@@ -1,6 +1,6 @@
 # Reglas de negocio y mecánica fiscal
 
-Reglas de dominio que la aplicación implementa. La especificación técnica (`especificacion.md`) las referencia por número.
+Reglas de dominio que la aplicación implementa. La especificación técnica (`specification.md`) las referencia por número.
 
 > **Aviso.** Este documento describe la mecánica fiscal española tal como se entiende en agosto de 2026, para orientar el diseño del software. La normativa cambia y su interpretación corresponde a un asesor fiscal, no a este documento. Cualquier cifra o tipo debe verificarse en la AEAT antes de usarse en producción. El sistema debe permitir cambiar tipos y umbrales por configuración, no por despliegue.
 
