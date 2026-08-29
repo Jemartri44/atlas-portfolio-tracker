@@ -1,0 +1,561 @@
+# Especificación — Aplicación de gestión de cartera
+
+**Fecha:** agosto 2026
+**Estado:** definición de requisitos. Sin implementar.
+**Documento relacionado:** `plan-financiero.md`
+
+---
+
+## 1. Objetivo
+
+Sistema personal para registrar, consultar y controlar una cartera de inversión a 20+ años, repartida entre varias plataformas y con reglas de operación escritas.
+
+**Lo que hace:**
+- Registro de todas las operaciones, con trazabilidad fiscal.
+- Cálculo de la aportación mensual según los pesos objetivo.
+- Seguimiento de la operativa especulativa con evaluación de rendimiento frente a índice.
+- Comprobaciones automáticas y avisos por correo.
+- Preparación de los datos de la declaración de la Renta.
+
+**Lo que NO hace:**
+- No ejecuta órdenes. Todas las operaciones son manuales.
+- No conecta con credenciales de brókers (salvo un token de solo lectura de IBKR, opcional).
+- No da recomendaciones de inversión.
+
+---
+
+## 2. Principios de diseño
+
+1. **El libro mayor propio es la fuente de verdad.** Los extractos de los brókers sirven para conciliar, no para alimentar el sistema. Los brókers cambian formatos, cierran cuentas antiguas y desaparecen; el registro propio no.
+2. **Registro en el momento de operar**, no reconstruido a posteriori (regla 20 del plan).
+3. **Compartimentación estricta.** Núcleo y cubo no se mezclan en ningún cálculo, vista ni métrica.
+4. **Todo dato derivado es recalculable** desde el libro mayor. Nada de valores agregados almacenados sin poder regenerarlos.
+5. **Supervivencia a 20 años** por encima de elegancia técnica: pocas dependencias, formatos abiertos, datos exportables en cualquier momento.
+6. **Fallo seguro.** Si una fuente de precios cae, el sistema muestra el último dato conocido con su antigüedad marcada. Nunca inventa ni interpola en silencio.
+
+---
+
+## 3. Compartimentación
+
+Cuatro libros independientes. Cada uno con sus reglas, sus métricas y su vista.
+
+| Libro | Contenido | Plataforma | Métrica principal |
+|---|---|---|---|
+| **Núcleo** | Fondos indexados RV + monetario/RF | MyInvestor | Desviación frente a pesos objetivo |
+| **Oro** | ETC de oro físico | IBKR | Peso sobre cartera total |
+| **Cripto** | ETP o tenencia directa | IBKR / exchange | Peso sobre cartera total |
+| **Cubo** | Acciones al contado, operativa corta | IBKR (cuenta separada) | Rendimiento frente al índice |
+
+**Regla transversal:** el cubo nunca entra en el cálculo de los pesos objetivo del núcleo. Es un presupuesto, no una asignación. Pero **sí** aparece en la vista de patrimonio total, con etiqueta propia.
+
+**Vista consolidada:** patrimonio total = Núcleo + Oro + Cripto + Cubo + Colchón, con desglose siempre visible. Nunca un único número sin descomponer.
+
+---
+
+## 4. Modelo de datos
+
+### 4.1 Entidades
+
+**Cuenta**
+`id`, `nombre`, `plataforma`, `libro`, `divisa_base`, `pais` (para el Modelo 720), `activa`
+
+**Activo**
+`id`, `tipo` (fondo | etc | etp | accion | cripto | monetario), `isin`, `ticker_yahoo`, `nombre`, `divisa`, `ter`, `traspasable` (bool), `libro`, `activo` (bool)
+
+Los identificadores cambian con el tiempo. El `id` interno es inmutable; ISIN y ticker son atributos que se versionan.
+
+**Lote** — *la entidad central*
+`id`, `activo_id`, `cuenta_id`, `fecha_adquisicion`, `cantidad`, `coste_unitario_original`, `divisa_original`, `tipo_cambio_bce`, `coste_unitario_eur`, `comision_eur`, `lote_origen_id` (para traspasos), `cerrado` (bool)
+
+**Nunca almacenar posiciones agregadas.** El FIFO exige el detalle lote a lote. La posición actual es una consulta, no un campo.
+
+**Operación**
+`id`, `fecha_orden`, `fecha_valor`, `tipo`, `activo_id`, `cuenta_id`, `cantidad`, `precio_unitario`, `divisa`, `tipo_cambio`, `comision`, `lotes_afectados[]`, `notas`
+
+Tipos: `compra`, `venta`, `traspaso`, `dividendo`, `evento_corporativo`, `aportacion_efectivo`, `retirada_efectivo`, `comision_suelta`.
+
+**Precio**
+`activo_id`, `fecha`, `valor`, `divisa`, `fuente`, `obtenido_en`
+
+**Tipo de cambio**
+`fecha`, `par`, `valor`, `fuente` (BCE)
+
+**Tesis** — solo cubo
+`id`, `fecha_apertura`, `activo_id`, `hipotesis`, `plazo_esperado`, `invalidacion`, `tamaño_previsto`, `operacion_apertura_id`, `operacion_cierre_id`, `resultado_eur`, `resultado_vs_indice`, `notas_cierre`
+
+Se crea **antes** de abrir la posición (regla 15). El sistema no debe permitir registrar una compra en el libro del cubo sin una tesis asociada.
+
+### 4.2 El traspaso: el caso que hay que modelar bien
+
+Cuando se traspasa entre fondos en MyInvestor:
+
+- **Se conserva la fecha de adquisición original y el coste original.** No es una venta seguida de una compra.
+- El evento genera lotes nuevos en el fondo destino que **heredan** `fecha_adquisicion` y `coste_unitario_eur` de los lotes origen, enlazados por `lote_origen_id`.
+- No genera ganancia ni pérdida patrimonial. No aparece en la declaración.
+
+Si esto se modela como venta + compra, la fiscalidad sale mal durante veinte años. Es la trampa principal del modelo.
+
+### 4.3 Eventos corporativos
+
+A 20 años, todos estos van a ocurrir. El modelo debe soportarlos sin migración de esquema:
+
+| Evento | Efecto sobre los lotes |
+|---|---|
+| **Split** (ej. 4:1) | Multiplica cantidad, divide coste unitario. Fecha y coste total intactos. |
+| **Contrasplit** | Inverso. Cuidado con las fracciones sobrantes, que suelen liquidarse en efectivo (hecho imponible). |
+| **Dividendo en efectivo** | No toca lotes. Rendimiento del capital mobiliario. Si hay retención en origen, registrarla para la deducción por doble imposición. |
+| **Dividendo en acciones** | Lotes nuevos. Fecha de adquisición y valoración según normativa. |
+| **Fusión / absorción** | Los lotes se transforman en el valor nuevo con canje. Conserva antigüedad. |
+| **Escisión (spin-off)** | El coste original se reparte entre matriz y escindida según proporción publicada. |
+| **Fusión de fondos** | Frecuente en fondos indexados. Similar al traspaso: conserva antigüedad y coste. |
+| **Cambio de clase de participación** | Muy frecuente. Mismo fondo, otro ISIN, otro TER. Conserva antigüedad. |
+| **Cierre / liquidación de fondo** | Reembolso forzoso. **Sí es hecho imponible.** |
+| **Cambio de ISIN o ticker** | Solo metadatos, pero rompe las fuentes de precios. |
+| **Exclusión de cotización** | Posición sin precio. Requiere marcado manual. |
+| **Fork de cripto** | Activo nuevo con coste de adquisición cero o valor de mercado, según criterio. |
+| **Migración de token** | Canje. Documentar el criterio aplicado. |
+| **Reestructuración del emisor de un ETC/ETP** | Puede implicar canje o reembolso forzoso. |
+
+**Requisito:** un evento corporativo es un tipo de operación de primera clase, con su propia lógica de transformación de lotes, no un apaño manual sobre la base de datos.
+
+**Requisito:** todo evento corporativo guarda la **fuente documental** (URL o PDF del emisor). Dentro de doce años no vas a recordar por qué tus lotes cambiaron en marzo de 2031.
+
+### 4.4 Qué es el modelo de datos y qué hay ya hecho
+
+El modelo de datos no es una librería: es el diseño de qué entidades existen, qué campos tienen y qué reglas las relacionan. Primero un documento, después un esquema.
+
+Proyectos de código abierto que ya han resuelto partes de esto:
+
+| Proyecto | Stack | Qué aporta | Qué le falta |
+|---|---|---|---|
+| **Ghostfolio** | TypeScript, NestJS + Angular + Postgres | Lo más parecido al objetivo: cuentas, actividades, multidivisa, dividendos, autohospedable | Sin traspaso español, sin FIFO fiscal español, eventos corporativos limitados, sin concepto de cubo |
+| **Beancount** | Python | **El mejor motor de lotes disponible**: coste base, métodos de imputación, multidivisa, texto plano versionable en git | Python; es CLI y ficheros, no app web |
+| **Portfolio Performance** | Java, escritorio | Excelente en eventos corporativos y seguimiento de lotes | Escritorio, no embebible |
+| **Firefly III** | PHP | Finanzas personales generales | Orientado a presupuesto, flojo en inversión |
+
+**Decisión: modelo propio.** Los requisitos específicos (traspaso español, regla de los dos meses, log de tesis, comparación contra índice) hacen que adaptar una app general sea pelear contra sus suposiciones.
+
+**Pero antes de diseñar:** leer cómo Beancount modela lotes y métodos de imputación de coste, y cómo Ghostfolio modela actividades y cuentas. Una tarde de lectura ahorra semanas de rediseño.
+
+---
+
+## 4bis. Configuración
+
+**Todo umbral, frecuencia y regla es configurable desde la interfaz.** Nada codificado en el fuente. Los valores cambian con la vida y con la cartera, y editar código para cambiar un porcentaje garantiza que no se hará.
+
+### Entidad Configuración
+
+| Parámetro | Valor inicial | Uso |
+|---|---|---|
+| `pesos_objetivo{}` | Por definir (P1 del plan) | Cálculo de aportación y desviaciones |
+| `umbral_desviacion_pp` | 5 puntos porcentuales | Regla 3 del plan |
+| `umbral_minimo_satelite_pct` | 10% | Regla 6b del plan |
+| `aportacion_mensual_eur` | Por definir | Reparto mensual |
+| `pct_cubo_sobre_aportacion` | Por definir | Presupuesto del cubo |
+| `cubo_tope_aportacion_acumulada` | Por definir | Regla 17 |
+| `cubo_umbral_parada_perdida_pct` | Por definir | Regla 17 |
+| `cubo_peso_maximo_sobre_cartera` | Por definir | Regla 18 |
+| `dias_precio_obsoleto` | 5 | Aviso de antigüedad |
+| `umbral_aviso_modelo_720` | 45.000€ | Margen sobre los 50.000€ |
+| `umbral_aviso_modelo_721` | 45.000€ | Ídem para cripto |
+| `frecuencia_*` | Ver 7.4 | Programación de trabajos |
+| `email_notificaciones` | — | Destino SES |
+| `canales_por_tipo_aviso{}` | — | Qué avisa por correo y qué solo en la interfaz |
+
+**Requisitos:**
+- **Historial de cambios de configuración.** Cambiar los pesos objetivo altera el cálculo de desviaciones históricas; hay que poder saber qué valores estaban vigentes en cada momento.
+- **Validación**: los pesos objetivo deben sumar 100%. Los umbrales deben ser coherentes entre sí.
+- **Aviso al cambiar**: modificar un umbral que está silenciando una alerta activa debe advertirlo explícitamente. Es la protección frente a subir el listón para no oír la alarma.
+
+---
+
+## 5. Funcionalidad por libro
+
+### 5.1 Núcleo
+
+- Posición actual por fondo: valor, peso real, peso objetivo, desviación en puntos porcentuales.
+- **Calculadora de aportación mensual**: dado el importe del mes, reparte hacia los activos más rezagados.
+- **Aviso de desviación** si algún activo supera los 5 puntos de desviación (regla 3).
+- **Simulador de traspaso**: qué pesos quedarían tras un traspaso, y confirmación de que no genera hecho imponible.
+- Histórico de aportaciones y evolución del valor.
+- TER medio ponderado de la cartera y coste anual estimado en euros.
+
+### 5.2 Oro
+
+- Posición, peso sobre cartera total, coste medio.
+- **Aviso de regla del umbral (6b)**: si el peso cae por debajo del 10%, avisar de que la posición ha dejado de ser significativa.
+- Coste acumulado en comisiones de compra, en euros y como porcentaje de lo invertido. Con órdenes pequeñas esto se dispara y conviene verlo.
+- TER del ETC y coste anual estimado.
+
+### 5.3 Cripto
+
+- Posición, peso, coste medio en euros.
+- **Si hay tenencia directa**: registro de cada permuta como hecho imponible, con valoración en euros en el momento del canje.
+- **Control del umbral del Modelo 721**: aviso si el valor en exchange extranjero se acerca a 50.000€.
+- Si es ETP: se trata como cualquier valor, sin especificidad.
+
+### 5.4 Cubo especulativo
+
+Es el libro con más funcionalidad propia.
+
+**Registro de tesis (obligatorio antes de abrir):**
+- Hipótesis: qué crees que va a pasar y por qué.
+- Plazo esperado.
+- Condición de invalidación: qué te haría estar equivocado.
+- Tamaño previsto.
+
+**Posiciones abiertas:**
+- Precio actual (Yahoo), P&L latente, días abierta, plazo esperado ya superado o no.
+- Recordatorio visible de la condición de invalidación.
+
+**Métricas de rendimiento:**
+- **Comparación frente al índice**: para cada operación cerrada, qué habría rendido ese mismo importe invertido en el fondo global durante el mismo periodo. Esta es la métrica que importa (regla 16), no el resultado absoluto.
+- Tasa de acierto, ganancia media, pérdida media, esperanza matemática por operación.
+- **Comisiones acumuladas como porcentaje del capital operado.** Con este tamaño de cuenta es probablemente el número más importante del panel.
+- Máxima caída del libro.
+- Número de operaciones (para saber cuándo la muestra empieza a tener significado; por debajo de ~100 no distingue habilidad de suerte).
+
+**Reglas de control:**
+- **Regla de parada (17)**: aviso al acercarse al umbral, bloqueo visible al superarlo.
+- **Regla de recogida (18)**: aviso si el cubo supera su peso máximo sobre la cartera.
+- **Regla de los dos meses**: alerta al intentar registrar una recompra de un valor vendido con pérdidas en los dos meses anteriores. Es el error fiscal más común en operativa activa.
+- Aporte acumulado al cubo frente al presupuesto anual previsto.
+
+---
+
+## 6. Fuentes de datos
+
+| Dato | Fuente | Fiabilidad | Riesgo |
+|---|---|---|---|
+| Acciones, ETFs, ETCs | Yahoo Finance (scraping / API no oficial) | Buena | IPs de AWS bloqueadas por antibot |
+| Cripto | CoinGecko o similar | Buena | Límites de uso en plan gratuito |
+| Tipos de cambio | BCE (CSV/API oficial) | Excelente | Ninguno |
+| Valor liquidativo de fondos | **Aproximación por ETF equivalente** | Buena para consulta | No sirve para fiscalidad |
+| Valor liquidativo exacto | Entrada manual al registrar la operación | Exacta | Requiere disciplina |
+| Operaciones IBKR | Flex Query (API con token) | Excelente | Token a rotar |
+| Operaciones MyInvestor | Subida de extracto o entrada manual | Buena | Formato puede cambiar |
+
+### Estrategia de precios: dos niveles
+
+El error de diseño a evitar es intentar obtener el valor liquidativo oficial de los fondos por scraping. Yahoo Finance cubre mal los fondos UCITS irlandeses, y depender de ello hace frágil todo el sistema.
+
+**Nivel 1 — Precio exacto (para fiscalidad y libro mayor).**
+Se introduce a mano en el momento de registrar la operación, o llega del extracto del bróker. Es el único que alimenta cálculos fiscales. Nunca se estima.
+
+**Nivel 2 — Precio aproximado (para consulta y paneles).**
+Para cada fondo se configura un **ETF de referencia que replica el mismo índice**. El movimiento del ETF sirve como aproximación de la evolución del fondo. Resuelve el caso "compré hace un año y quiero ver cómo va" sin depender de scraping de fondos.
+
+Estos precios son **exclusivamente informativos** y la interfaz los marca como aproximados. Ningún cálculo fiscal los toca.
+
+### Arquitectura de fuentes: patrón adaptador
+
+Cada fuente es un módulo intercambiable con la misma interfaz (`obtenerPrecio(activo, fecha)`). Requisitos:
+
+- **Cascada de respaldo**: fuente primaria → secundaria → último valor conocido → entrada manual.
+- **Antigüedad siempre visible.** Si un precio lleva más de N días sin refrescarse, la interfaz lo indica. N es configurable.
+- **Nunca interpolar ni estimar en silencio.**
+- **Registro de fallos**: si una fuente falla repetidamente, aviso por correo. Es lo que te va a avisar de que Yahoo ha empezado a bloquear las IPs de Lambda.
+
+### ⚠ Riesgo conocido: scraping desde Lambda
+
+Los rangos de IP de AWS son bloqueados con frecuencia por sistemas antibot. El scraping puede funcionar durante meses y dejar de hacerlo sin previo aviso.
+
+Mitigaciones, en orden:
+1. Diseño con adaptadores y respaldo manual (arriba). El sistema degrada, no se rompe.
+2. Cachear agresivamente: una consulta al día por activo es suficiente.
+3. Si se vuelve inviable: mover el recolector a una máquina propia que empuje los precios a la API. Rompe la autonomía del sistema pero resuelve el bloqueo.
+
+**Norma:** el sistema debe seguir siendo plenamente funcional con cero fuentes automáticas de precios. Todo lo automático es comodidad, no requisito.
+
+---
+
+## 6bis. Importación de extractos
+
+Toda entrada de datos tiene dos vías: **importación** y **manual**. La manual siempre disponible, nunca eliminada.
+
+### Fuentes de importación
+
+| Origen | Formato | Método |
+|---|---|---|
+| IBKR | Flex Query (XML/CSV) | **Automático vía API** con token de solo lectura |
+| MyInvestor | Extracto exportado | Subida de fichero |
+| Exchange de cripto | CSV | Subida de fichero |
+
+### Flujo de importación
+
+1. **Subida o descarga automática** del extracto.
+2. **Parseo** con el adaptador correspondiente al origen.
+3. **Detección de duplicados** por huella (fecha + activo + cantidad + importe). Reimportar el mismo extracto no debe duplicar nada.
+4. **Vista de conciliación**: qué operaciones son nuevas, cuáles ya existen, cuáles difieren de lo registrado.
+5. **Confirmación explícita** antes de escribir. Nada entra en el libro mayor sin que lo apruebes.
+6. **Informe de discrepancias**: si el extracto dice que tienes 24,31 participaciones y tu libro dice 24,30, sale un aviso.
+
+### Conciliación periódica
+
+Trabajo programado que compara las posiciones del libro mayor contra el extracto de IBKR y avisa si divergen. Es la red de seguridad frente a errores de transcripción y a eventos corporativos que se hayan pasado por alto.
+
+---
+
+## 7. Arquitectura
+
+### 7.0 Decisión: AWS, no Vercel ni VPS
+
+| Opción | A favor | En contra |
+|---|---|---|
+| **AWS (estático + Lambda)** | Always Free estable desde hace más de una década; control total del scheduling; **es donde tiene sentido el Terraform** | Más trabajo inicial |
+| Vercel Hobby | Despliegue con `git push` | Sin base de datos incluida; cron limitado; timeouts cortos para scraping; nivel gratuito sujeto a política comercial |
+| VPS (Hostinger) | Control total | Mantener un servidor durante 20 años: parches, actualizaciones, renovaciones |
+
+**Elegido: AWS.** "Estático" se refiere solo al frontend: la SPA se sirve desde S3, pero hay backend real en Lambda para scraping, cálculos y trabajos programados. No se pierde funcionalidad; se elimina el servidor de renderizado.
+
+### 7.1 Componentes
+
+```
+Navegador (PC / móvil)
+    │
+    ├── CloudFront ──── S3 (SPA estática, privada vía OAC)
+    │      <dominio de la app>
+    │
+    └── Lambda Function URL ─── Lambda (API) ─── DynamoDB (libro mayor)
+           (valida JWT de Cognito)     │
+                                       └───── S3 (backups JSON, documentos de eventos)
+
+EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
+                                │
+                                └── SSM Parameter Store (token IBKR)
+```
+
+**Decisiones deliberadas para minimizar coste y servicios:**
+
+- **Lambda Function URL en vez de API Gateway.** Un servicio menos. La Lambda valida el JWT de Cognito directamente.
+- **SSM Parameter Store en vez de Secrets Manager.** El estándar es gratuito; Secrets Manager cuesta ~0,40$/secreto/mes.
+- **DNS en el registrador, no en Route 53.** Un CNAME del subdominio propio a la distribución de CloudFront evita los 0,50$/mes de zona alojada. Certificado en ACM (gratuito), **obligatoriamente en us-east-1** para CloudFront.
+- **DynamoDB con capacidad aprovisionada** dentro del always-free (25 RCU/WCU), no bajo demanda.
+
+### 7.2 Costes
+
+Servicios en la categoría **Always Free**, perpetua e independiente de la antigüedad de la cuenta:
+
+| Servicio | Límite gratuito mensual | Uso previsto |
+|---|---|---|
+| Lambda | 1M invocaciones, 400.000 GB-segundo | Unos cientos de invocaciones |
+| DynamoDB | 25 GB, 25 RCU/WCU, 200M peticiones | Unos MB, decenas de operaciones |
+| CloudFront | 1 TB de salida, 10M peticiones | Unos MB |
+| SNS | 1M publicaciones | Marginal |
+| SSM Parameter Store (estándar) | Gratuito | 1-2 parámetros |
+| Cognito | Miles de usuarios activos | 1 usuario |
+| SES | 0,10$ por 1.000 correos | ~20 correos/mes |
+| S3 | 5 GB (solo primeros 12 meses) | Unos MB → céntimos después |
+
+**Coste estimado: entre 0 y 1$ al mes, indefinidamente.**
+
+### ⚠ 7.3 Trampa crítica del Free Plan
+
+AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **Free Plan** con 100$ de crédito inicial y hasta 100$ más por completar actividades, con ventana de seis meses.
+
+**En el Free Plan, cuando se agotan los créditos o vencen los seis meses, la cuenta se cierra automáticamente**, sin factura previa ni periodo de gracia. Quedan 90 días para pasar al Paid Plan y recuperar los datos antes de que se borren.
+
+**Acción obligatoria: pasar al Paid Plan desde el principio.** Con tarjeta asociada y usando solo servicios always-free, la facturación es cero pero la cuenta no se cierra.
+
+**Además:** alerta de presupuesto (AWS Budgets) en 1$, con aviso por correo. Es la red que avisa si algo se sale de los límites gratuitos.
+
+### 7.4 Lambdas programadas
+
+| Frecuencia | Función | Notifica |
+|---|---|---|
+| Diaria | Actualizar precios (posiciones del cubo y ETFs de referencia) | Solo si una tesis se acerca a su condición de invalidación |
+| Diaria | Actualizar tipos de cambio del BCE | No |
+| Diaria | Importar operaciones nuevas de IBKR vía Flex Query | Solo si hay operaciones nuevas o discrepancias |
+| Semanal | Comprobar desviaciones de pesos y reglas del cubo | Sí, si se supera algún umbral |
+| Semanal | Conciliar posiciones del libro contra extracto de IBKR | Sí, si divergen |
+| Mensual | Recordatorio de aportación con el reparto calculado | Sí, siempre |
+| Mensual | Volcado completo del libro mayor a S3 | Solo si falla |
+| Trimestral | Verificación de integridad: recalcular todo desde cero y comparar | Sí, si hay discrepancia |
+| Anual (enero) | Preparar datos de la Renta del ejercicio anterior | Sí |
+| Anual | Comprobar umbrales de los Modelos 720 y 721 | Sí, si se acerca a 50.000€ |
+
+**Todas las frecuencias y umbrales son configurables** (ver sección 6ter).
+
+**Principio de notificación:** el correo mensual siempre llega. Los demás solo cuando hay algo que hacer. Un sistema que envía correos rutinarios acaba filtrado a los seis meses.
+
+### 7.5 Frontend
+
+**Requisito:** compila a archivos estáticos servibles desde S3, sin servidor de renderizado.
+
+| Opción | Ventaja | Inconveniente |
+|---|---|---|
+| Vite + TypeScript sin framework | Dependencias mínimas, máxima auditabilidad | Todo a mano |
+| **Vite + Svelte** | Árbol de dependencias pequeño, compila a JS mínimo | Ecosistema menor |
+| **Vite + Solid** | Ligero, API tipo React | Menos material de apoyo |
+| Vite + React | Ecosistema enorme | Árbol de dependencias grande |
+| Astro | Pensado para estático | Puede quedarse corto con estado |
+
+**Recomendación: Svelte o Solid con Vite.** Suficientes para una app con estado y con un árbol de dependencias auditable de verdad.
+
+**Requisitos transversales:**
+- Responsive real: se va a consultar desde el móvil.
+- Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
+- Funciona sin conexión para consulta (los datos cacheados siguen visibles con su antigüedad marcada).
+
+---
+
+## 8. Seguridad
+
+Son datos financieros personales completos. Nivel de exigencia alto.
+
+- **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. El único secreto es el token Flex de IBKR, que es de **solo lectura** y va en Secrets Manager, jamás en el frontend.
+- **S3 privado**, servido solo vía CloudFront con Origin Access Control. Sin buckets públicos.
+- **Cognito con MFA obligatorio.** Sin excepciones ni "recordar dispositivo" indefinido.
+- **IAM de mínimo privilegio**: cada Lambda con su rol y solo los permisos que necesita.
+- **Cifrado en reposo** en DynamoDB y S3, y en tránsito por TLS.
+- **Sin analítica de terceros, sin CDN externos, sin fuentes remotas.** Todo se sirve desde tu propio origen. Un script de terceros en una app financiera es una vía de exfiltración.
+- **CSP restrictiva** que solo permita el propio origen y los endpoints de API necesarios.
+- **Validación en el backend**, siempre. El frontend es una comodidad, no un control de seguridad.
+- **Registro de auditoría**: cada escritura queda registrada con marca temporal. El versionado de S3 aporta la segunda capa.
+
+### Gestión de dependencias
+
+- Lockfile fijado y comprometido en el repositorio.
+- `npm audit` en CI, y revisión manual antes de cada actualización.
+- **Presupuesto explícito de dependencias.** Cada paquete nuevo requiere justificación. Menos dependencias es más seguridad y más probabilidad de que compile dentro de cinco años.
+- Preferir la biblioteca estándar frente a paquetes pequeños de utilidad.
+- Herramientas útiles: Dependabot para avisos, y servicios de análisis de cadena de suministro para detectar paquetes comprometidos.
+
+---
+
+## 9. Supervivencia a 20 años
+
+Requisitos que no son técnicos pero deciden si el sistema sigue vivo en 2046:
+
+- **Exportación completa a CSV/JSON en un clic**, en cualquier momento y sin depender del código.
+- **El libro mayor debe ser legible sin la aplicación.** Si el proyecto muere, los datos siguen siendo utilizables.
+- **Documentar el esquema** en el propio repositorio, incluida la lógica de transformación de lotes de cada tipo de evento.
+- **Cero dependencia de servicios de pago de terceros** en el camino crítico. Si CoinGecko cierra, se introduce el precio a mano y no pasa nada.
+- **Prueba de restauración anual**: reconstruir el sistema desde cero con el backup y verificar que cuadra. Va en la revisión anual del plan.
+- **Idempotencia**: registrar dos veces la misma operación debe detectarse, no duplicarse.
+
+---
+
+## 10. Fases
+
+**Fase 0 — Validación (antes de escribir nada)**
+1. **Pasar la cuenta AWS al Paid Plan** y configurar alerta de presupuesto en 1$.
+2. Probar la Flex Query de IBKR: configurar un informe, descargarlo por API, ver qué campos trae realmente.
+3. Descargar los tipos de cambio del BCE y verificar formato e histórico disponible.
+4. Probar el scraping de Yahoo desde una Lambda real, no desde tu máquina. Es donde se verá si las IPs de AWS están bloqueadas.
+5. Exportar un extracto de MyInvestor y ver qué formato y qué campos ofrece.
+6. Leer los esquemas de Beancount y Ghostfolio antes de diseñar el propio.
+
+**Fase 1 — Libro mayor (el núcleo del valor)**
+Modelo de datos, alta de operaciones, cálculo de posiciones, FIFO, traspasos, eventos corporativos. Sin interfaz bonita: una CLI o una página mínima. **Si solo se construye esto, el sistema ya cumple.**
+
+**Fase 2 — Aportación mensual**
+Calculadora de reparto, desviaciones, aviso de umbrales.
+
+**Fase 3 — Cubo**
+Registro de tesis, posiciones abiertas, métricas frente al índice, reglas de control.
+
+**Fase 4 — Automatización**
+Lambdas programadas, correos, precios automáticos.
+
+**Fase 5 — Motor fiscal**
+FIFO consolidado, conversión de divisa por fecha valor, regla de los dos meses, dividendos y doble imposición, salida agregada por casilla.
+
+**Orden deliberado:** el motor fiscal va al final porque no se necesita hasta la primera declaración, pero **el modelo de datos de la Fase 1 tiene que soportarlo desde el primer día**. Si los lotes o los traspasos se modelan mal, la Fase 5 obliga a rehacer todo.
+
+---
+
+## 9bis. Prácticas de ingeniería
+
+Repositorio público en GitHub, así que las prácticas son también parte del entregable.
+
+### Git
+
+- **Git Flow**: `main` (producción), `develop` (integración), `feature/*`, `fix/*`, `release/*`, `hotfix/*`.
+- **Pull requests obligatorias** hacia `develop` y `main`. Sin push directo. Protección de rama activada.
+- **Conventional Commits**, mensajes breves y en imperativo:
+  `feat(ledger): añadir evento de traspaso entre fondos`
+  `fix(fifo): corregir orden de lotes con misma fecha`
+  `test(tax): cubrir la regla de los dos meses`
+- **Ninguna herramienta de IA puede figurar como coautora ni aparecer en los mensajes de commit.**
+- Commits atómicos: un cambio conceptual por commit.
+
+### Entornos
+
+| Entorno | Rama | Infraestructura | Datos |
+|---|---|---|---|
+| `dev` | `develop` | Pila completa separada, sufijo en todos los recursos | Datos sintéticos |
+| `prod` | `main` | Pila de producción | Datos reales |
+
+- **Aislamiento total**: cuentas o al menos pilas independientes, sin recursos compartidos.
+- **Despliegue a producción solo desde `main`**, tras PR aprobada y CI en verde.
+- **Los artefactos que se despliegan a producción son los mismos que se validaron en dev.** Se construye una vez y se promociona; no se reconstruye por entorno.
+- **Datos de producción jamás en dev.** Generador de datos sintéticos como parte del repositorio.
+
+### Infraestructura
+
+- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola.
+- Estado remoto en S3 con bloqueo (DynamoDB o el bloqueo nativo de S3).
+- Módulos reutilizables y ficheros `.tfvars` por entorno.
+- `terraform plan` obligatorio en la PR, `apply` solo tras aprobación.
+
+### Tests
+
+| Nivel | Cobertura |
+|---|---|
+| **Unitarios** | Motor FIFO, transformaciones de lotes por evento corporativo, conversión de divisa, regla de los dos meses, cálculo de reparto mensual |
+| **Integración** | API contra DynamoDB local, adaptadores de importación con extractos de ejemplo |
+| **Contrato** | Parsers de extractos contra ficheros reales anonimizados guardados en el repositorio |
+| **End-to-end** | Flujos críticos: registrar operación, importar extracto, calcular aportación |
+
+**Prioridad absoluta: el motor fiscal.** Es donde un error silencioso cuesta dinero y no se detecta hasta años después. Cobertura alta y casos límite explícitos (misma fecha en varios lotes, fracciones, contrasplit con liquidación en efectivo, recompra en el límite de los dos meses).
+
+**Ficheros de ejemplo anonimizados** de cada formato de extracto, versionados en el repositorio. Cuando un bróker cambie el formato, el test falla y te enteras.
+
+### CI/CD
+
+GitHub Actions:
+1. Lint y formateo
+2. Comprobación de tipos
+3. Tests unitarios y de integración
+4. `npm audit` y análisis de dependencias
+5. `terraform plan`
+6. Build
+7. Despliegue (solo en merge a `develop` o `main`)
+
+### Logging por capas
+
+| Nivel | Uso |
+|---|---|
+| `ERROR` | Fallo que requiere intervención: importación fallida, discrepancia de conciliación |
+| `WARN` | Degradación: fuente de precios caída, precio obsoleto, umbral rozado |
+| `INFO` | Eventos de negocio: operación registrada, aportación calculada, correo enviado |
+| `DEBUG` | Detalle de ejecución, desactivado en producción |
+
+- **Logs estructurados en JSON**, con `request_id` para correlacionar entre Lambdas.
+- **Nunca registrar importes, posiciones ni identificadores de cuenta.** Los logs de CloudWatch son un almacén menos protegido que la base de datos; que un log filtre tu patrimonio sería absurdo.
+- **Retención corta** (30 días en prod, 7 en dev). CloudWatch cobra por almacenamiento y no aporta nada tener logs de 2029.
+
+### Gestión de secretos
+
+- **SSM Parameter Store** (nivel estándar, gratuito) con parámetros cifrados de tipo `SecureString`.
+- Token Flex de IBKR: **solo lectura**, rotado anualmente, jamás en el frontend ni en el repositorio.
+- Sin secretos en variables de entorno de la Lambda visibles en la consola.
+- `.gitignore` estricto y escaneo de secretos en CI.
+
+### Documentación
+
+- `README` con arranque en local, arquitectura y despliegue.
+- **ADRs** (registros de decisión de arquitectura) para las decisiones importantes: por qué DynamoDB, por qué modelo propio, por qué aproximación por ETF.
+- **El esquema de datos documentado en el repositorio**, incluida la lógica de transformación de lotes de cada evento corporativo.
+
+---
+
+## 11. Decisiones abiertas
+
+- [ ] **¿Svelte o Solid?** Ambos válidos. Decidir por preferencia tras un prototipo pequeño.
+- [ ] **¿DynamoDB, o JSON en S3 con versionado?** Decidido a favor de DynamoDB por encaje con Lambda y por estar en always-free. Reconsiderar solo si el modelo resulta muy relacional.
+- [ ] **Umbrales del cubo (reglas 17 y 18)**: dependen de la conversación P3 del plan financiero.
+- [ ] **Pesos objetivo**: dependen de la decisión P1 del plan financiero.
+- [ ] **¿Qué ETF de referencia para cada fondo?** Depende de P2 del plan financiero.
+- [ ] **Nivel de importación automática de IBKR**: diaria automática frente a bajo demanda. Empezar bajo demanda y automatizar cuando el parser esté probado.
