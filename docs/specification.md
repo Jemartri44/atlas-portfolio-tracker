@@ -2,7 +2,7 @@
 
 **Fecha:** agosto 2026
 **Estado:** definición de requisitos. Sin implementar.
-**Documento relacionado:** `plan-financiero.md`
+**Documento relacionado:** `plan-financiero.md` (plan de inversión personal; **privado, no está en el repositorio**; las referencias a "regla N del plan" o "P1/P2/P3" apuntan a él)
 
 ---
 

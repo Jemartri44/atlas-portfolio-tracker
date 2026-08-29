@@ -12,8 +12,8 @@ Usuario: residente fiscal en España. Integraciones previstas: MyInvestor (extra
 
 ## Documentos
 
-- `docs/especificacion.md` — especificación funcional y técnica completa. Es la referencia.
-- `docs/reglas-negocio.md` — reglas de dominio y mecánica fiscal española que la app implementa.
+- `docs/specification.md` — especificación funcional y técnica completa. Es la referencia.
+- `docs/business-rules.md` — reglas de dominio y mecánica fiscal española que la app implementa.
 
 ## Stack
 
@@ -33,7 +33,7 @@ Usuario: residente fiscal en España. Integraciones previstas: MyInvestor (extra
 
 ## Trampas de dominio
 
-Errores que no se detectan hasta años después. Los detalles están en `docs/reglas-negocio.md`.
+Errores que no se detectan hasta años después. Los detalles están en `docs/business-rules.md`.
 
 1. **El traspaso entre fondos NO es una venta seguida de una compra.** Conserva la fecha de adquisición y el coste original. Modelarlo como venta+compra rompe la fiscalidad de forma silenciosa.
 2. **Lotes, nunca posiciones agregadas.** La posición actual es una consulta derivada, no un campo almacenado. El FIFO exige el detalle lote a lote.
