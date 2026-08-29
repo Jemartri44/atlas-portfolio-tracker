@@ -1,129 +1,148 @@
 # CLAUDE.md
 
-Contexto del proyecto. No contiene tareas: las instrucciones llegan por conversación.
+Project context. It contains no tasks: instructions arrive through the conversation.
 
-## Qué es esto
+## What this is
 
-Aplicación personal de gestión de cartera de inversión, de un solo usuario, con horizonte de 20+ años. Registra operaciones, calcula la aportación mensual según pesos objetivo, hace seguimiento de una cuenta especulativa separada, y prepara los datos de la declaración de la Renta española.
+Personal investment portfolio manager, single user, 20+ year horizon. It records transactions, computes the monthly contribution from target weights, tracks a separate speculative bucket, and prepares the data for the Spanish income tax return (Renta).
 
-**No ejecuta órdenes.** Todas las operaciones se hacen manualmente en las plataformas y se registran aquí.
+**It never executes orders.** Every trade is placed manually on the platform and recorded here.
 
-Usuario: residente fiscal en España. Integraciones previstas: MyInvestor (extractos de fondos) e Interactive Brokers (Flex Query). El efectivo se registra a mano.
+User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) and Interactive Brokers (Flex Query). Cash is recorded by hand.
 
-## Documentos
+## Documents
 
-- `docs/specification.md` — especificación funcional y técnica completa. Es la referencia.
-- `docs/business-rules.md` — reglas de dominio y mecánica fiscal española que la app implementa.
+- `docs/specification.md` — full functional and technical specification. The reference.
+- `docs/business-rules.md` — domain rules and Spanish tax mechanics the app implements.
+- `plan-financiero.md` — the user's personal investment plan. **Private, git-ignored, never in the repo.** Docs reference it as "rule N of the plan" or "P1/P2/P3".
+
+## Language
+
+- **Everything technical is in English**: code, identifiers, comments, commit messages, branch names, file names, infrastructure, this file.
+- **Documents under `docs/` are in Spanish** (prose). Identifiers, field names and code inside them stay in English.
+- Conversation with the user is in Spanish.
+
+## Portfolio nomenclature
+
+Two books. They never mix in any calculation, view or metric.
+
+| Book | Spanish name | Contents | Main metric |
+|---|---|---|---|
+| `core` | Cartera principal / núcleo | Four asset classes: `equity` (RV), `fixed_income` (RF), `gold`, `crypto` | Deviation from target weights |
+| `bucket` | Cubo especulativo | Small, separate account for speculating, tinkering and learning. Rich tracking: theses, charts, comparisons against the index | Performance vs. index |
+
+Target weights apply **across the whole core**. The bucket is a *budget* (a fixed share of the monthly contribution), never an allocation. Total net worth = core + bucket + cash, always shown broken down.
 
 ## Stack
 
-| Capa | Elección |
+| Layer | Choice |
 |---|---|
-| Frontend | SPA estática con Vite (Svelte o Solid), servida desde S3 vía CloudFront |
-| Backend | Lambda con Function URL (no API Gateway) |
-| Datos | DynamoDB, capacidad aprovisionada dentro del always-free |
-| Auth | Cognito con MFA, un solo usuario. La Lambda valida el JWT |
-| Programación | EventBridge Scheduler |
-| Correo | SES |
-| Secretos | SSM Parameter Store estándar (gratuito), no Secrets Manager |
-| Infraestructura | Terraform |
-| Dominio | Subdominio propio (valor en `terraform.tfvars`, fuera del repositorio), CNAME a CloudFront, certificado ACM en us-east-1 |
+| Frontend | Static SPA with Vite (Svelte or Solid), served from S3 through CloudFront |
+| Backend | Lambda with Function URL (no API Gateway) |
+| Data | DynamoDB, provisioned capacity within the always-free tier |
+| Auth | Cognito with MFA, single user. The Lambda validates the JWT |
+| Scheduling | EventBridge Scheduler |
+| Email | SES |
+| Secrets | SSM Parameter Store standard tier (free), not Secrets Manager |
+| Infrastructure | Terraform |
+| Domain | Own subdomain (value lives in `terraform.tfvars`, outside the repo), CNAME to CloudFront, ACM certificate in us-east-1 |
 
-**Restricción de coste:** el proyecto debe permanecer dentro del always-free de AWS de forma indefinida. Antes de introducir un servicio nuevo, verificar que es gratuito a esta escala.
+**Cost constraint:** the project must stay inside the AWS always-free tier indefinitely. Before introducing a new service, verify it is free at this scale.
 
-## Trampas de dominio
+## Domain traps
 
-Errores que no se detectan hasta años después. Los detalles están en `docs/business-rules.md`.
+Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 
-1. **El traspaso entre fondos NO es una venta seguida de una compra.** Conserva la fecha de adquisición y el coste original. Modelarlo como venta+compra rompe la fiscalidad de forma silenciosa.
-2. **Lotes, nunca posiciones agregadas.** La posición actual es una consulta derivada, no un campo almacenado. El FIFO exige el detalle lote a lote.
-3. **Dinero en decimal, nunca en coma flotante.** Y las participaciones de fondos son fraccionarias con muchos decimales.
-4. **Guardar siempre importe original, divisa y tipo de cambio del BCE de la fecha valor.** Convertir a euros y descartar el original pierde información que Hacienda exige.
-5. **Ningún cálculo fiscal puede depender de precios de mercado.** Los precios son informativos. La fiscalidad sale exclusivamente del libro mayor.
-6. **Los eventos corporativos son operaciones de primera clase**, con lógica propia de transformación de lotes. No parches manuales sobre la base de datos.
-7. **El libro mayor propio es la fuente de verdad.** Los extractos de brókers sirven para conciliar, no para alimentar el sistema.
+1. **A transfer between funds is NOT a sell followed by a buy.** It keeps the original acquisition date and cost. Modelling it as sell+buy silently breaks taxation.
+2. **Lots, never aggregated positions.** The current position is a derived query, not a stored field. FIFO needs lot-level detail.
+3. **Money in decimal, never floating point.** Fund units are fractional with many decimals.
+4. **Always store the original amount, currency and the ECB exchange rate of the value date.** Converting to EUR and discarding the original loses information the tax agency requires.
+5. **No tax calculation may depend on market prices.** Prices are informational. Taxation comes exclusively from the ledger.
+6. **Corporate actions are first-class transactions** with their own lot-transformation logic. No manual patches on the database.
+7. **The own ledger is the source of truth.** Broker statements are for reconciliation, not for feeding the system.
 
-## Principios de diseño
+## Design principles
 
-- **Todo dato derivado debe ser recalculable** desde el libro mayor.
-- **Nada codificado en el fuente que deba ser configurable**: umbrales, pesos objetivo, frecuencias, destinatarios.
-- **Fallo seguro**: si una fuente de precios cae, mostrar el último valor conocido con su antigüedad marcada. Nunca interpolar ni estimar en silencio.
-- **La entrada manual nunca se elimina.** La importación automática es comodidad; el sistema debe ser plenamente funcional sin ninguna fuente automática.
-- **Compartimentación**: los cuatro libros (núcleo, oro, cripto, cubo) no se mezclan en cálculos ni métricas. El cubo aparece en el patrimonio total, pero nunca en el cálculo de pesos objetivo del núcleo.
-- **Supervivencia a 20 años por encima de elegancia técnica**: pocas dependencias, formatos abiertos, datos exportables en cualquier momento.
+- **Every derived value must be recomputable** from the ledger.
+- **Nothing hard-coded that should be configurable**: thresholds, target weights, frequencies, recipients.
+- **Fail safe**: if a price source goes down, show the last known value with its age marked. Never interpolate or estimate silently.
+- **Manual entry is never removed.** Automatic import is convenience; the system must be fully functional without any automatic source.
+- **Compartmentalisation**: core and bucket never mix in calculations or metrics. The bucket appears in total net worth, never in the core's target-weight calculation.
+- **20-year survival over technical elegance**: few dependencies, open formats, data exportable at any time.
 
-## Convenciones de código
+## Code conventions
 
 ### Git
 
-- **Git Flow**: `main` (producción), `develop` (integración), `feature/*`, `fix/*`, `release/*`, `hotfix/*`.
-- **Pull requests obligatorias**. Sin push directo a `main` ni `develop`.
-- **Conventional Commits**, mensajes breves, en imperativo y en español:
-  - `feat(ledger): añadir evento de traspaso entre fondos`
-  - `fix(fifo): corregir orden de lotes con misma fecha`
-  - `test(tax): cubrir la regla de los dos meses`
-- Commits atómicos: un cambio conceptual por commit.
-- **Ninguna herramienta de IA puede figurar como coautora ni aparecer en los mensajes de commit, en el cuerpo, en el pie ni en las descripciones de PR.**
+- **Git flow with plain git commands**: `main` (production), `develop` (integration), `feature/*`, `fix/*`, `release/*`, `hotfix/*`. Merges with `--no-ff`. The `git-flow` extension is not used.
+- **Pull requests are mandatory.** No direct push to `main` or `develop`.
+- **Conventional Commits**, brief, imperative, in English, subject line only whenever possible:
+  - `feat(ledger): add fund transfer event`
+  - `fix(fifo): fix lot ordering on equal dates`
+  - `test(tax): cover the two-month rule`
+- Atomic commits: one conceptual change per commit.
+- **No AI tool may appear as co-author or be mentioned in commit messages, bodies, footers or PR descriptions.**
+- Ask the user before installing tools, extensions or packages, and before committing or pushing.
 
-### Entornos
+### Environments
 
-- `dev` (rama `develop`) y `prod` (rama `main`), con pilas de infraestructura completamente separadas y sufijo en todos los recursos.
-- **Se construye una vez y se promociona.** El artefacto desplegado en producción es el mismo que se validó en dev.
-- **Datos de producción jamás en dev.** Generador de datos sintéticos en el repositorio.
+- `dev` (branch `develop`) and `prod` (branch `main`), with fully separate infrastructure stacks and a suffix on every resource.
+- **Build once, promote.** The artefact deployed to production is the same one validated in dev.
+- **Production data never in dev.** Synthetic data generator in the repository.
 
 ### Tests
 
-Prioridad por orden de daño si fallan:
+Priority by damage if they fail:
 
-1. Motor FIFO y transformaciones de lotes por evento corporativo
-2. Conversión de divisa por fecha valor
-3. Regla de los dos meses
-4. Cálculo de reparto de la aportación mensual
-5. Parsers de extractos (tests de contrato con ficheros de ejemplo anonimizados versionados en el repositorio)
+1. FIFO engine and lot transformations per corporate action
+2. Currency conversion by value date
+3. Two-month rule
+4. Monthly contribution split
+5. Statement parsers (contract tests against anonymised sample files versioned in the repo)
 
-Casos límite obligatorios: varios lotes con la misma fecha, fracciones, contrasplit con liquidación en efectivo, recompra justo en el límite de los dos meses, traspaso parcial.
+Mandatory edge cases: several lots with the same date, fractions, reverse split with cash-in-lieu, repurchase exactly at the two-month boundary, partial transfer.
 
 ### Logging
 
-| Nivel | Uso |
+| Level | Use |
 |---|---|
-| `ERROR` | Requiere intervención: importación fallida, discrepancia de conciliación |
-| `WARN` | Degradación: fuente de precios caída, precio obsoleto, umbral rozado |
-| `INFO` | Eventos de negocio: operación registrada, aportación calculada, correo enviado |
-| `DEBUG` | Detalle de ejecución, desactivado en producción |
+| `ERROR` | Needs intervention: failed import, reconciliation mismatch |
+| `WARN` | Degradation: price source down, stale price, threshold nearly hit |
+| `INFO` | Business events: transaction recorded, contribution computed, email sent |
+| `DEBUG` | Execution detail, disabled in production |
 
-- Logs estructurados en JSON con `request_id` para correlacionar entre Lambdas.
-- **Nunca registrar importes, posiciones, saldos ni identificadores de cuenta.** CloudWatch está menos protegido que la base de datos.
-- Retención: 30 días en producción, 7 en dev.
+- Structured JSON logs with `request_id` to correlate across Lambdas.
+- **Never log amounts, positions, balances or account identifiers.** CloudWatch is less protected than the database.
+- Retention: 30 days in production, 7 in dev.
 
-### Seguridad
+### Security
 
-- **Nunca almacenar credenciales de brókers.** El único secreto es el token Flex de IBKR, de solo lectura, en SSM Parameter Store como `SecureString`.
-- S3 privado, servido solo vía CloudFront con Origin Access Control.
-- IAM de mínimo privilegio: un rol por Lambda.
-- **Sin analítica de terceros, sin CDN externos, sin fuentes remotas.** Todo desde el propio origen. CSP restrictiva.
-- Validación siempre en el backend. El frontend es comodidad, no control de seguridad.
-- Lockfile comprometido, `npm audit` en CI, presupuesto explícito de dependencias: cada paquete nuevo requiere justificación.
+- **Never store broker credentials.** The only secret is the read-only IBKR Flex token, in SSM Parameter Store as a `SecureString`.
+- Private S3, served only through CloudFront with Origin Access Control.
+- Least-privilege IAM: one role per Lambda.
+- **No third-party analytics, no external CDNs, no remote fonts.** Everything from the own origin. Strict CSP.
+- Validation always on the backend. The frontend is convenience, not a security control.
+- Committed lockfile, `npm audit` in CI, explicit dependency budget: every new package needs a justification.
 
-### Infraestructura
+### Infrastructure
 
-- Terraform para todos los recursos AWS. Nada creado a mano en la consola.
-- Estado remoto en S3 con bloqueo.
-- `terraform plan` en la PR, `apply` solo tras aprobación.
+- Terraform for every AWS resource. Nothing created by hand in the console.
+- Remote state in S3 with locking.
+- `terraform plan` on the PR, `apply` only after approval.
 
-## Documentación
+## Documentation
 
-- ADRs para decisiones de arquitectura relevantes.
-- El esquema de datos documentado en el repositorio, incluida la lógica de transformación de lotes de cada tipo de evento corporativo.
-- Todo evento corporativo registrado guarda su fuente documental (URL o PDF del emisor).
+- ADRs for relevant architecture decisions.
+- Data schema documented in the repository, including the lot-transformation logic for every corporate action type.
+- Every recorded corporate action keeps its documentary source (issuer URL or PDF).
 
-## Fases
+## Phases
 
-El orden importa: el modelo de datos de la Fase 1 debe soportar la Fase 5 desde el primer día.
+Order matters: the Phase 1 data model must support Phase 5 from day one.
 
-0. Validación (accesos, formatos de extracto, viabilidad del scraping)
-1. **Libro mayor** — modelo de datos, alta de operaciones, posiciones, FIFO, traspasos, eventos corporativos
-2. Aportación mensual — reparto, desviaciones, umbrales
-3. Cubo — tesis, posiciones abiertas, métricas frente a índice
-4. Automatización — Lambdas programadas, correos, precios
-5. Motor fiscal — FIFO consolidado, divisa, regla de los dos meses, salida agregada
+0. Validation (access, statement formats, scraping feasibility)
+1. **Ledger** — data model, transaction entry, positions, FIFO, transfers, corporate actions
+2. Monthly contribution — split, deviations, thresholds
+3. Bucket — theses, open positions, metrics against the index, charts
+4. Automation — scheduled Lambdas, emails, prices
+5. Tax engine — consolidated FIFO, currency, two-month rule, aggregated output
