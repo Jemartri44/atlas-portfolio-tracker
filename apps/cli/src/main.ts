@@ -14,6 +14,7 @@ import {
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
+import { corporateActionCommand } from "./commands/corporate-actions.js";
 import { exportCommand } from "./commands/export.js";
 import {
   cashCommand,
@@ -22,8 +23,10 @@ import {
   incomeCommand,
   lotsCommand,
   positionsCommand,
+  valuationsCommand,
 } from "./commands/query.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
+import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
@@ -36,6 +39,9 @@ const COMMANDS: Record<string, Command> = {
   order: orderCommand,
   transfer: transferCommand,
   transfers: transferCommand,
+  ca: corporateActionCommand,
+  thesis: thesisCommand,
+  valuations: valuationsCommand,
   edit: editCommand,
   delete: deleteCommand,
   positions: positionsCommand,
@@ -53,8 +59,10 @@ comandos:
   account add|update|list        asset add|update|list        settings set|show
   add buy|sell|transfer|dividend|interest|fx|cash-in|cash-out|fee|valuation
   order place|cancel|note|list   transfer request|update|pending
+  ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|delisting|raw
+  thesis open|close|list [--closed]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
-  positions  lots [activo]  cash  gains <año>  income <año>  check
+  positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check
   export --format jsonl|csv [--out <ruta>]`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({

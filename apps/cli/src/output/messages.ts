@@ -28,7 +28,35 @@ export const describeError = (error: DomainError): string => {
     case "book_mismatch":
       return "La cuenta y el activo pertenecen a libros distintos (núcleo y cubo no se mezclan).";
     case "thesis_required":
-      return "Las compras en el cubo exigen una tesis previa; las tesis llegan con la feature 002.";
+      return `Las compras en el cubo exigen --thesis <id> de una tesis abierta y registrada antes (regla 15): atlas thesis open --id … --account ${text(d.account_id)} --asset ${text(d.asset_id)} …`;
+    case "unknown_thesis":
+      return `La tesis ${text(d.thesis_id)} no existe.`;
+    case "thesis_mismatch":
+      return `La tesis ${text(d.thesis_id)} es de ${text(d.asset_id)} en ${text(d.account_id)}, no de esta operación.`;
+    case "thesis_not_open":
+      return `La tesis ${text(d.thesis_id)} no está abierta en este punto del libro (se abre antes de comprar y no se cierra antes).`;
+    case "thesis_not_allowed":
+      return `--thesis solo se usa en cuentas del cubo; ${text(d.account_id)} es del núcleo.`;
+    case "duplicate_thesis":
+      return `La tesis ${text(d.thesis_id)} ya existe.`;
+    case "thesis_already_open":
+      return `Ya hay una tesis abierta (${text(d.thesis_id)}) sobre ${text(d.asset_id)} en ${text(d.account_id)}: ciérrala antes.`;
+    case "thesis_already_closed":
+      return `La tesis ${text(d.thesis_id)} ya está cerrada.`;
+    case "not_bucket":
+      return `Una tesis exige cuenta y activo del cubo (${text(d.account_id)}, ${text(d.asset_id)}).`;
+    case "effects_not_allowed_for_kind":
+      return `El kind ${text(d.kind)} no admite la secuencia de efectos ${text(d.effects)}; admitidas: ${text(d.allowed)}.`;
+    case "liquidation_must_cover_all_accounts":
+      return `Una liquidación vende "all" en exactamente las cuentas con posición de ${text(d.asset_id)} (faltan: ${text(d.missing)}; sobran: ${text(d.extra)}; parciales: ${text(d.partial)}).`;
+    case "no_open_lots":
+      return `El activo ${text(d.asset_id)} no tiene lotes abiertos en la fecha de efecto: nada que transformar.`;
+    case "same_asset":
+      return `El activo destino no puede ser el propio ${text(d.asset_id)}.`;
+    case "duplicate_account_in_effect":
+      return `La cuenta ${text(d.account_id)} aparece dos veces en per_account.`;
+    case "invalid_ratio":
+      return `Ratio no válido: ${text(d.value)} (decimal positivo o fracción nuevas/antiguas como 4/3).`;
     case "insufficient_position":
       return `La cuenta ${text(d.account_id)} no tiene suficiente ${text(d.asset_id)} en esa fecha (disponible: ${text(d.available)}).`;
     case "insufficient_lots":
@@ -57,7 +85,7 @@ export const describeError = (error: DomainError): string => {
     case "dependent_events":
       return `El evento ${text(d.target_id)} ha sido consumido por eventos posteriores; rectifícalos antes.`;
     case "unsupported_event":
-      return `El tipo de evento ${text(d.type)} todavía no está soportado (feature 002).`;
+      return `El tipo de evento ${text(d.type)} está reservado para una feature posterior y esta CLI no lo proyecta.`;
     case "schema_too_new":
       return `El libro usa schema_version ${text(d.found)} y esta CLI solo entiende hasta ${text(d.supported)}: actualiza la aplicación.`;
     case "conflict":
