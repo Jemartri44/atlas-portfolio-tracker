@@ -96,11 +96,8 @@ export class DependentEventsError extends DomainError {
 }
 
 /** The event type is reserved for a later feature and cannot be projected yet. */
-export class UnsupportedEventError extends DomainError {
+export class UnsupportedEventError extends ProjectionError {
   constructor(type: string, eventId: string) {
-    super("unsupported_event", `event type ${type} is not supported yet`, {
-      type,
-      event_id: eventId,
-    });
+    super("unsupported_event", eventId, `event type ${type} is not supported yet`, { type });
   }
 }

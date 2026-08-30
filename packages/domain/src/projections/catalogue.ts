@@ -108,6 +108,18 @@ export const applyAssetUpdated = (state: LedgerState, event: AssetUpdatedEvent):
   state.assets.set(event.asset_id, { ...fields, identifier_history: history });
 };
 
+/** Core and bucket never mix (constitution III, ADR-0009). */
+export const assertSameBook = (account: Account, asset: Asset, eventId: string): void => {
+  if (account.book !== asset.book) {
+    throw new ProjectionError(
+      "book_mismatch",
+      eventId,
+      `account ${account.account_id} (${account.book}) and asset ${asset.asset_id} (${asset.book}) belong to different books`,
+      { account_id: account.account_id, asset_id: asset.asset_id },
+    );
+  }
+};
+
 export const accounts = (state: LedgerState): Account[] => [...state.accounts.values()];
 
 export const assets = (state: LedgerState): Asset[] => [...state.assets.values()];

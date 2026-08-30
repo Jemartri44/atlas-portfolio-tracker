@@ -221,3 +221,13 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   positionOf: new Map(),
   usage: { accounts: new Set(), assets: new Set() },
 });
+
+export const addWarning = (
+  state: LedgerState,
+  code: string,
+  eventId: Ulid,
+  message: string,
+  details: Record<string, unknown>,
+): void => {
+  state.warnings.push({ code, event_id: eventId, message, details });
+};
