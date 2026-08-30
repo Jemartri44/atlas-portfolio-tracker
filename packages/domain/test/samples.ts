@@ -26,6 +26,9 @@ export const ID = {
   request: "01ARYZ6S41TSV4RRFFQ69G5FAH",
   requestUpdate: "01ARYZ6S41TSV4RRFFQ69G5FAJ",
   reversal: "01ARYZ6S41TSV4RRFFQ69G5FAK",
+  corporateAction: "01ARYZ6S41TSV4RRFFQ69G5FAM",
+  thesisOpened: "01ARYZ6S41TSV4RRFFQ69G5FAN",
+  thesisClosed: "01ARYZ6S41TSV4RRFFQ69G5FAP",
 } as const;
 
 export const envelope = (id: string, type: LedgerEvent["type"]): Envelope => ({
@@ -257,6 +260,44 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
     stage: "redeemed",
     date: "2027-03-03",
     nav_out: "105",
+  },
+  corporate_action: {
+    ...envelope(ID.corporateAction, "corporate_action"),
+    type: "corporate_action",
+    kind: "reverse_split",
+    asset_id: "ast_gold",
+    effective_date: "2027-04-01",
+    source_document: "https://issuer.example/reverse-split.pdf",
+    effects: [
+      { op: "scale", ratio: "1/4" },
+      {
+        op: "forced_sale",
+        per_account: [{ account_id: "acc_etf", quantity: "0.75", fee: "1" }],
+        unit_price: "800",
+        currency: "USD",
+        fx_rate: "1.0850",
+        fx_rate_date: "2027-04-01",
+      },
+    ],
+    notes: "1:4 reverse split; fractional share cashed out",
+    fingerprint: "sha256:9",
+  },
+  thesis_opened: {
+    ...envelope(ID.thesisOpened, "thesis_opened"),
+    type: "thesis_opened",
+    thesis_id: "th_spec_1",
+    account_id: "acc_bucket",
+    asset_id: "ast_spec",
+    hypothesis: "Q3 results above consensus",
+    expected_horizon_days: 90,
+    invalidation: "Guidance cut",
+    planned_size_eur: "500",
+  },
+  thesis_closed: {
+    ...envelope(ID.thesisClosed, "thesis_closed"),
+    type: "thesis_closed",
+    thesis_id: "th_spec_1",
+    closing_notes: "Thesis played out",
   },
   reversal: {
     ...envelope(ID.reversal, "reversal"),

@@ -1,5 +1,6 @@
-// Line envelope (data-schema.md §2). The type discriminator is open: types of
-// later features are "reserved" — accepted by the loader, rejected by the projection.
+// Line envelope (data-schema.md §2). The type discriminator is open: a later
+// feature can list its types as "reserved" — accepted by the loader, rejected by
+// the projection — until it implements them. Feature 002 emptied the list.
 
 import type { Ulid } from "../ids/ulid.js";
 
@@ -25,11 +26,14 @@ export const SUPPORTED_EVENT_TYPES = [
   "cash_withdrawal",
   "standalone_fee",
   "valuation",
+  "corporate_action",
+  "thesis_opened",
+  "thesis_closed",
   "reversal",
 ] as const;
 
-/** Types defined by data-schema.md but implemented by later features. */
-export const RESERVED_EVENT_TYPES = ["corporate_action", "thesis_opened", "thesis_closed"] as const;
+/** Types defined by data-schema.md but implemented by later features. Empty since feature 002. */
+export const RESERVED_EVENT_TYPES = [] as const;
 
 export type SupportedEventType = (typeof SUPPORTED_EVENT_TYPES)[number];
 export type ReservedEventType = (typeof RESERVED_EVENT_TYPES)[number];

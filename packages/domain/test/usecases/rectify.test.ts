@@ -233,3 +233,67 @@ describe("correctEvent", () => {
     expect(isPriorYear(deps, state, b.build()[0] as LedgerEvent)).toBe(false);
   });
 });
+
+describe("rectifying corporate actions", () => {
+  const split = (b: LedgerBuilder) =>
+    b.corporateAction({
+      kind: "split",
+      asset_id: "ast_world",
+      effects: [{ op: "scale", ratio: "4" }],
+      effective_date: "2027-03-01",
+    });
+
+  it("rejects reversing an action whose resulting lots were already sold, listing the sales", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    const action = split(b);
+    const sell = b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "30",
+      value_date: "2027-05-01",
+    });
+    const store = new TestStore(b.build());
+    const error = await expectRejection(
+      reverseEvent(testDeps(store), action.id, "x"),
+      DependentEventsError,
+    );
+    expect(error.affected.map((a) => [a.id, a.type])).toEqual([[sell.id, "sell"]]);
+    expect(store.all()).toHaveLength(10);
+  });
+
+  it("reverses an action nobody depends on and the projection returns to the original lots", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const buy = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    const action = split(b);
+    const store = new TestStore(b.build());
+    const deps = testDeps(store, "2028-03-01T10:00:00.000Z");
+    const result = await reverseEvent(deps, action.id, "wrong ratio");
+    expect(result.priorYear).toBe(true);
+    const { state } = await loadAndProject(deps);
+    expect(positionOf(state, "acc_fund", "ast_world").toString()).toBe("10");
+    expect(fiscalLots(state, "ast_world")[0]?.id).toBe(`${buy.id}#0`);
+    expect(state.reversed.get(action.id)).toBe(result.reversal.id);
+  });
+
+  it("corrects an action at domain level: reversal plus a replacement with corrects_id", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    const action = split(b);
+    const store = new TestStore(b.build());
+    const deps = testDeps(store);
+    const result = await correctEvent(
+      deps,
+      action.id,
+      { ...draftOf(action), effects: [{ op: "scale", ratio: "2" }] },
+      "ratio was 2:1",
+    );
+    expect(result.event.corrects_id).toBe(action.id);
+    const { state } = await loadAndProject(deps);
+    expect(positionOf(state, "acc_fund", "ast_world").toString()).toBe("20");
+    expect(state.lotCounts.has(action.id)).toBe(false);
+  });
+});

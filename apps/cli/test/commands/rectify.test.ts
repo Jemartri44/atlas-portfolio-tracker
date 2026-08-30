@@ -59,6 +59,25 @@ describe("atlas edit / delete", () => {
     ).toBe(64);
     expect(await declined.exec(["delete"])).toBe(64);
     expect(
+      await declined.exec([
+        "ca",
+        "split",
+        "--asset",
+        "ast_world",
+        "--ratio",
+        "2",
+        "--effective-date",
+        "2027-01-05",
+        "--source-document",
+        "doc",
+        "--yes",
+      ]),
+    ).toBe(0);
+    const actionId = await idAt(declined.store, 6);
+    expect(await declined.exec(["edit", actionId, "--reason", "x", "--yes"])).toBe(64);
+    expect(declined.text()).toContain("no se edita");
+    expect(await declined.exec(["delete", actionId, "--reason", "x", "--yes"])).toBe(0);
+    expect(
       await declined.exec(["delete", "01ARYZ6S41TSV4RRFFQ69G5FZZ", "--reason", "x", "--yes"]),
     ).toBe(64);
   });

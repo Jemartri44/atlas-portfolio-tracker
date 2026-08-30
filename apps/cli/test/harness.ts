@@ -125,6 +125,34 @@ export const seed = (): LedgerEvent[] => [
   },
 ];
 
+/** The seed plus a bucket account and a bucket asset, for thesis tests. */
+export const bucketSeed = (): LedgerEvent[] => [
+  ...seed(),
+  {
+    ...envelope("01ARYZ6S41TSV4RRFFQ6900005", "account_created"),
+    type: "account_created",
+    account_id: "acc_bucket",
+    name: "Cubo",
+    platform: "ibkr",
+    book: "bucket",
+    base_currency: "EUR",
+    country: "IE",
+    active: true,
+  },
+  {
+    ...envelope("01ARYZ6S41TSV4RRFFQ6900006", "asset_created"),
+    type: "asset_created",
+    asset_id: "ast_spec",
+    asset_type: "stock",
+    book: "bucket",
+    ticker: "SPEC",
+    name: "Spec Inc",
+    currency: "USD",
+    transferable: false,
+    active: true,
+  },
+];
+
 export const BUY_WORLD = [
   "add",
   "buy",

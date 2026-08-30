@@ -1,7 +1,8 @@
 // The projection (data-schema.md §7.1): pass 0 indexes ids, reversals and
-// reserved types; pass A applies catalogue and settings in file order; pass B
-// applies operations and tracking in chronological order (business date, then
-// file position). In `collectErrors` mode invalid events are recorded and
+// reserved types; pass A applies catalogue and settings in file order, then
+// the bucket theses (pass A', also in file order); pass B applies operations
+// and tracking in chronological order (business date, then file position);
+// the closing step adds the thesis warnings that need the final positions. In `collectErrors` mode invalid events are recorded and
 // skipped instead of aborting, so rectification can list everything affected.
 
 import type { CivilDate } from "../dates/civil-date.js";
@@ -17,6 +18,8 @@ import type {
   ReversalEvent,
   SettingsChangedEvent,
   SupportedEvent,
+  ThesisClosedEvent,
+  ThesisOpenedEvent,
 } from "../schema/events.js";
 import { fiscalDateOf } from "../settings/fiscal-date.js";
 import { DEFAULT_SETTINGS, type Settings } from "../settings/settings.js";
@@ -26,6 +29,7 @@ import {
   applyAssetCreated,
   applyAssetUpdated,
 } from "./catalogue.js";
+import { applyCorporateAction, referencesOf } from "./corporate-actions.js";
 import {
   applyBuy,
   applyCashDeposit,
@@ -46,6 +50,7 @@ import {
 } from "./pending.js";
 import { applySettingsChanged, resolveFiscalSettings } from "./settings-at.js";
 import { createEmptyState, type LedgerState } from "./state.js";
+import { applyThesisClosed, applyThesisOpened, thesisWarnings } from "./theses.js";
 
 export interface ProjectOptions {
   /** Settings used to derive fiscal dates; defaults to the latest `settings_changed` (Q3). */
@@ -61,8 +66,18 @@ export type CatalogueEvent =
   | AssetUpdatedEvent
   | SettingsChangedEvent;
 
-/** Events with a business date: everything except catalogue, settings and reversals. */
-export type OperationEvent = Exclude<SupportedEvent, CatalogueEvent | ReversalEvent>;
+export type ThesisEvent = ThesisOpenedEvent | ThesisClosedEvent;
+
+const THESIS_TYPES = new Set<string>(["thesis_opened", "thesis_closed"]);
+
+const isThesis = (entry: Positioned): entry is Positioned<ThesisEvent> =>
+  THESIS_TYPES.has(entry.event.type);
+
+/** Events with a business date: everything except catalogue, settings, theses and reversals. */
+export type OperationEvent = Exclude<
+  SupportedEvent,
+  CatalogueEvent | ReversalEvent | ThesisOpenedEvent | ThesisClosedEvent
+>;
 
 interface Positioned<E extends SupportedEvent = SupportedEvent> {
   event: E;
@@ -81,7 +96,10 @@ const isCatalogue = (entry: Positioned): entry is Positioned<CatalogueEvent> =>
   CATALOGUE_TYPES.has(entry.event.type);
 
 export const isOperationEvent = (event: LedgerEvent): event is OperationEvent =>
-  !CATALOGUE_TYPES.has(event.type) && event.type !== "reversal" && !isReservedEventType(event.type);
+  !CATALOGUE_TYPES.has(event.type) &&
+  event.type !== "reversal" &&
+  !THESIS_TYPES.has(event.type) &&
+  !isReservedEventType(event.type);
 
 const isOperation = (entry: Positioned): entry is Positioned<OperationEvent> =>
   isOperationEvent(entry.event);
@@ -123,6 +141,8 @@ export const businessDateOf = (state: LedgerState, event: OperationEvent): Civil
     case "order_placed":
     case "transfer_requested":
       return event.requested_date;
+    case "corporate_action":
+      return event.effective_date;
   }
 };
 
@@ -143,6 +163,7 @@ const recordUsage = (state: LedgerState, event: SupportedEvent): void => {
     case "dividend":
     case "valuation":
     case "order_placed":
+    case "thesis_opened":
       accounts.add(event.account_id);
       assets.add(event.asset_id);
       break;
@@ -160,6 +181,16 @@ const recordUsage = (state: LedgerState, event: SupportedEvent): void => {
       assets.add(event.from_asset_id);
       assets.add(event.to_asset_id);
       break;
+    case "corporate_action": {
+      const references = referencesOf(event);
+      for (const account of references.accounts) {
+        accounts.add(account);
+      }
+      for (const asset of references.assets) {
+        assets.add(asset);
+      }
+      break;
+    }
     default:
       break;
   }
@@ -171,7 +202,7 @@ const applyOperation = (state: LedgerState, event: OperationEvent, position: num
       applyBuy(state, event, position);
       return;
     case "sell":
-      applySell(state, event);
+      applySell(state, event, position);
       return;
     case "transfer":
       applyTransfer(state, event);
@@ -208,6 +239,9 @@ const applyOperation = (state: LedgerState, event: OperationEvent, position: num
       return;
     case "transfer_request_updated":
       applyTransferRequestUpdated(state, event);
+      return;
+    case "corporate_action":
+      applyCorporateAction(state, event, position);
       return;
   }
 };
@@ -311,10 +345,20 @@ export const projectLedger = (
   }
   state.fiscalSettings = resolveFiscalSettings(state.settingsHistory, options.settings);
 
+  // Pass A': bucket theses, in file order, against the complete catalogue.
+  for (const entry of active.filter(isThesis)) {
+    guarded(entry.event, () =>
+      entry.event.type === "thesis_opened"
+        ? applyThesisOpened(state, entry.event, entry.position)
+        : applyThesisClosed(state, entry.event, entry.position),
+    );
+  }
+
   // Pass B: operations and tracking, in chronological order.
   for (const entry of orderForProjection(state, active.filter(isOperation))) {
     guarded(entry.event, () => applyOperation(state, entry.event, entry.position));
   }
+  thesisWarnings(state);
   return state;
 };
 

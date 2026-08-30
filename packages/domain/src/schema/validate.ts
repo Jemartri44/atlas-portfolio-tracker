@@ -8,6 +8,7 @@ import { isRecord, type UnknownRecord } from "../guards.js";
 import { isUlid } from "../ids/ulid.js";
 import { Decimal, isDecimalString } from "../money/decimal.js";
 import { isCurrency } from "../money/money.js";
+import { isRatioString } from "../money/ratio.js";
 import { validateSettings } from "../settings/settings.js";
 import {
   CURRENT_SCHEMA_VERSION,
@@ -19,6 +20,9 @@ import {
   ASSET_CLASSES,
   ASSET_TYPES,
   BOOKS,
+  CORPORATE_ACTION_KINDS,
+  EFFECT_OPS,
+  type EffectOp,
   type LedgerEvent,
   ORDER_SIDES,
   ORDER_STAGES,
@@ -34,7 +38,13 @@ type RuleKind =
   | "currency"
   | "country"
   | "ulid"
-  | "enum";
+  | "enum"
+  | "array"
+  | "non_empty_array"
+  | "positive_integer"
+  | "ratio"
+  | "unit_interval"
+  | "all_or_positive_decimal";
 
 interface Rule {
   kind: RuleKind;
@@ -101,6 +111,48 @@ const CASH_MOVEMENT: Rules = {
   fingerprint: req("string"),
 };
 
+const EFFECT_COMMON: Rules = { op: oneOf(EFFECT_OPS), asset_id: opt("string") };
+
+const PRICED: Rules = {
+  currency: req("currency"),
+  fx_rate: req("positive_decimal"),
+  fx_rate_date: req("date"),
+};
+
+/** Shape of each primitive (data-schema.md §6.5). `per_account` entries have their own rules. */
+const EFFECT_RULES: Record<EffectOp, Rules> = {
+  scale: { ...EFFECT_COMMON, ratio: req("ratio") },
+  convert: { ...EFFECT_COMMON, to_asset_id: req("string"), ratio: req("ratio") },
+  carve_out: {
+    ...EFFECT_COMMON,
+    to_asset_id: req("string"),
+    ratio: req("ratio"),
+    cost_share: req("unit_interval"),
+  },
+  forced_sale: {
+    ...EFFECT_COMMON,
+    per_account: req("non_empty_array"),
+    unit_price: req("decimal"),
+    ...PRICED,
+  },
+  grant: {
+    ...EFFECT_COMMON,
+    per_account: req("non_empty_array"),
+    unit_cost: req("decimal"),
+    ...PRICED,
+    acquisition_date: req("date"),
+  },
+};
+
+const PER_ACCOUNT_RULES: Partial<Record<EffectOp, Rules>> = {
+  forced_sale: {
+    account_id: req("string"),
+    quantity: req("all_or_positive_decimal"),
+    fee: opt("decimal"),
+  },
+  grant: { account_id: req("string"), quantity: req("positive_decimal") },
+};
+
 const RULES: Record<SupportedEventType, Rules> = {
   account_created: ACCOUNT,
   account_updated: ACCOUNT,
@@ -108,7 +160,12 @@ const RULES: Record<SupportedEventType, Rules> = {
   asset_updated: ASSET,
   settings_changed: {},
   buy: { ...OPERATION, order_id: opt("ulid"), thesis_id: opt("string") },
-  sell: { ...OPERATION, order_id: opt("ulid"), withholding: opt("decimal") },
+  sell: {
+    ...OPERATION,
+    order_id: opt("ulid"),
+    withholding: opt("decimal"),
+    thesis_id: opt("string"),
+  },
   transfer: {
     request_id: opt("ulid"),
     from_account_id: req("string"),
@@ -222,6 +279,25 @@ const RULES: Record<SupportedEventType, Rules> = {
     quantity_out: opt("positive_decimal"),
     notes: opt("string"),
   },
+  corporate_action: {
+    kind: oneOf(CORPORATE_ACTION_KINDS),
+    asset_id: req("string"),
+    effective_date: req("date"),
+    source_document: req("string"),
+    effects: req("array"),
+    notes: opt("string"),
+    fingerprint: req("string"),
+  },
+  thesis_opened: {
+    thesis_id: req("string"),
+    account_id: req("string"),
+    asset_id: req("string"),
+    hypothesis: req("string"),
+    expected_horizon_days: req("positive_integer"),
+    invalidation: req("string"),
+    planned_size_eur: req("positive_decimal"),
+  },
+  thesis_closed: { thesis_id: req("string"), closing_notes: req("string") },
   reversal: { reverses_id: req("ulid"), reason: req("string") },
 };
 
@@ -246,6 +322,12 @@ const CHECKS: Record<RuleKind, (value: unknown, rule: Rule) => boolean> = {
   ulid: (value) => isUlid(value),
   enum: (value, rule) =>
     typeof value === "string" && (rule.values as readonly string[]).includes(value),
+  array: (value) => Array.isArray(value),
+  non_empty_array: (value) => Array.isArray(value) && value.length > 0,
+  positive_integer: (value) => typeof value === "number" && Number.isInteger(value) && value > 0,
+  ratio: (value) => isRatioString(value),
+  unit_interval: (value) => isNonNegativeDecimal(value) && !Decimal.parse(value).gt(Decimal.ONE),
+  all_or_positive_decimal: (value) => value === "all" || isPositiveDecimal(value),
 };
 
 const invalid = (
@@ -254,26 +336,55 @@ const invalid = (
   details: Record<string, unknown>,
 ): ValidationError => new ValidationError(code, message, details);
 
-const checkFields = (raw: UnknownRecord, rules: Rules): void => {
-  for (const [field, rule] of Object.entries(rules)) {
-    const value = raw[field];
+/** Checks `record` against `rules`; `path` qualifies nested fields (`effects[0].ratio`) in messages and details. */
+const checkFields = (record: UnknownRecord, rules: Rules, type: unknown, path = ""): void => {
+  for (const [name, rule] of Object.entries(rules)) {
+    const field = `${path}${name}`;
+    const value = record[name];
     if (value === undefined) {
       if (rule.optional === true) {
         continue;
       }
-      throw invalid("missing_field", `${raw.type}: ${field} is required`, {
-        type: raw.type,
-        field,
-      });
+      throw invalid("missing_field", `${type}: ${field} is required`, { type, field });
     }
     if (!CHECKS[rule.kind](value, rule)) {
-      throw invalid("invalid_field", `${raw.type}: ${field} is not a valid ${rule.kind}`, {
-        type: raw.type,
+      throw invalid("invalid_field", `${type}: ${field} is not a valid ${rule.kind}`, {
+        type,
         field,
         value,
       });
     }
   }
+};
+
+const requireRecord = (value: unknown, type: unknown, field: string): UnknownRecord => {
+  if (!isRecord(value)) {
+    throw invalid("invalid_field", `${type}: ${field} must be an object`, { type, field, value });
+  }
+  return value;
+};
+
+/** Validates `effects[]` of a corporate action: op, per-op fields and `per_account[]` entries. */
+const checkEffects = (raw: UnknownRecord): void => {
+  (raw.effects as unknown[]).forEach((candidate, index) => {
+    const path = `effects[${index}].`;
+    const effect = requireRecord(candidate, raw.type, `effects[${index}]`);
+    checkFields(effect, EFFECT_COMMON, raw.type, path);
+    const op = effect.op as EffectOp;
+    checkFields(effect, EFFECT_RULES[op], raw.type, path);
+    const entryRules = PER_ACCOUNT_RULES[op];
+    if (entryRules !== undefined) {
+      (effect.per_account as unknown[]).forEach((entry, position) => {
+        const entryPath = `${path}per_account[${position}]`;
+        checkFields(
+          requireRecord(entry, raw.type, entryPath),
+          entryRules,
+          raw.type,
+          `${entryPath}.`,
+        );
+      });
+    }
+  });
 };
 
 const exactlyOne = (raw: UnknownRecord, first: string, second: string): void => {
@@ -308,6 +419,7 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
   order_placed: (raw) => exactlyOne(raw, "amount", "quantity"),
   transfer_requested: (raw) => exactlyOne(raw, "quantity_out", "amount_eur"),
   transfer: (raw) => checkTransfer(raw),
+  corporate_action: (raw) => checkEffects(raw),
 };
 
 function checkBasis(raw: UnknownRecord): void {
@@ -417,7 +529,7 @@ export const validateShape = (raw: unknown): LedgerEvent => {
   if (!isSupportedEventType(type)) {
     throw invalid("unknown_event_type", `unknown event type ${String(type)}`, { value: type });
   }
-  checkFields(raw, RULES[type]);
+  checkFields(raw, RULES[type], type);
   CONSISTENCY[type]?.(raw);
   return raw as unknown as LedgerEvent;
 };

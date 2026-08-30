@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DomainError,
-  ProjectionError,
-  UnsupportedEventError,
-  ValidationError,
-} from "../../src/errors.js";
+import { DomainError, ProjectionError, ValidationError } from "../../src/errors.js";
 import { Quantity } from "../../src/money/quantity.js";
 import { cashBalances } from "../../src/projections/cash.js";
 import { applyAccountCreated, applyAssetCreated } from "../../src/projections/catalogue.js";
@@ -251,25 +246,17 @@ describe("projectLedger: rectification", () => {
     expect(failure(c.build()).code).toBe("dangling_correction");
   });
 
-  it("rejects duplicate ids even when collecting errors and reserved types always", () => {
+  it("rejects duplicate ids even when collecting errors", () => {
     const b = new LedgerBuilder();
     catalogue(b);
     const deposit = b.deposit({ account_id: "acc_fund" });
     b.raw({ ...deposit });
     expect(() => projectLedger(b.build(), { collectErrors: true })).toThrow(ProjectionError);
-
-    const c = new LedgerBuilder();
-    catalogue(c);
-    c.raw({ ...c.nextEnvelope("thesis_opened"), thesis_id: "t1" } as LedgerEvent);
-    expect(() => projectLedger(c.build())).toThrow(UnsupportedEventError);
-    const collected = projectLedger(c.build(), { collectErrors: true });
-    expect(collected.invalid[0]?.error.code).toBe("unsupported_event");
-    expect(integrity(collected)[0]?.code).toBe("unsupported_event");
   });
 });
 
 describe("projectLedger: books and catalogue references", () => {
-  it("rejects buys in the bucket until theses exist, cross-book operations and unknown ids", () => {
+  it("rejects buys in the bucket without a thesis, cross-book operations and unknown ids", () => {
     const b = new LedgerBuilder();
     catalogue(b);
     b.buy({ account_id: "acc_bucket", asset_id: "ast_spec", currency: "USD" });
@@ -786,7 +773,7 @@ describe("integrity on corrupted states", () => {
     applyAssetCreated(state, b.asset("ast_world"));
     adjustPosition(state, "acc_fund", "ast_world", Quantity.parse("5"), "x");
     expect(() =>
-      applySell(state, b.sell({ account_id: "acc_fund", asset_id: "ast_world" })),
+      applySell(state, b.sell({ account_id: "acc_fund", asset_id: "ast_world" }), 0),
     ).toThrow(expect.objectContaining({ code: "insufficient_lots" }));
   });
 });

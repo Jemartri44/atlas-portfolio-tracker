@@ -114,6 +114,7 @@ export interface SellEvent extends Envelope, OperationFields {
   type: "sell";
   order_id?: Ulid;
   withholding?: DecimalString;
+  thesis_id?: string;
 }
 
 export interface TransferEvent extends Envelope {
@@ -267,6 +268,120 @@ export interface TransferRequestUpdatedEvent extends Envelope {
   notes?: string;
 }
 
+// --- Corporate actions (data-schema.md §6.2, §6.5, §8.5; ADR-0011) ----------
+
+export const CORPORATE_ACTION_KINDS = [
+  "split",
+  "reverse_split",
+  "stock_dividend",
+  "merger",
+  "spin_off",
+  "fund_merger",
+  "share_class_change",
+  "fund_liquidation",
+  "issuer_liquidation",
+  "delisting",
+  "crypto_fork",
+  "token_migration",
+  "issuer_restructuring",
+] as const;
+export type CorporateActionKind = (typeof CORPORATE_ACTION_KINDS)[number];
+
+export const EFFECT_OPS = ["scale", "convert", "carve_out", "forced_sale", "grant"] as const;
+export type EffectOp = (typeof EFFECT_OPS)[number];
+
+/** A decimal string (`"4"`, `"0.25"`) or a fraction of positive integers `"new/old"` (`"4/3"`). */
+export type RatioString = string;
+
+interface EffectBase {
+  /** Asset the effect acts on; defaults to the event's `asset_id`. */
+  asset_id?: AssetId;
+}
+
+export interface ScaleEffect extends EffectBase {
+  op: "scale";
+  ratio: RatioString;
+}
+
+export interface ConvertEffect extends EffectBase {
+  op: "convert";
+  to_asset_id: AssetId;
+  ratio: RatioString;
+}
+
+export interface CarveOutEffect extends EffectBase {
+  op: "carve_out";
+  to_asset_id: AssetId;
+  ratio: RatioString;
+  /** Share of each origin lot's cost that moves to the new asset, in [0, 1]. */
+  cost_share: DecimalString;
+}
+
+export interface ForcedSaleEntry {
+  account_id: AccountId;
+  /** Quantity sold in that account, or `"all"` for its whole physical position. */
+  quantity: DecimalString | "all";
+  fee?: DecimalString;
+}
+
+export interface ForcedSaleEffect extends EffectBase {
+  op: "forced_sale";
+  per_account: ForcedSaleEntry[];
+  unit_price: DecimalString;
+  currency: Currency;
+  fx_rate: DecimalString;
+  fx_rate_date: CivilDate;
+}
+
+export interface GrantEntry {
+  account_id: AccountId;
+  quantity: DecimalString;
+}
+
+export interface GrantEffect extends EffectBase {
+  op: "grant";
+  per_account: GrantEntry[];
+  unit_cost: DecimalString;
+  currency: Currency;
+  fx_rate: DecimalString;
+  fx_rate_date: CivilDate;
+  acquisition_date: CivilDate;
+}
+
+export type Effect = ScaleEffect | ConvertEffect | CarveOutEffect | ForcedSaleEffect | GrantEffect;
+
+export interface CorporateActionEvent extends Envelope {
+  type: "corporate_action";
+  kind: CorporateActionKind;
+  asset_id: AssetId;
+  effective_date: CivilDate;
+  /** Key under `documents/` or the issuer's URL. Never empty. */
+  source_document: string;
+  effects: Effect[];
+  notes?: string;
+  fingerprint: string;
+}
+
+// --- Bucket theses (data-schema.md §6.4) ------------------------------------
+
+export interface ThesisOpenedEvent extends Envelope {
+  type: "thesis_opened";
+  thesis_id: string;
+  account_id: AccountId;
+  asset_id: AssetId;
+  hypothesis: string;
+  /** Plain JSON integer: it is a duration, not an amount. */
+  expected_horizon_days: number;
+  invalidation: string;
+  planned_size_eur: DecimalString;
+}
+
+export interface ThesisClosedEvent extends Envelope {
+  type: "thesis_closed";
+  thesis_id: string;
+  closing_notes: string;
+}
+
 // --- Rectification --------------------------------------------------------
 
 export interface ReversalEvent extends Envelope {
@@ -299,6 +414,9 @@ export type SupportedEvent =
   | OrderUpdatedEvent
   | TransferRequestedEvent
   | TransferRequestUpdatedEvent
+  | CorporateActionEvent
+  | ThesisOpenedEvent
+  | ThesisClosedEvent
   | ReversalEvent;
 
 export type LedgerEvent = SupportedEvent | ReservedEvent;

@@ -223,7 +223,7 @@ const SETTINGS_DECIMALS = [
 ];
 const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days"];
 
-const parseAssignments = (raw: string, flag: string): Record<string, string> => {
+export const parseAssignments = (raw: string, flag: string): Record<string, string> => {
   const result: Record<string, string> = {};
   for (const pair of raw.split(",")) {
     const [key, value] = pair.split("=");

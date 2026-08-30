@@ -1,11 +1,22 @@
 // Draft construction from flags and the preview → confirm → record flow.
 
 import {
+  completeDraft,
+  createUlidGenerator,
   type Draft,
+  type FiscalLot,
+  fiscalLots,
   type LedgerEvent,
+  type LedgerState,
+  loadAndProject,
+  type PhysicalPosition,
+  physicalPositions,
+  projectLedger,
+  type RealizedGain,
   type RecordResult,
   recordEvent,
   type SupportedEvent,
+  type Warning,
 } from "@atlas/domain";
 import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
 import {
@@ -28,6 +39,7 @@ const FLAG_ALIASES: Record<string, string> = {
   request: "request_id",
   "reference-etf": "reference_etf_id",
   type: "asset_type",
+  thesis: "thesis_id",
 };
 
 export const fieldOf = (flag: string): string => FLAG_ALIASES[flag] ?? flag.replaceAll("-", "_");
@@ -103,4 +115,67 @@ export const draftOf = (event: LedgerEvent): Record<string, unknown> => {
 
 export const render = (ctx: Context, data: unknown, text: string): void => {
   ctx.io.out(ctx.json ? JSON.stringify(data, null, 2) : text);
+};
+
+export interface Snapshot {
+  positions: PhysicalPosition[];
+  lots: FiscalLot[];
+}
+
+export interface CandidatePreview {
+  candidate: SupportedEvent;
+  before: Snapshot;
+  after: Snapshot;
+  /** Gains the candidate itself books. */
+  gains: RealizedGain[];
+  warnings: Warning[];
+  events: readonly LedgerEvent[];
+  state: LedgerState;
+}
+
+const snapshotOf = (state: LedgerState, assets: readonly string[]): Snapshot => ({
+  positions: physicalPositions(state).filter((p) => assets.includes(p.asset_id)),
+  lots: fiscalLots(state).filter((lot) => assets.includes(lot.asset_id)),
+});
+
+/**
+ * Projects the ledger with the draft completed as a provisional event — the same
+ * code path as recordEvent — and returns what changes for the given assets.
+ * Throws the domain error the record would throw.
+ */
+export const previewCandidate = async (
+  ctx: Context,
+  draft: Record<string, unknown>,
+  assets: readonly string[],
+): Promise<CandidatePreview> => {
+  const { events, state } = await loadAndProject(ctx.deps);
+  const candidate = completeDraft(
+    ctx.deps,
+    draft as unknown as Draft,
+    createUlidGenerator(ctx.deps).next(),
+  );
+  const after = projectLedger([...events, candidate]);
+  return {
+    candidate,
+    before: snapshotOf(state, assets),
+    after: snapshotOf(after, assets),
+    gains: after.gains.filter((gain) => gain.event_id === candidate.id),
+    warnings: after.warnings.filter((warning) => warning.event_id === candidate.id),
+    events,
+    state,
+  };
+};
+
+/** Type of the event that created a lot or booked a gain; corporate actions add their kind. */
+export const originOf = (
+  events: readonly LedgerEvent[],
+  state: LedgerState,
+  sourceEventId: string,
+): string => {
+  const position = state.positionOf.get(sourceEventId);
+  const event = position === undefined ? undefined : events[position];
+  if (event === undefined) {
+    return "";
+  }
+  return event.type === "corporate_action" ? `corporate_action:${event.kind}` : event.type;
 };
