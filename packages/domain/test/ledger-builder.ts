@@ -52,7 +52,12 @@ type Fields<E extends SupportedEvent> = Omit<E, keyof Envelope | "fingerprint"> 
 
 export class LedgerBuilder {
   private readonly events: LedgerEvent[] = [];
-  private sequence = 0;
+  private sequence: number;
+
+  /** `start` offsets the id sequence so two builders can extend the same ledger without colliding. */
+  constructor(start = 0) {
+    this.sequence = start;
+  }
 
   private envelope(type: LedgerEvent["type"]): Envelope {
     const sequence = this.sequence;
