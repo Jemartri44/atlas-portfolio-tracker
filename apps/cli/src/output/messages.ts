@@ -50,6 +50,8 @@ export const describeError = (error: DomainError): string => {
       return `La solicitud de traspaso ${text(d.request_id)} ya está cerrada (${text(d.stage)}).`;
     case "request_mismatch":
       return `La solicitud de traspaso ${text(d.request_id)} se refiere a otras cuentas o activos.`;
+    case "dependent_events":
+      return `El evento ${text(d.target_id)} ha sido consumido por eventos posteriores; rectifícalos antes.`;
     case "unsupported_event":
       return `El tipo de evento ${text(d.type)} todavía no está soportado (feature 002).`;
     case "schema_too_new":

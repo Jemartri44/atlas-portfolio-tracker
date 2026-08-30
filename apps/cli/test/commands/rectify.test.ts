@@ -31,6 +31,7 @@ describe("atlas edit / delete", () => {
     h.reset();
     expect(await h.exec(["delete", buyId, "--reason", "x", "--yes"])).toBe(1);
     expect(h.text()).toContain("dejarían de ser válidos");
+    expect(h.text()).toContain("consumido por eventos posteriores");
     expect(h.text()).toContain(sellId);
     h.reset();
     expect(await h.exec(["delete", sellId, "--reason", "x", "--yes"])).toBe(0);
