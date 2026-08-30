@@ -1,5 +1,6 @@
 // Random valid ledgers for property tests: dates strictly increasing in file
-// order, sells and transfers capped to the running position.
+// order, sells and transfers capped to the running position. The bucket takes
+// part through one thesis opened up front and buys/sells linked to it.
 
 import fc from "fast-check";
 import { Decimal } from "../../src/money/decimal.js";
@@ -9,9 +10,10 @@ import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
 export const ACCOUNTS = ["acc_fund", "acc_etf"] as const;
 export const ASSETS = ["ast_world", "ast_bonds"] as const;
+export const BUCKET = { account: "acc_bucket", asset: "ast_spec", thesis: "th_prop" } as const;
 
 export interface Op {
-  kind: "buy" | "sell" | "transfer" | "custody";
+  kind: "buy" | "sell" | "transfer" | "custody" | "bucket_buy" | "bucket_sell";
   account: (typeof ACCOUNTS)[number];
   asset: (typeof ASSETS)[number];
   quantity: string;
@@ -20,7 +22,7 @@ export interface Op {
 }
 
 export const opArb: fc.Arbitrary<Op> = fc.record({
-  kind: fc.constantFrom("buy", "buy", "sell", "transfer", "custody"),
+  kind: fc.constantFrom("buy", "buy", "sell", "transfer", "custody", "bucket_buy", "bucket_sell"),
   account: fc.constantFrom(...ACCOUNTS),
   asset: fc.constantFrom(...ASSETS),
   quantity: fc
@@ -41,6 +43,7 @@ const dateAt = (index: number): string => {
 export const ledgerOf = (ops: Op[]): { events: LedgerEvent[]; sells: number } => {
   const b = new LedgerBuilder();
   catalogue(b);
+  b.thesisOpened({ thesis_id: BUCKET.thesis, account_id: BUCKET.account, asset_id: BUCKET.asset });
   const held = new Map<string, Quantity>();
   const key = (account: string, asset: string): string => `${account}|${asset}`;
   const get = (account: string, asset: string): Quantity =>
@@ -52,6 +55,31 @@ export const ledgerOf = (ops: Op[]): { events: LedgerEvent[]; sells: number } =>
   ops.forEach((op, index) => {
     const date = dateAt(index);
     const requested = Quantity.parse(op.quantity);
+    if (op.kind === "bucket_buy" || op.kind === "bucket_sell") {
+      const bucket = {
+        account_id: BUCKET.account,
+        asset_id: BUCKET.asset,
+        value_date: date,
+        unit_price: op.price,
+        currency: "USD",
+        fx_rate: "1.1",
+        thesis_id: BUCKET.thesis,
+      };
+      if (op.kind === "bucket_buy") {
+        b.buy({ ...bucket, quantity: op.quantity });
+        add(BUCKET.account, BUCKET.asset, requested);
+        return;
+      }
+      const held = get(BUCKET.account, BUCKET.asset);
+      if (held.isZero()) {
+        return;
+      }
+      const sold = requested.gt(held) ? held : requested;
+      b.sell({ ...bucket, quantity: sold.toString() });
+      add(BUCKET.account, BUCKET.asset, Quantity.of(sold.value.neg()));
+      sells += 1;
+      return;
+    }
     if (op.kind === "buy") {
       b.buy({
         account_id: op.account,
@@ -103,5 +131,8 @@ export const ledgerOf = (ops: Op[]): { events: LedgerEvent[]; sells: number } =>
   return { events: b.build(), sells };
 };
 
+/** Events of pass A that the order-independence property keeps at the head of the file. */
 export const isCatalogue = (event: LedgerEvent): boolean =>
-  event.type === "account_created" || event.type === "asset_created";
+  event.type === "account_created" ||
+  event.type === "asset_created" ||
+  event.type === "thesis_opened";
