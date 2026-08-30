@@ -13,7 +13,6 @@ import type {
   AccountUpdatedEvent,
   AssetCreatedEvent,
   AssetUpdatedEvent,
-  CorporateActionEvent,
   LedgerEvent,
   ReversalEvent,
   SettingsChangedEvent,
@@ -29,6 +28,7 @@ import {
   applyAssetCreated,
   applyAssetUpdated,
 } from "./catalogue.js";
+import { applyCorporateAction, referencesOf } from "./corporate-actions.js";
 import {
   applyBuy,
   applyCashDeposit,
@@ -65,14 +65,14 @@ export type CatalogueEvent =
   | SettingsChangedEvent;
 
 /** Types of feature 002 not yet projected; each task removes its own. */
-const PENDING_TYPES = new Set<string>(["corporate_action", "thesis_opened", "thesis_closed"]);
+const PENDING_TYPES = new Set<string>(["thesis_opened", "thesis_closed"]);
 
 const isPending = (type: string): boolean => isReservedEventType(type) || PENDING_TYPES.has(type);
 
 /** Events with a business date: everything except catalogue, settings, theses and reversals. */
 export type OperationEvent = Exclude<
   SupportedEvent,
-  CatalogueEvent | ReversalEvent | CorporateActionEvent | ThesisOpenedEvent | ThesisClosedEvent
+  CatalogueEvent | ReversalEvent | ThesisOpenedEvent | ThesisClosedEvent
 >;
 
 interface Positioned<E extends SupportedEvent = SupportedEvent> {
@@ -134,6 +134,8 @@ export const businessDateOf = (state: LedgerState, event: OperationEvent): Civil
     case "order_placed":
     case "transfer_requested":
       return event.requested_date;
+    case "corporate_action":
+      return event.effective_date;
   }
 };
 
@@ -171,6 +173,16 @@ const recordUsage = (state: LedgerState, event: SupportedEvent): void => {
       assets.add(event.from_asset_id);
       assets.add(event.to_asset_id);
       break;
+    case "corporate_action": {
+      const references = referencesOf(event);
+      for (const account of references.accounts) {
+        accounts.add(account);
+      }
+      for (const asset of references.assets) {
+        assets.add(asset);
+      }
+      break;
+    }
     default:
       break;
   }
@@ -219,6 +231,9 @@ const applyOperation = (state: LedgerState, event: OperationEvent, position: num
       return;
     case "transfer_request_updated":
       applyTransferRequestUpdated(state, event);
+      return;
+    case "corporate_action":
+      applyCorporateAction(state, event, position);
       return;
   }
 };
