@@ -130,7 +130,7 @@
 - [X] T055 [P] Escribir `README.md` (reemplaza el actual): qué es, estado, arranque (`nvm use`, `npm ci`, `npm test`, `npm run build`), ejemplo de uso de la CLI con datos inventados (extracto de `quickstart.md`), enlace a `docs/` — commit `docs: add local setup and CLI walkthrough to README`
 - [X] T056 [P] Actualizar `specs/001-ledger-core/questions.md` con cualquier duda nueva surgida al implementar y `checklists/requirements.md` con el estado final
 - [X] T057 Ejecutar `quickstart.md` completo a mano sobre `demo.jsonl` (no comprometer el fichero) y anotar desviaciones en `questions.md`
-- [ ] T058 Abrir la PR `feature/001-ledger-core` → `develop` con `.github/pull_request_template.md`, checklist rellena con honestidad, descripción en inglés, sin mención a herramientas de IA; esperar CI en verde. **No fusionar.**
+- [X] T058 Abrir la PR `feature/001-ledger-core` → `develop` con `.github/pull_request_template.md`, checklist rellena con honestidad, descripción en inglés, sin mención a herramientas de IA; esperar CI en verde. **No fusionar.** — PR #10 abierta el 2026-08-30
 
 ## Dependencias
 
