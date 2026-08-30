@@ -205,7 +205,7 @@ export const applySell = (state: LedgerState, event: SellEvent): void => {
   warnFxDate(state, event, fiscalDate);
 };
 
-export const applyTransfer = (state: LedgerState, event: TransferEvent, position: number): void => {
+export const applyTransfer = (state: LedgerState, event: TransferEvent): void => {
   const fromAccount = requireAccount(state, event.from_account_id, event.id);
   const fromAsset = requireAsset(state, event.from_asset_id, event.id);
   const toAccount = requireAccount(state, event.to_account_id, event.id);
@@ -262,7 +262,8 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent, position
       quantity,
       cost_eur: slice.cost_eur,
       source_event_id: event.id,
-      position,
+      // FIFO tie-break on equal dates keeps the position of the origin event of the consumed lot (data-schema.md §8.1).
+      position: slice.position,
       source_lot_id: slice.lot_id,
     });
   });

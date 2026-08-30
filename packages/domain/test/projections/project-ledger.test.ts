@@ -482,6 +482,53 @@ describe("projectLedger: transfers", () => {
     expect(integrity(state)).toEqual([]);
   });
 
+  it("keeps the origin position on transferred lots for same-date FIFO ties", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const inA = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-01-10",
+      quantity: "4",
+      unit_price: "100",
+    });
+    const direct = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      value_date: "2027-01-10",
+      quantity: "4",
+      unit_price: "50",
+    });
+    const transfer = b.transfer({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      quantity_out: "4",
+      nav_out: "100",
+      value_date_out: "2027-02-01",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_bonds",
+      quantity_in: "4",
+      nav_in: "100",
+      value_date_in: "2027-02-03",
+    });
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      value_date: "2027-03-01",
+      quantity: "4",
+      unit_price: "60",
+    });
+    const state = projectLedger(b.build());
+    const [gain] = realizedGains(state, 2027);
+    expect(gain?.by_lot.map((lot) => lot.lot_id)).toEqual([`${transfer.id}#0`]);
+    expect(gain?.cost_eur.amount.toString()).toBe("400");
+    const lots = fiscalLots(state, "ast_bonds");
+    expect(lots.find((lot) => lot.source_event_id === transfer.id)?.position).toBe(
+      state.positionOf.get(inA.id),
+    );
+    expect(lots.find((lot) => lot.source_event_id === direct.id)?.closed).toBe(false);
+  });
+
   it("moves custody without touching lots and warns about the split holding", () => {
     const b = new LedgerBuilder();
     catalogue(b);
