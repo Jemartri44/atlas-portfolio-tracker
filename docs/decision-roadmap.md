@@ -96,7 +96,7 @@ Decisiones:
 Ninguna bloquea la Fase 1: el dominio y la CLI no dependen de nada externo. Sus resultados alimentan las rondas 6 y 7 y los tests de contrato. Los ficheros privados (extractos reales, capturas) se dejan **fuera del repo**, en `~/atlas-private/` (ver `CLAUDE.md` → Private inputs).
 
 **Cuanto antes**
-1. **Extracto de MyInvestor**: exportar movimientos de fondos (CSV/Excel/PDF) a `~/atlas-private/statements/myinvestor/`. Sirve para ver campos y cómo aparecen los traspasos; la fixture del repo se fabrica después con valores falsos y el mismo formato.
+1. **Extracto de MyInvestor**: recibidos el 2026-08-30 el xlsx de movimientos de efectivo y el PDF de posición (formato documentado en `docs/statements/myinvestor.md`). Falta la exportación de **operaciones de fondos**, que solo existirá tras la primera suscripción.
 
 **Cuando la cuenta de IBKR esté abierta**
 2. **Flex Query**: Activity Flex Query en XML con *Trades*, *Cash Transactions*, *Corporate Actions*, *Transfers*, *Open Positions*; activar Flex Web Service y generar el token de solo lectura. Descargar una vez por API y dejar el XML en `~/atlas-private/statements/ibkr/`.
