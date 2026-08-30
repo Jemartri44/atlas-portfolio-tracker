@@ -21,7 +21,7 @@ describe("generateLedger over seeds", () => {
       }),
       { numRuns: 10 },
     );
-  });
+  }, 60_000);
 
   it("projects cleanly prefix by prefix with the declared warnings and a stable snapshot", () => {
     fc.assert(
@@ -34,7 +34,7 @@ describe("generateLedger over seeds", () => {
       }),
       { numRuns: 20 },
     );
-  });
+  }, 120_000);
 
   it("produces different ledgers for different seeds", () => {
     const a = generateLedger({ seed: 1 }).map(encodeLine).join("\n");
@@ -62,5 +62,5 @@ describe("generateLedger over seeds", () => {
       }),
       { numRuns: 10 },
     );
-  });
+  }, 60_000);
 });

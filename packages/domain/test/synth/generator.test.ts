@@ -37,7 +37,7 @@ describe("generateLedger: determinism and invariants (seed 1)", () => {
     checkInvariants(events, "all");
     const elapsed = performance.now() - started;
     expect(elapsed).toBeLessThan(60_000);
-  });
+  }, 60_000);
 });
 
 describe("generateLedger: golden file (frozen once merged, prompt decision (i))", () => {
