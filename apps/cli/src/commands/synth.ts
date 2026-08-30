@@ -5,6 +5,8 @@ import { access } from "node:fs/promises";
 import { FileLedgerStore } from "@atlas/adapters";
 import {
   DomainError,
+  deepCheck,
+  encodeLine,
   generateLedger,
   integrity,
   type LedgerSummary,
@@ -51,7 +53,10 @@ export const synthCommand = async (
   }
   const events = generateLedger({ seed });
   const state = projectLedger(events, { collectErrors: true });
-  const errors = integrity(state).filter((finding) => finding.severity === "error");
+  const lines = events.map(encodeLine);
+  const errors = [...integrity(state), ...deepCheck(lines, events, state)].filter(
+    (finding) => finding.severity === "error",
+  );
   if (state.invalid.length > 0 || errors.length > 0) {
     throw new DomainError("synthetic_invalid", "the generated ledger does not verify", {
       invalid: state.invalid.map((entry) => entry.error.code),

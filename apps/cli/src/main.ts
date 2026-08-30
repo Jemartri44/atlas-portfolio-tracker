@@ -66,7 +66,7 @@ comandos:
   ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|delisting|raw
   thesis open|close|list [--closed]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
-  positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check
+  positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   compact [--yes]`;
 
