@@ -19,11 +19,39 @@ Si encuentras una contradicción o una ambigüedad que te impida seguir, **no la
 
 ## 2. Flujo de trabajo
 
-1. Rama `feature/001-ledger-core` desde `develop`. Ejecuta `git config core.hooksPath .githooks`.
+1. Trabaja en un **worktree separado** para no interferir con la sesión del asistente de dirección, que usa el clon principal:
+   ```bash
+   cd ~/projects/atlas-portfolio-tracker && git fetch origin && git worktree add ../atlas-portfolio-tracker-001 -b feature/001-ledger-core origin/develop
+   cd ../atlas-portfolio-tracker-001 && git config core.hooksPath .githooks && nvm use
+   ```
+   A partir de aquí todo ocurre en `~/projects/atlas-portfolio-tracker-001`.
 2. Spec Kit: `/speckit-specify` con el alcance de la sección 3 → `/speckit-clarify` si hace falta → `/speckit-plan` → `/speckit-tasks`. Artefactos en `specs/001-ledger-core/` en español con identificadores en inglés. **Enseña `spec.md` y `plan.md` al usuario y espera su visto bueno antes de escribir código.**
 3. Al planificar, dedica un rato a leer cómo Beancount modela lotes y coste (`beancount/core/inventory.py`, `position.py`) y cómo Ghostfolio modela actividades, y anota en `plan.md` cualquier caso que ellos cubran y nuestro esquema no. No copies código.
 4. `/speckit-implement` por tareas, commits atómicos en Conventional Commits en inglés (el hook los valida).
 5. PR a `develop` con la plantilla, checklist rellena con honestidad. No fusiones.
+
+## 2 bis. Reglas de operación (resumen de `CLAUDE.md`; en caso de duda, manda `CLAUDE.md`)
+
+**Git y ramas**
+- Git flow con git básico: `main` (producción), `develop` (integración), `feature/*`, `fix/*`, `release/*`, `hotfix/*`. Tú solo trabajas en `feature/001-ledger-core`. **Nunca** hagas push a `develop` ni a `main` (están protegidas), nunca fusiones, nunca `--force`, nunca reescribas historial.
+- Commits: Conventional Commits en **inglés**, imperativo, **solo la línea de asunto** (≤ 72 caracteres), un cambio conceptual por commit. Prohibido cualquier rastro de IA (`Co-Authored-By`, "generated with", nombres de herramientas) en commits o PR. El hook `commit-msg` lo rechaza; si te rechaza un commit, corrige el mensaje, no el hook.
+- `pre-commit` ejecuta `gitleaks`: si detecta un secreto, no lo saltes; elimina el secreto.
+- Al terminar: PR contra `develop` con la plantilla `.github/pull_request_template.md`, checklist rellena con honestidad (marca solo lo que se cumple). Descripción de la PR en inglés.
+
+**Qué puedes y qué no**
+- Puedes: crear el esqueleto, código, tests, fixtures sintéticas, README de arranque, `specs/001-ledger-core/*`, y anotar dudas en `specs/001-ledger-core/questions.md`.
+- No puedes: cambiar `docs/data-schema.md`, `docs/business-rules.md`, `docs/specification.md`, los ADRs ni la constitución (si crees que hace falta, es una pregunta); añadir dependencias fuera de `docs/dependencies.md`; instalar herramientas globales sin preguntar; crear `apps/api`, `apps/web` ni `infra/`; tocar `.githooks/`, `.claude/settings.json` ni `.github/`. Puedes proponer un ADR con `/adr` en estado `Propuesta`, nunca aceptarlo.
+
+**Idioma**
+- Código, identificadores, comentarios, commits, ramas, ficheros: inglés. Artefactos de Spec Kit (`spec.md`, `plan.md`, `tasks.md`, `questions.md`) y mensajes de la CLI al usuario: español con identificadores en inglés. Conversación con el usuario: español.
+
+**Entorno y herramientas**
+- Node 22 (`.nvmrc`; el usuario ya ha hecho `nvm install 22`), npm workspaces, ESM, TypeScript estricto (ADR-0007). Biome para lint y formato (ADR-0008): `npm run lint` y `npm run format` deben quedar limpios antes de cada commit. `vitest` + `fast-check`; cobertura 100 % de líneas y ramas en `packages/domain`, bloqueante.
+- Arquitectura hexagonal (ADR-0007): `domain` no importa nada; `adapters` importa `domain`; las apps importan ambos. Un test de arquitectura lo verifica.
+- Spec Kit: si eres Claude Code, las skills `/speckit-*` y `/adr` ya están instaladas en `.claude/skills/`. Si eres otro agente, ejecuta primero `uvx --from git+https://github.com/github/spec-kit.git specify integration add <tu-agente>` y lee `AGENTS.md`.
+
+**Cuando algo no encaja**
+- Documentos contradictorios, regla fiscal dudosa, caso no cubierto por el esquema: **no decidas**. Escribe la pregunta en `specs/001-ledger-core/questions.md` con el contexto y las opciones que ves, y avisa al usuario. Continúa con lo que no dependa de la respuesta.
 
 ## 3. Alcance
 
