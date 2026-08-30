@@ -57,3 +57,11 @@ Para un `sell` de 2027 proyectado en 2029, tras un `settings_changed` de 2028 qu
 - ADR-0007 fija Node 24 "si está disponible"; el prompt fija 22. Se usa 22.
 - `transfer` lleva `fee?` pero no `currency`: la comisión se guarda como dato informativo y no toca ni coste ni efectivo (supuesto A5 del spec).
 - El prompt §3.1 pide crear `.github/workflows/ci.yml` y §2 bis prohíbe "tocar `.github/`". Se interpreta: crear `ci.yml` y no modificar nada existente en `.github/` (la plantilla de PR).
+
+## Q4 — Colisión del campo `type` en `asset_created` / `asset_updated` (esquema, detectada al implementar)
+
+**Contexto.** `data-schema.md` §2 reserva `type` en el envoltorio para el tipo de evento, y §6.1 da al activo un campo `type` (`fund | etc | etp | stock | crypto | money_market`). Una línea `{"type":"asset_created", …, "type":"fund"}` no puede existir.
+
+**Opciones.** (a) Renombrar el campo del activo a `asset_type` en la línea (el tipo `Asset` proyectado puede seguir llamándolo `type`); (b) anidar los datos del activo en `asset: {…}`; (c) renombrar el discriminador del envoltorio (rompería §2 y todos los ejemplos).
+
+**Decisión provisional: (a) `asset_type`** en las líneas `asset_created`/`asset_updated` (y en el flag `--type` de la CLI se mantiene el nombre corto). Pendiente de que el usuario lo confirme y actualice `data-schema.md` §6.1.
