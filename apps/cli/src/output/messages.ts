@@ -90,6 +90,19 @@ export const describeError = (error: DomainError): string => {
       return `El libro usa schema_version ${text(d.found)} y esta CLI solo entiende hasta ${text(d.supported)}: actualiza la aplicación.`;
     case "conflict":
       return "El libro ha cambiado desde que se cargó: repite el comando.";
+    case "invalid_events":
+      return `El libro tiene eventos inválidos; rectifícalos antes de compactar:\n${table(
+        ["id", "tipo", "motivo"],
+        (d.affected as { id: string; type: string; error: string }[]).map((e) => [
+          e.id,
+          e.type,
+          e.error,
+        ]),
+      )}`;
+    case "projection_changed":
+      return `La reescritura cambiaría la proyección (${text(d.keys)}): no se ha escrito nada.`;
+    case "archive_exists":
+      return `El archivo ${text(d.archive_name)} ya existe y nunca se sobrescribe.`;
     case "path_exists":
       return `La ruta ${text(d.path)} ya existe: no se sobrescribe nada.`;
     case "synthetic_invalid":

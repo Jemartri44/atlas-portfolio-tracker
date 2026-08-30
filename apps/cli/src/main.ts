@@ -14,6 +14,7 @@ import {
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
+import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
 import { exportCommand } from "./commands/export.js";
 import {
@@ -53,6 +54,7 @@ const COMMANDS: Record<string, Command> = {
   check: checkCommand,
   export: exportCommand,
   synth: synthCommand,
+  compact: compactCommand,
 };
 
 export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--json] <comando> …
@@ -66,7 +68,7 @@ comandos:
   edit <id> --reason …           delete <id> --reason …
   positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check
   export --format jsonl|csv [--out <ruta>]
-  synth --out <ruta> [--seed <n>]`;
+  synth --out <ruta> [--seed <n>]   compact [--yes]`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
