@@ -11,7 +11,9 @@
       "!**/dist",
       "!**/coverage",
       "!packages/domain/vendor/big.js",
-      "!tests/fixtures"
+      "!tests/fixtures",
+      "!.specify",
+      "!.claude"
     ]
   },
   "formatter": {
