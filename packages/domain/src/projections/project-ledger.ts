@@ -80,8 +80,11 @@ const CATALOGUE_TYPES = new Set<string>([
 const isCatalogue = (entry: Positioned): entry is Positioned<CatalogueEvent> =>
   CATALOGUE_TYPES.has(entry.event.type);
 
+export const isOperationEvent = (event: LedgerEvent): event is OperationEvent =>
+  !CATALOGUE_TYPES.has(event.type) && event.type !== "reversal" && !isReservedEventType(event.type);
+
 const isOperation = (entry: Positioned): entry is Positioned<OperationEvent> =>
-  !CATALOGUE_TYPES.has(entry.event.type) && entry.event.type !== "reversal";
+  isOperationEvent(entry.event);
 
 /** Domain errors raised while applying an event become projection errors; anything else is a bug and propagates. */
 export const toProjectionError = (event: LedgerEvent, error: unknown): ProjectionError => {
