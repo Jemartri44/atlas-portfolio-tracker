@@ -21,7 +21,7 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | 5 | Calidad, proceso y tooling del asistente | Fase 1 | Spec §11, `.githooks/`, `.claude/`, `.github/`, `LICENSE` | **Cerrada** 2026-08-30 |
 | — | *Challenge externo de las rondas 1-5* | Fase 1 | ADR-0012, ADR-0013, `docs/fiscal-questions.md` | **Hecho** 2026-08-30: 10 hallazgos aplicados; repetir antes de cada fase |
 | — | *Fase 0 (validación con la realidad, tareas del usuario)* | Rondas 6-7 | — | En curso: MyInvestor e IBKR pendientes; AWS y Yahoo diferidos a antes de la Fase 4 |
-| — | *Fase 1 (libro mayor), feature 001* | Fases 2-5 | `specs/001-ledger-core/`, PR #10 | **Fusionada** 2026-08-30; correcciones de revisión pendientes (`docs/prompts/001-review-fixes.md`); siguen 002 (eventos corporativos y tesis) y 003 (datos sintéticos, `compact`, migraciones) |
+| — | *Fase 1 (libro mayor): features 001 y 002* | Fases 2-5 | `specs/001-ledger-core/`, `specs/002-corporate-actions/`, PRs #10, #12, #15 | **Fusionadas** 2026-08-30. Sigue 003 (datos sintéticos, `compact`, migración de prueba, `integrity` completa); después 004 (MyInvestor) y 005 (IBKR), que dependen de la Fase 0 |
 | 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente |
 | 7 | Aplicación web: framework, offline, auth, API | Fase 2 | ADR-0009+ | Pendiente |
 | 8 | Infraestructura, despliegue y copias de seguridad | Fase 4 | ADR-0010+ | Pendiente |

@@ -1,6 +1,6 @@
 # ADR-0011 — Eventos corporativos como composición de primitivas de lote
 
-**Estado:** Aceptada (2026-08-30). *Consecuencias fiscales: verificar con asesor.*
+**Estado:** Aceptada (2026-08-30). *Consecuencias fiscales: verificar con asesor.* La forma vigente de los parámetros de `forced_sale` y `grant` (`per_account[]` con comisión por cuenta, `fx_rate_date`, `asset_id?` en todo efecto, `ratio` decimal o fracción) es la de `docs/data-schema.md` §6.5, revisada en el *challenge* y en las features 001-002; la tabla siguiente conserva la redacción original.
 
 ## Contexto
 
