@@ -16,7 +16,7 @@ Why vendored and not an npm dependency: ADR-0005 and `docs/dependencies.md`. `@a
 ## How it is wired
 
 - `src/money/decimal.ts` imports `../../vendor/big.js`; TypeScript resolves the types from `big.d.ts`.
-- `vendor/` is outside the TypeScript program; `npm run build` copies it verbatim into `dist/vendor/` so the compiled code finds the same relative path.
+- `vendor/` is outside the TypeScript program (`rootDir: src`, output in `dist/`); the compiled `dist/money/decimal.js` resolves `../../vendor/big.js` to this very directory, so nothing is copied.
 - The architecture test only allows domain imports that resolve inside `src/` or `vendor/`.
 
 ## Update procedure (expected: never)

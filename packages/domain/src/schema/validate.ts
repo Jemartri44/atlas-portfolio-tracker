@@ -54,7 +54,7 @@ const OPERATION: Rules = {
   trade_date: req("date"),
   value_date: req("date"),
   quantity: req("positive_decimal"),
-  unit_price: req("decimal"),
+  unit_price: opt("decimal"),
   amount: opt("decimal"),
   currency: req("currency"),
   fx_rate: req("positive_decimal"),
@@ -290,8 +290,8 @@ const exactlyOne = (raw: UnknownRecord, first: string, second: string): void => 
 };
 
 const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => void>> = {
-  buy: (raw) => checkDates(raw),
-  sell: (raw) => checkDates(raw),
+  buy: (raw) => checkBasis(raw),
+  sell: (raw) => checkBasis(raw),
   asset_created: (raw) => checkAssetClass(raw),
   asset_updated: (raw) => checkAssetClass(raw),
   settings_changed: (raw) => {
@@ -309,6 +309,16 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
   transfer_requested: (raw) => exactlyOne(raw, "quantity_out", "amount_eur"),
   transfer: (raw) => checkTransfer(raw),
 };
+
+function checkBasis(raw: UnknownRecord): void {
+  checkDates(raw);
+  if (raw.amount === undefined && raw.unit_price === undefined) {
+    throw invalid("missing_field", `${raw.type}: unit_price is required when amount is absent`, {
+      type: raw.type,
+      field: "unit_price",
+    });
+  }
+}
 
 function checkDates(raw: UnknownRecord): void {
   if ((raw.value_date as string) < (raw.trade_date as string)) {

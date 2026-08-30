@@ -66,6 +66,13 @@ describe("validateShape: field rules", () => {
 });
 
 describe("validateShape: consistency rules", () => {
+  it("buy/sell: exactly a basis — amount, or unit_price without amount", () => {
+    expect(validateShape(variant(SAMPLES.buy, { unit_price: undefined }))).toBeTruthy();
+    expect(validateShape(variant(SAMPLES.buy, { amount: undefined }))).toBeTruthy();
+    rejects(variant(SAMPLES.buy, { amount: undefined, unit_price: undefined }), "missing_field");
+    rejects(variant(SAMPLES.sell, { unit_price: undefined }), "missing_field");
+  });
+
   it("buy/sell: value_date must not precede trade_date", () => {
     rejects(variant(SAMPLES.sell, { value_date: "2027-01-31" }), "invalid_field");
     expect(validateShape(variant(SAMPLES.sell, { value_date: "2027-02-01" }))).toBeTruthy();

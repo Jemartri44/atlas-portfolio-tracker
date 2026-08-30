@@ -107,7 +107,7 @@ packages/adapters/              # @atlas/adapters — depende de @atlas/domain
 └── test/                       # contrato compartido ledger-store.contract.ts para ambos + tests de fichero
 
 apps/cli/                       # @atlas/cli — depende de ambos, sin deps npm
-├── package.json (bin: atlas → dist/src/main.js), tsconfig.json
+├── package.json (bin: atlas → dist/main.js), tsconfig.json
 ├── src/
 │   ├── main.ts                 # entrada; resuelve --ledger, compone store + clock, despacha
 │   ├── args.ts                 # parser propio: posicionales + --flag valor + booleanos

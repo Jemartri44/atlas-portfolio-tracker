@@ -6,10 +6,10 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "atlas": "dist/src/main.js"
+    "atlas": "dist/main.js"
   },
   "files": [
-    "dist/src"
+    "dist"
   ],
   "dependencies": {
     "@atlas/adapters": "0.1.0",

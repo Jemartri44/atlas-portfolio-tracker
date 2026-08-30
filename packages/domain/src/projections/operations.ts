@@ -44,15 +44,27 @@ const fxOf = (event: Priced): FxRate =>
 
 const money = (amount: string, currency: string): Money => Money.parse(amount, currency);
 
+/** Cost or proceeds basis: `amount` when present, else `quantity × unit_price` (ADR-0012). */
 const basisOf = (event: {
+  id: string;
+  type: string;
   amount?: string;
   quantity: string;
-  unit_price: string;
+  unit_price?: string;
   currency: string;
-}): Money =>
-  event.amount === undefined
-    ? Price.parse(event.unit_price, event.currency).times(Quantity.parse(event.quantity))
-    : money(event.amount, event.currency);
+}): Money => {
+  if (event.amount !== undefined) {
+    return money(event.amount, event.currency);
+  }
+  if (event.unit_price === undefined) {
+    throw new ProjectionError(
+      "missing_basis",
+      event.id,
+      `${event.type} carries neither amount nor unit_price`,
+    );
+  }
+  return Price.parse(event.unit_price, event.currency).times(Quantity.parse(event.quantity));
+};
 
 const negative = (quantity: Quantity): Quantity => Quantity.of(quantity.value.neg());
 
@@ -193,7 +205,7 @@ export const applySell = (state: LedgerState, event: SellEvent): void => {
   warnFxDate(state, event, fiscalDate);
 };
 
-export const applyTransfer = (state: LedgerState, event: TransferEvent, position: number): void => {
+export const applyTransfer = (state: LedgerState, event: TransferEvent): void => {
   const fromAccount = requireAccount(state, event.from_account_id, event.id);
   const fromAsset = requireAsset(state, event.from_asset_id, event.id);
   const toAccount = requireAccount(state, event.to_account_id, event.id);
@@ -250,7 +262,8 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent, position
       quantity,
       cost_eur: slice.cost_eur,
       source_event_id: event.id,
-      position,
+      // FIFO tie-break on equal dates keeps the position of the origin event of the consumed lot (data-schema.md §8.1).
+      position: slice.position,
       source_lot_id: slice.lot_id,
     });
   });

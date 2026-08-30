@@ -42,6 +42,7 @@ plan-financiero.md
 
 # Build and test output
 coverage/
+dist-test/
 *.tsbuildinfo
 
 # Local ledgers and atomic-write temporaries (fixtures live under tests/fixtures/)

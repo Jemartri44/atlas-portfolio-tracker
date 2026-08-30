@@ -174,7 +174,7 @@ const applyOperation = (state: LedgerState, event: OperationEvent, position: num
       applySell(state, event);
       return;
     case "transfer":
-      applyTransfer(state, event, position);
+      applyTransfer(state, event);
       return;
     case "dividend":
       applyDividend(state, event);
