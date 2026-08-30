@@ -47,6 +47,12 @@ const editableFlags = (type: string): readonly string[] => {
       ];
     case "transfer_request_updated":
       return ["stage", "date", "nav-out", "quantity-out", "notes"];
+    case "corporate_action":
+    case "thesis_opened":
+    case "thesis_closed":
+      throw new UsageError(
+        `el tipo ${type} no se edita: usa atlas delete <id> --reason … y regístralo de nuevo`,
+      );
     default:
       throw new UsageError(
         `el tipo ${type} no se edita con atlas edit; usa los comandos de catálogo o delete`,

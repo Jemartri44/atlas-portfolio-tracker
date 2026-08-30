@@ -111,6 +111,67 @@ describe("atlas queries", () => {
     expect(h.text()).toContain("15.19");
   });
 
+  it("lists valuations at a date and shows corporate action origins in lots and gains", async () => {
+    const h = await populated();
+    expect(
+      await h.exec([
+        "add",
+        "valuation",
+        "--account",
+        "acc_etf",
+        "--asset",
+        "ast_gold",
+        "--date",
+        "2026-12-31",
+        "--quantity",
+        "3",
+        "--unit-value",
+        "210",
+        "--currency",
+        "USD",
+        "--fx-rate",
+        "1.09",
+        "--yes",
+      ]),
+    ).toBe(0);
+    h.reset();
+    expect(await h.exec(["valuations", "--date", "2026-12-30"])).toBe(0);
+    expect(h.text()).not.toContain("ast_gold");
+    h.reset();
+    expect(await h.exec(["valuations", "--date", "2027-01-15"])).toBe(0);
+    expect(h.text()).toMatch(
+      /acc_etf\s+ast_gold\s+2026-12-31\s+3\s+210\s+USD\s+1.09\s+577.9816513761/,
+    );
+    h.reset();
+    expect(await h.exec(["valuations", "--json"])).toBe(0);
+    expect(JSON.parse(h.out[0] as string)).toEqual([
+      expect.objectContaining({ asset_id: "ast_gold", value_eur: "577.9816513761" }),
+    ]);
+    expect(
+      await h.exec([
+        "ca",
+        "split",
+        "--asset",
+        "ast_gold",
+        "--ratio",
+        "2",
+        "--effective-date",
+        "2027-02-01",
+        "--source-document",
+        "doc",
+        "--yes",
+      ]),
+    ).toBe(0);
+    h.reset();
+    expect(await h.exec(["lots"])).toBe(0);
+    expect(h.text()).toMatch(/ast_gold\s+2026-12-30\s+6\s+5\s+.*\s+buy\s+/);
+    h.reset();
+    expect(await h.exec(["lots", "--json"])).toBe(0);
+    expect(
+      (JSON.parse(h.out[0] as string) as { origin: string }[]).map((lot) => lot.origin),
+    ).toEqual(["buy", "buy"]);
+  });
+
   it("reports integrity warnings and errors", async () => {
     const h = await populated();
     expect(await h.exec([...BUY_WORLD, "--confirm-duplicate"])).toBe(0);

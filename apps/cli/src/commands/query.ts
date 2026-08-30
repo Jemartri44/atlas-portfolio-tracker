@@ -1,4 +1,4 @@
-// atlas positions · lots · cash · gains · income · check
+// atlas positions · lots · cash · gains · income · valuations · check
 
 import {
   cashBalances,
@@ -9,11 +9,13 @@ import {
   Money,
   physicalPositions,
   realizedGains,
+  todayInMadrid,
+  valuations,
 } from "@atlas/domain";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
-import { render } from "./shared.js";
+import { originOf, render } from "./shared.js";
 
 const yearOf = (positionals: string[], usage: string): number => {
   const year = Number(positionals[1]);
@@ -54,13 +56,14 @@ export const lotsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["closed", ...GLOBAL_FLAGS]);
-  const { state } = await loadAndProject(ctx.deps);
+  const { events, state } = await loadAndProject(ctx.deps);
   const includeClosed = booleanFlag(flags, "closed");
   const rows = fiscalLots(state, positionals[1]).filter((lot) => includeClosed || !lot.closed);
   render(
     ctx,
     rows.map((lot) => ({
       ...lot,
+      origin: originOf(events, state, lot.source_event_id),
       original_quantity: lot.original_quantity.toString(),
       quantity: lot.quantity.toString(),
       cost_eur: lot.cost_eur.amount.toString(),
@@ -81,6 +84,7 @@ export const lotsCommand = async (
         "coste EUR",
         "coste original EUR",
         "origen",
+        "lote origen",
         "estado",
       ],
       rows.map((lot) => [
@@ -91,6 +95,7 @@ export const lotsCommand = async (
         lot.original_quantity.toString(),
         lot.cost_eur.amount.toString(),
         lot.original_cost_eur.amount.toString(),
+        originOf(events, state, lot.source_event_id),
         lot.source_lot_id ?? "",
         lot.closed ? "cerrado" : "abierto",
       ]),
@@ -126,7 +131,7 @@ export const gainsCommand = async (
 ): Promise<number> => {
   assertKnownFlags(flags, ["lots", ...GLOBAL_FLAGS]);
   const year = yearOf(positionals, "uso: atlas gains <año> [--lots]");
-  const { state } = await loadAndProject(ctx.deps);
+  const { events, state } = await loadAndProject(ctx.deps);
   const gains = realizedGains(state, year);
   const total = gains.reduce((sum, g) => sum.add(g.gain_eur_rounded), Money.zero("EUR"));
   const lines = [
@@ -139,6 +144,7 @@ export const gainsCommand = async (
         "transmisión EUR",
         "coste EUR",
         "ganancia EUR",
+        "origen",
         "evento",
       ],
       gains.map((g) => [
@@ -149,6 +155,7 @@ export const gainsCommand = async (
         g.proceeds_eur.amount.toString(),
         g.cost_eur.amount.toString(),
         g.gain_eur_rounded.amount.toString(),
+        originOf(events, state, g.event_id),
         g.event_id,
       ]),
     ),
@@ -175,6 +182,7 @@ export const gainsCommand = async (
     ctx,
     gains.map((g) => ({
       ...g,
+      origin: originOf(events, state, g.event_id),
       quantity: g.quantity.toString(),
       proceeds_eur: g.proceeds_eur.amount.toString(),
       cost_eur: g.cost_eur.amount.toString(),
@@ -241,6 +249,53 @@ export const incomeCommand = async (
         i.net_eur.amount.toString(),
       ]),
     ),
+  );
+  return 0;
+};
+
+export const valuationsCommand = async (
+  ctx: Context,
+  _positionals: string[],
+  flags: Flags,
+): Promise<number> => {
+  assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
+  const { state } = await loadAndProject(ctx.deps);
+  const date = stringFlag(flags, "date") ?? todayInMadrid(ctx.deps.clock);
+  const rows = valuations(state, date);
+  render(
+    ctx,
+    rows.map((v) => ({
+      ...v,
+      quantity: v.quantity.toString(),
+      unit_value: v.unit_value.toString(),
+      fx_rate: v.fx_rate.toString(),
+      value_eur: v.value_eur.amount.toString(),
+    })),
+    [
+      `Valoraciones a ${date} (última foto por cuenta y activo; informativo, Modelo 720):`,
+      table(
+        [
+          "cuenta",
+          "activo",
+          "fecha",
+          "cantidad",
+          "valor unitario",
+          "divisa",
+          "tipo BCE",
+          "valor EUR",
+        ],
+        rows.map((v) => [
+          v.account_id,
+          v.asset_id,
+          v.date,
+          v.quantity.toString(),
+          v.unit_value.toString(),
+          v.currency,
+          v.fx_rate.toString(),
+          v.value_eur.amount.toString(),
+        ]),
+      ),
+    ].join("\n"),
   );
   return 0;
 };
