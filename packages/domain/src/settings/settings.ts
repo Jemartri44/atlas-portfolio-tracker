@@ -3,6 +3,7 @@
 // with the tax advisor); every other parameter is optional until the user sets it.
 
 import { ValidationError } from "../errors.js";
+import { isRecord } from "../guards.js";
 import { Decimal, type DecimalString, isDecimalString } from "../money/decimal.js";
 import { ASSET_TYPES, type AssetType } from "../schema/events.js";
 
@@ -68,9 +69,6 @@ const DECIMAL_FIELDS = [
 ] as const;
 
 const INTEGER_FIELDS = ["stale_price_days", "transfer_max_days"] as const;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const fail = (message: string, details: Record<string, unknown>): never => {
   throw new ValidationError("invalid_settings", message, details);
