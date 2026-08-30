@@ -26,6 +26,7 @@ import {
   valuationsCommand,
 } from "./commands/query.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
+import { synthCommand } from "./commands/synth.js";
 import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
@@ -51,6 +52,7 @@ const COMMANDS: Record<string, Command> = {
   income: incomeCommand,
   check: checkCommand,
   export: exportCommand,
+  synth: synthCommand,
 };
 
 export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--json] <comando> …
@@ -63,7 +65,8 @@ comandos:
   thesis open|close|list [--closed]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
   positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check
-  export --format jsonl|csv [--out <ruta>]`;
+  export --format jsonl|csv [--out <ruta>]
+  synth --out <ruta> [--seed <n>]`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),

@@ -90,6 +90,10 @@ export const describeError = (error: DomainError): string => {
       return `El libro usa schema_version ${text(d.found)} y esta CLI solo entiende hasta ${text(d.supported)}: actualiza la aplicación.`;
     case "conflict":
       return "El libro ha cambiado desde que se cargó: repite el comando.";
+    case "path_exists":
+      return `La ruta ${text(d.path)} ya existe: no se sobrescribe nada.`;
+    case "synthetic_invalid":
+      return `El libro generado no supera la verificación (${text(d.invalid)}, ${text(d.findings)}): es un error del generador.`;
     case "missing_field":
       return `Falta el campo ${text(d.field)} en ${text(d.type)}.`;
     case "invalid_field":
