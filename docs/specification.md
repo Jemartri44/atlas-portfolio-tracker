@@ -61,7 +61,7 @@ Los pesos objetivo (`target_weights`) se definen por activo y se aplican **sobre
 
 El cubo nunca entra en el cálculo de los pesos objetivo del núcleo. Es un presupuesto (porcentaje fijo de la aportación mensual), no una asignación. Pero **sí** aparece en la vista de patrimonio total, con etiqueta propia.
 
-**Vista consolidada:** patrimonio total = núcleo (desglosado por clase de activo) + cubo + efectivo, con desglose siempre visible. Nunca un único número sin descomponer.
+**Vista consolidada:** patrimonio total = núcleo (desglosado por clase de activo) + cubo + efectivo de las cuentas de inversión, con desglose siempre visible. Nunca un único número sin descomponer. El colchón bancario queda **fuera del alcance** de la aplicación (ADR-0004).
 
 ---
 
@@ -69,8 +69,12 @@ El cubo nunca entra en el cálculo de los pesos objetivo del núcleo. Es un pres
 
 ### 4.1 Entidades
 
+**Magnitudes numéricas (ADR-0005):** importes, cantidades y tipos de cambio son decimales exactos (`big.js` vendorizada, envuelta en `Money`, `Quantity`, `Price`, `FxRate`), serializados como **cadenas** en JSON. Se guarda lo que dice el bróker sin truncar; se redondea a céntimos solo en la salida fiscal (half-up) y en pantalla, una vez por operación.
+
 **Account** (cuenta)
 `id`, `name`, `platform`, `book`, `base_currency`, `country` (para el Modelo 720), `active`
+
+El saldo de efectivo de cada cuenta (`cash_balance`) es **derivado**: resulta de `cash_deposit`, `cash_withdrawal`, compras, ventas, dividendos y comisiones. Se usa para conciliar con el bróker y para la vista de patrimonio. No hay cuentas bancarias puras: el colchón se gestiona fuera de la app (ADR-0004).
 
 **Asset** (activo)
 `id`, `type` (`fund` | `etc` | `etp` | `stock` | `crypto` | `money_market`), `book`, `asset_class` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin`, `ticker`, `name`, `currency`, `ter`, `transferable` (bool), `reference_etf_id` (solo fondos, ver §7), `active` (bool)
@@ -80,12 +84,14 @@ Los identificadores cambian con el tiempo. El `id` interno es inmutable; ISIN y 
 **Lot** (lote) — *la entidad central*
 `id`, `asset_id`, `account_id`, `acquisition_date`, `quantity`, `original_unit_cost`, `original_currency`, `ecb_fx_rate`, `unit_cost_eur`, `fee_eur`, `source_lot_id` (para traspasos), `closed` (bool)
 
-**Nunca almacenar posiciones agregadas.** El FIFO exige el detalle lote a lote. La posición actual es una consulta, no un campo.
+**Los lotes no se almacenan: son una proyección** calculada desde cero a partir de las operaciones (`projectLots(transactions)`, ADR-0003). **Nunca almacenar posiciones agregadas.** El FIFO exige el detalle lote a lote. La posición actual es una consulta, no un campo.
 
 **Transaction** (operación)
-`id`, `trade_date`, `value_date`, `type`, `asset_id`, `account_id`, `quantity`, `unit_price`, `currency`, `fx_rate`, `fee`, `affected_lots[]`, `notes`
+`id`, `trade_date`, `value_date`, `type`, `asset_id`, `account_id`, `quantity`, `unit_price`, `currency`, `fx_rate`, `fee`, `notes`, `reverses_transaction_id` (opcional), `corrects_transaction_id` (opcional)
 
-Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`.
+Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `reversal`.
+
+**El libro es append-only** (ADR-0003): las operaciones nunca se editan ni se borran. *Editar* en la interfaz escribe un `reversal` de la original más la operación correcta enlazada por `corrects_transaction_id`; *Eliminar* escribe solo el `reversal`. La proyección de lotes ignora las parejas anuladas. Si la rectificación afecta a un ejercicio fiscal ya declarado, la app lo advierte.
 
 **Price** (precio)
 `asset_id`, `date`, `value`, `currency`, `source`, `fetched_at`
@@ -179,7 +185,7 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 
 ### 5.2 Requisitos
 
-- **Historial de cambios de configuración.** Cambiar los pesos objetivo altera el cálculo de desviaciones históricas; hay que poder saber qué valores estaban vigentes en cada momento.
+- **Historial de cambios de configuración.** Cambiar los pesos objetivo altera el cálculo de desviaciones históricas; hay que poder saber qué valores estaban vigentes en cada momento. Se cumple porque cada cambio es un evento `settings_changed` del libro (ADR-0006).
 - **Validación**: los pesos objetivo deben sumar 100%. Los umbrales deben ser coherentes entre sí.
 - **Aviso al cambiar**: modificar un umbral que está silenciando una alerta activa debe advertirlo explícitamente. Es la protección frente a subir el listón para no oír la alarma.
 
@@ -345,9 +351,9 @@ Navegador (PC / móvil)
     ├── CloudFront ──── S3 (SPA estática, privada vía OAC)
     │      <dominio de la app>
     │
-    └── Lambda Function URL ─── Lambda (API) ─── DynamoDB (libro mayor)
-           (valida JWT de Cognito)     │
-                                       └───── S3 (backups JSON, documentos de eventos)
+    └── Lambda Function URL ─── Lambda (API) ─── S3 (libro mayor JSONL versionado,
+           (valida JWT de Cognito)                 configuración, precios cacheados,
+                                                   documentos de eventos)
 
 EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
                                 │
@@ -359,7 +365,7 @@ EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
 - **Lambda Function URL en vez de API Gateway.** Un servicio menos. La Lambda valida el JWT de Cognito directamente.
 - **SSM Parameter Store en vez de Secrets Manager.** El estándar es gratuito; Secrets Manager cuesta ~0,40$/secreto/mes.
 - **DNS en el registrador, no en Route 53.** Un CNAME del subdominio propio a la distribución de CloudFront evita los 0,50$/mes de zona alojada. Certificado en ACM (gratuito), **obligatoriamente en us-east-1** para CloudFront. El dominio real vive en `terraform.tfvars`, fuera del repositorio.
-- **DynamoDB con capacidad aprovisionada** dentro del always-free (25 RCU/WCU), no bajo demanda.
+- **S3 como único almacén** (ADR-0002, ADR-0006): un único `ledger/ledger.jsonl` con **todos los eventos** (operaciones, catálogo de cuentas y activos, cambios de configuración); la Lambda lo carga entero, proyecta y guarda con escritura condicional (`If-Match`). El versionado del bucket da historial y backup sin servicios adicionales. Esquema y distribución del bucket en `docs/data-schema.md`.
 
 ### 9.3 Costes
 
@@ -368,13 +374,12 @@ Servicios en la categoría **Always Free**, perpetua e independiente de la antig
 | Servicio | Límite gratuito mensual | Uso previsto |
 |---|---|---|
 | Lambda | 1M invocaciones, 400.000 GB-segundo | Unos cientos de invocaciones |
-| DynamoDB | 25 GB, 25 RCU/WCU, 200M peticiones | Unos MB, decenas de operaciones |
 | CloudFront | 1 TB de salida, 10M peticiones | Unos MB |
 | SNS | 1M publicaciones | Marginal |
 | SSM Parameter Store (estándar) | Gratuito | 1-2 parámetros |
 | Cognito | Miles de usuarios activos | 1 usuario |
 | SES | 0,10$ por 1.000 correos | ~20 correos/mes |
-| S3 | 5 GB (solo primeros 12 meses) | Unos MB → céntimos después |
+| S3 | 5 GB (solo primeros 12 meses) | Unos MB de libro, configuración y precios → céntimos al año después |
 
 **Coste estimado: entre 0 y 1$ al mes, indefinidamente.**
 
@@ -422,9 +427,11 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 **Recomendación: Svelte o Solid con Vite.** Suficientes para una app con estado y con un árbol de dependencias auditable de verdad.
 
 **Requisitos transversales:**
-- Responsive real: se va a consultar desde el móvil.
+- Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada en móvil.
+- **Modo privacidad**: un interruptor, **activado por defecto al iniciar sesión**, que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
 - Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
 - Funciona sin conexión para consulta (los datos cacheados siguen visibles con su antigüedad marcada).
+- **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. La librería base se decide en la Ronda 7 de `decision-roadmap.md`.
 
 ---
 
@@ -436,7 +443,7 @@ Son datos financieros personales completos. Nivel de exigencia alto.
 - **S3 privado**, servido solo vía CloudFront con Origin Access Control. Sin buckets públicos.
 - **Cognito con MFA obligatorio.** Sin excepciones ni "recordar dispositivo" indefinido.
 - **IAM de mínimo privilegio**: cada Lambda con su rol y solo los permisos que necesita.
-- **Cifrado en reposo** en DynamoDB y S3, y en tránsito por TLS.
+- **Cifrado en reposo** en S3, y en tránsito por TLS.
 - **Sin analítica de terceros, sin CDN externos, sin fuentes remotas.** Todo se sirve desde tu propio origen. Un script de terceros en una app financiera es una vía de exfiltración.
 - **CSP restrictiva** que solo permita el propio origen y los endpoints de API necesarios.
 - **Validación en el backend**, siempre. El frontend es una comodidad, no un control de seguridad.
@@ -472,6 +479,8 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
   `test(tax): cover the two-month rule`
 - **Ninguna herramienta de IA puede figurar como coautora ni aparecer en los mensajes de commit.**
 - Commits atómicos: un cambio conceptual por commit.
+- Hooks de git versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` ejecuta `gitleaks`. El asistente de código tiene el mismo control en `.claude/settings.json`.
+- Plantilla de PR con la checklist de la constitución en `.github/pull_request_template.md`.
 
 ### 11.3 Entornos
 
@@ -488,7 +497,7 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
 ### 11.4 Infraestructura
 
 - **Terraform** para todos los recursos AWS. Nada creado a mano en la consola.
-- Estado remoto en S3 con bloqueo (DynamoDB o el bloqueo nativo de S3).
+- Estado remoto en S3 con el bloqueo nativo de S3.
 - Módulos reutilizables y ficheros `.tfvars` por entorno.
 - `terraform plan` obligatorio en la PR, `apply` solo tras aprobación.
 
@@ -497,18 +506,18 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
 | Nivel | Cobertura |
 |---|---|
 | **Unitarios** | Motor FIFO, transformaciones de lotes por evento corporativo, conversión de divisa, regla de los dos meses, cálculo de reparto mensual |
-| **Integración** | API contra DynamoDB local, adaptadores de importación con extractos de ejemplo |
+| **Integración** | API contra un `LedgerStore` en memoria o en fichero local, adaptadores de importación con extractos de ejemplo |
 | **Contrato** | Parsers de extractos contra ficheros reales anonimizados guardados en el repositorio |
 | **End-to-end** | Flujos críticos: registrar operación, importar extracto, calcular aportación |
 
-**Prioridad absoluta: el motor fiscal.** Es donde un error silencioso cuesta dinero y no se detecta hasta años después. Cobertura alta y casos límite explícitos (misma fecha en varios lotes, fracciones, contrasplit con liquidación en efectivo, recompra en el límite de los dos meses).
+**Prioridad absoluta: el motor fiscal.** Es donde un error silencioso cuesta dinero y no se detecta hasta años después. **Cobertura del 100% de líneas y ramas en `packages/domain`, bloqueante en CI**; sin umbral numérico fuera del dominio (ahí mandan los tests de contrato e integración). Casos límite explícitos (misma fecha en varios lotes, fracciones, contrasplit con liquidación en efectivo, recompra en el límite de los dos meses).
 
 **Ficheros de ejemplo anonimizados** de cada formato de extracto, versionados en el repositorio. Cuando un bróker cambie el formato, el test falla y te enteras.
 
 ### 11.6 CI/CD
 
 GitHub Actions:
-1. Lint y formateo
+1. Lint y formateo (Biome, ADR-0008)
 2. Comprobación de tipos
 3. Tests unitarios y de integración
 4. `npm audit` y análisis de dependencias
@@ -539,7 +548,9 @@ GitHub Actions:
 ### 11.9 Documentación
 
 - `README` con arranque en local, arquitectura y despliegue.
-- **ADRs** (registros de decisión de arquitectura) para las decisiones importantes: por qué DynamoDB, por qué modelo propio, por qué aproximación por ETF.
+- Licencia **MIT** (`LICENSE`).
+- Versionado: etiquetas `vX.Y.Z` en `main` al cerrar cada `release/*`; `CHANGELOG.md` escrito a mano en la rama de release, sin herramienta de generación.
+- **ADRs** (registros de decisión de arquitectura) en `docs/adr/` para las decisiones importantes: lenguaje, almacenamiento, modelo del libro, por qué modelo propio, por qué aproximación por ETF.
 - **El esquema de datos documentado en el repositorio**, incluida la lógica de transformación de lotes de cada evento corporativo.
 
 ---
@@ -589,7 +600,7 @@ FIFO consolidado, conversión de divisa por fecha valor, regla de los dos meses,
 ## 14. Decisiones abiertas
 
 - [ ] **¿Svelte o Solid?** Ambos válidos. Decidir por preferencia tras un prototipo pequeño.
-- [ ] **¿DynamoDB, o JSON en S3 con versionado?** Decidido a favor de DynamoDB por encaje con Lambda y por estar en always-free. Reconsiderar solo si el modelo resulta muy relacional.
+- [x] **¿DynamoDB, o JSON en S3 con versionado?** S3 (ADR-0002).
 - [ ] **Umbrales del cubo (reglas 17 y 18)**: dependen de la conversación P3 del plan financiero.
 - [ ] **Pesos objetivo**: dependen de la decisión P1 del plan financiero.
 - [ ] **¿Qué ETF de referencia para cada fondo?** Depende de P2 del plan financiero.
@@ -599,13 +610,13 @@ FIFO consolidado, conversión de divisa por fecha valor, regla de los dos meses,
 
 Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno merece una conversación y, si procede, un ADR.
 
-- [ ] **Lenguaje del backend.** No está definido. TypeScript en todo (un solo toolchain, tipos del dominio compartidos con el frontend) o Python (`decimal` en la biblioteca estándar). Si es TypeScript: el SDK de DynamoDB devuelve los números como `number` de JS salvo que se configure `wrapNumbers`; candidato a trampa de dominio nº 8.
-- [ ] **Corrección de errores de registro.** Propuesta: las operaciones son *append-only*, nunca se editan ni borran; un error se corrige con una operación de rectificación que referencia a la original. Los lotes pasan a ser una proyección recalculable desde cero.
-- [ ] **Posición de efectivo.** `cash_deposit`/`cash_withdrawal` existen, pero no hay saldo por cuenta. Necesario para conciliar con IBKR y para la vista consolidada. Decidir si el colchón es un libro o un atributo de cuenta.
+- [x] **Lenguaje del backend**: TypeScript en todo, dominio compartido (ADR-0001). Trampa derivada: los importes se serializan como cadenas, nunca como números JSON.
+- [x] **Corrección de errores de registro**: libro append-only con rectificación; lotes como proyección (ADR-0003).
+- [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
 - [ ] **Retención a cuenta en reembolsos de fondos.** Registrarla en las ventas de fondos para que la salida de la Renta cuadre.
 - [ ] **Valoración a 31 de diciembre.** El Modelo 720 exige valor de mercado a fin de año. Foto manual anual guardada como dato de Nivel 1, no como precio scrapeado.
 - [ ] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio.
 - [ ] **Tests de propiedades** para el motor FIFO (suma de lotes = posición; recalcular = almacenado; split e inverso dejan el coste intacto).
-- [ ] **Reconsiderar DynamoDB frente a JSONL en S3.** El libro mayor completo cabe en memoria en una Lambda; con "cargar todo, calcular, guardar" el fichero versionado cumple mejor "legible sin la aplicación".
+- [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).
 - [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos.
 - [ ] **Protección de ramas** en GitHub para `main` y `develop`.

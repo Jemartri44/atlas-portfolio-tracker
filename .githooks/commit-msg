@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Enforces the commit message rules (see .githooks/lib/validate-commit-message.sh).
+exec "$(dirname "$0")/lib/validate-commit-message.sh" "$1"
