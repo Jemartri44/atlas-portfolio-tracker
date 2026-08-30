@@ -61,4 +61,23 @@ describe("architecture: @atlas/domain imports nothing", () => {
     }
     expect(violations).toEqual([]);
   });
+
+  it("keeps synth/ a leaf: nothing in domain/src imports from it, except the public index", () => {
+    const synthDir = join(domainSrc, "synth");
+    const violations: string[] = [];
+    for (const file of listTsFiles(domainSrc)) {
+      const insideSynth = !relative(synthDir, file).startsWith("..");
+      if (insideSynth || file === join(domainSrc, "index.ts")) {
+        continue;
+      }
+      for (const specifier of specifiersOf(readFileSync(file, "utf8"))) {
+        const target = resolve(dirname(file), specifier);
+        if (!relative(synthDir, target).startsWith("..")) {
+          violations.push(`${relative(repoRoot, file)} -> ${specifier}`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+    expect(readFileSync(join(domainSrc, "index.ts"), "utf8")).toContain("./synth/index.js");
+  });
 });
