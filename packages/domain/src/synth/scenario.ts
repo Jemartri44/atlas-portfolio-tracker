@@ -66,7 +66,8 @@ interface Params {
   fx: string;
 }
 
-const NOT_MULTIPLE_OF_FOUR = [1, 2, 3, 5, 6, 7];
+/** ≥ 5 so that, after the 1:4 reverse split, both IBKR accounts keep a whole share to value at 31/12. */
+const NOT_MULTIPLE_OF_FOUR = [5, 6, 7];
 const NOT_MULTIPLE_OF_FOUR_LOTS = [10, 11, 13, 14, 15, 17, 18, 19];
 const NOT_MULTIPLE_OF_THREE = [10, 11, 13, 14, 16, 17, 19, 20];
 
