@@ -1,0 +1,2 @@
+{"schema_version":1,"id":"01ARYZ6S41TSV4RRFFQ6900000","recorded_at":"2026-09-01T18:00:00.000Z","type":"account_created","account_id":"acc_fund","name":"Fondos","platform":"myinvestor","book":"core","base_currency":"EUR","country":"ES","active":true}
+{"schema_version":2,"id":"01ARYZ6S41TSV4RRFFQ6900001","recorded_at":"2026-09-01T18:00:01.000Z","type":"asset_created","asset_id":"ast_world","asset_type":"fund","book":"core","asset_class":"equity","isin":"XX0000000001","name":"World Index","currency":"EUR","transferable":true,"active":true}
