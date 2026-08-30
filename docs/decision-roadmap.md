@@ -17,7 +17,7 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | 1 | Dinero y cantidades | Fase 1 | ADR-0005 | **Cerrada** 2026-08-30 |
 | 2 | Esquema del libro en S3 | Fase 1 | ADR-0006, `docs/data-schema.md` | **Cerrada** 2026-08-30 |
 | 3 | Estructura del código y toolchain | Primer commit de código | ADR-0007, ADR-0008 | **Cerrada** salvo lint (ADR-0008 pendiente, el usuario quiere verlo con más detalle) |
-| 4 | Semántica de operaciones y FIFO | Fase 1 | `docs/data-schema.md` + spec de la feature 001 | Pendiente |
+| 4 | Semántica de operaciones y FIFO | Fase 1 | ADR-0009, ADR-0010, `docs/data-schema.md` §6-8 | **4a cerrada** 2026-08-30; 4b (eventos corporativos) en curso |
 | 5 | Calidad, proceso y tooling del asistente | Fase 1 | Spec §11, `.claude/`, `.github/` | Pendiente |
 | — | *Fase 0 (tareas manuales del usuario)* | Rondas 6-7 | — | Pendiente |
 | 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente |
