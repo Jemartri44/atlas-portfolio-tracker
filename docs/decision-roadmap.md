@@ -107,7 +107,7 @@ Depende de la Fase 0. Decisiones: mapeo de campos de cada extracto a `Transactio
 
 ## Ronda 7 — Aplicación web
 
-Antes de la Fase 2. Decisiones: Svelte o Solid (tras prototipo); **datos en el dispositivo** para consulta sin conexión (PWA + libro cacheado: ¿cifrado local?, ¿caducidad?) frente a solo lectura en línea; flujo de autenticación con Cognito (Hosted UI o formulario propio, dónde vive el token); diseño de la API sobre Function URL; idioma de la interfaz (español, sin i18n).
+Antes de la Fase 2. Decisiones: Svelte o Solid (tras prototipo); **librería de UI y de gráficas** (sistema de componentes consistente, responsive PC/móvil, sin CDN externos, dentro del presupuesto de dependencias); **modo privacidad** activado por defecto (diseño del componente de importe y de las gráficas enmascaradas); **datos en el dispositivo** para consulta sin conexión (PWA + libro cacheado: ¿cifrado local?, ¿caducidad?) frente a solo lectura en línea; flujo de autenticación con Cognito (Hosted UI o formulario propio, dónde vive el token); diseño de la API sobre Function URL; idioma de la interfaz (español, sin i18n). Referencias de diseño: capturas que aporte el usuario (fuera del repo) y apps abiertas como Ghostfolio o Wealthfolio.
 
 ## Ronda 8 — Infraestructura, despliegue y copias de seguridad
 
