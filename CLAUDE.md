@@ -18,6 +18,8 @@ User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) a
 - `.specify/memory/constitution.md` — project constitution (Spec Kit). Principles every spec, plan and task must respect.
 - `specs/NNN-<name>/` — per-feature Spec Kit artefacts (`spec.md`, `plan.md`, `tasks.md`, …).
 - `docs/data-schema.md` — the ledger file format (bucket layout, line envelope, event types, migrations). `docs/adr/` — architecture decision records.
+- `docs/dependencies.md` — the closed dependency budget.
+- `docs/prompts/` — handoff prompts, one per feature, written by the high-level assistant for the implementing assistant.
 
 ## Spec-driven development (GitHub Spec Kit)
 
@@ -76,6 +78,26 @@ infra/             Terraform.
 ```
 
 Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `StatementSource`, `PriceSource`, `FxRateSource`, `DocumentStore`, `Notifier`, `Clock`. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
+
+## Working on a feature (for implementing assistants)
+
+The user directs the project with a high-level assistant that writes decision rounds, ADRs and the handoff prompts in `docs/prompts/`. **Implementing assistants build features from those prompts.** Rules:
+
+1. **Read before coding**, in this order: `CLAUDE.md`, `.specify/memory/constitution.md`, `docs/adr/README.md` (then every ADR the prompt cites), `docs/data-schema.md`, the relevant sections of `docs/specification.md` and `docs/business-rules.md`, and the prompt itself.
+2. **Decisions are already taken.** Do not re-open an accepted ADR, change the data schema, or pick a different library "because it is better". If the docs are ambiguous, contradictory, or block you: **stop, write the questions in `specs/NNN-<name>/questions.md`, and report** — do not guess on anything fiscal or structural.
+3. **Follow Spec Kit**: `/speckit-specify` → `/speckit-clarify` (if needed) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`, artefacts in `specs/NNN-<name>/` (Spanish prose, English identifiers). Show `spec.md` and `plan.md` to the user before writing code.
+4. **Branch** `feature/NNN-<name>` from `develop`; enable hooks with `git config core.hooksPath .githooks`; Conventional Commits in English, one subject line, atomic; open a PR to `develop` using the template; never push to `develop` or `main`.
+5. **Package names**: `@atlas/domain`, `@atlas/adapters`, `@atlas/cli`, `@atlas/api`, `@atlas/web`. Node 22+ (`.nvmrc`), ESM, strict `tsconfig` (ADR-0007). Dependencies only from `docs/dependencies.md`.
+6. **Definition of done**: tests green, `packages/domain` at 100% line and branch coverage, Biome clean, architecture test green (`domain` imports nothing), docs updated where behaviour changed, PR checklist honestly filled.
+7. **Fixtures** live in `tests/fixtures/<source>/` and are **synthetic**: real file format, fake values (invented ISINs, account ids like `U0000000`, round amounts). Real statements never enter the repo.
+8. **ADRs**: an implementer may propose one (status `Propuesta`, via `/adr`) but never accept it; the user decides.
+
+## Private inputs (outside the repo)
+
+Real statements, screenshots and anything personal live in `~/atlas-private/` (never committed):
+
+- `~/atlas-private/statements/myinvestor/`, `~/atlas-private/statements/ibkr/` — raw exports, used only to learn the format when writing parsers and synthetic fixtures.
+- `~/atlas-private/ui-refs/` — screenshots the user likes, as layout references for Round 7.
 
 ## Domain traps
 
