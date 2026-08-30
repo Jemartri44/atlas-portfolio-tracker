@@ -39,7 +39,8 @@ Reglas transversales:
 - Fechas de negocio (`trade_date`, `value_date`, `acquisition_date`) como `YYYY-MM-DD` sin zona horaria.
 - Nombres de campo en `snake_case`.
 - Las líneas nunca se modifican ni se borran. Una rectificación son líneas nuevas (`reversal` + evento correcto).
-- **El orden canónico es la posición en el fichero.** Dos dispositivos con relojes distintos pueden generar ULIDs desordenados; el fichero manda, también para el desempate FIFO de lotes con la misma fecha.
+- **El orden canónico de almacenamiento es la posición en el fichero.** Dos dispositivos con relojes distintos pueden generar ULIDs desordenados; el fichero manda como desempate.
+- **La proyección aplica las operaciones en orden cronológico**, no en orden de registro: un evento registrado tarde (una compra anotada después de una venta posterior en fecha) se coloca donde le corresponde por `fiscal_date`. Ver §7.1.
 
 ## 3. Tipos de evento
 
@@ -81,7 +82,7 @@ La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se d
 | `fx_rate_date` | fecha | Fecha del tipo aplicado. Si `fiscal_date` no tiene publicación (fin de semana, festivo TARGET), el último anterior |
 | `fee` | decimal | Comisión en `currency` |
 | `broker_ref?` | cadena | Identificador del bróker (`tradeID` de IBKR, referencia de MyInvestor) |
-| `fingerprint` | cadena | Huella de idempotencia: hash de (`source`, `broker_ref` si existe —si no, `id` propio en manual—, `account_id`, `asset_id`, `type`, `value_date`, `quantity`, `amount` o `unit_price`, `currency`). **Huella repetida = aviso con confirmación**, no rechazo (ADR-0012) |
+| `fingerprint` | cadena | Huella de idempotencia: hash de (`source`, `broker_ref` si existe, `account_id`, `asset_id`, `type`, `value_date`, `quantity`, `amount` o `unit_price`, `currency`). En manual **no** entra el `id` propio: así dos entradas idénticas avisan, y una repetición legítima se confirma con `--confirm-duplicate`. **Huella repetida = aviso con confirmación**, no rechazo (ADR-0012) |
 | `source` | cadena | `manual`, `ibkr_flex`, `myinvestor_xlsx`… |
 | `notes` | cadena | Libre |
 
@@ -223,6 +224,16 @@ Ejemplo (fusión con pago parcial en efectivo: 1 acción nueva por cada 2 antigu
 
 Todas son funciones puras `project(events) → estado`, ignoran parejas anuladas por `reversal`, y se recalculan en cada carga.
 
+### 7.1 Orden de aplicación
+
+La proyección se hace en dos pasadas:
+
+1. **Catálogo, configuración y rectificaciones**, en orden de fichero: `account_*`, `asset_*`, `settings_changed`, `reversal`. Construyen el catálogo completo y el conjunto de parejas anuladas. Las referencias de cualquier operación se resuelven contra el catálogo completo (un `asset_created` registrado después de la primera compra de ese activo es válido).
+2. **Operaciones y seguimiento**, ordenadas por `(fecha de negocio, posición en el fichero)`: la fecha de negocio es `fiscal_date` para las operaciones con efecto en lotes o efectivo, `requested_date`/`date` para los eventos de seguimiento y `date` para `valuation`. Dentro de una misma fecha manda la posición en el fichero (también para el desempate FIFO de lotes con la misma `acquisition_date`).
+
+Consecuencias: registrar tarde es normal (importar un extracto semanas después, corregir con la fecha real) y no altera el resultado; una venta se valida contra la posición física **en su fecha**, no en el momento de registrarla; `recordEvent` proyecta el libro con el evento nuevo colocado cronológicamente y rechaza si cualquier invariante se rompe. `settingsAt(date)` sigue usando `recorded_at` (es historial administrativo, no de negocio).
+
+
 | Proyección | Devuelve | Notas |
 |---|---|---|
 | `accounts` | Cuentas con su estado actual | Último `account_*` por `account_id` |
@@ -244,7 +255,7 @@ Todas son funciones puras `project(events) → estado`, ignoran parejas anuladas
 
 ### 8.1 Algoritmo FIFO (ADR-0009)
 
-Para cada `asset_id`, los lotes abiertos se ordenan por (`acquisition_date`, `id`). Una transmisión de cantidad `q` consume lotes en ese orden, partiendo el último si hace falta. La cuenta donde ocurre la transmisión no influye en qué lotes se consumen; sí influye en `physicalPositions`.
+Para cada `asset_id`, los lotes abiertos se ordenan por (`acquisition_date`, posición en el fichero del evento origen). Una transmisión de cantidad `q` consume lotes en ese orden, partiendo el último si hace falta. La cuenta donde ocurre la transmisión no influye en qué lotes se consumen; sí influye en `physicalPositions`. Las transmisiones se aplican en orden cronológico (§7.1), de modo que una compra registrada tarde con fecha anterior sí es consumida por una venta posterior en fecha aunque anterior en registro.
 
 Coste de adquisición de un lote: `((amount ?? quantity × unit_price) + fee) / fx_rate`, en EUR, exacto. Valor de transmisión: `((amount ?? quantity × unit_price) − fee) / fx_rate`. Fechas: `acquisition_date` y la fecha de transmisión son la `fiscal_date` de cada evento (ADR-0013). Ganancia por lote consumido = valor de transmisión proporcional − coste del lote proporcional. Se suma por operación y se redondea a céntimos una vez (ADR-0005).
 

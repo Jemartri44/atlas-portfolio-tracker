@@ -82,7 +82,7 @@ El saldo de efectivo de cada cuenta (`cash_balance`) es **derivado**: resulta de
 Los identificadores cambian con el tiempo. El `id` interno es inmutable; ISIN y ticker son atributos que se versionan.
 
 **Lot** (lote) — *la entidad central*
-`id`, `asset_id`, `account_id`, `acquisition_date`, `quantity`, `original_unit_cost`, `original_currency`, `ecb_fx_rate`, `unit_cost_eur`, `fee_eur`, `source_lot_id` (para traspasos), `closed` (bool)
+`id`, `asset_id`, `acquisition_date`, `quantity`, `original_quantity`, `cost_eur` (total, con la comisión de compra incluida), `source_event_id`, `source_lot_id` (para traspasos), `closed` (bool). Sin `account_id`: los lotes son globales por activo (ADR-0009); la cuenta vive en `physicalPositions`.
 
 **Los lotes no se almacenan: son una proyección** calculada desde cero a partir de las operaciones (`projectLots(transactions)`, ADR-0003). **Nunca almacenar posiciones agregadas.** El FIFO exige el detalle lote a lote. La posición actual es una consulta, no un campo.
 
