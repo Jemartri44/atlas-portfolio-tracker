@@ -32,7 +32,7 @@ Resultado esperado: el resumen de `synth` lista los 23 tipos de evento de `docs/
 
 ```bash
 cp tests/fixtures/ledger/synthetic-v1.jsonl /tmp/d.jsonl
-sed -i '10s/"fee":"[0-9.]*"/"fee":"999"/' /tmp/d.jsonl     # edita a mano un importe de una línea con huella
+sed -i '0,/"quantity":"[0-9.]*"/s//"quantity":"999"/' /tmp/d.jsonl   # edita a mano una cantidad (la huella la cubre; fee no)
 atlas --ledger /tmp/d.jsonl check                   # limpio: la proyección no ve la huella
 atlas --ledger /tmp/d.jsonl check --deep            # error fingerprint_mismatch (código 1)
 atlas --ledger tests/fixtures/ledger/valid-v1.jsonl check --deep   # huellas de fixture ("sha256:fixture-…") → fingerprint_mismatch

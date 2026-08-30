@@ -33,3 +33,17 @@ Dudas encontradas al leer la documentación y el código que el prompt me prohí
 4. **`unknown_field` (aviso) en `deepCheck`** → adoptada, es barato: `validate.ts` expone los campos conocidos de cada tipo (envoltorio + reglas + `settings` para `settings_changed`) y `deepCheck` avisa por cada campo de primer nivel que sobra. Solo primer nivel; los efectos anidados de `corporate_action` quedan para un seguimiento si hace falta.
 
 Los tres candidatos de `research.md` §1 (`inactive_reference`, `duplicate_valuation`, `valuation_quantity_mismatch`) quedan fuera: los recoge la dirección.
+
+## Notas de implementación (2026-08-30, tras `/speckit-implement`)
+
+Decisiones de detalle que no cambian documentos pero conviene que el usuario conozca:
+
+- **`fingerprint_mismatch` no detecta una comisión editada**: la huella (ADR-0012) cubre el tuple de negocio (cuenta, activo, fecha valor, cantidad, importe/precio, divisa) y `fee` no forma parte de él. Los tests y el `quickstart.md` editan `quantity`; una edición manual de `fee` solo la detecta `projection_not_reproducible` si altera la proyección frente al estado cargado (no lo hace: el texto releído es el mismo). Si se quiere cubrir `fee`, es un cambio de la huella (ADR).
+- **`unknown_field` solo se evalúa en líneas de la versión actual**: los campos de una línea antigua pertenecen a las reglas de su versión (que ya no existen); la línea se señala como `outdated_lines` y, tras `compact`, se re-evalúa. Por eso la fixture legacy da `unknown_field` (×2) con el esquema real (v1 = actual) y `outdated_lines` con el de prueba.
+- **`deepCheck` omite `projection_not_reproducible` cuando hay ids duplicados** (no se puede proyectar) y la CLI captura el `ProjectionError` de la proyección para presentar `duplicate_id` como hallazgo único (spec A9).
+- **Actualizaciones de seguimiento de un traspaso fechadas el día del reembolso**: la fecha de negocio del `transfer` es `value_date_out`, así que una actualización `subscribed` fechada después encontraría la solicitud ya completada. El generador fecha `redeemed` y `subscribed` en `value_date_out` (el orden dentro del día lo da la posición en el fichero).
+- **Escenario, meses 4 y 6 intercambiados respecto al primer borrador** (recogido ya en `data-model.md` §6): la venta con pérdida va antes que el primer traspaso para que sea la venta, y no el traspaso, quien consuma por FIFO la compra registrada tarde (fechada 2026-08-28, el lote más antiguo).
+- **Tiempo de la propiedad de prefijos** (spec A14): proyectar los 160 prefijos de un libro tarda ~100 ms; la propiedad con 20 semillas y prefijos exhaustivos corre en ~5 s dentro de la batería. No hizo falta el modo "por bloques".
+- **`recordEvent` bajo el esquema de prueba**: la protección del hallazgo 10 actúa en la carga (un cliente viejo no puede ni leer un libro v2, `SchemaTooNewError`), no en el `append`; el test lo cubre así. `append` bajo un esquema nuevo escribe la versión que traiga el evento (el test de adaptadores usa `schema_version: 2` explícito) y conserva el prefijo byte a byte.
+- **`FileLedgerStore.replace` valida `archiveName`** (nombre plano, sin separadores): defensa en profundidad del adaptador; el nombre siempre lo genera `planCompact`.
+- **Toolchain**: sin cambios (TypeScript 7.0.2, Biome 2.5.11, Vitest 4.1.11, fast-check 4.9.0, Node 22.23.2); cero dependencias nuevas.

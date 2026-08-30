@@ -31,4 +31,5 @@
 
 ## Notas
 
-- Spec pendiente del visto bueno del usuario (2026-08-30); Q1 y las notas de `questions.md` se resuelven antes de codificar la parte afectada.
+- Spec y plan aprobados por el usuario el 2026-08-30; Q1 resuelta (a) con invariante bilateral; recomendaciones (1)-(4) adoptadas antes de codificar.
+- Implementación completa el 2026-08-30 (T001-T023); notas en `questions.md`.
