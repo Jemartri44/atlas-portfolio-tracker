@@ -45,7 +45,9 @@ coverage/
 dist-test/
 *.tsbuildinfo
 
-# Local ledgers and atomic-write temporaries (fixtures live under tests/fixtures/)
-/ledger.jsonl
-/demo.jsonl
+# Local ledgers, backups, exports and atomic-write temporaries, anywhere in the tree
+# (fixtures live under tests/fixtures/ and do not match these patterns)
+ledger*.jsonl
+demo*.jsonl
+backups/
 *.tmp-*

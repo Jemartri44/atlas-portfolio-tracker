@@ -1,6 +1,6 @@
 # ADR-0013 — Fecha fiscal y ventana de recompra por tipo de activo; sentido de `fx_rate`
 
-**Estado:** Aceptada con verificación pendiente (2026-08-30). Los valores por defecto se confirman con el asesor fiscal (`docs/fiscal-questions.md`). Origen: hallazgos 5, 6 y 7 del *challenge* externo.
+**Estado:** Aceptada con verificación pendiente (2026-08-30). Los valores por defecto se confirman con el asesor fiscal (`docs/fiscal-questions.md`). Origen: hallazgos 5, 6 y 7 del *challenge* externo. *Revisión del challenge 2026-08-31 (hallazgo 1): la ventana se cuenta de fecha a fecha en meses/años naturales, no en días; la forma vigente del parámetro es `wash_sale_window` (`"2m"`/`"1y"`/`"<n>d"`, con `wash_sale_window_days` como forma antigua aceptada), definida en `docs/data-schema.md` §8.4.*
 
 ## Contexto
 
