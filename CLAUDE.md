@@ -43,7 +43,7 @@ Two books. They never mix in any calculation, view or metric.
 | `core` | Cartera principal / núcleo | Four asset classes: `equity` (RV), `fixed_income` (RF), `gold`, `crypto` | Deviation from target weights |
 | `bucket` | Cubo especulativo | Small, separate account for speculating, tinkering and learning. Rich tracking: theses, charts, comparisons against the index | Performance vs. index |
 
-Target weights apply **across the whole core**. The bucket is a *budget* (a fixed share of the monthly contribution), never an allocation. Total net worth = core + bucket + cash, always shown broken down.
+Target weights apply **across the whole core**. The bucket is a *budget* (a fixed share of the monthly contribution), never an allocation. Total net worth = core + bucket + cash held in the investment accounts, always shown broken down. Bank cash (the emergency cushion) is out of scope (ADR-0004).
 
 ## Stack
 
@@ -144,7 +144,7 @@ Mandatory edge cases: several lots with the same date, fractions, reverse split 
 
 ## Documentation
 
-- ADRs for relevant architecture decisions.
+- ADRs in `docs/adr/` (status Propuesta / Aceptada / Reemplazada) for relevant architecture decisions.
 - Data schema documented in the repository, including the lot-transformation logic for every corporate action type.
 - Every recorded corporate action keeps its documentary source (issuer URL or PDF).
 

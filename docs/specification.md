@@ -61,7 +61,7 @@ Los pesos objetivo (`target_weights`) se definen por activo y se aplican **sobre
 
 El cubo nunca entra en el cálculo de los pesos objetivo del núcleo. Es un presupuesto (porcentaje fijo de la aportación mensual), no una asignación. Pero **sí** aparece en la vista de patrimonio total, con etiqueta propia.
 
-**Vista consolidada:** patrimonio total = núcleo (desglosado por clase de activo) + cubo + efectivo, con desglose siempre visible. Nunca un único número sin descomponer.
+**Vista consolidada:** patrimonio total = núcleo (desglosado por clase de activo) + cubo + efectivo de las cuentas de inversión, con desglose siempre visible. Nunca un único número sin descomponer. El colchón bancario queda **fuera del alcance** de la aplicación (ADR-0004).
 
 ---
 
@@ -71,6 +71,8 @@ El cubo nunca entra en el cálculo de los pesos objetivo del núcleo. Es un pres
 
 **Account** (cuenta)
 `id`, `name`, `platform`, `book`, `base_currency`, `country` (para el Modelo 720), `active`
+
+El saldo de efectivo de cada cuenta (`cash_balance`) es **derivado**: resulta de `cash_deposit`, `cash_withdrawal`, compras, ventas, dividendos y comisiones. Se usa para conciliar con el bróker y para la vista de patrimonio. No hay cuentas bancarias puras: el colchón se gestiona fuera de la app (ADR-0004).
 
 **Asset** (activo)
 `id`, `type` (`fund` | `etc` | `etp` | `stock` | `crypto` | `money_market`), `book`, `asset_class` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin`, `ticker`, `name`, `currency`, `ter`, `transferable` (bool), `reference_etf_id` (solo fondos, ver §7), `active` (bool)
@@ -599,13 +601,13 @@ FIFO consolidado, conversión de divisa por fecha valor, regla de los dos meses,
 
 Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno merece una conversación y, si procede, un ADR.
 
-- [ ] **Lenguaje del backend.** No está definido. TypeScript en todo (un solo toolchain, tipos del dominio compartidos con el frontend) o Python (`decimal` en la biblioteca estándar). Si es TypeScript: el SDK de DynamoDB devuelve los números como `number` de JS salvo que se configure `wrapNumbers`; candidato a trampa de dominio nº 8.
-- [ ] **Corrección de errores de registro.** Propuesta: las operaciones son *append-only*, nunca se editan ni borran; un error se corrige con una operación de rectificación que referencia a la original. Los lotes pasan a ser una proyección recalculable desde cero.
-- [ ] **Posición de efectivo.** `cash_deposit`/`cash_withdrawal` existen, pero no hay saldo por cuenta. Necesario para conciliar con IBKR y para la vista consolidada. Decidir si el colchón es un libro o un atributo de cuenta.
+- [ ] **Lenguaje del backend** (ADR-0001, propuesta). No está definido. TypeScript en todo (un solo toolchain, tipos del dominio compartidos con el frontend) o Python (`decimal` en la biblioteca estándar). Si es TypeScript: el SDK de DynamoDB devuelve los números como `number` de JS salvo que se configure `wrapNumbers`; candidato a trampa de dominio nº 8.
+- [ ] **Corrección de errores de registro** (ADR-0003, propuesta). Propuesta: las operaciones son *append-only*, nunca se editan ni borran; un error se corrige con una operación de rectificación que referencia a la original. Los lotes pasan a ser una proyección recalculable desde cero.
+- [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
 - [ ] **Retención a cuenta en reembolsos de fondos.** Registrarla en las ventas de fondos para que la salida de la Renta cuadre.
 - [ ] **Valoración a 31 de diciembre.** El Modelo 720 exige valor de mercado a fin de año. Foto manual anual guardada como dato de Nivel 1, no como precio scrapeado.
 - [ ] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio.
 - [ ] **Tests de propiedades** para el motor FIFO (suma de lotes = posición; recalcular = almacenado; split e inverso dejan el coste intacto).
-- [ ] **Reconsiderar DynamoDB frente a JSONL en S3.** El libro mayor completo cabe en memoria en una Lambda; con "cargar todo, calcular, guardar" el fichero versionado cumple mejor "legible sin la aplicación".
+- [ ] **Reconsiderar DynamoDB frente a JSONL en S3** (ADR-0002, propuesta). El libro mayor completo cabe en memoria en una Lambda; con "cargar todo, calcular, guardar" el fichero versionado cumple mejor "legible sin la aplicación".
 - [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos.
 - [ ] **Protección de ramas** en GitHub para `main` y `develop`.
