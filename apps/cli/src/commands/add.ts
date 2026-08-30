@@ -22,12 +22,21 @@ const CASH = ["account", "value-date", "amount", "currency", "fx-rate", "notes"]
 export const ADD_SPECS: Record<string, DraftSpec> = {
   buy: {
     type: "buy",
-    flags: [...COMMON, "asset", "quantity", "unit-price", "amount", "order"],
+    flags: [...COMMON, "asset", "quantity", "unit-price", "amount", "order", "thesis"],
     defaults: { fee: "0", source: "manual" },
   },
   sell: {
     type: "sell",
-    flags: [...COMMON, "asset", "quantity", "unit-price", "amount", "order", "withholding"],
+    flags: [
+      ...COMMON,
+      "asset",
+      "quantity",
+      "unit-price",
+      "amount",
+      "order",
+      "withholding",
+      "thesis",
+    ],
     defaults: { fee: "0", source: "manual" },
   },
   transfer: {
