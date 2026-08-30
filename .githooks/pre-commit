@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Runs gitleaks on the staged changes before every commit.
+# Install: https://github.com/gitleaks/gitleaks#installing
+set -u
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: WARNING gitleaks is not installed; secret scan skipped." >&2
+  echo "            Install it and re-run: gitleaks git --staged --no-banner" >&2
+  exit 0
+fi
+gitleaks git --staged --no-banner --redact

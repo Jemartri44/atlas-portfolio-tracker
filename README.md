@@ -11,6 +11,7 @@ Proyecto en fase inicial. Todavía no hay código de aplicación.
 - [`docs/specification.md`](docs/specification.md) — especificación funcional y técnica. Es la referencia.
 - [`docs/business-rules.md`](docs/business-rules.md) — reglas de dominio y mecánica fiscal española.
 - [`CLAUDE.md`](CLAUDE.md) — contexto y convenciones del proyecto para el asistente de código.
+- [`.specify/memory/constitution.md`](.specify/memory/constitution.md) — constitución del proyecto ([GitHub Spec Kit](https://github.com/github/spec-kit)). Los specs por funcionalidad viven en `specs/`.
 
 El plan de inversión personal (`plan-financiero.md`) es privado y no está en el repositorio.
 
@@ -51,3 +52,7 @@ git checkout develop && git merge --no-ff hotfix/<version> && git branch -d hotf
 
 Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/)
 (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea.
+
+## Licencia
+
+[MIT](LICENSE).

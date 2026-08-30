@@ -15,6 +15,19 @@ User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) a
 - `docs/specification.md` — full functional and technical specification. The reference.
 - `docs/business-rules.md` — domain rules and Spanish tax mechanics the app implements.
 - `plan-financiero.md` — the user's personal investment plan. **Private, git-ignored, never in the repo.** Docs reference it as "rule N of the plan" or "P1/P2/P3".
+- `.specify/memory/constitution.md` — project constitution (Spec Kit). Principles every spec, plan and task must respect.
+- `specs/NNN-<name>/` — per-feature Spec Kit artefacts (`spec.md`, `plan.md`, `tasks.md`, …).
+- `docs/data-schema.md` — the ledger file format (bucket layout, line envelope, event types, migrations). `docs/adr/` — architecture decision records.
+
+## Spec-driven development (GitHub Spec Kit)
+
+The project follows [GitHub Spec Kit](https://github.com/github/spec-kit). Scaffolding lives in `.specify/`; the skills are installed under `.claude/skills/speckit-*`.
+
+- Flow per feature: `/speckit-specify` → `/speckit-clarify` (optional) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`. `/speckit-constitution` amends the constitution; `/speckit-analyze` and `/speckit-checklist` are quality gates.
+- `docs/specification.md` is the **product-level** specification (the whole system). Spec Kit specs are **feature-level** slices derived from it; when they conflict, update `docs/specification.md` and the constitution first.
+- **Spec Kit does not create git branches** (feature state is tracked in the git-ignored `.specify/feature.json`). Branches follow git flow: one spec `specs/NNN-<name>/` ↔ one branch `feature/NNN-<name>` created by hand from `develop`.
+- **Spec Kit artefacts (constitution, specs, plans, tasks) are documents: Spanish prose, English identifiers**, like everything under `docs/`. Templates under `.specify/templates/` stay untouched in English.
+- `.specify/feature.json` and `.claude/settings.local.json` are git-ignored; everything else under `.specify/` and `.claude/skills/` is committed.
 
 ## Language
 
@@ -31,15 +44,15 @@ Two books. They never mix in any calculation, view or metric.
 | `core` | Cartera principal / núcleo | Four asset classes: `equity` (RV), `fixed_income` (RF), `gold`, `crypto` | Deviation from target weights |
 | `bucket` | Cubo especulativo | Small, separate account for speculating, tinkering and learning. Rich tracking: theses, charts, comparisons against the index | Performance vs. index |
 
-Target weights apply **across the whole core**. The bucket is a *budget* (a fixed share of the monthly contribution), never an allocation. Total net worth = core + bucket + cash, always shown broken down.
+Target weights apply **across the whole core**. The bucket is a *budget* (a fixed share of the monthly contribution), never an allocation. Total net worth = core + bucket + cash held in the investment accounts, always shown broken down. Bank cash (the emergency cushion) is out of scope (ADR-0004).
 
 ## Stack
 
 | Layer | Choice |
 |---|---|
 | Frontend | Static SPA with Vite (Svelte or Solid), served from S3 through CloudFront |
-| Backend | Lambda with Function URL (no API Gateway) |
-| Data | DynamoDB, provisioned capacity within the always-free tier |
+| Backend | Lambda (Node) with Function URL (no API Gateway). TypeScript everywhere, domain in a shared package. ADR-0001 |
+| Data | S3 only. One `ledger/ledger.jsonl` event log (transactions + account/asset catalogue + `settings_changed`), `schema_version` per line, migrated on load, explicit `compact`. Loaded whole into memory; conditional writes (`If-Match`). ECB FX history stored verbatim. ADR-0002, ADR-0006, `docs/data-schema.md` |
 | Auth | Cognito with MFA, single user. The Lambda validates the JWT |
 | Scheduling | EventBridge Scheduler |
 | Email | SES |
@@ -49,17 +62,33 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 
 **Cost constraint:** the project must stay inside the AWS always-free tier indefinitely. Before introducing a new service, verify it is free at this scale.
 
+## Code architecture (ADR-0007)
+
+Monorepo with npm workspaces, **hexagonal architecture** with a pure functional core:
+
+```
+packages/domain    pure core: types, money, events, projections, FIFO, tax, use cases, PORTS (interfaces). No I/O, no runtime npm deps.
+packages/adapters  port implementations: S3/file/memory LedgerStore, IBKR/MyInvestor StatementSource, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
+apps/cli           Phase-1 interface over a local file or S3.
+apps/api           Lambda Function URL: validates JWT, composes domain + adapters.
+apps/web           Vite SPA; uses domain to project/simulate offline.
+infra/             Terraform.
+```
+
+Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `StatementSource`, `PriceSource`, `FxRateSource`, `DocumentStore`, `Notifier`, `Clock`. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
+
 ## Domain traps
 
 Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 
 1. **A transfer between funds is NOT a sell followed by a buy.** It keeps the original acquisition date and cost. Modelling it as sell+buy silently breaks taxation.
-2. **Lots, never aggregated positions.** The current position is a derived query, not a stored field. FIFO needs lot-level detail.
-3. **Money in decimal, never floating point.** Fund units are fractional with many decimals.
+2. **Lots, never aggregated positions.** Lots are a projection computed from transactions, never stored; the current position is a derived query. FIFO needs lot-level detail.
+3. **Money in decimal, never floating point.** `Money`/`Quantity`/`Price`/`FxRate` wrap vendored `big.js`; amounts are strings in JSON; round only at fiscal output and display, half-up, once per transaction (ADR-0005).
 4. **Always store the original amount, currency and the ECB exchange rate of the value date.** Converting to EUR and discarding the original loses information the tax agency requires.
 5. **No tax calculation may depend on market prices.** Prices are informational. Taxation comes exclusively from the ledger.
 6. **Corporate actions are first-class transactions** with their own lot-transformation logic. No manual patches on the database.
 7. **The own ledger is the source of truth.** Broker statements are for reconciliation, not for feeding the system.
+8. **The ledger is append-only.** Transactions are never edited or deleted; "edit" = `reversal` + corrected transaction (ADR-0003). Amounts are serialised as strings in JSON, never as JSON numbers.
 
 ## Design principles
 
@@ -83,6 +112,8 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 - Atomic commits: one conceptual change per commit.
 - **No AI tool may appear as co-author or be mentioned in commit messages, bodies, footers or PR descriptions.**
 - Ask the user before installing tools, extensions or packages, and before committing or pushing.
+- Enforced mechanically: `.githooks/commit-msg` and `.claude/hooks/check-git-commit.py` reject non-conforming messages; `.githooks/pre-commit` runs `gitleaks`. Enable per clone with `git config core.hooksPath .githooks`.
+- New architecture decisions: use the `/adr` skill (`docs/adr/template.md`, index in `docs/adr/README.md`). Pending rounds of decisions live in `docs/decision-roadmap.md`.
 
 ### Environments
 
@@ -132,7 +163,7 @@ Mandatory edge cases: several lots with the same date, fractions, reverse split 
 
 ## Documentation
 
-- ADRs for relevant architecture decisions.
+- ADRs in `docs/adr/` (status Propuesta / Aceptada / Reemplazada) for relevant architecture decisions.
 - Data schema documented in the repository, including the lot-transformation logic for every corporate action type.
 - Every recorded corporate action keeps its documentary source (issuer URL or PDF).
 
