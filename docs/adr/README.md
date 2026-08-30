@@ -10,6 +10,8 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0004](0004-cash-scope.md) | Efectivo: saldos derivados por cuenta, colchón fuera de alcance | Aceptada |
 | [0005](0005-money-representation.md) | Representación de dinero y cantidades (`big.js` vendorizada, redondeo tardío) | Aceptada |
 | [0006](0006-ledger-file-schema.md) | Esquema del libro en S3 (un registro de eventos, versión por línea, BCE íntegro) | Aceptada |
+| [0007](0007-code-structure.md) | Monorepo npm workspaces, arquitectura hexagonal, CLI primero | Aceptada |
+| 0008 | Lint y formato (Biome frente a ESLint + Prettier) | Pendiente |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 

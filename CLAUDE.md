@@ -62,6 +62,21 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 
 **Cost constraint:** the project must stay inside the AWS always-free tier indefinitely. Before introducing a new service, verify it is free at this scale.
 
+## Code architecture (ADR-0007)
+
+Monorepo with npm workspaces, **hexagonal architecture** with a pure functional core:
+
+```
+packages/domain    pure core: types, money, events, projections, FIFO, tax, use cases, PORTS (interfaces). No I/O, no runtime npm deps.
+packages/adapters  port implementations: S3/file/memory LedgerStore, IBKR/MyInvestor StatementSource, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
+apps/cli           Phase-1 interface over a local file or S3.
+apps/api           Lambda Function URL: validates JWT, composes domain + adapters.
+apps/web           Vite SPA; uses domain to project/simulate offline.
+infra/             Terraform.
+```
+
+Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `StatementSource`, `PriceSource`, `FxRateSource`, `DocumentStore`, `Notifier`, `Clock`. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
+
 ## Domain traps
 
 Errors that go unnoticed for years. Details in `docs/business-rules.md`.
