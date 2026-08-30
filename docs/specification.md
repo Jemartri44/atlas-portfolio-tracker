@@ -89,7 +89,7 @@ Los identificadores cambian con el tiempo. El `id` interno es inmutable; ISIN y 
 **Transaction** (operación)
 `id`, `trade_date`, `value_date`, `type`, `asset_id`, `account_id`, `quantity`, `unit_price`, `currency`, `fx_rate`, `fee`, `notes`, `reverses_transaction_id` (opcional), `corrects_transaction_id` (opcional)
 
-Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `interest`, `fx_exchange`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `valuation`, `reversal`; más los eventos de seguimiento sin efecto contable `order_placed`/`order_updated` y `transfer_requested`/`transfer_request_updated` (ADR-0010, ADR-0012). Detalle en `docs/data-schema.md`.
+Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `reversal`.
 
 **El libro es append-only** (ADR-0003): las operaciones nunca se editan ni se borran. *Editar* en la interfaz escribe un `reversal` de la original más la operación correcta enlazada por `corrects_transaction_id`; *Eliminar* escribe solo el `reversal`. La proyección de lotes ignora las parejas anuladas. Si la rectificación afecta a un ejercicio fiscal ya declarado, la app lo advierte.
 
@@ -320,7 +320,7 @@ Toda entrada de datos tiene dos vías: **importación** y **manual**. La manual 
 
 1. **Subida o descarga automática** del extracto.
 2. **Parseo** con el adaptador correspondiente al origen.
-3. **Detección de duplicados** por huella que incluye el identificador del bróker cuando existe (ADR-0012): reimportar el mismo extracto no duplica nada, y dos ejecuciones parciales idénticas no se confunden. Huella repetida = aviso con confirmación.
+3. **Detección de duplicados** por huella (fecha + activo + cantidad + importe). Reimportar el mismo extracto no debe duplicar nada.
 4. **Vista de conciliación**: qué operaciones son nuevas, cuáles ya existen, cuáles difieren de lo registrado.
 5. **Confirmación explícita** antes de escribir. Nada entra en el libro mayor sin que lo apruebes.
 6. **Informe de discrepancias**: si el extracto dice que tienes 24,31 participaciones y tu libro dice 24,30, sale un aviso.
@@ -619,5 +619,4 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [ ] **Tests de propiedades** para el motor FIFO (suma de lotes = posición; recalcular = almacenado; split e inverso dejan el coste intacto).
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).
 - [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos.
-- [x] **Protección de ramas** en GitHub para `main` y `develop` (hecho por el usuario).
-- [x] **Revisión externa (*challenge*) del 2026-08-30**: diez hallazgos aplicados (ADR-0012, ADR-0013, `docs/data-schema.md`); preguntas al asesor consolidadas en `docs/fiscal-questions.md`.
+- [ ] **Protección de ramas** en GitHub para `main` y `develop`.

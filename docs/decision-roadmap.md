@@ -19,7 +19,6 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | 3 | Estructura del código y toolchain | Primer commit de código | ADR-0007, ADR-0008 | **Cerrada** 2026-08-30 |
 | 4 | Semántica de operaciones y FIFO | Fase 1 | ADR-0009, ADR-0010, ADR-0011, `docs/data-schema.md` §6-8 | **Cerrada** 2026-08-30 |
 | 5 | Calidad, proceso y tooling del asistente | Fase 1 | Spec §11, `.githooks/`, `.claude/`, `.github/`, `LICENSE` | **Cerrada** 2026-08-30 |
-| — | *Challenge externo de las rondas 1-5* | Fase 1 | ADR-0012, ADR-0013, `docs/fiscal-questions.md` | **Hecho** 2026-08-30: 10 hallazgos aplicados; repetir antes de cada fase |
 | — | *Fase 0 (validación con la realidad, tareas del usuario)* | Rondas 6-7 | — | En curso: MyInvestor e IBKR pendientes; AWS y Yahoo diferidos a antes de la Fase 4 |
 | 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente |
 | 7 | Aplicación web: framework, offline, auth, API | Fase 2 | ADR-0009+ | Pendiente |

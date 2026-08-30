@@ -151,8 +151,6 @@ El método de imputación es **primera entrada, primera salida**, aplicado por p
 
 **Regla 21 — El mismo activo no puede estar en `core` y en `bucket`.** Evita que una venta del cubo consuma lotes del núcleo. El sistema rechaza el alta. En dos cuentas del mismo libro se permite con aviso.
 
-**Traspaso de custodia.** Mover un valor (mismo ISIN) de un depositario a otro no es transmisión: conserva fecha y coste. Se registra como `transfer` del mismo activo entre cuentas (ADR-0012).
-
 **Comisiones en la base fiscal** (art. 35 LIRPF, *verificar*): la de compra se suma al coste de adquisición; la de venta se resta del valor de transmisión. Se guardan aparte del precio.
 
 **Retención a cuenta en reembolsos de fondos:** el comercializador retiene sobre la plusvalía; se registra en la venta (`withholding`) para que cuadre la declaración.
@@ -163,11 +161,11 @@ Casos límite a cubrir en tests:
 - Cantidades fraccionarias
 - Venta que consume parcialmente un lote
 
-### 5.4 Regla de recompra con pérdidas (dos meses / un año)
+### 5.4 Regla de los dos meses
 
-Si se vende con pérdidas y se recompra el **mismo valor homogéneo** dentro de la ventana anterior o posterior a la venta, la pérdida **no es computable** en ese ejercicio. Se difiere hasta que se transmitan los valores recomprados.
+Si se vende con pérdidas y se recompra el **mismo valor homogéneo** dentro de los dos meses anteriores o posteriores a la venta, la pérdida **no es computable** en ese ejercicio. Se difiere hasta que se transmitan los valores recomprados.
 
-La ventana es de **dos meses** para valores admitidos a negociación (acciones, ETF, ETC, ETP) y de **un año** para los no admitidos (participaciones de fondos —es decir, todo el núcleo `equity` y `fixed_income`— y cripto) (art. 33.5.f LIRPF, **verificar**). Con aportaciones mensuales a un fondo, cualquier reembolso con pérdida de ese fondo activa la regla. Parametrizada por tipo de activo (`wash_sale_window_days`, ADR-0013). Un traspaso entrante no cuenta como adquisición (**verificar**).
+Aplica a valores admitidos a negociación. Para valores no cotizados el plazo es más largo (**verificar**).
 
 → La app alerta al intentar registrar una recompra que active la regla, y **aplica el diferimiento completo** en el motor fiscal: la parte de la pérdida proporcional a la cantidad recomprada queda pendiente, asociada a los lotes recomprados, y se libera cuando estos se transmiten. Es el error más común en operativa activa.
 
@@ -187,11 +185,9 @@ La ventana es de **dos meses** para valores admitidos a negociación (acciones, 
 
 ### 5.7 Divisa
 
-Toda operación en divisa distinta del euro requiere conversión al **tipo de cambio oficial del BCE de la fecha fiscal** (§5.10).
+Toda operación en divisa distinta del euro requiere conversión al **tipo de cambio oficial del BCE de la fecha valor**.
 
-- Se almacena el tipo **tal cual lo publica el BCE** (unidades de divisa por EUR, todos los decimales) y la fecha del tipo aplicado; en días sin publicación, el último anterior (**verificar**). Conversión: `eur = importe / tipo` (ADR-0013).
 - Se almacenan siempre importe original, divisa y tipo aplicado.
-- Los cambios de divisa dentro de una cuenta se registran como `fx_exchange` con ambos importes y ambos tipos, para poder calcular diferencias de cambio cuando se confirme su tratamiento (ADR-0012).
 - Nunca convertir y descartar el original.
 - Las cuentas multidivisa pueden generar ganancias o pérdidas por diferencias de cambio con tratamiento propio (**verificar la doctrina aplicable**).
 
@@ -205,10 +201,6 @@ Toda operación en divisa distinta del euro requiere conversión al **tipo de ca
 - **No aplica a un ETP**, que es un valor, no una tenencia de criptoactivos.
 
 → La app avisa al acercarse a los umbrales, con margen configurable.
-
-### 5.10 Fecha fiscal por tipo de activo
-
-La fecha que determina el ejercicio, la antigüedad del lote, el tipo de cambio y la ventana de recompra es la **fecha de contratación** para valores cotizados (acciones, ETF, ETC, ETP; una venta el 30/12 con liquidación el 02/01 es del ejercicio anterior) y la **fecha valor** del reembolso o suscripción para fondos (**verificar**). Parametrizada por tipo de activo (`fiscal_date_rule`, ADR-0013); el libro guarda siempre ambas fechas.
 
 ### 5.9 Residencia fiscal
 
@@ -263,8 +255,6 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 | `model_720_alert_threshold_eur` | 45.000€ | 5.8 |
 | `model_721_alert_threshold_eur` | 45.000€ | 5.8 |
 | `savings_tax_brackets[]` | Ver 5.1 | 5.1 |
-| `fiscal_date_rule{}` | cotizados → contratación; fondos → fecha valor | 5.10 |
-| `wash_sale_window_days{}` | fondos/cripto 365; cotizados 61 | 5.4 |
 | `tax_residence` | España | 5.9 |
 | `notification_email` | — | — |
 | `job_frequencies{}` | Ver especificación | — |

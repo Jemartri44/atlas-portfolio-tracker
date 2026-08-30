@@ -10,9 +10,9 @@ Eres el asistente implementador del proyecto **Atlas Portfolio Tracker** (`~/pro
 
 1. `CLAUDE.md` entero, en especial *Working on a feature*, *Code architecture*, *Domain traps* y *Language*.
 2. `.specify/memory/constitution.md`.
-3. `docs/adr/README.md` y los ADRs 0001, 0003, 0005, 0006, 0007, 0008, 0009, 0010, 0012, 0013.
+3. `docs/adr/README.md` y los ADRs 0001, 0003, 0005, 0006, 0007, 0008, 0009, 0010.
 4. `docs/data-schema.md` completo.
-5. `docs/specification.md` §2, §3, §4, §5 y §11; `docs/business-rules.md` §1, §5.2, §5.3, §5.7, §5.10; `docs/fiscal-questions.md` (para saber qué valores son provisionales).
+5. `docs/specification.md` §2, §3, §4, §5 y §11; `docs/business-rules.md` §1, §5.2, §5.3.
 6. `docs/dependencies.md`.
 
 Si encuentras una contradicción o una ambigüedad que te impida seguir, **no la resuelvas tú**: anótala en `specs/001-ledger-core/questions.md` y avisa al usuario. Nada fiscal ni estructural se decide en esta feature.
@@ -45,29 +45,27 @@ Si encuentras una contradicción o una ambigüedad que te impida seguir, **no la
 
 ### 3.3 Eventos y libro (ADR-0003, ADR-0006, data-schema §2-§6)
 
-- Tipos TypeScript para el envoltorio y para **estos** eventos: `account_created/updated`, `asset_created/updated`, `settings_changed`, `buy`, `sell`, `transfer` (modos fiscal y de custodia), `order_placed`, `order_updated`, `transfer_requested`, `transfer_request_updated`, `dividend`, `interest`, `fx_exchange`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `valuation`, `reversal`. (`corporate_action`, `thesis_*` quedan para la feature 002; deja el discriminador abierto para añadirlos sin romper nada.)
-- `fx_rate` es el tipo del BCE tal cual (divisa por EUR) y la conversión es `eur = amount / fx_rate`; `amount` es la base de coste cuando está presente (ADR-0012, ADR-0013). `fiscal_date` se deriva por tipo de activo desde `Settings.fiscal_date_rule`.
-- Validación de cada evento al escribir (campos obligatorios, numéricos como cadenas decimales, fechas `YYYY-MM-DD`, `reversal` de `reversal` prohibido, `transfer` fiscal solo entre activos `transferable` y traspaso de custodia solo con el mismo activo, un activo no puede existir en los dos libros — ADR-0009). `fingerprint` repetida es un **aviso con confirmación** (`--confirm-duplicate`), no un rechazo.
-- `reverseEvent`/`correctEvent` re-proyectan sin la pareja y **rechazan** si algún evento posterior deja de ser válido, listando los afectados (data-schema §6.3). La proyección ante un estado inválido lanza; nunca cantidades negativas en silencio.
+- Tipos TypeScript para el envoltorio y para **estos** eventos: `account_created/updated`, `asset_created/updated`, `settings_changed`, `buy`, `sell`, `transfer`, `transfer_requested`, `transfer_request_updated`, `dividend`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `valuation`, `reversal`. (`corporate_action`, `thesis_*` quedan para la feature 002; deja el discriminador abierto para añadirlos sin romper nada.)
+- Validación de cada evento al escribir (campos obligatorios, numéricos como cadenas decimales, fechas `YYYY-MM-DD`, `fingerprint` única, `reversal` de `reversal` prohibido, `transfer` solo entre activos `transferable`, un activo no puede existir en los dos libros — ADR-0009).
 - ULID propio (~40 líneas, monótono dentro del proceso). `recorded_at` vía el puerto `Clock`.
 - `schema_version = 1`; cadena de migraciones vacía pero con el mecanismo implementado (`migrate(line)`), y test de que una línea v1 pasa intacta.
-- Puerto `LedgerStore` (`load() → {events, etag}`, `append(events, etag)` con conflicto explícito) y adaptadores **memoria** y **fichero local** (`ledger.jsonl`, escritura atómica vía fichero temporal + rename). Contrato obligatorio (data-schema §5): el cargador **rechaza** líneas con `schema_version` superior a la conocida; `append` conserva los bytes originales y solo añade; el orden canónico es la posición en el fichero. Tests: fichero con una línea "del futuro" falla al cargar; tras `append`, el prefijo del fichero es byte a byte el original. El adaptador S3 **no** entra en esta feature.
+- Puerto `LedgerStore` (`load() → {events, etag}`, `append(events, etag)` con conflicto explícito) y adaptadores **memoria** y **fichero local** (`ledger.jsonl`, escritura atómica vía fichero temporal + rename). El adaptador S3 **no** entra en esta feature.
 - Casos de uso en `domain/usecases`: `recordEvent`, `reverseEvent`, `correctEvent` (reversal + nuevo con `corrects_id`), `projectLedger`.
 
 ### 3.4 Proyecciones y FIFO (data-schema §7-§8, ADR-0009, ADR-0010)
 
-- `accounts`, `assets` (con `identifier_history`), `settingsAt(date)` (comparación en `Europe/Madrid`, fin del día), `physicalPositions`, `cashBalances` (incluye `fx_exchange`, `interest`, `dividend`), `pendingTransfers`, `pendingOrders`, `fiscalLots`, `realizedGains(year)` por `fiscal_date` y **sin** la regla de recompra (queda para el motor fiscal), `investmentIncome(year)`, `integrity`.
+- `accounts`, `assets` (con `identifier_history`), `settingsAt(date)`, `physicalPositions`, `cashBalances`, `pendingTransfers`, `fiscalLots`, `realizedGains(year)` **sin** la regla de los dos meses (queda para el motor fiscal), `integrity`.
 - FIFO global por `asset_id` entre cuentas, orden `(acquisition_date, id)`; coste de adquisición y valor de transmisión con comisiones según §8.1; `transfer` hereda fecha y coste total (§8.2), parcial en FIFO.
 - Tests de propiedades: suma de lotes abiertos = posición física agregada por activo; proyectar dos veces da lo mismo; `correctEvent` seguido de volver al valor original deja la proyección idéntica a no haber tocado nada; un `transfer` nunca genera ganancia.
-- Casos límite obligatorios (constitución VII): varios lotes con la misma fecha, cantidades fraccionarias con muchos decimales, venta que parte un lote, traspaso parcial, traspaso de custodia (posición cambia de cuenta, lotes intactos), venta mayor que la posición (rechazo), anulación de una compra ya vendida (rechazo con lista), venta el 30/12 con liquidación el 02/01 (ejercicio según `fiscal_date_rule`), efectivo en divisa que cuadra tras `fx_exchange`.
+- Casos límite obligatorios (constitución VII): varios lotes con la misma fecha, cantidades fraccionarias con muchos decimales, venta que parte un lote, traspaso parcial, venta mayor que la posición (rechazo).
 
 ### 3.5 CLI (ADR-0007)
 
 `apps/cli`, ejecutable `atlas`, sobre el `LedgerStore` de fichero (`--ledger <ruta>`, por defecto `./ledger.jsonl`). Sin dependencias: parseo de argumentos a mano.
 
 - `atlas account add|list`, `atlas asset add|list`, `atlas settings set|show`
-- `atlas add buy|sell|transfer|dividend|interest|fx|cash-in|cash-out|fee|valuation …` (flags con los campos de data-schema §6, incluido `--amount`; muestra el evento antes de escribir y pide confirmación salvo `--yes`)
-- `atlas order place|cancel|list` y `atlas transfer request|update|pending` (seguimiento, ADR-0010, ADR-0012); `atlas add buy --order <id>` cierra la orden
+- `atlas add buy|sell|transfer|dividend|cash-in|cash-out|fee|valuation …` (flags con los campos de data-schema §6; muestra el evento antes de escribir y pide confirmación salvo `--yes`)
+- `atlas transfer request|update` (seguimiento, ADR-0010)
 - `atlas edit <id>` y `atlas delete <id>` (implementan reversal + corrección; avisan si el `value_date` es de un ejercicio anterior)
 - `atlas positions`, `atlas lots [asset]`, `atlas cash`, `atlas transfers pending`, `atlas gains <year>`, `atlas check` (integrity)
 - `atlas export --format jsonl|csv`

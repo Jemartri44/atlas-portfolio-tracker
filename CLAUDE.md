@@ -21,7 +21,6 @@ User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) a
 - `docs/dependencies.md` — the closed dependency budget.
 - `docs/prompts/` — handoff prompts, one per feature, written by the high-level assistant for the implementing assistant.
 - `docs/statements/` — structural description of each broker export format (no real data), input for the `StatementSource` adapters.
-- `docs/fiscal-questions.md` — consolidated questions for the tax advisor; each answer becomes a `Settings` value or a note in `business-rules.md`.
 
 ## Spec-driven development (GitHub Spec Kit)
 
@@ -108,13 +107,11 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 1. **A transfer between funds is NOT a sell followed by a buy.** It keeps the original acquisition date and cost. Modelling it as sell+buy silently breaks taxation.
 2. **Lots, never aggregated positions.** Lots are a projection computed from transactions, never stored; the current position is a derived query. FIFO needs lot-level detail.
 3. **Money in decimal, never floating point.** `Money`/`Quantity`/`Price`/`FxRate` wrap vendored `big.js`; amounts are strings in JSON; round only at fiscal output and display, half-up, once per transaction (ADR-0005).
-4. **Always store the original amount, currency and the ECB rate as published** (currency units per EUR, all decimals, plus its date) for the fiscal date; `eur = amount / fx_rate`. Converting to EUR and discarding the original loses information the tax agency requires (ADR-0013).
+4. **Always store the original amount, currency and the ECB exchange rate of the value date.** Converting to EUR and discarding the original loses information the tax agency requires.
 5. **No tax calculation may depend on market prices.** Prices are informational. Taxation comes exclusively from the ledger.
 6. **Corporate actions are first-class transactions** with their own lot-transformation logic. No manual patches on the database.
 7. **The own ledger is the source of truth.** Broker statements are for reconciliation, not for feeding the system.
-8. **The ledger is append-only.** Transactions are never edited or deleted; "edit" = `reversal` + corrected transaction (ADR-0003). Reversing an event that later events consumed is **rejected** (rectify the dependants first). Amounts are serialised as strings in JSON, never as JSON numbers.
-9. **Fiscal date depends on asset type** (`trade_date` for listed securities, `value_date` for funds, configurable, ADR-0013); the wash-sale window is one year for funds and crypto, two months for listed securities (configurable, verify with advisor).
-10. **Loader rejects newer schema versions; `append` never re-serialises existing lines.** An old client must never rewrite a newer ledger.
+8. **The ledger is append-only.** Transactions are never edited or deleted; "edit" = `reversal` + corrected transaction (ADR-0003). Amounts are serialised as strings in JSON, never as JSON numbers.
 
 ## Design principles
 
