@@ -594,3 +594,18 @@ FIFO consolidado, conversión de divisa por fecha valor, regla de los dos meses,
 - [ ] **Pesos objetivo**: dependen de la decisión P1 del plan financiero.
 - [ ] **¿Qué ETF de referencia para cada fondo?** Depende de P2 del plan financiero.
 - [ ] **Nivel de importación automática de IBKR**: diaria automática frente a bajo demanda. Empezar bajo demanda y automatizar cuando el parser esté probado.
+
+### 14.1 Pendientes de la revisión de agosto de 2026
+
+Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno merece una conversación y, si procede, un ADR.
+
+- [ ] **Lenguaje del backend.** No está definido. TypeScript en todo (un solo toolchain, tipos del dominio compartidos con el frontend) o Python (`decimal` en la biblioteca estándar). Si es TypeScript: el SDK de DynamoDB devuelve los números como `number` de JS salvo que se configure `wrapNumbers`; candidato a trampa de dominio nº 8.
+- [ ] **Corrección de errores de registro.** Propuesta: las operaciones son *append-only*, nunca se editan ni borran; un error se corrige con una operación de rectificación que referencia a la original. Los lotes pasan a ser una proyección recalculable desde cero.
+- [ ] **Posición de efectivo.** `cash_deposit`/`cash_withdrawal` existen, pero no hay saldo por cuenta. Necesario para conciliar con IBKR y para la vista consolidada. Decidir si el colchón es un libro o un atributo de cuenta.
+- [ ] **Retención a cuenta en reembolsos de fondos.** Registrarla en las ventas de fondos para que la salida de la Renta cuadre.
+- [ ] **Valoración a 31 de diciembre.** El Modelo 720 exige valor de mercado a fin de año. Foto manual anual guardada como dato de Nivel 1, no como precio scrapeado.
+- [ ] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio.
+- [ ] **Tests de propiedades** para el motor FIFO (suma de lotes = posición; recalcular = almacenado; split e inverso dejan el coste intacto).
+- [ ] **Reconsiderar DynamoDB frente a JSONL en S3.** El libro mayor completo cabe en memoria en una Lambda; con "cargar todo, calcular, guardar" el fichero versionado cumple mejor "legible sin la aplicación".
+- [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos.
+- [ ] **Protección de ramas** en GitHub para `main` y `develop`.
