@@ -15,6 +15,16 @@ describe("MemoryLedgerStore", () => {
     expect(store.toText()).toBe(`${lineOf(account)}\n${lineOf(deposit)}\n`);
     expect((await MemoryLedgerStore.empty().load()).events).toEqual([]);
   });
+
+  it("keeps the archives written by replace", async () => {
+    const store = MemoryLedgerStore.fromLines([lineOf(account), lineOf(deposit)]);
+    const { etag } = await store.load();
+    await store.replace([deposit], etag, "ledger-2026-09-01-v1.jsonl");
+    expect([...store.archives.entries()]).toEqual([
+      ["ledger-2026-09-01-v1.jsonl", `${lineOf(account)}\n${lineOf(deposit)}\n`],
+    ]);
+    expect(store.toText()).toBe(`${lineOf(deposit)}\n`);
+  });
 });
 
 describe("system adapters", () => {
