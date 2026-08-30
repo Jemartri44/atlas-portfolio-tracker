@@ -477,6 +477,8 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
   `test(tax): cover the two-month rule`
 - **Ninguna herramienta de IA puede figurar como coautora ni aparecer en los mensajes de commit.**
 - Commits atómicos: un cambio conceptual por commit.
+- Hooks de git versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` ejecuta `gitleaks`. El asistente de código tiene el mismo control en `.claude/settings.json`.
+- Plantilla de PR con la checklist de la constitución en `.github/pull_request_template.md`.
 
 ### 11.3 Entornos
 
@@ -506,14 +508,14 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
 | **Contrato** | Parsers de extractos contra ficheros reales anonimizados guardados en el repositorio |
 | **End-to-end** | Flujos críticos: registrar operación, importar extracto, calcular aportación |
 
-**Prioridad absoluta: el motor fiscal.** Es donde un error silencioso cuesta dinero y no se detecta hasta años después. Cobertura alta y casos límite explícitos (misma fecha en varios lotes, fracciones, contrasplit con liquidación en efectivo, recompra en el límite de los dos meses).
+**Prioridad absoluta: el motor fiscal.** Es donde un error silencioso cuesta dinero y no se detecta hasta años después. **Cobertura del 100% de líneas y ramas en `packages/domain`, bloqueante en CI**; sin umbral numérico fuera del dominio (ahí mandan los tests de contrato e integración). Casos límite explícitos (misma fecha en varios lotes, fracciones, contrasplit con liquidación en efectivo, recompra en el límite de los dos meses).
 
 **Ficheros de ejemplo anonimizados** de cada formato de extracto, versionados en el repositorio. Cuando un bróker cambie el formato, el test falla y te enteras.
 
 ### 11.6 CI/CD
 
 GitHub Actions:
-1. Lint y formateo
+1. Lint y formateo (Biome, ADR-0008)
 2. Comprobación de tipos
 3. Tests unitarios y de integración
 4. `npm audit` y análisis de dependencias
@@ -544,6 +546,8 @@ GitHub Actions:
 ### 11.9 Documentación
 
 - `README` con arranque en local, arquitectura y despliegue.
+- Licencia **MIT** (`LICENSE`).
+- Versionado: etiquetas `vX.Y.Z` en `main` al cerrar cada `release/*`; `CHANGELOG.md` escrito a mano en la rama de release, sin herramienta de generación.
 - **ADRs** (registros de decisión de arquitectura) en `docs/adr/` para las decisiones importantes: lenguaje, almacenamiento, modelo del libro, por qué modelo propio, por qué aproximación por ETF.
 - **El esquema de datos documentado en el repositorio**, incluida la lógica de transformación de lotes de cada evento corporativo.
 
