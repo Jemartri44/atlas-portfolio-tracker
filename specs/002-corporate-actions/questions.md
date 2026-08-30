@@ -28,6 +28,19 @@ Con la semántica de venta, `forced_sale` de `"all"` a 3 € vendería las 10 ac
 - **Identificadores de lote.** En la 001 son `<event_id>#<n>` con `n` contado dentro del activo; un `issuer_restructuring` con dos `convert` en cadena crearía `#0` en dos activos. Se pasa a contar `n` por evento en todo el libro (los libros de la 001 no cambian: cada evento creaba lotes en un solo activo). Detalle de implementación, no de esquema.
 - **`data-schema.md` §7.1** dice "tesis en la primera pasada, en orden de fichero, como el catálogo". Para que un `thesis_opened` pueda preceder en el fichero al `asset_created` de su activo (igual que una compra), las tesis se aplican en la pasada A **después** de todo el catálogo, en orden de fichero (supuesto A5 del spec). No cambia el documento.
 
-## Notas de implementación
+## Notas de implementación (2026-08-30, tras `/speckit-implement`)
 
-*(Se rellena durante `/speckit-implement`.)*
+Decisiones de detalle que no cambian documentos pero conviene que el usuario conozca:
+
+- **Rollback por efecto.** Si un efecto posterior de un `corporate_action` falla (por ejemplo `forced_sale` de más picos de los que deja el `scale`), la proyección restaura lotes, posiciones, efectivo, ganancias y avisos de los activos implicados antes de rechazar el evento: en modo `collectErrors` (rectificación, `atlas check`) el evento inválido no deja rastro, como los `apply*` de la 001.
+- **`ratio` como tipo de valor** (`money/ratio.ts`): `Ratio.parse` acepta decimal positivo o fracción de enteros positivos; `scaleQuantities` calcula el total una vez y da el resto exacto al último elemento (último lote en orden FIFO, última cuenta en orden de primera aparición). Con ratio decimal la multiplicación es exacta y el resto es cero.
+- **`asset_id?` también en `grant`**, por uniformidad (spec A3): si falta, el activo concedido es el del evento.
+- **`thesis_id` fuera del cubo se rechaza** (`thesis_not_allowed`), para que un `--thesis` en una cuenta del núcleo no pase en silencio.
+- **`thesis_closed_with_position`** se evalúa al final de la proyección (spec A7); desaparece cuando una tesis nueva se abre sobre el mismo par.
+- **Ventana de la tesis con `corrects_id`** (spec A6): un `buy`/`sell` corregido usa la posición del evento que corrige, así que se puede corregir una compra tras cerrar su tesis; una compra nueva tras el cierre sigue rechazándose.
+- **`fund_liquidation` / `issuer_liquidation`** exigen `"all"` en exactamente las cuentas con posición (`liquidation_must_cover_all_accounts`, con `missing`/`extra`/`partial` en los detalles).
+- **Mecanismo de tipos reservados** conservado con `RESERVED_EVENT_TYPES = []`: un test (`reserved-types.test.ts`) lo ejercita simulando un tipo de una feature futura, para que la 003 pueda reservar tipos sin tocar cargador ni proyección.
+- **Asistente `merger --cash-per-share`**: solo picos del activo nuevo (Q1 (a)); el componente en efectivo por acción antigua se registra con `raw` (`forced_sale` parcial antes del `convert`), como dice `data-schema.md` §6.5.
+- **Picos en los asistentes** (`reverse-split`, `merger`, `spin-off`): se proyecta el libro con el efecto principal y se toma `posición − ⌊posición⌋` por cuenta sobre el activo resultante; sin fracciones no se genera `forced_sale` (aviso si se dio `--cash-per-share`).
+- **`atlas lots` y `atlas gains`** muestran la columna `origen` (tipo del evento que creó el lote o registró la ganancia; `corporate_action:<kind>`), resuelta con `state.positionOf` sobre los eventos cargados.
+- **Orden de commits**: T012 y T013 fueron un solo commit (`theses.ts` no se puede ejercitar sin la pasada A'); T003 entró con T001 (la muestra del `corporate_action` lleva huella).

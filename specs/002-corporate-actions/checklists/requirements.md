@@ -32,3 +32,4 @@
 ## Notas
 
 - Spec y plan aprobados por el usuario el 2026-08-30; Q1 resuelta (a); `ratio` con fracción incorporado antes de codificar.
+- Implementación completa el 2026-08-30 (T001-T021); notas en `questions.md`.
