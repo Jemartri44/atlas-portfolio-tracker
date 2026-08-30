@@ -1,12 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
+    "rootDir": "test",
+    "outDir": "dist-test",
     "types": ["node"]
   },
-  "include": ["src"],
+  "include": ["test"],
   "references": [
+    {
+      "path": "./tsconfig.json"
+    },
     {
       "path": "../domain"
     }

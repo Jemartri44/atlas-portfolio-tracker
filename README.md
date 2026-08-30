@@ -33,10 +33,10 @@ Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `v
 
 ## Uso de la CLI
 
-Tras `npm run build`, el ejecutable es `node apps/cli/dist/src/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. Ejemplo completo con datos inventados:
+Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. Ejemplo completo con datos inventados:
 
 ```bash
-alias atlas='node apps/cli/dist/src/main.js --ledger ./demo.jsonl'
+alias atlas='node apps/cli/dist/main.js --ledger ./demo.jsonl'
 
 # Catálogo
 atlas account add --id acc_fund --name "Fondos" --platform myinvestor --book core --base-currency EUR --country ES --yes
