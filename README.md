@@ -52,3 +52,7 @@ git checkout develop && git merge --no-ff hotfix/<version> && git branch -d hotf
 
 Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/)
 (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea.
+
+## Licencia
+
+[MIT](LICENSE).
