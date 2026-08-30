@@ -512,6 +512,15 @@ const checkEnvelope = (raw: UnknownRecord, schema: LedgerSchema): void => {
   }
 };
 
+const ENVELOPE_FIELDS = ["schema_version", "id", "recorded_at", "type", "corrects_id"] as const;
+
+/** Top-level fields a line of `type` may carry: envelope plus the type's rules (`settings` for settings_changed). */
+export const knownFieldsOf = (type: SupportedEventType): readonly string[] => [
+  ...ENVELOPE_FIELDS,
+  ...Object.keys(RULES[type]),
+  ...(type === "settings_changed" ? ["settings"] : []),
+];
+
 /** Validates envelope (against `schema.version`) and per-type shape. Returns the same object, typed. */
 export const validateShape = (
   raw: unknown,

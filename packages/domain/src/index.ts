@@ -19,6 +19,7 @@ export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
 export type { RandomSource } from "./ports/random.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";
+export { deepCheck } from "./projections/deep-check.js";
 export { realizedGains } from "./projections/gains.js";
 export { investmentIncome } from "./projections/income.js";
 export { type IntegrityFinding, integrity } from "./projections/integrity.js";
@@ -66,7 +67,7 @@ export {
   type Migration,
   migrate,
 } from "./schema/migrations/index.js";
-export { validateShape } from "./schema/validate.js";
+export { knownFieldsOf, validateShape } from "./schema/validate.js";
 export { type BusinessDates, fiscalDateOf } from "./settings/fiscal-date.js";
 export * from "./settings/settings.js";
 export * from "./synth/index.js";
