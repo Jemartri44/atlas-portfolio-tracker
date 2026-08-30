@@ -4,6 +4,7 @@
 // pair and refuse to write if any other event stops being valid.
 
 import { yearOf } from "../dates/civil-date.js";
+import { todayInMadrid } from "../dates/madrid.js";
 import { DependentEventsError, DuplicateFingerprintError, NotFoundError } from "../errors.js";
 import { createUlidGenerator } from "../ids/ulid.js";
 import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
@@ -32,14 +33,14 @@ const findTarget = (events: readonly LedgerEvent[], targetId: string): LedgerEve
   return target;
 };
 
-/** Whether the target's business date falls in a tax year before the clock's year. */
+/** Whether the target's business date falls in a tax year before today's year in Europe/Madrid. */
 export const isPriorYear = (
   deps: Pick<UseCaseDeps, "clock">,
   state: LedgerState,
   target: LedgerEvent,
 ): boolean =>
   isOperationEvent(target) &&
-  yearOf(businessDateOf(state, target)) < deps.clock.now().getUTCFullYear();
+  yearOf(businessDateOf(state, target)) < yearOf(todayInMadrid(deps.clock));
 
 /**
  * Projects the candidate ledger collecting errors and separates the new events'
