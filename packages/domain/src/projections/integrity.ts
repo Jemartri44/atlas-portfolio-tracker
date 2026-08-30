@@ -1,4 +1,7 @@
 // Integrity checks (data-schema.md §7): what a quarterly verification reports.
+// References the projection already rejects are not repeated here (feature 003
+// plan, table "reference → where it is checked"); `dangling_reference` covers
+// the one nobody checked: `reference_etf_id`.
 
 import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
@@ -47,6 +50,16 @@ export const integrity = (state: LedgerState): IntegrityFinding[] => {
         code: "duplicate_fingerprint",
         message: `${ids.length} events share fingerprint ${fingerprint}`,
         event_ids: ids,
+      });
+    }
+  }
+  for (const asset of state.assets.values()) {
+    if (asset.reference_etf_id !== undefined && !state.assets.has(asset.reference_etf_id)) {
+      findings.push({
+        severity: "error",
+        code: "dangling_reference",
+        message: `asset ${asset.asset_id} references unknown reference_etf_id ${asset.reference_etf_id}`,
+        event_ids: [],
       });
     }
   }
