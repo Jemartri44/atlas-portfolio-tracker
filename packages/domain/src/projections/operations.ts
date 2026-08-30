@@ -30,7 +30,8 @@ import { recordIncome } from "./income.js";
 import { consume, openLot, openQuantity } from "./lots.js";
 import { completeRequest, fillOrder, lookupOpenOrder, lookupOpenRequest } from "./pending.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
-import { type Asset, addWarning, type LedgerState } from "./state.js";
+import { type Account, type Asset, addWarning, type LedgerState, type Thesis } from "./state.js";
+import { linkBuy, linkSell, requireOpenThesis } from "./theses.js";
 
 export interface Priced {
   id: string;
@@ -131,18 +132,65 @@ export const requireAvailable = (
   }
 };
 
+/** File position that decides "before in the file" for theses: a correction inherits the position of the event it corrects (spec A6). */
+const logicalPositionOf = (
+  state: LedgerState,
+  event: { corrects_id?: string },
+  position: number,
+): number =>
+  event.corrects_id === undefined ? position : (state.positionOf.get(event.corrects_id) as number);
+
+/** The thesis a bucket operation links to; `undefined` outside the bucket or for an unlinked sell. */
+const thesisOf = (
+  state: LedgerState,
+  event: BuyEvent | SellEvent,
+  account: Account,
+  position: number,
+): Thesis | undefined => {
+  if (account.book !== "bucket") {
+    if (event.thesis_id !== undefined) {
+      throw new ProjectionError(
+        "thesis_not_allowed",
+        event.id,
+        `thesis_id only applies to the bucket; ${event.account_id} is a core account`,
+        { account_id: event.account_id, thesis_id: event.thesis_id },
+      );
+    }
+    return undefined;
+  }
+  if (event.thesis_id === undefined) {
+    if (event.type === "buy") {
+      throw new ProjectionError(
+        "thesis_required",
+        event.id,
+        "a buy in the bucket needs the thesis_id of an open thesis recorded earlier (rule 15)",
+        { account_id: event.account_id, asset_id: event.asset_id },
+      );
+    }
+    addWarning(
+      state,
+      "sell_without_thesis",
+      event.id,
+      `the sale of ${event.asset_id} in ${event.account_id} is not linked to a thesis`,
+      { account_id: event.account_id, asset_id: event.asset_id },
+    );
+    return undefined;
+  }
+  return requireOpenThesis(
+    state,
+    event.thesis_id,
+    event.account_id,
+    event.asset_id,
+    logicalPositionOf(state, event, position),
+    event.id,
+  );
+};
+
 export const applyBuy = (state: LedgerState, event: BuyEvent, position: number): void => {
   const account = requireAccount(state, event.account_id, event.id);
   const asset = requireAsset(state, event.asset_id, event.id);
   assertSameBook(account, asset, event.id);
-  if (account.book === "bucket") {
-    throw new ProjectionError(
-      "thesis_required",
-      event.id,
-      "a buy in the bucket needs a thesis; theses arrive with feature 002",
-      { account_id: event.account_id },
-    );
-  }
+  const thesis = thesisOf(state, event, account, position);
   const order =
     event.order_id === undefined ? undefined : lookupOpenOrder(state, event.order_id, event, "buy");
   const fiscalDate = fiscalDateOf(event, asset.asset_type, state.fiscalSettings);
@@ -163,15 +211,26 @@ export const applyBuy = (state: LedgerState, event: BuyEvent, position: number):
     source_event_id: event.id,
     position,
   });
+  if (thesis !== undefined) {
+    linkBuy(
+      state,
+      thesis,
+      event.id,
+      quantity,
+      costEur,
+      fxOf(event).toEur(money(event.fee, event.currency)),
+    );
+  }
   warnCurrency(state, event, asset);
   warnFxDate(state, event, fiscalDate);
   warnHolders(state, event.asset_id, event.id);
 };
 
-export const applySell = (state: LedgerState, event: SellEvent): void => {
+export const applySell = (state: LedgerState, event: SellEvent, position: number): void => {
   const account = requireAccount(state, event.account_id, event.id);
   const asset = requireAsset(state, event.asset_id, event.id);
   assertSameBook(account, asset, event.id);
+  const thesis = thesisOf(state, event, account, position);
   const order =
     event.order_id === undefined
       ? undefined
@@ -192,7 +251,7 @@ export const applySell = (state: LedgerState, event: SellEvent): void => {
   adjustCash(state, event.account_id, proceeds.sub(withholding));
   adjustPosition(state, event.account_id, event.asset_id, negative(quantity), event.id);
   const slices = consume(state, event.asset_id, quantity, event.id);
-  recordGain(state, {
+  const gain = recordGain(state, {
     event_id: event.id,
     asset_id: event.asset_id,
     account_id: event.account_id,
@@ -201,6 +260,15 @@ export const applySell = (state: LedgerState, event: SellEvent): void => {
     proceeds_eur: proceedsEur,
     slices,
   });
+  if (thesis !== undefined) {
+    linkSell(
+      thesis,
+      event.id,
+      quantity,
+      gain.gain_eur,
+      fxOf(event).toEur(money(event.fee, event.currency)),
+    );
+  }
   warnCurrency(state, event, asset);
   warnFxDate(state, event, fiscalDate);
 };

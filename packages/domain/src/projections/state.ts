@@ -149,6 +149,46 @@ export interface PendingTransfer {
   closed_by?: Ulid;
 }
 
+export type ThesisStatus = "open" | "closed";
+
+export interface Thesis {
+  thesis_id: string;
+  account_id: AccountId;
+  asset_id: AssetId;
+  hypothesis: string;
+  expected_horizon_days: number;
+  invalidation: string;
+  planned_size_eur: Money;
+  status: ThesisStatus;
+  opened_event_id: Ulid;
+  /** File position of the `thesis_opened`: a bucket buy must come later in the file. */
+  opened_position: number;
+  /** `recorded_at` of the opening in Europe/Madrid (administrative date, not a business date). */
+  opened_at: CivilDate;
+  closed_event_id?: Ulid;
+  closed_position?: number;
+  closed_at?: CivilDate;
+  closing_notes?: string;
+  buys: Ulid[];
+  sells: Ulid[];
+  quantity_bought: Quantity;
+  quantity_sold: Quantity;
+  /** Σ cost_eur of the linked buys (fee included). */
+  invested_eur: Money;
+  /** Σ fee / fx_rate of the linked buys and sells. */
+  fees_eur: Money;
+  /** Σ gain_eur of the linked sells, exact. */
+  result_eur: Money;
+}
+
+export interface ThesisView extends Thesis {
+  result_eur_rounded: Money;
+  /** Physical position of (account, asset) at the end of the ledger. */
+  position: Quantity;
+  /** Days from opening to closing, or to the date asked. */
+  days_open: number;
+}
+
 export interface Warning {
   code: string;
   event_id: Ulid;
@@ -184,6 +224,8 @@ export interface LedgerState {
   valuations: ValuationEvent[];
   orders: Map<Ulid, PendingOrder>;
   transferRequests: Map<Ulid, PendingTransfer>;
+  /** Bucket theses by thesis_id, in file order. */
+  theses: Map<string, Thesis>;
   /** reversed event id → reversal id. */
   reversed: Map<Ulid, Ulid>;
   warnings: Warning[];
@@ -217,6 +259,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   valuations: [],
   orders: new Map(),
   transferRequests: new Map(),
+  theses: new Map(),
   reversed: new Map(),
   warnings: [],
   invalid: [],
