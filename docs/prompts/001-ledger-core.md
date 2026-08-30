@@ -40,7 +40,7 @@ Si encuentras una contradicción o una ambigüedad que te impida seguir, **no la
 
 **Qué puedes y qué no**
 - Puedes: crear el esqueleto, código, tests, fixtures sintéticas, README de arranque, `specs/001-ledger-core/*`, y anotar dudas en `specs/001-ledger-core/questions.md`.
-- No puedes: cambiar `docs/data-schema.md`, `docs/business-rules.md`, `docs/specification.md`, los ADRs ni la constitución (si crees que hace falta, es una pregunta); añadir dependencias fuera de `docs/dependencies.md`; instalar herramientas globales sin preguntar; crear `apps/api`, `apps/web` ni `infra/`; tocar `.githooks/`, `.claude/settings.json` ni `.github/`. Puedes proponer un ADR con `/adr` en estado `Propuesta`, nunca aceptarlo.
+- No puedes: cambiar `docs/data-schema.md`, `docs/business-rules.md`, `docs/specification.md`, los ADRs ni la constitución (si crees que hace falta, es una pregunta); añadir dependencias fuera de `docs/dependencies.md`; instalar herramientas globales sin preguntar; crear `apps/api`, `apps/web` ni `infra/`; tocar `.githooks/`, `.claude/settings.json` ni lo que ya existe en `.github/` (crear `.github/workflows/ci.yml` sí está en el alcance). Puedes proponer un ADR con `/adr` en estado `Propuesta`, nunca aceptarlo.
 
 **Idioma**
 - Código, identificadores, comentarios, commits, ramas, ficheros: inglés. Artefactos de Spec Kit (`spec.md`, `plan.md`, `tasks.md`, `questions.md`) y mensajes de la CLI al usuario: español con identificadores en inglés. Conversación con el usuario: español.
@@ -100,6 +100,16 @@ Si encuentras una contradicción o una ambigüedad que te impida seguir, **no la
 - `atlas positions`, `atlas lots [asset]`, `atlas cash`, `atlas transfers pending`, `atlas gains <year>`, `atlas check` (integrity)
 - `atlas export --format jsonl|csv`
 - Salida en tablas de texto; mensajes al usuario en español; código e identificadores en inglés.
+
+## 3 bis. Respuestas a `questions.md` (2026-08-30, tras revisar spec y plan)
+
+- **Q1 → opción (b), proyección cronológica.** El orden del fichero es el de almacenamiento y el desempate; la proyección aplica primero catálogo/configuración/rectificaciones en orden de fichero y después las operaciones ordenadas por `(fecha de negocio, posición)`. Detalle en `data-schema.md` §7.1. Para el plan: `orderForProjection` implementa las dos pasadas; el aviso `out_of_order` desaparece (registrar tarde es normal); la validación "venta mayor que la posición" se evalúa en la fecha de la venta dentro de la proyección cronológica; `recordEvent` proyecta con el evento nuevo colocado en su sitio.
+- **Q2 → opción (a), rechazar** `buy` en cuentas `bucket` hasta la feature 002, con mensaje claro.
+- **Q3 → opción (a) implementada como (c)**: `fiscal_date` con la configuración vigente al final del libro, resuelta por el caso de uso y pasada a la proyección.
+- **Huella (corrección al esquema):** en manual **no** entra el `id` propio en el tuple (`data-schema.md` §4); si entrara, dos registros idénticos nunca avisarían. En `data-model.md` §2.6, `broker_ref ?? id` pasa a `broker_ref ?? ""`.
+- Incoherencias menores: todas resueltas como propones (nombres del esquema, lotes sin `account_id` —`docs/specification.md` §4.1 corregido—, Node 22, `fee` del `transfer` informativa, `ci.yml` sí y el resto de `.github/` no).
+- Permiso para comprometer `specs/001-ledger-core/` en un commit `docs(spec): add 001-ledger-core specification and plan`: **concedido**. Ajusta antes `spec.md` (A1, escenario 2 de la historia 2, FR-016, FR-025), `plan.md`, `research.md` (R6) y `data-model.md` (§2.6, `out_of_order`) a estas respuestas.
+- Cuando esta versión del prompt esté en `develop`, incorpórala a tu rama con `git merge origin/develop` (solo documentos; sin conflictos esperados).
 
 ## 4. Fuera de alcance (no lo hagas aunque parezca fácil)
 

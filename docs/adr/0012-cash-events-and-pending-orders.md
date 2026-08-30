@@ -12,7 +12,7 @@ El esquema v1 no tenía forma de registrar un cambio de divisa dentro de una cue
 2. **`amount` como base de coste.** `buy` y `sell` admiten `amount` (importe bruto liquidado en `currency`). Si está presente, es la base de coste o de transmisión y `unit_price` pasa a ser informativo; si no, se usa `quantity × unit_price`.
 3. **Órdenes pendientes** con el patrón de ADR-0010: `order_placed` registra la orden el día que se da (regla 20 cumplida) sin conocer VL ni cantidad; `order_updated` permite cancelarla o anotarla; el `buy`/`sell` posterior referencia `order_id` y la cierra. Proyección `pendingOrders`. Ningún evento de seguimiento toca lotes ni efectivo.
 4. **Traspaso de custodia:** `transfer` con `from_asset_id == to_asset_id` se admite para cualquier activo (también no `transferable`), sin `nav`; solo mueve `physicalPositions` entre cuentas. Los lotes fiscales no cambian (son globales, ADR-0009). Completa ADR-0010.
-5. **Huella de idempotencia:** incluye el identificador del bróker (`broker_ref`: `tradeID` de IBKR, referencia de MyInvestor) cuando existe; en manual, el `id` propio. Una huella repetida es un **aviso con confirmación**, nunca un rechazo silencioso.
+5. **Huella de idempotencia:** incluye el identificador del bróker (`broker_ref`: `tradeID` de IBKR, referencia de MyInvestor) cuando existe; en manual, solo el tuple de negocio (sin el `id` propio, que anularía la detección; *corregido el 2026-08-30 al revisar el plan de la feature 001*). Una huella repetida es un **aviso con confirmación**, nunca un rechazo silencioso.
 
 ## Consecuencias
 
