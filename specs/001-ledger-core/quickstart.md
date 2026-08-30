@@ -20,7 +20,7 @@ Resultado esperado: todo en verde; la cobertura de `packages/domain` marca 100 %
 ## Escenario 1 — Registro y consulta (Historias 1 y 2)
 
 ```bash
-alias atlas='node apps/cli/dist/main.js --ledger ./demo.jsonl'
+alias atlas='node apps/cli/dist/src/main.js --ledger ./demo.jsonl'
 
 atlas account add --id acc_fund --name "Fondos" --platform myinvestor --book core --base-currency EUR --country ES --yes
 atlas account add --id acc_etf --name "ETC" --platform ibkr --book core --base-currency EUR --country IE --yes
@@ -86,7 +86,7 @@ Esperado: la solicitud aparece pendiente y desaparece tras el `transfer`; el lot
 
 ```bash
 cp tests/fixtures/ledger/future-version.jsonl /tmp/future.jsonl
-node apps/cli/dist/main.js --ledger /tmp/future.jsonl positions   # código 5, fichero intacto
+node apps/cli/dist/src/main.js --ledger /tmp/future.jsonl positions   # código 5, fichero intacto
 head -c 100 demo.jsonl | sha256sum                                  # anotar
 atlas add cash-in --account acc_fund --value-date 2027-03-10 --amount 500 --currency EUR --fx-rate 1 --yes
 head -c 100 demo.jsonl | sha256sum                                  # idéntico

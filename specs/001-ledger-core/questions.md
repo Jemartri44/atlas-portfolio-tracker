@@ -65,3 +65,18 @@ Para un `sell` de 2027 proyectado en 2029, tras un `settings_changed` de 2028 qu
 **Opciones.** (a) Renombrar el campo del activo a `asset_type` en la línea (el tipo `Asset` proyectado puede seguir llamándolo `type`); (b) anidar los datos del activo en `asset: {…}`; (c) renombrar el discriminador del envoltorio (rompería §2 y todos los ejemplos).
 
 **Decisión provisional: (a) `asset_type`** en las líneas `asset_created`/`asset_updated` (y en el flag `--type` de la CLI se mantiene el nombre corto). Pendiente de que el usuario lo confirme y actualice `data-schema.md` §6.1.
+
+## Notas de implementación (2026-08-30, tras `/speckit-implement`)
+
+Decisiones de detalle que no cambian documentos pero conviene que el usuario conozca:
+
+- **Puerto `RandomSource`.** ADR-0007 no lo lista; el ULID necesita 80 bits aleatorios y el dominio no puede usar `globalThis.crypto` (no existe en `lib: ES2022` sin DOM y declararlo chocaría con `@types/node`). Es un tipo de una línea (`(bytes: Uint8Array) => void`) implementado en `adapters` con Web Crypto. Si se prefiere, puede añadirse a la tabla de puertos de ADR-0007.
+- **Q4 aplicada: `asset_type`** en las líneas `asset_created`/`asset_updated`; la CLI mantiene `--type`. `docs/data-schema.md` §6.1 sigue diciendo `type`: pendiente de corregir desde `develop`.
+- **Divisiones a 10 decimales half-up** (`Big.DP = 10`, ADR-0005 "derivados con 10 decimales"): afecta a `eur = amount / fx_rate`, al reparto proporcional de coste al partir un lote y al reparto de cantidad en un traspaso con `quantity_in ≠ quantity_out` (el último lote recibe el resto exacto para que las sumas cuadren).
+- **Orden de proyección** exactamente como `data-schema.md` §7.1: catálogo, configuración y anulaciones en orden de fichero; el resto por `(fecha de negocio, posición)`. Fecha de negocio del `transfer`: `value_date_out`. Un `order_updated` o `transfer` fechado antes que su `order_placed`/`transfer_requested` se rechaza (`unknown_order`/`unknown_request`).
+- **`account_updated` que cambia `book`** se rechaza si alguna operación referencia la cuenta (no se puede evaluar "posición viva en ese instante" porque el catálogo se proyecta antes que las operaciones).
+- **`buy`/`sell` con `--amount` y sin `--unit-price`**: la CLI escribe `unit_price: "0"` (informativo, ADR-0012) para que la línea cumpla el esquema.
+- **`atlas check`** proyecta en modo `collectErrors` y devuelve 1 si hay errores (p. ej. un evento de un tipo reservado); el resto de comandos rechazan el libro entero en ese caso.
+- **Propiedad de invariancia al orden de registro** (Q1): se verifica sin traspasos fiscales, porque dos lotes con la misma fecha (heredada) se consumen por posición en el fichero, que es justo lo que la propiedad baraja.
+- **Toolchain**: TypeScript 7.0.2, Biome 2.5.11, Vitest 4.1.11 (arrastra `vite` como *peer* al lockfile), fast-check 4.9.0, Node 22.23.2.
+- **Ejecución manual del `quickstart.md`** (T057): correcta con el binario compilado; única desviación, la ruta es `apps/cli/dist/src/main.js` (corregida en el documento).
