@@ -1,11 +1,11 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.1.0
-- Modified principles: II (lots are a projection; ledger is append-only, ADR-0003)
-- Modified sections: Restricciones técnicas (S3 replaces DynamoDB, ADR-0002; TypeScript everywhere, ADR-0001)
+- Version change: 1.1.0 → 1.2.0
+- Modified principles: VII (100% line and branch coverage required in packages/domain, blocking in CI)
+- Modified sections: Flujo de desarrollo (git hooks, PR template, MIT licence)
 - Added sections: none
 - Removed sections: none
-- Templates requiring updates: none (templates are read at runtime and stay untouched)
+- Templates requiring updates: none
 - Follow-up TODOs: none.
 -->
 
@@ -78,6 +78,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Prioridad por daño si fallan: motor FIFO y transformaciones de lotes, conversión de divisa por fecha valor, regla de los dos meses, reparto de la aportación mensual, parsers de extractos.
 - Casos límite obligatorios: varios lotes con la misma fecha, fracciones, contrasplit con liquidación en efectivo, recompra en el límite de los dos meses, traspaso parcial.
 - Los parsers tienen tests de contrato contra ficheros de ejemplo anonimizados versionados en el repositorio.
+- `packages/domain` mantiene **cobertura del 100% de líneas y ramas**, bloqueante en CI. Fuera del dominio no hay umbral numérico: mandan los tests de contrato e integración.
 - Ninguna funcionalidad del motor fiscal se da por terminada sin sus tests.
 
 *Razón:* un error silencioso en la fiscalidad no se detecta hasta años después y no tiene vuelta atrás.
@@ -93,7 +94,8 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 ## Flujo de desarrollo
 
 - **Git flow con git básico** (sin la extensión `git-flow`): `main`, `develop`, `feature/*`, `fix/*`, `release/*`, `hotfix/*`, fusiones con `--no-ff`. Pull requests obligatorias hacia `develop` y `main`.
-- **Conventional Commits** en inglés, breves, solo línea de asunto siempre que sea posible, atómicos. Ninguna herramienta de IA figura como coautora ni se menciona en commits o PRs.
+- **Conventional Commits** en inglés, breves, solo línea de asunto siempre que sea posible, atómicos. Ninguna herramienta de IA figura como coautora ni se menciona en commits o PRs. Lo verifican los hooks de `.githooks/` y de `.claude/settings.json`; `gitleaks` corre antes de cada commit. Cada PR usa la plantilla con la checklist de esta constitución.
+- El repositorio es público bajo licencia MIT; nada personal ni sensible entra en él.
 - **Spec Kit:** cada funcionalidad nace con `/speckit-specify` en `specs/NNN-<name>/` y se desarrolla en la rama `feature/NNN-<name>`; después `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. Los specs describen *qué* y *por qué*; el *cómo* va en el plan. Todo spec y plan se contrasta con esta constitución antes de implementar.
 - **Decisiones de arquitectura** relevantes se registran como ADR en `docs/adr/`. Las decisiones pendientes se listan en `docs/specification.md` §14.
 - **El asistente de código consulta al usuario** antes de instalar herramientas o dependencias y antes de hacer push.
@@ -105,4 +107,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.1.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30
+**Version**: 1.2.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30
