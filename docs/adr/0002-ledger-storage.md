@@ -1,7 +1,6 @@
 # ADR-0002 — Almacenamiento del libro mayor
 
-**Estado:** Propuesta (2026-08-30). Pendiente de decisión del usuario.
-**Recomendación:** JSON/JSONL en S3 con versionado, en lugar de DynamoDB.
+**Estado:** Aceptada (2026-08-30). Reemplaza la elección de DynamoDB de la especificación original.
 
 ## Contexto
 
@@ -54,13 +53,13 @@ Tabla única, clave por entidad, un ítem por operación/lote/precio.
 
 ## Decisión
 
-Pendiente. La recomendación es **A**. DynamoDB es la elección correcta para una aplicación con muchos usuarios o muchas escrituras concurrentes; este proyecto tiene un usuario, un libro de pocos MB y un requisito explícito de legibilidad y supervivencia que S3 cumple mejor. La única ventaja tangible de DynamoDB (always-free literal) vale unos céntimos al año.
+**Opción A: JSON/JSONL en S3 con versionado.** DynamoDB es la elección correcta para una aplicación con muchos usuarios o muchas escrituras concurrentes; este proyecto tiene un usuario, un libro de pocos MB y un requisito explícito de legibilidad y supervivencia que S3 cumple mejor. La única ventaja tangible de DynamoDB (always-free literal) vale unos céntimos al año.
 
-Si se acepta A, S3 pasa a ser el **único** almacén: libro mayor, configuración, precios cacheados, documentos de eventos corporativos y backups conviven en el mismo bucket con prefijos distintos.
+S3 pasa a ser el **único** almacén: libro mayor, configuración, precios cacheados, documentos de eventos corporativos y backups conviven en el mismo bucket con prefijos distintos.
 
-## Consecuencias (si se acepta A)
+## Consecuencias
 
-- Reemplaza la decisión "DynamoDB" de `docs/specification.md` §9 (tabla de stack, componentes, costes) y de `CLAUDE.md`.
+- `docs/specification.md` §9 (componentes, costes), `CLAUDE.md` y la constitución actualizados.
 - El repositorio de datos del dominio se define como una interfaz (`LedgerStore`) con una implementación S3 y otra en memoria/fichero local para tests y desarrollo.
 - Estrategia de escritura: leer objeto + ETag → modificar en memoria → `PutObject` con `If-Match`; reintentar en conflicto.
 - Ciclo de vida del bucket: conservar todas las versiones; sin expiración automática.

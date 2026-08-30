@@ -50,8 +50,8 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 | Layer | Choice |
 |---|---|
 | Frontend | Static SPA with Vite (Svelte or Solid), served from S3 through CloudFront |
-| Backend | Lambda with Function URL (no API Gateway) |
-| Data | DynamoDB, provisioned capacity within the always-free tier |
+| Backend | Lambda (Node) with Function URL (no API Gateway). TypeScript everywhere, domain in a shared package. ADR-0001 |
+| Data | S3 only: versioned JSONL ledger, settings, cached prices, documents. Loaded whole into memory; conditional writes (`If-Match`). ADR-0002 |
 | Auth | Cognito with MFA, single user. The Lambda validates the JWT |
 | Scheduling | EventBridge Scheduler |
 | Email | SES |
@@ -66,12 +66,13 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 
 1. **A transfer between funds is NOT a sell followed by a buy.** It keeps the original acquisition date and cost. Modelling it as sell+buy silently breaks taxation.
-2. **Lots, never aggregated positions.** The current position is a derived query, not a stored field. FIFO needs lot-level detail.
+2. **Lots, never aggregated positions.** Lots are a projection computed from transactions, never stored; the current position is a derived query. FIFO needs lot-level detail.
 3. **Money in decimal, never floating point.** Fund units are fractional with many decimals.
 4. **Always store the original amount, currency and the ECB exchange rate of the value date.** Converting to EUR and discarding the original loses information the tax agency requires.
 5. **No tax calculation may depend on market prices.** Prices are informational. Taxation comes exclusively from the ledger.
 6. **Corporate actions are first-class transactions** with their own lot-transformation logic. No manual patches on the database.
 7. **The own ledger is the source of truth.** Broker statements are for reconciliation, not for feeding the system.
+8. **The ledger is append-only.** Transactions are never edited or deleted; "edit" = `reversal` + corrected transaction (ADR-0003). Amounts are serialised as strings in JSON, never as JSON numbers.
 
 ## Design principles
 

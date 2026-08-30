@@ -1,7 +1,6 @@
 # ADR-0001 — Lenguaje del backend y del dominio
 
-**Estado:** Propuesta (2026-08-30). Pendiente de decisión del usuario.
-**Recomendación:** TypeScript en todo, con el dominio en un paquete compartido.
+**Estado:** Aceptada (2026-08-30).
 
 ## Contexto
 
@@ -59,9 +58,9 @@ Monorepo con `packages/domain` (puro, sin dependencias de AWS), `apps/api` (Lamb
 
 ## Decisión
 
-Pendiente. La recomendación es **A**, por dos razones que pesan más que el resto: un solo toolchain y el dominio compartido con el frontend (consulta y simulación sin conexión). Si el usuario prefiere Python por comodidad, la opción B es perfectamente viable siempre que se acepte que el frontend no calcula nada.
+**Opción A: TypeScript en todo**, por dos razones que pesan más que el resto: un solo toolchain y el dominio compartido con el frontend (consulta y simulación sin conexión). Python (B) era viable a cambio de un frontend sin lógica; Go (C) no compensaba para un solo desarrollador.
 
-## Consecuencias (si se acepta A)
+## Consecuencias
 
 - Estructura de monorepo con `packages/domain`, `apps/api`, `apps/web`, `infra/`.
 - Tipo `Money` y `Quantity` propios desde el primer commit de dominio; prohibido `number` para importes (regla de lint).
