@@ -46,6 +46,7 @@ export {
   projectLedger,
 } from "./projections/project-ledger.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
+export { type Snapshot, snapshotDiff, snapshotOf, sortKeysDeep } from "./projections/snapshot.js";
 export type * from "./projections/state.js";
 export { theses } from "./projections/theses.js";
 export { type ValuationAt, valuations } from "./projections/valuations.js";
