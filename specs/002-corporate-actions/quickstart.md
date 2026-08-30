@@ -45,7 +45,7 @@ atlas lots --closed
 atlas positions
 ```
 
-Esperado: los lotes de `ast_old` cerrados con consumición del evento; lotes de `ast_new` con cantidad 1 y 0,5, mismas fechas de adquisición (2027-01-10, 2027-02-10) y coste heredado; la CLI propone `atlas asset update ast_old --inactive`.
+Esperado: los lotes de `ast_old` cerrados con consumición del evento; posiciones de `ast_new` 1 (acc_a) y 0,5 (acc_b); lotes de `ast_new` de 0,625 y 0,875 (los picos del contrasplit salieron del lote más antiguo, FIFO global) con las mismas fechas de adquisición (2027-01-10, 2027-02-10) y coste heredado (500 y 770); la CLI propone `atlas asset update ast_old --inactive`.
 
 ```bash
 atlas asset add --id ast_spin --type stock --book core --asset-class equity --name "Spin Co" --currency EUR --not-transferable --isin XX0000000012 --yes
