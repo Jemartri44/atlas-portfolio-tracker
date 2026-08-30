@@ -1,11 +1,12 @@
 <!--
 Sync Impact Report
-- Version change: (template) → 1.0.0
-- Modified principles: none (initial ratification)
-- Added sections: Principios fundamentales (I–VII), Restricciones técnicas, Flujo de desarrollo, Gobernanza
+- Version change: 1.0.0 → 1.1.0
+- Modified principles: II (lots are a projection; ledger is append-only, ADR-0003)
+- Modified sections: Restricciones técnicas (S3 replaces DynamoDB, ADR-0002; TypeScript everywhere, ADR-0001)
+- Added sections: none
 - Removed sections: none
 - Templates requiring updates: none (templates are read at runtime and stay untouched)
-- Follow-up TODOs: none. Open technical decisions are tracked in docs/specification.md §14.1, not here.
+- Follow-up TODOs: none.
 -->
 
 # Constitución de Atlas Portfolio Tracker
@@ -27,7 +28,8 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 ### II. Los lotes son la unidad; la fiscalidad sale solo del libro
 
-- Las posiciones se modelan **lote a lote** (`Lot`), nunca como posiciones agregadas. La posición actual es una consulta.
+- Las posiciones se modelan **lote a lote** (`Lot`), nunca como posiciones agregadas. Los lotes son una **proyección** calculada desde las operaciones, no un dato almacenado; la posición actual es una consulta.
+- El libro es **append-only**: las operaciones nunca se editan ni se borran; se rectifican con `reversal` más la operación correcta (ADR-0003).
 - El traspaso entre fondos conserva `acquisition_date` y `unit_cost_eur` de los lotes origen. **NUNCA se modela como venta seguida de compra.**
 - Los eventos corporativos son operaciones de primera clase (`corporate_action`) con lógica propia de transformación de lotes y fuente documental obligatoria.
 - Ningún cálculo fiscal DEBE depender de precios de mercado. Los precios son informativos; la fiscalidad sale exclusivamente del libro.
@@ -82,7 +84,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 ## Restricciones técnicas
 
-- **Plataforma:** AWS dentro del always-free (S3 + CloudFront, Lambda con Function URL, DynamoDB aprovisionado, Cognito con MFA, EventBridge Scheduler, SES, SSM Parameter Store). Terraform para todo; nada creado a mano. Antes de introducir un servicio nuevo, verificar que es gratuito a esta escala.
+- **Plataforma:** AWS dentro del always-free (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, Cognito con MFA, EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano. Antes de introducir un servicio nuevo, verificar que es gratuito a esta escala.
 - **Seguridad:** nunca credenciales de brókers (solo el token Flex de IBKR, de solo lectura, en SSM como `SecureString`). Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
 - **Privacidad:** nunca se registran en logs importes, posiciones, saldos ni identificadores de cuenta. Nada personal en el repositorio público: ni dominio real, ni importes, ni el plan financiero (`plan-financiero.md`, ignorado por git).
 - **Idioma:** todo lo técnico (código, identificadores, commits, ramas, ficheros, infraestructura) en inglés. Documentos, especificaciones y esta constitución en español con identificadores en inglés.
@@ -103,4 +105,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30
+**Version**: 1.1.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30

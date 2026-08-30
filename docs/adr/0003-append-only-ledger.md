@@ -1,7 +1,6 @@
 # ADR-0003 — Libro mayor append-only con lotes como proyección
 
-**Estado:** Propuesta (2026-08-30). Pendiente de que el usuario valide el mecanismo de corrección.
-**Recomendación:** append-only, con "edición" implementada como rectificación.
+**Estado:** Aceptada (2026-08-30).
 
 ## Contexto
 
@@ -50,9 +49,9 @@ Se permite modificar y borrar registros; un log aparte guarda quién, cuándo y 
 
 ## Decisión
 
-Pendiente. La recomendación es **A**: la corrección es igual de fácil para el usuario (un botón *Editar*), y a cambio el sistema no puede perder ni corromper el historial. El único caso en que B sería preferible es si se quisiera un libro "limpio" sin registros anulados, y eso lo resuelve el filtro por defecto de la interfaz.
+**Opción A: append-only con rectificación.** La corrección es igual de fácil para el usuario (un botón *Editar*), y a cambio el sistema no puede perder ni corromper el historial. El único caso en que B sería preferible es si se quisiera un libro "limpio" sin registros anulados, y eso lo resuelve el filtro por defecto de la interfaz.
 
-## Consecuencias (si se acepta A)
+## Consecuencias
 
 - `Transaction.type` incorpora `reversal`; `Transaction` gana `reverses_transaction_id` y `corrects_transaction_id` (opcionales).
 - `Lot` deja de ser entidad almacenada: es el resultado de `projectLots(transactions)`. `affected_lots[]` desaparece de `Transaction` (se deriva).
