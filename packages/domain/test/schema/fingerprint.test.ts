@@ -32,6 +32,10 @@ describe("fingerprintOf", () => {
     expect(fp(variant(SAMPLES.buy, { amount: undefined, unit_price: "1" }))).not.toBe(
       fp(variant(SAMPLES.buy, { amount: undefined, unit_price: "2" })),
     );
+    expect(fp(variant(SAMPLES.buy, { unit_price: undefined }))).toBe(fingerprintOf(SAMPLES.buy));
+    expect(fp(variant(SAMPLES.buy, { amount: undefined, unit_price: undefined }))).toMatch(
+      /^sha256:/,
+    );
   });
 
   it("covers every fingerprinted type and returns undefined for the rest", () => {

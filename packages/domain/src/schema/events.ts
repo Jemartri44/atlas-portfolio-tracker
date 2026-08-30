@@ -89,7 +89,8 @@ export interface OperationFields {
   trade_date: CivilDate;
   value_date: CivilDate;
   quantity: DecimalString;
-  unit_price: DecimalString;
+  /** Required without `amount`; informative and optional with it. Never derived (data-schema.md §4). */
+  unit_price?: DecimalString;
   /** Gross settled amount; when present it is the cost or proceeds basis (ADR-0012). */
   amount?: DecimalString;
   currency: Currency;

@@ -12,7 +12,7 @@ import { realizedGains } from "../../src/projections/gains.js";
 import { investmentIncome } from "../../src/projections/income.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
-import { applySell } from "../../src/projections/operations.js";
+import { applyBuy, applySell } from "../../src/projections/operations.js";
 import { pendingOrders, pendingTransfers } from "../../src/projections/pending.js";
 import { adjustPosition, physicalPositions, positionOf } from "../../src/projections/positions.js";
 import { projectLedger, toProjectionError } from "../../src/projections/project-ledger.js";
@@ -714,6 +714,22 @@ describe("integrity on corrupted states", () => {
     expect(integrity(state).map((f) => f.code)).toEqual(["negative_position", "lots_mismatch"]);
     state.positions.delete("acc_fund|ast_world");
     expect(integrity(state).map((f) => f.code)).toEqual(["lots_mismatch"]);
+  });
+
+  it("refuses an operation without amount nor unit_price (only reachable bypassing validation)", () => {
+    const state = createEmptyState(DEFAULT_SETTINGS);
+    const b = new LedgerBuilder();
+    applyAccountCreated(state, b.account("acc_fund"));
+    applyAssetCreated(state, b.asset("ast_world"));
+    const buy = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    delete (buy as { unit_price?: string }).unit_price;
+    expect(() => applyBuy(state, buy, 0)).toThrow(
+      expect.objectContaining({ code: "missing_basis" }),
+    );
+    const only = b.buy({ account_id: "acc_fund", asset_id: "ast_world", amount: "500" });
+    delete (only as { unit_price?: string }).unit_price;
+    applyBuy(state, only, 1);
+    expect(fiscalLots(state, "ast_world")[0]?.cost_eur.amount.toString()).toBe("500");
   });
 
   it("refuses a sell whose lots do not cover the position", () => {

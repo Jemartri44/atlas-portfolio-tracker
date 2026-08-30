@@ -44,15 +44,27 @@ const fxOf = (event: Priced): FxRate =>
 
 const money = (amount: string, currency: string): Money => Money.parse(amount, currency);
 
+/** Cost or proceeds basis: `amount` when present, else `quantity × unit_price` (ADR-0012). */
 const basisOf = (event: {
+  id: string;
+  type: string;
   amount?: string;
   quantity: string;
-  unit_price: string;
+  unit_price?: string;
   currency: string;
-}): Money =>
-  event.amount === undefined
-    ? Price.parse(event.unit_price, event.currency).times(Quantity.parse(event.quantity))
-    : money(event.amount, event.currency);
+}): Money => {
+  if (event.amount !== undefined) {
+    return money(event.amount, event.currency);
+  }
+  if (event.unit_price === undefined) {
+    throw new ProjectionError(
+      "missing_basis",
+      event.id,
+      `${event.type} carries neither amount nor unit_price`,
+    );
+  }
+  return Price.parse(event.unit_price, event.currency).times(Quantity.parse(event.quantity));
+};
 
 const negative = (quantity: Quantity): Quantity => Quantity.of(quantity.value.neg());
 
