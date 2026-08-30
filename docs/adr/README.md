@@ -12,6 +12,8 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0006](0006-ledger-file-schema.md) | Esquema del libro en S3 (un registro de eventos, versión por línea, BCE íntegro) | Aceptada |
 | [0007](0007-code-structure.md) | Monorepo npm workspaces, arquitectura hexagonal, CLI primero | Aceptada |
 | 0008 | Lint y formato (Biome frente a ESLint + Prettier) | Pendiente |
+| [0009](0009-fifo-scope.md) | FIFO por activo entre cuentas; sin activos compartidos entre libros | Aceptada |
+| [0010](0010-transfer-model.md) | Traspaso: hecho contable atómico + eventos de seguimiento | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 

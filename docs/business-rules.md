@@ -147,7 +147,13 @@ Los ETFs, ETCs y ETPs (oro, cripto y todo el cubo) **no** admiten traspaso: cada
 
 ### 5.3 FIFO
 
-El método de imputación es **primera entrada, primera salida**, aplicado por producto homogéneo.
+El método de imputación es **primera entrada, primera salida**, aplicado por producto homogéneo (mismo `asset_id`) **a través de todas las cuentas** (ADR-0009): una venta en una cuenta consume fiscalmente los lotes más antiguos del activo aunque estén en otra. Empates de fecha: orden de registro (`id`).
+
+**Regla 21 — El mismo activo no puede estar en `core` y en `bucket`.** Evita que una venta del cubo consuma lotes del núcleo. El sistema rechaza el alta. En dos cuentas del mismo libro se permite con aviso.
+
+**Comisiones en la base fiscal** (art. 35 LIRPF, *verificar*): la de compra se suma al coste de adquisición; la de venta se resta del valor de transmisión. Se guardan aparte del precio.
+
+**Retención a cuenta en reembolsos de fondos:** el comercializador retiene sobre la plusvalía; se registra en la venta (`withholding`) para que cuadre la declaración.
 
 Casos límite a cubrir en tests:
 - Varios lotes con la misma fecha de adquisición
@@ -161,7 +167,7 @@ Si se vende con pérdidas y se recompra el **mismo valor homogéneo** dentro de 
 
 Aplica a valores admitidos a negociación. Para valores no cotizados el plazo es más largo (**verificar**).
 
-→ La app alerta al intentar registrar una recompra que active la regla, y la aplica en el cálculo fiscal. Es el error más común en operativa activa.
+→ La app alerta al intentar registrar una recompra que active la regla, y **aplica el diferimiento completo** en el motor fiscal: la parte de la pérdida proporcional a la cantidad recomprada queda pendiente, asociada a los lotes recomprados, y se libera cuando estos se transmiten. Es el error más común en operativa activa.
 
 ### 5.5 Compensación de pérdidas
 
@@ -223,7 +229,7 @@ Transformaciones que la app debe soportar sin migración de esquema.
 | **Cierre / liquidación de fondo** (`fund_liquidation`) | Reembolso forzoso. **Sí es hecho imponible.** |
 | **Cambio de ISIN o ticker** (`identifier_change`) | Solo metadatos, pero rompe las fuentes de precios. |
 | **Exclusión de cotización** (`delisting`) | Posición sin precio. Requiere marcado manual. |
-| **Fork de cripto** (`crypto_fork`) | Activo nuevo. Criterio de coste a documentar. |
+| **Fork de cripto** (`crypto_fork`) | Activo nuevo con **coste de adquisición cero** y fecha del fork (criterio conservador, *verificar*). Se documenta en el evento. |
 | **Migración de token** (`token_migration`) | Canje. Documentar el criterio aplicado. |
 | **Reestructuración de emisor de ETC/ETP** (`issuer_restructuring`) | Puede implicar canje o reembolso forzoso. |
 
