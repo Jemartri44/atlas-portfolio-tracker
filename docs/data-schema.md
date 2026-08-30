@@ -177,7 +177,7 @@ Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimien
 `account_id`, `asset_id`, `date`, `quantity`, `unit_value`, `currency`, `fx_rate`, `source`. Foto manual de Nivel 1 (p. ej. 31/12 para el Modelo 720). No toca lotes.
 
 **`corporate_action`** (ADR-0011)
-`kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/`), `effects[]` (primitivas, ver §6.5), `notes`, `fingerprint`
+`kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/` o URL del emisor), `effects[]` (primitivas, ver §6.5), `notes?`, `fingerprint`
 
 Afecta a los lotes del `asset_id` en **todas** las cuentas (los lotes fiscales son globales, ADR-0009); `forced_sale` reparte el efectivo entre cuentas en proporción a su posición física.
 
@@ -209,20 +209,22 @@ Cada efecto admite `asset_id?`: el activo sobre el que actúa, por defecto el `a
 | `scale` | `ratio` | `quantity × ratio` en cada lote; coste total y `acquisition_date` intactos |
 | `convert` | `to_asset_id`, `ratio` | Cada lote pasa a `to_asset_id` con `quantity × ratio`; coste total y fecha intactos; `source_lot_id` enlaza |
 | `carve_out` | `to_asset_id`, `ratio`, `cost_share` | Por cada lote crea otro en `to_asset_id` con `quantity × ratio`, coste `cost × cost_share` y la misma fecha; el lote origen queda con `cost × (1 − cost_share)` |
+
+**`ratio`** es una cadena decimal (`"4"`, `"0.25"`) **o una fracción `"nuevas/antiguas"` de enteros positivos** (`"4/3"`, `"1/3"`): un contrasplit 1:3 o "una nueva por cada tres" no tienen decimal exacto y guardarlos redondeados dejaría el libro a 1e-10 del bróker para siempre. Cantidad nueva = `quantity × nuevas / antiguas`; la división va a 10 decimales (ADR-0005) solo cuando no es exacta y, en ese caso, el total del activo se calcula una vez y el último lote y la última cuenta reciben el resto exacto, de modo que Σ lotes = Σ posiciones se mantiene.
 | `forced_sale` | `per_account[]` de `{account_id, quantity, fee?}` (`quantity` puede ser `"all"`), `unit_price`, `currency`, `fx_rate`, `fx_rate_date` | Como un `sell` FIFO por cada cuenta, con la comisión de cada bróker anotada por cuenta: hecho imponible. Los picos (contrasplit, liberadas, escisión) se liquidan **cuenta a cuenta**, como hace cada bróker (hallazgo 8) |
 | `grant` | `per_account[]` de `{account_id, quantity}`, `asset_id`, `unit_cost`, `currency`, `fx_rate`, `fx_rate_date`, `acquisition_date` | Lotes nuevos por cuenta con `cost_eur = quantity × unit_cost / fx_rate`. No toca el efectivo: un desembolso del titular es un `buy` |
 
-Ejemplo (fusión con pago parcial en efectivo: 1 acción nueva por cada 2 antiguas más 3 € por antigua):
+Ejemplo (fusión 2 antiguas → 1 nueva, con 10 y 7 títulos en dos cuentas; los picos de la nueva se liquidan a 40 € cuenta a cuenta):
 
 ```json
 {"type":"corporate_action","kind":"merger","asset_id":"ast_old","effective_date":"2031-03-12","source_document":"documents/01J…/prospectus.pdf",
  "effects":[
-   {"op":"forced_sale","quantity":"all","unit_price":"3","currency":"EUR","fx_rate":"1","note":"cash component"},
-   {"op":"convert","to_asset_id":"ast_new","ratio":"0.5"}
- ],"notes":"Absorción de OLD por NEW. Componente en efectivo tributa; el canje conserva antigüedad."}
+   {"op":"convert","to_asset_id":"ast_new","ratio":"1/2"},
+   {"op":"forced_sale","asset_id":"ast_new","per_account":[{"account_id":"acc_b","quantity":"0.5"}],"unit_price":"40","currency":"EUR","fx_rate":"1","fx_rate_date":"2031-03-12"}
+ ],"notes":"Absorción de OLD por NEW. El canje conserva antigüedad; el pico de acc_b (3,5 → 3) tributa."}
 ```
 
-(En este ejemplo el `forced_sale` se expresa como venta del componente en efectivo por acción antigua; el asistente de la CLI lo genera a partir de "3 € por acción".)
+**Compensación en efectivo de una fusión** ("más 3 € por acción antigua"): `forced_sale` es siempre una venta, así que se registra como venta **parcial** de las antiguas antes del `convert`, con la cantidad y el precio que fijen el usuario y el asesor (`docs/fiscal-questions.md` #13). Si el asesor concluye que el efectivo reduce el coste de las nuevas en vez de tributar como transmisión, hará falta una primitiva nueva (ADR); hasta entonces el asistente `merger` de la CLI solo liquida picos y el componente en efectivo se registra con `raw`.
 
 ## 7. Proyecciones
 
