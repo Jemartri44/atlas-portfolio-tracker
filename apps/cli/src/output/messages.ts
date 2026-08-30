@@ -19,6 +19,10 @@ export const describeError = (error: DomainError): string => {
       return `El activo ${text(d.asset_id)} ya existe.`;
     case "asset_book_change":
       return `El activo ${text(d.asset_id)} no puede cambiar de libro (ADR-0009): dalo de alta como activo nuevo.`;
+    case "asset_type_change":
+      return `El activo ${text(d.asset_id)} no puede cambiar de tipo (${text(d.from)} → ${text(d.to)}): alteraría la fecha fiscal de todas sus operaciones. Dalo de alta como activo nuevo.`;
+    case "asset_currency_change":
+      return `El activo ${text(d.asset_id)} no puede cambiar de divisa (${text(d.from)} → ${text(d.to)}): alteraría la base de coste de todas sus operaciones. Dalo de alta como activo nuevo.`;
     case "account_book_change":
       return `La cuenta ${text(d.account_id)} tiene operaciones registradas: su libro no puede cambiar.`;
     case "book_mismatch":

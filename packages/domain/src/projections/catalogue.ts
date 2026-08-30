@@ -90,6 +90,22 @@ export const applyAssetUpdated = (state: LedgerState, event: AssetUpdatedEvent):
       { asset_id: event.asset_id, from: current.book, to: event.book },
     );
   }
+  if (current.asset_type !== event.asset_type) {
+    throw new ProjectionError(
+      "asset_type_change",
+      event.id,
+      `asset ${event.asset_id} cannot change its type; create a new asset and a corporate action`,
+      { asset_id: event.asset_id, from: current.asset_type, to: event.asset_type },
+    );
+  }
+  if (current.currency !== event.currency) {
+    throw new ProjectionError(
+      "asset_currency_change",
+      event.id,
+      `asset ${event.asset_id} cannot change its currency; create a new asset and a corporate action`,
+      { asset_id: event.asset_id, from: current.currency, to: event.currency },
+    );
+  }
   const history = [...current.identifier_history];
   if (current.isin !== event.isin || current.ticker !== event.ticker) {
     history.push({

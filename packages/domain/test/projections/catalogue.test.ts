@@ -75,6 +75,40 @@ describe("assets projection", () => {
     ]);
   });
 
+  it("rejects changes of asset_type and currency but allows the rest", () => {
+    const state = fresh();
+    applyAssetCreated(state, SAMPLES.asset_created);
+    expect(() => applyAssetUpdated(state, { ...SAMPLES.asset_updated, asset_type: "etc" })).toThrow(
+      expect.objectContaining({ code: "asset_type_change" }),
+    );
+    expect(() => applyAssetUpdated(state, { ...SAMPLES.asset_updated, currency: "USD" })).toThrow(
+      expect.objectContaining({ code: "asset_currency_change" }),
+    );
+    applyAssetUpdated(state, {
+      ...SAMPLES.asset_updated,
+      isin: "XX0000000009",
+      ticker: "WLD",
+      ter: "0.10",
+      name: "World Index (Acc)",
+      reference_etf_id: "ast_ref",
+      transferable: false,
+      active: false,
+    });
+    const asset = requireAsset(state, "ast_world", "x");
+    expect(asset).toMatchObject({
+      asset_type: "fund",
+      currency: "EUR",
+      isin: "XX0000000009",
+      ticker: "WLD",
+      ter: "0.10",
+      name: "World Index (Acc)",
+      reference_etf_id: "ast_ref",
+      transferable: false,
+      active: false,
+    });
+    expect(asset.identifier_history).toHaveLength(1);
+  });
+
   it("rejects duplicates, unknown ids and book changes", () => {
     const state = fresh();
     applyAssetCreated(state, SAMPLES.asset_created);
