@@ -32,14 +32,14 @@ import { completeRequest, fillOrder, lookupOpenOrder, lookupOpenRequest } from "
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
 import { type Asset, addWarning, type LedgerState } from "./state.js";
 
-interface Priced {
+export interface Priced {
   id: string;
   currency: string;
   fx_rate: string;
   fx_rate_date: CivilDate;
 }
 
-const fxOf = (event: Priced): FxRate =>
+export const fxOf = (event: Priced): FxRate =>
   FxRate.of(Decimal.parse(event.fx_rate), event.currency, event.fx_rate_date);
 
 const money = (amount: string, currency: string): Money => Money.parse(amount, currency);
@@ -66,9 +66,9 @@ const basisOf = (event: {
   return Price.parse(event.unit_price, event.currency).times(Quantity.parse(event.quantity));
 };
 
-const negative = (quantity: Quantity): Quantity => Quantity.of(quantity.value.neg());
+export const negative = (quantity: Quantity): Quantity => Quantity.of(quantity.value.neg());
 
-const warnCurrency = (state: LedgerState, event: Priced, asset: Asset): void => {
+export const warnCurrency = (state: LedgerState, event: Priced, asset: Asset): void => {
   if (asset.currency !== event.currency) {
     addWarning(
       state,
@@ -80,7 +80,7 @@ const warnCurrency = (state: LedgerState, event: Priced, asset: Asset): void => 
   }
 };
 
-const warnFxDate = (state: LedgerState, event: Priced, fiscalDate: CivilDate): void => {
+export const warnFxDate = (state: LedgerState, event: Priced, fiscalDate: CivilDate): void => {
   if (compareCivilDates(event.fx_rate_date, fiscalDate) > 0) {
     addWarning(
       state,
@@ -92,7 +92,7 @@ const warnFxDate = (state: LedgerState, event: Priced, fiscalDate: CivilDate): v
   }
 };
 
-const warnHolders = (state: LedgerState, assetId: AssetId, eventId: string): void => {
+export const warnHolders = (state: LedgerState, assetId: AssetId, eventId: string): void => {
   const holders = accountsHolding(state, assetId);
   if (holders.length > 1) {
     addWarning(
@@ -105,7 +105,7 @@ const warnHolders = (state: LedgerState, assetId: AssetId, eventId: string): voi
   }
 };
 
-const requireAvailable = (
+export const requireAvailable = (
   state: LedgerState,
   accountId: string,
   assetId: AssetId,
