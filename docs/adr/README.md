@@ -14,6 +14,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | 0008 | Lint y formato (Biome frente a ESLint + Prettier) | Pendiente |
 | [0009](0009-fifo-scope.md) | FIFO por activo entre cuentas; sin activos compartidos entre libros | Aceptada |
 | [0010](0010-transfer-model.md) | Traspaso: hecho contable atómico + eventos de seguimiento | Aceptada |
+| [0011](0011-corporate-actions-primitives.md) | Eventos corporativos como composición de 5 primitivas de lote | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 
