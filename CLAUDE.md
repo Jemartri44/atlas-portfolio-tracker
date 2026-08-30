@@ -122,7 +122,7 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 - **Nothing hard-coded that should be configurable**: thresholds, target weights, frequencies, recipients.
 - **Fail safe**: if a price source goes down, show the last known value with its age marked. Never interpolate or estimate silently.
 - **Manual entry is never removed.** Automatic import is convenience; the system must be fully functional without any automatic source.
-- **Compartmentalisation**: core and bucket never mix in calculations or metrics. The bucket appears in total net worth, never in the core's target-weight calculation.
+- **Compartmentalisation**: core and bucket never mix in calculations or metrics. The bucket appears in total net worth, never in the core's target-weight calculation. Single exception (constitution III): tax output and the 720/721 reporting thresholds aggregate both books per taxpayer, always labelled as a fiscal total.
 - **20-year survival over technical elegance**: few dependencies, open formats, data exportable at any time.
 
 ## Code conventions

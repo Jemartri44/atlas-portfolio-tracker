@@ -1,7 +1,7 @@
 <!--
 Sync Impact Report
-- Version change: 1.2.0 → 1.3.0
-- Modified principles: II (ECB rate as published, fiscal date per asset type, reversal of consumed events rejected — ADR-0012/0013); VII (new mandatory edge cases: reversal of a sold purchase, year-end trade/settlement split, fund loss followed by monthly contribution, reverse split across two accounts)
+- Version change: 1.3.0 → 1.4.0
+- Modified principles: III (single exception: tax output and 720/721 thresholds aggregate both books per taxpayer — challenge 2026-08-31, finding 4); VII (new mandatory edge case: a deferred loss survives a transfer or a conversion, travelling with the descendant lots)
 - Modified sections: none
 - Added sections: none
 - Removed sections: none
@@ -43,6 +43,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Dos libros (`book`): `core` (cartera principal: `equity`, `fixed_income`, `gold`, `crypto`) y `bucket` (cubo especulativo).
 - Núcleo y cubo NUNCA se mezclan en un cálculo, vista o métrica. El cubo es un presupuesto (porcentaje de la aportación), no una asignación; no entra en los pesos objetivo.
 - El patrimonio total siempre se muestra desglosado. Nunca un único número sin descomponer.
+- La compartimentación es de **gestión** (pesos, métricas, vistas, presupuesto). Única excepción, exigida por la ley: la **salida fiscal** y los umbrales informativos (Modelos 720/721) agregan los dos libros **por contribuyente**, siempre etiquetados como total fiscal, nunca como métrica de cartera.
 - No se puede registrar una compra en el cubo sin una tesis (`Thesis`) creada antes.
 
 *Razón:* las reglas de conducta del plan de inversión solo sirven si el sistema las hace imposibles de saltar.
@@ -77,7 +78,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 ### VII. Tests primero donde un error cuesta dinero
 
 - Prioridad por daño si fallan: motor FIFO y transformaciones de lotes, conversión de divisa por fecha valor, regla de los dos meses, reparto de la aportación mensual, parsers de extractos.
-- Casos límite obligatorios: varios lotes con la misma fecha, fracciones, contrasplit con liquidación en efectivo **en dos cuentas**, recompra en el límite de la ventana, traspaso parcial, anulación de una compra ya vendida (rechazo), venta el 30/12 con liquidación el 02/01, pérdida en fondo seguida de aportación mensual dentro del año.
+- Casos límite obligatorios: varios lotes con la misma fecha, fracciones, contrasplit con liquidación en efectivo **en dos cuentas**, recompra en el límite de la ventana, traspaso parcial, anulación de una compra ya vendida (rechazo), venta el 30/12 con liquidación el 02/01, pérdida en fondo seguida de aportación mensual dentro del año, pérdida diferida cuyos lotes se traspasan o canjean antes de liberarse (el diferimiento viaja con los lotes descendientes).
 - Los parsers tienen tests de contrato contra ficheros de ejemplo anonimizados versionados en el repositorio.
 - `packages/domain` mantiene **cobertura del 100% de líneas y ramas**, bloqueante en CI. Fuera del dominio no hay umbral numérico: mandan los tests de contrato e integración.
 - Ninguna funcionalidad del motor fiscal se da por terminada sin sus tests.
@@ -108,4 +109,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.3.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30
+**Version**: 1.4.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30
