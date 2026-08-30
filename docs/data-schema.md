@@ -129,7 +129,7 @@ Comunes (§4) + `order_id?` (cierra un `order_placed`) + `thesis_id?` (obligator
 Efecto: crea un lote con `acquisition_date = fiscal_date`, `cost_eur = ((amount ?? quantity × unit_price) + fee) / fx_rate`.
 
 **`sell`**
-Comunes + `withholding?` (retención a cuenta practicada, en `currency`).
+Comunes + `withholding?` (retención a cuenta practicada, en `currency`) + `thesis_id?` (en cuentas `bucket`, enlaza la venta con su tesis abierta, igual que en `buy`; sin él se acepta con aviso).
 
 Admite `order_id?`. Efecto: consume lotes FIFO del `asset_id` en todas las cuentas (§8.1); valor de transmisión `((amount ?? quantity × unit_price) − fee) / fx_rate`; genera ganancia o pérdida por lote consumido; comprueba la regla de recompra (§8.4). Rechaza si la cantidad supera la posición física de la cuenta.
 
@@ -193,20 +193,24 @@ Cualquier evento puede llevar `corrects_id` apuntando al evento que sustituye. L
 ### 6.4 Cubo
 
 **`thesis_opened`**
-`thesis_id`, `account_id`, `asset_id`, `hypothesis`, `expected_horizon_days`, `invalidation`, `planned_size_eur`
+`thesis_id`, `account_id`, `asset_id`, `hypothesis`, `expected_horizon_days` (entero), `invalidation`, `planned_size_eur`
 
 **`thesis_closed`**
-`thesis_id`, `closing_notes`. El resultado (`result_eur`, `result_vs_index`) es derivado.
+`thesis_id`, `closing_notes`. El resultado (`result_eur`, `result_vs_index`) es derivado: `result_eur` suma las ganancias de los `sell` enlazados por `thesis_id`.
+
+Las tesis **no tienen fecha de negocio**: se proyectan en la primera pasada de §7.1, en orden de fichero, como el catálogo. "Crear la tesis antes de abrir la posición" (regla 15) significa *antes en el fichero*; su fecha administrativa es la de `recorded_at` en `Europe/Madrid`. Validación: cuenta y activo del libro `bucket`; como máximo una tesis abierta por (`account_id`, `asset_id`); un `buy` en `bucket` exige `thesis_id` de una tesis abierta, anterior en el fichero y de la misma cuenta y activo.
 
 ### 6.5 Eventos corporativos: primitivas
+
+Cada efecto admite `asset_id?`: el activo sobre el que actúa, por defecto el `asset_id` del evento. Hace falta para liquidar los picos del activo nuevo tras un `convert` o `carve_out`, y para vender los derechos de un `stock_dividend`. Los efectos se aplican en el orden del array.
 
 | Primitiva | Parámetros | Efecto |
 |---|---|---|
 | `scale` | `ratio` | `quantity × ratio` en cada lote; coste total y `acquisition_date` intactos |
 | `convert` | `to_asset_id`, `ratio` | Cada lote pasa a `to_asset_id` con `quantity × ratio`; coste total y fecha intactos; `source_lot_id` enlaza |
 | `carve_out` | `to_asset_id`, `ratio`, `cost_share` | Por cada lote crea otro en `to_asset_id` con `quantity × ratio`, coste `cost × cost_share` y la misma fecha; el lote origen queda con `cost × (1 − cost_share)` |
-| `forced_sale` | `per_account[]` de `{account_id, quantity}` (o `"all"`), `unit_price`, `currency`, `fx_rate`, `fx_rate_date`, `fee?` | Como un `sell` FIFO por cada cuenta: hecho imponible. Los picos (contrasplit, liberadas, escisión) se liquidan **cuenta a cuenta**, como hace cada bróker (hallazgo 8) |
-| `grant` | `per_account[]` de `{account_id, quantity}`, `asset_id`, `unit_cost`, `currency`, `fx_rate`, `acquisition_date` | Lotes nuevos por cuenta |
+| `forced_sale` | `per_account[]` de `{account_id, quantity, fee?}` (`quantity` puede ser `"all"`), `unit_price`, `currency`, `fx_rate`, `fx_rate_date` | Como un `sell` FIFO por cada cuenta, con la comisión de cada bróker anotada por cuenta: hecho imponible. Los picos (contrasplit, liberadas, escisión) se liquidan **cuenta a cuenta**, como hace cada bróker (hallazgo 8) |
+| `grant` | `per_account[]` de `{account_id, quantity}`, `asset_id`, `unit_cost`, `currency`, `fx_rate`, `fx_rate_date`, `acquisition_date` | Lotes nuevos por cuenta con `cost_eur = quantity × unit_cost / fx_rate`. No toca el efectivo: un desembolso del titular es un `buy` |
 
 Ejemplo (fusión con pago parcial en efectivo: 1 acción nueva por cada 2 antiguas más 3 € por antigua):
 
@@ -228,7 +232,7 @@ Todas son funciones puras `project(events) → estado`, ignoran parejas anuladas
 
 La proyección se hace en dos pasadas:
 
-1. **Catálogo, configuración y rectificaciones**, en orden de fichero: `account_*`, `asset_*`, `settings_changed`, `reversal`. Construyen el catálogo completo y el conjunto de parejas anuladas. Las referencias de cualquier operación se resuelven contra el catálogo completo (un `asset_created` registrado después de la primera compra de ese activo es válido).
+1. **Catálogo, configuración, tesis y rectificaciones**, en orden de fichero: `account_*`, `asset_*`, `settings_changed`, `thesis_*`, `reversal`. Construyen el catálogo completo y el conjunto de parejas anuladas. Las referencias de cualquier operación se resuelven contra el catálogo completo (un `asset_created` registrado después de la primera compra de ese activo es válido).
 2. **Operaciones y seguimiento**, ordenadas por `(fecha de negocio, posición en el fichero)`: la fecha de negocio es `fiscal_date` para las operaciones con efecto en lotes o efectivo, `requested_date`/`date` para los eventos de seguimiento y `date` para `valuation`. Dentro de una misma fecha manda la posición en el fichero (también para el desempate FIFO de lotes con la misma `acquisition_date`).
 
 Consecuencias: registrar tarde es normal (importar un extracto semanas después, corregir con la fecha real) y no altera el resultado; una venta se valida contra la posición física **en su fecha**, no en el momento de registrarla; `recordEvent` proyecta el libro con el evento nuevo colocado cronológicamente y rechaza si cualquier invariante se rompe. `settingsAt(date)` sigue usando `recorded_at` (es historial administrativo, no de negocio).
@@ -244,7 +248,7 @@ Consecuencias: registrar tarde es normal (importar un extracto semanas después,
 | `cashBalances` | Efectivo por cuenta y divisa | ADR-0004 |
 | `pendingTransfers` | Solicitudes de traspaso sin `transfer` final | ADR-0010 |
 | `pendingOrders` | Órdenes (`order_placed`) sin `buy`/`sell` que las cierre ni cancelación | ADR-0012 |
-| `theses` | Tesis abiertas y cerradas con métricas | Requiere precios para P&L latente |
+| `theses` | Tesis abiertas y cerradas: estado, `buy`/`sell` enlazados, invertido, `result_eur`, comisiones acumuladas, `days_open` | `result_vs_index` y P&L latente requieren precios (Fase 3) |
 | `realizedGains(year)` | Ganancias y pérdidas por operación y lote, con diferimientos | Motor fiscal |
 | `deferredLosses` | Pérdidas pendientes por regla de los dos meses, asociadas a lotes | §8.4 |
 | `investmentIncome(year)` | Dividendos y retenciones | §6.2 |
@@ -279,9 +283,9 @@ Tabla de composición admitida por `kind` (el evento se rechaza si sus `effects`
 |---|---|---|---|
 | `split` | `scale` | 4:1 → `scale(4)` | 40 títulos, coste 1.000 €, fecha 2027-01-10. Sin hecho imponible |
 | `reverse_split` | `scale` + `forced_sale?` | 1:4 con 10 títulos → `scale(0.25)` deja 2,5; `forced_sale(0.5 @ 400 €)` | 2 títulos, coste 800 €; la fracción vendida: transmisión 200 € − coste 200 € = 0 € (hecho imponible aunque sea cero) |
-| `stock_dividend` | `scale` | 1 nueva por cada 10 → `scale(1.1)` | 11 títulos, coste 1.000 € repartido (90,91 €/título), fecha original. Sin hecho imponible (acciones liberadas). Si en vez de acciones se venden los derechos: `grant(rights, coste 0)` + `forced_sale`: ganancia = importe cobrado |
-| `merger` | `convert` + `forced_sale?` | 1 nueva por 2 antiguas → `convert(NEW, 0.5)` | 5 títulos de NEW, coste 1.000 €, fecha 2027-01-10. El componente en efectivo, si lo hay, tributa vía `forced_sale` |
-| `spin_off` | `carve_out` | 1 nueva por 4 antiguas, 20% del coste → `carve_out(SPIN, 0.25, 0.20)` | 10 títulos OLD coste 800 € + 2,5 títulos SPIN coste 200 €, ambos fecha 2027-01-10. `cost_share` sale de la proporción publicada por el emisor o de los valores de mercado del primer día (*verificar*) |
+| `stock_dividend` | `scale` **o** `grant` + `forced_sale?` | 1 nueva por cada 10 → `scale(1.1)` | 11 títulos, coste 1.000 € repartido (90,91 €/título), fecha original. Sin hecho imponible (acciones liberadas). Si en vez de acciones se venden los derechos: `grant(rights, coste 0)` + `forced_sale`: ganancia = importe cobrado |
+| `merger` | `convert` + `forced_sale?` (antes del `convert`, sobre el activo antiguo: componente en efectivo; o después, sobre el nuevo: picos) | 1 nueva por 2 antiguas → `convert(NEW, 0.5)` | 5 títulos de NEW, coste 1.000 €, fecha 2027-01-10. El componente en efectivo, si lo hay, tributa vía `forced_sale` |
+| `spin_off` | `carve_out` + `forced_sale?` (sobre la escindida, para los picos) | 1 nueva por 4 antiguas, 20% del coste → `carve_out(SPIN, 0.25, 0.20)` | 10 títulos OLD coste 800 € + 2,5 títulos SPIN coste 200 €, ambos fecha 2027-01-10. `cost_share` sale de la proporción publicada por el emisor o de los valores de mercado del primer día (*verificar*) |
 | `fund_merger` | `convert` | ratio = NAV_old / NAV_new = 1,7 → `convert(FUND_B, 1.7)` | 17 participaciones de B, coste 1.000 €, fecha original. Sin hecho imponible |
 | `share_class_change` | `convert` | igual que `fund_merger` | Activo nuevo (otra clase, otro TER); lotes heredados |
 | `fund_liquidation` | `forced_sale(all)` | NAV de liquidación 120 € → `forced_sale(all @ 120)` | Transmisión 1.200 € − coste 1.000 € = ganancia 200 €. Hecho imponible |

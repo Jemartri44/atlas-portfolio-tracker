@@ -100,7 +100,9 @@ git checkout develop && git merge --no-ff release/<version> && git branch -d rel
 git checkout -b hotfix/<version> main
 git checkout main && git merge --no-ff hotfix/<version> && git tag -a v<version> -m "v<version>"
 git checkout develop && git merge --no-ff hotfix/<version> && git branch -d hotfix/<version>
-``` Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea. Hooks: `git config core.hooksPath .githooks`.
+```
+
+Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea. Hooks: `git config core.hooksPath .githooks`.
 
 ## Licencia
 
