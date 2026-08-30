@@ -179,7 +179,7 @@ Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimien
 **`corporate_action`** (ADR-0011)
 `kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/` o URL del emisor), `effects[]` (primitivas, ver §6.5), `notes?`, `fingerprint`
 
-Afecta a los lotes del `asset_id` en **todas** las cuentas (los lotes fiscales son globales, ADR-0009); `forced_sale` reparte el efectivo entre cuentas en proporción a su posición física.
+Afecta a los lotes del `asset_id` en **todas** las cuentas (los lotes fiscales son globales, ADR-0009); `forced_sale` vende y cobra **cuenta a cuenta** según `per_account[]` (§6.5), sin reparto automático.
 
 ### 6.3 Rectificación (ADR-0003)
 
