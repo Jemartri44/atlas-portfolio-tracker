@@ -2,7 +2,7 @@
 
 Referencia viva del formato del libro mayor y de las proyecciones. Decisiones de fondo en ADR-0002, ADR-0003, ADR-0005 y ADR-0006. Prosa en español; identificadores en inglés tal como aparecen en el fichero y en el código.
 
-> **Estado:** secciones 1-8 cerradas (Rondas 2 y 4, 2026-08-30) y revisadas tras el *challenge* externo del mismo día (ADR-0012, ADR-0013). Sigue siendo `schema_version = 1`: no existe código todavía. Cada cambio de formato posterior incrementa la versión (§5).
+> **Estado:** secciones 1-8 cerradas (Rondas 2 y 4, 2026-08-30) y revisadas tras el *challenge* externo del mismo día (ADR-0012, ADR-0013). Sigue siendo `schema_version = 1`; la feature 001 (PR #10, 2026-08-30) lo implementa en `packages/domain`. Cada cambio de formato posterior incrementa la versión (§5).
 
 ## 1. Distribución del bucket
 
@@ -73,9 +73,9 @@ La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se d
 | `asset_id` | id | Activo (no en movimientos de efectivo) |
 | `trade_date` | fecha | Fecha de contratación |
 | `value_date` | fecha | Fecha valor / liquidación |
-| *(derivada)* `fiscal_date` | fecha | La que manda para ejercicio, antigüedad, tipo de cambio y ventana de recompra. Se deriva por `asset.type` según `Settings.fiscal_date_rule` (ADR-0013); no se almacena |
+| *(derivada)* `fiscal_date` | fecha | La que manda para ejercicio, antigüedad, tipo de cambio y ventana de recompra. Se deriva por `asset_type` según `Settings.fiscal_date_rule` (ADR-0013); no se almacena |
 | `quantity` | decimal | Cantidad (participaciones, acciones, unidades) |
-| `unit_price` | decimal | Precio unitario en `currency`. Informativo si hay `amount` |
+| `unit_price?` | decimal | Precio unitario en `currency`. **Obligatorio si no hay `amount`**; si lo hay, es informativo y puede omitirse (nunca se rellena con `"0"` ni con un valor derivado: el libro no guarda datos inventados) |
 | `amount?` | decimal | Importe bruto liquidado en `currency` (sin comisión). Si está presente, **es la base de coste o de transmisión** (ADR-0012) |
 | `currency` | ISO 4217 | Divisa del precio y la comisión |
 | `fx_rate` | decimal | Tipo del BCE **tal cual lo publica**: unidades de `currency` por EUR, todos sus decimales; `"1"` si EUR. `eur = amount / fx_rate` (ADR-0013) |
@@ -110,9 +110,9 @@ Los eventos `*_updated` llevan el **estado completo resultante** (no un diff), i
 `account_id`, `name`, `platform`, `book` (`core` | `bucket`), `base_currency`, `country` (ISO 3166-1, para el Modelo 720), `active`
 
 **`asset_created` / `asset_updated`**
-`asset_id`, `type` (`fund` | `etc` | `etp` | `stock` | `crypto` | `money_market`), `book`, `asset_class?` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin?`, `ticker?`, `name`, `currency`, `ter?`, `transferable`, `reference_etf_id?`, `active`
+`asset_id`, `asset_type` (`fund` | `etc` | `etp` | `stock` | `crypto` | `money_market`; se llama `asset_type` en la línea porque `type` es el tipo de evento del envoltorio), `book`, `asset_class?` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin?`, `ticker?`, `name`, `currency`, `ter?`, `transferable`, `reference_etf_id?`, `active`
 
-Validación (ADR-0009): un `asset_id` no puede existir en los dos libros. Un cambio puro de identificador (mismo producto) es `asset_updated`; cualquier otro cambio es activo nuevo + `corporate_action` (ver §6.5).
+Validación (ADR-0009): un `asset_id` no puede existir en los dos libros. Un cambio puro de identificador (mismo producto) es `asset_updated`; cualquier otro cambio es activo nuevo + `corporate_action` (ver §6.5). En particular, `asset_updated` **rechaza** un cambio de `asset_type` o de `currency`: alteraría en silencio la `fiscal_date` (ADR-0013) o la base de coste de todas las operaciones pasadas del activo.
 
 **`settings_changed`**
 `settings`: objeto completo con todos los parámetros de `business-rules.md` §7. La proyección `settingsAt(date)` devuelve el último `settings_changed` con `recorded_at ≤ date`.
@@ -123,7 +123,7 @@ Validación (ADR-0009): un `asset_id` no puede existir en los dos libros. Un cam
 Comunes (§4) + `order_id?` (cierra un `order_placed`) + `thesis_id?` (obligatorio si la cuenta es del libro `bucket`; debe existir un `thesis_opened` previo con ese id).
 
 ```json
-{"type":"buy","account_id":"acc_ibkr","asset_id":"ast_xau","trade_date":"2026-09-01","value_date":"2026-09-03","quantity":"12","unit_price":"215.30","currency":"USD","fx_rate":"0.9211","fee":"1.50","source":"manual","fingerprint":"sha256:…"}
+{"type":"buy","account_id":"acc_ibkr","asset_id":"ast_xau","trade_date":"2026-09-01","value_date":"2026-09-03","quantity":"12","unit_price":"215.30","currency":"USD","fx_rate":"1.0857","fx_rate_date":"2026-09-01","fee":"1.50","source":"manual","fingerprint":"sha256:…"}
 ```
 
 Efecto: crea un lote con `acquisition_date = fiscal_date`, `cost_eur = ((amount ?? quantity × unit_price) + fee) / fx_rate`.
