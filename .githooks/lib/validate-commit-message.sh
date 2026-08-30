@@ -31,7 +31,10 @@ if (( ${#subject} > 72 )); then
   exit 1
 fi
 
-if grep -v '^#' "$file" | grep -qiE 'co-authored-by|generated with|claude|anthropic|chatgpt|copilot|gemini|cursor'; then
+# AI attribution: trailers or generator notes, and AI tool names. The project
+# file CLAUDE.md is a legitimate mention and is stripped before matching.
+body=$(grep -v '^#' "$file" | sed -E 's/CLAUDE\.md//Ig')
+if printf '%s\n' "$body" | grep -qiE 'co-authored-by|generated (with|by)|🤖|claude|anthropic|chatgpt|copilot|gemini|cursor'; then
   echo "commit-msg: AI attribution is not allowed in commit messages" >&2
   exit 1
 fi
