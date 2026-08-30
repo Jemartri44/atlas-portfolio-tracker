@@ -147,6 +147,9 @@ describe("FileLedgerStore", () => {
       "sell",
       "transfer",
     ]);
+    const synthetic = await at("synthetic-v1.jsonl").load();
+    expect(synthetic.lines).toHaveLength(synthetic.events.length);
+    expect(synthetic.events.length).toBeGreaterThan(100);
     expect((await at("no-trailing-newline.jsonl").load()).events).toHaveLength(2);
     expect((await at("empty.jsonl").load()).events).toEqual([]);
     await expect(at("future-version.jsonl").load()).rejects.toBeInstanceOf(SchemaTooNewError);

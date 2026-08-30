@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fiscalLots } from "../../src/projections/lots.js";
 import { pendingOrders, pendingTransfers } from "../../src/projections/pending.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
+import { snapshotOf } from "../../src/projections/snapshot.js";
 import type { FiscalLot } from "../../src/projections/state.js";
 import type {
   AssetUpdatedEvent,
@@ -13,9 +14,10 @@ import type {
   SellEvent,
   SupportedEvent,
 } from "../../src/schema/events.js";
-import { encodeLine } from "../../src/schema/line.js";
+import { decodeLine, encodeLine } from "../../src/schema/line.js";
 import { generateLedger } from "../../src/synth/scenario.js";
 import { summarizeLedger } from "../../src/synth/summary.js";
+import { fixtureLines, fixtureText } from "../fixtures-path.js";
 import { checkInvariants } from "./invariants.js";
 
 const events = generateLedger({ seed: 1 });
@@ -35,6 +37,21 @@ describe("generateLedger: determinism and invariants (seed 1)", () => {
     checkInvariants(events, "all");
     const elapsed = performance.now() - started;
     expect(elapsed).toBeLessThan(60_000);
+  });
+});
+
+describe("generateLedger: golden file (frozen once merged, prompt decision (i))", () => {
+  it("reproduces tests/fixtures/ledger/synthetic-v1.jsonl byte for byte", () => {
+    expect(events.map((event) => `${encodeLine(event)}\n`).join("")).toBe(
+      fixtureText("synthetic-v1.jsonl"),
+    );
+  });
+
+  it("projects the fixture to tests/fixtures/ledger/synthetic-v1.snapshot.json", () => {
+    const fixture = fixtureLines("synthetic-v1.jsonl").map((line) => decodeLine(line).event);
+    expect(`${JSON.stringify(snapshotOf(projectLedger(fixture)), null, 2)}\n`).toBe(
+      fixtureText("synthetic-v1.snapshot.json"),
+    );
   });
 });
 
