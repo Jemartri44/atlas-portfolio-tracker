@@ -20,8 +20,9 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | 4 | Semántica de operaciones y FIFO | Fase 1 | ADR-0009, ADR-0010, ADR-0011, `docs/data-schema.md` §6-8 | **Cerrada** 2026-08-30 |
 | 5 | Calidad, proceso y tooling del asistente | Fase 1 | Spec §11, `.githooks/`, `.claude/`, `.github/`, `LICENSE` | **Cerrada** 2026-08-30 |
 | — | *Challenge externo de las rondas 1-5* | Fase 1 | ADR-0012, ADR-0013, `docs/fiscal-questions.md` | **Hecho** 2026-08-30: 10 hallazgos aplicados; repetir antes de cada fase |
+| — | *Challenge 2 (rondas + código de la Fase 1)* | Fase 2 | Constitución 1.4.0, `data-schema.md` §4/§6/§8.4, `business-rules.md` §5, preguntas fiscales 14-16, bloque 0 del prompt 004 | **Hecho** 2026-08-31: 8 hallazgos, todos aceptados (informe en `~/atlas-private/reviews/`) |
 | — | *Fase 0 (validación con la realidad, tareas del usuario)* | Rondas 6-7 | — | En curso: IBKR sin abrir; la primera suscripción a MyInvestor (y con ella la exportación de operaciones de fondos) se aplaza hasta que la app esté lista para registrarla; AWS y Yahoo diferidos a antes de la Fase 4 |
-| — | *Fase 1 (libro mayor): features 001-003* | Fases 2-5 | `specs/001-ledger-core/`, `specs/002-corporate-actions/`, `specs/003-synthetic-data/`, PRs #10, #12, #15, #18 | **Cerrada** 2026-08-30. Antes de la Fase 2: repetir el *challenge* (prompt `review-challenge-decisions`), ahora también sobre el código, y triar como la primera vez. Candidatos de integridad anotados en `specs/003-synthetic-data/research.md` §1 (`inactive_reference`, `duplicate_valuation`, `valuation_quantity_mismatch`): decidir cuando se amplíe `integrity`. 004 (MyInvestor) y 005 (IBKR) siguen dependiendo de la Fase 0 |
+| — | *Fase 1 (libro mayor): features 001-003* | Fases 2-5 | `specs/001-ledger-core/`, `specs/002-corporate-actions/`, `specs/003-synthetic-data/`, PRs #10, #12, #15, #18 | **Cerrada** 2026-08-30; *challenge* 2 ejecutado y triado el 2026-08-31. La Fase 2 es la feature `004-monthly-contribution`; los importadores de MyInvestor e IBKR tomarán los números siguientes cuando la Fase 0 los desbloquee. Candidatos de integridad anotados en `specs/003-synthetic-data/research.md` §1 (`inactive_reference`, `duplicate_valuation`, `valuation_quantity_mismatch`): decidir cuando se amplíe `integrity`. los importadores siguen dependiendo de la Fase 0 |
 | 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente; bloqueada por la Fase 0 (IBKR y exportación de fondos de MyInvestor) |
 | 7 | Aplicación web: framework, offline, auth, API | Fase 2 | ADR-0009+ | Pendiente |
 | 8 | Infraestructura, despliegue y copias de seguridad | Fase 4 | ADR-0010+ | Pendiente |
@@ -113,7 +114,7 @@ Ninguna bloquea la Fase 1: el dominio y la CLI no dependen de nada externo. Sus 
 
 ## Ronda 6 — Importadores y fuentes de precios
 
-Depende de la Fase 0. Decisiones: mapeo de campos de cada extracto a `Transaction`, huella de duplicados por origen, política de caché de precios, respaldo si Lambda está bloqueada (recolector externo), formato del histórico de precios en S3.
+Depende de la Fase 0. Decisiones: mapeo de campos de cada extracto a `Transaction`, huella de duplicados por origen, política de caché de precios, respaldo si Lambda está bloqueada (recolector externo), formato del histórico de precios en S3; cotejo de `(fx_rate, fx_rate_date)` contra la tabla del BCE en `check --deep` y validación de festivos TARGET (challenge 2, hallazgo 5); ajuste de cotizaciones históricas tras un `scale` (seguimiento de la 002).
 
 ## Ronda 7 — Aplicación web
 
