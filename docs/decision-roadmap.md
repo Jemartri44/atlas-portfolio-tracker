@@ -14,7 +14,7 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 
 | Ronda | Tema | Bloquea | Registro | Estado |
 |---|---|---|---|---|
-| 1 | Dinero y cantidades | Fase 1 | ADR-0005 | Pendiente |
+| 1 | Dinero y cantidades | Fase 1 | ADR-0005 | **Cerrada** 2026-08-30 |
 | 2 | Esquema del libro en S3 | Fase 1 | ADR-0006, `docs/data-schema.md` | Pendiente |
 | 3 | Estructura del código y toolchain | Primer commit de código | ADR-0007, ADR-0008 | Pendiente |
 | 4 | Semántica de operaciones y FIFO | Fase 1 | `docs/data-schema.md` + spec de la feature 001 | Pendiente |

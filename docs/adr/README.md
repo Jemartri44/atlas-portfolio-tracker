@@ -8,6 +8,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0002](0002-ledger-storage.md) | Almacenamiento del libro mayor | Aceptada |
 | [0003](0003-append-only-ledger.md) | Libro mayor append-only con lotes como proyección | Aceptada |
 | [0004](0004-cash-scope.md) | Efectivo: saldos derivados por cuenta, colchón fuera de alcance | Aceptada |
+| [0005](0005-money-representation.md) | Representación de dinero y cantidades (`big.js` vendorizada, redondeo tardío) | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 

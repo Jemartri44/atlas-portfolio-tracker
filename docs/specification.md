@@ -69,6 +69,8 @@ El cubo nunca entra en el cálculo de los pesos objetivo del núcleo. Es un pres
 
 ### 4.1 Entidades
 
+**Magnitudes numéricas (ADR-0005):** importes, cantidades y tipos de cambio son decimales exactos (`big.js` vendorizada, envuelta en `Money`, `Quantity`, `Price`, `FxRate`), serializados como **cadenas** en JSON. Se guarda lo que dice el bróker sin truncar; se redondea a céntimos solo en la salida fiscal (half-up) y en pantalla, una vez por operación.
+
 **Account** (cuenta)
 `id`, `name`, `platform`, `book`, `base_currency`, `country` (para el Modelo 720), `active`
 
