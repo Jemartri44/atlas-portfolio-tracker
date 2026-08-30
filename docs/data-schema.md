@@ -9,7 +9,7 @@ Referencia viva del formato del libro mayor y de las proyecciones. Decisiones de
 | Prefijo | Contenido | Retención |
 |---|---|---|
 | `ledger/ledger.jsonl` | El libro: un evento por línea, append-only | Para siempre. Versiones no vigentes de S3: 365 días |
-| `archive/ledger-<YYYY-MM-DD>-v<n>.jsonl` | Fichero anterior a cada compactación, sin tocar | Para siempre |
+| `archive/ledger-<YYYY-MM-DD>-v<n>.jsonl` | Fichero anterior a cada compactación, sin tocar. `<YYYY-MM-DD>` es el día de la compactación en `Europe/Madrid` y `<n>` la **menor** `schema_version` presente en el fichero archivado; ante colisión, sufijo `-2`, `-3`… En local (`FileLedgerStore`), `archive/` es un directorio junto al libro | Para siempre |
 | `reference/ecb/eurofxref-hist.csv` | Histórico oficial del BCE, íntegro, refrescado a diario | Se sobrescribe |
 | `prices/<asset_id>.jsonl` | Precios informativos (Nivel 2), una línea por fecha y fuente | Para siempre |
 | `documents/<event_id>/<fichero>` | Fuente documental de eventos corporativos (PDF, HTML) | Para siempre |
@@ -91,11 +91,12 @@ La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se d
 - `schema_version` empieza en `1`. Cada cambio incompatible del formato de cualquier evento incrementa la versión global.
 - Al cargar, cada línea pasa por la cadena `migrate(v) → v+1` hasta la versión actual, en memoria. Las funciones de migración son puras, viven en `packages/domain/schema/migrations/` y tienen como fixtures líneas reales de la versión antigua.
 - El fichero **nunca** se reescribe por una migración.
-- `compact` (comando de CLI, acción deliberada): reescribe el libro entero a la versión actual y archiva el original en `archive/`. Se ejecuta cuando la cadena de migraciones pendientes molesta, no de forma automática.
+- `compact` (comando de CLI, acción deliberada): reescribe el libro entero a la versión actual y archiva el original en `archive/`. Se ejecuta cuando la cadena de migraciones pendientes molesta, no de forma automática. Contrato (feature 003): (1) el almacén guarda los bytes originales, tal cual, en `archive/` **antes** de reemplazar el libro y nunca sobrescribe un archivo (`LedgerStore.replace`, la única operación que reescribe); (2) es no-op si ninguna línea está por debajo de la versión actual (canonicalizar líneas escritas por otro cliente no es motivo); (3) aborta sin escribir si hay eventos inválidos o si la proyección del libro reescrito difiere de la original (`snapshotOf`).
 
 **Contrato del cargador y del `append` (hallazgo 10 del *challenge*):**
 - El cargador **rechaza** el fichero si alguna línea tiene `schema_version` mayor que la que conoce el código. Un cliente antiguo (CLI vieja, PWA cacheada) nunca escribe sobre un libro más nuevo.
 - `append` conserva **los bytes originales** del fichero y solo añade líneas al final; nunca re-serializa lo cargado. Solo `compact` reescribe.
+- `load` devuelve, además de los eventos migrados en memoria, las **líneas crudas** en orden de fichero (`lines`): son la entrada de las comprobaciones profundas de §7 (`integrity`).
 - `settingsAt(date)` y cualquier comparación entre una fecha de negocio y `recorded_at` convierte `recorded_at` a fecha en `Europe/Madrid` y usa "hasta el fin de ese día".
 
 ## 6. Semántica de cada evento
@@ -255,7 +256,9 @@ Consecuencias: registrar tarde es normal (importar un extracto semanas después,
 | `deferredLosses` | Pérdidas pendientes por regla de los dos meses, asociadas a lotes | §8.4 |
 | `investmentIncome(year)` | Dividendos y retenciones | §6.2 |
 | `valuations(date)` | Valoraciones registradas | Modelo 720 |
-| `integrity` | Comprobaciones: posiciones físicas ≥ 0, lotes fiscales = suma física por activo, huellas únicas | Verificación trimestral |
+| `integrity` | Comprobaciones: posiciones físicas ≥ 0, lotes fiscales = suma física por activo, huellas únicas, referencias colgantes (`corrects_id` a un evento inexistente o no anulado) | Verificación trimestral |
+| `deepCheck` | Sobre las líneas crudas (`atlas check --deep`): ids duplicados, huella que no coincide con los campos del evento, líneas no canónicas, líneas de versiones antiguas (sugiere `compact`), proyección no reproducible | Feature 003 |
+| `snapshotOf` | Instantánea canónica de todas las proyecciones (claves ordenadas, decimales como texto) | *Golden files*, `compact`, `check --deep` |
 
 ## 8. FIFO y reglas fiscales aplicadas
 

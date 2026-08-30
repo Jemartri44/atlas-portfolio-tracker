@@ -29,7 +29,7 @@ infra/               Terraform.
 
 | Puerto | Responsabilidad | Adaptadores previstos |
 |---|---|---|
-| `LedgerStore` | Cargar y guardar el libro con escritura condicional | S3, fichero local, memoria |
+| `LedgerStore` | Cargar el libro (eventos migrados y líneas crudas) y guardarlo con escritura condicional: `append` y `replace` (reescritura completa tras archivar el original, solo para `compact`; *añadido el 2026-08-30 al preparar la feature 003*) | S3, fichero local, memoria |
 | `StatementSource` | Obtener movimientos de un origen externo | IBKR Flex (API), MyInvestor (fichero), CSV de exchange; futuro: PSD2/bancos, APIs de brókers |
 | `PriceSource` | Precio informativo de un activo en una fecha | Yahoo, CoinGecko, manual |
 | `FxRateSource` | Tipo de cambio BCE por fecha | CSV íntegro del BCE |
