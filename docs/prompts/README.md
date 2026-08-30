@@ -5,3 +5,4 @@ Un fichero por feature, numerado igual que `specs/NNN-<name>/`. Los escribe el a
 | Prompt | Feature | Estado |
 |---|---|---|
 | [001](001-ledger-core.md) | Libro mayor: esqueleto, dinero, eventos, proyecciones, FIFO, CLI | Listo para entregar |
+| [review](review-challenge-decisions.md) | Agente revisor: *challenge* de las decisiones tomadas (reutilizable antes de cada fase) | Listo para entregar |

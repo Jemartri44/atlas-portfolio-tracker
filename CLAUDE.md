@@ -20,6 +20,7 @@ User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) a
 - `docs/data-schema.md` — the ledger file format (bucket layout, line envelope, event types, migrations). `docs/adr/` — architecture decision records.
 - `docs/dependencies.md` — the closed dependency budget.
 - `docs/prompts/` — handoff prompts, one per feature, written by the high-level assistant for the implementing assistant.
+- `docs/statements/` — structural description of each broker export format (no real data), input for the `StatementSource` adapters.
 
 ## Spec-driven development (GitHub Spec Kit)
 
