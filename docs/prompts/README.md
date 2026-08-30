@@ -4,5 +4,6 @@ Un fichero por feature, numerado igual que `specs/NNN-<name>/`. Los escribe el a
 
 | Prompt | Feature | Estado |
 |---|---|---|
+| [000](000-director-handoff.md) | Relevo del asistente de dirección (contexto, estado, planes no escritos, orden de lectura) | Vigente desde 2026-08-30 |
 | [001](001-ledger-core.md) | Libro mayor: esqueleto, dinero, eventos, proyecciones, FIFO, CLI | Listo para entregar |
 | [review](review-challenge-decisions.md) | Agente revisor: *challenge* de las decisiones tomadas (reutilizable antes de cada fase) | Ejecutado 2026-08-30 (10 hallazgos, aplicados) |
