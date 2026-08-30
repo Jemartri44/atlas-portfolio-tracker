@@ -9,4 +9,5 @@ Un fichero por feature, numerado igual que `specs/NNN-<name>/`. Los escribe el a
 | [001-fixes](001-review-fixes.md) | Correcciones tras la revisión de la PR #10 (`unit_price` opcional, `asset_type` inmutable, nits) | Fusionada (PR #12, 2026-08-30) |
 | [002](002-corporate-actions.md) | Eventos corporativos (cinco primitivas, tabla por `kind`, asistentes de CLI), tesis del cubo, `valuations(date)` | Fusionada (PR #15, 2026-08-30) |
 | [003](003-synthetic-data.md) | Datos sintéticos y *golden file*, `compact` con archivo del original, migración de prueba v1→v2, `integrity` completa (`check --deep`), `atlas backup`, tooling | Fusionada (PR #18, 2026-08-30) |
+| [004](004-monthly-contribution.md) | Fase 2: bloque 0 del *challenge* 2 (ADR-0014/0015, validaciones), precios manuales, `atlas weights`, calculadora de aportación, simulador de traspaso, costes | Escrito 2026-08-31; pendiente de implementar |
 | [review](review-challenge-decisions.md) | Agente revisor: *challenge* de las decisiones tomadas (reutilizable antes de cada fase) | Ejecutado 2026-08-30 (10 hallazgos, aplicados) |

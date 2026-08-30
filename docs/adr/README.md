@@ -17,6 +17,8 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0011](0011-corporate-actions-primitives.md) | Eventos corporativos como composición de 5 primitivas de lote | Aceptada |
 | [0012](0012-cash-events-and-pending-orders.md) | Eventos de efectivo, base de coste por importe, órdenes pendientes, traspaso de custodia | Aceptada |
 | [0013](0013-fiscal-date-and-wash-sale-window.md) | Fecha fiscal y ventana de recompra por tipo de activo; sentido de `fx_rate` | Aceptada, verificación fiscal pendiente |
+| [0014](0014-wash-sale-window-and-deferral-lineage.md) | Ventana de recompra de fecha a fecha y diferimiento ligado al linaje de lotes | Aceptada |
+| [0015](0015-degraded-projection-and-settings-acceptance.md) | Proyección degradada en consultas y aceptación de settings_changed que invalida el pasado | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 
