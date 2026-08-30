@@ -185,7 +185,7 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 
 ### 5.2 Requisitos
 
-- **Historial de cambios de configuración.** Cambiar los pesos objetivo altera el cálculo de desviaciones históricas; hay que poder saber qué valores estaban vigentes en cada momento.
+- **Historial de cambios de configuración.** Cambiar los pesos objetivo altera el cálculo de desviaciones históricas; hay que poder saber qué valores estaban vigentes en cada momento. Se cumple porque cada cambio es un evento `settings_changed` del libro (ADR-0006).
 - **Validación**: los pesos objetivo deben sumar 100%. Los umbrales deben ser coherentes entre sí.
 - **Aviso al cambiar**: modificar un umbral que está silenciando una alerta activa debe advertirlo explícitamente. Es la protección frente a subir el listón para no oír la alarma.
 
@@ -365,7 +365,7 @@ EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
 - **Lambda Function URL en vez de API Gateway.** Un servicio menos. La Lambda valida el JWT de Cognito directamente.
 - **SSM Parameter Store en vez de Secrets Manager.** El estándar es gratuito; Secrets Manager cuesta ~0,40$/secreto/mes.
 - **DNS en el registrador, no en Route 53.** Un CNAME del subdominio propio a la distribución de CloudFront evita los 0,50$/mes de zona alojada. Certificado en ACM (gratuito), **obligatoriamente en us-east-1** para CloudFront. El dominio real vive en `terraform.tfvars`, fuera del repositorio.
-- **S3 como único almacén** (ADR-0002): el libro mayor cabe en memoria; la Lambda carga, calcula y guarda con escritura condicional (`If-Match`). El versionado del bucket da historial y backup sin servicios adicionales.
+- **S3 como único almacén** (ADR-0002, ADR-0006): un único `ledger/ledger.jsonl` con **todos los eventos** (operaciones, catálogo de cuentas y activos, cambios de configuración); la Lambda lo carga entero, proyecta y guarda con escritura condicional (`If-Match`). El versionado del bucket da historial y backup sin servicios adicionales. Esquema y distribución del bucket en `docs/data-schema.md`.
 
 ### 9.3 Costes
 
