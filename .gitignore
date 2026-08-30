@@ -39,3 +39,12 @@ plan-financiero.md
 
 # Claude Code local settings (per-machine permissions)
 .claude/settings.local.json
+
+# Build and test output
+coverage/
+*.tsbuildinfo
+
+# Local ledgers and atomic-write temporaries (fixtures live under tests/fixtures/)
+/ledger.jsonl
+/demo.jsonl
+*.tmp-*

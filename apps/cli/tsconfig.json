@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "include": ["src", "test"],
+  "exclude": ["dist"],
+  "references": [{ "path": "../../packages/domain" }, { "path": "../../packages/adapters" }]
+}
