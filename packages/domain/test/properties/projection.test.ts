@@ -7,9 +7,9 @@ import { Quantity } from "../../src/money/quantity.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
-import type { LedgerState } from "../../src/projections/state.js";
 import type { LedgerEvent } from "../../src/schema/events.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
+import { aggregate } from "./aggregate.js";
 
 const ACCOUNTS = ["acc_fund", "acc_etf"] as const;
 const ASSETS = ["ast_world", "ast_bonds"] as const;
@@ -23,7 +23,7 @@ interface Op {
   ratio: string;
 }
 
-const opArb: fc.Arbitrary<Op> = fc.record({
+export const opArb: fc.Arbitrary<Op> = fc.record({
   kind: fc.constantFrom("buy", "buy", "sell", "transfer", "custody"),
   account: fc.constantFrom(...ACCOUNTS),
   asset: fc.constantFrom(...ASSETS),
@@ -42,7 +42,7 @@ const dateAt = (index: number): string => {
 };
 
 /** Builds a valid ledger: dates strictly increasing in file order, sells and transfers capped to the position. */
-const ledgerOf = (ops: Op[]): { events: LedgerEvent[]; sells: number } => {
+export const ledgerOf = (ops: Op[]): { events: LedgerEvent[]; sells: number } => {
   const b = new LedgerBuilder();
   catalogue(b);
   const held = new Map<string, Quantity>();
@@ -106,24 +106,6 @@ const ledgerOf = (ops: Op[]): { events: LedgerEvent[]; sells: number } => {
   });
   return { events: b.build(), sells };
 };
-
-const aggregate = (state: LedgerState): Record<string, unknown> => ({
-  positions: [...state.positions].map(([k, q]) => [k, q.toString()]).sort(),
-  cash: [...state.cash].map(([k, m]) => [k, m.amount.toString()]).sort(),
-  gains: state.gains
-    .map((g) => [
-      g.event_id,
-      g.proceeds_eur.amount.toString(),
-      g.cost_eur.amount.toString(),
-      g.gain_eur_rounded.amount.toString(),
-    ])
-    .sort(),
-  lots: [...state.lots].map(([asset, lots]) => [
-    asset,
-    lots.open.reduce((total, lot) => total.add(lot.quantity), Quantity.ZERO).toString(),
-    lots.open.reduce((total, lot) => total.add(lot.cost_eur.amount), Decimal.ZERO).toString(),
-  ]),
-});
 
 const isCatalogue = (event: LedgerEvent): boolean =>
   event.type === "account_created" || event.type === "asset_created";
