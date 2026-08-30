@@ -42,6 +42,7 @@ Los pesos objetivo se calculan sobre el valor total del núcleo, no sobre la apo
 
 **Regla 2 — Rebalanceo con dinero nuevo.**
 Cada mes la aportación se dirige a los activos por debajo de su peso objetivo. Es el mecanismo de rebalanceo por defecto.
+→ Mecánica de la calculadora (feature 004): del importe del mes se separa primero el presupuesto del cubo (`bucket_pct_of_contribution`); el resto se reparte entre los activos del núcleo **proporcionalmente a su déficit** frente al objetivo calculado sobre el valor tras la aportación; si la aportación supera el déficit total, el sobrante se reparte por pesos objetivo. Redondeo a céntimos una vez por activo. La calculadora **propone y nunca vende ni escribe**: las órdenes se dan a mano y se registran como siempre.
 
 **Regla 3 — Umbral de rebalanceo por venta.**
 Solo se vende para rebalancear si un activo se desvía más de un umbral (inicialmente 5 puntos porcentuales) de su peso objetivo. Revisión anual, no más frecuente.
