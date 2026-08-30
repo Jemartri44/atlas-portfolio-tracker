@@ -253,7 +253,7 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 
 | Parámetro | Valor inicial | Regla asociada |
 |---|---|---|
-| `target_weights{}` | Pendiente | 1, 2 |
+| `target_weights{}` | Pendiente (claves: `asset_id` del núcleo; suman 100) | 1, 2 |
 | `deviation_threshold_pp` | 5 puntos | 3 |
 | `satellite_min_weight_pct` | 10% | 6b |
 | `monthly_contribution_eur` | Pendiente | 9 |
@@ -266,7 +266,7 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 | `model_721_alert_threshold_eur` | 45.000€ | 5.8 |
 | `savings_tax_brackets[]` | Ver 5.1 | 5.1 |
 | `fiscal_date_rule{}` | cotizados → contratación; fondos → fecha valor | 5.10 |
-| `wash_sale_window_days{}` | fondos/cripto 365; cotizados 61 | 5.4 |
+| `wash_sale_window{}` | fondos/cripto `"1y"`; cotizados `"2m"` (de fecha a fecha; `wash_sale_window_days` en días es la forma antigua aceptada) | 5.4 |
 | `tax_residence` | España | 5.9 |
 | `notification_email` | — | — |
 | `job_frequencies{}` | Ver especificación | — |
