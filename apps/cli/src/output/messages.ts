@@ -90,6 +90,27 @@ export const describeError = (error: DomainError): string => {
       return `El libro usa schema_version ${text(d.found)} y esta CLI solo entiende hasta ${text(d.supported)}: actualiza la aplicación.`;
     case "conflict":
       return "El libro ha cambiado desde que se cargó: repite el comando.";
+    case "invalid_events":
+      return `El libro tiene eventos inválidos; rectifícalos antes de compactar:\n${table(
+        ["id", "tipo", "motivo"],
+        (d.affected as { id: string; type: string; error: string }[]).map((e) => [
+          e.id,
+          e.type,
+          e.error,
+        ]),
+      )}`;
+    case "projection_changed":
+      return `La reescritura cambiaría la proyección (${text(d.keys)}): no se ha escrito nada.`;
+    case "archive_exists":
+      return `El archivo ${text(d.archive_name)} ya existe y nunca se sobrescribe.`;
+    case "ledger_missing":
+      return `No hay libro en ${text(d.path)}: nada que copiar.`;
+    case "backup_mismatch":
+      return `La copia ${text(d.path)} no coincide con el libro (etag o número de líneas): bórrala y repite.`;
+    case "path_exists":
+      return `La ruta ${text(d.path)} ya existe: no se sobrescribe nada.`;
+    case "synthetic_invalid":
+      return `El libro generado no supera la verificación (${text(d.invalid)}, ${text(d.findings)}): es un error del generador.`;
     case "missing_field":
       return `Falta el campo ${text(d.field)} en ${text(d.type)}.`;
     case "invalid_field":

@@ -19,6 +19,7 @@ export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
 export type { RandomSource } from "./ports/random.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";
+export { deepCheck } from "./projections/deep-check.js";
 export { realizedGains } from "./projections/gains.js";
 export { investmentIncome } from "./projections/income.js";
 export { type IntegrityFinding, integrity } from "./projections/integrity.js";
@@ -46,22 +47,39 @@ export {
   projectLedger,
 } from "./projections/project-ledger.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
+export { type Snapshot, snapshotDiff, snapshotOf, sortKeysDeep } from "./projections/snapshot.js";
 export type * from "./projections/state.js";
 export { theses } from "./projections/theses.js";
 export { type ValuationAt, valuations } from "./projections/valuations.js";
 export * from "./schema/envelope.js";
 export * from "./schema/events.js";
 export { fingerprintOf } from "./schema/fingerprint.js";
-export { type DecodedLine, decodeLine, encodeLine } from "./schema/line.js";
 export {
-  MIGRATIONS,
+  canonicalLine,
+  type DecodedLine,
+  decodeLine,
+  encodeLine,
+  parseLine,
+} from "./schema/line.js";
+export {
+  CURRENT_LEDGER_SCHEMA,
+  type LedgerSchema,
   type Migration,
-  type MigrationChain,
   migrate,
 } from "./schema/migrations/index.js";
-export { validateShape } from "./schema/validate.js";
+export { knownFieldsOf, validateShape } from "./schema/validate.js";
 export { type BusinessDates, fiscalDateOf } from "./settings/fiscal-date.js";
 export * from "./settings/settings.js";
+export * from "./synth/index.js";
+export {
+  archiveNameFor,
+  type CompactDeps,
+  type CompactPlan,
+  type CompactResult,
+  compactLedger,
+  planCompact,
+  type VersionCount,
+} from "./usecases/compact.js";
 export type { UseCaseDeps } from "./usecases/deps.js";
 export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
 export {

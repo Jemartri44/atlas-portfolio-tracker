@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { SchemaTooNewError, ValidationError } from "../../src/errors.js";
-import { decodeLine, encodeLine } from "../../src/schema/line.js";
+import { canonicalLine, decodeLine, encodeLine, parseLine } from "../../src/schema/line.js";
 import { SAMPLES, sampleList } from "../samples.js";
+import { TEST_SCHEMA_V2 } from "./test-schema.js";
 
 describe("encodeLine / decodeLine", () => {
   it("round-trips every sample as a single JSON line", () => {
@@ -39,5 +40,33 @@ describe("encodeLine / decodeLine", () => {
     expect(() =>
       decodeLine(encodeLine(SAMPLES.buy).replace('"schema_version":1', '"schema_version":2')),
     ).toThrow(SchemaTooNewError);
+  });
+
+  it("decodes with an injected schema: migrates old lines and rejects newer ones", () => {
+    const oldLine = encodeLine({ ...SAMPLES.cash_deposit, note: "typed by hand" } as never);
+    expect(() => decodeLine(oldLine, TEST_SCHEMA_V2)).not.toThrow();
+    const decoded = decodeLine(oldLine, TEST_SCHEMA_V2).event;
+    expect(decoded.schema_version).toBe(2);
+    expect((decoded as { notes?: string }).notes).toBe("typed by hand");
+    expect("note" in decoded).toBe(false);
+    expect(decodeLine(oldLine, TEST_SCHEMA_V2).raw).toBe(oldLine);
+    expect(() =>
+      decodeLine(oldLine.replace('"schema_version":1', '"schema_version":3'), TEST_SCHEMA_V2),
+    ).toThrow(SchemaTooNewError);
+    expect(() => decodeLine(oldLine.replace('"schema_version":1', '"schema_version":2'))).toThrow(
+      SchemaTooNewError,
+    );
+  });
+
+  it("parses raw records and writes them canonically without migrating", () => {
+    expect(parseLine('{"a":1}')).toEqual({ a: 1 });
+    expect(() => parseLine("{")).toThrow(ValidationError);
+    expect(() => parseLine("null")).toThrow(ValidationError);
+    const reordered =
+      '{"type":"cash_deposit","amount":"1","id":"01ARYZ6S41TSV4RRFFQ69G5FAB","schema_version":1}';
+    expect(canonicalLine(parseLine(reordered))).toBe(
+      '{"schema_version":1,"id":"01ARYZ6S41TSV4RRFFQ69G5FAB","type":"cash_deposit","amount":"1"}',
+    );
+    expect(canonicalLine(parseLine(encodeLine(SAMPLES.buy)))).toBe(encodeLine(SAMPLES.buy));
   });
 });

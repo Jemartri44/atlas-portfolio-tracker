@@ -56,6 +56,28 @@ export class ConflictError extends DomainError {
   }
 }
 
+/** `replace` would overwrite an existing archive; archives are never overwritten. */
+export class ArchiveExistsError extends DomainError {
+  constructor(archiveName: string) {
+    super("archive_exists", `archive ${archiveName} already exists; it is never overwritten`, {
+      archive_name: archiveName,
+    });
+  }
+}
+
+/** `compact` refused to rewrite: invalid events in the ledger, or the rewritten text projects differently. */
+export class CompactRejectedError extends DomainError {
+  constructor(code: "invalid_events" | "projection_changed", details: Record<string, unknown>) {
+    super(
+      code,
+      code === "invalid_events"
+        ? "the ledger has invalid events; rectify them before compacting"
+        : "the rewritten ledger projects differently; nothing was written",
+      details,
+    );
+  }
+}
+
 /** A referenced event does not exist. */
 export class NotFoundError extends DomainError {
   constructor(id: string) {

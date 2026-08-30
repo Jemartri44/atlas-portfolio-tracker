@@ -13,7 +13,9 @@ import {
 } from "@atlas/domain";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
+import { backupCommand } from "./commands/backup.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
+import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
 import { exportCommand } from "./commands/export.js";
 import {
@@ -26,6 +28,7 @@ import {
   valuationsCommand,
 } from "./commands/query.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
+import { synthCommand } from "./commands/synth.js";
 import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
@@ -51,6 +54,9 @@ const COMMANDS: Record<string, Command> = {
   income: incomeCommand,
   check: checkCommand,
   export: exportCommand,
+  synth: synthCommand,
+  compact: compactCommand,
+  backup: backupCommand,
 };
 
 export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--json] <comando> …
@@ -62,8 +68,9 @@ comandos:
   ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|delisting|raw
   thesis open|close|list [--closed]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
-  positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check
-  export --format jsonl|csv [--out <ruta>]`;
+  positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
+  export --format jsonl|csv [--out <ruta>]
+  synth --out <ruta> [--seed <n>]   compact [--yes]   backup --to <directorio>`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),

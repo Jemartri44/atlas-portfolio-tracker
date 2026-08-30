@@ -1,0 +1,2523 @@
+{
+  "accounts": [
+    {
+      "account_id": "acc_bucket",
+      "active": true,
+      "base_currency": "EUR",
+      "book": "bucket",
+      "country": "IE",
+      "history": [
+        "01M1F21N48DPHF14EVN5BVG69D"
+      ],
+      "name": "Cubo especulativo",
+      "platform": "ibkr"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "active": true,
+      "base_currency": "EUR",
+      "book": "core",
+      "country": "IE",
+      "history": [
+        "01M1F21K5RVGWV6V77KK58XYJ7"
+      ],
+      "name": "ETC y ETP",
+      "platform": "ibkr"
+    },
+    {
+      "account_id": "acc_ibkr2",
+      "active": true,
+      "base_currency": "EUR",
+      "book": "core",
+      "country": "IE",
+      "history": [
+        "01M1F21M503MBGFXEET8TTS6B7"
+      ],
+      "name": "IBKR secundaria",
+      "platform": "ibkr"
+    },
+    {
+      "account_id": "acc_mi",
+      "active": true,
+      "base_currency": "EUR",
+      "book": "core",
+      "country": "ES",
+      "history": [
+        "01M1F21J6GGKZ39F2WMV90M9E3"
+      ],
+      "name": "Fondos indexados",
+      "platform": "myinvestor"
+    }
+  ],
+  "assets": [
+    {
+      "active": true,
+      "asset_id": "ast_alpha",
+      "asset_type": "stock",
+      "book": "bucket",
+      "currency": "USD",
+      "identifier_history": [],
+      "name": "Alpha Robotics",
+      "ticker": "ALP",
+      "transferable": false
+    },
+    {
+      "active": false,
+      "asset_id": "ast_alpha_spin",
+      "asset_type": "stock",
+      "book": "bucket",
+      "currency": "USD",
+      "identifier_history": [],
+      "name": "Alpha Spin-off",
+      "ticker": "ALPS",
+      "transferable": false
+    },
+    {
+      "active": true,
+      "asset_id": "ast_beta",
+      "asset_type": "stock",
+      "book": "bucket",
+      "currency": "USD",
+      "identifier_history": [],
+      "name": "Beta Biotech",
+      "ticker": "BET",
+      "transferable": false
+    },
+    {
+      "active": true,
+      "asset_id": "ast_beta_new",
+      "asset_type": "stock",
+      "book": "bucket",
+      "currency": "USD",
+      "identifier_history": [],
+      "name": "Beta Holdings",
+      "ticker": "BETN",
+      "transferable": false
+    },
+    {
+      "active": true,
+      "asset_class": "fixed_income",
+      "asset_id": "ast_bonds",
+      "asset_type": "fund",
+      "book": "core",
+      "currency": "EUR",
+      "identifier_history": [],
+      "isin": "XX0000000003",
+      "name": "Global Bond Index Fund",
+      "ter": "0.10",
+      "transferable": true
+    },
+    {
+      "active": true,
+      "asset_class": "fixed_income",
+      "asset_id": "ast_bonds_i",
+      "asset_type": "fund",
+      "book": "core",
+      "currency": "EUR",
+      "identifier_history": [],
+      "isin": "XX0000000013",
+      "name": "Global Bond Index Fund I",
+      "ter": "0.07",
+      "transferable": true
+    },
+    {
+      "active": true,
+      "asset_class": "crypto",
+      "asset_id": "ast_btc",
+      "asset_type": "etp",
+      "book": "core",
+      "currency": "EUR",
+      "identifier_history": [],
+      "isin": "XX0000000006",
+      "name": "Bitcoin ETP",
+      "ter": "0.95",
+      "ticker": "BTCX",
+      "transferable": false
+    },
+    {
+      "active": true,
+      "asset_id": "ast_gamma",
+      "asset_type": "stock",
+      "book": "bucket",
+      "currency": "USD",
+      "identifier_history": [],
+      "name": "Gamma Semiconductors",
+      "ticker": "GAM",
+      "transferable": false
+    },
+    {
+      "active": true,
+      "asset_class": "gold",
+      "asset_id": "ast_gold",
+      "asset_type": "etc",
+      "book": "core",
+      "currency": "USD",
+      "identifier_history": [],
+      "isin": "XX0000000005",
+      "name": "Physical Gold ETC",
+      "ter": "0.15",
+      "ticker": "GLDX",
+      "transferable": false
+    },
+    {
+      "active": true,
+      "asset_class": "fixed_income",
+      "asset_id": "ast_mm",
+      "asset_type": "money_market",
+      "book": "core",
+      "currency": "EUR",
+      "identifier_history": [],
+      "isin": "XX0000000004",
+      "name": "Money Market Fund",
+      "ter": "0.08",
+      "transferable": true
+    },
+    {
+      "active": true,
+      "asset_class": "equity",
+      "asset_id": "ast_smallcap",
+      "asset_type": "fund",
+      "book": "core",
+      "currency": "EUR",
+      "identifier_history": [],
+      "isin": "XX0000000002",
+      "name": "Small Cap Index Fund",
+      "ter": "0.25",
+      "transferable": true
+    },
+    {
+      "active": true,
+      "asset_class": "equity",
+      "asset_id": "ast_smallcap_b",
+      "asset_type": "fund",
+      "book": "core",
+      "currency": "EUR",
+      "identifier_history": [],
+      "isin": "XX0000000012",
+      "name": "Small Cap Index Fund B",
+      "ter": "0.20",
+      "transferable": true
+    },
+    {
+      "active": true,
+      "asset_class": "equity",
+      "asset_id": "ast_world",
+      "asset_type": "fund",
+      "book": "core",
+      "currency": "EUR",
+      "identifier_history": [
+        {
+          "isin": "XX0000000001",
+          "until_event_id": "01MZCXWZ5RE2V5BA5MWGS5XA3V"
+        }
+      ],
+      "isin": "XX0000000011",
+      "name": "World Index Fund",
+      "ter": "0.12",
+      "transferable": true
+    }
+  ],
+  "cash": [
+    {
+      "account_id": "acc_mi",
+      "balance": "10133.992821",
+      "currency": "EUR"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "balance": "94",
+      "currency": "EUR"
+    },
+    {
+      "account_id": "acc_bucket",
+      "balance": "100",
+      "currency": "EUR"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "balance": "321.82",
+      "currency": "USD"
+    },
+    {
+      "account_id": "acc_bucket",
+      "balance": "998.199999997205",
+      "currency": "USD"
+    },
+    {
+      "account_id": "acc_ibkr2",
+      "balance": "574.42",
+      "currency": "USD"
+    }
+  ],
+  "fiscal_settings": {
+    "bucket_max_cumulative_contribution": "6000",
+    "bucket_max_weight_pct": "10",
+    "bucket_pct_of_contribution": "10",
+    "bucket_stop_loss_pct": "30",
+    "deviation_threshold_pp": "5",
+    "fiscal_date_rule": {
+      "crypto": "trade_date",
+      "etc": "trade_date",
+      "etp": "trade_date",
+      "fund": "value_date",
+      "money_market": "value_date",
+      "stock": "trade_date"
+    },
+    "job_frequencies": {
+      "prices": "daily",
+      "reconciliation": "quarterly",
+      "reminder": "monthly"
+    },
+    "model_720_alert_threshold_eur": "45000",
+    "model_721_alert_threshold_eur": "45000",
+    "monthly_contribution_eur": "600",
+    "notification_email": "atlas@example.invalid",
+    "satellite_min_weight_pct": "2",
+    "savings_tax_brackets": [
+      {
+        "rate_pct": "19",
+        "up_to": "6000"
+      },
+      {
+        "rate_pct": "21",
+        "up_to": "50000"
+      },
+      {
+        "rate_pct": "23",
+        "up_to": "200000"
+      },
+      {
+        "rate_pct": "27",
+        "up_to": "300000"
+      },
+      {
+        "rate_pct": "30"
+      }
+    ],
+    "stale_price_days": 7,
+    "target_weights": {
+      "crypto": "5",
+      "equity": "55",
+      "fixed_income": "30",
+      "gold": "10"
+    },
+    "tax_residence": "ES",
+    "transfer_max_days": 15,
+    "wash_sale_window_days": {
+      "crypto": 365,
+      "etc": 61,
+      "etp": 61,
+      "fund": 365,
+      "money_market": 365,
+      "stock": 61
+    }
+  },
+  "gains": [
+    {
+      "account_id": "acc_mi",
+      "asset_id": "ast_world",
+      "by_lot": [
+        {
+          "cost_eur": "233.475",
+          "gain_eur": "-23.35",
+          "lot_id": "01MBRMXH78M52DKTKR4PNHG0AT#0",
+          "proceeds_eur": "210.125",
+          "quantity": "2.5"
+        },
+        {
+          "cost_eur": "600",
+          "gain_eur": "-66.06397",
+          "lot_id": "01M1PS7R5RJ4XWKK5GX24DQ2FE#0",
+          "proceeds_eur": "533.93603",
+          "quantity": "6.3526"
+        },
+        {
+          "cost_eur": "34.9272753806",
+          "gain_eur": "-4.7533253806",
+          "lot_id": "01M495YN80BYC4Q2KCPDGJRBPT#0",
+          "proceeds_eur": "30.17395",
+          "quantity": "0.359"
+        }
+      ],
+      "cost_eur": "868.4022753806",
+      "event_id": "01MBRMXG802C4P758505FNXJPH",
+      "fiscal_date": "2027-01-07",
+      "gain_eur": "-94.1672953806",
+      "gain_eur_rounded": "-94.17",
+      "proceeds_eur": "774.23498",
+      "quantity": "9.2116",
+      "year": 2027
+    },
+    {
+      "account_id": "acc_ibkr",
+      "asset_id": "ast_gold",
+      "by_lot": [
+        {
+          "cost_eur": "181.2181062181",
+          "gain_eur": "-8.5532462362",
+          "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
+          "proceeds_eur": "172.6648599819",
+          "quantity": "0.25"
+        }
+      ],
+      "cost_eur": "181.2181062181",
+      "event_id": "01MR01AS78A8EXTQJWZ00W5MNR",
+      "fiscal_date": "2027-06-08",
+      "gain_eur": "-8.5532462362",
+      "gain_eur_rounded": "-8.55",
+      "proceeds_eur": "172.6648599819",
+      "quantity": "0.25",
+      "year": 2027
+    },
+    {
+      "account_id": "acc_ibkr2",
+      "asset_id": "ast_gold",
+      "by_lot": [
+        {
+          "cost_eur": "543.6543186543",
+          "gain_eur": "-24.7563963417",
+          "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
+          "proceeds_eur": "518.8979223126",
+          "quantity": "0.75"
+        }
+      ],
+      "cost_eur": "543.6543186543",
+      "event_id": "01MR01AS78A8EXTQJWZ00W5MNR",
+      "fiscal_date": "2027-06-08",
+      "gain_eur": "-24.7563963417",
+      "gain_eur_rounded": "-24.76",
+      "proceeds_eur": "518.8979223126",
+      "quantity": "0.75",
+      "year": 2027
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_alpha_spin",
+      "by_lot": [
+        {
+          "cost_eur": "7.9795879796",
+          "gain_eur": "4.2374780304",
+          "lot_id": "01N1N11178TVC0AAFB49MF75TV#0",
+          "proceeds_eur": "12.21706601",
+          "quantity": "0.5"
+        }
+      ],
+      "cost_eur": "7.9795879796",
+      "event_id": "01N1N11178TVC0AAFB49MF75TV",
+      "fiscal_date": "2027-10-06",
+      "gain_eur": "4.2374780304",
+      "gain_eur_rounded": "4.24",
+      "proceeds_eur": "12.21706601",
+      "quantity": "0.5",
+      "year": 2027
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_beta_new",
+      "by_lot": [
+        {
+          "cost_eur": "24.6563940128",
+          "gain_eur": "-0.6532460614",
+          "lot_id": "01N4CJHF78PJN6VV58EBH73T8K#0",
+          "proceeds_eur": "24.0031479514",
+          "quantity": "0.3333333333"
+        }
+      ],
+      "cost_eur": "24.6563940128",
+      "event_id": "01N4CJHF78PJN6VV58EBH73T8K",
+      "fiscal_date": "2027-11-09",
+      "gain_eur": "-0.6532460614",
+      "gain_eur_rounded": "-0.65",
+      "proceeds_eur": "24.0031479514",
+      "quantity": "0.3333333333",
+      "year": 2027
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_alpha",
+      "by_lot": [
+        {
+          "cost_eur": "159.59175959176",
+          "gain_eur": "81.37529673134",
+          "lot_id": "01M1PS7P7828CF37AWMZ0G1BED#0",
+          "proceeds_eur": "240.9670563231",
+          "quantity": "10"
+        }
+      ],
+      "cost_eur": "159.59175959176",
+      "event_id": "01N8FWT3807Q5RMB9MJA1W1HEW",
+      "fiscal_date": "2027-12-30",
+      "gain_eur": "81.37529673134",
+      "gain_eur_rounded": "81.38",
+      "proceeds_eur": "240.9670563231",
+      "quantity": "10",
+      "year": 2027
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_beta_new",
+      "by_lot": [
+        {
+          "cost_eur": "295.876728183",
+          "gain_eur": "-87.9805873329",
+          "lot_id": "01N4CJHF78PJN6VV58EBH73T8K#0",
+          "proceeds_eur": "207.8961408501",
+          "quantity": "4"
+        }
+      ],
+      "cost_eur": "295.876728183",
+      "event_id": "01N972CJ80Q958G90TKX14BSJ0",
+      "fiscal_date": "2028-01-08",
+      "gain_eur": "-87.9805873329",
+      "gain_eur_rounded": "-87.98",
+      "proceeds_eur": "207.8961408501",
+      "quantity": "4",
+      "year": 2028
+    },
+    {
+      "account_id": "acc_mi",
+      "asset_id": "ast_mm",
+      "by_lot": [
+        {
+          "cost_eur": "1239.9980150027",
+          "gain_eur": "33.4848259973",
+          "lot_id": "01M1PS7N80HK088D7010QSGMEQ#0",
+          "proceeds_eur": "1273.482841",
+          "quantity": "12.4937"
+        }
+      ],
+      "cost_eur": "1239.9980150027",
+      "event_id": "01NJW22T80XBW4CC0FKG3TN1MW",
+      "fiscal_date": "2028-05-07",
+      "gain_eur": "33.4848259973",
+      "gain_eur_rounded": "33.48",
+      "proceeds_eur": "1273.482841",
+      "quantity": "12.4937",
+      "year": 2028
+    }
+  ],
+  "income": [
+    {
+      "account_id": "acc_mi",
+      "currency": "EUR",
+      "event_id": "01M61TPF802G9VNKVGAFSCMBTG",
+      "fiscal_date": "2026-10-28",
+      "gross": "8.68",
+      "gross_eur": "8.68",
+      "kind": "interest",
+      "net": "7.03",
+      "net_eur": "7.03",
+      "withholding_origin": "0",
+      "withholding_origin_eur": "0",
+      "withholding_spain": "1.65",
+      "withholding_spain_eur": "1.65",
+      "year": 2026
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_alpha",
+      "currency": "USD",
+      "event_id": "01M75W8H80JDGKJK8CCDBRNEMS",
+      "fiscal_date": "2026-11-11",
+      "gross": "2",
+      "gross_eur": "1.7525411847",
+      "kind": "dividend",
+      "net": "1.32",
+      "net_eur": "1.1566771819",
+      "withholding_origin": "0.3",
+      "withholding_origin_eur": "0.2628811777",
+      "withholding_spain": "0.38",
+      "withholding_spain_eur": "0.3329828251",
+      "year": 2026
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_alpha",
+      "currency": "USD",
+      "event_id": "01N91XK578VAZ50W4ENSEQA2VV",
+      "fiscal_date": "2027-04-11",
+      "gross": "2",
+      "gross_eur": "1.8601190476",
+      "kind": "dividend",
+      "net": "1.32",
+      "net_eur": "1.2276785714",
+      "withholding_origin": "0.3",
+      "withholding_origin_eur": "0.2790178571",
+      "withholding_spain": "0.38",
+      "withholding_spain_eur": "0.353422619",
+      "year": 2027
+    },
+    {
+      "account_id": "acc_mi",
+      "currency": "EUR",
+      "event_id": "01NJ4WGB80NHRTZ2ANMTAY4S6Q",
+      "fiscal_date": "2028-04-28",
+      "gross": "17.55",
+      "gross_eur": "17.55",
+      "kind": "interest",
+      "net": "14.22",
+      "net_eur": "14.22",
+      "withholding_origin": "0",
+      "withholding_origin_eur": "0",
+      "withholding_spain": "3.33",
+      "withholding_spain_eur": "3.33",
+      "year": 2028
+    }
+  ],
+  "invalid": [],
+  "lots": {
+    "ast_alpha": {
+      "closed": [
+        {
+          "acquisition_date": "2026-09-04",
+          "asset_id": "ast_alpha",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "159.59175959176",
+              "event_id": "01N8FWT3807Q5RMB9MJA1W1HEW",
+              "quantity": "10"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01M1PS7P7828CF37AWMZ0G1BED#0",
+          "original_cost_eur": "199.4896994897",
+          "original_quantity": "10",
+          "quantity": "0",
+          "source_event_id": "01M1PS7P7828CF37AWMZ0G1BED"
+        }
+      ],
+      "open": []
+    },
+    "ast_alpha_spin": {
+      "closed": [],
+      "open": [
+        {
+          "acquisition_date": "2026-09-04",
+          "asset_id": "ast_alpha_spin",
+          "closed": false,
+          "consumptions": [
+            {
+              "cost_eur": "7.9795879796",
+              "event_id": "01N1N11178TVC0AAFB49MF75TV",
+              "quantity": "0.5"
+            }
+          ],
+          "cost_eur": "31.91835191834",
+          "id": "01N1N11178TVC0AAFB49MF75TV#0",
+          "original_cost_eur": "39.89793989794",
+          "original_quantity": "2.5",
+          "quantity": "2",
+          "source_event_id": "01N1N11178TVC0AAFB49MF75TV",
+          "source_lot_id": "01M1PS7P7828CF37AWMZ0G1BED#0"
+        }
+      ]
+    },
+    "ast_beta": {
+      "closed": [
+        {
+          "acquisition_date": "2026-10-07",
+          "asset_id": "ast_beta",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "320.5331221958",
+              "event_id": "01N4CJHF78PJN6VV58EBH73T8K",
+              "quantity": "13"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01M4BRBD78HXF9SGE8990VQ67M#0",
+          "original_cost_eur": "320.5331221958",
+          "original_quantity": "13",
+          "quantity": "0",
+          "source_event_id": "01M4BRBD78HXF9SGE8990VQ67M"
+        }
+      ],
+      "open": []
+    },
+    "ast_beta_new": {
+      "closed": [
+        {
+          "acquisition_date": "2026-10-07",
+          "asset_id": "ast_beta_new",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "24.6563940128",
+              "event_id": "01N4CJHF78PJN6VV58EBH73T8K",
+              "quantity": "0.3333333333"
+            },
+            {
+              "cost_eur": "295.876728183",
+              "event_id": "01N972CJ80Q958G90TKX14BSJ0",
+              "quantity": "4"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01N4CJHF78PJN6VV58EBH73T8K#0",
+          "original_cost_eur": "320.5331221958",
+          "original_quantity": "4.3333333333",
+          "quantity": "0",
+          "source_event_id": "01N4CJHF78PJN6VV58EBH73T8K",
+          "source_lot_id": "01M4BRBD78HXF9SGE8990VQ67M#0"
+        }
+      ],
+      "open": []
+    },
+    "ast_bonds": {
+      "closed": [
+        {
+          "acquisition_date": "2026-09-05",
+          "asset_id": "ast_bonds",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "250",
+              "event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+              "quantity": "2.5487"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01M1SBMC80DQR811FBE84B8YRM#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.5487",
+          "quantity": "0",
+          "source_event_id": "01M1SBMC80DQR811FBE84B8YRM"
+        },
+        {
+          "acquisition_date": "2026-10-06",
+          "asset_id": "ast_bonds",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "565.0727246194",
+              "event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+              "quantity": "4.3702958209"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01MWTH5Y6GMPCQ7C0S2DEC8H92#0",
+          "original_cost_eur": "565.0727246194",
+          "original_quantity": "4.3702958209",
+          "quantity": "0",
+          "source_event_id": "01MWTH5Y6GMPCQ7C0S2DEC8H92",
+          "source_lot_id": "01MGDZZ778CK1FWY6251E6QYWM#0"
+        },
+        {
+          "acquisition_date": "2026-11-03",
+          "asset_id": "ast_bonds",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "96.3254979822",
+              "event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+              "quantity": "0.7599041791"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01MWTH5Y6GMPCQ7C0S2DEC8H92#1",
+          "original_cost_eur": "96.3254979822",
+          "original_quantity": "0.7599041791",
+          "quantity": "0",
+          "source_event_id": "01MWTH5Y6GMPCQ7C0S2DEC8H92",
+          "source_lot_id": "01MGDZZ778CK1FWY6251E6QYWM#1"
+        },
+        {
+          "acquisition_date": "2026-12-05",
+          "asset_id": "ast_bonds",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "250",
+              "event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+              "quantity": "2.3724"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01M93NSS801CEY95BKH1VNBXK0#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.3724",
+          "quantity": "0",
+          "source_event_id": "01M93NSS801CEY95BKH1VNBXK0"
+        },
+        {
+          "acquisition_date": "2027-03-04",
+          "asset_id": "ast_bonds",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "250",
+              "event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+              "quantity": "2.5212"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01MG8V5R80FMKB8N512YYT6SAD#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.5212",
+          "quantity": "0",
+          "source_event_id": "01MG8V5R80FMKB8N512YYT6SAD"
+        },
+        {
+          "acquisition_date": "2027-06-08",
+          "asset_id": "ast_bonds",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "250",
+              "event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+              "quantity": "2.3623"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01MR01AR806ZK3RD60N3CFKSZ1#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.3623",
+          "quantity": "0",
+          "source_event_id": "01MR01AR806ZK3RD60N3CFKSZ1"
+        },
+        {
+          "acquisition_date": "2027-09-08",
+          "asset_id": "ast_bonds",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "250",
+              "event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+              "quantity": "2.4241"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01MZCXWW809WCQY6W0KGKBPKB5#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.4241",
+          "quantity": "0",
+          "source_event_id": "01MZCXWW809WCQY6W0KGKBPKB5"
+        },
+        {
+          "acquisition_date": "2027-12-08",
+          "asset_id": "ast_bonds",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "250",
+              "event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+              "quantity": "2.556"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01N6Q82980BNSHNZHYQ8QZHMZW#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.556",
+          "quantity": "0",
+          "source_event_id": "01N6Q82980BNSHNZHYQ8QZHMZW"
+        },
+        {
+          "acquisition_date": "2028-03-05",
+          "asset_id": "ast_bonds",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "250",
+              "event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+              "quantity": "2.3776"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01NDSV1H80RBR0F2WF8XF755WA#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.3776",
+          "quantity": "0",
+          "source_event_id": "01NDSV1H80RBR0F2WF8XF755WA"
+        }
+      ],
+      "open": []
+    },
+    "ast_bonds_i": {
+      "closed": [],
+      "open": [
+        {
+          "acquisition_date": "2026-09-05",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01NDSV1K6GY7PGKNAMFQC2HKWV#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.5487",
+          "quantity": "2.5487",
+          "source_event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+          "source_lot_id": "01M1SBMC80DQR811FBE84B8YRM#0"
+        },
+        {
+          "acquisition_date": "2026-10-06",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "565.0727246194",
+          "id": "01NDSV1K6GY7PGKNAMFQC2HKWV#1",
+          "original_cost_eur": "565.0727246194",
+          "original_quantity": "4.3702958209",
+          "quantity": "4.3702958209",
+          "source_event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+          "source_lot_id": "01MWTH5Y6GMPCQ7C0S2DEC8H92#0"
+        },
+        {
+          "acquisition_date": "2026-11-03",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "96.3254979822",
+          "id": "01NDSV1K6GY7PGKNAMFQC2HKWV#2",
+          "original_cost_eur": "96.3254979822",
+          "original_quantity": "0.7599041791",
+          "quantity": "0.7599041791",
+          "source_event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+          "source_lot_id": "01MWTH5Y6GMPCQ7C0S2DEC8H92#1"
+        },
+        {
+          "acquisition_date": "2026-12-05",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01NDSV1K6GY7PGKNAMFQC2HKWV#3",
+          "original_cost_eur": "250",
+          "original_quantity": "2.3724",
+          "quantity": "2.3724",
+          "source_event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+          "source_lot_id": "01M93NSS801CEY95BKH1VNBXK0#0"
+        },
+        {
+          "acquisition_date": "2027-03-04",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01NDSV1K6GY7PGKNAMFQC2HKWV#4",
+          "original_cost_eur": "250",
+          "original_quantity": "2.5212",
+          "quantity": "2.5212",
+          "source_event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+          "source_lot_id": "01MG8V5R80FMKB8N512YYT6SAD#0"
+        },
+        {
+          "acquisition_date": "2027-06-08",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01NDSV1K6GY7PGKNAMFQC2HKWV#5",
+          "original_cost_eur": "250",
+          "original_quantity": "2.3623",
+          "quantity": "2.3623",
+          "source_event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+          "source_lot_id": "01MR01AR806ZK3RD60N3CFKSZ1#0"
+        },
+        {
+          "acquisition_date": "2027-09-08",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01NDSV1K6GY7PGKNAMFQC2HKWV#6",
+          "original_cost_eur": "250",
+          "original_quantity": "2.4241",
+          "quantity": "2.4241",
+          "source_event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+          "source_lot_id": "01MZCXWW809WCQY6W0KGKBPKB5#0"
+        },
+        {
+          "acquisition_date": "2027-12-08",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01NDSV1K6GY7PGKNAMFQC2HKWV#7",
+          "original_cost_eur": "250",
+          "original_quantity": "2.556",
+          "quantity": "2.556",
+          "source_event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+          "source_lot_id": "01N6Q82980BNSHNZHYQ8QZHMZW#0"
+        },
+        {
+          "acquisition_date": "2028-03-05",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01NDSV1K6GY7PGKNAMFQC2HKWV#8",
+          "original_cost_eur": "250",
+          "original_quantity": "2.3776",
+          "quantity": "2.3776",
+          "source_event_id": "01NDSV1K6GY7PGKNAMFQC2HKWV",
+          "source_lot_id": "01NDSV1H80RBR0F2WF8XF755WA#0"
+        },
+        {
+          "acquisition_date": "2028-06-04",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01NN456Y809PWNG679Y4MFNDYT#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.2839",
+          "quantity": "2.2839",
+          "source_event_id": "01NN456Y809PWNG679Y4MFNDYT"
+        },
+        {
+          "acquisition_date": "2028-09-07",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01NWRRZ780V3S7HVXR15S112R2#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.309",
+          "quantity": "2.309",
+          "source_event_id": "01NWRRZ780V3S7HVXR15S112R2"
+        },
+        {
+          "acquisition_date": "2028-12-08",
+          "asset_id": "ast_bonds_i",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "250",
+          "id": "01P45NHB80HBBGVPNZ2CXHD3MJ#0",
+          "original_cost_eur": "250",
+          "original_quantity": "2.3612",
+          "quantity": "2.3612",
+          "source_event_id": "01P45NHB80HBBGVPNZ2CXHD3MJ"
+        }
+      ]
+    },
+    "ast_btc": {
+      "closed": [],
+      "open": [
+        {
+          "acquisition_date": "2026-09-03",
+          "asset_id": "ast_btc",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "193.6",
+          "id": "01M1M6TZ78T3J54NXB4CZXH4XC#0",
+          "original_cost_eur": "193.6",
+          "original_quantity": "6",
+          "quantity": "6",
+          "source_event_id": "01M1M6TZ78T3J54NXB4CZXH4XC"
+        }
+      ]
+    },
+    "ast_gamma": {
+      "closed": [],
+      "open": [
+        {
+          "acquisition_date": "2027-07-06",
+          "asset_id": "ast_gamma",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "384.7626196284",
+          "id": "01MT84EX78SS2WE9DSAXZR6CJ3#0",
+          "original_cost_eur": "384.7626196284",
+          "original_quantity": "6",
+          "quantity": "12",
+          "source_event_id": "01MT84EX78SS2WE9DSAXZR6CJ3"
+        },
+        {
+          "acquisition_date": "2028-09-07",
+          "asset_id": "ast_gamma",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "508.3643452065",
+          "id": "01NWRRZ96GCENRTQ70H5BF5YXB#0",
+          "original_cost_eur": "508.3643452065",
+          "original_quantity": "7",
+          "quantity": "7",
+          "source_event_id": "01NWRRZ96GCENRTQ70H5BF5YXB"
+        }
+      ]
+    },
+    "ast_gold": {
+      "closed": [],
+      "open": [
+        {
+          "acquisition_date": "2026-09-03",
+          "asset_id": "ast_gold",
+          "closed": false,
+          "consumptions": [
+            {
+              "cost_eur": "181.2181062181",
+              "event_id": "01MR01AS78A8EXTQJWZ00W5MNR",
+              "quantity": "0.25"
+            },
+            {
+              "cost_eur": "543.6543186543",
+              "event_id": "01MR01AS78A8EXTQJWZ00W5MNR",
+              "quantity": "0.75"
+            }
+          ],
+          "cost_eur": "1449.7448497449",
+          "id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
+          "original_cost_eur": "2174.6172746173",
+          "original_quantity": "12",
+          "quantity": "2",
+          "source_event_id": "01M1M6TY80A45SV7BY1V6AFX8V"
+        }
+      ]
+    },
+    "ast_mm": {
+      "closed": [],
+      "open": [
+        {
+          "acquisition_date": "2026-09-04",
+          "asset_id": "ast_mm",
+          "closed": false,
+          "consumptions": [
+            {
+              "cost_eur": "1239.9980150027",
+              "event_id": "01NJW22T80XBW4CC0FKG3TN1MW",
+              "quantity": "12.4937"
+            }
+          ],
+          "cost_eur": "1860.0019849973",
+          "id": "01M1PS7N80HK088D7010QSGMEQ#0",
+          "original_cost_eur": "3100",
+          "original_quantity": "31.2343",
+          "quantity": "18.7406",
+          "source_event_id": "01M1PS7N80HK088D7010QSGMEQ"
+        }
+      ]
+    },
+    "ast_smallcap": {
+      "closed": [
+        {
+          "acquisition_date": "2026-10-06",
+          "asset_id": "ast_smallcap",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "565.0727246194",
+              "event_id": "01MWTH5Y6GMPCQ7C0S2DEC8H92",
+              "quantity": "4.9532347766"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01MGDZZ778CK1FWY6251E6QYWM#0",
+          "original_cost_eur": "565.0727246194",
+          "original_quantity": "4.9532347766",
+          "quantity": "0",
+          "source_event_id": "01MGDZZ778CK1FWY6251E6QYWM",
+          "source_lot_id": "01M495YN80BYC4Q2KCPDGJRBPT#0"
+        },
+        {
+          "acquisition_date": "2026-11-03",
+          "asset_id": "ast_smallcap",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "96.3254979822",
+              "event_id": "01MWTH5Y6GMPCQ7C0S2DEC8H92",
+              "quantity": "0.8612652234"
+            },
+            {
+              "cost_eur": "503.6745020178",
+              "event_id": "01NBF5GQ78TGWH0CR1T9F7BTA1",
+              "quantity": "4.5034527886"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01MGDZZ778CK1FWY6251E6QYWM#1",
+          "original_cost_eur": "600",
+          "original_quantity": "5.364718012",
+          "quantity": "0",
+          "source_event_id": "01MGDZZ778CK1FWY6251E6QYWM",
+          "source_lot_id": "01M6H92S80PZPKZ809HYAG101D#0"
+        },
+        {
+          "acquisition_date": "2026-12-04",
+          "asset_id": "ast_smallcap",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "164.9562713501",
+              "event_id": "01NBF5GQ78TGWH0CR1T9F7BTA1",
+              "quantity": "1.3109472114"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01MGDZZ778CK1FWY6251E6QYWM#2",
+          "original_cost_eur": "164.9562713501",
+          "original_quantity": "1.3109472114",
+          "quantity": "0",
+          "source_event_id": "01MGDZZ778CK1FWY6251E6QYWM",
+          "source_lot_id": "01M913D280DABTDXE2PY8XFSY8#0"
+        }
+      ],
+      "open": []
+    },
+    "ast_smallcap_b": {
+      "closed": [],
+      "open": [
+        {
+          "acquisition_date": "2026-11-03",
+          "asset_id": "ast_smallcap_b",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "503.6745020178",
+          "id": "01NBF5GQ78TGWH0CR1T9F7BTA1#0",
+          "original_cost_eur": "503.6745020178",
+          "original_quantity": "7.65586974062",
+          "quantity": "7.65586974062",
+          "source_event_id": "01NBF5GQ78TGWH0CR1T9F7BTA1",
+          "source_lot_id": "01MGDZZ778CK1FWY6251E6QYWM#1"
+        },
+        {
+          "acquisition_date": "2026-12-04",
+          "asset_id": "ast_smallcap_b",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "164.9562713501",
+          "id": "01NBF5GQ78TGWH0CR1T9F7BTA1#1",
+          "original_cost_eur": "164.9562713501",
+          "original_quantity": "2.22861025938",
+          "quantity": "2.22861025938",
+          "source_event_id": "01NBF5GQ78TGWH0CR1T9F7BTA1",
+          "source_lot_id": "01MGDZZ778CK1FWY6251E6QYWM#2"
+        }
+      ]
+    },
+    "ast_world": {
+      "closed": [
+        {
+          "acquisition_date": "2026-08-28",
+          "asset_id": "ast_world",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "233.475",
+              "event_id": "01MBRMXG802C4P758505FNXJPH",
+              "quantity": "2.5"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01MBRMXH78M52DKTKR4PNHG0AT#0",
+          "original_cost_eur": "233.475",
+          "original_quantity": "2.5",
+          "quantity": "0",
+          "source_event_id": "01MBRMXH78M52DKTKR4PNHG0AT"
+        },
+        {
+          "acquisition_date": "2026-09-04",
+          "asset_id": "ast_world",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "600",
+              "event_id": "01MBRMXG802C4P758505FNXJPH",
+              "quantity": "6.3526"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01M1PS7R5RJ4XWKK5GX24DQ2FE#0",
+          "original_cost_eur": "600",
+          "original_quantity": "6.3526",
+          "quantity": "0",
+          "source_event_id": "01M1PS7R5RJ4XWKK5GX24DQ2FE"
+        },
+        {
+          "acquisition_date": "2026-10-06",
+          "asset_id": "ast_world",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "34.9272753806",
+              "event_id": "01MBRMXG802C4P758505FNXJPH",
+              "quantity": "0.359"
+            },
+            {
+              "cost_eur": "565.0727246194",
+              "event_id": "01MGDZZ778CK1FWY6251E6QYWM",
+              "quantity": "5.8081"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01M495YN80BYC4Q2KCPDGJRBPT#0",
+          "original_cost_eur": "600",
+          "original_quantity": "6.1671",
+          "quantity": "0",
+          "source_event_id": "01M495YN80BYC4Q2KCPDGJRBPT"
+        },
+        {
+          "acquisition_date": "2026-11-03",
+          "asset_id": "ast_world",
+          "closed": true,
+          "consumptions": [
+            {
+              "cost_eur": "600",
+              "event_id": "01MGDZZ778CK1FWY6251E6QYWM",
+              "quantity": "6.2906"
+            }
+          ],
+          "cost_eur": "0",
+          "id": "01M6H92S80PZPKZ809HYAG101D#0",
+          "original_cost_eur": "600",
+          "original_quantity": "6.2906",
+          "quantity": "0",
+          "source_event_id": "01M6H92S80PZPKZ809HYAG101D"
+        }
+      ],
+      "open": [
+        {
+          "acquisition_date": "2026-12-04",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [
+            {
+              "cost_eur": "164.9562713501",
+              "event_id": "01MGDZZ778CK1FWY6251E6QYWM",
+              "quantity": "1.5372"
+            }
+          ],
+          "cost_eur": "435.0437286499",
+          "id": "01M913D280DABTDXE2PY8XFSY8#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.5913",
+          "quantity": "4.0541",
+          "source_event_id": "01M913D280DABTDXE2PY8XFSY8"
+        },
+        {
+          "acquisition_date": "2027-01-04",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01MBGXQB808VDDY7MJ7YVBWXMN#0",
+          "original_cost_eur": "600",
+          "original_quantity": "6.3038",
+          "quantity": "6.3038",
+          "source_event_id": "01MBGXQB808VDDY7MJ7YVBWXMN"
+        },
+        {
+          "acquisition_date": "2027-02-07",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01ME8F7S80376RR6EJ3RD6A5PG#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.4289",
+          "quantity": "5.4289",
+          "source_event_id": "01ME8F7S80376RR6EJ3RD6A5PG"
+        },
+        {
+          "acquisition_date": "2027-03-03",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01MG68S180GW3Z2CVP9C0CDN13#0",
+          "original_cost_eur": "600",
+          "original_quantity": "4.6671",
+          "quantity": "4.6671",
+          "source_event_id": "01MG68S180GW3Z2CVP9C0CDN13"
+        },
+        {
+          "acquisition_date": "2027-04-03",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01MJP33A80N421AVNHZT5YZAMQ#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.6899",
+          "quantity": "5.6899",
+          "source_event_id": "01MJP33A80N421AVNHZT5YZAMQ"
+        },
+        {
+          "acquisition_date": "2027-05-06",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01MNB27180N0CY11HM9Q8SJSAW#0",
+          "original_cost_eur": "600",
+          "original_quantity": "4.9657",
+          "quantity": "4.9657",
+          "source_event_id": "01MNB27180N0CY11HM9Q8SJSAW"
+        },
+        {
+          "acquisition_date": "2027-06-07",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01MQXEY18000TST9PVRR1GJC2F#0",
+          "original_cost_eur": "600",
+          "original_quantity": "6.3358",
+          "quantity": "6.3358",
+          "source_event_id": "01MQXEY18000TST9PVRR1GJC2F"
+        },
+        {
+          "acquisition_date": "2027-08-04",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01MWJSZQ80P8HSFT2EYTTYH3HH#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.8899",
+          "quantity": "5.8899",
+          "source_event_id": "01MWJSZQ80P8HSFT2EYTTYH3HH"
+        },
+        {
+          "acquisition_date": "2027-09-07",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01MZABG580F1C2PB6JDP1V4CH0#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.5871",
+          "quantity": "5.5871",
+          "source_event_id": "01MZABG580F1C2PB6JDP1V4CH0"
+        },
+        {
+          "acquisition_date": "2027-10-05",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01N1JEM980G1H53WPMXKMXZMXG#0",
+          "original_cost_eur": "600",
+          "original_quantity": "6.4781",
+          "quantity": "6.4781",
+          "source_event_id": "01N1JEM980G1H53WPMXKMXZMXG"
+        },
+        {
+          "acquisition_date": "2027-11-07",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01N47DR080WD46CYM2YGRN43TQ#0",
+          "original_cost_eur": "600",
+          "original_quantity": "6.4461",
+          "quantity": "6.4461",
+          "source_event_id": "01N47DR080WD46CYM2YGRN43TQ"
+        },
+        {
+          "acquisition_date": "2027-12-07",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01N6MNNJ80TSZERK9YY525Q1GM#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.663",
+          "quantity": "5.663",
+          "source_event_id": "01N6MNNJ80TSZERK9YY525Q1GM"
+        },
+        {
+          "acquisition_date": "2028-01-05",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01N8ZB6D804H8C3C3GPXDNRQJB#0",
+          "original_cost_eur": "600",
+          "original_quantity": "4.6754",
+          "quantity": "4.6754",
+          "source_event_id": "01N8ZB6D804H8C3C3GPXDNRQJB"
+        },
+        {
+          "acquisition_date": "2028-02-04",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01NBCK3Z805TKTDRP65C3W0BYN#0",
+          "original_cost_eur": "600",
+          "original_quantity": "6.0753",
+          "quantity": "6.0753",
+          "source_event_id": "01NBCK3Z805TKTDRP65C3W0BYN"
+        },
+        {
+          "acquisition_date": "2028-03-04",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01NDQ8MT802BPREAFFR26TZ8K3#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.2133",
+          "quantity": "5.2133",
+          "source_event_id": "01NDQ8MT802BPREAFFR26TZ8K3"
+        },
+        {
+          "acquisition_date": "2028-04-04",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01NG72Z380MPPZ2DEJG4QVNWB9#0",
+          "original_cost_eur": "600",
+          "original_quantity": "6.226",
+          "quantity": "6.226",
+          "source_event_id": "01NG72Z380MPPZ2DEJG4QVNWB9"
+        },
+        {
+          "acquisition_date": "2028-05-05",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01NJPX9C80P4GKWBFKY541QC4X#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.6593",
+          "quantity": "5.6593",
+          "source_event_id": "01NJPX9C80P4GKWBFKY541QC4X"
+        },
+        {
+          "acquisition_date": "2028-06-03",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01NN1JT780JHRHFCTWY4BEDSEP#0",
+          "original_cost_eur": "600",
+          "original_quantity": "4.6806",
+          "quantity": "4.6806",
+          "source_event_id": "01NN1JT780JHRHFCTWY4BEDSEP"
+        },
+        {
+          "acquisition_date": "2028-07-03",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01NQETQS80M120M8WA277YWQ7V#0",
+          "original_cost_eur": "600",
+          "original_quantity": "4.6678",
+          "quantity": "4.6678",
+          "source_event_id": "01NQETQS80M120M8WA277YWQ7V"
+        },
+        {
+          "acquisition_date": "2028-08-05",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01NT3SVG80631A31HNCC97RQ5M#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.7029",
+          "quantity": "5.7029",
+          "source_event_id": "01NT3SVG80631A31HNCC97RQ5M"
+        },
+        {
+          "acquisition_date": "2028-09-06",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01NWP6JG80H9SQ21PPPXRH62SF#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.2789",
+          "quantity": "5.2789",
+          "source_event_id": "01NWP6JG80H9SQ21PPPXRH62SF"
+        },
+        {
+          "acquisition_date": "2028-10-04",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01NYY9PM801WQ0Q3ZWZXGHBJC7#0",
+          "original_cost_eur": "600",
+          "original_quantity": "4.7714",
+          "quantity": "4.7714",
+          "source_event_id": "01NYY9PM801WQ0Q3ZWZXGHBJC7"
+        },
+        {
+          "acquisition_date": "2028-11-06",
+          "asset_id": "ast_world",
+          "closed": false,
+          "consumptions": [],
+          "cost_eur": "600",
+          "id": "01P1K8TB80FN9HX7J6JTD0H95Q#0",
+          "original_cost_eur": "600",
+          "original_quantity": "5.5721",
+          "quantity": "5.5721",
+          "source_event_id": "01P1K8TB80FN9HX7J6JTD0H95Q"
+        }
+      ]
+    }
+  },
+  "orders": [
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01M1PS7R5RJ4XWKK5GX24DQ2FE",
+      "closed_on": "2026-09-04",
+      "notes": [],
+      "order_id": "01M1PS7Q6GB2BV0HFJVSWXNGT8",
+      "requested_date": "2026-09-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds",
+      "closed_by": "01M1SBMC80DQR811FBE84B8YRM",
+      "closed_on": "2026-09-05",
+      "notes": [],
+      "order_id": "01M1PS7S50Y441S5ZYKNZT1B9A",
+      "requested_date": "2026-09-03",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01M495YN80BYC4Q2KCPDGJRBPT",
+      "closed_on": "2026-10-06",
+      "notes": [],
+      "order_id": "01M4415780N27T1SN9BJM6NFZ7",
+      "requested_date": "2026-10-04",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01M6H92S80PZPKZ809HYAG101D",
+      "closed_on": "2026-11-03",
+      "notes": [],
+      "order_id": "01M6C49B80XBTS9QEFKR0A38E8",
+      "requested_date": "2026-11-01",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01M913D280DABTDXE2PY8XFSY8",
+      "closed_on": "2026-12-04",
+      "notes": [],
+      "order_id": "01M8VYKM80SFEMDG2PG2KD7BQ0",
+      "requested_date": "2026-12-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds",
+      "closed_by": "01M93NSS801CEY95BKH1VNBXK0",
+      "closed_on": "2026-12-05",
+      "notes": [],
+      "order_id": "01M913D37850A9MXX630P23VGR",
+      "requested_date": "2026-12-03",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01MBGXQB808VDDY7MJ7YVBWXMN",
+      "closed_on": "2027-01-04",
+      "notes": [],
+      "order_id": "01MBBRXX80ECZ7BF8N7QGZQ961",
+      "requested_date": "2027-01-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01ME8F7S80376RR6EJ3RD6A5PG",
+      "closed_on": "2027-02-07",
+      "notes": [],
+      "order_id": "01ME3AEB80KFSNV66RWBV6K5AJ",
+      "requested_date": "2027-02-05",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01MG68S180GW3Z2CVP9C0CDN13",
+      "closed_on": "2027-03-03",
+      "notes": [],
+      "order_id": "01MG13ZK80SHC9ATARCQ4KFZT8",
+      "requested_date": "2027-03-01",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds",
+      "closed_by": "01MG8V5R80FMKB8N512YYT6SAD",
+      "closed_on": "2027-03-04",
+      "notes": [],
+      "order_id": "01MG68S27871QH5BB4NBSA0MYX",
+      "requested_date": "2027-03-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01MJP33A80N421AVNHZT5YZAMQ",
+      "closed_on": "2027-04-03",
+      "notes": [],
+      "order_id": "01MJGY9W80D09NW7J6207E8FD6",
+      "requested_date": "2027-04-01",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01MNB27180N0CY11HM9Q8SJSAW",
+      "closed_on": "2027-05-06",
+      "notes": [],
+      "order_id": "01MN5XDK80AEAF1JY0ZQ2DJQHE",
+      "requested_date": "2027-05-04",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01MQXEY18000TST9PVRR1GJC2F",
+      "closed_on": "2027-06-07",
+      "notes": [],
+      "order_id": "01MQRA4K8095F31ZQR29Z89Z56",
+      "requested_date": "2027-06-05",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds",
+      "closed_by": "01MR01AR806ZK3RD60N3CFKSZ1",
+      "closed_on": "2027-06-08",
+      "notes": [],
+      "order_id": "01MQXEY278F9225R72GAF7VQK6",
+      "requested_date": "2027-06-06",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01MT2ZNE80S3TNRPEVV3507EMS",
+      "closed_on": "2027-07-04",
+      "notes": [
+        "Cancelled: the platform was in maintenance"
+      ],
+      "order_id": "01MT0D8Q80SGMMNRQ3T4VHPEHS",
+      "requested_date": "2027-07-03",
+      "side": "buy",
+      "stage": "cancelled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01MWJSZQ80P8HSFT2EYTTYH3HH",
+      "closed_on": "2027-08-04",
+      "notes": [],
+      "order_id": "01MWDN6980KSRWNJEAYQF4PSD8",
+      "requested_date": "2027-08-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01MZABG580F1C2PB6JDP1V4CH0",
+      "closed_on": "2027-09-07",
+      "notes": [],
+      "order_id": "01MZ56PQ80MK0NFAHC291D7P6Z",
+      "requested_date": "2027-09-05",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds",
+      "closed_by": "01MZCXWW809WCQY6W0KGKBPKB5",
+      "closed_on": "2027-09-08",
+      "notes": [],
+      "order_id": "01MZABG67816A851D9SSTKKEKZ",
+      "requested_date": "2027-09-06",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01N1JEM980G1H53WPMXKMXZMXG",
+      "closed_on": "2027-10-05",
+      "notes": [],
+      "order_id": "01N1D9TV80RG4EHTRRWES7XWPP",
+      "requested_date": "2027-10-03",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01N47DR080WD46CYM2YGRN43TQ",
+      "closed_on": "2027-11-07",
+      "notes": [],
+      "order_id": "01N428YJ80G7X7YREQYASNZ488",
+      "requested_date": "2027-11-05",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01N6MNNJ80TSZERK9YY525Q1GM",
+      "closed_on": "2027-12-07",
+      "notes": [],
+      "order_id": "01N6FGW480TXZAYSJP57CZ2EP7",
+      "requested_date": "2027-12-05",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds",
+      "closed_by": "01N6Q82980BNSHNZHYQ8QZHMZW",
+      "closed_on": "2027-12-08",
+      "notes": [],
+      "order_id": "01N6MNNK787QQHHCTPK82YP58R",
+      "requested_date": "2027-12-06",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01N8ZB6D804H8C3C3GPXDNRQJB",
+      "closed_on": "2028-01-05",
+      "notes": [],
+      "order_id": "01N8T6CZ80XGHNTQG6X45X34GK",
+      "requested_date": "2028-01-03",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01NBCK3Z805TKTDRP65C3W0BYN",
+      "closed_on": "2028-02-04",
+      "notes": [],
+      "order_id": "01NB7EAH802MNCB8P1BTP3AFT1",
+      "requested_date": "2028-02-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01NDQ8MT802BPREAFFR26TZ8K3",
+      "closed_on": "2028-03-04",
+      "notes": [],
+      "order_id": "01NDJ3VC80XCVJFNFG8ZPY809F",
+      "requested_date": "2028-03-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds",
+      "closed_by": "01NDSV1H80RBR0F2WF8XF755WA",
+      "closed_on": "2028-03-05",
+      "notes": [],
+      "order_id": "01NDQ8MV78J7A6P5AYNZ6TXDAM",
+      "requested_date": "2028-03-03",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01NG72Z380MPPZ2DEJG4QVNWB9",
+      "closed_on": "2028-04-04",
+      "notes": [],
+      "order_id": "01NG1Y5N80WXCN63245T300D5A",
+      "requested_date": "2028-04-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01NJPX9C80P4GKWBFKY541QC4X",
+      "closed_on": "2028-05-05",
+      "notes": [],
+      "order_id": "01NJHRFY80TCNZSQ1JT5BWWNMZ",
+      "requested_date": "2028-05-03",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01NN1JT780JHRHFCTWY4BEDSEP",
+      "closed_on": "2028-06-03",
+      "notes": [],
+      "order_id": "01NMWE0S80F25H25S2NHJ9Q2G5",
+      "requested_date": "2028-06-01",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds_i",
+      "closed_by": "01NN456Y809PWNG679Y4MFNDYT",
+      "closed_on": "2028-06-04",
+      "notes": [],
+      "order_id": "01NN1JT8789NS50CX0PZCEQPEK",
+      "requested_date": "2028-06-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01NQETQS80M120M8WA277YWQ7V",
+      "closed_on": "2028-07-03",
+      "notes": [],
+      "order_id": "01NQ9NYB8077ZB5G9K9FS50J9G",
+      "requested_date": "2028-07-01",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01NT3SVG80631A31HNCC97RQ5M",
+      "closed_on": "2028-08-05",
+      "notes": [],
+      "order_id": "01NSYN2280TKZFBPD6AWMAY0T3",
+      "requested_date": "2028-08-03",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01NWP6JG80H9SQ21PPPXRH62SF",
+      "closed_on": "2028-09-06",
+      "notes": [],
+      "order_id": "01NWH1S280KEYYN9VPA3SYTRTJ",
+      "requested_date": "2028-09-04",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds_i",
+      "closed_by": "01NWRRZ780V3S7HVXR15S112R2",
+      "closed_on": "2028-09-07",
+      "notes": [],
+      "order_id": "01NWP6JH78ARVQCKPQJAHCPQ48",
+      "requested_date": "2028-09-05",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01NYY9PM801WQ0Q3ZWZXGHBJC7",
+      "closed_on": "2028-10-04",
+      "notes": [],
+      "order_id": "01NYS4X6805MB1XHTC21JEZ6MY",
+      "requested_date": "2028-10-02",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "closed_by": "01P1K8TB80FN9HX7J6JTD0H95Q",
+      "closed_on": "2028-11-06",
+      "notes": [],
+      "order_id": "01P1E40X80TT4B2RT5AT6DYGGT",
+      "requested_date": "2028-11-04",
+      "side": "buy",
+      "stage": "filled"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "600",
+      "asset_id": "ast_world",
+      "notes": [],
+      "order_id": "01P3XYB680N6P65BTEJP6HR8M6",
+      "requested_date": "2028-12-05",
+      "side": "buy",
+      "stage": "open"
+    },
+    {
+      "account_id": "acc_mi",
+      "amount": "250",
+      "asset_id": "ast_bonds_i",
+      "closed_by": "01P45NHB80HBBGVPNZ2CXHD3MJ",
+      "closed_on": "2028-12-08",
+      "notes": [],
+      "order_id": "01P40GQX80DAK22YFVS7B8RCT9",
+      "requested_date": "2028-12-06",
+      "side": "buy",
+      "stage": "filled"
+    }
+  ],
+  "positions": [
+    {
+      "account_id": "acc_mi",
+      "asset_id": "ast_world",
+      "quantity": "126.0325"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "asset_id": "ast_gold",
+      "quantity": "1"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "asset_id": "ast_btc",
+      "quantity": "6"
+    },
+    {
+      "account_id": "acc_mi",
+      "asset_id": "ast_mm",
+      "quantity": "18.7406"
+    },
+    {
+      "account_id": "acc_ibkr2",
+      "asset_id": "ast_gold",
+      "quantity": "1"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_gamma",
+      "quantity": "19"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_alpha_spin",
+      "quantity": "2"
+    },
+    {
+      "account_id": "acc_mi",
+      "asset_id": "ast_smallcap_b",
+      "quantity": "9.88448"
+    },
+    {
+      "account_id": "acc_mi",
+      "asset_id": "ast_bonds_i",
+      "quantity": "29.2466"
+    }
+  ],
+  "settings_history": [
+    {
+      "event_id": "01M1F21H78S8B8230B869P77CT",
+      "madrid_date": "2026-09-01",
+      "recorded_at": "2026-09-01T18:00:01.000Z",
+      "settings": {
+        "bucket_max_cumulative_contribution": "6000",
+        "bucket_max_weight_pct": "10",
+        "bucket_pct_of_contribution": "10",
+        "bucket_stop_loss_pct": "30",
+        "deviation_threshold_pp": "5",
+        "fiscal_date_rule": {
+          "crypto": "trade_date",
+          "etc": "trade_date",
+          "etp": "trade_date",
+          "fund": "value_date",
+          "money_market": "value_date",
+          "stock": "trade_date"
+        },
+        "job_frequencies": {
+          "prices": "daily",
+          "reconciliation": "quarterly",
+          "reminder": "monthly"
+        },
+        "model_720_alert_threshold_eur": "45000",
+        "model_721_alert_threshold_eur": "45000",
+        "monthly_contribution_eur": "600",
+        "notification_email": "atlas@example.invalid",
+        "satellite_min_weight_pct": "2",
+        "savings_tax_brackets": [
+          {
+            "rate_pct": "19",
+            "up_to": "6000"
+          },
+          {
+            "rate_pct": "21",
+            "up_to": "50000"
+          },
+          {
+            "rate_pct": "23",
+            "up_to": "200000"
+          },
+          {
+            "rate_pct": "27",
+            "up_to": "300000"
+          },
+          {
+            "rate_pct": "30"
+          }
+        ],
+        "stale_price_days": 7,
+        "target_weights": {
+          "crypto": "5",
+          "equity": "60",
+          "fixed_income": "25",
+          "gold": "10"
+        },
+        "tax_residence": "ES",
+        "transfer_max_days": 15,
+        "wash_sale_window_days": {
+          "crypto": 365,
+          "etc": 61,
+          "etp": 61,
+          "fund": 365,
+          "money_market": 365,
+          "stock": 61
+        }
+      }
+    },
+    {
+      "event_id": "01MZCXWX78RGD3VPTV35GFM8GT",
+      "madrid_date": "2027-09-08",
+      "recorded_at": "2027-09-08T18:00:01.000Z",
+      "settings": {
+        "bucket_max_cumulative_contribution": "6000",
+        "bucket_max_weight_pct": "10",
+        "bucket_pct_of_contribution": "10",
+        "bucket_stop_loss_pct": "30",
+        "deviation_threshold_pp": "5",
+        "fiscal_date_rule": {
+          "crypto": "trade_date",
+          "etc": "trade_date",
+          "etp": "trade_date",
+          "fund": "value_date",
+          "money_market": "value_date",
+          "stock": "trade_date"
+        },
+        "job_frequencies": {
+          "prices": "daily",
+          "reconciliation": "quarterly",
+          "reminder": "monthly"
+        },
+        "model_720_alert_threshold_eur": "45000",
+        "model_721_alert_threshold_eur": "45000",
+        "monthly_contribution_eur": "600",
+        "notification_email": "atlas@example.invalid",
+        "satellite_min_weight_pct": "2",
+        "savings_tax_brackets": [
+          {
+            "rate_pct": "19",
+            "up_to": "6000"
+          },
+          {
+            "rate_pct": "21",
+            "up_to": "50000"
+          },
+          {
+            "rate_pct": "23",
+            "up_to": "200000"
+          },
+          {
+            "rate_pct": "27",
+            "up_to": "300000"
+          },
+          {
+            "rate_pct": "30"
+          }
+        ],
+        "stale_price_days": 7,
+        "target_weights": {
+          "crypto": "5",
+          "equity": "55",
+          "fixed_income": "30",
+          "gold": "10"
+        },
+        "tax_residence": "ES",
+        "transfer_max_days": 15,
+        "wash_sale_window_days": {
+          "crypto": 365,
+          "etc": 61,
+          "etp": 61,
+          "fund": 365,
+          "money_market": 365,
+          "stock": 61
+        }
+      }
+    }
+  ],
+  "theses": [
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_alpha",
+      "buys": [
+        "01M1PS7P7828CF37AWMZ0G1BED"
+      ],
+      "closed_at": "2027-12-30",
+      "closed_event_id": "01N8FWT47864M43B9TDSN804SD",
+      "closing_notes": "th_alpha closed",
+      "expected_horizon_days": 180,
+      "fees_eur": "1.8305836584",
+      "hypothesis": "Synthetic thesis on ast_alpha",
+      "invalidation": "Synthetic invalidation rule",
+      "invested_eur": "199.4896994897",
+      "opened_at": "2026-09-01",
+      "opened_event_id": "01M1F21YWR5D0ZYD5MV4YGJPRB",
+      "planned_size_eur": "259",
+      "quantity_bought": "10",
+      "quantity_sold": "10",
+      "result_eur": "81.37529673134",
+      "result_eur_rounded": "81.38",
+      "sells": [
+        "01N8FWT3807Q5RMB9MJA1W1HEW"
+      ],
+      "status": "closed",
+      "thesis_id": "th_alpha"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_beta",
+      "buys": [
+        "01M4BRBD78HXF9SGE8990VQ67M"
+      ],
+      "closed_at": "2027-11-09",
+      "closed_event_id": "01N4CJHG6GZ6NY4EVDXRV9N73J",
+      "closing_notes": "th_beta closed",
+      "expected_horizon_days": 180,
+      "fees_eur": "0.8797395971",
+      "hypothesis": "Synthetic thesis on ast_beta",
+      "invalidation": "Synthetic invalidation rule",
+      "invested_eur": "320.5331221958",
+      "opened_at": "2026-10-07",
+      "opened_event_id": "01M4BRBC80NY67JH7324NV5MTT",
+      "planned_size_eur": "447",
+      "quantity_bought": "13",
+      "quantity_sold": "0",
+      "result_eur": "0",
+      "result_eur_rounded": "0",
+      "sells": [],
+      "status": "closed",
+      "thesis_id": "th_beta"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_gamma",
+      "buys": [
+        "01MT84EX78SS2WE9DSAXZR6CJ3",
+        "01NWRRZ96GCENRTQ70H5BF5YXB"
+      ],
+      "expected_horizon_days": 180,
+      "fees_eur": "1.8243158557",
+      "hypothesis": "Synthetic thesis on ast_gamma",
+      "invalidation": "Synthetic invalidation rule",
+      "invested_eur": "893.1269648349",
+      "opened_at": "2027-07-06",
+      "opened_event_id": "01MT84EW8060C6H22FRC2FADH9",
+      "planned_size_eur": "1525",
+      "quantity_bought": "13",
+      "quantity_sold": "0",
+      "result_eur": "0",
+      "result_eur_rounded": "0",
+      "sells": [],
+      "status": "open",
+      "thesis_id": "th_gamma"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_beta_new",
+      "buys": [],
+      "closed_at": "2028-01-08",
+      "closed_event_id": "01N972CK78XP7Z229NZHSBMRCY",
+      "closing_notes": "th_beta_new closed",
+      "expected_horizon_days": 180,
+      "fees_eur": "0.8892050507",
+      "hypothesis": "Synthetic thesis on ast_beta_new",
+      "invalidation": "Synthetic invalidation rule",
+      "invested_eur": "0",
+      "opened_at": "2027-11-09",
+      "opened_event_id": "01N4CJHH5RYFHACMNJVGB6SYDK",
+      "planned_size_eur": "447",
+      "quantity_bought": "0",
+      "quantity_sold": "4",
+      "result_eur": "-87.9805873329",
+      "result_eur_rounded": "-87.98",
+      "sells": [
+        "01N972CJ80Q958G90TKX14BSJ0"
+      ],
+      "status": "closed",
+      "thesis_id": "th_beta_new"
+    }
+  ],
+  "transfer_requests": [
+    {
+      "closed_by": "01MGDZZ778CK1FWY6251E6QYWM",
+      "from_account_id": "acc_mi",
+      "from_asset_id": "ast_world",
+      "quantity_out": "13.6359",
+      "request_id": "01MG8V5S78P21QBF2ETDMHMX0S",
+      "requested_date": "2027-03-04",
+      "stage": "completed",
+      "to_account_id": "acc_mi",
+      "to_asset_id": "ast_smallcap",
+      "updates": [
+        {
+          "date": "2027-03-06",
+          "event_id": "01MGDZZ680E5MFG2476BGD7D40",
+          "stage": "redeemed"
+        },
+        {
+          "date": "2027-03-08",
+          "event_id": "01MGDZZ778CK1FWY6251E6QYWM",
+          "stage": "completed"
+        }
+      ]
+    },
+    {
+      "closed_by": "01MWTH5Y6GMPCQ7C0S2DEC8H92",
+      "from_account_id": "acc_mi",
+      "from_asset_id": "ast_smallcap",
+      "quantity_out": "5.8145",
+      "request_id": "01MWNCCE80X3BJ9QMKBAHGH0X4",
+      "requested_date": "2027-08-05",
+      "stage": "completed",
+      "to_account_id": "acc_mi",
+      "to_asset_id": "ast_bonds",
+      "updates": [
+        {
+          "date": "2027-08-07",
+          "event_id": "01MWTH5W8025GXXJ52WCFWTEY4",
+          "stage": "redeemed"
+        },
+        {
+          "date": "2027-08-07",
+          "event_id": "01MWTH5X78ECRRJK2NV1HVJ866",
+          "stage": "subscribed"
+        },
+        {
+          "date": "2027-08-09",
+          "event_id": "01MWTH5Y6GMPCQ7C0S2DEC8H92",
+          "stage": "completed"
+        }
+      ]
+    },
+    {
+      "from_account_id": "acc_mi",
+      "from_asset_id": "ast_world",
+      "quantity_out": "12.6033",
+      "request_id": "01P1NV72808MMM69GGT4DE728W",
+      "requested_date": "2028-11-07",
+      "stage": "requested",
+      "to_account_id": "acc_mi",
+      "to_asset_id": "ast_smallcap_b",
+      "updates": []
+    }
+  ],
+  "valuations": [
+    {
+      "account_id": "acc_ibkr",
+      "asset_id": "ast_gold",
+      "currency": "USD",
+      "date": "2026-12-31",
+      "event_id": "01MB6M4F80BFV54WXH60D263SN",
+      "fx_rate": "1.092",
+      "quantity": "12",
+      "source": "manual",
+      "unit_value": "183.51"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "asset_id": "ast_btc",
+      "currency": "EUR",
+      "date": "2026-12-31",
+      "event_id": "01MB6M4G78QPDZF79309SRDBR9",
+      "fx_rate": "1",
+      "quantity": "6",
+      "source": "manual",
+      "unit_value": "30.83"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_alpha",
+      "currency": "USD",
+      "date": "2026-12-31",
+      "event_id": "01MB6M4H6GZCT30J2JDA9ARZGG",
+      "fx_rate": "1.0824",
+      "quantity": "10",
+      "source": "manual",
+      "unit_value": "79.53"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_beta",
+      "currency": "USD",
+      "date": "2026-12-31",
+      "event_id": "01MB6M4J5R201CRQKEASCPVWKP",
+      "fx_rate": "1.1481",
+      "quantity": "13",
+      "source": "manual",
+      "unit_value": "52.11"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "asset_id": "ast_gold",
+      "currency": "USD",
+      "date": "2027-12-31",
+      "event_id": "01N8JF6T80WVXTW94PMT36PT42",
+      "fx_rate": "1.1312",
+      "quantity": "1",
+      "source": "manual",
+      "unit_value": "231.01"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "asset_id": "ast_btc",
+      "currency": "EUR",
+      "date": "2027-12-31",
+      "event_id": "01N8JF6V78NSYW3KRF772K887B",
+      "fx_rate": "1",
+      "quantity": "6",
+      "source": "manual",
+      "unit_value": "40.98"
+    },
+    {
+      "account_id": "acc_ibkr2",
+      "asset_id": "ast_gold",
+      "currency": "USD",
+      "date": "2027-12-31",
+      "event_id": "01N8JF6W6GNA96KK5M51CZWYRS",
+      "fx_rate": "1.1064",
+      "quantity": "1",
+      "source": "manual",
+      "unit_value": "199.14"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_beta_new",
+      "currency": "USD",
+      "date": "2027-12-31",
+      "event_id": "01N8JF6X5R7ZXKFV2DJXNAP6V4",
+      "fx_rate": "1.0861",
+      "quantity": "4",
+      "source": "manual",
+      "unit_value": "75.44"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_gamma",
+      "currency": "USD",
+      "date": "2027-12-31",
+      "event_id": "01N8JF6Y50BP47434YX45W0KB0",
+      "fx_rate": "1.1149",
+      "quantity": "12",
+      "source": "manual",
+      "unit_value": "41.9"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "asset_id": "ast_gold",
+      "currency": "USD",
+      "date": "2028-12-31",
+      "event_id": "01P60WNW800C7M2HGPDYYCMVVY",
+      "fx_rate": "1.0845",
+      "quantity": "1",
+      "source": "manual",
+      "unit_value": "250.99"
+    },
+    {
+      "account_id": "acc_ibkr",
+      "asset_id": "ast_btc",
+      "currency": "EUR",
+      "date": "2028-12-31",
+      "event_id": "01P60WNX78WP41DDWNHGY6QGSK",
+      "fx_rate": "1",
+      "quantity": "6",
+      "source": "manual",
+      "unit_value": "39.52"
+    },
+    {
+      "account_id": "acc_ibkr2",
+      "asset_id": "ast_gold",
+      "currency": "USD",
+      "date": "2028-12-31",
+      "event_id": "01P60WNY6GE8Y20VHV5TG8FW86",
+      "fx_rate": "1.066",
+      "quantity": "1",
+      "source": "manual",
+      "unit_value": "222.07"
+    },
+    {
+      "account_id": "acc_bucket",
+      "asset_id": "ast_gamma",
+      "currency": "USD",
+      "date": "2028-12-31",
+      "event_id": "01P60WNZ5RV5TPG86WHX0Y6NPE",
+      "fx_rate": "1.1454",
+      "quantity": "19",
+      "source": "manual",
+      "unit_value": "31.32"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "same_asset_two_accounts",
+      "details": {
+        "accounts": [
+          "acc_ibkr",
+          "acc_ibkr2"
+        ],
+        "asset_id": "ast_gold"
+      },
+      "event_id": "01MNDMKR8054K86Y5WNBCP4KA4"
+    }
+  ]
+}

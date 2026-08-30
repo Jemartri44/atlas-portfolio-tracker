@@ -4,7 +4,7 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 
 ## Estado
 
-Fase 1 completa: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local) y feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha). Sin API, sin web, sin infraestructura todavía. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/) y [`specs/002-corporate-actions/`](specs/002-corporate-actions/).
+Fase 1 completa: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local), feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha) y feature `003-synthetic-data` (generador de libros sintéticos con *golden file*, `compact` con archivo del original, verificación profunda y copia local verificada). Sin API, sin web, sin infraestructura todavía. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/), [`specs/002-corporate-actions/`](specs/002-corporate-actions/) y [`specs/003-synthetic-data/`](specs/003-synthetic-data/).
 
 ## Documentación
 
@@ -27,7 +27,10 @@ npm ci                               # instala el toolchain (sin dependencias en
 npm run lint && npm run typecheck    # Biome + tsc
 npm test                             # vitest (dominio al 100 % de cobertura con npm run test:coverage)
 npm run build                        # compila a dist/ y copia big.js vendorizada
+npm run clean                        # borra dist/, dist-test/ y coverage/ de todos los paquetes
 ```
+
+`npm run clean && npm run build` reconstruye desde cero (los `.tsbuildinfo` viven dentro de `dist*/`, así que borrar la salida no deja estado incremental a medias, por ejemplo al cambiar de rama).
 
 Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `vendor/big.js` para el decimal exacto), `packages/adapters` (`FileLedgerStore`, `MemoryLedgerStore`, reloj y aleatoriedad del sistema) y `apps/cli`.
 
@@ -53,7 +56,8 @@ atlas lots               # lotes fiscales (FIFO global por activo), con fecha y 
 atlas cash               # efectivo por cuenta y divisa
 atlas gains 2027         # ganancias realizadas del ejercicio (redondeadas una vez por operación)
 atlas income 2027        # dividendos e intereses
-atlas check              # integridad del libro
+atlas check              # integridad del libro (proyección)
+atlas check --deep       # además, líneas crudas: ids duplicados, huellas manipuladas, líneas no canónicas o antiguas
 
 # Rectificar (el libro nunca se edita: anulación + evento corregido)
 atlas edit <id> --reason "precio mal tecleado" --unit-price 123.45
@@ -100,6 +104,21 @@ atlas valuations --date 2027-12-31   # última foto de valoración por cuenta y 
 ```
 
 Códigos de salida: `0` OK · `1` error de validación o de proyección · `2` conflicto de escritura (repite) · `3` huella repetida sin `--confirm-duplicate` · `4` falta confirmación sin terminal (añade `--yes`) · `5` libro escrito por una versión más nueva · `64` uso incorrecto.
+
+### Datos sintéticos, compactación y copia de seguridad
+
+Toda feature se prueba contra un **libro sintético** reproducible: `atlas synth` genera un libro de tres ejercicios con todos los tipos de evento y los casos raros (traspasos parciales encadenados, contrasplit con picos en dos cuentas, registro tardío, corrección de un ejercicio anterior, venta el 30/12 con liquidación el 02/01…), idéntico byte a byte para la misma semilla. La salida de la semilla 1 está congelada como *golden file* en `tests/fixtures/ledger/synthetic-v1.jsonl` junto con la instantánea de su proyección.
+
+```bash
+atlas synth --out demo.jsonl                 # semilla 1 (por defecto); rechaza si la ruta existe
+atlas synth --out otra.jsonl --seed 42       # mismo esqueleto, otros importes, precios y fechas
+atlas --ledger demo.jsonl check --deep       # verificación profunda sobre las líneas crudas
+atlas --ledger demo.jsonl compact            # reescribe el libro a la versión actual del esquema…
+                                             # …tras archivar el original tal cual en archive/ (no-op si no hay líneas antiguas)
+atlas --ledger demo.jsonl backup --to /ruta/copias   # copia ledger-<fecha>.jsonl, releída y verificada por etag
+```
+
+`compact` es la única operación que reescribe el libro: guarda antes los bytes originales en `archive/ledger-<fecha>-v<n>.jsonl` (nunca sobrescribe un archivo), es no-op si todas las líneas están en la versión actual y aborta sin escribir si la proyección cambiaría o hay eventos inválidos.
 
 ## Idioma
 

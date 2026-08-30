@@ -17,6 +17,7 @@
     "format": "biome check --write .",
     "typecheck": "tsc -b",
     "build": "tsc -b",
+    "clean": "rm -rf packages/*/dist packages/*/dist-test packages/*/coverage apps/*/dist apps/*/dist-test tests/dist coverage",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "atlas": "node apps/cli/dist/main.js"

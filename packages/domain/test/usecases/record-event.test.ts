@@ -3,10 +3,12 @@ import {
   ConflictError,
   DuplicateFingerprintError,
   ProjectionError,
+  SchemaTooNewError,
   ValidationError,
 } from "../../src/errors.js";
 import { physicalPositions } from "../../src/projections/positions.js";
 import type { BuyEvent } from "../../src/schema/events.js";
+import { encodeLine } from "../../src/schema/line.js";
 import { loadAndProject } from "../../src/usecases/project-ledger.js";
 import { duplicatesOf, recordEvent } from "../../src/usecases/record-event.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
@@ -128,8 +130,10 @@ describe("recordEvent", () => {
     const racing = {
       ...deps,
       store: {
-        load: deps.store.load.bind(store),
+        schema: store.schema,
+        load: () => store.load(),
         append: () => Promise.reject(new ConflictError()),
+        replace: () => Promise.reject(new ConflictError()),
       },
     };
     await expect(recordEvent(racing, buyDraft)).rejects.toBeInstanceOf(ConflictError);
@@ -157,5 +161,19 @@ describe("recordEvent", () => {
     });
     expect("fingerprint" in account.event).toBe(false);
     expect(store.all()).toHaveLength(1);
+  });
+
+  it("never writes on a ledger from a newer schema: the load already rejects it (data-schema.md §5)", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const newer = b.build().map((event) => ({ ...event, schema_version: 2 }));
+    const store = TestStore.fromLines(newer.map(encodeLine));
+    await expect(recordEvent(testDeps(store), buyDraft)).rejects.toBeInstanceOf(SchemaTooNewError);
+    expect(
+      store
+        .text()
+        .split("\n")
+        .filter((line) => line !== ""),
+    ).toHaveLength(newer.length);
   });
 });

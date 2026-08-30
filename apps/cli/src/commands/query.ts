@@ -2,15 +2,19 @@
 
 import {
   cashBalances,
+  deepCheck,
   fiscalLots,
+  type IntegrityFinding,
   integrity,
   investmentIncome,
   loadAndProject,
   Money,
+  ProjectionError,
   physicalPositions,
   realizedGains,
   todayInMadrid,
   valuations,
+  type Warning,
 } from "@atlas/domain";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
@@ -305,22 +309,40 @@ export const checkCommand = async (
   _positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  assertKnownFlags(flags, GLOBAL_FLAGS);
-  const { state } = await loadAndProject(ctx.deps, { collectErrors: true });
-  const findings = integrity(state);
-  const warnings = state.warnings;
+  assertKnownFlags(flags, ["deep", ...GLOBAL_FLAGS]);
+  const deep = booleanFlag(flags, "deep");
+  let findings: IntegrityFinding[];
+  let deepFindings: IntegrityFinding[] = [];
+  let warnings: Warning[] = [];
+  try {
+    const { state, events, lines } = await loadAndProject(ctx.deps, { collectErrors: true });
+    findings = integrity(state);
+    warnings = state.warnings;
+    if (deep) {
+      deepFindings = deepCheck(lines, events, state, ctx.deps.store.schema);
+    }
+  } catch (error) {
+    // Duplicate ids stop the projection even when collecting errors: report them as the single finding.
+    if (!(error instanceof ProjectionError) || error.code !== "duplicate_id") {
+      throw error;
+    }
+    findings = [
+      { severity: "error", code: error.code, message: error.message, event_ids: [error.eventId] },
+    ];
+  }
+  const all = [...findings, ...deepFindings];
   render(
     ctx,
-    { findings, warnings },
-    findings.length === 0 && warnings.length === 0
+    { findings, deep: deepFindings, warnings },
+    all.length === 0 && warnings.length === 0
       ? "Libro íntegro: sin hallazgos."
       : table(
           ["nivel", "código", "mensaje", "eventos"],
           [
-            ...findings.map((f) => [f.severity, f.code, f.message, f.event_ids.join(", ")]),
+            ...all.map((f) => [f.severity, f.code, f.message, f.event_ids.join(", ")]),
             ...warnings.map((w) => ["warning", w.code, w.message, w.event_id]),
           ],
         ),
   );
-  return findings.some((f) => f.severity === "error") ? 1 : 0;
+  return all.some((f) => f.severity === "error") ? 1 : 0;
 };

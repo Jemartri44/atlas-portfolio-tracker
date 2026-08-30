@@ -1,7 +1,7 @@
 // Runs the CLI in-process against an in-memory ledger with a fixed clock.
 
 import { MemoryLedgerStore } from "@atlas/adapters";
-import type { LedgerEvent, UseCaseDeps } from "@atlas/domain";
+import type { LedgerEvent, LedgerSchema, UseCaseDeps } from "@atlas/domain";
 import type { Io } from "../src/context.js";
 import { run } from "../src/main.js";
 
@@ -17,13 +17,20 @@ export interface Harness {
 
 export interface HarnessOptions {
   events?: LedgerEvent[];
+  /** Raw lines instead of events, exactly as a file would hold them. */
+  lines?: string[];
+  /** Schema the in-memory store decodes with (default: the current one). */
+  schema?: LedgerSchema;
   /** Answer given to confirmations; `undefined` simulates a non-interactive terminal. */
   confirm?: boolean;
   instant?: string;
 }
 
 export const harness = (options: HarnessOptions = {}): Harness => {
-  const store = MemoryLedgerStore.fromEvents(options.events ?? []);
+  const store =
+    options.lines === undefined
+      ? MemoryLedgerStore.fromEvents(options.events ?? [], options.schema)
+      : MemoryLedgerStore.fromLines(options.lines, options.schema);
   const out: string[] = [];
   const err: string[] = [];
   let counter = 0;
