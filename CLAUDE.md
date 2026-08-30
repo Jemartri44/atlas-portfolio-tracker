@@ -17,6 +17,7 @@ User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) a
 - `plan-financiero.md` — the user's personal investment plan. **Private, git-ignored, never in the repo.** Docs reference it as "rule N of the plan" or "P1/P2/P3".
 - `.specify/memory/constitution.md` — project constitution (Spec Kit). Principles every spec, plan and task must respect.
 - `specs/NNN-<name>/` — per-feature Spec Kit artefacts (`spec.md`, `plan.md`, `tasks.md`, …).
+- `docs/data-schema.md` — the ledger file format (bucket layout, line envelope, event types, migrations). `docs/adr/` — architecture decision records.
 
 ## Spec-driven development (GitHub Spec Kit)
 
@@ -51,7 +52,7 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 |---|---|
 | Frontend | Static SPA with Vite (Svelte or Solid), served from S3 through CloudFront |
 | Backend | Lambda (Node) with Function URL (no API Gateway). TypeScript everywhere, domain in a shared package. ADR-0001 |
-| Data | S3 only: versioned JSONL ledger, settings, cached prices, documents. Loaded whole into memory; conditional writes (`If-Match`). ADR-0002 |
+| Data | S3 only. One `ledger/ledger.jsonl` event log (transactions + account/asset catalogue + `settings_changed`), `schema_version` per line, migrated on load, explicit `compact`. Loaded whole into memory; conditional writes (`If-Match`). ECB FX history stored verbatim. ADR-0002, ADR-0006, `docs/data-schema.md` |
 | Auth | Cognito with MFA, single user. The Lambda validates the JWT |
 | Scheduling | EventBridge Scheduler |
 | Email | SES |
