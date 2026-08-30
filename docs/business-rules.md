@@ -214,7 +214,7 @@ Toda operación en divisa distinta del euro requiere conversión al **tipo de ca
 
 ## 6. Eventos corporativos
 
-Transformaciones que la app debe soportar sin migración de esquema.
+Transformaciones que la app debe soportar sin migración de esquema. Se implementan como composición de cinco primitivas de lote (`scale`, `convert`, `carve_out`, `forced_sale`, `grant`; ADR-0011). El dividendo en efectivo no es un evento corporativo sino un `dividend`. El cambio puro de ISIN/ticker es un `asset_updated`, no un evento corporativo.
 
 | Evento (`corporate_action.kind`) | Efecto sobre los lotes |
 |---|---|

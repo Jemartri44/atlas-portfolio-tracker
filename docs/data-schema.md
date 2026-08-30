@@ -2,7 +2,7 @@
 
 Referencia viva del formato del libro mayor y de las proyecciones. Decisiones de fondo en ADR-0002, ADR-0003, ADR-0005 y ADR-0006. Prosa en español; identificadores en inglés tal como aparecen en el fichero y en el código.
 
-> **Estado:** secciones 1-5 cerradas (Ronda 2); 6-8 cerradas (Ronda 4a) salvo los eventos corporativos (§6.5, §8.5), que se completan en la Ronda 4b.
+> **Estado:** secciones 1-8 cerradas (Rondas 2 y 4, 2026-08-30). Se amplía conforme aparezcan eventos nuevos; cada cambio de formato incrementa `schema_version` (§5).
 
 ## 1. Distribución del bucket
 
@@ -143,8 +143,10 @@ Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimien
 **`valuation`**
 `account_id`, `asset_id`, `date`, `quantity`, `unit_value`, `currency`, `fx_rate`, `source`. Foto manual de Nivel 1 (p. ej. 31/12 para el Modelo 720). No toca lotes.
 
-**`corporate_action`**
-*Pendiente — Ronda 4b.* `kind`, `effective_date`, `source_document`, `effects[]`, `notes`.
+**`corporate_action`** (ADR-0011)
+`kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/`), `effects[]` (primitivas, ver §6.5), `notes`, `fingerprint`
+
+Afecta a los lotes del `asset_id` en **todas** las cuentas (los lotes fiscales son globales, ADR-0009); `forced_sale` reparte el efectivo entre cuentas en proporción a su posición física.
 
 ### 6.3 Rectificación (ADR-0003)
 
@@ -161,9 +163,27 @@ Cualquier evento puede llevar `corrects_id` apuntando al evento que sustituye. L
 **`thesis_closed`**
 `thesis_id`, `closing_notes`. El resultado (`result_eur`, `result_vs_index`) es derivado.
 
-### 6.5 Eventos corporativos
+### 6.5 Eventos corporativos: primitivas
 
-*Pendiente — Ronda 4b.*
+| Primitiva | Parámetros | Efecto |
+|---|---|---|
+| `scale` | `ratio` | `quantity × ratio` en cada lote; coste total y `acquisition_date` intactos |
+| `convert` | `to_asset_id`, `ratio` | Cada lote pasa a `to_asset_id` con `quantity × ratio`; coste total y fecha intactos; `source_lot_id` enlaza |
+| `carve_out` | `to_asset_id`, `ratio`, `cost_share` | Por cada lote crea otro en `to_asset_id` con `quantity × ratio`, coste `cost × cost_share` y la misma fecha; el lote origen queda con `cost × (1 − cost_share)` |
+| `forced_sale` | `quantity` \| `"all"`, `unit_price`, `currency`, `fx_rate`, `fee?` | Como un `sell` FIFO: hecho imponible |
+| `grant` | `account_id`, `asset_id`, `quantity`, `unit_cost`, `currency`, `fx_rate`, `acquisition_date` | Lote nuevo |
+
+Ejemplo (fusión con pago parcial en efectivo: 1 acción nueva por cada 2 antiguas más 3 € por antigua):
+
+```json
+{"type":"corporate_action","kind":"merger","asset_id":"ast_old","effective_date":"2031-03-12","source_document":"documents/01J…/prospectus.pdf",
+ "effects":[
+   {"op":"forced_sale","quantity":"all","unit_price":"3","currency":"EUR","fx_rate":"1","note":"cash component"},
+   {"op":"convert","to_asset_id":"ast_new","ratio":"0.5"}
+ ],"notes":"Absorción de OLD por NEW. Componente en efectivo tributa; el canje conserva antigüedad."}
+```
+
+(En este ejemplo el `forced_sale` se expresa como venta del componente en efectivo por acción antigua; el asistente de la CLI lo genera a partir de "3 € por acción".)
 
 ## 7. Proyecciones
 
@@ -207,4 +227,22 @@ Para cada venta con pérdida de un activo, se buscan adquisiciones del mismo `as
 
 ### 8.5 Transformaciones por evento corporativo
 
-*Pendiente — Ronda 4b.* Una tabla por `kind` con ejemplo numérico.
+Tabla de composición admitida por `kind` (el evento se rechaza si sus `effects` no encajan) y ejemplo numérico sobre un lote de **10 títulos, coste total 1.000 €, adquirido el 2027-01-10**. *Criterios fiscales: verificar con asesor.*
+
+| `kind` | `effects` admitidos | Ejemplo | Resultado |
+|---|---|---|---|
+| `split` | `scale` | 4:1 → `scale(4)` | 40 títulos, coste 1.000 €, fecha 2027-01-10. Sin hecho imponible |
+| `reverse_split` | `scale` + `forced_sale?` | 1:4 con 10 títulos → `scale(0.25)` deja 2,5; `forced_sale(0.5 @ 400 €)` | 2 títulos, coste 800 €; la fracción vendida: transmisión 200 € − coste 200 € = 0 € (hecho imponible aunque sea cero) |
+| `stock_dividend` | `scale` | 1 nueva por cada 10 → `scale(1.1)` | 11 títulos, coste 1.000 € repartido (90,91 €/título), fecha original. Sin hecho imponible (acciones liberadas). Si en vez de acciones se venden los derechos: `grant(rights, coste 0)` + `forced_sale`: ganancia = importe cobrado |
+| `merger` | `convert` + `forced_sale?` | 1 nueva por 2 antiguas → `convert(NEW, 0.5)` | 5 títulos de NEW, coste 1.000 €, fecha 2027-01-10. El componente en efectivo, si lo hay, tributa vía `forced_sale` |
+| `spin_off` | `carve_out` | 1 nueva por 4 antiguas, 20% del coste → `carve_out(SPIN, 0.25, 0.20)` | 10 títulos OLD coste 800 € + 2,5 títulos SPIN coste 200 €, ambos fecha 2027-01-10. `cost_share` sale de la proporción publicada por el emisor o de los valores de mercado del primer día (*verificar*) |
+| `fund_merger` | `convert` | ratio = NAV_old / NAV_new = 1,7 → `convert(FUND_B, 1.7)` | 17 participaciones de B, coste 1.000 €, fecha original. Sin hecho imponible |
+| `share_class_change` | `convert` | igual que `fund_merger` | Activo nuevo (otra clase, otro TER); lotes heredados |
+| `fund_liquidation` | `forced_sale(all)` | NAV de liquidación 120 € → `forced_sale(all @ 120)` | Transmisión 1.200 € − coste 1.000 € = ganancia 200 €. Hecho imponible |
+| `issuer_liquidation` | `forced_sale(all)` | Disolución con 0 € → `forced_sale(all @ 0)` | Pérdida 1.000 €, computable cuando la sociedad se disuelve (*verificar*; una mera exclusión de cotización no basta) |
+| `delisting` | ninguno | — | Solo marca: `asset_updated` con `active=false`; la posición sigue sin precio (fallo seguro) |
+| `crypto_fork` | `grant` | 10 unidades nuevas → `grant(FORK, 10, coste 0, fecha del fork)` | Lote de 10 con coste 0 €; al vender tributa todo (ADR: criterio conservador) |
+| `token_migration` | `convert` | 1:100 → `convert(NEWTOKEN, 100)` | 1.000 unidades, coste 1.000 €, fecha original |
+| `issuer_restructuring` | `convert` y/o `forced_sale` | según el folleto | Se compone como fusión o liquidación |
+
+`identifier_change` y `cash_dividend` no son `corporate_action` (ver ADR-0011).
