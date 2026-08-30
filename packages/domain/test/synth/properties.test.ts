@@ -7,6 +7,9 @@ import { projectLedger } from "../../src/projections/project-ledger.js";
 import { snapshotOf } from "../../src/projections/snapshot.js";
 import { encodeLine } from "../../src/schema/line.js";
 import { generateLedger } from "../../src/synth/scenario.js";
+import { compactLedger, planCompact } from "../../src/usecases/compact.js";
+import { TestStore } from "../memory-store.js";
+import { TEST_SCHEMA_V2 } from "../schema/test-schema.js";
 import { checkInvariants } from "./invariants.js";
 
 describe("generateLedger over seeds", () => {
@@ -37,5 +40,27 @@ describe("generateLedger over seeds", () => {
     const a = generateLedger({ seed: 1 }).map(encodeLine).join("\n");
     const b = generateLedger({ seed: 2 }).map(encodeLine).join("\n");
     expect(a).not.toBe(b);
+  });
+
+  it("compact under the test schema preserves the snapshot of any synthetic ledger", async () => {
+    const clock = { now: () => new Date("2029-02-01T10:00:00.000Z") };
+    await fc.assert(
+      fc.asyncProperty(fc.nat({ max: 2 ** 32 - 1 }), async (seed) => {
+        const events = generateLedger({ seed });
+        const before = JSON.stringify(snapshotOf(projectLedger(events)));
+        // Every line is written at version 1; the store expects version 2, so all of them are outdated.
+        const store = TestStore.fromLines(events.map(encodeLine), TEST_SCHEMA_V2);
+        const original = store.text();
+        const plan = await planCompact({ store, clock });
+        expect(plan.outdated).toBe(events.length);
+        const result = await compactLedger({ store, clock }, plan);
+        expect(result.status).toBe("compacted");
+        expect(store.archives.get(plan.archiveName)).toBe(original);
+        const reloaded = await store.load();
+        expect(reloaded.lines.every((line) => line.startsWith('{"schema_version":2,'))).toBe(true);
+        expect(JSON.stringify(snapshotOf(projectLedger(reloaded.events)))).toBe(before);
+      }),
+      { numRuns: 10 },
+    );
   });
 });
