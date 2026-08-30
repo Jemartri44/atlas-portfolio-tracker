@@ -161,4 +161,140 @@ describe("atlas over a ledger file", () => {
     expect(await run(["frobnicate"], io)).toBe(64);
     expect(await run(["positions", "--ledger"], io)).toBe(64);
   });
+
+  it("runs the corporate action and thesis flows of the 002 quickstart", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "atlas-e2e-002-"));
+    const ledger = join(dir, "demo.jsonl");
+    const { io, lines } = capture();
+    const atlas = (...argv: string[]) => run(["--ledger", ledger, ...argv, "--yes"], io);
+    const account = (id: string, book: string) =>
+      atlas(
+        "account",
+        "add",
+        "--id",
+        id,
+        "--name",
+        id,
+        "--platform",
+        "ibkr",
+        "--book",
+        book,
+        "--base-currency",
+        "EUR",
+        "--country",
+        "IE",
+      );
+    const stock = (id: string, book: string, ...extra: string[]) =>
+      atlas(
+        "asset",
+        "add",
+        "--id",
+        id,
+        "--type",
+        "stock",
+        "--book",
+        book,
+        "--name",
+        id,
+        "--currency",
+        "EUR",
+        "--not-transferable",
+        ...extra,
+      );
+    const buy = (
+      account: string,
+      asset: string,
+      quantity: string,
+      date: string,
+      ...extra: string[]
+    ) =>
+      atlas(
+        "add",
+        "buy",
+        "--account",
+        account,
+        "--asset",
+        asset,
+        "--trade-date",
+        date,
+        "--value-date",
+        date,
+        "--quantity",
+        quantity,
+        "--unit-price",
+        "100",
+        "--currency",
+        "EUR",
+        "--fx-rate",
+        "1",
+        "--fx-rate-date",
+        date,
+        ...extra,
+      );
+
+    expect(await account("acc_a", "core")).toBe(0);
+    expect(await account("acc_b", "core")).toBe(0);
+    expect(await stock("ast_old", "core", "--asset-class", "equity")).toBe(0);
+    expect(await buy("acc_a", "ast_old", "10", "2027-01-10")).toBe(0);
+    expect(await buy("acc_b", "ast_old", "7", "2027-02-10")).toBe(0);
+    expect(
+      await atlas(
+        "ca",
+        "reverse-split",
+        "--asset",
+        "ast_old",
+        "--ratio",
+        "1/4",
+        "--effective-date",
+        "2027-04-01",
+        "--source-document",
+        "https://issuer.example/reverse.pdf",
+        "--cash-per-share",
+        "400",
+        "--currency",
+        "EUR",
+        "--fx-rate",
+        "1",
+        "--fx-rate-date",
+        "2027-04-01",
+      ),
+    ).toBe(0);
+    lines.length = 0;
+    expect(await atlas("positions")).toBe(0);
+    expect(lines.join("\n")).toMatch(/acc_a\s+ast_old\s+2\n.*acc_b\s+ast_old\s+1/);
+    lines.length = 0;
+    expect(await atlas("gains", "2027")).toBe(0);
+    expect(lines.join("\n")).toContain("corporate_action:reverse_split");
+
+    expect(await account("acc_bucket", "bucket")).toBe(0);
+    expect(await stock("ast_spec", "bucket")).toBe(0);
+    expect(await buy("acc_bucket", "ast_spec", "10", "2027-07-01")).toBe(1);
+    expect(
+      await atlas(
+        "thesis",
+        "open",
+        "--id",
+        "th1",
+        "--account",
+        "acc_bucket",
+        "--asset",
+        "ast_spec",
+        "--hypothesis",
+        "h",
+        "--horizon-days",
+        "90",
+        "--invalidation",
+        "i",
+        "--planned-size",
+        "500",
+      ),
+    ).toBe(0);
+    expect(await buy("acc_bucket", "ast_spec", "10", "2027-07-01", "--thesis", "th1")).toBe(0);
+    expect(await atlas("thesis", "close", "th1", "--notes", "done")).toBe(0);
+    lines.length = 0;
+    expect(await atlas("thesis", "list", "--closed")).toBe(0);
+    expect(lines.join("\n")).toMatch(/th1\s+acc_bucket\s+ast_spec\s+cerrada/);
+    expect(await atlas("check")).toBe(0);
+    expect((await readFile(ledger, "utf8")).trim().split("\n")).toHaveLength(11);
+  });
 });
