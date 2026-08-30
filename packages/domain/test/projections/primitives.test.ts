@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";
 import { cashBalances } from "../../src/projections/cash.js";
 import { integrity } from "../../src/projections/integrity.js";
-import type { ResolvedEffect } from "../../src/projections/kind-rules.js";
 import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
 import { positionOf } from "../../src/projections/positions.js";
 import {
