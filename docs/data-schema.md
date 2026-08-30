@@ -78,8 +78,8 @@ La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se d
 | `unit_price?` | decimal | Precio unitario en `currency`. **Obligatorio si no hay `amount`**; si lo hay, es informativo y puede omitirse (nunca se rellena con `"0"` ni con un valor derivado: el libro no guarda datos inventados) |
 | `amount?` | decimal | Importe bruto liquidado en `currency` (sin comisión). Si está presente, **es la base de coste o de transmisión** (ADR-0012) |
 | `currency` | ISO 4217 | Divisa del precio y la comisión |
-| `fx_rate` | decimal | Tipo del BCE **tal cual lo publica**: unidades de `currency` por EUR, todos sus decimales; `"1"` si EUR. `eur = amount / fx_rate` (ADR-0013) |
-| `fx_rate_date` | fecha | Fecha del tipo aplicado. Si `fiscal_date` no tiene publicación (fin de semana, festivo TARGET), el último anterior |
+| `fx_rate` | decimal | Tipo del BCE **tal cual lo publica**: unidades de `currency` por EUR, todos sus decimales; `"1"` si EUR. `eur = amount / fx_rate` (ADR-0013). Validación: si `currency` es `EUR`, `fx_rate` debe ser exactamente `"1"` (rechazo; *challenge* 2026-08-31, hallazgo 5) |
+| `fx_rate_date` | fecha | Fecha del tipo aplicado. Si `fiscal_date` no tiene publicación (fin de semana, festivo TARGET), el último anterior. Nunca un sábado ni un domingo (el BCE no publica: rechazo); los festivos TARGET no se validan hasta que exista `reference/ecb/` (Ronda 6) |
 | `fee` | decimal | Comisión en `currency` |
 | `broker_ref?` | cadena | Identificador del bróker (`tradeID` de IBKR, referencia de MyInvestor) |
 | `fingerprint` | cadena | Huella de idempotencia: hash de (`source`, `broker_ref` si existe, `account_id`, `asset_id`, `type`, `value_date`, `quantity`, `amount` o `unit_price`, `currency`). En manual **no** entra el `id` propio: así dos entradas idénticas avisan, y una repetición legítima se confirma con `--confirm-duplicate`. **Huella repetida = aviso con confirmación**, no rechazo (ADR-0012) |
@@ -118,6 +118,8 @@ Validación (ADR-0009): un `asset_id` no puede existir en los dos libros. Un cam
 **`settings_changed`**
 `settings`: objeto completo con todos los parámetros de `business-rules.md` §7. La proyección `settingsAt(date)` devuelve el último `settings_changed` con `recorded_at ≤ date`.
 
+Un `settings_changed` que reinterpreta el pasado (p. ej. un cambio de `fiscal_date_rule`) puede dejar eventos históricos inválidos bajo la regla nueva. Es el **único** evento que se admite registrar aun así, con confirmación explícita que lista los eventos afectados (los hechos no cambian; cambia su interpretación, y no hay nada que rectificar antes). Las consultas de solo lectura proyectan entonces en modo degradado (`collectErrors`) con un aviso en cabecera; las mutaciones siguen exigiendo un libro válido (*challenge* 2026-08-31, hallazgo 2; feature 004).
+
 ### 6.2 Operaciones
 
 **`buy`**
@@ -135,7 +137,9 @@ Comunes + `withholding?` (retención a cuenta practicada, en `currency`) + `thes
 Admite `order_id?`. Efecto: consume lotes FIFO del `asset_id` en todas las cuentas (§8.1); valor de transmisión `((amount ?? quantity × unit_price) − fee) / fx_rate`; genera ganancia o pérdida por lote consumido; comprueba la regla de recompra (§8.4). Rechaza si la cantidad supera la posición física de la cuenta.
 
 **`transfer`** (ADR-0010)
-`request_id?`, `from_account_id`, `from_asset_id`, `quantity_out`, `nav_out`, `value_date_out`, `to_account_id`, `to_asset_id`, `quantity_in`, `nav_in`, `value_date_in`, `fee?`, `fingerprint`
+`request_id?`, `from_account_id`, `from_asset_id`, `quantity_out`, `nav_out`, `value_date_out`, `to_account_id`, `to_asset_id`, `quantity_in`, `nav_in`, `value_date_in`, `fingerprint`
+
+Un `transfer` **no lleva comisión**: la comisión real de un traspaso de custodia (el cargo del depositario) se registra como `standalone_fee` (mueve efectivo, no toca la base fiscal; su deducibilidad está en la pregunta fiscal #3). El `fee?` que este evento tuvo hasta la feature 004 se aceptaba y se ignoraba (*challenge* 2026-08-31, hallazgo 6).
 
 **Dos modos:** (a) *traspaso fiscal* entre fondos distintos: ambos activos deben ser `transferable`; (b) *traspaso de custodia* (`from_asset_id == to_asset_id`, cuentas distintas): admitido para cualquier activo, sin `nav_*`, solo mueve `physicalPositions`; los lotes fiscales no cambian (ADR-0012). En el modo (a), efecto: consume `quantity_out` de lotes origen en FIFO; por cada lote consumido crea un lote destino con la **misma `acquisition_date`** y el **mismo coste total** (repartiendo `quantity_in` en proporción a la cantidad consumida de cada lote); `unit_cost_eur` destino = coste heredado / cantidad recibida. No genera ganancia ni pérdida.
 
@@ -164,7 +168,7 @@ Efecto: resta `sold_amount` y suma `bought_amount` en `cashBalances` de la cuent
 Efecto: suma el neto al efectivo; alimenta `investmentIncome` (rendimiento del capital mobiliario con retención).
 
 **`dividend`**
-`account_id`, `asset_id`, `value_date`, `gross`, `withholding_origin`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `per_unit?`, `broker_ref?`, `fingerprint`
+`account_id`, `asset_id`, `value_date`, `gross`, `withholding_origin`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `source_country?` (ISO 3166-1 del **pagador**, no del depositario; del convenio con ese país dependen el tipo deducible y el límite de la deducción por doble imposición, pregunta fiscal #16), `per_unit?`, `broker_ref?`, `fingerprint`
 
 Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimientos del capital mobiliario y deducción por doble imposición.
 
@@ -278,7 +282,7 @@ Tras un `convert` (fusión, cambio de clase…), los lotes pasan al activo nuevo
 
 ### 8.4 Regla de recompra con pérdidas ("dos meses" / "un año")
 
-Para cada transmisión con pérdida de un activo, se buscan adquisiciones del mismo `asset_id` en `[fiscal_date − W, fiscal_date + W]`, con `W = Settings.wash_sale_window_days[asset.type]` (por defecto 365 días para `fund`, `money_market` y `crypto`; 61 para `stock`, `etc`, `etp`; ADR-0013, *verificar*). Cuentan como adquisición `buy` y `grant` con coste; **no** cuentan un `transfer` entrante, `scale` ni `grant` con coste cero. La pérdida se difiere en la proporción `min(cantidad recomprada, cantidad vendida) / cantidad vendida`, se asocia a los lotes recomprados (los más cercanos en fecha primero) y se libera, como pérdida computable, en el ejercicio en que esos lotes se transmitan. La app avisa en el momento de registrar la recompra.
+Para cada transmisión con pérdida de un activo, se buscan adquisiciones del mismo `asset_id` en `[fiscal_date − W, fiscal_date + W]`, con la ventana `W = Settings.wash_sale_window[asset.type]`, expresada como `"2m"`, `"1y"` o `"<n>d"` y contada **de fecha a fecha** en meses o años naturales, no en días (por defecto `"1y"` para `fund`, `money_market` y `crypto`; `"2m"` para `stock`, `etc`, `etp`; ADR-0013 y pregunta fiscal #14, *verificar*). La forma antigua `wash_sale_window_days` (entero de días) se sigue aceptando al cargar y equivale a `"<n>d"`. Cuentan como adquisición `buy` y `grant` con coste; **no** cuentan un `transfer` entrante, `scale` ni `grant` con coste cero. La pérdida se difiere en la proporción `min(cantidad recomprada, cantidad vendida) / cantidad vendida`, se asocia a los lotes recomprados (los más cercanos en fecha primero) y se libera, como pérdida computable, en el ejercicio en que esos lotes se transmitan. El diferimiento **viaja con el lote**: si un lote recomprado se consume por `transfer`, `convert` o `carve_out` (reparto por `cost_share`) antes de liberarse, pasa a sus lotes descendientes (`source_lot_id`) y se libera cuando **estos** se transmiten (pregunta fiscal #15, *verificar*). La app avisa en el momento de registrar la recompra.
 
 ### 8.5 Transformaciones por evento corporativo
 

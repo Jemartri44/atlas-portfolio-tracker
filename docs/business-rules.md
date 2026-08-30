@@ -117,6 +117,8 @@ Si el cubo supera un porcentaje de la cartera total, el exceso se traspasa al n�
 
 ## 5. Mecánica fiscal española
 
+La declaración es **por contribuyente, no por libro**: la base del ahorro, la compensación de pérdidas y los umbrales de los Modelos 720/721 agregan núcleo y cubo. Es la única excepción a la compartimentación (constitución III) y toda salida que la use se etiqueta como total fiscal.
+
 ### 5.1 Base del ahorro
 
 Tipos vigentes según se entienden en agosto de 2026 (**verificar y mantener configurable**, `savings_tax_brackets`):
@@ -167,9 +169,9 @@ Casos límite a cubrir en tests:
 
 Si se vende con pérdidas y se recompra el **mismo valor homogéneo** dentro de la ventana anterior o posterior a la venta, la pérdida **no es computable** en ese ejercicio. Se difiere hasta que se transmitan los valores recomprados.
 
-La ventana es de **dos meses** para valores admitidos a negociación (acciones, ETF, ETC, ETP) y de **un año** para los no admitidos (participaciones de fondos —es decir, todo el núcleo `equity` y `fixed_income`— y cripto) (art. 33.5.f LIRPF, **verificar**). Con aportaciones mensuales a un fondo, cualquier reembolso con pérdida de ese fondo activa la regla. Parametrizada por tipo de activo (`wash_sale_window_days`, ADR-0013). Un traspaso entrante no cuenta como adquisición (**verificar**).
+La ventana es de **dos meses** para valores admitidos a negociación (acciones, ETF, ETC, ETP) y de **un año** para los no admitidos (participaciones de fondos —es decir, todo el núcleo `equity` y `fixed_income`— y cripto) (art. 33.5 LIRPF, **verificar**), contada **de fecha a fecha** en meses y años naturales, no en un número fijo de días (61 días no son dos meses: pregunta #14). Con aportaciones mensuales a un fondo, cualquier reembolso con pérdida de ese fondo activa la regla. Parametrizada por tipo de activo (`wash_sale_window`, `"2m"`/`"1y"`/`"<n>d"`, ADR-0013 y `data-schema.md` §8.4). Un traspaso entrante no cuenta como adquisición (**verificar**).
 
-→ La app alerta al intentar registrar una recompra que active la regla, y **aplica el diferimiento completo** en el motor fiscal: la parte de la pérdida proporcional a la cantidad recomprada queda pendiente, asociada a los lotes recomprados, y se libera cuando estos se transmiten. Es el error más común en operativa activa.
+→ La app alerta al intentar registrar una recompra que active la regla, y **aplica el diferimiento completo** en el motor fiscal: la parte de la pérdida proporcional a la cantidad recomprada queda pendiente, asociada a los lotes recomprados, y se libera cuando estos se transmiten; si esos lotes se traspasan o se canjean antes (`transfer`, `convert`, `carve_out`), el diferimiento viaja con los lotes descendientes y se libera cuando estos se transmiten (pregunta #15, **verificar**). Es el error más común en operativa activa.
 
 ### 5.5 Compensación de pérdidas
 
@@ -183,7 +185,7 @@ La ventana es de **dos meses** para valores admitidos a negociación (acciones, 
 
 - Tributan como **rendimiento del capital mobiliario** en la base del ahorro.
 - Si hubo retención en origen, corresponde la **deducción por doble imposición internacional**.
-- Se registra: importe bruto, retención en origen, retención en España, divisa y tipo de cambio de la fecha.
+- Se registra: importe bruto, retención en origen, retención en España, divisa, tipo de cambio de la fecha y **país del pagador** (`source_country`): de su convenio dependen el tipo deducible y el límite de la deducción (pregunta #16).
 
 ### 5.7 Divisa
 
