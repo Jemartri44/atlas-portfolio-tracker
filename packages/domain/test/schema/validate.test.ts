@@ -74,6 +74,124 @@ describe("validateShape: field rules", () => {
   });
 });
 
+const withEffects = (effects: unknown): Record<string, unknown> =>
+  variant(SAMPLES.corporate_action, { effects });
+
+const rejectsEffects = (effects: unknown, code: string, field: string): void => {
+  try {
+    validateShape(withEffects(effects));
+  } catch (error) {
+    expect(error).toBeInstanceOf(ValidationError);
+    expect((error as ValidationError).code).toBe(code);
+    expect((error as ValidationError).details.field).toBe(field);
+    return;
+  }
+  throw new Error("expected a ValidationError");
+};
+
+describe("validateShape: corporate action effects", () => {
+  const sale = {
+    op: "forced_sale",
+    per_account: [{ account_id: "acc_etf", quantity: "all" }],
+    unit_price: "0",
+    currency: "USD",
+    fx_rate: "1.0850",
+    fx_rate_date: "2027-04-01",
+  };
+  const grant = {
+    op: "grant",
+    asset_id: "ast_fork",
+    per_account: [{ account_id: "acc_etf", quantity: "10" }],
+    unit_cost: "0",
+    currency: "EUR",
+    fx_rate: "1",
+    fx_rate_date: "2027-04-01",
+    acquisition_date: "2027-04-01",
+  };
+
+  it("accepts every primitive, an empty list and fractional ratios", () => {
+    expect(validateShape(withEffects([]))).toBeTruthy();
+    expect(validateShape(withEffects([{ op: "scale", ratio: "4/3" }]))).toBeTruthy();
+    expect(
+      validateShape(withEffects([{ op: "convert", to_asset_id: "ast_new", ratio: "0.5" }])),
+    ).toBeTruthy();
+    expect(
+      validateShape(
+        withEffects([
+          { op: "carve_out", to_asset_id: "ast_spin", ratio: "1/4", cost_share: "0.2" },
+          { ...sale, asset_id: "ast_spin" },
+        ]),
+      ),
+    ).toBeTruthy();
+    expect(validateShape(withEffects([grant]))).toBeTruthy();
+    for (const share of ["0", "1", "0.3333333333"]) {
+      expect(
+        validateShape(
+          withEffects([{ op: "carve_out", to_asset_id: "x", ratio: "1", cost_share: share }]),
+        ),
+      ).toBeTruthy();
+    }
+  });
+
+  it("rejects malformed effects with the qualified field", () => {
+    rejectsEffects(["scale"], "invalid_field", "effects[0]");
+    rejectsEffects([{ ratio: "2" }], "missing_field", "effects[0].op");
+    rejectsEffects([{ op: "merge", ratio: "2" }], "invalid_field", "effects[0].op");
+    rejectsEffects([{ op: "scale" }], "missing_field", "effects[0].ratio");
+    for (const ratio of ["0", "-2", "4/0", "0/3", "1.5/2", "a/b", "4/", 4]) {
+      rejectsEffects([{ op: "scale", ratio }], "invalid_field", "effects[0].ratio");
+    }
+    rejectsEffects([{ op: "convert", ratio: "1" }], "missing_field", "effects[0].to_asset_id");
+    for (const cost_share of ["1.5", "-0.1", 0.2, "x"]) {
+      rejectsEffects(
+        [{ op: "carve_out", to_asset_id: "x", ratio: "1", cost_share }],
+        "invalid_field",
+        "effects[0].cost_share",
+      );
+    }
+    rejectsEffects([{ ...sale, per_account: [] }], "invalid_field", "effects[0].per_account");
+    rejectsEffects([{ ...sale, per_account: "all" }], "invalid_field", "effects[0].per_account");
+    rejectsEffects(
+      [{ ...sale, per_account: ["acc_etf"] }],
+      "invalid_field",
+      "effects[0].per_account[0]",
+    );
+    rejectsEffects(
+      [
+        { op: "scale", ratio: "2" },
+        { ...sale, per_account: [{ quantity: "1" }] },
+      ],
+      "missing_field",
+      "effects[1].per_account[0].account_id",
+    );
+    for (const quantity of ["some", "0", "-1", 1]) {
+      rejectsEffects(
+        [{ ...sale, per_account: [{ account_id: "acc_etf", quantity }] }],
+        "invalid_field",
+        "effects[0].per_account[0].quantity",
+      );
+    }
+    rejectsEffects(
+      [{ ...sale, per_account: [{ account_id: "acc_etf", quantity: "1", fee: "-1" }] }],
+      "invalid_field",
+      "effects[0].per_account[0].fee",
+    );
+    rejectsEffects([{ ...sale, unit_price: "-1" }], "invalid_field", "effects[0].unit_price");
+    rejectsEffects([{ ...sale, fx_rate: "0" }], "invalid_field", "effects[0].fx_rate");
+    rejectsEffects(
+      [{ ...grant, acquisition_date: undefined }],
+      "missing_field",
+      "effects[0].acquisition_date",
+    );
+    rejectsEffects(
+      [{ ...grant, per_account: [{ account_id: "acc_etf", quantity: "all" }] }],
+      "invalid_field",
+      "effects[0].per_account[0].quantity",
+    );
+    rejectsEffects([{ ...grant, unit_cost: "-1" }], "invalid_field", "effects[0].unit_cost");
+  });
+});
+
 describe("validateShape: consistency rules", () => {
   it("buy/sell: exactly a basis — amount, or unit_price without amount", () => {
     expect(validateShape(variant(SAMPLES.buy, { unit_price: undefined }))).toBeTruthy();
