@@ -15,6 +15,18 @@ User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) a
 - `docs/specification.md` — full functional and technical specification. The reference.
 - `docs/business-rules.md` — domain rules and Spanish tax mechanics the app implements.
 - `plan-financiero.md` — the user's personal investment plan. **Private, git-ignored, never in the repo.** Docs reference it as "rule N of the plan" or "P1/P2/P3".
+- `.specify/memory/constitution.md` — project constitution (Spec Kit). Principles every spec, plan and task must respect.
+- `specs/NNN-<name>/` — per-feature Spec Kit artefacts (`spec.md`, `plan.md`, `tasks.md`, …).
+
+## Spec-driven development (GitHub Spec Kit)
+
+The project follows [GitHub Spec Kit](https://github.com/github/spec-kit). Scaffolding lives in `.specify/`; the skills are installed under `.claude/skills/speckit-*`.
+
+- Flow per feature: `/speckit-specify` → `/speckit-clarify` (optional) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`. `/speckit-constitution` amends the constitution; `/speckit-analyze` and `/speckit-checklist` are quality gates.
+- `docs/specification.md` is the **product-level** specification (the whole system). Spec Kit specs are **feature-level** slices derived from it; when they conflict, update `docs/specification.md` and the constitution first.
+- **Spec Kit does not create git branches** (feature state is tracked in the git-ignored `.specify/feature.json`). Branches follow git flow: one spec `specs/NNN-<name>/` ↔ one branch `feature/NNN-<name>` created by hand from `develop`.
+- **Spec Kit artefacts (constitution, specs, plans, tasks) are documents: Spanish prose, English identifiers**, like everything under `docs/`. Templates under `.specify/templates/` stay untouched in English.
+- `.specify/feature.json` and `.claude/settings.local.json` are git-ignored; everything else under `.specify/` and `.claude/skills/` is committed.
 
 ## Language
 
