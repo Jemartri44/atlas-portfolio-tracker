@@ -257,7 +257,7 @@ Consecuencias: registrar tarde es normal (importar un extracto semanas después,
 | `investmentIncome(year)` | Dividendos y retenciones | §6.2 |
 | `valuations(date)` | Valoraciones registradas | Modelo 720 |
 | `integrity` | Comprobaciones: posiciones físicas ≥ 0, lotes fiscales = suma física por activo, huellas únicas, referencias colgantes (`corrects_id` a un evento inexistente o no anulado) | Verificación trimestral |
-| `deepCheck` | Sobre las líneas crudas (`atlas check --deep`): ids duplicados, huella que no coincide con los campos del evento, líneas no canónicas, líneas de versiones antiguas (sugiere `compact`), proyección no reproducible | Feature 003 |
+| `deepCheck` | Sobre las líneas crudas (`atlas check --deep`): ids duplicados, huella que no coincide con los campos del evento (la huella cubre el tuple de negocio de §4, no `fee`: una comisión editada a mano no se detecta por huella), líneas no canónicas, campos que el tipo no define (`unknown_field`, solo en líneas de la versión actual), líneas de versiones antiguas (sugiere `compact`), proyección no reproducible | Verificación trimestral |
 | `snapshotOf` | Instantánea canónica de todas las proyecciones (claves ordenadas, decimales como texto) | *Golden files*, `compact`, `check --deep` |
 
 ## 8. FIFO y reglas fiscales aplicadas
