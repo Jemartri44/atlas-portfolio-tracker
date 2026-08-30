@@ -1,0 +1,19 @@
+{
+  "name": "@atlas/domain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure domain core: money, ledger events, projections, FIFO lots, use cases and ports. No runtime dependencies.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist/src",
+    "dist/vendor",
+    "vendor"
+  ]
+}
