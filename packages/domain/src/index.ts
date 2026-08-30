@@ -70,6 +70,15 @@ export { validateShape } from "./schema/validate.js";
 export { type BusinessDates, fiscalDateOf } from "./settings/fiscal-date.js";
 export * from "./settings/settings.js";
 export * from "./synth/index.js";
+export {
+  archiveNameFor,
+  type CompactDeps,
+  type CompactPlan,
+  type CompactResult,
+  compactLedger,
+  planCompact,
+  type VersionCount,
+} from "./usecases/compact.js";
 export type { UseCaseDeps } from "./usecases/deps.js";
 export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
 export {

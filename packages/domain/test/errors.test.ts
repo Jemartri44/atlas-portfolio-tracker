@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ArchiveExistsError,
+  CompactRejectedError,
   ConflictError,
   CurrencyMismatchError,
   DependentEventsError,
@@ -36,6 +37,10 @@ describe("domain errors", () => {
     expect(projection.details).toEqual({ asset: "a", event_id: "01A" });
     expect(new SchemaTooNewError(2, 1).details).toEqual({ found: 2, supported: 1 });
     expect(new ConflictError().code).toBe("conflict");
+    expect(new CompactRejectedError("invalid_events", { affected: [] }).message).toMatch(/rectify/);
+    expect(new CompactRejectedError("projection_changed", { keys: ["lots"] }).details).toEqual({
+      keys: ["lots"],
+    });
     expect(new ArchiveExistsError("ledger-2026-09-01-v1.jsonl").details).toEqual({
       archive_name: "ledger-2026-09-01-v1.jsonl",
     });
