@@ -71,7 +71,7 @@
 - [ ] T023 [P] README: sección "Eventos corporativos y tesis" con un ejemplo inventado (un split y una tesis) y los comandos nuevos en la lista de la CLI — commit `docs: document corporate actions and theses in the README`
 - [ ] T024 [P] `specs/002-corporate-actions/questions.md`: notas de implementación y dudas nuevas; `checklists/requirements.md` con el estado final
 - [X] T025 Ejecutar `quickstart.md` a mano sobre `demo.jsonl` (sin comprometerlo) y anotar desviaciones en `questions.md` — hecho el 2026-08-30 con el binario compilado; única desviación: la expectativa de los lotes tras la fusión (corregida en `quickstart.md`)
-- [ ] T026 Abrir la PR `feature/002-corporate-actions` → `develop` con `.github/pull_request_template.md`, checklist honesta, descripción en inglés; esperar CI. **No fusionar.**
+- [X] T026 Abrir la PR `feature/002-corporate-actions` → `develop` con `.github/pull_request_template.md`, checklist honesta, descripción en inglés; esperar CI. **No fusionar.** — PR #15 abierta el 2026-08-30
 
 ## Dependencias
 
