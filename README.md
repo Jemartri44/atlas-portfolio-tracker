@@ -84,7 +84,23 @@ El repositorio sigue el modelo **git flow** con **git básico, sin la extensión
 | `release/*` | Preparación de una versión. Se fusiona en `main` y `develop`.    |
 | `hotfix/*`  | Arreglos urgentes sobre `main`. Se fusionan en `main` y `develop`.|
 
-Las fusiones a `develop` y `main` se hacen mediante pull request, nunca con push directo. Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea. Hooks: `git config core.hooksPath .githooks`.
+Las fusiones a `develop` y `main` se hacen mediante pull request, nunca con push directo.
+
+```bash
+# Feature (igual para fix/*)
+git checkout -b feature/<name> develop
+git checkout develop && git merge --no-ff feature/<name> && git branch -d feature/<name>
+
+# Release
+git checkout -b release/<version> develop
+git checkout main && git merge --no-ff release/<version> && git tag -a v<version> -m "v<version>"
+git checkout develop && git merge --no-ff release/<version> && git branch -d release/<version>
+
+# Hotfix
+git checkout -b hotfix/<version> main
+git checkout main && git merge --no-ff hotfix/<version> && git tag -a v<version> -m "v<version>"
+git checkout develop && git merge --no-ff hotfix/<version> && git branch -d hotfix/<version>
+``` Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea. Hooks: `git config core.hooksPath .githooks`.
 
 ## Licencia
 
