@@ -112,6 +112,8 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 - Atomic commits: one conceptual change per commit.
 - **No AI tool may appear as co-author or be mentioned in commit messages, bodies, footers or PR descriptions.**
 - Ask the user before installing tools, extensions or packages, and before committing or pushing.
+- Enforced mechanically: `.githooks/commit-msg` and `.claude/hooks/check-git-commit.py` reject non-conforming messages; `.githooks/pre-commit` runs `gitleaks`. Enable per clone with `git config core.hooksPath .githooks`.
+- New architecture decisions: use the `/adr` skill (`docs/adr/template.md`, index in `docs/adr/README.md`). Pending rounds of decisions live in `docs/decision-roadmap.md`.
 
 ### Environments
 
