@@ -106,8 +106,8 @@ Fecha inicial `2026-09-01`; reloj sintético desde `2026-09-01T18:00:00Z`; ejerc
 | 1 | 2026-10 | `thesis_opened` th_beta; `buy` `ast_beta`; `interest` `acc_mi` con retención |
 | 2 | 2026-11 | `dividend` `ast_alpha` USD con retención en origen y en España |
 | 3 | 2026-12 | `standalone_fee` `acc_ibkr`; `valuation` 31/12 en `acc_ibkr` y `acc_bucket` (cantidad = posición proyectada) |
-| 4 | 2027-01 | `transfer_requested` `ast_world` → `ast_smallcap` (parcial) → `transfer_request_updated` redeemed → `transfer` con `request_id` |
-| 6 | 2027-03 | `sell` `ast_world` parcial **con pérdida** (NAV = 0,9 × mínimo visto); después, **registro tardío**: `buy` `ast_world` con `value_date` en 2027-02 (unit_price, sin orden); las aportaciones mensuales siguen |
+| 4 | 2027-01 | `sell` `ast_world` parcial **con pérdida** (NAV = 0,9 × mínimo visto); después, **registro tardío**: `buy` `ast_world` con `value_date` 2026-08-28 (la más antigua: la venta la consume primero por FIFO); las aportaciones mensuales siguen todo 2027 |
+| 6 | 2027-03 | `transfer_requested` `ast_world` → `ast_smallcap` (parcial) → `transfer_request_updated` redeemed → `transfer` con `request_id` |
 | 7 | 2027-04 | `dividend` `ast_alpha` con `withholding_spain` "mal tecleada" (se corrige en m=16) |
 | 8 | 2027-05 | `transfer` de custodia `ast_gold` `acc_ibkr` → `acc_ibkr2` (parcial; aviso `same_asset_two_accounts` esperado) |
 | 9 | 2027-06 | `corporate_action` `reverse_split` `ast_gold`: `scale` 1/4 + `forced_sale` de los picos en `acc_ibkr` y `acc_ibkr2` (fracciones leídas de la proyección) |
