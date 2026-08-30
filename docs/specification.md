@@ -427,9 +427,11 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 **Recomendación: Svelte o Solid con Vite.** Suficientes para una app con estado y con un árbol de dependencias auditable de verdad.
 
 **Requisitos transversales:**
-- Responsive real: se va a consultar desde el móvil.
+- Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada en móvil.
+- **Modo privacidad**: un interruptor, **activado por defecto al iniciar sesión**, que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
 - Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
 - Funciona sin conexión para consulta (los datos cacheados siguen visibles con su antigüedad marcada).
+- **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. La librería base se decide en la Ronda 7 de `decision-roadmap.md`.
 
 ---
 
