@@ -11,6 +11,7 @@ import type {
   BuyEvent,
   CashDepositEvent,
   CashWithdrawalEvent,
+  CorporateActionEvent,
   DividendEvent,
   FxExchangeEvent,
   InterestEvent,
@@ -22,6 +23,8 @@ import type {
   SettingsChangedEvent,
   StandaloneFeeEvent,
   SupportedEvent,
+  ThesisClosedEvent,
+  ThesisOpenedEvent,
   TransferEvent,
   TransferRequestedEvent,
   TransferRequestUpdatedEvent,
@@ -284,6 +287,35 @@ export class LedgerBuilder {
 
   reversal(reverses_id: Ulid, reason = "test"): ReversalEvent {
     return this.push<ReversalEvent>("reversal", { reverses_id, reason });
+  }
+
+  corporateAction(
+    overrides: Partial<Fields<CorporateActionEvent>> &
+      Pick<CorporateActionEvent, "kind" | "asset_id" | "effects">,
+  ): CorporateActionEvent {
+    return this.push<CorporateActionEvent>("corporate_action", {
+      effective_date: "2027-03-01",
+      source_document: "https://issuer.example/notice.pdf",
+      ...overrides,
+    });
+  }
+
+  thesisOpened(
+    overrides: Partial<Fields<ThesisOpenedEvent>> & Pick<ThesisOpenedEvent, "thesis_id">,
+  ): ThesisOpenedEvent {
+    return this.push<ThesisOpenedEvent>("thesis_opened", {
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      hypothesis: "test hypothesis",
+      expected_horizon_days: 90,
+      invalidation: "test invalidation",
+      planned_size_eur: "500",
+      ...overrides,
+    });
+  }
+
+  thesisClosed(thesis_id: string, closing_notes = "closed"): ThesisClosedEvent {
+    return this.push<ThesisClosedEvent>("thesis_closed", { thesis_id, closing_notes });
   }
 }
 
