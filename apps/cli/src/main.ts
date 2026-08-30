@@ -13,6 +13,7 @@ import {
 } from "@atlas/domain";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
+import { backupCommand } from "./commands/backup.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
 import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
@@ -55,6 +56,7 @@ const COMMANDS: Record<string, Command> = {
   export: exportCommand,
   synth: synthCommand,
   compact: compactCommand,
+  backup: backupCommand,
 };
 
 export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--json] <comando> …
@@ -68,7 +70,7 @@ comandos:
   edit <id> --reason …           delete <id> --reason …
   positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
   export --format jsonl|csv [--out <ruta>]
-  synth --out <ruta> [--seed <n>]   compact [--yes]`;
+  synth --out <ruta> [--seed <n>]   compact [--yes]   backup --to <directorio>`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),

@@ -103,6 +103,10 @@ export const describeError = (error: DomainError): string => {
       return `La reescritura cambiaría la proyección (${text(d.keys)}): no se ha escrito nada.`;
     case "archive_exists":
       return `El archivo ${text(d.archive_name)} ya existe y nunca se sobrescribe.`;
+    case "ledger_missing":
+      return `No hay libro en ${text(d.path)}: nada que copiar.`;
+    case "backup_mismatch":
+      return `La copia ${text(d.path)} no coincide con el libro (etag o número de líneas): bórrala y repite.`;
     case "path_exists":
       return `La ruta ${text(d.path)} ya existe: no se sobrescribe nada.`;
     case "synthetic_invalid":

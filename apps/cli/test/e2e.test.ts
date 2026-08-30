@@ -17,6 +17,43 @@ const capture = () => {
   return { io, lines };
 };
 
+describe("atlas synth, check --deep, compact and backup over real files", () => {
+  it("generates, verifies, has nothing to compact and backs up a verified copy", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "atlas-e2e-003-"));
+    const ledger = join(dir, "demo.jsonl");
+    const { io, lines } = capture();
+    const atlas = (...argv: string[]) => run(["--ledger", ledger, ...argv], io);
+    expect(await atlas("synth", "--out", ledger, "--seed", "5")).toBe(0);
+    expect(lines.join("\n")).toContain("semilla 5");
+    lines.length = 0;
+    expect(await atlas("check", "--deep")).toBe(0);
+    expect(lines.join("\n")).toContain("same_asset_two_accounts");
+    lines.length = 0;
+    expect(await atlas("compact", "--yes")).toBe(0);
+    expect(lines.join("\n")).toContain("Nada que compactar");
+    lines.length = 0;
+    const backups = join(dir, "backups");
+    expect(await atlas("backup", "--to", backups)).toBe(0);
+    const copyPath = /Copia verificada: (\S+\.jsonl)/.exec(lines.join("\n"))?.[1] as string;
+    expect(await readFile(copyPath)).toEqual(await readFile(ledger));
+    expect(await atlas("backup", "--to", backups)).toBe(1);
+    expect(lines.join("\n")).toContain("ya existe");
+    lines.length = 0;
+    expect(await run(["--ledger", join(dir, "none.jsonl"), "backup", "--to", backups], io)).toBe(1);
+    expect(lines.join("\n")).toContain("nada que copiar");
+    lines.length = 0;
+    // A hand-edited line: the plain check stays clean, the deep check does not.
+    const text = await readFile(ledger, "utf8");
+    const edited = text.replace(/"quantity":"([0-9.]+)"/, '"quantity":"777"');
+    expect(edited).not.toBe(text);
+    await writeFile(ledger, edited);
+    expect(await atlas("check")).toBe(0);
+    lines.length = 0;
+    expect(await atlas("check", "--deep")).toBe(1);
+    expect(lines.join("\n")).toContain("fingerprint_mismatch");
+  });
+});
+
 describe("atlas over a ledger file", () => {
   it("runs the quickstart flow and keeps the file readable", async () => {
     const dir = await mkdtemp(join(tmpdir(), "atlas-e2e-"));
