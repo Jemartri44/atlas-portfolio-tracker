@@ -8,7 +8,7 @@ import { correctEvent } from "../../src/usecases/rectify.js";
 import { TestStore } from "../memory-store.js";
 import { testDeps } from "../usecases/helpers.js";
 import { aggregate } from "./aggregate.js";
-import { ledgerOf, opArb } from "./projection.test.js";
+import { ledgerOf, opArb } from "./ledgers.js";
 
 const draftOf = (event: SupportedEvent): Draft => {
   const {
