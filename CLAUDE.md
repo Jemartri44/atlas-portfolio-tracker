@@ -67,7 +67,7 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 
 1. **A transfer between funds is NOT a sell followed by a buy.** It keeps the original acquisition date and cost. Modelling it as sell+buy silently breaks taxation.
 2. **Lots, never aggregated positions.** Lots are a projection computed from transactions, never stored; the current position is a derived query. FIFO needs lot-level detail.
-3. **Money in decimal, never floating point.** Fund units are fractional with many decimals.
+3. **Money in decimal, never floating point.** `Money`/`Quantity`/`Price`/`FxRate` wrap vendored `big.js`; amounts are strings in JSON; round only at fiscal output and display, half-up, once per transaction (ADR-0005).
 4. **Always store the original amount, currency and the ECB exchange rate of the value date.** Converting to EUR and discarding the original loses information the tax agency requires.
 5. **No tax calculation may depend on market prices.** Prices are informational. Taxation comes exclusively from the ledger.
 6. **Corporate actions are first-class transactions** with their own lot-transformation logic. No manual patches on the database.
