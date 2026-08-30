@@ -202,6 +202,20 @@ describe("correctEvent", () => {
     expect(confirmed.event.quantity).toBe("12");
   });
 
+  it("decides the current year in Europe/Madrid, not UTC", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const buy = b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-06-01" });
+    const store = new TestStore(b.build());
+    const madridNewYear = testDeps(store, "2027-12-31T23:30:00.000Z");
+    const result = await reverseEvent(madridNewYear, buy.id, "x");
+    expect(result.priorYear).toBe(true);
+    const utcNewYear = testDeps(new TestStore(b.build()), "2028-01-01T00:30:00.000Z");
+    expect((await reverseEvent(utcNewYear, buy.id, "x")).priorYear).toBe(true);
+    const stillDecember = testDeps(new TestStore(b.build()), "2027-12-31T22:30:00.000Z");
+    expect((await reverseEvent(stillDecember, buy.id, "x")).priorYear).toBe(false);
+  });
+
   it("propagates conflicts and flags prior tax years", async () => {
     const b = new LedgerBuilder();
     catalogue(b);

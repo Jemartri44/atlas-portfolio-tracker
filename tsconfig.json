@@ -1,9 +1,26 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/domain" },
-    { "path": "packages/adapters" },
-    { "path": "apps/cli" },
-    { "path": "tests" }
+    {
+      "path": "packages/domain"
+    },
+    {
+      "path": "packages/domain/tsconfig.test.json"
+    },
+    {
+      "path": "packages/adapters"
+    },
+    {
+      "path": "packages/adapters/tsconfig.test.json"
+    },
+    {
+      "path": "apps/cli"
+    },
+    {
+      "path": "apps/cli/tsconfig.test.json"
+    },
+    {
+      "path": "tests"
+    }
   ]
 }

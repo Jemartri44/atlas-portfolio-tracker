@@ -113,18 +113,6 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
   },
 };
 
-/** Fills the unit price from the amount when only the amount is given (unit_price stays informative, ADR-0012). */
-export const withDerivedPrice = (draft: Record<string, unknown>): Record<string, unknown> => {
-  if (
-    (draft.type === "buy" || draft.type === "sell") &&
-    draft.unit_price === undefined &&
-    draft.amount !== undefined
-  ) {
-    return { ...draft, unit_price: "0" };
-  }
-  return draft;
-};
-
 export const addCommand = async (
   ctx: Context,
   positionals: string[],
@@ -134,6 +122,6 @@ export const addCommand = async (
   if (spec === undefined) {
     throw new UsageError(`uso: atlas add ${Object.keys(ADD_SPECS).join("|")} …`);
   }
-  await confirmAndRecord(ctx, withDerivedPrice(draftFromFlags(spec, flags)));
+  await confirmAndRecord(ctx, draftFromFlags(spec, flags));
   return 0;
 };

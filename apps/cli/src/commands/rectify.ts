@@ -11,7 +11,7 @@ import {
 import { type Flags, requireFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS, summarize } from "../context.js";
 import { priorYearWarning } from "../output/messages.js";
-import { ADD_SPECS, withDerivedPrice } from "./add.js";
+import { ADD_SPECS } from "./add.js";
 import { requireId } from "./catalogue.js";
 import { confirm, draftOf, fieldOf, preview } from "./shared.js";
 
@@ -89,7 +89,7 @@ export const editCommand = async (
   const result = await correctEvent(
     ctx.deps,
     id,
-    withDerivedPrice(draft) as unknown as Draft<SupportedEvent>,
+    draft as unknown as Draft<SupportedEvent>,
     reason,
     { confirmDuplicate: ctx.confirmDuplicate },
   );

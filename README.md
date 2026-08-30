@@ -33,10 +33,10 @@ Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `v
 
 ## Uso de la CLI
 
-Tras `npm run build`, el ejecutable es `node apps/cli/dist/src/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. Ejemplo completo con datos inventados:
+Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. Ejemplo completo con datos inventados:
 
 ```bash
-alias atlas='node apps/cli/dist/src/main.js --ledger ./demo.jsonl'
+alias atlas='node apps/cli/dist/main.js --ledger ./demo.jsonl'
 
 # Catálogo
 atlas account add --id acc_fund --name "Fondos" --platform myinvestor --book core --base-currency EUR --country ES --yes
@@ -84,7 +84,23 @@ El repositorio sigue el modelo **git flow** con **git básico, sin la extensión
 | `release/*` | Preparación de una versión. Se fusiona en `main` y `develop`.    |
 | `hotfix/*`  | Arreglos urgentes sobre `main`. Se fusionan en `main` y `develop`.|
 
-Las fusiones a `develop` y `main` se hacen mediante pull request, nunca con push directo. Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea. Hooks: `git config core.hooksPath .githooks`.
+Las fusiones a `develop` y `main` se hacen mediante pull request, nunca con push directo.
+
+```bash
+# Feature (igual para fix/*)
+git checkout -b feature/<name> develop
+git checkout develop && git merge --no-ff feature/<name> && git branch -d feature/<name>
+
+# Release
+git checkout -b release/<version> develop
+git checkout main && git merge --no-ff release/<version> && git tag -a v<version> -m "v<version>"
+git checkout develop && git merge --no-ff release/<version> && git branch -d release/<version>
+
+# Hotfix
+git checkout -b hotfix/<version> main
+git checkout main && git merge --no-ff hotfix/<version> && git tag -a v<version> -m "v<version>"
+git checkout develop && git merge --no-ff hotfix/<version> && git branch -d hotfix/<version>
+``` Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea. Hooks: `git config core.hooksPath .githooks`.
 
 ## Licencia
 

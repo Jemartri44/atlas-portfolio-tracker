@@ -19,7 +19,7 @@ const tupleOf = (event: FingerprintInput): string[] | undefined => {
         event.type,
         event.value_date,
         event.quantity,
-        event.amount ?? event.unit_price,
+        event.amount ?? event.unit_price ?? "",
         event.currency,
       ];
     case "transfer":

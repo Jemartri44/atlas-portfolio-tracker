@@ -9,7 +9,7 @@ describe("atlas add", () => {
     const events = (await h.store.load()).events;
     const buy = events[events.length - 1] as Record<string, unknown>;
     expect(buy.amount).toBe("1000");
-    expect(buy.unit_price).toBe("0");
+    expect("unit_price" in buy).toBe(false);
     expect(buy.fee).toBe("0");
     expect(buy.source).toBe("manual");
     expect(buy.fingerprint).toMatch(/^sha256:/);
@@ -89,6 +89,31 @@ describe("atlas add", () => {
       ]),
     ).toBe(1);
     expect(h.text()).toContain("no tiene suficiente ast_world");
+    h.reset();
+    expect(
+      await h.exec([
+        "add",
+        "buy",
+        "--account",
+        "acc_fund",
+        "--asset",
+        "ast_world",
+        "--trade-date",
+        "2027-01-10",
+        "--value-date",
+        "2027-01-10",
+        "--quantity",
+        "1",
+        "--currency",
+        "EUR",
+        "--fx-rate",
+        "1",
+        "--fx-rate-date",
+        "2027-01-10",
+        "--yes",
+      ]),
+    ).toBe(1);
+    expect(h.text()).toContain("unit_price");
     expect(await h.exec(["add", "swap"])).toBe(64);
     expect(await h.exec(["add", "buy", "--bogus", "1", "--yes"])).toBe(64);
   });

@@ -12,7 +12,7 @@ export default defineConfig({
   },
   test: {
     passWithNoTests: true,
-    exclude: ["**/node_modules/**", "**/dist/**"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/dist-test/**"],
     projects: [
       { extends: true, test: { name: "domain", root: "packages/domain" } },
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },

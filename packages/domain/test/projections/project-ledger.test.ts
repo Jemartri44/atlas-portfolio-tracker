@@ -12,7 +12,7 @@ import { realizedGains } from "../../src/projections/gains.js";
 import { investmentIncome } from "../../src/projections/income.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
-import { applySell } from "../../src/projections/operations.js";
+import { applyBuy, applySell } from "../../src/projections/operations.js";
 import { pendingOrders, pendingTransfers } from "../../src/projections/pending.js";
 import { adjustPosition, physicalPositions, positionOf } from "../../src/projections/positions.js";
 import { projectLedger, toProjectionError } from "../../src/projections/project-ledger.js";
@@ -482,6 +482,53 @@ describe("projectLedger: transfers", () => {
     expect(integrity(state)).toEqual([]);
   });
 
+  it("keeps the origin position on transferred lots for same-date FIFO ties", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const inA = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-01-10",
+      quantity: "4",
+      unit_price: "100",
+    });
+    const direct = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      value_date: "2027-01-10",
+      quantity: "4",
+      unit_price: "50",
+    });
+    const transfer = b.transfer({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      quantity_out: "4",
+      nav_out: "100",
+      value_date_out: "2027-02-01",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_bonds",
+      quantity_in: "4",
+      nav_in: "100",
+      value_date_in: "2027-02-03",
+    });
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      value_date: "2027-03-01",
+      quantity: "4",
+      unit_price: "60",
+    });
+    const state = projectLedger(b.build());
+    const [gain] = realizedGains(state, 2027);
+    expect(gain?.by_lot.map((lot) => lot.lot_id)).toEqual([`${transfer.id}#0`]);
+    expect(gain?.cost_eur.amount.toString()).toBe("400");
+    const lots = fiscalLots(state, "ast_bonds");
+    expect(lots.find((lot) => lot.source_event_id === transfer.id)?.position).toBe(
+      state.positionOf.get(inA.id),
+    );
+    expect(lots.find((lot) => lot.source_event_id === direct.id)?.closed).toBe(false);
+  });
+
   it("moves custody without touching lots and warns about the split holding", () => {
     const b = new LedgerBuilder();
     catalogue(b);
@@ -714,6 +761,22 @@ describe("integrity on corrupted states", () => {
     expect(integrity(state).map((f) => f.code)).toEqual(["negative_position", "lots_mismatch"]);
     state.positions.delete("acc_fund|ast_world");
     expect(integrity(state).map((f) => f.code)).toEqual(["lots_mismatch"]);
+  });
+
+  it("refuses an operation without amount nor unit_price (only reachable bypassing validation)", () => {
+    const state = createEmptyState(DEFAULT_SETTINGS);
+    const b = new LedgerBuilder();
+    applyAccountCreated(state, b.account("acc_fund"));
+    applyAssetCreated(state, b.asset("ast_world"));
+    const buy = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    delete (buy as { unit_price?: string }).unit_price;
+    expect(() => applyBuy(state, buy, 0)).toThrow(
+      expect.objectContaining({ code: "missing_basis" }),
+    );
+    const only = b.buy({ account_id: "acc_fund", asset_id: "ast_world", amount: "500" });
+    delete (only as { unit_price?: string }).unit_price;
+    applyBuy(state, only, 1);
+    expect(fiscalLots(state, "ast_world")[0]?.cost_eur.amount.toString()).toBe("500");
   });
 
   it("refuses a sell whose lots do not cover the position", () => {
