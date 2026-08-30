@@ -22,6 +22,15 @@ export { accounts, assets } from "./projections/catalogue.js";
 export { realizedGains } from "./projections/gains.js";
 export { investmentIncome } from "./projections/income.js";
 export { type IntegrityFinding, integrity } from "./projections/integrity.js";
+export {
+  checkEffectsAgainstKind,
+  KIND_RULES,
+  type KindRule,
+  type ResolvedEffect,
+  type Step,
+  type Target,
+  targetOf,
+} from "./projections/kind-rules.js";
 export { fiscalLots } from "./projections/lots.js";
 export {
   type OpenOrder,
@@ -38,6 +47,8 @@ export {
 } from "./projections/project-ledger.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
 export type * from "./projections/state.js";
+export { theses } from "./projections/theses.js";
+export { type ValuationAt, valuations } from "./projections/valuations.js";
 export * from "./schema/envelope.js";
 export * from "./schema/events.js";
 export { fingerprintOf } from "./schema/fingerprint.js";
@@ -53,7 +64,12 @@ export { type BusinessDates, fiscalDateOf } from "./settings/fiscal-date.js";
 export * from "./settings/settings.js";
 export type { UseCaseDeps } from "./usecases/deps.js";
 export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
-export { type RecordOptions, type RecordResult, recordEvent } from "./usecases/record-event.js";
+export {
+  completeDraft,
+  type RecordOptions,
+  type RecordResult,
+  recordEvent,
+} from "./usecases/record-event.js";
 export {
   type CorrectResult,
   correctEvent,
