@@ -19,7 +19,7 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | 3 | Estructura del código y toolchain | Primer commit de código | ADR-0007, ADR-0008 | **Cerrada** 2026-08-30 |
 | 4 | Semántica de operaciones y FIFO | Fase 1 | ADR-0009, ADR-0010, ADR-0011, `docs/data-schema.md` §6-8 | **Cerrada** 2026-08-30 |
 | 5 | Calidad, proceso y tooling del asistente | Fase 1 | Spec §11, `.githooks/`, `.claude/`, `.github/`, `LICENSE` | **Cerrada** 2026-08-30 |
-| — | *Fase 0 (tareas manuales del usuario)* | Rondas 6-7 | — | Pendiente |
+| — | *Fase 0 (validación con la realidad, tareas del usuario)* | Rondas 6-7 | — | En curso: MyInvestor e IBKR pendientes; AWS y Yahoo diferidos a antes de la Fase 4 |
 | 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente |
 | 7 | Aplicación web: framework, offline, auth, API | Fase 2 | ADR-0009+ | Pendiente |
 | 8 | Infraestructura, despliegue y copias de seguridad | Fase 4 | ADR-0010+ | Pendiente |
@@ -91,15 +91,23 @@ Decisiones:
 - Licencia (propuesta: MIT).
 - Versionado de la app: etiquetas `vX.Y.Z` en `main`, `CHANGELOG` generado desde Conventional Commits o manual.
 
-## Fase 0 — Tareas del usuario (en paralelo, sin asistente)
+## Fase 0 — Validación con la realidad (tareas del usuario, en paralelo)
 
-Los resultados alimentan las rondas 6 y 7. Hasta tenerlos, no merece la pena decidir sobre importadores ni precios.
+Ninguna bloquea la Fase 1: el dominio y la CLI no dependen de nada externo. Sus resultados alimentan las rondas 6 y 7 y los tests de contrato. Los ficheros privados (extractos reales, capturas) se dejan **fuera del repo**, en `~/atlas-private/` (ver `CLAUDE.md` → Private inputs).
 
-1. Pasar la cuenta AWS al Paid Plan y crear la alerta de presupuesto de 1$.
-2. Configurar una Flex Query en IBKR, descargarla por API y guardar un ejemplo (anonimizado) en el repo.
-3. Exportar un extracto de MyInvestor y guardar un ejemplo anonimizado.
-4. Probar el scraping de Yahoo desde una Lambda real.
-5. Decidir P1/P2/P3 del plan financiero (pesos, ETFs de referencia, umbrales del cubo): solo son valores de configuración, no cambian el diseño.
+**Cuanto antes**
+1. **Extracto de MyInvestor**: exportar movimientos de fondos (CSV/Excel/PDF) a `~/atlas-private/statements/myinvestor/`. Sirve para ver campos y cómo aparecen los traspasos; la fixture del repo se fabrica después con valores falsos y el mismo formato.
+
+**Cuando la cuenta de IBKR esté abierta**
+2. **Flex Query**: Activity Flex Query en XML con *Trades*, *Cash Transactions*, *Corporate Actions*, *Transfers*, *Open Positions*; activar Flex Web Service y generar el token de solo lectura. Descargar una vez por API y dejar el XML en `~/atlas-private/statements/ibkr/`.
+
+**Antes de la Fase 4, no antes**
+3. **Cuenta AWS al Paid Plan** y alerta de presupuesto de 1 $ (crearla antes solo arranca el reloj de seis meses del Free Plan).
+4. **Yahoo desde Lambda**: Lambda mínima que haga un `GET` a la API de gráficos y registre el código de respuesta.
+
+**No es tarea del usuario**
+- Lectura de Beancount y Ghostfolio: la hace el asistente al planificar la feature 001.
+- Pesos objetivo, ETFs de referencia y umbrales del cubo (P1/P2/P3 del plan privado): son valores de configuración que se introducen en la app cuando exista la pantalla de ajustes (Fase 2). No hay que decidirlos antes.
 
 ## Ronda 6 — Importadores y fuentes de precios
 
