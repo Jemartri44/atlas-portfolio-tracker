@@ -3,9 +3,8 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "dist",
-    "types": [],
-    "allowJs": true
+    "types": []
   },
-  "include": ["src", "test", "vendor"],
+  "include": ["src", "test"],
   "exclude": ["dist"]
 }

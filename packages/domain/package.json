@@ -15,5 +15,8 @@
     "dist/src",
     "dist/vendor",
     "vendor"
-  ]
+  ],
+  "scripts": {
+    "copy-vendor": "node -e \"require('node:fs').cpSync('vendor', 'dist/vendor', { recursive: true })\""
+  }
 }
