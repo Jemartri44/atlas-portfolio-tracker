@@ -57,5 +57,11 @@ describe("fingerprintOf", () => {
       fingerprintOf(SAMPLES.fx_exchange),
     );
     expect(fingerprintOf(SAMPLES.cash_deposit)).not.toBe(fingerprintOf(SAMPLES.cash_withdrawal));
+    const action = fingerprintOf(SAMPLES.corporate_action);
+    expect(fp(variant(SAMPLES.corporate_action, { kind: "split" }))).not.toBe(action);
+    expect(fp(variant(SAMPLES.corporate_action, { effective_date: "2027-04-02" }))).not.toBe(
+      action,
+    );
+    expect(fp(variant(SAMPLES.corporate_action, { effects: [], notes: undefined }))).toBe(action);
   });
 });

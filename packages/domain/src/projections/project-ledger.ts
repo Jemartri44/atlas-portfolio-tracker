@@ -13,10 +13,13 @@ import type {
   AccountUpdatedEvent,
   AssetCreatedEvent,
   AssetUpdatedEvent,
+  CorporateActionEvent,
   LedgerEvent,
   ReversalEvent,
   SettingsChangedEvent,
   SupportedEvent,
+  ThesisClosedEvent,
+  ThesisOpenedEvent,
 } from "../schema/events.js";
 import { fiscalDateOf } from "../settings/fiscal-date.js";
 import { DEFAULT_SETTINGS, type Settings } from "../settings/settings.js";
@@ -61,8 +64,16 @@ export type CatalogueEvent =
   | AssetUpdatedEvent
   | SettingsChangedEvent;
 
-/** Events with a business date: everything except catalogue, settings and reversals. */
-export type OperationEvent = Exclude<SupportedEvent, CatalogueEvent | ReversalEvent>;
+/** Types of feature 002 not yet projected; each task removes its own. */
+const PENDING_TYPES = new Set<string>(["corporate_action", "thesis_opened", "thesis_closed"]);
+
+const isPending = (type: string): boolean => isReservedEventType(type) || PENDING_TYPES.has(type);
+
+/** Events with a business date: everything except catalogue, settings, theses and reversals. */
+export type OperationEvent = Exclude<
+  SupportedEvent,
+  CatalogueEvent | ReversalEvent | CorporateActionEvent | ThesisOpenedEvent | ThesisClosedEvent
+>;
 
 interface Positioned<E extends SupportedEvent = SupportedEvent> {
   event: E;
@@ -81,7 +92,7 @@ const isCatalogue = (entry: Positioned): entry is Positioned<CatalogueEvent> =>
   CATALOGUE_TYPES.has(entry.event.type);
 
 export const isOperationEvent = (event: LedgerEvent): event is OperationEvent =>
-  !CATALOGUE_TYPES.has(event.type) && event.type !== "reversal" && !isReservedEventType(event.type);
+  !CATALOGUE_TYPES.has(event.type) && event.type !== "reversal" && !isPending(event.type);
 
 const isOperation = (entry: Positioned): entry is Positioned<OperationEvent> =>
   isOperationEvent(entry.event);
@@ -265,7 +276,7 @@ export const projectLedger = (
     state.positionOf.set(event.id, position);
   });
   for (const event of events) {
-    if (isReservedEventType(event.type)) {
+    if (isPending(event.type)) {
       reject(event, new UnsupportedEventError(event.type, event.id));
       continue;
     }

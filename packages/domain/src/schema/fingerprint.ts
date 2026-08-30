@@ -84,12 +84,14 @@ const tupleOf = (event: FingerprintInput): string[] | undefined => {
         event.amount,
         event.currency,
       ];
+    case "corporate_action":
+      return ["", "", "", event.asset_id, event.type, event.effective_date, event.kind, "", ""];
     default:
       return undefined;
   }
 };
 
-/** `sha256:<hex>` for fingerprinted types; `undefined` for catalogue, settings, tracking, valuation and reversal. */
+/** `sha256:<hex>` for fingerprinted types; `undefined` for catalogue, settings, tracking, valuation, theses and reversal. */
 export const fingerprintOf = (event: FingerprintInput): string | undefined => {
   const tuple = tupleOf(event);
   return tuple === undefined ? undefined : `sha256:${sha256Hex(tuple.join("|"))}`;

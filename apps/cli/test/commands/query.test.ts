@@ -124,13 +124,19 @@ describe("atlas queries", () => {
           schema_version: 1,
           id: "01ARYZ6S41TSV4RRFFQ69G5FZZ",
           recorded_at: "2026-09-01T18:00:00.000Z",
-          type: "thesis_opened",
+          type: "cash_deposit",
+          account_id: "acc_missing",
+          value_date: "2026-09-01",
+          amount: "1",
+          currency: "EUR",
+          fx_rate: "1",
+          fingerprint: "sha256:x",
         },
       ],
     });
     expect(await broken.exec(["check"])).toBe(1);
-    expect(broken.text()).toContain("unsupported_event");
+    expect(broken.text()).toContain("unknown_account");
     expect(await broken.exec(["positions"])).toBe(1);
-    expect(broken.text()).toContain("feature 002");
+    expect(broken.text()).toContain("acc_missing no existe");
   });
 });

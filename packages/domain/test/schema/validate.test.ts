@@ -33,9 +33,9 @@ describe("validateShape: envelope", () => {
     expect(validateShape(variant(SAMPLES.buy, { corrects_id: ID.sell })).corrects_id).toBe(ID.sell);
   });
 
-  it("accepts reserved types at envelope level without checking their fields", () => {
-    const reserved = { ...envelope(ID.buy, "thesis_opened"), anything: 1 };
-    expect(validateShape(reserved)).toBe(reserved);
+  it("rejects the formerly reserved types when their fields are missing", () => {
+    rejects({ ...envelope(ID.buy, "thesis_opened"), anything: 1 }, "missing_field");
+    rejects({ ...envelope(ID.buy, "corporate_action") }, "missing_field");
   });
 });
 
@@ -62,6 +62,15 @@ describe("validateShape: field rules", () => {
     rejects(variant(SAMPLES.account_created, { book: "other" }), "invalid_field");
     rejects(variant(SAMPLES.order_updated, { order_id: "1" }), "invalid_field");
     rejects(variant(SAMPLES.reversal, { reason: "" }), "invalid_field");
+    rejects(variant(SAMPLES.corporate_action, { effects: "scale" }), "invalid_field");
+    rejects(variant(SAMPLES.corporate_action, { kind: "dividend" }), "invalid_field");
+    rejects(variant(SAMPLES.corporate_action, { source_document: "" }), "invalid_field");
+    rejects(variant(SAMPLES.thesis_opened, { expected_horizon_days: "90" }), "invalid_field");
+    rejects(variant(SAMPLES.thesis_opened, { expected_horizon_days: 0 }), "invalid_field");
+    rejects(variant(SAMPLES.thesis_opened, { expected_horizon_days: 1.5 }), "invalid_field");
+    rejects(variant(SAMPLES.thesis_opened, { planned_size_eur: "0" }), "invalid_field");
+    rejects(variant(SAMPLES.thesis_closed, { closing_notes: "" }), "invalid_field");
+    expect(validateShape(variant(SAMPLES.sell, { thesis_id: "th_spec_1" }))).toBeTruthy();
   });
 });
 

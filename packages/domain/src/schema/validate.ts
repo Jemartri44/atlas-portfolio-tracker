@@ -19,6 +19,7 @@ import {
   ASSET_CLASSES,
   ASSET_TYPES,
   BOOKS,
+  CORPORATE_ACTION_KINDS,
   type LedgerEvent,
   ORDER_SIDES,
   ORDER_STAGES,
@@ -34,7 +35,9 @@ type RuleKind =
   | "currency"
   | "country"
   | "ulid"
-  | "enum";
+  | "enum"
+  | "array"
+  | "positive_integer";
 
 interface Rule {
   kind: RuleKind;
@@ -108,7 +111,12 @@ const RULES: Record<SupportedEventType, Rules> = {
   asset_updated: ASSET,
   settings_changed: {},
   buy: { ...OPERATION, order_id: opt("ulid"), thesis_id: opt("string") },
-  sell: { ...OPERATION, order_id: opt("ulid"), withholding: opt("decimal") },
+  sell: {
+    ...OPERATION,
+    order_id: opt("ulid"),
+    withholding: opt("decimal"),
+    thesis_id: opt("string"),
+  },
   transfer: {
     request_id: opt("ulid"),
     from_account_id: req("string"),
@@ -222,6 +230,25 @@ const RULES: Record<SupportedEventType, Rules> = {
     quantity_out: opt("positive_decimal"),
     notes: opt("string"),
   },
+  corporate_action: {
+    kind: oneOf(CORPORATE_ACTION_KINDS),
+    asset_id: req("string"),
+    effective_date: req("date"),
+    source_document: req("string"),
+    effects: req("array"),
+    notes: opt("string"),
+    fingerprint: req("string"),
+  },
+  thesis_opened: {
+    thesis_id: req("string"),
+    account_id: req("string"),
+    asset_id: req("string"),
+    hypothesis: req("string"),
+    expected_horizon_days: req("positive_integer"),
+    invalidation: req("string"),
+    planned_size_eur: req("positive_decimal"),
+  },
+  thesis_closed: { thesis_id: req("string"), closing_notes: req("string") },
   reversal: { reverses_id: req("ulid"), reason: req("string") },
 };
 
@@ -246,6 +273,8 @@ const CHECKS: Record<RuleKind, (value: unknown, rule: Rule) => boolean> = {
   ulid: (value) => isUlid(value),
   enum: (value, rule) =>
     typeof value === "string" && (rule.values as readonly string[]).includes(value),
+  array: (value) => Array.isArray(value),
+  positive_integer: (value) => typeof value === "number" && Number.isInteger(value) && value > 0,
 };
 
 const invalid = (
