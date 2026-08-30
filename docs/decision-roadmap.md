@@ -20,9 +20,9 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | 4 | Semántica de operaciones y FIFO | Fase 1 | ADR-0009, ADR-0010, ADR-0011, `docs/data-schema.md` §6-8 | **Cerrada** 2026-08-30 |
 | 5 | Calidad, proceso y tooling del asistente | Fase 1 | Spec §11, `.githooks/`, `.claude/`, `.github/`, `LICENSE` | **Cerrada** 2026-08-30 |
 | — | *Challenge externo de las rondas 1-5* | Fase 1 | ADR-0012, ADR-0013, `docs/fiscal-questions.md` | **Hecho** 2026-08-30: 10 hallazgos aplicados; repetir antes de cada fase |
-| — | *Fase 0 (validación con la realidad, tareas del usuario)* | Rondas 6-7 | — | En curso: MyInvestor e IBKR pendientes; AWS y Yahoo diferidos a antes de la Fase 4 |
-| — | *Fase 1 (libro mayor): features 001 y 002* | Fases 2-5 | `specs/001-ledger-core/`, `specs/002-corporate-actions/`, PRs #10, #12, #15 | **Fusionadas** 2026-08-30. Sigue 003 (datos sintéticos, `compact`, migración de prueba, `integrity` completa); después 004 (MyInvestor) y 005 (IBKR), que dependen de la Fase 0 |
-| 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente |
+| — | *Fase 0 (validación con la realidad, tareas del usuario)* | Rondas 6-7 | — | En curso: IBKR sin abrir; la primera suscripción a MyInvestor (y con ella la exportación de operaciones de fondos) se aplaza hasta que la app esté lista para registrarla; AWS y Yahoo diferidos a antes de la Fase 4 |
+| — | *Fase 1 (libro mayor): features 001 y 002* | Fases 2-5 | `specs/001-ledger-core/`, `specs/002-corporate-actions/`, PRs #10, #12, #15 | **Fusionadas** 2026-08-30. 003 (datos sintéticos, `compact`, migración de prueba, `integrity` completa, `backup`): prompt escrito 2026-08-30, en implementación; después 004 (MyInvestor) y 005 (IBKR), que dependen de la Fase 0 |
+| 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente; bloqueada por la Fase 0 (IBKR y exportación de fondos de MyInvestor) |
 | 7 | Aplicación web: framework, offline, auth, API | Fase 2 | ADR-0009+ | Pendiente |
 | 8 | Infraestructura, despliegue y copias de seguridad | Fase 4 | ADR-0010+ | Pendiente |
 | 9 | Salida fiscal | Fase 5 | Spec de la feature fiscal | Pendiente |
@@ -98,7 +98,7 @@ Decisiones:
 Ninguna bloquea la Fase 1: el dominio y la CLI no dependen de nada externo. Sus resultados alimentan las rondas 6 y 7 y los tests de contrato. Los ficheros privados (extractos reales, capturas) se dejan **fuera del repo**, en `~/atlas-private/` (ver `CLAUDE.md` → Private inputs).
 
 **Cuanto antes**
-1. **Extracto de MyInvestor**: recibidos el 2026-08-30 el xlsx de movimientos de efectivo y el PDF de posición (formato documentado en `docs/statements/myinvestor.md`). Falta la exportación de **operaciones de fondos**, que solo existirá tras la primera suscripción.
+1. **Extracto de MyInvestor**: recibidos el 2026-08-30 el xlsx de movimientos de efectivo y el PDF de posición (formato documentado en `docs/statements/myinvestor.md`). Falta la exportación de **operaciones de fondos**, que solo existirá tras la primera suscripción; el usuario la hará cuando la app esté lista para registrarla (decidido el 2026-08-30), así que la feature 004 espera a la Fase 2.
 
 **Cuando la cuenta de IBKR esté abierta**
 2. **Flex Query**: Activity Flex Query en XML con *Trades*, *Cash Transactions*, *Corporate Actions*, *Transfers*, *Open Positions*; activar Flex Web Service y generar el token de solo lectura. Descargar una vez por API y dejar el XML en `~/atlas-private/statements/ibkr/`.
