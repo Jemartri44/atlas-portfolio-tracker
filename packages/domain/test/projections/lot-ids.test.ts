@@ -21,11 +21,12 @@ describe("lot ids", () => {
     expect(openLot(state, lot("ast_b", "01E")).id).toBe("01E#1");
     expect(openLot(state, lot("ast_a", "01E")).id).toBe("01E#2");
     expect(openLot(state, lot("ast_a", "01F")).id).toBe("01F#0");
+    // fiscalLots lists per asset in insertion order: ast_a (#0, #2, then 01F#0) and ast_b (#1).
     expect(fiscalLots(state).map((entry) => entry.id)).toEqual([
       "01E#0",
       "01E#2",
-      "01E#1",
       "01F#0",
+      "01E#1",
     ]);
   });
 });
