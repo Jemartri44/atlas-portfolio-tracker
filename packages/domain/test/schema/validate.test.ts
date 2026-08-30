@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
 import { validateShape } from "../../src/schema/validate.js";
 import { envelope, ID, SAMPLES, sampleList, variant } from "../samples.js";
+import { TEST_SCHEMA_V2 } from "./test-schema.js";
 
 const rejects = (raw: unknown, code: string): void => {
   try {
@@ -31,6 +32,13 @@ describe("validateShape: envelope", () => {
     rejects(variant(SAMPLES.buy, { corrects_id: "nope" }), "invalid_envelope");
     rejects(variant(SAMPLES.buy, { type: "swap" }), "unknown_event_type");
     expect(validateShape(variant(SAMPLES.buy, { corrects_id: ID.sell })).corrects_id).toBe(ID.sell);
+  });
+
+  it("checks the envelope version against the injected schema", () => {
+    const v2 = variant(SAMPLES.buy, { schema_version: 2 });
+    expect(validateShape(v2, TEST_SCHEMA_V2)).toBe(v2);
+    rejects(v2, "invalid_envelope");
+    expect(() => validateShape(SAMPLES.buy, TEST_SCHEMA_V2)).toThrow(ValidationError);
   });
 
   it("rejects the formerly reserved types when their fields are missing", () => {

@@ -10,12 +10,7 @@ import { Decimal, isDecimalString } from "../money/decimal.js";
 import { isCurrency } from "../money/money.js";
 import { isRatioString } from "../money/ratio.js";
 import { validateSettings } from "../settings/settings.js";
-import {
-  CURRENT_SCHEMA_VERSION,
-  isReservedEventType,
-  isSupportedEventType,
-  type SupportedEventType,
-} from "./envelope.js";
+import { isReservedEventType, isSupportedEventType, type SupportedEventType } from "./envelope.js";
 import {
   ASSET_CLASSES,
   ASSET_TYPES,
@@ -28,6 +23,7 @@ import {
   ORDER_STAGES,
   TRANSFER_REQUEST_STAGES,
 } from "./events.js";
+import { CURRENT_LEDGER_SCHEMA, type LedgerSchema } from "./migrations/index.js";
 
 type RuleKind =
   | "string"
@@ -487,9 +483,9 @@ function checkTransfer(raw: UnknownRecord): void {
   }
 }
 
-const checkEnvelope = (raw: UnknownRecord): void => {
-  if (raw.schema_version !== CURRENT_SCHEMA_VERSION) {
-    throw invalid("invalid_envelope", `schema_version must be ${CURRENT_SCHEMA_VERSION}`, {
+const checkEnvelope = (raw: UnknownRecord, schema: LedgerSchema): void => {
+  if (raw.schema_version !== schema.version) {
+    throw invalid("invalid_envelope", `schema_version must be ${schema.version}`, {
       field: "schema_version",
       value: raw.schema_version,
     });
@@ -516,12 +512,15 @@ const checkEnvelope = (raw: UnknownRecord): void => {
   }
 };
 
-/** Validates envelope and per-type shape. Returns the same object, typed. */
-export const validateShape = (raw: unknown): LedgerEvent => {
+/** Validates envelope (against `schema.version`) and per-type shape. Returns the same object, typed. */
+export const validateShape = (
+  raw: unknown,
+  schema: LedgerSchema = CURRENT_LEDGER_SCHEMA,
+): LedgerEvent => {
   if (!isRecord(raw)) {
     throw invalid("invalid_line", "an event must be a JSON object", { value: raw });
   }
-  checkEnvelope(raw);
+  checkEnvelope(raw, schema);
   const type = raw.type;
   if (isReservedEventType(type)) {
     return raw as LedgerEvent;

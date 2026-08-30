@@ -52,11 +52,17 @@ export { type ValuationAt, valuations } from "./projections/valuations.js";
 export * from "./schema/envelope.js";
 export * from "./schema/events.js";
 export { fingerprintOf } from "./schema/fingerprint.js";
-export { type DecodedLine, decodeLine, encodeLine } from "./schema/line.js";
 export {
-  MIGRATIONS,
+  canonicalLine,
+  type DecodedLine,
+  decodeLine,
+  encodeLine,
+  parseLine,
+} from "./schema/line.js";
+export {
+  CURRENT_LEDGER_SCHEMA,
+  type LedgerSchema,
   type Migration,
-  type MigrationChain,
   migrate,
 } from "./schema/migrations/index.js";
 export { validateShape } from "./schema/validate.js";
