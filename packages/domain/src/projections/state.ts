@@ -177,6 +177,8 @@ export interface LedgerState {
   /** Balance per `account_id|currency`. */
   cash: Map<string, Money>;
   lots: Map<AssetId, AssetLots>;
+  /** Lots created per source event, to number lot ids uniquely across assets. */
+  lotCounts: Map<Ulid, number>;
   gains: RealizedGain[];
   income: InvestmentIncome[];
   valuations: ValuationEvent[];
@@ -209,6 +211,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   positions: new Map(),
   cash: new Map(),
   lots: new Map(),
+  lotCounts: new Map(),
   gains: [],
   income: [],
   valuations: [],

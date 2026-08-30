@@ -42,12 +42,11 @@ const before = (a: FiscalLot, b: FiscalLot): boolean =>
   a.acquisition_date < b.acquisition_date ||
   (a.acquisition_date === b.acquisition_date && a.position < b.position);
 
-/** Creates a lot and inserts it in FIFO order. Returns its id. */
+/** Creates a lot and inserts it in FIFO order. Ids are `<event>#<n>`, numbered per event across assets. */
 export const openLot = (state: LedgerState, lot: NewLot): FiscalLot => {
   const entry = lotsOf(state, lot.asset_id);
-  const sequence = [...entry.open, ...entry.closed].filter(
-    (existing) => existing.source_event_id === lot.source_event_id,
-  ).length;
+  const sequence = state.lotCounts.get(lot.source_event_id) ?? 0;
+  state.lotCounts.set(lot.source_event_id, sequence + 1);
   const created: FiscalLot = {
     id: `${lot.source_event_id}#${sequence}`,
     asset_id: lot.asset_id,
