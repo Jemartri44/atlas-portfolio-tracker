@@ -79,7 +79,7 @@ apps/web           Vite SPA; uses domain to project/simulate offline.
 infra/             Terraform.
 ```
 
-Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `StatementSource`, `PriceSource`, `FxRateSource`, `DocumentStore`, `Notifier`, `Clock`. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
+Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `StatementSource`, `PriceSource`, `FxRateSource`, `DocumentStore`, `Notifier`, `Clock`, `RandomSource`. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
 
 ## Working on a feature (for implementing assistants)
 

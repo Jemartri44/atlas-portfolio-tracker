@@ -36,6 +36,7 @@ infra/               Terraform.
 | `DocumentStore` | Guardar fuentes documentales y extractos importados | S3, fichero local |
 | `Notifier` | Enviar avisos | SES, consola |
 | `Clock` | Fecha y hora actuales | sistema, fijo en tests |
+| `RandomSource` | Bytes aleatorios para el ULID (el dominio no puede usar `globalThis.crypto` sin romper su aislamiento) | Web Crypto en `adapters`, determinista en tests. *Añadido el 2026-08-30 al implementar la feature 001* |
 
 El AWS SDK solo aparece en `adapters` (S3 para el libro y documentos, SSM para el token de IBKR, SES para correo). La CLI en local no lo carga.
 
