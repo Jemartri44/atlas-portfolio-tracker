@@ -56,6 +56,15 @@ export class ConflictError extends DomainError {
   }
 }
 
+/** `replace` would overwrite an existing archive; archives are never overwritten. */
+export class ArchiveExistsError extends DomainError {
+  constructor(archiveName: string) {
+    super("archive_exists", `archive ${archiveName} already exists; it is never overwritten`, {
+      archive_name: archiveName,
+    });
+  }
+}
+
 /** A referenced event does not exist. */
 export class NotFoundError extends DomainError {
   constructor(id: string) {

@@ -128,8 +128,10 @@ describe("recordEvent", () => {
     const racing = {
       ...deps,
       store: {
-        load: deps.store.load.bind(store),
+        schema: store.schema,
+        load: () => store.load(),
         append: () => Promise.reject(new ConflictError()),
+        replace: () => Promise.reject(new ConflictError()),
       },
     };
     await expect(recordEvent(racing, buyDraft)).rejects.toBeInstanceOf(ConflictError);

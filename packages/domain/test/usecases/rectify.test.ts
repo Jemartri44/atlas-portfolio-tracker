@@ -128,7 +128,8 @@ describe("reverseEvent", () => {
     const b = new LedgerBuilder();
     catalogue(b);
     const deposit = b.deposit({ account_id: "acc_fund" });
-    b.raw({ ...b.nextEnvelope("thesis_opened"), thesis_id: "t" } as LedgerEvent);
+    // Invalid at projection time (a thesis on a core account), so a store still loads it.
+    b.thesisOpened({ thesis_id: "t", account_id: "acc_fund", asset_id: "ast_world" });
     const store = new TestStore(b.build());
     const result = await reverseEvent(testDeps(store, "2026-12-01T10:00:00.000Z"), deposit.id, "x");
     expect(result.reversal.reverses_id).toBe(deposit.id);
@@ -224,7 +225,12 @@ describe("correctEvent", () => {
     const deps = testDeps(store, "2027-01-15T10:00:00.000Z");
     const racing = {
       ...deps,
-      store: { load: () => store.load(), append: () => Promise.reject(new ConflictError()) },
+      store: {
+        schema: store.schema,
+        load: () => store.load(),
+        append: () => Promise.reject(new ConflictError()),
+        replace: () => Promise.reject(new ConflictError()),
+      },
     };
     await expectRejection(correctEvent<BuyEvent>(racing, buy.id, draftOf(buy), "x"), ConflictError);
     const result = await correctEvent<BuyEvent>(deps, buy.id, { ...draftOf(buy), fee: "1" }, "fee");
