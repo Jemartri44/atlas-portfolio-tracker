@@ -1,12 +1,12 @@
 <!--
 Sync Impact Report
-- Version change: 1.1.0 → 1.2.0
-- Modified principles: VII (100% line and branch coverage required in packages/domain, blocking in CI)
-- Modified sections: Flujo de desarrollo (git hooks, PR template, MIT licence)
+- Version change: 1.2.0 → 1.3.0
+- Modified principles: II (ECB rate as published, fiscal date per asset type, reversal of consumed events rejected — ADR-0012/0013); VII (new mandatory edge cases: reversal of a sold purchase, year-end trade/settlement split, fund loss followed by monthly contribution, reverse split across two accounts)
+- Modified sections: none
 - Added sections: none
 - Removed sections: none
 - Templates requiring updates: none
-- Follow-up TODOs: none.
+- Follow-up TODOs: advisor answers in docs/fiscal-questions.md may change Settings defaults, not this document.
 -->
 
 # Constitución de Atlas Portfolio Tracker
@@ -33,7 +33,8 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - El traspaso entre fondos conserva `acquisition_date` y `unit_cost_eur` de los lotes origen. **NUNCA se modela como venta seguida de compra.**
 - Los eventos corporativos son operaciones de primera clase (`corporate_action`) con lógica propia de transformación de lotes y fuente documental obligatoria.
 - Ningún cálculo fiscal DEBE depender de precios de mercado. Los precios son informativos; la fiscalidad sale exclusivamente del libro.
-- El dinero se representa en decimal, nunca en coma flotante. Se guardan siempre importe original, divisa y tipo de cambio del BCE de la fecha valor.
+- El dinero se representa en decimal, nunca en coma flotante. Se guardan siempre importe original, divisa y el tipo del BCE **tal cual se publica** (con su fecha) de la **fecha fiscal**, que depende del tipo de activo y es configurable (ADR-0013).
+- Anular un evento que otros eventos ya consumieron se **rechaza**: primero se rectifica lo que dependía de él (ADR-0003, hallazgo 3 del *challenge*).
 
 *Razón:* estos son los errores que no se detectan hasta la primera declaración de la Renta con ventas, años después, y entonces cuestan dinero.
 
@@ -76,7 +77,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 ### VII. Tests primero donde un error cuesta dinero
 
 - Prioridad por daño si fallan: motor FIFO y transformaciones de lotes, conversión de divisa por fecha valor, regla de los dos meses, reparto de la aportación mensual, parsers de extractos.
-- Casos límite obligatorios: varios lotes con la misma fecha, fracciones, contrasplit con liquidación en efectivo, recompra en el límite de los dos meses, traspaso parcial.
+- Casos límite obligatorios: varios lotes con la misma fecha, fracciones, contrasplit con liquidación en efectivo **en dos cuentas**, recompra en el límite de la ventana, traspaso parcial, anulación de una compra ya vendida (rechazo), venta el 30/12 con liquidación el 02/01, pérdida en fondo seguida de aportación mensual dentro del año.
 - Los parsers tienen tests de contrato contra ficheros de ejemplo anonimizados versionados en el repositorio.
 - `packages/domain` mantiene **cobertura del 100% de líneas y ramas**, bloqueante en CI. Fuera del dominio no hay umbral numérico: mandan los tests de contrato e integración.
 - Ninguna funcionalidad del motor fiscal se da por terminada sin sus tests.
@@ -107,4 +108,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.2.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30
+**Version**: 1.3.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30

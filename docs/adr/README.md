@@ -15,6 +15,8 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0009](0009-fifo-scope.md) | FIFO por activo entre cuentas; sin activos compartidos entre libros | Aceptada |
 | [0010](0010-transfer-model.md) | Traspaso: hecho contable atómico + eventos de seguimiento | Aceptada |
 | [0011](0011-corporate-actions-primitives.md) | Eventos corporativos como composición de 5 primitivas de lote | Aceptada |
+| [0012](0012-cash-events-and-pending-orders.md) | Eventos de efectivo, base de coste por importe, órdenes pendientes, traspaso de custodia | Aceptada |
+| [0013](0013-fiscal-date-and-wash-sale-window.md) | Fecha fiscal y ventana de recompra por tipo de activo; sentido de `fx_rate` | Aceptada, verificación fiscal pendiente |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 
