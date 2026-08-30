@@ -4,7 +4,7 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 
 ## Estado
 
-Feature `001-ledger-core` (Fase 1): dominio puro (`@atlas/domain`), adaptadores de fichero y memoria (`@atlas/adapters`) y la CLI `atlas` sobre un `ledger.jsonl` local. Sin API, sin web, sin infraestructura todavía. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/).
+Fase 1 completa: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local) y feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha). Sin API, sin web, sin infraestructura todavía. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/) y [`specs/002-corporate-actions/`](specs/002-corporate-actions/).
 
 ## Documentación
 
@@ -63,6 +63,40 @@ atlas delete <id> --reason "duplicado"
 atlas order place --account acc_fund --asset ast_world --side buy --amount 500 --requested-date 2027-07-01 --yes
 atlas transfer request --from-account acc_fund --from-asset ast_world --to-account acc_fund --to-asset ast_bonds --quantity-out 4 --requested-date 2027-03-01 --yes
 atlas export --format csv --out ledger.csv
+```
+
+### Eventos corporativos y tesis
+
+Un evento corporativo (`corporate_action`) lleva un `kind` para las personas y una lista de **cinco primitivas de lote** (`scale`, `convert`, `carve_out`, `forced_sale`, `grant`) que es lo único que el dominio ejecuta; una tabla por `kind` decide qué secuencias se admiten (`docs/data-schema.md` §8.5, ADR-0011). Los asistentes `atlas ca <kind>` construyen los efectos a partir de flags sencillos, muestran el evento y una tabla **antes/después** de lotes y posiciones, y escriben solo tras confirmar. `ratio` admite un decimal (`4`, `0.25`) o una fracción `nuevas/antiguas` (`1/4`, `4/3`) para que un contrasplit 1:3 quede exacto.
+
+```bash
+# Split 4:1 de una acción: cantidades ×4, coste y fecha de adquisición intactos, sin hecho imponible
+atlas asset add --id ast_acme --type stock --book core --asset-class equity --name "ACME" --currency EUR --not-transferable --yes
+atlas add buy --account acc_fund --asset ast_acme --trade-date 2027-01-10 --value-date 2027-01-12 --quantity 10 --unit-price 100 --currency EUR --fx-rate 1 --fx-rate-date 2027-01-10 --yes
+atlas ca split --asset ast_acme --ratio 4 --effective-date 2027-03-01 --source-document https://acme.example/split.pdf --yes
+
+# Contrasplit 1:4 con liquidación de picos cuenta a cuenta (los picos son un hecho imponible aunque la ganancia sea cero)
+atlas ca reverse-split --asset ast_acme --ratio 1/4 --effective-date 2027-06-01 --source-document https://acme.example/reverse.pdf \
+  --cash-per-share 400 --currency EUR --fx-rate 1 --fx-rate-date 2027-06-01 --fees acc_fund=1 --yes
+
+# Otros asistentes: merger, spin-off, fund-merger, share-class-change, fund-liquidation, delisting; raw para el resto
+atlas ca raw --asset ast_acme --kind issuer_liquidation --effects-json '[{"op":"forced_sale","per_account":[{"account_id":"acc_fund","quantity":"all"}],"unit_price":"0","currency":"EUR","fx_rate":"1","fx_rate_date":"2028-01-15"}]' --effective-date 2028-01-15 --source-document documents/acme/liquidation.pdf --yes
+```
+
+El documento fuente (`--source-document`) se guarda como referencia: el PDF se copia a mano a `documents/`. Un `corporate_action` no se edita: `atlas delete <id>` y registrarlo de nuevo.
+
+En el cubo especulativo **no se puede comprar sin tesis** (regla 15 del plan): la tesis se abre antes en el libro y cada compra la referencia con `--thesis`; las ventas también pueden enlazarse para que el resultado de la tesis sea derivable.
+
+```bash
+atlas account add --id acc_bucket --name "Cubo" --platform ibkr --book bucket --base-currency EUR --country IE --yes
+atlas asset add --id ast_spec --type stock --book bucket --name "Spec Inc" --currency USD --not-transferable --yes
+atlas thesis open --id th_spec_1 --account acc_bucket --asset ast_spec --hypothesis "Resultados Q3 por encima del consenso" \
+  --horizon-days 90 --invalidation "Guidance recortada" --planned-size 500 --yes
+atlas add buy --account acc_bucket --asset ast_spec --trade-date 2027-07-01 --value-date 2027-07-03 --quantity 10 --unit-price 50 --fee 1 --currency USD --fx-rate 1.1 --fx-rate-date 2027-07-01 --thesis th_spec_1 --yes
+atlas add sell --account acc_bucket --asset ast_spec --trade-date 2027-09-01 --value-date 2027-09-03 --quantity 10 --unit-price 60 --fee 1 --currency USD --fx-rate 1.1 --fx-rate-date 2027-09-01 --thesis th_spec_1 --yes
+atlas thesis close th_spec_1 --notes "Cumplida" --yes
+atlas thesis list --closed     # invertido, resultado, comisiones, posición viva y días abierta
+atlas valuations --date 2027-12-31   # última foto de valoración por cuenta y activo (Modelo 720)
 ```
 
 Códigos de salida: `0` OK · `1` error de validación o de proyección · `2` conflicto de escritura (repite) · `3` huella repetida sin `--confirm-duplicate` · `4` falta confirmación sin terminal (añade `--yes`) · `5` libro escrito por una versión más nueva · `64` uso incorrecto.
