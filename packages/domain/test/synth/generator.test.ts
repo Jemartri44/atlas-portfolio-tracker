@@ -90,9 +90,13 @@ describe("generateLedger: the scenario contains every rare case", () => {
     const types = new Set(ofType("asset_created").map((asset) => asset.asset_type));
     expect([...types].sort()).toEqual(["etc", "etp", "fund", "money_market", "stock"]);
     expect(state.accounts.get("acc_bucket")?.book).toBe("bucket");
-    expect(state.settingsHistory).toHaveLength(2);
+    expect(state.settingsHistory).toHaveLength(3);
     expect(state.settingsHistory[0]?.settings.target_weights?.ast_world).toBe("45");
     expect(state.settingsHistory[1]?.settings.target_weights?.ast_world).toBe("40");
+    // After the fund merger and the share-class change the plan names the
+    // surviving assets, so the contribution never proposes a fund that is gone.
+    expect(state.settingsHistory[2]?.settings.target_weights?.ast_smallcap_b).toBe("10");
+    expect(state.settingsHistory[2]?.settings.target_weights?.ast_smallcap).toBeUndefined();
   });
 
   it("changes an identifier and deactivates the delisted asset", () => {

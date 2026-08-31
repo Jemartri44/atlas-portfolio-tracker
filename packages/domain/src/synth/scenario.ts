@@ -278,6 +278,20 @@ const TARGET_WEIGHTS_LATER: Record<string, string> = {
   ast_btc: "5",
 };
 
+/**
+ * The plan after the fund merger and the share-class change: the same weights
+ * moved onto the surviving assets. Without this the plan would keep naming
+ * funds that no longer exist and the contribution would propose buying them.
+ */
+const TARGET_WEIGHTS_AFTER_CONVERSIONS: Record<string, string> = {
+  ast_world: "40",
+  ast_smallcap_b: "10",
+  ast_bonds_i: "22",
+  ast_mm: "13",
+  ast_gold: "10",
+  ast_btc: "5",
+};
+
 const settingsWith = (weights: Record<string, string>, contribution: string): Settings => ({
   ...DEFAULT_SETTINGS,
   target_weights: weights,
@@ -1112,6 +1126,11 @@ class Scenario {
           break;
         case 18:
           this.shareClassChange(block);
+          // The plan follows the assets it now owns.
+          b.record(addDays(block, 1), {
+            type: "settings_changed",
+            settings: settingsWith(TARGET_WEIGHTS_AFTER_CONVERSIONS, p.worldAmount),
+          });
           break;
         case 19:
           this.interest(dateOf(year, month, 28));
