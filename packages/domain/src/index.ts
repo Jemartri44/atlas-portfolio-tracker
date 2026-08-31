@@ -10,6 +10,7 @@ export {
   isCivilDate,
   isLeapYear,
   isWeekend,
+  lastWorkingDay,
   yearOf,
 } from "./dates/civil-date.js";
 export { madridDateOf, todayInMadrid } from "./dates/madrid.js";

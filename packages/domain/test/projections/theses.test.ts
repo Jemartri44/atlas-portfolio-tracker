@@ -6,7 +6,7 @@ import { theses } from "../../src/projections/theses.js";
 import type { BuyEvent, LedgerEvent } from "../../src/schema/events.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
-const USD = { currency: "USD", fx_rate: "1.1", fx_rate_date: "2027-01-10" } as const;
+const USD = { currency: "USD", fx_rate: "1.1", fx_rate_date: "2027-01-11" } as const;
 
 const bucketCatalogue = (b: LedgerBuilder): void => {
   catalogue(b);

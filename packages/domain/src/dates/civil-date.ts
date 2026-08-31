@@ -65,3 +65,11 @@ export const isWeekend = (date: CivilDate): boolean => {
   const weekday = (((epochDayOf(date) + 4) % 7) + 7) % 7; // 1970-01-01 was a Thursday
   return weekday === 0 || weekday === 6;
 };
+
+/**
+ * Last working day on or before `date`: on a day the ECB does not publish, the
+ * last published rate applies (ADR-0013). TARGET holidays are not known until
+ * `reference/ecb/` exists (round 6), so only weekends are rolled back.
+ */
+export const lastWorkingDay = (date: CivilDate): CivilDate =>
+  isWeekend(date) ? lastWorkingDay(addDays(date, -1)) : date;

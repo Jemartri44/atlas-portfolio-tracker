@@ -25,7 +25,7 @@ const buyDraft = {
   type: "buy" as const,
   account_id: "acc_fund",
   asset_id: "ast_world",
-  trade_date: "2027-01-10",
+  trade_date: "2027-01-11",
   value_date: "2027-01-12",
   quantity: "10",
   unit_price: "100",

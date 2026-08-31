@@ -6,7 +6,7 @@ describe("summarizeLedger", () => {
   it("counts events by type and lists accounts, assets and years", () => {
     const b = new LedgerBuilder();
     catalogue(b);
-    b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-10" });
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-11" });
     b.sell({
       account_id: "acc_fund",
       asset_id: "ast_world",

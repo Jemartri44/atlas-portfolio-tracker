@@ -126,7 +126,7 @@ describe("projectLedger: chronological order (Q1)", () => {
     const first = b.buy({
       account_id: "acc_fund",
       asset_id: "ast_world",
-      value_date: "2027-01-10",
+      value_date: "2027-01-11",
     });
     b.sell({
       account_id: "acc_fund",
@@ -332,7 +332,7 @@ describe("projectLedger: orders", () => {
       account_id: "acc_fund",
       asset_id: "ast_world",
       order_id: order.id,
-      value_date: "2027-07-03",
+      value_date: "2027-07-05",
     });
     b.orderUpdated({
       order_id: other.id,
@@ -345,7 +345,7 @@ describe("projectLedger: orders", () => {
     expect(state.orders.get(order.id)).toMatchObject({
       stage: "filled",
       closed_by: buy.id,
-      closed_on: "2027-07-03",
+      closed_on: "2027-07-05",
     });
     expect(state.orders.get(other.id)).toMatchObject({
       stage: "cancelled",
@@ -363,7 +363,7 @@ describe("projectLedger: orders", () => {
       account_id: "acc_fund",
       asset_id: "ast_world",
       order_id: order.id,
-      value_date: "2027-07-03",
+      value_date: "2027-07-05",
     });
     expect(failure(b.build()).code).toBe("order_mismatch");
 
@@ -375,7 +375,7 @@ describe("projectLedger: orders", () => {
       account_id: "acc_fund",
       asset_id: "ast_world",
       order_id: cancelled.id,
-      value_date: "2027-07-03",
+      value_date: "2027-07-05",
     });
     expect(failure(c.build()).code).toBe("order_closed");
 
@@ -396,7 +396,7 @@ describe("projectLedger: transfers", () => {
     const first = b.buy({
       account_id: "acc_fund",
       asset_id: "ast_world",
-      value_date: "2027-01-10",
+      value_date: "2027-01-11",
     });
     const second = b.buy({
       account_id: "acc_fund",
@@ -456,7 +456,7 @@ describe("projectLedger: transfers", () => {
         lot.source_lot_id,
       ]),
     ).toEqual([
-      [`${transfer.id}#0`, "2027-01-10", "7.5", "1000", `${first.id}#0`],
+      [`${transfer.id}#0`, "2027-01-11", "7.5", "1000", `${first.id}#0`],
       [`${transfer.id}#1`, "2027-02-01", "1.5", "240", `${second.id}#0`],
     ]);
     expect(realizedGains(state, 2027)).toEqual([]);
@@ -475,14 +475,14 @@ describe("projectLedger: transfers", () => {
     const inA = b.buy({
       account_id: "acc_fund",
       asset_id: "ast_world",
-      value_date: "2027-01-10",
+      value_date: "2027-01-11",
       quantity: "4",
       unit_price: "100",
     });
     const direct = b.buy({
       account_id: "acc_fund",
       asset_id: "ast_bonds",
-      value_date: "2027-01-10",
+      value_date: "2027-01-11",
       quantity: "4",
       unit_price: "50",
     });
@@ -671,7 +671,8 @@ describe("projectLedger: cash, income and valuations", () => {
       account_id: "acc_etf",
       asset_id: "ast_gold",
       currency: "EUR",
-      fx_rate_date: "2027-01-11",
+      // A working day after the fiscal date of the buy (2027-01-11).
+      fx_rate_date: "2027-01-12",
     });
     const state = projectLedger(b.build());
     expect(state.warnings.map((w) => w.code)).toEqual([

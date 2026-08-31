@@ -128,7 +128,7 @@ describe("applyScale", () => {
     expect(lot?.quantity.toString()).toBe("40");
     expect(lot?.original_quantity.toString()).toBe("10");
     expect(lot?.cost_eur.amount.toString()).toBe("1000");
-    expect(lot?.acquisition_date).toBe("2027-01-10");
+    expect(lot?.acquisition_date).toBe("2027-01-11");
     expect(q(state, "acc_fund", "ast_world")).toBe("40");
     expect(state.gains).toEqual([]);
     expect(integrity(state)).toEqual([]);
@@ -188,7 +188,7 @@ describe("applyConvert", () => {
     expect(lots.map((lot) => lot.id)).toEqual([`${EVENT}#0`, `${EVENT}#1`]);
     expect(lots.map((lot) => lot.quantity.toString())).toEqual(["5", "3.5"]);
     expect(lots.map((lot) => lot.cost_eur.amount.toString())).toEqual(["1000", "770"]);
-    expect(lots.map((lot) => lot.acquisition_date)).toEqual(["2027-01-10", "2027-02-10"]);
+    expect(lots.map((lot) => lot.acquisition_date)).toEqual(["2027-01-11", "2027-02-10"]);
     expect(lots.map((lot) => lot.source_lot_id)).toEqual([first?.id, second?.id]);
     expect(lots.map((lot) => lot.position)).toEqual([first?.position, second?.position]);
     expect(q(state, "acc_fund", "ast_world")).toBe("0");
@@ -243,7 +243,7 @@ describe("applyCarveOut", () => {
     expect(kept?.cost_eur.amount.toString()).toBe("800");
     expect(carved?.quantity.toString()).toBe("2.5");
     expect(carved?.cost_eur.amount.toString()).toBe("200");
-    expect(carved?.acquisition_date).toBe("2027-01-10");
+    expect(carved?.acquisition_date).toBe("2027-01-11");
     expect(carved?.source_lot_id).toBe(origin?.id);
     expect(carved?.position).toBe(origin?.position);
     expect(q(state, "acc_fund", "ast_world")).toBe("10");
@@ -458,13 +458,13 @@ describe("applyGrant", () => {
         currency: "USD",
         fx_rate: "1.25",
         fx_rate_date: "2027-03-02",
-        acquisition_date: "2027-01-10",
+        acquisition_date: "2027-01-11",
       }),
       ctx,
     );
     const [lot] = open(state, "ast_fork");
     expect(lot?.cost_eur.amount.toString()).toBe("32");
-    expect(lot?.acquisition_date).toBe("2027-01-10");
+    expect(lot?.acquisition_date).toBe("2027-01-11");
     expect(state.warnings.map((w) => w.code)).toEqual([
       "currency_mismatch",
       "fx_rate_date_after_fiscal_date",

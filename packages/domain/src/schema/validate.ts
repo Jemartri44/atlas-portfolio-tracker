@@ -2,7 +2,7 @@
 // required fields, decimal strings, dates, currencies, enumerations, ULIDs,
 // and the per-type consistency rules that need no projected state.
 
-import { isCivilDate } from "../dates/civil-date.js";
+import { isCivilDate, isWeekend } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
 import { isUlid } from "../ids/ulid.js";
@@ -174,7 +174,6 @@ const RULES: Record<SupportedEventType, Rules> = {
     quantity_in: req("positive_decimal"),
     nav_in: opt("positive_decimal"),
     value_date_in: req("date"),
-    fee: opt("decimal"),
     fingerprint: req("string"),
     notes: opt("string"),
   },
@@ -188,6 +187,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     currency: req("currency"),
     fx_rate: req("positive_decimal"),
     fx_rate_date: req("date"),
+    source_country: opt("country"),
     per_unit: opt("decimal"),
     broker_ref: opt("string"),
     fingerprint: req("string"),
@@ -368,6 +368,10 @@ const checkEffects = (raw: UnknownRecord): void => {
     checkFields(effect, EFFECT_COMMON, raw.type, path);
     const op = effect.op as EffectOp;
     checkFields(effect, EFFECT_RULES[op], raw.type, path);
+    if (op === "forced_sale" || op === "grant") {
+      checkFxPairs({ ...effect, type: raw.type }, [["currency", "fx_rate"]], path);
+      checkFxDates({ ...effect, type: raw.type }, ["fx_rate_date"], path);
+    }
     const entryRules = PER_ACCOUNT_RULES[op];
     if (entryRules !== undefined) {
       (effect.per_account as unknown[]).forEach((entry, position) => {
@@ -393,6 +397,65 @@ const exactlyOne = (raw: UnknownRecord, first: string, second: string): void => 
         fields: [first, second],
       },
     );
+  }
+};
+
+/**
+ * Currency/rate pairs each event type declares (data-schema.md §4). Declaring
+ * them in one table keeps the two ECB rules below impossible to forget in a new
+ * event type; `reserved-types.test.ts` and `validate.test.ts` check the cover.
+ */
+const FX_PAIRS: Partial<Record<SupportedEventType, readonly (readonly [string, string])[]>> = {
+  buy: [["currency", "fx_rate"]],
+  sell: [["currency", "fx_rate"]],
+  dividend: [["currency", "fx_rate"]],
+  interest: [["currency", "fx_rate"]],
+  fx_exchange: [
+    ["sold_currency", "fx_rate_sold"],
+    ["bought_currency", "fx_rate_bought"],
+  ],
+  cash_deposit: [["currency", "fx_rate"]],
+  cash_withdrawal: [["currency", "fx_rate"]],
+  standalone_fee: [["currency", "fx_rate"]],
+  valuation: [["currency", "fx_rate"]],
+};
+
+/** Fields holding the date of an ECB rate; the ECB publishes on working days only. */
+const FX_DATE_FIELDS: Partial<Record<SupportedEventType, readonly string[]>> = {
+  buy: ["fx_rate_date"],
+  sell: ["fx_rate_date"],
+  dividend: ["fx_rate_date"],
+  interest: ["fx_rate_date"],
+  fx_exchange: ["fx_rate_date"],
+};
+
+/** The euro is its own reference: the ECB publishes 1, not 1.0000 (challenge 2026-08-31, finding 5). */
+const checkFxPairs = (
+  raw: UnknownRecord,
+  pairs: readonly (readonly [string, string])[],
+  path = "",
+): void => {
+  for (const [currencyField, rateField] of pairs) {
+    if (raw[currencyField] === "EUR" && raw[rateField] !== "1") {
+      throw invalid(
+        "eur_fx_rate_not_one",
+        `${raw.type}: ${path}${rateField} must be exactly "1" when ${path}${currencyField} is EUR`,
+        { type: raw.type, field: `${path}${rateField}`, value: raw[rateField] },
+      );
+    }
+  }
+};
+
+const checkFxDates = (raw: UnknownRecord, fields: readonly string[], path = ""): void => {
+  for (const field of fields) {
+    const value = raw[field];
+    if (isCivilDate(value) && isWeekend(value)) {
+      throw invalid(
+        "fx_rate_date_weekend",
+        `${raw.type}: ${path}${field} falls on a weekend; the ECB publishes no rate then`,
+        { type: raw.type, field: `${path}${field}`, value },
+      );
+    }
   }
 };
 
@@ -455,6 +518,13 @@ function checkAssetClass(raw: UnknownRecord): void {
 }
 
 function checkTransfer(raw: UnknownRecord): void {
+  if (raw.fee !== undefined) {
+    throw invalid(
+      "transfer_fee_not_allowed",
+      "transfer: a transfer carries no fee; record the custodian charge as a standalone_fee",
+      { type: raw.type, field: "fee", value: raw.fee },
+    );
+  }
   const custody = raw.from_asset_id === raw.to_asset_id;
   if (custody) {
     if (raw.from_account_id === raw.to_account_id) {
@@ -514,6 +584,9 @@ const checkEnvelope = (raw: UnknownRecord, schema: LedgerSchema): void => {
 
 const ENVELOPE_FIELDS = ["schema_version", "id", "recorded_at", "type", "corrects_id"] as const;
 
+/** Where every ECB rate and rate date lives, by event type; the cover is checked in the tests. */
+export const FX_FIELDS = { pairs: FX_PAIRS, dates: FX_DATE_FIELDS } as const;
+
 /** Top-level fields a line of `type` may carry: envelope plus the type's rules (`settings` for settings_changed). */
 export const knownFieldsOf = (type: SupportedEventType): readonly string[] => [
   ...ENVELOPE_FIELDS,
@@ -538,6 +611,8 @@ export const validateShape = (
     throw invalid("unknown_event_type", `unknown event type ${String(type)}`, { value: type });
   }
   checkFields(raw, RULES[type], type);
+  checkFxPairs(raw, FX_PAIRS[type] ?? []);
+  checkFxDates(raw, FX_DATE_FIELDS[type] ?? []);
   CONSISTENCY[type]?.(raw);
   return raw as unknown as LedgerEvent;
 };

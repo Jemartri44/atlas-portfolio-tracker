@@ -172,7 +172,7 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
     ...envelope(ID.fx, "fx_exchange"),
     type: "fx_exchange",
     account_id: "acc_etf",
-    value_date: "2027-05-02",
+    value_date: "2027-05-03",
     sold_amount: "1085",
     sold_currency: "EUR",
     bought_amount: "1170",
@@ -181,7 +181,7 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
     fee_currency: "USD",
     fx_rate_sold: "1",
     fx_rate_bought: "1.0783",
-    fx_rate_date: "2027-05-02",
+    fx_rate_date: "2027-05-03",
     fingerprint: "sha256:5",
   },
   cash_deposit: {

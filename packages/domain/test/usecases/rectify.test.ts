@@ -258,7 +258,7 @@ describe("rectifying corporate actions", () => {
       account_id: "acc_fund",
       asset_id: "ast_world",
       quantity: "30",
-      value_date: "2027-05-01",
+      value_date: "2027-05-03",
     });
     const store = new TestStore(b.build());
     const error = await expectRejection(
