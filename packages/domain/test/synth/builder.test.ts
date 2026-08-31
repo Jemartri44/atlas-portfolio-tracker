@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { lastWorkingDay } from "../../src/dates/civil-date.js";
 import type { BuyEvent } from "../../src/schema/events.js";
 import { validateShape } from "../../src/schema/validate.js";
 import { ScenarioBuilder } from "../../src/synth/builder.js";
@@ -42,7 +43,7 @@ const buy = (b: ScenarioBuilder, account_id: string, quantity: string, date: str
     unit_price: "100",
     currency: "EUR",
     fx_rate: "1",
-    fx_rate_date: date,
+    fx_rate_date: lastWorkingDay(date),
     fee: "0",
     source: "manual",
   });
