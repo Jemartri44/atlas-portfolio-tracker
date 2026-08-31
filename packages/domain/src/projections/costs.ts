@@ -185,13 +185,17 @@ export const costSummary = (
     if (asset.book !== "core") {
       continue;
     }
-    const fees = totals.fees.get(assetId);
-    if (fees === undefined) {
-      continue; // an asset the core never traded has no cost to report
-    }
-    // Present without a purchase when the position arrived by transfer and was sold.
-    const invested = totals.invested.get(assetId) ?? Money.zero(EUR);
     const quantity = coreQuantityOf(state, assetId);
+    const fees = totals.fees.get(assetId);
+    // An asset that never traded and is not held has no cost to report. One
+    // that arrived by transfer or conversion has no commission of its own but
+    // does carry a TER, so it must weigh in the aggregate.
+    if (fees === undefined && !quantity.isPositive()) {
+      continue;
+    }
+    const feesEur = fees ?? Money.zero(EUR);
+    // Absent when the position arrived by transfer or conversion instead of a purchase.
+    const invested = totals.invested.get(assetId) ?? Money.zero(EUR);
     const price = prices.get(assetId);
     const value = valueOf(price, quantity);
     if (quantity.isPositive() && price === undefined) {
@@ -209,9 +213,9 @@ export const costSummary = (
     rows.push({
       asset_id: assetId,
       asset_class: asset.asset_class as AssetClass,
-      fees_eur: fees,
+      fees_eur: feesEur,
       invested_eur: invested,
-      ...(invested.isZero() ? {} : { fees_pct: fees.amount.div(invested.amount).mul(HUNDRED) }),
+      ...(invested.isZero() ? {} : { fees_pct: feesEur.amount.div(invested.amount).mul(HUNDRED) }),
       ...(ter === undefined ? {} : { ter }),
       ...(value === undefined ? {} : { value_eur: value }),
       ...(annualCost === undefined ? {} : { annual_cost_eur: annualCost }),

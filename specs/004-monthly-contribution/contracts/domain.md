@@ -9,8 +9,10 @@ manualPrices(state: LedgerState, date: CivilDate, settings: Settings): Map<Asset
 coreWeights(state: LedgerState, date: CivilDate, settings: Settings): CoreWeights
 contributionPlan(state: LedgerState, input: ContributionInput): ContributionPlan
 simulateTransfer(state: LedgerState, input: SimulateTransferInput): TransferSimulation
-costSummary(state: LedgerState, date: CivilDate, settings: Settings): CostSummary
+costSummary(state: LedgerState, events: readonly LedgerEvent[], date: CivilDate, settings: Settings): CostSummary
 ```
+
+`costSummary` recibe los eventos además del estado: las comisiones por operación no se acumulan en la proyección (hacerlo cambiaría `snapshotOf` y el *golden*), así que se recorren los eventos no anulados, como hace `deepCheck`.
 
 ```ts
 interface ContributionInput { amount?: DecimalString; date: CivilDate; settings: Settings }

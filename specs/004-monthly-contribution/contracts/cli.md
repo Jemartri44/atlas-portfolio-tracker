@@ -98,7 +98,7 @@ Nada se ha registrado.
 Aviso: 3 eventos inválidos en el libro; lo que sigue es una proyección parcial. Ejecuta `atlas check` para verlos.
 ```
 
-Va a la salida estándar antes de la tabla, salvo en `export`, donde va al canal de error para no contaminar el fichero ni la tubería (A9). Con `--json` no aparece: el dato es `"invalid_count": 3` en el objeto raíz.
+Va a la salida estándar antes de la tabla, salvo en `export`, donde va al canal de error para no contaminar el fichero ni la tubería (A9). Con `--json` no aparece: la salida de todo comando de solo lectura es el sobre `{ "invalid_count": <n>, "data": <payload> }`, uniforme para los diecisiete (antes cada comando emitía su payload desnudo; el sobre es la forma estable que permite añadir el contador sin inventar una envoltura distinta por comando).
 
 ### `atlas settings set` que invalida el pasado
 

@@ -193,8 +193,12 @@ describe("costSummary", () => {
       value_date_in: "2027-07-02",
     });
     const transferOnly = summary(b.build());
-    // ast_bonds only ever received a transfer: it never traded, so it has no row.
-    expect(rowOf(transferOnly, "ast_bonds")).toBeUndefined();
+    // ast_bonds only ever received a transfer: it is held (so it weighs in the
+    // TER) but nothing was invested in it, so it has no percentage.
+    const received = rowOf(transferOnly, "ast_bonds");
+    expect(received?.fees_eur.amount.toString()).toBe("0");
+    expect(received?.invested_eur.amount.toString()).toBe("0");
+    expect(received?.fees_pct).toBeUndefined();
     expect(rowOf(transferOnly, "ast_world")?.fees_pct).toBeDefined();
 
     // Once it is sold it does have a commission, but still nothing invested.
@@ -243,6 +247,13 @@ describe("costSummary", () => {
     expect(result.bucket.rows[0]?.fees_eur.amount.toString()).toBe("7");
     expect(result.core.rows.map((row) => row.asset_id)).not.toContain("ast_spec");
     expect(result.core.totals.fees_eur.amount.toString()).toBe("8");
+  });
+
+  it("keeps an asset that arrived by conversion out of the table only when it is gone", () => {
+    const b = traded();
+    b.asset("ast_new", { asset_class: "equity", ter: "0.09" });
+    // Never traded and never held: nothing to report.
+    expect(rowOf(summary(b.build()), "ast_new")).toBeUndefined();
   });
 
   it("answers with empty tables on a ledger that never traded", () => {
