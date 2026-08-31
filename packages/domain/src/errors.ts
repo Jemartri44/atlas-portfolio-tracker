@@ -104,15 +104,27 @@ export interface AffectedEvent {
   readonly error: string;
 }
 
-/** Reversing or correcting an event would invalidate later events. */
+/**
+ * Writing an event would leave other events invalid: reversing or correcting
+ * something later events consumed (`dependent_events`, ADR-0003), or a
+ * `settings_changed` that reinterprets the past (`newly_invalid_events`,
+ * ADR-0015). The second is the only one that can be accepted on purpose.
+ */
 export class DependentEventsError extends DomainError {
   readonly affected: readonly AffectedEvent[];
 
-  constructor(targetId: string, affected: readonly AffectedEvent[]) {
-    super("dependent_events", `event ${targetId} is consumed by later events; rectify them first`, {
-      target_id: targetId,
-      affected,
-    });
+  constructor(
+    targetId: string,
+    affected: readonly AffectedEvent[],
+    code: "dependent_events" | "newly_invalid_events" = "dependent_events",
+  ) {
+    super(
+      code,
+      code === "dependent_events"
+        ? `event ${targetId} is consumed by later events; rectify them first`
+        : `the new settings leave ${affected.length} recorded events invalid`,
+      { target_id: targetId, affected },
+    );
     this.affected = affected;
   }
 }

@@ -14,12 +14,19 @@ export interface Context {
   ledgerPath: string;
   yes: boolean;
   confirmDuplicate: boolean;
+  acceptInvalid: boolean;
   json: boolean;
 }
 
 export type Command = (ctx: Context, positionals: string[], flags: Flags) => Promise<number>;
 
-export const GLOBAL_FLAGS = ["ledger", "yes", "confirm-duplicate", "json"] as const;
+export const GLOBAL_FLAGS = [
+  "ledger",
+  "yes",
+  "confirm-duplicate",
+  "accept-invalid",
+  "json",
+] as const;
 
 export const EXIT = {
   ok: 0,

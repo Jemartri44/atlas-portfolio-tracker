@@ -96,8 +96,14 @@ export const confirmAndRecord = async (
   }
   const result = await recordEvent(ctx.deps, draft as unknown as Draft, {
     confirmDuplicate: ctx.confirmDuplicate,
+    acceptInvalid: ctx.acceptInvalid,
   });
   ctx.io.out(`Registrado ${summarize(result.event)}.`);
+  if (result.newlyInvalid.length > 0) {
+    ctx.io.out(
+      `${result.newlyInvalid.length} eventos registrados quedan inválidos bajo la configuración nueva; las consultas lo avisarán. Ejecuta \`atlas check\`.`,
+    );
+  }
   for (const line of describeWarnings(result.warnings)) {
     ctx.io.out(line);
   }

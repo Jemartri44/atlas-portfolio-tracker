@@ -59,7 +59,7 @@ export const COMMANDS: Record<string, Command> = {
   backup: backupCommand,
 };
 
-export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--json] <comando> …
+export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--accept-invalid] [--json] <comando> …
 
 comandos:
   account add|update|list        asset add|update|list        settings set|show
@@ -119,6 +119,7 @@ export const run = async (
       ledgerPath,
       yes: booleanFlag(flags, "yes"),
       confirmDuplicate: booleanFlag(flags, "confirm-duplicate"),
+      acceptInvalid: booleanFlag(flags, "accept-invalid"),
       json: booleanFlag(flags, "json"),
     };
     return await command(ctx, positionals, flags);

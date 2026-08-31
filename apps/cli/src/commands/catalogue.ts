@@ -257,14 +257,20 @@ export const settingsCommand = async (
     return 0;
   }
   if (action === "set") {
+    if (flags.has("wash-sale-window-days")) {
+      throw new UsageError(
+        "la ventana de recompra se cuenta de fecha a fecha: usa --wash-sale-window fund=1y,stock=2m (ADR-0014)",
+      );
+    }
     assertKnownFlags(flags, [
       "fiscal-date-rule",
-      "wash-sale-window-days",
+      "wash-sale-window",
+      "target-weights",
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
       ...GLOBAL_FLAGS,
     ]);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const current = settingsAt(state, todayInMadrid(ctx.deps.clock)).settings;
     const patch: Record<string, unknown> = {};
     const rules = stringFlag(flags, "fiscal-date-rule");
@@ -274,15 +280,17 @@ export const settingsCommand = async (
         ...parseAssignments(rules, "fiscal-date-rule"),
       };
     }
-    const windows = stringFlag(flags, "wash-sale-window-days");
+    const windows = stringFlag(flags, "wash-sale-window");
     if (windows !== undefined) {
-      const parsed = Object.fromEntries(
-        Object.entries(parseAssignments(windows, "wash-sale-window-days")).map(([key, value]) => [
-          key,
-          Number(value),
-        ]),
-      );
-      patch.wash_sale_window_days = { ...current.wash_sale_window_days, ...parsed };
+      patch.wash_sale_window = {
+        ...current.wash_sale_window,
+        ...parseAssignments(windows, "wash-sale-window"),
+      };
+    }
+    const weights = stringFlag(flags, "target-weights");
+    if (weights !== undefined) {
+      // Replaced whole, never merged: the weights must add up to 100 as a set.
+      patch.target_weights = parseAssignments(weights, "target-weights");
     }
     for (const flag of SETTINGS_DECIMALS) {
       const value = stringFlag(flags, flag);

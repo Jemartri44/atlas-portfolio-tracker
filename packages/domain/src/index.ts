@@ -85,6 +85,11 @@ export {
   type VersionCount,
 } from "./usecases/compact.js";
 export type { UseCaseDeps } from "./usecases/deps.js";
+export {
+  type CandidateCheck,
+  describeAffected,
+  newlyInvalid,
+} from "./usecases/invalid-events.js";
 export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
 export {
   completeDraft,

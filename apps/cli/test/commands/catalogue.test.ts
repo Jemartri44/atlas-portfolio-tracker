@@ -129,8 +129,10 @@ describe("atlas settings", () => {
         "set",
         "--fiscal-date-rule",
         "etc=value_date",
-        "--wash-sale-window-days",
-        "etc=62",
+        "--wash-sale-window",
+        "etc=62d",
+        "--target-weights",
+        "ast_world=60,ast_bonds=40",
         "--stale-price-days",
         "7",
         "--deviation-threshold-pp",
@@ -142,6 +144,8 @@ describe("atlas settings", () => {
     expect(await h.exec(["settings", "show", "--at", "2027-08-30"])).toBe(0);
     expect(h.text()).toContain('"etc": "value_date"');
     expect(h.text()).toContain('"stale_price_days": 7');
+    expect(h.text()).toContain('"etc": "62d"');
+    expect(h.text()).toContain('"ast_world": "60"');
     h.reset();
     expect(await h.exec(["settings", "show", "--at", "2020-01-01", "--json"])).toBe(0);
     expect((h.json() as { origin: string }).origin).toBe("default");
@@ -149,6 +153,16 @@ describe("atlas settings", () => {
     expect(await h.exec(["settings", "set", "--fiscal-date-rule", "etc=tomorrow", "--yes"])).toBe(
       1,
     );
+    h.reset();
+    // The legacy flag is gone: the window is counted date to date (ADR-0014).
+    expect(await h.exec(["settings", "set", "--wash-sale-window-days", "etc=62", "--yes"])).toBe(
+      64,
+    );
+    expect(h.text()).toContain("--wash-sale-window");
+    expect(await h.exec(["settings", "set", "--wash-sale-window", "etc=3m", "--yes"])).toBe(1);
+    expect(
+      await h.exec(["settings", "set", "--target-weights", "ast_world=60,ast_bonds=30", "--yes"]),
+    ).toBe(1);
     expect(await h.exec(["settings", "wipe"])).toBe(64);
   });
 });
