@@ -4,7 +4,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
 import type { SettingsChangedEvent } from "../schema/events.js";
-import { DEFAULT_SETTINGS, type Settings } from "../settings/settings.js";
+import { DEFAULT_SETTINGS, normalizeSettings, type Settings } from "../settings/settings.js";
 import type { LedgerState, SettingsEntry } from "./state.js";
 
 export const applySettingsChanged = (state: LedgerState, event: SettingsChangedEvent): void => {
@@ -16,6 +16,11 @@ export const applySettingsChanged = (state: LedgerState, event: SettingsChangedE
   });
 };
 
+/**
+ * `settingsAt` normalizes the legacy wash-sale window into `<n>d` (ADR-0014).
+ * `settingsHistory` keeps what the line says, so the snapshot stays faithful to
+ * the ledger; the reading point is where the tolerant form is resolved.
+ */
 export interface SettingsResolution {
   settings: Settings;
   /** Id of the `settings_changed` in force, or "default". */
@@ -31,7 +36,7 @@ export const settingsAt = (state: LedgerState, date: CivilDate): SettingsResolut
   }
   return found === undefined
     ? { settings: DEFAULT_SETTINGS, origin: "default" }
-    : { settings: found.settings, origin: found.event_id };
+    : { settings: normalizeSettings(found.settings), origin: found.event_id };
 };
 
 /** Settings used to derive fiscal dates: an explicit override, else the latest change, else the defaults (Q3). */
