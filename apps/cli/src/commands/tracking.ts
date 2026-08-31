@@ -1,11 +1,11 @@
 // atlas order place|cancel|note|list · atlas transfer request|update|pending
 
-import { loadAndProject, pendingOrders, pendingTransfers, todayInMadrid } from "@atlas/domain";
+import { pendingOrders, pendingTransfers, todayInMadrid } from "@atlas/domain";
 import { assertKnownFlags, booleanFlag, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
 import { requireId } from "./catalogue.js";
-import { confirmAndRecord, draftFromFlags, render } from "./shared.js";
+import { confirmAndRecord, draftFromFlags, loadForQuery, renderQuery } from "./shared.js";
 
 export const orderCommand = async (
   ctx: Context,
@@ -42,13 +42,14 @@ export const orderCommand = async (
   }
   if (action === "list") {
     assertKnownFlags(flags, ["all", ...GLOBAL_FLAGS]);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const today = todayInMadrid(ctx.deps.clock);
     const rows = booleanFlag(flags, "all")
       ? [...state.orders.values()].map((order) => ({ ...order, days_open: 0 }))
       : pendingOrders(state, today);
-    render(
+    renderQuery(
       ctx,
+      state,
       rows,
       table(
         ["orden", "cuenta", "activo", "sentido", "importe", "cantidad", "fecha", "estado", "días"],
@@ -116,10 +117,11 @@ export const transferCommand = async (
   }
   if (action === "pending") {
     assertKnownFlags(flags, GLOBAL_FLAGS);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const rows = pendingTransfers(state, todayInMadrid(ctx.deps.clock));
-    render(
+    renderQuery(
       ctx,
+      state,
       rows,
       table(
         ["solicitud", "origen", "destino", "cantidad", "importe EUR", "fecha", "etapa", "días"],

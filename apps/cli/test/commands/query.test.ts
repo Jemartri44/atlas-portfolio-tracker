@@ -58,39 +58,38 @@ describe("atlas queries", () => {
     expect(
       await h.exec(["positions", "--account", "acc_etf", "--asset", "ast_gold", "--json"]),
     ).toBe(0);
-    expect(JSON.parse(h.out.join("\n"))).toHaveLength(1);
+    expect(h.json()).toHaveLength(1);
     h.reset();
     expect(await h.exec(["lots", "ast_gold"])).toBe(0);
     expect(h.text()).toContain("2026-12-30");
     expect(h.text()).toContain("923.0414746544");
     h.reset();
     expect(await h.exec(["lots", "--closed", "--json"])).toBe(0);
-    expect(JSON.parse(h.out.join("\n"))).toHaveLength(2);
+    expect(h.json()).toHaveLength(2);
     h.reset();
     expect(await h.exec(["cash"])).toBe(0);
     expect(h.text()).toContain("acc_fund  EUR     4000");
     expect(h.text()).toContain("-582.5");
     h.reset();
     expect(await h.exec(["cash", "--account", "acc_etf", "--json"])).toBe(0);
-    expect(
-      JSON.parse(h.out.join("\n"))
-        .map((c: { currency: string }) => c.currency)
-        .sort(),
-    ).toEqual(["EUR", "USD"]);
+    expect((h.json() as { currency: string }[]).map((c) => c.currency).sort()).toEqual([
+      "EUR",
+      "USD",
+    ]);
     h.reset();
     expect(await h.exec(["gains", "2026", "--lots"])).toBe(0);
     expect(h.text()).toContain("15.19");
     expect(h.text()).toContain("Total 2026: 15.19 EUR");
     h.reset();
     expect(await h.exec(["gains", "2027", "--json"])).toBe(0);
-    expect(JSON.parse(h.out.join("\n"))).toEqual([]);
+    expect(h.json()).toEqual([]);
     h.reset();
     expect(await h.exec(["income", "2027"])).toBe(0);
     expect(h.text()).toContain("interest");
     expect(h.text()).toContain("4.05");
     h.reset();
     expect(await h.exec(["income", "2027", "--json"])).toBe(0);
-    expect(JSON.parse(h.out.join("\n"))[0].net_eur).toBe("4.05");
+    expect((h.json() as { net_eur: string }[])[0]?.net_eur).toBe("4.05");
     h.reset();
     expect(await h.exec(["check"])).toBe(0);
     expect(h.text()).toContain("Libro íntegro");
@@ -144,7 +143,7 @@ describe("atlas queries", () => {
     );
     h.reset();
     expect(await h.exec(["valuations", "--json"])).toBe(0);
-    expect(JSON.parse(h.out[0] as string)).toEqual([
+    expect(h.json()).toEqual([
       expect.objectContaining({ asset_id: "ast_gold", value_eur: "577.9816513761" }),
     ]);
     expect(
@@ -167,9 +166,7 @@ describe("atlas queries", () => {
     expect(h.text()).toMatch(/ast_gold\s+2026-12-30\s+6\s+5\s+.*\s+buy\s+/);
     h.reset();
     expect(await h.exec(["lots", "--json"])).toBe(0);
-    expect(
-      (JSON.parse(h.out[0] as string) as { origin: string }[]).map((lot) => lot.origin),
-    ).toEqual(["buy", "buy"]);
+    expect((h.json() as { origin: string }[]).map((lot) => lot.origin)).toEqual(["buy", "buy"]);
   });
 
   it("reports integrity warnings and errors", async () => {
@@ -197,7 +194,10 @@ describe("atlas queries", () => {
     });
     expect(await broken.exec(["check"])).toBe(1);
     expect(broken.text()).toContain("unknown_account");
-    expect(await broken.exec(["positions"])).toBe(1);
-    expect(broken.text()).toContain("acc_missing no existe");
+    // A query no longer goes mute on an invalid event (ADR-0015): it answers and warns.
+    broken.reset();
+    expect(await broken.exec(["positions"])).toBe(0);
+    expect(broken.text()).toContain("1 evento inválido");
+    expect(broken.text()).toContain("atlas check");
   });
 });

@@ -12,6 +12,10 @@ export interface Harness {
   /** Runs one command; `argv` is already split. Returns the exit code. */
   exec(argv: string[]): Promise<number>;
   text(): string;
+  /** Payload of a `--json` read-only command: the envelope is `{ invalid_count, data }`. */
+  json(): unknown;
+  /** `invalid_count` of the last `--json` read-only command. */
+  invalidCount(): number;
   reset(): void;
 }
 
@@ -53,6 +57,8 @@ export const harness = (options: HarnessOptions = {}): Harness => {
     err,
     exec: (argv) => run(argv, io, () => deps),
     text: () => [...out, ...err].join("\n"),
+    json: () => (JSON.parse(out.join("\n")) as { data: unknown }).data,
+    invalidCount: () => (JSON.parse(out.join("\n")) as { invalid_count: number }).invalid_count,
     reset: () => {
       out.length = 0;
       err.length = 0;

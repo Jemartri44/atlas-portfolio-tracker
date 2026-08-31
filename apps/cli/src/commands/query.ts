@@ -19,7 +19,7 @@ import {
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
-import { originOf, render } from "./shared.js";
+import { loadForQuery, originOf, render, renderQuery } from "./shared.js";
 
 const yearOf = (positionals: string[], usage: string): number => {
   const year = Number(positionals[1]);
@@ -35,7 +35,7 @@ export const positionsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["account", "asset", ...GLOBAL_FLAGS]);
-  const { state } = await loadAndProject(ctx.deps);
+  const { state } = await loadForQuery(ctx);
   const account = stringFlag(flags, "account");
   const asset = stringFlag(flags, "asset");
   const rows = physicalPositions(state).filter(
@@ -43,8 +43,9 @@ export const positionsCommand = async (
       (account === undefined || p.account_id === account) &&
       (asset === undefined || p.asset_id === asset),
   );
-  render(
+  renderQuery(
     ctx,
+    state,
     rows.map((p) => ({ ...p, quantity: p.quantity.toString() })),
     table(
       ["cuenta", "activo", "cantidad"],
@@ -60,11 +61,12 @@ export const lotsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["closed", ...GLOBAL_FLAGS]);
-  const { events, state } = await loadAndProject(ctx.deps);
+  const { events, state } = await loadForQuery(ctx);
   const includeClosed = booleanFlag(flags, "closed");
   const rows = fiscalLots(state, positionals[1]).filter((lot) => includeClosed || !lot.closed);
-  render(
+  renderQuery(
     ctx,
+    state,
     rows.map((lot) => ({
       ...lot,
       origin: originOf(events, state, lot.source_event_id),
@@ -114,11 +116,12 @@ export const cashCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["account", ...GLOBAL_FLAGS]);
-  const { state } = await loadAndProject(ctx.deps);
+  const { state } = await loadForQuery(ctx);
   const account = stringFlag(flags, "account");
   const rows = cashBalances(state).filter((c) => account === undefined || c.account_id === account);
-  render(
+  renderQuery(
     ctx,
+    state,
     rows.map((c) => ({ ...c, balance: c.balance.amount.toString() })),
     table(
       ["cuenta", "divisa", "saldo"],
@@ -135,7 +138,7 @@ export const gainsCommand = async (
 ): Promise<number> => {
   assertKnownFlags(flags, ["lots", ...GLOBAL_FLAGS]);
   const year = yearOf(positionals, "uso: atlas gains <año> [--lots]");
-  const { events, state } = await loadAndProject(ctx.deps);
+  const { events, state } = await loadForQuery(ctx);
   const gains = realizedGains(state, year);
   const total = gains.reduce((sum, g) => sum.add(g.gain_eur_rounded), Money.zero("EUR"));
   const lines = [
@@ -182,8 +185,9 @@ export const gainsCommand = async (
       ),
     );
   }
-  render(
+  renderQuery(
     ctx,
+    state,
     gains.map((g) => ({
       ...g,
       origin: originOf(events, state, g.event_id),
@@ -212,10 +216,11 @@ export const incomeCommand = async (
 ): Promise<number> => {
   assertKnownFlags(flags, GLOBAL_FLAGS);
   const year = yearOf(positionals, "uso: atlas income <año>");
-  const { state } = await loadAndProject(ctx.deps);
+  const { state } = await loadForQuery(ctx);
   const rows = investmentIncome(state, year);
-  render(
+  renderQuery(
     ctx,
+    state,
     rows.map((i) => ({
       ...i,
       gross: i.gross.toString(),
@@ -263,11 +268,12 @@ export const valuationsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
-  const { state } = await loadAndProject(ctx.deps);
+  const { state } = await loadForQuery(ctx);
   const date = stringFlag(flags, "date") ?? todayInMadrid(ctx.deps.clock);
   const rows = valuations(state, date);
-  render(
+  renderQuery(
     ctx,
+    state,
     rows.map((v) => ({
       ...v,
       quantity: v.quantity.toString(),
@@ -331,6 +337,7 @@ export const checkCommand = async (
     ];
   }
   const all = [...findings, ...deepFindings];
+  // `check` is the tool that lists the invalid events: it does not need the header.
   render(
     ctx,
     { findings, deep: deepFindings, warnings },

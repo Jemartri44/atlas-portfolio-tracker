@@ -1,5 +1,8 @@
 // Draft construction from flags and the preview → confirm → record flow.
 
+import { access } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+
 import {
   completeDraft,
   createUlidGenerator,
@@ -10,6 +13,7 @@ import {
   type LedgerState,
   loadAndProject,
   type PhysicalPosition,
+  type ProjectedLedger,
   physicalPositions,
   projectLedger,
   type RealizedGain,
@@ -117,6 +121,45 @@ export const render = (ctx: Context, data: unknown, text: string): void => {
   ctx.io.out(ctx.json ? JSON.stringify(data, null, 2) : text);
 };
 
+/**
+ * Every read-only command projects in degraded mode (ADR-0015): one invalid
+ * event must never leave the ledger unreadable, because reading it is the only
+ * way to repair it. Mutations keep loading strictly.
+ */
+export const loadForQuery = (ctx: Context): Promise<ProjectedLedger> =>
+  loadAndProject(ctx.deps, { collectErrors: true });
+
+/** Visible degradation (constitution V): never a partial answer that looks complete. */
+export const degradedHeader = (state: LedgerState): string | undefined =>
+  state.invalid.length === 0
+    ? undefined
+    : `Aviso: ${state.invalid.length} ${
+        state.invalid.length === 1 ? "evento inválido" : "eventos inválidos"
+      } en el libro; lo que sigue es una proyección parcial. Ejecuta \`atlas check\` para verlos.`;
+
+/**
+ * Renders the result of a read-only command: the warning header before the
+ * table, and `invalid_count` beside the payload in JSON, where a header would
+ * corrupt the output.
+ */
+export const renderQuery = (
+  ctx: Context,
+  state: LedgerState,
+  data: unknown,
+  text: string,
+  channel: "out" | "err" = "out",
+): void => {
+  if (ctx.json) {
+    ctx.io.out(JSON.stringify({ invalid_count: state.invalid.length, data }, null, 2));
+    return;
+  }
+  const header = degradedHeader(state);
+  if (header !== undefined) {
+    ctx.io[channel](header);
+  }
+  ctx.io.out(text);
+};
+
 export interface Snapshot {
   positions: PhysicalPosition[];
   lots: FiscalLot[];
@@ -178,4 +221,43 @@ export const originOf = (
     return "";
   }
   return event.type === "corporate_action" ? `corporate_action:${event.kind}` : event.type;
+};
+
+/**
+ * The git working tree the path belongs to, if any: a `.git` entry (directory
+ * or file, so worktrees count) found walking up from it. Writing a ledger copy
+ * inside the repository is how private data ends up in a commit, so the CLI
+ * asks first. No `git` process involved.
+ */
+export const insideGitWorktree = async (path: string): Promise<string | undefined> => {
+  let current = resolve(path);
+  let parent = dirname(current);
+  while (true) {
+    try {
+      await access(join(current, ".git"));
+      return current;
+    } catch {
+      // Not a working tree root; keep walking up.
+    }
+    if (parent === current) {
+      return undefined;
+    }
+    current = parent;
+    parent = dirname(current);
+  }
+};
+
+/** Asks before writing `destination` when it falls inside a git working tree. Returns false if the user declines. */
+export const confirmOutsideRepository = async (
+  ctx: Context,
+  destination: string,
+): Promise<boolean> => {
+  const repository = await insideGitWorktree(destination);
+  if (repository === undefined) {
+    return true;
+  }
+  ctx.io.out(
+    `El destino está dentro del repositorio ${repository}: un fichero con datos reales podría acabar en un commit.`,
+  );
+  return confirm(ctx, "¿Escribir de todas formas? [s/N] ");
 };

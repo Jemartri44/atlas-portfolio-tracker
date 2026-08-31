@@ -19,7 +19,7 @@ import {
 } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
-import { confirmAndRecord, fieldOf, render } from "./shared.js";
+import { confirmAndRecord, fieldOf, loadForQuery, renderQuery } from "./shared.js";
 
 const ACCOUNT_FLAGS = ["id", "name", "platform", "book", "base-currency", "country", "inactive"];
 const ASSET_FLAGS = [
@@ -110,10 +110,11 @@ export const accountCommand = async (
   }
   if (action === "list") {
     assertKnownFlags(flags, GLOBAL_FLAGS);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const rows = accounts(state);
-    render(
+    renderQuery(
       ctx,
+      state,
       rows,
       table(
         ["cuenta", "nombre", "plataforma", "libro", "divisa", "país", "activa"],
@@ -164,11 +165,12 @@ export const assetCommand = async (
   }
   if (action === "list") {
     assertKnownFlags(flags, ["history", ...GLOBAL_FLAGS]);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const rows = assets(state);
     const withHistory = booleanFlag(flags, "history");
-    render(
+    renderQuery(
       ctx,
+      state,
       rows,
       table(
         [
@@ -243,11 +245,12 @@ export const settingsCommand = async (
   const [, action] = positionals;
   if (action === "show") {
     assertKnownFlags(flags, ["at", ...GLOBAL_FLAGS]);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const at = stringFlag(flags, "at") ?? todayInMadrid(ctx.deps.clock);
     const resolution = settingsAt(state, at);
-    render(
+    renderQuery(
       ctx,
+      state,
       resolution,
       `Configuración vigente el ${at} (origen: ${resolution.origin}):\n${JSON.stringify(resolution.settings, null, 2)}`,
     );

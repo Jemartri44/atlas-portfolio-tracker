@@ -41,7 +41,7 @@ describe("atlas account / asset", () => {
     expect(h.text()).toMatch(/no$/m);
     h.reset();
     expect(await h.exec(["account", "list", "--json"])).toBe(0);
-    expect(JSON.parse(h.out.join("\n"))[0].account_id).toBe("acc_fund");
+    expect((h.json() as { account_id: string }[])[0]?.account_id).toBe("acc_fund");
     expect(await h.exec(["account", "update", "acc_none", "--name", "x", "--yes"])).toBe(64);
     expect(await h.exec(["account", "frobnicate"])).toBe(64);
     expect(await h.exec(["account", "update"])).toBe(64);
@@ -144,7 +144,7 @@ describe("atlas settings", () => {
     expect(h.text()).toContain('"stale_price_days": 7');
     h.reset();
     expect(await h.exec(["settings", "show", "--at", "2020-01-01", "--json"])).toBe(0);
-    expect(JSON.parse(h.out.join("\n")).origin).toBe("default");
+    expect((h.json() as { origin: string }).origin).toBe("default");
     expect(await h.exec(["settings", "set", "--fiscal-date-rule", "etc", "--yes"])).toBe(64);
     expect(await h.exec(["settings", "set", "--fiscal-date-rule", "etc=tomorrow", "--yes"])).toBe(
       1,

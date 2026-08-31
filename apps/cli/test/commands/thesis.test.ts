@@ -74,7 +74,7 @@ describe("atlas thesis", () => {
     expect(h.text()).not.toContain("th_spec_1");
     h.reset();
     expect(await h.exec(["thesis", "list", "--closed", "--json"])).toBe(0);
-    const [row] = JSON.parse(h.out[0] as string) as Record<string, unknown>[];
+    const [row] = h.json() as Record<string, unknown>[];
     expect(row).toMatchObject({
       thesis_id: "th_spec_1",
       status: "closed",

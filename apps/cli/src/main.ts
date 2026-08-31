@@ -34,7 +34,7 @@ import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 
-const COMMANDS: Record<string, Command> = {
+export const COMMANDS: Record<string, Command> = {
   account: accountCommand,
   asset: assetCommand,
   settings: settingsCommand,
