@@ -53,7 +53,6 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "quantity-in",
       "nav-in",
       "value-date-in",
-      "fee",
       "notes",
     ],
   },
@@ -69,6 +68,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "currency",
       "fx-rate",
       "fx-rate-date",
+      "source-country",
       "per-unit",
       "broker-ref",
       "notes",
@@ -127,9 +127,15 @@ export const addCommand = async (
   positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  const spec = ADD_SPECS[positionals[1] ?? ""];
+  const name = positionals[1] ?? "";
+  const spec = ADD_SPECS[name];
   if (spec === undefined) {
     throw new UsageError(`uso: atlas add ${Object.keys(ADD_SPECS).join("|")} …`);
+  }
+  if (name === "transfer" && flags.has("fee")) {
+    throw new UsageError(
+      "un traspaso no lleva comisión: registra el cargo del depositario con `atlas add fee` (standalone_fee)",
+    );
   }
   await confirmAndRecord(ctx, draftFromFlags(spec, flags));
   return 0;
