@@ -181,6 +181,46 @@ const warnThresholds = (
   }
 };
 
+/**
+ * Fills in the percentages of every row, builds the subtotals per class and
+ * raises the threshold warnings. Shared with the transfer simulator, which
+ * moves value between two rows and asks the same questions of the result.
+ */
+export const deriveWeights = (
+  rows: CoreWeightRow[],
+  total: Money,
+  partial: boolean,
+  settings: Settings,
+  warnings: Warning[],
+): ClassSubtotal[] => {
+  for (const row of rows) {
+    if (!partial && row.value_eur !== undefined) {
+      row.weight_pct = percentOf(row.value_eur, total);
+      row.deviation_pp = row.weight_pct.sub(row.target_pct);
+    }
+  }
+  const by_class: ClassSubtotal[] = [];
+  for (const asset_class of ASSET_CLASSES) {
+    const members = rows.filter((row) => row.asset_class === asset_class);
+    if (members.length === 0) {
+      continue;
+    }
+    const value = members.reduce(
+      (sum, row) => (row.value_eur === undefined ? sum : sum.add(row.value_eur)),
+      Money.zero("EUR"),
+    );
+    const target = members.reduce((sum, row) => sum.add(row.target_pct), Decimal.ZERO);
+    const subtotal: ClassSubtotal = { asset_class, value_eur: value, target_pct: target };
+    if (!partial) {
+      subtotal.weight_pct = percentOf(value, total);
+      subtotal.deviation_pp = subtotal.weight_pct.sub(target);
+    }
+    by_class.push(subtotal);
+  }
+  warnThresholds(rows, by_class, settings, warnings);
+  return by_class;
+};
+
 /** Weights, deviations and threshold warnings of the core book at a date. */
 export const coreWeights = (
   state: LedgerState,
@@ -248,33 +288,7 @@ export const coreWeights = (
       { assets: missing, date },
     );
   }
-  for (const row of rows) {
-    if (!partial && row.value_eur !== undefined) {
-      row.weight_pct = percentOf(row.value_eur, total);
-      row.deviation_pp = row.weight_pct.sub(row.target_pct);
-    }
-  }
-
-  const by_class: ClassSubtotal[] = [];
-  for (const asset_class of ASSET_CLASSES) {
-    const members = rows.filter((row) => row.asset_class === asset_class);
-    if (members.length === 0) {
-      continue;
-    }
-    const value = members.reduce(
-      (sum, row) => (row.value_eur === undefined ? sum : sum.add(row.value_eur)),
-      Money.zero("EUR"),
-    );
-    const target = members.reduce((sum, row) => sum.add(row.target_pct), Decimal.ZERO);
-    const subtotal: ClassSubtotal = { asset_class, value_eur: value, target_pct: target };
-    if (!partial) {
-      subtotal.weight_pct = percentOf(value, total);
-      subtotal.deviation_pp = subtotal.weight_pct.sub(target);
-    }
-    by_class.push(subtotal);
-  }
-
-  warnThresholds(rows, by_class, settings, warnings);
+  const by_class = deriveWeights(rows, total, partial, settings, warnings);
   for (const assetId of stale) {
     const price = prices.get(assetId) as ManualPrice;
     warn(

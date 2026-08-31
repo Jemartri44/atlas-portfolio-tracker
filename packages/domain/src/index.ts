@@ -29,6 +29,13 @@ export {
   type ContributionRow,
   contributionPlan,
 } from "./projections/contribution.js";
+export {
+  type BucketCostRow,
+  type CoreCostRow,
+  type CoreCostTotals,
+  type CostSummary,
+  costSummary,
+} from "./projections/costs.js";
 export { deepCheck } from "./projections/deep-check.js";
 export { realizedGains } from "./projections/gains.js";
 export { investmentIncome } from "./projections/income.js";
@@ -58,6 +65,11 @@ export {
   projectLedger,
 } from "./projections/project-ledger.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
+export {
+  type SimulateTransferInput,
+  simulateTransfer,
+  type TransferSimulation,
+} from "./projections/simulate-transfer.js";
 export { type Snapshot, snapshotDiff, snapshotOf, sortKeysDeep } from "./projections/snapshot.js";
 export type * from "./projections/state.js";
 export { theses } from "./projections/theses.js";
