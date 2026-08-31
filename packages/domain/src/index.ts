@@ -44,6 +44,7 @@ export {
   pendingTransfers,
 } from "./projections/pending.js";
 export { type PhysicalPosition, physicalPositions } from "./projections/positions.js";
+export { type ManualPrice, manualPrices } from "./projections/prices.js";
 export {
   isOperationEvent,
   type OperationEvent,
@@ -55,6 +56,12 @@ export { type Snapshot, snapshotDiff, snapshotOf, sortKeysDeep } from "./project
 export type * from "./projections/state.js";
 export { theses } from "./projections/theses.js";
 export { type ValuationAt, valuations } from "./projections/valuations.js";
+export {
+  type ClassSubtotal,
+  type CoreWeightRow,
+  type CoreWeights,
+  coreWeights,
+} from "./projections/weights.js";
 export * from "./schema/envelope.js";
 export * from "./schema/events.js";
 export { fingerprintOf } from "./schema/fingerprint.js";
