@@ -5,16 +5,33 @@
 import { access, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DEFAULT_SETTINGS } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { COMMANDS } from "../../src/main.js";
 import { harness, seed } from "../harness.js";
 
+/** Enough configuration for `contribute` to have something to answer. */
+const configured = () => [
+  ...seed(),
+  {
+    schema_version: 1 as const,
+    id: "01ARYZ6S41TSV4RRFFQ69G5SET",
+    recorded_at: "2026-09-01T17:00:00.000Z",
+    type: "settings_changed" as const,
+    settings: {
+      ...DEFAULT_SETTINGS,
+      target_weights: { ast_world: "60", ast_bonds: "40" },
+      bucket_pct_of_contribution: "10",
+    },
+  },
+];
+
 /** A cash movement on an account that does not exist: valid in shape, invalid in projection. */
 const brokenLedger = () =>
   harness({
     events: [
-      ...seed(),
+      ...configured(),
       {
         schema_version: 1,
         id: "01ARYZ6S41TSV4RRFFQ69G5FZZ",
@@ -39,6 +56,9 @@ const brokenLedger = () =>
  */
 const INVOCATIONS: { command: string; argv: string[]; readOnly: boolean }[] = [
   { command: "positions", argv: ["positions"], readOnly: true },
+  { command: "weights", argv: ["weights"], readOnly: true },
+  { command: "contribute", argv: ["contribute", "--amount", "100"], readOnly: true },
+  { command: "costs", argv: ["costs"], readOnly: true },
   { command: "lots", argv: ["lots"], readOnly: true },
   { command: "cash", argv: ["cash"], readOnly: true },
   { command: "gains", argv: ["gains", "2027"], readOnly: true },
@@ -129,7 +149,7 @@ describe("degraded projection on read-only commands", () => {
   });
 
   it.each(readOnly)("$command says nothing on a healthy ledger", async ({ argv, command }) => {
-    const h = harness({ events: seed(), confirm: true });
+    const h = harness({ events: configured(), confirm: true });
     expect(await h.exec(argv)).toBe(0);
     expect(h.text()).not.toContain(HEADER);
     if (command === "export") {

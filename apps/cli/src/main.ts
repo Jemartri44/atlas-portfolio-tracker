@@ -18,6 +18,7 @@ import { accountCommand, assetCommand, settingsCommand } from "./commands/catalo
 import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
 import { exportCommand } from "./commands/export.js";
+import { contributeCommand, costsCommand, weightsCommand } from "./commands/portfolio.js";
 import {
   cashCommand,
   checkCommand,
@@ -48,6 +49,9 @@ export const COMMANDS: Record<string, Command> = {
   edit: editCommand,
   delete: deleteCommand,
   positions: positionsCommand,
+  weights: weightsCommand,
+  contribute: contributeCommand,
+  costs: costsCommand,
   lots: lotsCommand,
   cash: cashCommand,
   gains: gainsCommand,
@@ -69,6 +73,8 @@ comandos:
   thesis open|close|list [--closed]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
   positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
+  weights [--date]   contribute [--amount <eur>] [--date]   costs [--date]
+  transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   compact [--yes]   backup --to <directorio>`;
 

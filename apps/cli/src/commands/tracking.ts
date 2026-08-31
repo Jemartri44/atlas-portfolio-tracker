@@ -1,7 +1,20 @@
-// atlas order place|cancel|note|list · atlas transfer request|update|pending
+// atlas order place|cancel|note|list · atlas transfer request|update|pending|simulate
 
-import { pendingOrders, pendingTransfers, todayInMadrid } from "@atlas/domain";
-import { assertKnownFlags, booleanFlag, type Flags, UsageError } from "../args.js";
+import {
+  pendingOrders,
+  pendingTransfers,
+  settingsAt,
+  simulateTransfer,
+  todayInMadrid,
+} from "@atlas/domain";
+import {
+  assertKnownFlags,
+  booleanFlag,
+  type Flags,
+  requireFlag,
+  stringFlag,
+  UsageError,
+} from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
 import { requireId } from "./catalogue.js";
@@ -113,6 +126,66 @@ export const transferCommand = async (
       flags,
     );
     await confirmAndRecord(ctx, { ...draft, request_id: requestId });
+    return 0;
+  }
+  if (action === "simulate") {
+    assertKnownFlags(flags, ["from-asset", "to-asset", "quantity", "all", "date", ...GLOBAL_FLAGS]);
+    const { state } = await loadForQuery(ctx);
+    const quantity = stringFlag(flags, "quantity");
+    const all = booleanFlag(flags, "all");
+    if ((quantity === undefined) === !all) {
+      throw new UsageError("indica exactamente uno de --quantity <n> o --all");
+    }
+    const date = stringFlag(flags, "date") ?? todayInMadrid(ctx.deps.clock);
+    const simulation = simulateTransfer(state, {
+      from_asset_id: requireFlag(flags, "from-asset"),
+      to_asset_id: requireFlag(flags, "to-asset"),
+      ...(quantity === undefined ? { all: true } : { quantity }),
+      date,
+      settings: settingsAt(state, date).settings,
+    });
+    const weightOf = (weights: typeof simulation.before, assetId: string) =>
+      weights.rows.find((row) => row.asset_id === assetId);
+    renderQuery(
+      ctx,
+      state,
+      {
+        date,
+        from_asset_id: simulation.from_asset_id,
+        to_asset_id: simulation.to_asset_id,
+        quantity: simulation.quantity.toString(),
+        moved_eur: simulation.moved_eur.amount.toString(),
+        taxable: simulation.taxable,
+        rows: simulation.before.rows.map((row) => ({
+          asset_id: row.asset_id,
+          weight_before_pct: row.weight_pct?.toString(),
+          weight_after_pct: weightOf(simulation.after, row.asset_id)?.weight_pct?.toString(),
+          deviation_before_pp: row.deviation_pp?.toString(),
+          deviation_after_pp: weightOf(simulation.after, row.asset_id)?.deviation_pp?.toString(),
+        })),
+        warnings_after: simulation.after.warnings,
+      },
+      [
+        `Simulación de traspaso a ${date}: ${simulation.quantity.toString()} de ${simulation.from_asset_id} → ${simulation.to_asset_id} (${simulation.moved_eur.roundToCents().amount.toString()} EUR).`,
+        "Un traspaso entre fondos no es hecho imponible: conserva fecha de adquisición y coste (business-rules.md §5.2).",
+        "",
+        table(
+          ["activo", "peso antes", "peso después", "desv. antes", "desv. después"],
+          simulation.before.rows.map((row) => {
+            const after = weightOf(simulation.after, row.asset_id);
+            return [
+              row.asset_id,
+              row.weight_pct === undefined ? "" : `${row.weight_pct.round(2).toString()} %`,
+              after?.weight_pct === undefined ? "" : `${after.weight_pct.round(2).toString()} %`,
+              row.deviation_pp?.round(2).toString() ?? "",
+              after?.deviation_pp?.round(2).toString() ?? "",
+            ];
+          }),
+        ),
+        "",
+        "Nada se ha registrado.",
+      ].join("\n"),
+    );
     return 0;
   }
   if (action === "pending") {
