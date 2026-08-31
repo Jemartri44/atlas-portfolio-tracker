@@ -67,15 +67,27 @@ const warn = (
   warnings.push({ code, event_id: eventId, message, details });
 };
 
+/** Ids of the accounts of the core book. */
+export const coreAccountIds = (state: LedgerState): Set<string> => {
+  const ids = new Set<string>();
+  for (const [accountId, account] of state.accounts) {
+    if (account.book === "core") {
+      ids.add(accountId);
+    }
+  }
+  return ids;
+};
+
 /** Quantity of an asset across every core account, from the physical positions. */
-const coreQuantityOf = (state: LedgerState, assetId: AssetId): Quantity => {
+export const coreQuantityOf = (
+  state: LedgerState,
+  assetId: AssetId,
+  core = coreAccountIds(state),
+): Quantity => {
   let total = Quantity.ZERO;
   for (const [key, quantity] of state.positions) {
     const [accountId, keyAsset] = key.split("|");
-    if (keyAsset !== assetId) {
-      continue;
-    }
-    if (state.accounts.get(accountId as string)?.book === "core") {
+    if (keyAsset === assetId && core.has(accountId as string)) {
       total = total.add(quantity);
     }
   }

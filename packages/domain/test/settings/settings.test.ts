@@ -135,6 +135,10 @@ describe("wash_sale_window (ADR-0014)", () => {
       validateSettings({ ...WITHOUT_WINDOW, wash_sale_window_days: { ...LEGACY_DAYS, fund: 0 } }),
     ).toThrow(ValidationError);
     expect(() => validateSettings(WITHOUT_WINDOW)).toThrow(ValidationError);
+    // The new form alone must cover every asset type; there is no legacy map to fall back on.
+    expect(() =>
+      validateSettings({ ...WITHOUT_WINDOW, wash_sale_window: { stock: "2m" } }),
+    ).toThrow(ValidationError);
     expect(() => validateSettings({ ...WITHOUT_WINDOW, wash_sale_window_days: 365 })).toThrow(
       ValidationError,
     );

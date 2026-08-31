@@ -12,8 +12,9 @@ import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
+import type { ManualPrice } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
-import { type CoreWeights, coreWeights, deriveWeights } from "./weights.js";
+import { type CoreWeightRow, type CoreWeights, coreWeights, deriveWeights } from "./weights.js";
 
 export interface SimulateTransferInput {
   from_asset_id: AssetId;
@@ -69,7 +70,6 @@ export const simulateTransfer = (
 
   const before = coreWeights(state, date, settings);
   const rowOf = (assetId: AssetId) => before.rows.find((row) => row.asset_id === assetId);
-  const from = rowOf(from_asset_id);
   const missing = [from_asset_id, to_asset_id].filter(
     (assetId) => rowOf(assetId)?.price === undefined,
   );
@@ -79,7 +79,9 @@ export const simulateTransfer = (
       date,
     });
   }
-  const held = from?.quantity ?? Quantity.ZERO;
+  // Having a price means having a row: the two lookups below cannot miss.
+  const from = rowOf(from_asset_id) as CoreWeightRow;
+  const held = from.quantity;
   const quantity = input.all === true ? held : Quantity.parse(input.quantity);
   if (!quantity.isPositive()) {
     fail("invalid_quantity", "the quantity transferred must be greater than zero", {
@@ -93,7 +95,7 @@ export const simulateTransfer = (
     });
   }
 
-  const unit = from?.price?.unit_value_eur as Money;
+  const unit = (from.price as ManualPrice).unit_value_eur;
   const moved = Money.of(unit.amount.mul(quantity.value), "EUR");
   const warnings: Warning[] = [];
   const rows = before.rows.map((row) => {

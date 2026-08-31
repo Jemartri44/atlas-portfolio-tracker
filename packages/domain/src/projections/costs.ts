@@ -23,6 +23,7 @@ import type {
 import type { Settings } from "../settings/settings.js";
 import { type ManualPrice, manualPrices } from "./prices.js";
 import type { LedgerState } from "./state.js";
+import { coreQuantityOf } from "./weights.js";
 
 const HUNDRED = Decimal.parse("100");
 const EUR = "EUR";
@@ -185,10 +186,11 @@ export const costSummary = (
       continue;
     }
     const fees = totals.fees.get(assetId);
-    const invested = totals.invested.get(assetId) ?? Money.zero(EUR);
-    if (fees === undefined && invested.isZero()) {
+    if (fees === undefined) {
       continue; // an asset the core never traded has no cost to report
     }
+    // Present without a purchase when the position arrived by transfer and was sold.
+    const invested = totals.invested.get(assetId) ?? Money.zero(EUR);
     const quantity = coreQuantityOf(state, assetId);
     const price = prices.get(assetId);
     const value = valueOf(price, quantity);
@@ -207,11 +209,9 @@ export const costSummary = (
     rows.push({
       asset_id: assetId,
       asset_class: asset.asset_class as AssetClass,
-      fees_eur: fees ?? Money.zero(EUR),
+      fees_eur: fees,
       invested_eur: invested,
-      ...(invested.isZero()
-        ? {}
-        : { fees_pct: (fees ?? Money.zero(EUR)).amount.div(invested.amount).mul(HUNDRED) }),
+      ...(invested.isZero() ? {} : { fees_pct: fees.amount.div(invested.amount).mul(HUNDRED) }),
       ...(ter === undefined ? {} : { ter }),
       ...(value === undefined ? {} : { value_eur: value }),
       ...(annualCost === undefined ? {} : { annual_cost_eur: annualCost }),
@@ -235,18 +235,6 @@ export const costSummary = (
       rows: [...totals.bucketFees].map(([account_id, fees_eur]) => ({ account_id, fees_eur })),
     },
   };
-};
-
-/** Quantity of an asset across the core accounts. */
-const coreQuantityOf = (state: LedgerState, assetId: AssetId): Quantity => {
-  let total = Quantity.ZERO;
-  for (const [key, quantity] of state.positions) {
-    const [accountId, keyAsset] = key.split("|");
-    if (keyAsset === assetId && state.accounts.get(accountId as string)?.book === "core") {
-      total = total.add(quantity);
-    }
-  }
-  return total;
 };
 
 const valueOf = (price: ManualPrice | undefined, quantity: Quantity): Money | undefined =>

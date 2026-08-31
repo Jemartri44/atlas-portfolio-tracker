@@ -63,6 +63,22 @@ describe("costSummary", () => {
     expect(row?.invested_eur.amount.toString()).toBe("644");
   });
 
+  it("takes the settled amount as the cost basis when the buy carries one", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "5.5871",
+      unit_price: "107.39",
+      amount: "600",
+      fee: "2",
+    });
+    // 600 settled plus the 2 of commission: `amount` is the basis and
+    // `unit_price` stays informative (ADR-0012).
+    expect(rowOf(summary(b.build()), "ast_world")?.invested_eur.amount.toString()).toBe("602");
+  });
+
   it("does not count the commission of a reversed event", () => {
     const b = traded();
     const extra = b.buy({
@@ -98,6 +114,68 @@ describe("costSummary", () => {
     expect(rowOf(summary(b.build()), "ast_world")?.fees_eur.amount.toString()).toBe("10");
   });
 
+  it("ignores a forced sale entry with no fee, and books a bucket one to its account", () => {
+    const b = traded();
+    b.thesisOpened({ thesis_id: "th", account_id: "acc_bucket", asset_id: "ast_spec" });
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: "8",
+      unit_price: "50",
+      thesis_id: "th",
+    });
+    b.corporateAction({
+      kind: "reverse_split",
+      asset_id: "ast_spec",
+      effective_date: "2027-06-30",
+      source_document: "doc",
+      effects: [
+        { op: "scale", ratio: "1/3" },
+        {
+          op: "forced_sale",
+          // No fee on this broker's charge: the entry is simply skipped.
+          per_account: [{ account_id: "acc_bucket", quantity: "all" }],
+          unit_price: "100",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-06-30",
+        },
+      ],
+    });
+    expect(summary(b.build()).bucket.rows[0]?.fees_eur.amount.toString()).toBe("0");
+
+    const c = traded();
+    c.thesisOpened({ thesis_id: "th", account_id: "acc_bucket", asset_id: "ast_spec" });
+    c.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: "8",
+      unit_price: "50",
+      thesis_id: "th",
+    });
+    c.corporateAction({
+      kind: "reverse_split",
+      asset_id: "ast_spec",
+      effective_date: "2027-06-30",
+      source_document: "doc",
+      effects: [
+        { op: "scale", ratio: "1/3" },
+        {
+          op: "forced_sale",
+          per_account: [{ account_id: "acc_bucket", quantity: "all", fee: "4" }],
+          unit_price: "100",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-06-30",
+        },
+      ],
+    });
+    const result = summary(c.build());
+    expect(result.bucket.rows[0]?.fees_eur.amount.toString()).toBe("4");
+    // Never in the core: the two books do not share a euro.
+    expect(result.core.totals.fees_eur.amount.toString()).toBe("8");
+  });
+
   it("leaves the percentage empty when the asset was never bought", () => {
     const b = new LedgerBuilder();
     catalogue(b);
@@ -114,10 +192,24 @@ describe("costSummary", () => {
       nav_in: "100",
       value_date_in: "2027-07-02",
     });
-    const result = summary(b.build());
-    // ast_bonds only ever received a transfer: no purchase, so no percentage.
-    expect(rowOf(result, "ast_bonds")).toBeUndefined();
-    expect(rowOf(result, "ast_world")?.fees_pct).toBeDefined();
+    const transferOnly = summary(b.build());
+    // ast_bonds only ever received a transfer: it never traded, so it has no row.
+    expect(rowOf(transferOnly, "ast_bonds")).toBeUndefined();
+    expect(rowOf(transferOnly, "ast_world")?.fees_pct).toBeDefined();
+
+    // Once it is sold it does have a commission, but still nothing invested.
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      trade_date: "2027-08-02",
+      quantity: "5",
+      unit_price: "100",
+      fee: "1",
+    });
+    const sold = rowOf(summary(b.build()), "ast_bonds");
+    expect(sold?.fees_eur.amount.toString()).toBe("1");
+    expect(sold?.invested_eur.amount.toString()).toBe("0");
+    expect(sold?.fees_pct).toBeUndefined();
   });
 
   it("weights the TER by value and marks the aggregate partial when a price is missing", () => {

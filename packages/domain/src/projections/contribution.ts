@@ -121,6 +121,26 @@ const residueOrder = (
       return byTarget !== 0 ? byTarget : (ids[a] as string).localeCompare(ids[b] as string);
     });
 
+/**
+ * The two invariants of the split, checked in production and not only in the
+ * tests: a proposal that does not add up, or that asks for a negative amount,
+ * must never reach the user (constitution V).
+ */
+export const assertSplit = (
+  rows: readonly { asset_id: AssetId; allocation_eur: Money }[],
+  core: Money,
+): void => {
+  const distributed = rows.reduce((sum, row) => sum.add(row.allocation_eur), Money.zero(EUR));
+  const negative = rows.filter((row) => row.allocation_eur.isNegative());
+  if (!distributed.eq(core) || negative.length > 0) {
+    fail("split_not_exact", "the split does not add up to the core amount", {
+      distributed: distributed.amount.toString(),
+      core: core.amount.toString(),
+      negative: negative.map((row) => row.asset_id),
+    });
+  }
+};
+
 export const contributionPlan = (
   state: LedgerState,
   input: ContributionInput,
@@ -201,14 +221,7 @@ export const contributionPlan = (
     };
   });
 
-  // The two invariants of the split, checked here and not only in the tests.
-  const distributed = rows.reduce((sum, row) => sum.add(row.allocation_eur), Money.zero(EUR));
-  if (!distributed.eq(core) || rows.some((row) => row.allocation_eur.isNegative())) {
-    fail("split_not_exact", "the split does not add up to the core amount", {
-      distributed: distributed.amount.toString(),
-      core: core.amount.toString(),
-    });
-  }
+  assertSplit(rows, core);
   return {
     date,
     amount_eur: amount,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
 import { Money } from "../../src/money/money.js";
-import { contributionPlan } from "../../src/projections/contribution.js";
+import { assertSplit, contributionPlan } from "../../src/projections/contribution.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
@@ -138,6 +138,58 @@ describe("contributionPlan", () => {
     }
   });
 
+  it("spills the rounding residue across rows when the first cannot absorb it", () => {
+    // Five equal assets at target and three cents to split: every row rounds up
+    // to a cent, so two cents must come back out of more than one row (A6).
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const targets: Record<string, string> = {};
+    for (const suffix of ["a", "b", "c", "d", "e"]) {
+      const assetId = `ast_${suffix}`;
+      b.asset(assetId, { asset_class: "equity" });
+      b.buy({ account_id: "acc_fund", asset_id: assetId, quantity: "1", unit_price: "100" });
+      b.valuation({ account_id: "acc_fund", asset_id: assetId, date: DATE, unit_value: "100" });
+      targets[assetId] = "20";
+    }
+    const result = contributionPlan(projectLedger(b.build()), {
+      amount: "0.03",
+      date: DATE,
+      settings: settings({ target_weights: targets }),
+    });
+    expect(sumOf(result)).toBe("0.03");
+    for (const row of result.rows) {
+      expect(row.allocation_eur.isNegative()).toBe(false);
+    }
+  });
+
+  it("still adds up when the whole plan points outside the table", () => {
+    // Every weight names an asset that is not in the core catalogue: the rows
+    // have no weight to share the leftover by, so the residue settles it.
+    const result = plan(core(), "1000", { target_weights: { ast_ghost: "100" } });
+    expect(result.surplus_distributed).toBe(true);
+    expect(sumOf(result)).toBe("1000");
+    for (const row of result.rows) {
+      expect(row.allocation_eur.isNegative()).toBe(false);
+    }
+  });
+
+  it("answers with zero weights when there is nothing to weigh", () => {
+    // The bucket takes the whole contribution and the core owns nothing yet.
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const result = contributionPlan(projectLedger(b.build()), {
+      amount: "100",
+      date: DATE,
+      settings: settings({
+        target_weights: { ast_world: "100" },
+        bucket_pct_of_contribution: "100",
+      }),
+    });
+    expect(result.core_amount_eur.amount.toString()).toBe("0");
+    expect(result.rows[0]?.weight_after_pct.toString()).toBe("0");
+    expect(sumOf(result)).toBe("0");
+  });
+
   it("gives nothing to an asset with a zero target and a live position", () => {
     const result = plan(core(), "1000", {
       target_weights: { ast_world: "70", ast_bonds: "30", ast_gold: "0" },
@@ -242,5 +294,23 @@ describe("contributionPlan", () => {
       deviation_threshold_pp: "5",
     });
     expect(result.warnings.map((warning) => warning.code)).toContain("deviation_above_threshold");
+  });
+
+  it("guards its own invariants in production, not only in the tests", () => {
+    const rows = [
+      { asset_id: "ast_world", allocation_eur: Money.parse("60", "EUR") },
+      { asset_id: "ast_bonds", allocation_eur: Money.parse("30", "EUR") },
+    ];
+    expect(() => assertSplit(rows, Money.parse("90", "EUR"))).not.toThrow();
+    expect(() => assertSplit(rows, Money.parse("100", "EUR"))).toThrow(ValidationError);
+    expect(() =>
+      assertSplit(
+        [
+          { asset_id: "ast_world", allocation_eur: Money.parse("100", "EUR") },
+          { asset_id: "ast_bonds", allocation_eur: Money.parse("-10", "EUR") },
+        ],
+        Money.parse("90", "EUR"),
+      ),
+    ).toThrow(ValidationError);
   });
 });
