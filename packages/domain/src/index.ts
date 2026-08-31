@@ -1,12 +1,15 @@
 // Public API of @atlas/domain.
 
 export {
+  addDays,
   assertCivilDate,
   type CivilDate,
   compareCivilDates,
+  daysBetween,
   daysInMonth,
   isCivilDate,
   isLeapYear,
+  isWeekend,
   yearOf,
 } from "./dates/civil-date.js";
 export { madridDateOf, todayInMadrid } from "./dates/madrid.js";
