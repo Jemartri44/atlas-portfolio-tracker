@@ -3,11 +3,14 @@
 import {
   accounts,
   assets,
+  coreWeights,
+  type LedgerState,
   loadAndProject,
   mergeSettings,
   type Settings,
   settingsAt,
   todayInMadrid,
+  type Warning,
 } from "@atlas/domain";
 import {
   assertKnownFlags,
@@ -19,7 +22,7 @@ import {
 } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
-import { confirmAndRecord, fieldOf, loadForQuery, renderQuery } from "./shared.js";
+import { confirm, confirmAndRecord, fieldOf, loadForQuery, renderQuery } from "./shared.js";
 
 const ACCOUNT_FLAGS = ["id", "name", "platform", "book", "base-currency", "country", "inactive"];
 const ASSET_FLAGS = [
@@ -237,6 +240,56 @@ export const parseAssignments = (raw: string, flag: string): Record<string, stri
   return result;
 };
 
+/** Threshold warnings the settings raise on today's portfolio; empty when they cannot be evaluated. */
+const activeWarnings = (
+  state: LedgerState,
+  date: string,
+  settings: Settings,
+): { warnings: Warning[]; evaluated: boolean; missing: string[] } => {
+  const weights = coreWeights(state, date, settings);
+  return {
+    warnings: weights.warnings.filter(
+      (warning) =>
+        warning.code === "deviation_above_threshold" || warning.code === "satellite_below_minimum",
+    ),
+    evaluated: !weights.partial,
+    missing: weights.missing_prices,
+  };
+};
+
+/**
+ * Raising a threshold must never silence a live warning behind the user's back
+ * (constitution IV). The same ledger and date are evaluated with the settings
+ * in force and with the new ones; whatever stops warning is listed.
+ */
+const confirmSilencedWarnings = async (
+  ctx: Context,
+  state: LedgerState,
+  current: Settings,
+  next: Settings,
+): Promise<boolean> => {
+  const date = todayInMadrid(ctx.deps.clock);
+  const before = activeWarnings(state, date, current);
+  const after = activeWarnings(state, date, next);
+  if (!before.evaluated) {
+    ctx.io.out(
+      `No se han podido evaluar los avisos (faltan precios de ${before.missing.join(", ")}); se continúa.`,
+    );
+    return true;
+  }
+  const keyOf = (warning: Warning): string => `${warning.code}|${JSON.stringify(warning.details)}`;
+  const kept = new Set(after.warnings.map(keyOf));
+  const silenced = before.warnings.filter((warning) => !kept.has(keyOf(warning)));
+  if (silenced.length === 0) {
+    return true;
+  }
+  ctx.io.out("Este cambio silencia avisos activos:");
+  for (const warning of silenced) {
+    ctx.io.out(`  ${warning.code}  ${warning.message}`);
+  }
+  return confirm(ctx, "¿Continuar? [s/N] ");
+};
+
 export const settingsCommand = async (
   ctx: Context,
   positionals: string[],
@@ -305,6 +358,10 @@ export const settingsCommand = async (
       }
     }
     const settings = mergeSettings(current, patch as Partial<Settings>);
+    if (!(await confirmSilencedWarnings(ctx, state, current, settings))) {
+      ctx.io.out("Cancelado.");
+      return 0;
+    }
     await confirmAndRecord(ctx, { type: "settings_changed", settings });
     return 0;
   }
