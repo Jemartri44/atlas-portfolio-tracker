@@ -23,6 +23,12 @@ export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
 export type { RandomSource } from "./ports/random.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";
+export {
+  type ContributionInput,
+  type ContributionPlan,
+  type ContributionRow,
+  contributionPlan,
+} from "./projections/contribution.js";
 export { deepCheck } from "./projections/deep-check.js";
 export { realizedGains } from "./projections/gains.js";
 export { investmentIncome } from "./projections/income.js";
