@@ -242,6 +242,8 @@ La proyección se hace en dos pasadas:
 1. **Catálogo, configuración, tesis y rectificaciones**, en orden de fichero: `account_*`, `asset_*`, `settings_changed`, `thesis_*`, `reversal`. Construyen el catálogo completo y el conjunto de parejas anuladas. Las referencias de cualquier operación se resuelven contra el catálogo completo (un `asset_created` registrado después de la primera compra de ese activo es válido).
 2. **Operaciones y seguimiento**, ordenadas por `(fecha de negocio, posición en el fichero)`: la fecha de negocio es `fiscal_date` para las operaciones con efecto en lotes o efectivo, `requested_date`/`date` para los eventos de seguimiento y `date` para `valuation`. Dentro de una misma fecha manda la posición en el fichero (también para el desempate FIFO de lotes con la misma `acquisition_date`).
 
+**Consulta a una fecha (`asOf`, ADR-0016).** La segunda pasada admite un corte: con `asOf`, los eventos cuya fecha de negocio sea posterior se ignoran por completo (no entran en lotes, posiciones, efectivo, ganancias, rendimientos, valoraciones ni pendientes). La primera pasada no cambia, así que el catálogo sigue completo y la configuración se sigue eligiendo con `settingsAt`. Toda vista que acepte una fecha proyecta con `asOf`: mezclar cantidades del final del libro con precios de una fecha pasada da números incoherentes en silencio.
+
 Consecuencias: registrar tarde es normal (importar un extracto semanas después, corregir con la fecha real) y no altera el resultado; una venta se valida contra la posición física **en su fecha**, no en el momento de registrarla; `recordEvent` proyecta el libro con el evento nuevo colocado cronológicamente y rechaza si cualquier invariante se rompe. `settingsAt(date)` sigue usando `recorded_at` (es historial administrativo, no de negocio).
 
 
@@ -250,7 +252,7 @@ Consecuencias: registrar tarde es normal (importar un extracto semanas después,
 | `accounts` | Cuentas con su estado actual | Último `account_*` por `account_id` |
 | `assets` | Activos con su estado actual e historial de identificadores | Último `asset_*` por `asset_id`; los anteriores forman `identifier_history` |
 | `settingsAt(date)` | Configuración vigente | Último `settings_changed` anterior o igual a `date` |
-| `physicalPositions` | Cantidad por (`account_id`, `asset_id`) | Suma de compras, ventas, traspasos y efectos corporativos **por cuenta**. Es lo que se concilia |
+| `physicalPositions` | Cantidad por (`account_id`, `asset_id`) | Suma de compras, ventas, traspasos y efectos corporativos **por cuenta**. Es lo que se concilia. A una fecha pasada, se proyecta con `asOf` (ADR-0016) |
 | `fiscalLots` | Lotes abiertos y cerrados por `asset_id` (globales) | Resultado del FIFO de §8 |
 | `cashBalances` | Efectivo por cuenta y divisa | ADR-0004 |
 | `pendingTransfers` | Solicitudes de traspaso sin `transfer` final | ADR-0010 |

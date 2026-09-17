@@ -112,6 +112,7 @@ Reflejadas en `docs/data-schema.md` y `docs/business-rules.md` en `develop` (PR 
 
 - **(a) `target_weights` por `asset_id`** del núcleo, suman exactamente 100; clave desconocida y activo sin peso son **avisos** de proyección, no rechazos (el catálogo puede cambiar después del `settings_changed`).
 - **(b) Precio manual = última `valuation`** por activo (cualquier cuenta, `date ≤` la pedida, desempate por posición en el fichero). No hay evento nuevo de precio; los precios de Nivel 2 llegan en la Fase 4.
+- **(b bis) Corrección posterior (ADR-0016).** Las **cantidades** de estas vistas son también las de la fecha pedida, no las del final del libro. Este prompt decía "cantidad agregada entre cuentas" sin precisarlo y así se implementó, lo que daba pesos y repartos incoherentes al consultar una fecha pasada (revisión de la 004, hallazgo bloqueante): se corrigió proyectando con `asOf`. Toda vista con fecha proyecta así.
 - **(c) Fallo seguro en el reparto**: sin precio de un activo del núcleo con posición o con peso, la calculadora y el simulador **rechazan** listando lo que falta; `weights` muestra la fila "sin precio" y no calcula pesos sobre totales parciales.
 - **(d) Algoritmo de reparto**: proporcional al déficit hasta cubrirlo; sobrante por pesos objetivo; céntimos half-up una vez por activo; residuo al mayor déficit. La calculadora nunca propone ventas (regla 2; la venta es decisión anual, regla 3).
 - **(e) `wash_sale_window`** con forma antigua aceptada (ADR-0014); solo `Settings` en esta feature.
