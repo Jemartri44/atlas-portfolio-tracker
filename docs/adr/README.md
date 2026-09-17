@@ -20,6 +20,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0014](0014-wash-sale-window-and-deferral-lineage.md) | Ventana de recompra de fecha a fecha y diferimiento ligado al linaje de lotes | Aceptada |
 | [0015](0015-degraded-projection-and-settings-acceptance.md) | Proyección degradada en consultas y aceptación de settings_changed que invalida el pasado | Aceptada |
 | [0016](0016-project-ledger-as-of.md) | Consulta del libro a una fecha con asOf | Aceptada |
+| [0017](0017-web-stack.md) | Stack de la aplicacion web | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 
