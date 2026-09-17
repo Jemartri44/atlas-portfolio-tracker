@@ -3,11 +3,14 @@
 import {
   accounts,
   assets,
+  coreWeights,
+  type LedgerState,
   loadAndProject,
   mergeSettings,
   type Settings,
   settingsAt,
   todayInMadrid,
+  type Warning,
 } from "@atlas/domain";
 import {
   assertKnownFlags,
@@ -17,9 +20,9 @@ import {
   stringFlag,
   UsageError,
 } from "../args.js";
-import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
-import { confirmAndRecord, fieldOf, render } from "./shared.js";
+import { confirm, confirmAndRecord, fieldOf, loadForQuery, renderQuery } from "./shared.js";
 
 const ACCOUNT_FLAGS = ["id", "name", "platform", "book", "base-currency", "country", "inactive"];
 const ASSET_FLAGS = [
@@ -110,10 +113,11 @@ export const accountCommand = async (
   }
   if (action === "list") {
     assertKnownFlags(flags, GLOBAL_FLAGS);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const rows = accounts(state);
-    render(
+    renderQuery(
       ctx,
+      state,
       rows,
       table(
         ["cuenta", "nombre", "plataforma", "libro", "divisa", "país", "activa"],
@@ -164,11 +168,12 @@ export const assetCommand = async (
   }
   if (action === "list") {
     assertKnownFlags(flags, ["history", ...GLOBAL_FLAGS]);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const rows = assets(state);
     const withHistory = booleanFlag(flags, "history");
-    render(
+    renderQuery(
       ctx,
+      state,
       rows,
       table(
         [
@@ -235,6 +240,56 @@ export const parseAssignments = (raw: string, flag: string): Record<string, stri
   return result;
 };
 
+/** Threshold warnings the settings raise on today's portfolio; empty when they cannot be evaluated. */
+const activeWarnings = (
+  state: LedgerState,
+  date: string,
+  settings: Settings,
+): { warnings: Warning[]; evaluated: boolean; missing: string[] } => {
+  const weights = coreWeights(state, date, settings);
+  return {
+    warnings: weights.warnings.filter(
+      (warning) =>
+        warning.code === "deviation_above_threshold" || warning.code === "satellite_below_minimum",
+    ),
+    evaluated: !weights.partial,
+    missing: weights.missing_prices,
+  };
+};
+
+/**
+ * Raising a threshold must never silence a live warning behind the user's back
+ * (constitution IV). The same ledger and date are evaluated with the settings
+ * in force and with the new ones; whatever stops warning is listed.
+ */
+const confirmSilencedWarnings = async (
+  ctx: Context,
+  state: LedgerState,
+  current: Settings,
+  next: Settings,
+): Promise<boolean> => {
+  const date = todayInMadrid(ctx.deps.clock);
+  const before = activeWarnings(state, date, current);
+  const after = activeWarnings(state, date, next);
+  if (!before.evaluated) {
+    ctx.io.out(
+      `No se han podido evaluar los avisos (faltan precios de ${before.missing.join(", ")}); se continúa.`,
+    );
+    return true;
+  }
+  const keyOf = (warning: Warning): string => `${warning.code}|${JSON.stringify(warning.details)}`;
+  const kept = new Set(after.warnings.map(keyOf));
+  const silenced = before.warnings.filter((warning) => !kept.has(keyOf(warning)));
+  if (silenced.length === 0) {
+    return true;
+  }
+  ctx.io.out("Este cambio silencia avisos activos:");
+  for (const line of describeWarnings(silenced)) {
+    ctx.io.out(line);
+  }
+  return confirm(ctx, "¿Continuar? [s/N] ");
+};
+
 export const settingsCommand = async (
   ctx: Context,
   positionals: string[],
@@ -243,25 +298,32 @@ export const settingsCommand = async (
   const [, action] = positionals;
   if (action === "show") {
     assertKnownFlags(flags, ["at", ...GLOBAL_FLAGS]);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const at = stringFlag(flags, "at") ?? todayInMadrid(ctx.deps.clock);
     const resolution = settingsAt(state, at);
-    render(
+    renderQuery(
       ctx,
+      state,
       resolution,
       `Configuración vigente el ${at} (origen: ${resolution.origin}):\n${JSON.stringify(resolution.settings, null, 2)}`,
     );
     return 0;
   }
   if (action === "set") {
+    if (flags.has("wash-sale-window-days")) {
+      throw new UsageError(
+        "la ventana de recompra se cuenta de fecha a fecha: usa --wash-sale-window fund=1y,stock=2m (ADR-0014)",
+      );
+    }
     assertKnownFlags(flags, [
       "fiscal-date-rule",
-      "wash-sale-window-days",
+      "wash-sale-window",
+      "target-weights",
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
       ...GLOBAL_FLAGS,
     ]);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const current = settingsAt(state, todayInMadrid(ctx.deps.clock)).settings;
     const patch: Record<string, unknown> = {};
     const rules = stringFlag(flags, "fiscal-date-rule");
@@ -271,15 +333,17 @@ export const settingsCommand = async (
         ...parseAssignments(rules, "fiscal-date-rule"),
       };
     }
-    const windows = stringFlag(flags, "wash-sale-window-days");
+    const windows = stringFlag(flags, "wash-sale-window");
     if (windows !== undefined) {
-      const parsed = Object.fromEntries(
-        Object.entries(parseAssignments(windows, "wash-sale-window-days")).map(([key, value]) => [
-          key,
-          Number(value),
-        ]),
-      );
-      patch.wash_sale_window_days = { ...current.wash_sale_window_days, ...parsed };
+      patch.wash_sale_window = {
+        ...current.wash_sale_window,
+        ...parseAssignments(windows, "wash-sale-window"),
+      };
+    }
+    const weights = stringFlag(flags, "target-weights");
+    if (weights !== undefined) {
+      // Replaced whole, never merged: the weights must add up to 100 as a set.
+      patch.target_weights = parseAssignments(weights, "target-weights");
     }
     for (const flag of SETTINGS_DECIMALS) {
       const value = stringFlag(flags, flag);
@@ -294,6 +358,10 @@ export const settingsCommand = async (
       }
     }
     const settings = mergeSettings(current, patch as Partial<Settings>);
+    if (!(await confirmSilencedWarnings(ctx, state, current, settings))) {
+      ctx.io.out("Cancelado.");
+      return 0;
+    }
     await confirmAndRecord(ctx, { type: "settings_changed", settings });
     return 0;
   }

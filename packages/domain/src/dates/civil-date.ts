@@ -47,3 +47,29 @@ export const compareCivilDates = (left: CivilDate, right: CivilDate): number => 
 };
 
 export const yearOf = (date: CivilDate): number => Number(date.slice(0, 4));
+
+/** Days since the epoch for a civil date: UTC midnight, so no zone can shift the day. */
+const epochDayOf = (date: CivilDate): number =>
+  Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10))) /
+  86_400_000;
+
+/** `to − from`, in whole days; negative when `to` precedes `from`. */
+export const daysBetween = (from: CivilDate, to: CivilDate): number =>
+  epochDayOf(to) - epochDayOf(from);
+
+export const addDays = (date: CivilDate, days: number): CivilDate =>
+  new Date((epochDayOf(date) + days) * 86_400_000).toISOString().slice(0, 10);
+
+/** Saturday or Sunday: the ECB publishes no reference rate (data-schema.md §4). */
+export const isWeekend = (date: CivilDate): boolean => {
+  const weekday = (((epochDayOf(date) + 4) % 7) + 7) % 7; // 1970-01-01 was a Thursday
+  return weekday === 0 || weekday === 6;
+};
+
+/**
+ * Last working day on or before `date`: on a day the ECB does not publish, the
+ * last published rate applies (ADR-0013). TARGET holidays are not known until
+ * `reference/ecb/` exists (round 6), so only weekends are rolled back.
+ */
+export const lastWorkingDay = (date: CivilDate): CivilDate =>
+  isWeekend(date) ? lastWorkingDay(addDays(date, -1)) : date;

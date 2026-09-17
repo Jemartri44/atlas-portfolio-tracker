@@ -7,10 +7,11 @@ import { yearOf } from "../dates/civil-date.js";
 import { todayInMadrid } from "../dates/madrid.js";
 import { DependentEventsError, DuplicateFingerprintError, NotFoundError } from "../errors.js";
 import { createUlidGenerator } from "../ids/ulid.js";
-import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
-import type { InvalidEvent, LedgerState, Warning } from "../projections/state.js";
+import { businessDateOf, isOperationEvent } from "../projections/project-ledger.js";
+import type { LedgerState, Warning } from "../projections/state.js";
 import type { Draft, LedgerEvent, ReversalEvent, SupportedEvent } from "../schema/events.js";
 import type { UseCaseDeps } from "./deps.js";
+import { describeAffected, newlyInvalid } from "./invalid-events.js";
 import { completeDraft, duplicatesOf, type RecordOptions } from "./record-event.js";
 
 export interface ReverseResult {
@@ -43,9 +44,8 @@ export const isPriorYear = (
   yearOf(businessDateOf(state, target)) < yearOf(todayInMadrid(deps.clock));
 
 /**
- * Projects the candidate ledger collecting errors and separates the new events'
- * own failures from the events they would break. Pre-existing invalid events
- * (already in the store) are not attributed to this rectification.
+ * Checks the candidate ledger and separates the new events' own failures from
+ * the events they would break (shared with `recordEvent`, see `newlyInvalid`).
  */
 const checkCandidate = (
   current: readonly LedgerEvent[],
@@ -53,22 +53,13 @@ const checkCandidate = (
   newIds: readonly string[],
   targetId: string,
 ): LedgerState => {
-  const baseline = new Set(
-    projectLedger(current, { collectErrors: true }).invalid.map((entry) => entry.event.id),
-  );
-  const state = projectLedger(candidate, { collectErrors: true });
-  const fresh = state.invalid.filter((entry) => !baseline.has(entry.event.id));
+  const { fresh, state } = newlyInvalid(current, candidate);
   const own = fresh.find((entry) => newIds.includes(entry.event.id));
   if (own !== undefined) {
     throw own.error;
   }
-  const affected = fresh.map((entry: InvalidEvent) => ({
-    id: entry.event.id,
-    type: entry.event.type,
-    error: entry.error.message,
-  }));
-  if (affected.length > 0) {
-    throw new DependentEventsError(targetId, affected);
+  if (fresh.length > 0) {
+    throw new DependentEventsError(targetId, describeAffected(fresh));
   }
   return state;
 };

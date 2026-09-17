@@ -1,24 +1,31 @@
 // Draft construction from flags and the preview → confirm → record flow.
 
+import { access } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+
 import {
+  type CivilDate,
   completeDraft,
   createUlidGenerator,
   type Draft,
   type FiscalLot,
   fiscalLots,
+  isCivilDate,
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
   type PhysicalPosition,
+  type ProjectedLedger,
   physicalPositions,
   projectLedger,
   type RealizedGain,
   type RecordResult,
   recordEvent,
   type SupportedEvent,
+  todayInMadrid,
   type Warning,
 } from "@atlas/domain";
-import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
+import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import {
   ConfirmationRequired,
   type Context,
@@ -64,6 +71,23 @@ export const draftFromFlags = (spec: DraftSpec, flags: Flags): Record<string, un
   return draft;
 };
 
+/**
+ * `--date` of a read-only view, today in Europe/Madrid when it is absent. A
+ * typo has to fail as a usage error and not produce a plausible answer: the
+ * date comparisons are lexicographic, so a word would pick the last price and
+ * the last settings of the whole ledger and report an age of NaN.
+ */
+export const dateFlag = (ctx: Context, flags: Flags): CivilDate => {
+  const raw = stringFlag(flags, "date");
+  if (raw === undefined) {
+    return todayInMadrid(ctx.deps.clock);
+  }
+  if (!isCivilDate(raw)) {
+    throw new UsageError(`--date debe ser una fecha YYYY-MM-DD válida (recibido: ${raw})`);
+  }
+  return raw;
+};
+
 export const preview = (ctx: Context, title: string, draft: Record<string, unknown>): void => {
   ctx.io.out(title);
   ctx.io.out(keyValue(draft));
@@ -92,8 +116,14 @@ export const confirmAndRecord = async (
   }
   const result = await recordEvent(ctx.deps, draft as unknown as Draft, {
     confirmDuplicate: ctx.confirmDuplicate,
+    acceptInvalid: ctx.acceptInvalid,
   });
   ctx.io.out(`Registrado ${summarize(result.event)}.`);
+  if (result.newlyInvalid.length > 0) {
+    ctx.io.out(
+      `${result.newlyInvalid.length} eventos registrados quedan inválidos bajo la configuración nueva; las consultas lo avisarán. Ejecuta \`atlas check\`.`,
+    );
+  }
   for (const line of describeWarnings(result.warnings)) {
     ctx.io.out(line);
   }
@@ -115,6 +145,52 @@ export const draftOf = (event: LedgerEvent): Record<string, unknown> => {
 
 export const render = (ctx: Context, data: unknown, text: string): void => {
   ctx.io.out(ctx.json ? JSON.stringify(data, null, 2) : text);
+};
+
+/**
+ * Every read-only command projects in degraded mode (ADR-0015): one invalid
+ * event must never leave the ledger unreadable, because reading it is the only
+ * way to repair it. Mutations keep loading strictly.
+ *
+ * A view asked for a past date passes it as `asOf`, so the answer is the
+ * portfolio of that day and not the one of today read with the prices of then
+ * (data-schema.md §7).
+ */
+export const loadForQuery = (ctx: Context, asOf?: CivilDate): Promise<ProjectedLedger> =>
+  loadAndProject(ctx.deps, {
+    collectErrors: true,
+    ...(asOf === undefined ? {} : { asOf }),
+  });
+
+/** Visible degradation (constitution V): never a partial answer that looks complete. */
+export const degradedHeader = (state: LedgerState): string | undefined =>
+  state.invalid.length === 0
+    ? undefined
+    : `Aviso: ${state.invalid.length} ${
+        state.invalid.length === 1 ? "evento inválido" : "eventos inválidos"
+      } en el libro; lo que sigue es una proyección parcial. Ejecuta \`atlas check\` para verlos.`;
+
+/**
+ * Renders the result of a read-only command: the warning header before the
+ * table, and `invalid_count` beside the payload in JSON, where a header would
+ * corrupt the output.
+ */
+export const renderQuery = (
+  ctx: Context,
+  state: LedgerState,
+  data: unknown,
+  text: string,
+  channel: "out" | "err" = "out",
+): void => {
+  if (ctx.json) {
+    ctx.io.out(JSON.stringify({ invalid_count: state.invalid.length, data }, null, 2));
+    return;
+  }
+  const header = degradedHeader(state);
+  if (header !== undefined) {
+    ctx.io[channel](header);
+  }
+  ctx.io.out(text);
 };
 
 export interface Snapshot {
@@ -178,4 +254,43 @@ export const originOf = (
     return "";
   }
   return event.type === "corporate_action" ? `corporate_action:${event.kind}` : event.type;
+};
+
+/**
+ * The git working tree the path belongs to, if any: a `.git` entry (directory
+ * or file, so worktrees count) found walking up from it. Writing a ledger copy
+ * inside the repository is how private data ends up in a commit, so the CLI
+ * asks first. No `git` process involved.
+ */
+export const insideGitWorktree = async (path: string): Promise<string | undefined> => {
+  let current = resolve(path);
+  let parent = dirname(current);
+  while (true) {
+    try {
+      await access(join(current, ".git"));
+      return current;
+    } catch {
+      // Not a working tree root; keep walking up.
+    }
+    if (parent === current) {
+      return undefined;
+    }
+    current = parent;
+    parent = dirname(current);
+  }
+};
+
+/** Asks before writing `destination` when it falls inside a git working tree. Returns false if the user declines. */
+export const confirmOutsideRepository = async (
+  ctx: Context,
+  destination: string,
+): Promise<boolean> => {
+  const repository = await insideGitWorktree(destination);
+  if (repository === undefined) {
+    return true;
+  }
+  ctx.io.out(
+    `El destino está dentro del repositorio ${repository}: un fichero con datos reales podría acabar en un commit.`,
+  );
+  return confirm(ctx, "¿Escribir de todas formas? [s/N] ");
 };

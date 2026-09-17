@@ -90,8 +90,13 @@ describe("generateLedger: the scenario contains every rare case", () => {
     const types = new Set(ofType("asset_created").map((asset) => asset.asset_type));
     expect([...types].sort()).toEqual(["etc", "etp", "fund", "money_market", "stock"]);
     expect(state.accounts.get("acc_bucket")?.book).toBe("bucket");
-    expect(state.settingsHistory).toHaveLength(2);
-    expect(state.settingsHistory[1]?.settings.target_weights?.equity).toBe("55");
+    expect(state.settingsHistory).toHaveLength(3);
+    expect(state.settingsHistory[0]?.settings.target_weights?.ast_world).toBe("45");
+    expect(state.settingsHistory[1]?.settings.target_weights?.ast_world).toBe("40");
+    // After the fund merger and the share-class change the plan names the
+    // surviving assets, so the contribution never proposes a fund that is gone.
+    expect(state.settingsHistory[2]?.settings.target_weights?.ast_smallcap_b).toBe("10");
+    expect(state.settingsHistory[2]?.settings.target_weights?.ast_smallcap).toBeUndefined();
   });
 
   it("changes an identifier and deactivates the delisted asset", () => {
@@ -228,7 +233,11 @@ describe("generateLedger: the scenario contains every rare case", () => {
       "2027-12-31",
       "2028-12-31",
     ]);
-    expect(valuations.every((v) => v.account_id !== "acc_mi")).toBe(true);
+    // Foreign accounts for the Modelo 720, and the fund account so the phase-2
+    // projections have a price for every core asset held (feature 004).
+    expect(new Set(valuations.map((v) => v.account_id))).toEqual(
+      new Set(["acc_ibkr", "acc_ibkr2", "acc_bucket", "acc_mi"]),
+    );
     expect(ofType("fx_exchange")).toHaveLength(2);
     expect(ofType("interest")).toHaveLength(2);
     expect(ofType("standalone_fee")).toHaveLength(2);

@@ -1,6 +1,11 @@
 // User-facing messages in Spanish, derived from domain error codes.
 
-import type { DependentEventsError, DomainError, DuplicateFingerprintError } from "@atlas/domain";
+import type {
+  DependentEventsError,
+  DomainError,
+  DuplicateFingerprintError,
+  Warning,
+} from "@atlas/domain";
 import { table } from "./table.js";
 
 const text = (value: unknown): string =>
@@ -62,7 +67,45 @@ export const describeError = (error: DomainError): string => {
     case "insufficient_lots":
       return `Los lotes abiertos de ${text(d.asset_id)} no cubren la cantidad (abiertos: ${text(d.open ?? d.missing)}).`;
     case "not_transferable":
-      return "Un traspaso fiscal exige que ambos activos sean traspasables.";
+      return d.asset_id === undefined
+        ? "Un traspaso fiscal exige que ambos activos sean traspasables."
+        : `El activo ${text(d.asset_id)} no es traspasable (not_transferable): un traspaso fiscal exige que ambos lo sean.`;
+    case "not_core_asset":
+      return `El activo ${text(d.asset_id)} no pertenece al núcleo: el simulador de traspaso solo opera sobre la cartera principal.`;
+    case "missing_manual_prices":
+      return `Faltan precios manuales a ${text(d.date)}: ${(d.assets as string[]).join(", ")}. Regístralos con \`atlas add valuation --asset <id> --date ${text(d.date)} …\`.`;
+    case "missing_target_weights":
+      return "No hay pesos objetivo configurados: fíjalos con `atlas settings set --target-weights ast_x=60,ast_y=40` (target_weights).";
+    case "missing_bucket_pct":
+      return "Falta el porcentaje del cubo: `atlas settings set --bucket-pct-of-contribution 10` (bucket_pct_of_contribution).";
+    case "missing_amount":
+      return "Falta el importe de la aportación: pásalo con --amount o fíjalo con `atlas settings set --monthly-contribution-eur 600` (monthly_contribution_eur).";
+    case "no_target_weight_in_table":
+      return `Los pesos objetivo vigentes no apuntan a ningún activo de la tabla del núcleo${
+        (d.assets as string[]).length === 0
+          ? " (la tabla está vacía)"
+          : `: ${(d.assets as string[]).join(", ")} están todos al 0 %`
+      }. Es casi seguro un asset_id mal escrito en target_weights: mira el aviso unknown_target_weight de \`atlas weights\` y corrígelo con \`atlas settings set --target-weights …\`.`;
+    case "split_not_exact":
+      return `El reparto de la aportación no cuadra (${text(d.distributed)} repartidos de ${text(d.core)}): es un fallo interno de la calculadora, no registres nada.`;
+    case "invalid_amount":
+      return `El importe de la aportación debe ser mayor que cero (recibido: ${text(d.value)}).`;
+    case "invalid_quantity":
+      return `La cantidad traspasada debe ser mayor que cero (recibido: ${text(d.value)}).`;
+    case "eur_fx_rate_not_one":
+      return `${text(d.field)} debe ser exactamente "1" cuando la divisa es EUR (recibido: ${text(d.value)}): el BCE no publica un tipo del euro contra sí mismo.`;
+    case "fx_rate_date_weekend":
+      return `${text(d.field)} (${text(d.value)}) cae en fin de semana y el BCE no publica: usa el último día hábil anterior.`;
+    case "transfer_fee_not_allowed":
+      return "Un traspaso no lleva comisión: registra el cargo del depositario como `standalone_fee` (atlas add fee).";
+    case "accept_invalid_not_allowed":
+      return `--accept-invalid solo se admite en un cambio de configuración, no en ${text(d.type)} (ADR-0015).`;
+    case "newly_invalid_events":
+      return `Este cambio de configuración deja inválidos ${(d.affected as unknown[]).length} eventos ya registrados.`;
+    case "invalid_wash_sale_window":
+      return `La ventana de recompra de ${text(d.asset_type)} debe ser "2m", "1y" o "<n>d" (recibido: ${text(d.value)}).`;
+    case "negative_target_weight":
+      return `El peso objetivo de ${text(d.asset_id)} no puede ser negativo (recibido: ${text(d.value)}).`;
     case "reversal_of_reversal":
       return "No se puede anular una anulación: registra de nuevo el evento original.";
     case "already_reversed":
@@ -82,6 +125,12 @@ export const describeError = (error: DomainError): string => {
       return `La solicitud de traspaso ${text(d.request_id)} ya está cerrada (${text(d.stage)}).`;
     case "request_mismatch":
       return `La solicitud de traspaso ${text(d.request_id)} se refiere a otras cuentas o activos.`;
+    case "ledger_has_invalid_events": {
+      const count = d.invalid_count as number;
+      return `El libro ya tenía ${count} ${
+        count === 1 ? "evento inválido" : "eventos inválidos"
+      } antes de esta operación: sobre un libro degradado solo puede escribirse un cambio de configuración (ADR-0015). El primero es ${text(d.offending_type)} ${text(d.offending_id)}: ${text(d.offending_error)}. Ejecuta \`atlas check\` y rectifícalo antes.`;
+    }
     case "dependent_events":
       return `El evento ${text(d.target_id)} ha sido consumido por eventos posteriores; rectifícalos antes.`;
     case "unsupported_event":
@@ -124,14 +173,59 @@ export const describeError = (error: DomainError): string => {
   }
 };
 
+/**
+ * Spanish text of a projection warning. The domain speaks English and the CLI
+ * translates the `code` (see `errors.ts`); an unknown code falls back to the
+ * message, so a warning added later is never swallowed.
+ */
+export const describeWarning = (warning: Warning): string => {
+  const d = warning.details;
+  switch (warning.code) {
+    case "unknown_target_weight":
+      return `El peso objetivo de ${text(d.asset_id)} no corresponde a ningún activo del núcleo: revisa si el asset_id está mal escrito.`;
+    case "asset_without_target":
+      return `${text(d.asset_id)} tiene posición y ningún peso objetivo asignado.`;
+    case "deviation_above_threshold":
+      return `${text(d.asset_id)} se desvía ${text(d.deviation_pp)} pp del objetivo (umbral ${text(d.threshold_pp)} pp). El rebalanceo por venta es decisión anual tuya (regla 3).`;
+    case "satellite_below_minimum":
+      return `La clase satélite ${text(d.asset_class)} pesa ${text(d.weight_pct)} %, por debajo del mínimo de ${text(d.minimum_pct)} % (regla 6b: 0 % o al menos el mínimo).`;
+    case "partial_core_total":
+      return `Faltan precios de ${(d.assets as string[]).join(", ")} a ${text(d.date)}: no se calculan pesos sobre un total parcial.`;
+    case "stale_price":
+      return `${text(d.asset_id)}: el precio es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una valoración más reciente.`;
+    case "currency_mismatch":
+      return `El evento está en ${text(d.currency)} y el activo ${text(d.asset_id)} está en ${text(d.asset_currency)}.`;
+    case "fx_rate_date_after_fiscal_date":
+      return `fx_rate_date (${text(d.fx_rate_date)}) es posterior a la fecha fiscal (${text(d.fiscal_date)}).`;
+    case "same_asset_two_accounts":
+      return `El activo ${text(d.asset_id)} está ahora en ${(d.accounts as string[]).length} cuentas; el FIFO sigue siendo global.`;
+    case "sell_without_thesis":
+      return `La venta de ${text(d.asset_id)} en ${text(d.account_id)} no está enlazada a ninguna tesis.`;
+    case "thesis_size_exceeded":
+      return `La tesis ${text(d.thesis_id)} lleva ${text(d.invested_eur)} EUR invertidos, por encima de los ${text(d.planned_size_eur)} EUR previstos.`;
+    case "thesis_closed_with_position":
+      return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
+    default:
+      return warning.message;
+  }
+};
+
 export const describeDuplicate = (error: DuplicateFingerprintError): string =>
   `Ya existe un evento con la misma huella (${error.existing.join(", ")}). Si es una repetición legítima, añade --confirm-duplicate.`;
 
-export const describeDependants = (error: DependentEventsError): string =>
-  `${describeError(error)}\nEventos que dejarían de ser válidos (rectifícalos primero):\n${table(
+export const describeDependants = (error: DependentEventsError): string => {
+  const isSettings = error.code === "newly_invalid_events";
+  const heading = isSettings
+    ? "Eventos que pasan a ser inválidos con la configuración nueva:"
+    : "Eventos que dejarían de ser válidos (rectifícalos primero):";
+  const footer = isSettings
+    ? "\nLos hechos no cambian, cambia su interpretación (ADR-0015). Repite con --accept-invalid si es lo que quieres."
+    : "";
+  return `${describeError(error)}\n${heading}\n${table(
     ["id", "tipo", "motivo"],
     error.affected.map((entry) => [entry.id, entry.type, entry.error]),
-  )}`;
+  )}${footer}`;
+};
 
 export const priorYearWarning =
   "Aviso: el evento rectificado pertenece a un ejercicio anterior; puede afectar a una declaración ya presentada.";

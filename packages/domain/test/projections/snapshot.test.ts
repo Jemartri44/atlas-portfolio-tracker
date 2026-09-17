@@ -13,13 +13,13 @@ const richLedger = (): LedgerEvent[] => {
   b.buy({
     account_id: "acc_fund",
     asset_id: "ast_world",
-    value_date: "2027-07-03",
+    value_date: "2027-07-05",
     order_id: order.id,
     amount: "500",
     unit_price: undefined as never,
     quantity: "4.5",
   });
-  b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-10" });
+  b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-11" });
   b.sell({
     account_id: "acc_fund",
     asset_id: "ast_world",

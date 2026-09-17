@@ -64,7 +64,7 @@ describe("atlas ca", () => {
 
   it("reverse-split with cash-in-lieu computes the fractional shares per account", async () => {
     const h = harness({ events: seed() });
-    expect(await h.exec(buyGoldIn("acc_etf", "10", "2027-01-10"))).toBe(0);
+    expect(await h.exec(buyGoldIn("acc_etf", "10", "2027-01-11"))).toBe(0);
     expect(await h.exec(buyGoldIn("acc_fund", "7"))).toBe(0);
     h.reset();
     expect(
@@ -298,12 +298,12 @@ describe("atlas ca", () => {
         "--fx-rate",
         "1",
         "--fx-rate-date",
-        "2027-05-01",
+        "2027-05-03",
         "--fees",
         "acc_fund=2",
         ...CA,
         "--effective-date",
-        "2027-05-01",
+        "2027-05-03",
         "--yes",
       ]),
     ).toBe(0);
@@ -314,7 +314,7 @@ describe("atlas ca", () => {
         unit_price: "120",
         currency: "EUR",
         fx_rate: "1",
-        fx_rate_date: "2027-05-01",
+        fx_rate_date: "2027-05-03",
       },
     ]);
     expect(h.text()).toContain("queda sin posición");

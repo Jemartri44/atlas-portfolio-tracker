@@ -19,6 +19,19 @@ export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
 export type { RandomSource } from "./ports/random.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";
+export {
+  type ContributionInput,
+  type ContributionPlan,
+  type ContributionRow,
+  contributionPlan,
+} from "./projections/contribution.js";
+export {
+  type BucketCostRow,
+  type CoreCostRow,
+  type CoreCostTotals,
+  type CostSummary,
+  costSummary,
+} from "./projections/costs.js";
 export { deepCheck } from "./projections/deep-check.js";
 export { realizedGains } from "./projections/gains.js";
 export { investmentIncome } from "./projections/income.js";
@@ -40,6 +53,7 @@ export {
   pendingTransfers,
 } from "./projections/pending.js";
 export { type PhysicalPosition, physicalPositions } from "./projections/positions.js";
+export { type ManualPrice, manualPrices } from "./projections/prices.js";
 export {
   isOperationEvent,
   type OperationEvent,
@@ -47,10 +61,21 @@ export {
   projectLedger,
 } from "./projections/project-ledger.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
+export {
+  type SimulateTransferInput,
+  simulateTransfer,
+  type TransferSimulation,
+} from "./projections/simulate-transfer.js";
 export { type Snapshot, snapshotDiff, snapshotOf, sortKeysDeep } from "./projections/snapshot.js";
 export type * from "./projections/state.js";
 export { theses } from "./projections/theses.js";
 export { type ValuationAt, valuations } from "./projections/valuations.js";
+export {
+  type ClassSubtotal,
+  type CoreWeightRow,
+  type CoreWeights,
+  coreWeights,
+} from "./projections/weights.js";
 export * from "./schema/envelope.js";
 export * from "./schema/events.js";
 export { fingerprintOf } from "./schema/fingerprint.js";

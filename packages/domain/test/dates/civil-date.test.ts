@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDays,
   assertCivilDate,
   compareCivilDates,
+  daysBetween,
   daysInMonth,
   isCivilDate,
   isLeapYear,
+  isWeekend,
   yearOf,
 } from "../../src/dates/civil-date.js";
 import { ValidationError } from "../../src/errors.js";
@@ -43,5 +46,34 @@ describe("civil dates", () => {
     expect(compareCivilDates("2027-01-02", "2026-12-30")).toBe(1);
     expect(compareCivilDates("2026-12-30", "2026-12-30")).toBe(0);
     expect(yearOf("2026-12-30")).toBe(2026);
+  });
+
+  it("counts days between dates, across months, years and leap days", () => {
+    expect(daysBetween("2026-08-30", "2026-08-30")).toBe(0);
+    expect(daysBetween("2026-08-30", "2026-09-01")).toBe(2);
+    expect(daysBetween("2026-12-30", "2027-01-02")).toBe(3);
+    expect(daysBetween("2024-02-28", "2024-03-01")).toBe(2);
+    expect(daysBetween("2023-02-28", "2023-03-01")).toBe(1);
+    expect(daysBetween("2027-01-02", "2026-12-30")).toBe(-3);
+  });
+
+  it("adds days across months, years and leap days", () => {
+    expect(addDays("2026-08-30", 2)).toBe("2026-09-01");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addDays("2024-02-28", 1)).toBe("2024-02-29");
+    expect(addDays("2023-02-28", 1)).toBe("2023-03-01");
+    expect(addDays("2027-01-02", -3)).toBe("2026-12-30");
+    expect(addDays("2026-08-30", 0)).toBe("2026-08-30");
+  });
+
+  it("knows which days the ECB does not publish", () => {
+    // 2026-08-31 is a Monday.
+    expect(isWeekend("2026-08-31")).toBe(false);
+    expect(isWeekend("2026-09-04")).toBe(false); // Friday
+    expect(isWeekend("2026-09-05")).toBe(true); // Saturday
+    expect(isWeekend("2026-09-06")).toBe(true); // Sunday
+    expect(isWeekend("2026-09-07")).toBe(false); // Monday
+    expect(isWeekend("1970-01-01")).toBe(false); // Thursday, the epoch itself
+    expect(isWeekend("1969-12-28")).toBe(true); // Sunday before the epoch
   });
 });

@@ -272,7 +272,7 @@ describe("atlas over a ledger file", () => {
     expect(await account("acc_a", "core")).toBe(0);
     expect(await account("acc_b", "core")).toBe(0);
     expect(await stock("ast_old", "core", "--asset-class", "equity")).toBe(0);
-    expect(await buy("acc_a", "ast_old", "10", "2027-01-10")).toBe(0);
+    expect(await buy("acc_a", "ast_old", "10", "2027-01-11")).toBe(0);
     expect(await buy("acc_b", "ast_old", "7", "2027-02-10")).toBe(0);
     expect(
       await atlas(

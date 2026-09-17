@@ -4,6 +4,8 @@
 // and tracking in chronological order (business date, then file position);
 // the closing step adds the thesis warnings that need the final positions. In `collectErrors` mode invalid events are recorded and
 // skipped instead of aborting, so rectification can list everything affected.
+// With `asOf`, pass B stops at that business date: a view of a past date must
+// not be computed on a state that already contains the future.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { DomainError, ProjectionError, UnsupportedEventError } from "../errors.js";
@@ -57,6 +59,14 @@ export interface ProjectOptions {
   settings?: Settings;
   /** Record invalid events in `state.invalid` and continue instead of throwing. */
   collectErrors?: boolean;
+  /**
+   * Cuts pass B at a business date: every operation and tracking event dated
+   * after it is ignored, so the state is the portfolio as it stood that day and
+   * not the latest one read with old prices (data-schema.md §7). Pass A is
+   * unaffected: the catalogue, the settings and the theses are applied whole,
+   * because a reference is resolved against the complete catalogue (§7.1).
+   */
+  asOf?: CivilDate;
 }
 
 export type CatalogueEvent =
@@ -82,6 +92,11 @@ export type OperationEvent = Exclude<
 interface Positioned<E extends SupportedEvent = SupportedEvent> {
   event: E;
   position: number;
+}
+
+/** A pass-B event with its business date already resolved. */
+export interface DatedOperation extends Positioned<OperationEvent> {
+  date: CivilDate;
 }
 
 const CATALOGUE_TYPES = new Set<string>([
@@ -150,7 +165,7 @@ export const businessDateOf = (state: LedgerState, event: OperationEvent): Civil
 export const orderForProjection = (
   state: LedgerState,
   events: readonly Positioned<OperationEvent>[],
-): Positioned<OperationEvent>[] =>
+): DatedOperation[] =>
   events
     .map((entry) => ({ ...entry, date: businessDateOf(state, entry.event) }))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.position - b.position));
@@ -354,8 +369,13 @@ export const projectLedger = (
     );
   }
 
-  // Pass B: operations and tracking, in chronological order.
+  // Pass B: operations and tracking, in chronological order. With `asOf`, what
+  // happens after that date simply has not happened yet: it enters no lot, no
+  // position, no cash, no gain, no pending order, no valuation and no warning.
   for (const entry of orderForProjection(state, active.filter(isOperation))) {
+    if (options.asOf !== undefined && entry.date > options.asOf) {
+      continue;
+    }
     guarded(entry.event, () => applyOperation(state, entry.event, entry.position));
   }
   thesisWarnings(state);

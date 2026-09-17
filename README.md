@@ -4,7 +4,7 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 
 ## Estado
 
-Fase 1 completa: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local), feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha) y feature `003-synthetic-data` (generador de libros sintéticos con *golden file*, `compact` con archivo del original, verificación profunda y copia local verificada). Sin API, sin web, sin infraestructura todavía. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/), [`specs/002-corporate-actions/`](specs/002-corporate-actions/) y [`specs/003-synthetic-data/`](specs/003-synthetic-data/).
+Fase 1 completa y Fase 2 en marcha. Fase 1: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local), feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha) y feature `003-synthetic-data` (generador de libros sintéticos con *golden file*, `compact` con archivo del original, verificación profunda y copia local verificada). Fase 2: feature `004-monthly-contribution` (precios manuales, pesos y desviaciones del núcleo, calculadora de la aportación mensual, simulador de traspaso y resumen de costes). Sin API, sin web, sin infraestructura todavía. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/), [`specs/002-corporate-actions/`](specs/002-corporate-actions/), [`specs/003-synthetic-data/`](specs/003-synthetic-data/) y [`specs/004-monthly-contribution/`](specs/004-monthly-contribution/).
 
 ## Documentación
 
@@ -56,6 +56,9 @@ atlas lots               # lotes fiscales (FIFO global por activo), con fecha y 
 atlas cash               # efectivo por cuenta y divisa
 atlas gains 2027         # ganancias realizadas del ejercicio (redondeadas una vez por operación)
 atlas income 2027        # dividendos e intereses
+atlas weights --date 2027-12-31   # pesos, objetivos y desviaciones del núcleo
+atlas contribute --amount 1000    # reparto de la aportación del mes (propone; no escribe)
+atlas costs                       # comisiones, TER y coste anual, núcleo y cubo por separado
 atlas check              # integridad del libro (proyección)
 atlas check --deep       # además, líneas crudas: ids duplicados, huellas manipuladas, líneas no canónicas o antiguas
 
@@ -68,6 +71,33 @@ atlas order place --account acc_fund --asset ast_world --side buy --amount 500 -
 atlas transfer request --from-account acc_fund --from-asset ast_world --to-account acc_fund --to-asset ast_bonds --quantity-out 4 --requested-date 2027-03-01 --yes
 atlas export --format csv --out ledger.csv
 ```
+
+### El ciclo mensual (Fase 2)
+
+Los precios son manuales hasta la Fase 4: se registran como `valuation` y la aplicación siempre muestra de cuándo es cada uno. Ningún cálculo fiscal los mira.
+
+```bash
+# 1. Anota el valor liquidativo del mes de cada activo del núcleo
+atlas add valuation --account acc_fund --asset ast_world --date 2027-12-31 \
+  --quantity 120.45 --unit-value 105.20 --currency EUR --fx-rate 1 --yes
+
+# 2. Mira cómo está repartida la cartera y qué se ha desviado del plan
+atlas weights --date 2027-12-31
+
+# 3. Calcula el reparto de la aportación del mes: el cubo aparte, el resto a lo más rezagado
+atlas contribute --amount 1000 --date 2027-12-31
+
+# 4. Da las órdenes A MANO en la plataforma y regístralas
+atlas order place --account acc_fund --asset ast_bonds --side buy --amount 612.19 \
+  --requested-date 2028-01-03 --yes
+atlas add buy --account acc_fund --asset ast_bonds --order <order_id> \
+  --trade-date 2028-01-03 --value-date 2028-01-05 --quantity 6.2 --amount 612.19 \
+  --currency EUR --fx-rate 1 --fx-rate-date 2028-01-03 --fee 0 --yes
+```
+
+`atlas contribute` **propone y nunca escribe**: la aplicación no ejecuta órdenes ni elige valores del cubo. Si falta el precio de un activo con posición, se niega a repartir y dice cuál falta, en vez de repartir sobre un total incompleto.
+
+Antes de traspasar entre fondos, `atlas transfer simulate --from-asset ast_world --to-asset ast_bonds --quantity 10` enseña los pesos antes y después y recuerda que un traspaso no es hecho imponible.
 
 ### Copia de seguridad provisional (Fases 1-3)
 

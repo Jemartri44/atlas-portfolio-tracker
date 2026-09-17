@@ -126,7 +126,7 @@ describe("projectLedger: chronological order (Q1)", () => {
     const first = b.buy({
       account_id: "acc_fund",
       asset_id: "ast_world",
-      value_date: "2027-01-10",
+      value_date: "2027-01-11",
     });
     b.sell({
       account_id: "acc_fund",
@@ -332,7 +332,7 @@ describe("projectLedger: orders", () => {
       account_id: "acc_fund",
       asset_id: "ast_world",
       order_id: order.id,
-      value_date: "2027-07-03",
+      value_date: "2027-07-05",
     });
     b.orderUpdated({
       order_id: other.id,
@@ -345,7 +345,7 @@ describe("projectLedger: orders", () => {
     expect(state.orders.get(order.id)).toMatchObject({
       stage: "filled",
       closed_by: buy.id,
-      closed_on: "2027-07-03",
+      closed_on: "2027-07-05",
     });
     expect(state.orders.get(other.id)).toMatchObject({
       stage: "cancelled",
@@ -363,7 +363,7 @@ describe("projectLedger: orders", () => {
       account_id: "acc_fund",
       asset_id: "ast_world",
       order_id: order.id,
-      value_date: "2027-07-03",
+      value_date: "2027-07-05",
     });
     expect(failure(b.build()).code).toBe("order_mismatch");
 
@@ -375,7 +375,7 @@ describe("projectLedger: orders", () => {
       account_id: "acc_fund",
       asset_id: "ast_world",
       order_id: cancelled.id,
-      value_date: "2027-07-03",
+      value_date: "2027-07-05",
     });
     expect(failure(c.build()).code).toBe("order_closed");
 
@@ -396,7 +396,7 @@ describe("projectLedger: transfers", () => {
     const first = b.buy({
       account_id: "acc_fund",
       asset_id: "ast_world",
-      value_date: "2027-01-10",
+      value_date: "2027-01-11",
     });
     const second = b.buy({
       account_id: "acc_fund",
@@ -456,7 +456,7 @@ describe("projectLedger: transfers", () => {
         lot.source_lot_id,
       ]),
     ).toEqual([
-      [`${transfer.id}#0`, "2027-01-10", "7.5", "1000", `${first.id}#0`],
+      [`${transfer.id}#0`, "2027-01-11", "7.5", "1000", `${first.id}#0`],
       [`${transfer.id}#1`, "2027-02-01", "1.5", "240", `${second.id}#0`],
     ]);
     expect(realizedGains(state, 2027)).toEqual([]);
@@ -475,14 +475,14 @@ describe("projectLedger: transfers", () => {
     const inA = b.buy({
       account_id: "acc_fund",
       asset_id: "ast_world",
-      value_date: "2027-01-10",
+      value_date: "2027-01-11",
       quantity: "4",
       unit_price: "100",
     });
     const direct = b.buy({
       account_id: "acc_fund",
       asset_id: "ast_bonds",
-      value_date: "2027-01-10",
+      value_date: "2027-01-11",
       quantity: "4",
       unit_price: "50",
     });
@@ -671,7 +671,8 @@ describe("projectLedger: cash, income and valuations", () => {
       account_id: "acc_etf",
       asset_id: "ast_gold",
       currency: "EUR",
-      fx_rate_date: "2027-01-11",
+      // A working day after the fiscal date of the buy (2027-01-11).
+      fx_rate_date: "2027-01-12",
     });
     const state = projectLedger(b.build());
     expect(state.warnings.map((w) => w.code)).toEqual([
@@ -793,5 +794,114 @@ describe("toProjectionError", () => {
     expect(wrapped.details).toEqual({ field: "fee", event_id: event.id });
     expect(wrapped).toBeInstanceOf(DomainError);
     expect(() => toProjectionError(event, new TypeError("bug"))).toThrow(TypeError);
+  });
+});
+
+describe("projectLedger: asOf", () => {
+  /** One buy in 2027, then a sell and a split in 2028: the cut must hide both. */
+  const later = (): LedgerBuilder => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-01-11",
+      quantity: "10",
+      unit_price: "100",
+    });
+    return b;
+  };
+
+  it("ignores a sell dated after the cut: no lot consumed and no gain booked", () => {
+    const b = later();
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2028-03-01",
+      quantity: "4",
+      unit_price: "150",
+    });
+    const events = b.build();
+    const cut = projectLedger(events, { asOf: "2027-06-30" });
+    expect(cut.positions.get("acc_fund|ast_world")?.toString()).toBe("10");
+    expect(cut.gains).toEqual([]);
+    expect(fiscalLots(cut, "ast_world").map((lot) => lot.quantity.toString())).toEqual(["10"]);
+    // The same ledger read whole does see the sell.
+    const whole = projectLedger(events);
+    expect(whole.positions.get("acc_fund|ast_world")?.toString()).toBe("6");
+    expect(whole.gains).toHaveLength(1);
+  });
+
+  it("ignores a corporate action dated after the cut: nothing is transformed", () => {
+    const b = later();
+    b.corporateAction({
+      kind: "split",
+      asset_id: "ast_world",
+      effective_date: "2028-02-01",
+      effects: [{ op: "scale", ratio: "2" }],
+    });
+    const events = b.build();
+    expect(
+      projectLedger(events, { asOf: "2027-06-30" }).positions.get("acc_fund|ast_world")?.toString(),
+    ).toBe("10");
+    expect(projectLedger(events).positions.get("acc_fund|ast_world")?.toString()).toBe("20");
+  });
+
+  it("ignores the valuations, the cash and the pending orders dated after the cut", () => {
+    const b = later();
+    b.deposit({ account_id: "acc_fund", value_date: "2028-01-05", amount: "1000" });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2028-01-31",
+      unit_value: "300",
+    });
+    b.orderPlaced({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      requested_date: "2028-02-02",
+    });
+    const cut = projectLedger(b.build(), { asOf: "2027-06-30" });
+    expect(cut.valuations).toEqual([]);
+    expect(cut.orders.size).toBe(0);
+    // Only the cash the buy of 2027 moved; the deposit of 2028 is not there.
+    expect(cut.cash.get("acc_fund|EUR")?.amount.toString()).toBe("-1000");
+  });
+
+  it("keeps the whole catalogue and the whole settings history (pass A is not cut)", () => {
+    const b = later();
+    b.asset("ast_late", { asset_class: "equity" });
+    b.settings({ ...DEFAULT_SETTINGS, stale_price_days: 3 });
+    const cut = projectLedger(b.build(), { asOf: "2027-06-30" });
+    expect(cut.assets.has("ast_late")).toBe(true);
+    expect(cut.settingsHistory).toHaveLength(1);
+  });
+
+  it("cuts by business date, not by the order of registration", () => {
+    const b = later();
+    // Registered last, but dated before the cut: it counts.
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-02-11",
+      quantity: "5",
+      unit_price: "100",
+    });
+    expect(
+      projectLedger(b.build(), { asOf: "2027-06-30" })
+        .positions.get("acc_fund|ast_world")
+        ?.toString(),
+    ).toBe("15");
+    // Exactly on the cut date the event still counts: the cut is inclusive.
+    expect(
+      projectLedger(b.build(), { asOf: "2027-02-11" })
+        .positions.get("acc_fund|ast_world")
+        ?.toString(),
+    ).toBe("15");
+    expect(
+      projectLedger(b.build(), { asOf: "2027-02-10" })
+        .positions.get("acc_fund|ast_world")
+        ?.toString(),
+    ).toBe("10");
   });
 });

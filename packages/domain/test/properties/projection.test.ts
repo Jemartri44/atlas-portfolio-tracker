@@ -6,12 +6,37 @@ import { Decimal } from "../../src/money/decimal.js";
 import { Quantity } from "../../src/money/quantity.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
-import { projectLedger } from "../../src/projections/project-ledger.js";
+import {
+  businessDateOf,
+  isOperationEvent,
+  projectLedger,
+} from "../../src/projections/project-ledger.js";
+import { snapshotOf } from "../../src/projections/snapshot.js";
+import type { LedgerState } from "../../src/projections/state.js";
 import type { LedgerEvent } from "../../src/schema/events.js";
 import { aggregate } from "./aggregate.js";
 import { ACCOUNTS, ASSETS, isCatalogue, ledgerOf, opArb } from "./ledgers.js";
 
+/** Latest business date of pass B, the one an `asOf` must not cut anything at. */
+const lastBusinessDate = (events: readonly LedgerEvent[], state: LedgerState): string =>
+  events.filter(isOperationEvent).reduce((latest, event) => {
+    const date = businessDateOf(state, event);
+    return date > latest ? date : latest;
+  }, "0000-01-01");
+
 describe("projection invariants", () => {
+  it("asOf at the last business date projects exactly the whole ledger", () => {
+    fc.assert(
+      fc.property(fc.array(opArb, { maxLength: 30 }), (ops) => {
+        const { events } = ledgerOf(ops);
+        const whole = projectLedger(events);
+        const asOf = lastBusinessDate(events, whole);
+        expect(snapshotOf(projectLedger(events, { asOf }))).toEqual(snapshotOf(whole));
+      }),
+      { numRuns: 100 },
+    );
+  });
+
   it("open lots equal physical positions per asset and integrity is clean", () => {
     fc.assert(
       fc.property(fc.array(opArb, { maxLength: 30 }), (ops) => {

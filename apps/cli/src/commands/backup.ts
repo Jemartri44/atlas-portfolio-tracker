@@ -8,7 +8,7 @@ import { FileLedgerStore } from "@atlas/adapters";
 import { DomainError, todayInMadrid } from "@atlas/domain";
 import { assertKnownFlags, type Flags, requireFlag } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
-import { render } from "./shared.js";
+import { confirmOutsideRepository, render } from "./shared.js";
 import { pathExists } from "./synth.js";
 
 export const backupCommand = async (
@@ -26,6 +26,10 @@ export const backupCommand = async (
   const destination = join(directory, `ledger-${todayInMadrid(ctx.deps.clock)}.jsonl`);
   if (await pathExists(destination)) {
     throw new DomainError("path_exists", `${destination} already exists`, { path: destination });
+  }
+  if (!(await confirmOutsideRepository(ctx, destination))) {
+    ctx.io.out("Cancelado.");
+    return 0;
   }
   await mkdir(directory, { recursive: true });
   await copyFile(ctx.ledgerPath, destination, constants.COPYFILE_EXCL);

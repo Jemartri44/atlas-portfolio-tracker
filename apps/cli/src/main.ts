@@ -18,6 +18,7 @@ import { accountCommand, assetCommand, settingsCommand } from "./commands/catalo
 import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
 import { exportCommand } from "./commands/export.js";
+import { contributeCommand, costsCommand, weightsCommand } from "./commands/portfolio.js";
 import {
   cashCommand,
   checkCommand,
@@ -34,7 +35,7 @@ import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 
-const COMMANDS: Record<string, Command> = {
+export const COMMANDS: Record<string, Command> = {
   account: accountCommand,
   asset: assetCommand,
   settings: settingsCommand,
@@ -48,6 +49,9 @@ const COMMANDS: Record<string, Command> = {
   edit: editCommand,
   delete: deleteCommand,
   positions: positionsCommand,
+  weights: weightsCommand,
+  contribute: contributeCommand,
+  costs: costsCommand,
   lots: lotsCommand,
   cash: cashCommand,
   gains: gainsCommand,
@@ -59,7 +63,7 @@ const COMMANDS: Record<string, Command> = {
   backup: backupCommand,
 };
 
-export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--json] <comando> …
+export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--accept-invalid] [--json] <comando> …
 
 comandos:
   account add|update|list        asset add|update|list        settings set|show
@@ -69,6 +73,8 @@ comandos:
   thesis open|close|list [--closed]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
   positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
+  weights [--date]   contribute [--amount <eur>] [--date]   costs [--date]
+  transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   compact [--yes]   backup --to <directorio>`;
 
@@ -119,6 +125,7 @@ export const run = async (
       ledgerPath,
       yes: booleanFlag(flags, "yes"),
       confirmDuplicate: booleanFlag(flags, "confirm-duplicate"),
+      acceptInvalid: booleanFlag(flags, "accept-invalid"),
       json: booleanFlag(flags, "json"),
     };
     return await command(ctx, positionals, flags);

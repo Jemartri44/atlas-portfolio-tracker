@@ -1,6 +1,6 @@
 // atlas thesis open · close <id> · list [--closed] [--at]
 
-import { loadAndProject, theses, todayInMadrid } from "@atlas/domain";
+import { theses, todayInMadrid } from "@atlas/domain";
 import {
   assertKnownFlags,
   booleanFlag,
@@ -12,7 +12,7 @@ import {
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
 import { requireId } from "./catalogue.js";
-import { confirmAndRecord, render } from "./shared.js";
+import { confirmAndRecord, loadForQuery, renderQuery } from "./shared.js";
 
 const OPEN_FLAGS = [
   "id",
@@ -60,12 +60,13 @@ export const thesisCommand = async (
   }
   if (action === "list") {
     assertKnownFlags(flags, ["closed", "at", ...GLOBAL_FLAGS]);
-    const { state } = await loadAndProject(ctx.deps);
+    const { state } = await loadForQuery(ctx);
     const at = stringFlag(flags, "at") ?? todayInMadrid(ctx.deps.clock);
     const includeClosed = booleanFlag(flags, "closed");
     const rows = theses(state, at).filter((t) => includeClosed || t.status === "open");
-    render(
+    renderQuery(
       ctx,
+      state,
       rows.map((t) => ({
         ...t,
         planned_size_eur: t.planned_size_eur.amount.toString(),

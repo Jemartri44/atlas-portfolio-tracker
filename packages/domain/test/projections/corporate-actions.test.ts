@@ -1,5 +1,5 @@
 // Every row of data-schema.md §8.5 with its numeric example (10 shares, 1,000 €,
-// 2027-01-10) and the mandatory edge cases of the prompt §3.7.
+// 2027-01-11) and the mandatory edge cases of the prompt §3.7.
 
 import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";
@@ -32,7 +32,7 @@ const catalogueOf = (b: LedgerBuilder): void => {
   b.asset("ast_spec", { book: "bucket", asset_type: "stock", transferable: false });
 };
 
-/** The §8.5 lot: 10 units, 1,000 €, acquired 2027-01-10, in acc_a unless told otherwise. */
+/** The §8.5 lot: 10 units, 1,000 €, acquired 2027-01-11, in acc_a unless told otherwise. */
 const ten = (b: LedgerBuilder, asset_id: string, account_id = "acc_a") =>
   b.buy({ account_id, asset_id, quantity: "10", unit_price: "100" });
 
@@ -106,7 +106,7 @@ describe("data-schema.md §8.5, row by row", () => {
         id: expect.not.stringContaining(action.id),
         quantity: "40",
         cost: "1000",
-        date: "2027-01-10",
+        date: "2027-01-11",
         source: undefined,
       },
     ]);
@@ -123,7 +123,7 @@ describe("data-schema.md §8.5, row by row", () => {
     expect(openLots(state, "ast_old")[0]).toMatchObject({
       quantity: "2",
       cost: "800",
-      date: "2027-01-10",
+      date: "2027-01-11",
     });
     expect(positions(state)).toEqual(["acc_a|ast_old=2"]);
     expect(gains(state)).toEqual(["acc_a:0.5@200-200=0"]);
@@ -135,7 +135,7 @@ describe("data-schema.md §8.5, row by row", () => {
   it("stock dividend 1 per 10 → scale(1.1): 11 shares, 1,000 € (90.91 €/share), original date", () => {
     const { state } = ledger("stock_dividend", "ast_old", [{ op: "scale", ratio: "1.1" }]);
     const [lot] = openLots(state, "ast_old");
-    expect(lot).toMatchObject({ quantity: "11", cost: "1000", date: "2027-01-10" });
+    expect(lot).toMatchObject({ quantity: "11", cost: "1000", date: "2027-01-11" });
     expect(
       state.lots
         .get("ast_old")
@@ -180,7 +180,7 @@ describe("data-schema.md §8.5, row by row", () => {
         id: `${action.id}#0`,
         quantity: "5",
         cost: "1000",
-        date: "2027-01-10",
+        date: "2027-01-11",
         source: closed[0]?.id,
       },
     ]);
@@ -196,12 +196,12 @@ describe("data-schema.md §8.5, row by row", () => {
     expect(openLots(state, "ast_old")[0]).toMatchObject({
       quantity: "10",
       cost: "800",
-      date: "2027-01-10",
+      date: "2027-01-11",
     });
     expect(openLots(state, "ast_spin")[0]).toMatchObject({
       quantity: "2.5",
       cost: "200",
-      date: "2027-01-10",
+      date: "2027-01-11",
     });
     expect(positions(state)).toEqual(["acc_a|ast_old=10", "acc_a|ast_spin=2.5"]);
     expect(state.gains).toEqual([]);
@@ -218,7 +218,7 @@ describe("data-schema.md §8.5, row by row", () => {
     expect(openLots(state, "ast_fund_b")[0]).toMatchObject({
       quantity: "17",
       cost: "1000",
-      date: "2027-01-10",
+      date: "2027-01-11",
     });
     expect(positions(state)).toEqual(["acc_a|ast_fund_b=17"]);
     expect(state.gains).toEqual([]);
@@ -234,7 +234,7 @@ describe("data-schema.md §8.5, row by row", () => {
     expect(openLots(state, "ast_fund_b")[0]).toMatchObject({
       quantity: "10",
       cost: "1000",
-      date: "2027-01-10",
+      date: "2027-01-11",
     });
     expect(openLots(state, "ast_fund_a")).toEqual([]);
   });
@@ -311,7 +311,7 @@ describe("data-schema.md §8.5, row by row", () => {
     expect(openLots(state, "ast_newtoken")[0]).toMatchObject({
       quantity: "1000",
       cost: "1000",
-      date: "2027-01-10",
+      date: "2027-01-11",
     });
     expect(positions(state)).toEqual(["acc_a|ast_newtoken=1000"]);
   });
@@ -325,7 +325,7 @@ describe("data-schema.md §8.5, row by row", () => {
     expect(openLots(state, "ast_new")[0]).toMatchObject({
       quantity: "6",
       cost: "600",
-      date: "2027-01-10",
+      date: "2027-01-11",
     });
     expect(positions(state)).toEqual(["acc_a|ast_new=6"]);
     expect(integrity(state)).toEqual([]);
@@ -381,7 +381,7 @@ describe("mandatory edge cases (prompt §3.7)", () => {
     expect(openLots(state, "ast_new")[0]).toMatchObject({
       quantity: "4",
       cost: "800",
-      date: "2027-01-10",
+      date: "2027-01-11",
     });
     expect(positions(state)).toEqual(["acc_a|ast_new=4"]);
   });
@@ -477,7 +477,7 @@ describe("mandatory edge cases (prompt §3.7)", () => {
       asset_id: "ast_old",
       quantity: "20",
       unit_price: "30",
-      value_date: "2027-05-01",
+      value_date: "2027-05-03",
     });
     expect(failure(b.build()).code).toBe("insufficient_position");
     b.corporateAction({

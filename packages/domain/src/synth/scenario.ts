@@ -4,7 +4,7 @@
 // amounts, prices, rates and day-of-month jitter drawn from the seed. Nothing
 // here is real: invented ids, ISINs `XX…`, round amounts.
 
-import type { CivilDate } from "../dates/civil-date.js";
+import { type CivilDate, lastWorkingDay } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import type {
   AccountId,
@@ -258,6 +258,40 @@ const LATER_ASSETS: Record<string, AssetSpec> = {
   },
 };
 
+/** Target weights by `asset_id` over the core book (feature 004); they add up to exactly 100. */
+const TARGET_WEIGHTS: Record<string, string> = {
+  ast_world: "45",
+  ast_smallcap: "10",
+  ast_bonds: "20",
+  ast_mm: "10",
+  ast_gold: "10",
+  ast_btc: "5",
+};
+
+/** The later plan of the scenario: less equity, more fixed income (a second `settings_changed`). */
+const TARGET_WEIGHTS_LATER: Record<string, string> = {
+  ast_world: "40",
+  ast_smallcap: "10",
+  ast_bonds: "22",
+  ast_mm: "13",
+  ast_gold: "10",
+  ast_btc: "5",
+};
+
+/**
+ * The plan after the fund merger and the share-class change: the same weights
+ * moved onto the surviving assets. Without this the plan would keep naming
+ * funds that no longer exist and the contribution would propose buying them.
+ */
+const TARGET_WEIGHTS_AFTER_CONVERSIONS: Record<string, string> = {
+  ast_world: "40",
+  ast_smallcap_b: "10",
+  ast_bonds_i: "22",
+  ast_mm: "13",
+  ast_gold: "10",
+  ast_btc: "5",
+};
+
 const settingsWith = (weights: Record<string, string>, contribution: string): Settings => ({
   ...DEFAULT_SETTINGS,
   target_weights: weights,
@@ -313,10 +347,7 @@ class Scenario {
   private catalogue(date: CivilDate): void {
     this.b.record(date, {
       type: "settings_changed",
-      settings: settingsWith(
-        { equity: "60", fixed_income: "25", gold: "10", crypto: "5" },
-        this.p.worldAmount,
-      ),
+      settings: settingsWith(TARGET_WEIGHTS, this.p.worldAmount),
     });
     for (const account of ACCOUNTS) {
       this.b.record(date, {
@@ -360,7 +391,7 @@ class Scenario {
       fee_currency: "USD",
       fx_rate_sold: "1",
       fx_rate_bought: rate,
-      fx_rate_date: date,
+      fx_rate_date: lastWorkingDay(date),
     });
     return soldAmount;
   }
@@ -384,7 +415,7 @@ class Scenario {
       unit_price,
       currency: "USD",
       fx_rate,
-      fx_rate_date: trade,
+      fx_rate_date: lastWorkingDay(trade),
       fee: "1",
       source: "manual",
       thesis_id,
@@ -408,7 +439,7 @@ class Scenario {
       unit_price,
       currency: "USD",
       fx_rate: this.rate(),
-      fx_rate_date: trade,
+      fx_rate_date: lastWorkingDay(trade),
       fee: "1",
       source: "manual",
       thesis_id,
@@ -449,7 +480,8 @@ class Scenario {
       withholding_spain: pct(gross, withholdingSpainRate),
       currency: "USD",
       fx_rate: this.rate(),
-      fx_rate_date: date,
+      fx_rate_date: lastWorkingDay(date),
+      source_country: "US",
       per_unit: "0.20",
     });
   }
@@ -464,7 +496,7 @@ class Scenario {
       withholding_spain: pct(gross, "0.19"),
       currency: "EUR",
       fx_rate: "1",
-      fx_rate_date: date,
+      fx_rate_date: lastWorkingDay(date),
     });
   }
 
@@ -509,6 +541,18 @@ class Scenario {
     this.valuation("acc_ibkr", "ast_gold", date, this.b.rng.decimal(180, 260, 2), "USD");
     this.valuation("acc_ibkr", "ast_btc", date, this.b.rng.decimal(20, 45, 2), "EUR");
     this.valuation("acc_ibkr2", "ast_gold", date, this.b.rng.decimal(180, 260, 2), "USD");
+    // The core funds too: without a price for every core asset held, `weights` is
+    // partial and `contribute` refuses to split (feature 004, decision (c)).
+    for (const asset of [
+      "ast_world",
+      "ast_smallcap",
+      "ast_smallcap_b",
+      "ast_bonds",
+      "ast_bonds_i",
+    ]) {
+      this.valuation("acc_mi", asset, date, this.b.rng.decimal(80, 130, 2), "EUR");
+    }
+    this.valuation("acc_mi", "ast_mm", date, this.b.rng.decimal(100, 108, 2), "EUR");
     for (const asset of ["ast_alpha", "ast_beta", "ast_beta_new", "ast_gamma"]) {
       this.valuation("acc_bucket", asset, date, this.b.rng.decimal(15, 90, 2), "USD");
     }
@@ -547,7 +591,7 @@ class Scenario {
       unit_price,
       currency: "USD",
       fx_rate: this.rate(),
-      fx_rate_date: date,
+      fx_rate_date: lastWorkingDay(date),
     };
   }
 
@@ -582,7 +626,7 @@ class Scenario {
       amount,
       currency: "EUR",
       fx_rate: "1",
-      fx_rate_date: value,
+      fx_rate_date: lastWorkingDay(value),
       fee: "0",
       source: "manual",
       order_id: order.id,
@@ -682,7 +726,7 @@ class Scenario {
       unit_price: p.goldPrice,
       currency: "USD",
       fx_rate: p.fx,
-      fx_rate_date: tradeDay,
+      fx_rate_date: lastWorkingDay(tradeDay),
       fee: "1.5",
       source: "manual",
     });
@@ -696,7 +740,7 @@ class Scenario {
       unit_price: p.btcPrice,
       currency: "EUR",
       fx_rate: "1",
-      fx_rate_date: tradeDay,
+      fx_rate_date: lastWorkingDay(tradeDay),
       fee: "1",
       source: "manual",
     });
@@ -711,7 +755,7 @@ class Scenario {
       amount: p.mmAmount,
       currency: "EUR",
       fx_rate: "1",
-      fx_rate_date: mmValue,
+      fx_rate_date: lastWorkingDay(mmValue),
       fee: "0",
       source: "manual",
     });
@@ -750,7 +794,7 @@ class Scenario {
       unit_price: price,
       currency: "EUR",
       fx_rate: "1",
-      fx_rate_date: value,
+      fx_rate_date: lastWorkingDay(value),
       fee: "0",
       source: "manual",
       notes: "Loss sale followed by monthly contributions within the year",
@@ -766,7 +810,7 @@ class Scenario {
       unit_price: lateNav,
       currency: "EUR",
       fx_rate: "1",
-      fx_rate_date: LATE_BUY_DATE,
+      fx_rate_date: lastWorkingDay(LATE_BUY_DATE),
       fee: "0",
       source: "manual",
       notes: "Found in an old statement; recorded late",
@@ -904,7 +948,7 @@ class Scenario {
       unit_price: this.b.rng.decimal(100.5, 102, 2),
       currency: "EUR",
       fx_rate: "1",
-      fx_rate_date: value,
+      fx_rate_date: lastWorkingDay(value),
       fee: "0",
       withholding: "1.50",
       source: "manual",
@@ -1042,10 +1086,7 @@ class Scenario {
         case 12:
           b.record(day, {
             type: "settings_changed",
-            settings: settingsWith(
-              { equity: "55", fixed_income: "30", gold: "10", crypto: "5" },
-              p.worldAmount,
-            ),
+            settings: settingsWith(TARGET_WEIGHTS_LATER, p.worldAmount),
           });
           this.deposit(
             "acc_mi",
@@ -1085,6 +1126,11 @@ class Scenario {
           break;
         case 18:
           this.shareClassChange(block);
+          // The plan follows the assets it now owns.
+          b.record(addDays(block, 1), {
+            type: "settings_changed",
+            settings: settingsWith(TARGET_WEIGHTS_AFTER_CONVERSIONS, p.worldAmount),
+          });
           break;
         case 19:
           this.interest(dateOf(year, month, 28));

@@ -104,16 +104,49 @@ export interface AffectedEvent {
   readonly error: string;
 }
 
-/** Reversing or correcting an event would invalidate later events. */
+/**
+ * Writing an event would leave other events invalid: reversing or correcting
+ * something later events consumed (`dependent_events`, ADR-0003), or a
+ * `settings_changed` that reinterprets the past (`newly_invalid_events`,
+ * ADR-0015). The second is the only one that can be accepted on purpose.
+ */
 export class DependentEventsError extends DomainError {
   readonly affected: readonly AffectedEvent[];
 
-  constructor(targetId: string, affected: readonly AffectedEvent[]) {
-    super("dependent_events", `event ${targetId} is consumed by later events; rectify them first`, {
-      target_id: targetId,
-      affected,
-    });
+  constructor(
+    targetId: string,
+    affected: readonly AffectedEvent[],
+    code: "dependent_events" | "newly_invalid_events" = "dependent_events",
+  ) {
+    super(
+      code,
+      code === "dependent_events"
+        ? `event ${targetId} is consumed by later events; rectify them first`
+        : `the new settings leave ${affected.length} recorded events invalid`,
+      { target_id: targetId, affected },
+    );
     this.affected = affected;
+  }
+}
+
+/**
+ * The ledger already carried invalid events before this mutation. Only a
+ * `settings_changed` may be written over a degraded ledger (ADR-0015), and the
+ * new event is not at fault: the offending one is named so its own error is
+ * never read as an accusation against what is being recorded.
+ */
+export class InvalidLedgerError extends DomainError {
+  constructor(offender: AffectedEvent, invalidCount: number) {
+    super(
+      "ledger_has_invalid_events",
+      `the ledger already has ${invalidCount} invalid events; ${offender.type} ${offender.id} fails with: ${offender.error}`,
+      {
+        offending_id: offender.id,
+        offending_type: offender.type,
+        offending_error: offender.error,
+        invalid_count: invalidCount,
+      },
+    );
   }
 }
 

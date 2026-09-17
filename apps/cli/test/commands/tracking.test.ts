@@ -66,9 +66,9 @@ describe("atlas order", () => {
         "--asset",
         "ast_world",
         "--trade-date",
-        "2027-07-03",
+        "2027-07-05",
         "--value-date",
-        "2027-07-03",
+        "2027-07-05",
         "--quantity",
         "4",
         "--amount",
@@ -78,7 +78,7 @@ describe("atlas order", () => {
         "--fx-rate",
         "1",
         "--fx-rate-date",
-        "2027-07-03",
+        "2027-07-05",
         "--order",
         first,
         "--yes",
@@ -89,7 +89,7 @@ describe("atlas order", () => {
     expect(h.text()).not.toContain(first);
     h.reset();
     expect(await h.exec(["order", "list", "--all", "--json"])).toBe(0);
-    const all = JSON.parse(h.out.join("\n")) as { stage: string }[];
+    const all = h.json() as { stage: string }[];
     expect(all.map((o) => o.stage).sort()).toEqual(["cancelled", "filled"]);
     expect(await h.exec(["order", "cancel", "--date", "2027-07-05", "--yes"])).toBe(64);
     expect(await h.exec(["order", "nope"])).toBe(64);
@@ -108,9 +108,9 @@ describe("atlas transfer", () => {
         "--asset",
         "ast_world",
         "--trade-date",
-        "2027-01-10",
+        "2027-01-11",
         "--value-date",
-        "2027-01-10",
+        "2027-01-11",
         "--quantity",
         "10",
         "--unit-price",
@@ -120,7 +120,7 @@ describe("atlas transfer", () => {
         "--fx-rate",
         "1",
         "--fx-rate-date",
-        "2027-01-10",
+        "2027-01-11",
         "--yes",
       ]),
     ).toBe(0);
@@ -192,10 +192,10 @@ describe("atlas transfer", () => {
     ).toBe(0);
     h.reset();
     expect(await h.exec(["transfer", "pending", "--json"])).toBe(0);
-    expect(JSON.parse(h.out.join("\n"))).toEqual([]);
+    expect(h.json()).toEqual([]);
     h.reset();
     expect(await h.exec(["lots", "ast_bonds"])).toBe(0);
-    expect(h.text()).toContain("2027-01-10");
+    expect(h.text()).toContain("2027-01-11");
     expect(h.text()).toContain("3.5");
     expect(
       await h.exec(["transfer", "update", "--stage", "cancelled", "--date", "2027-03-03", "--yes"]),

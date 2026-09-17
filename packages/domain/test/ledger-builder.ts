@@ -1,6 +1,7 @@
 // Builds synthetic ledgers for tests: sequential ULID-shaped ids, computed
 // fingerprints and sensible defaults for every event type.
 
+import { lastWorkingDay } from "../src/dates/civil-date.js";
 import type { Ulid } from "../src/ids/ulid.js";
 import type { Envelope } from "../src/schema/envelope.js";
 import type {
@@ -140,7 +141,7 @@ export class LedgerBuilder {
   }
 
   buy(overrides: Partial<Fields<BuyEvent>> & { account_id: string; asset_id: string }): BuyEvent {
-    const value_date = overrides.value_date ?? overrides.trade_date ?? "2027-01-10";
+    const value_date = overrides.value_date ?? overrides.trade_date ?? "2027-01-11";
     return this.push<BuyEvent>("buy", {
       trade_date: value_date,
       value_date,
@@ -148,7 +149,7 @@ export class LedgerBuilder {
       unit_price: "100",
       currency: "EUR",
       fx_rate: "1",
-      fx_rate_date: value_date,
+      fx_rate_date: lastWorkingDay(value_date),
       fee: "0",
       source: "manual",
       ...overrides,
@@ -166,7 +167,7 @@ export class LedgerBuilder {
       unit_price: "100",
       currency: "EUR",
       fx_rate: "1",
-      fx_rate_date: value_date,
+      fx_rate_date: lastWorkingDay(value_date),
       fee: "0",
       source: "manual",
       ...overrides,
@@ -206,7 +207,7 @@ export class LedgerBuilder {
 
   fx(overrides: Partial<Fields<FxExchangeEvent>> & { account_id: string }): FxExchangeEvent {
     return this.push<FxExchangeEvent>("fx_exchange", {
-      value_date: "2027-05-02",
+      value_date: "2027-05-04",
       sold_amount: "1085",
       sold_currency: "EUR",
       bought_amount: "1170",
@@ -215,7 +216,7 @@ export class LedgerBuilder {
       fee_currency: "USD",
       fx_rate_sold: "1",
       fx_rate_bought: "1.0783",
-      fx_rate_date: "2027-05-02",
+      fx_rate_date: "2027-05-04",
       ...overrides,
     });
   }

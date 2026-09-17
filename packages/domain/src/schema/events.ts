@@ -130,7 +130,6 @@ export interface TransferEvent extends Envelope {
   quantity_in: DecimalString;
   nav_in?: DecimalString;
   value_date_in: CivilDate;
-  fee?: DecimalString;
   fingerprint: string;
   notes?: string;
 }
@@ -146,6 +145,8 @@ export interface DividendEvent extends Envelope {
   currency: Currency;
   fx_rate: DecimalString;
   fx_rate_date: CivilDate;
+  /** ISO 3166-1 alpha-2 of the payer (data-schema.md §6.2, fiscal question #16). */
+  source_country?: string;
   per_unit?: DecimalString;
   broker_ref?: string;
   fingerprint: string;

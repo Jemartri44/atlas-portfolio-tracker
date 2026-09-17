@@ -1,5 +1,6 @@
 import type { LedgerEvent, UseCaseDeps, Warning } from "@atlas/domain";
 import type { Flags } from "./args.js";
+import { describeWarning } from "./output/messages.js";
 
 export interface Io {
   out(text: string): void;
@@ -14,12 +15,19 @@ export interface Context {
   ledgerPath: string;
   yes: boolean;
   confirmDuplicate: boolean;
+  acceptInvalid: boolean;
   json: boolean;
 }
 
 export type Command = (ctx: Context, positionals: string[], flags: Flags) => Promise<number>;
 
-export const GLOBAL_FLAGS = ["ledger", "yes", "confirm-duplicate", "json"] as const;
+export const GLOBAL_FLAGS = [
+  "ledger",
+  "yes",
+  "confirm-duplicate",
+  "accept-invalid",
+  "json",
+] as const;
 
 export const EXIT = {
   ok: 0,
@@ -40,6 +48,6 @@ export class ConfirmationRequired extends Error {
 }
 
 export const describeWarnings = (warnings: readonly Warning[]): string[] =>
-  warnings.map((warning) => `Aviso (${warning.code}): ${warning.message}`);
+  warnings.map((warning) => `Aviso (${warning.code}): ${describeWarning(warning)}`);
 
 export const summarize = (event: LedgerEvent): string => `${event.type} ${event.id}`;

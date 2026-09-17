@@ -80,4 +80,40 @@ describe("architecture: @atlas/domain imports nothing", () => {
     expect(violations).toEqual([]);
     expect(readFileSync(join(domainSrc, "index.ts"), "utf8")).toContain("./synth/index.js");
   });
+
+  /**
+   * Constitution II: prices are informative and no tax calculation may depend
+   * on them. The phase-2 projections stay on their side of the line, and the
+   * fiscal ones never learn that a price exists.
+   */
+  it("keeps manual prices out of every fiscal calculation", () => {
+    const projections = join(domainSrc, "projections");
+    const informative = [
+      "prices.ts",
+      "weights.ts",
+      "contribution.ts",
+      "simulate-transfer.ts",
+      "costs.ts",
+    ];
+    const fiscal = ["lots.ts", "gains.ts", "income.ts", "corporate-actions.ts", "primitives.ts"];
+    const violations: string[] = [];
+    for (const file of informative) {
+      for (const specifier of specifiersOf(readFileSync(join(projections, file), "utf8"))) {
+        if (fiscal.some((name) => specifier.endsWith(name.replace(".ts", ".js")))) {
+          violations.push(`${file} -> ${specifier}`);
+        }
+        if (specifier.endsWith("fiscal-date.js")) {
+          violations.push(`${file} -> ${specifier}`);
+        }
+      }
+    }
+    for (const file of fiscal) {
+      for (const specifier of specifiersOf(readFileSync(join(projections, file), "utf8"))) {
+        if (specifier.endsWith("prices.js")) {
+          violations.push(`${file} -> ${specifier}`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
 });

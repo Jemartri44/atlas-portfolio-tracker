@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
-import { validateShape } from "../../src/schema/validate.js";
+import { FX_FIELDS, knownFieldsOf, validateShape } from "../../src/schema/validate.js";
 import { envelope, ID, SAMPLES, sampleList, variant } from "../samples.js";
 import { TEST_SCHEMA_V2 } from "./test-schema.js";
 
@@ -229,7 +229,10 @@ describe("validateShape: consistency rules", () => {
   });
 
   it("fx_exchange: currencies must differ", () => {
-    rejects(variant(SAMPLES.fx_exchange, { bought_currency: "EUR" }), "invalid_field");
+    rejects(
+      variant(SAMPLES.fx_exchange, { bought_currency: "EUR", fx_rate_bought: "1" }),
+      "invalid_field",
+    );
   });
 
   it("order_placed and transfer_requested: exactly one sizing field", () => {
@@ -259,5 +262,133 @@ describe("validateShape: consistency rules", () => {
     rejects({ ...custody, to_account_id: "acc_fund" }, "invalid_field");
     rejects({ ...custody, nav_out: "1" }, "invalid_field");
     rejects({ ...custody, quantity_in: "3" }, "invalid_field");
+  });
+});
+
+describe("ECB rate rules (data-schema.md §4)", () => {
+  it("declares every fx_rate field of every event type in one of the two tables", () => {
+    const declared = new Set<string>();
+    for (const pairs of Object.values(FX_FIELDS.pairs)) {
+      for (const [, rate] of pairs) {
+        declared.add(rate);
+      }
+    }
+    for (const dates of Object.values(FX_FIELDS.dates)) {
+      for (const field of dates) {
+        declared.add(field);
+      }
+    }
+    for (const sample of sampleList()) {
+      const type = sample.type as Parameters<typeof knownFieldsOf>[0];
+      for (const field of knownFieldsOf(type)) {
+        if (field.startsWith("fx_rate")) {
+          expect({ type, field, declared: declared.has(field) }).toEqual({
+            type,
+            field,
+            declared: true,
+          });
+        }
+      }
+    }
+  });
+
+  it('requires exactly "1" when the currency is the euro', () => {
+    expect(validateShape(variant(SAMPLES.buy, { currency: "EUR", fx_rate: "1" }))).toBeTruthy();
+    rejects(variant(SAMPLES.buy, { currency: "EUR", fx_rate: "1.0000" }), "eur_fx_rate_not_one");
+    rejects(variant(SAMPLES.buy, { currency: "EUR", fx_rate: "1.08" }), "eur_fx_rate_not_one");
+    expect(
+      validateShape(variant(SAMPLES.buy, { currency: "USD", fx_rate: "1.0850" })),
+    ).toBeTruthy();
+  });
+
+  it("checks both currency pairs of an fx_exchange", () => {
+    rejects(variant(SAMPLES.fx_exchange, { fx_rate_sold: "1.0001" }), "eur_fx_rate_not_one");
+    rejects(
+      variant(SAMPLES.fx_exchange, { bought_currency: "EUR", fx_rate_bought: "1.0783" }),
+      "eur_fx_rate_not_one",
+    );
+  });
+
+  it("checks the euro rule on cash movements, fees and valuations", () => {
+    rejects(variant(SAMPLES.cash_deposit, { fx_rate: "1.01" }), "eur_fx_rate_not_one");
+    rejects(variant(SAMPLES.cash_withdrawal, { fx_rate: "1.01" }), "eur_fx_rate_not_one");
+    rejects(variant(SAMPLES.standalone_fee, { fx_rate: "1.01" }), "eur_fx_rate_not_one");
+    rejects(
+      variant(SAMPLES.valuation, { currency: "EUR", fx_rate: "1.0900" }),
+      "eur_fx_rate_not_one",
+    );
+  });
+
+  it("rejects a rate dated on a weekend and accepts the working days around it", () => {
+    // 2027-05-01 is a Saturday and 2027-05-02 a Sunday.
+    rejects(variant(SAMPLES.buy, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+    rejects(variant(SAMPLES.buy, { fx_rate_date: "2027-05-02" }), "fx_rate_date_weekend");
+    expect(validateShape(variant(SAMPLES.buy, { fx_rate_date: "2027-04-30" }))).toBeTruthy();
+    expect(validateShape(variant(SAMPLES.buy, { fx_rate_date: "2027-05-03" }))).toBeTruthy();
+    rejects(variant(SAMPLES.sell, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+    rejects(variant(SAMPLES.dividend, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+    rejects(variant(SAMPLES.interest, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+    rejects(variant(SAMPLES.fx_exchange, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+  });
+
+  it("applies both rules to the forced_sale and grant effects", () => {
+    const effectVariant = (patch: Record<string, unknown>): unknown => ({
+      ...SAMPLES.corporate_action,
+      effects: [
+        SAMPLES.corporate_action.effects[0],
+        { ...SAMPLES.corporate_action.effects[1], ...patch },
+      ],
+    });
+    rejects(effectVariant({ currency: "EUR" }), "eur_fx_rate_not_one");
+    expect(validateShape(effectVariant({ currency: "EUR", fx_rate: "1" }))).toBeTruthy();
+    rejects(effectVariant({ fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+    const grant = {
+      ...SAMPLES.corporate_action,
+      kind: "crypto_fork",
+      effects: [
+        {
+          op: "grant",
+          asset_id: "ast_fork",
+          per_account: [{ account_id: "acc_etf", quantity: "10" }],
+          unit_cost: "0",
+          currency: "EUR",
+          fx_rate: "1.0000",
+          fx_rate_date: "2027-04-01",
+          acquisition_date: "2027-04-01",
+        },
+      ],
+    };
+    rejects(grant, "eur_fx_rate_not_one");
+    rejects(
+      { ...grant, effects: [{ ...grant.effects[0], fx_rate: "1", fx_rate_date: "2027-05-02" }] },
+      "fx_rate_date_weekend",
+    );
+  });
+});
+
+describe("transfer fee and dividend source country (challenge 2026-08-31)", () => {
+  it("rejects a fee inside a transfer and points at standalone_fee", () => {
+    try {
+      validateShape(variant(SAMPLES.transfer, { fee: "9" }));
+      throw new Error("expected a ValidationError");
+    } catch (error) {
+      expect((error as ValidationError).code).toBe("transfer_fee_not_allowed");
+      expect((error as ValidationError).message).toContain("standalone_fee");
+    }
+    expect(knownFieldsOf("transfer")).not.toContain("fee");
+  });
+
+  it("accepts an ISO 3166-1 alpha-2 source country on a dividend", () => {
+    expect(
+      (
+        validateShape(variant(SAMPLES.dividend, { source_country: "US" })) as {
+          source_country: string;
+        }
+      ).source_country,
+    ).toBe("US");
+    expect(validateShape(SAMPLES.dividend)).toBeTruthy();
+    rejects(variant(SAMPLES.dividend, { source_country: "usa" }), "invalid_field");
+    rejects(variant(SAMPLES.dividend, { source_country: "Us" }), "invalid_field");
+    rejects(variant(SAMPLES.dividend, { source_country: "USA" }), "invalid_field");
   });
 });
