@@ -6,6 +6,7 @@ import {
   settingsAt,
   simulateTransfer,
   todayInMadrid,
+  type Warning,
 } from "@atlas/domain";
 import {
   assertKnownFlags,
@@ -15,7 +16,7 @@ import {
   stringFlag,
   UsageError,
 } from "../args.js";
-import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
 import { requireId } from "./catalogue.js";
 import { confirmAndRecord, draftFromFlags, loadForQuery, renderQuery } from "./shared.js";
@@ -146,6 +147,8 @@ export const transferCommand = async (
     });
     const weightOf = (weights: typeof simulation.before, assetId: string) =>
       weights.rows.find((row) => row.asset_id === assetId);
+    const warningBlock = (title: string, warnings: readonly Warning[]): string[] =>
+      warnings.length === 0 ? [] : ["", title, ...describeWarnings(warnings)];
     renderQuery(
       ctx,
       state,
@@ -156,6 +159,8 @@ export const transferCommand = async (
         quantity: simulation.quantity.toString(),
         moved_eur: simulation.moved_eur.amount.toString(),
         taxable: simulation.taxable,
+        partial_before: simulation.before.partial,
+        partial_after: simulation.after.partial,
         rows: simulation.before.rows.map((row) => ({
           asset_id: row.asset_id,
           weight_before_pct: row.weight_pct?.toString(),
@@ -163,6 +168,7 @@ export const transferCommand = async (
           deviation_before_pp: row.deviation_pp?.toString(),
           deviation_after_pp: weightOf(simulation.after, row.asset_id)?.deviation_pp?.toString(),
         })),
+        warnings_before: simulation.before.warnings,
         warnings_after: simulation.after.warnings,
       },
       [
@@ -182,6 +188,8 @@ export const transferCommand = async (
             ];
           }),
         ),
+        ...warningBlock("Avisos de la cartera actual:", simulation.before.warnings),
+        ...warningBlock("Avisos tras el traspaso simulado:", simulation.after.warnings),
         "",
         "Nada se ha registrado.",
       ].join("\n"),

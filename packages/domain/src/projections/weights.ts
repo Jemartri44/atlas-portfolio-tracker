@@ -119,6 +119,14 @@ const universeOf = (
 
 const classOrder = (asset_class: AssetClass): number => ASSET_CLASSES.indexOf(asset_class);
 
+/** Table order: by asset class as the plan lists them, then by id. */
+export const sortWeightRows = (rows: CoreWeightRow[]): CoreWeightRow[] =>
+  rows.sort((a, b) =>
+    classOrder(a.asset_class) === classOrder(b.asset_class)
+      ? a.asset_id.localeCompare(b.asset_id)
+      : classOrder(a.asset_class) - classOrder(b.asset_class),
+  );
+
 /** Target weight of an asset, or zero when the plan does not mention it. */
 const targetOf = (targets: Record<string, string>, assetId: AssetId): Decimal =>
   targets[assetId] === undefined ? Decimal.ZERO : Decimal.parse(targets[assetId] as string);
@@ -286,11 +294,7 @@ export const coreWeights = (
     });
   }
 
-  rows.sort((a, b) =>
-    classOrder(a.asset_class) === classOrder(b.asset_class)
-      ? a.asset_id.localeCompare(b.asset_id)
-      : classOrder(a.asset_class) - classOrder(b.asset_class),
-  );
+  sortWeightRows(rows);
   const partial = missing.length > 0;
   if (partial) {
     warn(

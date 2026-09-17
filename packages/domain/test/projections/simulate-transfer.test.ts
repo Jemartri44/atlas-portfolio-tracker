@@ -97,6 +97,43 @@ describe("simulateTransfer", () => {
     }
   });
 
+  it("refuses when a third core asset has no price, instead of drawing a mute table", () => {
+    // The two assets of the transfer are priced, but the weights are computed
+    // over the whole core: a missing price blanks every cell.
+    const b = core();
+    b.asset("ast_mm", { asset_class: "fixed_income", asset_type: "money_market" });
+    b.buy({ account_id: "acc_fund", asset_id: "ast_mm", quantity: "5", unit_price: "100" });
+    try {
+      simulate(b, { quantity: "1" });
+      throw new Error("expected a ValidationError");
+    } catch (error) {
+      expect((error as ValidationError).code).toBe("missing_manual_prices");
+      expect((error as ValidationError).details.assets).toEqual(["ast_mm"]);
+    }
+  });
+
+  it("accepts a priced destination that is neither held nor in the plan", () => {
+    // Simulating the whole transfer into a new fund before putting it in the
+    // plan is legitimate: it has a valuation, so it has a price.
+    const b = core();
+    b.asset("ast_new", { asset_class: "equity" });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_new",
+      date: DATE,
+      quantity: "0",
+      unit_value: "100",
+    });
+    const result = simulate(b, { to_asset_id: "ast_new", all: true });
+    expect(result.moved_eur.amount.toString()).toBe("600");
+    expect(weightOf(result.before, "ast_new")).toBe("0");
+    expect(weightOf(result.after, "ast_new")).toBe("60");
+    expect(weightOf(result.after, "ast_world")).toBe("0");
+    // The new asset shows up in both tables and in the class subtotals.
+    expect(result.before.rows.map((row) => row.asset_id)).toContain("ast_new");
+    expect(result.after.total_eur.eq(result.before.total_eur)).toBe(true);
+  });
+
   it("refuses more than the core holds, and a quantity of zero", () => {
     const b = core();
     try {

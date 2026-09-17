@@ -8,13 +8,20 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
+import { Decimal } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
-import type { AssetId } from "../schema/events.js";
+import type { AssetClass, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import type { ManualPrice } from "./prices.js";
+import { type ManualPrice, manualPrices } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
-import { type CoreWeightRow, type CoreWeights, coreWeights, deriveWeights } from "./weights.js";
+import {
+  type CoreWeightRow,
+  type CoreWeights,
+  coreWeights,
+  deriveWeights,
+  sortWeightRows,
+} from "./weights.js";
 
 export interface SimulateTransferInput {
   from_asset_id: AssetId;
@@ -68,19 +75,59 @@ export const simulateTransfer = (
   requireTransferable(state, from_asset_id, "from");
   requireTransferable(state, to_asset_id, "to");
 
-  const before = coreWeights(state, date, settings);
-  const rowOf = (assetId: AssetId) => before.rows.find((row) => row.asset_id === assetId);
-  const missing = [from_asset_id, to_asset_id].filter(
-    (assetId) => rowOf(assetId)?.price === undefined,
-  );
+  const table = coreWeights(state, date, settings);
+  /*
+   * A partial core blanks every weight, so simulating over it would print a
+   * table of empty cells and explain nothing. The simulator refuses listing
+   * what is missing (decision (c) of prompt 004), even when the two assets of
+   * the transfer are priced: the weights are computed over the whole core.
+   */
+  if (table.partial) {
+    fail("missing_manual_prices", "some core assets held have no manual price", {
+      assets: table.missing_prices,
+      date,
+    });
+  }
+  /*
+   * Whether a price exists is asked of the prices, not of the table: a
+   * destination that is priced but neither held nor in the plan has no row yet
+   * (transferring a whole position into a fund before adding it to the plan is
+   * legitimate) and must not be refused for a price it does have.
+   */
+  const prices = manualPrices(state, date, settings);
+  const missing = [from_asset_id, to_asset_id].filter((assetId) => !prices.has(assetId));
   if (missing.length > 0) {
     fail("missing_manual_prices", "both assets need a manual price to simulate the transfer", {
       assets: missing,
       date,
     });
   }
-  // Having a price means having a row: the two lookups below cannot miss.
-  const from = rowOf(from_asset_id) as CoreWeightRow;
+
+  /** An asset outside the table has no position and no target weight (see `universeOf`): it joins it at zero. */
+  const zeroRow = (assetId: AssetId): CoreWeightRow => ({
+    asset_id: assetId,
+    asset_class: state.assets.get(assetId)?.asset_class as AssetClass,
+    quantity: Quantity.ZERO,
+    price: prices.get(assetId) as ManualPrice,
+    value_eur: Money.zero("EUR"),
+    target_pct: Decimal.ZERO,
+  });
+  const rowOf = (rows: readonly CoreWeightRow[], assetId: AssetId) =>
+    rows.find((row) => row.asset_id === assetId);
+  const extra = [from_asset_id, to_asset_id].filter(
+    (assetId) => rowOf(table.rows, assetId) === undefined,
+  );
+  const widened = sortWeightRows([...table.rows, ...extra.map(zeroRow)]);
+  const before: CoreWeights =
+    extra.length === 0
+      ? table
+      : {
+          ...table,
+          rows: widened,
+          // Fresh subtotals for the widened table; its warnings are already in `table`.
+          by_class: deriveWeights(widened, table.total_eur, false, settings, []),
+        };
+  const from = rowOf(before.rows, from_asset_id) as CoreWeightRow;
   const held = from.quantity;
   const quantity = input.all === true ? held : Quantity.parse(input.quantity);
   if (!quantity.isPositive()) {
