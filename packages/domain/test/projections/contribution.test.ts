@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
 import { Money } from "../../src/money/money.js";
-import { assertSplit, contributionPlan } from "../../src/projections/contribution.js";
+import {
+  assertSplit,
+  type ContributionRow,
+  contributionPlan,
+} from "../../src/projections/contribution.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { coreWeights } from "../../src/projections/weights.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
@@ -52,6 +56,16 @@ const allocations = (result: { rows: { asset_id: string; allocation_eur: Money }
   Object.fromEntries(
     result.rows.map((row) => [row.asset_id, row.allocation_eur.amount.toString()]),
   );
+
+/** Code of the ValidationError a rejection raises; each one means something different. */
+const codeOf = (run: () => unknown): string => {
+  try {
+    run();
+  } catch (error) {
+    return (error as ValidationError).code;
+  }
+  return "accepted";
+};
 
 const sumOf = (result: { rows: { allocation_eur: Money }[] }): string =>
   result.rows
@@ -120,7 +134,9 @@ describe("contributionPlan", () => {
     });
     const result = plan(b, "1000");
     expect(sumOf(result)).toBe("1000");
-    expect(Number(allocations(result).ast_gold)).toBeGreaterThan(100);
+    // Money against Money: an amount is never compared through a float.
+    const gold = result.rows.find((row) => row.asset_id === "ast_gold") as ContributionRow;
+    expect(gold.allocation_eur.cmp(Money.parse("100", "EUR"))).toBeGreaterThan(0);
   });
 
   it("adds up to the core amount to the cent when the split does not divide evenly", () => {
@@ -158,9 +174,19 @@ describe("contributionPlan", () => {
       settings: settings({ target_weights: targets }),
     });
     expect(sumOf(result)).toBe("0.03");
-    for (const row of result.rows) {
-      expect(row.allocation_eur.isNegative()).toBe(false);
-    }
+    /*
+     * The exact map, not just the sum: the residue is taken from the largest
+     * shortfall first and, on a tie, from the largest target weight and then
+     * the first `asset_id`. Every row rounded up to a cent, so two cents come
+     * back out of the first two rows in that order.
+     */
+    expect(allocations(result)).toEqual({
+      ast_a: "0",
+      ast_b: "0",
+      ast_c: "0.01",
+      ast_d: "0.01",
+      ast_e: "0.01",
+    });
   });
 
   it("refuses when the whole plan points outside the table", () => {
@@ -265,25 +291,33 @@ describe("contributionPlan", () => {
 
   it("refuses without an amount, without target weights and without the bucket percentage", () => {
     const state = projectLedger(core().build());
-    expect(() =>
-      contributionPlan(state, { date: DATE, settings: settings({ target_weights: BALANCED }) }),
-    ).toThrow(ValidationError);
-    expect(() =>
-      contributionPlan(state, { amount: "100", date: DATE, settings: DEFAULT_SETTINGS }),
-    ).toThrow(ValidationError);
-    expect(() =>
-      contributionPlan(state, {
-        amount: "100",
-        date: DATE,
-        settings: mergeSettings(DEFAULT_SETTINGS, { target_weights: BALANCED }),
-      }),
-    ).toThrow(ValidationError);
+    // Each rejection has its own code: the CLI turns it into its own message.
+    expect(
+      codeOf(() =>
+        contributionPlan(state, { date: DATE, settings: settings({ target_weights: BALANCED }) }),
+      ),
+    ).toBe("missing_amount");
+    expect(
+      codeOf(() =>
+        contributionPlan(state, { amount: "100", date: DATE, settings: DEFAULT_SETTINGS }),
+      ),
+    ).toBe("missing_target_weights");
+    expect(
+      codeOf(() =>
+        contributionPlan(state, {
+          amount: "100",
+          date: DATE,
+          settings: mergeSettings(DEFAULT_SETTINGS, { target_weights: BALANCED }),
+        }),
+      ),
+    ).toBe("missing_bucket_pct");
   });
 
   it("refuses a contribution of zero, a negative one and one that is not a decimal", () => {
-    for (const amount of ["0", "-100", "cien"]) {
-      expect(() => plan(core(), amount)).toThrow(ValidationError);
-    }
+    expect(codeOf(() => plan(core(), "0"))).toBe("invalid_amount");
+    expect(codeOf(() => plan(core(), "-100"))).toBe("invalid_amount");
+    // A word never reaches the amount check: `Money.parse` rejects it first.
+    expect(codeOf(() => plan(core(), "cien"))).toBe("invalid_decimal");
   });
 
   it("refuses to split when a core asset held has no price, listing what is missing", () => {
