@@ -3,7 +3,12 @@
 // appends only if every invariant still holds (data-schema.md §7.1).
 
 import type { AffectedEvent } from "../errors.js";
-import { DependentEventsError, DuplicateFingerprintError, ValidationError } from "../errors.js";
+import {
+  DependentEventsError,
+  DuplicateFingerprintError,
+  InvalidLedgerError,
+  ValidationError,
+} from "../errors.js";
 import { createUlidGenerator } from "../ids/ulid.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { Warning } from "../projections/state.js";
@@ -82,9 +87,20 @@ const checkInvalid = (
     throw own.error;
   }
   if (event.type !== "settings_changed") {
-    const blocking = all[0];
-    if (blocking !== undefined) {
-      throw blocking.error;
+    /*
+     * An event that was already invalid before this mutation blocks it, but it
+     * is not this event's fault: raising its error bare (say,
+     * `insufficient_position`) reads as an accusation against the buy being
+     * recorded. Name the culprit instead. An event the candidate itself breaks
+     * keeps raising its own error, which already identifies it (ADR-0003).
+     */
+    const preexisting = all.find((entry) => !fresh.includes(entry));
+    if (preexisting !== undefined) {
+      throw new InvalidLedgerError(describeAffected([preexisting])[0] as AffectedEvent, all.length);
+    }
+    const broken = fresh[0];
+    if (broken !== undefined) {
+      throw broken.error;
     }
     return [];
   }

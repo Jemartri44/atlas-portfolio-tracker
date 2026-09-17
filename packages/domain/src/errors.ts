@@ -129,6 +129,27 @@ export class DependentEventsError extends DomainError {
   }
 }
 
+/**
+ * The ledger already carried invalid events before this mutation. Only a
+ * `settings_changed` may be written over a degraded ledger (ADR-0015), and the
+ * new event is not at fault: the offending one is named so its own error is
+ * never read as an accusation against what is being recorded.
+ */
+export class InvalidLedgerError extends DomainError {
+  constructor(offender: AffectedEvent, invalidCount: number) {
+    super(
+      "ledger_has_invalid_events",
+      `the ledger already has ${invalidCount} invalid events; ${offender.type} ${offender.id} fails with: ${offender.error}`,
+      {
+        offending_id: offender.id,
+        offending_type: offender.type,
+        offending_error: offender.error,
+        invalid_count: invalidCount,
+      },
+    );
+  }
+}
+
 /** The event type is reserved for a later feature and cannot be projected yet. */
 export class UnsupportedEventError extends ProjectionError {
   constructor(type: string, eventId: string) {

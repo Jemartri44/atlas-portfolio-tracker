@@ -3,11 +3,13 @@ import {
   ConflictError,
   DependentEventsError,
   DuplicateFingerprintError,
+  InvalidLedgerError,
   ProjectionError,
   SchemaTooNewError,
   ValidationError,
 } from "../../src/errors.js";
 import { physicalPositions } from "../../src/projections/positions.js";
+import type { InvalidEvent } from "../../src/projections/state.js";
 import type { BuyEvent } from "../../src/schema/events.js";
 import { encodeLine } from "../../src/schema/line.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
@@ -257,7 +259,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     expect(result.newlyInvalid).toEqual([]);
   });
 
-  it("still refuses any other mutation over a degraded ledger", async () => {
+  it("still refuses any other mutation over a degraded ledger, naming the culprit", async () => {
     const store = reorderable();
     const deps = testDeps(store);
     await recordEvent(
@@ -265,16 +267,28 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
       { type: "settings_changed", settings: byTradeDate },
       { acceptInvalid: true },
     );
-    await expect(
-      recordEvent(deps, {
+    const offender = (await loadAndProject({ store }, { collectErrors: true })).state
+      .invalid[0] as InvalidEvent;
+    try {
+      await recordEvent(deps, {
         type: "cash_deposit",
         account_id: "acc_fund",
         value_date: "2027-03-01",
         amount: "100",
         currency: "EUR",
         fx_rate: "1",
-      }),
-    ).rejects.toBeInstanceOf(ProjectionError);
+      });
+      throw new Error("expected rejection");
+    } catch (error) {
+      // The new deposit is blameless: the error names the event that is not.
+      expect(error).toBeInstanceOf(InvalidLedgerError);
+      expect((error as InvalidLedgerError).code).toBe("ledger_has_invalid_events");
+      expect((error as InvalidLedgerError).details).toMatchObject({
+        offending_id: offender.event.id,
+        offending_type: "sell",
+        invalid_count: 1,
+      });
+    }
   });
 
   it("lets a new event that repairs the reading through", async () => {

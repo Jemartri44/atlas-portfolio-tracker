@@ -179,6 +179,30 @@ describe("degraded projection on read-only commands", () => {
     }
   });
 
+  it("blames the invalid event, not the mutation being recorded", async () => {
+    const h = brokenLedger();
+    expect(
+      await h.exec([
+        "add",
+        "cash-in",
+        "--account",
+        "acc_fund",
+        "--value-date",
+        "2027-01-11",
+        "--amount",
+        "10",
+        "--currency",
+        "EUR",
+        "--fx-rate",
+        "1",
+        "--yes",
+      ]),
+    ).toBe(EXIT.domain);
+    expect(h.text()).toContain("01ARYZ6S41TSV4RRFFQ69G5FZZ");
+    expect(h.text()).toContain("cash_deposit");
+    expect(h.text()).toContain("atlas check");
+  });
+
   it("covers every command of the CLI", () => {
     expect(INVOCATIONS.map((entry) => entry.command).sort()).toEqual(Object.keys(COMMANDS).sort());
   });

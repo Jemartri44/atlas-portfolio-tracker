@@ -120,6 +120,12 @@ export const describeError = (error: DomainError): string => {
       return `La solicitud de traspaso ${text(d.request_id)} ya está cerrada (${text(d.stage)}).`;
     case "request_mismatch":
       return `La solicitud de traspaso ${text(d.request_id)} se refiere a otras cuentas o activos.`;
+    case "ledger_has_invalid_events": {
+      const count = d.invalid_count as number;
+      return `El libro ya tenía ${count} ${
+        count === 1 ? "evento inválido" : "eventos inválidos"
+      } antes de esta operación: sobre un libro degradado solo puede escribirse un cambio de configuración (ADR-0015). El primero es ${text(d.offending_type)} ${text(d.offending_id)}: ${text(d.offending_error)}. Ejecuta \`atlas check\` y rectifícalo antes.`;
+    }
     case "dependent_events":
       return `El evento ${text(d.target_id)} ha sido consumido por eventos posteriores; rectifícalos antes.`;
     case "unsupported_event":
