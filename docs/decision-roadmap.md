@@ -26,7 +26,7 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | — | *Fase 2 (aportación mensual): feature `004-monthly-contribution`* | Fase 3 | `docs/prompts/004-monthly-contribution.md`, `specs/004-monthly-contribution/` | Implementada; PR #23 |
 | — | *Fase 3 (cubo especulativo): feature `005-bucket-tracking`* | Ronda 7 | `docs/prompts/005-bucket-tracking.md`, constitución 1.5.0 | Prompt escrito 2026-09-18; pendiente de implementar |
 | 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente; bloqueada por la Fase 0 (IBKR y exportación de fondos de MyInvestor) |
-| 7 | Aplicación web: framework, offline, auth, API | Fase 2 | ADR-0009+ | Pendiente |
+| 7 | Aplicación web: framework, offline, auth, API | Fase 2 | **ADR-0017** (stack), pendiente el diseño de pantallas y el flujo de autenticación | *Stack* **cerrado** 2026-09-18 con investigación verificada; el resto, al escribir el prompt de la web |
 | 8 | Infraestructura, despliegue y copias de seguridad | Fase 4 | ADR-0010+ | Pendiente |
 | 9 | Salida fiscal | Fase 5 | Spec de la feature fiscal | Pendiente |
 
