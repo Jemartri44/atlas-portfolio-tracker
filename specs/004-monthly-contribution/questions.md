@@ -79,3 +79,63 @@ Decisiones de detalle que no cambian documentos pero conviene que el usuario con
 ### `quickstart.md` ejecutado a mano (2026-08-31)
 
 Con el binario compilado, sobre un libro sintético de semilla 1: `check --deep` limpio (solo el aviso declarado `same_asset_two_accounts`), `settings show` muestra `wash_sale_window` en la forma nueva, y `weights`, `contribute`, `costs` y `transfer simulate` responden a `2028-12-31` sin rechazos. Dos desviaciones respecto al documento: los pasos usan `--date 2028-12-31` (el escenario sintético vive en 2026-2028, así que "hoy" es anterior a todo el libro) y el simulador se prueba contra `ast_bonds_i`, el fondo superviviente tras el cambio de clase.
+
+---
+
+## Notas de la revisión (2026-09-18, correcciones de los dos revisores)
+
+Lo que cambia respecto a lo implementado en la primera vuelta. Nada de esto reabre una decisión: son defectos corregidos y la limpieza que pidió la dirección.
+
+### 1. La corrección de fondo: la proyección se corta a la fecha consultada (`asOf`)
+
+**El defecto.** `coreWeights` leía `state.positions`, la foto **tras aplicar todos los eventos del libro**, mientras `--date` solo afectaba a precios y configuración (nota 1 de las notas de implementación). Sobre el *golden*, `atlas weights --date 2027-06-30` informaba `ast_bonds` con cantidad 0 (el `share_class_change` que lo vacía es de 2028) y `ast_bonds_i` con 28,759 participaciones que nacen en 2028. `contribute` repartía sobre esos valores y `transfer simulate --all` movía una cantidad que en esa fecha no existía.
+
+**El contrato nuevo** (lo fija la dirección; la documentación lo recogerá en `data-schema.md` §7 y en un ADR):
+
+- `ProjectOptions` gana `asOf?: CivilDate`; `loadAndProject` lo propaga.
+- **Pasada A** (catálogo, configuración, tesis, rectificaciones, en orden de fichero): **no cambia**, se aplica completa. Las referencias se siguen resolviendo contra el catálogo completo (`data-schema.md` §7.1).
+- **Pasada B** (operaciones y seguimiento, por `(fecha de negocio, posición en el fichero)`): con `asOf`, **se ignoran por completo** los eventos con fecha de negocio posterior. No entran en lotes, posiciones, efectivo, ganancias, rendimientos, órdenes ni solicitudes pendientes, valoraciones ni avisos. El corte es **inclusivo**: un evento con fecha igual a `asOf` sí cuenta.
+- La fecha de negocio es la que ya ordenaba la pasada B (`businessDateOf`); no hay una segunda función.
+- **Sin `asOf` el comportamiento es exactamente el de antes.** Lo fija una propiedad `fast-check` que compara `snapshotOf` con y sin `asOf` puesto a la fecha del último evento.
+- `costSummary` recorre eventos crudos, así que recibe `asOf` y filtra con la misma `businessDateOf`.
+- Los comandos de solo lectura con `--date` (`weights`, `contribute`, `costs`, `transfer simulate`, `valuations`) proyectan con `{ collectErrors: true, asOf: date }`. Los que no tienen `--date` siguen proyectando el libro completo.
+- `manualPrices` conserva su filtro por fecha (defensa en profundidad) y sigue usando la fecha pedida para la antigüedad y para `stale`.
+
+**El supuesto A3/A5 del spec queda superado por esto.** Ya no basta con decir que "la configuración y los precios se leen a la fecha consultada": el **estado entero** se lee a la fecha consultada. La nota 1 de las notas de implementación sigue siendo cierta pero es ahora un caso particular del corte.
+
+### 2. Rechazos nuevos
+
+- **`no_target_weight_in_table`** (`contributionPlan`). Si la suma de los pesos objetivo **de las filas de la tabla** es cero, se rechaza. Antes el sobrante no se repartía, la suma no cuadraba y el residuo metía **toda** la aportación en la primera fila por orden alfabético: un activo con objetivo 0 % y sin déficit, cuya desviación crecía. El caso real es un plan que apunta a `asset_id` mal escritos (aviso `unknown_target_weight`). El mismo rechazo cubre la tabla vacía, que antes moría en la invariante interna `split_not_exact` (ahora también traducida al español, aunque no debería llegar nunca al usuario).
+- **`missing_manual_prices` con el estado "antes" parcial** (`simulateTransfer`). Antes solo se comprobaba el precio de los dos activos implicados; si faltaba el de un **tercer** activo del núcleo, `deriveWeights` dejaba todos los pesos vacíos y la CLI imprimía una tabla en blanco con código de salida 0. Ahora rechaza listando `before.missing_prices` (decisión (c) del prompt §6), y la CLI publica los avisos y la marca de parcialidad de **antes** y de después.
+- **La existencia de precio se consulta a `manualPrices`, no a la fila de `coreWeights`.** Un activo destino `core`, `transferable` y **con** valoración, pero sin posición ni peso objetivo (simular el traspaso íntegro a un fondo nuevo antes de meterlo en el plan) se rechazaba con un diagnóstico falso. Ahora se añade a la simulación con valor cero antes del traslado, y aparece en las dos tablas.
+- **Rangos de los parámetros porcentuales** (`validateSettings`, especificación §5.2): `bucket_pct_of_contribution`, `satellite_min_weight_pct`, `bucket_stop_loss_pct` y `bucket_max_weight_pct` en `[0, 100]`; `deviation_threshold_pp`, `monthly_contribution_eur` y `bucket_max_cumulative_contribution` ≥ 0; `stale_price_days` y `transfer_max_days` enteros **> 0** (antes se aceptaba el cero). `model_720/721_alert_threshold_eur` se dejan sin rango: el prompt no los lista.
+- **`--date` se valida en todos los comandos de consulta** y falla como error de uso. Antes `atlas weights --date manana` imprimía una tabla completa con antigüedad `NaN` y, por comparación lexicográfica, el último precio y la última configuración del libro.
+- **Una mutación sobre un libro degradado nombra al culpable** (`ledger_has_invalid_events`, `InvalidLedgerError`): id y tipo del evento inválido anterior, cuántos hay y remisión a `atlas check`. Antes lanzaba el error del primer inválido del candidato (p. ej. `insufficient_position`) como si acusara al evento nuevo. Se distingue del caso en que el evento nuevo **sí** rompe uno recordado, que sigue lanzando el error de ese evento (ADR-0003).
+
+### 3. Otras correcciones
+
+- **`mergeSettings` descarta `wash_sale_window_days`**: la CLI escribe solo la forma nueva (decisión Q3). Antes `...current` sobre lo que devuelve `settingsAt` conservaba la forma antigua y cada `atlas settings set` sobre un libro antiguo escribía **las dos**, perpetuándola.
+- **`costSummary` ignora los eventos inválidos** y trata la cuenta desconocida como "sin libro" (fuera de las dos tablas). Un `buy`/`sell` inválido contaba, y como `accounts.get(id)?.book === "bucket"` es `false` para una cuenta desconocida, en un libro degradado una operación del cubo podía aterrizar en la tabla del **núcleo**: la única vía encontrada de mezclar libros.
+- **Ningún cero con aspecto de completo**: la fila TOTAL de `weights` muestra el porcentaje realmente sumado (vacío si el total es cero) en vez de un `100.00 %` fijo, y el subtotal de una clase que contiene una posición **sin precio** se marca `(parcial)` igual que el total.
+- **Los avisos del dominio se escriben en inglés** y la CLI traduce el `code` al español (`describeWarning` en `messages.ts`), que es el contrato de `errors.ts`. Se han traducido también los seis avisos anteriores a esta feature, que salían en inglés por el mismo canal.
+
+### 4. Limpieza
+
+- `newlyInvalid` devuelve el `LedgerState` del candidato y solo proyecta el libro actual cuando el candidato tiene inválidos: **una** proyección por mutación en el camino que escribe (antes tres), y **dos** solo en un `settings_changed` que deja eventos inválidos. Hay un test que cuenta las proyecciones, para que la cifra de `plan.md` siga siendo verdad.
+- `contributionPlan` usa un array de registros en vez de siete arrays alineados por índice; desaparecen doce *casts*. El resultado numérico no cambia.
+- `WashSaleWindow` se estrecha a los valores que acepta el validador: `"2m"`, `"1y"` o `<n>d`.
+- `coreQuantityOf` exige el conjunto de cuentas del núcleo y sus dos llamantes lo construyen **fuera** del bucle sobre los activos.
+- El valor de una posición a precio manual vive junto a `ManualPrice` (`positionValueOf` en `prices.ts`); los avisos se formatean en un solo sitio (`describeWarnings`); los porcentajes y los euros, en `apps/cli/src/output/format.ts`.
+- `index.ts` deja de exportar `newlyInvalid`, `describeAffected`, `CandidateCheck`, `addDays`, `daysBetween`, `isWeekend` y `lastWorkingDay`: fontanería interna que nadie usa fuera de `packages/domain/src`.
+- Tres aserciones flojas de `contribution.test.ts` ahora fijan lo que dicen fijar: el mapa exacto del derrame del residuo, el `code` de cada uno de los seis rechazos y una comparación de importes con `Money` en vez de `Number`.
+
+### 5. Nota que pidió el revisor sobre el *golden* regenerado
+
+En el *golden* regenerado, `ast_bonds` pasa de 9 a 10 lotes cerrados, `ast_bonds_i` de 12 a 13 abiertos y `ast_smallcap` de 3 a 4 cerrados. **No es una regresión de proyección**: está demostrado que el mismo flujo de eventos reproduce el snapshot anterior. Es el desplazamiento de fechas del PRNG (los `fx_rate_date` movidos a día hábil) el que mueve una compra al otro lado de la fusión de fondos.
+
+**Para la próxima feature:** las valoraciones deben tener su propio subflujo de PRNG. El flujo único hizo cambiar 116 de los 160 ids del *golden* al tocar la generación de fechas, lo que convierte cualquier retoque del escenario en un fichero irreconocible.
+
+### 6. Lo que sigue pendiente de la dirección
+
+- **Mensajes de `invalid_settings` en inglés.** `validateSettings` lanza todos sus rechazos con el código `invalid_settings` y `messages.ts` no lo traduce, así que el usuario ve el mensaje técnico en inglés (también los rangos nuevos). Es deuda anterior a esta revisión y no estaba en la lista de correcciones; se deja anotado.
+- **Más superficie pública sin usar.** Además de los siete símbolos retirados, `compareCivilDates`, `daysInMonth`, `isLeapYear`, `madridDateOf`, `sha256Hex` y `utf8Encode` tampoco se usan fuera de `packages/domain/src`. No se han tocado porque no estaban en la lista y parecen API pública legítima para la web.
