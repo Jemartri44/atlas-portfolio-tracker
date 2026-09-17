@@ -62,6 +62,50 @@ describe("validateSettings", () => {
     );
   });
 
+  it("keeps every percentage inside [0, 100], at the limits and outside them", () => {
+    const codeOf = (extra: Record<string, unknown>): string => {
+      try {
+        validateSettings(withDefaults(extra));
+      } catch (error) {
+        return (error as ValidationError).code;
+      }
+      return "accepted";
+    };
+    for (const field of [
+      "bucket_pct_of_contribution",
+      "satellite_min_weight_pct",
+      "bucket_stop_loss_pct",
+      "bucket_max_weight_pct",
+    ]) {
+      expect(codeOf({ [field]: "0" })).toBe("accepted");
+      expect(codeOf({ [field]: "100" })).toBe("accepted");
+      expect(codeOf({ [field]: "-0.01" })).toBe("invalid_settings");
+      expect(codeOf({ [field]: "100.01" })).toBe("invalid_settings");
+    }
+    // Bounded below only: a threshold or an amount has no ceiling.
+    for (const field of [
+      "deviation_threshold_pp",
+      "monthly_contribution_eur",
+      "bucket_max_cumulative_contribution",
+    ]) {
+      expect(codeOf({ [field]: "0" })).toBe("accepted");
+      expect(codeOf({ [field]: "1000000" })).toBe("accepted");
+      expect(codeOf({ [field]: "-0.01" })).toBe("invalid_settings");
+    }
+    // Free of range, as they were: only the shape is checked.
+    expect(codeOf({ model_720_alert_threshold_eur: "50000" })).toBe("accepted");
+    expect(codeOf({ model_721_alert_threshold_eur: "50000" })).toBe("accepted");
+  });
+
+  it("requires the day counts to be whole and greater than zero", () => {
+    for (const field of ["stale_price_days", "transfer_max_days"]) {
+      expect(validateSettings(withDefaults({ [field]: 1 }))).toBeDefined();
+      expect(() => validateSettings(withDefaults({ [field]: 0 }))).toThrow(ValidationError);
+      expect(() => validateSettings(withDefaults({ [field]: -1 }))).toThrow(ValidationError);
+      expect(() => validateSettings(withDefaults({ [field]: 1.5 }))).toThrow(ValidationError);
+    }
+  });
+
   it("requires target weights to be non-negative and add up to 100", () => {
     expect(
       validateSettings(withDefaults({ target_weights: { a: "60", b: "25.5", c: "14.5" } }))

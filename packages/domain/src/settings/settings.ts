@@ -83,6 +83,30 @@ const DECIMAL_FIELDS = [
   "model_721_alert_threshold_eur",
 ] as const;
 
+interface Range {
+  min: string;
+  /** Absent for a parameter that is only bounded below. */
+  max?: string;
+}
+
+/**
+ * Ranges the thresholds must be coherent with (specification §5.2). A
+ * percentage outside [0, 100] is not a typo the user finds out about later: a
+ * negative bucket share produces a negative budget and a core larger than the
+ * contribution, and one above 100 makes the calculator ask for negative
+ * allocations and die on its own invariant. The rest is bounded below only.
+ */
+const DECIMAL_RANGES: Partial<Record<(typeof DECIMAL_FIELDS)[number], Range>> = {
+  deviation_threshold_pp: { min: "0" },
+  satellite_min_weight_pct: { min: "0", max: "100" },
+  monthly_contribution_eur: { min: "0" },
+  bucket_pct_of_contribution: { min: "0", max: "100" },
+  bucket_max_cumulative_contribution: { min: "0" },
+  bucket_stop_loss_pct: { min: "0", max: "100" },
+  bucket_max_weight_pct: { min: "0", max: "100" },
+};
+
+/** Whole days, and zero days means nothing: a price is stale after a positive number of days. */
 const INTEGER_FIELDS = ["stale_price_days", "transfer_max_days"] as const;
 
 const fail = (message: string, details: Record<string, unknown>): never => {
@@ -155,13 +179,32 @@ export const validateSettings = (raw: unknown): Settings => {
   }
   checkWashSaleWindow(raw);
   for (const field of DECIMAL_FIELDS) {
-    if (field in raw && !isDecimalString(raw[field])) {
-      return fail(`${field} must be a decimal string`, { field, value: raw[field] });
+    if (!(field in raw)) {
+      continue;
+    }
+    const value = raw[field];
+    if (!isDecimalString(value)) {
+      return fail(`${field} must be a decimal string`, { field, value });
+    }
+    const range = DECIMAL_RANGES[field];
+    if (range === undefined) {
+      continue;
+    }
+    const parsed = Decimal.parse(value);
+    const belowMin = parsed.lt(Decimal.parse(range.min));
+    const aboveMax = range.max !== undefined && parsed.gt(Decimal.parse(range.max));
+    if (belowMin || aboveMax) {
+      return fail(
+        range.max === undefined
+          ? `${field} must be ${range.min} or greater`
+          : `${field} must be between ${range.min} and ${range.max}`,
+        { field, value, min: range.min, max: range.max },
+      );
     }
   }
   for (const field of INTEGER_FIELDS) {
-    if (field in raw && !isNonNegativeInteger(raw[field])) {
-      return fail(`${field} must be a non-negative integer`, { field, value: raw[field] });
+    if (field in raw && !isPositiveInteger(raw[field])) {
+      return fail(`${field} must be an integer greater than zero`, { field, value: raw[field] });
     }
   }
   if ("target_weights" in raw) {
