@@ -102,13 +102,15 @@ Campos: hipótesis, plazo esperado, condición de invalidación, tamaño previst
 
 **Regla 16 — La referencia es el índice, no cero.**
 Para cada operación cerrada se calcula qué habría rendido ese mismo importe invertido en el fondo global durante el mismo periodo. La pregunta no es "¿gané?" sino "¿gané más que la alternativa aburrida?".
+→ Mecánica (feature 005): el índice es un activo configurable (`bucket_benchmark_asset_id`) cuyos precios salen de las `valuation` manuales, como cualquier otro precio (Nivel 1). El equivalente en índice de una tesis es `Σ coste_i × P(fecha de cierre) / P(fecha de la compra i)` sobre sus compras enlazadas, y el resultado frente al índice es el resultado de la tesis menos el del índice. Si falta cualquiera de esos precios, la comparación queda **sin dato**: nunca se estima (constitución V).
 
 **Regla 17 — Regla de parada.** *(Pendiente de definir. Configurable.)*
 Umbral de pérdida acumulada o tope de aportación total tras el cual se deja de financiar el cubo.
 → La app avisa al acercarse y bloquea de forma visible al superarse (`bucket_max_cumulative_contribution`, `bucket_stop_loss_pct`).
 
-**Regla 18 — Regla de recogida.** *(Pendiente de definir. Configurable.)*
+**Regla 18 — Regla de recogida.** *(Umbral pendiente de definir. Configurable.)*
 Si el cubo supera un porcentaje de la cartera total, el exceso se traspasa al núcleo (`bucket_max_weight_pct`).
+→ El denominador es el **patrimonio total** (núcleo valorado + cubo valorado + efectivo de las cuentas de inversión, ADR-0004), siempre mostrado desglosado. Es una de las dos excepciones acotadas a la compartimentación (constitución III): un control de presupuesto, no una métrica de cartera mezclada. Sin el umbral configurado, el aviso no se evalúa.
 
 **Regla 19 — No reponer el cubo con dinero de las otras partes.**
 
@@ -262,6 +264,7 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 | `bucket_max_cumulative_contribution` | Pendiente | 17 |
 | `bucket_stop_loss_pct` | Pendiente | 17 |
 | `bucket_max_weight_pct` | Pendiente | 18 |
+| `bucket_benchmark_asset_id` | Pendiente (`asset_id` del índice de referencia) | 16 |
 | `stale_price_days` | 5 | — |
 | `model_720_alert_threshold_eur` | 45.000€ | 5.8 |
 | `model_721_alert_threshold_eur` | 45.000€ | 5.8 |
