@@ -10,7 +10,7 @@ Eres el asistente implementador del proyecto **Atlas Portfolio Tracker** (`~/pro
 
 1. `CLAUDE.md` entero, en especial *Portfolio nomenclature*, *Code architecture*, *Working on a feature*, *Domain traps* y *Design principles*.
 2. `.specify/memory/constitution.md` (v1.5.0: III con sus **dos** excepciones acotadas, II, IV, V y VII).
-3. `docs/adr/README.md` y los ADRs 0004 (efectivo derivado), 0005 (dinero), 0009 (FIFO global), 0013 y 0014 (fecha fiscal y ventana de recompra de fecha a fecha), 0015 (proyección degradada).
+3. `docs/adr/README.md` y los ADRs 0004 (efectivo derivado), 0005 (dinero), 0009 (FIFO global), 0013 y 0014 (fecha fiscal y ventana de recompra de fecha a fecha), 0015 (proyección degradada) y **0016 (consulta a una fecha con `asOf`): todas las vistas de esta feature que acepten `--date` proyectan así; no leas cantidades del final del libro.**
 4. `docs/business-rules.md` §4 completo (reglas 13-20 del cubo, con la nota de la regla 18), §1, §5.4 (regla de recompra) y §7 (tabla de parámetros).
 5. `docs/specification.md` §6.2 (el cubo, punto por punto: es tu lista de la compra), §3.2 y §5.
 6. `docs/data-schema.md` §6.1 (`settings_changed`), §6.4 (tesis), §7 (tabla de proyecciones, con las filas nuevas de esta feature) y §8.4.
