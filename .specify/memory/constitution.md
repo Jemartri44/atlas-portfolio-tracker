@@ -1,7 +1,7 @@
 <!--
 Sync Impact Report
-- Version change: 1.3.0 → 1.4.0
-- Modified principles: III (single exception: tax output and 720/721 thresholds aggregate both books per taxpayer — challenge 2026-08-31, finding 4); VII (new mandatory edge case: a deferred loss survives a transfer or a conversion, travelling with the descendant lots)
+- Version change: 1.4.0 → 1.5.0
+- Modified principles: III (second bounded exception: total net worth and the bucket's weight over it — rule 18 — aggregate both books as a budget control, always broken down; phase 3)
 - Modified sections: none
 - Added sections: none
 - Removed sections: none
@@ -43,7 +43,10 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Dos libros (`book`): `core` (cartera principal: `equity`, `fixed_income`, `gold`, `crypto`) y `bucket` (cubo especulativo).
 - Núcleo y cubo NUNCA se mezclan en un cálculo, vista o métrica. El cubo es un presupuesto (porcentaje de la aportación), no una asignación; no entra en los pesos objetivo.
 - El patrimonio total siempre se muestra desglosado. Nunca un único número sin descomponer.
-- La compartimentación es de **gestión** (pesos, métricas, vistas, presupuesto). Única excepción, exigida por la ley: la **salida fiscal** y los umbrales informativos (Modelos 720/721) agregan los dos libros **por contribuyente**, siempre etiquetados como total fiscal, nunca como métrica de cartera.
+- La compartimentación es de **gestión** (pesos, métricas, vistas, presupuesto). Solo dos excepciones, acotadas y escritas:
+  1. La **salida fiscal** y los umbrales informativos (Modelos 720/721) agregan los dos libros **por contribuyente**, siempre etiquetados como total fiscal, nunca como métrica de cartera.
+  2. El **patrimonio total** y el **peso del cubo sobre él** (regla 18, regla de recogida) suman los dos libros como **control de presupuesto**, siempre desglosados y sin alimentar ningún peso objetivo.
+  Ninguna otra vista, métrica o cálculo los mezcla.
 - No se puede registrar una compra en el cubo sin una tesis (`Thesis`) creada antes.
 
 *Razón:* las reglas de conducta del plan de inversión solo sirven si el sistema las hace imposibles de saltar.
@@ -109,4 +112,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.4.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30
+**Version**: 1.5.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-18
