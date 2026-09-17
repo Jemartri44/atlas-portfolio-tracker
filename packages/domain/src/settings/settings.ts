@@ -14,9 +14,11 @@ export type FiscalDateRule = (typeof FISCAL_DATE_RULES)[number];
 /**
  * Wash-sale window per asset type, counted date to date in whole months or
  * years (ADR-0014): `"2m"`, `"1y"` or an explicit number of days `"<n>d"`.
- * The tax engine (phase 5) reads it; nothing here interprets it.
+ * The tax engine (phase 5) reads it; nothing here interprets it. The type says
+ * exactly what `isWashSaleWindow` accepts: any other month or year count is a
+ * window the rule does not know, and the compiler must say so.
  */
-export type WashSaleWindow = `${number}m` | `${number}y` | `${number}d`;
+export type WashSaleWindow = "2m" | "1y" | `${number}d`;
 
 const WASH_SALE_WINDOW_PATTERN = /^(2m|1y|[1-9][0-9]*d)$/;
 
