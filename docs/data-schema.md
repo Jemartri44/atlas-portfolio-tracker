@@ -62,6 +62,7 @@ Reglas transversales:
 | Seguimiento | `transfer_requested`, `transfer_request_updated` | Traspaso en curso (ADR-0010). Sin efecto sobre lotes ni efectivo |
 | Rectificación | `reversal` | Anula un evento anterior (`reverses_id`); opcionalmente el evento correcto lo referencia con `corrects_id` |
 | Cubo | `thesis_opened`, `thesis_closed` | Tesis del cubo especulativo |
+| Fiscal *(previsto, Fase 5)* | `tax_return_filed` | Deja constancia de qué ejercicio se ha declarado y con qué cifras. Sin él, un `settings_changed` puede reescribir en silencio una Renta ya presentada, la regla de los 20.000 € del Modelo 720 (comparar con "la última declaración presentada") no es calculable y el arrastre de pérdidas a cuatro ejercicios no tiene ancla. *Challenge* 3, hallazgo 2 |
 
 La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se define en §6.
 
@@ -89,6 +90,7 @@ La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se d
 ## 5. Versionado y migraciones
 
 - `schema_version` empieza en `1`. Cada cambio incompatible del formato de cualquier evento incrementa la versión global.
+- **Qué es incompatible (ADR-0018).** Compatible, sin versión nueva: añadir un campo opcional, añadir un valor a un enumerado, relajar una validación, aceptar una forma antigua además de la nueva. Rompedor, con versión nueva y su migración: endurecer o eliminar una regla de forma existente, quitar un valor de un enumerado, cambiar el significado de un campo. El cargador valida cada línea con las reglas de hoy, así que endurecer sin migrar deja **ilegible el libro entero**, no degradado. Mientras el libro real esté vacío se admite endurecer dentro de la v1 regenerando el *golden*; **desde el primer evento real, no**.
 - Al cargar, cada línea pasa por la cadena `migrate(v) → v+1` hasta la versión actual, en memoria. Las funciones de migración son puras, viven en `packages/domain/schema/migrations/` y tienen como fixtures líneas reales de la versión antigua.
 - El fichero **nunca** se reescribe por una migración.
 - `compact` (comando de CLI, acción deliberada): reescribe el libro entero a la versión actual y archiva el original en `archive/`. Se ejecuta cuando la cadena de migraciones pendientes molesta, no de forma automática. Contrato (feature 003): (1) el almacén guarda los bytes originales, tal cual, en `archive/` **antes** de reemplazar el libro y nunca sobrescribe un archivo (`LedgerStore.replace`, la única operación que reescribe); (2) es no-op si ninguna línea está por debajo de la versión actual (canonicalizar líneas escritas por otro cliente no es motivo); (3) aborta sin escribir si hay eventos inválidos o si la proyección del libro reescrito difiere de la original (`snapshotOf`).
@@ -111,7 +113,7 @@ Los eventos `*_updated` llevan el **estado completo resultante** (no un diff), i
 `account_id`, `name`, `platform`, `book` (`core` | `bucket`), `base_currency`, `country` (ISO 3166-1, para el Modelo 720), `active`
 
 **`asset_created` / `asset_updated`**
-`asset_id`, `asset_type` (`fund` | `etc` | `etp` | `stock` | `crypto` | `money_market`; se llama `asset_type` en la línea porque `type` es el tipo de evento del envoltorio), `book`, `asset_class?` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin?`, `ticker?`, `name`, `currency`, `ter?`, `transferable`, `reference_etf_id?`, `active`
+`asset_id`, `asset_type` (`fund` | `etf` | `etc` | `etp` | `stock` | `crypto` | `money_market`; se llama `asset_type` en la línea porque `type` es el tipo de evento del envoltorio), `book`, `asset_class?` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin?`, `ticker?`, `name`, `currency`, `ter?`, `transferable`, `reference_etf_id?`, `active`
 
 Validación (ADR-0009): un `asset_id` no puede existir en los dos libros. Un cambio puro de identificador (mismo producto) es `asset_updated`; cualquier otro cambio es activo nuevo + `corporate_action` (ver §6.5). En particular, `asset_updated` **rechaza** un cambio de `asset_type` o de `currency`: alteraría en silencio la `fiscal_date` (ADR-0013) o la base de coste de todas las operaciones pasadas del activo.
 
@@ -173,13 +175,15 @@ Efecto: suma el neto al efectivo; alimenta `investmentIncome` (rendimiento del c
 Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimientos del capital mobiliario y deducción por doble imposición.
 
 **`cash_deposit` / `cash_withdrawal`**
-`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `notes?`, `fingerprint`
+`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date?`, `notes?`, `fingerprint`
 
 **`standalone_fee`**
-`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `description`, `fingerprint`. No afecta a la base fiscal de ningún lote.
+`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date?`, `description`, `fingerprint`. No afecta a la base fiscal de ningún lote.
 
 **`valuation`**
-`account_id`, `asset_id`, `date`, `quantity`, `unit_value`, `currency`, `fx_rate`, `source`. Foto manual de Nivel 1 (p. ej. 31/12 para el Modelo 720). No toca lotes.
+`account_id`, `asset_id`, `date`, `quantity`, `unit_value`, `currency`, `fx_rate`, `fx_rate_date?`, `source`. Foto manual de Nivel 1 (p. ej. 31/12 para el Modelo 720). No toca lotes.
+
+`fx_rate_date?` se añadió en la feature 005 (*challenge* 3, hallazgo 6): estos cuatro eventos guardaban el tipo del BCE **sin la fecha del tipo**, y el 31/12 cae en fin de semana dos de cada siete años, así que el tipo aplicado a una valoración de fin de año no era reproducible desde la tabla oficial. Es opcional y compatible (ADR-0018).
 
 **`corporate_action`** (ADR-0011)
 `kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/` o URL del emisor), `effects[]` (primitivas, ver §6.5), `notes?`, `fingerprint`
