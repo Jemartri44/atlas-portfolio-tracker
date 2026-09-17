@@ -167,6 +167,10 @@ const accumulate = (state: LedgerState, events: readonly LedgerEvent[]): Accumul
 const annualCostOf = (ter: Decimal | undefined, value: Money | undefined): Money | undefined =>
   ter === undefined || value === undefined ? undefined : value.mul(ter).div(HUNDRED);
 
+/** Value of a position at its manual price, or nothing without a price. */
+const positionValueOf = (price: ManualPrice | undefined, quantity: Quantity): Money | undefined =>
+  price === undefined ? undefined : Money.of(price.unit_value_eur.amount.mul(quantity.value), EUR);
+
 export const costSummary = (
   state: LedgerState,
   events: readonly LedgerEvent[],
@@ -197,7 +201,7 @@ export const costSummary = (
     // Absent when the position arrived by transfer or conversion instead of a purchase.
     const invested = totals.invested.get(assetId) ?? Money.zero(EUR);
     const price = prices.get(assetId);
-    const value = valueOf(price, quantity);
+    const value = positionValueOf(price, quantity);
     if (quantity.isPositive() && price === undefined) {
       partial = true;
     }
@@ -240,6 +244,3 @@ export const costSummary = (
     },
   };
 };
-
-const valueOf = (price: ManualPrice | undefined, quantity: Quantity): Money | undefined =>
-  price === undefined ? undefined : Money.of(price.unit_value_eur.amount.mul(quantity.value), EUR);
