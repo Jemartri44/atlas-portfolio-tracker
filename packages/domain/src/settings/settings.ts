@@ -213,10 +213,19 @@ export const normalizeSettings = (settings: Settings): Settings => {
   return { ...settings, wash_sale_window: windows };
 };
 
-/** Applies a partial change on top of the current settings, merging the per-asset-type maps. */
-export const mergeSettings = (current: Settings, patch: Partial<Settings>): Settings => ({
-  ...current,
-  ...patch,
-  fiscal_date_rule: { ...current.fiscal_date_rule, ...patch.fiscal_date_rule },
-  wash_sale_window: { ...current.wash_sale_window, ...patch.wash_sale_window },
-});
+/**
+ * Applies a partial change on top of the current settings, merging the
+ * per-asset-type maps. The legacy `wash_sale_window_days` never survives the
+ * merge (ADR-0014): the caller resolved it into `wash_sale_window` when it read
+ * the settings, and carrying it along would make every change written from now
+ * on repeat the old form for ever.
+ */
+export const mergeSettings = (current: Settings, patch: Partial<Settings>): Settings => {
+  const { wash_sale_window_days: _legacy, ...merged } = {
+    ...current,
+    ...patch,
+    fiscal_date_rule: { ...current.fiscal_date_rule, ...patch.fiscal_date_rule },
+    wash_sale_window: { ...current.wash_sale_window, ...patch.wash_sale_window },
+  };
+  return merged;
+};

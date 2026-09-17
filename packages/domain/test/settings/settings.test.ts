@@ -161,6 +161,29 @@ describe("mergeSettings", () => {
     expect(merged.stale_price_days).toBe(7);
     expect(mergeSettings(DEFAULT_SETTINGS, {})).toEqual(DEFAULT_SETTINGS);
   });
+
+  it("never carries the legacy window along: what it returns only has the new form", () => {
+    // A ledger written before ADR-0014 reads back with both forms (that is what
+    // `settingsAt` hands over); every change written from here on must carry
+    // only `wash_sale_window`, or the old form lives for ever.
+    const current = normalizeSettings(validateSettings(LEGACY_SETTINGS));
+    expect(current.wash_sale_window_days).toEqual(LEGACY_DAYS);
+    const merged = mergeSettings(current, { stale_price_days: 7 });
+    expect("wash_sale_window_days" in merged).toBe(false);
+    expect(merged.wash_sale_window).toEqual({
+      stock: "61d",
+      etc: "61d",
+      etp: "61d",
+      crypto: "365d",
+      fund: "365d",
+      money_market: "365d",
+    });
+    // Not even when the patch itself carries it.
+    expect(
+      "wash_sale_window_days" in
+        mergeSettings(DEFAULT_SETTINGS, { wash_sale_window_days: LEGACY_DAYS }),
+    ).toBe(false);
+  });
 });
 
 describe("fiscalDateOf", () => {

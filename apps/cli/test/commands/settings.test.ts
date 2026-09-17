@@ -1,6 +1,6 @@
 // atlas settings set: the two guards of ADR-0015 and of constitution IV.
 
-import { DEFAULT_SETTINGS } from "@atlas/domain";
+import { DEFAULT_SETTINGS, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { harness, seed } from "../harness.js";
@@ -146,6 +146,41 @@ describe("atlas settings set: a threshold that silences a live warning", () => {
     expect(h.text()).toContain("No se han podido evaluar los avisos");
     expect(h.text()).toContain("ast_world");
     expect(h.text()).toContain("Registrado settings_changed");
+  });
+});
+
+describe("atlas settings set: the legacy wash-sale window", () => {
+  it("writes only the new form over a ledger that carries the old one", async () => {
+    const { wash_sale_window: _window, ...withoutWindow } = DEFAULT_SETTINGS;
+    const legacy = {
+      schema_version: 1 as const,
+      id: "01ARYZ6S41TSV4RRFFQ69G5SET",
+      recorded_at: "2026-09-01T17:00:00.000Z",
+      type: "settings_changed" as const,
+      settings: {
+        ...withoutWindow,
+        wash_sale_window_days: {
+          stock: 61,
+          etc: 61,
+          etp: 61,
+          crypto: 365,
+          fund: 365,
+          money_market: 365,
+        },
+      },
+    };
+    const h = harness({ events: [...seed(), legacy as unknown as LedgerEvent], confirm: true });
+    expect(await h.exec(["settings", "set", "--stale-price-days", "9"])).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as {
+      settings: Record<string, unknown> & { wash_sale_window: Record<string, string> };
+    };
+    expect("wash_sale_window_days" in written.settings).toBe(false);
+    expect(written.settings.wash_sale_window.fund).toBe("365d");
+    // The old line is untouched: the ledger is append-only.
+    expect(
+      (events[events.length - 2] as unknown as { settings: Record<string, unknown> }).settings,
+    ).toEqual(legacy.settings);
   });
 });
 
