@@ -10,8 +10,7 @@ import {
   ValidationError,
 } from "../errors.js";
 import { createUlidGenerator } from "../ids/ulid.js";
-import { projectLedger } from "../projections/project-ledger.js";
-import type { Warning } from "../projections/state.js";
+import type { LedgerState, Warning } from "../projections/state.js";
 import { CURRENT_SCHEMA_VERSION } from "../schema/envelope.js";
 import type { Draft, LedgerEvent, SupportedEvent } from "../schema/events.js";
 import { fingerprintOf } from "../schema/fingerprint.js";
@@ -79,9 +78,9 @@ const checkInvalid = (
   events: readonly LedgerEvent[],
   event: SupportedEvent,
   options: RecordOptions,
-): AffectedEvent[] => {
+): { affected: AffectedEvent[]; state: LedgerState } => {
   const candidate = [...events, event];
-  const { fresh, all } = newlyInvalid(events, candidate);
+  const { fresh, all, state } = newlyInvalid(events, candidate);
   const own = all.find((entry) => entry.event.id === event.id);
   if (own !== undefined) {
     throw own.error;
@@ -102,13 +101,13 @@ const checkInvalid = (
     if (broken !== undefined) {
       throw broken.error;
     }
-    return [];
+    return { affected: [], state };
   }
   const affected = describeAffected(fresh);
   if (affected.length > 0 && options.acceptInvalid !== true) {
     throw new DependentEventsError(event.id, affected, "newly_invalid_events");
   }
-  return affected;
+  return { affected, state };
 };
 
 export const recordEvent = async <E extends SupportedEvent>(
@@ -125,8 +124,7 @@ export const recordEvent = async <E extends SupportedEvent>(
       { type: event.type },
     );
   }
-  const affected = checkInvalid(events, event, options);
-  const state = projectLedger([...events, event], { collectErrors: true });
+  const { affected, state } = checkInvalid(events, event, options);
   const duplicates = duplicatesOf(state.fingerprints, event);
   if (duplicates.length > 0 && options.confirmDuplicate !== true) {
     throw new DuplicateFingerprintError((event as { fingerprint: string }).fingerprint, duplicates);

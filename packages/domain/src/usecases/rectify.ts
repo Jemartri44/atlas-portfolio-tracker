@@ -7,7 +7,7 @@ import { yearOf } from "../dates/civil-date.js";
 import { todayInMadrid } from "../dates/madrid.js";
 import { DependentEventsError, DuplicateFingerprintError, NotFoundError } from "../errors.js";
 import { createUlidGenerator } from "../ids/ulid.js";
-import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
+import { businessDateOf, isOperationEvent } from "../projections/project-ledger.js";
 import type { LedgerState, Warning } from "../projections/state.js";
 import type { Draft, LedgerEvent, ReversalEvent, SupportedEvent } from "../schema/events.js";
 import type { UseCaseDeps } from "./deps.js";
@@ -53,7 +53,7 @@ const checkCandidate = (
   newIds: readonly string[],
   targetId: string,
 ): LedgerState => {
-  const { fresh } = newlyInvalid(current, candidate);
+  const { fresh, state } = newlyInvalid(current, candidate);
   const own = fresh.find((entry) => newIds.includes(entry.event.id));
   if (own !== undefined) {
     throw own.error;
@@ -61,7 +61,7 @@ const checkCandidate = (
   if (fresh.length > 0) {
     throw new DependentEventsError(targetId, describeAffected(fresh));
   }
-  return projectLedger(candidate, { collectErrors: true });
+  return state;
 };
 
 export const reverseEvent = async (
