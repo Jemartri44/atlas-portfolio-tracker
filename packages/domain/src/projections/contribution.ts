@@ -80,46 +80,55 @@ const amountOf = (input: ContributionInput): { amount: Money; origin: "flag" | "
 };
 
 /**
+ * One row of the split while it is being computed. It is a record and not a
+ * handful of arrays aligned by index: this is the calculation of priority 4 of
+ * the constitution, and two arrays that drift apart would still typecheck.
+ */
+interface Slice {
+  asset_id: AssetId;
+  asset_class: AssetClass;
+  target_pct: Decimal;
+  value_eur: Money;
+  target_eur: Money;
+  gap_eur: Money;
+  allocation_eur: Money;
+}
+
+/**
  * Spreads the rounding residue so the allocations add up to the core amount
  * exactly. It goes to the largest shortfall first (decision (d)); when taking
  * it would leave that allocation negative, only what it holds is taken and the
  * rest moves to the next one (A6).
  */
-const settleResidue = (order: readonly number[], allocations: Money[], residue: Money): void => {
+const settleResidue = (order: readonly Slice[], residue: Money): void => {
   let left = residue;
-  for (const index of order) {
+  for (const slice of order) {
     if (left.isZero()) {
       return;
     }
-    const current = allocations[index] as Money;
+    const current = slice.allocation_eur;
     if (left.isNegative()) {
       // Take at most what the row holds, so no allocation can turn negative.
       const take = current.amount.lt(left.neg().amount) ? current.neg() : left;
-      allocations[index] = current.add(take);
+      slice.allocation_eur = current.add(take);
       left = left.sub(take);
       continue;
     }
-    allocations[index] = current.add(left);
+    slice.allocation_eur = current.add(left);
     return;
   }
 };
 
 /** Rows sorted by shortfall, then by target weight, then by id: a stable, explainable order. */
-const residueOrder = (
-  gaps: readonly Money[],
-  targets: readonly Decimal[],
-  ids: readonly AssetId[],
-) =>
-  gaps
-    .map((_, index) => index)
-    .sort((a, b) => {
-      const byGap = (gaps[b] as Money).cmp(gaps[a] as Money);
-      if (byGap !== 0) {
-        return byGap;
-      }
-      const byTarget = (targets[b] as Decimal).cmp(targets[a] as Decimal);
-      return byTarget !== 0 ? byTarget : (ids[a] as string).localeCompare(ids[b] as string);
-    });
+const residueOrder = (slices: readonly Slice[]): Slice[] =>
+  [...slices].sort((a, b) => {
+    const byGap = b.gap_eur.cmp(a.gap_eur);
+    if (byGap !== 0) {
+      return byGap;
+    }
+    const byTarget = b.target_pct.cmp(a.target_pct);
+    return byTarget !== 0 ? byTarget : a.asset_id.localeCompare(b.asset_id);
+  });
 
 /**
  * The two invariants of the split, checked in production and not only in the
@@ -187,15 +196,22 @@ export const contributionPlan = (
   const total = weights.total_eur;
   const after = total.add(core);
 
-  const ids = weights.rows.map((row) => row.asset_id);
-  const targets = weights.rows.map((row) => row.target_pct);
-  const values = weights.rows.map((row) => row.value_eur as Money);
-  const targetValues = targets.map((target) => after.mul(target).div(HUNDRED));
-  const gaps = targetValues.map((target, index) => {
-    const gap = target.sub(values[index] as Money);
-    return gap.isNegative() ? Money.zero(EUR) : gap;
+  // Every row has a value: the ones held without a price were rejected above.
+  const slices: Slice[] = weights.rows.map((row) => {
+    const value = row.value_eur as Money;
+    const target = after.mul(row.target_pct).div(HUNDRED);
+    const gap = target.sub(value);
+    return {
+      asset_id: row.asset_id,
+      asset_class: row.asset_class,
+      target_pct: row.target_pct,
+      value_eur: value,
+      target_eur: target,
+      gap_eur: gap.isNegative() ? Money.zero(EUR) : gap,
+      allocation_eur: Money.zero(EUR),
+    };
   });
-  const totalGap = gaps.reduce((sum, gap) => sum.add(gap), Money.zero(EUR));
+  const totalGap = slices.reduce((sum, slice) => sum.add(slice.gap_eur), Money.zero(EUR));
 
   /*
    * Because the targets are computed on the value after the contribution, the
@@ -208,27 +224,21 @@ export const contributionPlan = (
    */
   const surplus = totalGap.cmp(core) < 0;
   const leftover = core.sub(totalGap);
-  const raw = gaps.map((gap, index) => {
-    if (!surplus) {
-      return totalGap.isZero() ? Money.zero(EUR) : core.mul(gap.amount).div(totalGap.amount);
-    }
-    return gap.add(leftover.mul(targets[index] as Decimal).div(rowWeight));
-  });
-  const allocations = raw.map((value) => value.roundToCents());
-  const assigned = allocations.reduce((sum, value) => sum.add(value), Money.zero(EUR));
-  settleResidue(residueOrder(gaps, targets, ids), allocations, core.sub(assigned));
+  for (const slice of slices) {
+    const raw = surplus
+      ? slice.gap_eur.add(leftover.mul(slice.target_pct).div(rowWeight))
+      : totalGap.isZero()
+        ? Money.zero(EUR)
+        : core.mul(slice.gap_eur.amount).div(totalGap.amount);
+    slice.allocation_eur = raw.roundToCents();
+  }
+  const assigned = slices.reduce((sum, slice) => sum.add(slice.allocation_eur), Money.zero(EUR));
+  settleResidue(residueOrder(slices), core.sub(assigned));
 
-  const rows = weights.rows.map((row, index) => {
-    const allocation = allocations[index] as Money;
-    const valueAfter = (values[index] as Money).add(allocation);
+  const rows = slices.map((slice) => {
+    const valueAfter = slice.value_eur.add(slice.allocation_eur);
     return {
-      asset_id: row.asset_id,
-      asset_class: row.asset_class,
-      target_pct: row.target_pct,
-      value_eur: values[index] as Money,
-      target_eur: targetValues[index] as Money,
-      gap_eur: gaps[index] as Money,
-      allocation_eur: allocation,
+      ...slice,
       value_after_eur: valueAfter,
       weight_after_pct: after.isZero()
         ? Decimal.ZERO
