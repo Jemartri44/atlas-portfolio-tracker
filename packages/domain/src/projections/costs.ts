@@ -24,7 +24,7 @@ import type { Settings } from "../settings/settings.js";
 import { type ManualPrice, manualPrices } from "./prices.js";
 import { businessDateOf, isOperationEvent } from "./project-ledger.js";
 import type { LedgerState } from "./state.js";
-import { coreQuantityOf } from "./weights.js";
+import { coreAccountIds, coreQuantityOf } from "./weights.js";
 
 const HUNDRED = Decimal.parse("100");
 const EUR = "EUR";
@@ -214,11 +214,12 @@ export const costSummary = (
   let annual = Money.zero(EUR);
   let weightedTer = Decimal.ZERO;
 
+  const core = coreAccountIds(state);
   for (const [assetId, asset] of state.assets) {
     if (asset.book !== "core") {
       continue;
     }
-    const quantity = coreQuantityOf(state, assetId);
+    const quantity = coreQuantityOf(state, assetId, core);
     const fees = totals.fees.get(assetId);
     // An asset that never traded and is not held has no cost to report. One
     // that arrived by transfer or conversion has no commission of its own but

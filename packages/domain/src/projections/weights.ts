@@ -81,11 +81,15 @@ export const coreAccountIds = (state: LedgerState): Set<string> => {
   return ids;
 };
 
-/** Quantity of an asset across every core account, from the physical positions. */
+/**
+ * Quantity of an asset across every core account, from the physical positions.
+ * The set of core accounts is a parameter because every caller asks this inside
+ * a loop over the assets: building it per asset would rebuild it each time.
+ */
 export const coreQuantityOf = (
   state: LedgerState,
   assetId: AssetId,
-  core = coreAccountIds(state),
+  core: ReadonlySet<string>,
 ): Quantity => {
   let total = Quantity.ZERO;
   for (const [key, quantity] of state.positions) {
@@ -107,11 +111,12 @@ const universeOf = (
   targets: Record<string, string>,
 ): Map<AssetId, Quantity> => {
   const universe = new Map<AssetId, Quantity>();
+  const core = coreAccountIds(state);
   for (const [assetId, asset] of state.assets) {
     if (asset.book !== "core") {
       continue;
     }
-    const quantity = coreQuantityOf(state, assetId);
+    const quantity = coreQuantityOf(state, assetId, core);
     const target = targets[assetId];
     if (quantity.isPositive() || (target !== undefined && Decimal.parse(target).isPositive())) {
       universe.set(assetId, quantity);
