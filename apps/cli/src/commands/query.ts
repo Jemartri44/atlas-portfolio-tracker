@@ -12,14 +12,13 @@ import {
   ProjectionError,
   physicalPositions,
   realizedGains,
-  todayInMadrid,
   valuations,
   type Warning,
 } from "@atlas/domain";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
-import { loadForQuery, originOf, render, renderQuery } from "./shared.js";
+import { dateFlag, loadForQuery, originOf, render, renderQuery } from "./shared.js";
 
 const yearOf = (positionals: string[], usage: string): number => {
   const year = Number(positionals[1]);
@@ -268,7 +267,7 @@ export const valuationsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
-  const date = stringFlag(flags, "date") ?? todayInMadrid(ctx.deps.clock);
+  const date = dateFlag(ctx, flags);
   const { state } = await loadForQuery(ctx, date);
   const rows = valuations(state, date);
   renderQuery(

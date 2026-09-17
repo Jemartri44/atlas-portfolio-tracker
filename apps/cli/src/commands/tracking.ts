@@ -19,7 +19,7 @@ import {
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
 import { requireId } from "./catalogue.js";
-import { confirmAndRecord, draftFromFlags, loadForQuery, renderQuery } from "./shared.js";
+import { confirmAndRecord, dateFlag, draftFromFlags, loadForQuery, renderQuery } from "./shared.js";
 
 export const orderCommand = async (
   ctx: Context,
@@ -136,7 +136,7 @@ export const transferCommand = async (
     if ((quantity === undefined) === !all) {
       throw new UsageError("indica exactamente uno de --quantity <n> o --all");
     }
-    const date = stringFlag(flags, "date") ?? todayInMadrid(ctx.deps.clock);
+    const date = dateFlag(ctx, flags);
     const { state } = await loadForQuery(ctx, date);
     const simulation = simulateTransfer(state, {
       from_asset_id: requireFlag(flags, "from-asset"),

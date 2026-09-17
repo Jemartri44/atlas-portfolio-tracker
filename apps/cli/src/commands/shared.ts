@@ -10,6 +10,7 @@ import {
   type Draft,
   type FiscalLot,
   fiscalLots,
+  isCivilDate,
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
@@ -21,9 +22,10 @@ import {
   type RecordResult,
   recordEvent,
   type SupportedEvent,
+  todayInMadrid,
   type Warning,
 } from "@atlas/domain";
-import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
+import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import {
   ConfirmationRequired,
   type Context,
@@ -67,6 +69,23 @@ export const draftFromFlags = (spec: DraftSpec, flags: Flags): Record<string, un
     }
   }
   return draft;
+};
+
+/**
+ * `--date` of a read-only view, today in Europe/Madrid when it is absent. A
+ * typo has to fail as a usage error and not produce a plausible answer: the
+ * date comparisons are lexicographic, so a word would pick the last price and
+ * the last settings of the whole ledger and report an age of NaN.
+ */
+export const dateFlag = (ctx: Context, flags: Flags): CivilDate => {
+  const raw = stringFlag(flags, "date");
+  if (raw === undefined) {
+    return todayInMadrid(ctx.deps.clock);
+  }
+  if (!isCivilDate(raw)) {
+    throw new UsageError(`--date debe ser una fecha YYYY-MM-DD válida (recibido: ${raw})`);
+  }
+  return raw;
 };
 
 export const preview = (ctx: Context, title: string, draft: Record<string, unknown>): void => {

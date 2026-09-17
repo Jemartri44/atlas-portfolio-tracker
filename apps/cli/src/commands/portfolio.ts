@@ -14,13 +14,12 @@ import {
   type ManualPrice,
   type Money,
   settingsAt,
-  todayInMadrid,
   type Warning,
 } from "@atlas/domain";
 import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
-import { loadForQuery, renderQuery } from "./shared.js";
+import { dateFlag, loadForQuery, renderQuery } from "./shared.js";
 
 const DASH = "—";
 
@@ -146,16 +145,13 @@ const jsonWeights = (weights: CoreWeights) => ({
   warnings: weights.warnings,
 });
 
-const dateOf = (ctx: Context, flags: Flags): string =>
-  stringFlag(flags, "date") ?? todayInMadrid(ctx.deps.clock);
-
 export const weightsCommand = async (
   ctx: Context,
   _positionals: string[],
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
-  const date = dateOf(ctx, flags);
+  const date = dateFlag(ctx, flags);
   const { state } = await loadForQuery(ctx, date);
   const weights = coreWeights(state, date, settingsAt(state, date).settings);
   renderQuery(ctx, state, jsonWeights(weights), weightsText(weights));
@@ -208,7 +204,7 @@ export const contributeCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["amount", "date", ...GLOBAL_FLAGS]);
-  const date = dateOf(ctx, flags);
+  const date = dateFlag(ctx, flags);
   const { state } = await loadForQuery(ctx, date);
   const amount = stringFlag(flags, "amount");
   const plan = contributionPlan(state, {
@@ -251,7 +247,7 @@ export const costsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
-  const date = dateOf(ctx, flags);
+  const date = dateFlag(ctx, flags);
   const { state, events } = await loadForQuery(ctx, date);
   const summary = costSummary(state, events, date, settingsAt(state, date).settings, date);
   const { rows, totals } = summary.core;

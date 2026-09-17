@@ -403,3 +403,36 @@ describe("read-only views as of the date asked", () => {
     );
   });
 });
+
+describe("the --date flag of every view", () => {
+  it("rejects a date that is not YYYY-MM-DD as a usage error", async () => {
+    const h = await portfolio();
+    for (const argv of [
+      ["weights", "--date", "manana"],
+      ["contribute", "--amount", "100", "--date", "manana"],
+      ["costs", "--date", "manana"],
+      ["valuations", "--date", "manana"],
+      [
+        "transfer",
+        "simulate",
+        "--from-asset",
+        "ast_world",
+        "--to-asset",
+        "ast_bonds",
+        "--quantity",
+        "1",
+        "--date",
+        "manana",
+      ],
+    ]) {
+      h.reset();
+      expect(await h.exec(argv)).toBe(EXIT.usage);
+      expect(h.text()).toContain("--date debe ser una fecha YYYY-MM-DD válida");
+    }
+  });
+
+  it("rejects a date that looks right but does not exist", async () => {
+    const h = await portfolio();
+    expect(await h.exec(["weights", "--date", "2027-02-30"])).toBe(EXIT.usage);
+  });
+});
