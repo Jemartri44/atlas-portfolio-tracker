@@ -4,6 +4,7 @@ import { access } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 import {
+  type CivilDate,
   completeDraft,
   createUlidGenerator,
   type Draft,
@@ -131,9 +132,16 @@ export const render = (ctx: Context, data: unknown, text: string): void => {
  * Every read-only command projects in degraded mode (ADR-0015): one invalid
  * event must never leave the ledger unreadable, because reading it is the only
  * way to repair it. Mutations keep loading strictly.
+ *
+ * A view asked for a past date passes it as `asOf`, so the answer is the
+ * portfolio of that day and not the one of today read with the prices of then
+ * (data-schema.md §7).
  */
-export const loadForQuery = (ctx: Context): Promise<ProjectedLedger> =>
-  loadAndProject(ctx.deps, { collectErrors: true });
+export const loadForQuery = (ctx: Context, asOf?: CivilDate): Promise<ProjectedLedger> =>
+  loadAndProject(ctx.deps, {
+    collectErrors: true,
+    ...(asOf === undefined ? {} : { asOf }),
+  });
 
 /** Visible degradation (constitution V): never a partial answer that looks complete. */
 export const degradedHeader = (state: LedgerState): string | undefined =>

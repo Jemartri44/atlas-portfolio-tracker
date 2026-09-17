@@ -268,8 +268,8 @@ export const valuationsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
-  const { state } = await loadForQuery(ctx);
   const date = stringFlag(flags, "date") ?? todayInMadrid(ctx.deps.clock);
+  const { state } = await loadForQuery(ctx, date);
   const rows = valuations(state, date);
   renderQuery(
     ctx,

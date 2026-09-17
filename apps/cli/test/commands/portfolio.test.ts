@@ -1,9 +1,23 @@
 // atlas weights · contribute · costs, and atlas transfer simulate.
 
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DEFAULT_SETTINGS } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { harness, seed } from "../harness.js";
+
+const goldenLines = (): string[] =>
+  readFileSync(
+    join(
+      resolve(dirname(fileURLToPath(import.meta.url)), "../../../../tests/fixtures/ledger"),
+      "synthetic-v1.jsonl",
+    ),
+    "utf8",
+  )
+    .split("\n")
+    .filter((line) => line !== "");
 
 const DATE = "2027-06-30";
 
@@ -282,5 +296,103 @@ describe("atlas transfer simulate", () => {
       ]),
     ).toBe(EXIT.domain);
     expect(h.text()).toContain("not_transferable");
+  });
+});
+
+describe("read-only views as of the date asked", () => {
+  it("reads the golden at a past date with the portfolio of that date", async () => {
+    // ast_bonds was emptied by a share-class change in 2028 and ast_bonds_i was
+    // born there: in 2027 the table must show the first and not the second.
+    const h = harness({ lines: goldenLines() });
+    expect(await h.exec(["weights", "--date", "2027-06-30", "--json"])).toBe(0);
+    const data = h.json() as { rows: { asset_id: string; quantity: string }[] };
+    const bonds = data.rows.find((row) => row.asset_id === "ast_bonds");
+    expect(Number(bonds?.quantity)).toBeGreaterThan(0);
+    expect(data.rows.map((row) => row.asset_id)).not.toContain("ast_bonds_i");
+  });
+
+  it("simulates a transfer of the position held at that date", async () => {
+    const h = await portfolio();
+    // 94 more of ast_world, well after the date asked.
+    expect(
+      await h.exec([
+        "add",
+        "buy",
+        "--account",
+        "acc_fund",
+        "--asset",
+        "ast_world",
+        "--trade-date",
+        "2028-06-01",
+        "--value-date",
+        "2028-06-02",
+        "--quantity",
+        "94",
+        "--unit-price",
+        "100",
+        "--currency",
+        "EUR",
+        "--fx-rate",
+        "1",
+        "--fx-rate-date",
+        "2028-06-02",
+        "--yes",
+      ]),
+    ).toBe(0);
+    h.reset();
+    expect(
+      await h.exec([
+        "transfer",
+        "simulate",
+        "--from-asset",
+        "ast_world",
+        "--to-asset",
+        "ast_bonds",
+        "--all",
+        "--date",
+        DATE,
+        "--json",
+      ]),
+    ).toBe(0);
+    expect((h.json() as { quantity: string }).quantity).toBe("6");
+  });
+
+  it("does not count in costs a commission paid after the date asked", async () => {
+    const h = await portfolio();
+    expect(await h.exec(["costs", "--date", DATE, "--json"])).toBe(0);
+    const before = (h.json() as { core: { totals: { fees_eur: string } } }).core.totals.fees_eur;
+    h.reset();
+    expect(
+      await h.exec([
+        "add",
+        "buy",
+        "--account",
+        "acc_fund",
+        "--asset",
+        "ast_world",
+        "--trade-date",
+        "2028-06-01",
+        "--value-date",
+        "2028-06-02",
+        "--quantity",
+        "1",
+        "--unit-price",
+        "100",
+        "--fee",
+        "50",
+        "--currency",
+        "EUR",
+        "--fx-rate",
+        "1",
+        "--fx-rate-date",
+        "2028-06-02",
+        "--yes",
+      ]),
+    ).toBe(0);
+    h.reset();
+    expect(await h.exec(["costs", "--date", DATE, "--json"])).toBe(0);
+    expect((h.json() as { core: { totals: { fees_eur: string } } }).core.totals.fees_eur).toBe(
+      before,
+    );
   });
 });

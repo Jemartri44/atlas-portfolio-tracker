@@ -130,13 +130,13 @@ export const transferCommand = async (
   }
   if (action === "simulate") {
     assertKnownFlags(flags, ["from-asset", "to-asset", "quantity", "all", "date", ...GLOBAL_FLAGS]);
-    const { state } = await loadForQuery(ctx);
     const quantity = stringFlag(flags, "quantity");
     const all = booleanFlag(flags, "all");
     if ((quantity === undefined) === !all) {
       throw new UsageError("indica exactamente uno de --quantity <n> o --all");
     }
     const date = stringFlag(flags, "date") ?? todayInMadrid(ctx.deps.clock);
+    const { state } = await loadForQuery(ctx, date);
     const simulation = simulateTransfer(state, {
       from_asset_id: requireFlag(flags, "from-asset"),
       to_asset_id: requireFlag(flags, "to-asset"),

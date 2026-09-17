@@ -155,8 +155,8 @@ export const weightsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
-  const { state } = await loadForQuery(ctx);
   const date = dateOf(ctx, flags);
+  const { state } = await loadForQuery(ctx, date);
   const weights = coreWeights(state, date, settingsAt(state, date).settings);
   renderQuery(ctx, state, jsonWeights(weights), weightsText(weights));
   return 0;
@@ -208,8 +208,8 @@ export const contributeCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["amount", "date", ...GLOBAL_FLAGS]);
-  const { state } = await loadForQuery(ctx);
   const date = dateOf(ctx, flags);
+  const { state } = await loadForQuery(ctx, date);
   const amount = stringFlag(flags, "amount");
   const plan = contributionPlan(state, {
     ...(amount === undefined ? {} : { amount }),
@@ -251,9 +251,9 @@ export const costsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
-  const { state, events } = await loadForQuery(ctx);
   const date = dateOf(ctx, flags);
-  const summary = costSummary(state, events, date, settingsAt(state, date).settings);
+  const { state, events } = await loadForQuery(ctx, date);
+  const summary = costSummary(state, events, date, settingsAt(state, date).settings, date);
   const { rows, totals } = summary.core;
   const text = [
     `Costes a ${date}.`,
