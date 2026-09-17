@@ -107,6 +107,19 @@ describe("coreWeights", () => {
     expect(result.total_eur.amount.toString()).toBe("1000");
   });
 
+  it("marks the subtotal of a class whose member is held without a price", () => {
+    const b = balanced();
+    b.asset("ast_mm", { asset_class: "fixed_income", asset_type: "money_market" });
+    b.buy({ account_id: "acc_fund", asset_id: "ast_mm", quantity: "5", unit_price: "100" });
+    const result = weightsOf(b);
+    const partialOf = (asset_class: string) =>
+      result.by_class.find((subtotal) => subtotal.asset_class === asset_class)?.partial;
+    expect(partialOf("fixed_income")).toBe(true);
+    // The other classes are whole even though the core total is not.
+    expect(partialOf("equity")).toBe(false);
+    expect(partialOf("gold")).toBe(false);
+  });
+
   it("shows an asset with a target and no position at zero, without making the total partial", () => {
     const b = balanced();
     b.asset("ast_mm", { asset_class: "fixed_income", asset_type: "money_market" });

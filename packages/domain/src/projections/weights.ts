@@ -36,7 +36,10 @@ export interface CoreWeightRow {
 
 export interface ClassSubtotal {
   asset_class: AssetClass;
+  /** Sum of what does have a value, exactly like the core total. */
   value_eur: Money;
+  /** A member is held without a price: this subtotal is not the value of the class. */
+  partial: boolean;
   target_pct: Decimal;
   weight_pct?: Decimal;
   deviation_pp?: Decimal;
@@ -230,7 +233,15 @@ export const deriveWeights = (
       Money.zero("EUR"),
     );
     const target = members.reduce((sum, row) => sum.add(row.target_pct), Decimal.ZERO);
-    const subtotal: ClassSubtotal = { asset_class, value_eur: value, target_pct: target };
+    // A class with a member held and unpriced adds up to less than it is worth:
+    // say so, or the subtotal reads as a complete figure while its own row
+    // shows a dash (constitution V).
+    const subtotal: ClassSubtotal = {
+      asset_class,
+      value_eur: value,
+      partial: members.some((row) => row.value_eur === undefined),
+      target_pct: target,
+    };
     if (!partial) {
       subtotal.weight_pct = percentOf(value, total);
       subtotal.deviation_pp = subtotal.weight_pct.sub(target);

@@ -10,7 +10,7 @@ import {
   contributionPlan,
   coreWeights,
   costSummary,
-  type Decimal,
+  Decimal,
   type ManualPrice,
   type Money,
   settingsAt,
@@ -49,6 +49,24 @@ const warningLines = (warnings: readonly Warning[]): string[] =>
     ? []
     : ["", "Avisos:", ...warnings.map((warning) => `  ${warning.code}  ${warning.message}`)];
 
+const PARTIAL = "(parcial)";
+
+/**
+ * Weight of the whole core: what the rows actually add up to, never a fixed
+ * 100 %. With target weights and nothing bought, every row says 0 % and the
+ * foot must not claim a full portfolio (constitution V).
+ */
+const totalWeightCell = (weights: CoreWeights): string => {
+  if (weights.partial) {
+    return PARTIAL;
+  }
+  const summed = weights.rows.reduce(
+    (total, row) => total.add(row.weight_pct ?? Decimal.ZERO),
+    Decimal.ZERO,
+  );
+  return summed.isZero() ? "" : pct(summed);
+};
+
 export const weightsText = (weights: CoreWeights): string => {
   const rows = weights.rows.map((row) => [
     row.asset_id,
@@ -70,7 +88,7 @@ export const weightsText = (weights: CoreWeights): string => {
     "",
     "",
     eur(subtotal.value_eur),
-    pct(subtotal.weight_pct),
+    subtotal.partial ? PARTIAL : pct(subtotal.weight_pct),
     pct(subtotal.target_pct),
     pp(subtotal.deviation_pp),
   ]);
@@ -104,7 +122,7 @@ export const weightsText = (weights: CoreWeights): string => {
           "",
           "",
           eur(weights.total_eur),
-          weights.partial ? "(parcial)" : "100.00 %",
+          totalWeightCell(weights),
           "",
           "",
         ],
@@ -138,6 +156,7 @@ const jsonWeights = (weights: CoreWeights) => ({
   by_class: weights.by_class.map((subtotal) => ({
     asset_class: subtotal.asset_class,
     value_eur: subtotal.value_eur.amount.toString(),
+    partial: subtotal.partial,
     weight_pct: subtotal.weight_pct?.toString(),
     target_pct: subtotal.target_pct.toString(),
     deviation_pp: subtotal.deviation_pp?.toString(),
@@ -269,7 +288,7 @@ export const costsCommand = async (
         ]),
         [
           "TOTAL",
-          totals.partial ? "(parcial)" : "",
+          totals.partial ? PARTIAL : "",
           eur(totals.fees_eur),
           "",
           totals.weighted_ter === undefined ? "" : totals.weighted_ter.round(4).toString(),

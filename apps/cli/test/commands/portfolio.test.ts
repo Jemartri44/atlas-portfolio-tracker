@@ -146,6 +146,52 @@ describe("atlas weights", () => {
     expect(h.text()).toContain("partial_core_total");
   });
 
+  it("never prints a full 100 % over a table of zeros", async () => {
+    // Target weights in force and nothing bought yet: every row is 0 %.
+    const h = harness({
+      events: [...seed(), settingsEvent(CONFIG)],
+      confirm: true,
+      instant: `${DATE}T10:00:00.000Z`,
+    });
+    expect(await h.exec(["weights", "--date", DATE])).toBe(0);
+    expect(h.text()).not.toContain("100.00 %");
+    expect(h.text()).toMatch(/TOTAL\s+0\s*$/m);
+  });
+
+  it("marks the subtotal of the class that hides a missing price", async () => {
+    const h = await portfolio();
+    expect(
+      await h.exec([
+        "add",
+        "buy",
+        "--account",
+        "acc_etf",
+        "--asset",
+        "ast_gold",
+        "--trade-date",
+        "2027-01-11",
+        "--value-date",
+        "2027-01-12",
+        "--quantity",
+        "1",
+        "--unit-price",
+        "100",
+        "--currency",
+        "USD",
+        "--fx-rate",
+        "1.1",
+        "--fx-rate-date",
+        "2027-01-12",
+        "--yes",
+      ]),
+    ).toBe(0);
+    h.reset();
+    expect(await h.exec(["weights", "--date", DATE])).toBe(0);
+    // The gold subtotal says so instead of showing a clean zero.
+    expect(h.text()).toMatch(/\[gold\]\s+0\s+\(parcial\)/);
+    expect(h.text()).toMatch(/\[equity\]\s+600\s{2,}/);
+  });
+
   it("answers in JSON with the rows, the subtotals and the warnings", async () => {
     const h = await portfolio();
     expect(await h.exec(["weights", "--date", DATE, "--json"])).toBe(0);
