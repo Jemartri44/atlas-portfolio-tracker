@@ -269,8 +269,8 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 | `model_720_alert_threshold_eur` | 45.000€ | 5.8 |
 | `model_721_alert_threshold_eur` | 45.000€ | 5.8 |
 | `savings_tax_brackets[]` | Ver 5.1 | 5.1 |
-| `fiscal_date_rule{}` | cotizados → contratación; fondos → fecha valor | 5.10 |
-| `wash_sale_window{}` | fondos/cripto `"1y"`; cotizados `"2m"` (de fecha a fecha; `wash_sale_window_days` en días es la forma antigua aceptada) | 5.4 |
+| `fiscal_date_rule{}` | cotizados → contratación; fondos → fecha valor. **Mapa parcial**, como el anterior (ADR-0018) | 5.10 |
+| `wash_sale_window{}` | fondos/cripto `"1y"`; cotizados `"2m"` (de fecha a fecha; `wash_sale_window_days` en días es la forma antigua aceptada). **Mapa parcial**: un tipo de activo ausente toma su valor por defecto, para que añadir un tipo nuevo no invalide la configuración ya escrita (ADR-0018) | 5.4 |
 | `tax_residence` | España | 5.9 |
 | `notification_email` | — | — |
 | `job_frequencies{}` | Ver especificación | — |

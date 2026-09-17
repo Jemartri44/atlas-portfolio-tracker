@@ -43,15 +43,29 @@ Dos recordatorios que esta feature pone a prueba:
 
 ## 3. Alcance
 
+### 3.0 bis Bloque 0 — correcciones del tercer *challenge* (hazlo primero)
+
+Tres cambios **compatibles** (ADR-0018): no tocan `schema_version` ni deben cambiar el *golden*.
+
+1. **`asset_type` gana `etf`.** Los documentos nombran los ETF como categoría de dos meses y de fecha de contratación en tres sitios, y `reference_etf_id` obliga a darlos de alta, pero el enumerado no los tenía. Valores por defecto: `fiscal_date_rule` = `trade_date`, `wash_sale_window` = `"2m"`.
+2. **Los mapas de `Settings` indexados por `asset_type` pasan a ser parciales** (`fiscal_date_rule`, `wash_sale_window` y la forma antigua `wash_sale_window_days`): un tipo ausente toma su valor por defecto documentado, y `settingsAt` los completa al leer. Sin esto, el punto 1 habría invalidado **todas** las líneas `settings_changed` ya escritas — que es exactamente el fallo que ADR-0018 cierra. Test: una línea `settings_changed` escrita sin `etf` sigue siendo válida y `settingsAt` devuelve el valor por defecto para ese tipo.
+3. **`fx_rate_date?` opcional en `valuation`, `cash_deposit`, `cash_withdrawal` y `standalone_fee`**, que guardaban el tipo del BCE sin la fecha del tipo. El 31/12 cae en fin de semana dos de cada siete años, así que el tipo de una valoración de fin de año no era reproducible desde la tabla oficial. Valida el fin de semana como en el resto (bloque 0 de la 004) y añade el flag a la CLI.
+
 ### 3.0 Configuración nueva (`Settings`)
 
 - `bucket_benchmark_asset_id?`: el activo que hace de índice de referencia del cubo (regla 16). Es un `asset_id` del catálogo; puede ser de cualquier libro (normalmente el fondo global del núcleo) y **no** participa en ningún cálculo del cubo salvo como referencia de rendimiento. Sin él, las comparaciones con el índice salen "sin dato" con un aviso, nunca un cero.
 - Los umbrales de las reglas 17 y 18 ya existen en `Settings` y siguen siendo opcionales: `bucket_max_cumulative_contribution`, `bucket_stop_loss_pct`, `bucket_max_weight_pct`. Sin el parámetro, su aviso **no se evalúa** (nunca un valor por defecto inventado, constitución IV).
 - `atlas settings set` gana `--bucket-benchmark-asset`. Valida que el activo exista en el catálogo al proyectar (aviso `unknown_benchmark_asset`, no rechazo: el catálogo puede cambiar después).
 
+### 3.0 ter Una sola puerta para los precios
+
+Hoy **todo** precio sale de eventos `valuation` del libro (`manualPrices`) y lo consumen ya tres proyecciones; esta feature añade tres más. Cuando llegue la Fase 4 con los precios automáticos (`PriceSource`, `prices/<asset_id>.jsonl` fuera del libro), o un trabajo diario escribe en el registro de hechos —que sería una barbaridad— o hay que reabrir seis proyecciones con cobertura del 100 %.
+
+Antes de añadir nada, **centraliza la lectura en una única función** de `prices.ts` que reciba el activo y la fecha y devuelva el precio con su origen, su fecha y su antigüedad, dejando **un parámetro opcional para una fuente externa** que hoy nadie pasa. Escribe en su documentación la precedencia que regirá: **precio manual (`valuation`) por delante del automático**, siempre, porque el manual es una decisión del usuario y el automático una conveniencia (constitución I). Ninguna proyección vuelve a leer `state.valuations` por su cuenta. Es el único punto que la Fase 4 tendrá que tocar.
+
 ### 3.1 Patrimonio total (`netWorth`, `atlas networth`)
 
-`netWorth(state, date, settings)`: valor del **núcleo** (reutiliza `coreWeights`), valor del **cubo** (posiciones físicas × precio manual) y **efectivo** por cuenta y divisa convertido a EUR con el `fx_rate` de la última operación que lo movió —si una divisa no tiene tipo conocido, esa línea sale "sin convertir" y el total se marca parcial—. Devuelve los tres bloques **siempre desglosados** y el total, con marca de parcialidad y la lista de lo que falta.
+`netWorth(state, date, settings)`: valor del **núcleo** (reutiliza `coreWeights`), valor del **cubo** (posiciones físicas × precio manual) y **efectivo** por cuenta y divisa. El efectivo en divisa se convierte con el **último tipo conocido de esa divisa** en el libro, y la fila muestra **de qué fecha es ese tipo y su antigüedad**, con la misma marca `stale` que los precios (`stale_price_days`): un tipo de hace dos años no es un dato actual y no puede presentarse como si lo fuera (*challenge* 3, hallazgo 4). Si una divisa no tiene ningún tipo conocido, esa línea sale "sin convertir" y el total se marca parcial. Devuelve los tres bloques **siempre desglosados** y el total, con marca de parcialidad y la lista de lo que falta.
 
 Es la única vista que suma los dos libros, y lo hace por mandato de la especificación (§3.2: "el patrimonio total siempre se muestra desglosado"). Cumple la constitución III porque **nunca** presenta un único número sin descomponer y porque no alimenta ningún peso objetivo. CLI: `atlas networth [--date]`, con una fila por libro y por divisa de efectivo, el total al pie y los avisos.
 
@@ -74,6 +88,7 @@ Sobre las **tesis cerradas** (la unidad de decisión del usuario) y sobre las ve
 
 - Número de tesis cerradas y número de operaciones de venta, con el **aviso de significancia** por debajo de 100 operaciones (especificación §6.2: por debajo de esa muestra no se distingue habilidad de suerte).
 - **Tasa de acierto** (tesis cerradas con resultado > 0 sobre el total), **ganancia media** de las positivas, **pérdida media** de las negativas y **esperanza matemática** por tesis (media de todas), todo en EUR exactos y redondeado una vez en la salida.
+- **Tesis con resultado contaminado, excluidas de las medias y contadas aparte** (*challenge* 3, hallazgo 5). El FIFO es global por activo (ADR-0009), así que si una tesis se cierra dejando posición viva, las ventas de una tesis **posterior** sobre ese mismo activo consumen lotes de la primera y su `result_eur` mezcla las dos. Marca la tesis cuyas ventas hayan consumido lotes creados por compras de otra tesis (el linaje está en `source_event_id` de cada lote y en los `buys` de cada tesis), déjala fuera de la tasa de acierto, de las medias y de la esperanza, y **di cuántas has excluido y por qué**. Una estadística que promedia resultados contaminados es peor que no tenerla.
 - **Comisiones acumuladas sobre capital operado** (regla 14): `Σ fees_eur de los buy y sell del cubo / Σ coste de sus buy`, en porcentaje, con los dos importes a la vista. Es la métrica que el plan llama la más reveladora: sale destacada, no en una esquina.
 - **Máxima caída del resultado realizado acumulado**: ordena las ventas del cubo por `fiscal_date` (desempate por posición en el fichero), acumula `gain_eur` y devuelve la mayor caída desde un máximo previo, con las fechas del pico y del valle. Se calcula **solo desde el libro**, sin precios, así que es exacta; la curva de valor con precios es de la web (Ronda 7).
 - **Resultado agregado frente al índice**: suma de `result_vs_index_eur` de las tesis que lo tienen, y cuántas quedaron sin dato.
@@ -82,10 +97,16 @@ Sobre las **tesis cerradas** (la unidad de decisión del usuario) y sobre las ve
 
 Avisos, nunca rechazos, devueltos en la estructura de la proyección (no en `state.warnings`: el libro es válido), con el patrón que fijó la 004:
 
-- `bucket_contribution_exceeded`: aporte acumulado al cubo (Σ `cash_deposit` − Σ `cash_withdrawal` de sus cuentas) por encima de `bucket_max_cumulative_contribution`; y `bucket_contribution_near_limit` al pasar del 80 % (umbral fijo relativo, no configurable: es el "aviso al acercarse" de la regla 17).
+- `bucket_contribution_exceeded`: aporte acumulado al cubo **en bruto** (Σ `cash_deposit` de sus cuentas, **sin restar las retiradas**) por encima de `bucket_max_cumulative_contribution`. La regla 17 es un tope de **cuánto dinero nuevo se pone en riesgo**, y la regla 19 prohíbe reponer el cubo, así que sacar beneficios no debe devolver margen para volver a arriesgar (*challenge* 3, hallazgo 7). Muestra también el neto, etiquetado como tal; y `bucket_contribution_near_limit` al pasar del 80 % (umbral fijo relativo, no configurable: es el "aviso al acercarse" de la regla 17).
 - `bucket_stop_loss_reached`: pérdida acumulada del cubo (realizada + latente) por encima de `bucket_stop_loss_pct` del aporte acumulado. La especificación pide "bloqueo visible al superarlo": en la CLI es un aviso destacado en `atlas bucket` y en `atlas add buy` cuando la cuenta es del cubo; **no** se bloquea el registro (el libro nunca rechaza un hecho que ocurrió).
 - `bucket_weight_exceeded`: peso del cubo sobre el patrimonio total (§3.1) por encima de `bucket_max_weight_pct` (regla 18).
 - Aporte acumulado **frente al presupuesto previsto**: `bucket_pct_of_contribution × monthly_contribution_eur × meses transcurridos` desde el primer evento del cubo, como referencia informativa. Si falta cualquiera de los dos parámetros, no se calcula.
+
+### 3.5 bis Aviso cuando la configuración mueve una Renta ya pasada
+
+`atlas settings set` ya avisa si un cambio de umbral silencia un aviso activo (feature 004). Añade el aviso que falta y que es mucho más caro: **si el cambio mueve las ganancias realizadas de un ejercicio anterior al actual**, dilo antes de escribir. Compara `realizedGains` por ejercicio con la configuración anterior y con la nueva (mismo libro), y lista los ejercicios cuyo total cambia, con las dos cifras. Es lo que ocurre al corregir `fiscal_date_rule`, que es justo el cambio que ADR-0013 promete que será "un `settings_changed`, no un despliegue".
+
+No bloquea: pide confirmación como el aviso de umbral silenciado (`--yes` la da por hecha). El libro no sabe todavía qué ejercicios se han declarado —hace falta un evento para eso, anotado en la Ronda 9—, así que el aviso se emite para **cualquier** ejercicio anterior al del reloj.
 
 ### 3.6 Aviso de recompra (regla de los dos meses)
 
@@ -140,3 +161,6 @@ Reflejadas en `docs/business-rules.md`, `docs/data-schema.md` §7 y la constituc
 - **(f) La regla de parada avisa, no bloquea el registro**: el libro nunca rechaza un hecho que ya ocurrió (ADR-0003). El "bloqueo visible" de la especificación es un aviso destacado, y en la web será una barrera de interfaz.
 - **(g) El aviso de recompra entra ahora; el diferimiento, no.** La ventana de fecha a fecha (ADR-0014) hace falta para el aviso, así que su aritmética de calendario se implementa aquí y el motor fiscal de la Fase 5 la reutiliza.
 - **(h) Los avisos de consulta viven en la estructura devuelta**, no en `state.warnings`: el libro es válido y el *golden* no debe cambiar por ellos (patrón de la 004).
+- **(i) Los tres cambios del bloque 0 son compatibles** (ADR-0018): añadir un valor a un enumerado, relajar una validación y añadir un campo opcional. No tocan `schema_version` y **no deben cambiar el *golden***; si lo cambian, investiga antes de aceptarlo.
+- **(j) Precedencia de precios: manual por delante de automático**, para siempre. El precio manual es una decisión del usuario; el automático, una conveniencia (constitución I). La Fase 4 añadirá la fuente automática por el parámetro que dejas preparado, sin tocar ninguna proyección.
+- **(k) Las estadísticas excluyen lo que no pueden medir** en vez de promediar un número contaminado, y dicen cuántas exclusiones ha habido. Es la misma regla que el "sin dato" de los precios: fallo seguro (constitución V).
