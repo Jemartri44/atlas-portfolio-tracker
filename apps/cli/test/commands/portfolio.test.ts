@@ -192,6 +192,17 @@ describe("atlas weights", () => {
     expect(h.text()).toMatch(/\[equity\]\s+600\s{2,}/);
   });
 
+  it("prints the warnings in Spanish while the domain keeps them in English", async () => {
+    const h = await portfolio();
+    expect(await h.exec(["weights", "--date", "2027-07-31"])).toBe(0);
+    expect(h.text()).toContain("Aviso (stale_price): ast_world: el precio es de");
+    h.reset();
+    // The domain message itself stays English: the CLI is the one that translates.
+    expect(await h.exec(["weights", "--date", "2027-07-31", "--json"])).toBe(0);
+    const data = h.json() as { warnings: { code: string; message: string }[] };
+    expect(data.warnings[0]?.message).toContain("days old");
+  });
+
   it("answers in JSON with the rows, the subtotals and the warnings", async () => {
     const h = await portfolio();
     expect(await h.exec(["weights", "--date", DATE, "--json"])).toBe(0);

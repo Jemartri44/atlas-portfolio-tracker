@@ -148,7 +148,7 @@ const warnUnknownTargets = (
       warn(
         warnings,
         "unknown_target_weight",
-        `el peso objetivo de ${assetId} no corresponde a ningún activo del núcleo`,
+        `target weight ${assetId} is not a core asset of the catalogue`,
         { asset_id: assetId },
       );
     }
@@ -169,7 +169,7 @@ const warnThresholds = (
         warn(
           warnings,
           "deviation_above_threshold",
-          `${row.asset_id} se desvía ${row.deviation_pp.round(2).toString()} pp del objetivo (umbral ${limit.toString()})`,
+          `${row.asset_id} deviates ${row.deviation_pp.round(2).toString()} pp from its target (threshold ${limit.toString()})`,
           {
             asset_id: row.asset_id,
             deviation_pp: row.deviation_pp.round(2).toString(),
@@ -193,7 +193,7 @@ const warnThresholds = (
       warn(
         warnings,
         "satellite_below_minimum",
-        `${subtotal.asset_class} pesa ${weight.round(2).toString()} %, por debajo del mínimo de satélite (${floor.toString()} %)`,
+        `${subtotal.asset_class} weighs ${weight.round(2).toString()} %, below the satellite minimum of ${floor.toString()} %`,
         {
           asset_class: subtotal.asset_class,
           weight_pct: weight.round(2).toString(),
@@ -276,7 +276,7 @@ export const coreWeights = (
       warn(
         warnings,
         "asset_without_target",
-        `${assetId} tiene posición y ningún peso objetivo asignado`,
+        `${assetId} is held and has no target weight assigned`,
         { asset_id: assetId },
       );
     }
@@ -311,7 +311,7 @@ export const coreWeights = (
     warn(
       warnings,
       "partial_core_total",
-      `faltan precios de ${missing.join(", ")} a ${date}: no se calculan pesos sobre un total parcial`,
+      `no price for ${missing.join(", ")} at ${date}: weights are not computed over a partial total`,
       { assets: missing, date },
     );
   }
@@ -321,7 +321,7 @@ export const coreWeights = (
     warn(
       warnings,
       "stale_price",
-      `${assetId}: precio de hace ${price.age_days} días (máximo ${settings.stale_price_days})`,
+      `${assetId}: price is ${price.age_days} days old (limit ${settings.stale_price_days})`,
       { asset_id: assetId, age_days: price.age_days, date: price.date },
       price.event_id,
     );

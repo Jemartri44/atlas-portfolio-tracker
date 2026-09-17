@@ -20,7 +20,7 @@ import {
   stringFlag,
   UsageError,
 } from "../args.js";
-import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
 import { confirm, confirmAndRecord, fieldOf, loadForQuery, renderQuery } from "./shared.js";
 
@@ -284,8 +284,8 @@ const confirmSilencedWarnings = async (
     return true;
   }
   ctx.io.out("Este cambio silencia avisos activos:");
-  for (const warning of silenced) {
-    ctx.io.out(`  ${warning.code}  ${warning.message}`);
+  for (const line of describeWarnings(silenced)) {
+    ctx.io.out(line);
   }
   return confirm(ctx, "¿Continuar? [s/N] ");
 };

@@ -1,6 +1,11 @@
 // User-facing messages in Spanish, derived from domain error codes.
 
-import type { DependentEventsError, DomainError, DuplicateFingerprintError } from "@atlas/domain";
+import type {
+  DependentEventsError,
+  DomainError,
+  DuplicateFingerprintError,
+  Warning,
+} from "@atlas/domain";
 import { table } from "./table.js";
 
 const text = (value: unknown): string =>
@@ -165,6 +170,43 @@ export const describeError = (error: DomainError): string => {
       return `La fecha de ${text(d.field)} debe tener el formato YYYY-MM-DD.`;
     default:
       return error.message;
+  }
+};
+
+/**
+ * Spanish text of a projection warning. The domain speaks English and the CLI
+ * translates the `code` (see `errors.ts`); an unknown code falls back to the
+ * message, so a warning added later is never swallowed.
+ */
+export const describeWarning = (warning: Warning): string => {
+  const d = warning.details;
+  switch (warning.code) {
+    case "unknown_target_weight":
+      return `El peso objetivo de ${text(d.asset_id)} no corresponde a ningún activo del núcleo: revisa si el asset_id está mal escrito.`;
+    case "asset_without_target":
+      return `${text(d.asset_id)} tiene posición y ningún peso objetivo asignado.`;
+    case "deviation_above_threshold":
+      return `${text(d.asset_id)} se desvía ${text(d.deviation_pp)} pp del objetivo (umbral ${text(d.threshold_pp)} pp). El rebalanceo por venta es decisión anual tuya (regla 3).`;
+    case "satellite_below_minimum":
+      return `La clase satélite ${text(d.asset_class)} pesa ${text(d.weight_pct)} %, por debajo del mínimo de ${text(d.minimum_pct)} % (regla 6b: 0 % o al menos el mínimo).`;
+    case "partial_core_total":
+      return `Faltan precios de ${(d.assets as string[]).join(", ")} a ${text(d.date)}: no se calculan pesos sobre un total parcial.`;
+    case "stale_price":
+      return `${text(d.asset_id)}: el precio es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una valoración más reciente.`;
+    case "currency_mismatch":
+      return `El evento está en ${text(d.currency)} y el activo ${text(d.asset_id)} está en ${text(d.asset_currency)}.`;
+    case "fx_rate_date_after_fiscal_date":
+      return `fx_rate_date (${text(d.fx_rate_date)}) es posterior a la fecha fiscal (${text(d.fiscal_date)}).`;
+    case "same_asset_two_accounts":
+      return `El activo ${text(d.asset_id)} está ahora en ${(d.accounts as string[]).length} cuentas; el FIFO sigue siendo global.`;
+    case "sell_without_thesis":
+      return `La venta de ${text(d.asset_id)} en ${text(d.account_id)} no está enlazada a ninguna tesis.`;
+    case "thesis_size_exceeded":
+      return `La tesis ${text(d.thesis_id)} lleva ${text(d.invested_eur)} EUR invertidos, por encima de los ${text(d.planned_size_eur)} EUR previstos.`;
+    case "thesis_closed_with_position":
+      return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
+    default:
+      return warning.message;
   }
 };
 

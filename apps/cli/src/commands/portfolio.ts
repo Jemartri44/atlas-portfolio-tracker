@@ -17,7 +17,7 @@ import {
   type Warning,
 } from "@atlas/domain";
 import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
-import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
 import { dateFlag, loadForQuery, renderQuery } from "./shared.js";
 
@@ -43,11 +43,9 @@ const priceCell = (price: ManualPrice | undefined): string[] =>
         `${price.age_days}${price.stale ? " ⚠" : ""}`,
       ];
 
-/** Warnings at the foot of the table: the code first, so it can be looked up. */
+/** Warnings at the foot of the table, in the one format the CLI uses for them. */
 const warningLines = (warnings: readonly Warning[]): string[] =>
-  warnings.length === 0
-    ? []
-    : ["", "Avisos:", ...warnings.map((warning) => `  ${warning.code}  ${warning.message}`)];
+  warnings.length === 0 ? [] : ["", "Avisos:", ...describeWarnings(warnings)];
 
 const PARTIAL = "(parcial)";
 
