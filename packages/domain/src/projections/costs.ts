@@ -126,10 +126,19 @@ const addTo = <K>(map: Map<K, Money>, key: K, amount: Money): void => {
   map.set(key, (map.get(key) ?? Money.zero(EUR)).add(amount));
 };
 
-/** Books one trade under its asset (core) or its account (bucket). */
+/**
+ * Books one trade under its asset (core) or its account (bucket). An account
+ * the catalogue does not know has no book: in a degraded ledger its operations
+ * must not fall into the core table just for not being in the bucket one
+ * (constitution III: the books never mix).
+ */
 const bookTrade = (state: LedgerState, totals: Accumulator, event: BuyEvent | SellEvent): void => {
+  const book = state.accounts.get(event.account_id)?.book;
+  if (book === undefined) {
+    return;
+  }
   const fee = feeEurOf(event);
-  if (state.accounts.get(event.account_id)?.book === "bucket") {
+  if (book === "bucket") {
     addTo(totals.bucketFees, event.account_id, fee);
     return;
   }
@@ -145,9 +154,12 @@ const accumulate = (
   asOf: CivilDate | undefined,
 ): Accumulator => {
   const totals: Accumulator = { fees: new Map(), invested: new Map(), bucketFees: new Map() };
+  // An event the projection rejected produced no position and no lot: its
+  // commission is not a cost of the portfolio either (ADR-0015).
+  const invalid = new Set(state.invalid.map((entry) => entry.event.id));
   for (const event of events) {
     // A reversed event never happened, so neither did its commission.
-    if (state.reversed.has(event.id)) {
+    if (state.reversed.has(event.id) || invalid.has(event.id)) {
       continue;
     }
     // The same cut as pass B of the projection, from the same business date
@@ -164,7 +176,11 @@ const accumulate = (
       // Each entry names the account the broker charged, so the charge lands in
       // the right book even when the position was fully cashed out.
       for (const { asset_id, account_id, fee } of forcedSaleFees(event)) {
-        if (state.accounts.get(account_id)?.book === "bucket") {
+        const book = state.accounts.get(account_id)?.book;
+        if (book === undefined) {
+          continue;
+        }
+        if (book === "bucket") {
           addTo(totals.bucketFees, account_id, fee);
           continue;
         }

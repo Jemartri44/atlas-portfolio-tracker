@@ -199,6 +199,54 @@ describe("costSummary", () => {
     expect(result.core.totals.fees_eur.amount.toString()).toBe("8");
   });
 
+  it("does not count the commission of an invalid event (degraded ledger)", () => {
+    const b = traded();
+    // More than the position holds: the projection rejects it, so its fee is
+    // not a cost of the portfolio either.
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      trade_date: "2027-08-02",
+      quantity: "999",
+      unit_price: "110",
+      fee: "100",
+    });
+    const events = b.build();
+    const state = projectLedger(events, { collectErrors: true });
+    expect(state.invalid).toHaveLength(1);
+    const result = costSummary(state, events, DATE, DEFAULT_SETTINGS);
+    expect(rowOf(result, "ast_world")?.fees_eur.amount.toString()).toBe("8");
+  });
+
+  it("leaves an operation of an unknown account outside both books", () => {
+    // A degraded ledger where the `account_created` did not survive: the
+    // account has no book, and "not bucket" must not mean "core".
+    const b = traded();
+    b.corporateAction({
+      kind: "reverse_split",
+      asset_id: "ast_world",
+      effective_date: "2027-06-30",
+      source_document: "doc",
+      effects: [
+        { op: "scale", ratio: "1/4" },
+        {
+          op: "forced_sale",
+          per_account: [{ account_id: "acc_fund", quantity: "all", fee: "2" }],
+          unit_price: "100",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-06-30",
+        },
+      ],
+    });
+    const events = b.build();
+    const state = projectLedger(events);
+    state.accounts.delete("acc_fund");
+    const result = costSummary(state, events, DATE, DEFAULT_SETTINGS);
+    expect(result.core.totals.fees_eur.amount.toString()).toBe("0");
+    expect(result.bucket.rows).toEqual([]);
+  });
+
   it("leaves the percentage empty when the asset was never bought", () => {
     const b = new LedgerBuilder();
     catalogue(b);
