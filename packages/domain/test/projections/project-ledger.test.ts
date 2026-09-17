@@ -796,3 +796,112 @@ describe("toProjectionError", () => {
     expect(() => toProjectionError(event, new TypeError("bug"))).toThrow(TypeError);
   });
 });
+
+describe("projectLedger: asOf", () => {
+  /** One buy in 2027, then a sell and a split in 2028: the cut must hide both. */
+  const later = (): LedgerBuilder => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-01-11",
+      quantity: "10",
+      unit_price: "100",
+    });
+    return b;
+  };
+
+  it("ignores a sell dated after the cut: no lot consumed and no gain booked", () => {
+    const b = later();
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2028-03-01",
+      quantity: "4",
+      unit_price: "150",
+    });
+    const events = b.build();
+    const cut = projectLedger(events, { asOf: "2027-06-30" });
+    expect(cut.positions.get("acc_fund|ast_world")?.toString()).toBe("10");
+    expect(cut.gains).toEqual([]);
+    expect(fiscalLots(cut, "ast_world").map((lot) => lot.quantity.toString())).toEqual(["10"]);
+    // The same ledger read whole does see the sell.
+    const whole = projectLedger(events);
+    expect(whole.positions.get("acc_fund|ast_world")?.toString()).toBe("6");
+    expect(whole.gains).toHaveLength(1);
+  });
+
+  it("ignores a corporate action dated after the cut: nothing is transformed", () => {
+    const b = later();
+    b.corporateAction({
+      kind: "split",
+      asset_id: "ast_world",
+      effective_date: "2028-02-01",
+      effects: [{ op: "scale", ratio: "2" }],
+    });
+    const events = b.build();
+    expect(
+      projectLedger(events, { asOf: "2027-06-30" }).positions.get("acc_fund|ast_world")?.toString(),
+    ).toBe("10");
+    expect(projectLedger(events).positions.get("acc_fund|ast_world")?.toString()).toBe("20");
+  });
+
+  it("ignores the valuations, the cash and the pending orders dated after the cut", () => {
+    const b = later();
+    b.deposit({ account_id: "acc_fund", value_date: "2028-01-05", amount: "1000" });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2028-01-31",
+      unit_value: "300",
+    });
+    b.orderPlaced({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      requested_date: "2028-02-02",
+    });
+    const cut = projectLedger(b.build(), { asOf: "2027-06-30" });
+    expect(cut.valuations).toEqual([]);
+    expect(cut.orders.size).toBe(0);
+    // Only the cash the buy of 2027 moved; the deposit of 2028 is not there.
+    expect(cut.cash.get("acc_fund|EUR")?.amount.toString()).toBe("-1000");
+  });
+
+  it("keeps the whole catalogue and the whole settings history (pass A is not cut)", () => {
+    const b = later();
+    b.asset("ast_late", { asset_class: "equity" });
+    b.settings({ ...DEFAULT_SETTINGS, stale_price_days: 3 });
+    const cut = projectLedger(b.build(), { asOf: "2027-06-30" });
+    expect(cut.assets.has("ast_late")).toBe(true);
+    expect(cut.settingsHistory).toHaveLength(1);
+  });
+
+  it("cuts by business date, not by the order of registration", () => {
+    const b = later();
+    // Registered last, but dated before the cut: it counts.
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-02-11",
+      quantity: "5",
+      unit_price: "100",
+    });
+    expect(
+      projectLedger(b.build(), { asOf: "2027-06-30" })
+        .positions.get("acc_fund|ast_world")
+        ?.toString(),
+    ).toBe("15");
+    // Exactly on the cut date the event still counts: the cut is inclusive.
+    expect(
+      projectLedger(b.build(), { asOf: "2027-02-11" })
+        .positions.get("acc_fund|ast_world")
+        ?.toString(),
+    ).toBe("15");
+    expect(
+      projectLedger(b.build(), { asOf: "2027-02-10" })
+        .positions.get("acc_fund|ast_world")
+        ?.toString(),
+    ).toBe("10");
+  });
+});

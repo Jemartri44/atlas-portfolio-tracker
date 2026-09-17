@@ -22,6 +22,7 @@ import type {
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type ManualPrice, manualPrices } from "./prices.js";
+import { businessDateOf, isOperationEvent } from "./project-ledger.js";
 import type { LedgerState } from "./state.js";
 import { coreQuantityOf } from "./weights.js";
 
@@ -138,11 +139,21 @@ const bookTrade = (state: LedgerState, totals: Accumulator, event: BuyEvent | Se
   }
 };
 
-const accumulate = (state: LedgerState, events: readonly LedgerEvent[]): Accumulator => {
+const accumulate = (
+  state: LedgerState,
+  events: readonly LedgerEvent[],
+  asOf: CivilDate | undefined,
+): Accumulator => {
   const totals: Accumulator = { fees: new Map(), invested: new Map(), bucketFees: new Map() };
   for (const event of events) {
     // A reversed event never happened, so neither did its commission.
     if (state.reversed.has(event.id)) {
+      continue;
+    }
+    // The same cut as pass B of the projection, from the same business date
+    // (data-schema.md §7): a commission paid after the date asked is not a cost
+    // of the portfolio as it stood that day.
+    if (asOf !== undefined && isOperationEvent(event) && businessDateOf(state, event) > asOf) {
       continue;
     }
     if (event.type === "buy" || event.type === "sell") {
@@ -176,8 +187,10 @@ export const costSummary = (
   events: readonly LedgerEvent[],
   date: CivilDate,
   settings: Settings,
+  /** Business-date cut, the same one the projection was given (`ProjectOptions.asOf`). */
+  asOf?: CivilDate,
 ): CostSummary => {
-  const totals = accumulate(state, events);
+  const totals = accumulate(state, events, asOf);
   const prices = manualPrices(state, date, settings);
   const rows: CoreCostRow[] = [];
   let partial = false;

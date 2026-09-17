@@ -210,3 +210,86 @@ describe("coreWeights", () => {
     expect(result.partial).toBe(false);
   });
 });
+
+describe("coreWeights as of a date", () => {
+  /**
+   * The reviewer's scenario: 10 of each fund in 2027 and 90 more of ast_world
+   * in 2028. Read at a 2027 date, the table must be the portfolio of 2027, not
+   * the one of 2028 valued with the prices of 2027.
+   */
+  const grown = (): LedgerBuilder => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-01-11",
+      quantity: "10",
+      unit_price: "100",
+    });
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      value_date: "2027-01-11",
+      quantity: "10",
+      unit_price: "100",
+    });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2027-01-31",
+      unit_value: "100",
+    });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      date: "2027-01-31",
+      unit_value: "100",
+    });
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2028-01-11",
+      quantity: "90",
+      unit_price: "100",
+    });
+    return b;
+  };
+
+  const HALVES = { ast_world: "50", ast_bonds: "50" };
+  const MID = "2027-06-30";
+
+  it("uses the position of the date asked, not the one of the end of the ledger", () => {
+    const events = grown().build();
+    const asked = coreWeights(
+      projectLedger(events, { asOf: MID }),
+      MID,
+      settings({ target_weights: HALVES }),
+    );
+    expect(
+      asked.rows.map((row) => [
+        row.asset_id,
+        row.quantity.toString(),
+        row.value_eur?.amount.toString(),
+        row.weight_pct?.toString(),
+        row.deviation_pp?.toString(),
+      ]),
+    ).toEqual([
+      ["ast_world", "10", "1000", "50", "0"],
+      ["ast_bonds", "10", "1000", "50", "0"],
+    ]);
+    expect(asked.total_eur.amount.toString()).toBe("2000");
+  });
+
+  it("without the cut, the same date reports the position of 2028", () => {
+    const whole = coreWeights(
+      projectLedger(grown().build()),
+      MID,
+      settings({
+        target_weights: HALVES,
+      }),
+    );
+    expect(whole.rows.map((row) => row.quantity.toString())).toEqual(["100", "10"]);
+    expect(whole.total_eur.amount.toString()).toBe("11000");
+  });
+});

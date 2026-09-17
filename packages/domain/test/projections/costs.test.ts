@@ -36,6 +36,29 @@ const traded = (): LedgerBuilder => {
 };
 
 describe("costSummary", () => {
+  it("ignores a commission whose business date is after the cut (asOf)", () => {
+    const b = traded();
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2028-02-01",
+      quantity: "1",
+      unit_price: "100",
+      fee: "50",
+    });
+    const events = b.build();
+    const cut = costSummary(
+      projectLedger(events, { asOf: DATE }),
+      events,
+      DATE,
+      DEFAULT_SETTINGS,
+      DATE,
+    );
+    expect(rowOf(cut, "ast_world")?.fees_eur.amount.toString()).toBe("8");
+    // Without the cut the fee of 2028 counts in a table dated 2027.
+    expect(rowOf(summary(events), "ast_world")?.fees_eur.amount.toString()).toBe("58");
+  });
+
   it("adds up the commissions of buys and sells per core asset, as a share of what was invested", () => {
     const b = traded();
     const result = summary(b.build());

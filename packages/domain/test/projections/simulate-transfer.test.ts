@@ -109,6 +109,30 @@ describe("simulateTransfer", () => {
     expect(() => simulate(b, { quantity: "0" })).toThrow(ValidationError);
   });
 
+  it("moves the position held at the date asked, not the one of the end of the ledger (asOf)", () => {
+    const b = core();
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2028-06-01",
+      quantity: "94",
+      unit_price: "100",
+    });
+    const events = b.build();
+    const input = {
+      from_asset_id: "ast_world",
+      to_asset_id: "ast_bonds",
+      all: true,
+      date: DATE,
+      settings: settings(),
+    };
+    const asked = simulateTransfer(projectLedger(events, { asOf: DATE }), input);
+    expect(asked.quantity.toString()).toBe("6");
+    expect(asked.moved_eur.amount.toString()).toBe("600");
+    // Read whole, the same command would move the 2028 position.
+    expect(simulateTransfer(projectLedger(events), input).quantity.toString()).toBe("100");
+  });
+
   it("re-evaluates the threshold warnings on the simulated portfolio", () => {
     const result = simulate(core(), {
       quantity: "2",
