@@ -193,6 +193,13 @@ describe("atlas contribute", () => {
     expect(noBucket.text()).toContain("bucket_pct_of_contribution");
   });
 
+  it("refuses when the plan points at no asset of the table, pointing at the typo", async () => {
+    const h = await portfolio({ ...CONFIG, target_weights: { ast_typo: "100" } });
+    expect(await h.exec(["contribute", "--amount", "1000", "--date", DATE])).toBe(EXIT.domain);
+    expect(h.text()).toContain("unknown_target_weight");
+    expect(h.text()).toContain("target_weights");
+  });
+
   it("refuses a non-positive amount and lists the prices that are missing", async () => {
     const h = await portfolio();
     expect(await h.exec(["contribute", "--amount", "0", "--date", DATE])).toBe(EXIT.domain);

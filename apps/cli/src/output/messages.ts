@@ -75,6 +75,14 @@ export const describeError = (error: DomainError): string => {
       return "Falta el porcentaje del cubo: `atlas settings set --bucket-pct-of-contribution 10` (bucket_pct_of_contribution).";
     case "missing_amount":
       return "Falta el importe de la aportación: pásalo con --amount o fíjalo con `atlas settings set --monthly-contribution-eur 600` (monthly_contribution_eur).";
+    case "no_target_weight_in_table":
+      return `Los pesos objetivo vigentes no apuntan a ningún activo de la tabla del núcleo${
+        (d.assets as string[]).length === 0
+          ? " (la tabla está vacía)"
+          : `: ${(d.assets as string[]).join(", ")} están todos al 0 %`
+      }. Es casi seguro un asset_id mal escrito en target_weights: mira el aviso unknown_target_weight de \`atlas weights\` y corrígelo con \`atlas settings set --target-weights …\`.`;
+    case "split_not_exact":
+      return `El reparto de la aportación no cuadra (${text(d.distributed)} repartidos de ${text(d.core)}): es un fallo interno de la calculadora, no registres nada.`;
     case "invalid_amount":
       return `El importe de la aportación debe ser mayor que cero (recibido: ${text(d.value)}).`;
     case "invalid_quantity":

@@ -161,6 +161,24 @@ export const contributionPlan = (
     });
   }
 
+  /*
+   * Every row of the table at a target of zero: the weights in force point at
+   * nothing that can be bought (typically a mistyped `asset_id`, which
+   * `coreWeights` reports as `unknown_target_weight`). There is no shortfall to
+   * cover and no weight to spread the surplus by, so anything distributed would
+   * land on whichever row happens to sort first — an asset with a target of 0 %
+   * whose deviation the contribution would only make worse. Reject instead.
+   * The empty table falls here too.
+   */
+  const rowWeight = weights.rows.reduce((sum, row) => sum.add(row.target_pct), Decimal.ZERO);
+  if (rowWeight.isZero()) {
+    fail(
+      "no_target_weight_in_table",
+      "the target weights in force do not point at any asset of the core table",
+      { assets: weights.rows.map((row) => row.asset_id), date },
+    );
+  }
+
   const bucket = amount
     .mul(Decimal.parse(settings.bucket_pct_of_contribution as string))
     .div(HUNDRED)
@@ -186,18 +204,15 @@ export const contributionPlan = (
    * part of the plan points at assets that are not in the table (an unknown
    * target weight, a warning of `coreWeights`): then the weights of the rows do
    * not add up to 100 and the leftover is spread among them in proportion to
-   * the weight they do have.
+   * the weight they do have, which is never zero (checked above).
    */
-  const rowWeight = targets.reduce((sum, target) => sum.add(target), Decimal.ZERO);
   const surplus = totalGap.cmp(core) < 0;
   const leftover = core.sub(totalGap);
   const raw = gaps.map((gap, index) => {
     if (!surplus) {
       return totalGap.isZero() ? Money.zero(EUR) : core.mul(gap.amount).div(totalGap.amount);
     }
-    return rowWeight.isZero()
-      ? gap
-      : gap.add(leftover.mul(targets[index] as Decimal).div(rowWeight));
+    return gap.add(leftover.mul(targets[index] as Decimal).div(rowWeight));
   });
   const allocations = raw.map((value) => value.roundToCents());
   const assigned = allocations.reduce((sum, value) => sum.add(value), Money.zero(EUR));

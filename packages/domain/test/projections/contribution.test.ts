@@ -3,6 +3,7 @@ import { ValidationError } from "../../src/errors.js";
 import { Money } from "../../src/money/money.js";
 import { assertSplit, contributionPlan } from "../../src/projections/contribution.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
+import { coreWeights } from "../../src/projections/weights.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
@@ -162,14 +163,46 @@ describe("contributionPlan", () => {
     }
   });
 
-  it("still adds up when the whole plan points outside the table", () => {
-    // Every weight names an asset that is not in the core catalogue: the rows
-    // have no weight to share the leftover by, so the residue settles it.
-    const result = plan(core(), "1000", { target_weights: { ast_ghost: "100" } });
-    expect(result.surplus_distributed).toBe(true);
-    expect(sumOf(result)).toBe("1000");
-    for (const row of result.rows) {
-      expect(row.allocation_eur.isNegative()).toBe(false);
+  it("refuses when the whole plan points outside the table", () => {
+    // Every weight names an asset that is not in the core catalogue (a mistyped
+    // `asset_id`): no row has a target, so there is no shortfall to cover and
+    // no weight to spread by. Distributing anyway would put the whole
+    // contribution into the first row by id, at a target of 0 %.
+    const ghost = { ast_ghost: "100" };
+    try {
+      plan(core(), "1000", { target_weights: ghost });
+      throw new Error("expected a ValidationError");
+    } catch (error) {
+      expect((error as ValidationError).code).toBe("no_target_weight_in_table");
+      expect((error as ValidationError).details.assets).toEqual([
+        "ast_world",
+        "ast_bonds",
+        "ast_gold",
+      ]);
+    }
+    // The warning that names the culprit is the one coreWeights already raises.
+    expect(
+      coreWeights(
+        projectLedger(core().build()),
+        DATE,
+        settings({ target_weights: ghost }),
+      ).warnings.map((warning) => warning.code),
+    ).toContain("unknown_target_weight");
+  });
+
+  it("refuses the same way when the core table has no rows at all", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    try {
+      contributionPlan(projectLedger(b.build()), {
+        amount: "100",
+        date: DATE,
+        settings: settings({ target_weights: { ast_ghost: "100" } }),
+      });
+      throw new Error("expected a ValidationError");
+    } catch (error) {
+      expect((error as ValidationError).code).toBe("no_target_weight_in_table");
+      expect((error as ValidationError).details.assets).toEqual([]);
     }
   });
 
