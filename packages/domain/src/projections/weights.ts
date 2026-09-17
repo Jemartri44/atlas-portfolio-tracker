@@ -12,7 +12,7 @@ import { Quantity } from "../money/quantity.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import { ASSET_CLASSES } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { type ManualPrice, manualPrices } from "./prices.js";
+import { type ManualPrice, manualPrices, positionValueOf } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
 
 /** Satellites (business rule 6b): 0 % or at least the minimum, never in between. */
@@ -287,11 +287,9 @@ export const coreWeights = (
     }
     // A zero position is worth zero without a price; only a live position needs one.
     const value =
-      price === undefined
-        ? quantity.isPositive()
-          ? undefined
-          : Money.zero("EUR")
-        : Money.of(price.unit_value_eur.amount.mul(quantity.value), "EUR");
+      price === undefined && !quantity.isPositive()
+        ? Money.zero("EUR")
+        : positionValueOf(price, quantity);
     if (value === undefined) {
       missing.push(assetId);
     } else {

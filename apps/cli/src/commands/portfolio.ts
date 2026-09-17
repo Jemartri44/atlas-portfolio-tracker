@@ -12,25 +12,14 @@ import {
   costSummary,
   Decimal,
   type ManualPrice,
-  type Money,
   settingsAt,
   type Warning,
 } from "@atlas/domain";
 import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
+import { eur, pct, pp } from "../output/format.js";
 import { table } from "../output/table.js";
 import { dateFlag, loadForQuery, renderQuery } from "./shared.js";
-
-const DASH = "—";
-
-const pct = (value: Decimal | undefined): string =>
-  value === undefined ? "" : `${value.round(2).toString()} %`;
-
-const pp = (value: Decimal | undefined): string =>
-  value === undefined ? "" : value.round(2).toString();
-
-const eur = (value: Money | undefined): string =>
-  value === undefined ? DASH : value.roundToCents().amount.toString();
 
 const priceCell = (price: ManualPrice | undefined): string[] =>
   price === undefined

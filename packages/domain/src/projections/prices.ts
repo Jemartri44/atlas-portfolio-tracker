@@ -11,6 +11,7 @@ import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
 import { Money } from "../money/money.js";
+import type { Quantity } from "../money/quantity.js";
 import type { AssetId, ValuationEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import type { LedgerState } from "./state.js";
@@ -31,6 +32,15 @@ export interface ManualPrice {
   /** Older than `stale_price_days`; always false when the parameter is not set. */
   stale: boolean;
 }
+
+/** Value in euros of a position at its manual price; nothing without a price. */
+export const positionValueOf = (
+  price: ManualPrice | undefined,
+  quantity: Quantity,
+): Money | undefined =>
+  price === undefined
+    ? undefined
+    : Money.of(price.unit_value_eur.amount.mul(quantity.value), "EUR");
 
 const toManualPrice = (
   event: ValuationEvent,

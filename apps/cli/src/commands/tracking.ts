@@ -17,6 +17,7 @@ import {
   UsageError,
 } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
+import { eur, pct, pp } from "../output/format.js";
 import { table } from "../output/table.js";
 import { requireId } from "./catalogue.js";
 import { confirmAndRecord, dateFlag, draftFromFlags, loadForQuery, renderQuery } from "./shared.js";
@@ -172,7 +173,7 @@ export const transferCommand = async (
         warnings_after: simulation.after.warnings,
       },
       [
-        `Simulación de traspaso a ${date}: ${simulation.quantity.toString()} de ${simulation.from_asset_id} → ${simulation.to_asset_id} (${simulation.moved_eur.roundToCents().amount.toString()} EUR).`,
+        `Simulación de traspaso a ${date}: ${simulation.quantity.toString()} de ${simulation.from_asset_id} → ${simulation.to_asset_id} (${eur(simulation.moved_eur)} EUR).`,
         "Un traspaso entre fondos no es hecho imponible: conserva fecha de adquisición y coste (business-rules.md §5.2).",
         "",
         table(
@@ -181,10 +182,10 @@ export const transferCommand = async (
             const after = weightOf(simulation.after, row.asset_id);
             return [
               row.asset_id,
-              row.weight_pct === undefined ? "" : `${row.weight_pct.round(2).toString()} %`,
-              after?.weight_pct === undefined ? "" : `${after.weight_pct.round(2).toString()} %`,
-              row.deviation_pp?.round(2).toString() ?? "",
-              after?.deviation_pp?.round(2).toString() ?? "",
+              pct(row.weight_pct),
+              pct(after?.weight_pct),
+              pp(row.deviation_pp),
+              pp(after?.deviation_pp),
             ];
           }),
         ),

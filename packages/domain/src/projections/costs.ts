@@ -21,7 +21,7 @@ import type {
   SellEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { type ManualPrice, manualPrices } from "./prices.js";
+import { manualPrices, positionValueOf } from "./prices.js";
 import { businessDateOf, isOperationEvent } from "./project-ledger.js";
 import type { LedgerState } from "./state.js";
 import { coreAccountIds, coreQuantityOf } from "./weights.js";
@@ -193,10 +193,6 @@ const accumulate = (
 
 const annualCostOf = (ter: Decimal | undefined, value: Money | undefined): Money | undefined =>
   ter === undefined || value === undefined ? undefined : value.mul(ter).div(HUNDRED);
-
-/** Value of a position at its manual price, or nothing without a price. */
-const positionValueOf = (price: ManualPrice | undefined, quantity: Quantity): Money | undefined =>
-  price === undefined ? undefined : Money.of(price.unit_value_eur.amount.mul(quantity.value), EUR);
 
 export const costSummary = (
   state: LedgerState,
