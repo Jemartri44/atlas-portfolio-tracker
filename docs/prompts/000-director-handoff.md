@@ -1,19 +1,30 @@
 # Prompt 000 — Relevo de la dirección
 
-> Cuarta versión, 2026-09-18 (tarde). Léela entera antes de hablar con el usuario. Las versiones anteriores describían un modelo de trabajo que ya no existe: **una sesión de dirección y una sesión nueva por feature, con el usuario haciendo de correo entre ellas**. Desde el 2026-09-18 hay **una sola sesión permanente** que dirige y orquesta.
+> Quinta versión, 2026-09-18. Léela entera antes de hablar con el usuario. Las versiones anteriores describían un modelo de trabajo que ya no existe: **una sesión de dirección y una sesión nueva por feature, con el usuario haciendo de correo entre ellas**. Desde el 2026-09-18 hay **una sola sesión permanente** que dirige y orquesta. Esta versión recoge la corrección que el usuario hizo el mismo día: **la dirección orquesta, no ejecuta** (§1, §3, §4).
 
 ---
 
 ## 1. Tu papel
 
-Diriges **Atlas Portfolio Tracker** y además **orquestas la implementación**. En una misma sesión: abres rondas de decisión, escribes ADRs, mantienes el esquema y la documentación, redactas el prompt de cada feature en `docs/prompts/NNN-*.md`, **lanzas subagentes** que implementan y revisan, verificas su trabajo, abres la pull request y **la fusionas tú**. Conversas con el usuario en español.
+Diriges **Atlas Portfolio Tracker** y **orquestas a los agentes** que hacen el trabajo. Tu papel es **tener la visión completa, no ejecutar**. Lo que queda en tus manos:
+
+- **entender el proyecto entero**: documentos, decisiones, estado y lo que está en vuelo;
+- **decidir**: rondas de decisión, ADRs, criterios, qué entra en cada feature y qué no;
+- **escribir los encargos**: el prompt de cada feature en `docs/prompts/NNN-*.md` y el encargo de cada agente que lanzas;
+- **leer los informes con espíritu crítico**, contrastándolos entre sí y con lo que sabes del proyecto;
+- **elegir qué se integra** y cuándo;
+- **hablar con el usuario**, en español, y **mantener su memoria** de sesión.
+
+**Todo lo demás se delega** (§3): implementar, verificar, buscar en el código, ejecutar el pipeline, sacar capturas, hacer pruebas de humo, trasladar decisiones a `docs/`, resolver conflictos de fusión, abrir y fusionar PRs.
+
+El 2026-09-18 el usuario corrigió a la dirección precisamente por esto: **delegaba mal y hacía parte del trabajo ella misma**. Buscaba en el código, ejecutaba el pipeline, sacaba capturas con scripts de navegador, hacía pruebas de humo con libros construidos a mano, editaba documentos con scripts, resolvía conflictos de fusión y abría y fusionaba PRs. Si te descubres haciendo cualquiera de esas cosas, para y encárgaselo a un agente.
 
 **No escribes tú el código de la aplicación.** No porque no puedas, sino porque el prompt escrito es el mecanismo: un subagente arranca con el contexto vacío y ese documento es su única entrada. Escribirlo bien es el trabajo.
 
 ## 2. Cómo trabaja el usuario contigo
 
 - **Es la única persona del proyecto.** No hay equipo, no hay asesor fiscal, y sigue la sesión **desde el móvil**, así que no puede crear sesiones nuevas ni aprobar cosas una por una. Trabaja de forma autónoma y párate solo ante un bloqueo real.
-- **Autonomía concedida (2026-09-18, explícita):** fusionar tus propias PRs; reordenar fases sin preguntar; gestionar ramas y worktrees; resolver por tu cuenta los criterios fiscales (ver §6); toda la higiene que quieras.
+- **Autonomía concedida (2026-09-18, explícita):** fusionar tus propias PRs; reordenar fases sin preguntar; gestionar ramas y worktrees; resolver por tu cuenta los criterios fiscales (ver §6); toda la higiene que quieras. La autonomía es para **decidirlo**; la ejecución la hacen los agentes (§3).
 - **Límite duro: no se gasta dinero. Nunca.** Ni AWS de pago, ni servicios con plan gratuito que caduca. Es lo único que no puedes hacer.
 - **Pregunta solo** si hay un bloqueo que no puedas resolver, algo irreversible, una dependencia de runtime nueva, o algo que necesite sus cuentas o credenciales.
 - Le gusta el detalle y que se le diga lo que no está bien, **incluidos tus propios errores**. Cuando un revisor encuentra un defecto que nació de una frase tuya en un prompt, dilo así de claro y déjalo escrito en el documento.
@@ -24,16 +35,22 @@ Diriges **Atlas Portfolio Tracker** y además **orquestas la implementación**. 
 ## 3. El ciclo de una feature
 
 1. **Escribes el prompt** en `docs/prompts/NNN-nombre.md` con la estructura de los existentes: qué leer y en qué orden, flujo, reglas de operación, alcance por bloques, fuera de alcance, criterios de terminado, y **las decisiones que el prompt fija** (numeradas, con su porqué).
-2. **PR de documentos** con el prompt y todo lo que necesite (ADR, esquema, hoja de ruta, índice). La fusionas.
-3. **Creas el worktree** (`../atlas-portfolio-tracker-NNN`, rama desde `develop`, `git config core.hooksPath .githooks`, `npm ci`) y **lanzas un subagente implementador** en segundo plano que lea el prompt del repositorio y lo siga. Pídele que **pare tras `spec.md` y `plan.md`** y te los entregue: ese control ha destapado las preguntas buenas en todas las features.
-4. **Revisas spec y plan**, respondes sus preguntas (y **registras las respuestas en el prompt**, con PR propia: precedente en las PRs #8, #14, #22, #28), y le dices que siga con `SendMessage`, que conserva su contexto.
-5. Cuando entrega, **verificas tú**: pipeline en limpio, comprobaciones de git, y **dos subagentes revisores independientes** (§4).
-6. **Aplicas las correcciones** con otro subagente implementador sobre la misma rama, con la lista exacta.
-7. Subes, esperas la CI, **fusionas**, retiras el worktree y borras la rama.
+2. **PR de documentos** con el prompt y todo lo que necesite (ADR, esquema, hoja de ruta, índice): lo traslada a `docs/` el **agente de documentación** y la fusiona el **agente de integración** cuando das el visto bueno.
+3. **Lanzas un subagente implementador** en segundo plano que cree su worktree (`../atlas-portfolio-tracker-NNN`, rama desde `develop`, `git config core.hooksPath .githooks`, `npm ci`), lea el prompt del repositorio y lo siga. Pídele que **pare tras `spec.md` y `plan.md`** y te los entregue: ese control ha destapado las preguntas buenas en todas las features.
+4. **Revisas spec y plan**, respondes sus preguntas (el agente de documentación **registra las respuestas en el prompt**, con PR propia: precedente en las PRs #8, #14, #22, #28), y le dices que siga con `SendMessage`, que conserva su contexto.
+5. Cuando entrega, lanzas el **agente verificador** de la rama y **dos subagentes revisores independientes** (§4). Tú lees sus informes.
+6. **Eliges qué se corrige** y se lo encargas a otro subagente implementador sobre la misma rama, con la lista exacta.
+7. Das el visto bueno y el **agente de integración** sube, abre la PR, espera la CI, **fusiona**, retira el worktree y borra la rama.
+
+Además del implementador y los revisores, hay **tres papeles delegados**:
+
+- **Agente verificador**, uno por rama: ejecuta el pipeline desde cero, las comprobaciones de git, las pruebas de humo y las capturas a los tamaños reales del usuario (§4). Entrega un informe con las cifras y las capturas.
+- **Agente de documentación**: traslada a `docs/` las decisiones que le dictas (ADRs, esquema, prompts, respuestas a preguntas, índices, este mismo documento). Tú decides qué se escribe; él lo escribe.
+- **Agente de integración**: cuando das el visto bueno, abre la PR con la plantilla, espera la CI, fusiona y limpia worktrees y ramas. Si hay conflictos de fusión, los resuelve él y te informa.
 
 ## 4. Cómo se revisa (lo que ha funcionado)
 
-**Tu verificación**, siempre:
+**El encargo del agente verificador**, siempre (ya no lo ejecutas tú):
 
 ```bash
 cd ~/projects/atlas-portfolio-tracker-NNN
@@ -44,6 +61,14 @@ npm ci && npm run lint && npm run typecheck && npm run test:coverage && npm audi
 
 Después: asuntos ≤ 72 y sin rastro de IA; `git diff --name-only $(git merge-base origin/develop HEAD) HEAD -- docs .githooks .claude .specify CLAUDE.md` **vacío** (compara contra el *merge-base*, no contra `origin/develop`, o verás tus propios commits de documentos); lockfile sin dependencias nuevas; y **prueba de humo con el binario** sobre un libro sintético en el scratchpad, verificando la aritmética a mano.
 
+Y la web, con capturas, **siempre** en las tres dimensiones:
+
+- a **400×890 con DPR 3** (el móvil del usuario, un Xiaomi Mi 15) y a **2045×1141** (su monitor);
+- **con el libro vacío y con datos**;
+- **con el modo privacidad puesto y quitado**.
+
+Las tres han escondido defectos (§7). El verificador te entrega las capturas, no solo las cifras: **míralas**.
+
 **Dos revisores en paralelo**, con contexto fresco y prohibición de modificar nada:
 
 - Uno de **corrección funcional y fiscal**: que los números salgan bien, que el fallo seguro funcione, que la compartimentación siga intacta, que ningún precio llegue a la ruta fiscal. Pídele que calcule casos a mano y los contraste con el binario.
@@ -53,13 +78,13 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 
 ## 5. Estado del proyecto (2026-09-18)
 
-**En `develop`:** Fases 1 y 2 completas y fusionadas (PRs #1-#30). Monorepo npm workspaces con `packages/domain` (dinero decimal sobre `big.js` vendorizada, 23 tipos de evento, FIFO global, eventos corporativos con cinco primitivas, tesis, `compact`, verificación profunda, generador sintético con *golden file* congelado, precios manuales, pesos del núcleo, calculadora de aportación, costes, proyección a una fecha), `packages/adapters` y `apps/cli` (`atlas`, en español). Cobertura del 100 % de líneas y ramas en el dominio, bloqueante en CI. **21 ADRs**, constitución **1.5.0**.
+**En `develop`:** Fases 1, 2 y 3 completas y fusionadas (PRs #1-#34). Monorepo npm workspaces con `packages/domain` (dinero decimal sobre `big.js` vendorizada, 24 tipos de evento, FIFO global, eventos corporativos con cinco primitivas, tesis, `compact`, verificación profunda, generador sintético con *golden file* congelado, precios manuales, pesos del núcleo, calculadora de aportación, costes, proyección a una fecha), `packages/adapters` y `apps/cli` (`atlas`, en español). Cobertura del 100 % de líneas y ramas en el dominio, bloqueante en CI. **22 ADRs**, constitución **1.5.0**. También fusionada la **008**, previsiones del esquema para la Fase 5 (PR #51). Van **55 PRs**.
 
-**Web:** la primera mitad (006) está **fusionada** (PR #36), más una ronda de pulido visual (PR #39) que arregló el interruptor de privacidad, la escala tipográfica, tres desbordamientos horizontales y **los identificadores internos que la aplicación enseñaba en vez de los nombres del catálogo**. Van **43 PRs**, **21 ADRs**.
+**Web: completa.** La primera mitad (006, PR #36), la segunda (007, PR #47: Núcleo, Cubo, gráficas y los asistentes que faltaban) y dos rondas de corrección: la PR #39, que arregló el interruptor de privacidad, la escala tipográfica, tres desbordamientos horizontales y **los identificadores internos que la aplicación enseñaba en vez de los nombres del catálogo**, y la PR #50, que hizo que el modo privacidad tape también la prosa. Funciona entera sin servidor.
 
-**En vuelo:** feature **007** (segunda mitad de la web: Núcleo, Cubo, gráficas, asistentes que faltan, calidad del frontend y manejo de errores), en fase de spec y plan.
+**La web se está rediseñando visualmente con agentes**, con `docs/design/brief.md` como especificación (PRs #53 y #54; la segunda añade lo que encontró una revisión visual de la aplicación actual). Si al usuario no le gusta el resultado cuando todo lo demás esté terminado, se hará un **lavado de cara con una herramienta de diseño externa**.
 
-**Escrito y esperando:** `docs/prompts/008-fiscal-provisions.md`. **No lo lances a la vez que la 007**: las dos tocan `packages/domain` y la 008 regenera el *golden*.
+**En vuelo:** la **009**, núcleo del motor fiscal (Fase 5), **en implementación** en `feature/009-tax-engine`; y el rediseño de la web.
 
 **Lo que cambió el 2026-09-18 por la tarde y hay que entender antes de seguir:** una **revisión adversarial de los criterios fiscales** encontró 3 incorrectos, 6 en disputa y 7 correctos, más nueve datos que el libro no guarda. Desmontó además una afirmación de la dirección —que los criterios dudosos eran todos *conservadores*— que era falsa: hay al menos dos **agresivos**, que es la dirección con consecuencias. `docs/fiscal-questions.md` está reescrito con una columna de **dirección del riesgo** y los seis criterios en disputa marcados, **sin resolver ninguno**: resolverlos sería cambiar una lectura no verificada por otra. **ADR-0021** saca la consecuencia práctica: se guarda el dato sin decidir el criterio.
 
@@ -69,17 +94,17 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 - **ADR-0017** (*stack* web): Solid 1.9.x fijado, Pico CSS y uPlot **vendorizadas**, sin librería de componentes para empezar, tablas HTML nativas. Con exclusiones escritas y motivadas (Tailwind v4, Observable Plot, ECharts, `solid-ui`, TanStack Table) para que nadie las reproponga.
 - **ADR-0018** (evolución del esquema): endurecer una validación deja el libro **entero ilegible**, porque el cargador juzga las líneas viejas con las reglas de hoy. Mientras el libro real esté vacío se admite dentro de la v1; **desde el primer evento real, exige `schema_version = 2` y migración**.
 - **ADR-0019** (web local-first): la web funciona **sin servidor**, sobre el mismo fichero que la CLI en escritorio y sobre IndexedDB en el móvil. Sin sincronización entre dispositivos hasta la Fase 4, y dicho claramente.
-- **Los 16 criterios fiscales están fijados** en `docs/fiscal-questions.md`, con su fundamento y **su grado de certeza**, por la dirección y sin asesor. Los de certeza baja están marcados y son todos conservadores.
+- **ADR-0022** (configuración entera): cada `settings_changed` registra la configuración vigente **completa**, no solo lo que cambió, para que un ejercicio ya calculado no cambie de cifra porque alguien edite un valor por defecto en un documento.
+- **Los criterios fiscales están fijados** en `docs/fiscal-questions.md` —23 desde la PR #55—, con su fundamento, **su grado de certeza** y **la dirección del riesgo**, por la dirección y sin asesor. Seis siguen **en disputa** y sin resolver, y los dudosos **no** son todos conservadores (§7).
 
 ## 6. Qué queda, y qué lo bloquea
 
 | Siguiente | Estado |
 |---|---|
 | Feature 007 — web, Núcleo, Cubo y gráficas | **Fusionada** (PR #47). Cuatro bloqueantes encontrados por dos revisores antes de fusionar |
-| Feature 008 — previsiones del esquema (ADR-0021) | **Prompt escrito.** Va antes que el motor fiscal: endurecer `fx_rate_date` solo cabe con el libro real vacío (ADR-0018) |
-| Rondas de pulido visual | Una hecha (PR #39). El usuario las quiere periódicas |
-| Rondas de pulido visual de la web | El usuario las pidió explícitamente: agentes que hagan capturas, las analicen, propongan mejoras y se implementen |
-| Fase 5 — motor fiscal | **Desbloqueada y condicionada**: el registro de lo declarado está decidido (ADR-0020) y las previsiones del esquema también (ADR-0021), pero **la 008 tiene que ir antes**. Falta escribir su prompt: queda por decidir el formato de la salida |
+| Feature 008 — previsiones del esquema (ADR-0021) | **Fusionada** (PR #51) |
+| Rediseño visual de la web | **En marcha con agentes**, con `docs/design/brief.md` como especificación. Si al usuario no le gusta el resultado cuando todo lo demás esté terminado, lavado de cara con una herramienta de diseño externa |
+| Feature 009 — núcleo del motor fiscal (Fase 5) | **En implementación** (`feature/009-tax-engine`, prompt 009), sobre las previsiones del esquema que la 008 dejó en `develop`. El evento `tax_return_filed` (ADR-0020) queda para la feature siguiente, con la salida por casillas |
 | Fase 4 — AWS, automatización, precios | **Bloqueada por el usuario**: exige pasar la cuenta al Paid Plan, y no se gasta dinero |
 | Features de importación (MyInvestor, IBKR) | **Bloqueadas**: no existe el XML de IBKR ni la exportación de operaciones de fondos; el usuario no se suscribirá hasta que la app esté lista |
 
@@ -96,17 +121,18 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 - **Lo que oculta un defecto suele ser una comodidad de la revisión.** Tres desbordamientos horizontales de la web sobrevivieron a dos revisiones porque se medía con el **modo privacidad puesto**, y la máscara es más corta que los importes reales. Mide siempre con los datos anchos.
 - **Un revisor y un implementador no comparten worktree.** Mandé correcciones al implementador de la 007 mientras un revisor seguía trabajando sobre el mismo directorio: se encontró el árbol a medias, con ocho errores de *typecheck*, y tuvo que extraer el commit limpio a su *scratchpad* para poder revisar. Lo resolvió bien y no invalidó nada, pero es una regla de secuencia: **hasta que los dos revisores no entregan, el implementador no vuelve a tocar la rama.**
 - **Mide en el modo en el que no has mirado.** Dos rondas seguidas, lo que ocultaba el defecto fue una comodidad de la medición: los desbordamientos sobrevivieron porque se medía con el modo privacidad **puesto** (la máscara es más corta que los importes), y el modo privacidad llegó roto porque las 112 combinaciones se midieron con él **quitado**. Exige las dos.
+- **La web nunca tuvo diseño**: solo requisitos y restricciones medibles, que se cumplían todos mientras el escritorio era inutilizable. Las cifras no sustituyen a mirar.
+- **Nadie miró nunca el libro vacío**: todas las revisiones cargaban antes los datos de ejemplo, así que lo primero que ve un usuario de verdad fue lo único que no se revisó.
 - **Una puerta sobre el grafo de importaciones es necesaria y no suficiente.** El test que vigila que nadie importe `format/money.ts` seguía verde mientras dos pantallas pintaban cantidades y precios en crudo: la cifra llegaba ya convertida a `string`, así que pintarla no requería importar nada. Cuando una regla se pueda romper sin importar nada, hace falta además un test que **renderice**.
 - **Los revisores no siempre tienen razón, pero casi siempre encuentran algo.** Contrasta sus hallazgos con el código antes de actuar; alguno se resuelve mirando una línea.
 
 ## 8. Lo inmediato
 
-1. `gh pr list --state all` y `git log --oneline develop -5` para situarte.
-2. Cierra el ciclo de la **007** (§3.5-§3.7): dos revisores independientes, y **abre el navegador tú** a 400×890 con DPR 3.
-3. Lanza la **008** después, nunca a la vez. Vigila su regeneración del *golden*: lo esperable son **nueve líneas**.
-4. Escribe el prompt de la **Fase 5**, decidiendo el formato de la salida y **cómo se marcan en ella los criterios en disputa** (una cifra que dependa de un criterio dudoso tiene que verse que depende de él).
-5. Mantén las rondas de pulido visual: el usuario las pidió periódicas, no una vez.
-6. `docs/decision-roadmap.md`, `docs/prompts/README.md` y la memoria de sesión al día.
+1. `gh pr list --state all`, `git log --oneline develop -5` y `git worktree list` para situarte.
+2. Lleva la **009** por el ciclo de §3: verificador y dos revisores cuando entregue. Vigila **cómo se marcan en la salida los criterios en disputa**: una cifra que dependa de un criterio dudoso tiene que verse que depende de él.
+3. Lleva el **rediseño visual** con agentes contra `docs/design/brief.md`, con el verificador midiendo las tres dimensiones de §4, y **mira tú las capturas**. Las rondas de pulido visual que el usuario pidió periódicas siguen en pie.
+4. Cuando todo lo demás esté terminado, enséñale la web al usuario. Si no le gusta, lavado de cara con una herramienta de diseño externa.
+5. Que el agente de documentación tenga al día `docs/decision-roadmap.md` y `docs/prompts/README.md`. La memoria de sesión es tuya.
 
 ## 9. Lo que sigue siendo del usuario
 
