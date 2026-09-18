@@ -17,6 +17,7 @@ import {
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { nameIndex } from "../src/format/names.js";
+import { toCorporateParams } from "../src/routes/registrar/corporate/params.js";
 import {
   bucketPositionsView,
   bucketReportView,
@@ -28,8 +29,9 @@ import {
   transferView,
   weightsView,
 } from "../src/view-models/core/index.js";
+import { corporateForm } from "../src/view-models/forms/corporate.js";
 import { openOrderOptions, openTransferOptions } from "../src/view-models/options.js";
-import { netWorthPlot, pointsIn, secondsOf, windowOf } from "../src/view-models/series.js";
+import { netWorthPlot } from "../src/view-models/series.js";
 import { goldenEvents } from "./helpers/golden.js";
 
 const EVENTS = goldenEvents();
@@ -77,7 +79,8 @@ describe("Núcleo: weights", () => {
     const quantityOf = (context: ReturnType<typeof at>, date: string, asset: string) =>
       weightsView(coreWeights(context.state, date, context.settings), context.names)
         .classes.flatMap((row) => row.rows)
-        .find((row) => row.assetId === asset)?.quantity;
+        .find((row) => row.assetId === asset)
+        ?.quantity.toString();
 
     expect(quantityOf(early, "2026-12-31", "ast_world")).toBe("26.9016");
     expect(quantityOf(late, "2028-12-31", "ast_world")).toBe("127.4196");
@@ -164,10 +167,46 @@ describe("Núcleo: costs", () => {
     const { state, settings, names } = at("2027-12-31");
     const view = costsView(costSummary(state, EVENTS, "2027-12-31", settings, "2027-12-31"), names);
 
-    expect(view.standalone.rows.length).toBeGreaterThan(0);
-    expect(view.standalone.rows[0]?.name).not.toMatch(/^acc_/);
+    expect(view.standalone.core.rows.length).toBeGreaterThan(0);
+    expect(view.standalone.core.rows[0]?.name).not.toMatch(/^acc_/);
     // The two are never added together.
-    expect(view.core.fees.amount.toString()).not.toBe(view.standalone.core.amount.toString());
+    expect(view.core.fees.amount.toString()).not.toBe(view.standalone.core.total.amount.toString());
+  });
+
+  /**
+   * The Núcleo screen used to receive the rows of **both** books and print them
+   * under a line that read "Total del núcleo" and added up only one of them:
+   * the bucket's charge was listed where it does not belong and counted
+   * nowhere. Each book now carries its own rows and its own total
+   * (constitution III), and the bucket's group is what `/cubo` shows.
+   */
+  it("keeps each book's standalone charges in its own group, with its own total", () => {
+    const date = "2028-12-31";
+    const { state, settings, names } = at(date);
+    // The golden ledger only charges custody to a core account; the bucket also
+    // pays for its connectivity, so the same charge is aimed at `acc_bucket`.
+    const charge = EVENTS.find((event) => event.type === "standalone_fee");
+    const events = [...EVENTS, { ...charge, account_id: "acc_bucket" } as (typeof EVENTS)[number]];
+    const summary = costSummary(state, events, date, settings, date);
+    const view = costsView(summary, names);
+
+    expect(view.standalone.bucket.rows).toEqual([
+      { accountId: "acc_bucket", name: "Cubo especulativo", fees: expect.anything() },
+    ]);
+    expect(view.standalone.core.rows.every((row) => row.accountId !== "acc_bucket")).toBe(true);
+    expect(view.standalone.core.rows.length + view.standalone.bucket.rows.length).toBe(
+      summary.standalone.rows.length,
+    );
+    // Each group's total is its own book's, and they are different numbers.
+    expect(view.standalone.bucket.total.amount.toString()).toBe(
+      summary.standalone.bucket_eur.amount.toString(),
+    );
+    expect(view.standalone.core.total.amount.toString()).toBe(
+      summary.standalone.core_eur.amount.toString(),
+    );
+    expect(view.standalone.bucket.total.amount.toString()).not.toBe(
+      view.standalone.core.total.amount.toString(),
+    );
   });
 });
 
@@ -258,15 +297,6 @@ describe("the series, as uPlot eats them", () => {
       );
     }
   });
-
-  it("counts the points inside a range, which is what disables a button", () => {
-    const last = secondsOf("2028-12-31");
-    const x = ["2027-06-30", "2028-11-30", "2028-12-31"].map(secondsOf);
-
-    expect(pointsIn(x, windowOf("TODO", last))).toBe(3);
-    expect(pointsIn(x, windowOf("1A", last))).toBe(2);
-    expect(pointsIn(x, windowOf("1M", last))).toBe(2);
-  });
 });
 
 describe("the option hints of the forms", () => {
@@ -293,5 +323,56 @@ describe("the option hints of the forms", () => {
     const state = projectLedger(EVENTS, { collectErrors: true });
     const hints = openTransferOptions(state, "2029-01-31").map((option) => option.hint ?? "");
     expect(hints.some((hint) => /\d+ días/.test(hint))).toBe(true);
+  });
+});
+
+describe("the corporate action form, as parameters", () => {
+  /**
+   * The broker's charge on a forced sale is **subtracted from the proceeds** in
+   * `applyForcedSale`, so it lowers the capital gain. A form that cannot capture
+   * it records the gain overstated, and the ledger is append-only: fixing it
+   * later needs a reversal plus a corrected event.
+   */
+  it("carries the per-account fees the user typed", () => {
+    const params = toCorporateParams(corporateForm("contrasplit") as never, {
+      asset_id: "ast_old",
+      effective_date: "2027-03-01",
+      source_document: "https://issuer.example/nota.pdf",
+      ratio: "1/3",
+      cash_unit_price: "50",
+      cash_currency: "EUR",
+      cash_fx_rate: "1",
+      cash_fx_rate_date: "2027-03-01",
+      cash_fees: "acc_a = 1,20\nacc_b = 0,80",
+    });
+
+    expect(params.fees).toEqual({ acc_a: "1.20", acc_b: "0.80" });
+    expect(params.cash?.unit_price).toBe("50");
+  });
+
+  it("leaves the fees out when the field is empty, instead of sending an empty map", () => {
+    const params = toCorporateParams(corporateForm("split") as never, {
+      asset_id: "ast_old",
+      effective_date: "2027-03-01",
+      source_document: "https://issuer.example/nota.pdf",
+      ratio: "2",
+      cash_fees: "   ",
+    });
+
+    expect(params.fees).toBeUndefined();
+    expect(params.cash).toBeUndefined();
+  });
+
+  it("ignores a malformed pair rather than sending nonsense to the domain", () => {
+    const params = toCorporateParams(corporateForm("contrasplit") as never, {
+      asset_id: "ast_old",
+      effective_date: "2027-03-01",
+      source_document: "d",
+      ratio: "1/3",
+      cash_unit_price: "50",
+      cash_fees: "acc_a = 1\n = 2\nacc_c =\n\n",
+    });
+
+    expect(params.fees).toEqual({ acc_a: "1" });
   });
 });

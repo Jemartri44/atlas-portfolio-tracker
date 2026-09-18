@@ -42,6 +42,20 @@ export default defineConfig({
         resolve: { conditions: ["browser", "development"] },
         ssr: { resolve: { conditions: ["browser", "development"] } },
         /*
+         * `@solidjs/router` ships **untransformed `.jsx`**, which Node refuses
+         * to load, so any test that imported a screen died with "Unknown file
+         * extension .jsx" before reaching a single assertion. Inlining it sends
+         * it through Vite's pipeline like our own sources.
+         *
+         * This one line is what makes the component layer testable at all, and
+         * that layer is where the four non-negotiable rules of this feature
+         * actually live: the privacy mask on a chart axis, the hole that must
+         * not be spanned, and the two screens cutting the ledger by the date
+         * asked. Their view-models were tested; the wiring between them and the
+         * pixels was not, and that is precisely where the defect of feature 004
+         * was born.
+         */
+        /*
          * **No DOM by default**, still (decision (k) of the 006): the pure
          * layers (`format/`, `view-models/`, `ledger/`) are tested as
          * functions, and the rule that only `Amount` may format money is
@@ -54,7 +68,12 @@ export default defineConfig({
          * than switching the project keeps the other 60-odd tests running
          * exactly as they did.
          */
-        test: { name: "web", root: "apps/web", environment: "node" },
+        test: {
+          name: "web",
+          root: "apps/web",
+          environment: "node",
+          server: { deps: { inline: [/@solidjs\/router/] } },
+        },
       },
       { extends: true, test: { name: "repo", root: "tests" } },
     ],

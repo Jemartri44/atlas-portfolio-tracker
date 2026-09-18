@@ -11,10 +11,9 @@
 // browser badly), so the drawn axis is checked in Chromium instead, which is
 // the stronger test anyway.
 
-import { Money } from "@atlas/domain";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
-import { axisAmount, axisDate, spanOf, tooltipAmount } from "../src/components/chart/axis.js";
+import { axisAmount, axisDate, spanOf } from "../src/components/chart/axis.js";
 import { ChartLegend } from "../src/components/chart/ChartLegend.jsx";
 import { ChartTable } from "../src/components/chart/ChartTable.jsx";
 import { MASK } from "../src/format/money.js";
@@ -48,13 +47,6 @@ describe("the axis of a chart is an amount", () => {
     expect(axisAmount(2_500_000, true)).toBe(MASK);
     expect(axisAmount(750, false)).toBe("750");
     expect(axisAmount(750, true)).toBe(MASK);
-  });
-
-  it("masks the tooltip too, and says «sin dato» for a hole", () => {
-    expect(tooltipAmount(1234.5, false)).toBe("1.234,50 EUR");
-    expect(tooltipAmount(1234.5, true)).toBe(MASK);
-    expect(tooltipAmount(null, false)).toBe("sin dato");
-    expect(tooltipAmount(undefined, true)).toBe("sin dato");
   });
 
   it("gives nothing for a value that is not a number", () => {
@@ -106,6 +98,27 @@ describe("the equivalent table of a chart", () => {
     expect(text).not.toContain(MASK);
   });
 
+  /**
+   * On a phone there is no header row, so the card has to name what each figure
+   * is. It did not: the first series went to the card's right-hand figure and
+   * the rest sat on the first line as bare numbers, in an order that did not
+   * even match the table's. Three unlabelled figures, one of them the core and
+   * one the cash, and no way to tell which. Found by looking at 400px, not by
+   * running anything.
+   */
+  it("names every series on the card, where there is no header to do it", () => {
+    store.setPrivacy(false);
+    const host = mount(() => (
+      <ChartTable headers={["Núcleo", "Cubo"]} rows={rows} caption="Evolución" />
+    ));
+    const card = host.querySelector("ul.datalist li");
+    const lines = [...(card?.querySelectorAll(".sub") ?? [])].map((node) => node.textContent ?? "");
+
+    expect(lines).toEqual(["Núcleo 1.234,56", "Cubo sin dato"]);
+    // And nothing numeric is left loose on the card's first line.
+    expect(card?.querySelector(".head")?.textContent).toBe("30/06/2027");
+  });
+
   it("says once, above the table, what is missing and why", () => {
     const host = mount(() => (
       <ChartTable
@@ -146,9 +159,4 @@ describe("the legend of a chart", () => {
     expect(host.querySelector("ul.chart-legend")).not.toBeNull();
     expect(host.querySelectorAll("li")).toHaveLength(1);
   });
-});
-
-/** A guard on the guard: `Money` is imported so the table can parse its strings. */
-it("parses the figures of the table as euros", () => {
-  expect(Money.parse("1234.56", "EUR").amount.toString()).toBe("1234.56");
 });

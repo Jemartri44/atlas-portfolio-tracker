@@ -29,6 +29,7 @@ import {
   ATTENTION_CODES,
   attentionDestination,
   attentionItems,
+  candidateSettings,
   detailView,
   movementRow,
   movementRows,
@@ -602,18 +603,47 @@ describe("the draft of the configuration screen", () => {
    * ADR-0018 makes these maps partial, so removing a key is the documented way
    * of going back to the default.
    */
-  it("removes the key of an asset type when the field is emptied", () => {
+  /**
+   * **End to end, on the `Settings` that gets written** — not on the draft in
+   * the middle. The first version of this test looked at the patch, and the
+   * patch was right: the key was gone from it. What was wrong was one step
+   * further on, where `mergeSettings` merged the map back into the one in force
+   * and the key returned. The screen said "guardado", the field went back to its
+   * old value and the fiscal rule in force never moved.
+   *
+   * A test that stops at the intermediate step cannot see that, and this is
+   * exactly the kind of figure where not seeing it costs money years later.
+   */
+  it("removes the key of an asset type, all the way to the settings it writes", () => {
     const current = {
       ...base,
       wash_sale_window: { fund: "1y" as const, stock: "2m" as const },
+      fiscal_date_rule: { fund: "value_date" as const, stock: "trade_date" as const },
     };
 
     const cleared = withPerAssetType(current, {}, "wash_sale_window", "fund", "");
+    const written = candidateSettings(current, cleared, undefined);
 
     expect(cleared.wash_sale_window).toEqual({ stock: "2m" });
+    expect(written.wash_sale_window).toEqual({ stock: "2m" });
+    expect(written.wash_sale_window.fund).toBeUndefined();
+    // The field shows empty, and what gets written agrees with the field.
     expect(perAssetTypeValue(current, cleared, "wash_sale_window", "fund")).toBe("");
-    // And it does not touch the other types.
     expect(perAssetTypeValue(current, cleared, "wash_sale_window", "stock")).toBe("2m");
+    // And nothing else moved.
+    expect(written.fiscal_date_rule).toEqual(current.fiscal_date_rule);
+  });
+
+  it("writes the fiscal date rule it was asked to remove, too", () => {
+    const current = {
+      ...base,
+      fiscal_date_rule: { fund: "trade_date" as const, stock: "trade_date" as const },
+    };
+
+    const cleared = withPerAssetType(current, {}, "fiscal_date_rule", "fund", "  ");
+    const written = candidateSettings(current, cleared, undefined);
+
+    expect(written.fiscal_date_rule).toEqual({ stock: "trade_date" });
   });
 
   it("removes a key that was only in the draft, not in force", () => {
