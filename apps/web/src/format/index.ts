@@ -15,6 +15,16 @@ export {
 export { describeError, ERROR_MESSAGES } from "./messages/errors.js";
 export { describeWarning, WARNING_MESSAGES } from "./messages/warnings.js";
 export {
+  displayName,
+  displayNames,
+  NAMED_ID_FIELDS,
+  type NameIndex,
+  type Naming,
+  NO_NAMES,
+  nameIndex,
+  namingOf,
+} from "./names.js";
+export {
   formatDecimalString,
   formatPercent,
   formatPoints,
