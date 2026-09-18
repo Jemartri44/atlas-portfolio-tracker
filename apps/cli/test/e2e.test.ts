@@ -142,6 +142,8 @@ describe("atlas over a ledger file", () => {
         "EUR",
         "--fx-rate",
         "1",
+        "--fx-rate-date",
+        "2027-03-10",
         "--yes",
       ),
     ).toBe(0);

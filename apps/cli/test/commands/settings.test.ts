@@ -72,6 +72,8 @@ const deviating = async (threshold: string) => {
       "EUR",
       "--fx-rate",
       "1",
+      "--fx-rate-date",
+      DATE,
       "--yes",
     ]),
   ).toBe(0);
@@ -421,6 +423,8 @@ describe("atlas settings set: a change that reinterprets the past (ADR-0015)", (
         "EUR",
         "--fx-rate",
         "1",
+        "--fx-rate-date",
+        "2027-03-01",
         "--accept-invalid",
         "--yes",
       ]),

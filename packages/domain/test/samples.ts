@@ -212,6 +212,7 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
     amount: "5000",
     currency: "EUR",
     fx_rate: "1",
+    fx_rate_date: "2026-08-31",
     fingerprint: "sha256:6",
   },
   cash_withdrawal: {
@@ -222,6 +223,7 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
     amount: "100",
     currency: "EUR",
     fx_rate: "1",
+    fx_rate_date: "2027-06-01",
     fingerprint: "sha256:7",
   },
   standalone_fee: {
@@ -232,6 +234,7 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
     amount: "3",
     currency: "EUR",
     fx_rate: "1",
+    fx_rate_date: "2027-06-30",
     description: "custody",
     fingerprint: "sha256:8",
   },
@@ -245,6 +248,7 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
     unit_value: "210",
     currency: "USD",
     fx_rate: "1.0900",
+    fx_rate_date: "2026-12-31",
     source: "manual",
   },
   order_placed: {

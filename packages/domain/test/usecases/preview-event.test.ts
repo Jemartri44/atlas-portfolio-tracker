@@ -260,6 +260,7 @@ describe("previewEvent", () => {
       type: "cash_deposit" as const,
       account_id: "acc_fund",
       value_date: "2027-03-01",
+      fx_rate_date: "2027-03-01",
       amount: "1000",
       currency: "EUR",
       fx_rate: "1",

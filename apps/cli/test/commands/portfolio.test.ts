@@ -72,6 +72,8 @@ const portfolio = async (settings: Record<string, unknown> = CONFIG) => {
     asset,
     "--date",
     DATE,
+    "--fx-rate-date",
+    DATE,
     "--quantity",
     quantity,
     "--unit-value",

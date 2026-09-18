@@ -207,6 +207,9 @@ describe("atlas add", () => {
         "EUR",
         "--fx-rate",
         "1",
+        // Required since ADR-0021, in euros too: the date of the rate applied.
+        "--fx-rate-date",
+        "2026-08-31",
       ],
       [
         "add",
@@ -221,6 +224,8 @@ describe("atlas add", () => {
         "EUR",
         "--fx-rate",
         "1",
+        "--fx-rate-date",
+        "2027-06-01",
       ],
       [
         "add",
@@ -235,8 +240,12 @@ describe("atlas add", () => {
         "EUR",
         "--fx-rate",
         "1",
+        "--fx-rate-date",
+        "2027-06-30",
         "--description",
         "custodia",
+        "--fee-kind",
+        "custody",
       ],
       [
         "add",

@@ -82,6 +82,7 @@ describe("atlas compact", () => {
         type: "cash_withdrawal",
         account_id: "acc_missing",
         value_date: "2027-01-01",
+        fx_rate_date: "2027-01-01",
         amount: "1",
         currency: "EUR",
         fx_rate: "1",

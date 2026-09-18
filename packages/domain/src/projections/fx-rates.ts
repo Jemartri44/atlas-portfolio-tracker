@@ -6,10 +6,12 @@
 // deposit in dollars, and refusing to convert an account that never traded in a
 // currency the ledger priced last week would be pedantry, not prudence.
 //
-// The date shown is the `fx_rate_date` of the event when it has one (the four
-// events that only gained the field in this feature may not) and its business
-// date otherwise, and the view says which it is. Nothing here is invented: a
-// currency the ledger never priced simply has no rate.
+// The date shown is the `fx_rate_date` of the event when it has one and its
+// business date otherwise, and the view says which it is. Since ADR-0021 every
+// event that carries a rate carries its date too, so the fallback only ever
+// serves a line written before that; it stays because the ledger keeps the
+// bytes it was written with. Nothing here is invented: a currency the ledger
+// never priced simply has no rate.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";

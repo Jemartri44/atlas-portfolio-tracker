@@ -107,7 +107,7 @@ const CASH_MOVEMENT: Rules = {
   amount: req("positive_decimal"),
   currency: req("currency"),
   fx_rate: req("positive_decimal"),
-  fx_rate_date: opt("date"),
+  fx_rate_date: req("date"),
   notes: opt("string"),
   fingerprint: req("string"),
 };
@@ -257,7 +257,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     amount: req("positive_decimal"),
     currency: req("currency"),
     fx_rate: req("positive_decimal"),
-    fx_rate_date: opt("date"),
+    fx_rate_date: req("date"),
     description: req("string"),
     fee_kind: { kind: "enum", optional: true, values: FEE_KINDS },
     fingerprint: req("string"),
@@ -270,7 +270,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     unit_value: req("decimal"),
     currency: req("currency"),
     fx_rate: req("positive_decimal"),
-    fx_rate_date: opt("date"),
+    fx_rate_date: req("date"),
     source: req("string"),
   },
   order_placed: {
@@ -484,8 +484,9 @@ const FX_DATE_FIELDS: Partial<Record<SupportedEventType, readonly string[]>> = {
   dividend: ["fx_rate_date"],
   interest: ["fx_rate_date"],
   fx_exchange: ["fx_rate_date"],
-  // Optional in these four (feature 005); when present it is an ECB rate date
-  // like any other, so the weekend rule applies just the same.
+  // Required in these four since ADR-0021; they were optional between features
+  // 005 and 008, and the hardening had to happen while the real ledger was
+  // still empty (ADR-0018, see the note in `events.ts`).
   valuation: ["fx_rate_date"],
   cash_deposit: ["fx_rate_date"],
   cash_withdrawal: ["fx_rate_date"],

@@ -285,17 +285,20 @@ describe("generateLedger: the scenario contains every rare case", () => {
     expect(new Set(valuations.map((v) => v.account_id))).toEqual(
       new Set(["acc_ibkr", "acc_ibkr2", "acc_bucket", "acc_mi"]),
     );
-    // A valuation in currency carries the publication date of its ECB rate
-    // (ADR-0013). Without it the 31/12 rate dated the currency with the business
-    // date and `atlas networth` had to label the cash rows "(fecha de la
-    // operación)" on the very day the rate was published for.
+    // Every valuation carries the publication date of its ECB rate: required
+    // since ADR-0021, in euros too. Without it the 31/12 rate dated the currency
+    // with the business date and `atlas networth` had to label the cash rows
+    // "(fecha de la operación)" on the very day the rate was published for.
     const inCurrency = valuations.filter((v) => v.currency !== "EUR");
     expect(inCurrency).toHaveLength(10);
-    expect(inCurrency.every((v) => v.fx_rate_date !== undefined)).toBe(true);
-    // In euros there is no ECB rate to date: the euro is its own reference.
-    expect(
-      valuations.filter((v) => v.currency === "EUR").every((v) => v.fx_rate_date === undefined),
-    ).toBe(true);
+    expect(valuations.every((v) => v.fx_rate_date !== undefined)).toBe(true);
+    // 31/12/2028 is a Sunday, and the ECB publishes nothing: the rate that
+    // applies to those nine valuations is Friday 2028-12-29's. It is the case
+    // that made the field exist (challenge 3, finding 6), and six of the nine
+    // only got the date when ADR-0021 made it required in euros too.
+    const yearEnd2028 = valuations.filter((v) => v.date === "2028-12-31");
+    expect(yearEnd2028).toHaveLength(9);
+    expect(yearEnd2028.every((v) => v.fx_rate_date === "2028-12-29")).toBe(true);
     expect(ofType("fx_exchange")).toHaveLength(2);
     expect(ofType("interest")).toHaveLength(2);
     expect(ofType("standalone_fee")).toHaveLength(2);

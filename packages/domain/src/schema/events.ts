@@ -299,8 +299,8 @@ export interface CashMovementFields {
   amount: DecimalString;
   currency: Currency;
   fx_rate: DecimalString;
-  /** Date of the ECB rate applied (feature 005). Optional: lines written before it exist. */
-  fx_rate_date?: CivilDate;
+  /** Date of the ECB rate applied. Required since ADR-0021; see the note below. */
+  fx_rate_date: CivilDate;
   notes?: string;
   fingerprint: string;
 }
@@ -320,8 +320,8 @@ export interface StandaloneFeeEvent extends Envelope {
   amount: DecimalString;
   currency: Currency;
   fx_rate: DecimalString;
-  /** Date of the ECB rate applied (feature 005). Optional: lines written before it exist. */
-  fx_rate_date?: CivilDate;
+  /** Date of the ECB rate applied. Required since ADR-0021; see the note below. */
+  fx_rate_date: CivilDate;
   description: string;
   /** What the charge is (ADR-0021). Absent means `other`; read through `feeKindOf`. */
   fee_kind?: FeeKind;
@@ -338,14 +338,32 @@ export interface ValuationEvent extends Envelope {
   currency: Currency;
   fx_rate: DecimalString;
   /**
-   * Date of the ECB rate applied (feature 005, challenge 3 finding 6). Optional
-   * and compatible (ADR-0018): without it, the rate of a 31/12 valuation is not
-   * reproducible from the official table, because 31/12 falls on a weekend two
-   * years out of seven.
+   * Date of the ECB rate applied. Required since ADR-0021; see the note below.
+   *
+   * This is where the hole was found (challenge 3, finding 6): form 720 values
+   * at the 31/12 price **converted at the ECB rate of that day**, and 31/12
+   * falls on a weekend two years out of seven, so a valuation in a foreign
+   * currency without the date of its rate is not reproducible from the official
+   * table.
    */
-  fx_rate_date?: CivilDate;
+  fx_rate_date: CivilDate;
   source: string;
 }
+
+/**
+ * **Why these four became required, and why it had to be now.**
+ *
+ * `cash_deposit`, `cash_withdrawal`, `standalone_fee` and `valuation` gained
+ * `fx_rate_date` as an optional field in feature 005. Making it required is a
+ * **hardening**, and ADR-0018 allows one inside schema version 1 only while the
+ * real ledger is empty: the loader judges old lines by today's rules, so
+ * hardening with data inside leaves the ledger not degraded but **unreadable in
+ * full**. The real ledger is empty today and stops being so with the first real
+ * operation, which is why ADR-0021 brought all nine provisions forward.
+ *
+ * That window closed with this feature. Any further hardening needs
+ * `schema_version = 2` and its migration.
+ */
 
 // --- Tracking (no effect on lots or cash) ---------------------------------
 

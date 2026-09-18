@@ -76,7 +76,8 @@ describe("netWorth", () => {
     // The last event that priced the dollar is the valuation of that day.
     expect(usd?.fx_rate?.rate.toString()).toBe("1.25");
     expect(usd?.fx_rate?.date).toBe("2027-06-30");
-    expect(usd?.fx_rate_dated).toBe(false);
+    // Dated since ADR-0021: every event that carries a rate carries its date.
+    expect(usd?.fx_rate_dated).toBe(true);
     expect(usd?.fx_age_days).toBe(0);
     expect(usd?.fx_stale).toBe(false);
     expect(usd?.value_eur?.amount.toString()).toBe("-80");

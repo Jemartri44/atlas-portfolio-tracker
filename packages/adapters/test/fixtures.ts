@@ -22,6 +22,7 @@ export const deposit: CashDepositEvent = {
   type: "cash_deposit",
   account_id: "acc_test",
   value_date: "2026-09-01",
+  fx_rate_date: "2026-09-01",
   amount: "100",
   currency: "EUR",
   fx_rate: "1",
