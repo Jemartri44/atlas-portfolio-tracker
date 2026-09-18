@@ -65,7 +65,11 @@ for (const path of files(dist)) {
   for (const match of text.matchAll(/["'`(](node:[a-z_/]+)/g)) {
     problems.push(`${name}: importa ${match[1]}`);
   }
-  for (const match of text.matchAll(/https?:\/\/[\w.-]+/g)) {
+  // A real remote origin always has a dotted host. Requiring the dot skips the
+  // internal sentinels of @solidjs/router (`https://action/` for server actions,
+  // `http://sr` as a base for `new URL`), which are never requested, without
+  // needing an exception for each of them.
+  for (const match of text.matchAll(/https?:\/\/[\w-]+(?:\.[\w-]+)+/g)) {
     if (!ALLOWED_URLS.some((allowed) => allowed.url === match[0])) {
       problems.push(`${name}: referencia a un origen ajeno ${match[0]}`);
     }

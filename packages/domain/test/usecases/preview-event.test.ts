@@ -44,7 +44,7 @@ describe("previewEvent", () => {
     expect(preview.candidate.type).toBe("buy");
     expect(preview.candidate.id).toHaveLength(26);
     expect(preview.candidate.recorded_at).toBe("2027-08-30T10:00:00.000Z");
-    expect(preview.candidate.fingerprint).toMatch(/^sha256:/);
+    expect((preview.candidate as { fingerprint: string }).fingerprint).toMatch(/^sha256:/);
     expect(preview.etag).toBe("0");
   });
 
