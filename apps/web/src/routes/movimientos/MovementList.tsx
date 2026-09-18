@@ -53,7 +53,9 @@ export const MovementList = (props: { rows: readonly MovementRow[] }): JSX.Eleme
             <span class="amount">
               <Figure row={row} />
             </span>
-            <span class="sub">{row.subtitle}</span>
+            <span class="sub" title={row.subtitle}>
+              {row.subtitle}
+            </span>
           </A>
         )}
       </For>
@@ -86,7 +88,11 @@ export const MovementList = (props: { rows: readonly MovementRow[] }): JSX.Eleme
                 </Show>
               </td>
               <td>{row.typeLabel}</td>
-              <td class="truncate">{row.subtitle}</td>
+              <td>
+                <span class="truncate" title={row.subtitle}>
+                  {row.subtitle}
+                </span>
+              </td>
               <td>
                 <Show when={row.status !== "current"} fallback={<span class="tiny">vigente</span>}>
                   <StatusBadge row={row} />
