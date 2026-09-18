@@ -263,6 +263,10 @@ describe("income in kind and exchanges without regime", () => {
     expect(lineOf(report, sale.id).criteria).toContain("8");
     expect(text(report.doubtful.find((d) => d.criterion === "8")?.exposure_eur)).toBe("50");
     expect(text(report.base_eur)).toBe("80");
+    // Income of 2027 belongs to 2027: the next year does not list it again.
+    const next = reportOf(b.build(), 2028);
+    expect(next.in_kind).toEqual([]);
+    expect(next.notes.map((n) => n.code)).not.toContain("tax_in_kind_income_not_integrated");
   });
 
   it("a merger with a cash leg tags #13, and without a regime the exchange is an exposure", () => {

@@ -101,11 +101,21 @@ describe("lines", () => {
       amount: "4",
       fee_kind: "custody",
     });
+    const nextYear = b.fee({
+      account_id: "acc_a",
+      value_date: "2028-01-10",
+      amount: "6",
+      fee_kind: "custody",
+    });
     const expenses = reportOf(b.build(), 2027).movable_capital.expenses;
     expect(expenses.map((e) => [e.event_id, text(e.amount_eur_rounded), e.criteria])).toEqual([
       [early.id, "-2", ["5", "6", "23"]],
       [euros.id, "-4", ["6", "23"]],
       [late.id, "-5", ["6", "23"]],
+    ]);
+    // Each fee in its year only.
+    expect(reportOf(b.build(), 2028).movable_capital.expenses.map((e) => e.event_id)).toEqual([
+      nextYear.id,
     ]);
   });
 });
