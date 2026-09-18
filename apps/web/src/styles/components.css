@@ -217,7 +217,14 @@
   width: 100%;
 }
 
-@media (min-width: 768px) {
+/*
+ * The table comes in at 1024px and not at the 768px of the rail, because at
+ * 768px it does not fit: the rail takes 216px and the dense table needs 659px
+ * of the 505px that are left, so the page scrolled sideways by 24px (measured
+ * in the review of 2026-09-18). Between the two widths the cards are shown,
+ * which is the same information in a column 505px wide — a comfortable one.
+ */
+@media (min-width: 1024px) {
   .movements {
     display: none;
   }
