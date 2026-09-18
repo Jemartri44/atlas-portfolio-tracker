@@ -21,7 +21,7 @@ import type {
   SellEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { manualPrices, positionValueOf } from "./prices.js";
+import { type ExternalPrices, manualPrices, positionValueOf } from "./prices.js";
 import { businessDateOf, isOperationEvent } from "./project-ledger.js";
 import type { LedgerState } from "./state.js";
 import { coreAccountIds, coreQuantityOf } from "./weights.js";
@@ -201,9 +201,10 @@ export const costSummary = (
   settings: Settings,
   /** Business-date cut, the same one the projection was given (`ProjectOptions.asOf`). */
   asOf?: CivilDate,
+  external?: ExternalPrices,
 ): CostSummary => {
   const totals = accumulate(state, events, asOf);
-  const prices = manualPrices(state, date, settings);
+  const prices = manualPrices(state, date, settings, external);
   const rows: CoreCostRow[] = [];
   let partial = false;
   let valued = Money.zero(EUR);

@@ -59,6 +59,7 @@ const INVOCATIONS: { command: string; argv: string[]; readOnly: boolean }[] = [
   { command: "weights", argv: ["weights"], readOnly: true },
   { command: "contribute", argv: ["contribute", "--amount", "100"], readOnly: true },
   { command: "costs", argv: ["costs"], readOnly: true },
+  { command: "networth", argv: ["networth"], readOnly: true },
   { command: "lots", argv: ["lots"], readOnly: true },
   { command: "cash", argv: ["cash"], readOnly: true },
   { command: "gains", argv: ["gains", "2027"], readOnly: true },

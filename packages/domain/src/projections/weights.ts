@@ -12,7 +12,7 @@ import { Quantity } from "../money/quantity.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import { ASSET_CLASSES } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { manualPrices, type PriceLookup, positionValueOf } from "./prices.js";
+import { type ExternalPrices, manualPrices, type PriceLookup, positionValueOf } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
 
 /** Satellites (business rule 6b): 0 % or at least the minimum, never in between. */
@@ -262,9 +262,10 @@ export const coreWeights = (
   state: LedgerState,
   date: CivilDate,
   settings: Settings,
+  external?: ExternalPrices,
 ): CoreWeights => {
   const targets = settings.target_weights ?? {};
-  const prices = manualPrices(state, date, settings);
+  const prices = manualPrices(state, date, settings, external);
   const warnings: Warning[] = [];
   warnUnknownTargets(state, targets, warnings);
 

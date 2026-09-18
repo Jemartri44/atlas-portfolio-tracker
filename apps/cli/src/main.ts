@@ -14,6 +14,7 @@ import {
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
 import { backupCommand } from "./commands/backup.js";
+import { netWorthCommand } from "./commands/bucket.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
 import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
@@ -49,6 +50,7 @@ export const COMMANDS: Record<string, Command> = {
   edit: editCommand,
   delete: deleteCommand,
   positions: positionsCommand,
+  networth: netWorthCommand,
   weights: weightsCommand,
   contribute: contributeCommand,
   costs: costsCommand,
@@ -74,6 +76,7 @@ comandos:
   edit <id> --reason …           delete <id> --reason …
   positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
   weights [--date]   contribute [--amount <eur>] [--date]   costs [--date]
+  networth [--date]
   transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   compact [--yes]   backup --to <directorio>`;

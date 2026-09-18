@@ -17,6 +17,11 @@ export * from "./money/index.js";
 export type { Clock } from "./ports/clock.js";
 export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
 export type { RandomSource } from "./ports/random.js";
+export {
+  type BucketPosition,
+  type BucketPositions,
+  bucketPositions,
+} from "./projections/bucket.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";
 export {
@@ -46,6 +51,12 @@ export {
   targetOf,
 } from "./projections/kind-rules.js";
 export { fiscalLots } from "./projections/lots.js";
+export {
+  type CashBlock,
+  type CashLine,
+  type NetWorth,
+  netWorth,
+} from "./projections/networth.js";
 export {
   type OpenOrder,
   type OpenTransfer,
