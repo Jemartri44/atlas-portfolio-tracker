@@ -25,6 +25,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0019](0019-web-local-first.md) | Aplicacion web local-first sin servidor | Aceptada |
 | [0020](0020-tax-return-filed.md) | Constancia de lo declarado: evento `tax_return_filed` | Aceptada |
 | [0021](0021-fiscal-schema-provisions.md) | Previsiones del esquema para la Fase 5: guardar el dato sin decidir el criterio | Aceptada |
+| [0022](0022-settings-recorded-in-full.md) | Un `settings_changed` registra la configuración vigente entera | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 

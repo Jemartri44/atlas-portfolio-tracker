@@ -48,7 +48,7 @@ Reglas transversales:
 |---|---|---|
 | Catálogo | `account_created`, `account_updated` | Alta y cambios de una cuenta |
 | Catálogo | `asset_created`, `asset_updated` | Alta y cambios de un activo (ISIN, ticker, TER, ETF de referencia…) |
-| Configuración | `settings_changed` | Configuración completa resultante tras el cambio |
+| Configuración | `settings_changed` | **Foto completa de la configuración en vigor tras el cambio, no un parche** (ADR-0022): un cálculo fiscal tiene que poder reproducirse desde el libro y solo desde el libro, sin depender de qué decía un documento aquel año |
 | Operación | `buy`, `sell` | Compra y venta |
 | Operación | `transfer` | Traspaso entre fondos (origen y destino en un solo evento) o **traspaso de custodia** del mismo activo entre cuentas (ADR-0012) |
 | Operación | `dividend` | Dividendo: bruto, retención en origen, retención en España |
@@ -321,6 +321,12 @@ Tabla de composición admitida por `kind` (el evento se rechaza si sus `effects`
 
 `identifier_change` y `cash_dividend` no son `corporate_action` (ver ADR-0011).
 
+
+> **Picos y posición previa (verificado en la revisión de la 007, 2026-09-18).** Cuando un contrasplit, una fusión o una
+> escisión dejan una posición fraccionada, el `forced_sale` de picos barre **la fracción de la posición resultante**, que
+> incluye la fracción que la cuenta **ya tenía** del activo destino antes del evento. Es el comportamiento correcto —el
+> intermediario liquida la fracción de lo que queda, no solo la que creó el evento— pero no estaba escrito en ninguna
+> parte, y decide cuánta ganancia se realiza. Queda dicho aquí para que nadie lo "arregle" dentro de cinco años.
 
 ### 8.6 Previsiones de la Fase 5 (ADR-0021)
 
