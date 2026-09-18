@@ -174,6 +174,7 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 | `bucket_max_cumulative_contribution` | Por definir | Regla 17 |
 | `bucket_stop_loss_pct` | Por definir | Regla 17 |
 | `bucket_max_weight_pct` | Por definir | Regla 18 |
+| `bucket_benchmark_asset_id` | Por definir | Regla 16: activo que hace de índice de referencia del cubo |
 | `stale_price_days` | 5 | Aviso de antigüedad |
 | `model_720_alert_threshold_eur` | 45.000€ | Margen sobre los 50.000€ |
 | `model_721_alert_threshold_eur` | 45.000€ | Ídem para cripto |
