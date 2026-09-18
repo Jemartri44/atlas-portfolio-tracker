@@ -69,6 +69,48 @@ export const duplicatesOf = (
 };
 
 /**
+ * One ISIN, one asset (ADR-0009, feature 009 review): FIFO and the wash-sale
+ * rule work on homogeneous securities, and the system knows them by
+ * `asset_id`. Two assets with the same ISIN — the same ETF in the core and in
+ * the bucket, say — are one security to the tax agency and two to the engine:
+ * a loss in one and a repurchase in the other fourteen days later is computed
+ * whole when it should be deferred whole, aggressively and in silence.
+ *
+ * Checked **when an ISIN is introduced**: an `asset_created` that carries one,
+ * or an `asset_updated` that changes it. Never on load and never in the
+ * projection: a ledger already written with a duplicate must stay readable
+ * (ADR-0018), and `integrity` reports it instead. An update that keeps the ISIN
+ * it had is not blocked either, so such a ledger can still be repaired.
+ */
+const checkIsinUnique = (events: readonly LedgerEvent[], event: SupportedEvent): void => {
+  if (
+    (event.type !== "asset_created" && event.type !== "asset_updated") ||
+    event.isin === undefined
+  ) {
+    return;
+  }
+  const current = new Map<string, string | undefined>();
+  for (const earlier of events) {
+    if (earlier.type === "asset_created" || earlier.type === "asset_updated") {
+      const asset = earlier as SupportedEvent & { asset_id: string; isin?: string };
+      current.set(asset.asset_id, asset.isin);
+    }
+  }
+  if (current.get(event.asset_id) === event.isin) {
+    return;
+  }
+  for (const [assetId, isin] of current) {
+    if (assetId !== event.asset_id && isin === event.isin) {
+      throw new ValidationError(
+        "duplicate_isin",
+        `ISIN ${event.isin} already belongs to asset ${assetId}; record the operations on that asset`,
+        { isin: event.isin, asset_id: event.asset_id, existing_asset_id: assetId },
+      );
+    }
+  }
+};
+
+/**
  * Decides whether the candidate ledger may be written (ADR-0015). Everything
  * but `settings_changed` still demands a valid ledger, exactly as before; a
  * `settings_changed` only has to leave no *new* invalid event, unless the
@@ -83,6 +125,7 @@ export const checkInvalid = (
   event: SupportedEvent,
   options: RecordOptions,
 ): { affected: AffectedEvent[]; state: LedgerState } => {
+  checkIsinUnique(events, event);
   const candidate = [...events, event];
   const { fresh, all, state } = newlyInvalid(events, candidate);
   const own = all.find((entry) => entry.event.id === event.id);

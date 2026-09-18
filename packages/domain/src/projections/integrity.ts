@@ -63,6 +63,25 @@ export const integrity = (state: LedgerState): IntegrityFinding[] => {
       });
     }
   }
+  // One ISIN, one asset (ADR-0009): two assets sharing it are one security to
+  // the tax agency and two to FIFO and the wash-sale rule. Recording refuses it
+  // since feature 009; a ledger written before is told here, never refused.
+  const byIsin = new Map<string, AssetId[]>();
+  for (const asset of state.assets.values()) {
+    if (asset.isin !== undefined) {
+      byIsin.set(asset.isin, [...(byIsin.get(asset.isin) ?? []), asset.asset_id]);
+    }
+  }
+  for (const [isin, assets] of byIsin) {
+    if (assets.length > 1) {
+      findings.push({
+        severity: "error",
+        code: "duplicate_isin",
+        message: `ISIN ${isin} is shared by ${assets.join(", ")}: FIFO and the wash-sale rule treat them as different securities`,
+        event_ids: [],
+      });
+    }
+  }
   for (const { event, error } of state.invalid) {
     findings.push({
       severity: "error",

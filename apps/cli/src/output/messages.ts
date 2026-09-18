@@ -136,6 +136,8 @@ export const describeError = (error: DomainError): string => {
       return `El libro tiene ${text(d.count)} eventos inválidos y un cálculo fiscal sobre él sería aproximado: repáralos antes (\`atlas check\`). Inválidos: ${((d.invalid as { id: string; type: string; code: string }[] | undefined) ?? []).map((entry) => `${entry.type} ${entry.id} (${entry.code})`).join(", ")}.`;
     case "tax_year_unsupported":
       return `El motor fiscal aplica el régimen de compensación vigente desde ${text(d.first_supported)}; ${text(d.year)} es anterior (o no es un año).`;
+    case "duplicate_isin":
+      return `El ISIN ${text(d.isin)} ya es del activo ${text(d.existing_asset_id)}: un mismo valor no puede ser dos activos, porque la regla de recompra y el FIFO los tratarían como distintos (ADR-0009). Registra las operaciones en ${text(d.existing_asset_id)}.`;
     case "invalid_fiscal_date_rule":
       return `La fecha fiscal de ${text(d.asset_type)} debe ser trade_date (contratación) o value_date (fecha valor) (recibido: ${text(d.value)}): decide el ejercicio de cada operación (ADR-0013).`;
     case "invalid_income_category":

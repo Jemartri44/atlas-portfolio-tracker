@@ -59,6 +59,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `La cuenta ${n.one(d.account_id)} no participa en la venta forzosa, así que no puede llevar comisión.`,
   duplicate_account: (d, n) => `La cuenta ${n.one(d.account_id)} ya existe.`,
   duplicate_asset: (d, n) => `El activo ${n.one(d.asset_id)} ya existe.`,
+  duplicate_isin: (d, n) =>
+    `El ISIN ${text(d.isin)} ya es de ${n.one(d.existing_asset_id)}: un mismo valor no puede ser dos activos, porque la regla de recompra y el FIFO los tratarían como distintos. Registra las operaciones en ${n.one(d.existing_asset_id)}.`,
   asset_book_change: (d, n) =>
     `El activo ${n.one(d.asset_id)} no puede pasar del núcleo al cubo ni al revés: da de alta un activo nuevo.`,
   asset_type_change: (d, n) =>

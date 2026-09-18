@@ -115,6 +115,38 @@ describe("atlas account / asset", () => {
     ).toBe(1);
     expect(h.text()).toContain("ya existe");
   });
+
+  it("refuses an ISIN another asset already has, in any book, and names that asset", async () => {
+    const h = harness({ events: seed() });
+    expect(
+      await h.exec([
+        "asset",
+        "add",
+        "--id",
+        "ast_spec",
+        "--type",
+        "fund",
+        "--book",
+        "bucket",
+        "--name",
+        "World again",
+        "--currency",
+        "EUR",
+        "--isin",
+        "XX0000000001",
+        "--transferable",
+        "--yes",
+      ]),
+    ).toBe(1);
+    expect(h.text()).toContain(
+      "El ISIN XX0000000001 ya es del activo ast_world: un mismo valor no puede ser dos activos",
+    );
+    h.reset();
+    expect(await h.exec(["asset", "update", "ast_bonds", "--isin", "XX0000000002", "--yes"])).toBe(
+      1,
+    );
+    expect(h.text()).toContain("ya es del activo ast_gold");
+  });
 });
 
 describe("atlas settings", () => {
