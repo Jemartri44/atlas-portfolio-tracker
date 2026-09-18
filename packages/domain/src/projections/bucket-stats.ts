@@ -55,6 +55,7 @@ export interface BucketStats {
   measured_theses: number;
   sell_operations: number;
   excluded: ExcludedThesis[];
+  /** Percentage, like every other rate here: the presentation layer multiplies nothing. */
   hit_rate?: Decimal;
   average_win_eur?: Money;
   average_loss_eur?: Money;
@@ -295,7 +296,9 @@ export const bucketStats = (
     ...(measured.length === 0
       ? {}
       : {
-          hit_rate: Decimal.parse(String(wins.length)).div(Decimal.parse(String(measured.length))),
+          hit_rate: Decimal.parse(String(wins.length))
+            .div(Decimal.parse(String(measured.length)))
+            .mul(HUNDRED),
         }),
     ...(average(wins) === undefined ? {} : { average_win_eur: average(wins) as Money }),
     ...(average(losses) === undefined ? {} : { average_loss_eur: average(losses) as Money }),

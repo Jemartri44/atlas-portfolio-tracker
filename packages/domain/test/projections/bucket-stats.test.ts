@@ -84,7 +84,7 @@ describe("bucketStats: what the operation says about the operator", () => {
     expect(stats.closed_theses).toBe(3);
     expect(stats.measured_theses).toBe(3);
     expect(stats.sell_operations).toBe(3);
-    expect(stats.hit_rate?.round(4).toString()).toBe("0.6667");
+    expect(stats.hit_rate?.round(4).toString()).toBe("66.6667");
     expect(stats.average_win_eur?.amount.toString()).toBe("30");
     expect(stats.average_loss_eur?.amount.toString()).toBe("-30");
     expect(stats.expectancy_eur?.amount.toString()).toBe("10");
@@ -106,7 +106,7 @@ describe("bucketStats: what the operation says about the operator", () => {
   it("with a single closed thesis the expectancy is exactly its result", () => {
     const { stats } = report(bucket([{ id: "t1", buyPrice: "10", sellPrice: "13" }]));
     expect(stats.expectancy_eur?.amount.toString()).toBe("30");
-    expect(stats.hit_rate?.toString()).toBe("1");
+    expect(stats.hit_rate?.toString()).toBe("100");
   });
 
   it("excludes a thesis whose sale ate lots of another one, and says how many", () => {
