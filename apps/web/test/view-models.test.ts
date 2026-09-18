@@ -375,19 +375,18 @@ describe("detailView", () => {
     expect(detailView(buy as never).editHint).toBeUndefined();
   });
 
-  it("does not offer it on the seven types that used to be a dead end", () => {
+  /**
+   * Four of the original seven. The other three — `transfer`,
+   * `transfer_requested` and `transfer_request_updated` — stopped being dead
+   * ends in feature 007, when the web gained their forms: `editable` is derived
+   * from `FORM_SPECS`, so offering the form and offering "Corregir" cannot drift
+   * apart.
+   */
+  it("does not offer it on the four types that are still a dead end", () => {
     const events = goldenEvents();
     const state = projectLedger(events, { collectErrors: true });
     const entries = ledgerEntries(state, events);
-    const deadEnds = [
-      "interest",
-      "standalone_fee",
-      "fx_exchange",
-      "transfer",
-      "order_updated",
-      "transfer_requested",
-      "transfer_request_updated",
-    ];
+    const deadEnds = ["interest", "standalone_fee", "fx_exchange", "order_updated"];
     const present = entries.filter((row) => deadEnds.includes(row.event.type));
     expect(present.length).toBeGreaterThan(0);
     for (const entry of present) {
@@ -623,7 +622,7 @@ describe("the form specs", () => {
    * FR-048: a field the schema gains and a form forgets has to make the suite
    * fail, or the day `buy` grows a field the web will quietly stop writing it.
    */
-  it("covers every field of the schema for the nine forms", () => {
+  it("covers every field of the schema for every form", () => {
     const gaps: string[] = [];
     for (const spec of FORM_SPECS) {
       const known = knownFieldsOf(spec.type as never).filter(

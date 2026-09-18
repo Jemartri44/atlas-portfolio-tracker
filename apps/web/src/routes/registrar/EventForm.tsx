@@ -210,10 +210,18 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       >
         <form class="form" onSubmit={(event) => event.preventDefault()}>
           <Show when={bucketWithoutThesis()}>
-            <Callout tone="warning" title="Las compras del cubo exigen una tesis">
-              La regla 15 pide escribir la tesis <strong>antes</strong> de comprar. Si no hay
-              ninguna abierta para esta cuenta y este activo, créala desde la CLI con{" "}
-              <code>atlas thesis open</code>: el asistente de tesis llega en la versión siguiente.
+            <Callout
+              tone="warning"
+              title="Las compras del cubo exigen una tesis"
+              action={
+                <A href="/registrar/tesis" role="button">
+                  Abrir una tesis
+                </A>
+              }
+            >
+              La regla 15 pide escribir la tesis <strong>antes</strong> de comprar: la hipótesis, el
+              plazo, la condición de invalidación y el tamaño previsto. Si no hay ninguna abierta
+              para esta cuenta y este activo, créala ahora y vuelve.
             </Callout>
           </Show>
 

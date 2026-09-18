@@ -9,7 +9,13 @@
 // from which list to choose. Whether the value is acceptable is decided by
 // `validateShape` and the projection, never here (decision (c)).
 
-import { ASSET_CLASSES, ASSET_TYPES, BOOKS, ORDER_SIDES } from "@atlas/domain";
+import {
+  ASSET_CLASSES,
+  ASSET_TYPES,
+  BOOKS,
+  ORDER_SIDES,
+  TRANSFER_REQUEST_STAGES,
+} from "@atlas/domain";
 
 export type FieldKind = "text" | "textarea" | "decimal" | "integer" | "date" | "select" | "switch";
 
@@ -20,6 +26,7 @@ export type OptionSource =
   | "currencies"
   | "openOrders"
   | "openTheses"
+  | "openTransfers"
   | "books"
   | "assetTypes"
   | "assetClasses"
@@ -429,6 +436,173 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         hint: "Para estimar el precio de un fondo entre valoraciones.",
       },
       { name: "active", label: "Activo", kind: "switch", initial: "true", required: true },
+    ],
+    omitted: [],
+  },
+  // --- Transfers (ADR-0010) -----------------------------------------------
+  //
+  // Three events, not one, because they are three different facts: the request
+  // and its stages are **tracking** and touch no lot, and the transfer itself is
+  // the single atomic accounting fact carrying both sides. Splitting the
+  // accounting one in two would create a half-transfer, which the FIFO engine
+  // would read as a sale — the mistake the whole model exists to prevent.
+  {
+    slug: "traspaso-solicitud",
+    type: "transfer_requested",
+    title: "Solicitar un traspaso",
+    when: "Has pedido a la gestora mover un fondo a otro. Todavía no ha pasado nada.",
+    fields: [
+      { ...account(), name: "from_account_id", label: "Cuenta de origen" },
+      { ...asset(), name: "from_asset_id", label: "Fondo de origen" },
+      { ...account(), name: "to_account_id", label: "Cuenta de destino" },
+      { ...asset(), name: "to_asset_id", label: "Fondo de destino" },
+      {
+        name: "quantity_out",
+        label: "Participaciones",
+        kind: "decimal",
+        hint: "O el importe, si lo pediste en euros. Uno de los dos.",
+      },
+      { name: "amount_eur", label: "Importe en euros", kind: "decimal" },
+      { name: "requested_date", label: "Fecha de la solicitud", kind: "date", required: true },
+      notes(),
+    ],
+    omitted: [],
+  },
+  {
+    slug: "traspaso-etapa",
+    type: "transfer_request_updated",
+    title: "Etapa de un traspaso",
+    when: "La gestora ha reembolsado, ha suscrito o ha cancelado la solicitud.",
+    fields: [
+      {
+        name: "request_id",
+        label: "Solicitud",
+        kind: "select",
+        required: true,
+        options: "openTransfers",
+      },
+      {
+        name: "stage",
+        label: "Etapa",
+        kind: "select",
+        required: true,
+        values: TRANSFER_REQUEST_STAGES,
+      },
+      { name: "date", label: "Fecha", kind: "date", required: true },
+      {
+        name: "nav_out",
+        label: "Valor liquidativo de salida",
+        kind: "decimal",
+        hint: "Si ya se conoce, al reembolsar.",
+      },
+      { name: "quantity_out", label: "Participaciones reembolsadas", kind: "decimal" },
+      notes(),
+    ],
+    omitted: [],
+  },
+  {
+    slug: "traspaso",
+    type: "transfer",
+    title: "Traspaso completado",
+    when: "El dinero ya está en el fondo de destino. Un solo hecho, con sus dos lados.",
+    fields: [
+      {
+        name: "request_id",
+        label: "Solicitud que cierra",
+        kind: "select",
+        options: "openTransfers",
+        hint: "La solicitud que este traspaso completa, si la registraste.",
+      },
+      { ...account(), name: "from_account_id", label: "Cuenta de origen" },
+      { ...asset(), name: "from_asset_id", label: "Fondo de origen" },
+      {
+        name: "quantity_out",
+        label: "Participaciones reembolsadas",
+        kind: "decimal",
+        required: true,
+      },
+      { name: "nav_out", label: "Valor liquidativo de salida", kind: "decimal" },
+      { name: "value_date_out", label: "Fecha valor de salida", kind: "date", required: true },
+      { ...account(), name: "to_account_id", label: "Cuenta de destino" },
+      { ...asset(), name: "to_asset_id", label: "Fondo de destino" },
+      {
+        name: "quantity_in",
+        label: "Participaciones suscritas",
+        kind: "decimal",
+        required: true,
+      },
+      { name: "nav_in", label: "Valor liquidativo de entrada", kind: "decimal" },
+      { name: "value_date_in", label: "Fecha valor de entrada", kind: "date", required: true },
+      notes(),
+    ],
+    // Nothing omitted: `fee` is not a field of a transfer at all. The
+    // depositary's charge is a `standalone_fee`, and sending one here is
+    // rejected by the domain (`transfer_fee_not_allowed`).
+    omitted: [],
+  },
+  // --- Bucket theses (rule 15) --------------------------------------------
+  {
+    slug: "tesis",
+    type: "thesis_opened",
+    title: "Abrir una tesis",
+    when: "Antes de comprar en el cubo. La regla 15 no admite comprar sin tesis escrita.",
+    fields: [
+      {
+        name: "thesis_id",
+        label: "Identificador",
+        kind: "text",
+        required: true,
+        hint: "Corto y tuyo, por ejemplo th_alpha. Es el que enlazará las compras.",
+      },
+      { ...account(), name: "account_id", label: "Cuenta del cubo", options: "bucketAccounts" },
+      { ...asset(), name: "asset_id", label: "Activo" },
+      {
+        name: "hypothesis",
+        label: "Hipótesis",
+        kind: "textarea",
+        required: true,
+        full: true,
+        hint: "Qué crees que va a pasar y por qué.",
+      },
+      {
+        name: "expected_horizon_days",
+        label: "Plazo previsto (días)",
+        kind: "integer",
+        required: true,
+      },
+      {
+        name: "invalidation",
+        label: "Condición de invalidación",
+        kind: "textarea",
+        required: true,
+        full: true,
+        hint: "Qué te haría estar equivocado. Se muestra cada vez que mires la posición.",
+      },
+      { name: "planned_size_eur", label: "Tamaño previsto (EUR)", kind: "decimal", required: true },
+    ],
+    omitted: [],
+  },
+  {
+    slug: "tesis-cierre",
+    type: "thesis_closed",
+    title: "Cerrar una tesis",
+    when: "La has cerrado: salió bien, salió mal o se invalidó.",
+    fields: [
+      {
+        name: "thesis_id",
+        label: "Tesis",
+        kind: "select",
+        required: true,
+        options: "openTheses",
+      },
+      {
+        name: "closing_notes",
+        label: "Cómo acabó",
+        kind: "textarea",
+        required: true,
+        full: true,
+        hint: "Qué pasó y qué aprendiste. Es lo que hace útil el registro dentro de un año.",
+      },
     ],
     omitted: [],
   },
