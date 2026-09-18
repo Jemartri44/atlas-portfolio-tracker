@@ -8,7 +8,7 @@ import { projectLedger } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
-import { withoutStale } from "../src/view-models/forms/choices.js";
+import { selectOptions, withoutStale } from "../src/view-models/forms/choices.js";
 import { FORM_SPECS } from "../src/view-models/forms/index.js";
 import { assetOptions, optionsFor } from "../src/view-models/options.js";
 import { goldenEvents } from "./helpers/golden.js";
@@ -104,6 +104,7 @@ describe("the lists, as data", () => {
       state,
       { account_id: "acc_bucket", asset_id: "ast_world" },
       "2029-01-01",
+      "account_id",
     );
     expect(next.asset_id).toBe("");
     const kept = withoutStale(
@@ -111,8 +112,31 @@ describe("the lists, as data", () => {
       state,
       { account_id: "acc_mi", asset_id: "ast_world" },
       "2029-01-01",
+      "account_id",
     );
     expect(kept.asset_id).toBe("ast_world");
+  });
+
+  /**
+   * Correcting the sale of a fund given up since then: the fund is inactive and
+   * no longer held, so no list offers it — but the form already holds it, and
+   * typing the amount must not empty it, nor may the list hide it.
+   */
+  it("keeps the asset a correction already holds, and only reacts to the account", () => {
+    const buy = FORM_SPECS.find((spec) => spec.slug === "buy");
+    const fields = buy?.fields ?? [];
+    const asset = fields.find((field) => field.name === "asset_id");
+    const values = { account_id: "acc_bucket", asset_id: "ast_alpha_spin", amount: "10" };
+    const withoutPositions = projectLedger(
+      goldenEvents().filter(
+        (event) => !["buy", "sell", "corporate_action", "transfer", "swap"].includes(event.type),
+      ),
+      { collectErrors: true },
+    );
+    expect(withoutStale(fields, withoutPositions, values, "2029-01-01", "amount")).toEqual(values);
+    expect(labels(selectOptions(asset as never, withoutPositions, values, "2029-01-01"))).toContain(
+      "Alpha Spin-off",
+    );
   });
 });
 
