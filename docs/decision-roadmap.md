@@ -31,7 +31,7 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente; bloqueada por la Fase 0 (IBKR y exportación de fondos de MyInvestor) |
 | 7 | Aplicación web: framework, offline, auth, API | Fase 2 | **ADR-0017** (*stack*), **ADR-0019** (local-first, sin servidor), `docs/prompts/006-web-shell.md` (pantallas y navegación) | **Cerrada** 2026-09-18. La autenticación desaparece del alcance: sin servidor no hay nada que autenticar; Cognito protegerá la API en la Fase 4 |
 | 8 | Infraestructura, despliegue y copias de seguridad | Fase 4 | ADR-0010+ | Pendiente |
-| 9 | Salida fiscal | Fase 5 | Spec de la feature fiscal; criterios ya fijados en `docs/fiscal-questions.md` | Pendiente, **desbloqueada**: las 16 preguntas están respondidas con su grado de certeza (2026-09-18). Queda decidir el registro de lo declarado (`tax_return_filed`) |
+| 9 | Salida fiscal | Fase 5 | **ADR-0020**, `docs/fiscal-questions.md`, `docs/data-schema.md` §3 | **Desbloqueada**: los 16 criterios fiscales están respondidos con su grado de certeza y el registro de lo declarado está decidido (ADR-0020, 2026-09-18). Queda el formato de la salida, que se decide al escribir el prompt de la fase |
 
 ---
 
@@ -135,7 +135,9 @@ Antes de la Fase 4. Decisiones: una cuenta AWS con dos pilas o dos cuentas; dist
 
 Antes de la Fase 5. Decisiones: formato de la salida (agregados por casilla + detalle por operación), cómo se marcan las reglas "verificar", estado de pérdidas pendientes por ejercicio, tratamiento de diferencias de cambio.
 
-Añadido por el *challenge* 3 (hallazgo 2): **qué queda registrado de lo declarado**. El libro no sabe qué ejercicio se presentó ni con qué cifras, de modo que (a) un `settings_changed` posterior puede mover ganancias entre ejercicios ya declarados sin avisar, (b) la regla de los 20.000 € del Modelo 720 (`business-rules.md` §5.8) no es calculable y (c) el arrastre de pérdidas a cuatro ejercicios no tiene ancla. Decidir la forma del evento `tax_return_filed` (§3 del esquema) y si se implementa en la Fase 5 o antes. Mitigación parcial ya en la feature 005: `atlas settings set` avisa cuando un cambio de configuración mueve las ganancias de un ejercicio anterior.
+**Cerrada en su parte estructural** (2026-09-18, **ADR-0020**): qué queda registrado de lo declarado. El evento `tax_return_filed` guarda el modelo (`renta` / `720` / `721`), las cifras presentadas, la huella del libro ese día y el justificante; se filtra por su fecha de presentación (documento administrativo, ADR-0016); una complementaria es un evento nuevo con `supersedes`, nunca un `reversal`; y un ejercicio con presentación registrada queda **cerrado**, de modo que registrar en él avisa en vez de rechazar. Se implementa en la Fase 5, junto al motor que produce esas cifras.
+
+Sigue abierto, y se decide al escribir el prompt de la Fase 5: el **formato de la salida** (agregados por casilla más detalle por operación) y cómo se marcan en ella las reglas de certeza media o baja de `docs/fiscal-questions.md`.
 
 ---
 

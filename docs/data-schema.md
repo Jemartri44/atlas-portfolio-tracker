@@ -62,7 +62,7 @@ Reglas transversales:
 | Seguimiento | `transfer_requested`, `transfer_request_updated` | Traspaso en curso (ADR-0010). Sin efecto sobre lotes ni efectivo |
 | Rectificación | `reversal` | Anula un evento anterior (`reverses_id`); opcionalmente el evento correcto lo referencia con `corrects_id` |
 | Cubo | `thesis_opened`, `thesis_closed` | Tesis del cubo especulativo |
-| Fiscal *(previsto, Fase 5)* | `tax_return_filed` | Deja constancia de qué ejercicio se ha declarado y con qué cifras. Sin él, un `settings_changed` puede reescribir en silencio una Renta ya presentada, la regla de los 20.000 € del Modelo 720 (comparar con "la última declaración presentada") no es calculable y el arrastre de pérdidas a cuatro ejercicios no tiene ancla. *Challenge* 3, hallazgo 2 |
+| Fiscal *(definido en ADR-0020; se implementa en la Fase 5)* | `tax_return_filed` | Deja constancia de qué se ha declarado, de qué modelo (`renta` / `720` / `721`) y con qué cifras, más la huella del libro ese día y la referencia del justificante. Sin él, un `settings_changed` puede reescribir en silencio una Renta ya presentada, la regla de los 20.000 € del Modelo 720 no es calculable y el arrastre de pérdidas a cuatro ejercicios no tiene ancla. Es un **documento administrativo**: se filtra por su fecha de presentación, no por el corte de `asOf` (ADR-0016). Una complementaria es un evento nuevo con `supersedes`, **nunca un `reversal`**. *Challenge* 3, hallazgo 2 |
 
 La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se define en §6.
 
