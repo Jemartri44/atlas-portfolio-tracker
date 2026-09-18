@@ -564,7 +564,9 @@ describe("the settings of the report", () => {
     expect(y2027.settings_diff?.changes).toEqual([{ event_id: moved.id, what: "left" }]);
     const y2028 = reportOf(b.build(), 2028);
     expect(y2028.settings_diff?.changes).toEqual([{ event_id: moved.id, what: "entered" }]);
-    expect(kept.id).not.toBe(moved.id);
+    // The June sale is in 2027 under both readings: in the year, and no change.
+    expect(lineOf(y2027, kept.id).fiscal_date).toBe("2027-06-01");
+    expect(y2027.settings_diff?.changes.map((change) => change.event_id)).not.toContain(kept.id);
   });
 
   it("says when the previous settings leave events invalid", () => {

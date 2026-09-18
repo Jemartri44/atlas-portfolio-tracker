@@ -158,7 +158,8 @@ describe("hand-computed exercise, 2028: transmissions", () => {
       ["120", "2027-02-01"],
       ["30", "2028-06-01"],
     ]);
-    expect(line.lots[0]?.lineage.map((step) => step.event_id)).toEqual([expect.any(String), id.E1]);
+    // The first lot went through the fund transfer E18, from the purchase E1.
+    expect(line.lots[0]?.lineage.map((step) => step.event_id)).toEqual([id.E18, id.E1]);
     expect(text(line.withholding?.eur)).toBe("31.35");
   });
 

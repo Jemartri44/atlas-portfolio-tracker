@@ -183,25 +183,25 @@ describe("mandatory edge cases", () => {
 
   it("a transfer keeps the antiquity through three hops, and the deferral travels with it", () => {
     const b = taxBuilder();
-    const original = buy(b, "fund_f", "2027-01-11", "10", "100");
+    buy(b, "fund_f", "2027-01-11", "10", "100");
     const loss = sell(b, "fund_f", "2027-02-01", "10", "90");
     const again = buy(b, "fund_f", "2027-03-01", "10", "90");
-    transfer(b, "fund_f", "fund_g", "2027-04-01", "10", "20");
-    transfer(b, "fund_g", "fund_h", "2027-05-03", "20", "20");
+    const first = transfer(b, "fund_f", "fund_g", "2027-04-01", "10", "20");
+    const second = transfer(b, "fund_g", "fund_h", "2027-05-03", "20", "20");
     const last = transfer(b, "fund_h", "fund_i", "2027-06-01", "20", "10");
     const sale = sell(b, "fund_i", "2028-06-01", "10", "95");
     const report = reportOf(b.build(), 2028);
     const line = lineOf(report, sale.id);
     expect(text(lineOf(reportOf(b.build(), 2027), loss.id).deferred_eur)).toBe("-100");
     expect(line.lots[0]?.acquisition_date).toBe("2027-03-01");
+    // Every hop, newest first, down to the repurchase that carried the deferral.
     expect(line.lots[0]?.lineage.map((step) => step.event_id)).toEqual([
       last.id,
-      expect.any(String),
-      expect.any(String),
+      second.id,
+      first.id,
       again.id,
     ]);
     expect(line.lots[0]?.root.event_id).toBe(again.id);
-    expect(original.id).not.toBe(again.id);
     // Own: 950 − 900 = 50; released −100: the year sees −50.
     expect(text(line.own_eur.roundToCents())).toBe("50");
     expect(text(line.computable_eur_rounded)).toBe("-50");

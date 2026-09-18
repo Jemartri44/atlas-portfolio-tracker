@@ -3,7 +3,7 @@
 // rate, deductible fees out of order, deferrals spread over several lots.
 
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
+import { DEFAULT_SETTINGS, type Settings } from "../../src/settings/settings.js";
 import { buy, lineOf, reportOf, sell, taxBuilder, text, transfer } from "./helpers.js";
 
 describe("lines", () => {
@@ -215,26 +215,36 @@ describe("deferrals over several lots of one acquisition", () => {
 
 describe("an alternative reading that breaks nothing of the year asked", () => {
   it("is left out when it leaves events invalid and no figure of the year applies it", () => {
-    const b = taxBuilder();
-    b.buy({
-      account_id: "acc_a",
-      asset_id: "fund_f",
-      trade_date: "2027-01-15",
-      value_date: "2027-01-18",
-      quantity: "10",
-      unit_price: "100",
-    });
-    b.sell({
-      account_id: "acc_a",
-      asset_id: "fund_f",
-      trade_date: "2027-01-14",
-      value_date: "2027-01-20",
-      quantity: "10",
-      unit_price: "90",
-      fx_rate_date: "2027-01-14",
-    });
-    buy(b, "stock_s", "2028-01-10", "1", "10");
-    expect(reportOf(b.build(), 2028).doubtful.find((d) => d.criterion === "1")).toBeUndefined();
-    expect(DEFAULT_SETTINGS.fiscal_date_rule.fund).toBe("value_date");
+    const ledger = (settings: Settings) => {
+      const b = taxBuilder(settings);
+      b.buy({
+        account_id: "acc_a",
+        asset_id: "fund_f",
+        trade_date: "2027-01-15",
+        value_date: "2027-01-18",
+        quantity: "10",
+        unit_price: "100",
+      });
+      b.sell({
+        account_id: "acc_a",
+        asset_id: "fund_f",
+        trade_date: "2027-01-14",
+        value_date: "2027-01-20",
+        quantity: "10",
+        unit_price: "90",
+        fx_rate_date: "2027-01-14",
+      });
+      buy(b, "stock_s", "2028-01-10", "1", "10");
+      return b.build();
+    };
+    // The other reading of #1 (funds by trade date) sells before it buys: the
+    // ledger it gives is refused, which is what makes the case.
+    expect(() =>
+      reportOf(ledger({ ...DEFAULT_SETTINGS, fiscal_date_rule: { fund: "trade_date" } }), 2028),
+    ).toThrow(expect.objectContaining({ code: "tax_ledger_invalid" }));
+    // And 2028 has no figure that applies #1 to a fund: nothing to show.
+    expect(
+      reportOf(ledger(DEFAULT_SETTINGS), 2028).doubtful.find((d) => d.criterion === "1"),
+    ).toBeUndefined();
   });
 });
