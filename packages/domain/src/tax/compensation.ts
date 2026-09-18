@@ -153,6 +153,7 @@ export const compensate = (
   return {
     capital_gain_eur: balances.capital_gain,
     movable_capital_eur: balances.movable_capital,
+    limit_pct: rules.limitPct.toString(),
     limit_eur: limit,
     steps,
     pending: [...left.filter((entry) => entry.expires_after > year), ...carried],

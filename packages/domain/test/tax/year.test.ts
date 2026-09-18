@@ -453,7 +453,8 @@ describe("the other doubtful criteria", () => {
       event_ids: [sale.id],
       direction: "conservative",
     });
-    expect(item?.reason).toContain("1 events invalid");
+    expect(item?.reason).toBe("invalid_under_alternative");
+    expect(item?.invalid_count).toBe(1);
   });
 });
 

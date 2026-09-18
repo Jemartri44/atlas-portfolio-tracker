@@ -208,7 +208,9 @@ export interface PendingLoss {
 export interface Compensation {
   capital_gain_eur: Money;
   movable_capital_eur: Money;
-  /** 25 % (or what the settings say) of each positive balance: the joint limit of both phases. */
+  /** The percentage in force (`savings_offset_limit_pct`, 25 by default). */
+  limit_pct: string;
+  /** That percentage of each positive balance: the joint limit of both phases. */
   limit_eur: { capital_gain: Money; movable_capital: Money };
   steps: CompensationStep[];
   /** What is left after the year, by origin and category, including this year's. */
@@ -252,8 +254,15 @@ export interface DoubtfulItem {
   exposure_eur?: Money;
   /** If the criterion is wrong: declared too much (conservative) or too little (aggressive). */
   direction: RiskDirection | "none";
-  /** Why it could not be quantified, when it could not. */
-  reason?: string;
+  /**
+   * Why the measure is what it is, as a code the interfaces translate:
+   * `invalid_under_alternative` (the other reading leaves `invalid_count`
+   * events invalid), `lot_in_other_currency` (#4 cannot be recomputed in the
+   * currency of the sale), `regime_not_recorded` (an exchange without a word on
+   * the neutrality regime: its taxable value is not in the ledger).
+   */
+  reason?: "invalid_under_alternative" | "lot_in_other_currency" | "regime_not_recorded";
+  invalid_count?: number;
   /** Markets of the listed securities involved (#2, Q15). */
   markets?: string[];
 }

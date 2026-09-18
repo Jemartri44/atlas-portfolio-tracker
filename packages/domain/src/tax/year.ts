@@ -521,7 +521,8 @@ const doubtful = (
             measure: "not_quantifiable",
             event_ids: lines.map((line) => line.event_id),
             direction: FISCAL_CRITERIA[alternative.criterion].risk,
-            reason: `the other reading leaves ${other.invalid.length} events invalid`,
+            reason: "invalid_under_alternative",
+            invalid_count: other.invalid.length,
           }),
         );
       }
@@ -580,7 +581,7 @@ const doubtful = (
           ? { base_difference_eur: difference }
           : { exposure_eur: sum(foreign.map((line) => line.own_eur.roundToCents())) }),
         direction: computable ? directionOf(difference, zero()) : "both",
-        ...(computable ? {} : { reason: "a lot was acquired in another currency" }),
+        ...(computable ? {} : { reason: "lot_in_other_currency" as const }),
       }),
     );
   }
@@ -686,8 +687,7 @@ const doubtful = (
         event_ids: [action.id],
         exposure_eur: sum(created.map((lot) => lot.original_cost_eur)).roundToCents(),
         direction: "aggressive",
-        reason:
-          "if the neutrality regime does not apply, the exchange is a taxable swap whose value the ledger does not record",
+        reason: "regime_not_recorded",
       }),
     );
   }
