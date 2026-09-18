@@ -1,4 +1,4 @@
-// Router and shell. Eleven routes, all readable and navigable
+// Router and shell. Twelve routes, all readable and navigable
 // (`specs/006-web-shell/contracts/routes.md`), each screen lazily loaded so the
 // first paint only carries what the summary needs.
 
@@ -14,7 +14,6 @@ const Registrar = lazy(() => import("./routes/registrar/index.jsx"));
 const RegistrarForm = lazy(() => import("./routes/registrar/form.jsx"));
 const Cubo = lazy(() => import("./routes/cubo/index.jsx"));
 const Nucleo = lazy(() => import("./routes/nucleo/index.jsx"));
-const Reservado = lazy(() => import("./routes/reservado/index.jsx"));
 const Ajustes = lazy(() => import("./routes/ajustes/index.jsx"));
 const Configuracion = lazy(() => import("./routes/ajustes/configuracion.jsx"));
 const Verificacion = lazy(() => import("./routes/ajustes/verificacion.jsx"));

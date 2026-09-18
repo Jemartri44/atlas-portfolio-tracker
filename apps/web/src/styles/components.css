@@ -529,17 +529,6 @@ dialog .dialog-actions {
   margin: 0;
 }
 
-/* --- Reserved destinations --------------------------------------------- */
-
-.reserved {
-  display: grid;
-  gap: var(--s-3);
-}
-
-.reserved code {
-  font-size: var(--t-sm);
-}
-
 /* --- The date every analytical screen is read at ------------------------ */
 
 .asof {
