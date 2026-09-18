@@ -301,6 +301,10 @@ describe("atlas ca", () => {
         "2027-05-03",
         "--fees",
         "acc_fund=2",
+        // ADR-0021: a fund liquidation withholds on the gain (fiscal question
+        // #12), and the withholding rides next to the fee, account by account.
+        "--withholdings",
+        "acc_fund=3.80",
         ...CA,
         "--effective-date",
         "2027-05-03",
@@ -310,7 +314,7 @@ describe("atlas ca", () => {
     expect((await lastEvent(h)).effects).toEqual([
       {
         op: "forced_sale",
-        per_account: [{ account_id: "acc_fund", quantity: "all", fee: "2" }],
+        per_account: [{ account_id: "acc_fund", quantity: "all", fee: "2", withholding: "3.80" }],
         unit_price: "120",
         currency: "EUR",
         fx_rate: "1",

@@ -264,12 +264,16 @@ export const applyForcedSale = (
       account_id: entry.account_id,
       quantity,
       fee: Money.parse(entry.fee ?? "0", effect.currency),
+      withholding: Money.parse(entry.withholding ?? "0", effect.currency),
     };
   });
 
   for (const entry of entries) {
     const proceeds = price.times(entry.quantity).sub(entry.fee);
-    adjustCash(state, entry.account_id, proceeds);
+    // The withholding leaves the cash and nothing else, exactly as in a `sell`:
+    // it is a payment on account, not a cost of the disposal, so the gain is
+    // computed on the full proceeds (ADR-0021, fiscal question #12).
+    adjustCash(state, entry.account_id, proceeds.sub(entry.withholding));
     adjustPosition(state, entry.account_id, asset.asset_id, negative(entry.quantity), ctx.eventId);
     const slices = consume(state, asset.asset_id, entry.quantity, ctx.eventId);
     const gain = recordGain(state, {

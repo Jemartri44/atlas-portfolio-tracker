@@ -384,6 +384,18 @@ export interface ForcedSaleEntry {
   /** Quantity sold in that account, or `"all"` for its whole physical position. */
   quantity: DecimalString | "all";
   fee?: DecimalString;
+  /**
+   * Tax withheld by that broker, in the effect's `currency` (ADR-0021). Same
+   * treatment as `sell.withholding`: it leaves the cash that comes in and it
+   * touches neither the disposal value nor the cost of the lots.
+   *
+   * It lives **per account** and not on the effect, unlike what ADR-0021 first
+   * said: a forced sale settles account by account and each broker withholds
+   * its own, so a single amount would have to be split between accounts and the
+   * split would be a figure the system invented. It is the same reason the fee
+   * moved here (challenge 2026-08-31, finding 8).
+   */
+  withholding?: DecimalString;
 }
 
 export interface ForcedSaleEffect extends EffectBase {

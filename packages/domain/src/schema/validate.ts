@@ -149,6 +149,7 @@ const PER_ACCOUNT_RULES: Partial<Record<EffectOp, Rules>> = {
     account_id: req("string"),
     quantity: req("all_or_positive_decimal"),
     fee: opt("decimal"),
+    withholding: opt("decimal"),
   },
   grant: { account_id: req("string"), quantity: req("positive_decimal") },
 };

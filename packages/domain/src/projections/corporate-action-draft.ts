@@ -64,6 +64,12 @@ export interface CorporateActionParams {
   cash?: CashSettlement;
   /** Fee the broker charged, per account taking part in the forced sale. */
   fees?: Readonly<Record<AccountId, DecimalString>>;
+  /**
+   * Tax withheld, per account taking part in the forced sale (ADR-0021). Per
+   * account and not per event because each broker withholds its own; splitting
+   * one figure between accounts would be inventing it.
+   */
+  withholdings?: Readonly<Record<AccountId, DecimalString>>;
   /** Only for the escape hatch: effects given verbatim, composed by nobody. */
   effects?: readonly Effect[];
 }
@@ -115,20 +121,31 @@ const priceOf = (
   fx_rate_date: cash.fx_rate_date,
 });
 
-/** Attaches the fee of each account taking part in the sale. */
-const withFees = (
+/** Per-account amounts of a forced sale: what each broker charged and what it withheld. */
+type PerAccountAmounts = Readonly<Record<AccountId, DecimalString>> | undefined;
+
+/** Attaches a per-account amount (fee, withholding) to each entry of the sale. */
+const withPerAccount = (
   entries: readonly ForcedSaleEntry[],
-  fees: Readonly<Record<AccountId, DecimalString>> | undefined,
+  amounts: PerAccountAmounts,
+  field: "fee" | "withholding",
 ): ForcedSaleEntry[] => {
-  if (fees === undefined) {
+  if (amounts === undefined) {
     return [...entries];
   }
   return entries.map((entry) =>
-    fees[entry.account_id] === undefined
+    amounts[entry.account_id] === undefined
       ? entry
-      : { ...entry, fee: fees[entry.account_id] as DecimalString },
+      : { ...entry, [field]: amounts[entry.account_id] as DecimalString },
   );
 };
+
+/** Both maps, in one pass, so the caller cannot attach one and forget the other. */
+const withAmounts = (
+  entries: readonly ForcedSaleEntry[],
+  params: CorporateActionParams,
+): ForcedSaleEntry[] =>
+  withPerAccount(withPerAccount(entries, params.fees, "fee"), params.withholdings, "withholding");
 
 /** Accounts that end up selling something in the composed sequence. */
 const sellingAccounts = (effects: readonly Effect[]): AccountId[] =>
@@ -147,22 +164,30 @@ const sellingAccounts = (effects: readonly Effect[]): AccountId[] =>
  * (`docs/business-rules.md`); losing it overstates the gain, and the ledger is
  * append-only, so the mistake is expensive to undo years later.
  */
-const checkFees = (
+const checkPerAccount = (
   selling: readonly AccountId[],
-  fees: Readonly<Record<AccountId, DecimalString>> | undefined,
+  amounts: PerAccountAmounts,
+  field: "fee" | "withholding",
 ): void => {
-  if (fees === undefined) {
+  if (amounts === undefined) {
     return;
   }
   const set = new Set(selling);
-  for (const account of Object.keys(fees)) {
+  for (const account of Object.keys(amounts)) {
     if (!set.has(account)) {
       fail("fee_account_not_selling", `account ${account} takes no part in the forced sale`, {
         account_id: account,
+        field,
         selling: [...set],
       });
     }
   }
+};
+
+/** The same refusal for both maps: a withholding that lands nowhere is as wrong as a fee. */
+const checkAmounts = (selling: readonly AccountId[], params: CorporateActionParams): void => {
+  checkPerAccount(selling, params.fees, "fee");
+  checkPerAccount(selling, params.withholdings, "withholding");
 };
 
 const eventOf = (
@@ -240,7 +265,7 @@ const withFractionalSale = (
     {
       op: "forced_sale",
       ...(asset === params.asset_id ? {} : { asset_id: asset }),
-      per_account: withFees(fractional, params.fees),
+      per_account: withAmounts(fractional, params),
       ...priceOf(params.cash),
     },
   ];
@@ -277,7 +302,7 @@ export const corporateActionDraft = (
   params: CorporateActionParams,
 ): CorporateActionDraft => {
   const composed = compose(state, events, params);
-  checkFees(sellingAccounts(composed.draft.effects), params.fees);
+  checkAmounts(sellingAccounts(composed.draft.effects), params);
   return composed;
 };
 
@@ -343,7 +368,7 @@ const compose = (
         quantity: "all",
       }));
       return plain(params, [
-        { op: "forced_sale", per_account: withFees(entries, params.fees), ...priceOf(cash) },
+        { op: "forced_sale", per_account: withAmounts(entries, params), ...priceOf(cash) },
       ]);
     }
     case "delisting":

@@ -32,7 +32,14 @@ import { parseAssignments } from "./catalogue.js";
 import { confirm } from "./shared.js";
 
 const COMMON_FLAGS = ["asset", "effective-date", "source-document", "notes"];
-const CASH_FLAGS = ["cash-per-share", "currency", "fx-rate", "fx-rate-date", "fees"];
+const CASH_FLAGS = [
+  "cash-per-share",
+  "currency",
+  "fx-rate",
+  "fx-rate-date",
+  "fees",
+  "withholdings",
+];
 
 interface Wizard {
   kind: CorporateActionKind;
@@ -41,10 +48,24 @@ interface Wizard {
   params: (flags: Flags) => Promise<Partial<CorporateActionParams>>;
 }
 
-/** Fees per account from `--fees acc=x,…`; the domain refuses one that is not selling. */
-const feesOf = (flags: Flags): Record<string, string> | undefined => {
-  const raw = stringFlag(flags, "fees");
-  return raw === undefined ? undefined : parseAssignments(raw, "fees");
+/**
+ * Per-account amounts of a forced sale from `--fees acc=x,…` and
+ * `--withholdings acc=y,…`; the domain refuses one naming an account that is
+ * not selling, so neither can be swallowed in silence.
+ */
+const perAccountOf = (flags: Flags, flag: string): Record<string, string> | undefined => {
+  const raw = stringFlag(flags, flag);
+  return raw === undefined ? undefined : parseAssignments(raw, flag);
+};
+
+/** Both maps of a settlement, ready to spread into the params. */
+const amountsOf = (flags: Flags): Partial<CorporateActionParams> => {
+  const fees = perAccountOf(flags, "fees");
+  const withholdings = perAccountOf(flags, "withholdings");
+  return {
+    ...(fees === undefined ? {} : { fees }),
+    ...(withholdings === undefined ? {} : { withholdings }),
+  };
 };
 
 /** The cash settlement of the leftovers, when `--cash-per-share` is given. */
@@ -60,11 +81,10 @@ const cashOf = (flags: Flags, priceFlag: string): CashSettlement | undefined =>
 
 const settled = async (flags: Flags): Promise<Partial<CorporateActionParams>> => {
   const cash = cashOf(flags, "cash-per-share");
-  const fees = feesOf(flags);
   return {
     ratio: requireFlag(flags, "ratio"),
     ...(cash === undefined ? {} : { cash }),
-    ...(fees === undefined ? {} : { fees }),
+    ...amountsOf(flags),
   };
 };
 
@@ -105,14 +125,11 @@ const WIZARDS: Record<string, Wizard> = {
   },
   "fund-liquidation": {
     kind: "fund_liquidation",
-    flags: ["unit-price", "currency", "fx-rate", "fx-rate-date", "fees"],
-    params: async (flags) => {
-      const fees = feesOf(flags);
-      return {
-        cash: cashOf(flags, "unit-price") as CashSettlement,
-        ...(fees === undefined ? {} : { fees }),
-      };
-    },
+    flags: ["unit-price", "currency", "fx-rate", "fx-rate-date", "fees", "withholdings"],
+    params: async (flags) => ({
+      cash: cashOf(flags, "unit-price") as CashSettlement,
+      ...amountsOf(flags),
+    }),
   },
   delisting: { kind: "delisting", flags: [], params: async () => ({}) },
   raw: {
@@ -196,9 +213,10 @@ const requireDestination = (state: LedgerState, params: Partial<CorporateActionP
 
 /**
  * Composes through the domain, and turns the one rejection that is really about
- * a **flag** back into a usage error: naming an account in `--fees` that takes
- * no part in the sale is a typo on the command line, not a ledger problem, and
- * it has exited 64 since the wizards were written.
+ * a **flag** back into a usage error: naming an account in `--fees` or in
+ * `--withholdings` that takes no part in the sale is a typo on the command
+ * line, not a ledger problem, and it has exited 64 since the wizards were
+ * written.
  */
 const compose = (
   state: LedgerState,
@@ -209,8 +227,9 @@ const compose = (
     return corporateActionDraft(state, events, params);
   } catch (error) {
     if (error instanceof DomainError && error.code === "fee_account_not_selling") {
+      const flag = error.details.field === "withholding" ? "withholdings" : "fees";
       throw new UsageError(
-        `--fees: la cuenta ${String(error.details.account_id)} no participa en la venta de picos`,
+        `--${flag}: la cuenta ${String(error.details.account_id)} no participa en la venta de picos`,
       );
     }
     throw error;

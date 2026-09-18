@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";
+import { Decimal } from "../../src/money/decimal.js";
 import { cashBalances } from "../../src/projections/cash.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
@@ -307,6 +308,59 @@ describe("applyForcedSale", () => {
     expect(gain?.cost_eur.amount.toString()).toBe("1000");
     expect(gain?.gain_eur_rounded.amount.toString()).toBe("195");
     expect(integrity(state)).toEqual([]);
+  });
+
+  /**
+   * ADR-0021: a fund liquidation, a rights sale or an ETC at a Spanish broker
+   * all withhold on account. The withholding leaves the cash and **nothing
+   * else**: the gain is still computed on the full proceeds, exactly as in a
+   * `sell` (fiscal question #12). It is per account because each broker
+   * withholds its own; one figure split between accounts would be invented.
+   */
+  it("takes the withholding out of the cash of its own account and out of nothing else", () => {
+    const state = stateWith(tenShares);
+    applyForcedSale(
+      state,
+      sale([{ account_id: "acc_fund", quantity: "all", fee: "5", withholding: "37.05" }]),
+      ctx,
+    );
+    // 10 × 120 − 5 fee = 1195 of proceeds, minus 37.05 withheld = 1157.95 in,
+    // on top of the −1000 the purchase left. Without the withholding it is 195,
+    // which is what the test above asserts.
+    expect(
+      cashBalances(state).map((c) => `${c.account_id}|${c.currency}=${c.balance.amount}`),
+    ).toEqual(["acc_fund|EUR=157.95"]);
+    const [gain] = state.gains;
+    // The gain does not move: a payment on account is not a cost of the disposal.
+    expect(gain?.proceeds_eur.amount.toString()).toBe("1195");
+    expect(gain?.gain_eur_rounded.amount.toString()).toBe("195");
+    expect(integrity(state)).toEqual([]);
+  });
+
+  it("withholds account by account, and an account without one is untouched", () => {
+    const state = stateWith(twoAccounts);
+    const before = new Map(
+      cashBalances(state).map((c) => [c.account_id, c.balance.amount.toString()]),
+    );
+    applyForcedSale(
+      state,
+      sale([
+        { account_id: "acc_etf", quantity: "1", withholding: "10" },
+        { account_id: "acc_fund", quantity: "1" },
+      ]),
+      ctx,
+    );
+    const moved = (account: string): string =>
+      Decimal.parse(
+        cashBalances(state)
+          .find((c) => c.account_id === account)
+          ?.balance.amount.toString() ?? "0",
+      )
+        .sub(Decimal.parse(before.get(account) ?? "0"))
+        .toString();
+    // Each one sells 1 at 120. The one that withheld 10 takes in 110; the other
+    // one, which withheld nothing, takes in the whole 120.
+    expect([moved("acc_etf"), moved("acc_fund")]).toEqual(["110", "120"]);
   });
 
   it("books one sale per account, with its own fee, consuming global FIFO lots", () => {
