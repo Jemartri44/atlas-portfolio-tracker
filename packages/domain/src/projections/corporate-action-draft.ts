@@ -115,7 +115,7 @@ const priceOf = (
   fx_rate_date: cash.fx_rate_date,
 });
 
-/** Attaches the fee of each account, and refuses one for an account that is not selling. */
+/** Attaches the fee of each account taking part in the sale. */
 const withFees = (
   entries: readonly ForcedSaleEntry[],
   fees: Readonly<Record<AccountId, DecimalString>> | undefined,
@@ -123,20 +123,46 @@ const withFees = (
   if (fees === undefined) {
     return [...entries];
   }
-  const selling = new Set(entries.map((entry) => entry.account_id));
-  for (const account of Object.keys(fees)) {
-    if (!selling.has(account)) {
-      fail("fee_account_not_selling", `account ${account} takes no part in the forced sale`, {
-        account_id: account,
-        selling: [...selling],
-      });
-    }
-  }
   return entries.map((entry) =>
     fees[entry.account_id] === undefined
       ? entry
       : { ...entry, fee: fees[entry.account_id] as DecimalString },
   );
+};
+
+/** Accounts that end up selling something in the composed sequence. */
+const sellingAccounts = (effects: readonly Effect[]): AccountId[] =>
+  effects.flatMap((effect) =>
+    effect.op === "forced_sale" ? effect.per_account.map((entry) => entry.account_id) : [],
+  );
+
+/**
+ * A fee that lands nowhere is **refused**, never dropped.
+ *
+ * It is checked against the sequence that was actually composed, not inside the
+ * branch that builds the sale, because the ways of ending up with no sale are
+ * several and each of them used to swallow the fee in silence: a split with no
+ * cash settlement, a reverse split where nobody was left with a fraction, an
+ * escape hatch with hand-written effects. The fee is a cost of a disposal
+ * (`docs/business-rules.md`); losing it overstates the gain, and the ledger is
+ * append-only, so the mistake is expensive to undo years later.
+ */
+const checkFees = (
+  selling: readonly AccountId[],
+  fees: Readonly<Record<AccountId, DecimalString>> | undefined,
+): void => {
+  if (fees === undefined) {
+    return;
+  }
+  const set = new Set(selling);
+  for (const account of Object.keys(fees)) {
+    if (!set.has(account)) {
+      fail("fee_account_not_selling", `account ${account} takes no part in the forced sale`, {
+        account_id: account,
+        selling: [...set],
+      });
+    }
+  }
 };
 
 const eventOf = (
@@ -246,6 +272,16 @@ const plain = (
  * builds is the one that `kind` admits.
  */
 export const corporateActionDraft = (
+  state: LedgerState,
+  events: readonly LedgerEvent[],
+  params: CorporateActionParams,
+): CorporateActionDraft => {
+  const composed = compose(state, events, params);
+  checkFees(sellingAccounts(composed.draft.effects), params.fees);
+  return composed;
+};
+
+const compose = (
   state: LedgerState,
   events: readonly LedgerEvent[],
   params: CorporateActionParams,

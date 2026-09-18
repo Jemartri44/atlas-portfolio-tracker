@@ -220,6 +220,28 @@ describe("corporateActionDraft: the fractional shares", () => {
     expect(result.no_fractions).toBe(false);
   });
 
+  /**
+   * A leftover of **half a share or more**. `position − ⌊position⌋` is the
+   * rule; rounding the position instead would give 10/4 = 2,5 → 3 whole shares
+   * and a leftover of −0,5, which is not a quantity. With a leftover under a
+   * half the two agree, which is why every earlier case passed either way.
+   */
+  it("sells a leftover of half a share as readily as one of a third", () => {
+    const result = compose({ ...base, kind: "reverse_split", ratio: "1/4", cash: CASH }, [
+      { account: "acc_a", quantity: "10" },
+    ]);
+
+    expect(result.fractional).toEqual([{ account_id: "acc_a", quantity: "0.5" }]);
+    expect(effectsOf(result)).toEqual([
+      { op: "scale", ratio: "1/4" },
+      {
+        op: "forced_sale",
+        per_account: [{ account_id: "acc_a", quantity: "0.5" }],
+        ...CASH,
+      },
+    ]);
+  });
+
   it("says so, and generates no sale, when the split leaves nobody with a fraction", () => {
     const result = compose({ ...base, kind: "reverse_split", ratio: "1/2", cash: CASH }, [
       { account: "acc_a", quantity: "10" },
@@ -275,6 +297,42 @@ describe("corporateActionDraft: the fractional shares", () => {
         { account: "acc_a", quantity: "10" },
       ]),
     ).toThrow(expect.objectContaining({ code: "fee_account_not_selling" }));
+  });
+
+  /**
+   * The three ways of composing an action with **no sale at all** used to drop
+   * the fee without a word. A fee is a cost of a disposal: losing it overstates
+   * the gain, and the ledger is append-only, so it is expensive to undo later.
+   */
+  it("refuses a fee when the action generates no sale at all", () => {
+    // Nobody is left with a fraction: 10/2 is five whole shares.
+    expect(() =>
+      compose({ ...base, kind: "reverse_split", ratio: "1/2", cash: CASH, fees: { acc_a: "1" } }, [
+        { account: "acc_a", quantity: "10" },
+      ]),
+    ).toThrow(expect.objectContaining({ code: "fee_account_not_selling" }));
+
+    // A reverse split with no cash settlement sells nothing either.
+    expect(() =>
+      compose({ ...base, kind: "reverse_split", ratio: "1/3", fees: { acc_a: "1" } }, [
+        { account: "acc_a", quantity: "10" },
+      ]),
+    ).toThrow(expect.objectContaining({ code: "fee_account_not_selling" }));
+
+    // And a plain split has no sale in its sequence by definition.
+    expect(() =>
+      compose({ ...base, kind: "split", ratio: "2", fees: { acc_a: "1" } }, [
+        { account: "acc_a", quantity: "10" },
+      ]),
+    ).toThrow(expect.objectContaining({ code: "fee_account_not_selling" }));
+  });
+
+  it("accepts an empty fee map anywhere: nothing was asked for", () => {
+    expect(() =>
+      compose({ ...base, kind: "split", ratio: "2", fees: {} }, [
+        { account: "acc_a", quantity: "10" },
+      ]),
+    ).not.toThrow();
   });
 
   it("attaches the fee of a liquidation too", () => {
