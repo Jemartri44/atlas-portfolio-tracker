@@ -353,19 +353,32 @@ describe("the other doubtful criteria", () => {
   it("#4: the currency-first method is an exposure when a lot was bought in another currency", () => {
     const b = taxBuilder();
     buy(b, "stock_s", "2027-01-11", "10", "100");
+    buy(b, "stock_t", "2027-01-11", "10", "100");
+    // 1,320 USD / 1.2 = 1,100 against 1,000: +100.
     b.sell({
       account_id: "acc_a",
       asset_id: "stock_s",
       value_date: "2027-06-01",
       quantity: "10",
-      unit_price: "120",
+      unit_price: "132",
+      currency: "USD",
+      fx_rate: "1.2",
+    });
+    // 1,080 USD / 1.2 = 900 against 1,000: −100. An exposure counts it as 100.
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "stock_t",
+      value_date: "2027-06-01",
+      quantity: "10",
+      unit_price: "108",
       currency: "USD",
       fx_rate: "1.2",
     });
     const item = reportOf(b.build(), 2027).doubtful.find((d) => d.criterion === "4");
     expect(item?.measure).toBe("exposure");
+    expect(item?.reason).toBe("lot_in_other_currency");
     expect(item?.direction).toBe("both");
-    expect(text(item?.exposure_eur)).toBe("0");
+    expect(text(item?.exposure_eur)).toBe("200");
   });
 
   it("#5: a foreign amount converted at an older rate is an exposure, in euros it is nothing", () => {

@@ -601,7 +601,15 @@ const doubtful = (
         event_ids: foreign.map((line) => line.event_id),
         ...(computable
           ? { base_difference_eur: difference }
-          : { exposure_eur: sum(foreign.map((line) => line.own_eur.roundToCents())) }),
+          : {
+              // An exposure is an amount at stake, whatever the sign of the result.
+              exposure_eur: sum(
+                foreign.map((line) => {
+                  const own = line.own_eur.roundToCents();
+                  return own.isNegative() ? own.neg() : own;
+                }),
+              ),
+            }),
         direction: computable ? directionOf(difference, zero()) : "both",
         ...(computable ? {} : { reason: "lot_in_other_currency" as const }),
       }),
