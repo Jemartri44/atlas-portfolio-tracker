@@ -137,13 +137,15 @@ export default function VerificacionRoute(): JSX.Element {
                   que no cuadran, líneas no canónicas, campos desconocidos y proyección
                   reproducible.
                 </p>
-                <Show when={deep() !== undefined}>
-                  <Show
-                    when={(deep() ?? []).length > 0}
-                    fallback={<p class="flush">Sin hallazgos: el libro es reproducible.</p>}
-                  >
-                    <Findings findings={deep() as IntegrityFinding[]} />
-                  </Show>
+                <Show when={deep()}>
+                  {(found) => (
+                    <Show
+                      when={found().length > 0}
+                      fallback={<p class="flush">Sin hallazgos: el libro es reproducible.</p>}
+                    >
+                      <Findings findings={found()} />
+                    </Show>
+                  )}
                 </Show>
               </section>
 

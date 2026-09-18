@@ -5,7 +5,7 @@
 // registers, filled in with what the event says today.
 
 import { A, useParams } from "@solidjs/router";
-import { For, type JSX, Show } from "solid-js";
+import { createMemo, For, type JSX, Show } from "solid-js";
 import { EmptyState } from "../../components/index.js";
 import { fieldLabel } from "../../format/labels.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
@@ -19,17 +19,27 @@ export default function MovimientoEditarRoute(): JSX.Element {
   return (
     <RequireLedger writes skeleton={8}>
       {(snapshot) => {
-        const event = () => snapshot.events.find((candidate) => candidate.id === params.id);
-        const spec = () => {
+        const event = createMemo(() =>
+          snapshot.events.find((candidate) => candidate.id === params.id),
+        );
+
+        /*
+         * The event **and** its form, together: the screen only exists when
+         * both are there, and resolving them in one place is what lets
+         * `<Show>` narrow instead of asserting (six `as NonNullable<…>`).
+         */
+        const target = createMemo(() => {
           const current = event();
-          return current === undefined
-            ? undefined
-            : FORM_SPECS.find((candidate) => candidate.type === current.type);
-        };
+          if (current === undefined) {
+            return undefined;
+          }
+          const spec = FORM_SPECS.find((candidate) => candidate.type === current.type);
+          return spec === undefined ? undefined : { event: current, spec };
+        });
 
         return (
           <Show
-            when={event() !== undefined && spec() !== undefined}
+            when={target()}
             fallback={
               <>
                 <PageHeader title="Corregir" />
@@ -45,47 +55,57 @@ export default function MovimientoEditarRoute(): JSX.Element {
               </>
             }
           >
-            <PageHeader
-              title={`Corregir ${(spec() as NonNullable<ReturnType<typeof spec>>).title.toLowerCase()}`}
-              lead="Se anula el original y se registra el corregido; nada se borra del fichero."
-            />
+            {(found) => (
+              <>
+                <PageHeader
+                  title={`Corregir ${found().spec.title.toLowerCase()}`}
+                  lead="Se anula el original y se registra el corregido; nada se borra del fichero."
+                />
 
-            <div class="stack">
-              <section class="card">
-                <header>
-                  <h2>Como está registrado ahora</h2>
-                </header>
-                <dl class="fields">
-                  <For
-                    each={Object.entries(event() as NonNullable<ReturnType<typeof event>>).filter(
-                      ([name]) =>
-                        !["schema_version", "id", "recorded_at", "type", "fingerprint"].includes(
-                          name,
-                        ),
-                    )}
-                  >
-                    {([name, value]) => (
-                      <>
-                        <dt>{fieldLabel(name)}</dt>
-                        <dd>{typeof value === "object" ? JSON.stringify(value) : String(value)}</dd>
-                      </>
-                    )}
-                  </For>
-                </dl>
-              </section>
+                <div class="stack">
+                  <section class="card">
+                    <header>
+                      <h2>Como está registrado ahora</h2>
+                    </header>
+                    <dl class="fields">
+                      <For
+                        each={Object.entries(found().event).filter(
+                          ([name]) =>
+                            ![
+                              "schema_version",
+                              "id",
+                              "recorded_at",
+                              "type",
+                              "fingerprint",
+                            ].includes(name),
+                        )}
+                      >
+                        {([name, value]) => (
+                          <>
+                            <dt>{fieldLabel(name)}</dt>
+                            <dd>
+                              {typeof value === "object" ? JSON.stringify(value) : String(value)}
+                            </dd>
+                          </>
+                        )}
+                      </For>
+                    </dl>
+                  </section>
 
-              <EventForm
-                spec={spec() as NonNullable<ReturnType<typeof spec>>}
-                state={snapshot.state}
-                correcting={{
-                  id: params.id,
-                  values: valuesOfEvent(
-                    spec() as NonNullable<ReturnType<typeof spec>>,
-                    event() as unknown as Record<string, unknown>,
-                  ),
-                }}
-              />
-            </div>
+                  <EventForm
+                    spec={found().spec}
+                    state={snapshot.state}
+                    correcting={{
+                      id: params.id,
+                      values: valuesOfEvent(
+                        found().spec,
+                        found().event as unknown as Record<string, unknown>,
+                      ),
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </Show>
         );
       }}

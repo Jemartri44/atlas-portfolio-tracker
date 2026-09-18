@@ -70,7 +70,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
 
         return (
           <Show
-            when={entry() !== undefined}
+            when={entry()}
             fallback={
               <>
                 <PageHeader title="Movimiento" />
@@ -80,25 +80,25 @@ export default function MovimientoDetalleRoute(): JSX.Element {
               </>
             }
           >
-            {(() => {
-              const view = detailView(entry() as NonNullable<ReturnType<typeof entry>>);
+            {(found) => {
+              const view = createMemo(() => detailView(found()));
               return (
                 <>
                   <PageHeader
-                    title={view.typeLabel}
-                    lead={`${formatDate((entry() as NonNullable<ReturnType<typeof entry>>).sort_date)} · ${view.statusLabel}`}
+                    title={view().typeLabel}
+                    lead={`${formatDate(found().sort_date)} · ${view().statusLabel}`}
                     actions={
                       <>
-                        <Show when={view.editable}>
+                        <Show when={view().editable}>
                           <A
-                            href={`/movimientos/${view.id}/editar`}
+                            href={`/movimientos/${view().id}/editar`}
                             role="button"
                             class="secondary"
                           >
                             Corregir
                           </A>
                         </Show>
-                        <Show when={view.status !== "reversed" && view.status !== "reversal"}>
+                        <Show when={view().status !== "reversed" && view().status !== "reversal"}>
                           <button type="button" class="secondary" onClick={() => setAsking(true)}>
                             Anular
                           </button>
@@ -120,9 +120,9 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                     </Callout>
                   </Show>
 
-                  <Show when={view.invalidReason !== undefined}>
+                  <Show when={view().invalidReason !== undefined}>
                     <Callout tone="error" title="Este evento es inválido">
-                      {view.invalidReason}
+                      {view().invalidReason}
                     </Callout>
                   </Show>
 
@@ -142,10 +142,10 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   </Show>
 
                   <div class="stack">
-                    <Show when={view.status !== "current"}>
+                    <Show when={view().status !== "current"}>
                       <div class="row wrap">
-                        <Badge tone={view.status === "reversed" ? "negative" : "neutral"}>
-                          {view.statusLabel}
+                        <Badge tone={view().status === "reversed" ? "negative" : "neutral"}>
+                          {view().statusLabel}
                         </Badge>
                       </div>
                     </Show>
@@ -155,7 +155,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                         <h2>Datos del evento</h2>
                       </header>
                       <dl class="fields">
-                        <For each={view.fields}>
+                        <For each={view().fields}>
                           {(field) => (
                             <>
                               <dt>{field.label}</dt>
@@ -187,13 +187,13 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                       </dl>
                     </section>
 
-                    <Show when={view.links.length > 0}>
+                    <Show when={view().links.length > 0}>
                       <section class="card">
                         <header>
                           <h2>Enlaces</h2>
                         </header>
                         <dl class="fields">
-                          <For each={view.links}>
+                          <For each={view().links}>
                             {(link) => (
                               <>
                                 <dt>{link.label}</dt>
@@ -212,7 +212,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                         <h2>La línea del libro</h2>
                       </header>
                       <dl class="fields">
-                        <For each={view.envelope}>
+                        <For each={view().envelope}>
                           {(field) => (
                             <>
                               <dt>{field.label}</dt>
@@ -229,9 +229,8 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                         </For>
                       </dl>
                       <p class="note">
-                        Posición en el fichero:{" "}
-                        {(entry() as NonNullable<ReturnType<typeof entry>>).position + 1}. Con este
-                        identificador puedes rectificar también desde la CLI.
+                        Posición en el fichero: {found().position + 1}. Con este identificador
+                        puedes rectificar también desde la CLI.
                       </p>
                     </section>
                   </div>
@@ -271,7 +270,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   </Dialog>
                 </>
               );
-            })()}
+            }}
           </Show>
         );
       }}

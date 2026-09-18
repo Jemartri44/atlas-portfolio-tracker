@@ -6,7 +6,7 @@
 import { A, Navigate } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import { Callout, Skeleton } from "../components/index.js";
-import type { LedgerSnapshot } from "../ledger/state.js";
+import type { AppError, LedgerSnapshot } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
 
 interface RequireLedgerProps {
@@ -20,6 +20,22 @@ interface RequireLedgerProps {
 
 export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
   const phase = () => store.load();
+
+  /*
+   * The two phases that carry something, read through the type and not through
+   * an assertion: `<Show when={x()}>{(x) => …}</Show>` narrows, which is what
+   * the twelve `as NonNullable<…>` of the screens were standing in for.
+   */
+  const loaded = (): LedgerSnapshot | undefined => {
+    const current = phase();
+    return current.phase === "ready" ? current.snapshot : undefined;
+  };
+
+  const failure = (): AppError | undefined => {
+    const current = phase();
+    return current.phase === "failed" ? current.error : undefined;
+  };
+
   return (
     <Show
       when={phase().phase !== "unconfigured" && phase().phase !== "reconnect"}
@@ -30,51 +46,47 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
         fallback={<Skeleton lines={props.skeleton ?? 4} tall />}
       >
         <Show
-          when={phase().phase === "ready"}
+          when={loaded()}
           fallback={
-            <Callout
-              tone="error"
-              title="No se ha podido leer el libro"
-              action={
-                <A
-                  href={
-                    (phase() as { error?: { action?: { to: string } } }).error?.action?.to ??
-                    "/libro"
+            <Show when={failure()}>
+              {(error) => (
+                <Callout
+                  tone="error"
+                  title="No se ha podido leer el libro"
+                  action={
+                    <A href={error().action?.to ?? "/libro"} role="button">
+                      {error().action?.label ?? "Abrir otro libro"}
+                    </A>
                   }
-                  role="button"
                 >
-                  {(phase() as { error?: { action?: { label: string } } }).error?.action?.label ??
-                    "Abrir otro libro"}
-                </A>
-              }
-            >
-              {(phase() as { error: { message: string; line?: number } }).error.message}
-              <Show when={(phase() as { error: { line?: number } }).error.line !== undefined}>
-                {" "}
-                (línea {(phase() as { error: { line?: number } }).error.line})
-              </Show>
-            </Callout>
+                  {error().message}
+                  <Show when={error().line !== undefined}> (línea {error().line})</Show>
+                </Callout>
+              )}
+            </Show>
           }
         >
-          <Show
-            when={props.writes !== true || store.invalidCount() === 0}
-            fallback={
-              <Callout
-                tone="error"
-                title="El libro tiene eventos inválidos"
-                action={
-                  <A href="/ajustes/verificacion" role="button">
-                    Ver la verificación
-                  </A>
-                }
-              >
-                Sobre un libro degradado solo puede escribirse un cambio de configuración
-                (ADR-0015). Rectifica lo que falla y vuelve.
-              </Callout>
-            }
-          >
-            {props.children((phase() as { snapshot: LedgerSnapshot }).snapshot)}
-          </Show>
+          {(snapshot) => (
+            <Show
+              when={props.writes !== true || store.invalidCount() === 0}
+              fallback={
+                <Callout
+                  tone="error"
+                  title="El libro tiene eventos inválidos"
+                  action={
+                    <A href="/ajustes/verificacion" role="button">
+                      Ver la verificación
+                    </A>
+                  }
+                >
+                  Sobre un libro degradado solo puede escribirse un cambio de configuración
+                  (ADR-0015). Rectifica lo que falla y vuelve.
+                </Callout>
+              }
+            >
+              {props.children(snapshot())}
+            </Show>
+          )}
         </Show>
       </Show>
     </Show>

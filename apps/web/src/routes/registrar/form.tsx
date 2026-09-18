@@ -16,7 +16,7 @@ export default function RegistrarFormRoute(): JSX.Element {
         const spec = () => formSpec(params.tipo);
         return (
           <Show
-            when={spec() !== undefined}
+            when={spec()}
             fallback={
               <>
                 <PageHeader title="Registrar" />
@@ -26,14 +26,12 @@ export default function RegistrarFormRoute(): JSX.Element {
               </>
             }
           >
-            <PageHeader
-              title={(spec() as NonNullable<ReturnType<typeof spec>>).title}
-              lead={(spec() as NonNullable<ReturnType<typeof spec>>).when}
-            />
-            <EventForm
-              spec={spec() as NonNullable<ReturnType<typeof spec>>}
-              state={snapshot.state}
-            />
+            {(found) => (
+              <>
+                <PageHeader title={found().title} lead={found().when} />
+                <EventForm spec={found()} state={snapshot.state} />
+              </>
+            )}
           </Show>
         );
       }}

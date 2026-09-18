@@ -52,8 +52,8 @@ export const LedgerChip = (): JSX.Element => {
     >
       <span class="dot" />
       <span class="truncate">
-        <Show when={source() !== undefined} fallback="Abrir un libro">
-          {sourceLabel(source() as NonNullable<ReturnType<typeof source>>)}
+        <Show when={source()} fallback="Abrir un libro">
+          {(current) => sourceLabel(current())}
         </Show>
       </span>
     </A>
