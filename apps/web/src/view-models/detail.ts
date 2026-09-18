@@ -7,6 +7,7 @@
 
 import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
 import { eventLabel, fieldLabel, STATUS_LABELS, valueLabel } from "../format/labels.js";
+import { FORM_SPECS } from "./forms/specs.js";
 
 export type DetailKind = "amount" | "quantity" | "date" | "text" | "id" | "percent" | "json";
 
@@ -36,7 +37,7 @@ export interface DetailView {
   /** Cross references, as links. */
   links: { label: string; to: string; text: string }[];
   invalidReason?: string;
-  /** Whether this type can be corrected, or only reversed (same rule as the CLI). */
+  /** Whether this type can be corrected, or only reversed: it has a form. */
   editable: boolean;
 }
 
@@ -90,18 +91,16 @@ const ID_FIELDS = new Set([
 
 const ENVELOPE_FIELDS = ["id", "type", "recorded_at", "schema_version", "fingerprint"];
 
-/** Types the CLI refuses to edit: they are re-registered instead (rectify.ts). */
-const NOT_EDITABLE = new Set([
-  "corporate_action",
-  "thesis_opened",
-  "thesis_closed",
-  "reversal",
-  "settings_changed",
-  "account_created",
-  "account_updated",
-  "asset_created",
-  "asset_updated",
-]);
+/**
+ * A type can be corrected when **a form exists for it**, because that form is
+ * what `routes/movimientos/edit.tsx` builds the screen from. One source and not
+ * two: as a blacklist of its own, this offered "Corregir" on seven types whose
+ * destination answered "este tipo de evento no se corrige" — `interest`,
+ * `standalone_fee`, `fx_exchange`, `transfer`, `order_updated`,
+ * `transfer_requested` and `transfer_request_updated`, 14 of the 200 events of
+ * the golden ledger.
+ */
+const EDITABLE_TYPES = new Set(FORM_SPECS.map((spec) => spec.type));
 
 /** Which currency an amount field is in: the event's, or the one of its own pair. */
 const currencyOf = (event: Record<string, unknown>, field: string): string => {
@@ -221,6 +220,6 @@ export const detailView = (entry: LedgerEntry): DetailView => {
     fields,
     links,
     ...(entry.invalid_reason === undefined ? {} : { invalidReason: entry.invalid_reason }),
-    editable: !NOT_EDITABLE.has(entry.event.type) && entry.status !== "reversed",
+    editable: EDITABLE_TYPES.has(entry.event.type) && entry.status !== "reversed",
   };
 };

@@ -272,14 +272,47 @@ describe("detailView", () => {
     );
   });
 
-  it("does not offer to correct what the CLI refuses to correct", () => {
+  /*
+   * "Corregir" and the screen behind it have to resolve the same thing.
+   * `editable` used to be a blacklist while `routes/movimientos/edit.tsx`
+   * resolves the form from `FORM_SPECS`, a whitelist of nine: seven types got
+   * the button and a dead end, 14 of the 200 events of the golden ledger.
+   */
+  it("offers to correct only what the form can actually correct", () => {
     const events = goldenEvents();
     const state = projectLedger(events, { collectErrors: true });
     const entries = ledgerEntries(state, events);
+    for (const entry of entries.filter((row) => detailView(row).editable)) {
+      // Exactly what the destination screen does to build itself.
+      expect(FORM_SPECS.find((spec) => spec.type === entry.event.type)).toBeDefined();
+    }
     const action = entries.find((row) => row.event.type === "corporate_action");
     expect(detailView(action as never).editable).toBe(false);
     const buy = entries.find((row) => row.event.type === "buy" && row.status === "current");
     expect(detailView(buy as never).editable).toBe(true);
+  });
+
+  it("does not offer it on the seven types that used to be a dead end", () => {
+    const events = goldenEvents();
+    const state = projectLedger(events, { collectErrors: true });
+    const entries = ledgerEntries(state, events);
+    const deadEnds = [
+      "interest",
+      "standalone_fee",
+      "fx_exchange",
+      "transfer",
+      "order_updated",
+      "transfer_requested",
+      "transfer_request_updated",
+    ];
+    const present = entries.filter((row) => deadEnds.includes(row.event.type));
+    expect(present.length).toBeGreaterThan(0);
+    for (const entry of present) {
+      expect(detailView(entry).editable).toBe(false);
+    }
+    // A reversed event is never corrected either, whatever its type.
+    const reversed = entries.find((row) => row.status === "reversed");
+    expect(detailView(reversed as never).editable).toBe(false);
   });
 });
 
