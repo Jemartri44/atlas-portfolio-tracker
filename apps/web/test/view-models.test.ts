@@ -3,6 +3,7 @@
 // All of it pure, so it is tested without painting anything (Q8).
 
 import {
+  Decimal,
   knownFieldsOf,
   ledgerEntries,
   Money,
@@ -28,6 +29,7 @@ import {
   attentionDestination,
   attentionItems,
   detailView,
+  movementRow,
   movementRows,
   netWorthView,
   targetWeightTotal,
@@ -211,6 +213,50 @@ describe("movementRows", () => {
     // A reversal records no figure: it has nothing to show, not a zero.
     expect(byType.get("reversal")?.amount).toBeUndefined();
     expect(byType.get("reversal")?.quantity).toBeUndefined();
+  });
+
+  /*
+   * Which recorded field each type takes its figure from, **checked by value**.
+   * `figureOf` has eleven branches and the assertion above only looked at the
+   * labels, so showing the withholding of a dividend instead of its gross
+   * stayed green. Table-driven over the types the golden ledger contains.
+   */
+  it("takes the figure from the field each type records", () => {
+    /** Candidates in order: the first one the event carries is the figure. */
+    const CANDIDATES: Record<string, readonly string[]> = {
+      buy: ["amount", "quantity"],
+      sell: ["amount", "quantity"],
+      cash_deposit: ["amount"],
+      cash_withdrawal: ["amount"],
+      standalone_fee: ["amount"],
+      dividend: ["gross"],
+      interest: ["gross"],
+      fx_exchange: ["sold_amount"],
+      valuation: ["unit_value"],
+      transfer: ["quantity_out"],
+      order_placed: ["amount", "quantity"],
+      transfer_requested: ["quantity_out", "amount_eur"],
+      thesis_opened: ["planned_size_eur"],
+    };
+    const events = goldenEvents();
+    const state = projectLedger(events, { collectErrors: true });
+    const seen = new Set<string>();
+    for (const entry of ledgerEntries(state, events)) {
+      const event = entry.event as unknown as Record<string, unknown>;
+      const row = movementRow(entry);
+      const shown = row.amount?.amount.toString() ?? row.quantity?.toString();
+      const candidates = CANDIDATES[entry.event.type];
+      if (candidates === undefined) {
+        // A type with no figure of its own shows none: never a zero.
+        expect(shown).toBeUndefined();
+        continue;
+      }
+      const field = candidates.find((name) => typeof event[name] === "string");
+      expect(shown).toBe(field === undefined ? undefined : Decimal.parse(event[field]).toString());
+      seen.add(entry.event.type);
+    }
+    // And the golden ledger really exercises every row of the table.
+    expect([...seen].sort()).toEqual(Object.keys(CANDIDATES).sort());
   });
 
   it("says the state in words and marks what is administrative", () => {
