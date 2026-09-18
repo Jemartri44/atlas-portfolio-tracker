@@ -184,6 +184,67 @@ describe("atlas settings set: the legacy wash-sale window", () => {
   });
 });
 
+describe("atlas settings set: a change that moves a past tax year", () => {
+  /** A sale agreed on 30/12/2027 and settled on 02/01/2028. */
+  const straddling = async (confirm = true) => {
+    // Standing in 2029: 2027 and 2028 are both over, so both may have been filed.
+    const h = harness({ events: seed(), confirm, instant: "2029-03-01T10:00:00.000Z" });
+    const trade = (type: string, trade_date: string, value_date: string, price: string) => [
+      "add",
+      type,
+      "--account",
+      "acc_fund",
+      "--asset",
+      "ast_world",
+      "--trade-date",
+      trade_date,
+      "--value-date",
+      value_date,
+      "--quantity",
+      "10",
+      "--unit-price",
+      price,
+      "--currency",
+      "EUR",
+      "--fx-rate",
+      "1",
+      "--fx-rate-date",
+      trade_date,
+      "--yes",
+    ];
+    expect(await h.exec(trade("buy", "2027-01-11", "2027-01-13", "10"))).toBe(0);
+    expect(await h.exec(trade("sell", "2027-12-30", "2028-01-03", "13"))).toBe(0);
+    h.reset();
+    return h;
+  };
+
+  it("lists the years that move, with both figures, and asks before writing", async () => {
+    const h = await straddling();
+    expect(await h.exec(["settings", "set", "--fiscal-date-rule", "fund=trade_date"])).toBe(0);
+    const text = h.text();
+    expect(text).toContain("mueve las ganancias realizadas de ejercicios anteriores");
+    expect(text).toContain("2027");
+    expect(text).toContain("2028");
+    expect(text).toContain("Puede afectar a una declaración ya presentada");
+    expect(text).toContain("Registrado");
+  });
+
+  it("does not write when the user declines", async () => {
+    // The setup uses --yes; only the settings change goes through the question.
+    const h = await straddling(false);
+    expect(await h.exec(["settings", "set", "--fiscal-date-rule", "fund=trade_date"])).toBe(0);
+    expect(h.text()).toContain("Cancelado");
+    const { events } = await h.store.load();
+    expect(events.filter((event) => event.type === "settings_changed")).toHaveLength(0);
+  });
+
+  it("says nothing when the change moves no past year", async () => {
+    const h = await straddling();
+    expect(await h.exec(["settings", "set", "--stale-price-days", "9"])).toBe(0);
+    expect(h.text()).not.toContain("mueve las ganancias realizadas");
+  });
+});
+
 describe("atlas settings set: the bucket benchmark", () => {
   it("writes the asset_id without checking the catalogue: the asset may come later", async () => {
     const h = harness({ events: seed(), confirm: true });

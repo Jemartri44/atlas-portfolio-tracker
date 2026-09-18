@@ -5,13 +5,16 @@ import {
   accounts,
   assets,
   coreWeights,
+  type LedgerEvent,
   type LedgerState,
   loadAndProject,
   mergeSettings,
+  movedFiscalYears,
   type Settings,
   settingsAt,
   todayInMadrid,
   type Warning,
+  yearOf,
 } from "@atlas/domain";
 import {
   assertKnownFlags,
@@ -309,6 +312,37 @@ const confirmSilencedWarnings = async (
   return confirm(ctx, "¿Continuar? [s/N] ");
 };
 
+/**
+ * The expensive warning of a settings change (prompt 005 §3.5 bis): reading the
+ * same ledger with the new rules can move realized gains from one tax year to
+ * another, and a return already filed may stop matching. It informs and asks;
+ * it never blocks.
+ */
+const confirmMovedYears = async (
+  ctx: Context,
+  events: readonly LedgerEvent[],
+  current: Settings,
+  next: Settings,
+): Promise<boolean> => {
+  const moved = movedFiscalYears(events, current, next, yearOf(todayInMadrid(ctx.deps.clock)));
+  if (moved.length === 0) {
+    return true;
+  }
+  ctx.io.out("Este cambio mueve las ganancias realizadas de ejercicios anteriores:");
+  ctx.io.out(
+    table(
+      ["ejercicio", "antes EUR", "después EUR"],
+      moved.map((impact) => [
+        String(impact.year),
+        impact.before.amount.toString(),
+        impact.after.amount.toString(),
+      ]),
+    ),
+  );
+  ctx.io.out("Puede afectar a una declaración ya presentada.");
+  return confirm(ctx, "¿Continuar? [s/N] ");
+};
+
 export const settingsCommand = async (
   ctx: Context,
   positionals: string[],
@@ -343,7 +377,7 @@ export const settingsCommand = async (
       ...SETTINGS_STRINGS,
       ...GLOBAL_FLAGS,
     ]);
-    const { state } = await loadForQuery(ctx);
+    const { state, events } = await loadForQuery(ctx);
     const current = settingsAt(state, todayInMadrid(ctx.deps.clock)).settings;
     const patch: Record<string, unknown> = {};
     const rules = stringFlag(flags, "fiscal-date-rule");
@@ -383,6 +417,10 @@ export const settingsCommand = async (
     }
     const settings = mergeSettings(current, patch as Partial<Settings>);
     if (!(await confirmSilencedWarnings(ctx, state, current, settings))) {
+      ctx.io.out("Cancelado.");
+      return 0;
+    }
+    if (!(await confirmMovedYears(ctx, events, current, settings))) {
       ctx.io.out("Cancelado.");
       return 0;
     }

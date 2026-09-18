@@ -90,6 +90,7 @@ export {
   projectLedger,
 } from "./projections/project-ledger.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
+export { type FiscalYearImpact, movedFiscalYears } from "./projections/settings-impact.js";
 export {
   type SimulateTransferInput,
   simulateTransfer,
