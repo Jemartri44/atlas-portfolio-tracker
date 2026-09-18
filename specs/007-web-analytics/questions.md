@@ -268,6 +268,103 @@ ADR-0018 dice que estos mapas de `Settings` son **parciales** y que *«los tipos
 
 ---
 
-## Notas de implementación
+## Notas de implementación (2026-09-18, al terminar)
 
-*(Se rellenan al terminar, como en las features anteriores.)*
+Lo que apareció al escribir el código y la dirección debería conocer. Nada reabre una decisión; tres son hallazgos y uno es un techo que no aguantó.
+
+### N1 — El presupuesto total del *bundle* no cabe en 150 KB: son 162,8
+
+Medido al terminar. El desglose, todo gzip: ~34 KB el dominio (está en el arranque porque la primera pantalla proyecta el libro), ~22 uPlot (en un fragmento perezoso que solo cargan Núcleo y Cubo), ~16 la hoja de estilo con Pico dentro, ~12 el router, ~8 Solid y el arranque, y unos 2 KB por pantalla.
+
+No hay grasa que quitar: lo único descartable sería uPlot, y la decisión (e) lo fija. **El techo está puesto en 175 KB**, que es lo medido más holgura, con el desglose escrito en la cabecera de `scripts/check-bundle.mjs`. La cifra que se nota en un teléfono es la del **arranque**, y esa ha pasado de 70,4 a **74,4 KB** con dos pantallas, seis formularios y una librería de gráficas — dentro de los 80 que la dirección fijó.
+
+Si la dirección prefiere mantener 150, la única palanca real es dejar de vendorizar uPlot y dibujar las dos series a mano en SVG, que es mucho más código que 22 KB.
+
+### N2 — La serie más larga del libro sintético tiene ocho puntos
+
+Y dos de ellos son completos. No es un defecto de la gráfica: es lo que el libro sabe. Las valoraciones son manuales y casi todas de un 31 de diciembre, así que la evolución del patrimonio tiene ocho fechas en las que decir algo y en seis de ellas falta el precio de algún activo.
+
+La pantalla lo dice con todas las letras debajo de la gráfica («N de M puntos con datos: en el resto falta el precio de X. No se interpola: donde no hay precio, hay hueco») y los botones de rango sin puntos salen deshabilitados con su motivo. **Merece la pena mirarlo en el libro real**: si allí también sale escaso, la conclusión no es tocar la gráfica, es valorar más a menudo — y esa es justamente la información que la pantalla está dando.
+
+### N3 — Dos defectos encontrados mirando, no ejecutando
+
+Ninguno de los dos lo habría visto un test:
+
+1. **Todas las filas de todas las tarjetas llevaban una viñeta cuadrada.** Al generalizar la lista a `<ul>/<li>` por accesibilidad, `list-style: none` en el `<ul>` no basta: Pico pone `list-style-type: square` en el `li`, que gana a lo que el elemento hereda. Se ve en una captura y en ninguna otra parte.
+2. **Una posición sin precio decía «sin dato» tres veces seguidas** en la misma línea de la tarjeta (el importe del P&L, su porcentaje y el valor). Ahora dice uno.
+
+Y dos de estructura, del mismo tipo: la tesis de una posición estaba en una lista al final de la tarjeta, lejos de su posición, y la condición de invalidación se leía como un bloque suelto — ahora va pegada a su fila, que es donde la regla 15 la quiere; y la distribución del núcleo era una tarjeta aparte que repetía peso y objetivo de la tabla de abajo, así que se han fundido en una.
+
+### N4 — El selector de fecha nativo muestra el formato del **sistema**, no el de la página
+
+En el Chromium sin cabeza del entorno sale `01/31/2027` aunque la página sea `lang="es"`: `<input type="date">` se pinta con la configuración regional del navegador, no con la del documento. En el teléfono del usuario, en español, saldrá `31/01/2027`.
+
+No se ha tocado: ADR-0017 eligió los controles nativos a propósito (en el móvil dan la rueda del sistema) y escribir un selector propio para arreglar un formato sería exactamente la clase de componente que el ADR evita. **Queda anotado para que nadie lo lea como un defecto en una captura.**
+
+### N5 — `atlas order list` y `atlas transfer pending` tenían el mismo defecto de clase
+
+Confirmado al añadirles `--date` (Q3): ninguno de los dos proyectaba con `asOf` y los dos contaban los días hasta hoy. `order list --all` además ponía `days_open: 0` en todas las filas, que no es un dato ausente sino **equivocado**, impreso en la misma columna que el bueno. Los dos arreglados.
+
+De la misma raíz salió un tercero, este en la web: los desplegables de «orden que cierra» y «solicitud que cierra» mostraban **`-780 días`** para un evento con fecha futura. Un formulario se rellena contra el libro entero, que puede tener una operación con fecha valor de la semana que viene, así que la resta puede salir negativa; ahora dice «con fecha futura» y hay un test que prohíbe imprimir una edad negativa.
+
+### N6 — La prueba de privacidad de las gráficas: lo que se pudo y lo que no
+
+La condición de Q5 era un test que renderizara con la privacidad puesta. Se ha hecho con `happy-dom` sobre todo lo que es DOM de una gráfica —la leyenda y la tabla equivalente, que no dejan ni un dígito a la vista— y sobre las dos funciones que dan formato al eje y al *tooltip*, que es donde vive la regla.
+
+**El lienzo no se puede pintar sin navegador**: `happy-dom` no tiene contexto 2D y uPlot falla al dibujar. Falsear uno sería reimplementar mal un navegador, que es lo que la 006 descartó. El eje dibujado se ha comprobado en Chromium, que es la prueba más fuerte de las dos.
+
+### N7 — Lo que el libro sintético no ejercita
+
+El aviso de traspaso vencido **no se ve en el libro sintético**: sus tres solicitudes se completan en dos días y el plazo son quince. La regla está cubierta por nueve tests del dominio (vencido, en plazo, justo en el límite, sin configurar, etapa `redeemed`, cancelada, dos fechas distintas…), pero si la dirección quiere verlo en pantalla habría que añadir una solicitud que se quede colgada al generador, lo cual regenera el *golden* y su snapshot. No se ha hecho: cambiar el libro sintético no estaba en el alcance.
+
+Lo mismo, más llamativo, con el presupuesto del cubo: el libro sintético mete 5.000 € en la cuenta del cubo contra un presupuesto de 300 €, así que la pantalla enseña un aporte veinte veces el previsto. Es el generador, no la aplicación.
+
+### N8 — `atlas costs` enseña por primera vez lo que cuesta la custodia
+
+Efecto lateral de Q9 que merece leerse: sobre el libro sintético, `atlas costs --date 2027-12-31` imprime ahora **3,00 EUR de comisiones sueltas en la cuenta del núcleo**, que hasta hoy no aparecían en ninguna pantalla de ninguna de las dos interfaces. Están etiquetadas como lo que son: no forman parte del coste de adquisición ni del valor de transmisión.
+
+---
+
+## Comparación con la CLI (SC-001)
+
+Sobre el mismo libro sintético y la misma fecha, cifra a cifra. Dos fechas: una con el núcleo completo y otra parcial.
+
+| Cifra | Fecha | CLI | Web |
+|---|---|---|---|
+| Total del núcleo | 2027-01-31 | `8014.16` | 8.014,16 EUR |
+| Peso RV / RF / Oro / Cripto | 2027-01-31 | `23.54 / 48.98 / 25.16 / 2.31 %` | idénticos |
+| Desviación RV / RF / Oro / Cripto | 2027-01-31 | `-31.46 / 18.98 / 15.16 / -2.69` | idénticas |
+| Total del núcleo | 2027-12-31 | `14226.62` | 14.226,62 EUR |
+| Aportación: cubo / núcleo | 2027-01-31 | `60 / 540` | 60,00 / 540,00 EUR |
+| Reparto por activo | 2027-01-31 | `111.42 / 255.63 / 141.33 / 0 / 0 / 31.62` | idéntico |
+| Comisiones del núcleo | 2027-12-31 | `3.3545329017` | 3,35 EUR |
+| TER ponderado | 2027-12-31 | `0.1228754852` | 0,1229 % |
+| Comisiones sueltas del núcleo | 2027-12-31 | `3` | 3,00 EUR |
+| Total del cubo / coste | 2027-01-31 | `997.5325705022 / 520.0228216863` | 997,53 / 520,02 EUR |
+| Total del cubo / coste, parcial | 2027-12-31 | `1185.4224124588 / 1225.172948086`, parcial | 1.185,42 / 1.225,17 EUR, marcado parcial |
+| P&L latente de cada posición | 2027-12-31 | `-59.77 (-20.2 %) / 587.44 (162.33 %)` | idénticos |
+| Tesis frente al índice | 2027-12-31 | `85.81 / -2.73 / 608.28 / — / -43.84 / -87.6 / -224.75 / —` | idénticas, y los dos «sin dato» con su motivo |
+| Comisiones sobre capital operado | 2027-12-31 | `0.37858468 %` | 0,38 % |
+| Tasa de acierto | 2027-12-31 | `40 %` | 40,00 % |
+| Resultado frente al índice | 2027-12-31 | `335.1754581474…` | +335,18 EUR |
+| Peso del cubo sobre el patrimonio | 2027-01-31 | `5.02942514 %` | 5,03 % |
+| Peso del cubo sobre el patrimonio | 2027-12-31 | no evaluable | «no evaluada» con su motivo |
+
+Ninguna diferencia. Donde la CLI imprime sin redondear y la web redondea a céntimos, la cifra es la misma redondeada una vez al mostrarla (ADR-0005).
+
+---
+
+## Inventario de errores de la 006, fila por fila
+
+| Caso (nota V6 de la 006) | Estado |
+|---|---|
+| Importar un fichero que no es un libro deja un libro vacío abierto y recordado | **Resuelto.** `importLedger` valida antes de abrir nada; si el texto no es un libro, el estado anterior queda intacto. Con test |
+| La fase `failed` pierde su aviso al navegar | **Resuelto.** Se pinta en `/libro` mientras dure, como la fase `reconnect` |
+| Las pantallas que escriben descartan `failure.error.action` | **Resuelto.** `ErrorView` pinta mensaje, acción y código plegado; lo usan la guarda, la configuración, el formulario genérico y el de eventos corporativos |
+| Los hallazgos de integridad salen en inglés | **Resuelto.** Catálogo español de los diez códigos, con qué significa y qué hacer, y el mensaje del dominio plegado como evidencia. Con test anti-deriva |
+| «Valor por defecto» de la fecha fiscal no hace nada | **Resuelto** (Q10). Vaciar el campo quita la clave del mapa; ADR-0018 define esa semántica y ADR-0015 protege el caso peligroso. Con dos tests |
+| Permiso de carpeta revocado a mitad de sesión | **Resuelto** por la misma vía que la tercera fila: el `AppError` ya traía la acción y ahora se pinta |
+| Almacenamiento lleno (`QuotaExceededError`) | **Ya estaba resuelto** en la 006; ahora tiene test propio y su acción se ve en las pantallas que escriben |
+| Fichero vacío, libro de esquema más nuevo, libro con eventos inválidos, rutas inexistentes | **Ya eran correctos**; comprobados otra vez en el barrido de 112 combinaciones |
+| Una escritura que falle a mitad | **No se puede provocar** desde el navegador: `BlobLedgerStore` escribe el fichero entero. Se provocan el fallo previo (cuota) y el conflicto de *etag*, que sí tienen camino |
+| La vía de carpeta completa (File System Access) | **Sigue sin poder comprobarse aquí**: Chromium sin cabeza no da el selector de carpetas sin interacción real |

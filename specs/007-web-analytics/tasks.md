@@ -1,5 +1,7 @@
 # Tareas — feature `007-web-analytics`
 
+> **Terminadas el 2026-09-18.** Lo medido está en `plan.md` §Mediciones; lo que apareció por el camino, en `questions.md` §Notas de implementación. Dos desviaciones del plan, ambas anotadas allí: el techo total del *bundle* subió de 150 a 175 KB (N1) y la tarjeta de distribución del núcleo se fundió con la de pesos porque repetía las mismas cifras (N3).
+
 Derivadas de [`spec.md`](spec.md), [`plan.md`](plan.md) y [`contracts/domain.md`](contracts/domain.md), con las once respuestas de [`questions.md`](questions.md) ya incorporadas.
 
 Orden por dependencia: **el dominio primero** (nadie puede consumir lo que no existe), después la CLI (que es el patrón de referencia contra el que se compara la web), después los cimientos de la web, después las pantallas, y al final las dos pasadas transversales y la verificación.
