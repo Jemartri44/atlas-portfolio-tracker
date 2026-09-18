@@ -32,7 +32,7 @@ const ICONS = {
 } as const;
 
 export const Nav = (): JSX.Element => (
-  <nav aria-label="Secciones">
+  <nav class="nav" aria-label="Secciones">
     <ul>
       <li>
         <A href="/" end>
