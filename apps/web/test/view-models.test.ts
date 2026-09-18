@@ -439,10 +439,10 @@ describe("netWorthView", () => {
     const view = netWorthView(netWorth(state, "2029-06-30", settings));
     expect(view.blocks.map((block) => block.label)).toEqual(["Núcleo", "Cubo", "Efectivo"]);
     const sum = view.blocks.reduce(
-      (total, block) => total.add(block.subtotal.roundToCents()),
+      (total, block) => total.add((block.subtotal as Money).roundToCents()),
       Money.zero("EUR"),
     );
-    expect(view.total.amount.toString()).toBe(sum.amount.toString());
+    expect(view.total?.amount.toString()).toBe(sum.amount.toString());
   });
 
   it("says what is missing instead of showing a smaller total", () => {

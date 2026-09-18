@@ -128,7 +128,7 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
           </Show>
         </span>
         <span class="row">
-          <Amount value={props.view.totalValue} />
+          <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
           <span class="tiny">
             coste <Amount value={props.view.totalCost} currency={false} />
           </span>

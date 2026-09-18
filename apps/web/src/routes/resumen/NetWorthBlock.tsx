@@ -17,7 +17,7 @@ export const NetWorthBlock = (props: { view: NetWorthView }): JSX.Element => (
     </header>
 
     <div class="total">
-      <Amount value={props.view.total} class="total-amount" />
+      <Amount value={props.view.total} class="total-amount" missingReason="nada tiene precio" />
       <Show when={props.view.partial}>
         <Badge tone="warning" title={`Faltan: ${props.view.missing.join(", ")}`}>
           parcial
@@ -30,8 +30,14 @@ export const NetWorthBlock = (props: { view: NetWorthView }): JSX.Element => (
         {(block) => (
           <div class="block">
             <div class="spread">
-              <span class="label">{block.label}</span>
-              <Amount value={block.subtotal} />
+              <span class="label">
+                {block.label}
+                <Show when={block.partial && block.subtotal !== undefined}>
+                  {" "}
+                  <span class="tiny">(parcial)</span>
+                </Show>
+              </span>
+              <Amount value={block.subtotal} missingReason="ninguna posición tiene precio" />
             </div>
             <div class="lines">
               <For each={block.lines}>
@@ -39,6 +45,10 @@ export const NetWorthBlock = (props: { view: NetWorthView }): JSX.Element => (
                   <div class="line">
                     <span class="name" title={line.detail}>
                       {line.name}
+                      <Show when={line.partial === true}>
+                        {" "}
+                        <span class="tiny">(parcial)</span>
+                      </Show>
                     </span>
                     <Show
                       when={line.value !== undefined}
