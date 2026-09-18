@@ -1,14 +1,19 @@
 // The warning of the wash-sale rule (business-rules.md §5.4, prompt 005 §3.6),
 // in **both directions**: the rule looks at the window before *and* after the
-// loss-making sale.
+// loss-making transmission.
 //
-// - buying an asset sold at a loss inside the window: `wash_sale_window_repurchase`;
-// - selling at a loss an asset bought inside the previous window: `wash_sale_window_prior_buy`.
+// - acquiring an asset transmitted at a loss inside the window: `wash_sale_window_repurchase`;
+// - transmitting at a loss an asset acquired inside the previous window: `wash_sale_window_prior_buy`.
 //
-// The second is the more useful of the two, because it arrives while the user
-// can still decide not to sell. Both are **warnings on a projected event**, like
-// `thesis_size_exceeded`, so they show up in `atlas check` and in the preview of
-// `atlas add buy|sell` with no extra code.
+// A transmission is a `sell` **or** a `forced_sale` (a fund liquidation, the
+// cash in lieu of a reverse split, the cash leg of a merger): the rule looks at
+// the loss, not at who decided it. An acquisition is what `noteAcquisition`
+// says below.
+//
+// The second warning is the more useful of the two, because it arrives while
+// the user can still decide not to sell. Both are **warnings on a projected
+// event**, like `thesis_size_exceeded`, so they show up in `atlas check` and in
+// the preview of `atlas add buy|sell` with no extra code.
 //
 // This is only the warning. Quantifying the deferred loss, splitting it across
 // the repurchased lots and carrying it through transfers and swaps is the tax
@@ -22,7 +27,7 @@ import type { AssetId, AssetType } from "../schema/events.js";
 import { washSaleWindowEnd, washSaleWindowOf, washSaleWindowStart } from "../settings/wash-sale.js";
 import { addWarning, type LedgerState } from "./state.js";
 
-/** A purchase that counts as an acquisition for the rule (data-schema.md §8.4). */
+/** An acquisition that counts for the rule (data-schema.md §8.4). */
 export interface Acquisition {
   event_id: Ulid;
   asset_id: AssetId;
@@ -31,8 +36,12 @@ export interface Acquisition {
 }
 
 /**
- * Records a purchase for the rule. A `transfer` in, a `scale` and a zero-cost
- * `grant` are **not** acquisitions (data-schema.md §8.4), so they never get here.
+ * Records an acquisition for the rule: a `buy`, a `grant` with a cost and —
+ * unless `Settings.wash_sale_transfer_counts` says otherwise — a `transfer`
+ * **in**, which acquires homogeneous securities even though nothing is taxed at
+ * the origin (data-schema.md §8.4, fiscal question #2b). A `scale` (free
+ * shares) and a zero-cost `grant` are **not** acquisitions, because nothing is
+ * paid, so they never get here.
  */
 export const noteAcquisition = (state: LedgerState, acquisition: Acquisition): void => {
   const previous = state.acquisitions.get(acquisition.asset_id) ?? [];
@@ -41,9 +50,9 @@ export const noteAcquisition = (state: LedgerState, acquisition: Acquisition): v
 };
 
 /**
- * Warns when a purchase falls inside the window of a previous loss-making sale
- * of the same asset. Runs while applying the buy, so `state.gains` holds
- * exactly what happened before it in time.
+ * Warns when an acquisition falls inside the window of a previous loss-making
+ * transmission of the same asset. Runs while applying the buy (or the transfer
+ * in), so `state.gains` holds exactly what happened before it in time.
  */
 export const warnRepurchase = (
   state: LedgerState,
