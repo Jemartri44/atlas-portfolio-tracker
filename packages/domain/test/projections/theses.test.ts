@@ -124,6 +124,39 @@ describe("theses: lifecycle and derived metrics", () => {
     expect(theses(state, "2026-09-11")[0]?.status).toBe("open");
   });
 
+  it("cuts the list by the administrative dates: nothing from the future, no negative days", () => {
+    const b = new LedgerBuilder();
+    bucketCatalogue(b);
+    b.recordedAt("2027-01-10");
+    b.thesisOpened({ thesis_id: "th_early" });
+    b.recordedAt("2027-06-01");
+    b.thesisClosed("th_early");
+    b.recordedAt("2027-09-01");
+    b.thesisOpened({ thesis_id: "th_late" });
+    const state = projectLedger(b.build());
+
+    // The day before it was opened, the first thesis does not exist yet.
+    expect(theses(state, "2027-01-09")).toEqual([]);
+    // Between opening and closing it is open, with its clock running.
+    const midway = theses(state, "2027-03-01");
+    expect(midway.map((t) => [t.thesis_id, t.status, t.days_open])).toEqual([
+      ["th_early", "open", 50],
+    ]);
+    expect(midway[0]?.closed_at).toBeUndefined();
+    expect(midway[0]?.closing_notes).toBeUndefined();
+    // After its closing it is closed, and the second one still does not exist.
+    const summer = theses(state, "2027-06-30");
+    expect(summer.map((t) => [t.thesis_id, t.status, t.days_open])).toEqual([
+      ["th_early", "closed", 142],
+    ]);
+    expect(summer[0]?.closed_at).toBe("2027-06-01");
+    // At the end both are there, each in its own state.
+    expect(theses(state, "2027-12-31").map((t) => [t.thesis_id, t.status, t.days_open])).toEqual([
+      ["th_early", "closed", 142],
+      ["th_late", "open", 121],
+    ]);
+  });
+
   it("is valid before the asset_created of its asset in the file (catalogue resolves first)", () => {
     const b = new LedgerBuilder();
     b.account("acc_bucket", { book: "bucket" });

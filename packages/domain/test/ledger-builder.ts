@@ -54,10 +54,20 @@ type Fields<E extends SupportedEvent> = Omit<E, keyof Envelope | "fingerprint"> 
 export class LedgerBuilder {
   private readonly events: LedgerEvent[] = [];
   private sequence: number;
+  private recordedOn = "2026-09-01";
 
   /** `start` offsets the id sequence so two builders can extend the same ledger without colliding. */
   constructor(start = 0) {
     this.sequence = start;
+  }
+
+  /**
+   * Moves the administrative clock: what follows is recorded on that day. Only
+   * theses read it (`opened_at` and `closed_at` come from `recorded_at`);
+   * everything else is dated by its own business fields.
+   */
+  recordedAt(date: string): void {
+    this.recordedOn = date;
   }
 
   private envelope(type: LedgerEvent["type"]): Envelope {
@@ -68,7 +78,7 @@ export class LedgerBuilder {
     return {
       schema_version: 1,
       id: idOf(sequence),
-      recorded_at: `2026-09-01T18:${minutes}:${seconds}.000Z`,
+      recorded_at: `${this.recordedOn}T18:${minutes}:${seconds}.000Z`,
       type,
     };
   }

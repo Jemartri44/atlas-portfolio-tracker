@@ -75,6 +75,37 @@ describe("bucketPositions", () => {
     );
   });
 
+  it("does not attribute a position to a thesis that had not been opened yet", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.recordedAt("2027-01-05");
+    b.thesisOpened({ thesis_id: "th_first" });
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: "10",
+      unit_price: "50",
+      fee: "1",
+      trade_date: "2027-01-11",
+      value_date: "2027-01-13",
+      ...USD,
+      thesis_id: "th_first",
+    });
+    b.recordedAt("2027-02-01");
+    b.thesisClosed("th_first");
+    b.recordedAt("2027-09-01");
+    b.thesisOpened({ thesis_id: "th_later" });
+    const state = project(b);
+    // In June the second thesis was three months away and the first was closed:
+    // the row carries no thesis at all.
+    const june = bucketPositions(state, "2027-06-30", DEFAULT_SETTINGS).rows[0];
+    expect(june?.thesis_id).toBeUndefined();
+    expect(june?.days_open).toBeUndefined();
+    const december = bucketPositions(state, "2027-12-31", DEFAULT_SETTINGS).rows[0];
+    expect(december?.thesis_id).toBe("th_later");
+    expect(december?.days_open).toBe(121);
+  });
+
   it("keeps the row without a price, with no value and no P&L, and says the total is partial", () => {
     const view = bucketPositions(project(openBucket()), "2027-06-30", DEFAULT_SETTINGS);
     expect(view.rows).toHaveLength(1);

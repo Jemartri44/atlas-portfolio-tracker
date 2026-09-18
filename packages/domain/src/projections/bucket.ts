@@ -221,7 +221,7 @@ export const bucketPositions = (
       ...(price === undefined ? {} : { price }),
       ...(rowValue === undefined ? {} : { value_eur: rowValue }),
       ...unrealizedOf(rowValue, rowCost),
-      ...thesisPartOf(openThesisOn(state, accountId, assetId), date),
+      ...thesisPartOf(openThesisOn(state, accountId, assetId, date), date),
     });
   }
 

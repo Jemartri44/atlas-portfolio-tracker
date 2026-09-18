@@ -1,9 +1,23 @@
 // atlas bucket · atlas thesis show — the view of the speculative bucket.
 
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DEFAULT_SETTINGS } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { bucketSeed, harness } from "../harness.js";
+
+const goldenLines = (): string[] =>
+  readFileSync(
+    join(
+      resolve(dirname(fileURLToPath(import.meta.url)), "../../../../tests/fixtures/ledger"),
+      "synthetic-v1.jsonl",
+    ),
+    "utf8",
+  )
+    .split("\n")
+    .filter((line) => line !== "");
 
 const DATE = "2027-12-31";
 
@@ -18,6 +32,10 @@ const settingsEvent = (settings: Record<string, unknown>) => ({
 /**
  * A bucket with one thesis closed at a profit and one still open, an index
  * priced on both dates, and the three thresholds configured.
+ *
+ * The clock moves along with the story: a thesis is dated by the `recorded_at`
+ * of its opening (data-schema.md §6.4), so recording everything on one instant
+ * would put both theses in the future of every dated view.
  */
 const bucket = async (settings: Record<string, unknown> = {}) => {
   const h = harness({
@@ -33,7 +51,7 @@ const bucket = async (settings: Record<string, unknown> = {}) => {
       }),
     ],
     confirm: true,
-    instant: "2028-01-15T10:00:00.000Z",
+    instant: "2027-01-05T10:00:00.000Z",
   });
   const run = async (argv: string[]) => {
     const code = await h.exec([...argv, "--yes"]);
@@ -102,6 +120,7 @@ const bucket = async (settings: Record<string, unknown> = {}) => {
   ]);
   await price("ast_world", "2027-01-01", "100");
   await price("ast_world", "2027-06-01", "110");
+  h.setInstant("2027-01-10T10:00:00.000Z");
   await run([
     "thesis",
     "open",
@@ -120,9 +139,12 @@ const bucket = async (settings: Record<string, unknown> = {}) => {
     "--planned-size",
     "500",
   ]);
+  h.setInstant("2027-01-11T10:00:00.000Z");
   await trade("buy", "2027-01-11", "10", "th_a");
+  h.setInstant("2027-06-01T10:00:00.000Z");
   await trade("sell", "2027-06-01", "13", "th_a");
   await run(["thesis", "close", "th_a", "--notes", "salió bien"]);
+  h.setInstant("2027-09-01T10:00:00.000Z");
   await run([
     "thesis",
     "open",
@@ -142,7 +164,9 @@ const bucket = async (settings: Record<string, unknown> = {}) => {
     "500",
   ]);
   await trade("buy", "2027-09-01", "12", "th_b");
+  h.setInstant("2027-12-01T10:00:00.000Z");
   await price("ast_spec", "2027-12-01", "15", "acc_bucket");
+  h.setInstant("2028-01-15T10:00:00.000Z");
   h.reset();
   return h;
 };
@@ -195,6 +219,29 @@ describe("atlas bucket", () => {
     expect(text).toContain("El aporte bruto al cubo");
     // The contribution cap is passed, and the message names rule 17.
     expect(text).toContain("regla 17");
+  });
+
+  it("shows only the theses that already existed at the date asked", async () => {
+    // The golden ends in 2028 with nine theses; in June 2027 only four had been
+    // opened and only one had been closed (ADR-0016 cuts pass A, and the
+    // administrative dates of a thesis cut the view).
+    const h = harness({ lines: goldenLines() });
+    expect(await h.exec(["bucket", "--date", "2027-06-30", "--json"])).toBe(0);
+    const data = h.json() as {
+      theses: { thesis_id: string; status: string; days_open: number }[];
+      stats: { closed_theses: number; measured_theses: number };
+    };
+    expect(data.theses.map((t) => t.thesis_id)).toEqual([
+      "th_alpha",
+      "th_beta",
+      "th_delta_1",
+      "th_epsilon_1",
+    ]);
+    expect(data.theses.filter((t) => t.status === "closed").map((t) => t.thesis_id)).toEqual([
+      "th_epsilon_1",
+    ]);
+    expect(data.theses.every((t) => t.days_open > 0)).toBe(true);
+    expect(data.stats).toMatchObject({ closed_theses: 1, measured_theses: 1 });
   });
 
   it("answers in JSON with the envelope and does not write", async () => {
