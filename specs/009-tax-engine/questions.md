@@ -582,4 +582,10 @@ No aparecen por no tocar ninguna cifra: #2b (ningún traspaso entrante causa un 
 
 ### Contraste con el motor
 
-*Pendiente: se rellena al ejecutar `exercise.test.ts`.*
+`packages/domain/test/tax/exercise.test.ts` construye este libro evento a evento (`exercise-ledger.ts`) y compara con literales copiados de esta sección, no de la salida del motor. **Todas las cifras coinciden a la primera ejecución, al céntimo**: las siete transmisiones de 2028 (propio, liberado, diferido y computable), los totales (502,50 / −130,00 / +372,50), los rendimientos (16,00 + 60,00 − 12,00), la compensación de 2027 (10,00 en fase 1, −260,80 pendiente hasta 2031) y la de 2028 (260,80 en fase 2, base **175,70**), el diferimiento del año (−125,00 / −105,00 / −20,00), las retenciones (42,75), la doble imposición (4,80 → 2,40 + 2,40) y el dinero en juego de los dudosos (+65,00, +75,83, 40,00, 10,00, −10,00, y los ceros del #1, la categoría del ETC y el #22).
+
+Tres discrepancias, **ninguna en una cifra**:
+
+1. **El orden de los criterios.** La primera ejecución dio las listas de criterios con `"2:listed"` y `"2:fund"` al final. Error del motor, no del cálculo: `Object.keys` pone primero las claves numéricas de un objeto. Corregido: el catálogo declara su orden explícitamente (`CRITERION_IDS`).
+2. **Qué operaciones nombra el #2.** El motor nombraba solo E12 y E19, las que aplican la ventana; este cálculo a mano decía que el #2 afecta también a E21 (mercado `XNAS`), porque con un año la pérdida de E5 de 2027 se habría diferido y liberado en ella. **Tenía razón el cálculo a mano**: una cifra que cambia con la lectura alternativa depende del criterio aunque no lo aplique ella misma. Corregido: el apartado de dudosos nombra también las operaciones cuya cifra cambia al recalcular (E12, E19, E21; mercados `XETR` y `XNAS`).
+3. **El #2b en otro test** (no en este ejercicio): esperaba una diferencia de base de −100 al no contar un traspaso entrante como adquisición, y el motor dio 0. **Tenía razón el motor**: sin diferimiento la pérdida se computa, pero la base del ejercicio es cero en las dos lecturas y lo que cambia es la pérdida pendiente de compensar (−100) y el diferimiento pendiente (+100). El test estaba mal escrito y se corrigió; la dirección sigue saliendo «conservadora» por lo pendiente.
