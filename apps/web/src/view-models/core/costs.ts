@@ -24,8 +24,21 @@ export interface CoreCostRowView {
 export interface StandaloneRowView {
   accountId: string;
   name: string;
-  book: string;
   fees: Money;
+}
+
+/**
+ * The standalone charges of **one** book, with the total of that book.
+ *
+ * They are split here and not in the card because the mistake they caused was a
+ * data one: the rows of both books were handed to the Núcleo screen, which
+ * listed the bucket's custody charge under a line that read "Total del núcleo"
+ * and did not include it. Two books, two groups, no total that covers rows it
+ * does not add up (constitution III).
+ */
+export interface StandaloneGroupView {
+  rows: StandaloneRowView[];
+  total: Money;
 }
 
 export interface CostsView {
@@ -43,8 +56,23 @@ export interface CostsView {
     rows: { accountId: string; name: string; fees: Money; invested: Money }[];
     fees: Money;
   };
-  standalone: { rows: StandaloneRowView[]; core: Money; bucket: Money };
+  standalone: { core: StandaloneGroupView; bucket: StandaloneGroupView };
 }
+
+const standaloneGroup = (
+  summary: CostSummary,
+  book: "core" | "bucket",
+  names: NameIndex,
+): StandaloneGroupView => ({
+  rows: summary.standalone.rows
+    .filter((row) => row.book === book)
+    .map((row) => ({
+      accountId: row.account_id,
+      name: displayName(names, row.account_id),
+      fees: row.fees_eur,
+    })),
+  total: book === "core" ? summary.standalone.core_eur : summary.standalone.bucket_eur,
+});
 
 export const costsView = (summary: CostSummary, names: NameIndex = NO_NAMES): CostsView => ({
   date: summary.date,
@@ -81,13 +109,7 @@ export const costsView = (summary: CostSummary, names: NameIndex = NO_NAMES): Co
     fees: summary.bucket.totals.fees_eur,
   },
   standalone: {
-    rows: summary.standalone.rows.map((row) => ({
-      accountId: row.account_id,
-      name: displayName(names, row.account_id),
-      book: valueLabel(row.book),
-      fees: row.fees_eur,
-    })),
-    core: summary.standalone.core_eur,
-    bucket: summary.standalone.bucket_eur,
+    core: standaloneGroup(summary, "core", names),
+    bucket: standaloneGroup(summary, "bucket", names),
   },
 });

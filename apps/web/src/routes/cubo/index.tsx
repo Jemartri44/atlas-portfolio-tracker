@@ -14,12 +14,13 @@ import {
   bucketPositions,
   bucketStats,
   bucketTheses,
+  costSummary,
   netWorth,
   settingsAt,
 } from "@atlas/domain";
 import { createMemo, For, type JSX, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
-import { AsOfPicker, Callout, useAsOf } from "../../components/index.js";
+import { AsOfPicker, Callout, Section, StandaloneFees, useAsOf } from "../../components/index.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { store } from "../../ledger/state.js";
@@ -29,6 +30,7 @@ import {
   bucketReportView,
   thesesView,
 } from "../../view-models/bucket/index.js";
+import { costsView } from "../../view-models/core/index.js";
 import { netWorthView } from "../../view-models/index.js";
 import { bucketIndexPlot } from "../../view-models/series.js";
 import { RequireLedger } from "../guard.jsx";
@@ -63,6 +65,13 @@ export default function CuboRoute(): JSX.Element {
           ),
         );
         const worth = createMemo(() => netWorthView(netWorth(dated(), date(), settings()), names));
+        // Only the **bucket's** standalone charges: the core's are on `/nucleo`
+        // with the core's own total, and the two never share one.
+        const fees = createMemo(
+          () =>
+            costsView(costSummary(dated(), snapshot.events, date(), settings(), date()), names)
+              .standalone.bucket,
+        );
         const series = createMemo(() =>
           bucketIndexPlot(
             bucketIndexSeries(snapshot.events, { to: date(), max_points: MAX_POINTS }),
@@ -124,6 +133,12 @@ export default function CuboRoute(): JSX.Element {
               />
               <StatsCard view={report().stats} />
               <BudgetCard view={report().controls} worth={worth()} />
+
+              <Show when={fees().rows.length > 0}>
+                <Section title="Costes del cubo">
+                  <StandaloneFees view={fees()} totalLabel="Total del cubo" />
+                </Section>
+              </Show>
 
               <Show when={others().length > 0}>
                 <section class="card" aria-label="Avisos del cubo">

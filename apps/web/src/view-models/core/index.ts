@@ -7,6 +7,7 @@ export {
   type CoreCostRowView,
   type CostsView,
   costsView,
+  type StandaloneGroupView,
   type StandaloneRowView,
 } from "./costs.js";
 export { type TransferRowView, type TransferView, transferView } from "./transfer.js";

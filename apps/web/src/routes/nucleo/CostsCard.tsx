@@ -7,6 +7,10 @@
 // `docs/business-rules.md` §5.2), and until now they appeared in no screen of
 // either interface. Shown apart, said to be apart, and never added to the
 // commissions of a trade.
+//
+// Only the **core's** charges are here. The bucket's are on `/cubo`, with the
+// bucket's own total: this screen showed both books' rows under a line that
+// read "Total del núcleo" and summed only one of them.
 
 import { type JSX, Show } from "solid-js";
 import {
@@ -16,12 +20,9 @@ import {
   DataTable,
   Figure,
   Section,
+  StandaloneFees,
 } from "../../components/index.js";
-import type {
-  CoreCostRowView,
-  CostsView,
-  StandaloneRowView,
-} from "../../view-models/core/index.js";
+import type { CoreCostRowView, CostsView } from "../../view-models/core/index.js";
 
 const CORE_COLUMNS: readonly DataColumn<CoreCostRowView>[] = [
   {
@@ -65,23 +66,17 @@ const CORE_COLUMNS: readonly DataColumn<CoreCostRowView>[] = [
   },
 ];
 
-const STANDALONE_COLUMNS: readonly DataColumn<StandaloneRowView>[] = [
-  { key: "name", header: "Cuenta", card: "title", cell: (row) => row.name },
-  { key: "book", header: "Libro", card: "meta", cell: (row) => row.book },
-  {
-    key: "fees",
-    header: "Comisiones",
-    numeric: true,
-    card: "figure",
-    cell: (row) => <Amount value={row.fees} />,
-  },
-];
-
 export const CostsCard = (props: { view: CostsView }): JSX.Element => (
   <Section title="Costes">
     <Show
       when={props.view.core.rows.length > 0}
-      fallback={<p class="subtle flush">Todavía no hay costes registrados.</p>}
+      fallback={
+        // Only when there is nothing at all: a ledger with a custody charge and
+        // no purchase yet does have costs registered.
+        <Show when={props.view.standalone.core.rows.length === 0}>
+          <p class="subtle flush">Todavía no hay costes registrados.</p>
+        </Show>
+      }
     >
       <DataTable label="Costes del núcleo" columns={CORE_COLUMNS} rows={props.view.core.rows} />
       <div class="spread total-line">
@@ -106,22 +101,6 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
       </Show>
     </Show>
 
-    <Show when={props.view.standalone.rows.length > 0}>
-      <h3 class="block-title">Comisiones sueltas</h3>
-      <p class="note flush">
-        Custodia, administración, conectividad. <strong>No forman parte</strong> del coste de
-        adquisición ni del valor de transmisión, así que no entran en la ganancia patrimonial
-        (business-rules.md §5.2). Están aquí porque son dinero que sale igualmente.
-      </p>
-      <DataTable
-        label="Comisiones sueltas"
-        columns={STANDALONE_COLUMNS}
-        rows={props.view.standalone.rows}
-      />
-      <div class="spread total-line">
-        <span class="subject">Total del núcleo</span>
-        <Amount value={props.view.standalone.core} />
-      </div>
-    </Show>
+    <StandaloneFees view={props.view.standalone.core} totalLabel="Total del núcleo" />
   </Section>
 );
