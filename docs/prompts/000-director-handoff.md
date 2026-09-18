@@ -75,7 +75,7 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 
 | Siguiente | Estado |
 |---|---|
-| Feature 007 — web, Núcleo, Cubo y gráficas | En implementación (spec y plan) |
+| Feature 007 — web, Núcleo, Cubo y gráficas | **Fusionada** (PR #47). Cuatro bloqueantes encontrados por dos revisores antes de fusionar |
 | Feature 008 — previsiones del esquema (ADR-0021) | **Prompt escrito.** Va antes que el motor fiscal: endurecer `fx_rate_date` solo cabe con el libro real vacío (ADR-0018) |
 | Rondas de pulido visual | Una hecha (PR #39). El usuario las quiere periódicas |
 | Rondas de pulido visual de la web | El usuario las pidió explícitamente: agentes que hagan capturas, las analicen, propongan mejoras y se implementen |
@@ -94,6 +94,9 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 - **No afirmes la dirección de un riesgo fiscal sin comprobarla criterio a criterio.** La dirección escribió que los criterios dudosos eran todos conservadores —"si están mal, se paga de más, nunca al revés"— y era falso. Pagar de más cuesta dinero; declarar de menos tiene consecuencias. No es lo mismo y presentarlo como si lo fuera es lo peor que se puede hacer con alguien que no tiene asesor.
 - **Una contradicción entre un ADR y los documentos la implementa el código, no el documento.** `ADR-0013` dijo tres semanas lo contrario que `business-rules.md` sobre si un traspaso entrante cuenta para la regla de recompra, **y el código siguió al ADR**: el caso central del núcleo no avisaba. Cuando un criterio nuevo revise un ADR anterior, la nota va en el ADR **el mismo día**.
 - **Lo que oculta un defecto suele ser una comodidad de la revisión.** Tres desbordamientos horizontales de la web sobrevivieron a dos revisiones porque se medía con el **modo privacidad puesto**, y la máscara es más corta que los importes reales. Mide siempre con los datos anchos.
+- **Un revisor y un implementador no comparten worktree.** Mandé correcciones al implementador de la 007 mientras un revisor seguía trabajando sobre el mismo directorio: se encontró el árbol a medias, con ocho errores de *typecheck*, y tuvo que extraer el commit limpio a su *scratchpad* para poder revisar. Lo resolvió bien y no invalidó nada, pero es una regla de secuencia: **hasta que los dos revisores no entregan, el implementador no vuelve a tocar la rama.**
+- **Mide en el modo en el que no has mirado.** Dos rondas seguidas, lo que ocultaba el defecto fue una comodidad de la medición: los desbordamientos sobrevivieron porque se medía con el modo privacidad **puesto** (la máscara es más corta que los importes), y el modo privacidad llegó roto porque las 112 combinaciones se midieron con él **quitado**. Exige las dos.
+- **Una puerta sobre el grafo de importaciones es necesaria y no suficiente.** El test que vigila que nadie importe `format/money.ts` seguía verde mientras dos pantallas pintaban cantidades y precios en crudo: la cifra llegaba ya convertida a `string`, así que pintarla no requería importar nada. Cuando una regla se pueda romper sin importar nada, hace falta además un test que **renderice**.
 - **Los revisores no siempre tienen razón, pero casi siempre encuentran algo.** Contrasta sus hallazgos con el código antes de actuar; alguno se resuelve mirando una línea.
 
 ## 8. Lo inmediato
