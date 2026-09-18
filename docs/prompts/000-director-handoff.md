@@ -55,9 +55,9 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 
 **En `develop`:** Fases 1 y 2 completas y fusionadas (PRs #1-#30). Monorepo npm workspaces con `packages/domain` (dinero decimal sobre `big.js` vendorizada, 23 tipos de evento, FIFO global, eventos corporativos con cinco primitivas, tesis, `compact`, verificación profunda, generador sintético con *golden file* congelado, precios manuales, pesos del núcleo, calculadora de aportación, costes, proyección a una fecha), `packages/adapters` y `apps/cli` (`atlas`, en español). Cobertura del 100 % de líneas y ramas en el dominio, bloqueante en CI. **21 ADRs**, constitución **1.5.0**.
 
-**En vuelo:** feature 005 (Fase 3, cubo especulativo) implementada y en revisión.
+**Web:** la primera mitad (006: esqueleto, almacenamiento en el navegador, navegación móvil, modo privacidad, Resumen, Movimientos y Ajustes) está **fusionada** (PR #36). Van 36 PRs, 353 commits, 19 ADRs.
 
-**Escrito y esperando:** `docs/prompts/006-web-shell.md` (primera mitad de la web).
+**Escrito y esperando:** `docs/prompts/007-web-analytics.md` (segunda mitad: Núcleo, Cubo, gráficas, asistentes que faltan, calidad del frontend y manejo de errores).
 
 **Decidido hace poco y que conviene que sepas:**
 
@@ -71,9 +71,7 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 
 | Siguiente | Estado |
 |---|---|
-| Cerrar la 005 (Fase 3) | En revisión |
-| Feature 006 — web, esqueleto + Resumen y Movimientos | Prompt escrito |
-| Feature 007 — web, vistas analíticas y gráficas | Por escribir |
+| Feature 007 — web, Núcleo, Cubo y gráficas | **Prompt escrito**, listo para lanzar |
 | Rondas de pulido visual de la web | El usuario las pidió explícitamente: agentes que hagan capturas, las analicen, propongan mejoras y se implementen |
 | Fase 5 — motor fiscal | **Desbloqueada**: criterios fijados. Falta decidir el registro de lo declarado (`tax_return_filed`, Ronda 9) |
 | Fase 4 — AWS, automatización, precios | **Bloqueada por el usuario**: exige pasar la cuenta al Paid Plan, y no se gasta dinero |
@@ -85,6 +83,8 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 - **La cobertura del 100 % puede mentir.** Tres tests de la 005 pasaban con el código mutado. Pide siempre revisión por mutación.
 - **Regenerar el *golden file* es el momento de mayor riesgo del proyecto**: es donde una regresión de proyección puede colarse disfrazada de "diff esperado". Exige que el commit de regeneración enumere **exactamente** qué cambia y que un revisor lo verifique por su cuenta, id por id.
 - **El generador sintético comparte su flujo de aleatoriedad**: cualquier evento nuevo en medio rebaraja los identificadores de todo lo posterior (una vez cambiaron 116 de 160). Todo bloque nuevo necesita su propio subflujo de PRNG, de ULID **y de reloj**.
+- **Ningún test sustituye a abrir el navegador.** La web llegó rota tras 19 commits por un `class` ausente en una línea: veinte reglas de estilo no se aplicaban y 812 tests seguían en verde. Después aparecieron la CSP bloqueando los estilos propios, un desbordamiento de 15 px, etiquetas truncadas y una carrera de arranque visible solo con la CPU frenada. **Exige capturas medidas a 400×890 con DPR 3** (el teléfono del usuario es un Xiaomi Mi 15), no a 360 como hice yo durante semanas.
+- **Mirar si funciona no es mirar si se ve bien.** El interruptor de privacidad llevaba semanas deformado en un óvalo estirado a 44 px de alto, yo lo tenía delante en las capturas y el usuario tuvo que señalarlo. Cuando revises una pantalla, revísala también con ojos de quien la va a usar.
 - **Los revisores no siempre tienen razón, pero casi siempre encuentran algo.** Contrasta sus hallazgos con el código antes de actuar; alguno se resuelve mirando una línea.
 
 ## 8. Lo inmediato
