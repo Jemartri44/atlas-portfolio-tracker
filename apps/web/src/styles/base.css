@@ -41,7 +41,7 @@ p {
 }
 
 /* Every interactive control reaches the recommended target size. */
-:where(button, a.button, [role="button"], summary.control) {
+:where(button, [role="button"]) {
   min-height: var(--tap);
 }
 
@@ -119,11 +119,6 @@ p {
 
 .wrap {
   flex-wrap: wrap;
-}
-
-.grow {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .truncate {
