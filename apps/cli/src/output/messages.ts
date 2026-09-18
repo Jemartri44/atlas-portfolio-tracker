@@ -18,6 +18,15 @@ export const describeError = (error: DomainError): string => {
       return `La cuenta ${text(d.account_id)} no existe.`;
     case "unknown_asset":
       return `El activo ${text(d.asset_id)} no existe.`;
+    // --- Corporate actions composed from parameters (feature 007) ----------
+    case "missing_source_document":
+      return `Un evento corporativo de tipo ${text(d.kind)} necesita su fuente documental: la URL o el PDF del emisor. No es opcional (data-schema.md §6.5).`;
+    case "missing_effect_parameter":
+      return `Un evento corporativo de tipo ${text(d.kind)} necesita ${text(d.parameter)} para poder componer sus efectos.`;
+    case "no_wizard_for_kind":
+      return `El tipo ${text(d.kind)} no se compone a partir de parámetros: sus efectos se indican a mano con atlas ca raw --kind ${text(d.kind)} --effects-json …`;
+    case "fee_account_not_selling":
+      return `La cuenta ${text(d.account_id)} no participa en la venta forzosa, así que no puede llevar comisión. Venden: ${(d.selling as string[]).join(", ")}.`;
     case "duplicate_account":
       return `La cuenta ${text(d.account_id)} ya existe.`;
     case "duplicate_asset":

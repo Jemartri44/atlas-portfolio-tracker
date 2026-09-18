@@ -71,7 +71,7 @@ export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate]
 comandos:
   account add|update|list        asset add|update|list        settings set|show
   add buy|sell|transfer|dividend|interest|fx|cash-in|cash-out|fee|valuation
-  order place|cancel|note|list   transfer request|update|pending
+  order place|cancel|note|list [--all] [--date]     transfer request|update|pending [--date]
   ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|delisting|raw
   thesis open|close <id>|show <id>|list [--closed] [--date]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
