@@ -326,7 +326,7 @@ Lo que **no** se borra y por qué: el `amount`/`unit_price` que es base de coste
 | 14 | `test(tax): check the hand-computed year against the engine` | §6 |
 | 15 | `test(tax): prove no tax figure reads a price` | §7 |
 | 16 | `test(tax): prove the defaults change nothing` | §8 |
-| 17 | `fix(projections): stop warning about purchases the loss sale itself consumed` | N6, **último**, con predicción escrita antes |
+| 17 | `fix(projections): align the wash-sale warnings with the tax engine` | N6, **último**, con predicción escrita antes. Incluye el añadido de la dirección: los dos avisos **nombran la compra** (fecha y cantidad), dicen **el año fiscal con número** y **no llevan identificadores internos**; en la CLI y en la web, con las cifras por `f.money`/`f.quantity`. Se rebasa al final sobre el cambio paralelo de `warnings.ts` y se conservan los dos |
 
 Si Q3/Q4/Q12 se confirman, entran como commits propios del bloque 3 (configuración) y del 4 (aviso). `npm run lint` verde **antes de cada commit** y como último paso antes de entregar. Nunca `git push`.
 

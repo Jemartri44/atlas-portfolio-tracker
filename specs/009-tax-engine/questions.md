@@ -335,4 +335,251 @@ Ninguna bloquea. Las anoto porque la dirección pidió que se dijera lo que pare
 
 ## Ejercicio calculado a mano
 
-**Pendiente de las respuestas.** El diseño está en `plan.md` §6. El cálculo completo —operación por operación, con la compensación, los pendientes y el dinero en juego de cada criterio dudoso— se escribe aquí **y se comprueba en git antes que el código del motor** (commit 4 del plan). Q1, Q2 y Q5 cambian cifras de ese cálculo, por eso no lo adelanto.
+**Escrito antes que el código del motor** (plan §6). Las cifras de aquí salen de aritmética hecha paso a paso sobre los datos de los eventos y de las reglas aprobadas (#1–#23); **no** de ejecutar el motor, que todavía no existe. El test `packages/domain/test/tax/exercise.test.ts` codificará estas cifras como literales. Toda discrepancia que aparezca al contrastar se investigará y se documentará al final de esta sección, sin tocar el literal hasta saber quién tiene razón.
+
+### Configuración
+
+Un único `settings_changed`, completo: los tres mapas por defecto (fondos y monetario a fecha valor y ventana `"1y"`; cotizados y cripto a fecha de contratación; cotizados `"2m"`, cripto `"1y"`; todo `capital_gain`), `wash_sale_transfer_counts: true`, `savings_offset_limit_pct: "25"`, `loss_carryforward_years: 4` y `treaty_withholding_pct: { US: "15" }`.
+
+### Catálogo
+
+| Cuenta | Libro | | Activo | Tipo | Libro | Divisa | Otros |
+|---|---|---|---|---|---|---|---|
+| `acc_mi` | núcleo | | `fund_a`, `fund_b` | `fund` | núcleo | EUR | traspasables |
+| `acc_ibkr` | núcleo | | `etc_gold` | `etc` | núcleo | EUR | `market: XETR` |
+| `acc_bkt` | cubo | | `stock_us` | `stock` | cubo | USD | `market: XNAS` |
+| | | | `stock_eu` | `stock` | cubo | EUR | |
+| | | | `coin_x`, `coin_y` | `crypto` | cubo | EUR | |
+
+Cuatro tesis abiertas en el cubo (una por activo del cubo), para que las compras sean válidas (regla 15). No intervienen en ninguna cifra.
+
+### Los eventos
+
+En todos, `trade_date = value_date` y `fx_rate_date` = esa fecha (todas son días laborables), así que la fecha fiscal no depende de la regla del #1 y ningún tipo es anterior a su fecha (#5 no aplica). Sin comisión salvo donde se dice.
+
+| # | Fecha | Evento | Datos |
+|---|---|---|---|
+| E1 | 2027-02-01 | `buy` `fund_a`, `acc_mi` | 100 participaciones, `amount` 1.000 €, `unit_price` 10 (informativo) |
+| E2 | 2027-03-01 | `buy` `stock_us`, `acc_bkt` | 10 acciones, `amount` 1.000 USD, comisión 1 USD, tipo 1,10 |
+| E3 | 2027-05-03 | `buy` `etc_gold`, `acc_ibkr` | 10 a 70 € |
+| E4 | 2027-06-01 | `buy` `stock_eu`, `acc_bkt` | 10 a 20 € |
+| E5 | 2027-09-01 | `sell` `stock_us`, `acc_bkt` | 10 acciones, `amount` 800 USD, comisión 1 USD, tipo 1,25 |
+| E6 | 2027-10-01 | `interest`, `acc_mi` | bruto 40 €, retención 7,60 € |
+| E7 | 2028-01-10 | `buy` `etc_gold` | 5 a 50 € |
+| E8 | 2028-01-31 | `fx_exchange`, `acc_bkt` | vende 1.000 EUR, compra 1.100 USD, tipos 1 y 1,10 |
+| E9 | 2028-02-01 | `buy` `stock_us` | 10 acciones, `amount` 1.000 USD, comisión 1 USD, tipo 1,10 |
+| E10 | 2028-02-10 | `buy` `coin_x`, `acc_bkt` | 1 a 1.000 € |
+| E11 | 2028-03-01 | `sell` `fund_a`, `acc_mi` (reembolso) | 40 participaciones, `amount` 320 € |
+| E12 | 2028-03-10 | `sell` `etc_gold` | 10 a 55 € |
+| E13 | 2028-05-02 | `corporate_action` `reverse_split` `stock_eu` | `scale("1/4")` + `forced_sale` de 0,5 a 90 € en `acc_bkt` |
+| E14 | 2028-05-11 | `buy` `etc_gold` | 5 a 52 € |
+| E15 | 2028-06-01 | `buy` `fund_a` | 20 participaciones, `amount` 180 € |
+| E16 | 2028-06-15 | `dividend` `stock_us` | bruto 20 USD, retención en origen 6 USD, España 0, tipo 1,25, `source_country: US`, `per_unit` 2 |
+| E17 | 2028-07-03 | `swap` `coin_x` → `coin_y` | entrega 1, recibe 10, valor entregado 1.200 €, recibido 1.190 €, comisión 10 € |
+| E18 | 2028-09-01 | `transfer` `fund_a` → `fund_b`, `acc_mi` | 80 → 160, `nav_out` 12, `nav_in` 6 (informativos), fechas valor 2028-09-01 |
+| E19 | 2028-11-02 | `sell` `etc_gold` | 5 a 60 € |
+| E20 | 2028-11-15 | `sell` `fund_b` (reembolso) | 150 participaciones, `amount` 900 €, `withholding` 31,35 € |
+| E21 | 2028-12-01 | `sell` `stock_us` | 10 acciones, `amount` 1.300 USD, comisión 1 USD, tipo 1,20 |
+| E22 | 2028-12-15 | `buy` `etc_gold` | 2 a 62 € |
+| E23 | 2028-12-29 | `interest`, `acc_mi` | bruto 60 €, retención 11,40 € |
+| E24 | 2028-12-29 | `standalone_fee`, `acc_ibkr` | 12 €, `fee_kind: custody` |
+| E25 | 2028-12-29 | `valuation` de cada posición abierta | precios: **no deben mover nada** |
+
+Los lotes se nombran por el evento que los abre: `L1`, `L2`, `L3`… `L18a` y `L18b` son los dos lotes que el traspaso E18 abre en `fund_b`.
+
+---
+
+### Ejercicio 2027
+
+**E5 — venta de `stock_us`.** Consume `L2` entero (10 acciones).
+
+- Coste (E2): (1.000 + 1) USD / 1,10 = 1.001 / 1,10 = **910,00 €** (#3: la comisión de compra suma).
+- Transmisión: (800 − 1) USD / 1,25 = 799 / 1,25 = **639,20 €** (#3: la de venta resta).
+- Resultado propio: 639,20 − 910,00 = **−270,80 €**. Nada liberado (`L2` no lleva diferimiento).
+- Regla de recompra: pérdida → ventana `"2m"` de `stock_us`: **[2027-07-01, 2027-11-01]**. Adquisiciones de `stock_us`: E2 (2027-03-01) fuera; E9 (2028-02-01) fuera. **Nada diferido.**
+- Computable: **−270,80 €**. Ganancia patrimonial.
+- Criterios: #1, #2 (cotizados), #3, #4 (USD), #6, #14.
+
+**E6 — interés**: rendimiento del capital mobiliario **+40,00 €**; retención **7,60 €**.
+
+**Saldos**: ganancias y pérdidas **−270,80**; rendimientos **+40,00**.
+
+**Compensación (#10, #22)**:
+
+- Fase 1: ganancias negativas contra rendimientos positivos, hasta el 25 % de 40,00 = **10,00**. Ganancias: −270,80 + 10,00 = **−260,80**. Rendimientos: 40,00 − 10,00 = **30,00**.
+- Fase 2: no hay pendientes anteriores.
+- **Pendiente**: −260,80 de ganancias patrimoniales con origen 2027; caduca al cierre de **2031** (2027 + 4).
+- **Base del ahorro 2027: 30,00 €.**
+- Retenciones: **7,60 €**.
+
+---
+
+### Ejercicio 2028
+
+#### Transmisiones, en orden
+
+**E11 — reembolso de `fund_a`** (40 participaciones). Lotes abiertos: `L1` (100, 1.000 €, 2027-02-01). FIFO: 40 de `L1`.
+
+- Coste: 1.000 × 40/100 = **400,00**. Transmisión: **320,00**. Propio: **−80,00**.
+- Ventana `"1y"` (fondo): **[2027-03-01, 2029-03-01]**. Adquisiciones de `fund_a`: E1 (2027-02-01) fuera; **E15 (2028-06-01) dentro**, posterior, 20 participaciones sin usar.
+- Disponibles: 20. Diferido: −80,00 × min(20, 40)/40 = **−40,00**, que llevará `L15` cuando se abra.
+- Computable: −80,00 − (−40,00) = **−40,00**.
+- Criterios: #1, #2 (fondos), #3, #6, #14.
+
+**E12 — venta de 10 `etc_gold`**. Lotes: `L3` (10, 700 €, 2027-05-03), `L7` (5, 250 €, 2028-01-10). FIFO: `L3` entero.
+
+- Coste **700,00**; transmisión 10 × 55 = **550,00**; propio **−150,00**.
+- Ventana `"2m"`: **[2028-01-10, 2028-05-10]**. E3 (2027-05-03) fuera. **E7 (2028-01-10) dentro, justo en el borde** `d − 2m`, anterior: `L7` sigue abierto con 5 → disponibles 5. **E14 (2028-05-11) fuera por un día** (`d + 2m + 1`).
+- Diferido: −150,00 × 5/10 = **−75,00**, a `L7`.
+- Computable: **−75,00**.
+- Criterios: #1, #2 (cotizados), #3, #6, #14, categoría ETC/ETP.
+
+**E13 — contrasplit de `stock_eu`**. `L4` (10, 200 €) → `scale(1/4)` → 2,5 acciones, 200 €. Pico: 0,5 a 90 €.
+
+- Transmisión 0,5 × 90 = **45,00**; coste 200 × 0,5/2,5 = **40,00**; propio **+5,00**. Sin regla (gana).
+- `L4` queda con 2 acciones y 160 €.
+- Computable: **+5,00**. Criterios: #3, #6 (una venta forzosa toma la fecha del evento, no la regla del #1).
+
+**E17 — permuta `coin_x` → `coin_y`**. `L10` (1, 1.000 €).
+
+- Valor (art. 37.1.h): el mayor de 1.200 y 1.190 = **1.200**. Transmisión: 1.200 − 10 = **1.190,00** (#17: la comisión resta de lo transmitido). Coste **1.000,00**. Propio **+190,00**.
+- Abre `L17`: 10 `coin_y`, **1.200 €**, fecha 2028-07-03.
+- Computable: **+190,00**. Criterios: #1, #3, #6, #17.
+
+**E18 — traspaso `fund_a` → `fund_b`** (no es transmisión). Lotes de `fund_a`: `L1` (60, 600 €, 2027-02-01) y `L15` (20, 180 €, 2028-06-01, lleva **−40,00**).
+
+- `L18a`: 160 × 60/80 = **120** participaciones, 600 €, fecha **2027-02-01**.
+- `L18b`: 160 − 120 = **40** participaciones, 180 €, fecha **2028-06-01**, y **el diferimiento de −40,00 viaja con él** (#15).
+
+**E19 — venta de 5 `etc_gold`**. Lotes: `L7` (5, 250 €, 2028-01-10, lleva −75,00), `L14` (5, 260 €, 2028-05-11). FIFO: `L7` entero.
+
+- Coste **250,00**; transmisión 5 × 60 = **300,00**; propio **+50,00**.
+- **Liberado**: `L7` se transmite entero → los **−75,00** de E12.
+- Total: 50,00 − 75,00 = **−25,00** → pérdida (#21: lo liberado vuelve a pasar por la regla).
+- Ventana `"2m"`: **[2028-09-02, 2029-01-02]**. E14 (2028-05-11) fuera. **E22 (2028-12-15) dentro**, posterior, 2 sin usar.
+- Diferido: −25,00 × min(2, 5)/5 = **−10,00**, a `L22`.
+- Computable: −25,00 − (−10,00) = **−15,00**.
+- Criterios: #1, #2 (cotizados), #3, #6, #14, #21, categoría ETC/ETP.
+
+**E20 — reembolso de 150 `fund_b`**. Lotes: `L18a` (120, 600 €), `L18b` (40, 180 €, lleva −40,00). FIFO: `L18a` entero y 30 de `L18b`.
+
+- Coste: 600,00 + 180 × 30/40 = 600,00 + 135,00 = **735,00**. Transmisión **900,00**. Propio **+165,00**.
+- **Liberado**: 30 de las 40 de `L18b` → −40,00 × 30/40 = **−30,00** (viajó por el traspaso: #15). Quedan en `L18b` 10 participaciones, 45 €, **−10,00**.
+- Total: 165,00 − 30,00 = **+135,00**. Sin regla.
+- Computable: **+135,00**. Retención **31,35 €** (#12).
+- Criterios: #1, #2 (fondos), #3, #6, #14, #15.
+
+**E21 — venta de `stock_us`**. `L9` (10, 910 €: 1.001 / 1,10).
+
+- Transmisión: (1.300 − 1) / 1,20 = 1.299 / 1,20 = **1.082,50**. Propio **+172,50**.
+- Computable: **+172,50**. Criterios: #1, #3, #4, #6.
+
+#### Ganancias y pérdidas patrimoniales
+
+| Transmisión | Propio | Liberado | Diferido | Computable |
+|---|---|---|---|---|
+| E11 | −80,00 | | −40,00 | −40,00 |
+| E12 | −150,00 | | −75,00 | −75,00 |
+| E13 | +5,00 | | | +5,00 |
+| E17 | +190,00 | | | +190,00 |
+| E19 | +50,00 | −75,00 | −10,00 | −15,00 |
+| E20 | +165,00 | −30,00 | | +135,00 |
+| E21 | +172,50 | | | +172,50 |
+| **Total** | **+352,50** | **−105,00** | **−125,00** | **+372,50** |
+
+Ganancias 502,50; pérdidas −130,00; **saldo +372,50**. Comprobación: 352,50 − 105,00 + 125,00 = 372,50.
+
+#### Rendimientos del capital mobiliario
+
+| Evento | Concepto | Importe |
+|---|---|---|
+| E16 | Dividendo: 20 USD / 1,25 | **+16,00** |
+| E23 | Interés | **+60,00** |
+| E24 | Custodia (art. 26.1.a, #23): 12 / 1 | **−12,00** |
+| | **Saldo** | **+64,00** |
+
+#### Compensación (#10, #22)
+
+- Fase 1: los dos saldos son positivos. Nada.
+- Fase 2: pendiente de 2027, **−260,80** de ganancias → contra el saldo positivo de ganancias, sin límite: 372,50 − 260,80 = **111,70**. Pendiente de 2027: **0**.
+- **Base del ahorro 2028: 111,70 + 64,00 = 175,70 €.** Nada pendiente para 2029.
+
+#### Regla de recompra: el año en tres cifras
+
+- Diferido en 2028: −40,00 (E11) − 75,00 (E12) − 10,00 (E19) = **−125,00**.
+- Liberado en 2028: −75,00 (en E19, de E12) − 30,00 (en E20, de E11) = **−105,00**.
+- **Pendiente a 31/12/2028: −20,00** = −10,00 en `L18b` (origen E11, ha viajado: #15) + −10,00 en `L22` (origen E19).
+- Conservación: −125,00 = −105,00 + −20,00.
+- Provisionalidad: la ventana de E19 cierra el **2029-01-02**. Con fecha de consulta anterior, E19 es **provisional**; con fecha de consulta el 2029-01-03 o después, no.
+
+#### Retenciones a cuenta
+
+E20: **31,35**; E23: **11,40**; E16: 0 en España. **Total: 42,75 €.** Se restan de una cuota que este motor no calcula.
+
+#### Doble imposición (E16, #16)
+
+- Impuesto satisfecho en origen: 6 USD / 1,25 = **4,80 €**.
+- Límite del convenio (EE. UU., 15 %): 15 % × 16,00 = **2,40 €**.
+- Primer límite: **2,40 €**. Los otros **2,40 €** no son deducibles en España (se reclaman en origen).
+- El segundo límite (tipo medio efectivo × 16,00) **no es calculable** sin la base liquidable completa.
+
+#### Lo que la salida dice que no calcula
+
+La cuota; el segundo límite de la doble imposición; las diferencias de cambio del efectivo, **con E8 en la lista**; ninguna renta en especie (no hay `grant`).
+
+---
+
+### Criterios dudosos de 2028 y el dinero en juego
+
+#### #2 cotizados (en disputa, agresivo) — recálculo con `"1y"` para `stock`, `etf`, `etc`, `etp`
+
+Hay que recalcular **los dos ejercicios**, porque la otra lectura alcanza también a E5.
+
+**2027 con `"1y"`.** E5: ventana [2026-09-01, 2028-09-01]. E2 está dentro, pero `L2` lo consume la propia E5 (**#18**: no cuenta). **E9 (2028-02-01) dentro**, posterior, 10 → diferido −270,80 × 10/10 = **−270,80**, a `L9`. Computable 0. Ganancias 0, rendimientos 40,00, sin compensación. **Base 2027: 40,00** (+10,00). Nada pendiente.
+
+**2028 con `"1y"`.**
+
+- E11: igual, **−40,00** (el fondo ya tenía un año).
+- E12: ventana [2027-03-10, 2029-03-10]. E3 dentro, pero `L3` lo consume la propia E12 (**#18**). E7: 60 días, `L7` 5 disponibles. E14: 62 días, posterior, 5. E22: 280 días, posterior, 2. Por cercanía: E7 (5) + E14 (5) = 10 → diferido **−150,00**: −75,00 a `L7` y −75,00 a `L14`. Computable **0**.
+- E13: **+5,00**. E17: **+190,00**.
+- E19: consume `L7` → propio +50,00, liberado −75,00, total −25,00. Ventana [2027-11-02, 2029-11-02]: E7 consumido por E19 (**#18**), E14 dentro pero sus 5 ya las usó E12 (**#19**), E22 2 disponibles → diferido **−10,00** a `L22`. Computable **−15,00**.
+- E20: igual, **+135,00**.
+- E21: consume `L9`, que lleva −270,80 → propio +172,50, liberado −270,80, total **−98,30**. Ventana [2027-12-01, 2029-12-01]: E9 consumido por E21 (**#18**), E2 fuera. Computable **−98,30**.
+- Ganancias: −40,00 + 0 + 5,00 + 190,00 − 15,00 + 135,00 − 98,30 = **176,70**. Rendimientos 64,00. Sin pendientes.
+- **Base 2028: 240,70**.
+
+**Dinero en juego del #2 en 2028: +65,00** de base (240,70 − 175,70), más **+10,00** en 2027. Pendiente de compensar a 31/12/2028: 0 en los dos casos. Diferido pendiente a 31/12/2028: −20,00 frente a −95,00 (−75,00 más en `L14`). **Dirección: agresiva** (la lectura alternativa da más base). Mercados afectados: `XETR` (E12, E19) y `XNAS` (E5, a través de E21).
+
+#### #4 método de la ganancia en divisa (en disputa) — diferencia calculada
+
+E21, calculando primero en dólares: (1.299 − 1.001) USD / 1,20 = 298 / 1,20 = 248,333… → **248,33**. Frente a +172,50: **+75,83**. **Agresiva.** (En 2027, E5: (799 − 1.001) / 1,25 = −161,60 frente a −270,80: +109,20, también agresiva; figura en el informe de 2027.)
+
+#### #4 diferencias de cambio del efectivo (en disputa) — no calculado
+
+E8 listado. Sin importe.
+
+#### #15 (en disputa, conservador) — exposición
+
+Liberado tras viajar: 30,00 (E20). Pendiente tras viajar: 10,00 (`L18b`). **Exposición 40,00. Conservadora.**
+
+#### #17 (media, agresivo en el momento) — la comisión
+
+E17: **10,00 €. Agresiva.**
+
+#### #21 (baja, conservador) — diferencia calculada
+
+E19: con la lectura alternativa (la regla solo mira el resultado propio, +50,00), no habría diferimiento y el computable sería −25,00. Diferencia: **−10,00** de base. **Conservadora.**
+
+#### Sin efecto este año (una línea cada uno)
+
+- **#1** (media): con la regla invertida la base no se mueve (**0,00**): en este libro contratación y valor coinciden.
+- **Categoría ETC/ETP**: con `etc` como rendimiento del capital mobiliario, E12 (−75,00) y E19 (−15,00) pasan a rendimientos: ganancias 462,50, rendimientos 64,00 − 90,00 = −26,00. Fase 1: −26,00 contra el 25 % de 462,50 = 115,625 → **115,63**; se compensan 26,00 → ganancias 436,50. Fase 2: −260,80 → **175,70**. Diferencia **0,00**.
+- **#22** (media): un solo ejercicio de origen y ningún límite del 25 % en juego: **0,00**.
+
+No aparecen por no tocar ninguna cifra: #2b (ningún traspaso entrante causa un diferimiento), #2 cripto (ninguna pérdida de cripto), #5, #7, #8, #13, #18, #19 y #20 (en la lectura vigente; #18 y #19 sí aparecen **dentro** del recálculo del #2). El #23 tiene certeza alta: no es dudoso, aunque su cifra (−12,00) lleve el criterio.
+
+---
+
+### Contraste con el motor
+
+*Pendiente: se rellena al ejecutar `exercise.test.ts`.*
