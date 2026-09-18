@@ -535,6 +535,125 @@ describe("architecture: apps/web", () => {
   });
 
   /**
+   * The other half of that gate: the figures a message **says**.
+   *
+   * `Amount` covers every figure a screen paints, and none of the warnings and
+   * errors the domain writes as prose goes through it — they are strings. So
+   * the mask on, the table said `••••` and the warning right under it said "el
+   * aporte bruto al cubo (5000 EUR) supera el tope de 6000 EUR" (N11 of the
+   * review of feature 007). The fix is that a template asks `format/privacy.ts`
+   * for its figures instead of writing them, and this is what keeps the next
+   * template from forgetting: it reads the catalogues and refuses a detail that
+   * is an amount or a quantity by name and goes in with `text()`.
+   *
+   * Both directions, like the stylesheet rules above: a figure that is not
+   * masked, and something masked that is not a figure — masking a percentage
+   * or a date would be the same defect mirrored, and the mode would stop being
+   * readable in public, which is what it is for.
+   */
+  const SENSITIVE_DETAIL =
+    /_eur$|^(?:amount|quantity|position|available|open|missing|distributed|core|gross|loss|invested|cost)$/;
+
+  /** A detail whose **name** matches but which is not a figure, with its reason. */
+  const NOT_A_FIGURE: Record<string, string> = {
+    "liquidation_must_cover_all_accounts.missing": "son las cuentas que faltan, no una cantidad",
+  };
+
+  /**
+   * And a figure whose name says nothing, so the catalogue has to say it.
+   * `invalid_settings` is not here: its value is an amount or a percentage
+   * depending on the field it names, and the catalogue decides that with its
+   * own `MONEY_SETTINGS`, outside the sentence.
+   */
+  const A_FIGURE_ANYWAY = new Set(["invalid_amount.value", "invalid_quantity.value"]);
+
+  /** Each entry of a catalogue with its body, from its key to the next one. */
+  const templatesOf = (source: string): Map<string, string> => {
+    const keys = [...source.matchAll(/^ {2}([a-z_0-9]+):\s*\(/gm)];
+    const bodies = new Map<string, string>();
+    keys.forEach((key, index) => {
+      const start = key.index as number;
+      const end = index + 1 < keys.length ? (keys[index + 1]?.index as number) : source.length;
+      bodies.set(key[1] as string, source.slice(start, end));
+    });
+    return bodies;
+  };
+
+  /** What a template **prints**: the inside of each `${…}` of its sentence. */
+  const interpolationsOf = (body: string): string[] => {
+    const found: string[] = [];
+    for (let at = body.indexOf("${"); at !== -1; at = body.indexOf("${", at + 1)) {
+      let depth = 0;
+      let end = at + 1;
+      for (; end < body.length; end += 1) {
+        const character = body.charAt(end);
+        if (character === "{") {
+          depth += 1;
+        } else if (character === "}") {
+          depth -= 1;
+          if (depth === 0) {
+            break;
+          }
+        }
+      }
+      found.push(body.slice(at + 2, end));
+    }
+    return found;
+  };
+
+  /** The call this read sits directly inside: `f.money`, `text`, `n.one`… */
+  const wrappingCall = (text: string, at: number): string => {
+    let depth = 0;
+    for (let index = at - 1; index >= 0; index -= 1) {
+      const character = text.charAt(index);
+      if (character === ")") {
+        depth += 1;
+      } else if (character === "(") {
+        if (depth === 0) {
+          return /([\w.]+)$/.exec(text.slice(0, index))?.[1] ?? "";
+        }
+        depth -= 1;
+      }
+    }
+    return "";
+  };
+
+  it("masks every amount and quantity a message says, and only those", () => {
+    const catalogues = ["errors.ts", "warnings.ts"].map((name) =>
+      join(webSrc, "format", "messages", name),
+    );
+    const bare: string[] = [];
+    const overreach: string[] = [];
+    let checked = 0;
+    for (const file of catalogues) {
+      for (const [code, body] of templatesOf(readFileSync(file, "utf8"))) {
+        for (const printed of interpolationsOf(body)) {
+          for (const read of printed.matchAll(/\bd\.([a-z_0-9]+)\b/g)) {
+            const where = `${code}.${read[1]}`;
+            const sensitive =
+              (SENSITIVE_DETAIL.test(read[1] as string) && NOT_A_FIGURE[where] === undefined) ||
+              A_FIGURE_ANYWAY.has(where);
+            const call = wrappingCall(printed, read.index as number);
+            const wrapped = call === "f.money" || call === "f.quantity";
+            if (sensitive) {
+              checked += 1;
+              if (!wrapped) {
+                bare.push(`${where} (${call === "" ? "sin envolver" : call})`);
+              }
+            } else if (wrapped) {
+              overreach.push(`${where} (${call})`);
+            }
+          }
+        }
+      }
+    }
+    // The scanner itself: if it stops finding figures, the rule passes vacuously.
+    expect(checked).toBeGreaterThan(15);
+    expect([...new Set(bare)].sort()).toEqual([]);
+    expect([...new Set(overreach)].sort()).toEqual([]);
+  });
+
+  /**
    * FR-014: importing the browser store must not drag `node:fs` into the
    * bundle. The barrel of `@atlas/adapters` exports `FileLedgerStore`, so the
    * web imports subpaths only. `scripts/check-bundle.mjs` verifies the same
