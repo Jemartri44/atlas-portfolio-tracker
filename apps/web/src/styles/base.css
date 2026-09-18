@@ -50,6 +50,37 @@ p {
   margin-bottom: 0;
 }
 
+/*
+ * The switch is the exception, and it has to be one.
+ *
+ * Pico draws it as an oval of 2.25em by 1.25em — 36x20 at the size of a form
+ * control — and its knob is a circle of `height: 100%`. Forcing `--tap` on it
+ * left a box of 36x44 with a knob of 44: a blue crescent that does not read as
+ * a switch at all (measured in the review of 2026-09-18: 36x44, radius 20px).
+ *
+ * The 44px target is the business of the **label**, `.switch-inline` below,
+ * which is what the finger actually hits. `:where()` above carries no
+ * specificity, so this rule wins without an `!important`.
+ */
+[type="checkbox"][role="switch"] {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+/*
+ * A switch and its text on one line: the status bar and the settings screen use
+ * the same row, so the touch target is defined once. `min-height` on the label
+ * is what makes the target 44px tall while the control keeps its proportion.
+ */
+.switch-inline {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: var(--s-2);
+  margin: 0;
+  min-height: var(--tap);
+}
+
 /* Numbers: tabular, right-aligned, never reflowing as digits change. */
 .num {
   font-variant-numeric: tabular-nums;

@@ -46,12 +46,6 @@
   gap: var(--s-1);
 }
 
-/* The privacy switch: a label that behaves like a control, in either shape. */
-.switch-inline {
-  cursor: pointer;
-  margin: 0;
-}
-
 /* Where the ledger is: visible on every screen (FR-011). */
 .ledger-chip {
   align-items: center;

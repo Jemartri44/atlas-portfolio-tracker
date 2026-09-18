@@ -126,9 +126,11 @@ interface SwitchProps {
   hint?: string | undefined;
 }
 
+// The same row as the status bar (`.switch-inline`): one class, one 44px
+// target, and the control keeps the proportion Pico gives it.
 export const Switch = (props: SwitchProps): JSX.Element => (
   <div class="field">
-    <label for={props.id} class="row">
+    <label for={props.id} class="switch-inline">
       <input
         id={props.id}
         type="checkbox"
