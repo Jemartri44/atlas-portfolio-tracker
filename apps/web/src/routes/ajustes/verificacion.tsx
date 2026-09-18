@@ -9,6 +9,7 @@ import { deepCheck, type IntegrityFinding, integrity } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Badge, Callout } from "../../components/index.js";
+import { describeError } from "../../format/messages/errors.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { RequireLedger } from "../guard.jsx";
@@ -91,7 +92,7 @@ export default function VerificacionRoute(): JSX.Element {
                           <span class="title">
                             <A href={`/movimientos/${entry.event.id}`}>{entry.event.type}</A>
                           </span>
-                          <span class="subtle">{entry.error.message}</span>
+                          <span class="subtle">{describeError(entry.error)}</span>
                         </div>
                       )}
                     </For>

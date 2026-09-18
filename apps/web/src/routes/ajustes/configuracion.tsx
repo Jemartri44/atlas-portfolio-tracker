@@ -22,7 +22,7 @@ import {
 } from "@atlas/domain";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Callout } from "../../components/index.js";
-import { changeSettings } from "../../ledger/actions.js";
+import { changeSettings, toAppError } from "../../ledger/actions.js";
 import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
@@ -95,7 +95,9 @@ export default function ConfiguracionRoute(): JSX.Element {
           try {
             next = candidateSettings(current(), patch(), weights());
           } catch (failure) {
-            setError(failure instanceof Error ? failure.message : "La configuración no es válida.");
+            // `toAppError` and not `failure.message`: the domain speaks English
+            // by contract and each interface translates (decision (i)).
+            setError(toAppError(failure).message);
             return;
           }
           if (!acceptInvalid) {
