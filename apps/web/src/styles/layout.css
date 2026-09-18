@@ -281,7 +281,12 @@ main {
     gap: var(--s-3);
     inset-inline: auto;
     left: 0;
-    padding: var(--s-4) var(--s-3);
+    /* A window shorter than the rail (a phone on its side) scrolls it rather
+       than cutting the footer, and with it the way to the settings, off. */
+    overflow-y: auto;
+    /* The same top as `main`: the action and the title of the screen start on
+       one line. */
+    padding: var(--s-6) var(--s-3) var(--s-4);
     top: 0;
     width: var(--rail-w);
   }
@@ -290,6 +295,17 @@ main {
     flex-direction: column;
     gap: var(--s-1);
     justify-content: flex-start;
+  }
+
+  /*
+   * Down the rail the list is a column, so the `flex: 1 1 0` that shares the
+   * width of the bar out among five slots shared the **height** of the screen
+   * out instead: on a 1141px monitor, 180px of void between one destination and
+   * the next (review of 2026-09-18). Here a slot is as tall as its link, the
+   * group sits at the top and the footer is pushed down by its own margin.
+   */
+  .nav li {
+    flex: 0 0 auto;
   }
 
   .nav a {
@@ -303,8 +319,31 @@ main {
     padding: 0 var(--s-3);
   }
 
+  /*
+   * One column of glyphs and one of labels for every row of the rail, the
+   * footer included. The glyph is centred in a track as wide as the widest of
+   * them — the privacy switch — so the dot, the switch and the gear share the
+   * axis of the icons above and every label starts on the same edge. Before,
+   * each footer row lined up on its own and the switch stuck out to the left.
+   */
+  .nav .rail-footer > *,
+  .nav ul a:not(.action) {
+    align-items: center;
+    column-gap: var(--s-3);
+    display: grid;
+    grid-template-columns: var(--rail-glyph) minmax(0, 1fr);
+    padding: 0 var(--s-3);
+  }
+
+  .nav .rail-footer > * > :first-child,
+  .nav ul a:not(.action) > :first-child {
+    justify-self: center;
+    margin: 0;
+  }
+
   /* In the rail there is width to spare: the label reads at the link's size. */
-  .nav .label {
+  .nav .label,
+  .nav .switch-inline .tiny {
     font-size: inherit;
   }
 
@@ -351,7 +390,7 @@ main {
     border-top: 1px solid var(--c-border);
     display: flex;
     flex-direction: column;
-    gap: var(--s-2);
+    gap: var(--s-1);
     margin-top: auto;
     padding-top: var(--s-3);
   }
@@ -360,8 +399,15 @@ main {
     max-width: 100%;
   }
 
+  /*
+   * Beside the rail, not centred in what is left of the screen: the content
+   * starts where the navigation ends, and whatever a wide monitor has to spare
+   * stays on the right as margin. Centred, a 2045px monitor showed a 992px
+   * column with 400px of void on either side (review of 2026-09-18).
+   */
   main {
-    padding-bottom: var(--s-6);
+    margin: 0;
+    padding: var(--s-6) var(--s-5);
   }
 }
 

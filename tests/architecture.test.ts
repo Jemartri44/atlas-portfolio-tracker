@@ -465,6 +465,11 @@ const SHELL_RULES = [
     reason: "un hueco tiene que poder encogerse por debajo de su palabra más larga",
   },
   {
+    selector: ".nav li",
+    declaration: "flex: 0 0 auto",
+    reason: "en la barra lateral `flex: 1 1 0` reparte la altura: 180px de vacío entre destinos",
+  },
+  {
     selector: ".nav a",
     declaration: "margin: 0",
     reason: "Pico da margen negativo a `nav li a` y cada destino se solapaba con el vecino",
@@ -730,8 +735,9 @@ describe("architecture: apps/web", () => {
     expect(violations).toEqual([]);
   });
   /**
-   * The six declarations of `layout.css` that keep the shell inside a 360px
-   * screen with its labels readable. See `SHELL_RULES` for why each one exists.
+   * The declarations of `layout.css` that keep the shell inside a 360px screen
+   * with its labels readable, and the rail with its destinations together. See
+   * `SHELL_RULES` for why each one exists.
    */
   it("keeps the declarations that hold the shell together", () => {
     const layout = readFileSync(join(webSrc, "styles", "layout.css"), "utf8");

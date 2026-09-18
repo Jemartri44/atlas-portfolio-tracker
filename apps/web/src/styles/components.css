@@ -301,7 +301,13 @@
  * which is the same information in a column 505px wide — a comfortable one.
  */
 @media (min-width: 1024px) {
-  .datalist {
+  /*
+   * Only the list that has a table to stand in for it. `.datalist` is also the
+   * menu of Registrar and of Ajustes, and hiding all of them left those two
+   * screens with their section titles and nothing under them: from a monitor
+   * nothing could be registered (review of 2026-09-18).
+   */
+  .datalist:has(+ .datatable) {
     display: none;
   }
 
