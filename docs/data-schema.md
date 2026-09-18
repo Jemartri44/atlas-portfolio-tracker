@@ -320,3 +320,24 @@ Tabla de composición admitida por `kind` (el evento se rechaza si sus `effects`
 | `issuer_restructuring` | `convert` y/o `forced_sale` | según el folleto | Se compone como fusión o liquidación |
 
 `identifier_change` y `cash_dividend` no son `corporate_action` (ver ADR-0011).
+
+
+### 8.6 Previsiones de la Fase 5 (ADR-0021)
+
+Nueve campos decididos el 2026-09-18 y **todavía no implementados**. Existen porque la revisión adversarial de `docs/fiscal-questions.md` dejó seis criterios **en disputa** y el libro no guarda lo necesario para aplicar ninguna de las dos lecturas. **Ninguno decide una pregunta fiscal**: cada uno permite responderla en cualquier sentido, y los valores por defecto dejan el comportamiento actual intacto.
+
+| Campo | Dónde | Forma | Por defecto |
+|---|---|---|---|
+| `income_category` | `Settings` | `Record<AssetType, "capital_gain" \| "movable_capital">` | `capital_gain` en todos |
+| `market` | `asset_created` | Código MIC o nombre del mercado, opcional | ausente |
+| `issuer_country` | `asset_created` | ISO 3166-1 alfa-2, opcional | ausente |
+| `fee_kind` | `standalone_fee` | `custody \| administration \| connectivity \| discretionary_management \| other`, opcional | `other` |
+| `withholding` | `forced_sale` | `DecimalString`, opcional; misma forma que en `sell` | ausente |
+| `income_eur`, `income_base` | `grant` | Importe y `general \| savings`, opcionales | ausentes |
+| *(tipo nuevo)* `swap` | — | Permuta de un activo por otro, con la valoración del art. 37.1.h: **el mayor** entre el valor de mercado de lo entregado y de lo recibido | — |
+| `neutrality_regime` | `corporate_action` | `boolean`, opcional | ausente |
+| `fx_rate_date` | `cash_deposit`, `cash_withdrawal`, `standalone_fee` | **Pasa de opcional a obligatorio** | — |
+
+**El calendario lo manda la última.** Hacer obligatorio `fx_rate_date` es un **endurecimiento**, y ADR-0018 solo lo permite dentro de la v1 **mientras el libro real esté vacío**: el cargador juzga las líneas viejas con las reglas de hoy, así que endurecer con datos dentro deja el libro entero ilegible. Por tanto las nueve se implementan **antes de que se registre la primera operación real**. Pasado ese punto exigen `schema_version = 2` y migración.
+
+Las ocho primeras son **compatibles** en el sentido de ADR-0018 (campos opcionales y un tipo de evento nuevo) y no urgen por sí solas; van juntas porque se consumen a la vez.
