@@ -158,11 +158,18 @@ export const linkBuy = (
   state: LedgerState,
   thesis: Thesis,
   eventId: Ulid,
+  fiscalDate: CivilDate,
   quantity: Quantity,
   costEur: Money,
   feeEur: Money,
 ): void => {
-  thesis.buys.push(eventId);
+  thesis.buys.push({
+    event_id: eventId,
+    fiscal_date: fiscalDate,
+    quantity,
+    amount_eur: costEur,
+    fee_eur: feeEur,
+  });
   thesis.quantity_bought = thesis.quantity_bought.add(quantity);
   thesis.invested_eur = thesis.invested_eur.add(costEur);
   thesis.fees_eur = thesis.fees_eur.add(feeEur);
@@ -184,11 +191,20 @@ export const linkBuy = (
 export const linkSell = (
   thesis: Thesis,
   eventId: Ulid,
+  fiscalDate: CivilDate,
   quantity: Quantity,
+  proceedsEur: Money,
   gainEur: Money,
   feeEur: Money,
 ): void => {
-  thesis.sells.push(eventId);
+  thesis.sells.push({
+    event_id: eventId,
+    fiscal_date: fiscalDate,
+    quantity,
+    amount_eur: proceedsEur,
+    fee_eur: feeEur,
+    gain_eur: gainEur,
+  });
   thesis.quantity_sold = thesis.quantity_sold.add(quantity);
   thesis.result_eur = thesis.result_eur.add(gainEur);
   thesis.fees_eur = thesis.fees_eur.add(feeEur);

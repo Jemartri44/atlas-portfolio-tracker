@@ -32,6 +32,7 @@ import {
   applyAssetUpdated,
 } from "./catalogue.js";
 import { applyCorporateAction, referencesOf } from "./corporate-actions.js";
+import { noteFxRates } from "./fx-rates.js";
 import {
   applyBuy,
   applyCashDeposit,
@@ -376,7 +377,12 @@ export const projectLedger = (
     if (options.asOf !== undefined && entry.date > options.asOf) {
       continue;
     }
-    guarded(entry.event, () => applyOperation(state, entry.event, entry.position));
+    guarded(entry.event, () => {
+      applyOperation(state, entry.event, entry.position);
+      // After applying, never before: an event the projection rejected must not
+      // date a currency either.
+      noteFxRates(state, entry.event, entry.date);
+    });
   }
   thesisWarnings(state);
   return state;

@@ -216,6 +216,7 @@ export const applyBuy = (state: LedgerState, event: BuyEvent, position: number):
       state,
       thesis,
       event.id,
+      fiscalDate,
       quantity,
       costEur,
       fxOf(event).toEur(money(event.fee, event.currency)),
@@ -264,7 +265,9 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
     linkSell(
       thesis,
       event.id,
+      fiscalDate,
       quantity,
+      proceedsEur,
       gain.gain_eur,
       fxOf(event).toEur(money(event.fee, event.currency)),
     );

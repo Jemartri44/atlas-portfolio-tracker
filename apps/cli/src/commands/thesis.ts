@@ -1,6 +1,6 @@
 // atlas thesis open · close <id> · list [--closed] [--at]
 
-import { theses, todayInMadrid } from "@atlas/domain";
+import { type ThesisLeg, theses, todayInMadrid } from "@atlas/domain";
 import {
   assertKnownFlags,
   booleanFlag,
@@ -13,6 +13,16 @@ import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
 import { requireId } from "./catalogue.js";
 import { confirmAndRecord, loadForQuery, renderQuery } from "./shared.js";
+
+/** A linked trade as `--json` shows it: decimals as strings, like everywhere else. */
+export const jsonLeg = (leg: ThesisLeg) => ({
+  event_id: leg.event_id,
+  fiscal_date: leg.fiscal_date,
+  quantity: leg.quantity.toString(),
+  amount_eur: leg.amount_eur.amount.toString(),
+  fee_eur: leg.fee_eur.amount.toString(),
+  gain_eur: leg.gain_eur?.amount.toString(),
+});
 
 const OPEN_FLAGS = [
   "id",
@@ -69,6 +79,8 @@ export const thesisCommand = async (
       state,
       rows.map((t) => ({
         ...t,
+        buys: t.buys.map(jsonLeg),
+        sells: t.sells.map(jsonLeg),
         planned_size_eur: t.planned_size_eur.amount.toString(),
         quantity_bought: t.quantity_bought.toString(),
         quantity_sold: t.quantity_sold.toString(),

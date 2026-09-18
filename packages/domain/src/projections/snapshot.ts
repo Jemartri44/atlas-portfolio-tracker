@@ -112,8 +112,10 @@ const thesisOf = (thesis: Thesis) => ({
   closed_event_id: thesis.closed_event_id,
   closed_at: thesis.closed_at,
   closing_notes: thesis.closing_notes,
-  buys: thesis.buys,
-  sells: thesis.sells,
+  // Only the ids: the legs carry money and dates that the snapshot does not
+  // need, and serialising them would move the golden file for no reason.
+  buys: thesis.buys.map((leg) => leg.event_id),
+  sells: thesis.sells.map((leg) => leg.event_id),
   quantity_bought: text(thesis.quantity_bought),
   quantity_sold: text(thesis.quantity_sold),
   invested_eur: text(thesis.invested_eur),

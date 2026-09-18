@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  addMonths,
+  addYears,
   assertCivilDate,
   compareCivilDates,
   daysBetween,
@@ -75,5 +77,34 @@ describe("civil dates", () => {
     expect(isWeekend("2026-09-07")).toBe(false); // Monday
     expect(isWeekend("1970-01-01")).toBe(false); // Thursday, the epoch itself
     expect(isWeekend("1969-12-28")).toBe(true); // Sunday before the epoch
+  });
+});
+
+/**
+ * The arithmetic of the wash-sale window (ADR-0014): date to date in whole
+ * months and years, never a fixed number of days. 61 days are not two months,
+ * and getting this wrong costs a deferred loss.
+ */
+describe("addMonths / addYears", () => {
+  it("counts whole months and clamps a day the target month does not have", () => {
+    expect(addMonths("2027-01-15", 2)).toBe("2027-03-15");
+    expect(addMonths("2027-01-31", 1)).toBe("2027-02-28");
+    expect(addMonths("2028-01-31", 1)).toBe("2028-02-29");
+    expect(addMonths("2027-01-31", 3)).toBe("2027-04-30");
+    expect(addMonths("2027-11-30", 2)).toBe("2028-01-30");
+  });
+
+  it("walks backwards too, which is the other half of the window", () => {
+    expect(addMonths("2027-03-15", -2)).toBe("2027-01-15");
+    expect(addMonths("2027-01-15", -1)).toBe("2026-12-15");
+    expect(addMonths("2027-03-31", -1)).toBe("2027-02-28");
+    expect(addMonths("2027-01-31", -13)).toBe("2025-12-31");
+  });
+
+  it("adds years with the leap day clamped", () => {
+    expect(addYears("2027-06-30", 1)).toBe("2028-06-30");
+    expect(addYears("2028-02-29", 1)).toBe("2029-02-28");
+    expect(addYears("2028-02-29", -1)).toBe("2027-02-28");
+    expect(addYears("2027-01-15", 0)).toBe("2027-01-15");
   });
 });
