@@ -23,6 +23,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0017](0017-web-stack.md) | Stack de la aplicacion web | Aceptada |
 | [0018](0018-schema-evolution-rules.md) | Evolucion del esquema y endurecimiento de validaciones | Aceptada |
 | [0019](0019-web-local-first.md) | Aplicacion web local-first sin servidor | Aceptada |
+| [0020](0020-tax-return-filed.md) | Constancia de lo declarado: evento `tax_return_filed` | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 
