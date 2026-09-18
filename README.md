@@ -4,7 +4,7 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 
 ## Estado
 
-Fase 1 completa y Fase 2 en marcha. Fase 1: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local), feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha) y feature `003-synthetic-data` (generador de libros sintéticos con *golden file*, `compact` con archivo del original, verificación profunda y copia local verificada). Fase 2: feature `004-monthly-contribution` (precios manuales, pesos y desviaciones del núcleo, calculadora de la aportación mensual, simulador de traspaso y resumen de costes). Sin API, sin web, sin infraestructura todavía. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/), [`specs/002-corporate-actions/`](specs/002-corporate-actions/), [`specs/003-synthetic-data/`](specs/003-synthetic-data/) y [`specs/004-monthly-contribution/`](specs/004-monthly-contribution/).
+Fases 1 y 2 completas y Fase 3 en marcha. Fase 1: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local), feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha) y feature `003-synthetic-data` (generador de libros sintéticos con *golden file*, `compact` con archivo del original, verificación profunda y copia local verificada). Fase 2: feature `004-monthly-contribution` (precios manuales, pesos y desviaciones del núcleo, calculadora de la aportación mensual, simulador de traspaso y resumen de costes). Fase 3: feature `005-bucket-tracking` (seguimiento del cubo especulativo contra el índice, patrimonio total desglosado, reglas de control y aviso de la ventana de recompra). Sin API, sin web, sin infraestructura todavía. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/), [`specs/002-corporate-actions/`](specs/002-corporate-actions/), [`specs/003-synthetic-data/`](specs/003-synthetic-data/), [`specs/004-monthly-contribution/`](specs/004-monthly-contribution/) y [`specs/005-bucket-tracking/`](specs/005-bucket-tracking/).
 
 ## Documentación
 
@@ -59,6 +59,9 @@ atlas income 2027        # dividendos e intereses
 atlas weights --date 2027-12-31   # pesos, objetivos y desviaciones del núcleo
 atlas contribute --amount 1000    # reparto de la aportación del mes (propone; no escribe)
 atlas costs                       # comisiones, TER y coste anual, núcleo y cubo por separado
+atlas bucket --date 2028-12-31    # el cubo: posiciones, tesis frente al índice, estadísticas y avisos
+atlas networth --date 2028-12-31  # patrimonio total, siempre desglosado (núcleo + cubo + efectivo)
+atlas thesis show th_delta        # la ficha de una tesis: hipótesis, plazo, operaciones y resultado
 atlas check              # integridad del libro (proyección)
 atlas check --deep       # además, líneas crudas: ids duplicados, huellas manipuladas, líneas no canónicas o antiguas
 
@@ -98,6 +101,35 @@ atlas add buy --account acc_fund --asset ast_bonds --order <order_id> \
 `atlas contribute` **propone y nunca escribe**: la aplicación no ejecuta órdenes ni elige valores del cubo. Si falta el precio de un activo con posición, se niega a repartir y dice cuál falta, en vez de repartir sobre un total incompleto.
 
 Antes de traspasar entre fondos, `atlas transfer simulate --from-asset ast_world --to-asset ast_bonds --quantity 10` enseña los pesos antes y después y recuerda que un traspaso no es hecho imponible.
+
+### El cubo especulativo (Fase 3)
+
+El cubo es el libro donde se aprende: cada tesis se escribe **antes** de comprar (regla 15) y se mide contra la alternativa aburrida, el índice de referencia (regla 16). El índice es un activo más del catálogo, y sus precios salen de las mismas `valuation` que todo lo demás.
+
+```bash
+# 0. Una vez: di cuál es el índice de referencia del cubo
+atlas settings set --bucket-benchmark-asset ast_world --yes
+
+# 1. La tesis, antes de comprar: qué crees, en cuánto tiempo, qué te haría estar equivocado
+atlas thesis open --id th_delta --account acc_bucket --asset ast_delta \
+  --hypothesis "El contrato nuevo dobla los ingresos" --horizon-days 120 \
+  --invalidation "Cierra por debajo de 15 EUR dos semanas seguidas" --planned-size 900 --yes
+
+# 2. La compra, enlazada a la tesis (sin tesis no se puede comprar en el cubo)
+atlas add buy --account acc_bucket --asset ast_delta --thesis th_delta \
+  --trade-date 2027-12-20 --value-date 2027-12-22 --quantity 25 --unit-price 18.20 \
+  --currency EUR --fx-rate 1 --fx-rate-date 2027-12-20 --fee 1 --yes
+
+# 3. El cubo entero en un comando
+atlas bucket --date 2028-12-31
+atlas thesis show th_delta --date 2028-12-31
+```
+
+`atlas bucket` enseña las posiciones abiertas con su P&L latente, sus días abierta y **la condición de invalidación a la vista**; las tesis con su resultado frente al índice; las estadísticas de la operativa —tasa de acierto, esperanza, máxima caída y, destacadas, las **comisiones sobre el capital operado** (regla 14)—; y los avisos de las reglas de control (17 y 18). Todo avisa y nada bloquea: el libro nunca rechaza un hecho que ya ocurrió.
+
+`atlas networth` es la única vista que suma los dos libros, y lo hace **siempre desglosada**: núcleo, cubo y efectivo por cuenta y divisa, con el tipo de cambio aplicado y de cuándo es. Si falta un precio o un tipo, el total sale marcado como parcial y dice qué falta.
+
+Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (dos meses para cotizados, un año para fondos y cripto, contados de fecha a fecha): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar; el diferimiento lo calculará el motor fiscal de la Fase 5.
 
 ### Copia de seguridad provisional (Fases 1-3)
 

@@ -108,20 +108,35 @@ describe("architecture: @atlas/domain imports nothing", () => {
    * on them. The phase-2 projections stay on their side of the line, and the
    * fiscal ones never learn that a price exists.
    */
-  it("keeps manual prices out of every fiscal calculation", () => {
+  it("keeps prices out of every fiscal calculation", () => {
     const projections = join(domainSrc, "projections");
+    /** Views: they may read the fiscal state, never compute with it. */
     const informative = [
       "prices.ts",
       "weights.ts",
       "contribution.ts",
       "simulate-transfer.ts",
       "costs.ts",
+      "networth.ts",
+      "bucket.ts",
+      "bucket-stats.ts",
     ];
-    const fiscal = ["lots.ts", "gains.ts", "income.ts", "corporate-actions.ts", "primitives.ts"];
+    /** The engine: what computes lots and gains. No view may import it. */
+    const engine = ["lots.ts", "gains.ts", "income.ts", "corporate-actions.ts", "primitives.ts"];
+    /**
+     * The whole fiscal path: the engine plus everything pass B of the projection
+     * calls. None of it may learn what a price is — if `theses.ts` did, the code
+     * that creates lots and gains would depend on prices through it, which is
+     * what constitution II forbids. That is exactly why the index comparison
+     * lives in `bucket.ts` and **wraps** `theses()` instead of extending it;
+     * reading that projection from a view is fine, the other way round is not.
+     */
+    const fiscal = [...engine, "operations.ts", "theses.ts", "wash-sale.ts", "settings-impact.ts"];
+    const forbiddenForFiscal = ["prices.js", "bucket.js", "bucket-stats.js", "networth.js"];
     const violations: string[] = [];
     for (const file of informative) {
       for (const specifier of specifiersOf(readFileSync(join(projections, file), "utf8"))) {
-        if (fiscal.some((name) => specifier.endsWith(name.replace(".ts", ".js")))) {
+        if (engine.some((name) => specifier.endsWith(name.replace(".ts", ".js")))) {
           violations.push(`${file} -> ${specifier}`);
         }
         if (specifier.endsWith("fiscal-date.js")) {
@@ -131,7 +146,7 @@ describe("architecture: @atlas/domain imports nothing", () => {
     }
     for (const file of fiscal) {
       for (const specifier of specifiersOf(readFileSync(join(projections, file), "utf8"))) {
-        if (specifier.endsWith("prices.js")) {
+        if (forbiddenForFiscal.some((name) => specifier.endsWith(name))) {
           violations.push(`${file} -> ${specifier}`);
         }
       }
