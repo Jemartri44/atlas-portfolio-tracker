@@ -49,9 +49,12 @@ const OTHER: Record<BalanceCategory, BalanceCategory> = {
   movable_capital: "capital_gain",
 };
 
-const CRITERIA = sortCriteria(["10", "22"]);
+// Marked pure so that a bundle that never compensates (the web, today) can drop
+// this module whole: a call at module level is kept by default, and with it
+// the whole catalogue of criteria.
+const CRITERIA = /* @__PURE__ */ sortCriteria(["10", "22"]);
 
-const HUNDRED = Decimal.parse("100");
+const HUNDRED = /* @__PURE__ */ Decimal.parse("100");
 
 /** Compensates one year: `pending` is what the previous years left, oldest or not. */
 export const compensate = (
