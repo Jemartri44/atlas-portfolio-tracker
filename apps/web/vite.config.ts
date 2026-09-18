@@ -17,7 +17,15 @@ import solid from "vite-plugin-solid";
 
 const repo = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
-/** Production CSP (constitution, security; ADR-0017). The dev server needs inline scripts, so it gets its own. */
+/**
+ * Production CSP (constitution, security; ADR-0017). The dev server needs inline
+ * scripts, so it gets its own. It has to be **the same string** as the one in
+ * `index.html`, which is what `transformIndexHtml` swaps in dev.
+ *
+ * No `frame-ancestors`: a `<meta>` element cannot deliver it, so announcing it
+ * here would promise a protection that does not exist. It is an HTTP header of
+ * the distribution (phase 4).
+ */
 const PRODUCTION_CSP = [
   "default-src 'self'",
   "script-src 'self'",
@@ -30,7 +38,6 @@ const PRODUCTION_CSP = [
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
-  "frame-ancestors 'none'",
 ].join("; ");
 
 /** Dev CSP: identical but allowing the inline scripts Vite injects for HMR. Documented in the README. */

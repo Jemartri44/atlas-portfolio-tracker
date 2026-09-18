@@ -7,10 +7,15 @@
       Restrictive CSP served by the application itself (constitution, security).
       `vite.config.ts` relaxes it in `vite dev`, where the dev server injects
       inline scripts; production keeps `script-src 'self'` with no unsafe-inline.
+
+      `frame-ancestors` is **not** here: a `<meta>` element cannot carry it and
+      the browser ignores it (Chromium says so in the console). It belongs to an
+      HTTP header of the CloudFront distribution, which is phase 4;
+      `specs/006-web-shell/questions.md` records it so it is not lost.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <meta name="referrer" content="no-referrer" />
     <meta name="color-scheme" content="light dark" />
