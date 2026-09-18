@@ -8,7 +8,7 @@
     "moduleResolution": "bundler",
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "types": []
+    "types": ["node", "vite-plugin-pwa/client"]
   },
   "include": ["src", "test"],
   "references": [
