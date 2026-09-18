@@ -13,7 +13,7 @@ Constitución VI y ADR-0007: pocas dependencias, cada una justificada. Esta es l
 | `@aws-sdk/client-ssm` | `adapters` | Token de IBKR (Fase 4) |
 | `@aws-sdk/client-ses` | `adapters` | Correo (Fase 4) |
 | `solid-js` (**fijada a 1.9.x**) | `web` | Framework de la SPA (ADR-0017). 4 paquetes, 5,33 KB gzip, compila con `tsc` 7 sin herramienta extra |
-| `@solidjs/router` | `web` | Rutas de la SPA; sin dependencias propias |
+| `@solidjs/router` (**versión exacta fijada**) | `web` | Rutas de la SPA; sin dependencias propias. Llegó a 1.0.0 después de ADR-0017 |
 
 `packages/domain` **no tiene dependencias npm en runtime**. Se comprueba en CI (`package.json` sin `dependencies`).
 
@@ -30,6 +30,7 @@ Constitución VI y ADR-0007: pocas dependencias, cada una justificada. Esta es l
 | `vite` | Build del frontend |
 | `@types/node` | Tipos de Node en `adapters`, `cli`, `api` |
 | `vite-plugin-pwa` | Service worker y manifiesto de la PWA (ADR-0017); solo desarrollo |
+| `vite-plugin-solid` | Imprescindible para compilar el JSX de Solid con Vite (ADR-0017); solo desarrollo, no llega al *bundle* |
 
 ## Prohibido
 

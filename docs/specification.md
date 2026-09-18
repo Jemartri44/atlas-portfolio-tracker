@@ -415,6 +415,8 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 ### 9.6 Frontend
 
+> **Vigente desde ADR-0017 y ADR-0019 (2026-09-18).** El *stack* está decidido con investigación verificada (Solid con versión fijada, Pico CSS y uPlot vendorizadas, sin librería de componentes, tablas HTML nativas), así que la comparativa de abajo es **histórica**. Y la web **no necesita servidor ni autenticación**: funciona en el dispositivo, sobre el mismo fichero que la CLI en escritorio y sobre el almacenamiento del navegador en el móvil. Lo que esta sección y la §9.2 describen detrás de Cognito y una Lambda es la **sincronización de la Fase 4**, no un requisito para que la web exista.
+
 **Requisito:** compila a archivos estáticos servibles desde S3, sin servidor de renderizado.
 
 | Opción | Ventaja | Inconveniente |

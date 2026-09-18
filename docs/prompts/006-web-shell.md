@@ -56,7 +56,7 @@ apps/web/src/
 ├── ledger/                    acceso al libro: adaptador, carga, proyección, acciones
 ├── format/                    formateo de importes, fechas, cantidades y porcentajes
 └── styles/                    tokens y hoja propia sobre Pico
-apps/web/vendor/               pico.css y uPlot con su LICENSE y su VENDOR.md
+apps/web/vendor/               pico.css con su LICENSE y su VENDOR.md (uPlot llega con las gráficas, que son la feature siguiente: Q9)
 ```
 
 No metas ficheros sueltos en la raíz de `src/`. Cada carpeta con más de un fichero lleva su `index.ts` de entrada si eso aclara los imports, no por costumbre.
@@ -80,7 +80,8 @@ Un adaptador nuevo del puerto `LedgerStore`, **con el contrato existente** (`pac
 
 ### 3.4 Modo privacidad (constitución: nada personal a la vista)
 
-- Un **único componente `Amount`** por el que pasa **todo** importe de la aplicación. Enmascara con un carácter neutro cuando el modo está activo; **los porcentajes, las cantidades y las fechas siguen visibles** (la desviación y el peso son la información útil en público).
+- Un **único componente** por el que pasa **todo** importe y **toda cantidad** de la aplicación. Enmascara con un carácter neutro cuando el modo está activo; **los porcentajes, los pesos, las desviaciones, las fechas y los textos siguen visibles** (son la información útil en público y no delatan el patrimonio).
+  *Corrección (Q6 de la 006): este prompt decía que las cantidades seguían visibles y **contradecía `docs/specification.md` §9.6**, que manda ocultar "importes y cantidades". Gana la especificación: doce participaciones de un fondo con precio público delatan el importe igual que el importe. Matiz de usabilidad: el enmascarado es de la **presentación de datos**; un campo de formulario que el usuario está rellenando no se enmascara, porque lo está escribiendo él.*
 - **Activado por defecto.** El interruptor está siempre a un toque desde la cabecera, y su estado se recuerda en el dispositivo.
 - Un test que recorra el árbol de componentes y falle si algún importe se pinta sin pasar por `Amount`: es la única forma de que la regla siga viva dentro de dos años.
 
@@ -157,3 +158,8 @@ Las vistas analíticas (pesos del núcleo, calculadora de aportación, cubo, fis
 - **(e) Una sola navegación**, adaptada al ancho: barra inferior en móvil, rail en escritorio. Nunca las dos.
 - **(f) El color nunca es el único portador de significado** y ninguna pantalla tiene desplazamiento horizontal a 360 px.
 - **(g) Esta feature es el esqueleto más Resumen y Movimientos.** Las vistas analíticas y las gráficas son la siguiente: se entrega algo pequeño y terminado antes que algo grande a medias.
+- **(h) Lo que la web necesita y el dominio no expone, se añade al dominio** (respuestas a Q1, Q2 y Q4 de la 006): la **vista previa del efecto de un evento** sale de `apps/cli` y pasa a `packages/domain/usecases/` para que las dos interfaces consuman la misma; se añade una proyección que **lista el libro** ordenado por fecha de negocio (ordenar y agrupar son dominio, ADR-0017); y el cálculo de **qué avisos silencia un cambio de configuración** se mueve junto a su gemelo `movedFiscalYears`. La CLI pasa a consumir las tres: una sola definición, nunca dos.
+- **(i) Los textos en español viven en cada interfaz, con un test anti-deriva** (Q3): el mensaje de la CLI remite a comandos que en la web no existen, así que cada una tiene su catálogo, y un test comprueba que **ambas** cubren todos los códigos del dominio y falla si aparece uno sin traducir. Si la duplicación llega a doler, se extrae entonces con datos reales de qué se comparte; hoy sería arquitectura especulativa.
+- **(j) En escritorio se abre la carpeta, no el fichero** (Q5): desde un *handle* de fichero el navegador **no permite llegar al directorio padre**, así que no habría dónde escribir `archive/` y `compact` quedaría incompleto. Se pide la carpeta y dentro se abre `ledger.jsonl`, igual que hace la CLI.
+- **(k) Se empieza sin entorno de DOM en los tests** (Q8). El test que vigila el componente de importe se hace **sobre el grafo de importaciones**, que es mejor que renderizar: es estructural y no depende de una librería. La lógica de presentación vive en su propia capa y se prueba como funciones puras, y los flujos de escritura se prueban sobre la capa de acciones **comprobando los bytes del fichero**. Si al implementar una pantalla crítica queda sin red, pide `happy-dom` con el caso concreto y se autoriza.
+- **(l) En el teléfono el libro vive siempre en el navegador** (hallazgo de la 006): la File System Access API no existe en ningún navegador móvil, así que el aviso de exportación **no es un adorno, es la única red de seguridad**; y como el permiso del fichero no sobrevive al cierre de todas las pestañas, hace falta un "Reconectar" que este prompt no preveía. Ambos entran en el alcance.
