@@ -292,6 +292,17 @@ main {
     justify-content: flex-start;
   }
 
+  /*
+   * Down the rail the list is a column, so the `flex: 1 1 0` that shares the
+   * width of the bar out among five slots shared the **height** of the screen
+   * out instead: on a 1141px monitor, 180px of void between one destination and
+   * the next (review of 2026-09-18). Here a slot is as tall as its link, the
+   * group sits at the top and the footer is pushed down by its own margin.
+   */
+  .nav li {
+    flex: 0 0 auto;
+  }
+
   .nav a {
     align-items: center;
     border-radius: var(--r-md);
