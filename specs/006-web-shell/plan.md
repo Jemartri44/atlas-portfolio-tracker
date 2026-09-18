@@ -223,6 +223,7 @@ Lo comprobado de forma automática (en CI y en cada commit):
 - El test anti-deriva de mensajes: todos los códigos del dominio traducidos en las **dos** interfaces.
 - El `build` comprueba sobre el resultado que no hay `node:`, ni URL ajena, ni exceso de presupuesto.
 - El servidor de desarrollo transforma las 17 pantallas y componentes con el *pipeline* real (`curl` a cada módulo: 200 y transformación correcta), y `vite preview` sirve el `index.html` con la CSP **estricta**, el manifiesto y el *service worker*.
+- **El paso 6 de `quickstart.md`, por el camino de código de la web**: sobre una copia del *golden*, `previewEvent` mostró la posición 127,4196 → 129,4196 y 27 → 28 lotes, y `recordEvent` escribió a través de `BlobLedgerStore` (el mismo adaptador del navegador, con el blob respaldado por un fichero real). Resultado comprobado desde fuera: el fichero pasa de 200 a **201 líneas**, las 200 anteriores son **idénticas byte a byte** (`diff` limpio), `atlas check --deep` devuelve **0 hallazgos** (los 21 avisos son los que el *golden* ya traía) y `atlas positions` refleja la compra. Es la garantía de que la web y la CLI comparten un solo libro; lo único que no se ha ejercitado es el *handle* de la File System Access API, que necesita navegador.
 
 Lo que **no** se ha podido comprobar en este entorno, y queda para la revisión del usuario (no hay navegador aquí):
 
