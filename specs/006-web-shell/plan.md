@@ -185,19 +185,53 @@ tests/architecture.test.ts               + 3 reglas: puerta de Amount, aislamien
 
 ## Mediciones
 
+Del dominio (portátil del usuario, Node 22, `tests/fixtures/ledger/synthetic-v1.jsonl`, 200 eventos):
+
 | Qué | Valor | Cuándo |
 |---|---|---|
-| Decodificar 200 líneas | 4,0 ms | Medido 2026-09-18 (portátil, Node 22) |
+| Decodificar y validar 200 líneas | 4,0 ms | Medido 2026-09-18 |
 | Proyectar 200 eventos (`collectErrors`) | 4,6 ms en frío / 1,24 ms en caliente | Medido 2026-09-18 |
 | Proyectar con `asOf` | 2,3 ms | Medido 2026-09-18 |
 | `netWorth` | 1,6 ms | Medido 2026-09-18 |
-| Escalado | ~6 µs/evento, lineal | Medido 2026-09-18 (prefijos 50/100/150/200) |
-| Estimación a 5.000 eventos (portátil) | 30-60 ms | Extrapolación lineal, a reconfirmar |
-| Carga + primera pintura en móvil real | *pendiente* | Tarea de cierre |
-| *Bundle* de producción (JS + CSS, gzip) | *pendiente*, presupuesto **120 KB** | Tarea de cierre, comprobado en `build` |
-| Runtime antes de nuestro código | ~42 KB gzip esperados (ADR-0017) | Tarea de cierre |
+| Escalado | ~6 µs/evento, lineal (prefijos 50/100/150/200) | Medido 2026-09-18 |
+| Estimación a 5.000 eventos (portátil) | 30-60 ms de carga + proyección | Extrapolación lineal |
 
-Compromiso del prompt §3.3: si la proyección del *golden* o de un libro de diez años pasara de 100 ms, se dice aquí en lugar de esconderlo. Con los números de arriba no ocurre en el portátil; el dato del móvil se añade a esta tabla al terminar, aunque sea malo.
+**Conclusión honesta**: el umbral de 100 ms del prompt §3.3 no se alcanza en el portátil hasta el orden de 10.000 eventos, así que no hay nada que optimizar; lo que sí se ha hecho es no desperdiciarlo (una sola proyección base y memoización por fecha). El dato del móvil real queda pendiente de la verificación del usuario.
+
+Del *bundle* (`npm run build`, comprobado por `scripts/check-bundle.mjs`):
+
+| Fragmento | Sin comprimir | gzip | Qué es |
+|---|---|---|---|
+| `assets/state-*.js` | 85,0 KB | **25,9 KB** | `@atlas/domain` entero con `big.js`: proyecciones, FIFO, dinero |
+| `assets/index-*.css` | 97,8 KB | **14,2 KB** | Pico vendorizada (13,2) más nuestra capa (~1,0) |
+| `assets/index-*.js` | 34,9 KB | **12,9 KB** | Arranque, esqueleto y estado |
+| `assets/routing-*.js` | 31,1 KB | **12,1 KB** | `solid-js` + `@solidjs/router` |
+| `workbox-*.js` + `sw.js` | 16,5 KB | **5,9 KB** | *Service worker* de la PWA (fuera del camino crítico) |
+| Resto (14 fragmentos por pantalla) | — | ~26 KB | Cargados por ruta, no en el arranque |
+| **TOTAL servido** | — | **109,9 KB** | Presupuesto 120 KB (SC-005) |
+
+Lo que descarga el arranque son ~65 KB gzip (índice + rutas + dominio + CSS); el resto llega por ruta. Nota sobre ADR-0017: su estimación de "~42 KB de runtime antes de nuestro código" no contaba el **dominio** (25,9 KB), que en el navegador es código nuestro pero no de interfaz; la cifra comparable es solid+router+Pico = **25,3 KB**, por debajo de lo previsto, y el dominio se suma aparte. Es el precio de tener el motor fiscal en el dispositivo, que es justo lo que hace que la web funcione sin servidor.
+
+## Verificación
+
+Lo comprobado de forma automática (en CI y en cada commit):
+
+- `npm run lint`, `npm run typecheck`, `npm test` (812 pruebas) y `npm run build` en verde; `npm run clean && npm run build` desde cero.
+- El adaptador del navegador pasa los **tests de contrato ya existentes** del puerto (rechazo de esquema nuevo, `append` que conserva bytes, `replace` que archiva, conflicto por etag).
+- Los flujos de escritura, sobre el *golden* real y comprobando los **bytes del fichero**: una compra añade una línea y deja las 200 anteriores intactas; corregir añade dos; anular una; la huella repetida no escribe sin confirmación; el conflicto no escribe nada.
+- Cuatro reglas de arquitectura nuevas: la puerta de `Amount`, la prohibición del barril de `@atlas/adapters` y de `node:*`, la ausencia de directivas `use:` y la de orígenes ajenos en las fuentes. **Se ha comprobado que fallan** introduciendo una violación a propósito.
+- El test anti-deriva de mensajes: todos los códigos del dominio traducidos en las **dos** interfaces.
+- El `build` comprueba sobre el resultado que no hay `node:`, ni URL ajena, ni exceso de presupuesto.
+- El servidor de desarrollo transforma las 17 pantallas y componentes con el *pipeline* real (`curl` a cada módulo: 200 y transformación correcta), y `vite preview` sirve el `index.html` con la CSP **estricta**, el manifiesto y el *service worker*.
+
+Lo que **no** se ha podido comprobar en este entorno, y queda para la revisión del usuario (no hay navegador aquí):
+
+- El recorrido visual de `quickstart.md` a 360 px: desplazamiento horizontal, objetivos táctiles y orden de lectura.
+- Abrir la carpeta del disco con la File System Access API, el ciclo de «Reconectar» y la escritura sobre el `ledger.jsonl` real desde el navegador.
+- La instalación como PWA y el arranque sin conexión.
+- El tiempo de carga y de proyección en un móvil real.
+
+El módulo de pantallas **no** se puede cargar en un test sin DOM: `@solidjs/router` lee `window.history` en el momento de importarse. Es el caso concreto que justificaría `happy-dom` (decisión (k)), anotado en `questions.md`.
 
 ## Riesgos y cómo se cortan
 

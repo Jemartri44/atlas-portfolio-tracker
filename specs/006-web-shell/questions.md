@@ -185,3 +185,38 @@ Comprobado hoy: `vite-plugin-solid@2.11.14` admite `vite ^8` y arrastra `@babel/
 5. **Solid 2.0 y `@solidjs/router` 1.0.0.** El router ha llegado a 1.0.0 después de ADR-0017 (que lo daba por "sin dependencias propias", lo cual sigue siendo cierto). *La dirección confirma fijar la versión exacta*, y `docs/dependencies.md` ya lo recoge.
 
 6. **Los dos hallazgos del móvil son alcance permanente** (decisión (l) del prompt): en el teléfono el libro vive **siempre** en el navegador, así que el aviso de exportación es la única red de seguridad, y el "Reconectar" del permiso del fichero entra en el alcance.
+
+---
+
+## Notas de implementación (2026-09-18, al terminar)
+
+Cosas que aparecieron al escribir el código y que la dirección debería conocer. Ninguna reabre una decisión; dos son hallazgos y una es una corrección de comportamiento.
+
+### N1 — El etag del dominio protege la escritura, no lo que el usuario vio
+
+`recordEvent`, `reverseEvent` y `correctEvent` **cargan el libro ellos mismos** y hacen `append` con el etag de *su* carga. Eso protege el fichero (nadie pisa nada) pero no detecta que el libro cambiara entre el momento en que la pantalla lo leyó y el momento en que el usuario confirma, que en un móvil pueden ser minutos. Con la vista previa por delante, confirmar una previsualización calculada sobre un libro viejo es justo lo que el prompt §3.2 quiere evitar.
+
+**Resuelto en la capa de la web**, sin tocar el dominio: antes de escribir, `ledger/actions.ts` compara el etag del *snapshot* que la pantalla está mostrando con el del fichero; si difieren, no escribe, recarga y avisa (`WriteFailure.kind === "conflict"`). Cuesta una lectura extra por escritura (4 ms con 200 eventos) y es una comparación de etags, no una regla de negocio. Si la dirección prefiere que el dominio acepte un `expectedEtag`, es un ADR pequeño y la web lo consumiría sin cambios de interfaz.
+
+### N2 — `silencedWarnings` compara el **sujeto** del aviso, no todos sus detalles
+
+Al mover la comparación al dominio apareció un defecto del código que había en la CLI: identificaba un aviso por `code` + `JSON.stringify(details)`, y los detalles incluyen el propio umbral. Subir el umbral de 5 a 6 pp con una desviación del 10 % listaba el aviso como "silenciado" cuando seguía sonando: una falsa alarma en el diálogo que pide confirmación. La versión del dominio identifica el aviso por su **sujeto** (`code` + `asset_id`/`asset_class`), con su test. Cambia el comportamiento observable de `atlas settings set` (deja de avisar de más), y por eso se anota.
+
+### N3 — La CLI traducía once códigos al inglés
+
+El test anti-deriva bidireccional que pidió la dirección encontró, a la primera, once códigos que la CLI mostraba con el mensaje inglés del dominio: `missing_basis`, `dangling_correction`, `dangling_reference`, `negative_position`, `lots_mismatch`, `duplicate_id`, `invalid_line`, `invalid_json`, `invalid_envelope`, `invalid_currency`, `invalid_fx_rate` e `invalid_instant`. Se han traducido en `apps/cli/src/output/messages.ts`, que es lo que pedía la condición de Q3. El test lleva una lista corta de códigos que no llegan a una persona con mensaje propio (guardas internas y los de `compact`), cada uno con su motivo escrito.
+
+### N4 — Sin DOM no se puede cargar el grafo de pantallas (caso concreto para `happy-dom`)
+
+Se intentó una prueba de humo que importara `App.tsx` y las doce rutas para detectar un ciclo de imports o un acceso al DOM en el momento de cargar. **No es posible sin DOM**: `@solidjs/router` lee `window.history` *al importarse* (`dist/lifecycle.js`), así que el import falla antes de llegar a nuestro código. Alternativas descartadas: falsear `window` a mano (reimplementar mal un DOM) y compilar en modo SSR (un segundo modo de compilación para el mismo código).
+
+Queda cubierto de otra forma —el servidor de desarrollo transforma las 17 pantallas y componentes con el *pipeline* real, y la lógica vive en capas puras que sí se prueban—, pero **este es el caso concreto** que la decisión (k) pedía para autorizar `happy-dom`: con él, la prueba de humo y un test de renderizado de `Amount` (máscara incluida) entrarían en unas pocas líneas. Lo pido para la feature siguiente, no para esta.
+
+### N5 — Lo que el entorno no permitió verificar
+
+No hay navegador en el entorno de implementación, así que el recorrido visual de `quickstart.md` (360 px, objetivos táctiles, File System Access, PWA sin conexión y tiempos en el móvil) queda para la revisión del usuario. `plan.md` §Verificación separa con precisión lo comprobado de forma automática de lo que necesita ojos.
+
+### N6 — Dos desviaciones menores del prompt, ya acordadas o inevitables
+
+1. `apps/web/src/` tiene dos carpetas más que el árbol del prompt (`shell/` y `view-models/`), justificadas en `plan.md`.
+2. El diálogo nativo **no** se cierra al pulsar el fondo: la mitad de estos diálogos están encima de un formulario que ha costado rellenar, y perderlo por un toque perdido es peor que un clic más. `Esc` y el botón de cancelar siguen cerrando.
