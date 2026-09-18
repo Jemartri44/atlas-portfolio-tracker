@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
 import { fiscalDateOf } from "../../src/settings/fiscal-date.js";
 import {
+  DEFAULT_FISCAL_DATE_RULE,
   DEFAULT_SETTINGS,
+  DEFAULT_WASH_SALE_WINDOW,
+  fiscalDateRuleOf,
   mergeSettings,
   normalizeSettings,
   validateSettings,
@@ -30,7 +33,7 @@ describe("validateSettings", () => {
     ...extra,
   });
 
-  it("rejects non-objects and missing per-type maps", () => {
+  it("rejects non-objects and a per-type map that is missing altogether", () => {
     expect(() => validateSettings("x")).toThrow(ValidationError);
     expect(() => validateSettings({ fiscal_date_rule: DEFAULT_SETTINGS.fiscal_date_rule })).toThrow(
       ValidationError,
@@ -41,11 +44,37 @@ describe("validateSettings", () => {
         fiscal_date_rule: { ...DEFAULT_SETTINGS.fiscal_date_rule, fund: "settlement" },
       }),
     ).toThrow(ValidationError);
+  });
+
+  /**
+   * ADR-0018: the maps are partial. Adding `etf` to the enum must not turn every
+   * `settings_changed` already written into an invalid line, so a type the map
+   * does not mention is valid and takes its documented default.
+   */
+  it("accepts partial per-type maps and resolves the missing types to their default", () => {
+    const partial = validateSettings({
+      ...DEFAULT_SETTINGS,
+      fiscal_date_rule: { stock: "trade_date" },
+      wash_sale_window: { stock: "2m" },
+    });
+    expect(partial.fiscal_date_rule.fund).toBeUndefined();
+    expect(fiscalDateRuleOf(partial, "fund")).toBe("value_date");
+    expect(fiscalDateRuleOf(partial, "etf")).toBe("trade_date");
+    const normalized = normalizeSettings(partial);
+    expect(normalized.fiscal_date_rule).toEqual(DEFAULT_FISCAL_DATE_RULE);
+    expect(normalized.wash_sale_window).toEqual(DEFAULT_WASH_SALE_WINDOW);
+    // Empty maps are the extreme case of the same rule.
     expect(() =>
-      validateSettings({
-        ...DEFAULT_SETTINGS,
-        fiscal_date_rule: { stock: "trade_date" },
-      }),
+      validateSettings({ ...DEFAULT_SETTINGS, fiscal_date_rule: {}, wash_sale_window: {} }),
+    ).not.toThrow();
+  });
+
+  it("keeps rejecting a value that is present and wrong: the tolerance is to absence", () => {
+    expect(() =>
+      validateSettings({ ...DEFAULT_SETTINGS, fiscal_date_rule: { etf: "settlement" } }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      validateSettings({ ...DEFAULT_SETTINGS, wash_sale_window: { etf: "3m" } }),
     ).toThrow(ValidationError);
   });
 
@@ -179,17 +208,21 @@ describe("wash_sale_window (ADR-0014)", () => {
       validateSettings({ ...WITHOUT_WINDOW, wash_sale_window_days: { ...LEGACY_DAYS, fund: 0 } }),
     ).toThrow(ValidationError);
     expect(() => validateSettings(WITHOUT_WINDOW)).toThrow(ValidationError);
-    // The new form alone must cover every asset type; there is no legacy map to fall back on.
+    // A partial new form is valid on its own (ADR-0018): what it does not say
+    // takes the default, not the legacy map.
     expect(() =>
       validateSettings({ ...WITHOUT_WINDOW, wash_sale_window: { stock: "2m" } }),
-    ).toThrow(ValidationError);
+    ).not.toThrow();
     expect(() => validateSettings({ ...WITHOUT_WINDOW, wash_sale_window_days: 365 })).toThrow(
       ValidationError,
     );
   });
 
-  it("leaves settings without the legacy form untouched", () => {
-    expect(normalizeSettings(DEFAULT_SETTINGS)).toBe(DEFAULT_SETTINGS);
+  it("returns complete maps even without the legacy form, and is idempotent", () => {
+    const normalized = normalizeSettings(DEFAULT_SETTINGS);
+    expect(normalized.fiscal_date_rule).toEqual(DEFAULT_FISCAL_DATE_RULE);
+    expect(normalized.wash_sale_window).toEqual(DEFAULT_WASH_SALE_WINDOW);
+    expect(normalizeSettings(normalized)).toEqual(normalized);
   });
 });
 
@@ -216,6 +249,8 @@ describe("mergeSettings", () => {
     expect("wash_sale_window_days" in merged).toBe(false);
     expect(merged.wash_sale_window).toEqual({
       stock: "61d",
+      // `etf` had no legacy value to inherit, so it keeps its documented default.
+      etf: "2m",
       etc: "61d",
       etp: "61d",
       crypto: "365d",
@@ -230,6 +265,22 @@ describe("mergeSettings", () => {
   });
 });
 
+describe("bucket_benchmark_asset_id (business rule 16)", () => {
+  it("accepts an asset_id and rejects an empty or non-string one", () => {
+    expect(
+      validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: "ast_world" }),
+    ).toMatchObject({ bucket_benchmark_asset_id: "ast_world" });
+    expect(() => validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: "" })).toThrow(
+      ValidationError,
+    );
+    expect(() => validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: 7 })).toThrow(
+      ValidationError,
+    );
+    // It is optional: a ledger without a benchmark is perfectly valid.
+    expect(() => validateSettings(DEFAULT_SETTINGS)).not.toThrow();
+  });
+});
+
 describe("fiscalDateOf", () => {
   const dates = { trade_date: "2026-12-30", value_date: "2027-01-02" };
 
@@ -240,5 +291,18 @@ describe("fiscalDateOf", () => {
       fiscal_date_rule: { ...DEFAULT_SETTINGS.fiscal_date_rule, etc: "value_date" },
     });
     expect(fiscalDateOf(dates, "etc", flipped)).toBe("2027-01-02");
+  });
+
+  /**
+   * The trap ADR-0018 closes: a type the map does not mention must take its
+   * documented default, not fall into `value_date` because `undefined` is not
+   * `"trade_date"`. An ETF taxed by value date would be a wrong tax year found
+   * out years later.
+   */
+  it("uses the documented default for an asset type the settings do not mention", () => {
+    const partial = { ...DEFAULT_SETTINGS, fiscal_date_rule: { fund: "value_date" as const } };
+    expect(fiscalDateOf(dates, "etf", partial)).toBe("2026-12-30");
+    expect(fiscalDateOf(dates, "stock", partial)).toBe("2026-12-30");
+    expect(fiscalDateOf(dates, "fund", partial)).toBe("2027-01-02");
   });
 });

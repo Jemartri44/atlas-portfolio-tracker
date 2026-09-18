@@ -102,6 +102,25 @@ export const describeError = (error: DomainError): string => {
       return `--accept-invalid solo se admite en un cambio de configuración, no en ${text(d.type)} (ADR-0015).`;
     case "newly_invalid_events":
       return `Este cambio de configuración deja inválidos ${(d.affected as unknown[]).length} eventos ya registrados.`;
+    case "invalid_settings": {
+      // `validateSettings` names the parameter it rejected; the CLI is the only
+      // place that speaks to a person, so it is the one that has to say it in
+      // Spanish (deuda anotada en la feature 004).
+      if (d.total !== undefined) {
+        return `Los pesos objetivo deben sumar 100 y suman ${text(d.total)}: corrígelos con \`atlas settings set --target-weights …\`.`;
+      }
+      if (d.min !== undefined) {
+        const range =
+          d.max === undefined
+            ? `${text(d.min)} o mayor`
+            : `un valor entre ${text(d.min)} y ${text(d.max)}`;
+        return `El parámetro ${text(d.field)} debe ser ${range} (recibido: ${text(d.value)}).`;
+      }
+      if (d.value === undefined) {
+        return `Falta el parámetro ${text(d.field)} en la configuración.`;
+      }
+      return `El parámetro ${text(d.field)} no admite ese valor (recibido: ${text(d.value)}).`;
+    }
     case "invalid_wash_sale_window":
       return `La ventana de recompra de ${text(d.asset_type)} debe ser "2m", "1y" o "<n>d" (recibido: ${text(d.value)}).`;
     case "negative_target_weight":
@@ -174,6 +193,41 @@ export const describeError = (error: DomainError): string => {
 };
 
 /**
+ * The wash-sale window by its real name. Calling a one-year window "the
+ * two-month rule" is not a wording slip: it states something fiscally false
+ * next to a date that contradicts it.
+ */
+const windowText = (window: unknown): string => {
+  const value = text(window);
+  if (value === "2m") {
+    return "ventana de dos meses";
+  }
+  if (value === "1y") {
+    return "ventana de un año";
+  }
+  return `ventana de ${value.slice(0, -1)} días`;
+};
+
+/** Why a control rule of the bucket could not be measured, with what is missing. */
+const gapText = (d: Record<string, unknown>): string => {
+  const missing = [
+    ...((d.assets as string[] | undefined) ?? []),
+    ...((d.currencies as string[] | undefined) ?? []),
+  ];
+  const detail = missing.length === 0 ? "" : ` (faltan ${missing.join(", ")})`;
+  switch (d.reason) {
+    case "missing_prices":
+      return `hay posiciones del cubo sin precio${detail}`;
+    case "no_contribution":
+      return "todavía no hay aporte bruto al cubo sobre el que medir";
+    case "partial_net_worth":
+      return `el patrimonio total es parcial${detail}`;
+    default:
+      return "el patrimonio total no es positivo";
+  }
+};
+
+/**
  * Spanish text of a projection warning. The domain speaks English and the CLI
  * translates the `code` (see `errors.ts`); an unknown code falls back to the
  * message, so a warning added later is never swallowed.
@@ -191,6 +245,34 @@ export const describeWarning = (warning: Warning): string => {
       return `La clase satélite ${text(d.asset_class)} pesa ${text(d.weight_pct)} %, por debajo del mínimo de ${text(d.minimum_pct)} % (regla 6b: 0 % o al menos el mínimo).`;
     case "partial_core_total":
       return `Faltan precios de ${(d.assets as string[]).join(", ")} a ${text(d.date)}: no se calculan pesos sobre un total parcial.`;
+    case "stale_fx_rate":
+      return `El tipo de cambio aplicado a ${text(d.currency)} es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una operación o una valoración más reciente en esa divisa.`;
+    case "partial_bucket_total":
+      return `Faltan precios de ${(d.assets as string[]).join(", ")} a ${text(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`;
+    case "partial_net_worth":
+      return `El patrimonio a ${text(d.date)} es parcial: faltan ${[...(d.assets as string[]), ...(d.currencies as string[])].join(", ")}.`;
+    case "bucket_sample_too_small":
+      return `Solo ${text(d.closed_theses)} tesis cerradas y ${text(d.realized_operations)} operaciones realizadas (ventas y realizaciones por evento corporativo): por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`;
+    case "bucket_contaminated_theses":
+      return `${(d.theses as string[]).length} tesis quedan fuera de las medias (${(d.theses as string[]).join(", ")}): sus ventas consumieron lotes comprados por otra tesis (FIFO global, ADR-0009).`;
+    case "bucket_contribution_exceeded":
+      return `El aporte bruto al cubo (${text(d.gross_eur)} EUR) supera el tope de ${text(d.limit_eur)} EUR (regla 17). Las retiradas no devuelven margen: la regla 19 prohíbe reponer el cubo.`;
+    case "bucket_contribution_near_limit":
+      return `El aporte bruto al cubo (${text(d.gross_eur)} EUR) pasa del 80 % del tope de ${text(d.limit_eur)} EUR (regla 17).`;
+    case "bucket_stop_loss_reached":
+      return `REGLA DE PARADA: la pérdida acumulada del cubo (${text(d.loss_eur)} EUR) es el ${text(d.loss_pct)} % del aporte bruto (${text(d.gross_eur)} EUR), por encima del ${text(d.limit_pct)} % configurado (regla 17). La app avisa; la decisión es tuya.`;
+    case "bucket_stop_loss_not_evaluated":
+      return `La regla de parada (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya (regla 17).`;
+    case "bucket_weight_not_evaluated":
+      return `La regla de peso (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro (regla 18).`;
+    case "bucket_weight_exceeded":
+      return `El cubo pesa el ${text(d.weight_pct)} % del patrimonio total, por encima del ${text(d.limit_pct)} % configurado (regla 18): valora traspasar el exceso al núcleo.`;
+    case "missing_benchmark_asset":
+      return "No hay índice de referencia configurado: fíjalo con `atlas settings set --bucket-benchmark-asset <asset_id>` (regla 16).";
+    case "unknown_benchmark_asset":
+      return `El índice de referencia ${text(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`;
+    case "missing_benchmark_price":
+      return `Falta el precio del índice ${text(d.asset_id)} a ${text(d.date)}: la comparación queda sin dato (nunca se estima).`;
     case "stale_price":
       return `${text(d.asset_id)}: el precio es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una valoración más reciente.`;
     case "currency_mismatch":
@@ -203,6 +285,10 @@ export const describeWarning = (warning: Warning): string => {
       return `La venta de ${text(d.asset_id)} en ${text(d.account_id)} no está enlazada a ninguna tesis.`;
     case "thesis_size_exceeded":
       return `La tesis ${text(d.thesis_id)} lleva ${text(d.invested_eur)} EUR invertidos, por encima de los ${text(d.planned_size_eur)} EUR previstos.`;
+    case "wash_sale_window_repurchase":
+      return `Recompra de ${text(d.asset_id)} dentro de la ventana de la venta ${text(d.sale_event_id)} (${text(d.sale_date)}, pérdida ${text(d.loss_eur)} EUR): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${text(d.window_end)} (${windowText(d.window)}, business-rules.md §5.4). El diferimiento lo calculará el motor fiscal.`;
+    case "wash_sale_window_prior_buy":
+      return `Venta con pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) con una compra del ${text(d.buy_date)} (${text(d.buy_event_id)}, ${text(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio (business-rules.md §5.4).`;
     case "thesis_closed_with_position":
       return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
     default:

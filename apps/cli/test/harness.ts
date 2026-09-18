@@ -16,6 +16,8 @@ export interface Harness {
   json(): unknown;
   /** `invalid_count` of the last `--json` read-only command. */
   invalidCount(): number;
+  /** Moves the clock: what follows is recorded on that instant (theses are dated by it). */
+  setInstant(instant: string): void;
   reset(): void;
 }
 
@@ -38,9 +40,10 @@ export const harness = (options: HarnessOptions = {}): Harness => {
   const out: string[] = [];
   const err: string[] = [];
   let counter = 0;
+  let instant = options.instant ?? "2027-08-30T10:00:00.000Z";
   const deps: UseCaseDeps = {
     store,
-    clock: { now: () => new Date(options.instant ?? "2027-08-30T10:00:00.000Z") },
+    clock: { now: () => new Date(instant) },
     random: (target) => {
       counter += 1;
       target.fill(counter % 256);
@@ -56,6 +59,9 @@ export const harness = (options: HarnessOptions = {}): Harness => {
     out,
     err,
     exec: (argv) => run(argv, io, () => deps),
+    setInstant: (value) => {
+      instant = value;
+    },
     text: () => [...out, ...err].join("\n"),
     json: () => (JSON.parse(out.join("\n")) as { data: unknown }).data,
     invalidCount: () => (JSON.parse(out.join("\n")) as { invalid_count: number }).invalid_count,

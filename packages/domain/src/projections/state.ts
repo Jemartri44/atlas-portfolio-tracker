@@ -17,6 +17,8 @@ import type {
   ValuationEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
+import type { KnownFxRate } from "./fx-rates.js";
+import type { Acquisition } from "./wash-sale.js";
 
 export interface Account extends AccountFields {
   /** Ids of the account events applied, in file order. */
@@ -151,6 +153,24 @@ export interface PendingTransfer {
 
 export type ThesisStatus = "open" | "closed";
 
+/**
+ * One trade linked to a thesis. The ids alone were enough until the feature
+ * 005: measuring a thesis against the index needs the cost **and the fiscal
+ * date** of each purchase, and a projection that only receives the state cannot
+ * go back to the raw events to find them. The snapshot still serialises only
+ * the ids, so the golden file does not move because of this.
+ */
+export interface ThesisLeg {
+  event_id: Ulid;
+  fiscal_date: CivilDate;
+  quantity: Quantity;
+  /** Acquisition cost (buy, fee included) or transmission value (sell, fee deducted), in euros. */
+  amount_eur: Money;
+  fee_eur: Money;
+  /** Only on sales: the gain the operation booked, exact. */
+  gain_eur?: Money;
+}
+
 export interface Thesis {
   thesis_id: string;
   account_id: AccountId;
@@ -169,8 +189,8 @@ export interface Thesis {
   closed_position?: number;
   closed_at?: CivilDate;
   closing_notes?: string;
-  buys: Ulid[];
-  sells: Ulid[];
+  buys: ThesisLeg[];
+  sells: ThesisLeg[];
   quantity_bought: Quantity;
   quantity_sold: Quantity;
   /** Σ cost_eur of the linked buys (fee included). */
@@ -216,6 +236,10 @@ export interface LedgerState {
   positions: Map<string, Quantity>;
   /** Balance per `account_id|currency`. */
   cash: Map<string, Money>;
+  /** Last ECB rate the ledger knows per currency (feature 005). Never in the snapshot. */
+  fxRates: Map<string, KnownFxRate>;
+  /** Purchases per asset that count for the wash-sale rule (feature 005). Never in the snapshot. */
+  acquisitions: Map<AssetId, Acquisition[]>;
   lots: Map<AssetId, AssetLots>;
   /** Lots created per source event, to number lot ids uniquely across assets. */
   lotCounts: Map<Ulid, number>;
@@ -252,6 +276,8 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   fiscalSettings,
   positions: new Map(),
   cash: new Map(),
+  fxRates: new Map(),
+  acquisitions: new Map(),
   lots: new Map(),
   lotCounts: new Map(),
   gains: [],

@@ -1,16 +1,20 @@
 // atlas account add|update|list · atlas asset add|update|list · atlas settings set|show
 
 import {
+  ASSET_TYPES,
   accounts,
   assets,
   coreWeights,
+  type LedgerEvent,
   type LedgerState,
   loadAndProject,
   mergeSettings,
+  movedFiscalYears,
   type Settings,
   settingsAt,
   todayInMadrid,
   type Warning,
+  yearOf,
 } from "@atlas/domain";
 import {
   assertKnownFlags,
@@ -227,6 +231,8 @@ const SETTINGS_DECIMALS = [
   "notification-email",
 ];
 const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days"];
+/** Free-text settings: the benchmark is an `asset_id`, checked against the catalogue when queried. */
+const SETTINGS_STRINGS = ["bucket-benchmark-asset"];
 
 export const parseAssignments = (raw: string, flag: string): Record<string, string> => {
   const result: Record<string, string> = {};
@@ -238,6 +244,22 @@ export const parseAssignments = (raw: string, flag: string): Record<string, stri
     result[key.trim()] = value.trim();
   }
   return result;
+};
+
+/**
+ * Assignments keyed by asset type. The ledger tolerates a map that does not
+ * mention a type (ADR-0018), which is exactly why a typo here would go
+ * unnoticed: `--fiscal-date-rule stcok=trade_date` would silently leave every
+ * stock on its default. The ledger stays tolerant; what the user types does not.
+ */
+const assetTypeAssignments = (raw: string, flag: string): Record<string, string> => {
+  const parsed = parseAssignments(raw, flag);
+  for (const key of Object.keys(parsed)) {
+    if (!(ASSET_TYPES as readonly string[]).includes(key)) {
+      throw new UsageError(`--${flag}: ${key} no es un tipo de activo (${ASSET_TYPES.join(", ")})`);
+    }
+  }
+  return parsed;
 };
 
 /** Threshold warnings the settings raise on today's portfolio; empty when they cannot be evaluated. */
@@ -290,6 +312,37 @@ const confirmSilencedWarnings = async (
   return confirm(ctx, "¿Continuar? [s/N] ");
 };
 
+/**
+ * The expensive warning of a settings change (prompt 005 §3.5 bis): reading the
+ * same ledger with the new rules can move realized gains from one tax year to
+ * another, and a return already filed may stop matching. It informs and asks;
+ * it never blocks.
+ */
+const confirmMovedYears = async (
+  ctx: Context,
+  events: readonly LedgerEvent[],
+  current: Settings,
+  next: Settings,
+): Promise<boolean> => {
+  const moved = movedFiscalYears(events, current, next, yearOf(todayInMadrid(ctx.deps.clock)));
+  if (moved.length === 0) {
+    return true;
+  }
+  ctx.io.out("Este cambio mueve las ganancias realizadas de ejercicios anteriores:");
+  ctx.io.out(
+    table(
+      ["ejercicio", "antes EUR", "después EUR"],
+      moved.map((impact) => [
+        String(impact.year),
+        impact.before.amount.toString(),
+        impact.after.amount.toString(),
+      ]),
+    ),
+  );
+  ctx.io.out("Puede afectar a una declaración ya presentada.");
+  return confirm(ctx, "¿Continuar? [s/N] ");
+};
+
 export const settingsCommand = async (
   ctx: Context,
   positionals: string[],
@@ -321,23 +374,24 @@ export const settingsCommand = async (
       "target-weights",
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
+      ...SETTINGS_STRINGS,
       ...GLOBAL_FLAGS,
     ]);
-    const { state } = await loadForQuery(ctx);
+    const { state, events } = await loadForQuery(ctx);
     const current = settingsAt(state, todayInMadrid(ctx.deps.clock)).settings;
     const patch: Record<string, unknown> = {};
     const rules = stringFlag(flags, "fiscal-date-rule");
     if (rules !== undefined) {
       patch.fiscal_date_rule = {
         ...current.fiscal_date_rule,
-        ...parseAssignments(rules, "fiscal-date-rule"),
+        ...assetTypeAssignments(rules, "fiscal-date-rule"),
       };
     }
     const windows = stringFlag(flags, "wash-sale-window");
     if (windows !== undefined) {
       patch.wash_sale_window = {
         ...current.wash_sale_window,
-        ...parseAssignments(windows, "wash-sale-window"),
+        ...assetTypeAssignments(windows, "wash-sale-window"),
       };
     }
     const weights = stringFlag(flags, "target-weights");
@@ -357,8 +411,16 @@ export const settingsCommand = async (
         patch[fieldOf(flag)] = Number(value);
       }
     }
+    const benchmark = stringFlag(flags, "bucket-benchmark-asset");
+    if (benchmark !== undefined) {
+      patch.bucket_benchmark_asset_id = benchmark;
+    }
     const settings = mergeSettings(current, patch as Partial<Settings>);
     if (!(await confirmSilencedWarnings(ctx, state, current, settings))) {
+      ctx.io.out("Cancelado.");
+      return 0;
+    }
+    if (!(await confirmMovedYears(ctx, events, current, settings))) {
       ctx.io.out("Cancelado.");
       return 0;
     }

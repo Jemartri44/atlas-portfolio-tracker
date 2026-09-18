@@ -1,9 +1,10 @@
 // atlas add buy|sell|transfer|dividend|interest|fx|cash-in|cash-out|fee|valuation
 
+import { bucketStats, DomainError, settingsAt, todayInMadrid } from "@atlas/domain";
 import type { Flags } from "../args.js";
 import { UsageError } from "../args.js";
-import type { Context } from "../context.js";
-import { confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
+import { type Context, describeWarnings } from "../context.js";
+import { confirmAndRecord, type DraftSpec, draftFromFlags, previewCandidate } from "./shared.js";
 
 const COMMON = [
   "account",
@@ -17,7 +18,7 @@ const COMMON = [
   "source",
   "notes",
 ];
-const CASH = ["account", "value-date", "amount", "currency", "fx-rate", "notes"];
+const CASH = ["account", "value-date", "amount", "currency", "fx-rate", "fx-rate-date", "notes"];
 
 export const ADD_SPECS: Record<string, DraftSpec> = {
   buy: {
@@ -113,13 +114,64 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
   "cash-out": { type: "cash_withdrawal", flags: CASH },
   fee: {
     type: "standalone_fee",
-    flags: ["account", "value-date", "amount", "currency", "fx-rate", "description"],
+    flags: [
+      "account",
+      "value-date",
+      "amount",
+      "currency",
+      "fx-rate",
+      "fx-rate-date",
+      "description",
+    ],
   },
   valuation: {
     type: "valuation",
-    flags: ["account", "asset", "date", "quantity", "unit-value", "currency", "fx-rate", "source"],
+    flags: [
+      "account",
+      "asset",
+      "date",
+      "quantity",
+      "unit-value",
+      "currency",
+      "fx-rate",
+      "fx-rate-date",
+      "source",
+    ],
     defaults: { source: "manual" },
   },
+};
+
+/**
+ * What the user has to see **before** confirming a trade: the warnings the event
+ * itself raises — above all the wash-sale one, which is the most expensive
+ * mistake in active trading — and, on a bucket account, the stop-loss rule.
+ *
+ * Best effort on purpose: if projecting the candidate fails, nothing is printed
+ * and `recordEvent` raises the same error right after, with its own message.
+ * A preview must never turn into a worse error than the one that follows.
+ */
+const tradeNotes = async (ctx: Context, draft: Record<string, unknown>): Promise<string[]> => {
+  const assetId = draft.asset_id as string;
+  try {
+    const { warnings, state, events } = await previewCandidate(ctx, draft, [assetId]);
+    const notes = describeWarnings(warnings);
+    const account = state.accounts.get(draft.account_id as string);
+    if (account?.book === "bucket") {
+      const date = todayInMadrid(ctx.deps.clock);
+      const { controls } = bucketStats(state, events, date, settingsAt(state, date).settings);
+      notes.push(
+        ...describeWarnings(
+          controls.warnings.filter((warning) => warning.code === "bucket_stop_loss_reached"),
+        ),
+      );
+    }
+    return notes;
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return [];
+    }
+    throw error;
+  }
 };
 
 export const addCommand = async (
@@ -137,6 +189,8 @@ export const addCommand = async (
       "un traspaso no lleva comisión: registra el cargo del depositario con `atlas add fee` (standalone_fee)",
     );
   }
-  await confirmAndRecord(ctx, draftFromFlags(spec, flags));
+  const draft = draftFromFlags(spec, flags);
+  const notes = name === "buy" || name === "sell" ? await tradeNotes(ctx, draft) : [];
+  await confirmAndRecord(ctx, draft, notes);
   return 0;
 };

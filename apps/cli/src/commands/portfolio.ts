@@ -11,7 +11,7 @@ import {
   coreWeights,
   costSummary,
   Decimal,
-  type ManualPrice,
+  type PriceLookup,
   settingsAt,
   type Warning,
 } from "@atlas/domain";
@@ -21,7 +21,7 @@ import { eur, pct, pp } from "../output/format.js";
 import { table } from "../output/table.js";
 import { dateFlag, loadForQuery, renderQuery } from "./shared.js";
 
-const priceCell = (price: ManualPrice | undefined): string[] =>
+const priceCell = (price: PriceLookup | undefined): string[] =>
   price === undefined
     ? ["sin precio", "", "", "", ""]
     : [

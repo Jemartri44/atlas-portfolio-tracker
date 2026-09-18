@@ -17,6 +17,23 @@ export * from "./money/index.js";
 export type { Clock } from "./ports/clock.js";
 export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
 export type { RandomSource } from "./ports/random.js";
+export {
+  type BenchmarkGap,
+  type BucketPosition,
+  type BucketPositions,
+  type BucketThesisView,
+  bucketPositions,
+  bucketTheses,
+} from "./projections/bucket.js";
+export {
+  type BucketControls,
+  type BucketReport,
+  type BucketStats,
+  bucketStats,
+  type ControlGap,
+  type DrawdownPoint,
+  type ExcludedThesis,
+} from "./projections/bucket-stats.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";
 export {
@@ -47,13 +64,26 @@ export {
 } from "./projections/kind-rules.js";
 export { fiscalLots } from "./projections/lots.js";
 export {
+  type CashBlock,
+  type CashLine,
+  type NetWorth,
+  netWorth,
+} from "./projections/networth.js";
+export {
   type OpenOrder,
   type OpenTransfer,
   pendingOrders,
   pendingTransfers,
 } from "./projections/pending.js";
 export { type PhysicalPosition, physicalPositions } from "./projections/positions.js";
-export { type ManualPrice, manualPrices } from "./projections/prices.js";
+export {
+  type ExternalPrices,
+  type ExternalQuote,
+  manualPrices,
+  type PriceLookup,
+  type PriceOrigin,
+  priceAt,
+} from "./projections/prices.js";
 export {
   isOperationEvent,
   type OperationEvent,
@@ -61,6 +91,7 @@ export {
   projectLedger,
 } from "./projections/project-ledger.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
+export { type FiscalYearImpact, movedFiscalYears } from "./projections/settings-impact.js";
 export {
   type SimulateTransferInput,
   simulateTransfer,

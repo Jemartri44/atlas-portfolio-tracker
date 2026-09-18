@@ -15,7 +15,15 @@ export type AssetId = string;
 export const BOOKS = ["core", "bucket"] as const;
 export type Book = (typeof BOOKS)[number];
 
-export const ASSET_TYPES = ["fund", "etc", "etp", "stock", "crypto", "money_market"] as const;
+export const ASSET_TYPES = [
+  "fund",
+  "etf",
+  "etc",
+  "etp",
+  "stock",
+  "crypto",
+  "money_market",
+] as const;
 export type AssetType = (typeof ASSET_TYPES)[number];
 
 export const ASSET_CLASSES = ["equity", "fixed_income", "gold", "crypto"] as const;
@@ -191,6 +199,8 @@ export interface CashMovementFields {
   amount: DecimalString;
   currency: Currency;
   fx_rate: DecimalString;
+  /** Date of the ECB rate applied (feature 005). Optional: lines written before it exist. */
+  fx_rate_date?: CivilDate;
   notes?: string;
   fingerprint: string;
 }
@@ -210,6 +220,8 @@ export interface StandaloneFeeEvent extends Envelope {
   amount: DecimalString;
   currency: Currency;
   fx_rate: DecimalString;
+  /** Date of the ECB rate applied (feature 005). Optional: lines written before it exist. */
+  fx_rate_date?: CivilDate;
   description: string;
   fingerprint: string;
 }
@@ -223,6 +235,13 @@ export interface ValuationEvent extends Envelope {
   unit_value: DecimalString;
   currency: Currency;
   fx_rate: DecimalString;
+  /**
+   * Date of the ECB rate applied (feature 005, challenge 3 finding 6). Optional
+   * and compatible (ADR-0018): without it, the rate of a 31/12 valuation is not
+   * reproducible from the official table, because 31/12 falls on a weekend two
+   * years out of seven.
+   */
+  fx_rate_date?: CivilDate;
   source: string;
 }
 

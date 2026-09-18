@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";
+import { Money } from "../../src/money/money.js";
+import { Quantity } from "../../src/money/quantity.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { LedgerState } from "../../src/projections/state.js";
 import { theses } from "../../src/projections/theses.js";
@@ -84,10 +86,23 @@ describe("theses: lifecycle and derived metrics", () => {
       closed_position: state.positionOf.get(closed.id),
       closed_at: "2026-09-01",
       closing_notes: "played out",
-      buys: [buy.id],
-      sells: [sell.id],
       days_open: 0,
     });
+    // The legs carry what measuring against the index needs (feature 005): the
+    // event, its fiscal date, its quantity and its money.
+    expect(view?.buys).toEqual([
+      {
+        event_id: buy.id,
+        fiscal_date: "2027-01-11",
+        quantity: Quantity.parse("10"),
+        amount_eur: view?.invested_eur,
+        fee_eur: Money.parse("0.9090909091", "EUR"),
+      },
+    ]);
+    expect(view?.sells).toHaveLength(1);
+    expect(view?.sells[0]?.event_id).toBe(sell.id);
+    expect(view?.sells[0]?.gain_eur?.amount.toString()).toBe("89.090909091");
+    expect(view?.sells[0]?.amount_eur.amount.toString()).toBe("544.5454545455");
     expect(view?.planned_size_eur.amount.toString()).toBe("500");
     expect(view?.quantity_bought.toString()).toBe("10");
     expect(view?.quantity_sold.toString()).toBe("10");
@@ -107,6 +122,39 @@ describe("theses: lifecycle and derived metrics", () => {
     const state = projectLedger(b.build());
     expect(theses(state, "2026-09-11")[0]?.days_open).toBe(10);
     expect(theses(state, "2026-09-11")[0]?.status).toBe("open");
+  });
+
+  it("cuts the list by the administrative dates: nothing from the future, no negative days", () => {
+    const b = new LedgerBuilder();
+    bucketCatalogue(b);
+    b.recordedAt("2027-01-10");
+    b.thesisOpened({ thesis_id: "th_early" });
+    b.recordedAt("2027-06-01");
+    b.thesisClosed("th_early");
+    b.recordedAt("2027-09-01");
+    b.thesisOpened({ thesis_id: "th_late" });
+    const state = projectLedger(b.build());
+
+    // The day before it was opened, the first thesis does not exist yet.
+    expect(theses(state, "2027-01-09")).toEqual([]);
+    // Between opening and closing it is open, with its clock running.
+    const midway = theses(state, "2027-03-01");
+    expect(midway.map((t) => [t.thesis_id, t.status, t.days_open])).toEqual([
+      ["th_early", "open", 50],
+    ]);
+    expect(midway[0]?.closed_at).toBeUndefined();
+    expect(midway[0]?.closing_notes).toBeUndefined();
+    // After its closing it is closed, and the second one still does not exist.
+    const summer = theses(state, "2027-06-30");
+    expect(summer.map((t) => [t.thesis_id, t.status, t.days_open])).toEqual([
+      ["th_early", "closed", 142],
+    ]);
+    expect(summer[0]?.closed_at).toBe("2027-06-01");
+    // At the end both are there, each in its own state.
+    expect(theses(state, "2027-12-31").map((t) => [t.thesis_id, t.status, t.days_open])).toEqual([
+      ["th_early", "closed", 142],
+      ["th_late", "open", 121],
+    ]);
   });
 
   it("is valid before the asset_created of its asset in the file (catalogue resolves first)", () => {
@@ -225,7 +273,7 @@ describe("theses: bucket buys and sells", () => {
     const fixed = buyWithThesis(b, "th1");
     fixed.corrects_id = wrong.id;
     const state = projectLedger(b.build());
-    expect(state.theses.get("th1")?.buys).toEqual([fixed.id]);
+    expect(state.theses.get("th1")?.buys.map((leg) => leg.event_id)).toEqual([fixed.id]);
     expect(state.theses.get("th1")?.invested_eur.amount.toString()).toBe("455.4545454545");
     // A plain new buy after the closing is still rejected.
     buyWithThesis(b, "th1");

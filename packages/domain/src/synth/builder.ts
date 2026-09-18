@@ -18,7 +18,7 @@ import { cashKey, type LedgerState } from "../projections/state.js";
 import type { AccountId, AssetId, Draft, LedgerEvent, SupportedEvent } from "../schema/events.js";
 import { completeDraft } from "../usecases/record-event.js";
 import { SyntheticClock } from "./clock.js";
-import type { Prng } from "./random.js";
+import { deriveSeed, Prng } from "./random.js";
 
 export interface Pico {
   account_id: AccountId;
@@ -28,6 +28,46 @@ export interface Pico {
 
 const integerPart = (value: Decimal): Decimal =>
   Decimal.parse(value.toString().split(".")[0] as string);
+
+/**
+ * A side stream of the scenario (feature 005, prompt §3.8): it records into the
+ * same ledger but with **its own dice, its own ULID generator and its own
+ * clock**, so a block added here does not move a single byte of what the main
+ * stream already recorded.
+ *
+ * The three are needed. The dice alone are not enough: the random part of every
+ * ULID is drawn from the same stream as the amounts, and the shared clock
+ * advances one second per event recorded on the same day, so an interleaved
+ * event would shift the `recorded_at` of its neighbours. Before this, adding
+ * any event reshuffled the ids and figures of everything after it: the feature
+ * 004 regeneration changed 116 of 160 ids and left the diff unreadable.
+ */
+export class ScenarioStream {
+  private readonly deps: { clock: Clock; random: RandomSource };
+  private readonly ids: UlidGenerator;
+
+  constructor(
+    private readonly owner: ScenarioBuilder,
+    readonly rng: Prng,
+    private readonly clock = new SyntheticClock(),
+  ) {
+    this.deps = { clock, random: (target) => rng.fill(target) };
+    this.ids = createUlidGenerator(this.deps);
+  }
+
+  /** Records `draft` as of business date `date`, at the end of the file. */
+  record<E extends SupportedEvent>(date: CivilDate, draft: Draft<E>): E {
+    this.clock.at(date);
+    const event = completeDraft<E>(this.deps, draft, this.ids.next());
+    this.owner.append(event);
+    return event;
+  }
+
+  /** Random day of month in [1, 5], drawn from this stream. */
+  day(): number {
+    return this.rng.int(1, 5);
+  }
+}
 
 export class ScenarioBuilder {
   readonly events: LedgerEvent[] = [];
@@ -39,10 +79,22 @@ export class ScenarioBuilder {
 
   constructor(
     readonly rng: Prng,
+    private readonly seed = 0,
     private readonly clock = new SyntheticClock(),
   ) {
     this.deps = { clock, random: (target) => rng.fill(target) };
     this.ids = createUlidGenerator(this.deps);
+  }
+
+  /** A side stream with its own dice, ids and clock, derived from the seed and the label. */
+  stream(label: string): ScenarioStream {
+    return new ScenarioStream(this, new Prng(deriveSeed(this.seed, label)));
+  }
+
+  /** Appends an event recorded elsewhere (a side stream) and invalidates the memo. */
+  append(event: LedgerEvent): void {
+    this.events.push(event);
+    this.cached = undefined;
   }
 
   /** Records `draft` as of business date `date`: the clock moves there, envelope and fingerprint are completed. */
@@ -60,6 +112,15 @@ export class ScenarioBuilder {
       this.cached = projectLedger(this.events);
     }
     return this.cached;
+  }
+
+  /**
+   * The ledger recorded so far, cut at a date (ADR-0016): what a side stream
+   * needs to write the quantity a valuation had **then**, not the one it has at
+   * the end of the file.
+   */
+  stateAsOf(date: CivilDate): LedgerState {
+    return projectLedger(this.events, { asOf: date });
   }
 
   position(accountId: AccountId, assetId: AssetId): Quantity {

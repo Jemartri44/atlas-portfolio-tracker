@@ -3,6 +3,13 @@
 // order after the catalogue, and "before opening the position" means earlier
 // in the file. Everything derived here needs no price; result_vs_index and the
 // latent P&L arrive with phase 3.
+//
+// A thesis is an **administrative document**, not a business fact, so a view
+// asked for a past date cuts it by its administrative dates (data-schema.md
+// §7): it exists when `opened_at` is on or before the date, and it is closed
+// only when `closed_at` is too. Pass A is complete by design (ADR-0016), so
+// without this cut a view of June would list the theses of December and count
+// as closed what had not been decided yet.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
@@ -16,17 +23,32 @@ import { daysBetween } from "./pending.js";
 import { positionOf } from "./positions.js";
 import { addWarning, type LedgerState, type Thesis, type ThesisView } from "./state.js";
 
-const openThesisOn = (
+/** A thesis exists at a date when its opening was recorded on or before it. */
+const existsAt = (thesis: Thesis, at: CivilDate): boolean => thesis.opened_at <= at;
+
+/** Closed at a date only when its closing was recorded on or before it. */
+const isClosedAt = (thesis: Thesis, at: CivilDate): boolean =>
+  thesis.closed_at !== undefined && thesis.closed_at <= at;
+
+/**
+ * The thesis open on a (account, asset) pair, if any. With `at`, open means
+ * open **on that date**: opened on or before it and not yet closed. Without it,
+ * open means open at the end of the ledger, which is what the projection needs
+ * while it is still applying events and has no date to answer for.
+ */
+export const openThesisOn = (
   state: LedgerState,
   accountId: AccountId,
   assetId: AssetId,
+  at?: CivilDate,
 ): Thesis | undefined => {
   for (const thesis of state.theses.values()) {
-    if (
-      thesis.status === "open" &&
-      thesis.account_id === accountId &&
-      thesis.asset_id === assetId
-    ) {
+    if (thesis.account_id !== accountId || thesis.asset_id !== assetId) {
+      continue;
+    }
+    const open =
+      at === undefined ? thesis.status === "open" : existsAt(thesis, at) && !isClosedAt(thesis, at);
+    if (open) {
       return thesis;
     }
   }
@@ -158,11 +180,18 @@ export const linkBuy = (
   state: LedgerState,
   thesis: Thesis,
   eventId: Ulid,
+  fiscalDate: CivilDate,
   quantity: Quantity,
   costEur: Money,
   feeEur: Money,
 ): void => {
-  thesis.buys.push(eventId);
+  thesis.buys.push({
+    event_id: eventId,
+    fiscal_date: fiscalDate,
+    quantity,
+    amount_eur: costEur,
+    fee_eur: feeEur,
+  });
   thesis.quantity_bought = thesis.quantity_bought.add(quantity);
   thesis.invested_eur = thesis.invested_eur.add(costEur);
   thesis.fees_eur = thesis.fees_eur.add(feeEur);
@@ -184,11 +213,20 @@ export const linkBuy = (
 export const linkSell = (
   thesis: Thesis,
   eventId: Ulid,
+  fiscalDate: CivilDate,
   quantity: Quantity,
+  proceedsEur: Money,
   gainEur: Money,
   feeEur: Money,
 ): void => {
-  thesis.sells.push(eventId);
+  thesis.sells.push({
+    event_id: eventId,
+    fiscal_date: fiscalDate,
+    quantity,
+    amount_eur: proceedsEur,
+    fee_eur: feeEur,
+    gain_eur: gainEur,
+  });
   thesis.quantity_sold = thesis.quantity_sold.add(quantity);
   thesis.result_eur = thesis.result_eur.add(gainEur);
   thesis.fees_eur = thesis.fees_eur.add(feeEur);
@@ -218,10 +256,27 @@ export const thesisWarnings = (state: LedgerState): void => {
   }
 };
 
-export const theses = (state: LedgerState, at: CivilDate): ThesisView[] =>
-  [...state.theses.values()].map((thesis) => ({
-    ...thesis,
+/** A thesis as it stood at a date: a closing later than the date had not happened yet. */
+const viewAt = (state: LedgerState, thesis: Thesis, at: CivilDate): ThesisView => {
+  const closed = isClosedAt(thesis, at);
+  const view = { ...thesis, status: closed ? ("closed" as const) : ("open" as const) };
+  if (!closed) {
+    delete view.closed_event_id;
+    delete view.closed_position;
+    delete view.closed_at;
+    delete view.closing_notes;
+  }
+  return {
+    ...view,
     result_eur_rounded: thesis.result_eur.roundToCents(),
     position: positionOf(state, thesis.account_id, thesis.asset_id),
-    days_open: daysBetween(thesis.opened_at, thesis.closed_at ?? at),
-  }));
+    // Never negative: a thesis that did not exist at the date is not in the list.
+    days_open: daysBetween(thesis.opened_at, closed ? (thesis.closed_at as CivilDate) : at),
+  };
+};
+
+/** The theses of the ledger that already existed at `at`, as they stood then. */
+export const theses = (state: LedgerState, at: CivilDate): ThesisView[] =>
+  [...state.theses.values()]
+    .filter((thesis) => existsAt(thesis, at))
+    .map((thesis) => viewAt(state, thesis, at));

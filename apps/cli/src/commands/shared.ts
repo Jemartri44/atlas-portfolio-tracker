@@ -108,8 +108,13 @@ export const confirm = async (ctx: Context, question: string): Promise<boolean> 
 export const confirmAndRecord = async (
   ctx: Context,
   draft: Record<string, unknown>,
+  /** Lines printed between the preview and the question: what the user has to know *before* saying yes. */
+  notes: readonly string[] = [],
 ): Promise<RecordResult | undefined> => {
   preview(ctx, "Evento a registrar:", draft);
+  for (const note of notes) {
+    ctx.io.out(note);
+  }
   if (!(await confirm(ctx, "¿Registrar? [s/N] "))) {
     ctx.io.out("Cancelado.");
     return undefined;

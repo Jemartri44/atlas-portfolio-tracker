@@ -103,6 +103,7 @@ const CASH_MOVEMENT: Rules = {
   amount: req("positive_decimal"),
   currency: req("currency"),
   fx_rate: req("positive_decimal"),
+  fx_rate_date: opt("date"),
   notes: opt("string"),
   fingerprint: req("string"),
 };
@@ -229,6 +230,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     amount: req("positive_decimal"),
     currency: req("currency"),
     fx_rate: req("positive_decimal"),
+    fx_rate_date: opt("date"),
     description: req("string"),
     fingerprint: req("string"),
   },
@@ -240,6 +242,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     unit_value: req("decimal"),
     currency: req("currency"),
     fx_rate: req("positive_decimal"),
+    fx_rate_date: opt("date"),
     source: req("string"),
   },
   order_placed: {
@@ -427,6 +430,12 @@ const FX_DATE_FIELDS: Partial<Record<SupportedEventType, readonly string[]>> = {
   dividend: ["fx_rate_date"],
   interest: ["fx_rate_date"],
   fx_exchange: ["fx_rate_date"],
+  // Optional in these four (feature 005); when present it is an ECB rate date
+  // like any other, so the weekend rule applies just the same.
+  valuation: ["fx_rate_date"],
+  cash_deposit: ["fx_rate_date"],
+  cash_withdrawal: ["fx_rate_date"],
+  standalone_fee: ["fx_rate_date"],
 };
 
 /** The euro is its own reference: the ECB publishes 1, not 1.0000 (challenge 2026-08-31, finding 5). */

@@ -60,6 +60,30 @@ export const daysBetween = (from: CivilDate, to: CivilDate): number =>
 export const addDays = (date: CivilDate, days: number): CivilDate =>
   new Date((epochDayOf(date) + days) * 86_400_000).toISOString().slice(0, 10);
 
+const pad = (value: number): string => String(value).padStart(2, "0");
+
+/**
+ * Whole calendar months, with the end of month clamped: 31-01 plus one month is
+ * 28-02 (29-02 in a leap year), not 03-03. It is the arithmetic the wash-sale
+ * window needs (ADR-0014: date to date, never a fixed number of days), and
+ * `docs/fiscal-questions.md` #14 records it as the default to confirm with the
+ * advisor. Negative counts walk backwards, which is the other half of the
+ * window.
+ */
+export const addMonths = (date: CivilDate, months: number): CivilDate => {
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(5, 7));
+  const day = Number(date.slice(8, 10));
+  const total = year * 12 + (month - 1) + months;
+  const targetYear = Math.floor(total / 12);
+  const targetMonth = (((total % 12) + 12) % 12) + 1;
+  const targetDay = Math.min(day, daysInMonth(targetYear, targetMonth));
+  return `${String(targetYear).padStart(4, "0")}-${pad(targetMonth)}-${pad(targetDay)}`;
+};
+
+/** Whole calendar years, with 29-02 clamped to 28-02 in a non-leap year. */
+export const addYears = (date: CivilDate, years: number): CivilDate => addMonths(date, years * 12);
+
 /** Saturday or Sunday: the ECB publishes no reference rate (data-schema.md §4). */
 export const isWeekend = (date: CivilDate): boolean => {
   const weekday = (((epochDayOf(date) + 4) % 7) + 7) % 7; // 1970-01-01 was a Thursday

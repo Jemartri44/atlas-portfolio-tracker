@@ -31,10 +31,16 @@ export interface TaxBracket {
 }
 
 export interface Settings {
-  fiscal_date_rule: Record<AssetType, FiscalDateRule>;
-  wash_sale_window: Record<AssetType, WashSaleWindow>;
+  /**
+   * Partial by design (ADR-0018): an asset type missing here takes its
+   * documented default, so adding a value to the enum never invalidates a
+   * `settings_changed` already written.
+   */
+  fiscal_date_rule: Partial<Record<AssetType, FiscalDateRule>>;
+  /** Partial too, and for the same reason (ADR-0018). */
+  wash_sale_window: Partial<Record<AssetType, WashSaleWindow>>;
   /** Legacy form, still accepted on load; `<n>` equals `"<n>d"` (ADR-0014). Never written by the CLI. */
-  wash_sale_window_days?: Record<AssetType, number>;
+  wash_sale_window_days?: Partial<Record<AssetType, number>>;
   target_weights?: Record<string, DecimalString>;
   deviation_threshold_pp?: DecimalString;
   satellite_min_weight_pct?: DecimalString;
@@ -43,6 +49,14 @@ export interface Settings {
   bucket_max_cumulative_contribution?: DecimalString;
   bucket_stop_loss_pct?: DecimalString;
   bucket_max_weight_pct?: DecimalString;
+  /**
+   * The asset that stands for "the boring alternative" of business rule 16. Any
+   * `asset_id` of the catalogue, of either book (normally the global fund of
+   * the core): it is a performance reference and takes part in no other
+   * calculation of the bucket. Its existence is checked when projecting a
+   * query, not when writing: the asset may be registered afterwards.
+   */
+  bucket_benchmark_asset_id?: string;
   stale_price_days?: number;
   model_720_alert_threshold_eur?: DecimalString;
   model_721_alert_threshold_eur?: DecimalString;
@@ -53,25 +67,42 @@ export interface Settings {
   transfer_max_days?: number;
 }
 
+/**
+ * Value every asset type falls back to when the settings do not mention it
+ * (ADR-0018). Complete by construction: the compiler refuses to forget a type
+ * added to the enum, which is the whole point of resolving at the point of use
+ * instead of demanding complete maps in the ledger.
+ */
+export const DEFAULT_FISCAL_DATE_RULE: Record<AssetType, FiscalDateRule> = {
+  stock: "trade_date",
+  etf: "trade_date",
+  etc: "trade_date",
+  etp: "trade_date",
+  crypto: "trade_date",
+  fund: "value_date",
+  money_market: "value_date",
+};
+
+/** Same, for the wash-sale window (ADR-0013, ADR-0014; verify with the tax advisor). */
+export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
+  stock: "2m",
+  etf: "2m",
+  etc: "2m",
+  etp: "2m",
+  crypto: "1y",
+  fund: "1y",
+  money_market: "1y",
+};
+
 /** Provisional defaults (ADR-0013, ADR-0014). Verify with the tax advisor; change via `settings_changed`, not code. */
 export const DEFAULT_SETTINGS: Settings = {
-  fiscal_date_rule: {
-    stock: "trade_date",
-    etc: "trade_date",
-    etp: "trade_date",
-    crypto: "trade_date",
-    fund: "value_date",
-    money_market: "value_date",
-  },
-  wash_sale_window: {
-    stock: "2m",
-    etc: "2m",
-    etp: "2m",
-    crypto: "1y",
-    fund: "1y",
-    money_market: "1y",
-  },
+  fiscal_date_rule: DEFAULT_FISCAL_DATE_RULE,
+  wash_sale_window: DEFAULT_WASH_SALE_WINDOW,
 };
+
+/** The rule in force for an asset type: what the settings say, or its default (ADR-0018). */
+export const fiscalDateRuleOf = (settings: Settings, assetType: AssetType): FiscalDateRule =>
+  settings.fiscal_date_rule[assetType] ?? DEFAULT_FISCAL_DATE_RULE[assetType];
 
 const DECIMAL_FIELDS = [
   "deviation_threshold_pp",
@@ -123,38 +154,43 @@ const isPositiveInteger = (value: unknown): value is number =>
 
 /**
  * Checks the wash-sale window in whichever form it comes (ADR-0014): the new
- * `wash_sale_window` wins, the legacy `wash_sale_window_days` is accepted and
- * means `"<n>d"`, and at least one of the two must cover every asset type.
+ * `wash_sale_window` wins and the legacy `wash_sale_window_days` is accepted
+ * and means `"<n>d"`. Both maps are **partial** (ADR-0018): an asset type that
+ * neither mentions takes its documented default, so adding a value to the enum
+ * never invalidates a line already written. What is present must still be
+ * valid: the tolerance is to absence, not to nonsense.
  */
 const checkWashSaleWindow = (raw: UnknownRecord): void => {
   const windows = raw.wash_sale_window;
   const legacy = raw.wash_sale_window_days;
   if (windows !== undefined && !isRecord(windows)) {
-    fail("wash_sale_window must be an object", { value: windows });
+    fail("wash_sale_window must be an object", { field: "wash_sale_window", value: windows });
   }
   if (legacy !== undefined && !isRecord(legacy)) {
-    fail("wash_sale_window_days must be an object", { value: legacy });
+    fail("wash_sale_window_days must be an object", {
+      field: "wash_sale_window_days",
+      value: legacy,
+    });
   }
   if (windows === undefined && legacy === undefined) {
-    fail("wash_sale_window is required (wash_sale_window_days is accepted as the legacy form)", {});
+    fail("wash_sale_window is required (wash_sale_window_days is accepted as the legacy form)", {
+      field: "wash_sale_window",
+    });
   }
   for (const assetType of ASSET_TYPES) {
     const value = isRecord(windows) ? windows[assetType] : undefined;
-    if (value !== undefined) {
-      if (!isWashSaleWindow(value)) {
-        throw new ValidationError(
-          "invalid_wash_sale_window",
-          `wash_sale_window.${assetType} must be "2m", "1y" or "<n>d"`,
-          { asset_type: assetType, value },
-        );
-      }
-      continue;
-    }
-    const days = isRecord(legacy) ? legacy[assetType] : undefined;
-    if (!isPositiveInteger(days)) {
+    if (value !== undefined && !isWashSaleWindow(value)) {
       throw new ValidationError(
         "invalid_wash_sale_window",
-        `wash_sale_window.${assetType} is missing and wash_sale_window_days.${assetType} is not a positive integer`,
+        `wash_sale_window.${assetType} must be "2m", "1y" or "<n>d"`,
+        { asset_type: assetType, value },
+      );
+    }
+    const days = isRecord(legacy) ? legacy[assetType] : undefined;
+    if (days !== undefined && !isPositiveInteger(days)) {
+      throw new ValidationError(
+        "invalid_wash_sale_window",
+        `wash_sale_window_days.${assetType} must be a positive integer`,
         { asset_type: assetType, value: days },
       );
     }
@@ -164,16 +200,19 @@ const checkWashSaleWindow = (raw: UnknownRecord): void => {
 /** Validates a complete settings object (the payload of `settings_changed`). Unknown keys are kept. */
 export const validateSettings = (raw: unknown): Settings => {
   if (!isRecord(raw)) {
-    return fail("settings must be an object", { value: raw });
+    return fail("settings must be an object", { field: "settings", value: raw });
   }
   const rules = raw.fiscal_date_rule;
   if (!isRecord(rules)) {
-    return fail("fiscal_date_rule is required", {});
+    return fail("fiscal_date_rule is required", { field: "fiscal_date_rule" });
   }
+  // Partial map (ADR-0018): a missing asset type is fine and takes its default;
+  // a present one must name a rule the engine knows.
   for (const assetType of ASSET_TYPES) {
     const rule = rules[assetType];
-    if (!(FISCAL_DATE_RULES as readonly unknown[]).includes(rule)) {
+    if (rule !== undefined && !(FISCAL_DATE_RULES as readonly unknown[]).includes(rule)) {
       return fail(`fiscal_date_rule.${assetType} must be trade_date or value_date`, {
+        field: `fiscal_date_rule.${assetType}`,
         asset_type: assetType,
         value: rule,
       });
@@ -204,6 +243,15 @@ export const validateSettings = (raw: unknown): Settings => {
       );
     }
   }
+  if ("bucket_benchmark_asset_id" in raw) {
+    const value = raw.bucket_benchmark_asset_id;
+    if (typeof value !== "string" || value.length === 0) {
+      return fail("bucket_benchmark_asset_id must be a non-empty asset_id", {
+        field: "bucket_benchmark_asset_id",
+        value,
+      });
+    }
+  }
   for (const field of INTEGER_FIELDS) {
     if (field in raw && !isPositiveInteger(raw[field])) {
       return fail(`${field} must be an integer greater than zero`, { field, value: raw[field] });
@@ -212,12 +260,13 @@ export const validateSettings = (raw: unknown): Settings => {
   if ("target_weights" in raw) {
     const weights = raw.target_weights;
     if (!isRecord(weights)) {
-      return fail("target_weights must be an object", { value: weights });
+      return fail("target_weights must be an object", { field: "target_weights", value: weights });
     }
     let total = Decimal.ZERO;
     for (const [assetId, weight] of Object.entries(weights)) {
       if (!isDecimalString(weight)) {
         return fail(`target_weights.${assetId} must be a decimal string`, {
+          field: `target_weights.${assetId}`,
           asset_id: assetId,
           value: weight,
         });
@@ -233,29 +282,37 @@ export const validateSettings = (raw: unknown): Settings => {
       total = total.add(parsed);
     }
     if (!total.eq(Decimal.parse("100"))) {
-      return fail("target_weights must add up to 100", { total: total.toString() });
+      return fail("target_weights must add up to 100", {
+        field: "target_weights",
+        total: total.toString(),
+      });
     }
   }
   return raw as unknown as Settings;
 };
 
 /**
- * Fills in `wash_sale_window` from the legacy `wash_sale_window_days` where it
- * is missing (ADR-0014). Applied when projecting, never by rewriting the line:
- * the ledger keeps the bytes it was written with (data-schema.md §5).
+ * The settings as a reader sees them: the legacy `wash_sale_window_days`
+ * resolved into `"<n>d"` (ADR-0014) and every asset type present, filled with
+ * its documented default (ADR-0018). Applied when **reading** (`settingsAt`),
+ * never by rewriting the line: the ledger keeps the bytes it was written with
+ * (data-schema.md §5), and the projected state keeps what the line says so the
+ * snapshot does not move because of a tolerant read.
  */
 export const normalizeSettings = (settings: Settings): Settings => {
   const legacy = settings.wash_sale_window_days;
-  if (legacy === undefined) {
-    return settings;
-  }
   const windows = { ...settings.wash_sale_window } as Record<AssetType, WashSaleWindow>;
+  const rules = { ...settings.fiscal_date_rule } as Record<AssetType, FiscalDateRule>;
   for (const assetType of ASSET_TYPES) {
     if (windows[assetType] === undefined) {
-      windows[assetType] = `${legacy[assetType] as number}d`;
+      const days = legacy?.[assetType];
+      windows[assetType] = days === undefined ? DEFAULT_WASH_SALE_WINDOW[assetType] : `${days}d`;
+    }
+    if (rules[assetType] === undefined) {
+      rules[assetType] = DEFAULT_FISCAL_DATE_RULE[assetType];
     }
   }
-  return { ...settings, wash_sale_window: windows };
+  return { ...settings, fiscal_date_rule: rules, wash_sale_window: windows };
 };
 
 /**

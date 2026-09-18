@@ -6,6 +6,7 @@
 
 import { type CivilDate, lastWorkingDay } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
+import { positionOf } from "../projections/positions.js";
 import type {
   AccountId,
   AssetCreatedEvent,
@@ -19,7 +20,7 @@ import type {
   SellEvent,
   ValuationEvent,
 } from "../schema/events.js";
-import { DEFAULT_SETTINGS, type Settings } from "../settings/settings.js";
+import type { Settings } from "../settings/settings.js";
 import { ScenarioBuilder } from "./builder.js";
 import { addDays, dateOf, monthAt } from "./calendar.js";
 import { Prng } from "./random.js";
@@ -28,8 +29,18 @@ export interface GenerateOptions {
   seed: number;
 }
 
-/** Warning codes the scenario provokes on purpose (Q1): the ETC held in two IBKR accounts. */
-export const SYNTHETIC_EXPECTED_WARNINGS: readonly string[] = ["same_asset_two_accounts"];
+/**
+ * Warning codes the scenario provokes on purpose (Q1): the ETC held in two IBKR
+ * accounts, and the two directions of the wash-sale window (feature 005). The
+ * loss-making sale of the fund followed by the monthly contributions inside the
+ * year was already in the scenario as a mandatory edge case (constitution VII):
+ * what is new is that the application now sees it.
+ */
+export const SYNTHETIC_EXPECTED_WARNINGS: readonly string[] = [
+  "same_asset_two_accounts",
+  "wash_sale_window_prior_buy",
+  "wash_sale_window_repurchase",
+];
 
 const MONTHS = 28; // 2026-09 … 2028-12
 const START_DEPOSIT_DATE = "2026-08-25";
@@ -215,6 +226,28 @@ const ASSETS: readonly AssetSpec[] = [
   },
 ];
 
+/** Bucket assets of the phase-3 programme: in euros, so the block adds no currency noise. */
+const BUCKET_PROGRAMME_ASSETS: readonly AssetSpec[] = [
+  {
+    asset_id: "ast_delta",
+    asset_type: "stock",
+    book: "bucket",
+    ticker: "DEL",
+    name: "Delta Materials",
+    currency: "EUR",
+    transferable: false,
+  },
+  {
+    asset_id: "ast_epsilon",
+    asset_type: "stock",
+    book: "bucket",
+    ticker: "EPS",
+    name: "Epsilon Logistics",
+    currency: "EUR",
+    transferable: false,
+  },
+];
+
 const LATER_ASSETS: Record<string, AssetSpec> = {
   ast_alpha_spin: {
     asset_id: "ast_alpha_spin",
@@ -292,8 +325,35 @@ const TARGET_WEIGHTS_AFTER_CONVERSIONS: Record<string, string> = {
   ast_btc: "5",
 };
 
+/**
+ * The scenario writes its own per-asset-type maps instead of inheriting
+ * `DEFAULT_SETTINGS`, and on purpose: the defaults grow with the enum (`etf`
+ * arrived in the feature 005), and inheriting them would rewrite three
+ * `settings_changed` lines of the golden file every time a type is added. As a
+ * bonus, the synthetic ledger is now what a ledger written before `etf` existed
+ * looks like, which is the regression test of the partial maps of ADR-0018.
+ */
+const SCENARIO_FISCAL_DATE_RULE: Settings["fiscal_date_rule"] = {
+  stock: "trade_date",
+  etc: "trade_date",
+  etp: "trade_date",
+  crypto: "trade_date",
+  fund: "value_date",
+  money_market: "value_date",
+};
+
+const SCENARIO_WASH_SALE_WINDOW: Settings["wash_sale_window"] = {
+  stock: "2m",
+  etc: "2m",
+  etp: "2m",
+  crypto: "1y",
+  fund: "1y",
+  money_market: "1y",
+};
+
 const settingsWith = (weights: Record<string, string>, contribution: string): Settings => ({
-  ...DEFAULT_SETTINGS,
+  fiscal_date_rule: SCENARIO_FISCAL_DATE_RULE,
+  wash_sale_window: SCENARIO_WASH_SALE_WINDOW,
   target_weights: weights,
   deviation_threshold_pp: "5",
   satellite_min_weight_pct: "2",
@@ -302,6 +362,7 @@ const settingsWith = (weights: Record<string, string>, contribution: string): Se
   bucket_max_cumulative_contribution: "6000",
   bucket_stop_loss_pct: "30",
   bucket_max_weight_pct: "10",
+  bucket_benchmark_asset_id: "ast_world",
   stale_price_days: 7,
   model_720_alert_threshold_eur: "45000",
   model_721_alert_threshold_eur: "45000",
@@ -327,7 +388,7 @@ class Scenario {
   constructor(seed: number) {
     const rng = new Prng(seed);
     this.p = drawParams(rng);
-    this.b = new ScenarioBuilder(rng);
+    this.b = new ScenarioBuilder(rng, seed);
   }
 
   private rate(): string {
@@ -532,6 +593,11 @@ class Scenario {
       unit_value,
       currency,
       fx_rate: currency === "EUR" ? "1" : this.rate(),
+      // The ECB rate has a publication date of its own (ADR-0013). Without it
+      // the year-end valuations date the currency with the business date, and
+      // `atlas networth` had to label the cash rows "(fecha de la operación)"
+      // on the very 31/12 the rate was published for.
+      ...(currency === "EUR" ? {} : { fx_rate_date: lastWorkingDay(date) }),
       source: "manual",
     });
   }
@@ -984,6 +1050,154 @@ class Scenario {
     });
   }
 
+  // --- side streams (feature 005) -------------------------------------------------
+
+  /**
+   * Half-yearly prices of the benchmark, from before the first event of the
+   * bucket: without them every comparison against the index would be "no data".
+   *
+   * Recorded in a **side stream** and at the end of the file, so not one id,
+   * `recorded_at` or amount of what came before moves (prompt §3.8). Recording
+   * late is normal and does not change the projection (data-schema.md §7.1);
+   * the quantity is read at the date of the valuation, with `asOf`.
+   */
+  private benchmarkPrices(): void {
+    const stream = this.b.stream("benchmark-valuations");
+    for (const [year, month] of [
+      [2026, 9],
+      [2027, 3],
+      [2027, 9],
+      [2028, 3],
+      [2028, 9],
+    ] as const) {
+      const date = dateOf(year, month, 1);
+      const quantity = positionOf(this.b.stateAsOf(date), "acc_mi", "ast_world");
+      stream.record<ValuationEvent>(date, {
+        type: "valuation",
+        account_id: "acc_mi",
+        asset_id: "ast_world",
+        date,
+        quantity: quantity.toString(),
+        unit_value: stream.rng.decimal(90, 130, 2),
+        currency: "EUR",
+        fx_rate: "1",
+        source: "manual",
+      });
+    }
+  }
+
+  /**
+   * The bucket programme of phase 3: four more closed theses (two winners, two
+   * losers, one of them with two purchases on different dates), one more open,
+   * and a **repurchase inside the window** after a loss-making sale, which is
+   * the case §3.6 needs. On assets of its own, so no lot, gain or position of
+   * what was already there changes.
+   */
+  private bucketProgramme(): void {
+    const s = this.b.stream("bucket-programme");
+    const created = "2027-01-15";
+    for (const asset of BUCKET_PROGRAMME_ASSETS) {
+      s.record<AssetCreatedEvent>(created, { type: "asset_created", ...asset, active: true });
+    }
+    s.record(created, {
+      type: "cash_deposit",
+      account_id: "acc_bucket",
+      value_date: created,
+      amount: "3000",
+      currency: "EUR",
+      fx_rate: "1",
+    });
+
+    const price = (min: number, max: number): string => s.rng.decimal(min, max, 2);
+    const trade = (
+      type: "buy" | "sell",
+      asset_id: AssetId,
+      date: CivilDate,
+      quantity: number,
+      unit_price: string,
+      thesis_id: string,
+    ): void => {
+      s.record<BuyEvent | SellEvent>(date, {
+        type,
+        account_id: "acc_bucket",
+        asset_id,
+        trade_date: date,
+        value_date: addDays(date, 2),
+        quantity: String(quantity),
+        unit_price,
+        currency: "EUR",
+        fx_rate: "1",
+        fx_rate_date: lastWorkingDay(date),
+        fee: "1",
+        source: "manual",
+        thesis_id,
+      } as Draft<BuyEvent | SellEvent>);
+    };
+    const open = (thesis_id: string, asset_id: AssetId, date: CivilDate, planned: number): void => {
+      s.record(date, {
+        type: "thesis_opened",
+        thesis_id,
+        account_id: "acc_bucket",
+        asset_id,
+        hypothesis: `Synthetic thesis on ${asset_id}`,
+        expected_horizon_days: 120,
+        invalidation: "Synthetic invalidation rule",
+        planned_size_eur: String(planned),
+      });
+    };
+    const close = (thesis_id: string, date: CivilDate): void => {
+      s.record(date, { type: "thesis_closed", thesis_id, closing_notes: `${thesis_id} closed` });
+    };
+
+    // In ascending date order, so the clock of the stream follows the business
+    // dates: a thesis is dated by the `recorded_at` of its opening
+    // (data-schema.md §6.4), and recording out of order would leave every
+    // thesis stamped on the day of the last event of the block.
+    const delta1 = price(18, 24);
+    const delta2 = price(20, 30);
+    const eps = price(10, 16);
+
+    // A thesis with two purchases on different dates, sold at a profit.
+    open("th_delta_1", "ast_delta", "2027-02-01", 1200);
+    trade("buy", "ast_delta", "2027-02-10", 20, delta1, "th_delta_1");
+    // A loser on the second asset, in parallel.
+    open("th_epsilon_1", "ast_epsilon", "2027-03-01", 900);
+    trade("buy", "ast_epsilon", "2027-03-05", 40, eps, "th_epsilon_1");
+    trade("buy", "ast_delta", "2027-04-12", 10, cents(d(delta1).mul(d("1.1"))), "th_delta_1");
+    trade("sell", "ast_epsilon", "2027-05-05", 40, cents(d(eps).mul(d("0.85"))), "th_epsilon_1");
+    close("th_epsilon_1", "2027-05-05");
+    trade("sell", "ast_delta", "2027-08-10", 30, cents(d(delta1).mul(d("1.35"))), "th_delta_1");
+    close("th_delta_1", "2027-08-10");
+
+    // Another loser, and the repurchase inside its two-month window (§3.6).
+    open("th_delta_2", "ast_delta", "2027-09-01", 900);
+    trade("buy", "ast_delta", "2027-09-10", 25, delta2, "th_delta_2");
+    trade("sell", "ast_delta", "2027-11-10", 25, cents(d(delta2).mul(d("0.7"))), "th_delta_2");
+    close("th_delta_2", "2027-11-10");
+    open("th_delta_3", "ast_delta", "2027-12-15", 900);
+    trade("buy", "ast_delta", "2027-12-20", 25, cents(d(delta2).mul(d("0.72"))), "th_delta_3");
+
+    // And one more winner, the following year.
+    open("th_epsilon_2", "ast_epsilon", "2028-01-10", 900);
+    trade("buy", "ast_epsilon", "2028-01-15", 35, cents(d(eps).mul(d("0.9"))), "th_epsilon_2");
+    trade("sell", "ast_epsilon", "2028-06-15", 35, cents(d(eps).mul(d("1.2"))), "th_epsilon_2");
+    close("th_epsilon_2", "2028-06-15");
+
+    // The open position needs a price, or every phase-3 view is partial.
+    const lastDay = "2028-12-31";
+    s.record<ValuationEvent>(lastDay, {
+      type: "valuation",
+      account_id: "acc_bucket",
+      asset_id: "ast_delta",
+      date: lastDay,
+      quantity: positionOf(this.b.stateAsOf(lastDay), "acc_bucket", "ast_delta").toString(),
+      unit_value: price(20, 32),
+      currency: "EUR",
+      fx_rate: "1",
+      source: "manual",
+    });
+  }
+
   // --- the timeline --------------------------------------------------------------
 
   run(): LedgerEvent[] {
@@ -1172,6 +1386,9 @@ class Scenario {
           break;
       }
     }
+    // Side streams last: what they record does not move a byte of the above.
+    this.benchmarkPrices();
+    this.bucketProgramme();
     return b.events;
   }
 }

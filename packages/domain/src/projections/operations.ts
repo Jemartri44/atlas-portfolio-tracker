@@ -32,6 +32,7 @@ import { completeRequest, fillOrder, lookupOpenOrder, lookupOpenRequest } from "
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
 import { type Account, type Asset, addWarning, type LedgerState, type Thesis } from "./state.js";
 import { linkBuy, linkSell, requireOpenThesis } from "./theses.js";
+import { noteAcquisition, warnPriorBuys, warnRepurchase } from "./wash-sale.js";
 
 export interface Priced {
   id: string;
@@ -216,11 +217,19 @@ export const applyBuy = (state: LedgerState, event: BuyEvent, position: number):
       state,
       thesis,
       event.id,
+      fiscalDate,
       quantity,
       costEur,
       fxOf(event).toEur(money(event.fee, event.currency)),
     );
   }
+  noteAcquisition(state, {
+    event_id: event.id,
+    asset_id: event.asset_id,
+    fiscal_date: fiscalDate,
+    quantity,
+  });
+  warnRepurchase(state, event.id, event.asset_id, asset.asset_type, fiscalDate);
   warnCurrency(state, event, asset);
   warnFxDate(state, event, fiscalDate);
   warnHolders(state, event.asset_id, event.id);
@@ -264,10 +273,15 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
     linkSell(
       thesis,
       event.id,
+      fiscalDate,
       quantity,
+      proceedsEur,
       gain.gain_eur,
       fxOf(event).toEur(money(event.fee, event.currency)),
     );
+  }
+  if (gain.gain_eur.amount.isNegative()) {
+    warnPriorBuys(state, event.id, event.asset_id, asset.asset_type, fiscalDate, gain.gain_eur);
   }
   warnCurrency(state, event, asset);
   warnFxDate(state, event, fiscalDate);

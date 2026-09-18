@@ -21,7 +21,7 @@ import type {
   SellEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { manualPrices, positionValueOf } from "./prices.js";
+import { type ExternalPrices, manualPrices, positionValueOf } from "./prices.js";
 import { businessDateOf, isOperationEvent } from "./project-ledger.js";
 import type { LedgerState } from "./state.js";
 import { coreAccountIds, coreQuantityOf } from "./weights.js";
@@ -59,12 +59,21 @@ export interface CoreCostTotals {
 export interface BucketCostRow {
   account_id: AccountId;
   fees_eur: Money;
+  /** Σ acquisition cost of its buys, fee included: the capital actually traded (rule 14). */
+  invested_eur: Money;
+}
+
+export interface BucketCostTotals {
+  fees_eur: Money;
+  invested_eur: Money;
+  /** `fees / invested × 100`; absent when nothing was ever bought. */
+  fees_pct?: Decimal;
 }
 
 export interface CostSummary {
   date: CivilDate;
   core: { rows: CoreCostRow[]; totals: CoreCostTotals };
-  bucket: { rows: BucketCostRow[] };
+  bucket: { rows: BucketCostRow[]; totals: BucketCostTotals };
 }
 
 const feeEurOf = (event: {
@@ -116,14 +125,37 @@ const forcedSaleFees = (
   return fees;
 };
 
+interface BucketTotals {
+  fees: Money;
+  invested: Money;
+}
+
 interface Accumulator {
   fees: Map<AssetId, Money>;
   invested: Map<AssetId, Money>;
-  bucketFees: Map<AccountId, Money>;
+  /** Per account of the bucket: commissions paid and capital traded, together. */
+  bucket: Map<AccountId, BucketTotals>;
 }
 
 const addTo = <K>(map: Map<K, Money>, key: K, amount: Money): void => {
   map.set(key, (map.get(key) ?? Money.zero(EUR)).add(amount));
+};
+
+/** Books a bucket trade under its account: the commission always, the cost only for a purchase. */
+const addToBucket = (
+  totals: Accumulator,
+  accountId: AccountId,
+  fee: Money,
+  cost: Money | undefined,
+): void => {
+  const current = totals.bucket.get(accountId) ?? {
+    fees: Money.zero(EUR),
+    invested: Money.zero(EUR),
+  };
+  totals.bucket.set(accountId, {
+    fees: current.fees.add(fee),
+    invested: cost === undefined ? current.invested : current.invested.add(cost),
+  });
 };
 
 /**
@@ -139,7 +171,7 @@ const bookTrade = (state: LedgerState, totals: Accumulator, event: BuyEvent | Se
   }
   const fee = feeEurOf(event);
   if (book === "bucket") {
-    addTo(totals.bucketFees, event.account_id, fee);
+    addToBucket(totals, event.account_id, fee, event.type === "buy" ? costEurOf(event) : undefined);
     return;
   }
   addTo(totals.fees, event.asset_id, fee);
@@ -153,7 +185,7 @@ const accumulate = (
   events: readonly LedgerEvent[],
   asOf: CivilDate | undefined,
 ): Accumulator => {
-  const totals: Accumulator = { fees: new Map(), invested: new Map(), bucketFees: new Map() };
+  const totals: Accumulator = { fees: new Map(), invested: new Map(), bucket: new Map() };
   // An event the projection rejected produced no position and no lot: its
   // commission is not a cost of the portfolio either (ADR-0015).
   const invalid = new Set(state.invalid.map((entry) => entry.event.id));
@@ -181,7 +213,7 @@ const accumulate = (
           continue;
         }
         if (book === "bucket") {
-          addTo(totals.bucketFees, account_id, fee);
+          addToBucket(totals, account_id, fee, undefined);
           continue;
         }
         addTo(totals.fees, asset_id, fee);
@@ -189,6 +221,30 @@ const accumulate = (
     }
   }
   return totals;
+};
+
+/**
+ * The bucket side: commissions and traded capital per account, and the ratio of
+ * business rule 14 — "with a small account and fixed fees, the commissions
+ * decide the result before the judgement does". Never a row or a total shared
+ * with the core (constitution III).
+ */
+const bucketBlockOf = (totals: Accumulator): CostSummary["bucket"] => {
+  const rows = [...totals.bucket].map(([account_id, entry]) => ({
+    account_id,
+    fees_eur: entry.fees,
+    invested_eur: entry.invested,
+  }));
+  const fees = rows.reduce((sum, row) => sum.add(row.fees_eur), Money.zero(EUR));
+  const invested = rows.reduce((sum, row) => sum.add(row.invested_eur), Money.zero(EUR));
+  return {
+    rows,
+    totals: {
+      fees_eur: fees,
+      invested_eur: invested,
+      ...(invested.isZero() ? {} : { fees_pct: fees.amount.div(invested.amount).mul(HUNDRED) }),
+    },
+  };
 };
 
 const annualCostOf = (ter: Decimal | undefined, value: Money | undefined): Money | undefined =>
@@ -201,9 +257,10 @@ export const costSummary = (
   settings: Settings,
   /** Business-date cut, the same one the projection was given (`ProjectOptions.asOf`). */
   asOf?: CivilDate,
+  external?: ExternalPrices,
 ): CostSummary => {
   const totals = accumulate(state, events, asOf);
-  const prices = manualPrices(state, date, settings);
+  const prices = manualPrices(state, date, settings, external);
   const rows: CoreCostRow[] = [];
   let partial = false;
   let valued = Money.zero(EUR);
@@ -265,8 +322,6 @@ export const costSummary = (
         partial,
       },
     },
-    bucket: {
-      rows: [...totals.bucketFees].map(([account_id, fees_eur]) => ({ account_id, fees_eur })),
-    },
+    bucket: bucketBlockOf(totals),
   };
 };

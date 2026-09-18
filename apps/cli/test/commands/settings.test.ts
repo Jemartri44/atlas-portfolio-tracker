@@ -184,6 +184,118 @@ describe("atlas settings set: the legacy wash-sale window", () => {
   });
 });
 
+describe("atlas settings set: a change that moves a past tax year", () => {
+  /** A sale agreed on 30/12/2027 and settled on 02/01/2028. */
+  const straddling = async (confirm = true) => {
+    // Standing in 2029: 2027 and 2028 are both over, so both may have been filed.
+    const h = harness({ events: seed(), confirm, instant: "2029-03-01T10:00:00.000Z" });
+    const trade = (type: string, trade_date: string, value_date: string, price: string) => [
+      "add",
+      type,
+      "--account",
+      "acc_fund",
+      "--asset",
+      "ast_world",
+      "--trade-date",
+      trade_date,
+      "--value-date",
+      value_date,
+      "--quantity",
+      "10",
+      "--unit-price",
+      price,
+      "--currency",
+      "EUR",
+      "--fx-rate",
+      "1",
+      "--fx-rate-date",
+      trade_date,
+      "--yes",
+    ];
+    expect(await h.exec(trade("buy", "2027-01-11", "2027-01-13", "10"))).toBe(0);
+    expect(await h.exec(trade("sell", "2027-12-30", "2028-01-03", "13"))).toBe(0);
+    h.reset();
+    return h;
+  };
+
+  it("lists the years that move, with both figures, and asks before writing", async () => {
+    const h = await straddling();
+    expect(await h.exec(["settings", "set", "--fiscal-date-rule", "fund=trade_date"])).toBe(0);
+    const text = h.text();
+    expect(text).toContain("mueve las ganancias realizadas de ejercicios anteriores");
+    expect(text).toContain("2027");
+    expect(text).toContain("2028");
+    expect(text).toContain("Puede afectar a una declaración ya presentada");
+    expect(text).toContain("Registrado");
+  });
+
+  it("does not write when the user declines", async () => {
+    // The setup uses --yes; only the settings change goes through the question.
+    const h = await straddling(false);
+    expect(await h.exec(["settings", "set", "--fiscal-date-rule", "fund=trade_date"])).toBe(0);
+    expect(h.text()).toContain("Cancelado");
+    const { events } = await h.store.load();
+    expect(events.filter((event) => event.type === "settings_changed")).toHaveLength(0);
+  });
+
+  it("says nothing when the change moves no past year", async () => {
+    const h = await straddling();
+    expect(await h.exec(["settings", "set", "--stale-price-days", "9"])).toBe(0);
+    expect(h.text()).not.toContain("mueve las ganancias realizadas");
+  });
+});
+
+describe("atlas settings set: the bucket benchmark", () => {
+  it("writes the asset_id without checking the catalogue: the asset may come later", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--bucket-benchmark-asset", "ast_not_yet"])).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as {
+      settings: { bucket_benchmark_asset_id?: string };
+    };
+    expect(written.settings.bucket_benchmark_asset_id).toBe("ast_not_yet");
+  });
+
+  it("rejects an empty asset_id in Spanish, naming the parameter", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--bucket-benchmark-asset", ""])).toBe(EXIT.domain);
+    expect(h.err.join("\n")).toContain(
+      "El parámetro bucket_benchmark_asset_id no admite ese valor",
+    );
+    expect((await h.store.load()).events).toHaveLength(seed().length);
+  });
+
+  it("rejects a threshold out of range in Spanish, with the range", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--bucket-stop-loss-pct", "120"])).toBe(EXIT.domain);
+    expect(h.err.join("\n")).toContain(
+      "El parámetro bucket_stop_loss_pct debe ser un valor entre 0 y 100 (recibido: 120)",
+    );
+  });
+});
+
+describe("atlas settings set: assignments keyed by asset type", () => {
+  it("rejects a type the enum does not have, instead of writing a map nobody reads", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--fiscal-date-rule", "stcok=trade_date"])).toBe(64);
+    expect(h.err.join("\n")).toContain("no es un tipo de activo");
+    expect(await h.exec(["settings", "set", "--wash-sale-window", "bond=2m"])).toBe(64);
+    // The ledger tolerates a partial map (ADR-0018), so a typo would otherwise
+    // be written and silently ignored for ever.
+    expect((await h.store.load()).events).toHaveLength(seed().length);
+  });
+
+  it("accepts the types the enum does have, including the new etf", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--wash-sale-window", "etf=2m,fund=1y"])).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as {
+      settings: { wash_sale_window: Record<string, string> };
+    };
+    expect(written.settings.wash_sale_window.etf).toBe("2m");
+  });
+});
+
 describe("atlas settings set: a change that reinterprets the past (ADR-0015)", () => {
   /** The buy settles after the sale was agreed: reading funds by trade date puts the sale first. */
   const reorderable = async () => {

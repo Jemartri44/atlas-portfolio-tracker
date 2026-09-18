@@ -27,6 +27,7 @@ import {
 } from "./operations.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
 import type { Asset, FiscalLot, LedgerState } from "./state.js";
+import { noteAcquisition } from "./wash-sale.js";
 
 export interface EffectContext {
   eventId: Ulid;
@@ -311,6 +312,16 @@ export const applyGrant = (
       position: ctx.position,
     });
     adjustPosition(state, entry.account_id, asset.asset_id, entry.quantity, ctx.eventId);
+    // Shares granted **with a cost** are an acquisition for the wash-sale rule;
+    // free ones are not (data-schema.md §8.4).
+    if (!unitCost.amount.isZero()) {
+      noteAcquisition(state, {
+        event_id: ctx.eventId,
+        asset_id: asset.asset_id,
+        fiscal_date: effect.acquisition_date,
+        quantity: entry.quantity,
+      });
+    }
   }
   warnCurrency(state, priced, asset);
   warnFxDate(state, priced, effect.acquisition_date);

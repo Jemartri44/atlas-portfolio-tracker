@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EXIT } from "../../src/context.js";
 import { bucketSeed, harness } from "../harness.js";
 
 const OPEN = [
@@ -61,9 +62,13 @@ describe("atlas thesis", () => {
     expect(await h.exec(OPEN)).toBe(0);
     expect(await h.exec(trade("buy", "50", "2027-07-01", "th_spec_1"))).toBe(0);
     h.reset();
-    expect(await h.exec(["thesis", "list", "--at", "2027-07-31"])).toBe(0);
+    // `--at` is gone: the view projects to the date asked (ADR-0016).
+    expect(await h.exec(["thesis", "list", "--at", "2027-07-31"])).toBe(EXIT.usage);
+    expect(h.err.join("\n")).toContain("usa --date");
+    h.reset();
+    expect(await h.exec(["thesis", "list", "--date", "2027-07-31"])).toBe(0);
     expect(h.text()).toMatch(
-      /th_spec_1\s+acc_bucket\s+ast_spec\s+abierta\s+2027-07-01\s+30\s+90\s+455.4545454545\s+0\s+0.91\s+10\s+500/,
+      /th_spec_1\s+acc_bucket\s+ast_spec\s+abierta\s+2027-07-01\s+30\s+90\s+455.4545454545\s+0\s+—\s+0.91\s+10\s+500/,
     );
     expect(await h.exec(trade("sell", "60", "2027-09-01", "th_spec_1"))).toBe(0);
     expect(await h.exec(["thesis", "close", "th_spec_1", "--notes", "played out", "--yes"])).toBe(
@@ -73,7 +78,10 @@ describe("atlas thesis", () => {
     expect(await h.exec(["thesis", "list"])).toBe(0);
     expect(h.text()).not.toContain("th_spec_1");
     h.reset();
-    expect(await h.exec(["thesis", "list", "--closed", "--json"])).toBe(0);
+    // Asked at the end of the year, so the September sale is inside the cut:
+    // without a date the view answers for today (2027-07-01), when the thesis
+    // was closed but its sale had not happened yet (ADR-0016).
+    expect(await h.exec(["thesis", "list", "--closed", "--date", "2027-12-31", "--json"])).toBe(0);
     const [row] = h.json() as Record<string, unknown>[];
     expect(row).toMatchObject({
       thesis_id: "th_spec_1",
@@ -83,7 +91,6 @@ describe("atlas thesis", () => {
       result_eur_rounded: "89.09",
       fees_eur: "1.8181818182",
       position: "0",
-      days_open: 0,
     });
     const events = (await h.store.load()).events;
     expect(events.map((e) => e.type).slice(-4)).toEqual([
