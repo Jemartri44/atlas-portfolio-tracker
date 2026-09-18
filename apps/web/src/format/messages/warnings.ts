@@ -3,6 +3,7 @@
 // and the drift test keeps this catalogue level with the CLI's.
 
 import type { Warning } from "@atlas/domain";
+import { type NameIndex, type Naming, NO_NAMES, namingOf } from "../names.js";
 
 type Details = Record<string, unknown>;
 
@@ -27,9 +28,9 @@ const windowText = (window: unknown): string => {
 };
 
 /** Why a control rule of the bucket could not be measured, and what is missing. */
-const gapText = (d: Details): string => {
+const gapText = (d: Details, n: Naming): string => {
   const missing = [
-    ...((d.assets as string[] | undefined) ?? []),
+    ...((d.assets as string[] | undefined) ?? []).map((id) => n.one(id)),
     ...((d.currencies as string[] | undefined) ?? []),
   ];
   const detail = missing.length === 0 ? "" : ` (faltan ${missing.join(", ")})`;
@@ -45,30 +46,30 @@ const gapText = (d: Details): string => {
   }
 };
 
-export const WARNING_MESSAGES: Record<string, (d: Details) => string> = {
+export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming) => string> = {
   // --- Core weights ------------------------------------------------------
-  unknown_target_weight: (d) =>
-    `El peso objetivo de ${text(d.asset_id)} no corresponde a ningún activo del núcleo: revisa si el identificador está mal escrito.`,
-  asset_without_target: (d) =>
-    `${text(d.asset_id)} tiene posición y ningún peso objetivo asignado.`,
-  deviation_above_threshold: (d) =>
-    `${text(d.asset_id)} se desvía ${text(d.deviation_pp)} pp del objetivo (umbral ${text(d.threshold_pp)} pp). Rebalancear vendiendo es una decisión anual tuya (regla 3).`,
+  unknown_target_weight: (d, n) =>
+    `El peso objetivo de ${n.one(d.asset_id)} no corresponde a ningún activo del núcleo: revisa si el identificador está mal escrito.`,
+  asset_without_target: (d, n) =>
+    `${n.one(d.asset_id)} tiene posición y ningún peso objetivo asignado.`,
+  deviation_above_threshold: (d, n) =>
+    `${n.one(d.asset_id)} se desvía ${text(d.deviation_pp)} pp del objetivo (umbral ${text(d.threshold_pp)} pp). Rebalancear vendiendo es una decisión anual tuya (regla 3).`,
   satellite_below_minimum: (d) =>
     `La clase satélite ${text(d.asset_class)} pesa ${text(d.weight_pct)} %, por debajo del mínimo del ${text(d.minimum_pct)} % (regla 6b: 0 % o al menos el mínimo).`,
-  partial_core_total: (d) =>
-    `Faltan precios de ${list(d.assets)} a ${text(d.date)}: no se calculan pesos sobre un total parcial.`,
+  partial_core_total: (d, n) =>
+    `Faltan precios de ${n.many(d.assets)} a ${text(d.date)}: no se calculan pesos sobre un total parcial.`,
   // --- Prices and rates --------------------------------------------------
-  stale_price: (d) =>
-    `${text(d.asset_id)}: el precio es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una valoración más reciente.`,
+  stale_price: (d, n) =>
+    `${n.one(d.asset_id)}: el precio es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una valoración más reciente.`,
   stale_fx_rate: (d) =>
     `El tipo de cambio aplicado a ${text(d.currency)} es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una operación o una valoración más reciente en esa divisa.`,
-  partial_net_worth: (d) =>
+  partial_net_worth: (d, n) =>
     `El patrimonio a ${text(d.date)} es parcial: faltan ${[
-      ...((d.assets as string[] | undefined) ?? []),
+      ...((d.assets as string[] | undefined) ?? []).map((id) => n.one(id)),
       ...((d.currencies as string[] | undefined) ?? []),
     ].join(", ")}.`,
-  partial_bucket_total: (d) =>
-    `Faltan precios de ${list(d.assets)} a ${text(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`,
+  partial_bucket_total: (d, n) =>
+    `Faltan precios de ${n.many(d.assets)} a ${text(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`,
   // --- Bucket ------------------------------------------------------------
   bucket_sample_too_small: (d) =>
     `Solo ${text(d.closed_theses)} tesis cerradas y ${text(d.realized_operations)} operaciones realizadas: por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`,
@@ -80,40 +81,46 @@ export const WARNING_MESSAGES: Record<string, (d: Details) => string> = {
     `El aporte bruto al cubo (${text(d.gross_eur)} EUR) pasa del 80 % del tope de ${text(d.limit_eur)} EUR (regla 17).`,
   bucket_stop_loss_reached: (d) =>
     `REGLA DE PARADA: la pérdida acumulada del cubo (${text(d.loss_eur)} EUR) es el ${text(d.loss_pct)} % del aporte bruto (${text(d.gross_eur)} EUR), por encima del ${text(d.limit_pct)} % configurado (regla 17). La aplicación avisa; la decisión es tuya.`,
-  bucket_stop_loss_not_evaluated: (d) =>
-    `La regla de parada (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya (regla 17).`,
-  bucket_weight_not_evaluated: (d) =>
-    `La regla de peso (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro (regla 18).`,
+  bucket_stop_loss_not_evaluated: (d, n) =>
+    `La regla de parada (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya (regla 17).`,
+  bucket_weight_not_evaluated: (d, n) =>
+    `La regla de peso (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro (regla 18).`,
   bucket_weight_exceeded: (d) =>
     `El cubo pesa el ${text(d.weight_pct)} % del patrimonio total, por encima del ${text(d.limit_pct)} % configurado (regla 18): valora traspasar el exceso al núcleo.`,
   missing_benchmark_asset: () =>
     "No hay índice de referencia configurado: fíjalo en Ajustes → Configuración (regla 16).",
-  unknown_benchmark_asset: (d) =>
-    `El índice de referencia ${text(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`,
-  missing_benchmark_price: (d) =>
-    `Falta el precio del índice ${text(d.asset_id)} a ${text(d.date)}: la comparación queda sin dato (nunca se estima).`,
+  unknown_benchmark_asset: (d, n) =>
+    `El índice de referencia ${n.one(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`,
+  missing_benchmark_price: (d, n) =>
+    `Falta el precio del índice ${n.one(d.asset_id)} a ${text(d.date)}: la comparación queda sin dato (nunca se estima).`,
   // --- Operations --------------------------------------------------------
-  currency_mismatch: (d) =>
-    `El evento está en ${text(d.currency)} y el activo ${text(d.asset_id)} está en ${text(d.asset_currency)}.`,
+  currency_mismatch: (d, n) =>
+    `El evento está en ${text(d.currency)} y el activo ${n.one(d.asset_id)} está en ${text(d.asset_currency)}.`,
   fx_rate_date_after_fiscal_date: (d) =>
     `La fecha del tipo (${text(d.fx_rate_date)}) es posterior a la fecha fiscal (${text(d.fiscal_date)}).`,
-  same_asset_two_accounts: (d) =>
-    `El activo ${text(d.asset_id)} está ahora en ${count(d.accounts)} cuentas; el FIFO sigue siendo global.`,
-  sell_without_thesis: (d) =>
-    `La venta de ${text(d.asset_id)} en ${text(d.account_id)} no está enlazada a ninguna tesis.`,
+  same_asset_two_accounts: (d, n) =>
+    `El activo ${n.one(d.asset_id)} está ahora en ${count(d.accounts)} cuentas; el FIFO sigue siendo global.`,
+  sell_without_thesis: (d, n) =>
+    `La venta de ${n.one(d.asset_id)} en ${n.one(d.account_id)} no está enlazada a ninguna tesis.`,
   thesis_size_exceeded: (d) =>
     `La tesis ${text(d.thesis_id)} lleva ${text(d.invested_eur)} EUR invertidos, por encima de los ${text(d.planned_size_eur)} EUR previstos.`,
-  thesis_closed_with_position: (d) =>
-    `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`,
+  thesis_closed_with_position: (d, n) =>
+    `La tesis ${text(d.thesis_id)} está cerrada pero ${n.one(d.account_id)} sigue teniendo ${n.one(d.asset_id)} (${text(d.position)}).`,
   // --- Wash-sale window --------------------------------------------------
-  wash_sale_window_repurchase: (d) =>
-    `Recompra de ${text(d.asset_id)} dentro de la ventana de la venta ${text(d.sale_event_id)} (${text(d.sale_date)}, pérdida ${text(d.loss_eur)} EUR): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${text(d.window_end)} (${windowText(d.window)}).`,
-  wash_sale_window_prior_buy: (d) =>
-    `Venta con pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) con una compra del ${text(d.buy_date)} (${text(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio.`,
+  wash_sale_window_repurchase: (d, n) =>
+    `Recompra de ${n.one(d.asset_id)} dentro de la ventana de la venta ${text(d.sale_event_id)} (${text(d.sale_date)}, pérdida ${text(d.loss_eur)} EUR): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${text(d.window_end)} (${windowText(d.window)}).`,
+  wash_sale_window_prior_buy: (d, n) =>
+    `Venta con pérdida de ${n.one(d.asset_id)} (${text(d.loss_eur)} EUR) con una compra del ${text(d.buy_date)} (${text(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio.`,
 };
 
-/** Spanish text of a projection warning; an unknown code falls back to its message. */
-export const describeWarning = (warning: Warning): string => {
+/**
+ * Spanish text of a projection warning; an unknown code falls back to its
+ * message. Without a catalogue every identifier prints as itself, which is what
+ * the whole application did before (`NO_NAMES`).
+ */
+export const describeWarning = (warning: Warning, names: NameIndex = NO_NAMES): string => {
   const render = WARNING_MESSAGES[warning.code];
-  return render === undefined ? warning.message : render(warning.details as Details);
+  return render === undefined
+    ? warning.message
+    : render(warning.details as Details, namingOf(names));
 };

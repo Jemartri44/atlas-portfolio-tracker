@@ -11,6 +11,7 @@ import { createSignal, For, type JSX, Show } from "solid-js";
 import { Badge, Callout } from "../../components/index.js";
 import { describeError } from "../../format/messages/errors.js";
 import { describeWarning } from "../../format/messages/warnings.js";
+import { nameIndex } from "../../format/names.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { RequireLedger } from "../guard.jsx";
 
@@ -64,6 +65,7 @@ export default function VerificacionRoute(): JSX.Element {
   return (
     <RequireLedger skeleton={5}>
       {(snapshot) => {
+        const names = nameIndex(snapshot.state);
         const findings = () => integrity(snapshot.state);
         const invalid = () => snapshot.state.invalid;
 
@@ -92,7 +94,7 @@ export default function VerificacionRoute(): JSX.Element {
                           <span class="title">
                             <A href={`/movimientos/${entry.event.id}`}>{entry.event.type}</A>
                           </span>
-                          <span class="subtle">{describeError(entry.error)}</span>
+                          <span class="subtle">{describeError(entry.error, names)}</span>
                         </div>
                       )}
                     </For>
@@ -160,7 +162,7 @@ export default function VerificacionRoute(): JSX.Element {
                     <For each={snapshot.state.warnings}>
                       {(warning) => (
                         <div class="callout is-warning">
-                          <span class="subtle">{describeWarning(warning)}</span>
+                          <span class="subtle">{describeWarning(warning, names)}</span>
                           <span class="tiny">
                             <A href={`/movimientos/${warning.event_id}`}>{warning.event_id}</A>
                           </span>

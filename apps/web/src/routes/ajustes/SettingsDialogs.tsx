@@ -12,6 +12,7 @@ import type { FiscalYearImpact, Warning } from "@atlas/domain";
 import { For, type JSX } from "solid-js";
 import { Amount, ConfirmDialog } from "../../components/index.js";
 import { describeWarning } from "../../format/messages/warnings.js";
+import { type NameIndex, NO_NAMES } from "../../format/names.js";
 
 /** An event that the new configuration would leave invalid (ADR-0015). */
 export interface InvalidatedEvent {
@@ -28,6 +29,8 @@ interface DialogsProps {
   onDismiss: (which: "silenced" | "moved" | "invalidating") => void;
   /** Save again; `acceptInvalid` only for the third question (ADR-0015). */
   onSave: (acceptInvalid?: boolean) => void;
+  /** The catalogue, so a silenced warning names its asset. */
+  names?: NameIndex;
 }
 
 export const SettingsDialogs = (props: DialogsProps): JSX.Element => (
@@ -41,7 +44,9 @@ export const SettingsDialogs = (props: DialogsProps): JSX.Element => (
     >
       <p>Subir un umbral no debe apagar un aviso vivo sin que te enteres (constitución IV):</p>
       <ul>
-        <For each={props.silenced ?? []}>{(warning) => <li>{describeWarning(warning)}</li>}</For>
+        <For each={props.silenced ?? []}>
+          {(warning) => <li>{describeWarning(warning, props.names ?? NO_NAMES)}</li>}
+        </For>
       </ul>
     </ConfirmDialog>
 

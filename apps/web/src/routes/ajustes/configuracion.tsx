@@ -22,6 +22,7 @@ import {
 } from "@atlas/domain";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Callout } from "../../components/index.js";
+import { nameIndex } from "../../format/names.js";
 import { changeSettings, toAppError } from "../../ledger/actions.js";
 import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
@@ -197,6 +198,7 @@ export default function ConfiguracionRoute(): JSX.Element {
                 }
               }}
               onSave={(acceptInvalid) => void save(acceptInvalid ?? false)}
+              names={nameIndex(snapshot.state)}
             />
           </>
         );

@@ -7,6 +7,7 @@
 
 import type { IntegrityFinding, OpenOrder, OpenTransfer, Warning } from "@atlas/domain";
 import { describeWarning } from "../format/messages/warnings.js";
+import { type NameIndex, NO_NAMES } from "../format/names.js";
 
 export type AttentionSeverity = "error" | "warning" | "info";
 
@@ -136,6 +137,8 @@ export interface AttentionInput {
   openTransfers: readonly OpenTransfer[];
   /** Days without exporting, when the ledger lives in the browser (ADR-0019). */
   exportOverdueDays?: number | "never";
+  /** The catalogue, so a warning names the asset instead of its identifier. */
+  names?: NameIndex;
 }
 
 const itemOf = (code: string, message: string): AttentionItem => ({
@@ -179,7 +182,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
       continue;
     }
     seen.add(key);
-    items.push(itemOf(warning.code, describeWarning(warning)));
+    items.push(itemOf(warning.code, describeWarning(warning, input.names ?? NO_NAMES)));
   }
 
   if (input.openOrders.length > 0) {
