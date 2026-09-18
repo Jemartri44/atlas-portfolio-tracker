@@ -36,8 +36,10 @@ const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
  * Everything it may download across the whole application: JS + CSS, gzip.
  *
  * The direction set 150 KB in the answers to feature 007, from an estimate that
- * turned out to be short: measured at the end of the feature the total is 162,7
- * KB, and it is not fat. Where it goes, all of it gzip:
+ * turned out to be short, and then approved 175 KB with one instruction: fix
+ * the ceiling at **what was actually measured**, not at what was allowed.
+ * Measured at the end of the feature, with every fix of the two reviews in:
+ * **163,1 KB**. Where it goes, all of it gzip:
  *
  *   ~34 KB  `@atlas/domain` — the projections, the FIFO engine and the money
  *           types. It is the application; it is on the boot path because the
@@ -50,10 +52,14 @@ const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
  *   the rest is our eleven screens, ~2 KB gzip each.
  *
  * The number that is felt on a phone is the **boot** one, and that one went
- * down over the feature. This ceiling is the measured value plus a little room;
- * it is not a target to grow into.
+ * down over the feature: 74,5 KB against a budget of 80.
+ *
+ * The ceiling below is the measured total rounded up to the next whole KB. It
+ * is not a target to grow into: the next feature that needs more has to say why
+ * and move it on purpose, which is the whole point of measuring at the end
+ * instead of leaving the allowance in place.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 175 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 164 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

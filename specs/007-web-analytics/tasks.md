@@ -1,6 +1,6 @@
 # Tareas — feature `007-web-analytics`
 
-> **Terminadas el 2026-09-18.** Lo medido está en `plan.md` §Mediciones; lo que apareció por el camino, en `questions.md` §Notas de implementación. Dos desviaciones del plan, ambas anotadas allí: el techo total del *bundle* subió de 150 a 175 KB (N1) y la tarjeta de distribución del núcleo se fundió con la de pesos porque repetía las mismas cifras (N3).
+> **Terminadas el 2026-09-18.** Lo medido está en `plan.md` §Mediciones; lo que apareció por el camino, en `questions.md` §Notas de implementación. Dos desviaciones del plan, ambas anotadas allí: el techo total del *bundle* subió de 150 a 164 KB, lo medido al terminar (N1) y la tarjeta de distribución del núcleo se fundió con la de pesos porque repetía las mismas cifras (N3).
 
 Derivadas de [`spec.md`](spec.md), [`plan.md`](plan.md) y [`contracts/domain.md`](contracts/domain.md), con las once respuestas de [`questions.md`](questions.md) ya incorporadas.
 

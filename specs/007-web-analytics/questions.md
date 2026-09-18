@@ -272,11 +272,11 @@ ADR-0018 dice que estos mapas de `Settings` son **parciales** y que *«los tipos
 
 Lo que apareció al escribir el código y la dirección debería conocer. Nada reabre una decisión; tres son hallazgos y uno es un techo que no aguantó.
 
-### N1 — El presupuesto total del *bundle* no cabe en 150 KB: son 162,8
+### N1 — El presupuesto total del *bundle* no cabe en 150 KB: son 163,1
 
 Medido al terminar. El desglose, todo gzip: ~34 KB el dominio (está en el arranque porque la primera pantalla proyecta el libro), ~22 uPlot (en un fragmento perezoso que solo cargan Núcleo y Cubo), ~16 la hoja de estilo con Pico dentro, ~12 el router, ~8 Solid y el arranque, y unos 2 KB por pantalla.
 
-No hay grasa que quitar: lo único descartable sería uPlot, y la decisión (e) lo fija. **El techo está puesto en 175 KB**, que es lo medido más holgura, con el desglose escrito en la cabecera de `scripts/check-bundle.mjs`. La cifra que se nota en un teléfono es la del **arranque**, y esa ha pasado de 70,4 a **74,4 KB** con dos pantallas, seis formularios y una librería de gráficas — dentro de los 80 que la dirección fijó.
+No hay grasa que quitar: lo único descartable sería uPlot, y la decisión (e) lo fija. La dirección aprobó 175 KB con una instrucción —*«fija el total en lo que realmente hayas medido, no en el techo»*—, así que **el techo queda en 164 KB**: lo medido al terminar (163,1, con los arreglos de las dos revisiones dentro) redondeado al KB siguiente. El desglose está escrito en la cabecera de `scripts/check-bundle.mjs`. La cifra que se nota en un teléfono es la del **arranque**, y esa ha pasado de 70,4 a **74,5 KB** con dos pantallas, seis formularios y una librería de gráficas — dentro de los 80 que la dirección fijó.
 
 Si la dirección prefiere mantener 150, la única palanca real es dejar de vendorizar uPlot y dibujar las dos series a mano en SVG, que es mucho más código que 22 KB.
 
@@ -309,7 +309,9 @@ De la misma raíz salió un tercero, este en la web: los desplegables de «orden
 
 ### N6 — La prueba de privacidad de las gráficas: lo que se pudo y lo que no
 
-La condición de Q5 era un test que renderizara con la privacidad puesta. Se ha hecho con `happy-dom` sobre todo lo que es DOM de una gráfica —la leyenda y la tabla equivalente, que no dejan ni un dígito a la vista— y sobre las dos funciones que dan formato al eje y al *tooltip*, que es donde vive la regla.
+La condición de Q5 era un test que renderizara con la privacidad puesta. Se ha hecho con `happy-dom` sobre todo lo que es DOM de una gráfica —la leyenda y la tabla equivalente, que no dejan ni un dígito a la vista— y sobre **las opciones que se le entregan a uPlot**, que es donde vive la regla: el test aplica el formateador del eje Y tal y como lo va a llamar el lienzo y comprueba que devuelve la máscara. Antes esa expresión vivía dentro del componente y quitarle la bandera de privacidad dejaba la suite entera en verde.
+
+(El formateador del *tooltip* que esta nota mencionaba ya no existe: la leyenda de uPlot está apagada —la nuestra lleva el trazo además del color— así que nadie lo llamaba nunca. Se ha borrado con su test.)
 
 **El lienzo no se puede pintar sin navegador**: `happy-dom` no tiene contexto 2D y uPlot falla al dibujar. Falsear uno sería reimplementar mal un navegador, que es lo que la 006 descartó. El eje dibujado se ha comprobado en Chromium, que es la prueba más fuerte de las dos.
 
@@ -322,6 +324,38 @@ Lo mismo, más llamativo, con el presupuesto del cubo: el libro sintético mete 
 ### N8 — `atlas costs` enseña por primera vez lo que cuesta la custodia
 
 Efecto lateral de Q9 que merece leerse: sobre el libro sintético, `atlas costs --date 2027-12-31` imprime ahora **3,00 EUR de comisiones sueltas en la cuenta del núcleo**, que hasta hoy no aparecían en ninguna pantalla de ninguna de las dos interfaces. Están etiquetadas como lo que son: no forman parte del coste de adquisición ni del valor de transmisión.
+
+---
+
+## Notas de la segunda revisión (2026-09-18)
+
+Tres cosas que la revisión funcional dejó anotadas para que decida la dirección, no para arreglarlas aquí.
+
+### N9 — Un `forced_sale` de fusión barre también el pico que la cuenta ya tenía (es correcto)
+
+**Qué pasa.** En una fusión o una escisión, `corporateActionDraft` mide el pico sobre la posición **resultante** en el activo de destino, no sobre la parte que acaba de convertirse. Si la cuenta ya tenía 0,4 participaciones del activo de destino de antes, esas 0,4 entran en el pico que se vende.
+
+**Por qué es correcto.** Es lo que hace el intermediario: liquida la parte fraccionaria de lo que te queda en la cuenta al final de la operación, no la de un tramo concreto. Medirlo sobre la conversión sola dejaría a la cuenta con un pico imposible de tener en un activo que no admite fracciones, y obligaría a inventar de qué lote sale lo vendido. FIFO sobre la posición resultante es la respuesta única y es la que el dominio ya da.
+
+**Qué falta.** Nada de código: es idéntico en `develop` y está bien. Lo que no existe es la frase que lo diga en `docs/data-schema.md` §6.5 o en `docs/business-rules.md`, y es justo el tipo de detalle que dentro de tres años parecerá un error. La dirección actualiza el documento.
+
+### N10 — `settingsAt` materializa los mapas parciales en cada guardado (preexistente)
+
+**Qué pasa.** ADR-0018 hace parciales los mapas por tipo de activo (`fiscal_date_rule`, `wash_sale_window`): un tipo ausente toma el valor por defecto documentado. Pero `settingsAt` normaliza los ajustes al proyectar, así que lo que la pantalla de configuración guarda al tocar cualquier otro campo es el mapa **entero**, con todos los tipos escritos.
+
+**Por qué importa.** El día que la dirección cambie un valor por defecto —porque lo diga el asesor fiscal— ese cambio **no alcanzará** a los libros que ya hayan guardado el mapa completo: llevan escrito el valor viejo, tipo por tipo, y el libro es *append-only*. La semántica de «ausente = por defecto» queda inutilizada en la práctica sin que nadie lo note.
+
+**Qué se ha hecho.** Nada: es anterior a esta feature, toca la forma en que se serializan los ajustes y es una decisión de la dirección, posiblemente un ADR. Aquí solo se ha arreglado lo que pedía Q10 (vaciar un campo quita la clave del mapa que se envía).
+
+### N11 — La prosa de los avisos del dominio enseña importes con la privacidad puesta
+
+**Qué pasa.** Con el modo privado activado, las cifras de las tablas, las tarjetas, los ejes y la leyenda quedan enmascaradas —eso está cubierto por tests y comprobado en Chromium—, pero el **texto de un aviso** las sigue enseñando, porque el importe va incrustado en la frase:
+
+> El aporte bruto al cubo (5000 EUR) supera el tope de 6000 EUR
+
+**Por qué no se ha arreglado aquí.** Es anterior a esta feature (nació con el Resumen de la 006) y no tiene arreglo pequeño: o los catálogos de mensajes reciben la bandera de privacidad y componen la frase con `Amount`, o el dominio deja de meter importes en la prosa y los pasa en `details` para que la interfaz los pinte. Lo primero cambia la firma de los dos catálogos; lo segundo cambia el dominio y la CLI. Cuál de las dos es una decisión de producto.
+
+**Mientras tanto** conviene saber que el modo privado cubre las cifras, no las frases.
 
 ---
 
