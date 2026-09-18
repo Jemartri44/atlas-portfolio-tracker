@@ -281,7 +281,9 @@ main {
     gap: var(--s-3);
     inset-inline: auto;
     left: 0;
-    padding: var(--s-4) var(--s-3);
+    /* The same top as `main`: the action and the title of the screen start on
+       one line. */
+    padding: var(--s-6) var(--s-3) var(--s-4);
     top: 0;
     width: var(--rail-w);
   }
@@ -396,6 +398,7 @@ main {
 
   main {
     padding-bottom: var(--s-6);
+    padding-top: var(--s-6);
   }
 }
 
