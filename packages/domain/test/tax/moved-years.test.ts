@@ -28,6 +28,19 @@ describe("movedTaxYears", () => {
     ]);
   });
 
+  it("sees the last closed year, the one declared in May", () => {
+    // Standing in 2028, 2027 is the year about to be declared: it must be seen.
+    const moved = movedTaxYears(
+      ledger(),
+      DEFAULT_SETTINGS,
+      { ...DEFAULT_SETTINGS, income_category: { etc: "movable_capital" } },
+      2028,
+    );
+    expect(moved.map((m) => [m.year, text(m.before), text(m.after)])).toEqual([
+      [2027, "300", "375"],
+    ]);
+  });
+
   it("says nothing when the base does not move, or for the current year", () => {
     expect(movedTaxYears(ledger(), DEFAULT_SETTINGS, DEFAULT_SETTINGS, 2029)).toEqual([]);
     expect(
