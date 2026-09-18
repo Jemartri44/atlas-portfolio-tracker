@@ -94,6 +94,8 @@ const ASSET: Rules = {
   ter: opt("decimal"),
   transferable: req("boolean"),
   reference_etf_id: opt("string"),
+  market: opt("string"),
+  issuer_country: opt("country"),
   active: req("boolean"),
 };
 

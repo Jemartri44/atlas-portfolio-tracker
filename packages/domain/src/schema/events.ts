@@ -72,6 +72,24 @@ export interface AssetFields {
   ter?: DecimalString;
   transferable: boolean;
   reference_etf_id?: AssetId;
+  /**
+   * Where it trades: MIC code or the market's name (ADR-0021). Optional, and
+   * nothing reads it yet. It exists because the wash-sale window of article
+   * 33.5.f) LIRPF talks about regulated markets **of the EU**, so a Nasdaq
+   * share may well fall under letter g) and its one-year window instead of the
+   * two months the project applies by default. That question is open
+   * (`docs/fiscal-questions.md` #2), and it cannot be answered either way if
+   * the catalogue does not say where the thing trades.
+   */
+  market?: string;
+  /**
+   * Where the issuer sits: ISO 3166-1 alpha-2 (ADR-0021). Optional, and nothing
+   * reads it yet. Article 95 LIRPF treats undertakings domiciled in
+   * non-cooperative jurisdictions apart, and several gold ETCs and crypto ETPs
+   * are domiciled in Jersey, Guernsey or the Cayman Islands. It also decides
+   * how a holding is classified in forms 720 and 721.
+   */
+  issuer_country?: string;
   active: boolean;
 }
 

@@ -439,6 +439,20 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       },
       { name: "isin", label: "ISIN", kind: "text" },
       { name: "ticker", label: "Ticker", kind: "text" },
+      // Optional and asked for only here, where the prospectus is in front of
+      // the user: in three years neither can be reconstructed (ADR-0021).
+      {
+        name: "market",
+        label: "Mercado",
+        kind: "text",
+        hint: "Dónde cotiza: código MIC (XMAD, XETR) o el nombre del mercado.",
+      },
+      {
+        name: "issuer_country",
+        label: "País del emisor",
+        kind: "text",
+        hint: "Dos letras, como en el folleto: IE, LU, JE. Es el domicilio, no el mercado.",
+      },
       {
         name: "ter",
         label: "TER",

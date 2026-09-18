@@ -39,6 +39,8 @@ const ASSET_FLAGS = [
   "ticker",
   "ter",
   "reference-etf",
+  "market",
+  "issuer-country",
   "transferable",
   "not-transferable",
   "inactive",

@@ -91,6 +91,11 @@ describe("assets projection", () => {
       ter: "0.10",
       name: "World Index (Acc)",
       reference_etf_id: "ast_ref",
+      // A security can move from one market to another, and an issuer can
+      // redomicile, without being another product: neither is a change the
+      // catalogue refuses (ADR-0021).
+      market: "XETR",
+      issuer_country: "IE",
       transferable: false,
       active: false,
     });
@@ -103,6 +108,8 @@ describe("assets projection", () => {
       ter: "0.10",
       name: "World Index (Acc)",
       reference_etf_id: "ast_ref",
+      market: "XETR",
+      issuer_country: "IE",
       transferable: false,
       active: false,
     });

@@ -224,6 +224,26 @@ describe("validateShape: consistency rules", () => {
     ).toBeTruthy();
   });
 
+  /**
+   * ADR-0021: where it trades and where the issuer sits. Both optional, both
+   * unread by anything today, and the country validated with the same rule as
+   * `dividend.source_country` — two uppercase letters, not a closed list, which
+   * is what the project already applies to `account.country`.
+   */
+  it("assets: the market is free text and the issuer country is ISO 3166-1 alpha-2", () => {
+    expect(
+      validateShape(variant(SAMPLES.asset_created, { market: "XETR", issuer_country: "IE" })),
+    ).toBeTruthy();
+    // Absent is the normal case: a ledger written before this feature has neither.
+    expect(validateShape(variant(SAMPLES.asset_created, { market: undefined }))).toBeTruthy();
+    rejects(variant(SAMPLES.asset_created, { issuer_country: "IRL" }), "invalid_field");
+    rejects(variant(SAMPLES.asset_created, { issuer_country: "ie" }), "invalid_field");
+    rejects(variant(SAMPLES.asset_created, { issuer_country: 7 }), "invalid_field");
+    // An empty optional string is accepted, here as in `isin` and `ticker`:
+    // that is the rule of the whole schema and this field does not change it.
+    expect(validateShape(variant(SAMPLES.asset_created, { market: "" }))).toBeTruthy();
+  });
+
   it("settings_changed: validates the settings object", () => {
     rejects(variant(SAMPLES.settings_changed, { settings: {} }), "invalid_settings");
   });

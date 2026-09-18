@@ -57,6 +57,8 @@ export const FIELD_LABELS: Record<string, string> = {
   asset_type: "Tipo de activo",
   asset_class: "Clase de activo",
   isin: "ISIN",
+  market: "Mercado",
+  issuer_country: "País del emisor",
   ticker: "Ticker",
   currency: "Divisa",
   ter: "TER",
