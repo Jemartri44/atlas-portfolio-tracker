@@ -691,9 +691,16 @@ const doubtful = (
       }),
     );
   }
-  // #22: the order among years only matters when several compete for one balance.
+  // #22: the order among years only matters when two or more years of origin
+  // compete for a balance that cannot absorb them all. Two steps of one year
+  // (its own category, then the other) compete with nothing (feature 009
+  // review), and when everything is absorbed the order changes nothing.
   const phase2 = core.compensation.steps.filter((step) => step.phase === 2);
-  const competing = new Set(phase2.map((step) => step.from)).size < phase2.length;
+  const origins = new Set(phase2.map((step) => step.origin_year));
+  const leftover =
+    core.compensation.expired.length > 0 ||
+    core.compensation.pending.some((entry) => entry.origin_year < year);
+  const competing = origins.size > 1 && leftover;
   if (phase2.length > 0) {
     items.push(
       item("22", {

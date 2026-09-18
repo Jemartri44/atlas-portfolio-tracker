@@ -427,6 +427,40 @@ describe("the other doubtful criteria", () => {
     expect(text(report.doubtful.find((d) => d.criterion === "22")?.exposure_eur)).toBe("150");
   });
 
+  it("#22: two years absorbed whole, or one year in two steps, put nothing at stake", () => {
+    const whole = taxBuilder();
+    buy(whole, "stock_s", "2027-01-11", "10", "100");
+    sell(whole, "stock_s", "2027-06-01", "10", "95");
+    buy(whole, "stock_t", "2028-01-11", "10", "100");
+    sell(whole, "stock_t", "2028-06-01", "10", "95");
+    buy(whole, "stock_s", "2029-01-11", "10", "100");
+    sell(whole, "stock_s", "2029-06-01", "10", "115");
+    const absorbed = reportOf(whole.build(), 2029);
+    expect(absorbed.compensation.steps.map((s) => s.origin_year)).toEqual([2027, 2028]);
+    expect(text(absorbed.doubtful.find((d) => d.criterion === "22")?.exposure_eur)).toBe("0");
+    // One year of origin offset first against its own category and then, up
+    // to 25 %, against the other: two steps, and nothing competes with it.
+    const single = taxBuilder();
+    buy(single, "stock_s", "2027-01-11", "10", "100");
+    sell(single, "stock_s", "2027-06-01", "10", "50");
+    buy(single, "stock_t", "2028-01-11", "10", "100");
+    sell(single, "stock_t", "2028-06-01", "10", "110");
+    single.interest({
+      account_id: "acc_a",
+      value_date: "2028-06-30",
+      fx_rate_date: "2028-06-30",
+      gross: "200",
+    });
+    const report = reportOf(single.build(), 2028);
+    expect(
+      report.compensation.steps.filter((s) => s.phase === 2).map((s) => [s.origin_year, s.against]),
+    ).toEqual([
+      [2027, "capital_gain"],
+      [2027, "movable_capital"],
+    ]);
+    expect(text(report.doubtful.find((d) => d.criterion === "22")?.exposure_eur)).toBe("0");
+  });
+
   it("an alternative reading that leaves events invalid is not quantifiable, and says why", () => {
     const b = taxBuilder();
     b.buy({
