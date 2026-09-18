@@ -158,7 +158,7 @@ El método de imputación es **primera entrada, primera salida**, aplicado por p
 
 **Traspaso de custodia.** Mover un valor (mismo ISIN) de un depositario a otro no es transmisión: conserva fecha y coste. Se registra como `transfer` del mismo activo entre cuentas (ADR-0012).
 
-**Comisiones en la base fiscal** (art. 35 LIRPF, *verificar*): la de compra se suma al coste de adquisición; la de venta se resta del valor de transmisión. Se guardan aparte del precio.
+**Comisiones en la base fiscal** (art. 35 LIRPF): la de compra se suma al coste de adquisición; la de venta se resta del valor de transmisión; las de **custodia, administración o conectividad no son deducibles** en la ganancia patrimonial, porque no son inherentes a la adquisición ni a la transmisión (`docs/fiscal-questions.md` #3, certeza alta). Se guardan aparte del precio.
 
 **Retención a cuenta en reembolsos de fondos:** el comercializador retiene sobre la plusvalía; se registra en la venta (`withholding`) para que cuadre la declaración.
 
@@ -172,14 +172,16 @@ Casos límite a cubrir en tests:
 
 Si se vende con pérdidas y se recompra el **mismo valor homogéneo** dentro de la ventana anterior o posterior a la venta, la pérdida **no es computable** en ese ejercicio. Se difiere hasta que se transmitan los valores recomprados.
 
-La ventana es de **dos meses** para valores admitidos a negociación (acciones, ETF, ETC, ETP) y de **un año** para los no admitidos (participaciones de fondos —es decir, todo el núcleo `equity` y `fixed_income`— y cripto) (art. 33.5 LIRPF, **verificar**), contada **de fecha a fecha** en meses y años naturales, no en un número fijo de días (61 días no son dos meses: pregunta #14). Con aportaciones mensuales a un fondo, cualquier reembolso con pérdida de ese fondo activa la regla. Parametrizada por tipo de activo (`wash_sale_window`, `"2m"`/`"1y"`/`"<n>d"`, ADR-0013 y `data-schema.md` §8.4). Un traspaso entrante no cuenta como adquisición (**verificar**).
+La ventana es de **dos meses** para valores admitidos a negociación (acciones, ETF, ETC, ETP) y de **un año** para los no admitidos (participaciones de fondos —es decir, todo el núcleo `equity` y `fixed_income`— y cripto) (art. 33.5 LIRPF, **verificar**), contada **de fecha a fecha** en meses y años naturales, no en un número fijo de días (61 días no son dos meses: pregunta #14). Con aportaciones mensuales a un fondo, cualquier reembolso con pérdida de ese fondo activa la regla. Parametrizada por tipo de activo (`wash_sale_window`, `"2m"`/`"1y"`/`"<n>d"`, ADR-0013 y `data-schema.md` §8.4).
+
+**Qué cuenta como adquisición** (criterio fijado el 2026-09-18, `docs/fiscal-questions.md` #2b, certeza media): un **traspaso entrante sí cuenta**, porque es una adquisición de valores homogéneos aunque no haya tributado en origen; unas acciones liberadas (`scale`) y un `grant` con coste cero **no** cuentan, porque no hay desembolso. El criterio es configurable (`wash_sale_transfer_counts`, por defecto `true`): contar difiere la pérdida, que es la lectura prudente, y no contarla la deduce antes.
 
 → La app alerta al intentar registrar una recompra que active la regla, y **aplica el diferimiento completo** en el motor fiscal: la parte de la pérdida proporcional a la cantidad recomprada queda pendiente, asociada a los lotes recomprados, y se libera cuando estos se transmiten; si esos lotes se traspasan o se canjean antes (`transfer`, `convert`, `carve_out`), el diferimiento viaja con los lotes descendientes y se libera cuando estos se transmiten (pregunta #15, **verificar**). Es el error más común en operativa activa.
 
 ### 5.5 Compensación de pérdidas
 
 - Las pérdidas patrimoniales compensan primero con ganancias patrimoniales del mismo ejercicio.
-- El remanente compensa con rendimientos del capital mobiliario hasta un porcentaje limitado (**verificar el porcentaje vigente**).
+- El remanente compensa con rendimientos del capital mobiliario **hasta el 25 %** del saldo positivo de esos rendimientos (art. 49 LIRPF; porcentaje vigente desde 2022, `docs/fiscal-questions.md` #10).
 - Lo no compensado se arrastra hasta **4 ejercicios** siguientes.
 
 → La app mantiene el saldo de pérdidas pendientes por ejercicio de origen.
@@ -271,6 +273,7 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 | `savings_tax_brackets[]` | Ver 5.1 | 5.1 |
 | `fiscal_date_rule{}` | cotizados → contratación; fondos → fecha valor. **Mapa parcial**, como el anterior (ADR-0018) | 5.10 |
 | `wash_sale_window{}` | fondos/cripto `"1y"`; cotizados `"2m"` (de fecha a fecha; `wash_sale_window_days` en días es la forma antigua aceptada). **Mapa parcial**: un tipo de activo ausente toma su valor por defecto, para que añadir un tipo nuevo no invalide la configuración ya escrita (ADR-0018) | 5.4 |
+| `wash_sale_transfer_counts` | `true`: un traspaso entrante cuenta como adquisición a efectos de la regla de recompra | 5.4 |
 | `tax_residence` | España | 5.9 |
 | `notification_email` | — | — |
 | `job_frequencies{}` | Ver especificación | — |
