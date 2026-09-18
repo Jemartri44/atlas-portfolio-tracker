@@ -741,7 +741,8 @@
           "criteria": [
             "3",
             "4",
-            "6"
+            "6",
+            "13"
           ],
           "deferred_eur": "0",
           "event_id": "01N428YK78ARMXKW9TRZB7XV2D",
@@ -1075,6 +1076,17 @@
         "exposure_eur": "39.9",
         "measure": "exposure",
         "reason": "regime_not_recorded"
+      },
+      {
+        "certainty": "disputed",
+        "criterion": "13",
+        "direction": "conservative",
+        "documented_risk": "conservative",
+        "event_ids": [
+          "01N428YK78ARMXKW9TRZB7XV2D"
+        ],
+        "exposure_eur": "1.41",
+        "measure": "exposure"
       },
       {
         "certainty": "disputed",

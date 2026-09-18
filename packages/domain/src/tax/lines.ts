@@ -85,23 +85,18 @@ interface SaleFacts {
   gross: Money;
   fee: Money;
   withholding: Money;
-  /** The forced sale is the cash leg of an exchange: it comes before a conversion (#13). */
+  /** The forced sale is the cash of an exchange, before or after its conversion (#13). */
   cash_leg_of_exchange: boolean;
 }
 
 /** The forced sale of a corporate action that booked this gain: same asset, same account. */
-const forcedSaleOf = (
-  event: CorporateActionEvent,
-  gain: RealizedGain,
-): { effect: ForcedSaleEffect; index: number } => {
-  const index = event.effects.findIndex(
+const forcedSaleOf = (event: CorporateActionEvent, gain: RealizedGain): ForcedSaleEffect =>
+  event.effects.find(
     (effect) =>
       effect.op === "forced_sale" &&
       (effect.asset_id ?? event.asset_id) === gain.asset_id &&
       effect.per_account.some((entry) => entry.account_id === gain.account_id),
-  );
-  return { effect: event.effects[index] as ForcedSaleEffect, index };
-};
+  ) as ForcedSaleEffect;
 
 const saleFacts = (event: LedgerEvent, gain: RealizedGain): SaleFacts => {
   if (event.type === "sell") {
@@ -135,12 +130,15 @@ const saleFacts = (event: LedgerEvent, gain: RealizedGain): SaleFacts => {
     };
   }
   const action = event as CorporateActionEvent;
-  const { effect, index } = forcedSaleOf(action, gain);
+  const effect = forcedSaleOf(action, gain);
   const entry = effect.per_account.find((e) => e.account_id === gain.account_id) as {
     fee?: string;
     withholding?: string;
   };
-  const convertAfter = action.effects.some((other, at) => at > index && other.op === "convert");
+  // The cash of an exchange, before the conversion (a cash component of the old
+  // shares) or after it (the fractions of the new ones): #13 either way
+  // (feature 009 review).
+  const exchanges = action.effects.some((other) => other.op === "convert");
   return {
     event_type: "forced_sale",
     kind: action.kind,
@@ -151,7 +149,7 @@ const saleFacts = (event: LedgerEvent, gain: RealizedGain): SaleFacts => {
     fee: money(entry.fee ?? "0", effect.currency),
     withholding: money(entry.withholding ?? "0", effect.currency),
     cash_leg_of_exchange:
-      (action.kind === "merger" || action.kind === "issuer_restructuring") && convertAfter,
+      (action.kind === "merger" || action.kind === "issuer_restructuring") && exchanges,
   };
 };
 

@@ -62,3 +62,34 @@ describe("pending at 31/12 includes what waits for a repurchase of the next year
     expect(text(lineOf(report, june.id).released_eur)).toBe("-200");
   });
 });
+
+describe("#13 marks the cash of an exchange in either order (finding 3)", () => {
+  it("tags the fractions sold after the conversion, as it tagged a cash leg before it", () => {
+    const b = taxBuilder();
+    b.buy({
+      account_id: "acc_a",
+      asset_id: "stock_s",
+      value_date: "2021-01-04",
+      quantity: "10",
+      unit_price: "100",
+    });
+    const merger = b.corporateAction({
+      kind: "merger",
+      asset_id: "stock_s",
+      effective_date: "2021-06-01",
+      effects: [
+        { op: "convert", to_asset_id: "stock_t", ratio: "3/4" },
+        {
+          op: "forced_sale",
+          asset_id: "stock_t",
+          per_account: [{ account_id: "acc_a", quantity: "0.5" }],
+          unit_price: "150",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2021-06-01",
+        },
+      ],
+    });
+    expect(lineOf(reportOf(b.build(), 2021), merger.id).criteria).toContain("13");
+  });
+});
