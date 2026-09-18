@@ -257,14 +257,17 @@ describe("detailView", () => {
         row.event.type === "buy" &&
         (row.event as unknown as { unit_price?: string }).unit_price !== undefined,
     );
-    const view = detailView(entry as never);
+    if (entry === undefined) {
+      throw new Error("el golden no trae ninguna compra con valor unitario");
+    }
+    const view = detailView(entry);
     expect(view.fields.find((field) => field.name === "quantity")?.kind).toBe("quantity");
     expect(view.fields.find((field) => field.name === "quantity")?.quantity).toBeDefined();
     expect(view.fields.find((field) => field.name === "unit_price")?.kind).toBe("amount");
     expect(view.fields.find((field) => field.name === "fee")?.amount).toBeDefined();
     // The currency of the amount is the event's, not a guess.
     expect(view.fields.find((field) => field.name === "unit_price")?.amount?.currency).toBe(
-      (entry?.event as unknown as { currency: string }).currency,
+      (entry.event as unknown as { currency: string }).currency,
     );
   });
 
