@@ -65,8 +65,19 @@ const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
  * all of them add ~1,1 KB gzip, and the web bundles the whole domain because
  * every calculation lives there (ADR-0007). The boot figure, which is the one
  * felt on a phone, did not move: 75,6 KB against a budget of 80.
+ *
+ * **Moved from 166 to 177 by the round of web defects of 2026-09-18, on
+ * purpose:** that round replaced what the screens used to print raw with
+ * readable text, and text weighs. The effects of a corporate action and a
+ * configuration change told as sentences instead of JSON (~1,5 KB), the error
+ * and warning catalogues naming fields, types and settings by their Spanish
+ * labels (~2 KB), the reader of Spanish numbers and the errors put on their
+ * field (~2 KB), events named by type and date instead of by identifier, the
+ * preview reduced to what changes. In exchange the **boot** went down, from
+ * 76,4 to 71,6 KB: the catalogue of messages is now fetched only when an error
+ * has to be explained.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 166 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 177 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
