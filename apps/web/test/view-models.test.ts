@@ -30,6 +30,7 @@ import {
   detailView,
   movementRows,
   netWorthView,
+  targetWeightTotal,
 } from "../src/view-models/index.js";
 import { goldenEvents } from "./helpers/golden.js";
 
@@ -311,6 +312,46 @@ describe("netWorthView", () => {
     expect(view.missing).toContain("ast_world");
     const core = view.blocks[0];
     expect(core?.partial).toBe(true);
+  });
+});
+
+describe("targetWeightTotal", () => {
+  it("adds with the decimal of the domain, never through floating point", () => {
+    // 0,1 + 0,2 is 0.30000000000000004 in floating point (trap 3, ADR-0005).
+    expect(targetWeightTotal({ a: "0.1", b: "0.2" }).total).toBe("0.3");
+    expect(targetWeightTotal({ a: "60.05", b: "39.95" })).toEqual({ total: "100", addsUp: true });
+  });
+
+  it("accepts the comma a Spanish keyboard types", () => {
+    expect(targetWeightTotal({ a: "60,5", b: "39,5" })).toEqual({ total: "100", addsUp: true });
+  });
+
+  it("leaves an empty field out: an undeclared weight is not a zero", () => {
+    expect(targetWeightTotal({ a: "100", b: "", c: "   " })).toEqual({
+      total: "100",
+      addsUp: true,
+    });
+    expect(targetWeightTotal({})).toEqual({ total: "0", addsUp: false });
+  });
+
+  it("says whether they add up to 100", () => {
+    const cases: [Record<string, string>, boolean][] = [
+      [{ a: "60", b: "40" }, true],
+      [{ a: "33.33", b: "33.33", c: "33.34" }, true],
+      [{ a: "33.33", b: "33.33", c: "33.33" }, false],
+      [{ a: "50" }, false],
+      [{ a: "60", b: "40.001" }, true],
+      [{ a: "60", b: "40.01" }, false],
+    ];
+    for (const [weights, addsUp] of cases) {
+      expect(targetWeightTotal(weights).addsUp).toBe(addsUp);
+    }
+  });
+
+  it("never claims 100 when a field is not a number", () => {
+    // Half typed: the sum cannot read it, so it must not say it adds up.
+    expect(targetWeightTotal({ a: "100", b: "-" })).toEqual({ total: "100", addsUp: false });
+    expect(targetWeightTotal({ a: "abc" })).toEqual({ total: "0", addsUp: false });
   });
 });
 

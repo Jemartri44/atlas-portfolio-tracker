@@ -17,14 +17,15 @@ import {
   type Warning,
   yearOf,
 } from "@atlas/domain";
-import { createSignal, For, type JSX, Show } from "solid-js";
-import { Amount, Callout, Dialog, Field, SelectField } from "../../components/index.js";
+import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
+import { Amount, Badge, Callout, Dialog, Field, SelectField } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { formatDecimalString } from "../../format/number.js";
 import { changeSettings } from "../../ledger/actions.js";
 import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { targetWeightTotal, type WeightTotal } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
 
 interface NumberSetting {
@@ -128,11 +129,7 @@ export default function ConfiguracionRoute(): JSX.Element {
           }
           return result;
         };
-        const weightTotal = (): string =>
-          Object.values(weightValues())
-            .filter((entry) => entry.trim() !== "")
-            .reduce((total, entry) => total + Number.parseFloat(entry.replace(",", ".")), 0)
-            .toFixed(2);
+        const weightTotal = createMemo<WeightTotal>(() => targetWeightTotal(weightValues()));
 
         /** The candidate configuration: what is in force plus what was touched. */
         const candidate = (): Settings => {
@@ -219,8 +216,11 @@ export default function ConfiguracionRoute(): JSX.Element {
               <section class="card">
                 <header>
                   <h2>Pesos objetivo del núcleo</h2>
-                  <span class="tiny">
-                    suman {formatDecimalString(weightTotal(), { decimals: 2 })} de 100
+                  <span class="row tiny">
+                    suman {formatDecimalString(weightTotal().total, { decimals: 2 })} de 100
+                    <Show when={!weightTotal().addsUp}>
+                      <Badge tone="warning">no suman 100</Badge>
+                    </Show>
                   </span>
                 </header>
                 <div class="fieldset">
