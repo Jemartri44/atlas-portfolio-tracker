@@ -1,10 +1,17 @@
 // atlas add buy|sell|transfer|dividend|interest|fx|cash-in|cash-out|fee|valuation
 
-import { bucketStats, DomainError, settingsAt, todayInMadrid } from "@atlas/domain";
+import {
+  bucketStats,
+  DomainError,
+  type Draft,
+  previewEvent,
+  settingsAt,
+  todayInMadrid,
+} from "@atlas/domain";
 import type { Flags } from "../args.js";
 import { UsageError } from "../args.js";
 import { type Context, describeWarnings } from "../context.js";
-import { confirmAndRecord, type DraftSpec, draftFromFlags, previewCandidate } from "./shared.js";
+import { confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
 
 const COMMON = [
   "account",
@@ -153,7 +160,9 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
 const tradeNotes = async (ctx: Context, draft: Record<string, unknown>): Promise<string[]> => {
   const assetId = draft.asset_id as string;
   try {
-    const { warnings, state, events } = await previewCandidate(ctx, draft, [assetId]);
+    const { warnings, state, events } = await previewEvent(ctx.deps, draft as unknown as Draft, {
+      assets: [assetId],
+    });
     const notes = describeWarnings(warnings);
     const account = state.accounts.get(draft.account_id as string);
     if (account?.book === "bucket") {

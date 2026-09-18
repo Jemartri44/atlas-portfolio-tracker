@@ -5,25 +5,16 @@ import { dirname, join, resolve } from "node:path";
 
 import {
   type CivilDate,
-  completeDraft,
-  createUlidGenerator,
   type Draft,
-  type FiscalLot,
-  fiscalLots,
   isCivilDate,
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
-  type PhysicalPosition,
   type ProjectedLedger,
-  physicalPositions,
-  projectLedger,
-  type RealizedGain,
   type RecordResult,
   recordEvent,
   type SupportedEvent,
   todayInMadrid,
-  type Warning,
 } from "@atlas/domain";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import {
@@ -196,55 +187,6 @@ export const renderQuery = (
     ctx.io[channel](header);
   }
   ctx.io.out(text);
-};
-
-export interface Snapshot {
-  positions: PhysicalPosition[];
-  lots: FiscalLot[];
-}
-
-export interface CandidatePreview {
-  candidate: SupportedEvent;
-  before: Snapshot;
-  after: Snapshot;
-  /** Gains the candidate itself books. */
-  gains: RealizedGain[];
-  warnings: Warning[];
-  events: readonly LedgerEvent[];
-  state: LedgerState;
-}
-
-const snapshotOf = (state: LedgerState, assets: readonly string[]): Snapshot => ({
-  positions: physicalPositions(state).filter((p) => assets.includes(p.asset_id)),
-  lots: fiscalLots(state).filter((lot) => assets.includes(lot.asset_id)),
-});
-
-/**
- * Projects the ledger with the draft completed as a provisional event — the same
- * code path as recordEvent — and returns what changes for the given assets.
- * Throws the domain error the record would throw.
- */
-export const previewCandidate = async (
-  ctx: Context,
-  draft: Record<string, unknown>,
-  assets: readonly string[],
-): Promise<CandidatePreview> => {
-  const { events, state } = await loadAndProject(ctx.deps);
-  const candidate = completeDraft(
-    ctx.deps,
-    draft as unknown as Draft,
-    createUlidGenerator(ctx.deps).next(),
-  );
-  const after = projectLedger([...events, candidate]);
-  return {
-    candidate,
-    before: snapshotOf(state, assets),
-    after: snapshotOf(after, assets),
-    gains: after.gains.filter((gain) => gain.event_id === candidate.id),
-    warnings: after.warnings.filter((warning) => warning.event_id === candidate.id),
-    events,
-    state,
-  };
 };
 
 /** Type of the event that created a lot or booked a gain; corporate actions add their kind. */

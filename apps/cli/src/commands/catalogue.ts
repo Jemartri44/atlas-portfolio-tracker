@@ -4,7 +4,6 @@ import {
   ASSET_TYPES,
   accounts,
   assets,
-  coreWeights,
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
@@ -12,8 +11,8 @@ import {
   movedFiscalYears,
   type Settings,
   settingsAt,
+  silencedWarnings,
   todayInMadrid,
-  type Warning,
   yearOf,
 } from "@atlas/domain";
 import {
@@ -262,27 +261,10 @@ const assetTypeAssignments = (raw: string, flag: string): Record<string, string>
   return parsed;
 };
 
-/** Threshold warnings the settings raise on today's portfolio; empty when they cannot be evaluated. */
-const activeWarnings = (
-  state: LedgerState,
-  date: string,
-  settings: Settings,
-): { warnings: Warning[]; evaluated: boolean; missing: string[] } => {
-  const weights = coreWeights(state, date, settings);
-  return {
-    warnings: weights.warnings.filter(
-      (warning) =>
-        warning.code === "deviation_above_threshold" || warning.code === "satellite_below_minimum",
-    ),
-    evaluated: !weights.partial,
-    missing: weights.missing_prices,
-  };
-};
-
 /**
  * Raising a threshold must never silence a live warning behind the user's back
- * (constitution IV). The same ledger and date are evaluated with the settings
- * in force and with the new ones; whatever stops warning is listed.
+ * (constitution IV). The comparison lives in the domain (`silencedWarnings`),
+ * so the CLI and the web cannot disagree about what gets muted.
  */
 const confirmSilencedWarnings = async (
   ctx: Context,
@@ -291,17 +273,13 @@ const confirmSilencedWarnings = async (
   next: Settings,
 ): Promise<boolean> => {
   const date = todayInMadrid(ctx.deps.clock);
-  const before = activeWarnings(state, date, current);
-  const after = activeWarnings(state, date, next);
-  if (!before.evaluated) {
+  const { silenced, evaluated, missing_prices } = silencedWarnings(state, date, current, next);
+  if (!evaluated) {
     ctx.io.out(
-      `No se han podido evaluar los avisos (faltan precios de ${before.missing.join(", ")}); se continúa.`,
+      `No se han podido evaluar los avisos (faltan precios de ${missing_prices.join(", ")}); se continúa.`,
     );
     return true;
   }
-  const keyOf = (warning: Warning): string => `${warning.code}|${JSON.stringify(warning.details)}`;
-  const kept = new Set(after.warnings.map(keyOf));
-  const silenced = before.warnings.filter((warning) => !kept.has(keyOf(warning)));
   if (silenced.length === 0) {
     return true;
   }
