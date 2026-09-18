@@ -148,7 +148,11 @@ describe("architecture: @atlas/domain imports nothing", () => {
         .map((name) => join(domainSrc, "projections", name))
         .concat(join(domainSrc, "projections", "state.ts")),
     );
-    const reads = [/\.valuations\b/, /\{[^{}]*\bvaluations\b[^{}]*\}\s*=[^=]/];
+    const reads = [
+      /\.valuations\b/,
+      /\{[^{}]*\bvaluations\b[^{}]*\}\s*=[^=]/,
+      /\[\s*["'`]valuations["'`]\s*\]/,
+    ];
     const violations = listTsFiles(domainSrc)
       .filter((file) => !allowed.has(file))
       .filter((file) => {
@@ -243,15 +247,34 @@ describe("architecture: @atlas/domain imports nothing", () => {
 describe("architecture: the tax engine", () => {
   it("reads neither the known FX rates nor the valuations of the state", () => {
     const taxDir = join(domainSrc, "tax");
+    // The three forms a read can take: a property, a destructuring and a
+    // bracket with the name written as a string.
     const reads = [
       /\.(?:fxRates|valuations)\b/,
       /\{[^{}]*\b(?:fxRates|valuations)\b[^{}]*\}\s*=[^=]/,
+      /\[\s*["'`](?:fxRates|valuations)["'`]\s*\]/,
     ];
     const files = listTsFiles(taxDir);
     expect(files.length).toBeGreaterThan(4);
     const violations = files
       .filter((file) => reads.some((pattern) => pattern.test(readFileSync(file, "utf8"))))
       .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * The Modelo 720 view (`projections/valuations.ts`) reads valuations because
+   * the law values that return at market prices. The next feature puts it next
+   * to the tax engine; this keeps the engine from ever reaching it, at any depth.
+   */
+  it("never reaches the valuations view, at any depth", () => {
+    const graph = importGraph();
+    const taxDir = join(domainSrc, "tax");
+    const view = join(domainSrc, "projections", "valuations.ts");
+    const violations = listTsFiles(taxDir)
+      .map((file) => reachableFrom(graph, file).get(view))
+      .filter((chain): chain is string[] => chain !== undefined)
+      .map(asChain);
     expect(violations).toEqual([]);
   });
 });
