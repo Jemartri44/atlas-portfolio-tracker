@@ -668,6 +668,25 @@ describe("architecture: apps/web", () => {
     expect(violations.sort()).toEqual([]);
   });
 
+  /**
+   * The ceiling itself applies to code, not to the cascade (Q8, answer (a)) —
+   * but the exemption was granted **on condition that each stylesheet over the
+   * ceiling carries its reason**, and a condition nobody checks is a wish too.
+   */
+  it("asks the long stylesheets for the same written reason", () => {
+    const LIMIT = 250;
+    const styles = join(webSrc, "styles");
+    const violations: string[] = [];
+    for (const entry of readdirSync(styles).filter((name) => name.endsWith(".css"))) {
+      const source = readFileSync(join(styles, entry), "utf8");
+      const lines = source.split("\n").length;
+      if (lines > LIMIT && !source.includes("LINE BUDGET:")) {
+        violations.push(`styles/${entry}: ${lines} líneas y ninguna razón escrita`);
+      }
+    }
+    expect(violations.sort()).toEqual([]);
+  });
+
   /** And the step of the scale that the bar's label uses has to exist. */
   it("declares the type token of the bottom bar", () => {
     const tokens = readFileSync(join(webSrc, "styles", "tokens.css"), "utf8");

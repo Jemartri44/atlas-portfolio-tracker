@@ -190,7 +190,6 @@ export const withOption = (
   raw: string,
 ): SettingsPatch => ({ ...patch, [key]: raw === "" ? undefined : raw });
 
-/** What one asset type shows for a per-type setting, in force or being typed. */
 /**
  * What the field shows: the draft when there is one, otherwise what is in force.
  *
@@ -213,19 +212,10 @@ export const perAssetTypeValue = (
 };
 
 /**
- * The patch after editing one asset type of a per-type setting.
+ * Sets — or **removes** — the rule of one asset type.
  *
  * The map is rebuilt from what is in force plus what was already typed, so
  * touching `fund` never drops `crypto`.
- *
- * An empty value leaves the map as it was — it does **not** clear the type.
- * That is the behaviour of the screen this was extracted from, kept on purpose
- * so the refactor changes nothing; it is also why choosing "Valor por defecto"
- * looks like it does nothing, which is written down in
- * `specs/006-web-shell/questions.md` for the direction to decide.
- */
-/**
- * Sets — or **removes** — the rule of one asset type.
  *
  * Emptying the field takes the key out of the map, which is what the control
  * ("Valor por defecto") has always promised and never did: the old version

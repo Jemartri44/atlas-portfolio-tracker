@@ -7,8 +7,8 @@
 //      conflict reloads and is reported, never overwritten (FR-015).
 //   2. A duplicate fingerprint and a dependent-events refusal are **outcomes**,
 //      not exceptions: the interface has to ask before insisting.
-//   3. Ante la duda, no se escribe. Every path that is not a clean success
-//      leaves the ledger exactly as it was.
+//   3. When in doubt, nothing is written. Every path that is not a clean
+//      success leaves the ledger exactly as it was.
 //
 // Separate from `actions.ts` since feature 007: opening a ledger is what the
 // boot does, writing to it is what a form does, and keeping them in one module

@@ -1,4 +1,10 @@
-/* Base: typography, focus, numbers and the pieces every screen repeats. */
+/*
+ * Base: typography, focus, numbers and the pieces every screen repeats.
+ *
+ * LINE BUDGET: the ceiling of decision (g) counts code. This is the vendored
+ * Pico layer plus the element defaults every screen inherits; splitting it
+ * would mean loading the reset in pieces, with the order deciding what applies.
+ */
 
 body {
   background-color: var(--c-bg);

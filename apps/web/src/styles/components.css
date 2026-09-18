@@ -2,6 +2,13 @@
  * The pieces the screens are made of: the net-worth block, the attention list,
  * the movement rows (cards on a phone, a table from 768px: one data source, two
  * presentations, never a sideways scrollbar), forms and dialogs.
+ *
+ * LINE BUDGET: the ceiling of decision (g) counts code, and this is a cascade.
+ * Splitting it per screen would scatter the order in which rules override each
+ * other, which is exactly where the style defects the 006 found in the browser
+ * came from: one stylesheet per component means every screen loads several and
+ * the winner depends on the import order. It stays in one file, sectioned, and
+ * each section says what it dresses.
  */
 
 /* --- The one big number, always broken down ----------------------------- */
@@ -651,16 +658,13 @@ dialog .dialog-actions {
   padding: 0;
 }
 
-/* The equivalent table is the accessible copy: it is shown at every width. */
-.datatable.is-always {
-  display: table;
+/*
+ * Inside the equivalent table of a chart the cards are enough at every width:
+ * three series of one figure each read better as two lines than as a table
+ * squeezed into 360px, and the table is there for the wide layout as usual.
+ */
+.chart-table .datalist {
   margin-top: var(--s-2);
-  width: 100%;
-}
-
-.datatable.is-always td.num,
-.datatable.is-always th.num {
-  text-align: right;
 }
 
 /* The legend of a chart: colour **and** dash, never colour alone. */
