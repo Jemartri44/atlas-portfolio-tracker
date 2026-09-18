@@ -160,6 +160,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   },
   invalid_wash_sale_window: (d) =>
     `La ventana de recompra de ${enumValue(d.asset_type)} no es válida: elige dos meses, un año o un número de días.`,
+  tax_ledger_invalid: (d) =>
+    `El libro tiene ${countOf(Number(d.count), "evento inválido", "eventos inválidos")}: un cálculo fiscal sobre él sería aproximado. Repáralo antes en Ajustes → Verificación.`,
+  tax_year_unsupported: (d) =>
+    `El cálculo fiscal aplica el régimen de compensación vigente desde ${num(d.first_supported)}; ${num(d.year)} es anterior.`,
   invalid_fiscal_date_rule: (d) =>
     `La fecha fiscal de ${enumValue(d.asset_type)} debe ser la de contratación o la fecha valor (recibido: ${text(d.value)}): decide el ejercicio de cada operación.`,
   invalid_income_category: (d) =>

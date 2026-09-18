@@ -167,6 +167,18 @@ export * from "./settings/settings.js";
 export { washSaleWindowEnd } from "./settings/wash-sale.js";
 export * from "./synth/index.js";
 export {
+  type Certainty,
+  CRITERION_IDS,
+  type CriterionId,
+  FISCAL_CRITERIA,
+  type FiscalCriterion,
+  isDoubtful,
+  type RiskDirection,
+} from "./tax/criteria.js";
+export { taxReportJson } from "./tax/json.js";
+export type * from "./tax/report.js";
+export { FIRST_SUPPORTED_YEAR, type TaxOptions, taxYear } from "./tax/year.js";
+export {
   archiveNameFor,
   type CompactDeps,
   type CompactPlan,
