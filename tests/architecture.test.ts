@@ -215,3 +215,106 @@ describe("architecture: @atlas/domain imports nothing", () => {
     expect(violations).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// The web (feature 006). Three rules that cannot be left to memory: the privacy
+// gate, the isolation of the bundle and the ban on `use:` directives.
+// ---------------------------------------------------------------------------
+
+const webRoot = join(repoRoot, "apps", "web");
+const webSrc = join(webRoot, "src");
+
+const listSourceFiles = (dir: string): string[] =>
+  readdirSync(dir).flatMap((entry) => {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) {
+      return listSourceFiles(path);
+    }
+    return path.endsWith(".ts") || path.endsWith(".tsx") ? [path] : [];
+  });
+
+describe("architecture: apps/web", () => {
+  /**
+   * Decision (d) of prompt 006 and Q6: **every** amount and **every** quantity
+   * is painted by one component, so the privacy mode cannot be bypassed by a
+   * screen written in two years by someone who never read the prompt.
+   *
+   * It is checked on the **import graph** rather than by rendering: the module
+   * that knows how to format a sensitive figure has exactly one legitimate
+   * consumer. It is the same mechanism that guards the price gate of the domain
+   * above, and it does not depend on a testing library.
+   */
+  it("lets only the Amount component format an amount or a quantity", () => {
+    const gate = join(webSrc, "format", "money.ts");
+    const allowed = new Set([join(webSrc, "components", "Amount.tsx")]);
+    const violations: string[] = [];
+    for (const file of listSourceFiles(webSrc)) {
+      if (file === gate || allowed.has(file)) {
+        continue;
+      }
+      for (const specifier of specifiersOf(readFileSync(file, "utf8"))) {
+        if (!specifier.startsWith(".")) {
+          continue;
+        }
+        const target = resolve(dirname(file), specifier)
+          .replace(/\.js$/, ".ts")
+          .replace(/\.jsx$/, ".tsx");
+        if (target === gate) {
+          violations.push(`${relative(repoRoot, file)} -> ${specifier}`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * FR-014: importing the browser store must not drag `node:fs` into the
+   * bundle. The barrel of `@atlas/adapters` exports `FileLedgerStore`, so the
+   * web imports subpaths only. `scripts/check-bundle.mjs` verifies the same
+   * thing on the built output; this one says it in the source, where the fix is.
+   */
+  it("never imports node builtins or the adapters barrel", () => {
+    const violations: string[] = [];
+    for (const file of listSourceFiles(webSrc)) {
+      for (const specifier of specifiersOf(readFileSync(file, "utf8"))) {
+        if (specifier.startsWith("node:")) {
+          violations.push(`${relative(repoRoot, file)} -> ${specifier}`);
+        }
+        if (specifier === "@atlas/adapters") {
+          violations.push(`${relative(repoRoot, file)} -> ${specifier} (usa una subruta)`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * ADR-0017: `use:` directives are the only thing Solid 2.0 removes entirely,
+   * and avoiding them today costs nothing. A grep is enough because the syntax
+   * is unmistakable.
+   */
+  it("uses no `use:` directive anywhere", () => {
+    const violations = listSourceFiles(webSrc)
+      .filter((file) => /\suse:[a-zA-Z]/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * Constitution, security: nothing is ever requested from a foreign origin. The
+   * sources may not name one (the built output is checked by the bundle script,
+   * which knows about the inert sentinels of the router).
+   */
+  it("names no remote origin in its sources", () => {
+    const allowed = /https?:\/\/(www\.)?w3\.org/;
+    const violations: string[] = [];
+    for (const file of listSourceFiles(webSrc)) {
+      for (const match of readFileSync(file, "utf8").matchAll(/https?:\/\/[\w.-]+/g)) {
+        if (!allowed.test(match[0])) {
+          violations.push(`${relative(repoRoot, file)}: ${match[0]}`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
