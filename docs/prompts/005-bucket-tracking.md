@@ -78,7 +78,8 @@ Por cada par (cuenta `bucket`, activo) con posición física > 0 a la fecha: can
 Amplía `theses()` (o una proyección nueva que la envuelva, como prefieras) con:
 
 - `benchmark_equivalent_eur`: qué valdría hoy —o en la fecha de cierre— el mismo dinero puesto en el índice el día que se puso en el activo. Definición exacta, para que sea reproducible: `Σ_compras coste_i × P(d_fin) / P(d_i)`, donde `coste_i` y `d_i` son el coste en EUR y la `fiscal_date` de cada `buy` enlazado, `P(d)` es el precio manual del `bucket_benchmark_asset_id` en la fecha `d` (última `valuation` con `date ≤ d`, como en `manualPrices`) y `d_fin` es la `fiscal_date` de la última venta enlazada si la tesis está cerrada, o la fecha consultada si sigue abierta.
-- `result_vs_index_eur` = resultado de la tesis − resultado del índice = `(result_eur + valor_latente) − (benchmark_equivalent_eur − invested_eur)`, donde `valor_latente` es el valor actual de la posición viva de la tesis (cero si está cerrada y sin posición).
+- `result_vs_index_eur` = resultado de la tesis − resultado del índice = `(result_eur + plusvalía_latente) − (benchmark_equivalent_eur − invested_eur)`, donde `plusvalía_latente` es **el valor actual de la posición viva menos su coste** (cero si la tesis está cerrada y sin posición).
+  *Corrección (Q1 de la 005): este prompt decía "el valor actual de la posición viva", y con esa lectura una tesis abierta que rindiera exactamente lo mismo que el índice daba `result_vs_index_eur = invested_eur` en vez de cero, incumpliendo las dos propiedades que el propio §3.9 exige. Manda la plusvalía.*
 - **Si falta cualquier `P(d)` necesaria** (no hay `valuation` del índice en o antes de esa fecha, o no hay índice configurado): los dos campos salen `undefined` y se lista el activo y la fecha que faltan. Nunca se estima.
 - Redondeo a céntimos solo en la salida, una vez (ADR-0005). Todo esto es informativo: no toca lotes, ni ganancias, ni fechas fiscales.
 
@@ -112,7 +113,9 @@ No bloquea: pide confirmación como el aviso de umbral silenciado (`--yes` la da
 
 Al registrar un `buy` de un activo que se vendió **con pérdida** dentro de la ventana `wash_sale_window[asset_type]` (ADR-0014, contada **de fecha a fecha** en meses o años naturales: implementa la aritmética de calendario en `dates/civil-date.ts`, con el fin de mes al último día cuando el día no existe), avisa: `wash_sale_window_repurchase`, con el evento de la venta, su pérdida y el último día de la ventana. Vale para los dos libros (la regla es fiscal, no del cubo), y aparece también en `atlas check`.
 
-**Esto es solo el aviso.** El diferimiento de la pérdida, su reparto entre los lotes recomprados y el viaje del diferimiento a través de traspasos y canjes (ADR-0014) son del motor fiscal, Fase 5. No los implementes aquí ni prepares estructuras para ellos.
+**Las dos direcciones de la ventana avisan** (respuesta a Q3 de la 005): al registrar una **compra** posterior a una venta con pérdida, y también al registrar una **venta con pérdida** posterior a compras del mismo activo dentro de la ventana. El cálculo es el mismo y la segunda es la más útil de las dos, porque llega en el momento en que el usuario todavía puede decidir. Códigos distintos (`wash_sale_window_repurchase` y `wash_sale_window_prior_buy`) con el evento, la cantidad y el último día de la ventana en los detalles.
+
+**Esto es solo el aviso.** El diferimiento de la pérdida, su cuantificación, su reparto entre los lotes recomprados y el viaje del diferimiento a través de traspasos y canjes (ADR-0014) son del motor fiscal, Fase 5. No los implementes aquí ni prepares estructuras para ellos.
 
 ### 3.7 CLI
 
@@ -123,7 +126,7 @@ Al registrar un `buy` de un activo que se vendió **con pérdida** dentro de la 
 
 ### 3.8 Generador sintético y *golden file*
 
-El escenario actual tiene tres tesis (dos cerradas, una abierta) y ninguna valoración del índice de referencia, así que las métricas nuevas saldrían casi todas "sin dato". Amplíalo con: `settings_changed` que fije `bucket_benchmark_asset_id` al fondo global y los tres umbrales del cubo; `valuation` periódicas (anuales o semestrales) del activo de referencia desde el primer evento del cubo, para que las comparaciones con el índice tengan datos; al menos **seis tesis cerradas** (mezcla de ganancias y pérdidas, alguna con dos compras en fechas distintas) y dos abiertas; y una recompra dentro de la ventana tras una venta con pérdida, para el aviso de §3.6.
+El escenario actual tiene **cuatro** tesis (tres cerradas —una de ellas sin ninguna venta, cerrada al canjearse su activo— y una abierta) y ninguna valoración del índice de referencia, así que las métricas nuevas saldrían casi todas "sin dato". Amplíalo con: `settings_changed` que fije `bucket_benchmark_asset_id` al fondo global y los tres umbrales del cubo; `valuation` periódicas (anuales o semestrales) del activo de referencia desde el primer evento del cubo, para que las comparaciones con el índice tengan datos; al menos **seis tesis cerradas** (mezcla de ganancias y pérdidas, alguna con dos compras en fechas distintas) y dos abiertas; y una recompra dentro de la ventana tras una venta con pérdida, para el aviso de §3.6.
 
 **Antes de tocar el escenario, arregla el sorteo.** Hoy todos los valores del generador salen del mismo flujo del PRNG, así que **cualquier** evento nuevo vuelve a sortear los ULIDs, los importes y las fechas de todo lo que viene después: la regeneración de la feature 004 cambió 116 de los 160 ids y dejó el diff ilegible. Da a las `valuation` (y a cualquier bloque que añadas en medio) **su propio subflujo de PRNG** —un `Prng` derivado de la semilla con otra constante, o sortéalas al final del escenario— de modo que los eventos preexistentes conserven sus ids y sus cifras y el diff del *golden* se pueda revisar de un vistazo. Es requisito de esta feature, no una mejora opcional: sin él, la siguiente regeneración vuelve a ser un acto de fe.
 
