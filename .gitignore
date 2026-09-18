@@ -44,6 +44,8 @@ plan-financiero.md
 coverage/
 dist-test/
 *.tsbuildinfo
+# The service worker the web dev server generates (excluded in biome.json too)
+apps/web/dev-dist/
 
 # Local ledgers, backups, exports and atomic-write temporaries, anywhere in the tree
 # (fixtures live under tests/fixtures/ and do not match these patterns)
