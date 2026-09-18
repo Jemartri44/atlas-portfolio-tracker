@@ -85,7 +85,7 @@ describe("generateLedger: the scenario contains every rare case", () => {
       ].sort(),
     );
     expect(summary.accounts).toEqual(["acc_bucket", "acc_ibkr", "acc_ibkr2", "acc_mi"]);
-    expect(summary.assets).toHaveLength(13);
+    expect(summary.assets).toHaveLength(15);
     expect(summary.years).toEqual([2026, 2027, 2028]);
     const types = new Set(ofType("asset_created").map((asset) => asset.asset_type));
     expect([...types].sort()).toEqual(["etc", "etp", "fund", "money_market", "stock"]);
@@ -218,6 +218,29 @@ describe("generateLedger: the scenario contains every rare case", () => {
     expect(byId.th_gamma?.buys).toHaveLength(2);
   });
 
+  it("gives the bucket the sample phase 3 needs: seven closed theses and two open", () => {
+    const theses = [...state.theses.values()];
+    const closed = theses.filter((thesis) => thesis.status === "closed");
+    const open = theses.filter((thesis) => thesis.status === "open");
+    expect(closed.length).toBeGreaterThanOrEqual(6);
+    expect(open).toHaveLength(2);
+    // Winners and losers, and one thesis that bought twice on different dates.
+    expect(closed.some((thesis) => thesis.result_eur.amount.isPositive())).toBe(true);
+    expect(closed.some((thesis) => thesis.result_eur.amount.isNegative())).toBe(true);
+    const byId = Object.fromEntries(theses.map((thesis) => [thesis.thesis_id, thesis]));
+    expect(byId.th_delta_1?.buys).toHaveLength(2);
+    expect(byId.th_delta_1?.buys[0]?.fiscal_date).not.toBe(byId.th_delta_1?.buys[1]?.fiscal_date);
+  });
+
+  it("repurchases inside the window after a loss, which is what §3.6 has to warn about", () => {
+    const repurchases = state.warnings.filter(
+      (warning) => warning.code === "wash_sale_window_repurchase",
+    );
+    expect(repurchases.some((warning) => warning.details.asset_id === "ast_delta")).toBe(true);
+    // And the ledger keeps the purchase: it is a warning, not a rejection.
+    expect(state.positions.get("acc_bucket|ast_delta")?.isPositive()).toBe(true);
+  });
+
   it("corrects a prior-year dividend in the following year and values foreign accounts at 31/12", () => {
     const reversal = ofType("reversal")[0];
     const corrected = ofType("dividend").find(
@@ -228,11 +251,24 @@ describe("generateLedger: the scenario contains every rare case", () => {
     expect(corrected.recorded_at.startsWith("2028")).toBe(true);
     expect(state.reversed.get(corrected.corrects_id as string)).toBe(reversal?.id);
     const valuations = ofType("valuation");
-    expect([...new Set(valuations.map((v) => v.date))]).toEqual([
+    // Year ends for the Modelo 720 and the phase-2 views, plus the half-yearly
+    // prices of the benchmark and the price of the open bucket position, which
+    // the phase-3 metrics need (feature 005).
+    expect([...new Set(valuations.map((v) => v.date))].sort()).toEqual([
+      "2026-09-01",
       "2026-12-31",
+      "2027-03-01",
+      "2027-09-01",
       "2027-12-31",
+      "2028-03-01",
+      "2028-09-01",
       "2028-12-31",
     ]);
+    const benchmark = valuations.filter((v) => v.asset_id === "ast_world");
+    expect(benchmark.length).toBeGreaterThanOrEqual(5);
+    // Priced before the first event of the bucket, or the first thesis would
+    // have no P(d_i) to compare against.
+    expect(benchmark.some((v) => v.date <= "2026-09-04")).toBe(true);
     // Foreign accounts for the Modelo 720, and the fund account so the phase-2
     // projections have a price for every core asset held (feature 004).
     expect(new Set(valuations.map((v) => v.account_id))).toEqual(

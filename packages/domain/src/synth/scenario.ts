@@ -6,6 +6,7 @@
 
 import { type CivilDate, lastWorkingDay } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
+import { positionOf } from "../projections/positions.js";
 import type {
   AccountId,
   AssetCreatedEvent,
@@ -225,6 +226,28 @@ const ASSETS: readonly AssetSpec[] = [
   },
 ];
 
+/** Bucket assets of the phase-3 programme: in euros, so the block adds no currency noise. */
+const BUCKET_PROGRAMME_ASSETS: readonly AssetSpec[] = [
+  {
+    asset_id: "ast_delta",
+    asset_type: "stock",
+    book: "bucket",
+    ticker: "DEL",
+    name: "Delta Materials",
+    currency: "EUR",
+    transferable: false,
+  },
+  {
+    asset_id: "ast_epsilon",
+    asset_type: "stock",
+    book: "bucket",
+    ticker: "EPS",
+    name: "Epsilon Logistics",
+    currency: "EUR",
+    transferable: false,
+  },
+];
+
 const LATER_ASSETS: Record<string, AssetSpec> = {
   ast_alpha_spin: {
     asset_id: "ast_alpha_spin",
@@ -339,6 +362,7 @@ const settingsWith = (weights: Record<string, string>, contribution: string): Se
   bucket_max_cumulative_contribution: "6000",
   bucket_stop_loss_pct: "30",
   bucket_max_weight_pct: "10",
+  bucket_benchmark_asset_id: "ast_world",
   stale_price_days: 7,
   model_720_alert_threshold_eur: "45000",
   model_721_alert_threshold_eur: "45000",
@@ -1021,6 +1045,148 @@ class Scenario {
     });
   }
 
+  // --- side streams (feature 005) -------------------------------------------------
+
+  /**
+   * Half-yearly prices of the benchmark, from before the first event of the
+   * bucket: without them every comparison against the index would be "no data".
+   *
+   * Recorded in a **side stream** and at the end of the file, so not one id,
+   * `recorded_at` or amount of what came before moves (prompt §3.8). Recording
+   * late is normal and does not change the projection (data-schema.md §7.1);
+   * the quantity is read at the date of the valuation, with `asOf`.
+   */
+  private benchmarkPrices(): void {
+    const stream = this.b.stream("benchmark-valuations");
+    for (const [year, month] of [
+      [2026, 9],
+      [2027, 3],
+      [2027, 9],
+      [2028, 3],
+      [2028, 9],
+    ] as const) {
+      const date = dateOf(year, month, 1);
+      const quantity = positionOf(this.b.stateAsOf(date), "acc_mi", "ast_world");
+      stream.record<ValuationEvent>(date, {
+        type: "valuation",
+        account_id: "acc_mi",
+        asset_id: "ast_world",
+        date,
+        quantity: quantity.toString(),
+        unit_value: stream.rng.decimal(90, 130, 2),
+        currency: "EUR",
+        fx_rate: "1",
+        source: "manual",
+      });
+    }
+  }
+
+  /**
+   * The bucket programme of phase 3: four more closed theses (two winners, two
+   * losers, one of them with two purchases on different dates), one more open,
+   * and a **repurchase inside the window** after a loss-making sale, which is
+   * the case §3.6 needs. On assets of its own, so no lot, gain or position of
+   * what was already there changes.
+   */
+  private bucketProgramme(): void {
+    const s = this.b.stream("bucket-programme");
+    const created = "2027-01-15";
+    for (const asset of BUCKET_PROGRAMME_ASSETS) {
+      s.record<AssetCreatedEvent>(created, { type: "asset_created", ...asset, active: true });
+    }
+    s.record(created, {
+      type: "cash_deposit",
+      account_id: "acc_bucket",
+      value_date: created,
+      amount: "3000",
+      currency: "EUR",
+      fx_rate: "1",
+    });
+
+    const price = (min: number, max: number): string => s.rng.decimal(min, max, 2);
+    const trade = (
+      type: "buy" | "sell",
+      asset_id: AssetId,
+      date: CivilDate,
+      quantity: number,
+      unit_price: string,
+      thesis_id: string,
+    ): void => {
+      s.record<BuyEvent | SellEvent>(date, {
+        type,
+        account_id: "acc_bucket",
+        asset_id,
+        trade_date: date,
+        value_date: addDays(date, 2),
+        quantity: String(quantity),
+        unit_price,
+        currency: "EUR",
+        fx_rate: "1",
+        fx_rate_date: lastWorkingDay(date),
+        fee: "1",
+        source: "manual",
+        thesis_id,
+      } as Draft<BuyEvent | SellEvent>);
+    };
+    const open = (thesis_id: string, asset_id: AssetId, date: CivilDate, planned: number): void => {
+      s.record(date, {
+        type: "thesis_opened",
+        thesis_id,
+        account_id: "acc_bucket",
+        asset_id,
+        hypothesis: `Synthetic thesis on ${asset_id}`,
+        expected_horizon_days: 120,
+        invalidation: "Synthetic invalidation rule",
+        planned_size_eur: String(planned),
+      });
+    };
+    const close = (thesis_id: string, date: CivilDate): void => {
+      s.record(date, { type: "thesis_closed", thesis_id, closing_notes: `${thesis_id} closed` });
+    };
+
+    // Two purchases on different dates and a sale with a gain.
+    const delta1 = price(18, 24);
+    open("th_delta_1", "ast_delta", "2027-02-01", 1200);
+    trade("buy", "ast_delta", "2027-02-10", 20, delta1, "th_delta_1");
+    trade("buy", "ast_delta", "2027-04-12", 10, cents(d(delta1).mul(d("1.1"))), "th_delta_1");
+    trade("sell", "ast_delta", "2027-08-10", 30, cents(d(delta1).mul(d("1.35"))), "th_delta_1");
+    close("th_delta_1", "2027-08-10");
+
+    // A loser, and the repurchase inside its two-month window (§3.6).
+    const delta2 = price(20, 30);
+    open("th_delta_2", "ast_delta", "2027-09-01", 900);
+    trade("buy", "ast_delta", "2027-09-10", 25, delta2, "th_delta_2");
+    trade("sell", "ast_delta", "2027-11-10", 25, cents(d(delta2).mul(d("0.7"))), "th_delta_2");
+    close("th_delta_2", "2027-11-10");
+    open("th_delta_3", "ast_delta", "2027-12-15", 900);
+    trade("buy", "ast_delta", "2027-12-20", 25, cents(d(delta2).mul(d("0.72"))), "th_delta_3");
+
+    // Another loser and another winner, on the second asset.
+    const eps = price(10, 16);
+    open("th_epsilon_1", "ast_epsilon", "2027-03-01", 900);
+    trade("buy", "ast_epsilon", "2027-03-05", 40, eps, "th_epsilon_1");
+    trade("sell", "ast_epsilon", "2027-05-05", 40, cents(d(eps).mul(d("0.85"))), "th_epsilon_1");
+    close("th_epsilon_1", "2027-05-05");
+    open("th_epsilon_2", "ast_epsilon", "2028-01-10", 900);
+    trade("buy", "ast_epsilon", "2028-01-15", 35, cents(d(eps).mul(d("0.9"))), "th_epsilon_2");
+    trade("sell", "ast_epsilon", "2028-06-15", 35, cents(d(eps).mul(d("1.2"))), "th_epsilon_2");
+    close("th_epsilon_2", "2028-06-15");
+
+    // The open position needs a price, or every phase-3 view is partial.
+    const lastDay = "2028-12-31";
+    s.record<ValuationEvent>(lastDay, {
+      type: "valuation",
+      account_id: "acc_bucket",
+      asset_id: "ast_delta",
+      date: lastDay,
+      quantity: positionOf(this.b.stateAsOf(lastDay), "acc_bucket", "ast_delta").toString(),
+      unit_value: price(20, 32),
+      currency: "EUR",
+      fx_rate: "1",
+      source: "manual",
+    });
+  }
+
   // --- the timeline --------------------------------------------------------------
 
   run(): LedgerEvent[] {
@@ -1209,6 +1375,9 @@ class Scenario {
           break;
       }
     }
+    // Side streams last: what they record does not move a byte of the above.
+    this.benchmarkPrices();
+    this.bucketProgramme();
     return b.events;
   }
 }
