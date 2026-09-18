@@ -80,7 +80,7 @@ export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JS
           <For each={positions()}>
             {(row) => (
               <div class="change">
-                <span class="truncate">{row.label}</span>
+                <span class="change-name">{row.label}</span>
                 <span class="values">
                   <span class="num subtle">{row.before ?? "0"}</span>
                   <span class="arrow" aria-hidden="true">
@@ -107,7 +107,7 @@ export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JS
             <For each={lots()}>
               {(row) => (
                 <div class="change">
-                  <span class="truncate">
+                  <span class="change-name">
                     {row.label}
                     <Show when={row.closed}>
                       {" "}
