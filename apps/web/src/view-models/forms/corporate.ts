@@ -40,6 +40,8 @@ const destination = (): FieldSpec => ({
   kind: "select",
   required: true,
   options: "assets",
+  // Same book as the affected asset: a corporate action never crosses books.
+  bookFrom: "asset_id",
   hint: "Tiene que estar dado de alta antes.",
 });
 
@@ -192,6 +194,8 @@ export const CORPORATE_COMMON: readonly FieldSpec[] = [
     kind: "select",
     required: true,
     options: "assets",
+    // A delisted share is deactivated and still held: its liquidation comes later.
+    heldAnywhere: true,
   },
   { name: "effective_date", label: "Fecha de efecto", kind: "date", required: true },
   {

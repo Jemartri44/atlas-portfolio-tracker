@@ -29,6 +29,11 @@ export interface SettingsDraft {
 }
 
 interface WeightsProps {
+  /**
+   * The active assets of the core, plus an inactive one **only** while it still
+   * carries a weight in force: hiding it would drop its weight silently on the
+   * next save, and showing it lets the user take it to zero.
+   */
   assets: readonly Asset[];
   values: Record<string, string>;
   onWeight: (assetId: string, raw: string) => void;
@@ -56,7 +61,7 @@ export const WeightsCard = (props: WeightsProps): JSX.Element => {
               id={`w-${asset.asset_id}`}
               kind="decimal"
               label={`${asset.name} (%)`}
-              hint={asset.asset_id}
+              hint={asset.active ? undefined : "Dado de baja: déjalo vacío para quitarle el peso."}
               value={props.values[asset.asset_id] ?? ""}
               onInput={(raw) => props.onWeight(asset.asset_id, raw)}
             />

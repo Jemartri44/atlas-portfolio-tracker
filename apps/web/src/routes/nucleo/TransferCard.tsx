@@ -115,7 +115,7 @@ export const TransferCard = (props: TransferCardProps): JSX.Element => {
     return outcome?.ok === false ? outcome.error : undefined;
   };
 
-  const options = () => assetOptions(props.state, "core");
+  const options = () => assetOptions(props.state, { book: "core" });
 
   return (
     <Section title="Simulador de traspaso">

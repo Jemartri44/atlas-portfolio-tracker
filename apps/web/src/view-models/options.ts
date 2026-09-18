@@ -5,9 +5,11 @@
 import {
   accounts,
   assets,
+  type Book,
   type CivilDate,
   type LedgerState,
   pendingOrders,
+  physicalPositions,
   settingsAt,
   theses,
   transferWatch,
@@ -15,7 +17,7 @@ import {
 import type { Option } from "../components/Field.jsx";
 import { eventLabel, valueLabel } from "../format/labels.js";
 import { displayName, nameIndex } from "../format/names.js";
-import type { OptionSource } from "./forms/specs.js";
+import type { FieldSpec, OptionSource } from "./forms/specs.js";
 
 /** Currencies worth offering: the ones the ledger already uses, euro first. */
 export const currencyOptions = (state: LedgerState): Option[] => {
@@ -31,23 +33,75 @@ export const currencyOptions = (state: LedgerState): Option[] => {
     .map((currency) => ({ value: currency, label: currency }));
 };
 
-export const accountOptions = (state: LedgerState, book?: "core" | "bucket"): Option[] =>
+export const accountOptions = (
+  state: LedgerState,
+  book?: Book,
+  { inactive = false }: { inactive?: boolean } = {},
+): Option[] =>
   accounts(state)
-    .filter((account) => account.active && (book === undefined || account.book === book))
+    .filter(
+      (account) => (inactive || account.active) && (book === undefined || account.book === book),
+    )
     .map((account) => ({
       value: account.account_id,
       label: account.name,
       hint: `${account.platform} · ${valueLabel(account.book)}`,
     }));
 
-export const assetOptions = (state: LedgerState, book?: "core" | "bucket"): Option[] =>
-  assets(state)
-    .filter((asset) => asset.active && (book === undefined || asset.book === book))
-    .map((asset) => ({
-      value: asset.asset_id,
-      label: asset.name,
-      hint: `${valueLabel(asset.asset_type)} · ${asset.currency}`,
-    }));
+export interface AssetChoice {
+  /** Only this book: a core account never buys a bucket share, and a thesis never covers a fund. */
+  book?: Book | undefined;
+  /**
+   * Inactive assets holding a position are offered too: in this account, or in
+   * any account with `true`. Absent, no inactive asset is offered.
+   */
+  heldIn?: string | true | undefined;
+  /** Every inactive asset, held or not: a filter of the ledger has to reach the past. */
+  inactive?: boolean;
+}
+
+/**
+ * The assets a form can choose from: the active ones first, then the inactive
+ * ones that still hold a position, marked as such, and never an inactive one
+ * with nothing left.
+ *
+ * The inactive-with-position case is not a corner: a delisted share is
+ * deactivated and **still held**, so the summary asks for its valuation — and
+ * the valuation form used to hide it because it only listed active assets. The
+ * total stayed partial for ever, with a button that led nowhere.
+ */
+export const assetOptions = (state: LedgerState, choice: AssetChoice = {}): Option[] => {
+  const held = new Set(
+    choice.heldIn === undefined
+      ? []
+      : physicalPositions(state)
+          .filter((row) => choice.heldIn === true || row.account_id === choice.heldIn)
+          .map((row) => row.asset_id),
+  );
+  const inBook = assets(state).filter(
+    (asset) => choice.book === undefined || asset.book === choice.book,
+  );
+  const option = (asset: (typeof inBook)[number]): Option => ({
+    value: asset.asset_id,
+    label: asset.name,
+    hint: `${valueLabel(asset.asset_type)} · ${asset.currency}${asset.active ? "" : " · dado de baja"}`,
+  });
+  return [
+    ...inBook.filter((asset) => asset.active).map(option),
+    ...inBook
+      .filter((asset) => !asset.active && (choice.inactive === true || held.has(asset.asset_id)))
+      .map(option),
+  ];
+};
+
+/**
+ * The book the chosen account or asset of another field belongs to, when the
+ * field says where to look (`bookFrom`). Nothing chosen yet means no filter.
+ */
+export const bookOf = (state: LedgerState, id: string | undefined): Book | undefined =>
+  id === undefined || id === ""
+    ? undefined
+    : (state.accounts.get(id)?.book ?? state.assets.get(id)?.book);
 
 /**
  * How long something has been open, as a hint. **Never a negative number**: a
@@ -112,14 +166,28 @@ export interface OptionContext {
 }
 
 /** The list a field asks for, resolved against the ledger. */
-export const optionsFor = (source: OptionSource, context: OptionContext): Option[] => {
+export const optionsFor = (
+  source: OptionSource,
+  context: OptionContext,
+  field?: Pick<FieldSpec, "bookFrom" | "heldFrom" | "heldAnywhere">,
+): Option[] => {
   switch (source) {
     case "accounts":
       return accountOptions(context.state);
     case "bucketAccounts":
       return accountOptions(context.state, "bucket");
     case "assets":
-      return assetOptions(context.state);
+      return assetOptions(context.state, {
+        book: bookOf(context.state, field?.bookFrom && context.values[field.bookFrom]),
+        heldIn:
+          field?.heldFrom !== undefined
+            ? context.values[field.heldFrom] || true
+            : field?.heldAnywhere === true
+              ? true
+              : undefined,
+      });
+    case "bucketAssets":
+      return assetOptions(context.state, { book: "bucket" });
     case "currencies":
       return currencyOptions(context.state);
     case "openOrders":

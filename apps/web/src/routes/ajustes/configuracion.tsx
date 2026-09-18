@@ -69,7 +69,14 @@ export default function ConfiguracionRoute(): JSX.Element {
         const resolution = () => settingsAt(snapshot.state, date);
         const current = (): Settings => resolution().settings;
 
-        const coreAssets = () => assetsOf(snapshot.state).filter((asset) => asset.book === "core");
+        // Weights are asked for active assets only; an inactive one appears only
+        // while it still carries a weight, so that saving never drops it unseen.
+        const coreAssets = () =>
+          assetsOf(snapshot.state).filter(
+            (asset) =>
+              asset.book === "core" &&
+              (asset.active || (current().target_weights?.[asset.asset_id] ?? "") !== ""),
+          );
         const values = (): Record<string, string> =>
           weightValues(
             current(),

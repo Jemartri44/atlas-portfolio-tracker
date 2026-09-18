@@ -87,7 +87,7 @@ export const Filters = (props: {
           label="Cuenta"
           value={params.cuenta ?? ""}
           placeholder="Todas"
-          options={accountOptions(props.state)}
+          options={accountOptions(props.state, undefined, { inactive: true })}
           onInput={(value) => set("cuenta", value)}
         />
         <SelectField
@@ -95,7 +95,7 @@ export const Filters = (props: {
           label="Activo"
           value={params.activo ?? ""}
           placeholder="Todos"
-          options={assetOptions(props.state)}
+          options={assetOptions(props.state, { inactive: true })}
           onInput={(value) => set("activo", value)}
         />
         <Field
