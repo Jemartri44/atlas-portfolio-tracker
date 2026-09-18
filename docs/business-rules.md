@@ -274,6 +274,7 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 | `fiscal_date_rule{}` | cotizados → contratación; fondos → fecha valor. **Mapa parcial**, como el anterior (ADR-0018) | 5.10 |
 | `wash_sale_window{}` | fondos/cripto `"1y"`; cotizados `"2m"` (de fecha a fecha; `wash_sale_window_days` en días es la forma antigua aceptada). **Mapa parcial**: un tipo de activo ausente toma su valor por defecto, para que añadir un tipo nuevo no invalide la configuración ya escrita (ADR-0018) | 5.4 |
 | `wash_sale_transfer_counts` | `true`: un traspaso entrante cuenta como adquisición a efectos de la regla de recompra | 5.4 |
+| `income_category` | Por tipo de activo: `capital_gain` (ganancia patrimonial, art. 33) o `movable_capital` (rendimiento del capital mobiliario por transmisión, art. 25.2). **Por defecto `capital_gain` en todos**; existe para que el asunto de los ETC pueda resolverse sin tocar código (ADR-0021) | 5.1 |
 | `tax_residence` | España | 5.9 |
 | `notification_email` | — | — |
 | `job_frequencies{}` | Ver especificación | — |
