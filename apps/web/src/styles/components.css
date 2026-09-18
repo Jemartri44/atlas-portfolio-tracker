@@ -479,6 +479,16 @@
   margin: 0;
 }
 
+/*
+ * A destructive action never wears the primary blue: "Anular" looked exactly
+ * like "Registrar" (review of 2026-09-18).
+ */
+button.destructive {
+  background-color: var(--c-negative);
+  border-color: var(--c-negative);
+  color: var(--c-bg);
+}
+
 @media (min-width: 768px) {
   .actions-bar {
     bottom: 0;

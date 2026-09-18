@@ -100,7 +100,11 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                           </A>
                         </Show>
                         <Show when={view().status !== "reversed" && view().status !== "reversal"}>
-                          <button type="button" class="secondary" onClick={() => setAsking(true)}>
+                          <button
+                            type="button"
+                            class="secondary outline"
+                            onClick={() => setAsking(true)}
+                          >
                             Anular
                           </button>
                         </Show>
@@ -166,7 +170,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
 
                   <Dialog
                     open={asking()}
-                    title="Anular el evento"
+                    title="Anular el movimiento"
                     onClose={() => setAsking(false)}
                     actions={
                       <>
@@ -175,6 +179,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                         </button>
                         <button
                           type="button"
+                          class="destructive"
                           disabled={reason().trim() === "" || store.writing()}
                           onClick={() => void onReverse()}
                         >
@@ -184,8 +189,8 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                     }
                   >
                     <p>
-                      El libro es append-only: no se borra nada. Se escribe una anulación que deja
-                      este evento sin efecto (ADR-0003).
+                      No se borra nada: se registra una anulación que deja este movimiento sin
+                      efecto. El original sigue en el libro, marcado como anulado.
                     </p>
                     <Field
                       id="reverse-reason"
