@@ -68,18 +68,25 @@ const rows = (): Row[] => {
 const DOUBT = ["disputed", "low", "medium", "high"];
 
 /**
- * Variants of a criterion on which the document is silent, with the reason.
- * Everything else must say exactly what the document says.
+ * Variants of a criterion on which the document is silent, dimension by
+ * dimension, with the reason. Only the dimension named here is exempt:
+ * everything else must say exactly what the document says.
  */
-const DOCUMENT_SILENT: Record<string, string> = {
-  "2:listed_1y":
-    "the document gives the risk of the two months; one year for a listed security is the other side of the same dispute, the conservative one",
-  "2:other":
-    "a window no reading of the document supports (days, or two months for a fund): its risk runs either way",
-  "2:crypto":
-    "the document gives crypto a certainty (low) and no direction of risk: one year by prudence defers more, the conservative side",
-  "2:fund":
-    "the document states no certainty for the one year of funds, the letter g) of article 33.5, which it does not dispute",
+const DOCUMENT_SILENT: Record<string, { certainty?: string; risk?: string }> = {
+  "2:listed_1y": {
+    risk: "the document gives the risk of the two months; one year for a listed security is the other side of the same dispute, the conservative one",
+  },
+  "2:other": {
+    risk: "a window no reading of the document supports (days, or two months for a fund): its risk runs either way",
+  },
+  "2:crypto": {
+    risk: "the document gives crypto a certainty (low) and no direction of risk: one year by prudence defers more, the conservative side",
+  },
+  "2:fund": {
+    certainty:
+      "the document states no certainty for the one year of funds, the letter g) of article 33.5, which it does not dispute",
+    risk: "and no direction either: one year is the longer window, the conservative side",
+  },
 };
 
 /** In the catalogue and not in the table: the question of ETC and ETP, which has no number. */
@@ -100,13 +107,11 @@ describe("the fiscal criteria of the code and of docs/fiscal-questions.md", () =
         continue;
       }
       for (const [key, entry] of mine) {
-        if (DOCUMENT_SILENT[key] !== undefined) {
-          continue;
-        }
-        if (!row.certainty.has(entry.certainty)) {
+        const silent = DOCUMENT_SILENT[key] ?? {};
+        if (silent.certainty === undefined && !row.certainty.has(entry.certainty)) {
           mismatches.push(`${key}: ${entry.certainty}, the document says ${[...row.certainty]}`);
         }
-        if (!row.risk.has(entry.risk)) {
+        if (silent.risk === undefined && !row.risk.has(entry.risk)) {
           mismatches.push(`${key}: ${entry.risk}, the document says ${[...row.risk]}`);
         }
       }
