@@ -213,6 +213,65 @@ describe("bucketTheses: the result against the index (business rule 16)", () => 
     expect(view.warnings.map((w) => w.code)).toEqual(["missing_benchmark_price"]);
   });
 
+  it("measures a closed thesis with no sale to the day it was closed, not to today", () => {
+    // th_beta of the golden: closed when a merger swapped its asset, with no
+    // linked sale. Measured to the date asked, its result against the index
+    // changed sign depending on the day somebody looked at it.
+    const b = new LedgerBuilder();
+    catalogue(b);
+    for (const [date, unit_value] of [
+      ["2027-01-01", "100"],
+      ["2027-06-01", "110"],
+      ["2027-12-01", "200"],
+    ] as const) {
+      b.valuation({ account_id: "acc_fund", asset_id: "ast_world", date, unit_value });
+    }
+    b.recordedAt("2027-01-05");
+    b.thesisOpened({ thesis_id: "th1" });
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: "10",
+      unit_price: "10",
+      fee: "0",
+      currency: "EUR",
+      fx_rate: "1",
+      trade_date: "2027-01-11",
+      value_date: "2027-01-13",
+      thesis_id: "th1",
+    });
+    b.recordedAt("2027-06-15");
+    b.thesisClosed("th1");
+    const state = projectLedger(b.build());
+    const at = (date: string) => bucketTheses(state, date, withBenchmark()).rows[0];
+    // 100 € invested, index at 110 on the day it closed: 110 whenever it is asked.
+    expect(at("2027-06-30")?.benchmark_equivalent_eur?.amount.toString()).toBe("110");
+    expect(at("2027-12-31")?.benchmark_equivalent_eur?.amount.toString()).toBe("110");
+    expect(at("2028-12-31")?.benchmark_equivalent_eur?.amount.toString()).toBe("110");
+  });
+
+  it("ends on the greatest fiscal date of its sales, not on the last of the list", () => {
+    const b = scenario({ indexStart: "100", indexEnd: "120" });
+    // Two sales on the very same fiscal date: the end of the measurement is the
+    // greatest date, and a tie does not move it.
+    for (const quantity of ["6", "4"]) {
+      b.sell({
+        account_id: "acc_bucket",
+        asset_id: "ast_spec",
+        quantity,
+        unit_price: "13",
+        currency: "EUR",
+        fx_rate: "1",
+        trade_date: "2027-07-12",
+        thesis_id: "th1",
+      });
+    }
+    b.thesisClosed("th1");
+    const rows = bucketTheses(projectLedger(b.build()), "2027-12-31", withBenchmark()).rows;
+    expect(rows[0]?.sells).toHaveLength(2);
+    expect(rows[0]?.benchmark_equivalent_eur?.amount.toString()).toBe("120");
+  });
+
   it("measures a closed thesis to its last sale, not to today", () => {
     const b = scenario({ indexStart: "100", indexEnd: "120", sell: true });
     // A later price of the index must not move a comparison that ended in July.

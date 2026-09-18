@@ -14,7 +14,7 @@ import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type ExternalPrices, type PriceLookup, positionValueOf, priceAt } from "./prices.js";
-import type { FiscalLot, LedgerState, Thesis, ThesisView, Warning } from "./state.js";
+import type { FiscalLot, LedgerState, Thesis, ThesisLeg, ThesisView, Warning } from "./state.js";
 import { openThesisOn, theses } from "./theses.js";
 
 const EUR = "EUR";
@@ -251,6 +251,17 @@ export const bucketPositions = (
   };
 };
 
+/** The greatest fiscal date among the legs, or nothing when there are none. */
+const lastFiscalDateOf = (legs: readonly ThesisLeg[]): CivilDate | undefined => {
+  let last: CivilDate | undefined;
+  for (const leg of legs) {
+    if (last === undefined || leg.fiscal_date > last) {
+      last = leg.fiscal_date;
+    }
+  }
+  return last;
+};
+
 /**
  * What the same money, on the same dates, would have made in the index
  * (business rule 16, decision (b) of prompt 005):
@@ -274,8 +285,17 @@ const benchmarkEquivalentOf = (
   gaps: BenchmarkGap[],
   external?: ExternalPrices,
 ): Money | undefined => {
-  const lastSale = thesis.sells.at(-1);
-  const end = thesis.status === "closed" && lastSale !== undefined ? lastSale.fiscal_date : date;
+  // A finished bet is measured to the day it finished, never to today: an open
+  // thesis moves with the market, a closed one does not get to change sign
+  // depending on the day it is looked at. "Last sale" is the one with the
+  // greatest **fiscal** date, not the last of the array: the legs pile up in
+  // file order, which is not the fiscal order when the rule is `value_date` or
+  // when a later rectification arrives. A thesis closed with no sale at all —
+  // its asset was swapped — ends on the day it was closed.
+  const end =
+    thesis.status === "closed"
+      ? (lastFiscalDateOf(thesis.sells) ?? (thesis.closed_at as CivilDate))
+      : date;
   const endPrice = priceAt(state, benchmarkId, end, settings, external);
   if (endPrice === undefined) {
     gaps.push({ reason: "no_price", asset_id: benchmarkId, date: end });
