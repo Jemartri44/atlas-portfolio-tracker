@@ -6,10 +6,10 @@
 // therefore not one an interface gets to work out.
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
-import { corporateActionDraft } from "@atlas/domain";
+import { corporateActionDraft, Quantity } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Badge, Callout, EmptyState, ErrorView } from "../../../components/index.js";
+import { Amount, Badge, Callout, EmptyState, ErrorView } from "../../../components/index.js";
 import { nameIndex } from "../../../format/names.js";
 import { toAppError } from "../../../ledger/actions.js";
 import { attempt } from "../../../ledger/query.js";
@@ -173,7 +173,7 @@ export default function CorporateFormRoute(): JSX.Element {
                       <For each={draft()?.fractional ?? []}>
                         {(row) => (
                           <p class="tiny flush">
-                            {row.account_id}: {row.quantity}
+                            {row.account_id}: <Amount quantity={Quantity.parse(row.quantity)} />
                           </p>
                         )}
                       </For>

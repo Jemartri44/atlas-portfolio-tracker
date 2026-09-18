@@ -51,6 +51,22 @@ const destination = (): FieldSpec => ({
 const cash = (label: string, hint: string): FieldSpec[] => [
   { name: "cash_unit_price", label, kind: "decimal", hint },
   {
+    /*
+     * The broker's charge on the forced sale. **It is not decoration**: it is
+     * subtracted from the proceeds in `applyForcedSale`, so it lowers the
+     * capital gain. Leaving it out of the form left a reverse split recorded
+     * from the phone with the gain **overstated**, and the user paying tax on
+     * money they never received — and since the ledger is append-only, fixing
+     * that afterwards means a `reversal` plus a corrected event.
+     */
+    name: "cash_fees",
+    label: "Comisión del bróker, por cuenta",
+    kind: "textarea",
+    hint: "Una por línea: cuenta = importe. Se resta de los ingresos de la venta, así que baja la ganancia. Déjalo vacío si no cobró nada.",
+    full: true,
+    visibleWhen: { field: "cash_unit_price", notEquals: "" },
+  },
+  {
     name: "cash_currency",
     label: "Divisa de la liquidación",
     kind: "select",
