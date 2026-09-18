@@ -234,11 +234,44 @@ describe("atlas bucket", () => {
       bucket_stop_loss_pct: "0.01",
       bucket_max_cumulative_contribution: "100",
     });
+    // And a price that turns the bucket into a loss: with the bucket in profit
+    // there is no stop-loss to hoist, and the test could only ever see the
+    // warning of the contribution cap, which is another rule entirely.
+    expect(
+      await h.exec([
+        "add",
+        "valuation",
+        "--account",
+        "acc_bucket",
+        "--asset",
+        "ast_spec",
+        "--date",
+        "2027-12-15",
+        "--quantity",
+        "10",
+        "--unit-value",
+        "1",
+        "--currency",
+        "EUR",
+        "--fx-rate",
+        "1",
+        "--yes",
+      ]),
+    ).toBe(0);
+    h.reset();
     expect(await h.exec(["bucket", "--date", DATE])).toBe(0);
     const text = h.text();
+    expect(text).toContain("REGLA DE PARADA");
+    // At the top, above the positions: it is the rule the plan wants hardest to
+    // ignore. Deleting the hoisting must fail here, not pass unnoticed.
+    expect(text.indexOf("REGLA DE PARADA")).toBeLessThan(text.indexOf("Posiciones abiertas:"));
+    // And still in the list of warnings at the bottom, not moved out of it.
+    expect(text.lastIndexOf("REGLA DE PARADA")).toBeGreaterThan(text.indexOf("Avisos:"));
+    // The contribution cap is another warning of rule 17, and it stays below.
     expect(text).toContain("El aporte bruto al cubo");
-    // The contribution cap is passed, and the message names rule 17.
-    expect(text).toContain("regla 17");
+    expect(text.indexOf("El aporte bruto al cubo")).toBeGreaterThan(
+      text.indexOf("Posiciones abiertas:"),
+    );
   });
 
   it("shows only the theses that already existed at the date asked", async () => {

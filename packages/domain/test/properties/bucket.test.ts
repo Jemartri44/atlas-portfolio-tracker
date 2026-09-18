@@ -4,6 +4,8 @@
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { Decimal } from "../../src/money/decimal.js";
+import type { Money } from "../../src/money/money.js";
 import { type BucketThesisView, bucketTheses } from "../../src/projections/bucket.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
@@ -11,6 +13,14 @@ import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
 const DATE = "2027-12-31";
 const settings = mergeSettings(DEFAULT_SETTINGS, { bucket_benchmark_asset_id: "ast_world" });
+
+const dec = (value: string): Decimal => Decimal.parse(value);
+
+/** A fractional quantity after a split, as an exact decimal string. */
+const times = (quantity: string, ratio: number): string =>
+  dec(quantity)
+    .mul(dec(String(ratio)))
+    .toString();
 
 /** A ratio with a terminating decimal expansion, so the division is exact (ADR-0005). */
 const exactRatio = fc.record({
@@ -72,27 +82,37 @@ describe("bucketTheses: properties", () => {
     );
   });
 
-  it("latent + realized = (current value + proceeds) − cost, across a split", () => {
+  it("latent + realized = (current value + proceeds) − cost, to the last decimal", () => {
     fc.assert(
       fc.property(
         fc.record({
-          quantity: fc.integer({ min: 2, max: 60 }),
-          sold: fc.integer({ min: 1, max: 30 }),
-          buyPrice: fc.integer({ min: 1, max: 200 }),
-          sellPrice: fc.integer({ min: 1, max: 200 }),
-          nowPrice: fc.integer({ min: 1, max: 200 }),
+          // Quarters of a share: a real bucket holds fractions, and a property
+          // that only ever sees whole numbers proves nothing about them.
+          quarters: fc.integer({ min: 2, max: 60 }),
+          soldQuarters: fc.integer({ min: 1, max: 30 }),
+          // Eighths of a euro: prices that do not land on a cent, so a rounding
+          // slipped in before the end would show.
+          buyEighths: fc.integer({ min: 1, max: 200 }),
+          sellEighths: fc.integer({ min: 1, max: 200 }),
+          nowEighths: fc.integer({ min: 1, max: 200 }),
           ratio: fc.constantFrom(1, 2, 4),
         }),
-        ({ quantity, sold, buyPrice, sellPrice, nowPrice, ratio }) => {
-          fc.pre(sold < quantity);
+        ({ quarters, soldQuarters, buyEighths, sellEighths, nowEighths, ratio }) => {
+          fc.pre(soldQuarters < quarters);
+          const quantity = (quarters / 4).toFixed(2);
+          const sold = (soldQuarters / 4).toFixed(2);
+          const live = ((quarters - soldQuarters) / 4).toFixed(2);
+          const buyPrice = (buyEighths / 8).toFixed(3);
+          const sellPrice = (sellEighths / 8).toFixed(3);
+          const nowPrice = (nowEighths / 8).toFixed(3);
           const b = new LedgerBuilder();
           catalogue(b);
           b.thesisOpened({ thesis_id: "th1", planned_size_eur: "100000" });
           b.buy({
             account_id: "acc_bucket",
             asset_id: "ast_spec",
-            quantity: String(quantity),
-            unit_price: String(buyPrice),
+            quantity,
+            unit_price: buyPrice,
             fee: "0",
             currency: "EUR",
             fx_rate: "1",
@@ -111,8 +131,8 @@ describe("bucketTheses: properties", () => {
           b.sell({
             account_id: "acc_bucket",
             asset_id: "ast_spec",
-            quantity: String(sold * ratio),
-            unit_price: String(sellPrice),
+            quantity: times(sold, ratio),
+            unit_price: sellPrice,
             currency: "EUR",
             fx_rate: "1",
             trade_date: "2027-07-12",
@@ -122,18 +142,20 @@ describe("bucketTheses: properties", () => {
             account_id: "acc_bucket",
             asset_id: "ast_spec",
             date: "2027-12-01",
-            quantity: String((quantity - sold) * ratio),
-            unit_value: String(nowPrice),
+            quantity: times(live, ratio),
+            unit_value: nowPrice,
           });
           const thesis = bucketTheses(projectLedger(b.build()), DATE, settings).rows[0] as
             | BucketThesisView
             | undefined;
-          const latent = Number((thesis as BucketThesisView).unrealized_eur?.amount.toString());
-          const realized = Number((thesis as BucketThesisView).result_eur.amount.toString());
-          const value = (quantity - sold) * ratio * nowPrice;
-          const proceeds = sold * ratio * sellPrice;
-          const cost = quantity * buyPrice;
-          expect(latent + realized).toBeCloseTo(value + proceeds - cost, 8);
+          const latent = (thesis as BucketThesisView).unrealized_eur as Money;
+          const realized = (thesis as BucketThesisView).result_eur;
+          // In decimal, never in floating point (ADR-0005): the value of what is
+          // still held, plus what the sale brought in, minus what it all cost.
+          const value = dec(times(live, ratio)).mul(dec(nowPrice));
+          const proceeds = dec(times(sold, ratio)).mul(dec(sellPrice));
+          const cost = dec(quantity).mul(dec(buyPrice));
+          expect(latent.add(realized).amount.eq(value.add(proceeds).sub(cost))).toBe(true);
         },
       ),
       { numRuns: 60 },
