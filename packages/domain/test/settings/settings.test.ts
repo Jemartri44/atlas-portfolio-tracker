@@ -8,6 +8,7 @@ import {
   fiscalDateRuleOf,
   mergeSettings,
   normalizeSettings,
+  type Settings,
   validateSettings,
 } from "../../src/settings/settings.js";
 
@@ -319,5 +320,70 @@ describe("fiscalDateOf", () => {
     expect(fiscalDateOf(dates, "etf", partial)).toBe("2026-12-30");
     expect(fiscalDateOf(dates, "stock", partial)).toBe("2026-12-30");
     expect(fiscalDateOf(dates, "fund", partial)).toBe("2027-01-02");
+  });
+});
+
+/**
+ * Removing an asset type from a per-type map, which ADR-0018 made a documented
+ * operation when it made the maps partial.
+ *
+ * It used to be impossible: `mergeSettings` merged the map into the one in
+ * force, so a key taken out of the patch came straight back. The screen showed
+ * the field empty, reported "guardado", and the **fiscal rule in force never
+ * changed** — the fiscal date, the tax year, the date of the exchange rate and
+ * the wash-sale window all kept using the old rule while the user believed
+ * otherwise.
+ */
+describe("mergeSettings: a per-asset-type map replaces, it does not merge", () => {
+  const current: Settings = {
+    ...DEFAULT_SETTINGS,
+    fiscal_date_rule: { fund: "value_date", stock: "trade_date" },
+    wash_sale_window: { fund: "1y", stock: "2m" },
+  };
+
+  it("removes a type the patch leaves out", () => {
+    const next = mergeSettings(current, { fiscal_date_rule: { stock: "trade_date" } });
+
+    expect(next.fiscal_date_rule).toEqual({ stock: "trade_date" });
+    expect(next.fiscal_date_rule.fund).toBeUndefined();
+  });
+
+  it("does the same for the wash-sale window", () => {
+    const next = mergeSettings(current, { wash_sale_window: { stock: "2m" } });
+
+    expect(next.wash_sale_window).toEqual({ stock: "2m" });
+  });
+
+  it("empties a map entirely when the patch says so", () => {
+    const next = mergeSettings(current, { fiscal_date_rule: {} });
+
+    expect(next.fiscal_date_rule).toEqual({});
+  });
+
+  it("leaves the map alone when the patch does not mention it", () => {
+    const next = mergeSettings(current, { monthly_contribution_eur: "700" });
+
+    expect(next.fiscal_date_rule).toEqual(current.fiscal_date_rule);
+    expect(next.wash_sale_window).toEqual(current.wash_sale_window);
+    expect(next.monthly_contribution_eur).toBe("700");
+  });
+
+  /**
+   * An absent type takes the documented default, which is the whole point of
+   * removing it. Both types are set to the **opposite** of their default here,
+   * so "it went back to the default" cannot be confused with "nothing changed".
+   */
+  it("hands the removed type back to its documented default", () => {
+    const flipped: Settings = {
+      ...DEFAULT_SETTINGS,
+      fiscal_date_rule: { fund: "trade_date", stock: "value_date" },
+    };
+
+    const next = mergeSettings(flipped, { fiscal_date_rule: { stock: "value_date" } });
+
+    expect(fiscalDateRuleOf(next, "fund")).toBe(DEFAULT_FISCAL_DATE_RULE.fund);
+    expect(fiscalDateRuleOf(next, "fund")).not.toBe("trade_date");
+    // And the type that stayed keeps the value that was chosen for it.
+    expect(fiscalDateRuleOf(next, "stock")).toBe("value_date");
   });
 });
