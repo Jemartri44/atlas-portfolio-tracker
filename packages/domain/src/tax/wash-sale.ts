@@ -402,7 +402,10 @@ class Walker {
     const start = washSaleWindowStart(gain.fiscal_date, window);
     const end = washSaleWindowEnd(gain.fiscal_date, window);
     outcome.window = { window, start, end };
-    if (end > this.today) {
+    // The last day of the window still counts (ADR-0014): a purchase recorded
+    // today, when the window ends today, defers. So it is provisional until the
+    // day after its end, and today included.
+    if (end >= this.today) {
       outcome.provisional_until = end;
     }
     const sold = gain.quantity;

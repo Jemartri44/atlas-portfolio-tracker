@@ -362,6 +362,11 @@ describe("mandatory edge cases", () => {
       loss_eur: "-100",
       window_end: "2028-02-01",
     });
+    // The last day of the window still counts (ADR-0014): on it, a purchase
+    // still defers, so the loss is still provisional. The day after, it is not.
+    expect(lineOf(reportOf(b.build(), 2027, "2028-02-01"), loss.id).provisional_until).toBe(
+      "2028-02-01",
+    );
     expect(
       lineOf(reportOf(b.build(), 2027, "2028-02-02"), loss.id).provisional_until,
     ).toBeUndefined();
