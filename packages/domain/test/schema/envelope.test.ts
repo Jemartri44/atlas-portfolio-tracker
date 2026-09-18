@@ -30,7 +30,7 @@ describe("event type discriminator", () => {
 
   it("exposes the catalogue enumerations of data-schema.md §6.1", () => {
     expect(BOOKS).toEqual(["core", "bucket"]);
-    expect(ASSET_TYPES).toEqual(["fund", "etc", "etp", "stock", "crypto", "money_market"]);
+    expect(ASSET_TYPES).toEqual(["fund", "etf", "etc", "etp", "stock", "crypto", "money_market"]);
     expect(ASSET_CLASSES).toEqual(["equity", "fixed_income", "gold", "crypto"]);
   });
 

@@ -17,7 +17,7 @@ const COMMON = [
   "source",
   "notes",
 ];
-const CASH = ["account", "value-date", "amount", "currency", "fx-rate", "notes"];
+const CASH = ["account", "value-date", "amount", "currency", "fx-rate", "fx-rate-date", "notes"];
 
 export const ADD_SPECS: Record<string, DraftSpec> = {
   buy: {
@@ -113,11 +113,29 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
   "cash-out": { type: "cash_withdrawal", flags: CASH },
   fee: {
     type: "standalone_fee",
-    flags: ["account", "value-date", "amount", "currency", "fx-rate", "description"],
+    flags: [
+      "account",
+      "value-date",
+      "amount",
+      "currency",
+      "fx-rate",
+      "fx-rate-date",
+      "description",
+    ],
   },
   valuation: {
     type: "valuation",
-    flags: ["account", "asset", "date", "quantity", "unit-value", "currency", "fx-rate", "source"],
+    flags: [
+      "account",
+      "asset",
+      "date",
+      "quantity",
+      "unit-value",
+      "currency",
+      "fx-rate",
+      "fx-rate-date",
+      "source",
+    ],
     defaults: { source: "manual" },
   },
 };

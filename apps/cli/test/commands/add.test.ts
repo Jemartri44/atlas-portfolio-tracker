@@ -252,11 +252,17 @@ describe("atlas add", () => {
         "USD",
         "--fx-rate",
         "1.09",
+        // Feature 005: the date of the rate, without which a 31/12 valuation is
+        // not reproducible from the ECB table (31/12/2026 was a Thursday).
+        "--fx-rate-date",
+        "2026-12-31",
       ],
     ];
     for (const argv of cases) {
       expect(await h.exec([...argv, "--yes"]), argv[1]).toBe(0);
     }
     expect((await h.store.load()).events).toHaveLength(5 + cases.length);
+    const valuation = (await h.store.load()).events.at(-1) as { fx_rate_date?: string };
+    expect(valuation.fx_rate_date).toBe("2026-12-31");
   });
 });

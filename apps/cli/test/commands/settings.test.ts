@@ -184,6 +184,28 @@ describe("atlas settings set: the legacy wash-sale window", () => {
   });
 });
 
+describe("atlas settings set: assignments keyed by asset type", () => {
+  it("rejects a type the enum does not have, instead of writing a map nobody reads", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--fiscal-date-rule", "stcok=trade_date"])).toBe(64);
+    expect(h.err.join("\n")).toContain("no es un tipo de activo");
+    expect(await h.exec(["settings", "set", "--wash-sale-window", "bond=2m"])).toBe(64);
+    // The ledger tolerates a partial map (ADR-0018), so a typo would otherwise
+    // be written and silently ignored for ever.
+    expect((await h.store.load()).events).toHaveLength(seed().length);
+  });
+
+  it("accepts the types the enum does have, including the new etf", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--wash-sale-window", "etf=2m,fund=1y"])).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as {
+      settings: { wash_sale_window: Record<string, string> };
+    };
+    expect(written.settings.wash_sale_window.etf).toBe("2m");
+  });
+});
+
 describe("atlas settings set: a change that reinterprets the past (ADR-0015)", () => {
   /** The buy settles after the sale was agreed: reading funds by trade date puts the sale first. */
   const reorderable = async () => {

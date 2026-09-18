@@ -1,6 +1,7 @@
 // atlas account add|update|list · atlas asset add|update|list · atlas settings set|show
 
 import {
+  ASSET_TYPES,
   accounts,
   assets,
   coreWeights,
@@ -240,6 +241,22 @@ export const parseAssignments = (raw: string, flag: string): Record<string, stri
   return result;
 };
 
+/**
+ * Assignments keyed by asset type. The ledger tolerates a map that does not
+ * mention a type (ADR-0018), which is exactly why a typo here would go
+ * unnoticed: `--fiscal-date-rule stcok=trade_date` would silently leave every
+ * stock on its default. The ledger stays tolerant; what the user types does not.
+ */
+const assetTypeAssignments = (raw: string, flag: string): Record<string, string> => {
+  const parsed = parseAssignments(raw, flag);
+  for (const key of Object.keys(parsed)) {
+    if (!(ASSET_TYPES as readonly string[]).includes(key)) {
+      throw new UsageError(`--${flag}: ${key} no es un tipo de activo (${ASSET_TYPES.join(", ")})`);
+    }
+  }
+  return parsed;
+};
+
 /** Threshold warnings the settings raise on today's portfolio; empty when they cannot be evaluated. */
 const activeWarnings = (
   state: LedgerState,
@@ -330,14 +347,14 @@ export const settingsCommand = async (
     if (rules !== undefined) {
       patch.fiscal_date_rule = {
         ...current.fiscal_date_rule,
-        ...parseAssignments(rules, "fiscal-date-rule"),
+        ...assetTypeAssignments(rules, "fiscal-date-rule"),
       };
     }
     const windows = stringFlag(flags, "wash-sale-window");
     if (windows !== undefined) {
       patch.wash_sale_window = {
         ...current.wash_sale_window,
-        ...parseAssignments(windows, "wash-sale-window"),
+        ...assetTypeAssignments(windows, "wash-sale-window"),
       };
     }
     const weights = stringFlag(flags, "target-weights");

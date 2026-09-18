@@ -19,7 +19,7 @@ import type {
   SellEvent,
   ValuationEvent,
 } from "../schema/events.js";
-import { DEFAULT_SETTINGS, type Settings } from "../settings/settings.js";
+import type { Settings } from "../settings/settings.js";
 import { ScenarioBuilder } from "./builder.js";
 import { addDays, dateOf, monthAt } from "./calendar.js";
 import { Prng } from "./random.js";
@@ -292,8 +292,35 @@ const TARGET_WEIGHTS_AFTER_CONVERSIONS: Record<string, string> = {
   ast_btc: "5",
 };
 
+/**
+ * The scenario writes its own per-asset-type maps instead of inheriting
+ * `DEFAULT_SETTINGS`, and on purpose: the defaults grow with the enum (`etf`
+ * arrived in the feature 005), and inheriting them would rewrite three
+ * `settings_changed` lines of the golden file every time a type is added. As a
+ * bonus, the synthetic ledger is now what a ledger written before `etf` existed
+ * looks like, which is the regression test of the partial maps of ADR-0018.
+ */
+const SCENARIO_FISCAL_DATE_RULE: Settings["fiscal_date_rule"] = {
+  stock: "trade_date",
+  etc: "trade_date",
+  etp: "trade_date",
+  crypto: "trade_date",
+  fund: "value_date",
+  money_market: "value_date",
+};
+
+const SCENARIO_WASH_SALE_WINDOW: Settings["wash_sale_window"] = {
+  stock: "2m",
+  etc: "2m",
+  etp: "2m",
+  crypto: "1y",
+  fund: "1y",
+  money_market: "1y",
+};
+
 const settingsWith = (weights: Record<string, string>, contribution: string): Settings => ({
-  ...DEFAULT_SETTINGS,
+  fiscal_date_rule: SCENARIO_FISCAL_DATE_RULE,
+  wash_sale_window: SCENARIO_WASH_SALE_WINDOW,
   target_weights: weights,
   deviation_threshold_pp: "5",
   satellite_min_weight_pct: "2",

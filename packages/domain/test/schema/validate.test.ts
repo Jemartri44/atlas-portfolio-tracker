@@ -319,6 +319,26 @@ describe("ECB rate rules (data-schema.md §4)", () => {
     );
   });
 
+  /**
+   * Feature 005, challenge 3 finding 6: these four carried the ECB rate without
+   * the date of the rate, so a 31/12 valuation was not reproducible from the
+   * official table. The field is optional (ADR-0018: adding one is compatible),
+   * and what is present plays by the same rules as everywhere else.
+   */
+  it("accepts the optional rate date of valuations, cash movements and fees, weekends aside", () => {
+    for (const sample of [
+      SAMPLES.valuation,
+      SAMPLES.cash_deposit,
+      SAMPLES.cash_withdrawal,
+      SAMPLES.standalone_fee,
+    ]) {
+      expect(validateShape(sample)).toBeTruthy(); // without the field, as before
+      expect(validateShape(variant(sample, { fx_rate_date: "2027-04-30" }))).toBeTruthy();
+      rejects(variant(sample, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+      rejects(variant(sample, { fx_rate_date: "yesterday" }), "invalid_field");
+    }
+  });
+
   it("rejects a rate dated on a weekend and accepts the working days around it", () => {
     // 2027-05-01 is a Saturday and 2027-05-02 a Sunday.
     rejects(variant(SAMPLES.buy, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
@@ -363,6 +383,13 @@ describe("ECB rate rules (data-schema.md §4)", () => {
       { ...grant, effects: [{ ...grant.effects[0], fx_rate: "1", fx_rate_date: "2027-05-02" }] },
       "fx_rate_date_weekend",
     );
+  });
+});
+
+describe("asset types (ADR-0018)", () => {
+  it("accepts an ETF, the type the documents named and the enum did not have", () => {
+    expect(validateShape(variant(SAMPLES.asset_created, { asset_type: "etf" }))).toBeTruthy();
+    rejects(variant(SAMPLES.asset_created, { asset_type: "etff" }), "invalid_field");
   });
 });
 
