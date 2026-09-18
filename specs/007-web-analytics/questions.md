@@ -363,6 +363,16 @@ La indicación era *«que enseñe los dos totales como hace la CLI, y que el del
 
 **Mientras tanto** conviene saber que el modo privado cubre las cifras, no las frases.
 
+**Resuelto (rama `fix/privacy-in-messages`, 2026-09-18).** Se ha elegido el primer camino, sin `Amount`: los dos catálogos reciben la bandera en un segundo parámetro obligatorio (`{ names, privacy }`) y piden sus cifras a `apps/web/src/format/privacy.ts` (`f.money`, `f.quantity`), que aplica la misma máscara `••••`. El segundo camino —datos estructurados y frase compuesta en la interfaz— obligaba a devolver JSX desde los siete puntos donde hoy sale un `string` (entre ellos `AppError.message`, que se guarda en el estado y se ordena), así que no compensaba. Se enmascaran importes y cantidades; porcentajes, puntos, fechas, nombres, plazos y números de regla siguen visibles (§9.6). La CLI no se toca: no tiene modo privacidad y su catálogo es suyo (decisión (i) del prompt 006).
+
+### N12 — El techo del bundle queda con 0,1 KB de margen
+
+El arreglo de N11 pesa **0,7 KB gzip** en el total (163,2 → 163,9 KB) y 0,9 KB en el arranque (74,5 → 75,4, con presupuesto de 80). El techo total está fijado en 164 KB, que es el medido al cerrar la 007 redondeado al KB: ese redondeo es justo lo que se acaba de gastar. La próxima feature que añada código tendrá que mover el techo a propósito, que es lo que dice el propio `check-bundle.mjs`. Conviene que la dirección lo sepa antes de que un cambio de tres líneas rompa una build.
+
+### N13 — Ajustes → Configuración enseña los importes de los ajustes con la privacidad puesta
+
+Comprobado en Chromium a 400×890: con el interruptor en «Oculto», el formulario de configuración muestra `Aportación mensual (EUR) = 600` y `Tope de aporte al cubo (EUR) = 6000` en sus campos, en claro. No es prosa y no lo cubre el arreglo de N11: es un `<input>`, y un campo enmascarado no se puede editar. Las salidas posibles son enmascarar el valor hasta que el campo recibe el foco, o decidir que la pantalla de configuración queda fuera del modo privacidad porque se abre para editar, no para consultar. Es una decisión de producto.
+
 ---
 
 ## Comparación con la CLI (SC-001)

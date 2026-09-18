@@ -3,7 +3,8 @@
 // and the drift test keeps this catalogue level with the CLI's.
 
 import type { Warning } from "@atlas/domain";
-import { type NameIndex, type Naming, NO_NAMES, namingOf } from "../names.js";
+import { type Naming, NO_NAMES, namingOf } from "../names.js";
+import { type Figures, figuresOf, maskFigures, type Prose } from "../privacy.js";
 
 type Details = Record<string, unknown>;
 
@@ -46,7 +47,7 @@ const gapText = (d: Details, n: Naming): string => {
   }
 };
 
-export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming) => string> = {
+export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) => string> = {
   // --- Core weights ------------------------------------------------------
   unknown_target_weight: (d, n) =>
     `El peso objetivo de ${n.one(d.asset_id)} no corresponde a ningún activo del núcleo: revisa si el identificador está mal escrito.`,
@@ -78,12 +79,12 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming) => string>
     `Solo ${text(d.closed_theses)} tesis cerradas y ${text(d.realized_operations)} operaciones realizadas: por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`,
   bucket_contaminated_theses: (d) =>
     `${count(d.theses)} tesis quedan fuera de las medias (${list(d.theses)}): sus ventas consumieron lotes comprados por otra tesis (FIFO global, ADR-0009).`,
-  bucket_contribution_exceeded: (d) =>
-    `El aporte bruto al cubo (${text(d.gross_eur)} EUR) supera el tope de ${text(d.limit_eur)} EUR (regla 17). Las retiradas no devuelven margen: la regla 19 prohíbe reponer el cubo.`,
-  bucket_contribution_near_limit: (d) =>
-    `El aporte bruto al cubo (${text(d.gross_eur)} EUR) pasa del 80 % del tope de ${text(d.limit_eur)} EUR (regla 17).`,
-  bucket_stop_loss_reached: (d) =>
-    `REGLA DE PARADA: la pérdida acumulada del cubo (${text(d.loss_eur)} EUR) es el ${text(d.loss_pct)} % del aporte bruto (${text(d.gross_eur)} EUR), por encima del ${text(d.limit_pct)} % configurado (regla 17). La aplicación avisa; la decisión es tuya.`,
+  bucket_contribution_exceeded: (d, _n, f) =>
+    `El aporte bruto al cubo (${f.money(d.gross_eur)}) supera el tope de ${f.money(d.limit_eur)} (regla 17). Las retiradas no devuelven margen: la regla 19 prohíbe reponer el cubo.`,
+  bucket_contribution_near_limit: (d, _n, f) =>
+    `El aporte bruto al cubo (${f.money(d.gross_eur)}) pasa del 80 % del tope de ${f.money(d.limit_eur)} (regla 17).`,
+  bucket_stop_loss_reached: (d, _n, f) =>
+    `REGLA DE PARADA: la pérdida acumulada del cubo (${f.money(d.loss_eur)}) es el ${text(d.loss_pct)} % del aporte bruto (${f.money(d.gross_eur)}), por encima del ${text(d.limit_pct)} % configurado (regla 17). La aplicación avisa; la decisión es tuya.`,
   bucket_stop_loss_not_evaluated: (d, n) =>
     `La regla de parada (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya (regla 17).`,
   bucket_weight_not_evaluated: (d, n) =>
@@ -105,25 +106,30 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming) => string>
     `El activo ${n.one(d.asset_id)} está ahora en ${count(d.accounts)} cuentas; el FIFO sigue siendo global.`,
   sell_without_thesis: (d, n) =>
     `La venta de ${n.one(d.asset_id)} en ${n.one(d.account_id)} no está enlazada a ninguna tesis.`,
-  thesis_size_exceeded: (d) =>
-    `La tesis ${text(d.thesis_id)} lleva ${text(d.invested_eur)} EUR invertidos, por encima de los ${text(d.planned_size_eur)} EUR previstos.`,
-  thesis_closed_with_position: (d, n) =>
-    `La tesis ${text(d.thesis_id)} está cerrada pero ${n.one(d.account_id)} sigue teniendo ${n.one(d.asset_id)} (${text(d.position)}).`,
+  thesis_size_exceeded: (d, _n, f) =>
+    `La tesis ${text(d.thesis_id)} lleva ${f.money(d.invested_eur)} invertidos, por encima de los ${f.money(d.planned_size_eur)} previstos.`,
+  thesis_closed_with_position: (d, n, f) =>
+    `La tesis ${text(d.thesis_id)} está cerrada pero ${n.one(d.account_id)} sigue teniendo ${n.one(d.asset_id)} (${f.quantity(d.position)}).`,
   // --- Wash-sale window --------------------------------------------------
-  wash_sale_window_repurchase: (d, n) =>
-    `Recompra de ${n.one(d.asset_id)} dentro de la ventana de la venta ${text(d.sale_event_id)} (${text(d.sale_date)}, pérdida ${text(d.loss_eur)} EUR): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${text(d.window_end)} (${windowText(d.window)}).`,
-  wash_sale_window_prior_buy: (d, n) =>
-    `Venta con pérdida de ${n.one(d.asset_id)} (${text(d.loss_eur)} EUR) con una compra del ${text(d.buy_date)} (${text(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio.`,
+  wash_sale_window_repurchase: (d, n, f) =>
+    `Recompra de ${n.one(d.asset_id)} dentro de la ventana de la venta ${text(d.sale_event_id)} (${text(d.sale_date)}, pérdida ${f.money(d.loss_eur)}): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${text(d.window_end)} (${windowText(d.window)}).`,
+  wash_sale_window_prior_buy: (d, n, f) =>
+    `Venta con pérdida de ${n.one(d.asset_id)} (${f.money(d.loss_eur)}) con una compra del ${text(d.buy_date)} (${f.quantity(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio.`,
 };
 
 /**
  * Spanish text of a projection warning; an unknown code falls back to its
- * message. Without a catalogue every identifier prints as itself, which is what
- * the whole application did before (`NO_NAMES`).
+ * message, with its figures masked because nothing here can tell which of them
+ * is an amount. Without a catalogue every identifier prints as itself, which is
+ * what the whole application did before (`NO_NAMES`).
  */
-export const describeWarning = (warning: Warning, names: NameIndex = NO_NAMES): string => {
+export const describeWarning = (warning: Warning, prose: Prose): string => {
   const render = WARNING_MESSAGES[warning.code];
   return render === undefined
-    ? warning.message
-    : render(warning.details as Details, namingOf(names));
+    ? maskFigures(warning.message, prose.privacy)
+    : render(
+        warning.details as Details,
+        namingOf(prose.names ?? NO_NAMES),
+        figuresOf(prose.privacy),
+      );
 };

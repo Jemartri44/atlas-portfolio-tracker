@@ -10,12 +10,14 @@ import { For, type JSX, Show } from "solid-js";
 import { Amount, Badge, Callout } from "../../components/index.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
+import { usePrivacy } from "../../ledger/state.js";
 
 const positionKey = (row: { account_id: string; asset_id: string }): string =>
   `${row.account_id}|${row.asset_id}`;
 
 export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JSX.Element => {
   const names = (): NameIndex => props.names ?? NO_NAMES;
+  const privacy = usePrivacy();
   const positions = (): {
     key: string;
     label: string;
@@ -153,7 +155,7 @@ export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JS
       <For each={props.preview.warnings}>
         {(warning) => (
           <Callout tone="warning" title="Aviso">
-            {describeWarning(warning, names())}
+            {describeWarning(warning, { names: names(), privacy: privacy() })}
           </Callout>
         )}
       </For>

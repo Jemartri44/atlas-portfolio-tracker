@@ -11,7 +11,13 @@
 // rest of the suite green.
 
 import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
-import { coreWeights, projectLedger, settingsAt, type UseCaseDeps } from "@atlas/domain";
+import {
+  coreWeights,
+  fingerprintOf,
+  projectLedger,
+  settingsAt,
+  type UseCaseDeps,
+} from "@atlas/domain";
 import { Route, Router } from "@solidjs/router";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -144,6 +150,13 @@ describe("Cubo cuts the ledger by the date asked", () => {
   });
 });
 
+/** Everything but the percentages and the points, which stay visible on purpose. */
+const withoutPercentages = (shown: string): string =>
+  shown.replace(/[\d.]+,\d+\s?(%|pp)/g, "").replace(/[+−-]/g, "");
+
+/** A Spanish decimal: an amount, a price or a quantity has one; a date does not. */
+const DECIMAL = /\d,\d/;
+
 describe("the privacy mode covers the two screens", () => {
   /**
    * Eight places used to interpolate a quantity or a unit price straight into
@@ -158,19 +171,12 @@ describe("the privacy mode covers the two screens", () => {
    * (8.014,16) all have one; a duration, a thesis identifier and a range label
    * do not.
    *
-   * What it does **not** check, and why: the warnings the domain writes as
-   * prose carry their figures inside the sentence ("el aporte bruto al cubo
-   * (5000 EUR) pasa del 80 % del tope"), so they do not go through `Amount` and
-   * are not masked. That is a real leak, it is **older than this feature** (the
-   * Resumen of the 006 shows the same warnings), and masking prose is a decision
-   * about what a sentence says without its numbers — reported to the direction
-   * rather than decided here.
+   * The prose of a warning used to escape it: "el aporte bruto al cubo (5000
+   * EUR) pasa del 80 % del tope de 6000 EUR" was printed with the mask on,
+   * because a sentence is a string and never went through `Amount`. It goes
+   * through `format/privacy.ts` now, and the assertion below names that very
+   * sentence.
    */
-  const withoutPercentages = (shown: string): string =>
-    shown.replace(/[\d.]+,\d+\s?(%|pp)/g, "").replace(/[+−-]/g, "");
-
-  const DECIMAL = /\d,\d/;
-
   it("leaves no amount, price or quantity visible on Núcleo", async () => {
     store.setPrivacy(true);
     const shown = text(await show("/nucleo?fecha=2027-01-31", Nucleo));
@@ -185,6 +191,10 @@ describe("the privacy mode covers the two screens", () => {
 
     expect(shown).toContain(MASK);
     expect(DECIMAL.test(withoutPercentages(shown))).toBe(false);
+    // Including the ones a warning **says**. This is the sentence the review of
+    // feature 007 found (N11), and the bucket screen has its own call to the
+    // catalogue: masking it in the summary would not have masked it here.
+    expect(shown).toContain(`El aporte bruto al cubo (${MASK}) pasa del 80 % del tope de ${MASK}`);
   });
 
   /** And with the mask off they are all there: the test is not passing on an empty page. */
@@ -197,6 +207,15 @@ describe("the privacy mode covers the two screens", () => {
     // A quantity and a unit price, the two shapes that used to bypass the gate.
     expect(shown).toContain("23,0274");
     expect(shown).toContain("81,9400");
+  });
+
+  it("shows what the warnings of the bucket say when the mask is off", async () => {
+    store.setPrivacy(false);
+    const shown = text(await show("/cubo?fecha=2027-12-31", Cubo));
+
+    expect(shown).toContain(
+      "El aporte bruto al cubo (5.000,00 EUR) pasa del 80 % del tope de 6.000,00 EUR",
+    );
   });
 
   it("still shows the percentages, which are the useful thing in public", async () => {
@@ -217,7 +236,7 @@ describe("the privacy mode covers the two screens", () => {
  * `pendingTransfers`, the plain query that knows nothing about the rule. The
  * warning was computed, translated in both catalogues and shown nowhere.
  */
-const OVERDUE = [
+const CATALOGUE = [
   {
     schema_version: 1,
     id: "01AAAAAAAAAAAAAAAAAAAAAAAA",
@@ -290,21 +309,33 @@ const OVERDUE = [
     transferable: true,
     active: true,
   },
-  {
-    schema_version: 1,
-    id: "01AAAAAAAAAAAAAAAAAAAAAAAE",
-    recorded_at: "2026-01-15T10:00:00.000Z",
-    type: "transfer_requested",
-    from_account_id: "acc_mi",
-    from_asset_id: "ast_world",
-    to_account_id: "acc_mi",
-    to_asset_id: "ast_bonds",
-    quantity_out: "10",
-    requested_date: "2026-01-15",
-  },
-]
-  .map((event) => JSON.stringify(event))
-  .join("\n");
+];
+
+/**
+ * The catalogue plus the events a test needs, as a ledger file. An operation
+ * carries a fingerprint by contract, so it is computed here instead of being
+ * written by hand: the domain owns that shape.
+ */
+const ledgerOf = (...events: Record<string, unknown>[]): string =>
+  [...CATALOGUE, ...events]
+    .map((event) => {
+      const fingerprint = fingerprintOf(event as never);
+      return JSON.stringify(fingerprint === undefined ? event : { ...event, fingerprint });
+    })
+    .join("\n");
+
+const OVERDUE = ledgerOf({
+  schema_version: 1,
+  id: "01AAAAAAAAAAAAAAAAAAAAAAAE",
+  recorded_at: "2026-01-15T10:00:00.000Z",
+  type: "transfer_requested",
+  from_account_id: "acc_mi",
+  from_asset_id: "ast_world",
+  to_account_id: "acc_mi",
+  to_asset_id: "ast_bonds",
+  quantity_out: "10",
+  requested_date: "2026-01-15",
+});
 
 describe("Resumen applies the rule of `transfer_max_days`", () => {
   it("puts an overdue request in the attention list, in Spanish", async () => {
@@ -315,5 +346,100 @@ describe("Resumen applies the rule of `transfer_max_days`", () => {
     expect(shown).toContain("más de los 15 configurados");
     // And the plain count of open requests is still there beside it.
     expect(shown).toContain("traspaso en curso");
+  });
+});
+
+/**
+ * A loss-making sale of a fund bought inside the wash-sale window, so the
+ * summary carries a warning whose figures live **inside the sentence**: "Venta
+ * con pérdida de World Index Fund (−525,00 EUR) con una compra del 2026-01-14
+ * (10,5 títulos)…". The dates are in the past of any plausible "today", which
+ * is what keeps this ledger stable: the summary projects at today's date.
+ */
+const WASH_SALE = ledgerOf(
+  {
+    schema_version: 1,
+    id: "01AAAAAAAAAAAAAAAAAAAAAAAF",
+    recorded_at: "2026-01-12T10:00:00.000Z",
+    type: "buy",
+    account_id: "acc_mi",
+    asset_id: "ast_world",
+    trade_date: "2026-01-12",
+    value_date: "2026-01-14",
+    quantity: "10.5",
+    unit_price: "100",
+    currency: "EUR",
+    fx_rate: "1",
+    fx_rate_date: "2026-01-12",
+    fee: "0",
+    source: "manual",
+  },
+  {
+    schema_version: 1,
+    id: "01AAAAAAAAAAAAAAAAAAAAAAAG",
+    recorded_at: "2026-02-10T10:00:00.000Z",
+    type: "sell",
+    account_id: "acc_mi",
+    asset_id: "ast_world",
+    trade_date: "2026-02-10",
+    value_date: "2026-02-12",
+    quantity: "10.5",
+    unit_price: "50",
+    currency: "EUR",
+    fx_rate: "1",
+    fx_rate_date: "2026-02-10",
+    fee: "0",
+    source: "manual",
+  },
+);
+
+/**
+ * **The prose of a warning is a figure too** (N11 of the review of feature 007).
+ *
+ * The tables, the cards and the axes were masked and covered by tests, and the
+ * warning right under them went on saying "el aporte bruto al cubo (5000 EUR)
+ * supera el tope de 6000 EUR" with the mask on. A privacy mode that does that
+ * is not a privacy mode.
+ *
+ * It is rendered, and it looks at the attention block of the summary, because
+ * a test over `describeWarning` proves the function masks and proves nothing
+ * about the screen that calls it: the defect was never in the formatting, it
+ * was in the call. Mutating `privacy: store.privacy()` in `resumen/index.tsx`,
+ * or the `privacy` that `attentionItems` hands on, has to land here.
+ */
+describe("the privacy mode covers the prose of the warnings", () => {
+  /** Only the attention block: the rest of the summary is already covered. */
+  const attention = (host: HTMLElement): string =>
+    (host.querySelector('[aria-label="Lo que reclama atención"]')?.textContent ?? "").replace(
+      /\s+/g,
+      " ",
+    );
+
+  beforeEach(async () => {
+    await loadInto({ deps: deps(WASH_SALE), source: { kind: "browser", persisted: false } });
+  });
+
+  it("masks the amount and the quantity a warning says", async () => {
+    store.setPrivacy(true);
+    const shown = attention(await show("/", Resumen));
+
+    // The warning is there, with its name, its dates and its window intact.
+    expect(shown).toContain("Venta con pérdida de World Index Fund");
+    expect(shown).toContain("2026-01-14");
+    expect(shown).toContain("ventana de un año");
+    // And nothing of what it is worth: neither the loss nor the units.
+    expect(shown).toContain(MASK);
+    expect(shown).not.toContain("525");
+    expect(shown).not.toContain("10,5");
+    expect(DECIMAL.test(withoutPercentages(shown))).toBe(false);
+  });
+
+  it("says them both again with the mask off", async () => {
+    store.setPrivacy(false);
+    const shown = attention(await show("/", Resumen));
+
+    expect(shown).not.toContain(MASK);
+    expect(shown).toContain("525,00 EUR");
+    expect(shown).toContain("10,5 títulos");
   });
 });

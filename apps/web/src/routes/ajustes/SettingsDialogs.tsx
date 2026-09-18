@@ -13,6 +13,8 @@ import { For, type JSX } from "solid-js";
 import { Amount, ConfirmDialog } from "../../components/index.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
+import { maskFigures } from "../../format/privacy.js";
+import { usePrivacy } from "../../ledger/state.js";
 
 /** An event that the new configuration would leave invalid (ADR-0015). */
 export interface InvalidatedEvent {
@@ -33,85 +35,93 @@ interface DialogsProps {
   names?: NameIndex;
 }
 
-export const SettingsDialogs = (props: DialogsProps): JSX.Element => (
-  <>
-    <ConfirmDialog
-      open={props.silenced !== undefined}
-      title="Este cambio silencia avisos activos"
-      confirm="Guardar de todas formas"
-      onClose={() => props.onDismiss("silenced")}
-      onConfirm={() => props.onSave()}
-    >
-      <p>Subir un umbral no debe apagar un aviso vivo sin que te enteres (constitución IV):</p>
-      <ul>
-        <For each={props.silenced ?? []}>
-          {(warning) => <li>{describeWarning(warning, props.names ?? NO_NAMES)}</li>}
-        </For>
-      </ul>
-    </ConfirmDialog>
+export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
+  const privacy = usePrivacy();
 
-    <ConfirmDialog
-      open={props.moved !== undefined}
-      title="Este cambio mueve ganancias de ejercicios anteriores"
-      confirm="Guardar de todas formas"
-      onClose={() => props.onDismiss("moved")}
-      onConfirm={() => props.onSave()}
-    >
-      <p>
-        Los hechos no cambian, cambia su lectura: una declaración ya presentada puede dejar de
-        cuadrar.
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Ejercicio</th>
-            <th scope="col" class="num">
-              Antes
-            </th>
-            <th scope="col" class="num">
-              Después
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <For each={props.moved ?? []}>
-            {(impact) => (
-              <tr>
-                <td>{impact.year}</td>
-                <td class="num">
-                  <Amount value={impact.before} />
-                </td>
-                <td class="num">
-                  <Amount value={impact.after} />
-                </td>
-              </tr>
+  return (
+    <>
+      <ConfirmDialog
+        open={props.silenced !== undefined}
+        title="Este cambio silencia avisos activos"
+        confirm="Guardar de todas formas"
+        onClose={() => props.onDismiss("silenced")}
+        onConfirm={() => props.onSave()}
+      >
+        <p>Subir un umbral no debe apagar un aviso vivo sin que te enteres (constitución IV):</p>
+        <ul>
+          <For each={props.silenced ?? []}>
+            {(warning) => (
+              <li>
+                {describeWarning(warning, { names: props.names ?? NO_NAMES, privacy: privacy() })}
+              </li>
             )}
           </For>
-        </tbody>
-      </table>
-    </ConfirmDialog>
+        </ul>
+      </ConfirmDialog>
 
-    <ConfirmDialog
-      open={props.invalidating !== undefined}
-      title="Hay eventos que quedarían inválidos"
-      confirm="Aceptar y guardar"
-      onClose={() => props.onDismiss("invalidating")}
-      onConfirm={() => props.onSave(true)}
-    >
-      <p>
-        Con la configuración nueva, {props.invalidating?.length} eventos ya registrados dejan de ser
-        válidos. Los hechos no cambian, cambia su interpretación (ADR-0015): las consultas seguirán
-        avisando y no podrás registrar hasta rectificarlos.
-      </p>
-      <ul>
-        <For each={props.invalidating ?? []}>
-          {(item) => (
-            <li>
-              {item.type}: {item.error}
-            </li>
-          )}
-        </For>
-      </ul>
-    </ConfirmDialog>
-  </>
-);
+      <ConfirmDialog
+        open={props.moved !== undefined}
+        title="Este cambio mueve ganancias de ejercicios anteriores"
+        confirm="Guardar de todas formas"
+        onClose={() => props.onDismiss("moved")}
+        onConfirm={() => props.onSave()}
+      >
+        <p>
+          Los hechos no cambian, cambia su lectura: una declaración ya presentada puede dejar de
+          cuadrar.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Ejercicio</th>
+              <th scope="col" class="num">
+                Antes
+              </th>
+              <th scope="col" class="num">
+                Después
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <For each={props.moved ?? []}>
+              {(impact) => (
+                <tr>
+                  <td>{impact.year}</td>
+                  <td class="num">
+                    <Amount value={impact.before} />
+                  </td>
+                  <td class="num">
+                    <Amount value={impact.after} />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={props.invalidating !== undefined}
+        title="Hay eventos que quedarían inválidos"
+        confirm="Aceptar y guardar"
+        onClose={() => props.onDismiss("invalidating")}
+        onConfirm={() => props.onSave(true)}
+      >
+        <p>
+          Con la configuración nueva, {props.invalidating?.length} eventos ya registrados dejan de
+          ser válidos. Los hechos no cambian, cambia su interpretación (ADR-0015): las consultas
+          seguirán avisando y no podrás registrar hasta rectificarlos.
+        </p>
+        <ul>
+          <For each={props.invalidating ?? []}>
+            {(item) => (
+              <li>
+                {item.type}: {maskFigures(item.error, privacy())}
+              </li>
+            )}
+          </For>
+        </ul>
+      </ConfirmDialog>
+    </>
+  );
+};

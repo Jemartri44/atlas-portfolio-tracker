@@ -23,7 +23,7 @@ import { SeriesCard } from "../../components/chart/index.js";
 import { AsOfPicker, Callout, Section, StandaloneFees, useAsOf } from "../../components/index.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
-import { store } from "../../ledger/state.js";
+import { store, usePrivacy } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   bucketPositionsView,
@@ -43,6 +43,7 @@ const MAX_POINTS = 120;
 
 export default function CuboRoute(): JSX.Element {
   const asOf = useAsOf();
+  const privacy = usePrivacy();
 
   return (
     <RequireLedger skeleton={8}>
@@ -108,7 +109,7 @@ export default function CuboRoute(): JSX.Element {
               <For each={stopLoss()}>
                 {(warning) => (
                   <Callout tone="error" title="Regla de parada">
-                    {describeWarning(warning, names)}
+                    {describeWarning(warning, { names, privacy: privacy() })}
                   </Callout>
                 )}
               </For>
@@ -148,7 +149,11 @@ export default function CuboRoute(): JSX.Element {
                   </header>
                   <div class="stack">
                     <For each={others()}>
-                      {(warning) => <p class="note flush">{describeWarning(warning, names)}</p>}
+                      {(warning) => (
+                        <p class="note flush">
+                          {describeWarning(warning, { names, privacy: privacy() })}
+                        </p>
+                      )}
                     </For>
                   </div>
                 </section>

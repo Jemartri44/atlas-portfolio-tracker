@@ -7,7 +7,8 @@
 
 import type { IntegrityFinding, OpenOrder, OpenTransfer, Warning } from "@atlas/domain";
 import { describeWarning } from "../format/messages/warnings.js";
-import { type NameIndex, NO_NAMES } from "../format/names.js";
+import type { NameIndex } from "../format/names.js";
+import { maskFigures } from "../format/privacy.js";
 
 export type AttentionSeverity = "error" | "warning" | "info";
 
@@ -142,6 +143,8 @@ export interface AttentionInput {
   exportOverdueDays?: number | "never";
   /** The catalogue, so a warning names the asset instead of its identifier. */
   names?: NameIndex;
+  /** Privacy mode: the figures of a warning travel **inside** its sentence. */
+  privacy: boolean;
 }
 
 const itemOf = (code: string, message: string): AttentionItem => ({
@@ -166,11 +169,14 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     );
   }
 
+  // The message of a finding is the domain's own, in English and free-form, and
+  // it carries the evidence: "open lots 23.0274 differ from physical positions
+  // 20" is a position, read out loud in the first screen of the application.
   for (const finding of input.findings) {
     items.push(
       itemOf(
         "integrity_finding",
-        `${finding.code}: ${finding.message}${
+        `${finding.code}: ${maskFigures(finding.message, input.privacy)}${
           finding.event_ids.length === 0 ? "" : ` (${finding.event_ids.join(", ")})`
         }`,
       ),
@@ -185,7 +191,8 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
       continue;
     }
     seen.add(key);
-    items.push(itemOf(warning.code, describeWarning(warning, input.names ?? NO_NAMES)));
+    // `input` **is** the prose context: it carries the catalogue and the mode.
+    items.push(itemOf(warning.code, describeWarning(warning, input)));
   }
 
   if (input.openOrders.length > 0) {

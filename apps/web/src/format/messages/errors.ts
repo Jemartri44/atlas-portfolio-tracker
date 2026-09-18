@@ -7,7 +7,8 @@
 // domain's own message so a new error is never swallowed.
 
 import type { DomainError } from "@atlas/domain";
-import { type NameIndex, type Naming, NO_NAMES, namingOf } from "../names.js";
+import { type Naming, NO_NAMES, namingOf } from "../names.js";
+import { type Figures, figuresOf, maskFigures, type Prose } from "../privacy.js";
 
 type Details = Record<string, unknown>;
 
@@ -19,7 +20,19 @@ const list = (value: unknown): string =>
 
 const count = (value: unknown): number => (Array.isArray(value) ? value.length : 0);
 
-export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming) => string> = {
+/**
+ * The settings whose value is an **amount**. The rest of them are percentages,
+ * points, whole days or a country code, and those stay visible: `invalid_settings`
+ * is the one message whose figure changes meaning with the field it names.
+ */
+const MONEY_SETTINGS: ReadonlySet<string> = new Set([
+  "monthly_contribution_eur",
+  "bucket_max_cumulative_contribution",
+  "model_720_alert_threshold_eur",
+  "model_721_alert_threshold_eur",
+]);
+
+export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) => string> = {
   // --- Catalogue ---------------------------------------------------------
   unknown_account: (d, n) => `La cuenta ${n.one(d.account_id)} no existe.`,
   unknown_asset: (d, n) => `El activo ${n.one(d.asset_id)} no existe.`,
@@ -73,10 +86,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming) => string> =
   invalid_ratio: (d) =>
     `Proporción no válida: ${text(d.value)} (un decimal positivo, o una fracción nuevas/antiguas como 4/3).`,
   // --- Operations --------------------------------------------------------
-  insufficient_position: (d, n) =>
-    `La cuenta ${n.one(d.account_id)} no tiene suficiente ${n.one(d.asset_id)} en esa fecha (disponible: ${text(d.available)}).`,
-  insufficient_lots: (d, n) =>
-    `Los lotes abiertos de ${n.one(d.asset_id)} no cubren la cantidad (abiertos: ${text(d.open ?? d.missing)}).`,
+  insufficient_position: (d, n, f) =>
+    `La cuenta ${n.one(d.account_id)} no tiene suficiente ${n.one(d.asset_id)} en esa fecha (disponible: ${f.quantity(d.available)}).`,
+  insufficient_lots: (d, n, f) =>
+    `Los lotes abiertos de ${n.one(d.asset_id)} no cubren la cantidad (abiertos: ${f.quantity(d.open ?? d.missing)}).`,
   missing_basis: (d) =>
     `Falta la base de la operación: indica el importe o el precio unitario (${text(d.type ?? "operación")}).`,
   not_transferable: (d, n) =>
@@ -93,8 +106,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming) => string> =
     "Un traspaso no lleva comisión: registra el cargo del depositario como una comisión aparte.",
   currency_mismatch: (d) => `No se pueden operar ${text(d.left)} con ${text(d.right)}.`,
   division_by_zero: () => "División por cero en un cálculo interno: no se ha registrado nada.",
-  invalid_amount: (d) => `El importe debe ser mayor que cero (recibido: ${text(d.value)}).`,
-  invalid_quantity: (d) => `La cantidad debe ser mayor que cero (recibido: ${text(d.value)}).`,
+  invalid_amount: (d, _n, f) =>
+    `El importe debe ser mayor que cero (recibido: ${f.money(d.value)}).`,
+  invalid_quantity: (d, _n, f) =>
+    `La cantidad debe ser mayor que cero (recibido: ${f.quantity(d.value)}).`,
   // --- Views that need prices or settings --------------------------------
   missing_manual_prices: (d, n) =>
     `Faltan precios a ${text(d.date)}: ${n.many(d.assets)}. Regístralos con una valoración.`,
@@ -108,10 +123,13 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming) => string> =
     `Los pesos objetivo vigentes no apuntan a ningún activo del núcleo${
       count(d.assets) === 0 ? " (la tabla está vacía)" : `: ${n.many(d.assets)} están todos al 0 %`
     }. Casi seguro es un identificador mal escrito en los pesos objetivo: revísalos en Ajustes → Configuración.`,
-  split_not_exact: (d) =>
-    `El reparto de la aportación no cuadra (${text(d.distributed)} repartidos de ${text(d.core)}): es un fallo interno de la calculadora, no registres nada.`,
+  split_not_exact: (d, _n, f) =>
+    `El reparto de la aportación no cuadra (${f.money(d.distributed)} repartidos de ${f.money(d.core)}): es un fallo interno de la calculadora, no registres nada.`,
   // --- Settings ----------------------------------------------------------
-  invalid_settings: (d) => {
+  invalid_settings: (d, _n, f) => {
+    // `min` and `max` are the bounds written in the domain, not the user's
+    // money: they say what is allowed and they stay visible.
+    const received = MONEY_SETTINGS.has(text(d.field)) ? f.money(d.value) : text(d.value);
     if (d.total !== undefined) {
       return `Los pesos objetivo deben sumar 100 y suman ${text(d.total)}.`;
     }
@@ -120,12 +138,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming) => string> =
         d.max === undefined
           ? `${text(d.min)} o mayor`
           : `un valor entre ${text(d.min)} y ${text(d.max)}`;
-      return `${text(d.field)} debe ser ${range} (recibido: ${text(d.value)}).`;
+      return `${text(d.field)} debe ser ${range} (recibido: ${received}).`;
     }
     if (d.value === undefined) {
       return `Falta el parámetro ${text(d.field)}.`;
     }
-    return `${text(d.field)} no admite ese valor (recibido: ${text(d.value)}).`;
+    return `${text(d.field)} no admite ese valor (recibido: ${received}).`;
   },
   invalid_wash_sale_window: (d) =>
     `La ventana de recompra de ${text(d.asset_type)} debe ser 2m, 1y o <n>d (recibido: ${text(d.value)}).`,
@@ -156,11 +174,13 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming) => string> =
   request_mismatch: (d) =>
     `La solicitud de traspaso ${text(d.request_id)} se refiere a otras cuentas o activos.`,
   // --- Ledger state ------------------------------------------------------
-  ledger_has_invalid_events: (d) => {
+  ledger_has_invalid_events: (d, _n, f) => {
     const invalid = Number(d.invalid_count ?? 0);
+    // `offending_error` is the domain's own message, in English and free-form:
+    // it goes through the blunt masker, like any other raw evidence.
     return `El libro ya tenía ${invalid} ${
       invalid === 1 ? "evento inválido" : "eventos inválidos"
-    } antes de esta operación: sobre un libro degradado solo se puede escribir un cambio de configuración (ADR-0015). El primero es ${text(d.offending_type)} ${text(d.offending_id)}: ${text(d.offending_error)}. Arréglalo en Ajustes → Verificación.`;
+    } antes de esta operación: sobre un libro degradado solo se puede escribir un cambio de configuración (ADR-0015). El primero es ${text(d.offending_type)} ${text(d.offending_id)}: ${f.evidence(d.offending_error)}. Arréglalo en Ajustes → Verificación.`;
   },
   invalid_events: (d) =>
     `El libro tiene ${count(d.affected)} eventos inválidos: rectifícalos antes (Ajustes → Verificación).`,
@@ -201,9 +221,13 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming) => string> =
 
 /**
  * Spanish text of a domain error; an unknown code falls back to its own
- * message. With no catalogue every identifier prints as itself (`NO_NAMES`).
+ * message, with its figures masked because nothing here can tell which of them
+ * is an amount. With no catalogue every identifier prints as itself
+ * (`NO_NAMES`).
  */
-export const describeError = (error: DomainError, names: NameIndex = NO_NAMES): string => {
+export const describeError = (error: DomainError, prose: Prose): string => {
   const render = ERROR_MESSAGES[error.code];
-  return render === undefined ? error.message : render(error.details as Details, namingOf(names));
+  return render === undefined
+    ? maskFigures(error.message, prose.privacy)
+    : render(error.details as Details, namingOf(prose.names ?? NO_NAMES), figuresOf(prose.privacy));
 };

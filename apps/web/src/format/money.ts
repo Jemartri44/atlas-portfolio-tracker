@@ -9,11 +9,12 @@
 // §9.6 demands — twelve units of a fund with a public price give the amount
 // away just as well as the amount. Percentages, weights, deviations, dates and
 // text stay visible and live in `format/number.ts`, which is not gated.
+//
+// The **prose** of a warning or an error is the other door, and it is in
+// `format/privacy.ts`: this one may not be imported from there, so the two
+// share the mask and nothing else.
 
 import type { Money, Quantity } from "@atlas/domain";
-
-/** Neutral, fixed-width mask. Not the amount's length: that would leak its size. */
-export const MASK = "••••";
 
 /** Shown where a figure exists but is not known. Never a zero (constitution V). */
 export const NO_DATA = "sin dato";
@@ -27,7 +28,11 @@ export interface AmountFormat {
   currency?: boolean;
 }
 
-import { formatDecimalString } from "./number.js";
+import { formatDecimalString, formatQuantityString } from "./number.js";
+import { MASK } from "./privacy.js";
+
+/** The mask, re-exported: this is the module every figure of a screen goes through. */
+export { MASK };
 
 /** An amount, already rounded to the requested decimals, in Spanish notation. */
 export const formatMoney = (value: Money, format: AmountFormat = {}): string => {
@@ -40,10 +45,8 @@ export const formatMoney = (value: Money, format: AmountFormat = {}): string => 
 };
 
 /** A quantity of units: up to eight decimals, trailing zeros trimmed (fractions are real). */
-export const formatQuantity = (value: Quantity, decimals = 8): string => {
-  const text = formatDecimalString(value.toString(), { decimals });
-  return text.includes(",") ? text.replace(/,?0+$/, "") : text;
-};
+export const formatQuantity = (value: Quantity, decimals = 8): string =>
+  formatQuantityString(value.toString(), decimals);
 
 /** A unit price: four decimals, which is what a NAV needs. */
 export const formatUnitValue = (value: Money, decimals = 4): string =>
