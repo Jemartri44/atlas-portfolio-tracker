@@ -19,7 +19,8 @@
   --t-xl: 1.375rem;
   --t-display: 2rem;
 
-  /* Space scale. */
+  /* Space scale. `--s-0` is the half step: two lines of the same block. */
+  --s-0: 0.125rem;
   --s-1: 0.25rem;
   --s-2: 0.5rem;
   --s-3: 0.75rem;
@@ -39,6 +40,8 @@
 
   /* Minimum touch target (Apple HIG 44pt, Material 48dp; WCAG 2.5.8 asks 24). */
   --tap: 2.75rem;
+  /* Compact target: a chip or its cross, above the 24px WCAG 2.5.8 asks for. */
+  --tap-compact: 2rem;
 
   /* Chrome. The breakpoint that swaps the bottom bar for the rail is 768px. */
   --statusbar-h: 3rem;

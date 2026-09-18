@@ -162,7 +162,7 @@
   border-bottom: 1px solid var(--c-border);
   color: var(--c-text);
   display: grid;
-  gap: 0.125rem;
+  gap: var(--s-0);
   grid-template-columns: 1fr auto;
   padding: var(--s-3) var(--s-1);
   text-decoration: none;
@@ -291,7 +291,7 @@
   display: inline-flex;
   font-size: var(--t-xs);
   gap: var(--s-1);
-  min-height: 2rem;
+  min-height: var(--tap-compact);
   padding: 0 var(--s-2);
 }
 
@@ -299,8 +299,8 @@
   background: none;
   border: none;
   color: var(--c-muted);
-  min-height: 2rem;
-  padding: 0 0.125rem;
+  min-height: var(--tap-compact);
+  padding: 0 var(--s-0);
 }
 
 /* --- Forms ------------------------------------------------------------- */

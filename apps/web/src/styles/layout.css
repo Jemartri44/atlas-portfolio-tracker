@@ -151,7 +151,7 @@ main {
   display: flex;
   flex-direction: column;
   font-size: var(--t-xs);
-  gap: 0.125rem;
+  gap: var(--s-0);
   justify-content: center;
   min-height: var(--bottomnav-h);
   padding: var(--s-1) 0;
