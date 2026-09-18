@@ -218,12 +218,15 @@ export const thesisCommand = async (
             t.closed_at ?? "",
             String(t.days_open),
             String(t.expected_horizon_days),
-            t.invested_eur.amount.toString(),
-            t.result_eur_rounded.amount.toString(),
+            // Rounded once, when shown, like `atlas bucket` (ADR-0005). Two
+            // commands printing the same figure with different decimals is a
+            // defect of presentation, not a difference of fact.
+            eur(t.invested_eur),
+            eur(t.result_eur_rounded),
             eur(t.result_vs_index_eur),
-            t.fees_eur.roundToCents().amount.toString(),
+            eur(t.fees_eur),
             t.position.toString(),
-            t.planned_size_eur.amount.toString(),
+            eur(t.planned_size_eur),
           ]),
         ),
         // A column of dashes is not an explanation: the index says why it is empty.
