@@ -14,4 +14,23 @@ export {
   type NetWorthView,
   netWorthView,
 } from "./networth.js";
-export { targetWeightTotal, type WeightTotal } from "./settings.js";
+export {
+  candidateSettings,
+  type NumberSetting,
+  type PerAssetTypeKey,
+  perAssetTypeValue,
+  SETTINGS_NUMBERS,
+  SETTINGS_TEXTS,
+  type SettingsPatch,
+  settingsTouched,
+  settingValue,
+  type TextSetting,
+  targetWeightTotal,
+  type WeightDraft,
+  type WeightTotal,
+  weightValues,
+  withNumber,
+  withOption,
+  withPerAssetType,
+  withText,
+} from "./settings.js";

@@ -5,7 +5,7 @@
 import { BrowserLedgerBlob } from "@atlas/adapters/browser";
 import { A } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout, Switch } from "../../components/index.js";
+import { Callout, Section, Switch } from "../../components/index.js";
 import { formatInstantDate } from "../../format/date.js";
 import { changeLedger, toAppError } from "../../ledger/actions.js";
 import { exportLedger, importLedger } from "../../ledger/export.js";
@@ -75,10 +75,7 @@ export default function AjustesRoute(): JSX.Element {
       </Show>
 
       <div class="stack">
-        <section class="card">
-          <header>
-            <h2>El libro</h2>
-          </header>
+        <Section title="El libro">
           <Show when={source()} fallback={<p>No hay ningún libro abierto.</p>}>
             {(current) => (
               <>
@@ -156,12 +153,9 @@ export default function AjustesRoute(): JSX.Element {
               </>
             )}
           </Show>
-        </section>
+        </Section>
 
-        <section class="card">
-          <header>
-            <h2>Privacidad y apariencia</h2>
-          </header>
+        <Section title="Privacidad y apariencia">
           <Switch
             id="privacy-setting"
             label="Ocultar importes y cantidades"
@@ -183,12 +177,9 @@ export default function AjustesRoute(): JSX.Element {
               <option value="dark">Oscuro</option>
             </select>
           </div>
-        </section>
+        </Section>
 
-        <section class="card">
-          <header>
-            <h2>Configuración y verificación</h2>
-          </header>
+        <Section title="Configuración y verificación">
           <div class="stack">
             <A href="/ajustes/configuracion" class="movement">
               <span class="head">
@@ -207,7 +198,7 @@ export default function AjustesRoute(): JSX.Element {
               </span>
             </A>
           </div>
-        </section>
+        </Section>
       </div>
     </>
   );
