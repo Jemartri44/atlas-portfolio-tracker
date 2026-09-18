@@ -354,7 +354,7 @@ class Scenario {
   constructor(seed: number) {
     const rng = new Prng(seed);
     this.p = drawParams(rng);
-    this.b = new ScenarioBuilder(rng);
+    this.b = new ScenarioBuilder(rng, seed);
   }
 
   private rate(): string {

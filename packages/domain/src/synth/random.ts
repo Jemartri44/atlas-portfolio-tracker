@@ -48,6 +48,19 @@ export class Prng {
   }
 }
 
+/**
+ * A seed for a side stream of the scenario (feature 005). FNV-1a of the label
+ * mixed into the seed: same seed and same label, same stream; two labels never
+ * share one. No dependency, a dozen lines, deterministic for ever.
+ */
+export const deriveSeed = (seed: number, label: string): number => {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < label.length; i += 1) {
+    hash = Math.imul(hash ^ label.charCodeAt(i), 0x01000193) >>> 0;
+  }
+  return (hash ^ (seed >>> 0)) >>> 0;
+};
+
 export const seededRandom = (seed: number): RandomSource => {
   const prng = new Prng(seed);
   return (target) => prng.fill(target);

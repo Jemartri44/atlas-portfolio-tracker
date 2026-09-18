@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lastWorkingDay } from "../../src/dates/civil-date.js";
 import type { BuyEvent } from "../../src/schema/events.js";
+import { encodeLine } from "../../src/schema/line.js";
 import { validateShape } from "../../src/schema/validate.js";
 import { ScenarioBuilder } from "../../src/synth/builder.js";
 import { addDays, dateOf, monthAt } from "../../src/synth/calendar.js";
@@ -95,6 +96,59 @@ describe("ScenarioBuilder", () => {
       expect(day).toBeGreaterThanOrEqual(1);
       expect(day).toBeLessThanOrEqual(5);
     }
+  });
+});
+
+/**
+ * The reason this exists (prompt §3.8): before it, adding one event reshuffled
+ * the ids and the amounts of everything recorded after it, and the golden file
+ * diff became unreadable. A side stream must leave the main one byte for byte
+ * as it was.
+ */
+describe("ScenarioStream: a side stream does not move what was already recorded", () => {
+  const main = (seed: number) => {
+    const b = new ScenarioBuilder(new Prng(seed), seed);
+    catalogue(b);
+    buy(b, "acc_a", "7", "2026-10-03");
+    buy(b, "acc_b", "5", "2026-10-04");
+    return b;
+  };
+
+  it("leaves every previous line identical, id, recorded_at and figures included", () => {
+    const before = main(1).events.map(encodeLine);
+    const b = main(1);
+    const stream = b.stream("valuations");
+    stream.record("2026-09-20", {
+      type: "valuation",
+      account_id: "acc_a",
+      asset_id: "ast_gold",
+      date: "2026-09-20",
+      quantity: b.stateAsOf("2026-09-20").positions.get("acc_a|ast_gold")?.toString() ?? "0",
+      unit_value: stream.rng.decimal(180, 240, 2),
+      currency: "EUR",
+      fx_rate: "1",
+      source: "manual",
+    });
+    buy(b, "acc_a", "3", "2026-11-05");
+    const after = b.events.map(encodeLine);
+    // The whole prefix survives untouched; the block is an insertion at the end.
+    expect(after.slice(0, before.length)).toEqual(before);
+    expect(after).toHaveLength(before.length + 2);
+  });
+
+  it("is a function of the seed and of the label, and its day jitter stays in [1, 5]", () => {
+    expect(main(1).stream("a").rng.uint32()).toBe(main(1).stream("a").rng.uint32());
+    expect(main(1).stream("a").rng.uint32()).not.toBe(main(1).stream("b").rng.uint32());
+    expect(main(1).stream("a").rng.uint32()).not.toBe(main(2).stream("a").rng.uint32());
+    const day = main(1).stream("a").day();
+    expect(day).toBeGreaterThanOrEqual(1);
+    expect(day).toBeLessThanOrEqual(5);
+  });
+
+  it("records the quantity the position had then, not the one it ends with", () => {
+    const b = main(1);
+    expect(b.stateAsOf("2026-10-03").positions.get("acc_a|ast_gold")?.toString()).toBe("7");
+    expect(b.stateAsOf("2026-09-01").positions.get("acc_a|ast_gold")).toBeUndefined();
   });
 });
 
