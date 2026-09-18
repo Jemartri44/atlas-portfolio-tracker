@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { formatAge, formatDate, formatInstantDate, formatLongDate } from "../src/format/date.js";
 import { eventLabel, FIELD_LABELS, fieldLabel, valueLabel } from "../src/format/labels.js";
 import {
+  amountDisplay,
   formatMoney,
   formatQuantity,
   formatUnitValue,
@@ -19,6 +20,7 @@ import {
   roundDecimalString,
   signOf,
 } from "../src/format/number.js";
+import { privacyFromPreference } from "../src/ledger/state.js";
 
 describe("roundDecimalString", () => {
   it("rounds half up, like the fiscal output (ADR-0005)", () => {
@@ -111,6 +113,65 @@ describe("the privacy gate", () => {
   it("has a fixed-width mask and a 'sin dato' that is never a zero", () => {
     expect(MASK).toBe("••••");
     expect(NO_DATA).toBe("sin dato");
+  });
+});
+
+/*
+ * The behaviour of the gate, not just its constants. Three mutations used to
+ * pass the whole suite: removing the mask, losing the privacy default and
+ * painting a zero where the datum is missing (review of 2026-09-18).
+ */
+describe("amountDisplay", () => {
+  const input = { formatted: "1.234,56 EUR", privacy: false, kind: "importe" } as const;
+
+  it("masks a known figure whenever privacy is on", () => {
+    const shown = amountDisplay(input);
+    expect(shown).toMatchObject({ state: "value", text: "1.234,56 EUR", label: "" });
+    const hidden = amountDisplay({ ...input, privacy: true });
+    expect(hidden.state).toBe("masked");
+    expect(hidden.text).toBe(MASK);
+    // The figure never reaches the screen, in any form.
+    expect(hidden.text).not.toContain("1.234");
+    expect(hidden.class).toContain("mask");
+    expect(hidden.label).toBe("importe oculto");
+  });
+
+  it("masks a quantity too, and says which kind it is (Q6)", () => {
+    const hidden = amountDisplay({ formatted: "12,5", privacy: true, kind: "cantidad" });
+    expect(hidden.text).toBe(MASK);
+    expect(hidden.label).toBe("cantidad oculto");
+  });
+
+  it("says 'sin dato' where there is no datum, never a zero (constitution V)", () => {
+    const missing = amountDisplay({ ...input, formatted: undefined });
+    expect(missing).toMatchObject({ state: "nodata", text: NO_DATA });
+    expect(missing.text).not.toBe("0,00");
+    expect(missing.class).toContain("nodata");
+    expect(missing.label).toBe("importe sin dato");
+    // Missing beats privacy: there is nothing to hide, and hiding it would
+    // read as a figure that exists.
+    expect(amountDisplay({ ...input, formatted: undefined, privacy: true }).state).toBe("nodata");
+    expect(
+      amountDisplay({ ...input, formatted: undefined, missingReason: "falta el precio" }).label,
+    ).toBe("importe sin dato: falta el precio");
+  });
+
+  it("carries the sign class and the caller's classes, without a stray space", () => {
+    expect(amountDisplay({ ...input, sign: "negative", extra: "total-amount" }).class).toBe(
+      "num negative total-amount",
+    );
+    expect(amountDisplay(input).class).toBe("num");
+    expect(amountDisplay({ ...input, privacy: true, extra: "cell" }).class).toBe("num mask cell");
+  });
+});
+
+describe("privacyFromPreference", () => {
+  it("is on unless the device says exactly 'off' (FR-021)", () => {
+    expect(privacyFromPreference(undefined)).toBe(true);
+    expect(privacyFromPreference("on")).toBe(true);
+    expect(privacyFromPreference("")).toBe(true);
+    expect(privacyFromPreference("false")).toBe(true);
+    expect(privacyFromPreference("off")).toBe(false);
   });
 });
 

@@ -9,10 +9,20 @@
 //   1. `undefined` is "sin dato", never a zero (constitution V).
 //   2. The sign and a label carry the meaning too, never colour alone.
 //   3. The mask has a fixed width, so turning privacy on does not reflow the page.
+//
+// The three live in `format/money.ts` as `amountDisplay`, a pure function with
+// its own tests: inside this JSX they were unreachable, and three mutations of
+// them passed the whole suite (review of 2026-09-18).
 
 import type { Money, Quantity } from "@atlas/domain";
-import { type JSX, Show } from "solid-js";
-import { formatMoney, formatQuantity, formatUnitValue, MASK, NO_DATA } from "../format/money.js";
+import { createMemo, type JSX, Show } from "solid-js";
+import {
+  type AmountDisplay,
+  amountDisplay,
+  formatMoney,
+  formatQuantity,
+  formatUnitValue,
+} from "../format/money.js";
 import { usePrivacy } from "../ledger/state.js";
 
 interface CommonProps {
@@ -75,35 +85,25 @@ export const Amount = (props: AmountProps): JSX.Element => {
         });
   };
 
-  const sign = (): string => (props.coloured === true ? signOfValue(props) : "");
-  const label = (): string => {
-    const kind = isQuantity(props) ? "cantidad" : "importe";
-    if (missing()) {
-      return `${kind} sin dato${props.missingReason === undefined ? "" : `: ${props.missingReason}`}`;
-    }
-    return privacy() ? `${kind} oculto` : "";
-  };
+  // Everything this component decides is decided by `amountDisplay`, in the
+  // gated module: here there is only markup left (decision (d), prompt §3.4).
+  const display = createMemo<AmountDisplay>(() =>
+    amountDisplay({
+      formatted: missing() ? undefined : shown(),
+      privacy: privacy(),
+      kind: isQuantity(props) ? "cantidad" : "importe",
+      ...(props.coloured === true ? { sign: signOfValue(props) } : {}),
+      ...(props.class === undefined ? {} : { extra: props.class }),
+      ...(props.missingReason === undefined ? {} : { missingReason: props.missingReason }),
+    }),
+  );
 
   return (
-    <Show
-      when={!missing()}
-      fallback={
-        <span class={`num nodata ${props.class ?? ""}`} title={label()}>
-          {NO_DATA}
-        </span>
-      }
-    >
-      <Show
-        when={!privacy()}
-        fallback={
-          <span class={`num mask ${props.class ?? ""}`} title={label()}>
-            <span aria-hidden="true">{MASK}</span>
-            <span class="sr-only">{label()}</span>
-          </span>
-        }
-      >
-        <span class={`num ${sign()} ${props.class ?? ""}`.trimEnd()}>{shown()}</span>
+    <span class={display().class} title={display().label === "" ? undefined : display().label}>
+      <Show when={display().state === "masked"} fallback={display().text}>
+        <span aria-hidden="true">{display().text}</span>
+        <span class="sr-only">{display().label}</span>
       </Show>
-    </Show>
+    </span>
   );
 };

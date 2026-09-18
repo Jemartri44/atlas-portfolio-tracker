@@ -66,12 +66,24 @@ const writeLocal = (key: string, value: string): void => {
   }
 };
 
+/**
+ * Privacy is **on** unless the device explicitly says it is off (FR-021,
+ * decision (d)): anything that is not the literal "off" — nothing stored,
+ * storage blocked, a value written by an older version — leaves the amounts
+ * covered.
+ *
+ * It is a function of its own, and not an expression inside `createStore`, so a
+ * test can reach it: turning `!== "off"` into `=== "on"` used to pass the whole
+ * suite and left every amount visible on first run.
+ */
+export const privacyFromPreference = (stored: string | undefined): boolean => stored !== "off";
+
 const createStore = () => {
   const [load, setLoad] = createSignal<LoadPhase>({ phase: "unconfigured" });
   const [deps, setDeps] = createSignal<UseCaseDeps | undefined>(undefined);
   const [writing, setWriting] = createSignal(false);
   // Privacy is **on** by default: the first read is what decides (FR-021).
-  const [privacy, setPrivacyRaw] = createSignal(readLocal(PRIVACY_KEY) !== "off");
+  const [privacy, setPrivacyRaw] = createSignal(privacyFromPreference(readLocal(PRIVACY_KEY)));
   const [theme, setThemeRaw] = createSignal<Theme>((readLocal(THEME_KEY) as Theme) ?? "system");
 
   const snapshot = createMemo<LedgerSnapshot | undefined>(() => {

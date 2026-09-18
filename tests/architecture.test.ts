@@ -410,6 +410,10 @@ const markupClasses = (): MarkupClasses & { literal: Set<string> } => {
 const RUNTIME_CLASSES = [
   { name: "positive", reason: "la devuelve signOf()/signOfValue() y la pinta Amount o Figure" },
   { name: "negative", reason: "idem, cuando el valor es negativo" },
+  {
+    name: "mask",
+    reason: "la compone amountDisplay() en format/money.ts, la puerta de privacidad",
+  },
 ];
 
 describe("architecture: apps/web", () => {
