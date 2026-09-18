@@ -22,6 +22,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0016](0016-project-ledger-as-of.md) | Consulta del libro a una fecha con asOf | Aceptada |
 | [0017](0017-web-stack.md) | Stack de la aplicacion web | Aceptada |
 | [0018](0018-schema-evolution-rules.md) | Evolucion del esquema y endurecimiento de validaciones | Aceptada |
+| [0019](0019-web-local-first.md) | Aplicacion web local-first sin servidor | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 
