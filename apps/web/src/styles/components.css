@@ -840,3 +840,48 @@ dialog .dialog-actions {
 .datatable tr.is-moved {
   font-weight: var(--w-medium);
 }
+
+/* --- Cubo: statistics read as a column of pairs ------------------------- */
+
+.stat-line {
+  align-items: baseline;
+  padding: var(--s-0) 0;
+}
+
+.stat-line .subject {
+  color: var(--c-muted);
+  min-width: 0;
+}
+
+.headline {
+  background-color: var(--c-surface-2);
+  border-radius: var(--r-sm);
+  display: grid;
+  gap: var(--s-1);
+  margin-bottom: var(--s-3);
+  padding: var(--s-3);
+}
+
+.headline .subject {
+  font-weight: var(--w-medium);
+}
+
+.headline .big {
+  font-size: var(--t-xl);
+  font-weight: var(--w-semibold);
+}
+
+.thesis-note {
+  border-top: 1px solid var(--c-border);
+  padding-top: var(--s-2);
+}
+
+.theses-notes {
+  display: grid;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+
+.breakdown {
+  margin-top: var(--s-3);
+}
