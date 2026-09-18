@@ -34,7 +34,10 @@ fi
 # AI attribution: trailers or generator notes, and AI tool names. The project
 # file CLAUDE.md is a legitimate mention and is stripped before matching.
 body=$(grep -v '^#' "$file" | sed -E 's/CLAUDE\.md//Ig')
-if printf '%s\n' "$body" | grep -qiE 'co-authored-by|generated (with|by)|🤖|claude|anthropic|chatgpt|copilot|gemini|cursor'; then
+# `\b` matters: without it, `generated (with|by)` also matches **re**generated,
+# and regenerating the golden file is an operation this repository has to be
+# able to describe. Same for `cursor`, which lives inside `precursor`.
+if printf '%s\n' "$body" | grep -qiE 'co-authored-by|\bgenerated (with|by)|🤖|claude|anthropic|chatgpt|copilot|gemini|\bcursor\b'; then
   echo "commit-msg: AI attribution is not allowed in commit messages" >&2
   exit 1
 fi

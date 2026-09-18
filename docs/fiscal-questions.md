@@ -98,7 +98,9 @@ Por probabilidad de aparecer en esta cartera:
 
 Son de la clase "barata ahora, carísima después". **Ninguno exige decidir hoy quién tiene razón en las disputas de arriba**: se trata de guardar el dato para que cualquiera de las dos lecturas sea implementable.
 
-> **Resueltos por ADR-0021** (2026-09-18): las nueve previsiones están decididas y se implementan **antes de que se registre la primera operación real**. La novena (`fx_rate_date` obligatorio) manda el calendario, porque es un endurecimiento y ADR-0018 solo lo permite mientras el libro real esté vacío.
+> **Implementados** (feature 008, PR #51, 2026-09-18): los nueve están en el esquema y el libro ya los guarda. Lo que sigue pendiente es **consumirlos**, que es la Fase 5.
+>
+> **Decisión original, ADR-0021** (2026-09-18): las nueve previsiones están decididas y se implementan **antes de que se registre la primera operación real**. La novena (`fx_rate_date` obligatorio) manda el calendario, porque es un endurecimiento y ADR-0018 solo lo permite mientras el libro real esté vacío.
 
 | # | Dato que falta | Para qué | Criterio afectado |
 |---|---|---|---|

@@ -62,6 +62,7 @@ Reglas transversales:
 | Seguimiento | `transfer_requested`, `transfer_request_updated` | Traspaso en curso (ADR-0010). Sin efecto sobre lotes ni efectivo |
 | Rectificación | `reversal` | Anula un evento anterior (`reverses_id`); opcionalmente el evento correcto lo referencia con `corrects_id` |
 | Cubo | `thesis_opened`, `thesis_closed` | Tesis del cubo especulativo |
+| Operación | `swap` | **Permuta de un activo por otro** (cripto por cripto es el caso que lo motiva; `fx_exchange` es solo para divisas). Es una **transmisión más una adquisición**, no un traspaso: valorada por **el mayor entre el valor de mercado de lo entregado y el de lo recibido** (art. 37.1.h LIRPF), el lote recibido nace con la fecha del swap y **sin heredar antigüedad ni coste**. Aviso `swap_fiscal_dates_differ` si las dos patas tienen reglas de fecha fiscal distintas. ADR-0021 |
 | Fiscal *(definido en ADR-0020; se implementa en la Fase 5)* | `tax_return_filed` | Deja constancia de qué se ha declarado, de qué modelo (`renta` / `720` / `721`) y con qué cifras, más la huella del libro ese día y la referencia del justificante. Sin él, un `settings_changed` puede reescribir en silencio una Renta ya presentada, la regla de los 20.000 € del Modelo 720 no es calculable y el arrastre de pérdidas a cuatro ejercicios no tiene ancla. Es un **documento administrativo**: se filtra por su fecha de presentación, no por el corte de `asOf` (ADR-0016). Una complementaria es un evento nuevo con `supersedes`, **nunca un `reversal`**. *Challenge* 3, hallazgo 2 |
 
 La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se define en §6.
@@ -330,7 +331,11 @@ Tabla de composición admitida por `kind` (el evento se rechaza si sus `effects`
 
 ### 8.6 Previsiones de la Fase 5 (ADR-0021)
 
-Nueve campos decididos el 2026-09-18 y **todavía no implementados**. Existen porque la revisión adversarial de `docs/fiscal-questions.md` dejó seis criterios **en disputa** y el libro no guarda lo necesario para aplicar ninguna de las dos lecturas. **Ninguno decide una pregunta fiscal**: cada uno permite responderla en cualquier sentido, y los valores por defecto dejan el comportamiento actual intacto.
+Nueve campos decididos el 2026-09-18. **Ocho están implementados** (feature 008, PR #51); el noveno —el evento `swap`— también, de modo que la tabla queda como registro de por qué existe cada uno. La previsión 9 se amplió a `valuation` (Q3 de la 008): el Modelo 720 convierte la cotización de 31/12 al tipo del BCE de ese día, así que una valoración en divisa sin la fecha de su tipo es el dato que ADR-0013 prohíbe perder.
+
+> **La puerta de ADR-0018 quedó cerrada con esta feature.** Desde la PR #51, cualquier endurecimiento del esquema exige `schema_version = 2` y migración: el libro real puede tener datos dentro a partir de ahora.
+
+Contexto original: Existen porque la revisión adversarial de `docs/fiscal-questions.md` dejó seis criterios **en disputa** y el libro no guarda lo necesario para aplicar ninguna de las dos lecturas. **Ninguno decide una pregunta fiscal**: cada uno permite responderla en cualquier sentido, y los valores por defecto dejan el comportamiento actual intacto.
 
 | Campo | Dónde | Forma | Por defecto |
 |---|---|---|---|
