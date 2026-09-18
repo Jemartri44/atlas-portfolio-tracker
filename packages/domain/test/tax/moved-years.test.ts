@@ -62,6 +62,17 @@ describe("movedTaxYears", () => {
       [2027, "100", "0"],
       [2028, "0", "100"],
     ]);
+    // And the other way round: now it is the current reading that starts later.
+    const back = movedTaxYears(
+      b.build(),
+      { ...DEFAULT_SETTINGS, fiscal_date_rule: { stock: "value_date" } },
+      DEFAULT_SETTINGS,
+      2030,
+    );
+    expect(back.map((m) => [m.year, text(m.before), text(m.after)])).toEqual([
+      [2027, "0", "100"],
+      [2028, "100", "0"],
+    ]);
   });
 
   it("compares nothing when a reading cannot be computed", () => {
