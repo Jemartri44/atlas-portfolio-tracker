@@ -6,15 +6,8 @@
 // (rule 14).
 
 import { type JSX, Show } from "solid-js";
-import { Amount, Badge, Figure, Section } from "../../components/index.js";
+import { Amount, Badge, Figure, Section, StatLine } from "../../components/index.js";
 import type { StatsView } from "../../view-models/bucket/index.js";
-
-const Line = (props: { label: string; children: JSX.Element }): JSX.Element => (
-  <div class="spread stat-line">
-    <span class="subject">{props.label}</span>
-    <span class="row">{props.children}</span>
-  </div>
-);
 
 export const StatsCard = (props: { view: StatsView }): JSX.Element => (
   <Section
@@ -36,32 +29,32 @@ export const StatsCard = (props: { view: StatsView }): JSX.Element => (
       </span>
     </div>
 
-    <Line label="Tasa de acierto">
+    <StatLine label="Tasa de acierto">
       <Figure value={props.view.hitRatePct} unit="percent" />
-    </Line>
-    <Line label="Ganancia media">
+    </StatLine>
+    <StatLine label="Ganancia media">
       <Amount value={props.view.averageWin} signed coloured currency={false} />
-    </Line>
-    <Line label="Pérdida media">
+    </StatLine>
+    <StatLine label="Pérdida media">
       <Amount value={props.view.averageLoss} signed coloured currency={false} />
-    </Line>
-    <Line label="Esperanza por tesis">
+    </StatLine>
+    <StatLine label="Esperanza por tesis">
       <Amount value={props.view.expectancy} signed coloured currency={false} />
-    </Line>
-    <Line label="Máxima caída">
+    </StatLine>
+    <StatLine label="Máxima caída">
       <Amount value={props.view.maxDrawdown} currency={false} />
       <Show when={props.view.drawdownFrom !== undefined}>
         <span class="tiny">
           de {props.view.drawdownFrom} a {props.view.drawdownTo}
         </span>
       </Show>
-    </Line>
-    <Line label="Resultado frente al índice">
+    </StatLine>
+    <StatLine label="Resultado frente al índice">
       <Amount value={props.view.vsIndexTotal} signed coloured currency={false} />
       <Show when={props.view.vsIndexMissing > 0}>
         <span class="tiny">{props.view.vsIndexMissing} sin dato</span>
       </Show>
-    </Line>
+    </StatLine>
 
     <Show when={props.view.excluded.length > 0}>
       <p class="note">

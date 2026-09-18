@@ -11,6 +11,8 @@ import {
   type DataColumn,
   DataTable,
   Figure,
+  Price,
+  PriceDetail,
   Section,
 } from "../../components/index.js";
 import type { BucketPositionRow, BucketPositionsView } from "../../view-models/bucket/index.js";
@@ -27,7 +29,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     key: "quantity",
     header: "Cantidad",
     numeric: true,
-    cell: (row) => <span class="num">{row.quantity}</span>,
+    cell: (row) => <Amount quantity={row.quantity} />,
   },
   {
     key: "cost",
@@ -40,24 +42,8 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     header: "Precio",
     numeric: true,
     card: "sub",
-    cell: (row) => (
-      <Show
-        when={row.unitValue !== undefined}
-        fallback={<span class="num nodata">sin precio</span>}
-      >
-        <span class="num">
-          {row.unitValue} {row.currency}
-        </span>
-      </Show>
-    ),
-    cardCell: (row) => (
-      <Show when={row.unitValue !== undefined} fallback={<span class="nodata">sin precio</span>}>
-        <span>
-          {row.unitValue} {row.currency} · {row.priceDate}
-          {row.stale ? " (caducado)" : ""}
-        </span>
-      </Show>
-    ),
+    cell: (row) => <Price price={row} />,
+    cardCell: (row) => <PriceDetail price={row} />,
   },
   {
     key: "value",

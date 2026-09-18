@@ -6,7 +6,7 @@
 // is repeated on the screen every single time, because it is the mistake this
 // project exists to avoid (trap 1 of `CLAUDE.md`).
 
-import type { Money, TransferSimulation, Warning } from "@atlas/domain";
+import type { Money, Quantity, TransferSimulation, Warning } from "@atlas/domain";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 
 export interface TransferRowView {
@@ -24,7 +24,8 @@ export interface TransferView {
   date: string;
   fromName: string;
   toName: string;
-  quantity: string;
+  /** `Quantity`, never a string: see the note in `core/weights.ts`. */
+  quantity: Quantity;
   moved: Money;
   rows: TransferRowView[];
   warningsBefore: readonly Warning[];
@@ -40,7 +41,7 @@ export const transferView = (
     date: simulation.date,
     fromName: displayName(names, simulation.from_asset_id),
     toName: displayName(names, simulation.to_asset_id),
-    quantity: simulation.quantity.toString(),
+    quantity: simulation.quantity,
     moved: simulation.moved_eur,
     rows: simulation.before.rows.map((row) => {
       const next = after.get(row.asset_id);

@@ -155,8 +155,9 @@ export const TransferCard = (props: TransferCardProps): JSX.Element => {
           {(simulation) => (
             <div class="stack">
               <p class="note flush">
-                Traspaso de {simulation().quantity} de {simulation().fromName} a{" "}
-                {simulation().toName} (<Amount value={simulation().moved} />
+                Traspaso de <Amount quantity={simulation().quantity} /> de {simulation().fromName} a{" "}
+                {simulation().toName} (
+                <Amount value={simulation().moved} />
                 ).
               </p>
               <Callout tone="info" title="No es un hecho imponible">

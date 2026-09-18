@@ -10,35 +10,28 @@
 // "within limits": the absence of a measurement is not a pass.
 
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Badge, Callout, Figure, Section } from "../../components/index.js";
+import { Amount, Badge, Callout, Figure, Section, StatLine } from "../../components/index.js";
 import type { ControlsView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
 
-const Line = (props: { label: string; children: JSX.Element }): JSX.Element => (
-  <div class="spread stat-line">
-    <span class="subject">{props.label}</span>
-    <span class="row">{props.children}</span>
-  </div>
-);
-
 export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): JSX.Element => (
   <Section title="Presupuesto y control del cubo">
-    <Line label="Aporte bruto acumulado">
+    <StatLine label="Aporte bruto acumulado">
       <Amount value={props.view.contributionGross} />
       <Show when={props.view.budget !== undefined}>
         <span class="tiny">
           de <Amount value={props.view.budget} currency={false} /> previstos
           <Show when={props.view.monthsElapsed !== undefined}>
             {" "}
-            ({props.view.monthsElapsed} meses)
+            ({props.view.monthsElapsed} {props.view.monthsElapsed === 1 ? "mes" : "meses"})
           </Show>
         </span>
       </Show>
-    </Line>
-    <Line label="Resultado realizado">
+    </StatLine>
+    <StatLine label="Resultado realizado">
       <Amount value={props.view.realized} signed coloured currency={false} />
-    </Line>
-    <Line label="Resultado latente">
+    </StatLine>
+    <StatLine label="Resultado latente">
       <Amount
         value={props.view.unrealized}
         signed
@@ -46,7 +39,7 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
         currency={false}
         missingReason="falta el precio de alguna posición"
       />
-    </Line>
+    </StatLine>
 
     <h3 class="block-title">Regla de parada (17)</h3>
     <Show
@@ -58,9 +51,9 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
         </p>
       }
     >
-      <Line label="Pérdida acumulada sobre el aporte">
+      <StatLine label="Pérdida acumulada sobre el aporte">
         <Figure value={props.view.lossPct} unit="percent" coloured />
-      </Line>
+      </StatLine>
     </Show>
 
     <h3 class="block-title">Regla de recogida (18)</h3>
@@ -77,9 +70,9 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
         </p>
       }
     >
-      <Line label="Peso del cubo sobre el patrimonio total">
+      <StatLine label="Peso del cubo sobre el patrimonio total">
         <Figure value={props.view.weightPct} unit="percent" />
-      </Line>
+      </StatLine>
     </Show>
 
     <div class="breakdown">

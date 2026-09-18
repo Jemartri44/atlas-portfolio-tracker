@@ -6,7 +6,14 @@
 // presentation. Recomputing `|deviation| > threshold` in the interface would be
 // the second place the rule lives.
 
-import type { ClassSubtotal, CoreWeightRow, CoreWeights, Money, Warning } from "@atlas/domain";
+import {
+  type ClassSubtotal,
+  type CoreWeightRow,
+  type CoreWeights,
+  Money,
+  type Quantity,
+  type Warning,
+} from "@atlas/domain";
 import { valueLabel } from "../../format/labels.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 
@@ -15,10 +22,17 @@ export interface WeightRow {
   /** The name it has today, never the identifier. */
   name: string;
   assetClass: string;
-  quantity: string;
-  /** Absent means "no price", which is not the same as zero. */
-  unitValue?: string;
-  currency?: string;
+  /**
+   * `Quantity` and `Money`, **never strings**. A quantity times a public price
+   * is the amount, so both are masked by the privacy mode, and the only thing
+   * that can paint either of them is `Amount`. Handing them over as text let
+   * eight call sites interpolate them straight into the markup and walk past the
+   * mask; a type that cannot be printed by accident is worth more than eight
+   * corrections.
+   */
+  quantity: Quantity;
+  /** Absent means "no price", which is not the same as zero. Carries its currency. */
+  unitValue?: Money;
   priceDate?: string;
   ageDays?: number;
   stale: boolean;
@@ -72,12 +86,11 @@ const rowOf = (
   assetId: row.asset_id,
   name: displayName(names, row.asset_id),
   assetClass: row.asset_class,
-  quantity: row.quantity.toString(),
+  quantity: row.quantity,
   ...(row.price === undefined
     ? {}
     : {
-        unitValue: row.price.unit_value.toString(),
-        currency: row.price.currency,
+        unitValue: Money.of(row.price.unit_value, row.price.currency),
         priceDate: row.price.date,
         ageDays: row.price.age_days,
       }),

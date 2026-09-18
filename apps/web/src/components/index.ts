@@ -6,4 +6,7 @@ export { ConfirmDialog, Dialog } from "./Dialog.jsx";
 export { ErrorView } from "./ErrorView.jsx";
 export { Field, type Option, SelectField, Switch } from "./Field.jsx";
 export { Figure } from "./Figure.jsx";
+export { Price, PriceDetail, type PriceInfo } from "./Price.jsx";
 export { Section } from "./Section.jsx";
+export { StandaloneFees, type StandaloneFeesProps } from "./StandaloneFees.jsx";
+export { StatLine } from "./StatLine.jsx";
