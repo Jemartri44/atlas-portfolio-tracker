@@ -28,8 +28,18 @@ export interface GenerateOptions {
   seed: number;
 }
 
-/** Warning codes the scenario provokes on purpose (Q1): the ETC held in two IBKR accounts. */
-export const SYNTHETIC_EXPECTED_WARNINGS: readonly string[] = ["same_asset_two_accounts"];
+/**
+ * Warning codes the scenario provokes on purpose (Q1): the ETC held in two IBKR
+ * accounts, and the two directions of the wash-sale window (feature 005). The
+ * loss-making sale of the fund followed by the monthly contributions inside the
+ * year was already in the scenario as a mandatory edge case (constitution VII):
+ * what is new is that the application now sees it.
+ */
+export const SYNTHETIC_EXPECTED_WARNINGS: readonly string[] = [
+  "same_asset_two_accounts",
+  "wash_sale_window_prior_buy",
+  "wash_sale_window_repurchase",
+];
 
 const MONTHS = 28; // 2026-09 … 2028-12
 const START_DEPOSIT_DATE = "2026-08-25";

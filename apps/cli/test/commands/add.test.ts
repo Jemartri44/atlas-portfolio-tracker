@@ -1,6 +1,63 @@
 import { describe, expect, it } from "vitest";
 import { BUY_GOLD, BUY_WORLD, harness, seed } from "../harness.js";
 
+describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
+  /** Buys 10 of the fund, sells at a loss, and buys again `months` later. */
+  const cycle = async () => {
+    const h = harness({ events: seed(), confirm: true });
+    const trade = (type: string, date: string, price: string, quantity = "10") => [
+      "add",
+      type,
+      "--account",
+      "acc_fund",
+      "--asset",
+      "ast_world",
+      "--trade-date",
+      date,
+      "--value-date",
+      date,
+      "--quantity",
+      quantity,
+      "--unit-price",
+      price,
+      "--currency",
+      "EUR",
+      "--fx-rate",
+      "1",
+      "--fx-rate-date",
+      date,
+      "--yes",
+    ];
+    expect(await h.exec(trade("buy", "2027-01-11", "10"))).toBe(0);
+    h.reset();
+    expect(await h.exec(trade("sell", "2027-02-10", "8"))).toBe(0);
+    // The sale itself warns about the purchase inside the previous window.
+    expect(h.text()).toContain("dentro de la ventana abierta");
+    h.reset();
+    return { h, trade };
+  };
+
+  it("warns before the question when the repurchase falls inside the window", async () => {
+    const { h, trade } = await cycle();
+    expect(await h.exec(trade("buy", "2027-06-01", "8", "5"))).toBe(0);
+    const text = h.text();
+    expect(text).toContain("Recompra de ast_world dentro de la ventana");
+    expect(text).toContain("2028-02-10");
+    // The warning comes before the confirmation, not after the write.
+    expect(text.indexOf("Recompra de ast_world")).toBeLessThan(text.indexOf("Registrado"));
+  });
+
+  it("does not warn when the repurchase is outside the window, and never blocks", async () => {
+    const { h, trade } = await cycle();
+    expect(await h.exec(trade("buy", "2028-03-01", "8", "5"))).toBe(0);
+    expect(h.text()).not.toContain("Recompra de ast_world dentro de la ventana");
+    expect(h.text()).toContain("Registrado");
+    // Even inside the window the purchase is recorded: it is a warning, not a rejection.
+    const { events } = await h.store.load();
+    expect(events.filter((event) => event.type === "buy")).toHaveLength(2);
+  });
+});
+
 describe("atlas add", () => {
   it("previews, confirms and records a buy with amount as cost basis", async () => {
     const h = harness({ events: seed(), confirm: true });

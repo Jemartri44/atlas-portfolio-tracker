@@ -18,10 +18,21 @@ export type { Clock } from "./ports/clock.js";
 export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
 export type { RandomSource } from "./ports/random.js";
 export {
+  type BenchmarkGap,
   type BucketPosition,
   type BucketPositions,
+  type BucketThesisView,
   bucketPositions,
+  bucketTheses,
 } from "./projections/bucket.js";
+export {
+  type BucketControls,
+  type BucketReport,
+  type BucketStats,
+  bucketStats,
+  type DrawdownPoint,
+  type ExcludedThesis,
+} from "./projections/bucket-stats.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";
 export {

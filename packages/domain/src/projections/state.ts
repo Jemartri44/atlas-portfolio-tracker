@@ -18,6 +18,7 @@ import type {
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import type { KnownFxRate } from "./fx-rates.js";
+import type { Acquisition } from "./wash-sale.js";
 
 export interface Account extends AccountFields {
   /** Ids of the account events applied, in file order. */
@@ -237,6 +238,8 @@ export interface LedgerState {
   cash: Map<string, Money>;
   /** Last ECB rate the ledger knows per currency (feature 005). Never in the snapshot. */
   fxRates: Map<string, KnownFxRate>;
+  /** Purchases per asset that count for the wash-sale rule (feature 005). Never in the snapshot. */
+  acquisitions: Map<AssetId, Acquisition[]>;
   lots: Map<AssetId, AssetLots>;
   /** Lots created per source event, to number lot ids uniquely across assets. */
   lotCounts: Map<Ulid, number>;
@@ -274,6 +277,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   positions: new Map(),
   cash: new Map(),
   fxRates: new Map(),
+  acquisitions: new Map(),
   lots: new Map(),
   lotCounts: new Map(),
   gains: [],

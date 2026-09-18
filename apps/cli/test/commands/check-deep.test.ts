@@ -44,7 +44,16 @@ describe("atlas check --deep", () => {
     };
     expect(report.findings).toEqual([]);
     expect(report.deep).toEqual([]);
-    expect(report.warnings).toHaveLength(1);
+    // No errors, and only the warnings the scenario provokes on purpose: the ETC
+    // held in two accounts and the two directions of the wash-sale window, which
+    // the loss-making sale of the fund followed by the monthly contributions has
+    // been triggering since the ledger was written (feature 005).
+    const codes = new Set((report.warnings as { code: string }[]).map((warning) => warning.code));
+    expect([...codes].sort()).toEqual([
+      "same_asset_two_accounts",
+      "wash_sale_window_prior_buy",
+      "wash_sale_window_repurchase",
+    ]);
   });
 
   it("flags invented fingerprints, duplicate ids and non-canonical lines", async () => {

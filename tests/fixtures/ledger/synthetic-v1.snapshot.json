@@ -2750,6 +2750,136 @@
   ],
   "warnings": [
     {
+      "code": "wash_sale_window_prior_buy",
+      "details": {
+        "asset_id": "ast_world",
+        "buy_date": "2026-08-28",
+        "buy_event_id": "01MBP2GT78JNMNGSE96ZZMH1R7",
+        "loss_eur": "-90.82",
+        "quantity": "2.5",
+        "window": "1y",
+        "window_start": "2026-01-06"
+      },
+      "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R"
+    },
+    {
+      "code": "wash_sale_window_prior_buy",
+      "details": {
+        "asset_id": "ast_world",
+        "buy_date": "2026-09-04",
+        "buy_event_id": "01M1PS7R5RJ4XWKK5GX24DQ2FE",
+        "loss_eur": "-90.82",
+        "quantity": "6.3526",
+        "window": "1y",
+        "window_start": "2026-01-06"
+      },
+      "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R"
+    },
+    {
+      "code": "wash_sale_window_prior_buy",
+      "details": {
+        "asset_id": "ast_world",
+        "buy_date": "2026-10-06",
+        "buy_event_id": "01M495YN80BYC4Q2KCPDGJRBPT",
+        "loss_eur": "-90.82",
+        "quantity": "6.1671",
+        "window": "1y",
+        "window_start": "2026-01-06"
+      },
+      "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R"
+    },
+    {
+      "code": "wash_sale_window_prior_buy",
+      "details": {
+        "asset_id": "ast_world",
+        "buy_date": "2026-11-03",
+        "buy_event_id": "01M6H92S80PZPKZ809HYAG101D",
+        "loss_eur": "-90.82",
+        "quantity": "6.2906",
+        "window": "1y",
+        "window_start": "2026-01-06"
+      },
+      "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R"
+    },
+    {
+      "code": "wash_sale_window_prior_buy",
+      "details": {
+        "asset_id": "ast_world",
+        "buy_date": "2026-12-04",
+        "buy_event_id": "01M913D280DABTDXE2PY8XFSY8",
+        "loss_eur": "-90.82",
+        "quantity": "5.5913",
+        "window": "1y",
+        "window_start": "2026-01-06"
+      },
+      "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R"
+    },
+    {
+      "code": "wash_sale_window_prior_buy",
+      "details": {
+        "asset_id": "ast_world",
+        "buy_date": "2027-01-03",
+        "buy_event_id": "01MBEBAM80K3CE5XK9JN91KKCC",
+        "loss_eur": "-90.82",
+        "quantity": "4.9233",
+        "window": "1y",
+        "window_start": "2026-01-06"
+      },
+      "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01ME3AEB80NNJANWN0AFEQT9NM"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01MGGJBX80QH7D6T8TEGCQ2T7R"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01MK0CP680GRT4VMCSCNE2J9M3"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01MN3B0W80VF30629G9Z57MH12"
+    },
+    {
       "code": "same_asset_two_accounts",
       "details": {
         "accounts": [
@@ -2759,6 +2889,97 @@
         "asset_id": "ast_gold"
       },
       "event_id": "01MN5XDK80W3H857KXVSK3FSHW"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01MQRA4K80BKW03GPJQ15WRAAA"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01MWQYS580AQC67E90RTJSJWXG"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01MZ2MA08035GFM8GTVXQKJPA0"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01N1QKDQ80FXGXFWNKBY8GHRT8"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01N3X45480EBH73T8KZ6NY4EVD"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01N6J38V806J987G65VGRJGGDD"
+    },
+    {
+      "code": "wash_sale_window_repurchase",
+      "details": {
+        "asset_id": "ast_world",
+        "loss_eur": "-90.82",
+        "quantity": "8.7975",
+        "sale_date": "2027-01-06",
+        "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "window": "1y",
+        "window_end": "2028-01-06"
+      },
+      "event_id": "01N91XK48084QAF9Q2RRNGFG1F"
     }
   ]
 }
