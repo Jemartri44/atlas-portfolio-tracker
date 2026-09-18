@@ -31,8 +31,10 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     expect(await h.exec(trade("buy", "2027-01-11", "10"))).toBe(0);
     h.reset();
     expect(await h.exec(trade("sell", "2027-02-10", "8"))).toBe(0);
-    // The sale itself warns about the purchase inside the previous window.
+    // The sale itself warns about the purchase inside the previous window, and
+    // names the window that actually applies: a fund has one year, not two months.
     expect(h.text()).toContain("dentro de la ventana abierta");
+    expect(h.text()).toContain("ventana de un año");
     h.reset();
     return { h, trade };
   };
@@ -43,6 +45,10 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     const text = h.text();
     expect(text).toContain("Recompra de ast_world dentro de la ventana");
     expect(text).toContain("2028-02-10");
+    // The window is a year (ADR-0014): calling it "the two-month rule" next to a
+    // date a year away contradicted the date and was fiscally false.
+    expect(text).toContain("ventana de un año");
+    expect(text).not.toContain("regla de los dos meses");
     // The warning comes before the confirmation, not after the write.
     expect(text.indexOf("Recompra de ast_world")).toBeLessThan(text.indexOf("Registrado"));
   });

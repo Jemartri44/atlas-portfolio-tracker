@@ -173,6 +173,22 @@ export const describeError = (error: DomainError): string => {
   }
 };
 
+/**
+ * The wash-sale window by its real name. Calling a one-year window "the
+ * two-month rule" is not a wording slip: it states something fiscally false
+ * next to a date that contradicts it.
+ */
+const windowText = (window: unknown): string => {
+  const value = text(window);
+  if (value === "2m") {
+    return "ventana de dos meses";
+  }
+  if (value === "1y") {
+    return "ventana de un año";
+  }
+  return `ventana de ${value.slice(0, -1)} días`;
+};
+
 /** Why a control rule of the bucket could not be measured, with what is missing. */
 const gapText = (d: Record<string, unknown>): string => {
   const missing = [
@@ -251,9 +267,9 @@ export const describeWarning = (warning: Warning): string => {
     case "thesis_size_exceeded":
       return `La tesis ${text(d.thesis_id)} lleva ${text(d.invested_eur)} EUR invertidos, por encima de los ${text(d.planned_size_eur)} EUR previstos.`;
     case "wash_sale_window_repurchase":
-      return `Recompra de ${text(d.asset_id)} dentro de la ventana de la venta ${text(d.sale_event_id)} (${text(d.sale_date)}, pérdida ${text(d.loss_eur)} EUR): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${text(d.window_end)} (regla de los dos meses, business-rules.md §5.4). El diferimiento lo calculará el motor fiscal.`;
+      return `Recompra de ${text(d.asset_id)} dentro de la ventana de la venta ${text(d.sale_event_id)} (${text(d.sale_date)}, pérdida ${text(d.loss_eur)} EUR): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${text(d.window_end)} (${windowText(d.window)}, business-rules.md §5.4). El diferimiento lo calculará el motor fiscal.`;
     case "wash_sale_window_prior_buy":
-      return `Venta con pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) con una compra del ${text(d.buy_date)} (${text(d.buy_event_id)}, ${text(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)}: la pérdida no será computable este ejercicio (business-rules.md §5.4).`;
+      return `Venta con pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) con una compra del ${text(d.buy_date)} (${text(d.buy_event_id)}, ${text(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio (business-rules.md §5.4).`;
     case "thesis_closed_with_position":
       return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
     default:
