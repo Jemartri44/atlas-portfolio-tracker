@@ -7,11 +7,12 @@ import { A } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Callout, Section, Switch } from "../../components/index.js";
 import { formatInstantDate } from "../../format/date.js";
+import { countOf, formatDecimalString } from "../../format/number.js";
 import { changeLedger } from "../../ledger/actions.js";
 import { toAppError } from "../../ledger/errors.js";
 import { exportLedger, importLedger } from "../../ledger/export.js";
 import { type BrowserSource, daysSinceExport, sourceLabel } from "../../ledger/source.js";
-import { store, today } from "../../ledger/state.js";
+import { messageWithLine, store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 
 export default function AjustesRoute(): JSX.Element {
@@ -50,10 +51,10 @@ export default function AjustesRoute(): JSX.Element {
     try {
       const events = await importLedger(await file.text());
       setMessage(
-        `Importados ${events} eventos: el libro anterior de este navegador se ha sustituido.`,
+        `${countOf(events, "evento importado", "eventos importados")}: el libro anterior de este navegador se ha sustituido.`,
       );
     } catch (failure) {
-      setError(toAppError(failure).message);
+      setError(messageWithLine(toAppError(failure)));
     } finally {
       setBusy(false);
       input.value = "";
@@ -92,7 +93,7 @@ export default function AjustesRoute(): JSX.Element {
                             {(when) => (
                               <>
                                 {formatInstantDate(when())} (hace{" "}
-                                {daysSinceExport(browser(), today())} días)
+                                {countOf(daysSinceExport(browser(), today()) ?? 0, "día", "días")})
                               </>
                             )}
                           </Show>
@@ -110,7 +111,7 @@ export default function AjustesRoute(): JSX.Element {
                     {(snapshot) => (
                       <>
                         <dt>Eventos</dt>
-                        <dd>{snapshot().events.length}</dd>
+                        <dd>{formatDecimalString(String(snapshot().events.length))}</dd>
                       </>
                     )}
                   </Show>

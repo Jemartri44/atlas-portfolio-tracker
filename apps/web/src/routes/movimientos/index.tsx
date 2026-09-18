@@ -5,11 +5,12 @@
 // years of ledger never land on screen at once (FR-039).
 
 import { type EntryFilter, ledgerEntries } from "@atlas/domain";
-import { useSearchParams } from "@solidjs/router";
+import { A, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
 import { EmptyState } from "../../components/index.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
+import { countOf } from "../../format/number.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { movementRows, PAGE_SIZE } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
@@ -42,6 +43,8 @@ export default function MovimientosRoute(): JSX.Element {
         const rows = createMemo(() =>
           movementRows(entries().slice(0, page() * PAGE_SIZE), names, events),
         );
+        const filtered = (): boolean =>
+          Object.values(filterOf(params)).some((value) => value !== undefined);
         const more = (): boolean => entries().length > rows().length;
 
         return (
@@ -58,9 +61,18 @@ export default function MovimientosRoute(): JSX.Element {
             <Show
               when={entries().length > 0}
               fallback={
-                <EmptyState what="Ningún movimiento coincide con los filtros.">
-                  <span class="subtle">Quita algún filtro para ver más.</span>
-                </EmptyState>
+                <Show
+                  when={filtered()}
+                  fallback={
+                    <EmptyState what="Todavía no hay ningún movimiento.">
+                      <A href="/registrar">Registrar el primero</A>
+                    </EmptyState>
+                  }
+                >
+                  <EmptyState what="Ningún movimiento coincide con los filtros.">
+                    <span class="subtle">Quita algún filtro para ver más.</span>
+                  </EmptyState>
+                </Show>
               }
             >
               <MovementList rows={rows()} />
@@ -74,7 +86,7 @@ export default function MovimientosRoute(): JSX.Element {
                 </button>
               </Show>
               <p class="note">
-                {rows().length} de {entries().length} movimientos
+                {rows().length} de {countOf(entries().length, "movimiento", "movimientos")}
               </p>
             </Show>
           </>

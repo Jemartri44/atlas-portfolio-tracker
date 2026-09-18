@@ -37,6 +37,16 @@ export interface AppError {
   action?: { label: string; to: string };
 }
 
+/**
+ * The message of an error **with the line of the file** it comes from, when it
+ * comes from one. Importing a file that is not a ledger used to say "El campo
+ * fee de buy no es válido" and nothing else: in a file of five thousand lines,
+ * the one piece of information that lets the user find the problem was folded
+ * away in the technical detail.
+ */
+export const messageWithLine = (error: AppError): string =>
+  error.line === undefined ? error.message : `Línea ${error.line} del fichero: ${error.message}`;
+
 export type LoadPhase =
   | { phase: "unconfigured" }
   | { phase: "reconnect"; directory: DirectorySource; handle: FileSystemDirectoryHandle }

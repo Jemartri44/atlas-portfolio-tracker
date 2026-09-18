@@ -9,12 +9,12 @@
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Callout, ErrorView } from "../../components/index.js";
+import { countOf } from "../../format/number.js";
 import { openBrowserLedger, openDirectoryLedger, reconnect } from "../../ledger/actions.js";
 import { toAppError } from "../../ledger/errors.js";
 import { importLedger } from "../../ledger/export.js";
 import { canUseDirectory } from "../../ledger/source.js";
-import type { AppError } from "../../ledger/state.js";
-import { store } from "../../ledger/state.js";
+import { type AppError, messageWithLine, store } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 
 export default function LibroRoute(): JSX.Element {
@@ -60,7 +60,7 @@ export default function LibroRoute(): JSX.Element {
       setImported(events);
       navigate("/", { replace: true });
     } catch (failure) {
-      setError(toAppError(failure).message);
+      setError(messageWithLine(toAppError(failure)));
     } finally {
       setBusy(false);
       input.value = "";
@@ -168,7 +168,9 @@ export default function LibroRoute(): JSX.Element {
             </label>
           </div>
           <Show when={imported() !== undefined}>
-            <p class="subtle">Importados {imported()} eventos.</p>
+            <p class="subtle">
+              {countOf(imported() ?? 0, "evento importado", "eventos importados")}.
+            </p>
           </Show>
         </article>
       </div>

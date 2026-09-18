@@ -14,6 +14,7 @@ import { describeError } from "../../format/messages/errors.js";
 import { describeFinding } from "../../format/messages/findings.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
+import { countOf } from "../../format/number.js";
 import { maskFigures } from "../../format/privacy.js";
 import { usePrivacy } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
@@ -81,7 +82,7 @@ export default function VerificacionRoute(): JSX.Element {
           <>
             <PageHeader
               title="Verificación"
-              lead={`${snapshot.events.length} eventos leídos. Todo lo que ves se recalcula desde el libro.`}
+              lead={`${countOf(snapshot.events.length, "evento leído", "eventos leídos")}. Todo lo que ves se recalcula desde el libro.`}
             />
 
             <div class="stack">

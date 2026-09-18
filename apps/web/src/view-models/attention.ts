@@ -192,9 +192,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "pending_orders",
-        `${input.openOrders.length} ${
-          input.openOrders.length === 1 ? "orden dada sin ejecutar" : "órdenes dadas sin ejecutar"
-        }; la más antigua lleva ${oldest} días.`,
+        `${countOf(input.openOrders.length, "orden dada sin ejecutar", "órdenes dadas sin ejecutar")}; la más antigua lleva ${countOf(oldest, "día", "días")}.`,
       ),
     );
   }
@@ -204,9 +202,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "pending_transfers",
-        `${input.openTransfers.length} ${
-          input.openTransfers.length === 1 ? "traspaso en curso" : "traspasos en curso"
-        }; el más antiguo lleva ${oldest} días.`,
+        `${countOf(input.openTransfers.length, "traspaso en curso", "traspasos en curso")}; el más antiguo lleva ${countOf(oldest, "día", "días")}.`,
       ),
     );
   }
@@ -217,7 +213,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
         "export_overdue",
         input.exportOverdueDays === "never"
           ? "El libro vive en el navegador y nunca se ha exportado: si borras los datos del sitio, se pierde."
-          : `El libro vive en el navegador y la última exportación es de hace ${input.exportOverdueDays} días.`,
+          : `El libro vive en el navegador y la última exportación es de hace ${countOf(input.exportOverdueDays, "día", "días")}: si borras los datos del sitio, se pierde lo registrado desde entonces.`,
       ),
     );
   }

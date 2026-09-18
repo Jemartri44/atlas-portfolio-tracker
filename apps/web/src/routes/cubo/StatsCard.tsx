@@ -8,6 +8,7 @@
 import { type JSX, Show } from "solid-js";
 import { Amount, Badge, Figure, Section, StatLine } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
+import { countOf } from "../../format/number.js";
 import type { StatsView } from "../../view-models/bucket/index.js";
 
 export const StatsCard = (props: { view: StatsView }): JSX.Element => (
@@ -15,7 +16,8 @@ export const StatsCard = (props: { view: StatsView }): JSX.Element => (
     title="Estadísticas de operativa"
     aside={
       <span class="tiny">
-        {props.view.closedTheses} cerradas · {props.view.realizedOperations} realizaciones
+        {countOf(props.view.closedTheses, "cerrada", "cerradas")} ·{" "}
+        {countOf(props.view.realizedOperations, "venta realizada", "ventas realizadas")}
       </span>
     }
   >

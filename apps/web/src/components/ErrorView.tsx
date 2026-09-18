@@ -12,7 +12,7 @@
 
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
-import type { AppError } from "../ledger/state.js";
+import { type AppError, messageWithLine } from "../ledger/state.js";
 import { Callout } from "./Callout.jsx";
 
 interface ErrorViewProps {
@@ -56,7 +56,7 @@ export const ErrorView = (props: ErrorViewProps): JSX.Element => (
       </Show>
     }
   >
-    {props.error.message}
+    {messageWithLine(props.error)}
     <Technical error={props.error} />
   </Callout>
 );

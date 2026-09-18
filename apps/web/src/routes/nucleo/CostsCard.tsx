@@ -82,7 +82,7 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
       <DataTable label="Costes del núcleo" columns={CORE_COLUMNS} rows={props.view.core.rows} />
       <div class="spread total-line">
         <span class="subject">
-          Total del núcleo
+          Comisiones de operaciones del núcleo
           <Show when={props.view.core.partial}>
             {" "}
             <Badge tone="warning">parcial</Badge>
@@ -102,7 +102,10 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
       </Show>
     </Show>
 
-    <StandaloneFees view={props.view.standalone.core} totalLabel="Total del núcleo" />
+    <StandaloneFees
+      view={props.view.standalone.core}
+      totalLabel="Total de comisiones sueltas del núcleo"
+    />
     {/*
       Where the rest went. The figure is not repeated here — it belongs to the
       other book — but its absence would otherwise look like a loss.
