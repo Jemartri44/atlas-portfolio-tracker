@@ -31,6 +31,18 @@ describe("settingsAt", () => {
     expect(settingsAt(state, "2026-09-11").settings.fiscal_date_rule.etc).toBe("value_date");
     expect(state.settingsHistory[1]?.madrid_date).toBe("2026-09-11");
   });
+
+  it("carries the optional criteria through the normalization untouched", () => {
+    const state = createEmptyState(DEFAULT_SETTINGS);
+    applySettingsChanged(state, {
+      ...SAMPLES.settings_changed,
+      settings: mergeSettings(DEFAULT_SETTINGS, { wash_sale_transfer_counts: false }),
+    });
+    // `settingsAt` completes the per-asset-type maps (ADR-0018); an optional
+    // parameter is returned as the line wrote it, and its absence stays absent.
+    expect(settingsAt(state, "2026-09-01").settings.wash_sale_transfer_counts).toBe(false);
+    expect(settingsAt(state, "2026-08-31").settings.wash_sale_transfer_counts).toBeUndefined();
+  });
 });
 
 describe("resolveFiscalSettings", () => {

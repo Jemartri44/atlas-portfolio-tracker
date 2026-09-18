@@ -23,6 +23,7 @@ import type {
   ValuationEvent,
 } from "../schema/events.js";
 import { fiscalDateOf } from "../settings/fiscal-date.js";
+import { washSaleTransferCounts } from "../settings/wash-sale.js";
 import { adjustCash } from "./cash.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
 import { recordGain } from "./gains.js";
@@ -349,6 +350,23 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent): void =>
       source_lot_id: slice.lot_id,
     });
   });
+  // The destination leg acquires homogeneous securities, so it counts for the
+  // wash-sale rule unless the criterion is switched off (business-rules.md
+  // §5.4, data-schema.md §8.4, fiscal question #2b). It counts on the date the
+  // units are subscribed (`value_date_in`, the fiscal date of a fund), which is
+  // **not** the acquisition date of the lots: those keep the original one
+  // (data-schema.md §8.1), and mixing the two would break the antiquity.
+  // A custody transfer returned above: moving the same asset between accounts
+  // acquires nothing.
+  if (washSaleTransferCounts(state.fiscalSettings)) {
+    noteAcquisition(state, {
+      event_id: event.id,
+      asset_id: event.to_asset_id,
+      fiscal_date: event.value_date_in,
+      quantity: quantityIn,
+    });
+    warnRepurchase(state, event.id, event.to_asset_id, toAsset.asset_type, event.value_date_in);
+  }
 };
 
 export const applyDividend = (state: LedgerState, event: DividendEvent): void => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
 import {
+  washSaleTransferCounts,
   washSaleWindowEnd,
   washSaleWindowOf,
   washSaleWindowStart,
@@ -11,6 +12,18 @@ import {
  * two months, and with a monthly contribution on the same day of the month the
  * difference decides whether a loss is deferred.
  */
+describe("washSaleTransferCounts", () => {
+  it("counts a transfer in unless the settings say otherwise (fiscal question #2b)", () => {
+    expect(washSaleTransferCounts(DEFAULT_SETTINGS)).toBe(true);
+    expect(
+      washSaleTransferCounts(mergeSettings(DEFAULT_SETTINGS, { wash_sale_transfer_counts: true })),
+    ).toBe(true);
+    expect(
+      washSaleTransferCounts(mergeSettings(DEFAULT_SETTINGS, { wash_sale_transfer_counts: false })),
+    ).toBe(false);
+  });
+});
+
 describe("washSaleWindowOf", () => {
   it("reads the setting, then the legacy form, then the documented default", () => {
     expect(washSaleWindowOf(DEFAULT_SETTINGS, "stock")).toBe("2m");

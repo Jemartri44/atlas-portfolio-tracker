@@ -41,6 +41,14 @@ export interface Settings {
   wash_sale_window: Partial<Record<AssetType, WashSaleWindow>>;
   /** Legacy form, still accepted on load; `<n>` equals `"<n>d"` (ADR-0014). Never written by the CLI. */
   wash_sale_window_days?: Partial<Record<AssetType, number>>;
+  /**
+   * Whether a `transfer` **in** counts as an acquisition for the wash-sale rule
+   * (business-rules.md §5.4, data-schema.md §8.4, fiscal question #2b). Absent
+   * means `true`, the prudent reading: it acquires homogeneous securities even
+   * though nothing is taxed at the origin, so it defers the loss. Read through
+   * `washSaleTransferCounts`, never off the field.
+   */
+  wash_sale_transfer_counts?: boolean;
   target_weights?: Record<string, DecimalString>;
   deviation_threshold_pp?: DecimalString;
   satellite_min_weight_pct?: DecimalString;
@@ -141,6 +149,9 @@ const DECIMAL_RANGES: Partial<Record<(typeof DECIMAL_FIELDS)[number], Range>> = 
 
 /** Whole days, and zero days means nothing: a price is stale after a positive number of days. */
 const INTEGER_FIELDS = ["stale_price_days", "transfer_max_days"] as const;
+
+/** Criteria that are on or off. Absent is not `false`: each one has its own documented default. */
+const BOOLEAN_FIELDS = ["wash_sale_transfer_counts"] as const;
 
 const fail = (message: string, details: Record<string, unknown>): never => {
   throw new ValidationError("invalid_settings", message, details);
@@ -255,6 +266,11 @@ export const validateSettings = (raw: unknown): Settings => {
   for (const field of INTEGER_FIELDS) {
     if (field in raw && !isPositiveInteger(raw[field])) {
       return fail(`${field} must be an integer greater than zero`, { field, value: raw[field] });
+    }
+  }
+  for (const field of BOOLEAN_FIELDS) {
+    if (field in raw && typeof raw[field] !== "boolean") {
+      return fail(`${field} must be true or false`, { field, value: raw[field] });
     }
   }
   if ("target_weights" in raw) {
