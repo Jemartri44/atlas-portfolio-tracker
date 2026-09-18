@@ -60,7 +60,7 @@ export const NetWorthBlock = (props: { view: NetWorthView }): JSX.Element => (
     </div>
 
     <Show when={props.view.missing.length > 0}>
-      <p class="tiny" style={{ "margin-top": "var(--s-3)", "margin-bottom": 0 }}>
+      <p class="note">
         Faltan {props.view.missing.join(", ")}:{" "}
         <A href="/registrar/valuation">registra la valoración</A> y el total dejará de ser parcial.
       </p>

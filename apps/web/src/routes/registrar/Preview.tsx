@@ -138,7 +138,7 @@ export const Preview = (props: { preview: EventPreview }): JSX.Element => {
               )}
             </For>
           </div>
-          <p class="tiny" style={{ "margin-bottom": 0 }}>
+          <p class="note">
             Es la ganancia fiscal que quedará registrada, calculada con FIFO sobre los lotes de
             arriba.
           </p>

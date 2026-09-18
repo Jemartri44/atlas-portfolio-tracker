@@ -237,7 +237,7 @@ export default function ConfiguracionRoute(): JSX.Element {
                     )}
                   </For>
                 </div>
-                <p class="tiny" style={{ "margin-bottom": 0 }}>
+                <p class="note">
                   Los pesos se aplican sobre el valor total del núcleo y tienen que sumar 100. El
                   cubo no entra aquí: es un presupuesto (constitución III).
                 </p>

@@ -63,10 +63,7 @@ interface SkeletonProps {
 export const Skeleton = (props: SkeletonProps): JSX.Element => (
   <div class="stack" aria-hidden="true">
     {Array.from({ length: props.lines ?? 3 }, (_, index) => (
-      <div
-        class={`skeleton${props.tall === true && index === 0 ? " tall" : ""}`}
-        style={{ width: `${100 - index * 12}%` }}
-      />
+      <div class={`skeleton${props.tall === true && index === 0 ? " tall" : ""}`} />
     ))}
   </div>
 );

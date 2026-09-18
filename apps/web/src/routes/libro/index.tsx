@@ -141,14 +141,14 @@ export default function LibroRoute(): JSX.Element {
             <button type="button" disabled={busy()} onClick={() => void run(openBrowserLedger)}>
               Usar el almacenamiento del navegador
             </button>
-            <label class="row" style={{ margin: 0 }}>
+            <label class="row flush">
               <span class="subtle">o importar un fichero:</span>
               <input
                 type="file"
                 accept=".jsonl,.json,application/x-ndjson,text/plain"
                 disabled={busy()}
                 onChange={(event) => void onImport(event)}
-                style={{ "max-width": "14rem" }}
+                class="file-input"
               />
             </label>
           </div>

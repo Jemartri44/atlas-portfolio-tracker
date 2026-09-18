@@ -38,7 +38,6 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
             stroke="currentColor"
             stroke-width="1.6"
             aria-hidden="true"
-            style={{ height: "1.375rem", width: "1.375rem" }}
           >
             <path d={ICONS.settings} stroke-linecap="round" stroke-linejoin="round" />
           </svg>

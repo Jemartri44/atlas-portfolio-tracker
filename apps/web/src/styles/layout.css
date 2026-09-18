@@ -38,6 +38,12 @@
   gap: var(--s-1);
 }
 
+/* The privacy switch: a label that behaves like a control, in either shape. */
+.switch-inline {
+  cursor: pointer;
+  margin: 0;
+}
+
 /* Where the ledger is: visible on every screen (FR-011). */
 .ledger-chip {
   align-items: center;
@@ -79,6 +85,12 @@
 
 .icon-button:hover {
   background-color: var(--c-surface-2);
+}
+
+/* The icon sizes itself here, not in the element: no inline style survives the CSP. */
+.icon-button svg {
+  height: var(--icon);
+  width: var(--icon);
 }
 
 /* --- Main --------------------------------------------------------------- */
@@ -147,8 +159,8 @@ main {
 }
 
 .nav a svg {
-  height: 1.375rem;
-  width: 1.375rem;
+  height: var(--icon);
+  width: var(--icon);
 }
 
 /* Active destination: weight and a bar, not colour alone. */
@@ -192,6 +204,15 @@ main {
 
 .nav .rail-footer {
   display: none;
+}
+
+.nav .rail-footer a {
+  text-decoration: none;
+}
+
+.nav .rail-footer a svg {
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }
 
 /* --- From 768px: the rail, and no bottom bar ---------------------------- */
@@ -335,4 +356,26 @@ main {
 
 .skeleton.tall {
   height: 2.5rem;
+}
+
+/*
+ * Lines of unequal width, so the placeholder reads as text and not as a block.
+ * A cycle of four widths and not one value per line: it is the same illusion
+ * and it needs nothing computed per element, which is what used to force an
+ * inline `style` the production CSP blocks.
+ */
+.skeleton:nth-child(4n + 1) {
+  width: 100%;
+}
+
+.skeleton:nth-child(4n + 2) {
+  width: 88%;
+}
+
+.skeleton:nth-child(4n + 3) {
+  width: 76%;
+}
+
+.skeleton:nth-child(4n) {
+  width: 64%;
 }

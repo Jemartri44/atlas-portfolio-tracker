@@ -69,7 +69,7 @@ export default function ResumenRoute(): JSX.Element {
               when={!empty}
               fallback={
                 <EmptyState what="El libro está vacío.">
-                  <p class="subtle" style={{ margin: 0 }}>
+                  <p class="subtle flush">
                     Empieza dando de alta la cuenta donde inviertes y el primer activo; después ya
                     puedes registrar una compra.
                   </p>

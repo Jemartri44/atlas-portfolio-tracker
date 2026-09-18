@@ -20,7 +20,7 @@ export const AttentionBlock = (props: { items: readonly AttentionItem[] }): JSX.
     <Show
       when={props.items.length > 0}
       fallback={
-        <p class="calm" style={{ margin: 0 }}>
+        <p class="calm">
           <span aria-hidden="true">·</span> Nada que hacer.
         </p>
       }

@@ -109,7 +109,7 @@ export default function VerificacionRoute(): JSX.Element {
                 <Show
                   when={findings().length > 0}
                   fallback={
-                    <p style={{ margin: 0 }}>
+                    <p class="flush">
                       Posiciones no negativas, lotes cuadrados, huellas únicas y ninguna referencia
                       colgante.
                     </p>
@@ -140,7 +140,7 @@ export default function VerificacionRoute(): JSX.Element {
                 <Show when={deep() !== undefined}>
                   <Show
                     when={(deep() ?? []).length > 0}
-                    fallback={<p style={{ margin: 0 }}>Sin hallazgos: el libro es reproducible.</p>}
+                    fallback={<p class="flush">Sin hallazgos: el libro es reproducible.</p>}
                   >
                     <Findings findings={deep() as IntegrityFinding[]} />
                   </Show>

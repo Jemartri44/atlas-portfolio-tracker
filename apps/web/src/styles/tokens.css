@@ -46,6 +46,11 @@
   --rail-w: 13.5rem;
   --content-max: 62rem;
 
+  /* Inline icons, and the widest a lone control gets inside a row. */
+  --icon: 1.375rem;
+  --icon-sm: 1.25rem;
+  --control-max: 14rem;
+
   /* Surfaces and text, from Pico. */
   --c-bg: var(--pico-background-color);
   --c-surface: var(--pico-card-background-color);

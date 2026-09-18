@@ -54,7 +54,7 @@ export default function ReservadoRoute(): JSX.Element {
         <ul>
           <For each={view().coming}>{(line) => <li>{line}</li>}</For>
         </ul>
-        <p class="subtle" style={{ "margin-bottom": 0 }}>
+        <p class="subtle flush">
           Mientras tanto, esto ya lo responde la CLI: <code>{view().command}</code>. Los datos son
           los mismos; lo que falta es la piel.
         </p>

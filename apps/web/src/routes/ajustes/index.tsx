@@ -110,20 +110,20 @@ export default function AjustesRoute(): JSX.Element {
                 <button type="button" disabled={busy()} onClick={() => void onExport()}>
                   Exportar el libro
                 </button>
-                <label class="row" style={{ margin: 0 }}>
+                <label class="row flush">
                   <span class="subtle">Importar y sustituir:</span>
                   <input
                     type="file"
                     accept=".jsonl,.json,application/x-ndjson,text/plain"
                     disabled={busy()}
                     onChange={(event) => void onImport(event)}
-                    style={{ "max-width": "13rem" }}
+                    class="file-input"
                   />
                 </label>
               </div>
             </Show>
 
-            <div class="row wrap" style={{ "margin-top": "var(--s-3)" }}>
+            <div class="row wrap spaced">
               <A href="/libro" role="button" class="secondary">
                 Cambiar de libro
               </A>

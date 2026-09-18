@@ -122,7 +122,20 @@
   color: var(--c-muted);
   display: flex;
   gap: var(--s-2);
+  margin: 0;
   padding: var(--s-3) 0;
+}
+
+/* The small print that closes a block: muted, tiny, spaced above. */
+.note {
+  color: var(--c-muted);
+  font-size: var(--t-xs);
+  margin: var(--s-3) 0 0;
+}
+
+/* A file picker is as wide as a file name needs, not as wide as its row. */
+.file-input {
+  max-width: var(--control-max);
 }
 
 /* --- Movements: two-line cards on a phone, a table on a desktop -------- */
@@ -183,6 +196,12 @@
 
 .movements-table {
   display: none;
+}
+
+/* "Cargar más": the width of the list, because it is the action of the list. */
+.load-more {
+  margin-top: var(--s-3);
+  width: 100%;
 }
 
 @media (min-width: 768px) {
@@ -419,6 +438,11 @@ dialog .dialog-actions {
 .empty .what {
   color: var(--c-text);
   font-weight: var(--w-medium);
+}
+
+/* The grid already spaces the lines of an empty state. */
+.empty p {
+  margin: 0;
 }
 
 /* --- Reserved destinations --------------------------------------------- */

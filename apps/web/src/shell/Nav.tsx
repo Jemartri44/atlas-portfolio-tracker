@@ -71,14 +71,13 @@ export const Nav = (): JSX.Element => (
     <div class="rail-footer">
       <LedgerChip />
       <PrivacyToggle />
-      <A href="/ajustes" class="row" style={{ "text-decoration": "none" }}>
+      <A href="/ajustes" class="row">
         <svg
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           stroke-width="1.6"
           aria-hidden="true"
-          style={{ height: "1.25rem", width: "1.25rem" }}
         >
           <path d={ICONS.settings} stroke-linecap="round" stroke-linejoin="round" />
         </svg>

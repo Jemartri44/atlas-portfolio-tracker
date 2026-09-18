@@ -127,6 +127,21 @@ p {
   white-space: nowrap;
 }
 
+/*
+ * Two spacing helpers, because the alternative was an inline `style` attribute
+ * and the production CSP blocks those (`style-src 'self'`, no unsafe-inline).
+ */
+
+/* Already spaced by its container: adds no margin of its own. */
+.flush {
+  margin: 0;
+}
+
+/* Opens a new group inside the same block, on the scale. */
+.spaced {
+  margin-top: var(--s-3);
+}
+
 /* Sections: a light card that groups without shouting. */
 .card {
   background-color: var(--c-surface);
@@ -247,6 +262,12 @@ dl.fields > dd {
   margin: 0;
   padding: var(--s-1) 0;
   overflow-wrap: anywhere;
+}
+
+/* A field carrying JSON wraps instead of scrolling sideways. */
+dl.fields pre {
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 480px) {

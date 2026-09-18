@@ -6,7 +6,7 @@ import type { JSX } from "solid-js";
 import { store } from "../ledger/state.js";
 
 export const PrivacyToggle = (): JSX.Element => (
-  <label class="row" for="privacy" style={{ margin: 0, cursor: "pointer" }}>
+  <label class="row switch-inline" for="privacy">
     <input
       id="privacy"
       type="checkbox"

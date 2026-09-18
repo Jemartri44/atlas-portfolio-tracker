@@ -50,40 +50,42 @@ export default function MovimientoEditarRoute(): JSX.Element {
               lead="Se anula el original y se registra el corregido; nada se borra del fichero."
             />
 
-            <section class="card" style={{ "margin-bottom": "var(--s-4)" }}>
-              <header>
-                <h2>Como está registrado ahora</h2>
-              </header>
-              <dl class="fields">
-                <For
-                  each={Object.entries(event() as NonNullable<ReturnType<typeof event>>).filter(
-                    ([name]) =>
-                      !["schema_version", "id", "recorded_at", "type", "fingerprint"].includes(
-                        name,
-                      ),
-                  )}
-                >
-                  {([name, value]) => (
-                    <>
-                      <dt>{fieldLabel(name)}</dt>
-                      <dd>{typeof value === "object" ? JSON.stringify(value) : String(value)}</dd>
-                    </>
-                  )}
-                </For>
-              </dl>
-            </section>
+            <div class="stack">
+              <section class="card">
+                <header>
+                  <h2>Como está registrado ahora</h2>
+                </header>
+                <dl class="fields">
+                  <For
+                    each={Object.entries(event() as NonNullable<ReturnType<typeof event>>).filter(
+                      ([name]) =>
+                        !["schema_version", "id", "recorded_at", "type", "fingerprint"].includes(
+                          name,
+                        ),
+                    )}
+                  >
+                    {([name, value]) => (
+                      <>
+                        <dt>{fieldLabel(name)}</dt>
+                        <dd>{typeof value === "object" ? JSON.stringify(value) : String(value)}</dd>
+                      </>
+                    )}
+                  </For>
+                </dl>
+              </section>
 
-            <EventForm
-              spec={spec() as NonNullable<ReturnType<typeof spec>>}
-              state={snapshot.state}
-              correcting={{
-                id: params.id,
-                values: valuesOfEvent(
-                  spec() as NonNullable<ReturnType<typeof spec>>,
-                  event() as unknown as Record<string, unknown>,
-                ),
-              }}
-            />
+              <EventForm
+                spec={spec() as NonNullable<ReturnType<typeof spec>>}
+                state={snapshot.state}
+                correcting={{
+                  id: params.id,
+                  values: valuesOfEvent(
+                    spec() as NonNullable<ReturnType<typeof spec>>,
+                    event() as unknown as Record<string, unknown>,
+                  ),
+                }}
+              />
+            </div>
           </Show>
         );
       }}

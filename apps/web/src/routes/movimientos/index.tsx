@@ -61,14 +61,13 @@ export default function MovimientosRoute(): JSX.Element {
               <Show when={more()}>
                 <button
                   type="button"
-                  class="secondary"
-                  style={{ "margin-top": "var(--s-3)", width: "100%" }}
+                  class="secondary load-more"
                   onClick={() => setPage(page() + 1)}
                 >
                   Cargar {Math.min(PAGE_SIZE, entries().length - rows().length)} más
                 </button>
               </Show>
-              <p class="tiny" style={{ "margin-top": "var(--s-2)" }}>
+              <p class="note">
                 {rows().length} de {entries().length} movimientos
               </p>
             </Show>

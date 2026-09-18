@@ -166,7 +166,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                                   <Figure value={field.text} unit="percent" />
                                 </Show>
                                 <Show when={field.kind === "json"}>
-                                  <pre style={{ margin: 0, "white-space": "pre-wrap" }}>
+                                  <pre>
                                     <code>{field.text}</code>
                                   </pre>
                                 </Show>
@@ -221,7 +221,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                           )}
                         </For>
                       </dl>
-                      <p class="tiny" style={{ "margin-bottom": 0 }}>
+                      <p class="note">
                         Posición en el fichero:{" "}
                         {(entry() as NonNullable<ReturnType<typeof entry>>).position + 1}. Con este
                         identificador puedes rectificar también desde la CLI.
