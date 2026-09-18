@@ -7,8 +7,7 @@
 // empty most of the time, and an empty chart reads as a broken chart.
 
 import { For, type JSX } from "solid-js";
-
-export type RangeKey = "1M" | "1A" | "5A" | "TODO";
+import type { RangeKey } from "./ranges.js";
 
 export interface RangeOption {
   key: RangeKey;
@@ -16,19 +15,6 @@ export interface RangeOption {
   /** How many points the series has inside this window. */
   points: number;
 }
-
-export const RANGE_DAYS: Record<Exclude<RangeKey, "TODO">, number> = {
-  "1M": 31,
-  "1A": 366,
-  "5A": 1827,
-};
-
-export const RANGE_LABELS: Record<RangeKey, string> = {
-  "1M": "1 mes",
-  "1A": "1 año",
-  "5A": "5 años",
-  TODO: "Todo",
-};
 
 interface RangeButtonsProps {
   options: readonly RangeOption[];

@@ -8,8 +8,9 @@
 // `spanGaps` off.
 
 import type { BucketIndexSeries, NetWorthSeries } from "@atlas/domain";
-import type { RangeKey } from "../components/chart/index.js";
-import { RANGE_DAYS } from "../components/chart/index.js";
+// From `ranges.ts`, not from the chart barrel: importing a component here would
+// drag Solid's JSX runtime into a module that is a pure function with a test.
+import { DAY_SECONDS, RANGE_DAYS, type RangeKey } from "../components/chart/ranges.js";
 import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
 
 /** Seconds since the epoch, which is what uPlot's time scale wants. */
@@ -114,7 +115,7 @@ export const bucketIndexPlot = (series: BucketIndexSeries): PlottedSeries => {
 
 /** The window a range button selects, as a pair of seconds; `undefined` is "everything". */
 export const windowOf = (key: RangeKey, last: number): [number, number] | undefined =>
-  key === "TODO" ? undefined : [last - RANGE_DAYS[key] * 86_400, last];
+  key === "TODO" ? undefined : [last - RANGE_DAYS[key] * DAY_SECONDS, last];
 
 /** How many points of a series fall inside a window: what decides if a button is dead. */
 export const pointsIn = (x: readonly number[], window: [number, number] | undefined): number =>

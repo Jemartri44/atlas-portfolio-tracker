@@ -10,7 +10,8 @@ import { Section } from "../Section.jsx";
 import { Chart, type ChartSeries } from "./Chart.jsx";
 import { ChartLegend } from "./ChartLegend.jsx";
 import { ChartTable } from "./ChartTable.jsx";
-import { RANGE_LABELS, RangeButtons, type RangeKey, type RangeOption } from "./RangeButtons.jsx";
+import { RangeButtons, type RangeOption } from "./RangeButtons.jsx";
+import { DAY_SECONDS, RANGE_DAYS, RANGE_KEYS, RANGE_LABELS, type RangeKey } from "./ranges.js";
 
 export interface SeriesCardProps {
   title: string;
@@ -26,13 +27,7 @@ export interface SeriesCardProps {
   empty: JSX.Element;
 }
 
-const KEYS: readonly RangeKey[] = ["1M", "1A", "5A", "TODO"];
-
-const RANGE_SECONDS: Record<Exclude<RangeKey, "TODO">, number> = {
-  "1M": 31 * 86_400,
-  "1A": 366 * 86_400,
-  "5A": 1827 * 86_400,
-};
+const secondsBack = (key: Exclude<RangeKey, "TODO">): number => RANGE_DAYS[key] * DAY_SECONDS;
 
 export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
   const [range, setRange] = createSignal<RangeKey>("TODO");
@@ -44,7 +39,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
     if (key === "TODO") {
       return props.x.map((_, index) => index);
     }
-    const from = last() - RANGE_SECONDS[key];
+    const from = last() - secondsBack(key);
     return props.x.flatMap((value, index) => (value >= from ? [index] : []));
   });
 
@@ -54,8 +49,8 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
    * of the time, and an empty chart reads as a broken chart.
    */
   const options = createMemo<RangeOption[]>(() =>
-    KEYS.map((key) => {
-      const from = key === "TODO" ? Number.NEGATIVE_INFINITY : last() - RANGE_SECONDS[key];
+    RANGE_KEYS.map((key) => {
+      const from = key === "TODO" ? Number.NEGATIVE_INFINITY : last() - secondsBack(key);
       const points = props.x.filter(
         (value, index) => value >= from && props.values.some((series) => series[index] !== null),
       ).length;
