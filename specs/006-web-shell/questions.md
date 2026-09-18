@@ -259,3 +259,47 @@ Se han llevado a *tokens* los que señaló la revisión (`--s-0`, `--tap-compact
 ### R6 — Lo que sigue sin verificarse aquí
 
 No hay navegador en este entorno. Lo automático está en verde (`lint`, `typecheck`, 837 pruebas, dominio al 100 %, `build` con el comprobador del *bundle*), y los 41 módulos de `apps/web/src` se transforman con el *pipeline* real del servidor de desarrollo (200 cada uno), pero **el resultado visual de R1, R2 y la conmutación a 360/1280 px lo tiene que ver la dirección**. Lo añadido por precaución y sin poder medirlo: `min-width: 0` en cada hueco de la barra y truncado de la etiqueta, porque a 360 px "Movimientos" ocupa casi el hueco entero y bastaba para volver a empujar la página de lado.
+
+---
+
+## Notas de la segunda revisión (2026-09-18, medido en un navegador)
+
+La dirección verificó en Chromium que V1, V2 y V3 estaban resueltos y encontró tres defectos más que solo se ven en pantalla. Esta vez **sí se han podido medir aquí**: la máquina ya tenía el Chromium de Playwright en `~/.cache/ms-playwright`, y se ha usado con un cliente del protocolo DevTools escrito con lo que trae Node 22 (`fetch` y `WebSocket` nativos). **No se ha instalado nada**, ni ha entrado ninguna dependencia en el repositorio: el navegador queda fuera, en el entorno, y los tests del repositorio siguen sin DOM (decisión (k)).
+
+### S1 — La barra de estado empujaba la página 15 px fuera de la pantalla
+
+Reproducido con el *golden* importado a 360 px: el chip del libro se quedaba clavado en su `max-width: 60vw` (216 px) porque, siendo un elemento flexible, su mínimo automático es el de su contenido; el bloque de acciones (interruptor + engranaje, 139 px) se iba a `right: 375`. **12 + 216 + 8 + 139 = 375** dentro de 360.
+
+Corregido: `.statusbar .actions { flex: 0 0 auto }` (los objetivos de 44 px no se encogen) y `.ledger-chip { min-width: 0 }` (lo que cede es el chip, que ya truncaba). Medido después: chip 189 px, acciones hasta 348, `scrollWidth` **360** con `innerWidth` 360 a 320, 360, 768 y 1280 px.
+
+### S2 — El hueco de la barra inferior era de 37 px, no de 72
+
+La causa no era tipográfica. **Pico convierte el `<nav>` en un contenedor flex en fila**, así que nuestra `<ul>` era un *ítem* flexible y medía solo lo que su contenido: 187 px repartidos entre cinco huecos. De ahí los 37 px y las etiquetas cortadas a "sum" y "Movim" — el truncado que añadí en la primera ronda tapaba el síntoma. Además `nav ul:first-of-type` lleva un `margin-inline` negativo que gana en especificidad a `.nav ul`, y `nav li a` otro que hacía cada destino 16 px más ancho que su hueco, **solapándose con el vecino** (los objetivos táctiles se pisaban).
+
+Corregido: `.nav ul { flex: 1 1 auto; min-width: 0 }`, el reset de los márgenes negativos con el mismo peso (`.nav ul:first-of-type, .nav ul:last-of-type`), `.nav a { margin: 0 }`, y la etiqueta a su propio escalón de la escala, `--t-nav: 0.625rem` (10 px), que vuelve a tamaño del enlace en el rail. Medido después: huecos de **72 px** a 360 (64 a 320, 191 en el rail), destinos contiguos sin solape, y **ninguna etiqueta truncada** en ninguna de las cuatro anchuras («Movimientos» pide 64 px de 72 a 360 px, y 64 de 64 a 320 px).
+
+Sin navegador un test no puede medir un *layout*, así que lo que se ha añadido es un guardián de las **seis declaraciones** que sostienen el armazón (`tests/architecture.test.ts`, tabla `SHELL_RULES`), cada una con el motivo escrito: cuál era el defecto y por qué Pico gana si esa línea desaparece. Comprobado que falla al tocar cualquiera de ellas. **Idea para más adelante**, no implementada: comparar la especificidad de cada selector nuestro con los de Pico que tocan la misma propiedad y avisar cuando el nuestro pierda — eso habría encontrado los dos márgenes negativos sin que nadie los buscara.
+
+### S3 — El arranque era una carrera, y en un teléfono la perdía
+
+La preferencia se leía bien; lo que fallaba era el orden. El estado arrancaba en `unconfigured` y `RequireLedger` manda esa fase a `/libro` con un `<Navigate>`, así que **quien terminaba primero decidía la pantalla**: la ruta perezosa o el `restoreLedger` asíncrono. Medido con el `build` de producción, registrando cada cambio de ruta y frenando la CPU con el protocolo DevTools:
+
+| CPU | Antes | Después |
+|---|---|---|
+| ×1 | `/` (Resumen) — la carrera se ganaba | `/` (Resumen) |
+| ×4 | `replace:/libro` → **«Cambiar de libro»** | `/` (Resumen), sin ningún cambio de ruta |
+| ×10 | `/libro` | `/` (Resumen), sin ningún cambio de ruta |
+
+Es decir: **cuanto más lento el dispositivo, más se reproduce**, y el dispositivo de uso diario es un teléfono. Por eso la dirección lo vio y aquí, a plena velocidad, no se veía.
+
+Corregido en la capa de estado: el arranque empieza en `loading` y `unconfigured` pasa a ser una **conclusión** del arranque, nunca su punto de partida; mientras dura, las pantallas muestran su esqueleto. Y `restoreLedger` ya no puede lanzar: un navegador con el almacenamiento bloqueado termina en `failed` con su explicación y su salida, en vez de dejar un esqueleto para siempre (que es lo que habría provocado el cambio anterior sin este). La regla de qué abrir está extraída como `bootDecision` y probada; el arranque tiene cinco pruebas en `test/actions.test.ts`, y se ha comprobado que ambas mutaciones (volver a `unconfigured`, tragarse el error) fallan.
+
+### S4 — Las dos decisiones
+
+1. **Privacidad por defecto en `ledger/state.ts`: aprobada por la dirección**, con su razonamiento: no se debilita una regla de arquitectura para colocar un test; el test va donde la regla lo permite. `privacyFromPreference` se queda donde está, y las dos reglas de pintado siguen en el módulo vigilado.
+2. **Catálogo: corregido según lo indicado.** `account_created`, `account_updated`, `asset_created` y `asset_updated` salen de los editables, y no con una lista negra de conveniencia: la derivación sigue saliendo de `FORM_SPECS` y se le **resta** el catálogo con la regla escrita —*el catálogo se actualiza, no se anula* (`docs/data-schema.md` §6.1)— y su motivo, que el formulario que existe **crea** una entrada, no la corrige. En el detalle de esos eventos aparece un aviso que dice qué hacer en su lugar (`atlas account update` / `atlas asset update`) y que su pantalla llega en la versión siguiente. Comprobado en el navegador: en el alta de activo y en el alta de cuenta no hay «Corregir» y sí el aviso; en una compra hay «Corregir» y no hay aviso.
+
+### S5 — Anotado y sin tocar, por indicación de la dirección
+
+- **`signOfValue` en `components/Amount.tsx` duplica `signOf` de `format/number.ts`**: la misma regla del cero con signo escrita dos veces. Candidato para la limpieza siguiente.
+- **Los cinco tamaños fuera de escala** de la nota §R5 de la primera ronda se quedan como están: son formas (el punto del chip, la pastilla de la acción, las dos alturas del esqueleto, el ancho del diálogo y el mínimo del botón de la barra de acciones), no espacio ni tipografía.
