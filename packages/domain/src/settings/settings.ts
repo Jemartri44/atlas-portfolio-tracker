@@ -260,11 +260,12 @@ const checkWashSaleWindow = (raw: UnknownRecord): void => {
  * siblings (ADR-0018). What is present must still name a category the engine
  * knows: the tolerance is to absence, not to nonsense.
  *
- * It reuses `invalid_settings` instead of a code of its own, unlike the
- * wash-sale window: the window has a code because its form (`"2m"`, `"1y"`,
- * `"<n>d"`) is not guessable, whereas an enumeration of two values is exactly
- * what the generic "that parameter does not take that value" message covers,
- * and `field` names which asset type it was.
+ * A wrong value has a code of its own, like the other two per-asset-type maps
+ * (feature 009, Q13). It used to share `invalid_settings`, on the argument that
+ * an enumeration of two values is what the generic message covers; but since
+ * the tax engine reads it, this is the setting that moves a disposal from one
+ * box of the return to another, and the message has to be able to say so.
+ * A map that is not an object stays `invalid_settings`, as for the window.
  */
 const checkIncomeCategory = (raw: UnknownRecord): void => {
   const categories = raw.income_category;
@@ -274,11 +275,11 @@ const checkIncomeCategory = (raw: UnknownRecord): void => {
   for (const assetType of ASSET_TYPES) {
     const value = isRecord(categories) ? categories[assetType] : undefined;
     if (value !== undefined && !(INCOME_CATEGORIES as readonly unknown[]).includes(value)) {
-      fail(`income_category.${assetType} must be ${INCOME_CATEGORIES.join(" or ")}`, {
-        field: `income_category.${assetType}`,
-        asset_type: assetType,
-        value,
-      });
+      throw new ValidationError(
+        "invalid_income_category",
+        `income_category.${assetType} must be ${INCOME_CATEGORIES.join(" or ")}`,
+        { asset_type: assetType, value },
+      );
     }
   }
 };
@@ -293,15 +294,16 @@ export const validateSettings = (raw: unknown): Settings => {
     return fail("fiscal_date_rule is required", { field: "fiscal_date_rule" });
   }
   // Partial map (ADR-0018): a missing asset type is fine and takes its default;
-  // a present one must name a rule the engine knows.
+  // a present one must name a rule the engine knows. Its own code, like its
+  // two siblings (feature 009, Q13): a missing map is still `invalid_settings`.
   for (const assetType of ASSET_TYPES) {
     const rule = rules[assetType];
     if (rule !== undefined && !(FISCAL_DATE_RULES as readonly unknown[]).includes(rule)) {
-      return fail(`fiscal_date_rule.${assetType} must be trade_date or value_date`, {
-        field: `fiscal_date_rule.${assetType}`,
-        asset_type: assetType,
-        value: rule,
-      });
+      throw new ValidationError(
+        "invalid_fiscal_date_rule",
+        `fiscal_date_rule.${assetType} must be trade_date or value_date`,
+        { asset_type: assetType, value: rule },
+      );
     }
   }
   checkWashSaleWindow(raw);

@@ -160,6 +160,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   },
   invalid_wash_sale_window: (d) =>
     `La ventana de recompra de ${enumValue(d.asset_type)} no es válida: elige dos meses, un año o un número de días.`,
+  invalid_fiscal_date_rule: (d) =>
+    `La fecha fiscal de ${enumValue(d.asset_type)} debe ser la de contratación o la fecha valor (recibido: ${text(d.value)}): decide el ejercicio de cada operación.`,
+  invalid_income_category: (d) =>
+    `La categoría de renta de ${enumValue(d.asset_type)} debe ser ganancia patrimonial o rendimiento del capital mobiliario (recibido: ${text(d.value)}): decide en qué parte de la base del ahorro entra cada venta.`,
   negative_target_weight: (d, n) =>
     `El peso objetivo de ${n.one(d.asset_id)} no puede ser negativo (recibido: ${num(d.value)}).`,
   accept_invalid_not_allowed: (d) =>

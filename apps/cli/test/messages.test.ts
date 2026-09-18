@@ -1,7 +1,8 @@
 // The Spanish texts of the CLI: what the user reads has to be true.
 
+import { ValidationError } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
-import { describeWarning } from "../src/output/messages.js";
+import { describeError, describeWarning } from "../src/output/messages.js";
 
 const repurchase = (window: string) =>
   describeWarning({
@@ -25,5 +26,28 @@ describe("describeWarning: the wash-sale window by its real name", () => {
     expect(repurchase("45d")).toContain("ventana de 45 días");
     // The old text called every window "the two-month rule", even a one-year one.
     expect(repurchase("1y")).not.toContain("dos meses");
+  });
+});
+
+describe("describeError: the per-asset-type settings name the type and the value", () => {
+  it("says which asset type carries a wrong income category or fiscal date rule", () => {
+    const category = describeError(
+      new ValidationError("invalid_income_category", "english", {
+        asset_type: "etc",
+        value: "rendimiento",
+      }),
+    );
+    expect(category).toContain("etc");
+    expect(category).toContain("rendimiento");
+    expect(category).toContain("movable_capital");
+    const rule = describeError(
+      new ValidationError("invalid_fiscal_date_rule", "english", {
+        asset_type: "fund",
+        value: "settlement",
+      }),
+    );
+    expect(rule).toContain("fund");
+    expect(rule).toContain("settlement");
+    expect(rule).toContain("value_date");
   });
 });

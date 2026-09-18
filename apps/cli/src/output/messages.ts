@@ -132,6 +132,10 @@ export const describeError = (error: DomainError): string => {
     }
     case "invalid_wash_sale_window":
       return `La ventana de recompra de ${text(d.asset_type)} debe ser "2m", "1y" o "<n>d" (recibido: ${text(d.value)}).`;
+    case "invalid_fiscal_date_rule":
+      return `La fecha fiscal de ${text(d.asset_type)} debe ser trade_date (contratación) o value_date (fecha valor) (recibido: ${text(d.value)}): decide el ejercicio de cada operación (ADR-0013).`;
+    case "invalid_income_category":
+      return `La categoría de renta de ${text(d.asset_type)} debe ser capital_gain (ganancia patrimonial) o movable_capital (rendimiento del capital mobiliario) (recibido: ${text(d.value)}): decide en qué parte de la base del ahorro entra cada transmisión (ADR-0021).`;
     case "negative_target_weight":
       return `El peso objetivo de ${text(d.asset_id)} no puede ser negativo (recibido: ${text(d.value)}).`;
     case "reversal_of_reversal":

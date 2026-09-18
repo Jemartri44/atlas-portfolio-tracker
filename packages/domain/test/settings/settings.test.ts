@@ -98,7 +98,15 @@ describe("validateSettings", () => {
   it("keeps rejecting a value that is present and wrong: the tolerance is to absence", () => {
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, fiscal_date_rule: { etf: "settlement" } }),
-    ).toThrow(ValidationError);
+    ).toThrow(expect.objectContaining({ code: "invalid_fiscal_date_rule" }));
+    try {
+      validateSettings({ ...DEFAULT_SETTINGS, fiscal_date_rule: { etf: "settlement" } });
+    } catch (error) {
+      expect((error as ValidationError).details).toEqual({
+        asset_type: "etf",
+        value: "settlement",
+      });
+    }
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, wash_sale_window: { etf: "3m" } }),
     ).toThrow(ValidationError);
@@ -288,10 +296,18 @@ describe("wash_sale_window (ADR-0014)", () => {
   it("rejects an income category that is not one of the two, and a map that is not an object", () => {
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, income_category: { etc: "rendimiento" } }),
-    ).toThrow(ValidationError);
+    ).toThrow(expect.objectContaining({ code: "invalid_income_category" }));
+    try {
+      validateSettings({ ...DEFAULT_SETTINGS, income_category: { etc: "rendimiento" } });
+    } catch (error) {
+      expect((error as ValidationError).details).toEqual({
+        asset_type: "etc",
+        value: "rendimiento",
+      });
+    }
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, income_category: "capital_gain" }),
-    ).toThrow(ValidationError);
+    ).toThrow(expect.objectContaining({ code: "invalid_settings" }));
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, income_category: { not_a_type: "nonsense" } }),
     ).not.toThrow();
