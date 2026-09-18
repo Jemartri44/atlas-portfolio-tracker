@@ -252,7 +252,7 @@
     },
     {
       "account_id": "acc_bucket",
-      "balance": "2599.95",
+      "balance": "2574.9",
       "currency": "EUR"
     },
     {
@@ -371,19 +371,19 @@
       "asset_id": "ast_epsilon",
       "by_lot": [
         {
-          "cost_eur": "458.2",
-          "gain_eur": "-70.4",
-          "lot_id": "01N7P4TZ6GB66K46Q919Q7GF1T#0",
-          "proceeds_eur": "387.8",
+          "cost_eur": "571",
+          "gain_eur": "-87.6",
+          "lot_id": "01MGBDJF80AQMY7TCNE7BB4R42#0",
+          "proceeds_eur": "483.4",
           "quantity": "40"
         }
       ],
-      "cost_eur": "458.2",
-      "event_id": "01N7P4V05RM2H506JPWCK7TZAC",
+      "cost_eur": "571",
+      "event_id": "01MN8FTA80DDTPKAG5TNV3Q20X",
       "fiscal_date": "2027-05-05",
-      "gain_eur": "-70.4",
-      "gain_eur_rounded": "-70.4",
-      "proceeds_eur": "387.8",
+      "gain_eur": "-87.6",
+      "gain_eur_rounded": "-87.6",
+      "proceeds_eur": "483.4",
       "quantity": "40",
       "year": 2027
     },
@@ -436,20 +436,20 @@
         {
           "cost_eur": "376.2",
           "gain_eur": "129.7333333333",
-          "lot_id": "01MEG6DY80H625MHGXX5RGN05R#0",
+          "lot_id": "01MEG6DY80B931VTBH1A0BGNRE#0",
           "proceeds_eur": "505.9333333333",
           "quantity": "20"
         },
         {
           "cost_eur": "207.4",
           "gain_eur": "45.5666666667",
-          "lot_id": "01MKD8NS80AW7C5NXEQN5AYR8H#0",
+          "lot_id": "01MKD8NS806CJ9SGD5ERZMGPD5#0",
           "proceeds_eur": "252.9666666667",
           "quantity": "10"
         }
       ],
       "cost_eur": "583.6",
-      "event_id": "01MX28C18050Z5BTF3X6AQ3NNJ",
+      "event_id": "01MX28C1803YR20A0EAGQ8XSQM",
       "fiscal_date": "2027-08-10",
       "gain_eur": "175.3",
       "gain_eur_rounded": "175.3",
@@ -504,19 +504,19 @@
       "asset_id": "ast_delta",
       "by_lot": [
         {
-          "cost_eur": "707",
-          "gain_eur": "-213.75",
-          "lot_id": "01MZJ2PA803MXYQ70X3B7G3MDM#0",
-          "proceeds_eur": "493.25",
+          "cost_eur": "743.5",
+          "gain_eur": "-224.75",
+          "lot_id": "01MZJ2PA80XHBXS2XS5FZYQ1N2#0",
+          "proceeds_eur": "518.75",
           "quantity": "25"
         }
       ],
-      "cost_eur": "707",
-      "event_id": "01N4F4Y580CCFV08181SA2X3Q6",
+      "cost_eur": "743.5",
+      "event_id": "01N4F4Y58036KX1852YTTM0XD3",
       "fiscal_date": "2027-11-10",
-      "gain_eur": "-213.75",
-      "gain_eur_rounded": "-213.75",
-      "proceeds_eur": "493.25",
+      "gain_eur": "-224.75",
+      "gain_eur_rounded": "-224.75",
+      "proceeds_eur": "518.75",
       "quantity": "25",
       "year": 2027
     },
@@ -588,19 +588,19 @@
       "asset_id": "ast_epsilon",
       "by_lot": [
         {
-          "cost_eur": "361.15",
-          "gain_eur": "118.05",
+          "cost_eur": "450.05",
+          "gain_eur": "147.45",
           "lot_id": "01N9S35K80Q2QR8FAZEQQ1JAZ5#0",
-          "proceeds_eur": "479.2",
+          "proceeds_eur": "597.5",
           "quantity": "35"
         }
       ],
-      "cost_eur": "361.15",
+      "cost_eur": "450.05",
       "event_id": "01NP0FJV80F4D8ENCZZRFTSFRS",
       "fiscal_date": "2028-06-15",
-      "gain_eur": "118.05",
-      "gain_eur_rounded": "118.05",
-      "proceeds_eur": "479.2",
+      "gain_eur": "147.45",
+      "gain_eur_rounded": "147.45",
+      "proceeds_eur": "597.5",
       "quantity": "35",
       "year": 2028
     }
@@ -1159,16 +1159,16 @@
           "consumptions": [
             {
               "cost_eur": "376.2",
-              "event_id": "01MX28C18050Z5BTF3X6AQ3NNJ",
+              "event_id": "01MX28C1803YR20A0EAGQ8XSQM",
               "quantity": "20"
             }
           ],
           "cost_eur": "0",
-          "id": "01MEG6DY80H625MHGXX5RGN05R#0",
+          "id": "01MEG6DY80B931VTBH1A0BGNRE#0",
           "original_cost_eur": "376.2",
           "original_quantity": "20",
           "quantity": "0",
-          "source_event_id": "01MEG6DY80H625MHGXX5RGN05R"
+          "source_event_id": "01MEG6DY80B931VTBH1A0BGNRE"
         },
         {
           "acquisition_date": "2027-04-12",
@@ -1177,16 +1177,16 @@
           "consumptions": [
             {
               "cost_eur": "207.4",
-              "event_id": "01MX28C18050Z5BTF3X6AQ3NNJ",
+              "event_id": "01MX28C1803YR20A0EAGQ8XSQM",
               "quantity": "10"
             }
           ],
           "cost_eur": "0",
-          "id": "01MKD8NS80AW7C5NXEQN5AYR8H#0",
+          "id": "01MKD8NS806CJ9SGD5ERZMGPD5#0",
           "original_cost_eur": "207.4",
           "original_quantity": "10",
           "quantity": "0",
-          "source_event_id": "01MKD8NS80AW7C5NXEQN5AYR8H"
+          "source_event_id": "01MKD8NS806CJ9SGD5ERZMGPD5"
         },
         {
           "acquisition_date": "2027-09-10",
@@ -1194,17 +1194,17 @@
           "closed": true,
           "consumptions": [
             {
-              "cost_eur": "707",
-              "event_id": "01N4F4Y580CCFV08181SA2X3Q6",
+              "cost_eur": "743.5",
+              "event_id": "01N4F4Y58036KX1852YTTM0XD3",
               "quantity": "25"
             }
           ],
           "cost_eur": "0",
-          "id": "01MZJ2PA803MXYQ70X3B7G3MDM#0",
-          "original_cost_eur": "707",
+          "id": "01MZJ2PA80XHBXS2XS5FZYQ1N2#0",
+          "original_cost_eur": "743.5",
           "original_quantity": "25",
           "quantity": "0",
-          "source_event_id": "01MZJ2PA803MXYQ70X3B7G3MDM"
+          "source_event_id": "01MZJ2PA80XHBXS2XS5FZYQ1N2"
         }
       ],
       "open": [
@@ -1213,12 +1213,12 @@
           "asset_id": "ast_delta",
           "closed": false,
           "consumptions": [],
-          "cost_eur": "509.25",
-          "id": "01N7P4TX80PZP5FQ4BQ4NZZTW6#0",
-          "original_cost_eur": "509.25",
+          "cost_eur": "535.5",
+          "id": "01N7P4TX80S2D9FXZN82KE9Z3A#0",
+          "original_cost_eur": "535.5",
           "original_quantity": "25",
           "quantity": "25",
-          "source_event_id": "01N7P4TX80PZP5FQ4BQ4NZZTW6"
+          "source_event_id": "01N7P4TX80S2D9FXZN82KE9Z3A"
         }
       ]
     },
@@ -1230,17 +1230,17 @@
           "closed": true,
           "consumptions": [
             {
-              "cost_eur": "458.2",
-              "event_id": "01N7P4V05RM2H506JPWCK7TZAC",
+              "cost_eur": "571",
+              "event_id": "01MN8FTA80DDTPKAG5TNV3Q20X",
               "quantity": "40"
             }
           ],
           "cost_eur": "0",
-          "id": "01N7P4TZ6GB66K46Q919Q7GF1T#0",
-          "original_cost_eur": "458.2",
+          "id": "01MGBDJF80AQMY7TCNE7BB4R42#0",
+          "original_cost_eur": "571",
           "original_quantity": "40",
           "quantity": "0",
-          "source_event_id": "01N7P4TZ6GB66K46Q919Q7GF1T"
+          "source_event_id": "01MGBDJF80AQMY7TCNE7BB4R42"
         },
         {
           "acquisition_date": "2028-01-15",
@@ -1248,14 +1248,14 @@
           "closed": true,
           "consumptions": [
             {
-              "cost_eur": "361.15",
+              "cost_eur": "450.05",
               "event_id": "01NP0FJV80F4D8ENCZZRFTSFRS",
               "quantity": "35"
             }
           ],
           "cost_eur": "0",
           "id": "01N9S35K80Q2QR8FAZEQQ1JAZ5#0",
-          "original_cost_eur": "361.15",
+          "original_cost_eur": "450.05",
           "original_quantity": "35",
           "quantity": "0",
           "source_event_id": "01N9S35K80Q2QR8FAZEQQ1JAZ5"
@@ -2656,11 +2656,11 @@
       "account_id": "acc_bucket",
       "asset_id": "ast_delta",
       "buys": [
-        "01MEG6DY80H625MHGXX5RGN05R",
-        "01MKD8NS80AW7C5NXEQN5AYR8H"
+        "01MEG6DY80B931VTBH1A0BGNRE",
+        "01MKD8NS806CJ9SGD5ERZMGPD5"
       ],
       "closed_at": "2027-08-10",
-      "closed_event_id": "01MX28C278C213694WR6JQCFT8",
+      "closed_event_id": "01MX28C278EA3DXCZNCABZPTW6",
       "closing_notes": "th_delta_1 closed",
       "expected_horizon_days": 120,
       "fees_eur": "3",
@@ -2668,41 +2668,68 @@
       "invalidation": "Synthetic invalidation rule",
       "invested_eur": "583.6",
       "opened_at": "2027-02-01",
-      "opened_event_id": "01MDS0VF80N47JC7DFPT0G5QYN",
+      "opened_event_id": "01MDS0VF804RETZDM10BFXB2C4",
       "planned_size_eur": "1200",
       "quantity_bought": "30",
       "quantity_sold": "30",
       "result_eur": "175.3",
       "result_eur_rounded": "175.3",
       "sells": [
-        "01MX28C18050Z5BTF3X6AQ3NNJ"
+        "01MX28C1803YR20A0EAGQ8XSQM"
       ],
       "status": "closed",
       "thesis_id": "th_delta_1"
     },
     {
       "account_id": "acc_bucket",
+      "asset_id": "ast_epsilon",
+      "buys": [
+        "01MGBDJF80AQMY7TCNE7BB4R42"
+      ],
+      "closed_at": "2027-05-05",
+      "closed_event_id": "01MN8FTB787FNSR78TSW0X3D33",
+      "closing_notes": "th_epsilon_1 closed",
+      "expected_horizon_days": 120,
+      "fees_eur": "2",
+      "hypothesis": "Synthetic thesis on ast_epsilon",
+      "invalidation": "Synthetic invalidation rule",
+      "invested_eur": "571",
+      "opened_at": "2027-03-01",
+      "opened_event_id": "01MG13ZK80RBBTXFAANXGH2A1Y",
+      "planned_size_eur": "900",
+      "quantity_bought": "40",
+      "quantity_sold": "40",
+      "result_eur": "-87.6",
+      "result_eur_rounded": "-87.6",
+      "sells": [
+        "01MN8FTA80DDTPKAG5TNV3Q20X"
+      ],
+      "status": "closed",
+      "thesis_id": "th_epsilon_1"
+    },
+    {
+      "account_id": "acc_bucket",
       "asset_id": "ast_delta",
       "buys": [
-        "01MZJ2PA803MXYQ70X3B7G3MDM"
+        "01MZJ2PA80XHBXS2XS5FZYQ1N2"
       ],
       "closed_at": "2027-11-10",
-      "closed_event_id": "01N4F4Y678YHS8DQNKYNH9FYVB",
+      "closed_event_id": "01N4F4Y678B66K46Q919Q7GF1T",
       "closing_notes": "th_delta_2 closed",
       "expected_horizon_days": 120,
       "fees_eur": "2",
       "hypothesis": "Synthetic thesis on ast_delta",
       "invalidation": "Synthetic invalidation rule",
-      "invested_eur": "707",
+      "invested_eur": "743.5",
       "opened_at": "2027-09-01",
-      "opened_event_id": "01MYTX3V80MNNQATDA0QAQCEW8",
+      "opened_event_id": "01MYTX3V80PQS9QTS0VJPX38XQ",
       "planned_size_eur": "900",
       "quantity_bought": "25",
       "quantity_sold": "25",
-      "result_eur": "-213.75",
-      "result_eur_rounded": "-213.75",
+      "result_eur": "-224.75",
+      "result_eur_rounded": "-224.75",
       "sells": [
-        "01N4F4Y580CCFV08181SA2X3Q6"
+        "01N4F4Y58036KX1852YTTM0XD3"
       ],
       "status": "closed",
       "thesis_id": "th_delta_2"
@@ -2711,15 +2738,15 @@
       "account_id": "acc_bucket",
       "asset_id": "ast_delta",
       "buys": [
-        "01N7P4TX80PZP5FQ4BQ4NZZTW6"
+        "01N7P4TX80S2D9FXZN82KE9Z3A"
       ],
       "expected_horizon_days": 120,
       "fees_eur": "1",
       "hypothesis": "Synthetic thesis on ast_delta",
       "invalidation": "Synthetic invalidation rule",
-      "invested_eur": "509.25",
+      "invested_eur": "535.5",
       "opened_at": "2027-12-15",
-      "opened_event_id": "01N798VA80GTTZ56ZB43EAVMD3",
+      "opened_event_id": "01N798VA80M2H506JPWCK7TZAC",
       "planned_size_eur": "900",
       "quantity_bought": "25",
       "quantity_sold": "0",
@@ -2728,33 +2755,6 @@
       "sells": [],
       "status": "open",
       "thesis_id": "th_delta_3"
-    },
-    {
-      "account_id": "acc_bucket",
-      "asset_id": "ast_epsilon",
-      "buys": [
-        "01N7P4TZ6GB66K46Q919Q7GF1T"
-      ],
-      "closed_at": "2027-12-20",
-      "closed_event_id": "01N7P4V150S2D9FXZN82KE9Z3A",
-      "closing_notes": "th_epsilon_1 closed",
-      "expected_horizon_days": 120,
-      "fees_eur": "2",
-      "hypothesis": "Synthetic thesis on ast_epsilon",
-      "invalidation": "Synthetic invalidation rule",
-      "invested_eur": "458.2",
-      "opened_at": "2027-12-20",
-      "opened_event_id": "01N7P4TY7836KX1852YTTM0XD3",
-      "planned_size_eur": "900",
-      "quantity_bought": "40",
-      "quantity_sold": "40",
-      "result_eur": "-70.4",
-      "result_eur_rounded": "-70.4",
-      "sells": [
-        "01N7P4V05RM2H506JPWCK7TZAC"
-      ],
-      "status": "closed",
-      "thesis_id": "th_epsilon_1"
     },
     {
       "account_id": "acc_bucket",
@@ -2769,14 +2769,14 @@
       "fees_eur": "2",
       "hypothesis": "Synthetic thesis on ast_epsilon",
       "invalidation": "Synthetic invalidation rule",
-      "invested_eur": "361.15",
+      "invested_eur": "450.05",
       "opened_at": "2028-01-10",
       "opened_event_id": "01N9C76080T3Q7CTEDNW3EKJ21",
       "planned_size_eur": "900",
       "quantity_bought": "35",
       "quantity_sold": "35",
-      "result_eur": "118.05",
-      "result_eur_rounded": "118.05",
+      "result_eur": "147.45",
+      "result_eur_rounded": "147.45",
       "sells": [
         "01NP0FJV80F4D8ENCZZRFTSFRS"
       ],
@@ -3327,13 +3327,13 @@
       "details": {
         "asset_id": "ast_epsilon",
         "buy_date": "2027-03-05",
-        "buy_event_id": "01N7P4TZ6GB66K46Q919Q7GF1T",
-        "loss_eur": "-70.4",
+        "buy_event_id": "01MGBDJF80AQMY7TCNE7BB4R42",
+        "loss_eur": "-87.6",
         "quantity": "40",
         "window": "2m",
         "window_start": "2027-03-05"
       },
-      "event_id": "01N7P4V05RM2H506JPWCK7TZAC"
+      "event_id": "01MN8FTA80DDTPKAG5TNV3Q20X"
     },
     {
       "code": "wash_sale_window_repurchase",
@@ -3405,13 +3405,13 @@
       "details": {
         "asset_id": "ast_delta",
         "buy_date": "2027-09-10",
-        "buy_event_id": "01MZJ2PA803MXYQ70X3B7G3MDM",
-        "loss_eur": "-213.75",
+        "buy_event_id": "01MZJ2PA80XHBXS2XS5FZYQ1N2",
+        "loss_eur": "-224.75",
         "quantity": "25",
         "window": "2m",
         "window_start": "2027-09-10"
       },
-      "event_id": "01N4F4Y580CCFV08181SA2X3Q6"
+      "event_id": "01N4F4Y58036KX1852YTTM0XD3"
     },
     {
       "code": "wash_sale_window_repurchase",
@@ -3430,14 +3430,14 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_delta",
-        "loss_eur": "-213.75",
+        "loss_eur": "-224.75",
         "quantity": "25",
         "sale_date": "2027-11-10",
-        "sale_event_id": "01N4F4Y580CCFV08181SA2X3Q6",
+        "sale_event_id": "01N4F4Y58036KX1852YTTM0XD3",
         "window": "2m",
         "window_end": "2028-01-10"
       },
-      "event_id": "01N7P4TX80PZP5FQ4BQ4NZZTW6"
+      "event_id": "01N7P4TX80S2D9FXZN82KE9Z3A"
     },
     {
       "code": "wash_sale_window_repurchase",

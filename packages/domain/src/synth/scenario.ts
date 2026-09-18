@@ -1144,16 +1144,27 @@ class Scenario {
       s.record(date, { type: "thesis_closed", thesis_id, closing_notes: `${thesis_id} closed` });
     };
 
-    // Two purchases on different dates and a sale with a gain.
+    // In ascending date order, so the clock of the stream follows the business
+    // dates: a thesis is dated by the `recorded_at` of its opening
+    // (data-schema.md §6.4), and recording out of order would leave every
+    // thesis stamped on the day of the last event of the block.
     const delta1 = price(18, 24);
+    const delta2 = price(20, 30);
+    const eps = price(10, 16);
+
+    // A thesis with two purchases on different dates, sold at a profit.
     open("th_delta_1", "ast_delta", "2027-02-01", 1200);
     trade("buy", "ast_delta", "2027-02-10", 20, delta1, "th_delta_1");
+    // A loser on the second asset, in parallel.
+    open("th_epsilon_1", "ast_epsilon", "2027-03-01", 900);
+    trade("buy", "ast_epsilon", "2027-03-05", 40, eps, "th_epsilon_1");
     trade("buy", "ast_delta", "2027-04-12", 10, cents(d(delta1).mul(d("1.1"))), "th_delta_1");
+    trade("sell", "ast_epsilon", "2027-05-05", 40, cents(d(eps).mul(d("0.85"))), "th_epsilon_1");
+    close("th_epsilon_1", "2027-05-05");
     trade("sell", "ast_delta", "2027-08-10", 30, cents(d(delta1).mul(d("1.35"))), "th_delta_1");
     close("th_delta_1", "2027-08-10");
 
-    // A loser, and the repurchase inside its two-month window (§3.6).
-    const delta2 = price(20, 30);
+    // Another loser, and the repurchase inside its two-month window (§3.6).
     open("th_delta_2", "ast_delta", "2027-09-01", 900);
     trade("buy", "ast_delta", "2027-09-10", 25, delta2, "th_delta_2");
     trade("sell", "ast_delta", "2027-11-10", 25, cents(d(delta2).mul(d("0.7"))), "th_delta_2");
@@ -1161,12 +1172,7 @@ class Scenario {
     open("th_delta_3", "ast_delta", "2027-12-15", 900);
     trade("buy", "ast_delta", "2027-12-20", 25, cents(d(delta2).mul(d("0.72"))), "th_delta_3");
 
-    // Another loser and another winner, on the second asset.
-    const eps = price(10, 16);
-    open("th_epsilon_1", "ast_epsilon", "2027-03-01", 900);
-    trade("buy", "ast_epsilon", "2027-03-05", 40, eps, "th_epsilon_1");
-    trade("sell", "ast_epsilon", "2027-05-05", 40, cents(d(eps).mul(d("0.85"))), "th_epsilon_1");
-    close("th_epsilon_1", "2027-05-05");
+    // And one more winner, the following year.
     open("th_epsilon_2", "ast_epsilon", "2028-01-10", 900);
     trade("buy", "ast_epsilon", "2028-01-15", 35, cents(d(eps).mul(d("0.9"))), "th_epsilon_2");
     trade("sell", "ast_epsilon", "2028-06-15", 35, cents(d(eps).mul(d("1.2"))), "th_epsilon_2");

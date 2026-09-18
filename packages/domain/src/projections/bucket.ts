@@ -285,7 +285,12 @@ const latentOf = (
   gaps: BenchmarkGap[],
   external?: ExternalPrices,
 ): Money | undefined => {
-  const own = thesis.quantity_bought.sub(thesis.quantity_sold);
+  // What it bought and has not sold, and never more than the account actually
+  // holds: a thesis whose asset was converted by a corporate action holds
+  // nothing any more, and a thesis closed while the next one bought more must
+  // not count shares that are not its own.
+  const bought = thesis.quantity_bought.sub(thesis.quantity_sold);
+  const own = bought.lt(thesis.position) ? bought : thesis.position;
   if (!own.isPositive()) {
     return Money.zero(EUR);
   }

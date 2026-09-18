@@ -111,7 +111,7 @@ const thesisSheet = (thesis: BucketThesisView): string => {
       comisiones: `${eur(thesis.fees_eur)} EUR`,
       resultado: `${eur(thesis.result_eur_rounded)} EUR`,
       latente: `${eur(thesis.unrealized_eur)} EUR`,
-      "posición viva": thesis.position.toString(),
+      "posición de la pareja": `${thesis.position.toString()} (cuenta y activo, no solo de esta tesis)`,
       "equivalente en índice": `${eur(thesis.benchmark_equivalent_eur)} EUR${
         thesis.benchmark_asset_id === undefined ? "" : ` (${thesis.benchmark_asset_id})`
       }`,

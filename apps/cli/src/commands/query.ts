@@ -17,6 +17,7 @@ import {
 } from "@atlas/domain";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 import { dateFlag, loadForQuery, originOf, render, renderQuery } from "./shared.js";
 
@@ -346,7 +347,11 @@ export const checkCommand = async (
           ["nivel", "código", "mensaje", "eventos"],
           [
             ...all.map((f) => [f.severity, f.code, f.message, f.event_ids.join(", ")]),
-            ...warnings.map((w) => ["warning", w.code, w.message, w.event_id]),
+            // The domain writes in English and the CLI translates by `code`
+            // (the contract of `errors.ts`): `check` was still printing the raw
+            // message, so the only place that lists every warning of the ledger
+            // spoke a different language from the rest of the application.
+            ...warnings.map((w) => ["warning", w.code, describeWarning(w), w.event_id]),
           ],
         ),
   );
