@@ -227,9 +227,42 @@ describe("mandatory edge cases", () => {
     const line = lineOf(report, loss.id);
     expect(text(line.deferred_eur)).toBe("0");
     expect(line.criteria).toContain("18");
+    // The other reading would count the 5 units of the second buy, but the sale
+    // left nothing of the asset to carry a deferral: it defers nothing more
+    // (direction's decision after the fiscal review), and says so.
     const doubtful = report.doubtful.find((entry) => entry.criterion === "18");
-    // With the other reading the 5 units of the second buy would defer half.
+    expect(text(doubtful?.base_difference_eur)).toBe("0");
+    expect(doubtful?.reason).toBe("no_carrier_left");
+    expect(doubtful?.direction).toBe("none");
+  });
+
+  it("#18 read the other way defers only onto units still held that the rule does not use", () => {
+    const b = taxBuilder();
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    // Free shares: a lot that stays, and that is not an acquisition for the rule.
+    b.corporateAction({
+      kind: "stock_dividend",
+      asset_id: "stock_s",
+      effective_date: "2027-02-01",
+      effects: [
+        {
+          op: "grant",
+          per_account: [{ account_id: "acc_a", quantity: "5" }],
+          unit_cost: "0",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-02-01",
+          acquisition_date: "2027-02-01",
+        },
+      ],
+    });
+    const loss = sell(b, "stock_s", "2027-03-01", "10", "80");
+    const report = reportOf(b.build(), 2027);
+    expect(text(lineOf(report, loss.id).deferred_eur)).toBe("0");
+    // −200 in all; the other reading could put 5 of the 10 units on the free shares.
+    const doubtful = report.doubtful.find((entry) => entry.criterion === "18");
     expect(text(doubtful?.base_difference_eur)).toBe("100");
+    expect(doubtful?.reason).toBeUndefined();
     expect(doubtful?.direction).toBe("aggressive");
   });
 

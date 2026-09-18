@@ -1101,17 +1101,18 @@
         "reason": "regime_not_recorded"
       },
       {
-        "base_difference_eur": "87.6",
+        "base_difference_eur": "0",
         "certainty": "medium",
         "criterion": "18",
-        "direction": "aggressive",
+        "direction": "none",
         "documented_risk": "aggressive",
         "event_ids": [
           "01MBP2GS80T8F1MS8PT0M7FK2R",
           "01MN8FTA80DDTPKAG5TNV3Q20X",
           "01N4F4Y58036KX1852YTTM0XD3"
         ],
-        "measure": "difference"
+        "measure": "difference",
+        "reason": "no_carrier_left"
       },
       {
         "base_difference_eur": "0",

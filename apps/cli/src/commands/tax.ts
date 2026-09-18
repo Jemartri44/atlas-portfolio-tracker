@@ -194,6 +194,8 @@ const REASONS: Record<NonNullable<DoubtfulItem["reason"]>, (item: DoubtfulItem) 
   lot_in_other_currency: () => "algún lote se compró en otra divisa",
   regime_not_recorded: () =>
     "sin régimen de neutralidad sería una permuta sujeta, y su valor no está en el libro",
+  no_carrier_left: () =>
+    "la otra lectura no tiene dónde aplazar: no queda en cartera ningún título de ese valor",
 };
 
 const stake = (item: DoubtfulItem): string => {

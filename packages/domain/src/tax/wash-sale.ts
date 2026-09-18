@@ -118,6 +118,11 @@ export interface WashSaleOutcome {
   provisional_until?: CivilDate;
   /** Candidates excluded because their units are no longer held (#18). */
   not_held: boolean;
+  /**
+   * With #18 read the other way, no homogeneous lot is left to carry the extra
+   * deferral (feature 009 review): the other reading defers nothing more.
+   */
+  no_carrier_for_18: boolean;
   /** Candidates whose units were already used by an earlier loss (#19). */
   used_before: boolean;
   /** The lots of the transmission had results of different sign (#20). */
@@ -371,6 +376,7 @@ class Walker {
       deferred_eur: zero(),
       computable_eur: total,
       not_held: false,
+      no_carrier_for_18: false,
       used_before: false,
       mixed_lots: signs.size > 1,
       reapplied: false,
@@ -404,14 +410,25 @@ class Walker {
     const available = candidates.reduce((sum, c) => sum.add(c.available), Quantity.ZERO);
     const units = available.gt(sold) ? sold : available;
     const deferred = units.isZero() ? zero() : share(outcome.total_eur, units, sold);
+    const least = (a: Quantity, b: Quantity): Quantity => (a.gt(b) ? b : a);
     const alternative = (extra: Quantity): Money => {
-      const all = available.add(extra);
-      const altUnits = all.gt(sold) ? sold : all;
+      const altUnits = least(available.add(extra), sold);
       return share(outcome.total_eur, altUnits, sold).sub(deferred);
     };
-    outcome.alternatives["18"] = alternative(
-      candidates.reduce((sum, c) => sum.add(c.notHeld), Quantity.ZERO),
-    );
+    // #18 read the other way counts the units the sale consumed too, but a
+    // deferral needs a lot to wait on: by article 33.5 in fine it comes back as
+    // the securities that **remain** are transmitted. So the other reading can
+    // only defer onto homogeneous units still held after the sale that the
+    // current one does not already use (direction's decision, feature 009
+    // review); with none left, it defers nothing more.
+    const priorAvailable = candidates
+      .filter((c) => c.timing === "prior")
+      .reduce((sum, c) => sum.add(c.available), Quantity.ZERO);
+    const spare = this.heldOf(gain.asset_id).sub(priorAvailable);
+    const notHeld = candidates.reduce((sum, c) => sum.add(c.notHeld), Quantity.ZERO);
+    const carried = spare.isPositive() ? least(notHeld, spare) : Quantity.ZERO;
+    outcome.no_carrier_for_18 = outcome.not_held && carried.isZero();
+    outcome.alternatives["18"] = alternative(carried);
     outcome.alternatives["19"] = alternative(
       candidates.reduce((sum, c) => sum.add(c.usedBefore), Quantity.ZERO),
     );
@@ -587,6 +604,17 @@ class Walker {
       this.used.set(entry.lot, usedUnits.value.div(held.value));
       this.sharesOf(entry.lot).push({ origin, amount: part, travelled: false });
     });
+  }
+
+  /** Units of the asset in open lots right now. */
+  private heldOf(assetId: AssetId): Quantity {
+    let held = Quantity.ZERO;
+    for (const [lotId, quantity] of this.quantity) {
+      if (this.assetOf.get(lotId) === assetId) {
+        held = held.add(quantity);
+      }
+    }
+    return held;
   }
 
   pending(): PendingDeferral[] {

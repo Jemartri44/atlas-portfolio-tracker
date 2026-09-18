@@ -259,9 +259,15 @@ export interface DoubtfulItem {
    * `invalid_under_alternative` (the other reading leaves `invalid_count`
    * events invalid), `lot_in_other_currency` (#4 cannot be recomputed in the
    * currency of the sale), `regime_not_recorded` (an exchange without a word on
-   * the neutrality regime: its taxable value is not in the ledger).
+   * the neutrality regime: its taxable value is not in the ledger),
+   * `no_carrier_left` (#18 read the other way would defer onto no lot: none of
+   * the asset is left in the patrimony).
    */
-  reason?: "invalid_under_alternative" | "lot_in_other_currency" | "regime_not_recorded";
+  reason?:
+    | "invalid_under_alternative"
+    | "lot_in_other_currency"
+    | "regime_not_recorded"
+    | "no_carrier_left";
   invalid_count?: number;
   /** Markets of the listed securities involved (#2, Q15). */
   markets?: string[];

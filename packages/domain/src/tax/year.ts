@@ -679,12 +679,22 @@ const doubtful = (
           .roundToCents(),
       ),
     );
+    // #18 read the other way can only defer onto units still held (direction's
+    // decision): with none, it moves nothing, and the item says why.
+    const withoutCarrier =
+      id === "18" &&
+      difference.isZero() &&
+      lines.some(
+        (line) =>
+          (core.outcomes[core.transmissions.indexOf(line)] as WashSaleOutcome).no_carrier_for_18,
+      );
     items.push(
       item(id, {
         measure: "difference",
         event_ids: lines.map((line) => line.event_id),
         base_difference_eur: difference,
         direction: directionOf(difference, zero()),
+        ...(withoutCarrier ? { reason: "no_carrier_left" as const } : {}),
       }),
     );
   }
