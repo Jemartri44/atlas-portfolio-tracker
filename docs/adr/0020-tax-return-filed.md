@@ -32,6 +32,8 @@ Se añade el evento **`tax_return_filed`** al esquema del libro, con estas propi
 - **Conserva su fuente documental**, como cualquier evento que remite a un papel externo: la referencia del justificante.
 - **Una complementaria es un `tax_return_filed` nuevo**, con `supersedes` apuntando al anterior. **No es un `reversal`**: una anulación significa "esto nunca ocurrió", y la primera declaración sí ocurrió. Un `reversal` se reserva para lo que de verdad fue un error de registro — haber anotado una presentación que nunca se hizo.
 
+> **Enmienda del 2026-09-18 (misma fecha).** Las pérdidas pendientes de compensar se guardan **separadas por categoría de renta** (ganancias y pérdidas patrimoniales por un lado, rendimientos del capital mobiliario por otro) además de por ejercicio de origen, porque **compensan de forma distinta** (art. 49 LIRPF). El texto original no las separaba. Lo detectó el implementador del motor fiscal al planificar; se corrige el mismo día.
+
 Y cambia el comportamiento de la proyección en un punto:
 
 - Un ejercicio con presentación registrada queda **cerrado**. Registrar un evento cuya fecha fiscal cae en un ejercicio cerrado **no se rechaza** —puede ser legítimo y a veces obligatorio— pero **avisa**, diciendo qué declaración habría que rectificar. Lo mismo con un `settings_changed` que mueva cifras de un ejercicio cerrado: es el aviso de la 005, ahora capaz de distinguir *pasado* de *declarado*.
