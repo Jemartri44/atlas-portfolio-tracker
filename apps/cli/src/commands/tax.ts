@@ -297,7 +297,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
           ["pérdida de origen", "lote", "activo", "importe", "viajó"],
           wash.pending.map((line) => [
             line.origin_event_id,
-            line.lot_id,
+            line.lot_id ?? `espera la recompra ${line.awaiting_event_id ?? ""}`,
             line.asset_id,
             cents(line.amount_eur),
             line.travelled ? "sí" : "no",

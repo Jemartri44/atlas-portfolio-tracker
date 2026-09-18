@@ -308,10 +308,14 @@ export interface TaxYearReport {
   wash_sale: {
     deferred: DeferralLine[];
     released: (ReleaseLine & { event_id: Ulid; fiscal_date: CivilDate })[];
-    /** Still deferred at 31/12 of the year, per lot. */
+    /**
+     * Still deferred at 31/12 of the year: on a lot, or waiting for the lots of
+     * a repurchase of the next year (`awaiting_event_id`).
+     */
     pending: {
       origin_event_id: Ulid;
-      lot_id: string;
+      lot_id?: string;
+      awaiting_event_id?: Ulid;
       asset_id: AssetId;
       amount_eur: Money;
       travelled: boolean;

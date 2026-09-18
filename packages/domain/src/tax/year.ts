@@ -879,7 +879,10 @@ export const taxYear = (
       ),
       pending: core.pendingDeferrals.map((entry) => ({
         origin_event_id: (state.gains[entry.origin] as RealizedGain).event_id,
-        lot_id: entry.lot_id,
+        ...(entry.lot_id === undefined ? {} : { lot_id: entry.lot_id }),
+        ...(entry.awaiting_event_id === undefined
+          ? {}
+          : { awaiting_event_id: entry.awaiting_event_id }),
         asset_id: entry.asset_id,
         amount_eur: entry.amount_eur,
         travelled: entry.travelled,

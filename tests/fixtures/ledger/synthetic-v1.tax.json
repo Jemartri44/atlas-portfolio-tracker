@@ -1010,7 +1010,7 @@
         "base_difference_eur": "84.16",
         "certainty": "disputed",
         "criterion": "2:listed",
-        "deferred_difference_eur": "-7.52",
+        "deferred_difference_eur": "-84.17",
         "direction": "aggressive",
         "documented_risk": "aggressive",
         "event_ids": [

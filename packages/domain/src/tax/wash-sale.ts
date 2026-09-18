@@ -130,10 +130,18 @@ export interface WashSaleOutcome {
   alternatives: { "18": Money; "19": Money; "21": Money };
 }
 
-/** A deferred loss still sitting on a lot after the whole ledger. */
+/**
+ * A deferred loss still pending: sitting on a lot, or waiting for the lots of
+ * a repurchase that has not happened yet at the cutoff (a loss sold in
+ * December and bought back in January is the typical case: at 31/12 it is
+ * deferred and carried by nothing yet).
+ */
 export interface PendingDeferral {
   origin: number;
-  lot_id: string;
+  /** The lot that carries it; absent while it waits for its repurchase. */
+  lot_id?: string;
+  /** The repurchase it waits for, when no lot carries it yet. */
+  awaiting_event_id?: Ulid;
   asset_id: AssetId;
   amount_eur: Money;
   travelled: boolean;
@@ -583,6 +591,20 @@ class Walker {
 
   pending(): PendingDeferral[] {
     const result: PendingDeferral[] = [];
+    for (const [key, list] of this.pendingOf) {
+      const [eventId, assetId] = key.split("|") as [Ulid, AssetId];
+      for (const entry of list) {
+        if (!entry.amount.isZero()) {
+          result.push({
+            origin: entry.origin,
+            awaiting_event_id: eventId,
+            asset_id: assetId,
+            amount_eur: entry.amount,
+            travelled: false,
+          });
+        }
+      }
+    }
     for (const [lotId, list] of this.shares) {
       for (const held of list) {
         if (!held.amount.isZero()) {
