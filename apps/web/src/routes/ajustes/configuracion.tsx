@@ -21,7 +21,7 @@ import {
   yearOf,
 } from "@atlas/domain";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout, ErrorView } from "../../components/index.js";
+import { Callout } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
@@ -41,6 +41,7 @@ import {
   withText,
 } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
+import { FormActions } from "../registrar/FormActions.jsx";
 import {
   FiscalCard,
   IdentityCard,
@@ -122,6 +123,8 @@ export default function ConfiguracionRoute(): JSX.Element {
             setInvalidating(undefined);
             discard();
             setSaved(true);
+            // The confirmation is at the top: take the user there to read it.
+            window.scrollTo?.({ top: 0 });
             return;
           }
           if (result.failure.kind === "dependents") {
@@ -162,10 +165,6 @@ export default function ConfiguracionRoute(): JSX.Element {
                 Se ha registrado un cambio de configuración con todos los parámetros.
               </Callout>
             </Show>
-            <Show when={error()}>
-              {(failure) => <ErrorView error={failure()} title="No se ha podido guardar" />}
-            </Show>
-
             <div class="stack">
               <WeightsCard
                 assets={coreAssets()}
@@ -181,7 +180,12 @@ export default function ConfiguracionRoute(): JSX.Element {
                 fiscal y la Fase 4; se editan desde la CLI hasta que existan sus pantallas.
               </Callout>
 
-              <div class="actions-bar">
+              {/* The error of a save goes next to the button that caused it. */}
+              <FormActions
+                failure={error()}
+                failureTitle="No se ha podido guardar"
+                blocked={touched() ? undefined : "No has cambiado nada todavía."}
+              >
                 <button type="button" class="secondary" disabled={!touched()} onClick={discard}>
                   Descartar cambios
                 </button>
@@ -192,7 +196,7 @@ export default function ConfiguracionRoute(): JSX.Element {
                 >
                   Guardar configuración
                 </button>
-              </div>
+              </FormActions>
             </div>
 
             <SettingsDialogs

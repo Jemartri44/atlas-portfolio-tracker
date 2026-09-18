@@ -1,3 +1,4 @@
+export { errorsAfterEdit, type FieldError, fieldErrorOf } from "./errors.js";
 export {
   ENVELOPE_FIELDS,
   type EventFormSpec,
@@ -12,6 +13,7 @@ export {
   initialValues,
   isVisible,
   missingRequired,
+  missingSentence,
   normaliseDecimal,
   toDraft,
   valuesOfEvent,

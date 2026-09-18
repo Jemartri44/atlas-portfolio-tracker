@@ -116,6 +116,17 @@ export const valuesOfEvent = (spec: EventFormSpec, event: Record<string, unknown
   return values;
 };
 
+/**
+ * Why "Ver el efecto" is disabled, in one sentence for the bar the button
+ * lives in: the labels of what is missing, or nothing when nothing is.
+ */
+export const missingSentence = (fields: readonly FieldSpec[], missing: readonly string[]) =>
+  missing.length === 0
+    ? undefined
+    : `Para ver el efecto ${missing.length === 1 ? "falta" : "faltan"}: ${missing
+        .map((name) => fields.find((field) => field.name === name)?.label ?? name)
+        .join(", ")}.`;
+
 /** Which fields the form requires and the user has left empty, for the local check. */
 export const missingRequired = (spec: EventFormSpec, values: FormValues): string[] =>
   spec.fields

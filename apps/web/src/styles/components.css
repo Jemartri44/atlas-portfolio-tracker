@@ -462,6 +462,7 @@
   border-top: 1px solid var(--c-border);
   bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom));
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-2);
   padding: var(--s-3) 0;
   position: sticky;
@@ -470,6 +471,12 @@
 
 .actions-bar button {
   flex: 1 1 auto;
+}
+
+/* Why the button cannot be pressed yet: inside the bar, on its own line. */
+.actions-bar .reason {
+  flex-basis: 100%;
+  margin: 0;
 }
 
 @media (min-width: 768px) {
