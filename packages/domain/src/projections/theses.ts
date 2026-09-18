@@ -16,7 +16,8 @@ import { daysBetween } from "./pending.js";
 import { positionOf } from "./positions.js";
 import { addWarning, type LedgerState, type Thesis, type ThesisView } from "./state.js";
 
-const openThesisOn = (
+/** The thesis open on a (account, asset) pair, if any. */
+export const openThesisOn = (
   state: LedgerState,
   accountId: AccountId,
   assetId: AssetId,
