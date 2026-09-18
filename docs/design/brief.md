@@ -274,3 +274,27 @@ El diseño se va a implementar a mano con componentes propios. Para que sea impl
 ## 12. Qué pasará con tu diseño
 
 Se usará como **referencia visual exacta**, no como código que se copia: la aplicación tiene sus propios componentes, su propia forma de ocultar importes y sus propias reglas de cálculo. Se trasladarán tus variables y tus componentes, se reconstruirán las pantallas y se compararán lado a lado con tus maquetas en todos los tamaños de §2. Si algo de tu diseño choca con una restricción de §10, se te dirá y se buscará lo más parecido.
+
+---
+
+## 13. Lo que una revisión de la aplicación actual ha encontrado y el diseño tiene que resolver
+
+Se revisó la aplicación de hoy con más de mil capturas en todos los tamaños. Esto es lo que falla por **falta de diseño**, no por un error de programación. Tu propuesta debería resolverlo de raíz.
+
+- **Los avisos se acumulan.** Con dos años de uso, la sección de atención llega a **27 avisos** y el Resumen mide más de seis pantallas del móvil. Muchos son el mismo aviso repetido (once veces la misma recompra de un fondo). Diseña cómo se **agrupan** ("11 recompras dentro de la ventana · World Index Fund →"), cuántos se enseñan antes de un "Ver todos" y cómo se ordenan por importancia. El riesgo de **perder datos** va siempre primero.
+- **Hoy los avisos se dibujan de tres formas distintas**, según la pantalla. Tiene que haber **un único componente de aviso**, con el mismo tono y la misma acción en todas partes.
+- **Un bloque que no se puede calcular no puede verse roto.** Hoy, si faltan precios, la tabla de pesos sale entera en "sin dato", la barra del reparto actual es un rectángulo vacío y la aportación del mes aparece como un **recuadro rojo de error**. Lo que se quiere: una sola frase con una sola acción ("Faltan 4 precios a 18/09/2026 para calcular los pesos → Registrar valoraciones"), enseñando lo que sí se sabe, como los objetivos. **"No se puede calcular todavía" no es un error** y no lleva su tono.
+- **Cada pantalla vacía necesita su estado vacío.** Hoy el Cubo vacío son más de dos pantallas de andamiaje sin nada dentro: una gráfica con el eje "31 dic · 31 dic · 31 dic", seis estadísticas en "sin dato" y varios avisos. Una pantalla sin datos enseña **un único mensaje con el siguiente paso**. En el Resumen, una **lista de primeros pasos con su estado**: cuenta, activo, pesos objetivo, primera compra.
+- **Filas de tres o cuatro columnas en el móvil.** Las etiquetas se aplastan: "Renta variable" se parte a mitad de palabra a 360 px y los números no quedan alineados entre filas. En el móvil, el **nombre en una línea y los números en la siguiente**, con una etiqueta pequeña. Cabeceras de columna solo donde haya anchura.
+- **El detalle de un movimiento** es hoy una pila de quince pares etiqueta-valor sin ninguna frase que diga qué pasó. Empieza por **una frase** ("Compraste 31,2343 participaciones de Money Market Fund por 3.100,00 € el 03/09/2026 · Fondos indexados"), sigue con los datos en dos columnas y deja el registro técnico plegado.
+- **La vista previa antes de registrar** tiene que enseñar **solo lo que cambia** (el lote nuevo, el efectivo antes y después) y una línea "25 lotes sin cambios", no la lista entera.
+- **Los formularios son largos.** La compra mensual necesita cuatro datos (cuenta, activo, cantidad e importe) y hoy enseña catorce campos, 2,2 pantallas. Pliega lo secundario (referencia del bróker, notas, orden, tesis) en un "Más datos". La **Configuración** mide cinco pantallas en el móvil: necesita estructura.
+- **Los desplegables** ("Ver activo por activo", "Ver los datos de la gráfica") miden hoy 16 px de alto: tienen que ser objetivos táctiles de verdad, y del mismo estilo en toda la aplicación.
+- **La palabra "libro" significa tres cosas**: la lista de movimientos, el sitio donde se guardan los datos y la cartera a la que pertenece una cuenta. Propón nombres distintos para cada una.
+- **Las acciones destructivas** (anular un movimiento) llevan hoy el estilo del botón principal. Tienen que parecer lo que son.
+- **La lista de movimientos**: agrupada por día, con la unidad siempre visible junto a cada cifra y el estado solo cuando no sea el normal (por ejemplo, "anulado").
+- **Las gráficas**: el selector de rango es hoy cuatro botones grises macizos. Mejor algo ligero. La explicación de un hueco sin datos, una línea con el detalle plegado.
+- **En modo oscuro**, el color de acento actual no llega al contraste mínimo con texto blanco. Elige un acento que lo cumpla en los dos modos, y **uno solo**: hoy hay dos azules principales distintos.
+- **Texto que se lee por debajo de 13 px** en muchos sitios, empezando por las etiquetas de la barra inferior, que están a 10 px. Nada que haya que leer por debajo de 13 px.
+
+**Lo que la revisión considera bien resuelto y conviene conservar**: una única navegación en el móvil con "Registrar" en el centro; el total grande con el desglose en tres bloques; cifras tabulares alineadas a la derecha; el modo privacidad coherente, incluido el eje de las gráficas; huecos en las gráficas en lugar de líneas inventadas; y en los formularios, una frase que resume lo que se va a registrar ("Has comprado…").
