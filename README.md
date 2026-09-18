@@ -4,7 +4,13 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 
 ## Estado
 
-Fases 1 y 2 completas y Fase 3 en marcha. Fase 1: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local), feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha) y feature `003-synthetic-data` (generador de libros sintéticos con *golden file*, `compact` con archivo del original, verificación profunda y copia local verificada). Fase 2: feature `004-monthly-contribution` (precios manuales, pesos y desviaciones del núcleo, calculadora de la aportación mensual, simulador de traspaso y resumen de costes). Fase 3: feature `005-bucket-tracking` (seguimiento del cubo especulativo contra el índice, patrimonio total desglosado, reglas de control y aviso de la ventana de recompra). **Web**: feature `006-web-shell` (aplicación local-first con Resumen, Movimientos, registro con vista previa, rectificación y Ajustes; ADR-0017 y ADR-0019). Sin API ni infraestructura todavía: la web funciona en el dispositivo, sin servidor y sin cuenta. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/), [`specs/002-corporate-actions/`](specs/002-corporate-actions/), [`specs/003-synthetic-data/`](specs/003-synthetic-data/), [`specs/004-monthly-contribution/`](specs/004-monthly-contribution/), [`specs/005-bucket-tracking/`](specs/005-bucket-tracking/) y [`specs/006-web-shell/`](specs/006-web-shell/).
+- **Fases 1, 2 y 3 completas.** El libro mayor con lotes FIFO, traspasos y eventos corporativos; la aportación mensual repartida según los pesos objetivo; y el seguimiento del cubo especulativo frente a su índice. Todo se usa desde la CLI `atlas`.
+- **La web, completa.** Resumen, Movimientos, Registrar, la cartera principal (Núcleo), Cubo, Ajustes y libro, con gráficas y todos los asistentes. Funciona entera en el dispositivo, sin servidor y sin cuenta.
+- **Las previsiones fiscales del esquema, integradas.** El libro ya guarda los datos que necesitará el cálculo de la Renta (ADR-0021).
+- **El motor fiscal, en implementación** (Fase 5).
+- **Sin infraestructura en la nube todavía.** Ni API ni AWS: los datos viven en un fichero local o en el navegador.
+
+Cada funcionalidad tiene su especificación en [`specs/`](specs/).
 
 ## Documentación
 
@@ -23,7 +29,7 @@ Requisitos: Node 22 (vía [nvm](https://github.com/nvm-sh/nvm)) y npm 10.
 
 ```bash
 nvm install 22 && nvm use            # lee .nvmrc
-npm ci                               # instala el toolchain (sin dependencias en runtime)
+npm ci                               # instala el toolchain (en runtime, solo Solid y su router en la web)
 npm run lint && npm run typecheck    # Biome + tsc
 npm test                             # vitest (dominio al 100 % de cobertura con npm run test:coverage)
 npm run build                        # tsc -b de todos los paquetes + build de la web
@@ -37,7 +43,7 @@ Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `v
 
 ## La aplicación web
 
-Local-first: **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión (ADR-0019). El *stack* es Solid con Pico CSS vendorizada (ADR-0017).
+Local-first: **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión (ADR-0019). El *stack* es Solid, con Pico CSS y uPlot vendorizadas (ADR-0017).
 
 ```bash
 npm run dev                          # http://localhost:5173
@@ -63,7 +69,7 @@ El modo privacidad está **activado por defecto**: oculta importes y cantidades,
 
 ### CSP: desarrollo y producción
 
-`apps/web/index.html` lleva la política de producción (`script-src 'self'`, sin `unsafe-inline`). El servidor de desarrollo de Vite inyecta *scripts* en línea, así que `vite.config.ts` **relaja la misma política en `npm run dev`** (añade `'unsafe-inline'`, `'unsafe-eval'` y `ws:` para el *hot reload*). Lo que se sirve en producción es la estricta, y `npm run build` comprueba sobre el resultado que no hay ni un `node:` ni una URL a un origen ajeno.
+`apps/web/index.html` lleva la política de producción (`script-src 'self'`, sin `unsafe-inline`). El servidor de desarrollo de Vite inyecta *scripts* en línea, así que `vite.config.ts` **relaja la misma política en `npm run dev`** (añade `'unsafe-inline'` a scripts y estilos, `'unsafe-eval'`, y `ws:`/`wss:` para el *hot reload*). Lo que se sirve en producción es la estricta, y `npm run build` comprueba sobre el resultado que no hay ni un `node:` ni una URL a un origen ajeno.
 
 ## Uso de la CLI
 
@@ -77,7 +83,7 @@ atlas account add --id acc_fund --name "Fondos" --platform myinvestor --book cor
 atlas asset add --id ast_world --type fund --book core --asset-class equity --name "World Index" --currency EUR --transferable --isin XX0000000001 --yes
 
 # Operaciones (importes, cantidades y tipos de cambio siempre como texto decimal; el tipo BCE tal cual se publica)
-atlas add cash-in --account acc_fund --value-date 2026-08-31 --amount 5000 --currency EUR --fx-rate 1 --yes
+atlas add cash-in --account acc_fund --value-date 2026-08-31 --amount 5000 --currency EUR --fx-rate 1 --fx-rate-date 2026-08-31 --yes
 atlas add buy --account acc_fund --asset ast_world --trade-date 2026-09-01 --value-date 2026-09-02 \
   --quantity 10.123456 --amount 1000 --currency EUR --fx-rate 1 --fx-rate-date 2026-09-02 --yes
 
@@ -113,7 +119,7 @@ Los precios son manuales hasta la Fase 4: se registran como `valuation` y la apl
 ```bash
 # 1. Anota el valor liquidativo del mes de cada activo del núcleo
 atlas add valuation --account acc_fund --asset ast_world --date 2027-12-31 \
-  --quantity 120.45 --unit-value 105.20 --currency EUR --fx-rate 1 --yes
+  --quantity 120.45 --unit-value 105.20 --currency EUR --fx-rate 1 --fx-rate-date 2027-12-31 --yes
 
 # 2. Mira cómo está repartida la cartera y qué se ha desviado del plan
 atlas weights --date 2027-12-31
