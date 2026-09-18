@@ -241,6 +241,10 @@ describe("atlas networth", () => {
     expect(text).toContain("Subtotal  22326.67 EUR");
     // 22326.67 + 1607.24 of bucket + 14518.45 of cash.
     expect(text).toContain("TOTAL (parcial)  38452.36 EUR");
+    // The dollar cash is converted at the rate of the year-end valuation, and
+    // the row shows the ECB publication date, not the business date of the event.
+    expect(text).toMatch(/acc_ibkr\s+USD\s+321\.82\s+1\.0776\s+2028-12-29/);
+    expect(text).not.toContain("(fecha de la operación)");
     h.reset();
     // The exact value, unrounded, is still the one in --json.
     expect(await h.exec(["networth", "--date", "2028-12-31", "--json"])).toBe(0);
