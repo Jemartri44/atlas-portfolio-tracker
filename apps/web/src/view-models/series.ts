@@ -8,9 +8,6 @@
 // `spanGaps` off.
 
 import type { BucketIndexSeries, NetWorthSeries } from "@atlas/domain";
-// From `ranges.ts`, not from the chart barrel: importing a component here would
-// drag Solid's JSX runtime into a module that is a pure function with a test.
-import { DAY_SECONDS, RANGE_DAYS, type RangeKey } from "../components/chart/ranges.js";
 import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
 
 /** Seconds since the epoch, which is what uPlot's time scale wants. */
@@ -34,7 +31,17 @@ const stringOrUndefined = (
   value: { amount: { toString: () => string } } | undefined,
 ): string | undefined => (value === undefined ? undefined : value.amount.toString());
 
-/** The reason, in one sentence: which assets and how many points went missing. */
+/**
+ * The reason, in one sentence: which assets and how many points went missing.
+ *
+ * It counts **complete** points — the three blocks present — and the count and
+ * the sentence have to mean the same thing. They did not: the count ignored the
+ * cash and the sentence named the currency whose rate was missing, so a chart
+ * could say "8 de 8" and, underneath, why one of the eight was incomplete.
+ *
+ * The wording says what actually happens: the point is not complete, and only
+ * the series that lacks the datum breaks there — the other two are drawn.
+ */
 const reasonOf = (
   drawn: number,
   total: number,
@@ -46,11 +53,11 @@ const reasonOf = (
   const gaps = total - drawn;
   const what =
     subjects.length === 0
-      ? "falta algún precio en esas fechas"
-      : `falta el precio de ${[...new Set(subjects)].join(", ")}`;
-  return `${drawn} de ${total} ${total === 1 ? "punto" : "puntos"} con datos: en ${gaps} ${
-    gaps === 1 ? "no se dibuja nada porque" : "no se dibuja nada porque"
-  } ${what}. No se interpola: donde no hay precio, hay hueco.`;
+      ? "falta algún dato en esas fechas"
+      : `falta el dato de ${[...new Set(subjects)].join(", ")}`;
+  return `${drawn} de ${total} ${total === 1 ? "punto" : "puntos"} completos: en ${gaps} ${
+    gaps === 1 ? "punto falta un bloque" : "puntos faltan bloques"
+  } porque ${what}, y la serie a la que le falta se corta ahí. No se interpola: donde no hay dato, hay hueco.`;
 };
 
 export const netWorthPlot = (
@@ -60,7 +67,13 @@ export const netWorthPlot = (
   const subjects: string[] = [];
   let drawn = 0;
   for (const point of series.points) {
-    if (point.core_eur !== undefined && point.bucket_eur !== undefined) {
+    // The three blocks, cash included: it is one of the three lines drawn and
+    // one of the three the sentence below explains.
+    if (
+      point.core_eur !== undefined &&
+      point.bucket_eur !== undefined &&
+      point.cash_eur !== undefined
+    ) {
       drawn += 1;
     }
     for (const id of [...point.missing.core, ...point.missing.bucket]) {
@@ -112,13 +125,3 @@ export const bucketIndexPlot = (series: BucketIndexSeries): PlottedSeries => {
         }),
   };
 };
-
-/** The window a range button selects, as a pair of seconds; `undefined` is "everything". */
-export const windowOf = (key: RangeKey, last: number): [number, number] | undefined =>
-  key === "TODO" ? undefined : [last - RANGE_DAYS[key] * DAY_SECONDS, last];
-
-/** How many points of a series fall inside a window: what decides if a button is dead. */
-export const pointsIn = (x: readonly number[], window: [number, number] | undefined): number =>
-  window === undefined
-    ? x.length
-    : x.filter((value) => value >= window[0] && value <= window[1]).length;

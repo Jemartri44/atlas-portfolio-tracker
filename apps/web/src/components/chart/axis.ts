@@ -43,14 +43,6 @@ export const axisAmount = (value: number | null | undefined, privacy: boolean): 
   return privacy ? MASK : compact(value);
 };
 
-/** The same, for a tooltip, where there is room for the cents and the currency. */
-export const tooltipAmount = (value: number | null | undefined, privacy: boolean): string => {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return "sin dato";
-  }
-  return privacy ? MASK : `${formatDecimalString(value.toFixed(2), { decimals: 2 })} EUR`;
-};
-
 /** A date of the X axis: the day is noise on a five-year range, and vital on a month. */
 export const axisDate = (timestamp: number, span: "days" | "months" | "years"): string => {
   const date = new Date(timestamp * 1000);

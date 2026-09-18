@@ -31,6 +31,29 @@ export interface ChartSeries {
   dash?: readonly number[];
 }
 
+const DEFAULT_HEIGHT = 220;
+
+/** Above this many points the dots crowd the line and are hidden. */
+const DOTS_UP_TO = 40;
+
+/**
+ * Whether a series holds a value with a hole on **both** sides (or with no
+ * neighbour at all).
+ *
+ * A line is drawn between two consecutive values; a value alone between two
+ * holes has nothing to join, so with the dots hidden it is not drawn at all —
+ * a date the ledger *does* know about, missing from the chart. Exactly the
+ * situation this feature's ledger is in most of the time: prices recorded once
+ * or twice a year, and one lonely valuation in between.
+ */
+export const hasIsolatedPoint = (values: readonly (number | null)[]): boolean =>
+  values.some(
+    (value, index) =>
+      value !== null &&
+      (values[index - 1] ?? null) === null &&
+      (values[index + 1] ?? null) === null,
+  );
+
 interface ChartProps {
   /** Seconds since the epoch, ascending. */
   x: readonly number[];
@@ -42,6 +65,70 @@ interface ChartProps {
 
 const cssValue = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888";
+
+export interface ChartSpec {
+  x: readonly number[];
+  series: readonly ChartSeries[];
+  width: number;
+  height: number;
+}
+
+/**
+ * The options uPlot is built with, as a **pure function of the data and the
+ * privacy flag**, so the two rules that live in here can be asserted without a
+ * canvas:
+ *
+ *   1. the Y axis asks `axisAmount` for its labels **with the privacy flag** —
+ *      the axis of a chart is an amount for every purpose, and with the mask on
+ *      there can be no absolute figure on it;
+ *   2. every series carries `spanGaps: false` — a `null` is a hole, and without
+ *      this uPlot joins its two ends with a straight line, which is exactly the
+ *      interpolation this feature exists to refuse.
+ *
+ * Both used to be unreachable from a test: they were expressions inside the
+ * component, and a mutation of either left the whole suite green.
+ */
+export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options => {
+  const from = spec.x[0] ?? 0;
+  const to = spec.x[spec.x.length - 1] ?? from;
+  const span = spanOf(from, to);
+  return {
+    width: spec.width,
+    height: spec.height,
+    padding: [8, 8, 0, 0],
+    legend: { show: false },
+    cursor: { drag: { x: false, y: false } },
+    scales: { x: { time: true } },
+    axes: [
+      {
+        stroke: cssValue("--c-muted"),
+        grid: { show: false },
+        ticks: { show: false },
+        values: (_plot, splits) => splits.map((value) => axisDate(value, span)),
+      },
+      {
+        stroke: cssValue("--c-muted"),
+        grid: { stroke: cssValue("--c-border"), width: 1 },
+        ticks: { show: false },
+        size: 56,
+        values: (_plot, splits) => splits.map((value) => axisAmount(value, privacy)),
+      },
+    ],
+    series: [
+      {},
+      ...spec.series.map((series) => ({
+        label: series.label,
+        stroke: cssValue(series.colour),
+        width: 2,
+        spanGaps: false,
+        ...(series.dash === undefined ? {} : { dash: [...series.dash] }),
+        // Crowded charts hide their dots, **except** where a dot is the only
+        // way a value gets drawn at all.
+        points: { show: spec.x.length < DOTS_UP_TO || hasIsolatedPoint(series.values) },
+      })),
+    ],
+  };
+};
 
 export const Chart = (props: ChartProps): JSX.Element => {
   const privacy = usePrivacy();
@@ -55,54 +142,42 @@ export const Chart = (props: ChartProps): JSX.Element => {
       ...props.series.map((series) => [...series.values]),
     ] as unknown as uPlot.AlignedData;
 
-  const options = (width: number): uPlot.Options => {
-    const from = props.x[0] ?? 0;
-    const to = props.x[props.x.length - 1] ?? from;
-    const span = spanOf(from, to);
-    return {
-      width,
-      height: props.height ?? 220,
-      padding: [8, 8, 0, 0],
-      legend: { show: false },
-      cursor: { drag: { x: false, y: false } },
-      scales: { x: { time: true } },
-      axes: [
-        {
-          stroke: cssValue("--c-muted"),
-          grid: { show: false },
-          ticks: { show: false },
-          values: (_plot, splits) => splits.map((value) => axisDate(value, span)),
-        },
-        {
-          stroke: cssValue("--c-muted"),
-          grid: { stroke: cssValue("--c-border"), width: 1 },
-          ticks: { show: false },
-          size: 56,
-          values: (_plot, splits) => splits.map((value) => axisAmount(value, privacy())),
-        },
-      ],
-      series: [
-        {},
-        ...props.series.map((series) => ({
-          label: series.label,
-          stroke: cssValue(series.colour),
-          width: 2,
-          // The hole, literally: without this uPlot joins the two ends of a gap
-          // with a straight line, which is the interpolation the project forbids.
-          spanGaps: false,
-          ...(series.dash === undefined ? {} : { dash: [...series.dash] }),
-          points: { show: props.x.length < 40 },
-        })),
-      ],
-    };
+  /**
+   * Whether this browser can actually paint on a canvas. Without a 2D context
+   * uPlot throws from inside a microtask while drawing, which no `try` around
+   * the constructor catches: the screen dies and the error boundary shows a
+   * failure for a chart that is **informative** (constitution II).
+   *
+   * Degrading is the right answer and costs nothing: the equivalent table under
+   * every chart carries the same numbers, and it is the accessible copy anyway.
+   */
+  const canDraw = (): boolean => {
+    try {
+      return document.createElement("canvas").getContext("2d") !== null;
+    } catch {
+      // A browser that refuses to create a canvas at all: same conclusion.
+      return false;
+    }
   };
 
   const build = (): void => {
-    if (host === undefined) {
+    if (host === undefined || !canDraw()) {
       return;
     }
     plot?.destroy();
-    plot = new uPlot(options(host.clientWidth || 320), data(), host);
+    plot = new uPlot(
+      chartOptions(
+        {
+          x: props.x,
+          series: props.series,
+          width: host.clientWidth || 320,
+          height: props.height ?? DEFAULT_HEIGHT,
+        },
+        privacy(),
+      ),
+      data(),
+      host,
+    );
   };
 
   onMount(() => {
@@ -110,7 +185,7 @@ export const Chart = (props: ChartProps): JSX.Element => {
     if (host !== undefined && typeof ResizeObserver !== "undefined") {
       observer = new ResizeObserver(() => {
         if (host !== undefined && plot !== undefined) {
-          plot.setSize({ width: host.clientWidth, height: props.height ?? 220 });
+          plot.setSize({ width: host.clientWidth, height: props.height ?? DEFAULT_HEIGHT });
         }
       });
       observer.observe(host);

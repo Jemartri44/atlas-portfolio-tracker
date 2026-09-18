@@ -11,7 +11,7 @@ import { Chart, type ChartSeries } from "./Chart.jsx";
 import { ChartLegend } from "./ChartLegend.jsx";
 import { ChartTable } from "./ChartTable.jsx";
 import { RangeButtons, type RangeOption } from "./RangeButtons.jsx";
-import { DAY_SECONDS, RANGE_DAYS, RANGE_KEYS, RANGE_LABELS, type RangeKey } from "./ranges.js";
+import { type RangeKey, rangeCounts, rangeIndices } from "./ranges.js";
 
 export interface SeriesCardProps {
   title: string;
@@ -27,36 +27,11 @@ export interface SeriesCardProps {
   empty: JSX.Element;
 }
 
-const secondsBack = (key: Exclude<RangeKey, "TODO">): number => RANGE_DAYS[key] * DAY_SECONDS;
-
 export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
   const [range, setRange] = createSignal<RangeKey>("TODO");
 
-  const last = (): number => props.x[props.x.length - 1] ?? 0;
-
-  const indices = createMemo<number[]>(() => {
-    const key = range();
-    if (key === "TODO") {
-      return props.x.map((_, index) => index);
-    }
-    const from = last() - secondsBack(key);
-    return props.x.flatMap((value, index) => (value >= from ? [index] : []));
-  });
-
-  /**
-   * How many points each button would show. A button with none is disabled and
-   * says why: with prices recorded once or twice a year, "1 mes" is empty most
-   * of the time, and an empty chart reads as a broken chart.
-   */
-  const options = createMemo<RangeOption[]>(() =>
-    RANGE_KEYS.map((key) => {
-      const from = key === "TODO" ? Number.NEGATIVE_INFINITY : last() - secondsBack(key);
-      const points = props.x.filter(
-        (value, index) => value >= from && props.values.some((series) => series[index] !== null),
-      ).length;
-      return { key, label: RANGE_LABELS[key], points };
-    }),
-  );
+  const indices = createMemo<number[]>(() => rangeIndices(props.x, range()));
+  const options = createMemo<RangeOption[]>(() => rangeCounts(props.x, props.values));
 
   const series = (): ChartSeries[] =>
     props.labels.map((label, index) => ({
