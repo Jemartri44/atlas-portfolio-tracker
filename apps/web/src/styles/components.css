@@ -77,16 +77,29 @@
   gap: var(--s-2);
 }
 
+/*
+ * On a phone the action goes **under** the text. Side by side, at 360px, the
+ * message was left with a column of about fifteen characters and six warnings
+ * filled three screenfuls; from 768px there is room and it goes back to a row.
+ */
 .attention .item {
   align-items: flex-start;
   border: 1px solid var(--c-border);
   border-left-width: 3px;
   border-radius: var(--r-md);
   display: flex;
-  gap: var(--s-3);
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--s-1);
   padding: var(--s-3);
   text-decoration: none;
+}
+
+@media (min-width: 768px) {
+  .attention .item {
+    flex-direction: row;
+    gap: var(--s-3);
+    justify-content: space-between;
+  }
 }
 
 .attention .item:hover {

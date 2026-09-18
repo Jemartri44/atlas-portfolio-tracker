@@ -150,11 +150,18 @@ p {
   padding: var(--s-4);
 }
 
+/*
+ * The header of a section wraps: with no wrapping, "Ver el libro" stole the
+ * width from "Últimos movimientos" and the title broke into two lines at 360px.
+ * Wrapping puts the action on its own line when it does not fit and changes
+ * nothing where it does.
+ */
 .card > header {
   align-items: baseline;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--s-3);
+  gap: var(--s-1) var(--s-3);
   margin-bottom: var(--s-3);
 }
 
