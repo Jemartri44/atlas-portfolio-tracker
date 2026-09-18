@@ -19,6 +19,7 @@ import {
   EFFECT_OPS,
   type EffectOp,
   FEE_KINDS,
+  INCOME_BASES,
   type LedgerEvent,
   ORDER_SIDES,
   ORDER_STAGES,
@@ -141,6 +142,8 @@ const EFFECT_RULES: Record<EffectOp, Rules> = {
     unit_cost: req("decimal"),
     ...PRICED,
     acquisition_date: req("date"),
+    income_eur: opt("decimal"),
+    income_base: { kind: "enum", optional: true, values: INCOME_BASES },
   },
 };
 
@@ -381,6 +384,9 @@ const checkEffects = (raw: UnknownRecord): void => {
       checkFxPairs({ ...effect, type: raw.type }, [["currency", "fx_rate"]], path);
       checkFxDates({ ...effect, type: raw.type }, ["fx_rate_date"], path);
     }
+    if (op === "grant") {
+      checkGrantIncome(effect, raw.type, path);
+    }
     const entryRules = PER_ACCOUNT_RULES[op];
     if (entryRules !== undefined) {
       (effect.per_account as unknown[]).forEach((entry, position) => {
@@ -393,6 +399,26 @@ const checkEffects = (raw: UnknownRecord): void => {
         );
       });
     }
+  });
+};
+
+/**
+ * The amount and the base of income in kind travel together (ADR-0021). An
+ * amount without a base is an amount nobody can declare, and a base without an
+ * amount is a category with nothing in it; either half alone would be a figure
+ * the tax engine would have to guess at, and guessing is what this whole
+ * feature exists to avoid.
+ */
+const checkGrantIncome = (effect: UnknownRecord, type: unknown, path: string): void => {
+  const hasAmount = effect.income_eur !== undefined;
+  const hasBase = effect.income_base !== undefined;
+  if (hasAmount === hasBase) {
+    return;
+  }
+  const field = hasAmount ? "income_base" : "income_eur";
+  throw invalid("missing_field", `${type}: ${path}${field} is required with the other`, {
+    type,
+    field: `${path}${field}`,
   });
 };
 

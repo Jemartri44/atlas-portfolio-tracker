@@ -3,7 +3,7 @@
 // (`consume`, `openLot`), the gains ledger (`recordGain`) and the position and
 // cash projections: there is no second FIFO.
 
-import type { CivilDate } from "../dates/civil-date.js";
+import { type CivilDate, yearOf } from "../dates/civil-date.js";
 import { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
@@ -305,6 +305,37 @@ export const applyForcedSale = (
   warnFxDate(state, priced, ctx.effectiveDate);
 };
 
+/**
+ * What the grant hands over as income, recorded and nothing else (ADR-0021).
+ *
+ * One entry per effect and **not per account**: `income_eur` is the market
+ * value of what was received, one figure the user read off one source, and
+ * splitting it between accounts would mean deciding a rounding nobody asked
+ * for. The lots are per account because a position is; the income is not.
+ *
+ * It reaches `investmentIncome`, `realizedGains` and no taxable base: declaring
+ * income on receipt is a criterion in dispute (`docs/fiscal-questions.md` #8)
+ * and phase 5 decides it, not this.
+ */
+const noteInKindIncome = (
+  state: LedgerState,
+  effect: Resolved<"grant">,
+  assetId: AssetId,
+  eventId: Ulid,
+): void => {
+  if (effect.income_eur === undefined || effect.income_base === undefined) {
+    return;
+  }
+  state.inKindIncome.push({
+    event_id: eventId,
+    asset_id: assetId,
+    fiscal_date: effect.acquisition_date,
+    year: yearOf(effect.acquisition_date),
+    amount_eur: Money.parse(effect.income_eur, "EUR"),
+    base: effect.income_base,
+  });
+};
+
 export const applyGrant = (
   state: LedgerState,
   effect: Resolved<"grant">,
@@ -342,6 +373,7 @@ export const applyGrant = (
       });
     }
   }
+  noteInKindIncome(state, effect, asset.asset_id, ctx.eventId);
   warnCurrency(state, priced, asset);
   warnFxDate(state, priced, effect.acquisition_date);
   warnHolders(state, asset.asset_id, ctx.eventId);

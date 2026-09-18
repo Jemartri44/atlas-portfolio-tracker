@@ -9,6 +9,7 @@ import type { Quantity } from "../money/quantity.js";
 import type {
   FiscalLot,
   GainByLot,
+  InKindIncome,
   InvalidEvent,
   InvestmentIncome,
   LedgerState,
@@ -98,6 +99,16 @@ const incomeOf = (income: InvestmentIncome) => ({
   net_eur: text(income.net_eur),
 });
 
+/** Income in kind is projected apart from `income` and serialised apart too (ADR-0021). */
+const inKindOf = (entry: InKindIncome) => ({
+  event_id: entry.event_id,
+  asset_id: entry.asset_id,
+  fiscal_date: entry.fiscal_date,
+  year: entry.year,
+  amount_eur: text(entry.amount_eur),
+  base: entry.base,
+});
+
 const thesisOf = (thesis: Thesis) => ({
   thesis_id: thesis.thesis_id,
   account_id: thesis.account_id,
@@ -170,6 +181,7 @@ export const snapshotOf = (state: LedgerState): Snapshot => {
     lots,
     gains: state.gains.map(gainOf),
     income: state.income.map(incomeOf),
+    in_kind_income: state.inKindIncome.map(inKindOf),
     valuations: state.valuations.map((event) => ({
       event_id: event.id,
       account_id: event.account_id,

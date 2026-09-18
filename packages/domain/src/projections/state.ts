@@ -12,6 +12,7 @@ import type {
   AccountId,
   AssetFields,
   AssetId,
+  IncomeBase,
   LedgerEvent,
   OrderSide,
   ValuationEvent,
@@ -106,6 +107,26 @@ export interface InvestmentIncome {
   withholding_origin_eur: Money;
   withholding_spain_eur: Money;
   net_eur: Money;
+}
+
+/**
+ * Income received in kind, without a transfer (ADR-0021): a fork, an airdrop,
+ * shares from a spin-off outside the neutrality regime, a dividend in kind.
+ *
+ * It is projected **apart** from `InvestmentIncome`, and on purpose. That one
+ * is movable capital income of the savings base and feeds the tax figures; this
+ * one feeds **nothing**: it is what the ledger recorded, so that phase 5 can
+ * read it when the criterion is settled. Mixing them would answer the question
+ * `docs/fiscal-questions.md` #8 by accident.
+ */
+export interface InKindIncome {
+  event_id: Ulid;
+  asset_id: AssetId;
+  /** Date the lot is acquired, which is when the income is received. */
+  fiscal_date: CivilDate;
+  year: number;
+  amount_eur: Money;
+  base: IncomeBase;
 }
 
 export type OrderStageProjected = "open" | "filled" | "cancelled";
@@ -245,6 +266,8 @@ export interface LedgerState {
   lotCounts: Map<Ulid, number>;
   gains: RealizedGain[];
   income: InvestmentIncome[];
+  /** Income in kind a grant declares; read by nobody yet (ADR-0021). */
+  inKindIncome: InKindIncome[];
   valuations: ValuationEvent[];
   orders: Map<Ulid, PendingOrder>;
   transferRequests: Map<Ulid, PendingTransfer>;
@@ -282,6 +305,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   lotCounts: new Map(),
   gains: [],
   income: [],
+  inKindIncome: [],
   valuations: [],
   orders: new Map(),
   transferRequests: new Map(),

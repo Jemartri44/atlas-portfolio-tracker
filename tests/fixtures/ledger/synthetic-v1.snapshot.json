@@ -605,6 +605,7 @@
       "year": 2028
     }
   ],
+  "in_kind_income": [],
   "income": [
     {
       "account_id": "acc_mi",

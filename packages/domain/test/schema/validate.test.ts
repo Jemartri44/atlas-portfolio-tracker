@@ -276,6 +276,40 @@ describe("validateShape: consistency rules", () => {
     rejects(variant(SAMPLES.corporate_action, { neutrality_regime: "si" }), "invalid_field");
   });
 
+  /**
+   * ADR-0021: a grant creates lots and declares nothing, and these two fields
+   * say that what was received **is income when it is received**. They travel
+   * together because half of either is a figure the tax engine would have to
+   * guess at.
+   */
+  it("grant: the income amount and its base travel together, or neither", () => {
+    const withIncome = (income: Record<string, unknown>) =>
+      variant(SAMPLES.corporate_action, {
+        kind: "crypto_fork",
+        effects: [
+          {
+            op: "grant",
+            asset_id: "ast_fork",
+            per_account: [{ account_id: "acc_fund", quantity: "10" }],
+            unit_cost: "0",
+            currency: "EUR",
+            fx_rate: "1",
+            fx_rate_date: "2027-03-01",
+            acquisition_date: "2027-03-01",
+            ...income,
+          },
+        ],
+      });
+    expect(
+      validateShape(withIncome({ income_eur: "420.50", income_base: "general" })),
+    ).toBeTruthy();
+    expect(validateShape(withIncome({}))).toBeTruthy();
+    rejects(withIncome({ income_eur: "420.50" }), "missing_field");
+    rejects(withIncome({ income_base: "savings" }), "missing_field");
+    rejects(withIncome({ income_eur: "420.50", income_base: "patrimonial" }), "invalid_field");
+    rejects(withIncome({ income_eur: "-1", income_base: "general" }), "invalid_field");
+  });
+
   it("settings_changed: validates the settings object", () => {
     rejects(variant(SAMPLES.settings_changed, { settings: {} }), "invalid_settings");
   });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";
 import { Decimal } from "../../src/money/decimal.js";
+import { Money } from "../../src/money/money.js";
 import { cashBalances } from "../../src/projections/cash.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
@@ -478,6 +479,61 @@ describe("applyForcedSale", () => {
 });
 
 describe("applyGrant", () => {
+  /**
+   * ADR-0021: a fork or an airdrop hands over something that DGT doctrine reads
+   * as income **on receipt**, in the general base. The ledger records the
+   * figure and the base; it declares nothing, because that criterion is in
+   * dispute (`docs/fiscal-questions.md` #8).
+   */
+  it("records the income a grant declares, apart from every other income", () => {
+    const state = stateWith(tenShares);
+    applyGrant(
+      state,
+      grant([{ account_id: "acc_fund", quantity: "10" }], {
+        income_eur: "420.50",
+        income_base: "general",
+      }),
+      ctx,
+    );
+    expect(state.inKindIncome).toEqual([
+      {
+        event_id: EVENT,
+        asset_id: "ast_fork",
+        fiscal_date: "2027-03-01",
+        year: 2027,
+        amount_eur: Money.parse("420.50", "EUR"),
+        base: "general",
+      },
+    ]);
+    // It feeds nothing: not movable capital income, not a gain, not a lot cost.
+    expect(state.income).toEqual([]);
+    expect(state.gains).toEqual([]);
+    expect(open(state, "ast_fork")[0]?.cost_eur.amount.toString()).toBe("0");
+  });
+
+  it("records nothing when the grant declares no income", () => {
+    const state = stateWith(tenShares);
+    applyGrant(state, grant([{ account_id: "acc_fund", quantity: "10" }]), ctx);
+    expect(state.inKindIncome).toEqual([]);
+  });
+
+  it("books one entry per effect and not one per account: the figure is not split", () => {
+    const state = stateWith(twoAccounts);
+    applyGrant(
+      state,
+      grant(
+        [
+          { account_id: "acc_fund", quantity: "6" },
+          { account_id: "acc_etf", quantity: "4" },
+        ],
+        { income_eur: "100", income_base: "savings" },
+      ),
+      ctx,
+    );
+    expect(state.inKindIncome).toHaveLength(1);
+    expect(state.inKindIncome[0]?.amount_eur.amount.toString()).toBe("100");
+  });
+
   it("opens a lot per account at the given cost and date without touching cash", () => {
     const state = stateWith(tenShares);
     applyGrant(

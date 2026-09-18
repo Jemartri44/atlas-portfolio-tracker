@@ -48,6 +48,18 @@ export type TransferRequestStage = (typeof TRANSFER_REQUEST_STAGES)[number];
  *
  * Nothing reads it yet: classifying is the tax engine of phase 5.
  */
+/**
+ * Which base income in kind goes into (ADR-0021). The savings base is where
+ * capital gains and movable capital income live; the **general** base is the
+ * one for income not derived from a transfer, and the project has never had the
+ * notion — which is precisely the hole: DGT doctrine treats the free receipt of
+ * crypto-assets as a gain **not derived from a transfer**, integrated in the
+ * general base, and the criterion in force here (cost zero, nothing declared on
+ * receipt) is the opposite reading (`docs/fiscal-questions.md` #8).
+ */
+export const INCOME_BASES = ["general", "savings"] as const;
+export type IncomeBase = (typeof INCOME_BASES)[number];
+
 export const FEE_KINDS = [
   "custody",
   "administration",
@@ -420,6 +432,19 @@ export interface GrantEffect extends EffectBase {
   fx_rate: DecimalString;
   fx_rate_date: CivilDate;
   acquisition_date: CivilDate;
+  /**
+   * Income the grant hands over **at the moment of receiving it**, in euros,
+   * and the base it goes into (ADR-0021). The two travel together: one without
+   * the other is refused.
+   *
+   * A `grant` creates lots and declares nothing. These two fields say that what
+   * was received **is income when it is received** — a fork, an airdrop, shares
+   * from a spin-off outside the neutrality regime, a dividend in kind. They are
+   * stored and shown; **they become no calculation**. Who is taxed on what is
+   * phase 5 and is a criterion in dispute (`docs/fiscal-questions.md` #8).
+   */
+  income_eur?: DecimalString;
+  income_base?: IncomeBase;
 }
 
 export type Effect = ScaleEffect | ConvertEffect | CarveOutEffect | ForcedSaleEffect | GrantEffect;

@@ -69,6 +69,28 @@ const richLedger = (): LedgerEvent[] => {
     thesis_id: "th_1",
   });
   b.thesisClosed("th_1");
+  // A fork that declares income in kind: the one projection that only ADR-0021
+  // fills, and the only way `in_kind_income` is anything but an empty list.
+  b.asset("ast_fork", { asset_type: "crypto", asset_class: "crypto", transferable: false });
+  b.corporateAction({
+    kind: "crypto_fork",
+    asset_id: "ast_world",
+    effective_date: "2027-10-01",
+    effects: [
+      {
+        op: "grant",
+        asset_id: "ast_fork",
+        per_account: [{ account_id: "acc_fund", quantity: "10" }],
+        unit_cost: "0",
+        currency: "EUR",
+        fx_rate: "1",
+        fx_rate_date: "2027-10-01",
+        acquisition_date: "2027-10-01",
+        income_eur: "420.50",
+        income_base: "general",
+      },
+    ],
+  });
   return b.build();
 };
 
@@ -96,6 +118,7 @@ describe("snapshotOf", () => {
       lots: Record<string, { open: unknown[]; closed: unknown[] }>;
       gains: unknown[];
       income: unknown[];
+      in_kind_income: unknown[];
       valuations: unknown[];
       orders: unknown[];
       transfer_requests: unknown[];
@@ -110,10 +133,10 @@ describe("snapshotOf", () => {
       "acc_etf",
       "acc_fund",
     ]);
-    expect(snapshot.assets).toHaveLength(4);
-    expect(snapshot.positions).toHaveLength(2);
+    expect(snapshot.assets).toHaveLength(5);
+    expect(snapshot.positions).toHaveLength(3);
     expect(snapshot.cash.length).toBeGreaterThan(0);
-    expect(Object.keys(snapshot.lots)).toEqual(["ast_bonds", "ast_spec", "ast_world"]);
+    expect(Object.keys(snapshot.lots)).toEqual(["ast_bonds", "ast_fork", "ast_spec", "ast_world"]);
     const transferred = snapshot.lots.ast_bonds?.open[0] as Record<string, unknown>;
     expect(transferred.source_lot_id).toBeDefined();
     expect(transferred.position).toBeUndefined();
@@ -123,6 +146,19 @@ describe("snapshotOf", () => {
     expect(snapshot.income.map((i) => (i as { kind: string }).kind)).toEqual([
       "dividend",
       "interest",
+    ]);
+    // Income in kind is serialised **apart** from `income`: one is movable
+    // capital income of the savings base, the other is a figure nobody has
+    // decided how to tax yet (ADR-0021, fiscal question #8).
+    expect(snapshot.in_kind_income).toEqual([
+      {
+        amount_eur: "420.5",
+        asset_id: "ast_fork",
+        base: "general",
+        event_id: expect.any(String),
+        fiscal_date: "2027-10-01",
+        year: 2027,
+      },
     ]);
     expect(snapshot.valuations).toHaveLength(1);
     expect((snapshot.orders[0] as { stage: string }).stage).toBe("filled");
