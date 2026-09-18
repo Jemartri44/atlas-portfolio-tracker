@@ -349,6 +349,7 @@ export const settingsCommand = async (
     assertKnownFlags(flags, [
       "fiscal-date-rule",
       "wash-sale-window",
+      "income-category",
       "target-weights",
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
@@ -370,6 +371,15 @@ export const settingsCommand = async (
       patch.wash_sale_window = {
         ...current.wash_sale_window,
         ...assetTypeAssignments(windows, "wash-sale-window"),
+      };
+    }
+    // Merged onto what is in force, like the other two per-asset-type maps: a
+    // category is set for one type at a time and the rest keep theirs.
+    const categories = stringFlag(flags, "income-category");
+    if (categories !== undefined) {
+      patch.income_category = {
+        ...current.income_category,
+        ...assetTypeAssignments(categories, "income-category"),
       };
     }
     const weights = stringFlag(flags, "target-weights");
