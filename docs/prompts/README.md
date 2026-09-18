@@ -14,4 +14,5 @@ Un fichero por feature, numerado igual que `specs/NNN-<name>/`. Los escribe el a
 | [006](006-web-shell.md) | Web, primera mitad: esqueleto, almacenamiento en el navegador, navegación móvil, modo privacidad, Resumen y Movimientos | Fusionada (PR #36, 2026-09-18) |
 | [007](007-web-analytics.md) | Web, segunda mitad: Núcleo, Cubo, gráficas con uPlot, asistentes de eventos corporativos/traspasos/tesis, `transfer_max_days`, calidad del frontend y manejo de errores | **En implementación** (2026-09-18) |
 | [008](008-fiscal-provisions.md) | Previsiones del esquema para la Fase 5 (ADR-0021): las nueve, el evento `swap`, y el endurecimiento de `fx_rate_date` con regeneración del *golden* | Escrito 2026-09-18; pendiente de implementar |
+| [009](009-tax-engine.md) | Fase 5, núcleo del motor fiscal: ejercicio consolidado, regla de recompra aplicada, compensaciones y arrastre, procedencia de cada cifra y marca de los criterios en disputa | Escrito 2026-09-18; **requiere la 008 fusionada** |
 | [review](review-challenge-decisions.md) | Agente revisor: *challenge* de las decisiones tomadas (reutilizable antes de cada fase) | Ejecutado 2026-08-30 (10 hallazgos, aplicados) |
