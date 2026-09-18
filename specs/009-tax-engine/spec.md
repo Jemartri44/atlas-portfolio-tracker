@@ -4,7 +4,7 @@
 
 **Creada**: 2026-09-18
 
-**Estado**: **Aprobada por la dirección el 2026-09-18.** Los supuestos A1–A16 quedan confirmados (respuestas en [`questions.md`](questions.md)). Criterios nuevos numerados por la dirección: **#18–#21** (reglas finas de la recompra, A1), **#22** (orden de la compensación, A2) y **#23** (gastos de administración y depósito, A4). Añadido tras la respuesta a N6: FR-038.
+**Estado**: **Implementada el 2026-09-18**, con un bloqueo abierto en el presupuesto del paquete de la web (`questions.md`, N7). **Aprobada por la dirección el 2026-09-18.** Los supuestos A1–A16 quedan confirmados (respuestas en [`questions.md`](questions.md)). Criterios nuevos numerados por la dirección: **#18–#21** (reglas finas de la recompra, A1), **#22** (orden de la compensación, A2) y **#23** (gastos de administración y depósito, A4). Añadido tras la respuesta a N6: FR-038.
 
 **Entrada**: `docs/prompts/009-tax-engine.md`; ADR-0020 (lo declarado), ADR-0021 (las previsiones), ADR-0022 (la configuración se registra entera), ADR-0013/0014 (fecha fiscal, ventana, linaje), ADR-0009/0010/0011 (FIFO, traspasos, primitivas), ADR-0005 (decimal), ADR-0015/0016 (proyección degradada, `asOf`); `docs/fiscal-questions.md` (los diecisiete criterios, incluido el **17**, posterior al prompt).
 

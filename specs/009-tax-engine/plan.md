@@ -328,7 +328,34 @@ Lo que **no** se borra y por qué: el `amount`/`unit_price` que es base de coste
 | 16 | `test(tax): prove the defaults change nothing` | §8 |
 | 17 | `fix(projections): align the wash-sale warnings with the tax engine` | N6, **último**, con predicción escrita antes. Incluye el añadido de la dirección: los dos avisos **nombran la compra** (fecha y cantidad), dicen **el año fiscal con número** y **no llevan identificadores internos**; en la CLI y en la web, con las cifras por `f.money`/`f.quantity`. Se rebasa al final sobre el cambio paralelo de `warnings.ts` y se conservan los dos |
 
-Si Q3/Q4/Q12 se confirman, entran como commits propios del bloque 3 (configuración) y del 4 (aviso). `npm run lint` verde **antes de cada commit** y como último paso antes de entregar. Nunca `git push`.
+Si Q3/Q4/Q12 se confirman, entran como commits propios del bloque 3 (configuración) y del 4 (aviso).
+
+**Lo entregado**, que se aparta del plan en el reparto de commits: el motor (bloques 2–4) entró en un commit, porque sus tests son de integración y sus módulos dependen unos de otros; la configuración de Q3/Q4 y el aviso de Q12 tienen el suyo, como estaba previsto; y aparecen cuatro que el plan no tenía: la corrección del catálogo para seguir las fichas #18–#23 que la dirección escribió después, la predicción de los avisos antes de tocarlos, un test que faltaba y la marca de puro que deja fuera del paquete de la web el catálogo de criterios.
+
+| # | Commit |
+|---|---|
+| 1 | `docs(009): spec, plan and questions for the tax engine` |
+| 2 | `fix(corporate): roll back acquisitions and income of a failed action` |
+| 3 | `feat(settings): give the income category and fiscal date rule own codes` |
+| 4 | `docs(009): hand-computed tax year` — **antes que el motor** |
+| 5 | `feat(projections): journal every lot the FIFO opens, consumes or moves` |
+| 6 | `feat(settings): configure the offset limit, carry years and treaty rates` |
+| 7 | `feat(tax): offset and carry forward the savings base` |
+| 8 | `feat(tax): compute the savings base with its criteria and provenance` |
+| 9 | `test(tax): check the hand-computed year against the engine` |
+| 10 | `feat(tax): warn when a settings change moves a past savings base` |
+| 11 | `refactor(tax): report the offset rate and doubtful reasons as codes` |
+| 12 | `feat(cli): add atlas tax with every section of the report` |
+| 13 | `test(tax): prove no figure reads a price and the defaults move nothing` |
+| 14 | `fix(tax): follow the document on the criteria 19, 22 and 23` |
+| 15 | `test(tax): keep the criteria catalogue level with the document` |
+| 16 | `docs(009): predict what the aligned wash-sale warnings move` |
+| 17 | `test(tax): cover a base that moves back into an earlier year` |
+| 18 | `fix(projections): align the wash-sale warnings with the tax engine` |
+| 19 | `perf(tax): let a bundle that never compensates drop the catalogue` |
+| 20 | `docs(009): implementation notes` |
+
+Medido al final: **1204 tests** en 113 ficheros; `packages/domain` al **100 %** (4208 sentencias, 2142 ramas, 939 funciones, 4015 líneas); `lint` y `typecheck` en verde; `build` **en rojo por el presupuesto del paquete de la web** (N7). `npm run lint` verde **antes de cada commit** y como último paso antes de entregar. Nunca `git push`.
 
 ---
 
