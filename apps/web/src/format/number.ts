@@ -115,6 +115,18 @@ export const formatPoints = (value: string | undefined, format: NumberFormat = {
     : `${formatDecimalString(value, { decimals: 2, signed: true, ...format })} pp`;
 
 /**
+ * Decimals that say something: none for an exact zero ("0 %", never
+ * "0,0000 %"), two for anything two decimals can show, and four for a small
+ * figure that two would round to a zero it is not.
+ */
+export const meaningfulDecimals = (value: string): number => {
+  if (/^[+-]?0*(\.0*)?$/.test(value)) {
+    return 0;
+  }
+  return /^[+-]?0*(\.0*)?$/.test(roundDecimalString(value, 2)) ? 4 : 2;
+};
+
+/**
  * A decimal **exactly as recorded**, in Spanish notation: an ECB rate
  * (1,0672), a ratio (1,7), a weight (22,5). Nothing is rounded and nothing is
  * padded, because the point is to read back what was written.

@@ -159,7 +159,7 @@ describe("amountDisplay", () => {
   it("masks a quantity too, and says which kind it is (Q6)", () => {
     const hidden = amountDisplay({ formatted: "12,5", privacy: true, kind: "cantidad" });
     expect(hidden.text).toBe(MASK);
-    expect(hidden.label).toBe("cantidad oculto");
+    expect(hidden.label).toBe("cantidad oculta");
   });
 
   it("says 'sin dato' where there is no datum, never a zero (constitution V)", () => {
@@ -357,7 +357,7 @@ describe("the privacy mode inside a message", () => {
     ).toContain(MASK);
     expect(
       describeError(settingsError("monthly_contribution_eur", "-600"), { privacy: false }),
-    ).toContain("−600,00 EUR");
+    ).toContain("−600,00\u00a0EUR");
     // A percentage is not an amount and stays readable in public (§9.6).
     const percent = describeError(settingsError("bucket_stop_loss_pct", "-25"), { privacy: true });
     expect(percent).toContain("−25");

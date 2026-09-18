@@ -33,17 +33,17 @@ const COLUMNS: readonly DataColumn<ContributionRowView>[] = [
     key: "value",
     header: "Valor hoy",
     numeric: true,
-    cell: (row) => <Amount value={row.value} currency={false} />,
+    cell: (row) => <Amount value={row.value} />,
   },
   {
     key: "gap",
     header: "Déficit",
     numeric: true,
     card: "sub",
-    cell: (row) => <Amount value={row.gap} currency={false} />,
+    cell: (row) => <Amount value={row.gap} />,
     cardCell: (row) => (
       <span>
-        déficit <Amount value={row.gap} currency={false} /> · objetivo{" "}
+        déficit <Amount value={row.gap} /> · objetivo{" "}
         <Figure value={row.targetPct} unit="percent" />
       </span>
     ),

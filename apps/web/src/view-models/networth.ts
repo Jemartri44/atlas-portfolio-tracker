@@ -7,8 +7,10 @@
 // exception 2).
 
 import { type CashLine, Money, type NetWorth } from "@atlas/domain";
+import { formatDate } from "../format/date.js";
 import { valueLabel } from "../format/labels.js";
 import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
+import { countOf, formatExact } from "../format/number.js";
 
 export interface NetWorthLine {
   /**
@@ -83,7 +85,7 @@ const cashDetail = (row: CashLine): string | undefined => {
   }
   const age = row.fx_age_days ?? 0;
   const dated = row.fx_rate_dated === true ? "" : " (fecha de la operación)";
-  return `tipo ${row.fx_rate.rate.toString()} del ${row.fx_rate.date}${dated}, ${age} días${
+  return `tipo ${formatExact(row.fx_rate.rate.toString())} del ${formatDate(row.fx_rate.date)}${dated}, ${countOf(age, "día", "días")}${
     row.fx_stale === true ? ", caducado" : ""
   }`;
 };

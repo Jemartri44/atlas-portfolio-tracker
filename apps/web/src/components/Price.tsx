@@ -11,6 +11,8 @@
 
 import type { Money } from "@atlas/domain";
 import { type JSX, Show } from "solid-js";
+import { formatDate } from "../format/date.js";
+import { countOf } from "../format/number.js";
 import { Amount } from "./Amount.jsx";
 
 export interface PriceInfo {
@@ -41,10 +43,11 @@ export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX
   >
     <span>
       <Price price={props.price} />
-      <Show when={props.price.priceDate !== undefined}> · {props.price.priceDate}</Show>
+      <Show when={props.price.priceDate}>{(date) => <> · {formatDate(date())}</>}</Show>
       <Show when={props.withAge === true && props.price.ageDays !== undefined}>
         {" "}
-        ({props.price.ageDays} días{props.price.stale ? ", caducado" : ""})
+        ({countOf(props.price.ageDays ?? 0, "día", "días")}
+        {props.price.stale ? ", caducado" : ""})
       </Show>
       <Show when={props.withAge !== true && props.price.stale}> (caducado)</Show>
     </span>

@@ -38,17 +38,17 @@ const CORE_COLUMNS: readonly DataColumn<CoreCostRowView>[] = [
     header: "Comisiones",
     numeric: true,
     card: "figure",
-    cell: (row) => <Amount value={row.fees} currency={false} />,
+    cell: (row) => <Amount value={row.fees} />,
   },
   {
     key: "pct",
     header: "% invertido",
     numeric: true,
     card: "sub",
-    cell: (row) => <Figure value={row.feesPct} unit="percent" decimals={4} />,
+    cell: (row) => <Figure value={row.feesPct} unit="percent" decimals="auto" />,
     cardCell: (row) => (
       <span>
-        <Figure value={row.feesPct} unit="percent" decimals={4} /> de lo invertido · TER{" "}
+        <Figure value={row.feesPct} unit="percent" decimals="auto" /> de lo invertido · TER{" "}
         <Figure value={row.ter} unit="percent" />
       </span>
     ),
@@ -63,7 +63,7 @@ const CORE_COLUMNS: readonly DataColumn<CoreCostRowView>[] = [
     key: "annual",
     header: "Coste anual",
     numeric: true,
-    cell: (row) => <Amount value={row.annualCost} missingReason="sin precio" currency={false} />,
+    cell: (row) => <Amount value={row.annualCost} missingReason="sin precio" />,
   },
 ];
 

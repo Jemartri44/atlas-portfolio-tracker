@@ -4,14 +4,18 @@
 // also why they are not painted by `Amount` and do not touch `format/money.ts`.
 
 import type { JSX } from "solid-js";
-import { formatPercent, formatPoints, signOf } from "../format/number.js";
+import { formatPercent, formatPoints, meaningfulDecimals, signOf } from "../format/number.js";
 
 interface FigureProps {
   /** Decimal string as the domain returns it; `undefined` is "sin dato". */
   value: string | undefined;
   /** `percent` adds " %", `points` adds " pp" and always shows the sign. */
   unit: "percent" | "points" | "plain";
-  decimals?: number | undefined;
+  /**
+   * Exact decimals, or `"auto"`: as many as say something — "0 %" for a zero,
+   * four for a small ratio two would round away. Never "0,0000 %".
+   */
+  decimals?: number | "auto" | undefined;
   /** Colour and sign by value; the sign is always printed for points. */
   coloured?: boolean | undefined;
   class?: string | undefined;
@@ -24,7 +28,7 @@ export const Figure = (props: FigureProps): JSX.Element => {
     if (props.value === undefined) {
       return NO_DATA;
     }
-    const decimals = props.decimals;
+    const decimals = props.decimals === "auto" ? meaningfulDecimals(props.value) : props.decimals;
     if (props.unit === "percent") {
       return formatPercent(props.value, decimals === undefined ? {} : { decimals });
     }

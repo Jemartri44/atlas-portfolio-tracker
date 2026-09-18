@@ -20,6 +20,7 @@ import {
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import { Callout, EmptyState } from "../../components/index.js";
+import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { displayName, nameIndex } from "../../format/names.js";
 import { daysSinceExport } from "../../ledger/source.js";
@@ -114,8 +115,8 @@ export default function ResumenRoute(): JSX.Element {
                 <Show when={weights.partial && weights.missing_prices.length > 0}>
                   <Callout tone="info" title="Los pesos del núcleo no se han podido calcular">
                     Faltan precios de{" "}
-                    {weights.missing_prices.map((id) => displayName(names, id)).join(", ")} a {date}
-                    . Los pesos no se calculan sobre un total parcial.
+                    {weights.missing_prices.map((id) => displayName(names, id)).join(", ")} a{" "}
+                    {formatDate(date)}. Los pesos no se calculan sobre un total parcial.
                   </Callout>
                 </Show>
               </div>

@@ -27,6 +27,7 @@ import {
   type NameIndex,
   NO_NAMES,
 } from "../format/names.js";
+import { formatExact } from "../format/number.js";
 import { FORM_SPECS } from "./forms/specs.js";
 import {
   effectSentences,
@@ -48,6 +49,7 @@ export type DetailKind =
   | "text"
   | "id"
   | "percent"
+  | "rate"
   | "effects"
   | "settings";
 
@@ -114,6 +116,9 @@ const AMOUNT_FIELDS = new Set([
 ]);
 
 const QUANTITY_FIELDS = new Set(["quantity", "quantity_in", "quantity_out"]);
+
+/** ECB rates: public figures, shown exactly as recorded and in Spanish notation. */
+const RATE_FIELDS = new Set(["fx_rate", "fx_rate_sold", "fx_rate_bought"]);
 
 /** Fields that point at another **event**: named by its type and date, never by its id. */
 const EVENT_ID_FIELDS = new Set(["corrects_id", "reverses_id", "order_id", "request_id"]);
@@ -227,6 +232,9 @@ const fieldOf = (
   }
   if (typeof value === "string" && DATE_FIELDS.has(name)) {
     return { name, label, kind: "date", text: value };
+  }
+  if (typeof value === "string" && RATE_FIELDS.has(name)) {
+    return { name, label, kind: "rate", text: formatExact(value) };
   }
   if (name === "effects" && Array.isArray(value)) {
     const sentences = effectSentences(value as Effect[], String(event.asset_id ?? ""), names);

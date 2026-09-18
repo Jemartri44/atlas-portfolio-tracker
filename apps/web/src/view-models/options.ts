@@ -113,7 +113,8 @@ export const bookOf = (state: LedgerState, id: string | undefined): Book | undef
  * of today (a purchase with next week's value date is normal), and "-780 días"
  * is not an age, it is a subtraction shown by mistake.
  */
-const ageHint = (days: number): string => (days < 0 ? "con fecha futura" : `${days} días`);
+const ageHint = (days: number): string =>
+  days < 0 ? "con fecha futura" : countOf(days, "día", "días");
 
 /** Open orders, so a purchase can close the one it executes. */
 export const openOrderOptions = (state: LedgerState, at: CivilDate): Option[] => {
@@ -121,7 +122,7 @@ export const openOrderOptions = (state: LedgerState, at: CivilDate): Option[] =>
   return pendingOrders(state, at).map((order) => ({
     value: order.order_id,
     label: `${eventLabel(order.side === "buy" ? "buy" : "sell")} de ${displayName(names, order.asset_id)}`,
-    hint: `${order.requested_date} · ${displayName(names, order.account_id)} · ${ageHint(order.days_open)}`,
+    hint: `${formatDate(order.requested_date)} · ${displayName(names, order.account_id)} · ${ageHint(order.days_open)}`,
   }));
 };
 
@@ -131,7 +132,7 @@ export const openTransferOptions = (state: LedgerState, at: CivilDate): Option[]
   return transferWatch(state, at, settingsAt(state, at).settings).rows.map((request) => ({
     value: request.request_id,
     label: `${displayName(names, request.from_asset_id)} → ${displayName(names, request.to_asset_id)}`,
-    hint: `${request.requested_date} · ${request.stage} · ${ageHint(request.days_open)}${
+    hint: `${formatDate(request.requested_date)} · ${valueLabel(request.stage)} · ${ageHint(request.days_open)}${
       request.overdue === true ? " ⚠ fuera de plazo" : ""
     }`,
   }));
