@@ -62,9 +62,16 @@ export interface LineContext {
 
 const LISTED: ReadonlySet<AssetType> = new Set(["stock", "etf", "etc", "etp"]);
 
-/** Which variant of criterion #2 a window of this asset type applies. */
-export const windowCriterion = (type: AssetType): CriterionId =>
-  LISTED.has(type) ? "2:listed" : type === "crypto" ? "2:crypto" : "2:fund";
+/** Which variant of criterion #2 applies: by the type of asset **and the window applied**. */
+export const windowCriterion = (type: AssetType, window: string): CriterionId => {
+  if (LISTED.has(type)) {
+    return window === "2m" ? "2:listed" : window === "1y" ? "2:listed_1y" : "2:other";
+  }
+  if (type === "crypto") {
+    return window === "1y" ? "2:crypto" : window === "2m" ? "2:crypto_2m" : "2:other";
+  }
+  return window === "1y" ? "2:fund" : "2:other";
+};
 
 const money = (amount: string, currency: string): Money => Money.parse(amount, currency);
 
@@ -284,7 +291,10 @@ export const deferralLine = (ctx: LineContext, deferral: Deferral): DeferralLine
 const deferralCriteria = (ctx: LineContext, outcome: WashSaleOutcome): CriterionId[] => {
   const gain = ctx.state.gains[outcome.gain_index] as RealizedGain;
   const type = (ctx.state.assets.get(gain.asset_id) as { asset_type: AssetType }).asset_type;
-  const ids: CriterionId[] = [windowCriterion(type), "14"];
+  const ids: CriterionId[] = [
+    windowCriterion(type, (outcome.window as { window: string }).window),
+    "14",
+  ];
   if (outcome.not_held) {
     ids.push("18");
   }

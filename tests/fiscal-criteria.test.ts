@@ -72,6 +72,10 @@ const DOUBT = ["disputed", "low", "medium", "high"];
  * Everything else must say exactly what the document says.
  */
 const DOCUMENT_SILENT: Record<string, string> = {
+  "2:listed_1y":
+    "the document gives the risk of the two months; one year for a listed security is the other side of the same dispute, the conservative one",
+  "2:other":
+    "a window no reading of the document supports (days, or two months for a fund): its risk runs either way",
   "2:crypto":
     "the document gives crypto a certainty (low) and no direction of risk: one year by prudence defers more, the conservative side",
   "2:fund":

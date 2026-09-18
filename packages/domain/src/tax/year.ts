@@ -44,6 +44,7 @@ import {
   savingsOffsetLimitPctOf,
   treatyWithholdingPctOf,
 } from "../settings/settings.js";
+import { washSaleWindowOf } from "../settings/wash-sale.js";
 import { compensate, type YearBalances } from "./compensation.js";
 import {
   CRITERION_IDS,
@@ -468,13 +469,32 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
         : "trade_date",
     ]),
   );
-  const windows = (types: readonly AssetType[], window: "1y" | "2m") => ({
-    ...settings,
-    wash_sale_window: {
-      ...settings.wash_sale_window,
-      ...Object.fromEntries(types.map((type) => [type, window])),
-    },
-  });
+  // The other side of #2 for the types that apply one side today: the
+  // alternative is labelled by the window applied, like the figures (feature
+  // 009 review). A reading nobody applies is not computed.
+  const windows = (
+    criterion: CriterionId,
+    types: readonly AssetType[],
+    from: "1y" | "2m",
+    to: "1y" | "2m",
+  ): { criterion: CriterionId; settings: Settings }[] => {
+    const applying = types.filter((type) => washSaleWindowOf(settings, type) === from);
+    return applying.length === 0
+      ? []
+      : [
+          {
+            criterion,
+            settings: {
+              ...settings,
+              wash_sale_window: {
+                ...settings.wash_sale_window,
+                ...Object.fromEntries(applying.map((type) => [type, to])),
+              },
+            },
+          },
+        ];
+  };
+  const listed = ["stock", "etf", "etc", "etp"] as const;
   const categories = Object.fromEntries(
     (["etc", "etp"] as const).map((type) => [
       type,
@@ -483,8 +503,10 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
   );
   return [
     { criterion: "1", settings: { ...settings, fiscal_date_rule: flipped } },
-    { criterion: "2:listed", settings: windows(["stock", "etf", "etc", "etp"], "1y") },
-    { criterion: "2:crypto", settings: windows(["crypto"], "2m") },
+    ...windows("2:listed", listed, "2m", "1y"),
+    ...windows("2:listed_1y", listed, "1y", "2m"),
+    ...windows("2:crypto", ["crypto"], "1y", "2m"),
+    ...windows("2:crypto_2m", ["crypto"], "2m", "1y"),
     {
       criterion: "2b",
       settings: {
@@ -605,6 +627,8 @@ const doubtful = (
   };
   const abs = (money: Money): Money => (money.isNegative() ? money.neg() : money);
   exposure("5", declaring("5"), (line) => abs(line.proceeds.eur.roundToCents()));
+  // A window no reading of the document supports: what it deferred is at stake.
+  exposure("2:other", declaring("2:other"), (line) => abs(line.deferred_eur.roundToCents()));
   exposure("7", declaring("7"), (line) => line.cost_eur.roundToCents());
   exposure("13", declaring("13"), (line) => abs(line.computable_eur_rounded));
   exposure("15", declaring("15"), (line) =>

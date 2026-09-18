@@ -27,12 +27,22 @@ export interface FiscalCriterion {
 }
 
 /**
- * The criteria the engine applies. Criterion #2 has three variants because the
- * document gives it three certainties: the two months of listed securities are
- * **disputed** outside the EU and the system cannot tell where a security trades
- * (Q15), so every listed security carries the disputed one; one year for crypto
- * is **low**; one year for funds is the letter g) of article 33.5, which the
- * document does not dispute. `etc_etp_category` is the finding the review calls
+ * The criteria the engine applies. Criterion #2 is labelled by the window
+ * **actually applied**, not by the type of asset (feature 009 review): a stock
+ * the user set to one year applies the prudent side of the dispute, and saying
+ * "two months, aggressive" of it would state the opposite of what was done.
+ *
+ * - `2:listed`: two months for a listed security — **disputed** outside the EU,
+ *   and the system cannot tell where a security trades (Q15), so every listed
+ *   security carries it; **aggressive** if wrong.
+ * - `2:listed_1y`: one year for a listed security — the other side of the same
+ *   dispute; **conservative** if wrong.
+ * - `2:crypto`: one year for crypto, by prudence — **low**; conservative.
+ * - `2:crypto_2m`: two months for crypto — the less prudent side; aggressive.
+ * - `2:fund`: one year for funds, the letter g) of article 33.5, which the
+ *   document does not dispute.
+ * - `2:other`: any other window (days, or two months for a fund): no reading
+ *   of the document supports it. `etc_etp_category` is the finding the review calls
  * the largest in amount and that has no number: whether the disposal of an ETC
  * or an ETP is a capital gain or movable capital income.
  *
@@ -45,8 +55,11 @@ export interface FiscalCriterion {
 export const FISCAL_CRITERIA = {
   "1": { doc: "1", certainty: "medium", risk: "conservative" },
   "2:listed": { doc: "2", certainty: "disputed", risk: "aggressive" },
+  "2:listed_1y": { doc: "2", certainty: "disputed", risk: "conservative" },
   "2:crypto": { doc: "2", certainty: "low", risk: "conservative" },
+  "2:crypto_2m": { doc: "2", certainty: "low", risk: "aggressive" },
   "2:fund": { doc: "2", certainty: "high", risk: "conservative" },
+  "2:other": { doc: "2", certainty: "low", risk: "both" },
   "2b": { doc: "2b", certainty: "medium", risk: "conservative" },
   "3": { doc: "3", certainty: "high", risk: "conservative" },
   "4": { doc: "4", certainty: "disputed", risk: "both" },
@@ -82,8 +95,11 @@ export type CriterionId = keyof typeof FISCAL_CRITERIA;
 export const CRITERION_IDS: readonly CriterionId[] = [
   "1",
   "2:listed",
+  "2:listed_1y",
   "2:crypto",
+  "2:crypto_2m",
   "2:fund",
+  "2:other",
   "2b",
   "3",
   "4",

@@ -52,8 +52,11 @@ const RISK: Record<string, string> = {
 export const CRITERION_LABELS: Record<CriterionId, string> = {
   "1": "fecha fiscal por tipo de activo",
   "2:listed": "ventana de dos meses (cotizados)",
+  "2:listed_1y": "ventana de un año (cotizados, la lectura prudente)",
   "2:crypto": "ventana de un año (cripto)",
+  "2:crypto_2m": "ventana de dos meses (cripto, la lectura menos prudente)",
   "2:fund": "ventana de un año (fondos)",
+  "2:other": "ventana configurada que ninguna lectura del documento sostiene",
   "2b": "un traspaso entrante es una adquisición",
   "3": "comisiones en la base (art. 35)",
   "4": "ganancia en divisa y diferencias de cambio",
