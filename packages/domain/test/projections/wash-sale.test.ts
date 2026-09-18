@@ -192,10 +192,11 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
         value_date: buyDate,
         thesis_id: "t1",
       });
+      // Half of it: the other half stays, and only what stays can defer (#18).
       b.sell({
         account_id: "acc_bucket",
         asset_id: "ast_spec",
-        quantity: "10",
+        quantity: "5",
         unit_price: "8",
         fee: "0",
         ...EUR,
@@ -209,12 +210,41 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
     expect(inside).toHaveLength(1);
     expect(inside[0]?.details).toMatchObject({
       asset_id: "ast_spec",
+      sale_date: "2027-03-10",
       buy_date: "2027-01-10",
       window_start: "2027-01-10",
       quantity: "10",
+      loss_eur: "-10",
+      tax_year: 2027,
       window: "2m",
     });
     expect(codes(cycle("2027-01-09"), "wash_sale_window_prior_buy")).toEqual([]);
+  });
+
+  it("does not name a purchase the loss-making sale itself consumed (#18)", () => {
+    // Bought and sold whole: nothing of that purchase stays in the patrimony,
+    // so it defers nothing, and the warning must not say it does.
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "10",
+      unit_price: "10",
+      ...EUR,
+      trade_date: "2027-01-10",
+      value_date: "2027-01-10",
+    });
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "10",
+      unit_price: "8",
+      ...EUR,
+      trade_date: "2027-03-10",
+      value_date: "2027-03-10",
+    });
+    expect(codes(projectLedger(b.build()), "wash_sale_window_prior_buy")).toEqual([]);
   });
 
   it("counts day zero on both sides, and warns about it exactly once", () => {
@@ -269,27 +299,37 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
       return projectLedger(b.build());
     };
 
-    // The purchase comes first in the file: it is a prior buy of the sale.
+    // The purchase comes first in the file: it is a prior buy of the sale. The
+    // sale consumes the older lot by FIFO, so only the purchase of the same day
+    // is still held and named (#18).
     const prior = sameDay(true);
     expect(codes(prior, "wash_sale_window_prior_buy").map((w) => w.details.buy_date)).toEqual([
-      "2027-01-10",
       "2027-02-10",
     ]);
     expect(codes(prior, "wash_sale_window_repurchase")).toEqual([]);
 
-    // The purchase comes after: it is a repurchase of the very same day.
+    // The purchase comes after: it is a repurchase of the very same day, and
+    // the older lot, sold whole, is named by nobody.
     const after = sameDay(false);
     expect(codes(after, "wash_sale_window_repurchase").map((w) => w.details.sale_date)).toEqual([
       "2027-02-10",
     ]);
-    expect(codes(after, "wash_sale_window_prior_buy").map((w) => w.details.buy_date)).toEqual([
-      "2027-01-10",
-    ]);
+    expect(codes(after, "wash_sale_window_prior_buy")).toEqual([]);
   });
 
   it("warns once per purchase inside the window", () => {
     const b = new LedgerBuilder();
     catalogue(b);
+    // An older lot the sale consumes by FIFO, so the three purchases stay held.
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "15",
+      unit_price: "10",
+      ...EUR,
+      trade_date: "2026-01-12",
+      value_date: "2026-01-12",
+    });
     for (const date of ["2027-02-01", "2027-02-15", "2027-03-01"]) {
       b.buy({
         account_id: "acc_fund",
@@ -316,8 +356,8 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
   it("applies to both books: the rule is fiscal, not of the bucket", () => {
     const bucket = stockCycle("2027-04-10");
     expect(codes(bucket, "wash_sale_window_repurchase")).toHaveLength(1);
-    // And the sale of the bucket itself warned about its own purchase.
-    expect(codes(bucket, "wash_sale_window_prior_buy")).toHaveLength(1);
+    // The sale sold its own purchase whole, so it names none (#18).
+    expect(codes(bucket, "wash_sale_window_prior_buy")).toHaveLength(0);
   });
 });
 
@@ -362,10 +402,11 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
       value_date_in: "2027-05-03",
       ...NAV,
     });
+    // Part of it: what the transfer brought in and is still held defers (#18).
     b.sell({
       account_id: "acc_fund",
       asset_id: "ast_bonds",
-      quantity: "10",
+      quantity: "6",
       unit_price: "6",
       ...EUR,
       trade_date: "2027-06-01",
@@ -384,7 +425,7 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
         asset_id: "ast_bonds",
         buy_date: "2027-05-03",
         quantity: "10",
-        loss_eur: "-40",
+        loss_eur: "-24",
         window_start: "2026-06-01",
         window: "1y",
       });
@@ -543,7 +584,11 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
 });
 
 describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
-  /** A fund liquidated at 6 after being bought at 10: a 40 EUR loss nobody chose. */
+  /**
+   * A fund bought at 10 and partly sold by force at 6: a 24 EUR loss nobody
+   * chose. Partly, because a liquidation sells everything, and then no purchase
+   * stays in the patrimony to defer anything (#18).
+   */
   const liquidation = (buyDate: string): LedgerState => {
     const b = new LedgerBuilder();
     catalogue(b);
@@ -557,13 +602,13 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
       value_date: buyDate,
     });
     b.corporateAction({
-      kind: "fund_liquidation",
+      kind: "issuer_restructuring",
       asset_id: "ast_world",
       effective_date: "2027-06-01",
       effects: [
         {
           op: "forced_sale",
-          per_account: [{ account_id: "acc_fund", quantity: "all" }],
+          per_account: [{ account_id: "acc_fund", quantity: "6" }],
           unit_price: "6",
           currency: "EUR",
           fx_rate: "1",
@@ -574,14 +619,14 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
     return projectLedger(b.build());
   };
 
-  it("warns about a purchase inside the window of the liquidation", () => {
+  it("warns about a purchase inside the window of the forced sale", () => {
     const warnings = codes(liquidation("2027-01-11"), "wash_sale_window_prior_buy");
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.details).toMatchObject({
       asset_id: "ast_world",
       buy_date: "2027-01-11",
       quantity: "10",
-      loss_eur: "-40",
+      loss_eur: "-24",
       window_start: "2026-06-01",
       window: "1y",
     });
@@ -670,6 +715,8 @@ describe("a swap counts on both sides of the wash-sale window", () => {
 
   it("1. hands over at a loss after buying inside the window: warns on the prior buy", () => {
     const state = crypto((b) => {
+      // An older lot for the swap to hand over by FIFO: the recent purchase stays.
+      buyBtc(b, "2025-01-10");
       buyBtc(b, "2027-01-11");
       swapAwayAtALoss(b, "2027-03-11");
     });
@@ -724,7 +771,7 @@ describe("a swap counts on both sides of the wash-sale window", () => {
       b.sell({
         account_id: "acc_fund",
         asset_id: "ast_eth",
-        quantity: "20",
+        quantity: "10",
         unit_price: "10",
         ...EUR,
         trade_date: "2027-05-11",

@@ -11,9 +11,12 @@ const repurchase = (window: string) =>
     message: "",
     details: {
       asset_id: "ast_world",
+      buy_date: "2027-03-01",
+      quantity: "4",
       sale_event_id: "01ARYZ6S41TSV4RRFFQ69G5SEV",
       sale_date: "2027-01-06",
       loss_eur: "-10",
+      tax_year: 2027,
       window_end: "2028-01-06",
       window,
     },
@@ -26,6 +29,15 @@ describe("describeWarning: the wash-sale window by its real name", () => {
     expect(repurchase("45d")).toContain("ventana de 45 días");
     // The old text called every window "the two-month rule", even a one-year one.
     expect(repurchase("1y")).not.toContain("dos meses");
+  });
+
+  it("names the purchase and the sale, says the year with its number, and no identifier", () => {
+    const text = repurchase("1y");
+    expect(text).toContain("Compra del 2027-03-01 de 4 títulos de ast_world");
+    expect(text).toContain("venta con pérdida del 2027-01-06");
+    expect(text).toContain("en 2027");
+    expect(text).not.toContain("este ejercicio");
+    expect(text).not.toContain("01ARYZ6S41TSV4RRFFQ69G5SEV");
   });
 });
 

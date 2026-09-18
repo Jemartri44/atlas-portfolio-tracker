@@ -108,9 +108,9 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `La tesis ${n.thesis(d.thesis_id)} está cerrada, pero ${n.one(d.account_id)} sigue teniendo ${n.one(d.asset_id)} (${f.quantity(d.position)}).`,
   // --- Wash-sale window --------------------------------------------------
   wash_sale_window_repurchase: (d, n, f) =>
-    `Recompra de ${n.one(d.asset_id)} dentro de la ventana de la venta del ${day(d.sale_date)} (pérdida ${f.money(d.loss_eur)}): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${day(d.window_end)} (${windowText(d.window)}).`,
+    `Compra del ${day(d.buy_date)} de ${f.quantity(d.quantity)} títulos de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): puede hacer que esa pérdida no sea computable en ${num(d.tax_year)}.`,
   wash_sale_window_prior_buy: (d, n, f) =>
-    `Venta con pérdida de ${n.one(d.asset_id)} (${f.money(d.loss_eur)}) con una compra del ${day(d.buy_date)} (${f.quantity(d.quantity)} títulos) dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio.`,
+    `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) con una compra del ${day(d.buy_date)} de ${f.quantity(d.quantity)} títulos que sigue en cartera, dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${num(d.tax_year)}.`,
 
   // --- Swap (ADR-0021) ----------------------------------------------------
   swap_fiscal_dates_differ: (d, n) =>

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BUY_GOLD, BUY_WORLD, harness, seed } from "../harness.js";
 
 describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
-  /** Buys 10 of the fund, sells at a loss, and buys again `months` later. */
+  /** Buys 10 of the fund, sells 6 at a loss (4 stay: #18), and buys again later. */
   const cycle = async () => {
     const h = harness({ events: seed(), confirm: true });
     const trade = (type: string, date: string, price: string, quantity = "10") => [
@@ -30,11 +30,13 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     ];
     expect(await h.exec(trade("buy", "2027-01-11", "10"))).toBe(0);
     h.reset();
-    expect(await h.exec(trade("sell", "2027-02-10", "8"))).toBe(0);
-    // The sale itself warns about the purchase inside the previous window, and
-    // names the window that actually applies: a fund has one year, not two months.
-    expect(h.text()).toContain("dentro de la ventana abierta");
+    expect(await h.exec(trade("sell", "2027-02-10", "8", "6"))).toBe(0);
+    // The sale itself warns about the purchase inside the previous window that
+    // it leaves in the portfolio, names it by its date and quantity and the
+    // window that actually applies: a fund has one year, not two months.
+    expect(h.text()).toContain("con una compra del 2027-01-11 de 10 títulos que sigue en cartera");
     expect(h.text()).toContain("ventana de un año");
+    expect(h.text()).toContain("puede no ser computable en 2027");
     h.reset();
     return { h, trade };
   };
@@ -43,20 +45,27 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     const { h, trade } = await cycle();
     expect(await h.exec(trade("buy", "2027-06-01", "8", "5"))).toBe(0);
     const text = h.text();
-    expect(text).toContain("Recompra de ast_world dentro de la ventana");
+    // The purchase by its date and quantity, the sale by its asset and date, the
+    // year with its number, and no internal identifier in the sentence.
+    expect(text).toContain(
+      "Compra del 2027-06-01 de 5 títulos de ast_world dentro de la ventana de su venta con pérdida del 2027-02-10",
+    );
     expect(text).toContain("2028-02-10");
+    expect(text).toContain("no sea computable en 2027");
+    expect(text).toContain("atlas tax 2027");
+    expect(text).not.toMatch(/ventana de la venta 01[0-9A-Z]{24}/);
     // The window is a year (ADR-0014): calling it "the two-month rule" next to a
     // date a year away contradicted the date and was fiscally false.
     expect(text).toContain("ventana de un año");
     expect(text).not.toContain("regla de los dos meses");
     // The warning comes before the confirmation, not after the write.
-    expect(text.indexOf("Recompra de ast_world")).toBeLessThan(text.indexOf("Registrado"));
+    expect(text.indexOf("Compra del 2027-06-01")).toBeLessThan(text.indexOf("Registrado"));
   });
 
   it("does not warn when the repurchase is outside the window, and never blocks", async () => {
     const { h, trade } = await cycle();
     expect(await h.exec(trade("buy", "2028-03-01", "8", "5"))).toBe(0);
-    expect(h.text()).not.toContain("Recompra de ast_world dentro de la ventana");
+    expect(h.text()).not.toContain("dentro de la ventana de su venta con pérdida");
     expect(h.text()).toContain("Registrado");
     // Even inside the window the purchase is recorded: it is a warning, not a rejection.
     const { events } = await h.store.load();

@@ -3186,23 +3186,12 @@
       "code": "wash_sale_window_prior_buy",
       "details": {
         "asset_id": "ast_world",
-        "buy_date": "2026-08-28",
-        "buy_event_id": "01MBP2GT78JNMNGSE96ZZMH1R7",
-        "loss_eur": "-90.82",
-        "quantity": "2.5",
-        "window": "1y",
-        "window_start": "2026-01-06"
-      },
-      "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R"
-    },
-    {
-      "code": "wash_sale_window_prior_buy",
-      "details": {
-        "asset_id": "ast_world",
         "buy_date": "2026-09-04",
         "buy_event_id": "01M1PS7R5RJ4XWKK5GX24DQ2FE",
         "loss_eur": "-90.82",
         "quantity": "6.3526",
+        "sale_date": "2027-01-06",
+        "tax_year": 2027,
         "window": "1y",
         "window_start": "2026-01-06"
       },
@@ -3216,6 +3205,8 @@
         "buy_event_id": "01M495YN80BYC4Q2KCPDGJRBPT",
         "loss_eur": "-90.82",
         "quantity": "6.1671",
+        "sale_date": "2027-01-06",
+        "tax_year": 2027,
         "window": "1y",
         "window_start": "2026-01-06"
       },
@@ -3229,6 +3220,8 @@
         "buy_event_id": "01M6H92S80PZPKZ809HYAG101D",
         "loss_eur": "-90.82",
         "quantity": "6.2906",
+        "sale_date": "2027-01-06",
+        "tax_year": 2027,
         "window": "1y",
         "window_start": "2026-01-06"
       },
@@ -3242,6 +3235,8 @@
         "buy_event_id": "01M913D280DABTDXE2PY8XFSY8",
         "loss_eur": "-90.82",
         "quantity": "5.5913",
+        "sale_date": "2027-01-06",
+        "tax_year": 2027,
         "window": "1y",
         "window_start": "2026-01-06"
       },
@@ -3255,6 +3250,8 @@
         "buy_event_id": "01MBEBAM80K3CE5XK9JN91KKCC",
         "loss_eur": "-90.82",
         "quantity": "4.9233",
+        "sale_date": "2027-01-06",
+        "tax_year": 2027,
         "window": "1y",
         "window_start": "2026-01-06"
       },
@@ -3264,10 +3261,12 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-02-05",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "5.0701",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
@@ -3277,10 +3276,12 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-03-07",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "5.3662",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
@@ -3290,10 +3291,12 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-04-07",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "6.0356",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
@@ -3303,10 +3306,12 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-05-03",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "5.7609",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
@@ -3324,26 +3329,15 @@
       "event_id": "01MN5XDK80W3H857KXVSK3FSHW"
     },
     {
-      "code": "wash_sale_window_prior_buy",
-      "details": {
-        "asset_id": "ast_epsilon",
-        "buy_date": "2027-03-05",
-        "buy_event_id": "01MGBDJF80AQMY7TCNE7BB4R42",
-        "loss_eur": "-87.6",
-        "quantity": "40",
-        "window": "2m",
-        "window_start": "2027-03-05"
-      },
-      "event_id": "01MN8FTA80DDTPKAG5TNV3Q20X"
-    },
-    {
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-06-05",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "4.9088",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
@@ -3353,10 +3347,12 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-08-06",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "5.5996",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
@@ -3366,10 +3362,12 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-09-04",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "6.5646",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
@@ -3379,10 +3377,12 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-10-07",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "6.4488",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
@@ -3392,36 +3392,27 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-11-03",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "4.8701",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
       "event_id": "01N3X45480EBH73T8KZ6NY4EVD"
     },
     {
-      "code": "wash_sale_window_prior_buy",
-      "details": {
-        "asset_id": "ast_delta",
-        "buy_date": "2027-09-10",
-        "buy_event_id": "01MZJ2PA80XHBXS2XS5FZYQ1N2",
-        "loss_eur": "-224.75",
-        "quantity": "25",
-        "window": "2m",
-        "window_start": "2027-09-10"
-      },
-      "event_id": "01N4F4Y58036KX1852YTTM0XD3"
-    },
-    {
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2027-12-06",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "4.6838",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
@@ -3431,10 +3422,12 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_delta",
+        "buy_date": "2027-12-20",
         "loss_eur": "-224.75",
         "quantity": "25",
         "sale_date": "2027-11-10",
         "sale_event_id": "01N4F4Y58036KX1852YTTM0XD3",
+        "tax_year": 2027,
         "window": "2m",
         "window_end": "2028-01-10"
       },
@@ -3444,10 +3437,12 @@
       "code": "wash_sale_window_repurchase",
       "details": {
         "asset_id": "ast_world",
+        "buy_date": "2028-01-06",
         "loss_eur": "-90.82",
-        "quantity": "8.7975",
+        "quantity": "5.629",
         "sale_date": "2027-01-06",
         "sale_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+        "tax_year": 2027,
         "window": "1y",
         "window_end": "2028-01-06"
       },
