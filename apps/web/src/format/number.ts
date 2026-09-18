@@ -82,6 +82,21 @@ export const formatDecimalString = (value: string, format: NumberFormat = {}): s
   return `${sign}${body}`;
 };
 
+/**
+ * A quantity of units **from its decimal string**: up to eight decimals with
+ * the trailing zeros trimmed, because a fraction of a fund is real and a
+ * `12,00000000` is noise.
+ *
+ * It lives here, and not behind the gate, because the prose of a warning needs
+ * exactly this shape and may not import `format/money.ts`. Nothing is given
+ * away by it: what the gate owns is the decision to **mask**, taken in
+ * `format/privacy.ts` and in `components/Amount.tsx`, never the typography.
+ */
+export const formatQuantityString = (value: string, decimals = 8): string => {
+  const text = formatDecimalString(value, { decimals });
+  return text.includes(",") ? text.replace(/,?0+$/, "") : text;
+};
+
 /** A percentage, with its symbol and a non-breaking space, as Spanish typography wants. */
 export const formatPercent = (value: string | undefined, format: NumberFormat = {}): string =>
   value === undefined ? "sin dato" : `${formatDecimalString(value, { decimals: 2, ...format })} %`;
