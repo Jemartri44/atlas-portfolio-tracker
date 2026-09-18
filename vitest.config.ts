@@ -33,7 +33,17 @@ export default defineConfig({
          */
         resolve: { conditions: ["browser", "development"] },
         ssr: { resolve: { conditions: ["browser", "development"] } },
-        test: { name: "web", root: "apps/web" },
+        // The Solid plugin asks for jsdom; this project has no DOM on purpose
+        // (decision (k)), and the smoke test only needs the modules to load.
+        /*
+         * No DOM environment on purpose (decision (k)). What that costs, found
+         * while trying: the `.tsx` module graph cannot be loaded here either,
+         * because `@solidjs/router` reads `window.history` **at import time**.
+         * So the components are covered by their pure layers (`format/`,
+         * `view-models/`, `ledger/`) and by hand; the day a screen needs more,
+         * `happy-dom` is pre-authorised and this is the concrete case for it.
+         */
+        test: { name: "web", root: "apps/web", environment: "node" },
       },
       { extends: true, test: { name: "repo", root: "tests" } },
     ],
