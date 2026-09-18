@@ -7,9 +7,16 @@
 // exception 2).
 
 import { type CashLine, Money, type NetWorth } from "@atlas/domain";
+import { valueLabel } from "../format/labels.js";
+import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
 
 export interface NetWorthLine {
-  /** What the line is about: an asset class, an asset, or an account and currency. */
+  /**
+   * What the line is about, **ready to paint**: the asset class in Spanish, or
+   * the current name of the asset or the account. The component used to run the
+   * name through `valueLabel`, which would have translated an asset genuinely
+   * called "Oro" into something else (review of 2026-09-18).
+   */
   name: string;
   detail?: string | undefined;
   value?: Money | undefined;
@@ -54,14 +61,23 @@ const cashDetail = (row: CashLine): string | undefined => {
   }`;
 };
 
-export const netWorthView = (view: NetWorth): NetWorthView => {
+/**
+ * `names` resolves the catalogue: the bucket lines and the cash lines are
+ * identifiers in the projection (`ast_alpha`, `acc_mi`) and the user knows them
+ * as "Alpha Robotics" and "Fondos indexados". The list of what is missing goes
+ * through the same resolver, because it is the text of the note at the bottom
+ * of the block (review of 2026-09-18). Without a catalogue every identifier
+ * still prints as itself.
+ */
+export const netWorthView = (view: NetWorth, names: NameIndex = NO_NAMES): NetWorthView => {
+  const named = (ids: readonly string[]): string[] => ids.map((id) => displayName(names, id));
   const core: NetWorthBlock = {
     label: "Núcleo",
     subtotal: shownSum(view.core.by_class.map((subtotal) => subtotal.value_eur)),
     partial: view.core.partial,
-    missing: view.core.missing_prices,
+    missing: named(view.core.missing_prices),
     lines: view.core.by_class.map((subtotal) => ({
-      name: subtotal.asset_class,
+      name: valueLabel(subtotal.asset_class),
       value: subtotal.value_eur,
       ...(subtotal.partial ? { missing: "falta algún precio" } : {}),
     })),
@@ -70,10 +86,10 @@ export const netWorthView = (view: NetWorth): NetWorthView => {
     label: "Cubo",
     subtotal: shownSum(view.bucket.rows.map((row) => row.value_eur)),
     partial: view.bucket.partial,
-    missing: view.bucket.missing_prices,
+    missing: named(view.bucket.missing_prices),
     lines: view.bucket.rows.map((row) => ({
-      name: row.asset_id,
-      ...(row.account_id === undefined ? {} : { detail: row.account_id }),
+      name: displayName(names, row.asset_id),
+      ...(row.account_id === undefined ? {} : { detail: displayName(names, row.account_id) }),
       ...(row.value_eur === undefined ? { missing: "sin precio" } : { value: row.value_eur }),
     })),
   };
@@ -83,7 +99,7 @@ export const netWorthView = (view: NetWorth): NetWorthView => {
     partial: view.cash.partial,
     missing: view.cash.missing_rates,
     lines: view.cash.rows.map((row) => ({
-      name: `${row.account_id} · ${row.currency}`,
+      name: `${displayName(names, row.account_id)} · ${row.currency}`,
       ...(cashDetail(row) === undefined ? {} : { detail: cashDetail(row) as string }),
       ...(row.value_eur === undefined ? { missing: "sin convertir" } : { value: row.value_eur }),
     })),

@@ -7,6 +7,7 @@
 
 import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
 import { eventLabel, fieldLabel, STATUS_LABELS, valueLabel } from "../format/labels.js";
+import { displayName, NAMED_ID_FIELDS, type NameIndex, NO_NAMES } from "../format/names.js";
 import { FORM_SPECS } from "./forms/specs.js";
 
 export type DetailKind = "amount" | "quantity" | "date" | "text" | "id" | "percent" | "json";
@@ -17,6 +18,12 @@ export interface DetailField {
   kind: DetailKind;
   /** Text for the plain kinds. */
   text?: string;
+  /**
+   * The raw value, when `text` is a resolved name. The detail screen is where
+   * the ledger is checked, so the identifier stays visible — **next to** the
+   * name and not instead of it (review of 2026-09-18).
+   */
+  hint?: string;
   /** Sensitive value, for the gated component. */
   amount?: Money;
   quantity?: Quantity;
@@ -146,6 +153,7 @@ const fieldOf = (
   event: Record<string, unknown>,
   name: string,
   value: unknown,
+  names: NameIndex,
 ): DetailField | undefined => {
   if (value === undefined) {
     return undefined;
@@ -161,7 +169,13 @@ const fieldOf = (
     return { name, label, kind: "date", text: value };
   }
   if (typeof value === "string" && ID_FIELDS.has(name)) {
-    return { name, label, kind: "id", text: value };
+    if (!NAMED_ID_FIELDS.has(name)) {
+      return { name, label, kind: "id", text: value };
+    }
+    const resolved = displayName(names, value);
+    return resolved === value
+      ? { name, label, kind: "id", text: value }
+      : { name, label, kind: "id", text: resolved, hint: value };
   }
   if (name === "ter") {
     return { name, label, kind: "percent", text: String(value) };
@@ -175,12 +189,12 @@ const fieldOf = (
   return { name, label, kind: "text", text: valueLabel(value) };
 };
 
-export const detailView = (entry: LedgerEntry): DetailView => {
+export const detailView = (entry: LedgerEntry, names: NameIndex = NO_NAMES): DetailView => {
   const event = entry.event as unknown as Record<string, unknown>;
   const envelope: DetailField[] = [];
   const fields: DetailField[] = [];
   for (const [name, value] of Object.entries(event)) {
-    const field = fieldOf(event, name, value);
+    const field = fieldOf(event, name, value, names);
     if (field === undefined) {
       continue;
     }

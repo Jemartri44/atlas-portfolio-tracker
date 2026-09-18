@@ -7,7 +7,6 @@ import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
 import { Amount, Badge } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
-import { valueLabel } from "../../format/labels.js";
 import type { NetWorthView } from "../../view-models/index.js";
 
 export const NetWorthBlock = (props: { view: NetWorthView }): JSX.Element => (
@@ -39,7 +38,7 @@ export const NetWorthBlock = (props: { view: NetWorthView }): JSX.Element => (
                 {(line) => (
                   <div class="line">
                     <span class="name" title={line.detail}>
-                      {valueLabel(line.name)}
+                      {line.name}
                     </span>
                     <Show
                       when={line.value !== undefined}

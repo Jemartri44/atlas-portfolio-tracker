@@ -12,6 +12,7 @@ import {
 } from "@atlas/domain";
 import type { Option } from "../components/Field.jsx";
 import { eventLabel, valueLabel } from "../format/labels.js";
+import { displayName, nameIndex } from "../format/names.js";
 import type { OptionSource } from "./forms/specs.js";
 
 /** Currencies worth offering: the ones the ledger already uses, euro first. */
@@ -47,12 +48,14 @@ export const assetOptions = (state: LedgerState, book?: "core" | "bucket"): Opti
     }));
 
 /** Open orders, so a purchase can close the one it executes. */
-export const openOrderOptions = (state: LedgerState, at: CivilDate): Option[] =>
-  pendingOrders(state, at).map((order) => ({
+export const openOrderOptions = (state: LedgerState, at: CivilDate): Option[] => {
+  const names = nameIndex(state);
+  return pendingOrders(state, at).map((order) => ({
     value: order.order_id,
-    label: `${eventLabel(order.side === "buy" ? "buy" : "sell")} de ${order.asset_id}`,
-    hint: `${order.requested_date} · ${order.account_id}`,
+    label: `${eventLabel(order.side === "buy" ? "buy" : "sell")} de ${displayName(names, order.asset_id)}`,
+    hint: `${order.requested_date} · ${displayName(names, order.account_id)}`,
   }));
+};
 
 /**
  * Open theses of that (account, asset). A bucket purchase demands one (rule 15)
@@ -64,8 +67,9 @@ export const openThesisOptions = (
   at: CivilDate,
   accountId?: string,
   assetId?: string,
-): Option[] =>
-  theses(state, at)
+): Option[] => {
+  const names = nameIndex(state);
+  return theses(state, at)
     .filter(
       (thesis) =>
         thesis.status === "open" &&
@@ -75,8 +79,9 @@ export const openThesisOptions = (
     .map((thesis) => ({
       value: thesis.thesis_id,
       label: thesis.thesis_id,
-      hint: `${thesis.asset_id} · ${thesis.days_open} días abierta`,
+      hint: `${displayName(names, thesis.asset_id)} · ${thesis.days_open} días abierta`,
     }));
+};
 
 export interface OptionContext {
   state: LedgerState;

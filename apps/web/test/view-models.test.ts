@@ -14,6 +14,7 @@ import {
   type Warning,
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
+import { nameIndex } from "../src/format/names.js";
 import {
   ENVELOPE_FIELDS,
   FORM_SPECS,
@@ -467,6 +468,65 @@ describe("targetWeightTotal", () => {
     // Half typed: the sum cannot read it, so it must not say it adds up.
     expect(targetWeightTotal({ a: "100", b: "-" })).toEqual({ total: "100", addsUp: false });
     expect(targetWeightTotal({ a: "abc" })).toEqual({ total: "0", addsUp: false });
+  });
+});
+
+describe("the names of the catalogue reach every screen", () => {
+  /*
+   * The complaint that opened this round: the screens showed `ast_delta` and
+   * `acc_bucket` where the ledger has had "Beta Biotech" and "Cubo
+   * especulativo" since the first event. Each of the three view-models takes
+   * the index and none of them resolves anything on its own.
+   */
+  const events = goldenEvents();
+  const state = projectLedger(events, { collectErrors: true });
+  const names = nameIndex(state);
+
+  it("names the account and the asset on every row of the ledger", () => {
+    const named = movementRows(ledgerEntries(state, events), names);
+    const plain = movementRows(ledgerEntries(state, events));
+    const withSubtitle = named.filter((row) => row.subtitle !== "");
+    expect(withSubtitle.length).toBeGreaterThan(50);
+    // Not one identifier of the catalogue survives in the second line.
+    for (const row of withSubtitle) {
+      expect(row.subtitle).not.toMatch(/\bast_[a-z_0-9]+/);
+      expect(row.subtitle).not.toMatch(/\bacc_[a-z_0-9]+/);
+    }
+    // Without the index, the identifiers: the fallback of `displayName`.
+    expect(plain.some((row) => /ast_|acc_/.test(row.subtitle))).toBe(true);
+  });
+
+  it("names the bucket, the cash and what is missing in the patrimony", () => {
+    const settings = settingsAt(
+      projectLedger(events, { collectErrors: true, asOf: "2029-06-30" }),
+      "2029-06-30",
+    ).settings;
+    const dated = projectLedger(events, { collectErrors: true, asOf: "2029-06-30" });
+    const view = netWorthView(netWorth(dated, "2029-06-30", settings), names);
+    const bucket = view.blocks.find((block) => block.label === "Cubo");
+    const cash = view.blocks.find((block) => block.label === "Efectivo");
+    for (const line of [...(bucket?.lines ?? []), ...(cash?.lines ?? [])]) {
+      expect(line.name).not.toMatch(/\bast_[a-z_0-9]+/);
+      expect(line.name).not.toMatch(/\bacc_[a-z_0-9]+/);
+    }
+    // The note at the bottom lists what is missing: names too.
+    for (const missing of view.missing) {
+      expect(missing).not.toMatch(/^ast_/);
+    }
+    // The core keeps its asset classes, in Spanish and not as an enum.
+    const core = view.blocks.find((block) => block.label === "Núcleo");
+    expect(core?.lines.map((line) => line.name)).toContain("Renta variable");
+  });
+
+  it("keeps the identifier next to the name where the ledger is checked", () => {
+    const entry = ledgerEntries(state, events).find((one) => one.event.type === "buy");
+    const view = detailView(entry as NonNullable<typeof entry>, names);
+    const asset = view.fields.find((field) => field.name === "asset_id");
+    expect(asset?.text).not.toMatch(/^ast_/);
+    expect(asset?.hint).toMatch(/^ast_/);
+    // With no catalogue there is no name to put beside it, so no hint either.
+    const plain = detailView(entry as NonNullable<typeof entry>);
+    expect(plain.fields.find((field) => field.name === "asset_id")?.hint).toBeUndefined();
   });
 });
 

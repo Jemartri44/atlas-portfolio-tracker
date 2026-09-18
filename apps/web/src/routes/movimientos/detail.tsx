@@ -11,6 +11,7 @@ import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import { Figure } from "../../components/Figure.jsx";
 import { Amount, Badge, Callout, Dialog, EmptyState, Field } from "../../components/index.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
+import { nameIndex } from "../../format/names.js";
 import { reverse } from "../../ledger/actions.js";
 import { store } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
@@ -81,7 +82,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
             }
           >
             {(found) => {
-              const view = createMemo(() => detailView(found()));
+              const view = createMemo(() => detailView(found(), nameIndex(snapshot.state)));
               return (
                 <>
                   <PageHeader
@@ -187,6 +188,12 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                                 </Show>
                                 <Show when={field.kind === "id" || field.kind === "text"}>
                                   {field.text}
+                                  {/* The identifier stays where the ledger is
+                                      checked, next to the name it resolves to. */}
+                                  <Show when={field.hint !== undefined}>
+                                    {" "}
+                                    <code class="tiny">{field.hint}</code>
+                                  </Show>
                                 </Show>
                               </dd>
                             </>
