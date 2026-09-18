@@ -428,7 +428,12 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
       "swap_fiscal_dates_differ",
       event.id,
       `the leg out of ${event.from_asset_id} is fiscally dated ${dateOut} and the leg in of ${event.to_asset_id} ${dateIn}`,
-      { from_asset_id: event.from_asset_id, to_asset_id: event.to_asset_id, dateOut, dateIn },
+      {
+        from_asset_id: event.from_asset_id,
+        to_asset_id: event.to_asset_id,
+        fiscal_date_out: dateOut,
+        fiscal_date_in: dateIn,
+      },
     );
   }
   warnCurrency(state, event, from);

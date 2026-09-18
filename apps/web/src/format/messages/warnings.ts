@@ -118,7 +118,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
 
   // --- Swap (ADR-0021) ----------------------------------------------------
   swap_fiscal_dates_differ: (d, n) =>
-    `En la permuta, ${n.one(d.from_asset_id)} tiene fecha fiscal ${text(d.dateOut)} y ${n.one(d.to_asset_id)} la tiene ${text(d.dateIn)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas.`,
+    `En la permuta, ${n.one(d.from_asset_id)} tiene fecha fiscal ${text(d.fiscal_date_out)} y ${n.one(d.to_asset_id)} la tiene ${text(d.fiscal_date_in)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas.`,
 };
 
 /**

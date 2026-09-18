@@ -325,7 +325,7 @@ export const describeWarning = (warning: Warning): string => {
     case "wash_sale_window_prior_buy":
       return `Venta con pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) con una compra del ${text(d.buy_date)} (${text(d.buy_event_id)}, ${text(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio (business-rules.md §5.4).`;
     case "swap_fiscal_dates_differ":
-      return `En la permuta, ${text(d.from_asset_id)} tiene fecha fiscal ${text(d.dateOut)} y ${text(d.to_asset_id)} la tiene ${text(d.dateIn)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas (ADR-0013).`;
+      return `En la permuta, ${text(d.from_asset_id)} tiene fecha fiscal ${text(d.fiscal_date_out)} y ${text(d.to_asset_id)} la tiene ${text(d.fiscal_date_in)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas (ADR-0013).`;
     case "thesis_closed_with_position":
       return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
     default:
