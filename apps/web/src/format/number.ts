@@ -10,6 +10,13 @@
 const GROUP = ".";
 const DECIMAL = ",";
 
+/**
+ * The space between a figure and its unit (`%`, `pp`, `EUR`): **non-breaking**,
+ * as Spanish typography wants, so a line never ends in "12,5" and starts the
+ * next one with "%".
+ */
+export const NBSP = "\u00a0";
+
 export interface NumberFormat {
   /** Exact number of decimals; the column decides, not the value. */
   decimals?: number;
@@ -106,6 +113,13 @@ export const formatPoints = (value: string | undefined, format: NumberFormat = {
   value === undefined
     ? "sin dato"
     : `${formatDecimalString(value, { decimals: 2, signed: true, ...format })} pp`;
+
+/**
+ * A decimal **exactly as recorded**, in Spanish notation: an ECB rate
+ * (1,0672), a ratio (1,7), a weight (22,5). Nothing is rounded and nothing is
+ * padded, because the point is to read back what was written.
+ */
+export const formatExact = (value: string): string => formatDecimalString(value);
 
 /** Sign of a decimal string, for the label and the class that accompany the colour. */
 export const signOf = (value: string): "positive" | "negative" | "zero" => {

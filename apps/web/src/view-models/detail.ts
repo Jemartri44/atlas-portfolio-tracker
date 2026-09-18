@@ -11,12 +11,32 @@
 // the twenty lines that use them would leave two files that only make sense
 // read together, and the classification is the thing worth reviewing as a whole.
 
-import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
+import { type Effect, type LedgerEntry, Money, Quantity, type Settings } from "@atlas/domain";
 import { eventLabel, fieldLabel, STATUS_LABELS, valueLabel } from "../format/labels.js";
 import { displayName, NAMED_ID_FIELDS, type NameIndex, NO_NAMES } from "../format/names.js";
 import { FORM_SPECS } from "./forms/specs.js";
+import {
+  effectSentences,
+  recordedDecimals,
+  type Sentence,
+  type SettingRow,
+  settingRows,
+} from "./structured.js";
 
-export type DetailKind = "amount" | "quantity" | "date" | "text" | "id" | "percent" | "json";
+/**
+ * `effects` and `settings` are told as sentences (`structured.ts`): the raw
+ * JSON they used to be printed as is gone from the interface, and with it the
+ * quantities and prices it showed with the privacy mode on.
+ */
+export type DetailKind =
+  | "amount"
+  | "quantity"
+  | "date"
+  | "text"
+  | "id"
+  | "percent"
+  | "effects"
+  | "settings";
 
 export interface DetailField {
   name: string;
@@ -32,7 +52,13 @@ export interface DetailField {
   hint?: string;
   /** Sensitive value, for the gated component. */
   amount?: Money;
+  /** The decimals it was recorded with, so the detail reads back what was written. */
+  decimals?: number;
   quantity?: Quantity;
+  /** The effects of a corporate action, one sentence each. */
+  sentences?: Sentence[];
+  /** The parameters of a configuration change, one row each. */
+  rows?: SettingRow[];
   /** A link to another screen, when the field points at something. */
   link?: { to: string; label: string };
 }
@@ -166,13 +192,26 @@ const fieldOf = (
   }
   const label = fieldLabel(name);
   if (typeof value === "string" && AMOUNT_FIELDS.has(name)) {
-    return { name, label, kind: "amount", amount: Money.parse(value, currencyOf(event, name)) };
+    return {
+      name,
+      label,
+      kind: "amount",
+      amount: Money.parse(value, currencyOf(event, name)),
+      decimals: recordedDecimals(value),
+    };
   }
   if (typeof value === "string" && QUANTITY_FIELDS.has(name)) {
     return { name, label, kind: "quantity", quantity: Quantity.parse(value) };
   }
   if (typeof value === "string" && DATE_FIELDS.has(name)) {
     return { name, label, kind: "date", text: value };
+  }
+  if (name === "effects" && Array.isArray(value)) {
+    const sentences = effectSentences(value as Effect[], String(event.asset_id ?? ""), names);
+    return { name, label, kind: "effects", sentences };
+  }
+  if (name === "settings" && typeof value === "object" && value !== null) {
+    return { name, label, kind: "settings", rows: settingRows(value as Settings, names) };
   }
   if (typeof value === "string" && ID_FIELDS.has(name)) {
     if (!NAMED_ID_FIELDS.has(name)) {
@@ -187,16 +226,18 @@ const fieldOf = (
     return { name, label, kind: "percent", text: String(value) };
   }
   if (typeof value === "object" && value !== null) {
-    return { name, label, kind: "json", text: JSON.stringify(value, null, 2) };
-  }
-  if (typeof value === "boolean") {
-    return { name, label, kind: "text", text: valueLabel(value) };
+    // A structure this version does not know: saying so beats dumping it, and
+    // dumping it could print a figure the privacy mode is meant to cover.
+    return { name, label, kind: "text", text: "Dato que esta versión no sabe mostrar." };
   }
   return { name, label, kind: "text", text: valueLabel(value) };
 };
 
-export const detailView = (entry: LedgerEntry, names: NameIndex = NO_NAMES): DetailView => {
-  const event = entry.event as unknown as Record<string, unknown>;
+/** The fields of an event with legible names, for the detail and for the correction screen. */
+export const eventFields = (
+  event: Record<string, unknown>,
+  names: NameIndex = NO_NAMES,
+): { envelope: DetailField[]; fields: DetailField[] } => {
   const envelope: DetailField[] = [];
   const fields: DetailField[] = [];
   for (const [name, value] of Object.entries(event)) {
@@ -210,6 +251,14 @@ export const detailView = (entry: LedgerEntry, names: NameIndex = NO_NAMES): Det
       fields.push(field);
     }
   }
+  return { envelope, fields };
+};
+
+export const detailView = (entry: LedgerEntry, names: NameIndex = NO_NAMES): DetailView => {
+  const { envelope, fields } = eventFields(
+    entry.event as unknown as Record<string, unknown>,
+    names,
+  );
   const links: DetailView["links"] = [];
   if (entry.reversed_by !== undefined) {
     links.push({

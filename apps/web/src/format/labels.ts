@@ -170,6 +170,17 @@ export const VALUE_LABELS: Record<string, string> = {
   connectivity: "Conectividad y datos de mercado",
   discretionary_management: "Gestión discrecional",
   other: "Otra",
+  // The scheduled jobs and their frequencies (settings, `job_frequencies`).
+  prices: "Precios",
+  reminder: "Recordatorio",
+  reconciliation: "Conciliación",
+  daily: "Diaria",
+  weekly: "Semanal",
+  monthly: "Mensual",
+  quarterly: "Trimestral",
+  yearly: "Anual",
+  capital_gain: "Ganancia patrimonial",
+  movable_capital: "Rendimiento del capital mobiliario",
   true: "Sí",
   false: "No",
 };
@@ -178,6 +189,38 @@ export const valueLabel = (value: unknown): string => {
   const text = typeof value === "string" ? value : JSON.stringify(value);
   return VALUE_LABELS[String(value)] ?? text ?? "";
 };
+
+/**
+ * The settings, by the name the configuration screen gives them. A message
+ * about a setting used to name it by its key — "deviation_threshold_pp debe
+ * ser…" — which is the ledger talking, not the application.
+ */
+export const SETTING_LABELS: Record<string, string> = {
+  fiscal_date_rule: "Fecha fiscal por tipo de activo",
+  wash_sale_window: "Ventana de recompra por tipo de activo",
+  income_category: "Tipo de renta por tipo de activo",
+  wash_sale_window_days: "Ventana de recompra en días",
+  wash_sale_transfer_counts: "Un traspaso entrante cuenta como recompra",
+  target_weights: "Pesos objetivo",
+  deviation_threshold_pp: "Umbral de desviación",
+  satellite_min_weight_pct: "Mínimo de un satélite",
+  monthly_contribution_eur: "Aportación mensual",
+  bucket_pct_of_contribution: "Porcentaje de la aportación al cubo",
+  bucket_max_cumulative_contribution: "Tope de aporte al cubo",
+  bucket_stop_loss_pct: "Regla de parada del cubo",
+  bucket_max_weight_pct: "Peso máximo del cubo",
+  bucket_benchmark_asset_id: "Índice de referencia del cubo",
+  stale_price_days: "Días para que un precio caduque",
+  model_720_alert_threshold_eur: "Umbral del Modelo 720",
+  model_721_alert_threshold_eur: "Umbral del Modelo 721",
+  savings_tax_brackets: "Tramos de la base del ahorro",
+  tax_residence: "Residencia fiscal",
+  notification_email: "Correo de avisos",
+  job_frequencies: "Frecuencia de los avisos automáticos",
+  transfer_max_days: "Días máximos de un traspaso",
+};
+
+export const settingLabel = (key: string): string => SETTING_LABELS[key] ?? key;
 
 /** State of an entry of the ledger, said with words and not only with a style. */
 export const STATUS_LABELS: Record<string, string> = {

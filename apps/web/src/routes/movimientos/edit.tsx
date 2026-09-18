@@ -5,14 +5,15 @@
 // registers, filled in with what the event says today.
 
 import { A, useParams } from "@solidjs/router";
-import { createMemo, For, type JSX, Show } from "solid-js";
+import { createMemo, type JSX, Show } from "solid-js";
 import { EmptyState } from "../../components/index.js";
-import { fieldLabel } from "../../format/labels.js";
-import { displayName, NAMED_ID_FIELDS, nameIndex } from "../../format/names.js";
+import { nameIndex } from "../../format/names.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { eventFields } from "../../view-models/detail.js";
 import { FORM_SPECS, valuesOfEvent } from "../../view-models/forms/index.js";
 import { RequireLedger } from "../guard.jsx";
 import { EventForm } from "../registrar/EventForm.jsx";
+import { EventFields } from "./DetailFields.jsx";
 
 export default function MovimientoEditarRoute(): JSX.Element {
   const params = useParams<{ id: string }>();
@@ -64,42 +65,20 @@ export default function MovimientoEditarRoute(): JSX.Element {
                 />
 
                 <div class="stack">
-                  <section class="card">
-                    <header>
-                      <h2>Como está registrado ahora</h2>
-                    </header>
-                    <dl class="fields">
-                      <For
-                        each={Object.entries(found().event).filter(
-                          ([name]) =>
-                            ![
-                              "schema_version",
-                              "id",
-                              "recorded_at",
-                              "type",
-                              "fingerprint",
-                            ].includes(name),
-                        )}
-                      >
-                        {([name, value]) => (
-                          <>
-                            <dt>{fieldLabel(name)}</dt>
-                            <dd>
-                              <Show
-                                when={NAMED_ID_FIELDS.has(name) && typeof value === "string"}
-                                fallback={
-                                  typeof value === "object" ? JSON.stringify(value) : String(value)
-                                }
-                              >
-                                {displayName(nameIndex(snapshot.state), value)}{" "}
-                                <code class="tiny">{String(value)}</code>
-                              </Show>
-                            </dd>
-                          </>
-                        )}
-                      </For>
-                    </dl>
-                  </section>
+                  {/*
+                    The same fields as the detail, painted the same way: amounts
+                    and quantities through `Amount`, dates as dd/mm/aaaa. This
+                    card printed them raw — "3100", "31.2343" — with the mask on.
+                  */}
+                  <EventFields
+                    title="Como está registrado ahora"
+                    fields={
+                      eventFields(
+                        found().event as unknown as Record<string, unknown>,
+                        nameIndex(snapshot.state),
+                      ).fields
+                    }
+                  />
 
                   <EventForm
                     spec={found().spec}
