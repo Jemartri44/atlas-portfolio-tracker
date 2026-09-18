@@ -21,6 +21,16 @@ export const washSaleWindowOf = (settings: Settings, assetType: AssetType): Wash
   return legacyDays === undefined ? DEFAULT_WASH_SALE_WINDOW[assetType] : `${legacyDays}d`;
 };
 
+/**
+ * Whether a `transfer` in counts as an acquisition for the rule
+ * (business-rules.md §5.4, fiscal question #2b). Resolved here instead of
+ * reading the field, so that its absence means the documented default (`true`,
+ * the prudent reading) and never `false` by elimination, which would be the
+ * wrong criterion arrived at in silence.
+ */
+export const washSaleTransferCounts = (settings: Settings): boolean =>
+  settings.wash_sale_transfer_counts ?? true;
+
 /** Moves a date by the window, forwards or backwards. */
 const shift = (date: CivilDate, window: WashSaleWindow, direction: 1 | -1): CivilDate => {
   if (window === "2m") {

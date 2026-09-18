@@ -135,6 +135,21 @@ describe("validateSettings", () => {
     }
   });
 
+  it("requires wash_sale_transfer_counts to be true or false, and accepts its absence", () => {
+    // Absent is not false: it means the documented default (`true`), resolved
+    // by `washSaleTransferCounts` and never by reading the field.
+    expect(validateSettings(DEFAULT_SETTINGS).wash_sale_transfer_counts).toBeUndefined();
+    expect(validateSettings(withDefaults({ wash_sale_transfer_counts: false }))).toMatchObject({
+      wash_sale_transfer_counts: false,
+    });
+    expect(validateSettings(withDefaults({ wash_sale_transfer_counts: true }))).toMatchObject({
+      wash_sale_transfer_counts: true,
+    });
+    expect(() => validateSettings(withDefaults({ wash_sale_transfer_counts: "false" }))).toThrow(
+      ValidationError,
+    );
+  });
+
   it("requires target weights to be non-negative and add up to 100", () => {
     expect(
       validateSettings(withDefaults({ target_weights: { a: "60", b: "25.5", c: "14.5" } }))
