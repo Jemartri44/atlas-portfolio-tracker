@@ -30,12 +30,12 @@ export default function RegistrarRoute(): JSX.Element {
               <header>
                 <h2>Operaciones</h2>
               </header>
-              <div class="stack">
+              <div class="datalist">
                 <For each={group(OPERATIONS)}>
                   {(spec) => (
-                    <A href={`/registrar/${spec.slug}`} class="movement">
+                    <A href={`/registrar/${spec.slug}`} class="item">
                       <span class="head">
-                        <span class="type">{spec.title}</span>
+                        <span class="title">{spec.title}</span>
                       </span>
                       <span class="sub">{spec.when}</span>
                     </A>
@@ -48,12 +48,12 @@ export default function RegistrarRoute(): JSX.Element {
               <header>
                 <h2>Catálogo</h2>
               </header>
-              <div class="stack">
+              <div class="datalist">
                 <For each={group(["cuenta", "activo"])}>
                   {(spec) => (
-                    <A href={`/registrar/${spec.slug}`} class="movement">
+                    <A href={`/registrar/${spec.slug}`} class="item">
                       <span class="head">
-                        <span class="type">{spec.title}</span>
+                        <span class="title">{spec.title}</span>
                       </span>
                       <span class="sub">{spec.when}</span>
                     </A>

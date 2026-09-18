@@ -5,7 +5,7 @@
 
 import { A, Navigate } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
-import { Callout, Skeleton } from "../components/index.js";
+import { Callout, ErrorView, Skeleton } from "../components/index.js";
 import type { AppError, LedgerSnapshot } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
 
@@ -50,18 +50,13 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
           fallback={
             <Show when={failure()}>
               {(error) => (
-                <Callout
-                  tone="error"
-                  title="No se ha podido leer el libro"
-                  action={
-                    <A href={error().action?.to ?? "/libro"} role="button">
-                      {error().action?.label ?? "Abrir otro libro"}
+                <ErrorView error={error()} title="No se ha podido leer el libro">
+                  <Show when={error().action === undefined}>
+                    <A href="/libro" role="button">
+                      Abrir otro libro
                     </A>
-                  }
-                >
-                  {error().message}
-                  <Show when={error().line !== undefined}> (línea {error().line})</Show>
-                </Callout>
+                  </Show>
+                </ErrorView>
               )}
             </Show>
           }

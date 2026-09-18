@@ -185,14 +185,27 @@
   max-width: var(--control-max);
 }
 
-/* --- Movements: two-line cards on a phone, a table on a desktop -------- */
+/* ---------------------------------------------------------------------------
+ * A list of rows, twice: two-line cards on a phone and a dense table from
+ * 1024px. Written for Movimientos and generalised in feature 007, because
+ * Núcleo and Cubo need exactly the same thing and a second copy of a layout is
+ * a second place to get it wrong (`components/DataTable.tsx`).
+ * ------------------------------------------------------------------------ */
 
-.movements {
+.datalist {
   display: grid;
   gap: var(--s-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.movement {
+.datalist > li {
+  margin: 0;
+  padding: 0;
+}
+
+.datalist .item {
   border-bottom: 1px solid var(--c-border);
   color: var(--c-text);
   display: grid;
@@ -202,11 +215,11 @@
   text-decoration: none;
 }
 
-.movement:hover {
+.datalist .item:hover {
   background-color: var(--c-surface-2);
 }
 
-.movement .head {
+.datalist .item .head {
   align-items: baseline;
   display: flex;
   flex-wrap: wrap;
@@ -214,11 +227,11 @@
   grid-column: 1;
 }
 
-.movement .type {
+.datalist .item .title {
   font-weight: var(--w-medium);
 }
 
-.movement .amount {
+.datalist .item .figure {
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
@@ -227,7 +240,7 @@
   white-space: nowrap;
 }
 
-.movement .sub {
+.datalist .item .sub {
   color: var(--c-muted);
   font-size: var(--t-sm);
   grid-column: 1;
@@ -236,12 +249,12 @@
   white-space: nowrap;
 }
 
-.movement.is-reversed .type,
-.movement.is-reversed .sub {
+.datalist .item.is-reversed .title,
+.datalist .item.is-reversed .sub {
   text-decoration: line-through;
 }
 
-.movements-table {
+.datatable {
   display: none;
 }
 
@@ -259,17 +272,17 @@
  * which is the same information in a column 505px wide — a comfortable one.
  */
 @media (min-width: 1024px) {
-  .movements {
+  .datalist {
     display: none;
   }
 
-  .movements-table {
+  .datatable {
     display: table;
     width: 100%;
   }
 
-  .movements-table td.num,
-  .movements-table th.num {
+  .datatable td.num,
+  .datatable th.num {
     text-align: right;
   }
 
@@ -281,16 +294,16 @@
    * the cell, where `max-width` is honoured, and the whole text stays one hover
    * away in `title` — the name is never traded back for the identifier.
    */
-  .movements-table td .truncate {
+  .datatable td .truncate {
     display: block;
     max-width: 18rem;
   }
 
-  .movements-table tr:hover {
+  .datatable tr:hover {
     background-color: var(--c-surface-2);
   }
 
-  .movements-table a {
+  .datatable a {
     text-decoration: none;
   }
 }
@@ -525,4 +538,166 @@ dialog .dialog-actions {
 
 .reserved code {
   font-size: var(--t-sm);
+}
+
+/* --- The date every analytical screen is read at ------------------------ */
+
+.asof {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+
+.asof input {
+  margin-bottom: 0;
+  max-width: var(--control-max);
+}
+
+.asof button {
+  margin-bottom: 0;
+  min-width: 0;
+  padding: var(--s-1) var(--s-3);
+  width: auto;
+}
+
+/* --- The technical code of an error: one click away, never in the way --- */
+
+.technical {
+  border: 0;
+  margin: var(--s-2) 0 0;
+  padding: 0;
+}
+
+.technical summary {
+  color: var(--c-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.technical summary::after {
+  display: none;
+}
+
+/* --- Charts (uPlot vendored, ADR-0017) ---------------------------------- */
+
+.chart {
+  margin-top: var(--s-2);
+  min-height: 13.75rem;
+  width: 100%;
+}
+
+/* uPlot draws on a canvas; only the frame is ours. */
+.chart .u-wrap {
+  margin: 0 auto;
+}
+
+.ranges {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+}
+
+.ranges .range {
+  margin-bottom: 0;
+  min-width: 0;
+  padding: var(--s-1) var(--s-3);
+  width: auto;
+}
+
+.ranges .range:disabled {
+  opacity: 0.45;
+}
+
+.chart-table {
+  border: 0;
+  margin-top: var(--s-2);
+  padding: 0;
+}
+
+.chart-table summary {
+  color: var(--c-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.chart-table summary::after {
+  display: none;
+}
+
+/* The equivalent table is the accessible copy: it is shown at every width. */
+.datatable.is-always {
+  display: table;
+  margin-top: var(--s-2);
+  width: 100%;
+}
+
+.datatable.is-always td.num,
+.datatable.is-always th.num {
+  text-align: right;
+}
+
+/* The legend of a chart: colour **and** dash, never colour alone. */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.chart-legend .entry {
+  align-items: center;
+  color: var(--c-muted);
+  display: flex;
+  font-size: var(--t-sm);
+  gap: var(--s-1);
+}
+
+.chart-legend .swatch {
+  border-radius: var(--r-pill);
+  display: inline-block;
+  height: 0.1875rem;
+  width: 1.5rem;
+}
+
+/*
+ * The swatch of the legend carries the same two signals as the line: its colour
+ * and whether it is dashed. Four fixed series, so four classes rather than a
+ * value computed per element — production serves `style-src 'self'` with no
+ * `unsafe-inline`, and an inline `style=` would simply be blocked.
+ */
+.chart-legend .entry.is-dashed .swatch {
+  background-image: repeating-linear-gradient(
+    to right,
+    currentColor 0 0.25rem,
+    transparent 0.25rem 0.5rem
+  );
+}
+
+.chart-legend .swatch.is-core {
+  background-color: var(--c-series-core);
+  color: var(--c-series-core);
+}
+
+.chart-legend .swatch.is-bucket {
+  background-color: var(--c-series-bucket);
+  color: var(--c-series-bucket);
+}
+
+.chart-legend .swatch.is-cash {
+  background-color: var(--c-series-cash);
+  color: var(--c-series-cash);
+}
+
+.chart-legend .swatch.is-index {
+  background-color: var(--c-series-index);
+  color: var(--c-series-index);
+}
+
+.chart-legend .entry.is-dashed .swatch {
+  background-color: transparent;
 }

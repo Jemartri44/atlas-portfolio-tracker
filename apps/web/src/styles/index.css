@@ -3,6 +3,7 @@
  * what we need of it, then base, layout and components.
  */
 @import "../../vendor/pico/pico.css";
+@import "../../vendor/uplot/uPlot.css";
 @import "./tokens.css";
 @import "./base.css";
 @import "./layout.css";

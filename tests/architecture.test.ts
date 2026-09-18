@@ -414,6 +414,10 @@ const RUNTIME_CLASSES = [
     name: "mask",
     reason: "la compone amountDisplay() en format/money.ts, la puerta de privacidad",
   },
+  {
+    name: "u-wrap",
+    reason: "la escribe uPlot al construir la gráfica; nuestro CSS solo la centra",
+  },
 ];
 
 /**
@@ -495,7 +499,21 @@ describe("architecture: apps/web", () => {
    */
   it("lets only the Amount component format an amount or a quantity", () => {
     const gate = join(webSrc, "format", "money.ts");
-    const allowed = new Set([join(webSrc, "components", "Amount.tsx")]);
+    /*
+     * Two consumers, enumerated, each with its reason:
+     *
+     * - `Amount.tsx` is the gate of the interface: every figure a screen paints
+     *   goes through it (decision (d) of prompt 006).
+     * - `chart/axis.ts` exists because uPlot asks for functions that take
+     *   numbers and return the labels of an axis and of a tooltip, where there
+     *   is no component to go through. Authorised in feature 007 (Q5) on the
+     *   condition that a rendered test proves the mask applies there too:
+     *   **the axis of a chart is an amount for every purpose**.
+     */
+    const allowed = new Set([
+      join(webSrc, "components", "Amount.tsx"),
+      join(webSrc, "components", "chart", "axis.ts"),
+    ]);
     const violations: string[] = [];
     for (const file of listSourceFiles(webSrc)) {
       if (file === gate || allowed.has(file)) {
@@ -582,8 +600,13 @@ describe("architecture: apps/web", () => {
 
   /** Direction two: an element with no rule, which is the same typo mirrored. */
   it("writes no class the stylesheet does not declare", () => {
-    const pico = cssClassesOf(readFileSync(join(webRoot, "vendor", "pico", "pico.css"), "utf8"));
-    const declared = new Set([...ourClasses(), ...pico]);
+    // Both vendored stylesheets count as declarations: the `.u-*` classes are
+    // uPlot's own, written by it at runtime and styled by it.
+    const vendored = [
+      join(webRoot, "vendor", "pico", "pico.css"),
+      join(webRoot, "vendor", "uplot", "uPlot.css"),
+    ].flatMap((path) => [...cssClassesOf(readFileSync(path, "utf8"))]);
+    const declared = new Set([...ourClasses(), ...vendored]);
     const violations = [...markupClasses().literal].filter((name) => !declared.has(name)).sort();
     expect(violations).toEqual([]);
   });

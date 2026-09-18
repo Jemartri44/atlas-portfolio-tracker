@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import solid from "vite-plugin-solid";
 import { defineConfig } from "vitest/config";
 
 const local = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
@@ -31,17 +32,27 @@ export default defineConfig({
          * pipeline, so the condition has to be set on both sides for the store
          * to be reactive in a plain Node process (Q8: no DOM, real signals).
          */
+        /*
+         * The Solid compiler, only for this project: its JSX is not standard
+         * JSX, it compiles to fine-grained DOM operations, so esbuild alone
+         * would produce something that renders nothing. Needed since feature
+         * 007, where three tests render a component under `happy-dom`.
+         */
+        plugins: [solid()],
         resolve: { conditions: ["browser", "development"] },
         ssr: { resolve: { conditions: ["browser", "development"] } },
-        // The Solid plugin asks for jsdom; this project has no DOM on purpose
-        // (decision (k)), and the smoke test only needs the modules to load.
         /*
-         * No DOM environment on purpose (decision (k)). What that costs, found
-         * while trying: the `.tsx` module graph cannot be loaded here either,
-         * because `@solidjs/router` reads `window.history` **at import time**.
-         * So the components are covered by their pure layers (`format/`,
-         * `view-models/`, `ledger/`) and by hand; the day a screen needs more,
-         * `happy-dom` is pre-authorised and this is the concrete case for it.
+         * **No DOM by default**, still (decision (k) of the 006): the pure
+         * layers (`format/`, `view-models/`, `ledger/`) are tested as
+         * functions, and the rule that only `Amount` may format money is
+         * checked on the **import graph**, which is structural and outlives any
+         * testing library.
+         *
+         * `happy-dom` was authorised in feature 007 for the three things the
+         * graph cannot see, and each test that needs it says so in its own
+         * header with `@vitest-environment happy-dom`. Opting in per file rather
+         * than switching the project keeps the other 60-odd tests running
+         * exactly as they did.
          */
         test: { name: "web", root: "apps/web", environment: "node" },
       },
