@@ -58,8 +58,15 @@ const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
  * is not a target to grow into: the next feature that needs more has to say why
  * and move it on purpose, which is the whole point of measuring at the end
  * instead of leaving the allowance in place.
+ *
+ * **Moved from 164 to 166 by feature 008, on purpose and for one reason:** the
+ * schema grew. A twenty-fourth event type with its projection (`swap`), four
+ * new optional fields, a new per-asset-type setting and the Spanish names of
+ * all of them add ~1,1 KB gzip, and the web bundles the whole domain because
+ * every calculation lives there (ADR-0007). The boot figure, which is the one
+ * felt on a phone, did not move: 75,6 KB against a budget of 80.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 164 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 166 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

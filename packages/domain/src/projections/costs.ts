@@ -119,16 +119,14 @@ const feeEurOf = (event: {
   );
 
 /**
- * A standalone fee in euros. `fx_rate_date` is optional on this event (lines
- * written before feature 005 do not carry it), so the rate is dated by the
- * value date when it is missing — the same fallback `fx-rates.ts` uses.
+ * A standalone fee in euros. The rate carries its own date since ADR-0021 made
+ * `fx_rate_date` required here, so there is nothing to fall back to: a line
+ * without it does not reach a projection, because the loader rejects it.
  */
 const standaloneFeeEurOf = (event: StandaloneFeeEvent): Money =>
-  FxRate.of(
-    Decimal.parse(event.fx_rate),
-    event.currency,
-    event.fx_rate_date ?? event.value_date,
-  ).toEur(Money.parse(event.amount, event.currency));
+  FxRate.of(Decimal.parse(event.fx_rate), event.currency, event.fx_rate_date).toEur(
+    Money.parse(event.amount, event.currency),
+  );
 
 /** Acquisition cost of a buy: `(amount ?? quantity × unit_price) + fee`, in euros (data-schema.md §8.1). */
 const costEurOf = (event: BuyEvent): Money => {
