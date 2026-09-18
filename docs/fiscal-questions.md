@@ -97,6 +97,8 @@ Por probabilidad de aparecer en esta cartera:
 
 Son de la clase "barata ahora, carísima después". **Ninguno exige decidir hoy quién tiene razón en las disputas de arriba**: se trata de guardar el dato para que cualquiera de las dos lecturas sea implementable.
 
+> **Resueltos por ADR-0021** (2026-09-18): las nueve previsiones están decididas y se implementan **antes de que se registre la primera operación real**. La novena (`fx_rate_date` obligatorio) manda el calendario, porque es un endurecimiento y ADR-0018 solo lo permite mientras el libro real esté vacío.
+
 | # | Dato que falta | Para qué | Criterio afectado |
 |---|---|---|---|
 | 1 | **Categoría de renta** de cada transmisión | Distinguir ganancia patrimonial (art. 33) de rendimiento del capital mobiliario (art. 25.2), que compensan distinto. Hoy `RealizedGain` no lleva ni el tipo de activo | ETC/ETP |

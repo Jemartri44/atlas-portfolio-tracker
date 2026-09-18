@@ -26,6 +26,7 @@ Constitución VI y ADR-0007: pocas dependencias, cada una justificada. Esta es l
 | `vitest` | Tests, comparte config con Vite |
 | `@vitest/coverage-v8` | Cobertura 100% en `domain` |
 | `fast-check` | Tests de propiedades (FIFO, primitivas, dinero) |
+| `happy-dom` | Entorno de DOM para los tests de la web. Autorizado en la feature 007 (decisión (h) de su prompt): la 006 se hizo sin él y funcionó, pero las gráficas y los asistentes nuevos tienen comportamiento que no se prueba bien solo desde el grafo de importaciones. Solo desarrollo, nunca llega al *bundle* |
 | `esbuild` | Empaquetado de Lambda |
 | `vite` | Build del frontend |
 | `@types/node` | Tipos de Node en `adapters`, `cli`, `api` |

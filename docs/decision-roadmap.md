@@ -31,7 +31,7 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente; bloqueada por la Fase 0 (IBKR y exportación de fondos de MyInvestor) |
 | 7 | Aplicación web: framework, offline, auth, API | Fase 2 | **ADR-0017** (*stack*), **ADR-0019** (local-first, sin servidor), `docs/prompts/006-web-shell.md` (pantallas y navegación) | **Cerrada** 2026-09-18. La autenticación desaparece del alcance: sin servidor no hay nada que autenticar; Cognito protegerá la API en la Fase 4 |
 | 8 | Infraestructura, despliegue y copias de seguridad | Fase 4 | ADR-0010+ | Pendiente |
-| 9 | Salida fiscal | Fase 5 | **ADR-0020**, `docs/fiscal-questions.md`, `docs/data-schema.md` §3 | **Desbloqueada**: los 16 criterios fiscales están respondidos con su grado de certeza y el registro de lo declarado está decidido (ADR-0020, 2026-09-18). Queda el formato de la salida, que se decide al escribir el prompt de la fase |
+| 9 | Salida fiscal | Fase 5 | **ADR-0020**, **ADR-0021**, `docs/fiscal-questions.md`, `docs/data-schema.md` §3 | **Desbloqueada**: los 16 criterios fiscales están respondidos con su grado de certeza y el registro de lo declarado está decidido (ADR-0020, 2026-09-18). Queda el formato de la salida, que se decide al escribir el prompt de la fase. **Revisión adversarial del 2026-09-18**: 3 criterios incorrectos y 6 en disputa; ninguno se resuelve sin asesor, pero ADR-0021 fija las nueve previsiones del esquema para que la fase pueda escribirse igualmente |
 
 ---
 
