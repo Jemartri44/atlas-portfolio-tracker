@@ -48,23 +48,25 @@ interface AsOfPickerProps {
 }
 
 export const AsOfPicker = (props: AsOfPickerProps): JSX.Element => (
-  <div class="asof">
-    <label class="row" for="asof">
-      <span class="tiny">A fecha</span>
-      <input
-        id="asof"
-        type="date"
-        value={props.date}
-        onInput={(event) => props.onChange(event.currentTarget.value)}
-      />
-    </label>
-    <Show when={!props.isToday}>
-      <button type="button" class="secondary" onClick={() => props.onChange("")}>
-        Volver a hoy
-      </button>
-    </Show>
+  <>
+    <div class="asof">
+      <label for="asof">
+        <span class="tiny">Fecha</span>
+        <input
+          id="asof"
+          type="date"
+          value={props.date}
+          onInput={(event) => props.onChange(event.currentTarget.value)}
+        />
+      </label>
+      <Show when={!props.isToday}>
+        <button type="button" class="secondary" onClick={() => props.onChange("")}>
+          Hoy
+        </button>
+      </Show>
+    </div>
     <Show when={props.hint !== undefined}>
-      <span class="tiny subtle">{props.hint}</span>
+      <span class="asof-hint tiny">{props.hint}</span>
     </Show>
-  </div>
+  </>
 );

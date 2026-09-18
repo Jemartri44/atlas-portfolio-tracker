@@ -72,11 +72,18 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     numeric: true,
     card: "meta",
     cell: (row) => <Amount value={row.unrealized} signed coloured currency={false} />,
+    // One "sin dato", not two: a row with no price used to read
+    // "Alpha Spin-off · sin dato · sin dato … sin dato" (seen in a screenshot).
     cardCell: (row) => (
-      <span class="row">
-        <Amount value={row.unrealized} signed coloured currency={false} />
-        <Figure value={row.unrealizedPct} unit="percent" coloured />
-      </span>
+      <Show
+        when={row.unrealized !== undefined}
+        fallback={<Amount value={undefined} missingReason="sin precio a esa fecha" />}
+      >
+        <span class="row">
+          <Amount value={row.unrealized} signed coloured currency={false} />
+          <Figure value={row.unrealizedPct} unit="percent" coloured />
+        </span>
+      </Show>
     ),
   },
   {
@@ -87,24 +94,28 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
   },
 ];
 
+/**
+ * The thesis of a position, **with** the position and not in a list at the
+ * bottom of the card: on a phone the two read as unrelated blocks otherwise,
+ * and the invalidation condition is the thing rule 15 wants in front of the
+ * eyes every time the position is looked at.
+ */
 const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
   <Show when={props.row.thesisId !== undefined}>
-    <div class="thesis-note">
-      <span class="row wrap">
-        <Badge>{props.row.thesisId}</Badge>
-        <span class="tiny">
-          {props.row.daysOpen} de {props.row.horizonDays} días
-        </span>
-        <Show when={props.row.horizonExceeded}>
-          <Badge tone="warning">plazo superado</Badge>
-        </Show>
+    <span class="row wrap">
+      <Badge>{props.row.thesisId}</Badge>
+      <span class="tiny">
+        {props.row.daysOpen} de {props.row.horizonDays} días
       </span>
-      <Show when={props.row.invalidation !== undefined}>
-        <p class="note flush">
-          <strong>Me equivoco si:</strong> {props.row.invalidation}
-        </p>
+      <Show when={props.row.horizonExceeded}>
+        <Badge tone="warning">plazo superado</Badge>
       </Show>
-    </div>
+    </span>
+    <Show when={props.row.invalidation !== undefined}>
+      <p class="note flush">
+        <strong>Me equivoco si:</strong> {props.row.invalidation}
+      </p>
+    </Show>
   </Show>
 );
 
@@ -114,7 +125,12 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
       when={props.view.rows.length > 0}
       fallback={<p class="subtle flush">No hay ninguna posición abierta en el cubo.</p>}
     >
-      <DataTable label="Posiciones del cubo" columns={COLUMNS} rows={props.view.rows} />
+      <DataTable
+        label="Posiciones del cubo"
+        columns={COLUMNS}
+        rows={props.view.rows}
+        detail={(row) => <ThesisNote row={row} />}
+      />
       <div class="spread total-line">
         <span class="subject">
           Total del cubo
@@ -138,11 +154,6 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
           precio, y los pesos dentro del cubo no se calculan sobre un total parcial.
         </p>
       </Show>
-      <div class="theses-notes">
-        {props.view.rows.map((row) => (
-          <ThesisNote row={row} />
-        ))}
-      </div>
     </Show>
   </Section>
 );

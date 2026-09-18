@@ -208,7 +208,13 @@
   padding: 0;
 }
 
+/*
+ * `list-style: none` on the `<ul>` is not enough: Pico sets `list-style-type:
+ * square` on `li` itself, which beats what the item inherits. Seen in a
+ * screenshot as a bullet beside every row of every card.
+ */
 .datalist > li {
+  list-style: none;
   margin: 0;
   min-width: 0;
   padding: 0;
@@ -547,24 +553,43 @@ dialog .dialog-actions {
 
 /* --- The date every analytical screen is read at ------------------------ */
 
+/*
+ * One line: label, control and "Hoy". The first version wrapped the button onto
+ * its own row and the block took 149px of a 890px screen before any content —
+ * a sixth of the phone spent on a date picker (measured in Chromium).
+ */
 .asof {
   align-items: center;
   display: flex;
-  flex-wrap: wrap;
   gap: var(--s-2);
-  margin-bottom: var(--s-3);
+  margin-bottom: var(--s-2);
+}
+
+.asof label {
+  align-items: center;
+  display: flex;
+  gap: var(--s-2);
+  margin: 0;
+  min-width: 0;
 }
 
 .asof input {
   margin-bottom: 0;
-  max-width: var(--control-max);
+  min-width: 0;
 }
 
 .asof button {
+  flex: 0 0 auto;
   margin-bottom: 0;
   min-width: 0;
   padding: var(--s-1) var(--s-3);
   width: auto;
+}
+
+.asof-hint {
+  color: var(--c-muted);
+  display: block;
+  margin-bottom: var(--s-4);
 }
 
 /* --- The technical code of an error: one click away, never in the way --- */
@@ -579,10 +604,6 @@ dialog .dialog-actions {
   color: var(--c-muted);
   cursor: pointer;
   padding: 0;
-}
-
-.technical summary::after {
-  display: none;
 }
 
 /* --- Charts (uPlot vendored, ADR-0017) ---------------------------------- */
@@ -628,10 +649,6 @@ dialog .dialog-actions {
   color: var(--c-muted);
   cursor: pointer;
   padding: 0;
-}
-
-.chart-table summary::after {
-  display: none;
 }
 
 /* The equivalent table is the accessible copy: it is shown at every width. */
@@ -841,9 +858,27 @@ dialog .dialog-actions {
   padding: 0;
 }
 
+/*
+ * A disclosure needs to look like one. Pico's own marker is a full-width
+ * chevron on the right, which on a card reads as a separate control; this is a
+ * small triangle glued to the text, and it turns when the block opens.
+ */
 .by-asset summary::after,
-.simulator summary::after {
-  display: none;
+.simulator summary::after,
+.chart-table summary::after,
+.technical summary::after {
+  background: none;
+  content: " ▸";
+  display: inline;
+  transform: none;
+  width: auto;
+}
+
+.by-asset[open] summary::after,
+.simulator[open] summary::after,
+.chart-table[open] summary::after,
+.technical[open] summary::after {
+  content: " ▾";
 }
 
 .datalist .item.is-moved,
@@ -881,17 +916,44 @@ dialog .dialog-actions {
   font-weight: var(--w-semibold);
 }
 
-.thesis-note {
-  border-top: 1px solid var(--c-border);
-  padding-top: var(--s-2);
-}
-
-.theses-notes {
-  display: grid;
-  gap: var(--s-2);
-  margin-top: var(--s-3);
-}
-
 .breakdown {
   margin-top: var(--s-3);
+}
+
+/* The swatch of a class, beside its name in the weights block. */
+.weight-line .swatch {
+  border-radius: var(--r-pill);
+  display: inline-block;
+  height: 0.1875rem;
+  vertical-align: middle;
+  width: 0.75rem;
+}
+
+.weight-line .swatch.is-class-equity {
+  background-color: var(--c-class-equity);
+}
+
+.weight-line .swatch.is-class-fixed_income {
+  background-color: var(--c-class-fixed_income);
+}
+
+.weight-line .swatch.is-class-gold {
+  background-color: var(--c-class-gold);
+}
+
+.weight-line .swatch.is-class-crypto {
+  background-color: var(--c-class-crypto);
+}
+
+/* What belongs to a row and does not fit in a cell: the thesis of a position. */
+.datalist .item .extra {
+  border-top: 1px dashed var(--c-border);
+  grid-column: 1 / -1;
+  margin-top: var(--s-1);
+  padding-top: var(--s-1);
+}
+
+.datatable tr.extra-row td {
+  color: var(--c-muted);
+  padding-top: 0;
 }

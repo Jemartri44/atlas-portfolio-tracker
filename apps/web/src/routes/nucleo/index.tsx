@@ -26,7 +26,6 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import { contributionView, costsView, weightsView } from "../../view-models/core/index.js";
 import { netWorthPlot } from "../../view-models/series.js";
 import { RequireLedger } from "../guard.jsx";
-import { AllocationCard } from "./AllocationCard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { TransferCard } from "./TransferCard.jsx";
@@ -90,7 +89,6 @@ export default function NucleoRoute(): JSX.Element {
             />
 
             <div class="stack">
-              <AllocationCard view={weights()} />
               <WeightsCard view={weights()} />
               <ContributionCard view={plan()} error={planError()} />
               <TransferCard state={dated()} date={date()} settings={settings()} />

@@ -6,6 +6,7 @@
 // (decision (f) of the 006).
 
 import { For, type JSX, Show } from "solid-js";
+import { Allocation, type AllocationSegment } from "../../components/chart/index.js";
 import {
   Amount,
   Badge,
@@ -98,7 +99,7 @@ const ASSET_COLUMNS: readonly DataColumn<WeightRow>[] = [
 const ClassLine = (props: { row: WeightClassRow }): JSX.Element => (
   <div class="weight-line">
     <span class="subject">
-      {props.row.label}
+      <span class={`swatch is-class-${props.row.assetClass}`} /> {props.row.label}
       <Show when={props.row.belowMinimum}>
         {" "}
         <Badge tone="warning">bajo el mínimo</Badge>
@@ -114,46 +115,63 @@ const ClassLine = (props: { row: WeightClassRow }): JSX.Element => (
   </div>
 );
 
-export const WeightsCard = (props: { view: WeightsView }): JSX.Element => (
-  <Section
-    title="Pesos y desviaciones"
-    aside={<span class="tiny">peso · objetivo · desviación</span>}
-  >
-    <Show
-      when={props.view.classes.length > 0}
-      fallback={<p class="subtle flush">Todavía no hay nada en el núcleo.</p>}
+export const WeightsCard = (props: { view: WeightsView }): JSX.Element => {
+  const segments = (): AllocationSegment[] =>
+    props.view.classes.map((row) => ({
+      key: row.assetClass,
+      label: row.label,
+      actualPct: row.weightPct,
+      targetPct: row.targetPct,
+    }));
+
+  return (
+    <Section
+      title="Pesos y desviaciones"
+      aside={<span class="tiny">peso · objetivo · desviación</span>}
     >
-      <div class="weights">
-        <For each={props.view.classes}>{(row) => <ClassLine row={row} />}</For>
-      </div>
+      <Show
+        when={props.view.classes.length > 0}
+        fallback={<p class="subtle flush">Todavía no hay nada en el núcleo.</p>}
+      >
+        {/*
+        The bar and the table are the same answer twice: the shape for the
+        glance, the figures for the decision. They live in one card because as
+        two they printed peso and objetivo twice, which reads as a mistake.
+      */}
+        <Allocation segments={segments()} />
 
-      <div class="spread total-line">
-        <span class="subject">Total del núcleo</span>
-        <span class="row">
-          <Amount value={props.view.total} />
-          <Show when={props.view.partial}>
-            <Badge tone="warning" title={`Faltan: ${props.view.missing.join(", ")}`}>
-              parcial
-            </Badge>
-          </Show>
-        </span>
-      </div>
+        <div class="weights">
+          <For each={props.view.classes}>{(row) => <ClassLine row={row} />}</For>
+        </div>
 
-      <Show when={props.view.partial}>
-        <p class="note">
-          Faltan precios de {props.view.missing.join(", ")} a {props.view.date}: los pesos no se
-          calculan sobre un total parcial.
-        </p>
+        <div class="spread total-line">
+          <span class="subject">Total del núcleo</span>
+          <span class="row">
+            <Amount value={props.view.total} />
+            <Show when={props.view.partial}>
+              <Badge tone="warning" title={`Faltan: ${props.view.missing.join(", ")}`}>
+                parcial
+              </Badge>
+            </Show>
+          </span>
+        </div>
+
+        <Show when={props.view.partial}>
+          <p class="note">
+            Faltan precios de {props.view.missing.join(", ")} a {props.view.date}: los pesos no se
+            calculan sobre un total parcial.
+          </p>
+        </Show>
+
+        <details class="by-asset">
+          <summary class="tiny">Ver activo por activo</summary>
+          <DataTable
+            label="Pesos por activo"
+            columns={ASSET_COLUMNS}
+            rows={props.view.classes.flatMap((row) => row.rows)}
+          />
+        </details>
       </Show>
-
-      <details class="by-asset">
-        <summary class="tiny">Ver activo por activo</summary>
-        <DataTable
-          label="Pesos por activo"
-          columns={ASSET_COLUMNS}
-          rows={props.view.classes.flatMap((row) => row.rows)}
-        />
-      </details>
-    </Show>
-  </Section>
-);
+    </Section>
+  );
+};

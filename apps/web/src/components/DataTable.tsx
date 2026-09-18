@@ -52,6 +52,13 @@ interface DataTableProps<R> {
   href?: (row: R) => string;
   /** Extra classes on the row, for a state the cells do not carry (struck through, …). */
   rowClass?: (row: R) => string | undefined;
+  /**
+   * A block under the card, for what belongs to the row and does not fit in a
+   * cell: the thesis of a position, with its clock and its invalidation
+   * condition. On the table it goes in a row of its own, spanning every column,
+   * so the two surfaces show the same thing.
+   */
+  detail?: (row: R) => JSX.Element;
 }
 
 const slot = <R,>(columns: readonly DataColumn<R>[], which: CardSlot): DataColumn<R>[] =>
@@ -61,7 +68,11 @@ const slot = <R,>(columns: readonly DataColumn<R>[], which: CardSlot): DataColum
 const onCard = <R,>(column: DataColumn<R>, row: R): JSX.Element =>
   (column.cardCell ?? column.cell)(row);
 
-const Card = <R,>(props: { columns: readonly DataColumn<R>[]; row: R }): JSX.Element => (
+const Card = <R,>(props: {
+  columns: readonly DataColumn<R>[];
+  row: R;
+  detail?: ((row: R) => JSX.Element) | undefined;
+}): JSX.Element => (
   <>
     <span class="head">
       <For each={slot(props.columns, "title")}>
@@ -81,6 +92,9 @@ const Card = <R,>(props: { columns: readonly DataColumn<R>[]; row: R }): JSX.Ele
         </span>
       )}
     </For>
+    <Show when={props.detail !== undefined}>
+      <span class="extra">{(props.detail as (row: R) => JSX.Element)(props.row)}</span>
+    </Show>
   </>
 );
 
@@ -103,12 +117,12 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
                 when={props.href !== undefined}
                 fallback={
                   <div class={classOf(row)}>
-                    <Card columns={props.columns} row={row} />
+                    <Card columns={props.columns} row={row} detail={props.detail} />
                   </div>
                 }
               >
                 <A href={(props.href as (row: R) => string)(row)} class={classOf(row)}>
-                  <Card columns={props.columns} row={row} />
+                  <Card columns={props.columns} row={row} detail={props.detail} />
                 </A>
               </Show>
             </li>
@@ -132,19 +146,28 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
         <tbody>
           <For each={props.rows}>
             {(row) => (
-              <tr class={props.rowClass?.(row)}>
-                <For each={props.columns}>
-                  {(column) => (
-                    <td class={column.numeric === true ? "num" : undefined}>
-                      <Show when={column.hint?.(row) !== undefined} fallback={column.cell(row)}>
-                        <span class="truncate" title={column.hint?.(row)}>
-                          {column.cell(row)}
-                        </span>
-                      </Show>
+              <>
+                <tr class={props.rowClass?.(row)}>
+                  <For each={props.columns}>
+                    {(column) => (
+                      <td class={column.numeric === true ? "num" : undefined}>
+                        <Show when={column.hint?.(row) !== undefined} fallback={column.cell(row)}>
+                          <span class="truncate" title={column.hint?.(row)}>
+                            {column.cell(row)}
+                          </span>
+                        </Show>
+                      </td>
+                    )}
+                  </For>
+                </tr>
+                <Show when={props.detail !== undefined}>
+                  <tr class="extra-row">
+                    <td colSpan={props.columns.length}>
+                      {(props.detail as (row: R) => JSX.Element)(row)}
                     </td>
-                  )}
-                </For>
-              </tr>
+                  </tr>
+                </Show>
+              </>
             )}
           </For>
         </tbody>
