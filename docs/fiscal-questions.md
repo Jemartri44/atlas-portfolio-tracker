@@ -1,8 +1,12 @@
-# Preguntas fiscales: criterios aplicados
+# Criterios fiscales aplicados, y lo que sigue en duda
 
-Todo lo que los documentos marcan como *verificar*, consolidado. Cada respuesta se traduce en un valor de `Settings` o en una nota de `business-rules.md`; ninguna exige cambiar el esquema salvo donde se diga.
+Todo lo que los documentos marcan como *verificar*, consolidado. Cada respuesta se traduce en un valor de `Settings` o en una nota de `business-rules.md`.
 
-> **Quién ha respondido esto y con qué valor.** El usuario **no tiene asesor fiscal**, así que los criterios de abajo los ha fijado la dirección del proyecto (2026-09-18) con su mejor lectura de la normativa española, citando el artículo cuando existe y **declarando el grado de certeza de cada uno**. No es asesoramiento fiscal. La regla de uso es esta: mientras las cifras sean pequeñas, estos criterios son razonables y están documentados; **antes de presentar una declaración en la que alguna de las respuestas de certeza media o baja mueva una cantidad que importe, conviene una revisión profesional**. Todas son valores de configuración: cambiar un criterio es un `settings_changed`, no un despliegue (ADR-0013), y las respuestas de certeza baja están marcadas para que se vean de lejos.
+> **Quién ha decidido esto y con qué valor.** El usuario **no tiene asesor fiscal**. Los criterios de abajo los fijó la dirección del proyecto el 2026-09-18 con su mejor lectura de la normativa española. **No es asesoramiento fiscal.**
+>
+> **Revisión adversarial del 2026-09-18.** Una segunda lectura independiente contrastó los dieciséis criterios contra el texto de la LIRPF, el manual práctico de IRPF y las FAQ del Modelo 720 de la AEAT, y contra el código ya escrito. **Encontró tres criterios incorrectos, seis matizables y siete correctos**, más diez datos que el libro no guarda y que harán falta. Lo relevante de esa revisión está incorporado abajo; los hallazgos que dependen de interpretar la norma quedan marcados como **en disputa**, no resueltos, porque resolverlos sería sustituir una lectura no verificada por otra.
+>
+> **Corrección importante.** La versión anterior de este documento afirmaba que los criterios dudosos eran *todos conservadores*: que si estaban equivocados, el error habría sido pagar de más y nunca al revés. **Eso era falso y se retira.** Hay al menos dos criterios dudosos que van en dirección agresiva —declarar de menos o deducir de más—, que es la dirección que tiene consecuencias frente a la Agencia Tributaria. Están señalados uno por uno.
 >
 > Fecha de referencia de la normativa: septiembre de 2026.
 
@@ -11,33 +15,104 @@ Todo lo que los documentos marcan como *verificar*, consolidado. Cada respuesta 
 | **Alta** | Hay artículo o regla expresa y su lectura no es controvertida |
 | **Media** | Hay norma o doctrina aplicable, pero requiere interpretación o hay criterios discrepantes |
 | **Baja** | No hay norma específica; el criterio elegido es el prudente y hay que revisarlo si la cifra crece |
+| **En disputa** | La revisión del 2026-09-18 aporta un argumento de peso en contra. **Sin resolver**: requiere revisión profesional antes de que mueva una cantidad que importe |
+
+**Dirección del riesgo**, que es lo que de verdad hay que mirar:
+
+| | Qué significa si el criterio está mal |
+|---|---|
+| **Conservador** | Se paga de más o se deduce de menos. Cuesta dinero, no tiene consecuencias sancionadoras |
+| **Agresivo** | Se declara de menos o se deduce de más. **Es la dirección con consecuencias** |
+| **Ambas** | Puede fallar en los dos sentidos según el caso |
 
 ---
 
-## Respondidas
+## Los dieciséis criterios
 
-| # | Pregunta | Criterio aplicado | Fundamento | Certeza |
-|---|---|---|---|---|
-| 1 | Fecha de la alteración patrimonial (y del tipo de cambio) | **Cotizados: fecha de contratación. Fondos: fecha valor** del reembolso o suscripción. Es el valor por defecto de `fiscal_date_rule` | La alteración se produce cuando se perfecciona la transmisión; en un fondo, el hecho es el reembolso al valor liquidativo aplicable | Media |
-| 2 | Plazo de la regla de recompra | **Dos meses** para valores admitidos a negociación; **un año** para los no admitidos, entre ellos las participaciones de fondos. Para cripto se aplica **un año** por prudencia | Art. 33.5.f) y g) LIRPF. Para cripto no hay norma expresa: el año es el criterio conservador (difiere más pérdida, nunca deduce de más) | Alta (valores) / Baja (cripto) |
-| 2b | ¿Un **traspaso entrante** cuenta como adquisición a efectos de la recompra? | **Sí**, cambio respecto al valor por defecto anterior. Unas acciones **liberadas** (`scale`) y un `grant` con coste cero **no** cuentan | Un traspaso entrante es una adquisición de valores homogéneos aunque no haya tributado en origen (art. 94 LIRPF). Contar difiere la pérdida, que es la lectura prudente; no contar la deduce antes y es la arriesgada | Media |
-| 3 | Comisiones en la base | La de **compra suma** al valor de adquisición; la de **venta resta** del valor de transmisión. Las de **custodia, administración o conectividad no son deducibles** en la ganancia patrimonial | Art. 35 LIRPF: gastos y tributos **inherentes** a la adquisición o a la transmisión. Una cuota periódica de custodia no es inherente a ninguna de las dos | Alta |
-| 4 | Diferencias de cambio del efectivo en divisa | Generan **ganancia o pérdida patrimonial** cuando la divisa se convierte a euros, se cambia por otra divisa o se emplea en una adquisición. Imputación **FIFO por divisa** | La moneda extranjera es un elemento patrimonial y su variación de valor aflora con la alteración; el FIFO se aplica por analogía con el art. 37.2 | Media |
-| 5 | Tipo de cambio en días sin publicación del BCE | **El último publicado anterior**, guardando siempre su fecha (`fx_rate_date`) | Práctica habitual y reproducible desde la tabla oficial; el libro guarda la fecha para poder rehacerlo | Media |
-| 6 | Redondeo a céntimos | **Half-up, una vez por operación**, nunca por lote | Convención contable ordinaria; la norma no impone método. Lo importante es aplicarlo una sola vez y de forma consistente | Media |
-| 7 | Reparto del coste en una escisión | **La proporción que publique el emisor**; si no publica ninguna, los valores de mercado del primer día de cotización separada | Es el criterio que sostiene la propia sociedad y el que la administración puede contrastar | Media |
-| 8 | Fork de cripto | **Coste de adquisición cero y fecha del fork** | Sin norma específica. Coste cero es el criterio prudente: al vender tributa todo, nunca se deduce un coste no acreditado | Baja |
-| 9 | Pérdida por liquidación de una sociedad | Computable **cuando la sociedad se disuelve y se liquida**, por la diferencia entre la cuota de liquidación y el valor de adquisición. **Una exclusión de cotización no basta** | Art. 37.1.e) LIRPF. Sin disolución no hay alteración patrimonial, solo un valor que nadie cotiza | Alta |
-| 10 | Compensación de pérdidas con rendimientos del capital mobiliario | Hasta el **25 %** del saldo positivo de los rendimientos de la base del ahorro. El remanente se arrastra **cuatro ejercicios** | Art. 49 LIRPF con el porcentaje vigente desde 2022 | Media-alta |
-| 11 | Modelo 720 | Valoración a **31/12**; los valores por su cotización a esa fecha convertida al tipo del BCE del día (o el último anterior). Umbral de **50.000 € por categoría** (cuentas / valores / inmuebles), con aviso configurable a 45.000 €. Se repite la declaración solo si una categoría **sube más de 20.000 €** sobre la última presentada | Normativa del modelo 720 y reglas de valoración del Impuesto sobre el Patrimonio | Media |
-| 12 | Retención en reembolsos de fondos | **19 % sobre la ganancia patrimonial** calculada por la comercializadora; se registra en `sell.withholding` y se resta de la cuota | Art. 101.6 LIRPF. Solo la practican las comercializadoras sujetas a retención en España | Alta |
-| 13 | Fusión o canje con **compensación en efectivo** | El efectivo recibido **tributa como ganancia patrimonial** en el ejercicio del canje, con el coste proporcional de los títulos entregados. Se registra como venta parcial de las antiguas antes del `convert` (`data-schema.md` §6.5) | En un canje acogido al régimen de neutralidad, la parte en dinero queda fuera del diferimiento | Media |
-| 14 | ¿La ventana se cuenta de fecha a fecha? | **Sí, de fecha a fecha** en meses y años naturales, con el día inexistente llevado al **último del mes** (31 de enero más un mes = 28 o 29 de febrero). El último día de la ventana **sí** avisa | Cómputo civil de plazos por meses (art. 5 CC): de fecha a fecha, no en número fijo de días. Es lo que corrigió ADR-0014 | Alta |
-| 15 | Pérdida diferida cuyos lotes se **traspasan o canjean** antes de liberarse | El diferimiento **viaja con los lotes descendientes** (`source_lot_id`) y se libera cuando estos se transmiten | Sin norma expresa. Es la única lectura coherente con que los descendientes conserven antigüedad y valor de adquisición (art. 94 LIRPF); la alternativa haría desaparecer la pérdida para siempre | Media-baja |
-| 16 | Deducción por doble imposición de dividendos extranjeros | La menor de: (a) el impuesto efectivamente satisfecho en el extranjero **limitado al tipo del convenio** con el país del pagador —el exceso se reclama a ese país, no a la AEAT— y (b) el tipo medio efectivo aplicado a esa renta. Por eso `dividend` guarda `source_country` | Art. 80 LIRPF y convenios de doble imposición | Alta |
+| # | Pregunta | Criterio aplicado | Fundamento | Certeza | Riesgo |
+|---|---|---|---|---|---|
+| 1 | Fecha de la alteración patrimonial | **Cotizados: fecha de contratación. Fondos: fecha valor**. Es el valor por defecto de `fiscal_date_rule` | La alteración se produce al perfeccionarse la transmisión; en un fondo, el reembolso al valor liquidativo aplicable | Media | Conservador |
+| 2 | Plazo de la regla de recompra | **Dos meses** para valores admitidos a negociación; **un año** para los no admitidos, entre ellos los fondos. Para cripto, **un año** por prudencia | Art. 33.5.f) y g) LIRPF. Para cripto no hay norma expresa | **En disputa** (valores no UE) / Baja (cripto) | **Agresivo** para lo cotizado fuera de la UE |
+| 2b | ¿Un **traspaso entrante** cuenta como adquisición? | **Sí** (`wash_sale_transfer_counts`, por defecto `true`). Unas acciones liberadas (`scale`) y un `grant` a coste cero **no**. Un traspaso de custodia (mismo activo, otra cuenta) tampoco | Es una adquisición de valores homogéneos aunque no tribute en origen (art. 94 LIRPF). Contar difiere la pérdida, que es lo prudente | Media | Conservador |
+| 3 | Comisiones en la base | La de **compra suma** al valor de adquisición; la de **venta resta** del de transmisión. Las de **custodia, administración o conectividad no entran en la ganancia patrimonial** | Art. 35 LIRPF: gastos **inherentes** a la adquisición o a la transmisión | Alta **pero incompleto** | Conservador |
+| 4 | Diferencias de cambio del efectivo en divisa | **Ganancia o pérdida patrimonial** al convertir a euros o cambiar por otra divisa. Imputación **FIFO por divisa** | La moneda extranjera es un elemento patrimonial; el FIFO por analogía con el art. 37.2 | **En disputa** | **Ambas** |
+| 5 | Días sin publicación del BCE | **El último tipo publicado anterior**, guardando su fecha (`fx_rate_date`) | Práctica habitual y reproducible desde la tabla oficial | Media | Conservador |
+| 6 | Redondeo a céntimos | **Half-up, una vez por operación**, nunca por lote | Convención contable ordinaria; la norma no impone método | Alta | Conservador |
+| 7 | Reparto del coste en una escisión | **La proporción que publique el emisor**; si no publica, valores de mercado del primer día de cotización separada | Es el criterio que sostiene la sociedad y el que la administración puede contrastar | **En disputa** | **Agresivo** si la escisión no está amparada por el régimen de neutralidad |
+| 8 | Fork o airdrop de cripto | **Coste de adquisición cero y fecha del fork**, sin declarar nada en el ejercicio de recepción | Sin norma específica en la ley | **En disputa** | **Agresivo** |
+| 9 | Pérdida por liquidación de una sociedad | Computable **cuando la sociedad se disuelve y se liquida**. **Una exclusión de cotización no basta** | Art. 37.1.e) LIRPF | Alta | Conservador |
+| 10 | Compensación de pérdidas con rendimientos del capital mobiliario | Hasta el **25 %** del saldo positivo, **en los dos sentidos**. El remanente se arrastra **cuatro ejercicios**, y **compensar el máximo posible cada año es obligatorio** | Art. 49 LIRPF; el 25 % rige **desde 2018** (Ley 26/2014 con régimen transitorio 2015-2017) | Alta | Conservador |
+| 11 | Modelo 720 | Valoración a **31/12**, por cotización a esa fecha convertida al tipo del BCE. Umbral de **50.000 € por categoría**, aviso configurable a 45.000 €. Se repite si una categoría **sube más de 20.000 €** sobre la última presentada **o si se deja de ser titular** de un bien declarado | Normativa del 720; las FAQ de la AEAT admiten expresamente la cotización a 31/12 como alternativa a la media del cuarto trimestre | Media | Conservador |
+| 12 | Retención en reembolsos de fondos | **19 % sobre la ganancia**, en `sell.withholding`, restado de la cuota | Art. 101.6 LIRPF. Solo las comercializadoras sujetas a retención en España | Alta | Conservador |
+| 13 | Fusión o canje con **compensación en efectivo** | El efectivo **tributa como ganancia patrimonial** en el ejercicio del canje | En un canje acogido al régimen de neutralidad, la parte en dinero queda fuera del diferimiento | **En disputa** | Conservador en el año, **incorrecto en la base** |
+| 14 | ¿La ventana se cuenta de fecha a fecha? | **Sí**, en meses y años naturales, con el día inexistente llevado al **último del mes**. El último día de la ventana **sí** avisa | Cómputo civil de plazos (art. 5 CC). Lo corrigió ADR-0014 | Alta | Conservador |
+| 15 | Pérdida diferida cuyos lotes se **traspasan o canjean** | El diferimiento **viaja con los lotes descendientes** (`source_lot_id`) | Sin norma expresa | **En disputa** | Conservador |
+| 16 | Deducción por doble imposición de dividendos extranjeros | La menor de: el impuesto satisfecho fuera **limitado al tipo del convenio**, y el tipo medio efectivo aplicado a esa renta. Por eso `dividend` guarda `source_country` | Art. 80 LIRPF y convenios | Alta, **pero no calculable entero** | Conservador |
 
-## Lo que sigue sin respuesta y por qué
+---
 
-- **Nada bloquea el motor fiscal de la Fase 5.** Los dieciséis criterios están fijados y son configurables.
-- Las respuestas de **certeza baja** (8, y la parte de cripto de la 2) y **media-baja** (15) son las que conviene revisar con un profesional antes de que muevan una cantidad relevante. Las tres son conservadoras: si resultan estar equivocadas, el error habrá sido pagar de más o deducir de menos, nunca al revés.
-- Queda abierta una decisión **de diseño**, no fiscal: qué deja registrado el libro sobre lo ya declarado (evento `tax_return_filed`), sin lo cual un cambio de criterio reescribe en silencio un ejercicio presentado, la regla de los 20.000 € del 720 no es calculable y el arrastre de pérdidas no tiene ancla. Está en la Ronda 9 de `docs/decision-roadmap.md`.
+## Los criterios en disputa, uno por uno
+
+Ninguno está resuelto. Se recogen con el argumento en contra para que la decisión, cuando llegue, se tome sabiendo lo que hay.
+
+**#2 — Dos meses para valores de fuera de la UE.** El art. 33.5.f) habla de mercados *"definidos en la Directiva 2004/39/CE"*, es decir, mercados regulados **de la UE**. Una acción del Nasdaq no lo está, y la lectura literal la llevaría a la letra g): **un año**. La práctica mayoritaria aplica los dos meses apoyándose en las decisiones de equivalencia de mercados estadounidenses, pero no se ha encontrado consulta vinculante que lo resuelva, y para mercados sin decisión de equivalencia ni ese argumento existe. **La opción por defecto del proyecto (`stock → "2m"`) es la agresiva.** Afecta de lleno al cubo, que es donde hay operativa frecuente. **Hueco estructural:** el catálogo de activos no guarda **dónde cotiza** cada valor, así que hoy el criterio no podría aplicarse por mercado aunque se decidiera.
+
+**#4 — Método de cálculo de la ganancia en divisa.** Hay doctrina que sostiene que la ganancia de unas acciones compradas y vendidas en dólares se calcula **primero en dólares** y se convierte al tipo de la fecha de transmisión, separando el efecto divisa del principal. El proyecto usa el método clásico —convertir cada pata a su propio tipo—, que es el mayoritario y el que usa la herramienta Cartera de Valores de la AEAT, pero **no da el mismo número**. Además, "se emplea en una adquisición" como hecho imponible de la divisa no está bien fundado: el criterio de la DGT es que la diferencia no se imputa hasta que el cambio se realiza efectivamente. **Riesgo en las dos direcciones. Hueco estructural:** el FIFO por divisa exige lotes de divisa y hoy solo se guardan saldos.
+
+**#7 y #13 — El régimen de neutralidad no siempre se aplica.** Los dos criterios dan por supuesto que una fusión, canje o escisión está acogida al régimen de diferimiento. El manual de la AEAT lo condiciona a que la entidad adquirente sea española o esté en el ámbito de la Directiva 2009/133/CE: **una fusión entre dos sociedades estadounidenses no lo cumple**, y sin régimen especial el canje es una permuta plenamente sujeta (art. 37.1.h LIRPF). El proyecto la modela como `convert`, que conserva fecha y coste y no declara nada: **omitiría la ganancia entera del canje**. Es la cifra individual más grande que puede fallar en todo el sistema. Aparte, sobre el #13: hay base para sostener que la compensación en dinero **no tributa en el canje sino que minora el valor fiscal** de los títulos recibidos (arts. 80/81 LIS). **Hueco estructural:** `corporate_action` no guarda si la operación se acoge al régimen.
+
+**#8 — Fork y airdrop.** Hay doctrina de la DGT que califica la recepción gratuita de criptoactivos como **ganancia patrimonial no derivada de transmisión**, por el valor de mercado en la recepción, integrada en la **base general** (no en la del ahorro). Si es así, el criterio actual omite renta en el año de recepción y luego tributa en la base equivocada. **Es agresivo, no prudente como decía la versión anterior de este documento.**
+
+**#15 — Contra qué se libera la pérdida diferida.** El art. 33.5 in fine dice que las pérdidas se integran *"a medida que se transmitan los valores o participaciones que permanezcan en el patrimonio del contribuyente"* — no dice "los valores recomprados". Con FIFO, los lotes recomprados son los últimos en venderse, así que el modelo del proyecto libera la pérdida **más tarde** de lo que permite la ley. Efecto colateral: desactiva el miedo que justificaba este criterio, porque la pérdida no desaparece aunque los lotes recomprados se traspasen.
+
+---
+
+## Lo que el criterio dice bien pero se queda corto
+
+**#3 — Las comisiones de custodia sí se deducen, pero de otra cosa.** No entran en la ganancia patrimonial (correcto), pero el art. 26.1.a) LIRPF permite deducir **los gastos de administración y depósito de valores negociables** del rendimiento íntegro del capital mobiliario. Quedan fuera la gestión discrecional de cartera y, razonablemente, las cuotas de datos de mercado o conectividad. **Hueco estructural:** `standalone_fee` solo guarda una descripción en texto libre, sin nada que distinga una comisión de depósito de otra cosa.
+
+**#11 — Modelo 721.** El umbral de 50.000 € es del **conjunto** de criptoactivos custodiados por terceros en el extranjero, no por categorías como el 720, y la autocustodia queda fuera. Y el motivo escrito para excluir MyInvestor ("es entidad española") **no es el criterio legal**: lo que cuenta es dónde están situados los bienes, y lo que salva el caso es que en cuenta ómnibus la titular formal es la comercializadora española. Con la regla tal como está escrita, comprar un fondo extranjero en una plataforma extranjera daría la respuesta contraria a la correcta.
+
+**#16 — Lo que la aplicación no puede calcular.** El límite del tipo medio efectivo exige conocer la base liquidable del ahorro completa, que la aplicación no ve. Y el exceso no deducible **se pierde**: en IRPF no hay arrastre.
+
+---
+
+## Lo que falta y ninguna de las dieciséis cubre
+
+Por probabilidad de aparecer en esta cartera:
+
+1. **ETC y ETP: probablemente no son ganancia patrimonial.** Un ETC es jurídicamente una **nota de deuda**, no una IIC, y hay base para que el resultado de su transmisión sea **rendimiento del capital mobiliario** del art. 25.2 LIRPF. Si es así, cambia cómo compensan sus pérdidas (contra ganancias, **solo hasta el 25 %**, no al 100 %), qué diferimiento por recompra se le aplica y en qué casilla va. **Afecta a la clase `gold` entera del núcleo, y a `crypto` si se tiene vía ETP.** Es el hallazgo de mayor cuantía de la revisión y el primero que habría que resolver.
+2. **Staking y airdrops** si alguna vez hay cripto en tenencia directa. Si solo se tiene vía ETP, decirlo explícitamente.
+3. **Permuta cripto por cripto**: art. 37.1.h, el mayor entre el valor de mercado de lo entregado y de lo recibido. El libro solo tiene `fx_exchange` para divisas.
+4. **Derechos de suscripción preferente**: venta con retención del 19 % desde 2017. El esquema da el número correcto pero no puede registrar la retención.
+5. **Devolución de prima de emisión y reducción de capital con devolución de aportaciones**: minoran el valor de adquisición, el exceso es rendimiento del capital mobiliario.
+6. **Art. 95 LIRPF** (IIC en jurisdicciones no cooperativas): varios ETC de oro y ETP de cripto se domicilian en Jersey, Guernsey o Caimán. Hay que comprobarlo producto a producto, y **el catálogo no guarda el domicilio del emisor**.
+7. **Pérdida por quiebra de un emisor o de un *exchange***: créditos vencidos y no cobrados, con el régimen y los plazos del art. 14.2.k).
+8. **Impuesto sobre el Patrimonio**: obligación de declarar por encima de 2.000.000 € de bienes y derechos aunque no salga cuota. Con horizonte de veinte años, llega.
+9. **Quedan excluidos explícitamente**, para que nadie los reproponga: los coeficientes de abatimiento (DT 9ª, solo para adquisiciones anteriores a 1995) y el oro físico en lingote, que sí es ganancia patrimonial a diferencia del ETC.
+
+---
+
+## Huecos estructurales: datos que el libro no guarda y va a necesitar
+
+Son de la clase "barata ahora, carísima después". **Ninguno exige decidir hoy quién tiene razón en las disputas de arriba**: se trata de guardar el dato para que cualquiera de las dos lecturas sea implementable.
+
+| # | Dato que falta | Para qué | Criterio afectado |
+|---|---|---|---|
+| 1 | **Categoría de renta** de cada transmisión | Distinguir ganancia patrimonial (art. 33) de rendimiento del capital mobiliario (art. 25.2), que compensan distinto. Hoy `RealizedGain` no lleva ni el tipo de activo | ETC/ETP |
+| 2 | **Mercado donde cotiza** el valor | Aplicar una ventana de recompra distinta dentro y fuera de la UE; elegir bien la valoración del 720 | #2 |
+| 3 | **Domicilio del emisor** del fondo o ETC | Art. 95 LIRPF; clasificación en 720/721 | Falta 6 |
+| 4 | **Naturaleza de `standalone_fee`** | Distinguir depósito y administración (deducible de RCM) de conectividad o gestión | #3 |
+| 5 | **`withholding` en `forced_sale`** | Retención de una liquidación de fondo, de la venta de derechos o de un ETC en bróker español | #12 |
+| 6 | **Renta recibida en especie sin transmisión** | Fork o airdrop a valor de mercado; acciones de una escisión no amparada; dividendo en especie. No existe la noción de base general | #8, #7 |
+| 7 | **Permuta cripto-cripto** | Regla de valoración del art. 37.1.h | Falta 3 |
+| 8 | **Si una acción corporativa se acoge al régimen de neutralidad** | Decide si un `merger` es `convert` (sin tributación) o permuta sujeta | #7, #13 |
+| 9 | **Lotes de divisa** con su tipo de adquisición | El FIFO por divisa no es computable sobre saldos | #4 |
+
+---
+
+## Estado
+
+- **La Fase 5 no está bloqueada, pero sí condicionada.** El motor puede escribirse tratando las disputas como configuración, igual que ya hace con la ventana de recompra — **siempre que el esquema guarde antes los datos de la tabla de arriba**. Eso es una decisión de diseño, no fiscal, y es lo que se hará.
+- **Lo que sigue siendo del usuario**, y no puede resolverlo ningún asistente: los criterios **#2 (valores de fuera de la UE)**, **#7/#13 (fusiones extranjeras)**, **#8 (forks)** y el asunto de **ETC/ETP como rendimiento del capital mobiliario** merecen una revisión profesional antes de presentar la primera declaración hecha con esta aplicación. No corre prisa: el libro está vacío y no hay nada presentado.
+- Queda abierta una decisión **de diseño** ya resuelta en su forma: qué deja registrado el libro sobre lo declarado (`tax_return_filed`, **ADR-0020**), que se implementa en la Fase 5.

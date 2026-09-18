@@ -205,8 +205,8 @@ Toda operación en divisa distinta del euro requiere conversión al **tipo de ca
 ### 5.8 Obligaciones informativas
 
 **Modelo 720** — declaración informativa (no se paga nada) si los bienes en el extranjero superan **50.000€ por categoría** (cuentas, valores, inmuebles).
-- Aplica a IBKR y a cualquier entidad extranjera. **No aplica a MyInvestor**, que es entidad española.
-- Solo se repite si el valor sube más de 20.000€ sobre la última declaración presentada.
+- Aplica a IBKR y a cualquier entidad extranjera. **No aplica a MyInvestor** — pero no por ser entidad española: el criterio legal es dónde están **situados** los bienes, y un fondo luxemburgués está en el extranjero. Lo que salva el caso es que en cuenta ómnibus la titular formal es la comercializadora española, que informa por sus propios modelos. **Comprar un fondo extranjero en una plataforma extranjera cambiaría la respuesta.**
+- Se repite si el valor sube más de 20.000€ sobre la última declaración presentada **o si se deja de ser titular** de un bien previamente declarado (extinción). Sin el segundo disparador, la aplicación diría "no hace falta declarar" en un año en que sí hace falta.
 
 **Modelo 721** — equivalente para criptoactivos en el extranjero por encima de 50.000€.
 - **No aplica a un ETP**, que es un valor, no una tenencia de criptoactivos.
