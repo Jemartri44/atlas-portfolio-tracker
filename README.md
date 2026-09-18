@@ -16,8 +16,10 @@ Cada funcionalidad tiene su especificación en [`specs/`](specs/).
 
 - [`docs/specification.md`](docs/specification.md) — especificación funcional y técnica. Es la referencia.
 - [`docs/business-rules.md`](docs/business-rules.md) — reglas de dominio y mecánica fiscal española.
+- [`docs/fiscal-questions.md`](docs/fiscal-questions.md) — los criterios fiscales que aplica la aplicación, cada uno con su grado de certeza y hacia qué lado caería el error si estuviera mal.
 - [`docs/data-schema.md`](docs/data-schema.md) — formato del libro (`ledger.jsonl`), eventos, proyecciones y FIFO.
 - [`docs/adr/`](docs/adr/) — decisiones de arquitectura. [`docs/dependencies.md`](docs/dependencies.md) — presupuesto cerrado de dependencias.
+- [`docs/design/brief.md`](docs/design/brief.md) — el encargo del rediseño de la interfaz: pantallas, estados, tamaños de pantalla y restricciones que el diseño tiene que respetar.
 - [`CLAUDE.md`](CLAUDE.md) — contexto y convenciones para el asistente de código.
 - [`.specify/memory/constitution.md`](.specify/memory/constitution.md) — constitución del proyecto ([GitHub Spec Kit](https://github.com/github/spec-kit)). Los specs por funcionalidad viven en `specs/`.
 
