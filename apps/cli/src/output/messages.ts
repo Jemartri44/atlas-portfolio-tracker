@@ -179,6 +179,30 @@ export const describeError = (error: DomainError): string => {
       return `La ruta ${text(d.path)} ya existe: no se sobrescribe nada.`;
     case "synthetic_invalid":
       return `El libro generado no supera la verificación (${text(d.invalid)}, ${text(d.findings)}): es un error del generador.`;
+    case "missing_basis":
+      return `Falta la base de la operación ${text(d.type ?? "")}: indica --amount o --unit-price.`;
+    case "dangling_correction":
+      return `La corrección apunta a ${text(d.corrects_id)}, que no está anulado: una corrección va siempre con su anulación (ADR-0003).`;
+    case "dangling_reference":
+      return `Referencia colgante: ${text(d.event_ids ?? d.ids)}.`;
+    case "negative_position":
+      return `Posición negativa en ${text(d.key ?? "una cuenta")}: falta una compra o sobra una venta.`;
+    case "lots_mismatch":
+      return `Los lotes fiscales de ${text(d.asset_id)} no suman la posición física.`;
+    case "duplicate_id":
+      return "Dos líneas del libro tienen el mismo identificador: el fichero está corrupto.";
+    case "invalid_line":
+      return `Línea no válida${d.line === undefined ? "" : ` (${text(d.line)})`}: ${text(d.value ?? "no es un objeto JSON")}.`;
+    case "invalid_json":
+      return `La línea ${text(d.line ?? "")} no es JSON válido: el fichero no es un libro de Atlas.`;
+    case "invalid_envelope":
+      return `El sobre de la línea no es válido: falta o sobra ${text(d.field)}.`;
+    case "invalid_currency":
+      return `Divisa no válida: ${text(d.value)} (tres letras, ISO 4217).`;
+    case "invalid_fx_rate":
+      return `Tipo de cambio no válido: ${text(d.value)}.`;
+    case "invalid_instant":
+      return "La marca de tiempo del evento (recorded_at) no es válida.";
     case "missing_field":
       return `Falta el campo ${text(d.field)} en ${text(d.type)}.`;
     case "invalid_field":
