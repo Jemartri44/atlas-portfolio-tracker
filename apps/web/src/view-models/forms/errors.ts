@@ -9,6 +9,7 @@
 // person; what cannot be tied to a field goes next to the button instead.
 
 import { DomainError } from "@atlas/domain";
+import { HOW_TO_WRITE } from "../../format/input.js";
 import { fieldLabel } from "../../format/labels.js";
 import type { FieldSpec } from "./specs.js";
 import { type FormValues, isVisible } from "./values.js";
@@ -50,7 +51,7 @@ const numberProblem = (value: unknown): string => {
         ? "Tiene que ser mayor que cero."
         : "Este valor no se admite aquí.";
   }
-  return "No es un número válido.";
+  return `No es un número válido. ${HOW_TO_WRITE}`;
 };
 
 const messageOf = (error: DomainError, spec: FieldSpec, fields: readonly FieldSpec[]): string => {

@@ -22,6 +22,7 @@ import {
   SelectField,
   Switch,
 } from "../../components/index.js";
+import { parseDecimalInput } from "../../format/input.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
@@ -84,12 +85,17 @@ export const TransferCard = (props: TransferCardProps): JSX.Element => {
     if (!ready()) {
       return undefined;
     }
+    // Read like every number the user types: "1.5" is refused, not guessed.
+    const typed = all() ? undefined : parseDecimalInput(quantity());
+    if (typed !== undefined && !typed.ok) {
+      return { ok: false as const, error: { code: "invalid_number", message: typed.message } };
+    }
     return attempt(() =>
       transferView(
         simulateTransfer(props.state, {
           from_asset_id: from(),
           to_asset_id: to(),
-          ...(all() ? { all: true } : { quantity: quantity().replace(",", ".") }),
+          ...(typed?.ok === true ? { quantity: typed.value } : { all: true }),
           date: props.date,
           settings: props.settings,
         }),

@@ -11,6 +11,7 @@ export {
 export {
   type FormValues,
   initialValues,
+  inputErrors,
   isVisible,
   missingRequired,
   missingSentence,

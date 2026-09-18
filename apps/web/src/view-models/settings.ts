@@ -19,13 +19,8 @@
 // The tables are the documentation of `Settings` as the screen sees it, and
 // they are worth reading in one piece.
 
-import {
-  type AssetType,
-  Decimal,
-  isDecimalString,
-  mergeSettings,
-  type Settings,
-} from "@atlas/domain";
+import { type AssetType, Decimal, mergeSettings, type Settings } from "@atlas/domain";
+import { decimalForInput, parseDecimalInput } from "../format/input.js";
 
 /** What the weights of the core have to add up to (rule 3 of the plan). */
 const HUNDRED = Decimal.parse("100");
@@ -50,15 +45,15 @@ export const targetWeightTotal = (weights: Record<string, string>): WeightTotal 
   let total = Decimal.ZERO;
   let readable = true;
   for (const raw of Object.values(weights)) {
-    const text = raw.trim().replace(",", ".");
-    if (text === "") {
+    if (raw.trim() === "") {
       continue;
     }
-    if (!isDecimalString(text)) {
+    const parsed = parseDecimalInput(raw);
+    if (!parsed.ok) {
       readable = false;
       continue;
     }
-    total = total.add(Decimal.parse(text));
+    total = total.add(Decimal.parse(parsed.value));
   }
   // Compared on the rounded value, so the verdict and the printed figure never
   // contradict each other.
@@ -140,7 +135,11 @@ export type PerAssetTypeKey = "fiscal_date_rule" | "wash_sale_window";
 const asRecord = (value: unknown): Record<string, string> =>
   typeof value === "object" && value !== null ? (value as Record<string, string>) : {};
 
-/** What a field shows: what was typed if it was, otherwise what is in force. */
+/**
+ * What a field shows: what was typed if it was, otherwise what is in force —
+ * written the way it is typed, with a decimal comma (`2.5` → `2,5`): the rule
+ * that reads what the user types refuses a bare point as ambiguous.
+ */
 export const settingValue = (
   current: Settings,
   patch: SettingsPatch,
@@ -148,10 +147,13 @@ export const settingValue = (
 ): string => {
   const override = patch[key as string];
   if (override !== undefined) {
-    return String(override);
+    return typeof override === "string" ? decimalForInput(override) : String(override);
   }
   const existing = current[key];
-  return existing === undefined ? "" : String(existing);
+  if (existing === undefined) {
+    return "";
+  }
+  return typeof existing === "string" ? decimalForInput(existing) : String(existing);
 };
 
 /**
@@ -167,10 +169,16 @@ export const withNumber = (
   integer = false,
 ): SettingsPatch => {
   const text = raw.trim();
-  return {
-    ...patch,
-    [key]: text === "" ? undefined : integer ? Number.parseInt(text, 10) : text.replace(",", "."),
-  };
+  if (text === "") {
+    return { ...patch, [key]: undefined };
+  }
+  if (integer) {
+    return { ...patch, [key]: Number.parseInt(text, 10) };
+  }
+  // What cannot be read stays as typed, and the domain refuses it on saving
+  // with a message that names the setting: a guess would be written silently.
+  const parsed = parseDecimalInput(text);
+  return { ...patch, [key]: parsed.ok ? parsed.value : text };
 };
 
 /** The patch after typing in a text field; blank clears it. */
@@ -261,7 +269,7 @@ export const weightValues = (
   const from = current.target_weights ?? {};
   const result: Record<string, string> = {};
   for (const assetId of coreAssetIds) {
-    result[assetId] = from[assetId] ?? "";
+    result[assetId] = decimalForInput(from[assetId] ?? "");
   }
   return result;
 };
@@ -282,7 +290,8 @@ export const candidateSettings = (
     const target: Record<string, string> = {};
     for (const [asset, raw] of Object.entries(declared)) {
       if (raw.trim() !== "") {
-        target[asset] = raw.replace(",", ".");
+        const parsed = parseDecimalInput(raw);
+        target[asset] = parsed.ok ? parsed.value : raw.trim();
       }
     }
     changes.target_weights = target;

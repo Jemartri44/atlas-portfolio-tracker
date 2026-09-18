@@ -62,7 +62,7 @@ const cash = (label: string, hint: string): FieldSpec[] => [
     name: "cash_fees",
     label: "Comisión del bróker, por cuenta",
     kind: "textarea",
-    hint: "Una por línea: cuenta = importe. Se resta de los ingresos de la venta, así que baja la ganancia. Déjalo vacío si no cobró nada.",
+    hint: "Una por línea: nombre de la cuenta = importe, por ejemplo «Cubo especulativo = 1,50». Se resta de los ingresos de la venta, así que baja la ganancia. Déjalo vacío si no cobró nada.",
     full: true,
     visibleWhen: { field: "cash_unit_price", notEquals: "" },
   },

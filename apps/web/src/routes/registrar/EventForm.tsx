@@ -1,10 +1,12 @@
 // The generic form: it paints an `EventFormSpec` and walks the flow the CLI
 // wizards use — fill in, **see the effect**, confirm, write (FR-043, FR-044).
 //
-// It validates nothing on its own beyond "this required field is empty": the
-// shape is checked by `validateShape` and the invariants by the projection,
-// both inside `previewEvent`. A domain error is shown as it comes, and the
-// confirm button stays disabled while there is one.
+// It validates two things on its own: that the required fields are filled, and
+// that a number can be read (`inputErrors`: "1.5" is refused as ambiguous, with
+// a sentence). Everything else is the domain's: the shape is checked by
+// `validateShape` and the invariants by the projection, both inside
+// `previewEvent`. A refusal about one field is written **under that field**; the
+// rest, next to the button (`FormActions`).
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
 import { A, useNavigate } from "@solidjs/router";
@@ -21,6 +23,7 @@ import {
   errorsAfterEdit,
   fieldErrorOf,
   initialValues,
+  inputErrors,
   missingRequired,
   missingSentence,
   toDraft,
@@ -86,6 +89,12 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const onPreview = async (): Promise<void> => {
     setProblem(undefined);
     setFailure(undefined);
+    const unreadable = inputErrors(props.spec.fields, values());
+    if (Object.keys(unreadable).length > 0) {
+      showFieldErrors(unreadable);
+      return;
+    }
+    setFieldErrors({});
     try {
       setPreview(await previewDraft(toDraft(props.spec, values())));
       setStep("preview");

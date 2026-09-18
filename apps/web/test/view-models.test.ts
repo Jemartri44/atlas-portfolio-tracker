@@ -466,8 +466,8 @@ describe("netWorthView", () => {
 describe("targetWeightTotal", () => {
   it("adds with the decimal of the domain, never through floating point", () => {
     // 0,1 + 0,2 is 0.30000000000000004 in floating point (trap 3, ADR-0005).
-    expect(targetWeightTotal({ a: "0.1", b: "0.2" }).total).toBe("0.3");
-    expect(targetWeightTotal({ a: "60.05", b: "39.95" })).toEqual({ total: "100", addsUp: true });
+    expect(targetWeightTotal({ a: "0,1", b: "0,2" }).total).toBe("0.3");
+    expect(targetWeightTotal({ a: "60,05", b: "39,95" })).toEqual({ total: "100", addsUp: true });
   });
 
   it("accepts the comma a Spanish keyboard types", () => {
@@ -485,11 +485,13 @@ describe("targetWeightTotal", () => {
   it("says whether they add up to 100", () => {
     const cases: [Record<string, string>, boolean][] = [
       [{ a: "60", b: "40" }, true],
-      [{ a: "33.33", b: "33.33", c: "33.34" }, true],
-      [{ a: "33.33", b: "33.33", c: "33.33" }, false],
+      [{ a: "33,33", b: "33,33", c: "33,34" }, true],
+      [{ a: "33,33", b: "33,33", c: "33,33" }, false],
       [{ a: "50" }, false],
-      [{ a: "60", b: "40.001" }, true],
-      [{ a: "60", b: "40.01" }, false],
+      [{ a: "60", b: "40,001" }, true],
+      [{ a: "60", b: "40,01" }, false],
+      // A point is not a decimal separator: "40.0" cannot be read, so it cannot add up.
+      [{ a: "60", b: "40.0" }, false],
     ];
     for (const [weights, addsUp] of cases) {
       expect(targetWeightTotal(weights).addsUp).toBe(addsUp);
@@ -789,8 +791,10 @@ describe("the form specs", () => {
       type: "cash_deposit",
       account_id: "acc_mi",
       value_date: "2027-03-01",
-      // The decimal comma the user typed becomes the point the ledger stores.
-      amount: "1.000.50",
+      // The decimal comma the user typed becomes the point the ledger stores,
+      // and the dot of the thousands goes. This line used to expect "1.000.50":
+      // it froze the defect that made "1.200,50" unrecordable.
+      amount: "1000.50",
       currency: "EUR",
       fx_rate: "1",
       // Hidden in euros, but required by the schema, so it is filled from the
@@ -899,6 +903,10 @@ describe("the form specs", () => {
 
   it("normalises the decimal the way a Spanish keyboard types it", () => {
     expect(normaliseDecimal(" 1,5 ")).toBe("1.5");
-    expect(normaliseDecimal("1 000.25")).toBe("1000.25");
+    expect(normaliseDecimal("1 000,25")).toBe("1000.25");
+    expect(normaliseDecimal("1.200,50")).toBe("1200.50");
+    // Ambiguous: it goes back as typed, and `inputErrors` stops the form first.
+    expect(normaliseDecimal("1000.25")).toBe("1000.25");
+    expect(normaliseDecimal("1.5")).toBe("1.5");
   });
 });

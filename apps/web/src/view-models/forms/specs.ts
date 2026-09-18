@@ -457,7 +457,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         name: "ter",
         label: "TER",
         kind: "decimal",
-        hint: "En porcentaje anual, por ejemplo 0.12.",
+        hint: "En porcentaje anual, por ejemplo 0,12.",
       },
       {
         name: "transferable",

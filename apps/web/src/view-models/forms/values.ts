@@ -4,11 +4,13 @@
 //   1. An empty optional field is **left out** of the draft, never sent as "".
 //      `docs/data-schema.md` §2: an absent field is absent, and the loader
 //      rejects a field the type does not define.
-//   2. What the user types is normalised only in the obvious way (a decimal
-//      comma becomes a point, spaces go). No rounding, no completion, no
+//   2. What the user types is read the way a Spanish keyboard writes it
+//      (`format/input.ts`: comma decimal, dots for thousands, anything
+//      ambiguous refused with a sentence). No rounding, no completion, no
 //      guessing: the domain decides whether the value is acceptable.
 
 import { type Draft, isCivilDate, lastWorkingDay, type SupportedEvent } from "@atlas/domain";
+import { decimalForInput, parseDecimalInput, parseIntegerInput } from "../../format/input.js";
 import type { EventFormSpec, FieldSpec } from "./specs.js";
 
 export type FormValues = Record<string, string>;
@@ -39,9 +41,15 @@ export const isVisible = (field: FieldSpec, values: FormValues): boolean => {
   return true;
 };
 
-/** A decimal as the user types it: comma or point, without spaces. */
-export const normaliseDecimal = (raw: string): string =>
-  raw.trim().replaceAll(" ", "").replace(",", ".");
+/**
+ * A decimal as the user types it, as the ledger stores it. What cannot be read
+ * comes back as typed, so the domain still refuses it — but a form never gets
+ * that far: `inputErrors` stops it first, next to the field.
+ */
+export const normaliseDecimal = (raw: string): string => {
+  const parsed = parseDecimalInput(raw);
+  return parsed.ok ? parsed.value : raw.trim();
+};
 
 const fieldValue = (field: FieldSpec, raw: string): string | boolean | number | undefined => {
   const text = raw.trim();
@@ -55,7 +63,8 @@ const fieldValue = (field: FieldSpec, raw: string): string | boolean | number | 
     return normaliseDecimal(text);
   }
   if (field.kind === "integer") {
-    return Number.parseInt(text, 10);
+    const parsed = parseIntegerInput(text);
+    return parsed.ok ? Number.parseInt(parsed.value, 10) : text;
   }
   return text;
 };
@@ -102,7 +111,11 @@ export const toDraft = (spec: EventFormSpec, values: FormValues): Draft<Supporte
   return draft as unknown as Draft<SupportedEvent>;
 };
 
-/** Values of an existing event, to correct it: the draft it came from, as text. */
+/**
+ * Values of an existing event, to correct it: the draft it came from, as text
+ * **the way the user types it** — `1.0672` becomes `1,0672`, or the rule that
+ * refuses an ambiguous point would refuse the event's own values.
+ */
 export const valuesOfEvent = (spec: EventFormSpec, event: Record<string, unknown>): FormValues => {
   const values = initialValues(spec);
   for (const field of spec.fields) {
@@ -111,9 +124,40 @@ export const valuesOfEvent = (spec: EventFormSpec, event: Record<string, unknown
       values[field.name] = field.kind === "switch" ? "false" : "";
       continue;
     }
-    values[field.name] = typeof current === "boolean" ? String(current) : String(current);
+    values[field.name] =
+      field.kind === "decimal" && typeof current === "string"
+        ? decimalForInput(current)
+        : String(current);
   }
   return values;
+};
+
+/**
+ * What the form can tell before asking the domain: a number it cannot read,
+ * said in Spanish **on the field**. Keyed by field name; empty when all is
+ * readable. Hidden fields are not the user's to fix, so they are not checked.
+ */
+export const inputErrors = (
+  fields: readonly FieldSpec[],
+  values: FormValues,
+): Record<string, string> => {
+  const errors: Record<string, string> = {};
+  for (const field of fields) {
+    const raw = (values[field.name] ?? "").trim();
+    if (raw === "" || !isVisible(field, values)) {
+      continue;
+    }
+    const parsed =
+      field.kind === "decimal"
+        ? parseDecimalInput(raw)
+        : field.kind === "integer"
+          ? parseIntegerInput(raw)
+          : undefined;
+    if (parsed !== undefined && !parsed.ok) {
+      errors[field.name] = parsed.message;
+    }
+  }
+  return errors;
 };
 
 /**
