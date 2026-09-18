@@ -10,24 +10,11 @@ import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Badge, Callout } from "../../components/index.js";
 import { describeError } from "../../format/messages/errors.js";
+import { describeFinding } from "../../format/messages/findings.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { RequireLedger } from "../guard.jsx";
-
-const FINDING_TEXTS: Record<string, string> = {
-  negative_position: "Una posición física ha quedado negativa: falta una compra o sobra una venta.",
-  lots_mismatch: "Los lotes fiscales de un activo no suman su posición física.",
-  duplicate_fingerprint: "Dos eventos comparten la misma huella de idempotencia.",
-  dangling_reference: "Una corrección apunta a un evento que no existe o que no está anulado.",
-  duplicate_id: "Dos líneas tienen el mismo identificador.",
-  non_canonical_line: "Una línea no está en su forma canónica: `compact` la reescribiría.",
-  unknown_field: "Una línea trae un campo que su tipo no define.",
-  old_version: "Hay líneas de una versión anterior del esquema: `atlas compact` las actualiza.",
-  fingerprint_mismatch: "La huella de un evento no coincide con sus campos: se editó a mano.",
-  projection_not_reproducible:
-    "Volver a proyectar las líneas crudas da un resultado distinto: es un fallo grave.",
-};
 
 const Findings = (props: { findings: readonly IntegrityFinding[] }): JSX.Element => (
   <div class="stack">
@@ -38,9 +25,21 @@ const Findings = (props: { findings: readonly IntegrityFinding[] }): JSX.Element
             <Badge tone={finding.severity === "error" ? "negative" : "warning"}>
               {finding.severity === "error" ? "error" : "aviso"}
             </Badge>{" "}
-            {FINDING_TEXTS[finding.code] ?? finding.code}
+            {describeFinding(finding).what}
           </span>
-          <span class="subtle">{finding.message}</span>
+          <span>{describeFinding(finding).todo}</span>
+          {/*
+            The domain's own message carries the evidence — which asset, which
+            line, which figure — and it is in English by contract (`errors.ts`).
+            It goes folded, like the code of an error: the explanation is
+            Spanish, the evidence is raw.
+          */}
+          <details class="technical">
+            <summary class="tiny">Detalle técnico</summary>
+            <p class="tiny flush">
+              <code>{finding.code}</code> · {finding.message}
+            </p>
+          </details>
           <Show when={finding.event_ids.length > 0}>
             <span class="tiny">
               <For each={finding.event_ids}>

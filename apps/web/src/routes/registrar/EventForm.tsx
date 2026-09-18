@@ -8,20 +8,18 @@
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
 import { A, useNavigate } from "@solidjs/router";
-import { createSignal, For, type JSX, Show } from "solid-js";
-import { Callout, Dialog, Field, SelectField, Switch } from "../../components/index.js";
-import { valueLabel } from "../../format/labels.js";
+import { createSignal, type JSX, Show } from "solid-js";
+import { Callout, ErrorView, Field } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
-import { correct, previewDraft, recordDraft, toAppError } from "../../ledger/actions.js";
+import { toAppError } from "../../ledger/actions.js";
+import type { AppError } from "../../ledger/state.js";
 import { store, today } from "../../ledger/state.js";
-import type { EventFormSpec, FieldSpec, FormValues } from "../../view-models/forms/index.js";
-import {
-  initialValues,
-  isVisible,
-  missingRequired,
-  toDraft,
-} from "../../view-models/forms/index.js";
-import { derivedCurrency, isBucketAccount, optionsFor } from "../../view-models/options.js";
+import { correct, previewDraft, recordDraft } from "../../ledger/write.js";
+import type { EventFormSpec, FormValues } from "../../view-models/forms/index.js";
+import { initialValues, missingRequired, toDraft } from "../../view-models/forms/index.js";
+import { isBucketAccount } from "../../view-models/options.js";
+import { DuplicateDialog } from "./DuplicateDialog.jsx";
+import { FormFields } from "./FormFields.jsx";
 import { Preview } from "./Preview.jsx";
 
 interface EventFormProps {
@@ -41,32 +39,12 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const [step, setStep] = createSignal<Step>("form");
   const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
   const [error, setError] = createSignal<string | undefined>(undefined);
+  // The whole error, with the button that fixes it (inventory V6).
+  const [failure, setFailure] = createSignal<AppError | undefined>(undefined);
   const [reason, setReason] = createSignal("");
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
   const [conflict, setConflict] = createSignal(false);
   const [priorYear, setPriorYear] = createSignal(false);
-
-  const setValue = (name: string, value: string): void => {
-    const next: FormValues = { ...values(), [name]: value };
-    // Prefill the currency from the chosen asset or account: a convenience,
-    // never a decision — the domain still validates what is sent. Computed on
-    // `next` in one pass, so it does not depend on what a read inside a batch
-    // would return.
-    for (const field of props.spec.fields) {
-      if (field.derive === undefined) {
-        continue;
-      }
-      const trigger = field.derive === "assetCurrency" ? "asset_id" : "account_id";
-      if (name !== trigger) {
-        continue;
-      }
-      const derived = derivedCurrency(props.state, field.derive, next);
-      if (derived !== undefined) {
-        next[field.name] = derived;
-      }
-    }
-    setValues(next);
-  };
 
   const missing = () => missingRequired(props.spec, values());
 
@@ -77,6 +55,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
 
   const onPreview = async (): Promise<void> => {
     setError(undefined);
+    setFailure(undefined);
     try {
       setPreview(await previewDraft(toDraft(props.spec, values())));
       setStep("preview");
@@ -87,6 +66,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
 
   const onConfirm = async (confirmDuplicate = false): Promise<void> => {
     setError(undefined);
+    setFailure(undefined);
     setDuplicate(undefined);
     const draft = toDraft(props.spec, values());
     const result =
@@ -117,49 +97,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       );
       return;
     }
-    setError(result.failure.error.message);
-  };
-
-  const renderField = (field: FieldSpec): JSX.Element => {
-    const value = (): string => values()[field.name] ?? "";
-    const common = {
-      id: `f-${field.name}`,
-      label: field.label,
-      value: value(),
-      ...(field.hint === undefined ? {} : { hint: field.hint }),
-      ...(field.required === undefined ? {} : { required: field.required }),
-      onInput: (next: string) => setValue(field.name, next),
-      ...(field.full === true ? { class: "full" } : {}),
-    };
-    if (field.kind === "switch") {
-      return (
-        <Switch
-          id={common.id}
-          label={field.label}
-          checked={value() === "true"}
-          onChange={(checked) => setValue(field.name, String(checked))}
-          {...(field.hint === undefined ? {} : { hint: field.hint })}
-        />
-      );
-    }
-    if (field.kind === "select") {
-      const options =
-        field.values !== undefined
-          ? field.values.map((entry) => ({ value: entry, label: valueLabel(entry) }))
-          : optionsFor(field.options ?? "accounts", {
-              state: props.state,
-              date: today(),
-              values: values(),
-            });
-      return (
-        <SelectField
-          {...common}
-          options={options}
-          {...(field.required === true ? {} : { placeholder: "Sin indicar" })}
-        />
-      );
-    }
-    return <Field {...common} kind={field.kind} />;
+    setFailure(result.failure.error);
   };
 
   return (
@@ -175,6 +113,10 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
         <Callout tone="error" title="El dominio rechaza este evento">
           {error()}
         </Callout>
+      </Show>
+
+      <Show when={failure()}>
+        {(problem) => <ErrorView error={problem()} title="No se ha podido registrar" />}
       </Show>
 
       <Show when={priorYear()}>
@@ -225,11 +167,12 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
             </Callout>
           </Show>
 
-          <div class="fieldset">
-            <For each={props.spec.fields.filter((field) => isVisible(field, values()))}>
-              {(field) => renderField(field)}
-            </For>
-          </div>
+          <FormFields
+            fields={props.spec.fields}
+            values={values()}
+            state={props.state}
+            onChange={setValues}
+          />
 
           <Show when={props.correcting !== undefined}>
             <Field
@@ -269,29 +212,11 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
         </form>
       </Show>
 
-      <Dialog
-        open={duplicate() !== undefined}
-        title="Ya existe un evento igual"
-        onClose={() => setDuplicate(undefined)}
-        actions={
-          <>
-            <button type="button" class="secondary" onClick={() => setDuplicate(undefined)}>
-              Cancelar
-            </button>
-            <button type="button" disabled={store.writing()} onClick={() => void onConfirm(true)}>
-              Registrar de todas formas
-            </button>
-          </>
-        }
-      >
-        <p>
-          Otro evento del libro tiene la misma huella (
-          {(duplicate() ?? []).map((id) => (
-            <A href={`/movimientos/${id}`}>{id}</A>
-          ))}
-          ). Si es una repetición legítima —dos aportaciones idénticas el mismo día— confírmalo.
-        </p>
-      </Dialog>
+      <DuplicateDialog
+        duplicates={duplicate()}
+        onCancel={() => setDuplicate(undefined)}
+        onConfirm={() => void onConfirm(true)}
+      />
     </>
   );
 };

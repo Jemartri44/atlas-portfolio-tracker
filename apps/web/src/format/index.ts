@@ -13,6 +13,7 @@ export {
   valueLabel,
 } from "./labels.js";
 export { describeError, ERROR_MESSAGES } from "./messages/errors.js";
+export { describeFinding, FINDING_TEXTS, type FindingText } from "./messages/findings.js";
 export { describeWarning, WARNING_MESSAGES } from "./messages/warnings.js";
 export {
   displayName,

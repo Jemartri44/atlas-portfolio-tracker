@@ -9,25 +9,19 @@ import type { EventPreview, LedgerState } from "@atlas/domain";
 import { corporateActionDraft } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import {
-  Badge,
-  Callout,
-  Dialog,
-  EmptyState,
-  ErrorView,
-  Field,
-  SelectField,
-} from "../../../components/index.js";
+import { Badge, Callout, EmptyState, ErrorView } from "../../../components/index.js";
 import { nameIndex } from "../../../format/names.js";
-import { previewDraft, recordDraft, toAppError } from "../../../ledger/actions.js";
+import { toAppError } from "../../../ledger/actions.js";
 import { attempt } from "../../../ledger/query.js";
 import { store, today } from "../../../ledger/state.js";
+import { previewDraft, recordDraft } from "../../../ledger/write.js";
 import { PageHeader } from "../../../shell/PageHeader.jsx";
 import { CORPORATE_COMMON, corporateForm } from "../../../view-models/forms/corporate.js";
 import type { FieldSpec, FormValues } from "../../../view-models/forms/index.js";
-import { isVisible, missingRequired } from "../../../view-models/forms/index.js";
-import { optionsFor } from "../../../view-models/options.js";
+import { missingRequired } from "../../../view-models/forms/index.js";
 import { RequireLedger } from "../../guard.jsx";
+import { DuplicateDialog } from "../DuplicateDialog.jsx";
+import { FormFields } from "../FormFields.jsx";
 import { Preview } from "../Preview.jsx";
 import { toCorporateParams } from "./params.js";
 
@@ -119,34 +113,6 @@ export default function CorporateFormRoute(): JSX.Element {
           }
         };
 
-        const render = (field: FieldSpec): JSX.Element => {
-          const common = {
-            id: `ca-${field.name}`,
-            label: field.label,
-            value: values()[field.name] ?? "",
-            ...(field.hint === undefined ? {} : { hint: field.hint }),
-            ...(field.required === undefined ? {} : { required: field.required }),
-            onInput: (next: string) => setValues({ ...values(), [field.name]: next }),
-            ...(field.full === true ? { class: "full" } : {}),
-          };
-          if (field.kind === "select") {
-            return (
-              <SelectField
-                {...common}
-                options={optionsFor(field.options ?? "assets", {
-                  state: snapshot.state,
-                  date: today(),
-                  values: values(),
-                })}
-                {...(field.required === true ? {} : { placeholder: "Sin indicar" })}
-              />
-            );
-          }
-          // No corporate form has a switch; the type says so out loud instead
-          // of leaving a branch nobody can reach.
-          return <Field {...common} kind={field.kind === "switch" ? "text" : field.kind} />;
-        };
-
         return (
           <Show
             when={form()}
@@ -187,11 +153,13 @@ export default function CorporateFormRoute(): JSX.Element {
                 </Show>
 
                 <form class="form" onSubmit={(event) => event.preventDefault()}>
-                  <div class="fieldset">
-                    <For each={fields().filter((field) => isVisible(field, values()))}>
-                      {(field) => render(field)}
-                    </For>
-                  </div>
+                  <FormFields
+                    fields={fields()}
+                    values={values()}
+                    state={snapshot.state}
+                    onChange={setValues}
+                    prefix="ca"
+                  />
 
                   <Show when={draft()?.no_fractions === true}>
                     <Callout tone="info" title="Sin picos">
@@ -253,38 +221,16 @@ export default function CorporateFormRoute(): JSX.Element {
                   )}
                 </Show>
 
-                <Dialog
-                  open={duplicate() !== undefined}
-                  title="Ya existe un evento igual"
-                  onClose={() => setDuplicate(undefined)}
-                  actions={
-                    <>
-                      <button
-                        type="button"
-                        class="secondary"
-                        onClick={() => setDuplicate(undefined)}
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={store.writing()}
-                        onClick={() => void onConfirm(true)}
-                      >
-                        Registrar de todas formas
-                      </button>
-                    </>
-                  }
+                <DuplicateDialog
+                  duplicates={duplicate()}
+                  onCancel={() => setDuplicate(undefined)}
+                  onConfirm={() => void onConfirm(true)}
                 >
                   <p>
-                    Otro evento del libro tiene la misma huella (
-                    <For each={duplicate() ?? []}>
-                      {(id) => <A href={`/movimientos/${id}`}>{id}</A>}
-                    </For>
-                    ). <Badge>ojo</Badge> Un evento corporativo repetido transforma los lotes dos
-                    veces.
+                    <Badge tone="warning">ojo</Badge> Un evento corporativo repetido transforma los
+                    lotes dos veces: comprueba que no es el mismo antes de insistir.
                   </p>
-                </Dialog>
+                </DuplicateDialog>
               </>
             )}
           </Show>

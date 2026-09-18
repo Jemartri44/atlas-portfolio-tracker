@@ -8,7 +8,7 @@
 
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout } from "../../components/index.js";
+import { Callout, ErrorView } from "../../components/index.js";
 import {
   openBrowserLedger,
   openDirectoryLedger,
@@ -17,6 +17,7 @@ import {
 } from "../../ledger/actions.js";
 import { importLedger } from "../../ledger/export.js";
 import { canUseDirectory } from "../../ledger/source.js";
+import type { AppError } from "../../ledger/state.js";
 import { store } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 
@@ -28,6 +29,10 @@ export default function LibroRoute(): JSX.Element {
 
   const phase = () => store.load();
   const isOpen = (): boolean => phase().phase === "ready";
+  const failedError = (): AppError | undefined => {
+    const current = phase();
+    return current.phase === "failed" ? current.error : undefined;
+  };
 
   const run = async (action: () => Promise<void>): Promise<void> => {
     setBusy(true);
@@ -53,10 +58,9 @@ export default function LibroRoute(): JSX.Element {
     setBusy(true);
     setError(undefined);
     try {
-      const text = await file.text();
-      // The browser path has to exist before the import can land in it.
-      await openBrowserLedger();
-      const events = await importLedger(text);
+      // `importLedger` validates before opening anything: a file that is not a
+      // ledger leaves the state exactly as it was (inventory V6).
+      const events = await importLedger(await file.text());
       setImported(events);
       navigate("/", { replace: true });
     } catch (failure) {
@@ -77,7 +81,22 @@ export default function LibroRoute(): JSX.Element {
       <Show when={error() !== undefined}>
         <Callout tone="error" title="No se ha podido abrir">
           {error()}
+          <p class="tiny flush">
+            No se ha tocado nada: el libro que tuvieras abierto sigue como estaba.
+          </p>
         </Callout>
+      </Show>
+
+      {/*
+        The failure of the boot is painted **here**, where the user always ends
+        up, and for as long as it lasts. It used to live only on the screen that
+        provoked it, so navigating away lost it and it only came back by
+        repeating the action (inventory V6).
+      */}
+      <Show when={failedError()}>
+        {(failure) => (
+          <ErrorView error={failure()} title="El libro que había no se ha podido leer" />
+        )}
       </Show>
 
       <Show when={phase().phase === "reconnect"}>

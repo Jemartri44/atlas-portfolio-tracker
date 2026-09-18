@@ -4,6 +4,12 @@
 // and quantities marked so `Amount` paints them and the privacy mode covers
 // them. Nothing is hidden: the detail is where the user checks what was
 // actually written (FR-040).
+//
+// LINE BUDGET: four sets and one dispatch table that classify **every field of
+// every event type** — which are amounts, which are quantities, which are
+// dates, which are identifiers that resolve to a name. Splitting the sets from
+// the twenty lines that use them would leave two files that only make sense
+// read together, and the classification is the thing worth reviewing as a whole.
 
 import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
 import { eventLabel, fieldLabel, STATUS_LABELS, valueLabel } from "../format/labels.js";

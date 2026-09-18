@@ -622,6 +622,52 @@ describe("architecture: apps/web", () => {
     expect(missing).toEqual([]);
   });
 
+  /**
+   * FR-047: a `catch` that does nothing is a defect. It is how a failure becomes
+   * a screen that does not react — the user presses, nothing happens, and
+   * nothing anywhere says why.
+   *
+   * A `catch` **may** be silent when the thing that failed is a convenience and
+   * the code carries on regardless; those are the three reads and writes of
+   * `localStorage`, which throw in a private window. They are recognised by
+   * having a comment inside, which is the point: the reason is written where the
+   * next reader will look.
+   */
+  it("swallows no exception in silence", () => {
+    const empty = /catch\s*(?:\([^)]*\))?\s*\{\s*\}/g;
+    const violations: string[] = [];
+    for (const file of listSourceFiles(webSrc)) {
+      const source = readFileSync(file, "utf8");
+      for (const match of source.matchAll(empty)) {
+        violations.push(`${relative(repoRoot, file)}: ${match[0].replace(/\s+/g, " ")}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * Decision (g) of prompt 007: no file of `apps/web/src` above ~250 lines
+   * without a written reason. The user asked for this in so many words — that
+   * the frontend must not turn into a large amount of code that is hard to
+   * change — and a ceiling nobody checks is a wish.
+   *
+   * The exception exists and is allowed; what is not allowed is an exception
+   * nobody had to justify. A file over the ceiling carries `LINE BUDGET:` in its
+   * header with the reason, and that reason is read in review.
+   */
+  it("keeps every file of the web under 250 lines, or says why not", () => {
+    const LIMIT = 250;
+    const violations: string[] = [];
+    for (const file of listSourceFiles(webSrc)) {
+      const source = readFileSync(file, "utf8");
+      const lines = source.split("\n").length;
+      if (lines > LIMIT && !source.includes("LINE BUDGET:")) {
+        violations.push(`${relative(repoRoot, file)}: ${lines} líneas y ninguna razón escrita`);
+      }
+    }
+    expect(violations.sort()).toEqual([]);
+  });
+
   /** And the step of the scale that the bar's label uses has to exist. */
   it("declares the type token of the bottom bar", () => {
     const tokens = readFileSync(join(webSrc, "styles", "tokens.css"), "utf8");

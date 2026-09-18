@@ -21,10 +21,12 @@ import {
   yearOf,
 } from "@atlas/domain";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout } from "../../components/index.js";
+import { Callout, ErrorView } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
-import { changeSettings, toAppError } from "../../ledger/actions.js";
+import { toAppError } from "../../ledger/actions.js";
+import type { AppError } from "../../ledger/state.js";
 import { store, today } from "../../ledger/state.js";
+import { changeSettings } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   candidateSettings,
@@ -51,7 +53,7 @@ import { type InvalidatedEvent, SettingsDialogs } from "./SettingsDialogs.jsx";
 export default function ConfiguracionRoute(): JSX.Element {
   const [patch, setPatch] = createSignal<SettingsPatch>({});
   const [weights, setWeights] = createSignal<WeightDraft>(undefined);
-  const [error, setError] = createSignal<string | undefined>(undefined);
+  const [error, setError] = createSignal<AppError | undefined>(undefined);
   const [silenced, setSilenced] = createSignal<readonly Warning[] | undefined>(undefined);
   const [moved, setMoved] = createSignal<readonly FiscalYearImpact[] | undefined>(undefined);
   const [invalidating, setInvalidating] = createSignal<readonly InvalidatedEvent[] | undefined>(
@@ -98,7 +100,7 @@ export default function ConfiguracionRoute(): JSX.Element {
           } catch (failure) {
             // `toAppError` and not `failure.message`: the domain speaks English
             // by contract and each interface translates (decision (i)).
-            setError(toAppError(failure).message);
+            setError(toAppError(failure));
             return;
           }
           if (!acceptInvalid) {
@@ -126,12 +128,23 @@ export default function ConfiguracionRoute(): JSX.Element {
             setInvalidating(result.failure.affected);
             return;
           }
+          /*
+           * The whole `AppError`, not just its text: it carries the action that
+           * fixes the problem — "Exportar el libro" when the browser storage is
+           * full, "Abrir el libro" when the folder permission is gone — and
+           * this screen used to drop it, so the user read what to do and had
+           * nowhere to press (inventory V6).
+           */
           setError(
-            result.failure.kind === "conflict"
-              ? "El libro ha cambiado desde que se cargó: se ha recargado, vuelve a guardar."
-              : result.failure.kind === "error"
-                ? result.failure.error.message
-                : "No se ha podido guardar.",
+            result.failure.kind === "error"
+              ? result.failure.error
+              : {
+                  code: result.failure.kind,
+                  message:
+                    result.failure.kind === "conflict"
+                      ? "El libro ha cambiado desde que se cargó: se ha recargado, vuelve a guardar."
+                      : "No se ha podido guardar.",
+                },
           );
         };
 
@@ -149,10 +162,8 @@ export default function ConfiguracionRoute(): JSX.Element {
                 Se ha registrado un cambio de configuración con todos los parámetros.
               </Callout>
             </Show>
-            <Show when={error() !== undefined}>
-              <Callout tone="error" title="No se ha podido guardar">
-                {error()}
-              </Callout>
+            <Show when={error()}>
+              {(failure) => <ErrorView error={failure()} title="No se ha podido guardar" />}
             </Show>
 
             <div class="stack">

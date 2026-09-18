@@ -595,6 +595,36 @@ describe("the draft of the configuration screen", () => {
     expect(perAssetTypeValue(current, {}, "wash_sale_window", "fund")).toBe("1y");
   });
 
+  /**
+   * "Valor por defecto" used to do nothing at all: an empty field spread an
+   * empty object, so a value already in force could not be taken off from the
+   * screen and the user was told something had changed when nothing had (Q10).
+   * ADR-0018 makes these maps partial, so removing a key is the documented way
+   * of going back to the default.
+   */
+  it("removes the key of an asset type when the field is emptied", () => {
+    const current = {
+      ...base,
+      wash_sale_window: { fund: "1y" as const, stock: "2m" as const },
+    };
+
+    const cleared = withPerAssetType(current, {}, "wash_sale_window", "fund", "");
+
+    expect(cleared.wash_sale_window).toEqual({ stock: "2m" });
+    expect(perAssetTypeValue(current, cleared, "wash_sale_window", "fund")).toBe("");
+    // And it does not touch the other types.
+    expect(perAssetTypeValue(current, cleared, "wash_sale_window", "stock")).toBe("2m");
+  });
+
+  it("removes a key that was only in the draft, not in force", () => {
+    const current = { ...base, wash_sale_window: { fund: "1y" as const } };
+
+    const added = withPerAssetType(current, {}, "wash_sale_window", "etf", "2m");
+    const removed = withPerAssetType(current, added, "wash_sale_window", "etf", "  ");
+
+    expect(removed.wash_sale_window).toEqual({ fund: "1y" });
+  });
+
   it("shows an asset type with no value as empty, never as its default", () => {
     // ADR-0018: what the ledger does not say takes the documented default at
     // the point of use; the form must not write that default back in.

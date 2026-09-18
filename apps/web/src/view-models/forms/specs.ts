@@ -8,6 +8,14 @@
 // The specs carry no validation: they say what to ask, with which keyboard and
 // from which list to choose. Whether the value is acceptable is decided by
 // `validateShape` and the projection, never here (decision (c)).
+//
+// LINE BUDGET: this file is a **data table**, not logic. It is one entry per
+// form, each one a list of fields with its label, its keyboard and the list it
+// chooses from — and the value of having them in one place is exactly that they
+// can be read side by side. Splitting it by event type would scatter fourteen
+// tables across fourteen files and make "does every form cover every field of
+// the schema" a question nobody can answer by looking. The logic that reads it
+// lives in `values.ts` and in `routes/registrar/FormFields.tsx`, both small.
 
 import {
   ASSET_CLASSES,
