@@ -8,7 +8,7 @@
 //      comma becomes a point, spaces go). No rounding, no completion, no
 //      guessing: the domain decides whether the value is acceptable.
 
-import type { Draft, SupportedEvent } from "@atlas/domain";
+import { type Draft, isCivilDate, lastWorkingDay, type SupportedEvent } from "@atlas/domain";
 import type { EventFormSpec, FieldSpec } from "./specs.js";
 
 export type FormValues = Record<string, string>;
@@ -61,10 +61,30 @@ const fieldValue = (field: FieldSpec, raw: string): string | boolean | number | 
 };
 
 /**
+ * What a hidden but still required field is worth: its `initial` if it has one
+ * (the euro rate is "1"), or the last working day on or before the date of the
+ * field it is filled from (`hiddenFrom`).
+ *
+ * It exists because of a real defect: `fx_rate_date` has no `initial`, so a
+ * purchase in euros produced a draft **without** it and the domain rejected it
+ * with `fx_rate_date is required`. Every operation in euros — buy, sell,
+ * dividend, interest — was unrecordable from the web, and a test froze the
+ * behaviour as if it were correct by checking that the field was absent
+ * without checking that the draft was valid.
+ */
+const hiddenValue = (field: FieldSpec, values: FormValues): string => {
+  if (field.hiddenFrom === undefined) {
+    return field.initial ?? "";
+  }
+  const source = (values[field.hiddenFrom] ?? "").trim();
+  return isCivilDate(source) ? lastWorkingDay(source) : "";
+};
+
+/**
  * The draft for the use case: the type, plus every visible field that has a
- * value. Hidden fields keep their value when they are required by the schema
- * (the euro exchange rate is "1" and is not asked for), and are dropped when
- * they are not.
+ * value. Hidden fields keep a value when they are required by the schema (the
+ * euro exchange rate is "1" and its date comes from the operation's own date),
+ * and are dropped when they are not.
  */
 export const toDraft = (spec: EventFormSpec, values: FormValues): Draft<SupportedEvent> => {
   const draft: Record<string, unknown> = { type: spec.type };
@@ -74,7 +94,7 @@ export const toDraft = (spec: EventFormSpec, values: FormValues): Draft<Supporte
     if (!visible && field.required !== true) {
       continue;
     }
-    const value = fieldValue(field, visible ? raw : (field.initial ?? ""));
+    const value = fieldValue(field, visible ? raw : hiddenValue(field, values));
     if (value !== undefined) {
       draft[field.name] = value;
     }

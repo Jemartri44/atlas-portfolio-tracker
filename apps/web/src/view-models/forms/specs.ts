@@ -57,6 +57,13 @@ export interface FieldSpec {
   visibleWhen?: { field: string; equals?: string; notEquals?: string };
   /** Copy the default from the chosen asset or account. */
   derive?: "assetCurrency" | "accountCurrency";
+  /**
+   * Field this one is filled from when it is hidden but the schema still
+   * requires it: the value taken is the last working day on or before that
+   * date. It exists for `fx_rate_date` in euros, which is not asked for and
+   * used to end up missing from the draft altogether.
+   */
+  hiddenFrom?: string;
   /** Occupies the full width of the grid. */
   full?: boolean;
 }
@@ -101,7 +108,16 @@ const currency = (): FieldSpec => ({
   hint: "La del activo; el euro no lleva tipo de cambio.",
 });
 
-const fxRate = (): FieldSpec[] => [
+/**
+ * The ECB rate and its date, hidden when the currency is the euro because
+ * neither is asked for: the rate is "1" and the date is taken from `dateField`.
+ *
+ * `dateField` is the **earliest** business date of the form (`trade_date` where
+ * there is one), so the date taken can never be later than the fiscal date and
+ * the `fx_rate_date_after_fiscal_date` warning is never raised by a value the
+ * user did not type.
+ */
+const fxRate = (dateField: string): FieldSpec[] => [
   {
     name: "fx_rate",
     label: "Tipo del BCE",
@@ -118,6 +134,7 @@ const fxRate = (): FieldSpec[] => [
     required: true,
     hint: "La del tipo aplicado; el BCE no publica sábados ni domingos.",
     visibleWhen: { field: "currency", notEquals: "EUR" },
+    hiddenFrom: dateField,
   },
 ];
 
@@ -159,7 +176,7 @@ const tradeFields = (): FieldSpec[] => [
     hint: "Bruto, sin comisión. Si lo indicas, es la base de coste.",
   },
   currency(),
-  ...fxRate(),
+  ...fxRate("trade_date"),
   { name: "fee", label: "Comisión", kind: "decimal", initial: "0", required: true },
   { name: "broker_ref", label: "Referencia del bróker", kind: "text" },
   {
@@ -177,7 +194,7 @@ const cashFields = (): FieldSpec[] => [
   { name: "value_date", label: "Fecha valor", kind: "date", required: true },
   { name: "amount", label: "Importe", kind: "decimal", required: true },
   { ...currency(), derive: "accountCurrency", hint: "La de la cuenta." },
-  ...fxRate(),
+  ...fxRate("value_date"),
   notes(),
 ];
 
@@ -265,7 +282,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         required: true,
       },
       currency(),
-      ...fxRate(),
+      ...fxRate("value_date"),
       {
         name: "source_country",
         label: "País del pagador",
@@ -290,7 +307,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       { name: "quantity", label: "Cantidad", kind: "decimal", required: true },
       { name: "unit_value", label: "Valor unitario", kind: "decimal", required: true },
       currency(),
-      ...fxRate(),
+      ...fxRate("date"),
       {
         name: "source",
         label: "Origen del dato",

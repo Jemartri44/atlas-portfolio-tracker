@@ -11,6 +11,7 @@ import {
   projectLedger,
   type SupportedEvent,
   settingsAt,
+  validateShape,
   type Warning,
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
@@ -792,11 +793,34 @@ describe("the form specs", () => {
       amount: "1.000.50",
       currency: "EUR",
       fx_rate: "1",
+      // Hidden in euros, but required by the schema, so it is filled from the
+      // value date instead of being dropped.
+      fx_rate_date: "2027-03-01",
     });
     expect("notes" in draft).toBe(false);
   });
 
-  it("keeps a hidden required field (the euro rate is 1 and is not asked)", () => {
+  /**
+   * The check that was missing. The old version of this test asserted that
+   * `fx_rate_date` was **absent** from a draft in euros and called it correct,
+   * so it froze a defect: the domain requires the field, and every operation in
+   * euros — buy, sell, dividend, interest — was rejected with
+   * `fx_rate_date is required` the moment the user pressed the button.
+   *
+   * Asserting the shape of the draft is not enough. What matters is whether the
+   * domain accepts it, so that is what is asserted now.
+   */
+  const accepted = (draft: Record<string, unknown>): void => {
+    validateShape({
+      schema_version: 1,
+      id: "01J6ZZZZZZZZZZZZZZZZZZZZZZ",
+      recorded_at: "2027-05-04T18:00:00.000Z",
+      fingerprint: "sha256:0",
+      ...draft,
+    });
+  };
+
+  it("fills a hidden required field, and the draft in euros is valid for the domain", () => {
     const spec = FORM_SPECS.find((candidate) => candidate.slug === "buy");
     const draft = toDraft(spec as never, {
       ...initialValues(spec as never, "2027-05-04"),
@@ -807,7 +831,35 @@ describe("the form specs", () => {
     }) as unknown as Record<string, unknown>;
     expect(draft.fx_rate).toBe("1");
     expect(draft.currency).toBe("EUR");
-    expect("fx_rate_date" in draft).toBe(false);
+    // Taken from `trade_date`, the earliest business date of the form, so it can
+    // never be later than the fiscal date whichever rule applies to the asset.
+    expect(draft.fx_rate_date).toBe("2027-05-04");
+    expect(() => accepted(draft)).not.toThrow();
+  });
+
+  it("takes the rate date back to the last working day when the operation is on a weekend", () => {
+    const spec = FORM_SPECS.find((candidate) => candidate.slug === "valuation");
+    // 2028-12-31 is a Sunday: the ECB publishes no rate, and the schema rejects
+    // a weekend date. The one that applies is Friday's.
+    const draft = toDraft(spec as never, {
+      ...initialValues(spec as never, "2028-12-31"),
+      account_id: "acc_mi",
+      asset_id: "ast_world",
+      quantity: "10",
+      unit_value: "100",
+    }) as unknown as Record<string, unknown>;
+    expect(draft.fx_rate_date).toBe("2028-12-29");
+    expect(() => accepted(draft)).not.toThrow();
+  });
+
+  it("fills it on every form that hides it, so none of them writes an invalid draft", () => {
+    const filled = ["buy", "sell", "dividend", "cash-in", "cash-out", "valuation"];
+    for (const slug of filled) {
+      const spec = FORM_SPECS.find((candidate) => candidate.slug === slug);
+      const values = initialValues(spec as never, "2027-05-04");
+      const draft = toDraft(spec as never, values) as unknown as Record<string, unknown>;
+      expect({ slug, date: draft.fx_rate_date }).toEqual({ slug, date: "2027-05-04" });
+    }
   });
 
   it("turns a switch into a real boolean", () => {
