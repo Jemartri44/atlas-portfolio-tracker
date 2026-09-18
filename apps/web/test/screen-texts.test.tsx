@@ -14,6 +14,7 @@ import { messageWithLine } from "../src/ledger/state.js";
 import Movimientos from "../src/routes/movimientos/index.jsx";
 import { ContributionCard } from "../src/routes/nucleo/ContributionCard.jsx";
 import Nucleo from "../src/routes/nucleo/index.jsx";
+import { SETTINGS_NUMBERS } from "../src/view-models/index.js";
 import { openLedger, show, text, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
@@ -31,6 +32,17 @@ const render = (catalogue: typeof ERROR_MESSAGES, code: string, details: Record<
   );
 
 describe("the words", () => {
+  /**
+   * Found during this round: the configuration said the transfer limit "hoy no
+   * dispara ningún aviso", and since feature 007 it raises `transfer_overdue`,
+   * which the summary shows. A hint that denies a warning is worse than none.
+   */
+  it("does not deny the warning the transfer limit raises", () => {
+    const hint = SETTINGS_NUMBERS.find((setting) => setting.key === "transfer_max_days")?.hint;
+    expect(hint).toContain("Atención");
+    expect(hint).not.toContain("no dispara");
+  });
+
   it("makes the nouns agree with their count", () => {
     const one = render(WARNING_MESSAGES, "bucket_contaminated_theses", { theses: ["th_alpha"] });
     expect(one).toMatch(/^Una tesis queda fuera/);

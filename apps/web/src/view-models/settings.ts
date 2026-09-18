@@ -119,7 +119,7 @@ export const SETTINGS_NUMBERS: readonly NumberSetting[] = [
     key: "transfer_max_days",
     label: "Días máximos de un traspaso",
     integer: true,
-    hint: "Referencia del plan; hoy no dispara ningún aviso.",
+    hint: "Pasados estos días, un traspaso sin completar sale en Atención para que reclames a la gestora.",
   },
 ];
 
