@@ -646,6 +646,70 @@ describe("mandatory edge cases (prompt §3.7)", () => {
     expect(collected.warnings).toEqual([]);
   });
 
+  it("rolls back the acquisitions and the income in kind a grant noted before a later effect failed", () => {
+    // Q14 of the feature 009: the grant of rights with a cost noted an
+    // acquisition for the wash-sale rule and a line of income in kind, and the
+    // failed sale that followed rolled back everything except those two.
+    const b = new LedgerBuilder();
+    catalogueOf(b);
+    ten(b, "ast_old");
+    b.buy({ account_id: "acc_a", asset_id: "ast_rights", quantity: "1", value_date: "2027-02-01" });
+    const action = b.corporateAction({
+      kind: "stock_dividend",
+      asset_id: "ast_old",
+      effects: [
+        {
+          op: "grant",
+          asset_id: "ast_rights",
+          per_account: [{ account_id: "acc_a", quantity: "10" }],
+          unit_cost: "1",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-03-01",
+          acquisition_date: "2027-03-01",
+          income_eur: "10",
+          income_base: "savings",
+        },
+        sale([{ account_id: "acc_a", quantity: "12" }], "1", "ast_rights"),
+      ],
+    });
+    const collected = projectLedger(b.build(), { collectErrors: true });
+    expect(collected.invalid.map((entry) => [entry.event.id, entry.error.code])).toEqual([
+      [action.id, "insufficient_position"],
+    ]);
+    expect(collected.inKindIncome).toEqual([]);
+    expect(collected.acquisitions.get("ast_rights")?.map((a) => a.quantity.toString())).toEqual([
+      "1",
+    ]);
+    expect(openLots(collected, "ast_rights").map((lot) => lot.quantity)).toEqual(["1"]);
+  });
+
+  it("leaves no acquisition list behind for an asset that had none", () => {
+    const b = new LedgerBuilder();
+    catalogueOf(b);
+    ten(b, "ast_old");
+    b.corporateAction({
+      kind: "stock_dividend",
+      asset_id: "ast_old",
+      effects: [
+        {
+          op: "grant",
+          asset_id: "ast_rights",
+          per_account: [{ account_id: "acc_a", quantity: "10" }],
+          unit_cost: "1",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-03-01",
+          acquisition_date: "2027-03-01",
+        },
+        sale([{ account_id: "acc_a", quantity: "11" }], "1", "ast_rights"),
+      ],
+    });
+    const collected = projectLedger(b.build(), { collectErrors: true });
+    expect(collected.invalid).toHaveLength(1);
+    expect(collected.acquisitions.has("ast_rights")).toBe(false);
+  });
+
   it("registers the accounts and assets it references for rectification checks", () => {
     const { state } = ledger("stock_dividend", "ast_old", [
       {

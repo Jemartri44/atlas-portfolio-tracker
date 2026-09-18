@@ -79,6 +79,16 @@ interface Snapshot {
   lotCounts: Map<Ulid, number>;
   gains: number;
   warnings: number;
+  /**
+   * The acquisitions a `grant` notes for the wash-sale rule and the income in
+   * kind it records. They were left out, so a rejected action kept both: a
+   * phantom acquisition that a real loss could be deferred against, and a
+   * phantom line of `in_kind_income` in the snapshot (question Q14 of the
+   * feature 009). Both lists only grow while an event applies, so their
+   * lengths are enough to put them back.
+   */
+  acquisitions: Map<AssetId, number>;
+  inKindIncome: number;
 }
 
 const cloneLot = (lot: FiscalLot): FiscalLot => ({ ...lot, consumptions: [...lot.consumptions] });
@@ -101,6 +111,10 @@ const snapshot = (state: LedgerState, assets: readonly AssetId[]): Snapshot => (
   lotCounts: new Map(state.lotCounts),
   gains: state.gains.length,
   warnings: state.warnings.length,
+  acquisitions: new Map(
+    assets.map((asset) => [asset, state.acquisitions.get(asset)?.length ?? 0] as const),
+  ),
+  inKindIncome: state.inKindIncome.length,
 });
 
 const restore = (state: LedgerState, saved: Snapshot): void => {
@@ -116,6 +130,14 @@ const restore = (state: LedgerState, saved: Snapshot): void => {
   state.lotCounts = saved.lotCounts;
   state.gains.length = saved.gains;
   state.warnings.length = saved.warnings;
+  for (const [asset, length] of saved.acquisitions) {
+    if (length === 0) {
+      state.acquisitions.delete(asset);
+    } else {
+      (state.acquisitions.get(asset) as unknown[]).length = length;
+    }
+  }
+  state.inKindIncome.length = saved.inKindIncome;
 };
 
 export const applyCorporateAction = (
