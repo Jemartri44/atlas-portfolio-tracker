@@ -66,6 +66,14 @@ export const toAppError = (error: unknown): AppError => {
       action: { label: "Abrir el libro", to: "/libro" },
     };
   }
+  if (error instanceof DOMException && error.name === "QuotaExceededError") {
+    return {
+      code: "storage_full",
+      message:
+        "No cabe en el almacenamiento del navegador: no se ha escrito nada. Exporta el libro y libera espacio del sitio antes de volver a intentarlo.",
+      action: { label: "Exportar el libro", to: "/ajustes" },
+    };
+  }
   if (error instanceof Error && error.name === "StorageUnavailable") {
     return {
       code: "storage_unavailable",
