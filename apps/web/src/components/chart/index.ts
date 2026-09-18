@@ -1,3 +1,4 @@
+export { Allocation, type AllocationSegment } from "./Allocation.jsx";
 export { axisAmount, axisDate, spanOf, tooltipAmount } from "./axis.js";
 export { Chart, type ChartSeries } from "./Chart.jsx";
 export { ChartLegend } from "./ChartLegend.jsx";
@@ -9,3 +10,4 @@ export {
   type RangeKey,
   type RangeOption,
 } from "./RangeButtons.jsx";
+export { SeriesCard, type SeriesCardProps } from "./SeriesCard.jsx";

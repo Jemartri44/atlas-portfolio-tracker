@@ -12,6 +12,7 @@ const MovimientoDetalle = lazy(() => import("./routes/movimientos/detail.jsx"));
 const MovimientoEditar = lazy(() => import("./routes/movimientos/edit.jsx"));
 const Registrar = lazy(() => import("./routes/registrar/index.jsx"));
 const RegistrarForm = lazy(() => import("./routes/registrar/form.jsx"));
+const Nucleo = lazy(() => import("./routes/nucleo/index.jsx"));
 const Reservado = lazy(() => import("./routes/reservado/index.jsx"));
 const Ajustes = lazy(() => import("./routes/ajustes/index.jsx"));
 const Configuracion = lazy(() => import("./routes/ajustes/configuracion.jsx"));
@@ -27,7 +28,7 @@ export const App = () => (
     <Route path="/movimientos/:id/editar" component={MovimientoEditar} />
     <Route path="/registrar" component={Registrar} />
     <Route path="/registrar/:tipo" component={RegistrarForm} />
-    <Route path="/nucleo" component={Reservado} />
+    <Route path="/nucleo" component={Nucleo} />
     <Route path="/cubo" component={Reservado} />
     <Route path="/ajustes" component={Ajustes} />
     <Route path="/ajustes/configuracion" component={Configuracion} />

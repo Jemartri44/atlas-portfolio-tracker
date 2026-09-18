@@ -670,6 +670,12 @@ dialog .dialog-actions {
  * value computed per element — production serves `style-src 'self'` with no
  * `unsafe-inline`, and an inline `style=` would simply be blocked.
  */
+/* A solid entry needs no rule of its own; it is declared so the markup that
+   writes it is accounted for, and so the two states read as a pair. */
+.chart-legend .entry.is-solid .swatch {
+  background-image: none;
+}
+
 .chart-legend .entry.is-dashed .swatch {
   background-image: repeating-linear-gradient(
     to right,
@@ -700,4 +706,137 @@ dialog .dialog-actions {
 
 .chart-legend .entry.is-dashed .swatch {
   background-color: transparent;
+}
+
+/* --- The core against its target: two stacked bars on the same scale ---- */
+
+.allocation {
+  margin-top: var(--s-2);
+}
+
+.alloc-svg {
+  display: block;
+  width: 100%;
+}
+
+.alloc-seg.is-equity {
+  fill: var(--c-class-equity);
+}
+
+.alloc-seg.is-fixed_income {
+  fill: var(--c-class-fixed_income);
+}
+
+.alloc-seg.is-gold {
+  fill: var(--c-class-gold);
+}
+
+.alloc-seg.is-crypto {
+  fill: var(--c-class-crypto);
+}
+
+.alloc-seg.is-empty {
+  fill: var(--c-surface-2);
+}
+
+.alloc-rows {
+  color: var(--c-muted);
+  margin-top: var(--s-1);
+}
+
+/* The legend swatches of the allocation, by asset class. */
+.chart-legend .swatch.is-class-equity {
+  background-color: var(--c-class-equity);
+}
+
+.chart-legend .swatch.is-class-fixed_income {
+  background-color: var(--c-class-fixed_income);
+}
+
+.chart-legend .swatch.is-class-gold {
+  background-color: var(--c-class-gold);
+}
+
+.chart-legend .swatch.is-class-crypto {
+  background-color: var(--c-class-crypto);
+}
+
+/* --- Núcleo: the class summary, dense and aligned ----------------------- */
+
+.weights {
+  display: grid;
+  gap: var(--s-1);
+  margin-bottom: var(--s-3);
+}
+
+.weight-line {
+  align-items: baseline;
+  display: grid;
+  gap: var(--s-2);
+  grid-template-columns: 1fr auto auto auto;
+}
+
+.weight-line .subject {
+  min-width: 0;
+}
+
+.weight-line .weight,
+.weight-line .target,
+.weight-line .deviation {
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+.weight-line .target {
+  color: var(--c-muted);
+}
+
+.total-line {
+  border-top: 1px solid var(--c-border);
+  margin-top: var(--s-2);
+  padding-top: var(--s-2);
+}
+
+.total-line .subject {
+  font-weight: var(--w-medium);
+}
+
+.contribution-head {
+  display: grid;
+  gap: var(--s-1);
+  margin-bottom: var(--s-3);
+}
+
+.contribution-head .subject {
+  min-width: 0;
+}
+
+.block-title {
+  font-size: var(--t-md);
+  font-weight: var(--w-semibold);
+  margin: var(--s-4) 0 var(--s-1);
+}
+
+.by-asset,
+.simulator {
+  border: 0;
+  margin-top: var(--s-3);
+  padding: 0;
+}
+
+.by-asset summary,
+.simulator summary {
+  color: var(--c-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.by-asset summary::after,
+.simulator summary::after {
+  display: none;
+}
+
+.datalist .item.is-moved,
+.datatable tr.is-moved {
+  font-weight: var(--w-medium);
 }

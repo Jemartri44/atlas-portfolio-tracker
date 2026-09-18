@@ -1,0 +1,159 @@
+// "¿Estoy desviado?" — the class summary first, because that is the question,
+// and the per-asset detail one tap away.
+//
+// The mark of a deviation above the threshold is a **badge with a word in it**,
+// not a colour: a screenshot in black and white has to say the same thing
+// (decision (f) of the 006).
+
+import { For, type JSX, Show } from "solid-js";
+import {
+  Amount,
+  Badge,
+  type DataColumn,
+  DataTable,
+  Figure,
+  Section,
+} from "../../components/index.js";
+import type { WeightClassRow, WeightRow, WeightsView } from "../../view-models/core/index.js";
+
+const ASSET_COLUMNS: readonly DataColumn<WeightRow>[] = [
+  {
+    key: "name",
+    header: "Activo",
+    card: "title",
+    cell: (row) => row.name,
+    hint: (row) => row.name,
+  },
+  {
+    key: "quantity",
+    header: "Cantidad",
+    numeric: true,
+    cell: (row) => <span class="num">{row.quantity}</span>,
+  },
+  {
+    key: "price",
+    header: "Precio",
+    numeric: true,
+    card: "sub",
+    cell: (row) => (
+      <Show
+        when={row.unitValue !== undefined}
+        fallback={<span class="num nodata">sin precio</span>}
+      >
+        <span class="num">
+          {row.unitValue} {row.currency}
+        </span>
+      </Show>
+    ),
+    cardCell: (row) => (
+      <Show when={row.unitValue !== undefined} fallback={<span class="nodata">sin precio</span>}>
+        <span>
+          {row.unitValue} {row.currency} · {row.priceDate} ({row.ageDays} días
+          {row.stale ? ", caducado" : ""})
+        </span>
+      </Show>
+    ),
+  },
+  {
+    key: "value",
+    header: "Valor",
+    numeric: true,
+    card: "figure",
+    cell: (row) => <Amount value={row.value} missingReason="sin precio a esa fecha" />,
+  },
+  {
+    key: "weight",
+    header: "Peso",
+    numeric: true,
+    cell: (row) => <Figure value={row.weightPct} unit="percent" />,
+  },
+  {
+    key: "target",
+    header: "Objetivo",
+    numeric: true,
+    cell: (row) => <Figure value={row.targetPct} unit="percent" />,
+  },
+  {
+    key: "deviation",
+    header: "Desviación",
+    numeric: true,
+    card: "meta",
+    cell: (row) => (
+      <>
+        <Figure value={row.deviationPp} unit="points" coloured />
+        <Show when={row.offTarget}>
+          {" "}
+          <Badge tone="warning">fuera de umbral</Badge>
+        </Show>
+      </>
+    ),
+    cardCell: (row) => (
+      <Show when={row.offTarget}>
+        <Badge tone="warning">fuera de umbral</Badge>
+      </Show>
+    ),
+  },
+];
+
+const ClassLine = (props: { row: WeightClassRow }): JSX.Element => (
+  <div class="weight-line">
+    <span class="subject">
+      {props.row.label}
+      <Show when={props.row.belowMinimum}>
+        {" "}
+        <Badge tone="warning">bajo el mínimo</Badge>
+      </Show>
+      <Show when={props.row.partial}>
+        {" "}
+        <Badge tone="warning">parcial</Badge>
+      </Show>
+    </span>
+    <Figure value={props.row.weightPct} unit="percent" class="weight" />
+    <Figure value={props.row.targetPct} unit="percent" class="target" />
+    <Figure value={props.row.deviationPp} unit="points" coloured class="deviation" />
+  </div>
+);
+
+export const WeightsCard = (props: { view: WeightsView }): JSX.Element => (
+  <Section
+    title="Pesos y desviaciones"
+    aside={<span class="tiny">peso · objetivo · desviación</span>}
+  >
+    <Show
+      when={props.view.classes.length > 0}
+      fallback={<p class="subtle flush">Todavía no hay nada en el núcleo.</p>}
+    >
+      <div class="weights">
+        <For each={props.view.classes}>{(row) => <ClassLine row={row} />}</For>
+      </div>
+
+      <div class="spread total-line">
+        <span class="subject">Total del núcleo</span>
+        <span class="row">
+          <Amount value={props.view.total} />
+          <Show when={props.view.partial}>
+            <Badge tone="warning" title={`Faltan: ${props.view.missing.join(", ")}`}>
+              parcial
+            </Badge>
+          </Show>
+        </span>
+      </div>
+
+      <Show when={props.view.partial}>
+        <p class="note">
+          Faltan precios de {props.view.missing.join(", ")} a {props.view.date}: los pesos no se
+          calculan sobre un total parcial.
+        </p>
+      </Show>
+
+      <details class="by-asset">
+        <summary class="tiny">Ver activo por activo</summary>
+        <DataTable
+          label="Pesos por activo"
+          columns={ASSET_COLUMNS}
+          rows={props.view.classes.flatMap((row) => row.rows)}
+        />
+      </details>
+    </Show>
+  </Section>
+);
