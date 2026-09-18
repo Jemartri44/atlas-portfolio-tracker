@@ -14,8 +14,8 @@ import {
   ledgerEntries,
   netWorth,
   pendingOrders,
-  pendingTransfers,
   settingsAt,
+  transferWatch,
 } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
@@ -44,6 +44,10 @@ export default function ResumenRoute(): JSX.Element {
         const settings = settingsAt(dated, date).settings;
         const worth = netWorth(dated, date, settings);
         const weights = coreWeights(dated, date, settings);
+        // `transferWatch`, not `pendingTransfers`: it is the one that applies
+        // `transfer_max_days` and emits `transfer_overdue`. Reading the plain
+        // query here left the rule computed and never shown.
+        const transfers = transferWatch(dated, date, settings);
         const source = store.source();
         const overdueDays =
           source?.kind === "browser"
@@ -51,10 +55,15 @@ export default function ResumenRoute(): JSX.Element {
             : undefined;
         const items = attentionItems({
           invalidCount: snapshot.state.invalid.length,
-          warnings: [...dated.warnings, ...weights.warnings, ...worth.warnings],
+          warnings: [
+            ...dated.warnings,
+            ...weights.warnings,
+            ...worth.warnings,
+            ...transfers.warnings,
+          ],
           findings: integrity(snapshot.state).filter((finding) => finding.severity === "error"),
           openOrders: pendingOrders(dated, date),
-          openTransfers: pendingTransfers(dated, date),
+          openTransfers: transfers.rows,
           ...(overdueDays === undefined || (overdueDays !== "never" && overdueDays <= 7)
             ? {}
             : { exportOverdueDays: overdueDays }),
