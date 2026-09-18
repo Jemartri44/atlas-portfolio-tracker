@@ -5,18 +5,16 @@
 // Two rules live here:
 //   1. Loading projects **once** and stores the snapshot; nobody re-projects.
 //   2. Every failure becomes an `AppError` with a message in Spanish and, where
-//      there is one, the action that fixes it. `toAppError` is the only door.
+//      there is one, the action that fixes it. `toAppError` (`errors.ts`) is the
+//      only door.
 
-import { DomainError, projectLedger } from "@atlas/domain";
-import { describeError } from "../format/messages/errors.js";
-import { nameIndex } from "../format/names.js";
+import { projectLedger } from "@atlas/domain";
 import {
   canUseDirectory,
   type LedgerSource,
   type LedgerSourceKind,
   rememberedKind,
 } from "./source.js";
-import type { AppError } from "./state.js";
 import { store } from "./state.js";
 import {
   chooseDirectory,
@@ -28,54 +26,12 @@ import {
 } from "./store.js";
 
 /**
- * A domain error (or anything else) as the interface shows it, in Spanish.
- *
- * The catalogue comes from the loaded snapshot, so "La cuenta acc_mi no existe"
- * reads "La cuenta Fondos indexados no existe". During the boot there is no
- * snapshot yet and `nameIndex` answers with an empty index, which resolves
- * every identifier to itself — the behaviour this had before.
+ * The Spanish explanation of a failure, fetched **only when there is one**.
+ * The catalogue of messages names fields, types and settings by their labels,
+ * and loading all of that before the first screen — to explain an error that
+ * almost never happens — would cost every start of the application.
  */
-export const toAppError = (error: unknown): AppError => {
-  if (error instanceof DomainError) {
-    const line = error.details.line;
-    return {
-      code: error.code,
-      message: describeError(error, {
-        names: nameIndex(store.snapshot()?.state),
-        privacy: store.privacy(),
-      }),
-      ...(typeof line === "number" ? { line } : {}),
-    };
-  }
-  if (error instanceof DOMException && error.name === "NotAllowedError") {
-    return {
-      code: "permission_denied",
-      message:
-        "El navegador ha denegado el acceso a la carpeta del libro. Vuelve a conectarla para seguir.",
-      action: { label: "Abrir el libro", to: "/libro" },
-    };
-  }
-  if (error instanceof DOMException && error.name === "QuotaExceededError") {
-    return {
-      code: "storage_full",
-      message:
-        "No cabe en el almacenamiento del navegador: no se ha escrito nada. Exporta el libro y libera espacio del sitio antes de volver a intentarlo.",
-      action: { label: "Exportar el libro", to: "/ajustes" },
-    };
-  }
-  if (error instanceof Error && error.name === "StorageUnavailable") {
-    return {
-      code: "storage_unavailable",
-      message:
-        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados). Abre el libro desde un fichero, o usa otro navegador.",
-      action: { label: "Abrir el libro", to: "/libro" },
-    };
-  }
-  return {
-    code: "unexpected",
-    message: error instanceof Error ? error.message : String(error),
-  };
-};
+const explained = async (error: unknown) => (await import("./errors.js")).toAppError(error);
 
 /** Loads the opened ledger, projects it once and publishes the snapshot. */
 export const loadInto = async (opened: OpenedLedger): Promise<void> => {
@@ -91,7 +47,7 @@ export const loadInto = async (opened: OpenedLedger): Promise<void> => {
       snapshot: { events, lines, etag, state, loadedAt: new Date().toISOString() },
     });
   } catch (error) {
-    store.setLoad({ phase: "failed", source: opened.source, error: toAppError(error) });
+    store.setLoad({ phase: "failed", source: opened.source, error: await explained(error) });
   }
 };
 
@@ -191,7 +147,7 @@ export const restoreLedger = async (): Promise<void> => {
       },
     });
   } catch (failure) {
-    store.setLoad({ phase: "failed", error: toAppError(failure) });
+    store.setLoad({ phase: "failed", error: await explained(failure) });
   }
 };
 

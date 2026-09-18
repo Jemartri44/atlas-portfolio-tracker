@@ -9,13 +9,8 @@
 import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
 import { type Draft, decodeLine, type SupportedEvent, type UseCaseDeps } from "@atlas/domain";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  bootDecision,
-  loadInto,
-  reloadLedger,
-  restoreLedger,
-  toAppError,
-} from "../src/ledger/actions.js";
+import { bootDecision, loadInto, reloadLedger, restoreLedger } from "../src/ledger/actions.js";
+import { toAppError } from "../src/ledger/errors.js";
 import { validateImport } from "../src/ledger/export.js";
 import { store } from "../src/ledger/state.js";
 import {

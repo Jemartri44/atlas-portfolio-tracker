@@ -23,7 +23,7 @@ import {
 import { createSignal, type JSX, Show } from "solid-js";
 import { Callout, ErrorView } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
-import { toAppError } from "../../ledger/actions.js";
+import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
 import { store, today } from "../../ledger/state.js";
 import { changeSettings } from "../../ledger/write.js";

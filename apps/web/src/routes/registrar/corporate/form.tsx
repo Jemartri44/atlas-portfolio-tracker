@@ -11,7 +11,7 @@ import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import { Amount, Badge, Callout, EmptyState, ErrorView } from "../../../components/index.js";
 import { nameIndex } from "../../../format/names.js";
-import { toAppError } from "../../../ledger/actions.js";
+import { toAppError } from "../../../ledger/errors.js";
 import { attempt } from "../../../ledger/query.js";
 import { store, today } from "../../../ledger/state.js";
 import { previewDraft, recordDraft } from "../../../ledger/write.js";

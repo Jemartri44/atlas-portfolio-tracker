@@ -9,12 +9,8 @@
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Callout, ErrorView } from "../../components/index.js";
-import {
-  openBrowserLedger,
-  openDirectoryLedger,
-  reconnect,
-  toAppError,
-} from "../../ledger/actions.js";
+import { openBrowserLedger, openDirectoryLedger, reconnect } from "../../ledger/actions.js";
+import { toAppError } from "../../ledger/errors.js";
 import { importLedger } from "../../ledger/export.js";
 import { canUseDirectory } from "../../ledger/source.js";
 import type { AppError } from "../../ledger/state.js";

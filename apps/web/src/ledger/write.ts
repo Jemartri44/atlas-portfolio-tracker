@@ -33,7 +33,8 @@ import {
   type SupportedEvent,
   type UseCaseDeps,
 } from "@atlas/domain";
-import { reloadLedger, toAppError } from "./actions.js";
+import { reloadLedger } from "./actions.js";
+import { toAppError } from "./errors.js";
 import type { AppError } from "./state.js";
 import { requireDeps, store } from "./state.js";
 

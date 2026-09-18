@@ -8,7 +8,7 @@
 // them failing is not a reason to hide the other four (FR-013).
 
 import { DomainError } from "@atlas/domain";
-import { toAppError } from "./actions.js";
+import { toAppError } from "./errors.js";
 import type { AppError } from "./state.js";
 
 export type Attempt<T> = { ok: true; value: T } | { ok: false; error: AppError };
