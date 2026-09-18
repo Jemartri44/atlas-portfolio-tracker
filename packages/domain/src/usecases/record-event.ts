@@ -73,8 +73,12 @@ export const duplicatesOf = (
  * but `settings_changed` still demands a valid ledger, exactly as before; a
  * `settings_changed` only has to leave no *new* invalid event, unless the
  * caller accepts them explicitly.
+ *
+ * Exported because `previewEvent` has to fail **exactly** where the write would
+ * fail: a preview that accepts what `recordEvent` rejects (or that blames the
+ * wrong event) is worse than no preview at all.
  */
-const checkInvalid = (
+export const checkInvalid = (
   events: readonly LedgerEvent[],
   event: SupportedEvent,
   options: RecordOptions,
