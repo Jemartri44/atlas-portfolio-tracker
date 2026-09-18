@@ -27,7 +27,7 @@ import {
 } from "./operations.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
 import type { Asset, FiscalLot, LedgerState } from "./state.js";
-import { noteAcquisition } from "./wash-sale.js";
+import { noteAcquisition, warnPriorBuys } from "./wash-sale.js";
 
 export interface EffectContext {
   eventId: Ulid;
@@ -272,7 +272,7 @@ export const applyForcedSale = (
     adjustCash(state, entry.account_id, proceeds);
     adjustPosition(state, entry.account_id, asset.asset_id, negative(entry.quantity), ctx.eventId);
     const slices = consume(state, asset.asset_id, entry.quantity, ctx.eventId);
-    recordGain(state, {
+    const gain = recordGain(state, {
       event_id: ctx.eventId,
       asset_id: asset.asset_id,
       account_id: entry.account_id,
@@ -281,6 +281,21 @@ export const applyForcedSale = (
       proceeds_eur: fx.toEur(proceeds),
       slices,
     });
+    // A forced sale is a transmission like any other: a fund liquidation, the
+    // cash in lieu of a reverse split or the cash leg of a merger can realize a
+    // loss, and the rule looks at the loss, not at who decided the sale
+    // (data-schema.md §8.4). The other half of the window — an acquisition
+    // **after** this loss — already worked, because it walks the recorded gains.
+    if (gain.gain_eur.amount.isNegative()) {
+      warnPriorBuys(
+        state,
+        ctx.eventId,
+        asset.asset_id,
+        asset.asset_type,
+        ctx.effectiveDate,
+        gain.gain_eur,
+      );
+    }
   }
   warnCurrency(state, priced, asset);
   warnFxDate(state, priced, ctx.effectiveDate);

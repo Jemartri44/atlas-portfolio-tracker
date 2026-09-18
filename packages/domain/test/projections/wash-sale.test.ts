@@ -541,3 +541,83 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
     }
   });
 });
+
+describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
+  /** A fund liquidated at 6 after being bought at 10: a 40 EUR loss nobody chose. */
+  const liquidation = (buyDate: string): LedgerState => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "10",
+      unit_price: "10",
+      ...EUR,
+      trade_date: buyDate,
+      value_date: buyDate,
+    });
+    b.corporateAction({
+      kind: "fund_liquidation",
+      asset_id: "ast_world",
+      effective_date: "2027-06-01",
+      effects: [
+        {
+          op: "forced_sale",
+          per_account: [{ account_id: "acc_fund", quantity: "all" }],
+          unit_price: "6",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-06-01",
+        },
+      ],
+    });
+    return projectLedger(b.build());
+  };
+
+  it("warns about a purchase inside the window of the liquidation", () => {
+    const warnings = codes(liquidation("2027-01-11"), "wash_sale_window_prior_buy");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.details).toMatchObject({
+      asset_id: "ast_world",
+      buy_date: "2027-01-11",
+      quantity: "10",
+      loss_eur: "-40",
+      window_start: "2026-06-01",
+      window: "1y",
+    });
+  });
+
+  it("says nothing about a purchase older than the window", () => {
+    expect(codes(liquidation("2026-05-29"), "wash_sale_window_prior_buy")).toEqual([]);
+  });
+
+  it("says nothing when the forced sale makes money", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "10",
+      unit_price: "10",
+      ...EUR,
+      trade_date: "2027-01-11",
+      value_date: "2027-01-11",
+    });
+    b.corporateAction({
+      kind: "fund_liquidation",
+      asset_id: "ast_world",
+      effective_date: "2027-06-01",
+      effects: [
+        {
+          op: "forced_sale",
+          per_account: [{ account_id: "acc_fund", quantity: "all" }],
+          unit_price: "12",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-06-01",
+        },
+      ],
+    });
+    expect(codes(projectLedger(b.build()), "wash_sale_window_prior_buy")).toEqual([]);
+  });
+});
