@@ -8,7 +8,7 @@
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
 import { A, useNavigate } from "@solidjs/router";
-import { batch, createSignal, For, type JSX, Show } from "solid-js";
+import { createSignal, For, type JSX, Show } from "solid-js";
 import { Callout, Dialog, Field, SelectField, Switch } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
 import { correct, previewDraft, recordDraft, toAppError } from "../../ledger/actions.js";
@@ -46,25 +46,25 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const [priorYear, setPriorYear] = createSignal(false);
 
   const setValue = (name: string, value: string): void => {
-    batch(() => {
-      setValues({ ...values(), [name]: value });
-      // Prefill the currency from the chosen asset or account: a convenience,
-      // never a decision — the domain still validates what is sent.
-      for (const field of props.spec.fields) {
-        if (field.derive === undefined) {
-          continue;
-        }
-        if (
-          (field.derive === "assetCurrency" && name === "asset_id") ||
-          (field.derive === "accountCurrency" && name === "account_id")
-        ) {
-          const derived = derivedCurrency(props.state, field.derive, values());
-          if (derived !== undefined) {
-            setValues({ ...values(), [field.name]: derived });
-          }
-        }
+    const next: FormValues = { ...values(), [name]: value };
+    // Prefill the currency from the chosen asset or account: a convenience,
+    // never a decision — the domain still validates what is sent. Computed on
+    // `next` in one pass, so it does not depend on what a read inside a batch
+    // would return.
+    for (const field of props.spec.fields) {
+      if (field.derive === undefined) {
+        continue;
       }
-    });
+      const trigger = field.derive === "assetCurrency" ? "asset_id" : "account_id";
+      if (name !== trigger) {
+        continue;
+      }
+      const derived = derivedCurrency(props.state, field.derive, next);
+      if (derived !== undefined) {
+        next[field.name] = derived;
+      }
+    }
+    setValues(next);
   };
 
   const missing = () => missingRequired(props.spec, values());
