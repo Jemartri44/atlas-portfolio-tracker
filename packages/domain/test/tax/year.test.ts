@@ -226,6 +226,9 @@ describe("double taxation (#16)", () => {
   });
 });
 
+const report13 = (events: Parameters<typeof reportOf>[0]) =>
+  reportOf(events, 2027).doubtful.filter((d) => d.criterion === "13");
+
 describe("income in kind and exchanges without regime", () => {
   it("records a fork's income without integrating it (#8), and tags the sale of its lots", () => {
     const b = taxBuilder();
@@ -296,6 +299,31 @@ describe("income in kind and exchanges without regime", () => {
       ["exposure", "60"],
       ["exposure", "800"],
     ]);
+  });
+
+  it("puts the cash of an exchange at a loss at stake as an absolute amount (#13)", () => {
+    const b = taxBuilder();
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    b.corporateAction({
+      kind: "merger",
+      asset_id: "stock_s",
+      effective_date: "2027-06-01",
+      neutrality_regime: true,
+      effects: [
+        {
+          op: "forced_sale",
+          per_account: [{ account_id: "acc_a", quantity: "2" }],
+          unit_price: "70",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-06-01",
+        },
+        { op: "convert", to_asset_id: "stock_t", ratio: "1" },
+      ],
+    });
+    // 2 × 70 − 2 × 100 = −60: 60 at stake, never −60.
+    const items = report13(b.build());
+    expect(items.map((d) => [d.measure, text(d.exposure_eur)])).toEqual([["exposure", "60"]]);
   });
 
   it("warns when the event says there is no regime and still keeps date and cost", () => {

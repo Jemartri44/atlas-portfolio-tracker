@@ -413,6 +413,20 @@ describe("mandatory edge cases", () => {
     ).toBeUndefined();
   });
 
+  it("gives the open window the whole loss at stake: its own and what it releases", () => {
+    const b = taxBuilder();
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    sell(b, "stock_s", "2027-02-01", "10", "90");
+    buy(b, "stock_s", "2027-03-01", "10", "90");
+    // −50 of its own and −100 released from the February loss: −150 at stake.
+    const loss = sell(b, "stock_s", "2027-12-01", "10", "85");
+    const open = reportOf(b.build(), 2027, "2028-01-15");
+    expect(open.notes.find((n) => n.event_id === loss.id)?.details).toMatchObject({
+      loss_eur: "-150",
+      window_end: "2028-02-01",
+    });
+  });
+
   it("keeps the deferred loss whole: what is deferred is released or still pending, to the last decimal", () => {
     const b = taxBuilder();
     buy(b, "fund_f", "2027-01-11", "3", "100");

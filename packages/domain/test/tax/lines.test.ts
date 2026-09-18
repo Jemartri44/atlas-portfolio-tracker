@@ -27,6 +27,9 @@ describe("lines", () => {
     expect(line.lots[0]?.root).toMatchObject({ event_id: swap.id, event_type: "swap" });
     expect(text(line.lots[0]?.root.cost.amount)).toBe("1150");
     expect(text(line.cost_eur)).toBe("1150");
+    // Without a fee nothing depends on where the fee goes: no #17.
+    expect(lineOf(report, swap.id).criteria).not.toContain("17");
+    expect(report.doubtful.map((d) => d.criterion)).not.toContain("17");
   });
 
   it("the withholding of a forced sale is a withholding of the year", () => {
