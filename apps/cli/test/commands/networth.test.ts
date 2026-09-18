@@ -1,9 +1,23 @@
 // atlas networth — the only view that adds the two books, always broken down.
 
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DEFAULT_SETTINGS } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { bucketSeed, harness } from "../harness.js";
+
+const goldenLines = (): string[] =>
+  readFileSync(
+    join(
+      resolve(dirname(fileURLToPath(import.meta.url)), "../../../../tests/fixtures/ledger"),
+      "synthetic-v1.jsonl",
+    ),
+    "utf8",
+  )
+    .split("\n")
+    .filter((line) => line !== "");
 
 const DATE = "2027-06-30";
 
@@ -215,6 +229,23 @@ describe("atlas networth", () => {
     expect(payload.data.core).toBeDefined();
     expect(payload.data.bucket).toBeDefined();
     expect(payload.data.cash).toBeDefined();
+  });
+
+  it("prints a total that is the sum of the figures it prints", async () => {
+    const h = harness({ lines: goldenLines() });
+    expect(await h.exec(["networth", "--date", "2028-12-31"])).toBe(0);
+    const text = h.text();
+    // 16276.96 + 5455.08 + 395.79 + 198.84 = 22326.67. The exact subtotal rounds
+    // to 22326.68, and in the view whose mandate is to stay broken down a reader
+    // has to be able to add the column up and get the line below it.
+    expect(text).toContain("Subtotal  22326.67 EUR");
+    // 22326.67 + 1607.24 of bucket + 14518.45 of cash.
+    expect(text).toContain("TOTAL (parcial)  38452.36 EUR");
+    h.reset();
+    // The exact value, unrounded, is still the one in --json.
+    expect(await h.exec(["networth", "--date", "2028-12-31", "--json"])).toBe(0);
+    const data = h.json() as { core: { total_eur: string } };
+    expect(data.core.total_eur).toBe("22326.6773692756");
   });
 
   it("rejects a date that is not a date instead of answering something plausible", async () => {

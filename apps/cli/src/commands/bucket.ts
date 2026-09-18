@@ -12,6 +12,7 @@ import {
   bucketStats,
   bucketTheses,
   type CashLine,
+  Money,
   type NetWorth,
   netWorth,
   settingsAt,
@@ -39,12 +40,26 @@ const rateCell = (row: CashLine): string[] =>
         `${row.fx_age_days ?? 0}${row.fx_stale === true ? " ⚠" : ""}`,
       ];
 
+/**
+ * In the one view whose mandate is to stay broken down, the printed total is
+ * the sum of the printed figures: a reader who adds the column has to get the
+ * number at the bottom. The exact, unrounded value is still in `--json`.
+ */
+const shownSum = (values: readonly (Money | undefined)[]): Money =>
+  values.reduce<Money>(
+    (total, value) => (value === undefined ? total : total.add(value.roundToCents())),
+    Money.zero("EUR"),
+  );
+
 export const netWorthText = (view: NetWorth): string => {
   const missing = [
     ...view.core.missing_prices,
     ...view.bucket.missing_prices,
     ...view.cash.missing_rates,
   ];
+  const core = shownSum(view.core.by_class.map((subtotal) => subtotal.value_eur));
+  const bucket = shownSum(view.bucket.rows.map((row) => row.value_eur));
+  const cash = shownSum(view.cash.rows.map((row) => row.value_eur));
   return [
     `Patrimonio total a ${view.date} (siempre desglosado: el núcleo y el cubo no se suman en ninguna otra métrica).`,
     "",
@@ -53,14 +68,14 @@ export const netWorthText = (view: NetWorth): string => {
       (subtotal) =>
         `  [${subtotal.asset_class}]  ${eur(subtotal.value_eur)} EUR${subtotal.partial ? `  ${PARTIAL}` : ""}`,
     ),
-    `  Subtotal  ${eur(view.core.total_eur)} EUR${view.core.partial ? `  ${PARTIAL}` : ""}`,
+    `  Subtotal  ${eur(core)} EUR${view.core.partial ? `  ${PARTIAL}` : ""}`,
     "",
     "Cubo:",
     ...view.bucket.rows.map(
       (row) =>
         `  ${row.account_id} / ${row.asset_id}  ${eur(row.value_eur)} EUR${row.value_eur === undefined ? "  (sin precio)" : ""}`,
     ),
-    `  Subtotal  ${eur(view.bucket.total_eur)} EUR${view.bucket.partial ? `  ${PARTIAL}` : ""}`,
+    `  Subtotal  ${eur(bucket)} EUR${view.bucket.partial ? `  ${PARTIAL}` : ""}`,
     "",
     "Efectivo:",
     table(
@@ -73,11 +88,11 @@ export const netWorthText = (view: NetWorth): string => {
           ...rateCell(row),
           row.value_eur === undefined ? "— (sin convertir)" : eur(row.value_eur),
         ]),
-        ["Subtotal", "", "", "", "", "", eur(view.cash.total_eur)],
+        ["Subtotal", "", "", "", "", "", eur(cash)],
       ],
     ),
     "",
-    `TOTAL${view.partial ? ` ${PARTIAL}` : ""}  ${eur(view.total_eur)} EUR`,
+    `TOTAL${view.partial ? ` ${PARTIAL}` : ""}  ${eur(core.add(bucket).add(cash))} EUR`,
     ...(missing.length === 0 ? [] : [`Faltan: ${missing.join(", ")}.`]),
     ...warningLines(view.warnings),
   ].join("\n");
