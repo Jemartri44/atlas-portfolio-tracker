@@ -1,16 +1,15 @@
 // Before/after tables of a candidate event: positions and open lots of the
 // affected assets, plus the gains the event would book.
 
-import type { FiscalLot } from "@atlas/domain";
-import type { CandidatePreview, Snapshot } from "../commands/shared.js";
+import type { EventEffect, EventPreview, FiscalLot } from "@atlas/domain";
 import { table } from "./table.js";
 
-const positionRows = (before: Snapshot, after: Snapshot): string[][] => {
+const positionRows = (before: EventEffect, after: EventEffect): string[][] => {
   const keys = new Map<string, [string, string]>();
   for (const p of [...before.positions, ...after.positions]) {
     keys.set(`${p.account_id}|${p.asset_id}`, [p.account_id, p.asset_id]);
   }
-  const find = (snapshot: Snapshot, account: string, asset: string): string =>
+  const find = (snapshot: EventEffect, account: string, asset: string): string =>
     snapshot.positions
       .find((p) => p.account_id === account && p.asset_id === asset)
       ?.quantity.toString() ?? "0";
@@ -32,7 +31,7 @@ const lotCell = (lot: FiscalLot | undefined, field: "quantity" | "cost_eur"): st
   return field === "quantity" ? lot.quantity.toString() : lot.cost_eur.amount.toString();
 };
 
-const lotRows = (before: Snapshot, after: Snapshot): string[][] => {
+const lotRows = (before: EventEffect, after: EventEffect): string[][] => {
   const ids = new Map<string, FiscalLot>();
   for (const lot of [...before.lots, ...after.lots]) {
     ids.set(lot.id, lot);
@@ -58,7 +57,7 @@ const lotRows = (before: Snapshot, after: Snapshot): string[][] => {
     });
 };
 
-export const renderPreview = (preview: CandidatePreview): string => {
+export const renderPreview = (preview: EventPreview): string => {
   const sections = [
     "Posiciones (antes → después):",
     table(["cuenta", "activo", "antes", "después"], positionRows(preview.before, preview.after)),
@@ -95,8 +94,8 @@ export const renderPreview = (preview: CandidatePreview): string => {
 };
 
 /** JSON-friendly version of the preview for --json. */
-export const previewData = (preview: CandidatePreview): Record<string, unknown> => {
-  const snapshot = (s: Snapshot) => ({
+export const previewData = (preview: EventPreview): Record<string, unknown> => {
+  const snapshot = (s: EventEffect) => ({
     positions: s.positions.map((p) => ({ ...p, quantity: p.quantity.toString() })),
     lots: s.lots.map((lot) => ({
       id: lot.id,

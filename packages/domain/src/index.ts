@@ -62,6 +62,12 @@ export {
   type Target,
   targetOf,
 } from "./projections/kind-rules.js";
+export {
+  type EntryFilter,
+  type EntryStatus,
+  type LedgerEntry,
+  ledgerEntries,
+} from "./projections/ledger-entries.js";
 export { fiscalLots } from "./projections/lots.js";
 export {
   type CashBlock,
@@ -91,7 +97,12 @@ export {
   projectLedger,
 } from "./projections/project-ledger.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
-export { type FiscalYearImpact, movedFiscalYears } from "./projections/settings-impact.js";
+export {
+  type FiscalYearImpact,
+  movedFiscalYears,
+  type SilencedWarnings,
+  silencedWarnings,
+} from "./projections/settings-impact.js";
 export {
   type SimulateTransferInput,
   simulateTransfer,
@@ -137,6 +148,12 @@ export {
   type VersionCount,
 } from "./usecases/compact.js";
 export type { UseCaseDeps } from "./usecases/deps.js";
+export {
+  type EventEffect,
+  type EventPreview,
+  type PreviewOptions,
+  previewEvent,
+} from "./usecases/preview-event.js";
 export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
 export {
   completeDraft,

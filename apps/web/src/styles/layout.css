@@ -1,0 +1,432 @@
+/*
+ * The shell: **one** navigation, two shapes.
+ *
+ * Under 768px it is a bottom bar at thumb reach; from 768px it is a side rail.
+ * It is the same `<nav>` with the same list of links — not two components, not
+ * two copies in the DOM — so "never both at once" is structural and not a
+ * promise (prompt §3.5, decision (e)). The status bar, which carries where the
+ * ledger is plus two switches, exists only on the narrow layout: on the wide
+ * one its content moves into the rail's footer, so there is never a second bar.
+ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* --- Status bar (narrow only) ------------------------------------------- */
+
+.statusbar {
+  align-items: center;
+  background-color: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  gap: var(--s-2);
+  height: var(--statusbar-h);
+  justify-content: space-between;
+  padding: 0 var(--s-3);
+  padding-top: env(safe-area-inset-top);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/*
+ * The switches and the gear keep their size (44px targets); what gives way is
+ * the chip on the left, which truncates. Without `flex: 0 0 auto` here and
+ * `min-width: 0` on the chip, a long source name ("Almacenamiento del
+ * navegador") pushed the bar to 375px inside a 360px screen and the whole page
+ * scrolled sideways (review of 2026-09-18).
+ */
+.statusbar .actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--s-1);
+}
+
+/* The privacy switch: a label that behaves like a control, in either shape. */
+.switch-inline {
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Where the ledger is: visible on every screen (FR-011). */
+.ledger-chip {
+  align-items: center;
+  border-radius: var(--r-pill);
+  color: var(--c-text);
+  display: inline-flex;
+  font-size: var(--t-sm);
+  gap: var(--s-2);
+  max-width: 60vw;
+  min-height: var(--tap);
+  /* It is the part of the bar that yields: it truncates, it does not push. */
+  min-width: 0;
+  padding: 0 var(--s-2);
+  text-decoration: none;
+}
+
+.ledger-chip .dot {
+  background-color: var(--c-positive);
+  border-radius: 50%;
+  flex: 0 0 auto;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.ledger-chip.needs-attention .dot {
+  background-color: var(--c-warning);
+}
+
+.icon-button {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: var(--r-md);
+  color: var(--c-text);
+  display: inline-flex;
+  height: var(--tap);
+  justify-content: center;
+  padding: 0;
+  width: var(--tap);
+}
+
+.icon-button:hover {
+  background-color: var(--c-surface-2);
+}
+
+/* The icon sizes itself here, not in the element: no inline style survives the CSP. */
+.icon-button svg {
+  height: var(--icon);
+  width: var(--icon);
+}
+
+/* --- Main --------------------------------------------------------------- */
+
+main {
+  flex: 1 1 auto;
+  margin: 0 auto;
+  max-width: var(--content-max);
+  padding: var(--s-4) var(--s-4) calc(var(--bottomnav-h) + var(--s-6) + env(safe-area-inset-bottom));
+  width: 100%;
+}
+
+.skip-link {
+  background-color: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  left: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  position: absolute;
+  top: var(--s-2);
+  transform: translateY(-200%);
+  z-index: 40;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* --- The single navigation --------------------------------------------- */
+
+.nav {
+  background-color: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  bottom: 0;
+  inset-inline: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  position: fixed;
+  z-index: 30;
+}
+
+/*
+ * Pico makes `<nav>` a flex **row**, so this list is a flex item: without
+ * `flex: 1 1 auto` it is only as wide as its content and the five slots come
+ * out at 37px instead of 72, which is why the labels read "sum" and "Movim"
+ * (review of 2026-09-18). And `nav ul:first-of-type` carries a negative
+ * margin-inline of its own that beats `.nav ul` on specificity, so the reset
+ * needs the same weight or the row hangs 8px off each edge.
+ */
+.nav ul {
+  align-items: stretch;
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: space-around;
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.nav ul:first-of-type,
+.nav ul:last-of-type {
+  margin-inline: 0;
+}
+
+.nav li {
+  flex: 1 1 0;
+  /* Without this, a slot cannot shrink below its longest word and five of them
+     push the page sideways on a narrow phone, which is an acceptance criterion
+     and not a detail (prompt §3.5). */
+  min-width: 0;
+  padding: 0;
+}
+
+.nav a {
+  align-items: center;
+  color: var(--c-muted);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--t-xs);
+  gap: var(--s-0);
+  justify-content: center;
+  /* Pico un-pads its nav links with a negative margin; here that made every
+     target 16px wider than its slot and overlap its neighbour's. */
+  margin: 0;
+  min-height: var(--bottomnav-h);
+  padding: var(--s-1) 0;
+  text-decoration: none;
+}
+
+.nav a svg {
+  height: var(--icon);
+  width: var(--icon);
+}
+
+/*
+ * The label of the bar has its own step of the scale: at 12px "Movimientos"
+ * needed 76px of a 72px slot and came out cut in half. The truncation stays as
+ * a safety net — a 320px screen, or text scaled up by the system — but no
+ * label is expected to reach it.
+ */
+.nav .label {
+  font-size: var(--t-nav);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Active destination: weight and a bar, not colour alone. */
+.nav a[aria-current="page"] {
+  color: var(--c-accent);
+  font-weight: var(--w-semibold);
+  position: relative;
+}
+
+.nav a[aria-current="page"]::before {
+  background-color: var(--c-accent);
+  border-radius: var(--r-pill);
+  content: "";
+  height: 2px;
+  left: 25%;
+  position: absolute;
+  right: 25%;
+  top: 0;
+}
+
+/* The action, not a destination: filled and in the middle, under the thumb. */
+.nav a.action {
+  color: var(--c-accent-inverse);
+  font-weight: var(--w-semibold);
+}
+
+.nav a.action .pill {
+  align-items: center;
+  background-color: var(--c-accent);
+  border-radius: var(--r-pill);
+  color: var(--c-accent-inverse);
+  display: flex;
+  height: 2.25rem;
+  justify-content: center;
+  width: 3.25rem;
+}
+
+.nav a.action span.label {
+  color: var(--c-accent);
+}
+
+.nav .rail-footer {
+  display: none;
+}
+
+.nav .rail-footer a {
+  text-decoration: none;
+}
+
+.nav .rail-footer a svg {
+  height: var(--icon-sm);
+  width: var(--icon-sm);
+}
+
+/* --- From 768px: the rail, and no bottom bar ---------------------------- */
+
+@media (min-width: 768px) {
+  .statusbar {
+    display: none;
+  }
+
+  .shell {
+    padding-left: var(--rail-w);
+  }
+
+  .nav {
+    border-right: 1px solid var(--c-border);
+    border-top: none;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    inset-inline: auto;
+    left: 0;
+    padding: var(--s-4) var(--s-3);
+    top: 0;
+    width: var(--rail-w);
+  }
+
+  .nav ul {
+    flex-direction: column;
+    gap: var(--s-1);
+    justify-content: flex-start;
+  }
+
+  .nav a {
+    align-items: center;
+    border-radius: var(--r-md);
+    flex-direction: row;
+    font-size: var(--t-md);
+    gap: var(--s-3);
+    justify-content: flex-start;
+    min-height: var(--tap);
+    padding: 0 var(--s-3);
+  }
+
+  /* In the rail there is width to spare: the label reads at the link's size. */
+  .nav .label {
+    font-size: inherit;
+  }
+
+  .nav a[aria-current="page"] {
+    background-color: var(--c-accent-bg);
+    color: var(--c-accent-inverse);
+  }
+
+  .nav a[aria-current="page"]::before {
+    border-radius: var(--r-pill);
+    bottom: 25%;
+    height: auto;
+    left: 0;
+    right: auto;
+    top: 25%;
+    width: 2px;
+    background-color: currentcolor;
+  }
+
+  /* The action becomes the primary button at the top of the rail. */
+  .nav li.action-item {
+    order: -1;
+    margin-bottom: var(--s-2);
+  }
+
+  .nav a.action {
+    background-color: var(--c-accent);
+    border-radius: var(--r-md);
+    color: var(--c-accent-inverse);
+    justify-content: center;
+  }
+
+  .nav a.action .pill {
+    background: none;
+    height: auto;
+    width: auto;
+  }
+
+  .nav a.action span.label {
+    color: var(--c-accent-inverse);
+  }
+
+  .nav .rail-footer {
+    border-top: 1px solid var(--c-border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    margin-top: auto;
+    padding-top: var(--s-3);
+  }
+
+  .ledger-chip {
+    max-width: 100%;
+  }
+
+  main {
+    padding-bottom: var(--s-6);
+  }
+}
+
+/* --- Page header: the title is the first line of content ---------------- */
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin-bottom: var(--s-4);
+}
+
+.page-header .lead {
+  color: var(--c-muted);
+  font-size: var(--t-sm);
+}
+
+/* --- Degraded banner: permanent while the ledger has invalid events ----- */
+
+.degraded {
+  align-items: center;
+  background-color: var(--c-negative-bg);
+  border-bottom: 1px solid var(--c-negative);
+  color: var(--c-negative);
+  display: flex;
+  font-size: var(--t-sm);
+  gap: var(--s-2);
+  justify-content: space-between;
+  padding: var(--s-2) var(--s-4);
+}
+
+.degraded a {
+  color: inherit;
+}
+
+/* --- Skeletons: the shape of what is coming, never a spinner ----------- */
+
+.skeleton {
+  background-color: var(--c-surface-2);
+  border-radius: var(--r-sm);
+  height: 1rem;
+}
+
+.skeleton.tall {
+  height: 2.5rem;
+}
+
+/*
+ * Lines of unequal width, so the placeholder reads as text and not as a block.
+ * A cycle of four widths and not one value per line: it is the same illusion
+ * and it needs nothing computed per element, which is what used to force an
+ * inline `style` the production CSP blocks.
+ */
+.skeleton:nth-child(4n + 1) {
+  width: 100%;
+}
+
+.skeleton:nth-child(4n + 2) {
+  width: 88%;
+}
+
+.skeleton:nth-child(4n + 3) {
+  width: 76%;
+}
+
+.skeleton:nth-child(4n) {
+  width: 64%;
+}

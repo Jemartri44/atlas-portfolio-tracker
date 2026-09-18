@@ -1,0 +1,118 @@
+/*
+ * One typographic scale, one space scale, one set of radii, one set of
+ * semantic colours. **Nothing outside these scales** anywhere else: it is what
+ * makes an application look like one piece (prompt §3.9).
+ *
+ * Surfaces, text and borders derive from Pico's own variables instead of being
+ * redefined: Pico already resolves light and dark, including the system
+ * preference and the `data-theme` override, so deriving means dark mode is
+ * correct by construction instead of by maintenance. What Pico does not have —
+ * positive, negative, warning and "no data" — is defined here for both themes.
+ */
+
+:root {
+  /*
+   * Type scale (1.2 ratio, rounded to the half pixel at 16px root). `--t-nav`
+   * is the step below the scale and exists for one place: the label of the
+   * bottom bar, where five slots share the width of a phone and "Movimientos"
+   * does not fit at 12px (review of 2026-09-18).
+   */
+  --t-nav: 0.625rem;
+  --t-xs: 0.75rem;
+  --t-sm: 0.8125rem;
+  --t-md: 0.9375rem;
+  --t-lg: 1.125rem;
+  --t-xl: 1.375rem;
+  --t-display: 2rem;
+
+  /* Space scale. `--s-0` is the half step: two lines of the same block. */
+  --s-0: 0.125rem;
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2.25rem;
+
+  /* Radii and weights. */
+  --r-sm: 0.375rem;
+  --r-md: 0.625rem;
+  --r-lg: 1rem;
+  --r-pill: 999px;
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-semibold: 600;
+  --w-bold: 700;
+
+  /* Minimum touch target (Apple HIG 44pt, Material 48dp; WCAG 2.5.8 asks 24). */
+  --tap: 2.75rem;
+  /* Compact target: a chip or its cross, above the 24px WCAG 2.5.8 asks for. */
+  --tap-compact: 2rem;
+
+  /* Chrome. The breakpoint that swaps the bottom bar for the rail is 768px. */
+  --statusbar-h: 3rem;
+  --bottomnav-h: 3.75rem;
+  --rail-w: 13.5rem;
+  --content-max: 62rem;
+
+  /* Inline icons, and the widest a lone control gets inside a row. */
+  --icon: 1.375rem;
+  --icon-sm: 1.25rem;
+  --control-max: 14rem;
+
+  /* Surfaces and text, from Pico. */
+  --c-bg: var(--pico-background-color);
+  --c-surface: var(--pico-card-background-color);
+  --c-surface-2: var(--pico-code-background-color);
+  --c-border: var(--pico-muted-border-color);
+  --c-text: var(--pico-color);
+  --c-muted: var(--pico-muted-color);
+  --c-accent: var(--pico-primary);
+  --c-accent-bg: var(--pico-primary-background);
+  --c-accent-inverse: var(--pico-primary-inverse);
+
+  /* Finance semantics: light theme. */
+  --c-positive: #0b6b43;
+  --c-positive-bg: #e4f4ec;
+  --c-negative: #a42017;
+  --c-negative-bg: #fceceb;
+  --c-warning: #7a4d00;
+  --c-warning-bg: #fdf1dc;
+  --c-nodata: var(--pico-muted-color);
+  --c-mask: var(--pico-muted-color);
+}
+
+/* Dark, following the system preference unless the user forced light. */
+@media only screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-positive: #58cf94;
+    --c-positive-bg: #12301f;
+    --c-negative: #ff8b80;
+    --c-negative-bg: #341715;
+    --c-warning: #e8bc55;
+    --c-warning-bg: #322609;
+  }
+}
+
+/* Dark, forced by the switch. */
+[data-theme="dark"] {
+  --c-positive: #58cf94;
+  --c-positive-bg: #12301f;
+  --c-negative: #ff8b80;
+  --c-negative-bg: #341715;
+  --c-warning: #e8bc55;
+  --c-warning-bg: #322609;
+}
+
+/* Pico, tuned to the scales above: a data application wants less air than a blog. */
+:root {
+  --pico-font-size: 100%;
+  --pico-border-radius: var(--r-md);
+  --pico-spacing: var(--s-4);
+  --pico-typography-spacing-vertical: var(--s-3);
+  --pico-block-spacing-vertical: var(--s-4);
+  --pico-block-spacing-horizontal: var(--s-4);
+  --pico-form-element-spacing-vertical: 0.6rem;
+  --pico-form-element-spacing-horizontal: var(--s-3);
+  --pico-line-height: 1.45;
+}

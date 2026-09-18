@@ -9,6 +9,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./blob": {
+      "types": "./dist/ledger-store/blob.d.ts",
+      "import": "./dist/ledger-store/blob.js"
+    },
+    "./browser": {
+      "types": "./dist/ledger-store/browser/index.d.ts",
+      "import": "./dist/ledger-store/browser/index.js"
+    },
+    "./clock": {
+      "types": "./dist/clock/system.d.ts",
+      "import": "./dist/clock/system.js"
+    },
+    "./random": {
+      "types": "./dist/random/web-crypto.d.ts",
+      "import": "./dist/random/web-crypto.js"
     }
   },
   "files": [

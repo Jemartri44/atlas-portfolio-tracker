@@ -43,13 +43,10 @@ const rateCell = (row: CashLine): string[] =>
 /**
  * In the one view whose mandate is to stay broken down, the printed total is
  * the sum of the printed figures: a reader who adds the column has to get the
- * number at the bottom. The exact, unrounded value is still in `--json`.
+ * number at the bottom. The exact, unrounded value is still in `--json`. The
+ * rule lives in the domain, so the web prints the same total.
  */
-const shownSum = (values: readonly (Money | undefined)[]): Money =>
-  values.reduce<Money>(
-    (total, value) => (value === undefined ? total : total.add(value.roundToCents())),
-    Money.zero("EUR"),
-  );
+const shownSum = (values: readonly (Money | undefined)[]): Money => Money.sumShown(values, "EUR");
 
 export const netWorthText = (view: NetWorth): string => {
   const missing = [

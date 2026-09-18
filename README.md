@@ -4,7 +4,7 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 
 ## Estado
 
-Fases 1 y 2 completas y Fase 3 en marcha. Fase 1: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local), feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha) y feature `003-synthetic-data` (generador de libros sintéticos con *golden file*, `compact` con archivo del original, verificación profunda y copia local verificada). Fase 2: feature `004-monthly-contribution` (precios manuales, pesos y desviaciones del núcleo, calculadora de la aportación mensual, simulador de traspaso y resumen de costes). Fase 3: feature `005-bucket-tracking` (seguimiento del cubo especulativo contra el índice, patrimonio total desglosado, reglas de control y aviso de la ventana de recompra). Sin API, sin web, sin infraestructura todavía. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/), [`specs/002-corporate-actions/`](specs/002-corporate-actions/), [`specs/003-synthetic-data/`](specs/003-synthetic-data/), [`specs/004-monthly-contribution/`](specs/004-monthly-contribution/) y [`specs/005-bucket-tracking/`](specs/005-bucket-tracking/).
+Fases 1 y 2 completas y Fase 3 en marcha. Fase 1: feature `001-ledger-core` (dominio puro `@atlas/domain`, adaptadores de fichero y memoria `@atlas/adapters`, CLI `atlas` sobre un `ledger.jsonl` local), feature `002-corporate-actions` (eventos corporativos como composición de cinco primitivas de lote, tesis del cubo especulativo y valoraciones a una fecha) y feature `003-synthetic-data` (generador de libros sintéticos con *golden file*, `compact` con archivo del original, verificación profunda y copia local verificada). Fase 2: feature `004-monthly-contribution` (precios manuales, pesos y desviaciones del núcleo, calculadora de la aportación mensual, simulador de traspaso y resumen de costes). Fase 3: feature `005-bucket-tracking` (seguimiento del cubo especulativo contra el índice, patrimonio total desglosado, reglas de control y aviso de la ventana de recompra). **Web**: feature `006-web-shell` (aplicación local-first con Resumen, Movimientos, registro con vista previa, rectificación y Ajustes; ADR-0017 y ADR-0019). Sin API ni infraestructura todavía: la web funciona en el dispositivo, sin servidor y sin cuenta. Detalle en [`specs/001-ledger-core/`](specs/001-ledger-core/), [`specs/002-corporate-actions/`](specs/002-corporate-actions/), [`specs/003-synthetic-data/`](specs/003-synthetic-data/), [`specs/004-monthly-contribution/`](specs/004-monthly-contribution/), [`specs/005-bucket-tracking/`](specs/005-bucket-tracking/) y [`specs/006-web-shell/`](specs/006-web-shell/).
 
 ## Documentación
 
@@ -26,13 +26,44 @@ nvm install 22 && nvm use            # lee .nvmrc
 npm ci                               # instala el toolchain (sin dependencias en runtime)
 npm run lint && npm run typecheck    # Biome + tsc
 npm test                             # vitest (dominio al 100 % de cobertura con npm run test:coverage)
-npm run build                        # compila a dist/ y copia big.js vendorizada
-npm run clean                        # borra dist/, dist-test/ y coverage/ de todos los paquetes
+npm run build                        # tsc -b de todos los paquetes + build de la web
+npm run dev                          # servidor de desarrollo de la web en http://localhost:5173
+npm run clean                        # borra dist/, dist-test/, coverage/ y la caché de Vite
 ```
 
 `npm run clean && npm run build` reconstruye desde cero (los `.tsbuildinfo` viven dentro de `dist*/`, así que borrar la salida no deja estado incremental a medias, por ejemplo al cambiar de rama).
 
-Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `vendor/big.js` para el decimal exacto), `packages/adapters` (`FileLedgerStore`, `MemoryLedgerStore`, reloj y aleatoriedad del sistema) y `apps/cli`.
+Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `vendor/big.js` para el decimal exacto), `packages/adapters` (`FileLedgerStore`, `MemoryLedgerStore`, `BlobLedgerStore` con sus dos *handles* de navegador, reloj y aleatoriedad del sistema), `apps/cli` y `apps/web`.
+
+## La aplicación web
+
+Local-first: **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión (ADR-0019). El *stack* es Solid con Pico CSS vendorizada (ADR-0017).
+
+```bash
+npm run dev                          # http://localhost:5173
+npm run build                        # produce apps/web/dist y comprueba el bundle
+npm run preview                      # sirve el build de producción en :4173
+```
+
+### Cómo abrir un libro
+
+Al arrancar por primera vez la aplicación pregunta dónde está el libro. Hay dos vías, y **cuál puedes usar depende del navegador**:
+
+| Vía | Dónde funciona | Qué hace |
+|---|---|---|
+| **La carpeta de mi ordenador** (recomendada) | Chrome y Edge de escritorio | Eliges la carpeta que contiene tu `ledger.jsonl` y la web escribe en **ese mismo fichero**, el que usa la CLI. Sin copias ni sincronización. Puede crear `archive/` igual que `atlas compact` |
+| **El almacenamiento del navegador** | Todos, y es la **única** vía en el móvil, Firefox y Safari | El libro vive dentro del navegador de ese dispositivo. Se importa y se exporta con un botón |
+
+Dos cosas que conviene saber y que la aplicación te recuerda:
+
+- **El permiso del fichero no sobrevive al cierre de todas las pestañas** (así funciona la File System Access API): al volver, la aplicación recuerda *qué carpeta era* y basta un clic en «Reconectar».
+- **El almacenamiento del navegador no es un almacén definitivo**: si borras los datos del sitio, el libro se va con ellos. Por eso la aplicación avisa cuando llevas más de una semana sin exportar. En el ordenador, `atlas backup` sigue siendo la copia de referencia.
+
+El modo privacidad está **activado por defecto**: oculta importes y cantidades, y deja a la vista porcentajes, pesos, desviaciones y fechas. Se conmuta desde la cabecera y se recuerda en el dispositivo.
+
+### CSP: desarrollo y producción
+
+`apps/web/index.html` lleva la política de producción (`script-src 'self'`, sin `unsafe-inline`). El servidor de desarrollo de Vite inyecta *scripts* en línea, así que `vite.config.ts` **relaja la misma política en `npm run dev`** (añade `'unsafe-inline'`, `'unsafe-eval'` y `ws:` para el *hot reload*). Lo que se sirve en producción es la estricta, y `npm run build` comprueba sobre el resultado que no hay ni un `node:` ni una URL a un origen ajeno.
 
 ## Uso de la CLI
 

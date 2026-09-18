@@ -5,9 +5,15 @@ const local = (path: string): string => fileURLToPath(new URL(path, import.meta.
 
 export default defineConfig({
   resolve: {
+    // The subpaths go first: aliases are matched by prefix, so the barrel
+    // would otherwise swallow `@atlas/adapters/blob`.
     alias: {
-      "@atlas/domain": local("./packages/domain/src/index.ts"),
+      "@atlas/adapters/blob": local("./packages/adapters/src/ledger-store/blob.ts"),
+      "@atlas/adapters/browser": local("./packages/adapters/src/ledger-store/browser/index.ts"),
+      "@atlas/adapters/clock": local("./packages/adapters/src/clock/system.ts"),
+      "@atlas/adapters/random": local("./packages/adapters/src/random/web-crypto.ts"),
       "@atlas/adapters": local("./packages/adapters/src/index.ts"),
+      "@atlas/domain": local("./packages/domain/src/index.ts"),
     },
   },
   test: {
@@ -17,6 +23,28 @@ export default defineConfig({
       { extends: true, test: { name: "domain", root: "packages/domain" } },
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },
       { extends: true, test: { name: "cli", root: "apps/cli" } },
+      {
+        extends: true,
+        /*
+         * Solid resolves its **server** build under the "node" condition, and
+         * there a `createMemo` never updates. Vitest transforms through the SSR
+         * pipeline, so the condition has to be set on both sides for the store
+         * to be reactive in a plain Node process (Q8: no DOM, real signals).
+         */
+        resolve: { conditions: ["browser", "development"] },
+        ssr: { resolve: { conditions: ["browser", "development"] } },
+        // The Solid plugin asks for jsdom; this project has no DOM on purpose
+        // (decision (k)), and the smoke test only needs the modules to load.
+        /*
+         * No DOM environment on purpose (decision (k)). What that costs, found
+         * while trying: the `.tsx` module graph cannot be loaded here either,
+         * because `@solidjs/router` reads `window.history` **at import time**.
+         * So the components are covered by their pure layers (`format/`,
+         * `view-models/`, `ledger/`) and by hand; the day a screen needs more,
+         * `happy-dom` is pre-authorised and this is the concrete case for it.
+         */
+        test: { name: "web", root: "apps/web", environment: "node" },
+      },
       { extends: true, test: { name: "repo", root: "tests" } },
     ],
     coverage: {

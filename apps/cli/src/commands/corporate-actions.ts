@@ -7,12 +7,15 @@ import {
   CORPORATE_ACTION_KINDS,
   type CorporateActionKind,
   Decimal,
+  type Draft,
   type Effect,
+  type EventPreview,
   type ForcedSaleEntry,
   type LedgerState,
   loadAndProject,
   type PhysicalPosition,
   physicalPositions,
+  previewEvent,
   Quantity,
   recordEvent,
 } from "@atlas/domain";
@@ -21,7 +24,7 @@ import { type Context, describeWarnings, GLOBAL_FLAGS, summarize } from "../cont
 import { previewData, renderPreview } from "../output/preview.js";
 import { keyValue } from "../output/table.js";
 import { parseAssignments } from "./catalogue.js";
-import { type CandidatePreview, confirm, previewCandidate } from "./shared.js";
+import { confirm } from "./shared.js";
 
 const COMMON_FLAGS = ["asset", "effective-date", "source-document", "notes"];
 const CASH_FLAGS = ["cash-per-share", "currency", "fx-rate", "fx-rate-date", "fees"];
@@ -106,7 +109,9 @@ const fractionalSale = async (
   if (stringFlag(flags, "cash-per-share") === undefined) {
     return main;
   }
-  const preview = await previewCandidate(ctx, draftOf(kind, base, main), [asset]);
+  const preview = await previewEvent(ctx.deps, draftOf(kind, base, main) as unknown as Draft, {
+    assets: [asset],
+  });
   const entries: ForcedSaleEntry[] = preview.after.positions
     .filter((p) => p.asset_id === asset)
     .map((p) => ({
@@ -293,7 +298,7 @@ const adviseAfter = (
   ctx: Context,
   base: Base,
   kind: CorporateActionKind,
-  preview: CandidatePreview,
+  preview: EventPreview,
 ): void => {
   ctx.io.out(
     `Recuerda copiar el documento fuente (${base.source_document}) a documents/ a mano: la CLI solo guarda la referencia.`,
@@ -337,7 +342,9 @@ export const corporateActionCommand = async (
   requireAssetInCatalogue(state, base.asset, "afectado");
   const effects = await wizard.build(ctx, flags, base, state);
   const draft = draftOf(kind, base, effects);
-  const preview = await previewCandidate(ctx, draft, affectedAssets(base, effects));
+  const preview = await previewEvent(ctx.deps, draft as unknown as Draft, {
+    assets: affectedAssets(base, effects),
+  });
   if (ctx.json) {
     ctx.io.out(JSON.stringify(previewData(preview), null, 2));
   } else {

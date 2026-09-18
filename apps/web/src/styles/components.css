@@ -1,0 +1,477 @@
+/*
+ * The pieces the screens are made of: the net-worth block, the attention list,
+ * the movement rows (cards on a phone, a table from 768px: one data source, two
+ * presentations, never a sideways scrollbar), forms and dialogs.
+ */
+
+/* --- The one big number, always broken down ----------------------------- */
+
+.networth .total {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.networth .total .total-amount {
+  font-size: var(--t-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--w-semibold);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.networth .blocks {
+  display: grid;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+
+.networth .block {
+  border-top: 1px solid var(--c-border);
+  padding-top: var(--s-2);
+}
+
+.networth .block > .spread > .label {
+  font-weight: var(--w-medium);
+}
+
+.networth .lines {
+  display: grid;
+  gap: var(--s-1);
+  margin-top: var(--s-1);
+}
+
+.networth .line {
+  align-items: baseline;
+  display: flex;
+  font-size: var(--t-sm);
+  gap: var(--s-2);
+  justify-content: space-between;
+}
+
+.networth .line .name {
+  color: var(--c-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .networth .blocks {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-4);
+  }
+
+  .networth .block {
+    border-top: none;
+    border-left: 1px solid var(--c-border);
+    padding: 0 0 0 var(--s-3);
+  }
+}
+
+/* --- What needs attention ---------------------------------------------- */
+
+.attention {
+  display: grid;
+  gap: var(--s-2);
+}
+
+/*
+ * On a phone the action goes **under** the text. Side by side, at 360px, the
+ * message was left with a column of about fifteen characters and six warnings
+ * filled three screenfuls; from 768px there is room and it goes back to a row.
+ */
+.attention .item {
+  align-items: flex-start;
+  border: 1px solid var(--c-border);
+  border-left-width: 3px;
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  text-decoration: none;
+}
+
+@media (min-width: 768px) {
+  .attention .item {
+    flex-direction: row;
+    gap: var(--s-3);
+    justify-content: space-between;
+  }
+}
+
+.attention .item:hover {
+  background-color: var(--c-surface-2);
+}
+
+.attention .item.is-error {
+  border-left-color: var(--c-negative);
+}
+
+.attention .item.is-warning {
+  border-left-color: var(--c-warning);
+}
+
+.attention .item.is-info {
+  border-left-color: var(--c-accent);
+}
+
+.attention .item .text {
+  color: var(--c-text);
+  font-size: var(--t-sm);
+}
+
+.attention .item .go {
+  color: var(--c-accent);
+  flex: 0 0 auto;
+  font-size: var(--t-sm);
+  white-space: nowrap;
+}
+
+.calm {
+  align-items: center;
+  color: var(--c-muted);
+  display: flex;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-3) 0;
+}
+
+/* The small print that closes a block: muted, tiny, spaced above. */
+.note {
+  color: var(--c-muted);
+  font-size: var(--t-xs);
+  margin: var(--s-3) 0 0;
+}
+
+/* A file picker is as wide as a file name needs, not as wide as its row. */
+.file-input {
+  max-width: var(--control-max);
+}
+
+/* --- Movements: two-line cards on a phone, a table on a desktop -------- */
+
+.movements {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.movement {
+  border-bottom: 1px solid var(--c-border);
+  color: var(--c-text);
+  display: grid;
+  gap: var(--s-0);
+  grid-template-columns: 1fr auto;
+  padding: var(--s-3) var(--s-1);
+  text-decoration: none;
+}
+
+.movement:hover {
+  background-color: var(--c-surface-2);
+}
+
+.movement .head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  grid-column: 1;
+}
+
+.movement .type {
+  font-weight: var(--w-medium);
+}
+
+.movement .amount {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.movement .sub {
+  color: var(--c-muted);
+  font-size: var(--t-sm);
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movement.is-reversed .type,
+.movement.is-reversed .sub {
+  text-decoration: line-through;
+}
+
+.movements-table {
+  display: none;
+}
+
+/* "Cargar más": the width of the list, because it is the action of the list. */
+.load-more {
+  margin-top: var(--s-3);
+  width: 100%;
+}
+
+/*
+ * The table comes in at 1024px and not at the 768px of the rail, because at
+ * 768px it does not fit: the rail takes 216px and the dense table needs 659px
+ * of the 505px that are left, so the page scrolled sideways by 24px (measured
+ * in the review of 2026-09-18). Between the two widths the cards are shown,
+ * which is the same information in a column 505px wide — a comfortable one.
+ */
+@media (min-width: 1024px) {
+  .movements {
+    display: none;
+  }
+
+  .movements-table {
+    display: table;
+    width: 100%;
+  }
+
+  .movements-table td.num,
+  .movements-table th.num {
+    text-align: right;
+  }
+
+  .movements-table tr:hover {
+    background-color: var(--c-surface-2);
+  }
+
+  .movements-table a {
+    text-decoration: none;
+  }
+}
+
+/* --- Filters ------------------------------------------------------------ */
+
+.filters {
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-3);
+  padding: 0;
+}
+
+.filters > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: var(--s-2);
+  justify-content: space-between;
+  min-height: var(--tap);
+  padding: 0 var(--s-3);
+}
+
+.filters > .body {
+  border-top: 1px solid var(--c-border);
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3);
+}
+
+@media (min-width: 768px) {
+  .filters > .body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filters > .body .full {
+    grid-column: 1 / -1;
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.chip {
+  align-items: center;
+  background-color: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-pill);
+  display: inline-flex;
+  font-size: var(--t-xs);
+  gap: var(--s-1);
+  min-height: var(--tap-compact);
+  padding: 0 var(--s-2);
+}
+
+.chip button {
+  background: none;
+  border: none;
+  color: var(--c-muted);
+  min-height: var(--tap-compact);
+  padding: 0 var(--s-0);
+}
+
+/* --- Forms ------------------------------------------------------------- */
+
+.form {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.form .fieldset {
+  display: grid;
+  gap: var(--s-3);
+}
+
+@media (min-width: 768px) {
+  .form .fieldset {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form .fieldset .full {
+    grid-column: 1 / -1;
+  }
+}
+
+.field {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.field > label {
+  font-size: var(--t-sm);
+  font-weight: var(--w-medium);
+  margin: 0;
+}
+
+.field .hint {
+  color: var(--c-muted);
+  font-size: var(--t-xs);
+}
+
+.field .error {
+  color: var(--c-negative);
+  font-size: var(--t-xs);
+}
+
+.field.required > label::after {
+  color: var(--c-muted);
+  content: " *";
+}
+
+.actions-bar {
+  background-color: var(--c-bg);
+  border-top: 1px solid var(--c-border);
+  bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom));
+  display: flex;
+  gap: var(--s-2);
+  padding: var(--s-3) 0;
+  position: sticky;
+  z-index: 10;
+}
+
+.actions-bar button {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 768px) {
+  .actions-bar {
+    bottom: 0;
+  }
+
+  .actions-bar button {
+    flex: 0 0 auto;
+    min-width: 12rem;
+  }
+}
+
+/* --- Preview ----------------------------------------------------------- */
+
+.preview {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.preview .beforeafter {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.preview .change {
+  align-items: baseline;
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  font-size: var(--t-sm);
+  gap: var(--s-2);
+  justify-content: space-between;
+  padding-bottom: var(--s-1);
+}
+
+.preview .change .values {
+  display: flex;
+  gap: var(--s-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.preview .arrow {
+  color: var(--c-muted);
+}
+
+/* --- Dialogs: the native element, nothing else ------------------------- */
+
+dialog article {
+  max-width: 34rem;
+}
+
+dialog h2 {
+  margin-bottom: var(--s-2);
+}
+
+dialog .dialog-actions {
+  display: flex;
+  gap: var(--s-2);
+  justify-content: flex-end;
+  margin-top: var(--s-4);
+}
+
+@media (max-width: 480px) {
+  dialog .dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  dialog .dialog-actions button {
+    width: 100%;
+  }
+}
+
+/* --- Empty states ------------------------------------------------------ */
+
+.empty {
+  border: 1px dashed var(--c-border);
+  border-radius: var(--r-lg);
+  color: var(--c-muted);
+  display: grid;
+  gap: var(--s-2);
+  justify-items: start;
+  padding: var(--s-5) var(--s-4);
+}
+
+.empty .what {
+  color: var(--c-text);
+  font-weight: var(--w-medium);
+}
+
+/* The grid already spaces the lines of an empty state. */
+.empty p {
+  margin: 0;
+}
+
+/* --- Reserved destinations --------------------------------------------- */
+
+.reserved {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.reserved code {
+  font-size: var(--t-sm);
+}
