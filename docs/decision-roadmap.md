@@ -25,9 +25,10 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | — | *Fase 0 (validación con la realidad, tareas del usuario)* | Rondas 6-7 | — | En curso: IBKR sin abrir; la primera suscripción a MyInvestor (y con ella la exportación de operaciones de fondos) se aplaza hasta que la app esté lista para registrarla; AWS y Yahoo diferidos a antes de la Fase 4 |
 | — | *Fase 1 (libro mayor): features 001-003* | Fases 2-5 | `specs/001-ledger-core/`, `specs/002-corporate-actions/`, `specs/003-synthetic-data/`, PRs #10, #12, #15, #18 | **Cerrada** 2026-08-30; *challenge* 2 ejecutado y triado el 2026-08-31. La Fase 2 es la feature `004-monthly-contribution`; los importadores de MyInvestor e IBKR tomarán los números siguientes cuando la Fase 0 los desbloquee. Candidatos de integridad anotados en `specs/003-synthetic-data/research.md` §1 (`inactive_reference`, `duplicate_valuation`, `valuation_quantity_mismatch`): decidir cuando se amplíe `integrity`. los importadores siguen dependiendo de la Fase 0 |
 | — | *Fase 2 (aportación mensual): feature `004-monthly-contribution`* | Fase 3 | `docs/prompts/004-monthly-contribution.md`, `specs/004-monthly-contribution/` | Implementada; PR #23 |
-| — | *Fase 3 (cubo especulativo): feature `005-bucket-tracking`* | Ronda 7 | `docs/prompts/005-bucket-tracking.md`, constitución 1.5.0 | Prompt escrito 2026-09-18; pendiente de implementar |
+| — | *Fase 3 (cubo especulativo): feature `005-bucket-tracking`* | Web | `docs/prompts/005-bucket-tracking.md`, constitución 1.5.0 | En implementación desde 2026-09-18 |
+| — | *Web, primera mitad: feature `006-web-shell`* | Fase 4 | `docs/prompts/006-web-shell.md`, ADR-0017, ADR-0019 | Prompt escrito 2026-09-18; espera a la 005 |
 | 6 | Importadores y fuentes de precios | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente; bloqueada por la Fase 0 (IBKR y exportación de fondos de MyInvestor) |
-| 7 | Aplicación web: framework, offline, auth, API | Fase 2 | **ADR-0017** (stack), pendiente el diseño de pantallas y el flujo de autenticación | *Stack* **cerrado** 2026-09-18 con investigación verificada; el resto, al escribir el prompt de la web |
+| 7 | Aplicación web: framework, offline, auth, API | Fase 2 | **ADR-0017** (*stack*), **ADR-0019** (local-first, sin servidor), `docs/prompts/006-web-shell.md` (pantallas y navegación) | **Cerrada** 2026-09-18. La autenticación desaparece del alcance: sin servidor no hay nada que autenticar; Cognito protegerá la API en la Fase 4 |
 | 8 | Infraestructura, despliegue y copias de seguridad | Fase 4 | ADR-0010+ | Pendiente |
 | 9 | Salida fiscal | Fase 5 | Spec de la feature fiscal | Pendiente |
 
@@ -106,6 +107,8 @@ Ninguna bloquea la Fase 1: el dominio y la CLI no dependen de nada externo. Sus 
 
 **Cuando la cuenta de IBKR esté abierta**
 2. **Flex Query**: Activity Flex Query en XML con *Trades*, *Cash Transactions*, *Corporate Actions*, *Transfers*, *Open Positions*; activar Flex Web Service y generar el token de solo lectura. Descargar una vez por API y dejar el XML en `~/atlas-private/statements/ibkr/`.
+
+> **La web ya no depende de la Fase 4** (ADR-0019): funciona en el dispositivo, sin servidor y sin cuenta. Lo que la Fase 4 añade es la sincronización entre dispositivos, los precios automáticos y los avisos por correo.
 
 **Antes de la Fase 4, no antes**
 3. **Cuenta AWS al Paid Plan** y alerta de presupuesto de 1 $ (crearla antes solo arranca el reloj de seis meses del Free Plan).
