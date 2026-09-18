@@ -47,7 +47,7 @@ describe("consume", () => {
     const state = createEmptyState(DEFAULT_SETTINGS);
     lot(state, "2027-01-11", "3", "100", "e1", 1);
     lot(state, "2027-01-11", "3", "200", "e2", 2);
-    const slices = consume(state, "x", q("4"), "sell1");
+    const slices = consume(state, "x", q("4"), "sell1", "transmission");
     expect(slices.map((s) => `${s.lot_id}:${s.quantity}:${s.cost_eur.amount}`)).toEqual([
       "e1#0:3:100",
       "e2#0:1:66.6666666667",
@@ -62,12 +62,21 @@ describe("consume", () => {
     expect(open?.cost_eur.amount.toString()).toBe("133.3333333333");
     expect(open?.original_cost_eur.amount.toString()).toBe("200");
     expect(openQuantity(state, "x").toString()).toBe("2");
+    // The journal records what the FIFO did, in order, with the quantity each
+    // lot held before: the tax engine walks it instead of choosing lots again.
+    expect(
+      state.lotJournal.map((entry) =>
+        entry.kind === "consume"
+          ? `${entry.kind}:${entry.lot_id}:${entry.quantity}/${entry.quantity_before}:${entry.purpose}`
+          : `${entry.kind}`,
+      ),
+    ).toEqual(["open", "open", "consume:e1#0:3/3:transmission", "consume:e2#0:1/3:transmission"]);
   });
 
   it("handles many-decimal quantities without rounding the quantity", () => {
     const state = createEmptyState(DEFAULT_SETTINGS);
     lot(state, "2027-01-11", "0.123456789012345678", "10", "e1", 1);
-    const [slice] = consume(state, "x", q("0.000000000000000001"), "s");
+    const [slice] = consume(state, "x", q("0.000000000000000001"), "s", "transmission");
     expect(slice?.quantity.toString()).toBe("0.000000000000000001");
     expect(openQuantity(state, "x").toString()).toBe("0.123456789012345677");
   });
@@ -75,8 +84,8 @@ describe("consume", () => {
   it("fails loudly when the open lots do not cover the quantity", () => {
     const state = createEmptyState(DEFAULT_SETTINGS);
     lot(state, "2027-01-11", "1", "100", "e1", 1);
-    expect(() => consume(state, "x", q("1.5"), "s")).toThrow(ProjectionError);
-    expect(() => consume(state, "y", q("1"), "s")).toThrow(ProjectionError);
+    expect(() => consume(state, "x", q("1.5"), "s", "transmission")).toThrow(ProjectionError);
+    expect(() => consume(state, "y", q("1"), "s", "transmission")).toThrow(ProjectionError);
     expect(fiscalLots(state)).toHaveLength(1);
   });
 

@@ -8,7 +8,7 @@ import { ProjectionError } from "../errors.js";
 import type { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AssetId } from "../schema/events.js";
-import type { AssetLots, FiscalLot, LedgerState } from "./state.js";
+import type { AssetLots, ConsumePurpose, FiscalLot, LedgerState } from "./state.js";
 
 export interface NewLot {
   asset_id: AssetId;
@@ -66,15 +66,28 @@ export const openLot = (state: LedgerState, lot: NewLot): FiscalLot => {
     index -= 1;
   }
   entry.open.splice(index, 0, created);
+  state.lotJournal.push({
+    kind: "open",
+    lot_id: created.id,
+    asset_id: created.asset_id,
+    event_id: lot.source_event_id,
+    quantity: lot.quantity,
+    ...(lot.source_lot_id === undefined ? {} : { source_lot_id: lot.source_lot_id }),
+  });
   return created;
 };
 
-/** Consumes `quantity` of the asset in FIFO order. Throws when the open lots do not cover it. */
+/**
+ * Consumes `quantity` of the asset in FIFO order. Throws when the open lots do
+ * not cover it. `purpose` changes nothing here: it is written to the journal,
+ * so the tax engine knows whether the quantity was disposed of or moved on.
+ */
 export const consume = (
   state: LedgerState,
   assetId: AssetId,
   quantity: Quantity,
   eventId: string,
+  purpose: ConsumePurpose,
 ): LotSlice[] => {
   const entry = lotsOf(state, assetId);
   const slices: LotSlice[] = [];
@@ -92,6 +105,14 @@ export const consume = (
     const whole = !lot.quantity.gt(remaining);
     const taken = whole ? lot.quantity : remaining;
     const cost = whole ? lot.cost_eur : lot.cost_eur.mul(taken.value).div(lot.quantity.value);
+    state.lotJournal.push({
+      kind: "consume",
+      lot_id: lot.id,
+      event_id: eventId,
+      quantity: taken,
+      quantity_before: lot.quantity,
+      purpose,
+    });
     lot.quantity = lot.quantity.sub(taken);
     lot.cost_eur = lot.cost_eur.sub(cost);
     lot.consumptions.push({ event_id: eventId, quantity: taken, cost_eur: cost });

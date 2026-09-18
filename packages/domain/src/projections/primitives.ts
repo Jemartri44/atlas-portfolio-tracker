@@ -115,6 +115,12 @@ export const applyScale = (
 
   lots.forEach((lot, index) => {
     lot.quantity = scaledLots[index] as Quantity;
+    state.lotJournal.push({
+      kind: "scale",
+      lot_id: lot.id,
+      event_id: ctx.eventId,
+      quantity_after: lot.quantity,
+    });
   });
   holdings.forEach((holding, index) => {
     adjustPosition(
@@ -138,7 +144,13 @@ export const applyConvert = (
   const holdings = holdingsOf(state, effect.asset_id);
   const scaledPositions = scaledHoldings(holdings, ratio);
 
-  const slices = consume(state, effect.asset_id, openQuantity(state, effect.asset_id), ctx.eventId);
+  const slices = consume(
+    state,
+    effect.asset_id,
+    openQuantity(state, effect.asset_id),
+    ctx.eventId,
+    "convert",
+  );
   const scaledLots = scaleQuantities(
     slices.map((slice) => slice.quantity),
     ratio,
@@ -194,7 +206,7 @@ export const applyCarveOut = (
     const carved = lot.cost_eur.mul(share);
     // Subtraction, so that origin + carved is exactly the cost before.
     lot.cost_eur = lot.cost_eur.sub(carved);
-    openLot(state, {
+    const into = openLot(state, {
       asset_id: to.asset_id,
       acquisition_date: lot.acquisition_date,
       quantity: scaledLots[index] as Quantity,
@@ -202,6 +214,15 @@ export const applyCarveOut = (
       source_event_id: ctx.eventId,
       position: lot.position,
       source_lot_id: lot.id,
+    });
+    // After the `open`: the journal says the new lot exists, then that a share
+    // of the origin's cost went into it.
+    state.lotJournal.push({
+      kind: "carve",
+      lot_id: lot.id,
+      into_lot_id: into.id,
+      event_id: ctx.eventId,
+      cost_share: share,
     });
   });
   holdings.forEach((holding, index) => {
@@ -275,7 +296,7 @@ export const applyForcedSale = (
     // computed on the full proceeds (ADR-0021, fiscal question #12).
     adjustCash(state, entry.account_id, proceeds.sub(entry.withholding));
     adjustPosition(state, entry.account_id, asset.asset_id, negative(entry.quantity), ctx.eventId);
-    const slices = consume(state, asset.asset_id, entry.quantity, ctx.eventId);
+    const slices = consume(state, asset.asset_id, entry.quantity, ctx.eventId, "transmission");
     const gain = recordGain(state, {
       event_id: ctx.eventId,
       asset_id: asset.asset_id,

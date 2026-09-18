@@ -89,6 +89,8 @@ interface Snapshot {
    */
   acquisitions: Map<AssetId, number>;
   inKindIncome: number;
+  /** The lot journal only grows too (feature 009). */
+  lotJournal: number;
 }
 
 const cloneLot = (lot: FiscalLot): FiscalLot => ({ ...lot, consumptions: [...lot.consumptions] });
@@ -115,6 +117,7 @@ const snapshot = (state: LedgerState, assets: readonly AssetId[]): Snapshot => (
     assets.map((asset) => [asset, state.acquisitions.get(asset)?.length ?? 0] as const),
   ),
   inKindIncome: state.inKindIncome.length,
+  lotJournal: state.lotJournal.length,
 });
 
 const restore = (state: LedgerState, saved: Snapshot): void => {
@@ -138,6 +141,7 @@ const restore = (state: LedgerState, saved: Snapshot): void => {
     }
   }
   state.inKindIncome.length = saved.inKindIncome;
+  state.lotJournal.length = saved.lotJournal;
 };
 
 export const applyCorporateAction = (

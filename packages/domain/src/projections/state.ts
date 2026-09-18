@@ -4,6 +4,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import type { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
+import type { Decimal } from "../money/decimal.js";
 import type { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import type { IsoInstant } from "../schema/envelope.js";
@@ -68,6 +69,45 @@ export interface FiscalLot {
   closed: boolean;
   consumptions: LotConsumption[];
 }
+
+/** Why the FIFO took quantity out of a lot: a disposal, or a move that keeps date and cost. */
+export type ConsumePurpose = "transmission" | "transfer" | "convert";
+
+/**
+ * One thing the single FIFO engine did to a lot, in the order it did it (feature
+ * 009). The journal **decides nothing**: which lot is consumed is still the
+ * FIFO's choice. It records those choices so that the tax engine can carry one
+ * more magnitude along them —the loss the wash-sale rule defers— without a
+ * second lot engine that could disagree with the first (constitution II,
+ * ADR-0016). Never in the snapshot.
+ *
+ * - `open`: a lot was created; `source_lot_id` when it inherits from another.
+ * - `consume`: `quantity` left the lot, which held `quantity_before`.
+ * - `carve`: a `carve_out` moved `cost_share` of the lot's cost into `into_lot_id`.
+ * - `scale`: the lot now holds `quantity_after` (split, reverse split, bonus shares).
+ * - `gain`: `state.gains[gain_index]` was booked; the `transmission` consumptions
+ *   right before it are the lots it disposed of.
+ */
+export type LotJournalEntry =
+  | {
+      kind: "open";
+      lot_id: string;
+      asset_id: AssetId;
+      event_id: Ulid;
+      quantity: Quantity;
+      source_lot_id?: string;
+    }
+  | {
+      kind: "consume";
+      lot_id: string;
+      event_id: Ulid;
+      quantity: Quantity;
+      quantity_before: Quantity;
+      purpose: ConsumePurpose;
+    }
+  | { kind: "carve"; lot_id: string; into_lot_id: string; event_id: Ulid; cost_share: Decimal }
+  | { kind: "scale"; lot_id: string; event_id: Ulid; quantity_after: Quantity }
+  | { kind: "gain"; gain_index: number };
 
 export interface GainByLot {
   lot_id: string;
@@ -262,6 +302,8 @@ export interface LedgerState {
   /** Purchases per asset that count for the wash-sale rule (feature 005). Never in the snapshot. */
   acquisitions: Map<AssetId, Acquisition[]>;
   lots: Map<AssetId, AssetLots>;
+  /** What the FIFO did to every lot, in order (feature 009). Never in the snapshot. */
+  lotJournal: LotJournalEntry[];
   /** Lots created per source event, to number lot ids uniquely across assets. */
   lotCounts: Map<Ulid, number>;
   gains: RealizedGain[];
@@ -302,6 +344,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   fxRates: new Map(),
   acquisitions: new Map(),
   lots: new Map(),
+  lotJournal: [],
   lotCounts: new Map(),
   gains: [],
   income: [],

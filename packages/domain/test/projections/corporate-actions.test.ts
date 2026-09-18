@@ -620,6 +620,10 @@ describe("mandatory edge cases (prompt §3.7)", () => {
     expect(gains(collected)).toEqual(["acc_a:10@1200-1000=200"]);
     expect(positionOf(collected, "acc_a", "ast_old").toString()).toBe("0");
     expect(collected.lotCounts.has(action.id)).toBe(false);
+    // The lot journal is rolled back with the lots it describes (feature 009).
+    expect(
+      collected.lotJournal.filter((entry) => "event_id" in entry && entry.event_id === action.id),
+    ).toEqual([]);
     expect(integrity(collected).map((f) => f.code)).toEqual(["insufficient_position"]);
   });
 

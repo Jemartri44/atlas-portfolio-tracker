@@ -304,7 +304,7 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
   }
   adjustCash(state, event.account_id, proceeds.sub(withholding));
   adjustPosition(state, event.account_id, event.asset_id, negative(quantity), event.id);
-  const slices = consume(state, event.asset_id, quantity, event.id);
+  const slices = consume(state, event.asset_id, quantity, event.id, "transmission");
   const gain = recordGain(state, {
     event_id: event.id,
     asset_id: event.asset_id,
@@ -391,7 +391,7 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   adjustCash(state, event.account_id, fee.neg());
   adjustPosition(state, event.account_id, event.from_asset_id, negative(quantityOut), event.id);
   adjustPosition(state, event.account_id, event.to_asset_id, quantityIn, event.id);
-  const slices = consume(state, event.from_asset_id, quantityOut, event.id);
+  const slices = consume(state, event.from_asset_id, quantityOut, event.id, "transmission");
   const gain = recordGain(state, {
     event_id: event.id,
     asset_id: event.from_asset_id,
@@ -484,7 +484,7 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent): void =>
     warnHolders(state, event.to_asset_id, event.id);
     return;
   }
-  const slices = consume(state, event.from_asset_id, quantityOut, event.id);
+  const slices = consume(state, event.from_asset_id, quantityOut, event.id, "transfer");
   let assigned = Quantity.ZERO;
   slices.forEach((slice, index) => {
     const quantity =
