@@ -165,3 +165,34 @@ Decisiones de detalle que no cambian documentos pero conviene que la dirección 
 1. **`atlas bucket` y `atlas networth` salen siempre parciales sobre el libro sintético.** El escenario contiene a propósito un activo **excluido de cotización** (`ast_alpha_spin`, `delisting`, "posición sin precio, requiere marcado manual") y el cubo conserva 2 títulos suyos. Es el fallo seguro funcionando —el total se marca parcial y dice qué falta—, pero tiene una consecuencia que conviene conocer: **el aviso de la regla 18 no se puede evaluar** mientras exista esa posición sin precio, porque el peso saldría de un total incompleto. En un libro real el usuario registraría una `valuation` (aunque sea a cero) del valor excluido. Si la dirección prefiere otra cosa, es una decisión de producto, no de implementación.
 2. **Con valoraciones semestrales del índice, dos tesis cortas dan `equiv. índice = invertido`.** Cuando la compra y la venta caen entre las mismas dos valoraciones, `P(d_fin) = P(d_i)` y el índice "no se movió" según el libro. Es correcto y reproducible, pero si se quisiera más resolución habría que valorar el índice más a menudo (el prompt admitía anual o semestral).
 3. **`atlas thesis show` etiqueta la posición como "de la pareja"**, no "viva": es la posición de (cuenta, activo), que puede incluir títulos de otra tesis. La plusvalía latente sí es solo la suya (nota 1).
+
+---
+
+## Notas de la revisión (2026-09-18, tras la doble revisión de la dirección)
+
+Criterios que fija la dirección al revisar la feature, y lo que queda anotado sin corregir. Los tres primeros son **decisiones de producto**: se implementan aquí y la dirección los llevará al documento que corresponda.
+
+### C1 — Las tesis se cortan por su fecha administrativa
+
+Una tesis es un **documento administrativo**, no un hecho de negocio: no tiene fecha de operación, se proyecta en orden de fichero (feature 002) y su fecha sale del `recorded_at` de su apertura (`data-schema.md` §6.4). La pasada A es completa por diseño (ADR-0016), así que sin un corte propio una vista de junio listaba las tesis de diciembre. A una fecha `d`:
+
+- una tesis **existe** si `opened_at ≤ d`; las posteriores no aparecen en ninguna vista, ni en listas, ni en posiciones, ni en estadísticas;
+- está **cerrada** si tiene cierre y `closed_at ≤ d`; si su cierre es posterior a `d`, a esa fecha estaba **abierta**, y su `closed_at`, su `closing_notes` y su evento de cierre no se muestran;
+- `days_open` se cuenta hasta el cierre o hasta `d`, y nunca es negativo.
+
+Aplicado en `theses()`, `openThesisOn`, `bucketPositions`, `bucketTheses`, `bucketStats`, `thesis list`, `thesis show` y `bucket`. Se documentará en `data-schema.md` §7.
+
+### C2 — El día cero pertenece a las dos mitades de la ventana de recompra
+
+Una compra con la **misma fecha fiscal** que la venta con pérdida está dentro de la ventana (art. 33.5 LIRPF no descuenta el día de la operación). Para no avisar dos veces del mismo hecho manda la posición en el fichero, que es también el orden en que la pasada B aplica los eventos: si la compra está antes de la venta es `wash_sale_window_prior_buy`; si está después, `wash_sale_window_repurchase`. Sigue siendo solo el aviso; el diferimiento es Fase 5.
+
+### C3 — En `atlas networth`, el total mostrado es la suma de lo mostrado
+
+La vista de patrimonio tiene por mandato estar siempre desglosada (constitución III), así que quien suma la columna tiene que obtener la línea de abajo: los subtotales y el TOTAL del texto son la **suma de las cifras impresas**, redondeadas al céntimo. El valor exacto sin redondear sigue estando en `--json`. Sobre el *golden* la diferencia era de un céntimo (22 326,67 impresos frente a 22 326,68 del subtotal exacto).
+
+### Anotado sin corregir
+
+1. **`fx-rates.ts:40` usa un `as` estructural.** `pairsOf` convierte el evento a un objeto con todos los campos de divisa posibles (`currency`, `fx_rate_sold`, `effects`…) para leerlos sin un `switch` por tipo. Es correcto hoy y sobrevive a un campo nuevo sin tocarse, pero también sobreviviría a un campo **renombrado**: el compilador no lo vería. La alternativa es un `switch` exhaustivo por tipo de evento, que sí se rompería al renombrar. No se cambia sin decisión de la dirección porque es una elección de estilo con coste real en líneas.
+2. **Hay símbolos exportados que nadie usa fuera del dominio.** El `index.ts` publica tipos y funciones que hoy solo consume el propio dominio o los tests (`BenchmarkGap`, `ExcludedThesis`, `DrawdownPoint`, `ControlGap`…). No molesta, pero la superficie pública crece por feature y nadie la poda; conviene revisarla antes de la web de la Ronda 7, que será su primer consumidor real.
+3. **Los tests de `--json` validan el sobre, no el contenido.** Varios comprueban `invalid_count` y que `data` existe, y no que los campos sean los que la web va a leer. Los de esta revisión ya afirman campos concretos (`weight_pct_unavailable`, `theses[].days_open`, `core.total_eur`); el resto sigue pendiente.
+4. **La regla "una vista nunca calcula lo fiscal" no se puede comprobar transitivamente hoy.** `costs.ts` y `bucket-stats.ts` importan `businessDateOf` e `isOperationEvent` de `project-ledger.ts`, que alcanza todo el motor FIFO, así que el cierre transitivo de una vista contiene `lots.ts` y `fiscal-date.ts`. El test de arquitectura comprueba transitivamente la dirección que sí es cierta y es la de la constitución II (**la ruta fiscal nunca alcanza `prices.ts`**, con los dos conjuntos deducidos del grafo). Para hacer transitiva también la dirección contraria habría que sacar esos dos ayudantes a su propio módulo; es un refactor de la 005 que la dirección no ha pedido.

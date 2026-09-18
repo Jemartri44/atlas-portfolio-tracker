@@ -108,6 +108,7 @@ packages/domain/src/
 ├── dates/civil-date.ts             # + addMonths / addYears con fin de mes
 ├── projections/prices.ts           # PUERTA ÚNICA: priceAt(activo, fecha, …, external?) + manualPrices
 ├── projections/state.ts            # + fxRates: último tipo conocido por divisa
+├── projections/fx-rates.ts         # NUEVO: último tipo del BCE conocido por divisa
 ├── projections/operations.ts       # registra el tipo por divisa; dispara el aviso de recompra
 ├── projections/wash-sale.ts        # NUEVO: aviso wash_sale_window_repurchase
 ├── projections/networth.ts         # NUEVO: netWorth
