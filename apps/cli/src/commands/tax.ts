@@ -9,6 +9,7 @@ import {
   type DoubtfulItem,
   FISCAL_CRITERIA,
   type IncomeLine,
+  isDoubtful,
   type Money,
   type TaxYearReport,
   type TransmissionLine,
@@ -83,7 +84,7 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
 };
 
 const criteriaText = (ids: readonly CriterionId[]): string =>
-  ids.map((id) => (FISCAL_CRITERIA[id].certainty === "high" ? id : `${id}*`)).join(" ");
+  ids.map((id) => (isDoubtful(id) ? `${id}*` : id)).join(" ");
 
 const CATEGORY: Record<string, string> = {
   capital_gain: "ganancias y pérdidas patrimoniales",
@@ -465,7 +466,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
       table(
         ["criterio", "qué dice", "certeza", "riesgo"],
         CRITERION_IDS.filter((id) => used.has(id)).map((id) => [
-          `${id}${FISCAL_CRITERIA[id].certainty === "high" ? "" : "*"}`,
+          `${id}${isDoubtful(id) ? "*" : ""}`,
           CRITERION_LABELS[id],
           CERTAINTY[FISCAL_CRITERIA[id].certainty] as string,
           RISK[FISCAL_CRITERIA[id].risk] as string,
