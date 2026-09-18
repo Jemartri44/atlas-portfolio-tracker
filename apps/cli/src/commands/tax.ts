@@ -44,6 +44,7 @@ const RISK: Record<string, string> = {
   conservative: "conservador",
   aggressive: "agresivo",
   both: "ambas",
+  neutral: "neutro",
   none: "ninguna",
 };
 

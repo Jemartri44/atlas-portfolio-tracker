@@ -12,8 +12,12 @@
 /** How sure the reading of the law is (`docs/fiscal-questions.md`, "Grado"). */
 export type Certainty = "high" | "medium" | "low" | "disputed";
 
-/** If the criterion is wrong, what happened: paid too much, declared too little, or either. */
-export type RiskDirection = "conservative" | "aggressive" | "both";
+/**
+ * If the criterion is wrong, what happened: paid too much, declared too little,
+ * either, or neither (#22: the order of compensation changes no total, only
+ * what expires).
+ */
+export type RiskDirection = "conservative" | "aggressive" | "both" | "neutral";
 
 export interface FiscalCriterion {
   /** The number of the criterion in `docs/fiscal-questions.md`. */
@@ -33,7 +37,10 @@ export interface FiscalCriterion {
  * or an ETP is a capital gain or movable capital income.
  *
  * #18 to #23 were numbered by the direction on 2026-09-18 (questions Q1, Q2 and
- * Q5 of the feature 009); the document receives them from the direction.
+ * Q5 of the feature 009). Where the document gives a criterion two certainties
+ * (#21 "media-baja", #22 "alta (orden) / media (redondeo)"), the catalogue
+ * keeps the more doubtful one: a figure is never presented as firmer than the
+ * weakest part of what it depends on.
  */
 export const FISCAL_CRITERIA = {
   "1": { doc: "1", certainty: "medium", risk: "conservative" },
@@ -57,11 +64,11 @@ export const FISCAL_CRITERIA = {
   "16": { doc: "16", certainty: "high", risk: "conservative" },
   "17": { doc: "17", certainty: "medium", risk: "aggressive" },
   "18": { doc: "18", certainty: "medium", risk: "aggressive" },
-  "19": { doc: "19", certainty: "low", risk: "aggressive" },
+  "19": { doc: "19", certainty: "medium", risk: "aggressive" },
   "20": { doc: "20", certainty: "medium", risk: "both" },
   "21": { doc: "21", certainty: "low", risk: "conservative" },
-  "22": { doc: "22", certainty: "medium", risk: "conservative" },
-  "23": { doc: "23", certainty: "high", risk: "aggressive" },
+  "22": { doc: "22", certainty: "medium", risk: "neutral" },
+  "23": { doc: "23", certainty: "high", risk: "conservative" },
   etc_etp_category: { doc: "ETC/ETP", certainty: "disputed", risk: "both" },
 } as const satisfies Record<string, FiscalCriterion>;
 
