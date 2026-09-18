@@ -593,6 +593,11 @@ class Scenario {
       unit_value,
       currency,
       fx_rate: currency === "EUR" ? "1" : this.rate(),
+      // The ECB rate has a publication date of its own (ADR-0013). Without it
+      // the year-end valuations date the currency with the business date, and
+      // `atlas networth` had to label the cash rows "(fecha de la operación)"
+      // on the very 31/12 the rate was published for.
+      ...(currency === "EUR" ? {} : { fx_rate_date: lastWorkingDay(date) }),
       source: "manual",
     });
   }
