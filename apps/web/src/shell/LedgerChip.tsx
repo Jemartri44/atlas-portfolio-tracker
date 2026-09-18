@@ -9,7 +9,7 @@
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import { formatInstantDate } from "../format/date.js";
-import { daysSinceExport, exportIsOverdue, sourceLabel } from "../ledger/source.js";
+import { daysSinceExport, exportIsOverdue, sourceShortLabel } from "../ledger/source.js";
 import { store, today } from "../ledger/state.js";
 
 export const LedgerChip = (): JSX.Element => {
@@ -53,7 +53,7 @@ export const LedgerChip = (): JSX.Element => {
       <span class="dot" />
       <span class="truncate">
         <Show when={source()} fallback="Abrir un libro">
-          {(current) => sourceLabel(current())}
+          {(current) => sourceShortLabel(current())}
         </Show>
       </span>
     </A>

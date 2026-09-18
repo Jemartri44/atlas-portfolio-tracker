@@ -17,6 +17,7 @@ import {
   type LedgerSource,
   rememberedKind,
   sourceLabel,
+  sourceShortLabel,
 } from "../src/ledger/source.js";
 
 const browser = (lastExportAt?: string): BrowserSource => ({
@@ -73,6 +74,19 @@ describe("sourceLabel", () => {
   it("names the file and its folder, or the browser storage", () => {
     expect(sourceLabel(directory)).toBe("ledger.jsonl · atlas");
     expect(sourceLabel(browser())).toBe("Almacenamiento del navegador");
+  });
+});
+
+describe("sourceShortLabel", () => {
+  it("says the same thing in what the status bar of a phone has", () => {
+    expect(sourceShortLabel(directory)).toBe("ledger.jsonl");
+    expect(sourceShortLabel(browser())).toBe("Navegador");
+  });
+
+  it("is never longer than the full label", () => {
+    for (const source of [directory, browser(), browser("2026-09-11T08:00:00.000Z")]) {
+      expect(sourceShortLabel(source).length).toBeLessThanOrEqual(sourceLabel(source).length);
+    }
   });
 });
 
