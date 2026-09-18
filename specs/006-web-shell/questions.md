@@ -299,6 +299,14 @@ Corregido en la capa de estado: el arranque empieza en `loading` y `unconfigured
 1. **Privacidad por defecto en `ledger/state.ts`: aprobada por la dirección**, con su razonamiento: no se debilita una regla de arquitectura para colocar un test; el test va donde la regla lo permite. `privacyFromPreference` se queda donde está, y las dos reglas de pintado siguen en el módulo vigilado.
 2. **Catálogo: corregido según lo indicado.** `account_created`, `account_updated`, `asset_created` y `asset_updated` salen de los editables, y no con una lista negra de conveniencia: la derivación sigue saliendo de `FORM_SPECS` y se le **resta** el catálogo con la regla escrita —*el catálogo se actualiza, no se anula* (`docs/data-schema.md` §6.1)— y su motivo, que el formulario que existe **crea** una entrada, no la corrige. En el detalle de esos eventos aparece un aviso que dice qué hacer en su lugar (`atlas account update` / `atlas asset update`) y que su pantalla llega en la versión siguiente. Comprobado en el navegador: en el alta de activo y en el alta de cuenta no hay «Corregir» y sí el aviso; en una compra hay «Corregir» y no hay aviso.
 
+### S6 — Encontrado al medir: la tabla densa no cabía a 768 px
+
+No estaba en la lista de la dirección; salió al medir las cuatro anchuras. A **768 px** exactos el documento medía 792 de ancho: el rail ocupa 216 px y la tabla de movimientos, que entraba en ese mismo punto de ruptura, pide 659 px de los 505 que quedan. La columna «Cuenta y activo» es la culpable (293 px, con `white-space: nowrap` sobre el identificador más largo del libro).
+
+La tabla entra ahora a **1024 px**, con la medida escrita en el CSS; entre 768 y 1023 se ven las tarjetas. Se descartó `table-layout: fixed`, que habría cabido, porque obliga a repartir anchos de columna a mano —cuatro anchos nuevos fuera de escala y los importes solapando su celda— y eso ya es rediseñar la tabla. La barra inferior y el rail **siguen conmutando a 768 px**: A10 no se toca. `plan.md` D11 lleva la corrección, porque decía "a partir de 768 px".
+
+Medido después, en `/movimientos`: sin desplazamiento a 360, 768, 900, 1023, 1024, 1280 y 1440 px, con las tarjetas hasta 1023 y la tabla desde 1024.
+
 ### S5 — Anotado y sin tocar, por indicación de la dirección
 
 - **`signOfValue` en `components/Amount.tsx` duplica `signOf` de `format/number.ts`**: la misma regla del cero con signo escrita dos veces. Candidato para la limpieza siguiente.
