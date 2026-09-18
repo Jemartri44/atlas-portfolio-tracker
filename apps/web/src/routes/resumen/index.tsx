@@ -68,6 +68,7 @@ export default function ResumenRoute(): JSX.Element {
             ? {}
             : { exportOverdueDays: overdueDays }),
           names,
+          privacy: store.privacy(),
         });
         const recent = movementRows(
           ledgerEntries(snapshot.state, snapshot.events).slice(0, RECENT),

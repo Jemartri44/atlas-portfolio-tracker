@@ -38,6 +38,7 @@ import {
   roundDecimalString,
   signOf,
 } from "../src/format/number.js";
+import { maskFigures } from "../src/format/privacy.js";
 import { privacyFromPreference } from "../src/ledger/state.js";
 import { goldenEvents } from "./helpers/golden.js";
 
@@ -304,10 +305,10 @@ describe("the catalogue of names", () => {
       message: "english",
       details: { asset_id: "ast_world", age_days: 17, date: "2026-09-01" },
     };
-    expect(describeWarning(warning, names)).toContain("World Index Fund");
-    expect(describeWarning(warning, names)).not.toContain("ast_world");
+    expect(describeWarning(warning, { names, privacy: false })).toContain("World Index Fund");
+    expect(describeWarning(warning, { names, privacy: false })).not.toContain("ast_world");
     // No catalogue: the identifier, which is what it did before.
-    expect(describeWarning(warning)).toContain("ast_world");
+    expect(describeWarning(warning, { privacy: false })).toContain("ast_world");
   });
 
   it("names a list of identifiers embedded in a warning", () => {
@@ -317,7 +318,7 @@ describe("the catalogue of names", () => {
       message: "english",
       details: { assets: ["ast_bonds", "ast_mm"], date: "2026-09-18" },
     };
-    const text = describeWarning(warning, names);
+    const text = describeWarning(warning, { names, privacy: false });
     expect(text).toContain("Global Bond Index Fund");
     expect(text).toContain("Money Market Fund");
     expect(text).not.toContain("ast_bonds");
@@ -329,9 +330,66 @@ describe("the catalogue of names", () => {
       message: "english",
       details: { account_id: "acc_ibkr", asset_id: "ast_gold", available: "0" },
     } as unknown as ProjectionError;
-    const text = describeError(error, names);
+    const text = describeError(error, { names, privacy: false });
     expect(text).toContain("ETC y ETP");
     expect(text).not.toContain("acc_ibkr");
-    expect(describeError(error)).toContain("acc_ibkr");
+    expect(describeError(error, { privacy: false })).toContain("acc_ibkr");
+  });
+});
+
+/**
+ * The branches of the catalogues that no screen of the test suite reaches: a
+ * setting whose value is an amount only because of the field it names, and the
+ * fallback for a code nobody translated. The rendered tests cover the call
+ * sites; these cover the two decisions taken inside.
+ */
+describe("the privacy mode inside a message", () => {
+  const settingsError = (field: string, value: string) =>
+    ({
+      code: "invalid_settings",
+      message: "english",
+      details: { field, value, min: "0" },
+    }) as unknown as ProjectionError;
+
+  it("masks the value of a setting that is money, and shows the ones that are not", () => {
+    expect(
+      describeError(settingsError("monthly_contribution_eur", "-600"), { privacy: true }),
+    ).toContain(MASK);
+    expect(
+      describeError(settingsError("monthly_contribution_eur", "-600"), { privacy: false }),
+    ).toContain("−600,00 EUR");
+    // A percentage is not an amount and stays readable in public (§9.6).
+    const percent = describeError(settingsError("bucket_stop_loss_pct", "-25"), { privacy: true });
+    expect(percent).toContain("-25");
+    expect(percent).not.toContain(MASK);
+  });
+
+  it("leaves a value that is not a figure alone, which is what the message points at", () => {
+    const typo = describeError(settingsError("monthly_contribution_eur", "seiscientos"), {
+      privacy: true,
+    });
+    expect(typo).toContain("seiscientos");
+  });
+
+  it("masks the figures of a message the catalogue does not translate", () => {
+    const unknown: Warning = {
+      code: "un_codigo_que_no_conozco",
+      event_id: "01ARYZ6S41TSV4RRFFQ6900001",
+      message: "holds 23.0274 of ast_world since 2026-09-01",
+      details: {},
+    };
+    const hidden = describeWarning(unknown, { privacy: true });
+    expect(hidden).not.toContain("23.0274");
+    // The date and the identifier are not figures and survive.
+    expect(hidden).toContain("2026-09-01");
+    expect(hidden).toContain("ast_world");
+    expect(describeWarning(unknown, { privacy: false })).toContain("23.0274");
+  });
+
+  it("masks a raw message of the domain wherever it is quoted", () => {
+    expect(maskFigures("open lots 23.0274 differ from positions 20", true)).toBe(
+      `open lots ${MASK} differ from positions ${MASK}`,
+    );
+    expect(maskFigures("open lots 23.0274 differ", false)).toBe("open lots 23.0274 differ");
   });
 });

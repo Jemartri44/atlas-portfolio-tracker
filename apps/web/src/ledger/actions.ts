@@ -40,7 +40,10 @@ export const toAppError = (error: unknown): AppError => {
     const line = error.details.line;
     return {
       code: error.code,
-      message: describeError(error, nameIndex(store.snapshot()?.state)),
+      message: describeError(error, {
+        names: nameIndex(store.snapshot()?.state),
+        privacy: store.privacy(),
+      }),
       ...(typeof line === "number" ? { line } : {}),
     };
   }

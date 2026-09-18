@@ -13,10 +13,15 @@ import { describeError } from "../../format/messages/errors.js";
 import { describeFinding } from "../../format/messages/findings.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
+import { maskFigures } from "../../format/privacy.js";
+import { usePrivacy } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { RequireLedger } from "../guard.jsx";
 
-const Findings = (props: { findings: readonly IntegrityFinding[] }): JSX.Element => (
+const Findings = (props: {
+  findings: readonly IntegrityFinding[];
+  privacy: boolean;
+}): JSX.Element => (
   <div class="stack">
     <For each={props.findings}>
       {(finding) => (
@@ -37,7 +42,7 @@ const Findings = (props: { findings: readonly IntegrityFinding[] }): JSX.Element
           <details class="technical">
             <summary class="tiny">Detalle técnico</summary>
             <p class="tiny flush">
-              <code>{finding.code}</code> · {finding.message}
+              <code>{finding.code}</code> · {maskFigures(finding.message, props.privacy)}
             </p>
           </details>
           <Show when={finding.event_ids.length > 0}>
@@ -60,6 +65,7 @@ const Findings = (props: { findings: readonly IntegrityFinding[] }): JSX.Element
 
 export default function VerificacionRoute(): JSX.Element {
   const [deep, setDeep] = createSignal<IntegrityFinding[] | undefined>(undefined);
+  const privacy = usePrivacy();
 
   return (
     <RequireLedger skeleton={5}>
@@ -93,7 +99,9 @@ export default function VerificacionRoute(): JSX.Element {
                           <span class="title">
                             <A href={`/movimientos/${entry.event.id}`}>{entry.event.type}</A>
                           </span>
-                          <span class="subtle">{describeError(entry.error, names)}</span>
+                          <span class="subtle">
+                            {describeError(entry.error, { names, privacy: privacy() })}
+                          </span>
                         </div>
                       )}
                     </For>
@@ -117,7 +125,7 @@ export default function VerificacionRoute(): JSX.Element {
                     </p>
                   }
                 >
-                  <Findings findings={findings()} />
+                  <Findings findings={findings()} privacy={privacy()} />
                 </Show>
               </section>
 
@@ -145,7 +153,7 @@ export default function VerificacionRoute(): JSX.Element {
                       when={found().length > 0}
                       fallback={<p class="flush">Sin hallazgos: el libro es reproducible.</p>}
                     >
-                      <Findings findings={found()} />
+                      <Findings findings={found()} privacy={privacy()} />
                     </Show>
                   )}
                 </Show>
@@ -161,7 +169,9 @@ export default function VerificacionRoute(): JSX.Element {
                     <For each={snapshot.state.warnings}>
                       {(warning) => (
                         <div class="callout is-warning">
-                          <span class="subtle">{describeWarning(warning, names)}</span>
+                          <span class="subtle">
+                            {describeWarning(warning, { names, privacy: privacy() })}
+                          </span>
                           <span class="tiny">
                             <A href={`/movimientos/${warning.event_id}`}>{warning.event_id}</A>
                           </span>

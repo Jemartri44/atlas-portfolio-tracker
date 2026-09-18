@@ -25,6 +25,7 @@ import {
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
+import { usePrivacy } from "../../ledger/state.js";
 import { type TransferRowView, transferView } from "../../view-models/core/index.js";
 import { assetOptions } from "../../view-models/options.js";
 
@@ -71,6 +72,7 @@ interface TransferCardProps {
 }
 
 export const TransferCard = (props: TransferCardProps): JSX.Element => {
+  const privacy = usePrivacy();
   const [from, setFrom] = createSignal("");
   const [to, setTo] = createSignal("");
   const [quantity, setQuantity] = createSignal("");
@@ -174,7 +176,10 @@ export const TransferCard = (props: TransferCardProps): JSX.Element => {
               <For each={simulation().warningsAfter}>
                 {(warning) => (
                   <Callout tone="warning" title="Aviso tras el traspaso simulado">
-                    {describeWarning(warning, nameIndex(props.state))}
+                    {describeWarning(warning, {
+                      names: nameIndex(props.state),
+                      privacy: privacy(),
+                    })}
                   </Callout>
                 )}
               </For>

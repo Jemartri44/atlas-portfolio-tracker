@@ -59,6 +59,7 @@ describe("attentionItems", () => {
   it("puts the ledger being degraded first, above every rule of the plan", () => {
     const items = attentionItems({
       invalidCount: 2,
+      privacy: false,
       warnings: [
         warning("deviation_above_threshold", { asset_id: "ast_world", deviation_pp: "9" }),
       ],
@@ -75,6 +76,7 @@ describe("attentionItems", () => {
   it("orders by severity first and by importance inside it", () => {
     const items = attentionItems({
       invalidCount: 0,
+      privacy: false,
       warnings: [
         warning("stale_price", { asset_id: "ast_world", age_days: 40, date: "2027-01-01" }),
         warning("bucket_stop_loss_reached", {
@@ -104,6 +106,7 @@ describe("attentionItems", () => {
     expect(
       attentionItems({
         invalidCount: 0,
+        privacy: false,
         warnings: [],
         findings: [],
         openOrders: [],
@@ -116,6 +119,7 @@ describe("attentionItems", () => {
     const repeated = warning("stale_price", { asset_id: "ast_world", age_days: 40 });
     const items = attentionItems({
       invalidCount: 0,
+      privacy: false,
       warnings: [repeated, { ...repeated }],
       findings: [],
       openOrders: [],
@@ -127,6 +131,7 @@ describe("attentionItems", () => {
   it("counts the pending orders and transfers, with the age of the oldest", () => {
     const items = attentionItems({
       invalidCount: 0,
+      privacy: false,
       warnings: [],
       findings: [],
       openOrders: [{ days_open: 3 } as never, { days_open: 40 } as never],
@@ -140,6 +145,7 @@ describe("attentionItems", () => {
   it("nags about the export only when it is due, and says when it never happened", () => {
     const never = attentionItems({
       invalidCount: 0,
+      privacy: false,
       warnings: [],
       findings: [],
       openOrders: [],
@@ -150,6 +156,7 @@ describe("attentionItems", () => {
     expect(never[0]?.message).toContain("nunca");
     const late = attentionItems({
       invalidCount: 0,
+      privacy: false,
       warnings: [],
       findings: [],
       openOrders: [],
@@ -162,6 +169,7 @@ describe("attentionItems", () => {
   it("carries the integrity findings with their events", () => {
     const items = attentionItems({
       invalidCount: 0,
+      privacy: false,
       warnings: [],
       findings: [
         {
@@ -175,7 +183,10 @@ describe("attentionItems", () => {
       openTransfers: [],
     });
     expect(items[0]?.code).toBe("integrity_finding");
-    expect(items[0]?.message).toContain("negative_position");
+    // The Spanish explanation, not the English evidence: "acc|ast is -1" carries
+    // a position and the summary is read in public.
+    expect(items[0]?.message).toContain("Una posición física ha quedado negativa");
+    expect(items[0]?.message).not.toContain("-1");
     expect(items[0]?.message).toContain("01ARYZ6S41TSV4RRFFQ6900002");
   });
 
@@ -188,6 +199,7 @@ describe("attentionItems", () => {
   it("falls back to a destination instead of an unreachable warning", () => {
     const items = attentionItems({
       invalidCount: 0,
+      privacy: false,
       warnings: [warning("un_codigo_que_no_conozco")],
       findings: [],
       openOrders: [],
