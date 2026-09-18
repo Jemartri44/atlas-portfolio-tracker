@@ -141,13 +141,28 @@ main {
   z-index: 30;
 }
 
+/*
+ * Pico makes `<nav>` a flex **row**, so this list is a flex item: without
+ * `flex: 1 1 auto` it is only as wide as its content and the five slots come
+ * out at 37px instead of 72, which is why the labels read "sum" and "Movim"
+ * (review of 2026-09-18). And `nav ul:first-of-type` carries a negative
+ * margin-inline of its own that beats `.nav ul` on specificity, so the reset
+ * needs the same weight or the row hangs 8px off each edge.
+ */
 .nav ul {
   align-items: stretch;
   display: flex;
+  flex: 1 1 auto;
   justify-content: space-around;
   list-style: none;
   margin: 0;
+  min-width: 0;
   padding: 0;
+}
+
+.nav ul:first-of-type,
+.nav ul:last-of-type {
+  margin-inline: 0;
 }
 
 .nav li {
@@ -167,6 +182,9 @@ main {
   font-size: var(--t-xs);
   gap: var(--s-0);
   justify-content: center;
+  /* Pico un-pads its nav links with a negative margin; here that made every
+     target 16px wider than its slot and overlap its neighbour's. */
+  margin: 0;
   min-height: var(--bottomnav-h);
   padding: var(--s-1) 0;
   text-decoration: none;
@@ -177,9 +195,14 @@ main {
   width: var(--icon);
 }
 
-/* "Movimientos" barely fits in a slot at 360px: it may ellipsise, the bar may
-   not overflow. Where the label fits, nothing changes. */
+/*
+ * The label of the bar has its own step of the scale: at 12px "Movimientos"
+ * needed 76px of a 72px slot and came out cut in half. The truncation stays as
+ * a safety net — a 320px screen, or text scaled up by the system — but no
+ * label is expected to reach it.
+ */
 .nav .label {
+  font-size: var(--t-nav);
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -278,6 +301,11 @@ main {
     justify-content: flex-start;
     min-height: var(--tap);
     padding: 0 var(--s-3);
+  }
+
+  /* In the rail there is width to spare: the label reads at the link's size. */
+  .nav .label {
+    font-size: inherit;
   }
 
   .nav a[aria-current="page"] {
