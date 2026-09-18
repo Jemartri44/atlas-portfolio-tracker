@@ -229,12 +229,17 @@ Lo comprobado de forma automática (en CI y en cada commit):
 - El servidor de desarrollo transforma las 17 pantallas y componentes con el *pipeline* real (`curl` a cada módulo: 200 y transformación correcta), y `vite preview` sirve el `index.html` con la CSP **estricta**, el manifiesto y el *service worker*.
 - **El paso 6 de `quickstart.md`, por el camino de código de la web**: sobre una copia del *golden*, `previewEvent` mostró la posición 127,4196 → 129,4196 y 27 → 28 lotes, y `recordEvent` escribió a través de `BlobLedgerStore` (el mismo adaptador del navegador, con el blob respaldado por un fichero real). Resultado comprobado desde fuera: el fichero pasa de 200 a **201 líneas**, las 200 anteriores son **idénticas byte a byte** (`diff` limpio), `atlas check --deep` devuelve **0 hallazgos** (los 21 avisos son los que el *golden* ya traía) y `atlas positions` refleja la compra. Es la garantía de que la web y la CLI comparten un solo libro; lo único que no se ha ejercitado es el *handle* de la File System Access API, que necesita navegador.
 
-Lo que **no** se ha podido comprobar en este entorno, y queda para la revisión del usuario (no hay navegador aquí):
+Medido en un navegador durante la segunda revisión (2026-09-18) sobre el `build` de producción con la CSP estricta, con el *golden* importado. Se usó el Chromium que la máquina ya tenía en `~/.cache/ms-playwright`, conducido por el protocolo DevTools con `fetch` y `WebSocket` nativos de Node 22: **no se instaló nada** y el repositorio no gana ninguna dependencia ni ningún test con DOM (decisión (k) intacta).
 
-- El recorrido visual de `quickstart.md` a 360 px: desplazamiento horizontal, objetivos táctiles y orden de lectura.
-- Abrir la carpeta del disco con la File System Access API, el ciclo de «Reconectar» y la escritura sobre el `ledger.jsonl` real desde el navegador.
+- A 320, 360, 768 y 1280 px: `scrollWidth` igual a `innerWidth` (**sin desplazamiento horizontal**), cero atributos `style` en el DOM, cero errores de CSP en consola, un solo `.ledger-chip` visible, la barra inferior `position: fixed` con huecos de 64/72/191 px y destinos contiguos de 44 px de alto o más, el rail de 216 px a 1280 con la barra de estado oculta, y **ninguna etiqueta truncada**.
+- El arranque tras recargar, con la CPU frenada ×1, ×4 y ×10: siempre el Resumen, sin ningún cambio de ruta. Con el código anterior, a ×4 y ×10 acababa en `/libro`.
+- El detalle de un alta de cuenta y de un alta de activo: sin «Corregir» y con el aviso de que el catálogo se actualiza; el de una compra, con «Corregir».
+
+Lo que **sigue** sin comprobarse y queda para la revisión del usuario:
+
+- Abrir la carpeta del disco con la File System Access API, el ciclo de «Reconectar» y la escritura sobre el `ledger.jsonl` real desde el navegador (necesita un gesto y un diálogo del sistema).
 - La instalación como PWA y el arranque sin conexión.
-- El tiempo de carga y de proyección en un móvil real.
+- El tiempo de carga y de proyección, los objetivos táctiles y el orden de lectura **en un teléfono real**: lo medido es un Chromium sin cabeza en un portátil, no un dispositivo.
 
 El módulo de pantallas **no** se puede cargar en un test sin DOM: `@solidjs/router` lee `window.history` en el momento de importarse. Es el caso concreto que justificaría `happy-dom` (decisión (k)), anotado en `questions.md`.
 
