@@ -1,0 +1,170 @@
+// The formatting layer: numbers from their decimal string (no floating point),
+// the privacy mask, Spanish dates and the label catalogue.
+
+import { knownFieldsOf, Money, Quantity, SUPPORTED_EVENT_TYPES } from "@atlas/domain";
+import { describe, expect, it } from "vitest";
+import { formatAge, formatDate, formatInstantDate, formatLongDate } from "../src/format/date.js";
+import { eventLabel, FIELD_LABELS, fieldLabel, valueLabel } from "../src/format/labels.js";
+import {
+  formatMoney,
+  formatQuantity,
+  formatUnitValue,
+  MASK,
+  NO_DATA,
+} from "../src/format/money.js";
+import {
+  formatDecimalString,
+  formatPercent,
+  formatPoints,
+  roundDecimalString,
+  signOf,
+} from "../src/format/number.js";
+
+describe("roundDecimalString", () => {
+  it("rounds half up, like the fiscal output (ADR-0005)", () => {
+    expect(roundDecimalString("1.005", 2)).toBe("1.01");
+    expect(roundDecimalString("1.004", 2)).toBe("1.00");
+    expect(roundDecimalString("-1.005", 2)).toBe("-1.01");
+    expect(roundDecimalString("2.5", 0)).toBe("3");
+    expect(roundDecimalString("9.999", 2)).toBe("10.00");
+    expect(roundDecimalString("0.999", 2)).toBe("1.00");
+    expect(roundDecimalString("99.995", 2)).toBe("100.00");
+  });
+
+  it("pads when there are fewer decimals than asked for", () => {
+    expect(roundDecimalString("7", 2)).toBe("7.00");
+    expect(roundDecimalString("7.1", 3)).toBe("7.100");
+    expect(roundDecimalString("7", 0)).toBe("7");
+  });
+
+  it("never goes through floating point", () => {
+    // 0.1 + 0.2 territory: a `Number` round trip would show it.
+    expect(roundDecimalString("12345678901234567.891", 2)).toBe("12345678901234567.89");
+    expect(formatDecimalString("12345678901234567.891", { decimals: 2 })).toBe(
+      "12.345.678.901.234.567,89",
+    );
+  });
+});
+
+describe("formatDecimalString", () => {
+  it("uses the Spanish comma and groups thousands", () => {
+    expect(formatDecimalString("1234567.891", { decimals: 2 })).toBe("1.234.567,89");
+    expect(formatDecimalString("100", { decimals: 2 })).toBe("100,00");
+    expect(formatDecimalString("1000", { decimals: 0 })).toBe("1.000");
+    expect(formatDecimalString("999", { decimals: 0 })).toBe("999");
+  });
+
+  it("prints the sign when asked, and never a signed zero", () => {
+    expect(formatDecimalString("12.3", { decimals: 2, signed: true })).toBe("+12,30");
+    expect(formatDecimalString("-12.3", { decimals: 2, signed: true })).toBe("−12,30");
+    expect(formatDecimalString("0", { decimals: 2, signed: true })).toBe("0,00");
+    expect(formatDecimalString("-0.00", { decimals: 2, signed: true })).toBe("0,00");
+  });
+
+  it("can skip the grouping and keep every decimal", () => {
+    expect(formatDecimalString("1234.5678", { grouped: false })).toBe("1234,5678");
+    expect(formatDecimalString("1234.5678")).toBe("1.234,5678");
+  });
+});
+
+describe("formatPercent and formatPoints", () => {
+  it("say 'sin dato' instead of a zero", () => {
+    expect(formatPercent(undefined)).toBe("sin dato");
+    expect(formatPoints(undefined)).toBe("sin dato");
+  });
+
+  it("carry their unit and, for points, the sign", () => {
+    expect(formatPercent("12.345")).toBe("12,35 %");
+    expect(formatPoints("1.5")).toBe("+1,50 pp");
+    expect(formatPoints("-1.5")).toBe("−1,50 pp");
+  });
+});
+
+describe("signOf", () => {
+  it("tells a zero from a positive and a negative", () => {
+    expect(signOf("0")).toBe("zero");
+    expect(signOf("0.00")).toBe("zero");
+    expect(signOf("-0.0")).toBe("zero");
+    expect(signOf("0.01")).toBe("positive");
+    expect(signOf("-0.01")).toBe("negative");
+  });
+});
+
+describe("the privacy gate", () => {
+  it("formats an amount with its currency, to the cent", () => {
+    expect(formatMoney(Money.parse("1234.567", "EUR"))).toBe("1.234,57 EUR");
+    expect(formatMoney(Money.parse("1234.567", "USD"), { currency: false })).toBe("1.234,57");
+    expect(formatMoney(Money.parse("-10", "EUR"), { signed: true })).toBe("−10,00 EUR");
+  });
+
+  it("formats a unit value with four decimals, which is what a NAV needs", () => {
+    expect(formatUnitValue(Money.parse("210.12345", "EUR"))).toBe("210,1235 EUR");
+  });
+
+  it("formats a quantity trimming the trailing zeros, because fractions are real", () => {
+    expect(formatQuantity(Quantity.parse("12"))).toBe("12");
+    expect(formatQuantity(Quantity.parse("12.5"))).toBe("12,5");
+    expect(formatQuantity(Quantity.parse("0.00012345"))).toBe("0,00012345");
+    expect(formatQuantity(Quantity.parse("1234.500"))).toBe("1.234,5");
+  });
+
+  it("has a fixed-width mask and a 'sin dato' that is never a zero", () => {
+    expect(MASK).toBe("••••");
+    expect(NO_DATA).toBe("sin dato");
+  });
+});
+
+describe("dates", () => {
+  it("reads as a Spanish reader expects", () => {
+    expect(formatDate("2027-01-12")).toBe("12/01/2027");
+    expect(formatLongDate("2027-01-12")).toBe("12 de enero de 2027");
+    expect(formatInstantDate("2026-09-18T20:15:00.000Z")).toBe("18/09/2026");
+    expect(formatInstantDate("no es una fecha")).toBe("no es una fecha");
+  });
+
+  it("says an age the way a person says it", () => {
+    expect(formatAge(0)).toBe("hoy");
+    expect(formatAge(1)).toBe("ayer");
+    expect(formatAge(9)).toBe("hace 9 días");
+    expect(formatAge(31)).toBe("hace un mes");
+    expect(formatAge(200)).toBe("hace 7 meses");
+    expect(formatAge(400)).toBe("hace más de un año");
+    expect(formatAge(900)).toBe("hace más de 2 años");
+  });
+});
+
+describe("the label catalogue", () => {
+  it("has a Spanish name for every event type", () => {
+    for (const type of SUPPORTED_EVENT_TYPES) {
+      expect(eventLabel(type), type).not.toBe(type);
+    }
+  });
+
+  /**
+   * The detail screen shows a ledger line field by field: a field the schema
+   * gains and this catalogue forgets would be painted as snake_case at the user
+   * (FR-040).
+   */
+  it("has a Spanish name for every field of every event type", () => {
+    const missing = new Set<string>();
+    for (const type of SUPPORTED_EVENT_TYPES) {
+      for (const field of knownFieldsOf(type)) {
+        if (FIELD_LABELS[field] === undefined) {
+          missing.add(`${type}.${field}`);
+        }
+      }
+    }
+    expect([...missing]).toEqual([]);
+  });
+
+  it("falls back to the raw name instead of hiding an unknown field", () => {
+    expect(fieldLabel("campo_que_no_existe")).toBe("campo_que_no_existe");
+  });
+
+  it("translates the values of the enumerations", () => {
+    expect(valueLabel("core")).toBe("Núcleo");
+    expect(valueLabel("fixed_income")).toBe("Renta fija");
+    expect(valueLabel(true)).toBe("Sí");
+    expect(valueLabel("lo que sea")).toBe("lo que sea");
+  });
+});
