@@ -416,6 +416,72 @@ const RUNTIME_CLASSES = [
   },
 ];
 
+/**
+ * The declarations of one selector, as written in a stylesheet. At-rule
+ * wrappers (`@media …`) do not match, their inner rules do, which is all this
+ * needs.
+ */
+const declarationsOf = (css: string, selector: string): string[] => {
+  const normalise = (text: string): string => text.trim().replace(/\s+/g, " ");
+  const found: string[] = [];
+  for (const match of css.replace(/\/\*[\s\S]*?\*\//g, " ").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selectors = (match[1] as string).split(",").map(normalise);
+    if (!selectors.includes(selector)) {
+      continue;
+    }
+    found.push(
+      ...(match[2] as string)
+        .split(";")
+        .map(normalise)
+        .filter((one) => one !== ""),
+    );
+  }
+  return found;
+};
+
+/**
+ * Declarations the shell cannot lose. Every one of them is here because Pico's
+ * own `nav` rules either win on specificity or fill in where we say nothing,
+ * and the damage is only visible in a browser: the bottom bar came out with
+ * 37px slots and the labels cut to "sum" and "Movim", and the status bar was
+ * 15px wider than the phone, which scrolled the whole page sideways.
+ *
+ * A test with no DOM cannot measure a layout. What it can do is refuse to let
+ * the line that fixes it disappear again without anybody noticing.
+ */
+const SHELL_RULES = [
+  {
+    selector: ".nav ul",
+    declaration: "flex: 1 1 auto",
+    reason: "Pico hace del <nav> un flex row: sin crecer, los cinco huecos salen a 37px",
+  },
+  {
+    selector: ".nav li",
+    declaration: "min-width: 0",
+    reason: "un hueco tiene que poder encogerse por debajo de su palabra más larga",
+  },
+  {
+    selector: ".nav a",
+    declaration: "margin: 0",
+    reason: "Pico da margen negativo a `nav li a` y cada destino se solapaba con el vecino",
+  },
+  {
+    selector: ".nav .label",
+    declaration: "font-size: var(--t-nav)",
+    reason: "«Movimientos» a 12px pide 76px de un hueco de 72",
+  },
+  {
+    selector: ".statusbar .actions",
+    declaration: "flex: 0 0 auto",
+    reason: "los interruptores y el engranaje no encogen: lo que cede es el chip",
+  },
+  {
+    selector: ".ledger-chip",
+    declaration: "min-width: 0",
+    reason: "sin esto el chip empuja la barra de estado fuera de la pantalla",
+  },
+];
+
 describe("architecture: apps/web", () => {
   /**
    * Decision (d) of prompt 006 and Q6: **every** amount and **every** quantity
@@ -520,5 +586,22 @@ describe("architecture: apps/web", () => {
     const declared = new Set([...ourClasses(), ...pico]);
     const violations = [...markupClasses().literal].filter((name) => !declared.has(name)).sort();
     expect(violations).toEqual([]);
+  });
+  /**
+   * The six declarations of `layout.css` that keep the shell inside a 360px
+   * screen with its labels readable. See `SHELL_RULES` for why each one exists.
+   */
+  it("keeps the declarations that hold the shell together", () => {
+    const layout = readFileSync(join(webSrc, "styles", "layout.css"), "utf8");
+    const missing = SHELL_RULES.filter(
+      (rule) => !declarationsOf(layout, rule.selector).includes(rule.declaration),
+    ).map((rule) => `${rule.selector} { ${rule.declaration} } — ${rule.reason}`);
+    expect(missing).toEqual([]);
+  });
+
+  /** And the step of the scale that the bar's label uses has to exist. */
+  it("declares the type token of the bottom bar", () => {
+    const tokens = readFileSync(join(webSrc, "styles", "tokens.css"), "utf8");
+    expect(declarationsOf(tokens, ":root")).toContain("--t-nav: 0.625rem");
   });
 });
