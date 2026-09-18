@@ -12,6 +12,7 @@
 // bucket's own total: this screen showed both books' rows under a line that
 // read "Total del núcleo" and summed only one of them.
 
+import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import {
   Amount,
@@ -102,5 +103,14 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
     </Show>
 
     <StandaloneFees view={props.view.standalone.core} totalLabel="Total del núcleo" />
+    {/*
+      Where the rest went. The figure is not repeated here — it belongs to the
+      other book — but its absence would otherwise look like a loss.
+    */}
+    <Show when={props.view.standalone.bucket.rows.length > 0}>
+      <p class="note flush">
+        El cubo paga las suyas aparte: están en <A href="/cubo">Cubo</A>, con su propio total.
+      </p>
+    </Show>
   </Section>
 );
