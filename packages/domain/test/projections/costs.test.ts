@@ -408,7 +408,16 @@ describe("costSummary: standalone fees", () => {
     expect(standalone.rows[0]?.fees_eur.amount.toString()).toBe("10");
   });
 
-  it("dates the rate by the value date when the charge carries no fx_rate_date", () => {
+  /**
+   * The name used to promise more than the test could see: `fx_rate_date` is
+   * optional on a `standalone_fee`, and when it is absent the value date takes
+   * its place — but the date of the rate is **inert** in this projection.
+   * Nothing downstream reads it (the row carries `fees_eur`, a `Money`), so no
+   * assertion here can tell one date from the other. What *is* observable, and
+   * what this checks, is that such a charge converts instead of being skipped
+   * or throwing.
+   */
+  it("converts a charge that carries no fx_rate_date instead of skipping it", () => {
     const b = traded();
     b.fee({
       account_id: "acc_etf",
@@ -464,10 +473,14 @@ describe("costSummary: standalone fees", () => {
   });
 
   it("says nothing when there are none", () => {
-    expect(summary(traded().build()).standalone).toEqual({
-      rows: [],
-      core_eur: expect.objectContaining({}),
-      bucket_eur: expect.objectContaining({}),
-    });
+    const { standalone } = summary(traded().build());
+
+    expect(standalone.rows).toEqual([]);
+    // Zero **euros**, not an object that happens to exist: `objectContaining({})`
+    // matched anything at all, including a total in the wrong currency.
+    expect(standalone.core_eur.amount.toString()).toBe("0");
+    expect(standalone.core_eur.currency).toBe("EUR");
+    expect(standalone.bucket_eur.amount.toString()).toBe("0");
+    expect(standalone.bucket_eur.currency).toBe("EUR");
   });
 });
