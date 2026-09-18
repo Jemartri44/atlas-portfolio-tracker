@@ -16,8 +16,10 @@ Cada funcionalidad tiene su especificación en [`specs/`](specs/).
 
 - [`docs/specification.md`](docs/specification.md) — especificación funcional y técnica. Es la referencia.
 - [`docs/business-rules.md`](docs/business-rules.md) — reglas de dominio y mecánica fiscal española.
+- [`docs/fiscal-questions.md`](docs/fiscal-questions.md) — los criterios fiscales que aplica la aplicación, cada uno con su grado de certeza y hacia qué lado caería el error si estuviera mal.
 - [`docs/data-schema.md`](docs/data-schema.md) — formato del libro (`ledger.jsonl`), eventos, proyecciones y FIFO.
 - [`docs/adr/`](docs/adr/) — decisiones de arquitectura. [`docs/dependencies.md`](docs/dependencies.md) — presupuesto cerrado de dependencias.
+- [`docs/design/brief.md`](docs/design/brief.md) — el encargo del rediseño de la interfaz: pantallas, estados, tamaños de pantalla y restricciones que el diseño tiene que respetar.
 - [`CLAUDE.md`](CLAUDE.md) — contexto y convenciones para el asistente de código.
 - [`.specify/memory/constitution.md`](.specify/memory/constitution.md) — constitución del proyecto ([GitHub Spec Kit](https://github.com/github/spec-kit)). Los specs por funcionalidad viven en `specs/`.
 
@@ -114,30 +116,35 @@ atlas export --format csv --out ledger.csv
 
 ### El ciclo mensual (Fase 2)
 
-Los precios son manuales hasta la Fase 4: se registran como `valuation` y la aplicación siempre muestra de cuándo es cada uno. Ningún cálculo fiscal los mira.
+Los precios son manuales hasta la Fase 4: se registran como `valuation` y la aplicación siempre muestra de cuándo es cada uno. Ningún cálculo fiscal los mira. El ciclo sigue sobre el libro del ejemplo anterior.
 
 ```bash
-# 1. Anota el valor liquidativo del mes de cada activo del núcleo
+# 0. Una vez: el resto del núcleo, los pesos objetivo por activo (suman 100) y qué parte de la aportación va al cubo
+atlas asset add --id ast_bonds --type fund --book core --asset-class fixed_income --name "Euro Bonds" --currency EUR --transferable --isin XX0000000002 --yes
+atlas settings set --target-weights ast_world=60,ast_bonds=40 --bucket-pct-of-contribution 10 --yes
+
+# 1. Anota el valor liquidativo del mes de cada activo del núcleo con posición
 atlas add valuation --account acc_fund --asset ast_world --date 2027-12-31 \
-  --quantity 120.45 --unit-value 105.20 --currency EUR --fx-rate 1 --fx-rate-date 2027-12-31 --yes
+  --quantity 10.123456 --unit-value 105.20 --currency EUR --fx-rate 1 --fx-rate-date 2027-12-31 --yes
 
 # 2. Mira cómo está repartida la cartera y qué se ha desviado del plan
 atlas weights --date 2027-12-31
 
 # 3. Calcula el reparto de la aportación del mes: el cubo aparte, el resto a lo más rezagado
+#    (aquí, 100 EUR al cubo, 786 a ast_bonds y 114 a ast_world)
 atlas contribute --amount 1000 --date 2027-12-31
 
 # 4. Da las órdenes A MANO en la plataforma y regístralas
-atlas order place --account acc_fund --asset ast_bonds --side buy --amount 612.19 \
+atlas order place --account acc_fund --asset ast_bonds --side buy --amount 786 \
   --requested-date 2028-01-03 --yes
 atlas add buy --account acc_fund --asset ast_bonds --order <order_id> \
-  --trade-date 2028-01-03 --value-date 2028-01-05 --quantity 6.2 --amount 612.19 \
+  --trade-date 2028-01-03 --value-date 2028-01-05 --quantity 7.86 --amount 786 \
   --currency EUR --fx-rate 1 --fx-rate-date 2028-01-03 --fee 0 --yes
 ```
 
 `atlas contribute` **propone y nunca escribe**: la aplicación no ejecuta órdenes ni elige valores del cubo. Si falta el precio de un activo con posición, se niega a repartir y dice cuál falta, en vez de repartir sobre un total incompleto.
 
-Antes de traspasar entre fondos, `atlas transfer simulate --from-asset ast_world --to-asset ast_bonds --quantity 10` enseña los pesos antes y después y recuerda que un traspaso no es hecho imponible.
+Antes de traspasar entre fondos, `atlas transfer simulate --from-asset ast_world --to-asset ast_bonds --quantity 10 --date 2028-01-31` enseña los pesos antes y después y recuerda que un traspaso no es hecho imponible. Necesita el precio de **los dos** fondos a esa fecha (paso 1 del mes siguiente); sin `--date`, usa la de hoy.
 
 ### El cubo especulativo (Fase 3)
 
