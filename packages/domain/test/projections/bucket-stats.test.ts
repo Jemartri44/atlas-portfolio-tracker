@@ -83,7 +83,7 @@ describe("bucketStats: what the operation says about the operator", () => {
     );
     expect(stats.closed_theses).toBe(3);
     expect(stats.measured_theses).toBe(3);
-    expect(stats.sell_operations).toBe(3);
+    expect(stats.realized_operations).toBe(3);
     expect(stats.hit_rate?.round(4).toString()).toBe("66.6667");
     expect(stats.average_win_eur?.amount.toString()).toBe("30");
     expect(stats.average_loss_eur?.amount.toString()).toBe("-30");
@@ -299,7 +299,7 @@ describe("bucketStats: what the operation says about the operator", () => {
     expect(stats).toMatchObject({
       closed_theses: 0,
       measured_theses: 0,
-      sell_operations: 0,
+      realized_operations: 0,
       vs_index_missing: 0,
     });
     expect(stats.hit_rate).toBeUndefined();

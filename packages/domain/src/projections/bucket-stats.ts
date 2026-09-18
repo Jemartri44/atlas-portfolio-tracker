@@ -53,7 +53,12 @@ export interface BucketStats {
   closed_theses: number;
   /** Closed theses whose result can be measured; the others are in `excluded`. */
   measured_theses: number;
-  sell_operations: number;
+  /**
+   * Realizations of the bucket: sales **and** what a corporate action realized
+   * (a cash-in-lieu of a reverse split is a realization nobody ordered). They
+   * belong in the drawdown; calling them "sales" was the misleading part.
+   */
+  realized_operations: number;
   excluded: ExcludedThesis[];
   /** Percentage, like every other rate here: the presentation layer multiplies nothing. */
   hit_rate?: Decimal;
@@ -273,8 +278,12 @@ export const bucketStats = (
     warn(
       warnings,
       "bucket_sample_too_small",
-      `${closed.length} closed theses and ${gains.length} sales: below ${SIGNIFICANT_SAMPLE} operations the sample does not tell skill from luck`,
-      { closed_theses: closed.length, sell_operations: gains.length, sample: SIGNIFICANT_SAMPLE },
+      `${closed.length} closed theses and ${gains.length} realized operations: below ${SIGNIFICANT_SAMPLE} operations the sample does not tell skill from luck`,
+      {
+        closed_theses: closed.length,
+        realized_operations: gains.length,
+        sample: SIGNIFICANT_SAMPLE,
+      },
     );
   }
   if (excluded.length > 0) {
@@ -291,7 +300,7 @@ export const bucketStats = (
     date,
     closed_theses: closed.length,
     measured_theses: measured.length,
-    sell_operations: gains.length,
+    realized_operations: gains.length,
     excluded,
     ...(measured.length === 0
       ? {}

@@ -226,6 +226,9 @@ describe("atlas bucket", () => {
     const h = await bucket();
     expect(await h.exec(["bucket", "--date", DATE])).toBe(0);
     expect(h.text()).toContain("no distingue habilidad de suerte");
+    // The counter includes what a corporate action realized, so it is not
+    // "sales": on the golden it says 8 where there are 6 sells and 2 liquidations.
+    expect(h.text()).toContain("operaciones realizadas");
   });
 
   it("puts the stop-loss rule at the top when it is passed", async () => {

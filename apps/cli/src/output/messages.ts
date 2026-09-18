@@ -252,7 +252,7 @@ export const describeWarning = (warning: Warning): string => {
     case "partial_net_worth":
       return `El patrimonio a ${text(d.date)} es parcial: faltan ${[...(d.assets as string[]), ...(d.currencies as string[])].join(", ")}.`;
     case "bucket_sample_too_small":
-      return `Solo ${text(d.closed_theses)} tesis cerradas y ${text(d.sell_operations)} ventas: por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`;
+      return `Solo ${text(d.closed_theses)} tesis cerradas y ${text(d.realized_operations)} operaciones realizadas (ventas y realizaciones por evento corporativo): por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`;
     case "bucket_contaminated_theses":
       return `${(d.theses as string[]).length} tesis quedan fuera de las medias (${(d.theses as string[]).join(", ")}): sus ventas consumieron lotes comprados por otra tesis (FIFO global, ADR-0009).`;
     case "bucket_contribution_exceeded":

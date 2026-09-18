@@ -214,7 +214,7 @@ const thesesText = (rows: readonly BucketThesisView[]): string[] => [
 
 /** Statistics, with the commissions over traded capital where they cannot be missed (rule 14). */
 const statsText = (stats: BucketStats): string[] => [
-  `Estadísticas (${stats.closed_theses} tesis cerradas, ${stats.measured_theses} medidas; ${stats.sell_operations} ventas):`,
+  `Estadísticas (${stats.closed_theses} tesis cerradas, ${stats.measured_theses} medidas; ${stats.realized_operations} operaciones realizadas):`,
   "",
   `  COMISIONES SOBRE CAPITAL OPERADO:  ${eur(stats.fees_eur)} / ${eur(stats.traded_capital_eur)} EUR = ${pct(stats.fees_pct)}`,
   "",
@@ -279,7 +279,7 @@ const jsonBucket = (
   stats: {
     closed_theses: stats.closed_theses,
     measured_theses: stats.measured_theses,
-    sell_operations: stats.sell_operations,
+    realized_operations: stats.realized_operations,
     excluded: stats.excluded,
     hit_rate: stats.hit_rate?.toString(),
     average_win_eur: stats.average_win_eur?.amount.toString(),
