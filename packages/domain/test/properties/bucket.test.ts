@@ -72,7 +72,7 @@ describe("bucketTheses: properties", () => {
     );
   });
 
-  it("latent + realized = (current value + proceeds) − cost, to the last decimal", () => {
+  it("latent + realized = (current value + proceeds) − cost, across a split", () => {
     fc.assert(
       fc.property(
         fc.record({
@@ -81,8 +81,9 @@ describe("bucketTheses: properties", () => {
           buyPrice: fc.integer({ min: 1, max: 200 }),
           sellPrice: fc.integer({ min: 1, max: 200 }),
           nowPrice: fc.integer({ min: 1, max: 200 }),
+          ratio: fc.constantFrom(1, 2, 4),
         }),
-        ({ quantity, sold, buyPrice, sellPrice, nowPrice }) => {
+        ({ quantity, sold, buyPrice, sellPrice, nowPrice, ratio }) => {
           fc.pre(sold < quantity);
           const b = new LedgerBuilder();
           catalogue(b);
@@ -99,10 +100,18 @@ describe("bucketTheses: properties", () => {
             value_date: "2027-01-13",
             thesis_id: "th1",
           });
+          // A split multiplies the shares of the thesis without a purchase: the
+          // quantity the thesis holds can only be read from the lot lineage.
+          b.corporateAction({
+            kind: "split",
+            asset_id: "ast_spec",
+            effective_date: "2027-03-01",
+            effects: [{ op: "scale", ratio: String(ratio) }],
+          });
           b.sell({
             account_id: "acc_bucket",
             asset_id: "ast_spec",
-            quantity: String(sold),
+            quantity: String(sold * ratio),
             unit_price: String(sellPrice),
             currency: "EUR",
             fx_rate: "1",
@@ -113,7 +122,7 @@ describe("bucketTheses: properties", () => {
             account_id: "acc_bucket",
             asset_id: "ast_spec",
             date: "2027-12-01",
-            quantity: String(quantity - sold),
+            quantity: String((quantity - sold) * ratio),
             unit_value: String(nowPrice),
           });
           const thesis = bucketTheses(projectLedger(b.build()), DATE, settings)[0] as
@@ -121,8 +130,8 @@ describe("bucketTheses: properties", () => {
             | undefined;
           const latent = Number((thesis as BucketThesisView).unrealized_eur?.amount.toString());
           const realized = Number((thesis as BucketThesisView).result_eur.amount.toString());
-          const value = (quantity - sold) * nowPrice;
-          const proceeds = sold * sellPrice;
+          const value = (quantity - sold) * ratio * nowPrice;
+          const proceeds = sold * ratio * sellPrice;
           const cost = quantity * buyPrice;
           expect(latent + realized).toBeCloseTo(value + proceeds - cost, 8);
         },

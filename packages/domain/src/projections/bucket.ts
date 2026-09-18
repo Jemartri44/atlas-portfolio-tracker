@@ -14,7 +14,7 @@ import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type ExternalPrices, type PriceLookup, positionValueOf, priceAt } from "./prices.js";
-import type { LedgerState, Thesis, ThesisView, Warning } from "./state.js";
+import type { FiscalLot, LedgerState, Thesis, ThesisView, Warning } from "./state.js";
 import { openThesisOn, theses } from "./theses.js";
 
 const EUR = "EUR";
@@ -95,6 +95,31 @@ export const openUnitCostOf = (state: LedgerState, assetId: AssetId): Money | un
   // reports as `lots_mismatch`. The view says "no cost" instead of dividing by
   // zero or inventing one.
   return quantity.isPositive() ? cost.div(quantity.value) : undefined;
+};
+
+/** Every lot by id, to walk the lineage of what a sale or a corporate action handed down. */
+export const lotIndexOf = (state: LedgerState): Map<string, FiscalLot> => {
+  const index = new Map<string, FiscalLot>();
+  for (const entry of state.lots.values()) {
+    for (const lot of [...entry.open, ...entry.closed]) {
+      index.set(lot.id, lot);
+    }
+  }
+  return index;
+};
+
+/**
+ * The event that originally created a lot, following `source_lot_id` up to the
+ * root: a transfer, a swap or a split hands down a lot that somebody else
+ * bought, and the lineage is what says who. A `source_lot_id` always names a lot
+ * of the same ledger — the projection created it — so the walk always lands.
+ */
+export const rootEventOf = (lots: Map<string, FiscalLot>, lot: FiscalLot): string => {
+  let current = lot;
+  while (current.source_lot_id !== undefined) {
+    current = lots.get(current.source_lot_id) as FiscalLot;
+  }
+  return current.source_event_id;
 };
 
 /** Latent gain of a quantity at a price, given the average cost; nothing without both. */
@@ -271,11 +296,38 @@ const benchmarkEquivalentOf = (
 };
 
 /**
- * Latent gain of what **this thesis** still holds: what it bought minus what it
- * sold, not the position of the pair (account, asset). A thesis closed while
- * the pair still holds something — because the next thesis on the asset bought
- * more — must not count shares that are not its own; that is the same mixing
- * the statistics exclude (decision (k)).
+ * What of its own asset a thesis still holds, by **lineage**: the open lots
+ * whose root — following `source_lot_id` up to the origin — is one of its own
+ * purchases.
+ *
+ * "Bought minus sold" is not the same thing and silently loses shares: a split
+ * multiplies a lot without any new purchase, so six shares bought and split two
+ * for one are twelve shares of the thesis that `quantity_bought` never saw. The
+ * lineage also keeps out what is not its own — the shares the next thesis on
+ * the asset bought, and the ones a swap moved to another asset, which leave no
+ * open lot of this one behind.
+ */
+const ownQuantityOf = (
+  state: LedgerState,
+  thesis: ThesisView,
+  lots: Map<string, FiscalLot>,
+): Quantity => {
+  const own = new Set(thesis.buys.map((leg) => leg.event_id));
+  let quantity = Quantity.ZERO;
+  for (const lot of state.lots.get(thesis.asset_id)?.open ?? []) {
+    if (own.has(rootEventOf(lots, lot))) {
+      quantity = quantity.add(lot.quantity);
+    }
+  }
+  return quantity;
+};
+
+/**
+ * Latent gain of what **this thesis** still holds (`ownQuantityOf`), not of the
+ * position of the pair (account, asset). A thesis closed while the pair still
+ * holds something — because the next thesis on the asset bought more — must not
+ * count shares that are not its own; that is the same mixing the statistics
+ * exclude (decision (k)).
  */
 const latentOf = (
   state: LedgerState,
@@ -283,14 +335,10 @@ const latentOf = (
   date: CivilDate,
   settings: Settings,
   gaps: BenchmarkGap[],
+  lots: Map<string, FiscalLot>,
   external?: ExternalPrices,
 ): Money | undefined => {
-  // What it bought and has not sold, and never more than the account actually
-  // holds: a thesis whose asset was converted by a corporate action holds
-  // nothing any more, and a thesis closed while the next one bought more must
-  // not count shares that are not its own.
-  const bought = thesis.quantity_bought.sub(thesis.quantity_sold);
-  const own = bought.lt(thesis.position) ? bought : thesis.position;
+  const own = ownQuantityOf(state, thesis, lots);
   if (!own.isPositive()) {
     return Money.zero(EUR);
   }
@@ -317,9 +365,10 @@ export const bucketTheses = (
   external?: ExternalPrices,
 ): BucketThesisView[] => {
   const benchmarkId = settings.bucket_benchmark_asset_id;
+  const lots = lotIndexOf(state);
   return theses(state, date).map((thesis) => {
     const gaps: BenchmarkGap[] = [];
-    const latent = latentOf(state, thesis, date, settings, gaps, external);
+    const latent = latentOf(state, thesis, date, settings, gaps, lots, external);
     let equivalent: Money | undefined;
     if (benchmarkId === undefined) {
       gaps.push({ reason: "no_benchmark" });

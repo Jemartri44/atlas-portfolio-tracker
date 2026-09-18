@@ -19,6 +19,8 @@ import {
   bucketAccountIds,
   bucketPositions,
   bucketTheses,
+  lotIndexOf,
+  rootEventOf,
   warn,
 } from "./bucket.js";
 import { costSummary } from "./costs.js";
@@ -84,31 +86,6 @@ export interface BucketControls {
   weight_pct?: Decimal;
   warnings: Warning[];
 }
-
-/** Every lot by id, to walk the lineage of what a sale consumed. */
-const lotIndexOf = (state: LedgerState): Map<string, FiscalLot> => {
-  const index = new Map<string, FiscalLot>();
-  for (const entry of state.lots.values()) {
-    for (const lot of [...entry.open, ...entry.closed]) {
-      index.set(lot.id, lot);
-    }
-  }
-  return index;
-};
-
-/**
- * The event that originally created a lot, following `source_lot_id` up to the
- * root: a transfer or a swap hands down a lot that somebody else bought, and
- * the lineage is what says who. A `source_lot_id` always names a lot of the same
- * ledger — the projection created it — so the walk always lands.
- */
-const rootEventOf = (lots: Map<string, FiscalLot>, lot: FiscalLot): string => {
-  let current = lot;
-  while (current.source_lot_id !== undefined) {
-    current = lots.get(current.source_lot_id) as FiscalLot;
-  }
-  return current.source_event_id;
-};
 
 /**
  * A thesis is contaminated when a sale of its own consumed lots that do not
