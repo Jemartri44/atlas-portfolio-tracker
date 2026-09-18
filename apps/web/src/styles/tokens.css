@@ -12,16 +12,25 @@
 
 :root {
   /*
-   * Type scale (1.2 ratio, rounded to the half pixel at 16px root). `--t-nav`
-   * is the step below the scale and exists for one place: the label of the
-   * bottom bar, where five slots share the width of a phone and "Movimientos"
-   * does not fit at 12px (review of 2026-09-18).
+   * Type scale (1.2 ratio, rounded to the half pixel at 16px root). Body text
+   * is `--t-md` (15px), `--t-sm` is what is secondary and `--t-xs` only what is
+   * accessory; **nothing that is meant to be read sits below `--t-sm`**.
+   *
+   * Two steps are outside the ratio and each exists for one place:
+   *   `--t-nav`  the label of the bottom bar, where five slots share the width
+   *              of a phone and "Movimientos" does not fit at 12px.
+   *   `--t-page` the `<h1>` of a screen on a phone. At `--t-xl` (22px) it was
+   *              1,47x the body and the owner read it as shouting; at `--t-lg`
+   *              it would tie with the card titles. From 768px there is room
+   *              and the `<h1>` goes back up to `--t-xl` (review of
+   *              2026-09-18).
    */
   --t-nav: 0.625rem;
   --t-xs: 0.75rem;
   --t-sm: 0.8125rem;
   --t-md: 0.9375rem;
   --t-lg: 1.125rem;
+  --t-page: 1.25rem;
   --t-xl: 1.375rem;
   --t-display: 2rem;
 

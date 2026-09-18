@@ -118,9 +118,14 @@
   border-left-color: var(--c-accent);
 }
 
+/*
+ * The warnings are what the summary is **for**: they read at the body size, not
+ * at the size of a footnote (review of 2026-09-18). The action next to them
+ * stays secondary, which is also what keeps the row from growing.
+ */
 .attention .item .text {
   color: var(--c-text);
-  font-size: var(--t-sm);
+  font-size: var(--t-md);
 }
 
 .attention .item .go {
@@ -139,10 +144,10 @@
   padding: var(--s-3) 0;
 }
 
-/* The small print that closes a block: muted, tiny, spaced above. */
+/* The small print that closes a block: muted and spaced above, but still read. */
 .note {
   color: var(--c-muted);
-  font-size: var(--t-xs);
+  font-size: var(--t-sm);
   margin: var(--s-3) 0 0;
 }
 
@@ -343,14 +348,18 @@
   margin: 0;
 }
 
+/*
+ * A hint explains the field and an error says why it was refused: both are
+ * meant to be read, so neither goes below `--t-sm` (review of 2026-09-18).
+ */
 .field .hint {
   color: var(--c-muted);
-  font-size: var(--t-xs);
+  font-size: var(--t-sm);
 }
 
 .field .error {
   color: var(--c-negative);
-  font-size: var(--t-xs);
+  font-size: var(--t-sm);
 }
 
 .field.required > label::after {

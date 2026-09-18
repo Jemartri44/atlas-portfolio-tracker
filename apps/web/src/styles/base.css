@@ -11,10 +11,17 @@ body {
 
 /* Titles are content, not a band of chrome (prompt §3.5). */
 h1 {
-  font-size: var(--t-xl);
+  font-size: var(--t-page);
   font-weight: var(--w-semibold);
   letter-spacing: -0.01em;
   margin: 0 0 var(--s-1);
+}
+
+/* From the rail layout there is width to spare: the title takes its full step. */
+@media (min-width: 768px) {
+  h1 {
+    font-size: var(--t-xl);
+  }
 }
 
 h2 {
@@ -89,11 +96,13 @@ p {
   white-space: nowrap;
 }
 
+/* Secondary: read, but not first. Never below this for anything with words. */
 .subtle {
   color: var(--c-muted);
   font-size: var(--t-sm);
 }
 
+/* Accessory: a date in a row, a count, a unit. Not prose. */
 .tiny {
   color: var(--c-muted);
   font-size: var(--t-xs);
