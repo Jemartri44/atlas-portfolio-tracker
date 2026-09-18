@@ -27,7 +27,7 @@ Todo lo que los documentos marcan como *verificar*, consolidado. Cada respuesta 
 
 ---
 
-## Los dieciséis criterios
+## Los criterios
 
 | # | Pregunta | Criterio aplicado | Fundamento | Certeza | Riesgo |
 |---|---|---|---|---|---|
@@ -48,7 +48,15 @@ Todo lo que los documentos marcan como *verificar*, consolidado. Cada respuesta 
 | 14 | ¿La ventana se cuenta de fecha a fecha? | **Sí**, en meses y años naturales, con el día inexistente llevado al **último del mes**. El último día de la ventana **sí** avisa | Cómputo civil de plazos (art. 5 CC). Lo corrigió ADR-0014 | Alta | Conservador |
 | 15 | Pérdida diferida cuyos lotes se **traspasan o canjean** | El diferimiento **viaja con los lotes descendientes** (`source_lot_id`) | Sin norma expresa | **En disputa** | Conservador |
 | 16 | Deducción por doble imposición de dividendos extranjeros | La menor de: el impuesto satisfecho fuera **limitado al tipo del convenio**, y el tipo medio efectivo aplicado a esa renta. Por eso `dividend` guarda `source_country` | Art. 80 LIRPF y convenios | Alta, **pero no calculable entero** | Conservador |
+
+> **Nota al criterio 16 (2026-09-18).** El tipo de cada convenio **no está en ningún sitio** del sistema. Se configura por país y **no tiene valores por defecto**: si un país no tiene tipo configurado, **no se calcula deducción** y la salida lo dice. Deducir todo lo retenido sin conocer el convenio sería agresivo.
 | 17 | La **comisión de una permuta** (`swap`), ¿resta de lo transmitido o suma al coste de lo adquirido? | **Resta de lo transmitido**, igual que en una venta: la pata de salida de una permuta es una transmisión | Art. 35 LIRPF. Una permuta es simultáneamente transmisión y adquisición, y la comisión es inherente a las dos; la norma no reparte | Media | **Agresivo en el momento**: restar ahora baja la ganancia de este ejercicio y sube la de uno futuro |
+| 18 | Para la regla de recompra, ¿qué adquisiciones cuentan? | Solo las que **permanecen en el patrimonio después de la venta**. Una compra que la propia venta consume por FIFO no bloquea la pérdida | Art. 33.5.f) y g) LIRPF: la pérdida se integra «a medida que se transmitan los valores que permanezcan en el patrimonio». Es la lectura mayoritaria | Media | **Agresivo** frente a la alternativa (contar también lo consumido difiere más pérdida) |
+| 19 | ¿Puede una misma unidad recomprada aplazar dos pérdidas distintas? | **No**: cada unidad recomprada aplaza una sola vez, asignada por orden cronológico | Sin norma expresa; evita contar dos veces la misma adquisición | Media | **Agresivo** frente a contarla varias veces |
+| 20 | ¿Sobre qué se aplica la regla de recompra? | **Por operación de transmisión**: cada venta con pérdida se evalúa por separado | Art. 33.5 LIRPF habla de las pérdidas «derivadas de las transmisiones» | Media | Ambas, según el caso |
+| 21 | Una pérdida liberada al vender, si esa venta tiene a su vez una recompra en su ventana | **Se suma a la pérdida de esa venta y se vuelve a aplicar la regla** | Coherencia con el art. 33.5 in fine; sin norma expresa | Media-baja | Conservador (puede volver a aplazar) |
+| 22 | Orden de la compensación de pérdidas (art. 49) | **Dos fases**, como el manual práctico de la AEAT: primero dentro de cada tipo de renta y después el cruce entre ganancias y rendimientos hasta el **25 % conjunto**. Las pérdidas de ejercicios anteriores se aplican **de la más antigua a la más reciente**, y el límite se redondea a céntimos | Art. 49 LIRPF y manual práctico de IRPF | Alta (orden) / Media (redondeo) | Neutro: no cambia el total, evita que caduquen pérdidas |
+| 23 | Comisiones de **custodia y administración** en el rendimiento del capital mobiliario | Se deducen **solo** las comisiones sueltas marcadas como custodia o administración; las de conectividad, datos o gestión discrecional, no | Art. 26.1.a) LIRPF | Alta | Conservador (lo dudoso no se deduce) |
 
 ---
 
@@ -78,7 +86,7 @@ Ninguno está resuelto. Se recogen con el argumento en contra para que la decisi
 
 ---
 
-## Lo que falta y ninguna de las dieciséis cubre
+## Lo que falta y ningún criterio cubre
 
 Por probabilidad de aparecer en esta cartera:
 

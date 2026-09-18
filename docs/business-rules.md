@@ -181,7 +181,7 @@ La ventana es de **dos meses** para valores admitidos a negociación (acciones, 
 ### 5.5 Compensación de pérdidas
 
 - Las pérdidas patrimoniales compensan primero con ganancias patrimoniales del mismo ejercicio.
-- El remanente compensa con rendimientos del capital mobiliario **hasta el 25 %** del saldo positivo de esos rendimientos (art. 49 LIRPF; porcentaje vigente desde 2022, `docs/fiscal-questions.md` #10).
+- El remanente compensa con rendimientos del capital mobiliario **hasta el 25 %** del saldo positivo de esos rendimientos (art. 49 LIRPF; porcentaje vigente **desde 2018**, tras el régimen transitorio del 10-15-20 % de 2015-2017; `docs/fiscal-questions.md` #10).
 - Lo no compensado se arrastra hasta **4 ejercicios** siguientes.
 
 → La app mantiene el saldo de pérdidas pendientes por ejercicio de origen.

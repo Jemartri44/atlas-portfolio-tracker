@@ -113,3 +113,25 @@ El evento `tax_return_filed` en sí (ADR-0020: es la feature siguiente, junto co
 - **(f) Ningún cálculo del IRPF lee un precio**, y se demuestra borrándolos. El 720 es la excepción legal y va en la feature siguiente, separado por ese motivo.
 - **(g) `income_category` se consume aquí pero su valor por defecto no cambia nada**: sin tocar configuración, todo sigue siendo ganancia patrimonial (ADR-0021).
 - **(h) Se entrega el motor con salida de consola terminada**, no media pantalla web. Lo pequeño y acabado antes que lo grande a medias (decisión (g) de la 006).
+
+## 7. Respuestas a las preguntas del motor fiscal
+
+Quince preguntas del implementador tras leer el prompt y medir sobre `develop`. Una encontró un defecto vivo y tres encontraron errores de este prompt.
+
+- **(Q14) Defecto vivo en `develop`, primer commit del bloque 0.** Cuando un `corporate_action` se rechaza, el estado se revierte pero **no se deshacen las adquisiciones ni la renta en especie** que había anotado. Deja una adquisición fantasma que el motor usaría para aplazar una pérdida que no existe. Solo ocurre en modo degradado, que es justo el modo en que se lee un libro que hay que reparar.
+- **(Q1) Cuatro reglas de la recompra** que `data-schema.md` §8.4 no fijaba, ahora criterios **#18 a #21** de `docs/fiscal-questions.md`: solo cuenta lo que permanece en el patrimonio tras la venta; cada unidad recomprada aplaza una sola vez; la regla se aplica por operación; y lo liberado se suma y vuelve a pasar por la regla. **#18 y #19 son la lectura mayoritaria y son agresivas frente a la alternativa**, y así constan.
+- **(Q2)** Orden de la compensación del art. 49 en dos fases, como el manual práctico de la AEAT: criterio **#22**.
+- **(Q3)** El 25 % y los cuatro años son **configuración con valor por defecto**, no constantes: el 25 % cambió cuatro veces entre 2015 y 2018.
+- **(Q4) Error de este prompt.** Daba por hecho que el tipo de cada convenio de doble imposición existía en algún sitio, y **no existe**. Se configura por país, sin valores por defecto, y **sin tipo no se calcula deducción**.
+- **(Q5)** Solo se deducen del capital mobiliario las comisiones de custodia y administración: criterio **#23**.
+- **(Q6)** Las diferencias de cambio del efectivo quedan fuera, y la salida lo dice con todas las letras.
+- **(Q7)** La renta en especie de un `grant` no se integra (criterio #8 vigente) y aparece entre los dudosos como exposición.
+- **(Q8)** "Dudoso" es: en disputa, certeza media o baja, los criterios nuevos y la categoría de los ETC/ETP.
+- **(Q9)** El ancla de lo declarado es parámetro del motor desde ya. **Enmienda a ADR-0020 el mismo día**: las pérdidas pendientes se guardan separadas por categoría de renta, porque compensan distinto.
+- **(Q10) Error de este prompt.** Pedía una "estimación de la base" usando los tramos del ahorro, y **los tramos dan una cuota, no una base**. No se aplican: el motor produce la base y se para ahí, que es lo que dice su propia decisión (a).
+- **(Q11)** Un libro con eventos inválidos no da cifras fiscales: da la lista de lo que hay que reparar.
+- **(Q12)** El aviso al cambiar la configuración pasa al dominio con una función nueva, porque hoy callaría cuando un cambio mueve la base sin mover ninguna ganancia.
+- **(Q13) Premisa inexacta de este prompt.** `fiscal_date_rule` tampoco tenía código de error propio; ahora lo tienen los dos.
+- **(Q15)** Sin una lista de mercados de la UE, no se clasifica: toda pérdida cotizada con ventana de dos meses declara que depende del criterio #2.
+- **El aviso de recompra actual y el motor no pueden contar historias distintas.** Con el #18 adoptado, el aviso que nombra una compra consumida por la propia venta es falso: se alinea al final de la feature, en commit propio y con la disciplina de una regeneración del *golden*. De paso, los dos mensajes de recompra nombran la compra y el año fiscal con número, en vez de "este ejercicio", que leído un año después es falso.
+- **Erratas de este prompt**, además de las anteriores: `fiscal-lots.ts` no existe (la función está en `lots.ts`) y `business-rules.md` no tiene §8 (era `data-schema.md` §8).
