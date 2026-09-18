@@ -64,11 +64,26 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Without this the ellipsis never happens: a flex item's floor is its
+     min-content, and the name is `nowrap`, so it pushed instead of cutting. */
+  min-width: 0;
 }
 
+/*
+ * Three columns **when three fit**, and not a column per book by decree.
+ *
+ * `repeat(3, 1fr)` is `minmax(auto, 1fr)`, and the auto floor of these tracks is
+ * the widest line they hold: "acc_bucket · USD" plus "1.698,62 EUR", neither of
+ * which wraps. At 768px the rail leaves 473px for the card and the three tracks
+ * asked for 701, so the whole page scrolled sideways by 78px as soon as the
+ * amounts were visible — with privacy on the mask is short and it hid the bug
+ * (measured in the review of 2026-09-18). `auto-fit` over a real minimum drops
+ * to two columns there and goes back to three where there is room, and the
+ * `min-width: 0` below means a long name cuts instead of pushing.
+ */
 @media (min-width: 768px) {
   .networth .blocks {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
     gap: var(--s-4);
   }
 
@@ -76,6 +91,7 @@
     border-top: none;
     border-left: 1px solid var(--c-border);
     padding: 0 0 0 var(--s-3);
+    min-width: 0;
   }
 }
 
