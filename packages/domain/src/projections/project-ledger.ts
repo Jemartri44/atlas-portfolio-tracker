@@ -42,6 +42,7 @@ import {
   applyInterest,
   applySell,
   applyStandaloneFee,
+  applySwap,
   applyTransfer,
   applyValuation,
 } from "./operations.js";
@@ -141,6 +142,15 @@ export const businessDateOf = (state: LedgerState, event: OperationEvent): Civil
         ? event.value_date
         : fiscalDateOf(event, asset.asset_type, state.fiscalSettings);
     }
+    case "swap": {
+      // Ordered by the fiscal date of the leg **handed over**, which is the one
+      // of the taxable event. The lot received is born on its own (§7.1 and
+      // `applySwap`), and when the two differ the projection says so.
+      const from = state.assets.get(event.from_asset_id);
+      return from === undefined
+        ? event.value_date
+        : fiscalDateOf(event, from.asset_type, state.fiscalSettings);
+    }
     case "transfer":
       return event.value_date_out;
     case "dividend":
@@ -190,6 +200,11 @@ const recordUsage = (state: LedgerState, event: SupportedEvent): void => {
     case "standalone_fee":
       accounts.add(event.account_id);
       break;
+    case "swap":
+      accounts.add(event.account_id);
+      assets.add(event.from_asset_id);
+      assets.add(event.to_asset_id);
+      break;
     case "transfer":
     case "transfer_requested":
       accounts.add(event.from_account_id);
@@ -219,6 +234,9 @@ const applyOperation = (state: LedgerState, event: OperationEvent, position: num
       return;
     case "sell":
       applySell(state, event, position);
+      return;
+    case "swap":
+      applySwap(state, event, position);
       return;
     case "transfer":
       applyTransfer(state, event);

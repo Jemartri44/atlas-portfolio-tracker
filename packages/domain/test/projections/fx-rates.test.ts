@@ -41,17 +41,27 @@ describe("fxRates: the last ECB rate the ledger knows per currency", () => {
     expect(project(b).fxRates.has("EUR")).toBe(false);
   });
 
-  it("falls back to the business date when the event carries no rate date", () => {
+  /**
+   * Since ADR-0021 no client writes a cash movement without its rate date, so
+   * the fallback only ever serves a line written before that — and those lines
+   * stay readable, because the ledger keeps the bytes it was written with. The
+   * event is therefore built by hand, which is the only way such a line can
+   * exist now.
+   */
+  it("falls back to the business date on a line written before ADR-0021", () => {
     const b = new LedgerBuilder();
     catalogue(b);
-    b.deposit({
+    const dated = b.deposit({
       account_id: "acc_etf",
       value_date: "2027-07-01",
       amount: "500",
       currency: "USD",
       fx_rate: "1.1",
     });
-    const rate = project(b).fxRates.get("USD");
+    const { fx_rate_date: _absent, ...undated } = dated;
+    const events = b.build();
+    events[events.length - 1] = undated as typeof dated;
+    const rate = projectLedger(events).fxRates.get("USD");
     expect(rate?.date).toBe("2027-07-01");
     expect(rate?.dated).toBe(false);
   });

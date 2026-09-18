@@ -73,6 +73,8 @@ const figureOf = (entry: LedgerEntry): Figure => {
       return { amount: money(event.unit_value, event.currency), label: "valor unitario" };
     case "transfer":
       return { quantity: quantity(event.quantity_out), label: "cantidad traspasada" };
+    case "swap":
+      return { quantity: quantity(event.quantity_out), label: "cantidad entregada" };
     case "order_placed": {
       const amount = money(event.amount, "EUR");
       return amount === undefined

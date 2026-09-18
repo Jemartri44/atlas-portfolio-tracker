@@ -38,6 +38,40 @@ export type OrderStage = (typeof ORDER_STAGES)[number];
 export const TRANSFER_REQUEST_STAGES = ["redeemed", "subscribed", "cancelled"] as const;
 export type TransferRequestStage = (typeof TRANSFER_REQUEST_STAGES)[number];
 
+/**
+ * What a standalone fee is (ADR-0021). None of these change a capital gain —
+ * article 35 LIRPF only admits costs inherent to the acquisition or the
+ * disposal— but article 26.1.a) does allow **administration and custody of
+ * negotiable securities** to be deducted from movable capital income, and does
+ * not allow discretionary management or market data. Today `standalone_fee`
+ * carries free text and nothing can tell one from the other.
+ *
+ * Nothing reads it yet: classifying is the tax engine of phase 5.
+ */
+/**
+ * Which base income in kind goes into (ADR-0021). The savings base is where
+ * capital gains and movable capital income live; the **general** base is the
+ * one for income not derived from a transfer, and the project has never had the
+ * notion — which is precisely the hole: DGT doctrine treats the free receipt of
+ * crypto-assets as a gain **not derived from a transfer**, integrated in the
+ * general base, and the criterion in force here (cost zero, nothing declared on
+ * receipt) is the opposite reading (`docs/fiscal-questions.md` #8).
+ */
+export const INCOME_BASES = ["general", "savings"] as const;
+export type IncomeBase = (typeof INCOME_BASES)[number];
+
+export const FEE_KINDS = [
+  "custody",
+  "administration",
+  "connectivity",
+  "discretionary_management",
+  "other",
+] as const;
+export type FeeKind = (typeof FEE_KINDS)[number];
+
+/** The kind of a standalone fee: what it says, or `other` (ADR-0021), resolved at the point of use. */
+export const feeKindOf = (event: { fee_kind?: FeeKind }): FeeKind => event.fee_kind ?? "other";
+
 // --- Catalogue ------------------------------------------------------------
 
 export interface AccountFields {
@@ -72,6 +106,24 @@ export interface AssetFields {
   ter?: DecimalString;
   transferable: boolean;
   reference_etf_id?: AssetId;
+  /**
+   * Where it trades: MIC code or the market's name (ADR-0021). Optional, and
+   * nothing reads it yet. It exists because the wash-sale window of article
+   * 33.5.f) LIRPF talks about regulated markets **of the EU**, so a Nasdaq
+   * share may well fall under letter g) and its one-year window instead of the
+   * two months the project applies by default. That question is open
+   * (`docs/fiscal-questions.md` #2), and it cannot be answered either way if
+   * the catalogue does not say where the thing trades.
+   */
+  market?: string;
+  /**
+   * Where the issuer sits: ISO 3166-1 alpha-2 (ADR-0021). Optional, and nothing
+   * reads it yet. Article 95 LIRPF treats undertakings domiciled in
+   * non-cooperative jurisdictions apart, and several gold ETCs and crypto ETPs
+   * are domiciled in Jersey, Guernsey or the Cayman Islands. It also decides
+   * how a holding is classified in forms 720 and 721.
+   */
+  issuer_country?: string;
   active: boolean;
 }
 
@@ -123,6 +175,54 @@ export interface SellEvent extends Envelope, OperationFields {
   order_id?: Ulid;
   withholding?: DecimalString;
   thesis_id?: string;
+}
+
+/**
+ * Swapping one asset for another, inside one account: crypto for crypto is the
+ * case that motivates it, and `fx_exchange` is only for currencies.
+ *
+ * **A swap is not a transfer, and the difference is the expensive one.** A
+ * transfer between funds keeps the acquisition date and the cost of the origin
+ * lots and is taxed nowhere (trap 1 of `CLAUDE.md`); a swap is a **disposal**
+ * of what is handed over and an **acquisition** of what is received, both on
+ * the day of the swap. It keeps no antiquity and no cost, because it is neither
+ * a transfer nor an exchange covered by the neutrality regime.
+ *
+ * It is valued by article 37.1.h LIRPF: **the greater** of the market value of
+ * what is handed over and of what is received. That is why both are recorded
+ * and neither is derived from the other.
+ *
+ * The vocabulary is deliberately the one of `transfer` (`from_*`,
+ * `quantity_out`, `to_*`, `quantity_in`): they are the two two-legged
+ * operations of the ledger, and naming them differently would only mean having
+ * to remember which is which. What tells them apart is where it can be seen:
+ * the type, the two `market_value_*` a transfer does not have, and the absence
+ * of `nav_*`.
+ */
+export interface SwapEvent extends Envelope {
+  type: "swap";
+  account_id: AccountId;
+  trade_date: CivilDate;
+  value_date: CivilDate;
+  from_asset_id: AssetId;
+  quantity_out: DecimalString;
+  /** Market value of what is handed over, in `currency`. */
+  market_value_out: DecimalString;
+  to_asset_id: AssetId;
+  quantity_in: DecimalString;
+  /** Market value of what is received, in `currency`. */
+  market_value_in: DecimalString;
+  currency: Currency;
+  /** ECB rate as published: units of `currency` per EUR (ADR-0013). */
+  fx_rate: DecimalString;
+  fx_rate_date: CivilDate;
+  fee: DecimalString;
+  /** Required in a bucket account, for the asset **received**: the position it opens (rule 15). */
+  thesis_id?: string;
+  broker_ref?: string;
+  fingerprint: string;
+  source: string;
+  notes?: string;
 }
 
 export interface TransferEvent extends Envelope {
@@ -199,8 +299,8 @@ export interface CashMovementFields {
   amount: DecimalString;
   currency: Currency;
   fx_rate: DecimalString;
-  /** Date of the ECB rate applied (feature 005). Optional: lines written before it exist. */
-  fx_rate_date?: CivilDate;
+  /** Date of the ECB rate applied. Required since ADR-0021; see the note below. */
+  fx_rate_date: CivilDate;
   notes?: string;
   fingerprint: string;
 }
@@ -220,9 +320,11 @@ export interface StandaloneFeeEvent extends Envelope {
   amount: DecimalString;
   currency: Currency;
   fx_rate: DecimalString;
-  /** Date of the ECB rate applied (feature 005). Optional: lines written before it exist. */
-  fx_rate_date?: CivilDate;
+  /** Date of the ECB rate applied. Required since ADR-0021; see the note below. */
+  fx_rate_date: CivilDate;
   description: string;
+  /** What the charge is (ADR-0021). Absent means `other`; read through `feeKindOf`. */
+  fee_kind?: FeeKind;
   fingerprint: string;
 }
 
@@ -236,14 +338,32 @@ export interface ValuationEvent extends Envelope {
   currency: Currency;
   fx_rate: DecimalString;
   /**
-   * Date of the ECB rate applied (feature 005, challenge 3 finding 6). Optional
-   * and compatible (ADR-0018): without it, the rate of a 31/12 valuation is not
-   * reproducible from the official table, because 31/12 falls on a weekend two
-   * years out of seven.
+   * Date of the ECB rate applied. Required since ADR-0021; see the note below.
+   *
+   * This is where the hole was found (challenge 3, finding 6): form 720 values
+   * at the 31/12 price **converted at the ECB rate of that day**, and 31/12
+   * falls on a weekend two years out of seven, so a valuation in a foreign
+   * currency without the date of its rate is not reproducible from the official
+   * table.
    */
-  fx_rate_date?: CivilDate;
+  fx_rate_date: CivilDate;
   source: string;
 }
+
+/**
+ * **Why these four became required, and why it had to be now.**
+ *
+ * `cash_deposit`, `cash_withdrawal`, `standalone_fee` and `valuation` gained
+ * `fx_rate_date` as an optional field in feature 005. Making it required is a
+ * **hardening**, and ADR-0018 allows one inside schema version 1 only while the
+ * real ledger is empty: the loader judges old lines by today's rules, so
+ * hardening with data inside leaves the ledger not degraded but **unreadable in
+ * full**. The real ledger is empty today and stops being so with the first real
+ * operation, which is why ADR-0021 brought all nine provisions forward.
+ *
+ * That window closed with this feature. Any further hardening needs
+ * `schema_version = 2` and its migration.
+ */
 
 // --- Tracking (no effect on lots or cash) ---------------------------------
 
@@ -342,6 +462,18 @@ export interface ForcedSaleEntry {
   /** Quantity sold in that account, or `"all"` for its whole physical position. */
   quantity: DecimalString | "all";
   fee?: DecimalString;
+  /**
+   * Tax withheld by that broker, in the effect's `currency` (ADR-0021). Same
+   * treatment as `sell.withholding`: it leaves the cash that comes in and it
+   * touches neither the disposal value nor the cost of the lots.
+   *
+   * It lives **per account** and not on the effect, unlike what ADR-0021 first
+   * said: a forced sale settles account by account and each broker withholds
+   * its own, so a single amount would have to be split between accounts and the
+   * split would be a figure the system invented. It is the same reason the fee
+   * moved here (challenge 2026-08-31, finding 8).
+   */
+  withholding?: DecimalString;
 }
 
 export interface ForcedSaleEffect extends EffectBase {
@@ -366,6 +498,19 @@ export interface GrantEffect extends EffectBase {
   fx_rate: DecimalString;
   fx_rate_date: CivilDate;
   acquisition_date: CivilDate;
+  /**
+   * Income the grant hands over **at the moment of receiving it**, in euros,
+   * and the base it goes into (ADR-0021). The two travel together: one without
+   * the other is refused.
+   *
+   * A `grant` creates lots and declares nothing. These two fields say that what
+   * was received **is income when it is received** — a fork, an airdrop, shares
+   * from a spin-off outside the neutrality regime, a dividend in kind. They are
+   * stored and shown; **they become no calculation**. Who is taxed on what is
+   * phase 5 and is a criterion in dispute (`docs/fiscal-questions.md` #8).
+   */
+  income_eur?: DecimalString;
+  income_base?: IncomeBase;
 }
 
 export type Effect = ScaleEffect | ConvertEffect | CarveOutEffect | ForcedSaleEffect | GrantEffect;
@@ -378,6 +523,23 @@ export interface CorporateActionEvent extends Envelope {
   /** Key under `documents/` or the issuer's URL. Never empty. */
   source_document: string;
   effects: Effect[];
+  /**
+   * Whether the operation takes the neutrality regime, i.e. the tax deferral of
+   * a merger, exchange or spin-off (ADR-0021). Optional, and **nothing reads
+   * it**: which primitives an exchange composes into is still the user's
+   * choice, and `KIND_RULES` does not look at this field.
+   *
+   * It exists because the deferral is conditional —the AEAT manual requires the
+   * acquiring entity to be Spanish or within Directive 2009/133/EC— so a merger
+   * between two US companies does not qualify, and without the regime the
+   * exchange is a fully taxable swap under article 37.1.h. The project models
+   * it as `convert`, which keeps date and cost and declares nothing: if the
+   * regime did not apply, that omits the whole gain of the exchange. It is the
+   * largest single figure that can be wrong in the system
+   * (`docs/fiscal-questions.md` #7 and #13), and until now the ledger did not
+   * record which of the two readings the user was relying on.
+   */
+  neutrality_regime?: boolean;
   notes?: string;
   fingerprint: string;
 }
@@ -422,6 +584,7 @@ export type SupportedEvent =
   | SettingsChangedEvent
   | BuyEvent
   | SellEvent
+  | SwapEvent
   | TransferEvent
   | DividendEvent
   | InterestEvent

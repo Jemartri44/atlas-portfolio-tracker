@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
+import { feeKindOf } from "../../src/schema/events.js";
 import { FX_FIELDS, knownFieldsOf, validateShape } from "../../src/schema/validate.js";
 import { envelope, ID, SAMPLES, sampleList, variant } from "../samples.js";
 import { TEST_SCHEMA_V2 } from "./test-schema.js";
@@ -30,7 +31,9 @@ describe("validateShape: envelope", () => {
     rejects(variant(SAMPLES.buy, { recorded_at: 5 }), "invalid_envelope");
     rejects(variant(SAMPLES.buy, { recorded_at: "2026-13-01T00:00:00Z" }), "invalid_envelope");
     rejects(variant(SAMPLES.buy, { corrects_id: "nope" }), "invalid_envelope");
-    rejects(variant(SAMPLES.buy, { type: "swap" }), "unknown_event_type");
+    // `swap` used to be the example of a type nobody knows. It is a type now,
+    // so the example has to be one that really is not (feature 008).
+    rejects(variant(SAMPLES.buy, { type: "barter" }), "unknown_event_type");
     expect(validateShape(variant(SAMPLES.buy, { corrects_id: ID.sell })).corrects_id).toBe(ID.sell);
   });
 
@@ -222,6 +225,104 @@ describe("validateShape: consistency rules", () => {
     expect(
       validateShape(variant(SAMPLES.asset_created, { book: "bucket", asset_class: undefined })),
     ).toBeTruthy();
+  });
+
+  /**
+   * ADR-0021: where it trades and where the issuer sits. Both optional, both
+   * unread by anything today, and the country validated with the same rule as
+   * `dividend.source_country` — two uppercase letters, not a closed list, which
+   * is what the project already applies to `account.country`.
+   */
+  it("assets: the market is free text and the issuer country is ISO 3166-1 alpha-2", () => {
+    expect(
+      validateShape(variant(SAMPLES.asset_created, { market: "XETR", issuer_country: "IE" })),
+    ).toBeTruthy();
+    // Absent is the normal case: a ledger written before this feature has neither.
+    expect(validateShape(variant(SAMPLES.asset_created, { market: undefined }))).toBeTruthy();
+    rejects(variant(SAMPLES.asset_created, { issuer_country: "IRL" }), "invalid_field");
+    rejects(variant(SAMPLES.asset_created, { issuer_country: "ie" }), "invalid_field");
+    rejects(variant(SAMPLES.asset_created, { issuer_country: 7 }), "invalid_field");
+    // An empty optional string is accepted, here as in `isin` and `ticker`:
+    // that is the rule of the whole schema and this field does not change it.
+    expect(validateShape(variant(SAMPLES.asset_created, { market: "" }))).toBeTruthy();
+  });
+
+  /**
+   * ADR-0021: which article 26.1.a) LIRPF lets phase 5 deduct from movable
+   * capital income, and which it does not. Optional, with `other` resolved at
+   * the point of use so that a line written before this feature never lands on
+   * a kind nobody chose.
+   */
+  it("standalone_fee: the kind is one of five, or absent and read as other", () => {
+    expect(validateShape(variant(SAMPLES.standalone_fee, { fee_kind: "custody" }))).toBeTruthy();
+    expect(feeKindOf(SAMPLES.standalone_fee)).toBe("other");
+    expect(feeKindOf({ ...SAMPLES.standalone_fee, fee_kind: "connectivity" })).toBe("connectivity");
+    rejects(variant(SAMPLES.standalone_fee, { fee_kind: "custodia" }), "invalid_field");
+  });
+
+  /**
+   * ADR-0021: whether a merger, exchange or spin-off takes the tax deferral.
+   * Recorded and not acted on — `KIND_RULES` does not look at it — so the test
+   * is that it survives validation in its three states: true, false and absent.
+   */
+  it("corporate_action: the neutrality regime is a boolean, or not recorded at all", () => {
+    expect(
+      validateShape(variant(SAMPLES.corporate_action, { neutrality_regime: true })),
+    ).toBeTruthy();
+    expect(
+      validateShape(variant(SAMPLES.corporate_action, { neutrality_regime: false })),
+    ).toBeTruthy();
+    expect(
+      validateShape(variant(SAMPLES.corporate_action, { neutrality_regime: undefined })),
+    ).toBeTruthy();
+    rejects(variant(SAMPLES.corporate_action, { neutrality_regime: "si" }), "invalid_field");
+  });
+
+  /**
+   * ADR-0021: a grant creates lots and declares nothing, and these two fields
+   * say that what was received **is income when it is received**. They travel
+   * together because half of either is a figure the tax engine would have to
+   * guess at.
+   */
+  it("grant: the income amount and its base travel together, or neither", () => {
+    const withIncome = (income: Record<string, unknown>) =>
+      variant(SAMPLES.corporate_action, {
+        kind: "crypto_fork",
+        effects: [
+          {
+            op: "grant",
+            asset_id: "ast_fork",
+            per_account: [{ account_id: "acc_fund", quantity: "10" }],
+            unit_cost: "0",
+            currency: "EUR",
+            fx_rate: "1",
+            fx_rate_date: "2027-03-01",
+            acquisition_date: "2027-03-01",
+            ...income,
+          },
+        ],
+      });
+    expect(
+      validateShape(withIncome({ income_eur: "420.50", income_base: "general" })),
+    ).toBeTruthy();
+    expect(validateShape(withIncome({}))).toBeTruthy();
+    rejects(withIncome({ income_eur: "420.50" }), "missing_field");
+    rejects(withIncome({ income_base: "savings" }), "missing_field");
+    rejects(withIncome({ income_eur: "420.50", income_base: "patrimonial" }), "invalid_field");
+    rejects(withIncome({ income_eur: "-1", income_base: "general" }), "invalid_field");
+  });
+
+  /**
+   * ADR-0021. Swapping an asset for itself would consume its lots by FIFO and
+   * open one with the same asset and a date of its own, quietly resetting the
+   * antiquity of a position nobody sold.
+   */
+  it("swap: refuses an asset swapped for itself, and a value date before the trade date", () => {
+    expect(validateShape(SAMPLES.swap)).toBeTruthy();
+    rejects(variant(SAMPLES.swap, { to_asset_id: "ast_world" }), "invalid_field");
+    rejects(variant(SAMPLES.swap, { value_date: "2027-01-31" }), "invalid_field");
+    rejects(variant(SAMPLES.swap, { quantity_out: "0" }), "invalid_field");
+    rejects(variant(SAMPLES.swap, { market_value_in: undefined }), "missing_field");
   });
 
   it("settings_changed: validates the settings object", () => {

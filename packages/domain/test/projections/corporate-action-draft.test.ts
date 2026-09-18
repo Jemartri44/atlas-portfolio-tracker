@@ -291,6 +291,61 @@ describe("corporateActionDraft: the fractional shares", () => {
     ]);
   });
 
+  /**
+   * ADR-0021, with the shape corrected: the withholding rides in
+   * `per_account[]` next to the fee, because a forced sale settles account by
+   * account and each broker withholds its own.
+   */
+  it("attaches the withholding of each account that sells, alongside its fee", () => {
+    const result = compose(
+      {
+        ...base,
+        kind: "reverse_split",
+        ratio: "1/3",
+        cash: CASH,
+        fees: { acc_b: "1.20" },
+        withholdings: { acc_a: "0.05", acc_b: "0.07" },
+      },
+      [
+        { account: "acc_a", quantity: "10" },
+        { account: "acc_b", quantity: "7" },
+      ],
+    );
+
+    const sale = effectsOf(result)[1] as Extract<Effect, { op: "forced_sale" }>;
+    expect(sale.per_account).toEqual([
+      { account_id: "acc_a", quantity: "0.3333333333", withholding: "0.05" },
+      { account_id: "acc_b", quantity: "0.3333333334", fee: "1.20", withholding: "0.07" },
+    ]);
+  });
+
+  it("carries the neutrality regime into the draft, and omits it when not stated", () => {
+    const stated = compose({ ...base, kind: "split", ratio: "2", neutrality_regime: false }, [
+      { account: "acc_a", quantity: "10" },
+    ]);
+    expect(stated.draft).toMatchObject({ neutrality_regime: false });
+    const silent = compose({ ...base, kind: "split", ratio: "2" }, [
+      { account: "acc_a", quantity: "10" },
+    ]);
+    // Absent means "not recorded", never "does not apply": the ledger stores no
+    // criterion nobody chose.
+    expect("neutrality_regime" in silent.draft).toBe(false);
+  });
+
+  it("refuses a withholding for an account that takes no part in the sale", () => {
+    expect(() =>
+      compose(
+        { ...base, kind: "reverse_split", ratio: "1/3", cash: CASH, withholdings: { acc_b: "1" } },
+        [{ account: "acc_a", quantity: "10" }],
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        code: "fee_account_not_selling",
+        details: { field: "withholding", account_id: "acc_b", selling: ["acc_a"] },
+      }),
+    );
+  });
+
   it("refuses a fee for an account that takes no part in the sale", () => {
     expect(() =>
       compose({ ...base, kind: "reverse_split", ratio: "1/3", cash: CASH, fees: { acc_b: "1" } }, [

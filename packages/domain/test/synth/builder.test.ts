@@ -123,6 +123,7 @@ describe("ScenarioStream: a side stream does not move what was already recorded"
       account_id: "acc_a",
       asset_id: "ast_gold",
       date: "2026-09-20",
+      fx_rate_date: "2026-09-18",
       quantity: b.stateAsOf("2026-09-20").positions.get("acc_a|ast_gold")?.toString() ?? "0",
       unit_value: stream.rng.decimal(180, 240, 2),
       currency: "EUR",

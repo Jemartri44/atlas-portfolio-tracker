@@ -205,6 +205,7 @@ describe("recording", () => {
       amount: "100",
       currency: "EUR",
       fx_rate: "1",
+      fx_rate_date: "2029-06-29",
       fingerprint: "sha256:otro",
     })}\n`;
     const before = blob.text;

@@ -67,6 +67,8 @@ const bucket = async (settings: Record<string, unknown> = {}) => {
       asset,
       "--date",
       date,
+      "--fx-rate-date",
+      date,
       "--quantity",
       "10",
       "--unit-value",
@@ -111,6 +113,10 @@ const bucket = async (settings: Record<string, unknown> = {}) => {
     "acc_bucket",
     "--value-date",
     "2027-01-02",
+    // 2027-01-02 is a Saturday and the ECB publishes nothing: the rate that
+    // applies is Thursday 2026-12-31's, the last working day of the year.
+    "--fx-rate-date",
+    "2026-12-31",
     "--amount",
     "5000",
     "--currency",
@@ -249,6 +255,8 @@ describe("atlas bucket", () => {
         "--asset",
         "ast_spec",
         "--date",
+        "2027-12-15",
+        "--fx-rate-date",
         "2027-12-15",
         "--quantity",
         "10",

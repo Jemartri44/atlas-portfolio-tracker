@@ -86,9 +86,11 @@ export interface StandaloneFeeRow {
  * money leaving the account, and until now no view of either interface showed
  * them at all.
  *
- * They are **not classified by kind**: the field that would tell custody from
- * connectivity (`fee_kind`) does not exist yet. An aggregate the user can see is
- * better than a breakdown that would have to be guessed.
+ * They are **not classified by kind** here. The field that tells custody from
+ * connectivity (`fee_kind`) exists since ADR-0021, but classifying is what the
+ * tax engine of phase 5 does with it —article 26.1.a) LIRPF admits custody and
+ * administration against movable capital income and not the rest— and until
+ * that engine exists, a breakdown here would be a number with no consequence.
  *
  * The two books keep their own total: they never share one (constitution III).
  */
@@ -117,16 +119,14 @@ const feeEurOf = (event: {
   );
 
 /**
- * A standalone fee in euros. `fx_rate_date` is optional on this event (lines
- * written before feature 005 do not carry it), so the rate is dated by the
- * value date when it is missing — the same fallback `fx-rates.ts` uses.
+ * A standalone fee in euros. The rate carries its own date since ADR-0021 made
+ * `fx_rate_date` required here, so there is nothing to fall back to: a line
+ * without it does not reach a projection, because the loader rejects it.
  */
 const standaloneFeeEurOf = (event: StandaloneFeeEvent): Money =>
-  FxRate.of(
-    Decimal.parse(event.fx_rate),
-    event.currency,
-    event.fx_rate_date ?? event.value_date,
-  ).toEur(Money.parse(event.amount, event.currency));
+  FxRate.of(Decimal.parse(event.fx_rate), event.currency, event.fx_rate_date).toEur(
+    Money.parse(event.amount, event.currency),
+  );
 
 /** Acquisition cost of a buy: `(amount ?? quantity × unit_price) + fee`, in euros (data-schema.md §8.1). */
 const costEurOf = (event: BuyEvent): Money => {

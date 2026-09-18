@@ -72,6 +72,8 @@ const deviating = async (threshold: string) => {
       "EUR",
       "--fx-rate",
       "1",
+      "--fx-rate-date",
+      DATE,
       "--yes",
     ]),
   ).toBe(0);
@@ -294,6 +296,28 @@ describe("atlas settings set: assignments keyed by asset type", () => {
     };
     expect(written.settings.wash_sale_window.etf).toBe("2m");
   });
+
+  /**
+   * ADR-0021: the category is stored and nothing reads it yet, so the only way
+   * to check it works is that it can be written, comes back, and leaves every
+   * other type on its default.
+   */
+  it("sets the income category of one asset type and leaves the rest on their default", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--income-category", "etc=movable_capital"])).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as {
+      settings: { income_category: Record<string, string> };
+    };
+    expect(written.settings.income_category.etc).toBe("movable_capital");
+    expect(written.settings.income_category.fund).toBe("capital_gain");
+  });
+
+  it("rejects a category the enumeration does not have", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--income-category", "etc=rendimiento"])).toBe(1);
+    expect((await h.store.load()).events).toHaveLength(seed().length);
+  });
 });
 
 describe("atlas settings set: a change that reinterprets the past (ADR-0015)", () => {
@@ -399,6 +423,8 @@ describe("atlas settings set: a change that reinterprets the past (ADR-0015)", (
         "EUR",
         "--fx-rate",
         "1",
+        "--fx-rate-date",
+        "2027-03-01",
         "--accept-invalid",
         "--yes",
       ]),

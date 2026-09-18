@@ -115,6 +115,10 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `Recompra de ${n.one(d.asset_id)} dentro de la ventana de la venta ${text(d.sale_event_id)} (${text(d.sale_date)}, pérdida ${f.money(d.loss_eur)}): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${text(d.window_end)} (${windowText(d.window)}).`,
   wash_sale_window_prior_buy: (d, n, f) =>
     `Venta con pérdida de ${n.one(d.asset_id)} (${f.money(d.loss_eur)}) con una compra del ${text(d.buy_date)} (${f.quantity(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio.`,
+
+  // --- Swap (ADR-0021) ----------------------------------------------------
+  swap_fiscal_dates_differ: (d, n) =>
+    `En la permuta, ${n.one(d.from_asset_id)} tiene fecha fiscal ${text(d.fiscal_date_out)} y ${n.one(d.to_asset_id)} la tiene ${text(d.fiscal_date_in)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas.`,
 };
 
 /**

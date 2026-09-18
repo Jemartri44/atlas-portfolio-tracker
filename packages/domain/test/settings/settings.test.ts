@@ -3,9 +3,11 @@ import { ValidationError } from "../../src/errors.js";
 import { fiscalDateOf } from "../../src/settings/fiscal-date.js";
 import {
   DEFAULT_FISCAL_DATE_RULE,
+  DEFAULT_INCOME_CATEGORY,
   DEFAULT_SETTINGS,
   DEFAULT_WASH_SALE_WINDOW,
   fiscalDateRuleOf,
+  incomeCategoryOf,
   mergeSettings,
   normalizeSettings,
   type Settings,
@@ -25,6 +27,29 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("1y");
     expect(DEFAULT_SETTINGS.wash_sale_window_days).toBeUndefined();
     expect(validateSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS);
+  });
+
+  /**
+   * ADR-0021: the provision exists so that phase 5 can treat "is an ETC a
+   * capital gain or movable capital income?" as configuration. The default is
+   * what the system does today, for every type, so switching the setting on
+   * changes nothing until somebody reads it — and nobody reads it yet.
+   */
+  it("starts every asset type as a capital gain, which is today's behaviour", () => {
+    expect(Object.values(DEFAULT_INCOME_CATEGORY)).toEqual(Array(7).fill("capital_gain"));
+    expect(DEFAULT_SETTINGS.income_category).toEqual(DEFAULT_INCOME_CATEGORY);
+  });
+});
+
+describe("incomeCategoryOf", () => {
+  it("resolves the default at the point of use, map absent or type absent", () => {
+    const { income_category: _all, ...without } = DEFAULT_SETTINGS;
+    // A ledger written before ADR-0021 carries no map at all.
+    expect(incomeCategoryOf(without as Settings, "etc")).toBe("capital_gain");
+    // A map that mentions other types only.
+    const partial = { ...DEFAULT_SETTINGS, income_category: { fund: "movable_capital" as const } };
+    expect(incomeCategoryOf(partial, "etc")).toBe("capital_gain");
+    expect(incomeCategoryOf(partial, "fund")).toBe("movable_capital");
   });
 });
 
@@ -238,7 +263,38 @@ describe("wash_sale_window (ADR-0014)", () => {
     const normalized = normalizeSettings(DEFAULT_SETTINGS);
     expect(normalized.fiscal_date_rule).toEqual(DEFAULT_FISCAL_DATE_RULE);
     expect(normalized.wash_sale_window).toEqual(DEFAULT_WASH_SALE_WINDOW);
+    expect(normalized.income_category).toEqual(DEFAULT_INCOME_CATEGORY);
     expect(normalizeSettings(normalized)).toEqual(normalized);
+  });
+
+  /**
+   * The map is optional as a whole, unlike its two siblings: every
+   * `settings_changed` written before ADR-0021 lacks it, and rejecting those
+   * would be the retroactive hardening ADR-0018 forbids. Reading fills it
+   * (ADR-0022), writing materialises it, and the stored line is untouched.
+   */
+  it("accepts settings without the income category and completes it on read", () => {
+    const { income_category: _absent, ...without } = DEFAULT_SETTINGS;
+    expect(() => validateSettings(without)).not.toThrow();
+    expect(normalizeSettings(validateSettings(without)).income_category).toEqual(
+      DEFAULT_INCOME_CATEGORY,
+    );
+    const partial = validateSettings({ ...without, income_category: { etc: "movable_capital" } });
+    const normalized = normalizeSettings(partial);
+    expect(normalized.income_category?.etc).toBe("movable_capital");
+    expect(normalized.income_category?.fund).toBe("capital_gain");
+  });
+
+  it("rejects an income category that is not one of the two, and a map that is not an object", () => {
+    expect(() =>
+      validateSettings({ ...DEFAULT_SETTINGS, income_category: { etc: "rendimiento" } }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      validateSettings({ ...DEFAULT_SETTINGS, income_category: "capital_gain" }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      validateSettings({ ...DEFAULT_SETTINGS, income_category: { not_a_type: "nonsense" } }),
+    ).not.toThrow();
   });
 });
 

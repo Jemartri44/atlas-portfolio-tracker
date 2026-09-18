@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";
+import { Decimal } from "../../src/money/decimal.js";
+import { Money } from "../../src/money/money.js";
 import { cashBalances } from "../../src/projections/cash.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
@@ -309,6 +311,59 @@ describe("applyForcedSale", () => {
     expect(integrity(state)).toEqual([]);
   });
 
+  /**
+   * ADR-0021: a fund liquidation, a rights sale or an ETC at a Spanish broker
+   * all withhold on account. The withholding leaves the cash and **nothing
+   * else**: the gain is still computed on the full proceeds, exactly as in a
+   * `sell` (fiscal question #12). It is per account because each broker
+   * withholds its own; one figure split between accounts would be invented.
+   */
+  it("takes the withholding out of the cash of its own account and out of nothing else", () => {
+    const state = stateWith(tenShares);
+    applyForcedSale(
+      state,
+      sale([{ account_id: "acc_fund", quantity: "all", fee: "5", withholding: "37.05" }]),
+      ctx,
+    );
+    // 10 × 120 − 5 fee = 1195 of proceeds, minus 37.05 withheld = 1157.95 in,
+    // on top of the −1000 the purchase left. Without the withholding it is 195,
+    // which is what the test above asserts.
+    expect(
+      cashBalances(state).map((c) => `${c.account_id}|${c.currency}=${c.balance.amount}`),
+    ).toEqual(["acc_fund|EUR=157.95"]);
+    const [gain] = state.gains;
+    // The gain does not move: a payment on account is not a cost of the disposal.
+    expect(gain?.proceeds_eur.amount.toString()).toBe("1195");
+    expect(gain?.gain_eur_rounded.amount.toString()).toBe("195");
+    expect(integrity(state)).toEqual([]);
+  });
+
+  it("withholds account by account, and an account without one is untouched", () => {
+    const state = stateWith(twoAccounts);
+    const before = new Map(
+      cashBalances(state).map((c) => [c.account_id, c.balance.amount.toString()]),
+    );
+    applyForcedSale(
+      state,
+      sale([
+        { account_id: "acc_etf", quantity: "1", withholding: "10" },
+        { account_id: "acc_fund", quantity: "1" },
+      ]),
+      ctx,
+    );
+    const moved = (account: string): string =>
+      Decimal.parse(
+        cashBalances(state)
+          .find((c) => c.account_id === account)
+          ?.balance.amount.toString() ?? "0",
+      )
+        .sub(Decimal.parse(before.get(account) ?? "0"))
+        .toString();
+    // Each one sells 1 at 120. The one that withheld 10 takes in 110; the other
+    // one, which withheld nothing, takes in the whole 120.
+    expect([moved("acc_etf"), moved("acc_fund")]).toEqual(["110", "120"]);
+  });
+
   it("books one sale per account, with its own fee, consuming global FIFO lots", () => {
     const state = stateWith(twoAccounts);
     applyForcedSale(
@@ -424,6 +479,61 @@ describe("applyForcedSale", () => {
 });
 
 describe("applyGrant", () => {
+  /**
+   * ADR-0021: a fork or an airdrop hands over something that DGT doctrine reads
+   * as income **on receipt**, in the general base. The ledger records the
+   * figure and the base; it declares nothing, because that criterion is in
+   * dispute (`docs/fiscal-questions.md` #8).
+   */
+  it("records the income a grant declares, apart from every other income", () => {
+    const state = stateWith(tenShares);
+    applyGrant(
+      state,
+      grant([{ account_id: "acc_fund", quantity: "10" }], {
+        income_eur: "420.50",
+        income_base: "general",
+      }),
+      ctx,
+    );
+    expect(state.inKindIncome).toEqual([
+      {
+        event_id: EVENT,
+        asset_id: "ast_fork",
+        fiscal_date: "2027-03-01",
+        year: 2027,
+        amount_eur: Money.parse("420.50", "EUR"),
+        base: "general",
+      },
+    ]);
+    // It feeds nothing: not movable capital income, not a gain, not a lot cost.
+    expect(state.income).toEqual([]);
+    expect(state.gains).toEqual([]);
+    expect(open(state, "ast_fork")[0]?.cost_eur.amount.toString()).toBe("0");
+  });
+
+  it("records nothing when the grant declares no income", () => {
+    const state = stateWith(tenShares);
+    applyGrant(state, grant([{ account_id: "acc_fund", quantity: "10" }]), ctx);
+    expect(state.inKindIncome).toEqual([]);
+  });
+
+  it("books one entry per effect and not one per account: the figure is not split", () => {
+    const state = stateWith(twoAccounts);
+    applyGrant(
+      state,
+      grant(
+        [
+          { account_id: "acc_fund", quantity: "6" },
+          { account_id: "acc_etf", quantity: "4" },
+        ],
+        { income_eur: "100", income_base: "savings" },
+      ),
+      ctx,
+    );
+    expect(state.inKindIncome).toHaveLength(1);
+    expect(state.inKindIncome[0]?.amount_eur.amount.toString()).toBe("100");
+  });
+
   it("opens a lot per account at the given cost and date without touching cash", () => {
     const state = stateWith(tenShares);
     applyGrant(

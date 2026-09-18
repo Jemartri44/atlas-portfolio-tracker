@@ -24,6 +24,7 @@ import type {
   SettingsChangedEvent,
   StandaloneFeeEvent,
   SupportedEvent,
+  SwapEvent,
   ThesisClosedEvent,
   ThesisOpenedEvent,
   TransferEvent,
@@ -184,6 +185,30 @@ export class LedgerBuilder {
     });
   }
 
+  swap(
+    overrides: Partial<Fields<SwapEvent>> & {
+      account_id: string;
+      from_asset_id: string;
+      to_asset_id: string;
+    },
+  ): SwapEvent {
+    const value_date = overrides.value_date ?? overrides.trade_date ?? "2027-06-10";
+    return this.push<SwapEvent>("swap", {
+      trade_date: value_date,
+      value_date,
+      quantity_out: "1",
+      market_value_out: "100",
+      quantity_in: "1",
+      market_value_in: "100",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: lastWorkingDay(value_date),
+      fee: "0",
+      source: "manual",
+      ...overrides,
+    });
+  }
+
   transfer(fields: Fields<TransferEvent>): TransferEvent {
     return this.push<TransferEvent>("transfer", fields);
   }
@@ -232,11 +257,13 @@ export class LedgerBuilder {
   }
 
   deposit(overrides: Partial<Fields<CashDepositEvent>> & { account_id: string }): CashDepositEvent {
+    const value_date = overrides.value_date ?? "2026-08-31";
     return this.push<CashDepositEvent>("cash_deposit", {
-      value_date: "2026-08-31",
+      value_date,
       amount: "5000",
       currency: "EUR",
       fx_rate: "1",
+      fx_rate_date: lastWorkingDay(value_date),
       ...overrides,
     });
   }
@@ -244,21 +271,25 @@ export class LedgerBuilder {
   withdrawal(
     overrides: Partial<Fields<CashWithdrawalEvent>> & { account_id: string },
   ): CashWithdrawalEvent {
+    const value_date = overrides.value_date ?? "2027-06-01";
     return this.push<CashWithdrawalEvent>("cash_withdrawal", {
-      value_date: "2027-06-01",
+      value_date,
       amount: "100",
       currency: "EUR",
       fx_rate: "1",
+      fx_rate_date: lastWorkingDay(value_date),
       ...overrides,
     });
   }
 
   fee(overrides: Partial<Fields<StandaloneFeeEvent>> & { account_id: string }): StandaloneFeeEvent {
+    const value_date = overrides.value_date ?? "2027-06-30";
     return this.push<StandaloneFeeEvent>("standalone_fee", {
-      value_date: "2027-06-30",
+      value_date,
       amount: "3",
       currency: "EUR",
       fx_rate: "1",
+      fx_rate_date: lastWorkingDay(value_date),
       description: "custody",
       ...overrides,
     });
@@ -267,12 +298,14 @@ export class LedgerBuilder {
   valuation(
     overrides: Partial<Fields<ValuationEvent>> & { account_id: string; asset_id: string },
   ): ValuationEvent {
+    const date = overrides.date ?? "2026-12-31";
     return this.push<ValuationEvent>("valuation", {
-      date: "2026-12-31",
+      date,
       quantity: "5",
       unit_value: "210",
       currency: "EUR",
       fx_rate: "1",
+      fx_rate_date: lastWorkingDay(date),
       source: "manual",
       ...overrides,
     });

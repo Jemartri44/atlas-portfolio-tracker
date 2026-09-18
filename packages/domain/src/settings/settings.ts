@@ -1,7 +1,7 @@
-// Settings (business-rules.md §7). Only `fiscal_date_rule` and
-// `wash_sale_window` have documented defaults (ADR-0013, ADR-0014, to be
-// verified with the tax advisor); every other parameter is optional until the
-// user sets it.
+// Settings (business-rules.md §7). Only `fiscal_date_rule`, `wash_sale_window`
+// and `income_category` have documented defaults (ADR-0013, ADR-0014, ADR-0021,
+// to be verified with the tax advisor); every other parameter is optional until
+// the user sets it.
 
 import { ValidationError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
@@ -10,6 +10,22 @@ import { ASSET_TYPES, type AssetType } from "../schema/events.js";
 
 export const FISCAL_DATE_RULES = ["trade_date", "value_date"] as const;
 export type FiscalDateRule = (typeof FISCAL_DATE_RULES)[number];
+
+/**
+ * What kind of income an asset type produces: a capital gain of article 33
+ * LIRPF, or income from movable capital of article 25.2. They offset each other
+ * differently —a loss against movable capital income is capped at 25% of its
+ * positive balance (art. 49)— so it decides which box a disposal ends up in.
+ *
+ * It exists because an ETC is legally a debt note and not a collective
+ * investment undertaking, so there is a case for its disposal being movable
+ * capital income. That case is **unresolved** (`docs/fiscal-questions.md`), and
+ * this feature does not resolve it: **nothing reads this setting yet**. The tax
+ * engine of phase 5 will, and then answering the question will be a
+ * `settings_changed` and not a migration (ADR-0021).
+ */
+export const INCOME_CATEGORIES = ["capital_gain", "movable_capital"] as const;
+export type IncomeCategory = (typeof INCOME_CATEGORIES)[number];
 
 /**
  * Wash-sale window per asset type, counted date to date in whole months or
@@ -39,6 +55,13 @@ export interface Settings {
   fiscal_date_rule: Partial<Record<AssetType, FiscalDateRule>>;
   /** Partial too, and for the same reason (ADR-0018). */
   wash_sale_window: Partial<Record<AssetType, WashSaleWindow>>;
+  /**
+   * Partial as well, and **optional as a whole**: every `settings_changed`
+   * written before ADR-0021 lacks it, and demanding it would make the loader
+   * reject them — the hardening ADR-0018 forbids. Absent means the documented
+   * default for every type. Read through `incomeCategoryOf`, never off the map.
+   */
+  income_category?: Partial<Record<AssetType, IncomeCategory>>;
   /** Legacy form, still accepted on load; `<n>` equals `"<n>d"` (ADR-0014). Never written by the CLI. */
   wash_sale_window_days?: Partial<Record<AssetType, number>>;
   /**
@@ -91,6 +114,17 @@ export const DEFAULT_FISCAL_DATE_RULE: Record<AssetType, FiscalDateRule> = {
   money_market: "value_date",
 };
 
+/** Same, for the income category: what the system does today, for every type (ADR-0021). */
+export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
+  stock: "capital_gain",
+  etf: "capital_gain",
+  etc: "capital_gain",
+  etp: "capital_gain",
+  crypto: "capital_gain",
+  fund: "capital_gain",
+  money_market: "capital_gain",
+};
+
 /** Same, for the wash-sale window (ADR-0013, ADR-0014; verify with the tax advisor). */
 export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
   stock: "2m",
@@ -106,11 +140,23 @@ export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
 export const DEFAULT_SETTINGS: Settings = {
   fiscal_date_rule: DEFAULT_FISCAL_DATE_RULE,
   wash_sale_window: DEFAULT_WASH_SALE_WINDOW,
+  income_category: DEFAULT_INCOME_CATEGORY,
 };
 
 /** The rule in force for an asset type: what the settings say, or its default (ADR-0018). */
 export const fiscalDateRuleOf = (settings: Settings, assetType: AssetType): FiscalDateRule =>
   settings.fiscal_date_rule[assetType] ?? DEFAULT_FISCAL_DATE_RULE[assetType];
+
+/**
+ * The income category in force for an asset type (ADR-0021). Resolved here and
+ * not read off the map, so that an absent type —or an absent map, which is what
+ * every line written before this feature has— takes the documented default and
+ * never a category arrived at by elimination.
+ *
+ * Nothing in the system calls this yet. It is the door the tax engine opens.
+ */
+export const incomeCategoryOf = (settings: Settings, assetType: AssetType): IncomeCategory =>
+  settings.income_category?.[assetType] ?? DEFAULT_INCOME_CATEGORY[assetType];
 
 const DECIMAL_FIELDS = [
   "deviation_threshold_pp",
@@ -208,6 +254,35 @@ const checkWashSaleWindow = (raw: UnknownRecord): void => {
   }
 };
 
+/**
+ * Checks the income category (ADR-0021). The map as a whole is **optional** —
+ * every line written before this feature lacks it— and partial, like its two
+ * siblings (ADR-0018). What is present must still name a category the engine
+ * knows: the tolerance is to absence, not to nonsense.
+ *
+ * It reuses `invalid_settings` instead of a code of its own, unlike the
+ * wash-sale window: the window has a code because its form (`"2m"`, `"1y"`,
+ * `"<n>d"`) is not guessable, whereas an enumeration of two values is exactly
+ * what the generic "that parameter does not take that value" message covers,
+ * and `field` names which asset type it was.
+ */
+const checkIncomeCategory = (raw: UnknownRecord): void => {
+  const categories = raw.income_category;
+  if (categories !== undefined && !isRecord(categories)) {
+    fail("income_category must be an object", { field: "income_category", value: categories });
+  }
+  for (const assetType of ASSET_TYPES) {
+    const value = isRecord(categories) ? categories[assetType] : undefined;
+    if (value !== undefined && !(INCOME_CATEGORIES as readonly unknown[]).includes(value)) {
+      fail(`income_category.${assetType} must be ${INCOME_CATEGORIES.join(" or ")}`, {
+        field: `income_category.${assetType}`,
+        asset_type: assetType,
+        value,
+      });
+    }
+  }
+};
+
 /** Validates a complete settings object (the payload of `settings_changed`). Unknown keys are kept. */
 export const validateSettings = (raw: unknown): Settings => {
   if (!isRecord(raw)) {
@@ -230,6 +305,7 @@ export const validateSettings = (raw: unknown): Settings => {
     }
   }
   checkWashSaleWindow(raw);
+  checkIncomeCategory(raw);
   for (const field of DECIMAL_FIELDS) {
     if (!(field in raw)) {
       continue;
@@ -319,6 +395,7 @@ export const normalizeSettings = (settings: Settings): Settings => {
   const legacy = settings.wash_sale_window_days;
   const windows = { ...settings.wash_sale_window } as Record<AssetType, WashSaleWindow>;
   const rules = { ...settings.fiscal_date_rule } as Record<AssetType, FiscalDateRule>;
+  const categories = { ...settings.income_category } as Record<AssetType, IncomeCategory>;
   for (const assetType of ASSET_TYPES) {
     if (windows[assetType] === undefined) {
       const days = legacy?.[assetType];
@@ -327,8 +404,16 @@ export const normalizeSettings = (settings: Settings): Settings => {
     if (rules[assetType] === undefined) {
       rules[assetType] = DEFAULT_FISCAL_DATE_RULE[assetType];
     }
+    if (categories[assetType] === undefined) {
+      categories[assetType] = DEFAULT_INCOME_CATEGORY[assetType];
+    }
   }
-  return { ...settings, fiscal_date_rule: rules, wash_sale_window: windows };
+  return {
+    ...settings,
+    fiscal_date_rule: rules,
+    wash_sale_window: windows,
+    income_category: categories,
+  };
 };
 
 /**
@@ -355,6 +440,11 @@ export const normalizeSettings = (settings: Settings): Settings => {
  * resolved it into `wash_sale_window` when it read the settings, and carrying it
  * along would make every change written from now on repeat the old form for
  * ever.
+ *
+ * `income_category` needs no line of its own: it is optional, so the spread
+ * already replaces it when the patch carries one and keeps the current one when
+ * it does not. Its two siblings are declared because they are not optional and
+ * the compiler cannot see that the spread has covered them.
  */
 export const mergeSettings = (current: Settings, patch: Partial<Settings>): Settings => {
   const { wash_sale_window_days: _legacy, ...merged } = {

@@ -433,6 +433,7 @@ class Scenario {
       amount,
       currency: "EUR",
       fx_rate: "1",
+      fx_rate_date: lastWorkingDay(date),
     });
   }
 
@@ -569,6 +570,7 @@ class Scenario {
       amount: "3",
       currency: "EUR",
       fx_rate: "1",
+      fx_rate_date: lastWorkingDay(date),
       description,
     });
   }
@@ -593,11 +595,12 @@ class Scenario {
       unit_value,
       currency,
       fx_rate: currency === "EUR" ? "1" : this.rate(),
-      // The ECB rate has a publication date of its own (ADR-0013). Without it
-      // the year-end valuations date the currency with the business date, and
-      // `atlas networth` had to label the cash rows "(fecha de la operación)"
-      // on the very 31/12 the rate was published for.
-      ...(currency === "EUR" ? {} : { fx_rate_date: lastWorkingDay(date) }),
+      // The ECB rate has a publication date of its own (ADR-0013), and since
+      // ADR-0021 it is required whatever the currency. Five of the scenario's
+      // valuations fall on 31/12/2028, which is a **Sunday**: the rate that
+      // applies is Friday 2028-12-29's, which is the very case that made this
+      // field exist (challenge 3, finding 6).
+      fx_rate_date: lastWorkingDay(date),
       source: "manual",
     });
   }
@@ -1029,6 +1032,10 @@ class Scenario {
       amount: "200",
       currency: "EUR",
       fx_rate: "1",
+      // 2028-04-08 is a Saturday: the ECB publishes nothing, so the rate that
+      // applies is Friday's. It is the one date of the whole scenario where
+      // this matters, and it is the reason the helper exists.
+      fx_rate_date: lastWorkingDay(date),
       notes: "Cash moved back to the bank",
     });
   }
@@ -1081,6 +1088,7 @@ class Scenario {
         unit_value: stream.rng.decimal(90, 130, 2),
         currency: "EUR",
         fx_rate: "1",
+        fx_rate_date: lastWorkingDay(date),
         source: "manual",
       });
     }
@@ -1106,6 +1114,7 @@ class Scenario {
       amount: "3000",
       currency: "EUR",
       fx_rate: "1",
+      fx_rate_date: lastWorkingDay(created),
     });
 
     const price = (min: number, max: number): string => s.rng.decimal(min, max, 2);
@@ -1194,6 +1203,7 @@ class Scenario {
       unit_value: price(20, 32),
       currency: "EUR",
       fx_rate: "1",
+      fx_rate_date: lastWorkingDay(lastDay),
       source: "manual",
     });
   }

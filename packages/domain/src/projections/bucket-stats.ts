@@ -214,10 +214,12 @@ const cashFlowsOf = (
       flows.firstDate = date;
     }
     if (event.type === "cash_deposit" || event.type === "cash_withdrawal") {
+      // The rate carries its own date since ADR-0021: a cash movement without
+      // it does not reach a projection, because the loader rejects it.
       const amount = FxRate.of(
         Decimal.parse(event.fx_rate),
         event.currency,
-        event.fx_rate_date ?? date,
+        event.fx_rate_date,
       ).toEur(Money.parse(event.amount, event.currency));
       if (event.type === "cash_deposit") {
         flows.deposits = flows.deposits.add(amount);

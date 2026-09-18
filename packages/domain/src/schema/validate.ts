@@ -18,6 +18,8 @@ import {
   CORPORATE_ACTION_KINDS,
   EFFECT_OPS,
   type EffectOp,
+  FEE_KINDS,
+  INCOME_BASES,
   type LedgerEvent,
   ORDER_SIDES,
   ORDER_STAGES,
@@ -94,6 +96,8 @@ const ASSET: Rules = {
   ter: opt("decimal"),
   transferable: req("boolean"),
   reference_etf_id: opt("string"),
+  market: opt("string"),
+  issuer_country: opt("country"),
   active: req("boolean"),
 };
 
@@ -103,7 +107,7 @@ const CASH_MOVEMENT: Rules = {
   amount: req("positive_decimal"),
   currency: req("currency"),
   fx_rate: req("positive_decimal"),
-  fx_rate_date: opt("date"),
+  fx_rate_date: req("date"),
   notes: opt("string"),
   fingerprint: req("string"),
 };
@@ -138,6 +142,8 @@ const EFFECT_RULES: Record<EffectOp, Rules> = {
     unit_cost: req("decimal"),
     ...PRICED,
     acquisition_date: req("date"),
+    income_eur: opt("decimal"),
+    income_base: { kind: "enum", optional: true, values: INCOME_BASES },
   },
 };
 
@@ -146,6 +152,7 @@ const PER_ACCOUNT_RULES: Partial<Record<EffectOp, Rules>> = {
     account_id: req("string"),
     quantity: req("all_or_positive_decimal"),
     fee: opt("decimal"),
+    withholding: opt("decimal"),
   },
   grant: { account_id: req("string"), quantity: req("positive_decimal") },
 };
@@ -162,6 +169,26 @@ const RULES: Record<SupportedEventType, Rules> = {
     order_id: opt("ulid"),
     withholding: opt("decimal"),
     thesis_id: opt("string"),
+  },
+  swap: {
+    account_id: req("string"),
+    trade_date: req("date"),
+    value_date: req("date"),
+    from_asset_id: req("string"),
+    quantity_out: req("positive_decimal"),
+    market_value_out: req("decimal"),
+    to_asset_id: req("string"),
+    quantity_in: req("positive_decimal"),
+    market_value_in: req("decimal"),
+    currency: req("currency"),
+    fx_rate: req("positive_decimal"),
+    fx_rate_date: req("date"),
+    fee: req("decimal"),
+    thesis_id: opt("string"),
+    broker_ref: opt("string"),
+    fingerprint: req("string"),
+    source: req("string"),
+    notes: opt("string"),
   },
   transfer: {
     request_id: opt("ulid"),
@@ -230,8 +257,9 @@ const RULES: Record<SupportedEventType, Rules> = {
     amount: req("positive_decimal"),
     currency: req("currency"),
     fx_rate: req("positive_decimal"),
-    fx_rate_date: opt("date"),
+    fx_rate_date: req("date"),
     description: req("string"),
+    fee_kind: { kind: "enum", optional: true, values: FEE_KINDS },
     fingerprint: req("string"),
   },
   valuation: {
@@ -242,7 +270,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     unit_value: req("decimal"),
     currency: req("currency"),
     fx_rate: req("positive_decimal"),
-    fx_rate_date: opt("date"),
+    fx_rate_date: req("date"),
     source: req("string"),
   },
   order_placed: {
@@ -284,6 +312,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     effective_date: req("date"),
     source_document: req("string"),
     effects: req("array"),
+    neutrality_regime: opt("boolean"),
     notes: opt("string"),
     fingerprint: req("string"),
   },
@@ -375,6 +404,9 @@ const checkEffects = (raw: UnknownRecord): void => {
       checkFxPairs({ ...effect, type: raw.type }, [["currency", "fx_rate"]], path);
       checkFxDates({ ...effect, type: raw.type }, ["fx_rate_date"], path);
     }
+    if (op === "grant") {
+      checkGrantIncome(effect, raw.type, path);
+    }
     const entryRules = PER_ACCOUNT_RULES[op];
     if (entryRules !== undefined) {
       (effect.per_account as unknown[]).forEach((entry, position) => {
@@ -387,6 +419,26 @@ const checkEffects = (raw: UnknownRecord): void => {
         );
       });
     }
+  });
+};
+
+/**
+ * The amount and the base of income in kind travel together (ADR-0021). An
+ * amount without a base is an amount nobody can declare, and a base without an
+ * amount is a category with nothing in it; either half alone would be a figure
+ * the tax engine would have to guess at, and guessing is what this whole
+ * feature exists to avoid.
+ */
+const checkGrantIncome = (effect: UnknownRecord, type: unknown, path: string): void => {
+  const hasAmount = effect.income_eur !== undefined;
+  const hasBase = effect.income_base !== undefined;
+  if (hasAmount === hasBase) {
+    return;
+  }
+  const field = hasAmount ? "income_base" : "income_eur";
+  throw invalid("missing_field", `${type}: ${path}${field} is required with the other`, {
+    type,
+    field: `${path}${field}`,
   });
 };
 
@@ -411,6 +463,7 @@ const exactlyOne = (raw: UnknownRecord, first: string, second: string): void => 
 const FX_PAIRS: Partial<Record<SupportedEventType, readonly (readonly [string, string])[]>> = {
   buy: [["currency", "fx_rate"]],
   sell: [["currency", "fx_rate"]],
+  swap: [["currency", "fx_rate"]],
   dividend: [["currency", "fx_rate"]],
   interest: [["currency", "fx_rate"]],
   fx_exchange: [
@@ -427,11 +480,13 @@ const FX_PAIRS: Partial<Record<SupportedEventType, readonly (readonly [string, s
 const FX_DATE_FIELDS: Partial<Record<SupportedEventType, readonly string[]>> = {
   buy: ["fx_rate_date"],
   sell: ["fx_rate_date"],
+  swap: ["fx_rate_date"],
   dividend: ["fx_rate_date"],
   interest: ["fx_rate_date"],
   fx_exchange: ["fx_rate_date"],
-  // Optional in these four (feature 005); when present it is an ECB rate date
-  // like any other, so the weekend rule applies just the same.
+  // Required in these four since ADR-0021; they were optional between features
+  // 005 and 008, and the hardening had to happen while the real ledger was
+  // still empty (ADR-0018, see the note in `events.ts`).
   valuation: ["fx_rate_date"],
   cash_deposit: ["fx_rate_date"],
   cash_withdrawal: ["fx_rate_date"],
@@ -484,6 +539,7 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
       });
     }
   },
+  swap: (raw) => checkSwap(raw),
   order_placed: (raw) => exactlyOne(raw, "amount", "quantity"),
   transfer_requested: (raw) => exactlyOne(raw, "quantity_out", "amount_eur"),
   transfer: (raw) => checkTransfer(raw),
@@ -496,6 +552,22 @@ function checkBasis(raw: UnknownRecord): void {
     throw invalid("missing_field", `${raw.type}: unit_price is required when amount is absent`, {
       type: raw.type,
       field: "unit_price",
+    });
+  }
+}
+
+/**
+ * A swap of an asset for itself is not an operation: it would consume lots by
+ * FIFO and open one with the same asset and a date of its own, quietly
+ * resetting the antiquity of a position nobody sold.
+ */
+function checkSwap(raw: UnknownRecord): void {
+  checkDates(raw);
+  if (raw.from_asset_id === raw.to_asset_id) {
+    throw invalid("invalid_field", "swap: an asset cannot be swapped for itself", {
+      type: raw.type,
+      field: "to_asset_id",
+      value: raw.to_asset_id,
     });
   }
 }
