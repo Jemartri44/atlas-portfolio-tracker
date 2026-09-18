@@ -206,12 +206,52 @@ describe("architecture: @atlas/domain imports nothing", () => {
     const graph = importGraph();
     const pricesFile = join(domainSrc, "projections", "prices.ts");
     const projectLedger = join(domainSrc, "projections", "project-ledger.ts");
-    const fiscal = reachableFrom(graph, projectLedger);
+    // The tax engine (feature 009) is the fiscal path by definition: every file
+    // of `tax/` is a root too, so a price can reach neither the projection nor
+    // the base of the return.
+    const taxDir = join(domainSrc, "tax");
+    const roots = [
+      projectLedger,
+      ...listTsFiles(domainSrc).filter((file) => !relative(taxDir, file).startsWith("..")),
+    ];
+    expect(roots.length).toBeGreaterThan(4);
+    const fiscal = new Map<string, string[]>();
+    for (const root of roots) {
+      for (const [file, chain] of reachableFrom(graph, root)) {
+        if (!fiscal.has(file)) {
+          fiscal.set(file, chain);
+        }
+      }
+    }
     expect(fiscal.size).toBeGreaterThan(1);
     const violations = [...fiscal.entries()]
       .map(([file, chain]) => ({ chain, toPrices: reachableFrom(graph, file).get(pricesFile) }))
       .filter((entry) => entry.toPrices !== undefined)
       .map((entry) => `${asChain(entry.chain)}  ==  then  ==>  ${asChain(entry.toPrices ?? [])}`);
+    expect(violations).toEqual([]);
+  });
+});
+
+/**
+ * Feature 009, decision (f): the tax engine converts every amount at the ECB
+ * rate **of its own operation**, as published and with its date (ADR-0013).
+ * `state.fxRates` is the last rate the ledger knows per currency, a convenience
+ * for valuing cash today; reading it from `tax/` would convert a disposal of
+ * 2027 at a rate of 2029. And `state.valuations` are prices. Neither may be
+ * read there, in either of the two forms a read can take.
+ */
+describe("architecture: the tax engine", () => {
+  it("reads neither the known FX rates nor the valuations of the state", () => {
+    const taxDir = join(domainSrc, "tax");
+    const reads = [
+      /\.(?:fxRates|valuations)\b/,
+      /\{[^{}]*\b(?:fxRates|valuations)\b[^{}]*\}\s*=[^=]/,
+    ];
+    const files = listTsFiles(taxDir);
+    expect(files.length).toBeGreaterThan(4);
+    const violations = files
+      .filter((file) => reads.some((pattern) => pattern.test(readFileSync(file, "utf8"))))
+      .map((file) => relative(repoRoot, file));
     expect(violations).toEqual([]);
   });
 });
