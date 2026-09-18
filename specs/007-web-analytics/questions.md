@@ -347,6 +347,12 @@ Tres cosas que la revisión funcional dejó anotadas para que decida la direcci�
 
 **Qué se ha hecho.** Nada: es anterior a esta feature, toca la forma en que se serializan los ajustes y es una decisión de la dirección, posiblemente un ADR. Aquí solo se ha arreglado lo que pedía Q10 (vaciar un campo quita la clave del mapa que se envía).
 
+### N10bis — Los costes sueltos: una lectura que conviene confirmar
+
+La indicación era *«que enseñe los dos totales como hace la CLI, y que el del cubo salga en `/cubo`»*. Se ha hecho así: cada libro lleva **sus filas y su total**, el del núcleo en `/nucleo` y el del cubo en `/cubo`, y bajo el total del núcleo hay una línea que dice dónde están los otros (sin repetir la cifra, que es del otro libro).
+
+**Por qué no los dos totales juntos en `/nucleo`:** `atlas costs` es un comando sobre el libro entero y puede permitirse una tabla con columna «Libro» y dos totales etiquetados; una pantalla que se llama «Núcleo» no, porque la constitución III dice que los dos libros no comparten ni vista ni métrica salvo en las dos excepciones acotadas, y ésta no es ninguna de ellas. Si la dirección quería literalmente los dos totales en la misma tarjeta, es una línea: el grupo del cubo ya viaja en el *view-model*.
+
 ### N11 — La prosa de los avisos del dominio enseña importes con la privacidad puesta
 
 **Qué pasa.** Con el modo privado activado, las cifras de las tablas, las tarjetas, los ejes y la leyenda quedan enmascaradas —eso está cubierto por tests y comprobado en Chromium—, pero el **texto de un aviso** las sigue enseñando, porque el importe va incrustado en la frase:
