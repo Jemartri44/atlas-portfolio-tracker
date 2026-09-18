@@ -311,3 +311,127 @@ Medido después, en `/movimientos`: sin desplazamiento a 360, 768, 900, 1023, 10
 
 - **`signOfValue` en `components/Amount.tsx` duplica `signOf` de `format/number.ts`**: la misma regla del cero con signo escrita dos veces. Candidato para la limpieza siguiente.
 - **Los cinco tamaños fuera de escala** de la nota §R5 de la primera ronda se quedan como están: son formas (el punto del chip, la pastilla de la acción, las dos alturas del esqueleto, el ancho del diálogo y el mínimo del botón de la barra de acciones), no espacio ni tipografía.
+
+---
+
+## Notas del pulido visual (2026-09-18, medido en un navegador)
+
+Ronda de pulido pedida por la dirección tras mirar el dueño las capturas en su teléfono (Xiaomi Mi 15). Todo lo de abajo está medido con el *build* de producción servido por `vite preview` y conducido por el protocolo DevTools, con la resolución real del teléfono: **viewport CSS 400×890 con `deviceScaleFactor` 3**, y además 320, 360, 768, 1023, 1024 y 1280.
+
+### V1 — El interruptor de privacidad era una media luna, y el culpable era el objetivo táctil
+
+El interruptor de Pico es un óvalo de `2.25em × 1.25em` cuyo pulgar es un círculo de `height: 100%`. La regla general `:where(input, select, textarea) { min-height: var(--tap) }` le imponía 44 px de alto sobre 36 de ancho: caja de **36×44** con radio 20 px y pulgar de 44 px desbordándola — la «luna» que vio el dueño.
+
+Corregido donde estaba la causa: el objetivo de 44 px pasa a ser el **área clicable del `<label>`** (`.switch-inline { min-height: var(--tap) }`) y el control recupera su proporción (`[type="checkbox"][role="switch"] { min-height: 0 }`). El mismo `.switch-inline` lo usa ahora el `Switch` de `components/Field.tsx`, así que el de Ajustes queda arreglado por la misma regla y no por una copia.
+
+| Medida (400×890, DPR 3) | Antes | Después |
+|---|---|---|
+| `<input role="switch">` | 36×44 | **36×20** |
+| `<label class="switch-inline">` (objetivo táctil) | 91,03×**42** | 91,03×**44** |
+| Interruptor de Ajustes (`#privacy-setting`) | 36×44 | 36×20, etiqueta 248,73×44 |
+| Encendido / apagado | fondo `#0172ad` / pulgar desbordado | fondo `#0172ad` con pulgar a la derecha (margen 16 px) / fondo `#bfc7d9` con pulgar a la izquierda (margen 0) |
+
+El estado no depende del color: el pulgar viaja (posición), y en la barra de estado hay además la palabra «Oculto» / «Visible».
+
+### V2 — La escala: el cuerpo susurraba
+
+Confirmado lo que decía la dirección: `<p>` suelto ya estaba a 15 px, pero **la prosa real de las pantallas iba marcada como accesoria**. Los cambios son de *qué escalón usa cada cosa*, salvo un escalón nuevo documentado.
+
+| Elemento | Antes | Después | Por qué |
+|---|---|---|---|
+| `h1` | 22 (`--t-xl`) | **20** (`--t-page`, nuevo) a <768 px; 22 desde 768 | A `--t-lg` empataría con el título de tarjeta |
+| `h2` / título de tarjeta | 18 (`--t-lg`) | 18 | Sin cambio: bajarlo aplastaba la jerarquía |
+| Texto de un aviso (`.attention .item .text`) | 13 (`--t-sm`) | **15** (`--t-md`) | Es el contenido del Resumen, no una nota al pie |
+| Letra pequeña (`.note`) | 12 (`--t-xs`) | **13** (`--t-sm`) | Se lee; lo accesorio es `.tiny` |
+| Pista de un campo (`.field .hint`) | 12 | **13** | Explica el campo |
+| Error de un campo (`.field .error`) | 12 | **13** | Un error a 12 px es un problema de accesibilidad |
+| Cuerpo (`body`, `<p>`), celda, `.subtle`, `.tiny`, etiqueta de la barra | 15 / 13 / 13 / 12 / 10 | iguales | Ya estaban bien |
+
+Regla escrita en `tokens.css`: **`--t-md` es el cuerpo, `--t-sm` lo secundario, `--t-xs` solo lo accesorio; nada que esté para leerse baja de `--t-sm`.** `--t-page` queda documentado como el segundo escalón fuera de la razón 1,2, igual que `--t-nav`.
+
+Comprobado a 320, 360, 400, 768, 1023, 1024 y 1280 px, en las nueve rutas: **ningún desbordamiento horizontal** (63 de 63 combinaciones a 0 px).
+
+### V3 — El chip del libro y la densidad del patrimonio
+
+- **Chip**: «Almacenamiento del navegador» pedía **228,97 px** de una barra de 400 y salía truncado a «Almacenamiento del naveg…». Ahora `sourceShortLabel` dice **«Navegador»** (o el nombre del fichero, en la vía de carpeta): **103,16 px**, sin truncar. La frase completa sigue en el `title` del chip y en Ajustes → «Dónde está», que es donde hay sitio.
+- **Patrimonio**: la tarjeta medía **501,34 px** de alto y el primer aviso empezaba en **y=688**, fuera de la pantalla. Recortado solo el aire entre líneas —ninguna de ellas es un objetivo táctil—: `--s-4`→`--s-3` sobre los bloques, `--s-2`→`--s-1` de separación del bloque, `--s-1`→`--s-0` entre líneas y `line-height: 1.3`. Después: tarjeta **473,56**, línea 18,84→**16,89**, bloque 122,13→**104,31**, primer aviso en **y=658**.
+
+### V4 — Encontrado al medir: el Patrimonio empujaba la página a 768 px
+
+No estaba en la lista. `repeat(3, 1fr)` es `minmax(auto, 1fr)`, y el suelo `auto` de esas columnas es la línea más ancha que contienen («acc_bucket · USD» + «1.698,62 EUR», ninguna de las dos parte). A 768 px el rail deja 473 px para la tarjeta y las tres columnas pedían 701: la página entera se desplazaba **78 px** de lado. **Con la privacidad puesta la máscara es corta y el defecto no se ve**, que es por lo que sobrevivió a la revisión anterior (reproducido también sobre `develop`: 63 px).
+
+Corregido con `repeat(auto-fit, minmax(14rem, 1fr))` más `min-width: 0` en el bloque y en el nombre: dos columnas a 768, tres donde caben. Verificado sin desplazamiento en las siete anchuras con la privacidad **quitada**, que es el caso ancho.
+
+### V5 — La pantalla de configuración: 517 líneas
+
+Partida sin cambiar comportamiento (los 847 tests anteriores siguen verdes; hay 8 nuevos):
+
+| Fichero | Líneas | Qué contiene |
+|---|---|---|
+| `routes/ajustes/configuracion.tsx` | 517 → **204** | Señales, el guardado y la composición |
+| `view-models/settings.ts` | 47 → **268** | Las tablas de campos y toda la lógica del borrador, pura y probada sin DOM |
+| `routes/ajustes/SettingsCards.tsx` | **172** (nuevo) | Los cuatro bloques |
+| `routes/ajustes/SettingsDialogs.tsx` | **112** (nuevo) | Las tres confirmaciones |
+| `components/Section.tsx` | **30** (nuevo) | `<section class="card">` + `<header><h2>`, escrito a mano once veces |
+| `components/Dialog.tsx` | +36 | `ConfirmDialog`: cancelar + confirmar, que estaba copiado tres veces |
+
+`Section` se usa también en `routes/ajustes/index.tsx`; el resto de pantallas se dejan como están para no ensanchar el cambio.
+
+### V6 — Inventario de manejo de errores
+
+Recorrido con el navegador, provocando cada fallo. **Corregido** lo que era de una línea con la capa que ya existe (`toAppError`, el catálogo de `format/messages/errors.ts`); el resto queda aquí para que la dirección decida.
+
+#### Corregido en esta rama
+
+| Sitio | Qué pasaba | Qué pasa ahora |
+|---|---|---|
+| Cualquier pantalla perezosa cuyo *chunk* no se puede descargar (PWA instalada sin red y sin caché) | **`<main>` vacío: 0 caracteres**, sin mensaje y sin salida. La peor «pantalla muda» que hay | `ErrorBoundary` en `AppShell` alrededor del contenido: aviso en español, «Reintentar» y «Recargar la aplicación». La navegación queda fuera del límite, así que los otros destinos siguen funcionando. Medido: 0 → 296 caracteres |
+| Ajustes → Verificación, lista de eventos inválidos | Mostraba el mensaje **en inglés** del dominio («account acc_no_existe does not exist») | `describeError`: «La cuenta acc_no_existe no existe.» |
+| Configuración, valor inválido al guardar | `failure.message`, también en inglés | `toAppError(failure).message` |
+| Escritura con el almacenamiento del navegador lleno (`QuotaExceededError`) | Caía en `unexpected` y mostraba el texto en inglés del `DOMException` | Rama propia en `toAppError`: «No cabe en el almacenamiento del navegador: no se ha escrito nada. Exporta el libro y libera espacio…» |
+
+#### Anotado, sin tocar
+
+| Sitio | Qué pasa hoy | Qué debería pasar |
+|---|---|---|
+| `/libro`, importar un fichero que falla la validación | `onImport` abre primero la vía del navegador y **deja un libro vacío abierto y recordado** (`atlas.source=browser`) antes de que la importación falle. El aviso se ve, pero si el usuario navega se encuentra «El libro está vacío» como si tuviera libro; al siguiente arranque abre ese libro vacío sin decir nada | Validar antes de abrir nada, o deshacer la apertura si la importación falla. **Decisión de la dirección**: es el camino de entrada de un teléfono |
+| Fase `failed` del libro (almacenamiento bloqueado, modo privado) | El aviso vive en la pantalla que lo provocó; al navegar, `RequireLedger` rebota a `/libro` y **el aviso se pierde**. Solo vuelve si el usuario repite la acción | Que la fase `failed` se pinte en `/libro` mientras dure, como hace la fase `reconnect` |
+| Todas las pantallas que escriben (`configuracion`, `EventForm`) | Muestran `failure.error.message` y **descartan `failure.error.action`**, que es el botón que lleva a la solución («Exportar el libro», «Abrir el libro»). Con el almacenamiento lleno el usuario lee qué hacer pero no tiene dónde pulsar | Un solo componente que pinte un `AppError` con su acción, como ya hace `RequireLedger` |
+| Verificación, hallazgos de integridad (`Findings`) | El título está en español (`FINDING_TEXTS`) pero el detalle es `finding.message`, **en inglés** del dominio. No hay equivalente de `describeError` para `IntegrityFinding` | Un catálogo para los hallazgos, o que el dominio entregue los datos y la web redacte. No es de una línea: son diez códigos con detalles distintos |
+| Configuración, «fecha fiscal» por tipo de activo | La opción **«Valor por defecto» no hace nada**: `withPerAssetType` con valor vacío deja el mapa como estaba, así que un valor fijado no se puede quitar desde la pantalla. Comportamiento heredado, conservado tal cual en el refactor | Que vaciar el campo saque el tipo del mapa y vuelva al valor documentado (ADR-0018). Es una línea, pero **cambia comportamiento fiscal** y por eso no se ha tocado |
+| Permiso de carpeta revocado a mitad de sesión (escritorio) | `toAppError` tiene el mensaje y la acción de `NotAllowedError`, pero llega por la vía de arriba, que descarta la acción | Lo mismo que la fila del `AppError` con acción |
+| Fichero vacío o sin líneas | Abre bien y el Resumen dice «El libro está vacío» con su siguiente paso. **Correcto**, se anota para que conste que se ha probado | — |
+| Libro de un esquema más nuevo | «El libro usa la versión de esquema 99 y esta aplicación entiende hasta la 1: actualiza la aplicación (recarga con conexión).» **Correcto** | — |
+| Libro con eventos inválidos | Banda permanente, escritura bloqueada con su motivo y salida a Verificación. **Correcto** | — |
+| Rutas inexistentes (`/loquesea`, un `id` que no existe, un tipo de formulario inventado) | Estado vacío en español con enlace de vuelta en los cuatro casos. **Correcto** | — |
+
+#### Lo que no se ha podido provocar aquí
+
+- Una escritura que falle **a mitad**: `BlobLedgerStore` escribe el fichero entero y el navegador cambia el temporal al cerrar, así que no hay estado intermedio que forzar desde el protocolo DevTools. Se ha provocado el fallo *antes* de escribir (cuota) y el conflicto de *etag*, que sí tienen camino.
+- La vía de **carpeta** (File System Access) completa: Chromium sin cabeza no da el selector de carpetas sin interacción real.
+
+### V7 — La aplicación enseñaba identificadores donde el libro guarda nombres
+
+Señalado por la dirección al mirar las capturas de V1-V6: el Resumen decía «Cubo → `ast_alpha`» y «Efectivo → `acc_mi · EUR`», las doscientas filas de Movimientos decían «`ast_delta · acc_bucket`», y el aviso «Faltan `ast_bonds`, `ast_mm`…» llevaba identificadores incrustados en el texto. El catálogo tiene el nombre desde el primer evento (`acc_mi` es «Fondos indexados», `ast_alpha` es «Alpha Robotics») y las proyecciones `accounts`/`assets` ya lo exponían.
+
+**Una sola función de resolución**, en `format/names.ts`, y nadie resuelve por su cuenta:
+
+- `nameIndex(state)` construye el índice desde el catálogo proyectado; `displayName(names, id)` es **la** función que devuelve el nombre. `displayNames` es la misma sobre una lista y `namingOf` el envoltorio que reciben los catálogos de mensajes, para que una plantilla no pueda sacar un nombre de ningún otro sitio.
+- **El nombre vigente**, el del final del libro: la proyección del catálogo ya resuelve al último `account_updated`/`asset_updated`, así que basta con leerla. El usuario reconoce sus cosas por como se llaman hoy, no por como se llamaban el día de la operación.
+- **Un id desconocido cae al id** y nunca a un hueco (catálogo incompleto, evento que apunta a algo que ya no está, libro aún sin cargar). Todos los parámetros `names` son opcionales y su valor por defecto es `NO_NAMES`, que es exactamente el comportamiento anterior. Con test de las tres vías.
+- `NAMED_ID_FIELDS` dice qué campos del esquema apuntan al **catálogo** y por tanto tienen nombre; el resto de `*_id` apuntan a un evento o a una tesis, que no lo tienen. Está definido una vez y lo usan la ficha del movimiento y el eco de la corrección.
+
+Cubierto: el patrimonio (líneas del cubo, del efectivo y la lista de lo que falta), las filas del libro, la vista previa de un evento (posiciones, lotes y ganancias), las listas de órdenes y tesis de los formularios, **los dos catálogos de mensajes** (quince plantillas de avisos y veinticuatro de errores llevaban ids interpolados) y `toAppError`, que toma el índice del snapshot cargado.
+
+**El id sigue accesible donde sirve para depurar**: en la ficha del movimiento y en el eco de «como está registrado ahora» aparece como dato secundario **junto al** nombre — «Cuenta: Cubo especulativo `acc_bucket`» — nunca en su lugar. La verificación de integridad sigue enseñando los ids de evento, que no son de catálogo.
+
+#### Lo medido después, que era el riesgo
+
+«Global Bond Index Fund · Fondos indexados» es mucho más largo que «ast_bonds · acc_mi». Repetidas las 63 combinaciones de ruta × anchura **con la privacidad quitada**:
+
+| Sitio | Desbordaba | Corregido con |
+|---|---|---|
+| Resumen a **1023 px** | 1 px: una línea del patrimonio | `min-width: 0` en `.networth .lines` y `.networth .line`, que faltaba fuera del *media query* de 768 |
+| Movimientos a **1024 px** | 14 px: la tabla densa | El corte va en un bloque **dentro** de la celda (`max-width: 18rem`), donde `max-width` sí se respeta; una celda con `white-space: nowrap` ensancha la columna en vez de cortar |
+
+Después: **0 desbordamientos en las 63 combinaciones**. Comprobado además que en `<main>` no queda ni un `ast_*` ni un `acc_*` a 400 (DPR 3) ni a 1280 en Resumen, Movimientos y Verificación. Lo que se corta lleva el texto completo en `title`: son las dos filas más largas a 400 px (283 px de 293 necesarios) y siete a 1280 px, todas de nombre compuesto; **en ningún caso se vuelve a enseñar el identificador** para que quepa.

@@ -8,6 +8,7 @@ import { A, useParams } from "@solidjs/router";
 import { createMemo, For, type JSX, Show } from "solid-js";
 import { EmptyState } from "../../components/index.js";
 import { fieldLabel } from "../../format/labels.js";
+import { displayName, NAMED_ID_FIELDS, nameIndex } from "../../format/names.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { FORM_SPECS, valuesOfEvent } from "../../view-models/forms/index.js";
 import { RequireLedger } from "../guard.jsx";
@@ -84,7 +85,15 @@ export default function MovimientoEditarRoute(): JSX.Element {
                           <>
                             <dt>{fieldLabel(name)}</dt>
                             <dd>
-                              {typeof value === "object" ? JSON.stringify(value) : String(value)}
+                              <Show
+                                when={NAMED_ID_FIELDS.has(name) && typeof value === "string"}
+                                fallback={
+                                  typeof value === "object" ? JSON.stringify(value) : String(value)
+                                }
+                              >
+                                {displayName(nameIndex(snapshot.state), value)}{" "}
+                                <code class="tiny">{String(value)}</code>
+                              </Show>
                             </dd>
                           </>
                         )}

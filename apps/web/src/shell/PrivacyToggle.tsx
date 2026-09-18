@@ -1,12 +1,16 @@
 // The privacy switch, one tap away from every screen (FR-023). Native
 // `<input type="checkbox" role="switch">`, which Pico styles as a switch
 // (ADR-0017): no component library for something the platform already has.
+//
+// The 44px target is the label, not the control (`.switch-inline`), and the
+// state is written next to it — "Oculto" / "Visible" — so it never depends on
+// the colour of the oval alone.
 
 import type { JSX } from "solid-js";
 import { store } from "../ledger/state.js";
 
 export const PrivacyToggle = (): JSX.Element => (
-  <label class="row switch-inline" for="privacy">
+  <label class="switch-inline" for="privacy">
     <input
       id="privacy"
       type="checkbox"

@@ -20,6 +20,7 @@ import {
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import { Callout, EmptyState } from "../../components/index.js";
+import { displayName, nameIndex } from "../../format/names.js";
 import { daysSinceExport } from "../../ledger/source.js";
 import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
@@ -38,6 +39,8 @@ export default function ResumenRoute(): JSX.Element {
       {(snapshot) => {
         const date = today();
         const dated = store.projectionAt(date) ?? snapshot.state;
+        // The catalogue, once per render: every block below names its things.
+        const names = nameIndex(snapshot.state);
         const settings = settingsAt(dated, date).settings;
         const worth = netWorth(dated, date, settings);
         const weights = coreWeights(dated, date, settings);
@@ -55,9 +58,11 @@ export default function ResumenRoute(): JSX.Element {
           ...(overdueDays === undefined || (overdueDays !== "never" && overdueDays <= 7)
             ? {}
             : { exportOverdueDays: overdueDays }),
+          names,
         });
         const recent = movementRows(
           ledgerEntries(snapshot.state, snapshot.events).slice(0, RECENT),
+          names,
         );
         const empty = snapshot.events.length === 0;
 
@@ -80,7 +85,7 @@ export default function ResumenRoute(): JSX.Element {
               }
             >
               <div class="stack">
-                <NetWorthBlock view={netWorthView(worth)} />
+                <NetWorthBlock view={netWorthView(worth, names)} />
                 <AttentionBlock items={items} />
                 <section class="card" aria-label="Últimos movimientos">
                   <header>
@@ -96,8 +101,9 @@ export default function ResumenRoute(): JSX.Element {
                 </section>
                 <Show when={weights.partial && weights.missing_prices.length > 0}>
                   <Callout tone="info" title="Los pesos del núcleo no se han podido calcular">
-                    Faltan precios de {weights.missing_prices.join(", ")} a {date}. Los pesos no se
-                    calculan sobre un total parcial.
+                    Faltan precios de{" "}
+                    {weights.missing_prices.map((id) => displayName(names, id)).join(", ")} a {date}
+                    . Los pesos no se calculan sobre un total parcial.
                   </Callout>
                 </Show>
               </div>

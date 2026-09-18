@@ -11,6 +11,7 @@ import { A, useNavigate } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Callout, Dialog, Field, SelectField, Switch } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
+import { nameIndex } from "../../format/names.js";
 import { correct, previewDraft, recordDraft, toAppError } from "../../ledger/actions.js";
 import { store, today } from "../../ledger/state.js";
 import type { EventFormSpec, FieldSpec, FormValues } from "../../view-models/forms/index.js";
@@ -195,7 +196,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
         when={step() === "form"}
         fallback={
           <div class="stack">
-            <Preview preview={preview() as EventPreview} />
+            <Preview preview={preview() as EventPreview} names={nameIndex(props.state)} />
             <div class="actions-bar">
               <button type="button" class="secondary" onClick={() => setStep("form")}>
                 Volver a los datos

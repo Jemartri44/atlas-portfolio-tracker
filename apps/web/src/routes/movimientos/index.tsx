@@ -8,6 +8,7 @@ import { type EntryFilter, ledgerEntries } from "@atlas/domain";
 import { useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
 import { EmptyState } from "../../components/index.js";
+import { nameIndex } from "../../format/names.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { movementRows, PAGE_SIZE } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
@@ -35,7 +36,8 @@ export default function MovimientosRoute(): JSX.Element {
         const entries = createMemo(() =>
           ledgerEntries(snapshot.state, snapshot.events, filterOf(params)),
         );
-        const rows = createMemo(() => movementRows(entries().slice(0, page() * PAGE_SIZE)));
+        const names = nameIndex(snapshot.state);
+        const rows = createMemo(() => movementRows(entries().slice(0, page() * PAGE_SIZE), names));
         const more = (): boolean => entries().length > rows().length;
 
         return (

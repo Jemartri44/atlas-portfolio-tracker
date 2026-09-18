@@ -14,6 +14,7 @@ import {
   type Warning,
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
+import { nameIndex } from "../src/format/names.js";
 import {
   ENVELOPE_FIELDS,
   FORM_SPECS,
@@ -32,7 +33,17 @@ import {
   movementRow,
   movementRows,
   netWorthView,
+  perAssetTypeValue,
+  SETTINGS_NUMBERS,
+  SETTINGS_TEXTS,
+  settingsTouched,
+  settingValue,
   targetWeightTotal,
+  weightValues,
+  withNumber,
+  withOption,
+  withPerAssetType,
+  withText,
 } from "../src/view-models/index.js";
 import { goldenEvents } from "./helpers/golden.js";
 
@@ -457,6 +468,153 @@ describe("targetWeightTotal", () => {
     // Half typed: the sum cannot read it, so it must not say it adds up.
     expect(targetWeightTotal({ a: "100", b: "-" })).toEqual({ total: "100", addsUp: false });
     expect(targetWeightTotal({ a: "abc" })).toEqual({ total: "0", addsUp: false });
+  });
+});
+
+describe("the names of the catalogue reach every screen", () => {
+  /*
+   * The complaint that opened this round: the screens showed `ast_delta` and
+   * `acc_bucket` where the ledger has had "Beta Biotech" and "Cubo
+   * especulativo" since the first event. Each of the three view-models takes
+   * the index and none of them resolves anything on its own.
+   */
+  const events = goldenEvents();
+  const state = projectLedger(events, { collectErrors: true });
+  const names = nameIndex(state);
+
+  it("names the account and the asset on every row of the ledger", () => {
+    const named = movementRows(ledgerEntries(state, events), names);
+    const plain = movementRows(ledgerEntries(state, events));
+    const withSubtitle = named.filter((row) => row.subtitle !== "");
+    expect(withSubtitle.length).toBeGreaterThan(50);
+    // Not one identifier of the catalogue survives in the second line.
+    for (const row of withSubtitle) {
+      expect(row.subtitle).not.toMatch(/\bast_[a-z_0-9]+/);
+      expect(row.subtitle).not.toMatch(/\bacc_[a-z_0-9]+/);
+    }
+    // Without the index, the identifiers: the fallback of `displayName`.
+    expect(plain.some((row) => /ast_|acc_/.test(row.subtitle))).toBe(true);
+  });
+
+  it("names the bucket, the cash and what is missing in the patrimony", () => {
+    const settings = settingsAt(
+      projectLedger(events, { collectErrors: true, asOf: "2029-06-30" }),
+      "2029-06-30",
+    ).settings;
+    const dated = projectLedger(events, { collectErrors: true, asOf: "2029-06-30" });
+    const view = netWorthView(netWorth(dated, "2029-06-30", settings), names);
+    const bucket = view.blocks.find((block) => block.label === "Cubo");
+    const cash = view.blocks.find((block) => block.label === "Efectivo");
+    for (const line of [...(bucket?.lines ?? []), ...(cash?.lines ?? [])]) {
+      expect(line.name).not.toMatch(/\bast_[a-z_0-9]+/);
+      expect(line.name).not.toMatch(/\bacc_[a-z_0-9]+/);
+    }
+    // The note at the bottom lists what is missing: names too.
+    for (const missing of view.missing) {
+      expect(missing).not.toMatch(/^ast_/);
+    }
+    // The core keeps its asset classes, in Spanish and not as an enum.
+    const core = view.blocks.find((block) => block.label === "Núcleo");
+    expect(core?.lines.map((line) => line.name)).toContain("Renta variable");
+  });
+
+  it("keeps the identifier next to the name where the ledger is checked", () => {
+    const entry = ledgerEntries(state, events).find((one) => one.event.type === "buy");
+    const view = detailView(entry as NonNullable<typeof entry>, names);
+    const asset = view.fields.find((field) => field.name === "asset_id");
+    expect(asset?.text).not.toMatch(/^ast_/);
+    expect(asset?.hint).toMatch(/^ast_/);
+    // With no catalogue there is no name to put beside it, so no hint either.
+    const plain = detailView(entry as NonNullable<typeof entry>);
+    expect(plain.fields.find((field) => field.name === "asset_id")?.hint).toBeUndefined();
+  });
+});
+
+describe("the draft of the configuration screen", () => {
+  /*
+   * Everything this block covers used to be a closure inside a 517-line `.tsx`,
+   * where no test could reach it (review of 2026-09-18). `mergeSettings` is the
+   * domain's and has its own tests; what is checked here is the bookkeeping
+   * around it, which is where a comma or an emptied field goes wrong.
+   */
+  const base = settingsAt(
+    projectLedger(goldenEvents() as SupportedEvent[], { collectErrors: true }),
+    "2029-06-30",
+  ).settings;
+
+  it("names every setting it edits with a key the type knows", () => {
+    for (const setting of [...SETTINGS_NUMBERS, ...SETTINGS_TEXTS]) {
+      expect(typeof setting.key).toBe("string");
+      expect(setting.label.length).toBeGreaterThan(0);
+    }
+    // Two tables, no key in both: a field edited twice would fight itself.
+    const keys = [...SETTINGS_NUMBERS, ...SETTINGS_TEXTS].map((one) => String(one.key));
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("shows what is in force until something is typed", () => {
+    expect(settingValue(base, {}, "tax_residence")).toBe(base.tax_residence ?? "");
+    expect(settingValue(base, { tax_residence: "PT" }, "tax_residence")).toBe("PT");
+    const { notification_email: _unset, ...withoutEmail } = base;
+    expect(settingValue(withoutEmail, {}, "notification_email")).toBe("");
+  });
+
+  it("keeps a decimal a string and turns the comma into a point", () => {
+    // Trap 3: a business decimal never becomes a float on the way in.
+    expect(withNumber({}, "deviation_threshold_pp", "2,5")).toEqual({
+      deviation_threshold_pp: "2.5",
+    });
+    expect(withNumber({}, "stale_price_days", " 7 ", true)).toEqual({ stale_price_days: 7 });
+  });
+
+  it("clears a setting when its field is emptied", () => {
+    expect(withNumber({}, "deviation_threshold_pp", "  ")).toEqual({
+      deviation_threshold_pp: undefined,
+    });
+    expect(withText({}, "notification_email", "   ")).toEqual({ notification_email: undefined });
+    expect(withOption({}, "bucket_benchmark_asset_id", "")).toEqual({
+      bucket_benchmark_asset_id: undefined,
+    });
+  });
+
+  it("edits one asset type of a per-type map without dropping the others", () => {
+    const current = {
+      ...base,
+      wash_sale_window: { fund: "1y" as const, stock: "2m" as const },
+    };
+    const patch = withPerAssetType(current, {}, "wash_sale_window", "crypto", " 30d ");
+    expect(patch.wash_sale_window).toEqual({ fund: "1y", stock: "2m", crypto: "30d" });
+    // A second keystroke builds on the first, not on what is in force.
+    const twice = withPerAssetType(current, patch, "wash_sale_window", "etf", "2m");
+    expect(twice.wash_sale_window).toEqual({
+      fund: "1y",
+      stock: "2m",
+      crypto: "30d",
+      etf: "2m",
+    });
+    expect(perAssetTypeValue(current, twice, "wash_sale_window", "crypto")).toBe("30d");
+    expect(perAssetTypeValue(current, {}, "wash_sale_window", "fund")).toBe("1y");
+  });
+
+  it("shows an asset type with no value as empty, never as its default", () => {
+    // ADR-0018: what the ledger does not say takes the documented default at
+    // the point of use; the form must not write that default back in.
+    const current = { ...base, fiscal_date_rule: {} };
+    expect(perAssetTypeValue(current, {}, "fiscal_date_rule", "etf")).toBe("");
+  });
+
+  it("reads the weights in force until one is typed", () => {
+    const current = { ...base, target_weights: { a: "60", b: "40" } };
+    expect(weightValues(current, ["a", "b", "c"], undefined)).toEqual({ a: "60", b: "40", c: "" });
+    expect(weightValues(current, ["a", "b"], { a: "70" })).toEqual({ a: "70" });
+  });
+
+  it("knows whether there is anything to save", () => {
+    expect(settingsTouched({}, undefined)).toBe(false);
+    expect(settingsTouched({ tax_residence: "PT" }, undefined)).toBe(true);
+    expect(settingsTouched({}, { a: "100" })).toBe(true);
+    // An emptied field counts as touched: clearing a setting is a change.
+    expect(settingsTouched({ tax_residence: undefined }, undefined)).toBe(true);
   });
 });
 

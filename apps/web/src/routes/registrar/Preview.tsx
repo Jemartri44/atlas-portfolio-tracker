@@ -9,11 +9,13 @@ import type { EventPreview } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
 import { Amount, Badge, Callout } from "../../components/index.js";
 import { describeWarning } from "../../format/messages/warnings.js";
+import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 
 const positionKey = (row: { account_id: string; asset_id: string }): string =>
   `${row.account_id}|${row.asset_id}`;
 
-export const Preview = (props: { preview: EventPreview }): JSX.Element => {
+export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JSX.Element => {
+  const names = (): NameIndex => props.names ?? NO_NAMES;
   const positions = (): {
     key: string;
     label: string;
@@ -22,7 +24,10 @@ export const Preview = (props: { preview: EventPreview }): JSX.Element => {
   }[] => {
     const keys = new Map<string, string>();
     for (const row of [...props.preview.before.positions, ...props.preview.after.positions]) {
-      keys.set(positionKey(row), `${row.asset_id} · ${row.account_id}`);
+      keys.set(
+        positionKey(row),
+        `${displayName(names(), row.asset_id)} · ${displayName(names(), row.account_id)}`,
+      );
     }
     return [...keys.entries()].map(([key, label]) => ({
       key,
@@ -53,7 +58,7 @@ export const Preview = (props: { preview: EventPreview }): JSX.Element => {
         const after = props.preview.after.lots.find((lot) => lot.id === id);
         return {
           id,
-          label: `${info.asset_id} · adquirido el ${info.acquisition_date}`,
+          label: `${displayName(names(), info.asset_id)} · adquirido el ${info.acquisition_date}`,
           before: before?.quantity.toString(),
           after: after?.quantity.toString(),
           closed: after?.closed === true,
@@ -131,7 +136,7 @@ export const Preview = (props: { preview: EventPreview }): JSX.Element => {
               {(gain) => (
                 <div class="change">
                   <span>
-                    {gain.asset_id} · {gain.fiscal_date}
+                    {displayName(names(), gain.asset_id)} · {gain.fiscal_date}
                   </span>
                   <Amount value={gain.gain_eur_rounded} signed coloured />
                 </div>
@@ -148,7 +153,7 @@ export const Preview = (props: { preview: EventPreview }): JSX.Element => {
       <For each={props.preview.warnings}>
         {(warning) => (
           <Callout tone="warning" title="Aviso">
-            {describeWarning(warning)}
+            {describeWarning(warning, names())}
           </Callout>
         )}
       </For>

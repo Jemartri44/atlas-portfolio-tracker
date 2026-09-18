@@ -84,8 +84,18 @@ export const exportIsOverdue = (source: LedgerSource, today: string): boolean =>
   return days === undefined || days > EXPORT_REMINDER_DAYS;
 };
 
-/** What the chip of the status bar says (FR-011). */
+/** Where the ledger is, written in full: the settings screen has the room. */
 export const sourceLabel = (source: LedgerSource): string =>
   source.kind === "directory"
     ? `${source.fileName} · ${source.directoryName}`
     : "Almacenamiento del navegador";
+
+/**
+ * The same thing in as few words as possible, for the chip of the status bar
+ * (FR-011). "Almacenamiento del navegador" needed 229px of a 400px bar and came
+ * out as "Almacenamiento del naveg…", which says less than "Navegador" does in
+ * a third of the width (review of 2026-09-18). The full sentence stays one tap
+ * away, in the chip's `title` and in Ajustes.
+ */
+export const sourceShortLabel = (source: LedgerSource): string =>
+  source.kind === "directory" ? source.fileName : "Navegador";

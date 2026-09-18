@@ -1,10 +1,21 @@
 // The formatting layer: numbers from their decimal string (no floating point),
 // the privacy mask, Spanish dates and the label catalogue.
 
-import { knownFieldsOf, Money, Quantity, SUPPORTED_EVENT_TYPES } from "@atlas/domain";
+import {
+  knownFieldsOf,
+  Money,
+  type ProjectionError,
+  projectLedger,
+  Quantity,
+  SUPPORTED_EVENT_TYPES,
+  type SupportedEvent,
+  type Warning,
+} from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { formatAge, formatDate, formatInstantDate, formatLongDate } from "../src/format/date.js";
 import { eventLabel, FIELD_LABELS, fieldLabel, valueLabel } from "../src/format/labels.js";
+import { describeError } from "../src/format/messages/errors.js";
+import { describeWarning } from "../src/format/messages/warnings.js";
 import {
   amountDisplay,
   formatMoney,
@@ -14,6 +25,13 @@ import {
   NO_DATA,
 } from "../src/format/money.js";
 import {
+  displayName,
+  displayNames,
+  NAMED_ID_FIELDS,
+  NO_NAMES,
+  nameIndex,
+} from "../src/format/names.js";
+import {
   formatDecimalString,
   formatPercent,
   formatPoints,
@@ -21,6 +39,7 @@ import {
   signOf,
 } from "../src/format/number.js";
 import { privacyFromPreference } from "../src/ledger/state.js";
+import { goldenEvents } from "./helpers/golden.js";
 
 describe("roundDecimalString", () => {
   it("rounds half up, like the fiscal output (ADR-0005)", () => {
@@ -227,5 +246,92 @@ describe("the label catalogue", () => {
     expect(valueLabel("fixed_income")).toBe("Renta fija");
     expect(valueLabel(true)).toBe("Sí");
     expect(valueLabel("lo que sea")).toBe("lo que sea");
+  });
+});
+
+describe("the catalogue of names", () => {
+  /*
+   * The ledger stores `acc_mi` and keeps "Fondos indexados" right next to it.
+   * Showing the identifier where the name exists turns the application into a
+   * debug dump, and it was doing it in the patrimony, in the two hundred rows
+   * of the ledger and inside the translated messages (review of 2026-09-18).
+   */
+  const state = projectLedger(goldenEvents() as SupportedEvent[], { collectErrors: true });
+  const names = nameIndex(state);
+
+  it("resolves an account and an asset to the name they have today", () => {
+    expect(displayName(names, "acc_mi")).toBe("Fondos indexados");
+    expect(displayName(names, "acc_bucket")).toBe("Cubo especulativo");
+    expect(displayName(names, "ast_world")).toBe("World Index Fund");
+    expect(displayName(names, "ast_alpha")).toBe("Alpha Robotics");
+  });
+
+  it("falls back to the identifier, and never to a blank", () => {
+    // An incomplete catalogue, an event pointing at something unknown, or a
+    // ledger that has not loaded yet: all of them must still say something.
+    expect(displayName(names, "ast_no_existe")).toBe("ast_no_existe");
+    expect(displayName(NO_NAMES, "acc_mi")).toBe("acc_mi");
+    expect(displayName(nameIndex(undefined), "acc_mi")).toBe("acc_mi");
+    expect(displayName(names, "")).toBe("");
+    expect(displayName(names, undefined)).toBe("");
+    expect(displayName(names, 7)).toBe("7");
+  });
+
+  it("names a list, and leaves what it does not know", () => {
+    expect(displayNames(names, ["ast_world", "ast_no_existe"])).toBe(
+      "World Index Fund, ast_no_existe",
+    );
+    // Not a list: the same as one identifier, which is what a domain detail
+    // carrying a single value looks like.
+    expect(displayNames(names, "ast_world")).toBe("World Index Fund");
+    expect(displayNames(names, [])).toBe("");
+  });
+
+  it("only claims a name for the fields that point at the catalogue", () => {
+    for (const field of ["account_id", "asset_id", "to_asset_id", "from_account_id"]) {
+      expect(NAMED_ID_FIELDS.has(field)).toBe(true);
+    }
+    // These point at an event or a thesis: there is no name to resolve.
+    for (const field of ["id", "order_id", "request_id", "thesis_id", "reverses_id"]) {
+      expect(NAMED_ID_FIELDS.has(field)).toBe(false);
+    }
+  });
+
+  it("names the identifiers embedded in a warning", () => {
+    const warning: Warning = {
+      code: "stale_price",
+      event_id: "01ARYZ6S41TSV4RRFFQ6900001",
+      message: "english",
+      details: { asset_id: "ast_world", age_days: 17, date: "2026-09-01" },
+    };
+    expect(describeWarning(warning, names)).toContain("World Index Fund");
+    expect(describeWarning(warning, names)).not.toContain("ast_world");
+    // No catalogue: the identifier, which is what it did before.
+    expect(describeWarning(warning)).toContain("ast_world");
+  });
+
+  it("names a list of identifiers embedded in a warning", () => {
+    const warning: Warning = {
+      code: "partial_core_total",
+      event_id: "01ARYZ6S41TSV4RRFFQ6900001",
+      message: "english",
+      details: { assets: ["ast_bonds", "ast_mm"], date: "2026-09-18" },
+    };
+    const text = describeWarning(warning, names);
+    expect(text).toContain("Global Bond Index Fund");
+    expect(text).toContain("Money Market Fund");
+    expect(text).not.toContain("ast_bonds");
+  });
+
+  it("names the identifiers embedded in an error", () => {
+    const error = {
+      code: "insufficient_position",
+      message: "english",
+      details: { account_id: "acc_ibkr", asset_id: "ast_gold", available: "0" },
+    } as unknown as ProjectionError;
+    const text = describeError(error, names);
+    expect(text).toContain("ETC y ETP");
+    expect(text).not.toContain("acc_ibkr");
+    expect(describeError(error)).toContain("acc_ibkr");
   });
 });
