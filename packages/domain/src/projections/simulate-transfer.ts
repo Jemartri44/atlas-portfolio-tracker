@@ -13,7 +13,7 @@ import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { type ManualPrice, manualPrices } from "./prices.js";
+import { manualPrices, type PriceLookup } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
 import {
   type CoreWeightRow,
@@ -108,7 +108,7 @@ export const simulateTransfer = (
     asset_id: assetId,
     asset_class: state.assets.get(assetId)?.asset_class as AssetClass,
     quantity: Quantity.ZERO,
-    price: prices.get(assetId) as ManualPrice,
+    price: prices.get(assetId) as PriceLookup,
     value_eur: Money.zero("EUR"),
     target_pct: Decimal.ZERO,
   });
@@ -142,7 +142,7 @@ export const simulateTransfer = (
     });
   }
 
-  const unit = (from.price as ManualPrice).unit_value_eur;
+  const unit = (from.price as PriceLookup).unit_value_eur;
   const moved = Money.of(unit.amount.mul(quantity.value), "EUR");
   const warnings: Warning[] = [];
   const rows = before.rows.map((row) => {

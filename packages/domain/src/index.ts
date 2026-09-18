@@ -53,7 +53,14 @@ export {
   pendingTransfers,
 } from "./projections/pending.js";
 export { type PhysicalPosition, physicalPositions } from "./projections/positions.js";
-export { type ManualPrice, manualPrices } from "./projections/prices.js";
+export {
+  type ExternalPrices,
+  type ExternalQuote,
+  manualPrices,
+  type PriceLookup,
+  type PriceOrigin,
+  priceAt,
+} from "./projections/prices.js";
 export {
   isOperationEvent,
   type OperationEvent,

@@ -82,6 +82,28 @@ describe("architecture: @atlas/domain imports nothing", () => {
   });
 
   /**
+   * Prompt 005 §3.0 ter: one door to a price. When phase 4 brings automatic
+   * prices, `prices.ts` is the only file that changes; a projection that reads
+   * the valuations on its own would silently keep ignoring them.
+   *
+   * The three exceptions are not price lookups: `operations.ts` fills the list,
+   * `snapshot.ts` serialises it and `valuations.ts` is the Modelo 720 view,
+   * which enumerates registered valuations instead of asking what an asset is
+   * worth on a date.
+   */
+  it("keeps every price lookup behind the gate of prices.ts", () => {
+    const allowed = new Set(
+      ["prices.ts", "valuations.ts", "snapshot.ts", "operations.ts"].map((name) =>
+        join(domainSrc, "projections", name),
+      ),
+    );
+    const violations = listTsFiles(domainSrc)
+      .filter((file) => !allowed.has(file) && readFileSync(file, "utf8").includes(".valuations"))
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+  });
+
+  /**
    * Constitution II: prices are informative and no tax calculation may depend
    * on them. The phase-2 projections stay on their side of the line, and the
    * fiscal ones never learn that a price exists.

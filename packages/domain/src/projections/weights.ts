@@ -12,7 +12,7 @@ import { Quantity } from "../money/quantity.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import { ASSET_CLASSES } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { type ManualPrice, manualPrices, positionValueOf } from "./prices.js";
+import { manualPrices, type PriceLookup, positionValueOf } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
 
 /** Satellites (business rule 6b): 0 % or at least the minimum, never in between. */
@@ -24,7 +24,7 @@ export interface CoreWeightRow {
   /** Aggregated across the core accounts holding it. */
   quantity: Quantity;
   /** Absent when there is no valuation on or before the date. */
-  price?: ManualPrice;
+  price?: PriceLookup;
   /** `quantity × unit_value_eur`; zero without a position, absent without a price. */
   value_eur?: Money;
   target_pct: Decimal;
@@ -320,7 +320,7 @@ export const coreWeights = (
   }
   const by_class = deriveWeights(rows, total, partial, settings, warnings);
   for (const assetId of stale) {
-    const price = prices.get(assetId) as ManualPrice;
+    const price = prices.get(assetId) as PriceLookup;
     warn(
       warnings,
       "stale_price",
