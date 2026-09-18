@@ -71,6 +71,8 @@ export default function ResumenRoute(): JSX.Element {
             : { exportOverdueDays: overdueDays }),
           names,
           privacy: store.privacy(),
+          date,
+          saleDates: new Map(dated.gains.map((gain) => [gain.event_id, gain.fiscal_date])),
         });
         const recent = movementRows(
           ledgerEntries(snapshot.state, snapshot.events).slice(0, RECENT),
