@@ -49,22 +49,18 @@ export const StatsCard = (props: { view: StatsView }): JSX.Element => (
       <Amount value={props.view.expectancy} signed coloured currency={false} />
     </Line>
     <Line label="Máxima caída">
-      <>
-        <Amount value={props.view.maxDrawdown} currency={false} />
-        <Show when={props.view.drawdownFrom !== undefined}>
-          <span class="tiny">
-            de {props.view.drawdownFrom} a {props.view.drawdownTo}
-          </span>
-        </Show>
-      </>
+      <Amount value={props.view.maxDrawdown} currency={false} />
+      <Show when={props.view.drawdownFrom !== undefined}>
+        <span class="tiny">
+          de {props.view.drawdownFrom} a {props.view.drawdownTo}
+        </span>
+      </Show>
     </Line>
     <Line label="Resultado frente al índice">
-      <>
-        <Amount value={props.view.vsIndexTotal} signed coloured currency={false} />
-        <Show when={props.view.vsIndexMissing > 0}>
-          <span class="tiny">{props.view.vsIndexMissing} sin dato</span>
-        </Show>
-      </>
+      <Amount value={props.view.vsIndexTotal} signed coloured currency={false} />
+      <Show when={props.view.vsIndexMissing > 0}>
+        <span class="tiny">{props.view.vsIndexMissing} sin dato</span>
+      </Show>
     </Line>
 
     <Show when={props.view.excluded.length > 0}>

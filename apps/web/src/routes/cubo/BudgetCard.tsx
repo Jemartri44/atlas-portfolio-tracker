@@ -24,18 +24,16 @@ const Line = (props: { label: string; children: JSX.Element }): JSX.Element => (
 export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): JSX.Element => (
   <Section title="Presupuesto y control del cubo">
     <Line label="Aporte bruto acumulado">
-      <>
-        <Amount value={props.view.contributionGross} />
-        <Show when={props.view.budget !== undefined}>
-          <span class="tiny">
-            de <Amount value={props.view.budget} currency={false} /> previstos
-            <Show when={props.view.monthsElapsed !== undefined}>
-              {" "}
-              ({props.view.monthsElapsed} meses)
-            </Show>
-          </span>
-        </Show>
-      </>
+      <Amount value={props.view.contributionGross} />
+      <Show when={props.view.budget !== undefined}>
+        <span class="tiny">
+          de <Amount value={props.view.budget} currency={false} /> previstos
+          <Show when={props.view.monthsElapsed !== undefined}>
+            {" "}
+            ({props.view.monthsElapsed} meses)
+          </Show>
+        </span>
+      </Show>
     </Line>
     <Line label="Resultado realizado">
       <Amount value={props.view.realized} signed coloured currency={false} />
