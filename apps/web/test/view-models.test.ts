@@ -183,11 +183,30 @@ describe("attentionItems", () => {
       openTransfers: [],
     });
     expect(items[0]?.code).toBe("integrity_finding");
-    // The Spanish explanation, not the English evidence: "acc|ast is -1" carries
-    // a position and the summary is read in public.
-    expect(items[0]?.message).toContain("Una posición física ha quedado negativa");
-    expect(items[0]?.message).not.toContain("-1");
+    expect(items[0]?.message).toContain("negative_position");
+    expect(items[0]?.message).toContain("acc|ast is -1");
     expect(items[0]?.message).toContain("01ARYZ6S41TSV4RRFFQ6900002");
+  });
+
+  it("masks the evidence of a finding, which is a position read out loud", () => {
+    const items = attentionItems({
+      invalidCount: 0,
+      privacy: true,
+      warnings: [],
+      findings: [
+        {
+          severity: "error",
+          code: "lots_mismatch",
+          message: "ast_world: open lots 23.0274 differ from physical positions 20",
+          event_ids: [],
+        },
+      ],
+      openOrders: [],
+      openTransfers: [],
+    });
+    expect(items[0]?.message).not.toContain("23.0274");
+    expect(items[0]?.message).toContain("lots_mismatch");
+    expect(items[0]?.message).toContain("ast_world");
   });
 
   /** SC-008: every warning shown leads to the screen where it is fixed. */
