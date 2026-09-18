@@ -18,6 +18,15 @@ export const describeError = (error: DomainError): string => {
       return `La cuenta ${text(d.account_id)} no existe.`;
     case "unknown_asset":
       return `El activo ${text(d.asset_id)} no existe.`;
+    // --- Corporate actions composed from parameters (feature 007) ----------
+    case "missing_source_document":
+      return `Un evento corporativo de tipo ${text(d.kind)} necesita su fuente documental: la URL o el PDF del emisor. No es opcional (data-schema.md §6.5).`;
+    case "missing_effect_parameter":
+      return `Un evento corporativo de tipo ${text(d.kind)} necesita ${text(d.parameter)} para poder componer sus efectos.`;
+    case "no_wizard_for_kind":
+      return `El tipo ${text(d.kind)} no se compone a partir de parámetros: sus efectos se indican a mano con atlas ca raw --kind ${text(d.kind)} --effects-json …`;
+    case "fee_account_not_selling":
+      return `La cuenta ${text(d.account_id)} no participa en la venta forzosa, así que no puede llevar comisión. Venden: ${(d.selling as string[]).join(", ")}.`;
     case "duplicate_account":
       return `La cuenta ${text(d.account_id)} ya existe.`;
     case "duplicate_asset":
@@ -271,6 +280,8 @@ export const describeWarning = (warning: Warning): string => {
       return `Faltan precios de ${(d.assets as string[]).join(", ")} a ${text(d.date)}: no se calculan pesos sobre un total parcial.`;
     case "stale_fx_rate":
       return `El tipo de cambio aplicado a ${text(d.currency)} es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una operación o una valoración más reciente en esa divisa.`;
+    case "transfer_overdue":
+      return `El traspaso ${text(d.request_id)} (${text(d.from_asset_id)} → ${text(d.to_asset_id)}) lleva ${text(d.days_open)} días abierto, más de los ${text(d.max_days)} configurados, y sigue en etapa "${text(d.stage)}". Reclama a la gestora: mientras dure, el dinero no está invertido ni en el origen ni en el destino.`;
     case "partial_bucket_total":
       return `Faltan precios de ${(d.assets as string[]).join(", ")} a ${text(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`;
     case "partial_net_worth":

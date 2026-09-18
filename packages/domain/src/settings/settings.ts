@@ -332,18 +332,36 @@ export const normalizeSettings = (settings: Settings): Settings => {
 };
 
 /**
- * Applies a partial change on top of the current settings, merging the
- * per-asset-type maps. The legacy `wash_sale_window_days` never survives the
- * merge (ADR-0014): the caller resolved it into `wash_sale_window` when it read
- * the settings, and carrying it along would make every change written from now
- * on repeat the old form for ever.
+ * Applies a partial change on top of the current settings.
+ *
+ * A per-asset-type map the patch carries **replaces** the one in force; it is
+ * not merged into it. That is what makes *removing* a type expressible, and
+ * removing is a documented operation: ADR-0018 made these maps partial, and an
+ * absent type takes the default of ADR-0013 and ADR-0014.
+ *
+ * It used to merge, and the consequence was not cosmetic. The configuration
+ * screen would take a type out of the draft, the field would show empty, the
+ * save would report success — and the key came straight back in from `current`,
+ * so the **fiscal rule in force never changed** while the user had read
+ * "guardado". The fiscal date, the tax year, the date of the exchange rate and
+ * the wash-sale window all kept using the old rule.
+ *
+ * Both callers already hand over the whole map (`atlas settings set` composes
+ * `{...current, ...assignments}` itself), so replacing is what they both meant.
+ * It is also what `target_weights` has always done, for the same reason: a set
+ * of values only means something as a set.
+ *
+ * The legacy `wash_sale_window_days` never survives (ADR-0014): the caller
+ * resolved it into `wash_sale_window` when it read the settings, and carrying it
+ * along would make every change written from now on repeat the old form for
+ * ever.
  */
 export const mergeSettings = (current: Settings, patch: Partial<Settings>): Settings => {
   const { wash_sale_window_days: _legacy, ...merged } = {
     ...current,
     ...patch,
-    fiscal_date_rule: { ...current.fiscal_date_rule, ...patch.fiscal_date_rule },
-    wash_sale_window: { ...current.wash_sale_window, ...patch.wash_sale_window },
+    fiscal_date_rule: patch.fiscal_date_rule ?? current.fiscal_date_rule,
+    wash_sale_window: patch.wash_sale_window ?? current.wash_sale_window,
   };
   return merged;
 };

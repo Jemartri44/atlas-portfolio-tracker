@@ -13,6 +13,13 @@
 //    compiles a static `style={{…}}` into the HTML of its templates, which live
 //    inside the `.js`, so the `.js` is scanned too.
 // 4. Size within budget, printed so plan.md can record the measured value.
+//    **Two** budgets since feature 007, because the two answer different
+//    questions and only one of them is felt on a phone: what the browser has to
+//    download **to boot** (what index.html preloads), and the total of
+//    everything it may end up downloading. Until then this file said it measured
+//    the boot and actually summed all of `dist`, lazily loaded chunks included —
+//    so vendoring uPlot, which is only ever loaded by two screens, would have
+//    failed the build without the boot path growing by a byte (Q6).
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
@@ -22,8 +29,37 @@ import { gzipSync } from "node:zlib";
 const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(webRoot, "dist");
 
-/** Budget for everything the browser downloads to boot: JS + CSS, gzip (SC-005). */
-const BUDGET_GZIP_BYTES = 120 * 1024;
+/** What the browser downloads before the first screen paints: JS + CSS, gzip. */
+const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
+
+/**
+ * Everything it may download across the whole application: JS + CSS, gzip.
+ *
+ * The direction set 150 KB in the answers to feature 007, from an estimate that
+ * turned out to be short, and then approved 175 KB with one instruction: fix
+ * the ceiling at **what was actually measured**, not at what was allowed.
+ * Measured at the end of the feature, with every fix of the two reviews in:
+ * **163,1 KB**. Where it goes, all of it gzip:
+ *
+ *   ~34 KB  `@atlas/domain` — the projections, the FIFO engine and the money
+ *           types. It is the application; it is on the boot path because the
+ *           first screen projects the ledger.
+ *   ~22 KB  uPlot, vendored, in a lazily loaded chunk that only Núcleo and Cubo
+ *           pull (ADR-0017 quotes 23 KB **minified**, not gzip).
+ *   ~16 KB  the stylesheet, mostly vendored Pico.
+ *   ~12 KB  `@solidjs/router`.
+ *    ~8 KB  Solid itself plus the boot.
+ *   the rest is our eleven screens, ~2 KB gzip each.
+ *
+ * The number that is felt on a phone is the **boot** one, and that one went
+ * down over the feature: 74,5 KB against a budget of 80.
+ *
+ * The ceiling below is the measured total rounded up to the next whole KB. It
+ * is not a target to grow into: the next feature that needs more has to say why
+ * and move it on purpose, which is the whole point of measuring at the end
+ * instead of leaving the allowance in place.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 164 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -108,18 +144,52 @@ for (const path of files(dist)) {
   }
 }
 
+/**
+ * The assets `index.html` itself pulls: the entry script, its `modulepreload`
+ * siblings and the stylesheet. Everything else arrives when a route is opened.
+ */
+const bootAssets = () => {
+  const html = readFileSync(join(dist, "index.html"), "utf8");
+  const referenced = new Set();
+  for (const match of html.matchAll(/(?:src|href)="\/?([^"]+\.(?:js|css))"/g)) {
+    referenced.add(match[1]);
+  }
+  return referenced;
+};
+
 const kb = (value) => `${(value / 1024).toFixed(1)} KB`;
+
+const boot = bootAssets();
+const gzipBoot = sizes
+  .filter((entry) => boot.has(entry.name))
+  .reduce((sum, entry) => sum + entry.gzip, 0);
 
 console.log("Bundle (JS + CSS):");
 for (const entry of sizes.sort((a, b) => b.gzip - a.gzip)) {
-  console.log(`  ${entry.name}  ${kb(entry.raw)} sin comprimir  ${kb(entry.gzip)} gzip`);
+  const mark = boot.has(entry.name) ? "arranque" : "perezoso";
+  console.log(`  ${entry.name}  ${kb(entry.raw)} sin comprimir  ${kb(entry.gzip)} gzip  ${mark}`);
 }
-console.log(`  TOTAL  ${kb(gzipTotal)} gzip  (presupuesto ${kb(BUDGET_GZIP_BYTES)})`);
+console.log(
+  `  ARRANQUE  ${kb(gzipBoot)} gzip  (presupuesto ${kb(BOOT_BUDGET_GZIP_BYTES)})  — lo que se descarga antes de la primera pantalla`,
+);
+console.log(
+  `  TOTAL     ${kb(gzipTotal)} gzip  (presupuesto ${kb(TOTAL_BUDGET_GZIP_BYTES)})  — todo lo que puede llegar a descargarse`,
+);
 
-if (gzipTotal > BUDGET_GZIP_BYTES) {
+if (gzipBoot > BOOT_BUDGET_GZIP_BYTES) {
   problems.push(
-    `el bundle pesa ${kb(gzipTotal)} gzip y el presupuesto es ${kb(BUDGET_GZIP_BYTES)}`,
+    `el arranque pesa ${kb(gzipBoot)} gzip y el presupuesto es ${kb(BOOT_BUDGET_GZIP_BYTES)}`,
   );
+}
+if (gzipTotal > TOTAL_BUDGET_GZIP_BYTES) {
+  problems.push(
+    `el bundle entero pesa ${kb(gzipTotal)} gzip y el presupuesto es ${kb(TOTAL_BUDGET_GZIP_BYTES)}`,
+  );
+}
+if (gzipBoot === 0) {
+  // A guard on the guard: if the parsing of index.html ever stops matching, the
+  // boot budget would pass by measuring nothing.
+  problems.push("no se ha reconocido ningún asset de arranque en index.html");
 }
 
 if (problems.length > 0) {

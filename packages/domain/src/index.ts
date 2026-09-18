@@ -1,9 +1,11 @@
 // Public API of @atlas/domain.
 
 export {
+  addDays,
   assertCivilDate,
   type CivilDate,
   compareCivilDates,
+  daysBetween,
   daysInMonth,
   isCivilDate,
   isLeapYear,
@@ -43,11 +45,20 @@ export {
   contributionPlan,
 } from "./projections/contribution.js";
 export {
+  type CashSettlement,
+  type CorporateActionDraft,
+  type CorporateActionParams,
+  corporateActionDraft,
+  type FractionRow,
+} from "./projections/corporate-action-draft.js";
+export {
   type BucketCostRow,
   type CoreCostRow,
   type CoreCostTotals,
   type CostSummary,
   costSummary,
+  type StandaloneFeeRow,
+  type StandaloneFees,
 } from "./projections/costs.js";
 export { deepCheck } from "./projections/deep-check.js";
 export { realizedGains } from "./projections/gains.js";
@@ -80,6 +91,9 @@ export {
   type OpenTransfer,
   pendingOrders,
   pendingTransfers,
+  type TransferWatch,
+  transferWatch,
+  type WatchedTransfer,
 } from "./projections/pending.js";
 export { type PhysicalPosition, physicalPositions } from "./projections/positions.js";
 export {
@@ -89,6 +103,7 @@ export {
   type PriceLookup,
   type PriceOrigin,
   priceAt,
+  priceDates,
 } from "./projections/prices.js";
 export {
   isOperationEvent,
@@ -96,6 +111,16 @@ export {
   type ProjectOptions,
   projectLedger,
 } from "./projections/project-ledger.js";
+export {
+  type BucketIndexPoint,
+  type BucketIndexSeries,
+  bucketIndexSeries,
+  type NetWorthPoint,
+  type NetWorthSeries,
+  netWorthSeries,
+  type SeriesOptions,
+  sampleEvenly,
+} from "./projections/series.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
 export {
   type FiscalYearImpact,

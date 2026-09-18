@@ -1,22 +1,32 @@
-// The rows of the ledger. **One data source, two presentations**: two-line
-// cards under 768px and a native table from there up, switched by CSS
-// (`styles/components.css`). No sideways scrollbar at 360px, which is an
-// acceptance criterion and not an aspiration (FR-031).
+// The rows of the ledger, described as columns and painted by `DataTable`:
+// cards under 1024px, dense table from there up. The layout used to live here;
+// since feature 007 it is shared with Núcleo and Cubo, and what is left is what
+// is genuinely about a movement — which figure matters, and what a reversed row
+// looks like.
 
 import { A } from "@solidjs/router";
-import { For, type JSX, Show } from "solid-js";
-import { Amount, Badge } from "../../components/index.js";
+import { type JSX, Show } from "solid-js";
+import { Amount, Badge, type DataColumn, DataTable } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import type { MovementRow } from "../../view-models/index.js";
 
 const StatusBadge = (props: { row: MovementRow }): JSX.Element => (
-  <Show when={props.row.status !== "current"}>
-    <Badge tone={props.row.status === "reversed" ? "negative" : "neutral"}>
-      {props.row.statusLabel}
-    </Badge>
-  </Show>
+  <>
+    <Show when={props.row.status !== "current"}>
+      <Badge tone={props.row.status === "reversed" ? "negative" : "neutral"}>
+        {props.row.statusLabel}
+      </Badge>
+    </Show>
+    <Show when={props.row.invalidReason !== undefined}>
+      {" "}
+      <Badge tone="negative" title={props.row.invalidReason}>
+        inválido
+      </Badge>
+    </Show>
+  </>
 );
 
+/** The figure of a movement: its amount, or its quantity when it has no amount. */
 const Figure = (props: { row: MovementRow }): JSX.Element => (
   <Show
     when={props.row.amount !== undefined}
@@ -30,87 +40,60 @@ const Figure = (props: { row: MovementRow }): JSX.Element => (
   </Show>
 );
 
-export const MovementList = (props: { rows: readonly MovementRow[] }): JSX.Element => (
-  <>
-    {/* Phone: a card per row, the whole card is the target. */}
-    <div class="movements">
-      <For each={props.rows}>
-        {(row) => (
-          <A
-            href={`/movimientos/${row.id}`}
-            class={`movement${row.status === "reversed" ? " is-reversed" : ""}`}
-          >
-            <span class="head">
-              <span class="type">{row.typeLabel}</span>
-              <span class="tiny">{formatDate(row.date)}</span>
-              <StatusBadge row={row} />
-              <Show when={row.invalidReason !== undefined}>
-                <Badge tone="negative" title={row.invalidReason}>
-                  inválido
-                </Badge>
-              </Show>
-            </span>
-            <span class="amount">
-              <Figure row={row} />
-            </span>
-            <span class="sub" title={row.subtitle}>
-              {row.subtitle}
-            </span>
-          </A>
-        )}
-      </For>
-    </div>
+const COLUMNS: readonly DataColumn<MovementRow>[] = [
+  {
+    key: "date",
+    header: "Fecha",
+    card: "meta",
+    cell: (row) => (
+      <>
+        <A href={`/movimientos/${row.id}`}>{formatDate(row.date)}</A>
+        <Show when={row.administrative}>
+          <span class="tiny" title="Fecha de registro: este tipo no tiene fecha de negocio">
+            {" "}
+            (registro)
+          </span>
+        </Show>
+      </>
+    ),
+    // On the card the whole row is already the link, and a link inside a link
+    // is not markup, it is a tap that does the wrong thing.
+    cardCell: (row) => <span class="tiny">{formatDate(row.date)}</span>,
+  },
+  { key: "type", header: "Tipo", card: "title", cell: (row) => row.typeLabel },
+  {
+    key: "subject",
+    header: "Cuenta y activo",
+    card: "sub",
+    cell: (row) => row.subtitle,
+    hint: (row) => row.subtitle,
+  },
+  {
+    key: "status",
+    header: "Estado",
+    card: "meta",
+    cell: (row) => (
+      <Show when={row.status !== "current"} fallback={<span class="tiny">vigente</span>}>
+        <StatusBadge row={row} />
+      </Show>
+    ),
+    cardCell: (row) => <StatusBadge row={row} />,
+  },
+  {
+    key: "figure",
+    header: "Importe o cantidad",
+    numeric: true,
+    card: "figure",
+    cell: (row) => <Figure row={row} />,
+  },
+];
 
-    {/* Desktop: the same rows as a dense table. */}
-    <table class="movements-table">
-      <thead>
-        <tr>
-          <th scope="col">Fecha</th>
-          <th scope="col">Tipo</th>
-          <th scope="col">Cuenta y activo</th>
-          <th scope="col">Estado</th>
-          <th scope="col" class="num">
-            Importe o cantidad
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <For each={props.rows}>
-          {(row) => (
-            <tr>
-              <td>
-                <A href={`/movimientos/${row.id}`}>{formatDate(row.date)}</A>
-                <Show when={row.administrative}>
-                  <span class="tiny" title="Fecha de registro: este tipo no tiene fecha de negocio">
-                    {" "}
-                    (registro)
-                  </span>
-                </Show>
-              </td>
-              <td>{row.typeLabel}</td>
-              <td>
-                <span class="truncate" title={row.subtitle}>
-                  {row.subtitle}
-                </span>
-              </td>
-              <td>
-                <Show when={row.status !== "current"} fallback={<span class="tiny">vigente</span>}>
-                  <StatusBadge row={row} />
-                </Show>
-                <Show when={row.invalidReason !== undefined}>
-                  {" "}
-                  <Badge tone="negative" title={row.invalidReason}>
-                    inválido
-                  </Badge>
-                </Show>
-              </td>
-              <td class="num">
-                <Figure row={row} />
-              </td>
-            </tr>
-          )}
-        </For>
-      </tbody>
-    </table>
-  </>
+export const MovementList = (props: { rows: readonly MovementRow[] }): JSX.Element => (
+  <DataTable
+    label="Movimientos"
+    columns={COLUMNS}
+    rows={props.rows}
+    href={(row) => `/movimientos/${row.id}`}
+    rowClass={(row) => (row.status === "reversed" ? "is-reversed" : undefined)}
+  />
 );

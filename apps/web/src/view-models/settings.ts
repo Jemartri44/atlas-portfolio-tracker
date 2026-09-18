@@ -12,6 +12,12 @@
 // live inside `routes/ajustes/configuracion.tsx`, where 517 lines hid four
 // closures no test could reach (review of 2026-09-18). Everything here is a
 // pure function over plain objects: no signal, no DOM.
+//
+// LINE BUDGET: same reason as `forms/specs.ts`. Most of this file is the two
+// tables that describe the configuration fields — which are numbers, which are
+// texts, what each one means — and the rest is the draft logic that reads them.
+// The tables are the documentation of `Settings` as the screen sees it, and
+// they are worth reading in one piece.
 
 import {
   type AssetType,
@@ -184,25 +190,44 @@ export const withOption = (
   raw: string,
 ): SettingsPatch => ({ ...patch, [key]: raw === "" ? undefined : raw });
 
-/** What one asset type shows for a per-type setting, in force or being typed. */
+/**
+ * What the field shows: the draft when there is one, otherwise what is in force.
+ *
+ * Once a draft map exists it is the **whole** map — `withPerAssetType` rebuilds
+ * it from what is in force plus what has been typed — so a key missing from it
+ * means "removed", not "not touched". Falling back to the value in force here
+ * would put the old value back on screen the moment the field was emptied,
+ * which is the same lie the control used to tell (Q10).
+ */
 export const perAssetTypeValue = (
   current: Settings,
   patch: SettingsPatch,
   key: PerAssetTypeKey,
   type: AssetType,
-): string => String(asRecord(patch[key])[type] ?? current[key][type] ?? "");
+): string => {
+  const draft = patch[key];
+  return draft === undefined
+    ? String(current[key][type] ?? "")
+    : String(asRecord(draft)[type] ?? "");
+};
 
 /**
- * The patch after editing one asset type of a per-type setting.
+ * Sets — or **removes** — the rule of one asset type.
  *
  * The map is rebuilt from what is in force plus what was already typed, so
  * touching `fund` never drops `crypto`.
  *
- * An empty value leaves the map as it was — it does **not** clear the type.
- * That is the behaviour of the screen this was extracted from, kept on purpose
- * so the refactor changes nothing; it is also why choosing "Valor por defecto"
- * looks like it does nothing, which is written down in
- * `specs/006-web-shell/questions.md` for the direction to decide.
+ * Emptying the field takes the key out of the map, which is what the control
+ * ("Valor por defecto") has always promised and never did: the old version
+ * spread an empty object, so a value already set could not be removed from the
+ * screen and the user was told something had changed when nothing had. A
+ * control that lies about what it did is worse than no control (Q10).
+ *
+ * Removing is legitimate and its meaning is written down: ADR-0018 makes these
+ * maps **partial**, and an absent type takes the default documented in ADR-0013
+ * and ADR-0014. The dangerous case — a change that reinterprets events already
+ * recorded — is caught where it belongs, when the `settings_changed` is
+ * registered (ADR-0015 lists what it invalidates and asks for confirmation).
  */
 export const withPerAssetType = (
   current: Settings,
@@ -212,14 +237,16 @@ export const withPerAssetType = (
   raw: string,
 ): SettingsPatch => {
   const text = raw.trim();
-  return {
-    ...patch,
-    [key]: {
-      ...current[key],
-      ...asRecord(patch[key]),
-      ...(text === "" ? {} : { [type]: text }),
-    },
+  const merged: Record<string, unknown> = {
+    ...current[key],
+    ...asRecord(patch[key]),
   };
+  if (text === "") {
+    delete merged[type];
+  } else {
+    merged[type] = text;
+  }
+  return { ...patch, [key]: merged };
 };
 
 /** The weights shown: what is being typed, or what is in force for each asset. */

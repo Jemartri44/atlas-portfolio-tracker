@@ -180,18 +180,18 @@ export default function AjustesRoute(): JSX.Element {
         </Section>
 
         <Section title="Configuración y verificación">
-          <div class="stack">
-            <A href="/ajustes/configuracion" class="movement">
+          <div class="datalist">
+            <A href="/ajustes/configuracion" class="item">
               <span class="head">
-                <span class="type">Configuración</span>
+                <span class="title">Configuración</span>
               </span>
               <span class="sub">
                 Umbrales, pesos objetivo, porcentaje del cubo, fecha fiscal y ventana de recompra.
               </span>
             </A>
-            <A href="/ajustes/verificacion" class="movement">
+            <A href="/ajustes/verificacion" class="item">
               <span class="head">
-                <span class="type">Verificación</span>
+                <span class="title">Verificación</span>
               </span>
               <span class="sub">
                 Comprueba que el libro está íntegro: posiciones, lotes, huellas y referencias.

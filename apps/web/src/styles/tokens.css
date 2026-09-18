@@ -89,6 +89,22 @@
   --c-warning-bg: #fdf1dc;
   --c-nodata: var(--pico-muted-color);
   --c-mask: var(--pico-muted-color);
+
+  /*
+   * Chart series. Four distinguishable hues, but the colour is **never** the
+   * only carrier: every series also has its own dash pattern and its name in
+   * the legend (decision (f) of the 006).
+   */
+  --c-series-core: #2d6cdf;
+  --c-series-bucket: #b8620f;
+  --c-series-cash: #4a7a63;
+  --c-series-index: #6b6f7a;
+
+  /* The four core asset classes, for the allocation bar. */
+  --c-class-equity: #2d6cdf;
+  --c-class-fixed_income: #4a7a63;
+  --c-class-gold: #b8860b;
+  --c-class-crypto: #7a4fd0;
 }
 
 /* Dark, following the system preference unless the user forced light. */
@@ -100,6 +116,14 @@
     --c-negative-bg: #341715;
     --c-warning: #e8bc55;
     --c-warning-bg: #322609;
+    --c-series-core: #7aa8ff;
+    --c-series-bucket: #f0a45e;
+    --c-series-cash: #79c2a4;
+    --c-series-index: #a3a8b4;
+    --c-class-equity: #7aa8ff;
+    --c-class-fixed_income: #79c2a4;
+    --c-class-gold: #e0b558;
+    --c-class-crypto: #b193f0;
   }
 }
 
@@ -111,6 +135,14 @@
   --c-negative-bg: #341715;
   --c-warning: #e8bc55;
   --c-warning-bg: #322609;
+  --c-series-core: #7aa8ff;
+  --c-series-bucket: #f0a45e;
+  --c-series-cash: #79c2a4;
+  --c-series-index: #a3a8b4;
+  --c-class-equity: #7aa8ff;
+  --c-class-fixed_income: #79c2a4;
+  --c-class-gold: #e0b558;
+  --c-class-crypto: #b193f0;
 }
 
 /* Pico, tuned to the scales above: a data application wants less air than a blog. */

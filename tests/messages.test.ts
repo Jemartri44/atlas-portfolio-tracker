@@ -20,6 +20,11 @@ const domainSrc = join(repoRoot, "packages", "domain", "src");
 const cliMessages = join(repoRoot, "apps", "cli", "src", "output", "messages.ts");
 const webErrors = join(repoRoot, "apps", "web", "src", "format", "messages", "errors.ts");
 const webWarnings = join(repoRoot, "apps", "web", "src", "format", "messages", "warnings.ts");
+const webFindings = join(repoRoot, "apps", "web", "src", "format", "messages", "findings.ts");
+const integrityFiles = [
+  join(domainSrc, "projections", "integrity.ts"),
+  join(domainSrc, "projections", "deep-check.ts"),
+];
 
 const listTsFiles = (dir: string): string[] =>
   readdirSync(dir).flatMap((entry) => {
@@ -104,6 +109,47 @@ const NOT_SHOWN: Record<string, string> = {
   missing_migration: "solo ocurre con un libro de una versión sin migración escrita",
   ulid_overflow: "agotar los ids de un milisegundo: prácticamente imposible",
 };
+
+/**
+ * The codes of an integrity finding, which are not errors and not warnings: they
+ * come out of `integrity()` and `deepCheck()` with their own vocabulary. Only
+ * the web has a catalogue for them — the CLI prints the English message of the
+ * domain and that is a known gap, noted for a later feature.
+ */
+const findingCodes = (): Set<string> => {
+  const codes = new Set<string>();
+  for (const file of integrityFiles) {
+    const source = readFileSync(file, "utf8");
+    for (const match of source.matchAll(/(?:error|warning|finding)\(\s*"([a-z_0-9]+)"/g)) {
+      codes.add(match[1] as string);
+    }
+    for (const match of source.matchAll(/code:\s*"([a-z_0-9]+)"/g)) {
+      codes.add(match[1] as string);
+    }
+  }
+  return codes;
+};
+
+describe("Spanish messages: the integrity findings", () => {
+  it("translates every finding the domain can raise", () => {
+    const source = readFileSync(webFindings, "utf8");
+    const translated = new Set(
+      [...source.matchAll(/^ {2}([a-z_0-9]+): \{/gm)].map((match) => match[1] as string),
+    );
+    const codes = findingCodes();
+    expect(codes.size).toBeGreaterThan(5);
+    expect([...codes].filter((code) => !translated.has(code)).sort()).toEqual([]);
+  });
+
+  it("has no dead entry either", () => {
+    const source = readFileSync(webFindings, "utf8");
+    const translated = [...source.matchAll(/^ {2}([a-z_0-9]+): \{/gm)].map(
+      (match) => match[1] as string,
+    );
+    const codes = findingCodes();
+    expect(translated.filter((code) => !codes.has(code)).sort()).toEqual([]);
+  });
+});
 
 describe("Spanish messages: the two interfaces stay level", () => {
   it("finds the codes of the domain", () => {

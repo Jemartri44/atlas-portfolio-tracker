@@ -8,7 +8,9 @@ import {
   type CivilDate,
   type LedgerState,
   pendingOrders,
+  settingsAt,
   theses,
+  transferWatch,
 } from "@atlas/domain";
 import type { Option } from "../components/Field.jsx";
 import { eventLabel, valueLabel } from "../format/labels.js";
@@ -47,20 +49,39 @@ export const assetOptions = (state: LedgerState, book?: "core" | "bucket"): Opti
       hint: `${valueLabel(asset.asset_type)} · ${asset.currency}`,
     }));
 
+/**
+ * How long something has been open, as a hint. **Never a negative number**: a
+ * form is filled against the whole ledger, which can hold an event dated ahead
+ * of today (a purchase with next week's value date is normal), and "-780 días"
+ * is not an age, it is a subtraction shown by mistake.
+ */
+const ageHint = (days: number): string => (days < 0 ? "con fecha futura" : `${days} días`);
+
 /** Open orders, so a purchase can close the one it executes. */
 export const openOrderOptions = (state: LedgerState, at: CivilDate): Option[] => {
   const names = nameIndex(state);
   return pendingOrders(state, at).map((order) => ({
     value: order.order_id,
     label: `${eventLabel(order.side === "buy" ? "buy" : "sell")} de ${displayName(names, order.asset_id)}`,
-    hint: `${order.requested_date} · ${displayName(names, order.account_id)}`,
+    hint: `${order.requested_date} · ${displayName(names, order.account_id)} · ${ageHint(order.days_open)}`,
+  }));
+};
+
+/** Open transfer requests, so the accounting transfer can close the one it completes. */
+export const openTransferOptions = (state: LedgerState, at: CivilDate): Option[] => {
+  const names = nameIndex(state);
+  return transferWatch(state, at, settingsAt(state, at).settings).rows.map((request) => ({
+    value: request.request_id,
+    label: `${displayName(names, request.from_asset_id)} → ${displayName(names, request.to_asset_id)}`,
+    hint: `${request.requested_date} · ${request.stage} · ${ageHint(request.days_open)}${
+      request.overdue === true ? " ⚠ fuera de plazo" : ""
+    }`,
   }));
 };
 
 /**
- * Open theses of that (account, asset). A bucket purchase demands one (rule 15)
- * and the wizard to create them is not in this feature, so the form offers what
- * exists and says how to create one when there is none.
+ * Open theses of that (account, asset). A bucket purchase demands one (rule 15),
+ * and since feature 007 the form that creates one lives in the web too.
  */
 export const openThesisOptions = (
   state: LedgerState,
@@ -103,6 +124,8 @@ export const optionsFor = (source: OptionSource, context: OptionContext): Option
       return currencyOptions(context.state);
     case "openOrders":
       return openOrderOptions(context.state, context.date);
+    case "openTransfers":
+      return openTransferOptions(context.state, context.date);
     case "openTheses":
       return openThesisOptions(
         context.state,

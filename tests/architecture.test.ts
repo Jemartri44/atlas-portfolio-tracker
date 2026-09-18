@@ -414,6 +414,10 @@ const RUNTIME_CLASSES = [
     name: "mask",
     reason: "la compone amountDisplay() en format/money.ts, la puerta de privacidad",
   },
+  {
+    name: "u-wrap",
+    reason: "la escribe uPlot al construir la gráfica; nuestro CSS solo la centra",
+  },
 ];
 
 /**
@@ -495,7 +499,21 @@ describe("architecture: apps/web", () => {
    */
   it("lets only the Amount component format an amount or a quantity", () => {
     const gate = join(webSrc, "format", "money.ts");
-    const allowed = new Set([join(webSrc, "components", "Amount.tsx")]);
+    /*
+     * Two consumers, enumerated, each with its reason:
+     *
+     * - `Amount.tsx` is the gate of the interface: every figure a screen paints
+     *   goes through it (decision (d) of prompt 006).
+     * - `chart/axis.ts` exists because uPlot asks for functions that take
+     *   numbers and return the labels of an axis and of a tooltip, where there
+     *   is no component to go through. Authorised in feature 007 (Q5) on the
+     *   condition that a rendered test proves the mask applies there too:
+     *   **the axis of a chart is an amount for every purpose**.
+     */
+    const allowed = new Set([
+      join(webSrc, "components", "Amount.tsx"),
+      join(webSrc, "components", "chart", "axis.ts"),
+    ]);
     const violations: string[] = [];
     for (const file of listSourceFiles(webSrc)) {
       if (file === gate || allowed.has(file)) {
@@ -582,8 +600,13 @@ describe("architecture: apps/web", () => {
 
   /** Direction two: an element with no rule, which is the same typo mirrored. */
   it("writes no class the stylesheet does not declare", () => {
-    const pico = cssClassesOf(readFileSync(join(webRoot, "vendor", "pico", "pico.css"), "utf8"));
-    const declared = new Set([...ourClasses(), ...pico]);
+    // Both vendored stylesheets count as declarations: the `.u-*` classes are
+    // uPlot's own, written by it at runtime and styled by it.
+    const vendored = [
+      join(webRoot, "vendor", "pico", "pico.css"),
+      join(webRoot, "vendor", "uplot", "uPlot.css"),
+    ].flatMap((path) => [...cssClassesOf(readFileSync(path, "utf8"))]);
+    const declared = new Set([...ourClasses(), ...vendored]);
     const violations = [...markupClasses().literal].filter((name) => !declared.has(name)).sort();
     expect(violations).toEqual([]);
   });
@@ -597,6 +620,71 @@ describe("architecture: apps/web", () => {
       (rule) => !declarationsOf(layout, rule.selector).includes(rule.declaration),
     ).map((rule) => `${rule.selector} { ${rule.declaration} } — ${rule.reason}`);
     expect(missing).toEqual([]);
+  });
+
+  /**
+   * FR-047: a `catch` that does nothing is a defect. It is how a failure becomes
+   * a screen that does not react — the user presses, nothing happens, and
+   * nothing anywhere says why.
+   *
+   * A `catch` **may** be silent when the thing that failed is a convenience and
+   * the code carries on regardless; those are the three reads and writes of
+   * `localStorage`, which throw in a private window. They are recognised by
+   * having a comment inside, which is the point: the reason is written where the
+   * next reader will look.
+   */
+  it("swallows no exception in silence", () => {
+    const empty = /catch\s*(?:\([^)]*\))?\s*\{\s*\}/g;
+    const violations: string[] = [];
+    for (const file of listSourceFiles(webSrc)) {
+      const source = readFileSync(file, "utf8");
+      for (const match of source.matchAll(empty)) {
+        violations.push(`${relative(repoRoot, file)}: ${match[0].replace(/\s+/g, " ")}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * Decision (g) of prompt 007: no file of `apps/web/src` above ~250 lines
+   * without a written reason. The user asked for this in so many words — that
+   * the frontend must not turn into a large amount of code that is hard to
+   * change — and a ceiling nobody checks is a wish.
+   *
+   * The exception exists and is allowed; what is not allowed is an exception
+   * nobody had to justify. A file over the ceiling carries `LINE BUDGET:` in its
+   * header with the reason, and that reason is read in review.
+   */
+  it("keeps every file of the web under 250 lines, or says why not", () => {
+    const LIMIT = 250;
+    const violations: string[] = [];
+    for (const file of listSourceFiles(webSrc)) {
+      const source = readFileSync(file, "utf8");
+      const lines = source.split("\n").length;
+      if (lines > LIMIT && !source.includes("LINE BUDGET:")) {
+        violations.push(`${relative(repoRoot, file)}: ${lines} líneas y ninguna razón escrita`);
+      }
+    }
+    expect(violations.sort()).toEqual([]);
+  });
+
+  /**
+   * The ceiling itself applies to code, not to the cascade (Q8, answer (a)) —
+   * but the exemption was granted **on condition that each stylesheet over the
+   * ceiling carries its reason**, and a condition nobody checks is a wish too.
+   */
+  it("asks the long stylesheets for the same written reason", () => {
+    const LIMIT = 250;
+    const styles = join(webSrc, "styles");
+    const violations: string[] = [];
+    for (const entry of readdirSync(styles).filter((name) => name.endsWith(".css"))) {
+      const source = readFileSync(join(styles, entry), "utf8");
+      const lines = source.split("\n").length;
+      if (lines > LIMIT && !source.includes("LINE BUDGET:")) {
+        violations.push(`styles/${entry}: ${lines} líneas y ninguna razón escrita`);
+      }
+    }
+    expect(violations.sort()).toEqual([]);
   });
 
   /** And the step of the scale that the bar's label uses has to exist. */

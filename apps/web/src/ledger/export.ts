@@ -7,8 +7,9 @@
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { BrowserLedgerBlob } from "@atlas/adapters/browser";
-import { reloadLedger } from "./actions.js";
+import { loadInto } from "./actions.js";
 import { store } from "./state.js";
+import { openBrowserStorage } from "./store.js";
 
 export const EXPORT_FILE_NAME = "ledger.jsonl";
 
@@ -34,17 +35,34 @@ export const exportLedger = async (blob: BrowserLedgerBlob): Promise<void> => {
 };
 
 /**
- * Validates the imported text and only then replaces the ledger. Returns the
- * number of events it holds, which is what the interface shows to confirm.
+ * Imports a file: **validate first, open nothing until it is a ledger**.
+ *
+ * The order is the whole point. It used to be the other way round — the screen
+ * opened the browser storage and *then* validated — so a file that was not a
+ * ledger left an **empty ledger open and remembered**: the warning was shown,
+ * but navigating away landed on "El libro está vacío" as if there were one, and
+ * the next start opened that emptiness without saying anything. It is the entry
+ * path of a phone, so it is the worst place to leave a trap (inventory V6 of
+ * `specs/006-web-shell/questions.md`).
+ *
+ * If the text is not a ledger this throws before touching anything, and the
+ * state the user had is exactly the state they keep.
  */
 export const importLedger = async (text: string): Promise<number> => {
-  const candidate = new MemoryText(text);
-  const events = (await new BlobLedgerStore(candidate).load()).events;
-  const blob = new BrowserLedgerBlob();
-  await blob.replaceText(text);
-  await reloadLedger();
-  return events.length;
+  const events = await validateImport(text);
+  const opened = await openBrowserStorage();
+  await new BrowserLedgerBlob().replaceText(text);
+  await loadInto(opened);
+  return events;
 };
+
+/**
+ * Reads the text as a ledger and answers how many events it holds. Exported so
+ * the half that decides whether a file is acceptable can be tested without a
+ * browser: the other half needs IndexedDB and is checked in Chromium.
+ */
+export const validateImport = async (text: string): Promise<number> =>
+  (await new BlobLedgerStore(new MemoryText(text)).load()).events.length;
 
 /** A read-only blob over a string, to validate an import before it lands. */
 class MemoryText {

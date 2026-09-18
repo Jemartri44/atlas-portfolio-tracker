@@ -63,6 +63,9 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming) => string>
     `${n.one(d.asset_id)}: el precio es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una valoración más reciente.`,
   stale_fx_rate: (d) =>
     `El tipo de cambio aplicado a ${text(d.currency)} es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una operación o una valoración más reciente en esa divisa.`,
+  // --- Tracking ----------------------------------------------------------
+  transfer_overdue: (d, n) =>
+    `El traspaso de ${n.one(d.from_asset_id)} a ${n.one(d.to_asset_id)} lleva ${text(d.days_open)} días abierto, más de los ${text(d.max_days)} configurados. Reclama a la gestora: mientras dure, el dinero no está invertido ni en el origen ni en el destino.`,
   partial_net_worth: (d, n) =>
     `El patrimonio a ${text(d.date)} es parcial: faltan ${[
       ...((d.assets as string[] | undefined) ?? []).map((id) => n.one(id)),

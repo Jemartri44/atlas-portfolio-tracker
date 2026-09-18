@@ -8,15 +8,15 @@
 import { ledgerEntries } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Figure } from "../../components/Figure.jsx";
-import { Amount, Badge, Callout, Dialog, EmptyState, Field } from "../../components/index.js";
-import { formatDate, formatInstantDate } from "../../format/date.js";
+import { Badge, Callout, Dialog, EmptyState, Field } from "../../components/index.js";
+import { formatDate } from "../../format/date.js";
 import { nameIndex } from "../../format/names.js";
-import { reverse } from "../../ledger/actions.js";
 import { store } from "../../ledger/state.js";
+import { reverse } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { detailView } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
+import { EventEnvelope, EventFields, EventLinks } from "./DetailFields.jsx";
 
 export default function MovimientoDetalleRoute(): JSX.Element {
   const params = useParams<{ id: string }>();
@@ -159,95 +159,9 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                       </div>
                     </Show>
 
-                    <section class="card">
-                      <header>
-                        <h2>Datos del evento</h2>
-                      </header>
-                      <dl class="fields">
-                        <For each={view().fields}>
-                          {(field) => (
-                            <>
-                              <dt>{field.label}</dt>
-                              <dd>
-                                <Show when={field.kind === "amount"}>
-                                  <Amount value={field.amount} />
-                                </Show>
-                                <Show when={field.kind === "quantity"}>
-                                  <Amount quantity={field.quantity} />
-                                </Show>
-                                <Show when={field.kind === "date"}>
-                                  {formatDate(field.text as string)}
-                                </Show>
-                                <Show when={field.kind === "percent"}>
-                                  <Figure value={field.text} unit="percent" />
-                                </Show>
-                                <Show when={field.kind === "json"}>
-                                  <pre>
-                                    <code>{field.text}</code>
-                                  </pre>
-                                </Show>
-                                <Show when={field.kind === "id" || field.kind === "text"}>
-                                  {field.text}
-                                  {/* The identifier stays where the ledger is
-                                      checked, next to the name it resolves to. */}
-                                  <Show when={field.hint !== undefined}>
-                                    {" "}
-                                    <code class="tiny">{field.hint}</code>
-                                  </Show>
-                                </Show>
-                              </dd>
-                            </>
-                          )}
-                        </For>
-                      </dl>
-                    </section>
-
-                    <Show when={view().links.length > 0}>
-                      <section class="card">
-                        <header>
-                          <h2>Enlaces</h2>
-                        </header>
-                        <dl class="fields">
-                          <For each={view().links}>
-                            {(link) => (
-                              <>
-                                <dt>{link.label}</dt>
-                                <dd>
-                                  <A href={link.to}>{link.text}</A>
-                                </dd>
-                              </>
-                            )}
-                          </For>
-                        </dl>
-                      </section>
-                    </Show>
-
-                    <section class="card">
-                      <header>
-                        <h2>La línea del libro</h2>
-                      </header>
-                      <dl class="fields">
-                        <For each={view().envelope}>
-                          {(field) => (
-                            <>
-                              <dt>{field.label}</dt>
-                              <dd>
-                                <Show
-                                  when={field.name === "recorded_at"}
-                                  fallback={<code>{field.text}</code>}
-                                >
-                                  {formatInstantDate(field.text as string)}
-                                </Show>
-                              </dd>
-                            </>
-                          )}
-                        </For>
-                      </dl>
-                      <p class="note">
-                        Posición en el fichero: {found().position + 1}. Con este identificador
-                        puedes rectificar también desde la CLI.
-                      </p>
-                    </section>
+                    <EventFields fields={view().fields} />
+                    <EventLinks links={view().links} />
+                    <EventEnvelope envelope={view().envelope} position={found().position} />
                   </div>
 
                   <Dialog

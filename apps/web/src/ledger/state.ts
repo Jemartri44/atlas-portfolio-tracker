@@ -54,6 +54,9 @@ const readLocal = (key: string): string | undefined => {
   try {
     return window.localStorage.getItem(key) ?? undefined;
   } catch {
+    // Blocked site data: the preference is simply not remembered, and the
+    // caller's default applies. There is nothing else to do and nothing worth
+    // telling the user about.
     return undefined;
   }
 };

@@ -23,6 +23,15 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming) => string> =
   // --- Catalogue ---------------------------------------------------------
   unknown_account: (d, n) => `La cuenta ${n.one(d.account_id)} no existe.`,
   unknown_asset: (d, n) => `El activo ${n.one(d.asset_id)} no existe.`,
+  // --- Corporate actions composed from parameters (feature 007) ------------
+  missing_source_document: (d) =>
+    `Un evento corporativo de tipo ${text(d.kind)} necesita su fuente documental: la URL o el PDF del emisor. No es opcional.`,
+  missing_effect_parameter: (d) =>
+    `Falta ${text(d.parameter)}: un evento corporativo de tipo ${text(d.kind)} no se puede componer sin ese dato.`,
+  no_wizard_for_kind: (d) =>
+    `El tipo ${text(d.kind)} no se compone a partir de un formulario: sus efectos hay que indicarlos uno a uno, y eso todavía solo lo hace la CLI.`,
+  fee_account_not_selling: (d, n) =>
+    `La cuenta ${n.one(d.account_id)} no participa en la venta forzosa, así que no puede llevar comisión.`,
   duplicate_account: (d, n) => `La cuenta ${n.one(d.account_id)} ya existe.`,
   duplicate_asset: (d, n) => `El activo ${n.one(d.asset_id)} ya existe.`,
   asset_book_change: (d, n) =>

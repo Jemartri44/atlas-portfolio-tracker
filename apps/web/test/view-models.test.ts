@@ -29,6 +29,7 @@ import {
   ATTENTION_CODES,
   attentionDestination,
   attentionItems,
+  candidateSettings,
   detailView,
   movementRow,
   movementRows,
@@ -375,19 +376,18 @@ describe("detailView", () => {
     expect(detailView(buy as never).editHint).toBeUndefined();
   });
 
-  it("does not offer it on the seven types that used to be a dead end", () => {
+  /**
+   * Four of the original seven. The other three — `transfer`,
+   * `transfer_requested` and `transfer_request_updated` — stopped being dead
+   * ends in feature 007, when the web gained their forms: `editable` is derived
+   * from `FORM_SPECS`, so offering the form and offering "Corregir" cannot drift
+   * apart.
+   */
+  it("does not offer it on the four types that are still a dead end", () => {
     const events = goldenEvents();
     const state = projectLedger(events, { collectErrors: true });
     const entries = ledgerEntries(state, events);
-    const deadEnds = [
-      "interest",
-      "standalone_fee",
-      "fx_exchange",
-      "transfer",
-      "order_updated",
-      "transfer_requested",
-      "transfer_request_updated",
-    ];
+    const deadEnds = ["interest", "standalone_fee", "fx_exchange", "order_updated"];
     const present = entries.filter((row) => deadEnds.includes(row.event.type));
     expect(present.length).toBeGreaterThan(0);
     for (const entry of present) {
@@ -596,6 +596,65 @@ describe("the draft of the configuration screen", () => {
     expect(perAssetTypeValue(current, {}, "wash_sale_window", "fund")).toBe("1y");
   });
 
+  /**
+   * "Valor por defecto" used to do nothing at all: an empty field spread an
+   * empty object, so a value already in force could not be taken off from the
+   * screen and the user was told something had changed when nothing had (Q10).
+   * ADR-0018 makes these maps partial, so removing a key is the documented way
+   * of going back to the default.
+   */
+  /**
+   * **End to end, on the `Settings` that gets written** — not on the draft in
+   * the middle. The first version of this test looked at the patch, and the
+   * patch was right: the key was gone from it. What was wrong was one step
+   * further on, where `mergeSettings` merged the map back into the one in force
+   * and the key returned. The screen said "guardado", the field went back to its
+   * old value and the fiscal rule in force never moved.
+   *
+   * A test that stops at the intermediate step cannot see that, and this is
+   * exactly the kind of figure where not seeing it costs money years later.
+   */
+  it("removes the key of an asset type, all the way to the settings it writes", () => {
+    const current = {
+      ...base,
+      wash_sale_window: { fund: "1y" as const, stock: "2m" as const },
+      fiscal_date_rule: { fund: "value_date" as const, stock: "trade_date" as const },
+    };
+
+    const cleared = withPerAssetType(current, {}, "wash_sale_window", "fund", "");
+    const written = candidateSettings(current, cleared, undefined);
+
+    expect(cleared.wash_sale_window).toEqual({ stock: "2m" });
+    expect(written.wash_sale_window).toEqual({ stock: "2m" });
+    expect(written.wash_sale_window.fund).toBeUndefined();
+    // The field shows empty, and what gets written agrees with the field.
+    expect(perAssetTypeValue(current, cleared, "wash_sale_window", "fund")).toBe("");
+    expect(perAssetTypeValue(current, cleared, "wash_sale_window", "stock")).toBe("2m");
+    // And nothing else moved.
+    expect(written.fiscal_date_rule).toEqual(current.fiscal_date_rule);
+  });
+
+  it("writes the fiscal date rule it was asked to remove, too", () => {
+    const current = {
+      ...base,
+      fiscal_date_rule: { fund: "trade_date" as const, stock: "trade_date" as const },
+    };
+
+    const cleared = withPerAssetType(current, {}, "fiscal_date_rule", "fund", "  ");
+    const written = candidateSettings(current, cleared, undefined);
+
+    expect(written.fiscal_date_rule).toEqual({ stock: "trade_date" });
+  });
+
+  it("removes a key that was only in the draft, not in force", () => {
+    const current = { ...base, wash_sale_window: { fund: "1y" as const } };
+
+    const added = withPerAssetType(current, {}, "wash_sale_window", "etf", "2m");
+    const removed = withPerAssetType(current, added, "wash_sale_window", "etf", "  ");
+
+    expect(removed.wash_sale_window).toEqual({ fund: "1y" });
+  });
+
   it("shows an asset type with no value as empty, never as its default", () => {
     // ADR-0018: what the ledger does not say takes the documented default at
     // the point of use; the form must not write that default back in.
@@ -623,7 +682,7 @@ describe("the form specs", () => {
    * FR-048: a field the schema gains and a form forgets has to make the suite
    * fail, or the day `buy` grows a field the web will quietly stop writing it.
    */
-  it("covers every field of the schema for the nine forms", () => {
+  it("covers every field of the schema for every form", () => {
     const gaps: string[] = [];
     for (const spec of FORM_SPECS) {
       const known = knownFieldsOf(spec.type as never).filter(

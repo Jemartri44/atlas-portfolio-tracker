@@ -15,10 +15,12 @@ import type {
   AccountId,
   AssetClass,
   AssetId,
+  Book,
   BuyEvent,
   CorporateActionEvent,
   LedgerEvent,
   SellEvent,
+  StandaloneFeeEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type ExternalPrices, manualPrices, positionValueOf } from "./prices.js";
@@ -70,10 +72,38 @@ export interface BucketCostTotals {
   fees_pct?: Decimal;
 }
 
+export interface StandaloneFeeRow {
+  account_id: AccountId;
+  book: Book;
+  fees_eur: Money;
+}
+
+/**
+ * Fees that are **not** inherent to an acquisition or a transmission — custody,
+ * administration, connectivity — and therefore do **not** add to the
+ * acquisition cost nor subtract from the transmission value (art. 35 LIRPF,
+ * `docs/business-rules.md` §5.2). They live in `standalone_fee`, they are real
+ * money leaving the account, and until now no view of either interface showed
+ * them at all.
+ *
+ * They are **not classified by kind**: the field that would tell custody from
+ * connectivity (`fee_kind`) does not exist yet. An aggregate the user can see is
+ * better than a breakdown that would have to be guessed.
+ *
+ * The two books keep their own total: they never share one (constitution III).
+ */
+export interface StandaloneFees {
+  rows: StandaloneFeeRow[];
+  core_eur: Money;
+  bucket_eur: Money;
+}
+
 export interface CostSummary {
   date: CivilDate;
   core: { rows: CoreCostRow[]; totals: CoreCostTotals };
   bucket: { rows: BucketCostRow[]; totals: BucketCostTotals };
+  /** Charges that never touch the fiscal basis; shown apart and labelled as such. */
+  standalone: StandaloneFees;
 }
 
 const feeEurOf = (event: {
@@ -85,6 +115,18 @@ const feeEurOf = (event: {
   FxRate.of(Decimal.parse(event.fx_rate), event.currency, event.fx_rate_date).toEur(
     Money.parse(event.fee, event.currency),
   );
+
+/**
+ * A standalone fee in euros. `fx_rate_date` is optional on this event (lines
+ * written before feature 005 do not carry it), so the rate is dated by the
+ * value date when it is missing — the same fallback `fx-rates.ts` uses.
+ */
+const standaloneFeeEurOf = (event: StandaloneFeeEvent): Money =>
+  FxRate.of(
+    Decimal.parse(event.fx_rate),
+    event.currency,
+    event.fx_rate_date ?? event.value_date,
+  ).toEur(Money.parse(event.amount, event.currency));
 
 /** Acquisition cost of a buy: `(amount ?? quantity × unit_price) + fee`, in euros (data-schema.md §8.1). */
 const costEurOf = (event: BuyEvent): Money => {
@@ -135,6 +177,8 @@ interface Accumulator {
   invested: Map<AssetId, Money>;
   /** Per account of the bucket: commissions paid and capital traded, together. */
   bucket: Map<AccountId, BucketTotals>;
+  /** Per account, either book: the charges that are not part of any basis. */
+  standalone: Map<AccountId, Money>;
 }
 
 const addTo = <K>(map: Map<K, Money>, key: K, amount: Money): void => {
@@ -185,7 +229,12 @@ const accumulate = (
   events: readonly LedgerEvent[],
   asOf: CivilDate | undefined,
 ): Accumulator => {
-  const totals: Accumulator = { fees: new Map(), invested: new Map(), bucket: new Map() };
+  const totals: Accumulator = {
+    fees: new Map(),
+    invested: new Map(),
+    bucket: new Map(),
+    standalone: new Map(),
+  };
   // An event the projection rejected produced no position and no lot: its
   // commission is not a cost of the portfolio either (ADR-0015).
   const invalid = new Set(state.invalid.map((entry) => entry.event.id));
@@ -202,6 +251,10 @@ const accumulate = (
     }
     if (event.type === "buy" || event.type === "sell") {
       bookTrade(state, totals, event);
+      continue;
+    }
+    if (event.type === "standalone_fee") {
+      addTo(totals.standalone, event.account_id, standaloneFeeEurOf(event));
       continue;
     }
     if (event.type === "corporate_action") {
@@ -245,6 +298,31 @@ const bucketBlockOf = (totals: Accumulator): CostSummary["bucket"] => {
       ...(invested.isZero() ? {} : { fees_pct: fees.amount.div(invested.amount).mul(HUNDRED) }),
     },
   };
+};
+
+/**
+ * The standalone charges, per account and with a total per book. An account the
+ * catalogue does not know has no book, so its charge is left out rather than
+ * dropped into one of the two totals (constitution III, same rule as `bookTrade`).
+ */
+const standaloneBlockOf = (state: LedgerState, totals: Accumulator): StandaloneFees => {
+  const rows: StandaloneFeeRow[] = [];
+  let core = Money.zero(EUR);
+  let bucket = Money.zero(EUR);
+  for (const [account_id, fees_eur] of totals.standalone) {
+    const book = state.accounts.get(account_id)?.book;
+    if (book === undefined) {
+      continue;
+    }
+    rows.push({ account_id, book, fees_eur });
+    if (book === "bucket") {
+      bucket = bucket.add(fees_eur);
+    } else {
+      core = core.add(fees_eur);
+    }
+  }
+  rows.sort((a, b) => a.account_id.localeCompare(b.account_id));
+  return { rows, core_eur: core, bucket_eur: bucket };
 };
 
 const annualCostOf = (ter: Decimal | undefined, value: Money | undefined): Money | undefined =>
@@ -323,5 +401,6 @@ export const costSummary = (
       },
     },
     bucket: bucketBlockOf(totals),
+    standalone: standaloneBlockOf(state, totals),
   };
 };

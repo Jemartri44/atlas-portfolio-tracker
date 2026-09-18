@@ -337,3 +337,150 @@ describe("costSummary", () => {
     expect(result.core.totals.weighted_ter).toBeUndefined();
   });
 });
+
+/**
+ * Charges that never touch the fiscal basis (art. 35 LIRPF,
+ * `docs/business-rules.md` §5.2). Until this feature they were in the ledger and
+ * in **no** view of either interface: the user could not see what custody cost.
+ */
+describe("costSummary: standalone fees", () => {
+  it("adds them up per account, with a total per book and never one shared", () => {
+    const b = traded();
+    b.fee({
+      account_id: "acc_fund",
+      value_date: "2027-03-31",
+      amount: "12",
+      description: "custodia",
+    });
+    b.fee({
+      account_id: "acc_fund",
+      value_date: "2027-06-30",
+      amount: "12",
+      description: "custodia",
+    });
+    b.fee({
+      account_id: "acc_bucket",
+      value_date: "2027-06-30",
+      amount: "9",
+      description: "conectividad",
+    });
+    const events = b.build();
+
+    const { standalone } = summary(events);
+
+    expect(
+      standalone.rows.map((row) => [row.account_id, row.book, row.fees_eur.amount.toString()]),
+    ).toEqual([
+      ["acc_bucket", "bucket", "9"],
+      ["acc_fund", "core", "24"],
+    ]);
+    expect(standalone.core_eur.amount.toString()).toBe("24");
+    expect(standalone.bucket_eur.amount.toString()).toBe("9");
+  });
+
+  it("keeps them out of the acquisition cost and out of the commissions of a trade", () => {
+    const b = traded();
+    b.fee({ account_id: "acc_fund", value_date: "2027-06-30", amount: "50" });
+    const withFee = summary(b.build());
+    const withoutFee = summary(traded().build());
+
+    expect(withFee.core.totals.fees_eur.amount.toString()).toBe(
+      withoutFee.core.totals.fees_eur.amount.toString(),
+    );
+    expect(withFee.core.totals.invested_eur.amount.toString()).toBe(
+      withoutFee.core.totals.invested_eur.amount.toString(),
+    );
+    expect(withFee.standalone.core_eur.amount.toString()).toBe("50");
+  });
+
+  it("converts a charge in another currency with its own rate", () => {
+    const b = traded();
+    b.fee({
+      account_id: "acc_etf",
+      value_date: "2027-06-30",
+      amount: "11",
+      currency: "USD",
+      fx_rate: "1.1",
+      fx_rate_date: "2027-06-30",
+    });
+    const { standalone } = summary(b.build());
+
+    expect(standalone.rows[0]?.fees_eur.amount.toString()).toBe("10");
+  });
+
+  /**
+   * The name used to promise more than the test could see: `fx_rate_date` is
+   * optional on a `standalone_fee`, and when it is absent the value date takes
+   * its place — but the date of the rate is **inert** in this projection.
+   * Nothing downstream reads it (the row carries `fees_eur`, a `Money`), so no
+   * assertion here can tell one date from the other. What *is* observable, and
+   * what this checks, is that such a charge converts instead of being skipped
+   * or throwing.
+   */
+  it("converts a charge that carries no fx_rate_date instead of skipping it", () => {
+    const b = traded();
+    b.fee({
+      account_id: "acc_etf",
+      value_date: "2027-06-30",
+      amount: "22",
+      currency: "USD",
+      fx_rate: "2",
+    });
+    const { standalone } = summary(b.build());
+
+    expect(standalone.rows[0]?.fees_eur.amount.toString()).toBe("11");
+  });
+
+  it("does not count a reversed charge: it never happened", () => {
+    const b = traded();
+    const fee = b.fee({ account_id: "acc_fund", value_date: "2027-06-30", amount: "40" });
+    b.reversal(fee.id, "cargo duplicado");
+    const { standalone } = summary(b.build());
+
+    expect(standalone.rows).toEqual([]);
+    expect(standalone.core_eur.amount.toString()).toBe("0");
+  });
+
+  it("cuts by the business date, like every other cost", () => {
+    const b = traded();
+    b.fee({ account_id: "acc_fund", value_date: "2028-01-31", amount: "40" });
+    const events = b.build();
+
+    const upToDate = costSummary(
+      projectLedger(events, { asOf: DATE }),
+      events,
+      DATE,
+      DEFAULT_SETTINGS,
+      DATE,
+    );
+
+    expect(upToDate.standalone.core_eur.amount.toString()).toBe("0");
+    expect(summary(events).standalone.core_eur.amount.toString()).toBe("40");
+  });
+
+  it("leaves out a charge on an account the catalogue does not know, instead of guessing its book", () => {
+    const b = traded();
+    const events = b.build();
+    const orphan = {
+      ...b.fee({ account_id: "acc_fund", value_date: "2027-06-30", amount: "7" }),
+      account_id: "acc_ghost",
+    };
+    const state = projectLedger(events, { collectErrors: true });
+
+    const { standalone } = costSummary(state, [...events, orphan], DATE, DEFAULT_SETTINGS);
+
+    expect(standalone.rows).toEqual([]);
+  });
+
+  it("says nothing when there are none", () => {
+    const { standalone } = summary(traded().build());
+
+    expect(standalone.rows).toEqual([]);
+    // Zero **euros**, not an object that happens to exist: `objectContaining({})`
+    // matched anything at all, including a total in the wrong currency.
+    expect(standalone.core_eur.amount.toString()).toBe("0");
+    expect(standalone.core_eur.currency).toBe("EUR");
+    expect(standalone.bucket_eur.amount.toString()).toBe("0");
+    expect(standalone.bucket_eur.currency).toBe("EUR");
+  });
+});

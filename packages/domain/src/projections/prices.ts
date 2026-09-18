@@ -109,6 +109,22 @@ const fromValuation = (
 });
 
 /**
+ * The dates on which the ledger knows **any** price at all, sorted and without
+ * repeats.
+ *
+ * It lives here, and not in whoever asks, for the reason this module exists:
+ * "on which days does a price exist" is a question about prices, and
+ * `state.valuations` is read behind this one door (the architecture test
+ * enforces it). When phase 4 adds automatic quotes, the dates of the external
+ * source are added **here** and every caller gains them for free.
+ *
+ * The time series uses it: between two valuations the ledger knows nothing new,
+ * so these are the only dates worth projecting at.
+ */
+export const priceDates = (state: LedgerState): CivilDate[] =>
+  [...new Set(state.valuations.map((event) => event.date))].sort();
+
+/**
  * Last manual price per asset on or before `date`. `state.valuations` is
  * already in (date, file position) order, so the last one seen wins and a tie
  * is broken by file position (decision (b) of prompt 004).

@@ -7,6 +7,12 @@
  * promise (prompt §3.5, decision (e)). The status bar, which carries where the
  * ledger is plus two switches, exists only on the narrow layout: on the wide
  * one its content moves into the rail's footer, so there is never a second bar.
+ *
+ * LINE BUDGET: the ceiling of decision (g) counts code, and this is the shell's
+ * cascade — the bottom bar, the desktop rail and the breakpoints that turn one
+ * into the other. Cutting it in two would put the two halves of a single
+ * media-query ladder in different files, and a rule would win or lose depending
+ * on which one was imported first.
  */
 
 .shell {

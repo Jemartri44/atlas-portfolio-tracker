@@ -67,8 +67,10 @@ describe("atlas thesis", () => {
     expect(h.err.join("\n")).toContain("usa --date");
     h.reset();
     expect(await h.exec(["thesis", "list", "--date", "2027-07-31"])).toBe(0);
+    // Rounded to the cent, like `atlas bucket`: the same figure printed twice
+    // with different decimals was a difference of presentation, not of fact.
     expect(h.text()).toMatch(
-      /th_spec_1\s+acc_bucket\s+ast_spec\s+abierta\s+2027-07-01\s+30\s+90\s+455.4545454545\s+0\s+—\s+0.91\s+10\s+500/,
+      /th_spec_1\s+acc_bucket\s+ast_spec\s+abierta\s+2027-07-01\s+30\s+90\s+455.45\s+0\s+—\s+0.91\s+10\s+500/,
     );
     expect(await h.exec(trade("sell", "60", "2027-09-01", "th_spec_1"))).toBe(0);
     expect(await h.exec(["thesis", "close", "th_spec_1", "--notes", "played out", "--yes"])).toBe(

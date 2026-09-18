@@ -4,7 +4,11 @@
 
 import { A } from "@solidjs/router";
 import { ErrorBoundary, type JSX, Show } from "solid-js";
-import { Callout } from "../components/index.js";
+// Imported straight from its module, not through the barrel: the shell is on
+// the boot path, and a barrel drags everything it re-exports with it — the
+// shared table, the chart layer and the date picker would all be downloaded
+// before the first screen paints.
+import { Callout } from "../components/Callout.jsx";
 import { store } from "../ledger/state.js";
 import { LedgerChip } from "./LedgerChip.jsx";
 import { ICONS, Nav } from "./Nav.jsx";

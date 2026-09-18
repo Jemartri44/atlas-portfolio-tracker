@@ -2,6 +2,13 @@
  * The pieces the screens are made of: the net-worth block, the attention list,
  * the movement rows (cards on a phone, a table from 768px: one data source, two
  * presentations, never a sideways scrollbar), forms and dialogs.
+ *
+ * LINE BUDGET: the ceiling of decision (g) counts code, and this is a cascade.
+ * Splitting it per screen would scatter the order in which rules override each
+ * other, which is exactly where the style defects the 006 found in the browser
+ * came from: one stylesheet per component means every screen loads several and
+ * the winner depends on the import order. It stays in one file, sectioned, and
+ * each section says what it dresses.
  */
 
 /* --- The one big number, always broken down ----------------------------- */
@@ -185,28 +192,62 @@
   max-width: var(--control-max);
 }
 
-/* --- Movements: two-line cards on a phone, a table on a desktop -------- */
+/* ---------------------------------------------------------------------------
+ * A list of rows, twice: two-line cards on a phone and a dense table from
+ * 1024px. Written for Movimientos and generalised in feature 007, because
+ * Núcleo and Cubo need exactly the same thing and a second copy of a layout is
+ * a second place to get it wrong (`components/DataTable.tsx`).
+ * ------------------------------------------------------------------------ */
 
-.movements {
+/*
+ * `minmax(0, 1fr)` and `min-width: 0` all the way down. The automatic minimum of
+ * a grid item is its content, so a card whose second line is `nowrap` widened
+ * the list, the list widened the card and the page scrolled sideways at 320px
+ * (measured in Chromium). Truncation only works if every box above the text is
+ * allowed to be narrower than it.
+ */
+.datalist {
   display: grid;
   gap: var(--s-1);
+  grid-template-columns: minmax(0, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.movement {
+/*
+ * `list-style: none` on the `<ul>` is not enough: Pico sets `list-style-type:
+ * square` on `li` itself, which beats what the item inherits. Seen in a
+ * screenshot as a bullet beside every row of every card.
+ */
+.datalist > li {
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.datalist .item {
   border-bottom: 1px solid var(--c-border);
   color: var(--c-text);
   display: grid;
   gap: var(--s-0);
-  grid-template-columns: 1fr auto;
+  /*
+   * `minmax(0, 1fr)`, not `1fr`: the automatic minimum of a grid column is its
+   * content, and the second line of a card is `white-space: nowrap`, so a long
+   * one (a price with its date and its age) pushed the page 35px sideways at
+   * 320px instead of being truncated — measured in Chromium.
+   */
+  grid-template-columns: minmax(0, 1fr) auto;
   padding: var(--s-3) var(--s-1);
   text-decoration: none;
 }
 
-.movement:hover {
+.datalist .item:hover {
   background-color: var(--c-surface-2);
 }
 
-.movement .head {
+.datalist .item .head {
   align-items: baseline;
   display: flex;
   flex-wrap: wrap;
@@ -214,11 +255,11 @@
   grid-column: 1;
 }
 
-.movement .type {
+.datalist .item .title {
   font-weight: var(--w-medium);
 }
 
-.movement .amount {
+.datalist .item .figure {
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
@@ -227,8 +268,9 @@
   white-space: nowrap;
 }
 
-.movement .sub {
+.datalist .item .sub {
   color: var(--c-muted);
+  min-width: 0;
   font-size: var(--t-sm);
   grid-column: 1;
   overflow: hidden;
@@ -236,12 +278,12 @@
   white-space: nowrap;
 }
 
-.movement.is-reversed .type,
-.movement.is-reversed .sub {
+.datalist .item.is-reversed .title,
+.datalist .item.is-reversed .sub {
   text-decoration: line-through;
 }
 
-.movements-table {
+.datatable {
   display: none;
 }
 
@@ -259,17 +301,17 @@
  * which is the same information in a column 505px wide — a comfortable one.
  */
 @media (min-width: 1024px) {
-  .movements {
+  .datalist {
     display: none;
   }
 
-  .movements-table {
+  .datatable {
     display: table;
     width: 100%;
   }
 
-  .movements-table td.num,
-  .movements-table th.num {
+  .datatable td.num,
+  .datatable th.num {
     text-align: right;
   }
 
@@ -281,16 +323,16 @@
    * the cell, where `max-width` is honoured, and the whole text stays one hover
    * away in `title` — the name is never traded back for the identifier.
    */
-  .movements-table td .truncate {
+  .datatable td .truncate {
     display: block;
     max-width: 18rem;
   }
 
-  .movements-table tr:hover {
+  .datatable tr:hover {
     background-color: var(--c-surface-2);
   }
 
-  .movements-table a {
+  .datatable a {
     text-decoration: none;
   }
 }
@@ -516,13 +558,406 @@ dialog .dialog-actions {
   margin: 0;
 }
 
-/* --- Reserved destinations --------------------------------------------- */
+/* --- The date every analytical screen is read at ------------------------ */
 
-.reserved {
-  display: grid;
-  gap: var(--s-3);
+/*
+ * One line: label, control and "Hoy". The first version wrapped the button onto
+ * its own row and the block took 149px of a 890px screen before any content —
+ * a sixth of the phone spent on a date picker (measured in Chromium).
+ */
+.asof {
+  align-items: center;
+  display: flex;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
 }
 
-.reserved code {
+.asof label {
+  align-items: center;
+  display: flex;
+  gap: var(--s-2);
+  margin: 0;
+  min-width: 0;
+}
+
+.asof input {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.asof button {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+  min-width: 0;
+  padding: var(--s-1) var(--s-3);
+  width: auto;
+}
+
+.asof-hint {
+  color: var(--c-muted);
+  display: block;
+  margin-bottom: var(--s-4);
+}
+
+/* --- The technical code of an error: one click away, never in the way --- */
+
+.technical {
+  border: 0;
+  margin: var(--s-2) 0 0;
+  padding: 0;
+}
+
+.technical summary {
+  color: var(--c-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+/* --- Charts (uPlot vendored, ADR-0017) ---------------------------------- */
+
+.chart {
+  margin-top: var(--s-2);
+  min-height: 13.75rem;
+  width: 100%;
+}
+
+/* uPlot draws on a canvas; only the frame is ours. */
+.chart .u-wrap {
+  margin: 0 auto;
+}
+
+.ranges {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+}
+
+.ranges .range {
+  margin-bottom: 0;
+  min-width: 0;
+  padding: var(--s-1) var(--s-3);
+  width: auto;
+}
+
+.ranges .range:disabled {
+  opacity: 0.45;
+}
+
+.chart-table {
+  border: 0;
+  margin-top: var(--s-2);
+  padding: 0;
+}
+
+.chart-table summary {
+  color: var(--c-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+/*
+ * Inside the equivalent table of a chart the cards are enough at every width:
+ * three series of one figure each read better as two lines than as a table
+ * squeezed into 360px, and the table is there for the wide layout as usual.
+ */
+.chart-table .datalist {
+  margin-top: var(--s-2);
+}
+
+/* The legend of a chart: colour **and** dash, never colour alone. */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.chart-legend .entry {
+  align-items: center;
+  color: var(--c-muted);
+  display: flex;
   font-size: var(--t-sm);
+  gap: var(--s-1);
+}
+
+.chart-legend .swatch {
+  border-radius: var(--r-pill);
+  display: inline-block;
+  height: 0.1875rem;
+  width: 1.5rem;
+}
+
+/*
+ * The swatch of the legend carries the same two signals as the line: its colour
+ * and whether it is dashed. Four fixed series, so four classes rather than a
+ * value computed per element — production serves `style-src 'self'` with no
+ * `unsafe-inline`, and an inline `style=` would simply be blocked.
+ */
+/* A solid entry needs no rule of its own; it is declared so the markup that
+   writes it is accounted for, and so the two states read as a pair. */
+.chart-legend .entry.is-solid .swatch {
+  background-image: none;
+}
+
+.chart-legend .entry.is-dashed .swatch {
+  background-image: repeating-linear-gradient(
+    to right,
+    currentColor 0 0.25rem,
+    transparent 0.25rem 0.5rem
+  );
+}
+
+.chart-legend .swatch.is-core {
+  background-color: var(--c-series-core);
+  color: var(--c-series-core);
+}
+
+.chart-legend .swatch.is-bucket {
+  background-color: var(--c-series-bucket);
+  color: var(--c-series-bucket);
+}
+
+.chart-legend .swatch.is-cash {
+  background-color: var(--c-series-cash);
+  color: var(--c-series-cash);
+}
+
+.chart-legend .swatch.is-index {
+  background-color: var(--c-series-index);
+  color: var(--c-series-index);
+}
+
+.chart-legend .entry.is-dashed .swatch {
+  background-color: transparent;
+}
+
+/* --- The core against its target: two stacked bars on the same scale ---- */
+
+.allocation {
+  margin-top: var(--s-2);
+}
+
+.alloc-svg {
+  display: block;
+  width: 100%;
+}
+
+.alloc-seg.is-equity {
+  fill: var(--c-class-equity);
+}
+
+.alloc-seg.is-fixed_income {
+  fill: var(--c-class-fixed_income);
+}
+
+.alloc-seg.is-gold {
+  fill: var(--c-class-gold);
+}
+
+.alloc-seg.is-crypto {
+  fill: var(--c-class-crypto);
+}
+
+.alloc-seg.is-empty {
+  fill: var(--c-surface-2);
+}
+
+.alloc-rows {
+  color: var(--c-muted);
+  margin-top: var(--s-1);
+}
+
+/* The legend swatches of the allocation, by asset class. */
+.chart-legend .swatch.is-class-equity {
+  background-color: var(--c-class-equity);
+}
+
+.chart-legend .swatch.is-class-fixed_income {
+  background-color: var(--c-class-fixed_income);
+}
+
+.chart-legend .swatch.is-class-gold {
+  background-color: var(--c-class-gold);
+}
+
+.chart-legend .swatch.is-class-crypto {
+  background-color: var(--c-class-crypto);
+}
+
+/* --- Núcleo: the class summary, dense and aligned ----------------------- */
+
+.weights {
+  display: grid;
+  gap: var(--s-1);
+  margin-bottom: var(--s-3);
+}
+
+.weight-line {
+  align-items: baseline;
+  display: grid;
+  gap: var(--s-2);
+  grid-template-columns: 1fr auto auto auto;
+}
+
+.weight-line .subject {
+  min-width: 0;
+}
+
+.weight-line .weight,
+.weight-line .target,
+.weight-line .deviation {
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+.weight-line .target {
+  color: var(--c-muted);
+}
+
+.total-line {
+  border-top: 1px solid var(--c-border);
+  margin-top: var(--s-2);
+  padding-top: var(--s-2);
+}
+
+.total-line .subject {
+  font-weight: var(--w-medium);
+}
+
+.contribution-head {
+  display: grid;
+  gap: var(--s-1);
+  margin-bottom: var(--s-3);
+}
+
+/* The label carries a badge; at 320px the row has to be allowed to break. */
+.contribution-head .spread {
+  flex-wrap: wrap;
+}
+
+.contribution-head .subject {
+  min-width: 0;
+}
+
+.block-title {
+  font-size: var(--t-md);
+  font-weight: var(--w-semibold);
+  margin: var(--s-4) 0 var(--s-1);
+}
+
+.by-asset,
+.simulator {
+  border: 0;
+  margin-top: var(--s-3);
+  padding: 0;
+}
+
+.by-asset summary,
+.simulator summary {
+  color: var(--c-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+/*
+ * A disclosure needs to look like one. Pico's own marker is a full-width
+ * chevron on the right, which on a card reads as a separate control; this is a
+ * small triangle glued to the text, and it turns when the block opens.
+ */
+.by-asset summary::after,
+.simulator summary::after,
+.chart-table summary::after,
+.technical summary::after {
+  background: none;
+  content: " ▸";
+  display: inline;
+  transform: none;
+  width: auto;
+}
+
+.by-asset[open] summary::after,
+.simulator[open] summary::after,
+.chart-table[open] summary::after,
+.technical[open] summary::after {
+  content: " ▾";
+}
+
+.datalist .item.is-moved,
+.datatable tr.is-moved {
+  font-weight: var(--w-medium);
+}
+
+/* --- Cubo: statistics read as a column of pairs ------------------------- */
+
+.stat-line {
+  align-items: baseline;
+  padding: var(--s-0) 0;
+}
+
+.stat-line .subject {
+  color: var(--c-muted);
+  min-width: 0;
+}
+
+.headline {
+  background-color: var(--c-surface-2);
+  border-radius: var(--r-sm);
+  display: grid;
+  gap: var(--s-1);
+  margin-bottom: var(--s-3);
+  padding: var(--s-3);
+}
+
+.headline .subject {
+  font-weight: var(--w-medium);
+}
+
+.headline .big {
+  font-size: var(--t-xl);
+  font-weight: var(--w-semibold);
+}
+
+.breakdown {
+  margin-top: var(--s-3);
+}
+
+/* The swatch of a class, beside its name in the weights block. */
+.weight-line .swatch {
+  border-radius: var(--r-pill);
+  display: inline-block;
+  height: 0.1875rem;
+  vertical-align: middle;
+  width: 0.75rem;
+}
+
+.weight-line .swatch.is-class-equity {
+  background-color: var(--c-class-equity);
+}
+
+.weight-line .swatch.is-class-fixed_income {
+  background-color: var(--c-class-fixed_income);
+}
+
+.weight-line .swatch.is-class-gold {
+  background-color: var(--c-class-gold);
+}
+
+.weight-line .swatch.is-class-crypto {
+  background-color: var(--c-class-crypto);
+}
+
+/* What belongs to a row and does not fit in a cell: the thesis of a position. */
+.datalist .item .extra {
+  border-top: 1px dashed var(--c-border);
+  grid-column: 1 / -1;
+  margin-top: var(--s-1);
+  padding-top: var(--s-1);
+}
+
+.datatable tr.extra-row td {
+  color: var(--c-muted);
+  padding-top: 0;
 }

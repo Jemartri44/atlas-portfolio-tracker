@@ -58,6 +58,7 @@ const DESTINATIONS: Record<string, { label: string; to: string }> = {
   same_asset_two_accounts: { label: "Ver movimientos", to: "/movimientos" },
   pending_orders: { label: "Ver movimientos", to: "/movimientos?tipo=order_placed" },
   pending_transfers: { label: "Ver movimientos", to: "/movimientos?tipo=transfer_requested" },
+  transfer_overdue: { label: "Ver la solicitud", to: "/movimientos?tipo=transfer_requested" },
 };
 
 /**
@@ -75,6 +76,7 @@ const RANKS: readonly string[] = [
   "satellite_below_minimum",
   "bucket_weight_exceeded",
   "bucket_contribution_near_limit",
+  "transfer_overdue",
   "wash_sale_window_repurchase",
   "wash_sale_window_prior_buy",
   "thesis_size_exceeded",
@@ -108,6 +110,7 @@ const SEVERITIES: Record<string, AttentionSeverity> = {
   bucket_stop_loss_reached: "error",
   bucket_contribution_exceeded: "error",
   export_overdue: "warning",
+  transfer_overdue: "warning",
   deviation_above_threshold: "warning",
   satellite_below_minimum: "warning",
   bucket_weight_exceeded: "warning",
