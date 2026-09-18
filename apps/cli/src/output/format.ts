@@ -6,9 +6,9 @@ import type { Decimal, Money } from "@atlas/domain";
 /** Shown where a figure exists but is unknown, never a zero (constitution V). */
 export const DASH = "—";
 
-/** Percentage to two decimals, empty when there is none to show. */
+/** Percentage to two decimals; a dash when it is not known, like `eur`. */
 export const pct = (value: Decimal | undefined): string =>
-  value === undefined ? "" : `${value.round(2).toString()} %`;
+  value === undefined ? DASH : `${value.round(2).toString()} %`;
 
 /** Percentage points to two decimals, empty when there are none to show. */
 export const pp = (value: Decimal | undefined): string =>

@@ -306,6 +306,8 @@ describe("atlas bucket", () => {
     expect(text).toContain("La regla de parada (30 %) no se ha podido evaluar");
     expect(text).toContain("La regla de peso (10 %) no se ha podido evaluar");
     expect(text).toContain("faltan ast_alpha_spin");
+    // And the line that cannot be filled ends in a dash, not in nothing.
+    expect(text).toContain("Peso sobre el patrimonio —");
     h.reset();
     expect(await h.exec(["bucket", "--date", "2028-12-31", "--json"])).toBe(0);
     const data = h.json() as {
