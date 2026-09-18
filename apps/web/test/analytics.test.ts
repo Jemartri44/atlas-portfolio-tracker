@@ -28,6 +28,7 @@ import {
   transferView,
   weightsView,
 } from "../src/view-models/core/index.js";
+import { openOrderOptions, openTransferOptions } from "../src/view-models/options.js";
 import { netWorthPlot, pointsIn, secondsOf, windowOf } from "../src/view-models/series.js";
 import { goldenEvents } from "./helpers/golden.js";
 
@@ -265,5 +266,32 @@ describe("the series, as uPlot eats them", () => {
     expect(pointsIn(x, windowOf("TODO", last))).toBe(3);
     expect(pointsIn(x, windowOf("1A", last))).toBe(2);
     expect(pointsIn(x, windowOf("1M", last))).toBe(2);
+  });
+});
+
+describe("the option hints of the forms", () => {
+  /**
+   * A form is filled against the **whole** ledger, which can hold an event dated
+   * ahead of today: a purchase with next week's value date is normal. The age of
+   * an open order or request is then negative, and "-780 días" is not an age,
+   * it is a subtraction shown by mistake.
+   */
+  it("never prints a negative age", () => {
+    const state = projectLedger(EVENTS, { collectErrors: true });
+    const early = "2026-09-18";
+
+    for (const hint of [
+      ...openOrderOptions(state, early).map((option) => option.hint ?? ""),
+      ...openTransferOptions(state, early).map((option) => option.hint ?? ""),
+    ]) {
+      expect(hint).not.toMatch(/-\d+ días/);
+      expect(hint.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("still says how old something is when it is genuinely open", () => {
+    const state = projectLedger(EVENTS, { collectErrors: true });
+    const hints = openTransferOptions(state, "2029-01-31").map((option) => option.hint ?? "");
+    expect(hints.some((hint) => /\d+ días/.test(hint))).toBe(true);
   });
 });

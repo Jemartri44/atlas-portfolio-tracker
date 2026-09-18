@@ -49,13 +49,21 @@ export const assetOptions = (state: LedgerState, book?: "core" | "bucket"): Opti
       hint: `${valueLabel(asset.asset_type)} · ${asset.currency}`,
     }));
 
+/**
+ * How long something has been open, as a hint. **Never a negative number**: a
+ * form is filled against the whole ledger, which can hold an event dated ahead
+ * of today (a purchase with next week's value date is normal), and "-780 días"
+ * is not an age, it is a subtraction shown by mistake.
+ */
+const ageHint = (days: number): string => (days < 0 ? "con fecha futura" : `${days} días`);
+
 /** Open orders, so a purchase can close the one it executes. */
 export const openOrderOptions = (state: LedgerState, at: CivilDate): Option[] => {
   const names = nameIndex(state);
   return pendingOrders(state, at).map((order) => ({
     value: order.order_id,
     label: `${eventLabel(order.side === "buy" ? "buy" : "sell")} de ${displayName(names, order.asset_id)}`,
-    hint: `${order.requested_date} · ${displayName(names, order.account_id)}`,
+    hint: `${order.requested_date} · ${displayName(names, order.account_id)} · ${ageHint(order.days_open)}`,
   }));
 };
 
@@ -65,7 +73,7 @@ export const openTransferOptions = (state: LedgerState, at: CivilDate): Option[]
   return transferWatch(state, at, settingsAt(state, at).settings).rows.map((request) => ({
     value: request.request_id,
     label: `${displayName(names, request.from_asset_id)} → ${displayName(names, request.to_asset_id)}`,
-    hint: `${request.requested_date} · ${request.stage} · ${request.days_open} días${
+    hint: `${request.requested_date} · ${request.stage} · ${ageHint(request.days_open)}${
       request.overdue === true ? " ⚠ fuera de plazo" : ""
     }`,
   }));
