@@ -216,6 +216,43 @@ describe("netWorthSeries", () => {
     expect(series.complete).toBe(1);
   });
 
+  /**
+   * The cap must never turn a gap into a continuous line. Sampling drops
+   * intermediate dates; if the dropped one is the incomplete one, the hole
+   * disappears and the chart draws straight through it — interpolation reached
+   * by arithmetic instead of by drawing, which is the same lie either way.
+   */
+  it("never samples away a point that has no data", () => {
+    const b = coreLedger(["2027-01-31", "2027-03-31", "2027-04-30"]);
+    // A second core asset, priced only at the end: the middle dates are partial.
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      trade_date: "2027-01-02",
+      value_date: "2027-01-02",
+      quantity: "50",
+      unit_price: "20",
+      amount: "1000",
+      fee: "0",
+    });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      date: "2027-04-30",
+      quantity: "50",
+      unit_value: "22",
+    });
+    const events = b.build();
+
+    const capped = netWorthSeries(events, { to: "2027-04-30", max_points: 2 });
+
+    // The two incomplete dates survive the cap, so the gap is still drawn.
+    expect(capped.points.map((point) => point.date)).toContain("2027-01-31");
+    expect(capped.points.map((point) => point.date)).toContain("2027-03-31");
+    expect(capped.points.filter((point) => point.total_eur === undefined).length).toBe(2);
+    expect(capped.complete).toBe(1);
+  });
+
   it("caps the number of points, keeping the ends", () => {
     const dates = ["2027-01-31", "2027-02-28", "2027-03-31", "2027-04-30", "2027-05-31"];
     const events = coreLedger(dates).build();
@@ -241,6 +278,17 @@ describe("sampleEvenly", () => {
 
   it("keeps only the last when asked for one", () => {
     expect(sampleEvenly([1, 2, 3], 1)).toEqual([3]);
+  });
+
+  /**
+   * Spaces the picks **rounding**, not truncating. With six values and four
+   * picks the step is 1,67, so the indices asked for are 0 · 1,67 · 3,33 · 5:
+   * rounding gives 0, 2, 3, 5 and truncating would give 0, 1, 3, 5 — a sample
+   * that leans towards the start of the range and, on a chart, shows the recent
+   * stretch with fewer points than the old one.
+   */
+  it("spaces the picks by rounding, not by truncating", () => {
+    expect(sampleEvenly([0, 1, 2, 3, 4, 5], 4)).toEqual([0, 2, 3, 5]);
   });
 
   it("returns nothing when asked for nothing", () => {
@@ -379,12 +427,22 @@ describe("bucketIndexSeries", () => {
     expect(series.points[0]?.idle).toBe(0);
   });
 
-  it("respects the cap on points like the other series", () => {
+  /**
+   * The cap shapes which **complete** points are drawn; a date with no
+   * comparison is kept on top of it, because dropping it would draw the line
+   * straight through a stretch where nothing is known.
+   */
+  it("shapes the series with the cap but never drops a point with no data", () => {
     const events = bucketLedger().build();
 
-    const series = bucketIndexSeries(events, { to: "2027-06-30", max_points: 2 });
+    const capped = bucketIndexSeries(events, { to: "2027-06-30", max_points: 2 });
+    const whole = bucketIndexSeries(events, { to: "2027-06-30" });
 
-    expect(series.points).toHaveLength(2);
-    expect(series.points.at(-1)?.date).toBe("2027-06-30");
+    expect(capped.points.length).toBeLessThan(whole.points.length + 1);
+    expect(capped.points.at(-1)?.date).toBe("2027-06-30");
+    // Every hole of the full series is still a hole of the capped one.
+    const holes = (series: typeof whole): string[] =>
+      series.points.filter((point) => point.vs_index_eur === undefined).map((p) => p.date);
+    expect(holes(capped)).toEqual(holes(whole));
   });
 });

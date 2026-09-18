@@ -91,9 +91,11 @@ export interface BucketIndexSeries {
 }
 
 /**
- * Evenly spaced sample of at most `limit` entries, keeping the first and the
- * last. A twenty-year ledger asked day by day would be thousands of
+ * Evenly spaced sample of at most `limit` entries, keeping the **first and the
+ * last**. A twenty-year ledger asked day by day would be thousands of
  * projections; the shape of the curve does not need them.
+ *
+ * With `limit` of 1 it keeps the last, which is the one the user asked about.
  */
 export const sampleEvenly = <T>(values: readonly T[], limit: number): T[] => {
   if (limit <= 0) {
@@ -117,15 +119,43 @@ export const sampleEvenly = <T>(values: readonly T[], limit: number): T[] => {
  * The dates of the series, sorted, deduplicated and clipped to the range. `to`
  * is always one of them: the user asked about that day, and the answer to "how
  * much do I have today" cannot depend on when the last valuation was recorded.
+ *
+ * **The cap never samples a hole away.** Sampling drops intermediate dates, and
+ * a dropped date that happened to be the incomplete one turns a gap into a
+ * continuous line — the interpolation decision (d) forbids, arrived at by
+ * arithmetic instead of by drawing. The cap shapes which **complete** points are
+ * drawn; a date known to be incomplete is kept on top of it, as is the last date
+ * of the range, which is the day the user asked about.
+ *
+ * So `max_points` is a target, not a hard ceiling, and it is the right way round:
+ * a chart with more gaps than the cap allows is a chart about a ledger that is
+ * barely valued, and that is information, not noise.
+ *
+ * It does not bite today (the cap is 120 and the ledger offers 8 dates); it
+ * bites around year ten with monthly valuations, which is inside this project's
+ * horizon.
  */
-const resolveDates = (state: LedgerState, options: SeriesOptions): CivilDate[] => {
+const resolveDates = (
+  state: LedgerState,
+  options: SeriesOptions,
+  incomplete: (date: CivilDate) => boolean,
+): CivilDate[] => {
   const from = options.from;
   const candidates = options.dates ?? [...priceDates(state), options.to];
   const inRange = candidates.filter(
     (date) => date <= options.to && (from === undefined || date >= from),
   );
   const sorted = [...new Set(inRange)].sort();
-  return options.max_points === undefined ? sorted : sampleEvenly(sorted, options.max_points);
+  if (options.max_points === undefined || sorted.length <= options.max_points) {
+    return sorted;
+  }
+  const kept = new Set([
+    ...sampleEvenly(sorted, options.max_points),
+    // Never dropped, whatever the cap says.
+    sorted[sorted.length - 1] as CivilDate,
+    ...sorted.filter((date) => incomplete(date)),
+  ]);
+  return sorted.filter((date) => kept.has(date));
 };
 
 interface Resolved {
@@ -134,8 +164,12 @@ interface Resolved {
   to: CivilDate;
 }
 
-const rangeOf = (state: LedgerState, options: SeriesOptions): Resolved => {
-  const dates = resolveDates(state, options);
+const rangeOf = (
+  state: LedgerState,
+  options: SeriesOptions,
+  incomplete: (date: CivilDate) => boolean,
+): Resolved => {
+  const dates = resolveDates(state, options, incomplete);
   return {
     dates,
     from: options.from ?? dates[0] ?? options.to,
@@ -155,7 +189,10 @@ export const netWorthSeries = (
   options: SeriesOptions,
 ): NetWorthSeries => {
   const base = projectLedger(events, { collectErrors: true });
-  const { dates, from, to } = rangeOf(base, options);
+  const { dates, from, to } = rangeOf(base, options, (date) => {
+    const { state, settings } = at(events, date);
+    return netWorth(state, date, settings).partial;
+  });
   let complete = 0;
   const points = dates.map((date): NetWorthPoint => {
     const { state, settings } = at(events, date);
@@ -203,7 +240,14 @@ export const bucketIndexSeries = (
   options: SeriesOptions,
 ): BucketIndexSeries => {
   const base = projectLedger(events, { collectErrors: true });
-  const { dates, from, to } = rangeOf(base, options);
+  const { dates, from, to } = rangeOf(base, options, (date) => {
+    const { state, settings } = at(events, date);
+    return bucketTheses(state, date, settings).rows.some(
+      (thesis) =>
+        (thesis.buys.length > 0 || thesis.sells.length > 0) &&
+        (thesis.unrealized_eur === undefined || thesis.benchmark_equivalent_eur === undefined),
+    );
+  });
   let complete = 0;
   const points = dates.map((date): BucketIndexPoint => {
     const { state, settings } = at(events, date);
