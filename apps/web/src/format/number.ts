@@ -121,6 +121,10 @@ export const formatPoints = (value: string | undefined, format: NumberFormat = {
  */
 export const formatExact = (value: string): string => formatDecimalString(value);
 
+/** "1 tesis", "2 tesis"; "1 evento", "3 eventos": the noun agrees with the count. */
+export const countOf = (count: number, one: string, many: string): string =>
+  `${count} ${count === 1 ? one : many}`;
+
 /** Sign of a decimal string, for the label and the class that accompany the colour. */
 export const signOf = (value: string): "positive" | "negative" | "zero" => {
   if (value.startsWith("-")) {
