@@ -327,7 +327,8 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
   if (facts.currency !== EUR) {
     criteria.add("4");
   }
-  if (facts.fx_rate_date < gain.fiscal_date) {
+  // #5 is about which day's rate converts an amount: in euros nothing is converted.
+  if (facts.currency !== EUR && facts.fx_rate_date < gain.fiscal_date) {
     criteria.add("5");
   }
   if (facts.event_type === "swap" && !facts.fee.isZero()) {
@@ -441,7 +442,7 @@ export const currencyFirstGain = (line: TransmissionLine): Money | undefined => 
 };
 
 const incomeCriteria = (income: InvestmentIncome, rateDate: CivilDate): CriterionId[] =>
-  sortCriteria(rateDate < income.fiscal_date ? ["5", "6"] : ["6"]);
+  sortCriteria(income.gross.currency !== EUR && rateDate < income.fiscal_date ? ["5", "6"] : ["6"]);
 
 export const incomeLine = (ctx: LineContext, income: InvestmentIncome): IncomeLine => {
   const event = ctx.events.get(income.event_id) as DividendEvent;
@@ -492,7 +493,9 @@ export const expenseLines = (ctx: LineContext): ExpenseLine[] =>
         amount,
         amount_eur_rounded: amount.eur.roundToCents().neg(),
         criteria: sortCriteria(
-          event.fx_rate_date < event.value_date ? ["5", "6", "23"] : ["6", "23"],
+          event.currency !== EUR && event.fx_rate_date < event.value_date
+            ? ["5", "6", "23"]
+            : ["6", "23"],
         ),
       };
     });

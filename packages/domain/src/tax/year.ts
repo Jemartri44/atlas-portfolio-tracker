@@ -626,7 +626,29 @@ const doubtful = (
     }
   };
   const abs = (money: Money): Money => (money.isNegative() ? money.neg() : money);
-  exposure("5", declaring("5"), (line) => abs(line.proceeds.eur.roundToCents()));
+  // #5 reaches every figure converted at the rate of an earlier day: the
+  // disposals, and also the income and the deductible fees (feature 009 review).
+  const lateIncome = core.income.filter((line) => line.criteria.includes("5"));
+  const lateFees = core.expenses.filter((line) => line.criteria.includes("5"));
+  const lateSales = declaring("5");
+  if (lateSales.length + lateIncome.length + lateFees.length > 0) {
+    items.push(
+      item("5", {
+        measure: "exposure",
+        event_ids: [
+          ...lateSales.map((line) => line.event_id),
+          ...lateIncome.map((line) => line.event_id),
+          ...lateFees.map((line) => line.event_id),
+        ],
+        exposure_eur: sum([
+          ...lateSales.map((line) => abs(line.proceeds.eur.roundToCents())),
+          ...lateIncome.map((line) => line.gross_eur_rounded),
+          ...lateFees.map((line) => abs(line.amount_eur_rounded)),
+        ]),
+        direction: FISCAL_CRITERIA["5"].risk,
+      }),
+    );
+  }
   // A window no reading of the document supports: what it deferred is at stake.
   exposure("2:other", declaring("2:other"), (line) => abs(line.deferred_eur.roundToCents()));
   exposure("7", declaring("7"), (line) => line.cost_eur.roundToCents());

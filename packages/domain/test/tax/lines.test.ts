@@ -53,7 +53,7 @@ describe("lines", () => {
     ).toEqual([[liquidation.id, "forced_sale", "38"]]);
   });
 
-  it("income converted at a rate older than its date carries #5", () => {
+  it("income in a foreign currency converted at an older rate carries #5; in euros, not", () => {
     const b = taxBuilder();
     buy(b, "stock_s", "2027-01-11", "10", "100");
     b.dividend({
@@ -61,11 +61,22 @@ describe("lines", () => {
       asset_id: "stock_s",
       value_date: "2027-06-07",
       fx_rate_date: "2027-06-04",
+      currency: "USD",
+      fx_rate: "1.2",
     });
-    expect(reportOf(b.build(), 2027).movable_capital.dividends[0]?.criteria).toEqual(["5", "6"]);
+    b.dividend({
+      account_id: "acc_a",
+      asset_id: "stock_s",
+      value_date: "2027-06-14",
+      fx_rate_date: "2027-06-11",
+    });
+    expect(reportOf(b.build(), 2027).movable_capital.dividends.map((d) => d.criteria)).toEqual([
+      ["5", "6"],
+      ["6"],
+    ]);
   });
 
-  it("lists the deductible fees in date order, with #5 when the rate is older", () => {
+  it("lists the deductible fees in date order, with #5 when a foreign rate is older", () => {
     const b = taxBuilder();
     const late = b.fee({
       account_id: "acc_a",
@@ -79,11 +90,21 @@ describe("lines", () => {
       value_date: "2027-07-05",
       fx_rate_date: "2027-07-02",
       amount: "3",
+      currency: "USD",
+      fx_rate: "1.5",
+      fee_kind: "custody",
+    });
+    const euros = b.fee({
+      account_id: "acc_a",
+      value_date: "2027-07-12",
+      fx_rate_date: "2027-07-09",
+      amount: "4",
       fee_kind: "custody",
     });
     const expenses = reportOf(b.build(), 2027).movable_capital.expenses;
     expect(expenses.map((e) => [e.event_id, text(e.amount_eur_rounded), e.criteria])).toEqual([
-      [early.id, "-3", ["5", "6", "23"]],
+      [early.id, "-2", ["5", "6", "23"]],
+      [euros.id, "-4", ["6", "23"]],
       [late.id, "-5", ["6", "23"]],
     ]);
   });

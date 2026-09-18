@@ -368,20 +368,50 @@ describe("the other doubtful criteria", () => {
     expect(text(item?.exposure_eur)).toBe("0");
   });
 
-  it("#5: a rate older than the fiscal date is an exposure", () => {
+  it("#5: a foreign amount converted at an older rate is an exposure, in euros it is nothing", () => {
     const b = taxBuilder();
     buy(b, "stock_s", "2027-01-11", "10", "100");
+    const usd = { currency: "USD", fx_rate: "1.2" } as const;
     const sale = b.sell({
       account_id: "acc_a",
       asset_id: "stock_s",
       value_date: "2027-06-07",
       fx_rate_date: "2027-06-04",
-      quantity: "10",
+      quantity: "5",
       unit_price: "120",
+      ...usd,
+    });
+    const euros = b.sell({
+      account_id: "acc_a",
+      asset_id: "stock_s",
+      value_date: "2027-06-14",
+      fx_rate_date: "2027-06-11",
+      quantity: "5",
+      unit_price: "120",
+    });
+    b.dividend({
+      account_id: "acc_a",
+      asset_id: "stock_s",
+      value_date: "2027-06-21",
+      fx_rate_date: "2027-06-18",
+      gross: "12",
+      ...usd,
+    });
+    b.fee({
+      account_id: "acc_a",
+      value_date: "2027-06-28",
+      fx_rate_date: "2027-06-25",
+      amount: "6",
+      fee_kind: "custody",
+      ...usd,
     });
     const report = reportOf(b.build(), 2027);
     expect(lineOf(report, sale.id).criteria).toContain("5");
-    expect(text(report.doubtful.find((d) => d.criterion === "5")?.exposure_eur)).toBe("1200");
+    expect(lineOf(report, euros.id).criteria).not.toContain("5");
+    // The disposal (600 / 1.2), the dividend (12 / 1.2) and the fee (6 / 1.2).
+    const item = report.doubtful.find((d) => d.criterion === "5");
+    expect(text(item?.exposure_eur)).toBe("515");
+    expect(item?.event_ids).toHaveLength(3);
   });
 
   it("#2 crypto: one year by prudence, and what two months would change", () => {
