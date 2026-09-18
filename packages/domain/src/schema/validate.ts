@@ -289,6 +289,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     effective_date: req("date"),
     source_document: req("string"),
     effects: req("array"),
+    neutrality_regime: opt("boolean"),
     notes: opt("string"),
     fingerprint: req("string"),
   },

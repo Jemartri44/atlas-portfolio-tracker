@@ -432,6 +432,23 @@ export interface CorporateActionEvent extends Envelope {
   /** Key under `documents/` or the issuer's URL. Never empty. */
   source_document: string;
   effects: Effect[];
+  /**
+   * Whether the operation takes the neutrality regime, i.e. the tax deferral of
+   * a merger, exchange or spin-off (ADR-0021). Optional, and **nothing reads
+   * it**: which primitives an exchange composes into is still the user's
+   * choice, and `KIND_RULES` does not look at this field.
+   *
+   * It exists because the deferral is conditional —the AEAT manual requires the
+   * acquiring entity to be Spanish or within Directive 2009/133/EC— so a merger
+   * between two US companies does not qualify, and without the regime the
+   * exchange is a fully taxable swap under article 37.1.h. The project models
+   * it as `convert`, which keeps date and cost and declares nothing: if the
+   * regime did not apply, that omits the whole gain of the exchange. It is the
+   * largest single figure that can be wrong in the system
+   * (`docs/fiscal-questions.md` #7 and #13), and until now the ledger did not
+   * record which of the two readings the user was relying on.
+   */
+  neutrality_regime?: boolean;
   notes?: string;
   fingerprint: string;
 }

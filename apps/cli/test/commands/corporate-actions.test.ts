@@ -144,6 +144,48 @@ describe("atlas ca", () => {
     expect((await lastEvent(h)).effects).toEqual([{ op: "scale", ratio: "0.25" }]);
   });
 
+  /**
+   * ADR-0021: the deferral of a merger is conditional (the acquiring entity has
+   * to be Spanish or within Directive 2009/133/EC), and until now the ledger
+   * did not record which reading the user relied on. The two flags are
+   * exclusive, and saying nothing records nothing.
+   */
+  it("records the neutrality regime when stated, and refuses both flags at once", async () => {
+    const h = harness({ events: seed() });
+    expect(await h.exec(BUY_GOLD)).toBe(0);
+    h.reset();
+    expect(
+      await h.exec([
+        "ca",
+        "split",
+        "--asset",
+        "ast_gold",
+        "--ratio",
+        "2",
+        "--neutrality-regime",
+        ...CA,
+        "--yes",
+      ]),
+    ).toBe(0);
+    expect(await lastEvent(h)).toMatchObject({ neutrality_regime: true });
+    h.reset();
+    expect(
+      await h.exec([
+        "ca",
+        "split",
+        "--asset",
+        "ast_gold",
+        "--ratio",
+        "2",
+        "--neutrality-regime",
+        "--no-neutrality-regime",
+        ...CA,
+        "--yes",
+      ]),
+    ).toBe(64);
+    expect(h.err.join("\n")).toContain("son excluyentes");
+  });
+
   it("merger needs an existing destination and proposes asset add and asset update --inactive", async () => {
     const h = harness({ events: seed() });
     expect(await h.exec(BUY_GOLD)).toBe(0);

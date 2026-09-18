@@ -258,6 +258,24 @@ describe("validateShape: consistency rules", () => {
     rejects(variant(SAMPLES.standalone_fee, { fee_kind: "custodia" }), "invalid_field");
   });
 
+  /**
+   * ADR-0021: whether a merger, exchange or spin-off takes the tax deferral.
+   * Recorded and not acted on — `KIND_RULES` does not look at it — so the test
+   * is that it survives validation in its three states: true, false and absent.
+   */
+  it("corporate_action: the neutrality regime is a boolean, or not recorded at all", () => {
+    expect(
+      validateShape(variant(SAMPLES.corporate_action, { neutrality_regime: true })),
+    ).toBeTruthy();
+    expect(
+      validateShape(variant(SAMPLES.corporate_action, { neutrality_regime: false })),
+    ).toBeTruthy();
+    expect(
+      validateShape(variant(SAMPLES.corporate_action, { neutrality_regime: undefined })),
+    ).toBeTruthy();
+    rejects(variant(SAMPLES.corporate_action, { neutrality_regime: "si" }), "invalid_field");
+  });
+
   it("settings_changed: validates the settings object", () => {
     rejects(variant(SAMPLES.settings_changed, { settings: {} }), "invalid_settings");
   });

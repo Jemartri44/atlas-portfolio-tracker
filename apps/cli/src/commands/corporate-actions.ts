@@ -24,14 +24,33 @@ import {
   previewEvent,
   recordEvent,
 } from "@atlas/domain";
-import { assertKnownFlags, type Flags, requireFlag, stringFlag, UsageError } from "../args.js";
+import {
+  assertKnownFlags,
+  booleanFlag,
+  type Flags,
+  requireFlag,
+  stringFlag,
+  UsageError,
+} from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS, summarize } from "../context.js";
 import { previewData, renderPreview } from "../output/preview.js";
 import { keyValue } from "../output/table.js";
 import { parseAssignments } from "./catalogue.js";
 import { confirm } from "./shared.js";
 
-const COMMON_FLAGS = ["asset", "effective-date", "source-document", "notes"];
+// `--neutrality-regime` / `--no-neutrality-regime` are common to every kind
+// rather than listed per kind: the field is on the event, not on the `kind`,
+// and stating it on a split is harmless while forgetting it on a foreign merger
+// is not (ADR-0021). Silence stays silence: absent means "not recorded", never
+// "does not apply".
+const COMMON_FLAGS = [
+  "asset",
+  "effective-date",
+  "source-document",
+  "notes",
+  "neutrality-regime",
+  "no-neutrality-regime",
+];
 const CASH_FLAGS = [
   "cash-per-share",
   "currency",
@@ -66,6 +85,23 @@ const amountsOf = (flags: Flags): Partial<CorporateActionParams> => {
     ...(fees === undefined ? {} : { fees }),
     ...(withholdings === undefined ? {} : { withholdings }),
   };
+};
+
+/**
+ * Whether the operation takes the neutrality regime. Three states, not two:
+ * said yes, said no, and **not said**, which is what every corporate action
+ * recorded before ADR-0021 carries. The two flags are exclusive.
+ */
+const neutralityOf = (flags: Flags): Partial<CorporateActionParams> => {
+  const yes = booleanFlag(flags, "neutrality-regime");
+  const no = booleanFlag(flags, "no-neutrality-regime");
+  if (yes && no) {
+    throw new UsageError("--neutrality-regime y --no-neutrality-regime son excluyentes");
+  }
+  if (!yes && !no) {
+    return {};
+  }
+  return { neutrality_regime: yes };
 };
 
 /** The cash settlement of the leftovers, when `--cash-per-share` is given. */
@@ -264,6 +300,7 @@ export const corporateActionCommand = async (
     asset_id: asset,
     effective_date: requireFlag(flags, "effective-date"),
     source_document: requireFlag(flags, "source-document"),
+    ...neutralityOf(flags),
     ...(notes === undefined ? {} : { notes }),
     ...extra,
   };

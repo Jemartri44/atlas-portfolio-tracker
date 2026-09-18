@@ -319,6 +319,19 @@ describe("corporateActionDraft: the fractional shares", () => {
     ]);
   });
 
+  it("carries the neutrality regime into the draft, and omits it when not stated", () => {
+    const stated = compose({ ...base, kind: "split", ratio: "2", neutrality_regime: false }, [
+      { account: "acc_a", quantity: "10" },
+    ]);
+    expect(stated.draft).toMatchObject({ neutrality_regime: false });
+    const silent = compose({ ...base, kind: "split", ratio: "2" }, [
+      { account: "acc_a", quantity: "10" },
+    ]);
+    // Absent means "not recorded", never "does not apply": the ledger stores no
+    // criterion nobody chose.
+    expect("neutrality_regime" in silent.draft).toBe(false);
+  });
+
   it("refuses a withholding for an account that takes no part in the sale", () => {
     expect(() =>
       compose(

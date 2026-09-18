@@ -59,6 +59,7 @@ export const FIELD_LABELS: Record<string, string> = {
   isin: "ISIN",
   market: "Mercado",
   fee_kind: "Tipo de comisión",
+  neutrality_regime: "Régimen de neutralidad",
   issuer_country: "País del emisor",
   ticker: "Ticker",
   currency: "Divisa",

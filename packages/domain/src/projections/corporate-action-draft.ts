@@ -50,6 +50,8 @@ export interface CorporateActionParams {
   effective_date: CivilDate;
   /** Issuer's URL or document key. Never empty (data-schema.md §6.5). */
   source_document: string;
+  /** Whether the operation takes the neutrality regime (ADR-0021); recorded, never acted on. */
+  neutrality_regime?: boolean;
   notes?: string;
   /** Destination of a conversion or a carve-out. */
   to_asset_id?: AssetId;
@@ -201,6 +203,9 @@ const eventOf = (
     effective_date: params.effective_date,
     source_document: params.source_document,
     effects: [...effects],
+    ...(params.neutrality_regime === undefined
+      ? {}
+      : { neutrality_regime: params.neutrality_regime }),
     ...(params.notes === undefined ? {} : { notes: params.notes }),
   }) as Draft<CorporateActionEvent>;
 
