@@ -91,6 +91,26 @@ export class Money {
     return new Money(this.amount.round(2), this.currency);
   }
 
+  /**
+   * Sum of the figures **as they are shown**: each one rounded to cents before
+   * being added. A reader who adds up the printed column has to get the printed
+   * total, which is the promise of the one view whose mandate is to stay broken
+   * down (constitution III); the exact value stays available separately.
+   *
+   * `undefined` is a figure that is **missing**, not a zero: it is skipped, and
+   * saying that the total is partial is the caller's job.
+   *
+   * It lives here because it is arithmetic over money and not text: the CLI and
+   * the web each carried this same reduce, with the same comment, and two
+   * copies of a rule about money drift apart.
+   */
+  static sumShown(values: readonly (Money | undefined)[], currency: Currency): Money {
+    return values.reduce<Money>(
+      (total, value) => (value === undefined ? total : total.add(value.roundToCents())),
+      Money.zero(currency),
+    );
+  }
+
   toString(): string {
     return `${this.amount.toString()} ${this.currency}`;
   }

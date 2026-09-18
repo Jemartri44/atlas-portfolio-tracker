@@ -61,6 +61,29 @@ describe("Money", () => {
     );
   });
 
+  /*
+   * The total the screen prints is the sum of the figures the screen prints.
+   * The CLI and the web each had their own copy of this reduce; it is money,
+   * so it lives here (review of 006).
+   */
+  it("sums the figures as they are shown, rounding each one first", () => {
+    // 0,005 + 0,005 is 0,01 exact, but each figure shows as 0,01, so the
+    // printed column adds up to 0,02. Adding first and rounding after would
+    // print a total nobody can reproduce from the lines above it.
+    expect(Money.sumShown([eur("0.005"), eur("0.005")], EUR).toString()).toBe("0.02 EUR");
+    expect(Money.sumShown([eur("10.004"), eur("10.005")], EUR).toString()).toBe("20.01 EUR");
+  });
+
+  it("skips a missing figure instead of counting it as a zero", () => {
+    expect(Money.sumShown([eur("10"), undefined, eur("5")], EUR).toString()).toBe("15 EUR");
+    expect(Money.sumShown([undefined], EUR).toString()).toBe("0 EUR");
+    expect(Money.sumShown([], "USD").toString()).toBe("0 USD");
+  });
+
+  it("refuses to add across currencies here too", () => {
+    expect(() => Money.sumShown([eur("1"), usd("1")], EUR)).toThrow(CurrencyMismatchError);
+  });
+
   it("mixing any two different currencies throws", () => {
     fc.assert(
       fc.property(currency(), currency(), decimal(), (left, right, amount) => {

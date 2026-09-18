@@ -37,12 +37,8 @@ export interface NetWorthView {
 
 const EUR = "EUR";
 
-/** Sum of the **rounded** figures, which is what the screen shows. */
-const shownSum = (values: readonly (Money | undefined)[]): Money =>
-  values.reduce<Money>(
-    (total, value) => (value === undefined ? total : total.add(value.roundToCents())),
-    Money.zero(EUR),
-  );
+/** Sum of the **rounded** figures, which is what the screen shows (domain). */
+const shownSum = (values: readonly (Money | undefined)[]): Money => Money.sumShown(values, EUR);
 
 const cashDetail = (row: CashLine): string | undefined => {
   if (row.currency === EUR) {
