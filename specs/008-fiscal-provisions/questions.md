@@ -354,6 +354,32 @@ La dirección los actualiza; esta es la lista exacta para que no haya que rastre
 
 ---
 
+## Notas de la implementación (2026-09-18, después de escribir el código)
+
+Cosas que aparecieron al implementar y que la dirección debe saber. Ninguna cambia una decisión; tres piden un sí o un no.
+
+**N7 — He tenido que tocar `apps/web/src/format/messages/`, una línea, y lo aviso.** El test `tests/messages.test.ts` escanea **el dominio** en busca de códigos y exige que **la CLI y la web** traduzcan cada uno. Un tipo de evento nuevo con su aviso propio no puede entrar sin eso.
+
+| Fichero | Qué le he añadido |
+|---|---|
+| `apps/web/src/format/messages/warnings.ts` | Una entrada: `swap_fiscal_dates_differ` |
+
+Es lo **único** que he puesto ahí, y es una adición al final de un `Record`: el conflicto con el otro agente, si lo hay, se resuelve en una línea. Para evitar una segunda entrada, `income_category` **no** tiene código de error propio: reutiliza `invalid_settings`, que ya está traducido en los dos sitios y cuyo mensaje genérico («el parámetro X no admite ese valor») dice lo que hay que decir porque `field` nombra el tipo de activo. Si prefieres el código propio (`invalid_income_category`, como tiene `wash_sale_window`), es añadir dos líneas más, una en cada catálogo. **¿Lo dejo así o lo cambio?**
+
+**N8 — El hook `commit-msg` rechaza la palabra «regenerated».** Su patrón antiadulación es `generated (with|by)`, y «**Regenerated with** `atlas synth`» lo cumple por subcadena. Es un falso positivo justo en la operación que esta feature tenía que describir. Lo he sorteado escribiendo «Rebuilt by». No toco `.githooks/`, pero la regla merece un `\b` o una lista de excepciones: la próxima persona que regenere el *golden* se topará con lo mismo y no sabrá por qué.
+
+**N9 — He movido el techo del *bundle* de 164 a 166 KB gzip.** El comprobador lo pedía por escrito: *«no es un objetivo al que crecer: la siguiente feature que necesite más tiene que decir por qué y moverlo a propósito»*. El porqué: el esquema creció con un vigesimocuarto tipo de evento y su proyección, cuatro campos y una configuración nueva, más sus nombres en español, y la web empaqueta el dominio entero porque todo cálculo vive ahí (ADR-0007). Son **1,1 KB gzip**: medido 165,1, techo nuevo 166. **El arranque, que es lo que se nota en el móvil, no se ha movido: 75,6 KB frente a un presupuesto de 80.**
+
+**N10 — Los *flags* de la CLI no tienen commit propio.** El plan preveía un commit 8 («ask for the new fields where they are still knowable»). Al implementar resultó más atómico meter el *flag* de cada campo en el commit del campo: así cada uno entra y sale de una pieza. El resultado es el mismo y el criterio de qué se pregunta y dónde sigue siendo el de la tabla del plan §1.7.
+
+**N11 — El endurecimiento dejó dos ramas muertas, y la cobertura las cazó.** `costs.ts` y `bucket-stats.ts` databan el tipo del BCE con la fecha de negocio cuando faltaba `fx_rate_date`. Ya no puede faltar, así que el `??` era inalcanzable: el 100 % de ramas del dominio lo señaló en cuanto se regeneró el *golden*. Quitados. El respaldo equivalente de `fx-rates.ts` **se queda**, porque sí sirve a una línea escrita antes de ADR-0021 —que el libro conserva tal cual—, y tiene un test que la construye a mano.
+
+**N12 — Dos tests usaban `swap` como ejemplo de «lo que no existe».** `validate.test.ts` comprobaba que el tipo `"swap"` se rechaza con `unknown_event_type`, y `add.test.ts` que `atlas add swap` sale con 64. Los dos han pasado a usar `barter`. No es anecdótico: son tests que **dejaron de comprobar lo que creían comprobar** en el momento en que el ejemplo se volvió real, y solo se enteró el que lo volvió real.
+
+**N13 — El aviso de recompra llega también en `atlas add swap`.** `tradeNotes` solo se invocaba para `buy` y `sell`, y ahora lee los activos del borrador (uno o dos) para que una permuta enseñe las dos mitades de la regla antes de confirmar, que es el único momento en que el aviso sirve de algo.
+
+---
+
 ## Anotado para más adelante (no en esta feature)
 
 - **`fee_kind` en el libro sintético** (Q8): los dos `standalone_fee` del escenario se llaman *Custody fee* y *Market data fee* y pedirían `custody` y `connectivity`. Exigiría una segunda regeneración del *golden*.

@@ -55,7 +55,7 @@ El valor es el que el generador ya usa en los otros trece sitios donde emite el 
 | 28 | 177 | `01NW9AJX80MXATN9HR9K7V6TPZ` | `acc_mi` · `ast_world` | 2028-09-01 | viernes | `2028-09-01` |
 | 29 | 200 | `01P60WNW80X12D4XMGH9C6FEV0` | `acc_bucket` · `ast_delta` | 2028-12-31 | **domingo** | **`2028-12-29`** |
 
-**Seis de las veintinueve no toman su propia fecha**: el `cash_withdrawal` del sábado y las **cinco valoraciones del 31/12/2028, que cae en domingo** — que es exactamente el caso que motivó el hallazgo 6 del tercer *challenge* (*«el 31/12 cae en fin de semana dos de cada siete años»*) y por el que la dirección decidió endurecer también `valuation`. Su tipo es el del **viernes 2028-12-29**.
+**Siete de las veintinueve no toman su propia fecha** *(la versión original de este documento decía «seis» y «cinco valoraciones»: era un error de recuento en la prosa, no en la tabla; ver §6.2)*: el `cash_withdrawal` del sábado y las **seis valoraciones del 31/12/2028, que cae en domingo** — que es exactamente el caso que motivó el hallazgo 6 del tercer *challenge* (*«el 31/12 cae en fin de semana dos de cada siete años»*) y por el que la dirección decidió endurecer también `valuation`. Su tipo es el del **viernes 2028-12-29**.
 
 Las líneas 167, 172, 178 y 179 son valoraciones en **USD** que **ya** llevan `fx_rate_date` (el generador lo emite hoy solo cuando la divisa no es el euro). No cambian.
 
@@ -166,6 +166,38 @@ Sobre el *golden* de `develop` imprime `patched 29 lines of 200` y las veintinue
 
 ---
 
-## 6. Resultado
+## 6. Resultado (2026-09-18)
 
-*(Se rellena al ejecutar el bloque 3, comparando con los apartados 1 y 3.)*
+**Las cuatro comparaciones pasan. La predicción por línea era exacta; mi resumen en prosa contaba mal, y lo digo antes que nada.**
+
+### 6.1 Lo que salió
+
+| Comprobación | Resultado |
+|---|---|
+| 1. `sha256(regenerado) == sha256(contraste)` | ✅ `d3ffab80f30383e970f0468fb67cb961ce0de7dc0bac64120dcc7e06b69e265e`, **byte a byte**, los dos ficheros. El generador y una transformación de veinte líneas que no lo usa producen el mismo fichero |
+| 2. 200 líneas, `id`/`recorded_at`/`type` idénticos posición a posición | ✅ |
+| 3. Ninguna clave eliminada, ningún valor modificado en las 200; claves añadidas solo en 29, y solo `fx_rate_date` | ✅ |
+| 4. `snapshotOf(projectLedger(regenerado))` idéntico a `synthetic-v1.snapshot.json`, **sin regenerarlo** | ✅ |
+
+Reparto de las veintinueve: `valuation` 20, `cash_deposit` 6, `standalone_fee` 2, `cash_withdrawal` 1. `git diff --stat` del commit de la regeneración: **un fichero, 29 inserciones y 29 borrados**, que es una línea modificada por cada una.
+
+### 6.2 La única diferencia con la predicción, y por qué no es un hallazgo
+
+**Predije «seis de las veintinueve no toman su propia fecha». Son siete.**
+
+La tabla del apartado 1 —que es la predicción de verdad, línea a línea— está **correcta**: marca en negrita el `cash_withdrawal` del sábado 2028-04-08 y **seis** valoraciones del domingo 2028-12-31 (líneas 166, 168, 169, 170, 171 y **200**). Uno más seis son siete. Lo que estaba mal era el **recuento en prosa** debajo de la tabla, que decía «cinco valoraciones» y «seis de las veintinueve».
+
+Se comprobó línea a línea: los veintinueve valores obtenidos coinciden **exactamente** con los veintinueve de la tabla, sin una sola excepción. El error era mío al contar filas, no del generador. Queda escrito en vez de corregido en silencio, que es de lo que trata el apartado 5.
+
+*(La línea 200 es la valoración de `ast_delta` en `acc_bucket`, que el subflujo del cubo escribe al final del fichero aunque esté fechada el 31/12/2028: por eso está separada de las otras cinco en la tabla y por eso se me escapó al contar.)*
+
+### 6.3 Lo que había que explicar y no estaba previsto
+
+Nada en el *golden*. Fuera de él, dos cosas que el endurecimiento destapó y que están en sus propios commits:
+
+1. **Dos respaldos quedaron inalcanzables.** `costs.ts` y `bucket-stats.ts` databan el tipo con la fecha de negocio cuando `fx_rate_date` faltaba. Ahora no puede faltar —el cargador rechaza la línea— así que las dos ramas eran código muerto y la cobertura del dominio lo señaló al instante. Se han quitado.
+2. **El respaldo de `fx-rates.ts` se queda**, y con su test: sirve a una línea escrita antes de ADR-0021, que el libro conserva tal cual aunque ningún cliente vuelva a escribirla. El test la construye a mano, que es la única forma en que puede existir ahora.
+
+### 6.4 La prueba transversal, con números
+
+`synthetic-v1.snapshot.json` en `origin/develop` frente a esta rama: **3.456 líneas de estado proyectado, una sola diferencia**, la lista vacía `"in_kind_income": []` que añade el bloque 1. Cuentas, activos, configuración fiscal, posiciones, efectivo, lotes, ganancias, rentas, valoraciones, órdenes, traspasos, tesis, avisos e inválidos: **idénticos**.

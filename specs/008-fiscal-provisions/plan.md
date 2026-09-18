@@ -320,20 +320,22 @@ y, como excepción a la regla de una sola línea (la dirección lo verificará i
 
 | # | Commit | Bloque |
 |---|---|---|
-| 0 | `docs(008): spec and plan for the fiscal schema provisions` | artefactos |
-| 1 | `fix(web): keep the ECB rate date on a draft the form hides` | 0 (Q0) |
-| 2 | `feat(settings): add the income category per asset type` | 1.1 |
-| 3 | `feat(schema): record where an asset trades and where its issuer sits` | 1.2 |
-| 4 | `feat(schema): tell one kind of standalone fee from another` | 1.3 |
-| 5 | `feat(corporate): carry the withholding of a forced sale` | 1.4 |
-| 6 | `feat(schema): record whether a corporate action takes the neutrality regime` | 1.5 |
-| 7 | `feat(corporate): record the income a grant hands over in kind` | 1.6 |
-| 8 | `feat(cli): ask for the new fields where they are still knowable` | 1.7 |
-| 9 | `feat(schema): add the swap event with its article 37.1.h valuation` | 2.1–2.2 |
-| 10 | `feat(projections): project a swap as a disposal and an acquisition` | 2.3–2.4 |
-| 11 | `feat(cli): add the swap wizard` | 2.5 |
-| 12 | `feat(schema): require fx_rate_date on cash, fee and valuation events` | 3.1 |
-| 13 | `test(fixtures): date the ECB rate of the 29 cash, fee and valuation events` | 3.2 |
+Lo entregado, que se aparta del plan en dos sitios y los dos a menos: los *flags* de la CLI entraron en el commit de su campo en vez de tener uno propio (**N10**), y el `swap` cupo en un commit en vez de tres.
+
+| # | Commit | Bloque |
+|---|---|---|
+| 1 | `docs(008): spec and plan for the fiscal schema provisions` | artefactos |
+| 2 | `fix(web): keep the ECB rate date on a draft the form hides` | 0 (Q0) |
+| 3 | `feat(settings): add the income category per asset type` | 1.1 |
+| 4 | `feat(schema): record where an asset trades and where its issuer sits` | 1.2 |
+| 5 | `feat(schema): tell one kind of standalone fee from another` | 1.3 |
+| 6 | `feat(corporate): carry the withholding of a forced sale` | 1.4 |
+| 7 | `feat(schema): record if a corporate action takes the neutrality regime` | 1.5 |
+| 8 | `feat(corporate): record the income a grant hands over in kind` | 1.6 |
+| 9 | `feat(schema): add the swap event with its article 37.1.h valuation` | 2 |
+| 10 | `feat(schema): require fx_rate_date on cash, fee and valuation events` | 3.1 |
+| 11 | `test(fixtures): date the ECB rate of the 29 cash and valuation lines` | 3.2 |
+| 12 | `test(domain): prove the new provisions change nothing by default` | transversal |
 
 `npm run lint` en verde **antes de cada commit** y otra vez como último paso antes de entregar.
 
