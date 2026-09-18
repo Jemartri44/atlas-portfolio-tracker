@@ -32,9 +32,17 @@
   z-index: 20;
 }
 
+/*
+ * The switches and the gear keep their size (44px targets); what gives way is
+ * the chip on the left, which truncates. Without `flex: 0 0 auto` here and
+ * `min-width: 0` on the chip, a long source name ("Almacenamiento del
+ * navegador") pushed the bar to 375px inside a 360px screen and the whole page
+ * scrolled sideways (review of 2026-09-18).
+ */
 .statusbar .actions {
   align-items: center;
   display: flex;
+  flex: 0 0 auto;
   gap: var(--s-1);
 }
 
@@ -54,6 +62,8 @@
   gap: var(--s-2);
   max-width: 60vw;
   min-height: var(--tap);
+  /* It is the part of the bar that yields: it truncates, it does not push. */
+  min-width: 0;
   padding: 0 var(--s-2);
   text-decoration: none;
 }
