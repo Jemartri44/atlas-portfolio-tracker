@@ -192,9 +192,17 @@
  * a second place to get it wrong (`components/DataTable.tsx`).
  * ------------------------------------------------------------------------ */
 
+/*
+ * `minmax(0, 1fr)` and `min-width: 0` all the way down. The automatic minimum of
+ * a grid item is its content, so a card whose second line is `nowrap` widened
+ * the list, the list widened the card and the page scrolled sideways at 320px
+ * (measured in Chromium). Truncation only works if every box above the text is
+ * allowed to be narrower than it.
+ */
 .datalist {
   display: grid;
   gap: var(--s-1);
+  grid-template-columns: minmax(0, 1fr);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -202,6 +210,7 @@
 
 .datalist > li {
   margin: 0;
+  min-width: 0;
   padding: 0;
 }
 
@@ -210,7 +219,13 @@
   color: var(--c-text);
   display: grid;
   gap: var(--s-0);
-  grid-template-columns: 1fr auto;
+  /*
+   * `minmax(0, 1fr)`, not `1fr`: the automatic minimum of a grid column is its
+   * content, and the second line of a card is `white-space: nowrap`, so a long
+   * one (a price with its date and its age) pushed the page 35px sideways at
+   * 320px instead of being truncated — measured in Chromium.
+   */
+  grid-template-columns: minmax(0, 1fr) auto;
   padding: var(--s-3) var(--s-1);
   text-decoration: none;
 }
@@ -242,6 +257,7 @@
 
 .datalist .item .sub {
   color: var(--c-muted);
+  min-width: 0;
   font-size: var(--t-sm);
   grid-column: 1;
   overflow: hidden;
@@ -794,6 +810,11 @@ dialog .dialog-actions {
   display: grid;
   gap: var(--s-1);
   margin-bottom: var(--s-3);
+}
+
+/* The label carries a badge; at 320px the row has to be allowed to break. */
+.contribution-head .spread {
+  flex-wrap: wrap;
 }
 
 .contribution-head .subject {
