@@ -270,7 +270,13 @@ const benchmarkEquivalentOf = (
   return equivalent;
 };
 
-/** Latent gain of the live position of a thesis; zero when the pair holds nothing. */
+/**
+ * Latent gain of what **this thesis** still holds: what it bought minus what it
+ * sold, not the position of the pair (account, asset). A thesis closed while
+ * the pair still holds something — because the next thesis on the asset bought
+ * more — must not count shares that are not its own; that is the same mixing
+ * the statistics exclude (decision (k)).
+ */
 const latentOf = (
   state: LedgerState,
   thesis: ThesisView,
@@ -279,17 +285,18 @@ const latentOf = (
   gaps: BenchmarkGap[],
   external?: ExternalPrices,
 ): Money | undefined => {
-  if (!thesis.position.isPositive()) {
+  const own = thesis.quantity_bought.sub(thesis.quantity_sold);
+  if (!own.isPositive()) {
     return Money.zero(EUR);
   }
   const price = priceAt(state, thesis.asset_id, date, settings, external);
   const unitCost = openUnitCostOf(state, thesis.asset_id);
-  const value = positionValueOf(price, thesis.position);
+  const value = positionValueOf(price, own);
   if (value === undefined || unitCost === undefined) {
     gaps.push({ reason: "no_asset_price", asset_id: thesis.asset_id, date });
     return undefined;
   }
-  return value.sub(unitCost.mul(thesis.position.value));
+  return value.sub(unitCost.mul(own.value));
 };
 
 /**

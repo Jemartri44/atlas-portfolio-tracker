@@ -1,18 +1,48 @@
 // atlas thesis open · close <id> · list [--closed] [--at]
 
-import { type ThesisLeg, theses, todayInMadrid } from "@atlas/domain";
 import {
-  assertKnownFlags,
-  booleanFlag,
-  type Flags,
-  requireFlag,
-  stringFlag,
-  UsageError,
-} from "../args.js";
+  type BucketThesisView,
+  bucketTheses,
+  DomainError,
+  settingsAt,
+  type ThesisLeg,
+} from "@atlas/domain";
+import { assertKnownFlags, booleanFlag, type Flags, requireFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
-import { table } from "../output/table.js";
+import { eur } from "../output/format.js";
+import { keyValue, table } from "../output/table.js";
 import { requireId } from "./catalogue.js";
-import { confirmAndRecord, loadForQuery, renderQuery } from "./shared.js";
+import { confirmAndRecord, dateFlag, loadForQuery, renderQuery } from "./shared.js";
+
+/** A thesis as `--json` shows it, index comparison included. */
+export const jsonThesis = (thesis: BucketThesisView) => ({
+  thesis_id: thesis.thesis_id,
+  account_id: thesis.account_id,
+  asset_id: thesis.asset_id,
+  status: thesis.status,
+  hypothesis: thesis.hypothesis,
+  invalidation: thesis.invalidation,
+  expected_horizon_days: thesis.expected_horizon_days,
+  opened_at: thesis.opened_at,
+  closed_at: thesis.closed_at,
+  closing_notes: thesis.closing_notes,
+  days_open: thesis.days_open,
+  planned_size_eur: thesis.planned_size_eur.amount.toString(),
+  invested_eur: thesis.invested_eur.amount.toString(),
+  fees_eur: thesis.fees_eur.amount.toString(),
+  result_eur: thesis.result_eur.amount.toString(),
+  result_eur_rounded: thesis.result_eur_rounded.amount.toString(),
+  unrealized_eur: thesis.unrealized_eur?.amount.toString(),
+  benchmark_asset_id: thesis.benchmark_asset_id,
+  benchmark_equivalent_eur: thesis.benchmark_equivalent_eur?.amount.toString(),
+  result_vs_index_eur: thesis.result_vs_index_eur?.amount.toString(),
+  missing_benchmark: thesis.missing_benchmark,
+  position: thesis.position.toString(),
+  quantity_bought: thesis.quantity_bought.toString(),
+  quantity_sold: thesis.quantity_sold.toString(),
+  buys: thesis.buys.map(jsonLeg),
+  sells: thesis.sells.map(jsonLeg),
+});
 
 /** A linked trade as `--json` shows it: decimals as strings, like everywhere else. */
 export const jsonLeg = (leg: ThesisLeg) => ({
@@ -33,6 +63,69 @@ const OPEN_FLAGS = [
   "invalidation",
   "planned-size",
 ];
+
+/** The sheet of one thesis: what was written, what was done, and how it ended. */
+const thesisSheet = (thesis: BucketThesisView): string => {
+  const legs = (rows: readonly ThesisLeg[], title: string, kind: "compra" | "venta"): string[] =>
+    rows.length === 0
+      ? [`${title}: (ninguna)`]
+      : [
+          `${title}:`,
+          table(
+            [
+              "fecha fiscal",
+              "evento",
+              "cantidad",
+              `${kind === "compra" ? "coste" : "transmisión"} EUR`,
+              "comisión EUR",
+              "ganancia EUR",
+            ],
+            rows.map((leg) => [
+              leg.fiscal_date,
+              leg.event_id,
+              leg.quantity.toString(),
+              eur(leg.amount_eur),
+              eur(leg.fee_eur),
+              eur(leg.gain_eur),
+            ]),
+          ),
+        ];
+  const missing = thesis.missing_benchmark
+    .map(
+      (gap) =>
+        `${gap.reason}${gap.asset_id === undefined ? "" : ` ${gap.asset_id}`}${gap.date === undefined ? "" : ` @ ${gap.date}`}`,
+    )
+    .join("; ");
+  return [
+    `Tesis ${thesis.thesis_id} (${thesis.status === "open" ? "abierta" : "cerrada"})`,
+    keyValue({
+      cuenta: thesis.account_id,
+      activo: thesis.asset_id,
+      hipótesis: thesis.hypothesis,
+      "plazo previsto": `${thesis.expected_horizon_days} días (lleva ${thesis.days_open}${
+        thesis.days_open > thesis.expected_horizon_days ? " ⚠ superado" : ""
+      })`,
+      invalidación: thesis.invalidation,
+      "tamaño previsto": `${eur(thesis.planned_size_eur)} EUR`,
+      invertido: `${eur(thesis.invested_eur)} EUR`,
+      comisiones: `${eur(thesis.fees_eur)} EUR`,
+      resultado: `${eur(thesis.result_eur_rounded)} EUR`,
+      latente: `${eur(thesis.unrealized_eur)} EUR`,
+      "posición viva": thesis.position.toString(),
+      "equivalente en índice": `${eur(thesis.benchmark_equivalent_eur)} EUR${
+        thesis.benchmark_asset_id === undefined ? "" : ` (${thesis.benchmark_asset_id})`
+      }`,
+      "resultado vs índice": `${eur(thesis.result_vs_index_eur)} EUR`,
+      ...(missing === "" ? {} : { "sin comparación por": missing }),
+      ...(thesis.closed_at === undefined ? {} : { cierre: thesis.closed_at }),
+      ...(thesis.closing_notes === undefined ? {} : { notas: thesis.closing_notes }),
+    }),
+    "",
+    ...legs(thesis.buys, "Compras", "compra"),
+    "",
+    ...legs(thesis.sells, "Ventas", "venta"),
+  ].join("\n");
+};
 
 export const thesisCommand = async (
   ctx: Context,
@@ -69,27 +162,24 @@ export const thesisCommand = async (
     return 0;
   }
   if (action === "list") {
-    assertKnownFlags(flags, ["closed", "at", ...GLOBAL_FLAGS]);
-    const { state } = await loadForQuery(ctx);
-    const at = stringFlag(flags, "at") ?? todayInMadrid(ctx.deps.clock);
+    // `--at` is gone: every dated view projects with `asOf` (ADR-0016), and one
+    // name for one thing (Q4, the same call as `--wash-sale-window-days` in 004).
+    if (flags.has("at")) {
+      throw new UsageError(
+        "usa --date YYYY-MM-DD: la vista se proyecta a esa fecha (ADR-0016), no solo los precios",
+      );
+    }
+    assertKnownFlags(flags, ["closed", "date", ...GLOBAL_FLAGS]);
+    const date = dateFlag(ctx, flags);
+    const { state } = await loadForQuery(ctx, date);
     const includeClosed = booleanFlag(flags, "closed");
-    const rows = theses(state, at).filter((t) => includeClosed || t.status === "open");
+    const rows = bucketTheses(state, date, settingsAt(state, date).settings).filter(
+      (thesis) => includeClosed || thesis.status === "open",
+    );
     renderQuery(
       ctx,
       state,
-      rows.map((t) => ({
-        ...t,
-        buys: t.buys.map(jsonLeg),
-        sells: t.sells.map(jsonLeg),
-        planned_size_eur: t.planned_size_eur.amount.toString(),
-        quantity_bought: t.quantity_bought.toString(),
-        quantity_sold: t.quantity_sold.toString(),
-        invested_eur: t.invested_eur.amount.toString(),
-        fees_eur: t.fees_eur.amount.toString(),
-        result_eur: t.result_eur.amount.toString(),
-        result_eur_rounded: t.result_eur_rounded.amount.toString(),
-        position: t.position.toString(),
-      })),
+      rows.map(jsonThesis),
       table(
         [
           "tesis",
@@ -102,6 +192,7 @@ export const thesisCommand = async (
           "plazo",
           "invertido EUR",
           "resultado EUR",
+          "vs índice EUR",
           "comisiones EUR",
           "posición",
           "previsto EUR",
@@ -117,6 +208,7 @@ export const thesisCommand = async (
           String(t.expected_horizon_days),
           t.invested_eur.amount.toString(),
           t.result_eur_rounded.amount.toString(),
+          eur(t.result_vs_index_eur),
           t.fees_eur.roundToCents().amount.toString(),
           t.position.toString(),
           t.planned_size_eur.amount.toString(),
@@ -125,5 +217,23 @@ export const thesisCommand = async (
     );
     return 0;
   }
-  throw new UsageError("uso: atlas thesis open|close <id>|list [--closed] [--at YYYY-MM-DD]");
+  if (action === "show") {
+    const thesisId = requireId(positionals, 2, "uso: atlas thesis show <thesis_id> [--date]");
+    assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
+    const date = dateFlag(ctx, flags);
+    const { state } = await loadForQuery(ctx, date);
+    const thesis = bucketTheses(state, date, settingsAt(state, date).settings).find(
+      (candidate) => candidate.thesis_id === thesisId,
+    );
+    if (thesis === undefined) {
+      throw new DomainError("unknown_thesis", `thesis ${thesisId} does not exist`, {
+        thesis_id: thesisId,
+      });
+    }
+    renderQuery(ctx, state, jsonThesis(thesis), thesisSheet(thesis));
+    return 0;
+  }
+  throw new UsageError(
+    "uso: atlas thesis open|close <id>|show <id>|list [--closed] [--date YYYY-MM-DD]",
+  );
 };
