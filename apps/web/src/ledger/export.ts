@@ -49,12 +49,20 @@ export const exportLedger = async (blob: BrowserLedgerBlob): Promise<void> => {
  * state the user had is exactly the state they keep.
  */
 export const importLedger = async (text: string): Promise<number> => {
-  const events = (await new BlobLedgerStore(new MemoryText(text)).load()).events;
+  const events = await validateImport(text);
   const opened = await openBrowserStorage();
   await new BrowserLedgerBlob().replaceText(text);
   await loadInto(opened);
-  return events.length;
+  return events;
 };
+
+/**
+ * Reads the text as a ledger and answers how many events it holds. Exported so
+ * the half that decides whether a file is acceptable can be tested without a
+ * browser: the other half needs IndexedDB and is checked in Chromium.
+ */
+export const validateImport = async (text: string): Promise<number> =>
+  (await new BlobLedgerStore(new MemoryText(text)).load()).events.length;
 
 /** A read-only blob over a string, to validate an import before it lands. */
 class MemoryText {

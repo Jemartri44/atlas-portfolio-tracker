@@ -16,6 +16,7 @@ import {
   restoreLedger,
   toAppError,
 } from "../src/ledger/actions.js";
+import { validateImport } from "../src/ledger/export.js";
 import { store } from "../src/ledger/state.js";
 import {
   changeSettings,
@@ -415,5 +416,52 @@ describe("toAppError", () => {
   it("does not swallow an unexpected failure", () => {
     expect(toAppError(new Error("algo raro")).message).toBe("algo raro");
     expect(toAppError("texto suelto").message).toBe("texto suelto");
+  });
+});
+
+describe("importing a file", () => {
+  /**
+   * The order is the whole point (inventory V6): the screen used to open the
+   * browser storage and **then** validate, so a file that was not a ledger left
+   * an empty ledger open and remembered. Validation is now a step of its own,
+   * and it is the first one.
+   */
+  it("refuses a file that is not a ledger, before anything is opened", async () => {
+    await expect(validateImport("esto no es un libro\n")).rejects.toThrow();
+    await expect(validateImport('{"hola": 1}\n')).rejects.toThrow();
+  });
+
+  it("refuses a ledger written by a newer schema", async () => {
+    const line = JSON.stringify({
+      schema_version: 99,
+      id: "01ARYZ6S41TSV4RRFFQ69G5FA0",
+      recorded_at: "2026-09-01T18:22:05.000Z",
+      type: "account_created",
+    });
+    await expect(validateImport(`${line}\n`)).rejects.toThrow();
+  });
+
+  it("accepts an empty file: a ledger with no events is a ledger", async () => {
+    await expect(validateImport("")).resolves.toBe(0);
+  });
+
+  it("counts the events of a good one", async () => {
+    const text = goldenText();
+    await expect(validateImport(text)).resolves.toBeGreaterThan(100);
+  });
+});
+
+describe("toAppError: the storage that fills up", () => {
+  /**
+   * The worst case of a phone: the ledger lives in the browser and the write
+   * does not fit. It must say that **nothing was written**, and offer the way
+   * out — exporting — rather than the English text of a `DOMException`.
+   */
+  it("explains a full browser storage and offers the export", () => {
+    const error = toAppError(new DOMException("quota", "QuotaExceededError"));
+
+    expect(error.code).toBe("storage_full");
+    expect(error.message).toContain("no se ha escrito nada");
+    expect(error.action?.to).toBe("/ajustes");
   });
 });
