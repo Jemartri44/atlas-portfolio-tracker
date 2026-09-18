@@ -142,6 +142,10 @@ main {
 
 .nav li {
   flex: 1 1 0;
+  /* Without this, a slot cannot shrink below its longest word and five of them
+     push the page sideways on a narrow phone, which is an acceptance criterion
+     and not a detail (prompt §3.5). */
+  min-width: 0;
   padding: 0;
 }
 
@@ -161,6 +165,15 @@ main {
 .nav a svg {
   height: var(--icon);
   width: var(--icon);
+}
+
+/* "Movimientos" barely fits in a slot at 360px: it may ellipsise, the bar may
+   not overflow. Where the label fits, nothing changes. */
+.nav .label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Active destination: weight and a bar, not colour alone. */
