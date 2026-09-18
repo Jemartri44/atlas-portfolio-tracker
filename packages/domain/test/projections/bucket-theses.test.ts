@@ -61,7 +61,7 @@ const scenario = (options: { indexStart?: string; indexEnd?: string; sell?: bool
 };
 
 const view = (b: LedgerBuilder, settings = withBenchmark(), date = "2027-12-31") =>
-  bucketTheses(projectLedger(b.build()), date, settings)[0];
+  bucketTheses(projectLedger(b.build()), date, settings).rows[0];
 
 describe("bucketTheses: the result against the index (business rule 16)", () => {
   it("values the same money in the index between the same dates", () => {
@@ -157,9 +157,60 @@ describe("bucketTheses: the result against the index (business rule 16)", () => 
     b.valuation({ account_id: "acc_fund", asset_id: "ast_world", date: "2027-01-01" });
     b.thesisOpened({ thesis_id: "th_empty" });
     b.thesisClosed("th_empty");
-    const empty = bucketTheses(projectLedger(b.build()), "2027-12-31", withBenchmark())[0];
+    const empty = bucketTheses(projectLedger(b.build()), "2027-12-31", withBenchmark()).rows[0];
     expect(empty?.benchmark_equivalent_eur).toBeUndefined();
     expect(empty?.missing_benchmark).toEqual([{ reason: "no_linked_buys" }]);
+  });
+
+  it("turns every gap of the index into a warning, once per cause", () => {
+    const none = bucketTheses(
+      projectLedger(scenario({ sell: true }).build()),
+      "2027-12-31",
+      DEFAULT_SETTINGS,
+    );
+    expect(none.warnings.map((w) => w.code)).toEqual(["missing_benchmark_asset"]);
+
+    const typo = bucketTheses(
+      projectLedger(scenario({ indexStart: "100", sell: true }).build()),
+      "2027-12-31",
+      withBenchmark({ bucket_benchmark_asset_id: "ast_typo" }),
+    );
+    expect(typo.warnings.map((w) => w.code)).toEqual(["unknown_benchmark_asset"]);
+    expect(typo.warnings[0]?.details).toMatchObject({ asset_id: "ast_typo" });
+
+    const priceless = bucketTheses(
+      projectLedger(scenario({ sell: true }).build()),
+      "2027-12-31",
+      withBenchmark(),
+    );
+    expect(priceless.warnings.map((w) => w.code)).toEqual(["missing_benchmark_price"]);
+    expect(priceless.warnings[0]?.details).toMatchObject({
+      asset_id: "ast_world",
+      date: "2027-07-12",
+    });
+  });
+
+  it("says the same missing price once, however many theses share it", () => {
+    // The index is only priced from July, so the January purchase of both theses
+    // lands on the very same missing price.
+    const b = scenario({ indexEnd: "120", sell: true });
+    // A second thesis on the same pair, with the same purchase date as the first.
+    b.thesisOpened({ thesis_id: "th2" });
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: "10",
+      unit_price: "10",
+      fee: "0",
+      currency: "EUR",
+      fx_rate: "1",
+      trade_date: "2027-01-11",
+      value_date: "2027-01-13",
+      thesis_id: "th2",
+    });
+    const view = bucketTheses(projectLedger(b.build()), "2027-12-31", withBenchmark());
+    expect(view.rows).toHaveLength(2);
+    expect(view.warnings.map((w) => w.code)).toEqual(["missing_benchmark_price"]);
   });
 
   it("measures a closed thesis to its last sale, not to today", () => {

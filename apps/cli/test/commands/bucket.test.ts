@@ -202,6 +202,26 @@ describe("atlas bucket", () => {
     expect(closed?.missing_benchmark).toEqual([]);
   });
 
+  it("says why the index comparison is missing, in bucket and in thesis list", async () => {
+    // Without a benchmark configured, three theses without a comparison used to
+    // print exactly the same as three theses beating the index.
+    const h = await bucket({ bucket_benchmark_asset_id: undefined });
+    expect(await h.exec(["bucket", "--date", DATE])).toBe(0);
+    expect(h.text()).toContain("No hay índice de referencia configurado");
+    h.reset();
+    expect(await h.exec(["thesis", "list", "--closed", "--date", DATE])).toBe(0);
+    expect(h.text()).toContain("No hay índice de referencia configurado");
+
+    const typo = await bucket({ bucket_benchmark_asset_id: "ast_typo" });
+    expect(await typo.exec(["bucket", "--date", DATE])).toBe(0);
+    expect(typo.text()).toContain("El índice de referencia ast_typo no está en el catálogo");
+
+    // Configured and in the catalogue, but never priced.
+    const unpriced = await bucket({ bucket_benchmark_asset_id: "ast_bonds" });
+    expect(await unpriced.exec(["bucket", "--date", DATE])).toBe(0);
+    expect(unpriced.text()).toContain("Falta el precio del índice ast_bonds a 2027-06-01");
+  });
+
   it("marks the sample as too small and never blocks anything", async () => {
     const h = await bucket();
     expect(await h.exec(["bucket", "--date", DATE])).toBe(0);

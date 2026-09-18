@@ -1,6 +1,7 @@
 // atlas thesis open · close <id> · list [--closed] [--at]
 
 import {
+  type BenchmarkGap,
   type BucketThesisView,
   bucketTheses,
   DomainError,
@@ -8,7 +9,7 @@ import {
   type ThesisLeg,
 } from "@atlas/domain";
 import { assertKnownFlags, booleanFlag, type Flags, requireFlag, UsageError } from "../args.js";
-import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { eur } from "../output/format.js";
 import { keyValue, table } from "../output/table.js";
 import { requireId } from "./catalogue.js";
@@ -64,6 +65,22 @@ const OPEN_FLAGS = [
   "planned-size",
 ];
 
+/** Why a thesis has no comparison with the index, in Spanish and in full. */
+const gapText = (gap: BenchmarkGap): string => {
+  switch (gap.reason) {
+    case "no_benchmark":
+      return "no hay índice de referencia configurado";
+    case "unknown_asset":
+      return `el índice ${gap.asset_id} no está en el catálogo`;
+    case "no_price":
+      return `falta el precio del índice ${gap.asset_id} a ${gap.date}`;
+    case "no_linked_buys":
+      return "la tesis no tiene ninguna compra enlazada: un sumatorio vacío no es cero";
+    default:
+      return `falta el precio de ${gap.asset_id} a ${gap.date}`;
+  }
+};
+
 /** The sheet of one thesis: what was written, what was done, and how it ended. */
 const thesisSheet = (thesis: BucketThesisView): string => {
   const legs = (rows: readonly ThesisLeg[], title: string, kind: "compra" | "venta"): string[] =>
@@ -90,12 +107,7 @@ const thesisSheet = (thesis: BucketThesisView): string => {
             ]),
           ),
         ];
-  const missing = thesis.missing_benchmark
-    .map(
-      (gap) =>
-        `${gap.reason}${gap.asset_id === undefined ? "" : ` ${gap.asset_id}`}${gap.date === undefined ? "" : ` @ ${gap.date}`}`,
-    )
-    .join("; ");
+  const missing = thesis.missing_benchmark.map(gapText).join("; ");
   return [
     `Tesis ${thesis.thesis_id} (${thesis.status === "open" ? "abierta" : "cerrada"})`,
     keyValue({
@@ -173,47 +185,50 @@ export const thesisCommand = async (
     const date = dateFlag(ctx, flags);
     const { state } = await loadForQuery(ctx, date);
     const includeClosed = booleanFlag(flags, "closed");
-    const rows = bucketTheses(state, date, settingsAt(state, date).settings).filter(
-      (thesis) => includeClosed || thesis.status === "open",
-    );
+    const view = bucketTheses(state, date, settingsAt(state, date).settings);
+    const rows = view.rows.filter((thesis) => includeClosed || thesis.status === "open");
     renderQuery(
       ctx,
       state,
       rows.map(jsonThesis),
-      table(
-        [
-          "tesis",
-          "cuenta",
-          "activo",
-          "estado",
-          "apertura",
-          "cierre",
-          "días",
-          "plazo",
-          "invertido EUR",
-          "resultado EUR",
-          "vs índice EUR",
-          "comisiones EUR",
-          "posición",
-          "previsto EUR",
-        ],
-        rows.map((t) => [
-          t.thesis_id,
-          t.account_id,
-          t.asset_id,
-          t.status === "open" ? "abierta" : "cerrada",
-          t.opened_at,
-          t.closed_at ?? "",
-          String(t.days_open),
-          String(t.expected_horizon_days),
-          t.invested_eur.amount.toString(),
-          t.result_eur_rounded.amount.toString(),
-          eur(t.result_vs_index_eur),
-          t.fees_eur.roundToCents().amount.toString(),
-          t.position.toString(),
-          t.planned_size_eur.amount.toString(),
-        ]),
-      ),
+      [
+        table(
+          [
+            "tesis",
+            "cuenta",
+            "activo",
+            "estado",
+            "apertura",
+            "cierre",
+            "días",
+            "plazo",
+            "invertido EUR",
+            "resultado EUR",
+            "vs índice EUR",
+            "comisiones EUR",
+            "posición",
+            "previsto EUR",
+          ],
+          rows.map((t) => [
+            t.thesis_id,
+            t.account_id,
+            t.asset_id,
+            t.status === "open" ? "abierta" : "cerrada",
+            t.opened_at,
+            t.closed_at ?? "",
+            String(t.days_open),
+            String(t.expected_horizon_days),
+            t.invested_eur.amount.toString(),
+            t.result_eur_rounded.amount.toString(),
+            eur(t.result_vs_index_eur),
+            t.fees_eur.roundToCents().amount.toString(),
+            t.position.toString(),
+            t.planned_size_eur.amount.toString(),
+          ]),
+        ),
+        // A column of dashes is not an explanation: the index says why it is empty.
+        ...(view.warnings.length === 0 ? [] : ["", "Avisos:", ...describeWarnings(view.warnings)]),
+      ].join("\n"),
     );
     return 0;
   }
@@ -222,7 +237,7 @@ export const thesisCommand = async (
     assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
     const date = dateFlag(ctx, flags);
     const { state } = await loadForQuery(ctx, date);
-    const thesis = bucketTheses(state, date, settingsAt(state, date).settings).find(
+    const thesis = bucketTheses(state, date, settingsAt(state, date).settings).rows.find(
       (candidate) => candidate.thesis_id === thesisId,
     );
     if (thesis === undefined) {

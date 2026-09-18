@@ -65,7 +65,7 @@ describe("bucketTheses: properties", () => {
           thesis_id: "th1",
         });
         b.thesisClosed("th1");
-        const thesis = bucketTheses(projectLedger(b.build()), DATE, settings)[0];
+        const thesis = bucketTheses(projectLedger(b.build()), DATE, settings).rows[0];
         expect(thesis?.result_vs_index_eur?.isZero()).toBe(true);
       }),
       { numRuns: 60 },
@@ -125,7 +125,7 @@ describe("bucketTheses: properties", () => {
             quantity: String((quantity - sold) * ratio),
             unit_value: String(nowPrice),
           });
-          const thesis = bucketTheses(projectLedger(b.build()), DATE, settings)[0] as
+          const thesis = bucketTheses(projectLedger(b.build()), DATE, settings).rows[0] as
             | BucketThesisView
             | undefined;
           const latent = Number((thesis as BucketThesisView).unrealized_eur?.amount.toString());

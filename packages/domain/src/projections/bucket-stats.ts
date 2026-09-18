@@ -11,8 +11,8 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
-import { Money } from "../money/money.js";
 import type { Currency } from "../money/money.js";
+import { Money } from "../money/money.js";
 import type { AccountId, AssetId, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import {
@@ -247,7 +247,7 @@ export const bucketStats = (
   external?: ExternalPrices,
 ): BucketReport => {
   const accounts = bucketAccountIds(state);
-  const theses = bucketTheses(state, date, settings, external);
+  const theses = bucketTheses(state, date, settings, external).rows;
   const gains = state.gains.filter((gain) => accounts.has(gain.account_id));
   const lots = lotIndexOf(state);
   const warnings: Warning[] = [];

@@ -352,6 +352,73 @@ const latentOf = (
   return value.sub(unitCost.mul(own.value));
 };
 
+export interface BucketThesesView {
+  rows: BucketThesisView[];
+  /** What keeps the comparison with the index from existing, said once per cause. */
+  warnings: Warning[];
+}
+
+/**
+ * The gaps of the index, turned into warnings the views cannot forget to show.
+ * A gap lives inside each thesis, which is the right place to read it one by
+ * one, and the wrong place to notice it: three theses without an index printed
+ * the same as three theses beating it. Said once per cause, not per thesis.
+ *
+ * `no_linked_buys` and `no_asset_price` are facts of the thesis, not gaps of
+ * the benchmark: the first means nothing was ever put in, and the second is
+ * already the `partial_bucket_total` of its own asset.
+ */
+const benchmarkWarningsOf = (rows: readonly BucketThesisView[]): Warning[] => {
+  const warnings: Warning[] = [];
+  const said = new Set<string>();
+  const once = (
+    key: string,
+    code: string,
+    message: string,
+    details: Record<string, unknown>,
+  ): void => {
+    if (!said.has(key)) {
+      said.add(key);
+      warn(warnings, code, message, details);
+    }
+  };
+  for (const thesis of rows) {
+    for (const gap of thesis.missing_benchmark) {
+      switch (gap.reason) {
+        case "no_benchmark":
+          once(
+            "no_benchmark",
+            "missing_benchmark_asset",
+            "no benchmark asset configured: rule 16 has nothing to compare against",
+            {},
+          );
+          break;
+        case "unknown_asset":
+          once(
+            `unknown|${gap.asset_id}`,
+            "unknown_benchmark_asset",
+            `the benchmark ${gap.asset_id} is not in the catalogue`,
+            {
+              asset_id: gap.asset_id,
+            },
+          );
+          break;
+        case "no_price":
+          once(
+            `price|${gap.asset_id}|${gap.date}`,
+            "missing_benchmark_price",
+            `no price for the benchmark ${gap.asset_id} at ${gap.date}`,
+            { asset_id: gap.asset_id, date: gap.date },
+          );
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  return warnings;
+};
+
 /**
  * The theses with their result against the index (§3.3). It **wraps** `theses()`
  * instead of extending it: pass B of the projection uses `theses.ts`, and the
@@ -363,10 +430,10 @@ export const bucketTheses = (
   date: CivilDate,
   settings: Settings,
   external?: ExternalPrices,
-): BucketThesisView[] => {
+): BucketThesesView => {
   const benchmarkId = settings.bucket_benchmark_asset_id;
   const lots = lotIndexOf(state);
-  return theses(state, date).map((thesis) => {
+  const rows = theses(state, date).map((thesis) => {
     const gaps: BenchmarkGap[] = [];
     const latent = latentOf(state, thesis, date, settings, gaps, lots, external);
     let equivalent: Money | undefined;
@@ -405,4 +472,5 @@ export const bucketTheses = (
       missing_benchmark: gaps,
     };
   });
+  return { rows, warnings: benchmarkWarningsOf(rows) };
 };

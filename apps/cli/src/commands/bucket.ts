@@ -327,7 +327,7 @@ export const bucketCommand = async (
   const { state, events } = await loadForQuery(ctx, date);
   const settings = settingsAt(state, date).settings;
   const positions = bucketPositions(state, date, settings);
-  const theses = bucketTheses(state, date, settings);
+  const { rows: theses, warnings: benchmark } = bucketTheses(state, date, settings);
   const { stats, controls } = bucketStats(state, events, date, settings, date);
   const stopLoss = controls.warnings.filter(
     (warning) => warning.code === "bucket_stop_loss_reached",
@@ -345,7 +345,7 @@ export const bucketCommand = async (
     ...statsText(stats),
     "",
     ...controlsText(controls),
-    ...warningLines([...positions.warnings, ...stats.warnings, ...controls.warnings]),
+    ...warningLines([...positions.warnings, ...benchmark, ...stats.warnings, ...controls.warnings]),
   ].join("\n");
   renderQuery(ctx, state, jsonBucket(date, positions, theses, stats, controls), text);
   return 0;
