@@ -31,6 +31,52 @@ const specifiersOf = (source: string): string[] => {
   return found;
 };
 
+/** A relative specifier as a file of `src/`, or nothing when it points outside. */
+const targetOf = (from: string, specifier: string): string | undefined => {
+  if (!specifier.startsWith(".")) {
+    return undefined;
+  }
+  const target = resolve(dirname(from), specifier).replace(/\.js$/, ".ts");
+  return relative(domainSrc, target).startsWith("..") ? undefined : target;
+};
+
+/** The import graph of `domain/src`, built once: every file with the files it imports. */
+const importGraph = (): Map<string, string[]> => {
+  const graph = new Map<string, string[]>();
+  for (const file of listTsFiles(domainSrc)) {
+    graph.set(
+      file,
+      specifiersOf(readFileSync(file, "utf8"))
+        .map((specifier) => targetOf(file, specifier))
+        .filter((target): target is string => target !== undefined),
+    );
+  }
+  return graph;
+};
+
+/**
+ * Everything reachable from a file, **transitively**, with the chain that gets
+ * there. A rule checked on direct imports only is a rule one intermediate file
+ * turns off, and neither side has to be enumerated: the graph finds them.
+ */
+const reachableFrom = (graph: Map<string, string[]>, root: string): Map<string, string[]> => {
+  const chains = new Map<string, string[]>([[root, [root]]]);
+  const pending = [root];
+  while (pending.length > 0) {
+    const file = pending.shift() as string;
+    for (const next of graph.get(file) ?? []) {
+      if (!chains.has(next)) {
+        chains.set(next, [...(chains.get(file) as string[]), next]);
+        pending.push(next);
+      }
+    }
+  }
+  return chains;
+};
+
+const asChain = (files: readonly string[]): string =>
+  files.map((file) => relative(domainSrc, file)).join(" -> ");
+
 describe("architecture: @atlas/domain imports nothing", () => {
   it("declares no runtime dependencies", () => {
     const manifest = JSON.parse(readFileSync(join(domainRoot, "package.json"), "utf8")) as Record<
@@ -83,74 +129,89 @@ describe("architecture: @atlas/domain imports nothing", () => {
 
   /**
    * Prompt 005 §3.0 ter: one door to a price. When phase 4 brings automatic
-   * prices, `prices.ts` is the only file that changes; a projection that reads
+   * prices, `prices.ts` is the only file that changes; a projection that read
    * the valuations on its own would silently keep ignoring them.
+   *
+   * Reading a field is not an import, so this half cannot be graph-based: what
+   * it can be is blind to how the field is spelled. It looks for the **read**
+   * in either of its two forms, `state.valuations` and a destructuring of it,
+   * because a `const { valuations } = state` used to walk straight past it.
    *
    * The three exceptions are not price lookups: `operations.ts` fills the list,
    * `snapshot.ts` serialises it and `valuations.ts` is the Modelo 720 view,
    * which enumerates registered valuations instead of asking what an asset is
-   * worth on a date.
+   * worth on a date. `state.ts` declares the field and reads nothing.
    */
-  it("keeps every price lookup behind the gate of prices.ts", () => {
+  it("keeps every read of the valuations behind the gate of prices.ts", () => {
     const allowed = new Set(
-      ["prices.ts", "valuations.ts", "snapshot.ts", "operations.ts"].map((name) =>
-        join(domainSrc, "projections", name),
-      ),
+      ["prices.ts", "valuations.ts", "snapshot.ts", "operations.ts"]
+        .map((name) => join(domainSrc, "projections", name))
+        .concat(join(domainSrc, "projections", "state.ts")),
     );
+    const reads = [/\.valuations\b/, /\{[^{}]*\bvaluations\b[^{}]*\}\s*=[^=]/];
     const violations = listTsFiles(domainSrc)
-      .filter((file) => !allowed.has(file) && readFileSync(file, "utf8").includes(".valuations"))
+      .filter((file) => !allowed.has(file))
+      .filter((file) => {
+        const source = readFileSync(file, "utf8");
+        return reads.some((pattern) => pattern.test(source));
+      })
       .map((file) => relative(repoRoot, file));
     expect(violations).toEqual([]);
   });
 
   /**
-   * Constitution II: prices are informative and no tax calculation may depend
-   * on them. The phase-2 projections stay on their side of the line, and the
-   * fiscal ones never learn that a price exists.
+   * And the gate stays a gate: `prices.ts` may lean on the types of the state
+   * and on money and dates, never on a projection the state does not already
+   * carry. A door that starts importing the rest of the house is no longer a
+   * door, and "the rest of the house" is read off the graph, not off a list.
    */
-  it("keeps prices out of every fiscal calculation", () => {
+  it("keeps prices.ts a leaf among the projections", () => {
+    const graph = importGraph();
     const projections = join(domainSrc, "projections");
-    /** Views: they may read the fiscal state, never compute with it. */
-    const informative = [
-      "prices.ts",
-      "weights.ts",
-      "contribution.ts",
-      "simulate-transfer.ts",
-      "costs.ts",
-      "networth.ts",
-      "bucket.ts",
-      "bucket-stats.ts",
-    ];
-    /** The engine: what computes lots and gains. No view may import it. */
-    const engine = ["lots.ts", "gains.ts", "income.ts", "corporate-actions.ts", "primitives.ts"];
-    /**
-     * The whole fiscal path: the engine plus everything pass B of the projection
-     * calls. None of it may learn what a price is — if `theses.ts` did, the code
-     * that creates lots and gains would depend on prices through it, which is
-     * what constitution II forbids. That is exactly why the index comparison
-     * lives in `bucket.ts` and **wraps** `theses()` instead of extending it;
-     * reading that projection from a view is fine, the other way round is not.
-     */
-    const fiscal = [...engine, "operations.ts", "theses.ts", "wash-sale.ts", "settings-impact.ts"];
-    const forbiddenForFiscal = ["prices.js", "bucket.js", "bucket-stats.js", "networth.js"];
-    const violations: string[] = [];
-    for (const file of informative) {
-      for (const specifier of specifiersOf(readFileSync(join(projections, file), "utf8"))) {
-        if (engine.some((name) => specifier.endsWith(name.replace(".ts", ".js")))) {
-          violations.push(`${file} -> ${specifier}`);
-        }
-        if (specifier.endsWith("fiscal-date.js")) {
-          violations.push(`${file} -> ${specifier}`);
-        }
-      }
-    }
-    for (const file of fiscal) {
-      for (const specifier of specifiersOf(readFileSync(join(projections, file), "utf8"))) {
-        if (forbiddenForFiscal.some((name) => specifier.endsWith(name))) {
-          violations.push(`${file} -> ${specifier}`);
-        }
-      }
-    }
+    const pricesFile = join(projections, "prices.ts");
+    const typeLayer = reachableFrom(graph, join(projections, "state.ts"));
+    const violations = [...reachableFrom(graph, pricesFile).values()]
+      .filter((chain) => {
+        const file = chain[chain.length - 1] as string;
+        return (
+          file !== pricesFile &&
+          !typeLayer.has(file) &&
+          !relative(projections, file).startsWith("..")
+        );
+      })
+      .map(asChain);
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * Constitution II: prices are informative and no tax calculation may depend
+   * on them. Both sides of the rule come out of the graph, so a file added
+   * tomorrow is covered without being written down anywhere:
+   *
+   * - the **fiscal path** is everything `project-ledger.ts` reaches, which is
+   *   pass A, pass A' and pass B: the code that creates lots, gains, theses and
+   *   fiscal warnings;
+   * - a file is **price-aware** when it reaches `prices.ts`, the single gate.
+   *
+   * The two sets must not meet, at any depth. Checking direct imports against
+   * two fixed lists left a new file in neither list and a leak one hop away
+   * from being seen; this sees the whole chain and prints it.
+   *
+   * Note which way round it is: a view reading `theses.ts` is fine, and that is
+   * exactly why the index comparison lives in `bucket.ts` and **wraps**
+   * `theses()` instead of extending it. What is forbidden is the fiscal path
+   * learning what a price is.
+   */
+  it("keeps prices out of every fiscal calculation, transitively", () => {
+    const graph = importGraph();
+    const pricesFile = join(domainSrc, "projections", "prices.ts");
+    const projectLedger = join(domainSrc, "projections", "project-ledger.ts");
+    const fiscal = reachableFrom(graph, projectLedger);
+    expect(fiscal.size).toBeGreaterThan(1);
+    const violations = [...fiscal.entries()]
+      .map(([file, chain]) => ({ chain, toPrices: reachableFrom(graph, file).get(pricesFile) }))
+      .filter((entry) => entry.toPrices !== undefined)
+      .map((entry) => `${asChain(entry.chain)}  ==  then  ==>  ${asChain(entry.toPrices ?? [])}`);
     expect(violations).toEqual([]);
   });
 });
