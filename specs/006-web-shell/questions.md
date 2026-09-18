@@ -220,3 +220,42 @@ No hay navegador en el entorno de implementación, así que el recorrido visual 
 
 1. `apps/web/src/` tiene dos carpetas más que el árbol del prompt (`shell/` y `view-models/`), justificadas en `plan.md`.
 2. El diálogo nativo **no** se cierra al pulsar el fondo: la mitad de estos diálogos están encima de un formulario que ha costado rellenar, y perderlo por un toque perdido es peor que un clic más. `Esc` y el botón de cancelar siguen cerrando.
+
+---
+
+## Notas de la revisión (2026-09-18, correcciones aplicadas)
+
+La dirección revisó la web con un revisor independiente **y abriéndola en Chromium** a 360 px y a 1280 px. Lo que sigue es lo que se corrigió, lo que queda anotado y las dos cosas que la dirección tiene que decidir.
+
+### R1 — La clase que faltaba, y la regla que ahora lo vigila
+
+`shell/Nav.tsx` declaraba `<nav aria-label="Secciones">` **sin `class="nav"`** mientras `styles/layout.css` tenía veinte reglas bajo `.nav`. El CSS estaba bien escrito; simplemente no encontraba al elemento. Consecuencias medidas en el navegador: iconos a 70-96 px en vez de 22, desplazamiento horizontal a 360 px (criterio de aceptación de `spec.md`), ninguna barra fija abajo, ningún rail en escritorio y el pie del rail duplicado sobre la barra inferior. Un atributo.
+
+Corregido, y **con una regla de arquitectura nueva en `tests/architecture.test.ts`** que comprueba las dos direcciones sobre los ficheros reales: toda clase que el CSS selecciona aparece en el marcado, y toda clase literal del marcado está declarada en nuestro CSS o en el Pico vendorizado. Se ha comprobado que falla quitando otra vez el atributo (`expected [ 'nav' ] to deeply equal []`). Encontró además tres selectores muertos (`a.button`, `summary.control`, `.grow`), ya eliminados.
+
+Lo que la regla **no** puede ver: una clase que el CSS compone en tiempo de ejecución (`is-${tone}`) se cubre por su prefijo, y las tres que devuelve una función (`positive`, `negative`, `mask`) están en una lista corta con su motivo escrito, al estilo de `ALLOWED_URLS` del comprobador del *bundle*.
+
+### R2 — La CSP de producción bloqueaba los veintidós estilos en línea
+
+Chromium confirmó que `style-src 'self'` (sin `unsafe-inline`) bloquea los atributos `style=` que Solid compila dentro del HTML de sus plantillas: *"The action has been blocked"*. El caso peor era visible: el engranaje de la barra de estado no tenía respaldo en CSS y en producción se pintaba al tamaño por defecto.
+
+**No queda ningún atributo `style` en el marcado.** Los veintidós casos son ahora clases (`.flush`, `.spaced`, `.note`, `.file-input`, `.switch-inline`, `.load-more`, `.icon-button svg`, `dl.fields pre`, `.empty p`, `.nav .rail-footer a svg`), y el único valor dinámico —el ancho de cada línea del *skeleton*— es un ciclo de cuatro anchos con `:nth-child(4n+…)`, sin nada calculado por elemento. `scripts/check-bundle.mjs` **falla el build** si aparece un `style=` o un `<style>` en el HTML del *bundle*, `.js` incluidos porque es ahí donde viven las plantillas de Solid; comprobado introduciendo uno a propósito.
+
+### R3 — `frame-ancestors` en un `<meta>` no hace nada
+
+Chromium lo dice: *"The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a `<meta>` element"*. Se ha quitado de `index.html` y de `vite.config.ts` para no anunciar una protección que no existe.
+
+**Para la dirección:** la protección sigue haciendo falta y solo puede venir en una **cabecera HTTP**. Le corresponde a la distribución de CloudFront (Fase 4), junto con el resto de la CSP si algún día se quiere servir por cabecera en vez de por `<meta>`. Queda anotado aquí porque `docs/` no se toca en esta feature.
+
+### R4 — Dos decisiones que la dirección debería mirar
+
+1. **`editable` se deriva ahora de `FORM_SPECS`** (una sola fuente, como pedía la revisión). Efecto secundario: `account_created` y `asset_created` **sí** tienen formulario, así que ahora muestran "Corregir" — 19 eventos del *golden*. Antes la lista negra lo impedía por paridad con `atlas edit`, que remite a los comandos de catálogo. Corregir uno escribe anulación + evento corregido; si algo lo referencia, el dominio rechaza la anulación y lo explica (ADR-0003), así que no hay callejón sin salida, pero **es un cambio de comportamiento respecto a la CLI** y la dirección puede querer lo contrario (un `account_updated` en la web, que hoy no tiene formulario).
+2. **La regla por defecto del modo privacidad vive en `ledger/state.ts`**, no en `format/money.ts`. Las dos reglas de pintado (máscara y "sin dato") sí están en el módulo vigilado, como pedía la revisión; la tercera lee `localStorage` y meterla en `format/money.ts` habría obligado a **añadir `state.ts` a la lista de módulos autorizados a importar la puerta de privacidad**, que es exactamente la regla de arquitectura que protege que solo `Amount` formate un importe. Se ha exportado como función pura (`privacyFromPreference`) con su test: las tres mutaciones de la revisión mueren igual.
+
+### R5 — Valores fuera de las escalas: lo que queda
+
+Se han llevado a *tokens* los que señaló la revisión (`--s-0`, `--tap-compact`, `--icon`, `--icon-sm`, `--control-max`, y el padding del `badge`). Siguen fuera de escala, y **no** se han tocado, cinco tamaños intrínsecos de una forma concreta: el punto del `ledger-chip` (0,5 rem), la pastilla de la acción (2,25 × 3,25 rem), las dos alturas del *skeleton* (1 y 2,5 rem), el ancho máximo del diálogo (34 rem) y el mínimo de un botón de la barra de acciones (12 rem). No son espacio ni tipografía; si la dirección quiere una escala también para ellos, es un cambio de `plan.md` D10.
+
+### R6 — Lo que sigue sin verificarse aquí
+
+No hay navegador en este entorno. Lo automático está en verde (`lint`, `typecheck`, 837 pruebas, dominio al 100 %, `build` con el comprobador del *bundle*), y los 41 módulos de `apps/web/src` se transforman con el *pipeline* real del servidor de desarrollo (200 cada uno), pero **el resultado visual de R1, R2 y la conmutación a 360/1280 px lo tiene que ver la dirección**. Lo añadido por precaución y sin poder medirlo: `min-width: 0` en cada hueco de la barra y truncado de la etiqueta, porque a 360 px "Movimientos" ocupa casi el hueco entero y bastaba para volver a empujar la página de lado.
