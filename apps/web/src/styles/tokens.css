@@ -62,6 +62,9 @@
   --statusbar-h: 3rem;
   --bottomnav-h: 3.75rem;
   --rail-w: 13.5rem;
+  /* The glyph column of the rail: as wide as its widest glyph, the privacy
+     switch, which Pico draws 2.25em wide on a 1rem control. */
+  --rail-glyph: 2.25rem;
   --content-max: 62rem;
 
   /* Inline icons, and the widest a lone control gets inside a row. */
