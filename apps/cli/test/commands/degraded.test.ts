@@ -77,6 +77,10 @@ const INVOCATIONS: { command: string; argv: string[]; readOnly: boolean }[] = [
   { command: "export", argv: ["export", "--format", "csv"], readOnly: true },
   // `check` is the tool that lists the invalid events: it reports them, it does not warn about itself.
   { command: "check", argv: ["check"], readOnly: true },
+  // `tax` writes nothing, but on a degraded ledger it refuses instead of warning:
+  // a savings base computed over a skipped event is approximate, and the answer
+  // to that is the list of what to repair (feature 009, Q11).
+  { command: "tax", argv: ["tax", "2027"], readOnly: false },
   {
     command: "add",
     argv: [

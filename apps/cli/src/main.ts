@@ -31,6 +31,7 @@ import {
 } from "./commands/query.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
 import { synthCommand } from "./commands/synth.js";
+import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
@@ -59,6 +60,7 @@ export const COMMANDS: Record<string, Command> = {
   cash: cashCommand,
   gains: gainsCommand,
   income: incomeCommand,
+  tax: taxCommand,
   check: checkCommand,
   export: exportCommand,
   synth: synthCommand,
@@ -76,6 +78,7 @@ comandos:
   thesis open|close <id>|show <id>|list [--closed] [--date]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
   positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
+  tax <año> [--lots]             base del ahorro: total fiscal de núcleo y cubo, no la cuota
   weights [--date]   contribute [--amount <eur>] [--date]   costs [--date]
   networth [--date]   bucket [--date]
   transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
