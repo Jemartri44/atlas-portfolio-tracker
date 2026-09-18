@@ -1,9 +1,11 @@
 // Public API of @atlas/domain.
 
 export {
+  addDays,
   assertCivilDate,
   type CivilDate,
   compareCivilDates,
+  daysBetween,
   daysInMonth,
   isCivilDate,
   isLeapYear,
@@ -43,11 +45,20 @@ export {
   contributionPlan,
 } from "./projections/contribution.js";
 export {
+  type CashSettlement,
+  type CorporateActionDraft,
+  type CorporateActionParams,
+  corporateActionDraft,
+  type FractionRow,
+} from "./projections/corporate-action-draft.js";
+export {
   type BucketCostRow,
   type CoreCostRow,
   type CoreCostTotals,
   type CostSummary,
   costSummary,
+  type StandaloneFeeRow,
+  type StandaloneFees,
 } from "./projections/costs.js";
 export { deepCheck } from "./projections/deep-check.js";
 export { realizedGains } from "./projections/gains.js";

@@ -7,6 +7,7 @@
 import {
   type ContributionPlan,
   type CoreWeights,
+  type CostSummary,
   contributionPlan,
   coreWeights,
   costSummary,
@@ -247,6 +248,33 @@ export const contributeCommand = async (
   return 0;
 };
 
+/**
+ * The charges that are **not** part of any fiscal basis (custody,
+ * administration, connectivity: art. 35 LIRPF, `docs/business-rules.md` §5.2).
+ * They are shown apart and said to be apart, because adding them to the
+ * commissions of a trade would overstate the acquisition cost, and leaving them
+ * out — which is what every view did until now — understates what the portfolio
+ * actually costs.
+ *
+ * Not broken down by kind: the field that would tell one from another does not
+ * exist in the schema yet.
+ */
+const standaloneText = (standalone: CostSummary["standalone"]): string[] =>
+  standalone.rows.length === 0
+    ? []
+    : [
+        "",
+        "Comisiones sueltas (custodia, administración, conectividad). No forman parte del coste de adquisición ni del valor de transmisión (business-rules.md §5.2):",
+        table(
+          ["cuenta", "libro", "comisiones EUR"],
+          [
+            ...standalone.rows.map((row) => [row.account_id, row.book, eur(row.fees_eur)]),
+            ["TOTAL núcleo", "", eur(standalone.core_eur)],
+            ["TOTAL cubo", "", eur(standalone.bucket_eur)],
+          ],
+        ),
+      ];
+
 export const costsCommand = async (
   ctx: Context,
   _positionals: string[],
@@ -293,6 +321,7 @@ export const costsCommand = async (
       ["cuenta", "comisiones EUR"],
       summary.bucket.rows.map((row) => [row.account_id, eur(row.fees_eur)]),
     ),
+    ...standaloneText(summary.standalone),
   ].join("\n");
   renderQuery(
     ctx,
@@ -324,6 +353,15 @@ export const costsCommand = async (
           account_id: row.account_id,
           fees_eur: row.fees_eur.amount.toString(),
         })),
+      },
+      standalone: {
+        rows: summary.standalone.rows.map((row) => ({
+          account_id: row.account_id,
+          book: row.book,
+          fees_eur: row.fees_eur.amount.toString(),
+        })),
+        core_eur: summary.standalone.core_eur.amount.toString(),
+        bucket_eur: summary.standalone.bucket_eur.amount.toString(),
       },
     },
     text,
