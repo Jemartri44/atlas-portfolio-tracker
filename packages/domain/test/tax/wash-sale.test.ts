@@ -280,6 +280,21 @@ describe("mandatory edge cases", () => {
     expect(text(doubtful?.base_difference_eur)).toBe("200");
   });
 
+  it("#19: a repurchase bought before two losses defers only the first, whichever buy carries it", () => {
+    // Two prior purchases, and the second loss consumes what is left of the
+    // first one: the purchase of February can only carry one of the two.
+    const b = taxBuilder();
+    buy(b, "stock_s", "2027-01-11", "20", "100");
+    buy(b, "stock_s", "2027-02-15", "10", "100");
+    const first = sell(b, "stock_s", "2027-03-01", "10", "80");
+    const second = sell(b, "stock_s", "2027-03-10", "10", "80");
+    const report = reportOf(b.build(), 2027);
+    expect(text(lineOf(report, first.id).deferred_eur)).toBe("-200");
+    expect(text(lineOf(report, second.id).deferred_eur)).toBe("0");
+    expect(text(lineOf(report, second.id).computable_eur_rounded)).toBe("-200");
+    expect(report.wash_sale.pending.map((p) => text(p.amount_eur))).toEqual(["-200"]);
+  });
+
   it("#20: a transmission of lots with results of different sign is looked at as a whole", () => {
     const b = taxBuilder();
     buy(b, "stock_s", "2027-01-11", "5", "50");
