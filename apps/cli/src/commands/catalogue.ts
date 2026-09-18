@@ -228,10 +228,11 @@ const SETTINGS_DECIMALS = [
   "bucket-max-weight-pct",
   "model-720-alert-threshold-eur",
   "model-721-alert-threshold-eur",
+  "savings-offset-limit-pct",
   "tax-residence",
   "notification-email",
 ];
-const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days"];
+const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days", "loss-carryforward-years"];
 /** Free-text settings: the benchmark is an `asset_id`, checked against the catalogue when queried. */
 const SETTINGS_STRINGS = ["bucket-benchmark-asset"];
 
@@ -352,6 +353,7 @@ export const settingsCommand = async (
       "fiscal-date-rule",
       "wash-sale-window",
       "income-category",
+      "treaty-withholding-pct",
       "target-weights",
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
@@ -382,6 +384,14 @@ export const settingsCommand = async (
       patch.income_category = {
         ...current.income_category,
         ...assetTypeAssignments(categories, "income-category"),
+      };
+    }
+    // Merged too: a treaty rate is set one country at a time (feature 009, Q4).
+    const treaties = stringFlag(flags, "treaty-withholding-pct");
+    if (treaties !== undefined) {
+      patch.treaty_withholding_pct = {
+        ...current.treaty_withholding_pct,
+        ...parseAssignments(treaties, "treaty-withholding-pct"),
       };
     }
     const weights = stringFlag(flags, "target-weights");

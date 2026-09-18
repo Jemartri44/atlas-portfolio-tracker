@@ -313,6 +313,34 @@ describe("atlas settings set: assignments keyed by asset type", () => {
     expect(written.settings.income_category.fund).toBe("capital_gain");
   });
 
+  it("sets the parameters of the tax engine and merges the treaty rates country by country", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(
+      await h.exec([
+        "settings",
+        "set",
+        "--savings-offset-limit-pct",
+        "20",
+        "--loss-carryforward-years",
+        "5",
+        "--treaty-withholding-pct",
+        "US=15",
+      ]),
+    ).toBe(0);
+    expect(await h.exec(["settings", "set", "--treaty-withholding-pct", "CH=15"])).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as {
+      settings: {
+        savings_offset_limit_pct: string;
+        loss_carryforward_years: number;
+        treaty_withholding_pct: Record<string, string>;
+      };
+    };
+    expect(written.settings.savings_offset_limit_pct).toBe("20");
+    expect(written.settings.loss_carryforward_years).toBe(5);
+    expect(written.settings.treaty_withholding_pct).toEqual({ US: "15", CH: "15" });
+  });
+
   it("rejects a category the enumeration does not have", async () => {
     const h = harness({ events: seed(), confirm: true });
     expect(await h.exec(["settings", "set", "--income-category", "etc=rendimiento"])).toBe(1);

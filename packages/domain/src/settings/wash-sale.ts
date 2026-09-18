@@ -9,7 +9,12 @@
 
 import { addDays, addMonths, addYears, type CivilDate } from "../dates/civil-date.js";
 import type { AssetType } from "../schema/events.js";
-import { DEFAULT_WASH_SALE_WINDOW, type Settings, type WashSaleWindow } from "./settings.js";
+import {
+  DEFAULT_WASH_SALE_TRANSFER_COUNTS,
+  DEFAULT_WASH_SALE_WINDOW,
+  type Settings,
+  type WashSaleWindow,
+} from "./settings.js";
 
 /** The window in force for an asset type: the settings, the legacy form, or the default (ADR-0018). */
 export const washSaleWindowOf = (settings: Settings, assetType: AssetType): WashSaleWindow => {
@@ -29,7 +34,7 @@ export const washSaleWindowOf = (settings: Settings, assetType: AssetType): Wash
  * wrong criterion arrived at in silence.
  */
 export const washSaleTransferCounts = (settings: Settings): boolean =>
-  settings.wash_sale_transfer_counts ?? true;
+  settings.wash_sale_transfer_counts ?? DEFAULT_WASH_SALE_TRANSFER_COUNTS;
 
 /** Moves a date by the window, forwards or backwards. */
 const shift = (date: CivilDate, window: WashSaleWindow, direction: 1 | -1): CivilDate => {
