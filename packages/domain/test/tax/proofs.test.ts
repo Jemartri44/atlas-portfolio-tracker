@@ -13,9 +13,12 @@ import { yearOf } from "../../src/dates/civil-date.js";
 import { realizedGains } from "../../src/projections/gains.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type {
+  BuyEvent,
   CorporateActionEvent,
   LedgerEvent,
+  SellEvent,
   SettingsChangedEvent,
+  ValuationEvent,
 } from "../../src/schema/events.js";
 import { decodeLine } from "../../src/schema/line.js";
 import { DEFAULT_INCOME_CATEGORY } from "../../src/settings/settings.js";
@@ -72,6 +75,45 @@ const withoutInKindValues = (events: readonly LedgerEvent[]): LedgerEvent[] =>
       : event,
   );
 
+/** Crockford base 32, the alphabet of a ULID. */
+const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const extraId = (n: number): string => {
+  let text = "";
+  for (let rest = n, i = 0; i < 6; i += 1, rest = Math.floor(rest / 32)) {
+    text = `${CROCKFORD[rest % 32]}${text}`;
+  }
+  return `01ARYZ6S41TSV4RRFFQ7${text}`;
+};
+
+/**
+ * The other direction: **more** prices than the ledger had. After the whole
+ * ledger, a valuation of every account and asset traded, on the day of each
+ * trade, at an absurd price and in the currency and rate of the trade. Pass B
+ * orders by date, so they land among the trades they value.
+ */
+const withMorePrices = (events: readonly LedgerEvent[]): LedgerEvent[] => [
+  ...events,
+  ...events
+    .filter((event): event is BuyEvent | SellEvent => event.type === "buy" || event.type === "sell")
+    .map(
+      (trade, index): ValuationEvent => ({
+        schema_version: 1,
+        id: extraId(index),
+        recorded_at: trade.recorded_at,
+        type: "valuation",
+        account_id: trade.account_id,
+        asset_id: trade.asset_id,
+        date: trade.value_date,
+        quantity: "1",
+        unit_value: "987.65",
+        currency: trade.currency,
+        fx_rate: trade.fx_rate,
+        fx_rate_date: trade.fx_rate_date,
+        source: "manual",
+      }),
+    ),
+];
+
 const json = (events: readonly LedgerEvent[], year: number): string =>
   JSON.stringify(taxReportJson(taxYear(events, year, { today: TODAY })));
 
@@ -109,6 +151,7 @@ describe("proof 1: no figure of the return depends on a price", () => {
           const year = 2027 + offset;
           const reference = json(withoutPrices(events), year);
           expect(json(events, year)).toBe(reference);
+          expect(json(withMorePrices(events), year)).toBe(reference);
         },
       ),
       { numRuns: 200 },
