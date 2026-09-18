@@ -65,7 +65,14 @@
   /* The glyph column of the rail: as wide as its widest glyph, the privacy
      switch, which Pico draws 2.25em wide on a 1rem control. */
   --rail-glyph: 2.25rem;
-  --content-max: 62rem;
+  /*
+   * The widest the content gets beside the rail. At 62rem, and centred, a wide
+   * monitor left it floating in the middle of the void. It stops at 80rem
+   * because today's screens are one column: past it, the rows with a label on
+   * the left and a figure on the right, and the fields of a form, stretch
+   * beyond reading. Using more of the width is the job of the composition.
+   */
+  --content-max: 80rem;
 
   /* Inline icons, and the widest a lone control gets inside a row. */
   --icon: 1.375rem;

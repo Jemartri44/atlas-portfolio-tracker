@@ -396,9 +396,15 @@ main {
     max-width: 100%;
   }
 
+  /*
+   * Beside the rail, not centred in what is left of the screen: the content
+   * starts where the navigation ends, and whatever a wide monitor has to spare
+   * stays on the right as margin. Centred, a 2045px monitor showed a 992px
+   * column with 400px of void on either side (review of 2026-09-18).
+   */
   main {
-    padding-bottom: var(--s-6);
-    padding-top: var(--s-6);
+    margin: 0;
+    padding: var(--s-6) var(--s-5);
   }
 }
 
