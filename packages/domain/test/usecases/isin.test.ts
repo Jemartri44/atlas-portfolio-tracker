@@ -1,13 +1,14 @@
 // One ISIN, one asset (ADR-0009; feature 009, fiscal review, blocking finding
 // 1). Two assets with the same ISIN are one security to the tax agency and two
 // to FIFO and the wash-sale rule: recording refuses them, and a ledger written
-// before is told by `integrity`, never refused on load.
+// before is told by `integrity` and by the tax report, never refused on load.
 
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
+import { taxYear } from "../../src/tax/year.js";
 import { previewEvent } from "../../src/usecases/preview-event.js";
 import { recordEvent } from "../../src/usecases/record-event.js";
 import { LedgerBuilder } from "../ledger-builder.js";
@@ -147,5 +148,13 @@ describe("a ledger written before, with two assets on one ISIN", () => {
     expect(integrity(state).map((finding) => [finding.severity, finding.code])).toEqual([
       ["error", "duplicate_isin"],
     ]);
+  });
+
+  it("gives its tax report, and the report says the figures of that security may be wrong", () => {
+    const report = taxYear(legacy(), 2021, { today: "2025-01-01" });
+    expect(report.notes.find((note) => note.code === "tax_duplicate_isin")?.details).toEqual({
+      isin: ISIN,
+      assets: ["vwce_core", "vwce_bkt"],
+    });
   });
 });

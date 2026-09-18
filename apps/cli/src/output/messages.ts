@@ -358,6 +358,8 @@ export const describeWarning = (warning: Warning): string => {
       return `CADUCA al cierre de este ejercicio un saldo negativo de ${text(d.origin_year)} (${text(d.category) === "capital_gain" ? "ganancias y pérdidas patrimoniales" : "rendimientos del capital mobiliario"}) de ${text(d.amount_eur)} EUR que no ha podido compensarse.`;
     case "tax_release_category_differs":
       return `Se liberan aquí ${text(d.amount_eur)} EUR diferidos de una pérdida de la otra categoría de renta: se integran donde nació la pérdida.`;
+    case "tax_duplicate_isin":
+      return `El ISIN ${text(d.isin)} lo comparten ${((d.assets as string[] | undefined) ?? []).join(", ")}: para Hacienda son el mismo valor, y la regla de recompra y el FIFO de este informe los tratan como distintos. Sus cifras pueden estar mal: registra ese valor en un solo activo (\`atlas check\`).`;
     case "tax_settings_default_used":
       return `Parámetros fiscales que no están en el libro y se han tomado del código (ADR-0022): ${((d.fields as string[] | undefined) ?? []).join(", ")}. El próximo \`atlas settings set\` los dejará fijados.`;
     case "thesis_closed_with_position":

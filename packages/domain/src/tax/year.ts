@@ -1087,6 +1087,27 @@ const notesOf = (
       );
     }
   }
+  // Two assets with one ISIN are one security to the tax agency and two to the
+  // engine: its wash-sale rule and its FIFO cannot see across them (ADR-0009).
+  // Recording refuses it; a ledger written before is told here, where it costs.
+  const byIsin = new Map<string, string[]>();
+  for (const asset of core.state.assets.values()) {
+    if (asset.isin !== undefined) {
+      byIsin.set(asset.isin, [...(byIsin.get(asset.isin) ?? []), asset.asset_id]);
+    }
+  }
+  for (const [isin, assets] of byIsin) {
+    if (assets.length > 1) {
+      notes.push(
+        note(
+          "tax_duplicate_isin",
+          "",
+          `ISIN ${isin} is shared by ${assets.join(", ")}: the wash-sale rule and FIFO treat them as different securities`,
+          { isin, assets },
+        ),
+      );
+    }
+  }
   for (const entry of core.compensation.expired) {
     notes.push(
       note(

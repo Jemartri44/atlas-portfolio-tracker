@@ -140,6 +140,8 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `Caduca al cierre del ejercicio un saldo negativo de ${num(d.origin_year)} de ${f.money(d.amount_eur)} que no ha podido compensarse.`,
   tax_release_category_differs: (d, _n, f) =>
     `Se liberan ${f.money(d.amount_eur)} diferidos de una pérdida de la otra categoría de renta: se integran donde nació la pérdida.`,
+  tax_duplicate_isin: (d, n) =>
+    `El ISIN ${text(d.isin)} lo comparten ${n.many(d.assets)}: para Hacienda son el mismo valor y el cálculo fiscal los trata como distintos. Registra ese valor en un solo activo.`,
   tax_settings_default_used: (d) =>
     `Hay ${countOf(count(d.fields), "parámetro fiscal", "parámetros fiscales")} que no están en el libro y se han tomado del código. Guardar la configuración los dejará fijados.`,
 };
