@@ -1,11 +1,18 @@
-// Runs inside `npm run build -w @atlas/web`. Three things the bundle must never
+// Runs inside `npm run build -w @atlas/web`. Four things the bundle must never
 // do, checked on the real output instead of trusted (prompt §3.2 and §3.10):
 //
 // 1. No `node:` builtin: importing the browser store must not drag in node:fs
 //    through the adapters barrel (ADR-0019).
 // 2. No request to a foreign origin: no remote font, icon, script or analytics
 //    (constitution, security).
-// 3. Size within budget, printed so plan.md can record the measured value.
+// 3. No inline style: production serves `style-src 'self'` with no
+//    unsafe-inline, and CSP 3 governs a `style=` attribute through
+//    `style-src-attr`, which falls back to it. Chromium blocked twenty-two of
+//    them in the review, and the only visible symptom was an icon painted at
+//    the wrong size — so it is checked here and not left to the eye. Solid
+//    compiles a static `style={{…}}` into the HTML of its templates, which live
+//    inside the `.js`, so the `.js` is scanned too.
+// 4. Size within budget, printed so plan.md can record the measured value.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
@@ -32,6 +39,24 @@ const ALLOWED_URLS = [
     reason:
       "cadena dentro de un console.warn de Workbox (“Learn more at…”); no hay ninguna petición",
   },
+  {
+    url: "http://sr",
+    reason: "centinela inerte de @solidjs/router: base de un new URL(), nunca se pide",
+  },
+  {
+    url: "https://action",
+    reason: "centinela inerte de @solidjs/router para las server actions; no hay servidor",
+  },
+];
+
+/**
+ * An inline style, in either of its two forms: the attribute on an element and
+ * the `<style>` element. Both need `unsafe-inline` to work, which production
+ * does not grant.
+ */
+const INLINE_STYLES = [
+  { pattern: /<[a-zA-Z][^<>]*\sstyle\s*=/g, what: "un atributo style=" },
+  { pattern: /<style[\s>]/g, what: "un elemento <style>" },
 ];
 
 const files = (dir) =>
@@ -65,13 +90,20 @@ for (const path of files(dist)) {
   for (const match of text.matchAll(/["'`(](node:[a-z_/]+)/g)) {
     problems.push(`${name}: importa ${match[1]}`);
   }
-  // A real remote origin always has a dotted host. Requiring the dot skips the
-  // internal sentinels of @solidjs/router (`https://action/` for server actions,
-  // `http://sr` as a base for `new URL`), which are never requested, without
-  // needing an exception for each of them.
-  for (const match of text.matchAll(/https?:\/\/[\w-]+(?:\.[\w-]+)+/g)) {
+  // Scheme plus host, **without** requiring a dotted host: demanding the dot
+  // used to skip the inert sentinels of @solidjs/router for free, and with them
+  // any `http://localhost:9999/beacon` somebody injected. The two sentinels are
+  // named in ALLOWED_URLS instead, one by one.
+  for (const match of text.matchAll(/https?:\/\/[\w.-]+/g)) {
     if (!ALLOWED_URLS.some((allowed) => allowed.url === match[0])) {
       problems.push(`${name}: referencia a un origen ajeno ${match[0]}`);
+    }
+  }
+  if ([".js", ".html"].includes(extension)) {
+    for (const { pattern, what } of INLINE_STYLES) {
+      for (const match of text.matchAll(pattern)) {
+        problems.push(`${name}: el HTML lleva ${what} (${match[0].trim()})`);
+      }
     }
   }
 }
