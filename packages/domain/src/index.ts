@@ -177,7 +177,13 @@ export {
 } from "./tax/criteria.js";
 export { taxReportJson } from "./tax/json.js";
 export type * from "./tax/report.js";
-export { FIRST_SUPPORTED_YEAR, type TaxOptions, taxYear } from "./tax/year.js";
+export {
+  FIRST_SUPPORTED_YEAR,
+  type MovedTaxYear,
+  movedTaxYears,
+  type TaxOptions,
+  taxYear,
+} from "./tax/year.js";
 export {
   archiveNameFor,
   type CompactDeps,

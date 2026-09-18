@@ -107,6 +107,8 @@ interface Core {
   /** Deferred losses still sitting on lots at 31/12 of the year. */
   pendingDeferrals: PendingDeferral[];
   firstYear: number;
+  /** The savings base of every year of the chain, up to the one asked. */
+  bases: Map<number, Money>;
 }
 
 /** A reading that could not be computed because the ledger has invalid events under it. */
@@ -221,8 +223,10 @@ const computeCore = (
   let pending: PendingLoss[] = [];
   let compensation = compensate(firstYear, zeroBalances(), [], rules);
   let anchor: AnchorDifference | undefined;
+  const bases = new Map<number, Money>();
   for (let y = firstYear; y <= year; y += 1) {
     compensation = compensate(y, balances.get(y) ?? zeroBalances(), pending, rules);
+    bases.set(y, compensation.base_eur);
     pending = compensation.pending;
     const filed = options.filed?.find((entry) => entry.year === y);
     if (filed !== undefined) {
@@ -255,7 +259,65 @@ const computeCore = (
     ...(anchor === undefined ? {} : { anchor }),
     pendingDeferrals: walk.pendingAtCutoff,
     firstYear,
+    bases,
   };
+};
+
+/** A tax year whose savings base moves with a change of settings. */
+export interface MovedTaxYear {
+  year: number;
+  before: Money;
+  after: Money;
+}
+
+/**
+ * Years **before** `currentYear` whose savings base changes when the same
+ * ledger is read with the new settings (feature 009, Q12).
+ *
+ * `movedFiscalYears` compares realized gains, and that stopped being enough
+ * the day the engine started reading the wash-sale window, the transfer
+ * criterion and the income category: each of them moves the base without
+ * moving a single realized gain, and the warning would stay silent. This one
+ * compares what goes into the return. When either reading cannot be computed
+ * (invalid events, a ledger older than the regime), it compares nothing: the
+ * invalid events have their own confirmation (ADR-0015).
+ */
+export const movedTaxYears = (
+  events: readonly LedgerEvent[],
+  current: Settings,
+  next: Settings,
+  currentYear: number,
+): MovedTaxYear[] => {
+  const last = currentYear - 1;
+  const options = { today: `${currentYear}-01-01` };
+  const basesOf = (settings: Settings): Map<number, Money> | undefined => {
+    try {
+      const core = computeCore(events, Math.max(last, FIRST_SUPPORTED_YEAR), options, settings);
+      return isInvalid(core) ? undefined : core.bases;
+    } catch (error) {
+      if (error instanceof DomainError && error.code === "tax_year_unsupported") {
+        return undefined;
+      }
+      throw error;
+    }
+  };
+  const before = basesOf(current);
+  const after = basesOf(next);
+  if (before === undefined || after === undefined) {
+    return [];
+  }
+  // A change of fiscal date can move a figure into a year the other reading
+  // does not even reach: every year of either chain, zero where it is absent.
+  const moved: MovedTaxYear[] = [];
+  const years = [...new Set([...before.keys(), ...after.keys()])].sort((a, b) => a - b);
+  for (const year of years.filter((y) => y <= last)) {
+    const was = before.get(year) ?? zero();
+    const is = after.get(year) ?? zero();
+    if (!was.eq(is)) {
+      moved.push({ year, before: was, after: is });
+    }
+  }
+  return moved;
 };
 
 const zeroBalances = (): YearBalances => ({ capital_gain: zero(), movable_capital: zero() });

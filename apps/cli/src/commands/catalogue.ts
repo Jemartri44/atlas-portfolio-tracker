@@ -7,8 +7,10 @@ import {
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
+  type Money,
   mergeSettings,
   movedFiscalYears,
+  movedTaxYears,
   type Settings,
   settingsAt,
   silencedWarnings,
@@ -305,21 +307,33 @@ const confirmMovedYears = async (
   current: Settings,
   next: Settings,
 ): Promise<boolean> => {
-  const moved = movedFiscalYears(events, current, next, yearOf(todayInMadrid(ctx.deps.clock)));
-  if (moved.length === 0) {
+  const year = yearOf(todayInMadrid(ctx.deps.clock));
+  const moved = movedFiscalYears(events, current, next, year);
+  // The base too (feature 009, Q12): the window, the transfer criterion and the
+  // income category move it without moving a single realized gain.
+  const bases = movedTaxYears(events, current, next, year);
+  if (moved.length === 0 && bases.length === 0) {
     return true;
   }
-  ctx.io.out("Este cambio mueve las ganancias realizadas de ejercicios anteriores:");
-  ctx.io.out(
+  const rows = (impacts: readonly { year: number; before: Money; after: Money }[]) =>
     table(
       ["ejercicio", "antes EUR", "después EUR"],
-      moved.map((impact) => [
+      impacts.map((impact) => [
         String(impact.year),
         impact.before.amount.toString(),
         impact.after.amount.toString(),
       ]),
-    ),
-  );
+    );
+  if (moved.length > 0) {
+    ctx.io.out("Este cambio mueve las ganancias realizadas de ejercicios anteriores:");
+    ctx.io.out(rows(moved));
+  }
+  if (bases.length > 0) {
+    ctx.io.out(
+      "Este cambio mueve la base del ahorro de ejercicios anteriores (`atlas tax <año>`):",
+    );
+    ctx.io.out(rows(bases));
+  }
   ctx.io.out("Puede afectar a una declaración ya presentada.");
   return confirm(ctx, "¿Continuar? [s/N] ");
 };

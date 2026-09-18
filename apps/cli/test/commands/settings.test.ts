@@ -244,6 +244,53 @@ describe("atlas settings set: a change that moves a past tax year", () => {
     const h = await straddling();
     expect(await h.exec(["settings", "set", "--stale-price-days", "9"])).toBe(0);
     expect(h.text()).not.toContain("mueve las ganancias realizadas");
+    expect(h.text()).not.toContain("mueve la base del ahorro");
+  });
+
+  /**
+   * Feature 009, Q12: the income category moves the savings base without
+   * moving a single realized gain. The warning used to stay silent here.
+   */
+  it("also lists the years whose savings base moves when no realized gain does", async () => {
+    const h = harness({ events: seed(), confirm: true, instant: "2029-03-01T10:00:00.000Z" });
+    const trade = (type: string, asset: string, date: string, price: string) => [
+      "add",
+      type,
+      "--account",
+      "acc_fund",
+      "--asset",
+      asset,
+      "--trade-date",
+      date,
+      "--value-date",
+      date,
+      "--quantity",
+      "10",
+      "--unit-price",
+      price,
+      "--currency",
+      "EUR",
+      "--fx-rate",
+      "1",
+      "--fx-rate-date",
+      date,
+      "--yes",
+    ];
+    // A fund loss of −20 deferred by a repurchase within the year, and a gain of +50.
+    expect(await h.exec(trade("buy", "ast_world", "2027-01-11", "10"))).toBe(0);
+    expect(await h.exec(trade("sell", "ast_world", "2027-06-01", "8"))).toBe(0);
+    expect(await h.exec(trade("buy", "ast_world", "2027-09-01", "8"))).toBe(0);
+    expect(await h.exec(trade("buy", "ast_bonds", "2027-01-11", "10"))).toBe(0);
+    expect(await h.exec(trade("sell", "ast_bonds", "2027-10-01", "15"))).toBe(0);
+    h.reset();
+    // A window of one day stops deferring the loss: the base of 2027 goes from 50 to 30.
+    expect(await h.exec(["settings", "set", "--wash-sale-window", "fund=1d"])).toBe(0);
+    const text = h.text();
+    expect(text).not.toContain("mueve las ganancias realizadas");
+    expect(text).toContain("mueve la base del ahorro de ejercicios anteriores");
+    expect(text).toContain("2027");
+    expect(text).toContain("50");
+    expect(text).toContain("30");
   });
 });
 
