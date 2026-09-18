@@ -54,7 +54,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
   },
   {
     key: "pl",
-    header: "P&L latente",
+    header: "Resultado latente",
     numeric: true,
     card: "meta",
     cell: (row) => <Amount value={row.unrealized} signed coloured currency={false} />,
@@ -89,7 +89,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
 const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
   <Show when={props.row.thesisId !== undefined}>
     <span class="row wrap">
-      <Badge>{props.row.thesisId}</Badge>
+      <Badge>tesis abierta</Badge>
       <span class="tiny">
         {props.row.daysOpen} de {props.row.horizonDays} días
       </span>

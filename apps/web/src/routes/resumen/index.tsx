@@ -20,6 +20,7 @@ import {
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import { Callout, EmptyState } from "../../components/index.js";
+import { eventReferences } from "../../format/events.js";
 import { displayName, nameIndex } from "../../format/names.js";
 import { daysSinceExport } from "../../ledger/source.js";
 import { store, today } from "../../ledger/state.js";
@@ -73,6 +74,7 @@ export default function ResumenRoute(): JSX.Element {
         const recent = movementRows(
           ledgerEntries(snapshot.state, snapshot.events).slice(0, RECENT),
           names,
+          eventReferences(snapshot.events),
         );
         const empty = snapshot.events.length === 0;
 

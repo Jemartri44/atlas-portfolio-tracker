@@ -127,7 +127,7 @@ export const CORPORATE_FORMS: readonly CorporateForm[] = [
       ...cash("Precio del pico por título", "Si el canje liquidó picos en efectivo."),
     ],
     effect:
-      "Convierte los lotes al activo nuevo conservando fecha y coste. Un canje homogéneo no tributa (business-rules.md §6).",
+      "Convierte los lotes al activo nuevo conservando fecha y coste. Un canje de valores homogéneos no tributa.",
   },
   {
     slug: "escision",

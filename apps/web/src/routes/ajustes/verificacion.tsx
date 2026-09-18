@@ -9,6 +9,7 @@ import { deepCheck, type IntegrityFinding, integrity } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Badge, Callout } from "../../components/index.js";
+import { type EventReferences, eventReferences } from "../../format/events.js";
 import { describeError } from "../../format/messages/errors.js";
 import { describeFinding } from "../../format/messages/findings.js";
 import { describeWarning } from "../../format/messages/warnings.js";
@@ -21,6 +22,7 @@ import { RequireLedger } from "../guard.jsx";
 const Findings = (props: {
   findings: readonly IntegrityFinding[];
   privacy: boolean;
+  events: EventReferences;
 }): JSX.Element => (
   <div class="stack">
     <For each={props.findings}>
@@ -51,7 +53,7 @@ const Findings = (props: {
                 {(id, index) => (
                   <>
                     <Show when={index() > 0}>, </Show>
-                    <A href={`/movimientos/${id}`}>{id}</A>
+                    <A href={`/movimientos/${id}`}>{props.events(id)}</A>
                   </>
                 )}
               </For>
@@ -71,6 +73,7 @@ export default function VerificacionRoute(): JSX.Element {
     <RequireLedger skeleton={5}>
       {(snapshot) => {
         const names = nameIndex(snapshot.state);
+        const events = eventReferences(snapshot.events);
         const findings = () => integrity(snapshot.state);
         const invalid = () => snapshot.state.invalid;
 
@@ -89,15 +92,15 @@ export default function VerificacionRoute(): JSX.Element {
                     <Badge tone="negative">{invalid().length}</Badge>
                   </header>
                   <p class="subtle">
-                    Mientras los haya, se puede consultar pero no registrar (ADR-0015). Rectifica
-                    cada uno desde su ficha.
+                    Mientras los haya, se puede consultar pero no registrar. Rectifica cada uno
+                    desde su ficha.
                   </p>
                   <div class="stack">
                     <For each={invalid()}>
                       {(entry) => (
                         <div class="callout is-error">
                           <span class="title">
-                            <A href={`/movimientos/${entry.event.id}`}>{entry.event.type}</A>
+                            <A href={`/movimientos/${entry.event.id}`}>{events(entry.event.id)}</A>
                           </span>
                           <span class="subtle">
                             {describeError(entry.error, { names, privacy: privacy() })}
@@ -125,7 +128,7 @@ export default function VerificacionRoute(): JSX.Element {
                     </p>
                   }
                 >
-                  <Findings findings={findings()} privacy={privacy()} />
+                  <Findings findings={findings()} privacy={privacy()} events={events} />
                 </Show>
               </section>
 
@@ -153,7 +156,7 @@ export default function VerificacionRoute(): JSX.Element {
                       when={found().length > 0}
                       fallback={<p class="flush">Sin hallazgos: el libro es reproducible.</p>}
                     >
-                      <Findings findings={found()} privacy={privacy()} />
+                      <Findings findings={found()} privacy={privacy()} events={events} />
                     </Show>
                   )}
                 </Show>
@@ -173,7 +176,9 @@ export default function VerificacionRoute(): JSX.Element {
                             {describeWarning(warning, { names, privacy: privacy() })}
                           </span>
                           <span class="tiny">
-                            <A href={`/movimientos/${warning.event_id}`}>{warning.event_id}</A>
+                            <A href={`/movimientos/${warning.event_id}`}>
+                              {events(warning.event_id)}
+                            </A>
                           </span>
                         </div>
                       )}

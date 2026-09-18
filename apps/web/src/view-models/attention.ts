@@ -6,9 +6,10 @@
 // makes SC-008 checkable — every code shown has a screen where it is fixed.
 
 import type { IntegrityFinding, OpenOrder, OpenTransfer, Warning } from "@atlas/domain";
+import { describeFinding } from "../format/messages/findings.js";
 import { describeWarning } from "../format/messages/warnings.js";
 import type { NameIndex } from "../format/names.js";
-import { maskFigures } from "../format/privacy.js";
+import { countOf } from "../format/number.js";
 
 export type AttentionSeverity = "error" | "warning" | "info";
 
@@ -162,25 +163,16 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "invalid_events",
-        `${input.invalidCount} ${
-          input.invalidCount === 1 ? "evento inválido" : "eventos inválidos"
-        } en el libro: las consultas siguen, registrar no (ADR-0015).`,
+        `${countOf(input.invalidCount, "evento inválido", "eventos inválidos")} en el libro: se puede consultar, pero no registrar hasta rectificarlos.`,
       ),
     );
   }
 
-  // The message of a finding is the domain's own, in English and free-form, and
-  // it carries the evidence: "open lots 23.0274 differ from physical positions
-  // 20" is a position, read out loud in the first screen of the application.
+  // The explanation of a finding in Spanish. Its evidence — the domain's own
+  // message, in English, with identifiers and figures — stays in the
+  // verification screen, folded away, where it can be checked.
   for (const finding of input.findings) {
-    items.push(
-      itemOf(
-        "integrity_finding",
-        `${finding.code}: ${maskFigures(finding.message, input.privacy)}${
-          finding.event_ids.length === 0 ? "" : ` (${finding.event_ids.join(", ")})`
-        }`,
-      ),
-    );
+    items.push(itemOf("integrity_finding", describeFinding(finding).what));
   }
 
   // One entry per distinct warning; the domain can repeat a code per asset.

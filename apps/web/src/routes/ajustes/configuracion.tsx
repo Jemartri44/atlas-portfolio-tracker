@@ -22,6 +22,8 @@ import {
 } from "@atlas/domain";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Callout } from "../../components/index.js";
+import { formatDate } from "../../format/date.js";
+import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
@@ -77,6 +79,11 @@ export default function ConfiguracionRoute(): JSX.Element {
               asset.book === "core" &&
               (asset.active || (current().target_weights?.[asset.asset_id] ?? "") !== ""),
           );
+        /** Where the configuration in force comes from, said as a person would. */
+        const origin = (): string =>
+          resolution().origin === "default"
+            ? "la de partida, porque todavía no has registrado ningún cambio"
+            : `la del ${eventReferences(snapshot.events)(resolution().origin).toLowerCase()}`;
         const values = (): Record<string, string> =>
           weightValues(
             current(),
@@ -164,7 +171,7 @@ export default function ConfiguracionRoute(): JSX.Element {
           <>
             <PageHeader
               title="Configuración"
-              lead={`Vigente el ${date} (origen: ${resolution().origin}). Guardar escribe un evento con la configuración completa.`}
+              lead={`En vigor el ${formatDate(date)}: ${origin()}. Guardar registra un cambio con la configuración completa.`}
             />
 
             <Show when={saved()}>
@@ -183,8 +190,8 @@ export default function ConfiguracionRoute(): JSX.Element {
               <FiscalCard draft={draft()} />
 
               <Callout tone="info" title="Lo que no se edita aquí">
-                Los tramos del ahorro y las frecuencias de los avisos programados los usará el motor
-                fiscal y la Fase 4; se editan desde la CLI hasta que existan sus pantallas.
+                Los tramos de la base del ahorro y la frecuencia de los avisos automáticos todavía
+                no tienen pantalla: de momento se cambian desde la CLI.
               </Callout>
 
               {/* The error of a save goes next to the button that caused it. */}

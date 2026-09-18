@@ -10,6 +10,7 @@ import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import { Badge, Callout, Dialog, EmptyState, Field } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
+import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { store } from "../../ledger/state.js";
 import { reverse } from "../../ledger/write.js";
@@ -75,14 +76,16 @@ export default function MovimientoDetalleRoute(): JSX.Element {
             fallback={
               <>
                 <PageHeader title="Movimiento" />
-                <EmptyState what={`No hay ningún evento con el identificador ${params.id}.`}>
+                <EmptyState what="Ese movimiento no está en el libro.">
                   <A href="/movimientos">Volver al libro</A>
                 </EmptyState>
               </>
             }
           >
             {(found) => {
-              const view = createMemo(() => detailView(found(), nameIndex(snapshot.state)));
+              const view = createMemo(() =>
+                detailView(found(), nameIndex(snapshot.state), eventReferences(snapshot.events)),
+              );
               return (
                 <>
                   <PageHeader
@@ -140,13 +143,17 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   </Show>
 
                   <Show when={dependents().length > 0}>
-                    <Callout tone="error" title="Hay eventos que dependen de este">
-                      <p>Rectifícalos antes; el libro nunca se queda incoherente (ADR-0003).</p>
+                    <Callout tone="error" title="Hay movimientos que dependen de este">
+                      <p>
+                        Anúlalos o corrígelos antes: si este desapareciera, dejarían de cuadrar.
+                      </p>
                       <ul>
                         <For each={dependents()}>
                           {(item) => (
                             <li>
-                              <A href={`/movimientos/${item.id}`}>{item.type}</A>: {item.error}
+                              <A href={`/movimientos/${item.id}`}>
+                                {eventReferences(snapshot.events)(item.id)}
+                              </A>
                             </li>
                           )}
                         </For>

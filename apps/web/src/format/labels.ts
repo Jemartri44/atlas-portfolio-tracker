@@ -5,6 +5,11 @@
 //
 // The domain speaks English by contract (`errors.ts`); translating is the
 // interface's job, and each interface does it its own way (decision (i)).
+//
+// LINE BUDGET: six dictionaries — event types, fields, values, settings,
+// platforms and states — and nothing else. They are the vocabulary of the
+// screens and a reviewer reads them as one list; splitting them would only
+// move the drift test's target around.
 
 /** Event types, as a person names the operation. */
 export const EVENT_LABELS: Record<string, string> = {
@@ -170,6 +175,7 @@ export const VALUE_LABELS: Record<string, string> = {
   connectivity: "Conectividad y datos de mercado",
   discretionary_management: "Gestión discrecional",
   other: "Otra",
+  requested: "Solicitado",
   // The scheduled jobs and their frequencies (settings, `job_frequencies`).
   prices: "Precios",
   reminder: "Recordatorio",
@@ -181,6 +187,20 @@ export const VALUE_LABELS: Record<string, string> = {
   yearly: "Anual",
   capital_gain: "Ganancia patrimonial",
   movable_capital: "Rendimiento del capital mobiliario",
+  // Corporate actions, by kind: the detail and the list said "reverse_split".
+  split: "Split",
+  reverse_split: "Contrasplit",
+  stock_dividend: "Dividendo en acciones",
+  merger: "Fusión",
+  spin_off: "Escisión",
+  fund_merger: "Fusión de fondos",
+  share_class_change: "Cambio de clase",
+  fund_liquidation: "Liquidación de un fondo",
+  issuer_liquidation: "Liquidación del emisor",
+  delisting: "Exclusión de cotización",
+  crypto_fork: "Bifurcación de una cripto",
+  token_migration: "Migración de token",
+  issuer_restructuring: "Reestructuración del emisor",
   true: "Sí",
   false: "No",
 };
@@ -221,6 +241,21 @@ export const SETTING_LABELS: Record<string, string> = {
 };
 
 export const settingLabel = (key: string): string => SETTING_LABELS[key] ?? key;
+
+/**
+ * The platforms the project integrates with, by their proper names. The ledger
+ * keeps what was typed when the account was created (`myinvestor`, `ibkr`), and
+ * the lists of accounts used to print it as it was: "myinvestor · ibkr" in
+ * lower case, which reads like a configuration key. Anything else the user
+ * typed is theirs and comes back untouched.
+ */
+const PLATFORMS: Record<string, string> = {
+  myinvestor: "MyInvestor",
+  ibkr: "Interactive Brokers",
+};
+
+export const platformLabel = (platform: string): string =>
+  PLATFORMS[platform.trim().toLowerCase()] ?? platform;
 
 /** State of an entry of the ledger, said with words and not only with a style. */
 export const STATUS_LABELS: Record<string, string> = {

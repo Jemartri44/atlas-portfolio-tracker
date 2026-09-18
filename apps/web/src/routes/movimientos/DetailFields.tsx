@@ -12,6 +12,7 @@ import { A } from "@solidjs/router";
 import { For, type JSX, Match, Show, Switch } from "solid-js";
 import { Amount, Figure } from "../../components/index.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
+import { eventLabel } from "../../format/labels.js";
 import type { DetailField, DetailView } from "../../view-models/index.js";
 import type { Part } from "../../view-models/structured.js";
 
@@ -125,6 +126,10 @@ export const EventLinks = (props: { links: DetailView["links"] }): JSX.Element =
   </Show>
 );
 
+/**
+ * The technical block: the one place an identifier is shown as such, because
+ * it is what the CLI asks for and what a repaired file is checked against.
+ */
 export const EventEnvelope = (props: {
   envelope: readonly DetailField[];
   position: number;
@@ -139,17 +144,20 @@ export const EventEnvelope = (props: {
           <>
             <dt>{field.label}</dt>
             <dd>
-              <Show when={field.name === "recorded_at"} fallback={<code>{field.text}</code>}>
-                {formatInstantDate(field.text as string)}
-              </Show>
+              <Switch fallback={<code>{field.text}</code>}>
+                <Match when={field.name === "recorded_at"}>
+                  {formatInstantDate(field.text as string)}
+                </Match>
+                <Match when={field.name === "type"}>{eventLabel(field.text as string)}</Match>
+              </Switch>
             </dd>
           </>
         )}
       </For>
     </dl>
     <p class="note">
-      Posición en el fichero: {props.position + 1}. Con este identificador puedes rectificar también
-      desde la CLI.
+      Línea {props.position + 1} del fichero. Con este identificador puedes rectificar también desde
+      la CLI.
     </p>
   </section>
 );

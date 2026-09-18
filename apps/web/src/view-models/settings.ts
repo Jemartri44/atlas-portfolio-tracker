@@ -126,7 +126,11 @@ export const SETTINGS_NUMBERS: readonly NumberSetting[] = [
 /** The free-text settings. */
 export const SETTINGS_TEXTS: readonly TextSetting[] = [
   { key: "tax_residence", label: "Residencia fiscal", hint: "Dos letras (ISO 3166-1)." },
-  { key: "notification_email", label: "Correo de avisos", hint: "Lo usará la Fase 4." },
+  {
+    key: "notification_email",
+    label: "Correo de avisos",
+    hint: "Todavía no se envía ningún correo: queda guardado para cuando lleguen los avisos por correo.",
+  },
 ];
 
 /** The two settings that hold one value **per asset type** (ADR-0013, ADR-0018). */

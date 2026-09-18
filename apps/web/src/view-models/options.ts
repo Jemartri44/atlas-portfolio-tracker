@@ -15,8 +15,10 @@ import {
   transferWatch,
 } from "@atlas/domain";
 import type { Option } from "../components/Field.jsx";
-import { eventLabel, valueLabel } from "../format/labels.js";
+import { formatDate } from "../format/date.js";
+import { eventLabel, platformLabel, valueLabel } from "../format/labels.js";
 import { displayName, nameIndex } from "../format/names.js";
+import { countOf } from "../format/number.js";
 import type { FieldSpec, OptionSource } from "./forms/specs.js";
 
 /** Currencies worth offering: the ones the ledger already uses, euro first. */
@@ -45,7 +47,9 @@ export const accountOptions = (
     .map((account) => ({
       value: account.account_id,
       label: account.name,
-      hint: `${account.platform} · ${valueLabel(account.book)}`,
+      hint: `${platformLabel(account.platform)} · ${valueLabel(account.book)}${
+        account.active ? "" : " · cerrada"
+      }`,
     }));
 
 export interface AssetChoice {
@@ -153,8 +157,8 @@ export const openThesisOptions = (
     )
     .map((thesis) => ({
       value: thesis.thesis_id,
-      label: thesis.thesis_id,
-      hint: `${displayName(names, thesis.asset_id)} · ${thesis.days_open} días abierta`,
+      label: `${displayName(names, thesis.asset_id)} · ${displayName(names, thesis.account_id)}`,
+      hint: `abierta el ${formatDate(thesis.opened_at)}, hace ${countOf(thesis.days_open, "día", "días")}`,
     }));
 };
 

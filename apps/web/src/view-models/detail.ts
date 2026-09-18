@@ -12,8 +12,21 @@
 // read together, and the classification is the thing worth reviewing as a whole.
 
 import { type Effect, type LedgerEntry, Money, Quantity, type Settings } from "@atlas/domain";
-import { eventLabel, fieldLabel, STATUS_LABELS, valueLabel } from "../format/labels.js";
-import { displayName, NAMED_ID_FIELDS, type NameIndex, NO_NAMES } from "../format/names.js";
+import type { EventReferences } from "../format/events.js";
+import {
+  eventLabel,
+  fieldLabel,
+  platformLabel,
+  STATUS_LABELS,
+  valueLabel,
+} from "../format/labels.js";
+import {
+  displayName,
+  displayThesis,
+  NAMED_ID_FIELDS,
+  type NameIndex,
+  NO_NAMES,
+} from "../format/names.js";
 import { FORM_SPECS } from "./forms/specs.js";
 import {
   effectSentences,
@@ -102,6 +115,9 @@ const AMOUNT_FIELDS = new Set([
 
 const QUANTITY_FIELDS = new Set(["quantity", "quantity_in", "quantity_out"]);
 
+/** Fields that point at another **event**: named by its type and date, never by its id. */
+const EVENT_ID_FIELDS = new Set(["corrects_id", "reverses_id", "order_id", "request_id"]);
+
 const DATE_FIELDS = new Set([
   "trade_date",
   "value_date",
@@ -149,7 +165,7 @@ const CATALOGUE_TYPES = new Set([
 
 /** What to do instead, said where the user is looking for the button. */
 const CATALOGUE_HINT =
-  "El catálogo no se anula: se actualiza. El cambio se registra como una actualización con el estado completo resultante (esquema §6.1), y anular un alta que ya tiene operaciones detrás lo rechaza el libro. Desde la CLI: atlas account update o atlas asset update; su pantalla llega en la versión siguiente.";
+  "Las cuentas y los activos no se anulan: se actualizan, y cada cambio queda registrado con el estado completo resultante. Anular un alta que ya tiene operaciones detrás no se admite. De momento, el cambio se hace desde la CLI (atlas account update, atlas asset update).";
 
 /**
  * A type can be corrected when **a form exists for it** and it is not part of
@@ -181,11 +197,17 @@ const currencyOf = (event: Record<string, unknown>, field: string): string => {
   return String(event.currency ?? "EUR");
 };
 
+interface Resolvers {
+  names: NameIndex;
+  /** Event identifier → "Compra del 03/09/2026". Without it, the identifier. */
+  events?: EventReferences | undefined;
+}
+
 const fieldOf = (
   event: Record<string, unknown>,
   name: string,
   value: unknown,
-  names: NameIndex,
+  { names, events }: Resolvers,
 ): DetailField | undefined => {
   if (value === undefined) {
     return undefined;
@@ -213,6 +235,12 @@ const fieldOf = (
   if (name === "settings" && typeof value === "object" && value !== null) {
     return { name, label, kind: "settings", rows: settingRows(value as Settings, names) };
   }
+  if (typeof value === "string" && name === "thesis_id") {
+    return { name, label, kind: "id", text: displayThesis(names, value), hint: value };
+  }
+  if (typeof value === "string" && EVENT_ID_FIELDS.has(name) && events !== undefined) {
+    return { name, label, kind: "id", text: events(value), hint: value };
+  }
   if (typeof value === "string" && ID_FIELDS.has(name)) {
     if (!NAMED_ID_FIELDS.has(name)) {
       return { name, label, kind: "id", text: value };
@@ -224,6 +252,9 @@ const fieldOf = (
   }
   if (name === "ter") {
     return { name, label, kind: "percent", text: String(value) };
+  }
+  if (name === "platform" && typeof value === "string") {
+    return { name, label, kind: "text", text: platformLabel(value) };
   }
   if (typeof value === "object" && value !== null) {
     // A structure this version does not know: saying so beats dumping it, and
@@ -237,11 +268,12 @@ const fieldOf = (
 export const eventFields = (
   event: Record<string, unknown>,
   names: NameIndex = NO_NAMES,
+  events?: EventReferences,
 ): { envelope: DetailField[]; fields: DetailField[] } => {
   const envelope: DetailField[] = [];
   const fields: DetailField[] = [];
   for (const [name, value] of Object.entries(event)) {
-    const field = fieldOf(event, name, value, names);
+    const field = fieldOf(event, name, value, { names, events });
     if (field === undefined) {
       continue;
     }
@@ -254,52 +286,59 @@ export const eventFields = (
   return { envelope, fields };
 };
 
-export const detailView = (entry: LedgerEntry, names: NameIndex = NO_NAMES): DetailView => {
+export const detailView = (
+  entry: LedgerEntry,
+  names: NameIndex = NO_NAMES,
+  events?: EventReferences,
+): DetailView => {
   const { envelope, fields } = eventFields(
     entry.event as unknown as Record<string, unknown>,
     names,
+    events,
   );
+  // The link says what it leads to; the identifier stays in the technical block.
+  const describe = (id: string): string => (events === undefined ? id : events(id));
   const links: DetailView["links"] = [];
   if (entry.reversed_by !== undefined) {
     links.push({
       label: "Anulado por",
       to: `/movimientos/${entry.reversed_by}`,
-      text: entry.reversed_by,
+      text: describe(entry.reversed_by),
     });
   }
   if (entry.reverses_id !== undefined) {
     links.push({
       label: "Anula a",
       to: `/movimientos/${entry.reverses_id}`,
-      text: entry.reverses_id,
+      text: describe(entry.reverses_id),
     });
   }
   if (entry.corrects_id !== undefined) {
     links.push({
       label: "Corrige a",
       to: `/movimientos/${entry.corrects_id}`,
-      text: entry.corrects_id,
+      text: describe(entry.corrects_id),
     });
   }
   if (entry.corrected_by !== undefined) {
     links.push({
       label: "Corregido por",
       to: `/movimientos/${entry.corrected_by}`,
-      text: entry.corrected_by,
+      text: describe(entry.corrected_by),
     });
   }
   if (entry.order_id !== undefined) {
     links.push({
       label: "Orden",
       to: `/movimientos/${entry.order_id}`,
-      text: entry.order_id,
+      text: describe(entry.order_id),
     });
   }
   if (entry.request_id !== undefined) {
     links.push({
       label: "Solicitud de traspaso",
       to: `/movimientos/${entry.request_id}`,
-      text: entry.request_id,
+      text: describe(entry.request_id),
     });
   }
   return {

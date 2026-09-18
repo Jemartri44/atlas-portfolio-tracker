@@ -8,6 +8,7 @@
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
 import { Dialog } from "../../components/index.js";
+import { eventReferences } from "../../format/events.js";
 import { store } from "../../ledger/state.js";
 
 interface DuplicateDialogProps {
@@ -18,10 +19,13 @@ interface DuplicateDialogProps {
   children?: JSX.Element | undefined;
 }
 
+/** The events of the ledger as it is loaded, to name a duplicate instead of printing its id. */
+const references = () => eventReferences(store.snapshot()?.events ?? []);
+
 export const DuplicateDialog = (props: DuplicateDialogProps): JSX.Element => (
   <Dialog
     open={props.duplicates !== undefined}
-    title="Ya existe un evento igual"
+    title="Ya existe un movimiento igual"
     onClose={props.onCancel}
     actions={
       <>
@@ -35,16 +39,16 @@ export const DuplicateDialog = (props: DuplicateDialogProps): JSX.Element => (
     }
   >
     <p>
-      Otro evento del libro tiene la misma huella (
+      El libro ya tiene un movimiento con los mismos datos:{" "}
       <For each={props.duplicates ?? []}>
         {(id, index) => (
           <>
             <Show when={index() > 0}>, </Show>
-            <A href={`/movimientos/${id}`}>{id}</A>
+            <A href={`/movimientos/${id}`}>{references()(id)}</A>
           </>
         )}
       </For>
-      ).
+      .
     </p>
     <Show
       when={props.children !== undefined}

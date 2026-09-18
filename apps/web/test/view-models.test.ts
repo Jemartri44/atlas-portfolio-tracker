@@ -184,9 +184,10 @@ describe("attentionItems", () => {
       openTransfers: [],
     });
     expect(items[0]?.code).toBe("integrity_finding");
-    expect(items[0]?.message).toContain("negative_position");
-    expect(items[0]?.message).toContain("acc|ast is -1");
-    expect(items[0]?.message).toContain("01ARYZ6S41TSV4RRFFQ6900002");
+    // In Spanish; the evidence (English, with identifiers) stays in Verificación.
+    expect(items[0]?.message).toContain("Una posición física ha quedado negativa");
+    expect(items[0]?.message).not.toContain("negative_position");
+    expect(items[0]?.message).not.toContain("01ARYZ6S41TSV4RRFFQ6900002");
   });
 
   it("masks the evidence of a finding, which is a position read out loud", () => {
@@ -205,9 +206,10 @@ describe("attentionItems", () => {
       openOrders: [],
       openTransfers: [],
     });
-    expect(items[0]?.message).not.toContain("23.0274");
-    expect(items[0]?.message).toContain("lots_mismatch");
-    expect(items[0]?.message).toContain("ast_world");
+    // The summary explains; the evidence, figures included, stays folded in
+    // Verificación, where the privacy mode masks it.
+    expect(items[0]?.message).not.toContain("23");
+    expect(items[0]?.message).toContain("Los lotes fiscales de un activo no suman");
   });
 
   /** SC-008: every warning shown leads to the screen where it is fixed. */

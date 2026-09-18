@@ -58,9 +58,9 @@ export const StatsCard = (props: { view: StatsView }): JSX.Element => (
 
     <Show when={props.view.excluded.length > 0}>
       <p class="note">
-        <Badge tone="warning">fuera de las medias</Badge> {props.view.excluded.join(", ")}: sus
-        ventas consumieron lotes comprados por otra tesis, así que su resultado no es suyo (FIFO
-        global, ADR-0009).
+        <Badge tone="warning">fuera de las medias</Badge> Las tesis {props.view.excluded.join("; ")}
+        : sus ventas consumieron lotes comprados por otra tesis, porque el FIFO es global entre
+        todas, así que su resultado no es solo suyo.
       </p>
     </Show>
   </Section>

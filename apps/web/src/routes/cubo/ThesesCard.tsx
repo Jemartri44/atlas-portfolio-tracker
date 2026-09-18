@@ -11,13 +11,13 @@ import type { ThesesView, ThesisRow } from "../../view-models/bucket/index.js";
 
 const COLUMNS: readonly DataColumn<ThesisRow>[] = [
   {
-    key: "id",
-    header: "Tesis",
+    key: "asset",
+    header: "Activo",
     card: "title",
-    cell: (row) => row.thesisId,
-    hint: (row) => `${row.thesisId} · ${row.assetName}`,
+    cell: (row) => row.assetName,
+    hint: (row) => `${row.assetName} · ${row.accountName}`,
   },
-  { key: "asset", header: "Activo", card: "sub", cell: (row) => row.assetName },
+  { key: "period", header: "Tesis", card: "sub", cell: (row) => row.period },
   {
     key: "status",
     header: "Estado",

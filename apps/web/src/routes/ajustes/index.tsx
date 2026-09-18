@@ -119,7 +119,7 @@ export default function AjustesRoute(): JSX.Element {
                 <Show when={stored() !== undefined}>
                   <p class="subtle">
                     El libro vive en el navegador: <strong>no es un almacén definitivo</strong>. Si
-                    borras los datos del sitio, se va con ellos (ADR-0019).
+                    borras los datos del sitio, se va con ellos.
                   </p>
                   <div class="row wrap">
                     <button type="button" disabled={busy()} onClick={() => void onExport()}>

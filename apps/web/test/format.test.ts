@@ -360,7 +360,7 @@ describe("the privacy mode inside a message", () => {
     ).toContain("−600,00 EUR");
     // A percentage is not an amount and stays readable in public (§9.6).
     const percent = describeError(settingsError("bucket_stop_loss_pct", "-25"), { privacy: true });
-    expect(percent).toContain("-25");
+    expect(percent).toContain("−25");
     expect(percent).not.toContain(MASK);
   });
 

@@ -37,8 +37,8 @@ export const StandaloneFees = (props: StandaloneFeesProps): JSX.Element => (
     <h3 class="block-title">Comisiones sueltas</h3>
     <p class="note flush">
       Custodia, administración, conectividad. <strong>No forman parte</strong> del coste de
-      adquisición ni del valor de transmisión, así que no entran en la ganancia patrimonial
-      (business-rules.md §5.2). Están aquí porque son dinero que sale igualmente.
+      adquisición ni del valor de transmisión, así que no entran en la ganancia patrimonial. Están
+      aquí porque son dinero que sale igualmente.
     </p>
     <DataTable label="Comisiones sueltas" columns={COLUMNS} rows={props.view.rows} />
     <div class="spread total-line">

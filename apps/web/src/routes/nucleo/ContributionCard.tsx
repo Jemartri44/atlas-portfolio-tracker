@@ -100,7 +100,7 @@ export const ContributionCard = (props: {
             </div>
             <p class="note flush">
               <Badge>presupuesto, no asignación</Badge> El cubo se lleva su parte antes del reparto
-              y nunca entra en los pesos objetivo (constitución III).
+              y nunca entra en los pesos objetivo.
             </p>
             <div class="spread">
               <span class="subject">A repartir en el núcleo</span>

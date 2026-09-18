@@ -113,7 +113,9 @@ describe("opening a ledger", () => {
     const phase = store.load();
     expect(phase.phase).toBe("failed");
     expect(phase.phase === "failed" && phase.error.line).toBe(201);
-    expect(phase.phase === "failed" && phase.error.message).toContain("no es válido");
+    expect(phase.phase === "failed" && phase.error.message).toContain("no es válida");
+    // Named by its label, never by the key of the schema.
+    expect(phase.phase === "failed" && phase.error.message).toContain("«Identificador»");
   });
 
   it("refuses a ledger written by a newer schema, and says what to do", async () => {

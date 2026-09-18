@@ -7,10 +7,17 @@
 // and has the tests.
 
 import type { BucketThesisView, Money, Warning } from "@atlas/domain";
+import { formatDate } from "../../format/date.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 
 export interface ThesisRow {
   thesisId: string;
+  /**
+   * How the thesis is named on screen: when it was opened and, if it is closed,
+   * when it was closed. A thesis has no name, and its key ("th_alpha") is the
+   * ledger's, not the user's.
+   */
+  period: string;
   assetName: string;
   accountName: string;
   open: boolean;
@@ -55,6 +62,10 @@ export const thesesView = (
 ): ThesesView => ({
   rows: view.rows.map((thesis) => ({
     thesisId: thesis.thesis_id,
+    period:
+      thesis.closed_at === undefined
+        ? `abierta el ${formatDate(thesis.opened_at)}`
+        : `del ${formatDate(thesis.opened_at)} al ${formatDate(thesis.closed_at)}`,
     assetName: displayName(names, thesis.asset_id),
     accountName: displayName(names, thesis.account_id),
     open: thesis.status === "open",
