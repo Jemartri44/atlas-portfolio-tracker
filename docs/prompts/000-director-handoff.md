@@ -1,6 +1,6 @@
 # Prompt 000 — Relevo de la dirección
 
-> Tercera versión, escrita el 2026-09-18. Léela entera antes de hablar con el usuario. Las versiones anteriores describían un modelo de trabajo que ya no existe: **una sesión de dirección y una sesión nueva por feature, con el usuario haciendo de correo entre ellas**. Desde el 2026-09-18 hay **una sola sesión permanente** que dirige y orquesta.
+> Cuarta versión, 2026-09-18 (tarde). Léela entera antes de hablar con el usuario. Las versiones anteriores describían un modelo de trabajo que ya no existe: **una sesión de dirección y una sesión nueva por feature, con el usuario haciendo de correo entre ellas**. Desde el 2026-09-18 hay **una sola sesión permanente** que dirige y orquesta.
 
 ---
 
@@ -55,9 +55,13 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 
 **En `develop`:** Fases 1 y 2 completas y fusionadas (PRs #1-#30). Monorepo npm workspaces con `packages/domain` (dinero decimal sobre `big.js` vendorizada, 23 tipos de evento, FIFO global, eventos corporativos con cinco primitivas, tesis, `compact`, verificación profunda, generador sintético con *golden file* congelado, precios manuales, pesos del núcleo, calculadora de aportación, costes, proyección a una fecha), `packages/adapters` y `apps/cli` (`atlas`, en español). Cobertura del 100 % de líneas y ramas en el dominio, bloqueante en CI. **21 ADRs**, constitución **1.5.0**.
 
-**Web:** la primera mitad (006: esqueleto, almacenamiento en el navegador, navegación móvil, modo privacidad, Resumen, Movimientos y Ajustes) está **fusionada** (PR #36). Van 36 PRs, 353 commits, 19 ADRs.
+**Web:** la primera mitad (006) está **fusionada** (PR #36), más una ronda de pulido visual (PR #39) que arregló el interruptor de privacidad, la escala tipográfica, tres desbordamientos horizontales y **los identificadores internos que la aplicación enseñaba en vez de los nombres del catálogo**. Van **43 PRs**, **21 ADRs**.
 
-**Escrito y esperando:** `docs/prompts/007-web-analytics.md` (segunda mitad: Núcleo, Cubo, gráficas, asistentes que faltan, calidad del frontend y manejo de errores).
+**En vuelo:** feature **007** (segunda mitad de la web: Núcleo, Cubo, gráficas, asistentes que faltan, calidad del frontend y manejo de errores), en fase de spec y plan.
+
+**Escrito y esperando:** `docs/prompts/008-fiscal-provisions.md`. **No lo lances a la vez que la 007**: las dos tocan `packages/domain` y la 008 regenera el *golden*.
+
+**Lo que cambió el 2026-09-18 por la tarde y hay que entender antes de seguir:** una **revisión adversarial de los criterios fiscales** encontró 3 incorrectos, 6 en disputa y 7 correctos, más nueve datos que el libro no guarda. Desmontó además una afirmación de la dirección —que los criterios dudosos eran todos *conservadores*— que era falsa: hay al menos dos **agresivos**, que es la dirección con consecuencias. `docs/fiscal-questions.md` está reescrito con una columna de **dirección del riesgo** y los seis criterios en disputa marcados, **sin resolver ninguno**: resolverlos sería cambiar una lectura no verificada por otra. **ADR-0021** saca la consecuencia práctica: se guarda el dato sin decidir el criterio.
 
 **Decidido hace poco y que conviene que sepas:**
 
@@ -71,9 +75,11 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 
 | Siguiente | Estado |
 |---|---|
-| Feature 007 — web, Núcleo, Cubo y gráficas | **Prompt escrito**, listo para lanzar |
+| Feature 007 — web, Núcleo, Cubo y gráficas | En implementación (spec y plan) |
+| Feature 008 — previsiones del esquema (ADR-0021) | **Prompt escrito.** Va antes que el motor fiscal: endurecer `fx_rate_date` solo cabe con el libro real vacío (ADR-0018) |
+| Rondas de pulido visual | Una hecha (PR #39). El usuario las quiere periódicas |
 | Rondas de pulido visual de la web | El usuario las pidió explícitamente: agentes que hagan capturas, las analicen, propongan mejoras y se implementen |
-| Fase 5 — motor fiscal | **Desbloqueada**: criterios fijados. Falta decidir el registro de lo declarado (`tax_return_filed`, Ronda 9) |
+| Fase 5 — motor fiscal | **Desbloqueada y condicionada**: el registro de lo declarado está decidido (ADR-0020) y las previsiones del esquema también (ADR-0021), pero **la 008 tiene que ir antes**. Falta escribir su prompt: queda por decidir el formato de la salida |
 | Fase 4 — AWS, automatización, precios | **Bloqueada por el usuario**: exige pasar la cuenta al Paid Plan, y no se gasta dinero |
 | Features de importación (MyInvestor, IBKR) | **Bloqueadas**: no existe el XML de IBKR ni la exportación de operaciones de fondos; el usuario no se suscribirá hasta que la app esté lista |
 
@@ -85,11 +91,22 @@ Esos dos revisores han encontrado, entre las features 004 y 005, once defectos r
 - **El generador sintético comparte su flujo de aleatoriedad**: cualquier evento nuevo en medio rebaraja los identificadores de todo lo posterior (una vez cambiaron 116 de 160). Todo bloque nuevo necesita su propio subflujo de PRNG, de ULID **y de reloj**.
 - **Ningún test sustituye a abrir el navegador.** La web llegó rota tras 19 commits por un `class` ausente en una línea: veinte reglas de estilo no se aplicaban y 812 tests seguían en verde. Después aparecieron la CSP bloqueando los estilos propios, un desbordamiento de 15 px, etiquetas truncadas y una carrera de arranque visible solo con la CPU frenada. **Exige capturas medidas a 400×890 con DPR 3** (el teléfono del usuario es un Xiaomi Mi 15), no a 360 como hice yo durante semanas.
 - **Mirar si funciona no es mirar si se ve bien.** El interruptor de privacidad llevaba semanas deformado en un óvalo estirado a 44 px de alto, yo lo tenía delante en las capturas y el usuario tuvo que señalarlo. Cuando revises una pantalla, revísala también con ojos de quien la va a usar.
+- **No afirmes la dirección de un riesgo fiscal sin comprobarla criterio a criterio.** La dirección escribió que los criterios dudosos eran todos conservadores —"si están mal, se paga de más, nunca al revés"— y era falso. Pagar de más cuesta dinero; declarar de menos tiene consecuencias. No es lo mismo y presentarlo como si lo fuera es lo peor que se puede hacer con alguien que no tiene asesor.
+- **Una contradicción entre un ADR y los documentos la implementa el código, no el documento.** `ADR-0013` dijo tres semanas lo contrario que `business-rules.md` sobre si un traspaso entrante cuenta para la regla de recompra, **y el código siguió al ADR**: el caso central del núcleo no avisaba. Cuando un criterio nuevo revise un ADR anterior, la nota va en el ADR **el mismo día**.
+- **Lo que oculta un defecto suele ser una comodidad de la revisión.** Tres desbordamientos horizontales de la web sobrevivieron a dos revisiones porque se medía con el **modo privacidad puesto**, y la máscara es más corta que los importes reales. Mide siempre con los datos anchos.
 - **Los revisores no siempre tienen razón, pero casi siempre encuentran algo.** Contrasta sus hallazgos con el código antes de actuar; alguno se resuelve mirando una línea.
 
 ## 8. Lo inmediato
 
 1. `gh pr list --state all` y `git log --oneline develop -5` para situarte.
-2. Si la 005 sigue abierta, cierra su ciclo (§3.5-§3.7).
-3. Después, la web: lanza la 006 con su prompt, escribe la 007, y prepara las rondas de pulido visual (hay Chromium de Playwright en la caché del sistema: condúcelo desde el scratchpad, **nunca** metas Playwright en el `package.json` del repositorio).
-4. Mantén `docs/decision-roadmap.md`, `docs/prompts/README.md` y la memoria de sesión al día. Registra cada decisión donde le toca y nada más.
+2. Cierra el ciclo de la **007** (§3.5-§3.7): dos revisores independientes, y **abre el navegador tú** a 400×890 con DPR 3.
+3. Lanza la **008** después, nunca a la vez. Vigila su regeneración del *golden*: lo esperable son **nueve líneas**.
+4. Escribe el prompt de la **Fase 5**, decidiendo el formato de la salida y **cómo se marcan en ella los criterios en disputa** (una cifra que dependa de un criterio dudoso tiene que verse que depende de él).
+5. Mantén las rondas de pulido visual: el usuario las pidió periódicas, no una vez.
+6. `docs/decision-roadmap.md`, `docs/prompts/README.md` y la memoria de sesión al día.
+
+## 9. Lo que sigue siendo del usuario
+
+- **Fase 4 (AWS)**: exige pasar la cuenta al Paid Plan. **No se gasta dinero.** Bloqueada.
+- **Importadores**: no existe el XML de IBKR ni la exportación de operaciones de fondos de MyInvestor.
+- **Revisión fiscal profesional**: los criterios **#2 (valores de fuera de la UE)**, **#7/#13 (fusiones extranjeras)**, **#8 (forks)** y el asunto de **ETC/ETP como rendimiento del capital mobiliario** la merecen antes de la primera declaración hecha con esta aplicación. No corre prisa —el libro está vacío— y el usuario sabe que cuesta dinero. Está dicho; no hay que repetírselo cada semana.
