@@ -82,6 +82,13 @@ export const warnRepurchase = (
  * Warns when a loss-making sale has purchases of the same asset inside the
  * window **before** it: the other half of the rule, and the one that arrives in
  * time to matter.
+ *
+ * Day zero belongs to both halves: a purchase with the **same fiscal date** as
+ * the loss-making sale is inside the window. What keeps it from being warned
+ * about twice is the position in the file, which is also the order pass B
+ * applies: what is already in `state.acquisitions` when the sale is applied
+ * came before it, so it is a prior buy; a purchase recorded after the sale
+ * finds the loss in `state.gains` and is a repurchase.
  */
 export const warnPriorBuys = (
   state: LedgerState,
@@ -94,7 +101,7 @@ export const warnPriorBuys = (
   const window = washSaleWindowOf(state.fiscalSettings, assetType);
   const start = washSaleWindowStart(fiscalDate, window);
   for (const acquisition of state.acquisitions.get(assetId) ?? []) {
-    if (acquisition.fiscal_date >= start && acquisition.fiscal_date < fiscalDate) {
+    if (acquisition.fiscal_date >= start && acquisition.fiscal_date <= fiscalDate) {
       addWarning(
         state,
         "wash_sale_window_prior_buy",
