@@ -409,3 +409,29 @@ Recorrido con el navegador, provocando cada fallo. **Corregido** lo que era de u
 
 - Una escritura que falle **a mitad**: `BlobLedgerStore` escribe el fichero entero y el navegador cambia el temporal al cerrar, así que no hay estado intermedio que forzar desde el protocolo DevTools. Se ha provocado el fallo *antes* de escribir (cuota) y el conflicto de *etag*, que sí tienen camino.
 - La vía de **carpeta** (File System Access) completa: Chromium sin cabeza no da el selector de carpetas sin interacción real.
+
+### V7 — La aplicación enseñaba identificadores donde el libro guarda nombres
+
+Señalado por la dirección al mirar las capturas de V1-V6: el Resumen decía «Cubo → `ast_alpha`» y «Efectivo → `acc_mi · EUR`», las doscientas filas de Movimientos decían «`ast_delta · acc_bucket`», y el aviso «Faltan `ast_bonds`, `ast_mm`…» llevaba identificadores incrustados en el texto. El catálogo tiene el nombre desde el primer evento (`acc_mi` es «Fondos indexados», `ast_alpha` es «Alpha Robotics») y las proyecciones `accounts`/`assets` ya lo exponían.
+
+**Una sola función de resolución**, en `format/names.ts`, y nadie resuelve por su cuenta:
+
+- `nameIndex(state)` construye el índice desde el catálogo proyectado; `displayName(names, id)` es **la** función que devuelve el nombre. `displayNames` es la misma sobre una lista y `namingOf` el envoltorio que reciben los catálogos de mensajes, para que una plantilla no pueda sacar un nombre de ningún otro sitio.
+- **El nombre vigente**, el del final del libro: la proyección del catálogo ya resuelve al último `account_updated`/`asset_updated`, así que basta con leerla. El usuario reconoce sus cosas por como se llaman hoy, no por como se llamaban el día de la operación.
+- **Un id desconocido cae al id** y nunca a un hueco (catálogo incompleto, evento que apunta a algo que ya no está, libro aún sin cargar). Todos los parámetros `names` son opcionales y su valor por defecto es `NO_NAMES`, que es exactamente el comportamiento anterior. Con test de las tres vías.
+- `NAMED_ID_FIELDS` dice qué campos del esquema apuntan al **catálogo** y por tanto tienen nombre; el resto de `*_id` apuntan a un evento o a una tesis, que no lo tienen. Está definido una vez y lo usan la ficha del movimiento y el eco de la corrección.
+
+Cubierto: el patrimonio (líneas del cubo, del efectivo y la lista de lo que falta), las filas del libro, la vista previa de un evento (posiciones, lotes y ganancias), las listas de órdenes y tesis de los formularios, **los dos catálogos de mensajes** (quince plantillas de avisos y veinticuatro de errores llevaban ids interpolados) y `toAppError`, que toma el índice del snapshot cargado.
+
+**El id sigue accesible donde sirve para depurar**: en la ficha del movimiento y en el eco de «como está registrado ahora» aparece como dato secundario **junto al** nombre — «Cuenta: Cubo especulativo `acc_bucket`» — nunca en su lugar. La verificación de integridad sigue enseñando los ids de evento, que no son de catálogo.
+
+#### Lo medido después, que era el riesgo
+
+«Global Bond Index Fund · Fondos indexados» es mucho más largo que «ast_bonds · acc_mi». Repetidas las 63 combinaciones de ruta × anchura **con la privacidad quitada**:
+
+| Sitio | Desbordaba | Corregido con |
+|---|---|---|
+| Resumen a **1023 px** | 1 px: una línea del patrimonio | `min-width: 0` en `.networth .lines` y `.networth .line`, que faltaba fuera del *media query* de 768 |
+| Movimientos a **1024 px** | 14 px: la tabla densa | El corte va en un bloque **dentro** de la celda (`max-width: 18rem`), donde `max-width` sí se respeta; una celda con `white-space: nowrap` ensancha la columna en vez de cortar |
+
+Después: **0 desbordamientos en las 63 combinaciones**. Comprobado además que en `<main>` no queda ni un `ast_*` ni un `acc_*` a 400 (DPR 3) ni a 1280 en Resumen, Movimientos y Verificación. Lo que se corta lleva el texto completo en `title`: son las dos filas más largas a 400 px (283 px de 293 necesarios) y siete a 1280 px, todas de nombre compuesto; **en ningún caso se vuelve a enseñar el identificador** para que quepa.
