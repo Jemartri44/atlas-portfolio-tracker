@@ -79,7 +79,17 @@ const writeLocal = (key: string, value: string): void => {
 export const privacyFromPreference = (stored: string | undefined): boolean => stored !== "off";
 
 const createStore = () => {
-  const [load, setLoad] = createSignal<LoadPhase>({ phase: "unconfigured" });
+  /*
+   * It starts **loading**, not `unconfigured`. `restoreLedger` is async (it
+   * reads localStorage, then IndexedDB or the folder handle) and every screen
+   * behind `RequireLedger` sends an `unconfigured` phase straight to `/libro`
+   * with a `<Navigate>`: whoever won the race decided the first screen, so a
+   * reload with a ledger already chosen landed on the opening screen instead of
+   * the summary (review of 2026-09-18). `unconfigured` is now a **conclusion**
+   * of the boot, never its starting point, and while it lasts the screens show
+   * their skeleton.
+   */
+  const [load, setLoad] = createSignal<LoadPhase>({ phase: "loading" });
   const [deps, setDeps] = createSignal<UseCaseDeps | undefined>(undefined);
   const [writing, setWriting] = createSignal(false);
   // Privacy is **on** by default: the first read is what decides (FR-021).

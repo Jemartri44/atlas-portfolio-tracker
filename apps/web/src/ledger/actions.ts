@@ -31,7 +31,12 @@ import {
   type UseCaseDeps,
 } from "@atlas/domain";
 import { describeError } from "../format/messages/errors.js";
-import { canUseDirectory, type LedgerSource, rememberedKind } from "./source.js";
+import {
+  canUseDirectory,
+  type LedgerSource,
+  type LedgerSourceKind,
+  rememberedKind,
+} from "./source.js";
 import type { AppError } from "./state.js";
 import { requireDeps, store } from "./state.js";
 import {
@@ -125,45 +130,72 @@ export const reconnect = async (handle: FileSystemDirectoryHandle): Promise<void
   await loadInto(opened);
 };
 
+/** What the boot has to do, decided before touching any storage. */
+export type BootDecision = "browser" | "directory" | "nothing";
+
 /**
- * On boot: reopen what was open. The folder handle survives but its permission
- * does not, so this can end in `reconnect`, which needs a gesture and is
- * therefore a screen, not a silent retry (research.md §4).
+ * The remembered choice, read as a rule instead of inline in the boot:
+ * `browser` is reopened with no gesture at all (on a phone it is the only path
+ * there is, decision (l)), and a folder is only worth trying where the File
+ * System Access API exists — a ledger opened on the desktop and reopened on a
+ * phone is not an error, it is a ledger that has to be chosen again.
+ */
+export const bootDecision = (
+  remembered: LedgerSourceKind | undefined,
+  canDirectory: boolean,
+): BootDecision => {
+  if (remembered === undefined) {
+    return "nothing";
+  }
+  if (remembered === "browser") {
+    return "browser";
+  }
+  return canDirectory ? "directory" : "nothing";
+};
+
+/**
+ * On boot: reopen what was open, **without a click** when the ledger lives in
+ * this browser. The folder handle survives but its permission does not, so that
+ * path can end in `reconnect`, which needs a gesture and is therefore a screen,
+ * not a silent retry (research.md §4).
+ *
+ * It never throws: the store starts in `loading` and something has to take it
+ * out of there, so a browser with its storage blocked ends in `failed` with its
+ * explanation and its way out, not in a skeleton for ever.
  */
 export const restoreLedger = async (): Promise<void> => {
-  const kind = rememberedKind();
-  if (kind === undefined) {
-    store.setLoad({ phase: "unconfigured" });
-    return;
+  try {
+    const decision = bootDecision(rememberedKind(), canUseDirectory());
+    if (decision === "nothing") {
+      store.setLoad({ phase: "unconfigured" });
+      return;
+    }
+    if (decision === "browser") {
+      await openBrowserLedger();
+      return;
+    }
+    const remembered = await rememberedDirectoryState();
+    if (remembered === undefined) {
+      store.setLoad({ phase: "unconfigured" });
+      return;
+    }
+    if (remembered.permission === "granted") {
+      await reconnect(remembered.handle);
+      return;
+    }
+    store.setLoad({
+      phase: "reconnect",
+      handle: remembered.handle,
+      directory: {
+        kind: "directory",
+        directoryName: remembered.name,
+        fileName: "ledger.jsonl",
+        permission: remembered.permission,
+      },
+    });
+  } catch (failure) {
+    store.setLoad({ phase: "failed", error: toAppError(failure) });
   }
-  if (kind === "browser") {
-    await openBrowserLedger();
-    return;
-  }
-  if (!canUseDirectory()) {
-    // The ledger was opened on a desktop and this is a phone: say so instead of failing.
-    store.setLoad({ phase: "unconfigured" });
-    return;
-  }
-  const remembered = await rememberedDirectoryState();
-  if (remembered === undefined) {
-    store.setLoad({ phase: "unconfigured" });
-    return;
-  }
-  if (remembered.permission === "granted") {
-    await reconnect(remembered.handle);
-    return;
-  }
-  store.setLoad({
-    phase: "reconnect",
-    handle: remembered.handle,
-    directory: {
-      kind: "directory",
-      directoryName: remembered.name,
-      fileName: "ledger.jsonl",
-      permission: remembered.permission,
-    },
-  });
 };
 
 /** Forgets the current ledger and goes back to the opening screen. */

@@ -8,14 +8,16 @@
 
 import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
 import { type Draft, decodeLine, type SupportedEvent, type UseCaseDeps } from "@atlas/domain";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  bootDecision,
   changeSettings,
   correct,
   loadInto,
   previewDraft,
   recordDraft,
   reloadLedger,
+  restoreLedger,
   reverse,
   toAppError,
 } from "../src/ledger/actions.js";
@@ -324,6 +326,74 @@ describe("changing the configuration", () => {
       (written as { settings: { deviation_threshold_pp?: string } }).settings
         .deviation_threshold_pp,
     ).toBe("7");
+  });
+});
+
+/*
+ * The boot. It used to be a race: the store started `unconfigured`, and
+ * `RequireLedger` sends that phase straight to `/libro` with a `<Navigate>`,
+ * so whichever finished first — the lazy route or the asynchronous restore —
+ * decided the first screen. With the ledger already chosen and stored, a reload
+ * landed on the opening screen instead of the summary (review of 2026-09-18).
+ */
+describe("the boot", () => {
+  const fakeWindow = (stored: string | undefined): void => {
+    (globalThis as { window?: unknown }).window = {
+      localStorage: {
+        getItem: (key: string) => (key === "atlas.source" ? (stored ?? null) : null),
+        setItem: () => undefined,
+        removeItem: () => undefined,
+      },
+    };
+  };
+
+  afterEach(() => {
+    (globalThis as { window?: unknown }).window = undefined;
+  });
+
+  it("starts loading, so nothing redirects before the decision is taken", async () => {
+    vi.resetModules();
+    const fresh = (await import(
+      "../src/ledger/state.js"
+    )) as typeof import("../src/ledger/state.js");
+    expect(fresh.store.load().phase).toBe("loading");
+  });
+
+  it("reads the remembered choice as a rule", () => {
+    // A ledger inside this browser is reopened with no gesture at all: on a
+    // phone it is the only path there is (decision (l)).
+    expect(bootDecision("browser", false)).toBe("browser");
+    expect(bootDecision("browser", true)).toBe("browser");
+    // A folder is only worth trying where the API exists.
+    expect(bootDecision("directory", true)).toBe("directory");
+    expect(bootDecision("directory", false)).toBe("nothing");
+    expect(bootDecision(undefined, true)).toBe("nothing");
+  });
+
+  it("ends unconfigured when nothing was remembered", async () => {
+    fakeWindow(undefined);
+    await restoreLedger();
+    expect(store.load().phase).toBe("unconfigured");
+  });
+
+  it("tries to reopen the browser ledger when that is what was chosen", async () => {
+    fakeWindow("browser");
+    // There is no IndexedDB in this process, so opening it fails — and that is
+    // the point: it **attempts** it instead of asking again, and a failure
+    // explains itself with a way out rather than leaving a skeleton for ever.
+    await restoreLedger();
+    const phase = store.load();
+    expect(phase.phase).toBe("failed");
+    if (phase.phase === "failed") {
+      expect(phase.error.code).toBe("storage_unavailable");
+      expect(phase.error.action?.to).toBe("/libro");
+    }
+  });
+
+  it("does not try a folder on a browser that has no file access", async () => {
+    fakeWindow("directory");
+    await restoreLedger();
+    expect(store.load().phase).toBe("unconfigured");
   });
 });
 
