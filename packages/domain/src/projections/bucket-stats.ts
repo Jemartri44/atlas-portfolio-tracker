@@ -12,7 +12,8 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import { Money } from "../money/money.js";
-import type { AccountId, LedgerEvent } from "../schema/events.js";
+import type { Currency } from "../money/money.js";
+import type { AccountId, AssetId, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import {
   type BucketThesisView,
@@ -70,6 +71,20 @@ export interface BucketStats {
   warnings: Warning[];
 }
 
+/**
+ * Why a control rule could not be measured. Not computing a percentage over a
+ * partial total is right (constitution V); staying quiet about it is not, so
+ * the reason travels next to the field that is missing and, when the rule is
+ * configured, it also becomes a warning of its own.
+ */
+export interface ControlGap {
+  reason: "missing_prices" | "no_contribution" | "partial_net_worth" | "no_net_worth";
+  /** The assets with no price behind the gap. */
+  assets?: AssetId[];
+  /** The currencies with no rate behind the gap. */
+  currencies?: Currency[];
+}
+
 export interface BucketControls {
   /** Σ `cash_deposit` of the bucket accounts, **without** subtracting withdrawals. */
   contribution_gross_eur: Money;
@@ -82,8 +97,12 @@ export interface BucketControls {
   unrealized_eur?: Money;
   /** Accumulated loss over the gross contribution; absent without a contribution. */
   loss_pct?: Decimal;
+  /** Why the stop-loss rule could not be measured; absent when it could. */
+  loss_pct_unavailable?: ControlGap;
   /** Bucket over total net worth; absent when the net worth is partial. */
   weight_pct?: Decimal;
+  /** Why the weight rule could not be measured; absent when it could. */
+  weight_pct_unavailable?: ControlGap;
   warnings: Warning[];
 }
 
@@ -350,12 +369,34 @@ const controlsOf = (
     }
   }
 
+  // A percentage over an incomplete total is exactly the "partial total that
+  // looks complete" the constitution forbids. What it does not excuse is
+  // silence: the rule that cannot be measured says so, with its cause.
+  const stopLossGap: ControlGap | undefined =
+    unrealized === undefined
+      ? {
+          reason: "missing_prices",
+          assets: positions.rows
+            .filter((row) => row.unrealized_eur === undefined)
+            .map((row) => row.asset_id),
+        }
+      : gross.amount.isPositive()
+        ? undefined
+        : { reason: "no_contribution" };
   const total = realized.add(unrealized ?? Money.zero(EUR));
   const lossPct =
-    unrealized === undefined || !gross.amount.isPositive() || !total.amount.isNegative()
+    stopLossGap !== undefined || !total.amount.isNegative()
       ? undefined
       : total.neg().amount.div(gross.amount).mul(HUNDRED);
   const stopLoss = settings.bucket_stop_loss_pct;
+  if (stopLoss !== undefined && stopLossGap !== undefined) {
+    warn(
+      warnings,
+      "bucket_stop_loss_not_evaluated",
+      `the stop-loss rule of ${stopLoss} % cannot be measured (${stopLossGap.reason}): the accumulated loss is not a percentage of anything yet (rule 17)`,
+      { limit_pct: stopLoss, ...stopLossGap },
+    );
+  }
   if (lossPct !== undefined && stopLoss !== undefined && lossPct.gt(Decimal.parse(stopLoss))) {
     warn(
       warnings,
@@ -371,13 +412,28 @@ const controlsOf = (
   }
 
   const worth = netWorth(state, date, settings, external);
-  // A percentage over an incomplete total is exactly the "partial total that
-  // looks complete" the constitution forbids: no weight, no warning.
-  const weightPct =
-    worth.partial || !worth.total_eur.amount.isPositive()
+  const weightGap: ControlGap | undefined = worth.partial
+    ? {
+        reason: "partial_net_worth",
+        assets: [...worth.core.missing_prices, ...worth.bucket.missing_prices],
+        currencies: worth.cash.missing_rates,
+      }
+    : worth.total_eur.amount.isPositive()
       ? undefined
-      : worth.bucket.total_eur.amount.div(worth.total_eur.amount).mul(HUNDRED);
+      : { reason: "no_net_worth" };
+  const weightPct =
+    weightGap === undefined
+      ? worth.bucket.total_eur.amount.div(worth.total_eur.amount).mul(HUNDRED)
+      : undefined;
   const maxWeight = settings.bucket_max_weight_pct;
+  if (maxWeight !== undefined && weightGap !== undefined) {
+    warn(
+      warnings,
+      "bucket_weight_not_evaluated",
+      `the weight rule of ${maxWeight} % cannot be measured (${weightGap.reason}): the bucket is not a percentage of an incomplete net worth (rule 18)`,
+      { limit_pct: maxWeight, ...weightGap },
+    );
+  }
   if (
     weightPct !== undefined &&
     maxWeight !== undefined &&
@@ -410,7 +466,9 @@ const controlsOf = (
     realized_eur: realized,
     ...(unrealized === undefined ? {} : { unrealized_eur: unrealized }),
     ...(lossPct === undefined ? {} : { loss_pct: lossPct }),
+    ...(stopLossGap === undefined ? {} : { loss_pct_unavailable: stopLossGap }),
     ...(weightPct === undefined ? {} : { weight_pct: weightPct }),
+    ...(weightGap === undefined ? {} : { weight_pct_unavailable: weightGap }),
     warnings,
   };
 };

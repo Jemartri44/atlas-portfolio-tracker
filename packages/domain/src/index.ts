@@ -30,6 +30,7 @@ export {
   type BucketReport,
   type BucketStats,
   bucketStats,
+  type ControlGap,
   type DrawdownPoint,
   type ExcludedThesis,
 } from "./projections/bucket-stats.js";

@@ -352,8 +352,9 @@ describe("bucket control rules (17 and 18)", () => {
     );
   });
 
-  it("does not measure the loss without a contribution or without prices", () => {
-    // No deposit: the denominator is zero and the rule is not evaluated.
+  it("says out loud when the stop-loss rule cannot be measured", () => {
+    // No deposit: the denominator is zero, so the rule is not evaluated — and a
+    // rule that is not evaluated must say so, or its silence reads as "fine".
     const b = new LedgerBuilder();
     catalogue(b);
     trade(b, { id: "t1", buyPrice: "10", sellPrice: "8" });
@@ -365,7 +366,37 @@ describe("bucket control rules (17 and 18)", () => {
       settings({ bucket_stop_loss_pct: "1" }),
     );
     expect(controls.loss_pct).toBeUndefined();
-    expect(controls.warnings).toEqual([]);
+    expect(controls.loss_pct_unavailable).toEqual({ reason: "no_contribution" });
+    expect(controls.warnings.map((w) => w.code)).toEqual(["bucket_stop_loss_not_evaluated"]);
+
+    // Without the rule configured there is nothing to fail to evaluate.
+    const quiet = bucketStats(projectLedger(events), events, DATE, settings({})).controls;
+    expect(quiet.warnings).toEqual([]);
+    expect(quiet.loss_pct_unavailable).toEqual({ reason: "no_contribution" });
+  });
+
+  it("says out loud when a position without a price switches the two rules off", () => {
+    const b = bucket([{ id: "t1", buyPrice: "10", close: false }]);
+    const events = b.build();
+    const { controls } = bucketStats(
+      projectLedger(events),
+      events,
+      DATE,
+      settings({ bucket_stop_loss_pct: "1", bucket_max_weight_pct: "1" }),
+    );
+    expect(controls.loss_pct_unavailable).toEqual({
+      reason: "missing_prices",
+      assets: ["ast_spec"],
+    });
+    expect(controls.weight_pct_unavailable).toEqual({
+      reason: "partial_net_worth",
+      assets: ["ast_spec"],
+      currencies: [],
+    });
+    expect(controls.warnings.map((w) => w.code)).toEqual([
+      "bucket_stop_loss_not_evaluated",
+      "bucket_weight_not_evaluated",
+    ]);
   });
 
   it("leaves the weight without data when the net worth is partial, and warns when it is not", () => {

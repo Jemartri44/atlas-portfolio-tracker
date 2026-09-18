@@ -310,7 +310,9 @@ const jsonBucket = (
     realized_eur: controls.realized_eur.amount.toString(),
     unrealized_eur: controls.unrealized_eur?.amount.toString(),
     loss_pct: controls.loss_pct?.toString(),
+    loss_pct_unavailable: controls.loss_pct_unavailable,
     weight_pct: controls.weight_pct?.toString(),
+    weight_pct_unavailable: controls.weight_pct_unavailable,
     warnings: controls.warnings,
   },
 });

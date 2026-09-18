@@ -173,6 +173,25 @@ export const describeError = (error: DomainError): string => {
   }
 };
 
+/** Why a control rule of the bucket could not be measured, with what is missing. */
+const gapText = (d: Record<string, unknown>): string => {
+  const missing = [
+    ...((d.assets as string[] | undefined) ?? []),
+    ...((d.currencies as string[] | undefined) ?? []),
+  ];
+  const detail = missing.length === 0 ? "" : ` (faltan ${missing.join(", ")})`;
+  switch (d.reason) {
+    case "missing_prices":
+      return `hay posiciones del cubo sin precio${detail}`;
+    case "no_contribution":
+      return "todavía no hay aporte bruto al cubo sobre el que medir";
+    case "partial_net_worth":
+      return `el patrimonio total es parcial${detail}`;
+    default:
+      return "el patrimonio total no es positivo";
+  }
+};
+
 /**
  * Spanish text of a projection warning. The domain speaks English and the CLI
  * translates the `code` (see `errors.ts`); an unknown code falls back to the
@@ -207,6 +226,10 @@ export const describeWarning = (warning: Warning): string => {
       return `El aporte bruto al cubo (${text(d.gross_eur)} EUR) pasa del 80 % del tope de ${text(d.limit_eur)} EUR (regla 17).`;
     case "bucket_stop_loss_reached":
       return `REGLA DE PARADA: la pérdida acumulada del cubo (${text(d.loss_eur)} EUR) es el ${text(d.loss_pct)} % del aporte bruto (${text(d.gross_eur)} EUR), por encima del ${text(d.limit_pct)} % configurado (regla 17). La app avisa; la decisión es tuya.`;
+    case "bucket_stop_loss_not_evaluated":
+      return `La regla de parada (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya (regla 17).`;
+    case "bucket_weight_not_evaluated":
+      return `La regla de peso (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro (regla 18).`;
     case "bucket_weight_exceeded":
       return `El cubo pesa el ${text(d.weight_pct)} % del patrimonio total, por encima del ${text(d.limit_pct)} % configurado (regla 18): valora traspasar el exceso al núcleo.`;
     case "missing_benchmark_asset":

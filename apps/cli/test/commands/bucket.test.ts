@@ -244,6 +244,25 @@ describe("atlas bucket", () => {
     expect(data.stats).toMatchObject({ closed_theses: 1, measured_theses: 1 });
   });
 
+  it("says which control rules a position without a price switched off", async () => {
+    // The golden keeps a delisted asset with no price on purpose: both rules go
+    // unmeasured, and the view must say so instead of leaving a blank line.
+    const h = harness({ lines: goldenLines() });
+    expect(await h.exec(["bucket", "--date", "2028-12-31"])).toBe(0);
+    const text = h.text();
+    expect(text).toContain("La regla de parada (30 %) no se ha podido evaluar");
+    expect(text).toContain("La regla de peso (10 %) no se ha podido evaluar");
+    expect(text).toContain("faltan ast_alpha_spin");
+    h.reset();
+    expect(await h.exec(["bucket", "--date", "2028-12-31", "--json"])).toBe(0);
+    const data = h.json() as {
+      controls: { weight_pct?: string; weight_pct_unavailable?: { reason: string } };
+    };
+    // The reason travels next to the field that is missing.
+    expect(data.controls.weight_pct).toBeUndefined();
+    expect(data.controls.weight_pct_unavailable?.reason).toBe("partial_net_worth");
+  });
+
   it("answers in JSON with the envelope and does not write", async () => {
     const h = await bucket();
     const before = (await h.store.load()).etag;
