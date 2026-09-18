@@ -129,6 +129,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "fx-rate",
       "fx-rate-date",
       "description",
+      "fee-kind",
     ],
   },
   valuation: {

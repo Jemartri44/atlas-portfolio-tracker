@@ -38,6 +38,28 @@ export type OrderStage = (typeof ORDER_STAGES)[number];
 export const TRANSFER_REQUEST_STAGES = ["redeemed", "subscribed", "cancelled"] as const;
 export type TransferRequestStage = (typeof TRANSFER_REQUEST_STAGES)[number];
 
+/**
+ * What a standalone fee is (ADR-0021). None of these change a capital gain —
+ * article 35 LIRPF only admits costs inherent to the acquisition or the
+ * disposal— but article 26.1.a) does allow **administration and custody of
+ * negotiable securities** to be deducted from movable capital income, and does
+ * not allow discretionary management or market data. Today `standalone_fee`
+ * carries free text and nothing can tell one from the other.
+ *
+ * Nothing reads it yet: classifying is the tax engine of phase 5.
+ */
+export const FEE_KINDS = [
+  "custody",
+  "administration",
+  "connectivity",
+  "discretionary_management",
+  "other",
+] as const;
+export type FeeKind = (typeof FEE_KINDS)[number];
+
+/** The kind of a standalone fee: what it says, or `other` (ADR-0021), resolved at the point of use. */
+export const feeKindOf = (event: { fee_kind?: FeeKind }): FeeKind => event.fee_kind ?? "other";
+
 // --- Catalogue ------------------------------------------------------------
 
 export interface AccountFields {
@@ -241,6 +263,8 @@ export interface StandaloneFeeEvent extends Envelope {
   /** Date of the ECB rate applied (feature 005). Optional: lines written before it exist. */
   fx_rate_date?: CivilDate;
   description: string;
+  /** What the charge is (ADR-0021). Absent means `other`; read through `feeKindOf`. */
+  fee_kind?: FeeKind;
   fingerprint: string;
 }
 

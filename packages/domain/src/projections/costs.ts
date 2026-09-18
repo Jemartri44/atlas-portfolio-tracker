@@ -86,9 +86,11 @@ export interface StandaloneFeeRow {
  * money leaving the account, and until now no view of either interface showed
  * them at all.
  *
- * They are **not classified by kind**: the field that would tell custody from
- * connectivity (`fee_kind`) does not exist yet. An aggregate the user can see is
- * better than a breakdown that would have to be guessed.
+ * They are **not classified by kind** here. The field that tells custody from
+ * connectivity (`fee_kind`) exists since ADR-0021, but classifying is what the
+ * tax engine of phase 5 does with it —article 26.1.a) LIRPF admits custody and
+ * administration against movable capital income and not the rest— and until
+ * that engine exists, a breakdown here would be a number with no consequence.
  *
  * The two books keep their own total: they never share one (constitution III).
  */

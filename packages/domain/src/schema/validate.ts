@@ -18,6 +18,7 @@ import {
   CORPORATE_ACTION_KINDS,
   EFFECT_OPS,
   type EffectOp,
+  FEE_KINDS,
   type LedgerEvent,
   ORDER_SIDES,
   ORDER_STAGES,
@@ -234,6 +235,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     fx_rate: req("positive_decimal"),
     fx_rate_date: opt("date"),
     description: req("string"),
+    fee_kind: { kind: "enum", optional: true, values: FEE_KINDS },
     fingerprint: req("string"),
   },
   valuation: {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
+import { feeKindOf } from "../../src/schema/events.js";
 import { FX_FIELDS, knownFieldsOf, validateShape } from "../../src/schema/validate.js";
 import { envelope, ID, SAMPLES, sampleList, variant } from "../samples.js";
 import { TEST_SCHEMA_V2 } from "./test-schema.js";
@@ -242,6 +243,19 @@ describe("validateShape: consistency rules", () => {
     // An empty optional string is accepted, here as in `isin` and `ticker`:
     // that is the rule of the whole schema and this field does not change it.
     expect(validateShape(variant(SAMPLES.asset_created, { market: "" }))).toBeTruthy();
+  });
+
+  /**
+   * ADR-0021: which article 26.1.a) LIRPF lets phase 5 deduct from movable
+   * capital income, and which it does not. Optional, with `other` resolved at
+   * the point of use so that a line written before this feature never lands on
+   * a kind nobody chose.
+   */
+  it("standalone_fee: the kind is one of five, or absent and read as other", () => {
+    expect(validateShape(variant(SAMPLES.standalone_fee, { fee_kind: "custody" }))).toBeTruthy();
+    expect(feeKindOf(SAMPLES.standalone_fee)).toBe("other");
+    expect(feeKindOf({ ...SAMPLES.standalone_fee, fee_kind: "connectivity" })).toBe("connectivity");
+    rejects(variant(SAMPLES.standalone_fee, { fee_kind: "custodia" }), "invalid_field");
   });
 
   it("settings_changed: validates the settings object", () => {
