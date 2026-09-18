@@ -30,6 +30,7 @@ const TYPE_ORDER = [
   "valuation",
   "order_placed",
   "transfer",
+  "swap",
   "corporate_action",
   "thesis_opened",
   "settings_changed",

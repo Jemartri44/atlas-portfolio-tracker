@@ -31,7 +31,9 @@ describe("validateShape: envelope", () => {
     rejects(variant(SAMPLES.buy, { recorded_at: 5 }), "invalid_envelope");
     rejects(variant(SAMPLES.buy, { recorded_at: "2026-13-01T00:00:00Z" }), "invalid_envelope");
     rejects(variant(SAMPLES.buy, { corrects_id: "nope" }), "invalid_envelope");
-    rejects(variant(SAMPLES.buy, { type: "swap" }), "unknown_event_type");
+    // `swap` used to be the example of a type nobody knows. It is a type now,
+    // so the example has to be one that really is not (feature 008).
+    rejects(variant(SAMPLES.buy, { type: "barter" }), "unknown_event_type");
     expect(validateShape(variant(SAMPLES.buy, { corrects_id: ID.sell })).corrects_id).toBe(ID.sell);
   });
 
@@ -308,6 +310,19 @@ describe("validateShape: consistency rules", () => {
     rejects(withIncome({ income_base: "savings" }), "missing_field");
     rejects(withIncome({ income_eur: "420.50", income_base: "patrimonial" }), "invalid_field");
     rejects(withIncome({ income_eur: "-1", income_base: "general" }), "invalid_field");
+  });
+
+  /**
+   * ADR-0021. Swapping an asset for itself would consume its lots by FIFO and
+   * open one with the same asset and a date of its own, quietly resetting the
+   * antiquity of a position nobody sold.
+   */
+  it("swap: refuses an asset swapped for itself, and a value date before the trade date", () => {
+    expect(validateShape(SAMPLES.swap)).toBeTruthy();
+    rejects(variant(SAMPLES.swap, { to_asset_id: "ast_world" }), "invalid_field");
+    rejects(variant(SAMPLES.swap, { value_date: "2027-01-31" }), "invalid_field");
+    rejects(variant(SAMPLES.swap, { quantity_out: "0" }), "invalid_field");
+    rejects(variant(SAMPLES.swap, { market_value_in: undefined }), "missing_field");
   });
 
   it("settings_changed: validates the settings object", () => {

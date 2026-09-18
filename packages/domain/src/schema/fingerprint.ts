@@ -22,6 +22,18 @@ const tupleOf = (event: FingerprintInput): string[] | undefined => {
         event.amount ?? event.unit_price ?? "",
         event.currency,
       ];
+    case "swap":
+      return [
+        event.source,
+        event.broker_ref ?? "",
+        event.account_id,
+        event.from_asset_id,
+        event.type,
+        event.value_date,
+        event.quantity_out,
+        event.market_value_out,
+        event.currency,
+      ];
     case "transfer":
       return [
         "",

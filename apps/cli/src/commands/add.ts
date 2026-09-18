@@ -117,6 +117,31 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
     ],
     defaults: { fee: "0" },
   },
+  // A swap is neither a buy nor a transfer, and the flags say so: two market
+  // values, because article 37.1.h takes the greater of the two (ADR-0021).
+  swap: {
+    type: "swap",
+    flags: [
+      "account",
+      "trade-date",
+      "value-date",
+      "from-asset",
+      "quantity-out",
+      "market-value-out",
+      "to-asset",
+      "quantity-in",
+      "market-value-in",
+      "currency",
+      "fx-rate",
+      "fx-rate-date",
+      "fee",
+      "thesis",
+      "broker-ref",
+      "source",
+      "notes",
+    ],
+    defaults: { fee: "0", source: "manual" },
+  },
   "cash-in": { type: "cash_deposit", flags: CASH },
   "cash-out": { type: "cash_withdrawal", flags: CASH },
   fee: {
@@ -158,11 +183,16 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
  * and `recordEvent` raises the same error right after, with its own message.
  * A preview must never turn into a worse error than the one that follows.
  */
+/** The assets an operation touches: one for a buy or a sell, two for a swap. */
+const assetsOf = (draft: Record<string, unknown>): string[] =>
+  [draft.asset_id, draft.from_asset_id, draft.to_asset_id].filter(
+    (value): value is string => typeof value === "string",
+  );
+
 const tradeNotes = async (ctx: Context, draft: Record<string, unknown>): Promise<string[]> => {
-  const assetId = draft.asset_id as string;
   try {
     const { warnings, state, events } = await previewEvent(ctx.deps, draft as unknown as Draft, {
-      assets: [assetId],
+      assets: assetsOf(draft),
     });
     const notes = describeWarnings(warnings);
     const account = state.accounts.get(draft.account_id as string);
@@ -200,7 +230,11 @@ export const addCommand = async (
     );
   }
   const draft = draftFromFlags(spec, flags);
-  const notes = name === "buy" || name === "sell" ? await tradeNotes(ctx, draft) : [];
+  // A swap shows them too: it is a disposal and an acquisition at once, so both
+  // halves of the wash-sale rule can fire and the user has to see them before
+  // saying yes, which is the only moment the warning is still useful.
+  const notes =
+    name === "buy" || name === "sell" || name === "swap" ? await tradeNotes(ctx, draft) : [];
   await confirmAndRecord(ctx, draft, notes);
   return 0;
 };

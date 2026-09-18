@@ -621,3 +621,120 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
     expect(codes(projectLedger(b.build()), "wash_sale_window_prior_buy")).toEqual([]);
   });
 });
+
+/**
+ * A swap is a disposal and an acquisition at once, so the rule has to see it
+ * from **four** sides. That is the gap PR #40 had to close for transfers — the
+ * warning was wired in one direction only and the central case of the core went
+ * three weeks without saying anything — and it is written out here one
+ * direction at a time so the next person can see all four are covered.
+ */
+describe("a swap counts on both sides of the wash-sale window", () => {
+  /** Crypto in the core: a one-year window, which is what makes these dates work. */
+  const crypto = (setup: (b: LedgerBuilder) => void): LedgerState => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.asset("ast_btc", { asset_type: "crypto", asset_class: "crypto", transferable: false });
+    b.asset("ast_eth", { asset_type: "crypto", asset_class: "crypto", transferable: false });
+    b.deposit({ account_id: "acc_fund", amount: "100000" });
+    setup(b);
+    return projectLedger(b.build());
+  };
+
+  const buyBtc = (b: LedgerBuilder, date: string, unit_price = "100"): void => {
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_btc",
+      quantity: "10",
+      unit_price,
+      ...EUR,
+      trade_date: date,
+      value_date: date,
+    });
+  };
+
+  /** Hands over BTC at a loss: 10 units that cost 100 each, valued at 500 in all. */
+  const swapAwayAtALoss = (b: LedgerBuilder, date: string): void => {
+    b.swap({
+      account_id: "acc_fund",
+      from_asset_id: "ast_btc",
+      to_asset_id: "ast_eth",
+      trade_date: date,
+      value_date: date,
+      quantity_out: "10",
+      market_value_out: "500",
+      quantity_in: "20",
+      market_value_in: "500",
+    });
+  };
+
+  it("1. hands over at a loss after buying inside the window: warns on the prior buy", () => {
+    const state = crypto((b) => {
+      buyBtc(b, "2027-01-11");
+      swapAwayAtALoss(b, "2027-03-11");
+    });
+    const [warning] = codes(state, "wash_sale_window_prior_buy");
+    expect(warning?.details).toMatchObject({ asset_id: "ast_btc", buy_date: "2027-01-11" });
+  });
+
+  it("2. buys back what a swap handed over at a loss: warns on the repurchase", () => {
+    const state = crypto((b) => {
+      buyBtc(b, "2027-01-11");
+      swapAwayAtALoss(b, "2027-03-11");
+      // The edge case the prompt asks to document: a swap at a loss followed by
+      // buying the same asset back inside the window.
+      buyBtc(b, "2027-04-11", "60");
+    });
+    const [warning] = codes(state, "wash_sale_window_repurchase");
+    expect(warning?.details).toMatchObject({ asset_id: "ast_btc", sale_date: "2027-03-11" });
+  });
+
+  it("3. receives an asset sold at a loss inside the window: warns on the swap itself", () => {
+    const state = crypto((b) => {
+      b.buy({
+        account_id: "acc_fund",
+        asset_id: "ast_eth",
+        quantity: "10",
+        unit_price: "100",
+        ...EUR,
+        trade_date: "2027-01-11",
+        value_date: "2027-01-11",
+      });
+      b.sell({
+        account_id: "acc_fund",
+        asset_id: "ast_eth",
+        quantity: "10",
+        unit_price: "50",
+        ...EUR,
+        trade_date: "2027-02-11",
+        value_date: "2027-02-11",
+      });
+      buyBtc(b, "2027-01-11");
+      // The leg in acquires ETH again, inside the window of that loss.
+      swapAwayAtALoss(b, "2027-03-11");
+    });
+    const repurchases = codes(state, "wash_sale_window_repurchase");
+    expect(repurchases.map((warning) => warning.details.asset_id)).toContain("ast_eth");
+  });
+
+  it("4. sells at a loss what a swap brought in inside the window: warns on the prior buy", () => {
+    const state = crypto((b) => {
+      buyBtc(b, "2027-01-11");
+      swapAwayAtALoss(b, "2027-03-11");
+      b.sell({
+        account_id: "acc_fund",
+        asset_id: "ast_eth",
+        quantity: "20",
+        unit_price: "10",
+        ...EUR,
+        trade_date: "2027-05-11",
+        value_date: "2027-05-11",
+      });
+    });
+    const priors = codes(state, "wash_sale_window_prior_buy");
+    // The acquisition the rule sees is the leg in of the swap, on its own date.
+    expect(
+      priors.filter((warning) => warning.details.asset_id === "ast_eth")[0]?.details,
+    ).toMatchObject({ buy_date: "2027-03-11" });
+  });
+});

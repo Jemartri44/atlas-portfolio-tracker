@@ -170,6 +170,26 @@ const RULES: Record<SupportedEventType, Rules> = {
     withholding: opt("decimal"),
     thesis_id: opt("string"),
   },
+  swap: {
+    account_id: req("string"),
+    trade_date: req("date"),
+    value_date: req("date"),
+    from_asset_id: req("string"),
+    quantity_out: req("positive_decimal"),
+    market_value_out: req("decimal"),
+    to_asset_id: req("string"),
+    quantity_in: req("positive_decimal"),
+    market_value_in: req("decimal"),
+    currency: req("currency"),
+    fx_rate: req("positive_decimal"),
+    fx_rate_date: req("date"),
+    fee: req("decimal"),
+    thesis_id: opt("string"),
+    broker_ref: opt("string"),
+    fingerprint: req("string"),
+    source: req("string"),
+    notes: opt("string"),
+  },
   transfer: {
     request_id: opt("ulid"),
     from_account_id: req("string"),
@@ -443,6 +463,7 @@ const exactlyOne = (raw: UnknownRecord, first: string, second: string): void => 
 const FX_PAIRS: Partial<Record<SupportedEventType, readonly (readonly [string, string])[]>> = {
   buy: [["currency", "fx_rate"]],
   sell: [["currency", "fx_rate"]],
+  swap: [["currency", "fx_rate"]],
   dividend: [["currency", "fx_rate"]],
   interest: [["currency", "fx_rate"]],
   fx_exchange: [
@@ -459,6 +480,7 @@ const FX_PAIRS: Partial<Record<SupportedEventType, readonly (readonly [string, s
 const FX_DATE_FIELDS: Partial<Record<SupportedEventType, readonly string[]>> = {
   buy: ["fx_rate_date"],
   sell: ["fx_rate_date"],
+  swap: ["fx_rate_date"],
   dividend: ["fx_rate_date"],
   interest: ["fx_rate_date"],
   fx_exchange: ["fx_rate_date"],
@@ -516,6 +538,7 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
       });
     }
   },
+  swap: (raw) => checkSwap(raw),
   order_placed: (raw) => exactlyOne(raw, "amount", "quantity"),
   transfer_requested: (raw) => exactlyOne(raw, "quantity_out", "amount_eur"),
   transfer: (raw) => checkTransfer(raw),
@@ -528,6 +551,22 @@ function checkBasis(raw: UnknownRecord): void {
     throw invalid("missing_field", `${raw.type}: unit_price is required when amount is absent`, {
       type: raw.type,
       field: "unit_price",
+    });
+  }
+}
+
+/**
+ * A swap of an asset for itself is not an operation: it would consume lots by
+ * FIFO and open one with the same asset and a date of its own, quietly
+ * resetting the antiquity of a position nobody sold.
+ */
+function checkSwap(raw: UnknownRecord): void {
+  checkDates(raw);
+  if (raw.from_asset_id === raw.to_asset_id) {
+    throw invalid("invalid_field", "swap: an asset cannot be swapped for itself", {
+      type: raw.type,
+      field: "to_asset_id",
+      value: raw.to_asset_id,
     });
   }
 }

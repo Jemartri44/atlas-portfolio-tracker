@@ -24,6 +24,7 @@ import type {
   SettingsChangedEvent,
   StandaloneFeeEvent,
   SupportedEvent,
+  SwapEvent,
   ThesisClosedEvent,
   ThesisOpenedEvent,
   TransferEvent,
@@ -175,6 +176,30 @@ export class LedgerBuilder {
       value_date,
       quantity: "1",
       unit_price: "100",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: lastWorkingDay(value_date),
+      fee: "0",
+      source: "manual",
+      ...overrides,
+    });
+  }
+
+  swap(
+    overrides: Partial<Fields<SwapEvent>> & {
+      account_id: string;
+      from_asset_id: string;
+      to_asset_id: string;
+    },
+  ): SwapEvent {
+    const value_date = overrides.value_date ?? overrides.trade_date ?? "2027-06-10";
+    return this.push<SwapEvent>("swap", {
+      trade_date: value_date,
+      value_date,
+      quantity_out: "1",
+      market_value_out: "100",
+      quantity_in: "1",
+      market_value_in: "100",
       currency: "EUR",
       fx_rate: "1",
       fx_rate_date: lastWorkingDay(value_date),

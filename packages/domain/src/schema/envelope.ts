@@ -14,6 +14,7 @@ export const SUPPORTED_EVENT_TYPES = [
   "settings_changed",
   "buy",
   "sell",
+  "swap",
   "transfer",
   "order_placed",
   "order_updated",

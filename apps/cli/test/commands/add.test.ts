@@ -177,7 +177,9 @@ describe("atlas add", () => {
       ]),
     ).toBe(1);
     expect(h.text()).toContain("unit_price");
-    expect(await h.exec(["add", "swap"])).toBe(64);
+    // `swap` used to be the example of a subcommand that does not exist. It
+    // does now (feature 008), so the example has to be one that really does not.
+    expect(await h.exec(["add", "barter"])).toBe(64);
     expect(await h.exec(["add", "buy", "--bogus", "1", "--yes"])).toBe(64);
   });
 
@@ -327,5 +329,65 @@ describe("atlas add", () => {
     expect((await h.store.load()).events).toHaveLength(5 + cases.length);
     const valuation = (await h.store.load()).events.at(-1) as { fx_rate_date?: string };
     expect(valuation.fx_rate_date).toBe("2026-12-31");
+  });
+});
+
+/**
+ * A swap is neither a buy nor a transfer, and the CLI has to make that visible
+ * before the user confirms: it is a disposal and an acquisition at once, so
+ * both halves of the wash-sale rule can fire on the same event (ADR-0021).
+ */
+describe("atlas add swap", () => {
+  const swap = (overrides: string[] = []) => [
+    "add",
+    "swap",
+    "--account",
+    "acc_etf",
+    "--trade-date",
+    "2027-06-10",
+    "--value-date",
+    "2027-06-10",
+    "--from-asset",
+    "ast_gold",
+    "--quantity-out",
+    "2",
+    "--market-value-out",
+    "380",
+    "--to-asset",
+    "ast_world",
+    "--quantity-in",
+    "3",
+    "--market-value-in",
+    "400",
+    "--currency",
+    "EUR",
+    "--fx-rate",
+    "1",
+    "--fx-rate-date",
+    "2027-06-10",
+    ...overrides,
+    "--yes",
+  ];
+
+  it("records the disposal and the acquisition, valued by the greater of the two", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(BUY_GOLD)).toBe(0);
+    h.reset();
+    expect(await h.exec(swap())).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as Record<string, unknown>;
+    expect(written.type).toBe("swap");
+    expect(written.market_value_out).toBe("380");
+    expect(written.market_value_in).toBe("400");
+    expect(written.fee).toBe("0");
+    expect(written.source).toBe("manual");
+  });
+
+  it("refuses a swap of an asset for itself, in Spanish", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(BUY_GOLD)).toBe(0);
+    h.reset();
+    expect(await h.exec(swap(["--to-asset", "ast_gold"]))).toBe(1);
+    expect(h.text()).toContain("to_asset_id");
   });
 });

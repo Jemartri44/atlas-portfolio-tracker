@@ -56,7 +56,18 @@ describe("generateLedger: golden file (frozen once merged, prompt decision (i))"
 });
 
 describe("generateLedger: the scenario contains every rare case", () => {
-  it("covers every event type of data-schema.md §3 and the catalogue of the plan", () => {
+  /**
+   * Every type but two, and both absences are deliberate.
+   *
+   * `swap` (feature 008) is not here because the scenario has no crypto asset
+   * to swap, so adding one would mean new asset, purchase and valuation events
+   * — and a side stream protects the ids but **not** the snapshot: an event
+   * dated in the middle of the scenario moves lots, gains and warnings of
+   * everything after it. It is covered in `projections/swap.test.ts` instead.
+   *
+   * `tax_return_filed` is defined by ADR-0020 and implemented in phase 5.
+   */
+  it("covers every event type of data-schema.md §3 but the two it cannot", () => {
     const summary = summarizeLedger(events);
     expect(Object.keys(summary.by_type).sort()).toEqual(
       [

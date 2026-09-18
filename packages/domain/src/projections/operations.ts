@@ -19,6 +19,7 @@ import type {
   InterestEvent,
   SellEvent,
   StandaloneFeeEvent,
+  SwapEvent,
   TransferEvent,
   ValuationEvent,
 } from "../schema/events.js";
@@ -188,6 +189,49 @@ const thesisOf = (
   );
 };
 
+/**
+ * The thesis a swap links to. Rule 15 says a purchase in the bucket needs a
+ * thesis opened first, and the leg **in** of a swap is a purchase: it is the
+ * position that opens and the one that will have to be defended. The leg out is
+ * handled like a sale — a warning if it closes a position with no thesis behind
+ * it — without asking for a second id, which would be one more field to fill in
+ * for no decision.
+ */
+const swapThesisOf = (
+  state: LedgerState,
+  event: SwapEvent,
+  account: Account,
+  position: number,
+): Thesis | undefined => {
+  if (account.book !== "bucket") {
+    if (event.thesis_id !== undefined) {
+      throw new ProjectionError(
+        "thesis_not_allowed",
+        event.id,
+        `thesis_id only applies to the bucket; ${event.account_id} is a core account`,
+        { account_id: event.account_id, thesis_id: event.thesis_id },
+      );
+    }
+    return undefined;
+  }
+  if (event.thesis_id === undefined) {
+    throw new ProjectionError(
+      "thesis_required",
+      event.id,
+      "a swap in the bucket needs the thesis_id of an open thesis recorded earlier (rule 15)",
+      { account_id: event.account_id, asset_id: event.to_asset_id },
+    );
+  }
+  return requireOpenThesis(
+    state,
+    event.thesis_id,
+    event.account_id,
+    event.to_asset_id,
+    logicalPositionOf(state, event, position),
+    event.id,
+  );
+};
+
 export const applyBuy = (state: LedgerState, event: BuyEvent, position: number): void => {
   const account = requireAccount(state, event.account_id, event.id);
   const asset = requireAsset(state, event.asset_id, event.id);
@@ -286,6 +330,110 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
   }
   warnCurrency(state, event, asset);
   warnFxDate(state, event, fiscalDate);
+};
+
+/**
+ * Valuation of a swap under article 37.1.h LIRPF: **the greater** of the market
+ * value of what is handed over and of what is received.
+ *
+ * Exported and tested on its own because it is the whole fiscal content of the
+ * event: a rule of three lines that decides a taxable figure, and the kind of
+ * thing that gets "simplified" into "use what was received" by somebody in five
+ * years. It is symmetric by construction — swapping the two arguments cannot
+ * change the answer — and that is a property the tests assert.
+ */
+export const swapValuation = (event: SwapEvent): Money => {
+  const out = money(event.market_value_out, event.currency);
+  const received = money(event.market_value_in, event.currency);
+  return out.amount.gt(received.amount) ? out : received;
+};
+
+/**
+ * A swap: one disposal and one acquisition, in the same fact.
+ *
+ * The leg out has to be **indistinguishable from a `sell`** — it consumes lots
+ * by global FIFO and books a gain — and the leg in from a `buy`, except that
+ * the lot it opens is born on the day of the swap with the value of article
+ * 37.1.h. It inherits **no antiquity and no cost**: a swap is neither a
+ * transfer nor an exchange covered by the neutrality regime, and modelling it
+ * as one would omit the whole gain (`docs/fiscal-questions.md` #7).
+ *
+ * The wash-sale rule is wired in **all four directions**, which is the gap the
+ * PR #40 had to fix for transfers and that is not repeated here: what is
+ * received is an acquisition (so it is warned about after an earlier loss, and
+ * it is remembered for a later loss), and what is handed over is a disposal (so
+ * a loss is warned about against earlier purchases, and it is remembered for a
+ * later repurchase).
+ */
+export const applySwap = (state: LedgerState, event: SwapEvent, position: number): void => {
+  const account = requireAccount(state, event.account_id, event.id);
+  const from = requireAsset(state, event.from_asset_id, event.id);
+  const to = requireAsset(state, event.to_asset_id, event.id);
+  assertSameBook(account, from, event.id);
+  assertSameBook(account, to, event.id);
+  const thesis = swapThesisOf(state, event, account, position);
+  const dateOut = fiscalDateOf(event, from.asset_type, state.fiscalSettings);
+  const dateIn = fiscalDateOf(event, to.asset_type, state.fiscalSettings);
+  const quantityOut = Quantity.parse(event.quantity_out);
+  const quantityIn = Quantity.parse(event.quantity_in);
+  requireAvailable(state, event.account_id, event.from_asset_id, quantityOut, event.id);
+  const fee = money(event.fee, event.currency);
+  const value = swapValuation(event);
+  const fx = fxOf(event);
+  // The fee is inherent to the disposal and subtracts from it, as in a `sell`;
+  // it does **not** also add to the cost of what is received, because the same
+  // fee counted on both legs would be counted twice. It is a new fiscal
+  // criterion and its direction of risk is written down in the feature's
+  // `questions.md`; verify with an adviser.
+  const proceedsEur = fx.toEur(value.sub(fee));
+  const costEur = fx.toEur(value);
+
+  adjustCash(state, event.account_id, fee.neg());
+  adjustPosition(state, event.account_id, event.from_asset_id, negative(quantityOut), event.id);
+  adjustPosition(state, event.account_id, event.to_asset_id, quantityIn, event.id);
+  const slices = consume(state, event.from_asset_id, quantityOut, event.id);
+  const gain = recordGain(state, {
+    event_id: event.id,
+    asset_id: event.from_asset_id,
+    account_id: event.account_id,
+    fiscal_date: dateOut,
+    quantity: quantityOut,
+    proceeds_eur: proceedsEur,
+    slices,
+  });
+  openLot(state, {
+    asset_id: event.to_asset_id,
+    acquisition_date: dateIn,
+    quantity: quantityIn,
+    cost_eur: costEur,
+    source_event_id: event.id,
+    position,
+  });
+  if (thesis !== undefined) {
+    linkBuy(state, thesis, event.id, dateIn, quantityIn, costEur, Money.zero("EUR"));
+  }
+  noteAcquisition(state, {
+    event_id: event.id,
+    asset_id: event.to_asset_id,
+    fiscal_date: dateIn,
+    quantity: quantityIn,
+  });
+  warnRepurchase(state, event.id, event.to_asset_id, to.asset_type, dateIn);
+  if (gain.gain_eur.amount.isNegative()) {
+    warnPriorBuys(state, event.id, event.from_asset_id, from.asset_type, dateOut, gain.gain_eur);
+  }
+  if (dateOut !== dateIn) {
+    addWarning(
+      state,
+      "swap_fiscal_dates_differ",
+      event.id,
+      `the leg out of ${event.from_asset_id} is fiscally dated ${dateOut} and the leg in of ${event.to_asset_id} ${dateIn}`,
+      { from_asset_id: event.from_asset_id, to_asset_id: event.to_asset_id, dateOut, dateIn },
+    );
+  }
+  warnCurrency(state, event, from);
+  warnFxDate(state, event, dateOut);
+  warnHolders(state, event.to_asset_id, event.id);
 };
 
 export const applyTransfer = (state: LedgerState, event: TransferEvent): void => {

@@ -177,6 +177,54 @@ export interface SellEvent extends Envelope, OperationFields {
   thesis_id?: string;
 }
 
+/**
+ * Swapping one asset for another, inside one account: crypto for crypto is the
+ * case that motivates it, and `fx_exchange` is only for currencies.
+ *
+ * **A swap is not a transfer, and the difference is the expensive one.** A
+ * transfer between funds keeps the acquisition date and the cost of the origin
+ * lots and is taxed nowhere (trap 1 of `CLAUDE.md`); a swap is a **disposal**
+ * of what is handed over and an **acquisition** of what is received, both on
+ * the day of the swap. It keeps no antiquity and no cost, because it is neither
+ * a transfer nor an exchange covered by the neutrality regime.
+ *
+ * It is valued by article 37.1.h LIRPF: **the greater** of the market value of
+ * what is handed over and of what is received. That is why both are recorded
+ * and neither is derived from the other.
+ *
+ * The vocabulary is deliberately the one of `transfer` (`from_*`,
+ * `quantity_out`, `to_*`, `quantity_in`): they are the two two-legged
+ * operations of the ledger, and naming them differently would only mean having
+ * to remember which is which. What tells them apart is where it can be seen:
+ * the type, the two `market_value_*` a transfer does not have, and the absence
+ * of `nav_*`.
+ */
+export interface SwapEvent extends Envelope {
+  type: "swap";
+  account_id: AccountId;
+  trade_date: CivilDate;
+  value_date: CivilDate;
+  from_asset_id: AssetId;
+  quantity_out: DecimalString;
+  /** Market value of what is handed over, in `currency`. */
+  market_value_out: DecimalString;
+  to_asset_id: AssetId;
+  quantity_in: DecimalString;
+  /** Market value of what is received, in `currency`. */
+  market_value_in: DecimalString;
+  currency: Currency;
+  /** ECB rate as published: units of `currency` per EUR (ADR-0013). */
+  fx_rate: DecimalString;
+  fx_rate_date: CivilDate;
+  fee: DecimalString;
+  /** Required in a bucket account, for the asset **received**: the position it opens (rule 15). */
+  thesis_id?: string;
+  broker_ref?: string;
+  fingerprint: string;
+  source: string;
+  notes?: string;
+}
+
 export interface TransferEvent extends Envelope {
   type: "transfer";
   request_id?: Ulid;
@@ -518,6 +566,7 @@ export type SupportedEvent =
   | SettingsChangedEvent
   | BuyEvent
   | SellEvent
+  | SwapEvent
   | TransferEvent
   | DividendEvent
   | InterestEvent
