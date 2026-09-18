@@ -13,8 +13,9 @@ import type {
   TransferRequestedEvent,
   TransferRequestUpdatedEvent,
 } from "../schema/events.js";
+import type { Settings } from "../settings/settings.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
-import type { LedgerState, PendingOrder, PendingTransfer } from "./state.js";
+import type { LedgerState, PendingOrder, PendingTransfer, Warning } from "./state.js";
 
 const DAY_MS = 86_400_000;
 
@@ -231,3 +232,74 @@ export const pendingTransfers = (state: LedgerState, at: CivilDate): OpenTransfe
   [...state.transferRequests.values()]
     .filter((request) => request.stage !== "completed" && request.stage !== "cancelled")
     .map((request) => ({ ...request, days_open: daysBetween(request.requested_date, at) }));
+
+export interface WatchedTransfer extends OpenTransfer {
+  /** `days_open > transfer_max_days`; absent when the parameter is not configured. */
+  overdue?: boolean;
+  /** The limit it was compared against, so the interface can name it. */
+  max_days?: number;
+}
+
+export interface TransferWatch {
+  date: CivilDate;
+  rows: WatchedTransfer[];
+  /** One warning per overdue request; empty when `transfer_max_days` is not set. */
+  warnings: Warning[];
+}
+
+/**
+ * Open transfer requests at a date, with the rule of `Settings.transfer_max_days`
+ * applied (ADR-0010: "a scheduled job warns if a request has been open for more
+ * than `transfer_max_days`"). The parameter had existed since phase 1 with
+ * nobody reading it.
+ *
+ * It **wraps** `pendingTransfers` instead of changing it, the same way
+ * `bucketTheses` wraps `theses`: the inner one is a plain query over the
+ * tracking events, and its three callers do not have to learn about a rule they
+ * did not ask for.
+ *
+ * Three decisions, each written down because none is obvious:
+ *
+ *   1. The days are counted **to `at`**, never to today. Asking on 30/06/2027
+ *      has to answer what was known that day (ADR-0016).
+ *   2. The comparison is **strictly greater**: the parameter reads "more than N
+ *      days", so the day the limit falls on is still within the limit.
+ *   3. A request in stage `redeemed` **still counts**. That is the dangerous
+ *      state — the money has left the origin fund and has not arrived anywhere —
+ *      and it is exactly the transfer worth chasing.
+ *
+ * Without `transfer_max_days` the rule is not evaluated: no `overdue`, no
+ * warning, and no invented default (constitution IV and V).
+ */
+export const transferWatch = (
+  state: LedgerState,
+  at: CivilDate,
+  settings: Settings,
+): TransferWatch => {
+  const limit = settings.transfer_max_days;
+  const warnings: Warning[] = [];
+  const rows = pendingTransfers(state, at).map((request): WatchedTransfer => {
+    if (limit === undefined) {
+      return request;
+    }
+    const overdue = request.days_open > limit;
+    if (overdue) {
+      warnings.push({
+        code: "transfer_overdue",
+        event_id: request.request_id,
+        message: `transfer request ${request.request_id} has been open ${request.days_open} days (limit ${limit})`,
+        details: {
+          request_id: request.request_id,
+          days_open: request.days_open,
+          max_days: limit,
+          requested_date: request.requested_date,
+          stage: request.stage,
+          from_asset_id: request.from_asset_id,
+          to_asset_id: request.to_asset_id,
+        },
+      });
+    }
+    return { ...request, overdue, max_days: limit };
+  });
+  return { date: at, rows, warnings };
+};

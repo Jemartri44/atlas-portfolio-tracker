@@ -80,6 +80,9 @@ export {
   type OpenTransfer,
   pendingOrders,
   pendingTransfers,
+  type TransferWatch,
+  transferWatch,
+  type WatchedTransfer,
 } from "./projections/pending.js";
 export { type PhysicalPosition, physicalPositions } from "./projections/positions.js";
 export {
