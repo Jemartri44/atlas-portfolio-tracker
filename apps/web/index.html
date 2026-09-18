@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      Restrictive CSP served by the application itself (constitution, security).
+      `vite.config.ts` relaxes it in `vite dev`, where the dev server injects
+      inline scripts; production keeps `script-src 'self'` with no unsafe-inline.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0b1220" />
+    <title>Atlas</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>Atlas necesita JavaScript: proyecta el libro entero en el dispositivo.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -13,7 +13,10 @@
       "!packages/domain/vendor/big.js",
       "!tests/fixtures",
       "!.specify",
-      "!.claude"
+      "!.claude",
+      "!apps/web/vendor",
+      "!apps/web/dist",
+      "!apps/web/dev-dist"
     ]
   },
   "formatter": {
