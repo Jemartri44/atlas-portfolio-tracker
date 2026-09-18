@@ -155,6 +155,32 @@ describe("mandatory edge cases", () => {
     expect(lineOf(report, saleG.id).criteria).toContain("15");
   });
 
+  it("a partial transfer then a spin-off of the origin: what travelled is not carved out again", () => {
+    const b = taxBuilder();
+    buy(b, "fund_f", "2027-01-11", "10", "100");
+    const loss = sell(b, "fund_f", "2027-02-01", "10", "90");
+    buy(b, "fund_f", "2027-03-01", "10", "90");
+    // 4 of the 10 units carrying the −100 move to fund_g: −40 travel with them.
+    transfer(b, "fund_f", "fund_g", "2027-03-15", "4", "4");
+    // Then the origin lot gives 30 % of its cost to fund_h: 30 % of the −60 left.
+    b.corporateAction({
+      kind: "spin_off",
+      asset_id: "fund_f",
+      effective_date: "2027-04-01",
+      effects: [{ op: "carve_out", to_asset_id: "fund_h", ratio: "1", cost_share: "0.3" }],
+    });
+    const report = reportOf(b.build(), 2027);
+    expect(text(lineOf(report, loss.id).deferred_eur)).toBe("-100");
+    // Still −100 in all: the −40 in transit went to fund_g once, not to fund_h too.
+    expect(
+      report.wash_sale.pending.map((p) => [p.asset_id, text(p.amount_eur), p.travelled]),
+    ).toEqual([
+      ["fund_f", "-42", false],
+      ["fund_g", "-40", true],
+      ["fund_h", "-18", true],
+    ]);
+  });
+
   it("a transfer keeps the antiquity through three hops, and the deferral travels with it", () => {
     const b = taxBuilder();
     const original = buy(b, "fund_f", "2027-01-11", "10", "100");
