@@ -4,7 +4,7 @@
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { bucketTheses } from "../../src/projections/bucket.js";
+import { type BucketThesisView, bucketTheses } from "../../src/projections/bucket.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
@@ -116,15 +116,15 @@ describe("bucketTheses: properties", () => {
             quantity: String(quantity - sold),
             unit_value: String(nowPrice),
           });
-          const thesis = bucketTheses(projectLedger(b.build()), DATE, settings)[0];
-          const left = (
-            thesis?.unrealized_eur as { amount: { toString(): string } }
-          ).amount.toString();
+          const thesis = bucketTheses(projectLedger(b.build()), DATE, settings)[0] as
+            | BucketThesisView
+            | undefined;
+          const latent = Number((thesis as BucketThesisView).unrealized_eur?.amount.toString());
+          const realized = Number((thesis as BucketThesisView).result_eur.amount.toString());
           const value = (quantity - sold) * nowPrice;
           const proceeds = sold * sellPrice;
           const cost = quantity * buyPrice;
-          const realized = Number(thesis?.result_eur.amount.toString());
-          expect(Number(left) + realized).toBeCloseTo(value + proceeds - cost, 8);
+          expect(latent + realized).toBeCloseTo(value + proceeds - cost, 8);
         },
       ),
       { numRuns: 60 },

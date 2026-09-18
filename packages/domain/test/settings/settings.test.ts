@@ -270,12 +270,12 @@ describe("bucket_benchmark_asset_id (business rule 16)", () => {
     expect(
       validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: "ast_world" }),
     ).toMatchObject({ bucket_benchmark_asset_id: "ast_world" });
-    expect(() =>
-      validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: "" }),
-    ).toThrow(ValidationError);
-    expect(() =>
-      validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: 7 }),
-    ).toThrow(ValidationError);
+    expect(() => validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: "" })).toThrow(
+      ValidationError,
+    );
+    expect(() => validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: 7 })).toThrow(
+      ValidationError,
+    );
     // It is optional: a ledger without a benchmark is perfectly valid.
     expect(() => validateSettings(DEFAULT_SETTINGS)).not.toThrow();
   });

@@ -6,7 +6,7 @@
 import { type CashLine, type NetWorth, netWorth, settingsAt } from "@atlas/domain";
 import { assertKnownFlags, type Flags } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
-import { DASH, eur, pct } from "../output/format.js";
+import { DASH, eur } from "../output/format.js";
 import { table } from "../output/table.js";
 import { dateFlag, loadForQuery, renderQuery } from "./shared.js";
 
