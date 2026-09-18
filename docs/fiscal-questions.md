@@ -48,6 +48,7 @@ Todo lo que los documentos marcan como *verificar*, consolidado. Cada respuesta 
 | 14 | ¿La ventana se cuenta de fecha a fecha? | **Sí**, en meses y años naturales, con el día inexistente llevado al **último del mes**. El último día de la ventana **sí** avisa | Cómputo civil de plazos (art. 5 CC). Lo corrigió ADR-0014 | Alta | Conservador |
 | 15 | Pérdida diferida cuyos lotes se **traspasan o canjean** | El diferimiento **viaja con los lotes descendientes** (`source_lot_id`) | Sin norma expresa | **En disputa** | Conservador |
 | 16 | Deducción por doble imposición de dividendos extranjeros | La menor de: el impuesto satisfecho fuera **limitado al tipo del convenio**, y el tipo medio efectivo aplicado a esa renta. Por eso `dividend` guarda `source_country` | Art. 80 LIRPF y convenios | Alta, **pero no calculable entero** | Conservador |
+| 17 | La **comisión de una permuta** (`swap`), ¿resta de lo transmitido o suma al coste de lo adquirido? | **Resta de lo transmitido**, igual que en una venta: la pata de salida de una permuta es una transmisión | Art. 35 LIRPF. Una permuta es simultáneamente transmisión y adquisición, y la comisión es inherente a las dos; la norma no reparte | Media | **Agresivo en el momento**: restar ahora baja la ganancia de este ejercicio y sube la de uno futuro |
 
 ---
 
