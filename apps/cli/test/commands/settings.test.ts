@@ -255,6 +255,23 @@ describe("atlas settings set: the bucket benchmark", () => {
     };
     expect(written.settings.bucket_benchmark_asset_id).toBe("ast_not_yet");
   });
+
+  it("rejects an empty asset_id in Spanish, naming the parameter", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--bucket-benchmark-asset", ""])).toBe(EXIT.domain);
+    expect(h.err.join("\n")).toContain(
+      "El parámetro bucket_benchmark_asset_id no admite ese valor",
+    );
+    expect((await h.store.load()).events).toHaveLength(seed().length);
+  });
+
+  it("rejects a threshold out of range in Spanish, with the range", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--bucket-stop-loss-pct", "120"])).toBe(EXIT.domain);
+    expect(h.err.join("\n")).toContain(
+      "El parámetro bucket_stop_loss_pct debe ser un valor entre 0 y 100 (recibido: 120)",
+    );
+  });
 });
 
 describe("atlas settings set: assignments keyed by asset type", () => {

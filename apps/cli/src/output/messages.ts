@@ -102,6 +102,25 @@ export const describeError = (error: DomainError): string => {
       return `--accept-invalid solo se admite en un cambio de configuración, no en ${text(d.type)} (ADR-0015).`;
     case "newly_invalid_events":
       return `Este cambio de configuración deja inválidos ${(d.affected as unknown[]).length} eventos ya registrados.`;
+    case "invalid_settings": {
+      // `validateSettings` names the parameter it rejected; the CLI is the only
+      // place that speaks to a person, so it is the one that has to say it in
+      // Spanish (deuda anotada en la feature 004).
+      if (d.total !== undefined) {
+        return `Los pesos objetivo deben sumar 100 y suman ${text(d.total)}: corrígelos con \`atlas settings set --target-weights …\`.`;
+      }
+      if (d.min !== undefined) {
+        const range =
+          d.max === undefined
+            ? `${text(d.min)} o mayor`
+            : `un valor entre ${text(d.min)} y ${text(d.max)}`;
+        return `El parámetro ${text(d.field)} debe ser ${range} (recibido: ${text(d.value)}).`;
+      }
+      if (d.value === undefined) {
+        return `Falta el parámetro ${text(d.field)} en la configuración.`;
+      }
+      return `El parámetro ${text(d.field)} no admite ese valor (recibido: ${text(d.value)}).`;
+    }
     case "invalid_wash_sale_window":
       return `La ventana de recompra de ${text(d.asset_type)} debe ser "2m", "1y" o "<n>d" (recibido: ${text(d.value)}).`;
     case "negative_target_weight":

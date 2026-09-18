@@ -164,13 +164,18 @@ const checkWashSaleWindow = (raw: UnknownRecord): void => {
   const windows = raw.wash_sale_window;
   const legacy = raw.wash_sale_window_days;
   if (windows !== undefined && !isRecord(windows)) {
-    fail("wash_sale_window must be an object", { value: windows });
+    fail("wash_sale_window must be an object", { field: "wash_sale_window", value: windows });
   }
   if (legacy !== undefined && !isRecord(legacy)) {
-    fail("wash_sale_window_days must be an object", { value: legacy });
+    fail("wash_sale_window_days must be an object", {
+      field: "wash_sale_window_days",
+      value: legacy,
+    });
   }
   if (windows === undefined && legacy === undefined) {
-    fail("wash_sale_window is required (wash_sale_window_days is accepted as the legacy form)", {});
+    fail("wash_sale_window is required (wash_sale_window_days is accepted as the legacy form)", {
+      field: "wash_sale_window",
+    });
   }
   for (const assetType of ASSET_TYPES) {
     const value = isRecord(windows) ? windows[assetType] : undefined;
@@ -195,11 +200,11 @@ const checkWashSaleWindow = (raw: UnknownRecord): void => {
 /** Validates a complete settings object (the payload of `settings_changed`). Unknown keys are kept. */
 export const validateSettings = (raw: unknown): Settings => {
   if (!isRecord(raw)) {
-    return fail("settings must be an object", { value: raw });
+    return fail("settings must be an object", { field: "settings", value: raw });
   }
   const rules = raw.fiscal_date_rule;
   if (!isRecord(rules)) {
-    return fail("fiscal_date_rule is required", {});
+    return fail("fiscal_date_rule is required", { field: "fiscal_date_rule" });
   }
   // Partial map (ADR-0018): a missing asset type is fine and takes its default;
   // a present one must name a rule the engine knows.
@@ -207,6 +212,7 @@ export const validateSettings = (raw: unknown): Settings => {
     const rule = rules[assetType];
     if (rule !== undefined && !(FISCAL_DATE_RULES as readonly unknown[]).includes(rule)) {
       return fail(`fiscal_date_rule.${assetType} must be trade_date or value_date`, {
+        field: `fiscal_date_rule.${assetType}`,
         asset_type: assetType,
         value: rule,
       });
@@ -240,7 +246,10 @@ export const validateSettings = (raw: unknown): Settings => {
   if ("bucket_benchmark_asset_id" in raw) {
     const value = raw.bucket_benchmark_asset_id;
     if (typeof value !== "string" || value.length === 0) {
-      return fail("bucket_benchmark_asset_id must be a non-empty asset_id", { value });
+      return fail("bucket_benchmark_asset_id must be a non-empty asset_id", {
+        field: "bucket_benchmark_asset_id",
+        value,
+      });
     }
   }
   for (const field of INTEGER_FIELDS) {
@@ -251,12 +260,13 @@ export const validateSettings = (raw: unknown): Settings => {
   if ("target_weights" in raw) {
     const weights = raw.target_weights;
     if (!isRecord(weights)) {
-      return fail("target_weights must be an object", { value: weights });
+      return fail("target_weights must be an object", { field: "target_weights", value: weights });
     }
     let total = Decimal.ZERO;
     for (const [assetId, weight] of Object.entries(weights)) {
       if (!isDecimalString(weight)) {
         return fail(`target_weights.${assetId} must be a decimal string`, {
+          field: `target_weights.${assetId}`,
           asset_id: assetId,
           value: weight,
         });
@@ -272,7 +282,10 @@ export const validateSettings = (raw: unknown): Settings => {
       total = total.add(parsed);
     }
     if (!total.eq(Decimal.parse("100"))) {
-      return fail("target_weights must add up to 100", { total: total.toString() });
+      return fail("target_weights must add up to 100", {
+        field: "target_weights",
+        total: total.toString(),
+      });
     }
   }
   return raw as unknown as Settings;
