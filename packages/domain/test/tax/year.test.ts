@@ -502,6 +502,23 @@ describe("the other doubtful criteria", () => {
     expect(text(report.doubtful.find((d) => d.criterion === "22")?.exposure_eur)).toBe("150");
   });
 
+  it("#22: a year the order leaves with nothing competed too", () => {
+    // 2027 −100 and 2028 −100 pending; 2029 gains 50: the oldest takes it all,
+    // and 2028 gets nothing only because of the order.
+    const b = taxBuilder();
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    sell(b, "stock_s", "2027-06-01", "10", "90");
+    buy(b, "stock_t", "2028-01-11", "10", "100");
+    sell(b, "stock_t", "2028-06-01", "10", "90");
+    buy(b, "stock_s", "2029-01-11", "10", "100");
+    sell(b, "stock_s", "2029-06-01", "10", "105");
+    const report = reportOf(b.build(), 2029);
+    expect(report.compensation.steps.map((s) => [s.origin_year, text(s.amount_eur)])).toEqual([
+      [2027, "50"],
+    ]);
+    expect(text(report.doubtful.find((d) => d.criterion === "22")?.exposure_eur)).toBe("50");
+  });
+
   it("#22: two years absorbed whole, or one year in two steps, put nothing at stake", () => {
     const whole = taxBuilder();
     buy(whole, "stock_s", "2027-01-11", "10", "100");

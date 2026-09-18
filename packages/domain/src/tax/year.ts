@@ -758,13 +758,19 @@ const doubtful = (
   // #22: the order among years only matters when two or more years of origin
   // compete for a balance that cannot absorb them all. Two steps of one year
   // (its own category, then the other) compete with nothing (feature 009
-  // review), and when everything is absorbed the order changes nothing.
+  // review), and when everything is absorbed the order changes nothing. A year
+  // that took nothing competed too: it is the one the order left out, so the
+  // years are those of the steps and those still pending or expiring after them.
   const phase2 = core.compensation.steps.filter((step) => step.phase === 2);
-  const origins = new Set(phase2.map((step) => step.origin_year));
-  const leftover =
-    core.compensation.expired.length > 0 ||
-    core.compensation.pending.some((entry) => entry.origin_year < year);
-  const competing = origins.size > 1 && leftover;
+  const left = [
+    ...core.compensation.expired,
+    ...core.compensation.pending.filter((entry) => entry.origin_year < year),
+  ];
+  const origins = new Set([
+    ...phase2.map((step) => step.origin_year),
+    ...left.map((entry) => entry.origin_year),
+  ]);
+  const competing = origins.size > 1 && left.length > 0;
   if (phase2.length > 0) {
     items.push(
       item("22", {
