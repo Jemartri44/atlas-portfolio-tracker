@@ -338,6 +338,32 @@ describe("detailView", () => {
     expect(detailView(buy as never).editable).toBe(true);
   });
 
+  /*
+   * The catalogue is **updated, not rectified** (`docs/data-schema.md` §6.1):
+   * a change to an account or an asset is an `account_updated`/`asset_updated`
+   * with the whole resulting state. Two of those types do have a form — the one
+   * that creates them — so having a form is not on its own enough.
+   */
+  it("keeps the catalogue out of the correctable types, and says why", () => {
+    const events = goldenEvents();
+    const state = projectLedger(events, { collectErrors: true });
+    const entries = ledgerEntries(state, events);
+    const catalogue = ["account_created", "account_updated", "asset_created", "asset_updated"];
+    const present = entries.filter((row) => catalogue.includes(row.event.type));
+    expect(new Set(present.map((row) => row.event.type)).size).toBeGreaterThan(1);
+    for (const entry of present) {
+      const view = detailView(entry);
+      expect(view.editable).toBe(false);
+      // And the screen has something better to offer than a missing button.
+      expect(view.editHint).toContain("se actualiza");
+    }
+    // Two of them are in FORM_SPECS: this is not a side effect of not having one.
+    expect(FORM_SPECS.filter((spec) => catalogue.includes(spec.type)).length).toBe(2);
+    // Nothing else carries the hint.
+    const buy = entries.find((row) => row.event.type === "buy" && row.status === "current");
+    expect(detailView(buy as never).editHint).toBeUndefined();
+  });
+
   it("does not offer it on the seven types that used to be a dead end", () => {
     const events = goldenEvents();
     const state = projectLedger(events, { collectErrors: true });

@@ -120,6 +120,14 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                     </Callout>
                   </Show>
 
+                  <Show when={view().editHint}>
+                    {(hint) => (
+                      <Callout tone="info" title="Este evento no se corrige">
+                        {hint()}
+                      </Callout>
+                    )}
+                  </Show>
+
                   <Show when={view().invalidReason !== undefined}>
                     <Callout tone="error" title="Este evento es inválido">
                       {view().invalidReason}

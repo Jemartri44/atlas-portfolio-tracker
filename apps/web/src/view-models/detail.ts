@@ -39,6 +39,8 @@ export interface DetailView {
   invalidReason?: string;
   /** Whether this type can be corrected, or only reversed: it has a form. */
   editable: boolean;
+  /** When it cannot be corrected and there is something better to say, this says it. */
+  editHint?: string;
 }
 
 const AMOUNT_FIELDS = new Set([
@@ -92,15 +94,36 @@ const ID_FIELDS = new Set([
 const ENVELOPE_FIELDS = ["id", "type", "recorded_at", "schema_version", "fingerprint"];
 
 /**
- * A type can be corrected when **a form exists for it**, because that form is
- * what `routes/movimientos/edit.tsx` builds the screen from. One source and not
- * two: as a blacklist of its own, this offered "Corregir" on seven types whose
- * destination answered "este tipo de evento no se corrige" — `interest`,
- * `standalone_fee`, `fx_exchange`, `transfer`, `order_updated`,
- * `transfer_requested` and `transfer_request_updated`, 14 of the 200 events of
- * the golden ledger.
+ * **The catalogue is updated, not rectified.** A change to an account or an
+ * asset is an `account_updated`/`asset_updated` carrying the whole resulting
+ * state (`docs/data-schema.md` §6.1), and reversing an entry that already has
+ * operations behind it is refused by the domain anyway. So these four types are
+ * subtracted below even though two of them do have a form: that form creates a
+ * catalogue entry, it does not correct one.
  */
-const EDITABLE_TYPES = new Set(FORM_SPECS.map((spec) => spec.type));
+const CATALOGUE_TYPES = new Set([
+  "account_created",
+  "account_updated",
+  "asset_created",
+  "asset_updated",
+]);
+
+/** What to do instead, said where the user is looking for the button. */
+const CATALOGUE_HINT =
+  "El catálogo no se anula: se actualiza. El cambio se registra como una actualización con el estado completo resultante (esquema §6.1), y anular un alta que ya tiene operaciones detrás lo rechaza el libro. Desde la CLI: atlas account update o atlas asset update; su pantalla llega en la versión siguiente.";
+
+/**
+ * A type can be corrected when **a form exists for it** and it is not part of
+ * the catalogue. The form specs are the single source, because that is what
+ * `routes/movimientos/edit.tsx` builds the screen from: as a blacklist of its
+ * own, this offered "Corregir" on seven types whose destination answered "este
+ * tipo de evento no se corrige" — `interest`, `standalone_fee`, `fx_exchange`,
+ * `transfer`, `order_updated`, `transfer_requested` and
+ * `transfer_request_updated`, 14 of the 200 events of the golden ledger.
+ */
+const EDITABLE_TYPES = new Set(
+  FORM_SPECS.map((spec) => spec.type).filter((type) => !CATALOGUE_TYPES.has(type)),
+);
 
 /** Which currency an amount field is in: the event's, or the one of its own pair. */
 const currencyOf = (event: Record<string, unknown>, field: string): string => {
@@ -221,5 +244,6 @@ export const detailView = (entry: LedgerEntry): DetailView => {
     links,
     ...(entry.invalid_reason === undefined ? {} : { invalidReason: entry.invalid_reason }),
     editable: EDITABLE_TYPES.has(entry.event.type) && entry.status !== "reversed",
+    ...(CATALOGUE_TYPES.has(entry.event.type) ? { editHint: CATALOGUE_HINT } : {}),
   };
 };
