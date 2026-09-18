@@ -281,6 +281,9 @@ main {
     gap: var(--s-3);
     inset-inline: auto;
     left: 0;
+    /* A window shorter than the rail (a phone on its side) scrolls it rather
+       than cutting the footer, and with it the way to the settings, off. */
+    overflow-y: auto;
     /* The same top as `main`: the action and the title of the screen start on
        one line. */
     padding: var(--s-6) var(--s-3) var(--s-4);
