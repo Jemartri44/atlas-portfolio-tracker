@@ -265,6 +265,22 @@ describe("mergeSettings", () => {
   });
 });
 
+describe("bucket_benchmark_asset_id (business rule 16)", () => {
+  it("accepts an asset_id and rejects an empty or non-string one", () => {
+    expect(
+      validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: "ast_world" }),
+    ).toMatchObject({ bucket_benchmark_asset_id: "ast_world" });
+    expect(() =>
+      validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: "" }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      validateSettings({ ...DEFAULT_SETTINGS, bucket_benchmark_asset_id: 7 }),
+    ).toThrow(ValidationError);
+    // It is optional: a ledger without a benchmark is perfectly valid.
+    expect(() => validateSettings(DEFAULT_SETTINGS)).not.toThrow();
+  });
+});
+
 describe("fiscalDateOf", () => {
   const dates = { trade_date: "2026-12-30", value_date: "2027-01-02" };
 

@@ -26,7 +26,10 @@ const portfolio = async () => {
   });
   const run = async (argv: string[]) => {
     const code = await h.exec([...argv, "--yes"]);
-    expect({ argv: argv.slice(0, 3).join(" "), code, err: h.err.join("\n") }).toMatchObject({ code: 0, err: "" });
+    expect({ argv: argv.slice(0, 3).join(" "), code, err: h.err.join("\n") }).toMatchObject({
+      code: 0,
+      err: "",
+    });
   };
   await run([
     "add",

@@ -1,0 +1,133 @@
+// Properties of the bucket metrics (constitution VII). Whatever the amounts and
+// the prices: beating the index by the same return is a tie, and the latent
+// gain plus the realized result is what the position and the sales say it is.
+
+import fc from "fast-check";
+import { describe, expect, it } from "vitest";
+import { bucketTheses } from "../../src/projections/bucket.js";
+import { projectLedger } from "../../src/projections/project-ledger.js";
+import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
+import { catalogue, LedgerBuilder } from "../ledger-builder.js";
+
+const DATE = "2027-12-31";
+const settings = mergeSettings(DEFAULT_SETTINGS, { bucket_benchmark_asset_id: "ast_world" });
+
+/** A ratio with a terminating decimal expansion, so the division is exact (ADR-0005). */
+const exactRatio = fc.record({
+  den: fc.constantFrom(1, 2, 4, 5, 10),
+  num: fc.integer({ min: 1, max: 20 }),
+  unit: fc.integer({ min: 1, max: 20 }),
+  quantity: fc.integer({ min: 1, max: 50 }),
+});
+
+describe("bucketTheses: properties", () => {
+  it("is a tie, exactly zero, when the asset and the index return the same", () => {
+    fc.assert(
+      fc.property(exactRatio, ({ den, num, unit, quantity }) => {
+        const buyPrice = String(den * unit);
+        const sellPrice = String(num * unit);
+        const b = new LedgerBuilder();
+        catalogue(b);
+        // The index is priced with the very same numbers: same return, by construction.
+        b.valuation({
+          account_id: "acc_fund",
+          asset_id: "ast_world",
+          date: "2027-01-01",
+          unit_value: buyPrice,
+        });
+        b.valuation({
+          account_id: "acc_fund",
+          asset_id: "ast_world",
+          date: "2027-07-01",
+          unit_value: sellPrice,
+        });
+        b.thesisOpened({ thesis_id: "th1", planned_size_eur: "100000" });
+        b.buy({
+          account_id: "acc_bucket",
+          asset_id: "ast_spec",
+          quantity: String(quantity),
+          unit_price: buyPrice,
+          fee: "0",
+          currency: "EUR",
+          fx_rate: "1",
+          trade_date: "2027-01-11",
+          value_date: "2027-01-13",
+          thesis_id: "th1",
+        });
+        b.sell({
+          account_id: "acc_bucket",
+          asset_id: "ast_spec",
+          quantity: String(quantity),
+          unit_price: sellPrice,
+          currency: "EUR",
+          fx_rate: "1",
+          trade_date: "2027-07-12",
+          thesis_id: "th1",
+        });
+        b.thesisClosed("th1");
+        const thesis = bucketTheses(projectLedger(b.build()), DATE, settings)[0];
+        expect(thesis?.result_vs_index_eur?.isZero()).toBe(true);
+      }),
+      { numRuns: 60 },
+    );
+  });
+
+  it("latent + realized = (current value + proceeds) − cost, to the last decimal", () => {
+    fc.assert(
+      fc.property(
+        fc.record({
+          quantity: fc.integer({ min: 2, max: 60 }),
+          sold: fc.integer({ min: 1, max: 30 }),
+          buyPrice: fc.integer({ min: 1, max: 200 }),
+          sellPrice: fc.integer({ min: 1, max: 200 }),
+          nowPrice: fc.integer({ min: 1, max: 200 }),
+        }),
+        ({ quantity, sold, buyPrice, sellPrice, nowPrice }) => {
+          fc.pre(sold < quantity);
+          const b = new LedgerBuilder();
+          catalogue(b);
+          b.thesisOpened({ thesis_id: "th1", planned_size_eur: "100000" });
+          b.buy({
+            account_id: "acc_bucket",
+            asset_id: "ast_spec",
+            quantity: String(quantity),
+            unit_price: String(buyPrice),
+            fee: "0",
+            currency: "EUR",
+            fx_rate: "1",
+            trade_date: "2027-01-11",
+            value_date: "2027-01-13",
+            thesis_id: "th1",
+          });
+          b.sell({
+            account_id: "acc_bucket",
+            asset_id: "ast_spec",
+            quantity: String(sold),
+            unit_price: String(sellPrice),
+            currency: "EUR",
+            fx_rate: "1",
+            trade_date: "2027-07-12",
+            thesis_id: "th1",
+          });
+          b.valuation({
+            account_id: "acc_bucket",
+            asset_id: "ast_spec",
+            date: "2027-12-01",
+            quantity: String(quantity - sold),
+            unit_value: String(nowPrice),
+          });
+          const thesis = bucketTheses(projectLedger(b.build()), DATE, settings)[0];
+          const left = (
+            thesis?.unrealized_eur as { amount: { toString(): string } }
+          ).amount.toString();
+          const value = (quantity - sold) * nowPrice;
+          const proceeds = sold * sellPrice;
+          const cost = quantity * buyPrice;
+          const realized = Number(thesis?.result_eur.amount.toString());
+          expect(Number(left) + realized).toBeCloseTo(value + proceeds - cost, 8);
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+});

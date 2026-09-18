@@ -14,8 +14,8 @@ import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type ExternalPrices, type PriceLookup, positionValueOf, priceAt } from "./prices.js";
-import type { LedgerState, Thesis, Warning } from "./state.js";
-import { openThesisOn } from "./theses.js";
+import type { LedgerState, Thesis, ThesisView, Warning } from "./state.js";
+import { openThesisOn, theses } from "./theses.js";
 
 const EUR = "EUR";
 const HUNDRED = Decimal.parse("100");
@@ -127,6 +127,24 @@ const thesisPartOf = (thesis: Thesis | undefined, date: CivilDate): Partial<Buck
   };
 };
 
+/** Why a thesis has no comparison with the index. Never a zero in its place. */
+export interface BenchmarkGap {
+  reason: "no_benchmark" | "unknown_asset" | "no_price" | "no_linked_buys" | "no_asset_price";
+  asset_id?: AssetId;
+  date?: CivilDate;
+}
+
+export interface BucketThesisView extends ThesisView {
+  /** Latent gain of the live position of the pair (account, asset); zero when there is none. */
+  unrealized_eur?: Money;
+  benchmark_asset_id?: AssetId;
+  /** `Σ cost_i × P(d_fin) / P(d_i)`: what the same money would be worth in the index. */
+  benchmark_equivalent_eur?: Money;
+  /** `(result + latent) − (equivalent − invested)`. Absent when anything is missing. */
+  result_vs_index_eur?: Money;
+  missing_benchmark: BenchmarkGap[];
+}
+
 /** Open positions of the bucket at a date, with their latent P&L and their thesis (§3.2). */
 export const bucketPositions = (
   state: LedgerState,
@@ -206,4 +224,124 @@ export const bucketPositions = (
     stale_prices: stale,
     warnings,
   };
+};
+
+/**
+ * What the same money, on the same dates, would have made in the index
+ * (business rule 16, decision (b) of prompt 005):
+ *
+ *     benchmark_equivalent_eur = Σ cost_i × P(d_fin) / P(d_i)
+ *
+ * `P(d)` is the price of the benchmark on `d` **in euros** (Q2: the user would
+ * have put euros in the index, so the comparable return is theirs, currency
+ * effect included), and `d_fin` is the fiscal date of the last linked sale of a
+ * closed thesis, or the date asked while it is open.
+ *
+ * If any `P(d)` is missing the whole comparison is missing: a partial sum would
+ * be a number nobody can reproduce (constitution V).
+ */
+const benchmarkEquivalentOf = (
+  state: LedgerState,
+  thesis: ThesisView,
+  benchmarkId: AssetId,
+  date: CivilDate,
+  settings: Settings,
+  gaps: BenchmarkGap[],
+  external?: ExternalPrices,
+): Money | undefined => {
+  const lastSale = thesis.sells.at(-1);
+  const end = thesis.status === "closed" && lastSale !== undefined ? lastSale.fiscal_date : date;
+  const endPrice = priceAt(state, benchmarkId, end, settings, external);
+  if (endPrice === undefined) {
+    gaps.push({ reason: "no_price", asset_id: benchmarkId, date: end });
+    return undefined;
+  }
+  let equivalent = Money.zero(EUR);
+  for (const leg of thesis.buys) {
+    const price = priceAt(state, benchmarkId, leg.fiscal_date, settings, external);
+    if (price === undefined) {
+      gaps.push({ reason: "no_price", asset_id: benchmarkId, date: leg.fiscal_date });
+      return undefined;
+    }
+    equivalent = equivalent.add(
+      leg.amount_eur.mul(endPrice.unit_value_eur.amount.div(price.unit_value_eur.amount)),
+    );
+  }
+  return equivalent;
+};
+
+/** Latent gain of the live position of a thesis; zero when the pair holds nothing. */
+const latentOf = (
+  state: LedgerState,
+  thesis: ThesisView,
+  date: CivilDate,
+  settings: Settings,
+  gaps: BenchmarkGap[],
+  external?: ExternalPrices,
+): Money | undefined => {
+  if (!thesis.position.isPositive()) {
+    return Money.zero(EUR);
+  }
+  const price = priceAt(state, thesis.asset_id, date, settings, external);
+  const unitCost = openUnitCostOf(state, thesis.asset_id);
+  const value = positionValueOf(price, thesis.position);
+  if (value === undefined || unitCost === undefined) {
+    gaps.push({ reason: "no_asset_price", asset_id: thesis.asset_id, date });
+    return undefined;
+  }
+  return value.sub(unitCost.mul(thesis.position.value));
+};
+
+/**
+ * The theses with their result against the index (§3.3). It **wraps** `theses()`
+ * instead of extending it: pass B of the projection uses `theses.ts`, and the
+ * path that creates lots and gains must never learn what a price is
+ * (constitution II, enforced by the architecture test).
+ */
+export const bucketTheses = (
+  state: LedgerState,
+  date: CivilDate,
+  settings: Settings,
+  external?: ExternalPrices,
+): BucketThesisView[] => {
+  const benchmarkId = settings.bucket_benchmark_asset_id;
+  return theses(state, date).map((thesis) => {
+    const gaps: BenchmarkGap[] = [];
+    const latent = latentOf(state, thesis, date, settings, gaps, external);
+    let equivalent: Money | undefined;
+    if (benchmarkId === undefined) {
+      gaps.push({ reason: "no_benchmark" });
+    } else if (!state.assets.has(benchmarkId)) {
+      gaps.push({ reason: "unknown_asset", asset_id: benchmarkId });
+    } else if (thesis.buys.length === 0) {
+      // Nothing was ever put in: the index would have made nothing out of
+      // nothing, and that is "no data", not zero (Q6).
+      gaps.push({ reason: "no_linked_buys" });
+    } else {
+      equivalent = benchmarkEquivalentOf(
+        state,
+        thesis,
+        benchmarkId,
+        date,
+        settings,
+        gaps,
+        external,
+      );
+    }
+    const comparable = equivalent !== undefined && latent !== undefined;
+    return {
+      ...thesis,
+      ...(latent === undefined ? {} : { unrealized_eur: latent }),
+      ...(benchmarkId === undefined ? {} : { benchmark_asset_id: benchmarkId }),
+      ...(equivalent === undefined ? {} : { benchmark_equivalent_eur: equivalent }),
+      ...(comparable
+        ? {
+            result_vs_index_eur: thesis.result_eur
+              .add(latent as Money)
+              .sub((equivalent as Money).sub(thesis.invested_eur)),
+          }
+        : {}),
+      missing_benchmark: gaps,
+    };
+  });
 };

@@ -184,6 +184,18 @@ describe("atlas settings set: the legacy wash-sale window", () => {
   });
 });
 
+describe("atlas settings set: the bucket benchmark", () => {
+  it("writes the asset_id without checking the catalogue: the asset may come later", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--bucket-benchmark-asset", "ast_not_yet"])).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as {
+      settings: { bucket_benchmark_asset_id?: string };
+    };
+    expect(written.settings.bucket_benchmark_asset_id).toBe("ast_not_yet");
+  });
+});
+
 describe("atlas settings set: assignments keyed by asset type", () => {
   it("rejects a type the enum does not have, instead of writing a map nobody reads", async () => {
     const h = harness({ events: seed(), confirm: true });

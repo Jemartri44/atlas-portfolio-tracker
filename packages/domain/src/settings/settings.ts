@@ -49,6 +49,14 @@ export interface Settings {
   bucket_max_cumulative_contribution?: DecimalString;
   bucket_stop_loss_pct?: DecimalString;
   bucket_max_weight_pct?: DecimalString;
+  /**
+   * The asset that stands for "the boring alternative" of business rule 16. Any
+   * `asset_id` of the catalogue, of either book (normally the global fund of
+   * the core): it is a performance reference and takes part in no other
+   * calculation of the bucket. Its existence is checked when projecting a
+   * query, not when writing: the asset may be registered afterwards.
+   */
+  bucket_benchmark_asset_id?: string;
   stale_price_days?: number;
   model_720_alert_threshold_eur?: DecimalString;
   model_721_alert_threshold_eur?: DecimalString;
@@ -227,6 +235,12 @@ export const validateSettings = (raw: unknown): Settings => {
           : `${field} must be between ${range.min} and ${range.max}`,
         { field, value, min: range.min, max: range.max },
       );
+    }
+  }
+  if ("bucket_benchmark_asset_id" in raw) {
+    const value = raw.bucket_benchmark_asset_id;
+    if (typeof value !== "string" || value.length === 0) {
+      return fail("bucket_benchmark_asset_id must be a non-empty asset_id", { value });
     }
   }
   for (const field of INTEGER_FIELDS) {

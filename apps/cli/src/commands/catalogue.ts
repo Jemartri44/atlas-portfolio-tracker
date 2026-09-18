@@ -228,6 +228,8 @@ const SETTINGS_DECIMALS = [
   "notification-email",
 ];
 const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days"];
+/** Free-text settings: the benchmark is an `asset_id`, checked against the catalogue when queried. */
+const SETTINGS_STRINGS = ["bucket-benchmark-asset"];
 
 export const parseAssignments = (raw: string, flag: string): Record<string, string> => {
   const result: Record<string, string> = {};
@@ -338,6 +340,7 @@ export const settingsCommand = async (
       "target-weights",
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
+      ...SETTINGS_STRINGS,
       ...GLOBAL_FLAGS,
     ]);
     const { state } = await loadForQuery(ctx);
@@ -373,6 +376,10 @@ export const settingsCommand = async (
       if (value !== undefined) {
         patch[fieldOf(flag)] = Number(value);
       }
+    }
+    const benchmark = stringFlag(flags, "bucket-benchmark-asset");
+    if (benchmark !== undefined) {
+      patch.bucket_benchmark_asset_id = benchmark;
     }
     const settings = mergeSettings(current, patch as Partial<Settings>);
     if (!(await confirmSilencedWarnings(ctx, state, current, settings))) {
