@@ -92,6 +92,7 @@ export {
   type PriceLookup,
   type PriceOrigin,
   priceAt,
+  priceDates,
 } from "./projections/prices.js";
 export {
   isOperationEvent,
@@ -99,6 +100,16 @@ export {
   type ProjectOptions,
   projectLedger,
 } from "./projections/project-ledger.js";
+export {
+  type BucketIndexPoint,
+  type BucketIndexSeries,
+  bucketIndexSeries,
+  type NetWorthPoint,
+  type NetWorthSeries,
+  netWorthSeries,
+  type SeriesOptions,
+  sampleEvenly,
+} from "./projections/series.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
 export {
   type FiscalYearImpact,
