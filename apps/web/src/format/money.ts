@@ -28,19 +28,13 @@ export interface AmountFormat {
   currency?: boolean;
 }
 
+import { currencyUnit } from "./currency.js";
 import { formatDecimalString, formatQuantityString, NBSP } from "./number.js";
 import { MASK } from "./privacy.js";
 
 /** The mask, re-exported: this is the module every figure of a screen goes through. */
-export { MASK };
-
-/**
- * How a currency is written after its figure: the euro with its sign, as
- * Spanish typography does ("1.234,56 €"), every other one with its ISO code
- * ("123,49 USD"), which is less ambiguous than a sign shared by several
- * countries (brief §8).
- */
-export const currencyUnit = (currency: string): string => (currency === "EUR" ? "€" : currency);
+/** How a currency is written after its figure; it lives apart so a form can say it too. */
+export { currencyUnit, MASK };
 
 /** An amount, already rounded to the requested decimals, in Spanish notation, without its unit. */
 export const formatMoneyNumber = (value: Money, format: AmountFormat = {}): string =>

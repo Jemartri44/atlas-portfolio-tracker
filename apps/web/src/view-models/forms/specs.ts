@@ -656,7 +656,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         full: true,
         hint: "Qué te haría estar equivocado. Se muestra cada vez que mires la posición.",
       },
-      { name: "planned_size_eur", label: "Tamaño previsto (€)", kind: "decimal", required: true },
+      { name: "planned_size_eur", label: "Tamaño previsto", kind: "decimal", required: true },
     ],
     omitted: [],
   },

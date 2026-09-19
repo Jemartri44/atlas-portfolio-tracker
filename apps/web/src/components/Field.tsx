@@ -77,6 +77,11 @@ interface TextFieldProps extends BaseProps {
    * the screen; without it, the field remembers only while it is mounted.
    */
   revealed?: boolean | undefined;
+  /**
+   * The unit of the figure, written inside the field at its right, with the
+   * figure right-aligned against it (§5.10): "€", "USD", "part.", "%".
+   */
+  unit?: string | undefined;
 }
 
 export const Field = (props: TextFieldProps): JSX.Element => {
@@ -89,6 +94,36 @@ export const Field = (props: TextFieldProps): JSX.Element => {
     !focused() &&
     !(props.revealed ?? typed()) &&
     props.value !== "";
+  /** The hint, the error and the unit: everything the field is read with. */
+  const described = (): string | undefined =>
+    [describedBy(props), props.unit === undefined ? undefined : `${props.id}-unit`]
+      .filter((id) => id !== undefined)
+      .join(" ") || undefined;
+  const input = (): JSX.Element => (
+    <input
+      id={props.id}
+      type={props.kind === "date" ? "date" : "text"}
+      class={props.unit === undefined ? undefined : "num"}
+      value={masked() ? MASK : props.value}
+      title={masked() ? "Oculto: al entrar en el campo se ve su valor" : undefined}
+      placeholder={props.placeholder}
+      inputmode={
+        props.kind === "decimal" ? "decimal" : props.kind === "integer" ? "numeric" : undefined
+      }
+      autocomplete="off"
+      aria-describedby={described()}
+      aria-invalid={props.error === undefined ? undefined : true}
+      disabled={props.disabled}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onInput={(event) => {
+        // The value first: marking the field as typed re-renders it, and
+        // the control would be read back after that with the old value.
+        props.onInput(event.currentTarget.value);
+        setTyped(true);
+      }}
+    />
+  );
   return (
     <Wrapper {...props}>
       <Show
@@ -105,28 +140,19 @@ export const Field = (props: TextFieldProps): JSX.Element => {
           />
         }
       >
-        <input
-          id={props.id}
-          type={props.kind === "date" ? "date" : "text"}
-          value={masked() ? MASK : props.value}
-          title={masked() ? "Oculto: al entrar en el campo se ve su valor" : undefined}
-          placeholder={props.placeholder}
-          inputmode={
-            props.kind === "decimal" ? "decimal" : props.kind === "integer" ? "numeric" : undefined
-          }
-          autocomplete="off"
-          aria-describedby={describedBy(props)}
-          aria-invalid={props.error === undefined ? undefined : true}
-          disabled={props.disabled}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          onInput={(event) => {
-            // The value first: marking the field as typed re-renders it, and
-            // the control would be read back after that with the old value.
-            props.onInput(event.currentTarget.value);
-            setTyped(true);
-          }}
-        />
+        <Show when={props.unit} fallback={input()}>
+          {(unit) => (
+            // A unit of up to two characters ("€", "%") leaves less room than "part.".
+            <div
+              class={unit().length <= 2 ? "control has-unit is-short" : "control has-unit is-long"}
+            >
+              {input()}
+              <span class="field-unit" id={`${props.id}-unit`}>
+                {unit()}
+              </span>
+            </div>
+          )}
+        </Show>
       </Show>
     </Wrapper>
   );

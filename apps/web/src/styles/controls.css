@@ -246,6 +246,39 @@
   padding-right: var(--space-8);
 }
 
+/*
+ * The unit inside the field, at its right, and the figure right-aligned
+ * against it (§5.10): the field reads «300,00 €» as the figure will be shown.
+ * The room left for the unit follows its length, so "€" does not leave a gap.
+ */
+.control.has-unit > input {
+  text-align: right;
+}
+
+.control.has-unit.is-short > input {
+  padding-right: calc(var(--space-3) + var(--space-2) + 2ch);
+}
+
+.control.has-unit.is-long > input {
+  padding-right: calc(var(--space-3) + var(--space-2) + 5ch);
+}
+
+.field-unit {
+  color: var(--c-text-2);
+  font-size: var(--text-control);
+  pointer-events: none;
+  position: absolute;
+  right: var(--space-3);
+}
+
+.control.has-unit.is-short > .field-unit {
+  min-width: 2ch;
+}
+
+.control.has-unit.is-long > .field-unit {
+  min-width: 5ch;
+}
+
 .hint {
   color: var(--c-text-3);
   font-size: var(--text-sm);

@@ -10,12 +10,14 @@
 // has a sensible default folded in «Más datos» (docs/design/system.md §7.4).
 
 import type { LedgerState } from "@atlas/domain";
-import { For, type JSX, Show } from "solid-js";
+import { createMemo, For, type JSX, Show } from "solid-js";
 import { Disclosure, Field, type Option, SelectField, Switch } from "../../components/index.js";
+import { nameIndex } from "../../format/names.js";
 import { today } from "../../ledger/state.js";
 import { selectOptions, withoutStale } from "../../view-models/forms/choices.js";
 import type { FieldSpec, FormValues } from "../../view-models/forms/index.js";
 import { isVisible } from "../../view-models/forms/index.js";
+import { fieldUnit } from "../../view-models/forms/units.js";
 import { derivedCurrency } from "../../view-models/options.js";
 
 interface FormFieldsProps {
@@ -88,6 +90,7 @@ const optionsOf = (field: FieldSpec, state: LedgerState, values: FormValues): Op
   selectOptions(field, state, values, today());
 
 export const FormFields = (props: FormFieldsProps): JSX.Element => {
+  const names = createMemo(() => nameIndex(props.state));
   const set = (name: string, value: string): void => {
     props.onChange(
       withoutStale(
@@ -147,6 +150,7 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
         kind={field.kind}
         sensitive={isSensitive(field)}
         revealed={props.revealed?.(field.name) ?? true}
+        unit={fieldUnit(field, props.values, names())}
       />
     );
   };
