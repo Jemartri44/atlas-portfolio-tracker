@@ -76,8 +76,15 @@ const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
  * preview reduced to what changes. In exchange the **boot** went down, from
  * 76,4 to 71,6 KB: the catalogue of messages is now fetched only when an error
  * has to be explained.
+ *
+ * **Moved from 177 to 179 by feature 009 (the tax engine), on purpose:** the
+ * lot journal of the projection, three new fiscal settings with their
+ * validation, the refusal of a second asset with the same ISIN, and the
+ * Spanish of the codes of the tax engine that the drift test demands in both
+ * interfaces. The tax engine itself does not enter the bundle. Measured on top
+ * of the round of defects: 178,6 KB total; the boot, 72,6 KB against 80.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 177 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 179 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
