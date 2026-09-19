@@ -135,7 +135,7 @@ export const SaleResult = (props: { gain: RealizedGain | undefined }): JSX.Eleme
           <Amount value={gain().gain_eur_rounded} signed coloured />
         </TotalLine>
         <p class="card-note">
-          Es la ganancia fiscal registrada, calculada con FIFO: el coste es el de los lotes más
+          Es el resultado fiscal registrado, calculado con FIFO: el coste es el de los lotes más
           antiguos.
         </p>
       </>
