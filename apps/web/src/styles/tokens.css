@@ -85,7 +85,6 @@
   --swatch-h: 0.25rem;
   --bar-h: 0.75rem; /* allocation and share bars */
   --gauge-w: 4.5rem; /* deviation gauge */
-  --mask-w: 2.4em; /* the four dots of the privacy mask, always this wide */
   --chart-h: 11.5rem;
   --chart-h-wide: 15rem;
   --lead-size: 2.25rem; /* the round icon that opens a row */

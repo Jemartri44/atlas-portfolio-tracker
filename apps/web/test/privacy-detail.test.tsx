@@ -230,3 +230,18 @@ describe("the detail as data", () => {
     expect(words).not.toMatch(/0[.,]25|766|0[.,]5\b/);
   });
 });
+
+describe("the mask in its place", () => {
+  it("is as wide as its dots, so it starts where the figure would", async () => {
+    // A box wider than the dots, aligned to the right, pushed the mask ~20px
+    // off the left edge of a hero figure and of a line of the detail.
+    withStyles(2045, 1141);
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}`, Detail, "/movimientos/:id");
+    const dots = host.querySelector(".sentence .mask > .dots") as HTMLElement;
+    expect(dots).not.toBeNull();
+    const style = getComputedStyle(dots);
+    expect(style.textAlign).not.toBe("right");
+    expect(["", "auto"]).toContain(style.width);
+  });
+});

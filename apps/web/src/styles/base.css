@@ -128,11 +128,16 @@
 }
 
 /*
- * The privacy mask (D2): four dots in a box of fixed width, so it measures the
- * same whatever the amount it hides, and the unit, which says what kind of
- * figure is hidden (euros, participations) without saying how big it is. The
- * dots are drawn smaller than the digits, so a masked hero figure reads as a
- * quiet placeholder and not as four billiard balls.
+ * The privacy mask (D2): always the same four dots, so it measures the same
+ * whatever the amount it hides, and the unit, which says what kind of figure
+ * is hidden (euros, participations) without saying how big it is. The dots are
+ * drawn smaller than the digits, so a masked hero figure reads as a quiet
+ * placeholder and not as four billiard balls.
+ *
+ * No box wider than the dots: its slack, right-aligned, pushed the mask ~20px
+ * off the left edge of a hero figure and of a line of the detail (review of
+ * 2026-09-19). The trailing letter-spacing is taken back, so the unit keeps
+ * the same gap as after a figure.
  */
 .mask {
   color: var(--c-text-3);
@@ -143,9 +148,8 @@
   display: inline-block;
   font-size: 0.72em;
   letter-spacing: 0.12em;
-  text-align: right;
+  margin-right: -0.12em;
   vertical-align: 0.08em;
-  width: var(--mask-w);
 }
 
 /* A unit reads after its figure, one step quieter. */
