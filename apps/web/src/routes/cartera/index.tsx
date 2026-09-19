@@ -49,8 +49,14 @@ export default function CarteraRoute(): JSX.Element {
             ),
           ),
         );
+        /** Funds converted into another and holding nothing: not listed, not offered. */
+        const absorbed = createMemo(() => absorbedAssets(dated(), snapshot.events, date()));
         const costs = createMemo(() =>
-          costsView(costSummary(dated(), snapshot.events, date(), settings(), date()), names),
+          costsView(
+            costSummary(dated(), snapshot.events, date(), settings(), date()),
+            names,
+            absorbed(),
+          ),
         );
 
         const plan = () => {
@@ -83,7 +89,7 @@ export default function CarteraRoute(): JSX.Element {
                 state={dated()}
                 date={date()}
                 settings={settings()}
-                absorbed={absorbedAssets(dated(), snapshot.events, date())}
+                absorbed={absorbed()}
               />
               <ContributionCard view={plan()} error={planError()} />
               <CostsCard view={costs()} />

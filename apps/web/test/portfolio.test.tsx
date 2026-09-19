@@ -22,6 +22,18 @@ const card = (host: HTMLElement, title: string): Element | undefined =>
 afterEach(() => withoutStyles());
 
 describe("the portfolio", () => {
+  it("lists no fund merged away in the costs, when it paid nothing", async () => {
+    const host = await show("/cartera?fecha=2029-01-10", Cartera);
+    const costs = [...host.querySelectorAll("section.card")].find(
+      (card) => text(card.querySelector("h2")) === "Costes",
+    );
+    const names = [...(costs?.querySelectorAll("table tbody tr td:first-child") ?? [])].map(text);
+    expect(names).toContain("Small Cap Index Fund B");
+    expect(names).not.toContain("Small Cap Index Fund");
+    expect(names).not.toContain("Global Bond Index Fund");
+  });
+
+
   it("marks a stale price in its row, not in a notice repeating the summary", async () => {
     const host = await show("/cartera?fecha=2029-01-10", Cartera);
     expect(text(host)).not.toContain("Hay precios caducados");
