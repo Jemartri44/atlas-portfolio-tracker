@@ -119,7 +119,7 @@
   --c-fill: #f0efea; /* wells: pending block, skeleton, tab track */
   --c-fill-hover: #e9e7e1;
   --c-border: #e3e1db; /* hairlines */
-  --c-border-control: #8f8c84; /* field and secondary-button outline, 3:1 */
+  --c-border-control: #8a877f; /* field and secondary-button outline: 3,2:1 on the paper */
   --c-backdrop: rgb(28 27 24 / 0.45);
 
   --c-text: #1c1b18; /* ink */

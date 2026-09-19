@@ -66,7 +66,7 @@ Contraste medido con la fórmula WCAG sobre la superficie en la que se usa cada 
 | `--c-raised` | `#ffffff` | `#3a3a36` | Pestaña actual sobre su carril | — |
 | `--c-fill` | `#f0efea` | `#2a2a27` | Pozos: bloque «pendiente», esqueleto, carril de pestañas | — |
 | `--c-border` | `#e3e1db` | `#30302d` | Separadores de 1 px | — |
-| `--c-border-control` | `#8f8c84` | `#76746d` | Borde de campos y botón secundario | 3,4:1 / 3,5:1 (≥ 3:1, WCAG 1.4.11) |
+| `--c-border-control` | `#8a877f` | `#76746d` | Borde de campos y botón secundario | 3,2:1 sobre el papel, 3,6:1 sobre la tarjeta / 3,5:1 (≥ 3:1, WCAG 1.4.11) |
 | `--c-text` | `#1c1b18` | `#edece8` | Texto principal (tinta) | 15,4:1 / 15,3:1 |
 | `--c-text-2` | `#54524c` | `#bdbbb4` | Segunda línea, etiquetas | 6,8:1 / 8,6:1 |
 | `--c-text-3` | `#66645d` | `#9e9c95` | Meta, leyendas, la máscara | 5,1:1 / 5,2:1 (sobre `--c-fill`) |
