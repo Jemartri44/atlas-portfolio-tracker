@@ -1,5 +1,5 @@
 export { Allocation, type AllocationSegment } from "./Allocation.jsx";
-export { axisAmount, axisDate, spanOf } from "./axis.js";
+export { axisAmount, axisDate, axisDates, spanOf } from "./axis.js";
 export { Chart, type ChartSeries } from "./Chart.jsx";
 export { ChartLegend } from "./ChartLegend.jsx";
 export { ChartTable, type ChartTableRow } from "./ChartTable.jsx";

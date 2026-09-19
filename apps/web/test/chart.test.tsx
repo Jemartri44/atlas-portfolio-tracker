@@ -13,7 +13,7 @@
 
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
-import { axisAmount, axisDate, spanOf } from "../src/components/chart/axis.js";
+import { axisAmount, axisDate, axisDates, spanOf } from "../src/components/chart/axis.js";
 import { ChartLegend } from "../src/components/chart/ChartLegend.jsx";
 import { ChartTable } from "../src/components/chart/ChartTable.jsx";
 import { MASK } from "../src/format/money.js";
@@ -64,6 +64,14 @@ describe("the axis of a chart is an amount", () => {
     expect(axisDate(when, "years")).toBe("2027");
     expect(axisDate(when, "months")).toContain("27");
     expect(axisDate(when, "days")).toContain("30");
+  });
+
+  it("writes each month once, however many ticks fall in it", () => {
+    const at = (month: number, day: number): number => Date.UTC(2026, month, day) / 1000;
+    const labels = axisDates([at(8, 1), at(8, 8), at(8, 15), at(9, 1), at(9, 8)], "months");
+    expect(labels.filter((label) => label !== "")).toHaveLength(2);
+    expect(labels[1]).toBe("");
+    expect(labels[3]).toBe(axisDate(at(9, 1), "months"));
   });
 });
 

@@ -23,7 +23,7 @@
 import { createEffect, type JSX, onCleanup, onMount } from "solid-js";
 import uPlot from "../../../vendor/uplot/uPlot.js";
 import { store, usePrivacy } from "../../ledger/state.js";
-import { axisAmount, axisDate, spanOf } from "./axis.js";
+import { axisAmount, axisDates, spanOf } from "./axis.js";
 import { drawGaps, gapsOf } from "./gaps.js";
 
 export interface ChartSeries {
@@ -114,7 +114,7 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         font: axisFont(),
         grid: { show: false },
         ticks: { show: false },
-        values: (_plot, splits) => splits.map((value) => axisDate(value, span)),
+        values: (_plot, splits) => axisDates(splits, span),
       },
       {
         stroke: cssValue("--c-text-3"),

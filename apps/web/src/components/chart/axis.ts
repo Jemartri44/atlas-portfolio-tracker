@@ -57,6 +57,20 @@ export const axisDate = (timestamp: number, span: "days" | "months" | "years"): 
   return `${date.getUTCDate()} ${month}`;
 };
 
+/**
+ * The labels of the date axis, each said **once**: uPlot places its ticks by
+ * the room it has, not by the calendar, so four months across a wide screen
+ * got a tick every few days and "sept 26" written six times in a row. A tick
+ * whose label repeats the one before it stays unlabelled.
+ */
+export const axisDates = (
+  splits: readonly number[],
+  span: "days" | "months" | "years",
+): string[] => {
+  const labels = splits.map((value) => axisDate(value, span));
+  return labels.map((label, index) => (index > 0 && labels[index - 1] === label ? "" : label));
+};
+
 /** Which of the three date spans a range of seconds deserves. */
 export const spanOf = (from: number, to: number): "days" | "months" | "years" => {
   const days = (to - from) / 86_400;
