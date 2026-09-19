@@ -134,6 +134,22 @@ describe("the fields a form fills in for you", () => {
     expect(shownIn(host, "f-quantity")).toBe(MASK);
   });
 
+  it("heads the effect with what is about to be recorded, what was typed unmasked", async () => {
+    withStyles(400);
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    type(host, "f-amount", "3200");
+    type(host, "correct-reason", "importe mal tecleado");
+    await press(host, "Ver el efecto");
+    const said = text(host.querySelector(".preview > .sentence"));
+    expect(said).toMatch(/^Vas a registrar la compra de /);
+    expect(said).toContain("de Money Market Fund por 3.200,00 €");
+    // The quantity came from the data and was not touched: masked, with its unit.
+    expect(host.querySelectorAll(".preview > .sentence .dots")).toHaveLength(1);
+    expect(said).toMatch(/participaciones/);
+    expect(said).not.toContain("31,2343");
+  });
+
   it("does not mask a default of the application: it is not the user's data", async () => {
     store.setPrivacy(true);
     const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");

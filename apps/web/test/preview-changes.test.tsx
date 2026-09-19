@@ -114,9 +114,13 @@ describe("what changes, on the preview of a purchase", () => {
     // A masked quantity keeps its unit (D2): what kind of figure, never how big.
     const units = [...(section("Posiciones")?.querySelectorAll(".mask .unit") ?? [])].map(text);
     expect(units).toEqual(["part.", "part."]);
-    // Not one quantity with the mask on: they were painted raw before.
-    expect(shown).toContain(MASK);
-    expect(shown).not.toMatch(/\d+\.\d{3,}/);
-    expect(DECIMAL.test(figuresLeft(shown))).toBe(false);
+    // Not one quantity of the data with the mask on: they were painted raw
+    // before. The sentence on top is what the user just typed, and reads so.
+    const data = [...(preview?.querySelectorAll("section.card") ?? [])].map(text).join(" ");
+    expect(data).toContain(MASK);
+    expect(data).not.toMatch(/\d+\.\d{3,}/);
+    expect(DECIMAL.test(figuresLeft(data))).toBe(false);
+    expect(text(preview?.querySelector(".sentence"))).toMatch(/^Vas a registrar la compra de /);
+    expect(text(preview?.querySelector(".sentence"))).toContain("por 600,00 €");
   });
 });

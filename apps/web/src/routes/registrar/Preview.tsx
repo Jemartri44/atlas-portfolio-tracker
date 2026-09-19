@@ -10,13 +10,14 @@
 
 import type { EventPreview } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Notice, Section, Tag } from "../../components/index.js";
+import { Amount, Notice, Parts, Section, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { usePrivacy } from "../../ledger/state.js";
 import { type CashRow, type ChangeRow, previewChanges } from "../../view-models/preview.js";
+import { draftSentence } from "../../view-models/sentence.js";
 
 /**
  * One row: its name on top, wrapping if it has to, and the two figures under
@@ -73,13 +74,24 @@ const Cash = (props: { row: CashRow }): JSX.Element => (
   </li>
 );
 
-export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JSX.Element => {
+export const Preview = (props: {
+  preview: EventPreview;
+  names?: NameIndex;
+  /** Which fields the user typed: their figures read unmasked in the sentence. */
+  revealed?: (field: string) => boolean;
+}): JSX.Element => {
   const names = (): NameIndex => props.names ?? NO_NAMES;
   const privacy = usePrivacy();
   const changes = () => previewChanges(props.preview, names());
 
   return (
     <div class="preview">
+      <p class="sentence">
+        <Parts
+          parts={draftSentence(props.preview.candidate, names())}
+          {...(props.revealed === undefined ? {} : { revealed: props.revealed })}
+        />
+      </p>
       <Section title="Posiciones" aside={<span>antes → después</span>}>
         <ul class="changes">
           <For each={changes().positions}>{(row) => <Change row={row} empty="0" />}</For>

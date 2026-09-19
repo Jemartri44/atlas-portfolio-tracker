@@ -11,7 +11,7 @@
 import { ledgerEntries } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Dialog, EmptyState, Field, Notice, Tag } from "../../components/index.js";
+import { Dialog, EmptyState, Field, Notice, Parts, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -21,7 +21,7 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import { detailView } from "../../view-models/index.js";
 import { movementSentence } from "../../view-models/sentence.js";
 import { RequireLedger } from "../guard.jsx";
-import { EventEnvelope, EventLinks, Facts, Parts, SaleResult } from "./DetailFields.jsx";
+import { EventEnvelope, EventLinks, Facts, SaleResult } from "./DetailFields.jsx";
 
 export default function MovimientoDetalleRoute(): JSX.Element {
   const params = useParams<{ id: string }>();

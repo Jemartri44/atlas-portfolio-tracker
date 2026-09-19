@@ -40,6 +40,12 @@ interface CommonProps {
   coloured?: boolean | undefined;
   /** What is missing, when there is no data: it goes in the title. */
   missingReason?: string | undefined;
+  /**
+   * The user typed this figure on this very screen: masking it back at them
+   * hides nothing from anyone looking over their shoulder that the field did
+   * not already show. Only a form sets it, and only for what was typed.
+   */
+  revealed?: boolean | undefined;
 }
 
 interface MoneyProps extends CommonProps {
@@ -102,7 +108,7 @@ export const Amount = (props: AmountProps): JSX.Element => {
     amountDisplay({
       formatted: missing() ? undefined : shown(),
       unit: unit(),
-      privacy: privacy(),
+      privacy: privacy() && props.revealed !== true,
       kind: isQuantity(props) ? "cantidad" : "importe",
       ...(props.coloured === true ? { sign: signOfValue(props) } : {}),
       ...(props.class === undefined ? {} : { extra: props.class }),

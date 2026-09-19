@@ -17,6 +17,7 @@ import {
   Disclosure,
   Figure,
   Icon,
+  Parts,
   Section,
   StatLine,
   TotalLine,
@@ -24,24 +25,6 @@ import {
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { eventLabel } from "../../format/labels.js";
 import type { DetailField, DetailView } from "../../view-models/index.js";
-import type { Part } from "../../view-models/structured.js";
-
-/** A sentence made of text and figures; each figure goes through the gate. */
-export const Parts = (props: { parts: readonly Part[] }): JSX.Element => (
-  <For each={props.parts}>
-    {(part) => (
-      <Switch>
-        <Match when={"amount" in part && part}>
-          {(figure) => <Amount value={figure().amount} decimals={figure().decimals} />}
-        </Match>
-        <Match when={"quantity" in part && part}>
-          {(figure) => <Amount quantity={figure().quantity} of={figure().of} />}
-        </Match>
-        <Match when={"text" in part && part}>{(words) => words().text}</Match>
-      </Switch>
-    )}
-  </For>
-);
 
 const Value = (props: { field: DetailField }): JSX.Element => (
   <Switch>

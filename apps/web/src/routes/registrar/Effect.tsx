@@ -1,5 +1,5 @@
-// The effect of a record, before it is written (FR-044): what changes and the
-// button that writes it. On a phone it replaces the form and offers the way
+// The effect of a record, before it is written (FR-044): one sentence saying
+// what is about to be recorded, what changes and the button that writes it. On a phone it replaces the form and offers the way
 // back; from 1024px it sits beside the form, and while there is nothing to show
 // yet it says where the effect will appear (docs/design/system.md §7.4).
 
@@ -15,6 +15,8 @@ interface EffectProps {
   /** The effect to show; absent while the form has not been sent to see it. */
   preview: EventPreview | undefined;
   names: NameIndex;
+  /** Which fields the user typed, which the sentence of the effect shows unmasked. */
+  revealed: (field: string) => boolean;
   wide: boolean;
   problem: string | undefined;
   failure: AppError | undefined;
@@ -39,7 +41,7 @@ export const Effect = (props: EffectProps): JSX.Element => (
   >
     {(preview) => (
       <section class="effect" aria-label="El efecto">
-        <Preview preview={preview()} names={props.names} />
+        <Preview preview={preview()} names={props.names} revealed={props.revealed} />
         <FormActions problem={props.problem} failure={props.failure}>
           <Show when={!props.wide}>
             <button type="button" class="secondary" onClick={() => props.onBack()}>

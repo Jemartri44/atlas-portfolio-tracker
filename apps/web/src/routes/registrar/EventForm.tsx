@@ -224,6 +224,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
         <Effect
           preview={step() === "preview" ? preview() : undefined}
           names={nameIndex(props.state)}
+          revealed={revealed}
           wide={wide()}
           problem={problem()}
           failure={failure()}

@@ -13,7 +13,7 @@ import Detail from "../src/routes/movimientos/detail.jsx";
 import Movimientos from "../src/routes/movimientos/index.jsx";
 import { byDay } from "../src/routes/movimientos/MovementList.jsx";
 import { movementRows } from "../src/view-models/index.js";
-import { movementSentence } from "../src/view-models/sentence.js";
+import { draftSentence, movementSentence } from "../src/view-models/sentence.js";
 import { goldenEvents } from "./helpers/golden.js";
 import { show, text, withGoldenLedger } from "./helpers/render.jsx";
 import { withoutStyles, withStyles } from "./helpers/styles.js";
@@ -26,10 +26,9 @@ const state = projectLedger(events, { collectErrors: true });
 const names = nameIndex(state);
 const entries = ledgerEntries(state, events);
 
-/** The sentence as plain text, figures included, as it reads with the mask off. */
-const said = (type: string): string => {
-  const entry = entries.find((one) => one.event.type === type && one.status === "current");
-  return movementSentence(entry as NonNullable<typeof entry>, names)
+/** A sentence as plain text, its figures by their unit. */
+const plain = (sentence: ReturnType<typeof movementSentence>): string =>
+  sentence
     .map((part) =>
       "text" in part
         ? part.text
@@ -38,7 +37,17 @@ const said = (type: string): string => {
           : `[${part.of ?? ""}]`,
     )
     .join("");
+
+const current = (type: string) => {
+  const entry = entries.find((one) => one.event.type === type && one.status === "current");
+  return entry as NonNullable<typeof entry>;
 };
+
+/** The sentence as plain text, figures included, as it reads with the mask off. */
+const said = (type: string): string => plain(movementSentence(current(type), names));
+
+/** The same, told before it is recorded, over the effect of a form. */
+const drafted = (type: string): string => plain(draftSentence(current(type).event, names));
 
 describe("the list of movements", () => {
   it("groups consecutive rows of the same day, in the order given", () => {
@@ -91,6 +100,22 @@ describe("the sentence of a movement", () => {
     expect(said("cash_deposit")).toMatch(/^Ingresaste \[EUR\] el /);
     expect(said("transfer")).toMatch(/^Traspasaste \[participaciones\] de .+ a .+ el /);
     expect(said("valuation")).toMatch(/ valía \[(EUR|USD)\] por unidad el /);
+  });
+
+  it("tells what is about to be recorded, in the words of a form", () => {
+    expect(drafted("buy")).toMatch(
+      /^Vas a registrar la compra de \[participaciones\] de .+ por \[EUR\] el \d\d\/\d\d\/\d{4} · .+\.$/,
+    );
+    expect(drafted("cash_deposit")).toMatch(/^Vas a registrar un ingreso de \[EUR\] el /);
+    expect(drafted("cash_withdrawal")).toMatch(/^Vas a registrar una retirada de \[EUR\] el /);
+    expect(drafted("valuation")).toMatch(/^Vas a registrar que .+ valía \[(EUR|USD)\] por unidad/);
+    expect(drafted("order_updated")).toMatch(/^Vas a registrar cambio de orden/);
+    // Each figure carries its field, so a form can reveal what was typed.
+    const figures = draftSentence(current("buy").event, names).filter((part) => !("text" in part));
+    expect(figures.map((part) => ("field" in part ? part.field : undefined))).toEqual([
+      "quantity",
+      "amount",
+    ]);
   });
 
   it("says orders and reversals too, and falls back to the type", () => {

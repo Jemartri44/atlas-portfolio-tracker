@@ -15,10 +15,11 @@ import { SETTING_LABELS, settingLabel, valueLabel } from "../format/labels.js";
 import { displayName, type NameIndex } from "../format/names.js";
 import { formatExact, NBSP } from "../format/number.js";
 
+/** `field`: the field of a form a figure comes from, when it was just typed. */
 export type Part =
   | { text: string }
-  | { amount: Money; decimals?: number }
-  | { quantity: Quantity; of?: string };
+  | { amount: Money; decimals?: number; field?: string }
+  | { quantity: Quantity; of?: string; field?: string };
 
 export type Sentence = Part[];
 
