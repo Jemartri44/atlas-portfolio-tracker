@@ -300,7 +300,7 @@ Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, 
 
 ### 7.6 Cubo
 
-*Frente al índice* abre con la cifra protagonista: el resultado del cubo frente al mismo dinero en el índice. El dominio lo da como **importe**, así que la privacidad lo enmascara; no se fabrica un porcentaje en la interfaz para tener uno que enseñar. Debajo, la tira de estadísticas (comisiones sobre capital, tasa de acierto, tesis cerradas), la gráfica del cubo frente al índice y el resto de las estadísticas plegado. Después, *Posiciones abiertas* en filas, con la ganancia con signo. Luego, *Presupuesto y control*: el consumo del tope y el peso del cubo sobre el patrimonio, marcado como la única vista que junta cubo y cartera. Cierran los costes y los avisos. **Vacío: un único estado vacío.**
+*Frente al índice* abre con la cifra protagonista: el resultado del cubo frente al mismo dinero en el índice **en porcentaje sobre lo aportado** (`BucketStats.vs_index_pct`), que se ve con la privacidad activa; el importe va debajo, enmascarado. Si alguna tesis no se puede comparar, el total es parcial y no hay porcentaje: la tarjeta dice por qué. Debajo, la tira de estadísticas (comisiones sobre capital, tasa de acierto, tesis cerradas), la gráfica del cubo frente al índice y el resto de las estadísticas plegado. Después, *Posiciones abiertas* en filas, con la ganancia con signo. Luego, *Presupuesto y control*: el consumo del tope y el peso del cubo sobre el patrimonio, marcado como la única vista que junta cubo y cartera. Cierran los costes y los avisos. **Vacío: un único estado vacío.**
 
 ### 7.7 Ajustes y Configuración
 

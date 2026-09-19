@@ -3,8 +3,10 @@
 //
 // The card opens with the one figure the bucket is judged by: its result
 // against what the same money would have done in the index (rule 16: the
-// reference is the index, not zero). The domain gives it as an amount, so the
-// privacy mode masks it; no percentage is made up here to have one to show.
+// reference is the index, not zero), as a share of what was put in. It is a
+// percentage, so it stays in sight with the privacy mode on; the amount goes
+// under it and is masked. Over a partial total the domain gives no share, and
+// the card says why instead.
 //
 // Commissions over traded capital lead the strip, as in `atlas bucket`: with a
 // small account and fixed fees, that ratio decides the result before the
@@ -27,20 +29,27 @@ interface Plot {
 const Lead = (props: { view: StatsView }): JSX.Element => (
   <>
     <p class="hero-figure">
-      <Amount
-        value={props.view.vsIndexTotal}
-        signed
-        coloured
-        decimals={0}
-        missingReason="ninguna tesis se puede comparar todavía"
-      />
+      <Figure value={props.view.vsIndexPct} unit="percent" decimals={1} signed coloured />
     </p>
     <p class="card-note">
-      Lo que el cubo ha ganado o perdido de más frente al mismo dinero en el índice.
-      <Show when={props.view.vsIndexMissing > 0}>
-        {" "}
-        {countOf(props.view.vsIndexMissing, "tesis queda", "tesis quedan")} fuera: no se pueden
-        comparar.
+      <Show
+        when={props.view.vsIndexPct !== undefined}
+        fallback={
+          <Show
+            when={props.view.vsIndexMissing > 0}
+            fallback={<>Todavía no hay ninguna tesis que comparar con el índice.</>}
+          >
+            {countOf(props.view.vsIndexMissing, "tesis no se puede", "tesis no se pueden")} comparar
+            con el índice: un porcentaje sobre un total parcial no diría nada.
+          </Show>
+        }
+      >
+        Lo que el cubo ha hecho de más o de menos que el mismo dinero en el índice, sobre lo
+        aportado:{" "}
+      </Show>
+      <Show when={props.view.vsIndexTotal !== undefined}>
+        <Amount value={props.view.vsIndexTotal} signed coloured />
+        {props.view.vsIndexPct === undefined ? " en las tesis que sí se comparan." : "."}
       </Show>
     </p>
     <dl class="kpis">

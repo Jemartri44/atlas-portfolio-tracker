@@ -30,6 +30,8 @@ export interface StatsView {
   drawdownTo?: string;
   vsIndexTotal?: Money;
   vsIndexMissing: number;
+  /** The same result as a share of the gross contribution; absent over a partial total. */
+  vsIndexPct?: string;
   warnings: readonly Warning[];
 }
 
@@ -87,6 +89,7 @@ export const statsView = (stats: BucketStats, names: NameIndex = NO_NAMES): Stat
   ...(stats.drawdown_valley === undefined ? {} : { drawdownTo: stats.drawdown_valley.date }),
   ...(stats.vs_index_total_eur === undefined ? {} : { vsIndexTotal: stats.vs_index_total_eur }),
   vsIndexMissing: stats.vs_index_missing,
+  ...(stats.vs_index_pct === undefined ? {} : { vsIndexPct: stats.vs_index_pct.toString() }),
   warnings: stats.warnings,
 });
 

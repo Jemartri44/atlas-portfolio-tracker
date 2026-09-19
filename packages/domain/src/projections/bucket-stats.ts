@@ -74,6 +74,14 @@ export interface BucketStats {
   drawdown_valley?: DrawdownPoint;
   vs_index_total_eur?: Money;
   vs_index_missing: number;
+  /**
+   * The result against the index over the gross contribution, in percent: how
+   * much the bucket did better or worse than the same money in the index, as
+   * a share of what was put in. **Absent** when a thesis cannot be compared —
+   * the total is then partial, and a share of a partial total is not one — or
+   * when nothing was contributed.
+   */
+  vs_index_pct?: Decimal;
   warnings: Warning[];
 }
 
@@ -332,7 +340,16 @@ export const bucketStats = (
     warnings,
   };
 
-  return { stats, controls: controlsOf(state, events, date, settings, accounts, asOf, external) };
+  const controls = controlsOf(state, events, date, settings, accounts, asOf, external);
+  const total = stats.vs_index_total_eur;
+  const gross = controls.contribution_gross_eur;
+  return {
+    stats:
+      total === undefined || stats.vs_index_missing > 0 || gross.isZero()
+        ? stats
+        : { ...stats, vs_index_pct: total.amount.div(gross.amount).mul(HUNDRED) },
+    controls,
+  };
 };
 
 /** Rules 17 and 18: warnings, never rejections, and never over a partial total. */
