@@ -333,7 +333,7 @@ export const describeWarning = (warning: Warning): string => {
     case "wash_sale_window_repurchase":
       return `Compra del ${text(d.buy_date)} de ${text(d.buy_quantity)} títulos de ${text(d.asset_id)} dentro de la ventana de su venta con pérdida del ${text(d.sale_date)} (${text(d.loss_eur)} EUR; ${windowText(d.window)}, hasta el ${text(d.window_end)}): puede hacer que esa pérdida no sea computable en ${text(d.tax_year)}. Cuánto difiere, lo dice \`atlas tax ${text(d.tax_year)}\` (business-rules.md §5.4).`;
     case "wash_sale_window_prior_buy":
-      return `Venta con pérdida de ${text(d.asset_id)} del ${text(d.sale_date)} (${text(d.loss_eur)} EUR) cuando siguen en cartera ${text(d.buy_quantity)} títulos de una compra del ${text(d.buy_date)}, dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${text(d.tax_year)}. Cuánto, lo dice \`atlas tax ${text(d.tax_year)}\` (business-rules.md §5.4).`;
+      return `Venta con pérdida de ${text(d.asset_id)} del ${text(d.sale_date)} (${text(d.loss_eur)} EUR) cuando siguen en cartera ${text(d.held_quantity)} títulos de una compra del ${text(d.buy_date)}, dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${text(d.tax_year)}. Cuánto, lo dice \`atlas tax ${text(d.tax_year)}\` (business-rules.md §5.4).`;
     case "swap_fiscal_dates_differ":
       return `En la permuta, ${text(d.from_asset_id)} tiene fecha fiscal ${text(d.fiscal_date_out)} y ${text(d.to_asset_id)} la tiene ${text(d.fiscal_date_in)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas (ADR-0013).`;
     case "tax_quota_not_computed":

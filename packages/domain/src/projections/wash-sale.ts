@@ -156,7 +156,7 @@ export const warnPriorBuys = (
           sale_date: fiscalDate,
           buy_event_id: acquisition.event_id,
           buy_date: acquisition.fiscal_date,
-          buy_quantity: held.toString(),
+          held_quantity: held.toString(),
           loss_eur: loss.roundToCents().amount.toString(),
           tax_year: yearOf(fiscalDate),
           window_start: start,

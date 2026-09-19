@@ -218,11 +218,13 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
       buy_date: "2027-01-10",
       window_start: "2027-01-10",
       // Of the 10 bought, the sale took 5: what is still held is what it says.
-      buy_quantity: "5",
+      held_quantity: "5",
       loss_eur: "-10",
       tax_year: 2027,
       window: "2m",
     });
+    // Held, not bought: the key says which, unlike the repurchase's buy_quantity.
+    expect(inside[0]?.details).not.toHaveProperty("buy_quantity");
     expect(codes(cycle("2027-01-09"), "wash_sale_window_prior_buy")).toEqual([]);
   });
 
@@ -266,7 +268,7 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
     });
     const warnings = codes(projectLedger(b.build()), "wash_sale_window_prior_buy");
     // Not the 10 and 2 bought: the 1.5 and 0.5 that are left.
-    expect(warnings.map((w) => [w.details.buy_event_id, w.details.buy_quantity])).toEqual([
+    expect(warnings.map((w) => [w.details.buy_event_id, w.details.held_quantity])).toEqual([
       [first.id, "1.5"],
       [second.id, "0.5"],
     ]);
@@ -307,7 +309,7 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
       value_date: "2027-03-10",
     });
     const warnings = codes(projectLedger(b.build()), "wash_sale_window_prior_buy");
-    expect(warnings.map((w) => [w.details.buy_event_id, w.details.buy_quantity])).toEqual([
+    expect(warnings.map((w) => [w.details.buy_event_id, w.details.held_quantity])).toEqual([
       [grant.id, "9"],
     ]);
   });
@@ -516,7 +518,7 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
         asset_id: "ast_bonds",
         buy_date: "2027-05-03",
         // 10 came in, the sale took 6: 4 are still held.
-        buy_quantity: "4",
+        held_quantity: "4",
         loss_eur: "-24",
         window_start: "2026-06-01",
         window: "1y",
@@ -718,7 +720,7 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
       asset_id: "ast_world",
       buy_date: "2027-01-11",
       // 10 bought, 6 taken by the forced sale: 4 are still held.
-      buy_quantity: "4",
+      held_quantity: "4",
       loss_eur: "-24",
       window_start: "2026-06-01",
       window: "1y",

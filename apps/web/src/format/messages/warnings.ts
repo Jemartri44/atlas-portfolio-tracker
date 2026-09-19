@@ -110,7 +110,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   wash_sale_window_repurchase: (d, n, f) =>
     `Compra del ${day(d.buy_date)} de ${f.quantity(d.buy_quantity)} títulos de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): puede hacer que esa pérdida no sea computable en ${num(d.tax_year)}.`,
   wash_sale_window_prior_buy: (d, n, f) =>
-    `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) cuando siguen en cartera ${f.quantity(d.buy_quantity)} títulos de una compra del ${day(d.buy_date)}, dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${num(d.tax_year)}.`,
+    `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) cuando siguen en cartera ${f.quantity(d.held_quantity)} títulos de una compra del ${day(d.buy_date)}, dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${num(d.tax_year)}.`,
 
   // --- Swap (ADR-0021) ----------------------------------------------------
   swap_fiscal_dates_differ: (d, n) =>
