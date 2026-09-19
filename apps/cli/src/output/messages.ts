@@ -352,8 +352,6 @@ export const describeWarning = (warning: Warning): string => {
       return `La pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) es PROVISIONAL: su ventana de recompra sigue abierta hasta el ${text(d.window_end)} y una compra antes de esa fecha la diferiría.`;
     case "tax_neutrality_contradiction":
       return `El evento corporativo (${text(d.kind)}) dice que NO se acoge al régimen de neutralidad y aun así se registró conservando fecha y coste: si no hay régimen, es una permuta sujeta y falta su ganancia.`;
-    case "tax_scale_in_window":
-      return `Hubo un split de ${text(d.asset_id)} entre esta venta con pérdida y una compra de su ventana: sus cantidades no son comparables y esa compra no se ha tenido en cuenta. Revísalo a mano.`;
     case "tax_loss_expires":
       return `CADUCA al cierre de este ejercicio un saldo negativo de ${text(d.origin_year)} (${text(d.category) === "capital_gain" ? "ganancias y pérdidas patrimoniales" : "rendimientos del capital mobiliario"}) de ${text(d.amount_eur)} EUR que no ha podido compensarse.`;
     case "tax_release_category_differs":

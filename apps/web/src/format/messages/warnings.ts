@@ -134,8 +134,6 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `La pérdida de ${n.one(d.asset_id)} (${f.money(d.loss_eur)}) es provisional: su ventana de recompra sigue abierta hasta el ${day(d.window_end)}.`,
   tax_neutrality_contradiction: (d) =>
     `El evento corporativo (${enumValue(d.kind)}) dice que no se acoge al régimen de neutralidad y aun así conserva fecha y coste: si no hay régimen, falta su ganancia.`,
-  tax_scale_in_window: (d, n) =>
-    `Hubo un split de ${n.one(d.asset_id)} entre la venta con pérdida y una compra de su ventana: esa compra no se ha tenido en cuenta. Revísalo.`,
   tax_loss_expires: (d, _n, f) =>
     `Caduca al cierre del ejercicio un saldo negativo de ${num(d.origin_year)} de ${f.money(d.amount_eur)} que no ha podido compensarse.`,
   tax_release_category_differs: (d, _n, f) =>

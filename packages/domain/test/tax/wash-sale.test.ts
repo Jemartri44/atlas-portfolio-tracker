@@ -350,23 +350,95 @@ describe("mandatory edge cases", () => {
     expect(line.criteria).toContain("21");
   });
 
-  it("a split between the loss and a repurchase makes their units incomparable: left out and said", () => {
-    const b = taxBuilder();
-    buy(b, "stock_s", "2026-10-01", "10", "100");
-    const loss = sell(b, "stock_s", "2027-03-01", "5", "80");
-    b.corporateAction({
-      kind: "split",
-      asset_id: "stock_s",
-      effective_date: "2027-03-10",
-      effects: [{ op: "scale", ratio: "2" }],
+  describe("a split between the loss and the repurchase: the same security, in other units", () => {
+    /**
+     * 20 bought long before the window, 10 sold at a loss of 200, `ratio`
+     * applied, `bought` bought again: only the repurchase can defer.
+     */
+    const across = (ratio: string, bought: string) => {
+      const b = taxBuilder();
+      buy(b, "stock_s", "2026-10-01", "20", "100");
+      const loss = sell(b, "stock_s", "2027-03-01", "10", "80");
+      b.corporateAction({
+        kind: ratio.startsWith("1/") ? "reverse_split" : "split",
+        asset_id: "stock_s",
+        effective_date: "2027-03-10",
+        effects: [{ op: "scale", ratio }],
+      });
+      const again = buy(b, "stock_s", "2027-03-20", bought, "40");
+      return { b, loss, again };
+    };
+
+    it("converts what was bought after a 2:1 split: 20 new shares are the 10 sold", () => {
+      // The verifier's case: it used to be −200 computable, with only a note.
+      const { b, loss, again } = across("2", "20");
+      // The 10 left of the first buy became 20 and are sold first (FIFO); the
+      // 20 bought again go with them.
+      const later = sell(b, "stock_s", "2027-09-01", "40", "45");
+      const report = reportOf(b.build(), 2027);
+      const line = lineOf(report, loss.id);
+      expect(text(line.deferred_eur)).toBe("-200");
+      expect(text(line.computable_eur_rounded)).toBe("0");
+      const deferral = report.wash_sale.deferred.find((d) => d.event_id === loss.id);
+      // "10 de 10" in the units of the sale; the purchase in its own: 20.
+      expect([deferral?.units.toString(), deferral?.sold.toString()]).toEqual(["10", "10"]);
+      expect(deferral?.acquisitions.map((a) => [a.event_id, a.units.toString(), a.timing])).toEqual(
+        [[again.id, "20", "posterior"]],
+      );
+      expect(report.notes.map((n) => n.code)).not.toContain("tax_scale_in_window");
+      // And it comes back when those shares are sold.
+      expect(text(lineOf(report, later.id).released_eur)).toBe("-200");
     });
-    buy(b, "stock_s", "2027-03-20", "10", "40");
-    const report = reportOf(b.build(), 2027);
-    expect(text(lineOf(report, loss.id).deferred_eur)).toBe("0");
-    expect(report.notes.map((n) => [n.code, n.event_id])).toContainEqual([
-      "tax_scale_in_window",
-      loss.id,
-    ]);
+
+    it("takes from a larger repurchase only what the sale needs, in its own units", () => {
+      // 30 new shares are 15 of those sold; the 10 sold need 20 of them.
+      const { b, loss, again } = across("2", "30");
+      const report = reportOf(b.build(), 2027);
+      expect(text(lineOf(report, loss.id).deferred_eur)).toBe("-200");
+      const deferral = report.wash_sale.deferred.find((d) => d.event_id === loss.id);
+      expect(deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()])).toEqual([
+        [again.id, "20"],
+      ]);
+    });
+
+    it("converts across a 3:1 split: 15 new shares are 5 of those sold", () => {
+      const { b, loss } = across("3", "15");
+      const line = lineOf(reportOf(b.build(), 2027), loss.id);
+      expect(text(line.deferred_eur)).toBe("-100");
+      expect(text(line.computable_eur_rounded)).toBe("-100");
+    });
+
+    it("converts across a 1:4 reverse split: 2 new shares are 8 of those sold", () => {
+      const { b, loss, again } = across("1/4", "2");
+      const report = reportOf(b.build(), 2027);
+      expect(text(lineOf(report, loss.id).deferred_eur)).toBe("-160");
+      const deferral = report.wash_sale.deferred.find((d) => d.event_id === loss.id);
+      expect(deferral?.units.toString()).toBe("8");
+      expect(deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()])).toEqual([
+        [again.id, "2"],
+      ]);
+    });
+
+    it("changes nothing when the split falls before the sale", () => {
+      // Sale and purchases are measured after the split: nothing to convert.
+      const b = taxBuilder();
+      buy(b, "stock_s", "2027-01-11", "10", "100");
+      b.corporateAction({
+        kind: "split",
+        asset_id: "stock_s",
+        effective_date: "2027-02-01",
+        effects: [{ op: "scale", ratio: "2" }],
+      });
+      const loss = sell(b, "stock_s", "2027-03-01", "10", "40");
+      const again = buy(b, "stock_s", "2027-03-20", "10", "40");
+      const report = reportOf(b.build(), 2027);
+      // 10 of the 20 after the split cost 500 and sell for 400: −100, all deferred.
+      expect(text(lineOf(report, loss.id).deferred_eur)).toBe("-100");
+      const deferral = report.wash_sale.deferred.find((d) => d.event_id === loss.id);
+      expect(deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()])).toEqual([
+        [again.id, "10"],
+      ]);
+    });
   });
 
   it("#2b: a transfer in counts as an acquisition, unless the setting says otherwise", () => {

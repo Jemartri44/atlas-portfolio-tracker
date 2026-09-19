@@ -1065,16 +1065,6 @@ const notesOf = (
     if (gain.year !== year) {
       continue;
     }
-    if (outcome.scale_excluded) {
-      notes.push(
-        note(
-          "tax_scale_in_window",
-          gain.event_id,
-          "a split between the loss and a purchase of its window makes their units incomparable; that purchase was left out",
-          { asset_id: gain.asset_id },
-        ),
-      );
-    }
     if (outcome.foreign_released.length > 0) {
       notes.push(
         note(

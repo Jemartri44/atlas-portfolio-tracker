@@ -84,7 +84,9 @@ export type ConsumePurpose = "transmission" | "transfer" | "convert";
  * - `open`: a lot was created; `source_lot_id` when it inherits from another.
  * - `consume`: `quantity` left the lot, which held `quantity_before`.
  * - `carve`: a `carve_out` moved `cost_share` of the lot's cost into `into_lot_id`.
- * - `scale`: the lot now holds `quantity_after` (split, reverse split, bonus shares).
+ * - `scale`: the lot now holds `quantity_after` (split, reverse split, bonus shares),
+ *   by the exact `ratio` of the event (`"2"`, `"1/4"`), so that units bought
+ *   after it can be compared with units sold before it.
  * - `gain`: `state.gains[gain_index]` was booked; the `transmission` consumptions
  *   right before it are the lots it disposed of.
  */
@@ -106,7 +108,7 @@ export type LotJournalEntry =
       purpose: ConsumePurpose;
     }
   | { kind: "carve"; lot_id: string; into_lot_id: string; event_id: Ulid; cost_share: Decimal }
-  | { kind: "scale"; lot_id: string; event_id: Ulid; quantity_after: Quantity }
+  | { kind: "scale"; lot_id: string; event_id: Ulid; quantity_after: Quantity; ratio: string }
   | { kind: "gain"; gain_index: number };
 
 export interface GainByLot {

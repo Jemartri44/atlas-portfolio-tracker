@@ -25,9 +25,10 @@
 
 import { type CivilDate, daysBetween, yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
-import type { Decimal } from "../money/decimal.js";
+import { Decimal } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
+import { Ratio } from "../money/ratio.js";
 import type { LedgerState, LotJournalEntry, RealizedGain } from "../projections/state.js";
 import type { AssetId, AssetType } from "../schema/events.js";
 import {
@@ -54,7 +55,11 @@ export interface DeferralCandidate {
   event_id: Ulid;
   asset_id: AssetId;
   fiscal_date: CivilDate;
-  /** Units of this acquisition used to defer the loss. */
+  /**
+   * Units of this acquisition used to defer the loss, in its own units: after
+   * a split between the loss and a later purchase they are not the units of
+   * the sale (`Deferral.units`).
+   */
   units: Quantity;
   amount_eur: Money;
   /** Before the loss in pass B (its lots existed) or after it. */
@@ -129,8 +134,6 @@ export interface WashSaleOutcome {
   mixed_lots: boolean;
   /** The release changed what the rule looked at (#21). */
   reapplied: boolean;
-  /** An acquisition was left out because a scale happened between it and the loss (A12). */
-  scale_excluded: boolean;
   /** Deferral with the alternative reading minus the current one, per criterion. */
   alternatives: { "18": Money; "19": Money; "21": Money };
 }
@@ -173,6 +176,7 @@ interface Acquired {
 interface Pending {
   origin: number;
   amount: Money;
+  /** In the units of the purchase that will carry it. */
   units: Quantity;
 }
 
@@ -212,7 +216,7 @@ class Walker {
     private readonly today: CivilDate,
     private readonly acquired: Map<AssetId, Acquired[]>,
     private readonly firstOpen: Map<string, number>,
-    private readonly scales: Map<AssetId, number[]>,
+    private readonly scales: Map<AssetId, ScaleMark[]>,
     private readonly afterCutoff: (eventId: Ulid) => boolean,
   ) {
     for (const list of acquired.values()) {
@@ -380,7 +384,6 @@ class Walker {
       used_before: false,
       mixed_lots: signs.size > 1,
       reapplied: false,
-      scale_excluded: false,
       alternatives: { "18": zero(), "19": zero(), "21": zero() },
     };
     this.outcomes.push(outcome);
@@ -480,28 +483,48 @@ class Walker {
       const position = this.firstOpen.get(acquisition.key) as number;
       const lots = this.lotsOfKey.get(acquisition.key);
       if (lots === undefined) {
-        // After the loss: its lots do not exist yet. A scale in between makes
-        // the units of the purchase and of the sale incomparable (A12).
-        const scaled = (this.scales.get(assetId) ?? []).some(
-          (at) => at > journalIndex && at < position,
-        );
-        if (scaled) {
-          outcome.scale_excluded = true;
-          continue;
-        }
-        // Its units matched to earlier losses (#19) are the ones still pending.
+        // After the loss: its lots do not exist yet. Its units matched to
+        // earlier losses (#19) are the ones still pending, in its own units.
         const usedBefore = (this.pendingOf.get(acquisition.key) ?? []).reduce(
           (sum, entry) => sum.add(entry.units),
           Quantity.ZERO,
+        );
+        const free = acquisition.quantity.sub(usedBefore);
+        // A split or reverse split in between does not make it another
+        // security: what was bought after is the same value, in other units.
+        // It is converted with the exact ratio of each one (verifier of
+        // feature 009): 20 bought after a 2:1 split are 10 of those sold.
+        const between = (this.scales.get(assetId) ?? []).filter(
+          (mark) => mark.at > journalIndex && mark.at < position,
+        );
+        if (between.length === 0) {
+          found.push({
+            acquisition,
+            position,
+            timing: "posterior",
+            available: free,
+            notHeld: Quantity.ZERO,
+            usedBefore,
+            lots: [],
+          });
+          continue;
+        }
+        const factor = between.reduce(
+          (product, mark) => ({
+            numerator: product.numerator.mul(mark.ratio.numerator),
+            denominator: product.denominator.mul(mark.ratio.denominator),
+          }),
+          { numerator: Decimal.ONE, denominator: Decimal.ONE },
         );
         found.push({
           acquisition,
           position,
           timing: "posterior",
-          available: acquisition.quantity.sub(usedBefore),
+          available: toSale(free, factor),
           notHeld: Quantity.ZERO,
-          usedBefore,
+          usedBefore: toSale(usedBefore, factor),
           lots: [],
+          converted: { factor, free },
         });
         continue;
       }
@@ -566,11 +589,21 @@ class Walker {
         : deferred.mul(taken.value).div(units.value);
       remainingUnits = remainingUnits.sub(taken);
       remainingAmount = remainingAmount.sub(amount);
+      // The purchase's units in its own terms: after a split, what the sale
+      // counts as `taken` is another number of the shares bought. All of what
+      // it had free is taken exactly, without converting back.
+      const converted = candidate.converted;
+      const own =
+        converted === undefined
+          ? taken
+          : taken.eq(candidate.available)
+            ? converted.free
+            : toOwn(taken, converted.factor);
       deferral.candidates.push({
         event_id: candidate.acquisition.event_id,
         asset_id: candidate.acquisition.asset_id,
         fiscal_date: candidate.acquisition.fiscal_date,
-        units: taken,
+        units: own,
         amount_eur: amount,
         timing: candidate.timing,
         via_transfer: candidate.acquisition.via_transfer,
@@ -579,7 +612,7 @@ class Walker {
         const key = candidate.acquisition.key;
         this.pendingOf.set(key, [
           ...(this.pendingOf.get(key) ?? []),
-          { origin: deferral.origin, amount, units: taken },
+          { origin: deferral.origin, amount, units: own },
         ]);
         continue;
       }
@@ -658,11 +691,38 @@ interface Candidate {
   /** Journal index where its first lot opens: the tie-break at equal distance. */
   position: number;
   timing: "prior" | "posterior";
+  /** In units of the sale. */
   available: Quantity;
   notHeld: Quantity;
+  /** In units of the sale. */
   usedBefore: Quantity;
   lots: { lot: string; available: Quantity }[];
+  /**
+   * A purchase after the loss with splits in between: its own units per unit
+   * of the sale, and what it has free in its own units.
+   */
+  converted?: { factor: Factor; free: Quantity };
 }
+
+/** Units of a purchase per unit of the sale: the product of the ratios of the splits between them. */
+interface Factor {
+  numerator: Decimal;
+  denominator: Decimal;
+}
+
+/** A split or reverse split of an asset in the lot journal, once per event. */
+interface ScaleMark {
+  at: number;
+  ratio: Ratio;
+}
+
+/** Units of the purchase in units of the sale. */
+const toSale = (own: Quantity, factor: Factor): Quantity =>
+  Quantity.of(own.value.mul(factor.denominator).div(factor.numerator));
+
+/** Units of the sale in units of the purchase. */
+const toOwn = (sold: Quantity, factor: Factor): Quantity =>
+  Quantity.of(sold.value.mul(factor.numerator).div(factor.denominator));
 
 /** Acquisitions per asset, one per (event, asset), with its whole quantity. */
 const acquisitionsOf = (
@@ -706,8 +766,9 @@ export const walkWashSales = (
   afterCutoff: (eventId: Ulid) => boolean = () => false,
 ): WashSaleResult => {
   const firstOpen = new Map<string, number>();
-  const scales = new Map<AssetId, number[]>();
+  const scales = new Map<AssetId, ScaleMark[]>();
   const assetOfLot = new Map<string, AssetId>();
+  const scaled = new Set<Ulid>();
   state.lotJournal.forEach((entry, index) => {
     if (entry.kind === "open") {
       assetOfLot.set(entry.lot_id, entry.asset_id);
@@ -716,9 +777,14 @@ export const walkWashSales = (
         firstOpen.set(key, index);
       }
     }
-    if (entry.kind === "scale") {
+    // One mark per event: every lot of the asset gets its own entry.
+    if (entry.kind === "scale" && !scaled.has(entry.event_id)) {
+      scaled.add(entry.event_id);
       const assetId = assetOfLot.get(entry.lot_id) as AssetId;
-      scales.set(assetId, [...(scales.get(assetId) ?? []), index]);
+      scales.set(assetId, [
+        ...(scales.get(assetId) ?? []),
+        { at: index, ratio: Ratio.parse(entry.ratio) },
+      ]);
     }
   });
   const walker = new Walker(

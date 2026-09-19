@@ -134,7 +134,12 @@ describe("the lot journal", () => {
               const event = byId.get(entry.event_id) as CorporateActionEvent;
               expect(event.type).toBe("corporate_action");
               expect(event.asset_id).toBe((lotOf.get(entry.lot_id) as FiscalLot).asset_id);
-              expect(event.effects.some((effect) => effect.op === "scale")).toBe(true);
+              // With the exact ratio of the event, which the tax engine converts with.
+              expect(
+                event.effects.some(
+                  (effect) => effect.op === "scale" && effect.ratio === entry.ratio,
+                ),
+              ).toBe(true);
               quantities.set(entry.lot_id, entry.quantity_after);
               break;
             }

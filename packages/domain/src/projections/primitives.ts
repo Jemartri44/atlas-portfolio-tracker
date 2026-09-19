@@ -120,6 +120,7 @@ export const applyScale = (
       lot_id: lot.id,
       event_id: ctx.eventId,
       quantity_after: lot.quantity,
+      ratio: effect.ratio,
     });
   });
   holdings.forEach((holding, index) => {
