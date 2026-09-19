@@ -10,12 +10,21 @@
 
 import type { EventPreview } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Notice, Parts, Section, Tag } from "../../components/index.js";
+import {
+  Amount,
+  Disclosure,
+  type NoticeItem,
+  NoticeList,
+  Parts,
+  Section,
+  Tag,
+} from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { usePrivacy } from "../../ledger/state.js";
+import { attentionItems } from "../../view-models/attention.js";
 import { type CashRow, type ChangeRow, previewChanges } from "../../view-models/preview.js";
 import { resultWord } from "../../view-models/sale.js";
 import { draftSentence } from "../../view-models/sentence.js";
@@ -86,6 +95,40 @@ export const Preview = (props: {
   const privacy = usePrivacy();
   const changes = () => previewChanges(props.preview, names());
 
+  /**
+   * The warnings the candidate raises, grouped by the same rule as Atención
+   * (`attentionItems`): a sale with ten purchases inside the window of its loss
+   * is one line with how many, and each purchase waits folded under it. They
+   * used to be ten notices saying the same thing (third pass of the review).
+   * No notice links anywhere: leaving would lose what was typed.
+   */
+  const notices = (): NoticeItem[] =>
+    attentionItems({
+      invalidCount: 0,
+      warnings: props.preview.warnings,
+      findings: [],
+      openOrders: [],
+      openTransfers: [],
+      names: names(),
+      privacy: privacy(),
+    }).map((item) => ({
+      severity: item.severity === "error" ? "danger" : "caution",
+      message: item.message,
+      count: item.count,
+      detail:
+        item.warnings.length > 1 ? (
+          <Disclosure label={`Ver los ${item.warnings.length} avisos`}>
+            <ul class="sentences">
+              <For each={item.warnings}>
+                {(warning) => (
+                  <li>{describeWarning(warning, { names: names(), privacy: privacy() })}</li>
+                )}
+              </For>
+            </ul>
+          </Disclosure>
+        ) : undefined,
+    }));
+
   return (
     <div class="preview">
       <p class="sentence">
@@ -155,13 +198,11 @@ export const Preview = (props: {
         </Section>
       </Show>
 
-      <For each={props.preview.warnings}>
-        {(warning) => (
-          <Notice severity="caution" title="Aviso">
-            {describeWarning(warning, { names: names(), privacy: privacy() })}
-          </Notice>
-        )}
-      </For>
+      <Show when={notices().length > 0}>
+        <Section title="Avisos">
+          <NoticeList items={notices()} label="Avisos del movimiento" />
+        </Section>
+      </Show>
     </div>
   );
 };

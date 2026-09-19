@@ -41,6 +41,8 @@ export interface AttentionItem {
   count: number;
   /** The events the warnings of this item come from, so a list can link each one. */
   eventIds: string[];
+  /** The warnings it stands for, each one to be told in the detail of a gathered item. */
+  warnings: Warning[];
 }
 
 /** Where each code is fixed. A code missing from here is a bug the test catches. */
@@ -184,6 +186,7 @@ const itemOf = (
   message: string,
   count = 1,
   eventIds: string[] = [],
+  warnings: Warning[] = [],
 ): AttentionItem => ({
   code,
   severity: severityOf(code),
@@ -192,6 +195,7 @@ const itemOf = (
   rank: rankOf(code),
   count,
   eventIds,
+  warnings,
 });
 
 /** The last day on which the window a wash-sale warning talks about is open. */
@@ -287,8 +291,8 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     const gathered = count > 1 ? describeWarningGroup(warning.code, all, input) : undefined;
     items.push(
       gathered === undefined
-        ? itemOf(warning.code, describeWarning(warning, input), count, [...events])
-        : itemOf(warning.code, gathered, 1, [...events]),
+        ? itemOf(warning.code, describeWarning(warning, input), count, [...events], all)
+        : itemOf(warning.code, gathered, 1, [...events], all),
     );
   }
 

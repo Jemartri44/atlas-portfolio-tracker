@@ -107,7 +107,13 @@ describe("the list, as data", () => {
       "01ARYZ6S41TSV4RRFFQ690000A",
     );
     const items = attention([...buys, other, { ...(buys[0] as Warning) }]);
-    expect(items.map((item) => item.count).sort()).toEqual([1, 3]);
+    // Two sales, two items: one sentence each, with how many purchases, and
+    // the purchases themselves kept for the detail.
+    expect(items).toHaveLength(2);
+    const three = items.find((item) => item.warnings.length === 3);
+    expect(three?.message).toMatch(/ con 3 compras en cartera dentro de la ventana /);
+    expect(three?.count).toBe(1);
+    expect(items.find((item) => item.warnings.length === 1)?.message).toMatch(/de una compra del/);
   });
 });
 
@@ -200,7 +206,10 @@ describe("the list, on the summary", () => {
     // eleven purchases inside the year before it.
     today("2027-01-10");
     const early = text(await show("/", Resumen));
-    expect(early).toMatch(/Venta con pérdida de World Index Fund.*\d+ iguales/);
+    // One sentence with how many purchases, not the first one with «N iguales».
+    expect(early).toMatch(
+      /Venta con pérdida de World Index Fund del [^)]*\) con \d+ compras en cartera/,
+    );
     expect(early.match(/Venta con pérdida de World Index Fund/g)).toHaveLength(1);
 
     // Two years later that window is long closed and is not something to act on.

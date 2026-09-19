@@ -145,3 +145,29 @@ describe("the result a sale would book", () => {
     expect(text(result)).not.toContain("Ganancia");
   });
 });
+
+describe("the warnings a sale would raise", () => {
+  it("are grouped as in Atención: one line with how many, each one folded under it", async () => {
+    // A loss on 11/01/2029 with ten purchases of the fund inside its year.
+    today("2029-01-11");
+    store.setPrivacy(false);
+    const host = await show("/registrar/sell", RegistrarForm, "/registrar/:tipo");
+    choose(host, "f-account_id", "acc_mi");
+    choose(host, "f-asset_id", "ast_world");
+    type(host, "f-quantity", "1");
+    type(host, "f-amount", "50");
+    await press(host, "Ver el efecto");
+    const list = host.querySelector('[aria-label="Avisos del movimiento"]');
+    const notices = [...(list?.querySelectorAll(".notice") ?? [])];
+    expect(notices).toHaveLength(1);
+    const said = text(notices[0]?.querySelector(".notice-text"));
+    const many = Number(/ con (\d+) compras en cartera /.exec(said)?.[1]);
+    expect(many).toBeGreaterThan(1);
+    expect(said).toContain("Venta con pérdida de World Index Fund");
+    const folded = notices[0]?.querySelector("details");
+    expect(folded?.hasAttribute("open")).toBe(false);
+    expect(folded?.querySelectorAll("li")).toHaveLength(many);
+    // No notice leaves the form: what was typed would be lost.
+    expect(list?.querySelector("a.notice")).toBeNull();
+  });
+});

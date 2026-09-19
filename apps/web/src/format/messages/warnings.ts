@@ -202,7 +202,16 @@ export const describeWarningGroup = (
   prose: Prose,
 ): string | undefined => {
   const n = namingOf(prose.names ?? NO_NAMES);
+  const f = figuresOf(prose.privacy);
+  const d = (warnings[0]?.details ?? {}) as Details;
   switch (code) {
+    // One loss and its purchases inside the window: one sentence with how many,
+    // each purchase in the detail. The preview of a sale listed ten notices
+    // that said the same thing (third pass of the review of 2026-09-19).
+    case "wash_sale_window_prior_buy":
+      return `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) con ${warnings.length} compras en cartera dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${year(d.tax_year)}.`;
+    case "wash_sale_window_repurchase":
+      return `${warnings.length} compras de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): pueden hacer que esa pérdida no sea computable en ${year(d.tax_year)}.`;
     case "stale_price":
       return `${warnings.length} precios con más de ${days(limitOf(warnings))} · ${joinAll(
         warnings.map((warning) => n.one(warning.details.asset_id)),
