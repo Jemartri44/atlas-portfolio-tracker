@@ -86,7 +86,7 @@ export const warnRepurchase = (
         {
           asset_id: assetId,
           buy_date: fiscalDate,
-          quantity: quantity.toString(),
+          buy_quantity: quantity.toString(),
           sale_event_id: gain.event_id,
           sale_date: gain.fiscal_date,
           loss_eur: gain.gain_eur.roundToCents().amount.toString(),
@@ -141,7 +141,7 @@ export const warnPriorBuys = (
           sale_date: fiscalDate,
           buy_event_id: acquisition.event_id,
           buy_date: acquisition.fiscal_date,
-          quantity: acquisition.quantity.toString(),
+          buy_quantity: acquisition.quantity.toString(),
           loss_eur: loss.roundToCents().amount.toString(),
           tax_year: yearOf(fiscalDate),
           window_start: start,

@@ -620,7 +620,7 @@ describe("architecture: apps/web", () => {
    * readable in public, which is what it is for.
    */
   const SENSITIVE_DETAIL =
-    /_eur$|^(?:amount|quantity|position|available|open|missing|distributed|core|gross|loss|invested|cost)$/;
+    /_eur$|_quantity$|^(?:amount|quantity|position|available|open|missing|distributed|core|gross|loss|invested|cost)$/;
 
   /** A detail whose **name** matches but which is not a figure, with its reason. */
   const NOT_A_FIGURE: Record<string, string> = {

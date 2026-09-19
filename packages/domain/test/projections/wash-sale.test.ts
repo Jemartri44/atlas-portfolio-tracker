@@ -59,6 +59,10 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
     expect(inside).toHaveLength(1);
     expect(inside[0]?.details).toMatchObject({
       asset_id: "ast_spec",
+      buy_date: "2027-04-10",
+      // What was bought back: it used to be the quantity sold, under a name
+      // that did not say which (feature 009, quality review).
+      buy_quantity: "10",
       sale_date: "2027-02-10",
       window_end: "2027-04-10",
       loss_eur: "-20",
@@ -213,7 +217,7 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
       sale_date: "2027-03-10",
       buy_date: "2027-01-10",
       window_start: "2027-01-10",
-      quantity: "10",
+      buy_quantity: "10",
       loss_eur: "-10",
       tax_year: 2027,
       window: "2m",
@@ -424,7 +428,7 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
       expect(warnings[0]?.details).toMatchObject({
         asset_id: "ast_bonds",
         buy_date: "2027-05-03",
-        quantity: "10",
+        buy_quantity: "10",
         loss_eur: "-24",
         window_start: "2026-06-01",
         window: "1y",
@@ -625,7 +629,7 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
     expect(warnings[0]?.details).toMatchObject({
       asset_id: "ast_world",
       buy_date: "2027-01-11",
-      quantity: "10",
+      buy_quantity: "10",
       loss_eur: "-24",
       window_start: "2026-06-01",
       window: "1y",

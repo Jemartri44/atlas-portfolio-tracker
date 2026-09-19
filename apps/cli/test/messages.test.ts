@@ -12,7 +12,7 @@ const repurchase = (window: string) =>
     details: {
       asset_id: "ast_world",
       buy_date: "2027-03-01",
-      quantity: "4",
+      buy_quantity: "4",
       sale_event_id: "01ARYZ6S41TSV4RRFFQ69G5SEV",
       sale_date: "2027-01-06",
       loss_eur: "-10",
