@@ -24,6 +24,7 @@ import { describeWarning } from "../../format/messages/warnings.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { usePrivacy } from "../../ledger/state.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { attentionItems } from "../../view-models/attention.js";
 import { type CashRow, type ChangeRow, previewChanges } from "../../view-models/preview.js";
 import { resultWord } from "../../view-models/sale.js";
@@ -85,6 +86,9 @@ const Cash = (props: { row: CashRow }): JSX.Element => (
   </li>
 );
 
+/** Lots in sight on a phone before they are folded behind how many. */
+const LOTS_IN_SIGHT = 3;
+
 export const Preview = (props: {
   preview: EventPreview;
   names?: NameIndex;
@@ -92,6 +96,7 @@ export const Preview = (props: {
   revealed?: (field: string) => boolean;
 }): JSX.Element => {
   const names = (): NameIndex => props.names ?? NO_NAMES;
+  const wide = mediaQuery(GRID);
   const privacy = usePrivacy();
   const changes = () => previewChanges(props.preview, names());
 
@@ -129,6 +134,58 @@ export const Preview = (props: {
         ) : undefined,
     }));
 
+  /** The lots that move; on a phone, beyond a few, folded behind how many. */
+  const Lots = (): JSX.Element => (
+    <Show when={changes().lots.length > 0}>
+      <Section title="Lotes fiscales" aside={<span>antes → después</span>}>
+        <Show
+          when={!wide() && changes().lots.length > LOTS_IN_SIGHT}
+          fallback={
+            <ul class="changes">
+              <For each={changes().lots}>{(row) => <Change row={row} empty="—" />}</For>
+            </ul>
+          }
+        >
+          <Disclosure label={`Ver los ${changes().lots.length} lotes`}>
+            <ul class="changes">
+              <For each={changes().lots}>{(row) => <Change row={row} empty="—" />}</For>
+            </ul>
+          </Disclosure>
+        </Show>
+        <Show when={changes().unchangedLots > 0}>
+          <p class="card-note">
+            {countOf(changes().unchangedLots, "lote sin cambios", "lotes sin cambios")}
+          </p>
+        </Show>
+      </Section>
+    </Show>
+  );
+
+  /** What a sale books: its result, by its sign. */
+  const Result = (): JSX.Element => (
+    <Show when={props.preview.gains.length > 0}>
+      <Section title="Resultado que genera">
+        <ul class="changes">
+          <For each={props.preview.gains}>
+            {(gain) => (
+              <li class="change">
+                <span class="change-name">
+                  {resultWord(gain.gain_eur_rounded)} · {displayName(names(), gain.asset_id)} ·{" "}
+                  {formatDate(gain.fiscal_date)}
+                </span>
+                <Amount value={gain.gain_eur_rounded} signed coloured />
+              </li>
+            )}
+          </For>
+        </ul>
+        <p class="card-note">
+          Es el resultado fiscal que quedará registrado, calculado con FIFO sobre los lotes que
+          cierra.
+        </p>
+      </Section>
+    </Show>
+  );
+
   return (
     <div class="preview">
       <p class="sentence">
@@ -137,6 +194,14 @@ export const Preview = (props: {
           {...(props.revealed === undefined ? {} : { revealed: props.revealed })}
         />
       </p>
+      {/*
+        On a phone what a sale books comes first, and its lots wait folded: a
+        sale of a hundred units listed some twenty closed lots before its
+        result (final pass of the review). On a desk, beside the form, they fit.
+      */}
+      <Show when={!wide()}>
+        <Result />
+      </Show>
       <Section title="Posiciones" aside={<span>antes → después</span>}>
         <ul class="changes">
           <For each={changes().positions}>{(row) => <Change row={row} empty="0" />}</For>
@@ -163,39 +228,13 @@ export const Preview = (props: {
         </Section>
       </Show>
 
-      <Show when={changes().lots.length > 0}>
-        <Section title="Lotes fiscales" aside={<span>antes → después</span>}>
-          <ul class="changes">
-            <For each={changes().lots}>{(row) => <Change row={row} empty="—" />}</For>
-          </ul>
-          <Show when={changes().unchangedLots > 0}>
-            <p class="card-note">
-              {countOf(changes().unchangedLots, "lote sin cambios", "lotes sin cambios")}
-            </p>
-          </Show>
-        </Section>
+      <Show when={wide()}>
+        <Lots />
+        <Result />
       </Show>
 
-      <Show when={props.preview.gains.length > 0}>
-        <Section title="Resultado que genera">
-          <ul class="changes">
-            <For each={props.preview.gains}>
-              {(gain) => (
-                <li class="change">
-                  <span class="change-name">
-                    {resultWord(gain.gain_eur_rounded)} · {displayName(names(), gain.asset_id)} ·{" "}
-                    {formatDate(gain.fiscal_date)}
-                  </span>
-                  <Amount value={gain.gain_eur_rounded} signed coloured />
-                </li>
-              )}
-            </For>
-          </ul>
-          <p class="card-note">
-            Es el resultado fiscal que quedará registrado, calculado con FIFO sobre los lotes de
-            arriba.
-          </p>
-        </Section>
+      <Show when={!wide()}>
+        <Lots />
       </Show>
 
       <Show when={notices().length > 0}>

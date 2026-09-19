@@ -5,7 +5,7 @@
 // at the very bottom — and every quantity in plain text with the mask on.
 
 import { type AccountId, Money, Quantity } from "@atlas/domain";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MASK } from "../src/format/money.js";
 import { store } from "../src/ledger/state.js";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
@@ -21,6 +21,7 @@ import {
   type,
   withGoldenLedger,
 } from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -169,5 +170,44 @@ describe("the warnings a sale would raise", () => {
     expect(folded?.querySelectorAll("li")).toHaveLength(many);
     // No notice leaves the form: what was typed would be lost.
     expect(list?.querySelector("a.notice")).toBeNull();
+  });
+});
+
+describe("the preview of a large sale", () => {
+  const sell = async (width: number): Promise<HTMLElement> => {
+    withStyles(width, 890);
+    today("2029-01-11");
+    store.setPrivacy(false);
+    const host = await show("/registrar/sell", RegistrarForm, "/registrar/:tipo");
+    choose(host, "f-account_id", "acc_mi");
+    choose(host, "f-asset_id", "ast_world");
+    type(host, "f-quantity", "100");
+    type(host, "f-amount", "12000");
+    await press(host, "Ver el efecto");
+    return host;
+  };
+  const sections = (host: HTMLElement): Element[] => [
+    ...host.querySelectorAll(".preview > section.card"),
+  ];
+  const lotsOf = (host: HTMLElement) =>
+    sections(host).find((card) => text(card.querySelector("h2")) === "Lotes fiscales");
+
+  afterEach(() => withoutStyles());
+
+  it("puts the result first on a phone and folds its many lots behind how many", async () => {
+    const host = await sell(400);
+    expect(text(sections(host)[0]?.querySelector("h2"))).toBe("Resultado que genera");
+    const folded = lotsOf(host)?.querySelector("details");
+    expect(folded?.hasAttribute("open")).toBe(false);
+    const many = Number(/^Ver los (\d+) lotes$/.exec(text(folded?.querySelector("summary")))?.[1]);
+    expect(many).toBeGreaterThan(3);
+    expect(folded?.querySelectorAll(".change")).toHaveLength(many);
+  });
+
+  it("leaves the lots in sight on a desk, beside the form, before the result", async () => {
+    const host = await sell(1280);
+    expect(lotsOf(host)?.querySelector("details")).toBeNull();
+    const titles = sections(host).map((card) => text(card.querySelector("h2")));
+    expect(titles.indexOf("Lotes fiscales")).toBeLessThan(titles.indexOf("Resultado que genera"));
   });
 });
