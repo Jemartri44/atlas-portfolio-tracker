@@ -21,7 +21,7 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import { detailView } from "../../view-models/index.js";
 import { movementSentence } from "../../view-models/sentence.js";
 import { RequireLedger } from "../guard.jsx";
-import { EventEnvelope, EventLinks, Facts, Parts } from "./DetailFields.jsx";
+import { EventEnvelope, EventLinks, Facts, Parts, SaleResult } from "./DetailFields.jsx";
 
 export default function MovimientoDetalleRoute(): JSX.Element {
   const params = useParams<{ id: string }>();
@@ -190,8 +190,12 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                       </Show>
                       <h2 class="block-title">Datos</h2>
                       <Facts fields={view().fields} />
+                      <SaleResult
+                        gain={snapshot.state.gains.find((gain) => gain.event_id === view().id)}
+                      />
                       <EventEnvelope
                         envelope={view().envelope}
+                        technical={view().technical}
                         position={found().position}
                         identifiers={view().fields.filter((field) => field.hint !== undefined)}
                       />

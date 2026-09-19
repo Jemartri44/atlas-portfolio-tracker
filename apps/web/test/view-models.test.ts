@@ -326,12 +326,14 @@ describe("movementRows", () => {
 });
 
 describe("detailView", () => {
-  it("shows every field of the event with a legible name", () => {
+  it("shows every field of the event with a legible name, bookkeeping folded", () => {
     const events = goldenEvents();
     const state = projectLedger(events, { collectErrors: true });
     const entry = ledgerEntries(state, events).find((row) => row.event.type === "buy");
     const view = detailView(entry as never);
-    const names = view.fields.map((field) => field.name);
+    // Every field is somewhere: in sight, or the bookkeeping in the technical record.
+    const names = [...view.fields, ...view.technical].map((field) => field.name);
+    expect(view.technical.map((field) => field.name)).toContain("source");
     const event = entry?.event as unknown as Record<string, unknown>;
     for (const name of Object.keys(event)) {
       if (["schema_version", "id", "recorded_at", "type", "fingerprint"].includes(name)) {

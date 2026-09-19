@@ -91,6 +91,8 @@ export interface DetailView {
   envelope: DetailField[];
   /** The event's own fields. */
   fields: DetailField[];
+  /** Its bookkeeping, still shown but in the technical record (`isBookkeeping`). */
+  technical: DetailField[];
   /** Cross references, as links. */
   links: { label: string; to: string; text: string }[];
   invalidReason?: string;
@@ -155,6 +157,23 @@ const ID_FIELDS = new Set([
 ]);
 
 const ENVELOPE_FIELDS = ["id", "type", "recorded_at", "schema_version", "fingerprint"];
+
+const CURRENCY_FIELDS = ["currency", "fee_currency", "sold_currency", "bought_currency"];
+
+/** The rate fields of an operation all in euros: a rate of 1 the ECB never published. */
+const EURO_BOOKKEEPING = new Set(["currency", "fee_currency", "fx_rate", "fx_rate_date"]);
+
+/**
+ * What a reader does not need to understand the movement: where the line came
+ * from, and on an operation all in euros its currency and a rate of 1 with its
+ * date. «Tipo del BCE 1» and «Divisa EUR» among the data of a purchase in euros
+ * read as something to check (review of 2026-09-19). Still printed, folded in
+ * the technical record: the detail hides nothing.
+ */
+const isBookkeeping = (event: Record<string, unknown>, name: string): boolean =>
+  name === "source" ||
+  (EURO_BOOKKEEPING.has(name) &&
+    CURRENCY_FIELDS.every((field) => event[field] === undefined || event[field] === "EUR"));
 
 /**
  * **The catalogue is updated, not rectified.** A change to an account or an
@@ -297,9 +316,10 @@ export const eventFields = (
   event: Record<string, unknown>,
   names: NameIndex = NO_NAMES,
   events?: EventReferences,
-): { envelope: DetailField[]; fields: DetailField[] } => {
+): { envelope: DetailField[]; fields: DetailField[]; technical: DetailField[] } => {
   const envelope: DetailField[] = [];
   const fields: DetailField[] = [];
+  const technical: DetailField[] = [];
   for (const [name, value] of Object.entries(event)) {
     const field = fieldOf(event, name, value, { names, events });
     if (field === undefined) {
@@ -307,11 +327,13 @@ export const eventFields = (
     }
     if (ENVELOPE_FIELDS.includes(name)) {
       envelope.push(field);
+    } else if (isBookkeeping(event, name)) {
+      technical.push(field);
     } else {
       fields.push(field);
     }
   }
-  return { envelope, fields };
+  return { envelope, fields, technical };
 };
 
 export const detailView = (
@@ -319,7 +341,7 @@ export const detailView = (
   names: NameIndex = NO_NAMES,
   events?: EventReferences,
 ): DetailView => {
-  const { envelope, fields } = eventFields(
+  const { envelope, fields, technical } = eventFields(
     entry.event as unknown as Record<string, unknown>,
     names,
     events,
@@ -377,6 +399,7 @@ export const detailView = (
     statusLabel: STATUS_LABELS[entry.status] ?? entry.status,
     envelope,
     fields,
+    technical,
     links,
     ...(entry.invalid_reason === undefined ? {} : { invalidReason: entry.invalid_reason }),
     editable: EDITABLE_TYPES.has(entry.event.type) && entry.status !== "reversed",

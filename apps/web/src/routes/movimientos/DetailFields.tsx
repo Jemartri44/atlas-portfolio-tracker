@@ -9,9 +9,18 @@
 // effects of a corporate action and a configuration — are sentences, never
 // JSON: the JSON printed their figures in plain text with the mask on.
 
+import type { RealizedGain } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { For, type JSX, Match, Show, Switch } from "solid-js";
-import { Amount, Disclosure, Figure, Icon, Section } from "../../components/index.js";
+import {
+  Amount,
+  Disclosure,
+  Figure,
+  Icon,
+  Section,
+  StatLine,
+  TotalLine,
+} from "../../components/index.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { eventLabel } from "../../format/labels.js";
 import type { DetailField, DetailView } from "../../view-models/index.js";
@@ -124,6 +133,34 @@ export const EventLinks = (props: { links: DetailView["links"] }): JSX.Element =
 );
 
 /**
+ * What a sale produced, from the gain the ledger booked for it: the figure a
+ * sale is recorded for, which the list of its fields never said (review of
+ * 2026-09-19). Nothing is computed here; absent, nothing is shown.
+ */
+export const SaleResult = (props: { gain: RealizedGain | undefined }): JSX.Element => (
+  <Show when={props.gain}>
+    {(gain) => (
+      <>
+        <h2 class="block-title">Resultado de la venta</h2>
+        <StatLine label="Importe obtenido en euros">
+          <Amount value={gain().proceeds_eur} />
+        </StatLine>
+        <StatLine label="Coste de lo vendido">
+          <Amount value={gain().cost_eur} />
+        </StatLine>
+        <TotalLine label={gain().gain_eur_rounded.isNegative() ? "Pérdida" : "Ganancia"}>
+          <Amount value={gain().gain_eur_rounded} signed coloured />
+        </TotalLine>
+        <p class="card-note">
+          Es la ganancia fiscal registrada, calculada con FIFO: el coste es el de los lotes más
+          antiguos.
+        </p>
+      </>
+    )}
+  </Show>
+);
+
+/**
  * The technical record, folded: the one place an identifier is shown as such,
  * because it is what the CLI asks for and what a repaired file is checked
  * against.
@@ -137,9 +174,21 @@ export const EventEnvelope = (props: {
    * checked and a repair is written (review of 2026-09-19).
    */
   identifiers?: readonly DetailField[];
+  /** Bookkeeping of the line: its origin, and the rate of 1 of an operation in euros. */
+  technical?: readonly DetailField[];
 }): JSX.Element => (
   <Disclosure label="Registro técnico">
     <dl class="facts">
+      <For each={props.technical ?? []}>
+        {(field) => (
+          <div class="fact">
+            <dt>{field.label}</dt>
+            <dd>
+              <Value field={field} />
+            </dd>
+          </div>
+        )}
+      </For>
       <For each={props.identifiers ?? []}>
         {(field) => (
           <div class="fact">
