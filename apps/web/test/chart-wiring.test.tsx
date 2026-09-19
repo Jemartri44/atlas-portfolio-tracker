@@ -70,6 +70,8 @@ describe("the axis of a chart is an amount", () => {
     ];
     const options = chartOptions({ x: year, series, width: 1600, height: 220 }, false);
     expect((options.axes?.[0] as { space?: number }).space).toBeGreaterThanOrEqual(80);
+    // And half a label of room past the last tick, which sits on the edge.
+    expect(options.padding?.[1]).toBeGreaterThanOrEqual(24);
   });
 
   it("dates the X axis with the span the data covers", () => {

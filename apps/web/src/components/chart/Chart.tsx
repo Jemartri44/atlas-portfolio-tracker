@@ -106,7 +106,9 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
   return {
     width: spec.width,
     height: spec.height,
-    padding: [8, 8, 0, 0],
+    // Room on the right for half of the last date, which uPlot centres on its
+    // tick: at the edge of a phone «dic 2028» was cut to «dic 20».
+    padding: [8, SPACE[span] / 2 - 16, 0, 0],
     legend: { show: false },
     cursor: { drag: { x: false, y: false } },
     scales: { x: { time: true } },
