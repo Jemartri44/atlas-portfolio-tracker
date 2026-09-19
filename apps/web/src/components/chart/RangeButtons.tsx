@@ -1,4 +1,5 @@
-// The time range of a chart, chosen with **buttons** (ADR-0017): uPlot has no
+// The time range of a chart, chosen with **buttons** (ADR-0017), drawn light
+// (docs/design/system.md §5.12: never four solid grey blocks). uPlot has no
 // pinch-zoom, and on a phone used to consult a portfolio, buttons are a better
 // interface than a gesture anyway.
 //
@@ -23,13 +24,12 @@ interface RangeButtonsProps {
 }
 
 export const RangeButtons = (props: RangeButtonsProps): JSX.Element => (
-  <fieldset class="ranges">
+  <fieldset class="segmented">
     <legend class="sr-only">Rango temporal</legend>
     <For each={props.options}>
       {(option) => (
         <button
           type="button"
-          class={option.key === props.current ? "range is-current" : "range secondary"}
           aria-pressed={option.key === props.current}
           disabled={option.points === 0}
           title={
@@ -39,7 +39,7 @@ export const RangeButtons = (props: RangeButtonsProps): JSX.Element => (
           }
           onClick={() => props.onChange(option.key)}
         >
-          {option.label}
+          <span>{option.label}</span>
         </button>
       )}
     </For>

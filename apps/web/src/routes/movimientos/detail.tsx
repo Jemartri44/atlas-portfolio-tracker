@@ -8,7 +8,7 @@
 import { ledgerEntries } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Badge, Callout, Dialog, EmptyState, Field } from "../../components/index.js";
+import { Callout, Dialog, EmptyState, Field, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -103,11 +103,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                           </A>
                         </Show>
                         <Show when={view().status !== "reversed" && view().status !== "reversal"}>
-                          <button
-                            type="button"
-                            class="secondary outline"
-                            onClick={() => setAsking(true)}
-                          >
+                          <button type="button" class="danger" onClick={() => setAsking(true)}>
                             Anular
                           </button>
                         </Show>
@@ -164,9 +160,9 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   <div class="stack">
                     <Show when={view().status !== "current"}>
                       <div class="row wrap">
-                        <Badge tone={view().status === "reversed" ? "negative" : "neutral"}>
+                        <Tag tone={view().status === "reversed" ? "danger" : "neutral"}>
                           {view().statusLabel}
-                        </Badge>
+                        </Tag>
                       </div>
                     </Show>
 
@@ -186,7 +182,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                         </button>
                         <button
                           type="button"
-                          class="destructive"
+                          class="danger solid"
                           disabled={reason().trim() === "" || store.writing()}
                           onClick={() => void onReverse()}
                         >

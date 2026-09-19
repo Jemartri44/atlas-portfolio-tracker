@@ -5,7 +5,7 @@
 
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Badge } from "../../components/index.js";
+import { Amount, Tag } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
 import type { NetWorthView } from "../../view-models/index.js";
 
@@ -19,9 +19,9 @@ export const NetWorthBlock = (props: { view: NetWorthView }): JSX.Element => (
     <div class="total">
       <Amount value={props.view.total} class="total-amount" missingReason="nada tiene precio" />
       <Show when={props.view.partial}>
-        <Badge tone="warning" title={`Faltan: ${props.view.missing.join(", ")}`}>
+        <Tag tone="caution" title={`Faltan: ${props.view.missing.join(", ")}`}>
           parcial
-        </Badge>
+        </Tag>
       </Show>
     </div>
 

@@ -216,9 +216,7 @@
 }
 
 /*
- * `list-style: none` on the `<ul>` is not enough: Pico sets `list-style-type:
- * square` on `li` itself, which beats what the item inherits. Seen in a
- * screenshot as a bullet beside every row of every card.
+ * The items of the list carry no marker of their own.
  */
 .datalist > li {
   list-style: none;
@@ -288,10 +286,6 @@
 }
 
 /* "Cargar más": the width of the list, because it is the action of the list. */
-.load-more {
-  margin-top: var(--s-3);
-  width: 100%;
-}
 
 /*
  * The table comes in at 1024px and not at the 768px of the rail, because at
@@ -479,16 +473,6 @@
   margin: 0;
 }
 
-/*
- * A destructive action never wears the primary blue: "Anular" looked exactly
- * like "Registrar" (review of 2026-09-18).
- */
-button.destructive {
-  background-color: var(--c-negative);
-  border-color: var(--c-negative);
-  color: var(--c-bg);
-}
-
 @media (min-width: 768px) {
   .actions-bar {
     bottom: 0;
@@ -634,20 +618,6 @@ dialog .dialog-actions {
   margin-bottom: var(--s-4);
 }
 
-/* --- The technical code of an error: one click away, never in the way --- */
-
-.technical {
-  border: 0;
-  margin: var(--s-2) 0 0;
-  padding: 0;
-}
-
-.technical summary {
-  color: var(--c-muted);
-  cursor: pointer;
-  padding: 0;
-}
-
 /* --- Charts (uPlot vendored, ADR-0017) ---------------------------------- */
 
 .chart {
@@ -661,46 +631,11 @@ dialog .dialog-actions {
   margin: 0 auto;
 }
 
-.ranges {
-  border: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-1);
-  margin: 0;
-  padding: 0;
-}
-
-.ranges .range {
-  margin-bottom: 0;
-  min-width: 0;
-  padding: var(--s-1) var(--s-3);
-  width: auto;
-}
-
-.ranges .range:disabled {
-  opacity: 0.45;
-}
-
-.chart-table {
-  border: 0;
-  margin-top: var(--s-2);
-  padding: 0;
-}
-
-.chart-table summary {
-  color: var(--c-muted);
-  cursor: pointer;
-  padding: 0;
-}
-
 /*
  * Inside the equivalent table of a chart the cards are enough at every width:
  * three series of one figure each read better as two lines than as a table
  * squeezed into 360px, and the table is there for the wide layout as usual.
  */
-.chart-table .datalist {
-  margin-top: var(--s-2);
-}
 
 /* The legend of a chart: colour **and** dash, never colour alone. */
 .chart-legend {
@@ -881,43 +816,6 @@ dialog .dialog-actions {
   font-size: var(--t-md);
   font-weight: var(--w-semibold);
   margin: var(--s-4) 0 var(--s-1);
-}
-
-.by-asset,
-.simulator {
-  border: 0;
-  margin-top: var(--s-3);
-  padding: 0;
-}
-
-.by-asset summary,
-.simulator summary {
-  color: var(--c-muted);
-  cursor: pointer;
-  padding: 0;
-}
-
-/*
- * A disclosure needs to look like one. Pico's own marker is a full-width
- * chevron on the right, which on a card reads as a separate control; this is a
- * small triangle glued to the text, and it turns when the block opens.
- */
-.by-asset summary::after,
-.simulator summary::after,
-.chart-table summary::after,
-.technical summary::after {
-  background: none;
-  content: " ▸";
-  display: inline;
-  transform: none;
-  width: auto;
-}
-
-.by-asset[open] summary::after,
-.simulator[open] summary::after,
-.chart-table[open] summary::after,
-.technical[open] summary::after {
-  content: " ▾";
 }
 
 .datalist .item.is-moved,

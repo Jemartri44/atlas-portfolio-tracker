@@ -307,7 +307,7 @@ const listSourceFiles = (dir: string): string[] =>
  *
  * So both directions are checked, over the real files: every class the
  * stylesheet targets is written by the markup, and every class the markup
- * writes literally is declared by our CSS or by vendored Pico (a misspelt
+ * writes literally is declared by our CSS or by vendored uPlot (a misspelt
  * class is the same defect mirrored).
  */
 
@@ -437,7 +437,14 @@ const mineClasses = (expression: string, found: MarkupClasses): void => {
   }
 };
 
-const STYLESHEETS = ["base.css", "layout.css", "components.css", "tokens.css"];
+/**
+ * Every stylesheet of `src/styles` except the one that only imports the rest:
+ * read from the folder, so a new layer of the design system cannot be left
+ * out of the check by forgetting to add it to a list.
+ */
+const STYLESHEETS = readdirSync(join(webSrc, "styles")).filter(
+  (name) => name.endsWith(".css") && name !== "index.css",
+);
 
 const ourClasses = (): Set<string> =>
   new Set(
@@ -787,12 +794,9 @@ describe("architecture: apps/web", () => {
 
   /** Direction two: an element with no rule, which is the same typo mirrored. */
   it("writes no class the stylesheet does not declare", () => {
-    // Both vendored stylesheets count as declarations: the `.u-*` classes are
+    // The vendored stylesheet counts as a declaration: the `.u-*` classes are
     // uPlot's own, written by it at runtime and styled by it.
-    const vendored = [
-      join(webRoot, "vendor", "pico", "pico.css"),
-      join(webRoot, "vendor", "uplot", "uPlot.css"),
-    ].flatMap((path) => [...cssClassesOf(readFileSync(path, "utf8"))]);
+    const vendored = [join(webRoot, "vendor", "uplot", "uPlot.css")].flatMap((path) => [...cssClassesOf(readFileSync(path, "utf8"))]);
     const declared = new Set([...ourClasses(), ...vendored]);
     const violations = [...markupClasses().literal].filter((name) => !declared.has(name)).sort();
     expect(violations).toEqual([]);
@@ -875,9 +879,31 @@ describe("architecture: apps/web", () => {
     expect(violations.sort()).toEqual([]);
   });
 
-  /** And the step of the scale that the bar's label uses has to exist. */
-  it("declares the type token of the bottom bar", () => {
+  /**
+   * Nothing that is read goes below 13px (brief §10 and §13): the bottom bar
+   * used to carry its labels at 10px, and a test demanded that token. Now the
+   * scale itself is checked — every `--text-*` step, at every width — and every
+   * `font-size` of our stylesheets has to come from it, or be relative to a
+   * figure that does (the dots of the mask, the euro of a hero figure).
+   */
+  it("keeps every step of the type scale at 13px or more", () => {
     const tokens = readFileSync(join(webSrc, "styles", "tokens.css"), "utf8");
-    expect(declarationsOf(tokens, ":root")).toContain("--t-nav: 0.625rem");
+    const steps = [...tokens.matchAll(/--text-[a-z0-9-]+:\s*([\d.]+)rem/g)].map((match) =>
+      Number.parseFloat(match[1] as string),
+    );
+    expect(steps.length).toBeGreaterThan(7);
+    expect(steps.filter((rem) => rem * 16 < 13)).toEqual([]);
+
+    const loose: string[] = [];
+    for (const name of STYLESHEETS) {
+      const css = readFileSync(join(webSrc, "styles", name), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      for (const match of css.matchAll(/font-size:\s*([^;]+);/g)) {
+        const value = (match[1] as string).trim();
+        if (!/^(var\(--(text|t)-[a-z0-9-]+\)|inherit|[\d.]+em)$/.test(value)) {
+          loose.push(`${name}: font-size: ${value}`);
+        }
+      }
+    }
+    expect(loose).toEqual([]);
   });
 });

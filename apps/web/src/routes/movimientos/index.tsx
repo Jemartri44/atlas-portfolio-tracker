@@ -77,11 +77,7 @@ export default function MovimientosRoute(): JSX.Element {
             >
               <MovementList rows={rows()} />
               <Show when={more()}>
-                <button
-                  type="button"
-                  class="secondary load-more"
-                  onClick={() => setPage(page() + 1)}
-                >
+                <button type="button" class="secondary block" onClick={() => setPage(page() + 1)}>
                   Cargar {Math.min(PAGE_SIZE, entries().length - rows().length)} más
                 </button>
               </Show>

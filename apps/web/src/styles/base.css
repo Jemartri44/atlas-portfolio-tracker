@@ -1,119 +1,119 @@
 /*
- * Base: typography, focus, numbers and the pieces every screen repeats.
- *
- * LINE BUDGET: the ceiling of decision (g) counts code. This is the vendored
- * Pico layer plus the element defaults every screen inherits; splitting it
- * would mean loading the reset in pieces, with the order deciding what applies.
+ * Base: a small reset and the element defaults that replaced Pico (ADR-0023).
+ * Everything uses :where(), so it carries zero specificity and any component
+ * class wins without a fight — the opposite of what Pico's defaults did.
  */
 
-body {
-  background-color: var(--c-bg);
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:where(html) {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(body) {
+  background-color: var(--c-canvas);
   color: var(--c-text);
-  font-size: var(--t-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--lh-body);
   margin: 0;
   min-height: 100dvh;
-  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
 }
 
-/* Titles are content, not a band of chrome (prompt §3.5). */
-h1 {
-  font-size: var(--t-page);
-  font-weight: var(--w-semibold);
-  letter-spacing: -0.01em;
-  margin: 0 0 var(--s-1);
-}
-
-/* From the rail layout there is width to spare: the title takes its full step. */
-@media (min-width: 768px) {
-  h1 {
-    font-size: var(--t-xl);
-  }
-}
-
-h2 {
-  font-size: var(--t-lg);
-  font-weight: var(--w-semibold);
-  margin: 0 0 var(--s-2);
-}
-
-h3 {
-  font-size: var(--t-md);
-  font-weight: var(--w-semibold);
-  margin: 0 0 var(--s-1);
-}
-
-p {
-  margin: 0 0 var(--s-3);
-}
-
-/* A visible focus ring, in both themes, on everything. */
-:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--c-accent);
-  outline-offset: 2px;
-  border-radius: var(--r-sm);
-}
-
-/* Every interactive control reaches the recommended target size. */
-:where(button, [role="button"]) {
-  min-height: var(--tap);
-}
-
-:where(input, select, textarea) {
-  min-height: var(--tap);
-  margin-bottom: 0;
-}
-
-/*
- * The switch is the exception, and it has to be one.
- *
- * Pico draws it as an oval of 2.25em by 1.25em — 36x20 at the size of a form
- * control — and its knob is a circle of `height: 100%`. Forcing `--tap` on it
- * left a box of 36x44 with a knob of 44: a blue crescent that does not read as
- * a switch at all (measured in the review of 2026-09-18: 36x44, radius 20px).
- *
- * The 44px target is the business of the **label**, `.switch-inline` below,
- * which is what the finger actually hits. `:where()` above carries no
- * specificity, so this rule wins without an `!important`.
- */
-[type="checkbox"][role="switch"] {
-  flex: 0 0 auto;
-  min-height: 0;
-}
-
-/*
- * A switch and its text on one line: the status bar and the settings screen use
- * the same row, so the touch target is defined once. `min-height` on the label
- * is what makes the target 44px tall while the control keeps its proportion.
- */
-.switch-inline {
-  align-items: center;
-  cursor: pointer;
-  display: flex;
-  gap: var(--s-2);
+:where(h1, h2, h3, h4, p, ul, ol, dl, dd, figure, blockquote, pre) {
   margin: 0;
-  min-height: var(--tap);
 }
 
-/* Numbers: tabular, right-aligned, never reflowing as digits change. */
+:where(ul, ol) {
+  list-style: none;
+  padding: 0;
+}
+
+:where(h1, h2, h3) {
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-snug);
+}
+
+:where(h1) {
+  font-size: var(--text-xl);
+}
+
+:where(h2) {
+  font-size: var(--text-lg);
+}
+
+:where(h3) {
+  font-size: var(--text-md);
+}
+
+:where(a) {
+  color: var(--c-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+:where(a:hover) {
+  color: var(--c-accent-hover);
+}
+
+:where(strong, b) {
+  font-weight: var(--fw-semibold);
+}
+
+:where(code, pre) {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+:where(svg) {
+  flex: none;
+}
+
+:where(img, svg, canvas) {
+  display: block;
+  max-width: 100%;
+}
+
+:where(table) {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+:where(th) {
+  font-weight: var(--fw-medium);
+  text-align: left;
+}
+
+:where(hr) {
+  border: 0;
+  border-top: var(--border) solid var(--c-border);
+  margin: 0;
+}
+
+/* One focus ring, both themes, everything interactive. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--border-strong) solid var(--c-accent);
+  outline-offset: var(--space-0);
+}
+
+/* ---- Figures ------------------------------------------------------------ */
+
+/* Numbers in rows and columns align; a hero figure keeps proportional digits. */
 .num {
-  font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  text-align: right;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* Secondary: read, but not first. Never below this for anything with words. */
-.subtle {
-  color: var(--c-muted);
-  font-size: var(--t-sm);
-}
-
-/* Accessory: a date in a row, a count, a unit. Not prose. */
-.tiny {
-  color: var(--c-muted);
-  font-size: var(--t-xs);
-}
-
+/* Gains and losses: the sign is printed too, so colour is never alone. */
 .positive {
   color: var(--c-positive);
 }
@@ -122,16 +122,18 @@ p {
   color: var(--c-negative);
 }
 
-/* Sign and label carry the meaning too, never colour alone (prompt §3.9). */
+/* "sin dato": quiet, and never a zero. */
 .nodata {
-  color: var(--c-nodata);
-  font-style: normal;
+  color: var(--c-text-3);
 }
 
+/* The privacy mask: the same four dots whatever the amount they hide. */
 .mask {
-  color: var(--c-mask);
-  letter-spacing: 0.1em;
+  color: var(--c-text-3);
+  white-space: nowrap;
 }
+
+/* ---- Utilities ---------------------------------------------------------- */
 
 /* Announced by a screen reader, invisible on screen. */
 .sr-only {
@@ -144,207 +146,32 @@ p {
   width: 1px;
 }
 
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-}
-
-.spread {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-3);
-}
-
-.wrap {
-  flex-wrap: wrap;
-}
-
 .truncate {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/*
- * Two spacing helpers, because the alternative was an inline `style` attribute
- * and the production CSP blocks those (`style-src 'self'`, no unsafe-inline).
- */
-
-/* Already spaced by its container: adds no margin of its own. */
-.flush {
-  margin: 0;
+.meta {
+  color: var(--c-text-3);
+  font-size: var(--text-sm);
 }
 
-/* Opens a new group inside the same block, on the scale. */
-.spaced {
-  margin-top: var(--s-3);
+.icon {
+  height: var(--icon-md);
+  width: var(--icon-md);
 }
 
-/* Sections: a light card that groups without shouting. */
-.card {
-  background-color: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-lg);
-  padding: var(--s-4);
-}
-
-/*
- * The header of a section wraps: with no wrapping, "Ver el libro" stole the
- * width from "Últimos movimientos" and the title broke into two lines at 360px.
- * Wrapping puts the action on its own line when it does not fit and changes
- * nothing where it does.
- */
-.card > header {
-  align-items: baseline;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--s-1) var(--s-3);
-  margin-bottom: var(--s-3);
-}
-
-.card > header > h2 {
-  margin: 0;
-}
-
-/* Badges: state in words plus shape; colour is never the only signal. */
-.badge {
-  align-items: center;
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-pill);
-  color: var(--c-muted);
-  display: inline-flex;
-  font-size: var(--t-xs);
-  gap: var(--s-1);
-  line-height: 1;
-  padding: var(--s-1) var(--s-2);
-  white-space: nowrap;
-}
-
-.badge.is-warning {
-  background-color: var(--c-warning-bg);
-  border-color: transparent;
-  color: var(--c-warning);
-}
-
-.badge.is-negative {
-  background-color: var(--c-negative-bg);
-  border-color: transparent;
-  color: var(--c-negative);
-}
-
-.badge.is-positive {
-  background-color: var(--c-positive-bg);
-  border-color: transparent;
-  color: var(--c-positive);
-}
-
-/* Callouts: what needs attention, what went wrong, what is only information. */
-.callout {
-  border: 1px solid var(--c-border);
-  border-left: 3px solid var(--c-muted);
-  border-radius: var(--r-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-3);
-}
-
-.callout > .title {
-  font-weight: var(--w-semibold);
-}
-
-.callout.is-error {
-  background-color: var(--c-negative-bg);
-  border-color: transparent;
-  border-left-color: var(--c-negative);
-}
-
-.callout.is-warning {
-  background-color: var(--c-warning-bg);
-  border-color: transparent;
-  border-left-color: var(--c-warning);
-}
-
-.callout.is-info {
-  background-color: var(--c-surface);
-  border-left-color: var(--c-accent);
-}
-
-/* Tables: dense on the desktop, and never a horizontal scrollbar on a phone. */
-table {
-  font-size: var(--t-sm);
-  margin: 0;
-}
-
-th,
-td {
-  padding: var(--s-2) var(--s-2);
-}
-
-th {
-  color: var(--c-muted);
-  font-size: var(--t-xs);
-  font-weight: var(--w-medium);
-  text-transform: none;
-}
-
-/* Definition lists are how the event detail shows its fields. */
-dl.fields {
-  display: grid;
-  gap: 0 var(--s-3);
-  grid-template-columns: minmax(8rem, 12rem) 1fr;
-  margin: 0;
-}
-
-dl.fields > dt {
-  color: var(--c-muted);
-  font-size: var(--t-sm);
-  padding: var(--s-1) 0;
-}
-
-dl.fields > dd {
-  margin: 0;
-  padding: var(--s-1) 0;
-  overflow-wrap: anywhere;
-}
-
-/* A field carrying JSON wraps instead of scrolling sideways. */
-dl.fields pre {
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-@media (max-width: 480px) {
-  dl.fields {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  dl.fields > dt {
-    padding-bottom: 0;
-  }
-
-  dl.fields > dd {
-    padding-top: 0;
-    border-bottom: 1px solid var(--c-border);
-    padding-bottom: var(--s-2);
-    margin-bottom: var(--s-2);
-  }
+.icon-sm {
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }
 
 /*
  * No decorative animation anywhere; what little there is respects the choice.
- * `!important` is deliberate here: the override has to beat any animation
- * declared elsewhere, including Pico's, which is the whole purpose of the rule.
+ * `!important` is deliberate: the override has to beat any transition declared
+ * elsewhere, which is the whole purpose of the rule.
  */
 @media (prefers-reduced-motion: reduce) {
   /* biome-ignore-start lint/complexity/noImportantStyles: an accessibility override must win */

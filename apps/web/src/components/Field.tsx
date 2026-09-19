@@ -1,11 +1,14 @@
-// Form controls: native `<input>`, `<select>` and `<datalist>` (ADR-0017). On a
-// phone the native select gives the system wheel, which beats any combobox we
-// could write, and `inputmode="decimal"` gives the numeric keypad with a comma.
+// Form controls: native `<input>`, `<select>` and `<textarea>` (ADR-0017),
+// styled by our own base (`styles/controls.css`, ADR-0023). On a phone the
+// native select gives the system wheel, which beats any combobox we could
+// write, and `inputmode="decimal"` gives the numeric keypad with a comma.
 //
-// What the user is typing is **never masked**: the privacy mode hides the
-// presentation of data, not the entry (matiz de Q6).
+// Every field has the same anatomy (docs/design/system.md §5.10): the label
+// above, the control, then the hint and — when there is one — the error **in
+// line**, under the field it is about, with its icon.
 
 import { type JSX, Show } from "solid-js";
+import { Icon } from "./Icon.jsx";
 
 export interface Option {
   value: string;
@@ -39,14 +42,15 @@ const Wrapper = (props: BaseProps & { children: JSX.Element }): JSX.Element => (
     <label for={props.id}>{props.label}</label>
     {props.children}
     <Show when={props.hint !== undefined}>
-      <span class="hint" id={`${props.id}-hint`}>
+      <p class="hint" id={`${props.id}-hint`}>
         {props.hint}
-      </span>
+      </p>
     </Show>
     <Show when={props.error !== undefined}>
-      <span class="error" id={`${props.id}-error`} role="alert">
-        {props.error}
-      </span>
+      <p class="field-error" id={`${props.id}-error`} role="alert">
+        <Icon name="danger" />
+        <span>{props.error}</span>
+      </p>
     </Show>
   </div>
 );
@@ -98,23 +102,26 @@ interface SelectFieldProps extends BaseProps {
 
 export const SelectField = (props: SelectFieldProps): JSX.Element => (
   <Wrapper {...props}>
-    <select
-      id={props.id}
-      value={props.value}
-      aria-describedby={describedBy(props)}
-      aria-invalid={props.error === undefined ? undefined : true}
-      disabled={props.disabled}
-      onChange={(event) => props.onInput(event.currentTarget.value)}
-    >
-      <Show when={props.placeholder !== undefined}>
-        <option value="">{props.placeholder}</option>
-      </Show>
-      {props.options.map((option) => (
-        <option value={option.value}>
-          {option.hint === undefined ? option.label : `${option.label} — ${option.hint}`}
-        </option>
-      ))}
-    </select>
+    <div class="control has-chevron">
+      <select
+        id={props.id}
+        value={props.value}
+        aria-describedby={describedBy(props)}
+        aria-invalid={props.error === undefined ? undefined : true}
+        disabled={props.disabled}
+        onChange={(event) => props.onInput(event.currentTarget.value)}
+      >
+        <Show when={props.placeholder !== undefined}>
+          <option value="">{props.placeholder}</option>
+        </Show>
+        {props.options.map((option) => (
+          <option value={option.value}>
+            {option.hint === undefined ? option.label : `${option.label} — ${option.hint}`}
+          </option>
+        ))}
+      </select>
+      <Icon name="chevdown" class="icon-sm chev" />
+    </div>
   </Wrapper>
 );
 
@@ -126,11 +133,10 @@ interface SwitchProps {
   hint?: string | undefined;
 }
 
-// The same row as the status bar (`.switch-inline`): one class, one 44px
-// target, and the control keeps the proportion Pico gives it.
+/** A boolean: the switch and its words on one 44px row, the hint under it. */
 export const Switch = (props: SwitchProps): JSX.Element => (
   <div class="field">
-    <label for={props.id} class="switch-inline">
+    <label for={props.id} class="switch-row">
       <input
         id={props.id}
         type="checkbox"
@@ -142,7 +148,7 @@ export const Switch = (props: SwitchProps): JSX.Element => (
       <span>{props.label}</span>
     </label>
     <Show when={props.hint !== undefined}>
-      <span class="hint">{props.hint}</span>
+      <p class="hint">{props.hint}</p>
     </Show>
   </div>
 );

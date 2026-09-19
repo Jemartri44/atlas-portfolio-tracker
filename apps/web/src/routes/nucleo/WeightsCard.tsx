@@ -9,13 +9,14 @@ import { For, type JSX, Show } from "solid-js";
 import { Allocation, type AllocationSegment } from "../../components/chart/index.js";
 import {
   Amount,
-  Badge,
   type DataColumn,
   DataTable,
+  Disclosure,
   Figure,
   Price,
   PriceDetail,
   Section,
+  Tag,
 } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import type { WeightClassRow, WeightRow, WeightsView } from "../../view-models/core/index.js";
@@ -71,13 +72,13 @@ const ASSET_COLUMNS: readonly DataColumn<WeightRow>[] = [
         <Figure value={row.deviationPp} unit="points" coloured />
         <Show when={row.offTarget}>
           {" "}
-          <Badge tone="warning">fuera de umbral</Badge>
+          <Tag tone="caution">fuera de umbral</Tag>
         </Show>
       </>
     ),
     cardCell: (row) => (
       <Show when={row.offTarget}>
-        <Badge tone="warning">fuera de umbral</Badge>
+        <Tag tone="caution">fuera de umbral</Tag>
       </Show>
     ),
   },
@@ -89,11 +90,11 @@ const ClassLine = (props: { row: WeightClassRow }): JSX.Element => (
       <span class={`swatch is-class-${props.row.assetClass}`} /> {props.row.label}
       <Show when={props.row.belowMinimum}>
         {" "}
-        <Badge tone="warning">bajo el mínimo</Badge>
+        <Tag tone="caution">bajo el mínimo</Tag>
       </Show>
       <Show when={props.row.partial}>
         {" "}
-        <Badge tone="warning">parcial</Badge>
+        <Tag tone="caution">parcial</Tag>
       </Show>
     </span>
     <Figure value={props.row.weightPct} unit="percent" class="weight" />
@@ -136,9 +137,9 @@ export const WeightsCard = (props: { view: WeightsView }): JSX.Element => {
           <span class="row">
             <Amount value={props.view.total} missingReason="ninguna posición tiene precio" />
             <Show when={props.view.partial}>
-              <Badge tone="warning" title={`Faltan: ${props.view.missing.join(", ")}`}>
+              <Tag tone="caution" title={`Faltan: ${props.view.missing.join(", ")}`}>
                 parcial
-              </Badge>
+              </Tag>
             </Show>
           </span>
         </div>
@@ -150,14 +151,13 @@ export const WeightsCard = (props: { view: WeightsView }): JSX.Element => {
           </p>
         </Show>
 
-        <details class="by-asset">
-          <summary class="tiny">Ver activo por activo</summary>
+        <Disclosure label="Ver activo por activo">
           <DataTable
             label="Pesos por activo"
             columns={ASSET_COLUMNS}
             rows={props.view.classes.flatMap((row) => row.rows)}
           />
-        </details>
+        </Disclosure>
       </Show>
     </Section>
   );

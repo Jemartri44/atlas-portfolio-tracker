@@ -12,6 +12,7 @@ import { type JSX, Show } from "solid-js";
 import { formatDate } from "../../format/date.js";
 import { Amount } from "../Amount.jsx";
 import { type DataColumn, DataTable } from "../DataTable.jsx";
+import { Disclosure } from "../Disclosure.jsx";
 
 export interface ChartTableRow {
   date: string;
@@ -73,9 +74,8 @@ export const ChartTable = (props: ChartTableProps): JSX.Element => (
     <Show when={props.missing !== undefined}>
       <p class="note">{props.missing}</p>
     </Show>
-    <details class="chart-table">
-      <summary class="tiny">Ver los datos de la gráfica</summary>
+    <Disclosure label="Ver los datos de la gráfica">
       <DataTable label={props.caption} columns={columnsOf(props.headers)} rows={props.rows} />
-    </details>
+    </Disclosure>
   </>
 );

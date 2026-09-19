@@ -6,7 +6,7 @@
 import { type LedgerState, SUPPORTED_EVENT_TYPES } from "@atlas/domain";
 import { useSearchParams } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
-import { Field, SelectField } from "../../components/index.js";
+import { Disclosure, Field, SelectField, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventLabel } from "../../format/labels.js";
 import { displayName, nameIndex } from "../../format/names.js";
@@ -83,18 +83,23 @@ export const Filters = (props: {
       .filter(([, value]) => value !== "");
 
   return (
-    <details class="filters" open={active().length > 0}>
-      <summary>
-        <span class="row">
-          <span>Filtros</span>
+    <Disclosure
+      class="filters"
+      open={active().length > 0}
+      label={
+        <>
+          Filtros
           <Show when={active().length > 0}>
-            <span class="badge">{active().length}</span>
+            {" "}
+            <Tag>{active().length}</Tag>
           </Show>
-        </span>
-        <span class="tiny">
-          {props.shown} de {props.total}
-        </span>
-      </summary>
+          <span class="meta">
+            {" "}
+            · {props.shown} de {props.total}
+          </span>
+        </>
+      }
+    >
       <div class="body">
         <SelectField
           id="f-tipo"
@@ -180,6 +185,6 @@ export const Filters = (props: {
           </div>
         </Show>
       </div>
-    </details>
+    </Disclosure>
   );
 };

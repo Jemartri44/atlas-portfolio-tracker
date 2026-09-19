@@ -27,7 +27,7 @@ describe("numbers typed the Spanish way", () => {
     fillPurchase(host, "1.200,50");
     await press(host, "Ver el efecto");
 
-    expect(host.querySelector(".field .error")).toBeNull();
+    expect(host.querySelector(".field .field-error")).toBeNull();
     expect(host.querySelector(".preview")).not.toBeNull();
   });
 
@@ -38,7 +38,7 @@ describe("numbers typed the Spanish way", () => {
 
     const amount = host.querySelector("#f-amount");
     expect(amount?.getAttribute("aria-invalid")).toBe("true");
-    const error = amount?.closest(".field")?.querySelector(".error");
+    const error = amount?.closest(".field")?.querySelector(".field-error");
     expect(text(error)).toContain("escribe 1,5");
     expect(text(host)).not.toMatch(/dominio|amount|buy/);
     expect(host.querySelector(".preview")).toBeNull();

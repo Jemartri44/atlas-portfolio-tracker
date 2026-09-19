@@ -12,7 +12,7 @@ import {
   type Settings,
 } from "@atlas/domain";
 import { createSignal, For, type JSX, Show } from "solid-js";
-import { Badge, Field, Section, SelectField } from "../../components/index.js";
+import { Field, Section, SelectField, Tag } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
 import { formatDecimalString } from "../../format/number.js";
 import {
@@ -57,7 +57,7 @@ export const WeightsCard = (props: WeightsProps): JSX.Element => {
         <span class="row tiny">
           suman {formatDecimalString(total().total, { decimals: 2 })} de 100
           <Show when={!total().addsUp}>
-            <Badge tone="warning">no suman 100</Badge>
+            <Tag tone="caution">no suman 100</Tag>
           </Show>
         </span>
       }

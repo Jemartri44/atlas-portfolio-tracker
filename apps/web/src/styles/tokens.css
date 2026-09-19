@@ -1,169 +1,287 @@
 /*
- * One typographic scale, one space scale, one set of radii, one set of
- * semantic colours. **Nothing outside these scales** anywhere else: it is what
- * makes an application look like one piece (prompt §3.9).
+ * Atlas design tokens (docs/design/system.md §3). Every value the interface
+ * uses lives here; nothing outside this file writes a colour, a size, a radius
+ * or a shadow by hand.
  *
- * Surfaces, text and borders derive from Pico's own variables instead of being
- * redefined: Pico already resolves light and dark, including the system
- * preference and the `data-theme` override, so deriving means dark mode is
- * correct by construction instead of by maintenance. What Pico does not have —
- * positive, negative, warning and "no data" — is defined here for both themes.
+ * Direction: "papel y tinta". A warm paper canvas, white sheets, ink text and
+ * ONE accent, a Prussian ink blue, reserved for what can be pressed. Data
+ * colours (asset classes, chart series) are a separate, validated set and never
+ * double as the accent. Status colours are reserved for status and always ship
+ * with an icon and a word.
+ *
+ * LINE BUDGET: the light palette, the desktop steps and the dark palette twice
+ * (the system preference and the manual switch, which has to win both ways).
+ * The two dark blocks are the same list on purpose: a custom property cannot
+ * be shared between an `@media` block and an attribute selector.
  */
 
 :root {
-  /*
-   * Type scale (1.2 ratio, rounded to the half pixel at 16px root). Body text
-   * is `--t-md` (15px), `--t-sm` is what is secondary and `--t-xs` only what is
-   * accessory; **nothing that is meant to be read sits below `--t-sm`**.
-   *
-   * Two steps are outside the ratio and each exists for one place:
-   *   `--t-nav`  the label of the bottom bar, where five slots share the width
-   *              of a phone and "Movimientos" does not fit at 12px.
-   *   `--t-page` the `<h1>` of a screen on a phone. At `--t-xl` (22px) it was
-   *              1,47x the body and the owner read it as shouting; at `--t-lg`
-   *              it would tie with the card titles. From 768px there is room
-   *              and the `<h1>` goes back up to `--t-xl` (review of
-   *              2026-09-18).
-   */
-  --t-nav: 0.625rem;
-  --t-xs: 0.75rem;
-  --t-sm: 0.8125rem;
-  --t-md: 0.9375rem;
-  --t-lg: 1.125rem;
-  --t-page: 1.25rem;
-  --t-xl: 1.375rem;
-  --t-display: 2rem;
+  color-scheme: light;
 
-  /* Space scale. `--s-0` is the half step: two lines of the same block. */
-  --s-0: 0.125rem;
-  --s-1: 0.25rem;
-  --s-2: 0.5rem;
-  --s-3: 0.75rem;
-  --s-4: 1rem;
-  --s-5: 1.5rem;
-  --s-6: 2.25rem;
+  /* ---- Type ------------------------------------------------------------- */
 
-  /* Radii and weights. */
-  --r-sm: 0.375rem;
-  --r-md: 0.625rem;
-  --r-lg: 1rem;
-  --r-pill: 999px;
-  --w-regular: 400;
-  --w-medium: 500;
-  --w-semibold: 600;
-  --w-bold: 700;
+  /* System fonts only (CSP font-src 'self'): Segoe UI on Windows, Roboto on
+     Android, SF on Apple, each with tabular figures. */
+  --font-sans:
+    "Segoe UI Variable Text", "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, "Ubuntu Sans",
+    "Noto Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-mono:
+    ui-monospace, "Cascadia Mono", "Roboto Mono", "Ubuntu Sans Mono", Menlo, Consolas, monospace;
 
-  /* Minimum touch target (Apple HIG 44pt, Material 48dp; WCAG 2.5.8 asks 24). */
-  --tap: 2.75rem;
-  /* Compact target: a chip or its cross, above the 24px WCAG 2.5.8 asks for. */
-  --tap-compact: 2rem;
+  /* Phone scale. Nothing that is read goes below --text-xs (13px). */
+  --text-xs: 0.8125rem; /* 13 · captions, tags, column heads, tab labels */
+  --text-sm: 0.875rem; /* 14 · second line of a row, hints, meta */
+  --text-md: 1rem; /* 16 · body, first line of a row, controls */
+  --text-lg: 1.125rem; /* 18 · card titles */
+  --text-xl: 1.375rem; /* 22 · page title */
+  --text-2xl: 1.625rem; /* 26 · the figure that answers a card */
+  --text-display: 2.25rem; /* 36 · the one hero figure of a screen */
+  /* Form controls stay at 16px at every width: below it mobile Safari zooms. */
+  --text-control: 1rem;
 
-  /* Chrome. The breakpoint that swaps the bottom bar for the rail is 768px. */
-  --statusbar-h: 3rem;
-  --bottomnav-h: 3.75rem;
-  --rail-w: 13.5rem;
-  /* The glyph column of the rail: as wide as its widest glyph, the privacy
-     switch, which Pico draws 2.25em wide on a 1rem control. */
-  --rail-glyph: 2.25rem;
-  /*
-   * The widest the content gets beside the rail. At 62rem, and centred, a wide
-   * monitor left it floating in the middle of the void. It stops at 80rem
-   * because today's screens are one column: past it, the rows with a label on
-   * the left and a figure on the right, and the fields of a form, stretch
-   * beyond reading. Using more of the width is the job of the composition.
-   */
-  --content-max: 80rem;
+  --lh-tight: 1.15;
+  --lh-snug: 1.3;
+  --lh-body: 1.5;
 
-  /* Inline icons, and the widest a lone control gets inside a row. */
-  --icon: 1.375rem;
-  --icon-sm: 1.25rem;
-  --control-max: 14rem;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
 
-  /* Surfaces and text, from Pico. */
-  --c-bg: var(--pico-background-color);
-  --c-surface: var(--pico-card-background-color);
-  --c-surface-2: var(--pico-code-background-color);
-  --c-border: var(--pico-muted-border-color);
-  --c-text: var(--pico-color);
-  --c-muted: var(--pico-muted-color);
-  --c-accent: var(--pico-primary);
-  --c-accent-bg: var(--pico-primary-background);
-  --c-accent-inverse: var(--pico-primary-inverse);
+  --tracking-tight: -0.015em;
+  --tracking-display: -0.025em;
 
-  /* Finance semantics: light theme. */
-  --c-positive: #0b6b43;
-  --c-positive-bg: #e4f4ec;
-  --c-negative: #a42017;
-  --c-negative-bg: #fceceb;
-  --c-warning: #7a4d00;
-  --c-warning-bg: #fdf1dc;
-  --c-nodata: var(--pico-muted-color);
-  --c-mask: var(--pico-muted-color);
+  /* ---- Space (4px grid) ------------------------------------------------- */
 
-  /*
-   * Chart series. Four distinguishable hues, but the colour is **never** the
-   * only carrier: every series also has its own dash pattern and its name in
-   * the legend (decision (f) of the 006).
-   */
-  --c-series-core: #2d6cdf;
-  --c-series-bucket: #b8620f;
-  --c-series-cash: #4a7a63;
-  --c-series-index: #6b6f7a;
+  --space-0: 0.125rem; /* 2 */
+  --space-1: 0.25rem; /* 4 */
+  --space-2: 0.5rem; /* 8 */
+  --space-3: 0.75rem; /* 12 */
+  --space-4: 1rem; /* 16 */
+  --space-5: 1.25rem; /* 20 */
+  --space-6: 1.5rem; /* 24 */
+  --space-7: 2rem; /* 32 */
+  --space-8: 2.5rem; /* 40 */
+  --space-9: 3rem; /* 48 */
 
-  /* The four core asset classes, for the allocation bar. */
-  --c-class-equity: #2d6cdf;
-  --c-class-fixed_income: #4a7a63;
-  --c-class-gold: #b8860b;
-  --c-class-crypto: #7a4fd0;
+  /* ---- Shape ------------------------------------------------------------ */
+
+  --radius-sm: 0.375rem; /* 6 · skeleton lines, bars */
+  --radius-md: 0.5rem; /* 8 · buttons, fields, segmented items */
+  --radius-lg: 0.75rem; /* 12 · cards, notices, panels */
+  --radius-xl: 1rem; /* 16 · dialogs */
+  --radius-pill: 999px;
+
+  --border: 1px;
+  --border-strong: 2px; /* focus ring, current-step ring */
+
+  /* ---- Sizes ------------------------------------------------------------ */
+
+  --tap: 2.75rem; /* 44 · minimum touch target */
+  --control-h: 2.75rem; /* 44 · field and button height */
+  --icon-sm: 1rem;
+  --icon-md: 1.25rem;
+  --icon-lg: 1.5rem;
+  --swatch-w: 0.75rem;
+  --swatch-h: 0.25rem;
+  --bar-h: 0.75rem; /* allocation and share bars */
+  --gauge-w: 4.5rem; /* deviation gauge */
+  --mask-w: 2.4em; /* the four dots of the privacy mask, always this wide */
+  --chart-h: 11.5rem;
+  --chart-h-wide: 15rem;
+  --lead-size: 2.25rem; /* the round icon that opens a row */
+  --glyph-size: 2.75rem; /* the round glyph of an empty state */
+  --mark-size: 1.75rem; /* the number of a first step */
+
+  /* ---- Layout ----------------------------------------------------------- */
+
+  --gutter: var(--space-4);
+  --grid-gap: var(--space-3);
+  --content-max: 105rem; /* 1680 */
+  --reading-max: 40rem; /* forms and prose never run wider than this */
+  --choice-max: 60rem; /* the two options of the first run */
+  --statusbar-h: 3.25rem; /* 52 */
+  --tabbar-h: 4rem; /* 64 */
+  --topbar-h: 4rem; /* 64 */
+  --tabbar-max: 40rem; /* the bottom bar stops growing on a tablet */
+  --label-col: 4.5rem; /* the label column of the allocation bars */
+  --dialog-max: 34rem;
+
+  /* ---- Motion ----------------------------------------------------------- */
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+
+  /* ---- Colour: light ---------------------------------------------------- */
+
+  --c-canvas: #f3f2ee; /* the page: warm paper */
+  --c-surface: #ffffff; /* cards, bars, dialogs */
+  --c-raised: #ffffff; /* the current tab on its track */
+  --c-fill: #f0efea; /* wells: pending block, skeleton, tab track */
+  --c-fill-hover: #e9e7e1;
+  --c-border: #e3e1db; /* hairlines */
+  --c-border-control: #8f8c84; /* field and secondary-button outline, 3:1 */
+  --c-backdrop: rgb(28 27 24 / 0.45);
+
+  --c-text: #1c1b18; /* ink */
+  --c-text-2: #54524c; /* second line, labels */
+  --c-text-3: #66645d; /* meta, captions, the mask */
+
+  --c-accent: #1f4f7c; /* Prussian ink: links, primary, current tab, focus */
+  --c-accent-hover: #183f63;
+  --c-accent-soft: #e4ecf5; /* current tab pill, privacy-on pill */
+  --c-accent-soft-text: #1f4f7c;
+  --c-on-accent: #ffffff;
+
+  --c-positive: #1b6a44; /* gains: always with a sign */
+  --c-negative: #a2392b; /* losses: always with a sign */
+
+  --c-caution: #80530a; /* needs a look */
+  --c-caution-icon: #a8700f;
+  --c-caution-soft: #faf0dc;
+  --c-danger: #9e2f27; /* a real problem; destructive actions */
+  --c-danger-soft: #fbe9e5;
+  --c-danger-border: #e3aca3;
+  --c-on-danger: #ffffff;
+  --c-done: #1b6a44; /* a completed step */
+
+  /* Data colours, validated as a set (lightness band, chroma, CVD ΔE ≥ 8,
+     normal-vision ΔE ≥ 15, ≥ 3:1 on the surface). Order is the domain order. */
+  --c-class-equity: #4166b4;
+  --c-class-fixed-income: #178a70;
+  --c-class-gold: #b07f1f;
+  --c-class-crypto: #8a58a8;
+
+  --c-series-core: #4166b4;
+  --c-series-bucket: #b07f1f;
+  --c-series-cash: #178a70;
+  --c-series-index: #8a8880;
+
+  --c-chart-grid: #ebe9e3;
+  --c-chart-axis: #c9c6be;
+  --c-chart-gap: #f3f1ec;
+  --c-chart-gap-edge: #d6d3cb;
+
+  /* ---- Elevation -------------------------------------------------------- */
+
+  --shadow-1: 0 1px 2px rgb(28 27 24 / 0.05);
+  --shadow-2: 0 1px 2px rgb(28 27 24 / 0.05), 0 4px 12px rgb(28 27 24 / 0.06);
+  --shadow-3: 0 16px 40px rgb(28 27 24 / 0.18);
+  --shadow-bar: 0 -1px 0 var(--c-border), 0 -6px 16px rgb(28 27 24 / 0.04);
 }
 
-/* Dark, following the system preference unless the user forced light. */
-@media only screen and (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --c-positive: #58cf94;
-    --c-positive-bg: #12301f;
-    --c-negative: #ff8b80;
-    --c-negative-bg: #341715;
-    --c-warning: #e8bc55;
-    --c-warning-bg: #322609;
-    --c-series-core: #7aa8ff;
-    --c-series-bucket: #f0a45e;
-    --c-series-cash: #79c2a4;
-    --c-series-index: #a3a8b4;
-    --c-class-equity: #7aa8ff;
-    --c-class-fixed_income: #79c2a4;
-    --c-class-gold: #e0b558;
-    --c-class-crypto: #b193f0;
+/* Desktop steps: a little more type where there is distance to the eye. */
+@media (min-width: 64rem) {
+  :root {
+    --text-md: 0.9375rem; /* 15 */
+    --text-lg: 1.0625rem; /* 17 */
+    --text-xl: 1.625rem; /* 26 */
+    --text-2xl: 1.75rem; /* 28 */
+    --text-display: 2.75rem; /* 44 */
+    --gutter: var(--space-7);
+    --grid-gap: var(--space-5);
+    --chart-h: var(--chart-h-wide);
   }
 }
 
-/* Dark, forced by the switch. */
-[data-theme="dark"] {
-  --c-positive: #58cf94;
-  --c-positive-bg: #12301f;
-  --c-negative: #ff8b80;
-  --c-negative-bg: #341715;
-  --c-warning: #e8bc55;
-  --c-warning-bg: #322609;
-  --c-series-core: #7aa8ff;
-  --c-series-bucket: #f0a45e;
-  --c-series-cash: #79c2a4;
-  --c-series-index: #a3a8b4;
-  --c-class-equity: #7aa8ff;
-  --c-class-fixed_income: #79c2a4;
-  --c-class-gold: #e0b558;
-  --c-class-crypto: #b193f0;
+@media (min-width: 40rem) and (max-width: 63.99rem) {
+  :root {
+    --gutter: var(--space-6);
+    --grid-gap: var(--space-4);
+  }
 }
 
-/* Pico, tuned to the scales above: a data application wants less air than a blog. */
-:root {
-  --pico-font-size: 100%;
-  --pico-border-radius: var(--r-md);
-  --pico-spacing: var(--s-4);
-  --pico-typography-spacing-vertical: var(--s-3);
-  --pico-block-spacing-vertical: var(--s-4);
-  --pico-block-spacing-horizontal: var(--s-4);
-  --pico-form-element-spacing-vertical: 0.6rem;
-  --pico-form-element-spacing-horizontal: var(--s-3);
-  --pico-line-height: 1.45;
+/* ---- Colour: dark ------------------------------------------------------ */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c-canvas: #161615;
+    --c-surface: #1f1f1d;
+    --c-raised: #3a3a36;
+    --c-fill: #2a2a27;
+    --c-fill-hover: #33332f;
+    --c-border: #30302d;
+    --c-border-control: #76746d;
+    --c-backdrop: rgb(0 0 0 / 0.6);
+    --c-text: #edece8;
+    --c-text-2: #bdbbb4;
+    --c-text-3: #9e9c95;
+    --c-accent: #8fb6e3;
+    --c-accent-hover: #a9c8ec;
+    --c-accent-soft: #223246;
+    --c-accent-soft-text: #a9c8ec;
+    --c-on-accent: #0f1c2c;
+    --c-positive: #6fc79a;
+    --c-negative: #f0917e;
+    --c-caution: #e8b659;
+    --c-caution-icon: #d9a441;
+    --c-caution-soft: #352a14;
+    --c-danger: #f29a8a;
+    --c-danger-soft: #3b1f1b;
+    --c-danger-border: #7a3a30;
+    --c-on-danger: #2a0f0b;
+    --c-done: #6fc79a;
+    --c-class-equity: #5b8fd6;
+    --c-class-fixed-income: #2a9f80;
+    --c-class-gold: #b98521;
+    --c-class-crypto: #a476c8;
+    --c-series-core: #5b8fd6;
+    --c-series-bucket: #b98521;
+    --c-series-cash: #2a9f80;
+    --c-series-index: #8f8d86;
+    --c-chart-grid: #2a2a27;
+    --c-chart-axis: #45443f;
+    --c-chart-gap: #242422;
+    --c-chart-gap-edge: #3a3a36;
+    --shadow-1: 0 0 0 transparent;
+    --shadow-2: 0 4px 16px rgb(0 0 0 / 0.3);
+    --shadow-3: 0 16px 48px rgb(0 0 0 / 0.5);
+    --shadow-bar: 0 -1px 0 var(--c-border);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-canvas: #161615;
+  --c-surface: #1f1f1d;
+  --c-raised: #3a3a36;
+  --c-fill: #2a2a27;
+  --c-fill-hover: #33332f;
+  --c-border: #30302d;
+  --c-border-control: #76746d;
+  --c-backdrop: rgb(0 0 0 / 0.6);
+  --c-text: #edece8;
+  --c-text-2: #bdbbb4;
+  --c-text-3: #9e9c95;
+  --c-accent: #8fb6e3;
+  --c-accent-hover: #a9c8ec;
+  --c-accent-soft: #223246;
+  --c-accent-soft-text: #a9c8ec;
+  --c-on-accent: #0f1c2c;
+  --c-positive: #6fc79a;
+  --c-negative: #f0917e;
+  --c-caution: #e8b659;
+  --c-caution-icon: #d9a441;
+  --c-caution-soft: #352a14;
+  --c-danger: #f29a8a;
+  --c-danger-soft: #3b1f1b;
+  --c-danger-border: #7a3a30;
+  --c-on-danger: #2a0f0b;
+  --c-done: #6fc79a;
+  --c-class-equity: #5b8fd6;
+  --c-class-fixed-income: #2a9f80;
+  --c-class-gold: #b98521;
+  --c-class-crypto: #a476c8;
+  --c-series-core: #5b8fd6;
+  --c-series-bucket: #b98521;
+  --c-series-cash: #2a9f80;
+  --c-series-index: #8f8d86;
+  --c-chart-grid: #2a2a27;
+  --c-chart-axis: #45443f;
+  --c-chart-gap: #242422;
+  --c-chart-gap-edge: #3a3a36;
+  --shadow-1: 0 0 0 transparent;
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 0.3);
+  --shadow-3: 0 16px 48px rgb(0 0 0 / 0.5);
+  --shadow-bar: 0 -1px 0 var(--c-border);
 }

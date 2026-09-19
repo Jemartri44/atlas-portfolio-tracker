@@ -6,7 +6,7 @@
 // column of dashes is not an explanation.
 
 import { type JSX, Show } from "solid-js";
-import { Amount, Badge, type DataColumn, DataTable, Section } from "../../components/index.js";
+import { Amount, type DataColumn, DataTable, Section, Tag } from "../../components/index.js";
 import type { ThesesView, ThesisRow } from "../../view-models/bucket/index.js";
 
 const COLUMNS: readonly DataColumn<ThesisRow>[] = [
@@ -24,10 +24,10 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
     card: "meta",
     cell: (row) => (
       <>
-        <Badge tone={row.open ? "neutral" : undefined}>{row.status}</Badge>
+        <Tag tone={row.open ? "neutral" : undefined}>{row.status}</Tag>
         <Show when={row.horizonExceeded && row.open}>
           {" "}
-          <Badge tone="warning">plazo superado</Badge>
+          <Tag tone="caution">plazo superado</Tag>
         </Show>
       </>
     ),

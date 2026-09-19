@@ -10,7 +10,7 @@
 // "within limits": the absence of a measurement is not a pass.
 
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Badge, Callout, Figure, Section, StatLine } from "../../components/index.js";
+import { Amount, Callout, Figure, Section, StatLine, Tag } from "../../components/index.js";
 import type { ControlsView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
 
@@ -45,8 +45,8 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
       when={props.view.lossUnavailable === undefined}
       fallback={
         <p class="note flush">
-          <Badge tone="warning">no evaluada</Badge> {props.view.lossUnavailable}. Sin ese dato no
-          hay control de pérdida acumulada; no es que no la haya.
+          <Tag tone="caution">no evaluada</Tag> {props.view.lossUnavailable}. Sin ese dato no hay
+          control de pérdida acumulada; no es que no la haya.
         </p>
       }
     >
@@ -64,8 +64,8 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
       when={props.view.weightUnavailable === undefined}
       fallback={
         <p class="note flush">
-          <Badge tone="warning">no evaluada</Badge> {props.view.weightUnavailable}. Sin ese dato no
-          hay control de peso del cubo; no es que esté dentro.
+          <Tag tone="caution">no evaluada</Tag> {props.view.weightUnavailable}. Sin ese dato no hay
+          control de peso del cubo; no es que esté dentro.
         </p>
       }
     >
@@ -88,7 +88,7 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
           Patrimonio total
           <Show when={props.worth.partial}>
             {" "}
-            <Badge tone="warning">parcial</Badge>
+            <Tag tone="caution">parcial</Tag>
           </Show>
         </span>
         <Amount value={props.worth.total} />

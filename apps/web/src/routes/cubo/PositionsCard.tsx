@@ -7,13 +7,13 @@
 import { type JSX, Show } from "solid-js";
 import {
   Amount,
-  Badge,
   type DataColumn,
   DataTable,
   Figure,
   Price,
   PriceDetail,
   Section,
+  Tag,
 } from "../../components/index.js";
 import type { BucketPositionRow, BucketPositionsView } from "../../view-models/bucket/index.js";
 
@@ -89,12 +89,12 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
 const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
   <Show when={props.row.thesisId !== undefined}>
     <span class="row wrap">
-      <Badge>tesis abierta</Badge>
+      <Tag>tesis abierta</Tag>
       <span class="tiny">
         {props.row.daysOpen} de {props.row.horizonDays} días
       </span>
       <Show when={props.row.horizonExceeded}>
-        <Badge tone="warning">plazo superado</Badge>
+        <Tag tone="caution">plazo superado</Tag>
       </Show>
     </span>
     <Show when={props.row.invalidation !== undefined}>
@@ -122,9 +122,9 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
           Total del cubo
           <Show when={props.view.partial}>
             {" "}
-            <Badge tone="warning" title={`Faltan: ${props.view.missing.join(", ")}`}>
+            <Tag tone="caution" title={`Faltan: ${props.view.missing.join(", ")}`}>
               parcial
-            </Badge>
+            </Tag>
           </Show>
         </span>
         <span class="row">

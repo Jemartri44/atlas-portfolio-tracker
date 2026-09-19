@@ -8,7 +8,7 @@
 import { deepCheck, type IntegrityFinding, integrity } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
-import { Badge, Callout } from "../../components/index.js";
+import { Callout, Disclosure, Tag } from "../../components/index.js";
 import { type EventReferences, eventReferences } from "../../format/events.js";
 import { describeError } from "../../format/messages/errors.js";
 import { describeFinding } from "../../format/messages/findings.js";
@@ -30,9 +30,9 @@ const Findings = (props: {
       {(finding) => (
         <div class={`callout is-${finding.severity === "error" ? "error" : "warning"}`}>
           <span class="title">
-            <Badge tone={finding.severity === "error" ? "negative" : "warning"}>
+            <Tag tone={finding.severity === "error" ? "danger" : "caution"}>
               {finding.severity === "error" ? "error" : "aviso"}
-            </Badge>{" "}
+            </Tag>{" "}
             {describeFinding(finding).what}
           </span>
           <span>{describeFinding(finding).todo}</span>
@@ -42,12 +42,11 @@ const Findings = (props: {
             It goes folded, like the code of an error: the explanation is
             Spanish, the evidence is raw.
           */}
-          <details class="technical">
-            <summary class="tiny">Detalle técnico</summary>
-            <p class="tiny flush">
+          <Disclosure label="Detalle técnico">
+            <p class="meta">
               <code>{finding.code}</code> · {maskFigures(finding.message, props.privacy)}
             </p>
-          </details>
+          </Disclosure>
           <Show when={finding.event_ids.length > 0}>
             <span class="tiny">
               <For each={finding.event_ids}>
@@ -90,7 +89,7 @@ export default function VerificacionRoute(): JSX.Element {
                 <section class="card">
                   <header>
                     <h2>Eventos inválidos</h2>
-                    <Badge tone="negative">{invalid().length}</Badge>
+                    <Tag tone="danger">{invalid().length}</Tag>
                   </header>
                   <p class="subtle">
                     Mientras los haya, se puede consultar pero no registrar. Rectifica cada uno
@@ -117,7 +116,7 @@ export default function VerificacionRoute(): JSX.Element {
                 <header>
                   <h2>Integridad</h2>
                   <Show when={findings().length === 0}>
-                    <Badge tone="positive">sin hallazgos</Badge>
+                    <Tag tone="done">sin hallazgos</Tag>
                   </Show>
                 </header>
                 <Show

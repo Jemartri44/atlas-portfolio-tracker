@@ -6,7 +6,7 @@ import type { EventPreview, LedgerState } from "@atlas/domain";
 import { accounts, corporateActionDraft, Quantity } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Amount, Badge, Callout, EmptyState } from "../../../components/index.js";
+import { Amount, Callout, EmptyState, Tag } from "../../../components/index.js";
 import { displayName, nameIndex } from "../../../format/names.js";
 import { toAppError } from "../../../ledger/errors.js";
 import { attempt } from "../../../ledger/query.js";
@@ -234,7 +234,7 @@ export default function CorporateFormRoute(): JSX.Element {
                   onConfirm={() => void onConfirm(true)}
                 >
                   <p>
-                    <Badge tone="warning">ojo</Badge> Un evento corporativo repetido transforma los
+                    <Tag tone="caution">ojo</Tag> Un evento corporativo repetido transforma los
                     lotes dos veces: comprueba que no es el mismo antes de insistir.
                   </p>
                 </DuplicateDialog>

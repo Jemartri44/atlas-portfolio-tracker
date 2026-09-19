@@ -14,8 +14,8 @@ const root = document.querySelector("#app");
 
 if (root !== null) {
   render(() => {
-    // The theme follows the system unless the user forced one; Pico reads
-    // `data-theme` natively, so nothing else is needed.
+    // The theme follows the system unless the user forced one; the tokens read
+    // `data-theme` both ways (styles/tokens.css), so nothing else is needed.
     createEffect(() => {
       const theme = store.theme();
       if (theme === "system") {

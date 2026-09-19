@@ -105,7 +105,7 @@ describe("the form, rendered", () => {
     await press(host, "Ver el efecto");
 
     const field = host.querySelector("#f-value_date")?.closest(".field");
-    expect(text(field?.querySelector(".error"))).toBe(
+    expect(text(field?.querySelector(".field-error"))).toBe(
       "La fecha valor no puede ser anterior a la de contratación.",
     );
   });

@@ -14,6 +14,7 @@ import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import { type AppError, messageWithLine } from "../ledger/state.js";
 import { Callout } from "./Callout.jsx";
+import { Disclosure } from "./Disclosure.jsx";
 
 interface ErrorViewProps {
   error: AppError;
@@ -28,13 +29,12 @@ interface ErrorViewProps {
  * makes a message unreadable, so it is one click away and never in the way.
  */
 const Technical = (props: { error: AppError }): JSX.Element => (
-  <details class="technical">
-    <summary class="tiny">Detalle técnico</summary>
-    <p class="tiny flush">
+  <Disclosure label="Detalle técnico">
+    <p class="meta">
       <code>{props.error.code}</code>
       <Show when={props.error.line !== undefined}> · línea {props.error.line}</Show>
     </p>
-  </details>
+  </Disclosure>
 );
 
 export const ErrorView = (props: ErrorViewProps): JSX.Element => (

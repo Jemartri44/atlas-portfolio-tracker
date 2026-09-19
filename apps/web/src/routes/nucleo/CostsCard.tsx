@@ -16,12 +16,12 @@ import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import {
   Amount,
-  Badge,
   type DataColumn,
   DataTable,
   Figure,
   Section,
   StandaloneFees,
+  Tag,
 } from "../../components/index.js";
 import type { CoreCostRowView, CostsView } from "../../view-models/core/index.js";
 
@@ -85,7 +85,7 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
           Comisiones de operaciones del núcleo
           <Show when={props.view.core.partial}>
             {" "}
-            <Badge tone="warning">parcial</Badge>
+            <Tag tone="caution">parcial</Tag>
           </Show>
         </span>
         <span class="row">

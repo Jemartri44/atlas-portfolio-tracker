@@ -6,7 +6,7 @@
 // (rule 14).
 
 import { type JSX, Show } from "solid-js";
-import { Amount, Badge, Figure, Section, StatLine } from "../../components/index.js";
+import { Amount, Figure, Section, StatLine, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { countOf } from "../../format/number.js";
 import type { StatsView } from "../../view-models/bucket/index.js";
@@ -61,9 +61,9 @@ export const StatsCard = (props: { view: StatsView }): JSX.Element => (
 
     <Show when={props.view.excluded.length > 0}>
       <p class="note">
-        <Badge tone="warning">fuera de las medias</Badge> Las tesis {props.view.excluded.join("; ")}
-        : sus ventas consumieron lotes comprados por otra tesis, porque el FIFO es global entre
-        todas, así que su resultado no es solo suyo.
+        <Tag tone="caution">fuera de las medias</Tag> Las tesis {props.view.excluded.join("; ")}:
+        sus ventas consumieron lotes comprados por otra tesis, porque el FIFO es global entre todas,
+        así que su resultado no es solo suyo.
       </p>
     </Show>
   </Section>

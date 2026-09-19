@@ -11,12 +11,12 @@ import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import {
   Amount,
-  Badge,
   type DataColumn,
   DataTable,
   ErrorView,
   Figure,
   Section,
+  Tag,
 } from "../../components/index.js";
 import type { AppError } from "../../ledger/state.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
@@ -107,7 +107,7 @@ export const ContributionCard = (props: {
               <span class="row">
                 <Amount value={view().amount} />
                 <Show when={view().fromSettings}>
-                  <Badge title="Configurada en Ajustes">de la configuración</Badge>
+                  <Tag title="Configurada en Ajustes">de la configuración</Tag>
                 </Show>
               </span>
             </div>
@@ -116,8 +116,8 @@ export const ContributionCard = (props: {
               <Amount value={view().bucketBudget} />
             </div>
             <p class="note flush">
-              <Badge>presupuesto, no asignación</Badge> El cubo se lleva su parte antes del reparto
-              y nunca entra en los pesos objetivo.
+              <Tag>presupuesto, no asignación</Tag> El cubo se lleva su parte antes del reparto y
+              nunca entra en los pesos objetivo.
             </p>
             <div class="spread">
               <span class="subject">A repartir en el núcleo</span>

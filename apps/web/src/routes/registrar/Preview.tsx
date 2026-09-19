@@ -10,7 +10,7 @@
 
 import type { EventPreview } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Badge, Callout } from "../../components/index.js";
+import { Amount, Callout, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
@@ -30,11 +30,11 @@ const Change = (props: { row: ChangeRow; empty: string }): JSX.Element => (
       {props.row.label}
       <Show when={props.row.isNew}>
         {" "}
-        <Badge tone="positive">nuevo</Badge>
+        <Tag tone="done">nuevo</Tag>
       </Show>
       <Show when={props.row.closed}>
         {" "}
-        <Badge>cerrado</Badge>
+        <Tag>cerrado</Tag>
       </Show>
     </span>
     <span class="values">

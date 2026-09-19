@@ -8,7 +8,7 @@
 
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout, ErrorView } from "../../components/index.js";
+import { Callout, ErrorView, Tag } from "../../components/index.js";
 import { countOf } from "../../format/number.js";
 import { openBrowserLedger, openDirectoryLedger, reconnect } from "../../ledger/actions.js";
 import { toAppError } from "../../ledger/errors.js";
@@ -124,7 +124,7 @@ export default function LibroRoute(): JSX.Element {
           <article class="card">
             <header>
               <h2>El fichero de mi ordenador</h2>
-              <span class="badge is-positive">Recomendado</span>
+              <Tag tone="done">Recomendado</Tag>
             </header>
             <p>
               Eliges la carpeta que contiene tu <code>ledger.jsonl</code> y la aplicación escribe en{" "}
@@ -141,7 +141,7 @@ export default function LibroRoute(): JSX.Element {
           <header>
             <h2>El almacenamiento del navegador</h2>
             <Show when={!canUseDirectory()}>
-              <span class="badge">Única vía en este navegador</span>
+              <Tag>Única vía en este navegador</Tag>
             </Show>
           </header>
           <p>

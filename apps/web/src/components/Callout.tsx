@@ -25,21 +25,6 @@ export const Callout = (props: CalloutProps): JSX.Element => (
   </div>
 );
 
-interface BadgeProps {
-  children: JSX.Element;
-  tone?: "neutral" | "positive" | "negative" | "warning" | undefined;
-  title?: string | undefined;
-}
-
-export const Badge = (props: BadgeProps): JSX.Element => (
-  <span
-    class={`badge${props.tone === undefined || props.tone === "neutral" ? "" : ` is-${props.tone}`}`}
-    title={props.title}
-  >
-    {props.children}
-  </span>
-);
-
 interface EmptyStateProps {
   /** What is empty, in one line. */
   what: string;

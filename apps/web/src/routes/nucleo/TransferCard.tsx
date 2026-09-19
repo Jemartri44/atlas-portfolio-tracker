@@ -11,16 +11,17 @@ import { simulateTransfer } from "@atlas/domain";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import {
   Amount,
-  Badge,
   Callout,
   type DataColumn,
   DataTable,
+  Disclosure,
   ErrorView,
   Field,
   Figure,
   Section,
   SelectField,
   Switch,
+  Tag,
 } from "../../components/index.js";
 import { parseDecimalInput } from "../../format/input.js";
 import { describeWarning } from "../../format/messages/warnings.js";
@@ -119,8 +120,7 @@ export const TransferCard = (props: TransferCardProps): JSX.Element => {
 
   return (
     <Section title="Simulador de traspaso">
-      <details class="simulator">
-        <summary class="tiny">Probar un traspaso entre fondos</summary>
+      <Disclosure label="Probar un traspaso entre fondos">
         <div class="fieldset">
           <SelectField
             id="tr-from"
@@ -190,13 +190,13 @@ export const TransferCard = (props: TransferCardProps): JSX.Element => {
                 )}
               </For>
               <p class="note">
-                <Badge>nada registrado</Badge> Es una simulación: la orden se da a mano en la
-                gestora y se registra después.
+                <Tag>nada registrado</Tag> Es una simulación: la orden se da a mano en la gestora y
+                se registra después.
               </p>
             </div>
           )}
         </Show>
-      </details>
+      </Disclosure>
     </Section>
   );
 };

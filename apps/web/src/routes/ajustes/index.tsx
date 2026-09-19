@@ -145,7 +145,7 @@ export default function AjustesRoute(): JSX.Element {
                   </A>
                   <button
                     type="button"
-                    class="secondary outline"
+                    class="secondary"
                     disabled={busy()}
                     onClick={() => void changeLedger()}
                   >

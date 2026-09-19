@@ -6,22 +6,22 @@
 
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
-import { Amount, Badge, type DataColumn, DataTable } from "../../components/index.js";
+import { Amount, type DataColumn, DataTable, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import type { MovementRow } from "../../view-models/index.js";
 
 const StatusBadge = (props: { row: MovementRow }): JSX.Element => (
   <>
     <Show when={props.row.status !== "current"}>
-      <Badge tone={props.row.status === "reversed" ? "negative" : "neutral"}>
+      <Tag tone={props.row.status === "reversed" ? "danger" : "neutral"}>
         {props.row.statusLabel}
-      </Badge>
+      </Tag>
     </Show>
     <Show when={props.row.invalidReason !== undefined}>
       {" "}
-      <Badge tone="negative" title={props.row.invalidReason}>
+      <Tag tone="danger" title={props.row.invalidReason}>
         inválido
-      </Badge>
+      </Tag>
     </Show>
   </>
 );
