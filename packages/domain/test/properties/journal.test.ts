@@ -32,7 +32,7 @@ describe("the lot journal", () => {
         }
       }
     }
-    expect([...kinds].sort()).toEqual(["carve", "consume", "gain", "open", "scale"]);
+    expect([...kinds].sort()).toEqual(["carve", "consume", "gain", "open", "scale", "units"]);
     expect([...purposes].sort()).toEqual(["convert", "transfer", "transmission"]);
   });
 
@@ -141,6 +141,23 @@ describe("the lot journal", () => {
                 ),
               ).toBe(true);
               quantities.set(entry.lot_id, entry.quantity_after);
+              break;
+            }
+            case "units": {
+              // A split of an asset nobody held: its ratio, and no lot of it open.
+              const event = byId.get(entry.event_id) as CorporateActionEvent;
+              expect(
+                event.effects.some(
+                  (effect) => effect.op === "scale" && effect.ratio === entry.ratio,
+                ),
+              ).toBe(true);
+              expect(
+                [...quantities].filter(
+                  ([lot, quantity]) =>
+                    (lotOf.get(lot) as FiscalLot).asset_id === entry.asset_id &&
+                    quantity.isPositive(),
+                ),
+              ).toEqual([]);
               break;
             }
             case "carve": {

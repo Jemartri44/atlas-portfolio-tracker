@@ -217,16 +217,15 @@ export const taxLedgerOf = (ops: readonly TaxOp[]): LedgerEvent[] => {
         break;
       }
       case "split":
-        if (total(op.asset).isPositive()) {
-          b.corporateAction({
-            kind: "split",
-            asset_id: op.asset,
-            effective_date: date,
-            effects: [{ op: "scale", ratio: "2" }],
-          });
-          for (const account of TAX_ACCOUNTS) {
-            add(account, op.asset, get(account, op.asset));
-          }
+        // Also of an asset nobody holds: it only leaves its ratio in the journal.
+        b.corporateAction({
+          kind: "split",
+          asset_id: op.asset,
+          effective_date: date,
+          effects: [{ op: "scale", ratio: "2" }],
+        });
+        for (const account of TAX_ACCOUNTS) {
+          add(account, op.asset, get(account, op.asset));
         }
         break;
       case "convert":

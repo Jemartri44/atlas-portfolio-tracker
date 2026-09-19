@@ -31,6 +31,8 @@ import { noteAcquisition, warnPriorBuys } from "./wash-sale.js";
 
 export interface EffectContext {
   eventId: Ulid;
+  /** Every effect of the action is a `scale`: it may find nothing to scale. */
+  scaleOnly: boolean;
   /** File position of the corporate action: FIFO tie-break of the lots a `grant` creates. */
   position: number;
   effectiveDate: CivilDate;
@@ -104,6 +106,21 @@ export const applyScale = (
   effect: Resolved<"scale">,
   ctx: EffectContext,
 ): void => {
+  // A split of an asset nobody holds transforms nothing, and it still happened:
+  // the units of the asset are others from then on. An action that only
+  // scales is recorded without open lots, and the journal keeps its ratio for
+  // the tax engine (verifier of feature 009): selling everything at a loss, a
+  // reverse split while holding nothing and a repurchase inside the window
+  // compared units of before and after without knowing it.
+  if (ctx.scaleOnly && (state.lots.get(effect.asset_id)?.open ?? []).length === 0) {
+    state.lotJournal.push({
+      kind: "units",
+      asset_id: effect.asset_id,
+      event_id: ctx.eventId,
+      ratio: effect.ratio,
+    });
+    return;
+  }
   const lots = requireOpenLots(state, effect.asset_id, ctx.eventId);
   const ratio = Ratio.parse(effect.ratio);
   const holdings = holdingsOf(state, effect.asset_id);

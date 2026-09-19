@@ -262,6 +262,9 @@ class Walker {
       case "scale":
         this.quantity.set(entry.lot_id, entry.quantity_after);
         return;
+      case "units":
+        // No lot to scale; `walkWashSales` read its ratio already.
+        return;
       case "gain":
         this.gain(entry.gain_index, index);
         return;
@@ -777,10 +780,12 @@ export const walkWashSales = (
         firstOpen.set(key, index);
       }
     }
-    // One mark per event: every lot of the asset gets its own entry.
-    if (entry.kind === "scale" && !scaled.has(entry.event_id)) {
+    // One mark per event: every lot of the asset gets its own entry. A split
+    // of an asset nobody held leaves one `units` entry and no lot.
+    if ((entry.kind === "scale" || entry.kind === "units") && !scaled.has(entry.event_id)) {
       scaled.add(entry.event_id);
-      const assetId = assetOfLot.get(entry.lot_id) as AssetId;
+      const assetId =
+        entry.kind === "units" ? entry.asset_id : (assetOfLot.get(entry.lot_id) as AssetId);
       scales.set(assetId, [
         ...(scales.get(assetId) ?? []),
         { at: index, ratio: Ratio.parse(entry.ratio) },

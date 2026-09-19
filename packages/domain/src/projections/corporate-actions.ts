@@ -158,7 +158,12 @@ export const applyCorporateAction = (
   if (isLiquidation(event.kind)) {
     requireFullCoverage(state, effects[0] as Resolved<"forced_sale">, event.id);
   }
-  const ctx: EffectContext = { eventId: event.id, position, effectiveDate: event.effective_date };
+  const ctx: EffectContext = {
+    eventId: event.id,
+    position,
+    effectiveDate: event.effective_date,
+    scaleOnly: effects.every((effect) => effect.op === "scale"),
+  };
   const touched = [...new Set(effects.flatMap((effect) => [effect.asset_id, targetOf(effect)]))];
   const saved = snapshot(state, touched);
   try {

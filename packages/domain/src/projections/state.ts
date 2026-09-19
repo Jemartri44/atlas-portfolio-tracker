@@ -87,6 +87,9 @@ export type ConsumePurpose = "transmission" | "transfer" | "convert";
  * - `scale`: the lot now holds `quantity_after` (split, reverse split, bonus shares),
  *   by the exact `ratio` of the event (`"2"`, `"1/4"`), so that units bought
  *   after it can be compared with units sold before it.
+ * - `units`: an asset **nobody held** was split or reverse split by `ratio`.
+ *   There was no lot to scale, but units bought after it are not the units
+ *   sold before it, and the tax engine needs the ratio to compare them.
  * - `gain`: `state.gains[gain_index]` was booked; the `transmission` consumptions
  *   right before it are the lots it disposed of.
  */
@@ -109,6 +112,7 @@ export type LotJournalEntry =
     }
   | { kind: "carve"; lot_id: string; into_lot_id: string; event_id: Ulid; cost_share: Decimal }
   | { kind: "scale"; lot_id: string; event_id: Ulid; quantity_after: Quantity; ratio: string }
+  | { kind: "units"; asset_id: AssetId; event_id: Ulid; ratio: string }
   | { kind: "gain"; gain_index: number };
 
 export interface GainByLot {

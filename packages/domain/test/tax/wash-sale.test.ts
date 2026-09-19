@@ -460,6 +460,35 @@ describe("mandatory edge cases", () => {
       expect(text(report.capital_gains.balance_eur)).toBe("-1350");
     });
 
+    it("converts across a reverse split of an asset nobody held when it happened", () => {
+      // Sold whole at a loss, a 1:4 reverse split while holding nothing, and a
+      // repurchase inside the window. The split used to be unrecordable
+      // (`no_open_lots`), and the engine compared 2.5 new shares with 10 old
+      // ones: −50 deferred instead of −200.
+      const b = taxBuilder();
+      buy(b, "stock_s", "2026-10-01", "10", "100");
+      const loss = sell(b, "stock_s", "2027-03-01", "10", "80");
+      const split = b.corporateAction({
+        kind: "reverse_split",
+        asset_id: "stock_s",
+        effective_date: "2027-03-10",
+        effects: [{ op: "scale", ratio: "1/4" }],
+      });
+      buy(b, "stock_s", "2027-03-20", "2.5", "320");
+      const events = b.build();
+      const state = projectLedger(events);
+      expect(state.invalid).toEqual([]);
+      expect(state.lotJournal).toContainEqual({
+        kind: "units",
+        asset_id: "stock_s",
+        event_id: split.id,
+        ratio: "1/4",
+      });
+      const report = reportOf(events, 2027);
+      expect(text(lineOf(report, loss.id).deferred_eur)).toBe("-200");
+      expect(text(lineOf(report, loss.id).computable_eur_rounded)).toBe("0");
+    });
+
     it("changes nothing when the split falls before the sale", () => {
       // Sale and purchases are measured after the split: nothing to convert.
       const b = taxBuilder();

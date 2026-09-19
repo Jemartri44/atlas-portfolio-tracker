@@ -186,6 +186,26 @@ describe("atlas ca", () => {
     expect(h.err.join("\n")).toContain("son excluyentes");
   });
 
+  it("records a reverse split of an asset nobody holds: its ratio is all the tax engine needs", async () => {
+    // It used to be refused (`no_open_lots`), so a repurchase after it compared
+    // units of before and after without knowing it.
+    const h = harness({ events: seed() });
+    expect(
+      await h.exec([
+        "ca",
+        "reverse-split",
+        "--asset",
+        "ast_gold",
+        "--ratio",
+        "1/4",
+        ...CA,
+        "--yes",
+      ]),
+    ).toBe(0);
+    expect(h.text()).toContain("Registrado corporate_action");
+    expect((await lastEvent(h)).effects).toEqual([{ op: "scale", ratio: "1/4" }]);
+  });
+
   it("refuses --neutrality-regime false instead of recording the regime as applying", async () => {
     // The verifier's case: `false` was left loose and the flag set, so the
     // ledger said the regime applied, the opposite of what was written.
