@@ -49,7 +49,7 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
     severity="danger"
     title="Esta pantalla no ha podido abrirse"
     action={
-      <div class="hstack wrap">
+      <div class="button-row">
         <button type="button" onClick={() => props.retry()}>
           Reintentar
         </button>

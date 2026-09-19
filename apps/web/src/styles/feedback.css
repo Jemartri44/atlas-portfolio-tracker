@@ -51,9 +51,9 @@ a.notice:hover {
   font-weight: var(--fw-semibold);
 }
 
+/* Block, not grid: a tag or a piece of code inside the sentence stays inline. */
 .notice-text {
-  display: grid;
-  gap: var(--space-2);
+  display: block;
   line-height: 1.45;
 }
 
@@ -61,6 +61,11 @@ a.notice:hover {
 .notice-detail {
   display: grid;
   gap: var(--space-1);
+}
+
+/* Paragraphs and lists inside a notice keep their air between them. */
+.notice-text > * + * {
+  margin-top: var(--space-2);
 }
 
 .notice-action {
