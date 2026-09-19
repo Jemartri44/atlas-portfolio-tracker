@@ -29,11 +29,12 @@ import {
   toDraft,
 } from "../../view-models/forms/index.js";
 import { isBucketAccount } from "../../view-models/options.js";
+import { doneUrl } from "../movimientos/Rectified.jsx";
 import { DuplicateDialog } from "./DuplicateDialog.jsx";
 import { Effect } from "./Effect.jsx";
 import { FormActions, revealField } from "./FormActions.jsx";
 import { FormFields } from "./FormFields.jsx";
-import { PriorYear, Reloaded, ThesisFirst } from "./FormNotices.jsx";
+import { Reloaded, ThesisFirst } from "./FormNotices.jsx";
 
 interface EventFormProps {
   spec: EventFormSpec;
@@ -66,7 +67,6 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const [reason, setReason] = createSignal("");
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
   const [conflict, setConflict] = createSignal(false);
-  const [priorYear, setPriorYear] = createSignal(false);
 
   /** Why "Ver el efecto" cannot be pressed yet, said next to it. */
   const blocked = (): string | undefined =>
@@ -142,12 +142,11 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
         ? await recordDraft(draft, { confirmDuplicate })
         : await correct(props.correcting.id, draft, reason().trim(), { confirmDuplicate });
     if (result.ok) {
-      const id = "event" in result.value ? result.value.event.id : "";
-      if ("priorYear" in result.value && result.value.priorYear) {
-        setPriorYear(true);
-        return;
-      }
-      navigate(id === "" ? "/movimientos" : `/movimientos/${id}`);
+      // To the movement written, with what was done and, for a past tax year,
+      // the warning: the reload that follows the write cannot take them away.
+      const priorYear = "priorYear" in result.value && result.value.priorYear;
+      const done = props.correcting === undefined ? "registrado" : "corregido";
+      navigate(doneUrl(result.value.event.id, done, priorYear));
       return;
     }
     if (result.failure.kind === "duplicate") {
@@ -172,10 +171,6 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     <>
       <Show when={conflict()}>
         <Reloaded />
-      </Show>
-
-      <Show when={priorYear()}>
-        <PriorYear />
       </Show>
 
       <div class="register">

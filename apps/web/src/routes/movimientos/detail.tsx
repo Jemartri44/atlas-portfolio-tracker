@@ -23,6 +23,7 @@ import { saleResult } from "../../view-models/sale.js";
 import { movementSentence } from "../../view-models/sentence.js";
 import { RequireLedger } from "../guard.jsx";
 import { EventEnvelope, EventLinks, Facts, SaleResult } from "./DetailFields.jsx";
+import { doneUrl, Rectified } from "./Rectified.jsx";
 
 export default function MovimientoDetalleRoute(): JSX.Element {
   const params = useParams<{ id: string }>();
@@ -33,17 +34,14 @@ export default function MovimientoDetalleRoute(): JSX.Element {
   const [dependents, setDependents] = createSignal<
     readonly { id: string; type: string; error: string }[]
   >([]);
-  const [priorYear, setPriorYear] = createSignal(false);
 
   const onReverse = async (): Promise<void> => {
     setError(undefined);
     const result = await reverse(params.id, reason().trim());
     if (result.ok) {
       setAsking(false);
-      setPriorYear(result.value.priorYear);
-      if (!result.value.priorYear) {
-        navigate("/movimientos");
-      }
+      // To the reversal it wrote, with the confirmation in the address.
+      navigate(doneUrl(result.value.reversal.id, "anulado", result.value.priorYear));
       return;
     }
     if (result.failure.kind === "dependents") {
@@ -115,12 +113,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                     }
                   />
 
-                  <Show when={priorYear()}>
-                    <Notice severity="caution" title="Ejercicio anterior">
-                      El evento rectificado pertenece a un ejercicio anterior: puede afectar a una
-                      declaración ya presentada.
-                    </Notice>
-                  </Show>
+                  <Rectified />
 
                   <Show when={error() !== undefined}>
                     <Notice severity="danger" title="No se ha podido rectificar">

@@ -14,21 +14,6 @@ export const Reloaded = (): JSX.Element => (
   </Notice>
 );
 
-export const PriorYear = (): JSX.Element => (
-  <Notice
-    severity="caution"
-    title="Ejercicio anterior"
-    action={
-      <A href="/movimientos" role="button">
-        Ver los movimientos
-      </A>
-    }
-  >
-    Registrado. El evento rectificado pertenece a un ejercicio anterior: puede afectar a una
-    declaración ya presentada.
-  </Notice>
-);
-
 export const ThesisFirst = (): JSX.Element => (
   <Notice
     severity="caution"
