@@ -1,0 +1,208 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: frozen visual reference */
+/* biome-ignore-all lint/complexity/noImportantStyles: an accessibility override must win */
+/*
+ * Base: the small reset and the element defaults that replace Pico.
+ * Everything uses :where() so it carries zero specificity and any component
+ * class wins without a fight.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:where(html) {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(body) {
+  background-color: var(--c-canvas);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--lh-body);
+  margin: 0;
+  min-height: 100dvh;
+  text-rendering: optimizeLegibility;
+}
+
+:where(h1, h2, h3, h4, p, ul, ol, dl, dd, figure, blockquote) {
+  margin: 0;
+}
+
+:where(ul, ol) {
+  list-style: none;
+  padding: 0;
+}
+
+:where(h1, h2, h3) {
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-snug);
+}
+
+:where(h1) {
+  font-size: var(--text-xl);
+}
+
+:where(h2) {
+  font-size: var(--text-lg);
+}
+
+:where(h3) {
+  font-size: var(--text-md);
+}
+
+:where(a) {
+  color: var(--c-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+:where(a:hover) {
+  color: var(--c-accent-hover);
+}
+
+:where(svg) {
+  flex: none;
+}
+
+:where(img, svg, canvas) {
+  display: block;
+  max-width: 100%;
+}
+
+:where(button, input, select, textarea) {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+:where(table) {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+:where(th) {
+  font-weight: var(--fw-medium);
+  text-align: left;
+}
+
+:where(summary) {
+  cursor: pointer;
+  list-style: none;
+}
+
+:where(summary)::-webkit-details-marker {
+  display: none;
+}
+
+:where(hr) {
+  border: 0;
+  border-top: var(--border) solid var(--c-border);
+  margin: 0;
+}
+
+/* One focus ring, both themes, everything interactive. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--border-strong) solid var(--c-accent);
+  outline-offset: var(--space-0);
+}
+
+/* ---- Figures ---------------------------------------------------------- */
+
+/* Numbers in rows and columns align; a hero figure keeps proportional digits. */
+.num {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pos {
+  color: var(--c-positive);
+}
+
+.neg {
+  color: var(--c-negative);
+}
+
+/* "sin dato": muted and never a zero. */
+.nodata {
+  color: var(--c-text-3);
+}
+
+/*
+ * The privacy mask. Always the same four dots, so it has the same width
+ * whatever the amount it hides; the dots are drawn smaller than the digits so
+ * a masked hero figure reads as a quiet placeholder and not as four billiard
+ * balls. The unit stays: it says what kind of figure is hidden (euros,
+ * participations) without saying how big it is.
+ */
+.mask {
+  color: var(--c-text-3);
+  white-space: nowrap;
+}
+
+.mask > .dots {
+  font-size: 0.72em;
+  letter-spacing: 0.12em;
+  vertical-align: 0.08em;
+}
+
+.mask > .unit {
+  margin-left: 0.25em;
+}
+
+/* A unit reads after its figure, one step quieter. */
+.unit {
+  color: var(--c-text-3);
+}
+
+.sr-only {
+  border: 0;
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--c-text-2);
+}
+
+.meta {
+  color: var(--c-text-3);
+  font-size: var(--text-sm);
+}
+
+.icon {
+  height: var(--icon-md);
+  width: var(--icon-md);
+}
+
+.icon-sm {
+  height: var(--icon-sm);
+  width: var(--icon-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

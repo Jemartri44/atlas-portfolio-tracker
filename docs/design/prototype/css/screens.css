@@ -1,0 +1,212 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: frozen visual reference */
+/*
+ * Screen compositions: how the components are arranged on each screen.
+ * Only arrangement lives here; the look of every piece is in components.css.
+ */
+
+/* ---- Small shared pieces ------------------------------------------------- */
+
+.block-title {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  margin: var(--space-5) 0 var(--space-1);
+}
+
+.spaced {
+  margin-top: var(--space-3);
+}
+
+.strong {
+  font-weight: var(--fw-semibold);
+}
+
+.note-line {
+  align-items: start;
+  border-top: var(--border) solid var(--c-border);
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-3);
+}
+
+.note-line .icon-sm {
+  color: var(--c-text-3);
+  margin-top: var(--space-0);
+}
+
+.card > .note-line {
+  margin-top: auto;
+}
+
+/* The note is pushed to the bottom of a stretched card, never glued to the
+   content above it. */
+.card > :has(+ .note-line) {
+  margin-bottom: var(--space-4);
+}
+
+/* Label/value lines that sum: the contribution split. */
+.summary-lines {
+  display: grid;
+}
+
+.summary-lines > div {
+  align-items: center;
+  border-bottom: var(--border) solid var(--c-border);
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  min-height: var(--tap);
+}
+
+.summary-lines dt {
+  align-items: center;
+  color: var(--c-text-2);
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.summary-lines .is-strong {
+  border-bottom: 0;
+}
+
+.summary-lines .is-strong dt {
+  color: var(--c-text);
+  font-weight: var(--fw-semibold);
+}
+
+/* ---- Resumen ------------------------------------------------------------- */
+
+@media (min-width: 64rem) {
+  .hero .parts {
+    margin-top: auto;
+  }
+
+  .card.is-chart .chart {
+    flex: 1 1 auto;
+    grid-template-rows: minmax(var(--chart-h), 1fr) auto auto;
+  }
+
+  .card.is-chart .chart-plot {
+    height: auto;
+  }
+}
+
+/* ---- Resumen vacío: the first steps -------------------------------------- */
+
+.onboarding-lead {
+  margin-bottom: var(--space-2);
+  max-width: var(--reading-max);
+}
+
+.onboarding-foot {
+  align-items: center;
+  border-top: var(--border) solid var(--c-border);
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding-top: var(--space-3);
+}
+
+.onboarding-foot .icon-sm {
+  color: var(--c-text-3);
+}
+
+@media (min-width: 64rem) {
+  /* On a wide screen the steps are the cards: no card around them. */
+  .onboarding {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .onboarding-head {
+    margin-bottom: var(--space-5);
+  }
+
+  .onboarding-head .card-head {
+    justify-content: flex-start;
+    margin-bottom: var(--space-2);
+  }
+
+  .onboarding-head h2 {
+    font-size: var(--text-xl);
+  }
+
+  .onboarding-foot {
+    border-top: 0;
+    margin-top: var(--space-4);
+    padding-top: 0;
+  }
+}
+
+/* ---- Cartera --------------------------------------------------------------- */
+
+.class-name {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.class-row.is-total .name {
+  font-weight: var(--fw-semibold);
+}
+
+.target-only {
+  font-size: var(--text-sm);
+}
+
+.alloc + .classes,
+.alloc + .table {
+  margin-top: var(--space-2);
+}
+
+.row.is-total .title {
+  font-weight: var(--fw-semibold);
+}
+
+.costs-side {
+  margin-top: var(--space-2);
+}
+
+@media (min-width: 64rem) {
+  .costs {
+    column-gap: var(--space-7);
+    display: grid;
+    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  }
+
+  .costs-side {
+    border-left: var(--border) solid var(--c-border);
+    margin-top: 0;
+    padding-left: var(--space-6);
+  }
+
+  .costs-side .block-title {
+    margin-top: 0;
+  }
+
+  /* In a stretched card the disclosures sit at the bottom edge together. */
+  .card > .disclosure:first-of-type {
+    margin-top: auto;
+  }
+
+  .card > :has(+ .disclosure:first-of-type) {
+    margin-bottom: var(--space-4);
+  }
+}
+
+.form-demo {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* Prototype only: where the gap label sits. In the app uPlot draws it. */
+.proto-gap-pos {
+  left: 54.2%;
+}
