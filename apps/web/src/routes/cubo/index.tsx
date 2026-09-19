@@ -69,6 +69,7 @@ const SAID_IN_PLACE = new Set([
   "bucket_contaminated_theses",
   "missing_benchmark_price",
   "missing_prices",
+  "partial_bucket_total",
   "stale_price",
 ]);
 
