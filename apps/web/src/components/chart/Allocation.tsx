@@ -70,21 +70,19 @@ export const Allocation = (props: { segments: readonly AllocationSegment[] }): J
 
   return (
     <div class="alloc" role="img" aria-label="Reparto actual de la cartera frente al objetivo">
-      <div class="alloc-row">
-        <span class="alloc-label">Actual</span>
-        <svg class="alloc-bar" aria-hidden="true">
-          <Show
-            when={hasActual()}
-            fallback={
-              <rect x="0" y="0" width="100%" height="100%" class="alloc-seg is-empty">
-                <title>Sin datos: falta algún precio</title>
-              </rect>
-            }
-          >
+      {/*
+        With a partial total there is no current weight to draw: an empty rail
+        looked broken (review of 2026-09-19). The target stays, and the card
+        says what is missing in its pending block.
+      */}
+      <Show when={hasActual()}>
+        <div class="alloc-row">
+          <span class="alloc-label">Actual</span>
+          <svg class="alloc-bar" aria-hidden="true">
             <Bar segments={props.segments} values={actual()} title="Actual" />
-          </Show>
-        </svg>
-      </div>
+          </svg>
+        </div>
+      </Show>
       <div class="alloc-row">
         <span class="alloc-label">Objetivo</span>
         <svg class="alloc-bar" aria-hidden="true">

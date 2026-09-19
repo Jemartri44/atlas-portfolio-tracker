@@ -129,8 +129,3 @@
 .alloc-seg.is-crypto {
   fill: var(--c-class-crypto);
 }
-
-.alloc-seg.is-empty {
-  fill: var(--c-fill);
-  stroke: none;
-}

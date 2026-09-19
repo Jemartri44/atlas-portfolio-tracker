@@ -328,6 +328,18 @@ describe("the catalogue of names", () => {
     expect(describeWarning(warning, { privacy: false })).toContain("ast_world");
   });
 
+  it("says an empty bucket as empty, never «solo 0 tesis cerradas»", () => {
+    const warning: Warning = {
+      code: "bucket_sample_too_small",
+      event_id: "",
+      message: "english",
+      details: { closed_theses: 0, realized_operations: 0, sample: 100 },
+    };
+    const said = describeWarning(warning, { privacy: false });
+    expect(said).toContain("Todavía no hay ninguna tesis cerrada");
+    expect(said).not.toContain("Solo 0");
+  });
+
   it("keeps the unit beside a masked quantity inside a sentence", () => {
     const warning: Warning = {
       code: "thesis_closed_with_position",

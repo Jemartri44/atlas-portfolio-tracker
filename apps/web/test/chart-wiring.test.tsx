@@ -272,13 +272,14 @@ describe("the allocation bar", () => {
   });
 
   /** A partial core has no current weights: the top bar says so instead of lying. */
-  it("draws an empty bar, not a wrong one, when there is no current weight", () => {
+  it("draws only the target, never an empty rail, when there is no current weight", () => {
     const host = mount(() => (
       <Allocation segments={[{ key: "equity", label: "Renta variable", targetPct: "100" }]} />
     ));
     const titles = [...host.querySelectorAll("rect title")].map((t) => t.textContent ?? "");
+    const labels = [...host.querySelectorAll(".alloc-label")].map((l) => l.textContent);
 
-    expect(titles.some((t) => t.includes("Sin datos"))).toBe(true);
+    expect(labels).toEqual(["Objetivo"]);
     expect(titles.filter((t) => t.startsWith("Actual:"))).toHaveLength(0);
   });
 

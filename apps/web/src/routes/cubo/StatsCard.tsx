@@ -14,9 +14,16 @@
 
 import { type JSX, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
-import { Amount, Disclosure, Figure, Notice, StatLine, Tag } from "../../components/index.js";
+import {
+  Amount,
+  Disclosure,
+  Figure,
+  Notice,
+  Pending,
+  StatLine,
+  Tag,
+} from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
-import { countOf } from "../../format/number.js";
 import type { StatsView } from "../../view-models/bucket/index.js";
 
 interface Plot {
@@ -26,32 +33,41 @@ interface Plot {
   missing?: string | undefined;
 }
 
+/** Why there is no percentage yet, said once, with the way to get it. */
+const NotYet = (props: { view: StatsView }): JSX.Element => (
+  <Show
+    when={props.view.vsIndexMissing > 0}
+    fallback={
+      <Pending action={{ label: "Abrir una tesis", to: "/registrar/tesis" }}>
+        El resultado frente al índice llega con la primera tesis que se pueda comparar.
+      </Pending>
+    }
+  >
+    <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
+      Llega cuando todas las tesis se puedan comparar:{" "}
+      {props.view.vsIndexMissing === 1
+        ? "a una tesis le falta"
+        : `a ${props.view.vsIndexMissing} tesis les falta`}{" "}
+      el precio del índice en sus fechas.
+      <Show when={props.view.vsIndexTotal !== undefined}>
+        {" "}
+        En las que sí se comparan: <Amount value={props.view.vsIndexTotal} signed coloured />.
+      </Show>
+    </Pending>
+  </Show>
+);
+
 const Lead = (props: { view: StatsView }): JSX.Element => (
   <>
-    <p class="hero-figure">
-      <Figure value={props.view.vsIndexPct} unit="percent" decimals={1} signed coloured />
-    </p>
-    <p class="card-note">
-      <Show
-        when={props.view.vsIndexPct !== undefined}
-        fallback={
-          <Show
-            when={props.view.vsIndexMissing > 0}
-            fallback={<>Todavía no hay ninguna tesis que comparar con el índice.</>}
-          >
-            {countOf(props.view.vsIndexMissing, "tesis no se puede", "tesis no se pueden")} comparar
-            con el índice: un porcentaje sobre un total parcial no diría nada.
-          </Show>
-        }
-      >
+    <Show when={props.view.vsIndexPct !== undefined} fallback={<NotYet view={props.view} />}>
+      <p class="hero-figure">
+        <Figure value={props.view.vsIndexPct} unit="percent" decimals={1} signed coloured />
+      </p>
+      <p class="card-note">
         Lo que el cubo ha hecho de más o de menos que el mismo dinero en el índice, sobre lo
-        aportado:{" "}
-      </Show>
-      <Show when={props.view.vsIndexTotal !== undefined}>
-        <Amount value={props.view.vsIndexTotal} signed coloured />
-        {props.view.vsIndexPct === undefined ? " en las tesis que sí se comparan." : "."}
-      </Show>
-    </p>
+        aportado: <Amount value={props.view.vsIndexTotal} signed coloured />.
+      </p>
+    </Show>
     <dl class="kpis">
       <div class="kpi">
         <dt>Comisiones s/ capital</dt>

@@ -29,9 +29,11 @@ describe("the bucket", () => {
   it("gives no percentage over a partial total, and says why", async () => {
     // 15/01/2029: one closed thesis has no index to compare with.
     const host = await show("/cubo?fecha=2029-01-15", Cubo);
-    const hero = host.querySelector(".card .hero-figure");
-    expect(text(hero)).toBe("sin dato");
-    expect(text(hero?.nextElementSibling)).toContain("1 tesis no se puede comparar");
+    // Not a «sin dato» at the size of a hero figure: a pending block, with why.
+    expect(host.querySelector(".card .hero-figure")).toBeNull();
+    const pending = host.querySelector(".card .pending");
+    expect(text(pending)).toContain("a una tesis le falta el precio del índice");
+    expect(pending?.querySelector('a[href="/registrar/valuation"]')).not.toBeNull();
   });
 
   it("says its warnings with the one notice, and never links to itself", async () => {

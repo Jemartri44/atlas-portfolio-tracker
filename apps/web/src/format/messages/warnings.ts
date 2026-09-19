@@ -76,7 +76,9 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `Faltan precios de ${n.many(d.assets)} a ${day(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`,
   // --- Bucket ------------------------------------------------------------
   bucket_sample_too_small: (d) =>
-    `Solo ${countOf(Number(d.closed_theses), "tesis cerrada", "tesis cerradas")} y ${countOf(Number(d.realized_operations), "operación realizada", "operaciones realizadas")}: por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`,
+    Number(d.closed_theses) === 0 && Number(d.realized_operations) === 0
+      ? "Todavía no hay ninguna tesis cerrada ni ninguna venta: las estadísticas del cubo empiezan con la primera."
+      : `Solo ${countOf(Number(d.closed_theses), "tesis cerrada", "tesis cerradas")} y ${countOf(Number(d.realized_operations), "operación realizada", "operaciones realizadas")}: por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`,
   bucket_contaminated_theses: (d, n) =>
     `${count(d.theses) === 1 ? "Una tesis queda" : `${count(d.theses)} tesis quedan`} fuera de las medias (${((d.theses as unknown[] | undefined) ?? []).map((id) => n.thesis(id)).join("; ")}): sus ventas consumieron lotes comprados por otra tesis, porque el FIFO es global.`,
   bucket_contribution_exceeded: (d, _n, f) =>
