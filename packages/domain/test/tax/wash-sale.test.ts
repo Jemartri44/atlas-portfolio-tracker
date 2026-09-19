@@ -419,6 +419,47 @@ describe("mandatory edge cases", () => {
       ]);
     });
 
+    it("chains every split in between: a 3:2 and a 1:4 make 12 new shares 32 of those sold", () => {
+      // The verifier's case, worked out by hand. 60 bought long before; 30 sold
+      // at 80: −600. 3:2 and then 1:4: the 30 left are 11.25. 12 bought again
+      // at 300 are 12 ÷ (3/2 × 1/4) = 32 of those sold: the −600 is deferred
+      // whole, on 11.25 of the 12 new shares.
+      const b = taxBuilder();
+      buy(b, "stock_s", "2026-12-01", "60", "100");
+      const first = sell(b, "stock_s", "2027-04-01", "30", "80");
+      b.corporateAction({
+        kind: "split",
+        asset_id: "stock_s",
+        effective_date: "2027-04-10",
+        effects: [{ op: "scale", ratio: "3/2" }],
+      });
+      b.corporateAction({
+        kind: "reverse_split",
+        asset_id: "stock_s",
+        effective_date: "2027-04-20",
+        effects: [{ op: "scale", ratio: "1/4" }],
+      });
+      buy(b, "stock_s", "2027-05-03", "12", "300");
+      // The 11.25 old ones at 200: 2,250 against 3,000, −750. Of the 12 new
+      // shares only 0.75 are free (#19): −750 × 0.75 / 11.25 = −50 deferred.
+      const second = sell(b, "stock_s", "2027-06-01", "11.25", "200");
+      // The 12 new ones at 300: no result of their own, and −600 − 50 released.
+      const last = sell(b, "stock_s", "2027-09-01", "12", "300");
+      const report = reportOf(b.build(), 2027);
+      const figures = (id: string) => {
+        const line = lineOf(report, id);
+        return [
+          text(line.deferred_eur),
+          text(line.released_eur),
+          text(line.computable_eur_rounded),
+        ];
+      };
+      expect(figures(first.id)).toEqual(["-600", "0", "0"]);
+      expect(figures(second.id)).toEqual(["-50", "0", "-700"]);
+      expect(figures(last.id)).toEqual(["0", "-650", "-650"]);
+      expect(text(report.capital_gains.balance_eur)).toBe("-1350");
+    });
+
     it("changes nothing when the split falls before the sale", () => {
       // Sale and purchases are measured after the split: nothing to convert.
       const b = taxBuilder();
