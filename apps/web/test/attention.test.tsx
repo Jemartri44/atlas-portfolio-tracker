@@ -114,7 +114,7 @@ describe("the list, as data", () => {
 describe("the rules whose repeats are one thing to do", () => {
   it("say several stale prices in one sentence, with the assets", () => {
     const stale = (asset_id: string, age_days: number, id: string) =>
-      warning("stale_price", { asset_id, age_days, date: "2028-12-31" }, id);
+      warning("stale_price", { asset_id, age_days, date: "2028-12-31", limit_days: 15 }, id);
     const items = attention(
       [
         stale("ast_world", 16, "01ARYZ6S41TSV4RRFFQ6900011"),
@@ -131,10 +131,37 @@ describe("the rules whose repeats are one thing to do", () => {
     );
     expect(items).toHaveLength(1);
     expect(items[0]?.message).toMatch(
-      /^3 precios con más de 16 días · World Index Fund, Physical Gold ETC y Bitcoin ETP\./,
+      /^3 precios con más de 15 días · World Index Fund, Physical Gold ETC y Bitcoin ETP\./,
     );
     expect(items[0]?.count).toBe(1);
     expect(items[0]?.eventIds).toHaveLength(3);
+  });
+
+  it("say the limit configured, not the youngest of the ages", () => {
+    // Six prices of 10 days and more, with a limit of 7: «más de 7 días».
+    const items = attention(
+      [10, 12, 30].map((age_days, index) =>
+        warning(
+          "stale_price",
+          { asset_id: `ast_${index}`, age_days, date: "2028-12-31", limit_days: 7 },
+          `01ARYZ6S41TSV4RRFFQ690002${index}`,
+        ),
+      ),
+      {},
+    );
+    expect(items[0]?.message).toMatch(/^3 precios con más de 7 días · /);
+    // A warning of an older version carries no limit: the youngest age is all there is.
+    const old = attention(
+      [10, 12].map((age_days, index) =>
+        warning(
+          "stale_fx_rate",
+          { currency: `C${index}`, age_days, date: "2028-12-31" },
+          `01ARYZ6S41TSV4RRFFQ690003${index}`,
+        ),
+      ),
+      {},
+    );
+    expect(old[0]?.message).toMatch(/de hace más de 10 días/);
   });
 
   it("say the deviations together, each with its points", () => {

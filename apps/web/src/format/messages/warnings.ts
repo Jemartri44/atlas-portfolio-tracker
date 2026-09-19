@@ -176,8 +176,19 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
 const joinAll = (items: readonly string[]): string =>
   items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} y ${items.at(-1)}`;
 
-const lowestAge = (warnings: readonly Warning[]): number =>
-  Math.min(...warnings.map((warning) => Number(warning.details.age_days)));
+/**
+ * The age a group of stale prices is past: the limit configured, which the
+ * domain puts in each warning. The youngest of their ages is not it — six
+ * prices of 10 days and more read «más de 10 días» with a limit of 7 (second
+ * pass of the review of 2026-09-19); it is only the answer for a warning of an
+ * older version, which does not carry the limit.
+ */
+const limitOf = (warnings: readonly Warning[]): number => {
+  const limit = warnings[0]?.details.limit_days;
+  return limit === undefined
+    ? Math.min(...warnings.map((warning) => Number(warning.details.age_days)))
+    : Number(limit);
+};
 
 /**
  * One sentence for several warnings of the same rule, as the summary shows
@@ -193,11 +204,11 @@ export const describeWarningGroup = (
   const n = namingOf(prose.names ?? NO_NAMES);
   switch (code) {
     case "stale_price":
-      return `${warnings.length} precios con más de ${days(lowestAge(warnings))} · ${joinAll(
+      return `${warnings.length} precios con más de ${days(limitOf(warnings))} · ${joinAll(
         warnings.map((warning) => n.one(warning.details.asset_id)),
       )}. Registra valoraciones más recientes.`;
     case "stale_fx_rate":
-      return `${warnings.length} tipos de cambio de hace más de ${days(lowestAge(warnings))} · ${joinAll(
+      return `${warnings.length} tipos de cambio de hace más de ${days(limitOf(warnings))} · ${joinAll(
         warnings.map((warning) => text(warning.details.currency)),
       )}. Registra una operación o una valoración más reciente en esas divisas.`;
     case "deviation_above_threshold":
