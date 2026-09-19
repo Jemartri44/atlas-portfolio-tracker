@@ -131,7 +131,7 @@ export const IdentityCard = (props: {
       <SelectField
         id="s-benchmark"
         label="Índice de referencia del cubo"
-        hint="La alternativa aburrida contra la que se mide cada tesis (regla 16)."
+        hint="La alternativa aburrida contra la que se mide cada tesis."
         placeholder="Sin configurar"
         value={settingText(props.draft.current, props.draft.patch, "bucket_benchmark_asset_id")}
         options={benchmarkOptions(

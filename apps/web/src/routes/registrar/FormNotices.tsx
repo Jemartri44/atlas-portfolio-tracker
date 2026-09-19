@@ -39,7 +39,7 @@ export const ThesisFirst = (): JSX.Element => (
       </A>
     }
   >
-    La regla 15 pide escribir la tesis <strong>antes</strong> de comprar: la hipótesis, el plazo, la
+    En el cubo la tesis se escribe <strong>antes</strong> de comprar: la hipótesis, el plazo, la
     condición de invalidación y el tamaño previsto. Si no hay ninguna abierta para esta cuenta y
     este activo, créala ahora y vuelve.
   </Notice>

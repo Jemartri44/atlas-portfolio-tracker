@@ -73,7 +73,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "La cuenta y el activo pertenecen a carteras distintas: la cartera principal y el cubo no se mezclan.",
   // --- Bucket theses -----------------------------------------------------
   thesis_required: () =>
-    "Las compras del cubo exigen una tesis abierta antes de comprar (regla 15). Ábrela en Registrar → Abrir una tesis y vuelve.",
+    "Las compras del cubo exigen una tesis abierta antes de comprar. Ábrela en Registrar → Abrir una tesis y vuelve.",
   unknown_thesis: (d, n) => `La tesis ${n.thesis(d.thesis_id)} no existe.`,
   thesis_mismatch: (d, n) =>
     `La tesis ${n.thesis(d.thesis_id)} es de ${n.one(d.asset_id)} en ${n.one(d.account_id)}, no de esta operación.`,

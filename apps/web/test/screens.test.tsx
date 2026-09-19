@@ -146,7 +146,9 @@ describe("Cubo cuts the ledger by the date asked", () => {
     expect(shown).not.toContain("Renta variable");
     expect(shown).not.toContain("Money Market Fund");
     // The one bounded exception is the net worth, and it travels labelled.
-    expect(shown).toContain("Excepción acotada");
+    expect(shown).toContain("Es la única cifra que suma el cubo y la cartera principal");
+    // Said in plain words, never by the number of a rule of a private plan.
+    expect(shown).not.toMatch(/regla \d|\(1[5-9]\)|compartimentación/i);
   });
 });
 

@@ -92,7 +92,7 @@ export default function CuboRoute(): JSX.Element {
           ),
         );
 
-        /** Rule 17 breached: top of the screen, not a corner. */
+        /** The stop rule breached: top of the screen, not a corner. */
         const stopLoss = () =>
           report().controls.warnings.filter(
             (warning) => warning.code === "bucket_stop_loss_reached",
@@ -168,7 +168,14 @@ export default function CuboRoute(): JSX.Element {
 
                 <StatsCard view={report().stats} plot={series()} />
                 <PositionsCard view={positions()} />
-                <BudgetCard view={report().controls} worth={worth()} />
+                <BudgetCard
+                  view={report().controls}
+                  worth={worth()}
+                  limits={{
+                    stopLossPct: settings().bucket_stop_loss_pct,
+                    maxWeightPct: settings().bucket_max_weight_pct,
+                  }}
+                />
                 <ThesesCard view={theses()} />
 
                 <Show when={fees().rows.length > 0}>

@@ -93,12 +93,12 @@ export const SETTINGS_NUMBERS: readonly NumberSetting[] = [
   {
     key: "deviation_threshold_pp",
     label: "Umbral de desviación (pp)",
-    hint: "Avisa cuando un activo de la cartera principal se separa tanto de su objetivo (regla 3).",
+    hint: "Avisa cuando un activo de la cartera principal se separa tanto de su objetivo.",
   },
   {
     key: "satellite_min_weight_pct",
     label: "Mínimo de un satélite (%)",
-    hint: "Por debajo de esto, oro o cripto dejan de ser significativos (regla 6b).",
+    hint: "Por debajo de esto, oro o cripto dejan de ser significativos.",
   },
   { key: "monthly_contribution_eur", label: "Aportación mensual (€)", money: true },
   {
@@ -111,8 +111,16 @@ export const SETTINGS_NUMBERS: readonly NumberSetting[] = [
     label: "Tope de aporte al cubo (€)",
     money: true,
   },
-  { key: "bucket_stop_loss_pct", label: "Regla de parada del cubo (%)" },
-  { key: "bucket_max_weight_pct", label: "Peso máximo del cubo (%)" },
+  {
+    key: "bucket_stop_loss_pct",
+    label: "Regla de parada del cubo (%)",
+    hint: "Pérdida acumulada, sobre lo aportado, a partir de la cual se deja de aportar al cubo.",
+  },
+  {
+    key: "bucket_max_weight_pct",
+    label: "Peso máximo del cubo (%)",
+    hint: "Sobre todo tu patrimonio; por encima, el exceso se pasa a la cartera principal.",
+  },
   { key: "model_720_alert_threshold_eur", label: "Umbral del Modelo 720 (€)", money: true },
   { key: "model_721_alert_threshold_eur", label: "Umbral del Modelo 721 (€)", money: true },
   {

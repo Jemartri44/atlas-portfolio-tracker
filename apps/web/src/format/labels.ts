@@ -70,7 +70,7 @@ export const FIELD_LABELS: Record<string, string> = {
   market_value_in: "Valor de mercado de lo recibido",
   fee_kind: "Tipo de comisión",
   neutrality_regime: "Régimen de neutralidad",
-  income_eur: "Renta imputada (EUR)",
+  income_eur: "Renta imputada (€)",
   income_base: "Base de la renta",
   issuer_country: "País del emisor",
   ticker: "Ticker",

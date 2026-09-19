@@ -257,7 +257,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         label: "Tesis",
         kind: "select",
         options: "openTheses",
-        hint: "Obligatoria en el cubo (regla 15): se abre antes de comprar.",
+        hint: "Obligatoria en el cubo: se abre antes de comprar.",
       },
     ],
     omitted: [],
@@ -623,7 +623,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     slug: "tesis",
     type: "thesis_opened",
     title: "Abrir una tesis",
-    when: "Antes de comprar en el cubo. La regla 15 no admite comprar sin tesis escrita.",
+    when: "Antes de comprar en el cubo. En el cubo no se compra sin una tesis escrita.",
     fields: [
       {
         name: "thesis_id",
@@ -656,7 +656,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         full: true,
         hint: "Qué te haría estar equivocado. Se muestra cada vez que mires la posición.",
       },
-      { name: "planned_size_eur", label: "Tamaño previsto (EUR)", kind: "decimal", required: true },
+      { name: "planned_size_eur", label: "Tamaño previsto (€)", kind: "decimal", required: true },
     ],
     omitted: [],
   },

@@ -54,9 +54,9 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   asset_without_target: (d, n) =>
     `${n.one(d.asset_id)} tiene posición y ningún peso objetivo asignado.`,
   deviation_above_threshold: (d, n) =>
-    `${n.one(d.asset_id)} se desvía ${pp(d.deviation_pp)} del objetivo (umbral ${pp(d.threshold_pp).replace(/^\+/, "")}). Rebalancear vendiendo es una decisión anual tuya (regla 3).`,
+    `${n.one(d.asset_id)} se desvía ${pp(d.deviation_pp)} del objetivo (umbral ${pp(d.threshold_pp).replace(/^\+/, "")}). Rebalancear vendiendo es una decisión tuya, una vez al año.`,
   satellite_below_minimum: (d) =>
-    `${valueLabel(d.asset_class)} pesa ${pct(d.weight_pct)}, por debajo del mínimo de un satélite, que es del ${pct(d.minimum_pct)} (regla 6b: 0 % o al menos el mínimo).`,
+    `${valueLabel(d.asset_class)} pesa ${pct(d.weight_pct)}, por debajo del mínimo de un satélite, que es del ${pct(d.minimum_pct)}; o 0 % o al menos el mínimo.`,
   partial_core_total: (d, n) =>
     `Faltan precios de ${n.many(d.assets)} a ${day(d.date)}: no se calculan pesos sobre un total parcial.`,
   // --- Prices and rates --------------------------------------------------
@@ -82,19 +82,19 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   bucket_contaminated_theses: (d, n) =>
     `${count(d.theses) === 1 ? "Una tesis queda" : `${count(d.theses)} tesis quedan`} fuera de las medias (${((d.theses as unknown[] | undefined) ?? []).map((id) => n.thesis(id)).join("; ")}): sus ventas consumieron lotes comprados por otra tesis, porque el FIFO es global.`,
   bucket_contribution_exceeded: (d, _n, f) =>
-    `El aporte bruto al cubo (${f.money(d.gross_eur)}) supera el tope de ${f.money(d.limit_eur)} (regla 17). Las retiradas no devuelven margen: la regla 19 prohíbe reponer el cubo.`,
+    `El aporte bruto al cubo (${f.money(d.gross_eur)}) supera el tope de ${f.money(d.limit_eur)}. Las retiradas no devuelven margen: el cubo no se repone con dinero de fuera.`,
   bucket_contribution_near_limit: (d, _n, f) =>
-    `El aporte bruto al cubo (${f.money(d.gross_eur)}) pasa del 80 % del tope de ${f.money(d.limit_eur)} (regla 17).`,
+    `El aporte bruto al cubo (${f.money(d.gross_eur)}) pasa del 80 % del tope de ${f.money(d.limit_eur)}.`,
   bucket_stop_loss_reached: (d, _n, f) =>
-    `REGLA DE PARADA: la pérdida acumulada del cubo (${f.money(d.loss_eur)}) es el ${pct(d.loss_pct)} del aporte bruto (${f.money(d.gross_eur)}), por encima del ${pct(d.limit_pct)} configurado (regla 17). La aplicación avisa; la decisión es tuya.`,
+    `REGLA DE PARADA: la pérdida acumulada del cubo (${f.money(d.loss_eur)}) es el ${pct(d.loss_pct)} del aporte bruto (${f.money(d.gross_eur)}), por encima del ${pct(d.limit_pct)} configurado: toca dejar de aportar al cubo. La aplicación avisa; la decisión es tuya.`,
   bucket_stop_loss_not_evaluated: (d, n) =>
-    `La regla de parada (${pct(d.limit_pct)}) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya (regla 17).`,
+    `La regla de parada (${pct(d.limit_pct)}) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya.`,
   bucket_weight_not_evaluated: (d, n) =>
-    `La regla de peso (${pct(d.limit_pct)}) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro (regla 18).`,
+    `La regla de peso (${pct(d.limit_pct)}) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro.`,
   bucket_weight_exceeded: (d) =>
-    `El cubo pesa el ${pct(d.weight_pct)} del patrimonio total, por encima del ${pct(d.limit_pct)} configurado (regla 18): valora traspasar el exceso a la cartera principal.`,
+    `El cubo pesa el ${pct(d.weight_pct)} del patrimonio total, por encima del ${pct(d.limit_pct)} configurado: valora traspasar el exceso a la cartera principal.`,
   missing_benchmark_asset: () =>
-    "No hay índice de referencia configurado: fíjalo en Ajustes → Configuración (regla 16).",
+    "No hay índice de referencia configurado: fíjalo en Ajustes → Configuración.",
   unknown_benchmark_asset: (d, n) =>
     `El índice de referencia ${n.one(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`,
   missing_benchmark_price: (d, n) =>

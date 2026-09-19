@@ -67,7 +67,7 @@ export const ThesesCard = (props: { view: ThesesView }): JSX.Element => (
   <Section
     title="Tesis frente al índice"
     class="span-12"
-    aside={<span>regla 16: la referencia es el índice, no cero</span>}
+    aside={<span>la vara de medir es el índice, no el cero</span>}
   >
     <Show
       when={props.view.rows.length > 0}
