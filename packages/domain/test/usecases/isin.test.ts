@@ -11,6 +11,7 @@ import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { taxYear } from "../../src/tax/year.js";
 import { previewEvent } from "../../src/usecases/preview-event.js";
 import { recordEvent } from "../../src/usecases/record-event.js";
+import { correctEvent, reverseEvent } from "../../src/usecases/rectify.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 import { TestStore } from "../memory-store.js";
 import { testDeps } from "./helpers.js";
@@ -107,6 +108,79 @@ describe("recording an ISIN another asset already has", () => {
   });
 });
 
+describe("the catalogue in force, not the raw lines (verifier of feature 009)", () => {
+  it("accepts the ISIN of an asset whose creation was reversed", async () => {
+    // The natural way to fix a wrong type or currency: reverse the creation
+    // and create the asset again. The ISIN is free once the first is gone.
+    const store = withCoreEtf();
+    const deps = testDeps(store);
+    const wrong = await recordEvent(deps, asset("vwce_bad", { isin: "IE00B0000001" }) as never);
+    await reverseEvent(deps, wrong.event.id, "wrong currency");
+    expect(
+      await codeOf(() => recordEvent(deps, asset("vwce_good", { isin: "IE00B0000001" }) as never)),
+    ).toBe("recorded");
+  });
+
+  it("refuses the ISIN an asset got back when its last change was reversed", async () => {
+    const store = withCoreEtf();
+    const deps = testDeps(store);
+    const update = (isin: string) =>
+      recordEvent(deps, { ...asset("vwce_core", { isin }), type: "asset_updated" } as never);
+    await update("IE00B0000002");
+    const second = await update("IE00B0000003");
+    await reverseEvent(deps, second.event.id, "typo");
+    // vwce_core holds IE00B0000002 again: a new asset cannot take it.
+    expect(
+      await codeOf(() => recordEvent(deps, asset("other", { isin: "IE00B0000002" }) as never)),
+    ).toBe("duplicate_isin");
+    // And the one it no longer holds is free.
+    expect(
+      await codeOf(() => recordEvent(deps, asset("other", { isin: "IE00B0000003" }) as never)),
+    ).toBe("recorded");
+  });
+
+  it("refuses a correction that gives an asset another asset's ISIN", async () => {
+    const store = withCoreEtf();
+    const deps = testDeps(store);
+    const created = await recordEvent(deps, asset("other", { isin: "IE00B0000004" }) as never);
+    expect(
+      await codeOf(() =>
+        correctEvent(deps, created.event.id, asset("other", { isin: ISIN }) as never, "fix"),
+      ),
+    ).toBe("duplicate_isin");
+    // Correcting it with its own ISIN, or a free one, is fine.
+    expect(
+      await codeOf(() =>
+        correctEvent(
+          deps,
+          created.event.id,
+          asset("other", { isin: "IE00B0000005" }) as never,
+          "fix",
+        ),
+      ),
+    ).toBe("recorded");
+  });
+
+  it("compares the ISIN in upper case and without spaces", async () => {
+    const store = withCoreEtf();
+    const deps = testDeps(store);
+    for (const typed of [ISIN.toLowerCase(), ` ${ISIN.slice(0, 4)} ${ISIN.slice(4)} `]) {
+      expect(await codeOf(() => recordEvent(deps, asset("again", { isin: typed }) as never))).toBe(
+        "duplicate_isin",
+      );
+    }
+    // An update that keeps its own ISIN, typed another way, is not a clash.
+    expect(
+      await codeOf(() =>
+        recordEvent(deps, {
+          ...asset("vwce_core", { isin: ISIN.toLowerCase() }),
+          type: "asset_updated",
+        } as never),
+      ),
+    ).toBe("recorded");
+  });
+});
+
 describe("a ledger written before, with two assets on one ISIN", () => {
   /** The reviewer's case: a loss in the core, a repurchase in the bucket 14 days later. */
   const legacy = () => {
@@ -141,6 +215,42 @@ describe("a ledger written before, with two assets on one ISIN", () => {
     });
     return b.build();
   };
+
+  it("can still be repaired: an update that keeps its own ISIN is not refused", async () => {
+    const deps = testDeps(new TestStore(legacy()));
+    expect(
+      await codeOf(() =>
+        recordEvent(deps, {
+          ...asset("vwce_bkt", { isin: ISIN, name: "VWCE (bucket)" }),
+          book: "bucket",
+          asset_class: undefined,
+          type: "asset_updated",
+        } as never),
+      ),
+    ).toBe("recorded");
+    // Taking the other's ISIN from an asset without one is still refused.
+    expect(
+      await codeOf(() =>
+        recordEvent(deps, {
+          ...asset("fresh", {}),
+          type: "asset_created",
+        } as never).then(() =>
+          recordEvent(deps, { ...asset("fresh", { isin: ISIN }), type: "asset_updated" } as never),
+        ),
+      ),
+    ).toBe("duplicate_isin");
+  });
+
+  it("is seen by integrity however the ISIN was typed", () => {
+    const b = new LedgerBuilder();
+    b.asset("one", { asset_type: "etf", transferable: false, isin: "ie00b0000001" });
+    b.asset("two", { asset_type: "etf", transferable: false, isin: "IE00 B000 0001" });
+    b.asset("three", { asset_type: "etf", transferable: false, isin: "IE00B0000009" });
+    const findings = integrity(projectLedger(b.build())).filter((f) => f.code === "duplicate_isin");
+    expect(findings.map((f) => f.message)).toEqual([
+      "ISIN IE00B0000001 is shared by one, two: FIFO and the wash-sale rule treat them as different securities",
+    ]);
+  });
 
   it("still loads and projects, and integrity says what is wrong", () => {
     const state = projectLedger(legacy());
