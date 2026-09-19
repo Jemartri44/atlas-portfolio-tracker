@@ -15,7 +15,10 @@ import { SETTING_LABELS, settingLabel, valueLabel } from "../format/labels.js";
 import { displayName, type NameIndex } from "../format/names.js";
 import { formatExact, NBSP } from "../format/number.js";
 
-export type Part = { text: string } | { amount: Money; decimals?: number } | { quantity: Quantity };
+export type Part =
+  | { text: string }
+  | { amount: Money; decimals?: number }
+  | { quantity: Quantity; of?: string };
 
 export type Sentence = Part[];
 

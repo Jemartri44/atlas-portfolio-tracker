@@ -49,11 +49,13 @@ export default function MovimientoEditarRoute(): JSX.Element {
                 <EmptyState
                   what={
                     event() === undefined
-                      ? "Ese movimiento no está en el libro."
+                      ? "Ese movimiento no está en tus datos."
                       : "Este tipo de movimiento no se corrige desde aquí: se anula y se vuelve a registrar."
                   }
                 >
-                  <A href={`/movimientos/${params.id}`}>Volver al movimiento</A>
+                  <A href={`/movimientos/${params.id}`} role="button" class="secondary">
+                    Volver al movimiento
+                  </A>
                 </EmptyState>
               </>
             }

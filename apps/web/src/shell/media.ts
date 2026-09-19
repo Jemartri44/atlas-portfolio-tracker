@@ -23,3 +23,6 @@ export const mediaQuery = (query: string): Accessor<boolean> => {
 
 /** Where the shell turns from the bottom bar into the top bar (styles/layout.css). */
 export const TOP_BAR = "(min-width: 75rem)";
+
+/** Where the content grid gains its columns (styles/layout.css). */
+export const GRID = "(min-width: 64rem)";

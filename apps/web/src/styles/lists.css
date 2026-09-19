@@ -145,10 +145,17 @@ a.row:hover {
   font-weight: var(--fw-semibold);
 }
 
+/* The link of a row fills its height, so it is a target and not a word. */
+.table td > a {
+  align-items: center;
+  display: inline-flex;
+  min-height: var(--tap);
+}
+
 /* A long name is cut inside its cell, with the whole of it in the title. */
 .cell-trunc {
   display: block;
-  max-width: 18rem;
+  max-width: 28rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

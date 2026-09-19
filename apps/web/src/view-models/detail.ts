@@ -26,6 +26,7 @@ import {
   NAMED_ID_FIELDS,
   type NameIndex,
   NO_NAMES,
+  unitsOf,
 } from "../format/names.js";
 import { formatExact } from "../format/number.js";
 import { FORM_SPECS } from "./forms/specs.js";
@@ -70,6 +71,8 @@ export interface DetailField {
   /** The decimals it was recorded with, so the detail reads back what was written. */
   decimals?: number;
   quantity?: Quantity;
+  /** What the quantity counts: "part.", "acc.", "uds.". */
+  of?: string;
   /** The effects of a corporate action, one sentence each. */
   sentences?: Sentence[];
   /** The parameters of a configuration change, one row each. */
@@ -202,6 +205,17 @@ const currencyOf = (event: Record<string, unknown>, field: string): string => {
   return String(event.currency ?? "EUR");
 };
 
+/** The units a quantity field counts: those of the asset it leaves or enters. */
+const unitsFor = (event: Record<string, unknown>, name: string, names: NameIndex): string => {
+  const asset =
+    name === "quantity_out"
+      ? (event.from_asset_id ?? event.asset_id)
+      : name === "quantity_in"
+        ? (event.to_asset_id ?? event.asset_id)
+        : event.asset_id;
+  return unitsOf(names, typeof asset === "string" ? asset : undefined);
+};
+
 interface Resolvers {
   names: NameIndex;
   /** Event identifier → "Compra del 03/09/2026". Without it, the identifier. */
@@ -228,7 +242,13 @@ const fieldOf = (
     };
   }
   if (typeof value === "string" && QUANTITY_FIELDS.has(name)) {
-    return { name, label, kind: "quantity", quantity: Quantity.parse(value) };
+    return {
+      name,
+      label,
+      kind: "quantity",
+      quantity: Quantity.parse(value),
+      of: unitsFor(event, name, names),
+    };
   }
   if (typeof value === "string" && DATE_FIELDS.has(name)) {
     return { name, label, kind: "date", text: value };

@@ -1,0 +1,169 @@
+/*
+ * The movements (docs/design/system.md §7.3): the filters in two shapes (D12),
+ * the list grouped by day, and the detail that opens with one sentence and
+ * sets its data in two columns.
+ */
+
+/* ---- Filters: folded on a phone, a column beside the table on a desk ---- */
+
+.filters-bar {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.filters-bar > .filters {
+  background-color: var(--c-surface);
+  border: var(--border) solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding-inline: var(--space-4);
+}
+
+.filter-fields {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.filters-bar .filter-fields {
+  padding-bottom: var(--space-4);
+}
+
+.filter-dates {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* A date control has an intrinsic width; in a half column it has to give. */
+.filter-dates input {
+  min-width: 0;
+  width: 100%;
+}
+
+.filters-panel {
+  align-self: start;
+  gap: var(--space-4);
+}
+
+.filters-panel > h2 {
+  font-size: var(--text-lg);
+}
+
+.filters-panel .filter-dates {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The active filters, each one a chip that removes itself. */
+.chips {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  align-items: center;
+  background-color: var(--c-accent-soft);
+  border-radius: var(--radius-pill);
+  color: var(--c-accent-soft-text);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  gap: var(--space-1);
+  max-width: 100%;
+  min-height: 2rem;
+  padding-left: var(--space-3);
+}
+
+/* The cross is a full target, spilling over the chip instead of growing it. */
+.chip > button {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: inherit;
+  display: inline-flex;
+  height: var(--tap);
+  justify-content: center;
+  margin-block: calc((2rem - var(--tap)) / 2);
+  min-height: 0;
+  padding: 0;
+  width: var(--tap);
+}
+
+/* ---- The list, grouped by day on a phone -------------------------------- */
+
+.list-pane,
+.days {
+  min-width: 0;
+}
+
+.day + .day {
+  margin-top: var(--space-4);
+}
+
+.day-title {
+  border-bottom: var(--border) solid var(--c-border);
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  padding-bottom: var(--space-2);
+}
+
+.load-more {
+  margin-top: var(--space-4);
+}
+
+/* ---- The detail: one sentence, then the data in two columns ------------ */
+
+.sentence {
+  font-size: var(--text-lg);
+  line-height: var(--lh-snug);
+  margin-bottom: var(--space-3);
+}
+
+.facts {
+  display: grid;
+  margin: 0;
+}
+
+.fact {
+  border-bottom: var(--border) solid var(--c-border);
+  display: grid;
+  gap: var(--space-0) var(--space-3);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  padding-block: var(--space-2);
+}
+
+.fact > dt {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+}
+
+.fact > dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.facts.is-nested .fact {
+  border-bottom: 0;
+  padding-block: var(--space-0);
+}
+
+.sentences {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.row > .chev {
+  color: var(--c-text-3);
+}
+
+@media (min-width: 64rem) {
+  /* Two pairs of label and value per line: the data reads across the card. */
+  .facts:not(.is-nested) {
+    column-gap: var(--space-6);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

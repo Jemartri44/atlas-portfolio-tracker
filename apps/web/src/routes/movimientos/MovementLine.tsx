@@ -71,7 +71,11 @@ export const MovementState = (props: { row: MovementRow }): JSX.Element => (
   </>
 );
 
-export const MovementLine = (props: { row: MovementRow }): JSX.Element => (
+/**
+ * `dated`: the date under the figure. Off inside a list grouped by day, where
+ * the heading of the day already says it.
+ */
+export const MovementLine = (props: { row: MovementRow; dated?: boolean }): JSX.Element => (
   <A
     href={`/movimientos/${props.row.id}`}
     class={props.row.status === "reversed" ? "row has-lead is-reversed" : "row has-lead"}
@@ -96,7 +100,9 @@ export const MovementLine = (props: { row: MovementRow }): JSX.Element => (
       <span class="fig">
         <MovementFigure row={props.row} />
       </span>
-      <span class="fig-sub num">{formatDate(props.row.date)}</span>
+      <Show when={props.dated !== false}>
+        <span class="fig-sub num">{formatDate(props.row.date)}</span>
+      </Show>
     </span>
   </A>
 );

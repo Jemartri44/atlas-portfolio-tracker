@@ -383,12 +383,28 @@
     grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 
+  .span-3 {
+    grid-column: span 3;
+  }
+
+  .span-4 {
+    grid-column: span 4;
+  }
+
   .span-5 {
     grid-column: span 5;
   }
 
   .span-7 {
     grid-column: span 7;
+  }
+
+  .span-8 {
+    grid-column: span 8;
+  }
+
+  .span-9 {
+    grid-column: span 9;
   }
 
   .span-12 {

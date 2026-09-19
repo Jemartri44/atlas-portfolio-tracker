@@ -1,9 +1,12 @@
-// "¿Qué dice exactamente este evento y sigue vigente?"
+// "¿Qué dice exactamente este movimiento y sigue vigente?"
 //
-// Every field with a legible name, the state in words, the cross references as
-// links and the identifier ready to copy — which is what `atlas edit` or
-// `atlas delete` need from a terminal (FR-040). Rectifying lives here too,
-// because this is where the user realises something is wrong.
+// It opens with one sentence — what happened, for how much, when and where —
+// and then every field with a legible name, the state in words, the linked
+// movements as rows and the identifier ready to copy in the folded technical
+// record, which is what `atlas edit` or `atlas delete` need from a terminal
+// (FR-040, docs/design/system.md §7.3). Rectifying lives here too, because this
+// is where the user realises something is wrong: «Corregir» is secondary and
+// «Anular» destructive, never the look of a main action.
 
 import { ledgerEntries } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
@@ -16,8 +19,9 @@ import { store } from "../../ledger/state.js";
 import { reverse } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { detailView } from "../../view-models/index.js";
+import { movementSentence } from "../../view-models/sentence.js";
 import { RequireLedger } from "../guard.jsx";
-import { EventEnvelope, EventFields, EventLinks } from "./DetailFields.jsx";
+import { EventEnvelope, EventLinks, Facts, Parts } from "./DetailFields.jsx";
 
 export default function MovimientoDetalleRoute(): JSX.Element {
   const params = useParams<{ id: string }>();
@@ -48,7 +52,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
     }
     setError(
       result.failure.kind === "conflict"
-        ? "El libro ha cambiado desde que se cargó: se ha recargado, vuelve a intentarlo."
+        ? "Tus datos han cambiado desde que se cargaron: se han recargado, vuelve a intentarlo."
         : result.failure.kind === "error"
           ? result.failure.error.message
           : "No se ha podido anular.",
@@ -76,8 +80,10 @@ export default function MovimientoDetalleRoute(): JSX.Element {
             fallback={
               <>
                 <PageHeader title="Movimiento" />
-                <EmptyState what="Ese movimiento no está en el libro.">
-                  <A href="/movimientos">Volver al libro</A>
+                <EmptyState glyph="movements" what="Ese movimiento no está en tus datos.">
+                  <A href="/movimientos" role="button" class="secondary">
+                    Volver a los movimientos
+                  </A>
                 </EmptyState>
               </>
             }
@@ -157,18 +163,29 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                     </Notice>
                   </Show>
 
-                  <div class="stack">
-                    <Show when={view().status !== "current"}>
-                      <div class="hstack wrap">
-                        <Tag tone={view().status === "reversed" ? "danger" : "neutral"}>
-                          {view().statusLabel}
-                        </Tag>
-                      </div>
-                    </Show>
-
-                    <EventFields fields={view().fields} />
+                  <div class="grid">
+                    <section class="card span-8" aria-label="El movimiento">
+                      <p class="sentence">
+                        <Parts
+                          parts={movementSentence(
+                            found(),
+                            nameIndex(snapshot.state),
+                            eventReferences(snapshot.events),
+                          )}
+                        />
+                      </p>
+                      <Show when={view().status !== "current"}>
+                        <p>
+                          <Tag icon={view().status === "reversed" ? "reversed" : undefined}>
+                            {view().statusLabel}
+                          </Tag>
+                        </p>
+                      </Show>
+                      <h2 class="block-title">Datos</h2>
+                      <Facts fields={view().fields} />
+                      <EventEnvelope envelope={view().envelope} position={found().position} />
+                    </section>
                     <EventLinks links={view().links} />
-                    <EventEnvelope envelope={view().envelope} position={found().position} />
                   </div>
 
                   <Dialog
@@ -193,14 +210,14 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   >
                     <p>
                       No se borra nada: se registra una anulación que deja este movimiento sin
-                      efecto. El original sigue en el libro, marcado como anulado.
+                      efecto. El original sigue en tus datos, marcado como anulado.
                     </p>
                     <Field
                       id="reverse-reason"
                       kind="text"
                       label="Motivo"
                       required
-                      hint="Queda registrado en el libro."
+                      hint="Queda registrado junto a la anulación."
                       value={reason()}
                       onInput={setReason}
                     />

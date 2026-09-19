@@ -56,6 +56,11 @@ interface DataTableProps<R> {
   /** The round icon that opens a row of the list, when rows are of different kinds. */
   lead?: (row: R) => IconName | undefined;
   /**
+   * Only the table: the caller draws the rows of a phone itself, because they
+   * are grouped (the movements, by day).
+   */
+  tableOnly?: boolean | undefined;
+  /**
    * A block under the row, for what belongs to it and does not fit in a cell:
    * the thesis of a position. On the table it goes in a row of its own.
    */
@@ -135,39 +140,41 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
         the only thing a screen reader has, and a list says how many rows there
         are.
       */}
-      <ul class="rows only-narrow" aria-label={props.label}>
-        <For each={props.rows}>
-          {(row) => (
-            <li>
-              <Show
-                when={props.href !== undefined}
-                fallback={
-                  <div class={classOf(row, "row", "has-lead")}>
+      <Show when={props.tableOnly !== true}>
+        <ul class="rows only-narrow" aria-label={props.label}>
+          <For each={props.rows}>
+            {(row) => (
+              <li>
+                <Show
+                  when={props.href !== undefined}
+                  fallback={
+                    <div class={classOf(row, "row", "has-lead")}>
+                      <RowBody
+                        columns={props.columns}
+                        row={row}
+                        lead={props.lead?.(row)}
+                        detail={props.detail}
+                      />
+                    </div>
+                  }
+                >
+                  <A
+                    href={(props.href as (row: R) => string)(row)}
+                    class={classOf(row, "row", "has-lead")}
+                  >
                     <RowBody
                       columns={props.columns}
                       row={row}
                       lead={props.lead?.(row)}
                       detail={props.detail}
                     />
-                  </div>
-                }
-              >
-                <A
-                  href={(props.href as (row: R) => string)(row)}
-                  class={classOf(row, "row", "has-lead")}
-                >
-                  <RowBody
-                    columns={props.columns}
-                    row={row}
-                    lead={props.lead?.(row)}
-                    detail={props.detail}
-                  />
-                </A>
-              </Show>
-            </li>
-          )}
-        </For>
-      </ul>
+                  </A>
+                </Show>
+              </li>
+            )}
+          </For>
+        </ul>
+      </Show>
 
       {/* Desktop: the same rows, dense. */}
       <table class="table only-wide" aria-label={props.label}>

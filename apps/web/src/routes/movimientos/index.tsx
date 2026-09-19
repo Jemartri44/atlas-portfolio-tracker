@@ -1,4 +1,4 @@
-// "¿Qué he registrado?" — the ledger, readable and filterable.
+// "¿Qué he registrado?" — every movement, readable and filterable.
 //
 // The order and the state of each entry come from the domain (`ledgerEntries`,
 // decision (h)); this screen filters through it, paints and **pages**: twenty
@@ -51,40 +51,56 @@ export default function MovimientosRoute(): JSX.Element {
           <>
             <PageHeader
               title="Movimientos"
-              lead="Todo lo registrado, de lo más reciente a lo más antiguo. Toca un movimiento para ver todos sus campos."
+              lead={
+                filtered()
+                  ? `${entries().length} de ${countOf(snapshot.events.length, "movimiento", "movimientos")}`
+                  : countOf(snapshot.events.length, "movimiento", "movimientos")
+              }
             />
-            <Filters
-              state={snapshot.state}
-              total={snapshot.events.length}
-              shown={entries().length}
-            />
-            <Show
-              when={entries().length > 0}
-              fallback={
+            <div class="grid">
+              <Filters state={snapshot.state} />
+              <section class="card list-pane span-9" aria-label="Lista de movimientos">
                 <Show
-                  when={filtered()}
+                  when={entries().length > 0}
                   fallback={
-                    <EmptyState what="Todavía no hay ningún movimiento.">
-                      <A href="/registrar">Registrar el primero</A>
-                    </EmptyState>
+                    <Show
+                      when={filtered()}
+                      fallback={
+                        <EmptyState
+                          glyph="movements"
+                          what="Todavía no hay ningún movimiento."
+                          why="Cada operación que hagas en tu plataforma se anota aquí."
+                        >
+                          <A href="/registrar" role="button">
+                            Registrar el primero
+                          </A>
+                        </EmptyState>
+                      }
+                    >
+                      <EmptyState
+                        glyph="movements"
+                        what="Ningún movimiento coincide con los filtros."
+                        why="Quita algún filtro para ver más."
+                      />
+                    </Show>
                   }
                 >
-                  <EmptyState what="Ningún movimiento coincide con los filtros.">
-                    <span class="subtle">Quita algún filtro para ver más.</span>
-                  </EmptyState>
+                  <MovementList rows={rows()} />
+                  <Show when={more()}>
+                    <button
+                      type="button"
+                      class="secondary block load-more"
+                      onClick={() => setPage(page() + 1)}
+                    >
+                      Cargar {Math.min(PAGE_SIZE, entries().length - rows().length)} más
+                    </button>
+                  </Show>
+                  <p class="card-note">
+                    {rows().length} de {countOf(entries().length, "movimiento", "movimientos")}
+                  </p>
                 </Show>
-              }
-            >
-              <MovementList rows={rows()} />
-              <Show when={more()}>
-                <button type="button" class="secondary block" onClick={() => setPage(page() + 1)}>
-                  Cargar {Math.min(PAGE_SIZE, entries().length - rows().length)} más
-                </button>
-              </Show>
-              <p class="note">
-                {rows().length} de {countOf(entries().length, "movimiento", "movimientos")}
-              </p>
-            </Show>
+              </section>
+            </div>
           </>
         );
       }}

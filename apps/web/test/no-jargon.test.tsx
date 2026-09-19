@@ -269,7 +269,7 @@ describe("the screens", () => {
   it("keeps the identifiers of a movement in its technical block only", async () => {
     const host = await show(`/movimientos/01N94FZV80TNBBFGNVWT1XZ01Y`, Detail, "/movimientos/:id");
     const cards = [...host.querySelectorAll("section.card")];
-    const links = cards.find((card) => card.textContent?.includes("Enlaces"));
+    const links = cards.find((card) => card.textContent?.includes("Movimientos enlazados"));
     expect(text(links)).toContain("Dividendo del 15/04/2027");
     expect(text(links)).not.toMatch(ULID);
   });
