@@ -31,6 +31,13 @@ const SAID: Readonly<Record<Done, { title: string; text: string }>> = {
   },
 };
 
+/** What happened to the original, in the warning of a past year: said as it was done. */
+const WHAT: Readonly<Record<Done, string>> = {
+  registrado: "registrado",
+  corregido: "corregido",
+  anulado: "anulado",
+};
+
 export const Rectified = (): JSX.Element => {
   const [params] = useSearchParams<{ hecho?: string; ejercicio?: string }>();
   const said = () => SAID[params.hecho as Done] as (typeof SAID)[Done] | undefined;
@@ -45,8 +52,8 @@ export const Rectified = (): JSX.Element => {
       </Show>
       <Show when={params.ejercicio === "anterior"}>
         <Notice severity="caution" title="Ejercicio anterior">
-          El movimiento rectificado pertenece a un ejercicio anterior: puede afectar a una
-          declaración ya presentada.
+          El movimiento {WHAT[params.hecho as Done] ?? "rectificado"} pertenece a un ejercicio
+          anterior: puede afectar a una declaración ya presentada.
         </Notice>
       </Show>
     </>

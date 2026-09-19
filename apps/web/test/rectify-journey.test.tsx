@@ -65,6 +65,7 @@ describe("correcting a movement of a past tax year", () => {
     const shown = text(host);
     expect(shown).toContain("Corrección registrada");
     expect(shown).toContain("Ejercicio anterior");
+    expect(shown).toContain("El movimiento corregido pertenece a un ejercicio anterior");
     expect(shown).toContain("8.000,00 €");
     // Not the form again, with the original's values.
     expect(host.querySelector("#f-amount")).toBeNull();
@@ -101,5 +102,7 @@ describe("correcting a movement of a past tax year", () => {
     expect(window.location.search).toBe("?hecho=anulado&ejercicio=anterior");
     expect(text(host)).toContain("Anulación registrada");
     expect(text(host)).toContain("Ejercicio anterior");
+    // Said as it was done: annulled, not «rectified».
+    expect(text(host)).toContain("El movimiento anulado pertenece a un ejercicio anterior");
   });
 });
