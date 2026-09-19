@@ -5,7 +5,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import NoExiste from "../src/routes/no-existe.jsx";
-import { show, withGoldenLedger } from "./helpers/render.jsx";
+import { show, showInShell, withGoldenLedger } from "./helpers/render.jsx";
 import { applied, pixels, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
@@ -18,5 +18,15 @@ describe("the page that does not exist", () => {
     const back = host.querySelector('a[href="/"]');
     expect(back?.getAttribute("role")).toBe("button");
     expect(pixels(applied(back, "min-height"))).toBeGreaterThanOrEqual(44);
+  });
+});
+
+describe("the brand of the top bar", () => {
+  it("is a full target where it shows the mark alone, from 1200 to 1439px", async () => {
+    withStyles(1280, 800);
+    const host = await showInShell("/", { "/": () => <p>resumen</p> });
+    const brand = host.querySelector(".brand");
+    expect(pixels(applied(brand, "min-width"))).toBeGreaterThanOrEqual(44);
+    expect(pixels(applied(brand, "min-height"))).toBeGreaterThanOrEqual(44);
   });
 });

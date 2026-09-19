@@ -437,9 +437,12 @@
     font-size: var(--text-lg);
     font-weight: var(--fw-semibold);
     gap: var(--space-2);
+    justify-content: center;
     letter-spacing: var(--tracking-tight);
     margin-right: var(--space-2);
     min-height: var(--tap);
+    /* The mark alone, between 1200 and 1439px, is still a 44px target. */
+    min-width: var(--tap);
     text-decoration: none;
   }
 
