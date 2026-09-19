@@ -180,7 +180,9 @@ export const Filters = (props: { state: LedgerState }): JSX.Element => {
     <Show
       when={wide()}
       fallback={
-        <div class="filters-bar">
+        // The whole row of the grid: without a span, from 1024px the bar took
+        // one column of twelve and squeezed every filter to ~100px.
+        <div class="filters-bar span-12">
           <Search />
           <Disclosure class="filters" label={folded() > 0 ? `Filtros · ${folded()}` : "Filtros"}>
             <div class="filter-fields">

@@ -73,6 +73,9 @@ describe("the list of movements", () => {
     const host = await show("/movimientos", Movimientos);
     expect(host.querySelector(".filters-panel")).toBeNull();
     expect(host.querySelector(".list-pane")?.classList.contains("span-12")).toBe(true);
+    // The folded bar takes the whole row of the grid, not one column of twelve.
+    const bar = host.querySelector(".filters-bar") as HTMLElement;
+    expect(getComputedStyle(bar).gridColumn).toMatch(/^(span 12|1 \/ -1)$/);
   });
 
   it("draws money in and money out apart, and neither as a charge", () => {
