@@ -474,3 +474,22 @@ describe("the privacy mode inside a message", () => {
     expect(maskFigures("open lots 23.0274 differ", false)).toBe("open lots 23.0274 differ");
   });
 });
+
+describe("a closed order or transfer request", () => {
+  const closed = (code: string, stage: string) =>
+    describeError({ code, message: "english", details: { stage } } as unknown as ProjectionError, {
+      privacy: false,
+    });
+
+  it("is said in Spanish, never with the ledger's word for its stage", () => {
+    expect(closed("order_closed", "filled")).toBe(
+      "La orden elegida ya se ejecutó: otra operación la cerró.",
+    );
+    expect(closed("order_closed", "cancelled")).toContain("está cancelada");
+    expect(closed("request_closed", "completed")).toContain("ya se completó");
+    expect(closed("request_closed", "cancelled")).toContain("está cancelada");
+    for (const said of [closed("order_closed", "filled"), closed("request_closed", "completed")]) {
+      expect(said).not.toMatch(/filled|completed|cancelled/);
+    }
+  });
+});

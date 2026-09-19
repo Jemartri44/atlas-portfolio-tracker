@@ -190,12 +190,18 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `Hay ${countOf(count(d.event_ids ?? d.ids), "referencia", "referencias")} a movimientos que no están en tus datos.`,
   // --- Orders and transfer requests --------------------------------------
   unknown_order: () => "La orden elegida no existe en esa fecha.",
-  order_closed: (d) => `La orden elegida ya está cerrada (${enumValue(d.stage)}).`,
+  // The stage in Spanish, never the ledger's word: «(filled)» reached the screen.
+  order_closed: (d) =>
+    d.stage === "filled"
+      ? "La orden elegida ya se ejecutó: otra operación la cerró."
+      : `La orden elegida está ${enumValue(d.stage)}: ya no se puede ejecutar.`,
   order_mismatch: () =>
     "La orden elegida no coincide con la cuenta, el activo o el sentido de la operación.",
   unknown_request: () => "La solicitud de traspaso elegida no existe en esa fecha.",
   request_closed: (d) =>
-    `La solicitud de traspaso elegida ya está cerrada (${enumValue(d.stage)}).`,
+    d.stage === "completed"
+      ? "La solicitud de traspaso elegida ya se completó."
+      : `La solicitud de traspaso elegida está ${enumValue(d.stage)}: ya no admite más pasos.`,
   request_mismatch: () =>
     "La solicitud de traspaso elegida se refiere a otras cuentas o a otros fondos.",
   // --- Ledger state ------------------------------------------------------
