@@ -8,8 +8,14 @@
 // keyboard walks it in that same order: CSS could move Registrar to the middle,
 // but not the Tab key. Settings are not a destination: they live in the status
 // area of the header, touched once a month.
+//
+// A destination is current on its own page **and on every page under it**: the
+// detail of a movement, its correction or a form of Registrar still belong to
+// their section, and the bar has to say where the user is (review of
+// 2026-09-19). The router only marks the exact page, so the mark is ours. The
+// links are plain anchors, which the router still handles.
 
-import { A } from "@solidjs/router";
+import { useLocation } from "@solidjs/router";
 import { For, type JSX } from "solid-js";
 import { Icon, type IconName } from "../components/Icon.jsx";
 import { mediaQuery, TOP_BAR } from "./media.js";
@@ -32,26 +38,43 @@ const RECORD: Destination = { href: "/registrar", label: "Registrar", icon: "plu
 const NARROW = [SUMMARY, MOVEMENTS, RECORD, PORTFOLIO, BUCKET];
 const WIDE = [SUMMARY, MOVEMENTS, PORTFOLIO, BUCKET, RECORD];
 
-const Item = (props: { destination: Destination }): JSX.Element =>
-  props.destination.action === true ? (
+/** Whether a path is a destination's page or one under it. */
+export const inSection = (path: string, href: string, end = false): boolean => {
+  const clean = path.replace(/\/+$/, "") || "/";
+  return clean === href || (!end && clean.startsWith(`${href}/`));
+};
+
+const Item = (props: { destination: Destination }): JSX.Element => {
+  const location = useLocation();
+  const current = (): "page" | undefined =>
+    inSection(location.pathname, props.destination.href, props.destination.end)
+      ? "page"
+      : undefined;
+  return props.destination.action === true ? (
     <li class="nav-action-item">
-      <A href={props.destination.href} class="nav-action" aria-label="Registrar una operación">
+      <a
+        href={props.destination.href}
+        class="nav-action"
+        aria-label="Registrar una operación"
+        aria-current={current()}
+      >
         <span class="plate">
           <Icon name="plus" class="nav-glyph" />
         </span>
         <span class="nav-label">{props.destination.label}</span>
-      </A>
+      </a>
     </li>
   ) : (
     <li>
-      <A href={props.destination.href} end={props.destination.end} class="nav-link">
+      <a href={props.destination.href} class="nav-link" aria-current={current()}>
         <span class="indicator">
           <Icon name={props.destination.icon} class="nav-glyph" />
         </span>
         <span class="nav-label">{props.destination.label}</span>
-      </A>
+      </a>
     </li>
   );
+};
 
 export const Nav = (): JSX.Element => {
   const wide = mediaQuery(TOP_BAR);

@@ -8,6 +8,7 @@
 // for the presence of a line sees none of that; one that asks the document
 // what it applies, at the width of each device, sees all of it.
 
+import type { JSX } from "solid-js";
 import { afterEach, describe, expect, it } from "vitest";
 import { store } from "../src/ledger/state.js";
 import Ajustes from "../src/routes/ajustes/index.jsx";
@@ -102,6 +103,32 @@ describe("one navigation, in the order the eye reads it", () => {
         (element) => `${url} → ${element.outerHTML.slice(0, 80)}`,
       );
       expect(current, current.join("\n")).toHaveLength(1);
+      document.body.innerHTML = "";
+    }
+  });
+
+  it("marks the section of a page under it: a detail, a correction, a form", async () => {
+    const pages: Record<string, (props: never) => JSX.Element> = {
+      "/movimientos/:id": () => <p>detalle</p>,
+      "/movimientos/:id/editar": () => <p>corregir</p>,
+      "/registrar/:tipo": () => <p>formulario</p>,
+      "/ajustes/configuracion": () => <p>configuración</p>,
+    };
+    const expected: [string, string][] = [
+      ["/movimientos/01ARYZ6S41TSV4RRFFQ6900001", "Movimientos"],
+      ["/movimientos/01ARYZ6S41TSV4RRFFQ6900001/editar", "Movimientos"],
+      ["/registrar/buy", "Registrar"],
+      ["/ajustes/configuracion", "Ajustes"],
+    ];
+    for (const [url, section] of expected) {
+      const host = await showInShell(url, pages);
+      const current = [...host.querySelectorAll('[aria-current="page"]')];
+      expect(current, url).toHaveLength(1);
+      expect(
+        current[0]?.textContent?.includes(section) ||
+          current[0]?.getAttribute("aria-label") === section,
+        `${url}: ${current[0]?.outerHTML.slice(0, 80)}`,
+      ).toBe(true);
       document.body.innerHTML = "";
     }
   });

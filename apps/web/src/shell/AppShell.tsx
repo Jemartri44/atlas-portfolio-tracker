@@ -7,7 +7,7 @@
 // every destination needs data. An open ledger, even an empty one, shows it,
 // because the first steps lead to Registrar and to Ajustes (D8).
 
-import { A } from "@solidjs/router";
+import { A, useLocation } from "@solidjs/router";
 import { ErrorBoundary, type JSX, Show } from "solid-js";
 import { Icon } from "../components/Icon.jsx";
 // Imported straight from their modules, not through the barrel: the shell is
@@ -18,7 +18,7 @@ import { Notice } from "../components/Notice.jsx";
 import { countOf } from "../format/number.js";
 import { store } from "../ledger/state.js";
 import { LedgerChip } from "./LedgerChip.jsx";
-import { Nav } from "./Nav.jsx";
+import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
 
 const DegradedBand = (): JSX.Element => (
@@ -73,6 +73,21 @@ const hasLedger = (): boolean => {
   return phase !== "unconfigured" && phase !== "reconnect";
 };
 
+/** Settings are current on their page and on everything under it. */
+const SettingsButton = (): JSX.Element => {
+  const location = useLocation();
+  return (
+    <a
+      href="/ajustes"
+      class="icon-button"
+      aria-label="Ajustes"
+      aria-current={inSection(location.pathname, "/ajustes") ? "page" : undefined}
+    >
+      <Icon name="settings" />
+    </a>
+  );
+};
+
 export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
   <div class="app">
     <a href="#contenido" class="skip-link">
@@ -94,9 +109,7 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
         <div class="status">
           <LedgerChip />
           <PrivacyToggle />
-          <A href="/ajustes" class="icon-button" aria-label="Ajustes">
-            <Icon name="settings" />
-          </A>
+          <SettingsButton />
         </div>
       </div>
     </header>
