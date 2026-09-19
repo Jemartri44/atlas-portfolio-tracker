@@ -78,6 +78,8 @@ export interface NumberSetting {
   hint?: string;
   /** Written as an integer; anything else is a business decimal. */
   integer?: boolean;
+  /** An amount of euros: masked in privacy mode, like every other amount. */
+  money?: boolean;
 }
 
 export interface TextSetting {
@@ -98,17 +100,21 @@ export const SETTINGS_NUMBERS: readonly NumberSetting[] = [
     label: "Mínimo de un satélite (%)",
     hint: "Por debajo de esto, oro o cripto dejan de ser significativos (regla 6b).",
   },
-  { key: "monthly_contribution_eur", label: "Aportación mensual (EUR)" },
+  { key: "monthly_contribution_eur", label: "Aportación mensual (€)", money: true },
   {
     key: "bucket_pct_of_contribution",
     label: "Porcentaje al cubo (%)",
     hint: "El cubo es un presupuesto sobre la aportación, nunca una asignación.",
   },
-  { key: "bucket_max_cumulative_contribution", label: "Tope de aporte al cubo (EUR)" },
+  {
+    key: "bucket_max_cumulative_contribution",
+    label: "Tope de aporte al cubo (€)",
+    money: true,
+  },
   { key: "bucket_stop_loss_pct", label: "Regla de parada del cubo (%)" },
   { key: "bucket_max_weight_pct", label: "Peso máximo del cubo (%)" },
-  { key: "model_720_alert_threshold_eur", label: "Umbral del Modelo 720 (EUR)" },
-  { key: "model_721_alert_threshold_eur", label: "Umbral del Modelo 721 (EUR)" },
+  { key: "model_720_alert_threshold_eur", label: "Umbral del Modelo 720 (€)", money: true },
+  { key: "model_721_alert_threshold_eur", label: "Umbral del Modelo 721 (€)", money: true },
   {
     key: "stale_price_days",
     label: "Días para que un precio caduque",

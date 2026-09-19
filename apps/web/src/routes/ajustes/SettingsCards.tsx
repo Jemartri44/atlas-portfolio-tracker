@@ -94,6 +94,7 @@ export const ThresholdsCard = (props: { draft: SettingsDraft }): JSX.Element => 
             id={`s-${String(setting.key)}`}
             kind={setting.integer === true ? "integer" : "decimal"}
             label={setting.label}
+            sensitive={setting.money === true}
             {...(setting.hint === undefined ? {} : { hint: setting.hint })}
             value={settingValue(props.draft.current, props.draft.patch, setting.key)}
             onInput={(raw) => props.draft.onNumber(setting.key, raw, setting.integer === true)}

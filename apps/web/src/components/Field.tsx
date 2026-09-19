@@ -6,8 +6,15 @@
 // Every field has the same anatomy (docs/design/system.md §5.10): the label
 // above, the control, then the hint and — when there is one — the error **in
 // line**, under the field it is about, with its icon.
+//
+// Privacy (§5.10): what the user **types** is never hidden, but what the
+// application **shows** is. A field of an amount or a quantity that arrives
+// filled in — a correction, the configuration — is masked while it does not
+// have the focus, and shows its value as soon as it gets it.
 
-import { type JSX, Show } from "solid-js";
+import { createSignal, type JSX, Show } from "solid-js";
+import { MASK } from "../format/privacy.js";
+import { usePrivacy } from "../ledger/state.js";
 import { Icon } from "./Icon.jsx";
 
 export interface Option {
@@ -58,41 +65,52 @@ const Wrapper = (props: BaseProps & { children: JSX.Element }): JSX.Element => (
 interface TextFieldProps extends BaseProps {
   kind: "text" | "decimal" | "integer" | "date" | "textarea";
   placeholder?: string | undefined;
+  /** An amount or a quantity: masked, in privacy mode, until it has the focus. */
+  sensitive?: boolean | undefined;
 }
 
-export const Field = (props: TextFieldProps): JSX.Element => (
-  <Wrapper {...props}>
-    <Show
-      when={props.kind !== "textarea"}
-      fallback={
-        <textarea
+export const Field = (props: TextFieldProps): JSX.Element => {
+  const privacy = usePrivacy();
+  const [focused, setFocused] = createSignal(false);
+  const masked = (): boolean =>
+    props.sensitive === true && privacy() && !focused() && props.value !== "";
+  return (
+    <Wrapper {...props}>
+      <Show
+        when={props.kind !== "textarea"}
+        fallback={
+          <textarea
+            id={props.id}
+            value={props.value}
+            rows={3}
+            aria-describedby={describedBy(props)}
+            aria-invalid={props.error === undefined ? undefined : true}
+            disabled={props.disabled}
+            onInput={(event) => props.onInput(event.currentTarget.value)}
+          />
+        }
+      >
+        <input
           id={props.id}
-          value={props.value}
-          rows={3}
+          type={props.kind === "date" ? "date" : "text"}
+          value={masked() ? MASK : props.value}
+          title={masked() ? "Oculto: al entrar en el campo se ve su valor" : undefined}
+          placeholder={props.placeholder}
+          inputmode={
+            props.kind === "decimal" ? "decimal" : props.kind === "integer" ? "numeric" : undefined
+          }
+          autocomplete="off"
           aria-describedby={describedBy(props)}
           aria-invalid={props.error === undefined ? undefined : true}
           disabled={props.disabled}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           onInput={(event) => props.onInput(event.currentTarget.value)}
         />
-      }
-    >
-      <input
-        id={props.id}
-        type={props.kind === "date" ? "date" : "text"}
-        value={props.value}
-        placeholder={props.placeholder}
-        inputmode={
-          props.kind === "decimal" ? "decimal" : props.kind === "integer" ? "numeric" : undefined
-        }
-        autocomplete="off"
-        aria-describedby={describedBy(props)}
-        aria-invalid={props.error === undefined ? undefined : true}
-        disabled={props.disabled}
-        onInput={(event) => props.onInput(event.currentTarget.value)}
-      />
-    </Show>
-  </Wrapper>
-);
+      </Show>
+    </Wrapper>
+  );
+};
 
 interface SelectFieldProps extends BaseProps {
   options: readonly Option[];

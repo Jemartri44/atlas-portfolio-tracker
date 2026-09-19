@@ -116,8 +116,8 @@ describe("the equivalent table of a chart", () => {
       (node) => node.textContent ?? "",
     );
 
-    // With its currency: on a card there is no header to say EUR either.
-    expect(lines).toEqual(["Núcleo 1.234,56\u00a0EUR", "Cubo sin dato"]);
+    // With its currency: on a card there is no header to say € either.
+    expect(lines).toEqual(["Núcleo 1.234,56\u00a0€", "Cubo sin dato"]);
     // And nothing numeric is left loose on the card's first line.
     expect(card?.querySelector(".title")?.textContent).toBe("30/06/2027");
   });

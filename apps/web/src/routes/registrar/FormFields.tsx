@@ -56,6 +56,16 @@ export const withDerived = (
   return next;
 };
 
+/**
+ * The decimals of a form that are **not** an amount or a quantity: a rate of
+ * the ECB, a share of a cost, a TER. Every other decimal is money or units and
+ * is masked, in privacy mode, while it is not being edited.
+ */
+const VISIBLE_DECIMALS = new Set(["fx_rate", "cash_fx_rate", "cost_share", "ter"]);
+
+const isSensitive = (field: FieldSpec): boolean =>
+  field.kind === "decimal" && !VISIBLE_DECIMALS.has(field.name) && !/_(pct|pp)$/.test(field.name);
+
 /** The options a select field offers with these values, as of today. */
 const optionsOf = (field: FieldSpec, state: LedgerState, values: FormValues): Option[] =>
   selectOptions(field, state, values, today());
@@ -111,7 +121,7 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
         />
       );
     }
-    return <Field {...common} kind={field.kind} />;
+    return <Field {...common} kind={field.kind} sensitive={isSensitive(field)} />;
   };
 
   return (

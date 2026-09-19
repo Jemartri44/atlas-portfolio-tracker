@@ -725,7 +725,9 @@ describe("architecture: apps/web", () => {
   it("writes no class the stylesheet does not declare", () => {
     // The vendored stylesheet counts as a declaration: the `.u-*` classes are
     // uPlot's own, written by it at runtime and styled by it.
-    const vendored = [join(webRoot, "vendor", "uplot", "uPlot.css")].flatMap((path) => [...cssClassesOf(readFileSync(path, "utf8"))]);
+    const vendored = [join(webRoot, "vendor", "uplot", "uPlot.css")].flatMap((path) => [
+      ...cssClassesOf(readFileSync(path, "utf8")),
+    ]);
     const declared = new Set([...ourClasses(), ...vendored]);
     const violations = [...markupClasses().literal].filter((name) => !declared.has(name)).sort();
     expect(violations).toEqual([]);
@@ -820,7 +822,10 @@ describe("architecture: apps/web", () => {
 
     const loose: string[] = [];
     for (const name of STYLESHEETS) {
-      const css = readFileSync(join(webSrc, "styles", name), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      const css = readFileSync(join(webSrc, "styles", name), "utf8").replace(
+        /\/\*[\s\S]*?\*\//g,
+        "",
+      );
       for (const match of css.matchAll(/font-size:\s*([^;]+);/g)) {
         const value = (match[1] as string).trim();
         if (!/^(var\(--(text|t)-[a-z0-9-]+\)|inherit|[\d.]+em)$/.test(value)) {

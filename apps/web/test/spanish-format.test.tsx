@@ -54,13 +54,13 @@ describe("figures and units", () => {
   });
 
   it("keeps the unit of an amount a message says on the same line as the figure", () => {
-    expect(figuresOf(false).money("5000")).toBe("5.000,00\u00a0EUR");
+    expect(figuresOf(false).money("5000")).toBe("5.000,00\u00a0€");
   });
 
   it("writes an amount always with its currency", async () => {
     today("2026-09-18");
-    // On a card of the bucket the header that said EUR is not there.
-    expect(text(await show("/cubo", Cubo))).toContain("coste 199,49 EUR");
+    // On a card of the bucket the header that said € is not there.
+    expect(text(await show("/cubo", Cubo))).toContain("coste 199,49 €");
   });
 
   it("gives a percentage the decimals that say something", async () => {

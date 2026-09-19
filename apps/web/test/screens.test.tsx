@@ -194,7 +194,10 @@ describe("the privacy mode covers the two screens", () => {
     // Including the ones a warning **says**. This is the sentence the review of
     // feature 007 found (N11), and the bucket screen has its own call to the
     // catalogue: masking it in the summary would not have masked it here.
-    expect(shown).toContain(`El aporte bruto al cubo (${MASK}) pasa del 80 % del tope de ${MASK}`);
+    // The mask keeps its unit, and nothing else of the figure (D2).
+    expect(shown).toContain(
+      `El aporte bruto al cubo (${MASK} €) pasa del 80 % del tope de ${MASK} €`,
+    );
   });
 
   /** And with the mask off they are all there: the test is not passing on an empty page. */
@@ -214,7 +217,7 @@ describe("the privacy mode covers the two screens", () => {
     const shown = text(await show("/cubo?fecha=2027-12-31", Cubo));
 
     expect(shown).toContain(
-      "El aporte bruto al cubo (5.000,00 EUR) pasa del 80 % del tope de 6.000,00 EUR",
+      "El aporte bruto al cubo (5.000,00 €) pasa del 80 % del tope de 6.000,00 €",
     );
   });
 
@@ -442,7 +445,7 @@ describe("the privacy mode covers the prose of the warnings", () => {
     const shown = attention(await show("/", Resumen));
 
     expect(shown).not.toContain(MASK);
-    expect(shown).toContain("500,00 EUR");
+    expect(shown).toContain("500,00 €");
     expect(shown).toContain("0,5 títulos");
   });
 });

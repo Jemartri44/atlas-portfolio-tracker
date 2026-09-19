@@ -114,13 +114,15 @@ describe("signOf", () => {
 
 describe("the privacy gate", () => {
   it("formats an amount with its currency, to the cent", () => {
-    expect(formatMoney(Money.parse("1234.567", "EUR"))).toBe("1.234,57 EUR");
+    expect(formatMoney(Money.parse("1234.567", "EUR"))).toBe("1.234,57\u00a0€");
+    // Any other currency keeps its code, which no two countries share.
+    expect(formatMoney(Money.parse("1234.567", "USD"))).toBe("1.234,57\u00a0USD");
     expect(formatMoney(Money.parse("1234.567", "USD"), { currency: false })).toBe("1.234,57");
-    expect(formatMoney(Money.parse("-10", "EUR"), { signed: true })).toBe("−10,00 EUR");
+    expect(formatMoney(Money.parse("-10", "EUR"), { signed: true })).toBe("−10,00\u00a0€");
   });
 
   it("formats a unit value with four decimals, which is what a NAV needs", () => {
-    expect(formatUnitValue(Money.parse("210.12345", "EUR"))).toBe("210,1235 EUR");
+    expect(formatUnitValue(Money.parse("210.12345", "EUR"))).toBe("210,1235\u00a0€");
   });
 
   it("formats a quantity trimming the trailing zeros, because fractions are real", () => {
@@ -142,11 +144,11 @@ describe("the privacy gate", () => {
  * painting a zero where the datum is missing (review of 2026-09-18).
  */
 describe("amountDisplay", () => {
-  const input = { formatted: "1.234,56 EUR", privacy: false, kind: "importe" } as const;
+  const input = { formatted: "1.234,56", unit: "€", privacy: false, kind: "importe" } as const;
 
   it("masks a known figure whenever privacy is on", () => {
     const shown = amountDisplay(input);
-    expect(shown).toMatchObject({ state: "value", text: "1.234,56 EUR", label: "" });
+    expect(shown).toMatchObject({ state: "value", text: "1.234,56", unit: "€", label: "" });
     const hidden = amountDisplay({ ...input, privacy: true });
     expect(hidden.state).toBe("masked");
     expect(hidden.text).toBe(MASK);
@@ -154,6 +156,21 @@ describe("amountDisplay", () => {
     expect(hidden.text).not.toContain("1.234");
     expect(hidden.class).toContain("mask");
     expect(hidden.label).toBe("importe oculto");
+  });
+
+  /**
+   * D2: the mask keeps the unit — it says what kind of figure is hidden,
+   * never how big — and it is the same four dots whatever the amount, so its
+   * width cannot tell twelve euros from a hundred and twenty thousand.
+   */
+  it("keeps the unit under the mask and the same mask for every amount", () => {
+    const small = amountDisplay({ ...input, formatted: "12,00", privacy: true });
+    const large = amountDisplay({ ...input, formatted: "120.000,00", privacy: true });
+    expect(small.unit).toBe("€");
+    expect(small.text).toBe(large.text);
+    expect(small.text).toBe(MASK);
+    const nothing = amountDisplay({ ...input, formatted: undefined, privacy: true });
+    expect(nothing.unit).toBe("");
   });
 
   it("masks a quantity too, and says which kind it is (Q6)", () => {
@@ -376,7 +393,7 @@ describe("the privacy mode inside a message", () => {
     ).toContain(MASK);
     expect(
       describeError(settingsError("monthly_contribution_eur", "-600"), { privacy: false }),
-    ).toContain("−600,00\u00a0EUR");
+    ).toContain("−600,00\u00a0€");
     // A percentage is not an amount and stays readable in public (§9.6).
     const percent = describeError(settingsError("bucket_stop_loss_pct", "-25"), { privacy: true });
     expect(percent).toContain("−25");

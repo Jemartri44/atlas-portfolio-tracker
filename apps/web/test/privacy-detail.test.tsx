@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { MASK } from "../src/format/money.js";
 import { nameIndex } from "../src/format/names.js";
 import { store } from "../src/ledger/state.js";
+import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Detail from "../src/routes/movimientos/detail.jsx";
 import Edit from "../src/routes/movimientos/edit.jsx";
 import { detailView } from "../src/view-models/detail.js";
@@ -77,7 +78,65 @@ describe("the detail and the correction of a movement, with the mask on and off"
     const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
     const shown = text(host.querySelector("section.card"));
     expect(shown).toContain("31,2343");
-    expect(shown).toContain("3.100,00 EUR");
+    expect(shown).toContain("3.100,00 €");
+  });
+});
+
+/** The value an input shows right now, whatever it holds. */
+const shownIn = (host: HTMLElement, id: string): string =>
+  (host.querySelector(`#${id}`) as HTMLInputElement | null)?.value ?? "";
+
+describe("the fields a form fills in for you", () => {
+  /**
+   * What the user types is never hidden; what the application shows is. The
+   * correction form arrives filled in with the amounts of the event, and it
+   * used to print them in the clear right under a card that masked them.
+   */
+  it("masks a filled-in amount of a correction until the field has the focus", async () => {
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    expect(shownIn(host, "f-amount")).toBe(MASK);
+    expect(shownIn(host, "f-quantity")).toBe(MASK);
+    // The ECB rate is not an amount: it stays visible.
+    const amount = host.querySelector("#f-amount") as HTMLInputElement;
+    amount.dispatchEvent(new FocusEvent("focus"));
+    await Promise.resolve();
+    expect(shownIn(host, "f-amount")).toBe("3100");
+    amount.dispatchEvent(new FocusEvent("blur"));
+    await Promise.resolve();
+    expect(shownIn(host, "f-amount")).toBe(MASK);
+  });
+
+  it("shows them as they are with the mask off", async () => {
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    expect(shownIn(host, "f-amount")).toBe("3100");
+  });
+
+  /** One rule for every amount of the configuration: the 720 and 721 thresholds too. */
+  it("masks every amount of the configuration and leaves the percentages", async () => {
+    store.setPrivacy(true);
+    const host = await show("/ajustes/configuracion", Configuracion);
+    for (const id of [
+      "s-monthly_contribution_eur",
+      "s-bucket_max_cumulative_contribution",
+      "s-model_720_alert_threshold_eur",
+      "s-model_721_alert_threshold_eur",
+    ]) {
+      expect(shownIn(host, id), id).toBe(MASK);
+    }
+    expect(shownIn(host, "s-deviation_threshold_pp")).not.toBe(MASK);
+    expect(shownIn(host, "s-bucket_pct_of_contribution")).not.toBe(MASK);
+  });
+
+  it("masks the limits of the savings brackets and keeps their rates", async () => {
+    store.setPrivacy(true);
+    const shown = text(await show(`/movimientos/${SETTINGS}`, Detail, "/movimientos/:id"));
+    expect(shown).toContain("Tramos de la base del ahorro");
+    expect(shown).not.toMatch(/6\.000|50\.000|200\.000|300\.000/);
+    expect(shown).toContain("al 19");
+    store.setPrivacy(false);
+    const open = text(await show(`/movimientos/${SETTINGS}`, Detail, "/movimientos/:id"));
+    expect(open).toContain("hasta 6.000,00 € al 19");
   });
 });
 

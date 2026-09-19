@@ -28,20 +28,31 @@ export interface AmountFormat {
   currency?: boolean;
 }
 
-import { formatDecimalString, formatQuantityString } from "./number.js";
+import { formatDecimalString, formatQuantityString, NBSP } from "./number.js";
 import { MASK } from "./privacy.js";
 
 /** The mask, re-exported: this is the module every figure of a screen goes through. */
 export { MASK };
 
-/** An amount, already rounded to the requested decimals, in Spanish notation. */
-export const formatMoney = (value: Money, format: AmountFormat = {}): string => {
-  const decimals = format.decimals ?? 2;
-  const body = formatDecimalString(value.amount.toString(), {
-    decimals,
+/**
+ * How a currency is written after its figure: the euro with its sign, as
+ * Spanish typography does ("1.234,56 €"), every other one with its ISO code
+ * ("123,49 USD"), which is less ambiguous than a sign shared by several
+ * countries (brief §8).
+ */
+export const currencyUnit = (currency: string): string => (currency === "EUR" ? "€" : currency);
+
+/** An amount, already rounded to the requested decimals, in Spanish notation, without its unit. */
+export const formatMoneyNumber = (value: Money, format: AmountFormat = {}): string =>
+  formatDecimalString(value.amount.toString(), {
+    decimals: format.decimals ?? 2,
     ...(format.signed === undefined ? {} : { signed: format.signed }),
   });
-  return format.currency === false ? body : `${body} ${value.currency}`;
+
+/** An amount with its unit, the two joined by a non-breaking space. */
+export const formatMoney = (value: Money, format: AmountFormat = {}): string => {
+  const body = formatMoneyNumber(value, format);
+  return format.currency === false ? body : `${body}${NBSP}${currencyUnit(value.currency)}`;
 };
 
 /** A quantity of units: up to eight decimals, trailing zeros trimmed (fractions are real). */
@@ -57,8 +68,13 @@ export type AmountState = "nodata" | "masked" | "value";
 
 export interface AmountDisplay {
   state: AmountState;
-  /** Exactly what is written on screen. */
+  /** The figure, the mask, or "sin dato": exactly what is written first. */
   text: string;
+  /**
+   * The unit written after it — "€", "USD", "part." — or empty. It survives
+   * the mask: it says what kind of figure is hidden, never how big (D2).
+   */
+  unit: string;
   /** Classes of the `<span>`, the semantic one first. */
   class: string;
   /** Accessible label; empty when the figure speaks for itself. */
@@ -67,10 +83,12 @@ export interface AmountDisplay {
 
 export interface AmountInput {
   /**
-   * The formatted figure, or `undefined` when there is none: `undefined` is
-   * "sin dato" and **never** a zero (constitution V).
+   * The formatted figure, without its unit, or `undefined` when there is
+   * none: `undefined` is "sin dato" and **never** a zero (constitution V).
    */
   formatted: string | undefined;
+  /** The unit of the figure: a currency already written ("€", "USD"), or a measure. */
+  unit?: string | undefined;
   /** Privacy mode, on by default (FR-021). */
   privacy: boolean;
   /** What is being shown, for the accessible label. */
@@ -95,7 +113,8 @@ const classes = (...names: readonly (string | undefined)[]): string =>
  *
  * The order is itself a rule: a missing figure reads "sin dato" even in privacy
  * mode (there is nothing to hide), and a known figure is masked whenever
- * privacy is on, whatever else the caller asked for.
+ * privacy is on, whatever else the caller asked for. The mask is always the
+ * same four dots, so it measures the same whatever it hides.
  */
 export const amountDisplay = (input: AmountInput): AmountDisplay => {
   if (input.formatted === undefined) {
@@ -103,6 +122,7 @@ export const amountDisplay = (input: AmountInput): AmountDisplay => {
     return {
       state: "nodata",
       text: NO_DATA,
+      unit: "",
       class: classes("num", "nodata", input.extra),
       label: `${input.kind} sin dato${reason}`,
     };
@@ -111,6 +131,7 @@ export const amountDisplay = (input: AmountInput): AmountDisplay => {
     return {
       state: "masked",
       text: MASK,
+      unit: input.unit ?? "",
       class: classes("num", "mask", input.extra),
       label: input.kind === "cantidad" ? "cantidad oculta" : "importe oculto",
     };
@@ -118,6 +139,7 @@ export const amountDisplay = (input: AmountInput): AmountDisplay => {
   return {
     state: "value",
     text: input.formatted,
+    unit: input.unit ?? "",
     class: classes("num", input.sign, input.extra),
     label: "",
   };
