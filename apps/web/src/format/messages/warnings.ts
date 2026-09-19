@@ -7,7 +7,7 @@ import { valueLabel } from "../labels.js";
 import { type Naming, NO_NAMES, namingOf } from "../names.js";
 import { countOf } from "../number.js";
 import { type Figures, figuresOf, maskFigures, type Prose } from "../privacy.js";
-import { count, type Details, day, days, enumValue, list, num, pct, pp, text } from "./prose.js";
+import { count, type Details, day, days, enumValue, num, pct, pp, text } from "./prose.js";
 
 /** The wash-sale window by its real name: calling a one-year window "two months" is fiscally false. */
 const windowText = (window: unknown): string => {
@@ -127,7 +127,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   tax_dividend_without_country: (d, _n, f) =>
     `El dividendo no dice qué país lo pagó: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos en origen.`,
   tax_fx_differences_not_computed: (d) =>
-    `Las diferencias de cambio del efectivo en divisa (${list(d.currencies)}) no se calculan: es un criterio en disputa y faltan los lotes de divisa.`,
+    `Las diferencias de cambio del efectivo en divisa (${(Array.isArray(d.currencies) ? d.currencies : [d.currencies]).map((code) => num(code)).join(", ")}) no se calculan: es un criterio en disputa y faltan los lotes de divisa.`,
   tax_in_kind_income_not_integrated: (d, _n, f) =>
     `Renta en especie registrada (${f.money(d.income_eur)}) y no integrada: el criterio vigente no declara nada al recibirla.`,
   tax_window_open: (d, n, f) =>

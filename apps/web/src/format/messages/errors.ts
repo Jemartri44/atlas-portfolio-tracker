@@ -163,13 +163,15 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   invalid_wash_sale_window: (d) =>
     `La ventana de recompra de ${enumValue(d.asset_type)} no es válida: elige dos meses, un año o un número de días.`,
   tax_ledger_invalid: (d) =>
-    `El libro tiene ${countOf(Number(d.count), "evento inválido", "eventos inválidos")}: un cálculo fiscal sobre él sería aproximado. Repáralo antes en Ajustes → Verificación.`,
+    `El libro tiene ${num(d.count)} ${Number(d.count) === 1 ? "evento inválido" : "eventos inválidos"}: un cálculo fiscal sobre él sería aproximado. Repáralo antes en Ajustes → Verificación.`,
   tax_year_unsupported: (d) =>
     `El cálculo fiscal aplica el régimen de compensación vigente desde ${num(d.first_supported)}; ${num(d.year)} es anterior.`,
+  // The value received is the user's word, shown as typed (`num` only turns a
+  // number into Spanish, and leaves a word as it is).
   invalid_fiscal_date_rule: (d) =>
-    `La fecha fiscal de ${enumValue(d.asset_type)} debe ser la de contratación o la fecha valor (recibido: ${text(d.value)}): decide el ejercicio de cada operación.`,
+    `La fecha fiscal de ${enumValue(d.asset_type)} debe ser la de contratación o la fecha valor (recibido: ${num(d.value)}): decide el ejercicio de cada operación.`,
   invalid_income_category: (d) =>
-    `La categoría de renta de ${enumValue(d.asset_type)} debe ser ganancia patrimonial o rendimiento del capital mobiliario (recibido: ${text(d.value)}): decide en qué parte de la base del ahorro entra cada venta.`,
+    `La categoría de renta de ${enumValue(d.asset_type)} debe ser ganancia patrimonial o rendimiento del capital mobiliario (recibido: ${num(d.value)}): decide en qué parte de la base del ahorro entra cada venta.`,
   negative_target_weight: (d, n) =>
     `El peso objetivo de ${n.one(d.asset_id)} no puede ser negativo (recibido: ${num(d.value)}).`,
   accept_invalid_not_allowed: (d) =>
