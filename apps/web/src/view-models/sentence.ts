@@ -16,7 +16,7 @@
 
 import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
 import { formatDate } from "../format/date.js";
-import type { EventReferences } from "../format/events.js";
+import { type EventReferences, inSentence } from "../format/events.js";
 import { eventLabel, valueLabel } from "../format/labels.js";
 import { displayName, displayThesis, type NameIndex, unitsOf } from "../format/names.js";
 import type { Part, Sentence } from "./structured.js";
@@ -193,7 +193,7 @@ const what = (
       return told(v("Cambiaste la configuración", "un cambio de la configuración"));
     case "reversal":
       return typeof event.reverses_id === "string" && events !== undefined
-        ? told(v("Anulaste ", "la anulación de ") + events(event.reverses_id))
+        ? told(v("Anulaste ", "la anulación de ") + inSentence(events(event.reverses_id)))
         : undefined;
     default:
       return undefined;

@@ -7,7 +7,7 @@
 // domain (decision (c)).
 
 import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
-import type { EventReferences } from "../format/events.js";
+import { type EventReferences, inSentence } from "../format/events.js";
 import { eventLabel, STATUS_LABELS, valueLabel } from "../format/labels.js";
 import { displayName, displayThesis, type NameIndex, NO_NAMES, unitsOf } from "../format/names.js";
 
@@ -134,7 +134,9 @@ const partsOf = (
   }
   if (entry.event.type === "reversal" && typeof event.reverses_id === "string") {
     extras.push(
-      events === undefined ? "anula un movimiento" : `anula ${events(event.reverses_id)}`,
+      events === undefined
+        ? "anula un movimiento"
+        : `anula ${inSentence(events(event.reverses_id))}`,
     );
   }
   if (entry.event.type === "settings_changed") {

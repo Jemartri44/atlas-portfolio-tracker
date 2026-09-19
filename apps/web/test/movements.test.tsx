@@ -7,6 +7,7 @@
 
 import { ledgerEntries, projectLedger } from "@atlas/domain";
 import { afterEach, describe, expect, it } from "vitest";
+import { eventReferences, inSentence } from "../src/format/events.js";
 import { nameIndex } from "../src/format/names.js";
 import { store } from "../src/ledger/state.js";
 import Detail from "../src/routes/movimientos/detail.jsx";
@@ -143,6 +144,19 @@ describe("the sentence of a movement", () => {
     expect(said("asset_created")).toMatch(/^Diste de alta el activo .+ el /);
     // An update of an order is about no asset and no account: its type says it.
     expect(said("order_updated")).toBe("Cambio de orden");
+  });
+
+  it("says the movement a reversal annuls in lower case, the names of assets as they are", () => {
+    const refs = eventReferences(events, names);
+    const reversal = entries.find((one) => one.event.type === "reversal");
+    const told = plain(movementSentence(reversal as NonNullable<typeof reversal>, names, refs));
+    expect(told).toMatch(/^Anulaste dividendo del \d\d\/\d\d\/\d{4} el /);
+    const row = movementRows([reversal as NonNullable<typeof reversal>], names, refs)[0];
+    expect(row?.subtitle).toMatch(/anula dividendo del /);
+    // Only the type is lowered: an asset further on keeps its capitals.
+    expect(inSentence("Orden de compra de World Index Fund del 02/09/2026")).toBe(
+      "orden de compra de World Index Fund del 02/09/2026",
+    );
   });
 
   it("opens the detail, masked with its units when the privacy mode is on", async () => {

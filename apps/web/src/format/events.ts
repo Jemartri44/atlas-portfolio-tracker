@@ -48,6 +48,16 @@ export const describeEvent = (event: LedgerEvent, names: NameIndex = NO_NAMES): 
   return `${eventLabel(event.type)} del ${date}`;
 };
 
+/**
+ * A reference said inside a sentence: «Anulaste valoración del 31/12/2026»,
+ * not «Anulaste Valoración…» (final pass of the review of 2026-09-19). Only
+ * the first letter, which is always the type's — a common noun — so the name of
+ * an asset further on keeps its capitals, where `toLowerCase` wrote «world
+ * index fund».
+ */
+export const inSentence = (reference: string): string =>
+  reference.charAt(0).toLowerCase() + reference.slice(1);
+
 /** Resolves an event identifier to its description, over the events of one load. */
 export type EventReferences = (id: string) => string;
 

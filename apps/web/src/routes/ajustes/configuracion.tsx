@@ -23,7 +23,7 @@ import {
 import { createSignal, type JSX, Show } from "solid-js";
 import { Notice } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
-import { eventReferences } from "../../format/events.js";
+import { eventReferences, inSentence } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
@@ -74,7 +74,7 @@ export default function ConfiguracionRoute(): JSX.Element {
         const origin = (): string =>
           resolution().origin === "default"
             ? "la de partida, porque todavía no has registrado ningún cambio"
-            : `la del ${eventReferences(snapshot.events)(resolution().origin).toLowerCase()}`;
+            : `la del ${inSentence(eventReferences(snapshot.events)(resolution().origin))}`;
         const values = (): Record<string, string> =>
           weightValues(
             current(),
