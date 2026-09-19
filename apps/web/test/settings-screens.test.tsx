@@ -31,7 +31,7 @@ describe("the configuration", () => {
       false,
       false,
     ]);
-    expect(text(groups[0]?.querySelector("summary"))).toMatch(/suman [\d.,]+ de 100/);
+    expect(text(groups[0]?.querySelector("summary"))).toContain("suman 100 %");
   });
 
   it("never offers a delisted asset as the benchmark of the bucket", async () => {

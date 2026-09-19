@@ -65,7 +65,7 @@ const COLUMNS: readonly DataColumn<ContributionRowView>[] = [
     cardCell: (row) => (
       <span>
         déficit <Amount value={row.gap} /> · objetivo{" "}
-        <Figure value={row.targetPct} unit="percent" />
+        <Figure value={row.targetPct} unit="percent" decimals="auto" />
       </span>
     ),
   },

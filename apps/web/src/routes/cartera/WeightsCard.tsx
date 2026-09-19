@@ -75,7 +75,7 @@ const assetColumns = (threshold: string | undefined): readonly DataColumn<Weight
     key: "target",
     header: "Objetivo",
     numeric: true,
-    cell: (row) => <Figure value={row.targetPct} unit="percent" />,
+    cell: (row) => <Figure value={row.targetPct} unit="percent" decimals="auto" />,
   },
   {
     key: "deviation",

@@ -48,6 +48,9 @@ describe("figures and units", () => {
 
   it("gives decimals that say something: 0 %, not 0,0000 %", () => {
     expect(meaningfulDecimals("0")).toBe(0);
+    // A whole percentage reads whole: «55 %», never «55,00 %».
+    expect(meaningfulDecimals("55")).toBe(0);
+    expect(meaningfulDecimals("100.00")).toBe(0);
     expect(meaningfulDecimals("0.0000")).toBe(0);
     expect(meaningfulDecimals("0.5165")).toBe(2);
     expect(meaningfulDecimals("0.0012")).toBe(4);

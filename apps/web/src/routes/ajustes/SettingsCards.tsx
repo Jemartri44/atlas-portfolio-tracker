@@ -11,7 +11,7 @@ import type { Asset, AssetType, Settings } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
 import { Field, Fold, SelectField, Tag } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
-import { formatDecimalString } from "../../format/number.js";
+import { formatPercent, meaningfulDecimals } from "../../format/number.js";
 import {
   type PerAssetTypeKey,
   SETTINGS_NUMBERS,
@@ -54,10 +54,10 @@ export const WeightsCard = (props: WeightsProps): JSX.Element => {
       open
       aside={
         <>
-          suman {formatDecimalString(total().total, { decimals: 2 })} de 100
+          suman {formatPercent(total().total, { decimals: meaningfulDecimals(total().total) })}
           <Show when={!total().addsUp}>
             <Tag tone="caution" icon="caution">
-              no suman 100
+              deben sumar 100 %
             </Tag>
           </Show>
         </>
