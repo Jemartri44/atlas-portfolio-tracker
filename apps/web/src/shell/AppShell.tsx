@@ -74,9 +74,9 @@ const hasLedger = (): boolean => {
 };
 
 /**
- * Settings are current on their page, on everything under it, and on the page
- * that changes the file of the data (`/libro`), which is reached from them: with
- * data open, that page marked nothing at all.
+ * Settings are current on their page, on everything under it, and — with data
+ * open — on the page that changes their file (`/libro`), which is reached from
+ * them and marked nothing at all.
  */
 const SettingsButton = (): JSX.Element => {
   const location = useLocation();
@@ -86,7 +86,9 @@ const SettingsButton = (): JSX.Element => {
       class="icon-button"
       aria-label="Ajustes"
       aria-current={
-        inSection(location.pathname, "/ajustes") || inSection(location.pathname, "/libro")
+        inSection(location.pathname, "/ajustes") ||
+        // Without data, «Abrir tus datos» already marks that page.
+        (hasLedger() && inSection(location.pathname, "/libro"))
           ? "page"
           : undefined
       }

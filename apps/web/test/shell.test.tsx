@@ -153,6 +153,13 @@ describe("one navigation, in the order the eye reads it", () => {
     }
   });
 
+  it("marks one current page on the first run too, where the settings mark nothing", async () => {
+    store.setLoad({ phase: "unconfigured" });
+    const host = await showInShell("/libro", { "/libro": () => <p>primer arranque</p> });
+    expect(host.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    document.body.innerHTML = "";
+  });
+
   it("has no navigation while no ledger is open, and has it with an empty one", async () => {
     store.setLoad({ phase: "unconfigured" });
     const first = await showInShell("/", { "/": () => <p>primer arranque</p> });
