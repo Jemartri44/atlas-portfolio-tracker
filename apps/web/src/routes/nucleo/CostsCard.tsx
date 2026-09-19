@@ -88,7 +88,7 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
             <Tag tone="caution">parcial</Tag>
           </Show>
         </span>
-        <span class="row">
+        <span class="hstack">
           <Amount value={props.view.core.fees} />
           <span class="tiny">
             TER medio <Figure value={props.view.core.weightedTer} unit="percent" />

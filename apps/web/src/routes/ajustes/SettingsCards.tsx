@@ -54,7 +54,7 @@ export const WeightsCard = (props: WeightsProps): JSX.Element => {
     <Section
       title="Pesos objetivo del núcleo"
       aside={
-        <span class="row tiny">
+        <span class="hstack tiny">
           suman {formatDecimalString(total().total, { decimals: 2 })} de 100
           <Show when={!total().addsUp}>
             <Tag tone="caution">no suman 100</Tag>

@@ -8,7 +8,7 @@
 
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout, ErrorView, Tag } from "../../components/index.js";
+import { ErrorView, Notice, Tag } from "../../components/index.js";
 import { countOf } from "../../format/number.js";
 import { openBrowserLedger, openDirectoryLedger, reconnect } from "../../ledger/actions.js";
 import { toAppError } from "../../ledger/errors.js";
@@ -75,12 +75,12 @@ export default function LibroRoute(): JSX.Element {
       />
 
       <Show when={error() !== undefined}>
-        <Callout tone="error" title="No se ha podido abrir">
+        <Notice severity="danger" title="No se ha podido abrir">
           {error()}
           <p class="tiny flush">
             No se ha tocado nada: el libro que tuvieras abierto sigue como estaba.
           </p>
-        </Callout>
+        </Notice>
       </Show>
 
       {/*
@@ -96,8 +96,8 @@ export default function LibroRoute(): JSX.Element {
       </Show>
 
       <Show when={phase().phase === "reconnect"}>
-        <Callout
-          tone="warning"
+        <Notice
+          severity="caution"
           title="Hay que reconectar la carpeta"
           action={
             <button
@@ -116,7 +116,7 @@ export default function LibroRoute(): JSX.Element {
         >
           El navegador recuerda qué carpeta era, pero el permiso caduca al cerrar todas las
           pestañas: hace falta un clic tuyo para devolverlo.
-        </Callout>
+        </Notice>
       </Show>
 
       <div class="stack">
@@ -152,11 +152,11 @@ export default function LibroRoute(): JSX.Element {
             <strong>No es un almacén definitivo</strong>: si borras los datos del sitio, el libro se
             va con ellos. Expórtalo con frecuencia; la aplicación te lo recordará.
           </p>
-          <div class="row wrap">
+          <div class="hstack wrap">
             <button type="button" disabled={busy()} onClick={() => void run(openBrowserLedger)}>
               Usar el almacenamiento del navegador
             </button>
-            <label class="row flush">
+            <label class="hstack flush">
               <span class="subtle">o importar un fichero:</span>
               <input
                 type="file"

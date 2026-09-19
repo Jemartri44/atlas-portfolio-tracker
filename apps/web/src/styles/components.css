@@ -257,15 +257,6 @@
   font-weight: var(--w-medium);
 }
 
-.datalist .item .figure {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
-}
-
 .datalist .item .sub {
   color: var(--c-muted);
   min-width: 0;
@@ -281,10 +272,6 @@
   text-decoration: line-through;
 }
 
-.datatable {
-  display: none;
-}
-
 /* "Cargar más": the width of the list, because it is the action of the list. */
 
 /*
@@ -294,48 +281,6 @@
  * in the review of 2026-09-18). Between the two widths the cards are shown,
  * which is the same information in a column 505px wide — a comfortable one.
  */
-@media (min-width: 1024px) {
-  /*
-   * Only the list that has a table to stand in for it. `.datalist` is also the
-   * menu of Registrar and of Ajustes, and hiding all of them left those two
-   * screens with their section titles and nothing under them: from a monitor
-   * nothing could be registered (review of 2026-09-18).
-   */
-  .datalist:has(+ .datatable) {
-    display: none;
-  }
-
-  .datatable {
-    display: table;
-    width: 100%;
-  }
-
-  .datatable td.num,
-  .datatable th.num {
-    text-align: right;
-  }
-
-  /*
-   * "Cuenta y activo" holds two names now ("Global Bond Index Fund · Fondos
-   * indexados"), and a table cell with `white-space: nowrap` widens the column
-   * instead of cutting: at 1024px the table came out 14px wider than the page
-   * (measured in the review of 2026-09-18). The cut goes on a block **inside**
-   * the cell, where `max-width` is honoured, and the whole text stays one hover
-   * away in `title` — the name is never traded back for the identifier.
-   */
-  .datatable td .truncate {
-    display: block;
-    max-width: 18rem;
-  }
-
-  .datatable tr:hover {
-    background-color: var(--c-surface-2);
-  }
-
-  .datatable a {
-    text-decoration: none;
-  }
-}
 
 /* --- Filters ------------------------------------------------------------ */
 
@@ -421,35 +366,10 @@
   }
 }
 
-.field {
-  display: grid;
-  gap: var(--s-1);
-}
-
-.field > label {
-  font-size: var(--t-sm);
-  font-weight: var(--w-medium);
-  margin: 0;
-}
-
 /*
  * A hint explains the field and an error says why it was refused: both are
  * meant to be read, so neither goes below `--t-sm` (review of 2026-09-18).
  */
-.field .hint {
-  color: var(--c-muted);
-  font-size: var(--t-sm);
-}
-
-.field .error {
-  color: var(--c-negative);
-  font-size: var(--t-sm);
-}
-
-.field.required > label::after {
-  color: var(--c-muted);
-  content: " *";
-}
 
 .actions-bar {
   background-color: var(--c-bg);
@@ -557,25 +477,7 @@ dialog .dialog-actions {
 
 /* --- Empty states ------------------------------------------------------ */
 
-.empty {
-  border: 1px dashed var(--c-border);
-  border-radius: var(--r-lg);
-  color: var(--c-muted);
-  display: grid;
-  gap: var(--s-2);
-  justify-items: start;
-  padding: var(--s-5) var(--s-4);
-}
-
-.empty .what {
-  color: var(--c-text);
-  font-weight: var(--w-medium);
-}
-
 /* The grid already spaces the lines of an empty state. */
-.empty p {
-  margin: 0;
-}
 
 /* --- The date every analytical screen is read at ------------------------ */
 
@@ -584,39 +486,6 @@ dialog .dialog-actions {
  * its own row and the block took 149px of a 890px screen before any content —
  * a sixth of the phone spent on a date picker (measured in Chromium).
  */
-.asof {
-  align-items: center;
-  display: flex;
-  gap: var(--s-2);
-  margin-bottom: var(--s-2);
-}
-
-.asof label {
-  align-items: center;
-  display: flex;
-  gap: var(--s-2);
-  margin: 0;
-  min-width: 0;
-}
-
-.asof input {
-  margin-bottom: 0;
-  min-width: 0;
-}
-
-.asof button {
-  flex: 0 0 auto;
-  margin-bottom: 0;
-  min-width: 0;
-  padding: var(--s-1) var(--s-3);
-  width: auto;
-}
-
-.asof-hint {
-  color: var(--c-muted);
-  display: block;
-  margin-bottom: var(--s-4);
-}
 
 /* --- Charts (uPlot vendored, ADR-0017) ---------------------------------- */
 
@@ -818,8 +687,7 @@ dialog .dialog-actions {
   margin: var(--s-4) 0 var(--s-1);
 }
 
-.datalist .item.is-moved,
-.datatable tr.is-moved {
+.datalist .item.is-moved {
   font-weight: var(--w-medium);
 }
 
@@ -883,14 +751,3 @@ dialog .dialog-actions {
 }
 
 /* What belongs to a row and does not fit in a cell: the thesis of a position. */
-.datalist .item .extra {
-  border-top: 1px dashed var(--c-border);
-  grid-column: 1 / -1;
-  margin-top: var(--s-1);
-  padding-top: var(--s-1);
-}
-
-.datatable tr.extra-row td {
-  color: var(--c-muted);
-  padding-top: 0;
-}

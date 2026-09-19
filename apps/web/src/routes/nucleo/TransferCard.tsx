@@ -11,13 +11,13 @@ import { simulateTransfer } from "@atlas/domain";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import {
   Amount,
-  Callout,
   type DataColumn,
   DataTable,
   Disclosure,
   ErrorView,
   Field,
   Figure,
+  Notice,
   Section,
   SelectField,
   Switch,
@@ -168,11 +168,11 @@ export const TransferCard = (props: TransferCardProps): JSX.Element => {
                 <Amount value={simulation().moved} />
                 ).
               </p>
-              <Callout tone="info" title="No es un hecho imponible">
+              <Notice severity="info" title="No es un hecho imponible">
                 Un traspaso entre fondos <strong>no tributa</strong>: conserva la fecha de
                 adquisición y el coste de los lotes de origen. No es una venta seguida de una
                 compra.
-              </Callout>
+              </Notice>
               <DataTable
                 label="Pesos antes y después del traspaso"
                 columns={COLUMNS}
@@ -181,12 +181,12 @@ export const TransferCard = (props: TransferCardProps): JSX.Element => {
               />
               <For each={simulation().warningsAfter}>
                 {(warning) => (
-                  <Callout tone="warning" title="Aviso tras el traspaso simulado">
+                  <Notice severity="caution" title="Aviso tras el traspaso simulado">
                     {describeWarning(warning, {
                       names: nameIndex(props.state),
                       privacy: privacy(),
                     })}
-                  </Callout>
+                  </Notice>
                 )}
               </For>
               <p class="note">

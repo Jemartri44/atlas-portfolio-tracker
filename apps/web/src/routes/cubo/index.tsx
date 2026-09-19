@@ -20,7 +20,7 @@ import {
 } from "@atlas/domain";
 import { createMemo, For, type JSX, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
-import { AsOfPicker, Callout, Section, StandaloneFees, useAsOf } from "../../components/index.js";
+import { AsOfPicker, Notice, Section, StandaloneFees, useAsOf } from "../../components/index.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { store, usePrivacy } from "../../ledger/state.js";
@@ -108,9 +108,9 @@ export default function CuboRoute(): JSX.Element {
             <div class="stack">
               <For each={stopLoss()}>
                 {(warning) => (
-                  <Callout tone="error" title="Regla de parada">
+                  <Notice severity="danger" title="Regla de parada">
                     {describeWarning(warning, { names, privacy: privacy() })}
-                  </Callout>
+                  </Notice>
                 )}
               </For>
 
@@ -126,10 +126,10 @@ export default function CuboRoute(): JSX.Element {
                 rows={series().rows}
                 missing={series().missing}
                 empty={
-                  <Callout tone="info" title="Todavía no hay nada que dibujar">
+                  <Notice severity="info" title="Todavía no hay nada que dibujar">
                     La comparación se dibuja sobre las fechas en las que el libro tiene precio del
                     índice y de los activos del cubo.
-                  </Callout>
+                  </Notice>
                 }
               />
               <StatsCard view={report().stats} />

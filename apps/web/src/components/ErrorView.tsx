@@ -2,48 +2,32 @@
 // the reader: what happened, what to do about it, and — folded away — the
 // technical code, for the day the "what to do" is not enough.
 //
-// It exists because the screens that write were throwing away the most useful
-// half of the error. `toAppError` has carried an `action` since the 006 (the
-// button that exports the ledger when the storage is full, the one that reopens
-// it when the permission is gone), and only `RequireLedger` painted it: the
-// configuration screen and the event form showed `failure.error.message` and
-// dropped the button, so the user read what to do and had nowhere to press
-// (inventory V6 of `specs/006-web-shell/questions.md`).
+// It is the notice of the design system in its danger gravity: the same
+// component every other warning uses, so an error never looks like a
+// different application. What cannot be computed **yet** is not an error and
+// is painted by `Pending` instead.
 
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import { type AppError, messageWithLine } from "../ledger/state.js";
-import { Callout } from "./Callout.jsx";
 import { Disclosure } from "./Disclosure.jsx";
+import { Notice } from "./Notice.jsx";
 
 interface ErrorViewProps {
   error: AppError;
-  /** Heading of the callout; the default suits a write that did not happen. */
+  /** Heading of the notice; the default suits a write that did not happen. */
   title?: string | undefined;
   /** An extra action of the screen, beside the one the error carries. */
   children?: JSX.Element | undefined;
 }
 
-/**
- * The code is shown, but folded: it is what makes a report actionable and what
- * makes a message unreadable, so it is one click away and never in the way.
- */
-const Technical = (props: { error: AppError }): JSX.Element => (
-  <Disclosure label="Detalle técnico">
-    <p class="meta">
-      <code>{props.error.code}</code>
-      <Show when={props.error.line !== undefined}> · línea {props.error.line}</Show>
-    </p>
-  </Disclosure>
-);
-
 export const ErrorView = (props: ErrorViewProps): JSX.Element => (
-  <Callout
-    tone="error"
+  <Notice
+    severity="danger"
     title={props.title ?? "No se ha podido completar"}
     action={
       <Show when={props.error.action ?? props.children !== undefined}>
-        <div class="row wrap">
+        <div class="button-row">
           <Show when={props.error.action}>
             {(action) => (
               <A href={action().to} role="button">
@@ -56,7 +40,12 @@ export const ErrorView = (props: ErrorViewProps): JSX.Element => (
       </Show>
     }
   >
-    {messageWithLine(props.error)}
-    <Technical error={props.error} />
-  </Callout>
+    <p>{messageWithLine(props.error)}</p>
+    <Disclosure label="Detalle técnico">
+      <p class="meta">
+        <code>{props.error.code}</code>
+        <Show when={props.error.line !== undefined}> · línea {props.error.line}</Show>
+      </p>
+    </Disclosure>
+  </Notice>
 );

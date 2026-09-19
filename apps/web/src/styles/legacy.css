@@ -72,7 +72,7 @@ p {
   margin-top: var(--s-3);
 }
 
-.row {
+.hstack {
   align-items: center;
   display: flex;
   gap: var(--s-2);
@@ -87,13 +87,6 @@ p {
 
 .wrap {
   flex-wrap: wrap;
-}
-
-.card {
-  background-color: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-lg);
-  padding: var(--s-4);
 }
 
 .card > header {
@@ -193,37 +186,4 @@ td {
 th {
   color: var(--c-muted);
   font-size: var(--t-xs);
-}
-/* --- Skeletons: the shape of what is coming, never a spinner ----------- */
-
-.skeleton {
-  background-color: var(--c-surface-2);
-  border-radius: var(--r-sm);
-  height: 1rem;
-}
-
-.skeleton.tall {
-  height: 2.5rem;
-}
-
-/*
- * Lines of unequal width, so the placeholder reads as text and not as a block.
- * A cycle of four widths and not one value per line: it is the same illusion
- * and it needs nothing computed per element, which is what used to force an
- * inline `style` the production CSP blocks.
- */
-.skeleton:nth-child(4n + 1) {
-  width: 100%;
-}
-
-.skeleton:nth-child(4n + 2) {
-  width: 88%;
-}
-
-.skeleton:nth-child(4n + 3) {
-  width: 76%;
-}
-
-.skeleton:nth-child(4n) {
-  width: 64%;
 }

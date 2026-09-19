@@ -10,7 +10,7 @@
 // "within limits": the absence of a measurement is not a pass.
 
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Callout, Figure, Section, StatLine, Tag } from "../../components/index.js";
+import { Amount, Figure, Notice, Section, StatLine, Tag } from "../../components/index.js";
 import type { ControlsView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
 
@@ -56,10 +56,10 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
     </Show>
 
     <h3 class="block-title">Regla de recogida (18)</h3>
-    <Callout tone="info" title="Excepción acotada a la compartimentación">
+    <Notice severity="info" title="Excepción acotada a la compartimentación">
       El peso del cubo se mide sobre el <strong>patrimonio total</strong>, que suma los dos libros.
       Es un control de presupuesto, no una métrica de cartera, y por eso el desglose va al lado.
-    </Callout>
+    </Notice>
     <Show
       when={props.view.weightUnavailable === undefined}
       fallback={

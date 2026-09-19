@@ -1,30 +1,35 @@
-// A block of a screen: the card, its `<h2>` and, when there is one, the figure
-// or the badge that belongs to the title.
-//
-// `<section class="card"><header><h2>…</h2></header>…</section>` was written by
-// hand eleven times, and the header of a card carries a wrapping rule that only
-// shows up at 360px (`base.css`, `.card > header`): every hand-written copy is
-// a chance to forget it (review of 2026-09-18).
+// A block of a screen (docs/design/system.md §5.1): a card with its `<h2>` and,
+// to its right, the one piece of context that belongs to the title — a date,
+// a count, a tag. No grey band: the heading is content.
 
-import { type JSX, Show } from "solid-js";
+import { createUniqueId, type JSX, Show } from "solid-js";
 
 interface SectionProps {
   title: string;
-  /** To the right of the title: a date, a count, a badge. */
+  /** To the right of the title: a date, a count, a tag. */
   aside?: JSX.Element | undefined;
-  /** Extra classes on the card, for the blocks that style their own insides. */
+  /** Extra classes on the card: its place in the grid, its variant. */
   class?: string | undefined;
   /** When the card is a landmark of its own, like the patrimony. */
   label?: string | undefined;
   children: JSX.Element;
 }
 
-export const Section = (props: SectionProps): JSX.Element => (
-  <section class={`card ${props.class ?? ""}`.trimEnd()} aria-label={props.label}>
-    <header>
-      <h2>{props.title}</h2>
-      <Show when={props.aside !== undefined}>{props.aside}</Show>
-    </header>
-    {props.children}
-  </section>
-);
+export const Section = (props: SectionProps): JSX.Element => {
+  const id = createUniqueId();
+  return (
+    <section
+      class={`card ${props.class ?? ""}`.trimEnd()}
+      aria-label={props.label}
+      aria-labelledby={props.label === undefined ? `h-${id}` : undefined}
+    >
+      <div class="card-head">
+        <h2 id={`h-${id}`}>{props.title}</h2>
+        <Show when={props.aside !== undefined}>
+          <div class="aside">{props.aside}</div>
+        </Show>
+      </div>
+      {props.children}
+    </section>
+  );
+};

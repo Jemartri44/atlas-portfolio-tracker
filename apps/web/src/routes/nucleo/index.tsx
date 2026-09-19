@@ -18,7 +18,7 @@ import {
 } from "@atlas/domain";
 import { createMemo, type JSX, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
-import { AsOfPicker, Callout, useAsOf } from "../../components/index.js";
+import { AsOfPicker, Notice, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import { store } from "../../ledger/state.js";
@@ -103,18 +103,18 @@ export default function NucleoRoute(): JSX.Element {
                 rows={series().rows}
                 missing={series().missing}
                 empty={
-                  <Callout tone="info" title="Todavía no hay nada que dibujar">
+                  <Notice severity="info" title="Todavía no hay nada que dibujar">
                     La evolución se dibuja sobre las fechas en las que el libro tiene precios.
                     Registra una valoración y aparecerá el primer punto.
-                  </Callout>
+                  </Notice>
                 }
               />
               <Show when={weights().stale.length > 0}>
-                <Callout tone="warning" title="Hay precios caducados">
+                <Notice severity="caution" title="Hay precios caducados">
                   {weights().stale.join(", ")}: el precio que se está usando es más antiguo de lo
                   que dice la configuración. Sigue siendo el último que conoce el libro, con su
                   antigüedad a la vista.
-                </Callout>
+                </Notice>
               </Show>
             </div>
           </>

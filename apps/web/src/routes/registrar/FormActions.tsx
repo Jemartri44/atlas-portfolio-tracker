@@ -9,7 +9,7 @@
 // scrolled into view, and the reason travels inside the bar.
 
 import { createEffect, type JSX, Show } from "solid-js";
-import { Callout, ErrorView } from "../../components/index.js";
+import { ErrorView, Notice } from "../../components/index.js";
 import type { AppError } from "../../ledger/state.js";
 
 /** Brings an element to the middle of the screen, where it cannot be missed. */
@@ -50,9 +50,9 @@ export const FormActions = (props: FormActionsProps): JSX.Element => {
       <div ref={problems}>
         <Show when={props.problem}>
           {(problem) => (
-            <Callout tone="error" title="No se puede registrar así">
+            <Notice severity="danger" title="No se puede registrar así">
               {problem()}
-            </Callout>
+            </Notice>
           )}
         </Show>
         <Show when={props.failure}>

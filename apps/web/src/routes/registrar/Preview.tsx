@@ -10,7 +10,7 @@
 
 import type { EventPreview } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Callout, Tag } from "../../components/index.js";
+import { Amount, Notice, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
@@ -126,9 +126,9 @@ export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JS
 
       <For each={props.preview.warnings}>
         {(warning) => (
-          <Callout tone="warning" title="Aviso">
+          <Notice severity="caution" title="Aviso">
             {describeWarning(warning, { names: names(), privacy: privacy() })}
-          </Callout>
+          </Notice>
         )}
       </For>
     </div>

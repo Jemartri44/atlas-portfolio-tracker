@@ -9,12 +9,12 @@
 
 import { A } from "@solidjs/router";
 import { ErrorBoundary, type JSX, Show } from "solid-js";
+import { Icon } from "../components/Icon.jsx";
 // Imported straight from their modules, not through the barrel: the shell is
 // on the boot path, and a barrel drags everything it re-exports with it — the
 // shared table, the chart layer and the date picker would all be downloaded
 // before the first screen paints.
-import { Callout } from "../components/Callout.jsx";
-import { Icon } from "../components/Icon.jsx";
+import { Notice } from "../components/Notice.jsx";
 import { countOf } from "../format/number.js";
 import { store } from "../ledger/state.js";
 import { LedgerChip } from "./LedgerChip.jsx";
@@ -45,11 +45,11 @@ const DegradedBand = (): JSX.Element => (
  * destinations still work.
  */
 const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Element => (
-  <Callout
-    tone="error"
+  <Notice
+    severity="danger"
     title="Esta pantalla no ha podido abrirse"
     action={
-      <div class="row wrap">
+      <div class="hstack wrap">
         <button type="button" onClick={() => props.retry()}>
           Reintentar
         </button>
@@ -64,7 +64,7 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
     <Show when={props.failure instanceof Error}>
       <p class="meta">{(props.failure as Error).message}</p>
     </Show>
-  </Callout>
+  </Notice>
 );
 
 /** Whether a ledger is open or on its way: only the first run has none. */

@@ -65,7 +65,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
         when={row.unrealized !== undefined}
         fallback={<Amount value={undefined} missingReason="sin precio a esa fecha" />}
       >
-        <span class="row">
+        <span class="hstack">
           <Amount value={row.unrealized} signed coloured />
           <Figure value={row.unrealizedPct} unit="percent" coloured />
         </span>
@@ -88,7 +88,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
  */
 const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
   <Show when={props.row.thesisId !== undefined}>
-    <span class="row wrap">
+    <span class="hstack wrap">
       <Tag>tesis abierta</Tag>
       <span class="tiny">
         {props.row.daysOpen} de {props.row.horizonDays} días
@@ -127,7 +127,7 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
             </Tag>
           </Show>
         </span>
-        <span class="row">
+        <span class="hstack">
           <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
           <span class="tiny">
             coste <Amount value={props.view.totalCost} />

@@ -111,13 +111,15 @@ describe("the equivalent table of a chart", () => {
     const host = mount(() => (
       <ChartTable headers={["Núcleo", "Cubo"]} rows={rows} caption="Evolución" />
     ));
-    const card = host.querySelector("ul.datalist li");
-    const lines = [...(card?.querySelectorAll(".sub") ?? [])].map((node) => node.textContent ?? "");
+    const card = host.querySelector("ul.rows li");
+    const lines = [...(card?.querySelectorAll(".sub > span") ?? [])].map(
+      (node) => node.textContent ?? "",
+    );
 
     // With its currency: on a card there is no header to say EUR either.
     expect(lines).toEqual(["Núcleo 1.234,56\u00a0EUR", "Cubo sin dato"]);
     // And nothing numeric is left loose on the card's first line.
-    expect(card?.querySelector(".head")?.textContent).toBe("30/06/2027");
+    expect(card?.querySelector(".title")?.textContent).toBe("30/06/2027");
   });
 
   it("says once, above the table, what is missing and why", () => {

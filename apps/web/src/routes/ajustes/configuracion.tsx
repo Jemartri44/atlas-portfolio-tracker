@@ -21,7 +21,7 @@ import {
   yearOf,
 } from "@atlas/domain";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout } from "../../components/index.js";
+import { Notice } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -175,9 +175,9 @@ export default function ConfiguracionRoute(): JSX.Element {
             />
 
             <Show when={saved()}>
-              <Callout tone="info" title="Configuración guardada">
+              <Notice severity="info" title="Configuración guardada">
                 Se ha registrado un cambio de configuración con todos los parámetros.
-              </Callout>
+              </Notice>
             </Show>
             <div class="stack">
               <WeightsCard
@@ -189,10 +189,10 @@ export default function ConfiguracionRoute(): JSX.Element {
               <IdentityCard draft={draft()} assets={assetsOf(snapshot.state)} />
               <FiscalCard draft={draft()} />
 
-              <Callout tone="info" title="Lo que no se edita aquí">
+              <Notice severity="info" title="Lo que no se edita aquí">
                 Los tramos de la base del ahorro y la frecuencia de los avisos automáticos todavía
                 no tienen pantalla: de momento se cambian desde la CLI.
-              </Callout>
+              </Notice>
 
               {/* The error of a save goes next to the button that caused it. */}
               <FormActions

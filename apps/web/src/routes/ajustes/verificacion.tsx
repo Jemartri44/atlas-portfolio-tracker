@@ -8,7 +8,7 @@
 import { deepCheck, type IntegrityFinding, integrity } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
-import { Callout, Disclosure, Tag } from "../../components/index.js";
+import { Disclosure, Notice, Tag } from "../../components/index.js";
 import { type EventReferences, eventReferences } from "../../format/events.js";
 import { describeError } from "../../format/messages/errors.js";
 import { describeFinding } from "../../format/messages/findings.js";
@@ -187,10 +187,10 @@ export default function VerificacionRoute(): JSX.Element {
                 </section>
               </Show>
 
-              <Callout tone="info" title="La copia de seguridad sigue siendo tuya">
+              <Notice severity="info" title="La copia de seguridad sigue siendo tuya">
                 La verificación dice si el libro es coherente, no si está a salvo. Exporta desde
                 Ajustes, y en el ordenador usa <code>atlas backup</code>.
-              </Callout>
+              </Notice>
             </div>
           </>
         );

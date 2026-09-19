@@ -54,6 +54,18 @@
 }
 
 /* Destructive looks like what it is: never the primary blue (brief §13). */
+:where(button, a[role="button"]).quiet {
+  background: none;
+  border-color: transparent;
+  color: var(--c-accent);
+  padding-inline: var(--space-2);
+}
+
+:where(button, a[role="button"]).quiet:hover {
+  background-color: var(--c-fill);
+  color: var(--c-accent-hover);
+}
+
 :where(button, a[role="button"]).danger {
   background-color: var(--c-surface);
   border-color: var(--c-danger-border);
@@ -342,6 +354,47 @@
 .segmented > button:disabled > span {
   background: none;
   color: var(--c-text-3);
+}
+
+/* ---- The date a screen is read at -------------------------------------- */
+
+.asof-group {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.asof {
+  align-items: center;
+  background-color: var(--c-surface);
+  border: var(--border) solid var(--c-border-control);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  position: relative;
+}
+
+.asof:focus-within {
+  outline: var(--border-strong) solid var(--c-accent);
+  outline-offset: var(--space-0);
+}
+
+.asof > .today {
+  color: var(--c-text-2);
+}
+
+/* The native input covers the control: a tap anywhere opens the picker. */
+.asof-input {
+  cursor: pointer;
+  inset: 0;
+  opacity: 0;
+  position: absolute;
 }
 
 /* ---- Tags: state in a word, plus an icon -------------------------------- */

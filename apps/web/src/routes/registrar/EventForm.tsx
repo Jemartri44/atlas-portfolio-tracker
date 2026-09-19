@@ -11,7 +11,7 @@
 import type { EventPreview, LedgerState } from "@atlas/domain";
 import { A, useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout, Field } from "../../components/index.js";
+import { Field, Notice } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { toAppError } from "../../ledger/errors.js";
@@ -148,15 +148,15 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   return (
     <>
       <Show when={conflict()}>
-        <Callout tone="warning" title="El libro ha cambiado">
+        <Notice severity="caution" title="El libro ha cambiado">
           Otra pestaña o la CLI han escrito mientras rellenabas. Se ha recargado el libro: vuelve a
           ver el efecto antes de confirmar. No se ha pisado nada.
-        </Callout>
+        </Notice>
       </Show>
 
       <Show when={priorYear()}>
-        <Callout
-          tone="warning"
+        <Notice
+          severity="caution"
           title="Ejercicio anterior"
           action={
             <A href="/movimientos" role="button">
@@ -166,7 +166,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
         >
           Registrado. El evento rectificado pertenece a un ejercicio anterior: puede afectar a una
           declaración ya presentada.
-        </Callout>
+        </Notice>
       </Show>
 
       <Show
@@ -187,8 +187,8 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       >
         <form class="form" onSubmit={(event) => event.preventDefault()}>
           <Show when={bucketWithoutThesis()}>
-            <Callout
-              tone="warning"
+            <Notice
+              severity="caution"
               title="Las compras del cubo exigen una tesis"
               action={
                 <A href="/registrar/tesis" role="button">
@@ -199,7 +199,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
               La regla 15 pide escribir la tesis <strong>antes</strong> de comprar: la hipótesis, el
               plazo, la condición de invalidación y el tamaño previsto. Si no hay ninguna abierta
               para esta cuenta y este activo, créala ahora y vuelve.
-            </Callout>
+            </Notice>
           </Show>
 
           <FormFields

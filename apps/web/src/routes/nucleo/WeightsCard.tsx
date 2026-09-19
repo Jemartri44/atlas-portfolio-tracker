@@ -134,7 +134,7 @@ export const WeightsCard = (props: { view: WeightsView }): JSX.Element => {
 
         <div class="spread total-line">
           <span class="subject">Total del núcleo</span>
-          <span class="row">
+          <span class="hstack">
             <Amount value={props.view.total} missingReason="ninguna posición tiene precio" />
             <Show when={props.view.partial}>
               <Tag tone="caution" title={`Faltan: ${props.view.missing.join(", ")}`}>

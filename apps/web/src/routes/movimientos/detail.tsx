@@ -8,7 +8,7 @@
 import { ledgerEntries } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Callout, Dialog, EmptyState, Field, Tag } from "../../components/index.js";
+import { Dialog, EmptyState, Field, Notice, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -112,34 +112,34 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   />
 
                   <Show when={priorYear()}>
-                    <Callout tone="warning" title="Ejercicio anterior">
+                    <Notice severity="caution" title="Ejercicio anterior">
                       El evento rectificado pertenece a un ejercicio anterior: puede afectar a una
                       declaración ya presentada.
-                    </Callout>
+                    </Notice>
                   </Show>
 
                   <Show when={error() !== undefined}>
-                    <Callout tone="error" title="No se ha podido rectificar">
+                    <Notice severity="danger" title="No se ha podido rectificar">
                       {error()}
-                    </Callout>
+                    </Notice>
                   </Show>
 
                   <Show when={view().editHint}>
                     {(hint) => (
-                      <Callout tone="info" title="Este evento no se corrige">
+                      <Notice severity="info" title="Este evento no se corrige">
                         {hint()}
-                      </Callout>
+                      </Notice>
                     )}
                   </Show>
 
                   <Show when={view().invalidReason !== undefined}>
-                    <Callout tone="error" title="Este evento es inválido">
+                    <Notice severity="danger" title="Este evento es inválido">
                       {view().invalidReason}
-                    </Callout>
+                    </Notice>
                   </Show>
 
                   <Show when={dependents().length > 0}>
-                    <Callout tone="error" title="Hay movimientos que dependen de este">
+                    <Notice severity="danger" title="Hay movimientos que dependen de este">
                       <p>
                         Anúlalos o corrígelos antes: si este desapareciera, dejarían de cuadrar.
                       </p>
@@ -154,12 +154,12 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                           )}
                         </For>
                       </ul>
-                    </Callout>
+                    </Notice>
                   </Show>
 
                   <div class="stack">
                     <Show when={view().status !== "current"}>
-                      <div class="row wrap">
+                      <div class="hstack wrap">
                         <Tag tone={view().status === "reversed" ? "danger" : "neutral"}>
                           {view().statusLabel}
                         </Tag>

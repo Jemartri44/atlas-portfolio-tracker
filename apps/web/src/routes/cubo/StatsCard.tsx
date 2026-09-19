@@ -23,7 +23,7 @@ export const StatsCard = (props: { view: StatsView }): JSX.Element => (
   >
     <div class="headline">
       <span class="subject">Comisiones sobre capital operado</span>
-      <span class="row">
+      <span class="hstack">
         <Figure value={props.view.feesPct} unit="percent" class="big" />
         <span class="tiny">
           <Amount value={props.view.fees} /> de <Amount value={props.view.tradedCapital} />

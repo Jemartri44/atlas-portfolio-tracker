@@ -1,0 +1,209 @@
+/*
+ * What the application says about itself (docs/design/system.md §5.6–5.8,
+ * §5.16): the one notice, what cannot be computed yet, what is empty and what
+ * is loading. None of them is a blank page; only a real problem is red.
+ */
+
+/* ---- Notice: the one warning component ---------------------------------- */
+
+.notice {
+  color: inherit;
+  display: grid;
+  gap: var(--space-1) var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr);
+  padding-block: var(--space-3);
+  text-decoration: none;
+}
+
+a.notice:hover {
+  color: inherit;
+}
+
+.notices > li + li > .notice {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.notice-icon {
+  height: var(--icon-md);
+  margin-top: var(--space-0);
+  width: var(--icon-md);
+}
+
+.notice.is-caution .notice-icon {
+  color: var(--c-caution-icon);
+}
+
+.notice.is-danger .notice-icon {
+  color: var(--c-danger);
+}
+
+.notice.is-info .notice-icon {
+  color: var(--c-text-3);
+}
+
+.notice-body {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.notice-title {
+  font-weight: var(--fw-semibold);
+}
+
+.notice-text {
+  display: grid;
+  gap: var(--space-2);
+  line-height: 1.45;
+}
+
+.notice-action {
+  align-items: center;
+  color: var(--c-accent);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-1);
+}
+
+.notice-actions {
+  margin-top: var(--space-2);
+}
+
+/* A danger notice is the only one with a background: red is for real trouble. */
+.notice.is-danger {
+  background-color: var(--c-danger-soft);
+  border-radius: var(--radius-md);
+  padding-inline: var(--space-3);
+}
+
+/* On its own, outside a list, a notice is boxed. */
+.notice.is-boxed {
+  border: var(--border) solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+}
+
+.notice.is-boxed.is-danger {
+  border-color: transparent;
+}
+
+@media (min-width: 64rem) {
+  a.notice > .notice-body {
+    align-items: baseline;
+    gap: var(--space-4);
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .notice-action {
+    white-space: nowrap;
+  }
+
+  /* The rest of a list waits folded at the bottom edge of its card. */
+  .card > .disclosure.more {
+    margin-top: auto;
+  }
+}
+
+/* The action of a notice underlines when its notice is hovered. */
+a.notice:hover .notice-action {
+  text-decoration: underline;
+}
+
+/* ---- Pending: "no se puede calcular todavía", never the tone of an error */
+
+.pending {
+  align-items: start;
+  background-color: var(--c-fill);
+  border-radius: var(--radius-lg);
+  color: var(--c-text-3);
+  display: grid;
+  gap: var(--space-2) var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: var(--space-3) var(--space-4);
+}
+
+.pending-body {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.pending-text {
+  color: var(--c-text);
+}
+
+/* A quiet action lines up with the sentence above it. */
+.pending-body > a {
+  margin-left: calc(-1 * var(--space-2));
+}
+
+/* ---- Empty state: one message, one next step ---------------------------- */
+
+.empty {
+  align-content: center;
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-4) 0;
+}
+
+.empty > .glyph {
+  align-items: center;
+  background-color: var(--c-fill);
+  border-radius: var(--radius-pill);
+  color: var(--c-text-2);
+  display: flex;
+  height: var(--glyph-size);
+  justify-content: center;
+  margin-bottom: var(--space-1);
+  width: var(--glyph-size);
+}
+
+.empty > .what {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.empty > .why {
+  color: var(--c-text-2);
+  max-width: var(--reading-max);
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ---- Skeleton: the shape of what is coming, and nothing moves ------------ */
+
+.skel-lines {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.skel {
+  background-color: var(--c-fill);
+  border-radius: var(--radius-sm);
+  display: block;
+  height: 0.875rem;
+}
+
+.skel.is-figure {
+  height: 2.25rem;
+  width: 55%;
+}
+
+.skel.w-90 {
+  width: 90%;
+}
+
+.skel.w-70 {
+  width: 70%;
+}
+
+.skel.w-50 {
+  width: 50%;
+}

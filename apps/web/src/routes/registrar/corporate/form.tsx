@@ -6,7 +6,7 @@ import type { EventPreview, LedgerState } from "@atlas/domain";
 import { accounts, corporateActionDraft, Quantity } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Amount, Callout, EmptyState, Tag } from "../../../components/index.js";
+import { Amount, EmptyState, Notice, Tag } from "../../../components/index.js";
 import { displayName, nameIndex } from "../../../format/names.js";
 import { toAppError } from "../../../ledger/errors.js";
 import { attempt } from "../../../ledger/query.js";
@@ -143,15 +143,15 @@ export default function CorporateFormRoute(): JSX.Element {
               <>
                 <PageHeader title={current().title} lead={current().when} />
 
-                <Callout tone="info" title="Qué va a pasar">
+                <Notice severity="info" title="Qué va a pasar">
                   {current().effect}
-                </Callout>
+                </Notice>
 
                 <Show when={conflict()}>
-                  <Callout tone="warning" title="El libro ha cambiado">
+                  <Notice severity="caution" title="El libro ha cambiado">
                     Otra pestaña o la CLI han escrito mientras rellenabas. Vuelve a ver el efecto
                     antes de confirmar. No se ha pisado nada.
-                  </Callout>
+                  </Notice>
                 </Show>
 
                 <form class="form" onSubmit={(event) => event.preventDefault()}>
@@ -165,14 +165,14 @@ export default function CorporateFormRoute(): JSX.Element {
                   />
 
                   <Show when={draft()?.no_fractions === true}>
-                    <Callout tone="info" title="Sin picos">
+                    <Notice severity="info" title="Sin picos">
                       Ninguna cuenta queda con fracciones, así que no se genera ninguna venta
                       forzosa.
-                    </Callout>
+                    </Notice>
                   </Show>
 
                   <Show when={(draft()?.fractional.length ?? 0) > 0}>
-                    <Callout tone="warning" title="Picos que se venden">
+                    <Notice severity="caution" title="Picos que se venden">
                       <For each={draft()?.fractional ?? []}>
                         {(row) => (
                           <p class="tiny flush">
@@ -183,7 +183,7 @@ export default function CorporateFormRoute(): JSX.Element {
                       </For>
                       Esa venta genera ganancia patrimonial. La aplicación la calcula al registrar
                       el evento.
-                    </Callout>
+                    </Notice>
                   </Show>
 
                   <FormActions
@@ -204,10 +204,10 @@ export default function CorporateFormRoute(): JSX.Element {
                   {(shown) => (
                     <div class="stack">
                       <Preview preview={shown()} names={names} />
-                      <Callout tone="info" title="Guarda el documento">
+                      <Notice severity="info" title="Guarda el documento">
                         Copia la nota del emisor a tu carpeta de documentos: el libro guarda la
                         referencia, no el fichero.
-                      </Callout>
+                      </Notice>
                       <FormActions problem={problem()}>
                         <button
                           type="button"

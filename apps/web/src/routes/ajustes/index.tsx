@@ -5,7 +5,7 @@
 import { BrowserLedgerBlob } from "@atlas/adapters/browser";
 import { A } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout, Section, Switch } from "../../components/index.js";
+import { Notice, Section, Switch } from "../../components/index.js";
 import { formatInstantDate } from "../../format/date.js";
 import { countOf, formatDecimalString } from "../../format/number.js";
 import { changeLedger } from "../../ledger/actions.js";
@@ -66,14 +66,14 @@ export default function AjustesRoute(): JSX.Element {
       <PageHeader title="Ajustes" />
 
       <Show when={message() !== undefined}>
-        <Callout tone="info" title="Hecho">
+        <Notice severity="info" title="Hecho">
           {message()}
-        </Callout>
+        </Notice>
       </Show>
       <Show when={error() !== undefined}>
-        <Callout tone="error" title="No se ha podido">
+        <Notice severity="danger" title="No se ha podido">
           {error()}
-        </Callout>
+        </Notice>
       </Show>
 
       <div class="stack">
@@ -122,11 +122,11 @@ export default function AjustesRoute(): JSX.Element {
                     El libro vive en el navegador: <strong>no es un almacén definitivo</strong>. Si
                     borras los datos del sitio, se va con ellos.
                   </p>
-                  <div class="row wrap">
+                  <div class="hstack wrap">
                     <button type="button" disabled={busy()} onClick={() => void onExport()}>
                       Exportar el libro
                     </button>
-                    <label class="row flush">
+                    <label class="hstack flush">
                       <span class="subtle">Importar y sustituir:</span>
                       <input
                         type="file"
@@ -139,7 +139,7 @@ export default function AjustesRoute(): JSX.Element {
                   </div>
                 </Show>
 
-                <div class="row wrap spaced">
+                <div class="hstack wrap spaced">
                   <A href="/libro" role="button" class="secondary">
                     Cambiar de libro
                   </A>

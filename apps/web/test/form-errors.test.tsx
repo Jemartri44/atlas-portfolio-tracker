@@ -119,7 +119,7 @@ describe("the form, rendered", () => {
     await press(host, "Ver el efecto");
 
     const form = host.querySelector("form");
-    const callout = form?.querySelector(".callout.is-error");
+    const callout = form?.querySelector(".notice.is-danger");
     expect(text(callout)).toContain("no tiene suficiente World Index Fund");
     // Inside the form, and the bar right after it: next to the button.
     expect(callout?.parentElement?.nextElementSibling?.classList.contains("actions-bar")).toBe(
