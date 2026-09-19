@@ -103,6 +103,20 @@ describe("the first run", () => {
     expect(elsewhere?.querySelector("button")).toBeNull();
   });
 
+  it("says once that nothing was touched when a chosen file cannot be read", async () => {
+    const host = await show("/libro", Libro);
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+    const unreadable = {
+      text: () => Promise.reject(new DOMException("gone", "NotReadableError")),
+    };
+    Object.defineProperty(input, "files", { value: [unreadable], configurable: true });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const said = text(host.querySelector(".notice"));
+    expect(said).toContain("No se ha podido leer el archivo");
+    expect(said.match(/no se ha tocado nada/gi)).toHaveLength(1);
+  });
+
   it("offers the folder first where there is one, with the one primary button", async () => {
     const picker = window as unknown as { showDirectoryPicker?: () => Promise<never> };
     picker.showDirectoryPicker = () => Promise.reject(new Error("no se usa"));

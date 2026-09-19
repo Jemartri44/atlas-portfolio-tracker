@@ -161,7 +161,11 @@ export default function LibroRoute(): JSX.Element {
 
       <Show when={error() !== undefined}>
         <Notice severity="danger" title="No se ha podido abrir">
-          {error()} No se ha tocado nada: lo que tuvieras abierto sigue como estaba.
+          {error()}
+          {/* Said once: a message that already says it does not get it twice. */}
+          {/no se ha tocado nada/i.test(error() ?? "")
+            ? ""
+            : " No se ha tocado nada: lo que tuvieras abierto sigue como estaba."}
         </Notice>
       </Show>
 
