@@ -217,12 +217,99 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
       sale_date: "2027-03-10",
       buy_date: "2027-01-10",
       window_start: "2027-01-10",
-      buy_quantity: "10",
+      // Of the 10 bought, the sale took 5: what is still held is what it says.
+      buy_quantity: "5",
       loss_eur: "-10",
       tax_year: 2027,
       window: "2m",
     });
     expect(codes(cycle("2027-01-09"), "wash_sale_window_prior_buy")).toEqual([]);
+  });
+
+  it("says how much of the purchase is still held, in today's units (fiscal review 7a)", () => {
+    // 10 bought in January and 2 in February; a 1:4 reverse split leaves 2.5
+    // and 0.5; the loss-making sale takes 1 from the oldest.
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const first = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "10",
+      unit_price: "10",
+      ...EUR,
+      trade_date: "2027-01-11",
+      value_date: "2027-01-11",
+    });
+    const second = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "2",
+      unit_price: "10",
+      ...EUR,
+      trade_date: "2027-02-01",
+      value_date: "2027-02-01",
+    });
+    b.corporateAction({
+      kind: "reverse_split",
+      asset_id: "ast_world",
+      effective_date: "2027-02-15",
+      effects: [{ op: "scale", ratio: "1/4" }],
+    });
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "1",
+      unit_price: "30",
+      ...EUR,
+      trade_date: "2027-03-10",
+      value_date: "2027-03-10",
+    });
+    const warnings = codes(projectLedger(b.build()), "wash_sale_window_prior_buy");
+    // Not the 10 and 2 bought: the 1.5 and 0.5 that are left.
+    expect(warnings.map((w) => [w.details.buy_event_id, w.details.buy_quantity])).toEqual([
+      [first.id, "1.5"],
+      [second.id, "0.5"],
+    ]);
+    expect(warnings[1]?.message).toContain("while 0.5 of a purchase of 2027-02-01 are still held");
+  });
+
+  it("names a purchase noted once per account only once, with all it left", () => {
+    // Shares granted with a cost in two accounts: one purchase, two entries.
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const grant = b.corporateAction({
+      kind: "stock_dividend",
+      asset_id: "ast_world",
+      effective_date: "2027-01-11",
+      effects: [
+        {
+          op: "grant",
+          asset_id: "ast_world",
+          per_account: [
+            { account_id: "acc_fund", quantity: "4" },
+            { account_id: "acc_etf", quantity: "6" },
+          ],
+          unit_cost: "10",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-01-11",
+          acquisition_date: "2027-01-11",
+        },
+      ],
+    });
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "1",
+      unit_price: "8",
+      ...EUR,
+      trade_date: "2027-03-10",
+      value_date: "2027-03-10",
+    });
+    const warnings = codes(projectLedger(b.build()), "wash_sale_window_prior_buy");
+    expect(warnings.map((w) => [w.details.buy_event_id, w.details.buy_quantity])).toEqual([
+      [grant.id, "9"],
+    ]);
   });
 
   it("does not name a purchase the loss-making sale itself consumed (#18)", () => {
@@ -428,7 +515,8 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
       expect(warnings[0]?.details).toMatchObject({
         asset_id: "ast_bonds",
         buy_date: "2027-05-03",
-        buy_quantity: "10",
+        // 10 came in, the sale took 6: 4 are still held.
+        buy_quantity: "4",
         loss_eur: "-24",
         window_start: "2026-06-01",
         window: "1y",
@@ -629,7 +717,8 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
     expect(warnings[0]?.details).toMatchObject({
       asset_id: "ast_world",
       buy_date: "2027-01-11",
-      buy_quantity: "10",
+      // 10 bought, 6 taken by the forced sale: 4 are still held.
+      buy_quantity: "4",
       loss_eur: "-24",
       window_start: "2026-06-01",
       window: "1y",

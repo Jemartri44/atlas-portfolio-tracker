@@ -32,9 +32,10 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     h.reset();
     expect(await h.exec(trade("sell", "2027-02-10", "8", "6"))).toBe(0);
     // The sale itself warns about the purchase inside the previous window that
-    // it leaves in the portfolio, names it by its date and quantity and the
-    // window that actually applies: a fund has one year, not two months.
-    expect(h.text()).toContain("con una compra del 2027-01-11 de 10 títulos que sigue en cartera");
+    // it leaves in the portfolio, names it by its date and by what of it is
+    // still held (10 bought, 6 sold), and the window that actually applies: a
+    // fund has one year, not two months.
+    expect(h.text()).toContain("cuando siguen en cartera 4 títulos de una compra del 2027-01-11");
     expect(h.text()).toContain("ventana de un año");
     expect(h.text()).toContain("puede no ser computable en 2027");
     h.reset();

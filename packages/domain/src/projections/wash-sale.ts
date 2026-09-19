@@ -25,7 +25,7 @@
 import { type CivilDate, yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { Money } from "../money/money.js";
-import type { Quantity } from "../money/quantity.js";
+import { Quantity } from "../money/quantity.js";
 import type { AssetId, AssetType } from "../schema/events.js";
 import { washSaleWindowEnd, washSaleWindowOf, washSaleWindowStart } from "../settings/wash-sale.js";
 import { type AssetLots, addWarning, type LedgerState } from "./state.js";
@@ -115,6 +115,11 @@ export const warnRepurchase = (
  * one whose lots this very sale consumed, or that is already gone, defers
  * nothing, and the tax engine agrees. It runs after the sale consumed its lots,
  * so "still held" is "still has an open lot of this asset".
+ *
+ * And it says **how much of it** is still held, in today's units: the sum of
+ * those open lots (feature 009, fiscal review 7a). What was bought is not what
+ * is left after a reverse split, nor after a sale that consumed part of it. A
+ * purchase noted once per account (a grant with a cost) is named once.
  */
 export const warnPriorBuys = (
   state: LedgerState,
@@ -128,20 +133,30 @@ export const warnPriorBuys = (
   const start = washSaleWindowStart(fiscalDate, window);
   // The sale has just consumed lots of this asset, so its inventory exists.
   const open = (state.lots.get(assetId) as AssetLots).open;
+  const named = new Set<Ulid>();
   for (const acquisition of state.acquisitions.get(assetId) ?? []) {
-    const held = open.some((lot) => lot.source_event_id === acquisition.event_id);
-    if (held && acquisition.fiscal_date >= start && acquisition.fiscal_date <= fiscalDate) {
+    if (named.has(acquisition.event_id)) {
+      continue;
+    }
+    named.add(acquisition.event_id);
+    const lots = open.filter((lot) => lot.source_event_id === acquisition.event_id);
+    if (
+      lots.length > 0 &&
+      acquisition.fiscal_date >= start &&
+      acquisition.fiscal_date <= fiscalDate
+    ) {
+      const held = lots.reduce((sum, lot) => sum.add(lot.quantity), Quantity.ZERO);
       addWarning(
         state,
         "wash_sale_window_prior_buy",
         eventId,
-        `selling ${assetId} at a loss of ${loss.roundToCents().amount.toString()} EUR on ${fiscalDate} with a purchase of ${acquisition.quantity.toString()} on ${acquisition.fiscal_date} still held, inside the window that opened on ${start}: the loss may not be computable in ${yearOf(fiscalDate)}`,
+        `selling ${assetId} at a loss of ${loss.roundToCents().amount.toString()} EUR on ${fiscalDate} while ${held.toString()} of a purchase of ${acquisition.fiscal_date} are still held, inside the window that opened on ${start}: the loss may not be computable in ${yearOf(fiscalDate)}`,
         {
           asset_id: assetId,
           sale_date: fiscalDate,
           buy_event_id: acquisition.event_id,
           buy_date: acquisition.fiscal_date,
-          buy_quantity: acquisition.quantity.toString(),
+          buy_quantity: held.toString(),
           loss_eur: loss.roundToCents().amount.toString(),
           tax_year: yearOf(fiscalDate),
           window_start: start,
