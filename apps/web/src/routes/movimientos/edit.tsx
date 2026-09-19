@@ -64,7 +64,7 @@ export default function MovimientoEditarRoute(): JSX.Element {
               <>
                 <PageHeader
                   title={`Corregir ${found().spec.title.toLowerCase()}`}
-                  lead="Se anula el original y se registra el corregido; nada se borra del fichero."
+                  lead="Se anula el original y se registra el corregido; nada se borra de tus datos."
                 />
 
                 <div class="stack">

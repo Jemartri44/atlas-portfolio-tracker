@@ -62,15 +62,15 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   duplicate_isin: (d, n) =>
     `El ISIN ${text(d.isin)} ya es de ${n.one(d.existing_asset_id)}: un mismo valor no puede ser dos activos, porque la regla de recompra y el FIFO los tratarían como distintos. Registra las operaciones en ${n.one(d.existing_asset_id)}.`,
   asset_book_change: (d, n) =>
-    `El activo ${n.one(d.asset_id)} no puede pasar del núcleo al cubo ni al revés: da de alta un activo nuevo.`,
+    `El activo ${n.one(d.asset_id)} no puede pasar de la cartera principal al cubo ni al revés: da de alta un activo nuevo.`,
   asset_type_change: (d, n) =>
     `El activo ${n.one(d.asset_id)} no puede cambiar de tipo (${enumValue(d.from)} → ${enumValue(d.to)}): alteraría la fecha fiscal de todas sus operaciones. Da de alta un activo nuevo.`,
   asset_currency_change: (d, n) =>
     `El activo ${n.one(d.asset_id)} no puede cambiar de divisa (${text(d.from)} → ${text(d.to)}): alteraría la base de coste de todas sus operaciones. Da de alta un activo nuevo.`,
   account_book_change: (d, n) =>
-    `La cuenta ${n.one(d.account_id)} tiene operaciones registradas: ya no puede pasar del núcleo al cubo ni al revés.`,
+    `La cuenta ${n.one(d.account_id)} tiene operaciones registradas: ya no puede pasar de la cartera principal al cubo ni al revés.`,
   book_mismatch: () =>
-    "La cuenta y el activo pertenecen a libros distintos: el núcleo y el cubo no se mezclan.",
+    "La cuenta y el activo pertenecen a carteras distintas: la cartera principal y el cubo no se mezclan.",
   // --- Bucket theses -----------------------------------------------------
   thesis_required: () =>
     "Las compras del cubo exigen una tesis abierta antes de comprar (regla 15). Ábrela en Registrar → Abrir una tesis y vuelve.",
@@ -80,7 +80,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   thesis_not_open: (d, n) =>
     `La tesis ${n.thesis(d.thesis_id)} no está abierta en ese momento: se abre antes de comprar y no se cierra antes.`,
   thesis_not_allowed: (d, n) =>
-    `Solo las cuentas del cubo llevan tesis; ${n.one(d.account_id)} es del núcleo.`,
+    `Solo las cuentas del cubo llevan tesis; ${n.one(d.account_id)} es de la cartera principal.`,
   duplicate_thesis: (d) =>
     `Ya hay una tesis con el identificador «${text(d.thesis_id)}»: elige otro.`,
   thesis_already_open: (d, n) =>
@@ -112,7 +112,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
       ? "Un traspaso fiscal exige que los dos activos sean traspasables."
       : `El activo ${n.one(d.asset_id)} no es traspasable: un traspaso fiscal exige que los dos lo sean.`,
   not_core_asset: (d, n) =>
-    `El activo ${n.one(d.asset_id)} no pertenece al núcleo: el simulador de traspaso solo opera sobre la cartera principal.`,
+    `El activo ${n.one(d.asset_id)} no pertenece a la cartera principal: el simulador de traspaso solo opera sobre ella.`,
   eur_fx_rate_not_one: (d) =>
     `${field(d.field)} debe ser exactamente 1 cuando la divisa es el euro (recibido: ${num(d.value)}): el BCE no publica un tipo del euro contra sí mismo.`,
   fx_rate_date_weekend: (d) =>
@@ -135,7 +135,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   missing_amount: () =>
     "Falta el importe de la aportación: indícalo, o fija la aportación mensual en Ajustes → Configuración.",
   no_target_weight_in_table: (d, n) =>
-    `Los pesos objetivo vigentes no apuntan a ningún activo del núcleo${
+    `Los pesos objetivo vigentes no apuntan a ningún activo de la cartera principal${
       count(d.assets) === 0 ? " (la tabla está vacía)" : `: ${n.many(d.assets)} están todos al 0 %`
     }. Revísalos en Ajustes → Configuración.`,
   split_not_exact: (d, _n, f) =>
@@ -163,7 +163,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   invalid_wash_sale_window: (d) =>
     `La ventana de recompra de ${enumValue(d.asset_type)} no es válida: elige dos meses, un año o un número de días.`,
   tax_ledger_invalid: (d) =>
-    `El libro tiene ${num(d.count)} ${Number(d.count) === 1 ? "evento inválido" : "eventos inválidos"}: un cálculo fiscal sobre él sería aproximado. Repáralo antes en Ajustes → Verificación.`,
+    `Tus datos tienen ${num(d.count)} ${Number(d.count) === 1 ? "movimiento inválido" : "movimientos inválidos"}: un cálculo fiscal sobre ellos sería aproximado. Repáralo antes en Ajustes → Verificación.`,
   tax_year_unsupported: (d) =>
     `El cálculo fiscal aplica el régimen de compensación vigente desde ${num(d.first_supported)}; ${num(d.year)} es anterior.`,
   // The value received is the user's word, shown as typed (`num` only turns a
@@ -182,12 +182,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   reversal_of_reversal: () =>
     "No se puede anular una anulación: vuelve a registrar el evento original.",
   already_reversed: () => "Ese evento ya está anulado.",
-  reversal_target_missing: () => "El movimiento que se quiere anular no está en el libro.",
-  not_found: () => "Ese movimiento no está en el libro.",
+  reversal_target_missing: () => "El movimiento que se quiere anular no está en tus datos.",
+  not_found: () => "Ese movimiento no está en tus datos.",
   dependent_events: () => "Hay movimientos posteriores que se apoyan en este: rectifícalos antes.",
   dangling_correction: () => "La corrección apunta a un movimiento que no está anulado.",
   dangling_reference: (d) =>
-    `Hay ${countOf(count(d.event_ids ?? d.ids), "referencia", "referencias")} a movimientos que no están en el libro.`,
+    `Hay ${countOf(count(d.event_ids ?? d.ids), "referencia", "referencias")} a movimientos que no están en tus datos.`,
   // --- Orders and transfer requests --------------------------------------
   unknown_order: () => "La orden elegida no existe en esa fecha.",
   order_closed: (d) => `La orden elegida ya está cerrada (${enumValue(d.stage)}).`,
@@ -203,13 +203,13 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     const invalid = Number(d.invalid_count ?? 0);
     // `offending_error` is the domain's own message, in English and free-form:
     // it goes through the blunt masker, like any other raw evidence.
-    return `El libro ya tenía ${countOf(invalid, "evento inválido", "eventos inválidos")} antes de esta operación, y sobre un libro así solo se puede escribir un cambio de configuración. El primero es ${kind(d.offending_type)}: ${f.evidence(d.offending_error)}. Arréglalo en Ajustes → Verificación.`;
+    return `Tus datos ya tenían ${countOf(invalid, "movimiento inválido", "movimientos inválidos")} antes de esta operación, y sobre unos datos así solo se puede escribir un cambio de configuración. El primero es ${kind(d.offending_type)}: ${f.evidence(d.offending_error)}. Arréglalo en Ajustes → Verificación.`;
   },
   invalid_events: (d) =>
-    `El libro tiene ${countOf(count(d.affected), "evento inválido", "eventos inválidos")}: rectifícalos antes (Ajustes → Verificación).`,
+    `Tus datos tienen ${countOf(count(d.affected), "movimiento inválido", "movimientos inválidos")}: rectifícalos antes (Ajustes → Verificación).`,
   duplicate_fingerprint: () =>
-    "Ya hay un movimiento idéntico en el libro. Si es una repetición legítima, confírmalo.",
-  duplicate_id: () => "Hay dos eventos con el mismo identificador: el libro está corrupto.",
+    "Ya hay un movimiento idéntico en tus datos. Si es una repetición legítima, confírmalo.",
+  duplicate_id: () => "Hay dos movimientos con el mismo identificador: tus datos están dañados.",
   unsupported_event: (d) =>
     `El tipo de evento «${text(d.type)}» es de una versión posterior de la aplicación y esta no lo entiende.`,
   unknown_event_type: (d) => `Tipo de evento desconocido: «${text(d.type)}».`,
@@ -221,16 +221,16 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `Los lotes fiscales de ${n.one(d.asset_id)} no cuadran con la posición física.`,
   // --- Store and schema --------------------------------------------------
   conflict: () =>
-    "El libro ha cambiado desde que se cargó (la CLI u otra pestaña han escrito): se recarga y se vuelve a intentar.",
+    "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",
   schema_too_new: (d) =>
-    `El libro lo ha escrito una versión más nueva de la aplicación (formato ${text(d.found)}; esta entiende hasta el ${text(d.supported)}): actualiza la aplicación recargando con conexión.`,
+    `Tus datos los ha escrito una versión más nueva de la aplicación (formato ${text(d.found)}; esta entiende hasta el ${text(d.supported)}): actualiza la aplicación recargando con conexión.`,
   missing_migration: (d) =>
-    `Esta aplicación no sabe leer el formato ${text(d.from ?? d.version)} del libro.`,
+    `Esta aplicación no sabe leer el formato ${text(d.from ?? d.version)} de tus datos.`,
   archive_exists: (d) => `El archivo ${text(d.archive_name)} ya existe y nunca se sobrescribe.`,
   projection_changed: () => "La reescritura cambiaría los cálculos: no se ha escrito nada.",
   // --- Line shape --------------------------------------------------------
   invalid_line: () => "La línea no es un evento: no es un objeto JSON.",
-  invalid_json: () => "La línea no es JSON válido: el fichero no es un libro de Atlas.",
+  invalid_json: () => "La línea no es JSON válido: el archivo no es de Atlas.",
   invalid_envelope: (d) => `La cabecera de la línea no es válida (${field(d.field)}).`,
   missing_field: (d) => `Falta ${field(d.field)} en ${kind(d.type)}.`,
   invalid_field: (d) =>

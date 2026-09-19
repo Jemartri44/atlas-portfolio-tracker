@@ -59,7 +59,7 @@ describe("the words", () => {
   it("says which line of the file a load error comes from", () => {
     expect(
       messageWithLine({ code: "invalid_field", message: "«Comisión» no es válido.", line: 12 }),
-    ).toBe("Línea 12 del fichero: «Comisión» no es válido.");
+    ).toBe("Línea 12 del archivo: «Comisión» no es válido.");
     expect(messageWithLine({ code: "conflict", message: "cambió" })).toBe("cambió");
   });
 });

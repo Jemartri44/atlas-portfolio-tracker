@@ -66,7 +66,7 @@ export const validateImport = async (text: string): Promise<number> =>
 
 /** A read-only blob over a string, to validate an import before it lands. */
 class MemoryText {
-  readonly label = "fichero importado";
+  readonly label = "archivo importado";
   private readonly bytes: Uint8Array;
 
   constructor(text: string) {
@@ -78,10 +78,10 @@ class MemoryText {
   }
 
   async write(): Promise<void> {
-    throw new Error("el fichero importado no se escribe");
+    throw new Error("el archivo importado no se escribe");
   }
 
   async writeArchive(): Promise<void> {
-    throw new Error("el fichero importado no se archiva");
+    throw new Error("el archivo importado no se archiva");
   }
 }

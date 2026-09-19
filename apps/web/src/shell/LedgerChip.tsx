@@ -28,7 +28,7 @@ const ageOf = (source: LedgerSource): string => {
 const detailOf = (source: LedgerSource): string => {
   if (source.kind === "directory") {
     return source.permission === "granted"
-      ? `Tus datos están en ${source.fileName}, en la carpeta ${source.directoryName}: el mismo fichero que usa la CLI.`
+      ? `Tus datos están en ${source.fileName}, en la carpeta ${source.directoryName}: el mismo archivo que usa la CLI.`
       : "El navegador ha perdido el permiso sobre la carpeta: hay que reconectarla.";
   }
   if (source.lastExportAt === undefined) {

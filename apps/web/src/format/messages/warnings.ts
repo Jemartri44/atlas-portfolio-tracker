@@ -46,7 +46,7 @@ const age = (d: Details): string => `de hace ${days(d.age_days)} (${day(d.date)}
 export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) => string> = {
   // --- Core weights ------------------------------------------------------
   unknown_target_weight: (d, n) =>
-    `Hay un peso objetivo para ${n.one(d.asset_id)}, que no es ningún activo del núcleo: revísalo en la configuración.`,
+    `Hay un peso objetivo para ${n.one(d.asset_id)}, que no es ningún activo de la cartera principal: revísalo en la configuración.`,
   asset_without_target: (d, n) =>
     `${n.one(d.asset_id)} tiene posición y ningún peso objetivo asignado.`,
   deviation_above_threshold: (d, n) =>
@@ -86,7 +86,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   bucket_weight_not_evaluated: (d, n) =>
     `La regla de peso (${pct(d.limit_pct)}) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro (regla 18).`,
   bucket_weight_exceeded: (d) =>
-    `El cubo pesa el ${pct(d.weight_pct)} del patrimonio total, por encima del ${pct(d.limit_pct)} configurado (regla 18): valora traspasar el exceso al núcleo.`,
+    `El cubo pesa el ${pct(d.weight_pct)} del patrimonio total, por encima del ${pct(d.limit_pct)} configurado (regla 18): valora traspasar el exceso a la cartera principal.`,
   missing_benchmark_asset: () =>
     "No hay índice de referencia configurado: fíjalo en Ajustes → Configuración (regla 16).",
   unknown_benchmark_asset: (d, n) =>
@@ -118,7 +118,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
 
   // --- Tax report (feature 009) --------------------------------------------
   tax_quota_not_computed: () =>
-    "Esto es la base del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en el libro.",
+    "Esto es la base del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en tus datos.",
   tax_double_taxation_partial: () =>
     "Doble imposición: solo se calcula el primer límite, el del convenio. El segundo exige la declaración entera, y lo que no se deduce se pierde.",
   // The country is the code the ledger keeps (US, IE): `num` leaves it as it is.
@@ -141,7 +141,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   tax_duplicate_isin: (d, n) =>
     `El ISIN ${text(d.isin)} lo comparten ${n.many(d.assets)}: para Hacienda son el mismo valor y el cálculo fiscal los trata como distintos. Registra ese valor en un solo activo.`,
   tax_settings_default_used: (d) =>
-    `Hay ${countOf(count(d.fields), "parámetro fiscal", "parámetros fiscales")} que no están en el libro y se han tomado del código. Guardar la configuración los dejará fijados.`,
+    `Hay ${countOf(count(d.fields), "parámetro fiscal", "parámetros fiscales")} que no están en tus datos y se han tomado del código. Guardar la configuración los dejará fijados.`,
 };
 
 /**
