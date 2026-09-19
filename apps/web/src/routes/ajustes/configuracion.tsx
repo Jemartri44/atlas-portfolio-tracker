@@ -42,6 +42,7 @@ import {
   withPerAssetType,
   withText,
 } from "../../view-models/index.js";
+import { weightedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
 import { FiscalCard } from "./FiscalCard.jsx";
@@ -66,14 +67,9 @@ export default function ConfiguracionRoute(): JSX.Element {
         const resolution = () => settingsAt(snapshot.state, date);
         const current = (): Settings => resolution().settings;
 
-        // Weights are asked for active assets only; an inactive one appears only
-        // while it still carries a weight, so that saving never drops it unseen.
-        const coreAssets = () =>
-          assetsOf(snapshot.state).filter(
-            (asset) =>
-              asset.book === "core" &&
-              (asset.active || (current().target_weights?.[asset.asset_id] ?? "") !== ""),
-          );
+        // Weights are asked for live assets only (`weightedAssets`): not for
+        // one a merger or a class change converted away.
+        const coreAssets = () => weightedAssets(snapshot.state, snapshot.events, current(), date);
         /** Where the configuration in force comes from, said as a person would. */
         const origin = (): string =>
           resolution().origin === "default"

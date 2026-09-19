@@ -6,12 +6,12 @@
 // the verification grouped as on the summary; the theme chosen with a
 // segmented control; and the first run offering first what this browser can do.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Ajustes from "../src/routes/ajustes/index.jsx";
 import Verificacion from "../src/routes/ajustes/verificacion.jsx";
 import Libro from "../src/routes/libro/index.jsx";
-import { optionsOf, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { optionsOf, show, text, today, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -32,6 +32,24 @@ describe("the configuration", () => {
       false,
     ]);
     expect(text(groups[0]?.querySelector("summary"))).toContain("suman 100 %");
+  });
+
+  it("asks a weight only of a live asset, not of one a merger converted away", async () => {
+    // After the fund merger of 07/02/2028 and the class change of 06/03/2028.
+    today("2029-01-10");
+    const host = await show("/ajustes/configuracion", Configuracion);
+    vi.useRealTimers();
+    const asked = [...host.querySelectorAll("details.fold")][0];
+    const labels = [...(asked?.querySelectorAll(".field > label") ?? [])].map(text);
+    // Their units became Small Cap Index Fund B and Global Bond Index Fund I:
+    // the catalogue still says «active», and they hold nothing.
+    expect(labels.some((label) => label.startsWith("Small Cap Index Fund B"))).toBe(true);
+    expect(labels.some((label) => label.startsWith("Global Bond Index Fund I"))).toBe(true);
+    expect(labels.some((label) => /^Small Cap Index Fund \(/.test(label))).toBe(false);
+    expect(labels.some((label) => /^Global Bond Index Fund \(/.test(label))).toBe(false);
+    // Every field asked is filled in: none of them is a weight left empty.
+    const inputs = [...(asked?.querySelectorAll("input") ?? [])] as HTMLInputElement[];
+    expect(inputs.every((input) => input.value !== "")).toBe(true);
   });
 
   it("never offers a delisted asset as the benchmark of the bucket", async () => {
