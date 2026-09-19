@@ -90,3 +90,18 @@ describe("parseArgs: a flag that never takes a value never swallows the next wor
     expect([...read].filter((name) => !BOOLEAN_FLAGS.has(name))).toEqual([]);
   });
 });
+
+describe("parseArgs: a boolean flag given a yes or a no", () => {
+  it("is refused, and says how the flag is written, instead of being read", () => {
+    for (const word of ["true", "false", "sí", "si", "no", "0", "1", "FALSE", "No"]) {
+      expect(() => parseArgs(["asset", "add", "--transferable", word])).toThrow(
+        `--transferable no lleva valor («${word}»): pon --transferable para sí y --not-transferable para no`,
+      );
+    }
+    expect(() => parseArgs(["tax", "2027", "--json", "false"])).toThrow(
+      "--json no lleva valor («false»): pon --json para sí; omítela para no",
+    );
+    // A flag that takes a value takes it, whatever it says.
+    expect(parseArgs(["add", "fee", "--notes", "no"]).flags.get("notes")).toBe("no");
+  });
+});

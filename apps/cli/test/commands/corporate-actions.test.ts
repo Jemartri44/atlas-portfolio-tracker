@@ -186,6 +186,35 @@ describe("atlas ca", () => {
     expect(h.err.join("\n")).toContain("son excluyentes");
   });
 
+  it("refuses --neutrality-regime false instead of recording the regime as applying", async () => {
+    // The verifier's case: `false` was left loose and the flag set, so the
+    // ledger said the regime applied, the opposite of what was written.
+    const h = harness({ events: seed() });
+    expect(await h.exec(BUY_GOLD)).toBe(0);
+    const before = (await h.store.load()).events.length;
+    h.reset();
+    for (const word of ["false", "no", "0", "true", "sí"]) {
+      expect(
+        await h.exec([
+          "ca",
+          "split",
+          "--asset",
+          "ast_gold",
+          "--ratio",
+          "2",
+          "--neutrality-regime",
+          word,
+          ...CA,
+          "--yes",
+        ]),
+      ).toBe(64);
+    }
+    expect(h.err.join("\n")).toContain(
+      "--neutrality-regime no lleva valor («false»): pon --neutrality-regime para sí y --no-neutrality-regime para no",
+    );
+    expect((await h.store.load()).events).toHaveLength(before);
+  });
+
   it("merger needs an existing destination and proposes asset add and asset update --inactive", async () => {
     const h = harness({ events: seed() });
     expect(await h.exec(BUY_GOLD)).toBe(0);

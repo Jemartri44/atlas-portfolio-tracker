@@ -68,6 +68,57 @@ export const COMMANDS: Record<string, Command> = {
   backup: backupCommand,
 };
 
+/**
+ * How many words each command reads, its own name included, per subcommand
+ * where it has them. A word more is refused, never ignored: a boolean flag
+ * followed by a word leaves that word loose, and a command that ignored it
+ * would record the opposite of what was written (verifier of feature 009).
+ * An unknown subcommand is left to the command, which says its own usage.
+ */
+export const ARITY: Readonly<Record<string, number | Readonly<Record<string, number>>>> = {
+  account: { add: 2, update: 3, list: 2 },
+  asset: { add: 2, update: 3, list: 2 },
+  settings: { set: 2, show: 2 },
+  add: 2,
+  order: { place: 2, cancel: 3, note: 3, list: 2 },
+  transfer: { request: 2, update: 3, pending: 2, simulate: 2 },
+  transfers: { request: 2, update: 3, pending: 2, simulate: 2 },
+  ca: 2,
+  thesis: { open: 2, close: 3, show: 3, list: 2 },
+  valuations: 1,
+  edit: 2,
+  delete: 2,
+  positions: 1,
+  networth: 1,
+  bucket: 1,
+  weights: 1,
+  contribute: 1,
+  costs: 1,
+  lots: 2,
+  cash: 1,
+  gains: 2,
+  income: 2,
+  tax: 2,
+  check: 1,
+  export: 1,
+  synth: 1,
+  compact: 1,
+  backup: 1,
+};
+
+/** Refuses the first word a command does not read. */
+const assertArity = (positionals: readonly string[]): void => {
+  const [name, sub] = positionals as [string, string | undefined];
+  const arity = ARITY[name];
+  const most = typeof arity === "number" ? arity : sub === undefined ? undefined : arity?.[sub];
+  const extra = most === undefined ? undefined : positionals[most];
+  if (extra !== undefined) {
+    throw new UsageError(
+      `sobra el argumento «${extra}»: «atlas ${positionals.slice(0, most).join(" ")}» no lo espera`,
+    );
+  }
+};
+
 export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--accept-invalid] [--json] <comando> …
 
 comandos:
@@ -125,6 +176,7 @@ export const run = async (
     if (command === undefined) {
       throw new UsageError(`comando desconocido: ${name}`);
     }
+    assertArity(positionals);
     const ledgerPath = stringFlag(flags, "ledger") ?? "./ledger.jsonl";
     const ctx: Context = {
       deps: compose(ledgerPath),

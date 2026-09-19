@@ -119,6 +119,42 @@ describe("atlas account / asset", () => {
     expect(h.text()).toContain("Registrado asset_created");
   });
 
+  it("refuses --transferable false, and any word the command does not read", async () => {
+    const h = harness({ events: seed() });
+    const before = (await h.store.load()).events.length;
+    const add = (...extra: string[]) =>
+      h.exec([
+        "asset",
+        "add",
+        "--id",
+        "ast_new",
+        "--type",
+        "fund",
+        "--book",
+        "core",
+        "--asset-class",
+        "equity",
+        "--name",
+        "New",
+        "--currency",
+        "EUR",
+        ...extra,
+        "--yes",
+      ]);
+    // It used to record transferable: true.
+    expect(await add("--transferable", "false")).toBe(64);
+    expect(h.err.join("\n")).toContain(
+      "--transferable no lleva valor («false»): pon --transferable para sí y --not-transferable para no",
+    );
+    h.reset();
+    // A word no command expects is named, never ignored.
+    expect(await add("--transferable", "loose")).toBe(64);
+    expect(h.err.join("\n")).toContain(
+      "sobra el argumento «loose»: «atlas asset add» no lo espera",
+    );
+    expect((await h.store.load()).events).toHaveLength(before);
+  });
+
   it("rejects an asset that already exists in the other book", async () => {
     const h = harness({ events: seed() });
     expect(
