@@ -12,6 +12,7 @@ import Ajustes from "../src/routes/ajustes/index.jsx";
 import Verificacion from "../src/routes/ajustes/verificacion.jsx";
 import Libro from "../src/routes/libro/index.jsx";
 import { optionsOf, show, text, today, withGoldenLedger } from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -105,6 +106,7 @@ describe("the first run", () => {
   it("offers the folder first where there is one, with the one primary button", async () => {
     const picker = window as unknown as { showDirectoryPicker?: () => Promise<never> };
     picker.showDirectoryPicker = () => Promise.reject(new Error("no se usa"));
+    withStyles(2045, 1141);
     try {
       const host = await show("/libro", Libro);
       const choices = [...host.querySelectorAll(".choices > .choice")];
@@ -113,13 +115,17 @@ describe("the first run", () => {
         "El almacenamiento del navegador",
       ]);
       // «Recomendado» beside its title, not indented under it.
-      expect(choices[0]?.querySelector(".choice-head > .tag")).not.toBeNull();
+      const tag = choices[0]?.querySelector(".choice-head > .tag") as HTMLElement;
+      expect(tag).not.toBeNull();
+      // A tag with no box has no padding to indent its words with.
+      expect(getComputedStyle(tag).getPropertyValue("padding-inline")).toMatch(/^0(px)?$/);
       const primary = [...host.querySelectorAll(".choice button")].filter(
         (button) => !button.classList.contains("secondary"),
       );
       expect(primary.map(text)).toEqual(["Elegir la carpeta"]);
     } finally {
       delete picker.showDirectoryPicker;
+      withoutStyles();
     }
   });
 });

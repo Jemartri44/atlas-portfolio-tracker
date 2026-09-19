@@ -482,9 +482,14 @@
   color: var(--c-danger);
 }
 
+/*
+ * "Hecho" has no box to fill, so it has no padding either: an invisible pill
+ * left its words indented under the title or the name they follow.
+ */
 .tag.is-done {
   border-color: transparent;
   color: var(--c-done);
+  padding-inline: 0;
 }
 
 /* ---- Dialog: the native element ----------------------------------------- */
