@@ -20,6 +20,7 @@ import {
   Figure,
   Section,
   StandaloneFees,
+  StatLine,
   Tag,
   TotalLine,
 } from "../../components/index.js";
@@ -92,10 +93,11 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
             }
           >
             <Amount value={props.view.core.fees} />
-            <span class="meta">
-              TER medio <Figure value={props.view.core.weightedTer} unit="percent" />
-            </span>
           </TotalLine>
+          {/* A line of its own, with its name: beside the commissions it read as one of them. */}
+          <StatLine label="TER medio de la cartera, ponderado por valor">
+            <Figure value={props.view.core.weightedTer} unit="percent" />
+          </StatLine>
           <Show when={props.view.core.partial}>
             <p class="card-note">
               El agregado solo cubre la parte de la cartera con precio: faltan valoraciones.

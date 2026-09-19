@@ -30,6 +30,17 @@ describe("the portfolio", () => {
     expect(marks[0]?.getAttribute("title")).toMatch(/^Precio caducado: \d+ días?$/);
   });
 
+  it("gives the weighted TER a line with its own name", async () => {
+    const host = await show("/cartera?fecha=2029-01-10", Cartera);
+    const rows = [...host.querySelectorAll(".stat-row, .total-row")];
+    const ter = rows.find((row) => text(row.querySelector(".label")).startsWith("TER medio"));
+    expect(text(ter?.querySelector(".value"))).toMatch(/%/);
+    // The commissions' total says the commissions, and only them.
+    const fees = rows.find((row) =>
+      text(row.querySelector(".label")).startsWith("Comisiones de operaciones"),
+    );
+    expect(text(fees?.querySelector(".value"))).not.toContain("TER");
+  });
 
   it("keeps the weights and the contribution at their own height, side by side", async () => {
     withStyles(2045, 1141);
