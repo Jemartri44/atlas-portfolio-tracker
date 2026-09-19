@@ -73,7 +73,11 @@ const hasLedger = (): boolean => {
   return phase !== "unconfigured" && phase !== "reconnect";
 };
 
-/** Settings are current on their page and on everything under it. */
+/**
+ * Settings are current on their page, on everything under it, and on the page
+ * that changes the file of the data (`/libro`), which is reached from them: with
+ * data open, that page marked nothing at all.
+ */
 const SettingsButton = (): JSX.Element => {
   const location = useLocation();
   return (
@@ -81,7 +85,11 @@ const SettingsButton = (): JSX.Element => {
       href="/ajustes"
       class="icon-button"
       aria-label="Ajustes"
-      aria-current={inSection(location.pathname, "/ajustes") ? "page" : undefined}
+      aria-current={
+        inSection(location.pathname, "/ajustes") || inSection(location.pathname, "/libro")
+          ? "page"
+          : undefined
+      }
     >
       <Icon name="settings" />
     </a>

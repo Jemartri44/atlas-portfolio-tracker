@@ -113,12 +113,15 @@ describe("one navigation, in the order the eye reads it", () => {
       "/movimientos/:id/editar": () => <p>corregir</p>,
       "/registrar/:tipo": () => <p>formulario</p>,
       "/ajustes/configuracion": () => <p>configuración</p>,
+      "/libro": () => <p>cambiar de archivo</p>,
     };
     const expected: [string, string][] = [
       ["/movimientos/01ARYZ6S41TSV4RRFFQ6900001", "Movimientos"],
       ["/movimientos/01ARYZ6S41TSV4RRFFQ6900001/editar", "Movimientos"],
       ["/registrar/buy", "Registrar"],
       ["/ajustes/configuracion", "Ajustes"],
+      // Changing the file, with data open, is reached from the settings.
+      ["/libro", "Ajustes"],
     ];
     for (const [url, section] of expected) {
       const host = await showInShell(url, pages);
