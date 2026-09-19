@@ -64,6 +64,20 @@ describe("the detail of a movement", () => {
     expect(shown).toMatch(/Ganancia|Pérdida/);
   });
 
+  it("says every sale of a corporate action, one per account, and their total", async () => {
+    // The reverse split of Physical Gold ETC sells fractions in two accounts.
+    const REVERSE_SPLIT = "01MQTWHB78RC2FADH9B774BHS5";
+    const booked = state.gains.filter((gain) => gain.event_id === REVERSE_SPLIT);
+    expect(booked).toHaveLength(2);
+    const host = await show(`/movimientos/${REVERSE_SPLIT}`, Detail, "/movimientos/:id");
+    const shown = text(host);
+    expect(shown).toContain("Resultado de las ventas");
+    // Both lines and the total, never the first sale presented as the whole.
+    expect(shown).toContain("2,11");
+    expect(shown).toContain("5,40");
+    expect(shown).toMatch(/Pérdida total\s*[−-]7,51/);
+  });
+
   it("says nothing of a result on a movement that is not a sale", async () => {
     const host = await show(`/movimientos/${firstBuy("EUR")}`, Detail, "/movimientos/:id");
     expect(text(host)).not.toContain("Resultado de la venta");

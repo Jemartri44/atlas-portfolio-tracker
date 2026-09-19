@@ -9,7 +9,7 @@
 // effects of a corporate action and a configuration — are sentences, never
 // JSON: the JSON printed their figures in plain text with the mask on.
 
-import type { RealizedGain } from "@atlas/domain";
+import type { Money } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { For, type JSX, Match, Show, Switch } from "solid-js";
 import {
@@ -25,6 +25,7 @@ import {
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { eventLabel } from "../../format/labels.js";
 import type { DetailField, DetailView } from "../../view-models/index.js";
+import type { SaleResultView } from "../../view-models/sale.js";
 
 const Value = (props: { field: DetailField }): JSX.Element => (
   <Switch>
@@ -115,25 +116,61 @@ export const EventLinks = (props: { links: DetailView["links"] }): JSX.Element =
   </Show>
 );
 
+/** The result of one sale: gain or loss, said in words as well as by its sign. */
+const resultLabel = (result: Money): string =>
+  result.isNegative() ? "Pérdida" : result.isZero() ? "Resultado" : "Ganancia";
+
 /**
- * What a sale produced, from the gain the ledger booked for it: the figure a
- * sale is recorded for, which the list of its fields never said (review of
- * 2026-09-19). Nothing is computed here; absent, nothing is shown.
+ * What a movement sold, from every gain the ledger booked for it: a sale books
+ * one, a corporate action can book one per account (`view-models/sale.ts`).
+ * With several, a line per sale and the total; nothing is computed here.
  */
-export const SaleResult = (props: { gain: RealizedGain | undefined }): JSX.Element => (
-  <Show when={props.gain}>
-    {(gain) => (
+export const SaleResult = (props: { view: SaleResultView | undefined }): JSX.Element => (
+  <Show when={props.view}>
+    {(view) => (
       <>
-        <h2 class="block-title">Resultado de la venta</h2>
-        <StatLine label="Importe obtenido en euros">
-          <Amount value={gain().proceeds_eur} />
-        </StatLine>
-        <StatLine label="Coste de lo vendido">
-          <Amount value={gain().cost_eur} />
-        </StatLine>
-        <TotalLine label={gain().gain_eur_rounded.isNegative() ? "Pérdida" : "Ganancia"}>
-          <Amount value={gain().gain_eur_rounded} signed coloured />
-        </TotalLine>
+        <h2 class="block-title">
+          {view().lines.length === 1 ? "Resultado de la venta" : "Resultado de las ventas"}
+        </h2>
+        <Show
+          when={view().total}
+          fallback={
+            <For each={view().lines}>
+              {(line) => (
+                <>
+                  <StatLine label="Importe obtenido en euros">
+                    <Amount value={line.proceeds} />
+                  </StatLine>
+                  <StatLine label="Coste de lo vendido">
+                    <Amount value={line.cost} />
+                  </StatLine>
+                  <TotalLine label={resultLabel(line.result)}>
+                    <Amount value={line.result} signed coloured />
+                  </TotalLine>
+                </>
+              )}
+            </For>
+          }
+        >
+          {(total) => (
+            <>
+              <For each={view().lines}>
+                {(line) => (
+                  <StatLine label={line.where}>
+                    <Amount value={line.result} signed coloured />
+                  </StatLine>
+                )}
+              </For>
+              <TotalLine label={`${resultLabel(total().result)} total`}>
+                <Amount value={total().result} signed coloured />
+              </TotalLine>
+              <p class="card-note">
+                {view().lines.length} ventas: se obtuvieron <Amount value={total().proceeds} /> por
+                lo que había costado <Amount value={total().cost} />.
+              </p>
+            </>
+          )}
+        </Show>
         <p class="card-note">
           Es el resultado fiscal registrado, calculado con FIFO: el coste es el de los lotes más
           antiguos.

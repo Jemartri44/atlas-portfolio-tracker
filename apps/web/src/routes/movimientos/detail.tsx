@@ -19,6 +19,7 @@ import { store } from "../../ledger/state.js";
 import { reverse } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { detailView } from "../../view-models/index.js";
+import { saleResult } from "../../view-models/sale.js";
 import { movementSentence } from "../../view-models/sentence.js";
 import { RequireLedger } from "../guard.jsx";
 import { EventEnvelope, EventLinks, Facts, SaleResult } from "./DetailFields.jsx";
@@ -62,17 +63,16 @@ export default function MovimientoDetalleRoute(): JSX.Element {
   return (
     <RequireLedger skeleton={6}>
       {(snapshot) => {
-        // A memo, not an arrow: this is read four times per render and
-        // `ledgerEntries` projects and sorts the **whole** ledger. Measured:
-        // 0,60 ms with the 200 events of the golden file and 10,66 ms with
-        // 5.000, which at twenty years is a tenth of a second on a phone every
-        // time any signal changes (turning privacy on, opening a dialog). The
-        // sibling route already does it this way.
+        // A memo, not an arrow: `ledgerEntries` projects and sorts the whole
+        // ledger (10,66 ms with 5.000 events), and this is read four times per
+        // render — a tenth of a second on a phone each time a signal changes.
         const entry = createMemo(() =>
           ledgerEntries(snapshot.state, snapshot.events).find(
             (candidate) => candidate.event.id === params.id,
           ),
         );
+        const names = nameIndex(snapshot.state);
+        const refs = eventReferences(snapshot.events, names);
 
         return (
           <Show
@@ -89,13 +89,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
             }
           >
             {(found) => {
-              const view = createMemo(() =>
-                detailView(
-                  found(),
-                  nameIndex(snapshot.state),
-                  eventReferences(snapshot.events, nameIndex(snapshot.state)),
-                ),
-              );
+              const view = createMemo(() => detailView(found(), names, refs));
               return (
                 <>
                   <PageHeader
@@ -157,12 +151,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                         <For each={dependents()}>
                           {(item) => (
                             <li>
-                              <A href={`/movimientos/${item.id}`}>
-                                {eventReferences(
-                                  snapshot.events,
-                                  nameIndex(snapshot.state),
-                                )(item.id)}
-                              </A>
+                              <A href={`/movimientos/${item.id}`}>{refs(item.id)}</A>
                             </li>
                           )}
                         </For>
@@ -173,13 +162,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   <div class="grid">
                     <section class="card span-8" aria-label="El movimiento">
                       <p class="sentence">
-                        <Parts
-                          parts={movementSentence(
-                            found(),
-                            nameIndex(snapshot.state),
-                            eventReferences(snapshot.events, nameIndex(snapshot.state)),
-                          )}
-                        />
+                        <Parts parts={movementSentence(found(), names, refs)} />
                       </p>
                       <Show when={view().status !== "current"}>
                         <p>
@@ -190,9 +173,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                       </Show>
                       <h2 class="block-title">Datos</h2>
                       <Facts fields={view().fields} />
-                      <SaleResult
-                        gain={snapshot.state.gains.find((gain) => gain.event_id === view().id)}
-                      />
+                      <SaleResult view={saleResult(snapshot.state.gains, view().id, names)} />
                       <EventEnvelope
                         envelope={view().envelope}
                         technical={view().technical}
