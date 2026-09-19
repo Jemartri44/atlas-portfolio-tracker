@@ -112,6 +112,15 @@ a.card-foot:hover {
     padding-inline: var(--space-6);
   }
 
+  /*
+   * A card whose neighbour in the row is much taller keeps its own height: two
+   * tables of different length side by side, stretched, left a white field in
+   * the middle of the shorter one (review of 2026-09-19, Cartera at 2045).
+   */
+  .grid > .card.is-natural {
+    align-self: start;
+  }
+
   /* In a stretched card the disclosures sit together at its bottom edge. */
   .card > .disclosure:first-of-type {
     margin-top: auto;

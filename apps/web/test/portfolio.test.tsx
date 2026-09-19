@@ -6,10 +6,11 @@
 // contribution as a proposal with the transfer simulator at the foot of the
 // weights (D6).
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { gaugeX } from "../src/routes/cartera/Gauge.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";
 import { show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -18,7 +19,19 @@ const card = (host: HTMLElement, title: string): Element | undefined =>
     (section) => section.querySelector("h2")?.textContent === title,
   );
 
+afterEach(() => withoutStyles());
+
 describe("the portfolio", () => {
+  it("keeps the weights and the contribution at their own height, side by side", async () => {
+    withStyles(2045, 1141);
+    const host = await show("/cartera", Cartera);
+    const cards = [...host.querySelectorAll(".grid > .card.is-natural")];
+    expect(cards).toHaveLength(2);
+    for (const card of cards) {
+      expect(getComputedStyle(card).alignSelf).toBe("start");
+    }
+  });
+
   it("puts the date in force beside the title", async () => {
     const host = await show("/cartera?fecha=2027-01-10", Cartera);
     expect(host.querySelector(".page-head .page-actions input#asof")).not.toBeNull();

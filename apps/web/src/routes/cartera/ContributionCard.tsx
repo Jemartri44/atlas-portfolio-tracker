@@ -185,7 +185,7 @@ export const ContributionCard = (props: {
         ? "Aportación del mes"
         : `Aportación de ${formatMonth(props.view.date)}`
     }
-    class="span-5"
+    class="span-5 is-natural"
     aside={props.view === undefined ? undefined : <Tag tone="accent">Propuesta</Tag>}
   >
     <Show

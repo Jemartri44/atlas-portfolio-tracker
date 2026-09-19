@@ -119,7 +119,7 @@ export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
   return (
     <Section
       title="Pesos frente al objetivo"
-      class="span-7"
+      class="span-7 is-natural"
       aside={
         <Show when={props.threshold}>
           {(threshold) => <span>umbral ±{formatDecimalString(threshold())} pp</span>}
