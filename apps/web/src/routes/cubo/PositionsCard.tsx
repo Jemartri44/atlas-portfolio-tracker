@@ -17,6 +17,7 @@ import {
   Tag,
   TotalLine,
 } from "../../components/index.js";
+import { pricesOf } from "../../format/messages/prose.js";
 import type { BucketPositionRow, BucketPositionsView } from "../../view-models/bucket/index.js";
 
 const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
@@ -142,8 +143,8 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
       </TotalLine>
       <Show when={props.view.partial}>
         <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
-          Faltan precios de {props.view.missing.join(", ")}: el total solo cubre lo que sí tiene
-          precio, y los pesos dentro del cubo no se calculan sobre un total parcial.
+          {pricesOf(props.view.missing)}: el total solo cubre lo que sí tiene precio, y los pesos
+          dentro del cubo no se calculan sobre un total parcial.
         </Pending>
       </Show>
     </Show>

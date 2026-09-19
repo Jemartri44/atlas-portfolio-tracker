@@ -127,7 +127,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `La cantidad debe ser mayor que cero (recibido: ${f.quantity(d.value)} títulos).`,
   // --- Views that need prices or settings --------------------------------
   missing_manual_prices: (d, n) =>
-    `Faltan precios a ${day(d.date)}: ${n.many(d.assets)}. Regístralos con una valoración.`,
+    `${count(d.assets) === 1 ? "Falta el precio" : "Faltan precios"} a ${day(d.date)}: ${n.many(d.assets)}. ${count(d.assets) === 1 ? "Regístralo" : "Regístralos"} con una valoración.`,
   missing_target_weights: () =>
     "No hay pesos objetivo configurados: fíjalos en Ajustes → Configuración.",
   missing_bucket_pct: () =>

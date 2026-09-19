@@ -30,6 +30,7 @@ import {
   Tag,
 } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
+import { pricesOf } from "../../format/messages/prose.js";
 import { formatDecimalString } from "../../format/number.js";
 import type { WeightRow, WeightsView } from "../../view-models/core/index.js";
 import { ClassRows, ClassTable } from "./Classes.jsx";
@@ -136,8 +137,8 @@ export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
 
         <Show when={props.view.partial}>
           <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
-            Faltan precios de {props.view.missing.join(", ")} a {formatDate(props.view.date)}: los
-            pesos no se calculan sobre un total parcial.
+            {pricesOf(props.view.missing)} a {formatDate(props.view.date)}: los pesos no se calculan
+            sobre un total parcial.
           </Pending>
         </Show>
 

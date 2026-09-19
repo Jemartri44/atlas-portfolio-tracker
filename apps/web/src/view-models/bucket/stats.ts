@@ -11,6 +11,7 @@
 //     it — the exception is a budget control, not a portfolio metric.
 
 import type { BucketControls, BucketReport, BucketStats, Money, Warning } from "@atlas/domain";
+import { missingOf } from "../../format/messages/prose.js";
 import { displayName, displayThesis, type NameIndex, NO_NAMES } from "../../format/names.js";
 
 export interface StatsView {
@@ -68,7 +69,7 @@ const gapText = (
     ...(gap.assets ?? []).map((id) => displayName(names, id)),
     ...(gap.currencies ?? []),
   ];
-  const detail = missing.length === 0 ? "" : ` (faltan ${missing.join(", ")})`;
+  const detail = missing.length === 0 ? "" : ` (${missingOf(missing)})`;
   return `${REASONS[gap.reason] ?? gap.reason}${detail}`;
 };
 

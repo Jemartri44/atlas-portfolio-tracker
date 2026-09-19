@@ -7,7 +7,19 @@ import { valueLabel } from "../labels.js";
 import { type Naming, NO_NAMES, namingOf } from "../names.js";
 import { countOf } from "../number.js";
 import { type Figures, figuresOf, maskFigures, type Prose } from "../privacy.js";
-import { count, type Details, day, days, enumValue, num, pct, pp, text } from "./prose.js";
+import {
+  count,
+  type Details,
+  day,
+  days,
+  enumValue,
+  missingOf,
+  num,
+  pct,
+  pp,
+  pricesOf,
+  text,
+} from "./prose.js";
 
 /** A tax year is a name, not a quantity: "2027", never "2.027". */
 const year = (value: unknown): string =>
@@ -25,13 +37,17 @@ const windowText = (window: unknown): string => {
   return `ventana de ${value.slice(0, -1)} días`;
 };
 
+/** The names of a detail that lists assets, one per asset. */
+const names = (ids: unknown, n: Naming): string[] =>
+  (Array.isArray(ids) ? ids : ids === undefined ? [] : [ids]).map((id) => n.one(id));
+
 /** Why a control rule of the bucket could not be measured, and what is missing. */
 const gapText = (d: Details, n: Naming): string => {
   const missing = [
     ...((d.assets as string[] | undefined) ?? []).map((id) => n.one(id)),
     ...((d.currencies as string[] | undefined) ?? []),
   ];
-  const detail = missing.length === 0 ? "" : ` (faltan ${missing.join(", ")})`;
+  const detail = missing.length === 0 ? "" : ` (${missingOf(missing)})`;
   switch (d.reason) {
     case "missing_prices":
       return `hay posiciones del cubo sin precio${detail}`;
@@ -58,7 +74,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   satellite_below_minimum: (d) =>
     `${valueLabel(d.asset_class)} pesa ${pct(d.weight_pct)}, por debajo del mínimo de un satélite, que es del ${pct(d.minimum_pct)}; o 0 % o al menos el mínimo.`,
   partial_core_total: (d, n) =>
-    `Faltan precios de ${n.many(d.assets)} a ${day(d.date)}: no se calculan pesos sobre un total parcial.`,
+    `${pricesOf(names(d.assets, n))} a ${day(d.date)}: no se calculan pesos sobre un total parcial.`,
   // --- Prices and rates --------------------------------------------------
   stale_price: (d, n) =>
     `${n.one(d.asset_id)}: el precio es ${age(d)}; registra una valoración más reciente.`,
@@ -68,12 +84,12 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   transfer_overdue: (d, n) =>
     `El traspaso de ${n.one(d.from_asset_id)} a ${n.one(d.to_asset_id)} lleva ${days(d.days_open)} abierto, más de los ${text(d.max_days)} configurados. Reclama a la gestora: mientras dure, el dinero no está invertido ni en el origen ni en el destino.`,
   partial_net_worth: (d, n) =>
-    `El patrimonio a ${day(d.date)} es parcial: faltan ${[
-      ...((d.assets as string[] | undefined) ?? []).map((id) => n.one(id)),
+    `El patrimonio a ${day(d.date)} es parcial: ${missingOf([
+      ...names(d.assets, n),
       ...((d.currencies as string[] | undefined) ?? []),
-    ].join(", ")}.`,
+    ])}.`,
   partial_bucket_total: (d, n) =>
-    `Faltan precios de ${n.many(d.assets)} a ${day(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`,
+    `${pricesOf(names(d.assets, n))} a ${day(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`,
   // --- Bucket ------------------------------------------------------------
   bucket_sample_too_small: (d) =>
     Number(d.closed_theses) === 0 && Number(d.realized_operations) === 0

@@ -25,6 +25,14 @@ export const list = (value: unknown): string =>
 
 export const count = (value: unknown): number => (Array.isArray(value) ? value.length : 0);
 
+/** The verb agrees with what is missing: «falta Alpha Spin-off», «faltan A, B». */
+export const missingOf = (names: readonly string[]): string =>
+  `${names.length === 1 ? "falta" : "faltan"} ${names.join(", ")}`;
+
+/** «Falta el precio de A», «Faltan los precios de A, B»: one price, or several. */
+export const pricesOf = (names: readonly string[]): string =>
+  `${names.length === 1 ? "Falta el precio" : "Faltan los precios"} de ${names.join(", ")}`;
+
 /** A number the domain wrote with a point, as a Spanish reader writes it. */
 const decimal = (value: unknown): string => {
   const raw = text(value);

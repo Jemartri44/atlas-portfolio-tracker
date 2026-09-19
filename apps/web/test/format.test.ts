@@ -493,3 +493,22 @@ describe("a closed order or transfer request", () => {
     }
   });
 });
+
+describe("what is missing", () => {
+  it("agrees with how many are missing", async () => {
+    const { missingOf, pricesOf } = await import("../src/format/messages/prose.js");
+    expect(missingOf(["Alpha Spin-off"])).toBe("falta Alpha Spin-off");
+    expect(missingOf(["Alpha Spin-off", "USD"])).toBe("faltan Alpha Spin-off, USD");
+    expect(pricesOf(["Alpha Spin-off"])).toBe("Falta el precio de Alpha Spin-off");
+    expect(pricesOf(["A", "B"])).toBe("Faltan los precios de A, B");
+    const partial = describeWarning(
+      {
+        code: "partial_net_worth",
+        message: "english",
+        details: { date: "2029-01-10", assets: ["ast_alpha_spin"] },
+      } as never,
+      { privacy: false },
+    );
+    expect(partial).toContain("es parcial: falta ast_alpha_spin.");
+  });
+});
