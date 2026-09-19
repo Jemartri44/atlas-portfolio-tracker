@@ -54,24 +54,6 @@ p {
   margin: 0 0 var(--s-3);
 }
 
-.subtle {
-  color: var(--c-muted);
-  font-size: var(--t-sm);
-}
-
-.tiny {
-  color: var(--c-muted);
-  font-size: var(--t-xs);
-}
-
-.flush {
-  margin: 0;
-}
-
-.spaced {
-  margin-top: var(--s-3);
-}
-
 .hstack {
   align-items: center;
   display: flex;
@@ -93,37 +75,6 @@ p {
 
 .card > header > h2 {
   margin: 0;
-}
-
-.callout {
-  border: 1px solid var(--c-border);
-  border-left: 3px solid var(--c-muted);
-  border-radius: var(--r-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-3);
-}
-
-.callout > .title {
-  font-weight: var(--w-semibold);
-}
-
-.callout.is-error {
-  background-color: var(--c-negative-bg);
-  border-color: transparent;
-  border-left-color: var(--c-negative);
-}
-
-.callout.is-warning {
-  background-color: var(--c-warning-bg);
-  border-color: transparent;
-  border-left-color: var(--c-warning);
-}
-
-.callout.is-info {
-  background-color: var(--c-surface);
-  border-left-color: var(--c-accent);
 }
 
 dl.fields {

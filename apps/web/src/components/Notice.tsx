@@ -59,6 +59,8 @@ export interface NoticeItem {
   action?: { label: string; to: string } | undefined;
   /** How many warnings of the same kind it stands for. */
   count?: number | undefined;
+  /** Under the sentence: the evidence, the events it names. Only on a notice that is no link. */
+  detail?: JSX.Element | undefined;
 }
 
 const Body = (props: { item: NoticeItem }): JSX.Element => (
@@ -72,6 +74,9 @@ const Body = (props: { item: NoticeItem }): JSX.Element => (
           <span class="tag">{props.item.count} iguales</span>
         </Show>
       </span>
+      <Show when={props.item.detail !== undefined}>
+        <span class="notice-detail">{props.item.detail}</span>
+      </Show>
       <Show when={props.item.action}>
         {(action) => (
           <span class="notice-action">

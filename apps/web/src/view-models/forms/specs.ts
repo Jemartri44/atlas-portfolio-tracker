@@ -403,7 +403,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       { name: "platform", label: "Plataforma", kind: "text", required: true },
       {
         name: "book",
-        label: "Libro",
+        label: "Cartera",
         kind: "select",
         required: true,
         values: BOOKS,
@@ -453,7 +453,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       },
       {
         name: "book",
-        label: "Libro",
+        label: "Cartera",
         kind: "select",
         required: true,
         values: BOOKS,
@@ -465,7 +465,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         kind: "select",
         values: ASSET_CLASSES,
         visibleWhen: { field: "book", equals: "core" },
-        hint: "Solo en el núcleo: es la clase sobre la que se aplican los pesos objetivo.",
+        hint: "Solo en la cartera principal: es la clase sobre la que se aplican los pesos objetivo.",
       },
       { name: "name", label: "Nombre", kind: "text", required: true },
       {

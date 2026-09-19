@@ -2,22 +2,18 @@
 // what was typed; they never write: the route owns the draft and the save
 // (review of 2026-09-18). The only state here is which way a window is being
 // typed — a choice of the control, not of the configuration.
+//
+// Each block is a group that folds (docs/design/system.md §7.7): the target
+// weights open, with their total live in the title; the rest closed until
+// they are needed.
 
-import {
-  ASSET_TYPES,
-  type Asset,
-  type AssetType,
-  DEFAULT_FISCAL_DATE_RULE,
-  DEFAULT_WASH_SALE_WINDOW,
-  type Settings,
-} from "@atlas/domain";
-import { createSignal, For, type JSX, Show } from "solid-js";
-import { Field, Section, SelectField, Tag } from "../../components/index.js";
+import type { Asset, AssetType, Settings } from "@atlas/domain";
+import { For, type JSX, Show } from "solid-js";
+import { Field, Fold, SelectField, Tag } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
 import { formatDecimalString } from "../../format/number.js";
 import {
   type PerAssetTypeKey,
-  perAssetTypeValue,
   SETTINGS_NUMBERS,
   SETTINGS_TEXTS,
   type SettingsPatch,
@@ -51,15 +47,19 @@ interface WeightsProps {
 export const WeightsCard = (props: WeightsProps): JSX.Element => {
   const total = () => targetWeightTotal(props.values);
   return (
-    <Section
-      title="Pesos objetivo del núcleo"
+    <Fold
+      title="Pesos objetivo"
+      class="span-6"
+      open
       aside={
-        <span class="hstack tiny">
+        <>
           suman {formatDecimalString(total().total, { decimals: 2 })} de 100
           <Show when={!total().addsUp}>
-            <Tag tone="caution">no suman 100</Tag>
+            <Tag tone="caution" icon="caution">
+              no suman 100
+            </Tag>
           </Show>
-        </span>
+        </>
       }
     >
       <div class="fieldset">
@@ -76,17 +76,17 @@ export const WeightsCard = (props: WeightsProps): JSX.Element => {
           )}
         </For>
       </div>
-      <p class="note">
-        Los pesos se aplican sobre el valor total del núcleo y tienen que sumar 100. El cubo no
-        entra aquí: es un presupuesto aparte, no una parte de la cartera.
+      <p class="card-note">
+        Los pesos se aplican sobre el valor total de la cartera principal y tienen que sumar 100. El
+        cubo no entra aquí: es un presupuesto aparte, no una parte de la cartera.
       </p>
-    </Section>
+    </Fold>
   );
 };
 
 /** The numeric thresholds, straight from `SETTINGS_NUMBERS`. */
 export const ThresholdsCard = (props: { draft: SettingsDraft }): JSX.Element => (
-  <Section title="Umbrales y avisos">
+  <Fold class="span-6" title="Umbrales y avisos">
     <div class="fieldset">
       <For each={SETTINGS_NUMBERS}>
         {(setting) => (
@@ -102,15 +102,29 @@ export const ThresholdsCard = (props: { draft: SettingsDraft }): JSX.Element => 
         )}
       </For>
     </div>
-  </Section>
+  </Fold>
 );
+
+/**
+ * What the benchmark can be: the assets in force. A delisted one is not an
+ * index anyone can buy; it stays on the list only while it is the one chosen,
+ * marked, so that saving never swaps it silently.
+ */
+const benchmarkOptions = (assets: readonly Asset[], chosen: string) =>
+  assets
+    .filter((asset) => asset.active || asset.asset_id === chosen)
+    .map((asset) => ({
+      value: asset.asset_id,
+      label: asset.name,
+      hint: `${valueLabel(asset.asset_type)} · ${valueLabel(asset.book)}${asset.active ? "" : " · dado de baja"}`,
+    }));
 
 /** The benchmark of the bucket (rule 16) and the fiscal identity. */
 export const IdentityCard = (props: {
   draft: SettingsDraft;
   assets: readonly Asset[];
 }): JSX.Element => (
-  <Section title="Cubo e identidad fiscal">
+  <Fold class="span-6" title="Cubo e identidad fiscal">
     <div class="fieldset">
       <SelectField
         id="s-benchmark"
@@ -118,11 +132,10 @@ export const IdentityCard = (props: {
         hint="La alternativa aburrida contra la que se mide cada tesis (regla 16)."
         placeholder="Sin configurar"
         value={settingValue(props.draft.current, props.draft.patch, "bucket_benchmark_asset_id")}
-        options={props.assets.map((asset) => ({
-          value: asset.asset_id,
-          label: asset.name,
-          hint: `${valueLabel(asset.asset_type)} · ${valueLabel(asset.book)}`,
-        }))}
+        options={benchmarkOptions(
+          props.assets,
+          settingValue(props.draft.current, props.draft.patch, "bucket_benchmark_asset_id"),
+        )}
         onInput={(raw) => props.draft.onOption("bucket_benchmark_asset_id", raw)}
       />
       <For each={SETTINGS_TEXTS}>
@@ -138,92 +151,5 @@ export const IdentityCard = (props: {
         )}
       </For>
     </div>
-  </Section>
-);
-
-const WINDOW_LABELS: Record<string, string> = { "2m": "2 meses", "1y": "1 año" };
-
-/** "2 meses", "1 año", "45 días": a window said, never its syntax. */
-const windowLabel = (window: string): string =>
-  WINDOW_LABELS[window] ?? `${window.slice(0, -1)} días`;
-
-/**
- * The repurchase window, **chosen**: two months, one year or a number of days.
- * It used to be a text box whose hint was the syntax itself, "2m, 1y o <n>d".
- */
-const WindowField = (props: { draft: SettingsDraft; type: AssetType }): JSX.Element => {
-  const value = (): string =>
-    perAssetTypeValue(props.draft.current, props.draft.patch, "wash_sale_window", props.type);
-  // Days are typed after choosing them; until then the select has to remember it.
-  const [byDays, setByDays] = createSignal(/^\d+d$/.test(value()));
-  const set = (raw: string): void =>
-    props.draft.onPerAssetType("wash_sale_window", props.type, raw);
-  return (
-    <>
-      <SelectField
-        id={`wsw-${props.type}`}
-        label={`${valueLabel(props.type)}: ventana de recompra`}
-        value={byDays() ? "days" : value()}
-        placeholder={`Por defecto (${windowLabel(DEFAULT_WASH_SALE_WINDOW[props.type])})`}
-        options={[
-          { value: "2m", label: "2 meses" },
-          { value: "1y", label: "1 año" },
-          { value: "days", label: "Un número de días" },
-        ]}
-        onInput={(raw) => {
-          setByDays(raw === "days");
-          if (raw !== "days") {
-            set(raw);
-          }
-        }}
-      />
-      <Show when={byDays()}>
-        <Field
-          id={`wsd-${props.type}`}
-          kind="integer"
-          label={`${valueLabel(props.type)}: días de la ventana`}
-          value={/^\d+d$/.test(value()) ? value().slice(0, -1) : ""}
-          onInput={(raw) => set(raw.trim() === "" ? "" : `${raw.trim()}d`)}
-        />
-      </Show>
-    </>
-  );
-};
-
-/** One row per asset type: which date is fiscal, and how long the window is. */
-const FiscalRow = (props: { draft: SettingsDraft; type: AssetType }): JSX.Element => (
-  <>
-    <SelectField
-      id={`fdr-${props.type}`}
-      label={`${valueLabel(props.type)}: fecha fiscal`}
-      value={perAssetTypeValue(
-        props.draft.current,
-        props.draft.patch,
-        "fiscal_date_rule",
-        props.type,
-      )}
-      placeholder={`Por defecto (${valueLabel(DEFAULT_FISCAL_DATE_RULE[props.type]).toLowerCase()})`}
-      options={[
-        { value: "trade_date", label: "Fecha de contratación" },
-        { value: "value_date", label: "Fecha valor" },
-      ]}
-      onInput={(raw) => props.draft.onPerAssetType("fiscal_date_rule", props.type, raw)}
-    />
-    <WindowField draft={props.draft} type={props.type} />
-  </>
-);
-
-/** Fiscal date and repurchase window, per asset type. */
-export const FiscalCard = (props: { draft: SettingsDraft }): JSX.Element => (
-  <Section title="Fecha fiscal y ventana de recompra">
-    <p class="subtle">
-      Por tipo de activo. Lo que dejes por defecto toma el valor indicado entre paréntesis, así que
-      añadir un tipo de activo nuevo nunca deja el libro a medias.
-    </p>
-    <div class="fieldset">
-      <For each={ASSET_TYPES}>
-        {(type: AssetType) => <FiscalRow draft={props.draft} type={type} />}
-      </For>
-    </div>
-  </Section>
+  </Fold>
 );

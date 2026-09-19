@@ -57,6 +57,12 @@ a.notice:hover {
   line-height: 1.45;
 }
 
+/* Under the sentence of a notice that is no link: its events, its evidence. */
+.notice-detail {
+  display: grid;
+  gap: var(--space-1);
+}
+
 .notice-action {
   align-items: center;
   color: var(--c-accent);

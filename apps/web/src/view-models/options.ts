@@ -208,7 +208,7 @@ export const optionsFor = (
       );
     case "books":
       return [
-        { value: "core", label: "Núcleo" },
+        { value: "core", label: "Cartera principal" },
         { value: "bucket", label: "Cubo" },
       ];
     case "assetTypes":

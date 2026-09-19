@@ -36,24 +36,24 @@ export const toAppError = (error: unknown): AppError => {
     return {
       code: "permission_denied",
       message:
-        "El navegador ha denegado el acceso a la carpeta del libro. Vuelve a conectarla para seguir.",
-      action: { label: "Abrir el libro", to: "/libro" },
+        "El navegador ha denegado el acceso a la carpeta de tus datos. Vuelve a conectarla para seguir.",
+      action: { label: "Abrir tus datos", to: "/libro" },
     };
   }
   if (error instanceof DOMException && error.name === "QuotaExceededError") {
     return {
       code: "storage_full",
       message:
-        "No cabe en el almacenamiento del navegador: no se ha escrito nada. Exporta el libro y libera espacio del sitio antes de volver a intentarlo.",
-      action: { label: "Exportar el libro", to: "/ajustes" },
+        "No cabe en el almacenamiento del navegador: no se ha escrito nada. Exporta tus datos y libera espacio del sitio antes de volver a intentarlo.",
+      action: { label: "Exportar tus datos", to: "/ajustes" },
     };
   }
   if (error instanceof Error && error.name === "StorageUnavailable") {
     return {
       code: "storage_unavailable",
       message:
-        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados). Abre el libro desde un fichero, o usa otro navegador.",
-      action: { label: "Abrir el libro", to: "/libro" },
+        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados). Abre tus datos desde una carpeta, o usa otro navegador.",
+      action: { label: "Abrir tus datos", to: "/libro" },
     };
   }
   return {

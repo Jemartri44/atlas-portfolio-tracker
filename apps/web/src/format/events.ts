@@ -43,6 +43,6 @@ export const eventReferences = (events: readonly LedgerEvent[]): EventReferences
   const byId = new Map(events.map((event) => [event.id, event]));
   return (id) => {
     const event = byId.get(id);
-    return event === undefined ? "un movimiento que ya no está en el libro" : describeEvent(event);
+    return event === undefined ? "un movimiento que ya no está en tus datos" : describeEvent(event);
   };
 };

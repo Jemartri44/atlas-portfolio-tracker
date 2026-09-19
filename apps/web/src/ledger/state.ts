@@ -186,7 +186,7 @@ export const today = (): CivilDate => madridDateOf(new Date());
 export const requireDeps = (): UseCaseDeps => {
   const current = store.deps();
   if (current === undefined) {
-    throw new Error("no hay ningún libro abierto");
+    throw new Error("no hay datos abiertos");
   }
   return current;
 };

@@ -12,16 +12,8 @@
  */
 
 /* The small print that closes a block: muted and spaced above, but still read. */
-.note {
-  color: var(--c-muted);
-  font-size: var(--t-sm);
-  margin: var(--s-3) 0 0;
-}
 
 /* A file picker is as wide as a file name needs, not as wide as its row. */
-.file-input {
-  max-width: var(--control-max);
-}
 
 /* ---------------------------------------------------------------------------
  * A list of rows, twice: two-line cards on a phone and a dense table from
@@ -37,71 +29,10 @@
  * (measured in Chromium). Truncation only works if every box above the text is
  * allowed to be narrower than it.
  */
-.datalist {
-  display: grid;
-  gap: var(--s-1);
-  grid-template-columns: minmax(0, 1fr);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
 
 /*
  * The items of the list carry no marker of their own.
  */
-.datalist > li {
-  list-style: none;
-  margin: 0;
-  min-width: 0;
-  padding: 0;
-}
-
-.datalist .item {
-  border-bottom: 1px solid var(--c-border);
-  color: var(--c-text);
-  display: grid;
-  gap: var(--s-0);
-  /*
-   * `minmax(0, 1fr)`, not `1fr`: the automatic minimum of a grid column is its
-   * content, and the second line of a card is `white-space: nowrap`, so a long
-   * one (a price with its date and its age) pushed the page 35px sideways at
-   * 320px instead of being truncated — measured in Chromium.
-   */
-  grid-template-columns: minmax(0, 1fr) auto;
-  padding: var(--s-3) var(--s-1);
-  text-decoration: none;
-}
-
-.datalist .item:hover {
-  background-color: var(--c-surface-2);
-}
-
-.datalist .item .head {
-  align-items: baseline;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  grid-column: 1;
-}
-
-.datalist .item .title {
-  font-weight: var(--w-medium);
-}
-
-.datalist .item .sub {
-  color: var(--c-muted);
-  min-width: 0;
-  font-size: var(--t-sm);
-  grid-column: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.datalist .item.is-reversed .title,
-.datalist .item.is-reversed .sub {
-  text-decoration: line-through;
-}
 
 /* "Cargar más": the width of the list, because it is the action of the list. */
 
@@ -199,10 +130,6 @@ dialog .dialog-actions {
 /* --- Núcleo: the class summary, dense and aligned ----------------------- */
 
 /* The label carries a badge; at 320px the row has to be allowed to break. */
-
-.datalist .item.is-moved {
-  font-weight: var(--w-medium);
-}
 
 /* --- Cubo: statistics read as a column of pairs ------------------------- */
 

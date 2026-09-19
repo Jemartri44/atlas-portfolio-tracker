@@ -115,7 +115,7 @@ describe("the list, on the summary", () => {
   it("puts the export first and never an identifier or an ISO date", async () => {
     const host = await show("/", Resumen);
     const items = [...host.querySelectorAll('[aria-label="Lo que reclama atención"] .notice')];
-    expect(text(items[0])).toContain("nunca se ha exportado");
+    expect(text(items[0])).toContain("nunca se han exportado");
     const shown = text(host.querySelector('[aria-label="Lo que reclama atención"]'));
     expect(shown).not.toMatch(ULID);
     expect(shown).not.toMatch(/\d{4}-\d{2}-\d{2}|th_alpha/);

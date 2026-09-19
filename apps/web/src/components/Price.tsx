@@ -28,7 +28,7 @@ export interface PriceInfo {
 
 /** Just the figure, for a cell of a dense table. */
 export const Price = (props: { price: PriceInfo }): JSX.Element => (
-  <Amount value={props.price.unitValue} unit missingReason="el libro no tiene precio a esa fecha" />
+  <Amount value={props.price.unitValue} unit missingReason="no hay precio registrado a esa fecha" />
 );
 
 /**

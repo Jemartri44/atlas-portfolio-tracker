@@ -39,13 +39,15 @@ export interface AttentionItem {
    * now it is one, with the count.
    */
   count: number;
+  /** The events the warnings of this item come from, so a list can link each one. */
+  eventIds: string[];
 }
 
 /** Where each code is fixed. A code missing from here is a bug the test catches. */
 const DESTINATIONS: Record<string, { label: string; to: string }> = {
   invalid_events: { label: "Ver la verificación", to: "/ajustes/verificacion" },
   integrity_finding: { label: "Ver la verificación", to: "/ajustes/verificacion" },
-  export_overdue: { label: "Exportar el libro", to: "/ajustes" },
+  export_overdue: { label: "Exportar tus datos", to: "/ajustes" },
   // Prices and rates are fixed by recording a valuation.
   stale_price: { label: "Registrar valoración", to: "/registrar/valuation" },
   stale_fx_rate: { label: "Registrar valoración", to: "/registrar/valuation" },
@@ -177,13 +179,19 @@ export interface AttentionInput {
   saleDates?: ReadonlyMap<string, CivilDate>;
 }
 
-const itemOf = (code: string, message: string, count = 1): AttentionItem => ({
+const itemOf = (
+  code: string,
+  message: string,
+  count = 1,
+  eventIds: string[] = [],
+): AttentionItem => ({
   code,
   severity: severityOf(code),
   message,
   action: DESTINATIONS[code] ?? FALLBACK,
   rank: rankOf(code),
   count,
+  eventIds,
 });
 
 /** The last day on which the window a wash-sale warning talks about is open. */
@@ -228,7 +236,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "invalid_events",
-        `${countOf(input.invalidCount, "evento inválido", "eventos inválidos")} en el libro: se puede consultar, pero no registrar hasta rectificarlos.`,
+        `${countOf(input.invalidCount, "movimiento inválido", "movimientos inválidos")} en tus datos: se puede consultar, pero no registrar hasta rectificarlos.`,
       ),
     );
   }
@@ -244,7 +252,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
   // projection and from three views that share rules — and that is one warning,
   // not two of a kind: exact copies go first, then the repeats are counted.
   const seen = new Set<string>();
-  const groups = new Map<string, { warning: Warning; count: number }>();
+  const groups = new Map<string, { warning: Warning; count: number; events: Set<string> }>();
   for (const warning of input.warnings) {
     const identity = `${warning.code}|${warning.event_id}|${JSON.stringify(warning.details)}`;
     if (seen.has(identity)) {
@@ -256,16 +264,16 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
       continue;
     }
     const key = groupKey(warning);
-    const group = groups.get(key);
-    if (group === undefined) {
-      groups.set(key, { warning, count: 1 });
-    } else {
-      group.count += 1;
+    const group = groups.get(key) ?? { warning, count: 0, events: new Set<string>() };
+    group.count += 1;
+    if (warning.event_id !== "") {
+      group.events.add(warning.event_id);
     }
+    groups.set(key, group);
   }
-  for (const { warning, count } of groups.values()) {
+  for (const { warning, count, events } of groups.values()) {
     // `input` **is** the prose context: it carries the catalogue and the mode.
-    items.push(itemOf(warning.code, describeWarning(warning, input), count));
+    items.push(itemOf(warning.code, describeWarning(warning, input), count, [...events]));
   }
 
   if (input.openOrders.length > 0) {
@@ -293,8 +301,8 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
       itemOf(
         "export_overdue",
         input.exportOverdueDays === "never"
-          ? "El libro vive en el navegador y nunca se ha exportado: si borras los datos del sitio, se pierde."
-          : `El libro vive en el navegador y la última exportación es de hace ${countOf(input.exportOverdueDays, "día", "días")}: si borras los datos del sitio, se pierde lo registrado desde entonces.`,
+          ? "Tus datos viven en el navegador y nunca se han exportado: si borras los datos del sitio, se pierden."
+          : `Tus datos viven en el navegador y la última exportación es de hace ${countOf(input.exportOverdueDays, "día", "días")}: si borras los datos del sitio, se pierde lo registrado desde entonces.`,
       ),
     );
   }

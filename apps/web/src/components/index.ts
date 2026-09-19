@@ -6,6 +6,7 @@ export { Disclosure } from "./Disclosure.jsx";
 export { ErrorView } from "./ErrorView.jsx";
 export { Field, type Option, SelectField, Switch } from "./Field.jsx";
 export { Figure } from "./Figure.jsx";
+export { Fold } from "./Fold.jsx";
 export { Icon, type IconName } from "./Icon.jsx";
 export { Notice, type NoticeItem, NoticeList, type Severity } from "./Notice.jsx";
 export { Price, PriceDetail, type PriceInfo } from "./Price.jsx";

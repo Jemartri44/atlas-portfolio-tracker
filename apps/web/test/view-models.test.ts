@@ -70,7 +70,7 @@ describe("attentionItems", () => {
     });
     expect(items[0]?.code).toBe("invalid_events");
     expect(items[0]?.severity).toBe("error");
-    expect(items[0]?.message).toContain("2 eventos inválidos");
+    expect(items[0]?.message).toContain("2 movimientos inválidos");
     expect(items[0]?.action.to).toBe("/ajustes/verificacion");
   });
 

@@ -93,7 +93,7 @@ export const SETTINGS_NUMBERS: readonly NumberSetting[] = [
   {
     key: "deviation_threshold_pp",
     label: "Umbral de desviación (pp)",
-    hint: "Avisa cuando un activo del núcleo se separa tanto de su objetivo (regla 3).",
+    hint: "Avisa cuando un activo de la cartera principal se separa tanto de su objetivo (regla 3).",
   },
   {
     key: "satellite_min_weight_pct",

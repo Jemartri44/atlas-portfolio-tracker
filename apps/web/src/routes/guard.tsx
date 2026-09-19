@@ -50,10 +50,10 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
           fallback={
             <Show when={failure()}>
               {(error) => (
-                <ErrorView error={error()} title="No se ha podido leer el libro">
+                <ErrorView error={error()} title="No se han podido leer tus datos">
                   <Show when={error().action === undefined}>
                     <A href="/libro" role="button">
-                      Abrir otro libro
+                      Abrir otro archivo
                     </A>
                   </Show>
                 </ErrorView>
@@ -67,7 +67,7 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
               fallback={
                 <Notice
                   severity="danger"
-                  title="El libro tiene eventos inválidos"
+                  title="Tus datos tienen movimientos inválidos"
                   action={
                     <A href="/ajustes/verificacion" role="button">
                       Ver la verificación

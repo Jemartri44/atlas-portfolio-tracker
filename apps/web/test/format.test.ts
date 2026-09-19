@@ -260,7 +260,7 @@ describe("the label catalogue", () => {
   });
 
   it("translates the values of the enumerations", () => {
-    expect(valueLabel("core")).toBe("Núcleo");
+    expect(valueLabel("core")).toBe("Cartera principal");
     expect(valueLabel("fixed_income")).toBe("Renta fija");
     expect(valueLabel(true)).toBe("Sí");
     expect(valueLabel("lo que sea")).toBe("lo que sea");

@@ -39,7 +39,7 @@ export const DuplicateDialog = (props: DuplicateDialogProps): JSX.Element => (
     }
   >
     <p>
-      El libro ya tiene un movimiento con los mismos datos:{" "}
+      Tus datos ya tienen un movimiento con los mismos datos:{" "}
       <For each={props.duplicates ?? []}>
         {(id, index) => (
           <>
