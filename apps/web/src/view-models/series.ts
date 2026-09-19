@@ -21,7 +21,18 @@ export interface PlottedSeries {
   /** Points drawn, points asked for, and why the rest are missing. */
   drawn: number;
   total: number;
-  missing?: string;
+  missing?: MissingNote;
+}
+
+/**
+ * What a chart lacks, said in **one line**, and what it lacks it from, apart:
+ * the list of assets folded under the line, where it does not push the chart
+ * off the screen (review of 2026-09-19).
+ */
+export interface MissingNote {
+  line: string;
+  /** The assets or currencies whose datum is missing, each once. */
+  from: readonly string[];
 }
 
 const numberOrNull = (value: { amount: { toString: () => string } } | undefined): number | null =>
@@ -32,32 +43,26 @@ const stringOrUndefined = (
 ): string | undefined => (value === undefined ? undefined : value.amount.toString());
 
 /**
- * The reason, in one sentence: which assets and how many points went missing.
+ * The reason, in one line: in how many dates of how many something is
+ * missing, and what happens there — only the series that lacks the datum
+ * stops. Which assets lack it goes apart, to be folded.
  *
  * It counts **complete** points — the three blocks present — and the count and
- * the sentence have to mean the same thing. They did not: the count ignored the
- * cash and the sentence named the currency whose rate was missing, so a chart
- * could say "8 de 8" and, underneath, why one of the eight was incomplete.
- *
- * The wording says what actually happens: the point is not complete, and only
- * the series that lacks the datum breaks there — the other two are drawn.
+ * the list have to mean the same thing: the cash counts too, and the currency
+ * whose rate was missing is on the list.
  */
 const reasonOf = (
   drawn: number,
   total: number,
   subjects: readonly string[],
-): string | undefined => {
+): MissingNote | undefined => {
   if (drawn === total) {
     return undefined;
   }
-  const gaps = total - drawn;
-  const what =
-    subjects.length === 0
-      ? "falta algún dato en esas fechas"
-      : `falta el dato de ${[...new Set(subjects)].join(", ")}`;
-  return `${drawn} de ${total} ${total === 1 ? "punto" : "puntos"} completos: en ${gaps} ${
-    gaps === 1 ? "punto falta un bloque" : "puntos faltan bloques"
-  } porque ${what}, y la serie a la que le falta se corta ahí. No se interpola: donde no hay dato, hay hueco.`;
+  return {
+    line: `En ${total - drawn} de ${total} fechas falta algún precio: la línea a la que le falta se corta ahí, sin inventar el tramo.`,
+    from: [...new Set(subjects)],
+  };
 };
 
 export const netWorthPlot = (
@@ -100,7 +105,7 @@ export const netWorthPlot = (
     total: series.points.length,
     ...(reasonOf(drawn, series.points.length, subjects) === undefined
       ? {}
-      : { missing: reasonOf(drawn, series.points.length, subjects) as string }),
+      : { missing: reasonOf(drawn, series.points.length, subjects) as MissingNote }),
   };
 };
 
@@ -121,7 +126,10 @@ export const bucketIndexPlot = (series: BucketIndexSeries): PlottedSeries => {
     ...(drawn === series.points.length
       ? {}
       : {
-          missing: `${drawn} de ${series.points.length} puntos con datos: en el resto falta el precio del índice o de algún activo del cubo, y una suma parcial no se puede comparar con nada.`,
+          missing: {
+            line: `En ${series.points.length - drawn} de ${series.points.length} fechas falta el precio del índice o de algún activo del cubo: la comparación se corta ahí.`,
+            from: [],
+          },
         }),
   };
 };

@@ -25,12 +25,13 @@ import {
 } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import type { StatsView } from "../../view-models/bucket/index.js";
+import type { MissingNote } from "../../view-models/series.js";
 
 interface Plot {
   x: readonly number[];
   values: readonly (number | null)[][];
   rows: readonly { date: string; values: readonly (string | undefined)[] }[];
-  missing?: string | undefined;
+  missing?: MissingNote | undefined;
 }
 
 /** Why there is no percentage yet, said once, with the way to get it. */

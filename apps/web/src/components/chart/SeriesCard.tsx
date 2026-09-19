@@ -6,10 +6,12 @@
 // need exactly this, and the next one will too.
 
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
+import type { MissingNote } from "../../view-models/series.js";
 import { Section } from "../Section.jsx";
 import { Chart, type ChartSeries } from "./Chart.jsx";
 import { ChartLegend } from "./ChartLegend.jsx";
 import { ChartTable } from "./ChartTable.jsx";
+import { gapsOf } from "./gaps.js";
 import { RangeButtons, type RangeOption } from "./RangeButtons.jsx";
 import { type RangeKey, rangeCounts, rangeIndices } from "./ranges.js";
 
@@ -24,7 +26,7 @@ export interface SeriesCardProps {
   x: readonly number[];
   values: readonly (number | null)[][];
   rows: readonly { date: string; values: readonly (string | undefined)[] }[];
-  missing?: string | undefined;
+  missing?: MissingNote | undefined;
   /** What the card says when there is nothing at all to draw. */
   empty: JSX.Element;
   /** Above the chart: the figure the chart explains, when it has one. */
@@ -74,6 +76,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
           }))}
           caption={props.title}
           missing={props.missing}
+          banded={gapsOf(shown(), series()).length > 0}
         />
       </Show>
       {props.tail}

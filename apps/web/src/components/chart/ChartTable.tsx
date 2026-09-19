@@ -10,6 +10,7 @@
 import { Money } from "@atlas/domain";
 import { type JSX, Show } from "solid-js";
 import { formatDate } from "../../format/date.js";
+import type { MissingNote } from "../../view-models/series.js";
 import { Amount } from "../Amount.jsx";
 import { type DataColumn, DataTable } from "../DataTable.jsx";
 import { Disclosure } from "../Disclosure.jsx";
@@ -24,8 +25,10 @@ interface ChartTableProps {
   /** Names of the series, in the order the rows carry their values. */
   headers: readonly string[];
   rows: readonly ChartTableRow[];
-  /** What is missing and why, said once under the chart. */
-  missing?: string | undefined;
+  /** What is missing and why, said once under the chart, in one line. */
+  missing?: MissingNote | undefined;
+  /** The chart shades a band: the swatch beside the line says what it is. */
+  banded?: boolean | undefined;
   caption: string;
 }
 
@@ -71,11 +74,22 @@ const columnsOf = (headers: readonly string[]): DataColumn<ChartTableRow>[] => [
 
 export const ChartTable = (props: ChartTableProps): JSX.Element => (
   <>
-    <Show when={props.missing !== undefined}>
-      <p class="gap-note">
-        <span class="swatch-gap" aria-hidden="true" />
-        <span>{props.missing}</span>
-      </p>
+    <Show when={props.missing}>
+      {(note) => (
+        <>
+          <p class="gap-note">
+            <Show when={props.banded === true}>
+              <span class="swatch-gap" aria-hidden="true" />
+            </Show>
+            <span>{note().line}</span>
+          </p>
+          <Show when={note().from.length > 0}>
+            <Disclosure label={`A qué le falta el precio (${note().from.length})`}>
+              <p class="card-note">{note().from.join(", ")}.</p>
+            </Disclosure>
+          </Show>
+        </>
+      )}
     </Show>
     <Disclosure label="Ver los datos de la gráfica">
       <DataTable

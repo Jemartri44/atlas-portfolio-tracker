@@ -136,11 +136,21 @@ describe("the equivalent table of a chart", () => {
         headers={["Núcleo"]}
         rows={rows}
         caption="Evolución"
-        missing="Faltan 3 puntos: no hay precio de Global Bond Index Fund."
+        missing={{
+          line: "En 3 de 24 fechas falta algún precio.",
+          from: ["Global Bond Index Fund", "USD"],
+        }}
       />
     ));
 
-    expect(host.textContent).toContain("Faltan 3 puntos");
+    expect(host.querySelector(".gap-note")?.textContent).toBe(
+      "En 3 de 24 fechas falta algún precio.",
+    );
+    // The list goes folded under the line, not in it.
+    const folded = host.querySelector(".gap-note + details");
+    expect(folded?.textContent).toContain("Global Bond Index Fund, USD");
+    // No band drawn, no swatch of one.
+    expect(host.querySelector(".swatch-gap")).toBeNull();
   });
 });
 
