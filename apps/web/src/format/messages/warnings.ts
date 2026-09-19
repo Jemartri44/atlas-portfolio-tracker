@@ -154,6 +154,47 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
  * is an amount. Without a catalogue every identifier prints as itself, which is
  * what the whole application did before (`NO_NAMES`).
  */
+/** "A", "A y B", "A, B y C". */
+const joinAll = (items: readonly string[]): string =>
+  items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} y ${items.at(-1)}`;
+
+const lowestAge = (warnings: readonly Warning[]): number =>
+  Math.min(...warnings.map((warning) => Number(warning.details.age_days)));
+
+/**
+ * One sentence for several warnings of the same rule, as the summary shows
+ * them (docs/design/system.md §5.6): «3 precios con más de 15 días · World
+ * Index Fund, Physical Gold ETC y Bitcoin ETP». Only the rules whose repeats
+ * are one thing to do; the others are said one by one.
+ */
+export const describeWarningGroup = (
+  code: string,
+  warnings: readonly Warning[],
+  prose: Prose,
+): string | undefined => {
+  const n = namingOf(prose.names ?? NO_NAMES);
+  switch (code) {
+    case "stale_price":
+      return `${warnings.length} precios con más de ${days(lowestAge(warnings))} · ${joinAll(
+        warnings.map((warning) => n.one(warning.details.asset_id)),
+      )}. Registra valoraciones más recientes.`;
+    case "stale_fx_rate":
+      return `${warnings.length} tipos de cambio de hace más de ${days(lowestAge(warnings))} · ${joinAll(
+        warnings.map((warning) => text(warning.details.currency)),
+      )}. Registra una operación o una valoración más reciente en esas divisas.`;
+    case "deviation_above_threshold":
+      return `${warnings.length} activos fuera del umbral de ±${pp(
+        warnings[0]?.details.threshold_pp,
+      ).replace(/^\+/, "")} · ${joinAll(
+        warnings.map(
+          (warning) => `${n.one(warning.details.asset_id)} (${pp(warning.details.deviation_pp)})`,
+        ),
+      )}. Rebalancear vendiendo es una decisión anual tuya.`;
+    default:
+      return undefined;
+  }
+};
+
 export const describeWarning = (warning: Warning, prose: Prose): string => {
   const render = WARNING_MESSAGES[warning.code];
   return render === undefined

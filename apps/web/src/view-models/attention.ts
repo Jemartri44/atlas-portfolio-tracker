@@ -20,7 +20,7 @@ import {
   washSaleWindowEnd,
 } from "@atlas/domain";
 import { describeFinding } from "../format/messages/findings.js";
-import { describeWarning } from "../format/messages/warnings.js";
+import { describeWarning, describeWarningGroup } from "../format/messages/warnings.js";
 import type { NameIndex } from "../format/names.js";
 import { countOf } from "../format/number.js";
 
@@ -216,7 +216,13 @@ const windowEndOf = (
  * wash-sale ones are about **a sale** — eleven purchases inside the window of
  * one loss are one thing to know, not eleven.
  */
+/** Rules whose repeats are one thing to do: all of them, one item, one sentence. */
+const GATHERED = new Set(["stale_price", "stale_fx_rate", "deviation_above_threshold"]);
+
 const groupKey = (warning: Warning): string => {
+  if (GATHERED.has(warning.code)) {
+    return warning.code;
+  }
   const d = warning.details;
   const subject =
     warning.code === "wash_sale_window_repurchase"
@@ -252,7 +258,10 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
   // projection and from three views that share rules — and that is one warning,
   // not two of a kind: exact copies go first, then the repeats are counted.
   const seen = new Set<string>();
-  const groups = new Map<string, { warning: Warning; count: number; events: Set<string> }>();
+  const groups = new Map<
+    string,
+    { warning: Warning; count: number; events: Set<string>; all: Warning[] }
+  >();
   for (const warning of input.warnings) {
     const identity = `${warning.code}|${warning.event_id}|${JSON.stringify(warning.details)}`;
     if (seen.has(identity)) {
@@ -264,16 +273,23 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
       continue;
     }
     const key = groupKey(warning);
-    const group = groups.get(key) ?? { warning, count: 0, events: new Set<string>() };
+    const group = groups.get(key) ?? { warning, count: 0, events: new Set<string>(), all: [] };
     group.count += 1;
+    group.all.push(warning);
     if (warning.event_id !== "") {
       group.events.add(warning.event_id);
     }
     groups.set(key, group);
   }
-  for (const { warning, count, events } of groups.values()) {
+  for (const { warning, count, events, all } of groups.values()) {
     // `input` **is** the prose context: it carries the catalogue and the mode.
-    items.push(itemOf(warning.code, describeWarning(warning, input), count, [...events]));
+    // A gathered rule says its number in the sentence, so it carries no count.
+    const gathered = count > 1 ? describeWarningGroup(warning.code, all, input) : undefined;
+    items.push(
+      gathered === undefined
+        ? itemOf(warning.code, describeWarning(warning, input), count, [...events])
+        : itemOf(warning.code, gathered, 1, [...events]),
+    );
   }
 
   if (input.openOrders.length > 0) {
