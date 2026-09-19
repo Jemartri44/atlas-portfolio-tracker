@@ -1,6 +1,6 @@
 # ADR-0020 — El libro deja constancia de lo declarado: `tax_return_filed`
 
-**Estado:** Aceptada (2026-09-18). Cierra la Ronda 9 en su parte estructural y desbloquea la Fase 5. Nace del hallazgo 2 del *challenge* 3.
+**Estado:** Aceptada (2026-09-18). Cierra la Ronda 9 en su parte estructural y desbloquea la Fase 5. Nace del hallazgo 2 del *challenge* 3. Enmendada el 2026-09-18 (pendientes por categoría) y el 2026-09-19 (lista de bienes declarados, dos saldos de las cuentas del 720 y aviso cuando se mueve una cifra declarada).
 
 ## Contexto
 
@@ -34,6 +34,14 @@ Se añade el evento **`tax_return_filed`** al esquema del libro, con estas propi
 
 > **Enmienda del 2026-09-18 (misma fecha).** Las pérdidas pendientes de compensar se guardan **separadas por categoría de renta** (ganancias y pérdidas patrimoniales por un lado, rendimientos del capital mobiliario por otro) además de por ejercicio de origen, porque **compensan de forma distinta** (art. 49 LIRPF). El texto original no las separaba. Lo detectó el implementador del motor fiscal al planificar; se corrige el mismo día.
 
+> **Enmienda del 2026-09-19 (misma fecha que el prompt 010).** Tres precisiones que salieron al escribir el encargo de la salida fiscal (preguntas P2, P3 y P4 del prompt 010), respondidas y corregidas el mismo día:
+>
+> - **La lista de bienes declarados.** Para el 720 y el 721 el evento guarda, además del valor por categoría, **qué bienes se declararon** (la cuenta, para el efectivo; la cuenta y el activo, para los valores) con su valor. El texto original solo guardaba el valor por categoría, y con eso no se puede saber cuándo se deja de ser titular de un bien declarado, que es el segundo disparador de la obligación de volver a presentar el 720. Deducir la lista del libro sería guardar lo calculado, justo lo que este ADR separa de lo presentado.
+> - **Las cuentas del 720 guardan dos saldos**: el de 31/12 y el saldo medio del cuarto trimestre, porque la AEAT mira los dos para el umbral y para la regla de los 20.000 € (criterio #11, corregido el mismo día).
+> - **Un ejercicio cerrado avisa por fecha y también siempre que se mueva una cifra declarada.** El motor fiscal hace depender un ejercicio del siguiente: una recompra en enero aplaza una pérdida de diciembre y cambia la base de un ejercicio ya presentado. La regla por fecha sola callaría justo el caso que este ADR existe para señalar.
+
+> **Nota del 2026-09-19 (erratas).** La enumeración de categorías de arriba juntaba las de los dos modelos. **En el 720 los criptoactivos solo entran como valores** (un ETP es un valor); la tenencia directa custodiada en el extranjero va al **721**, con un único umbral sobre el conjunto. Y el recuento de tipos de evento de las consecuencias está corregido allí: con `swap` (ADR-0021) son 25.
+
 Y cambia el comportamiento de la proyección en un punto:
 
 - Un ejercicio con presentación registrada queda **cerrado**. Registrar un evento cuya fecha fiscal cae en un ejercicio cerrado **no se rechaza** —puede ser legítimo y a veces obligatorio— pero **avisa**, diciendo qué declaración habría que rectificar. Lo mismo con un `settings_changed` que mueva cifras de un ejercicio cerrado: es el aviso de la 005, ahora capaz de distinguir *pasado* de *declarado*.
@@ -44,7 +52,7 @@ Y cambia el comportamiento de la proyección en un punto:
 
 ## Consecuencias
 
-- `docs/data-schema.md` §3 pasa a describir `tax_return_filed` como evento definido, no como previsto. Sube a **24 tipos de evento**.
+- `docs/data-schema.md` §3 pasa a describir `tax_return_filed` como evento definido, no como previsto. Sube a **24 tipos de evento**. *Nota del 2026-09-19: son **25**. Este recuento no contaba `swap`, que ADR-0021 añadió después; con los dos, el catálogo tiene 25 tipos.*
 - La Fase 5 lo implementa: el motor fiscal produce las cifras, el usuario confirma lo que realmente presentó, y el evento las congela.
 - El aviso de `atlas settings set` gana precisión: deja de decir "mueve ganancias de un ejercicio anterior" y pasa a decir "mueve ganancias de un ejercicio **declarado el tal**, habría que valorar una complementaria".
 - El Modelo 720 se vuelve calculable de verdad, incluida la regla de los 20.000 €, que hasta ahora estaba escrita en `business-rules.md` sin que nada pudiera evaluarla.
