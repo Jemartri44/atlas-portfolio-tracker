@@ -4,7 +4,8 @@
 
 import { A } from "@solidjs/router";
 import type { JSX } from "solid-js";
-import { Notice } from "../../components/index.js";
+import { EmptyState, Notice } from "../../components/index.js";
+import { PageHeader } from "../../shell/PageHeader.jsx";
 
 export const Reloaded = (): JSX.Element => (
   <Notice severity="caution" title="Tus datos han cambiado">
@@ -42,4 +43,16 @@ export const ThesisFirst = (): JSX.Element => (
     condición de invalidación y el tamaño previsto. Si no hay ninguna abierta para esta cuenta y
     este activo, créala ahora y vuelve.
   </Notice>
+);
+
+/** An address with no form behind it: said, with the way to what can be recorded. */
+export const NoForm = (props: { title: string; what: string }): JSX.Element => (
+  <>
+    <PageHeader title={props.title} />
+    <EmptyState what={props.what}>
+      <A href="/registrar" role="button" class="secondary">
+        Ver qué se puede registrar
+      </A>
+    </EmptyState>
+  </>
 );

@@ -360,9 +360,12 @@
 }
 
 .band a {
+  align-items: center;
   color: inherit;
+  display: inline-flex;
   font-weight: var(--fw-semibold);
   margin-left: auto;
+  min-height: var(--tap);
 }
 
 /* ======================================================================== */

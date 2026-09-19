@@ -4,9 +4,9 @@
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
 import { accounts, corporateActionDraft, Quantity } from "@atlas/domain";
-import { A, useNavigate, useParams } from "@solidjs/router";
+import { useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Amount, EmptyState, Notice, Tag } from "../../../components/index.js";
+import { Amount, Notice, Tag } from "../../../components/index.js";
 import { displayName, nameIndex } from "../../../format/names.js";
 import { toAppError } from "../../../ledger/errors.js";
 import { attempt } from "../../../ledger/query.js";
@@ -25,7 +25,7 @@ import { RequireLedger } from "../../guard.jsx";
 import { DuplicateDialog } from "../DuplicateDialog.jsx";
 import { FormActions } from "../FormActions.jsx";
 import { FormFields } from "../FormFields.jsx";
-import { Reloaded } from "../FormNotices.jsx";
+import { NoForm, Reloaded } from "../FormNotices.jsx";
 import { Preview } from "../Preview.jsx";
 import { feeLinesError, toCorporateParams } from "./params.js";
 
@@ -132,12 +132,10 @@ export default function CorporateFormRoute(): JSX.Element {
           <Show
             when={form()}
             fallback={
-              <>
-                <PageHeader title="Evento corporativo" />
-                <EmptyState what="No hay ningún formulario para ese tipo de evento corporativo.">
-                  <A href="/registrar">Ver qué se puede registrar</A>
-                </EmptyState>
-              </>
+              <NoForm
+                title="Evento corporativo"
+                what="No hay ningún formulario para ese tipo de evento corporativo."
+              />
             }
           >
             {(current) => (
