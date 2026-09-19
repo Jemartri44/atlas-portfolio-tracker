@@ -411,9 +411,11 @@ describe("toAppError", () => {
     expect(toAppError(failure).code).toBe("storage_unavailable");
   });
 
-  it("does not swallow an unexpected failure", () => {
-    expect(toAppError(new Error("algo raro")).message).toBe("algo raro");
-    expect(toAppError("texto suelto").message).toBe("texto suelto");
+  it("does not swallow an unexpected failure, and frames it in Spanish", () => {
+    expect(toAppError(new Error("algo raro")).message).toMatch(
+      /^Algo ha fallado .*Detalle: algo raro$/,
+    );
+    expect(toAppError("texto suelto").message).toContain("Detalle: texto suelto");
   });
 });
 
@@ -446,6 +448,22 @@ describe("importing a file", () => {
   it("counts the events of a good one", async () => {
     const text = goldenText();
     await expect(validateImport(text)).resolves.toBeGreaterThan(100);
+  });
+});
+
+describe("toAppError: a file that cannot be read", () => {
+  it("says it in Spanish, with what to do, whatever the browser called it", () => {
+    for (const name of ["NotReadableError", "NotFoundError", "EncodingError"]) {
+      const error = toAppError(
+        new DOMException(
+          "The requested file could not be read, typically due to permission problems",
+          name,
+        ),
+      );
+      expect(error.code).toBe("file_unreadable");
+      expect(error.message).toContain("No se ha podido leer el archivo");
+      expect(error.message).not.toMatch(/requested|permission/);
+    }
   });
 });
 
