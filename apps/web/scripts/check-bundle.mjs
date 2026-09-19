@@ -43,8 +43,14 @@ const dist = join(webRoot, "dist");
  * card, the draft that remembers what was typed, the notices gathered, the
  * pending states, the rules said in plain words, the sentence over the effect,
  * the unit inside a field) measured **69,1 KB**; the ceiling is 70,1.
+ *
+ * **Set again to what was measured plus 1 KB after its second and third
+ * passes**, as the direction asked when a ceiling is passed: the preview of a
+ * correction as it is written, the stale mark of a row, the singular of one
+ * unit, the theme of the browser's bar and the confirmation of a write on the
+ * movement it wrote. Measured **69,4 KB**; the ceiling is 70,4.
  */
-const BOOT_BUDGET_GZIP_BYTES = 70.1 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 70.4 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -112,8 +118,14 @@ const BOOT_BUDGET_GZIP_BYTES = 70.1 * 1024;
  * in one line with its list folded, the bucket's notices in their cards, the
  * first run with the folder in one line and the weights asked only of live
  * assets, measured **187,4 KB**; the ceiling is 189,4.
+ *
+ * **Passed by the second and third passes of the review, and set again to
+ * what was measured plus 2 KB:** every sale of a movement with its total, the
+ * lists without assets converted away, the rectified movement reached with its
+ * confirmation, the page that refuses to correct a reversed one and the closed
+ * theses folded. Measured **189,8 KB**; the ceiling is 191,8.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 189.4 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 191.8 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
