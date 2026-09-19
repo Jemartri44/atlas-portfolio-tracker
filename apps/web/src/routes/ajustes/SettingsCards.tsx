@@ -17,6 +17,7 @@ import {
   SETTINGS_NUMBERS,
   SETTINGS_TEXTS,
   type SettingsPatch,
+  settingText,
   settingValue,
   targetWeightTotal,
 } from "../../view-models/index.js";
@@ -132,10 +133,10 @@ export const IdentityCard = (props: {
         label="Índice de referencia del cubo"
         hint="La alternativa aburrida contra la que se mide cada tesis (regla 16)."
         placeholder="Sin configurar"
-        value={settingValue(props.draft.current, props.draft.patch, "bucket_benchmark_asset_id")}
+        value={settingText(props.draft.current, props.draft.patch, "bucket_benchmark_asset_id")}
         options={benchmarkOptions(
           props.assets,
-          settingValue(props.draft.current, props.draft.patch, "bucket_benchmark_asset_id"),
+          settingText(props.draft.current, props.draft.patch, "bucket_benchmark_asset_id"),
         )}
         onInput={(raw) => props.draft.onOption("bucket_benchmark_asset_id", raw)}
       />
@@ -146,7 +147,7 @@ export const IdentityCard = (props: {
             kind="text"
             label={setting.label}
             {...(setting.hint === undefined ? {} : { hint: setting.hint })}
-            value={settingValue(props.draft.current, props.draft.patch, setting.key)}
+            value={settingText(props.draft.current, props.draft.patch, setting.key)}
             onInput={(raw) => props.draft.onText(setting.key, raw)}
           />
         )}

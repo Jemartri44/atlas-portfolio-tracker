@@ -25,6 +25,7 @@ export {
   SETTINGS_TEXTS,
   type SettingsPatch,
   settingsTouched,
+  settingText,
   settingValue,
   type TextSetting,
   targetWeightTotal,

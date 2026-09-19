@@ -167,6 +167,25 @@ export const settingValue = (
 };
 
 /**
+ * What a **text** field shows: exactly what is in force or was typed. The
+ * decimal comma is for figures only: applied to every setting, it turned
+ * `atlas@example.invalid` into `atlas@example,invalid`, and editing one letter
+ * would have saved the comma (review of 2026-09-19).
+ */
+export const settingText = (
+  current: Settings,
+  patch: SettingsPatch,
+  key: keyof Settings,
+): string => {
+  const override = patch[key as string];
+  if (override !== undefined) {
+    return String(override);
+  }
+  const existing = current[key];
+  return existing === undefined ? "" : String(existing);
+};
+
+/**
  * The patch after typing in a numeric field. An empty field clears the setting;
  * the comma of a Spanish keyboard becomes the point the ledger stores, and the
  * value stays a **string** all the way to `mergeSettings` unless the field is
