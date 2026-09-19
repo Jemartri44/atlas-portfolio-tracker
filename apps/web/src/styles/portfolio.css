@@ -197,7 +197,10 @@
 
 /* ---- Costs: the trades, and the standalone charges beside them ---------- */
 
-.costs-main {
+/* Each column is a container too: its table switches by the room of the column. */
+.costs-main,
+.costs-side {
+  container: column / inline-size;
   min-width: 0;
 }
 
@@ -205,7 +208,8 @@
   margin-top: var(--space-2);
 }
 
-@media (min-width: 64rem) {
+/* The trades and the standalone charges side by side where both fit. */
+@container card (min-width: 64rem) {
   .costs {
     column-gap: var(--space-7);
     display: grid;

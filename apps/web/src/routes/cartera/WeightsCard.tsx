@@ -140,7 +140,7 @@ export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
         </Show>
 
         <ClassRows view={props.view} />
-        <div class={props.view.partial ? "total-row" : "total-row only-narrow"}>
+        <div class={props.view.partial ? "total-row" : "total-row only-narrow is-sm"}>
           <span class="label">Total de la cartera</span>
           <span class="value">
             <Amount value={props.view.total} missingReason="ninguna posición tiene precio" />
@@ -159,6 +159,7 @@ export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
       <Disclosure label="Ver activo por activo">
         <DataTable
           label="Pesos por activo"
+          size="lg"
           columns={assetColumns(props.threshold)}
           rows={props.view.classes.flatMap((row) => row.rows)}
         />

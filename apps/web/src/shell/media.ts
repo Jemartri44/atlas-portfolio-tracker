@@ -26,3 +26,10 @@ export const TOP_BAR = "(min-width: 75rem)";
 
 /** Where the content grid gains its columns (styles/layout.css). */
 export const GRID = "(min-width: 64rem)";
+
+/**
+ * Where a side column fits beside a table (the filters of the movements): at
+ * 1024px the column and the table together did not, and the table spilled
+ * past its card (review of 2026-09-19).
+ */
+export const SIDE_COLUMN = "(min-width: 80rem)";

@@ -117,6 +117,7 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
     >
       <DataTable
         label="Posiciones del cubo"
+        size="lg"
         columns={COLUMNS}
         rows={props.view.rows}
         detail={(row) => <ThesisNote row={row} />}

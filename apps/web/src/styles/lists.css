@@ -155,7 +155,7 @@ a.row:hover {
 /* A long name is cut inside its cell, with the whole of it in the title. */
 .cell-trunc {
   display: block;
-  max-width: 28rem;
+  max-width: 18rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -176,17 +176,45 @@ a.row:hover {
   padding-top: 0;
 }
 
-/* Rows on a phone, a table from 64rem: the same data, twice, one shown. */
+/*
+ * Rows in a narrow box, a table where it fits: the same data, twice, one
+ * shown. The switch reads the width of the **card** that holds them (a
+ * container), not of the window: a table in a card of five columns out of
+ * twelve does not fit where the same table across the page does, and at
+ * 1024px that difference was a table spilling out of its card (review of
+ * 2026-09-19). Each table says how much room it needs: `is-sm`, the default,
+ * `is-lg`.
+ */
 .only-wide {
   display: none;
 }
 
-@media (min-width: 64rem) {
-  .only-wide {
+@container (min-width: 30rem) {
+  .only-wide.is-sm {
     display: table;
   }
 
-  .only-narrow {
+  .only-narrow.is-sm {
+    display: none;
+  }
+}
+
+@container (min-width: 44rem) {
+  .only-wide:not(.is-sm, .is-lg) {
+    display: table;
+  }
+
+  .only-narrow:not(.is-sm, .is-lg) {
+    display: none;
+  }
+}
+
+@container (min-width: 49rem) {
+  .only-wide.is-lg {
+    display: table;
+  }
+
+  .only-narrow.is-lg {
     display: none;
   }
 }

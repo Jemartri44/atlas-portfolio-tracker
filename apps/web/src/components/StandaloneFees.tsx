@@ -35,7 +35,7 @@ export interface StandaloneFeesProps {
 export const StandaloneFees = (props: StandaloneFeesProps): JSX.Element => (
   <Show when={props.view.rows.length > 0}>
     <h3 class="block-title">Comisiones sueltas</h3>
-    <DataTable label="Comisiones sueltas" columns={COLUMNS} rows={props.view.rows} />
+    <DataTable label="Comisiones sueltas" columns={COLUMNS} rows={props.view.rows} size="sm" />
     <TotalLine label={props.totalLabel}>
       <Amount value={props.view.total} />
     </TotalLine>

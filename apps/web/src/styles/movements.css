@@ -141,7 +141,7 @@
 .fact > dd {
   margin: 0;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .facts.is-nested .fact {
@@ -160,8 +160,8 @@
   color: var(--c-text-3);
 }
 
-@media (min-width: 64rem) {
-  /* Two pairs of label and value per line: the data reads across the card. */
+@container (min-width: 44rem) {
+  /* Two pairs of label and value per line, where the card has room for them. */
   .facts:not(.is-nested) {
     column-gap: var(--space-6);
     grid-template-columns: repeat(2, minmax(0, 1fr));

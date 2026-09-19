@@ -36,7 +36,7 @@ const ClassName = (props: { row: WeightClassRow }): JSX.Element => (
  */
 export const ClassRows = (props: { view: WeightsView }): JSX.Element => (
   <ul
-    class={props.view.partial ? "classes" : "classes only-narrow"}
+    class={props.view.partial ? "classes" : "classes only-narrow is-sm"}
     aria-label="Pesos por tipo de activo"
   >
     <For each={props.view.classes}>
@@ -60,7 +60,7 @@ export const ClassRows = (props: { view: WeightsView }): JSX.Element => (
 
 /** From 1024px: the same classes as a table, with the total at its foot. */
 export const ClassTable = (props: { view: WeightsView }): JSX.Element => (
-  <table class="table only-wide" aria-label="Pesos por tipo de activo">
+  <table class="table only-wide is-sm" aria-label="Pesos por tipo de activo">
     <thead>
       <tr>
         <th scope="col">Tipo de activo</th>

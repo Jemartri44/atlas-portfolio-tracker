@@ -6,7 +6,12 @@
 
 /* ---- Card --------------------------------------------------------------- */
 
+/*
+ * A card is a container: what it holds (a table or its rows, a list of data in
+ * one column or two) is laid out by the room the card has, not the window.
+ */
 .card {
+  container: card / inline-size;
   background-color: var(--c-surface);
   border: var(--border) solid var(--c-border);
   border-radius: var(--radius-lg);

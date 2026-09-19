@@ -61,6 +61,12 @@ interface DataTableProps<R> {
    */
   tableOnly?: boolean | undefined;
   /**
+   * How much room the table needs before it replaces the rows, measured on the
+   * card that holds it (`styles/lists.css`): `sm` for two or three columns,
+   * `lg` for six or more; the default sits between.
+   */
+  size?: "sm" | "lg" | undefined;
+  /**
    * A block under the row, for what belongs to it and does not fit in a cell:
    * the thesis of a position. On the table it goes in a row of its own.
    */
@@ -141,7 +147,16 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
         are.
       */}
       <Show when={props.tableOnly !== true}>
-        <ul class="rows only-narrow" aria-label={props.label}>
+        <ul
+          class={
+            props.size === "lg"
+              ? "rows only-narrow is-lg"
+              : props.size === "sm"
+                ? "rows only-narrow is-sm"
+                : "rows only-narrow"
+          }
+          aria-label={props.label}
+        >
           <For each={props.rows}>
             {(row) => (
               <li>
@@ -177,7 +192,16 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
       </Show>
 
       {/* Desktop: the same rows, dense. */}
-      <table class="table only-wide" aria-label={props.label}>
+      <table
+        class={
+          props.size === "lg"
+            ? "table only-wide is-lg"
+            : props.size === "sm"
+              ? "table only-wide is-sm"
+              : "table only-wide"
+        }
+        aria-label={props.label}
+      >
         <thead>
           <tr>
             <For each={props.columns}>

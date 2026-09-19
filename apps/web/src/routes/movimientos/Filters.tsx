@@ -4,7 +4,7 @@
 //
 // Two shapes (docs/design/system.md §7.3, D12): on a phone, the search across
 // the width and the rest folded in «Filtros · N», with the active ones as
-// chips; from 1024px, all of them always in sight in a column beside the table.
+// chips; from 1280px, all of them always in sight in a column beside the table.
 // One or the other is drawn, never both, so every control keeps one id.
 
 import { type LedgerState, SUPPORTED_EVENT_TYPES } from "@atlas/domain";
@@ -14,7 +14,7 @@ import { Disclosure, Field, Icon, SelectField } from "../../components/index.js"
 import { formatDate } from "../../format/date.js";
 import { eventLabel } from "../../format/labels.js";
 import { displayName, nameIndex } from "../../format/names.js";
-import { GRID, mediaQuery } from "../../shell/media.js";
+import { mediaQuery, SIDE_COLUMN } from "../../shell/media.js";
 import { accountOptions, assetOptions } from "../../view-models/options.js";
 
 /** What each filter is called on its chip: the parameter of the URL is not a word. */
@@ -67,7 +67,7 @@ const KEYS = ["tipo", "cuenta", "activo", "desde", "hasta", "q"] as const;
 
 export const Filters = (props: { state: LedgerState }): JSX.Element => {
   const [params, setParams] = useSearchParams<MovementFilters>();
-  const wide = mediaQuery(GRID);
+  const wide = mediaQuery(SIDE_COLUMN);
   const set = (key: keyof MovementFilters, value: string): void => {
     setParams({ [key]: value === "" ? undefined : value }, { replace: false, scroll: false });
   };

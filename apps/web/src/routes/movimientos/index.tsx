@@ -11,6 +11,7 @@ import { EmptyState } from "../../components/index.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
+import { mediaQuery, SIDE_COLUMN } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { movementRows, PAGE_SIZE } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
@@ -28,6 +29,7 @@ const filterOf = (params: MovementFilters): EntryFilter => ({
 
 export default function MovimientosRoute(): JSX.Element {
   const [params] = useSearchParams<MovementFilters>();
+  const side = mediaQuery(SIDE_COLUMN);
   const [page, setPage] = createSignal(1);
 
   return (
@@ -59,7 +61,10 @@ export default function MovimientosRoute(): JSX.Element {
             />
             <div class="grid">
               <Filters state={snapshot.state} />
-              <section class="card list-pane span-9" aria-label="Lista de movimientos">
+              <section
+                class={side() ? "card list-pane span-9" : "card list-pane span-12"}
+                aria-label="Lista de movimientos"
+              >
                 <Show
                   when={entries().length > 0}
                   fallback={

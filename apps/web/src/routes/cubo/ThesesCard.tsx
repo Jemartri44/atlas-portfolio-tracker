@@ -73,7 +73,7 @@ export const ThesesCard = (props: { view: ThesesView }): JSX.Element => (
       when={props.view.rows.length > 0}
       fallback={<p class="meta">Todavía no hay ninguna tesis.</p>}
     >
-      <DataTable label="Tesis del cubo" columns={COLUMNS} rows={props.view.rows} />
+      <DataTable label="Tesis del cubo" columns={COLUMNS} rows={props.view.rows} size="lg" />
       <Show when={props.view.withoutIndex > 0}>
         <p class="card-note">
           {props.view.withoutIndex}{" "}

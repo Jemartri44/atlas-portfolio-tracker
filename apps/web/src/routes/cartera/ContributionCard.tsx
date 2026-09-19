@@ -169,7 +169,7 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
         </span>
       </p>
       <Disclosure label="Ver el cálculo">
-        <DataTable label="Cálculo del reparto" columns={COLUMNS} rows={props.view.rows} />
+        <DataTable label="Cálculo del reparto" columns={COLUMNS} rows={props.view.rows} size="sm" />
       </Disclosure>
     </>
   );

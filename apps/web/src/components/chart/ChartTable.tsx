@@ -78,7 +78,12 @@ export const ChartTable = (props: ChartTableProps): JSX.Element => (
       </p>
     </Show>
     <Disclosure label="Ver los datos de la gráfica">
-      <DataTable label={props.caption} columns={columnsOf(props.headers)} rows={props.rows} />
+      <DataTable
+        label={props.caption}
+        columns={columnsOf(props.headers)}
+        rows={props.rows}
+        size="sm"
+      />
     </Disclosure>
   </>
 );

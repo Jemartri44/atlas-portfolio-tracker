@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
 // The movements as composed in docs/design/system.md §7.3: grouped by day on a
-// phone, the filters folded there and in a column beside the table from 1024px
+// phone and on a small laptop, the filters folded there and in a column beside the table from 1280px
 // (D12), and a detail that opens with one sentence whose figures the privacy
 // mode masks with their unit.
 
@@ -58,7 +58,14 @@ describe("the list of movements", () => {
     expect(host.querySelector(".filters-panel")).toBeNull();
   });
 
-  it("keeps every filter in sight beside the table from 1024px", async () => {
+  it("folds them too at 1024px, where a column beside the table does not fit", async () => {
+    withStyles(1024);
+    const host = await show("/movimientos", Movimientos);
+    expect(host.querySelector(".filters-panel")).toBeNull();
+    expect(host.querySelector(".list-pane")?.classList.contains("span-12")).toBe(true);
+  });
+
+  it("keeps every filter in sight beside the table from 1280px", async () => {
     withStyles(1440);
     const host = await show("/movimientos", Movimientos);
     const panel = host.querySelector("aside.filters-panel");
