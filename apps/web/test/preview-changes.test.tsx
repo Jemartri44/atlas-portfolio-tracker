@@ -4,7 +4,7 @@
 // twenty-seven lots, twenty-five of them "4,7186 → 4,7186", with the new lot
 // at the very bottom — and every quantity in plain text with the mask on.
 
-import { type AccountId, Quantity } from "@atlas/domain";
+import { type AccountId, Money, Quantity } from "@atlas/domain";
 import { beforeEach, describe, expect, it } from "vitest";
 import { MASK } from "../src/format/money.js";
 import { store } from "../src/ledger/state.js";
@@ -71,6 +71,24 @@ describe("what changes, as data", () => {
   });
 });
 
+describe("the cash, as data", () => {
+  it("names the account, keeps the amounts and says when a balance ends below zero", () => {
+    const eur = (amount: string) => Money.parse(amount, "EUR");
+    const changes = previewChanges({
+      before: { positions: [], lots: [] },
+      after: { positions: [], lots: [] },
+      cash: [
+        { account_id: "acc_mi", currency: "EUR", before: eur("100"), after: eur("-61") },
+        { account_id: "acc_ibkr", currency: "EUR", before: eur("0"), after: eur("300") },
+      ],
+    } as never);
+    expect(changes.cash.map((row) => [row.key, row.short])).toEqual([
+      ["acc_mi|EUR", true],
+      ["acc_ibkr|EUR", false],
+    ]);
+  });
+});
+
 describe("what changes, on the preview of a purchase", () => {
   beforeEach(() => today("2026-09-18"));
 
@@ -83,9 +101,16 @@ describe("what changes, on the preview of a purchase", () => {
     const preview = host.querySelector(".preview");
     const shown = text(preview);
     expect(shown).toMatch(/\d+ lotes sin cambios/);
+    const section = (title: string) =>
+      [...(preview?.querySelectorAll("section.card") ?? [])].find(
+        (card) => card.querySelector("h2")?.textContent === title,
+      );
     // The new lot is the first row of the lots, and it says it is new.
-    const lots = [...(preview?.querySelectorAll("section.card") ?? [])][1];
-    expect(text(lots?.querySelector(".change"))).toContain("nuevo");
+    expect(text(section("Lotes fiscales")?.querySelector(".change"))).toContain("nuevo");
+    // The cash of the account the purchase is paid from, before and after, masked.
+    const cash = section("Efectivo");
+    expect(text(cash?.querySelector(".change-name"))).toContain("Fondos indexados · EUR");
+    expect(cash?.querySelectorAll(".change .mask")).toHaveLength(2);
     // Not one quantity with the mask on: they were painted raw before.
     expect(shown).toContain(MASK);
     expect(shown).not.toMatch(/\d+\.\d{3,}/);

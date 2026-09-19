@@ -48,6 +48,44 @@ describe("previewEvent", () => {
     expect(preview.etag).toBe("0");
   });
 
+  it("shows the cash the candidate moves, before and after, and only that", async () => {
+    const store = new TestStore(seeded());
+    // The seeded purchase was paid with money never deposited: −100 €.
+    const buy = await previewEvent(testDeps(store), buyDraft);
+    expect(
+      buy.cash.map((row) => [row.account_id, row.currency, `${row.before}`, `${row.after}`]),
+    ).toEqual([["acc_fund", "EUR", "-100 EUR", "-161 EUR"]]);
+
+    // A first deposit into another account: its balance starts at zero.
+    const deposit = await previewEvent(testDeps(store), {
+      type: "cash_deposit" as const,
+      account_id: "acc_etf",
+      value_date: "2027-02-10",
+      amount: "300",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2027-02-10",
+    });
+    expect(deposit.cash).toHaveLength(1);
+    expect(deposit.cash[0]?.before.isZero()).toBe(true);
+    expect(deposit.cash[0]?.after.amount.toString()).toBe("300");
+
+    // A valuation moves no cash at all.
+    const valuation = await previewEvent(testDeps(store), {
+      type: "valuation" as const,
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2027-02-10",
+      quantity: "10",
+      unit_value: "11",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2027-02-10",
+      source: "manual",
+    });
+    expect(valuation.cash).toEqual([]);
+  });
+
   it("shows the effect on positions and lots, before and after", async () => {
     const store = new TestStore(seeded());
     const preview = await previewEvent(testDeps(store), buyDraft);

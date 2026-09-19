@@ -290,7 +290,7 @@ Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, 
 
 - **Elegir tipo**: «Del día a día» en un mosaico de baldosas a un toque, dos columnas en el móvil y cuatro en escritorio; debajo, los grupos restantes plegados. **Las listas de compra no ofrecen activos dados de baja** (valorarlos sí se puede).
 - **Formulario**: arriba solo lo necesario; lo secundario (referencia del bróker, origen del dato y notas) en «Más datos». Tiene un ancho máximo legible. En escritorio, el efecto aparece **al lado** del formulario al pulsar «Ver el efecto», y el formulario sigue a la vista; tocarlo retira el efecto, que ya no sería el de lo escrito. En el móvil el efecto sustituye al formulario, con «Volver a los datos».
-- **Vista previa**: solo lo que cambia (las posiciones y los lotes que se mueven, el nuevo primero) y una línea con lo que no cambia. El efectivo antes y después no aparece: la vista previa del dominio (`previewEvent`) no lo da, y calcularlo en la interfaz sería la segunda casa de una regla.
+- **Vista previa**: solo lo que cambia: las posiciones, el **efectivo** de cada cuenta y divisa que se mueve, antes y después (`EventPreview.cash`, del dominio), con «en negativo» si el saldo acaba por debajo de cero, y los lotes que se mueven, el nuevo primero; y una línea con lo que no cambia.
 
 ### 7.5 Cartera
 

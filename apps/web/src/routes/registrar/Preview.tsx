@@ -1,6 +1,6 @@
 // What is going to happen, before it happens (FR-044).
 //
-// The positions and lots **that change**, the gains the event would book and
+// The positions, the cash and the lots **that change**, the gains the event would book and
 // the warnings it raises — all of it from the domain use case the CLI also uses
 // (`previewEvent`, decision (h)), so the preview cannot disagree with the
 // write. What does not move is counted, not listed (`previewChanges`).
@@ -16,7 +16,7 @@ import { describeWarning } from "../../format/messages/warnings.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { usePrivacy } from "../../ledger/state.js";
-import { type ChangeRow, previewChanges } from "../../view-models/preview.js";
+import { type CashRow, type ChangeRow, previewChanges } from "../../view-models/preview.js";
 
 /**
  * One row: its name on top, wrapping if it has to, and the two figures under
@@ -52,6 +52,27 @@ const Change = (props: { row: ChangeRow; empty: string }): JSX.Element => (
   </li>
 );
 
+/** The cash of an account, before and after; amounts, so the mask covers them. */
+const Cash = (props: { row: CashRow }): JSX.Element => (
+  <li class="change">
+    <span class="change-name">
+      {props.row.label}
+      <Show when={props.row.short}>
+        <Tag tone="caution" icon="caution">
+          en negativo
+        </Tag>
+      </Show>
+    </span>
+    <span class="values">
+      <Amount value={props.row.before} class="meta" />
+      <span class="arrow" aria-hidden="true">
+        →
+      </span>
+      <Amount value={props.row.after} />
+    </span>
+  </li>
+);
+
 export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JSX.Element => {
   const names = (): NameIndex => props.names ?? NO_NAMES;
   const privacy = usePrivacy();
@@ -76,6 +97,14 @@ export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JS
           </p>
         </Show>
       </Section>
+
+      <Show when={changes().cash.length > 0}>
+        <Section title="Efectivo" aside={<span>antes → después</span>}>
+          <ul class="changes">
+            <For each={changes().cash}>{(row) => <Cash row={row} />}</For>
+          </ul>
+        </Section>
+      </Show>
 
       <Show when={changes().lots.length > 0}>
         <Section title="Lotes fiscales" aside={<span>antes → después</span>}>
