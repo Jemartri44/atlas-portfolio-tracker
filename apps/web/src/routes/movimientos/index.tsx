@@ -41,7 +41,7 @@ export default function MovimientosRoute(): JSX.Element {
           ledgerEntries(snapshot.state, snapshot.events, filterOf(params)),
         );
         const names = nameIndex(snapshot.state);
-        const events = eventReferences(snapshot.events);
+        const events = eventReferences(snapshot.events, names);
         const rows = createMemo(() =>
           movementRows(entries().slice(0, page() * PAGE_SIZE), names, events),
         );

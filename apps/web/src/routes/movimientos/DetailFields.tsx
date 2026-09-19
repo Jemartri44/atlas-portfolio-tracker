@@ -71,14 +71,7 @@ const Value = (props: { field: DetailField }): JSX.Element => (
         </For>
       </dl>
     </Match>
-    <Match when={true}>
-      {props.field.text}
-      {/* The identifier stays where the ledger is checked, next to the name. */}
-      <Show when={props.field.hint !== undefined}>
-        {" "}
-        <code class="meta">{props.field.hint}</code>
-      </Show>
-    </Match>
+    <Match when={true}>{props.field.text}</Match>
   </Switch>
 );
 
@@ -138,9 +131,25 @@ export const EventLinks = (props: { links: DetailView["links"] }): JSX.Element =
 export const EventEnvelope = (props: {
   envelope: readonly DetailField[];
   position: number;
+  /**
+   * The identifiers behind the names of the data (`acc_mi`, `ast_world`, the
+   * ULID of an order): here and nowhere else, folded, where the ledger is
+   * checked and a repair is written (review of 2026-09-19).
+   */
+  identifiers?: readonly DetailField[];
 }): JSX.Element => (
   <Disclosure label="Registro técnico">
     <dl class="facts">
+      <For each={props.identifiers ?? []}>
+        {(field) => (
+          <div class="fact">
+            <dt>{field.label}</dt>
+            <dd>
+              <code>{field.hint}</code>
+            </dd>
+          </div>
+        )}
+      </For>
       <For each={props.envelope}>
         {(field) => (
           <div class="fact">

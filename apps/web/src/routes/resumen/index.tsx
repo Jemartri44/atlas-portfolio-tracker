@@ -108,7 +108,7 @@ export default function ResumenRoute(): JSX.Element {
         const recent = movementRows(
           entries.filter(isMovement).slice(0, RECENT),
           names,
-          eventReferences(snapshot.events),
+          eventReferences(snapshot.events, names),
         );
         const onboarding = onboardingOf(dated, entries, settings);
         const moved = entries.some(isMovement);

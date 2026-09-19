@@ -90,7 +90,11 @@ export default function MovimientoDetalleRoute(): JSX.Element {
           >
             {(found) => {
               const view = createMemo(() =>
-                detailView(found(), nameIndex(snapshot.state), eventReferences(snapshot.events)),
+                detailView(
+                  found(),
+                  nameIndex(snapshot.state),
+                  eventReferences(snapshot.events, nameIndex(snapshot.state)),
+                ),
               );
               return (
                 <>
@@ -154,7 +158,10 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                           {(item) => (
                             <li>
                               <A href={`/movimientos/${item.id}`}>
-                                {eventReferences(snapshot.events)(item.id)}
+                                {eventReferences(
+                                  snapshot.events,
+                                  nameIndex(snapshot.state),
+                                )(item.id)}
                               </A>
                             </li>
                           )}
@@ -170,7 +177,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                           parts={movementSentence(
                             found(),
                             nameIndex(snapshot.state),
-                            eventReferences(snapshot.events),
+                            eventReferences(snapshot.events, nameIndex(snapshot.state)),
                           )}
                         />
                       </p>
@@ -183,7 +190,11 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                       </Show>
                       <h2 class="block-title">Datos</h2>
                       <Facts fields={view().fields} />
-                      <EventEnvelope envelope={view().envelope} position={found().position} />
+                      <EventEnvelope
+                        envelope={view().envelope}
+                        position={found().position}
+                        identifiers={view().fields.filter((field) => field.hint !== undefined)}
+                      />
                     </section>
                     <EventLinks links={view().links} />
                   </div>

@@ -10,6 +10,7 @@
 import { type LedgerEvent, madridDateOf } from "@atlas/domain";
 import { formatDate } from "./date.js";
 import { eventLabel } from "./labels.js";
+import { displayName, type NameIndex, NO_NAMES } from "./names.js";
 
 /** The date a person associates with the event: its business date, or the day it was recorded. */
 const DATE_FIELDS = [
@@ -32,17 +33,33 @@ export const eventDateOf = (event: LedgerEvent): string => {
   return madridDateOf(event.recorded_at);
 };
 
-/** "Compra del 03/09/2026". */
-export const describeEvent = (event: LedgerEvent): string =>
-  `${eventLabel(event.type)} del ${formatDate(eventDateOf(event))}`;
+/**
+ * "Compra del 03/09/2026". An order is named by what it asked for too —
+ * "Orden de compra de World Index Fund del 02/09/2026" —, because a day can
+ * hold several and the user remembers them by the asset (review of 2026-09-19).
+ */
+export const describeEvent = (event: LedgerEvent, names: NameIndex = NO_NAMES): string => {
+  const date = formatDate(eventDateOf(event));
+  if (event.type === "order_placed") {
+    const order = event as unknown as { side?: string; asset_id?: string };
+    const kind = order.side === "sell" ? "Orden de venta" : "Orden de compra";
+    return `${kind} de ${displayName(names, order.asset_id)} del ${date}`;
+  }
+  return `${eventLabel(event.type)} del ${date}`;
+};
 
 /** Resolves an event identifier to its description, over the events of one load. */
 export type EventReferences = (id: string) => string;
 
-export const eventReferences = (events: readonly LedgerEvent[]): EventReferences => {
+export const eventReferences = (
+  events: readonly LedgerEvent[],
+  names: NameIndex = NO_NAMES,
+): EventReferences => {
   const byId = new Map(events.map((event) => [event.id, event]));
   return (id) => {
     const event = byId.get(id);
-    return event === undefined ? "un movimiento que ya no está en tus datos" : describeEvent(event);
+    return event === undefined
+      ? "un movimiento que ya no está en tus datos"
+      : describeEvent(event, names);
   };
 };

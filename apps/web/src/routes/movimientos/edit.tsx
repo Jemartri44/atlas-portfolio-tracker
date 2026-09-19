@@ -79,7 +79,7 @@ export default function MovimientoEditarRoute(): JSX.Element {
                       eventFields(
                         found().event as unknown as Record<string, unknown>,
                         nameIndex(snapshot.state),
-                        eventReferences(snapshot.events),
+                        eventReferences(snapshot.events, nameIndex(snapshot.state)),
                       ).fields
                     }
                   />

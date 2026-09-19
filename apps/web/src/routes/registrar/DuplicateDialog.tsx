@@ -9,6 +9,7 @@ import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
 import { Dialog } from "../../components/index.js";
 import { eventReferences } from "../../format/events.js";
+import { nameIndex } from "../../format/names.js";
 import { store } from "../../ledger/state.js";
 
 interface DuplicateDialogProps {
@@ -20,7 +21,8 @@ interface DuplicateDialogProps {
 }
 
 /** The events of the ledger as it is loaded, to name a duplicate instead of printing its id. */
-const references = () => eventReferences(store.snapshot()?.events ?? []);
+const references = () =>
+  eventReferences(store.snapshot()?.events ?? [], nameIndex(store.snapshot()?.state));
 
 export const DuplicateDialog = (props: DuplicateDialogProps): JSX.Element => (
   <Dialog

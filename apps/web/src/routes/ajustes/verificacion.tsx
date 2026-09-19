@@ -87,7 +87,7 @@ export default function VerificacionRoute(): JSX.Element {
     <RequireLedger skeleton={5}>
       {(snapshot) => {
         const names = nameIndex(snapshot.state);
-        const events = eventReferences(snapshot.events);
+        const events = eventReferences(snapshot.events, names);
         const findings = () => integrity(snapshot.state);
         const invalid = () => snapshot.state.invalid;
 
