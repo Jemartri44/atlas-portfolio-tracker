@@ -112,6 +112,21 @@ describe("the fields a form fills in for you", () => {
     expect(shownIn(host, "f-amount")).toBe("3100");
   });
 
+  it("leaves in sight what the user types, after the field loses the focus", async () => {
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    const amount = host.querySelector("#f-amount") as HTMLInputElement;
+    amount.dispatchEvent(new FocusEvent("focus"));
+    await Promise.resolve();
+    amount.value = "3200";
+    amount.dispatchEvent(new Event("input", { bubbles: true }));
+    amount.dispatchEvent(new FocusEvent("blur"));
+    await Promise.resolve();
+    expect(shownIn(host, "f-amount")).toBe("3200");
+    // What the user did not touch is still what the application shows: masked.
+    expect(shownIn(host, "f-quantity")).toBe(MASK);
+  });
+
   /** One rule for every amount of the configuration: the 720 and 721 thresholds too. */
   it("masks every amount of the configuration and leaves the percentages", async () => {
     store.setPrivacy(true);
