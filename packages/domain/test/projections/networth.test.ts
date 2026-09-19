@@ -70,6 +70,16 @@ describe("netWorth", () => {
     expect(view.core.by_class).not.toHaveLength(0);
   });
 
+  it("says what each block weighs in the total, exactly and adding up to 100", () => {
+    const view = netWorth(project(portfolio()), "2027-06-30", settings);
+    const shares = view.share_pct;
+    // 600 + 96 + 420 = 1116.
+    expect(shares?.core.round(4).toString()).toBe("53.7634");
+    expect(shares?.bucket.round(4).toString()).toBe("8.6022");
+    expect(shares?.cash.round(4).toString()).toBe("37.6344");
+    expect(shares?.core.add(shares.bucket).add(shares.cash).round(10).toString()).toBe("100");
+  });
+
   it("converts foreign cash with the last known rate and says how old it is", () => {
     const view = netWorth(project(portfolio()), "2027-06-30", settings);
     const usd = view.cash.rows.find((row) => row.currency === "USD");
@@ -128,6 +138,8 @@ describe("netWorth", () => {
     expect(view.cash.missing_rates).toEqual(["CHF"]);
     expect(view.partial).toBe(true);
     expect(view.warnings.map((w) => w.code)).toContain("partial_net_worth");
+    // No share of an incomplete total.
+    expect(view.share_pct).toBeUndefined();
   });
 
   it("marks the total partial when an asset held has no price, and lists it", () => {
@@ -164,6 +176,8 @@ describe("netWorth", () => {
     expect(view.cash.rows).toEqual([]);
     expect(view.total_eur.isZero()).toBe(true);
     expect(view.partial).toBe(false);
+    // Nor of nothing at all.
+    expect(view.share_pct).toBeUndefined();
   });
 
   it("answers for the date asked, quantities and rates included", () => {

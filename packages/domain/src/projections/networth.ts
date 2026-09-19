@@ -11,6 +11,7 @@
 // the ledger never priced is shown unconverted and makes the total partial.
 
 import { type CivilDate, daysBetween } from "../dates/civil-date.js";
+import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
 import { Money } from "../money/money.js";
@@ -73,8 +74,30 @@ export interface NetWorth {
   /** Sum of the three blocks, of what does have a value. Read it with `partial`. */
   total_eur: Money;
   partial: boolean;
+  /**
+   * What each block weighs in the total, in percent and exact. **Absent** when
+   * the total is partial or not positive: a share of an incomplete total is
+   * not a share of anything (rule 18 refuses it for the same reason).
+   */
+  share_pct?: NetWorthShares;
   warnings: Warning[];
 }
+
+export interface NetWorthShares {
+  core: Decimal;
+  bucket: Decimal;
+  cash: Decimal;
+}
+
+const HUNDRED = Decimal.parse("100");
+
+const sharesOf = (
+  total: Money,
+  blocks: { core: Money; bucket: Money; cash: Money },
+): NetWorthShares => {
+  const of = (part: Money): Decimal => part.amount.div(total.amount).mul(HUNDRED);
+  return { core: of(blocks.core), bucket: of(blocks.bucket), cash: of(blocks.cash) };
+};
 
 const bucketRowOf = (row: BucketPosition): NetWorthAssetRow => ({
   account_id: row.account_id,
@@ -193,6 +216,15 @@ export const netWorth = (
     cash,
     total_eur: total,
     partial,
+    ...(partial || !total.amount.isPositive()
+      ? {}
+      : {
+          share_pct: sharesOf(total, {
+            core: core.total_eur,
+            bucket: bucket.total_value_eur,
+            cash: cash.total_eur,
+          }),
+        }),
     warnings,
   };
 };

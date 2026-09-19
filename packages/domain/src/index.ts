@@ -86,6 +86,7 @@ export {
   type CashBlock,
   type CashLine,
   type NetWorth,
+  type NetWorthShares,
   netWorth,
 } from "./projections/networth.js";
 export {
