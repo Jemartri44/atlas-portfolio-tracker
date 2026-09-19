@@ -11,7 +11,17 @@
 // "within limits": the absence of a measurement is not a pass.
 
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Figure, Icon, Section, StatLine, Tag, TotalLine } from "../../components/index.js";
+import {
+  Amount,
+  Figure,
+  Icon,
+  type NoticeItem,
+  NoticeList,
+  Section,
+  StatLine,
+  Tag,
+  TotalLine,
+} from "../../components/index.js";
 import { formatPercent, meaningfulDecimals } from "../../format/number.js";
 import type { ControlsView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
@@ -40,8 +50,13 @@ export const BudgetCard = (props: {
   view: ControlsView;
   worth: NetWorthView;
   limits: BucketLimits;
+  /** What the budget warns of that no line of the card already says: a cap passed. */
+  notices: readonly NoticeItem[];
 }): JSX.Element => (
   <Section title="Presupuesto y control" class="span-5">
+    <Show when={props.notices.length > 0}>
+      <NoticeList items={props.notices} label="Avisos del presupuesto" />
+    </Show>
     <StatLine label="Aporte bruto acumulado">
       <Amount value={props.view.contributionGross} />
       <Show when={props.view.budget !== undefined}>

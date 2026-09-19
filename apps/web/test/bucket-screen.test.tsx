@@ -36,11 +36,21 @@ describe("the bucket", () => {
     expect(pending?.querySelector('a[href="/registrar/valuation"]')).not.toBeNull();
   });
 
-  it("says its warnings with the one notice, and never links to itself", async () => {
+  it("puts the range right over the chart it changes, not over the figure", async () => {
     const host = await show("/cubo?fecha=2029-01-15", Cubo);
-    const warnings = host.querySelector('[aria-label="Avisos del cubo"]');
-    expect(warnings?.querySelectorAll(".notice").length).toBeGreaterThan(0);
-    expect(warnings?.querySelector('a[href="/cubo"]')).toBeNull();
+    const range = host.querySelector(".card.is-chart fieldset.segmented");
+    expect(range?.closest(".chart-range")).not.toBeNull();
+    expect(range?.closest(".chart-range")?.nextElementSibling?.matches("figure.chart")).toBe(true);
+  });
+
+  it("says each warning once, where it happens, and never links to itself", async () => {
+    const host = await show("/cubo?fecha=2029-01-15", Cubo);
+    // No list of notices repeating the cards: the missing index is said by the
+    // statistics, with the way to fix it, and by nothing else.
+    expect(host.querySelector('[aria-label="Avisos del cubo"]')).toBeNull();
+    const notices = [...host.querySelectorAll(".notice")].map(text);
+    expect(notices.some((notice) => notice.includes("precio del índice"))).toBe(false);
+    expect(host.querySelector('.notice a[href="/cubo"]')).toBeNull();
     expect(host.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
   });
 

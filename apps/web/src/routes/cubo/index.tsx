@@ -21,6 +21,7 @@ import {
   costSummary,
   netWorth,
   settingsAt,
+  type Warning,
 } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { createMemo, For, type JSX, Show } from "solid-js";
@@ -29,7 +30,6 @@ import {
   EmptyState,
   Notice,
   type NoticeItem,
-  NoticeList,
   Section,
   StandaloneFees,
   useAsOf,
@@ -53,6 +53,24 @@ import { StatsCard } from "./StatsCard.jsx";
 import { ThesesCard } from "./ThesesCard.jsx";
 
 const MAX_POINTS = 120;
+
+/**
+ * What a card of this screen already says where it happens: the missing price
+ * in its cell, the rule that could not be evaluated under its heading, the
+ * sample and the index in the statistics. A list of notices repeating them was
+ * a second copy of the screen (review of 2026-09-19); what is left goes into
+ * the card it is about.
+ */
+const SAID_IN_PLACE = new Set([
+  "bucket_stop_loss_reached",
+  "bucket_stop_loss_not_evaluated",
+  "bucket_weight_not_evaluated",
+  "bucket_sample_too_small",
+  "bucket_contaminated_theses",
+  "missing_benchmark_price",
+  "missing_prices",
+  "stale_price",
+]);
 
 export default function CuboRoute(): JSX.Element {
   const asOf = useAsOf();
@@ -97,27 +115,21 @@ export default function CuboRoute(): JSX.Element {
           report().controls.warnings.filter(
             (warning) => warning.code === "bucket_stop_loss_reached",
           );
-        const others = () =>
-          [
-            ...positions().warnings,
-            ...theses().warnings,
-            ...report().stats.warnings,
-            ...report().controls.warnings,
-          ].filter((warning) => warning.code !== "bucket_stop_loss_reached");
-
         /** Each warning where it is fixed, the same notice as everywhere else. */
-        const notices = (): NoticeItem[] =>
-          others().map((warning) => ({
-            severity: "caution",
-            message: describeWarning(warning, { names, privacy: privacy() }),
-            // What is fixed on this very screen carries no link to itself.
-            action: ((to) => (to?.to === "/cubo" ? undefined : to))(
-              attentionDestination(warning.code) ?? {
-                label: "Ver movimientos",
-                to: "/movimientos",
-              },
-            ),
-          }));
+        const noticesOf = (warnings: readonly Warning[]): NoticeItem[] =>
+          warnings
+            .filter((warning) => !SAID_IN_PLACE.has(warning.code))
+            .map((warning) => ({
+              severity: "caution",
+              message: describeWarning(warning, { names, privacy: privacy() }),
+              // What is fixed on this very screen carries no link to itself.
+              action: ((to) => (to?.to === "/cubo" ? undefined : to))(
+                attentionDestination(warning.code) ?? {
+                  label: "Ver movimientos",
+                  to: "/movimientos",
+                },
+              ),
+            }));
         /** Nothing ever happened in the bucket: no thesis, no position, not a euro put in. */
         const empty = () =>
           positions().rows.length === 0 &&
@@ -169,6 +181,7 @@ export default function CuboRoute(): JSX.Element {
                 <StatsCard view={report().stats} plot={series()} />
                 <PositionsCard view={positions()} />
                 <BudgetCard
+                  notices={noticesOf(report().controls.warnings)}
                   view={report().controls}
                   worth={worth()}
                   limits={{
@@ -176,25 +189,21 @@ export default function CuboRoute(): JSX.Element {
                     maxWeightPct: settings().bucket_max_weight_pct,
                   }}
                 />
-                <ThesesCard view={theses()} />
+                <ThesesCard
+                  view={theses()}
+                  notices={noticesOf([
+                    ...theses().warnings,
+                    ...positions().warnings,
+                    ...report().stats.warnings,
+                  ])}
+                />
 
                 <Show when={fees().rows.length > 0}>
-                  <Section title="Costes del cubo" class="span-5">
+                  <Section title="Costes del cubo" class="span-12">
                     <StandaloneFees
                       view={fees()}
                       totalLabel="Total de comisiones sueltas del cubo"
                     />
-                  </Section>
-                </Show>
-
-                <Show when={notices().length > 0}>
-                  <Section
-                    title="Avisos del cubo"
-                    class={fees().rows.length > 0 ? "span-7" : "span-12"}
-                    label="Avisos del cubo"
-                    aside={<span>{notices().length}</span>}
-                  >
-                    <NoticeList items={notices()} label="Avisos" />
                   </Section>
                 </Show>
               </div>

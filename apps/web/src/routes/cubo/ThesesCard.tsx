@@ -1,12 +1,20 @@
-// "¿Gané más que la alternativa aburrida?" — rule 16: the reference is the
-// index, not zero.
+// "¿Gané más que la alternativa aburrida?" — the reference is the index, not
+// zero.
 //
 // The figure comes from `bucketTheses` and is not recomputed here. Where the
 // comparison is missing, the cell says **sin dato** and the row says why: a
 // column of dashes is not an explanation.
 
 import { type JSX, Show } from "solid-js";
-import { Amount, type DataColumn, DataTable, Section, Tag } from "../../components/index.js";
+import {
+  Amount,
+  type DataColumn,
+  DataTable,
+  type NoticeItem,
+  NoticeList,
+  Section,
+  Tag,
+} from "../../components/index.js";
 import type { ThesesView, ThesisRow } from "../../view-models/bucket/index.js";
 
 const COLUMNS: readonly DataColumn<ThesisRow>[] = [
@@ -63,12 +71,19 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
   },
 ];
 
-export const ThesesCard = (props: { view: ThesesView }): JSX.Element => (
+export const ThesesCard = (props: {
+  view: ThesesView;
+  /** What the theses warn of that no row says: no index set, a thesis closed still holding. */
+  notices?: readonly NoticeItem[];
+}): JSX.Element => (
   <Section
     title="Tesis frente al índice"
     class="span-12"
     aside={<span>la vara de medir es el índice, no el cero</span>}
   >
+    <Show when={(props.notices ?? []).length > 0}>
+      <NoticeList items={props.notices ?? []} label="Avisos de las tesis" />
+    </Show>
     <Show
       when={props.view.rows.length > 0}
       fallback={<p class="meta">Todavía no hay ninguna tesis.</p>}
@@ -80,7 +95,7 @@ export const ThesesCard = (props: { view: ThesesView }): JSX.Element => (
           {props.view.withoutIndex === 1
             ? "tesis no se puede comparar"
             : "tesis no se pueden comparar"}{" "}
-          con el índice. El motivo está en la propia fila y en los avisos: nunca se estima.
+          con el índice. El motivo está en la propia fila: nunca se estima.
         </p>
       </Show>
     </Show>
