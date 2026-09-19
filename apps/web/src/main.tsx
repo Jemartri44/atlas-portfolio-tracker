@@ -8,22 +8,16 @@ import { render } from "solid-js/web";
 import { App } from "./App.jsx";
 import { restoreLedger } from "./ledger/actions.js";
 import { store } from "./ledger/state.js";
+import { applyTheme } from "./shell/theme.js";
 import "./styles/index.css";
 
 const root = document.querySelector("#app");
 
 if (root !== null) {
   render(() => {
-    // The theme follows the system unless the user forced one; the tokens read
-    // `data-theme` both ways (styles/tokens.css), so nothing else is needed.
-    createEffect(() => {
-      const theme = store.theme();
-      if (theme === "system") {
-        document.documentElement.removeAttribute("data-theme");
-      } else {
-        document.documentElement.setAttribute("data-theme", theme);
-      }
-    });
+    // The theme follows the system unless the user forced one: the tokens and
+    // the colour of the browser's bar follow it too (`shell/theme.ts`).
+    createEffect(() => applyTheme(document, store.theme()));
     return <App />;
   }, root);
 
