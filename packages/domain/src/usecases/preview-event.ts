@@ -24,6 +24,7 @@ import type { FiscalLot, LedgerState, RealizedGain, Warning } from "../projectio
 import type { AccountId, AssetId, Draft, LedgerEvent, SupportedEvent } from "../schema/events.js";
 import type { UseCaseDeps } from "./deps.js";
 import { checkInvalid, completeDraft, duplicatesOf, type RecordOptions } from "./record-event.js";
+import { prepareCorrection } from "./rectify.js";
 
 /** Positions and open lots of the assets a candidate touches, at one point in time. */
 export interface EventEffect {
@@ -117,6 +118,51 @@ export const previewEvent = async <E extends SupportedEvent>(
     warnings: after.warnings.filter((warning) => warning.event_id === candidate.id),
     duplicates: duplicatesOf(before.fingerprints, candidate),
     newlyInvalid: affected.map((entry) => ({ ...entry })),
+    events,
+    state: before,
+    etag,
+  };
+};
+
+/**
+ * What a correction would do: the ledger **with the original reversed and the
+ * corrected event in its place**, the very pair `correctEvent` appends and the
+ * very check it runs (`prepareCorrection`). Adding the corrected event to the
+ * ledger as it is counted the movement twice — a deposit corrected from 8.700
+ * to 8.000 € showed 18.092,05 € of cash instead of 9.392,05 — and refused a
+ * purchase whose order the original itself had filled (review of 2026-09-19).
+ *
+ * A dependent event the correction would break is refused here as the write
+ * refuses it, so there is nothing to list in `newlyInvalid`. The duplicates are
+ * counted on the ledger after the correction, where the original no longer
+ * holds its fingerprint: a correction identical to its original repeats nothing.
+ */
+export const previewCorrection = async <E extends SupportedEvent>(
+  deps: UseCaseDeps,
+  targetId: string,
+  replacement: Draft<E>,
+  reason: string,
+  options: PreviewOptions = {},
+): Promise<EventPreview<E>> => {
+  const { events, etag } = await deps.store.load();
+  const {
+    target,
+    event,
+    state: after,
+  } = prepareCorrection(deps, events, targetId, replacement, reason);
+  const before = projectLedger(events, { collectErrors: true });
+  const assets = options.assets ?? [
+    ...new Set([...assetsOf(target as SupportedEvent), ...assetsOf(event)]),
+  ];
+  return {
+    candidate: event,
+    before: effectOf(before, assets),
+    after: effectOf(after, assets),
+    cash: cashChanges(before, after),
+    gains: after.gains.filter((gain) => gain.event_id === event.id),
+    warnings: after.warnings.filter((warning) => warning.event_id === event.id),
+    duplicates: duplicatesOf(after.fingerprints, event),
+    newlyInvalid: [],
     events,
     state: before,
     etag,
