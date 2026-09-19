@@ -41,7 +41,11 @@ const GLYPHS: Record<string, IconName> = {
 
 export const movementGlyph = (type: string): IconName => GLYPHS[type] ?? "movements";
 
-/** The figure of a movement: its amount, or its quantity when it has no amount. */
+/**
+ * The figure of a movement: its amount, or its quantity when it has no amount.
+ * A valuation's is a price per unit, and it is labelled so: next to amounts
+ * that changed hands, a bare "104,20 €" reads as money moved.
+ */
 export const MovementFigure = (props: { row: MovementRow }): JSX.Element => (
   <Show
     when={props.row.amount !== undefined}
@@ -51,6 +55,9 @@ export const MovementFigure = (props: { row: MovementRow }): JSX.Element => (
       </Show>
     }
   >
+    <Show when={props.row.price}>
+      <span class="meta">precio </span>
+    </Show>
     <Amount value={props.row.amount} />
   </Show>
 );

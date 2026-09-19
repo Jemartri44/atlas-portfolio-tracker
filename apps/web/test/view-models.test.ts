@@ -253,7 +253,9 @@ describe("movementRows", () => {
     expect(buy?.figureLabel === "importe liquidado" || buy?.figureLabel === "cantidad").toBe(true);
     expect(byType.get("cash_deposit")?.figureLabel).toBe("importe");
     expect(byType.get("dividend")?.figureLabel).toBe("importe bruto");
-    expect(byType.get("valuation")?.figureLabel).toBe("valor unitario");
+    expect(byType.get("valuation")?.figureLabel).toBe("precio");
+    expect(byType.get("valuation")?.price).toBe(true);
+    expect(byType.get("buy")?.price).toBeUndefined();
     expect(byType.get("transfer")?.figureLabel).toBe("cantidad traspasada");
     expect(byType.get("order_placed")?.figureLabel).toBe("importe pedido");
     // A reversal records no figure: it has nothing to show, not a zero.

@@ -65,6 +65,14 @@ describe("the list of movements", () => {
     expect(host.querySelector(".list-pane")?.classList.contains("span-12")).toBe(true);
   });
 
+  it("labels a valuation's figure as a price, not as money that moved", async () => {
+    withStyles(400);
+    const host = await show("/movimientos?tipo=valuation", Movimientos);
+    const rows = [...host.querySelectorAll(".rows .fig")].map((fig) => text(fig));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((fig) => fig.startsWith("precio "))).toBe(true);
+  });
+
   it("keeps every filter in sight beside the table from 1280px", async () => {
     withStyles(1440);
     const host = await show("/movimientos", Movimientos);

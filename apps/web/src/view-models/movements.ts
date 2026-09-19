@@ -36,6 +36,8 @@ export interface MovementRow {
   units: string;
   /** What the figure means, for the accessible label of the row. */
   figureLabel?: string;
+  /** The figure is a price per unit, not an amount that changed hands: it says so. */
+  price?: true;
   invalidReason?: string;
 }
 
@@ -51,6 +53,7 @@ interface Figure {
   amount?: Money | undefined;
   quantity?: Quantity | undefined;
   label?: string | undefined;
+  price?: true;
 }
 
 /**
@@ -77,7 +80,7 @@ const figureOf = (entry: LedgerEntry): Figure => {
     case "fx_exchange":
       return { amount: money(event.sold_amount, event.sold_currency), label: "importe vendido" };
     case "valuation":
-      return { amount: money(event.unit_value, event.currency), label: "valor unitario" };
+      return { amount: money(event.unit_value, event.currency), label: "precio", price: true };
     case "transfer":
       return { quantity: quantity(event.quantity_out), label: "cantidad traspasada" };
     case "swap":
@@ -193,6 +196,7 @@ export const movementRow = (
     ...(figure.quantity === undefined ? {} : { quantity: figure.quantity }),
     units: unitsOf(names, entry.asset_id),
     ...(figure.label === undefined ? {} : { figureLabel: figure.label }),
+    ...(figure.price === undefined ? {} : { price: figure.price }),
     ...(entry.invalid_reason === undefined ? {} : { invalidReason: entry.invalid_reason }),
   };
 };
