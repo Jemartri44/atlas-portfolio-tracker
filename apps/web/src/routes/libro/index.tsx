@@ -3,8 +3,11 @@
 // The folder goes first where it exists, because it writes the **same**
 // `ledger.jsonl` the CLI uses and there is no copy to keep in sync (ADR-0019).
 // Where it does not exist — every phone, Firefox, Safari (research.md §4) — the
-// browser comes first, with its limitation written down, never dressed up as
-// a definitive store, and the folder follows, dimmed, saying why.
+// browser is the one card, with its limitation written down, never dressed up
+// as a definitive store, and the folder is one line under it saying where it
+// can be used: half a phone screen for an option a phone cannot take was noise
+// (review of 2026-09-19). One primary button per screen: with the folder
+// available, the browser's is secondary.
 //
 // Two option cards, side by side on a wide screen and centred, because this is
 // a choice and not a screen of data (docs/design/system.md §7.1). Reconnecting
@@ -72,39 +75,38 @@ export default function LibroRoute(): JSX.Element {
   };
 
   const Folder = (): JSX.Element => (
-    <article
-      class={canUseDirectory() ? "card choice" : "card choice is-unavailable"}
-      aria-labelledby="h-folder"
-    >
+    <article class="card choice" aria-labelledby="h-folder">
       <span class="choice-glyph" aria-hidden="true">
         <Icon name="laptop" />
       </span>
-      <h2 id="h-folder">Una carpeta de tu ordenador</h2>
-      <Show when={canUseDirectory()}>
+      <div class="choice-head">
+        <h2 id="h-folder">Una carpeta de tu ordenador</h2>
         <Tag tone="done" icon="check">
           Recomendado
         </Tag>
-      </Show>
+      </div>
       <p>
         Eliges la carpeta que contiene tu <code>ledger.jsonl</code> y Atlas escribe en{" "}
         <strong>ese mismo archivo</strong>, el que usa la CLI. Sin copias y sin sincronizar nada. El
         permiso se recuerda; en una sesión nueva basta un clic.
       </p>
-      <Show
-        when={canUseDirectory()}
-        fallback={
-          <p class="card-note">
-            Este navegador no permite abrir carpetas del disco: Chrome o Edge en el ordenador sí.
-          </p>
-        }
-      >
-        <div class="choice-actions">
-          <button type="button" disabled={busy()} onClick={() => void run(openDirectoryLedger)}>
-            {phase().phase === "reconnect" ? "Elegir otra carpeta" : "Elegir la carpeta"}
-          </button>
-        </div>
-      </Show>
+      <div class="choice-actions">
+        <button type="button" disabled={busy()} onClick={() => void run(openDirectoryLedger)}>
+          {phase().phase === "reconnect" ? "Elegir otra carpeta" : "Elegir la carpeta"}
+        </button>
+      </div>
     </article>
+  );
+
+  /** The folder where this browser cannot open one: said in a line, not offered. */
+  const FolderElsewhere = (): JSX.Element => (
+    <p class="choice-elsewhere">
+      <Icon name="laptop" class="icon-sm" />
+      <span>
+        En el ordenador, con Chrome o Edge, Atlas puede guardar tus datos en una carpeta tuya, en el
+        mismo archivo que usa la CLI.
+      </span>
+    </p>
   );
 
   const Browser = (): JSX.Element => (
@@ -113,9 +115,6 @@ export default function LibroRoute(): JSX.Element {
         <Icon name="browser" />
       </span>
       <h2 id="h-browser">El almacenamiento del navegador</h2>
-      <Show when={!canUseDirectory()}>
-        <Tag>La vía de este navegador</Tag>
-      </Show>
       <p>
         Tus datos viven dentro del navegador de este dispositivo. Es la vía del móvil, de Firefox y
         de Safari, que no abren archivos del disco.
@@ -125,7 +124,12 @@ export default function LibroRoute(): JSX.Element {
         ellos. Expórtalos con frecuencia; Atlas te lo recordará.
       </p>
       <div class="choice-actions">
-        <button type="button" disabled={busy()} onClick={() => void run(openBrowserLedger)}>
+        <button
+          type="button"
+          class={canUseDirectory() ? "secondary" : undefined}
+          disabled={busy()}
+          onClick={() => void run(openBrowserLedger)}
+        >
           Usar el almacenamiento del navegador
         </button>
         <label class="file-button">
@@ -174,14 +178,20 @@ export default function LibroRoute(): JSX.Element {
       <Show
         when={phase().phase === "reconnect"}
         fallback={
-          <div class="choices">
-            <Show when={canUseDirectory()} fallback={<Browser />}>
+          <Show
+            when={canUseDirectory()}
+            fallback={
+              <div class="choices is-single">
+                <Browser />
+                <FolderElsewhere />
+              </div>
+            }
+          >
+            <div class="choices">
               <Folder />
-            </Show>
-            <Show when={canUseDirectory()} fallback={<Folder />}>
               <Browser />
-            </Show>
-          </div>
+            </div>
+          </Show>
         }
       >
         <article class="card choice is-single" aria-labelledby="h-reconnect">

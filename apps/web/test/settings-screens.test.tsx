@@ -81,15 +81,38 @@ describe("the settings", () => {
 });
 
 describe("the first run", () => {
-  it("offers first what this browser can do, and the folder after it, dimmed", async () => {
+  it("offers what this browser can do, and says the folder in one line", async () => {
     // happy-dom has no folder picker, like a phone, Firefox or Safari.
     const host = await show("/libro", Libro);
     const choices = [...host.querySelectorAll(".choices > .choice")];
     expect(choices.map((choice) => text(choice.querySelector("h2")))).toEqual([
       "El almacenamiento del navegador",
-      "Una carpeta de tu ordenador",
     ]);
-    expect(choices[1]?.classList.contains("is-unavailable")).toBe(true);
-    expect(choices[1]?.querySelector("button")).toBeNull();
+    // Its button is the one primary action of the screen.
+    expect(choices[0]?.querySelector("button")?.classList.contains("secondary")).toBe(false);
+    const elsewhere = host.querySelector(".choices > .choice-elsewhere");
+    expect(text(elsewhere)).toContain("Chrome o Edge");
+    expect(elsewhere?.querySelector("button")).toBeNull();
+  });
+
+  it("offers the folder first where there is one, with the one primary button", async () => {
+    const picker = window as unknown as { showDirectoryPicker?: () => Promise<never> };
+    picker.showDirectoryPicker = () => Promise.reject(new Error("no se usa"));
+    try {
+      const host = await show("/libro", Libro);
+      const choices = [...host.querySelectorAll(".choices > .choice")];
+      expect(choices.map((choice) => text(choice.querySelector("h2")))).toEqual([
+        "Una carpeta de tu ordenador",
+        "El almacenamiento del navegador",
+      ]);
+      // «Recomendado» beside its title, not indented under it.
+      expect(choices[0]?.querySelector(".choice-head > .tag")).not.toBeNull();
+      const primary = [...host.querySelectorAll(".choice button")].filter(
+        (button) => !button.classList.contains("secondary"),
+      );
+      expect(primary.map(text)).toEqual(["Elegir la carpeta"]);
+    } finally {
+      delete picker.showDirectoryPicker;
+    }
   });
 });

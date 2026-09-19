@@ -149,15 +149,28 @@
   margin-top: var(--space-2);
 }
 
-/* Offered, and said to be unavailable here: never hidden, never pressable. */
-.choice.is-unavailable {
-  background-color: var(--c-canvas);
-  box-shadow: none;
+/* The title and its tag on one line, the tag flush with the text under it. */
+.choice-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
 }
 
-.choice.is-unavailable > .choice-glyph {
-  background-color: var(--c-fill);
+/* The folder where this browser has none: one line saying where it works. */
+.choice-elsewhere {
+  align-items: start;
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.choice-elsewhere > .icon-sm {
   color: var(--c-text-3);
+  flex: none;
+  margin-top: var(--space-0);
 }
 
 @media (min-width: 64rem) {
@@ -166,8 +179,12 @@
     max-width: var(--choice-max);
   }
 
-  .choices {
+  .choices:not(.is-single) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .choices.is-single {
+    max-width: var(--reading-max);
   }
 
   .choice.is-single {
