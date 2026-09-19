@@ -2,7 +2,7 @@
 
 **Rama**: `feature/010-tax-output` · **Spec**: [`spec.md`](spec.md) · **Preguntas**: [`questions.md`](questions.md)
 
-**Fecha**: 2026-09-19 · **Estado**: **borrador para el visto bueno**. Sin código hasta que la 009, el rediseño y la PR #59 estén en `develop`. · **Entrada**: `docs/prompts/010-tax-output.md` (con §7), ADR-0020, ADR-0022, ADR-0021, ADR-0013, ADR-0016, ADR-0018, ADR-0003, ADR-0015, ADR-0019, ADR-0023.
+**Fecha**: 2026-09-19 · **Estado**: **aprobado por la dirección el 2026-09-19**, con las once respuestas de `questions.md` y una decisión fiscal nueva (los ETC y los ETP, rendimiento del capital mobiliario por defecto, §0.3). Sin código hasta que la 009, el rediseño y la PR #59 estén en `develop`: la dirección avisa. · **Entrada**: `docs/prompts/010-tax-output.md` (con §7), ADR-0020, ADR-0022, ADR-0021, ADR-0013, ADR-0016, ADR-0018, ADR-0003, ADR-0015, ADR-0019, ADR-0023.
 
 ---
 
@@ -25,7 +25,7 @@ Cinco decisiones de diseño sostienen el plan:
 2. **Las presentaciones son documentos administrativos de la pasada A**, como las tesis: se proyectan en orden de fichero y cada consulta las filtra por `filed_at`. La cadena de complementarias se valida al proyectar, y anular una sustituida se rechaza por la vía que ya existe para lo consumido (ADR-0003), sin código nuevo en `rectify.ts`.
 3. **Los modelos informativos viven en su módulo y leen precios por la única puerta.** `informative/` importa `prices.ts` y la proyección; nada de `tax/` ni `project-ledger.ts` lo alcanza. `prices.ts` gana la fecha del tipo en lo que devuelve, porque la regla del 31/12 la necesita.
 4. **La web no calcula nada.** Todo lo que decide (qué presentación está en vigor, qué casilla, qué veredicto, si la tarjeta sube) es una función del dominio; la web pone nombres en llano y enmascara.
-5. **Nada nuevo en el informe de la Renta si no hay presentaciones.** Lo que el informe gana (el cierre, la comparación) es opcional y solo aparece con una presentación en vigor; el informe fiscal del libro sintético no se mueve.
+5. **Nada nuevo en el informe de la Renta si no hay presentaciones.** Lo que el informe gana (el cierre, la comparación) es opcional y solo aparece con una presentación en vigor. El informe fiscal del libro sintético solo se mueve por la decisión nueva de la dirección sobre los ETC y los ETP (§0.3), con la predicción comiteada antes.
 
 ---
 
@@ -88,9 +88,26 @@ Validación: los cinco importes, decimales ≥ 0 (en `DECIMAL_RANGES`); **un avi
 
 El informe de la Renta **no** lista estos parámetros en `settings.from_code`: no mueven ninguna cifra de la Renta. El del 720 y el del 721 tienen su propio `from_code`.
 
-### 0.3 Los cálculos a mano
+### 0.3 Los ETC y los ETP, rendimiento del capital mobiliario por defecto (decisión de la dirección, respuesta a Q2)
 
-Los cuatro de §6 se escriben en `questions.md` y se comitean **antes** que el código que los calcula: el de la complementaria antes del bloque 1, los dos del 720 antes del bloque 3, la Renta de 2025 por casillas antes del bloque 2. Cada uno lo codifica después un test con los literales copiados de `questions.md`; toda discrepancia se investiga y se documenta allí sin tocar el literal hasta saber quién tenía razón.
+`DEFAULT_INCOME_CATEGORY.etc` y `.etp` pasan a `movable_capital`. La razón es la consulta vinculante DGT V0267-25, y es además la lectura prudente: como rendimiento, una pérdida solo compensa ganancias hasta el 25 %. La certeza es **alta** para el ETC y **media** para el ETP, que depende de la estructura de cada producto. Los dos siguen siendo configurables. El catálogo de criterios sustituye `etc_etp_category` por las entradas que numere `docs/fiscal-questions.md` (PR #60, otro agente), y el test anti-deriva obliga a seguirlo. Con el ETC en certeza alta, deja de ser dudoso (N18).
+
+Tres commits, en este orden, y **parada si se mueve algo no previsto**:
+
+1. **Predicción**, en `specs/010-tax-output/income-category-expectation.md`, escrita contra el documento ya fusionado.
+   - **Esperado en el libro sintético, solo en 2027**: las dos ventas forzosas de `ast_gold` del contrasplit del 06/06/2027 (−2,11 y −5,40) pasan de `capital_gains.lines` a `movable_capital.transmissions`, con categoría `movable_capital` y el criterio nuevo.
+   - Efecto en los saldos: el de ganancias va de 172,53 a 180,04 y el de rendimientos de 1,82 a −5,69. Aparece un paso de fase 1 de 5,69 (límite 45,01). La **base no cambia: 174,35**.
+   - Cambian también el apartado de dudosos (sale el del ETC) y `settings.from_code`, que se mantiene.
+   - 2026, 2028 y 2029, **idénticos byte a byte**.
+   - Además, la lista de tests de la 009 que usan `etc` o `etp` con la configuración por defecto, uno por uno, con lo que cada uno mueve.
+2. **Fijar el libro a mano de la 009** en `capital_gain` (N17): su cálculo a mano lo dice, y sus literales no se mueven. Un test nuevo le aplica el valor por defecto nuevo y comprueba lo que la 009 ya calculó a mano para esa lectura (base **175,70**).
+3. **El cambio de valor por defecto**, con la instantánea fiscal regenerada y el diff enumerado clave por clave contra la predicción.
+
+La web no cambia de código: el marcador de posición de Configuración lee el valor por defecto del dominio.
+
+### 0.4 Los cálculos a mano
+
+Los tres que exige el prompt (§6.1–§6.3) están **completos en `questions.md` y comiteados** (commit 3 de la tabla), antes que cualquier código. La Renta de 2025 por casillas (§6.4) está recalculada con el ETC en rendimientos y va en el mismo commit. Cada uno lo codifica después un test con los literales copiados de `questions.md`. Toda discrepancia se investiga y se documenta allí sin tocar el literal hasta saber quién tenía razón.
 
 ---
 
@@ -232,7 +249,7 @@ La búsqueda en fuentes oficiales (`questions.md`, «Casillas de 2025») cambió
 
 | Grupo | Conceptos | Sale de |
 |---|---|---|
-| Rendimientos del capital mobiliario | `rcm.interest`, `rcm.dividends`, `rcm.transmission` (transmisiones en `movable_capital`), `rcm.gross_total`, `rcm.expenses`, `rcm.net`, `rcm.withholding` | `movable_capital.*`, `withholdings` |
+| Rendimientos del capital mobiliario | `rcm.interest`, `rcm.dividends`, `rcm.transmission` (transmisiones en `movable_capital`, que por defecto son los ETC y los ETP: una línea por título, con su signo, en la 0031), `rcm.gross_total`, `rcm.expenses`, `rcm.net`, `rcm.withholding` | `movable_capital.*`, `withholdings` |
 | Filas de transmisiones, por apartado (F1) | `gp.iic.row`, `gp.etf.row`, `gp.listed_shares.row`, `gp.crypto.row`, `gp.other.row`. Por fila: denominación, NIF (siempre «falta en tus datos»), fechas, valor de transmisión, valor de adquisición, ganancia, pérdida obtenida, pérdida imputable, retención | `capital_gains.lines` + F5 |
 | Totales por apartado | `gp.<apartado>.gains`, `gp.<apartado>.losses` | suma de sus filas |
 | Ejercicios anteriores | `gp.prior_years.row` (pérdida que pasa a imputable este año, por origen), `gp.prior_years.losses` | F5 |
@@ -242,7 +259,7 @@ La búsqueda en fuentes oficiales (`questions.md`, «Casillas de 2025») cambió
 | Doble imposición | `ddi.income`, `ddi.foreign_tax` (sin casilla, N9), `ddi.first_limit` (rotulado «primer límite», nunca como el importe de la 0588) | `double_taxation` |
 | Retenciones | `withholding.rcm` (0597), `withholding.fund_reimbursement` (0603) | `withholdings` |
 
-`transmissionSection(assetType, incomeCategory)` decide el apartado con la tabla de F1. Mientras la dirección no la numere, lleva el criterio `section`, dudoso, en el catálogo, y el test anti-deriva de la 009 obligará a seguir al documento. Un ETC o un ETP en `capital_gain` va a `gp.other.row` **sin casilla**, y la salida lo dice.
+`transmissionSection(assetType, incomeCategory)` decide el apartado con la tabla de F1 (actualizada tras Q2). Con la configuración por defecto, un ETC o un ETP va a `rcm.transmission` (0031). Solo si el usuario lo configura en `capital_gain` va a `gp.other.row` **sin casilla**, y la salida lo dice. El criterio es el que numere el documento, y el test anti-deriva de la 009 obligará a seguirlo.
 
 ### 2.2 Las filas por origen (F5)
 
@@ -256,6 +273,8 @@ Con `P(O, año)`, lo que de la pérdida O sigue diferido al cierre del año:
 - **Fila de O**, en su año: pérdida obtenida = resultado propio; imputable = propio − `P(O, año)`.
 - **`gp.prior_years.row`** de cada año posterior: `P(O, año − 1) − P(O, año)`.
 - Las ganancias van con su resultado propio. Lo liberado nunca se suma a la fila que lo libera: va a su origen.
+- **Rendimientos del capital mobiliario** (ETC y ETP por defecto): no hay apartado de ejercicios anteriores. Lo liberado va a la 0031 del año en que se libera, en la fila del título que lo libera (F5, añadido tras Q2).
+- **Test pedido por la dirección (Q10)**, con su nombre: el #21 vuelve a aplazar una pérdida liberada y las filas de cada año suman **exactamente** lo que da el motor (`questions.md`, final de §6.4).
 
 **Invariante, con test en cada ejercicio de cada libro de prueba y en los 200 aleatorios**: la suma de las filas de ganancias menos la de las pérdidas imputables menos la de ejercicios anteriores es el saldo de ganancias y pérdidas del informe, redondeos aparte (F2). La marca de recompra se dice como lo que es: «marca la pérdida como no computable por recompra; la casilla no tiene número».
 
@@ -377,11 +396,11 @@ Método de la 009: diseño del libro con importes elegidos para el papel; cálcu
    - un reembolso de fondo con pérdida diferida a la mitad y otro con ganancia y retención;
    - un ETF, unas acciones con pérdida y otras que liberan una pérdida de 2024 (va a la 0395);
    - una cripto;
-   - un ETC en ganancias, sin casilla;
+   - un ETC, que con la decisión de Q2 va a rendimientos (0031, −50,00);
    - intereses con retención, un dividendo de EE. UU. con doble imposición y una custodia;
    - una Renta de 2024 presentada con un pendiente de 2023 anterior a la aplicación.
 
-   Cifras de control: 0422 660,00; 0423 320,00; **0424 340,00** (igual al saldo del motor); 0429 130,00; 0441 300,00; **0460 170,00**. El mismo libro en 2024 sale por conceptos y sin números.
+   Cifras de control: 0422 660,00; 0423 270,00; **0424 390,00** (igual al saldo de ganancias del motor); 0031 −50,00; **0429 80,00** (igual al de rendimientos); 0441 300,00; **0460 170,00**. El mismo libro en 2024 sale por conceptos y sin números.
 
 ---
 
@@ -393,11 +412,13 @@ Método de la 009: diseño del libro con importes elegidos para el papel; cálcu
 
 ---
 
-## §8 — Los valores por defecto no cambian nada
+## §8 — Los valores por defecto no cambian nada (salvo lo decidido)
 
-1. **Predicción antes**, en `specs/010-tax-output/snapshot-expectation.md`: la instantánea del libro sintético gana exactamente la clave `filings: []` y nada más; el informe fiscal (`synthetic-v1.tax.json`) **no se mueve**. Se comitea antes del commit que añade el tipo de evento.
-2. Sin presentaciones y con la configuración por defecto, `atlas tax` de todos los ejercicios del libro sintético da la misma salida (texto y `--json`) que en la base de la rama.
-3. Lo nuevo del informe (`filing`, `anchor.before_ledger`) solo aparece con presentaciones: se enumera en la predicción, no se «compara con develop».
+1. **Dos predicciones antes**, cada una en su commit:
+   - `income-category-expectation.md` (§0.3): lo que mueve la categoría nueva de los ETC y los ETP.
+   - `snapshot-expectation.md`: la instantánea del libro sintético gana exactamente la clave `filings: []` y nada más, y el informe fiscal no se mueve por el tipo de evento nuevo. Se comitea antes del commit que añade el tipo de evento.
+2. Sin presentaciones y con la configuración por defecto, `atlas tax` de todos los ejercicios del libro sintético da, **después del commit de §0.3**, la misma salida (texto y `--json`) de principio a fin de la feature.
+3. Lo nuevo del informe (`filing`, `anchor.before_ledger`) solo aparece con presentaciones. Se enumera en la predicción; no se «compara con develop».
 4. Cualquier movimiento no previsto es un hallazgo: se para y se pregunta.
 
 ---
@@ -413,33 +434,34 @@ Chromium de Playwright desde el *scratchpad*, nunca en un `package.json`. Captur
 | # | Commit | Bloque |
 |---|---|---|
 | 1 | `docs: bring prompt 010 and the amended ADR-0020 from PR 60` | hecho |
-| 2 | `docs(010): spec, plan and questions for the tax output` | este |
-| 3 | `fix(tax): start the year chain at the first filed return` | 0.1 (P5) |
-| 4 | `feat(settings): add the informative return thresholds and the tax season` | 0.2 |
-| 5 | `docs(010): hand-computed supplementary return` | §6.3, antes del 6 |
-| 6 | `docs(010): predict what the filing event moves in the golden snapshot` | §8 |
-| 7 | `feat(schema): add the tax_return_filed event` | 1.1–1.2 |
-| 8 | `feat(projections): project filed returns and their supplementary chain` | 1.4 |
-| 9 | `feat(ledger): fingerprint the ledger before a filed return and reseal it on compact` | 1.3 |
-| 10 | `refactor(tax): share one year chain that anchors on the filed returns` | 1.5 |
-| 11 | `feat(filings): warn when an event moves a closed tax year` | 1.6 |
-| 12 | `feat(tax): compare what was filed with what the ledger says today` | 1.7 |
-| 13 | `test(tax): check the supplementary return by hand` | §6.3 |
-| 14 | `docs(010): hand-computed 720 and 20,000 euro trigger` | §6.1–§6.2, antes del 15 |
-| 15 | `feat(prices): return the date of the rate with every price` | 3.3 |
-| 16 | `feat(informative): compute the 720 and 721 with a fail-safe verdict` | 3 |
-| 17 | `test(informative): check the 720 by hand` | §6.1–§6.2 |
-| 18 | `docs(010): hand-computed 2025 return by boxes` | §6.4, antes del 19 |
-| 19 | `feat(tax): lay the savings base out by concept and 2025 box` | 2 |
-| 20 | `test(tax): check the 2025 boxes by hand` | §6.4 |
-| 21 | `test(tax): prove the return reads no price with the 720 inside` | §7 |
-| 22 | `test(tax): prove the defaults change nothing` | §8 |
-| 23 | `feat(cli): add boxes, the informative returns and filed returns` | 5 |
-| 24 | `feat(web): add the fiscal screen and its summary card` | 4.1–4.2 |
-| 25 | `feat(web): record a filed return from the fiscal screen` | 4.3 |
-| 26 | `feat(web): say which filed return a change affects` | 4.4 |
-| 27 | `build(web): set the bundle ceiling to what the tax output measures` | 4.5 |
-| 28 | `docs(010): implementation notes` | cierre |
+| 2 | `docs(010): spec, plan and questions for the tax output` | hecho |
+| 3 | `docs(010): record the answers and the hand-computed returns` | hecho: respuestas y los cuatro cálculos a mano, **antes de cualquier código** |
+| 4 | `fix(tax): start the year chain at the first filed return` | 0.1 (P5), primer commit de código |
+| 5 | `feat(settings): add the informative return thresholds and the tax season` | 0.2 |
+| 6 | `docs(010): predict what the ETC and ETP income category moves` | 0.3, antes del 8 |
+| 7 | `test(tax): pin the hand-computed year of feature 009 to capital gains` | 0.3 |
+| 8 | `feat(settings): make ETC and ETP movable capital income by default` | 0.3 |
+| 9 | `docs(010): predict what the filing event moves in the golden snapshot` | §8, antes del 10 |
+| 10 | `feat(schema): add the tax_return_filed event` | 1.1–1.2 |
+| 11 | `feat(projections): project filed returns and their supplementary chain` | 1.4 |
+| 12 | `feat(ledger): fingerprint the ledger before a filed return and reseal it on compact` | 1.3 |
+| 13 | `refactor(tax): share one year chain that anchors on the filed returns` | 1.5 |
+| 14 | `feat(filings): warn when an event moves a closed tax year` | 1.6 |
+| 15 | `feat(tax): compare what was filed with what the ledger says today` | 1.7 |
+| 16 | `test(tax): check the supplementary return by hand` | §6.3 |
+| 17 | `feat(prices): return the date of the rate with every price` | 3.3 |
+| 18 | `feat(informative): compute the 720 and 721 with a fail-safe verdict` | 3 |
+| 19 | `test(informative): check the 720 by hand` | §6.1–§6.2 |
+| 20 | `feat(tax): lay the savings base out by concept and 2025 box` | 2 |
+| 21 | `test(tax): check the 2025 boxes by hand` | §6.4 y el test de Q10 |
+| 22 | `test(tax): prove the return reads no price with the 720 inside` | §7 |
+| 23 | `test(tax): prove the defaults change nothing` | §8 |
+| 24 | `feat(cli): add boxes, the informative returns and filed returns` | 5 |
+| 25 | `feat(web): add the fiscal screen and its summary card` | 4.1–4.2 |
+| 26 | `feat(web): record a filed return from the fiscal screen` | 4.3 |
+| 27 | `feat(web): say which filed return a change affects` | 4.4 |
+| 28 | `build(web): set the bundle ceiling to what the tax output measures` | 4.5 |
+| 29 | `docs(010): implementation notes` | cierre |
 
 `npm run lint` verde antes de cada commit y como último paso. Nunca `git push`, nunca fusiones.
 
@@ -450,6 +472,7 @@ Chromium de Playwright desde el *scratchpad*, nunca en un `package.json`. Captur
 | Qué | Dónde |
 |---|---|
 | P5, con su nombre | `packages/domain/test/tax/chain.test.ts` |
+| ETC y ETP en rendimientos por defecto; el libro a mano de la 009 con el valor nuevo (base 175,70) | `packages/domain/test/tax/income-category-default.test.ts` |
 | Configuración nueva: valores por defecto, rangos, `alert_above_threshold`, temporada | `packages/domain/test/settings/settings.test.ts` |
 | Forma del evento y sus rechazos | `packages/domain/test/schema/validate.test.ts` |
 | Cadena de complementarias, anulaciones, consulta anterior a `filed_at` | `packages/domain/test/projections/filings.test.ts` |

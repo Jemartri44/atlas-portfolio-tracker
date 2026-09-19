@@ -4,11 +4,11 @@
 
 **Creada**: 2026-09-19
 
-**Estado**: **borrador para el visto bueno de la dirección**. Solo especificación y plan: no hay código. La rama sale de `feature/visual-system` (`2cdc078`), apilada sobre `feature/009-tax-engine` y la PR #59, porque ninguna está todavía en `develop`; el primer commit trae el prompt, la ADR-0020 enmendada y el criterio #11 corregido de la PR #60. La implementación empieza cuando las ramas de las que depende estén integradas (excepción decidida por la dirección el 2026-09-19).
+**Estado**: **aprobado por la dirección el 2026-09-19**: las once preguntas respondidas (supuestos S1–S17 confirmados, Q10 con un test más) y una decisión fiscal nueva, los ETC y los ETP como rendimiento del capital mobiliario por defecto (FR-005). Solo especificación y plan: no hay código. La rama sale de `feature/visual-system` (`2cdc078`), apilada sobre `feature/009-tax-engine` y la PR #59, porque ninguna está todavía en `develop`; el primer commit trae el prompt, la ADR-0020 enmendada y el criterio #11 corregido de la PR #60. La implementación empieza cuando las ramas de las que depende estén integradas (excepción decidida por la dirección el 2026-09-19).
 
 **Entrada**: `docs/prompts/010-tax-output.md` con sus respuestas P1–P7; ADR-0020 (con sus dos enmiendas y su nota de erratas), ADR-0022, ADR-0021, ADR-0013, ADR-0016, ADR-0018, ADR-0003, ADR-0015, ADR-0019, ADR-0023; `docs/fiscal-questions.md` (#1–#23 y la cuestión ETC/ETP); `specs/009-tax-engine/` (spec, plan y `questions.md` con N1–N36); `docs/design/system.md` y `docs/design/brief.md`.
 
-**Preguntas**: [`questions.md`](questions.md). Cada supuesto de abajo (S1–S17) remite a la suya; **si no hay respuesta, se implementa el supuesto**.
+**Preguntas**: [`questions.md`](questions.md), respondidas. Cada supuesto de abajo (S1–S17) remite a la suya y está **confirmado**.
 
 ---
 
@@ -31,7 +31,7 @@ Seis reglas gobiernan la feature entera:
 - **R3 — Cerrado avisa, nunca rechaza, y nombra la declaración** (decisión (c)), por fecha **y** cuando se mueve una cifra declarada (P4).
 - **R4 — La Renta sigue sin leer un precio**, ahora con el 720 dentro. El motor de la Renta solo lee presentaciones `renta`, y de ellas solo los pendientes (decisión (d)); se demuestra tres veces.
 - **R5 — Nunca «no obligado» con datos incompletos** (decisión (h)).
-- **R6 — Los valores por defecto no cambian nada**: sin presentaciones y sin tocar la configuración, `atlas tax` da las mismas cifras que hoy, y lo que el informe gane es campo nuevo, enumerado antes.
+- **R6 — Los valores por defecto no cambian nada salvo lo que la dirección decidió**: la categoría de los ETC y los ETP (FR-005), con su predicción. Fuera de eso, sin presentaciones y sin tocar la configuración, `atlas tax` da las mismas cifras que hoy, y lo que el informe gane es campo nuevo, enumerado antes.
 
 ---
 
@@ -107,7 +107,7 @@ En mayo de 2027, el usuario abre Renta WEB con la aplicación al lado y quiere i
 1. **Dado** un ejercicio con correspondencia comprobada, **cuando** se pide su salida por casillas, **entonces** cada concepto sale con su número de casilla, su rótulo **literal**, la fuente oficial con su URL, la fecha de comprobación y su certeza.
 2. **Dado** un ejercicio sin correspondencia (hoy, todos menos 2025), **cuando** se pide, **entonces** sale la base **por conceptos, sin ningún número de casilla**, y lo dice. **Nunca** la casilla de otro ejercicio.
 3. **Dado** un concepto sin correspondencia en un ejercicio que sí la tiene para otros, **entonces** ese concepto sale sin número y lo dice.
-4. **Dado** una transmisión, **cuando** se ordena, **entonces** va al apartado que fije el criterio nuevo de la ficha F1 (fondos; en 2025, un apartado propio para los ETF; acciones negociadas; monedas virtuales; o rendimientos del capital mobiliario si su categoría de renta lo dice), y lleva ese criterio con su certeza. Un ETC o un ETP en ganancias sale sin casilla mientras su categoría siga en disputa.
+4. **Dado** una transmisión, **cuando** se ordena, **entonces** va al apartado que fije el criterio nuevo de la ficha F1 (fondos; en 2025, un apartado propio para los ETF; acciones negociadas; monedas virtuales; o rendimientos del capital mobiliario si su categoría de renta lo dice), y lleva ese criterio con su certeza. Un ETC o un ETP va por defecto a la casilla de rendimientos por transmisión de otros activos financieros (0031), un título por fila y con su signo; solo si el usuario lo configura como ganancia sale sin casilla, y lo dice.
 5. **Dado** una transmisión, **cuando** se muestra por operación, **entonces** da lo que pide el formulario de ese año: fechas, valor de transmisión, valor de adquisición, resultado y la parte no computable por recompra o la imputada de ejercicios anteriores. Lo que el libro no tiene (el NIF de una gestora) **se dice que falta**, no se inventa.
 6. **Dado** una casilla cuyo importe el motor no calcula entero (la deducción por doble imposición), **entonces** la salida da lo que sí sabe **rotulado como tal** («primer límite», no «importe de la casilla»).
 7. **Dado** cualquier cifra, **entonces** conserva los criterios de los que depende y la marca de dudosa que ya lleva en el informe de la 009.
@@ -193,7 +193,7 @@ En mayo, en el móvil, con la privacidad puesta, el usuario abre la tarjeta fisc
 1. **Estructural**: el test transitivo de arquitectura sigue viendo `tax/` (con los datos de las casillas) como camino fiscal, y **ni `tax/` ni `project-ledger.ts` alcanzan el módulo del 720 y el 721**, a ninguna profundidad, igual que no alcanzan `prices.ts` ni `valuations.ts`.
 2. **Por borrado**: borrar **todos los precios y todas las presentaciones `720` y `721`** deja el informe fiscal y la salida por casillas de **todos** los ejercicios **idénticos byte a byte**, en el libro sintético y en los libros a mano de la 009 y de esta feature.
 3. **Que la prueba no esté vacía**: el mismo borrado **sí** cambia la salida del 720.
-4. **Valores por defecto**: sin presentaciones y sin tocar la configuración, `atlas tax` da las mismas cifras que en la base de esta rama; `synthetic-v1.tax.json` no se mueve, y la instantánea del libro solo gana la clave `filings` (vacía), con la predicción comiteada antes.
+4. **Valores por defecto**: `synthetic-v1.tax.json` solo se mueve por FR-005 (las dos ventas forzosas de `ast_gold` de 2027 pasan a rendimientos, y la base no cambia), exactamente como diga su predicción. Fuera de eso, sin presentaciones y sin tocar la configuración, `atlas tax` da las mismas cifras de principio a fin de la feature, y la instantánea del libro solo gana la clave `filings` (vacía), también con su predicción comiteada antes.
 
 ---
 
@@ -228,6 +228,7 @@ Cada uno con test propio y con su nombre:
 - **FR-002**: `Settings` DEBE ganar, opcionales, resueltos en el punto de uso con su valor por defecto documentado y materializados al escribir (ADR-0022, N12 de la 009): `model_720_threshold_eur` (50.000), `model_720_increase_eur` (20.000), `model_721_threshold_eur` (50.000) y `model_721_increase_eur` (20.000; las fuentes oficiales confirman que la regla se aplica al 721, nota N3); `model_720_alert_threshold_eur` y `model_721_alert_threshold_eur` pasan a tener su valor por defecto (45.000, `business-rules.md` §7), que hoy no existe en el código; y `renta_season_start` / `renta_season_end` (`"04-01"` y `"06-30"`).
 - **FR-003**: la validación DEBE rechazar un aviso por encima de su umbral con un **código propio** (`alert_above_threshold`), traducido en las dos interfaces; y una temporada con fechas que no existen o con el inicio posterior al fin (`invalid_renta_season`).
 - **FR-004**: los tres cálculos a mano (plan §6.1–§6.3) y la Renta de 2025 por casillas (§6.4) DEBEN estar escritos en `questions.md` y comiteados **antes** del código que los calcula.
+- **FR-005** (decisión de la dirección, respuesta a Q2): `income_category.etc` y `income_category.etp` DEBEN pasar a `movable_capital` por defecto. Certeza alta para el ETC (DGT V0267-25) y media para el ETP, que depende de la estructura de cada producto; los dos siguen siendo configurables. La predicción de lo que mueve en `synthetic-v1.tax.json` y en los tests de la 009 se escribe y se comitea antes, y **se para si se mueve algo no previsto**. El libro a mano de la 009 fija `capital_gain`, que es lo que su cálculo dice.
 
 ### Bloque 1 — `tax_return_filed`
 
@@ -303,7 +304,7 @@ Cada uno con test propio y con su nombre:
 - **SC-001**: los tres cálculos a mano y la Renta de 2025 por casillas coinciden con el binario **al céntimo**, y están en la historia de git **antes** que el código.
 - **SC-002**: borrar precios y presentaciones `720`/`721` deja **idénticos byte a byte** el informe y la salida por casillas de todos los ejercicios del libro sintético, del de la 009 y de los de esta feature; el mismo borrado **cambia** el 720.
 - **SC-003**: el test de arquitectura ve `tax/` y los datos de casillas en el camino fiscal y a los modelos informativos fuera de su alcance.
-- **SC-004**: sin presentaciones y con la configuración por defecto, el informe fiscal del libro sintético no se mueve un byte; la instantánea del libro solo gana `filings: []`, predicho antes.
+- **SC-004**: el informe fiscal del libro sintético se mueve **solo** lo que predice `income-category-expectation.md` (FR-005), y después no se mueve un byte; la instantánea del libro solo gana `filings: []`, predicho antes.
 - **SC-005**: cada caso límite con test de nombre propio, y cada mutante de la lista del prompt (§5) muerto por un test que se nombra.
 - **SC-006**: `packages/domain` al 100 % de líneas y ramas; `lint`, `typecheck`, `test:coverage` y `build` en verde.
 - **SC-007**: capturas medidas en los tamaños y estados de la Historia 7, con los desbordamientos medidos con la privacidad **quitada**.
@@ -316,10 +317,10 @@ Cada uno con test propio y con su nombre:
 Cada uno está preguntado en `questions.md`; si no hay respuesta, se implementa así.
 
 - **S1** *(Q1)*: la huella es un SHA-256 del contenido canónico de los eventos anteriores, **migrados a la versión que la huella declara**, más su número; `compact` la verifica antes de reescribir y la vuelve a sellar en la versión nueva.
-- **S2** *(Q2, ficha F1)*: apartado de cada transmisión en 2025: `fund` y `money_market` al de IIC (0310–0325); `etf` al apartado nuevo de 2025 para las IIC del art. 75.3.j) RIRPF (2224–2236); `stock` al de acciones negociadas (0326–0340); `crypto` al de monedas virtuales (1800–1814); cualquier tipo con categoría `movable_capital`, a la casilla 0031; `etc` y `etp` en `capital_gain`, **sin casilla** mientras su categoría siga en disputa (y la salida lo dice).
+- **S2** *(Q2, ficha F1, respondida)*: apartado de cada transmisión en 2025: `fund` y `money_market` al de IIC (0310–0325); `etf` al apartado nuevo de 2025 para las IIC del art. 75.3.j) RIRPF (2224–2236); `stock` al de acciones negociadas (0326–0340); `crypto` al de monedas virtuales (1800–1814); todo lo que esté en `movable_capital` (**por defecto, los ETC y los ETP**, FR-005) a la casilla 0031, un título por fila y con su signo; un `etc` o `etp` que el usuario configure en `capital_gain`, sin casilla y dicho.
 - **S3** *(Q3, ficha F2)*: por operación, valor de transmisión y de adquisición redondeados cada uno una vez; la salida enseña el resultado que calculará el formulario y avisa si difiere en un céntimo del del motor.
 - **S4** *(Q4, ficha F3)*: el saldo medio es la media de los saldos al cierre de cada día natural, convertida al tipo del 31/12 (FAQ de la AEAT, certeza alta); el periodo empieza el 1/10 o, si la cuenta aparece en el trimestre, en su primer movimiento (DGT V0630-25); una cuenta cerrada en el trimestre cuenta con saldo cero desde el cierre.
-- **S5** *(Q5)*: sin un evento con tipo del 31/12 para una divisa que solo es efectivo, el saldo sale marcado y el veredicto cae en «no se puede determinar» salvo que lo demás ya obligue; la acción lo dice.
+- **S5** *(Q5)*: sin un evento con tipo del 31/12 para una divisa que solo es efectivo, el saldo sale marcado y el veredicto cae en «no se puede determinar» salvo que lo demás ya obligue; la acción dice cómo resolverlo. Un evento para anotar tipos es una decisión aparte, fuera de esta feature.
 - **S6** *(Q6)*: el país de una cuenta a 31/12 es el de su último `account_*` registrado hasta ese día (fecha administrativa), y la salida lo dice cuando hay un cambio.
 - **S7** *(Q7)*: una extinción obliga en el ejercicio en que se deja de ser titular (bien de la lista del último 720, que se tenía a 31/12 del año anterior y no a 31/12 del año evaluado); una cuenta se extingue al marcarse inactiva, no por quedarse a cero; una venta parcial no es extinción.
 - **S8** *(Q8)*: un ejercicio pasado sin presentación registrada da una **nota** informativa («no consta como declarado; si lo presentaste, regístralo»), no el aviso de declaración.

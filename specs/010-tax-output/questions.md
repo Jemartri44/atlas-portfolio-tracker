@@ -10,6 +10,24 @@ Las fuentes oficiales se consultaron el 2026-09-19 con dos búsquedas independie
 
 ---
 
+> **Todas respondidas por la dirección el 2026-09-19**, antes de escribir código. Las once recomendaciones se aceptan (Q10, con un test añadido). Q2 trae además **una decisión fiscal nueva**: los ETC y los ETP pasan a ser rendimiento del capital mobiliario por defecto. El documento de criterios lo actualiza otro agente en la PR #60; el catálogo `FISCAL_CRITERIA` seguirá lo que ese documento diga (test anti-deriva de la 009).
+
+## Respuestas de la dirección (2026-09-19)
+
+| # | Respuesta | Qué cambia respecto al supuesto |
+|---|---|---|
+| **Q1** | **Aceptada**: huella sobre el contenido migrado a su propia versión; `compact` comprueba que las huellas de las presentaciones siguen cuadrando (y las vuelve a sellar) | Nada |
+| **Q2** | **Decisión nueva**, a raíz de la V0267-25 y porque es la opción prudente (una pérdida como rendimiento del capital mobiliario solo compensa ganancias hasta el 25 %): **`income_category.etc` = `movable_capital` por defecto, certeza alta**; **`income_category.etp` = `movable_capital` por defecto, certeza media** (depende de la estructura de cada producto; casi todos los ETP de cripto europeos son notas de deuda). Los dos siguen siendo configurables. Entra en el **bloque 0**, con la predicción de lo que mueve en `synthetic-v1.tax.json` escrita y comiteada antes y parada si se mueve algo no previsto | **F1**: ETC y ETP van a la **0031** por defecto; ya no se quedan sin casilla. Un bloque 0 con un commit más (plan §0.3) |
+| **Q3** | **Aceptada** (F2): una fila por operación, cada importe redondeado, aviso si difiere un céntimo | Nada |
+| **Q4** | **Aceptada** (F3): el primer movimiento como fecha de apertura, con su certeza declarada | Nada |
+| **Q5** | **Aceptada**: «no se puede determinar», con cómo resolverlo. Un evento para anotar tipos es una decisión aparte, **fuera de esta feature** | Nada |
+| **Q6–Q9** | **Aceptadas** las cuatro recomendaciones | Nada |
+| **Q10** | **Aceptada** (F5), **con un test** en el que el #21 vuelva a aplazar una pérdida liberada y las filas sumen exactamente lo que da el motor | Un test con nombre (plan §2.2) |
+| **Q11** | **Aceptada**: en temporada **o** cuando hay algo que hacer; «no se puede determinar» cuenta | Nada |
+| N3 | **`model_721_increase_eur` aprobado** (art. 42 quater.6) | Nada |
+
+---
+
 ## Índice
 
 | # | Tema | Recomendación | Si la respuesta es otra |
@@ -238,21 +256,21 @@ Además, el prompt lista como «algo que hacer» un veredicto de obligado sin pr
 
 Formato de `docs/fiscal-questions.md`. Las numera la dirección. El test anti-deriva de la 009 exigirá después que el catálogo `FISCAL_CRITERIA` las siga.
 
-> **F1 — Apartado de la Renta de cada transmisión.**
+> **F1 — Apartado de la Renta de cada transmisión** *(actualizada con la respuesta a Q2)*.
 >
 > Criterio:
 > - `fund` y `money_market` → IIC (0310–0325).
 > - `etf` → apartado de IIC del art. 75.3.j) RIRPF (2224–2236, nuevo en 2025).
 > - `stock` → acciones negociadas (0326–0340).
 > - `crypto` → monedas virtuales (1800–1814).
-> - Categoría `movable_capital` → rendimientos por transmisión de otros activos financieros (0031).
-> - `etc` y `etp` en `capital_gain` → sin casilla hasta que se resuelva su categoría.
+> - Categoría `movable_capital`, **que desde la respuesta a Q2 es la de `etc` y `etp` por defecto** → rendimientos procedentes de la transmisión, amortización o reembolso de otros activos financieros (**0031**), cada título por separado y con su signo (la ayuda de Renta WEB 2025: «Los rendimientos negativos se consignarán precedidos del signo menos (-)» y «El cómputo de cada rendimiento debe efectuarse, individualmente, por cada título o activo»).
+> - Un `etc` o `etp` que el usuario configure en `capital_gain` → sin casilla, dicho en la salida: ningún texto oficial dice dónde iría.
 >
-> Fundamento: formulario de la Orden HAC/277/2026 y su preámbulo; ayuda de Renta WEB 2025; DGT V0267-25 para los ETC.
+> Fundamento: formulario de la Orden HAC/277/2026 y su preámbulo; ayuda de Renta WEB 2025; DGT V0267-25.
 >
-> **Certeza**: alta para fondos, ETF, acciones y cripto en 2025; media para `movable_capital`; ninguna para ETC/ETP en ganancias.
+> **Certeza**: alta para fondos, ETF, acciones, cripto y ETC en 2025; media para ETP (sigue a su categoría).
 >
-> **Riesgo**: neutro en la base (todo suma en 0422/0423); lo que cambia es el cruce con los datos fiscales de la AEAT.
+> **Riesgo**: neutro en la base (todo suma en 0422/0423 o en 0036); lo que cambia es el cruce con los datos fiscales de la AEAT.
 
 > **F2 — Filas y redondeo de las casillas por operación.**
 >
@@ -299,6 +317,8 @@ Formato de `docs/fiscal-questions.md`. Las numera la dirección. El test anti-de
 > Fundamento: estructura del formulario de 2025 (pérdida obtenida e imputable por operación; 0394–0396 para ejercicios anteriores); ayuda de Renta WEB sobre la «integración diferida de determinadas pérdidas por recompra».
 >
 > **Certeza**: baja. **Riesgo**: neutro; no cambia ningún total, solo en qué fila va cada importe.
+>
+> **Añadido tras Q2.** Con los ETC en rendimientos del capital mobiliario, una pérdida diferida de un ETC no tiene apartado de «ejercicios anteriores» en el capital mobiliario: según la ayuda de la 0031, el rendimiento negativo diferido «se integrará a medida que se transmitan los activos financieros que permanezcan en el patrimonio». Se lleva a la **0031 del ejercicio en que se libera**, en la fila del título que la libera. Certeza media. El total de la 0031 coincide con el de transmisiones del capital mobiliario del informe.
 
 ---
 
@@ -327,6 +347,10 @@ Ninguna bloquea. Las anoto porque la dirección pidió que se dijera lo que pare
 - **N13 — `TaxOptions.filed` desaparece.** Los tests de la 009 que lo usan pasan a construir presentaciones con `LedgerBuilder`, con los mismos literales. Mantenerlo sería una segunda puerta al ancla que la CLI o la web podrían usar sin el libro.
 - **N14 — El prompt dice que el 720 «es la única ruta fiscal que lee precios».** El 721 también los lee, en el mismo módulo y por la misma puerta. Sin consecuencia, pero los documentos deberían decir «los modelos informativos».
 - **N15 — «Importe global» por fondo en el formulario.** Los apartados de IIC y de ETF piden importes globales por sociedad o fondo. Juntar en una fila una venta con pérdida diferida y otra con ganancia hace imposible decir la parte imputable. Por eso F2 propone una fila por operación, con el mismo NIF repetido.
+
+- **N16 — El valor por defecto nuevo de los ETC y los ETP, frente a ADR-0022.** ADR-0022 dice que cambiar un valor por defecto no altera ningún libro ya escrito. Eso es cierto para un libro cuyo `settings_changed` materializa `income_category`, y no lo es para uno escrito antes de la materialización. En ese caso el tipo ausente toma el valor por defecto al leer. **El libro sintético es de estos**: sus tres `settings_changed` no tienen `income_category`. Por eso su informe se mueve, y la predicción lo enumera. El libro real está vacío, así que no hay nada que migrar. El informe ya lista `income_category.etc` y `.etp` en `settings.from_code`, lo que dice de dónde salió la categoría.
+- **N17 — El libro a mano de la 009 cambia de configuración sin querer.** `exercise-ledger.ts` escribe `{...DEFAULT_SETTINGS, …}`, y su cálculo a mano dice «todo `capital_gain`». Con el valor por defecto nuevo, el test dejaría de ser el cálculo que dice codificar. En el commit del cambio de valor por defecto, ese libro fija `income_category` en `capital_gain` explícitamente, y sus literales no se mueven. Un test nuevo comprueba el mismo libro **con el valor por defecto nuevo** contra lo que el cálculo de la 009 ya hizo a mano para esa lectura: ganancias 462,50; rendimientos −26,00; 26,00 compensados en la fase 1 (límite 115,63); **base 175,70**. Los demás tests de la 009 que usan `etc` o `etp` con la configuración por defecto se enumeran en la predicción, uno por uno, antes de tocarlos.
+- **N18 — El dudoso de la categoría se parte en dos.** Con el ETC en certeza alta deja de ser dudoso (la 009 llama dudoso a todo lo que no es de certeza alta, Q8). El ETP en certeza media sigue siéndolo. El catálogo sustituye `etc_etp_category` por las entradas que numere el documento, y el test anti-deriva lo exige.
 
 ---
 
@@ -395,140 +419,211 @@ Para que la dirección lo traslade a `docs/`. El primer ejercicio real del usuar
 
 ## Cálculos a mano
 
-Método de la 009. Aquí están **el diseño del libro y las cifras calculadas a mano** con los supuestos recomendados. Tras las respuestas, cada cálculo se completa paso a paso (conversiones, lotes, redondeos) y **se comitea antes que el código** que lo calcula (plan §6). Después, el test copia estos literales. Todos los importes son en euros salvo que se diga otra cosa.
+Método de la 009: el diseño del libro con importes elegidos para el papel, el cálculo paso a paso y **el commit antes que el código** que lo calcula. Cuando llegue ese código, el test copia estos literales, y toda discrepancia se investiga y se documenta aquí sin tocar el literal hasta saber quién tenía razón.
+
+**Estado (2026-09-19)**: los tres cálculos que exige el prompt (§6.1–§6.3) están **completos**, con las respuestas de la dirección ya aplicadas, y cada cifra se ha comprobado con aritmética decimal exacta. La Renta de 2025 por casillas (§6.4) está recalculada con el ETC como rendimiento del capital mobiliario. Todo va en este commit, que es anterior a cualquier código de la feature.
+
+Convenciones:
+- Importes en euros salvo que se diga otra cosa.
+- En todas las operaciones, `trade_date = value_date`, y `fx_rate_date` es esa misma fecha (siempre de lunes a viernes).
+- Las operaciones en euros llevan el tipo `"1"` y no tienen comisión.
+- La configuración es un único `settings_changed` con los valores por defecto resueltos (umbral de 50.000, subida de 20.000 y aviso de 45.000 para el 720).
 
 ### §6.1 — Un 720 a 31/12/2027 (viernes)
 
-**Catálogo**:
-- `acc_es`: MyInvestor, `ES`. Contiene `fund_es` (fondo) y efectivo.
-- `acc_ib`: IBKR, `IE`, cartera. Contiene `etf_us` (ETF en USD), `etc_au` (ETC en EUR), `etp_bt` (ETP en EUR) y efectivo en EUR y USD.
-- `acc_ib2`: IBKR, `IE`, cubo. Contiene `stock_x` (acciones en EUR) y efectivo en EUR.
+**Catálogo**
 
-**Eventos de 2027** (todos con fecha fiscal = fecha valor):
+| Cuenta | Libro | País | Activos |
+|---|---|---|---|
+| `acc_es` | núcleo | `ES` | `fund_es` (`fund`, EUR) |
+| `acc_ib` | núcleo | `IE` | `etf_us` (`etf`, USD), `etc_au` (`etc`, EUR), `etp_bt` (`etp`, EUR) |
+| `acc_ib2` | cubo | `IE` | `stock_x` (`stock`, EUR), con su tesis |
 
-| Fecha | Cuenta | Evento |
-|---|---|---|
-| 04/01 | `acc_es` | Ingreso de 100.000,00 |
-| 05/01 | `acc_es` | Compra de `fund_es` por 60.000,00; efectivo 40.000,00 |
-| 01/03 | `acc_ib` | Ingreso de 53.500,00 |
-| 02/03 | `acc_ib` | Compra de 1.000 `etc_au` a 20,00 |
-| 03/03 | `acc_ib` | Compra de 2 `etp_bt` a 3.500,00 |
-| 04/03 | `acc_ib` | `fx_exchange`: vende 16.500,00 EUR y compra 18.000,00 USD; EUR queda en 10.000,00 |
-| 05/03 | `acc_ib` | Compra de 100 `etf_us` a 150,00 USD; USD queda en 3.000,00 |
-| 01/06 | `acc_ib2` | Ingreso de 6.500,00 |
-| 02/06 | `acc_ib2` | Compra de 100 `stock_x` a 60,00; efectivo 500,00 |
-| 16/11 | `acc_ib` | Ingreso de 4.000,00 EUR |
-| 01/12 | `acc_ib` | Ingreso de 2.500,00 USD (tipo 1,08, del 01/12) |
-| 20/12 | `acc_ib2` | Retirada de 2.000,00; efectivo −1.500,00 |
-| 30/12 | `acc_ib2` | Valoración de `stock_x` a 60,00: **fechada el 30/12** |
-| 31/12 | `acc_ib` | Retirada de 2.000,00 EUR |
-| 31/12 | `acc_ib` | Valoraciones: `etf_us` a 165,01 USD (tipo 1,10, del 31/12); `etc_au` a 22,00; `etp_bt` a 4.000,0025 |
-| 31/12 | `acc_es` | Valoración de `fund_es` a su precio |
+**Eventos**
 
-**Fuera del cálculo**: `acc_es`, porque es española. Si contara, sus 40.000,00 de efectivo llevarían las cuentas a 55.500,00, por encima del umbral. La exclusión decide el veredicto.
-
-**Cuentas**. El trimestre tiene 92 días.
-
-- **`acc_ib` en EUR**: 46 días a 10.000,00 (1/10–15/11), 45 días a 14.000,00 (16/11–30/12) y 1 día a 12.000,00 (31/12).
-  - Suma de saldos diarios: 1.102.000,00.
-  - Media: 1.102.000,00 / 92 = 11.978,2608695…
-- **`acc_ib` en USD**: 61 días a 3.000,00 (1/10–30/11) y 31 días a 5.500,00 (1/12–31/12).
-  - Suma: 353.500,00 USD.
-  - Media: 3.842,3913043… USD, que al tipo del 31/12 (1,10) son 3.493,0830039… €.
-  - Saldo a 31/12: 5.500,00 USD / 1,10 = 5.000,00 €.
-- **Bien `acc_ib`**:
-  - Saldo a 31/12: 12.000,00 + 5.000,00 = **17.000,00**.
-  - Media: 11.978,2608695… + 3.493,0830039… = 15.471,3438735… → **15.471,34**.
-- **`acc_ib2` en EUR**: 80 días a 500,00 (1/10–19/12) y 12 días a −1.500,00 (20/12–31/12).
-  - Suma: 40.000,00 − 18.000,00 = 22.000,00.
-  - Media: 22.000,00 / 92 = 239,1304347… → **239,13**.
-  - Saldo a 31/12: **−1.500,00**, que se netea con los demás.
-- **Categoría**:
-  - Saldo a 31/12: 17.000,00 − 1.500,00 = **15.500,00**.
-  - Saldo medio: 15.471,34 + 239,13 = **15.710,47**.
-  - Los dos saldos están por debajo del umbral, todos los tipos son del 31/12 y ningún bien lleva marca → **no obligado**.
-
-**Valores**:
-
-| Bien | Cálculo | Exacto | Redondeado | Marca |
+| # | Fecha | Cuenta | Evento | Efectivo después |
 |---|---|---|---|---|
-| `etf_us` | 100 × 165,01 USD / 1,10 | 15.000,9090… | 15.000,91 | — |
-| `etc_au` | 1.000 × 22,00 | 22.000,00 | 22.000,00 | — |
-| `etp_bt` | 2 × 4.000,0025 | 8.000,005 | **8.000,01** (half-up; half-even daría 8.000,00) | — |
-| `stock_x` | 100 × 60,00 | 6.000,00 | 6.000,00 | **valoración del 30/12** |
+| A1 | 04/01 | `acc_es` | `cash_deposit` 100.000,00 | 100.000,00 |
+| A2 | 05/01 | `acc_es` | `buy` `fund_es`, `amount` 60.000,00 | 40.000,00 |
+| A3 | 01/03 | `acc_ib` | `cash_deposit` 52.000,00 | EUR 52.000,00 |
+| A4 | 02/03 | `acc_ib` | `buy` 1.000 `etc_au` a 20,00 | EUR 32.000,00 |
+| A5 | 03/03 | `acc_ib` | `buy` 2 `etp_bt` a 3.500,00 | EUR 25.000,00 |
+| A6 | 04/03 | `acc_ib` | `fx_exchange`: vende 15.000,00 EUR y compra 18.000,00 USD (tipos 1 y 1,2) | EUR 10.000,00 · USD 18.000,00 |
+| A7 | 05/03 | `acc_ib` | `buy` 100 `etf_us` a 150,00 USD, tipo 1,2 | USD 3.000,00 |
+| A8 | 01/06 | `acc_ib2` | `cash_deposit` 6.500,00 | 6.500,00 |
+| A9 | 02/06 | `acc_ib2` | `buy` 100 `stock_x` a 60,00 | 500,00 |
+| A10 | 16/11 | `acc_ib` | `cash_deposit` 4.000,00 EUR | EUR 14.000,00 |
+| A11 | 01/12 | `acc_ib` | `cash_deposit` 2.500,00 USD, tipo 1,08 del 01/12 | USD 5.500,00 |
+| A12 | 20/12 | `acc_ib2` | `cash_withdrawal` 2.000,00 | **−1.500,00** |
+| A13 | 30/12 | `acc_ib2` | `valuation` `stock_x`: 100 a 60,00 EUR, **fechada el 30/12** | |
+| A14 | 31/12 | `acc_ib` | `cash_withdrawal` 2.000,00 EUR | EUR 12.000,00 |
+| A15 | 31/12 | `acc_ib` | `valuation` `etf_us`: 100 a 165,01 USD, tipo 1,10 del 31/12 | |
+| A16 | 31/12 | `acc_ib` | `valuation` `etc_au`: 1.000 a 22,00 | |
+| A17 | 31/12 | `acc_ib` | `valuation` `etp_bt`: 2 a 4.000,0025 | |
+| A18 | 31/12 | `acc_es` | `valuation` `fund_es`: a su valor liquidativo | |
 
-- **Suma de los bienes redondeados: 51.000,92.** La suma exacta, redondeada una sola vez, sería 51.000,91. Esa diferencia es la lectura del #6: se redondea cada bien y luego se suma.
-- **Veredicto: obligado, decidido con un valor marcado.** Con `stock_x` la suma supera el umbral; sin él quedaría en 45.000,92, por debajo. La salida lo dice y nombra la valoración del 30/12.
-- **Aviso previo**: sin el valor marcado (45.000,92), la categoría ya está por encima de 45.000.
+**Paso 1 — Qué cuenta.** `acc_es` es española y queda fuera entera, con su fondo y sus 40.000,00 de efectivo. Si contara, las cuentas sumarían 55.500,00 y obligarían: **la exclusión decide el veredicto**, y la salida lo dice. `acc_ib` y `acc_ib2` son irlandesas y cuentan. `acc_ib2` es del cubo: los dos libros se agregan como total fiscal (constitución III).
+
+**Paso 2 — Cantidades a 31/12**, proyectadas con `asOf = 2027-12-31`:
+- Posiciones físicas: `acc_ib`: `etf_us` 100, `etc_au` 1.000, `etp_bt` 2; `acc_ib2`: `stock_x` 100.
+- Efectivo: `acc_ib` EUR 12.000,00 y USD 5.500,00; `acc_ib2` EUR −1.500,00.
+
+**Paso 3 — El tipo del 31/12.** El último día de lunes a viernes no posterior al 31/12/2027 es el propio 31/12 (viernes). El último tipo del dólar que conoce el libro a esa fecha es el de A15: 1,10, fechado el 31/12. **No lleva marca.**
+
+**Paso 4 — Saldo a 31/12, por bien (la cuenta)**:
+- `acc_ib`: 12.000,00 + 5.500,00 / 1,10 = 12.000,00 + 5.000,00 = **17.000,00**.
+- `acc_ib2`: **−1.500,00**.
+
+**Paso 5 — Saldo medio del cuarto trimestre** (F3). Son 92 días naturales, del 1/10 al 31/12, y las dos cuentas existían antes del 1/10. Los saldos salen de proyecciones con `asOf` el 30/09 y en cada fecha del trimestre con movimiento de efectivo en una cuenta extranjera (16/11, 01/12, 20/12 y 31/12).
+
+| Cuenta y divisa | Tramos (días × saldo al cierre del día) | Suma | Media |
+|---|---|---|---|
+| `acc_ib` EUR | 46 × 10.000,00 (1/10–15/11) + 45 × 14.000,00 (16/11–30/12) + 1 × 12.000,00 (31/12) | 1.102.000,00 | 11.978,26086956… |
+| `acc_ib` USD | 61 × 3.000,00 (1/10–30/11) + 31 × 5.500,00 (1/12–31/12) | 353.500,00 USD | 3.842,39130434… USD → / 1,10 = 3.493,08300395… € |
+| `acc_ib2` EUR | 80 × 500,00 (1/10–19/12) + 12 × −1.500,00 (20/12–31/12) | 22.000,00 | 239,13043478… |
+
+- Bien `acc_ib`: 11.978,26086956… + 3.493,08300395… = 15.471,34387351… → **15.471,34**. Se redondea una vez por bien, después de sumar sus divisas.
+- Bien `acc_ib2`: **239,13**.
+
+**Paso 6 — Categoría de cuentas**:
+- Saldo a 31/12: 17.000,00 − 1.500,00 = **15.500,00**. El negativo se netea.
+- Saldo medio: 15.471,34 + 239,13 = **15.710,47**.
+- Todos los bienes tienen valor y ningún tipo lleva marca, así que el dato está completo. Los dos saldos están por debajo de 50.000 → **no obligado**. Los dos están por debajo de 45.000 → **sin aviso**.
+
+**Paso 7 — Valores**, por `prices.ts`, solo Nivel 1:
+
+| Bien | Valoración (fecha) | Tipo (fecha) | Exacto | Redondeado (half-up) | Marca |
+|---|---|---|---|---|---|
+| (`acc_ib`, `etf_us`) | 165,01 USD (31/12) | 1,10 (31/12) | 100 × 165,01 / 1,10 = 15.000,90909… | **15.000,91** | — |
+| (`acc_ib`, `etc_au`) | 22,00 (31/12) | 1 | 22.000,00 | **22.000,00** | — |
+| (`acc_ib`, `etp_bt`) | 4.000,0025 (31/12) | 1 | 8.000,005 | **8.000,01** (half-even daría 8.000,00) | — |
+| (`acc_ib2`, `stock_x`) | 60,00 (**30/12**) | 1 | 6.000,00 | **6.000,00** | `valuation_not_year_end` (30/12) |
+
+- **Suma de los bienes redondeados: 51.000,92.** La suma exacta redondeada una sola vez daría 51.000,91: esa es la lectura del #6.
+- Sin el bien marcado: 45.000,92.
+
+**Paso 8 — Veredicto de valores.** El dato está incompleto porque `stock_x` lleva marca. Lo que tiene valor, marcado incluido, suma 51.000,92, por encima del umbral → **obligado, decidido con un valor marcado**: la valoración de `stock_x` del 30/12 (S16). Sin ese valor serían 45.000,92, así que **el veredicto depende de él**, y la salida lo dice. Tampoco hay aviso previo aparte: la categoría ya está obligada.
+
+**Paso 9 — Lo que la salida dice además**:
+- Que `acc_es` queda fuera por ser española.
+- Que los dos libros van juntos, como total fiscal.
+- Que el efectivo se mueve en la fecha de negocio (N1).
+- Que el ETF debe llevar su valor liquidativo y el ETC y el ETP su cotización (F4).
+- Los criterios: #11 y los que se numeren de F3 y F4, con su certeza.
+
+**Literales del test**:
+- Cuentas: `17000.00` / `15471.34`; `-1500.00` / `239.13`; categoría `15500.00` / `15710.47`; `not_obliged`; sin aviso.
+- Valores: `15000.91`, `22000.00`, `8000.01`, `6000.00` (marcado, 2027-12-30); categoría `51000.92`; `obliged`, decidido con `[stock_x]`.
+- `acc_es`, excluida con el motivo `domestic_account`.
+
+**Mutantes que mata**: aceptar la valoración del 30/12 sin marcarla (el test exige la marca y el «decidido con»); redondear la suma en vez de cada bien (51.000,91); half-even en lugar de half-up (8.000,00); contar `acc_es`.
 
 ### §6.2 — La regla de los 20.000 € con dos 720 sucesivos
 
-**Libro**: `acc_ib` (`IE`), con `etf_a` (ETF en EUR), `etc_b` (ETC en EUR) y efectivo en EUR. Una valoración de cada activo cada 31/12. El 31/12/2028 cae en domingo: la valoración va fechada el 31/12 y, al estar en euros, no hay tipo que comprobar.
+**Catálogo**: `acc_ib` (`IE`, núcleo) con `etf_a` (`etf`, EUR) y `etc_b` (`etc`, EUR).
 
-| Año | Valores (bienes) | Valores, total | Cuentas (31/12 · media) | Veredicto de valores | Veredicto de cuentas |
+**Eventos**
+
+| # | Fecha | Evento |
+|---|---|---|
+| B1 | 04/01/2027 | `cash_deposit` 70.000,00 |
+| B2 | 05/01/2027 | `buy` 600 `etf_a` a 50,00 (30.000,00) |
+| B3 | 05/01/2027 | `buy` 300 `etc_b` a 100,00 (30.000,00). Efectivo: 10.000,00 |
+| B4 | 31/12/2027 (vie) | `valuation` `etf_a` 50,00 y `etc_b` 100,00 |
+| B5 | *registrado el 15/03/2028* | `tax_return_filed` 720 de 2027, `filed_at` 2028-03-15. Declara: valores 60.000,00 con dos bienes, (`acc_ib`, `etf_a`) 30.000,00 y (`acc_ib`, `etc_b`) 30.000,00. Cuentas no declaradas |
+| B6 | 01/06/2028 | `cash_deposit` 2.000,00 y `buy` 20 `etc_b` a 100,00. Efectivo: 10.000,00 |
+| B7 | 31/12/2028 (**domingo**) | `valuation` `etf_a` 80,00 y `etc_b` 100,00, fechadas el 31/12 con `fx_rate_date` del viernes **29/12** |
+| B8 | 31/12/2029 (lun) | `cash_deposit` 40.000,01. Efectivo: 50.000,01 |
+| B9 | 31/12/2029 | `valuation` `etf_a` 80,00 y `etc_b` 100,00003125 |
+| B10 | *registrado el 20/03/2030* | `tax_return_filed` 720 de 2029, `filed_at` 2030-03-20. Declara: valores 80.000,01, con (`acc_ib`, `etf_a`) 48.000,00 y (`acc_ib`, `etc_b`) 32.000,01; cuentas 50.000,01 · 10.434,78, con (`acc_ib`) 50.000,01 · 10.434,78 |
+| B11 | 10/05/2030 | `sell` 320 `etc_b` a 100,00 (32.000,00) y `cash_withdrawal` 32.000,00. Efectivo: 50.000,01 |
+| B12 | 30/09/2030 | `cash_withdrawal` 19.565,22. Efectivo: 30.434,79 |
+| B13 | 31/12/2030 (mar) | `valuation` `etf_a` 90,00 |
+
+**Por año**, con la fecha de consulta en 2031:
+
+| Año | Valores | Frente a qué | Veredicto de valores | Cuentas (31/12 · media) | Veredicto de cuentas |
 |---|---|---|---|---|---|
-| 2027 | `etf_a` 600 × 50,00 = 30.000,00; `etc_b` 300 × 100,00 = 30.000,00 | **60.000,00** | 10.000,00 · 10.000,00 | **Obligado** (primera vez) | No obligado |
-| | *Se presenta el 720 de 2027 el 15/03/2028: valores 60.000,00, con sus dos bienes* | | | | |
-| 2028 | `etc_b` compra 20 más; `etf_a` 600 × 80,00 = 48.000,00; `etc_b` 320 × 100,00 = 32.000,00 | **80.000,00** | 10.000,00 · 10.000,00 | **No obligado**: +20.000,00 no es «más de» | No obligado |
-| 2029 | `etf_a` 48.000,00; `etc_b` 320 × 100,00003125 = 32.000,01 | **80.000,01** | **50.000,01** · 10.434,78 | **Obligado**: +20.000,01 sobre **2027**. Sobre 2028 serían +0,01: así muere el mutante «el penúltimo» o «el año anterior» | **Obligado**: la categoría no se declaró antes y supera 50.000 |
-| | *Se presenta el 720 de 2029 el 20/03/2030: valores 80.000,01 (48.000,00 + 32.000,01); cuentas 50.000,01 · 10.434,78* | | | | |
-| 2030 | `etc_b` vendido entero el 10/05; `etf_a` 600 × 90,00 = 54.000,00 | **54.000,00** (baja) | 30.434,79 · 30.434,79 | **Obligado por extinción** de (`acc_ib`, `etc_b`) sin subir | **Obligado**: la media sube +20.000,01 sobre 10.434,78; el saldo a 31/12 baja. Así muere el mutante «solo el 31/12» |
+| 2027 | 30.000,00 + 30.000,00 = **60.000,00** | Primera vez | **Obligado** (60.000,00 > 50.000) | 10.000,00 · 10.000,00 | No obligado |
+| 2028 | 600 × 80 = 48.000,00; 320 × 100 = 32.000,00; **80.000,00** | Último 720 en vigor: 2027 (60.000,00) → +20.000,00 | **No obligado**: la subida no es «superior a» 20.000. No hay extinción: los dos bienes siguen | 10.000,00 · 10.000,00 | No obligado: nunca declarada y por debajo del umbral |
+| 2029 | 48.000,00 + 320 × 100,00003125 = 32.000,01; **80.000,01** | Último 720 en vigor: **2027** → +20.000,01 | **Obligado**. Frente a 2028 serían +0,01: muere el mutante «el año anterior» | **50.000,01** · (91 × 10.000,00 + 50.000,01) / 92 = 10.434,78271… → **10.434,78** | **Obligado**: no se declaró en 2027 y el saldo a 31/12 supera 50.000 |
+| 2030 | 600 × 90 = **54.000,00** | Último 720 en vigor: **2029** → baja 26.000,01 | **Obligado por extinción**: (`acc_ib`, `etc_b`) estaba en la lista de 2029, se tenía a 31/12/2029 y no a 31/12/2030 | **30.434,79** · **30.434,79** | **Obligado**: frente a 2029, el saldo a 31/12 baja 19.565,22 y **la media sube 20.000,01**. Mueren el mutante «solo el 31/12» y el mutante «el penúltimo», porque el 720 de 2027 no declaró cuentas y con él serían «primera vez, por debajo del umbral» |
 
-Los saldos de las cuentas:
+**Variantes de borde**, cada una con su test:
+- Con B12 de 19.565,23, la media queda en 30.434,78, sube +20.000,00 y no obliga.
+- Con B8 de 40.000,00, el saldo queda en 50.000,00 y no obliga.
+- B7 comprueba el 31/12 en domingo: la valoración va fechada el 31/12, el tipo el viernes 29/12, y ninguna de las dos se marca.
 
-- **2029**: 10.000,00 del 1/10 al 30/12 (91 días) y 50.000,01 el 31/12, tras un ingreso de 40.000,01.
-  - Media: (910.000,00 + 50.000,01) / 92 = 10.434,7827… → **10.434,78**.
-- **2030**: una retirada de 19.565,22 el 30/09 deja 30.434,79 todo el trimestre.
-  - La venta de `etc_b` se retira el mismo día y no toca el efectivo.
-  - Variante de borde: con 30.434,78, la subida es +20.000,00 y no obliga.
+**Literales del test**:
+- Por año: `2027` `obliged`/`not_obliged`; `2028` `not_obliged`/`not_obliged`; `2029` `obliged`/`obliged`; `2030` `obliged`/`obliged`.
+- Motivos: `threshold`, `increase` (con `60000.00` → `80000.01` y `+20000.01`), `first_time_category`, `extinction` (`etc_b`) e `increase_q4_average` (`10434.78` → `30434.79`).
 
 ### §6.3 — Una complementaria
 
-**Libro**: `acc_a` (`ES`) con `fund_f` (fondo) y `stock_s` y `stock_t` (acciones), todo en EUR. Configuración por defecto.
+**Catálogo y configuración**: `acc_a` (`ES`) con `fund_f` (`fund`), `stock_s` y `stock_t` (`stock`), todo en EUR. Un `settings_changed` inicial con la configuración por defecto resuelta (límite del 25 %).
 
-**2027**:
+**Eventos, en orden de fichero**
 
-| Fecha | Evento | Resultado |
-|---|---|---|
-| 10/01 | Compra de 100 `fund_f` a 10,00 | |
-| 01/02 | Compra de 10 `stock_s` a 100,00 | |
-| 01/06 | Venta de 10 `stock_s` a 50,00 | −500,00. La única compra de la ventana la consume la propia venta (#18): computable |
-| 10/11 | Venta de 100 `fund_f` a 12,00 | +200,00 |
-| 20/12 | Interés | 40,00 |
+| # | Registrado | Fecha de negocio | Evento |
+|---|---|---|---|
+| C1 | 2027 | 11/01/2027 | `buy` 100 `fund_f` a 10,00 |
+| C2 | 2027 | 01/02/2027 | `buy` 10 `stock_s` a 100,00 |
+| C3 | 2027 | 01/06/2027 | `sell` 10 `stock_s` a 50,00 |
+| C4 | 2027 | 10/11/2027 | `sell` 100 `fund_f` a 12,00 |
+| C5 | 2027 | 20/12/2027 | `interest` 40,00 |
+| C6 | 2028 | 01/02/2028 | `buy` 10 `stock_t` a 100,00 |
+| C7 | 2028 | 01/09/2028 | `sell` 10 `stock_t` a 180,00 |
+| F1 | 10/06/2028 | — | `tax_return_filed` Renta 2027, `filed_at` 2028-06-10 |
+| C8 | 01/10/2028 | — | `reversal` de C4 |
+| C9 | 01/10/2028 | 10/11/2027 | `sell` 100 `fund_f` a 13,00, `corrects_id` C4 |
+| F2 | 05/11/2028 | — | `tax_return_filed` Renta 2027, `filed_at` 2028-11-05, `supersedes` F1 |
+| C10 | 05/01/2029 | 28/12/2027 | `interest` 20,00 (registrado tarde) |
+| C11 | 06/01/2029 | — | `settings_changed`: `savings_offset_limit_pct` de 25 a **20** |
 
-- Ganancias −300,00; rendimientos 40,00.
-- Fase 1: 25 % × 40,00 = 10,00, así que ganancias −290,00 y rendimientos 30,00.
-- **Base 30,00; pendiente de 2027: −290,00.**
+**Paso 1 — 2027 tal como lo calculaba la aplicación al registrar F1** (C1–C7, límite del 25 %):
+- C3: 500,00 − 1.000,00 = **−500,00**. Ventana de dos meses: [01/04/2027, 01/08/2027]. C2 (01/02) queda fuera y no hay otra compra de `stock_s`: computable **−500,00**.
+- C4: 1.200,00 − 1.000,00 = **+200,00**.
+- Saldos: ganancias −300,00; rendimientos +40,00.
+- Fase 1: 25 % × 40,00 = 10,00. Ganancias −290,00; rendimientos 30,00.
+- **Base 30,00; pendiente de 2027 (`capital_gain`): −290,00**; diferido 0,00.
+- F1 declara lo mismo que calcula: `declared` = `computed` = {30,00; [2027 GP −290,00]; 0,00}. `computed.settings` = límite del 25 %.
 
-**2028**: compra de 10 `stock_t` a 100,00 el 01/02; venta a 180,00 el 01/09, **+800,00**.
+**Paso 2 — La corrección (C8 + C9).** C9: 1.300,00 − 1.000,00 = +300,00. Ganancias −200,00, compensados 10,00: −190,00.
+- **Aviso** `closed_year_moved` de la Renta de 2027, presentada el 10/06/2028, por fecha (`by_date`): el pendiente de 2027 pasa de −290,00 a **−190,00**. La base (30,00) y el diferido no se mueven.
 
-**Registros, en orden de fichero**:
+**Paso 3 — F2, la complementaria.**
+- `computed` = {30,00; [2027 GP −190,00]; 0,00}, con el límite del 25 %, a fecha 05/11/2028.
+- `declared` = {30,00; [2027 GP **−200,00**]; 0,00}. El usuario lo cambió al presentar.
+- Su huella cubre C1–C9 y F1.
 
-1. **F1**, Renta de 2027, presentada el 10/06/2028. Declarado = calculado: base 30,00; pendiente −290,00; diferido 0,00.
-2. **Corrección** el 01/10/2028: la venta de `fund_f` era a 13,00, así que +300,00. **Avisa**, por fecha, de la Renta de 2027: el pendiente pasa de −290,00 a −190,00 (ganancias −200,00 + 10,00) y la base no se mueve.
-3. **F2**, complementaria (`supersedes` F1), presentada el 05/11/2028.
-   - Calculado: base 30,00; pendiente −190,00.
-   - **Declarado: base 30,00; pendiente −200,00.** El usuario lo cambió al presentar.
-4. **Interés tardío** de 20,00, fechado el 28/12/2027 y registrado el 05/01/2029. **Avisa**: la base pasa de 30,00 a 45,00 y el pendiente de −190,00 a −185,00.
-5. **`settings_changed`** del 06/01/2029: `savings_offset_limit_pct` pasa de 25 a 20. **Avisa**: 2027 pasa a una base de 48,00 y un pendiente de −188,00.
+**Paso 4 — El interés tardío (C10).**
+- Rendimientos 60,00; 25 % = 15,00; ganancias −185,00; base 45,00.
+- **Aviso** por fecha de la Renta de 2027, presentada el 05/11/2028: base de 30,00 a **45,00** y pendiente de −190,00 a **−185,00**.
 
-**Anular F1: rechazado** (F2 la ha consumido). Anular F2: aceptado, y F1 vuelve a estar en vigor.
+**Paso 5 — El cambio de configuración (C11).**
+- Con el 20 %: límite 12,00; ganancias −188,00; base 48,00.
+- **Aviso** de la Renta de 2027: base de 45,00 a **48,00** y pendiente de −185,00 a **−188,00**. Ningún otro ejercicio cerrado.
 
-**2028 a fecha 10/01/2029**, con límite del 20 %:
+**Paso 6 — Anulaciones.**
+- `reverseEvent(F1)` → **rechazado**: F2 queda inválida sin ella (`filing_supersedes_invalid`, ADR-0003).
+- `reverseEvent(F2)` → aceptado, y F1 vuelve a estar en vigor. Se comprueba en un libro aparte, para no alterar los pasos siguientes.
 
-- **Ancla F2** (−200,00): 800,00 − 200,00 = **base 600,00**.
-- Con F1 como ancla (mutante): 510,00. Sin ancla (mutante): 800,00 − 188,00 = 612,00.
-- **A fecha 01/08/2028**, anterior al `filed_at` de F2, está en vigor F1: **510,00**.
+**Paso 7 — 2028, a fecha 10/01/2029** (límite del 20 %).
+- C7: 1.800,00 − 1.000,00 = **+800,00**.
+- Fase 2 con el ancla F2: −200,00 contra las ganancias, en la misma categoría y sin límite → **base 600,00**.
+- Mutante «ancla sustituida» (F1, −290,00): 510,00.
+- Mutante «sin ancla» (lo calculado hoy, −188,00): 612,00.
+- **A fecha 01/08/2028**, antes del `filed_at` de F2, está en vigor F1 → **510,00**.
 
-**Comparación de 2027 a fecha 10/01/2029**:
+**Paso 8 — La comparación de 2027, a fecha 10/01/2029.**
 
-| Lectura | Base | Pendiente 2027 |
-|---|---|---|
-| Declarado (F2) | 30,00 | −200,00 |
-| Calculado entonces (F2) | 30,00 | −190,00 |
-| R0: prefijo de F2, configuración de F2 (25 %) | 30,00 | −190,00 |
-| R1: prefijo de F2, configuración de hoy (20 %): límite 8,00 | 32,00 | −192,00 |
-| Hoy: todo el libro, 20 %: rendimientos 60,00, límite 12,00 | 48,00 | −188,00 |
+| Lectura | Libro | Configuración | Base | Pendiente 2027 |
+|---|---|---|---|---|
+| Declarado (F2) | — | — | 30,00 | −200,00 |
+| Calculado entonces (F2) | — | — | 30,00 | −190,00 |
+| R0 | prefijo de F2 (C1–C9, F1) | la de F2 (25 %): límite 10,00 | 30,00 | −190,00 |
+| R1 | prefijo de F2 | la de hoy (20 %): límite 8,00 | 32,00 | −192,00 |
+| Hoy | todo el libro | 20 %: rendimientos 60,00, límite 12,00 | 48,00 | −188,00 |
 
 | Causa | Base | Pendiente |
 |---|---|---|
@@ -538,62 +633,81 @@ Los saldos de las cuentas:
 | Eventos posteriores (hoy − R1) | +16,00 | +4,00 |
 | **Total = hoy − declarado** | **+18,00** | **+12,00** |
 
-La causa «motor» se prueba aparte: en otro test, un `computed` escrito como lo habría escrito un motor anterior (base 31,00) da **−1,00** de motor.
+- **La causa «motor»**, aparte: el mismo libro con un F2 cuyo `computed` diga base 31,00 (como lo habría escrito un motor anterior) da motor **−1,00** y total igual.
+- **La huella**: F2 verifica; con C3 editado a mano en el fichero (precio 55,00), `integrity` da `filing_fingerprint_mismatch` y la comparación omite las causas.
 
-### §6.4 — La Renta de 2025 por casillas
+**Literales del test**: `30.00`/`-290.00` (F1); `-290.00 → -190.00` (aviso de C9); `30.00`/`-190.00` calculado y `30.00`/`-200.00` declarado (F2); `30.00 → 45.00` y `-190.00 → -185.00` (C10); `45.00 → 48.00` y `-185.00 → -188.00` (C11); `600.00`, `510.00` a 01/08/2028; las causas `0.00`/`+10.00`, `0.00`/`0.00`, `+2.00`/`-2.00`, `+16.00`/`+4.00`.
+
+### §6.4 — La Renta de 2025 por casillas (recalculada tras Q2)
 
 **Libro**:
 - `acc_mi` (`ES`): `fund_a`.
 - `acc_ib` (`IE`): `etf_w`, `stock_s`, `stock_t`, `coin_c` y `etc_g`.
-- Todo en EUR salvo el dividendo. `treaty_withholding_pct: { US: "15" }`.
+- Todo en EUR salvo el dividendo. `treaty_withholding_pct: { US: "15" }`. `income_category`, por defecto, **con `etc` en `movable_capital`**.
 
-| Fecha | Evento | Qué ejercita |
+| Fecha | Evento | Resultado |
 |---|---|---|
-| 10/01/2024 | Compra de 100 `fund_a` a 10,00 | Fuera de la ventana de un año de la venta de 2025 |
+| 10/01/2024 | Compra de 100 `fund_a` a 10,00 | |
 | 01/10/2024 | Compra de 10 `stock_t` a 100,00 | |
-| 04/11/2024 | Venta de 10 `stock_t` a 80,00: −200,00 | |
-| 02/12/2024 | Compra de 10 `stock_t` a 85,00 | Recompra: **difiere los −200,00 enteros**; computable de 2024: 0 |
-| *20/06/2025* | *Renta de 2024 presentada: base 0,00; pendiente de 2023 −300,00 (de antes de la aplicación); diferido −200,00* | Ancla |
+| 04/11/2024 | Venta de 10 `stock_t` a 80,00 | −200,00. Ventana [04/09/2024, 04/01/2025]: la compra del 01/10 la consume la propia venta (#18) |
+| 02/12/2024 | Compra de 10 `stock_t` a 85,00 | Recompra: difiere los −200,00 enteros; computable de 2024: 0,00 |
+| *20/06/2025* | *Renta de 2024 presentada: base 0,00; pendiente de 2023 −300,00 (anterior a la aplicación); diferido −200,00* | Ancla |
 | 15/01/2025 | Compra de 10 `etf_w` a 100,00 | |
 | 20/01/2025 | Compra de 10 `stock_s` a 50,00 | |
-| 03/02/2025 | Venta de 10 `stock_t` a 95,00: propio +100,00; libera −200,00; ninguna compra en la ventana | Computable −100,00 |
+| 03/02/2025 | Venta de 10 `stock_t` a 95,00 | Propio +100,00; libera −200,00; total −100,00. La compra del 02/12 la consume esta venta (#18): computable **−100,00** |
 | 10/02/2025 | Compra de 1 `coin_c` a 1.000,00 | |
-| 03/03/2025 | Reembolso de 40 `fund_a` a 9,00: −40,00 | |
+| 03/03/2025 | Reembolso de 40 `fund_a` a 9,00 | −40,00. La suscripción del 05/05, 20 participaciones, difiere 20/40 = −20,00: computable **−20,00** |
 | 10/03/2025 | Compra de 5 `etc_g` a 200,00 | |
-| 05/05/2025 | Suscripción de 20 `fund_a` a 9,50 | Difiere 20/40 de −40,00 = −20,00 |
-| 15/05/2025 | Dividendo de `stock_s`: 50,00 USD brutos, 7,50 USD retenidos en origen, tipo 1,25, `US` | 40,00 €; impuesto extranjero 6,00 € |
-| 02/06/2025 | Venta de 10 `stock_s` a 45,00: −50,00 | |
-| 01/09/2025 | Venta de 10 `etf_w` a 120,00: +200,00 | |
-| 01/10/2025 | Venta de 5 `etc_g` a 190,00: −50,00 | |
-| 10/11/2025 | Reembolso de 60 `fund_a` a 11,00: +60,00; retención 11,40 | |
-| 01/12/2025 | Venta de 1 `coin_c` a 1.300,00: +300,00 | |
-| 15/12/2025 | Custodia de 10,00 (`fee_kind: custody`) | |
-| 31/12/2025 | Interés en `acc_mi` de 100,00, retención 19,00 | |
+| 05/05/2025 | Suscripción de 20 `fund_a` a 9,50 | Lleva −20,00 diferidos |
+| 15/05/2025 | Dividendo de `stock_s`: 50,00 USD brutos, 7,50 USD en origen, tipo 1,25, `US` | 40,00; impuesto extranjero 6,00 |
+| 02/06/2025 | Venta de 10 `stock_s` a 45,00 | **−50,00** (la compra del 20/01 queda fuera de la ventana) |
+| 01/09/2025 | Venta de 10 `etf_w` a 120,00 | **+200,00** |
+| 01/10/2025 | Venta de 5 `etc_g` a 190,00 | **−50,00**, en **rendimientos del capital mobiliario** (Q2) |
+| 10/11/2025 | Reembolso de 60 `fund_a` a 11,00 | Consume por FIFO 60 del lote de 2024: **+60,00**; retención 11,40 |
+| 01/12/2025 | Venta de 1 `coin_c` a 1.300,00 | **+300,00** |
+| 15/12/2025 | Custodia de 10,00 (`fee_kind: custody`) | −10,00 en rendimientos (#23) |
+| 31/12/2025 | Interés en `acc_mi` de 100,00, retención 19,00 | +100,00 |
 
-**Las casillas de 2025** (con F1, F2 y F5):
+**El motor**:
+- Ganancias y pérdidas: −100 − 20 − 50 + 200 + 60 + 300 = **+390,00**.
+- Rendimientos: 100 + 40 − 50 − 10 = **+80,00**.
+- Fase 1: nada, porque los dos saldos son positivos.
+- Fase 2: el pendiente de 2023 (−300,00) contra las ganancias, sin límite → 90,00.
+- **Base 170,00.** Es la misma que antes de Q2, porque la pérdida del ETC pasa de un saldo positivo a otro.
+- Diferido pendiente a 31/12/2025: −20,00.
+
+**Las casillas** (F1, F2 y F5):
 
 | Apartado | Casillas |
 |---|---|
 | IIC, fila del 03/03 | 0312 **360,00** · 0315 **400,00** · 0321 **40,00** · 0322 **20,00** · 0311 *falta en tus datos* |
-| IIC, fila del 10/11 | 0312 **660,00** · 0315 **600,00** · 0316 / 0320 **60,00** |
+| IIC, fila del 10/11 | 0312 **660,00** · 0315 **600,00** · 0316 **60,00** · 0320 **60,00** |
 | IIC, totales | 0324 **60,00** · 0325 **20,00** · retención en 0603 **11,40** |
-| ETF | 2227 **1.200,00** · 2229 **1.000,00** · 2230 / 2232 **200,00** · 2235 **200,00** · 2236 **0,00** · 2225 *falta* |
+| ETF | 2227 **1.200,00** · 2229 **1.000,00** · 2230 **200,00** · 2232 **200,00** · 2235 **200,00** · 2236 **0,00** · 2225 *falta* |
 | Acciones, `stock_s` | 0328 **450,00** · 0331 **500,00** · 0337 **50,00** · 0338 **50,00** |
-| Acciones, `stock_t` | 0328 **950,00** · 0331 **850,00** · 0332 / 0336 **100,00** |
+| Acciones, `stock_t` | 0328 **950,00** · 0331 **850,00** · 0332 **100,00** · 0336 **100,00**. Es una ganancia en su fila; lo liberado va a su origen (F5) |
 | Acciones, totales | 0339 **100,00** · 0340 **50,00** |
-| Monedas virtuales | 1804 **1.300,00** · 1806 **1.000,00** · 1809 / 1811 / 1812 **300,00** · 1814 **300,00** · 1813 **0,00** |
-| ETC (`etc_g`, en ganancias) | **Sin casilla** (F1): pérdida de **50,00**, por conceptos |
+| Monedas virtuales | 1804 **1.300,00** · 1806 **1.000,00** · 1809 **300,00** · 1811 **300,00** · 1812 **300,00** · 1814 **300,00** · 1813 **0,00** |
 | Ejercicios anteriores | 0395 **200,00** (la pérdida de 2024 de `stock_t`, liberada) · 0396 **200,00** |
-| Saldo | 0422 **660,00** · 0423 **320,00** (20 + 50 + 50 + 200; incluye los 50,00 del ETC, que no tiene casilla, y la salida lo dice) · **0424 340,00** |
-| Rendimientos | 0027 **100,00** · 0029 **40,00** · 0036 **140,00** · 0037 **10,00** · 0038 / 0040 / 0041 / 0429 **130,00** · retención en 0597 **19,00** |
-| Compensación | 0441 **300,00** (el pendiente de 2023, contra las ganancias) · anexo C.3: 1264 **300,00**, 1265 **300,00**, 1266 **0,00** |
-| Base imponible del ahorro | **0460 170,00** (340,00 − 300,00 + 130,00) |
-| Doble imposición | Primer límite **6,00** (15 % de 40,00), **no** el importe de la 0588 |
-| Diferido pendiente a 31/12/2025 | −20,00, sobre la suscripción del 05/05 |
+| Saldo de ganancias | 0422 **660,00** · 0423 **270,00** (20 + 0 + 50 + 0 + 200) · **0424 390,00**, igual al saldo del motor |
+| Rendimientos | 0027 **100,00** · 0029 **40,00** · **0031 −50,00** (`etc_g`, con su signo menos) · 0036 **90,00** · 0037 **10,00** · 0038 **80,00** · 0040 **80,00** · 0041 **80,00** · 0429 **80,00** · retención en 0597 **19,00** |
+| Compensación | 0441 **300,00** · anexo C.3: 1264 **300,00**, 1265 **300,00**, 1266 **0,00** |
+| Base imponible del ahorro | **0460 170,00** (390,00 − 300,00 + 80,00) |
+| Doble imposición | Primer límite **6,00** (15 % de 40,00 = 6,00; impuesto extranjero 6,00). **No** es el importe de la 0588 |
 
-**Contraste con el motor**: las ganancias computables son −20 + 60 + 200 − 50 − 100 + 300 − 50 = **340,00**, lo mismo que la 0424.
+**Invariantes que el test comprueba**:
+- 0424 = saldo de ganancias y pérdidas del motor (390,00).
+- 0041 = saldo de rendimientos del motor (80,00).
+- 0460 = base (170,00).
 
 **El mismo libro en 2024**: base 0,00 y diferido −200,00, **por conceptos y sin ningún número de casilla**, con la nota `tax_boxes_missing_year`.
+
+**El test de Q10** (con su nombre, aparte de este libro):
+- **Año 1**: una venta con pérdida de −100,00 se difiere entera. Su fila lleva pérdida obtenida −100,00 e imputable 0,00, y el motor da computable 0,00.
+- **Año 2**: una venta con ganancia propia de +30,00 libera los −100,00. El total, −70,00, **vuelve a aplazarse** entero por una recompra (#21) y se atribuye a la pérdida de origen (F5).
+  - Filas: la venta es una **ganancia de +30,00**. La 0395 lleva **30,00**, que es −100,00 menos los −70,00 que siguen diferidos.
+  - Suma: 30,00 − 30,00 = **0,00**, el computable que da el motor ese año.
+- **Año 3**: se vende la recompra, sin más recompras. La 0395 lleva **70,00**, y la suma coincide con el computable del motor.
 
 ---
 
@@ -609,6 +723,7 @@ No he tocado `docs/`, salvo el primer commit que trae la PR #60.
 | `docs/data-schema.md` §7 | Pasada A'' (presentaciones, filtradas por `filed_at`); `filings` en la instantánea sin la huella; el ejercicio cerrado |
 | `docs/business-rules.md` §5.5 | El arrastre anclado en lo declarado; la cadena empieza en la primera Renta presentada (P5) |
 | `docs/business-rules.md` §5.8 | Los dos saldos y su tipo; el saldo medio (F3); el neteo de negativos; el bloque único de valores; ETF en clave I; extinción (Q7); el 721 con sus 20.000 € y su extinción, desde 2023, solo a 31/12 |
+| `docs/business-rules.md` §7 y `docs/data-schema.md` §6.1 | `income_category`: por defecto `movable_capital` para `etc` y `etp` (respuesta a Q2); ADR-0021 lo daba como `capital_gain` para todos |
 | `docs/business-rules.md` §7 | `model_720_threshold_eur`, `model_720_increase_eur`, `model_721_threshold_eur`, `model_721_increase_eur`, las alertas con su valor por defecto y la temporada de Renta |
 | `docs/fiscal-questions.md` | #11 (N2); fichas F1–F5 numeradas; la V0267-25 en la cuestión ETC/ETP (N6); el apartado «lo que el criterio dice bien pero se queda corto» del 721 |
 | `docs/specification.md` | §13: lo que la Fase 5 ya entrega; §14.1: la valoración a 31/12 resuelta como Nivel 1 |
