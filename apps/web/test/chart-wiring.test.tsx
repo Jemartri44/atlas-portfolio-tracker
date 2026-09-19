@@ -77,8 +77,15 @@ describe("a hole is a hole", () => {
    * from the last known point to the next one, so a gap reads as a gap and
    * not as a chart that failed to load (docs/design/system.md §5.15).
    */
-  it("shades the stretch where a series has no value, from known point to known point", () => {
-    expect(gapsOf(X, SERIES)).toEqual([{ from: 0, to: 2 * DAY }]);
+  it("shades the stretch where no series has a value, from known point to known point", () => {
+    // Each series misses one date, never the same: the hole is each line
+    // stopping, and a band across the chart would say the other one lacks it too.
+    expect(gapsOf(X, SERIES)).toEqual([]);
+    const both: ChartSeries[] = [
+      { label: "Núcleo", values: [100, null, 300], colour: "--c-series-core" },
+      { label: "Cubo", values: [10, null, 30], colour: "--c-series-bucket" },
+    ];
+    expect(gapsOf(X, both)).toEqual([{ from: 0, to: 2 * DAY }]);
     // A chart with no hole has nothing to shade.
     const full: ChartSeries[] = [{ label: "Núcleo", values: [1, 2, 3], colour: "--c-series-core" }];
     expect(gapsOf(X, full)).toEqual([]);
