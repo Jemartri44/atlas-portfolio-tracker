@@ -3,6 +3,10 @@
 // exported, in the colour of a warning after a week. That reminder is the
 // **only** safety net on a phone, where the File System Access API does not
 // exist (decision (l), ADR-0019). It leads to Ajustes, where it is exported.
+//
+// While the data are empty there is nothing to lose, so the chip says where
+// they live and nothing about exporting: a warning with no stake teaches the
+// user to ignore the one that will matter.
 
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
@@ -11,6 +15,9 @@ import { formatInstantDate } from "../format/date.js";
 import { countOf } from "../format/number.js";
 import { daysSinceExport, exportIsOverdue, type LedgerSource } from "../ledger/source.js";
 import { store, today } from "../ledger/state.js";
+
+/** Something has been recorded: from then on there is something to lose. */
+const hasData = (): boolean => (store.snapshot()?.events.length ?? 0) > 0;
 
 /** The short second half of the chip: how old the copy is, or which file. */
 const ageOf = (source: LedgerSource): string => {
@@ -31,6 +38,9 @@ const detailOf = (source: LedgerSource): string => {
       ? `Tus datos están en ${source.fileName}, en la carpeta ${source.directoryName}: el mismo archivo que usa la CLI.`
       : "El navegador ha perdido el permiso sobre la carpeta: hay que reconectarla.";
   }
+  if (!hasData()) {
+    return "Tus datos viven en este navegador. Todavía no hay nada que exportar.";
+  }
   if (source.lastExportAt === undefined) {
     return "Tus datos viven en este navegador y nunca se han exportado.";
   }
@@ -38,7 +48,9 @@ const detailOf = (source: LedgerSource): string => {
 };
 
 const needsAttention = (source: LedgerSource): boolean =>
-  source.kind === "directory" ? source.permission !== "granted" : exportIsOverdue(source, today());
+  source.kind === "directory"
+    ? source.permission !== "granted"
+    : hasData() && exportIsOverdue(source, today());
 
 export const LedgerChip = (): JSX.Element => (
   <Show
@@ -59,12 +71,14 @@ export const LedgerChip = (): JSX.Element => (
           class="icon-sm source-icon"
         />
         <span class="where">{source().kind === "directory" ? "Este ordenador" : "Navegador"}</span>
-        <span class={`age${needsAttention(source()) ? " is-overdue" : ""}`}>
-          <Show when={needsAttention(source())}>
-            <Icon name="caution" class="icon-sm overdue-icon" />
-          </Show>
-          <span>{ageOf(source())}</span>
-        </span>
+        <Show when={source().kind === "directory" || hasData()}>
+          <span class={`age${needsAttention(source()) ? " is-overdue" : ""}`}>
+            <Show when={needsAttention(source())}>
+              <Icon name="caution" class="icon-sm overdue-icon" />
+            </Show>
+            <span>{ageOf(source())}</span>
+          </span>
+        </Show>
       </a>
     )}
   </Show>
