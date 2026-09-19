@@ -36,6 +36,16 @@ describe("the bucket", () => {
     expect(pending?.querySelector('a[href="/registrar/valuation"]')).not.toBeNull();
   });
 
+  it("says a position with no price has none once, not «sin precio sin dato»", async () => {
+    // The figure says «sin dato»; the card, below, which prices are missing.
+    const host = await show("/cubo?fecha=2029-01-15", Cubo);
+    const row = [...host.querySelectorAll(".rows > li, .rows > .row")].find((item) =>
+      text(item).startsWith("Alpha Spin-off"),
+    );
+    expect(row).toBeDefined();
+    expect(text(row)).toBe("Alpha Spin-offsin dato");
+  });
+
   it("puts the range right over the chart it changes, not over the figure", async () => {
     const host = await show("/cubo?fecha=2029-01-15", Cubo);
     const range = host.querySelector(".card.is-chart fieldset.segmented");

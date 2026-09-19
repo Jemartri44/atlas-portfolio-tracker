@@ -56,7 +56,7 @@ const assetColumns = (threshold: string | undefined): readonly DataColumn<Weight
     header: "Precio",
     numeric: true,
     card: "sub",
-    cell: (row) => <Price price={row} />,
+    cell: (row) => <Price price={row} marked />,
     cardCell: (row) => <PriceDetail price={row} withAge />,
   },
   {

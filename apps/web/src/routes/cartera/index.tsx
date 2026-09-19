@@ -14,8 +14,8 @@
 // of the title.
 
 import { contributionPlan, coreWeights, costSummary, settingsAt } from "@atlas/domain";
-import { createMemo, type JSX, Show } from "solid-js";
-import { AsOfPicker, Notice, useAsOf } from "../../components/index.js";
+import { createMemo, type JSX } from "solid-js";
+import { AsOfPicker, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import { store } from "../../ledger/state.js";
@@ -87,15 +87,6 @@ export default function CarteraRoute(): JSX.Element {
               />
               <ContributionCard view={plan()} error={planError()} />
               <CostsCard view={costs()} />
-              <Show when={weights().stale.length > 0}>
-                <div class="span-12">
-                  <Notice severity="caution" title="Hay precios caducados">
-                    {weights().stale.join(", ")}: el precio que se está usando es más antiguo de lo
-                    que dice la configuración. Sigue siendo el último conocido, con su antigüedad a
-                    la vista.
-                  </Notice>
-                </div>
-              </Show>
             </div>
           </>
         );

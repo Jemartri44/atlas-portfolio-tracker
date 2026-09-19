@@ -122,6 +122,14 @@
   color: var(--c-negative);
 }
 
+/* A stale price in a table: the clock of the caution, its age on hover. */
+.stale-mark {
+  color: var(--c-caution);
+  display: inline-flex;
+  margin-left: var(--space-1);
+  vertical-align: -0.125em;
+}
+
 /* "sin dato": quiet, and never a zero. */
 .nodata {
   color: var(--c-text-3);

@@ -61,13 +61,10 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     numeric: true,
     card: "meta",
     cell: (row) => <Amount value={row.unrealized} signed coloured />,
-    // One "sin dato", not two: a row with no price used to read
-    // "Alpha Spin-off · sin dato · sin dato … sin dato" (seen in a screenshot).
+    // Said once: with no price the line above already reads «sin precio» and
+    // the figure «sin dato»; a third one here read «sin precio sin dato».
     cardCell: (row) => (
-      <Show
-        when={row.unrealized !== undefined}
-        fallback={<Amount value={undefined} missingReason="sin precio a esa fecha" />}
-      >
+      <Show when={row.unrealized !== undefined}>
         <span class="figure-pair">
           <Amount value={row.unrealized} signed coloured />
           <Figure value={row.unrealizedPct} unit="percent" coloured />

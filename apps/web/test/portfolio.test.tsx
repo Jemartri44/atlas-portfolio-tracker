@@ -22,6 +22,15 @@ const card = (host: HTMLElement, title: string): Element | undefined =>
 afterEach(() => withoutStyles());
 
 describe("the portfolio", () => {
+  it("marks a stale price in its row, not in a notice repeating the summary", async () => {
+    const host = await show("/cartera?fecha=2029-01-10", Cartera);
+    expect(text(host)).not.toContain("Hay precios caducados");
+    const marks = [...host.querySelectorAll("table .stale-mark")];
+    expect(marks.length).toBeGreaterThan(0);
+    expect(marks[0]?.getAttribute("title")).toMatch(/^Precio caducado: \d+ días?$/);
+  });
+
+
   it("keeps the weights and the contribution at their own height, side by side", async () => {
     withStyles(2045, 1141);
     const host = await show("/cartera", Cartera);
