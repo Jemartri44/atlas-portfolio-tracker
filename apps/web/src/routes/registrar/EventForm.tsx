@@ -13,7 +13,7 @@
 // touching the form again takes the effect away, because it would no longer be
 // the effect of what is written there.
 
-import type { EventPreview, LedgerState } from "@atlas/domain";
+import type { EventPreview, LedgerEvent, LedgerState } from "@atlas/domain";
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Field } from "../../components/index.js";
@@ -44,6 +44,8 @@ import { PriorYear, Reloaded, ThesisFirst } from "./FormNotices.jsx";
 interface EventFormProps {
   spec: EventFormSpec;
   state: LedgerState;
+  /** The ledger's events, for the lists that need them (an asset merged away). */
+  events?: readonly LedgerEvent[];
   /** Correcting an existing event instead of recording a new one. */
   correcting?: { id: string; values: FormValues };
 }
@@ -185,6 +187,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
               fields={props.spec.fields}
               values={values()}
               state={props.state}
+              events={props.events}
               onChange={onChange}
               errors={fieldErrors()}
               revealed={revealed}

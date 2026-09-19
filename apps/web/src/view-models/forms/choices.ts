@@ -2,7 +2,7 @@
 // stops offering when another field changes. Pure, like the rest of the
 // view-models: the form component only paints what this returns.
 
-import type { CivilDate, LedgerState } from "@atlas/domain";
+import type { CivilDate, LedgerEvent, LedgerState } from "@atlas/domain";
 import type { Option } from "../../components/Field.jsx";
 import { formatDate } from "../../format/date.js";
 import { eventLabel, valueLabel } from "../../format/labels.js";
@@ -49,11 +49,12 @@ export const selectOptions = (
   state: LedgerState,
   values: Record<string, string>,
   date: CivilDate,
+  events?: readonly LedgerEvent[],
 ): Option[] => {
   if (field.values !== undefined) {
     return field.values.map((entry) => ({ value: entry, label: valueLabel(entry) }));
   }
-  const options = optionsFor(field.options ?? "accounts", { state, date, values }, field);
+  const options = optionsFor(field.options ?? "accounts", { state, events, date, values }, field);
   const order = heldOrder(field, state, values, options);
   if (order !== undefined) {
     return [...options, order];

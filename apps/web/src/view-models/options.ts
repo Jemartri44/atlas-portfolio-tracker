@@ -7,6 +7,7 @@ import {
   assets,
   type Book,
   type CivilDate,
+  type LedgerEvent,
   type LedgerState,
   pendingOrders,
   physicalPositions,
@@ -20,6 +21,7 @@ import { eventLabel, platformLabel, valueLabel } from "../format/labels.js";
 import { displayName, nameIndex } from "../format/names.js";
 import { countOf } from "../format/number.js";
 import type { FieldSpec, OptionSource } from "./forms/specs.js";
+import { absorbedAssets } from "./weighted.js";
 
 /** Currencies worth offering: the ones the ledger already uses, euro first. */
 export const currencyOptions = (state: LedgerState): Option[] => {
@@ -55,13 +57,12 @@ export const accountOptions = (
 export interface AssetChoice {
   /** Only this book: a core account never buys a bucket share, and a thesis never covers a fund. */
   book?: Book | undefined;
-  /**
-   * Inactive assets holding a position are offered too: in this account, or in
-   * any account with `true`. Absent, no inactive asset is offered.
-   */
+  /** Inactive assets held in this account are offered too; held in any, with `true`. */
   heldIn?: string | true | undefined;
   /** Every inactive asset, held or not: a filter of the ledger has to reach the past. */
   inactive?: boolean;
+  /** Assets left out although active: converted into another and holding nothing. */
+  absorbed?: ReadonlySet<string> | undefined;
 }
 
 /**
@@ -91,7 +92,9 @@ export const assetOptions = (state: LedgerState, choice: AssetChoice = {}): Opti
     hint: `${valueLabel(asset.asset_type)} · ${asset.currency}${asset.active ? "" : " · dado de baja"}`,
   });
   return [
-    ...inBook.filter((asset) => asset.active).map(option),
+    ...inBook
+      .filter((asset) => asset.active && choice.absorbed?.has(asset.asset_id) !== true)
+      .map(option),
     ...inBook
       .filter((asset) => !asset.active && (choice.inactive === true || held.has(asset.asset_id)))
       .map(option),
@@ -165,6 +168,8 @@ export const openThesisOptions = (
 
 export interface OptionContext {
   state: LedgerState;
+  /** The ledger, for what only its events say: an asset a merger converted away. */
+  events?: readonly LedgerEvent[] | undefined;
   date: CivilDate;
   /** Current values, so the thesis list can narrow down to the chosen pair. */
   values: Record<string, string>;
@@ -174,7 +179,7 @@ export interface OptionContext {
 export const optionsFor = (
   source: OptionSource,
   context: OptionContext,
-  field?: Pick<FieldSpec, "bookFrom" | "heldFrom" | "heldAnywhere">,
+  field?: Pick<FieldSpec, "bookFrom" | "heldFrom" | "heldAnywhere" | "liveOnly">,
 ): Option[] => {
   switch (source) {
     case "accounts":
@@ -190,6 +195,10 @@ export const optionsFor = (
             : field?.heldAnywhere === true
               ? true
               : undefined,
+        absorbed:
+          field?.liveOnly === true && context.events !== undefined
+            ? absorbedAssets(context.state, context.events, context.date)
+            : undefined,
       });
     case "bucketAssets":
       return assetOptions(context.state, { book: "bucket" });

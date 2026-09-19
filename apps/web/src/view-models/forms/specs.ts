@@ -79,6 +79,13 @@ export interface FieldSpec {
   heldFrom?: string;
   /** For a list of assets: an inactive asset held in **any** account is offered too. */
   heldAnywhere?: boolean;
+  /**
+   * For a list of assets: leave out one a corporate action converted into
+   * another — a fund merged away, a share class that no longer exists — and
+   * that holds nothing (`view-models/weighted.ts`). It cannot be bought, and
+   * offering it invites the mistake (review of 2026-09-19).
+   */
+  liveOnly?: boolean;
 }
 
 export interface EventFormSpec {
@@ -216,8 +223,10 @@ const tradeFields = (): FieldSpec[] => [
 
 /**
  * A purchase lists only the assets in force. A delisted one is still held,
- * still valued and still sold, but never bought again (review of 2026-09-18);
- * a correction that already holds one keeps it on its list (`choices.ts`).
+ * still valued and still sold, but never bought again (review of 2026-09-18),
+ * and one a merger or a class change converted away is not bought either
+ * (`liveOnly`); a correction that already holds one keeps it on its list
+ * (`choices.ts`).
  */
 const buyFields = (): FieldSpec[] =>
   tradeFields().map((field) => {
@@ -225,7 +234,7 @@ const buyFields = (): FieldSpec[] =>
       return field;
     }
     const { heldFrom: _held, ...inForce } = field;
-    return inForce;
+    return { ...inForce, liveOnly: true };
   });
 
 const cashFields = (): FieldSpec[] => [
@@ -365,7 +374,8 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     when: "Has dado una orden que aún no ha ejecutado.",
     fields: [
       account(),
-      asset(),
+      // An order is placed on an asset that exists: never on one converted away.
+      { ...asset(), liveOnly: true },
       {
         name: "side",
         label: "Sentido",

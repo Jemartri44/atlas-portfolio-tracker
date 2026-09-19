@@ -24,7 +24,7 @@ export default function RegistrarFormRoute(): JSX.Element {
             {(found) => (
               <>
                 <PageHeader title={found().title} lead={found().when} />
-                <EventForm spec={found()} state={snapshot.state} />
+                <EventForm spec={found()} state={snapshot.state} events={snapshot.events} />
               </>
             )}
           </Show>

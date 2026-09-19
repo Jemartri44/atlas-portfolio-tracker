@@ -87,6 +87,7 @@ export default function MovimientoEditarRoute(): JSX.Element {
                   <EventForm
                     spec={found().spec}
                     state={snapshot.state}
+                    events={snapshot.events}
                     correcting={{
                       id: params.id,
                       values: valuesOfEvent(

@@ -9,7 +9,7 @@
 // each field goes: what every record needs on top, and the bookkeeping that
 // has a sensible default folded in «Más datos» (docs/design/system.md §7.4).
 
-import type { LedgerState } from "@atlas/domain";
+import type { LedgerEvent, LedgerState } from "@atlas/domain";
 import { createMemo, For, type JSX, Show } from "solid-js";
 import { Disclosure, Field, type Option, SelectField, Switch } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
@@ -24,6 +24,8 @@ interface FormFieldsProps {
   fields: readonly FieldSpec[];
   values: FormValues;
   state: LedgerState;
+  /** The ledger's events: what a list of assets leaves out needs them (`liveOnly`). */
+  events?: readonly LedgerEvent[] | undefined;
   onChange: (values: FormValues) => void;
   /** Prefix of the control ids, so two forms on one screen cannot collide. */
   prefix?: string;
@@ -86,8 +88,12 @@ const isSensitive = (field: FieldSpec): boolean =>
 const SECONDARY = new Set(["broker_ref", "source", "notes"]);
 
 /** The options a select field offers with these values, as of today. */
-const optionsOf = (field: FieldSpec, state: LedgerState, values: FormValues): Option[] =>
-  selectOptions(field, state, values, today());
+const optionsOf = (
+  field: FieldSpec,
+  state: LedgerState,
+  values: FormValues,
+  events: readonly LedgerEvent[] | undefined,
+): Option[] => selectOptions(field, state, values, today(), events);
 
 export const FormFields = (props: FormFieldsProps): JSX.Element => {
   const names = createMemo(() => nameIndex(props.state));
@@ -139,7 +145,7 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
       return (
         <SelectField
           {...common}
-          options={optionsOf(field, props.state, props.values)}
+          options={optionsOf(field, props.state, props.values, props.events)}
           {...(field.required === true ? {} : { placeholder: "Sin indicar" })}
         />
       );
