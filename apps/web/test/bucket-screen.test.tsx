@@ -46,6 +46,20 @@ describe("the bucket", () => {
     expect(text(row)).toBe("Alpha Spin-offsin dato");
   });
 
+  it("keeps the open theses in sight and folds the closed ones, which are history", async () => {
+    const host = await show("/cubo?fecha=2029-01-15", Cubo);
+    const card = [...host.querySelectorAll("section.card")].find(
+      (section) => text(section.querySelector("h2")) === "Tesis frente al índice",
+    );
+    const fold = card?.querySelector("details") as HTMLDetailsElement | null;
+    expect(fold?.open).toBe(false);
+    expect(text(fold?.querySelector("summary"))).toMatch(/^\d+ tesis cerradas$/);
+    // Every open thesis is outside the fold.
+    const outside = [...(card?.querySelectorAll('[aria-label="Tesis abiertas"] tbody tr') ?? [])];
+    expect(outside.length).toBeGreaterThan(0);
+    expect(outside.every((row) => text(row).includes("abierta"))).toBe(true);
+  });
+
   it("puts the range right over the chart it changes, not over the figure", async () => {
     const host = await show("/cubo?fecha=2029-01-15", Cubo);
     const range = host.querySelector(".card.is-chart fieldset.segmented");
