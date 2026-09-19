@@ -54,8 +54,8 @@ const DESTINATIONS: Record<string, { label: string; to: string }> = {
   partial_net_worth: { label: "Registrar valoración", to: "/registrar/valuation" },
   missing_benchmark_price: { label: "Registrar valoración", to: "/registrar/valuation" },
   // Portfolio rules: the core and the bucket screens (next feature) explain them.
-  deviation_above_threshold: { label: "Ver el núcleo", to: "/nucleo" },
-  satellite_below_minimum: { label: "Ver el núcleo", to: "/nucleo" },
+  deviation_above_threshold: { label: "Ver la cartera", to: "/cartera" },
+  satellite_below_minimum: { label: "Ver la cartera", to: "/cartera" },
   asset_without_target: { label: "Revisar la configuración", to: "/ajustes/configuracion" },
   unknown_target_weight: { label: "Revisar la configuración", to: "/ajustes/configuracion" },
   missing_benchmark_asset: { label: "Revisar la configuración", to: "/ajustes/configuracion" },

@@ -13,6 +13,7 @@ import { render } from "solid-js/web";
 import { afterEach, beforeEach, vi } from "vitest";
 import { loadInto } from "../../src/ledger/actions.js";
 import { store } from "../../src/ledger/state.js";
+import { AppShell } from "../../src/shell/AppShell.jsx";
 import { goldenText } from "./golden.js";
 
 class MemoryBlob implements LedgerBlob {
@@ -86,6 +87,34 @@ export const show = async (
     ),
   );
   await settle();
+  return host;
+};
+
+/**
+ * Renders the **whole application frame** — header, navigation, content — at a
+ * URL, with the screens it is given behind their patterns: what the shell does
+ * around a screen is only visible with the shell there.
+ */
+export const showInShell = async (
+  url: string,
+  routes: Readonly<Record<string, (props: never) => JSX.Element>>,
+): Promise<HTMLElement> => {
+  window.history.replaceState({}, "", url);
+  const host = document.createElement("div");
+  document.body.append(host);
+  disposers.push(
+    render(
+      () => (
+        <Router root={AppShell}>
+          {Object.entries(routes).map(([pattern, screen]) => (
+            <Route path={pattern} component={screen as never} />
+          ))}
+        </Router>
+      ),
+      host,
+    ),
+  );
+  await settle(10);
   return host;
 };
 

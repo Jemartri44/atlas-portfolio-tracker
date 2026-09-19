@@ -1,126 +1,39 @@
 /*
- * The shell: **one** navigation, two shapes.
+ * The shell (docs/design/system.md §4): ONE header and ONE navigation, two
+ * shapes.
  *
- * Under 768px it is a bottom bar at thumb reach; from 768px it is a side rail.
- * It is the same `<nav>` with the same list of links — not two components, not
- * two copies in the DOM — so "never both at once" is structural and not a
- * promise (prompt §3.5, decision (e)). The status bar, which carries where the
- * ledger is plus two switches, exists only on the narrow layout: on the wide
- * one its content moves into the rail's footer, so there is never a second bar.
+ *   < 75rem  a status bar on top (where the data lives, privacy, settings)
+ *            and the navigation fixed at the bottom, Registrar in the middle.
+ *            A 1024px tablet in landscape keeps the thumb bar.
+ *   ≥ 75rem  one top bar: brand, the four destinations as a group, Registrar
+ *            as the primary button, and the status on the right. Compact
+ *            (shorter privacy label, tighter tabs) until 90rem.
  *
- * LINE BUDGET: the ceiling of decision (g) counts code, and this is the shell's
- * cascade — the bottom bar, the desktop rail and the breakpoints that turn one
- * into the other. Cutting it in two would put the two halves of a single
- * media-query ladder in different files, and a rule would win or lose depending
- * on which one was imported first.
+ * The content grid has its own breakpoint (64rem): the shell and the grid
+ * answer different questions — where the thumb is, and how wide the page is.
+ *
+ * LINE BUDGET: the two shapes of the navigation and the breakpoints that turn
+ * one into the other. Split in two files, the halves of one media-query ladder
+ * would win or lose depending on which file was imported first.
  */
 
-.shell {
+.app {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
 }
 
-/* --- Status bar (narrow only) ------------------------------------------- */
-
-.statusbar {
-  align-items: center;
-  background-color: var(--c-surface);
-  border-bottom: 1px solid var(--c-border);
-  display: flex;
-  gap: var(--s-2);
-  height: var(--statusbar-h);
-  justify-content: space-between;
-  padding: 0 var(--s-3);
-  padding-top: env(safe-area-inset-top);
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-
-/*
- * The switches and the gear keep their size (44px targets); what gives way is
- * the chip on the left, which truncates. Without `flex: 0 0 auto` here and
- * `min-width: 0` on the chip, a long source name ("Almacenamiento del
- * navegador") pushed the bar to 375px inside a 360px screen and the whole page
- * scrolled sideways (review of 2026-09-18).
- */
-.statusbar .actions {
-  align-items: center;
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--s-1);
-}
-
-/* Where the ledger is: visible on every screen (FR-011). */
-.ledger-chip {
-  align-items: center;
-  border-radius: var(--r-pill);
-  color: var(--c-text);
-  display: inline-flex;
-  font-size: var(--t-sm);
-  gap: var(--s-2);
-  max-width: 60vw;
-  min-height: var(--tap);
-  /* It is the part of the bar that yields: it truncates, it does not push. */
-  min-width: 0;
-  padding: 0 var(--s-2);
-  text-decoration: none;
-}
-
-.ledger-chip .dot {
-  background-color: var(--c-positive);
-  border-radius: 50%;
-  flex: 0 0 auto;
-  height: 0.5rem;
-  width: 0.5rem;
-}
-
-.ledger-chip.needs-attention .dot {
-  background-color: var(--c-warning);
-}
-
-.icon-button {
-  align-items: center;
-  background: none;
-  border: none;
-  border-radius: var(--r-md);
-  color: var(--c-text);
-  display: inline-flex;
-  height: var(--tap);
-  justify-content: center;
-  padding: 0;
-  width: var(--tap);
-}
-
-.icon-button:hover {
-  background-color: var(--c-surface-2);
-}
-
-/* The icon sizes itself here, not in the element: no inline style survives the CSP. */
-.icon-button svg {
-  height: var(--icon);
-  width: var(--icon);
-}
-
-/* --- Main --------------------------------------------------------------- */
-
-main {
-  flex: 1 1 auto;
-  margin: 0 auto;
-  max-width: var(--content-max);
-  padding: var(--s-4) var(--s-4) calc(var(--bottomnav-h) + var(--s-6) + env(safe-area-inset-bottom));
-  width: 100%;
-}
-
 .skip-link {
+  align-items: center;
   background-color: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-md);
-  left: var(--s-2);
-  padding: var(--s-2) var(--s-3);
+  border: var(--border) solid var(--c-border);
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  left: var(--space-2);
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
   position: absolute;
-  top: var(--s-2);
+  top: var(--space-2);
   transform: translateY(-200%);
   z-index: 40;
 }
@@ -129,350 +42,497 @@ main {
   transform: translateY(0);
 }
 
-/* --- The single navigation --------------------------------------------- */
+/* ---- Header ------------------------------------------------------------- */
+
+.topbar {
+  background-color: var(--c-surface);
+  border-bottom: var(--border) solid var(--c-border);
+  padding-top: env(safe-area-inset-top);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.topbar-inner {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  height: var(--statusbar-h);
+  margin-inline: auto;
+  max-width: var(--content-max);
+  padding-inline: var(--space-2) var(--space-1);
+}
+
+.brand {
+  display: none;
+}
+
+.status {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* ---- Where the data lives ------------------------------------------------ */
+
+.source {
+  align-items: center;
+  border-radius: var(--radius-md);
+  color: var(--c-text-2);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  min-height: var(--tap);
+  min-width: 0;
+  padding-inline: var(--space-2);
+  text-decoration: none;
+}
+
+.source:hover {
+  background-color: var(--c-fill);
+  color: var(--c-text);
+}
+
+.status > .source {
+  margin-right: auto;
+}
+
+.source .where {
+  color: var(--c-text);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.source .age {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source .age.is-overdue {
+  color: var(--c-caution);
+}
+
+.overdue-icon {
+  color: var(--c-caution-icon);
+}
+
+/* ---- Privacy: a pressed or unpressed pill ------------------------------- */
+
+.privacy {
+  background: none;
+  border: 0;
+  color: var(--c-text-2);
+  min-height: var(--tap);
+  padding: 0 var(--space-1);
+}
+
+.privacy:hover {
+  background: none;
+  color: var(--c-text);
+}
+
+.privacy .pill {
+  align-items: center;
+  border: var(--border) solid var(--c-border-control);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  gap: var(--space-2);
+  height: 2rem;
+  padding-inline: var(--space-3);
+}
+
+.privacy[aria-pressed="true"] .pill {
+  background-color: var(--c-accent-soft);
+  border-color: transparent;
+  color: var(--c-accent-soft-text);
+}
+
+.privacy .long {
+  display: none;
+}
+
+.icon-button {
+  align-items: center;
+  border-radius: var(--radius-md);
+  color: var(--c-text-2);
+  display: inline-flex;
+  height: var(--tap);
+  justify-content: center;
+  text-decoration: none;
+  width: var(--tap);
+}
+
+.icon-button:hover,
+.icon-button[aria-current="page"] {
+  background-color: var(--c-fill);
+  color: var(--c-text);
+}
+
+/* ---- Navigation: the bottom bar ----------------------------------------- */
 
 .nav {
   background-color: var(--c-surface);
-  border-top: 1px solid var(--c-border);
   bottom: 0;
+  box-shadow: var(--shadow-bar);
   inset-inline: 0;
   padding-bottom: env(safe-area-inset-bottom);
   position: fixed;
   z-index: 30;
 }
 
-/*
- * Pico makes `<nav>` a flex **row**, so this list is a flex item: without
- * `flex: 1 1 auto` it is only as wide as its content and the five slots come
- * out at 37px instead of 72, which is why the labels read "sum" and "Movim"
- * (review of 2026-09-18). And `nav ul:first-of-type` carries a negative
- * margin-inline of its own that beats `.nav ul` on specificity, so the reset
- * needs the same weight or the row hangs 8px off each edge.
- */
-.nav ul {
-  align-items: stretch;
+.nav-list {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) minmax(0, 1fr) auto minmax(0, 1fr)
+    minmax(0, 1fr);
+  height: var(--tabbar-h);
+  margin-inline: auto;
+  max-width: var(--tabbar-max);
+}
+
+.nav-list > li {
+  display: flex;
+  min-width: 0;
+}
+
+.nav-link {
+  align-items: center;
+  color: var(--c-text-2);
   display: flex;
   flex: 1 1 auto;
-  justify-content: space-around;
-  list-style: none;
-  margin: 0;
-  min-width: 0;
-  padding: 0;
-}
-
-.nav ul:first-of-type,
-.nav ul:last-of-type {
-  margin-inline: 0;
-}
-
-.nav li {
-  flex: 1 1 0;
-  /* Without this, a slot cannot shrink below its longest word and five of them
-     push the page sideways on a narrow phone, which is an acceptance criterion
-     and not a detail (prompt §3.5). */
-  min-width: 0;
-  padding: 0;
-}
-
-.nav a {
-  align-items: center;
-  color: var(--c-muted);
-  display: flex;
   flex-direction: column;
-  font-size: var(--t-xs);
-  gap: var(--s-0);
+  font-size: var(--text-xs);
+  gap: var(--space-1);
   justify-content: center;
-  /* Pico un-pads its nav links with a negative margin; here that made every
-     target 16px wider than its slot and overlap its neighbour's. */
-  margin: 0;
-  min-height: var(--bottomnav-h);
-  padding: var(--s-1) 0;
+  min-width: 0;
   text-decoration: none;
 }
 
-.nav a svg {
-  height: var(--icon);
-  width: var(--icon);
+.nav-link:hover {
+  color: var(--c-text);
 }
 
-/*
- * The label of the bar has its own step of the scale: at 12px "Movimientos"
- * needed 76px of a 72px slot and came out cut in half. The truncation stays as
- * a safety net — a 320px screen, or text scaled up by the system — but no
- * label is expected to reach it.
- */
-.nav .label {
-  font-size: var(--t-nav);
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Active destination: weight and a bar, not colour alone. */
-.nav a[aria-current="page"] {
-  color: var(--c-accent);
-  font-weight: var(--w-semibold);
-  position: relative;
-}
-
-.nav a[aria-current="page"]::before {
-  background-color: var(--c-accent);
-  border-radius: var(--r-pill);
-  content: "";
-  height: 2px;
-  left: 25%;
-  position: absolute;
-  right: 25%;
-  top: 0;
-}
-
-/* The action, not a destination: filled and in the middle, under the thumb. */
-.nav a.action {
-  color: var(--c-accent-inverse);
-  font-weight: var(--w-semibold);
-}
-
-.nav a.action .pill {
+.nav-link .indicator {
   align-items: center;
-  background-color: var(--c-accent);
-  border-radius: var(--r-pill);
-  color: var(--c-accent-inverse);
+  border-radius: var(--radius-pill);
   display: flex;
   height: 2.25rem;
   justify-content: center;
-  width: 3.25rem;
+  width: 3.5rem;
 }
 
-.nav a.action span.label {
+.nav-glyph {
+  height: var(--icon-lg);
+  width: var(--icon-lg);
+}
+
+/* A label may overflow its slot into its neighbours' air rather than be cut:
+   "Movimientos" is the one long word, and its neighbours are short. */
+.nav-label {
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.nav-link[aria-current="page"] {
+  color: var(--c-text);
+  font-weight: var(--fw-semibold);
+}
+
+.nav-link[aria-current="page"] .indicator {
+  background-color: var(--c-accent-soft);
+  color: var(--c-accent-soft-text);
+}
+
+.nav-action {
+  align-items: center;
   color: var(--c-accent);
-}
-
-.nav .rail-footer {
-  display: none;
-}
-
-.nav .rail-footer a {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-1);
+  justify-content: center;
+  padding-inline: var(--space-3);
   text-decoration: none;
 }
 
-.nav .rail-footer a svg {
-  height: var(--icon-sm);
-  width: var(--icon-sm);
+.nav-action .plate {
+  align-items: center;
+  background-color: var(--c-accent);
+  border-radius: var(--radius-lg);
+  color: var(--c-on-accent);
+  display: flex;
+  height: 2.25rem;
+  justify-content: center;
+  width: 3.5rem;
 }
 
-/* --- From 768px: the rail, and no bottom bar ---------------------------- */
+.nav-action:hover .plate {
+  background-color: var(--c-accent-hover);
+}
 
-@media (min-width: 768px) {
-  .statusbar {
+/* The narrowest phones (< 380px): the decorative icon of the source and some
+   air around Registrar give way; no word does. */
+@media (max-width: 23.74rem) {
+  .source-icon {
     display: none;
   }
 
-  .shell {
-    padding-left: var(--rail-w);
+  .nav-action {
+    padding-inline: var(--space-2);
+  }
+
+  .nav-action .plate {
+    width: 3rem;
+  }
+}
+
+/* ---- Page --------------------------------------------------------------- */
+
+.page {
+  flex: 1 1 auto;
+  margin-inline: auto;
+  max-width: var(--content-max);
+  padding: var(--space-5) var(--gutter)
+    calc(var(--tabbar-h) + var(--space-7) + env(safe-area-inset-bottom));
+  width: 100%;
+}
+
+/* No navigation, no bar to keep the content clear of. */
+.page.is-bare {
+  padding-bottom: var(--space-9);
+}
+
+.page-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.page-head .titles {
+  display: grid;
+  gap: var(--space-0);
+  min-width: 0;
+}
+
+.page-head .sub {
+  color: var(--c-text-3);
+  font-size: var(--text-sm);
+}
+
+.page-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.stack {
+  display: grid;
+  gap: var(--grid-gap);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ---- The band of a ledger with problems: permanent while they last ------ */
+
+.band {
+  align-items: center;
+  background-color: var(--c-danger-soft);
+  color: var(--c-danger);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--gutter);
+}
+
+.band a {
+  color: inherit;
+  font-weight: var(--fw-semibold);
+  margin-left: auto;
+}
+
+/* ======================================================================== */
+/* ≥ 64rem (1024): the grid                                                  */
+/* ======================================================================== */
+
+@media (min-width: 64rem) {
+  .page {
+    padding-top: var(--space-6);
+  }
+
+  .page-head {
+    margin-bottom: var(--space-5);
+  }
+}
+
+/* ======================================================================== */
+/* ≥ 75rem (1200): the top bar                                               */
+/* ======================================================================== */
+
+@media (min-width: 75rem) {
+  .topbar-inner {
+    gap: var(--space-4);
+    height: var(--topbar-h);
+    padding-inline: var(--gutter);
+  }
+
+  .brand {
+    align-items: center;
+    color: var(--c-text);
+    display: inline-flex;
+    font-size: var(--text-lg);
+    font-weight: var(--fw-semibold);
+    gap: var(--space-2);
+    letter-spacing: var(--tracking-tight);
+    margin-right: var(--space-2);
+    min-height: var(--tap);
+    text-decoration: none;
+  }
+
+  .brand .mark {
+    color: var(--c-accent);
+    height: var(--icon-lg);
+    width: var(--icon-lg);
+  }
+
+  .status {
+    flex: 0 1 auto;
+    margin-left: auto;
+  }
+
+  .status > .source {
+    margin-right: 0;
+  }
+
+  .privacy .short {
+    display: none;
+  }
+
+  .privacy .long {
+    display: inline;
   }
 
   .nav {
-    border-right: 1px solid var(--c-border);
-    border-top: none;
-    bottom: 0;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    position: static;
+  }
+
+  .nav-list {
+    align-items: center;
     display: flex;
-    flex-direction: column;
-    gap: var(--s-3);
-    inset-inline: auto;
-    left: 0;
-    /* A window shorter than the rail (a phone on its side) scrolls it rather
-       than cutting the footer, and with it the way to the settings, off. */
-    overflow-y: auto;
-    /* The same top as `main`: the action and the title of the screen start on
-       one line. */
-    padding: var(--s-6) var(--s-3) var(--s-4);
-    top: 0;
-    width: var(--rail-w);
-  }
-
-  .nav ul {
-    flex-direction: column;
-    gap: var(--s-1);
-    justify-content: flex-start;
-  }
-
-  /*
-   * Down the rail the list is a column, so the `flex: 1 1 0` that shares the
-   * width of the bar out among five slots shared the **height** of the screen
-   * out instead: on a 1141px monitor, 180px of void between one destination and
-   * the next (review of 2026-09-18). Here a slot is as tall as its link, the
-   * group sits at the top and the footer is pushed down by its own margin.
-   */
-  .nav li {
-    flex: 0 0 auto;
-  }
-
-  .nav a {
-    align-items: center;
-    border-radius: var(--r-md);
-    flex-direction: row;
-    font-size: var(--t-md);
-    gap: var(--s-3);
-    justify-content: flex-start;
-    min-height: var(--tap);
-    padding: 0 var(--s-3);
-  }
-
-  /*
-   * One column of glyphs and one of labels for every row of the rail, the
-   * footer included. The glyph is centred in a track as wide as the widest of
-   * them — the privacy switch — so the dot, the switch and the gear share the
-   * axis of the icons above and every label starts on the same edge. Before,
-   * each footer row lined up on its own and the switch stuck out to the left.
-   */
-  .nav .rail-footer > *,
-  .nav ul a:not(.action) {
-    align-items: center;
-    column-gap: var(--s-3);
-    display: grid;
-    grid-template-columns: var(--rail-glyph) minmax(0, 1fr);
-    padding: 0 var(--s-3);
-  }
-
-  .nav .rail-footer > * > :first-child,
-  .nav ul a:not(.action) > :first-child {
-    justify-self: center;
-    margin: 0;
-  }
-
-  /* In the rail there is width to spare: the label reads at the link's size. */
-  .nav .label,
-  .nav .switch-inline .tiny {
-    font-size: inherit;
-  }
-
-  .nav a[aria-current="page"] {
-    background-color: var(--c-accent-bg);
-    color: var(--c-accent-inverse);
-  }
-
-  .nav a[aria-current="page"]::before {
-    border-radius: var(--r-pill);
-    bottom: 25%;
     height: auto;
-    left: 0;
-    right: auto;
-    top: 25%;
-    width: 2px;
-    background-color: currentcolor;
+    max-width: none;
   }
 
-  /* The action becomes the primary button at the top of the rail. */
-  .nav li.action-item {
-    order: -1;
-    margin-bottom: var(--s-2);
+  /* The four destinations sit on one shared track: the group. */
+  .nav-list > li:not(.nav-action-item) {
+    background-color: var(--c-fill);
+    padding-block: var(--space-1);
   }
 
-  .nav a.action {
+  .nav-list > li:first-child {
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    padding-left: var(--space-1);
+  }
+
+  .nav-list > li:nth-child(4) {
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding-right: var(--space-1);
+  }
+
+  .nav-link {
+    border-radius: calc(var(--radius-md) - var(--space-0));
+    flex-direction: row;
+    font-size: var(--text-md);
+    gap: var(--space-2);
+    min-height: var(--tap);
+    padding-inline: var(--space-4);
+  }
+
+  .nav-link .indicator {
+    height: auto;
+    width: auto;
+  }
+
+  .nav-glyph {
+    height: var(--icon-md);
+    width: var(--icon-md);
+  }
+
+  .nav-link[aria-current="page"] {
+    background-color: var(--c-raised);
+    box-shadow: var(--shadow-2);
+    font-weight: var(--fw-medium);
+  }
+
+  .nav-link[aria-current="page"] .indicator {
+    background: none;
+    color: var(--c-accent);
+  }
+
+  .nav-action-item {
+    margin-left: var(--space-3);
+  }
+
+  .nav-action {
     background-color: var(--c-accent);
-    border-radius: var(--r-md);
-    color: var(--c-accent-inverse);
-    justify-content: center;
+    border-radius: var(--radius-md);
+    color: var(--c-on-accent);
+    flex-direction: row;
+    font-size: var(--text-md);
+    gap: var(--space-2);
+    min-height: var(--tap);
+    padding-inline: var(--space-4) var(--space-5);
   }
 
-  .nav a.action .pill {
+  .nav-action:hover,
+  .nav-action[aria-current="page"] {
+    background-color: var(--c-accent-hover);
+    color: var(--c-on-accent);
+  }
+
+  .nav-action .plate,
+  .nav-action:hover .plate {
     background: none;
     height: auto;
     width: auto;
   }
 
-  .nav a.action span.label {
-    color: var(--c-accent-inverse);
-  }
-
-  .nav .rail-footer {
-    border-top: 1px solid var(--c-border);
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-1);
-    margin-top: auto;
-    padding-top: var(--s-3);
-  }
-
-  .ledger-chip {
-    max-width: 100%;
-  }
-
-  /*
-   * Beside the rail, not centred in what is left of the screen: the content
-   * starts where the navigation ends, and whatever a wide monitor has to spare
-   * stays on the right as margin. Centred, a 2045px monitor showed a 992px
-   * column with 400px of void on either side (review of 2026-09-18).
-   */
-  main {
-    margin: 0;
-    padding: var(--s-6) var(--s-5);
+  .page {
+    padding-bottom: var(--space-9);
   }
 }
 
-/* --- Page header: the title is the first line of content ---------------- */
+/* The top bar, compact: until the monitor has room for every word. */
+@media (min-width: 75rem) and (max-width: 89.99rem) {
+  .brand > span {
+    display: none;
+  }
 
-.page-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  margin-bottom: var(--s-4);
-}
+  .nav-link {
+    padding-inline: var(--space-3);
+  }
 
-.page-header .lead {
-  color: var(--c-muted);
-  font-size: var(--t-sm);
-}
+  .privacy .short {
+    display: inline;
+  }
 
-/* --- Degraded banner: permanent while the ledger has invalid events ----- */
-
-.degraded {
-  align-items: center;
-  background-color: var(--c-negative-bg);
-  border-bottom: 1px solid var(--c-negative);
-  color: var(--c-negative);
-  display: flex;
-  font-size: var(--t-sm);
-  gap: var(--s-2);
-  justify-content: space-between;
-  padding: var(--s-2) var(--s-4);
-}
-
-.degraded a {
-  color: inherit;
-}
-
-/* --- Skeletons: the shape of what is coming, never a spinner ----------- */
-
-.skeleton {
-  background-color: var(--c-surface-2);
-  border-radius: var(--r-sm);
-  height: 1rem;
-}
-
-.skeleton.tall {
-  height: 2.5rem;
-}
-
-/*
- * Lines of unequal width, so the placeholder reads as text and not as a block.
- * A cycle of four widths and not one value per line: it is the same illusion
- * and it needs nothing computed per element, which is what used to force an
- * inline `style` the production CSP blocks.
- */
-.skeleton:nth-child(4n + 1) {
-  width: 100%;
-}
-
-.skeleton:nth-child(4n + 2) {
-  width: 88%;
-}
-
-.skeleton:nth-child(4n + 3) {
-  width: 76%;
-}
-
-.skeleton:nth-child(4n) {
-  width: 64%;
+  .privacy .long {
+    display: none;
+  }
 }

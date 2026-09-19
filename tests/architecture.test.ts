@@ -490,77 +490,6 @@ const RUNTIME_CLASSES = [
   },
 ];
 
-/**
- * The declarations of one selector, as written in a stylesheet. At-rule
- * wrappers (`@media …`) do not match, their inner rules do, which is all this
- * needs.
- */
-const declarationsOf = (css: string, selector: string): string[] => {
-  const normalise = (text: string): string => text.trim().replace(/\s+/g, " ");
-  const found: string[] = [];
-  for (const match of css.replace(/\/\*[\s\S]*?\*\//g, " ").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const selectors = (match[1] as string).split(",").map(normalise);
-    if (!selectors.includes(selector)) {
-      continue;
-    }
-    found.push(
-      ...(match[2] as string)
-        .split(";")
-        .map(normalise)
-        .filter((one) => one !== ""),
-    );
-  }
-  return found;
-};
-
-/**
- * Declarations the shell cannot lose. Every one of them is here because Pico's
- * own `nav` rules either win on specificity or fill in where we say nothing,
- * and the damage is only visible in a browser: the bottom bar came out with
- * 37px slots and the labels cut to "sum" and "Movim", and the status bar was
- * 15px wider than the phone, which scrolled the whole page sideways.
- *
- * A test with no DOM cannot measure a layout. What it can do is refuse to let
- * the line that fixes it disappear again without anybody noticing.
- */
-const SHELL_RULES = [
-  {
-    selector: ".nav ul",
-    declaration: "flex: 1 1 auto",
-    reason: "Pico hace del <nav> un flex row: sin crecer, los cinco huecos salen a 37px",
-  },
-  {
-    selector: ".nav li",
-    declaration: "min-width: 0",
-    reason: "un hueco tiene que poder encogerse por debajo de su palabra más larga",
-  },
-  {
-    selector: ".nav li",
-    declaration: "flex: 0 0 auto",
-    reason: "en la barra lateral `flex: 1 1 0` reparte la altura: 180px de vacío entre destinos",
-  },
-  {
-    selector: ".nav a",
-    declaration: "margin: 0",
-    reason: "Pico da margen negativo a `nav li a` y cada destino se solapaba con el vecino",
-  },
-  {
-    selector: ".nav .label",
-    declaration: "font-size: var(--t-nav)",
-    reason: "«Movimientos» a 12px pide 76px de un hueco de 72",
-  },
-  {
-    selector: ".statusbar .actions",
-    declaration: "flex: 0 0 auto",
-    reason: "los interruptores y el engranaje no encogen: lo que cede es el chip",
-  },
-  {
-    selector: ".ledger-chip",
-    declaration: "min-width: 0",
-    reason: "sin esto el chip empuja la barra de estado fuera de la pantalla",
-  },
-];
-
 describe("architecture: apps/web", () => {
   /**
    * Decision (d) of prompt 006 and Q6: **every** amount and **every** quantity
@@ -801,18 +730,13 @@ describe("architecture: apps/web", () => {
     const violations = [...markupClasses().literal].filter((name) => !declared.has(name)).sort();
     expect(violations).toEqual([]);
   });
-  /**
-   * The declarations of `layout.css` that keep the shell inside a 360px screen
-   * with its labels readable, and the rail with its destinations together. See
-   * `SHELL_RULES` for why each one exists.
+  /*
+   * The shell used to be guarded here by declarations that had to exist in
+   * `layout.css`, each one there to beat a default of Pico. Pico is gone
+   * (ADR-0023), and what those rules protected — a navigation that fits, a
+   * screen whose content is shown at every width — is now checked on what the
+   * browser **applies**, in `apps/web/test/shell.test.tsx`.
    */
-  it("keeps the declarations that hold the shell together", () => {
-    const layout = readFileSync(join(webSrc, "styles", "layout.css"), "utf8");
-    const missing = SHELL_RULES.filter(
-      (rule) => !declarationsOf(layout, rule.selector).includes(rule.declaration),
-    ).map((rule) => `${rule.selector} { ${rule.declaration} } — ${rule.reason}`);
-    expect(missing).toEqual([]);
-  });
 
   /**
    * FR-047: a `catch` that does nothing is a defect. It is how a failure becomes

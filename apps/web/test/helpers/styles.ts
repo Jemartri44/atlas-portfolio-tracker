@@ -58,3 +58,9 @@ export const applied = (element: Element | null | undefined, property: string): 
   }
   return getComputedStyle(element).getPropertyValue(property).trim();
 };
+
+/** A length as pixels: happy-dom answers some of them in `rem`, at 16px each. */
+export const pixels = (length: string): number => {
+  const value = Number.parseFloat(length);
+  return length.endsWith("rem") ? value * 16 : value;
+};

@@ -1,90 +1,67 @@
-// **The** navigation. One element, one list of links, two shapes: a bottom bar
-// under 768px and a side rail from there up, switched by CSS alone
-// (`styles/layout.css`). There is no second copy in the DOM, so "never both at
-// once" is structural rather than a promise (decision (e)).
+// **The** navigation (docs/design/system.md §4.2). One element, one list: a
+// bar at the bottom of a phone or a tablet, with Registrar in the middle under
+// the thumb, and from 75rem a group of four destinations in the top bar with
+// Registrar as the primary button after it. There is no second copy in the
+// DOM, so "never two navigations" is structural and not a promise.
 //
-// Four destinations of equal standing plus the **action** of recording, which
-// is not a destination: on the phone it sits in the middle, where the thumb
-// is; on the desktop it becomes the primary button at the top of the rail.
-// Settings do not take a thumb slot — they are touched once a month and live in
-// the status bar (narrow) or the rail footer (wide).
+// The list is written in the order the eye reads it at each width, so the
+// keyboard walks it in that same order: CSS could move Registrar to the middle,
+// but not the Tab key. Settings are not a destination: they live in the status
+// area of the header, touched once a month.
 
 import { A } from "@solidjs/router";
-import type { JSX } from "solid-js";
-import { LedgerChip } from "./LedgerChip.jsx";
-import { PrivacyToggle } from "./PrivacyToggle.jsx";
+import { For, type JSX } from "solid-js";
+import { Icon, type IconName } from "../components/Icon.jsx";
+import { mediaQuery, TOP_BAR } from "./media.js";
 
-/** Inline icons: no icon font, no sprite, nothing remote (constitution, security). */
-const Icon = (props: { path: string }): JSX.Element => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-    <path d={props.path} stroke-linecap="round" stroke-linejoin="round" />
-  </svg>
-);
+interface Destination {
+  href: string;
+  label: string;
+  icon: IconName;
+  end?: boolean;
+  action?: boolean;
+}
 
-const ICONS = {
-  summary: "M4 13h5v7H4zM10 4h5v16h-5zM16 9h4v11h-4z",
-  movements: "M4 7h16M4 12h10M4 17h13",
-  plus: "M12 5v14M5 12h14",
-  core: "M12 3a9 9 0 1 0 9 9h-9z",
-  bucket: "M5 7h14l-1.5 12h-11zM9 7V5a3 3 0 0 1 6 0v2",
-  settings:
-    "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12c0-.5 0-1-.1-1.4l1.7-1.3-1.7-3-2 .8a7 7 0 0 0-2.4-1.4L14.2 3H9.8l-.3 2.7a7 7 0 0 0-2.4 1.4l-2-.8-1.7 3L5.1 10.6c-.1.4-.1.9-.1 1.4s0 1 .1 1.4l-1.7 1.3 1.7 3 2-.8a7 7 0 0 0 2.4 1.4l.3 2.7h4.4l.3-2.7a7 7 0 0 0 2.4-1.4l2 .8 1.7-3-1.7-1.3c.1-.4.1-.9.1-1.4z",
-} as const;
+const SUMMARY: Destination = { href: "/", label: "Resumen", icon: "summary", end: true };
+const MOVEMENTS: Destination = { href: "/movimientos", label: "Movimientos", icon: "movements" };
+const PORTFOLIO: Destination = { href: "/cartera", label: "Cartera", icon: "portfolio" };
+const BUCKET: Destination = { href: "/cubo", label: "Cubo", icon: "bucket" };
+const RECORD: Destination = { href: "/registrar", label: "Registrar", icon: "plus", action: true };
 
-export const Nav = (): JSX.Element => (
-  <nav class="nav" aria-label="Secciones">
-    <ul>
-      <li>
-        <A href="/" end>
-          <Icon path={ICONS.summary} />
-          <span class="label">Resumen</span>
-        </A>
-      </li>
-      <li>
-        <A href="/movimientos">
-          <Icon path={ICONS.movements} />
-          <span class="label">Movimientos</span>
-        </A>
-      </li>
-      <li class="action-item">
-        <A href="/registrar" class="action" aria-label="Registrar una operación">
-          <span class="pill">
-            <Icon path={ICONS.plus} />
-          </span>
-          <span class="label">Registrar</span>
-        </A>
-      </li>
-      <li>
-        <A href="/nucleo">
-          <Icon path={ICONS.core} />
-          <span class="label">Núcleo</span>
-        </A>
-      </li>
-      <li>
-        <A href="/cubo">
-          <Icon path={ICONS.bucket} />
-          <span class="label">Cubo</span>
-        </A>
-      </li>
-    </ul>
-    {/* Wide layout only: what the status bar carries on a phone. */}
-    <div class="rail-footer">
-      <LedgerChip />
-      <PrivacyToggle />
-      <A href="/ajustes" class="row">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.6"
-          aria-hidden="true"
-        >
-          <path d={ICONS.settings} stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        <span>Ajustes</span>
+/** Narrow: Registrar in the middle. Wide: after the group of four. */
+const NARROW = [SUMMARY, MOVEMENTS, RECORD, PORTFOLIO, BUCKET];
+const WIDE = [SUMMARY, MOVEMENTS, PORTFOLIO, BUCKET, RECORD];
+
+const Item = (props: { destination: Destination }): JSX.Element =>
+  props.destination.action === true ? (
+    <li class="nav-action-item">
+      <A href={props.destination.href} class="nav-action" aria-label="Registrar una operación">
+        <span class="plate">
+          <Icon name="plus" class="nav-glyph" />
+        </span>
+        <span class="nav-label">{props.destination.label}</span>
       </A>
-    </div>
-  </nav>
-);
+    </li>
+  ) : (
+    <li>
+      <A href={props.destination.href} end={props.destination.end} class="nav-link">
+        <span class="indicator">
+          <Icon name={props.destination.icon} class="nav-glyph" />
+        </span>
+        <span class="nav-label">{props.destination.label}</span>
+      </A>
+    </li>
+  );
 
-export { ICONS };
+export const Nav = (): JSX.Element => {
+  const wide = mediaQuery(TOP_BAR);
+  return (
+    <nav class="nav" aria-label="Secciones">
+      <ul class="nav-list">
+        <For each={wide() ? WIDE : NARROW}>
+          {(destination) => <Item destination={destination} />}
+        </For>
+      </ul>
+    </nav>
+  );
+};

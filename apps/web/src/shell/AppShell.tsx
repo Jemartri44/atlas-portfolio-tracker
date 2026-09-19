@@ -1,26 +1,33 @@
-// The frame: status bar (narrow only), permanent degraded banner, content and
-// the single navigation. No centred title band anywhere — the title of each
-// screen is the first heading of its content (FR-028).
+// The frame (docs/design/system.md §4.2): one header, one navigation inside it,
+// the permanent band of a ledger with problems, and the content. The <nav>
+// comes **before** <main> in the document, as the eye and the keyboard expect,
+// and there is never a second navigation anywhere.
+//
+// Without any open ledger (the first run) there is no navigation at all:
+// every destination needs data. An open ledger, even an empty one, shows it,
+// because the first steps lead to Registrar and to Ajustes (D8).
 
 import { A } from "@solidjs/router";
 import { ErrorBoundary, type JSX, Show } from "solid-js";
-// Imported straight from its module, not through the barrel: the shell is on
-// the boot path, and a barrel drags everything it re-exports with it — the
+// Imported straight from their modules, not through the barrel: the shell is
+// on the boot path, and a barrel drags everything it re-exports with it — the
 // shared table, the chart layer and the date picker would all be downloaded
 // before the first screen paints.
 import { Callout } from "../components/Callout.jsx";
+import { Icon } from "../components/Icon.jsx";
+import { countOf } from "../format/number.js";
 import { store } from "../ledger/state.js";
 import { LedgerChip } from "./LedgerChip.jsx";
-import { ICONS, Nav } from "./Nav.jsx";
+import { Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
 
-const DegradedBanner = (): JSX.Element => (
+const DegradedBand = (): JSX.Element => (
   <Show when={store.invalidCount() > 0}>
-    <aside class="degraded" role="status">
+    <aside class="band" role="status">
+      <Icon name="danger" class="icon-sm" />
       <span>
-        {store.invalidCount()}{" "}
-        {store.invalidCount() === 1 ? "evento inválido" : "eventos inválidos"} en el libro: se puede
-        consultar, no registrar.
+        {countOf(store.invalidCount(), "movimiento inválido", "movimientos inválidos")} en tus
+        datos: se puede consultar, no registrar.
       </span>
       <A href="/ajustes/verificacion">Verificar</A>
     </aside>
@@ -34,7 +41,7 @@ const DegradedBanner = (): JSX.Element => (
  * whenever a lazily loaded screen could not be fetched, which is what happens
  * to an installed PWA that lost the network before its chunk was cached
  * (measured in the review of 2026-09-18: 0 characters inside `<main>`). The
- * navigation is outside the boundary on purpose: whatever broke, the other four
+ * navigation is outside the boundary on purpose: whatever broke, the other
  * destinations still work.
  */
 const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Element => (
@@ -52,44 +59,54 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
       </div>
     }
   >
-    El libro no se ha tocado: esto es un fallo de la propia pantalla. Si acabas de perder la
+    Tus datos no se han tocado: esto es un fallo de la propia pantalla. Si acabas de perder la
     conexión, recarga cuando vuelvas a tenerla.
     <Show when={props.failure instanceof Error}>
-      <p class="tiny flush">{(props.failure as Error).message}</p>
+      <p class="meta">{(props.failure as Error).message}</p>
     </Show>
   </Callout>
 );
 
+/** Whether a ledger is open or on its way: only the first run has none. */
+const hasLedger = (): boolean => {
+  const phase = store.load().phase;
+  return phase !== "unconfigured" && phase !== "reconnect";
+};
+
 export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
-  <div class="shell">
+  <div class="app">
     <a href="#contenido" class="skip-link">
       Ir al contenido
     </a>
-    <header class="statusbar">
-      <LedgerChip />
-      <div class="actions">
-        <PrivacyToggle />
-        <A href="/ajustes" class="icon-button" aria-label="Ajustes">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            aria-hidden="true"
-          >
-            <path d={ICONS.settings} stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </A>
+    <header class="topbar">
+      <div class="topbar-inner">
+        {/*
+          A plain link, not the router's <A>: the router would mark it as the
+          current page on "/", and the summary tab is already that.
+        */}
+        <a href="/" class="brand" aria-label="Atlas, ir al resumen">
+          <Icon name="globe" class="mark" />
+          <span>Atlas</span>
+        </a>
+        <Show when={hasLedger()}>
+          <Nav />
+        </Show>
+        <div class="status">
+          <LedgerChip />
+          <PrivacyToggle />
+          <A href="/ajustes" class="icon-button" aria-label="Ajustes">
+            <Icon name="settings" />
+          </A>
+        </div>
       </div>
     </header>
-    <DegradedBanner />
-    <main id="contenido">
+    <DegradedBand />
+    <main id="contenido" class={`page${hasLedger() ? "" : " is-bare"}`}>
       <ErrorBoundary
         fallback={(failure, reset) => <ScreenFailed failure={failure} retry={reset} />}
       >
         {props.children}
       </ErrorBoundary>
     </main>
-    <Nav />
   </div>
 );

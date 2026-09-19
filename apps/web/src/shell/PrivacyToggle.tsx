@@ -1,25 +1,29 @@
-// The privacy switch, one tap away from every screen (FR-023). Native
-// `<input type="checkbox" role="switch">`, which Pico styles as a switch
-// (ADR-0017): no component library for something the platform already has.
+// The privacy mode, one tap away from every screen (FR-023). A **pressed or
+// unpressed button**, not a switch: a pill with the crossed eye and "Oculto"
+// when it hides, the open eye and "Visible" when it does not. The whole button
+// is the 44px target; the pill it shows is 32px, so the bar stays light.
 //
-// The 44px target is the label, not the control (`.switch-inline`), and the
-// state is written next to it — "Oculto" / "Visible" — so it never depends on
-// the colour of the oval alone.
+// Its accessible name does not change with the state — the pressed state is
+// what a screen reader announces — so the words inside are for the eye.
 
-import type { JSX } from "solid-js";
+import { type JSX, Show } from "solid-js";
+import { Icon } from "../components/Icon.jsx";
 import { store } from "../ledger/state.js";
 
 export const PrivacyToggle = (): JSX.Element => (
-  <label class="switch-inline" for="privacy">
-    <input
-      id="privacy"
-      type="checkbox"
-      role="switch"
-      checked={store.privacy()}
-      aria-checked={store.privacy()}
-      onChange={(event) => store.setPrivacy(event.currentTarget.checked)}
-      aria-label="Ocultar importes y cantidades"
-    />
-    <span class="tiny">{store.privacy() ? "Oculto" : "Visible"}</span>
-  </label>
+  <button
+    type="button"
+    class="privacy"
+    aria-pressed={store.privacy()}
+    aria-label="Ocultar importes y cantidades"
+    onClick={() => store.setPrivacy(!store.privacy())}
+  >
+    <span class="pill" aria-hidden="true">
+      <Show when={store.privacy()} fallback={<Icon name="eye" class="icon-sm" />}>
+        <Icon name="eyeoff" class="icon-sm" />
+      </Show>
+      <span class="short">{store.privacy() ? "Oculto" : "Visible"}</span>
+      <span class="long">{store.privacy() ? "Importes ocultos" : "Importes visibles"}</span>
+    </span>
+  </button>
 );
