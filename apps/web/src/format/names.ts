@@ -45,6 +45,24 @@ export const NO_NAMES: NameIndex = {};
  */
 const thesisKey = (id: string): string => `tesis:${id}`;
 
+/**
+ * What the units of an asset are called, beside a quantity: "12,5 part." and,
+ * masked, "•••• part." (D2 of docs/design/system.md). In the same index under
+ * its own namespace, like the theses, because it is the catalogue read for the
+ * screen.
+ */
+const unitsKey = (id: string): string => `unidades:${id}`;
+
+const UNITS: Readonly<Record<string, string>> = {
+  fund: "part.",
+  money_market: "part.",
+  etf: "part.",
+  stock: "acc.",
+};
+
+/** Units nobody has a better word for: ETC, ETP, crypto, an unknown asset. */
+export const GENERIC_UNITS = "uds.";
+
 /** Builds the index from a projected ledger. */
 export const nameIndex = (state: LedgerState | undefined): NameIndex => {
   if (state === undefined) {
@@ -60,6 +78,7 @@ export const nameIndex = (state: LedgerState | undefined): NameIndex => {
     if (asset.name !== "") {
       names[asset.asset_id] = asset.name;
     }
+    names[unitsKey(asset.asset_id)] = UNITS[asset.asset_type] ?? GENERIC_UNITS;
   }
   for (const thesis of state.theses.values()) {
     names[thesisKey(thesis.thesis_id)] =
@@ -67,6 +86,10 @@ export const nameIndex = (state: LedgerState | undefined): NameIndex => {
   }
   return names;
 };
+
+/** "part.", "acc." or "uds.": what a quantity of this asset counts. */
+export const unitsOf = (names: NameIndex, assetId: string | undefined): string =>
+  assetId === undefined ? GENERIC_UNITS : (names[unitsKey(assetId)] ?? GENERIC_UNITS);
 
 /** "sobre Alpha Robotics (abierta el 01/09/2026)", or the identifier when the ledger does not know it. */
 export const displayThesis = (names: NameIndex, id: unknown): string =>

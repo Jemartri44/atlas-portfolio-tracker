@@ -131,11 +131,31 @@ a.notice:hover .notice-action {
 
 .pending-text {
   color: var(--c-text);
+  margin: 0;
 }
 
 /* A quiet action lines up with the sentence above it. */
 .pending-body > a {
   margin-left: calc(-1 * var(--space-2));
+}
+
+@media (min-width: 64rem) {
+  /* With room, the sentence and its action share one line. */
+  .pending {
+    align-items: center;
+  }
+
+  .pending-body {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    justify-content: space-between;
+  }
+
+  .pending-body > a {
+    margin-left: 0;
+  }
 }
 
 /* ---- Empty state: one message, one next step ---------------------------- */

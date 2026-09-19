@@ -339,7 +339,8 @@
   gap: var(--space-2);
 }
 
-.stack {
+.stack,
+.grid {
   display: grid;
   gap: var(--grid-gap);
   grid-template-columns: minmax(0, 1fr);
@@ -375,6 +376,23 @@
 
   .page-head {
     margin-bottom: var(--space-5);
+  }
+
+  /* Twelve columns; each card says how many it takes. */
+  .grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .span-5 {
+    grid-column: span 5;
+  }
+
+  .span-7 {
+    grid-column: span 7;
+  }
+
+  .span-12 {
+    grid-column: 1 / -1;
   }
 }
 

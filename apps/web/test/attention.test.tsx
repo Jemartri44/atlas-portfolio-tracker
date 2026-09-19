@@ -114,7 +114,7 @@ describe("the list, as data", () => {
 describe("the list, on the summary", () => {
   it("puts the export first and never an identifier or an ISO date", async () => {
     const host = await show("/", Resumen);
-    const items = [...host.querySelectorAll('[aria-label="Lo que reclama atención"] .item')];
+    const items = [...host.querySelectorAll('[aria-label="Lo que reclama atención"] .notice')];
     expect(text(items[0])).toContain("nunca se ha exportado");
     const shown = text(host.querySelector('[aria-label="Lo que reclama atención"]'));
     expect(shown).not.toMatch(ULID);
@@ -126,7 +126,7 @@ describe("the list, on the summary", () => {
     // eleven purchases inside the year before it.
     today("2027-01-10");
     const early = text(await show("/", Resumen));
-    expect(early).toMatch(/Venta con pérdida de World Index Fund.*\(\d+ avisos iguales\)/);
+    expect(early).toMatch(/Venta con pérdida de World Index Fund.*\d+ iguales/);
     expect(early.match(/Venta con pérdida de World Index Fund/g)).toHaveLength(1);
 
     // Two years later that window is long closed and is not something to act on.

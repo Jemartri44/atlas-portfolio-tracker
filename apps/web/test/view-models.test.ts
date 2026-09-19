@@ -439,7 +439,11 @@ describe("netWorthView", () => {
     const state = projectLedger(events, { collectErrors: true, asOf: "2029-06-30" });
     const settings = settingsAt(state, "2029-06-30").settings;
     const view = netWorthView(netWorth(state, "2029-06-30", settings));
-    expect(view.blocks.map((block) => block.label)).toEqual(["Núcleo", "Cubo", "Efectivo"]);
+    expect(view.blocks.map((block) => block.label)).toEqual([
+      "Cartera principal",
+      "Cubo",
+      "Efectivo",
+    ]);
     const sum = view.blocks.reduce(
       (total, block) => total.add((block.subtotal as Money).roundToCents()),
       Money.zero("EUR"),
@@ -550,7 +554,7 @@ describe("the names of the catalogue reach every screen", () => {
       expect(missing).not.toMatch(/^ast_/);
     }
     // The core keeps its asset classes, in Spanish and not as an enum.
-    const core = view.blocks.find((block) => block.label === "Núcleo");
+    const core = view.blocks.find((block) => block.label === "Cartera principal");
     expect(core?.lines.map((line) => line.name)).toContain("Renta variable");
   });
 

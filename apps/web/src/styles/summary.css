@@ -1,0 +1,190 @@
+/*
+ * The summary (docs/design/system.md §5.2 and §7.2): the one hero figure with
+ * its proportion bar and its three books, and the calm line of an empty
+ * attention list. The first steps of an empty ledger are in `steps.css`.
+ */
+
+/* ---- Hero: the one big figure, always broken down ------------------------ */
+
+.hero-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hero-figure {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-display);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-2);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--lh-tight);
+  margin-bottom: var(--space-4);
+}
+
+/* Masked, the dots of the one big figure stay a quiet placeholder. */
+.hero-figure .mask > .dots {
+  font-size: 0.55em;
+}
+
+/* The euro sign of a hero figure is set small, masked or not. */
+.hero-figure .unit {
+  font-size: 0.55em;
+  font-weight: var(--fw-medium);
+  letter-spacing: normal;
+}
+
+.hero-figure .tag {
+  align-self: center;
+  letter-spacing: normal;
+}
+
+/* The three shares on one bar, cut apart by the colour of the surface. */
+.shares {
+  border-radius: var(--radius-sm);
+  display: block;
+  height: var(--bar-h);
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+  width: 100%;
+}
+
+.share-seg {
+  stroke: var(--c-surface);
+  stroke-width: 3;
+}
+
+.share-seg.is-core {
+  fill: var(--c-series-core);
+}
+
+.share-seg.is-bucket {
+  fill: var(--c-series-bucket);
+}
+
+.share-seg.is-cash {
+  fill: var(--c-series-cash);
+}
+
+.parts {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.part {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  min-height: var(--tap);
+  padding-block: var(--space-2);
+}
+
+.part + .part {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.part-label {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+
+.part-figs {
+  align-items: baseline;
+  display: inline-flex;
+  gap: var(--space-3);
+}
+
+.part-share {
+  color: var(--c-text-3);
+  font-size: var(--text-sm);
+}
+
+.hero > .pending {
+  margin-top: var(--space-3);
+}
+
+@media (min-width: 64rem) {
+  /* A band across the page: the figure and its bar, then the books as columns. */
+  .hero {
+    column-gap: var(--space-6);
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  }
+
+  .hero > .pending,
+  .hero > .disclosure {
+    grid-column: 1 / -1;
+  }
+
+  .hero .shares {
+    margin-bottom: 0;
+  }
+
+  .hero .parts {
+    border-top: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: auto;
+  }
+
+  .part {
+    align-content: end;
+    align-items: start;
+    border-left: var(--border) solid var(--c-border);
+    display: grid;
+    gap: var(--space-2);
+    justify-content: start;
+    padding: 0 var(--space-5);
+  }
+
+  .part + .part {
+    border-top: 0;
+  }
+
+  .part-label {
+    color: var(--c-text-2);
+    font-size: var(--text-sm);
+    gap: var(--space-2);
+  }
+
+  .part-figs {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .part-share {
+    order: 1;
+  }
+
+  .part-fig {
+    font-size: var(--text-2xl);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--lh-tight);
+  }
+
+  .part-fig .unit {
+    font-size: 0.6em;
+    font-weight: var(--fw-medium);
+  }
+}
+
+/* ---- Nothing to do: said calmly, never as an empty card ------------------ */
+
+.calm {
+  align-items: center;
+  color: var(--c-text-2);
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  min-height: var(--tap);
+}
+
+.calm > .icon-sm {
+  color: var(--c-done);
+}

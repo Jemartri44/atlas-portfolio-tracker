@@ -1,0 +1,210 @@
+/*
+ * The first steps of an empty ledger (docs/design/system.md §5.18, D4): a
+ * numbered checklist with the state of each step on a phone, four cards in a
+ * row on a wide screen.
+ */
+
+.onboarding-lead {
+  color: var(--c-text-2);
+  margin-bottom: var(--space-2);
+  max-width: var(--reading-max);
+}
+
+.progress {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.progress .track {
+  display: grid;
+  gap: var(--space-1);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 6rem;
+}
+
+.progress .track > span {
+  background-color: var(--c-border);
+  border-radius: var(--radius-pill);
+  height: 0.375rem;
+}
+
+.progress .track > .is-done {
+  background-color: var(--c-done);
+}
+
+.steps {
+  display: grid;
+}
+
+.step {
+  align-items: start;
+  border-top: var(--border) solid var(--c-border);
+  color: inherit;
+  display: grid;
+  gap: var(--space-1) var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding-block: var(--space-4);
+  text-decoration: none;
+}
+
+.step-mark {
+  align-items: center;
+  border: var(--border) solid var(--c-border-control);
+  border-radius: var(--radius-pill);
+  color: var(--c-text-3);
+  display: flex;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  height: var(--mark-size);
+  justify-content: center;
+  width: var(--mark-size);
+}
+
+.step.is-done .step-mark {
+  background-color: var(--c-done);
+  border-color: var(--c-done);
+  color: var(--c-surface);
+}
+
+.step.is-current .step-mark {
+  border: var(--border-strong) solid var(--c-accent);
+  color: var(--c-accent);
+}
+
+.step-body {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  min-width: 0;
+}
+
+.step-title {
+  font-size: var(--text-md);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  padding-top: var(--space-0);
+}
+
+.step.is-done .step-title {
+  color: var(--c-text-2);
+}
+
+.step-text {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+a.step:hover .step-title {
+  color: var(--c-accent);
+}
+
+.step-body > [role="button"] {
+  margin-top: var(--space-2);
+}
+
+.step > .chev {
+  color: var(--c-text-3);
+  margin-top: var(--space-1);
+}
+
+.step-go {
+  align-items: center;
+  color: var(--c-accent);
+  display: none;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-1);
+}
+
+.onboarding-foot {
+  align-items: center;
+  border-top: var(--border) solid var(--c-border);
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin: 0;
+  min-height: var(--tap);
+  padding-top: var(--space-3);
+}
+
+.onboarding-foot > .icon-sm {
+  color: var(--c-text-3);
+  flex: none;
+}
+
+@media (min-width: 64rem) {
+  /* On a wide screen the steps are the cards: no card around them. */
+  .onboarding {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .onboarding-head {
+    margin-bottom: var(--space-5);
+  }
+
+  .onboarding-head .card-head {
+    justify-content: flex-start;
+    margin-bottom: var(--space-2);
+  }
+
+  .onboarding-head h2 {
+    font-size: var(--text-xl);
+  }
+
+  .steps {
+    gap: var(--grid-gap);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .step {
+    align-content: start;
+    background-color: var(--c-surface);
+    border: var(--border) solid var(--c-border);
+    border-radius: var(--radius-lg);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    height: 100%;
+    min-height: 13rem;
+    padding: var(--space-5);
+    row-gap: var(--space-4);
+  }
+
+  .step.is-current {
+    border-color: var(--c-accent);
+    box-shadow: 0 0 0 var(--border) var(--c-accent);
+  }
+
+  .step > .chev {
+    display: none;
+  }
+
+  /* A column, so the action sits at the foot of every card alike. */
+  .step-body {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .step-body > [role="button"],
+  .step-go {
+    margin-top: auto;
+  }
+
+  .step-go {
+    display: inline-flex;
+    padding-top: var(--space-3);
+  }
+
+  .onboarding-foot {
+    border-top: 0;
+    margin-top: var(--space-4);
+    padding-top: 0;
+  }
+}

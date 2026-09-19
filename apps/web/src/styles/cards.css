@@ -39,6 +39,27 @@
   gap: var(--space-2);
 }
 
+/* A card's last line: the way to the whole list, edge to edge. */
+.card-foot {
+  align-items: center;
+  border-top: var(--border) solid var(--c-border);
+  color: var(--c-accent);
+  display: flex;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-2);
+  justify-content: space-between;
+  margin: auto calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+  min-height: var(--tap);
+  padding: var(--space-1) var(--space-4);
+  text-decoration: none;
+}
+
+a.card-foot:hover {
+  background-color: var(--c-fill);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
 .card-note {
   color: var(--c-text-2);
   font-size: var(--text-sm);
@@ -61,6 +82,11 @@
 @media (min-width: 64rem) {
   .card {
     padding: var(--space-5) var(--space-6);
+  }
+
+  .card-foot {
+    margin: auto calc(-1 * var(--space-6)) calc(-1 * var(--space-5));
+    padding-inline: var(--space-6);
   }
 }
 

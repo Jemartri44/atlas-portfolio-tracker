@@ -9,30 +9,19 @@
 // A block the domain refuses (no prices, no target weights) explains itself and
 // leaves the other four standing (FR-013).
 
-import {
-  contributionPlan,
-  coreWeights,
-  costSummary,
-  netWorthSeries,
-  settingsAt,
-} from "@atlas/domain";
+import { contributionPlan, coreWeights, costSummary, settingsAt } from "@atlas/domain";
 import { createMemo, type JSX, Show } from "solid-js";
-import { SeriesCard } from "../../components/chart/index.js";
 import { AsOfPicker, Notice, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import { store } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { contributionView, costsView, weightsView } from "../../view-models/core/index.js";
-import { netWorthPlot } from "../../view-models/series.js";
 import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { TransferCard } from "./TransferCard.jsx";
 import { WeightsCard } from "./WeightsCard.jsx";
-
-/** Enough points for a curve, few enough that twenty years stay instant. */
-const MAX_POINTS = 120;
 
 export default function NucleoRoute(): JSX.Element {
   const asOf = useAsOf();
@@ -58,12 +47,6 @@ export default function NucleoRoute(): JSX.Element {
         );
         const costs = createMemo(() =>
           costsView(costSummary(dated(), snapshot.events, date(), settings(), date()), names),
-        );
-        const series = createMemo(() =>
-          netWorthPlot(
-            netWorthSeries(snapshot.events, { to: date(), max_points: MAX_POINTS }),
-            names,
-          ),
         );
 
         const plan = () => {
@@ -93,22 +76,6 @@ export default function NucleoRoute(): JSX.Element {
               <ContributionCard view={plan()} error={planError()} />
               <TransferCard state={dated()} date={date()} settings={settings()} />
               <CostsCard view={costs()} />
-              <SeriesCard
-                title="Evolución del patrimonio"
-                labels={["Núcleo", "Cubo", "Efectivo"]}
-                colours={["--c-series-core", "--c-series-bucket", "--c-series-cash"]}
-                dashes={[undefined, [6, 4], [1, 5]]}
-                x={series().x}
-                values={series().values}
-                rows={series().rows}
-                missing={series().missing}
-                empty={
-                  <Notice severity="info" title="Todavía no hay nada que dibujar">
-                    La evolución se dibuja sobre las fechas en las que el libro tiene precios.
-                    Registra una valoración y aparecerá el primer punto.
-                  </Notice>
-                }
-              />
               <Show when={weights().stale.length > 0}>
                 <Notice severity="caution" title="Hay precios caducados">
                   {weights().stale.join(", ")}: el precio que se está usando es más antiguo de lo
