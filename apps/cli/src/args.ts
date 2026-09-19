@@ -17,7 +17,37 @@ export class UsageError extends Error {
   }
 }
 
-export const parseArgs = (argv: readonly string[]): ParsedArgs => {
+/**
+ * The flags that never take a value. Without this list a boolean flag followed
+ * by a word swallowed it as its value: `atlas --json tax 2027` read `tax` as the
+ * value of `--json` and answered «comando desconocido: 2027», and
+ * `atlas --yes asset add` answered «--yes no admite valor» — in exactly the
+ * order the usage line suggests (verifier of feature 009). Every `booleanFlag`
+ * of the CLI has to be here; `test/args.test.ts` reads the sources to check it.
+ */
+export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
+  // Global.
+  "yes",
+  "confirm-duplicate",
+  "accept-invalid",
+  "json",
+  // Of a command.
+  "all",
+  "closed",
+  "deep",
+  "history",
+  "inactive",
+  "lots",
+  "neutrality-regime",
+  "no-neutrality-regime",
+  "not-transferable",
+  "transferable",
+]);
+
+export const parseArgs = (
+  argv: readonly string[],
+  booleans: ReadonlySet<string> = BOOLEAN_FLAGS,
+): ParsedArgs => {
   const positionals: string[] = [];
   const flags: Flags = new Map();
   let onlyPositionals = false;
@@ -41,7 +71,7 @@ export const parseArgs = (argv: readonly string[]): ParsedArgs => {
       continue;
     }
     const next = argv[i + 1];
-    if (next === undefined || next.startsWith("--")) {
+    if (next === undefined || next.startsWith("--") || booleans.has(body)) {
       flags.set(body, true);
       continue;
     }

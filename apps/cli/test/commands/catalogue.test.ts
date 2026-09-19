@@ -93,6 +93,32 @@ describe("atlas account / asset", () => {
     expect(await h.exec(["asset", "nope"])).toBe(64);
   });
 
+  it("takes --yes in front of the command, as the usage line puts it", async () => {
+    // It used to read `asset` as the value of --yes: «--yes no admite valor».
+    const h = harness({ events: seed() });
+    expect(
+      await h.exec([
+        "--yes",
+        "asset",
+        "add",
+        "--id",
+        "ast_new",
+        "--type",
+        "fund",
+        "--book",
+        "core",
+        "--asset-class",
+        "equity",
+        "--name",
+        "New",
+        "--currency",
+        "EUR",
+        "--transferable",
+      ]),
+    ).toBe(0);
+    expect(h.text()).toContain("Registrado asset_created");
+  });
+
   it("rejects an asset that already exists in the other book", async () => {
     const h = harness({ events: seed() });
     expect(

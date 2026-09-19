@@ -77,6 +77,15 @@ describe("atlas tax", () => {
     expect(json.notes.map((n) => n.code)).toContain("tax_quota_not_computed");
   });
 
+  it("takes --json in front of the command too, as the usage line puts it", async () => {
+    // It used to read `tax` as the value of --json: «comando desconocido: 2027».
+    const before = golden();
+    expect(await before.exec(["--json", "tax", "2027"])).toBe(0);
+    const after = golden();
+    expect(await after.exec(["tax", "2027", "--json"])).toBe(0);
+    expect(JSON.parse(before.text())).toEqual(JSON.parse(after.text()));
+  });
+
   it("marks what is provisional when the window is still open", async () => {
     const h = harness({ lines: goldenLines(), instant: "2027-12-15T10:00:00.000Z" });
     expect(await h.exec(["tax", "2027"])).toBe(0);
