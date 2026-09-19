@@ -142,7 +142,8 @@ describe("the fields a form fills in for you", () => {
     type(host, "correct-reason", "importe mal tecleado");
     await press(host, "Ver el efecto");
     const said = text(host.querySelector(".preview > .sentence"));
-    expect(said).toMatch(/^Vas a registrar la compra de /);
+    // A correction replaces the purchase, and says so.
+    expect(said).toMatch(/^Vas a rectificarlo: en su lugar, la compra de /);
     expect(said).toContain("de Money Market Fund por 3.200,00 €");
     // The quantity came from the data and was not touched: masked, with its unit.
     expect(host.querySelectorAll(".preview > .sentence .dots")).toHaveLength(1);

@@ -119,6 +119,13 @@ describe("the sentence of a movement", () => {
     expect(drafted("cash_withdrawal")).toMatch(/^Vas a registrar una retirada de \[EUR\] el /);
     expect(drafted("valuation")).toMatch(/^Vas a registrar que .+ valía \[(EUR|USD)\] por unidad/);
     expect(drafted("order_updated")).toMatch(/^Vas a registrar cambio de orden/);
+    const correction = {
+      ...current("cash_deposit").event,
+      corrects_id: "01ARYZ6S41TSV4RRFFQ6900001",
+    };
+    expect(plain(draftSentence(correction, names))).toMatch(
+      /^Vas a rectificarlo: en su lugar, un ingreso de \[EUR\] el /,
+    );
     // Each figure carries its field, so a form can reveal what was typed.
     const figures = draftSentence(current("buy").event, names).filter((part) => !("text" in part));
     expect(figures.map((part) => ("field" in part ? part.field : undefined))).toEqual([

@@ -257,8 +257,10 @@ export const draftSentence = (
   const date = DATE_FIELDS.map((field) => event[field]).find(
     (value): value is string => typeof value === "string",
   );
+  // A correction replaces an event: it is not one more (third pass of the review).
+  const corrects = typeof event.corrects_id === "string";
   return [
-    text("Vas a registrar "),
+    text(corrects ? "Vas a rectificarlo: en su lugar, " : "Vas a registrar "),
     ...said,
     ...(date === undefined ? [] : [closing(date, account)]),
     text("."),
