@@ -105,6 +105,8 @@ interface WeightsCardProps {
   state: LedgerState;
   date: string;
   settings: Settings;
+  /** Funds a merger or a class change converted away: nothing of them to transfer. */
+  absorbed: ReadonlySet<string>;
 }
 
 export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
@@ -165,7 +167,12 @@ export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
         />
       </Disclosure>
       <Disclosure label="Simular un traspaso entre fondos">
-        <TransferSimulator state={props.state} date={props.date} settings={props.settings} />
+        <TransferSimulator
+          state={props.state}
+          date={props.date}
+          settings={props.settings}
+          absorbed={props.absorbed}
+        />
       </Disclosure>
     </Section>
   );

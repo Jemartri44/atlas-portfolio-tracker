@@ -67,13 +67,9 @@ export interface AssetChoice {
 
 /**
  * The assets a form can choose from: the active ones first, then the inactive
- * ones that still hold a position, marked as such, and never an inactive one
- * with nothing left.
- *
- * The inactive-with-position case is not a corner: a delisted share is
- * deactivated and **still held**, so the summary asks for its valuation — and
- * the valuation form used to hide it because it only listed active assets. The
- * total stayed partial for ever, with a button that led nowhere.
+ * ones that still hold a position, marked as such. That case is no corner: a
+ * delisted share is deactivated and **still held**, so the summary asks for its
+ * valuation, and a valuation form that hid it left the total partial for ever.
  */
 export const assetOptions = (state: LedgerState, choice: AssetChoice = {}): Option[] => {
   const held = new Set(
@@ -175,6 +171,12 @@ export interface OptionContext {
   values: Record<string, string>;
 }
 
+/** What a list that takes only live assets leaves out; nothing without the ledger's events. */
+const absorbedOf = (context: OptionContext, field?: Pick<FieldSpec, "liveOnly">) =>
+  field?.liveOnly === true && context.events !== undefined
+    ? absorbedAssets(context.state, context.events, context.date)
+    : undefined;
+
 /** The list a field asks for, resolved against the ledger. */
 export const optionsFor = (
   source: OptionSource,
@@ -195,13 +197,10 @@ export const optionsFor = (
             : field?.heldAnywhere === true
               ? true
               : undefined,
-        absorbed:
-          field?.liveOnly === true && context.events !== undefined
-            ? absorbedAssets(context.state, context.events, context.date)
-            : undefined,
+        absorbed: absorbedOf(context, field),
       });
     case "bucketAssets":
-      return assetOptions(context.state, { book: "bucket" });
+      return assetOptions(context.state, { book: "bucket", absorbed: absorbedOf(context, field) });
     case "currencies":
       return currencyOptions(context.state);
     case "openOrders":

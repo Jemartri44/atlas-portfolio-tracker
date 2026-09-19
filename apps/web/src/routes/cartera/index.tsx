@@ -21,6 +21,7 @@ import { attempt } from "../../ledger/query.js";
 import { store } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { contributionView, costsView, weightsView } from "../../view-models/core/index.js";
+import { absorbedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
@@ -82,6 +83,7 @@ export default function CarteraRoute(): JSX.Element {
                 state={dated()}
                 date={date()}
                 settings={settings()}
+                absorbed={absorbedAssets(dated(), snapshot.events, date())}
               />
               <ContributionCard view={plan()} error={planError()} />
               <CostsCard view={costs()} />

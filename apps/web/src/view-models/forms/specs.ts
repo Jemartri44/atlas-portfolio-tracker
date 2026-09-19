@@ -109,6 +109,12 @@ const account = (): FieldSpec => ({
   options: "accounts",
 });
 
+/**
+ * An asset of an operation: of the account's book, a delisted one only while
+ * the account still holds it, and never one a merger or a class change
+ * converted away and that holds nothing (`liveOnly`): there is nothing of it
+ * to buy, sell, value or transfer (second pass of the review of 2026-09-19).
+ */
 const asset = (account = "account_id"): FieldSpec => ({
   name: "asset_id",
   label: "Activo",
@@ -117,7 +123,14 @@ const asset = (account = "account_id"): FieldSpec => ({
   options: "assets",
   bookFrom: account,
   heldFrom: account,
+  liveOnly: true,
 });
+
+/** The same, for what is placed from now on: a delisted asset is not bought or ordered. */
+const inForce = (field: FieldSpec): FieldSpec => {
+  const { heldFrom: _held, ...rest } = field;
+  return rest;
+};
 
 /** Where something arrives: active assets of the destination account's book, never a delisted one. */
 const destinationAsset = (): FieldSpec => ({
@@ -223,19 +236,11 @@ const tradeFields = (): FieldSpec[] => [
 
 /**
  * A purchase lists only the assets in force. A delisted one is still held,
- * still valued and still sold, but never bought again (review of 2026-09-18),
- * and one a merger or a class change converted away is not bought either
- * (`liveOnly`); a correction that already holds one keeps it on its list
- * (`choices.ts`).
+ * still valued and still sold, but never bought again (review of 2026-09-18);
+ * a correction that already holds one keeps it on its list (`choices.ts`).
  */
 const buyFields = (): FieldSpec[] =>
-  tradeFields().map((field) => {
-    if (field.name !== "asset_id") {
-      return field;
-    }
-    const { heldFrom: _held, ...inForce } = field;
-    return { ...inForce, liveOnly: true };
-  });
+  tradeFields().map((field) => (field.name === "asset_id" ? inForce(field) : field));
 
 const cashFields = (): FieldSpec[] => [
   account(),
@@ -374,8 +379,8 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     when: "Has dado una orden que aún no ha ejecutado.",
     fields: [
       account(),
-      // An order is placed on an asset that exists: never on one converted away.
-      { ...asset(), liveOnly: true },
+      // An order is placed on an asset in force: not on a delisted one, even held.
+      inForce(asset()),
       {
         name: "side",
         label: "Sentido",

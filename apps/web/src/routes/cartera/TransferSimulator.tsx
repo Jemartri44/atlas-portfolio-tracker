@@ -70,6 +70,8 @@ interface TransferSimulatorProps {
   state: LedgerState;
   date: string;
   settings: Settings;
+  /** Funds converted into another and holding nothing: not offered (`weighted.ts`). */
+  absorbed?: ReadonlySet<string>;
 }
 
 export const TransferSimulator = (props: TransferSimulatorProps): JSX.Element => {
@@ -115,7 +117,7 @@ export const TransferSimulator = (props: TransferSimulatorProps): JSX.Element =>
     return outcome?.ok === false ? outcome.error : undefined;
   };
 
-  const options = () => assetOptions(props.state, { book: "core" });
+  const options = () => assetOptions(props.state, { book: "core", absorbed: props.absorbed });
 
   return (
     <>
