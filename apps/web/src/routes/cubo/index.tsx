@@ -8,6 +8,10 @@
 //
 // The stop-loss warning goes at the very top, as `atlas bucket` does: it is the
 // rule the plan wants hardest to ignore. It warns; it never blocks.
+//
+// Composition (docs/design/system.md §7.6): the bucket against the index, the
+// open positions beside the budget, the theses, the costs and the warnings.
+// A bucket with nothing in it is one empty state, not six empty cards.
 
 import {
   bucketIndexSeries,
@@ -18,9 +22,18 @@ import {
   netWorth,
   settingsAt,
 } from "@atlas/domain";
+import { A } from "@solidjs/router";
 import { createMemo, For, type JSX, Show } from "solid-js";
-import { SeriesCard } from "../../components/chart/index.js";
-import { AsOfPicker, Notice, Section, StandaloneFees, useAsOf } from "../../components/index.js";
+import {
+  AsOfPicker,
+  EmptyState,
+  Notice,
+  type NoticeItem,
+  NoticeList,
+  Section,
+  StandaloneFees,
+  useAsOf,
+} from "../../components/index.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { store, usePrivacy } from "../../ledger/state.js";
@@ -31,7 +44,7 @@ import {
   thesesView,
 } from "../../view-models/bucket/index.js";
 import { costsView } from "../../view-models/core/index.js";
-import { netWorthView } from "../../view-models/index.js";
+import { attentionDestination, netWorthView } from "../../view-models/index.js";
 import { bucketIndexPlot } from "../../view-models/series.js";
 import { RequireLedger } from "../guard.jsx";
 import { BudgetCard } from "./BudgetCard.jsx";
@@ -66,7 +79,7 @@ export default function CuboRoute(): JSX.Element {
           ),
         );
         const worth = createMemo(() => netWorthView(netWorth(dated(), date(), settings()), names));
-        // Only the **bucket's** standalone charges: the core's are on `/nucleo`
+        // Only the **bucket's** standalone charges: the core's are on `/cartera`
         // with the core's own total, and the two never share one.
         const fees = createMemo(
           () =>
@@ -92,73 +105,93 @@ export default function CuboRoute(): JSX.Element {
             ...report().controls.warnings,
           ].filter((warning) => warning.code !== "bucket_stop_loss_reached");
 
+        /** Each warning where it is fixed, the same notice as everywhere else. */
+        const notices = (): NoticeItem[] =>
+          others().map((warning) => ({
+            severity: "caution",
+            message: describeWarning(warning, { names, privacy: privacy() }),
+            // What is fixed on this very screen carries no link to itself.
+            action: ((to) => (to?.to === "/cubo" ? undefined : to))(
+              attentionDestination(warning.code) ?? {
+                label: "Ver movimientos",
+                to: "/movimientos",
+              },
+            ),
+          }));
+        /** Nothing ever happened in the bucket: no thesis, no position, not a euro put in. */
+        const empty = () =>
+          positions().rows.length === 0 &&
+          theses().rows.length === 0 &&
+          report().stats.closedTheses === 0 &&
+          report().controls.contributionGross.isZero();
+
         return (
           <>
             <PageHeader
               title="Cubo"
-              lead="Posiciones abiertas, tesis frente al índice, estadísticas y presupuesto."
+              actions={
+                <AsOfPicker
+                  date={date()}
+                  isToday={asOf.isToday()}
+                  onChange={asOf.set}
+                  hint="Corta todos tus datos por esa fecha: cantidades, precios, tesis y avisos."
+                />
+              }
             />
-            <AsOfPicker
-              date={date()}
-              isToday={asOf.isToday()}
-              onChange={asOf.set}
-              hint="Corta el libro entero por esa fecha: cantidades, precios, tesis y avisos."
-            />
 
-            <div class="stack">
-              <For each={stopLoss()}>
-                {(warning) => (
-                  <Notice severity="danger" title="Regla de parada">
-                    {describeWarning(warning, { names, privacy: privacy() })}
-                  </Notice>
-                )}
-              </For>
+            <Show
+              when={!empty()}
+              fallback={
+                <div class="card">
+                  <EmptyState
+                    glyph="bucket"
+                    what="El cubo está vacío."
+                    why="Cada compra del cubo empieza por una tesis: qué esperas, en qué plazo y qué te diría que te equivocas."
+                  >
+                    <A href="/registrar/tesis" role="button">
+                      Abrir una tesis
+                    </A>
+                  </EmptyState>
+                </div>
+              }
+            >
+              <div class="grid">
+                <For each={stopLoss()}>
+                  {(warning) => (
+                    <div class="span-12">
+                      <Notice severity="danger" title="Regla de parada">
+                        {describeWarning(warning, { names, privacy: privacy() })}
+                      </Notice>
+                    </div>
+                  )}
+                </For>
 
-              <PositionsCard view={positions()} />
-              <ThesesCard view={theses()} />
-              <SeriesCard
-                title="El cubo frente al índice"
-                labels={["Resultado del cubo", "Equivalente en el índice"]}
-                colours={["--c-series-bucket", "--c-series-index"]}
-                dashes={[undefined, [6, 4]]}
-                x={series().x}
-                values={series().values}
-                rows={series().rows}
-                missing={series().missing}
-                empty={
-                  <Notice severity="info" title="Todavía no hay nada que dibujar">
-                    La comparación se dibuja sobre las fechas en las que el libro tiene precio del
-                    índice y de los activos del cubo.
-                  </Notice>
-                }
-              />
-              <StatsCard view={report().stats} />
-              <BudgetCard view={report().controls} worth={worth()} />
+                <StatsCard view={report().stats} plot={series()} />
+                <PositionsCard view={positions()} />
+                <BudgetCard view={report().controls} worth={worth()} />
+                <ThesesCard view={theses()} />
 
-              <Show when={fees().rows.length > 0}>
-                <Section title="Costes del cubo">
-                  <StandaloneFees view={fees()} totalLabel="Total de comisiones sueltas del cubo" />
-                </Section>
-              </Show>
+                <Show when={fees().rows.length > 0}>
+                  <Section title="Costes del cubo" class="span-5">
+                    <StandaloneFees
+                      view={fees()}
+                      totalLabel="Total de comisiones sueltas del cubo"
+                    />
+                  </Section>
+                </Show>
 
-              <Show when={others().length > 0}>
-                <section class="card" aria-label="Avisos del cubo">
-                  <header>
-                    <h2>Avisos</h2>
-                    <span class="tiny">{others().length}</span>
-                  </header>
-                  <div class="stack">
-                    <For each={others()}>
-                      {(warning) => (
-                        <p class="note flush">
-                          {describeWarning(warning, { names, privacy: privacy() })}
-                        </p>
-                      )}
-                    </For>
-                  </div>
-                </section>
-              </Show>
-            </div>
+                <Show when={notices().length > 0}>
+                  <Section
+                    title="Avisos del cubo"
+                    class={fees().rows.length > 0 ? "span-7" : "span-12"}
+                    label="Avisos del cubo"
+                    aside={<span>{notices().length}</span>}
+                  >
+                    <NoticeList items={notices()} label="Avisos" />
+                  </Section>
+                </Show>
+              </div>
+            </Show>
           </>
         );
       }}

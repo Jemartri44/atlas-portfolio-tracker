@@ -52,30 +52,54 @@ export const Notice = (props: NoticeProps): JSX.Element => (
 export interface NoticeItem {
   severity: Severity;
   message: JSX.Element;
-  /** Where it is fixed; the whole notice is the link. */
-  action: { label: string; to: string };
+  /**
+   * Where it is fixed; the whole notice is the link. Absent when that place is
+   * the screen already open: a link to itself fixes nothing.
+   */
+  action?: { label: string; to: string } | undefined;
   /** How many warnings of the same kind it stands for. */
   count?: number | undefined;
 }
 
+const Body = (props: { item: NoticeItem }): JSX.Element => (
+  <>
+    <Icon name={ICONS[props.item.severity]} class="notice-icon" />
+    <span class="notice-body">
+      <span class="notice-text">
+        {props.item.message}
+        <Show when={(props.item.count ?? 1) > 1}>
+          {" "}
+          <span class="tag">{props.item.count} iguales</span>
+        </Show>
+      </span>
+      <Show when={props.item.action}>
+        {(action) => (
+          <span class="notice-action">
+            {action().label}
+            <Icon name="arrow" class="icon-sm" />
+          </span>
+        )}
+      </Show>
+    </span>
+  </>
+);
+
 const Item = (props: { item: NoticeItem }): JSX.Element => (
   <li>
-    <A href={props.item.action.to} class={`notice is-${props.item.severity}`}>
-      <Icon name={ICONS[props.item.severity]} class="notice-icon" />
-      <span class="notice-body">
-        <span class="notice-text">
-          {props.item.message}
-          <Show when={(props.item.count ?? 1) > 1}>
-            {" "}
-            <span class="tag">{props.item.count} iguales</span>
-          </Show>
-        </span>
-        <span class="notice-action">
-          {props.item.action.label}
-          <Icon name="arrow" class="icon-sm" />
-        </span>
-      </span>
-    </A>
+    <Show
+      when={props.item.action}
+      fallback={
+        <div class={`notice is-${props.item.severity}`}>
+          <Body item={props.item} />
+        </div>
+      }
+    >
+      {(action) => (
+        <A href={action().to} class={`notice is-${props.item.severity}`}>
+          <Body item={props.item} />
+        </A>
+      )}
+    </Show>
   </li>
 );
 

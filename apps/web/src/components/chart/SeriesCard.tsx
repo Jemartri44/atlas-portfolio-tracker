@@ -27,6 +27,12 @@ export interface SeriesCardProps {
   missing?: string | undefined;
   /** What the card says when there is nothing at all to draw. */
   empty: JSX.Element;
+  /** Above the chart: the figure the chart explains, when it has one. */
+  lead?: JSX.Element | undefined;
+  /** Under the chart and before its table: what goes with it, a strip of figures. */
+  foot?: JSX.Element | undefined;
+  /** The last rows of the card, drawn or not: a disclosure with the detail. */
+  tail?: JSX.Element | undefined;
 }
 
 export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
@@ -51,6 +57,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
       class={`is-chart ${props.class ?? ""}`.trimEnd()}
       aside={<RangeButtons options={options()} current={range()} onChange={setRange} />}
     >
+      {props.lead}
       <Show when={props.x.length > 0} fallback={props.empty}>
         <figure class="chart">
           <Chart x={shown()} series={series()} label={props.title} />
@@ -58,6 +65,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
             <ChartLegend series={series()} />
           </figcaption>
         </figure>
+        {props.foot}
         <ChartTable
           headers={props.labels}
           rows={indices().map((at) => ({
@@ -68,6 +76,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
           missing={props.missing}
         />
       </Show>
+      {props.tail}
     </Section>
   );
 };

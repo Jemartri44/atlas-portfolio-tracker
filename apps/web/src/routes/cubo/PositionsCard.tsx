@@ -10,10 +10,12 @@ import {
   type DataColumn,
   DataTable,
   Figure,
+  Pending,
   Price,
   PriceDetail,
   Section,
   Tag,
+  TotalLine,
 } from "../../components/index.js";
 import type { BucketPositionRow, BucketPositionsView } from "../../view-models/bucket/index.js";
 
@@ -29,7 +31,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     key: "quantity",
     header: "Cantidad",
     numeric: true,
-    cell: (row) => <Amount quantity={row.quantity} />,
+    cell: (row) => <Amount quantity={row.quantity} of={row.units} />,
   },
   {
     key: "cost",
@@ -65,7 +67,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
         when={row.unrealized !== undefined}
         fallback={<Amount value={undefined} missingReason="sin precio a esa fecha" />}
       >
-        <span class="hstack">
+        <span class="figure-pair">
           <Amount value={row.unrealized} signed coloured />
           <Figure value={row.unrealizedPct} unit="percent" coloured />
         </span>
@@ -88,28 +90,30 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
  */
 const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
   <Show when={props.row.thesisId !== undefined}>
-    <span class="hstack wrap">
-      <Tag>tesis abierta</Tag>
-      <span class="tiny">
+    <span class="thesis-line">
+      <Tag icon="flask">tesis abierta</Tag>
+      <span class="meta">
         {props.row.daysOpen} de {props.row.horizonDays} días
       </span>
       <Show when={props.row.horizonExceeded}>
-        <Tag tone="caution">plazo superado</Tag>
+        <Tag tone="caution" icon="clock">
+          plazo superado
+        </Tag>
       </Show>
     </span>
     <Show when={props.row.invalidation !== undefined}>
-      <p class="note flush">
+      <span class="thesis-text">
         <strong>Me equivoco si:</strong> {props.row.invalidation}
-      </p>
+      </span>
     </Show>
   </Show>
 );
 
 export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element => (
-  <Section title="Posiciones abiertas">
+  <Section title="Posiciones abiertas" class="span-7">
     <Show
       when={props.view.rows.length > 0}
-      fallback={<p class="subtle flush">No hay ninguna posición abierta en el cubo.</p>}
+      fallback={<p class="meta">No hay ninguna posición abierta en el cubo.</p>}
     >
       <DataTable
         label="Posiciones del cubo"
@@ -117,28 +121,29 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
         rows={props.view.rows}
         detail={(row) => <ThesisNote row={row} />}
       />
-      <div class="spread total-line">
-        <span class="subject">
-          Total del cubo
-          <Show when={props.view.partial}>
-            {" "}
-            <Tag tone="caution" title={`Faltan: ${props.view.missing.join(", ")}`}>
-              parcial
-            </Tag>
-          </Show>
+      <TotalLine
+        label={
+          <>
+            Total del cubo
+            <Show when={props.view.partial}>
+              {" "}
+              <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
+                parcial
+              </Tag>
+            </Show>
+          </>
+        }
+      >
+        <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
+        <span class="meta">
+          coste <Amount value={props.view.totalCost} />
         </span>
-        <span class="hstack">
-          <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
-          <span class="tiny">
-            coste <Amount value={props.view.totalCost} />
-          </span>
-        </span>
-      </div>
+      </TotalLine>
       <Show when={props.view.partial}>
-        <p class="note">
+        <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
           Faltan precios de {props.view.missing.join(", ")}: el total solo cubre lo que sí tiene
           precio, y los pesos dentro del cubo no se calculan sobre un total parcial.
-        </p>
+        </Pending>
       </Show>
     </Show>
   </Section>

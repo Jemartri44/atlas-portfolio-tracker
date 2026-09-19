@@ -200,53 +200,11 @@ dialog .dialog-actions {
 
 /* The label carries a badge; at 320px the row has to be allowed to break. */
 
-.total-line {
-  border-top: 1px solid var(--c-border);
-  margin-top: var(--s-2);
-  padding-top: var(--s-2);
-}
-
-.total-line .subject {
-  font-weight: var(--w-medium);
-}
-
 .datalist .item.is-moved {
   font-weight: var(--w-medium);
 }
 
 /* --- Cubo: statistics read as a column of pairs ------------------------- */
-
-.stat-line {
-  align-items: baseline;
-  padding: var(--s-0) 0;
-}
-
-.stat-line .subject {
-  color: var(--c-muted);
-  min-width: 0;
-}
-
-.headline {
-  background-color: var(--c-surface-2);
-  border-radius: var(--r-sm);
-  display: grid;
-  gap: var(--s-1);
-  margin-bottom: var(--s-3);
-  padding: var(--s-3);
-}
-
-.headline .subject {
-  font-weight: var(--w-medium);
-}
-
-.headline .big {
-  font-size: var(--t-xl);
-  font-weight: var(--w-semibold);
-}
-
-.breakdown {
-  margin-top: var(--s-3);
-}
 
 /* The swatch of a class, beside its name in the weights block. */
 

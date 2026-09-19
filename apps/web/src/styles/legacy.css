@@ -78,13 +78,6 @@ p {
   gap: var(--s-2);
 }
 
-.spread {
-  align-items: baseline;
-  display: flex;
-  gap: var(--s-3);
-  justify-content: space-between;
-}
-
 .wrap {
   flex-wrap: wrap;
 }

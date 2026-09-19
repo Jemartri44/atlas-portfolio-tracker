@@ -10,16 +10,16 @@
 // "within limits": the absence of a measurement is not a pass.
 
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Figure, Notice, Section, StatLine, Tag } from "../../components/index.js";
+import { Amount, Figure, Icon, Section, StatLine, Tag, TotalLine } from "../../components/index.js";
 import type { ControlsView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
 
 export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): JSX.Element => (
-  <Section title="Presupuesto y control del cubo">
+  <Section title="Presupuesto y control" class="span-5">
     <StatLine label="Aporte bruto acumulado">
       <Amount value={props.view.contributionGross} />
       <Show when={props.view.budget !== undefined}>
-        <span class="tiny">
+        <span class="meta">
           de <Amount value={props.view.budget} /> previstos
           <Show when={props.view.monthsElapsed !== undefined}>
             {" "}
@@ -44,7 +44,7 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
     <Show
       when={props.view.lossUnavailable === undefined}
       fallback={
-        <p class="note flush">
+        <p class="card-note">
           <Tag tone="caution">no evaluada</Tag> {props.view.lossUnavailable}. Sin ese dato no hay
           control de pérdida acumulada; no es que no la haya.
         </p>
@@ -56,14 +56,18 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
     </Show>
 
     <h3 class="block-title">Regla de recogida (18)</h3>
-    <Notice severity="info" title="Excepción acotada a la compartimentación">
-      El peso del cubo se mide sobre el <strong>patrimonio total</strong>, que suma los dos libros.
-      Es un control de presupuesto, no una métrica de cartera, y por eso el desglose va al lado.
-    </Notice>
+    <p class="joined">
+      <Icon name="info" class="icon-sm" />
+      <span>
+        <strong>Excepción acotada a la compartimentación.</strong> Es la única vista que junta el
+        cubo y la cartera principal: el peso del cubo se mide sobre el patrimonio total, como
+        control de presupuesto y no como métrica de cartera, y por eso el desglose va al lado.
+      </span>
+    </p>
     <Show
       when={props.view.weightUnavailable === undefined}
       fallback={
-        <p class="note flush">
+        <p class="card-note">
           <Tag tone="caution">no evaluada</Tag> {props.view.weightUnavailable}. Sin ese dato no hay
           control de peso del cubo; no es que esté dentro.
         </p>
@@ -74,25 +78,25 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
       </StatLine>
     </Show>
 
-    <div class="breakdown">
-      <For each={props.worth.blocks}>
-        {(block) => (
-          <div class="spread stat-line">
-            <span class="subject tiny">{block.label}</span>
-            <Amount value={block.subtotal} />
-          </div>
-        )}
-      </For>
-      <div class="spread total-line">
-        <span class="subject">
+    <For each={props.worth.blocks}>
+      {(block) => (
+        <StatLine label={block.label}>
+          <Amount value={block.subtotal} />
+        </StatLine>
+      )}
+    </For>
+    <TotalLine
+      label={
+        <>
           Patrimonio total
           <Show when={props.worth.partial}>
             {" "}
-            <Tag tone="caution">parcial</Tag>
+            <Tag icon="half">parcial</Tag>
           </Show>
-        </span>
-        <Amount value={props.worth.total} />
-      </div>
-    </div>
+        </>
+      }
+    >
+      <Amount value={props.worth.total} />
+    </TotalLine>
   </Section>
 );

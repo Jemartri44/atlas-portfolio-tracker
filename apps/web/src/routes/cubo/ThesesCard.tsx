@@ -24,10 +24,12 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
     card: "meta",
     cell: (row) => (
       <>
-        <Tag tone={row.open ? "neutral" : undefined}>{row.status}</Tag>
+        <Tag tone={row.open ? "accent" : undefined}>{row.status}</Tag>
         <Show when={row.horizonExceeded && row.open}>
           {" "}
-          <Tag tone="caution">plazo superado</Tag>
+          <Tag tone="caution" icon="clock">
+            plazo superado
+          </Tag>
         </Show>
       </>
     ),
@@ -64,15 +66,16 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
 export const ThesesCard = (props: { view: ThesesView }): JSX.Element => (
   <Section
     title="Tesis frente al índice"
-    aside={<span class="tiny">regla 16: la referencia es el índice, no cero</span>}
+    class="span-12"
+    aside={<span>regla 16: la referencia es el índice, no cero</span>}
   >
     <Show
       when={props.view.rows.length > 0}
-      fallback={<p class="subtle flush">Todavía no hay ninguna tesis.</p>}
+      fallback={<p class="meta">Todavía no hay ninguna tesis.</p>}
     >
       <DataTable label="Tesis del cubo" columns={COLUMNS} rows={props.view.rows} />
       <Show when={props.view.withoutIndex > 0}>
-        <p class="note">
+        <p class="card-note">
           {props.view.withoutIndex}{" "}
           {props.view.withoutIndex === 1
             ? "tesis no se puede comparar"
