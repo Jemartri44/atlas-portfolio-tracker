@@ -17,6 +17,7 @@ import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { usePrivacy } from "../../ledger/state.js";
 import { type CashRow, type ChangeRow, previewChanges } from "../../view-models/preview.js";
+import { resultWord } from "../../view-models/sale.js";
 import { draftSentence } from "../../view-models/sentence.js";
 
 /**
@@ -133,13 +134,14 @@ export const Preview = (props: {
       </Show>
 
       <Show when={props.preview.gains.length > 0}>
-        <Section title="Ganancia que genera">
+        <Section title="Resultado que genera">
           <ul class="changes">
             <For each={props.preview.gains}>
               {(gain) => (
                 <li class="change">
                   <span class="change-name">
-                    {displayName(names(), gain.asset_id)} · {formatDate(gain.fiscal_date)}
+                    {resultWord(gain.gain_eur_rounded)} · {displayName(names(), gain.asset_id)} ·{" "}
+                    {formatDate(gain.fiscal_date)}
                   </span>
                   <Amount value={gain.gain_eur_rounded} signed coloured />
                 </li>
@@ -147,7 +149,7 @@ export const Preview = (props: {
             </For>
           </ul>
           <p class="card-note">
-            Es la ganancia fiscal que quedará registrada, calculada con FIFO sobre los lotes de
+            Es el resultado fiscal que quedará registrado, calculado con FIFO sobre los lotes de
             arriba.
           </p>
         </Section>

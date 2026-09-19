@@ -9,7 +9,6 @@
 // effects of a corporate action and a configuration — are sentences, never
 // JSON: the JSON printed their figures in plain text with the mask on.
 
-import type { Money } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { For, type JSX, Match, Show, Switch } from "solid-js";
 import {
@@ -25,7 +24,7 @@ import {
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { eventLabel } from "../../format/labels.js";
 import type { DetailField, DetailView } from "../../view-models/index.js";
-import type { SaleResultView } from "../../view-models/sale.js";
+import { resultWord, type SaleResultView } from "../../view-models/sale.js";
 
 const Value = (props: { field: DetailField }): JSX.Element => (
   <Switch>
@@ -116,10 +115,6 @@ export const EventLinks = (props: { links: DetailView["links"] }): JSX.Element =
   </Show>
 );
 
-/** The result of one sale: gain or loss, said in words as well as by its sign. */
-const resultLabel = (result: Money): string =>
-  result.isNegative() ? "Pérdida" : result.isZero() ? "Resultado" : "Ganancia";
-
 /**
  * What a movement sold, from every gain the ledger booked for it: a sale books
  * one, a corporate action can book one per account (`view-models/sale.ts`).
@@ -144,7 +139,7 @@ export const SaleResult = (props: { view: SaleResultView | undefined }): JSX.Ele
                   <StatLine label="Coste de lo vendido">
                     <Amount value={line.cost} />
                   </StatLine>
-                  <TotalLine label={resultLabel(line.result)}>
+                  <TotalLine label={resultWord(line.result)}>
                     <Amount value={line.result} signed coloured />
                   </TotalLine>
                 </>
@@ -161,7 +156,7 @@ export const SaleResult = (props: { view: SaleResultView | undefined }): JSX.Ele
                   </StatLine>
                 )}
               </For>
-              <TotalLine label={`${resultLabel(total().result)} total`}>
+              <TotalLine label={`${resultWord(total().result)} total`}>
                 <Amount value={total().result} signed coloured />
               </TotalLine>
               <p class="card-note">

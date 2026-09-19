@@ -127,3 +127,21 @@ describe("what changes, on the preview of a purchase", () => {
     expect(text(preview?.querySelector(".sentence"))).toContain("por 600,00 €");
   });
 });
+
+describe("the result a sale would book", () => {
+  it("is titled a result, and each line a loss or a gain by its sign", async () => {
+    store.setPrivacy(false);
+    const host = await show("/registrar/sell", RegistrarForm, "/registrar/:tipo");
+    choose(host, "f-account_id", "acc_mi");
+    choose(host, "f-asset_id", "ast_world");
+    type(host, "f-quantity", "1");
+    type(host, "f-amount", "1");
+    await press(host, "Ver el efecto");
+    const result = [...host.querySelectorAll(".preview section.card")].find((card) =>
+      text(card.querySelector("h2")).startsWith("Resultado"),
+    );
+    expect(text(result?.querySelector("h2"))).toBe("Resultado que genera");
+    expect(text(result?.querySelector(".change-name"))).toMatch(/^Pérdida · World Index Fund · /);
+    expect(text(result)).not.toContain("Ganancia");
+  });
+});

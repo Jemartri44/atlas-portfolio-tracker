@@ -10,6 +10,10 @@
 import { EUR, Money, type RealizedGain } from "@atlas/domain";
 import { displayName, type NameIndex } from "../format/names.js";
 
+/** What a result is, in words as well as by its sign: the detail and the preview say it alike. */
+export const resultWord = (result: Money): string =>
+  result.isNegative() ? "Pérdida" : result.isZero() ? "Resultado" : "Ganancia";
+
 export interface SaleLine {
   /** Where it was sold: the account, and the asset when the event touched several. */
   where: string;
