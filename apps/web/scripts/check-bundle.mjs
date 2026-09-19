@@ -37,8 +37,14 @@ const dist = join(webRoot, "dist");
  * gzip of stylesheet that the screens overrode anyway; our own base weighs
  * 9,1 KB where Pico and its overrides weighed 16,0. Measured on top of the
  * tax engine: **68,5 KB** (72,6 before the redesign), rounded up to 69.
+ *
+ * **Set to what the third review measured plus 1 KB, as the direction asked:**
+ * the fixes of the verifier's review (the tables laid out by the room of their
+ * card, the draft that remembers what was typed, the notices gathered, the
+ * pending states, the rules said in plain words, the sentence over the effect,
+ * the unit inside a field) measured **69,1 KB**; the ceiling is 70,1.
  */
-const BOOT_BUDGET_GZIP_BYTES = 69 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 70.1 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -100,8 +106,14 @@ const BOOT_BUDGET_GZIP_BYTES = 69 * 1024;
  * opens a movement, the filters in two shapes, the effect beside the form, the
  * deviation gauge and the proportion of the patrimony. Measured on top of the
  * tax engine: **183,4 KB**, of which the boot is 68,5.
+ *
+ * **Set to what the third review measured plus 2 KB, as the direction asked:**
+ * the same fixes, plus the result of a sale in its detail, the gap of a chart
+ * in one line with its list folded, the bucket's notices in their cards, the
+ * first run with the folder in one line and the weights asked only of live
+ * assets, measured **187,4 KB**; the ceiling is 189,4.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 184 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 189.4 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
