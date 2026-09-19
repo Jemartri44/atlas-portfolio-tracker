@@ -328,6 +328,27 @@ describe("the catalogue of names", () => {
     expect(describeWarning(warning, { privacy: false })).toContain("ast_world");
   });
 
+  it("writes a tax year as a year, never with the dot of a thousand", () => {
+    const warning: Warning = {
+      code: "wash_sale_window_repurchase",
+      event_id: "01ARYZ6S41TSV4RRFFQ6900001",
+      message: "english",
+      details: {
+        asset_id: "ast_world",
+        buy_date: "2027-01-10",
+        buy_quantity: "4.8765",
+        sale_date: "2027-01-06",
+        loss_eur: "-50",
+        window: "1y",
+        window_end: "2028-01-06",
+        tax_year: 2027,
+      },
+    };
+    const said = describeWarning(warning, { names, privacy: false });
+    expect(said).toContain("no sea computable en 2027.");
+    expect(said).not.toContain("2.027");
+  });
+
   it("names a list of identifiers embedded in a warning", () => {
     const warning: Warning = {
       code: "partial_core_total",

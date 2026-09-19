@@ -9,6 +9,10 @@ import { countOf } from "../number.js";
 import { type Figures, figuresOf, maskFigures, type Prose } from "../privacy.js";
 import { count, type Details, day, days, enumValue, num, pct, pp, text } from "./prose.js";
 
+/** A tax year is a name, not a quantity: "2027", never "2.027". */
+const year = (value: unknown): string =>
+  /^\d{4}$/.test(String(value)) ? String(value) : num(value);
+
 /** The wash-sale window by its real name: calling a one-year window "two months" is fiscally false. */
 const windowText = (window: unknown): string => {
   const value = text(window);
@@ -108,9 +112,9 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `La tesis ${n.thesis(d.thesis_id)} está cerrada, pero ${n.one(d.account_id)} sigue teniendo ${n.one(d.asset_id)} (${f.quantity(d.position)}).`,
   // --- Wash-sale window --------------------------------------------------
   wash_sale_window_repurchase: (d, n, f) =>
-    `Compra del ${day(d.buy_date)} de ${f.quantity(d.buy_quantity)} títulos de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): puede hacer que esa pérdida no sea computable en ${num(d.tax_year)}.`,
+    `Compra del ${day(d.buy_date)} de ${f.quantity(d.buy_quantity)} títulos de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): puede hacer que esa pérdida no sea computable en ${year(d.tax_year)}.`,
   wash_sale_window_prior_buy: (d, n, f) =>
-    `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) cuando siguen en cartera ${f.quantity(d.held_quantity)} títulos de una compra del ${day(d.buy_date)}, dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${num(d.tax_year)}.`,
+    `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) cuando siguen en cartera ${f.quantity(d.held_quantity)} títulos de una compra del ${day(d.buy_date)}, dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${year(d.tax_year)}.`,
 
   // --- Swap (ADR-0021) ----------------------------------------------------
   swap_fiscal_dates_differ: (d, n) =>
