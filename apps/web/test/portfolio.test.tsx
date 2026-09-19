@@ -33,6 +33,14 @@ describe("the portfolio", () => {
     expect(names).not.toContain("Global Bond Index Fund");
   });
 
+  it("says «sin posición» for an asset with a target and nothing held, never «0,00 €»", async () => {
+    const host = await show("/cartera?fecha=2026-09-19", Cartera);
+    const row = [...host.querySelectorAll(".only-wide tbody tr")].find(
+      (tr) => text(tr.querySelector("td")) === "Small Cap Index Fund",
+    );
+    expect(text(row)).toContain("sin posición");
+    expect(text(row)).not.toContain("0,00");
+  });
 
   it("marks a stale price in its row, not in a notice repeating the summary", async () => {
     const host = await show("/cartera?fecha=2029-01-10", Cartera);

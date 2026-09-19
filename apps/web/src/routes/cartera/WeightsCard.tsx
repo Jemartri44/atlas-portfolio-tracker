@@ -64,7 +64,13 @@ const assetColumns = (threshold: string | undefined): readonly DataColumn<Weight
     header: "Valor",
     numeric: true,
     card: "figure",
-    cell: (row) => <Amount value={row.value} missingReason="sin precio a esa fecha" />,
+    // Nothing held is said in words: «0,00 €» beside prices that are missing
+    // read as a zero value, not as no position (third pass of the review).
+    cell: (row) => (
+      <Show when={!row.quantity.isZero()} fallback={<span class="meta">sin posición</span>}>
+        <Amount value={row.value} missingReason="sin precio a esa fecha" />
+      </Show>
+    ),
   },
   {
     key: "weight",
