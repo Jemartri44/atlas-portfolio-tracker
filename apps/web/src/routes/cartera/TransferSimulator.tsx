@@ -140,7 +140,6 @@ export const TransferSimulator = (props: TransferSimulatorProps): JSX.Element =>
           <Field
             id="tr-qty"
             kind="decimal"
-            sensitive
             label="Participaciones"
             value={quantity()}
             onInput={setQuantity}

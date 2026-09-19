@@ -7,18 +7,29 @@
 // it: the leak was in the call, so the screen is what is rendered here.
 
 import { ledgerEntries, projectLedger } from "@atlas/domain";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { MASK } from "../src/format/money.js";
 import { nameIndex } from "../src/format/names.js";
 import { store } from "../src/ledger/state.js";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Detail from "../src/routes/movimientos/detail.jsx";
 import Edit from "../src/routes/movimientos/edit.jsx";
+import RegistrarForm from "../src/routes/registrar/form.jsx";
 import { detailView } from "../src/view-models/detail.js";
 import { goldenEvents } from "./helpers/golden.js";
-import { DECIMAL, figuresLeft, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import {
+  DECIMAL,
+  figuresLeft,
+  press,
+  show,
+  text,
+  type,
+  withGoldenLedger,
+} from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
+afterEach(() => withoutStyles());
 
 /** The reverse split of the golden ledger: a forced sale of fractions in two accounts. */
 const REVERSE_SPLIT = "01MQTWHB78RC2FADH9B774BHS5";
@@ -105,6 +116,28 @@ describe("the fields a form fills in for you", () => {
     amount.dispatchEvent(new FocusEvent("blur"));
     await Promise.resolve();
     expect(shownIn(host, "f-amount")).toBe(MASK);
+  });
+
+  it("keeps what the user typed in sight after the preview and back, on a phone", async () => {
+    // On a phone the effect replaces the form: the fields leave the screen and
+    // come back, and what was typed in them must come back in sight too.
+    withStyles(400);
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    type(host, "f-amount", "3200");
+    type(host, "correct-reason", "importe mal tecleado");
+    await press(host, "Ver el efecto");
+    expect(host.querySelector("#f-amount")).toBeNull();
+    await press(host, "Volver a los datos");
+    expect(shownIn(host, "f-amount")).toBe("3200");
+    // What came from the data and was not touched is still masked.
+    expect(shownIn(host, "f-quantity")).toBe(MASK);
+  });
+
+  it("does not mask a default of the application: it is not the user's data", async () => {
+    store.setPrivacy(true);
+    const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
+    expect(shownIn(host, "f-fee")).toBe("0");
   });
 
   it("shows them as they are with the mask off", async () => {

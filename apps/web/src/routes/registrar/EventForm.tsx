@@ -57,6 +57,10 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     props.correcting?.values ?? initialValues(props.spec, today()),
   );
   const [step, setStep] = createSignal<Step>("form");
+  // What the user typed, by field: in the draft and not in the fields, which a
+  // phone takes off the screen while it shows the effect.
+  const [typed, setTyped] = createSignal<ReadonlySet<string>>(new Set());
+  const revealed = (name: string): boolean => props.correcting === undefined || typed().has(name);
   const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
   // A refusal about one field goes under it; the rest, next to the button.
   const [fieldErrors, setFieldErrors] = createSignal<Record<string, string>>({});
@@ -183,6 +187,8 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
               state={props.state}
               onChange={onChange}
               errors={fieldErrors()}
+              revealed={revealed}
+              onTyped={(name) => setTyped(new Set([...typed(), name]))}
             />
 
             <Show when={props.correcting !== undefined}>

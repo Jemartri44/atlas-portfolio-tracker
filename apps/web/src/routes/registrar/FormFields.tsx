@@ -27,6 +27,14 @@ interface FormFieldsProps {
   prefix?: string;
   /** What is wrong with a field, by name, written under it. */
   errors?: Readonly<Record<string, string>>;
+  /**
+   * Whether a field shows its value in privacy mode: a default or something the
+   * user typed does, a value that came from their data does not until they
+   * touch it. All of them by default: a new record holds nothing of theirs.
+   */
+  revealed?: ((name: string) => boolean) | undefined;
+  /** A field was typed in: the form keeps it, so it is still in sight after the preview. */
+  onTyped?: ((name: string) => void) | undefined;
 }
 
 /**
@@ -80,7 +88,7 @@ const optionsOf = (field: FieldSpec, state: LedgerState, values: FormValues): Op
   selectOptions(field, state, values, today());
 
 export const FormFields = (props: FormFieldsProps): JSX.Element => {
-  const set = (name: string, value: string): void =>
+  const set = (name: string, value: string): void => {
     props.onChange(
       withoutStale(
         props.fields,
@@ -90,6 +98,9 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
         name,
       ),
     );
+    // After the value: marking it re-renders the field, which reads the value.
+    props.onTyped?.(name);
+  };
 
   const render = (field: FieldSpec): JSX.Element => {
     const value = (): string => props.values[field.name] ?? "";
@@ -130,7 +141,14 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
         />
       );
     }
-    return <Field {...common} kind={field.kind} sensitive={isSensitive(field)} />;
+    return (
+      <Field
+        {...common}
+        kind={field.kind}
+        sensitive={isSensitive(field)}
+        revealed={props.revealed?.(field.name) ?? true}
+      />
+    );
   };
 
   const shown = (): FieldSpec[] => props.fields.filter((field) => isVisible(field, props.values));

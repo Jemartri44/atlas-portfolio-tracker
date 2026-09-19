@@ -9,10 +9,12 @@
 //
 // Privacy (§5.10): what the user **types** is never hidden, but what the
 // application **shows** is. A field of an amount or a quantity that arrives
-// filled in — a correction, the configuration, a default — is masked while it
-// does not have the focus, and shows its value as soon as it gets it. Once the
-// user has typed in it, the value is theirs and stays in sight: hiding a
-// figure the moment it is written would leave nothing to check before saving.
+// filled in **from the user's data** — a correction, the configuration — is
+// masked while it does not have the focus, and shows its value as soon as it
+// gets it. A default of the application is not their data, and what they type
+// is theirs to read: both stay in sight. Which is which lives in the draft of
+// the form (`revealed`), not here, because a phone takes the form off the
+// screen to show the effect and brings it back afterwards.
 
 import { createSignal, type JSX, Show } from "solid-js";
 import { MASK } from "../format/privacy.js";
@@ -69,6 +71,12 @@ interface TextFieldProps extends BaseProps {
   placeholder?: string | undefined;
   /** An amount or a quantity: masked, in privacy mode, until it has the focus. */
   sensitive?: boolean | undefined;
+  /**
+   * The value is not the user's data but a default, or they typed it: it
+   * stays in sight. Kept by the form, so it survives the field being taken off
+   * the screen; without it, the field remembers only while it is mounted.
+   */
+  revealed?: boolean | undefined;
 }
 
 export const Field = (props: TextFieldProps): JSX.Element => {
@@ -76,7 +84,11 @@ export const Field = (props: TextFieldProps): JSX.Element => {
   const [focused, setFocused] = createSignal(false);
   const [typed, setTyped] = createSignal(false);
   const masked = (): boolean =>
-    props.sensitive === true && privacy() && !focused() && !typed() && props.value !== "";
+    props.sensitive === true &&
+    privacy() &&
+    !focused() &&
+    !(props.revealed ?? typed()) &&
+    props.value !== "";
   return (
     <Wrapper {...props}>
       <Show
