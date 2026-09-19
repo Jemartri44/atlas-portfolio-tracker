@@ -78,7 +78,7 @@ export const figuresOf = (privacy: boolean): Figures => ({
     if (!DECIMAL.test(raw)) {
       return raw;
     }
-    return privacy ? MASK : `${formatDecimalString(raw, { decimals: 2 })} EUR`;
+    return privacy ? MASK : `${formatDecimalString(raw, { decimals: 2 })} EUR`;
   },
   quantity: (value) => {
     const raw = asText(value);

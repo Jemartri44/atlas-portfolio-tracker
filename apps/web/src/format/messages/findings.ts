@@ -44,19 +44,19 @@ export const FINDING_TEXTS: Record<string, FindingText> = {
   },
   non_canonical_line: {
     what: "Una línea no está en su forma canónica: el orden de sus campos no es el que escribe la aplicación.",
-    todo: "No afecta a ningún cálculo. `atlas compact` la reescribe cuando quieras.",
+    todo: "No afecta a ningún cálculo. La orden «atlas compact» de la CLI la reescribe cuando quieras.",
   },
   unknown_field: {
     what: "Una línea trae un campo que su tipo de evento no define.",
     todo: "Suele venir de una edición a mano. El campo se ignora; si sobra, quítalo con una rectificación.",
   },
   outdated_lines: {
-    what: "Hay líneas de una versión anterior del esquema.",
-    todo: "Se leen sin problema porque la aplicación las migra al cargarlas. `atlas compact` las reescribe en la versión actual.",
+    what: "Hay líneas escritas por una versión anterior de la aplicación.",
+    todo: "Se leen sin problema porque la aplicación las convierte al cargarlas. La orden «atlas compact» de la CLI las reescribe en el formato actual.",
   },
   fingerprint_mismatch: {
     what: "La huella guardada de un evento no coincide con sus campos: alguien lo editó a mano.",
-    todo: "El libro es append-only: un evento no se edita, se anula y se registra corregido. Recupera la copia anterior a la edición.",
+    todo: "En el libro nada se edita: un movimiento equivocado se anula y se registra corregido. Recupera la copia anterior a la edición.",
   },
   projection_not_reproducible: {
     what: "Volver a leer el fichero da un resultado distinto del que tienes en pantalla.",
@@ -67,6 +67,6 @@ export const FINDING_TEXTS: Record<string, FindingText> = {
 /** Spanish text of a finding; an unknown code falls back to its own code. */
 export const describeFinding = (finding: IntegrityFinding): FindingText =>
   FINDING_TEXTS[finding.code] ?? {
-    what: finding.code,
+    what: "La verificación ha encontrado algo que esta versión todavía no sabe explicar.",
     todo: "Este hallazgo no tiene explicación escrita todavía: el detalle técnico de abajo es lo que hay.",
   };

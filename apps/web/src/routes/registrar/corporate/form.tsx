@@ -1,37 +1,32 @@
-// The form of one kind of corporate action.
-//
-// **The web composes nothing.** It collects the parameters, hands them to
-// `corporateActionDraft` and shows what comes back — including which accounts
-// are left with fractions, which is a figure with a fiscal consequence and
-// therefore not one an interface gets to work out.
+// One kind of corporate action. **The web composes nothing**: it hands the
+// parameters to `corporateActionDraft` and shows what comes back, fractions
+// included. Problems are said under their field or next to the buttons.
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
-import { corporateActionDraft, Quantity } from "@atlas/domain";
+import { accounts, corporateActionDraft, Quantity } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Amount, Badge, Callout, EmptyState, ErrorView } from "../../../components/index.js";
-import { nameIndex } from "../../../format/names.js";
-import { toAppError } from "../../../ledger/actions.js";
+import { Amount, Badge, Callout, EmptyState } from "../../../components/index.js";
+import { displayName, nameIndex } from "../../../format/names.js";
+import { toAppError } from "../../../ledger/errors.js";
 import { attempt } from "../../../ledger/query.js";
 import { store, today } from "../../../ledger/state.js";
 import { previewDraft, recordDraft } from "../../../ledger/write.js";
 import { PageHeader } from "../../../shell/PageHeader.jsx";
 import { CORPORATE_COMMON, corporateForm } from "../../../view-models/forms/corporate.js";
 import type { FieldSpec, FormValues } from "../../../view-models/forms/index.js";
-import { missingRequired } from "../../../view-models/forms/index.js";
+import {
+  initialValues,
+  inputErrors,
+  missingRequired,
+  missingSentence,
+} from "../../../view-models/forms/index.js";
 import { RequireLedger } from "../../guard.jsx";
 import { DuplicateDialog } from "../DuplicateDialog.jsx";
+import { FormActions } from "../FormActions.jsx";
 import { FormFields } from "../FormFields.jsx";
 import { Preview } from "../Preview.jsx";
-import { toCorporateParams } from "./params.js";
-
-const initial = (fields: readonly FieldSpec[], date: string): FormValues => {
-  const values: FormValues = {};
-  for (const field of fields) {
-    values[field.name] = field.initial ?? (field.kind === "date" ? date : "");
-  }
-  return values;
-};
+import { feeLinesError, toCorporateParams } from "./params.js";
 
 export default function CorporateFormRoute(): JSX.Element {
   const params = useParams<{ kind: string }>();
@@ -42,25 +37,36 @@ export default function CorporateFormRoute(): JSX.Element {
       {(snapshot) => {
         const form = () => corporateForm(params.kind);
         const fields = (): FieldSpec[] => [...CORPORATE_COMMON, ...(form()?.fields ?? [])];
-        const [values, setValues] = createSignal<FormValues>(initial(fields(), today()));
+        const [values, setValues] = createSignal<FormValues>(
+          initialValues({ fields: fields() } as never, today()),
+        );
         const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
-        const [error, setError] = createSignal<string | undefined>(undefined);
+        const [problem, setProblem] = createSignal<string | undefined>(undefined);
         const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
         const [conflict, setConflict] = createSignal(false);
+        const names = nameIndex(snapshot.state);
+        const catalogue = accounts(snapshot.state);
+
+        /** What the form can tell on its own: unreadable numbers and fee lines, by field. */
+        const errors = createMemo((): Record<string, string> => {
+          const fees = feeLinesError(values(), catalogue);
+          return {
+            ...inputErrors(fields(), values()),
+            ...(fees === undefined ? {} : { cash_fees: fees }),
+          };
+        });
+        const missing = () => missingRequired({ fields: fields() } as never, values());
 
         const composed = createMemo(() => {
           const current = form();
-          if (
-            current === undefined ||
-            missingRequired({ fields: fields() } as never, values()).length > 0
-          ) {
+          if (current === undefined || missing().length > 0 || Object.keys(errors()).length > 0) {
             return undefined;
           }
           return attempt(() =>
             corporateActionDraft(
               snapshot.state as LedgerState,
               snapshot.events,
-              toCorporateParams(current, values()),
+              toCorporateParams(current, values(), catalogue),
             ),
           );
         });
@@ -69,13 +75,21 @@ export default function CorporateFormRoute(): JSX.Element {
           const outcome = composed();
           return outcome?.ok === true ? outcome.value : undefined;
         };
-        const composeError = () => {
+
+        /** Why "Ver el efecto" is disabled, said next to it. */
+        const blocked = (): string | undefined => {
           const outcome = composed();
-          return outcome?.ok === false ? outcome.error : undefined;
+          return (
+            missingSentence(fields(), missing()) ??
+            (Object.keys(errors()).length > 0
+              ? "Corrige los datos marcados en rojo."
+              : undefined) ??
+            (outcome?.ok === false ? outcome.error.message : undefined)
+          );
         };
 
         const onPreview = async (): Promise<void> => {
-          setError(undefined);
+          setProblem(undefined);
           const built = draft();
           if (built === undefined) {
             return;
@@ -83,7 +97,7 @@ export default function CorporateFormRoute(): JSX.Element {
           try {
             setPreview(await previewDraft(built.draft as never));
           } catch (failure) {
-            setError(toAppError(failure).message);
+            setProblem(toAppError(failure).message);
           }
         };
 
@@ -92,7 +106,7 @@ export default function CorporateFormRoute(): JSX.Element {
           if (built === undefined) {
             return;
           }
-          setError(undefined);
+          setProblem(undefined);
           setDuplicate(undefined);
           const result = await recordDraft(built.draft as never, { confirmDuplicate });
           if (result.ok) {
@@ -109,7 +123,7 @@ export default function CorporateFormRoute(): JSX.Element {
             return;
           }
           if (result.failure.kind === "error") {
-            setError(result.failure.error.message);
+            setProblem(result.failure.error.message);
           }
         };
 
@@ -119,7 +133,7 @@ export default function CorporateFormRoute(): JSX.Element {
             fallback={
               <>
                 <PageHeader title="Evento corporativo" />
-                <EmptyState what={`No hay ningún formulario para "${params.kind}".`}>
+                <EmptyState what="No hay ningún formulario para ese tipo de evento corporativo.">
                   <A href="/registrar">Ver qué se puede registrar</A>
                 </EmptyState>
               </>
@@ -129,7 +143,7 @@ export default function CorporateFormRoute(): JSX.Element {
               <>
                 <PageHeader title={current().title} lead={current().when} />
 
-                <Callout tone="info" title="Qué va a hacer el dominio">
+                <Callout tone="info" title="Qué va a pasar">
                   {current().effect}
                 </Callout>
 
@@ -140,18 +154,6 @@ export default function CorporateFormRoute(): JSX.Element {
                   </Callout>
                 </Show>
 
-                <Show when={error() !== undefined}>
-                  <Callout tone="error" title="El dominio rechaza este evento">
-                    {error()}
-                  </Callout>
-                </Show>
-
-                <Show when={composeError()}>
-                  {(failure) => (
-                    <ErrorView error={failure()} title="Faltan datos para componer el evento" />
-                  )}
-                </Show>
-
                 <form class="form" onSubmit={(event) => event.preventDefault()}>
                   <FormFields
                     fields={fields()}
@@ -159,6 +161,7 @@ export default function CorporateFormRoute(): JSX.Element {
                     state={snapshot.state}
                     onChange={setValues}
                     prefix="ca"
+                    errors={errors()}
                   />
 
                   <Show when={draft()?.no_fractions === true}>
@@ -173,16 +176,20 @@ export default function CorporateFormRoute(): JSX.Element {
                       <For each={draft()?.fractional ?? []}>
                         {(row) => (
                           <p class="tiny flush">
-                            {row.account_id}: <Amount quantity={Quantity.parse(row.quantity)} />
+                            {displayName(names, row.account_id)}:{" "}
+                            <Amount quantity={Quantity.parse(row.quantity)} />
                           </p>
                         )}
                       </For>
-                      Esa venta genera ganancia patrimonial. La calcula el dominio, no esta
-                      pantalla.
+                      Esa venta genera ganancia patrimonial. La aplicación la calcula al registrar
+                      el evento.
                     </Callout>
                   </Show>
 
-                  <div class="actions-bar">
+                  <FormActions
+                    problem={preview() === undefined ? problem() : undefined}
+                    blocked={blocked()}
+                  >
                     <button
                       type="button"
                       disabled={draft() === undefined}
@@ -190,18 +197,18 @@ export default function CorporateFormRoute(): JSX.Element {
                     >
                       Ver el efecto
                     </button>
-                  </div>
+                  </FormActions>
                 </form>
 
                 <Show when={preview()}>
                   {(shown) => (
                     <div class="stack">
-                      <Preview preview={shown()} names={nameIndex(snapshot.state)} />
+                      <Preview preview={shown()} names={names} />
                       <Callout tone="info" title="Guarda el documento">
                         Copia la nota del emisor a tu carpeta de documentos: el libro guarda la
                         referencia, no el fichero.
                       </Callout>
-                      <div class="actions-bar">
+                      <FormActions problem={problem()}>
                         <button
                           type="button"
                           class="secondary"
@@ -216,7 +223,7 @@ export default function CorporateFormRoute(): JSX.Element {
                         >
                           Registrar
                         </button>
-                      </div>
+                      </FormActions>
                     </div>
                   )}
                 </Show>

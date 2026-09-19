@@ -462,6 +462,7 @@
   border-top: 1px solid var(--c-border);
   bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom));
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-2);
   padding: var(--s-3) 0;
   position: sticky;
@@ -470,6 +471,22 @@
 
 .actions-bar button {
   flex: 1 1 auto;
+}
+
+/* Why the button cannot be pressed yet: inside the bar, on its own line. */
+.actions-bar .reason {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/*
+ * A destructive action never wears the primary blue: "Anular" looked exactly
+ * like "Registrar" (review of 2026-09-18).
+ */
+button.destructive {
+  background-color: var(--c-negative);
+  border-color: var(--c-negative);
+  color: var(--c-bg);
 }
 
 @media (min-width: 768px) {
@@ -495,20 +512,32 @@
   gap: var(--s-2);
 }
 
+/*
+ * A row may wrap: the name above, the figures below and to the right. The name
+ * was `nowrap` in a row that could not shrink, so a long fund name pushed the
+ * card up to 248 px past a phone screen (review of 2026-09-18).
+ */
 .preview .change {
   align-items: baseline;
   border-bottom: 1px solid var(--c-border);
   display: flex;
+  flex-wrap: wrap;
   font-size: var(--t-sm);
   gap: var(--s-2);
   justify-content: space-between;
   padding-bottom: var(--s-1);
 }
 
+.preview .change .change-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .preview .change .values {
   display: flex;
   gap: var(--s-2);
   font-variant-numeric: tabular-nums;
+  margin-left: auto;
 }
 
 .preview .arrow {

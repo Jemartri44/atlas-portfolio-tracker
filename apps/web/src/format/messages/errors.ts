@@ -5,20 +5,32 @@
 // fixed (decision (i) of the prompt). A drift test checks that both catalogues
 // cover every code the domain can raise, and an unknown code falls back to the
 // domain's own message so a new error is never swallowed.
+//
+// A message is read by the user, so it names things the way the screens do:
+// fields by their label, types by their Spanish name, dates as dd/mm/aaaa, and
+// never an identifier of an event or a document of the project.
+//
+// LINE BUDGET: one entry per code the domain can raise — about ninety — and
+// the value of the file is reading them side by side, which is how a message
+// that still says "amount" or cites a document gets caught. Splitting it by
+// area would scatter the drift test's target over five files.
 
 import type { DomainError } from "@atlas/domain";
 import { type Naming, NO_NAMES, namingOf } from "../names.js";
+import { countOf } from "../number.js";
 import { type Figures, figuresOf, maskFigures, type Prose } from "../privacy.js";
-
-type Details = Record<string, unknown>;
-
-const text = (value: unknown): string =>
-  typeof value === "string" ? value : JSON.stringify(value);
-
-const list = (value: unknown): string =>
-  Array.isArray(value) ? value.map((entry) => text(entry)).join(", ") : text(value);
-
-const count = (value: unknown): number => (Array.isArray(value) ? value.length : 0);
+import {
+  count,
+  type Details,
+  day,
+  enumValue,
+  field,
+  fields,
+  kind,
+  num,
+  setting,
+  text,
+} from "./prose.js";
 
 /**
  * The settings whose value is an **amount**. The rest of them are percentages,
@@ -38,44 +50,45 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   unknown_asset: (d, n) => `El activo ${n.one(d.asset_id)} no existe.`,
   // --- Corporate actions composed from parameters (feature 007) ------------
   missing_source_document: (d) =>
-    `Un evento corporativo de tipo ${text(d.kind)} necesita su fuente documental: la URL o el PDF del emisor. No es opcional.`,
+    `Un evento corporativo de tipo ${enumValue(d.kind)} necesita su fuente documental: la dirección o el PDF de la nota del emisor. No es opcional.`,
   missing_effect_parameter: (d) =>
-    `Falta ${text(d.parameter)}: un evento corporativo de tipo ${text(d.kind)} no se puede componer sin ese dato.`,
+    `Falta ${field(d.parameter)}: un evento corporativo de tipo ${enumValue(d.kind)} no se puede componer sin ese dato.`,
   no_wizard_for_kind: (d) =>
-    `El tipo ${text(d.kind)} no se compone a partir de un formulario: sus efectos hay que indicarlos uno a uno, y eso todavía solo lo hace la CLI.`,
+    `Un evento corporativo de tipo ${enumValue(d.kind)} no tiene formulario: sus efectos se indican uno a uno, y eso de momento solo se hace desde la CLI.`,
   fee_account_not_selling: (d, n) =>
     `La cuenta ${n.one(d.account_id)} no participa en la venta forzosa, así que no puede llevar comisión.`,
   duplicate_account: (d, n) => `La cuenta ${n.one(d.account_id)} ya existe.`,
   duplicate_asset: (d, n) => `El activo ${n.one(d.asset_id)} ya existe.`,
   asset_book_change: (d, n) =>
-    `El activo ${n.one(d.asset_id)} no puede cambiar de libro (ADR-0009): da de alta un activo nuevo.`,
+    `El activo ${n.one(d.asset_id)} no puede pasar del núcleo al cubo ni al revés: da de alta un activo nuevo.`,
   asset_type_change: (d, n) =>
-    `El activo ${n.one(d.asset_id)} no puede cambiar de tipo (${text(d.from)} → ${text(d.to)}): alteraría la fecha fiscal de todas sus operaciones. Da de alta un activo nuevo.`,
+    `El activo ${n.one(d.asset_id)} no puede cambiar de tipo (${enumValue(d.from)} → ${enumValue(d.to)}): alteraría la fecha fiscal de todas sus operaciones. Da de alta un activo nuevo.`,
   asset_currency_change: (d, n) =>
     `El activo ${n.one(d.asset_id)} no puede cambiar de divisa (${text(d.from)} → ${text(d.to)}): alteraría la base de coste de todas sus operaciones. Da de alta un activo nuevo.`,
   account_book_change: (d, n) =>
-    `La cuenta ${n.one(d.account_id)} tiene operaciones registradas: su libro ya no puede cambiar.`,
+    `La cuenta ${n.one(d.account_id)} tiene operaciones registradas: ya no puede pasar del núcleo al cubo ni al revés.`,
   book_mismatch: () =>
     "La cuenta y el activo pertenecen a libros distintos: el núcleo y el cubo no se mezclan.",
   // --- Bucket theses -----------------------------------------------------
-  thesis_required: (d) =>
-    `Las compras del cubo exigen una tesis abierta antes de comprar (regla 15). Ábrela desde la CLI con \`atlas thesis open --account ${text(d.account_id)} --asset ${text(d.asset_id)}…\`: el asistente de tesis llega en la versión siguiente.`,
-  unknown_thesis: (d) => `La tesis ${text(d.thesis_id)} no existe.`,
+  thesis_required: () =>
+    "Las compras del cubo exigen una tesis abierta antes de comprar (regla 15). Ábrela en Registrar → Abrir una tesis y vuelve.",
+  unknown_thesis: (d, n) => `La tesis ${n.thesis(d.thesis_id)} no existe.`,
   thesis_mismatch: (d, n) =>
-    `La tesis ${text(d.thesis_id)} es de ${n.one(d.asset_id)} en ${n.one(d.account_id)}, no de esta operación.`,
-  thesis_not_open: (d) =>
-    `La tesis ${text(d.thesis_id)} no está abierta en este punto del libro: se abre antes de comprar y no se cierra antes.`,
+    `La tesis ${n.thesis(d.thesis_id)} es de ${n.one(d.asset_id)} en ${n.one(d.account_id)}, no de esta operación.`,
+  thesis_not_open: (d, n) =>
+    `La tesis ${n.thesis(d.thesis_id)} no está abierta en ese momento: se abre antes de comprar y no se cierra antes.`,
   thesis_not_allowed: (d, n) =>
     `Solo las cuentas del cubo llevan tesis; ${n.one(d.account_id)} es del núcleo.`,
-  duplicate_thesis: (d) => `La tesis ${text(d.thesis_id)} ya existe.`,
+  duplicate_thesis: (d) =>
+    `Ya hay una tesis con el identificador «${text(d.thesis_id)}»: elige otro.`,
   thesis_already_open: (d, n) =>
-    `Ya hay una tesis abierta (${text(d.thesis_id)}) sobre ${n.one(d.asset_id)} en ${n.one(d.account_id)}: ciérrala antes.`,
-  thesis_already_closed: (d) => `La tesis ${text(d.thesis_id)} ya está cerrada.`,
+    `Ya hay una tesis abierta sobre ${n.one(d.asset_id)} en ${n.one(d.account_id)}: ciérrala antes.`,
+  thesis_already_closed: (d, n) => `La tesis ${n.thesis(d.thesis_id)} ya está cerrada.`,
   not_bucket: (d, n) =>
     `Una tesis exige cuenta y activo del cubo (${n.one(d.account_id)}, ${n.one(d.asset_id)}).`,
   // --- Corporate actions -------------------------------------------------
   effects_not_allowed_for_kind: (d) =>
-    `El subtipo ${text(d.kind)} no admite la secuencia de efectos ${list(d.effects)}; admitidas: ${list(d.allowed)}.`,
+    `Un evento corporativo de tipo ${enumValue(d.kind)} no admite esa combinación de efectos: revisa el tipo elegido.`,
   liquidation_must_cover_all_accounts: (d, n) =>
     `Una liquidación vende todo en exactamente las cuentas con posición de ${n.one(d.asset_id)} (faltan: ${n.many(d.missing)}; sobran: ${n.many(d.extra)}; parciales: ${n.many(d.partial)}).`,
   no_open_lots: (d, n) =>
@@ -84,14 +97,14 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   duplicate_account_in_effect: (d, n) =>
     `La cuenta ${n.one(d.account_id)} aparece dos veces en el mismo efecto.`,
   invalid_ratio: (d) =>
-    `Proporción no válida: ${text(d.value)} (un decimal positivo, o una fracción nuevas/antiguas como 4/3).`,
+    `Proporción no válida: ${num(d.value)}. Escribe un número positivo (1,5) o una fracción de títulos nuevos entre antiguos (4/3).`,
   // --- Operations --------------------------------------------------------
   insufficient_position: (d, n, f) =>
     `La cuenta ${n.one(d.account_id)} no tiene suficiente ${n.one(d.asset_id)} en esa fecha (disponible: ${f.quantity(d.available)}).`,
   insufficient_lots: (d, n, f) =>
     `Los lotes abiertos de ${n.one(d.asset_id)} no cubren la cantidad (abiertos: ${f.quantity(d.open ?? d.missing)}).`,
-  missing_basis: (d) =>
-    `Falta la base de la operación: indica el importe o el precio unitario (${text(d.type ?? "operación")}).`,
+  missing_basis: () =>
+    "Falta la base de la operación: indica el importe liquidado o el precio unitario.",
   not_transferable: (d, n) =>
     d.asset_id === undefined
       ? "Un traspaso fiscal exige que los dos activos sean traspasables."
@@ -99,9 +112,9 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   not_core_asset: (d, n) =>
     `El activo ${n.one(d.asset_id)} no pertenece al núcleo: el simulador de traspaso solo opera sobre la cartera principal.`,
   eur_fx_rate_not_one: (d) =>
-    `${text(d.field)} debe ser exactamente 1 cuando la divisa es el euro (recibido: ${text(d.value)}): el BCE no publica un tipo del euro contra sí mismo.`,
+    `${field(d.field)} debe ser exactamente 1 cuando la divisa es el euro (recibido: ${num(d.value)}): el BCE no publica un tipo del euro contra sí mismo.`,
   fx_rate_date_weekend: (d) =>
-    `${text(d.field)} (${text(d.value)}) cae en fin de semana y el BCE no publica: usa el último día hábil anterior.`,
+    `${field(d.field)} (${day(d.value)}) cae en fin de semana y el BCE no publica: usa el último día hábil anterior.`,
   transfer_fee_not_allowed: () =>
     "Un traspaso no lleva comisión: registra el cargo del depositario como una comisión aparte.",
   currency_mismatch: (d) => `No se pueden operar ${text(d.left)} con ${text(d.right)}.`,
@@ -112,7 +125,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `La cantidad debe ser mayor que cero (recibido: ${f.quantity(d.value)}).`,
   // --- Views that need prices or settings --------------------------------
   missing_manual_prices: (d, n) =>
-    `Faltan precios a ${text(d.date)}: ${n.many(d.assets)}. Regístralos con una valoración.`,
+    `Faltan precios a ${day(d.date)}: ${n.many(d.assets)}. Regístralos con una valoración.`,
   missing_target_weights: () =>
     "No hay pesos objetivo configurados: fíjalos en Ajustes → Configuración.",
   missing_bucket_pct: () =>
@@ -122,99 +135,101 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   no_target_weight_in_table: (d, n) =>
     `Los pesos objetivo vigentes no apuntan a ningún activo del núcleo${
       count(d.assets) === 0 ? " (la tabla está vacía)" : `: ${n.many(d.assets)} están todos al 0 %`
-    }. Casi seguro es un identificador mal escrito en los pesos objetivo: revísalos en Ajustes → Configuración.`,
+    }. Revísalos en Ajustes → Configuración.`,
   split_not_exact: (d, _n, f) =>
     `El reparto de la aportación no cuadra (${f.money(d.distributed)} repartidos de ${f.money(d.core)}): es un fallo interno de la calculadora, no registres nada.`,
   // --- Settings ----------------------------------------------------------
   invalid_settings: (d, _n, f) => {
     // `min` and `max` are the bounds written in the domain, not the user's
     // money: they say what is allowed and they stay visible.
-    const received = MONEY_SETTINGS.has(text(d.field)) ? f.money(d.value) : text(d.value);
+    const received = MONEY_SETTINGS.has(text(d.field)) ? f.money(d.value) : num(d.value);
     if (d.total !== undefined) {
-      return `Los pesos objetivo deben sumar 100 y suman ${text(d.total)}.`;
+      return `Los pesos objetivo deben sumar 100 y suman ${num(d.total)}.`;
     }
     if (d.min !== undefined) {
       const range =
         d.max === undefined
-          ? `${text(d.min)} o mayor`
-          : `un valor entre ${text(d.min)} y ${text(d.max)}`;
-      return `${text(d.field)} debe ser ${range} (recibido: ${received}).`;
+          ? `${num(d.min)} o mayor`
+          : `un valor entre ${num(d.min)} y ${num(d.max)}`;
+      return `${setting(d.field)} debe ser ${range} (recibido: ${received}).`;
     }
     if (d.value === undefined) {
-      return `Falta el parámetro ${text(d.field)}.`;
+      return `Falta ${setting(d.field)}.`;
     }
-    return `${text(d.field)} no admite ese valor (recibido: ${received}).`;
+    return `${setting(d.field)} no admite ese valor (recibido: ${received}).`;
   },
   invalid_wash_sale_window: (d) =>
-    `La ventana de recompra de ${text(d.asset_type)} debe ser 2m, 1y o <n>d (recibido: ${text(d.value)}).`,
+    `La ventana de recompra de ${enumValue(d.asset_type)} no es válida: elige dos meses, un año o un número de días.`,
   negative_target_weight: (d, n) =>
-    `El peso objetivo de ${n.one(d.asset_id)} no puede ser negativo (recibido: ${text(d.value)}).`,
+    `El peso objetivo de ${n.one(d.asset_id)} no puede ser negativo (recibido: ${num(d.value)}).`,
   accept_invalid_not_allowed: (d) =>
-    `Solo un cambio de configuración puede escribirse sobre eventos que quedan inválidos, no un ${text(d.type)} (ADR-0015).`,
+    `Sobre eventos que quedan inválidos solo puede escribirse un cambio de configuración, no ${kind(d.type)}.`,
   newly_invalid_events: (d) =>
-    `Este cambio de configuración deja inválidos ${count(d.affected)} eventos ya registrados.`,
+    `Este cambio de configuración deja inválidos ${countOf(count(d.affected), "evento ya registrado", "eventos ya registrados")}.`,
   // --- Rectification -----------------------------------------------------
   reversal_of_reversal: () =>
     "No se puede anular una anulación: vuelve a registrar el evento original.",
   already_reversed: () => "Ese evento ya está anulado.",
-  reversal_target_missing: (d) => `El evento ${text(d.reverses_id ?? d.id)} no existe.`,
-  not_found: (d) => `El evento ${text(d.id ?? d.reverses_id)} no existe.`,
-  dependent_events: (d) =>
-    `El evento ${text(d.target_id)} ha sido consumido por eventos posteriores: rectifícalos antes.`,
-  dangling_correction: (d) => `La corrección apunta a ${text(d.corrects_id)}, que no está anulado.`,
-  dangling_reference: (d) => `Referencia colgante: ${list(d.event_ids ?? d.ids)}.`,
+  reversal_target_missing: () => "El movimiento que se quiere anular no está en el libro.",
+  not_found: () => "Ese movimiento no está en el libro.",
+  dependent_events: () => "Hay movimientos posteriores que se apoyan en este: rectifícalos antes.",
+  dangling_correction: () => "La corrección apunta a un movimiento que no está anulado.",
+  dangling_reference: (d) =>
+    `Hay ${countOf(count(d.event_ids ?? d.ids), "referencia", "referencias")} a movimientos que no están en el libro.`,
   // --- Orders and transfer requests --------------------------------------
-  unknown_order: (d) => `La orden ${text(d.order_id)} no existe en esa fecha.`,
-  order_closed: (d) => `La orden ${text(d.order_id)} ya está cerrada (${text(d.stage)}).`,
-  order_mismatch: (d) =>
-    `La orden ${text(d.order_id)} no coincide con la cuenta, el activo o el sentido de la operación.`,
-  unknown_request: (d) => `La solicitud de traspaso ${text(d.request_id)} no existe en esa fecha.`,
+  unknown_order: () => "La orden elegida no existe en esa fecha.",
+  order_closed: (d) => `La orden elegida ya está cerrada (${enumValue(d.stage)}).`,
+  order_mismatch: () =>
+    "La orden elegida no coincide con la cuenta, el activo o el sentido de la operación.",
+  unknown_request: () => "La solicitud de traspaso elegida no existe en esa fecha.",
   request_closed: (d) =>
-    `La solicitud de traspaso ${text(d.request_id)} ya está cerrada (${text(d.stage)}).`,
-  request_mismatch: (d) =>
-    `La solicitud de traspaso ${text(d.request_id)} se refiere a otras cuentas o activos.`,
+    `La solicitud de traspaso elegida ya está cerrada (${enumValue(d.stage)}).`,
+  request_mismatch: () =>
+    "La solicitud de traspaso elegida se refiere a otras cuentas o a otros fondos.",
   // --- Ledger state ------------------------------------------------------
   ledger_has_invalid_events: (d, _n, f) => {
     const invalid = Number(d.invalid_count ?? 0);
     // `offending_error` is the domain's own message, in English and free-form:
     // it goes through the blunt masker, like any other raw evidence.
-    return `El libro ya tenía ${invalid} ${
-      invalid === 1 ? "evento inválido" : "eventos inválidos"
-    } antes de esta operación: sobre un libro degradado solo se puede escribir un cambio de configuración (ADR-0015). El primero es ${text(d.offending_type)} ${text(d.offending_id)}: ${f.evidence(d.offending_error)}. Arréglalo en Ajustes → Verificación.`;
+    return `El libro ya tenía ${countOf(invalid, "evento inválido", "eventos inválidos")} antes de esta operación, y sobre un libro así solo se puede escribir un cambio de configuración. El primero es ${kind(d.offending_type)}: ${f.evidence(d.offending_error)}. Arréglalo en Ajustes → Verificación.`;
   },
   invalid_events: (d) =>
-    `El libro tiene ${count(d.affected)} eventos inválidos: rectifícalos antes (Ajustes → Verificación).`,
-  duplicate_fingerprint: (d) =>
-    `Ya existe un evento con la misma huella (${list(d.existing)}). Si es una repetición legítima, confírmalo.`,
+    `El libro tiene ${countOf(count(d.affected), "evento inválido", "eventos inválidos")}: rectifícalos antes (Ajustes → Verificación).`,
+  duplicate_fingerprint: () =>
+    "Ya hay un movimiento idéntico en el libro. Si es una repetición legítima, confírmalo.",
   duplicate_id: () => "Hay dos eventos con el mismo identificador: el libro está corrupto.",
   unsupported_event: (d) =>
-    `El tipo de evento ${text(d.type)} está reservado para una versión posterior y esta aplicación no lo proyecta.`,
-  unknown_event_type: (d) => `Tipo de evento desconocido: ${text(d.type)}.`,
-  negative_position: (d) => `Posición negativa en ${text(d.key ?? "una cuenta")}.`,
+    `El tipo de evento «${text(d.type)}» es de una versión posterior de la aplicación y esta no lo entiende.`,
+  unknown_event_type: (d) => `Tipo de evento desconocido: «${text(d.type)}».`,
+  negative_position: (d, n) =>
+    `Posición negativa en ${
+      typeof d.key === "string" ? n.many(d.key.split("|")).replace(", ", " · ") : "una cuenta"
+    }.`,
   lots_mismatch: (d, n) =>
     `Los lotes fiscales de ${n.one(d.asset_id)} no cuadran con la posición física.`,
   // --- Store and schema --------------------------------------------------
   conflict: () =>
     "El libro ha cambiado desde que se cargó (la CLI u otra pestaña han escrito): se recarga y se vuelve a intentar.",
   schema_too_new: (d) =>
-    `El libro usa la versión de esquema ${text(d.found)} y esta aplicación entiende hasta la ${text(d.supported)}: actualiza la aplicación (recarga con conexión).`,
-  missing_migration: (d) => `Falta la migración de la versión ${text(d.from ?? d.version)}.`,
+    `El libro lo ha escrito una versión más nueva de la aplicación (formato ${text(d.found)}; esta entiende hasta el ${text(d.supported)}): actualiza la aplicación recargando con conexión.`,
+  missing_migration: (d) =>
+    `Esta aplicación no sabe leer el formato ${text(d.from ?? d.version)} del libro.`,
   archive_exists: (d) => `El archivo ${text(d.archive_name)} ya existe y nunca se sobrescribe.`,
-  projection_changed: (d) =>
-    `La reescritura cambiaría la proyección (${list(d.keys)}): no se ha escrito nada.`,
+  projection_changed: () => "La reescritura cambiaría los cálculos: no se ha escrito nada.",
   // --- Line shape --------------------------------------------------------
-  invalid_line: (d) =>
-    `Línea no válida${d.line === undefined ? "" : ` (${text(d.line)})`}: ${text(d.value ?? "no es un objeto JSON")}.`,
-  invalid_json: (d) =>
-    `La línea ${text(d.line ?? "")} no es JSON válido: el fichero no es un libro de Atlas.`,
-  invalid_envelope: (d) => `El sobre de la línea no es válido: falta o sobra ${text(d.field)}.`,
-  missing_field: (d) => `Falta el campo ${text(d.field)} en ${text(d.type)}.`,
-  invalid_field: (d) => `El campo ${text(d.field ?? d.fields)} de ${text(d.type)} no es válido.`,
+  invalid_line: () => "La línea no es un evento: no es un objeto JSON.",
+  invalid_json: () => "La línea no es JSON válido: el fichero no es un libro de Atlas.",
+  invalid_envelope: (d) => `La cabecera de la línea no es válida (${field(d.field)}).`,
+  missing_field: (d) => `Falta ${field(d.field)} en ${kind(d.type)}.`,
+  invalid_field: (d) =>
+    d.field === undefined && d.fields === undefined
+      ? `Los datos de ${kind(d.type)} no son coherentes entre sí.`
+      : `${fields(d.field ?? d.fields)} no es válido en ${kind(d.type)}.`,
   invalid_decimal: (d) =>
-    `Valor numérico no válido: ${text(d.value)} (se escriben como texto decimal, por ejemplo 123,45).`,
-  invalid_date: (d) => `La fecha de ${text(d.field)} debe tener el formato aaaa-mm-dd.`,
-  invalid_instant: () => "La marca de tiempo del evento no es válida.",
-  invalid_currency: (d) => `Divisa no válida: ${text(d.value)} (tres letras, ISO 4217).`,
+    `Valor numérico no válido: ${text(d.value)}. Se escribe con coma decimal, por ejemplo 123,45.`,
+  invalid_date: (d) => `${field(d.field)} tiene que ser una fecha válida.`,
+  invalid_instant: () => "La fecha de registro del evento no es válida.",
+  invalid_currency: (d) => `Divisa no válida: ${text(d.value)} (tres letras, como EUR o USD).`,
   invalid_fx_rate: (d) => `Tipo de cambio no válido: ${text(d.value)}.`,
   ulid_overflow: () => "Se han agotado los identificadores de este milisegundo: repite la acción.",
 };

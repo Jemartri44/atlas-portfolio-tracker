@@ -9,12 +9,12 @@
 
 import type { LedgerState } from "@atlas/domain";
 import { For, type JSX } from "solid-js";
-import { Field, SelectField, Switch } from "../../components/index.js";
-import { valueLabel } from "../../format/labels.js";
+import { Field, type Option, SelectField, Switch } from "../../components/index.js";
 import { today } from "../../ledger/state.js";
+import { selectOptions, withoutStale } from "../../view-models/forms/choices.js";
 import type { FieldSpec, FormValues } from "../../view-models/forms/index.js";
 import { isVisible } from "../../view-models/forms/index.js";
-import { derivedCurrency, optionsFor } from "../../view-models/options.js";
+import { derivedCurrency } from "../../view-models/options.js";
 
 interface FormFieldsProps {
   fields: readonly FieldSpec[];
@@ -23,6 +23,8 @@ interface FormFieldsProps {
   onChange: (values: FormValues) => void;
   /** Prefix of the control ids, so two forms on one screen cannot collide. */
   prefix?: string;
+  /** What is wrong with a field, by name, written under it. */
+  errors?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -54,20 +56,40 @@ export const withDerived = (
   return next;
 };
 
+/** The options a select field offers with these values, as of today. */
+const optionsOf = (field: FieldSpec, state: LedgerState, values: FormValues): Option[] =>
+  selectOptions(field, state, values, today());
+
 export const FormFields = (props: FormFieldsProps): JSX.Element => {
   const set = (name: string, value: string): void =>
-    props.onChange(withDerived(props.fields, props.state, props.values, name, value));
+    props.onChange(
+      withoutStale(
+        props.fields,
+        props.state,
+        withDerived(props.fields, props.state, props.values, name, value),
+        today(),
+        name,
+      ),
+    );
 
   const render = (field: FieldSpec): JSX.Element => {
     const value = (): string => props.values[field.name] ?? "";
+    // Getters, not values: this runs once per field, and what it hands down has
+    // to follow the form — the value, the error under it and, for a list of
+    // assets, which ones the chosen account allows.
     const common = {
       id: `${props.prefix ?? "f"}-${field.name}`,
       label: field.label,
-      value: value(),
+      get value(): string {
+        return value();
+      },
       ...(field.hint === undefined ? {} : { hint: field.hint }),
       ...(field.required === undefined ? {} : { required: field.required }),
       onInput: (next: string) => set(field.name, next),
       ...(field.full === true ? { class: "full" } : {}),
+      get error(): string | undefined {
+        return props.errors?.[field.name];
+      },
     };
     if (field.kind === "switch") {
       return (
@@ -81,18 +103,10 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
       );
     }
     if (field.kind === "select") {
-      const options =
-        field.values !== undefined
-          ? field.values.map((entry) => ({ value: entry, label: valueLabel(entry) }))
-          : optionsFor(field.options ?? "accounts", {
-              state: props.state,
-              date: today(),
-              values: props.values,
-            });
       return (
         <SelectField
           {...common}
-          options={options}
+          options={optionsOf(field, props.state, props.values)}
           {...(field.required === true ? {} : { placeholder: "Sin indicar" })}
         />
       );

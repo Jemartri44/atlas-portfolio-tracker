@@ -17,7 +17,14 @@ import {
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { nameIndex } from "../src/format/names.js";
-import { toCorporateParams } from "../src/routes/registrar/corporate/params.js";
+import { feeLinesError, toCorporateParams } from "../src/routes/registrar/corporate/params.js";
+
+/** The accounts a fee line may name, by name or by key. */
+const ACCOUNTS = [
+  { account_id: "acc_a", name: "Cuenta A" },
+  { account_id: "acc_b", name: "Cuenta B" },
+];
+
 import {
   bucketPositionsView,
   bucketReportView,
@@ -59,8 +66,8 @@ describe("Núcleo: weights", () => {
     expect(equity?.targetPct).toBe("55");
     // Unrounded: rounding happens once, when the figure is shown (ADR-0005).
     // `atlas weights --date 2027-01-31` prints the same number as 8014.16.
-    expect(view.total.amount.toString()).toBe("8014.158644594");
-    expect(view.total.roundToCents().amount.toString()).toBe("8014.16");
+    expect(view.total?.amount.toString()).toBe("8014.158644594");
+    expect(view.total?.roundToCents().amount.toString()).toBe("8014.16");
     expect(view.partial).toBe(false);
     // Names, never identifiers (V7 of the 006).
     expect(view.classes.flatMap((row) => row.rows).map((row) => row.name)).toContain(
@@ -334,45 +341,84 @@ describe("the corporate action form, as parameters", () => {
    * later needs a reversal plus a corrected event.
    */
   it("carries the per-account fees the user typed", () => {
-    const params = toCorporateParams(corporateForm("contrasplit") as never, {
-      asset_id: "ast_old",
-      effective_date: "2027-03-01",
-      source_document: "https://issuer.example/nota.pdf",
-      ratio: "1/3",
-      cash_unit_price: "50",
-      cash_currency: "EUR",
-      cash_fx_rate: "1",
-      cash_fx_rate_date: "2027-03-01",
-      cash_fees: "acc_a = 1,20\nacc_b = 0,80",
-    });
+    const params = toCorporateParams(
+      corporateForm("contrasplit") as never,
+      {
+        asset_id: "ast_old",
+        effective_date: "2027-03-01",
+        source_document: "https://issuer.example/nota.pdf",
+        ratio: "1/3",
+        cash_unit_price: "50",
+        cash_currency: "EUR",
+        cash_fx_rate: "1",
+        cash_fx_rate_date: "2027-03-01",
+        cash_fees: "Cuenta A = 1,20\nacc_b = 0,80",
+      },
+      ACCOUNTS,
+    );
 
+    // By the account's name, which is what the user knows, or by its key.
     expect(params.fees).toEqual({ acc_a: "1.20", acc_b: "0.80" });
     expect(params.cash?.unit_price).toBe("50");
   });
 
   it("leaves the fees out when the field is empty, instead of sending an empty map", () => {
-    const params = toCorporateParams(corporateForm("split") as never, {
-      asset_id: "ast_old",
-      effective_date: "2027-03-01",
-      source_document: "https://issuer.example/nota.pdf",
-      ratio: "2",
-      cash_fees: "   ",
-    });
+    const params = toCorporateParams(
+      corporateForm("split") as never,
+      {
+        asset_id: "ast_old",
+        effective_date: "2027-03-01",
+        source_document: "https://issuer.example/nota.pdf",
+        ratio: "2",
+        cash_fees: "   ",
+      },
+      ACCOUNTS,
+    );
 
     expect(params.fees).toBeUndefined();
     expect(params.cash).toBeUndefined();
   });
 
-  it("ignores a malformed pair rather than sending nonsense to the domain", () => {
-    const params = toCorporateParams(corporateForm("contrasplit") as never, {
+  /**
+   * A fee that cannot be read is **refused**, not skipped: skipped, it left the
+   * gain of the forced sale overstated with nothing on screen saying so.
+   */
+  it("refuses a fee line it cannot read, instead of dropping the fee", () => {
+    const values = {
       asset_id: "ast_old",
       effective_date: "2027-03-01",
       source_document: "d",
       ratio: "1/3",
       cash_unit_price: "50",
-      cash_fees: "acc_a = 1\n = 2\nacc_c =\n\n",
-    });
+    };
+    expect(feeLinesError({ ...values, cash_fees: "Cuenta A = 1\n\n" }, ACCOUNTS)).toBeUndefined();
+    expect(feeLinesError({ ...values, cash_fees: " = 2" }, ACCOUNTS)).toContain("No se entiende");
+    expect(feeLinesError({ ...values, cash_fees: "acc_c = 1" }, ACCOUNTS)).toContain(
+      "No hay ninguna cuenta llamada «acc_c»",
+    );
+    expect(feeLinesError({ ...values, cash_fees: "Cuenta A = 1.5" }, ACCOUNTS)).toContain(
+      "no se sabe si son decimales o miles",
+    );
+    // Without a settlement there is no sale, and the fees are not read at all.
+    expect(feeLinesError({ ...values, cash_unit_price: "", cash_fees: "x" }, ACCOUNTS)).toBe(
+      undefined,
+    );
+    expect(
+      toCorporateParams(
+        corporateForm("contrasplit") as never,
+        {
+          ...values,
+          cash_fees: "cuenta a = 1",
+        },
+        ACCOUNTS,
+      ).fees,
+    ).toEqual({ acc_a: "1" });
+  });
 
-    expect(params.fees).toEqual({ acc_a: "1" });
+  it("reads a decimal ratio the Spanish way and keeps a fraction as written", () => {
+    const base = { asset_id: "ast_old", effective_date: "2027-03-01", source_document: "d" };
+    const split = corporateForm("split") as never;
+    expect(toCorporateParams(split, { ...base, ratio: "1,5" }, ACCOUNTS).ratio).toBe("1.5");
+    expect(toCorporateParams(split, { ...base, ratio: "3/2" }, ACCOUNTS).ratio).toBe("3/2");
   });
 });

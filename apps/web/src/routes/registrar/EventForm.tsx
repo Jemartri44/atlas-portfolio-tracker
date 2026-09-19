@@ -1,24 +1,36 @@
 // The generic form: it paints an `EventFormSpec` and walks the flow the CLI
 // wizards use — fill in, **see the effect**, confirm, write (FR-043, FR-044).
 //
-// It validates nothing on its own beyond "this required field is empty": the
-// shape is checked by `validateShape` and the invariants by the projection,
-// both inside `previewEvent`. A domain error is shown as it comes, and the
-// confirm button stays disabled while there is one.
+// It validates two things on its own: that the required fields are filled, and
+// that a number can be read (`inputErrors`: "1.5" is refused as ambiguous, with
+// a sentence). Everything else is the domain's: the shape is checked by
+// `validateShape` and the invariants by the projection, both inside
+// `previewEvent`. A refusal about one field is written **under that field**; the
+// rest, next to the button (`FormActions`).
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
 import { A, useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout, ErrorView, Field } from "../../components/index.js";
+import { Callout, Field } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
-import { toAppError } from "../../ledger/actions.js";
+import { countOf } from "../../format/number.js";
+import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
 import { store, today } from "../../ledger/state.js";
 import { correct, previewDraft, recordDraft } from "../../ledger/write.js";
 import type { EventFormSpec, FormValues } from "../../view-models/forms/index.js";
-import { initialValues, missingRequired, toDraft } from "../../view-models/forms/index.js";
+import {
+  errorsAfterEdit,
+  fieldErrorOf,
+  initialValues,
+  inputErrors,
+  missingRequired,
+  missingSentence,
+  toDraft,
+} from "../../view-models/forms/index.js";
 import { isBucketAccount } from "../../view-models/options.js";
 import { DuplicateDialog } from "./DuplicateDialog.jsx";
+import { FormActions, revealField } from "./FormActions.jsx";
 import { FormFields } from "./FormFields.jsx";
 import { Preview } from "./Preview.jsx";
 
@@ -38,34 +50,67 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   );
   const [step, setStep] = createSignal<Step>("form");
   const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
-  const [error, setError] = createSignal<string | undefined>(undefined);
-  // The whole error, with the button that fixes it (inventory V6).
+  // A refusal about one field goes under it; the rest, next to the button.
+  const [fieldErrors, setFieldErrors] = createSignal<Record<string, string>>({});
+  const [problem, setProblem] = createSignal<string | undefined>(undefined);
+  // The whole error of a write, with the button that fixes it (inventory V6).
   const [failure, setFailure] = createSignal<AppError | undefined>(undefined);
   const [reason, setReason] = createSignal("");
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
   const [conflict, setConflict] = createSignal(false);
   const [priorYear, setPriorYear] = createSignal(false);
 
-  const missing = () => missingRequired(props.spec, values());
+  /** Why "Ver el efecto" cannot be pressed yet, said next to it. */
+  const blocked = (): string | undefined =>
+    missingSentence(props.spec.fields, missingRequired(props.spec, values())) ??
+    (props.correcting !== undefined && reason().trim() === ""
+      ? "Para ver el efecto falta el motivo de la rectificación."
+      : undefined);
 
   const bucketWithoutThesis = (): boolean =>
     props.spec.type === "buy" &&
     isBucketAccount(props.state, values().account_id) &&
     (values().thesis_id ?? "") === "";
 
+  /** Editing a field clears what was said about it. */
+  const onChange = (next: FormValues): void => {
+    setFieldErrors(errorsAfterEdit(fieldErrors(), values(), next));
+    setValues(next);
+  };
+
+  const showFieldErrors = (errors: Record<string, string>): void => {
+    setFieldErrors(errors);
+    const first = props.spec.fields.find((field) => errors[field.name] !== undefined);
+    if (first !== undefined) {
+      revealField(`f-${first.name}`);
+    }
+  };
+
   const onPreview = async (): Promise<void> => {
-    setError(undefined);
+    setProblem(undefined);
     setFailure(undefined);
+    const unreadable = inputErrors(props.spec.fields, values());
+    if (Object.keys(unreadable).length > 0) {
+      showFieldErrors(unreadable);
+      return;
+    }
+    setFieldErrors({});
     try {
       setPreview(await previewDraft(toDraft(props.spec, values())));
       setStep("preview");
-    } catch (failure) {
-      setError(toAppError(failure).message);
+      window.scrollTo?.({ top: 0 });
+    } catch (refusal) {
+      const onField = fieldErrorOf(refusal, props.spec.fields, values());
+      if (onField === undefined) {
+        setProblem(toAppError(refusal).message);
+      } else {
+        showFieldErrors({ [onField.field]: onField.message });
+      }
     }
   };
 
   const onConfirm = async (confirmDuplicate = false): Promise<void> => {
-    setError(undefined);
+    setProblem(undefined);
     setFailure(undefined);
     setDuplicate(undefined);
     const draft = toDraft(props.spec, values());
@@ -92,8 +137,8 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       return;
     }
     if (result.failure.kind === "dependents") {
-      setError(
-        `Hay ${result.failure.affected.length} eventos que dependen de este: rectifícalos antes.`,
+      setProblem(
+        `${countOf(result.failure.affected.length, "movimiento posterior depende", "movimientos posteriores dependen")} de este: rectifícalos antes.`,
       );
       return;
     }
@@ -107,16 +152,6 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
           Otra pestaña o la CLI han escrito mientras rellenabas. Se ha recargado el libro: vuelve a
           ver el efecto antes de confirmar. No se ha pisado nada.
         </Callout>
-      </Show>
-
-      <Show when={error() !== undefined}>
-        <Callout tone="error" title="El dominio rechaza este evento">
-          {error()}
-        </Callout>
-      </Show>
-
-      <Show when={failure()}>
-        {(problem) => <ErrorView error={problem()} title="No se ha podido registrar" />}
       </Show>
 
       <Show when={priorYear()}>
@@ -139,14 +174,14 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
         fallback={
           <div class="stack">
             <Preview preview={preview() as EventPreview} names={nameIndex(props.state)} />
-            <div class="actions-bar">
+            <FormActions problem={problem()} failure={failure()}>
               <button type="button" class="secondary" onClick={() => setStep("form")}>
                 Volver a los datos
               </button>
               <button type="button" disabled={store.writing()} onClick={() => void onConfirm()}>
                 {props.correcting === undefined ? "Registrar" : "Rectificar"}
               </button>
-            </div>
+            </FormActions>
           </div>
         }
       >
@@ -171,7 +206,8 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
             fields={props.spec.fields}
             values={values()}
             state={props.state}
-            onChange={setValues}
+            onChange={onChange}
+            errors={fieldErrors()}
           />
 
           <Show when={props.correcting !== undefined}>
@@ -187,28 +223,15 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
             />
           </Show>
 
-          <div class="actions-bar">
+          <FormActions problem={problem()} failure={failure()} blocked={blocked()}>
             <button
               type="button"
-              disabled={
-                missing().length > 0 || (props.correcting !== undefined && reason().trim() === "")
-              }
+              disabled={blocked() !== undefined}
               onClick={() => void onPreview()}
             >
               Ver el efecto
             </button>
-          </div>
-          <Show when={missing().length > 0}>
-            <p class="tiny">
-              Faltan campos obligatorios:{" "}
-              {missing()
-                .map(
-                  (name) => props.spec.fields.find((field) => field.name === name)?.label ?? name,
-                )
-                .join(", ")}
-              .
-            </p>
-          </Show>
+          </FormActions>
         </form>
       </Show>
 

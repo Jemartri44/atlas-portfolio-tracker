@@ -114,7 +114,8 @@ describe("the equivalent table of a chart", () => {
     const card = host.querySelector("ul.datalist li");
     const lines = [...(card?.querySelectorAll(".sub") ?? [])].map((node) => node.textContent ?? "");
 
-    expect(lines).toEqual(["Núcleo 1.234,56", "Cubo sin dato"]);
+    // With its currency: on a card there is no header to say EUR either.
+    expect(lines).toEqual(["Núcleo 1.234,56\u00a0EUR", "Cubo sin dato"]);
     // And nothing numeric is left loose on the card's first line.
     expect(card?.querySelector(".head")?.textContent).toBe("30/06/2027");
   });

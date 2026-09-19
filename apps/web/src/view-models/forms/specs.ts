@@ -31,6 +31,7 @@ export type OptionSource =
   | "accounts"
   | "bucketAccounts"
   | "assets"
+  | "bucketAssets"
   | "currencies"
   | "openOrders"
   | "openTheses"
@@ -66,6 +67,18 @@ export interface FieldSpec {
   hiddenFrom?: string;
   /** Occupies the full width of the grid. */
   full?: boolean;
+  /**
+   * For a list of assets: the field (an account or an asset) whose **book** the
+   * list is narrowed to. A core account never buys a bucket share.
+   */
+  bookFrom?: string;
+  /**
+   * For a list of assets: the account field whose positions let an **inactive**
+   * asset in. A delisted share is still held, and it still needs a valuation.
+   */
+  heldFrom?: string;
+  /** For a list of assets: an inactive asset held in **any** account is offered too. */
+  heldAnywhere?: boolean;
 }
 
 export interface EventFormSpec {
@@ -89,12 +102,24 @@ const account = (): FieldSpec => ({
   options: "accounts",
 });
 
-const asset = (): FieldSpec => ({
+const asset = (account = "account_id"): FieldSpec => ({
   name: "asset_id",
   label: "Activo",
   kind: "select",
   required: true,
   options: "assets",
+  bookFrom: account,
+  heldFrom: account,
+});
+
+/** Where something arrives: active assets of the destination account's book, never a delisted one. */
+const destinationAsset = (): FieldSpec => ({
+  name: "to_asset_id",
+  label: "Activo de destino",
+  kind: "select",
+  required: true,
+  options: "assets",
+  bookFrom: "to_account_id",
 });
 
 const currency = (): FieldSpec => ({
@@ -358,7 +383,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         label: "Identificador",
         kind: "text",
         required: true,
-        hint: "Corto y estable, como acc_mi. No se puede cambiar después.",
+        hint: "Una clave corta y sin espacios, por ejemplo «indexados». No se puede cambiar después.",
       },
       { name: "name", label: "Nombre", kind: "text", required: true },
       { name: "platform", label: "Plataforma", kind: "text", required: true },
@@ -401,7 +426,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         label: "Identificador",
         kind: "text",
         required: true,
-        hint: "Corto y estable, como ast_world. No se puede cambiar después.",
+        hint: "Una clave corta y sin espacios, por ejemplo «mundo». No se puede cambiar después.",
       },
       {
         name: "asset_type",
@@ -410,7 +435,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         required: true,
         values: ASSET_TYPES,
         initial: "fund",
-        hint: "Decide la fecha fiscal y la ventana de recompra (ADR-0013).",
+        hint: "Decide qué fecha cuenta para Hacienda y cuánto dura la ventana de recompra.",
       },
       {
         name: "book",
@@ -457,7 +482,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         name: "ter",
         label: "TER",
         kind: "decimal",
-        hint: "En porcentaje anual, por ejemplo 0.12.",
+        hint: "En porcentaje anual, por ejemplo 0,12.",
       },
       {
         name: "transferable",
@@ -492,9 +517,9 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     when: "Has pedido a la gestora mover un fondo a otro. Todavía no ha pasado nada.",
     fields: [
       { ...account(), name: "from_account_id", label: "Cuenta de origen" },
-      { ...asset(), name: "from_asset_id", label: "Fondo de origen" },
+      { ...asset("from_account_id"), name: "from_asset_id", label: "Fondo de origen" },
       { ...account(), name: "to_account_id", label: "Cuenta de destino" },
-      { ...asset(), name: "to_asset_id", label: "Fondo de destino" },
+      { ...destinationAsset(), label: "Fondo de destino" },
       {
         name: "quantity_out",
         label: "Participaciones",
@@ -553,7 +578,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         hint: "La solicitud que este traspaso completa, si la registraste.",
       },
       { ...account(), name: "from_account_id", label: "Cuenta de origen" },
-      { ...asset(), name: "from_asset_id", label: "Fondo de origen" },
+      { ...asset("from_account_id"), name: "from_asset_id", label: "Fondo de origen" },
       {
         name: "quantity_out",
         label: "Participaciones reembolsadas",
@@ -563,7 +588,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       { name: "nav_out", label: "Valor liquidativo de salida", kind: "decimal" },
       { name: "value_date_out", label: "Fecha valor de salida", kind: "date", required: true },
       { ...account(), name: "to_account_id", label: "Cuenta de destino" },
-      { ...asset(), name: "to_asset_id", label: "Fondo de destino" },
+      { ...destinationAsset(), label: "Fondo de destino" },
       {
         name: "quantity_in",
         label: "Participaciones suscritas",
@@ -591,10 +616,10 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         label: "Identificador",
         kind: "text",
         required: true,
-        hint: "Corto y tuyo, por ejemplo th_alpha. Es el que enlazará las compras.",
+        hint: "Una clave corta y sin espacios, por ejemplo «robotica-2026». Las compras se enlazan a ella.",
       },
       { ...account(), name: "account_id", label: "Cuenta del cubo", options: "bucketAccounts" },
-      { ...asset(), name: "asset_id", label: "Activo" },
+      { ...asset(), options: "bucketAssets" },
       {
         name: "hypothesis",
         label: "Hipótesis",

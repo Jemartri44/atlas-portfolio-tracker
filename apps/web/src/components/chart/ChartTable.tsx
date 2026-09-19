@@ -35,7 +35,6 @@ const amountOf = (row: ChartTableRow, index: number): JSX.Element => (
       row.values[index] === undefined ? undefined : Money.parse(row.values[index] as string, "EUR")
     }
     missingReason="falta algún precio a esa fecha"
-    currency={false}
   />
 );
 

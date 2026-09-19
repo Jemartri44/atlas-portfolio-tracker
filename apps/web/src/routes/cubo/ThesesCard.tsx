@@ -11,13 +11,13 @@ import type { ThesesView, ThesisRow } from "../../view-models/bucket/index.js";
 
 const COLUMNS: readonly DataColumn<ThesisRow>[] = [
   {
-    key: "id",
-    header: "Tesis",
+    key: "asset",
+    header: "Activo",
     card: "title",
-    cell: (row) => row.thesisId,
-    hint: (row) => `${row.thesisId} · ${row.assetName}`,
+    cell: (row) => row.assetName,
+    hint: (row) => `${row.assetName} · ${row.accountName}`,
   },
-  { key: "asset", header: "Activo", card: "sub", cell: (row) => row.assetName },
+  { key: "period", header: "Tesis", card: "sub", cell: (row) => row.period },
   {
     key: "status",
     header: "Estado",
@@ -36,26 +36,20 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
     key: "invested",
     header: "Invertido",
     numeric: true,
-    cell: (row) => <Amount value={row.invested} currency={false} />,
+    cell: (row) => <Amount value={row.invested} />,
   },
   {
     key: "result",
     header: "Resultado",
     numeric: true,
-    cell: (row) => <Amount value={row.result} signed coloured currency={false} />,
+    cell: (row) => <Amount value={row.result} signed coloured />,
   },
   {
     key: "latent",
     header: "Latente",
     numeric: true,
     cell: (row) => (
-      <Amount
-        value={row.unrealized}
-        signed
-        coloured
-        currency={false}
-        missingReason="falta el precio del activo"
-      />
+      <Amount value={row.unrealized} signed coloured missingReason="falta el precio del activo" />
     ),
   },
   {
@@ -63,9 +57,7 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
     header: "Frente al índice",
     numeric: true,
     card: "figure",
-    cell: (row) => (
-      <Amount value={row.vsIndex} signed coloured missingReason={row.gap} currency={false} />
-    ),
+    cell: (row) => <Amount value={row.vsIndex} signed coloured missingReason={row.gap} />,
   },
 ];
 

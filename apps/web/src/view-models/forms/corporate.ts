@@ -40,6 +40,8 @@ const destination = (): FieldSpec => ({
   kind: "select",
   required: true,
   options: "assets",
+  // Same book as the affected asset: a corporate action never crosses books.
+  bookFrom: "asset_id",
   hint: "Tiene que estar dado de alta antes.",
 });
 
@@ -62,7 +64,7 @@ const cash = (label: string, hint: string): FieldSpec[] => [
     name: "cash_fees",
     label: "Comisión del bróker, por cuenta",
     kind: "textarea",
-    hint: "Una por línea: cuenta = importe. Se resta de los ingresos de la venta, así que baja la ganancia. Déjalo vacío si no cobró nada.",
+    hint: "Una por línea: nombre de la cuenta = importe, por ejemplo «Cubo especulativo = 1,50». Se resta de los ingresos de la venta, así que baja la ganancia. Déjalo vacío si no cobró nada.",
     full: true,
     visibleWhen: { field: "cash_unit_price", notEquals: "" },
   },
@@ -125,7 +127,7 @@ export const CORPORATE_FORMS: readonly CorporateForm[] = [
       ...cash("Precio del pico por título", "Si el canje liquidó picos en efectivo."),
     ],
     effect:
-      "Convierte los lotes al activo nuevo conservando fecha y coste. Un canje homogéneo no tributa (business-rules.md §6).",
+      "Convierte los lotes al activo nuevo conservando fecha y coste. Un canje de valores homogéneos no tributa.",
   },
   {
     slug: "escision",
@@ -192,6 +194,8 @@ export const CORPORATE_COMMON: readonly FieldSpec[] = [
     kind: "select",
     required: true,
     options: "assets",
+    // A delisted share is deactivated and still held: its liquidation comes later.
+    heldAnywhere: true,
   },
   { name: "effective_date", label: "Fecha de efecto", kind: "date", required: true },
   {

@@ -21,6 +21,19 @@ import {
 import type { AppError } from "../../ledger/state.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 
+/**
+ * What fixes each refusal, and where. The button used to be written by hand as
+ * "Registrar una valoración", so it also appeared when what was missing were
+ * the target weights, and sent the user to a form that could not help.
+ */
+const REMEDIES: Record<string, { label: string; to: string }> = {
+  missing_manual_prices: { label: "Registrar una valoración", to: "/registrar/valuation" },
+  missing_target_weights: { label: "Fijar los pesos objetivo", to: "/ajustes/configuracion" },
+  no_target_weight_in_table: { label: "Revisar los pesos objetivo", to: "/ajustes/configuracion" },
+  missing_bucket_pct: { label: "Revisar la configuración", to: "/ajustes/configuracion" },
+  missing_amount: { label: "Fijar la aportación mensual", to: "/ajustes/configuracion" },
+};
+
 const COLUMNS: readonly DataColumn<ContributionRowView>[] = [
   {
     key: "name",
@@ -33,17 +46,17 @@ const COLUMNS: readonly DataColumn<ContributionRowView>[] = [
     key: "value",
     header: "Valor hoy",
     numeric: true,
-    cell: (row) => <Amount value={row.value} currency={false} />,
+    cell: (row) => <Amount value={row.value} />,
   },
   {
     key: "gap",
     header: "Déficit",
     numeric: true,
     card: "sub",
-    cell: (row) => <Amount value={row.gap} currency={false} />,
+    cell: (row) => <Amount value={row.gap} />,
     cardCell: (row) => (
       <span>
-        déficit <Amount value={row.gap} currency={false} /> · objetivo{" "}
+        déficit <Amount value={row.gap} /> · objetivo{" "}
         <Figure value={row.targetPct} unit="percent" />
       </span>
     ),
@@ -74,9 +87,13 @@ export const ContributionCard = (props: {
         <Show when={props.error} fallback={<p class="subtle flush">Sin datos.</p>}>
           {(error) => (
             <ErrorView error={error()} title="La aportación no se puede repartir todavía">
-              <A href="/registrar/valuation" role="button" class="secondary">
-                Registrar una valoración
-              </A>
+              <Show when={REMEDIES[error().code]}>
+                {(remedy) => (
+                  <A href={remedy().to} role="button" class="secondary">
+                    {remedy().label}
+                  </A>
+                )}
+              </Show>
             </ErrorView>
           )}
         </Show>
@@ -100,7 +117,7 @@ export const ContributionCard = (props: {
             </div>
             <p class="note flush">
               <Badge>presupuesto, no asignación</Badge> El cubo se lleva su parte antes del reparto
-              y nunca entra en los pesos objetivo (constitución III).
+              y nunca entra en los pesos objetivo.
             </p>
             <div class="spread">
               <span class="subject">A repartir en el núcleo</span>

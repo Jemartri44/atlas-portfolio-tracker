@@ -137,7 +137,7 @@ export default function CuboRoute(): JSX.Element {
 
               <Show when={fees().rows.length > 0}>
                 <Section title="Costes del cubo">
-                  <StandaloneFees view={fees()} totalLabel="Total del cubo" />
+                  <StandaloneFees view={fees()} totalLabel="Total de comisiones sueltas del cubo" />
                 </Section>
               </Show>
 

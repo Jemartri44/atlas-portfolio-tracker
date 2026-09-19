@@ -45,7 +45,8 @@ export interface BucketPositionRow {
 export interface BucketPositionsView {
   date: string;
   rows: BucketPositionRow[];
-  totalValue: Money;
+  /** Absent when there are positions and not one of them has a price: no data, never a zero. */
+  totalValue?: Money | undefined;
   totalCost: Money;
   partial: boolean;
   missing: string[];
@@ -106,7 +107,9 @@ export const bucketPositionsView = (
 ): BucketPositionsView => ({
   date: view.date,
   rows: view.rows.map((row) => rowOf(row, view.total_value_eur, view.partial, names)),
-  totalValue: view.total_value_eur,
+  ...(view.rows.length > 0 && view.rows.every((row) => row.value_eur === undefined)
+    ? {}
+    : { totalValue: view.total_value_eur }),
   totalCost: view.total_cost_eur,
   partial: view.partial,
   missing: view.missing_prices.map((id) => displayName(names, id)),

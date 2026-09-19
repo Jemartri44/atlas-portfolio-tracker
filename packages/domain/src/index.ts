@@ -164,6 +164,7 @@ export {
 export { knownFieldsOf, validateShape } from "./schema/validate.js";
 export { type BusinessDates, fiscalDateOf } from "./settings/fiscal-date.js";
 export * from "./settings/settings.js";
+export { washSaleWindowEnd } from "./settings/wash-sale.js";
 export * from "./synth/index.js";
 export {
   archiveNameFor,

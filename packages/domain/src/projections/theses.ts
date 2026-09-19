@@ -232,13 +232,22 @@ export const linkSell = (
   thesis.fees_eur = thesis.fees_eur.add(feeEur);
 };
 
-/** After pass B: a closed thesis whose pair still has a position, and no newer open thesis on it. */
-export const thesisWarnings = (state: LedgerState): void => {
+/**
+ * After pass B: a closed thesis whose pair still has a position, and no newer
+ * open thesis on it.
+ *
+ * With `asOf`, "closed" and "open" are read **at that date**, like every other
+ * view of a thesis. Pass A' applies the theses whole, so without the date a
+ * view of September warned that a thesis closed in December "is closed" while
+ * the bucket screen, reading the same date, said it was open (ADR-0016).
+ */
+export const thesisWarnings = (state: LedgerState, asOf?: CivilDate): void => {
   for (const thesis of state.theses.values()) {
+    const closed = asOf === undefined ? thesis.status === "closed" : isClosedAt(thesis, asOf);
     if (
-      thesis.status === "closed" &&
+      closed &&
       positionOf(state, thesis.account_id, thesis.asset_id).isPositive() &&
-      openThesisOn(state, thesis.account_id, thesis.asset_id) === undefined
+      openThesisOn(state, thesis.account_id, thesis.asset_id, asOf) === undefined
     ) {
       addWarning(
         state,

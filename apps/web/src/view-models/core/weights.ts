@@ -60,7 +60,11 @@ export interface WeightClassRow {
 export interface WeightsView {
   date: string;
   classes: WeightClassRow[];
-  total: Money;
+  /**
+   * Absent when the total is partial and what is known of it is zero: every
+   * position lacks a price, and that is "sin dato", never "0,00 EUR".
+   */
+  total?: Money | undefined;
   partial: boolean;
   /** Names of what has a position and no price, ready to print. */
   missing: string[];
@@ -125,7 +129,7 @@ export const weightsView = (view: CoreWeights, names: NameIndex = NO_NAMES): Wei
   return {
     date: view.date,
     classes: view.by_class.map((subtotal) => classOf(subtotal, rows, belowMinimum)),
-    total: view.total_eur,
+    ...(view.partial && view.total_eur.isZero() ? {} : { total: view.total_eur }),
     partial: view.partial,
     missing: view.missing_prices.map((id) => displayName(names, id)),
     stale: view.stale_prices.map((id) => displayName(names, id)),

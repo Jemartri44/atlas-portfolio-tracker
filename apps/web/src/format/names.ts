@@ -23,6 +23,7 @@
 //      projected state and returns plain data, so a test reaches all of it.
 
 import { accounts, assets, type LedgerState } from "@atlas/domain";
+import { formatDate } from "./date.js";
 
 /**
  * Identifier → current name, for accounts and assets together.
@@ -35,6 +36,14 @@ export type NameIndex = Readonly<Record<string, string>>;
 
 /** No catalogue: every identifier resolves to itself. */
 export const NO_NAMES: NameIndex = {};
+
+/**
+ * Theses live in the same index under a namespace of their own, so a thesis
+ * the user called like an asset can never shadow it. A thesis has no name: it
+ * is named by what it is about and when it was opened, which is how the user
+ * remembers it — "th_alpha" is a key the ledger needs, not a word of theirs.
+ */
+const thesisKey = (id: string): string => `tesis:${id}`;
 
 /** Builds the index from a projected ledger. */
 export const nameIndex = (state: LedgerState | undefined): NameIndex => {
@@ -52,8 +61,16 @@ export const nameIndex = (state: LedgerState | undefined): NameIndex => {
       names[asset.asset_id] = asset.name;
     }
   }
+  for (const thesis of state.theses.values()) {
+    names[thesisKey(thesis.thesis_id)] =
+      `sobre ${names[thesis.asset_id] ?? thesis.asset_id} (abierta el ${formatDate(thesis.opened_at)})`;
+  }
   return names;
 };
+
+/** "sobre Alpha Robotics (abierta el 01/09/2026)", or the identifier when the ledger does not know it. */
+export const displayThesis = (names: NameIndex, id: unknown): string =>
+  typeof id === "string" ? (names[thesisKey(id)] ?? id) : displayName(names, id);
 
 /**
  * **The** resolution function: the name of an identifier, or the identifier
@@ -89,6 +106,8 @@ export interface Naming {
   one: (id: unknown) => string;
   /** A list of them, comma separated. */
   many: (ids: unknown) => string;
+  /** A thesis, by what it is about and when it was opened. */
+  thesis: (id: unknown) => string;
 }
 
 /**
@@ -111,4 +130,5 @@ export const NAMED_ID_FIELDS: ReadonlySet<string> = new Set([
 export const namingOf = (names: NameIndex): Naming => ({
   one: (id) => displayName(names, id),
   many: (ids) => displayNames(names, ids),
+  thesis: (id) => displayThesis(names, id),
 });

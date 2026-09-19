@@ -5,6 +5,11 @@
 //
 // The domain speaks English by contract (`errors.ts`); translating is the
 // interface's job, and each interface does it its own way (decision (i)).
+//
+// LINE BUDGET: six dictionaries — event types, fields, values, settings,
+// platforms and states — and nothing else. They are the vocabulary of the
+// screens and a reviewer reads them as one list; splitting them would only
+// move the drift test's target around.
 
 /** Event types, as a person names the operation. */
 export const EVENT_LABELS: Record<string, string> = {
@@ -170,6 +175,32 @@ export const VALUE_LABELS: Record<string, string> = {
   connectivity: "Conectividad y datos de mercado",
   discretionary_management: "Gestión discrecional",
   other: "Otra",
+  requested: "Solicitado",
+  // The scheduled jobs and their frequencies (settings, `job_frequencies`).
+  prices: "Precios",
+  reminder: "Recordatorio",
+  reconciliation: "Conciliación",
+  daily: "Diaria",
+  weekly: "Semanal",
+  monthly: "Mensual",
+  quarterly: "Trimestral",
+  yearly: "Anual",
+  capital_gain: "Ganancia patrimonial",
+  movable_capital: "Rendimiento del capital mobiliario",
+  // Corporate actions, by kind: the detail and the list said "reverse_split".
+  split: "Split",
+  reverse_split: "Contrasplit",
+  stock_dividend: "Dividendo en acciones",
+  merger: "Fusión",
+  spin_off: "Escisión",
+  fund_merger: "Fusión de fondos",
+  share_class_change: "Cambio de clase",
+  fund_liquidation: "Liquidación de un fondo",
+  issuer_liquidation: "Liquidación del emisor",
+  delisting: "Exclusión de cotización",
+  crypto_fork: "Bifurcación de una cripto",
+  token_migration: "Migración de token",
+  issuer_restructuring: "Reestructuración del emisor",
   true: "Sí",
   false: "No",
 };
@@ -178,6 +209,53 @@ export const valueLabel = (value: unknown): string => {
   const text = typeof value === "string" ? value : JSON.stringify(value);
   return VALUE_LABELS[String(value)] ?? text ?? "";
 };
+
+/**
+ * The settings, by the name the configuration screen gives them. A message
+ * about a setting used to name it by its key — "deviation_threshold_pp debe
+ * ser…" — which is the ledger talking, not the application.
+ */
+export const SETTING_LABELS: Record<string, string> = {
+  fiscal_date_rule: "Fecha fiscal por tipo de activo",
+  wash_sale_window: "Ventana de recompra por tipo de activo",
+  income_category: "Tipo de renta por tipo de activo",
+  wash_sale_window_days: "Ventana de recompra en días",
+  wash_sale_transfer_counts: "Un traspaso entrante cuenta como recompra",
+  target_weights: "Pesos objetivo",
+  deviation_threshold_pp: "Umbral de desviación",
+  satellite_min_weight_pct: "Mínimo de un satélite",
+  monthly_contribution_eur: "Aportación mensual",
+  bucket_pct_of_contribution: "Porcentaje de la aportación al cubo",
+  bucket_max_cumulative_contribution: "Tope de aporte al cubo",
+  bucket_stop_loss_pct: "Regla de parada del cubo",
+  bucket_max_weight_pct: "Peso máximo del cubo",
+  bucket_benchmark_asset_id: "Índice de referencia del cubo",
+  stale_price_days: "Días para que un precio caduque",
+  model_720_alert_threshold_eur: "Umbral del Modelo 720",
+  model_721_alert_threshold_eur: "Umbral del Modelo 721",
+  savings_tax_brackets: "Tramos de la base del ahorro",
+  tax_residence: "Residencia fiscal",
+  notification_email: "Correo de avisos",
+  job_frequencies: "Frecuencia de los avisos automáticos",
+  transfer_max_days: "Días máximos de un traspaso",
+};
+
+export const settingLabel = (key: string): string => SETTING_LABELS[key] ?? key;
+
+/**
+ * The platforms the project integrates with, by their proper names. The ledger
+ * keeps what was typed when the account was created (`myinvestor`, `ibkr`), and
+ * the lists of accounts used to print it as it was: "myinvestor · ibkr" in
+ * lower case, which reads like a configuration key. Anything else the user
+ * typed is theirs and comes back untouched.
+ */
+const PLATFORMS: Record<string, string> = {
+  myinvestor: "MyInvestor",
+  ibkr: "Interactive Brokers",
+};
+
+export const platformLabel = (platform: string): string =>
+  PLATFORMS[platform.trim().toLowerCase()] ?? platform;
 
 /** State of an entry of the ledger, said with words and not only with a style. */
 export const STATUS_LABELS: Record<string, string> = {

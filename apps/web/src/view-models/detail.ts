@@ -11,12 +11,47 @@
 // the twenty lines that use them would leave two files that only make sense
 // read together, and the classification is the thing worth reviewing as a whole.
 
-import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
-import { eventLabel, fieldLabel, STATUS_LABELS, valueLabel } from "../format/labels.js";
-import { displayName, NAMED_ID_FIELDS, type NameIndex, NO_NAMES } from "../format/names.js";
+import { type Effect, type LedgerEntry, Money, Quantity, type Settings } from "@atlas/domain";
+import type { EventReferences } from "../format/events.js";
+import {
+  eventLabel,
+  fieldLabel,
+  platformLabel,
+  STATUS_LABELS,
+  valueLabel,
+} from "../format/labels.js";
+import {
+  displayName,
+  displayThesis,
+  NAMED_ID_FIELDS,
+  type NameIndex,
+  NO_NAMES,
+} from "../format/names.js";
+import { formatExact } from "../format/number.js";
 import { FORM_SPECS } from "./forms/specs.js";
+import {
+  effectSentences,
+  recordedDecimals,
+  type Sentence,
+  type SettingRow,
+  settingRows,
+} from "./structured.js";
 
-export type DetailKind = "amount" | "quantity" | "date" | "text" | "id" | "percent" | "json";
+/**
+ * `effects` and `settings` are told as sentences (`structured.ts`): the raw
+ * JSON they used to be printed as is gone from the interface, and with it the
+ * quantities and prices it showed with the privacy mode on.
+ */
+export type DetailKind =
+  | "amount"
+  | "quantity"
+  | "date"
+  | "text"
+  | "id"
+  | "percent"
+  | "rate"
+  | "effects"
+  | "settings";
 
 export interface DetailField {
   name: string;
@@ -32,7 +67,13 @@ export interface DetailField {
   hint?: string;
   /** Sensitive value, for the gated component. */
   amount?: Money;
+  /** The decimals it was recorded with, so the detail reads back what was written. */
+  decimals?: number;
   quantity?: Quantity;
+  /** The effects of a corporate action, one sentence each. */
+  sentences?: Sentence[];
+  /** The parameters of a configuration change, one row each. */
+  rows?: SettingRow[];
   /** A link to another screen, when the field points at something. */
   link?: { to: string; label: string };
 }
@@ -75,6 +116,12 @@ const AMOUNT_FIELDS = new Set([
 ]);
 
 const QUANTITY_FIELDS = new Set(["quantity", "quantity_in", "quantity_out"]);
+
+/** ECB rates: public figures, shown exactly as recorded and in Spanish notation. */
+const RATE_FIELDS = new Set(["fx_rate", "fx_rate_sold", "fx_rate_bought"]);
+
+/** Fields that point at another **event**: named by its type and date, never by its id. */
+const EVENT_ID_FIELDS = new Set(["corrects_id", "reverses_id", "order_id", "request_id"]);
 
 const DATE_FIELDS = new Set([
   "trade_date",
@@ -123,7 +170,7 @@ const CATALOGUE_TYPES = new Set([
 
 /** What to do instead, said where the user is looking for the button. */
 const CATALOGUE_HINT =
-  "El catálogo no se anula: se actualiza. El cambio se registra como una actualización con el estado completo resultante (esquema §6.1), y anular un alta que ya tiene operaciones detrás lo rechaza el libro. Desde la CLI: atlas account update o atlas asset update; su pantalla llega en la versión siguiente.";
+  "Las cuentas y los activos no se anulan: se actualizan, y cada cambio queda registrado con el estado completo resultante. Anular un alta que ya tiene operaciones detrás no se admite. De momento, el cambio se hace desde la CLI (atlas account update, atlas asset update).";
 
 /**
  * A type can be corrected when **a form exists for it** and it is not part of
@@ -155,24 +202,52 @@ const currencyOf = (event: Record<string, unknown>, field: string): string => {
   return String(event.currency ?? "EUR");
 };
 
+interface Resolvers {
+  names: NameIndex;
+  /** Event identifier → "Compra del 03/09/2026". Without it, the identifier. */
+  events?: EventReferences | undefined;
+}
+
 const fieldOf = (
   event: Record<string, unknown>,
   name: string,
   value: unknown,
-  names: NameIndex,
+  { names, events }: Resolvers,
 ): DetailField | undefined => {
   if (value === undefined) {
     return undefined;
   }
   const label = fieldLabel(name);
   if (typeof value === "string" && AMOUNT_FIELDS.has(name)) {
-    return { name, label, kind: "amount", amount: Money.parse(value, currencyOf(event, name)) };
+    return {
+      name,
+      label,
+      kind: "amount",
+      amount: Money.parse(value, currencyOf(event, name)),
+      decimals: recordedDecimals(value),
+    };
   }
   if (typeof value === "string" && QUANTITY_FIELDS.has(name)) {
     return { name, label, kind: "quantity", quantity: Quantity.parse(value) };
   }
   if (typeof value === "string" && DATE_FIELDS.has(name)) {
     return { name, label, kind: "date", text: value };
+  }
+  if (typeof value === "string" && RATE_FIELDS.has(name)) {
+    return { name, label, kind: "rate", text: formatExact(value) };
+  }
+  if (name === "effects" && Array.isArray(value)) {
+    const sentences = effectSentences(value as Effect[], String(event.asset_id ?? ""), names);
+    return { name, label, kind: "effects", sentences };
+  }
+  if (name === "settings" && typeof value === "object" && value !== null) {
+    return { name, label, kind: "settings", rows: settingRows(value as Settings, names) };
+  }
+  if (typeof value === "string" && name === "thesis_id") {
+    return { name, label, kind: "id", text: displayThesis(names, value), hint: value };
+  }
+  if (typeof value === "string" && EVENT_ID_FIELDS.has(name) && events !== undefined) {
+    return { name, label, kind: "id", text: events(value), hint: value };
   }
   if (typeof value === "string" && ID_FIELDS.has(name)) {
     if (!NAMED_ID_FIELDS.has(name)) {
@@ -186,21 +261,27 @@ const fieldOf = (
   if (name === "ter") {
     return { name, label, kind: "percent", text: String(value) };
   }
-  if (typeof value === "object" && value !== null) {
-    return { name, label, kind: "json", text: JSON.stringify(value, null, 2) };
+  if (name === "platform" && typeof value === "string") {
+    return { name, label, kind: "text", text: platformLabel(value) };
   }
-  if (typeof value === "boolean") {
-    return { name, label, kind: "text", text: valueLabel(value) };
+  if (typeof value === "object" && value !== null) {
+    // A structure this version does not know: saying so beats dumping it, and
+    // dumping it could print a figure the privacy mode is meant to cover.
+    return { name, label, kind: "text", text: "Dato que esta versión no sabe mostrar." };
   }
   return { name, label, kind: "text", text: valueLabel(value) };
 };
 
-export const detailView = (entry: LedgerEntry, names: NameIndex = NO_NAMES): DetailView => {
-  const event = entry.event as unknown as Record<string, unknown>;
+/** The fields of an event with legible names, for the detail and for the correction screen. */
+export const eventFields = (
+  event: Record<string, unknown>,
+  names: NameIndex = NO_NAMES,
+  events?: EventReferences,
+): { envelope: DetailField[]; fields: DetailField[] } => {
   const envelope: DetailField[] = [];
   const fields: DetailField[] = [];
   for (const [name, value] of Object.entries(event)) {
-    const field = fieldOf(event, name, value, names);
+    const field = fieldOf(event, name, value, { names, events });
     if (field === undefined) {
       continue;
     }
@@ -210,47 +291,62 @@ export const detailView = (entry: LedgerEntry, names: NameIndex = NO_NAMES): Det
       fields.push(field);
     }
   }
+  return { envelope, fields };
+};
+
+export const detailView = (
+  entry: LedgerEntry,
+  names: NameIndex = NO_NAMES,
+  events?: EventReferences,
+): DetailView => {
+  const { envelope, fields } = eventFields(
+    entry.event as unknown as Record<string, unknown>,
+    names,
+    events,
+  );
+  // The link says what it leads to; the identifier stays in the technical block.
+  const describe = (id: string): string => (events === undefined ? id : events(id));
   const links: DetailView["links"] = [];
   if (entry.reversed_by !== undefined) {
     links.push({
       label: "Anulado por",
       to: `/movimientos/${entry.reversed_by}`,
-      text: entry.reversed_by,
+      text: describe(entry.reversed_by),
     });
   }
   if (entry.reverses_id !== undefined) {
     links.push({
       label: "Anula a",
       to: `/movimientos/${entry.reverses_id}`,
-      text: entry.reverses_id,
+      text: describe(entry.reverses_id),
     });
   }
   if (entry.corrects_id !== undefined) {
     links.push({
       label: "Corrige a",
       to: `/movimientos/${entry.corrects_id}`,
-      text: entry.corrects_id,
+      text: describe(entry.corrects_id),
     });
   }
   if (entry.corrected_by !== undefined) {
     links.push({
       label: "Corregido por",
       to: `/movimientos/${entry.corrected_by}`,
-      text: entry.corrected_by,
+      text: describe(entry.corrected_by),
     });
   }
   if (entry.order_id !== undefined) {
     links.push({
       label: "Orden",
       to: `/movimientos/${entry.order_id}`,
-      text: entry.order_id,
+      text: describe(entry.order_id),
     });
   }
   if (entry.request_id !== undefined) {
     links.push({
       label: "Solicitud de traspaso",
       to: `/movimientos/${entry.request_id}`,
-      text: entry.request_id,
+      text: describe(entry.request_id),
     });
   }
   return {
