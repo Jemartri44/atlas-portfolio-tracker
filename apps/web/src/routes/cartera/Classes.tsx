@@ -50,7 +50,7 @@ export const ClassRows = (props: { view: WeightsView }): JSX.Element => (
             objetivo <Figure value={row.targetPct} unit="percent" decimals="auto" />
           </span>
           <Show when={!props.view.partial}>
-            <Figure value={row.deviationPp} unit="points" coloured class="dev" />
+            <Figure value={row.deviationPp} unit="points" class="dev" />
           </Show>
         </li>
       )}
@@ -95,7 +95,7 @@ export const ClassTable = (props: { view: WeightsView }): JSX.Element => (
               <Figure value={row.targetPct} unit="percent" decimals="auto" />
             </td>
             <td class="num">
-              <Figure value={row.deviationPp} unit="points" coloured />
+              <Figure value={row.deviationPp} unit="points" />
             </td>
           </tr>
         )}

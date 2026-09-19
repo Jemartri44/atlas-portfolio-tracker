@@ -33,6 +33,13 @@ describe("the portfolio", () => {
     expect(weights?.querySelectorAll("svg.gauge.is-off")).toHaveLength(5);
   });
 
+  it("writes the deviations in neutral ink: off target is the gauge's to say", async () => {
+    // A green +22,90 pp above the threshold said the opposite of what happens.
+    const host = await show("/cartera?fecha=2027-01-10", Cartera);
+    const weights = card(host, "Pesos frente al objetivo");
+    expect(weights?.querySelectorAll(".positive, .negative")).toHaveLength(0);
+  });
+
   it("keeps the dot of the gauge on its track", () => {
     expect(gaugeX("0", "5")).toBe(36);
     expect(gaugeX("5", "5")).toBe(60);

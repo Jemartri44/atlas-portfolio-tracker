@@ -55,14 +55,14 @@ const COLUMNS: readonly DataColumn<TransferRowView>[] = [
     key: "devBefore",
     header: "Desv. antes",
     numeric: true,
-    cell: (row) => <Figure value={row.deviationBeforePp} unit="points" coloured />,
+    cell: (row) => <Figure value={row.deviationBeforePp} unit="points" />,
   },
   {
     key: "devAfter",
     header: "Desv. después",
     numeric: true,
     card: "meta",
-    cell: (row) => <Figure value={row.deviationAfterPp} unit="points" coloured />,
+    cell: (row) => <Figure value={row.deviationAfterPp} unit="points" />,
   },
 ];
 

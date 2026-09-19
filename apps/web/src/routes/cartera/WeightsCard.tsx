@@ -85,7 +85,7 @@ const assetColumns = (threshold: string | undefined): readonly DataColumn<Weight
     cell: (row) => (
       <span class="dev-cell">
         <Gauge deviation={row.deviationPp} threshold={threshold} off={row.offTarget} />
-        <Figure value={row.deviationPp} unit="points" coloured />
+        <Figure value={row.deviationPp} unit="points" />
       </span>
     ),
     cardCell: (row) => (
