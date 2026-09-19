@@ -117,107 +117,20 @@
 
 /* --- Forms ------------------------------------------------------------- */
 
-.form {
-  display: grid;
-  gap: var(--s-4);
-}
-
-.form .fieldset {
-  display: grid;
-  gap: var(--s-3);
-}
-
-@media (min-width: 768px) {
-  .form .fieldset {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .form .fieldset .full {
-    grid-column: 1 / -1;
-  }
-}
-
 /*
  * A hint explains the field and an error says why it was refused: both are
  * meant to be read, so neither goes below `--t-sm` (review of 2026-09-18).
  */
 
-.actions-bar {
-  background-color: var(--c-bg);
-  border-top: 1px solid var(--c-border);
-  bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom));
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  padding: var(--s-3) 0;
-  position: sticky;
-  z-index: 10;
-}
-
-.actions-bar button {
-  flex: 1 1 auto;
-}
-
 /* Why the button cannot be pressed yet: inside the bar, on its own line. */
-.actions-bar .reason {
-  flex-basis: 100%;
-  margin: 0;
-}
-
-@media (min-width: 768px) {
-  .actions-bar {
-    bottom: 0;
-  }
-
-  .actions-bar button {
-    flex: 0 0 auto;
-    min-width: 12rem;
-  }
-}
 
 /* --- Preview ----------------------------------------------------------- */
-
-.preview {
-  display: grid;
-  gap: var(--s-3);
-}
-
-.preview .beforeafter {
-  display: grid;
-  gap: var(--s-2);
-}
 
 /*
  * A row may wrap: the name above, the figures below and to the right. The name
  * was `nowrap` in a row that could not shrink, so a long fund name pushed the
  * card up to 248 px past a phone screen (review of 2026-09-18).
  */
-.preview .change {
-  align-items: baseline;
-  border-bottom: 1px solid var(--c-border);
-  display: flex;
-  flex-wrap: wrap;
-  font-size: var(--t-sm);
-  gap: var(--s-2);
-  justify-content: space-between;
-  padding-bottom: var(--s-1);
-}
-
-.preview .change .change-name {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.preview .change .values {
-  display: flex;
-  gap: var(--s-2);
-  font-variant-numeric: tabular-nums;
-  margin-left: auto;
-}
-
-.preview .arrow {
-  color: var(--c-muted);
-}
 
 /* --- Dialogs: the native element, nothing else ------------------------- */
 

@@ -214,6 +214,20 @@ const tradeFields = (): FieldSpec[] => [
   notes(),
 ];
 
+/**
+ * A purchase lists only the assets in force. A delisted one is still held,
+ * still valued and still sold, but never bought again (review of 2026-09-18);
+ * a correction that already holds one keeps it on its list (`choices.ts`).
+ */
+const buyFields = (): FieldSpec[] =>
+  tradeFields().map((field) => {
+    if (field.name !== "asset_id") {
+      return field;
+    }
+    const { heldFrom: _held, ...inForce } = field;
+    return inForce;
+  });
+
 const cashFields = (): FieldSpec[] => [
   account(),
   { name: "value_date", label: "Fecha valor", kind: "date", required: true },
@@ -230,7 +244,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     title: "Compra",
     when: "Has comprado participaciones, acciones o unidades.",
     fields: [
-      ...tradeFields(),
+      ...buyFields(),
       {
         name: "order_id",
         label: "Orden que cierra",

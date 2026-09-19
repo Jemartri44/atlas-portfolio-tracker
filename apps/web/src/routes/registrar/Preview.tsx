@@ -10,7 +10,7 @@
 
 import type { EventPreview } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Notice, Tag } from "../../components/index.js";
+import { Amount, Notice, Section, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
@@ -25,24 +25,22 @@ import { type ChangeRow, previewChanges } from "../../view-models/preview.js";
  * and dragged the "Registrar" button under the navigation bar.
  */
 const Change = (props: { row: ChangeRow; empty: string }): JSX.Element => (
-  <div class="change">
+  <li class="change">
     <span class="change-name">
       {props.row.label}
       <Show when={props.row.isNew}>
-        {" "}
         <Tag tone="done">nuevo</Tag>
       </Show>
       <Show when={props.row.closed}>
-        {" "}
         <Tag>cerrado</Tag>
       </Show>
     </span>
     <span class="values">
       <Show
         when={props.row.before !== undefined}
-        fallback={<span class="subtle">{props.empty}</span>}
+        fallback={<span class="meta">{props.empty}</span>}
       >
-        <Amount quantity={props.row.before} class="subtle" />
+        <Amount quantity={props.row.before} class="meta" />
       </Show>
       <span class="arrow" aria-hidden="true">
         →
@@ -51,7 +49,7 @@ const Change = (props: { row: ChangeRow; empty: string }): JSX.Element => (
         <Amount quantity={props.row.after} />
       </Show>
     </span>
-  </div>
+  </li>
 );
 
 export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JSX.Element => {
@@ -61,67 +59,56 @@ export const Preview = (props: { preview: EventPreview; names?: NameIndex }): JS
 
   return (
     <div class="preview">
-      <section class="card">
-        <header>
-          <h2>Posiciones</h2>
-          <span class="tiny">antes → después</span>
-        </header>
-        <div class="beforeafter">
+      <Section title="Posiciones" aside={<span>antes → después</span>}>
+        <ul class="changes">
           <For each={changes().positions}>{(row) => <Change row={row} empty="0" />}</For>
-          <Show when={changes().positions.length === 0}>
-            <span class="subtle">Este evento no cambia ninguna posición.</span>
-          </Show>
-          <Show when={changes().positions.length > 0 && changes().unchangedPositions > 0}>
-            <span class="tiny">
-              {countOf(
-                changes().unchangedPositions,
-                "posición sin cambios",
-                "posiciones sin cambios",
-              )}
-            </span>
-          </Show>
-        </div>
-      </section>
+        </ul>
+        <Show when={changes().positions.length === 0}>
+          <p class="meta">Este movimiento no cambia ninguna posición.</p>
+        </Show>
+        <Show when={changes().positions.length > 0 && changes().unchangedPositions > 0}>
+          <p class="card-note">
+            {countOf(
+              changes().unchangedPositions,
+              "posición sin cambios",
+              "posiciones sin cambios",
+            )}
+          </p>
+        </Show>
+      </Section>
 
       <Show when={changes().lots.length > 0}>
-        <section class="card">
-          <header>
-            <h2>Lotes fiscales</h2>
-            <span class="tiny">antes → después</span>
-          </header>
-          <div class="beforeafter">
+        <Section title="Lotes fiscales" aside={<span>antes → después</span>}>
+          <ul class="changes">
             <For each={changes().lots}>{(row) => <Change row={row} empty="—" />}</For>
-            <Show when={changes().unchangedLots > 0}>
-              <span class="tiny">
-                {countOf(changes().unchangedLots, "lote sin cambios", "lotes sin cambios")}
-              </span>
-            </Show>
-          </div>
-        </section>
+          </ul>
+          <Show when={changes().unchangedLots > 0}>
+            <p class="card-note">
+              {countOf(changes().unchangedLots, "lote sin cambios", "lotes sin cambios")}
+            </p>
+          </Show>
+        </Section>
       </Show>
 
       <Show when={props.preview.gains.length > 0}>
-        <section class="card">
-          <header>
-            <h2>Ganancia que genera</h2>
-          </header>
-          <div class="beforeafter">
+        <Section title="Ganancia que genera">
+          <ul class="changes">
             <For each={props.preview.gains}>
               {(gain) => (
-                <div class="change">
+                <li class="change">
                   <span class="change-name">
                     {displayName(names(), gain.asset_id)} · {formatDate(gain.fiscal_date)}
                   </span>
                   <Amount value={gain.gain_eur_rounded} signed coloured />
-                </div>
+                </li>
               )}
             </For>
-          </div>
-          <p class="note">
+          </ul>
+          <p class="card-note">
             Es la ganancia fiscal que quedará registrada, calculada con FIFO sobre los lotes de
             arriba.
           </p>
-        </section>
+        </Section>
       </Show>
 
       <For each={props.preview.warnings}>

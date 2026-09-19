@@ -17,9 +17,16 @@ export const reveal = (element: Element | null | undefined): void => {
   element?.scrollIntoView?.({ block: "center" });
 };
 
-/** Brings the first field with an error into view and moves the focus to it. */
+/**
+ * Brings the first field with an error into view and moves the focus to it,
+ * unfolding «Más datos» first when that is where it waits.
+ */
 export const revealField = (id: string): void => {
   const control = document.getElementById(id);
+  const folded = control?.closest("details");
+  if (folded instanceof HTMLDetailsElement) {
+    folded.open = true;
+  }
   reveal(control?.closest(".field") ?? control);
   control?.focus({ preventScroll: true });
 };
@@ -65,7 +72,7 @@ export const FormActions = (props: FormActionsProps): JSX.Element => {
         </Show>
       </div>
       <div class="actions-bar">
-        <Show when={props.blocked}>{(reason) => <p class="tiny reason">{reason()}</p>}</Show>
+        <Show when={props.blocked}>{(reason) => <p class="reason">{reason()}</p>}</Show>
         {props.children}
       </div>
     </>

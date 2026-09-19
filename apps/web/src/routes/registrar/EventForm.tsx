@@ -7,17 +7,23 @@
 // `validateShape` and the invariants by the projection, both inside
 // `previewEvent`. A refusal about one field is written **under that field**; the
 // rest, next to the button (`FormActions`).
+//
+// On a phone the effect replaces the form, with a way back. From 1024px it
+// appears beside the form, which stays in sight (docs/design/system.md §7.4);
+// touching the form again takes the effect away, because it would no longer be
+// the effect of what is written there.
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
-import { A, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Field, Notice } from "../../components/index.js";
+import { Field } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
-import { store, today } from "../../ledger/state.js";
+import { today } from "../../ledger/state.js";
 import { correct, previewDraft, recordDraft } from "../../ledger/write.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import type { EventFormSpec, FormValues } from "../../view-models/forms/index.js";
 import {
   errorsAfterEdit,
@@ -30,9 +36,10 @@ import {
 } from "../../view-models/forms/index.js";
 import { isBucketAccount } from "../../view-models/options.js";
 import { DuplicateDialog } from "./DuplicateDialog.jsx";
+import { Effect } from "./Effect.jsx";
 import { FormActions, revealField } from "./FormActions.jsx";
 import { FormFields } from "./FormFields.jsx";
-import { Preview } from "./Preview.jsx";
+import { PriorYear, Reloaded, ThesisFirst } from "./FormNotices.jsx";
 
 interface EventFormProps {
   spec: EventFormSpec;
@@ -45,6 +52,7 @@ type Step = "form" | "preview";
 
 export const EventForm = (props: EventFormProps): JSX.Element => {
   const navigate = useNavigate();
+  const wide = mediaQuery(GRID);
   const [values, setValues] = createSignal<FormValues>(
     props.correcting?.values ?? initialValues(props.spec, today()),
   );
@@ -76,6 +84,11 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const onChange = (next: FormValues): void => {
     setFieldErrors(errorsAfterEdit(fieldErrors(), values(), next));
     setValues(next);
+    // The effect beside the form is the effect of what was there before.
+    if (step() === "preview") {
+      setStep("form");
+      setPreview(undefined);
+    }
   };
 
   const showFieldErrors = (errors: Record<string, string>): void => {
@@ -98,7 +111,9 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     try {
       setPreview(await previewDraft(toDraft(props.spec, values())));
       setStep("preview");
-      window.scrollTo?.({ top: 0 });
+      if (!wide()) {
+        window.scrollTo?.({ top: 0 });
+      }
     } catch (refusal) {
       const onField = fieldErrorOf(refusal, props.spec.fields, values());
       if (onField === undefined) {
@@ -148,92 +163,69 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   return (
     <>
       <Show when={conflict()}>
-        <Notice severity="caution" title="El libro ha cambiado">
-          Otra pestaña o la CLI han escrito mientras rellenabas. Se ha recargado el libro: vuelve a
-          ver el efecto antes de confirmar. No se ha pisado nada.
-        </Notice>
+        <Reloaded />
       </Show>
 
       <Show when={priorYear()}>
-        <Notice
-          severity="caution"
-          title="Ejercicio anterior"
-          action={
-            <A href="/movimientos" role="button">
-              Ver el libro
-            </A>
-          }
-        >
-          Registrado. El evento rectificado pertenece a un ejercicio anterior: puede afectar a una
-          declaración ya presentada.
-        </Notice>
+        <PriorYear />
       </Show>
 
-      <Show
-        when={step() === "form"}
-        fallback={
-          <div class="stack">
-            <Preview preview={preview() as EventPreview} names={nameIndex(props.state)} />
-            <FormActions problem={problem()} failure={failure()}>
-              <button type="button" class="secondary" onClick={() => setStep("form")}>
-                Volver a los datos
-              </button>
-              <button type="button" disabled={store.writing()} onClick={() => void onConfirm()}>
-                {props.correcting === undefined ? "Registrar" : "Rectificar"}
+      <div class="register">
+        <Show when={step() === "form" || wide()}>
+          <form class="form" onSubmit={(event) => event.preventDefault()}>
+            <Show when={bucketWithoutThesis()}>
+              <ThesisFirst />
+            </Show>
+
+            <FormFields
+              fields={props.spec.fields}
+              values={values()}
+              state={props.state}
+              onChange={onChange}
+              errors={fieldErrors()}
+            />
+
+            <Show when={props.correcting !== undefined}>
+              <Field
+                id="correct-reason"
+                kind="text"
+                label="Motivo de la rectificación"
+                required
+                hint="Se anula el original y se registra el corregido; el motivo queda registrado."
+                value={reason()}
+                onInput={setReason}
+                class="full"
+              />
+            </Show>
+
+            <FormActions
+              problem={step() === "form" ? problem() : undefined}
+              failure={step() === "form" ? failure() : undefined}
+              blocked={blocked()}
+            >
+              <button
+                type="button"
+                class={step() === "preview" ? "secondary" : undefined}
+                disabled={blocked() !== undefined}
+                onClick={() => void onPreview()}
+              >
+                Ver el efecto
               </button>
             </FormActions>
-          </div>
-        }
-      >
-        <form class="form" onSubmit={(event) => event.preventDefault()}>
-          <Show when={bucketWithoutThesis()}>
-            <Notice
-              severity="caution"
-              title="Las compras del cubo exigen una tesis"
-              action={
-                <A href="/registrar/tesis" role="button">
-                  Abrir una tesis
-                </A>
-              }
-            >
-              La regla 15 pide escribir la tesis <strong>antes</strong> de comprar: la hipótesis, el
-              plazo, la condición de invalidación y el tamaño previsto. Si no hay ninguna abierta
-              para esta cuenta y este activo, créala ahora y vuelve.
-            </Notice>
-          </Show>
+          </form>
+        </Show>
 
-          <FormFields
-            fields={props.spec.fields}
-            values={values()}
-            state={props.state}
-            onChange={onChange}
-            errors={fieldErrors()}
-          />
-
-          <Show when={props.correcting !== undefined}>
-            <Field
-              id="correct-reason"
-              kind="text"
-              label="Motivo de la rectificación"
-              required
-              hint="Se anula el original y se registra el corregido; el motivo queda en el libro."
-              value={reason()}
-              onInput={setReason}
-              class="full"
-            />
-          </Show>
-
-          <FormActions problem={problem()} failure={failure()} blocked={blocked()}>
-            <button
-              type="button"
-              disabled={blocked() !== undefined}
-              onClick={() => void onPreview()}
-            >
-              Ver el efecto
-            </button>
-          </FormActions>
-        </form>
-      </Show>
+        <Effect
+          preview={step() === "preview" ? preview() : undefined}
+          names={nameIndex(props.state)}
+          wide={wide()}
+          problem={problem()}
+          failure={failure()}
+          confirmLabel={props.correcting === undefined ? "Registrar" : "Rectificar"}
+          onBack={() => setStep("form")}
+          onConfirm={() => void onConfirm()}
+        />
+      </div>
 
       <DuplicateDialog
         duplicates={duplicate()}

@@ -4,12 +4,14 @@
 //
 // It decides nothing: which fields exist is `specs.ts`, whether a value is
 // acceptable is the domain. What is here is the mapping from a kind of field to
-// a control, and the one convenience the forms allow — copying the currency
-// from the chosen asset or account, which the domain still validates.
+// a control, the one convenience the forms allow — copying the currency from
+// the chosen asset or account, which the domain still validates — and where
+// each field goes: what every record needs on top, and the bookkeeping that
+// has a sensible default folded in «Más datos» (docs/design/system.md §7.4).
 
 import type { LedgerState } from "@atlas/domain";
-import { For, type JSX } from "solid-js";
-import { Field, type Option, SelectField, Switch } from "../../components/index.js";
+import { For, type JSX, Show } from "solid-js";
+import { Disclosure, Field, type Option, SelectField, Switch } from "../../components/index.js";
 import { today } from "../../ledger/state.js";
 import { selectOptions, withoutStale } from "../../view-models/forms/choices.js";
 import type { FieldSpec, FormValues } from "../../view-models/forms/index.js";
@@ -65,6 +67,13 @@ const VISIBLE_DECIMALS = new Set(["fx_rate", "cash_fx_rate", "cost_share", "ter"
 
 const isSensitive = (field: FieldSpec): boolean =>
   field.kind === "decimal" && !VISIBLE_DECIMALS.has(field.name) && !/_(pct|pp)$/.test(field.name);
+
+/**
+ * What goes in «Más datos»: the reference of the broker, where the datum comes
+ * from and the notes. None of them changes what the record does, and each has
+ * a default or can be left empty.
+ */
+const SECONDARY = new Set(["broker_ref", "source", "notes"]);
 
 /** The options a select field offers with these values, as of today. */
 const optionsOf = (field: FieldSpec, state: LedgerState, values: FormValues): Option[] =>
@@ -124,11 +133,22 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
     return <Field {...common} kind={field.kind} sensitive={isSensitive(field)} />;
   };
 
+  const shown = (): FieldSpec[] => props.fields.filter((field) => isVisible(field, props.values));
+  const main = (): FieldSpec[] => shown().filter((field) => !SECONDARY.has(field.name));
+  const more = (): FieldSpec[] => shown().filter((field) => SECONDARY.has(field.name));
+
   return (
-    <div class="fieldset">
-      <For each={props.fields.filter((field) => isVisible(field, props.values))}>
-        {(field) => render(field)}
-      </For>
-    </div>
+    <>
+      <div class="fieldset">
+        <For each={main()}>{(field) => render(field)}</For>
+      </div>
+      <Show when={more().length > 0}>
+        <Disclosure label="Más datos" class="more-data">
+          <div class="fieldset">
+            <For each={more()}>{(field) => render(field)}</For>
+          </div>
+        </Disclosure>
+      </Show>
+    </>
   );
 };

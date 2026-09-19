@@ -5,16 +5,17 @@
 // buy no es válido" 667 px above the screen, and the reason the button was
 // disabled sat 1.000 px below it.
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { DomainError } from "@atlas/domain";
-import { beforeEach, describe, expect, it } from "vitest";
+import { render } from "solid-js/web";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { FormActions } from "../src/routes/registrar/FormActions.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import { FORM_SPECS, fieldErrorOf } from "../src/view-models/forms/index.js";
 import { choose, press, show, text, today, type, withGoldenLedger } from "./helpers/render.jsx";
+import { applied, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
+afterEach(() => withoutStyles());
 
 /** Fills a purchase of World Index Fund in the form of the application. */
 const fillPurchase = (host: HTMLElement, amount: string): void => {
@@ -22,26 +23,6 @@ const fillPurchase = (host: HTMLElement, amount: string): void => {
   choose(host, "f-asset_id", "ast_world");
   type(host, "f-quantity", "4,8765");
   type(host, "f-amount", amount);
-};
-
-/** A path of the web, from this file: `new URL` is not Node's under happy-dom. */
-const here = dirname(fileURLToPath(import.meta.url));
-const css = readFileSync(join(here, "../src/styles/components.css"), "utf8");
-
-/** The declarations of one selector of the stylesheet, comments out. */
-const declarations = (selector: string): string[] => {
-  const found: string[] = [];
-  for (const match of css.replace(/\/\*[\s\S]*?\*\//g, " ").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    if (
-      (match[1] as string)
-        .split(",")
-        .map((one) => one.trim())
-        .includes(selector)
-    ) {
-      found.push(...(match[2] as string).split(";").map((one) => one.trim().replace(/\s+/g, " ")));
-    }
-  }
-  return found;
 };
 
 describe("a refusal of the domain goes on its field", () => {
@@ -128,7 +109,24 @@ describe("the form, rendered", () => {
   });
 
   it("keeps the reason of a disabled button inside the bar, on a line of its own", () => {
-    expect(declarations(".actions-bar")).toContain("flex-wrap: wrap");
-    expect(declarations(".actions-bar .reason")).toContain("flex-basis: 100%");
+    withStyles(400);
+    const host = document.createElement("div");
+    document.body.append(host);
+    const dispose = render(
+      () => (
+        <FormActions blocked="Falta la cantidad.">
+          <button type="button" disabled>
+            Ver el efecto
+          </button>
+        </FormActions>
+      ),
+      host,
+    );
+    const bar = host.querySelector(".actions-bar");
+    expect(applied(bar, "flex-wrap")).toBe("wrap");
+    expect(applied(bar?.querySelector(".reason"), "flex-basis")).toBe("100%");
+    // It stays in reach, above the bottom bar of a phone.
+    expect(applied(bar, "position")).toBe("sticky");
+    dispose();
   });
 });
