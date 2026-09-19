@@ -26,7 +26,7 @@ import { describeFinding } from "../../format/messages/findings.js";
 import { nameIndex } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { maskFigures } from "../../format/privacy.js";
-import { usePrivacy } from "../../ledger/state.js";
+import { store, usePrivacy } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { attentionItems } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
@@ -212,9 +212,20 @@ export default function VerificacionRoute(): JSX.Element {
                 </Section>
               </Show>
 
+              {/*
+                The command line exists only on a computer, beside a folder: on
+                a phone it named a tool the user has no way to run (review of
+                2026-09-19). There, the export is the copy.
+              */}
               <Notice severity="info" title="La copia de seguridad sigue siendo tuya">
-                La verificación dice si tus datos son coherentes, no si están a salvo. Exporta desde
-                Ajustes, y en el ordenador usa <code>atlas backup</code>.
+                La verificación dice si tus datos son coherentes, no si están a salvo.{" "}
+                <Show
+                  when={store.source()?.kind === "directory"}
+                  fallback="Para tener una copia, exporta tus datos desde Ajustes y guarda el archivo fuera de este dispositivo."
+                >
+                  Exporta desde Ajustes, o haz la copia desde la línea de órdenes con{" "}
+                  <code>atlas backup</code>.
+                </Show>
               </Notice>
             </div>
           </>

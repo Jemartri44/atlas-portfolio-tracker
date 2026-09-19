@@ -70,6 +70,13 @@ describe("the verification", () => {
     expect(warnings?.querySelector("a.notice")).toBeNull();
     expect(warnings?.querySelector(".notice .event-links a")).not.toBeNull();
   });
+
+  it("names the command line only beside a folder, where it can be run", async () => {
+    // The data of these tests do not come from a folder: a phone, as it were.
+    const host = await show("/ajustes/verificacion", Verificacion);
+    expect(text(host)).not.toContain("atlas backup");
+    expect(text(host)).toContain("exporta tus datos desde Ajustes");
+  });
 });
 
 describe("the settings", () => {
