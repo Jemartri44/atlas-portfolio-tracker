@@ -32,6 +32,10 @@ import {
   text,
 } from "./prose.js";
 
+/** «El archivo no tiene el formato esperado: la línea 3», or without a line when none came. */
+const notTheFormat = (d: Details): string =>
+  `El archivo no tiene el formato esperado: ${d.line === undefined ? "una línea" : `la línea ${text(d.line)}`}`;
+
 /**
  * The settings whose value is an **amount**. The rest of them are percentages,
  * points, whole days or a country code, and those stay visible: `invalid_settings`
@@ -235,8 +239,9 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   archive_exists: (d) => `El archivo ${text(d.archive_name)} ya existe y nunca se sobrescribe.`,
   projection_changed: () => "La reescritura cambiaría los cálculos: no se ha escrito nada.",
   // --- Line shape --------------------------------------------------------
-  invalid_line: () => "La línea no es un evento: no es un objeto JSON.",
-  invalid_json: () => "La línea no es JSON válido: el archivo no es de Atlas.",
+  // What the reader needs: the file is not what was expected, and where.
+  invalid_line: (d) => `${notTheFormat(d)} no es un evento.`,
+  invalid_json: (d) => `${notTheFormat(d)} no se puede leer como datos de Atlas.`,
   invalid_envelope: (d) => `La cabecera de la línea no es válida (${field(d.field)}).`,
   missing_field: (d) => `Falta ${field(d.field)} en ${kind(d.type)}.`,
   invalid_field: (d) =>

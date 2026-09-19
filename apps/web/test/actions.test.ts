@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bootDecision, loadInto, reloadLedger, restoreLedger } from "../src/ledger/actions.js";
 import { toAppError } from "../src/ledger/errors.js";
 import { validateImport } from "../src/ledger/export.js";
-import { store } from "../src/ledger/state.js";
+import { messageWithLine, store } from "../src/ledger/state.js";
 import {
   changeSettings,
   correct,
@@ -429,6 +429,17 @@ describe("importing a file", () => {
   it("refuses a file that is not a ledger, before anything is opened", async () => {
     await expect(validateImport("esto no es un libro\n")).rejects.toThrow();
     await expect(validateImport('{"hola": 1}\n')).rejects.toThrow();
+  });
+
+  it("says a file that is not a ledger lacks the expected format, and where", async () => {
+    const said = async (text: string): Promise<string> =>
+      messageWithLine(toAppError(await validateImport(text).catch((error: unknown) => error)));
+    expect(await said("esto no es un libro\n")).toBe(
+      "El archivo no tiene el formato esperado: la línea 1 no se puede leer como datos de Atlas.",
+    );
+    expect(await said("[]\n")).toBe(
+      "El archivo no tiene el formato esperado: la línea 1 no es un evento.",
+    );
   });
 
   it("refuses a ledger written by a newer schema", async () => {

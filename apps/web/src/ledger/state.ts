@@ -45,7 +45,9 @@ export interface AppError {
  * away in the technical detail.
  */
 export const messageWithLine = (error: AppError): string =>
-  error.line === undefined ? error.message : `Línea ${error.line} del archivo: ${error.message}`;
+  error.line === undefined || error.message.includes(`línea ${error.line}`)
+    ? error.message
+    : `Línea ${error.line} del archivo: ${error.message}`;
 
 export type LoadPhase =
   | { phase: "unconfigured" }
