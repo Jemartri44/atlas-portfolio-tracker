@@ -96,6 +96,9 @@ export interface ChartSpec {
  * Both used to be unreachable from a test: they were expressions inside the
  * component, and a mutation of either left the whole suite green.
  */
+/** The least room, in CSS pixels, between two labels of the date axis. */
+const SPACE = { days: 56, months: 88, years: 56 } as const;
+
 export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options => {
   const from = spec.x[0] ?? 0;
   const to = spec.x[spec.x.length - 1] ?? from;
@@ -114,6 +117,9 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         font: axisFont(),
         grid: { show: false },
         ticks: { show: false },
+        // The least room between two dates: «sept 2026» is wider than «2026»,
+        // and at uPlot's default of 50 px the months ran into each other.
+        space: SPACE[span],
         values: (_plot, splits) => axisDates(splits, span),
       },
       {

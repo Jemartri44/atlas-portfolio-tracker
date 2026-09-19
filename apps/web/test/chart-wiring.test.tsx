@@ -63,6 +63,15 @@ describe("the axis of a chart is an amount", () => {
     expect(yLabels(false)).toEqual(["1 k", "25 k"]);
   });
 
+  it("leaves a month and its year room enough not to run into the next", () => {
+    const year = Array.from({ length: 13 }, (_, month) => month * 30 * DAY);
+    const series: ChartSeries[] = [
+      { label: "Núcleo", values: year.map(() => 1), colour: "--c-series-core" },
+    ];
+    const options = chartOptions({ x: year, series, width: 1600, height: 220 }, false);
+    expect((options.axes?.[0] as { space?: number }).space).toBeGreaterThanOrEqual(80);
+  });
+
   it("dates the X axis with the span the data covers", () => {
     const options = chartOptions({ x: X, series: SERIES, width: 320, height: 220 }, false);
     const axis = options.axes?.[0] as { values: (p: unknown, s: number[]) => string[] };
