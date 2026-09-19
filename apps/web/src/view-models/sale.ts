@@ -25,8 +25,16 @@ export interface SaleLine {
 
 export interface SaleResultView {
   lines: SaleLine[];
-  /** Only with more than one line: a single sale is its own total. */
-  total?: { proceeds: Money; cost: Money; result: Money };
+  /**
+   * Only with more than one line: the sum of their results, each one rounded
+   * once per operation, as they are declared. Amounts and costs are **not**
+   * added up across operations: rounded one by one they do not subtract to the
+   * total (717,35 − 724,87 = −7,52 against −7,51), and a screen that does not
+   * add up to the eye sows distrust (third pass of the review of 2026-09-19).
+   */
+  total?: Money;
+  /** A single sale whose rounded result is a cent off its amount minus its cost, as shown. */
+  rounded: boolean;
 }
 
 export const saleResult = (
@@ -48,16 +56,17 @@ export const saleResult = (
     cost: gain.cost_eur,
     result: gain.gain_eur_rounded,
   }));
-  if (lines.length === 1) {
-    return { lines };
+  const [only] = lines;
+  if (lines.length === 1 && only !== undefined) {
+    const shown = only.proceeds.roundToCents().sub(only.cost.roundToCents());
+    return { lines, rounded: !shown.eq(only.result) };
   }
-  const sum = (pick: (line: SaleLine) => Money): Money => Money.sumShown(lines.map(pick), EUR);
   return {
     lines,
-    total: {
-      proceeds: sum((line) => line.proceeds),
-      cost: sum((line) => line.cost),
-      result: sum((line) => line.result),
-    },
+    total: Money.sumShown(
+      lines.map((line) => line.result),
+      EUR,
+    ),
+    rounded: true,
   };
 };

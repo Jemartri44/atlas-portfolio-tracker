@@ -156,19 +156,20 @@ export const SaleResult = (props: { view: SaleResultView | undefined }): JSX.Ele
                   </StatLine>
                 )}
               </For>
-              <TotalLine label={`${resultWord(total().result)} total`}>
-                <Amount value={total().result} signed coloured />
+              <TotalLine label={`${resultWord(total())} total`}>
+                <Amount value={total()} signed coloured />
               </TotalLine>
-              <p class="card-note">
-                {view().lines.length} ventas: se obtuvieron <Amount value={total().proceeds} /> por
-                lo que había costado <Amount value={total().cost} />.
-              </p>
             </>
           )}
         </Show>
         <p class="card-note">
           Es el resultado fiscal registrado, calculado con FIFO: el coste es el de los lotes más
           antiguos.
+          <Show when={view().rounded}>
+            {" "}
+            Se redondea al céntimo una vez por operación, como se declara
+            {view().total === undefined ? ": puede diferir en un céntimo de la resta." : "."}
+          </Show>
         </p>
       </>
     )}

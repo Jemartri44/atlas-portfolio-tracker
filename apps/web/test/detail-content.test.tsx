@@ -76,10 +76,35 @@ describe("the detail of a movement", () => {
     expect(shown).toContain("2,11");
     expect(shown).toContain("5,40");
     expect(shown).toMatch(/Pérdida total\s*[−-]7,51/);
+    // No amounts or costs added up across operations: rounded one by one they
+    // would subtract to −7,52 against the −7,51 declared.
+    expect(shown).not.toContain("717,35");
+    expect(shown).not.toContain("724,87");
+    expect(shown).toContain("Se redondea al céntimo una vez por operación, como se declara.");
   });
 
   it("says nothing of a result on a movement that is not a sale", async () => {
     const host = await show(`/movimientos/${firstBuy("EUR")}`, Detail, "/movimientos/:id");
     expect(text(host)).not.toContain("Resultado de la venta");
+  });
+});
+
+describe("the result of a single sale", () => {
+  it("says it is rounded once per operation when it is a cent off the subtraction", async () => {
+    const { Money } = await import("@atlas/domain");
+    const { saleResult } = await import("../src/view-models/sale.js");
+    const gain = (proceeds: string, cost: string, rounded: string) =>
+      ({
+        event_id: "e",
+        asset_id: "a",
+        account_id: "c",
+        proceeds_eur: Money.parse(proceeds, "EUR"),
+        cost_eur: Money.parse(cost, "EUR"),
+        gain_eur_rounded: Money.parse(rounded, "EUR"),
+      }) as never;
+    // 263,123 − 265,236 = −2,113 → −2,11, while 263,12 − 265,24 = −2,12.
+    expect(saleResult([gain("263.123", "265.236", "-2.11")], "e", {})?.rounded).toBe(true);
+    expect(saleResult([gain("263.12", "265.24", "-2.12")], "e", {})?.rounded).toBe(false);
+    expect(saleResult([], "e", {})).toBeUndefined();
   });
 });
