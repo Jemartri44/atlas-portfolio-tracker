@@ -146,7 +146,7 @@ const cashBlockOf = (
         warnings,
         "stale_fx_rate",
         `the rate used for ${currency} is ${ageDays} days old (${known.date}, limit ${settings.stale_price_days})`,
-        { currency, age_days: ageDays, date: known.date },
+        { currency, age_days: ageDays, date: known.date, limit_days: settings.stale_price_days },
         known.event_id,
       );
     }
