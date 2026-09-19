@@ -29,8 +29,16 @@ import { gzipSync } from "node:zlib";
 const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(webRoot, "dist");
 
-/** What the browser downloads before the first screen paints: JS + CSS, gzip. */
-const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
+/**
+ * What the browser downloads before the first screen paints: JS + CSS, gzip.
+ *
+ * **Lowered from 80 to 69 by the visual redesign (ADR-0023), to what it
+ * measured plus a small margin:** Pico left the boot path, and with it 6,9 KB
+ * gzip of stylesheet that the screens overrode anyway; our own base weighs
+ * 9,1 KB where Pico and its overrides weighed 16,0. Measured on top of the
+ * tax engine: **68,5 KB** (72,6 before the redesign), rounded up to 69.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 69 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -46,7 +54,8 @@ const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
  *           first screen projects the ledger.
  *   ~22 KB  uPlot, vendored, in a lazily loaded chunk that only Núcleo and Cubo
  *           pull (ADR-0017 quotes 23 KB **minified**, not gzip).
- *   ~16 KB  the stylesheet, mostly vendored Pico.
+ *   ~16 KB  the stylesheet, mostly vendored Pico (9 KB of our own base since
+ *           the redesign, ADR-0023).
  *   ~12 KB  `@solidjs/router`.
  *    ~8 KB  Solid itself plus the boot.
  *   the rest is our eleven screens, ~2 KB gzip each.
@@ -83,8 +92,16 @@ const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
  * Spanish of the codes of the tax engine that the drift test demands in both
  * interfaces. The tax engine itself does not enter the bundle. Measured on top
  * of the round of defects: 178,6 KB total; the boot, 72,6 KB against 80.
+ *
+ * **Moved from 179 to 184 by the visual redesign (ADR-0023), measured and
+ * not allowed:** the stylesheet went down by 6,9 KB, and the JavaScript went up
+ * by about 10 KB — one icon set drawn in SVG, the notice, the fold and the
+ * states as components, the first steps of an empty ledger, the sentence that
+ * opens a movement, the filters in two shapes, the effect beside the form, the
+ * deviation gauge and the proportion of the patrimony. Measured on top of the
+ * tax engine: **183,4 KB**, of which the boot is 68,5.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 179 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 184 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
