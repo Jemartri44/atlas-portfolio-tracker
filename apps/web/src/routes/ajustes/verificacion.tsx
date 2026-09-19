@@ -31,14 +31,26 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import { attentionItems } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
 
+/** How many events a notice lists in sight; more than that wait folded. */
+const IN_SIGHT = 3;
+
 /** The events a notice is about, each one a link by its type and date. */
-const EventLinks = (props: { ids: readonly string[]; events: EventReferences }): JSX.Element => (
-  <Show when={props.ids.length > 0}>
+const EventLinks = (props: { ids: readonly string[]; events: EventReferences }): JSX.Element => {
+  const Links = (): JSX.Element => (
     <span class="event-links">
       <For each={props.ids}>{(id) => <A href={`/movimientos/${id}`}>{props.events(id)}</A>}</For>
     </span>
-  </Show>
-);
+  );
+  return (
+    <Show when={props.ids.length > 0}>
+      <Show when={props.ids.length > IN_SIGHT} fallback={<Links />}>
+        <Disclosure label={`Ver los ${props.ids.length} movimientos`}>
+          <Links />
+        </Disclosure>
+      </Show>
+    </Show>
+  );
+};
 
 /** A finding: what is wrong and what to do, its events, and the raw evidence folded. */
 const findingItems = (
