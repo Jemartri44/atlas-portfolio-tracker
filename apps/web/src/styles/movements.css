@@ -39,6 +39,25 @@
   width: 100%;
 }
 
+/*
+ * The folded bar on a wide row (a tablet, 1024–1279px): the filters side by
+ * side in columns of a readable width, never one select stretched to the whole
+ * row — they measured 1.000px at 1100 (third pass of the review of 2026-09-19).
+ */
+@media (min-width: 40rem) {
+  .filters-bar > .field {
+    max-width: var(--reading-max);
+  }
+
+  .filters-bar .filter-fields {
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  }
+
+  .filters-bar .filter-dates {
+    grid-column: span 2;
+  }
+}
+
 .filters-panel {
   align-self: start;
   gap: var(--space-4);

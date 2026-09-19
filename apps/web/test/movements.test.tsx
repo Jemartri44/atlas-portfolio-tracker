@@ -76,6 +76,10 @@ describe("the list of movements", () => {
     // The folded bar takes the whole row of the grid, not one column of twelve.
     const bar = host.querySelector(".filters-bar") as HTMLElement;
     expect(getComputedStyle(bar).gridColumn).toMatch(/^(span 12|1 \/ -1)$/);
+    // And its filters in columns of a readable width, not one select the width of the row.
+    const fields = bar.querySelector(".filter-fields") as HTMLElement;
+    expect(getComputedStyle(fields).gridTemplateColumns).toContain("minmax(14rem, 1fr)");
+    expect(getComputedStyle(bar.querySelector(".field") as HTMLElement).maxWidth).not.toBe("none");
   });
 
   it("draws money in and money out apart, and neither as a charge", () => {
