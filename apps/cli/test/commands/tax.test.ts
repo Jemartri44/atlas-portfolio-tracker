@@ -1,7 +1,7 @@
 // atlas tax <año>: a console that only formats what the domain computed
-// (feature 009, decision (h)). The figures themselves are tested in the domain;
-// here, that every section is there, that nothing is lost in --json, and that
-// the refusals speak Spanish.
+// (feature 009, decision (h)). The figures it prints are checked against
+// hand-worked literals in tax-figures.test.ts; here, that every section is
+// there, that nothing is lost in --json, and that the refusals speak Spanish.
 
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
