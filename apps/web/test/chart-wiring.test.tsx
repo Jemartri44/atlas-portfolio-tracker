@@ -69,7 +69,8 @@ describe("the axis of a chart is an amount", () => {
       { label: "Núcleo", values: year.map(() => 1), colour: "--c-series-core" },
     ];
     const options = chartOptions({ x: year, series, width: 1600, height: 220 }, false);
-    expect((options.axes?.[0] as { space?: number }).space).toBeGreaterThanOrEqual(80);
+    const axis = options.axes?.[0] as { space?: number } | undefined;
+    expect(axis?.space).toBeGreaterThanOrEqual(80);
     // And half a label of room past the last tick, which sits on the edge.
     expect(options.padding?.[1]).toBeGreaterThanOrEqual(24);
   });
