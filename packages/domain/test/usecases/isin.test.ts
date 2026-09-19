@@ -161,6 +161,19 @@ describe("the catalogue in force, not the raw lines (verifier of feature 009)", 
     ).toBe("recorded");
   });
 
+  it("answers with its own error in a ledger that has an invalid event elsewhere", async () => {
+    // The catalogue of before was projected strictly: the invalid sell answered
+    // for the asset, with an error that had nothing to do with it.
+    const b = new LedgerBuilder();
+    b.account("acc_core", { platform: "ibkr", country: "IE" });
+    b.asset("vwce_core", { asset_type: "etf", transferable: false, isin: ISIN });
+    b.sell({ account_id: "acc_core", asset_id: "vwce_core", quantity: "5", unit_price: "10" });
+    const deps = testDeps(new TestStore(b.build()));
+    expect(await codeOf(() => recordEvent(deps, asset("again", { isin: ISIN }) as never))).toBe(
+      "duplicate_isin",
+    );
+  });
+
   it("compares the ISIN in upper case and without spaces", async () => {
     const store = withCoreEtf();
     const deps = testDeps(store);

@@ -90,7 +90,8 @@ export const duplicatesOf = (
  * change (verifier of feature 009). And the ISIN compared as the tax agency
  * reads it, upper case and without spaces. `before` is only projected when
  * there is a clash, to tell an update that keeps its own ISIN from one that
- * takes another's.
+ * takes another's; collecting errors, so that an invalid event elsewhere in
+ * the ledger does not answer for this one.
  */
 export const checkIsinUnique = (
   after: LedgerState,
@@ -145,7 +146,7 @@ export const checkInvalid = (
   if (own !== undefined) {
     throw own.error;
   }
-  checkIsinUnique(state, event, () => projectLedger(events));
+  checkIsinUnique(state, event, () => projectLedger(events, { collectErrors: true }));
   if (event.type !== "settings_changed") {
     /*
      * An event that was already invalid before this mutation blocks it, but it

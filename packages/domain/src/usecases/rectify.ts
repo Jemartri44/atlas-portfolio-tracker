@@ -118,7 +118,7 @@ export const correctEvent = async <E extends SupportedEvent>(
     targetId,
   );
   // A correction introduces an ISIN exactly as a new event does.
-  checkIsinUnique(state, event, () => projectLedger(events));
+  checkIsinUnique(state, event, () => projectLedger(events, { collectErrors: true }));
   const duplicates = duplicatesOf(state.fingerprints, event);
   if (duplicates.length > 0 && options.confirmDuplicate !== true) {
     throw new DuplicateFingerprintError((event as { fingerprint: string }).fingerprint, duplicates);
