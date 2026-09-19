@@ -43,11 +43,10 @@
 
 /* The three shares on one bar, cut apart by the colour of the surface. */
 .shares {
-  border-radius: var(--radius-sm);
+  clip-path: inset(0 round var(--radius-sm));
   display: block;
   height: var(--bar-h);
   margin-bottom: var(--space-4);
-  overflow: hidden;
   width: 100%;
 }
 

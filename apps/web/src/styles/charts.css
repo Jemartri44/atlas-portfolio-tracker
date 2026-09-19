@@ -101,10 +101,10 @@
   font-size: var(--text-sm);
 }
 
+/* The ends are rounded by a clip: a border radius does not clip an SVG root. */
 .alloc-bar {
-  border-radius: var(--radius-sm);
+  clip-path: inset(0 round var(--radius-sm));
   height: var(--bar-h);
-  overflow: hidden;
   width: 100%;
 }
 
