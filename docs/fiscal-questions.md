@@ -57,6 +57,7 @@ Todo lo que los documentos marcan como *verificar*, consolidado. Cada respuesta 
 | 21 | Una pérdida liberada al vender, si esa venta tiene a su vez una recompra en su ventana | **Se suma a la pérdida de esa venta y se vuelve a aplicar la regla** | Coherencia con el art. 33.5 in fine; sin norma expresa | Media-baja | Conservador (puede volver a aplazar) |
 | 22 | Orden de la compensación de pérdidas (art. 49) | **Dos fases**, como el manual práctico de la AEAT: primero dentro de cada tipo de renta y después el cruce entre ganancias y rendimientos hasta el **25 % conjunto**. Las pérdidas de ejercicios anteriores se aplican **de la más antigua a la más reciente**, y el límite se redondea a céntimos | Art. 49 LIRPF y manual práctico de IRPF | Alta (orden) / Media (redondeo) | Neutro: no cambia el total, evita que caduquen pérdidas |
 | 23 | Comisiones de **custodia y administración** en el rendimiento del capital mobiliario | Se deducen **solo** las comisiones sueltas marcadas como custodia o administración; las de conectividad, datos o gestión discrecional, no | Art. 26.1.a) LIRPF | Alta | Conservador (lo dudoso no se deduce) |
+| 24 | Categoría de renta de los **ETC** y los **ETP**: ¿ganancia patrimonial o rendimiento del capital mobiliario? | **ETC → rendimiento del capital mobiliario** (art. 25.2 LIRPF, cesión a terceros de capitales propios): es una nota de deuda garantizada, no una IIC. **ETP → rendimiento del capital mobiliario por defecto**: depende de la estructura jurídica de cada producto, aunque los ETP de cripto europeos suelen ser notas de deuda. Configurable por tipo de activo (`income_category`); el valor por defecto de los dos cambia en la feature 010 | Consulta vinculante de la DGT [**V0267-25**](https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0267-25), de 13/03/2025: califica el rendimiento de un ETC como rendimiento del capital mobiliario «en todo caso». Para un ETP no hay consulta propia: se sigue su estructura | Alta (ETC) / Media (ETP) | **Conservador**: como rendimiento del capital mobiliario, una pérdida solo compensa ganancias patrimoniales hasta el 25 %, y una ganancia no puede absorber al 100 % pérdidas patrimoniales |
 
 ---
 
@@ -90,7 +91,7 @@ Ninguno está resuelto. Se recogen con el argumento en contra para que la decisi
 
 Por probabilidad de aparecer en esta cartera:
 
-1. **ETC y ETP: probablemente no son ganancia patrimonial.** Un ETC es jurídicamente una **nota de deuda**, no una IIC, y hay base para que el resultado de su transmisión sea **rendimiento del capital mobiliario** del art. 25.2 LIRPF. Si es así, cambia cómo compensan sus pérdidas (contra ganancias, **solo hasta el 25 %**, no al 100 %), qué diferimiento por recompra se le aplica y en qué casilla va. **Afecta a la clase `gold` entera del núcleo, y a `crypto` si se tiene vía ETP.** Es el hallazgo de mayor cuantía de la revisión y el primero que habría que resolver.
+1. **ETC y ETP**: resuelto el 2026-09-19 con la consulta vinculante V0267-25; es el criterio **#24**.
 2. **Staking y airdrops** si alguna vez hay cripto en tenencia directa. Si solo se tiene vía ETP, decirlo explícitamente.
 3. **Permuta cripto por cripto**: art. 37.1.h, el mayor entre el valor de mercado de lo entregado y de lo recibido. El libro solo tiene `fx_exchange` para divisas.
 4. **Derechos de suscripción preferente**: venta con retención del 19 % desde 2017. El esquema da el número correcto pero no puede registrar la retención.
@@ -112,7 +113,7 @@ Son de la clase "barata ahora, carísima después". **Ninguno exige decidir hoy 
 
 | # | Dato que falta | Para qué | Criterio afectado |
 |---|---|---|---|
-| 1 | **Categoría de renta** de cada transmisión | Distinguir ganancia patrimonial (art. 33) de rendimiento del capital mobiliario (art. 25.2), que compensan distinto. Hoy `RealizedGain` no lleva ni el tipo de activo | ETC/ETP |
+| 1 | **Categoría de renta** de cada transmisión | Distinguir ganancia patrimonial (art. 33) de rendimiento del capital mobiliario (art. 25.2), que compensan distinto. Hoy `RealizedGain` no lleva ni el tipo de activo | #24 |
 | 2 | **Mercado donde cotiza** el valor | Aplicar una ventana de recompra distinta dentro y fuera de la UE; elegir bien la valoración del 720 | #2 |
 | 3 | **Domicilio del emisor** del fondo o ETC | Art. 95 LIRPF; clasificación en 720/721 | Falta 6 |
 | 4 | **Naturaleza de `standalone_fee`** | Distinguir depósito y administración (deducible de RCM) de conectividad o gestión | #3 |
@@ -127,5 +128,5 @@ Son de la clase "barata ahora, carísima después". **Ninguno exige decidir hoy 
 ## Estado
 
 - **La Fase 5 no está bloqueada, pero sí condicionada.** El motor puede escribirse tratando las disputas como configuración, igual que ya hace con la ventana de recompra — **siempre que el esquema guarde antes los datos de la tabla de arriba**. Eso es una decisión de diseño, no fiscal, y es lo que se hará.
-- **Lo que sigue siendo del usuario**, y no puede resolverlo ningún asistente: los criterios **#2 (valores de fuera de la UE)**, **#7/#13 (fusiones extranjeras)**, **#8 (forks)** y el asunto de **ETC/ETP como rendimiento del capital mobiliario** merecen una revisión profesional antes de presentar la primera declaración hecha con esta aplicación. No corre prisa: el libro está vacío y no hay nada presentado.
+- **Lo que sigue siendo del usuario**, y no puede resolverlo ningún asistente: los criterios **#2 (valores de fuera de la UE)**, **#7/#13 (fusiones extranjeras)**, **#8 (forks)** y la estructura de cada **ETP** que se compre (#24, certeza media) merecen una revisión profesional antes de presentar la primera declaración hecha con esta aplicación. El de los **ETC** lo resolvió la consulta vinculante V0267-25 (#24, certeza alta). No corre prisa: el libro está vacío y no hay nada presentado.
 - Queda abierta una decisión **de diseño** ya resuelta en su forma: qué deja registrado el libro sobre lo declarado (`tax_return_filed`, **ADR-0020**), que se implementa en la Fase 5.
