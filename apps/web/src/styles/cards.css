@@ -106,6 +106,19 @@ a.card-foot:hover {
     margin: var(--space-4) calc(-1 * var(--space-6)) calc(-1 * var(--space-5));
     padding-inline: var(--space-6);
   }
+
+  /* In a stretched card the disclosures sit together at its bottom edge. */
+  .card > .disclosure:first-of-type {
+    margin-top: auto;
+  }
+
+  .card > :has(+ .disclosure:first-of-type) {
+    margin-bottom: var(--space-4);
+  }
+
+  .card > .disclosure + .disclosure {
+    margin-top: var(--space-5);
+  }
 }
 
 /* ---- Lines of a panel and the line of a total -------------------------- */

@@ -152,10 +152,6 @@ a.notice:hover .notice-action {
     gap: var(--space-1) var(--space-4);
     justify-content: space-between;
   }
-
-  .pending-body > a {
-    margin-left: 0;
-  }
 }
 
 /* ---- Empty state: one message, one next step ---------------------------- */

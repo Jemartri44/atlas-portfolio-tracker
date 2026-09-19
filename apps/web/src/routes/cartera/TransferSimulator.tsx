@@ -1,5 +1,6 @@
-// "¿Cómo quedarían los pesos si traspaso?" — folded by default, because it is
-// used on purpose and not consulted in passing.
+// "¿Cómo quedarían los pesos si traspaso?" — folded at the foot of the weights
+// card (D6), because it is used on purpose and not consulted in passing, and
+// because what it changes are those weights.
 //
 // The sentence about a transfer not being a taxable event is printed **every
 // time**, not once in a help page: modelling a transfer as a sale plus a
@@ -13,12 +14,10 @@ import {
   Amount,
   type DataColumn,
   DataTable,
-  Disclosure,
   ErrorView,
   Field,
   Figure,
   Notice,
-  Section,
   SelectField,
   Switch,
   Tag,
@@ -67,13 +66,13 @@ const COLUMNS: readonly DataColumn<TransferRowView>[] = [
   },
 ];
 
-interface TransferCardProps {
+interface TransferSimulatorProps {
   state: LedgerState;
   date: string;
   settings: Settings;
 }
 
-export const TransferCard = (props: TransferCardProps): JSX.Element => {
+export const TransferSimulator = (props: TransferSimulatorProps): JSX.Element => {
   const privacy = usePrivacy();
   const [from, setFrom] = createSignal("");
   const [to, setTo] = createSignal("");
@@ -119,85 +118,77 @@ export const TransferCard = (props: TransferCardProps): JSX.Element => {
   const options = () => assetOptions(props.state, { book: "core" });
 
   return (
-    <Section title="Simulador de traspaso">
-      <Disclosure label="Probar un traspaso entre fondos">
-        <div class="fieldset">
-          <SelectField
-            id="tr-from"
-            label="Desde"
-            value={from()}
-            placeholder="Elige el fondo de origen"
-            options={options()}
-            onInput={setFrom}
+    <>
+      <div class="fieldset">
+        <SelectField
+          id="tr-from"
+          label="Desde"
+          value={from()}
+          placeholder="Elige el fondo de origen"
+          options={options()}
+          onInput={setFrom}
+        />
+        <SelectField
+          id="tr-to"
+          label="Hacia"
+          value={to()}
+          placeholder="Elige el fondo de destino"
+          options={options()}
+          onInput={setTo}
+        />
+        <Show when={!all()}>
+          <Field
+            id="tr-qty"
+            kind="decimal"
+            sensitive
+            label="Participaciones"
+            value={quantity()}
+            onInput={setQuantity}
           />
-          <SelectField
-            id="tr-to"
-            label="Hacia"
-            value={to()}
-            placeholder="Elige el fondo de destino"
-            options={options()}
-            onInput={setTo}
-          />
-          <Show when={!all()}>
-            <Field
-              id="tr-qty"
-              kind="decimal"
-              sensitive
-              label="Participaciones"
-              value={quantity()}
-              onInput={setQuantity}
+        </Show>
+        <Switch id="tr-all" label="Traspasar toda la posición" checked={all()} onChange={setAll} />
+      </div>
+
+      <Show when={failure()}>
+        {(error) => <ErrorView error={error()} title="No se puede simular ese traspaso" />}
+      </Show>
+
+      <Show when={view()}>
+        {(simulation) => (
+          <div class="simulation">
+            <p class="card-note">
+              Traspaso de <Amount quantity={simulation().quantity} of="part." /> de{" "}
+              {simulation().fromName} a {simulation().toName} (
+              <Amount value={simulation().moved} />
+              ).
+            </p>
+            <Notice severity="info" title="No es un hecho imponible">
+              Un traspaso entre fondos <strong>no tributa</strong>: conserva la fecha de adquisición
+              y el coste de los lotes de origen. No es una venta seguida de una compra.
+            </Notice>
+            <DataTable
+              label="Pesos antes y después del traspaso"
+              columns={COLUMNS}
+              rows={simulation().rows}
+              rowClass={(row) => (row.role === undefined ? undefined : "is-moved")}
             />
-          </Show>
-          <Switch
-            id="tr-all"
-            label="Traspasar toda la posición"
-            checked={all()}
-            onChange={setAll}
-          />
-        </div>
-
-        <Show when={failure()}>
-          {(error) => <ErrorView error={error()} title="No se puede simular ese traspaso" />}
-        </Show>
-
-        <Show when={view()}>
-          {(simulation) => (
-            <div class="stack">
-              <p class="note flush">
-                Traspaso de <Amount quantity={simulation().quantity} /> de {simulation().fromName} a{" "}
-                {simulation().toName} (
-                <Amount value={simulation().moved} />
-                ).
-              </p>
-              <Notice severity="info" title="No es un hecho imponible">
-                Un traspaso entre fondos <strong>no tributa</strong>: conserva la fecha de
-                adquisición y el coste de los lotes de origen. No es una venta seguida de una
-                compra.
-              </Notice>
-              <DataTable
-                label="Pesos antes y después del traspaso"
-                columns={COLUMNS}
-                rows={simulation().rows}
-                rowClass={(row) => (row.role === undefined ? undefined : "is-moved")}
-              />
-              <For each={simulation().warningsAfter}>
-                {(warning) => (
-                  <Notice severity="caution" title="Aviso tras el traspaso simulado">
-                    {describeWarning(warning, {
-                      names: nameIndex(props.state),
-                      privacy: privacy(),
-                    })}
-                  </Notice>
-                )}
-              </For>
-              <p class="note">
-                <Tag>nada registrado</Tag> Es una simulación: la orden se da a mano en la gestora y
-                se registra después.
-              </p>
-            </div>
-          )}
-        </Show>
-      </Disclosure>
-    </Section>
+            <For each={simulation().warningsAfter}>
+              {(warning) => (
+                <Notice severity="caution" title="Aviso tras el traspaso simulado">
+                  {describeWarning(warning, {
+                    names: nameIndex(props.state),
+                    privacy: privacy(),
+                  })}
+                </Notice>
+              )}
+            </For>
+            <p class="card-note">
+              <Tag>nada registrado</Tag> Es una simulación: la orden se da a mano en la gestora y se
+              registra después.
+            </p>
+          </div>
+        )}
+      </Show>
+    </>
   );
 };

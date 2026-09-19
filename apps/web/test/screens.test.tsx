@@ -24,8 +24,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { formatMoney, MASK } from "../src/format/money.js";
 import { loadInto } from "../src/ledger/actions.js";
 import { store } from "../src/ledger/state.js";
+import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
-import Nucleo from "../src/routes/nucleo/index.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
 
@@ -103,10 +103,10 @@ describe("Núcleo cuts the ledger by the date asked", () => {
    * place where that decision is made.
    */
   it("shows the figures of the date in the address, not of the last event", async () => {
-    const early = text(await show("/nucleo?fecha=2027-01-31", Nucleo));
+    const early = text(await show("/cartera?fecha=2027-01-31", Cartera));
     expect(early).toContain(coreTotalAt("2027-01-31"));
 
-    const late = text(await show("/nucleo?fecha=2027-12-31", Nucleo));
+    const late = text(await show("/cartera?fecha=2027-12-31", Cartera));
     expect(late).toContain(coreTotalAt("2027-12-31"));
 
     // And the two are genuinely different books, not the same one twice.
@@ -115,7 +115,7 @@ describe("Núcleo cuts the ledger by the date asked", () => {
   });
 
   it("says «sin dato» instead of a zero where a price is missing", async () => {
-    const host = await show("/nucleo?fecha=2027-06-30", Nucleo);
+    const host = await show("/cartera?fecha=2027-06-30", Cartera);
     const shown = text(host);
 
     expect(shown).toContain("sin dato");
@@ -179,7 +179,7 @@ describe("the privacy mode covers the two screens", () => {
    */
   it("leaves no amount, price or quantity visible on Núcleo", async () => {
     store.setPrivacy(true);
-    const shown = text(await show("/nucleo?fecha=2027-01-31", Nucleo));
+    const shown = text(await show("/cartera?fecha=2027-01-31", Cartera));
 
     expect(shown).toContain(MASK);
     expect(DECIMAL.test(withoutPercentages(shown))).toBe(false);
@@ -203,7 +203,7 @@ describe("the privacy mode covers the two screens", () => {
   /** And with the mask off they are all there: the test is not passing on an empty page. */
   it("shows them all again when privacy is off", async () => {
     store.setPrivacy(false);
-    const shown = text(await show("/nucleo?fecha=2027-01-31", Nucleo));
+    const shown = text(await show("/cartera?fecha=2027-01-31", Cartera));
 
     expect(shown).not.toContain(MASK);
     expect(shown).toContain(coreTotalAt("2027-01-31"));
@@ -223,7 +223,7 @@ describe("the privacy mode covers the two screens", () => {
 
   it("still shows the percentages, which are the useful thing in public", async () => {
     store.setPrivacy(true);
-    const shown = text(await show("/nucleo?fecha=2027-01-31", Nucleo));
+    const shown = text(await show("/cartera?fecha=2027-01-31", Cartera));
 
     expect(shown).toMatch(/\d+,\d+ %/);
     expect(shown).toMatch(/[+−]\d+,\d+ pp/);

@@ -139,6 +139,12 @@ a.row:hover {
   text-align: right;
 }
 
+.table tfoot td {
+  border-bottom: 0;
+  border-top: var(--border) solid var(--c-border);
+  font-weight: var(--fw-semibold);
+}
+
 /* A long name is cut inside its cell, with the whole of it in the title. */
 .cell-trunc {
   display: block;

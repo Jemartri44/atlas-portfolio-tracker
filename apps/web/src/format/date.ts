@@ -32,6 +32,12 @@ export const formatLongDate = (date: CivilDate): string => {
   return `${Number.parseInt(day ?? "1", 10)} de ${MONTHS[index] ?? month} de ${year}`;
 };
 
+/** `2027-01-12` → `enero`: the month a contribution belongs to. */
+export const formatMonth = (date: CivilDate): string => {
+  const month = date.split("-")[1] ?? "01";
+  return MONTHS[Number.parseInt(month, 10) - 1] ?? month;
+};
+
 /** An age in days, said the way a person says it. */
 export const formatAge = (days: number): string => {
   if (days <= 0) {

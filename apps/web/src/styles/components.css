@@ -345,33 +345,7 @@ dialog .dialog-actions {
 
 /* --- Núcleo: the class summary, dense and aligned ----------------------- */
 
-.weights {
-  display: grid;
-  gap: var(--s-1);
-  margin-bottom: var(--s-3);
-}
-
-.weight-line {
-  align-items: baseline;
-  display: grid;
-  gap: var(--s-2);
-  grid-template-columns: 1fr auto auto auto;
-}
-
-.weight-line .subject {
-  min-width: 0;
-}
-
-.weight-line .weight,
-.weight-line .target,
-.weight-line .deviation {
-  min-width: 4.5rem;
-  text-align: right;
-}
-
-.weight-line .target {
-  color: var(--c-muted);
-}
+/* The label carries a badge; at 320px the row has to be allowed to break. */
 
 .total-line {
   border-top: 1px solid var(--c-border);
@@ -381,21 +355,6 @@ dialog .dialog-actions {
 
 .total-line .subject {
   font-weight: var(--w-medium);
-}
-
-.contribution-head {
-  display: grid;
-  gap: var(--s-1);
-  margin-bottom: var(--s-3);
-}
-
-/* The label carries a badge; at 320px the row has to be allowed to break. */
-.contribution-head .spread {
-  flex-wrap: wrap;
-}
-
-.contribution-head .subject {
-  min-width: 0;
 }
 
 .datalist .item.is-moved {

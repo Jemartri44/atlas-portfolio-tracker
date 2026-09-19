@@ -205,6 +205,13 @@
 
 /* ---- The field: label, control, hint and the error in line ------------- */
 
+/* A group of fields: one column, never wider than a line can be read. */
+.fieldset {
+  display: grid;
+  gap: var(--space-4);
+  max-width: var(--reading-max);
+}
+
 .field {
   display: grid;
   gap: var(--space-1);

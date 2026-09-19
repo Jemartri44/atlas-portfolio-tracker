@@ -10,8 +10,8 @@ import { WARNING_MESSAGES } from "../src/format/messages/warnings.js";
 import { namingOf } from "../src/format/names.js";
 import { meaningfulDecimals } from "../src/format/number.js";
 import { figuresOf } from "../src/format/privacy.js";
+import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
-import Nucleo from "../src/routes/nucleo/index.jsx";
 import { show, text, today, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
@@ -64,6 +64,6 @@ describe("figures and units", () => {
   });
 
   it("gives a percentage the decimals that say something", async () => {
-    expect(text(await show("/nucleo?fecha=2029-06-30", Nucleo))).not.toContain("0,0000");
+    expect(text(await show("/cartera?fecha=2029-06-30", Cartera))).not.toContain("0,0000");
   });
 });
