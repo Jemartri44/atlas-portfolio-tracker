@@ -44,7 +44,10 @@ export const axisAmount = (value: number | null | undefined, privacy: boolean): 
   return compact(value);
 };
 
-/** A date of the X axis: the day is noise on a five-year range, and vital on a month. */
+/**
+ * A date of the X axis: the day is noise on a five-year range, and vital on a
+ * month. The year in full: «feb 27» reads as the 27th of February.
+ */
 export const axisDate = (timestamp: number, span: "days" | "months" | "years"): string => {
   const date = new Date(timestamp * 1000);
   const month = date.toLocaleDateString("es-ES", { month: "short", timeZone: "UTC" });
@@ -52,7 +55,7 @@ export const axisDate = (timestamp: number, span: "days" | "months" | "years"): 
     return String(date.getUTCFullYear());
   }
   if (span === "months") {
-    return `${month} ${String(date.getUTCFullYear()).slice(2)}`;
+    return `${month} ${date.getUTCFullYear()}`;
   }
   return `${date.getUTCDate()} ${month}`;
 };

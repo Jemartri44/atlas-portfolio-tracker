@@ -62,7 +62,7 @@ describe("the axis of a chart is an amount", () => {
     // 2027-06-30, as seconds since the epoch.
     const when = Date.UTC(2027, 5, 30) / 1000;
     expect(axisDate(when, "years")).toBe("2027");
-    expect(axisDate(when, "months")).toContain("27");
+    expect(axisDate(when, "months")).toMatch(/^\p{L}+\.? 2027$/u);
     expect(axisDate(when, "days")).toContain("30");
   });
 
