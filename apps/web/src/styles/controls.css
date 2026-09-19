@@ -242,8 +242,12 @@
   right: var(--space-3);
 }
 
+/* A long option ends in an ellipsis, never cut mid-word ("Cartera pr"). */
 .control.has-chevron > select {
+  overflow: hidden;
   padding-right: var(--space-8);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*
