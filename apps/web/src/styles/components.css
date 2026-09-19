@@ -489,16 +489,7 @@ dialog .dialog-actions {
 
 /* --- Charts (uPlot vendored, ADR-0017) ---------------------------------- */
 
-.chart {
-  margin-top: var(--s-2);
-  min-height: 13.75rem;
-  width: 100%;
-}
-
 /* uPlot draws on a canvas; only the frame is ours. */
-.chart .u-wrap {
-  margin: 0 auto;
-}
 
 /*
  * Inside the equivalent table of a chart the cards are enough at every width:
@@ -507,27 +498,6 @@ dialog .dialog-actions {
  */
 
 /* The legend of a chart: colour **and** dash, never colour alone. */
-.chart-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3);
-  margin-top: var(--s-2);
-}
-
-.chart-legend .entry {
-  align-items: center;
-  color: var(--c-muted);
-  display: flex;
-  font-size: var(--t-sm);
-  gap: var(--s-1);
-}
-
-.chart-legend .swatch {
-  border-radius: var(--r-pill);
-  display: inline-block;
-  height: 0.1875rem;
-  width: 1.5rem;
-}
 
 /*
  * The swatch of the legend carries the same two signals as the line: its colour
@@ -537,94 +507,10 @@ dialog .dialog-actions {
  */
 /* A solid entry needs no rule of its own; it is declared so the markup that
    writes it is accounted for, and so the two states read as a pair. */
-.chart-legend .entry.is-solid .swatch {
-  background-image: none;
-}
-
-.chart-legend .entry.is-dashed .swatch {
-  background-image: repeating-linear-gradient(
-    to right,
-    currentColor 0 0.25rem,
-    transparent 0.25rem 0.5rem
-  );
-}
-
-.chart-legend .swatch.is-core {
-  background-color: var(--c-series-core);
-  color: var(--c-series-core);
-}
-
-.chart-legend .swatch.is-bucket {
-  background-color: var(--c-series-bucket);
-  color: var(--c-series-bucket);
-}
-
-.chart-legend .swatch.is-cash {
-  background-color: var(--c-series-cash);
-  color: var(--c-series-cash);
-}
-
-.chart-legend .swatch.is-index {
-  background-color: var(--c-series-index);
-  color: var(--c-series-index);
-}
-
-.chart-legend .entry.is-dashed .swatch {
-  background-color: transparent;
-}
 
 /* --- The core against its target: two stacked bars on the same scale ---- */
 
-.allocation {
-  margin-top: var(--s-2);
-}
-
-.alloc-svg {
-  display: block;
-  width: 100%;
-}
-
-.alloc-seg.is-equity {
-  fill: var(--c-class-equity);
-}
-
-.alloc-seg.is-fixed_income {
-  fill: var(--c-class-fixed_income);
-}
-
-.alloc-seg.is-gold {
-  fill: var(--c-class-gold);
-}
-
-.alloc-seg.is-crypto {
-  fill: var(--c-class-crypto);
-}
-
-.alloc-seg.is-empty {
-  fill: var(--c-surface-2);
-}
-
-.alloc-rows {
-  color: var(--c-muted);
-  margin-top: var(--s-1);
-}
-
 /* The legend swatches of the allocation, by asset class. */
-.chart-legend .swatch.is-class-equity {
-  background-color: var(--c-class-equity);
-}
-
-.chart-legend .swatch.is-class-fixed_income {
-  background-color: var(--c-class-fixed_income);
-}
-
-.chart-legend .swatch.is-class-gold {
-  background-color: var(--c-class-gold);
-}
-
-.chart-legend .swatch.is-class-crypto {
-  background-color: var(--c-class-crypto);
-}
 
 /* --- Núcleo: the class summary, dense and aligned ----------------------- */
 
@@ -726,28 +612,5 @@ dialog .dialog-actions {
 }
 
 /* The swatch of a class, beside its name in the weights block. */
-.weight-line .swatch {
-  border-radius: var(--r-pill);
-  display: inline-block;
-  height: 0.1875rem;
-  vertical-align: middle;
-  width: 0.75rem;
-}
-
-.weight-line .swatch.is-class-equity {
-  background-color: var(--c-class-equity);
-}
-
-.weight-line .swatch.is-class-fixed_income {
-  background-color: var(--c-class-fixed_income);
-}
-
-.weight-line .swatch.is-class-gold {
-  background-color: var(--c-class-gold);
-}
-
-.weight-line .swatch.is-class-crypto {
-  background-color: var(--c-class-crypto);
-}
 
 /* What belongs to a row and does not fit in a cell: the thesis of a position. */

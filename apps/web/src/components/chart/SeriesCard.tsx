@@ -15,6 +15,8 @@ import { type RangeKey, rangeCounts, rangeIndices } from "./ranges.js";
 
 export interface SeriesCardProps {
   title: string;
+  /** Its place in the grid of the screen. */
+  class?: string | undefined;
   /** Names of the series, in the order of `values`. */
   labels: readonly string[];
   colours: readonly string[];
@@ -37,7 +39,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
     props.labels.map((label, index) => ({
       label,
       values: indices().map((at) => props.values[index]?.[at] ?? null),
-      colour: props.colours[index] ?? "--c-muted",
+      colour: props.colours[index] ?? "--c-series-index",
       ...(props.dashes[index] === undefined ? {} : { dash: props.dashes[index] as number[] }),
     }));
 
@@ -46,11 +48,16 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
   return (
     <Section
       title={props.title}
+      class={`is-chart ${props.class ?? ""}`.trimEnd()}
       aside={<RangeButtons options={options()} current={range()} onChange={setRange} />}
     >
       <Show when={props.x.length > 0} fallback={props.empty}>
-        <Chart x={shown()} series={series()} label={props.title} />
-        <ChartLegend series={series()} />
+        <figure class="chart">
+          <Chart x={shown()} series={series()} label={props.title} />
+          <figcaption>
+            <ChartLegend series={series()} />
+          </figcaption>
+        </figure>
         <ChartTable
           headers={props.labels}
           rows={indices().map((at) => ({

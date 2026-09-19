@@ -72,7 +72,10 @@ const columnsOf = (headers: readonly string[]): DataColumn<ChartTableRow>[] => [
 export const ChartTable = (props: ChartTableProps): JSX.Element => (
   <>
     <Show when={props.missing !== undefined}>
-      <p class="note">{props.missing}</p>
+      <p class="gap-note">
+        <span class="swatch-gap" aria-hidden="true" />
+        <span>{props.missing}</span>
+      </p>
     </Show>
     <Disclosure label="Ver los datos de la gráfica">
       <DataTable label={props.caption} columns={columnsOf(props.headers)} rows={props.rows} />

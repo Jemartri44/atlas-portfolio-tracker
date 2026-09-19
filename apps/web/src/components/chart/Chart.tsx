@@ -15,11 +15,16 @@
 //   3. `prefers-reduced-motion` is honoured by simply not animating — uPlot
 //      redraws, it does not tween, so there is nothing to disable beyond the
 //      CSS transition of the container.
+//   4. A hole is not only left undrawn, it is **shown** (docs/design/system.md
+//      §5.15): a quiet band over the stretch the ledger knows nothing about,
+//      with dashed edges and "sin precios" on top, so a gap reads as a gap and
+//      not as a chart that failed to load.
 
 import { createEffect, type JSX, onCleanup, onMount } from "solid-js";
 import uPlot from "../../../vendor/uplot/uPlot.js";
-import { usePrivacy } from "../../ledger/state.js";
+import { store, usePrivacy } from "../../ledger/state.js";
 import { axisAmount, axisDate, spanOf } from "./axis.js";
+import { drawGaps, gapsOf } from "./gaps.js";
 
 export interface ChartSeries {
   label: string;
@@ -31,7 +36,7 @@ export interface ChartSeries {
   dash?: readonly number[];
 }
 
-const DEFAULT_HEIGHT = 220;
+const DEFAULT_HEIGHT = 184;
 
 /** Above this many points the dots crowd the line and are hidden. */
 const DOTS_UP_TO = 40;
@@ -66,6 +71,9 @@ interface ChartProps {
 const cssValue = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888";
 
+/** The type of the axes: the family of the page, at the smallest step it reads. */
+const axisFont = (): string => `13px ${cssValue("--font-sans")}`;
+
 export interface ChartSpec {
   x: readonly number[];
   series: readonly ChartSeries[];
@@ -99,18 +107,23 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
     legend: { show: false },
     cursor: { drag: { x: false, y: false } },
     scales: { x: { time: true } },
+    hooks: { drawClear: [drawGaps(gapsOf(spec.x, spec.series))] },
     axes: [
       {
-        stroke: cssValue("--c-muted"),
+        stroke: cssValue("--c-text-3"),
+        font: axisFont(),
         grid: { show: false },
         ticks: { show: false },
         values: (_plot, splits) => splits.map((value) => axisDate(value, span)),
       },
       {
-        stroke: cssValue("--c-muted"),
-        grid: { stroke: cssValue("--c-border"), width: 1 },
+        stroke: cssValue("--c-text-3"),
+        font: axisFont(),
+        grid: { stroke: cssValue("--c-chart-grid"), width: 1 },
         ticks: { show: false },
-        size: 56,
+        // With the mask on the axis carries no figure at all: the grid stays,
+        // so the shape reads, and no line says how much (brief §7).
+        size: privacy ? 8 : 56,
         values: (_plot, splits) => splits.map((value) => axisAmount(value, privacy)),
       },
     ],
@@ -120,15 +133,26 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         label: series.label,
         stroke: cssValue(series.colour),
         width: 2,
+        cap: "round" as CanvasLineCap,
         spanGaps: false,
-        ...(series.dash === undefined ? {} : { dash: [...series.dash] }),
+        // uPlot draws on a canvas of device pixels and does not scale a dash:
+        // at 3x a dotted line came out solid on the phone.
+        ...(series.dash === undefined
+          ? {}
+          : { dash: series.dash.map((step) => step * (window.devicePixelRatio || 1)) }),
         // Crowded charts hide their dots, **except** where a dot is the only
         // way a value gets drawn at all.
-        points: { show: spec.x.length < DOTS_UP_TO || hasIsolatedPoint(series.values) },
+        points: {
+          show: spec.x.length < DOTS_UP_TO || hasIsolatedPoint(series.values),
+          size: 8,
+          fill: cssValue("--c-surface"),
+        },
       })),
     ],
   };
 };
+
+export { gapsOf };
 
 export const Chart = (props: ChartProps): JSX.Element => {
   const privacy = usePrivacy();
@@ -171,7 +195,7 @@ export const Chart = (props: ChartProps): JSX.Element => {
           x: props.x,
           series: props.series,
           width: host.clientWidth || 320,
-          height: props.height ?? DEFAULT_HEIGHT,
+          height: props.height ?? (host.clientHeight || DEFAULT_HEIGHT),
         },
         privacy(),
       ),
@@ -185,7 +209,10 @@ export const Chart = (props: ChartProps): JSX.Element => {
     if (host !== undefined && typeof ResizeObserver !== "undefined") {
       observer = new ResizeObserver(() => {
         if (host !== undefined && plot !== undefined) {
-          plot.setSize({ width: host.clientWidth, height: props.height ?? DEFAULT_HEIGHT });
+          plot.setSize({
+            width: host.clientWidth,
+            height: props.height ?? (host.clientHeight || DEFAULT_HEIGHT),
+          });
         }
       });
       observer.observe(host);
@@ -198,6 +225,7 @@ export const Chart = (props: ChartProps): JSX.Element => {
     void props.x;
     void props.series;
     void privacy();
+    void store.theme();
     if (plot !== undefined) {
       build();
     }
@@ -209,5 +237,5 @@ export const Chart = (props: ChartProps): JSX.Element => {
     plot = undefined;
   });
 
-  return <div class="chart" ref={host} role="img" aria-label={props.label} />;
+  return <div class="chart-plot" ref={host} role="img" aria-label={props.label} />;
 };

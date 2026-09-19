@@ -11,10 +11,10 @@ import {
   Chart,
   type ChartSeries,
   chartOptions,
+  gapsOf,
   hasIsolatedPoint,
 } from "../src/components/chart/Chart.jsx";
 import { rangeCounts, rangeIndices } from "../src/components/chart/ranges.js";
-import { MASK } from "../src/format/money.js";
 
 const disposers: (() => void)[] = [];
 
@@ -52,8 +52,11 @@ describe("the axis of a chart is an amount", () => {
    * this, taking the privacy flag out of the axis left every chart showing
    * absolute amounts in privacy mode and the whole suite green.
    */
-  it("asks for the mask when privacy is on", () => {
-    expect(yLabels(true)).toEqual([MASK, MASK]);
+  it("carries no figure at all when privacy is on", () => {
+    // Not even the mask: four dots on each line of the grid would add noise
+    // and say nothing. The shape of the lines is what stays useful in public.
+    expect(yLabels(true)).toEqual(["", ""]);
+    expect(yLabels(true).join("")).not.toMatch(/\d/);
   });
 
   it("shows the figures when privacy is off", () => {
@@ -69,6 +72,24 @@ describe("the axis of a chart is an amount", () => {
 });
 
 describe("a hole is a hole", () => {
+  /**
+   * The line stops at a hole, and the stretch it skips is **shown** as a band
+   * from the last known point to the next one, so a gap reads as a gap and
+   * not as a chart that failed to load (docs/design/system.md §5.15).
+   */
+  it("shades the stretch where a series has no value, from known point to known point", () => {
+    expect(gapsOf(X, SERIES)).toEqual([{ from: 0, to: 2 * DAY }]);
+    // A chart with no hole has nothing to shade.
+    const full: ChartSeries[] = [{ label: "Núcleo", values: [1, 2, 3], colour: "--c-series-core" }];
+    expect(gapsOf(X, full)).toEqual([]);
+    // A series with no value at all is not "a hole everywhere": it is absent.
+    const absent: ChartSeries[] = [
+      ...full,
+      { label: "Cubo", values: [null, null, null], colour: "--c-series-bucket" },
+    ];
+    expect(gapsOf(X, absent)).toEqual([]);
+  });
+
   /**
    * `spanGaps: true` makes uPlot join the two ends of a gap with a straight
    * line — the interpolation the whole feature exists to refuse. It is the

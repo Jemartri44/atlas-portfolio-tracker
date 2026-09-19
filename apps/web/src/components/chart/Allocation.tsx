@@ -1,19 +1,16 @@
-// The core against its target, as **two stacked bars on the same scale**:
-// what there is on top, what the plan says underneath.
+// The portfolio against its target, as **two stacked bars on the same scale**:
+// what there is, and what the plan says (docs/design/system.md §5.15).
 //
-// Why not the donut ADR-0017 sketched (prompt §3.3 leaves the choice and asks
-// for the reason): what the screen has to make visible is the **deviation**, and
-// a deviation is a difference. On two aligned bars the difference reads as a
-// length, at a glance and without comparing angles; each segment can carry its
-// own label inside, so there is no legend duplicating the table below.
+// Why bars and not a donut: what the screen has to make visible is the
+// **deviation**, and a deviation is a difference. On two aligned bars the
+// difference reads as a length, at a glance and without comparing angles.
+// Each segment is cut from its neighbour by a line of the surface colour,
+// never by a border, and the class rows under the bars carry the names and
+// the figures, so the colour is never alone.
 //
-// Written in SVG by hand, not with uPlot: two rectangles per class do not
-// justify a library, and ADR-0017 already said the allocation shape would be
-// ours.
-//
+// Written in SVG by hand: two rectangles per class do not justify a library.
 // The privacy mode does not touch it: these are **percentages**, which stay
-// visible on purpose — they are the information that is useful in public and
-// they give no amount away (`docs/specification.md` §9.6).
+// visible on purpose (`docs/specification.md` §9.6).
 
 import { For, type JSX, Show } from "solid-js";
 
@@ -25,9 +22,6 @@ export interface AllocationSegment {
   actualPct?: string | undefined;
   targetPct: string;
 }
-
-const ROW_HEIGHT = 22;
-const GAP = 8;
 
 const numberOf = (value: string | undefined): number => {
   const parsed = Number.parseFloat(value ?? "");
@@ -50,26 +44,23 @@ const layout = (values: readonly number[]): { x: number; width: number }[] => {
 const Bar = (props: {
   segments: readonly AllocationSegment[];
   values: readonly number[];
-  y: number;
   title: string;
 }): JSX.Element => (
-  <>
-    <For each={layout(props.values)}>
-      {(box, index) => (
-        <rect
-          x={`${box.x}%`}
-          y={props.y}
-          width={`${box.width}%`}
-          height={ROW_HEIGHT}
-          class={`alloc-seg is-${props.segments[index()]?.key ?? "equity"}`}
-        >
-          <title>
-            {props.title}: {props.segments[index()]?.label} {props.values[index()]?.toFixed(1)} %
-          </title>
-        </rect>
-      )}
-    </For>
-  </>
+  <For each={layout(props.values)}>
+    {(box, index) => (
+      <rect
+        x={`${box.x}%`}
+        y="0"
+        width={`${box.width}%`}
+        height="100%"
+        class={`alloc-seg is-${props.segments[index()]?.key ?? "equity"}`}
+      >
+        <title>
+          {props.title}: {props.segments[index()]?.label} {props.values[index()]?.toFixed(1)} %
+        </title>
+      </rect>
+    )}
+  </For>
 );
 
 export const Allocation = (props: { segments: readonly AllocationSegment[] }): JSX.Element => {
@@ -78,28 +69,28 @@ export const Allocation = (props: { segments: readonly AllocationSegment[] }): J
   const hasActual = (): boolean => actual().some((value) => value > 0);
 
   return (
-    <div class="allocation">
-      <svg
-        viewBox={`0 0 100 ${ROW_HEIGHT * 2 + GAP}`}
-        preserveAspectRatio="none"
-        height={ROW_HEIGHT * 2 + GAP}
-        class="alloc-svg"
-        role="img"
-        aria-label="Reparto actual del núcleo frente al objetivo"
-      >
-        <Show
-          when={hasActual()}
-          fallback={
-            <rect x="0" y="0" width="100%" height={ROW_HEIGHT} class="alloc-seg is-empty">
-              <title>Sin datos: falta algún precio</title>
-            </rect>
-          }
-        >
-          <Bar segments={props.segments} values={actual()} y={0} title="Actual" />
-        </Show>
-        <Bar segments={props.segments} values={target()} y={ROW_HEIGHT + GAP} title="Objetivo" />
-      </svg>
-      <p class="alloc-rows tiny flush">Barra de arriba: actual. Barra de abajo: objetivo.</p>
+    <div class="alloc" role="img" aria-label="Reparto actual de la cartera frente al objetivo">
+      <div class="alloc-row">
+        <span class="alloc-label">Actual</span>
+        <svg class="alloc-bar" aria-hidden="true">
+          <Show
+            when={hasActual()}
+            fallback={
+              <rect x="0" y="0" width="100%" height="100%" class="alloc-seg is-empty">
+                <title>Sin datos: falta algún precio</title>
+              </rect>
+            }
+          >
+            <Bar segments={props.segments} values={actual()} title="Actual" />
+          </Show>
+        </svg>
+      </div>
+      <div class="alloc-row">
+        <span class="alloc-label">Objetivo</span>
+        <svg class="alloc-bar" aria-hidden="true">
+          <Bar segments={props.segments} values={target()} title="Objetivo" />
+        </svg>
+      </div>
     </div>
   );
 };

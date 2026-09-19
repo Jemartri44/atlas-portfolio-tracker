@@ -40,13 +40,13 @@ afterEach(() => {
 const DIGITS = /\d/;
 
 describe("the axis of a chart is an amount", () => {
-  it("shows the mask instead of the figure when privacy is on", () => {
+  it("shows no figure at all when privacy is on", () => {
     expect(axisAmount(12_345, false)).toBe("12 k");
-    expect(axisAmount(12_345, true)).toBe(MASK);
+    expect(axisAmount(12_345, true)).toBe("");
     expect(axisAmount(2_500_000, false)).toBe("2,5 M");
-    expect(axisAmount(2_500_000, true)).toBe(MASK);
+    expect(axisAmount(2_500_000, true)).toBe("");
     expect(axisAmount(750, false)).toBe("750");
-    expect(axisAmount(750, true)).toBe(MASK);
+    expect(axisAmount(750, true)).toBe("");
   });
 
   it("gives nothing for a value that is not a number", () => {
@@ -151,7 +151,7 @@ describe("the legend of a chart", () => {
     expect(host.textContent).toContain("Cubo");
     expect(host.querySelectorAll(".entry.is-dashed")).toHaveLength(1);
     expect(host.querySelectorAll(".entry.is-solid")).toHaveLength(1);
-    expect(host.querySelector(".swatch.is-core")).not.toBeNull();
+    expect(host.querySelector(".key.is-core")).not.toBeNull();
   });
 
   it("is a list, so a screen reader announces how many series there are", () => {

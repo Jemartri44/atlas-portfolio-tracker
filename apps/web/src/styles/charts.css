@@ -1,0 +1,136 @@
+/*
+ * Charts (docs/design/system.md §5.15): the lines of uPlot and their frame,
+ * the legend of line keys, the note that explains a hole, and the two
+ * allocation bars. Series colours come from the validated data palette of
+ * `tokens.css`; the text around them is always ink, never the series colour.
+ */
+
+.chart {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.chart-plot {
+  height: var(--chart-h);
+  min-width: 0;
+  position: relative;
+}
+
+/* The keys and their names, in one wrapping line under the plot. */
+.chart-legend {
+  color: var(--c-text-2);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-1) var(--space-4);
+}
+
+.chart-legend > .entry {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+/* A key is a short piece of the line: colour and dash, as drawn. */
+.key {
+  display: inline-block;
+  flex: none;
+  height: 0.75rem;
+  width: 1.25rem;
+}
+
+.key > line {
+  stroke-linecap: round;
+  stroke-width: 2.5;
+}
+
+.key.is-core > line {
+  stroke: var(--c-series-core);
+}
+
+.key.is-bucket > line {
+  stroke: var(--c-series-bucket);
+}
+
+.key.is-cash > line {
+  stroke: var(--c-series-cash);
+}
+
+.key.is-index > line {
+  stroke: var(--c-series-index);
+}
+
+/* What a hole is, said once, with the swatch of the band it draws. */
+.gap-note {
+  align-items: flex-start;
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.swatch-gap {
+  background-color: var(--c-chart-gap);
+  border: var(--border) dashed var(--c-chart-gap-edge);
+  border-radius: var(--radius-sm);
+  flex: none;
+  height: 0.875rem;
+  margin-top: var(--space-0);
+  width: 0.875rem;
+}
+
+/* ---- Allocation: actual against target on the same scale ---------------- */
+
+.alloc {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.alloc-row {
+  align-items: center;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: var(--label-col) minmax(0, 1fr);
+}
+
+.alloc-label {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+}
+
+.alloc-bar {
+  border-radius: var(--radius-sm);
+  height: var(--bar-h);
+  overflow: hidden;
+  width: 100%;
+}
+
+/* Segments are cut apart by the colour of the surface, never by a border. */
+.alloc-seg {
+  stroke: var(--c-surface);
+  stroke-width: 3;
+}
+
+.alloc-seg.is-equity {
+  fill: var(--c-class-equity);
+}
+
+.alloc-seg.is-fixed_income {
+  fill: var(--c-class-fixed-income);
+}
+
+.alloc-seg.is-gold {
+  fill: var(--c-class-gold);
+}
+
+.alloc-seg.is-crypto {
+  fill: var(--c-class-crypto);
+}
+
+.alloc-seg.is-empty {
+  fill: var(--c-fill);
+  stroke: none;
+}

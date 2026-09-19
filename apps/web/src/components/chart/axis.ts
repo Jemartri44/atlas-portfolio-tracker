@@ -12,7 +12,6 @@
 // figure on it. If that leaves the chart lame in public, it stays lame: that is
 // exactly what the privacy mode promises.
 
-import { MASK } from "../../format/money.js";
 import { formatDecimalString } from "../../format/number.js";
 
 /**
@@ -32,15 +31,17 @@ const compact = (value: number): string => {
 };
 
 /**
- * A euro figure for an axis or a tooltip. With privacy on it is the mask, with
- * no exception and no "it is only an axis": twelve units of a fund with a public
- * price give the amount away just as well as the amount.
+ * A euro figure for an axis. With privacy on there is **none**, with no
+ * exception and no "it is only an axis": twelve units of a fund with a public
+ * price give the amount away just as well as the amount. Not even the mask:
+ * four dots on every line of the grid would say nothing and add noise, and the
+ * shape of the lines is what stays useful in public.
  */
 export const axisAmount = (value: number | null | undefined, privacy: boolean): string => {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
+  if (privacy || value === null || value === undefined || !Number.isFinite(value)) {
     return "";
   }
-  return privacy ? MASK : compact(value);
+  return compact(value);
 };
 
 /** A date of the X axis: the day is noise on a five-year range, and vital on a month. */

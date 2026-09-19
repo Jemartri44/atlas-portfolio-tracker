@@ -97,7 +97,7 @@ export default function NucleoRoute(): JSX.Element {
                 title="Evolución del patrimonio"
                 labels={["Núcleo", "Cubo", "Efectivo"]}
                 colours={["--c-series-core", "--c-series-bucket", "--c-series-cash"]}
-                dashes={[undefined, [6, 4], [2, 3]]}
+                dashes={[undefined, [6, 4], [1, 5]]}
                 x={series().x}
                 values={series().values}
                 rows={series().rows}
