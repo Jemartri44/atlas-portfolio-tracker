@@ -64,15 +64,17 @@ export default defineConfig(({ command }) => ({
       manifest: {
         name: "Atlas",
         short_name: "Atlas",
-        description: "Gestión de la cartera de inversión: libro mayor, lotes FIFO y Renta.",
+        description: "Gestión de la cartera de inversión: movimientos, lotes FIFO y Renta.",
         lang: "es",
         dir: "ltr",
         start_url: "/",
         scope: "/",
         display: "standalone",
         orientation: "portrait-primary",
-        background_color: "#0b1220",
-        theme_color: "#0b1220",
+        // The paper of the page for the splash, the top bar for the system bar:
+        // the light theme, the one a manifest can name (tokens.css).
+        background_color: "#f3f2ee",
+        theme_color: "#ffffff",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" },
