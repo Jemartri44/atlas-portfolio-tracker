@@ -29,8 +29,9 @@ const Change = (props: { row: ChangeRow; empty: string }): JSX.Element => (
   <li class="change">
     <span class="change-name">
       {props.row.label}
+      {/* «nuevo» and «cerrado» are two states of the same row: one look for both. */}
       <Show when={props.row.isNew}>
-        <Tag tone="done">nuevo</Tag>
+        <Tag>nuevo</Tag>
       </Show>
       <Show when={props.row.closed}>
         <Tag>cerrado</Tag>

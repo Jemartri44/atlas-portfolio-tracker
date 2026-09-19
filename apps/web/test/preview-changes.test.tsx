@@ -107,6 +107,9 @@ describe("what changes, on the preview of a purchase", () => {
       );
     // The new lot is the first row of the lots, and it says it is new.
     expect(text(section("Lotes fiscales")?.querySelector(".change"))).toContain("nuevo");
+    // «nuevo» and «cerrado» look alike: the same tag, the same tone.
+    const tag = section("Lotes fiscales")?.querySelector(".change .tag");
+    expect(tag?.className).toBe("tag");
     // The cash of the account the purchase is paid from, before and after, masked.
     const cash = section("Efectivo");
     expect(text(cash?.querySelector(".change-name"))).toContain("Fondos indexados · EUR");
