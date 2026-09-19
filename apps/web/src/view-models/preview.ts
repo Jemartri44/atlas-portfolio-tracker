@@ -9,7 +9,7 @@
 
 import type { EventPreview, FiscalLot, Money, PhysicalPosition, Quantity } from "@atlas/domain";
 import { formatDate } from "../format/date.js";
-import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
+import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../format/names.js";
 
 export interface ChangeRow {
   key: string;
@@ -21,6 +21,8 @@ export interface ChangeRow {
   isNew: boolean;
   /** A lot the event closes. */
   closed: boolean;
+  /** What the quantities count: "part.", "acc.", "uds.", kept beside the mask. */
+  units: string;
 }
 
 /** The cash of one account in one currency, before and after: amounts, so the mask covers them. */
@@ -69,6 +71,7 @@ export const previewChanges = (
       after: after?.quantity,
       isNew: before === undefined,
       closed: false,
+      units: unitsOf(names, row.asset_id),
     });
   }
 
@@ -84,6 +87,7 @@ export const previewChanges = (
       after: after?.quantity,
       isNew: before === undefined,
       closed: after?.closed === true && before?.closed !== true,
+      units: unitsOf(names, lot.asset_id),
     });
   }
 

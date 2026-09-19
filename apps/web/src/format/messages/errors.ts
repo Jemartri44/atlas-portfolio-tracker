@@ -102,9 +102,9 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `Proporción no válida: ${num(d.value)}. Escribe un número positivo (1,5) o una fracción de títulos nuevos entre antiguos (4/3).`,
   // --- Operations --------------------------------------------------------
   insufficient_position: (d, n, f) =>
-    `La cuenta ${n.one(d.account_id)} no tiene suficiente ${n.one(d.asset_id)} en esa fecha (disponible: ${f.quantity(d.available)}).`,
+    `La cuenta ${n.one(d.account_id)} no tiene suficiente ${n.one(d.asset_id)} en esa fecha (disponibles: ${f.quantity(d.available)} títulos).`,
   insufficient_lots: (d, n, f) =>
-    `Los lotes abiertos de ${n.one(d.asset_id)} no cubren la cantidad (abiertos: ${f.quantity(d.open ?? d.missing)}).`,
+    `Los lotes abiertos de ${n.one(d.asset_id)} no cubren la cantidad (abiertos: ${f.quantity(d.open ?? d.missing)} títulos).`,
   missing_basis: () =>
     "Falta la base de la operación: indica el importe liquidado o el precio unitario.",
   not_transferable: (d, n) =>
@@ -124,7 +124,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   invalid_amount: (d, _n, f) =>
     `El importe debe ser mayor que cero (recibido: ${f.money(d.value)}).`,
   invalid_quantity: (d, _n, f) =>
-    `La cantidad debe ser mayor que cero (recibido: ${f.quantity(d.value)}).`,
+    `La cantidad debe ser mayor que cero (recibido: ${f.quantity(d.value)} títulos).`,
   // --- Views that need prices or settings --------------------------------
   missing_manual_prices: (d, n) =>
     `Faltan precios a ${day(d.date)}: ${n.many(d.assets)}. Regístralos con una valoración.`,

@@ -328,6 +328,18 @@ describe("the catalogue of names", () => {
     expect(describeWarning(warning, { privacy: false })).toContain("ast_world");
   });
 
+  it("keeps the unit beside a masked quantity inside a sentence", () => {
+    const warning: Warning = {
+      code: "thesis_closed_with_position",
+      event_id: "01ARYZ6S41TSV4RRFFQ6900001",
+      message: "english",
+      details: { thesis_id: "th_x", account_id: "acc_mi", asset_id: "ast_world", position: "12.5" },
+    };
+    expect(describeWarning(warning, { names, privacy: true })).toContain(
+      "•••• títulos de World Index Fund",
+    );
+  });
+
   it("writes a tax year as a year, never with the dot of a thousand", () => {
     const warning: Warning = {
       code: "wash_sale_window_repurchase",

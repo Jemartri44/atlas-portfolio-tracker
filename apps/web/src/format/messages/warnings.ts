@@ -109,7 +109,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   thesis_size_exceeded: (d, n, f) =>
     `La tesis ${n.thesis(d.thesis_id)} lleva ${f.money(d.invested_eur)} invertidos, por encima de los ${f.money(d.planned_size_eur)} previstos.`,
   thesis_closed_with_position: (d, n, f) =>
-    `La tesis ${n.thesis(d.thesis_id)} está cerrada, pero ${n.one(d.account_id)} sigue teniendo ${n.one(d.asset_id)} (${f.quantity(d.position)}).`,
+    `La tesis ${n.thesis(d.thesis_id)} está cerrada, pero ${n.one(d.account_id)} sigue teniendo ${f.quantity(d.position)} títulos de ${n.one(d.asset_id)}.`,
   // --- Wash-sale window --------------------------------------------------
   wash_sale_window_repurchase: (d, n, f) =>
     `Compra del ${day(d.buy_date)} de ${f.quantity(d.buy_quantity)} títulos de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): puede hacer que esa pérdida no sea computable en ${year(d.tax_year)}.`,

@@ -40,13 +40,13 @@ const Change = (props: { row: ChangeRow; empty: string }): JSX.Element => (
         when={props.row.before !== undefined}
         fallback={<span class="meta">{props.empty}</span>}
       >
-        <Amount quantity={props.row.before} class="meta" />
+        <Amount quantity={props.row.before} of={props.row.units} class="meta" />
       </Show>
       <span class="arrow" aria-hidden="true">
         →
       </span>
       <Show when={props.row.after !== undefined} fallback={<span>{props.empty}</span>}>
-        <Amount quantity={props.row.after} />
+        <Amount quantity={props.row.after} of={props.row.units} />
       </Show>
     </span>
   </li>
