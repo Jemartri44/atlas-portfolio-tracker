@@ -1,17 +1,11 @@
 // The generic form: it paints an `EventFormSpec` and walks the flow the CLI
 // wizards use — fill in, **see the effect**, confirm, write (FR-043, FR-044).
 //
-// It validates two things on its own: that the required fields are filled, and
-// that a number can be read (`inputErrors`: "1.5" is refused as ambiguous, with
-// a sentence). Everything else is the domain's: the shape is checked by
-// `validateShape` and the invariants by the projection, both inside
-// `previewEvent`. A refusal about one field is written **under that field**; the
-// rest, next to the button (`FormActions`).
-//
-// On a phone the effect replaces the form, with a way back. From 1024px it
-// appears beside the form, which stays in sight (docs/design/system.md §7.4);
-// touching the form again takes the effect away, because it would no longer be
-// the effect of what is written there.
+// It checks only that the required fields are filled and that a number can be
+// read (`inputErrors`); the rest is the domain's, inside the preview. A refusal
+// about one field goes under it; the rest, next to the button (`FormActions`).
+// On a phone the effect replaces the form, with a way back; from 1024px it sits
+// beside it, and touching the form takes it away (docs/design/system.md §7.4).
 
 import type { EventPreview, LedgerEvent, LedgerState } from "@atlas/domain";
 import { useNavigate } from "@solidjs/router";
@@ -22,7 +16,7 @@ import { countOf } from "../../format/number.js";
 import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
 import { today } from "../../ledger/state.js";
-import { correct, previewDraft, recordDraft } from "../../ledger/write.js";
+import { correct, previewCorrectionDraft, previewDraft, recordDraft } from "../../ledger/write.js";
 import { GRID, mediaQuery } from "../../shell/media.js";
 import type { EventFormSpec, FormValues } from "../../view-models/forms/index.js";
 import {
@@ -115,7 +109,15 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     }
     setFieldErrors({});
     try {
-      setPreview(await previewDraft(toDraft(props.spec, values())));
+      // A correction is previewed as it will be written: the original reversed
+      // and the corrected event in its place, never the two added together.
+      const draft = toDraft(props.spec, values());
+      const correcting = props.correcting;
+      setPreview(
+        await (correcting === undefined
+          ? previewDraft(draft)
+          : previewCorrectionDraft(correcting.id, draft, reason().trim())),
+      );
       setStep("preview");
       if (!wide()) {
         window.scrollTo?.({ top: 0 });

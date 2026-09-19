@@ -23,6 +23,7 @@ import {
   DuplicateFingerprintError,
   type EventPreview,
   type PreviewOptions,
+  previewCorrection,
   previewEvent,
   type RecordOptions,
   type RecordResult,
@@ -106,6 +107,16 @@ export const previewDraft = async <E extends SupportedEvent>(
   draft: Draft<E>,
   options: PreviewOptions = {},
 ): Promise<EventPreview<E>> => previewEvent(requireDeps(), draft, options);
+
+/**
+ * The preview of a correction: the original reversed and the corrected event
+ * in its place, the pair `correct` writes (`previewCorrection`, in the domain).
+ */
+export const previewCorrectionDraft = async <E extends SupportedEvent>(
+  id: string,
+  draft: Draft<E>,
+  reason: string,
+): Promise<EventPreview<E>> => previewCorrection(requireDeps(), id, draft, reason);
 
 export const recordDraft = async <E extends SupportedEvent>(
   draft: Draft<E>,
