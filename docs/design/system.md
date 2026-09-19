@@ -238,7 +238,7 @@ Tres o cuatro cifras que van juntas: etiqueta a 13 px sobre la cifra a 18 px en 
 
 - **Evolución** (uPlot): líneas de 2 px con `spanGaps: false`; cada serie se distingue por **color y trazo**. Con la privacidad activa, el eje vertical no lleva cifras. **El hueco se dibuja**: una banda en `--c-chart-gap` con bordes discontinuos, pintada por un *hook* de dibujo. Debajo, una línea que lo explica y la tabla equivalente plegada. Un punto aislado se dibuja como marca.
 - **Reparto frente al objetivo**: dos barras apiladas de 12 px (actual y objetivo) sobre la misma escala, con cortes de 3 px y extremos redondeados; las filas de debajo llevan la muestra de cada tipo.
-- **Desviación frente al umbral** (D7): un indicador de 72×12 con la banda ±umbral, la marca del objetivo y un punto que se vuelve color de aviso fuera del umbral. Solo en la tabla de escritorio.
+- **Desviación frente al umbral** (D7): un indicador de 72×12 con la banda ±umbral, la marca del objetivo y un punto que se vuelve color de aviso fuera del umbral. Solo en la tabla de escritorio **activo por activo**: la regla del umbral es por activo, y el punto se colorea con el aviso que emite el dominio, nunca comparando cifras en la interfaz (decisión (c)).
 
 ### 5.16 Esqueleto de carga (`.skel`)
 
@@ -289,8 +289,8 @@ Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, 
 ### 7.4 Registrar y vista previa
 
 - **Elegir tipo**: «Del día a día» en un mosaico de baldosas a un toque, dos columnas en el móvil y cuatro en escritorio; debajo, los grupos restantes plegados. **Las listas de compra no ofrecen activos dados de baja** (valorarlos sí se puede).
-- **Formulario**: arriba solo lo necesario; lo secundario en «Más datos». Tiene un ancho máximo legible, y en escritorio lleva la vista previa en vivo al lado.
-- **Vista previa**: solo lo que cambia (el lote nuevo, el efectivo antes y después) y una línea con los lotes sin cambios.
+- **Formulario**: arriba solo lo necesario; lo secundario (referencia del bróker, origen del dato y notas) en «Más datos». Tiene un ancho máximo legible. En escritorio, el efecto aparece **al lado** del formulario al pulsar «Ver el efecto», y el formulario sigue a la vista; tocarlo retira el efecto, que ya no sería el de lo escrito. En el móvil el efecto sustituye al formulario, con «Volver a los datos».
+- **Vista previa**: solo lo que cambia (las posiciones y los lotes que se mueven, el nuevo primero) y una línea con lo que no cambia. El efectivo antes y después no aparece: la vista previa del dominio (`previewEvent`) no lo da, y calcularlo en la interfaz sería la segunda casa de una regla.
 
 ### 7.5 Cartera
 
@@ -300,7 +300,7 @@ Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, 
 
 ### 7.6 Cubo
 
-*Frente al índice* abre con la cifra protagonista, que es un porcentaje y se ve con la privacidad activa; debajo, la gráfica del cubo frente al índice y la tira de estadísticas. Después, *Posiciones abiertas* en filas, con la ganancia con signo. Luego, *Presupuesto y control*: el consumo del tope y el peso del cubo sobre el patrimonio, marcado como la única vista que junta cubo y cartera. Cierran los costes y los avisos. **Vacío: un único estado vacío.**
+*Frente al índice* abre con la cifra protagonista: el resultado del cubo frente al mismo dinero en el índice. El dominio lo da como **importe**, así que la privacidad lo enmascara; no se fabrica un porcentaje en la interfaz para tener uno que enseñar. Debajo, la tira de estadísticas (comisiones sobre capital, tasa de acierto, tesis cerradas), la gráfica del cubo frente al índice y el resto de las estadísticas plegado. Después, *Posiciones abiertas* en filas, con la ganancia con signo. Luego, *Presupuesto y control*: el consumo del tope y el peso del cubo sobre el patrimonio, marcado como la única vista que junta cubo y cartera. Cierran los costes y los avisos. **Vacío: un único estado vacío.**
 
 ### 7.7 Ajustes y Configuración
 
@@ -337,11 +337,18 @@ Aprobadas por la dirección el 2026-09-19.
 |---|---|
 | Variables | `apps/web/src/styles/tokens.css` |
 | Base y elementos (sustituye a Pico) | `styles/base.css` |
-| Controles: botones, campos, desplegable, rango, etiquetas | `styles/controls.css` |
+| Controles: botones, campos, desplegable, rango, etiquetas, diálogo | `styles/controls.css` |
+| Tarjetas, pie de tarjeta, líneas de panel y de total | `styles/cards.css` |
+| Filas en dos líneas y tablas | `styles/lists.css` |
+| Avisos, pendiente, vacío, esqueleto | `styles/feedback.css` |
+| Gráficas, leyenda, hueco, reparto | `styles/charts.css` |
+| Resumen: cifra protagonista, proporción y partes | `styles/summary.css` |
+| Primeros pasos | `styles/steps.css` |
+| Cartera: tipos de activo, indicador de desviación, tira de cifras, costes | `styles/portfolio.css` |
+| Movimientos: filtros, días, detalle | `styles/movements.css` |
+| Registrar: baldosas, formulario, barra de acciones, efecto | `styles/registrar.css` |
+| Cubo: tesis de una posición, la vista que junta los dos libros | `styles/bucket.css` |
+| Ajustes, grupos plegables y primer arranque | `styles/settings.css` |
 | Armazón: cabecera, navegación, página y rejilla | `styles/layout.css` |
-| Tarjetas, cifra protagonista, filas, tablas, cifras | `styles/cards.css` |
-| Avisos, pendiente, vacío, pasos, esqueleto, banda | `styles/feedback.css` |
-| Gráficas, reparto, indicador de desviación | `styles/charts.css` |
-| Composición de las pantallas | `styles/screens.css` |
 
 Cada hoja tiene menos de 250 líneas o explica en su cabecera por qué no. Se conservan `Amount` como única puerta de la privacidad, la doble presentación de `DataTable`, uPlot, el `<dialog>` nativo y la ausencia de estilos en línea (CSP).
