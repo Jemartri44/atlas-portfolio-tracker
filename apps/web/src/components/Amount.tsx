@@ -63,6 +63,12 @@ interface QuantityProps extends CommonProps {
   decimals?: number | undefined;
   /** What the units are, when it is known: "part.", "acc.", "uds.". */
   of?: string | undefined;
+  /**
+   * The unit when the quantity is exactly one: «1 participación», never «1
+   * participaciones». Only when the figure shows: under the mask the plural
+   * stays, or the unit would say how much it hides.
+   */
+  one?: string | undefined;
 }
 
 export type AmountProps = MoneyProps | QuantityProps;
@@ -97,7 +103,9 @@ export const Amount = (props: AmountProps): JSX.Element => {
   /** The unit written after the figure, which the mask keeps. */
   const unit = (): string | undefined => {
     if (isQuantity(props)) {
-      return props.of;
+      const shown = !privacy() || props.revealed === true;
+      const exactlyOne = /^1(\.0*)?$/.test(props.quantity?.toString() ?? "");
+      return shown && exactlyOne && props.one !== undefined ? props.one : props.of;
     }
     return props.value === undefined ? undefined : currencyUnit(props.value.currency);
   };

@@ -43,6 +43,11 @@ export interface Figures {
   money: (value: unknown) => string;
   /** A quantity of units: up to eight decimals, trailing zeros trimmed, or the mask. */
   quantity: (value: unknown) => string;
+  /**
+   * A quantity of securities with its word: «3 títulos», «1 título», and under
+   * the mask always «•••• títulos», or the singular would say what it hides.
+   */
+  titles: (value: unknown) => string;
   /** A message of the domain quoted inside ours: see `maskFigures`. */
   evidence: (value: unknown) => string;
 }
@@ -86,6 +91,12 @@ export const figuresOf = (privacy: boolean): Figures => ({
       return raw;
     }
     return privacy ? MASK : formatQuantityString(raw);
+  },
+  titles: (value) => {
+    const raw = asText(value);
+    const shown = privacy || !DECIMAL.test(raw) ? raw : formatQuantityString(raw);
+    const one = !privacy && /^\+?1(\.0*)?$/.test(raw);
+    return `${privacy && DECIMAL.test(raw) ? MASK : shown} ${one ? "título" : "títulos"}`;
   },
   evidence: (value) => maskFigures(asText(value), privacy),
 });

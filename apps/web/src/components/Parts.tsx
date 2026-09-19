@@ -35,6 +35,7 @@ export const Parts = (props: {
               <Amount
                 quantity={figure().quantity}
                 of={figure().of}
+                one={figure().one}
                 revealed={shown(figure().field)}
               />
             )}

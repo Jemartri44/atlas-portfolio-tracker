@@ -21,11 +21,11 @@ import { eventLabel, valueLabel } from "../format/labels.js";
 import { displayName, displayThesis, type NameIndex, unitsOf } from "../format/names.js";
 import type { Part, Sentence } from "./structured.js";
 
-/** The units, said in full inside a sentence. */
-const IN_FULL: Readonly<Record<string, string>> = {
-  "part.": "participaciones",
-  "acc.": "acciones",
-  "uds.": "unidades",
+/** The units, said in full inside a sentence; the second one for exactly one. */
+const IN_FULL: Readonly<Record<string, readonly [string, string]>> = {
+  "part.": ["participaciones", "participación"],
+  "acc.": ["acciones", "acción"],
+  "uds.": ["unidades", "unidad"],
 };
 
 const text = (value: string): Part => ({ text: value });
@@ -40,7 +40,8 @@ const quantity = (value: unknown, units: string, field?: string): Part | undefin
   typeof value === "string"
     ? {
         quantity: Quantity.parse(value),
-        of: IN_FULL[units] ?? units,
+        of: IN_FULL[units]?.[0] ?? units,
+        one: IN_FULL[units]?.[1] ?? units,
         ...(field === undefined ? {} : { field }),
       }
     : undefined;

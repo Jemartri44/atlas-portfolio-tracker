@@ -19,7 +19,7 @@ import { formatExact, NBSP } from "../format/number.js";
 export type Part =
   | { text: string }
   | { amount: Money; decimals?: number; field?: string }
-  | { quantity: Quantity; of?: string; field?: string };
+  | { quantity: Quantity; of?: string; one?: string; field?: string };
 
 export type Sentence = Part[];
 

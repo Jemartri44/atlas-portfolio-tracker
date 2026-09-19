@@ -638,7 +638,8 @@ describe("architecture: apps/web", () => {
               (SENSITIVE_DETAIL.test(read[1] as string) && NOT_A_FIGURE[where] === undefined) ||
               A_FIGURE_ANYWAY.has(where);
             const call = wrappingCall(printed, read.index as number);
-            const wrapped = call === "f.money" || call === "f.quantity";
+            // `f.titles` is `f.quantity` with its word, «título» or «títulos».
+            const wrapped = call === "f.money" || call === "f.quantity" || call === "f.titles";
             if (sensitive) {
               checked += 1;
               if (!wrapped) {
