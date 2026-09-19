@@ -11,6 +11,13 @@
   margin: 0;
 }
 
+/* The range right over the chart it changes, when a figure leads the card. */
+.chart-range {
+  display: flex;
+  justify-content: flex-end;
+  margin-block: var(--space-3) var(--space-2);
+}
+
 .chart-plot {
   height: var(--chart-h);
   min-width: 0;

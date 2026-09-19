@@ -52,15 +52,23 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
     }));
 
   const shown = (): number[] => indices().map((at) => props.x[at] as number);
+  const buttons = (): JSX.Element => (
+    <RangeButtons options={options()} current={range()} onChange={setRange} />
+  );
 
+  // With a lead figure between the title and the chart, the range goes with the
+  // chart it changes, not above the figure it does not (review of 2026-09-19).
   return (
     <Section
       title={props.title}
       class={`is-chart ${props.class ?? ""}`.trimEnd()}
-      aside={<RangeButtons options={options()} current={range()} onChange={setRange} />}
+      aside={props.lead === undefined ? buttons() : undefined}
     >
       {props.lead}
       <Show when={props.x.length > 0} fallback={props.empty}>
+        <Show when={props.lead !== undefined}>
+          <div class="chart-range">{buttons()}</div>
+        </Show>
         <figure class="chart">
           <Chart x={shown()} series={series()} label={props.title} />
           <figcaption>
