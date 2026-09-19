@@ -82,6 +82,8 @@ Contraste medido con la fórmula WCAG sobre la superficie en la que se usa cada 
 
 **El color nunca va solo**: ganancia y pérdida llevan signo; los avisos, un icono con forma distinta por gravedad; «parcial», «anulado» y «fuera de umbral» son palabras; la pestaña actual lleva peso y un indicador.
 
+Fuera de la hoja de estilos, la aplicación instalada pinta con la misma paleta: el manifiesto lleva `background_color` `#f3f2ee` (el papel) y `theme_color` `#ffffff` (la barra), y `index.html` declara un `theme-color` por tema (`#ffffff` en claro, `#1f1f1d` en oscuro), para que ni el arranque ni la barra del sistema salgan del azul marino anterior.
+
 ### 3.2 Color: datos
 
 Validados como conjunto (banda de luminosidad, croma mínimo, separación ΔE ≥ 8 para daltonismo, ΔE ≥ 15 en visión normal, ≥ 3:1 sobre la superficie). Todos los controles pasan en los dos modos. El orden es el del dominio y es fijo.
@@ -149,7 +151,7 @@ El armazón y la rejilla tienen puntos de corte distintos a propósito: responde
 
 ### 4.2 El armazón: una sola navegación
 
-Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orden de tabulación sigue el visual: en escritorio, Resumen, Movimientos, Cartera, Cubo y Registrar; en la barra inferior, Registrar va en el centro también en el DOM de su lista. **Nunca hay dos destinos marcados como actuales**: Ajustes no es un destino de la barra y no se marca en ella.
+Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orden de tabulación sigue el visual: en escritorio, Resumen, Movimientos, Cartera, Cubo y Registrar; en la barra inferior, Registrar va en el centro también en el DOM de su lista. **Nunca hay dos destinos marcados como actuales**: Ajustes no es un destino de la barra y no se marca en ella. Una subpágina (el detalle de un movimiento, su corrección, un formulario de Registrar) marca su sección con `aria-current="page"`, y las páginas de Ajustes marcan su botón.
 
 - **Móvil y tableta** (< 1200): el `<header>` es una barra de estado de 52 px pegada arriba, con el origen de los datos a la izquierda y la privacidad y Ajustes a la derecha. El `<nav>` se fija abajo (64 px más la zona segura) como barra de cinco huecos, con **Registrar en el centro**. Cada destino es un icono de 24 px con su etiqueta a 13 px; el actual lleva un indicador en píldora de acento suave y la etiqueta en seminegrita. Registrar es una placa llena del acento con el «+». Por debajo de 380 px se retira el icono decorativo del origen y se estrecha la placa: ninguna palabra desaparece.
 - **Escritorio** (≥ 1200): una sola barra de 64 px con la marca, los cuatro destinos **agrupados en un carril** (la pestaña actual en relieve), **Registrar** como botón principal a continuación del grupo y, a la derecha, el origen de los datos, la privacidad y Ajustes.
@@ -160,7 +162,9 @@ Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orde
 
 ### 4.3 La rejilla
 
-Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de una misma fila se estiran a la misma altura, y lo que cierra una tarjeta (sus desplegables o el enlace «Ver todos») se ancla abajo. En el móvil todo es una columna en el orden del DOM, que es el orden de lectura. **Los formularios nunca pasan de su ancho de lectura** (`--reading-max`), por ancho que sea la pantalla.
+Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de una misma fila se estiran a la misma altura, y lo que cierra una tarjeta (sus desplegables o el enlace «Ver todos») se ancla abajo. La excepción es una tarjeta cuya vecina es mucho más alta (`.is-natural`, *Pesos* y *Aportación* en la Cartera): conserva su altura, porque estirada dejaba un campo en blanco en mitad de la corta.
+
+**Lo que se maqueta por el sitio que tiene, no por el ancho de la pantalla.** A 1024 px una tarjeta de 7 columnas mide menos que un móvil apaisado, y una tabla decidida por la ventana se salía de ella. Por eso la tarjeta es un contenedor (`container: card / inline-size`) y la tabla o sus filas, los datos en dos columnas del detalle y la rejilla de *Costes* se deciden con consultas de contenedor. Cada tabla declara cuánto necesita (`DataTable size`: `sm` desde 30 rem, por defecto desde 44 rem, `lg` desde 49 rem), medido sobre su anchura mínima de contenido. En el móvil todo es una columna en el orden del DOM, que es el orden de lectura. **Los formularios nunca pasan de su ancho de lectura** (`--reading-max`), por ancho que sea la pantalla.
 
 ---
 
@@ -182,19 +186,19 @@ Rejilla `[icono] [principal] [cifras]`. En la línea principal van el sujeto a 1
 
 ### 5.4 Tabla (`.table`)
 
-Solo en ≥ 1024 (`.only-wide`), con las mismas filas en `.row` para el móvil (`.only-narrow`). Cabecera a 13 px en `--c-text-3`, celdas de 48 px, separadores de 1 px, sin cebra, cifras tabulares a la derecha con los mismos decimales en cada columna, total en `tfoot`.
+Cuando **la tarjeta** tiene sitio para ella (`.only-wide`, por consulta de contenedor), y si no, las mismas filas en `.row` (`.only-narrow`). Cabecera a 13 px en `--c-text-3`, celdas de 48 px, separadores de 1 px, sin cebra, cifras tabulares a la derecha con los mismos decimales en cada columna, total en `tfoot`.
 
 ### 5.5 Etiqueta de estado (`.tag`)
 
-Píldora de 24 px, texto a 13 px y un icono de 14 px. Variantes: **neutra** («◐ parcial», «⊘ anulado», «corrige a otro»), **acento** («Propuesta»), **aviso** («⚠ fuera de umbral»), **peligro** («inválido») y **hecho**. «Parcial» es neutra a propósito.
+Píldora de 24 px, texto a 13 px y un icono de 14 px. Variantes: **neutra** («◐ parcial», «⊘ anulado», «corrige a otro»), **acento** («Propuesta»), **aviso** («⚠ fuera de umbral»), **peligro** («inválido») y **hecho**. «Parcial» es neutra a propósito. Junto a un título va en la misma línea (`.choice-head`), nunca sangrada debajo.
 
 ### 5.6 Aviso: un único componente (`.notice`)
 
-Igual en el Resumen, el Cubo, la Cartera, la Verificación y en cualquier otro sitio. Icono de 20 px con **forma distinta por gravedad**: triángulo (aviso), octógono (crítico) o círculo con «i» (información). El texto va a tamaño de cuerpo, con la cifra clave de un grupo en seminegrita, y la acción en acento con flecha: debajo del texto en el móvil y a la derecha en escritorio. El aviso entero es el enlace. **Solo el crítico lleva fondo.** En lista se separan con líneas, no con cajas. Se enseñan **4 grupos** y el resto va en «Ver N avisos más». La agrupación y el orden (el riesgo de perder datos, primero) los decide `view-models/attention.ts`.
+Igual en el Resumen, el Cubo, la Cartera, la Verificación y en cualquier otro sitio. Icono de 20 px con **forma distinta por gravedad**: triángulo (aviso), octógono (crítico) o círculo con «i» (información). El texto va a tamaño de cuerpo, con la cifra clave de un grupo en seminegrita, y la acción en acento con flecha: debajo del texto en el móvil y a la derecha en escritorio. El aviso entero es el enlace. **Solo el crítico lleva fondo.** En lista se separan con líneas, no con cajas. Se enseñan **4 grupos** y el resto va en «Ver N avisos más». La agrupación y el orden (el riesgo de perder datos, primero) los decide `view-models/attention.ts`. Los precios caducados, los tipos de cambio caducados y las desviaciones van **en un solo aviso cada uno**, con los activos nombrados («3 precios con más de 15 días · A, B y C»). Un aviso que una tarjeta ya dice en su sitio no se repite en una lista: en el Cubo, cada aviso que queda va en la tarjeta de la que trata.
 
 ### 5.7 «No se puede calcular todavía» (`.pending`)
 
-Nunca con tono de error. Es un pozo en `--c-fill` con un reloj, **una frase** y **una acción** discreta. Va en el sitio del dato, y la tarjeta sigue enseñando lo que sí se sabe.
+Nunca con tono de error. Es un pozo en `--c-fill` con un reloj, **una frase** y **una acción** discreta. Va en el sitio del dato, y la tarjeta sigue enseñando lo que sí se sabe. **Sustituye** a una cifra protagonista que sería «sin dato» (el porcentaje del Cubo) y a una barra que estaría vacía (la «Actual» de la Cartera con el total parcial): un hueco del tamaño de una cifra no explica nada.
 
 ### 5.8 Estado vacío (`.empty`)
 
@@ -206,7 +210,7 @@ De 44 px de alto, radio 8, seminegrita e icono opcional de 16.
 
 | Variante | Aspecto | Uso |
 |---|---|---|
-| principal (`.primary`) | Acento lleno | Una por vista |
+| principal (`.primary`) | Acento lleno | Una por vista: en el primer arranque con carpeta, «Elegir la carpeta», y el del navegador pasa a secundario |
 | secundario (por defecto) | Superficie con contorno `--c-border-control` | Exportar, Corregir |
 | discreto (`.quiet`) | Texto en acento, sin caja | «Ver todos», acciones dentro de bloques |
 | destructivo (`.danger`) | Contorno y texto de `--c-danger` | «Anular movimiento»: **nunca** con aspecto de principal |
@@ -214,9 +218,11 @@ De 44 px de alto, radio 8, seminegrita e icono opcional de 16.
 
 ### 5.10 Campo con error en línea (`.field`)
 
-Etiqueta a 14 px en seminegrita encima; control de 44 px a 16 px con borde `--c-border-control` y radio 8. Con foco, borde de acento y anillo de 1 px. Con error, `aria-invalid`, borde y anillo de peligro, y **debajo** el mensaje con su icono. La pista va debajo en `--c-text-3`. La unidad va dentro del campo, con la cifra alineada a la derecha. El `select` lleva un chevrón SVG superpuesto.
+Etiqueta a 14 px en seminegrita encima; control de 44 px a 16 px con borde `--c-border-control` y radio 8. Con foco, borde de acento y anillo de 1 px. Con error, `aria-invalid`, borde y anillo de peligro, y **debajo** el mensaje con su icono. La pista va debajo en `--c-text-3`. La unidad va dentro del campo, a su derecha, con la cifra alineada contra ella (`.control.has-unit`): la divisa de un importe, lo que cuenta una cantidad («part.», «acc.»), «%» o «pp»; se lee con el campo (`aria-describedby`) y la etiqueta ya no la repite. Un tipo de cambio o una proporción no llevan unidad. El `select` lleva un chevrón SVG superpuesto y corta una opción larga con puntos suspensivos, nunca a media palabra.
 
-**Privacidad en los campos**: lo que el usuario escribe no se oculta; **lo que la aplicación precarga sí**. Un campo de importe o de cantidad que llega relleno (Corregir, Configuración) se muestra enmascarado mientras no tiene el foco, y enseña su valor al recibirlo.
+El contorno de un campo tiene **3:1** sobre el papel y sobre la superficie en los dos temas (`--c-border-control`; lo comprueba `test/contrast.test.ts`).
+
+**Privacidad en los campos**: lo que el usuario escribe no se oculta; **lo que la aplicación precarga sí**. Un campo de importe o de cantidad que llega relleno (Corregir, Configuración) se muestra enmascarado mientras no tiene el foco, y enseña su valor al recibirlo. Un valor por defecto de la aplicación (la comisión a 0) no es un dato del usuario y no se enmascara. Qué ha tecleado el usuario lo guarda **el borrador del formulario**, no el campo: en el móvil el efecto sustituye al formulario y, al volver, lo tecleado sigue a la vista.
 
 ### 5.11 Desplegable (`.disclosure`)
 
@@ -224,7 +230,7 @@ Etiqueta a 14 px en seminegrita encima; control de 44 px a 16 px con borde `--c-
 
 ### 5.12 Selector de rango ligero (`.segmented`)
 
-Botones de texto de 44 px de alto sin caja; el seleccionado lleva una píldora de acento suave (`aria-pressed`). Un rango sin datos queda atenuado, desactivado y con el motivo en `title`.
+Botones de texto de 44 px de alto sin caja; el seleccionado lleva una píldora de acento suave (`aria-pressed`). Un rango sin datos queda atenuado, desactivado y con el motivo en `title`. Va en la cabecera de la tarjeta, salvo cuando una cifra protagonista se interpone: entonces va justo encima de la gráfica que cambia.
 
 ### 5.13 Fecha de consulta (`.asof`)
 
@@ -236,7 +242,7 @@ Tres o cuatro cifras que van juntas: etiqueta a 13 px sobre la cifra a 18 px en 
 
 ### 5.15 Gráficas
 
-- **Evolución** (uPlot): líneas de 2 px con `spanGaps: false`; cada serie se distingue por **color y trazo**. Con la privacidad activa, el eje vertical no lleva cifras. **El hueco se dibuja**: una banda en `--c-chart-gap` con bordes discontinuos, pintada por un *hook* de dibujo. Debajo, una línea que lo explica y la tabla equivalente plegada. Un punto aislado se dibuja como marca.
+- **Evolución** (uPlot): líneas de 2 px con `spanGaps: false`; cada serie se distingue por **color y trazo**. Con la privacidad activa, el eje vertical no lleva cifras. **El hueco se dibuja**: donde a una serie le falta el dato, su línea se corta; donde **no hay ninguna** serie, una banda en `--c-chart-gap` con bordes discontinuos, pintada por un *hook* de dibujo, con «sin precios» solo si cabe entre los bordes. Debajo, **una línea** que lo explica («En 3 de 24 fechas falta algún precio…»), la lista de activos a los que les falta plegada y la tabla equivalente plegada. Un punto aislado se dibuja como marca. En el eje de fechas por meses, el año va entero («feb 2027»): «feb 27» se lee como un día.
 - **Reparto frente al objetivo**: dos barras apiladas de 12 px (actual y objetivo) sobre la misma escala, con cortes de 3 px y extremos redondeados; las filas de debajo llevan la muestra de cada tipo.
 - **Desviación frente al umbral** (D7): un indicador de 72×12 con la banda ±umbral, la marca del objetivo y un punto que se vuelve color de aviso fuera del umbral. Solo en la tabla de escritorio **activo por activo**: la regla del umbral es por activo, y el punto se colorea con el aviso que emite el dominio, nunca comparando cifras en la interfaz (decisión (c)).
 
@@ -261,7 +267,10 @@ Lista numerada con el estado de cada paso: **hecho** (círculo lleno con ✓), *
   - la lista de movimientos → **«Movimientos»**;
   - el sitio donde se guardan los datos → **«tus datos»** o **«el archivo de datos»**;
   - la cartera a la que pertenece una cuenta → **«Cartera principal»** o **«Cubo»**.
-- **Máscara de privacidad**: siempre del mismo ancho (cuatro puntos en una caja fija) más la unidad, que sigue visible: «•••• €», «•••• part.», «•••• USD». Dentro de una frase se enmascara igual.
+- **Máscara de privacidad**: siempre los mismos cuatro puntos, que miden siempre lo mismo, sin caja más ancha que ellos (su holgura desplazaba la máscara de una cifra protagonista), más la unidad, que sigue visible: «•••• €», «•••• part.», «•••• USD». Dentro de una frase se enmascara igual, y con su unidad («sigue teniendo •••• títulos de X»).
+- **Nada de números de regla** ni de vocabulario interno: las reglas vienen del plan personal del usuario y la aplicación no puede depender de que las recuerde. Se dicen en llano, con el umbral configurado: «Regla de parada: dejar de aportar al cubo si la pérdida acumulada pasa del 30 % de lo aportado».
+- **Porcentajes enteros sin decimales** («objetivo 55 %», «suman 100 %»); los que no lo son, con los que digan algo.
+- **La desviación va en tinta neutra**: decir que está fuera del objetivo es cosa del indicador y del aviso, no del color de la cifra.
 - Euros con «€», otras divisas con su código; fechas 18/09/2026 en tablas y avisos, y 18 de septiembre de 2026 en encabezados; ningún identificador interno a la vista.
 - La cifra protagonista del Resumen va **sin céntimos** (D10); las filas y tablas, con dos decimales.
 
@@ -271,7 +280,7 @@ Lista numerada con el estado de cada paso: **hecho** (círculo lleno con ✓), *
 
 ### 7.1 Primer arranque: «¿Dónde guardamos tus datos?»
 
-Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, sin cuenta, sin subir nada a ningún sitio.»). Dos tarjetas de opción, **la disponible primero**: en el móvil, «El almacenamiento del navegador» con su botón principal, el aviso de exportar y «Importar un fichero»; después, «Una carpeta de tu ordenador», atenuada si el navegador no la permite. En escritorio van lado a lado (6+6), centradas con un máximo de 960 px, porque es una elección y no una pantalla de datos. Reconectar es una sola tarjeta con «Reconectar» y «Elegir otra carpeta». Sin navegación (D8).
+Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, sin cuenta, sin subir nada a ningún sitio.»). Con carpeta disponible (Chrome o Edge en el ordenador), dos tarjetas de opción lado a lado (6+6), centradas con un máximo de 960 px, porque es una elección y no una pantalla de datos: «Una carpeta de tu ordenador» con «Recomendado» junto al título y **el único botón principal**, y «El almacenamiento del navegador», con su botón secundario, el aviso de exportar e «Importar un archivo». Sin carpeta (el móvil, Firefox, Safari), una sola tarjeta, la del navegador con su botón principal, y **una línea** debajo que dice dónde se puede usar la carpeta: media pantalla de teléfono para una opción que el teléfono no puede usar era ruido. Reconectar es una sola tarjeta con «Reconectar» y «Elegir otra carpeta». Sin navegación (D8).
 
 ### 7.2 Resumen
 
@@ -283,28 +292,28 @@ Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, 
 ### 7.3 Movimientos y detalle
 
 - **Lista, móvil**: búsqueda a lo ancho y «Filtros · N» plegado, con las etiquetas de los filtros activos. La lista va agrupada por día, en filas `.row`, con la cantidad y su unidad; al final, «Cargar más».
-- **Lista, escritorio**: los filtros siempre visibles en una columna lateral (3) y la tabla (9) (D12).
-- **Detalle**: empieza por **una frase** («Compraste 31,2343 participaciones de Money Market Fund por 3.100,00 € el 03/09/2026 · Fondos indexados»). Después vienen los datos en dos columnas, los movimientos enlazados como filas y el registro técnico plegado. «Corregir» es secundario y «Anular», destructivo.
+- **Lista, escritorio**: desde 1280 px, los filtros siempre visibles en una columna lateral (3) y la tabla (9) (D12); entre 1024 y 1279 la columna no cabe junto a la tabla, y los filtros se pliegan como en el móvil. La valoración lleva su cifra marcada como **precio** («precio 104,20 €»), porque junto a importes que cambiaron de manos se leería como dinero movido. El ingreso y la retirada tienen glifos propios, distintos del de una comisión.
+- **Detalle**: empieza por **una frase** («Compraste 31,2343 participaciones de Money Market Fund por 3.100,00 € el 03/09/2026 · Fondos indexados»). Después vienen los datos en dos columnas, los movimientos enlazados como filas y el registro técnico plegado. Una venta dice **lo que produjo**: importe obtenido, coste de lo vendido y ganancia o pérdida (de `state.gains`, sin calcular nada en la interfaz). El registro técnico guarda los identificadores (`acc_mi`, `ast_world`, el ULID de una orden), el origen del dato y, en una operación toda en euros, la divisa y el tipo 1 con su fecha: nada de eso hace falta para entender el movimiento. Fuera de él, cada cosa se nombra: una orden, por lo que pidió y cuándo. «Corregir» es secundario y «Anular», destructivo.
 
 ### 7.4 Registrar y vista previa
 
 - **Elegir tipo**: «Del día a día» en un mosaico de baldosas a un toque, dos columnas en el móvil y cuatro en escritorio; debajo, los grupos restantes plegados. **Las listas de compra no ofrecen activos dados de baja** (valorarlos sí se puede).
 - **Formulario**: arriba solo lo necesario; lo secundario (referencia del bróker, origen del dato y notas) en «Más datos». Tiene un ancho máximo legible. En escritorio, el efecto aparece **al lado** del formulario al pulsar «Ver el efecto», y el formulario sigue a la vista; tocarlo retira el efecto, que ya no sería el de lo escrito. En el móvil el efecto sustituye al formulario, con «Volver a los datos».
-- **Vista previa**: solo lo que cambia: las posiciones, el **efectivo** de cada cuenta y divisa que se mueve, antes y después (`EventPreview.cash`, del dominio), con «en negativo» si el saldo acaba por debajo de cero, y los lotes que se mueven, el nuevo primero; y una línea con lo que no cambia.
+- **Vista previa**: la encabeza **una frase** con lo que se va a registrar («Vas a registrar la compra de 2,5 participaciones de World Index Fund por 300,00 € el 19/09/2026 · Fondos indexados»), sin enmascarar lo que el usuario acaba de teclear y enmascarando lo que vino de sus datos. Después, solo lo que cambia: las posiciones, el **efectivo** de cada cuenta y divisa que se mueve, antes y después (`EventPreview.cash`, del dominio), con «en negativo» si el saldo acaba por debajo de cero, y los lotes que se mueven, el nuevo primero; y una línea con lo que no cambia.
 
 ### 7.5 Cartera
 
 - **Móvil**: título con la fecha de consulta a su derecha. Primero, *Pesos frente al objetivo*: las barras, una fila por tipo en dos líneas y el total. Al pie de *Pesos* van «Ver activo por activo» y «Simular un traspaso entre fondos» (D6). Después, *Aportación del mes*, con la etiqueta «Propuesta», la tira de cifras, el reparto por activo y la nota de propuesta. Por último, *Costes*, con las comisiones sueltas aparte.
-- **Escritorio**: *Pesos* (7) y *Aportación* (5) a la misma altura; *Costes* a lo ancho, con la tabla (8) y las comisiones sueltas al lado (4).
-- **Parcial**: la barra del objetivo, el bloque *pendiente* en lugar de los pesos y los objetivos por tipo. Nada rojo.
+- **Escritorio**: *Pesos* (7) y *Aportación* (5), cada una a su altura; *Costes* a lo ancho, con la tabla (8) y las comisiones sueltas al lado (4) cuando la tarjeta mide al menos 64 rem, y una debajo de la otra si no.
+- **Parcial**: la barra del objetivo sola (sin la «Actual» vacía), el bloque *pendiente* en lugar de los pesos y los objetivos por tipo. Nada rojo.
 
 ### 7.6 Cubo
 
-*Frente al índice* abre con la cifra protagonista: el resultado del cubo frente al mismo dinero en el índice **en porcentaje sobre lo aportado** (`BucketStats.vs_index_pct`), que se ve con la privacidad activa; el importe va debajo, enmascarado. Si alguna tesis no se puede comparar, el total es parcial y no hay porcentaje: la tarjeta dice por qué. Debajo, la tira de estadísticas (comisiones sobre capital, tasa de acierto, tesis cerradas), la gráfica del cubo frente al índice y el resto de las estadísticas plegado. Después, *Posiciones abiertas* en filas, con la ganancia con signo. Luego, *Presupuesto y control*: el consumo del tope y el peso del cubo sobre el patrimonio, marcado como la única vista que junta cubo y cartera. Cierran los costes y los avisos. **Vacío: un único estado vacío.**
+*Frente al índice* abre con la cifra protagonista: el resultado del cubo frente al mismo dinero en el índice **en porcentaje sobre lo aportado** (`BucketStats.vs_index_pct`), que se ve con la privacidad activa; el importe va debajo, enmascarado. Si alguna tesis no se puede comparar, el total es parcial y no hay porcentaje: en su sitio va un bloque *pendiente* que dice a cuántas tesis les falta el precio del índice, con la acción de registrar valoraciones. Debajo, la tira de estadísticas (comisiones sobre capital, tasa de acierto, tesis cerradas), el selector de rango **pegado a la gráfica**, la gráfica del cubo frente al índice y el resto de las estadísticas plegado. Después, *Posiciones abiertas* en filas, con la ganancia con signo. Luego, *Presupuesto y control*: el consumo del tope, la regla de parada y la de recogida dichas en llano con su umbral, y el peso del cubo sobre el patrimonio, marcado como la única cifra que suma cubo y cartera. Cierran las tesis y los costes. **No hay lista de avisos del cubo**: lo que una tarjeta ya dice no se repite, y lo que queda (un tope superado, una tesis cerrada con posición, el índice sin configurar) va en la tarjeta de la que trata. **Vacío: un único estado vacío.**
 
 ### 7.7 Ajustes y Configuración
 
-*Tus datos* (dónde están, exportar, importar, cambiar de archivo y reconectar), *Privacidad y apariencia* y *Verificación*, que agrupa sus hallazgos igual que Atención. La **Configuración** va en grupos plegables, con los pesos objetivo y su total en vivo. Con la privacidad activa **se enmascaran todos sus importes**, incluidos los tramos de la base del ahorro y los umbrales de los modelos 720 y 721: una sola regla. El índice de referencia del cubo no ofrece activos dados de baja. En escritorio, dos columnas de tarjetas, y los formularios nunca pasan de su ancho de lectura.
+*Tus datos* (dónde están, exportar, importar, cambiar de archivo y reconectar), *Privacidad y apariencia* y *Verificación*, que agrupa sus hallazgos igual que Atención. La **Configuración** va en grupos plegables, con los pesos objetivo y su total en vivo. Se piden pesos **solo de activos vivos** (`view-models/weighted.ts`): no de uno dado de baja ni de uno que una fusión o un cambio de clase convirtió en otro y ya no tiene nada, aunque el catálogo lo siga dando por activo; uno que aún lleve peso sí sale, para que guardar nunca quite un peso sin verlo. La *Verificación* nombra `atlas backup` solo cuando los datos están en una carpeta del ordenador; en el móvil dice que la copia es exportar y guardar el archivo fuera del dispositivo. Con la privacidad activa **se enmascaran todos sus importes**, incluidos los tramos de la base del ahorro y los umbrales de los modelos 720 y 721: una sola regla. El índice de referencia del cubo no ofrece activos dados de baja. En escritorio, dos columnas de tarjetas, y los formularios nunca pasan de su ancho de lectura.
 
 ---
 
