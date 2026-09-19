@@ -44,6 +44,11 @@ const SHAPES = {
   valuation:
     '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z"/><circle cx="8.2" cy="8.2" r="1.4"/>',
   cash: '<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M15 14.5h2.5"/>',
+  // Money into the account and out of it: the arrow enters the card or leaves it.
+  cashin:
+    '<rect x="3" y="11" width="18" height="9.5" rx="2"/><path d="M12 3v11M8.5 10.5 12 14l3.5-3.5"/>',
+  cashout:
+    '<rect x="3" y="11" width="18" height="9.5" rx="2"/><path d="M12 15V3.5M8.5 7 12 3.5 15.5 7"/>',
   transfer: '<path d="M4 8h13M13.5 4.5 17 8l-3.5 3.5"/><path d="M20 16H7M10.5 12.5 7 16l3.5 3.5"/>',
   export:
     '<path d="M12 14.5V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4.5 14v4.5a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V14"/>',

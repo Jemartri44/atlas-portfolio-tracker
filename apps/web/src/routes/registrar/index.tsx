@@ -19,8 +19,8 @@ import { RequireLedger } from "../guard.jsx";
 const DAILY: readonly (readonly [string, IconName])[] = [
   ["buy", "buy"],
   ["sell", "sell"],
-  ["cash-in", "cash"],
-  ["cash-out", "cash"],
+  ["cash-in", "cashin"],
+  ["cash-out", "cashout"],
   ["dividend", "dividend"],
   ["valuation", "valuation"],
   ["order", "order"],

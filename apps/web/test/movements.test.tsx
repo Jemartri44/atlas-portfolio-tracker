@@ -11,6 +11,7 @@ import { nameIndex } from "../src/format/names.js";
 import { store } from "../src/ledger/state.js";
 import Detail from "../src/routes/movimientos/detail.jsx";
 import Movimientos from "../src/routes/movimientos/index.jsx";
+import { movementGlyph } from "../src/routes/movimientos/MovementLine.jsx";
 import { byDay } from "../src/routes/movimientos/MovementList.jsx";
 import { movementRows } from "../src/view-models/index.js";
 import { draftSentence, movementSentence } from "../src/view-models/sentence.js";
@@ -72,6 +73,11 @@ describe("the list of movements", () => {
     const host = await show("/movimientos", Movimientos);
     expect(host.querySelector(".filters-panel")).toBeNull();
     expect(host.querySelector(".list-pane")?.classList.contains("span-12")).toBe(true);
+  });
+
+  it("draws money in and money out apart, and neither as a charge", () => {
+    const glyphs = ["cash_deposit", "cash_withdrawal", "standalone_fee"].map(movementGlyph);
+    expect(new Set(glyphs).size).toBe(3);
   });
 
   it("labels a valuation's figure as a price, not as money that moved", async () => {
