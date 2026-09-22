@@ -4,7 +4,7 @@
 
 ## Contexto
 
-El esquema decía "la fecha valor manda para fiscalidad" de forma global. Para valores cotizados el criterio habitual de la AEAT es la **fecha de contratación** (una venta el 30/12 con liquidación el 02/01 cambia de ejercicio); para fondos, la fecha del reembolso/VL aplicado. La regla de recompra era "dos meses" fija, cuando para participaciones de fondos (no admitidas a negociación) el plazo es de **un año** (art. 33.5.f LIRPF) —es decir, todo el núcleo `equity` y `fixed_income`. Y `fx_rate` se guardaba invertido y redondeado (EUR por divisa) cuando el BCE publica divisa por EUR: no reproducible desde la tabla oficial y con un sesgo de céntimos por operación.
+El esquema decía "la fecha valor manda para fiscalidad" de forma global. Para valores cotizados el criterio habitual de la AEAT es la **fecha de contratación** (una venta el 30/12 con liquidación el 02/01 cambia de ejercicio); para fondos, la fecha del reembolso/VL aplicado. La regla de recompra era "dos meses" fija, cuando para los valores **no admitidos a negociación** el plazo es de **un año** (art. 33.5 **g)** LIRPF; la **f)** son los dos meses de los admitidos —errata corregida el 2026-09-22, este ADR citaba la f) para el año). Y `fx_rate` se guardaba invertido y redondeado (EUR por divisa) cuando el BCE publica divisa por EUR: no reproducible desde la tabla oficial y con un sesgo de céntimos por operación.
 
 ## Decisión
 
@@ -21,3 +21,11 @@ El esquema decía "la fecha valor manda para fiscalidad" de forma global. Para v
 - La constitución II pasa a decir "tipo de cambio del BCE de la fecha fiscal".
 - Casos límite obligatorios: venta el 30/12 con liquidación el 02/01; pérdida en fondo seguida de aportación mensual a los cinco meses.
 - Si el asesor corrige un valor por defecto, es un `settings_changed`, no un despliegue.
+
+---
+
+## Nota del 2026-09-22 (feature 010): los fondos pasan a dos meses
+
+Este ADR daba por hecho que las participaciones de fondos **no** están admitidas a negociación y les asignaba el año de la letra g). La verificación de fuentes de la feature 010 lo desmiente: el **art. 4.9 del RD 1082/2012** dice que cumplir la difusión diaria del valor liquidativo «determinará que las participaciones […] tengan la consideración de **valores admitidos a cotización**», y las dos únicas consultas sobre el asunto (**DGT 0011-00** y **DGT V2067-06**) encajan las participaciones de fondos en la **letra f)**, la de los dos meses. El Manual de ayuda del Modelo 100 de 2025 las incluye expresamente en el supuesto de dos meses.
+
+**`DEFAULT_WASH_SALE_WINDOW.fund` pasa de `"1y"` a `"2m"`**, con certeza **media** y dirección **agresiva**: el fundamento reglamentario está escrito para fondos españoles de una SGIIC inscrita en la CNMV, y **ninguna fuente resuelve el caso de un UCITS extranjero**, que es lo que se contrata habitualmente. `money_market` se queda en un año, incoherencia señalada y sin resolver. Todo ello en el criterio **#2** de `docs/fiscal-questions.md`. La decisión no reemplaza este ADR: cambia un valor por defecto, que es justamente lo que este ADR hizo configurable.

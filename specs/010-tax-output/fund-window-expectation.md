@@ -103,9 +103,34 @@ Y queda anotado que **`issuer_country` deja de ser un campo sin uso**: es el dat
 
 ## 5. Resultado de la comparación
 
-Se rellena después, sin tocar nada de lo de arriba.
+Rellenado después, sin tocar nada de lo de arriba.
 
-- [ ] El dorado: solo 2027, solo la lista de criterios de `ast_world` y una entrada de dudosos con tres ceros.
-- [ ] 2026, 2028 y 2029, byte a byte.
-- [ ] El ejercicio a mano: **−10,00 / 0,00 / +10,00**, conservador, y ninguna cifra aplicada movida.
-- [ ] La instantánea del libro, sin cambios.
+**El fichero dorado: exactamente dos rutas distintas**, las dos previstas.
+
+```
+/2027/capital_gains/lines[0]/criteria[1]:  "2:fund" → "2:fund_1y"
+/2027/doubtful:                            10 entradas → 11
+```
+
+- ✅ La entrada nueva es `2:fund_1y`, en **tercera posición**, con `measure: "difference"`, las **tres diferencias a cero** y `direction: "none"`, tal y como se razonó: con dos meses, [06/11/2026, 06/03/2027], las dos adquisiciones de `ast_world` siguen dentro y la lectura alternativa difiere lo mismo.
+- ✅ **2026, 2028 y 2029, byte a byte.**
+- ✅ Ninguna cifra movida en ningún ejercicio.
+- ✅ La instantánea del libro, sin cambios.
+
+**El ejercicio calculado a mano de la 009: el dinero en juego cuadró a la primera.** `base_difference_eur` **−10,00**, `pending_difference_eur` **0,00**, `deferred_difference_eur` **+10,00**, dirección **conservadora**, certeza media — exactamente lo calculado a mano en §3, sin tocar un literal. Y ninguna cifra aplicada se movió, porque el libro fija su ventana.
+
+### 5.1 Lo que la predicción erró, y lo que no enumeró
+
+1. **Un valor mal dicho en la predicción.** §2 decía que la entrada nueva llevaría riesgo documentado `aggressive`. Lleva **`conservative`**, y es lo correcto: el criterio se etiqueta por la lectura **aplicada**, y la aplicada en ese libro es el año, que es la lectura conservadora; la agresiva es la de dos meses, `2:fund_2m`. El catálogo estaba bien escrito; la descripción de la predicción, mal.
+2. **El libro a mano de la 009 heredaba el valor por defecto.** §3 daba por supuesto que fijaba su ventana. No la fijaba: `exercise-ledger.ts` escribía `{...DEFAULT_SETTINGS}`, así que el cambio **movía sus cifras aplicadas**. Es exactamente la trampa de la nota N17 con `income_category`, y se resuelve igual: el libro **fija ahora `wash_sale_window`** explícitamente, con su comentario, y sus literales vuelven a ser el cálculo que dicen codificar.
+3. **La lista de «tests que fijan el comportamiento viejo» no estaba enumerada**, y eran **dieciocho**. Ninguno reveló un fallo del motor; todos eran escenarios apoyados en que un fondo tenía un año. Se resolvieron de tres maneras, según lo que cada test existiera para demostrar:
+   - **Fijando la ventana en el libro** cuando lo que se comprueba no es la ventana sino otra cosa (la aritmética de un año desde un 29 de febrero, el invariante de que lo diferido se libera o queda pendiente, el criterio #2b).
+   - **Moviendo las fechas dentro de los dos meses** cuando el escenario se sostiene igual (los avisos de compra anterior y de recompra, el traspaso entrante, la venta forzosa, el cambio de configuración de la CLI).
+   - **Cubriendo las dos lecturas** en el caso obligatorio de la constitución VII (pérdida en fondo seguida de la aportación mensual): con dos meses difiere −160,00 y con un año −200,00, y ahora se comprueban las dos.
+4. **Un detalle de fechas, no de fiscalidad**: una de las fechas nuevas cayó en domingo y el BCE no publica, así que la CLI la rechazó. Corregida al lunes siguiente.
+
+### 5.2 Las dos tablas de valores por defecto: se quedan en dos, y por qué
+
+La dirección pedía unificar `SCENARIO_WASH_SALE_WINDOW` con `DEFAULT_WASH_SALE_WINDOW` o dejar escrito por qué son dos. **Se quedan en dos**, y el motivo se comprobó intentándolo: al unificarlas, el generador empezó a escribir `fund: "2m"` y **el fichero dorado dejó de reproducirse byte a byte**. El dorado está **congelado una vez fusionado** (decisión (i) de la 003), y un generador que lee el valor por defecto lo reescribe cada vez que el código cambia de opinión sobre un criterio. El escenario es **dato**; el valor por defecto es **lo que el código cree hoy**; un *fixture* que sigue al código no demuestra nada del código.
+
+Lo que eso cuesta es deriva, y contra la deriva hay ahora un test: el escenario **tiene que nombrar todos los tipos de activo menos `etf`**, que se deja fuera a propósito para que el dorado ejercite el respaldo por defecto y el informe lo liste en `settings.from_code`. Un tipo nuevo en la enumeración no puede colarse aquí sin que alguien lo vea.

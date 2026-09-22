@@ -12,8 +12,10 @@ import type {
   EventOf,
   OrderUpdatedEvent,
   SellEvent,
+  SettingsChangedEvent,
   SupportedEvent,
 } from "../../src/schema/events.js";
+import { ASSET_TYPES } from "../../src/schema/events.js";
 import { decodeLine, encodeLine } from "../../src/schema/line.js";
 import { generateLedger } from "../../src/synth/scenario.js";
 import { summarizeLedger } from "../../src/synth/summary.js";
@@ -307,5 +309,27 @@ describe("generateLedger: the scenario contains every rare case", () => {
     expect(dividend.currency).toBe("USD");
     expect(Number(dividend.withholding_origin)).toBeGreaterThan(0);
     expect(Number(dividend.withholding_spain)).toBeGreaterThan(0);
+  });
+});
+
+describe("the settings the scenario writes: a second table, on purpose", () => {
+  /**
+   * The scenario writes its own wash-sale window instead of reading the
+   * documented default, so that moving a default never rewrites a frozen
+   * fixture. The price of that is drift, and this is the guard against it: the
+   * table has to name **every asset type except `etf`**, which is left out
+   * deliberately so the golden exercises the fallback and the report lists it
+   * in `settings.from_code`.
+   */
+  it("names every asset type except etf, so nothing else rides a default unnoticed", () => {
+    const settings = generateLedger({ seed: 1 }).find(
+      (event) => event.type === "settings_changed",
+    ) as SettingsChangedEvent;
+    const named = Object.keys(settings.settings.wash_sale_window).sort();
+    expect(named).toEqual(ASSET_TYPES.filter((type) => type !== "etf").sort());
+    // And the fiscal date rule, for the same reason.
+    expect(Object.keys(settings.settings.fiscal_date_rule).sort()).toEqual(
+      ASSET_TYPES.filter((type) => type !== "etf").sort(),
+    );
   });
 });

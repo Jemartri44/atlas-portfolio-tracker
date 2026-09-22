@@ -211,7 +211,9 @@ describe("windowCriterion", () => {
     expect(windowCriterion("crypto", "1y")).toBe("2:crypto");
     expect(windowCriterion("crypto", "2m")).toBe("2:crypto_2m");
     expect(windowCriterion("crypto", "45d")).toBe("2:other");
-    expect(windowCriterion("fund", "1y")).toBe("2:fund");
-    expect(windowCriterion("fund", "2m")).toBe("2:other");
+    expect(windowCriterion("fund", "2m")).toBe("2:fund_2m");
+    expect(windowCriterion("fund", "1y")).toBe("2:fund_1y");
+    expect(windowCriterion("money_market", "1y")).toBe("2:fund_1y");
+    expect(windowCriterion("fund", "45d")).toBe("2:other");
   });
 });

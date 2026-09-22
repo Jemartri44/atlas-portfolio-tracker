@@ -43,6 +43,21 @@ export const exerciseLedger = (reading: CategoryReading = "capital_gain"): Exerc
   const { income_category: _fromCode, ...withoutCategory } = DEFAULT_SETTINGS;
   const settings = b.settings({
     ...withoutCategory,
+    // Pinned for the same reason as the income category (note N17): the hand
+    // calculation was worked out with a **year** for funds, and feature 010
+    // moved that default to two months (criterion #2). Borrowing whatever the
+    // code says today would make these literals stop being the calculation they
+    // say they encode. The two-month reading has its own money at stake, in the
+    // doubtful section, and that figure is hand-computed too.
+    wash_sale_window: {
+      stock: "2m",
+      etf: "2m",
+      etc: "2m",
+      etp: "2m",
+      crypto: "1y",
+      fund: "1y",
+      money_market: "1y",
+    },
     ...(reading === "from_code"
       ? {}
       : { income_category: { ...DEFAULT_INCOME_CATEGORY, etc: reading, etp: reading } }),

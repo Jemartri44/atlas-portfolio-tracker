@@ -82,10 +82,8 @@ const DOCUMENT_SILENT: Record<string, { certainty?: string; risk?: string }> = {
   "2:crypto": {
     risk: "the document gives crypto a certainty (low) and no direction of risk: one year by prudence defers more, the conservative side",
   },
-  "2:fund": {
-    certainty:
-      "the document states no certainty for the one year of funds, the letter g) of article 33.5, which it does not dispute",
-    risk: "and no direction either: one year is the longer window, the conservative side",
+  "2:fund_1y": {
+    risk: "the document gives the risk of the two months of a fund; one year is the other side of the same dispute, the conservative one",
   },
 };
 

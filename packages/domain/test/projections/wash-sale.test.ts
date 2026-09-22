@@ -72,9 +72,15 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
   });
 
   it("warns at eleven months and not at thirteen for a fund (one year)", () => {
-    const fundCycle = (repurchase: string): LedgerState => {
+    const fundCycle = (repurchase: string, window?: "1y"): LedgerState => {
       const b = new LedgerBuilder();
       catalogue(b);
+      if (window !== undefined) {
+        b.settings({
+          ...DEFAULT_SETTINGS,
+          wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: window },
+        });
+      }
       b.buy({
         account_id: "acc_fund",
         asset_id: "ast_world",
@@ -104,10 +110,15 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
       });
       return projectLedger(b.build());
     };
-    // A fund is taxed by value date and its window is a year (ADR-0013/0014).
-    expect(codes(fundCycle("2028-01-10"), "wash_sale_window_repurchase")).toHaveLength(1);
-    expect(codes(fundCycle("2028-02-10"), "wash_sale_window_repurchase")).toHaveLength(1);
-    expect(codes(fundCycle("2028-03-10"), "wash_sale_window_repurchase")).toEqual([]);
+    // A fund is taxed by value date, and since the correction of criterion #2
+    // (2026-09-22) its window is **two months**: the sale of 10 February warns
+    // until 10 April and not on the 11th.
+    expect(codes(fundCycle("2027-04-10"), "wash_sale_window_repurchase")).toHaveLength(1);
+    expect(codes(fundCycle("2027-04-11"), "wash_sale_window_repurchase")).toEqual([]);
+    // With a year written into the ledger, eleven months still warn and
+    // thirteen do not: the arithmetic of the year is the same as it was.
+    expect(codes(fundCycle("2028-01-10", "1y"), "wash_sale_window_repurchase")).toHaveLength(1);
+    expect(codes(fundCycle("2028-03-10", "1y"), "wash_sale_window_repurchase")).toEqual([]);
   });
 
   it("does not warn when the sale made money", () => {
@@ -423,7 +434,9 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
       trade_date: "2026-01-12",
       value_date: "2026-01-12",
     });
-    for (const date of ["2027-02-01", "2027-02-15", "2027-03-01"]) {
+    // Inside the two months of a fund, which is its window since the correction
+    // of criterion #2: what this pins is one warning per purchase.
+    for (const date of ["2027-04-10", "2027-04-20", "2027-05-01"]) {
       b.buy({
         account_id: "acc_fund",
         asset_id: "ast_world",
@@ -520,8 +533,10 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
         // 10 came in, the sale took 6: 4 are still held.
         held_quantity: "4",
         loss_eur: "-24",
-        window_start: "2026-06-01",
-        window: "1y",
+        // Two months for a fund since the correction of criterion #2: the
+        // transfer of 3 May is still well inside the window of a sale of 1 June.
+        window_start: "2027-04-01",
+        window: "2m",
       });
     }
   });
@@ -570,18 +585,18 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
   };
 
   it("warns when the transfer in falls inside the window of a fund redeemed at a loss", () => {
-    const warnings = codes(lossThenTransferIn("2027-05-03"), "wash_sale_window_repurchase");
+    const warnings = codes(lossThenTransferIn("2027-04-03"), "wash_sale_window_repurchase");
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.details).toMatchObject({
       asset_id: "ast_world",
       sale_date: "2027-02-10",
       loss_eur: "-20",
-      window_end: "2028-02-10",
-      window: "1y",
+      window_end: "2027-04-10",
+      window: "2m",
     });
-    // Outside the year, and with the criterion off, nothing is said.
-    expect(codes(lossThenTransferIn("2028-03-10"), "wash_sale_window_repurchase")).toEqual([]);
-    expect(codes(lossThenTransferIn("2027-05-03", false), "wash_sale_window_repurchase")).toEqual(
+    // Outside the two months, and with the criterion off, nothing is said.
+    expect(codes(lossThenTransferIn("2027-04-11"), "wash_sale_window_repurchase")).toEqual([]);
+    expect(codes(lossThenTransferIn("2027-04-03", false), "wash_sale_window_repurchase")).toEqual(
       [],
     );
   });
@@ -714,21 +729,21 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
   };
 
   it("warns about a purchase inside the window of the forced sale", () => {
-    const warnings = codes(liquidation("2027-01-11"), "wash_sale_window_prior_buy");
+    const warnings = codes(liquidation("2027-05-01"), "wash_sale_window_prior_buy");
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.details).toMatchObject({
       asset_id: "ast_world",
-      buy_date: "2027-01-11",
+      buy_date: "2027-05-01",
       // 10 bought, 6 taken by the forced sale: 4 are still held.
       held_quantity: "4",
       loss_eur: "-24",
-      window_start: "2026-06-01",
-      window: "1y",
+      window_start: "2027-04-01",
+      window: "2m",
     });
   });
 
   it("says nothing about a purchase older than the window", () => {
-    expect(codes(liquidation("2026-05-29"), "wash_sale_window_prior_buy")).toEqual([]);
+    expect(codes(liquidation("2027-03-31"), "wash_sale_window_prior_buy")).toEqual([]);
   });
 
   it("says nothing when the forced sale makes money", () => {

@@ -9,8 +9,20 @@ import { walkWashSales } from "../../src/tax/wash-sale.js";
 import { buy, lineOf, reportOf, sell, taxBuilder, text, transfer } from "./helpers.js";
 
 describe("the window, counted date to date, at its four edges", () => {
-  const windowCase = (asset: string, saleDate: string, buyDate: string): string => {
-    const b = taxBuilder();
+  const windowCase = (
+    asset: string,
+    saleDate: string,
+    buyDate: string,
+    window?: string,
+  ): string => {
+    const b = taxBuilder(
+      window === undefined
+        ? DEFAULT_SETTINGS
+        : {
+            ...DEFAULT_SETTINGS,
+            wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: window as "1y" },
+          },
+    );
     buy(b, asset, "2026-01-05", "10", "100");
     const loss = sell(b, asset, saleDate, "5", "80");
     buy(b, asset, buyDate, "5", "80");
@@ -41,9 +53,19 @@ describe("the window, counted date to date, at its four edges", () => {
     expect(windowCase("stock_s", "2027-03-31", "2027-06-01")).toBe("0");
   });
 
-  it("one year for a fund, from 29 February: the window ends on 28 February", () => {
-    expect(windowCase("fund_f", "2028-02-29", "2029-02-28")).toBe("-100");
-    expect(windowCase("fund_f", "2028-02-29", "2029-03-01")).toBe("0");
+  /**
+   * The year is no longer the default of a fund (criterion #2, corrected on
+   * 2026-09-22), so the ledger says so: what this pins is the **arithmetic of
+   * a year from a 29 February**, not which asset takes a year.
+   */
+  it("one year, from 29 February: the window ends on 28 February", () => {
+    expect(windowCase("fund_f", "2028-02-29", "2029-02-28", "1y")).toBe("-100");
+    expect(windowCase("fund_f", "2028-02-29", "2029-03-01", "1y")).toBe("0");
+  });
+
+  it("two months for a fund, which is its default: 29 February plus two is 29 April", () => {
+    expect(windowCase("fund_f", "2028-02-29", "2028-04-29")).toBe("-100");
+    expect(windowCase("fund_f", "2028-02-29", "2028-04-30")).toBe("0");
   });
 });
 
@@ -228,19 +250,45 @@ describe("mandatory edge cases", () => {
     expect(lineOf(report, saleT.id).criteria).toEqual(expect.arrayContaining(["7", "15"]));
   });
 
-  it("a fund loss followed by the monthly contribution within the year: the nearest purchases carry it", () => {
-    const b = taxBuilder();
-    buy(b, "fund_f", "2027-01-11", "100", "10");
-    const loss = sell(b, "fund_f", "2027-03-01", "100", "8");
-    const months = ["2027-03-10", "2027-04-12", "2027-05-10"].map((date) =>
-      buy(b, "fund_f", date, "40", "8"),
-    );
-    const line = lineOf(reportOf(b.build(), 2027), loss.id);
-    expect(text(line.deferred_eur)).toBe("-200");
-    expect(line.deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()])).toEqual([
-      [months[0]?.id, "40"],
-      [months[1]?.id, "40"],
-      [months[2]?.id, "20"],
+  /**
+   * The mandatory edge case of constitution VII, now under the two windows: the
+   * default of a fund is two months since the correction of criterion #2, and
+   * the case is worth pinning under both, because which contributions fall
+   * inside is exactly what the change moves.
+   */
+  it("a fund loss followed by the monthly contribution: the nearest purchases inside the window carry it", () => {
+    const monthly = (window?: "1y") => {
+      const b = taxBuilder(
+        window === undefined
+          ? DEFAULT_SETTINGS
+          : {
+              ...DEFAULT_SETTINGS,
+              wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: window },
+            },
+      );
+      buy(b, "fund_f", "2027-01-11", "100", "10");
+      const loss = sell(b, "fund_f", "2027-03-01", "100", "8");
+      const months = ["2027-03-10", "2027-04-12", "2027-05-10"].map((date) =>
+        buy(b, "fund_f", date, "40", "8"),
+      );
+      return { line: lineOf(reportOf(b.build(), 2027), loss.id), months };
+    };
+    // Two months, [01/01/2027, 01/05/2027]: the contribution of 10 May is out.
+    const twoMonths = monthly();
+    expect(text(twoMonths.line.deferred_eur)).toBe("-160");
+    expect(
+      twoMonths.line.deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()]),
+    ).toEqual([
+      [twoMonths.months[0]?.id, "40"],
+      [twoMonths.months[1]?.id, "40"],
+    ]);
+    // A year: the three of them, and only 100 of the 120 units are needed.
+    const year = monthly("1y");
+    expect(text(year.line.deferred_eur)).toBe("-200");
+    expect(year.line.deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()])).toEqual([
+      [year.months[0]?.id, "40"],
+      [year.months[1]?.id, "40"],
+      [year.months[2]?.id, "20"],
     ]);
   });
 
@@ -519,7 +567,9 @@ describe("mandatory edge cases", () => {
       buy(b, "fund_g", "2027-01-11", "10", "100");
       const loss = sell(b, "fund_g", "2027-03-01", "10", "90");
       buy(b, "fund_f", "2027-01-12", "10", "100");
-      transfer(b, "fund_f", "fund_g", "2027-05-03", "10", "10");
+      // Inside the two months of a fund, which is its window since the
+      // correction of criterion #2: what this pins is #2b, not the window.
+      transfer(b, "fund_f", "fund_g", "2027-04-03", "10", "10");
       const report = reportOf(b.build(), 2027);
       return { line: lineOf(report, loss.id), report };
     };
@@ -571,8 +621,16 @@ describe("mandatory edge cases", () => {
     });
   });
 
+  /**
+   * The bookkeeping invariant, not the window: the ledger pins a year for the
+   * fund so that the release is itself deferred again (#21) and there is more
+   * than one deferral to add up.
+   */
   it("keeps the deferred loss whole: what is deferred is released or still pending, to the last decimal", () => {
-    const b = taxBuilder();
+    const b = taxBuilder({
+      ...DEFAULT_SETTINGS,
+      wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: "1y" },
+    });
     buy(b, "fund_f", "2027-01-11", "3", "100");
     sell(b, "fund_f", "2027-02-01", "3", "70");
     buy(b, "fund_f", "2027-02-15", "7", "70");

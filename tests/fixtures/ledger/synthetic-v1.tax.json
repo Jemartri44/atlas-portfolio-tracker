@@ -238,7 +238,7 @@
           "cost_eur": "838.695831628",
           "criteria": [
             "1",
-            "2:fund",
+            "2:fund_1y",
             "3",
             "6",
             "14",
@@ -897,6 +897,19 @@
         ],
         "markets": [
           "unknown"
+        ],
+        "measure": "difference",
+        "pending_difference_eur": "0"
+      },
+      {
+        "base_difference_eur": "0",
+        "certainty": "medium",
+        "criterion": "2:fund_1y",
+        "deferred_difference_eur": "0",
+        "direction": "none",
+        "documented_risk": "conservative",
+        "event_ids": [
+          "01MBP2GS80T8F1MS8PT0M7FK2R"
         ],
         "measure": "difference",
         "pending_difference_eur": "0"

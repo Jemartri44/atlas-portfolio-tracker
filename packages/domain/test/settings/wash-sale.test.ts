@@ -27,7 +27,8 @@ describe("washSaleTransferCounts", () => {
 describe("washSaleWindowOf", () => {
   it("reads the setting, then the legacy form, then the documented default", () => {
     expect(washSaleWindowOf(DEFAULT_SETTINGS, "stock")).toBe("2m");
-    expect(washSaleWindowOf(DEFAULT_SETTINGS, "fund")).toBe("1y");
+    expect(washSaleWindowOf(DEFAULT_SETTINGS, "fund")).toBe("2m");
+    expect(washSaleWindowOf(DEFAULT_SETTINGS, "crypto")).toBe("1y");
     expect(washSaleWindowOf(DEFAULT_SETTINGS, "etf")).toBe("2m");
     const configured = mergeSettings(DEFAULT_SETTINGS, { wash_sale_window: { stock: "30d" } });
     expect(washSaleWindowOf(configured, "stock")).toBe("30d");

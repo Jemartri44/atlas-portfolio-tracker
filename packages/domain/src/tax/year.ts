@@ -406,6 +406,11 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
     ...windows("2:listed_1y", listed, "1y", "2m"),
     ...windows("2:crypto", ["crypto"], "1y", "2m"),
     ...windows("2:crypto_2m", ["crypto"], "2m", "1y"),
+    // Funds, since the correction of 2026-09-22: a criterion that is doubtful
+    // and offers no figure is of no use to anybody, so the other reading is
+    // computed like the one of listed securities.
+    ...windows("2:fund_2m", ["fund", "money_market"], "2m", "1y"),
+    ...windows("2:fund_1y", ["fund", "money_market"], "1y", "2m"),
     {
       criterion: "2b",
       settings: {

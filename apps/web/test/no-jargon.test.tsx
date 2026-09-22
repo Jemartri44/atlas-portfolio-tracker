@@ -248,7 +248,8 @@ describe("the screens", () => {
     expect(shown).not.toMatch(/ADR-|constituci|<n>d|2m, 1y|ast_world/);
     expect(shown).toContain("la del cambio de configuración del 01/09/2026");
     expect(optionsOf(host, "wsw-fund")).toEqual([
-      "Por defecto (1 año)",
+      // Two months for a fund since the correction of criterion #2 (2026-09-22).
+      "Por defecto (2 meses)",
       "2 meses",
       "1 año",
       "Un número de días",

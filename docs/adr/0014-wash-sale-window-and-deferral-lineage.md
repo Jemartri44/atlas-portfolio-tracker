@@ -21,7 +21,7 @@ ADR-0013 parametrizó la ventana de la regla de recompra como `wash_sale_window_
 
 ## Decisión
 
-`Settings.wash_sale_window[asset_type]` con valores `"2m"`, `"1y"` o `"<n>d"`, contados de fecha a fecha en meses/años naturales (por defecto `"2m"` cotizados, `"1y"` fondos, monetario y cripto); `wash_sale_window_days` sigue aceptándose como forma antigua. El diferimiento viaja con el linaje de lotes y se libera al transmitirse los descendientes. *Verificar con asesor* (#14, #15).
+`Settings.wash_sale_window[asset_type]` con valores `"2m"`, `"1y"` o `"<n>d"`, contados de fecha a fecha en meses/años naturales (por defecto `"2m"` cotizados **y fondos** —corregido el 2026-09-22, criterio #2—, `"1y"` monetario y cripto); `wash_sale_window_days` sigue aceptándose como forma antigua. El diferimiento viaja con el linaje de lotes y se libera al transmitirse los descendientes. *Verificar con asesor* (#14, #15).
 
 ## Consecuencias
 

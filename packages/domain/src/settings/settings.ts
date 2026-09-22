@@ -187,14 +187,30 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
   money_market: "capital_gain",
 };
 
-/** Same, for the wash-sale window (ADR-0013, ADR-0014; verify with the tax advisor). */
+/**
+ * Same, for the wash-sale window (ADR-0013, ADR-0014; verify with the tax
+ * advisor).
+ *
+ * A **fund** takes two months, not a year (criterion #2, corrected on
+ * 2026-09-22). What separates the two months of article 33.5 f) from the year
+ * of g) is being admitted to trading, and article 4.9 of RD 1082/2012 says
+ * that publishing the net asset value daily "determina que las participaciones
+ * tengan la consideración de valores admitidos a cotización". The two only
+ * consultations on the point (DGT 0011-00 and V2067-06) put fund units under
+ * f), and the help of Modelo 100 for 2025 lists funds with daily information
+ * among the two-month case; its example of the year is a SICAV of the MAB.
+ *
+ * **`money_market` stays on a year**, and that is an inconsistency noted and
+ * not resolved: a monetary fund is a collective investment undertaking with a
+ * daily net asset value, so the same reasoning would apply to it.
+ */
 export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
   stock: "2m",
   etf: "2m",
   etc: "2m",
   etp: "2m",
   crypto: "1y",
-  fund: "1y",
+  fund: "2m",
   money_market: "1y",
 };
 

@@ -39,10 +39,23 @@ export interface FiscalCriterion {
  *   dispute; **conservative** if wrong.
  * - `2:crypto`: one year for crypto, by prudence — **low**; conservative.
  * - `2:crypto_2m`: two months for crypto — the less prudent side; aggressive.
- * - `2:fund`: one year for funds, the letter g) of article 33.5, which the
- *   document does not dispute.
+ * - `2:fund_2m`: two months for a fund, which is what the document says since
+ *   2026-09-22 — a fund that publishes its net asset value daily is a security
+ *   "admitted to trading" (art. 4.9 RD 1082/2012), and that is letter f). Its
+ *   certainty is **medium**, not high: the regulatory ground is written for
+ *   Spanish funds managed by a SGIIC, and nothing resolves a foreign UCITS,
+ *   which is what is usually bought in Spain.
+ * - `2:fund_1y`: one year for a fund, the other side of the same dispute and
+ *   the conservative one.
  * - `2:other`: any other window (days, or two months for a fund): no reading
  *   of the document supports it.
+ *
+ * **A new reading gets a new identifier; an identifier never changes meaning.**
+ * That is why the year of funds is `2:fund_1y` and not the old bare `2:fund`,
+ * which meant "one year, undisputed": keeping the name would have made the same
+ * identifier say one thing in yesterday's documents and another in today's,
+ * with nothing to give it away. `2:listed` and `2:crypto` keep their names
+ * because renaming them now would be a large change for symmetry alone.
  *
  * Criterion #24, the income category of an ETC or an ETP, is labelled the same
  * way, by the reading in force (`income_category`), and that is why it has four
@@ -78,7 +91,8 @@ export const FISCAL_CRITERIA = {
   "2:listed_1y": { doc: "2", certainty: "disputed", risk: "conservative" },
   "2:crypto": { doc: "2", certainty: "low", risk: "conservative" },
   "2:crypto_2m": { doc: "2", certainty: "low", risk: "aggressive" },
-  "2:fund": { doc: "2", certainty: "high", risk: "conservative" },
+  "2:fund_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
+  "2:fund_1y": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:other": { doc: "2", certainty: "low", risk: "both" },
   "2b": { doc: "2b", certainty: "medium", risk: "conservative" },
   "3": { doc: "3", certainty: "high", risk: "conservative" },
@@ -121,7 +135,8 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "2:listed_1y",
   "2:crypto",
   "2:crypto_2m",
-  "2:fund",
+  "2:fund_2m",
+  "2:fund_1y",
   "2:other",
   "2b",
   "3",
