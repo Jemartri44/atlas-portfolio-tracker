@@ -33,6 +33,7 @@ import {
   applyAssetUpdated,
 } from "./catalogue.js";
 import { applyCorporateAction, referencesOf } from "./corporate-actions.js";
+import { applyTaxReturnFiled } from "./filings.js";
 import { noteFxRates } from "./fx-rates.js";
 import {
   applyBuy,
@@ -85,6 +86,9 @@ const THESIS_TYPES = new Set<string>(["thesis_opened", "thesis_closed"]);
 
 const isThesis = (entry: Positioned): entry is Positioned<ThesisEvent> =>
   THESIS_TYPES.has(entry.event.type);
+
+const isFiling = (entry: Positioned): entry is Positioned<TaxReturnFiledEvent> =>
+  entry.event.type === "tax_return_filed";
 
 /**
  * Events with a business date: everything except catalogue, settings, theses,
@@ -392,6 +396,14 @@ export const projectLedger = (
         ? applyThesisOpened(state, entry.event, entry.position)
         : applyThesisClosed(state, entry.event, entry.position),
     );
+  }
+
+  // Pass A'': filed returns, in file order. After the catalogue, because the
+  // assets of a 720 name accounts and assets, and after the theses only
+  // because nothing links them: a filing is a document, not an operation, and
+  // each query filters it by its own `filed_at` (ADR-0016).
+  for (const entry of active.filter(isFiling)) {
+    guarded(entry.event, () => applyTaxReturnFiled(state, entry.event, entry.position));
   }
 
   // Pass B: operations and tracking, in chronological order. With `asOf`, what

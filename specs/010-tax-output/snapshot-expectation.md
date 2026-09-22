@@ -49,8 +49,18 @@ El informe fiscal de este fichero **ya se movió** en el bloque 0 por el valor p
 
 ## 4. Resultado de la comparación
 
-Se rellena después, sin tocar nada de lo de arriba.
+Rellenado después, sin tocar nada de lo de arriba.
 
-- [ ] La instantánea gana `filings: []` y nada más.
-- [ ] El informe fiscal, byte a byte igual.
-- [ ] El `.jsonl` del libro sintético, sin tocar.
+- ✅ **La instantánea gana `filings: []` y nada más.** `diff` de línea contra el fichero congelado: **una sola línea añadida**, `"filings": [],`, y ninguna quitada ni cambiada.
+
+  ```diff
+  273a274
+  >   "filings": [],
+  ```
+
+  Y en la posición prevista, entre el cierre de `cash` y la apertura de `fiscal_settings`.
+- ✅ **El informe fiscal, byte a byte igual**: la prueba 3 de `proofs.test.ts` pasa sin regenerar nada.
+- ✅ **El `.jsonl` del libro sintético, sin tocar**: `git diff` vacío. Ningún identificador se rebaraja.
+- ✅ El catálogo pasa a 25 tipos y `schema_version` sigue en 1.
+
+Los cinco tests de exhaustividad fallaron solos, como anticipaba la 008: el recuento de tipos, la huella de idempotencia, las traducciones de las dos interfaces, el nombre del tipo de evento en la web y el de cada uno de sus campos. **Ninguna sorpresa fuera de esa lista.**

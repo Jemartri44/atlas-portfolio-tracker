@@ -19,6 +19,7 @@ import type {
   ValuationEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
+import type { Filing } from "./filings.js";
 import type { KnownFxRate } from "./fx-rates.js";
 import type { Acquisition } from "./wash-sale.js";
 
@@ -321,6 +322,8 @@ export interface LedgerState {
   transferRequests: Map<Ulid, PendingTransfer>;
   /** Bucket theses by thesis_id, in file order. */
   theses: Map<string, Thesis>;
+  /** Filed returns by event id, in file order, with their chain resolved (ADR-0020). */
+  filings: Map<Ulid, Filing>;
   /** reversed event id → reversal id. */
   reversed: Map<Ulid, Ulid>;
   warnings: Warning[];
@@ -359,6 +362,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   orders: new Map(),
   transferRequests: new Map(),
   theses: new Map(),
+  filings: new Map(),
   reversed: new Map(),
   warnings: [],
   invalid: [],

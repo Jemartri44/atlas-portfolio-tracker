@@ -271,6 +271,7 @@
       "currency": "USD"
     }
   ],
+  "filings": [],
   "fiscal_settings": {
     "bucket_benchmark_asset_id": "ast_world",
     "bucket_max_cumulative_contribution": "6000",
