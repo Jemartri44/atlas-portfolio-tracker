@@ -189,6 +189,21 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   tax_box_partial: (d) => `${PARTIAL_BOX[text(d.reason)] ?? "Esta casilla no se calcula entera"}.`,
   tax_box_rounding_differs: (d) =>
     `El formulario redondea cada valor y hace él mismo la resta: en ${countOf(count(d.boxes), "una casilla", "algunas casillas")} sale un céntimo distinto del nuestro. Te enseñamos los dos.`,
+  // --- The informative returns (feature 010, block 3) --------------------
+  // The date of the query is on the screen already: repeating it here only
+  // gives the drift test a date to trip over.
+  informative_current_year: () =>
+    "El modelo va de lo que hay a 31 de diciembre y ese día no ha llegado: esto es cómo está hoy, sin veredicto.",
+  informative_model_did_not_exist: (d) =>
+    `El modelo ${num(d.model)} no existía en ${year(d.year)}: no hay nada que presentar por ese ejercicio.`,
+  informative_domestic_accounts_left_out: (d) =>
+    `${countOf(count(d.accounts), "cuenta registrada", "cuentas registradas")} en España queda fuera aunque lo que tenga sea extranjero: ante el registro el titular es la comercializadora.`,
+  informative_account_changed_country: (d) =>
+    `${countOf(count(d.accounts), "cuenta ha cambiado", "cuentas han cambiado")} de país: cuenta el país que tenía a 31 de diciembre.`,
+  informative_crypto_custody_unknown: () =>
+    "Se cuenta todo lo que hay en cuentas extranjeras; si alguna es de autocustodia, no entraría. Tus datos no distinguen las dos cosas.",
+  informative_criteria_not_numbered: () =>
+    "El método del saldo medio del trimestre y la clasificación de ETF, ETC y ETP se apoyan en criterios todavía sin numerar.",
   tax_box_repurchase_has_no_number: () =>
     "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.",
 };

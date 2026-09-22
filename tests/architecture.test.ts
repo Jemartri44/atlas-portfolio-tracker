@@ -277,6 +277,64 @@ describe("architecture: the tax engine", () => {
       .map(asChain);
     expect(violations).toEqual([]);
   });
+
+  /**
+   * Feature 010, block 3: the informative returns (Modelo 720 and 721) are the
+   * **only** fiscal route the law makes value things at market price, and they
+   * live in `informative/` for that reason alone. The income tax may not depend
+   * on a price (constitution II), so the fiscal path —everything
+   * `project-ledger.ts` and every file of `tax/` reach— must not reach a single
+   * file of that folder, at any depth.
+   *
+   * The other direction is allowed and is the point: `informative/` reads
+   * `prices.ts` and the catalogue of criteria. A table of criteria is a table;
+   * what must never happen is the return learning what a price is.
+   */
+  it("keeps the informative returns out of reach of every fiscal calculation", () => {
+    const graph = importGraph();
+    const informative = join(domainSrc, "informative");
+    const taxDir = join(domainSrc, "tax");
+    const roots = [join(domainSrc, "projections", "project-ledger.ts"), ...listTsFiles(taxDir)];
+    const violations: string[] = [];
+    for (const root of roots) {
+      for (const [file, chain] of reachableFrom(graph, root)) {
+        if (!relative(informative, file).startsWith("..")) {
+          violations.push(asChain(chain));
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * And they read it at **level 1**: a registered `valuation`, which is a
+   * decision of the user. The specification makes the photograph of the year
+   * end a manual datum on purpose (§7.1 and §14.1), so an automatic quote of
+   * phase 4 must never walk into a tax return. `priceAt` only returns one when
+   * it is handed an `ExternalPrices`, so the rule is that this folder never
+   * names one — checked on the text, where the mistake would be made.
+   */
+  it("never lets an automatic quote into an informative return", () => {
+    const offenders = listTsFiles(join(domainSrc, "informative"))
+      // Comments are not code: what the rule forbids is naming the type or
+      // passing the argument, and both of those are code.
+      .filter((file) =>
+        /\bExternalPrices\b|\bExternalQuote\b|external\s*[:,)]/.test(
+          readFileSync(file, "utf8").replace(/\/\/[^\n]*/g, ""),
+        ),
+      )
+      .map((file) => relative(repoRoot, file));
+    expect(offenders).toEqual([]);
+  });
+
+  /** And the rule is not vacuous: the informative returns do read the price gate. */
+  it("lets the informative returns read a price, which is what they are for", () => {
+    const graph = importGraph();
+    const m720 = join(domainSrc, "informative", "m720.ts");
+    const prices = join(domainSrc, "projections", "prices.ts");
+    expect(reachableFrom(graph, m720).get(prices)).toBeDefined();
+    expect(listTsFiles(join(domainSrc, "informative")).length).toBeGreaterThan(4);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -396,6 +396,18 @@ export const describeWarning = (warning: Warning): string => {
       return `El formulario redondea cada valor y hace él mismo la resta: en ${listOf(d.boxes)} sale un céntimo distinto del que calcula el motor. Se enseñan los dos.`;
     case "tax_box_repurchase_has_no_number":
       return "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.";
+    case "informative_current_year":
+      return `El modelo va de lo que hay a 31/12 y ese día no ha llegado: esto es el estado a ${text(d.as_of)}, sin veredicto.`;
+    case "informative_model_did_not_exist":
+      return `El modelo ${text(d.model)} no existía en ${text(d.year)}: no hay nada que presentar por ese ejercicio (existe desde ${text(d.first_year)}).`;
+    case "informative_domestic_accounts_left_out":
+      return `Quedan fuera las cuentas registradas en España (${listOf(d.accounts)}) aunque lo que tengan sea extranjero: ante el registro el titular es la comercializadora (business-rules.md §5.8).`;
+    case "informative_account_changed_country":
+      return `Alguna cuenta ha cambiado de país (${listOf(d.accounts)}): cuenta el país que tenía a 31/12, tomado del día en que se registró cada cambio.`;
+    case "informative_crypto_custody_unknown":
+      return "Se cuenta todo lo que hay en cuentas extranjeras; si alguna es de autocustodia, no entraría. El libro no distingue las dos cosas.";
+    case "informative_criteria_not_numbered":
+      return "El método del saldo medio del trimestre y la clasificación de ETF, ETC y ETP se apoyan en criterios que la dirección todavía no ha numerado (fichas F3 y F4).";
     case "thesis_closed_with_position":
       return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
     default:

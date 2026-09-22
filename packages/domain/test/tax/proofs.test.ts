@@ -10,6 +10,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { yearOf } from "../../src/dates/civil-date.js";
+import { model720, model721 } from "../../src/informative/m720.js";
 import { realizedGains } from "../../src/projections/gains.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type {
@@ -26,8 +27,10 @@ import { taxBoxes } from "../../src/tax/boxes/boxes.js";
 import { taxBoxesJson, taxReportJson } from "../../src/tax/json.js";
 import { taxYear } from "../../src/tax/year.js";
 import { fixtureLines, fixtureText } from "../fixtures-path.js";
+import { LedgerBuilder } from "../ledger-builder.js";
 import { taxLedgerOf, taxOpArb } from "../properties/tax-ledgers.js";
 import { exerciseLedger } from "./exercise-ledger.js";
+import { HAND_SETTINGS } from "./helpers.js";
 
 const TODAY = "2030-01-01";
 
@@ -225,6 +228,175 @@ describe("proof 1: no figure of the return depends on a price", () => {
       expect(JSON.stringify(without[key])).toBe(JSON.stringify(withValue[key]));
     }
     expect(withValue.in_kind).not.toEqual(without.in_kind);
+  });
+});
+
+/**
+ * Feature 010, decision (d): the figures a Modelo 720 declares are **market
+ * values stored in the ledger**. Letting them reach the savings base would be
+ * putting a price into the income tax without touching `prices.ts` at all, and
+ * no architecture test would see it, because a filing is an ordinary event.
+ *
+ * So the proof by deletion grows: deleting every price **and every 720 and 721
+ * filed** leaves the report and the layout by box identical byte for byte. And
+ * the proof is not vacuous, because the same deletion does change the 720.
+ */
+describe("proof 1 bis: the return reads no price, with the 720 inside", () => {
+  const withoutInformativeFilings = (events: readonly LedgerEvent[]): LedgerEvent[] =>
+    events.filter(
+      (event) =>
+        event.type !== "tax_return_filed" || (event as { model: string }).model === "renta",
+    );
+
+  /** A foreign account with securities, an income tax return filed and a 720 filed. */
+  const withFilings = (): LedgerEvent[] => {
+    const b = new LedgerBuilder();
+    b.settings(HAND_SETTINGS);
+    b.account("acc_ib", { platform: "ibkr", country: "IE" });
+    b.asset("etf_a", { asset_type: "etf", transferable: false });
+    b.asset("coin_c", { asset_type: "crypto", asset_class: "crypto", transferable: false });
+    b.deposit({ account_id: "acc_ib", value_date: "2027-01-04", amount: "120000" });
+    b.buy({
+      account_id: "acc_ib",
+      asset_id: "etf_a",
+      value_date: "2027-01-05",
+      quantity: "600",
+      unit_price: "100",
+    });
+    b.buy({
+      account_id: "acc_ib",
+      asset_id: "coin_c",
+      value_date: "2027-01-05",
+      quantity: "10",
+      unit_price: "1000",
+    });
+    b.sell({
+      account_id: "acc_ib",
+      asset_id: "etf_a",
+      value_date: "2027-09-01",
+      quantity: "100",
+      unit_price: "150",
+    });
+    b.valuation({
+      account_id: "acc_ib",
+      asset_id: "etf_a",
+      date: "2027-12-31",
+      quantity: "500",
+      unit_value: "150",
+    });
+    b.valuation({
+      account_id: "acc_ib",
+      asset_id: "coin_c",
+      date: "2027-12-31",
+      quantity: "10",
+      unit_value: "6000",
+    });
+    b.filed({
+      tax_year: 2027,
+      filed_at: "2028-06-10",
+      declared: {
+        savings_base_eur: "5000",
+        pending_losses: [{ origin_year: 2026, category: "capital_gain", amount_eur: "-400" }],
+        deferred_losses_eur: "0",
+      },
+    });
+    b.filed({
+      model: "720",
+      tax_year: 2027,
+      filed_at: "2028-03-15",
+      declared: {
+        securities: { value_eur: "75000.00" },
+        items: [
+          {
+            category: "securities",
+            account_id: "acc_ib",
+            asset_id: "etf_a",
+            value_eur: "75000.00",
+          },
+        ],
+      },
+    });
+    b.filed({
+      model: "721",
+      tax_year: 2027,
+      filed_at: "2028-03-16",
+      declared: {
+        crypto: { value_eur: "60000.00" },
+        items: [
+          { category: "crypto", account_id: "acc_ib", asset_id: "coin_c", value_eur: "60000.00" },
+        ],
+      },
+    });
+    return b.build();
+  };
+
+  /**
+   * Two things of the report are **about the file** and not figures of the
+   * return, and deleting four lines of the ledger necessarily moves them: the
+   * fingerprint of a filed return covers the lines that precede it, so it stops
+   * verifying, and with it goes the decomposition of the difference into its
+   * causes, which needs that prefix to be readable (plan §1.7).
+   *
+   * They are normalised here and **only** here, and what they hide is checked
+   * separately below: the three figures of the comparison —what was declared,
+   * what was computed then and what the ledger says today— have to be identical
+   * in both readings, and they are.
+   */
+  const withoutFileFacts = (report: Record<string, unknown>): string => {
+    const filing = report.filing as
+      | { fingerprint_ok: boolean; figures: Record<string, unknown>[] }
+      | undefined;
+    return JSON.stringify({
+      ...report,
+      ...(filing === undefined
+        ? {}
+        : {
+            filing: {
+              ...filing,
+              fingerprint_ok: "about the file, not about the figures",
+              figures: filing.figures.map(({ causes: _causes, ...rest }) => rest),
+            },
+          }),
+    });
+  };
+
+  /** The three figures of the comparison, without the decomposition of their difference. */
+  const figuresOf = (events: readonly LedgerEvent[], year: number): string => {
+    const filing = taxReportJson(taxYear(events, year, { today: TODAY })).filing as {
+      figures: Record<string, unknown>[];
+    };
+    return JSON.stringify(filing.figures.map(({ causes: _causes, ...rest }) => rest));
+  };
+
+  it("deletes the prices and the informative returns and the income tax does not move", () => {
+    const events = withFilings();
+    const stripped = withoutInformativeFilings(withoutPrices(events));
+    expect(events.length - stripped.length).toBe(4);
+    for (const year of [2027, 2028]) {
+      const before = taxReportJson(taxYear(events, year, { today: TODAY }));
+      const after = taxReportJson(taxYear(stripped, year, { today: TODAY }));
+      expect(withoutFileFacts(after)).toBe(withoutFileFacts(before));
+      expect(boxesJson(stripped, year)).toBe(boxesJson(events, year));
+    }
+    // What was normalised, checked for itself: every figure of the comparison
+    // is the same with the 720 and the 721 gone.
+    expect(figuresOf(stripped, 2027)).toBe(figuresOf(events, 2027));
+    // And what the income tax **does** read of what was filed is still there:
+    // the anchor of the return of 2027.
+    expect(json(events, 2028)).toContain("-400");
+  });
+
+  it("and the proof is not vacuous: the same deletion does change the 720", () => {
+    const events = withFilings();
+    const before = model720(events, 2027, { today: "2029-01-10" });
+    const after = model720(withoutInformativeFilings(withoutPrices(events)), 2027, {
+      today: "2029-01-10",
+    });
+    // With its valuations, the securities are worth 75.000,00 and oblige.
+    expect(before.categories[1]?.verdict).toBe("obliged");
+    // Without them there is no price at all, and nothing can be decided.
+    expect(after.categories[1]?.verdict).toBe("undetermined");
+    expect(model721(events, 2027, { today: "2029-01-10" }).categories[0]?.verdict).toBe("obliged");
   });
 });
 

@@ -17,6 +17,13 @@ export { madridDateOf, todayInMadrid } from "./dates/madrid.js";
 export * from "./errors.js";
 export { sha256Hex, utf8Encode } from "./ids/sha256.js";
 export { createUlidGenerator, isUlid, type Ulid, type UlidGenerator } from "./ids/ulid.js";
+export {
+  type FiscalAttention,
+  fiscalAttention,
+  type InformativeTodo,
+} from "./informative/attention.js";
+export { informativeReturn, model720, model721 } from "./informative/m720.js";
+export type * from "./informative/report.js";
 export * from "./money/index.js";
 export type { Clock } from "./ports/clock.js";
 export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
