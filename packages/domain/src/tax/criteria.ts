@@ -119,7 +119,7 @@ export const FISCAL_CRITERIA = {
   "20": { doc: "20", certainty: "medium", risk: "aggressive" },
   "21": { doc: "21", certainty: "low", risk: "conservative" },
   "22": { doc: "22", certainty: "medium", risk: "neutral" },
-  "23": { doc: "23", certainty: "high", risk: "conservative" },
+  "23": { doc: "23", certainty: "high", risk: "aggressive" },
   "24:etc": { doc: "24", certainty: "medium", risk: "both" },
   "24:etc_gain": { doc: "24", certainty: "low", risk: "both" },
   "24:etp": { doc: "24", certainty: "low", risk: "both" },
