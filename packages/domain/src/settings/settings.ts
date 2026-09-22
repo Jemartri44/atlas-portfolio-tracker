@@ -3,6 +3,7 @@
 // to be verified with the tax advisor); every other parameter is optional until
 // the user sets it.
 
+import { isCivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
 import { Decimal, type DecimalString, isDecimalString } from "../money/decimal.js";
@@ -113,8 +114,29 @@ export interface Settings {
    */
   bucket_benchmark_asset_id?: string;
   stale_price_days?: number;
+  /**
+   * The legal figures of the informative returns (Models 720 and 721): the
+   * amount above which a category obliges, the increase over the last filed
+   * return that obliges again, and the amount at which the application warns
+   * before either. They are the law of a given year, not a constant of the
+   * code (constitution IV, prompt 010 decision (i)): a year computed today has
+   * to stay reproducible if the figure changes (ADR-0022). Absent means the
+   * documented default; read through `modelThresholdOf`, `modelIncreaseOf` and
+   * `modelAlertThresholdOf`, never off the field.
+   */
+  model_720_threshold_eur?: DecimalString;
+  model_720_increase_eur?: DecimalString;
   model_720_alert_threshold_eur?: DecimalString;
+  model_721_threshold_eur?: DecimalString;
+  model_721_increase_eur?: DecimalString;
   model_721_alert_threshold_eur?: DecimalString;
+  /**
+   * The income tax season, as `MM-DD`: the weeks in which the fiscal card of
+   * the summary goes to the top. The dates of the campaign move every year,
+   * so they are configuration too. Read through `rentaSeasonOf`.
+   */
+  renta_season_start?: string;
+  renta_season_end?: string;
   savings_tax_brackets?: TaxBracket[];
   tax_residence?: string;
   notification_email?: string;
@@ -184,6 +206,55 @@ export const savingsOffsetLimitPctOf = (settings: Settings): Decimal =>
 export const lossCarryforwardYearsOf = (settings: Settings): number =>
   settings.loss_carryforward_years ?? DEFAULT_LOSS_CARRYFORWARD_YEARS;
 
+/** The informative returns on assets held abroad. */
+export const INFORMATIVE_MODELS = ["720", "721"] as const;
+export type InformativeModel = (typeof INFORMATIVE_MODELS)[number];
+
+/**
+ * The figures of the informative returns as understood in September 2026;
+ * verify, and change them with a `settings_changed`, never here.
+ *
+ * - 720, threshold and increase: arts. 42 bis.4.e), 42 bis.5, 42 ter.4.c) and
+ *   42 ter.5 of RD 1065/2007.
+ * - 721, threshold and increase: arts. 42 quater.5.d) and 42 quater.6.
+ * - The warning: `business-rules.md` §7, which is a choice of the user and not
+ *   a figure of the law.
+ */
+export const DEFAULT_INFORMATIVE_LIMITS = {
+  "720": { threshold: "50000", increase: "20000", alert: "45000" },
+  "721": { threshold: "50000", increase: "20000", alert: "45000" },
+} as const satisfies Record<
+  InformativeModel,
+  { threshold: DecimalString; increase: DecimalString; alert: DecimalString }
+>;
+
+/** The amount above which a category of the model obliges to file. */
+export const modelThresholdOf = (settings: Settings, model: InformativeModel): Decimal =>
+  Decimal.parse(
+    settings[`model_${model}_threshold_eur`] ?? DEFAULT_INFORMATIVE_LIMITS[model].threshold,
+  );
+
+/** The increase over the last filed return of the model that obliges to file again. */
+export const modelIncreaseOf = (settings: Settings, model: InformativeModel): Decimal =>
+  Decimal.parse(
+    settings[`model_${model}_increase_eur`] ?? DEFAULT_INFORMATIVE_LIMITS[model].increase,
+  );
+
+/** The amount at which the application warns, before the threshold obliges. */
+export const modelAlertThresholdOf = (settings: Settings, model: InformativeModel): Decimal =>
+  Decimal.parse(
+    settings[`model_${model}_alert_threshold_eur`] ?? DEFAULT_INFORMATIVE_LIMITS[model].alert,
+  );
+
+/** The income tax season as understood in September 2026: from 1 April to 30 June. */
+export const DEFAULT_RENTA_SEASON = { start: "04-01", end: "06-30" } as const;
+
+/** The season in force, as two `MM-DD`: what the settings say, or its documented default. */
+export const rentaSeasonOf = (settings: Settings): { start: string; end: string } => ({
+  start: settings.renta_season_start ?? DEFAULT_RENTA_SEASON.start,
+  end: settings.renta_season_end ?? DEFAULT_RENTA_SEASON.end,
+});
+
 /** The treaty rate for a country, or nothing when the settings do not know it (#16). */
 export const treatyWithholdingPctOf = (
   settings: Settings,
@@ -216,7 +287,11 @@ const DECIMAL_FIELDS = [
   "bucket_max_cumulative_contribution",
   "bucket_stop_loss_pct",
   "bucket_max_weight_pct",
+  "model_720_threshold_eur",
+  "model_720_increase_eur",
   "model_720_alert_threshold_eur",
+  "model_721_threshold_eur",
+  "model_721_increase_eur",
   "model_721_alert_threshold_eur",
   "savings_offset_limit_pct",
 ] as const;
@@ -233,8 +308,11 @@ interface Range {
  * negative bucket share produces a negative budget and a core larger than the
  * contribution, and one above 100 makes the calculator ask for negative
  * allocations and die on its own invariant. The rest is bounded below only.
+ *
+ * Complete, not partial: every decimal setting has a bound, and the compiler
+ * asks for one the day a new setting joins `DECIMAL_FIELDS`.
  */
-const DECIMAL_RANGES: Partial<Record<(typeof DECIMAL_FIELDS)[number], Range>> = {
+const DECIMAL_RANGES: Record<(typeof DECIMAL_FIELDS)[number], Range> = {
   deviation_threshold_pp: { min: "0" },
   satellite_min_weight_pct: { min: "0", max: "100" },
   monthly_contribution_eur: { min: "0" },
@@ -242,6 +320,12 @@ const DECIMAL_RANGES: Partial<Record<(typeof DECIMAL_FIELDS)[number], Range>> = 
   bucket_max_cumulative_contribution: { min: "0" },
   bucket_stop_loss_pct: { min: "0", max: "100" },
   bucket_max_weight_pct: { min: "0", max: "100" },
+  model_720_threshold_eur: { min: "0" },
+  model_720_increase_eur: { min: "0" },
+  model_720_alert_threshold_eur: { min: "0" },
+  model_721_threshold_eur: { min: "0" },
+  model_721_increase_eur: { min: "0" },
+  model_721_alert_threshold_eur: { min: "0" },
   savings_offset_limit_pct: { min: "0", max: "100" },
 };
 
@@ -383,6 +467,48 @@ const checkTreatyRates = (raw: UnknownRecord): void => {
   }
 };
 
+/**
+ * A warning above its own threshold would never fire: the category would be
+ * obliged before the application said anything. Checked on the figures **in
+ * force**, defaults included, because that is the configuration that will run.
+ */
+const checkInformativeAlerts = (raw: UnknownRecord): void => {
+  const settings = raw as unknown as Settings;
+  for (const model of INFORMATIVE_MODELS) {
+    const alert = modelAlertThresholdOf(settings, model);
+    const threshold = modelThresholdOf(settings, model);
+    if (alert.gt(threshold)) {
+      throw new ValidationError(
+        "alert_above_threshold",
+        `model_${model}_alert_threshold_eur must not be above model_${model}_threshold_eur`,
+        { model, alert: alert.toString(), threshold: threshold.toString() },
+      );
+    }
+  }
+};
+
+/** A day of the year as `MM-DD`, checked against a leap year so that 02-29 exists. */
+const SEASON_FIELDS = ["renta_season_start", "renta_season_end"] as const;
+
+const checkRentaSeason = (raw: UnknownRecord): void => {
+  const invalid = (message: string, details: Record<string, unknown>): never => {
+    throw new ValidationError("invalid_renta_season", message, details);
+  };
+  for (const field of SEASON_FIELDS) {
+    if (field in raw && !isCivilDate(`2024-${String(raw[field])}`)) {
+      invalid(`${field} must be a day of the year as MM-DD`, { field, value: raw[field] });
+    }
+  }
+  const season = rentaSeasonOf(raw as unknown as Settings);
+  if (season.start > season.end) {
+    invalid("renta_season_start must not be after renta_season_end", {
+      field: "renta_season_start",
+      start: season.start,
+      end: season.end,
+    });
+  }
+};
+
 /** Validates a complete settings object (the payload of `settings_changed`). Unknown keys are kept. */
 export const validateSettings = (raw: unknown): Settings => {
   if (!isRecord(raw)) {
@@ -416,9 +542,6 @@ export const validateSettings = (raw: unknown): Settings => {
       return fail(`${field} must be a decimal string`, { field, value });
     }
     const range = DECIMAL_RANGES[field];
-    if (range === undefined) {
-      continue;
-    }
     const parsed = Decimal.parse(value);
     const belowMin = parsed.lt(Decimal.parse(range.min));
     const aboveMax = range.max !== undefined && parsed.gt(Decimal.parse(range.max));
@@ -450,6 +573,8 @@ export const validateSettings = (raw: unknown): Settings => {
       return fail(`${field} must be true or false`, { field, value: raw[field] });
     }
   }
+  checkInformativeAlerts(raw);
+  checkRentaSeason(raw);
   checkTreatyRates(raw);
   if ("target_weights" in raw) {
     const weights = raw.target_weights;
@@ -522,6 +647,14 @@ export const normalizeSettings = (settings: Settings): Settings => {
       settings.wash_sale_transfer_counts ?? DEFAULT_WASH_SALE_TRANSFER_COUNTS,
     savings_offset_limit_pct: settings.savings_offset_limit_pct ?? DEFAULT_SAVINGS_OFFSET_LIMIT_PCT,
     loss_carryforward_years: lossCarryforwardYearsOf(settings),
+    model_720_threshold_eur: modelThresholdOf(settings, "720").toString(),
+    model_720_increase_eur: modelIncreaseOf(settings, "720").toString(),
+    model_720_alert_threshold_eur: modelAlertThresholdOf(settings, "720").toString(),
+    model_721_threshold_eur: modelThresholdOf(settings, "721").toString(),
+    model_721_increase_eur: modelIncreaseOf(settings, "721").toString(),
+    model_721_alert_threshold_eur: modelAlertThresholdOf(settings, "721").toString(),
+    renta_season_start: rentaSeasonOf(settings).start,
+    renta_season_end: rentaSeasonOf(settings).end,
   };
 };
 

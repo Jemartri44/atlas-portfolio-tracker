@@ -44,7 +44,11 @@ const notTheFormat = (d: Details): string =>
 const MONEY_SETTINGS: ReadonlySet<string> = new Set([
   "monthly_contribution_eur",
   "bucket_max_cumulative_contribution",
+  "model_720_threshold_eur",
+  "model_720_increase_eur",
   "model_720_alert_threshold_eur",
+  "model_721_threshold_eur",
+  "model_721_increase_eur",
   "model_721_alert_threshold_eur",
 ]);
 
@@ -166,6 +170,14 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   },
   invalid_wash_sale_window: (d) =>
     `La ventana de recompra de ${enumValue(d.asset_type)} no es válida: elige dos meses, un año o un número de días.`,
+  alert_above_threshold: (d, _n, f) =>
+    `El aviso previo del Modelo ${num(d.model)} (${f.money(d.alert)}) no puede superar el umbral que obliga a presentarlo (${f.money(d.threshold)}): nunca llegaría a saltar.`,
+  // Named in words and never by its key: there are only two fields, and a
+  // fallback to the raw name would print `renta_season_start` at the user.
+  invalid_renta_season: (d) =>
+    d.value === undefined
+      ? `La temporada de Renta empieza el ${num(d.start)} y termina el ${num(d.end)}: el inicio no puede ser posterior al fin.`
+      : `${text(d.field) === "renta_season_end" ? "El fin" : "El inicio"} de la temporada de Renta se escribe como MM-DD, mes y día (recibido: ${num(d.value)}).`,
   tax_ledger_invalid: (d) =>
     `Tus datos tienen ${num(d.count)} ${Number(d.count) === 1 ? "movimiento inválido" : "movimientos inválidos"}: un cálculo fiscal sobre ellos sería aproximado. Repáralo antes en Ajustes → Verificación.`,
   tax_year_unsupported: (d) =>

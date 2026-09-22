@@ -132,6 +132,12 @@ export const describeError = (error: DomainError): string => {
     }
     case "invalid_wash_sale_window":
       return `La ventana de recompra de ${text(d.asset_type)} debe ser "2m", "1y" o "<n>d" (recibido: ${text(d.value)}).`;
+    case "alert_above_threshold":
+      return `El aviso del Modelo ${text(d.model)} (${text(d.alert)} €) no puede superar el umbral que obliga a presentarlo (${text(d.threshold)} €): nunca llegaría a saltar.`;
+    case "invalid_renta_season":
+      return d.value === undefined
+        ? `La temporada de Renta empieza el ${text(d.start)} y termina el ${text(d.end)}: el inicio no puede ser posterior al fin.`
+        : `El parámetro ${text(d.field)} debe ser un día del año con la forma MM-DD (recibido: ${text(d.value)}).`;
     case "tax_ledger_invalid":
       return `El libro tiene ${text(d.count)} eventos inválidos y un cálculo fiscal sobre él sería aproximado: repáralos antes (\`atlas check\`). Inválidos: ${((d.invalid as { id: string; type: string; code: string }[] | undefined) ?? []).map((entry) => `${entry.type} ${entry.id} (${entry.code})`).join(", ")}.`;
     case "tax_year_unsupported":

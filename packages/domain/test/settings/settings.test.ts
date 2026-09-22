@@ -9,10 +9,15 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_WASH_SALE_WINDOW,
   fiscalDateRuleOf,
+  INFORMATIVE_MODELS,
   incomeCategoryOf,
   lossCarryforwardYearsOf,
   mergeSettings,
+  modelAlertThresholdOf,
+  modelIncreaseOf,
+  modelThresholdOf,
   normalizeSettings,
+  rentaSeasonOf,
   type Settings,
   savingsOffsetLimitPctOf,
   treatyWithholdingPctOf,
@@ -546,5 +551,128 @@ describe("the tax engine settings", () => {
     expect(explicit.wash_sale_transfer_counts).toBe(false);
     expect(explicit.savings_offset_limit_pct).toBe("20");
     expect(explicit.loss_carryforward_years).toBe(5);
+  });
+});
+
+describe("the figures of the informative returns and the tax season (feature 010)", () => {
+  const code = (settings: unknown): string => {
+    try {
+      validateSettings(settings);
+    } catch (error) {
+      return (error as ValidationError).code;
+    }
+    return "accepted";
+  };
+
+  it("have the documented default of September 2026, per model", () => {
+    for (const model of INFORMATIVE_MODELS) {
+      expect(modelThresholdOf(DEFAULT_SETTINGS, model).toString()).toBe("50000");
+      expect(modelIncreaseOf(DEFAULT_SETTINGS, model).toString()).toBe("20000");
+      expect(modelAlertThresholdOf(DEFAULT_SETTINGS, model).toString()).toBe("45000");
+    }
+    expect(rentaSeasonOf(DEFAULT_SETTINGS)).toEqual({ start: "04-01", end: "06-30" });
+  });
+
+  it("are read off the settings when they are there, model by model", () => {
+    const settings: Settings = {
+      ...DEFAULT_SETTINGS,
+      model_720_threshold_eur: "60000",
+      model_720_increase_eur: "25000",
+      model_720_alert_threshold_eur: "55000",
+      model_721_threshold_eur: "40000",
+      model_721_increase_eur: "15000",
+      model_721_alert_threshold_eur: "35000",
+      renta_season_start: "04-11",
+      renta_season_end: "07-01",
+    };
+    expect(modelThresholdOf(settings, "720").toString()).toBe("60000");
+    expect(modelIncreaseOf(settings, "720").toString()).toBe("25000");
+    expect(modelAlertThresholdOf(settings, "720").toString()).toBe("55000");
+    expect(modelThresholdOf(settings, "721").toString()).toBe("40000");
+    expect(modelIncreaseOf(settings, "721").toString()).toBe("15000");
+    expect(modelAlertThresholdOf(settings, "721").toString()).toBe("35000");
+    expect(rentaSeasonOf(settings)).toEqual({ start: "04-11", end: "07-01" });
+    expect(code(settings)).toBe("accepted");
+  });
+
+  it("refuse a negative amount and anything that is not a decimal string", () => {
+    expect(code({ ...DEFAULT_SETTINGS, model_720_threshold_eur: "-1" })).toBe("invalid_settings");
+    expect(code({ ...DEFAULT_SETTINGS, model_721_increase_eur: "-0.01" })).toBe("invalid_settings");
+    expect(code({ ...DEFAULT_SETTINGS, model_720_increase_eur: 20000 })).toBe("invalid_settings");
+    // Zero is a number, not a missing value; the warning has to come down with it.
+    expect(
+      code({
+        ...DEFAULT_SETTINGS,
+        model_721_threshold_eur: "0",
+        model_721_alert_threshold_eur: "0",
+      }),
+    ).toBe("accepted");
+  });
+
+  it("refuse a warning above its own threshold: it would never fire", () => {
+    expect(code({ ...DEFAULT_SETTINGS, model_720_alert_threshold_eur: "50000.01" })).toBe(
+      "alert_above_threshold",
+    );
+    // Exactly at the threshold is fine: the warning fires and the category obliges the cent after.
+    expect(code({ ...DEFAULT_SETTINGS, model_720_alert_threshold_eur: "50000" })).toBe("accepted");
+    expect(code({ ...DEFAULT_SETTINGS, model_721_alert_threshold_eur: "50000.01" })).toBe(
+      "alert_above_threshold",
+    );
+    // Against the figures **in force**: lowering the threshold alone leaves the
+    // default warning of 45.000 above it.
+    expect(code({ ...DEFAULT_SETTINGS, model_720_threshold_eur: "40000" })).toBe(
+      "alert_above_threshold",
+    );
+    expect(
+      code({
+        ...DEFAULT_SETTINGS,
+        model_720_threshold_eur: "40000",
+        model_720_alert_threshold_eur: "39000",
+      }),
+    ).toBe("accepted");
+    try {
+      validateSettings({ ...DEFAULT_SETTINGS, model_721_alert_threshold_eur: "60000" });
+      expect.unreachable();
+    } catch (error) {
+      expect((error as ValidationError).details).toEqual({
+        model: "721",
+        alert: "60000",
+        threshold: "50000",
+      });
+    }
+  });
+
+  it("refuse a season that is not two days of the year, or that ends before it starts", () => {
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_start: "2026-04-01" })).toBe(
+      "invalid_renta_season",
+    );
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_end: "06-31" })).toBe("invalid_renta_season");
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_end: "13-01" })).toBe("invalid_renta_season");
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_start: "07-01" })).toBe("invalid_renta_season");
+    // 29 February exists: the check reads the day against a leap year.
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_start: "02-29" })).toBe("accepted");
+    // A season of one single day is a season.
+    expect(
+      code({ ...DEFAULT_SETTINGS, renta_season_start: "06-30", renta_season_end: "06-30" }),
+    ).toBe("accepted");
+  });
+
+  it("are materialised when the settings are read (ADR-0022)", () => {
+    const normalized = normalizeSettings(DEFAULT_SETTINGS);
+    expect(normalized.model_720_threshold_eur).toBe("50000");
+    expect(normalized.model_720_increase_eur).toBe("20000");
+    expect(normalized.model_720_alert_threshold_eur).toBe("45000");
+    expect(normalized.model_721_threshold_eur).toBe("50000");
+    expect(normalized.model_721_increase_eur).toBe("20000");
+    expect(normalized.model_721_alert_threshold_eur).toBe("45000");
+    expect(normalized.renta_season_start).toBe("04-01");
+    expect(normalized.renta_season_end).toBe("06-30");
+    const explicit = normalizeSettings({
+      ...DEFAULT_SETTINGS,
+      model_720_threshold_eur: "60000",
+      renta_season_end: "07-01",
+    });
+    expect(explicit.model_720_threshold_eur).toBe("60000");
+    expect(explicit.renta_season_end).toBe("07-01");
   });
 });

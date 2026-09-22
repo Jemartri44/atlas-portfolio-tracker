@@ -121,8 +121,31 @@ export const SETTINGS_NUMBERS: readonly NumberSetting[] = [
     label: "Peso máximo del cubo (%)",
     hint: "Sobre todo tu patrimonio; por encima, el exceso se pasa a la cartera principal.",
   },
-  { key: "model_720_alert_threshold_eur", label: "Umbral del Modelo 720 (€)", money: true },
-  { key: "model_721_alert_threshold_eur", label: "Umbral del Modelo 721 (€)", money: true },
+  {
+    key: "model_720_threshold_eur",
+    label: "Umbral que obliga al Modelo 720 (€)",
+    money: true,
+    hint: "Por categoría: las cuentas por un lado y los valores por otro. Lo fija la ley.",
+  },
+  {
+    key: "model_720_increase_eur",
+    label: "Subida que obliga a repetir el Modelo 720 (€)",
+    money: true,
+    hint: "Sobre lo declarado en el último Modelo 720 presentado.",
+  },
+  {
+    key: "model_720_alert_threshold_eur",
+    label: "Aviso previo del Modelo 720 (€)",
+    money: true,
+    hint: "Desde este valor te avisamos, antes de que la categoría llegue a obligar.",
+  },
+  { key: "model_721_threshold_eur", label: "Umbral que obliga al Modelo 721 (€)", money: true },
+  {
+    key: "model_721_increase_eur",
+    label: "Subida que obliga a repetir el Modelo 721 (€)",
+    money: true,
+  },
+  { key: "model_721_alert_threshold_eur", label: "Aviso previo del Modelo 721 (€)", money: true },
   {
     key: "stale_price_days",
     label: "Días para que un precio caduque",
@@ -140,6 +163,16 @@ export const SETTINGS_NUMBERS: readonly NumberSetting[] = [
 /** The free-text settings. */
 export const SETTINGS_TEXTS: readonly TextSetting[] = [
   { key: "tax_residence", label: "Residencia fiscal", hint: "Dos letras (ISO 3166-1)." },
+  {
+    key: "renta_season_start",
+    label: "Inicio de la temporada de Renta",
+    hint: "Mes y día, como 04-01. Dentro de la temporada, lo fiscal sube arriba del Resumen.",
+  },
+  {
+    key: "renta_season_end",
+    label: "Fin de la temporada de Renta",
+    hint: "Mes y día, como 06-30.",
+  },
   {
     key: "notification_email",
     label: "Correo de avisos",

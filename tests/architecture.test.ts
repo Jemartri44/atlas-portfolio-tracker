@@ -569,7 +569,14 @@ describe("architecture: apps/web", () => {
    * depending on the field it names, and the catalogue decides that with its
    * own `MONEY_SETTINGS`, outside the sentence.
    */
-  const A_FIGURE_ANYWAY = new Set(["invalid_amount.value", "invalid_quantity.value"]);
+  const A_FIGURE_ANYWAY = new Set([
+    "invalid_amount.value",
+    "invalid_quantity.value",
+    // The configured figures of the informative returns: amounts in euros the
+    // user set, said back to him when one contradicts the other.
+    "alert_above_threshold.alert",
+    "alert_above_threshold.threshold",
+  ]);
 
   /** Each entry of a catalogue with its body, from its key to the next one. */
   const templatesOf = (source: string): Map<string, string> => {

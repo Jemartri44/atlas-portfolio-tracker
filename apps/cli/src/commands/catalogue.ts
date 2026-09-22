@@ -228,9 +228,16 @@ const SETTINGS_DECIMALS = [
   "bucket-max-cumulative-contribution",
   "bucket-stop-loss-pct",
   "bucket-max-weight-pct",
+  "model-720-threshold-eur",
+  "model-720-increase-eur",
   "model-720-alert-threshold-eur",
+  "model-721-threshold-eur",
+  "model-721-increase-eur",
   "model-721-alert-threshold-eur",
   "savings-offset-limit-pct",
+  // Copied verbatim, like the two below: the domain validates the form.
+  "renta-season-start",
+  "renta-season-end",
   "tax-residence",
   "notification-email",
 ];
