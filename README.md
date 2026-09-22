@@ -7,7 +7,7 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 - **Fases 1, 2 y 3 completas.** El libro mayor con lotes FIFO, traspasos y eventos corporativos; la aportación mensual repartida según los pesos objetivo; y el seguimiento del cubo especulativo frente a su índice. Todo se usa desde la CLI `atlas`.
 - **La web, completa.** Resumen, Movimientos, Registrar, la cartera principal (Núcleo), Cubo, Ajustes y libro, con gráficas y todos los asistentes. Funciona entera en el dispositivo, sin servidor y sin cuenta.
 - **Las previsiones fiscales del esquema, integradas.** El libro ya guarda los datos que necesitará el cálculo de la Renta (ADR-0021).
-- **El motor fiscal, en implementación** (Fase 5).
+- **El motor fiscal, terminado** (Fase 5, primera mitad): la base imponible del ahorro de un ejercicio, con la regla de recompra calculada, la compensación del art. 49 y el arrastre a cuatro ejercicios, y `atlas tax <año>` como salida. La salida por casillas de la Renta, los modelos informativos y la pantalla fiscal de la web son lo siguiente.
 - **Sin infraestructura en la nube todavía.** Ni API ni AWS: los datos viven en un fichero local o en el navegador.
 
 Cada funcionalidad tiene su especificación en [`specs/`](specs/).
@@ -95,6 +95,7 @@ atlas lots               # lotes fiscales (FIFO global por activo), con fecha y 
 atlas cash               # efectivo por cuenta y divisa
 atlas gains 2027         # ganancias realizadas del ejercicio (redondeadas una vez por operación)
 atlas income 2027        # dividendos e intereses
+atlas tax 2028           # la base imponible del ahorro del ejercicio, por apartados
 atlas weights --date 2027-12-31   # pesos, objetivos y desviaciones del núcleo
 atlas contribute --amount 1000    # reparto de la aportación del mes (propone; no escribe)
 atlas costs                       # comisiones, TER y coste anual, núcleo y cubo por separado
@@ -174,6 +175,38 @@ atlas thesis show th_delta --date 2028-12-31
 `atlas networth` es la única vista que suma los dos libros, y lo hace **siempre desglosada**: núcleo, cubo y efectivo por cuenta y divisa, con el tipo de cambio aplicado y de cuándo es. Si falta un precio o un tipo, el total sale marcado como parcial y dice qué falta.
 
 Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (dos meses para cotizados, un año para fondos y cripto, contados de fecha a fecha): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar; el diferimiento lo calculará el motor fiscal de la Fase 5.
+
+### La Renta (Fase 5)
+
+```bash
+atlas tax 2028            # la base imponible del ahorro del ejercicio, por apartados
+atlas tax 2028 --lots     # además, los lotes que consumió cada operación y su linaje
+atlas tax 2028 --json     # el informe entero, con los importes como cadenas decimales
+```
+
+`atlas tax <año> [--lots] [--json]` calcula la **base, no la cuota**: no aplica tramos, no resta el mínimo personal y no dice lo que se paga. La cabecera lo recuerda, y avisa además de que el informe es un **total fiscal** —núcleo y cubo agregados por contribuyente, la excepción de la constitución III—, de con qué configuración se ha calculado y de qué fecha se ha tomado como día de la consulta.
+
+Ninguna cifra fiscal mira un precio: la declaración sale del libro y solo del libro. Cada línea dice de qué **criterios fiscales** depende (los de `docs/fiscal-questions.md`), y los dudosos van marcados con un asterisco y explicados en la leyenda del final.
+
+Diez apartados, en este orden:
+
+1. **Ganancias y pérdidas patrimoniales** (art. 33), una línea por operación: fecha fiscal, evento, activo, libro, cuenta, cantidad, importe transmitido en su divisa con el tipo del BCE y su fecha, transmisión y coste en euros, resultado propio, lo liberado, lo diferido, lo computable y sus criterios. Con `--lots`, debajo, los lotes que consumió y de dónde venía cada uno.
+2. **Rendimientos del capital mobiliario** (art. 25): dividendos, intereses, las transmisiones cuya categoría de renta configurada los lleve aquí, y los gastos de administración y depósito deducibles (art. 26.1.a).
+3. **Regla de recompra**: lo diferido en el ejercicio con su ventana y las adquisiciones que lo causan, lo liberado con la pérdida de la que viene, y lo que sigue diferido a 31/12 y en qué lotes.
+4. **Compensación** (art. 49), paso a paso, con el límite del 25 % en los dos sentidos.
+5. **Saldos negativos pendientes**, por ejercicio de origen y categoría, con el último ejercicio en que se pueden usar y un aviso de lo que caduca. Debajo, en una línea destacada, la **base imponible del ahorro**.
+6. **Retenciones a cuenta**, que se restan de la cuota que este motor no calcula.
+7. **Doble imposición internacional**: lo deducible hasta el tipo del convenio de cada país y lo que excede, que se pierde. Sin el tipo del convenio configurado, o sin el país del pagador, no se calcula y se dice por qué.
+8. **Criterios dudosos**: cuánto dinero hay en juego si un criterio está mal y en qué dirección, medido como diferencia real de base cuando el criterio es configuración y como exposición cuando no lo es. Nunca con un precio de por medio: lo que no se puede cuantificar desde el libro se dice así.
+9. **Lo que este motor no calcula**, y avisos.
+10. **Diferencias con la configuración anterior**, cuando el libro tiene algún `settings_changed`: qué operaciones cambian respecto de la configuración anterior (o de los valores por defecto documentados, si solo hay una).
+
+Dos cosas que el comando se niega a hacer:
+
+- **Dar cifras sobre un libro con eventos inválidos.** Una base calculada saltándose un evento sería aproximada, así que la respuesta es la lista de lo que hay que reparar y una remisión a `atlas check`.
+- **Calcular un ejercicio anterior a 2018**, cuando empieza el régimen de compensación vigente. Tampoco calcula ninguno si el libro tiene cifras anteriores a esa fecha.
+
+Y un aviso que llega antes: `atlas settings set` compara la base del ahorro de los ejercicios ya cerrados con la configuración en vigor y con la propuesta, y dice cuáles se mueven. Cambiar la ventana de recompra o la categoría de renta mueve una declaración pasada sin mover ni una ganancia realizada.
 
 ### Copia de seguridad provisional (Fases 1-3)
 
