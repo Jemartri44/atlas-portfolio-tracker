@@ -178,13 +178,19 @@ La ventana es de **dos meses** para valores admitidos a negociación (acciones, 
 
 → La app alerta al intentar registrar una recompra que active la regla, y **aplica el diferimiento completo** en el motor fiscal: la parte de la pérdida proporcional a la cantidad recomprada queda pendiente, asociada a los lotes recomprados, y se libera cuando estos se transmiten; si esos lotes se traspasan o se canjean antes (`transfer`, `convert`, `carve_out`), el diferimiento viaja con los lotes descendientes y se libera cuando estos se transmiten (pregunta #15, **verificar**). Es el error más común en operativa activa.
 
+La ley no cierra cuatro cosas que el motor no puede dejar de decidir, y que van numeradas en `docs/fiscal-questions.md` con su certeza y la dirección de su riesgo: solo cuenta la recompra que **sigue en el patrimonio** tras la venta (#18); cada unidad recomprada difiere **una sola** unidad vendida, atendiendo las pérdidas por orden cronológico (#19); la regla mira el **resultado neto de la operación**, no lote a lote (#20); y lo que una transmisión libera se suma a su resultado y **vuelve a pasar** por la regla (#21). El detalle está en `data-schema.md` §8.4.
+
 ### 5.5 Compensación de pérdidas
 
 - Las pérdidas patrimoniales compensan primero con ganancias patrimoniales del mismo ejercicio.
-- El remanente compensa con rendimientos del capital mobiliario **hasta el 25 %** del saldo positivo de esos rendimientos (art. 49 LIRPF; porcentaje vigente **desde 2018**, tras el régimen transitorio del 10-15-20 % de 2015-2017; `docs/fiscal-questions.md` #10).
+- El remanente compensa con rendimientos del capital mobiliario **hasta el 25 %** del saldo positivo de esos rendimientos (art. 49 LIRPF; porcentaje vigente **desde 2018**, tras el régimen transitorio del 10-15-20 % de 2015-2017; `docs/fiscal-questions.md` #10). **El cruce va en los dos sentidos**: un saldo negativo de rendimientos del capital mobiliario compensa el saldo positivo de ganancias patrimoniales con el mismo límite.
 - Lo no compensado se arrastra hasta **4 ejercicios** siguientes.
 
-→ La app mantiene el saldo de pérdidas pendientes por ejercicio de origen.
+**El orden, que decide qué caduca** (criterio #22, tomado del manual práctico de IRPF de la AEAT): **fase 1**, el ejercicio —cada categoría se integra por separado y el saldo negativo de una compensa el positivo de la otra hasta el límite—; **fase 2**, lo pendiente de ejercicios anteriores —primero contra el saldo positivo restante de **su misma categoría**, sin límite, y después contra el de la otra, donde el límite es **conjunto** con lo ya compensado en la fase 1—. Entre ejercicios pendientes, los **más antiguos primero**, que es lo que minimiza lo que caduca. El límite se redondea a céntimos half-up, como cualquier otra cifra (#6). El motor compensa siempre el máximo posible: no compensar no es una opción que se deje al usuario.
+
+El porcentaje y los cuatro años son **configuración**, no constantes del código (`savings_offset_limit_pct` y `loss_carryforward_years`, §7): el primero ya fue 10, 15 y 20 entre 2015 y 2017.
+
+→ La app mantiene el saldo de pérdidas pendientes **por ejercicio de origen y por categoría**, con el último ejercicio en que se puede usar cada uno. Separarlos por categoría no es cosmético: un saldo negativo de ganancias patrimoniales y uno de rendimientos del capital mobiliario compensan de forma distinta, sin límite dentro de su categoría y con el límite en la otra.
 
 ### 5.6 Dividendos y rendimientos extranjeros
 
