@@ -9,6 +9,7 @@
 // prices compares byte for byte.
 
 import type { CivilDate } from "../dates/civil-date.js";
+import type { FilingComparison } from "../filings/comparison.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
@@ -335,6 +336,12 @@ export interface TaxYearReport {
   };
   compensation: Compensation;
   anchor?: AnchorDifference;
+  /**
+   * Present only when an income tax return is in force for the year
+   * (ADR-0020): what it declared, what the application computed the day it was
+   * recorded, what it computes today, and where each difference comes from.
+   */
+  filing?: FilingComparison;
   base_eur: Money;
   withholdings: { lines: WithholdingLine[]; total_eur: Money };
   double_taxation: {

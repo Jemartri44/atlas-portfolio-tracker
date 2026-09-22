@@ -18,6 +18,7 @@
 
 import { yearOf } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
+import { filingComparison } from "../filings/comparison.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
@@ -784,6 +785,9 @@ export const taxYear = (
       { count: core.invalid.length, invalid: core.invalid },
     );
   }
+  // What was filed for this year, when there is a return in force: a fact kept
+  // as it was filed, compared with what the ledger says today (ADR-0020).
+  const filing = filingComparison(events, year, options.today, core);
   const { state } = core;
   const byCategory = (category: IncomeCategory) =>
     core.transmissions.filter((line) => line.category === category);
@@ -863,6 +867,7 @@ export const taxYear = (
     },
     compensation: core.compensation,
     ...(core.anchor === undefined ? {} : { anchor: core.anchor }),
+    ...(filing === undefined ? {} : { filing }),
     base_eur: core.compensation.base_eur,
     withholdings: {
       lines: withholdings,
