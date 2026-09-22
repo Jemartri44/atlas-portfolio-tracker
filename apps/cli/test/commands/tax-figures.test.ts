@@ -258,7 +258,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "0.00",
       "-20.00",
       "0.00",
-      "1* 2:fund_1y* 3 6 14 18*",
+      "1* 2:fund_1y* 3 6 14 18",
     ]);
     expect(gains).toContain("Ganancias 0.00 · Pérdidas -107.25 · Saldo -107.25");
     expect(section(text, 2)).toContain("Saldo 50.00");

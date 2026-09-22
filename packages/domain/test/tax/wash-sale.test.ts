@@ -301,13 +301,11 @@ describe("mandatory edge cases", () => {
     const line = lineOf(report, loss.id);
     expect(text(line.deferred_eur)).toBe("0");
     expect(line.criteria).toContain("18");
-    // The other reading would count the 5 units of the second buy, but the sale
-    // left nothing of the asset to carry a deferral: it defers nothing more
-    // (direction's decision after the fiscal review), and says so.
-    const doubtful = report.doubtful.find((entry) => entry.criterion === "18");
-    expect(text(doubtful?.base_difference_eur)).toBe("0");
-    expect(doubtful?.reason).toBe("no_carrier_left");
-    expect(doubtful?.direction).toBe("none");
+    // The criterion is named on the line and it is **not** doubtful: the
+    // Manual práctico de Renta of the AEAT says in so many words that the
+    // repurchased securities have to remain in the estate after the sale
+    // (certainty high since 2026-09-23), so no alternative reading is offered.
+    expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("18");
   });
 
   it("#18 read the other way defers only onto units still held that the rule does not use", () => {
@@ -333,11 +331,13 @@ describe("mandatory edge cases", () => {
     const loss = sell(b, "stock_s", "2027-03-01", "10", "80");
     const report = reportOf(b.build(), 2027);
     expect(text(lineOf(report, loss.id).deferred_eur)).toBe("0");
-    // −200 in all; the other reading could put 5 of the 10 units on the free shares.
-    const doubtful = report.doubtful.find((entry) => entry.criterion === "18");
-    expect(text(doubtful?.base_difference_eur)).toBe("100");
-    expect(doubtful?.reason).toBeUndefined();
-    expect(doubtful?.direction).toBe("aggressive");
+    // −200 in all, and the other reading could put 5 of the 10 units on the
+    // free shares. It is not offered: the criterion is of high certainty, and
+    // **that is what it costs** — a reading that moves money stops being shown
+    // because we stopped doubting it. Written down with the same case of #19,
+    // to be decided in block 2.
+    expect(lineOf(report, loss.id).criteria).toContain("18");
+    expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("18");
   });
 
   it("#19: one repurchase in the windows of two losses defers only the first", () => {

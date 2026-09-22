@@ -62,3 +62,37 @@ Tres assertions miran la entrada de dudosos del #18. Siguen el patrón que ya se
 Es el mismo efecto que la dirección dejó anotado para el #19 y congeló para el bloque 2: **una lectura alternativa deja de verse porque hemos dejado de dudar de ella**. En el libro sintético la cifra en juego es 0,00 €, pero en un libro real la lectura contraria del #18 (contar también la recompra que la propia venta consumió) puede diferir una pérdida grande, y con el criterio en certeza alta esa cifra no aparece en ningún sitio.
 
 Se anota en las pendientes de `questions.md` junto a la del #19: **las dos se deciden en el bloque 2**, que es donde se elige qué ve el usuario y dónde. No se resuelve aquí.
+
+---
+
+## 6. Resultado de la comparación (2026-09-23)
+
+**Cumplida al pie de la letra.** Regenerado `tests/fixtures/ledger/synthetic-v1.tax.json` y comparado con el anterior, el `diff` entero es **una sola entrada borrada**, la del `18` en `/2027/doubtful`, exactamente la que predice el apartado 3:
+
+```diff
+@@ -991,20 +991,6 @@
+       {
+         "base_difference_eur": "0",
+         "certainty": "medium",
+-        "criterion": "18",
+-        "direction": "none",
+-        "documented_risk": "aggressive",
+-        "event_ids": [
+-          "01MBP2GS80T8F1MS8PT0M7FK2R",
+-          "01MN8FTA80DDTPKAG5TNV3Q20X",
+-          "01N4F4Y58036KX1852YTTM0XD3"
+-        ],
+-        "measure": "difference",
+-        "reason": "no_carrier_left"
+-      },
+-      {
+-        "base_difference_eur": "0",
+-        "certainty": "medium",
+         "criterion": "24:etc",
+```
+
+Ni una línea más: el `18` sigue en los tres `criteria`, ninguna cifra se movió, y `synthetic-v1.jsonl` y `synthetic-v1.snapshot.json` no se tocaron. **Nada no previsto.**
+
+Los cuatro sitios de test del apartado 4 son los cuatro que fallaron al aplicar el cambio, ni uno más. Suite completa: **163 ficheros, 1.576 tests**, verde.
+
+Una corrección de redacción que no estaba prevista: la celda de certeza no puede decir «Alta (subida de **media**…)», porque `tests/fiscal-criteria.test.ts` busca palabras clave en la celda y leía las dos certezas. Queda «Alta (subió el 2026-09-23, al verificarse el manual de la AEAT)».
