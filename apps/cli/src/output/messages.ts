@@ -242,6 +242,8 @@ export const describeError = (error: DomainError): string => {
       return `El sobre de la línea no es válido: falta o sobra ${text(d.field)}.`;
     case "invalid_currency":
       return `Divisa no válida: ${text(d.value)} (tres letras, ISO 4217).`;
+    case "fx_rate_unknown":
+      return `El libro tiene saldo en ${text(d.currency)} y no conoce ningún tipo del BCE para esa divisa: no se puede valorar. No debería poder pasar —toda operación lleva su tipo—, así que es un defecto: repórtalo con el libro a mano.`;
     case "invalid_fx_rate":
       return `Tipo de cambio no válido: ${text(d.value)}.`;
     case "invalid_instant":

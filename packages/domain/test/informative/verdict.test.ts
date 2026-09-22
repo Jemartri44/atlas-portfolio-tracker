@@ -10,9 +10,12 @@
 // 50.000,00 does not oblige and 50.000,01 does.
 
 import { describe, expect, it } from "vitest";
+import type { DomainError } from "../../src/errors.js";
 import { model720 } from "../../src/informative/m720.js";
 import type { InformativeCategory, InformativeReturn } from "../../src/informative/report.js";
-import type { Money } from "../../src/money/money.js";
+import { cashValueAt, toEurAt } from "../../src/informative/valuation.js";
+import { Money } from "../../src/money/money.js";
+import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { Settings } from "../../src/settings/settings.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 import { HAND_SETTINGS } from "../tax/helpers.js";
@@ -28,6 +31,15 @@ const TODAY = "2028-06-01";
 
 const text = (money: Money | undefined): string =>
   money === undefined ? "—" : money.amount.toString();
+
+const codeOf = (run: () => unknown): string => {
+  try {
+    run();
+  } catch (error) {
+    return (error as DomainError).code;
+  }
+  return "no error";
+};
 
 const categoryOf = (report: InformativeReturn, name: string): InformativeCategory =>
   report.categories.find((entry) => entry.category === name) as InformativeCategory;
@@ -232,5 +244,34 @@ describe("a year with no verdict to give", () => {
     expect(early.period).toBe("before_model");
     expect(early.categories.every((entry) => entry.verdict === "not_applicable")).toBe(true);
     expect(early.notes.map((note) => note.code)).toContain("informative_model_did_not_exist");
+  });
+});
+
+describe("the invariant behind the conversion of a balance", () => {
+  it("throws where the fault is instead of valuing a balance short", () => {
+    // A balance in a currency implies an operation in that currency, and every
+    // operation carries its ECB rate (ADR-0013), so the ledger cannot hold
+    // dollars and know no rate for the dollar. The invariant is checked and not
+    // assumed: broken by hand, it stops the calculation with the currency in
+    // the error instead of producing a plausible figure one conversion short.
+    const b = new LedgerBuilder();
+    b.settings(SETTINGS);
+    b.account("acc_ib", { platform: "ibkr", country: "IE" });
+    b.deposit({
+      account_id: "acc_ib",
+      value_date: "2027-06-01",
+      amount: "1000",
+      currency: "USD",
+      fx_rate: "1.1",
+      fx_rate_date: "2027-06-01",
+    });
+    const events = b.build();
+    const state = projectLedger(events, { asOf: "2027-12-31" });
+    const amount = Money.parse("1000", "USD");
+    expect(cashValueAt(state, "USD", amount, 2027).value_eur?.amount.toString()).toBe("909.09");
+    state.fxRates.delete("USD");
+    expect(() => cashValueAt(state, "USD", amount, 2027)).toThrowError(/USD/);
+    expect(() => toEurAt(state, "USD", amount)).toThrowError(/USD/);
+    expect(codeOf(() => toEurAt(state, "USD", amount))).toBe("fx_rate_unknown");
   });
 });

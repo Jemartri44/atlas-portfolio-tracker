@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import { yearOf } from "../../src/dates/civil-date.js";
 import { model720, model721 } from "../../src/informative/m720.js";
 import { realizedGains } from "../../src/projections/gains.js";
+import { integrity } from "../../src/projections/integrity.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type {
   BuyEvent,
@@ -381,6 +382,21 @@ describe("proof 1 bis: the return reads no price, with the 720 inside", () => {
     // What was normalised, checked for itself: every figure of the comparison
     // is the same with the 720 and the 721 gone.
     expect(figuresOf(stripped, 2027)).toBe(figuresOf(events, 2027));
+    // **And why it stopped verifying**, anchored: the file really did lose four
+    // lines, so the fingerprint of the income tax return no longer covers the
+    // lines before it. That is the fingerprint working. If it ever failed for
+    // another reason the normalisation above would swallow it in silence, and
+    // a proof that swallows is a carpet.
+    const finding = integrity(projectLedger(stripped, { collectErrors: true })).find((entry) =>
+      entry.code.startsWith("filing_fingerprint"),
+    );
+    expect(finding?.code).toBe("filing_fingerprint_lines");
+    // With the whole ledger it verifies, so the deletion is what moved it.
+    expect(
+      integrity(projectLedger(events, { collectErrors: true })).filter((entry) =>
+        entry.code.startsWith("filing_fingerprint"),
+      ),
+    ).toEqual([]);
     // And what the income tax **does** read of what was filed is still there:
     // the anchor of the return of 2027.
     expect(json(events, 2028)).toContain("-400");

@@ -281,6 +281,11 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   invalid_instant: () => "La fecha de registro del evento no es válida.",
   invalid_currency: (d) => `Divisa no válida: ${text(d.value)} (tres letras, como EUR o USD).`,
   invalid_fx_rate: (d) => `Tipo de cambio no válido: ${text(d.value)}.`,
+  // It cannot happen: every operation carries the rate of its currency. If it
+  // ever does, it is a defect and the sentence says so rather than inviting the
+  // user to fix something that is not his to fix.
+  fx_rate_unknown: (d) =>
+    `Hay saldo en ${text(d.currency)} y no consta ningún tipo del BCE para esa divisa, así que no se puede valorar. Es un fallo de la aplicación, no de tus datos.`,
   ulid_overflow: () => "Se han agotado los identificadores de este milisegundo: repite la acción.",
 };
 

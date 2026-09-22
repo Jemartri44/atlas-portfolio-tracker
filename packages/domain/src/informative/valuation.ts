@@ -21,6 +21,7 @@
 // keeps a verdict from resting on it without anybody noticing.
 
 import { type CivilDate, lastWorkingDay } from "../dates/civil-date.js";
+import { DomainError } from "../errors.js";
 import { FxRate } from "../money/fx-rate.js";
 import { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
@@ -32,6 +33,29 @@ import type { Settings } from "../settings/settings.js";
 import type { ValueFlag } from "./report.js";
 
 const EUR = "EUR";
+
+/**
+ * The rate the ledger knows for a currency, **which it always does** when it
+ * holds a balance in it: a balance implies an operation in that currency, and
+ * every operation carries its ECB rate as published (ADR-0013). What the ledger
+ * can be short of is a rate **of 31 December**, and that is marked, not missing.
+ *
+ * The invariant is not left to a comment. If it ever broke, a valuation of the
+ * 720 would be one conversion short and the amount would come out plausible and
+ * wrong, which is the one thing this application does not do: it throws, loudly
+ * and at the point of the fault, with the currency in the error.
+ */
+const rateFor = (state: LedgerState, currency: string): KnownFxRate => {
+  const known = state.fxRates.get(currency);
+  if (known === undefined) {
+    throw new DomainError(
+      "fx_rate_unknown",
+      `the ledger holds ${currency} and knows no ECB rate for it: it cannot be valued`,
+      { currency },
+    );
+  }
+  return known;
+};
 
 export interface ValuedAsset {
   /** Rounded half-up to cents **once**, which is what the category adds up (#6). */
@@ -108,11 +132,7 @@ export const cashValueAt = (
   if (currency === EUR) {
     return { value_eur: amount.roundToCents(), fx_rate: "1", flags: [] };
   }
-  // A balance in a currency implies an operation in that currency, and every
-  // one of them carries its ECB rate (ADR-0013): the ledger cannot hold pounds
-  // and know no rate for the pound. What it can hold is a rate of another day,
-  // which is what gets marked.
-  const known = state.fxRates.get(currency) as KnownFxRate;
+  const known = rateFor(state, currency);
   const flags: ValueFlag[] = known.date === rateDayOf(year) ? [] : ["rate_not_year_end"];
   return {
     value_eur: FxRate.of(known.rate, currency, known.date).toEur(amount).roundToCents(),
@@ -127,6 +147,6 @@ export const toEurAt = (state: LedgerState, currency: string, amount: Money): Mo
   if (currency === EUR) {
     return amount;
   }
-  const known = state.fxRates.get(currency) as KnownFxRate;
+  const known = rateFor(state, currency);
   return FxRate.of(known.rate, currency, known.date).toEur(amount);
 };
