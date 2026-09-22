@@ -6,7 +6,7 @@
 import {
   CRITERION_IDS,
   type CriterionId,
-  type DoubtfulItem,
+  type CriterionStake,
   FISCAL_CRITERIA,
   type IncomeLine,
   isDoubtful,
@@ -193,7 +193,7 @@ const incomeTable = (lines: readonly IncomeLine[]): string =>
     ]),
   );
 
-const REASONS: Record<NonNullable<DoubtfulItem["reason"]>, (item: DoubtfulItem) => string> = {
+const REASONS: Record<NonNullable<CriterionStake["reason"]>, (item: CriterionStake) => string> = {
   invalid_under_alternative: (item) =>
     `con la otra lectura ${String(item.invalid_count)} eventos serían inválidos`,
   lot_in_other_currency: () => "algún lote se compró en otra divisa",
@@ -203,7 +203,7 @@ const REASONS: Record<NonNullable<DoubtfulItem["reason"]>, (item: DoubtfulItem) 
     "la otra lectura no tiene dónde aplazar: no queda en cartera ningún título de ese valor",
 };
 
-const stake = (item: DoubtfulItem): string => {
+const stake = (item: CriterionStake): string => {
   const reason = item.reason === undefined ? "" : ` (${REASONS[item.reason](item)})`;
   if (item.measure === "not_quantifiable") {
     return `no cuantificable${reason}`;
@@ -220,6 +220,23 @@ const stake = (item: DoubtfulItem): string => {
   }
   return `diferencia: ${parts.join(", ")}`;
 };
+
+/** The same table for the two lists of criteria: what is doubtful and what is settled. */
+const stakeTable = (items: readonly CriterionStake[]): string =>
+  table(
+    ["criterio", "certeza", "riesgo documentado", "dinero en juego", "dirección", "operaciones"],
+    items.map((item) => [
+      `${item.criterion} ${CRITERION_LABELS[item.criterion]}`,
+      CERTAINTY[item.certainty] as string,
+      RISK[item.documented_risk] as string,
+      stake(item),
+      RISK[item.direction] as string,
+      [
+        ...item.event_ids,
+        ...(item.markets === undefined ? [] : [`mercados: ${item.markets.join(", ")}`]),
+      ].join(" "),
+    ]),
+  );
 
 const section = (title: string, body: string): string => `\n${title}\n${body}`;
 
@@ -409,32 +426,18 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
   out.push(
     section(
       "8. Criterios dudosos: qué hay en juego si el criterio está mal",
-      table(
-        [
-          "criterio",
-          "certeza",
-          "riesgo documentado",
-          "dinero en juego",
-          "dirección",
-          "operaciones",
-        ],
-        report.doubtful.map((item) => [
-          `${item.criterion} ${CRITERION_LABELS[item.criterion]}`,
-          CERTAINTY[item.certainty] as string,
-          RISK[item.documented_risk] as string,
-          stake(item),
-          RISK[item.direction] as string,
-          [
-            ...item.event_ids,
-            ...(item.markets === undefined ? [] : [`mercados: ${item.markets.join(", ")}`]),
-          ].join(" "),
-        ]),
-      ),
+      stakeTable(report.doubtful),
     ),
   );
   out.push(
     section(
-      "9. Lo que este motor no calcula, y avisos",
+      "9. Criterios firmes: lo que moverían leídos al revés",
+      `${stakeTable(report.settled)}\nLa lectura de estos no está en duda; la cifra dice qué habría detrás si lo estuviera.`,
+    ),
+  );
+  out.push(
+    section(
+      "10. Lo que este motor no calcula, y avisos",
       report.notes.map((note) => `- ${describeWarning(note)}`).join("\n"),
     ),
   );
@@ -442,7 +445,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
     const diff = report.settings_diff;
     out.push(
       section(
-        `10. Diferencias con la configuración anterior (${diff.previous_origin} → ${diff.current_origin})`,
+        `11. Diferencias con la configuración anterior (${diff.previous_origin} → ${diff.current_origin})`,
         diff.invalid_before !== undefined
           ? `La configuración anterior deja ${diff.invalid_before} eventos inválidos: no hay cifra con la que comparar.`
           : `Base antes ${cents(diff.base_before_eur)} · ahora ${cents(diff.base_after_eur)}\n${
@@ -465,6 +468,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
     ...report.capital_gains.lines.flatMap((line) => line.criteria),
     ...report.movable_capital.transmissions.flatMap((line) => line.criteria),
     ...report.doubtful.map((item) => item.criterion),
+    ...report.settled.map((item) => item.criterion),
   ]);
   out.push(
     section(

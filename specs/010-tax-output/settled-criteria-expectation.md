@@ -92,4 +92,34 @@ apartado nuevo (en 2027, ninguno: el #18 ya salía en las líneas).
 
 ## 5. Resultado de la comparación
 
-*(Se rellena después de regenerar, enumerando el diff clave por clave.)*
+Regenerado el 2026-09-23. El `diff` del fichero dorado tiene **cuatro inserciones y nada más**,
+exactamente las previstas:
+
+| Línea | Qué entra | ¿Previsto? |
+|---|---|---|
+| 2026, tras `settings_diff` | `"settled": []` | Sí |
+| 2027, tras `settings_diff` | `"settled": [ { … "criterion": "18" … } ]` | Sí, **campo a campo** |
+| 2028, tras `settings_diff` | `"settled": []` | Sí |
+| 2029, tras `settings_diff` | `"settled": []` | Sí |
+
+La entrada de 2027 salió idéntica al bloque JSON del apartado 3: los ocho campos, los tres
+identificadores de evento en el mismo orden, `"base_difference_eur": "0"`, `"direction": "none"` y
+`"reason": "no_carrier_left"`.
+
+**Ni una línea más se movió**: `doubtful` no cambia en ningún ejercicio, ninguna otra clave se
+toca y la instantánea del libro sigue igual. Los tres tests que fallaron antes de regenerar
+fueron los tres esperados (el dorado y los dos rótulos de apartado de la CLI).
+
+### Pruebas de mutación sobre el código nuevo
+
+Cuatro mutantes, los cuatro muertos (cobertura al 100 % no es lo mismo que estar probado):
+
+| Mutante | Tests que fallan |
+|---|---|
+| `settled` recibe la lista entera, sin partir | 2 |
+| `doubtful` recibe la lista entera, sin partir | 4 |
+| `settled` descarta las entradas con diferencia cero | 3 |
+| Vuelta al `.filter(isDoubtful)` de antes | 5 |
+
+El tercero es el que importa: es la «simplificación» razonable que volvería a perder la
+información, y ahora hay tres tests que la paran.

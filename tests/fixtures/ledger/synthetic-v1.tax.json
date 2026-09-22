@@ -173,6 +173,7 @@
       "current_origin": "01NDYZTZ804AP696WA0PA725XK",
       "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
     },
+    "settled": [],
     "today": "2030-01-01",
     "wash_sale": {
       "deferred": [],
@@ -1253,6 +1254,22 @@
       "current_origin": "01NDYZTZ804AP696WA0PA725XK",
       "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
     },
+    "settled": [
+      {
+        "base_difference_eur": "0",
+        "certainty": "high",
+        "criterion": "18",
+        "direction": "none",
+        "documented_risk": "aggressive",
+        "event_ids": [
+          "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "01MN8FTA80DDTPKAG5TNV3Q20X",
+          "01N4F4Y58036KX1852YTTM0XD3"
+        ],
+        "measure": "difference",
+        "reason": "no_carrier_left"
+      }
+    ],
     "today": "2030-01-01",
     "wash_sale": {
       "deferred": [
@@ -1748,6 +1765,7 @@
       "current_origin": "01NDYZTZ804AP696WA0PA725XK",
       "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
     },
+    "settled": [],
     "today": "2030-01-01",
     "wash_sale": {
       "deferred": [],
@@ -1924,6 +1942,7 @@
       "current_origin": "01NDYZTZ804AP696WA0PA725XK",
       "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
     },
+    "settled": [],
     "today": "2030-01-01",
     "wash_sale": {
       "deferred": [],
