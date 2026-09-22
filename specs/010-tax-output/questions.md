@@ -739,8 +739,8 @@ desviación están en `implementation-notes.md`; esto es el estado y el camino.
 
 ### 1. Estado del árbol
 
-- Worktree `/home/jemar/projects/atlas-portfolio-tracker-010`, rama `feature/010-tax-output`,
-  HEAD `6d9e206`, `git status` **limpio**: nada sin commitear, nada sin seguir.
+- Worktree propio de la rama `feature/010-tax-output` (fuera del repositorio), `git status`
+  **limpio**: nada sin commitear, nada sin seguir.
 - **26 commits por delante de `origin/develop`**, ya **rebasados** sobre `f29ebc1`, el `develop`
   que trae `docs/spec-coherence`. Si `develop` se vuelve a mover, rebase otra vez antes de la PR.
 - **Sin PR y sin `push`**: la rama vive solo en local. La dirección pidió avisar antes de fusionar.
