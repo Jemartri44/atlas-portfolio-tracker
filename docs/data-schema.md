@@ -265,8 +265,8 @@ Consecuencias: registrar tarde es normal (importar un extracto semanas después,
 | `pendingTransfers` | Solicitudes de traspaso sin `transfer` final | ADR-0010 |
 | `pendingOrders` | Órdenes (`order_placed`) sin `buy`/`sell` que las cierre ni cancelación | ADR-0012 |
 | `theses` | Tesis abiertas y cerradas: estado, `buy`/`sell` enlazados, invertido, `result_eur`, comisiones acumuladas, `days_open` y, desde la feature 005, `benchmark_equivalent_eur` y `result_vs_index_eur` (o *sin dato* si falta un precio del índice) | Regla 16; los precios son informativos y nunca tocan la fiscalidad |
-| `realizedGains(year)` | Ganancias y pérdidas por operación y lote, con diferimientos | Motor fiscal |
-| `deferredLosses` | Pérdidas pendientes por regla de los dos meses, asociadas a lotes | §8.4 |
+| `realizedGains(year)` | Ganancias y pérdidas por operación y lote, **sin diferimientos**: el resultado propio de cada transmisión, redondeado una vez por operación (ADR-0005) | La regla de recompra no se aplica aquí: la aplica `taxYear` (§8.4) |
+| `lotJournal` | Lo que el motor FIFO hizo a cada lote, en orden: `open`, `consume` (con su propósito: transmisión, traspaso o canje), `carve`, `scale` y `units` (con la razón exacta del evento) y `gain` | Estado de la proyección, **nunca en la instantánea**. No decide nada: deja por escrito lo que el único motor de lotes decidió, para que el motor fiscal arrastre por encima una magnitud más —la pérdida diferida— sin un segundo FIFO que pudiera discrepar del primero (feature 009) |
 | `investmentIncome(year)` | Dividendos y retenciones | §6.2 |
 | `valuations(date)` | Valoraciones registradas | Modelo 720 |
 | `manualPrices(date)` | Último precio manual por activo (la `valuation` más reciente con `date ≤` la pedida, de cualquier cuenta), en su divisa y en EUR, con antigüedad y marca `stale` (`stale_price_days`) | Informativo: ningún cálculo fiscal lo usa (constitución II); nunca se interpola (feature 004) |
@@ -276,9 +276,16 @@ Consecuencias: registrar tarde es normal (importar un extracto semanas después,
 | `netWorth(date)` | Patrimonio total **siempre desglosado**: núcleo valorado, cubo valorado y efectivo por cuenta y divisa, con marca de parcialidad si falta un precio o un tipo de cambio. En la salida de texto, el total y los subtotales son la **suma de las cifras mostradas** (las partes tienen que cuadrar con el total a la vista); el valor exacto sin redondear va en `--json` | Excepción 2 de la constitución III; denominador de la regla 18 (feature 005) |
 | `bucketPositions(date)` | Posiciones abiertas del cubo: cantidad, coste medio, precio manual con antigüedad, valor, P&L latente, tesis asociada, días abierta, plazo superado y condición de invalidación | Especificación §6.2 (feature 005) |
 | `bucketStats(date)` | Estadísticas de operativa del cubo sobre tesis cerradas: tasa de acierto, ganancia y pérdida medias, esperanza, número de operaciones con aviso de significancia, comisiones sobre capital operado, máxima caída del resultado realizado y resultado frente al índice | Reglas 14 y 16 (feature 005) |
-| `integrity` | Comprobaciones: posiciones físicas ≥ 0, lotes fiscales = suma física por activo, huellas únicas, referencias colgantes (`corrects_id` a un evento inexistente o no anulado) | Verificación trimestral |
+| `integrity` | Comprobaciones: posiciones físicas ≥ 0, lotes fiscales = suma física por activo, huellas únicas, referencias colgantes (`corrects_id` a un evento inexistente o no anulado), un mismo ISIN en dos activos (`duplicate_isin`) | Verificación trimestral |
 | `deepCheck` | Sobre las líneas crudas (`atlas check --deep`): ids duplicados, huella que no coincide con los campos del evento (la huella cubre el tuple de negocio de §4, no `fee`: una comisión editada a mano no se detecta por huella), líneas no canónicas, campos que el tipo no define (`unknown_field`, solo en líneas de la versión actual), líneas de versiones antiguas (sugiere `compact`), proyección no reproducible | Verificación trimestral |
 | `snapshotOf` | Instantánea canónica de todas las proyecciones (claves ordenadas, decimales como texto) | *Golden files*, `compact`, `check --deep` |
+
+**El motor fiscal no es una proyección** (feature 009). `taxYear(events, año, { today })` recorre el estado ya proyectado y su diario de lotes y devuelve el informe del ejercicio: transmisiones por categoría de renta, rendimientos del capital mobiliario, la regla de recompra calculada (§8.4), la integración y compensación del art. 49, los saldos negativos pendientes por ejercicio de origen y categoría con su caducidad, la base del ahorro, las retenciones, la deducción por doble imposición, los criterios dudosos con el dinero en juego y lo que el motor declara no calcular. Dos negativas explícitas:
+
+- **Un libro con eventos inválidos no da cifras.** Las consultas de solo lectura siguen proyectando en modo degradado (ADR-0015), pero una base calculada saltándose un evento sería aproximada, así que la respuesta es el error `tax_ledger_invalid` con la lista de lo que hay que reparar, no un número.
+- **Un ejercicio anterior a 2018 tampoco.** El régimen de compensación vigente (el 25 %, art. 49) empieza ahí; antes hubo un transitorio del 10-15-20 %. Es `tax_year_unsupported`, y lo lanza también cuando el ejercicio pedido es válido pero el libro tiene cifras anteriores a 2018.
+
+`movedTaxYears(events, actual, siguiente, año)` compara la base del ahorro de cada ejercicio cerrado con la configuración en vigor y con la propuesta: es lo que permite que `atlas settings set` avise de que un cambio de configuración mueve un ejercicio pasado aunque no mueva ninguna ganancia realizada.
 
 ## 8. FIFO y reglas fiscales aplicadas
 
