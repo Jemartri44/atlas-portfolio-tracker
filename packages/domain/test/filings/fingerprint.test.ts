@@ -34,6 +34,83 @@ const sealed = (): { events: LedgerEvent[]; lines: string[]; filing: TaxReturnFi
 const reasons = (events: LedgerEvent[], lines: string[], schema = undefined as never) =>
   checkFilingFingerprints(lines, events, schema).map((check) => check.reason);
 
+/**
+ * Two lines written out here, letter by letter, and the digest they hash to.
+ *
+ * Every other test of this file compares one digest against another computed
+ * by the same code, so a change of the **recipe** —the separator, the
+ * canonical form, the order of the keys— would agree with itself and stay
+ * green. And the fingerprint is not a derived value: it is **data already
+ * written in the user's ledger**, in lines that can never be rewritten. A
+ * silent change of the recipe would stop every fingerprint already sealed from
+ * verifying, and `atlas check --deep` would start accusing returns nobody
+ * touched, with the suite green. Pinning the digest of a known input is the
+ * guarantee ADR-0020 asks for, and it is what this holds.
+ *
+ * If this test fails, the recipe changed. That is not something to re-record:
+ * it invalidates fingerprints already written, and it needs a migration and a
+ * decision, not a new literal here.
+ */
+const KNOWN_LINES = [
+  {
+    schema_version: 1,
+    id: "01ARYZ6S41TSV4RRFFQ69G5FA0",
+    recorded_at: "2026-09-01T18:00:00.000Z",
+    type: "cash_deposit",
+    account_id: "acc_a",
+    value_date: "2026-09-01",
+    amount: "1000.00",
+    currency: "EUR",
+    fingerprint: "sha256:deposit",
+  },
+  {
+    schema_version: 1,
+    id: "01ARYZ6S41TSV4RRFFQ69G5FA1",
+    recorded_at: "2026-09-01T18:00:01.000Z",
+    type: "reversal",
+    reverses_id: "01ARYZ6S41TSV4RRFFQ69G5FA0",
+    reason: "importe mal tecleado",
+  },
+] as unknown as LedgerEvent[];
+
+/** The digest of the first line alone: it pins the canonical form of a line. */
+const ONE_LINE = "93652fe0b8f15e3be577112856d082d936231dc2956c6c88e0463ce9a76ba966";
+/** And of the two, joined by a newline: it pins the separator as well. */
+const TWO_LINES = "9f5a566a9e5b73b5ad244fd4d15a737e54b751409990f0982cf08b99c28270d1";
+
+describe("the recipe of the digest, pinned to a literal", () => {
+  it("hashes two known lines to the digest written down here", () => {
+    expect(fingerprintOfEvents(KNOWN_LINES.slice(0, 1), 1)).toEqual({
+      schema_version: 1,
+      lines: 1,
+      sha256: ONE_LINE,
+    });
+    expect(fingerprintOfEvents(KNOWN_LINES, 1)).toEqual({
+      schema_version: 1,
+      lines: 2,
+      sha256: TWO_LINES,
+    });
+  });
+
+  it("reads the same digest off the raw lines, keys in any order", () => {
+    const lines = KNOWN_LINES.map((event) => JSON.stringify(event));
+    expect(fingerprintOfLines(lines, 1)).toBe(TWO_LINES);
+    // The same two lines with every key written backwards: same digest.
+    const backwards = KNOWN_LINES.map((event) =>
+      JSON.stringify(Object.fromEntries(Object.entries(event).reverse())),
+    );
+    expect(fingerprintOfLines(backwards, 1)).toBe(TWO_LINES);
+  });
+
+  it("is empty over no lines at all, which is what a first-line filing seals", () => {
+    expect(fingerprintOfEvents([], 1)).toEqual({
+      schema_version: 1,
+      lines: 0,
+      sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    });
+  });
+});
+
 describe("the fingerprint of the ledger before a filing", () => {
   it("covers exactly the lines that precede it, and holds", () => {
     const { events, lines, filing } = sealed();

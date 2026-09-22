@@ -727,6 +727,105 @@ describe("validateShape: a filed return (ADR-0020)", () => {
     );
   });
 
+  /**
+   * `computed` goes through the very same check as `declared`, and nothing
+   * held it: deleting the call left the whole suite green. It is the block the
+   * comparison reads as "what the application computed that day", it enters a
+   * ledger that can never be edited, and a loss with the wrong sign or a
+   * repeated origin there poisons the four causes for good.
+   */
+  it("checks the figures of `computed` exactly as it checks the declared ones", () => {
+    const computing = (changes: Record<string, unknown>) =>
+      variant(filed, { computed: { ...filed.computed, ...changes } });
+    rejects(computing({ deferred_losses_eur: "20.00" }), "invalid_field");
+    rejects(computing({ savings_base_eur: "-1" }), "invalid_field");
+    rejects(
+      computing({
+        pending_losses: [{ origin_year: 2024, category: "capital_gain", amount_eur: "260.80" }],
+      }),
+      "invalid_field",
+    );
+    rejects(
+      computing({
+        pending_losses: [{ origin_year: 2026, category: "capital_gain", amount_eur: "-1" }],
+      }),
+      "invalid_field",
+    );
+    rejects(
+      computing({
+        pending_losses: [
+          { origin_year: 2024, category: "capital_gain", amount_eur: "-1" },
+          { origin_year: 2024, category: "capital_gain", amount_eur: "-2" },
+        ],
+      }),
+      "duplicate_pending_loss",
+    );
+    // And on an informative return: a category the model does not have.
+    rejects(
+      { ...m720, computed: { ...m720.computed, crypto: { value_eur: "1.00" } } },
+      "invalid_field",
+    );
+  });
+
+  /**
+   * The ordinary case of that border, and the one nothing was testing: you
+   * lose in 2027 and you declare 2027. Only a year **after** the one being
+   * declared is impossible, so `>` and `>=` were telling the same story.
+   */
+  it("accepts a pending loss of the very year being declared", () => {
+    const ofItsOwnYear = [{ origin_year: 2025, category: "capital_gain", amount_eur: "-1" }];
+    expect(
+      validateShape(
+        variant(filed, {
+          declared: { ...filed.declared, pending_losses: ofItsOwnYear },
+          computed: { ...filed.computed, pending_losses: ofItsOwnYear },
+        }),
+      ),
+    ).toBeTruthy();
+  });
+
+  /**
+   * A fingerprint over **zero** lines is the first line of the file: a return
+   * recorded before anything else, which is how the losses carried from before
+   * the application get in. And a digest is 64 hexadecimal characters, no
+   * fewer and no more: nothing was refusing a truncated one.
+   */
+  it("accepts a fingerprint over no lines and refuses a digest of the wrong length", () => {
+    // A real digest, with letters in it: the sample's is all zeros, and zeros
+    // have no case, so it could not tell an upper-case digest from its own.
+    const digest = "9f5a566a9e5b73b5ad244fd4d15a737e54b751409990f0982cf08b99c28270d1";
+    const sealing = (fingerprint: Record<string, unknown>) =>
+      variant(filed, { ledger_fingerprint: fingerprint });
+    expect(validateShape(sealing({ schema_version: 1, lines: 0, sha256: digest }))).toBeTruthy();
+    rejects(sealing({ schema_version: 1, lines: 12, sha256: digest.slice(1) }), "invalid_field");
+    rejects(sealing({ schema_version: 1, lines: 12, sha256: `${digest}0` }), "invalid_field");
+    rejects(
+      sealing({ schema_version: 1, lines: 12, sha256: digest.toUpperCase() }),
+      "invalid_field",
+    );
+    // And the version of the fingerprint is a version, not a count.
+    rejects(sealing({ schema_version: 0, lines: 12, sha256: digest }), "invalid_field");
+  });
+
+  /**
+   * A pending loss of zero is not a loss. Letting it in would put a figure in
+   * the comparison that declares nothing and that the chain never computes,
+   * and it would be compared against zero for ever.
+   */
+  it("refuses a pending loss of zero", () => {
+    for (const amount of ["0", "0.00", "-0.00"]) {
+      rejects(
+        variant(filed, {
+          declared: {
+            ...filed.declared,
+            pending_losses: [{ origin_year: 2024, category: "capital_gain", amount_eur: amount }],
+          },
+        }),
+        "invalid_field",
+      );
+    }
+  });
+
   it("refuses the same origin twice and the same asset twice", () => {
     rejects(
       variant(filed, {
