@@ -200,9 +200,11 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
  * f), and the help of Modelo 100 for 2025 lists funds with daily information
  * among the two-month case; its example of the year is a SICAV of the MAB.
  *
- * **`money_market` stays on a year**, and that is an inconsistency noted and
- * not resolved: a monetary fund is a collective investment undertaking with a
- * daily net asset value, so the same reasoning would apply to it.
+ * **A monetary fund too** (`money_market`), for exactly the same reason and
+ * with the same certainty: in this catalogue the type is a **money market
+ * fund** —it carries an ISIN, a TER and `transferable`, which is the Spanish
+ * transfer regime and only exists for collective investment undertakings— not
+ * a treasury bill, a repo or a deposit, which the reasoning would not reach.
  */
 export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
   stock: "2m",
@@ -211,7 +213,7 @@ export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
   etp: "2m",
   crypto: "1y",
   fund: "2m",
-  money_market: "1y",
+  money_market: "2m",
 };
 
 /** Provisional defaults (ADR-0013, ADR-0014). Verify with the tax advisor; change via `settings_changed`, not code. */

@@ -58,6 +58,20 @@ export const exerciseLedger = (reading: CategoryReading = "capital_gain"): Exerc
       fund: "1y",
       money_market: "1y",
     },
+    // And the fiscal date rule, the last thing this ledger still borrowed from
+    // the code. Twice now a default has moved under a hand calculation
+    // (`income_category` in feature 010's block 0, the wash-sale window in its
+    // criteria lot); a calculation whose literals depend on what the code
+    // believes today is not a hand calculation, it is a mirror.
+    fiscal_date_rule: {
+      stock: "trade_date",
+      etf: "trade_date",
+      etc: "trade_date",
+      etp: "trade_date",
+      crypto: "trade_date",
+      fund: "value_date",
+      money_market: "value_date",
+    },
     ...(reading === "from_code"
       ? {}
       : { income_category: { ...DEFAULT_INCOME_CATEGORY, etc: reading, etp: reading } }),
