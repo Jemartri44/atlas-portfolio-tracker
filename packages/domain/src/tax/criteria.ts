@@ -55,7 +55,9 @@ export interface FiscalCriterion {
  *   structure of each product.
  * - `24:etc_gain`, `24:etp_gain`: a capital gain, the opposite of the document.
  *   Both doubtful, and **aggressive**: a loss would offset in full what the
- *   documented reading limits to 25 %.
+ *   documented reading limits to 25 %. Reading an ETC that way goes against a
+ *   binding ruling that says "in every case", so it is **low**, not medium;
+ *   for an ETP the structure of each product leaves real room, so it is medium.
  *
  * #18 to #23 were numbered by the direction on 2026-09-18 (questions Q1, Q2 and
  * Q5 of the feature 009). Where the document gives a criterion two certainties
@@ -94,7 +96,7 @@ export const FISCAL_CRITERIA = {
   "22": { doc: "22", certainty: "medium", risk: "neutral" },
   "23": { doc: "23", certainty: "high", risk: "conservative" },
   "24:etc": { doc: "24", certainty: "high", risk: "conservative" },
-  "24:etc_gain": { doc: "24", certainty: "medium", risk: "aggressive" },
+  "24:etc_gain": { doc: "24", certainty: "low", risk: "aggressive" },
   "24:etp": { doc: "24", certainty: "medium", risk: "conservative" },
   "24:etp_gain": { doc: "24", certainty: "medium", risk: "aggressive" },
 } as const satisfies Record<string, FiscalCriterion>;

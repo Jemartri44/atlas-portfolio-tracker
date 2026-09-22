@@ -1116,7 +1116,7 @@
       },
       {
         "base_difference_eur": "0",
-        "certainty": "medium",
+        "certainty": "low",
         "criterion": "24:etc_gain",
         "deferred_difference_eur": "0",
         "direction": "none",

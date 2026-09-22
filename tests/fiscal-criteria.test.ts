@@ -83,7 +83,9 @@ const DOCUMENT_SILENT: Record<string, { certainty?: string; risk?: string }> = {
     risk: "the document gives crypto a certainty (low) and no direction of risk: one year by prudence defers more, the conservative side",
   },
   "24:etc_gain": {
-    risk: "the document gives the risk of its own reading, movable capital income; a capital gain is the opposite one, and offsetting a loss in full is the aggressive side",
+    certainty:
+      "the document gives the certainty of its own reading, high for an ETC because a binding ruling says so in every case; reading it as a capital gain is the weak side of that, not the medium one",
+    risk: "and the risk of that reading is the conservative one; a capital gain is the opposite, and offsetting a loss in full is the aggressive side",
   },
   "24:etp_gain": {
     risk: "the same, for an ETP",
