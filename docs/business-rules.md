@@ -256,6 +256,8 @@ Cada evento registrado guarda su **fuente documental** (URL o PDF del emisor).
 
 Ninguno de estos valores va codificado en el fuente. Los valores marcados como *pendiente* dependen del plan financiero privado.
 
+Algunos parámetros tienen un **valor por defecto documentado** (el que aplica mientras el libro no diga otra cosa). Ese valor por defecto **se materializa en el libro** en cuanto se escribe un `settings_changed`, porque cada uno registra la configuración vigente **entera**, no un parche (ADR-0022): un ejercicio calculado hoy se reproduce dentro de quince años aunque el valor por defecto del código haya cambiado, que es lo que un cálculo fiscal necesita.
+
 | Parámetro | Valor inicial | Regla asociada |
 |---|---|---|
 | `target_weights{}` | Pendiente (claves: `asset_id` del núcleo; suman 100) | 1, 2 |
@@ -275,6 +277,10 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 | `wash_sale_window{}` | fondos/cripto `"1y"`; cotizados `"2m"` (de fecha a fecha; `wash_sale_window_days` en días es la forma antigua aceptada). **Mapa parcial**: un tipo de activo ausente toma su valor por defecto, para que añadir un tipo nuevo no invalide la configuración ya escrita (ADR-0018) | 5.4 |
 | `wash_sale_transfer_counts` | `true`: un traspaso entrante cuenta como adquisición a efectos de la regla de recompra | 5.4 |
 | `income_category` | Por tipo de activo: `capital_gain` (ganancia patrimonial, art. 33) o `movable_capital` (rendimiento del capital mobiliario por transmisión, art. 25.2). **Por defecto `capital_gain` en todos**; existe para que el asunto de los ETC pueda resolverse sin tocar código (ADR-0021) | 5.1 |
+| `savings_offset_limit_pct` | `"25"` (%). Parte del saldo positivo de una categoría de la base del ahorro que puede compensar el saldo negativo de la otra (art. 49). Fue 10, 15 y 20 en 2015-2017, así que es configuración y no una constante | 5.5 |
+| `loss_carryforward_years` | `4`. Ejercicios a los que se arrastra un saldo negativo de la base del ahorro (art. 49) | 5.5 |
+| `treaty_withholding_pct{}` | **Sin valor por defecto, a propósito**: tipo máximo de retención en origen que el convenio de doble imposición permite a cada país, por clave ISO 3166-1 alfa-2. Son cifras de tratados, verificables una a una; un dividendo de un país que no esté aquí, o sin `source_country`, no recibe deducción calculada y la salida dice por qué | 5.6 |
+| `transfer_max_days` | Pendiente. Días que puede estar abierta una solicitud de traspaso antes de que la aplicación avise; contados hasta la fecha de la consulta, no hasta hoy | 5.2 |
 | `tax_residence` | España | 5.9 |
 | `notification_email` | — | — |
 | `job_frequencies{}` | Ver especificación | — |
@@ -283,3 +289,4 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 - Historial de cambios de configuración: cambiar los pesos objetivo altera el cálculo de desviaciones históricas.
 - Validación: los pesos objetivo suman 100%; los umbrales deben ser coherentes entre sí.
 - **Aviso al modificar un umbral que esté silenciando una alerta activa.**
+- **Aviso al cambiar un parámetro fiscal que mueve un ejercicio ya cerrado.** La ventana de recompra, `wash_sale_transfer_counts`, `income_category` y los dos parámetros de la compensación mueven la **base del ahorro** de un ejercicio pasado sin mover ninguna ganancia realizada, así que el aviso compara las dos cosas —las ganancias realizadas y la base— con la configuración en vigor y con la propuesta, y dice qué ejercicios se mueven antes de guardar.
