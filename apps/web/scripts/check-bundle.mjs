@@ -49,8 +49,26 @@ const dist = join(webRoot, "dist");
  * correction as it is written, the stale mark of a row, the singular of one
  * unit, the theme of the browser's bar and the confirmation of a write on the
  * movement it wrote. Measured **69,4 KB**; the ceiling is 70,4.
+ *
+ * **Raised to 71,5 by the direction (feature 010), because the loader
+ * validates.** The eight configured figures of the informative returns and of
+ * the tax season took the boot from 69,4 to 69,9, and the question was whether
+ * validating settings belongs in the boot path at all. It does, and
+ * structurally: `LedgerStore.load()` decodes every line with `decodeLine`,
+ * which validates it against today's rules (trap 10 of `CLAUDE.md`, ADR-0018),
+ * and the web is local-first (ADR-0019), so **opening the ledger is the boot**.
+ * Measured by removing the call: the whole validation of settings is **1,4 KB
+ * gzip** of the boot, 0,5 of it the new parameters. The two ways of getting it
+ * back are worse than a higher ceiling: not validating lets a ledger with a
+ * negative threshold or a category that does not exist **load in silence**,
+ * and splitting the validation in two levels breaks one rule across two places
+ * that will drift apart, without even closing that hole. At 71,5 the
+ * application still boots lighter than before the redesign (72,7 KB): the
+ * budget is not relaxed, it is put where the design puts it. **71,5 is a wall,
+ * not a target**: passing it is a stop-and-ask, and every commit that moves
+ * the bundle records its measurement.
  */
-const BOOT_BUDGET_GZIP_BYTES = 70.4 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 71.5 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
