@@ -160,6 +160,8 @@ El método de imputación es **primera entrada, primera salida**, aplicado por p
 
 **Comisiones en la base fiscal** (art. 35 LIRPF): la de compra se suma al coste de adquisición; la de venta se resta del valor de transmisión; las de **custodia, administración o conectividad no son deducibles** en la ganancia patrimonial, porque no son inherentes a la adquisición ni a la transmisión (`docs/fiscal-questions.md` #3, certeza alta). Se guardan aparte del precio.
 
+No deducibles **de la ganancia patrimonial** no quiere decir no deducibles en absoluto: el art. 26.1.a) permite restar del rendimiento íntegro del capital mobiliario los gastos de **administración y depósito** de valores negociables (nunca la gestión discrecional de carteras). El motor fiscal resta por eso las comisiones sueltas marcadas `custody` o `administration` (`standalone_fee.fee_kind`, criterio #23); `connectivity`, `discretionary_management` y `other` no se restan, y una comisión sin marcar es `other`, así que **sin clasificar nada no cambia nada**. Clasificar cada comisión es del usuario, y marcar como custodia lo que no lo es es la lectura agresiva.
+
 **Retención a cuenta en reembolsos de fondos:** el comercializador retiene sobre la plusvalía; se registra en la venta (`withholding`) para que cuadre la declaración.
 
 Casos límite a cubrir en tests:
@@ -196,6 +198,7 @@ El porcentaje y los cuatro años son **configuración**, no constantes del códi
 
 - Tributan como **rendimiento del capital mobiliario** en la base del ahorro.
 - Si hubo retención en origen, corresponde la **deducción por doble imposición internacional**.
+- La deducción tiene dos límites y el motor solo calcula el primero: el **tipo del convenio** con el país del pagador (`treaty_withholding_pct`, §7). Sin ese tipo configurado, o sin `source_country` en el dividendo, no se calcula nada y la salida dice por qué; deducir todo lo retenido sería justo el exceso que el convenio manda reclamar en origen. El segundo límite (el tipo medio efectivo del contribuyente) no es calculable desde el libro, porque el motor no ve la base general; la salida lo dice, y dice también que el exceso **se pierde**, sin arrastre en IRPF.
 - Se registra: importe bruto, retención en origen, retención en España, divisa, tipo de cambio de la fecha y **país del pagador** (`source_country`): de su convenio dependen el tipo deducible y el límite de la deducción (pregunta #16).
 
 ### 5.7 Divisa
