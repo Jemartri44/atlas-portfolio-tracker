@@ -210,7 +210,14 @@ const computeCore = (
     add(yearOf(expense.fiscal_date), "movable_capital", expense.amount_eur_rounded);
   }
   const years = [...balances.keys()];
-  const firstYear = years.length === 0 ? year : Math.min(year, ...years);
+  // The chain starts at the earliest of three: the year asked, the first year
+  // with figures and the **first filed return** (prompt 010, P5). Walking only
+  // the years with figures drops in silence a return filed for a year earlier
+  // than the ledger, and with it the losses it declares pending: the way the
+  // user brings in what he carried from before the application. Never before
+  // 2018: the event refuses an earlier `tax_year`, and so does the guard.
+  const filedYears = (options.filed ?? []).map((entry) => entry.year);
+  const firstYear = Math.min(year, ...years, ...filedYears);
   if (firstYear < FIRST_SUPPORTED_YEAR) {
     throw new DomainError(
       "tax_year_unsupported",
@@ -226,6 +233,8 @@ const computeCore = (
   let pending: PendingLoss[] = [];
   let compensation = compensate(firstYear, zeroBalances(), [], rules);
   let anchor: AnchorDifference | undefined;
+  // `Infinity` when the ledger has no figures at all: any anchor precedes it.
+  const firstFigureYear = Math.min(...years);
   const bases = new Map<number, Money>();
   for (let y = firstYear; y <= year; y += 1) {
     compensation = compensate(y, balances.get(y) ?? zeroBalances(), pending, rules);
@@ -239,7 +248,14 @@ const computeCore = (
         amount_eur: entry.amount_eur,
         expires_after: entry.origin_year + rules.carryYears,
       }));
-      anchor = { year: y, computed: pending, declared };
+      anchor = {
+        year: y,
+        computed: pending,
+        declared,
+        // Nothing was computed for a year the ledger does not reach: the
+        // figures come from what was declared, they do not differ from it.
+        ...(y < firstFigureYear ? { before_ledger: true } : {}),
+      };
       pending = declared;
     }
   }

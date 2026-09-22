@@ -355,7 +355,9 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
         ...(report.anchor === undefined
           ? []
           : [
-              `Anclado en lo declarado en ${report.anchor.year}: calculado ${report.anchor.computed.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}; declarado ${report.anchor.declared.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}.`,
+              report.anchor.before_ledger === true
+                ? `Anclado en lo declarado en ${report.anchor.year}, anterior a tus datos: ${report.anchor.declared.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}. Vienen de lo declarado, no de un cálculo.`
+                : `Anclado en lo declarado en ${report.anchor.year}: calculado ${report.anchor.computed.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}; declarado ${report.anchor.declared.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}.`,
             ]),
       ].join("\n"),
     ),

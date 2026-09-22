@@ -232,6 +232,12 @@ export interface AnchorDifference {
   year: number;
   computed: PendingLoss[];
   declared: PendingLoss[];
+  /**
+   * The anchored year is earlier than the first year with figures: the ledger
+   * computes nothing for it, so what it declares is not a difference but what
+   * the user carried from before the application (prompt 010, P5).
+   */
+  before_ledger?: boolean;
 }
 
 export type Measure = "difference" | "exposure" | "not_quantifiable";
