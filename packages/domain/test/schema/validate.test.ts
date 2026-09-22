@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
-import { feeKindOf } from "../../src/schema/events.js";
+import { FIRST_FILING_YEAR, feeKindOf } from "../../src/schema/events.js";
 import { FX_FIELDS, knownFieldsOf, validateShape } from "../../src/schema/validate.js";
+import { FIRST_SUPPORTED_YEAR } from "../../src/tax/chain.js";
 import { envelope, ID, SAMPLES, sampleList, variant } from "../samples.js";
 import { TEST_SCHEMA_V2 } from "./test-schema.js";
 
@@ -621,7 +622,7 @@ describe("validateShape: a filed return (ADR-0020)", () => {
     expect(knownFieldsOf("tax_return_filed")).toContain("receipt_reference");
   });
 
-  it("refuses a year the model did not exist in: 2018 for the Renta, 2023 for the 721", () => {
+  it("refuses a year the model did not exist in: 2018 for the Renta, 2012 for the 720, 2023 for the 721", () => {
     rejects(
       variant(filed, {
         tax_year: 2017,
@@ -657,6 +658,32 @@ describe("validateShape: a filed return (ADR-0020)", () => {
       },
       "filing_year_unsupported",
     );
+    // The 720 exists since 2012, and nothing about the offsetting regime of
+    // the income tax has any say over an informative return: a 720 of 2015 is
+    // a return the user may well have filed.
+    const informative = (tax_year: number, filed_at: string) => ({
+      ...m720,
+      tax_year,
+      filed_at,
+      declared: { items: [] },
+      computed: {
+        as_of: filed_at,
+        settings_origin: "default",
+        settings: filed.computed.settings,
+        items: [],
+      },
+    });
+    expect(validateShape(informative(2015, "2016-04-20"))).toBeTruthy();
+    rejects(informative(2011, "2012-04-20"), "filing_year_unsupported");
+  });
+
+  it("keeps the first year of the Renta level with the regime the engine implements", () => {
+    // The schema cannot import the tax module, so the two constants are
+    // written twice and this is what keeps them from drifting apart. The
+    // comment that claimed such a test existed was written before it did.
+    expect(FIRST_FILING_YEAR.renta).toBe(FIRST_SUPPORTED_YEAR);
+    expect(FIRST_FILING_YEAR["720"]).toBe(2012);
+    expect(FIRST_FILING_YEAR["721"]).toBe(2023);
   });
 
   it("refuses a filing dated before the year ended, and one dated after today", () => {
