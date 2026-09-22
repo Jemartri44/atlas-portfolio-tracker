@@ -7,17 +7,29 @@
 // it: the leak was in the call, so the screen is what is rendered here.
 
 import { ledgerEntries, projectLedger } from "@atlas/domain";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { MASK } from "../src/format/money.js";
 import { nameIndex } from "../src/format/names.js";
 import { store } from "../src/ledger/state.js";
+import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Detail from "../src/routes/movimientos/detail.jsx";
 import Edit from "../src/routes/movimientos/edit.jsx";
+import RegistrarForm from "../src/routes/registrar/form.jsx";
 import { detailView } from "../src/view-models/detail.js";
 import { goldenEvents } from "./helpers/golden.js";
-import { DECIMAL, figuresLeft, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import {
+  DECIMAL,
+  figuresLeft,
+  press,
+  show,
+  text,
+  type,
+  withGoldenLedger,
+} from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
+afterEach(() => withoutStyles());
 
 /** The reverse split of the golden ledger: a forced sale of fractions in two accounts. */
 const REVERSE_SPLIT = "01MQTWHB78RC2FADH9B774BHS5";
@@ -77,7 +89,119 @@ describe("the detail and the correction of a movement, with the mask on and off"
     const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
     const shown = text(host.querySelector("section.card"));
     expect(shown).toContain("31,2343");
-    expect(shown).toContain("3.100,00 EUR");
+    expect(shown).toContain("3.100,00 €");
+  });
+});
+
+/** The value an input shows right now, whatever it holds. */
+const shownIn = (host: HTMLElement, id: string): string =>
+  (host.querySelector(`#${id}`) as HTMLInputElement | null)?.value ?? "";
+
+describe("the fields a form fills in for you", () => {
+  /**
+   * What the user types is never hidden; what the application shows is. The
+   * correction form arrives filled in with the amounts of the event, and it
+   * used to print them in the clear right under a card that masked them.
+   */
+  it("masks a filled-in amount of a correction until the field has the focus", async () => {
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    expect(shownIn(host, "f-amount")).toBe(MASK);
+    expect(shownIn(host, "f-quantity")).toBe(MASK);
+    // The ECB rate is not an amount: it stays visible.
+    const amount = host.querySelector("#f-amount") as HTMLInputElement;
+    amount.dispatchEvent(new FocusEvent("focus"));
+    await Promise.resolve();
+    expect(shownIn(host, "f-amount")).toBe("3100");
+    amount.dispatchEvent(new FocusEvent("blur"));
+    await Promise.resolve();
+    expect(shownIn(host, "f-amount")).toBe(MASK);
+  });
+
+  it("keeps what the user typed in sight after the preview and back, on a phone", async () => {
+    // On a phone the effect replaces the form: the fields leave the screen and
+    // come back, and what was typed in them must come back in sight too.
+    withStyles(400);
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    type(host, "f-amount", "3200");
+    type(host, "correct-reason", "importe mal tecleado");
+    await press(host, "Ver el efecto");
+    expect(host.querySelector("#f-amount")).toBeNull();
+    await press(host, "Volver a los datos");
+    expect(shownIn(host, "f-amount")).toBe("3200");
+    // What came from the data and was not touched is still masked.
+    expect(shownIn(host, "f-quantity")).toBe(MASK);
+  });
+
+  it("heads the effect with what is about to be recorded, what was typed unmasked", async () => {
+    withStyles(400);
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    type(host, "f-amount", "3200");
+    type(host, "correct-reason", "importe mal tecleado");
+    await press(host, "Ver el efecto");
+    const said = text(host.querySelector(".preview > .sentence"));
+    // A correction replaces the purchase, and says so.
+    expect(said).toMatch(/^Vas a rectificarlo: en su lugar, la compra de /);
+    expect(said).toContain("de Money Market Fund por 3.200,00 €");
+    // The quantity came from the data and was not touched: masked, with its unit.
+    expect(host.querySelectorAll(".preview > .sentence .dots")).toHaveLength(1);
+    expect(said).toMatch(/participaciones/);
+    expect(said).not.toContain("31,2343");
+  });
+
+  it("does not mask a default of the application: it is not the user's data", async () => {
+    store.setPrivacy(true);
+    const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
+    expect(shownIn(host, "f-fee")).toBe("0");
+  });
+
+  it("shows them as they are with the mask off", async () => {
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    expect(shownIn(host, "f-amount")).toBe("3100");
+  });
+
+  it("leaves in sight what the user types, after the field loses the focus", async () => {
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
+    const amount = host.querySelector("#f-amount") as HTMLInputElement;
+    amount.dispatchEvent(new FocusEvent("focus"));
+    await Promise.resolve();
+    amount.value = "3200";
+    amount.dispatchEvent(new Event("input", { bubbles: true }));
+    amount.dispatchEvent(new FocusEvent("blur"));
+    await Promise.resolve();
+    expect(shownIn(host, "f-amount")).toBe("3200");
+    // What the user did not touch is still what the application shows: masked.
+    expect(shownIn(host, "f-quantity")).toBe(MASK);
+  });
+
+  /** One rule for every amount of the configuration: the 720 and 721 thresholds too. */
+  it("masks every amount of the configuration and leaves the percentages", async () => {
+    store.setPrivacy(true);
+    const host = await show("/ajustes/configuracion", Configuracion);
+    for (const id of [
+      "s-monthly_contribution_eur",
+      "s-bucket_max_cumulative_contribution",
+      "s-model_720_alert_threshold_eur",
+      "s-model_721_alert_threshold_eur",
+    ]) {
+      expect(shownIn(host, id), id).toBe(MASK);
+    }
+    expect(shownIn(host, "s-deviation_threshold_pp")).not.toBe(MASK);
+    expect(shownIn(host, "s-bucket_pct_of_contribution")).not.toBe(MASK);
+  });
+
+  it("masks the limits of the savings brackets and keeps their rates", async () => {
+    store.setPrivacy(true);
+    const shown = text(await show(`/movimientos/${SETTINGS}`, Detail, "/movimientos/:id"));
+    expect(shown).toContain("Tramos de la base del ahorro");
+    expect(shown).not.toMatch(/6\.000|50\.000|200\.000|300\.000/);
+    expect(shown).toContain("al 19");
+    store.setPrivacy(false);
+    const open = text(await show(`/movimientos/${SETTINGS}`, Detail, "/movimientos/:id"));
+    expect(open).toContain("hasta 6.000,00 € al 19");
   });
 });
 
@@ -105,5 +229,20 @@ describe("the detail as data", () => {
     expect(parts.some((part) => "amount" in part)).toBe(true);
     const words = parts.map((part) => ("text" in part ? part.text : "")).join("");
     expect(words).not.toMatch(/0[.,]25|766|0[.,]5\b/);
+  });
+});
+
+describe("the mask in its place", () => {
+  it("is as wide as its dots, so it starts where the figure would", async () => {
+    // A box wider than the dots, aligned to the right, pushed the mask ~20px
+    // off the left edge of a hero figure and of a line of the detail.
+    withStyles(2045, 1141);
+    store.setPrivacy(true);
+    const host = await show(`/movimientos/${PURCHASE}`, Detail, "/movimientos/:id");
+    const dots = host.querySelector(".sentence .mask > .dots") as HTMLElement;
+    expect(dots).not.toBeNull();
+    const style = getComputedStyle(dots);
+    expect(style.textAlign).not.toBe("right");
+    expect(["", "auto"]).toContain(style.width);
   });
 });

@@ -1,0 +1,228 @@
+/*
+ * The portfolio (docs/design/system.md §5.14, §5.15 and §7.5): the classes
+ * against their targets with the swatch of each, the deviation gauge (D7), the
+ * strip of the contribution's figures, the note of a proposal, and the two
+ * columns of the costs.
+ */
+
+/* ---- Asset classes: a swatch, a name and whatever the row says -------- */
+
+.class-name {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+}
+
+.swatch {
+  border-radius: var(--radius-pill);
+  display: inline-block;
+  flex: none;
+  height: var(--swatch-h);
+  width: var(--swatch-w);
+}
+
+.swatch.is-equity {
+  background-color: var(--c-class-equity);
+}
+
+.swatch.is-fixed_income {
+  background-color: var(--c-class-fixed-income);
+}
+
+.swatch.is-gold {
+  background-color: var(--c-class-gold);
+}
+
+.swatch.is-crypto {
+  background-color: var(--c-class-crypto);
+}
+
+/* A class in two lines: name and weight; target and deviation under them. */
+.class-row {
+  align-items: center;
+  display: grid;
+  gap: var(--space-0) var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: var(--tap);
+  padding-block: var(--space-2);
+}
+
+.class-row + .class-row {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.class-row > .weight {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+  justify-self: end;
+}
+
+.class-row > .target,
+.class-row > .dev {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+}
+
+.class-row > .target {
+  padding-left: calc(var(--swatch-w) + var(--space-2));
+}
+
+.class-row > .dev {
+  justify-self: end;
+}
+
+.table .weight {
+  font-weight: var(--fw-semibold);
+}
+
+.alloc + .pending {
+  margin-bottom: var(--space-2);
+}
+
+/* ---- Gauge: the deviation against the threshold (D7) ------------------- */
+
+.dev-cell {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
+.gauge {
+  flex: none;
+  height: 0.75rem;
+  width: var(--gauge-w);
+}
+
+.gauge .track {
+  fill: var(--c-fill);
+}
+
+.gauge .band {
+  fill: var(--c-border-control);
+}
+
+.gauge .zero {
+  stroke: var(--c-text-3);
+  stroke-width: 1;
+}
+
+.gauge .dot {
+  fill: var(--c-text-2);
+  stroke: var(--c-surface);
+  stroke-width: 2;
+}
+
+.gauge.is-off .dot {
+  fill: var(--c-caution-icon);
+}
+
+/* ---- The strip of figures that belong together ------------------------- */
+
+.kpis {
+  border-block: var(--border) solid var(--c-border);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding-block: var(--space-3);
+}
+
+.kpi {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding-inline: var(--space-3);
+}
+
+.kpi:first-child {
+  padding-left: 0;
+}
+
+.kpi + .kpi {
+  border-left: var(--border) solid var(--c-border);
+}
+
+.kpi dt {
+  color: var(--c-text-3);
+  font-size: var(--text-xs);
+}
+
+.kpi dd {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+  margin: 0;
+}
+
+.kpi dd .unit {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+}
+
+/* The note that closes a card: an icon, one sentence, pushed to the bottom. */
+.note-line {
+  align-items: start;
+  border-top: var(--border) solid var(--c-border);
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin: auto 0 0;
+  padding-top: var(--space-3);
+}
+
+.note-line > .icon-sm {
+  color: var(--c-text-3);
+  flex: none;
+  margin-top: var(--space-0);
+}
+
+.card > :has(+ .note-line) {
+  margin-bottom: var(--space-4);
+}
+
+/* A note and the disclosure after it travel together to the bottom. */
+.card > .note-line + .disclosure {
+  margin-top: 0;
+}
+
+/* ---- The transfer simulator, inside its disclosure --------------------- */
+
+.simulation {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* ---- Costs: the trades, and the standalone charges beside them ---------- */
+
+/* Each column is a container too: its table switches by the room of the column. */
+.costs-main,
+.costs-side {
+  container: column / inline-size;
+  min-width: 0;
+}
+
+.costs-side {
+  margin-top: var(--space-2);
+}
+
+/* The trades and the standalone charges side by side where both fit. */
+@container card (min-width: 64rem) {
+  .costs {
+    column-gap: var(--space-7);
+    display: grid;
+    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  }
+
+  .costs-side {
+    border-left: var(--border) solid var(--c-border);
+    margin-top: 0;
+    padding-left: var(--space-6);
+  }
+
+  .costs-side > .block-title:first-child {
+    margin-top: 0;
+  }
+}

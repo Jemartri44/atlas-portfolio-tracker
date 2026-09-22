@@ -7,7 +7,23 @@ import { valueLabel } from "../labels.js";
 import { type Naming, NO_NAMES, namingOf } from "../names.js";
 import { countOf } from "../number.js";
 import { type Figures, figuresOf, maskFigures, type Prose } from "../privacy.js";
-import { count, type Details, day, days, enumValue, num, pct, pp, text } from "./prose.js";
+import {
+  count,
+  type Details,
+  day,
+  days,
+  enumValue,
+  missingOf,
+  num,
+  pct,
+  pp,
+  pricesOf,
+  text,
+} from "./prose.js";
+
+/** A tax year is a name, not a quantity: "2027", never "2.027". */
+const year = (value: unknown): string =>
+  /^\d{4}$/.test(String(value)) ? String(value) : num(value);
 
 /** The wash-sale window by its real name: calling a one-year window "two months" is fiscally false. */
 const windowText = (window: unknown): string => {
@@ -21,13 +37,17 @@ const windowText = (window: unknown): string => {
   return `ventana de ${value.slice(0, -1)} días`;
 };
 
+/** The names of a detail that lists assets, one per asset. */
+const names = (ids: unknown, n: Naming): string[] =>
+  (Array.isArray(ids) ? ids : ids === undefined ? [] : [ids]).map((id) => n.one(id));
+
 /** Why a control rule of the bucket could not be measured, and what is missing. */
 const gapText = (d: Details, n: Naming): string => {
   const missing = [
     ...((d.assets as string[] | undefined) ?? []).map((id) => n.one(id)),
     ...((d.currencies as string[] | undefined) ?? []),
   ];
-  const detail = missing.length === 0 ? "" : ` (faltan ${missing.join(", ")})`;
+  const detail = missing.length === 0 ? "" : ` (${missingOf(missing)})`;
   switch (d.reason) {
     case "missing_prices":
       return `hay posiciones del cubo sin precio${detail}`;
@@ -46,15 +66,15 @@ const age = (d: Details): string => `de hace ${days(d.age_days)} (${day(d.date)}
 export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) => string> = {
   // --- Core weights ------------------------------------------------------
   unknown_target_weight: (d, n) =>
-    `Hay un peso objetivo para ${n.one(d.asset_id)}, que no es ningún activo del núcleo: revísalo en la configuración.`,
+    `Hay un peso objetivo para ${n.one(d.asset_id)}, que no es ningún activo de la cartera principal: revísalo en la configuración.`,
   asset_without_target: (d, n) =>
     `${n.one(d.asset_id)} tiene posición y ningún peso objetivo asignado.`,
   deviation_above_threshold: (d, n) =>
-    `${n.one(d.asset_id)} se desvía ${pp(d.deviation_pp)} del objetivo (umbral ${pp(d.threshold_pp).replace(/^\+/, "")}). Rebalancear vendiendo es una decisión anual tuya (regla 3).`,
+    `${n.one(d.asset_id)} se desvía ${pp(d.deviation_pp)} del objetivo (umbral ${pp(d.threshold_pp).replace(/^\+/, "")}). Rebalancear vendiendo es una decisión tuya, una vez al año.`,
   satellite_below_minimum: (d) =>
-    `${valueLabel(d.asset_class)} pesa ${pct(d.weight_pct)}, por debajo del mínimo de un satélite, que es del ${pct(d.minimum_pct)} (regla 6b: 0 % o al menos el mínimo).`,
+    `${valueLabel(d.asset_class)} pesa ${pct(d.weight_pct)}, por debajo del mínimo de un satélite, que es del ${pct(d.minimum_pct)}; o 0 % o al menos el mínimo.`,
   partial_core_total: (d, n) =>
-    `Faltan precios de ${n.many(d.assets)} a ${day(d.date)}: no se calculan pesos sobre un total parcial.`,
+    `${pricesOf(names(d.assets, n))} a ${day(d.date)}: no se calculan pesos sobre un total parcial.`,
   // --- Prices and rates --------------------------------------------------
   stale_price: (d, n) =>
     `${n.one(d.asset_id)}: el precio es ${age(d)}; registra una valoración más reciente.`,
@@ -64,31 +84,33 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   transfer_overdue: (d, n) =>
     `El traspaso de ${n.one(d.from_asset_id)} a ${n.one(d.to_asset_id)} lleva ${days(d.days_open)} abierto, más de los ${text(d.max_days)} configurados. Reclama a la gestora: mientras dure, el dinero no está invertido ni en el origen ni en el destino.`,
   partial_net_worth: (d, n) =>
-    `El patrimonio a ${day(d.date)} es parcial: faltan ${[
-      ...((d.assets as string[] | undefined) ?? []).map((id) => n.one(id)),
+    `El patrimonio a ${day(d.date)} es parcial: ${missingOf([
+      ...names(d.assets, n),
       ...((d.currencies as string[] | undefined) ?? []),
-    ].join(", ")}.`,
+    ])}.`,
   partial_bucket_total: (d, n) =>
-    `Faltan precios de ${n.many(d.assets)} a ${day(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`,
+    `${pricesOf(names(d.assets, n))} a ${day(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`,
   // --- Bucket ------------------------------------------------------------
   bucket_sample_too_small: (d) =>
-    `Solo ${countOf(Number(d.closed_theses), "tesis cerrada", "tesis cerradas")} y ${countOf(Number(d.realized_operations), "operación realizada", "operaciones realizadas")}: por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`,
+    Number(d.closed_theses) === 0 && Number(d.realized_operations) === 0
+      ? "Todavía no hay ninguna tesis cerrada ni ninguna venta: las estadísticas del cubo empiezan con la primera."
+      : `Solo ${countOf(Number(d.closed_theses), "tesis cerrada", "tesis cerradas")} y ${countOf(Number(d.realized_operations), "operación realizada", "operaciones realizadas")}: por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`,
   bucket_contaminated_theses: (d, n) =>
     `${count(d.theses) === 1 ? "Una tesis queda" : `${count(d.theses)} tesis quedan`} fuera de las medias (${((d.theses as unknown[] | undefined) ?? []).map((id) => n.thesis(id)).join("; ")}): sus ventas consumieron lotes comprados por otra tesis, porque el FIFO es global.`,
   bucket_contribution_exceeded: (d, _n, f) =>
-    `El aporte bruto al cubo (${f.money(d.gross_eur)}) supera el tope de ${f.money(d.limit_eur)} (regla 17). Las retiradas no devuelven margen: la regla 19 prohíbe reponer el cubo.`,
+    `El aporte bruto al cubo (${f.money(d.gross_eur)}) supera el tope de ${f.money(d.limit_eur)}. Las retiradas no devuelven margen: el cubo no se repone con dinero de fuera.`,
   bucket_contribution_near_limit: (d, _n, f) =>
-    `El aporte bruto al cubo (${f.money(d.gross_eur)}) pasa del 80 % del tope de ${f.money(d.limit_eur)} (regla 17).`,
+    `El aporte bruto al cubo (${f.money(d.gross_eur)}) pasa del 80 % del tope de ${f.money(d.limit_eur)}.`,
   bucket_stop_loss_reached: (d, _n, f) =>
-    `REGLA DE PARADA: la pérdida acumulada del cubo (${f.money(d.loss_eur)}) es el ${pct(d.loss_pct)} del aporte bruto (${f.money(d.gross_eur)}), por encima del ${pct(d.limit_pct)} configurado (regla 17). La aplicación avisa; la decisión es tuya.`,
+    `REGLA DE PARADA: la pérdida acumulada del cubo (${f.money(d.loss_eur)}) es el ${pct(d.loss_pct)} del aporte bruto (${f.money(d.gross_eur)}), por encima del ${pct(d.limit_pct)} configurado: toca dejar de aportar al cubo. La aplicación avisa; la decisión es tuya.`,
   bucket_stop_loss_not_evaluated: (d, n) =>
-    `La regla de parada (${pct(d.limit_pct)}) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya (regla 17).`,
+    `La regla de parada (${pct(d.limit_pct)}) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya.`,
   bucket_weight_not_evaluated: (d, n) =>
-    `La regla de peso (${pct(d.limit_pct)}) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro (regla 18).`,
+    `La regla de peso (${pct(d.limit_pct)}) no se ha podido evaluar: ${gapText(d, n)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro.`,
   bucket_weight_exceeded: (d) =>
-    `El cubo pesa el ${pct(d.weight_pct)} del patrimonio total, por encima del ${pct(d.limit_pct)} configurado (regla 18): valora traspasar el exceso al núcleo.`,
+    `El cubo pesa el ${pct(d.weight_pct)} del patrimonio total, por encima del ${pct(d.limit_pct)} configurado: valora traspasar el exceso a la cartera principal.`,
   missing_benchmark_asset: () =>
-    "No hay índice de referencia configurado: fíjalo en Ajustes → Configuración (regla 16).",
+    "No hay índice de referencia configurado: fíjalo en Ajustes → Configuración.",
   unknown_benchmark_asset: (d, n) =>
     `El índice de referencia ${n.one(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`,
   missing_benchmark_price: (d, n) =>
@@ -105,12 +127,12 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   thesis_size_exceeded: (d, n, f) =>
     `La tesis ${n.thesis(d.thesis_id)} lleva ${f.money(d.invested_eur)} invertidos, por encima de los ${f.money(d.planned_size_eur)} previstos.`,
   thesis_closed_with_position: (d, n, f) =>
-    `La tesis ${n.thesis(d.thesis_id)} está cerrada, pero ${n.one(d.account_id)} sigue teniendo ${n.one(d.asset_id)} (${f.quantity(d.position)}).`,
+    `La tesis ${n.thesis(d.thesis_id)} está cerrada, pero ${n.one(d.account_id)} sigue teniendo ${f.titles(d.position)} de ${n.one(d.asset_id)}.`,
   // --- Wash-sale window --------------------------------------------------
   wash_sale_window_repurchase: (d, n, f) =>
-    `Compra del ${day(d.buy_date)} de ${f.quantity(d.buy_quantity)} títulos de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): puede hacer que esa pérdida no sea computable en ${num(d.tax_year)}.`,
+    `Compra del ${day(d.buy_date)} de ${f.titles(d.buy_quantity)} de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): puede hacer que esa pérdida no sea computable en ${year(d.tax_year)}.`,
   wash_sale_window_prior_buy: (d, n, f) =>
-    `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) cuando siguen en cartera ${f.quantity(d.held_quantity)} títulos de una compra del ${day(d.buy_date)}, dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${num(d.tax_year)}.`,
+    `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) cuando en cartera hay todavía ${f.titles(d.held_quantity)} de una compra del ${day(d.buy_date)}, dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${year(d.tax_year)}.`,
 
   // --- Swap (ADR-0021) ----------------------------------------------------
   swap_fiscal_dates_differ: (d, n) =>
@@ -118,7 +140,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
 
   // --- Tax report (feature 009) --------------------------------------------
   tax_quota_not_computed: () =>
-    "Esto es la base del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en el libro.",
+    "Esto es la base del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en tus datos.",
   tax_double_taxation_partial: () =>
     "Doble imposición: solo se calcula el primer límite, el del convenio. El segundo exige la declaración entera, y lo que no se deduce se pierde.",
   // The country is the code the ledger keeps (US, IE): `num` leaves it as it is.
@@ -141,7 +163,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   tax_duplicate_isin: (d, n) =>
     `El ISIN ${text(d.isin)} lo comparten ${n.many(d.assets)}: para Hacienda son el mismo valor y el cálculo fiscal los trata como distintos. Registra ese valor en un solo activo.`,
   tax_settings_default_used: (d) =>
-    `Hay ${countOf(count(d.fields), "parámetro fiscal", "parámetros fiscales")} que no están en el libro y se han tomado del código. Guardar la configuración los dejará fijados.`,
+    `Hay ${countOf(count(d.fields), "parámetro fiscal", "parámetros fiscales")} que no están en tus datos y se han tomado del código. Guardar la configuración los dejará fijados.`,
 };
 
 /**
@@ -150,6 +172,67 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
  * is an amount. Without a catalogue every identifier prints as itself, which is
  * what the whole application did before (`NO_NAMES`).
  */
+/** "A", "A y B", "A, B y C". */
+const joinAll = (items: readonly string[]): string =>
+  items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} y ${items.at(-1)}`;
+
+/**
+ * The age a group of stale prices is past: the limit configured, which the
+ * domain puts in each warning. The youngest of their ages is not it — six
+ * prices of 10 days and more read «más de 10 días» with a limit of 7 (second
+ * pass of the review of 2026-09-19); it is only the answer for a warning of an
+ * older version, which does not carry the limit.
+ */
+const limitOf = (warnings: readonly Warning[]): number => {
+  const limit = warnings[0]?.details.limit_days;
+  return limit === undefined
+    ? Math.min(...warnings.map((warning) => Number(warning.details.age_days)))
+    : Number(limit);
+};
+
+/**
+ * One sentence for several warnings of the same rule, as the summary shows
+ * them (docs/design/system.md §5.6): «3 precios con más de 15 días · World
+ * Index Fund, Physical Gold ETC y Bitcoin ETP». Only the rules whose repeats
+ * are one thing to do; the others are said one by one.
+ */
+export const describeWarningGroup = (
+  code: string,
+  warnings: readonly Warning[],
+  prose: Prose,
+): string | undefined => {
+  const n = namingOf(prose.names ?? NO_NAMES);
+  const f = figuresOf(prose.privacy);
+  const d = (warnings[0]?.details ?? {}) as Details;
+  switch (code) {
+    // One loss and its purchases inside the window: one sentence with how many,
+    // each purchase in the detail. The preview of a sale listed ten notices
+    // that said the same thing (third pass of the review of 2026-09-19).
+    case "wash_sale_window_prior_buy":
+      return `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) con ${warnings.length} compras en cartera dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${year(d.tax_year)}.`;
+    case "wash_sale_window_repurchase":
+      return `${warnings.length} compras de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): pueden hacer que esa pérdida no sea computable en ${year(d.tax_year)}.`;
+    case "stale_price":
+      return `${warnings.length} precios con más de ${days(limitOf(warnings))} · ${joinAll(
+        warnings.map((warning) => n.one(warning.details.asset_id)),
+      )}. Registra valoraciones más recientes.`;
+    case "stale_fx_rate":
+      return `${warnings.length} tipos de cambio de hace más de ${days(limitOf(warnings))} · ${joinAll(
+        warnings.map((warning) => text(warning.details.currency)),
+      )}. Registra una operación o una valoración más reciente en esas divisas.`;
+    case "deviation_above_threshold":
+      return `${warnings.length} activos fuera del umbral de ±${pp(
+        warnings[0]?.details.threshold_pp,
+      ).replace(/^\+/, "")} · ${joinAll(
+        warnings.map(
+          (warning) => `${n.one(warning.details.asset_id)} (${pp(warning.details.deviation_pp)})`,
+        ),
+      )}. Rebalancear vendiendo es una decisión anual tuya.`;
+    default:
+      return undefined;
+  }
+};
+
 export const describeWarning = (warning: Warning, prose: Prose): string => {
   const render = WARNING_MESSAGES[warning.code];
   return render === undefined

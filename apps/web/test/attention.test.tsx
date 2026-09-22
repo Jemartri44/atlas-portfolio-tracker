@@ -107,15 +107,95 @@ describe("the list, as data", () => {
       "01ARYZ6S41TSV4RRFFQ690000A",
     );
     const items = attention([...buys, other, { ...(buys[0] as Warning) }]);
-    expect(items.map((item) => item.count).sort()).toEqual([1, 3]);
+    // Two sales, two items: one sentence each, with how many purchases, and
+    // the purchases themselves kept for the detail.
+    expect(items).toHaveLength(2);
+    const three = items.find((item) => item.warnings.length === 3);
+    expect(three?.message).toMatch(/ con 3 compras en cartera dentro de la ventana /);
+    expect(three?.count).toBe(1);
+    expect(items.find((item) => item.warnings.length === 1)?.message).toMatch(/de una compra del/);
+  });
+});
+
+describe("the rules whose repeats are one thing to do", () => {
+  it("say several stale prices in one sentence, with the assets", () => {
+    const stale = (asset_id: string, age_days: number, id: string) =>
+      warning("stale_price", { asset_id, age_days, date: "2028-12-31", limit_days: 15 }, id);
+    const items = attention(
+      [
+        stale("ast_world", 16, "01ARYZ6S41TSV4RRFFQ6900011"),
+        stale("ast_gold", 20, "01ARYZ6S41TSV4RRFFQ6900012"),
+        stale("ast_btc", 17, "01ARYZ6S41TSV4RRFFQ6900013"),
+      ],
+      {
+        names: {
+          ast_world: "World Index Fund",
+          ast_gold: "Physical Gold ETC",
+          ast_btc: "Bitcoin ETP",
+        },
+      },
+    );
+    expect(items).toHaveLength(1);
+    expect(items[0]?.message).toMatch(
+      /^3 precios con más de 15 días · World Index Fund, Physical Gold ETC y Bitcoin ETP\./,
+    );
+    expect(items[0]?.count).toBe(1);
+    expect(items[0]?.eventIds).toHaveLength(3);
+  });
+
+  it("say the limit configured, not the youngest of the ages", () => {
+    // Six prices of 10 days and more, with a limit of 7: «más de 7 días».
+    const items = attention(
+      [10, 12, 30].map((age_days, index) =>
+        warning(
+          "stale_price",
+          { asset_id: `ast_${index}`, age_days, date: "2028-12-31", limit_days: 7 },
+          `01ARYZ6S41TSV4RRFFQ690002${index}`,
+        ),
+      ),
+      {},
+    );
+    expect(items[0]?.message).toMatch(/^3 precios con más de 7 días · /);
+    // A warning of an older version carries no limit: the youngest age is all there is.
+    const old = attention(
+      [10, 12].map((age_days, index) =>
+        warning(
+          "stale_fx_rate",
+          { currency: `C${index}`, age_days, date: "2028-12-31" },
+          `01ARYZ6S41TSV4RRFFQ690003${index}`,
+        ),
+      ),
+      {},
+    );
+    expect(old[0]?.message).toMatch(/de hace más de 10 días/);
+  });
+
+  it("say the deviations together, each with its points", () => {
+    const off = (asset_id: string, deviation_pp: string, id: string) =>
+      warning("deviation_above_threshold", { asset_id, deviation_pp, threshold_pp: "5" }, id);
+    const items = attention([
+      off("ast_world", "22.9", "01ARYZ6S41TSV4RRFFQ6900021"),
+      off("ast_bonds", "-10.57", "01ARYZ6S41TSV4RRFFQ6900022"),
+    ]);
+    expect(items).toHaveLength(1);
+    const said = (items[0]?.message ?? "").replace(/\s/g, " ");
+    expect(said).toContain("2 activos fuera del umbral de ±5,00 pp");
+    expect(said).toContain("ast_world (+22,90 pp) y ast_bonds (−10,57 pp)");
+  });
+
+  it("say a single one as before", () => {
+    const items = attention([
+      warning("stale_price", { asset_id: "ast_world", age_days: 16, date: "2028-12-31" }),
+    ]);
+    expect(items[0]?.message).toContain("el precio es de hace 16 días");
   });
 });
 
 describe("the list, on the summary", () => {
   it("puts the export first and never an identifier or an ISO date", async () => {
     const host = await show("/", Resumen);
-    const items = [...host.querySelectorAll('[aria-label="Lo que reclama atención"] .item')];
-    expect(text(items[0])).toContain("nunca se ha exportado");
+    const items = [...host.querySelectorAll('[aria-label="Lo que reclama atención"] .notice')];
+    expect(text(items[0])).toContain("nunca se han exportado");
     const shown = text(host.querySelector('[aria-label="Lo que reclama atención"]'));
     expect(shown).not.toMatch(ULID);
     expect(shown).not.toMatch(/\d{4}-\d{2}-\d{2}|th_alpha/);
@@ -126,7 +206,10 @@ describe("the list, on the summary", () => {
     // eleven purchases inside the year before it.
     today("2027-01-10");
     const early = text(await show("/", Resumen));
-    expect(early).toMatch(/Venta con pérdida de World Index Fund.*\(\d+ avisos iguales\)/);
+    // One sentence with how many purchases, not the first one with «N iguales».
+    expect(early).toMatch(
+      /Venta con pérdida de World Index Fund del [^)]*\) con \d+ compras en cartera/,
+    );
     expect(early.match(/Venta con pérdida de World Index Fund/g)).toHaveLength(1);
 
     // Two years later that window is long closed and is not something to act on.

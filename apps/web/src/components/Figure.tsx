@@ -18,6 +18,8 @@ interface FigureProps {
   decimals?: number | "auto" | undefined;
   /** Colour and sign by value; the sign is always printed for points. */
   coloured?: boolean | undefined;
+  /** Print the sign of a percentage too: a result reads as a result without colour. */
+  signed?: boolean | undefined;
   class?: string | undefined;
 }
 
@@ -30,7 +32,10 @@ export const Figure = (props: FigureProps): JSX.Element => {
     }
     const decimals = props.decimals === "auto" ? meaningfulDecimals(props.value) : props.decimals;
     if (props.unit === "percent") {
-      return formatPercent(props.value, decimals === undefined ? {} : { decimals });
+      return formatPercent(props.value, {
+        ...(decimals === undefined ? {} : { decimals }),
+        ...(props.signed === true ? { signed: true } : {}),
+      });
     }
     if (props.unit === "points") {
       return formatPoints(props.value, decimals === undefined ? {} : { decimals });

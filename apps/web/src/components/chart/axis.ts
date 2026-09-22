@@ -12,7 +12,6 @@
 // figure on it. If that leaves the chart lame in public, it stays lame: that is
 // exactly what the privacy mode promises.
 
-import { MASK } from "../../format/money.js";
 import { formatDecimalString } from "../../format/number.js";
 
 /**
@@ -32,18 +31,23 @@ const compact = (value: number): string => {
 };
 
 /**
- * A euro figure for an axis or a tooltip. With privacy on it is the mask, with
- * no exception and no "it is only an axis": twelve units of a fund with a public
- * price give the amount away just as well as the amount.
+ * A euro figure for an axis. With privacy on there is **none**, with no
+ * exception and no "it is only an axis": twelve units of a fund with a public
+ * price give the amount away just as well as the amount. Not even the mask:
+ * four dots on every line of the grid would say nothing and add noise, and the
+ * shape of the lines is what stays useful in public.
  */
 export const axisAmount = (value: number | null | undefined, privacy: boolean): string => {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
+  if (privacy || value === null || value === undefined || !Number.isFinite(value)) {
     return "";
   }
-  return privacy ? MASK : compact(value);
+  return compact(value);
 };
 
-/** A date of the X axis: the day is noise on a five-year range, and vital on a month. */
+/**
+ * A date of the X axis: the day is noise on a five-year range, and vital on a
+ * month. The year in full: «feb 27» reads as the 27th of February.
+ */
 export const axisDate = (timestamp: number, span: "days" | "months" | "years"): string => {
   const date = new Date(timestamp * 1000);
   const month = date.toLocaleDateString("es-ES", { month: "short", timeZone: "UTC" });
@@ -51,9 +55,23 @@ export const axisDate = (timestamp: number, span: "days" | "months" | "years"): 
     return String(date.getUTCFullYear());
   }
   if (span === "months") {
-    return `${month} ${String(date.getUTCFullYear()).slice(2)}`;
+    return `${month} ${date.getUTCFullYear()}`;
   }
   return `${date.getUTCDate()} ${month}`;
+};
+
+/**
+ * The labels of the date axis, each said **once**: uPlot places its ticks by
+ * the room it has, not by the calendar, so four months across a wide screen
+ * got a tick every few days and "sept 26" written six times in a row. A tick
+ * whose label repeats the one before it stays unlabelled.
+ */
+export const axisDates = (
+  splits: readonly number[],
+  span: "days" | "months" | "years",
+): string[] => {
+  const labels = splits.map((value) => axisDate(value, span));
+  return labels.map((label, index) => (index > 0 && labels[index - 1] === label ? "" : label));
 };
 
 /** Which of the three date spans a range of seconds deserves. */

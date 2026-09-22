@@ -86,6 +86,7 @@ export {
   type CashBlock,
   type CashLine,
   type NetWorth,
+  type NetWorthShares,
   netWorth,
 } from "./projections/networth.js";
 export {
@@ -198,6 +199,7 @@ export {
   type EventEffect,
   type EventPreview,
   type PreviewOptions,
+  previewCorrection,
   previewEvent,
 } from "./usecases/preview-event.js";
 export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
@@ -210,6 +212,8 @@ export {
 export {
   type CorrectResult,
   correctEvent,
+  type PreparedCorrection,
+  prepareCorrection,
   type ReverseResult,
   reverseEvent,
 } from "./usecases/rectify.js";

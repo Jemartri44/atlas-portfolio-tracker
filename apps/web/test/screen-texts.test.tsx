@@ -11,9 +11,9 @@ import { WARNING_MESSAGES } from "../src/format/messages/warnings.js";
 import { namingOf } from "../src/format/names.js";
 import { figuresOf } from "../src/format/privacy.js";
 import { messageWithLine } from "../src/ledger/state.js";
+import { ContributionCard } from "../src/routes/cartera/ContributionCard.jsx";
+import Cartera from "../src/routes/cartera/index.jsx";
 import Movimientos from "../src/routes/movimientos/index.jsx";
-import { ContributionCard } from "../src/routes/nucleo/ContributionCard.jsx";
-import Nucleo from "../src/routes/nucleo/index.jsx";
 import { SETTINGS_NUMBERS } from "../src/view-models/index.js";
 import { openLedger, show, text, withGoldenLedger } from "./helpers/render.jsx";
 
@@ -59,7 +59,7 @@ describe("the words", () => {
   it("says which line of the file a load error comes from", () => {
     expect(
       messageWithLine({ code: "invalid_field", message: "«Comisión» no es válido.", line: 12 }),
-    ).toBe("Línea 12 del fichero: «Comisión» no es válido.");
+    ).toBe("Línea 12 del archivo: «Comisión» no es válido.");
     expect(messageWithLine({ code: "conflict", message: "cambió" })).toBe("cambió");
   });
 });
@@ -89,8 +89,8 @@ describe("the screens", () => {
   });
 
   it("gives the two cost totals of the core two different names", async () => {
-    const shown = text(await show("/nucleo?fecha=2029-06-30", Nucleo));
-    expect(shown).toContain("Comisiones de operaciones del núcleo");
-    expect(shown.match(/Total del núcleo/g)).toHaveLength(1);
+    const shown = text(await show("/cartera?fecha=2029-06-30", Cartera));
+    expect(shown).toContain("Comisiones de operaciones de la cartera");
+    expect(shown.match(/Total de comisiones sueltas/g)).toHaveLength(1);
   });
 });

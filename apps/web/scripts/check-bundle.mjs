@@ -29,8 +29,28 @@ import { gzipSync } from "node:zlib";
 const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(webRoot, "dist");
 
-/** What the browser downloads before the first screen paints: JS + CSS, gzip. */
-const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
+/**
+ * What the browser downloads before the first screen paints: JS + CSS, gzip.
+ *
+ * **Lowered from 80 to 69 by the visual redesign (ADR-0023), to what it
+ * measured plus a small margin:** Pico left the boot path, and with it 6,9 KB
+ * gzip of stylesheet that the screens overrode anyway; our own base weighs
+ * 9,1 KB where Pico and its overrides weighed 16,0. Measured on top of the
+ * tax engine: **68,5 KB** (72,6 before the redesign), rounded up to 69.
+ *
+ * **Set to what the third review measured plus 1 KB, as the direction asked:**
+ * the fixes of the verifier's review (the tables laid out by the room of their
+ * card, the draft that remembers what was typed, the notices gathered, the
+ * pending states, the rules said in plain words, the sentence over the effect,
+ * the unit inside a field) measured **69,1 KB**; the ceiling is 70,1.
+ *
+ * **Set again to what was measured plus 1 KB after its second and third
+ * passes**, as the direction asked when a ceiling is passed: the preview of a
+ * correction as it is written, the stale mark of a row, the singular of one
+ * unit, the theme of the browser's bar and the confirmation of a write on the
+ * movement it wrote. Measured **69,4 KB**; the ceiling is 70,4.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 70.4 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -46,7 +66,8 @@ const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
  *           first screen projects the ledger.
  *   ~22 KB  uPlot, vendored, in a lazily loaded chunk that only Núcleo and Cubo
  *           pull (ADR-0017 quotes 23 KB **minified**, not gzip).
- *   ~16 KB  the stylesheet, mostly vendored Pico.
+ *   ~16 KB  the stylesheet, mostly vendored Pico (9 KB of our own base since
+ *           the redesign, ADR-0023).
  *   ~12 KB  `@solidjs/router`.
  *    ~8 KB  Solid itself plus the boot.
  *   the rest is our eleven screens, ~2 KB gzip each.
@@ -83,8 +104,28 @@ const BOOT_BUDGET_GZIP_BYTES = 80 * 1024;
  * Spanish of the codes of the tax engine that the drift test demands in both
  * interfaces. The tax engine itself does not enter the bundle. Measured on top
  * of the round of defects: 178,6 KB total; the boot, 72,6 KB against 80.
+ *
+ * **Moved from 179 to 184 by the visual redesign (ADR-0023), measured and
+ * not allowed:** the stylesheet went down by 6,9 KB, and the JavaScript went up
+ * by about 10 KB — one icon set drawn in SVG, the notice, the fold and the
+ * states as components, the first steps of an empty ledger, the sentence that
+ * opens a movement, the filters in two shapes, the effect beside the form, the
+ * deviation gauge and the proportion of the patrimony. Measured on top of the
+ * tax engine: **183,4 KB**, of which the boot is 68,5.
+ *
+ * **Set to what the third review measured plus 2 KB, as the direction asked:**
+ * the same fixes, plus the result of a sale in its detail, the gap of a chart
+ * in one line with its list folded, the bucket's notices in their cards, the
+ * first run with the folder in one line and the weights asked only of live
+ * assets, measured **187,4 KB**; the ceiling is 189,4.
+ *
+ * **Passed by the second and third passes of the review, and set again to
+ * what was measured plus 2 KB:** every sale of a movement with its total, the
+ * lists without assets converted away, the rectified movement reached with its
+ * confirmation, the page that refuses to correct a reversed one and the closed
+ * theses folded. Measured **189,8 KB**; the ceiling is 191,8.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 179 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 191.8 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

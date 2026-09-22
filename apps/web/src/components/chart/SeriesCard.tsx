@@ -6,15 +6,19 @@
 // need exactly this, and the next one will too.
 
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
+import type { MissingNote } from "../../view-models/series.js";
 import { Section } from "../Section.jsx";
 import { Chart, type ChartSeries } from "./Chart.jsx";
 import { ChartLegend } from "./ChartLegend.jsx";
 import { ChartTable } from "./ChartTable.jsx";
+import { gapsOf } from "./gaps.js";
 import { RangeButtons, type RangeOption } from "./RangeButtons.jsx";
 import { type RangeKey, rangeCounts, rangeIndices } from "./ranges.js";
 
 export interface SeriesCardProps {
   title: string;
+  /** Its place in the grid of the screen. */
+  class?: string | undefined;
   /** Names of the series, in the order of `values`. */
   labels: readonly string[];
   colours: readonly string[];
@@ -22,9 +26,15 @@ export interface SeriesCardProps {
   x: readonly number[];
   values: readonly (number | null)[][];
   rows: readonly { date: string; values: readonly (string | undefined)[] }[];
-  missing?: string | undefined;
+  missing?: MissingNote | undefined;
   /** What the card says when there is nothing at all to draw. */
   empty: JSX.Element;
+  /** Above the chart: the figure the chart explains, when it has one. */
+  lead?: JSX.Element | undefined;
+  /** Under the chart and before its table: what goes with it, a strip of figures. */
+  foot?: JSX.Element | undefined;
+  /** The last rows of the card, drawn or not: a disclosure with the detail. */
+  tail?: JSX.Element | undefined;
 }
 
 export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
@@ -37,20 +47,35 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
     props.labels.map((label, index) => ({
       label,
       values: indices().map((at) => props.values[index]?.[at] ?? null),
-      colour: props.colours[index] ?? "--c-muted",
+      colour: props.colours[index] ?? "--c-series-index",
       ...(props.dashes[index] === undefined ? {} : { dash: props.dashes[index] as number[] }),
     }));
 
   const shown = (): number[] => indices().map((at) => props.x[at] as number);
+  const buttons = (): JSX.Element => (
+    <RangeButtons options={options()} current={range()} onChange={setRange} />
+  );
 
+  // With a lead figure between the title and the chart, the range goes with the
+  // chart it changes, not above the figure it does not (review of 2026-09-19).
   return (
     <Section
       title={props.title}
-      aside={<RangeButtons options={options()} current={range()} onChange={setRange} />}
+      class={`is-chart ${props.class ?? ""}`.trimEnd()}
+      aside={props.lead === undefined ? buttons() : undefined}
     >
+      {props.lead}
       <Show when={props.x.length > 0} fallback={props.empty}>
-        <Chart x={shown()} series={series()} label={props.title} />
-        <ChartLegend series={series()} />
+        <Show when={props.lead !== undefined}>
+          <div class="chart-range">{buttons()}</div>
+        </Show>
+        <figure class="chart">
+          <Chart x={shown()} series={series()} label={props.title} />
+          <figcaption>
+            <ChartLegend series={series()} />
+          </figcaption>
+        </figure>
+        {props.foot}
         <ChartTable
           headers={props.labels}
           rows={indices().map((at) => ({
@@ -59,8 +84,10 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
           }))}
           caption={props.title}
           missing={props.missing}
+          banded={gapsOf(shown(), series()).length > 0}
         />
       </Show>
+      {props.tail}
     </Section>
   );
 };

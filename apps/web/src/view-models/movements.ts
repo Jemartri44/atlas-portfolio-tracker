@@ -7,9 +7,9 @@
 // domain (decision (c)).
 
 import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
-import type { EventReferences } from "../format/events.js";
+import { type EventReferences, inSentence } from "../format/events.js";
 import { eventLabel, STATUS_LABELS, valueLabel } from "../format/labels.js";
-import { displayName, displayThesis, type NameIndex, NO_NAMES } from "../format/names.js";
+import { displayName, displayThesis, type NameIndex, NO_NAMES, unitsOf } from "../format/names.js";
 
 export interface MovementRow {
   id: string;
@@ -22,14 +22,22 @@ export interface MovementRow {
   administrative: boolean;
   status: LedgerEntry["status"];
   statusLabel: string;
-  /** Second line: account, asset and whatever identifies the event. */
+  /** Second line of the table: asset, account and whatever identifies the event. */
   subtitle: string;
+  /** First line of a row: the asset, else the account, else the type. */
+  subject: string;
+  /** Second line of a row: the type, the account when the subject is the asset, the rest. */
+  context: string;
   /** Main recorded amount, as recorded; absent when the event has none. */
   amount?: Money;
   /** Main quantity, when the event is about units. */
   quantity?: Quantity;
+  /** What the quantity counts: "part.", "acc.", "uds.". */
+  units: string;
   /** What the figure means, for the accessible label of the row. */
   figureLabel?: string;
+  /** The figure is a price per unit, not an amount that changed hands: it says so. */
+  price?: true;
   invalidReason?: string;
 }
 
@@ -45,6 +53,7 @@ interface Figure {
   amount?: Money | undefined;
   quantity?: Quantity | undefined;
   label?: string | undefined;
+  price?: true;
 }
 
 /**
@@ -71,7 +80,7 @@ const figureOf = (entry: LedgerEntry): Figure => {
     case "fx_exchange":
       return { amount: money(event.sold_amount, event.sold_currency), label: "importe vendido" };
     case "valuation":
-      return { amount: money(event.unit_value, event.currency), label: "valor unitario" };
+      return { amount: money(event.unit_value, event.currency), label: "precio", price: true };
     case "transfer":
       return { quantity: quantity(event.quantity_out), label: "cantidad traspasada" };
     case "swap":
@@ -93,8 +102,15 @@ const figureOf = (entry: LedgerEntry): Figure => {
   }
 };
 
+interface Parts {
+  asset?: string | undefined;
+  account?: string | undefined;
+  /** Whatever else identifies the event: the destination, the kind, the thesis. */
+  extras: string[];
+}
+
 /**
- * Second line: what the event is about, without repeating the type.
+ * What the event is about, without repeating the type.
  *
  * With names, not identifiers: "Beta Biotech · Cubo especulativo" is an
  * application and "ast_delta · acc_bucket" is a debug dump, and this line is
@@ -103,35 +119,60 @@ const figureOf = (entry: LedgerEntry): Figure => {
  * sobre Alpha Robotics (abierta el 01/09/2026)", "anula Dividendo del
  * 12/03/2027" — never by their identifier.
  */
-const subtitleOf = (
+const partsOf = (
   entry: LedgerEntry,
   names: NameIndex,
   events: EventReferences | undefined,
-): string => {
+): Parts => {
   const event = entry.event as Record<string, unknown>;
-  const parts: string[] = [];
-  if (entry.asset_id !== undefined) {
-    parts.push(displayName(names, entry.asset_id));
-  }
-  if (entry.account_id !== undefined) {
-    parts.push(displayName(names, entry.account_id));
-  }
+  const extras: string[] = [];
   if (entry.event.type === "transfer" || entry.event.type === "transfer_requested") {
-    parts.push(`→ ${displayName(names, event.to_asset_id ?? event.to_account_id ?? "")}`);
+    extras.push(`→ ${displayName(names, event.to_asset_id ?? event.to_account_id ?? "")}`);
   }
   if (entry.event.type === "corporate_action") {
-    parts.push(valueLabel(event.kind ?? ""));
+    extras.push(valueLabel(event.kind ?? ""));
   }
   if (entry.event.type === "reversal" && typeof event.reverses_id === "string") {
-    parts.push(events === undefined ? "anula un movimiento" : `anula ${events(event.reverses_id)}`);
+    extras.push(
+      events === undefined
+        ? "anula un movimiento"
+        : `anula ${inSentence(events(event.reverses_id))}`,
+    );
   }
   if (entry.event.type === "settings_changed") {
-    parts.push("configuración completa");
+    extras.push("configuración completa");
   }
   if (entry.thesis_id !== undefined) {
-    parts.push(`tesis ${displayThesis(names, entry.thesis_id)}`);
+    extras.push(`tesis ${displayThesis(names, entry.thesis_id)}`);
   }
-  return parts.filter((part) => part !== "").join(" · ");
+  return {
+    asset: entry.asset_id === undefined ? undefined : displayName(names, entry.asset_id),
+    account: entry.account_id === undefined ? undefined : displayName(names, entry.account_id),
+    extras: extras.filter((part) => part !== ""),
+  };
+};
+
+const joined = (parts: readonly (string | undefined)[]): string =>
+  parts.filter((part) => part !== undefined && part !== "").join(" · ");
+
+/**
+ * The two lines of a row (docs/design/system.md §5.3): what it is about — the
+ * asset, else the account, else the type itself — and, under it, the type and
+ * where.
+ */
+const linesOf = (parts: Parts, typeLabel: string): { subject: string; context: string } => {
+  const subject = parts.asset ?? parts.account;
+  if (subject === undefined) {
+    return { subject: typeLabel, context: joined(parts.extras) };
+  }
+  return {
+    subject,
+    context: joined([
+      typeLabel,
+      parts.asset === undefined ? undefined : parts.account,
+      ...parts.extras,
+    ]),
+  };
 };
 
 export const movementRow = (
@@ -140,19 +181,24 @@ export const movementRow = (
   events?: EventReferences,
 ): MovementRow => {
   const figure = figureOf(entry);
+  const parts = partsOf(entry, names, events);
+  const typeLabel = eventLabel(entry.event.type);
   return {
     id: entry.event.id,
     position: entry.position,
     type: entry.event.type,
-    typeLabel: eventLabel(entry.event.type),
+    typeLabel,
+    ...linesOf(parts, typeLabel),
     date: entry.sort_date,
     administrative: entry.business_date === undefined,
     status: entry.status,
     statusLabel: STATUS_LABELS[entry.status] ?? entry.status,
-    subtitle: subtitleOf(entry, names, events),
+    subtitle: joined([parts.asset, parts.account, ...parts.extras]),
     ...(figure.amount === undefined ? {} : { amount: figure.amount }),
     ...(figure.quantity === undefined ? {} : { quantity: figure.quantity }),
+    units: unitsOf(names, entry.asset_id),
     ...(figure.label === undefined ? {} : { figureLabel: figure.label }),
+    ...(figure.price === undefined ? {} : { price: figure.price }),
     ...(entry.invalid_reason === undefined ? {} : { invalidReason: entry.invalid_reason }),
   };
 };

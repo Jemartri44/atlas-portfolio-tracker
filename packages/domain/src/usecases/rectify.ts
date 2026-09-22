@@ -91,14 +91,30 @@ export const reverseEvent = async (
   };
 };
 
-export const correctEvent = async <E extends SupportedEvent>(
+/** The pair a correction appends, and the ledger as it would be after it. */
+export interface PreparedCorrection<E extends SupportedEvent = SupportedEvent> {
+  target: LedgerEvent;
+  reversal: ReversalEvent;
+  event: E;
+  /** The candidate ledger, projected: the original reversed and the corrected in its place. */
+  state: LedgerState;
+}
+
+/**
+ * Builds and checks a correction exactly as it will be written: the reversal
+ * of the original and the corrected event, over the ledger as loaded. It is
+ * **the** definition of what a correction does, shared by `correctEvent`, which
+ * writes it, and by `previewCorrection`, which shows it: a preview that added
+ * the corrected event on top of the original counted a corrected deposit of
+ * 8.000 € on top of the 8.700 € it replaced (review of 2026-09-19).
+ */
+export const prepareCorrection = <E extends SupportedEvent>(
   deps: UseCaseDeps,
+  events: readonly LedgerEvent[],
   targetId: string,
   replacement: Draft<E>,
   reason: string,
-  options: RecordOptions = {},
-): Promise<CorrectResult<E>> => {
-  const { events, etag } = await deps.store.load();
+): PreparedCorrection<E> => {
   const target = findTarget(events, targetId);
   const ids = createUlidGenerator(deps);
   const reversal = completeDraft<ReversalEvent>(
@@ -119,6 +135,24 @@ export const correctEvent = async <E extends SupportedEvent>(
   );
   // A correction introduces an ISIN exactly as a new event does.
   checkIsinUnique(state, event, () => projectLedger(events, { collectErrors: true }));
+  return { target, reversal, event, state };
+};
+
+export const correctEvent = async <E extends SupportedEvent>(
+  deps: UseCaseDeps,
+  targetId: string,
+  replacement: Draft<E>,
+  reason: string,
+  options: RecordOptions = {},
+): Promise<CorrectResult<E>> => {
+  const { events, etag } = await deps.store.load();
+  const { target, reversal, event, state } = prepareCorrection(
+    deps,
+    events,
+    targetId,
+    replacement,
+    reason,
+  );
   const duplicates = duplicatesOf(state.fingerprints, event);
   if (duplicates.length > 0 && options.confirmDuplicate !== true) {
     throw new DuplicateFingerprintError((event as { fingerprint: string }).fingerprint, duplicates);

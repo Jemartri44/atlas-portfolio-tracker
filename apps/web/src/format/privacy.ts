@@ -20,7 +20,7 @@
 // imported from anywhere else: one mask, two doors that apply it.
 
 import type { NameIndex } from "./names.js";
-import { formatDecimalString, formatQuantityString } from "./number.js";
+import { formatDecimalString, formatQuantityString, NBSP } from "./number.js";
 
 /** Neutral, fixed-width mask. Not the amount's length: that would leak its size. */
 export const MASK = "••••";
@@ -39,10 +39,15 @@ export interface Prose {
 
 /** How a message template puts a sensitive figure in a sentence. */
 export interface Figures {
-  /** An amount in euros: "1.234,56 EUR", or the mask. */
+  /** An amount in euros: "1.234,56 €", or the mask with its unit, "•••• €". */
   money: (value: unknown) => string;
   /** A quantity of units: up to eight decimals, trailing zeros trimmed, or the mask. */
   quantity: (value: unknown) => string;
+  /**
+   * A quantity of securities with its word: «3 títulos», «1 título», and under
+   * the mask always «•••• títulos», or the singular would say what it hides.
+   */
+  titles: (value: unknown) => string;
   /** A message of the domain quoted inside ours: see `maskFigures`. */
   evidence: (value: unknown) => string;
 }
@@ -78,7 +83,7 @@ export const figuresOf = (privacy: boolean): Figures => ({
     if (!DECIMAL.test(raw)) {
       return raw;
     }
-    return privacy ? MASK : `${formatDecimalString(raw, { decimals: 2 })} EUR`;
+    return `${privacy ? MASK : formatDecimalString(raw, { decimals: 2 })}${NBSP}€`;
   },
   quantity: (value) => {
     const raw = asText(value);
@@ -86,6 +91,12 @@ export const figuresOf = (privacy: boolean): Figures => ({
       return raw;
     }
     return privacy ? MASK : formatQuantityString(raw);
+  },
+  titles: (value) => {
+    const raw = asText(value);
+    const shown = privacy || !DECIMAL.test(raw) ? raw : formatQuantityString(raw);
+    const one = !privacy && /^\+?1(\.0*)?$/.test(raw);
+    return `${privacy && DECIMAL.test(raw) ? MASK : shown} ${one ? "título" : "títulos"}`;
   },
   evidence: (value) => maskFigures(asText(value), privacy),
 });

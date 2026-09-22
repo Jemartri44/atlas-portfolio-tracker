@@ -14,6 +14,7 @@ import { type JSX, Show } from "solid-js";
 import { formatDate } from "../format/date.js";
 import { countOf } from "../format/number.js";
 import { Amount } from "./Amount.jsx";
+import { Icon } from "./Icon.jsx";
 
 export interface PriceInfo {
   /** The price in its own currency; absent means the ledger has none. */
@@ -26,21 +27,41 @@ export interface PriceInfo {
   stale: boolean;
 }
 
-/** Just the figure, for a cell of a dense table. */
-export const Price = (props: { price: PriceInfo }): JSX.Element => (
-  <Amount value={props.price.unitValue} unit missingReason="el libro no tiene precio a esa fecha" />
+/**
+ * Just the figure, for a cell of a dense table; with `marked`, a stale one
+ * carries the clock and its age in words for a screen reader and on hover —
+ * the table is where the portfolio says it, not a notice under the cards.
+ */
+export const Price = (props: { price: PriceInfo; marked?: boolean }): JSX.Element => (
+  <>
+    <Amount
+      value={props.price.unitValue}
+      unit
+      missingReason="no hay precio registrado a esa fecha"
+    />
+    <Show when={props.marked === true && props.price.stale}>
+      <span
+        class="stale-mark"
+        title={`Precio caducado: ${countOf(props.price.ageDays ?? 0, "día", "días")}`}
+      >
+        <Icon name="clock" class="icon-sm" />
+        <span class="sr-only">caducado</span>
+      </span>
+    </Show>
+  </>
 );
 
 /**
  * The figure with where it comes from, for a card, where there is room to say
  * that a price is three weeks old. The age is **always** shown next to a stale
  * price: degrading visibly is the point (constitution V).
+ *
+ * With no price it says nothing: the figure of the same row already reads «sin
+ * dato», and the card says which prices are missing. The row read «sin precio
+ * sin dato», the same thing twice (second pass of the review of 2026-09-19).
  */
 export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX.Element => (
-  <Show
-    when={props.price.unitValue !== undefined}
-    fallback={<span class="nodata">sin precio</span>}
-  >
+  <Show when={props.price.unitValue !== undefined}>
     <span>
       <Price price={props.price} />
       <Show when={props.price.priceDate}>{(date) => <> · {formatDate(date())}</>}</Show>

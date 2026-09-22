@@ -2,11 +2,41 @@
 // stops offering when another field changes. Pure, like the rest of the
 // view-models: the form component only paints what this returns.
 
-import type { CivilDate, LedgerState } from "@atlas/domain";
+import type { CivilDate, LedgerEvent, LedgerState } from "@atlas/domain";
 import type { Option } from "../../components/Field.jsx";
-import { valueLabel } from "../../format/labels.js";
+import { formatDate } from "../../format/date.js";
+import { eventLabel, valueLabel } from "../../format/labels.js";
+import { displayName, nameIndex } from "../../format/names.js";
 import { bookOf, optionsFor } from "../options.js";
 import type { FieldSpec } from "./specs.js";
+
+/**
+ * The order a correction already names, when it is no longer open: the
+ * purchase executed it, so the list of open orders leaves it out, and the
+ * correction would silently unlink it. It stays, named by what it asked for
+ * and when — never by its identifier (review of 2026-09-19).
+ */
+const heldOrder = (
+  field: FieldSpec,
+  state: LedgerState,
+  values: Record<string, string>,
+  options: readonly Option[],
+): Option | undefined => {
+  const chosen = values[field.name] ?? "";
+  if (field.options !== "openOrders" || chosen === "" || options.some((o) => o.value === chosen)) {
+    return undefined;
+  }
+  const order = state.orders.get(chosen);
+  if (order === undefined) {
+    return undefined;
+  }
+  const names = nameIndex(state);
+  return {
+    value: order.order_id,
+    label: `${eventLabel(order.side === "sell" ? "sell" : "buy")} de ${displayName(names, order.asset_id)}`,
+    hint: `${formatDate(order.requested_date)} · ya ejecutada`,
+  };
+};
 
 /**
  * The options a select field offers with these values: literal ones or a list
@@ -19,11 +49,16 @@ export const selectOptions = (
   state: LedgerState,
   values: Record<string, string>,
   date: CivilDate,
+  events?: readonly LedgerEvent[],
 ): Option[] => {
   if (field.values !== undefined) {
     return field.values.map((entry) => ({ value: entry, label: valueLabel(entry) }));
   }
-  const options = optionsFor(field.options ?? "accounts", { state, date, values }, field);
+  const options = optionsFor(field.options ?? "accounts", { state, events, date, values }, field);
+  const order = heldOrder(field, state, values, options);
+  if (order !== undefined) {
+    return [...options, order];
+  }
   const chosen = state.assets.get(values[field.name] ?? "");
   const book = field.bookFrom === undefined ? undefined : bookOf(state, values[field.bookFrom]);
   if (

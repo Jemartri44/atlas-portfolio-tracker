@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bootDecision, loadInto, reloadLedger, restoreLedger } from "../src/ledger/actions.js";
 import { toAppError } from "../src/ledger/errors.js";
 import { validateImport } from "../src/ledger/export.js";
-import { store } from "../src/ledger/state.js";
+import { messageWithLine, store } from "../src/ledger/state.js";
 import {
   changeSettings,
   correct,
@@ -411,9 +411,11 @@ describe("toAppError", () => {
     expect(toAppError(failure).code).toBe("storage_unavailable");
   });
 
-  it("does not swallow an unexpected failure", () => {
-    expect(toAppError(new Error("algo raro")).message).toBe("algo raro");
-    expect(toAppError("texto suelto").message).toBe("texto suelto");
+  it("does not swallow an unexpected failure, and frames it in Spanish", () => {
+    expect(toAppError(new Error("algo raro")).message).toMatch(
+      /^Algo ha fallado .*Detalle: algo raro$/,
+    );
+    expect(toAppError("texto suelto").message).toContain("Detalle: texto suelto");
   });
 });
 
@@ -427,6 +429,17 @@ describe("importing a file", () => {
   it("refuses a file that is not a ledger, before anything is opened", async () => {
     await expect(validateImport("esto no es un libro\n")).rejects.toThrow();
     await expect(validateImport('{"hola": 1}\n')).rejects.toThrow();
+  });
+
+  it("says a file that is not a ledger lacks the expected format, and where", async () => {
+    const said = async (text: string): Promise<string> =>
+      messageWithLine(toAppError(await validateImport(text).catch((error: unknown) => error)));
+    expect(await said("esto no es un libro\n")).toBe(
+      "El archivo no tiene el formato esperado: la línea 1 no se puede leer como datos de Atlas.",
+    );
+    expect(await said("[]\n")).toBe(
+      "El archivo no tiene el formato esperado: la línea 1 no es un evento.",
+    );
   });
 
   it("refuses a ledger written by a newer schema", async () => {
@@ -446,6 +459,22 @@ describe("importing a file", () => {
   it("counts the events of a good one", async () => {
     const text = goldenText();
     await expect(validateImport(text)).resolves.toBeGreaterThan(100);
+  });
+});
+
+describe("toAppError: a file that cannot be read", () => {
+  it("says it in Spanish, with what to do, whatever the browser called it", () => {
+    for (const name of ["NotReadableError", "NotFoundError", "EncodingError"]) {
+      const error = toAppError(
+        new DOMException(
+          "The requested file could not be read, typically due to permission problems",
+          name,
+        ),
+      );
+      expect(error.code).toBe("file_unreadable");
+      expect(error.message).toContain("No se ha podido leer el archivo");
+      expect(error.message).not.toMatch(/requested|permission/);
+    }
   });
 });
 

@@ -11,6 +11,7 @@
 //     it — the exception is a budget control, not a portfolio metric.
 
 import type { BucketControls, BucketReport, BucketStats, Money, Warning } from "@atlas/domain";
+import { missingOf } from "../../format/messages/prose.js";
 import { displayName, displayThesis, type NameIndex, NO_NAMES } from "../../format/names.js";
 
 export interface StatsView {
@@ -30,6 +31,8 @@ export interface StatsView {
   drawdownTo?: string;
   vsIndexTotal?: Money;
   vsIndexMissing: number;
+  /** The same result as a share of the gross contribution; absent over a partial total. */
+  vsIndexPct?: string;
   warnings: readonly Warning[];
 }
 
@@ -66,7 +69,7 @@ const gapText = (
     ...(gap.assets ?? []).map((id) => displayName(names, id)),
     ...(gap.currencies ?? []),
   ];
-  const detail = missing.length === 0 ? "" : ` (faltan ${missing.join(", ")})`;
+  const detail = missing.length === 0 ? "" : ` (${missingOf(missing)})`;
   return `${REASONS[gap.reason] ?? gap.reason}${detail}`;
 };
 
@@ -87,6 +90,7 @@ export const statsView = (stats: BucketStats, names: NameIndex = NO_NAMES): Stat
   ...(stats.drawdown_valley === undefined ? {} : { drawdownTo: stats.drawdown_valley.date }),
   ...(stats.vs_index_total_eur === undefined ? {} : { vsIndexTotal: stats.vs_index_total_eur }),
   vsIndexMissing: stats.vs_index_missing,
+  ...(stats.vs_index_pct === undefined ? {} : { vsIndexPct: stats.vs_index_pct.toString() }),
   warnings: stats.warnings,
 });
 

@@ -1,0 +1,199 @@
+/*
+ * Recording (docs/design/system.md §7.4): the tiles of the day to day, the
+ * other kinds folded in groups, the form at a width a line can be read, the
+ * bar of its actions, and the effect — replacing the form on a phone, beside
+ * it from 1024px.
+ */
+
+/* ---- Tiles: one tap for what happens every month ------------------------ */
+
+.tiles {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tile {
+  align-content: start;
+  background-color: var(--c-surface);
+  border: var(--border) solid var(--c-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  color: inherit;
+  display: grid;
+  gap: var(--space-2);
+  height: 100%;
+  min-height: 6.5rem;
+  padding: var(--space-4);
+  text-decoration: none;
+}
+
+.tile:hover {
+  border-color: var(--c-accent);
+  color: inherit;
+}
+
+.tile > .lead {
+  align-items: center;
+  background-color: var(--c-accent-soft);
+  border-radius: var(--radius-pill);
+  color: var(--c-accent-soft-text);
+  display: flex;
+  height: var(--lead-size);
+  justify-content: center;
+  width: var(--lead-size);
+}
+
+.tile-title {
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+}
+
+/* On a phone the tile is the word; the sentence about it waits for room. */
+.tile-when {
+  color: var(--c-text-2);
+  display: none;
+  font-size: var(--text-sm);
+}
+
+.groups .row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* ---- The form ------------------------------------------------------------ */
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.form .full {
+  grid-column: 1 / -1;
+}
+
+/* «Más datos»: a quiet row under the fields, never a card of its own. */
+.more-data {
+  border-block: var(--border) solid var(--c-border);
+  max-width: var(--reading-max);
+}
+
+.more-data .fieldset {
+  padding-bottom: var(--space-4);
+}
+
+/* The bar of a form's actions stays in reach, above the bottom bar. */
+.actions-bar {
+  align-items: center;
+  background-color: var(--c-canvas);
+  border-top: var(--border) solid var(--c-border);
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  max-width: var(--reading-max);
+  padding-block: var(--space-3);
+  position: sticky;
+  z-index: 5;
+}
+
+.actions-bar > button {
+  flex: 1 1 auto;
+}
+
+/* Why the button cannot be pressed yet: inside the bar, on its own line. */
+.actions-bar > .reason {
+  color: var(--c-text-2);
+  flex-basis: 100%;
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+/* ---- The effect: what changes, and nothing else ------------------------- */
+
+.effect,
+.preview {
+  display: grid;
+  gap: var(--grid-gap);
+  min-width: 0;
+}
+
+.changes {
+  display: grid;
+}
+
+.change {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  justify-content: space-between;
+  min-height: var(--tap);
+  padding-block: var(--space-2);
+}
+
+.change + .change {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.change-name {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.change > .values {
+  align-items: baseline;
+  display: inline-flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.change .arrow {
+  color: var(--c-text-3);
+}
+
+@media (min-width: 64rem) {
+  .tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .tile-when {
+    display: block;
+  }
+
+  /* The form and its effect, side by side. */
+  .register {
+    align-items: start;
+    column-gap: var(--space-7);
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+
+  .effect {
+    position: sticky;
+    top: calc(var(--statusbar-h) + var(--space-4));
+  }
+
+  .effect .actions-bar {
+    position: static;
+  }
+
+  .actions-bar > button {
+    flex: 0 0 auto;
+    min-width: 12rem;
+  }
+}
+
+@media (min-width: 75rem) {
+  .actions-bar {
+    bottom: 0;
+  }
+
+  .effect {
+    top: calc(var(--topbar-h) + var(--space-4));
+  }
+}

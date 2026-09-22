@@ -415,7 +415,7 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 ### 9.6 Frontend
 
-> **Vigente desde ADR-0017 y ADR-0019 (2026-09-18).** El *stack* está decidido con investigación verificada (Solid con versión fijada, Pico CSS y uPlot vendorizadas, sin librería de componentes, tablas HTML nativas), así que la comparativa de abajo es **histórica**. Y la web **no necesita servidor ni autenticación**: funciona en el dispositivo, sobre el mismo fichero que la CLI en escritorio y sobre el almacenamiento del navegador en el móvil. Lo que esta sección y la §9.2 describen detrás de Cognito y una Lambda es la **sincronización de la Fase 4**, no un requisito para que la web exista.
+> **Vigente desde ADR-0017 y ADR-0019 (2026-09-18).** El *stack* está decidido con investigación verificada (Solid con versión fijada, uPlot vendorizada, sin librería de componentes, tablas HTML nativas; la base de estilos es propia desde ADR-0023, que retiró Pico), así que la comparativa de abajo es **histórica**. Y la web **no necesita servidor ni autenticación**: funciona en el dispositivo, sobre el mismo fichero que la CLI en escritorio y sobre el almacenamiento del navegador en el móvil. Lo que esta sección y la §9.2 describen detrás de Cognito y una Lambda es la **sincronización de la Fase 4**, no un requisito para que la web exista.
 
 **Requisito:** compila a archivos estáticos servibles desde S3, sin servidor de renderizado.
 
@@ -431,10 +431,10 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 **Requisitos transversales:**
 - Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada en móvil.
-- **Modo privacidad**: un interruptor, **activado por defecto al iniciar sesión**, que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
+- **Modo privacidad**: un interruptor, **activado por defecto al iniciar sesión**, que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. La máscara mide siempre lo mismo y conserva la unidad («•••• €», «•••• part.»), que dice qué se oculta sin decir cuánto. Lo que el usuario escribe no se oculta; lo que la aplicación precarga en un campo (corregir un movimiento, la configuración) sí, hasta que el campo recibe el foco. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
 - Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
 - Funciona sin conexión para consulta (los datos cacheados siguen visibles con su antigüedad marcada).
-- **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. La librería base se decide en la Ronda 7 de `decision-roadmap.md`.
+- **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. El sistema está en `docs/design/system.md` y la base de estilos es propia (ADR-0023).
 
 ---
 

@@ -21,9 +21,9 @@ import {
   yearOf,
 } from "@atlas/domain";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout } from "../../components/index.js";
+import { Notice } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
-import { eventReferences } from "../../format/events.js";
+import { eventReferences, inSentence } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
@@ -42,15 +42,11 @@ import {
   withPerAssetType,
   withText,
 } from "../../view-models/index.js";
+import { weightedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
-import {
-  FiscalCard,
-  IdentityCard,
-  type SettingsDraft,
-  ThresholdsCard,
-  WeightsCard,
-} from "./SettingsCards.jsx";
+import { FiscalCard } from "./FiscalCard.jsx";
+import { IdentityCard, type SettingsDraft, ThresholdsCard, WeightsCard } from "./SettingsCards.jsx";
 import { type InvalidatedEvent, SettingsDialogs } from "./SettingsDialogs.jsx";
 
 export default function ConfiguracionRoute(): JSX.Element {
@@ -71,19 +67,14 @@ export default function ConfiguracionRoute(): JSX.Element {
         const resolution = () => settingsAt(snapshot.state, date);
         const current = (): Settings => resolution().settings;
 
-        // Weights are asked for active assets only; an inactive one appears only
-        // while it still carries a weight, so that saving never drops it unseen.
-        const coreAssets = () =>
-          assetsOf(snapshot.state).filter(
-            (asset) =>
-              asset.book === "core" &&
-              (asset.active || (current().target_weights?.[asset.asset_id] ?? "") !== ""),
-          );
+        // Weights are asked for live assets only (`weightedAssets`): not for
+        // one a merger or a class change converted away.
+        const coreAssets = () => weightedAssets(snapshot.state, snapshot.events, current(), date);
         /** Where the configuration in force comes from, said as a person would. */
         const origin = (): string =>
           resolution().origin === "default"
             ? "la de partida, porque todavía no has registrado ningún cambio"
-            : `la del ${eventReferences(snapshot.events)(resolution().origin).toLowerCase()}`;
+            : `la del ${inSentence(eventReferences(snapshot.events)(resolution().origin))}`;
         const values = (): Record<string, string> =>
           weightValues(
             current(),
@@ -147,8 +138,8 @@ export default function ConfiguracionRoute(): JSX.Element {
           }
           /*
            * The whole `AppError`, not just its text: it carries the action that
-           * fixes the problem — "Exportar el libro" when the browser storage is
-           * full, "Abrir el libro" when the folder permission is gone — and
+           * fixes the problem — export when the browser storage is full, open
+           * again when the folder permission is gone — and
            * this screen used to drop it, so the user read what to do and had
            * nowhere to press (inventory V6).
            */
@@ -159,7 +150,7 @@ export default function ConfiguracionRoute(): JSX.Element {
                   code: result.failure.kind,
                   message:
                     result.failure.kind === "conflict"
-                      ? "El libro ha cambiado desde que se cargó: se ha recargado, vuelve a guardar."
+                      ? "Tus datos han cambiado desde que se cargaron: se han recargado, vuelve a guardar."
                       : "No se ha podido guardar.",
                 },
           );
@@ -175,11 +166,11 @@ export default function ConfiguracionRoute(): JSX.Element {
             />
 
             <Show when={saved()}>
-              <Callout tone="info" title="Configuración guardada">
+              <Notice severity="info" title="Configuración guardada">
                 Se ha registrado un cambio de configuración con todos los parámetros.
-              </Callout>
+              </Notice>
             </Show>
-            <div class="stack">
+            <div class="grid">
               <WeightsCard
                 assets={coreAssets()}
                 values={values()}
@@ -189,28 +180,30 @@ export default function ConfiguracionRoute(): JSX.Element {
               <IdentityCard draft={draft()} assets={assetsOf(snapshot.state)} />
               <FiscalCard draft={draft()} />
 
-              <Callout tone="info" title="Lo que no se edita aquí">
-                Los tramos de la base del ahorro y la frecuencia de los avisos automáticos todavía
-                no tienen pantalla: de momento se cambian desde la CLI.
-              </Callout>
+              <div class="span-12 settings-foot">
+                <Notice severity="info" title="Lo que no se edita aquí">
+                  Los tramos de la base del ahorro y la frecuencia de los avisos automáticos todavía
+                  no tienen pantalla: de momento se cambian desde la CLI.
+                </Notice>
 
-              {/* The error of a save goes next to the button that caused it. */}
-              <FormActions
-                failure={error()}
-                failureTitle="No se ha podido guardar"
-                blocked={touched() ? undefined : "No has cambiado nada todavía."}
-              >
-                <button type="button" class="secondary" disabled={!touched()} onClick={discard}>
-                  Descartar cambios
-                </button>
-                <button
-                  type="button"
-                  disabled={!touched() || store.writing()}
-                  onClick={() => void save()}
+                {/* The error of a save goes next to the button that caused it. */}
+                <FormActions
+                  failure={error()}
+                  failureTitle="No se ha podido guardar"
+                  blocked={touched() ? undefined : "No has cambiado nada todavía."}
                 >
-                  Guardar configuración
-                </button>
-              </FormActions>
+                  <button type="button" class="secondary" disabled={!touched()} onClick={discard}>
+                    Descartar cambios
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!touched() || store.writing()}
+                    onClick={() => void save()}
+                  >
+                    Guardar configuración
+                  </button>
+                </FormActions>
+              </div>
             </div>
 
             <SettingsDialogs

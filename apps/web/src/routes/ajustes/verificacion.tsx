@@ -1,70 +1,83 @@
-// "¿Está sano mi libro?" — `integrity` always, and the deep check on request
-// because it re-reads the raw lines and re-projects (`deepCheck`), which is
-// heavier and only makes sense when asked for.
+// "¿Están sanos mis datos?" — `integrity` always, and the deep check on
+// request because it re-reads the raw lines and re-projects (`deepCheck`),
+// which is heavier and only makes sense when asked for.
 //
 // Findings are explained in Spanish and each one names its events, which is how
-// a degraded ledger gets repaired: read, check, rectify.
+// a degraded file gets repaired: read, check, rectify. Everything here is said
+// with the one notice of the application, and the warnings of the ledger are
+// grouped and ordered exactly as on the summary (docs/design/system.md §7.7):
+// the same rule about the same thing is one notice with its count and the
+// events it comes from.
 
 import { deepCheck, type IntegrityFinding, integrity } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
-import { Badge, Callout } from "../../components/index.js";
+import {
+  Disclosure,
+  Notice,
+  type NoticeItem,
+  NoticeList,
+  Section,
+  Tag,
+} from "../../components/index.js";
 import { type EventReferences, eventReferences } from "../../format/events.js";
 import { describeError } from "../../format/messages/errors.js";
 import { describeFinding } from "../../format/messages/findings.js";
-import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { maskFigures } from "../../format/privacy.js";
-import { usePrivacy } from "../../ledger/state.js";
+import { store, usePrivacy } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { attentionItems } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
 
-const Findings = (props: {
-  findings: readonly IntegrityFinding[];
-  privacy: boolean;
-  events: EventReferences;
-}): JSX.Element => (
-  <div class="stack">
-    <For each={props.findings}>
-      {(finding) => (
-        <div class={`callout is-${finding.severity === "error" ? "error" : "warning"}`}>
-          <span class="title">
-            <Badge tone={finding.severity === "error" ? "negative" : "warning"}>
-              {finding.severity === "error" ? "error" : "aviso"}
-            </Badge>{" "}
-            {describeFinding(finding).what}
-          </span>
-          <span>{describeFinding(finding).todo}</span>
-          {/*
-            The domain's own message carries the evidence — which asset, which
-            line, which figure — and it is in English by contract (`errors.ts`).
-            It goes folded, like the code of an error: the explanation is
-            Spanish, the evidence is raw.
-          */}
-          <details class="technical">
-            <summary class="tiny">Detalle técnico</summary>
-            <p class="tiny flush">
-              <code>{finding.code}</code> · {maskFigures(finding.message, props.privacy)}
-            </p>
-          </details>
-          <Show when={finding.event_ids.length > 0}>
-            <span class="tiny">
-              <For each={finding.event_ids}>
-                {(id, index) => (
-                  <>
-                    <Show when={index() > 0}>, </Show>
-                    <A href={`/movimientos/${id}`}>{props.events(id)}</A>
-                  </>
-                )}
-              </For>
-            </span>
-          </Show>
-        </div>
-      )}
-    </For>
-  </div>
-);
+/** How many events a notice lists in sight; more than that wait folded. */
+const IN_SIGHT = 3;
+
+/** The events a notice is about, each one a link by its type and date. */
+const EventLinks = (props: { ids: readonly string[]; events: EventReferences }): JSX.Element => {
+  const Links = (): JSX.Element => (
+    <span class="event-links">
+      <For each={props.ids}>{(id) => <A href={`/movimientos/${id}`}>{props.events(id)}</A>}</For>
+    </span>
+  );
+  return (
+    <Show when={props.ids.length > 0}>
+      <Show when={props.ids.length > IN_SIGHT} fallback={<Links />}>
+        <Disclosure label={`Ver los ${props.ids.length} movimientos`}>
+          <Links />
+        </Disclosure>
+      </Show>
+    </Show>
+  );
+};
+
+/** A finding: what is wrong and what to do, its events, and the raw evidence folded. */
+const findingItems = (
+  findings: readonly IntegrityFinding[],
+  privacy: boolean,
+  events: EventReferences,
+): NoticeItem[] =>
+  findings.map((finding) => ({
+    severity: finding.severity === "error" ? "danger" : "caution",
+    message: `${describeFinding(finding).what} ${describeFinding(finding).todo}`,
+    detail: (
+      <>
+        <EventLinks ids={finding.event_ids} events={events} />
+        {/*
+          The domain's own message carries the evidence — which asset, which
+          line, which figure — and it is in English by contract (`errors.ts`).
+          It goes folded, like the code of an error: the explanation is
+          Spanish, the evidence is raw.
+        */}
+        <Disclosure label="Detalle técnico">
+          <p class="meta">
+            <code>{finding.code}</code> · {maskFigures(finding.message, privacy)}
+          </p>
+        </Disclosure>
+      </>
+    ),
+  }));
 
 export default function VerificacionRoute(): JSX.Element {
   const [deep, setDeep] = createSignal<IntegrityFinding[] | undefined>(undefined);
@@ -74,68 +87,90 @@ export default function VerificacionRoute(): JSX.Element {
     <RequireLedger skeleton={5}>
       {(snapshot) => {
         const names = nameIndex(snapshot.state);
-        const events = eventReferences(snapshot.events);
+        const events = eventReferences(snapshot.events, names);
         const findings = () => integrity(snapshot.state);
         const invalid = () => snapshot.state.invalid;
+
+        /** The warnings of the ledger, grouped and ordered as on the summary. */
+        const warnings = (): NoticeItem[] =>
+          attentionItems({
+            invalidCount: 0,
+            warnings: snapshot.state.warnings,
+            findings: [],
+            openOrders: [],
+            openTransfers: [],
+            names,
+            privacy: privacy(),
+          }).map((item) => ({
+            severity:
+              item.severity === "error"
+                ? "danger"
+                : item.severity === "warning"
+                  ? "caution"
+                  : "info",
+            message: item.message,
+            count: item.count,
+            detail: <EventLinks ids={item.eventIds} events={events} />,
+          }));
 
         return (
           <>
             <PageHeader
               title="Verificación"
-              lead={`${countOf(snapshot.events.length, "evento leído", "eventos leídos")}. Todo lo que ves se recalcula desde el libro.`}
+              lead={`${countOf(snapshot.events.length, "movimiento leído", "movimientos leídos")}. Todo lo que ves se recalcula desde tus datos.`}
             />
 
             <div class="stack">
               <Show when={invalid().length > 0}>
-                <section class="card">
-                  <header>
-                    <h2>Eventos inválidos</h2>
-                    <Badge tone="negative">{invalid().length}</Badge>
-                  </header>
-                  <p class="subtle">
+                <Section
+                  title="Movimientos inválidos"
+                  aside={<Tag tone="danger">{invalid().length}</Tag>}
+                >
+                  <p class="card-note">
                     Mientras los haya, se puede consultar pero no registrar. Rectifica cada uno
                     desde su ficha.
                   </p>
-                  <div class="stack">
-                    <For each={invalid()}>
-                      {(entry) => (
-                        <div class="callout is-error">
-                          <span class="title">
-                            <A href={`/movimientos/${entry.event.id}`}>{events(entry.event.id)}</A>
-                          </span>
-                          <span class="subtle">
-                            {describeError(entry.error, { names, privacy: privacy() })}
-                          </span>
-                        </div>
-                      )}
-                    </For>
-                  </div>
-                </section>
+                  <NoticeList
+                    label="Movimientos inválidos"
+                    limit={invalid().length}
+                    items={invalid().map((entry) => ({
+                      severity: "danger",
+                      message: describeError(entry.error, { names, privacy: privacy() }),
+                      detail: <EventLinks ids={[entry.event.id]} events={events} />,
+                    }))}
+                  />
+                </Section>
               </Show>
 
-              <section class="card">
-                <header>
-                  <h2>Integridad</h2>
+              <Section
+                title="Integridad"
+                aside={
                   <Show when={findings().length === 0}>
-                    <Badge tone="positive">sin hallazgos</Badge>
+                    <Tag tone="done" icon="check">
+                      sin hallazgos
+                    </Tag>
                   </Show>
-                </header>
+                }
+              >
                 <Show
                   when={findings().length > 0}
                   fallback={
-                    <p class="flush">
+                    <p class="calm">
                       Posiciones no negativas, lotes cuadrados, huellas únicas y ninguna referencia
                       colgante.
                     </p>
                   }
                 >
-                  <Findings findings={findings()} privacy={privacy()} events={events} />
+                  <NoticeList
+                    label="Hallazgos de integridad"
+                    items={findingItems(findings(), privacy(), events)}
+                  />
                 </Show>
-              </section>
+              </Section>
 
-              <section class="card">
-                <header>
-                  <h2>Comprobación profunda</h2>
+              <Section
+                title="Comprobación profunda"
+                aside={
                   <button
                     type="button"
                     class="secondary"
@@ -145,9 +180,10 @@ export default function VerificacionRoute(): JSX.Element {
                   >
                     {deep() === undefined ? "Ejecutar" : "Volver a ejecutar"}
                   </button>
-                </header>
-                <p class="subtle">
-                  Relee las líneas tal cual están en el fichero: identificadores repetidos, huellas
+                }
+              >
+                <p class="card-note">
+                  Relee las líneas tal cual están en el archivo: identificadores repetidos, huellas
                   que no cuadran, líneas no canónicas, campos desconocidos y proyección
                   reproducible.
                 </p>
@@ -155,43 +191,42 @@ export default function VerificacionRoute(): JSX.Element {
                   {(found) => (
                     <Show
                       when={found().length > 0}
-                      fallback={<p class="flush">Sin hallazgos: el libro es reproducible.</p>}
+                      fallback={<p class="calm">Sin hallazgos: tus datos son reproducibles.</p>}
                     >
-                      <Findings findings={found()} privacy={privacy()} events={events} />
+                      <NoticeList
+                        label="Hallazgos de la comprobación profunda"
+                        items={findingItems(found(), privacy(), events)}
+                      />
                     </Show>
                   )}
                 </Show>
-              </section>
+              </Section>
 
-              <Show when={snapshot.state.warnings.length > 0}>
-                <section class="card">
-                  <header>
-                    <h2>Avisos del libro</h2>
-                    <span class="tiny">{snapshot.state.warnings.length}</span>
-                  </header>
-                  <div class="stack">
-                    <For each={snapshot.state.warnings}>
-                      {(warning) => (
-                        <div class="callout is-warning">
-                          <span class="subtle">
-                            {describeWarning(warning, { names, privacy: privacy() })}
-                          </span>
-                          <span class="tiny">
-                            <A href={`/movimientos/${warning.event_id}`}>
-                              {events(warning.event_id)}
-                            </A>
-                          </span>
-                        </div>
-                      )}
-                    </For>
-                  </div>
-                </section>
+              <Show when={warnings().length > 0}>
+                <Section
+                  title="Avisos de tus datos"
+                  label="Avisos de tus datos"
+                  aside={<span>{warnings().length}</span>}
+                >
+                  <NoticeList label="Avisos" items={warnings()} />
+                </Section>
               </Show>
 
-              <Callout tone="info" title="La copia de seguridad sigue siendo tuya">
-                La verificación dice si el libro es coherente, no si está a salvo. Exporta desde
-                Ajustes, y en el ordenador usa <code>atlas backup</code>.
-              </Callout>
+              {/*
+                The command line exists only on a computer, beside a folder: on
+                a phone it named a tool the user has no way to run (review of
+                2026-09-19). There, the export is the copy.
+              */}
+              <Notice severity="info" title="La copia de seguridad sigue siendo tuya">
+                La verificación dice si tus datos son coherentes, no si están a salvo.{" "}
+                <Show
+                  when={store.source()?.kind === "directory"}
+                  fallback="Para tener una copia, exporta tus datos desde Ajustes y guarda el archivo fuera de este dispositivo."
+                >
+                  Exporta desde Ajustes, o haz la copia desde la línea de órdenes con{" "}
+                  <code>atlas backup</code>.
+                </Show>
+              </Notice>
             </div>
           </>
         );

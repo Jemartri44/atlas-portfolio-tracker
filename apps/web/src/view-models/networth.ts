@@ -28,7 +28,11 @@ export interface NetWorthLine {
   partial?: boolean | undefined;
 }
 
+export type BlockKey = "core" | "bucket" | "cash";
+
 export interface NetWorthBlock {
+  /** Which book: it picks the line key, the same one the evolution chart draws. */
+  key: BlockKey;
   label: string;
   /**
    * The sum of the lines shown, or **nothing** when not one of them has a
@@ -41,6 +45,11 @@ export interface NetWorthBlock {
   lines: NetWorthLine[];
   /** What is missing in this block, to say it without making the user hunt. */
   missing: string[];
+  /**
+   * Its share of the total, in percent, exact as the domain gives it. Absent
+   * when the total is partial: a proportion of an incomplete total is not one.
+   */
+  share?: string | undefined;
 }
 
 export interface NetWorthView {
@@ -71,9 +80,13 @@ const shownSum = (values: readonly (Money | undefined)[]): Money | undefined =>
 const subtotalOf = (lines: readonly NetWorthLine[]): Money | undefined =>
   lines.length === 0 ? Money.zero(EUR) : shownSum(lines.map((line) => line.value));
 
-const withSubtotal = (block: Omit<NetWorthBlock, "subtotal">): NetWorthBlock => ({
+const withSubtotal = (
+  block: Omit<NetWorthBlock, "subtotal">,
+  share: { toString(): string } | undefined,
+): NetWorthBlock => ({
   ...block,
   subtotal: subtotalOf(block.lines),
+  ...(share === undefined ? {} : { share: share.toString() }),
 });
 
 const cashDetail = (row: CashLine): string | undefined => {
@@ -100,42 +113,55 @@ const cashDetail = (row: CashLine): string | undefined => {
  */
 export const netWorthView = (view: NetWorth, names: NameIndex = NO_NAMES): NetWorthView => {
   const named = (ids: readonly string[]): string[] => ids.map((id) => displayName(names, id));
-  const core = withSubtotal({
-    label: "Núcleo",
-    partial: view.core.partial,
-    missing: named(view.core.missing_prices),
-    lines: view.core.by_class.map((subtotal) =>
-      // A partial class whose known part is zero knows nothing at all: every
-      // member of it lacks a price. That is "sin dato", not "0,00 EUR".
-      subtotal.partial && subtotal.value_eur.isZero()
-        ? { name: valueLabel(subtotal.asset_class), missing: "sin precio" }
-        : {
-            name: valueLabel(subtotal.asset_class),
-            value: subtotal.value_eur,
-            ...(subtotal.partial ? { partial: true, missing: "falta algún precio" } : {}),
-          },
-    ),
-  });
-  const bucket = withSubtotal({
-    label: "Cubo",
-    partial: view.bucket.partial,
-    missing: named(view.bucket.missing_prices),
-    lines: view.bucket.rows.map((row) => ({
-      name: displayName(names, row.asset_id),
-      ...(row.account_id === undefined ? {} : { detail: displayName(names, row.account_id) }),
-      ...(row.value_eur === undefined ? { missing: "sin precio" } : { value: row.value_eur }),
-    })),
-  });
-  const cash = withSubtotal({
-    label: "Efectivo",
-    partial: view.cash.partial,
-    missing: view.cash.missing_rates,
-    lines: view.cash.rows.map((row) => ({
-      name: `${displayName(names, row.account_id)} · ${row.currency}`,
-      ...(cashDetail(row) === undefined ? {} : { detail: cashDetail(row) as string }),
-      ...(row.value_eur === undefined ? { missing: "sin convertir" } : { value: row.value_eur }),
-    })),
-  });
+  const shares = view.share_pct;
+  const core = withSubtotal(
+    {
+      key: "core",
+      label: "Cartera principal",
+      partial: view.core.partial,
+      missing: named(view.core.missing_prices),
+      lines: view.core.by_class.map((subtotal) =>
+        // A partial class whose known part is zero knows nothing at all: every
+        // member of it lacks a price. That is "sin dato", not "0,00 EUR".
+        subtotal.partial && subtotal.value_eur.isZero()
+          ? { name: valueLabel(subtotal.asset_class), missing: "sin precio" }
+          : {
+              name: valueLabel(subtotal.asset_class),
+              value: subtotal.value_eur,
+              ...(subtotal.partial ? { partial: true, missing: "falta algún precio" } : {}),
+            },
+      ),
+    },
+    shares?.core,
+  );
+  const bucket = withSubtotal(
+    {
+      key: "bucket",
+      label: "Cubo",
+      partial: view.bucket.partial,
+      missing: named(view.bucket.missing_prices),
+      lines: view.bucket.rows.map((row) => ({
+        name: displayName(names, row.asset_id),
+        ...(row.account_id === undefined ? {} : { detail: displayName(names, row.account_id) }),
+        ...(row.value_eur === undefined ? { missing: "sin precio" } : { value: row.value_eur }),
+      })),
+    },
+    shares?.bucket,
+  );
+  const cash = withSubtotal(
+    {
+      key: "cash",
+      label: "Efectivo",
+      partial: view.cash.partial,
+      missing: view.cash.missing_rates,
+      lines: view.cash.rows.map((row) => ({
+        name: `${displayName(names, row.account_id)} · ${row.currency}`,
+        ...(cashDetail(row) === undefined ? {} : { detail: cashDetail(row) as string }),
+        ...(row.value_eur === undefined ? { missing: "sin convertir" } : { value: row.value_eur }),
+      })),
+    },
+    shares?.cash,
+  );
   const blocks = [core, bucket, cash];
   return {
     date: view.date,

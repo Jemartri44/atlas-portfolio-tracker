@@ -1,10 +1,21 @@
 /*
- * Order matters: Pico first (vendored, ADR-0017), then our tokens redefining
- * what we need of it, then base, layout and components.
+ * Our own base, in order: the tokens, the element defaults, the controls, and
+ * then the layers built on them (ADR-0023). uPlot's stylesheet is the only
+ * vendored one left, and it is scoped to the charts.
  */
-@import "../../vendor/pico/pico.css";
 @import "../../vendor/uplot/uPlot.css";
 @import "./tokens.css";
 @import "./base.css";
+@import "./controls.css";
+@import "./cards.css";
+@import "./lists.css";
+@import "./feedback.css";
+@import "./charts.css";
+@import "./summary.css";
+@import "./steps.css";
+@import "./portfolio.css";
+@import "./movements.css";
+@import "./registrar.css";
+@import "./bucket.css";
+@import "./settings.css";
 @import "./layout.css";
-@import "./components.css";

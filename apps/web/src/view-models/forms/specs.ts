@@ -79,6 +79,13 @@ export interface FieldSpec {
   heldFrom?: string;
   /** For a list of assets: an inactive asset held in **any** account is offered too. */
   heldAnywhere?: boolean;
+  /**
+   * For a list of assets: leave out one a corporate action converted into
+   * another — a fund merged away, a share class that no longer exists — and
+   * that holds nothing (`view-models/weighted.ts`). It cannot be bought, and
+   * offering it invites the mistake (review of 2026-09-19).
+   */
+  liveOnly?: boolean;
 }
 
 export interface EventFormSpec {
@@ -102,6 +109,12 @@ const account = (): FieldSpec => ({
   options: "accounts",
 });
 
+/**
+ * An asset of an operation: of the account's book, a delisted one only while
+ * the account still holds it, and never one a merger or a class change
+ * converted away and that holds nothing (`liveOnly`): there is nothing of it
+ * to buy, sell, value or transfer (second pass of the review of 2026-09-19).
+ */
 const asset = (account = "account_id"): FieldSpec => ({
   name: "asset_id",
   label: "Activo",
@@ -110,7 +123,14 @@ const asset = (account = "account_id"): FieldSpec => ({
   options: "assets",
   bookFrom: account,
   heldFrom: account,
+  liveOnly: true,
 });
+
+/** The same, for what is placed from now on: a delisted asset is not bought or ordered. */
+const inForce = (field: FieldSpec): FieldSpec => {
+  const { heldFrom: _held, ...rest } = field;
+  return rest;
+};
 
 /** Where something arrives: active assets of the destination account's book, never a delisted one. */
 const destinationAsset = (): FieldSpec => ({
@@ -214,6 +234,14 @@ const tradeFields = (): FieldSpec[] => [
   notes(),
 ];
 
+/**
+ * A purchase lists only the assets in force. A delisted one is still held,
+ * still valued and still sold, but never bought again (review of 2026-09-18);
+ * a correction that already holds one keeps it on its list (`choices.ts`).
+ */
+const buyFields = (): FieldSpec[] =>
+  tradeFields().map((field) => (field.name === "asset_id" ? inForce(field) : field));
+
 const cashFields = (): FieldSpec[] => [
   account(),
   { name: "value_date", label: "Fecha valor", kind: "date", required: true },
@@ -230,7 +258,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     title: "Compra",
     when: "Has comprado participaciones, acciones o unidades.",
     fields: [
-      ...tradeFields(),
+      ...buyFields(),
       {
         name: "order_id",
         label: "Orden que cierra",
@@ -243,7 +271,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         label: "Tesis",
         kind: "select",
         options: "openTheses",
-        hint: "Obligatoria en el cubo (regla 15): se abre antes de comprar.",
+        hint: "Obligatoria en el cubo: se abre antes de comprar.",
       },
     ],
     omitted: [],
@@ -351,7 +379,8 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     when: "Has dado una orden que aún no ha ejecutado.",
     fields: [
       account(),
-      asset(),
+      // An order is placed on an asset in force: not on a delisted one, even held.
+      inForce(asset()),
       {
         name: "side",
         label: "Sentido",
@@ -389,7 +418,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       { name: "platform", label: "Plataforma", kind: "text", required: true },
       {
         name: "book",
-        label: "Libro",
+        label: "Cartera",
         kind: "select",
         required: true,
         values: BOOKS,
@@ -439,7 +468,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       },
       {
         name: "book",
-        label: "Libro",
+        label: "Cartera",
         kind: "select",
         required: true,
         values: BOOKS,
@@ -451,7 +480,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         kind: "select",
         values: ASSET_CLASSES,
         visibleWhen: { field: "book", equals: "core" },
-        hint: "Solo en el núcleo: es la clase sobre la que se aplican los pesos objetivo.",
+        hint: "Solo en la cartera principal: es la clase sobre la que se aplican los pesos objetivo.",
       },
       { name: "name", label: "Nombre", kind: "text", required: true },
       {
@@ -609,7 +638,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     slug: "tesis",
     type: "thesis_opened",
     title: "Abrir una tesis",
-    when: "Antes de comprar en el cubo. La regla 15 no admite comprar sin tesis escrita.",
+    when: "Antes de comprar en el cubo. En el cubo no se compra sin una tesis escrita.",
     fields: [
       {
         name: "thesis_id",
@@ -642,7 +671,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         full: true,
         hint: "Qué te haría estar equivocado. Se muestra cada vez que mires la posición.",
       },
-      { name: "planned_size_eur", label: "Tamaño previsto (EUR)", kind: "decimal", required: true },
+      { name: "planned_size_eur", label: "Tamaño previsto", kind: "decimal", required: true },
     ],
     omitted: [],
   },

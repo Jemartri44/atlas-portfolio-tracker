@@ -114,13 +114,15 @@ describe("signOf", () => {
 
 describe("the privacy gate", () => {
   it("formats an amount with its currency, to the cent", () => {
-    expect(formatMoney(Money.parse("1234.567", "EUR"))).toBe("1.234,57 EUR");
+    expect(formatMoney(Money.parse("1234.567", "EUR"))).toBe("1.234,57\u00a0€");
+    // Any other currency keeps its code, which no two countries share.
+    expect(formatMoney(Money.parse("1234.567", "USD"))).toBe("1.234,57\u00a0USD");
     expect(formatMoney(Money.parse("1234.567", "USD"), { currency: false })).toBe("1.234,57");
-    expect(formatMoney(Money.parse("-10", "EUR"), { signed: true })).toBe("−10,00 EUR");
+    expect(formatMoney(Money.parse("-10", "EUR"), { signed: true })).toBe("−10,00\u00a0€");
   });
 
   it("formats a unit value with four decimals, which is what a NAV needs", () => {
-    expect(formatUnitValue(Money.parse("210.12345", "EUR"))).toBe("210,1235 EUR");
+    expect(formatUnitValue(Money.parse("210.12345", "EUR"))).toBe("210,1235\u00a0€");
   });
 
   it("formats a quantity trimming the trailing zeros, because fractions are real", () => {
@@ -142,11 +144,11 @@ describe("the privacy gate", () => {
  * painting a zero where the datum is missing (review of 2026-09-18).
  */
 describe("amountDisplay", () => {
-  const input = { formatted: "1.234,56 EUR", privacy: false, kind: "importe" } as const;
+  const input = { formatted: "1.234,56", unit: "€", privacy: false, kind: "importe" } as const;
 
   it("masks a known figure whenever privacy is on", () => {
     const shown = amountDisplay(input);
-    expect(shown).toMatchObject({ state: "value", text: "1.234,56 EUR", label: "" });
+    expect(shown).toMatchObject({ state: "value", text: "1.234,56", unit: "€", label: "" });
     const hidden = amountDisplay({ ...input, privacy: true });
     expect(hidden.state).toBe("masked");
     expect(hidden.text).toBe(MASK);
@@ -154,6 +156,21 @@ describe("amountDisplay", () => {
     expect(hidden.text).not.toContain("1.234");
     expect(hidden.class).toContain("mask");
     expect(hidden.label).toBe("importe oculto");
+  });
+
+  /**
+   * D2: the mask keeps the unit — it says what kind of figure is hidden,
+   * never how big — and it is the same four dots whatever the amount, so its
+   * width cannot tell twelve euros from a hundred and twenty thousand.
+   */
+  it("keeps the unit under the mask and the same mask for every amount", () => {
+    const small = amountDisplay({ ...input, formatted: "12,00", privacy: true });
+    const large = amountDisplay({ ...input, formatted: "120.000,00", privacy: true });
+    expect(small.unit).toBe("€");
+    expect(small.text).toBe(large.text);
+    expect(small.text).toBe(MASK);
+    const nothing = amountDisplay({ ...input, formatted: undefined, privacy: true });
+    expect(nothing.unit).toBe("");
   });
 
   it("masks a quantity too, and says which kind it is (Q6)", () => {
@@ -243,7 +260,7 @@ describe("the label catalogue", () => {
   });
 
   it("translates the values of the enumerations", () => {
-    expect(valueLabel("core")).toBe("Núcleo");
+    expect(valueLabel("core")).toBe("Cartera principal");
     expect(valueLabel("fixed_income")).toBe("Renta fija");
     expect(valueLabel(true)).toBe("Sí");
     expect(valueLabel("lo que sea")).toBe("lo que sea");
@@ -311,6 +328,51 @@ describe("the catalogue of names", () => {
     expect(describeWarning(warning, { privacy: false })).toContain("ast_world");
   });
 
+  it("says an empty bucket as empty, never «solo 0 tesis cerradas»", () => {
+    const warning: Warning = {
+      code: "bucket_sample_too_small",
+      event_id: "",
+      message: "english",
+      details: { closed_theses: 0, realized_operations: 0, sample: 100 },
+    };
+    const said = describeWarning(warning, { privacy: false });
+    expect(said).toContain("Todavía no hay ninguna tesis cerrada");
+    expect(said).not.toContain("Solo 0");
+  });
+
+  it("keeps the unit beside a masked quantity inside a sentence", () => {
+    const warning: Warning = {
+      code: "thesis_closed_with_position",
+      event_id: "01ARYZ6S41TSV4RRFFQ6900001",
+      message: "english",
+      details: { thesis_id: "th_x", account_id: "acc_mi", asset_id: "ast_world", position: "12.5" },
+    };
+    expect(describeWarning(warning, { names, privacy: true })).toContain(
+      "•••• títulos de World Index Fund",
+    );
+  });
+
+  it("writes a tax year as a year, never with the dot of a thousand", () => {
+    const warning: Warning = {
+      code: "wash_sale_window_repurchase",
+      event_id: "01ARYZ6S41TSV4RRFFQ6900001",
+      message: "english",
+      details: {
+        asset_id: "ast_world",
+        buy_date: "2027-01-10",
+        buy_quantity: "4.8765",
+        sale_date: "2027-01-06",
+        loss_eur: "-50",
+        window: "1y",
+        window_end: "2028-01-06",
+        tax_year: 2027,
+      },
+    };
+    const said = describeWarning(warning, { names, privacy: false });
+    expect(said).toContain("no sea computable en 2027.");
+    expect(said).not.toContain("2.027");
+  });
+
   it("names a list of identifiers embedded in a warning", () => {
     const warning: Warning = {
       code: "partial_core_total",
@@ -376,7 +438,7 @@ describe("the privacy mode inside a message", () => {
     ).toContain(MASK);
     expect(
       describeError(settingsError("monthly_contribution_eur", "-600"), { privacy: false }),
-    ).toContain("−600,00\u00a0EUR");
+    ).toContain("−600,00\u00a0€");
     // A percentage is not an amount and stays readable in public (§9.6).
     const percent = describeError(settingsError("bucket_stop_loss_pct", "-25"), { privacy: true });
     expect(percent).toContain("−25");
@@ -410,5 +472,43 @@ describe("the privacy mode inside a message", () => {
       `open lots ${MASK} differ from positions ${MASK}`,
     );
     expect(maskFigures("open lots 23.0274 differ", false)).toBe("open lots 23.0274 differ");
+  });
+});
+
+describe("a closed order or transfer request", () => {
+  const closed = (code: string, stage: string) =>
+    describeError({ code, message: "english", details: { stage } } as unknown as ProjectionError, {
+      privacy: false,
+    });
+
+  it("is said in Spanish, never with the ledger's word for its stage", () => {
+    expect(closed("order_closed", "filled")).toBe(
+      "La orden elegida ya se ejecutó: otra operación la cerró.",
+    );
+    expect(closed("order_closed", "cancelled")).toContain("está cancelada");
+    expect(closed("request_closed", "completed")).toContain("ya se completó");
+    expect(closed("request_closed", "cancelled")).toContain("está cancelada");
+    for (const said of [closed("order_closed", "filled"), closed("request_closed", "completed")]) {
+      expect(said).not.toMatch(/filled|completed|cancelled/);
+    }
+  });
+});
+
+describe("what is missing", () => {
+  it("agrees with how many are missing", async () => {
+    const { missingOf, pricesOf } = await import("../src/format/messages/prose.js");
+    expect(missingOf(["Alpha Spin-off"])).toBe("falta Alpha Spin-off");
+    expect(missingOf(["Alpha Spin-off", "USD"])).toBe("faltan Alpha Spin-off, USD");
+    expect(pricesOf(["Alpha Spin-off"])).toBe("Falta el precio de Alpha Spin-off");
+    expect(pricesOf(["A", "B"])).toBe("Faltan los precios de A, B");
+    const partial = describeWarning(
+      {
+        code: "partial_net_worth",
+        message: "english",
+        details: { date: "2029-01-10", assets: ["ast_alpha_spin"] },
+      } as never,
+      { privacy: false },
+    );
+    expect(partial).toContain("es parcial: falta ast_alpha_spin.");
   });
 });

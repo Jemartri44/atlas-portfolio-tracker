@@ -1,11 +1,25 @@
-// Form controls: native `<input>`, `<select>` and `<datalist>` (ADR-0017). On a
-// phone the native select gives the system wheel, which beats any combobox we
-// could write, and `inputmode="decimal"` gives the numeric keypad with a comma.
+// Form controls: native `<input>`, `<select>` and `<textarea>` (ADR-0017),
+// styled by our own base (`styles/controls.css`, ADR-0023). On a phone the
+// native select gives the system wheel, which beats any combobox we could
+// write, and `inputmode="decimal"` gives the numeric keypad with a comma.
 //
-// What the user is typing is **never masked**: the privacy mode hides the
-// presentation of data, not the entry (matiz de Q6).
+// Every field has the same anatomy (docs/design/system.md §5.10): the label
+// above, the control, then the hint and — when there is one — the error **in
+// line**, under the field it is about, with its icon.
+//
+// Privacy (§5.10): what the user **types** is never hidden, but what the
+// application **shows** is. A field of an amount or a quantity that arrives
+// filled in **from the user's data** — a correction, the configuration — is
+// masked while it does not have the focus, and shows its value as soon as it
+// gets it. A default of the application is not their data, and what they type
+// is theirs to read: both stay in sight. Which is which lives in the draft of
+// the form (`revealed`), not here, because a phone takes the form off the
+// screen to show the effect and brings it back afterwards.
 
-import { type JSX, Show } from "solid-js";
+import { createSignal, type JSX, Show } from "solid-js";
+import { MASK } from "../format/privacy.js";
+import { usePrivacy } from "../ledger/state.js";
+import { Icon } from "./Icon.jsx";
 
 export interface Option {
   value: string;
@@ -39,14 +53,15 @@ const Wrapper = (props: BaseProps & { children: JSX.Element }): JSX.Element => (
     <label for={props.id}>{props.label}</label>
     {props.children}
     <Show when={props.hint !== undefined}>
-      <span class="hint" id={`${props.id}-hint`}>
+      <p class="hint" id={`${props.id}-hint`}>
         {props.hint}
-      </span>
+      </p>
     </Show>
     <Show when={props.error !== undefined}>
-      <span class="error" id={`${props.id}-error`} role="alert">
-        {props.error}
-      </span>
+      <p class="field-error" id={`${props.id}-error`} role="alert">
+        <Icon name="danger" />
+        <span>{props.error}</span>
+      </p>
     </Show>
   </div>
 );
@@ -54,41 +69,94 @@ const Wrapper = (props: BaseProps & { children: JSX.Element }): JSX.Element => (
 interface TextFieldProps extends BaseProps {
   kind: "text" | "decimal" | "integer" | "date" | "textarea";
   placeholder?: string | undefined;
+  /** An amount or a quantity: masked, in privacy mode, until it has the focus. */
+  sensitive?: boolean | undefined;
+  /**
+   * The value is not the user's data but a default, or they typed it: it
+   * stays in sight. Kept by the form, so it survives the field being taken off
+   * the screen; without it, the field remembers only while it is mounted.
+   */
+  revealed?: boolean | undefined;
+  /**
+   * The unit of the figure, written inside the field at its right, with the
+   * figure right-aligned against it (§5.10): "€", "USD", "part.", "%".
+   */
+  unit?: string | undefined;
 }
 
-export const Field = (props: TextFieldProps): JSX.Element => (
-  <Wrapper {...props}>
-    <Show
-      when={props.kind !== "textarea"}
-      fallback={
-        <textarea
-          id={props.id}
-          value={props.value}
-          rows={3}
-          aria-describedby={describedBy(props)}
-          aria-invalid={props.error === undefined ? undefined : true}
-          disabled={props.disabled}
-          onInput={(event) => props.onInput(event.currentTarget.value)}
-        />
+export const Field = (props: TextFieldProps): JSX.Element => {
+  const privacy = usePrivacy();
+  const [focused, setFocused] = createSignal(false);
+  const [typed, setTyped] = createSignal(false);
+  const masked = (): boolean =>
+    props.sensitive === true &&
+    privacy() &&
+    !focused() &&
+    !(props.revealed ?? typed()) &&
+    props.value !== "";
+  /** The hint, the error and the unit: everything the field is read with. */
+  const described = (): string | undefined =>
+    [describedBy(props), props.unit === undefined ? undefined : `${props.id}-unit`]
+      .filter((id) => id !== undefined)
+      .join(" ") || undefined;
+  const input = (): JSX.Element => (
+    <input
+      id={props.id}
+      type={props.kind === "date" ? "date" : "text"}
+      class={props.unit === undefined ? undefined : "num"}
+      value={masked() ? MASK : props.value}
+      title={masked() ? "Oculto: al entrar en el campo se ve su valor" : undefined}
+      placeholder={props.placeholder}
+      inputmode={
+        props.kind === "decimal" ? "decimal" : props.kind === "integer" ? "numeric" : undefined
       }
-    >
-      <input
-        id={props.id}
-        type={props.kind === "date" ? "date" : "text"}
-        value={props.value}
-        placeholder={props.placeholder}
-        inputmode={
-          props.kind === "decimal" ? "decimal" : props.kind === "integer" ? "numeric" : undefined
+      autocomplete="off"
+      aria-describedby={described()}
+      aria-invalid={props.error === undefined ? undefined : true}
+      disabled={props.disabled}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onInput={(event) => {
+        // The value first: marking the field as typed re-renders it, and
+        // the control would be read back after that with the old value.
+        props.onInput(event.currentTarget.value);
+        setTyped(true);
+      }}
+    />
+  );
+  return (
+    <Wrapper {...props}>
+      <Show
+        when={props.kind !== "textarea"}
+        fallback={
+          <textarea
+            id={props.id}
+            value={props.value}
+            rows={3}
+            aria-describedby={describedBy(props)}
+            aria-invalid={props.error === undefined ? undefined : true}
+            disabled={props.disabled}
+            onInput={(event) => props.onInput(event.currentTarget.value)}
+          />
         }
-        autocomplete="off"
-        aria-describedby={describedBy(props)}
-        aria-invalid={props.error === undefined ? undefined : true}
-        disabled={props.disabled}
-        onInput={(event) => props.onInput(event.currentTarget.value)}
-      />
-    </Show>
-  </Wrapper>
-);
+      >
+        <Show when={props.unit} fallback={input()}>
+          {(unit) => (
+            // A unit of up to two characters ("€", "%") leaves less room than "part.".
+            <div
+              class={unit().length <= 2 ? "control has-unit is-short" : "control has-unit is-long"}
+            >
+              {input()}
+              <span class="field-unit" id={`${props.id}-unit`}>
+                {unit()}
+              </span>
+            </div>
+          )}
+        </Show>
+      </Show>
+    </Wrapper>
+  );
+};
 
 interface SelectFieldProps extends BaseProps {
   options: readonly Option[];
@@ -98,23 +166,26 @@ interface SelectFieldProps extends BaseProps {
 
 export const SelectField = (props: SelectFieldProps): JSX.Element => (
   <Wrapper {...props}>
-    <select
-      id={props.id}
-      value={props.value}
-      aria-describedby={describedBy(props)}
-      aria-invalid={props.error === undefined ? undefined : true}
-      disabled={props.disabled}
-      onChange={(event) => props.onInput(event.currentTarget.value)}
-    >
-      <Show when={props.placeholder !== undefined}>
-        <option value="">{props.placeholder}</option>
-      </Show>
-      {props.options.map((option) => (
-        <option value={option.value}>
-          {option.hint === undefined ? option.label : `${option.label} — ${option.hint}`}
-        </option>
-      ))}
-    </select>
+    <div class="control has-chevron">
+      <select
+        id={props.id}
+        value={props.value}
+        aria-describedby={describedBy(props)}
+        aria-invalid={props.error === undefined ? undefined : true}
+        disabled={props.disabled}
+        onChange={(event) => props.onInput(event.currentTarget.value)}
+      >
+        <Show when={props.placeholder !== undefined}>
+          <option value="">{props.placeholder}</option>
+        </Show>
+        {props.options.map((option) => (
+          <option value={option.value}>
+            {option.hint === undefined ? option.label : `${option.label} — ${option.hint}`}
+          </option>
+        ))}
+      </select>
+      <Icon name="chevdown" class="icon-sm chev" />
+    </div>
   </Wrapper>
 );
 
@@ -126,11 +197,10 @@ interface SwitchProps {
   hint?: string | undefined;
 }
 
-// The same row as the status bar (`.switch-inline`): one class, one 44px
-// target, and the control keeps the proportion Pico gives it.
+/** A boolean: the switch and its words on one 44px row, the hint under it. */
 export const Switch = (props: SwitchProps): JSX.Element => (
   <div class="field">
-    <label for={props.id} class="switch-inline">
+    <label for={props.id} class="switch-row">
       <input
         id={props.id}
         type="checkbox"
@@ -142,7 +212,7 @@ export const Switch = (props: SwitchProps): JSX.Element => (
       <span>{props.label}</span>
     </label>
     <Show when={props.hint !== undefined}>
-      <span class="hint">{props.hint}</span>
+      <p class="hint">{props.hint}</p>
     </Show>
   </div>
 );

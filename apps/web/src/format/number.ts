@@ -115,12 +115,12 @@ export const formatPoints = (value: string | undefined, format: NumberFormat = {
     : `${formatDecimalString(value, { decimals: 2, signed: true, ...format })} pp`;
 
 /**
- * Decimals that say something: none for an exact zero ("0 %", never
- * "0,0000 %"), two for anything two decimals can show, and four for a small
- * figure that two would round to a zero it is not.
+ * Decimals that say something: none for a whole number ("0 %", "55 %", never
+ * "0,0000 %" or "55,00 %"), two for anything two decimals can show, and four
+ * for a small figure that two would round to a zero it is not.
  */
 export const meaningfulDecimals = (value: string): number => {
-  if (/^[+-]?0*(\.0*)?$/.test(value)) {
+  if (/^[+-]?\d*(\.0*)?$/.test(value)) {
     return 0;
   }
   return /^[+-]?0*(\.0*)?$/.test(roundDecimalString(value, 2)) ? 4 : 2;

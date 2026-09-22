@@ -74,20 +74,31 @@ const standaloneGroup = (
   total: book === "core" ? summary.standalone.core_eur : summary.standalone.bucket_eur,
 });
 
-export const costsView = (summary: CostSummary, names: NameIndex = NO_NAMES): CostsView => ({
+/**
+ * `absorbed`: assets a merger or a class change converted away. Their row says
+ * nothing — no position, no value, no annual cost — unless they paid
+ * commissions, which the total adds up and so the row must show.
+ */
+export const costsView = (
+  summary: CostSummary,
+  names: NameIndex = NO_NAMES,
+  absorbed: ReadonlySet<string> = new Set(),
+): CostsView => ({
   date: summary.date,
   core: {
-    rows: summary.core.rows.map((row) => ({
-      assetId: row.asset_id,
-      name: displayName(names, row.asset_id),
-      assetClass: valueLabel(row.asset_class),
-      fees: row.fees_eur,
-      invested: row.invested_eur,
-      ...(row.fees_pct === undefined ? {} : { feesPct: row.fees_pct.toString() }),
-      ...(row.ter === undefined ? {} : { ter: row.ter.toString() }),
-      ...(row.value_eur === undefined ? {} : { value: row.value_eur }),
-      ...(row.annual_cost_eur === undefined ? {} : { annualCost: row.annual_cost_eur }),
-    })),
+    rows: summary.core.rows
+      .filter((row) => !(absorbed.has(row.asset_id) && row.fees_eur.isZero()))
+      .map((row) => ({
+        assetId: row.asset_id,
+        name: displayName(names, row.asset_id),
+        assetClass: valueLabel(row.asset_class),
+        fees: row.fees_eur,
+        invested: row.invested_eur,
+        ...(row.fees_pct === undefined ? {} : { feesPct: row.fees_pct.toString() }),
+        ...(row.ter === undefined ? {} : { ter: row.ter.toString() }),
+        ...(row.value_eur === undefined ? {} : { value: row.value_eur }),
+        ...(row.annual_cost_eur === undefined ? {} : { annualCost: row.annual_cost_eur }),
+      })),
     fees: summary.core.totals.fees_eur,
     invested: summary.core.totals.invested_eur,
     value: summary.core.totals.value_eur,

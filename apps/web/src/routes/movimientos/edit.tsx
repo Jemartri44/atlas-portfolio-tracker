@@ -40,62 +40,104 @@ export default function MovimientoEditarRoute(): JSX.Element {
           return spec === undefined ? undefined : { event: current, spec };
         });
 
+        /*
+         * A movement already reversed has nothing left to correct: offering the
+         * form again, filled with its values, invited a second try that the
+         * ledger refuses with «Ese evento ya está anulado». Say so, and lead to
+         * what replaced it — its correction, or else the reversal.
+         */
+        const replacedBy = (): { to: string; label: string } | undefined => {
+          const reversal = snapshot.state.reversed.get(params.id);
+          if (reversal === undefined) {
+            return undefined;
+          }
+          const correction = snapshot.events.find(
+            (candidate) =>
+              (candidate as { corrects_id?: string }).corrects_id === params.id &&
+              !snapshot.state.reversed.has(candidate.id),
+          );
+          return correction === undefined
+            ? { to: `/movimientos/${reversal}`, label: "Ver la anulación" }
+            : { to: `/movimientos/${correction.id}`, label: "Ver su corrección" };
+        };
+
         return (
           <Show
-            when={target()}
+            when={replacedBy() === undefined}
             fallback={
               <>
                 <PageHeader title="Corregir" />
                 <EmptyState
-                  what={
-                    event() === undefined
-                      ? "Ese movimiento no está en el libro."
-                      : "Este tipo de movimiento no se corrige desde aquí: se anula y se vuelve a registrar."
-                  }
+                  glyph="reversed"
+                  what="Este movimiento ya está anulado."
+                  why="Lo que tiene efecto es lo que lo sustituyó: si hay que cambiar algo, se corrige eso."
                 >
-                  <A href={`/movimientos/${params.id}`}>Volver al movimiento</A>
+                  <A href={replacedBy()?.to ?? "/movimientos"} role="button">
+                    {replacedBy()?.label ?? "Ver los movimientos"}
+                  </A>
                 </EmptyState>
               </>
             }
           >
-            {(found) => (
-              <>
-                <PageHeader
-                  title={`Corregir ${found().spec.title.toLowerCase()}`}
-                  lead="Se anula el original y se registra el corregido; nada se borra del fichero."
-                />
+            <Show
+              when={target()}
+              fallback={
+                <>
+                  <PageHeader title="Corregir" />
+                  <EmptyState
+                    what={
+                      event() === undefined
+                        ? "Ese movimiento no está en tus datos."
+                        : "Este tipo de movimiento no se corrige desde aquí: se anula y se vuelve a registrar."
+                    }
+                  >
+                    <A href={`/movimientos/${params.id}`} role="button" class="secondary">
+                      Volver al movimiento
+                    </A>
+                  </EmptyState>
+                </>
+              }
+            >
+              {(found) => (
+                <>
+                  <PageHeader
+                    title={`Corregir ${found().spec.title.toLowerCase()}`}
+                    lead="Se anula el original y se registra el corregido; nada se borra de tus datos."
+                  />
 
-                <div class="stack">
-                  {/*
+                  <div class="stack">
+                    {/*
                     The same fields as the detail, painted the same way: amounts
                     and quantities through `Amount`, dates as dd/mm/aaaa. This
                     card printed them raw — "3100", "31.2343" — with the mask on.
                   */}
-                  <EventFields
-                    title="Como está registrado ahora"
-                    fields={
-                      eventFields(
-                        found().event as unknown as Record<string, unknown>,
-                        nameIndex(snapshot.state),
-                        eventReferences(snapshot.events),
-                      ).fields
-                    }
-                  />
+                    <EventFields
+                      title="Como está registrado ahora"
+                      fields={
+                        eventFields(
+                          found().event as unknown as Record<string, unknown>,
+                          nameIndex(snapshot.state),
+                          eventReferences(snapshot.events, nameIndex(snapshot.state)),
+                        ).fields
+                      }
+                    />
 
-                  <EventForm
-                    spec={found().spec}
-                    state={snapshot.state}
-                    correcting={{
-                      id: params.id,
-                      values: valuesOfEvent(
-                        found().spec,
-                        found().event as unknown as Record<string, unknown>,
-                      ),
-                    }}
-                  />
-                </div>
-              </>
-            )}
+                    <EventForm
+                      spec={found().spec}
+                      state={snapshot.state}
+                      events={snapshot.events}
+                      correcting={{
+                        id: params.id,
+                        values: valuesOfEvent(
+                          found().spec,
+                          found().event as unknown as Record<string, unknown>,
+                        ),
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </Show>
           </Show>
         );
       }}

@@ -1,0 +1,1402 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: frozen visual reference */
+/*
+ * Components. One definition each, used the same way on every screen.
+ * Sections: card · hero · list row · notice · pending · empty · steps ·
+ * buttons · tags · fields · disclosure · segmented · table · allocation ·
+ * gauge · chart · kpis · skeleton.
+ */
+
+/* ---- Card ---------------------------------------------------------------- */
+
+.card {
+  background-color: var(--c-surface);
+  border: var(--border) solid var(--c-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.card-head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.card-head > h2 {
+  min-width: 0;
+}
+
+.card-head .aside {
+  color: var(--c-text-3);
+  font-size: var(--text-sm);
+}
+
+.aside-link {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+
+/* A card's last line: the way to the whole list, edge to edge. */
+.card-foot {
+  align-items: center;
+  border-top: var(--border) solid var(--c-border);
+  color: var(--c-accent);
+  display: flex;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-2);
+  justify-content: space-between;
+  margin: var(--space-3) calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+  min-height: var(--tap);
+  padding: var(--space-1) var(--space-4);
+  text-decoration: none;
+}
+
+a.card-foot:hover {
+  background-color: var(--c-fill);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.card-note {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+  margin-top: var(--space-3);
+}
+
+@media (min-width: 64rem) {
+  .card {
+    padding: var(--space-5) var(--space-6);
+  }
+
+  .card-foot {
+    margin: var(--space-4) calc(-1 * var(--space-6)) calc(-1 * var(--space-5));
+    padding-inline: var(--space-6);
+  }
+}
+
+/* ---- Hero: the one big figure, always broken down ------------------------ */
+
+.hero-figure {
+  font-size: var(--text-display);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--lh-tight);
+  margin-bottom: var(--space-4);
+}
+
+.hero-figure .mask {
+  color: var(--c-text-2);
+}
+
+.hero-figure .mask > .dots {
+  font-size: 0.6em;
+  letter-spacing: 0.1em;
+}
+
+/* The euro sign of a hero figure is set small, masked or not. */
+.hero-figure .unit {
+  font-size: 0.55em;
+  font-weight: var(--fw-medium);
+  letter-spacing: normal;
+}
+
+.hero-figure .tag {
+  letter-spacing: normal;
+  margin-left: var(--space-2);
+}
+
+.parts {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.part {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  min-height: var(--tap);
+  padding-block: var(--space-2);
+}
+
+.part + .part {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.part-label {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+@media (min-width: 64rem) {
+  /* A band across the page: the figure, then its three parts as columns. */
+  .hero {
+    column-gap: var(--space-6);
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  }
+
+  .hero-figure {
+    margin-bottom: 0;
+  }
+
+  .hero .parts {
+    border-top: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .part {
+    align-content: end;
+    align-items: start;
+    border-left: var(--border) solid var(--c-border);
+    display: grid;
+    gap: var(--space-2);
+    justify-content: start;
+    padding: 0 var(--space-5);
+  }
+
+  .part + .part {
+    border-top: 0;
+  }
+
+  .part-label {
+    color: var(--c-text-2);
+    font-size: var(--text-sm);
+    gap: var(--space-2);
+  }
+
+  .part-fig {
+    font-size: var(--text-2xl);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--lh-tight);
+  }
+
+  .part-fig .unit {
+    font-size: 0.6em;
+    font-weight: var(--fw-medium);
+  }
+
+  .hero > .disclosure {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Line keys: colour AND dash, the same keys as the chart legend. */
+.key {
+  display: inline-block;
+  height: 0.75rem;
+  width: 1.25rem;
+}
+
+.key line {
+  stroke-linecap: round;
+  stroke-width: 2.5;
+}
+
+.key.is-core line {
+  stroke: var(--c-series-core);
+}
+
+.key.is-bucket line {
+  stroke: var(--c-series-bucket);
+  stroke-dasharray: 5 3;
+}
+
+.key.is-cash line {
+  stroke: var(--c-series-cash);
+  stroke-dasharray: 1 4;
+}
+
+.key.is-index line {
+  stroke: var(--c-series-index);
+  stroke-dasharray: 5 3;
+}
+
+.swatch {
+  border-radius: var(--radius-pill);
+  display: inline-block;
+  height: var(--swatch-h);
+  width: var(--swatch-w);
+}
+
+.swatch.is-equity {
+  background-color: var(--c-class-equity);
+}
+
+.swatch.is-fixed-income {
+  background-color: var(--c-class-fixed-income);
+}
+
+.swatch.is-gold {
+  background-color: var(--c-class-gold);
+}
+
+.swatch.is-crypto {
+  background-color: var(--c-class-crypto);
+}
+
+/* ---- List row: two lines on a phone, never three columns squeezed -------- */
+
+.rows > li + li > .row {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.row {
+  align-items: center;
+  color: inherit;
+  display: grid;
+  gap: var(--space-1) var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 3.75rem;
+  padding-block: var(--space-3);
+  text-decoration: none;
+}
+
+.row.has-lead {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+a.row:hover {
+  background-color: var(--c-fill);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 var(--space-2) var(--c-fill);
+}
+
+.row .lead {
+  align-items: center;
+  background-color: var(--c-fill);
+  border-radius: var(--radius-pill);
+  color: var(--c-text-2);
+  display: flex;
+  height: 2.25rem;
+  justify-content: center;
+  width: 2.25rem;
+}
+
+.row .lead .icon {
+  height: var(--icon-sm);
+  width: var(--icon-sm);
+}
+
+.row .main,
+.row .figs {
+  display: grid;
+  gap: var(--space-0);
+  min-width: 0;
+}
+
+.row .figs {
+  justify-items: end;
+  text-align: right;
+}
+
+.row .title {
+  color: var(--c-text);
+  line-height: var(--lh-snug);
+}
+
+.row .sub {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+  line-height: var(--lh-snug);
+}
+
+.row .fig {
+  line-height: var(--lh-snug);
+}
+
+.row .fig-sub {
+  color: var(--c-text-3);
+  font-size: var(--text-sm);
+  line-height: var(--lh-snug);
+}
+
+.row.is-reversed .title,
+.row.is-reversed .fig {
+  color: var(--c-text-3);
+  text-decoration: line-through;
+}
+
+/* Day header of a grouped list. */
+.day {
+  color: var(--c-text-3);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  padding: var(--space-4) 0 var(--space-1);
+}
+
+/* ---- Notice: the ONE warning component ----------------------------------- */
+
+.notices > li + li > .notice {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.notice {
+  color: inherit;
+  display: grid;
+  gap: var(--space-1) var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr);
+  padding-block: var(--space-3);
+  text-decoration: none;
+}
+
+a.notice:hover .notice-action {
+  text-decoration: underline;
+}
+
+.notice-icon {
+  height: var(--icon-md);
+  margin-top: var(--space-0);
+  width: var(--icon-md);
+}
+
+.notice.is-caution .notice-icon {
+  color: var(--c-caution-icon);
+}
+
+.notice.is-danger .notice-icon {
+  color: var(--c-danger);
+}
+
+.notice.is-info .notice-icon {
+  color: var(--c-text-3);
+}
+
+.notice-body {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.notice-text {
+  line-height: 1.45;
+}
+
+.notice-text strong {
+  font-weight: var(--fw-semibold);
+}
+
+.notice-action {
+  align-items: center;
+  color: var(--c-accent);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-1);
+}
+
+/* A danger notice is the only one with a background: red is for real trouble. */
+.notice.is-danger {
+  background-color: var(--c-danger-soft);
+  border-radius: var(--radius-md);
+  padding-inline: var(--space-3);
+}
+
+.notices > li + li > .notice.is-danger,
+.notices > li:has(+ li > .notice.is-danger) + li > .notice {
+  border-top-color: transparent;
+}
+
+@media (min-width: 64rem) {
+  .card > .disclosure.more {
+    margin-top: auto;
+  }
+
+  .card > :has(+ .disclosure.more) {
+    margin-bottom: var(--space-4);
+  }
+}
+
+@media (min-width: 64rem) {
+  .notice-body {
+    align-items: baseline;
+    gap: var(--space-4);
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .notice-action {
+    white-space: nowrap;
+  }
+}
+
+/* ---- Pending: "no se puede calcular todavía" — never the tone of an error */
+
+.pending {
+  align-items: start;
+  background-color: var(--c-fill);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: var(--space-2) var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: var(--space-3) var(--space-4);
+}
+
+.pending > .icon {
+  color: var(--c-text-3);
+  margin-top: var(--space-0);
+}
+
+.pending-body {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.pending-text {
+  color: var(--c-text);
+}
+
+/* A quiet action lines up with the sentence above it. */
+.pending-body > .btn.quiet {
+  margin-left: calc(-1 * var(--space-2));
+}
+
+/* ---- Empty state: one message, one next step ---------------------------- */
+
+.empty {
+  align-content: center;
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-4) 0;
+}
+
+.empty .glyph {
+  align-items: center;
+  background-color: var(--c-fill);
+  border-radius: var(--radius-pill);
+  color: var(--c-text-2);
+  display: flex;
+  height: 2.75rem;
+  justify-content: center;
+  margin-bottom: var(--space-1);
+  width: 2.75rem;
+}
+
+.empty .what {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.empty .why {
+  color: var(--c-text-2);
+  max-width: var(--reading-max);
+}
+
+.empty .btn {
+  margin-top: var(--space-2);
+}
+
+/* ---- Steps: the first-run checklist ------------------------------------- */
+
+.progress {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.progress .track {
+  display: grid;
+  gap: var(--space-1);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 6rem;
+}
+
+.progress .track > span {
+  background-color: var(--c-fill);
+  border-radius: var(--radius-pill);
+  height: 0.375rem;
+}
+
+.progress .track > span.is-done {
+  background-color: var(--c-done);
+}
+
+.steps {
+  counter-reset: step;
+  display: grid;
+}
+
+.step {
+  align-items: start;
+  border-top: var(--border) solid var(--c-border);
+  color: inherit;
+  display: grid;
+  gap: var(--space-1) var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding-block: var(--space-4);
+  text-decoration: none;
+}
+
+a.step:hover .step-title {
+  color: var(--c-accent);
+}
+
+.step-mark {
+  align-items: center;
+  border: var(--border) solid var(--c-border-control);
+  border-radius: var(--radius-pill);
+  color: var(--c-text-3);
+  display: flex;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  height: 1.75rem;
+  justify-content: center;
+  width: 1.75rem;
+}
+
+.step.is-done .step-mark {
+  background-color: var(--c-done);
+  border-color: var(--c-done);
+  color: var(--c-surface);
+}
+
+.step.is-current .step-mark {
+  border: var(--border-strong) solid var(--c-accent);
+  color: var(--c-accent);
+}
+
+.step-body {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  min-width: 0;
+}
+
+.step-title {
+  font-size: var(--text-md);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  padding-top: var(--space-0);
+}
+
+.step.is-done .step-title {
+  color: var(--c-text-2);
+}
+
+.step-text {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+}
+
+.step-body .btn {
+  margin-top: var(--space-2);
+}
+
+.step > .chev {
+  color: var(--c-text-3);
+  margin-top: var(--space-1);
+}
+
+@media (min-width: 64rem) {
+  .steps {
+    gap: var(--grid-gap);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .step {
+    align-content: start;
+    background-color: var(--c-surface);
+    border: var(--border) solid var(--c-border);
+    border-radius: var(--radius-lg);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    min-height: 13rem;
+    padding: var(--space-5);
+    row-gap: var(--space-4);
+  }
+
+  .step.is-current {
+    border-color: var(--c-accent);
+    box-shadow: 0 0 0 var(--border) var(--c-accent);
+  }
+
+  .step > .chev {
+    display: none;
+  }
+
+  .step-body {
+    align-content: start;
+    height: 100%;
+  }
+
+  .step-body .btn,
+  .step-body .step-go {
+    align-self: end;
+    margin-top: auto;
+  }
+}
+
+.step-go {
+  align-items: center;
+  color: var(--c-accent);
+  display: none;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-1);
+}
+
+@media (min-width: 64rem) {
+  .step-go {
+    display: inline-flex;
+    padding-top: var(--space-3);
+  }
+}
+
+/* ---- Buttons --------------------------------------------------------------- */
+
+.btn {
+  align-items: center;
+  background-color: var(--c-surface);
+  border: var(--border) solid var(--c-border-control);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--text-md);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-2);
+  justify-content: center;
+  line-height: 1;
+  min-height: var(--control-h);
+  padding: 0 var(--space-4);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background-color: var(--c-fill);
+  color: var(--c-text);
+}
+
+.btn .icon {
+  height: var(--icon-sm);
+  width: var(--icon-sm);
+}
+
+.btn.primary {
+  background-color: var(--c-accent);
+  border-color: transparent;
+  color: var(--c-on-accent);
+}
+
+.btn.primary:hover {
+  background-color: var(--c-accent-hover);
+}
+
+.btn.quiet {
+  background: none;
+  border-color: transparent;
+  color: var(--c-accent);
+  padding-inline: var(--space-2);
+}
+
+.btn.quiet:hover {
+  background-color: var(--c-fill);
+}
+
+/* Destructive looks like what it is: never the primary blue. */
+.btn.danger {
+  border-color: var(--c-danger-border);
+  color: var(--c-danger);
+}
+
+.btn.danger:hover {
+  background-color: var(--c-danger-soft);
+}
+
+.btn.danger.solid {
+  background-color: var(--c-danger);
+  border-color: transparent;
+  color: var(--c-on-danger);
+}
+
+.btn[disabled],
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btn.block {
+  width: 100%;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ---- Tags: state in a word, plus an icon -------------------------------- */
+
+.tag {
+  align-items: center;
+  border: var(--border) solid var(--c-border);
+  border-radius: var(--radius-pill);
+  color: var(--c-text-2);
+  display: inline-flex;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  gap: var(--space-1);
+  height: 1.5rem;
+  line-height: 1;
+  padding-inline: var(--space-2);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.tag .icon {
+  height: 0.875rem;
+  width: 0.875rem;
+}
+
+.tag.is-accent {
+  background-color: var(--c-accent-soft);
+  border-color: transparent;
+  color: var(--c-accent-soft-text);
+}
+
+.tag.is-caution {
+  background-color: var(--c-caution-soft);
+  border-color: transparent;
+  color: var(--c-caution);
+}
+
+.tag.is-danger {
+  background-color: var(--c-danger-soft);
+  border-color: transparent;
+  color: var(--c-danger);
+}
+
+.tag.is-done {
+  border-color: transparent;
+  color: var(--c-done);
+}
+
+/* ---- Fields --------------------------------------------------------------- */
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.field > label {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+}
+
+.control {
+  align-items: center;
+  display: flex;
+  position: relative;
+}
+
+.input {
+  appearance: none;
+  background-color: var(--c-surface);
+  border: var(--border) solid var(--c-border-control);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  font-size: 1rem; /* 16px always: no zoom on focus in mobile Safari */
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  width: 100%;
+}
+
+.input:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 var(--border) var(--c-accent);
+  outline: none;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--c-danger);
+  box-shadow: 0 0 0 var(--border) var(--c-danger);
+}
+
+.control .suffix {
+  color: var(--c-text-3);
+  pointer-events: none;
+  position: absolute;
+  right: var(--space-3);
+}
+
+.control.has-suffix .input {
+  padding-right: var(--space-8);
+  text-align: right;
+}
+
+.control.is-select .input {
+  cursor: pointer;
+  padding-right: var(--space-8);
+}
+
+.control.is-select .chev {
+  color: var(--c-text-2);
+  pointer-events: none;
+  position: absolute;
+  right: var(--space-3);
+}
+
+.hint {
+  color: var(--c-text-3);
+  font-size: var(--text-sm);
+}
+
+.field-error {
+  align-items: start;
+  color: var(--c-danger);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-1);
+}
+
+.field-error .icon {
+  height: var(--icon-sm);
+  margin-top: var(--space-0);
+  width: var(--icon-sm);
+}
+
+/* ---- Disclosure: one style, a real 44px target -------------------------- */
+
+.disclosure > summary {
+  align-items: center;
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  gap: var(--space-2);
+  justify-content: space-between;
+  min-height: var(--tap);
+}
+
+.disclosure > summary:hover {
+  color: var(--c-text);
+}
+
+.disclosure > summary .chev {
+  color: var(--c-text-3);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.disclosure[open] > summary .chev {
+  transform: rotate(180deg);
+}
+
+/* Inside a card it is the card's last row, edge to edge. */
+.card > .disclosure {
+  border-top: var(--border) solid var(--c-border);
+  margin: var(--space-3) calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+  padding-inline: var(--space-4);
+}
+
+.card > .disclosure + .disclosure {
+  margin-top: var(--space-4);
+}
+
+@media (min-width: 64rem) {
+  .card > .disclosure {
+    margin: var(--space-4) calc(-1 * var(--space-6)) calc(-1 * var(--space-5));
+    padding-inline: var(--space-6);
+  }
+}
+
+/* ---- Segmented: the light range selector -------------------------------- */
+
+.segmented {
+  display: inline-flex;
+  gap: var(--space-0);
+}
+
+.segmented > button {
+  align-items: center;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  min-height: var(--tap);
+  padding: 0;
+}
+
+.segmented > button > span {
+  align-items: center;
+  border-radius: var(--radius-pill);
+  color: var(--c-text-2);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  height: 1.875rem;
+  padding-inline: var(--space-3);
+}
+
+.segmented > button:hover > span {
+  background-color: var(--c-fill);
+  color: var(--c-text);
+}
+
+.segmented > button[aria-pressed="true"] > span {
+  background-color: var(--c-accent-soft);
+  color: var(--c-accent-soft-text);
+}
+
+.segmented > button[disabled] > span {
+  background: none;
+  color: var(--c-text-3);
+  opacity: 0.6;
+}
+
+/* ---- Date: the as-of picker, compact -------------------------------------- */
+
+.asof {
+  align-items: center;
+  background-color: var(--c-surface);
+  border: var(--border) solid var(--c-border-control);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+}
+
+.asof .icon {
+  color: var(--c-text-2);
+  height: var(--icon-sm);
+  width: var(--icon-sm);
+}
+
+.asof .today {
+  color: var(--c-text-2);
+}
+
+/* ---- Table: wide screens only -------------------------------------------- */
+
+.table th {
+  border-bottom: var(--border) solid var(--c-border);
+  color: var(--c-text-3);
+  font-size: var(--text-xs);
+  padding: 0 var(--space-3) var(--space-2);
+  white-space: nowrap;
+}
+
+.table td {
+  border-bottom: var(--border) solid var(--c-border);
+  height: 3rem;
+  padding: var(--space-2) var(--space-3);
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: 0;
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: 0;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.table .num {
+  text-align: right;
+}
+
+.table td.name {
+  max-width: 0;
+  width: 40%;
+}
+
+.table .cell-sub {
+  color: var(--c-text-3);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-regular);
+  margin-left: var(--space-1);
+}
+
+.table tfoot td {
+  border-bottom: 0;
+  border-top: var(--border) solid var(--c-border);
+  font-weight: var(--fw-semibold);
+}
+
+/* Rows on the phone, table on the desktop: the same data, twice. */
+.only-wide {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .only-wide {
+    display: revert;
+  }
+
+  .only-narrow {
+    display: none;
+  }
+}
+
+/* ---- Allocation: actual against target ----------------------------------- */
+
+.alloc {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.alloc-row {
+  align-items: center;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: var(--label-col) minmax(0, 1fr);
+}
+
+.alloc-row .label {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+}
+
+.alloc-bar {
+  border-radius: var(--radius-sm);
+  height: var(--bar-h);
+  overflow: hidden;
+  width: 100%;
+}
+
+.alloc-bar svg {
+  height: 100%;
+  width: 100%;
+}
+
+.alloc-bar .gap {
+  fill: var(--c-surface);
+}
+
+.seg-equity {
+  fill: var(--c-class-equity);
+}
+
+.seg-fixed-income {
+  fill: var(--c-class-fixed-income);
+}
+
+.seg-gold {
+  fill: var(--c-class-gold);
+}
+
+.seg-crypto {
+  fill: var(--c-class-crypto);
+}
+
+/* The class rows under the bars. */
+.class-row {
+  align-items: center;
+  display: grid;
+  gap: var(--space-0) var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: var(--tap);
+  padding-block: var(--space-2);
+}
+
+.classes > li + li > .class-row {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.class-row .name {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.class-row .weight {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.class-row .weight,
+.class-row .dev,
+.class-row > .mask,
+.class-row > .num {
+  justify-self: end;
+  text-align: right;
+}
+
+.class-row .target,
+.class-row .dev {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+}
+
+.class-row .target {
+  padding-left: calc(var(--swatch-w) + var(--space-2));
+}
+
+/* ---- Gauge: deviation against the threshold ----------------------------- */
+
+.dev-cell {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
+.gauge {
+  height: 0.75rem;
+  width: var(--gauge-w);
+}
+
+.gauge .track {
+  fill: var(--c-fill);
+}
+
+.gauge .band {
+  fill: var(--c-border);
+}
+
+.gauge .zero {
+  stroke: var(--c-text-3);
+  stroke-width: 1;
+}
+
+.gauge .dot {
+  fill: var(--c-text-2);
+  stroke: var(--c-surface);
+  stroke-width: 2;
+}
+
+.gauge.is-off .dot {
+  fill: var(--c-caution-icon);
+}
+
+/* ---- Chart --------------------------------------------------------------- */
+
+.chart-top {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: space-between;
+  margin: calc(-1 * var(--space-2)) 0 var(--space-1);
+}
+
+.chart {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.chart-plot {
+  height: var(--chart-h);
+  position: relative;
+}
+
+.chart-plot svg {
+  height: 100%;
+  overflow: visible;
+  width: 100%;
+}
+
+.chart-plot .grid-line {
+  stroke: var(--c-chart-grid);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-plot .base-line {
+  stroke: var(--c-chart-axis);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-plot .gap-band {
+  fill: var(--c-chart-gap);
+}
+
+.chart-plot .gap-edge {
+  stroke: var(--c-chart-gap-edge);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-plot .series {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-plot .series.is-core {
+  stroke: var(--c-series-core);
+}
+
+.chart-plot .series.is-bucket {
+  stroke: var(--c-series-bucket);
+  stroke-dasharray: 6 4;
+}
+
+.chart-plot .series.is-cash {
+  stroke: var(--c-series-cash);
+  stroke-dasharray: 1 5;
+}
+
+.chart-plot .gap-label {
+  color: var(--c-text-3);
+  font-size: var(--text-xs);
+  position: absolute;
+  top: var(--space-1);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.chart-x {
+  color: var(--c-text-3);
+  display: flex;
+  font-size: var(--text-xs);
+  justify-content: space-between;
+}
+
+.chart-legend {
+  color: var(--c-text-2);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-1) var(--space-4);
+}
+
+.chart-legend > span {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.gap-note {
+  align-items: start;
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.gap-note .icon-sm {
+  color: var(--c-text-3);
+  margin-top: var(--space-0);
+}
+
+.gap-note .swatch-gap {
+  background-color: var(--c-chart-gap);
+  border: var(--border) dashed var(--c-chart-gap-edge);
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  flex: none;
+  height: 0.875rem;
+  margin-top: var(--space-0);
+  width: 0.875rem;
+}
+
+/* ---- KPIs: a strip of figures that belong together ---------------------- */
+
+.kpis {
+  border-block: var(--border) solid var(--c-border);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: var(--space-1);
+  padding-block: var(--space-3);
+}
+
+.kpi {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding-inline: var(--space-3);
+}
+
+.kpi:first-child {
+  padding-left: 0;
+}
+
+.kpi + .kpi {
+  border-left: var(--border) solid var(--c-border);
+}
+
+.kpi dt {
+  color: var(--c-text-3);
+  font-size: var(--text-xs);
+}
+
+.kpi dd {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.kpi dd .unit {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+}
+
+/* ---- Stats: label over value, in a row that wraps ------------------------ */
+
+.stats {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+}
+
+.stat {
+  display: grid;
+  gap: var(--space-0);
+}
+
+.stat .label {
+  color: var(--c-text-3);
+  font-size: var(--text-xs);
+}
+
+.stat .value {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+}
+
+/* ---- Skeleton: the shape of what is coming, no shimmer ------------------ */
+
+.skel {
+  background-color: var(--c-fill);
+  border-radius: var(--radius-sm);
+  display: block;
+  height: 0.875rem;
+}
+
+.skel.is-figure {
+  height: 2.25rem;
+  width: 55%;
+}
+
+.skel.w-90 {
+  width: 90%;
+}
+
+.skel.w-70 {
+  width: 70%;
+}
+
+.skel.w-50 {
+  width: 50%;
+}
+
+.skel-lines {
+  display: grid;
+  gap: var(--space-3);
+}

@@ -43,8 +43,8 @@ export const FINDING_TEXTS: Record<string, FindingText> = {
   },
   // --- deepCheck(): the raw lines and the fingerprints -------------------
   duplicate_id: {
-    what: "Dos líneas del fichero tienen el mismo identificador.",
-    todo: "El fichero se ha editado a mano o se han concatenado dos libros. Recupera una copia y compárala antes de escribir nada más.",
+    what: "Dos líneas del archivo tienen el mismo identificador.",
+    todo: "El archivo se ha editado a mano o se han juntado dos archivos. Recupera una copia y compárala antes de escribir nada más.",
   },
   non_canonical_line: {
     what: "Una línea no está en su forma canónica: el orden de sus campos no es el que escribe la aplicación.",
@@ -60,11 +60,11 @@ export const FINDING_TEXTS: Record<string, FindingText> = {
   },
   fingerprint_mismatch: {
     what: "La huella guardada de un evento no coincide con sus campos: alguien lo editó a mano.",
-    todo: "En el libro nada se edita: un movimiento equivocado se anula y se registra corregido. Recupera la copia anterior a la edición.",
+    todo: "En tus datos nada se edita: un movimiento equivocado se anula y se registra corregido. Recupera la copia anterior a la edición.",
   },
   projection_not_reproducible: {
-    what: "Volver a leer el fichero da un resultado distinto del que tienes en pantalla.",
-    todo: "Es el fallo más grave que hay: no registres nada. Exporta el libro tal como está, guárdalo aparte y revísalo antes de seguir.",
+    what: "Volver a leer el archivo da un resultado distinto del que tienes en pantalla.",
+    todo: "Es el fallo más grave que hay: no registres nada. Exporta tus datos tal como están, guárdalos aparte y revísalos antes de seguir.",
   },
 };
 

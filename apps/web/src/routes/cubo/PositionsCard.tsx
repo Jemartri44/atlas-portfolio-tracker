@@ -7,14 +7,17 @@
 import { type JSX, Show } from "solid-js";
 import {
   Amount,
-  Badge,
   type DataColumn,
   DataTable,
   Figure,
+  Pending,
   Price,
   PriceDetail,
   Section,
+  Tag,
+  TotalLine,
 } from "../../components/index.js";
+import { pricesOf } from "../../format/messages/prose.js";
 import type { BucketPositionRow, BucketPositionsView } from "../../view-models/bucket/index.js";
 
 const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
@@ -29,7 +32,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     key: "quantity",
     header: "Cantidad",
     numeric: true,
-    cell: (row) => <Amount quantity={row.quantity} />,
+    cell: (row) => <Amount quantity={row.quantity} of={row.units} />,
   },
   {
     key: "cost",
@@ -58,14 +61,11 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     numeric: true,
     card: "meta",
     cell: (row) => <Amount value={row.unrealized} signed coloured />,
-    // One "sin dato", not two: a row with no price used to read
-    // "Alpha Spin-off · sin dato · sin dato … sin dato" (seen in a screenshot).
+    // Said once: with no price the line above already reads «sin precio» and
+    // the figure «sin dato»; a third one here read «sin precio sin dato».
     cardCell: (row) => (
-      <Show
-        when={row.unrealized !== undefined}
-        fallback={<Amount value={undefined} missingReason="sin precio a esa fecha" />}
-      >
-        <span class="row">
+      <Show when={row.unrealized !== undefined}>
+        <span class="figure-pair">
           <Amount value={row.unrealized} signed coloured />
           <Figure value={row.unrealizedPct} unit="percent" coloured />
         </span>
@@ -88,57 +88,61 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
  */
 const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
   <Show when={props.row.thesisId !== undefined}>
-    <span class="row wrap">
-      <Badge>tesis abierta</Badge>
-      <span class="tiny">
+    <span class="thesis-line">
+      <Tag icon="flask">tesis abierta</Tag>
+      <span class="meta">
         {props.row.daysOpen} de {props.row.horizonDays} días
       </span>
       <Show when={props.row.horizonExceeded}>
-        <Badge tone="warning">plazo superado</Badge>
+        <Tag tone="caution" icon="clock">
+          plazo superado
+        </Tag>
       </Show>
     </span>
     <Show when={props.row.invalidation !== undefined}>
-      <p class="note flush">
+      <span class="thesis-text">
         <strong>Me equivoco si:</strong> {props.row.invalidation}
-      </p>
+      </span>
     </Show>
   </Show>
 );
 
 export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element => (
-  <Section title="Posiciones abiertas">
+  <Section title="Posiciones abiertas" class="span-7">
     <Show
       when={props.view.rows.length > 0}
-      fallback={<p class="subtle flush">No hay ninguna posición abierta en el cubo.</p>}
+      fallback={<p class="meta">No hay ninguna posición abierta en el cubo.</p>}
     >
       <DataTable
         label="Posiciones del cubo"
+        size="lg"
         columns={COLUMNS}
         rows={props.view.rows}
         detail={(row) => <ThesisNote row={row} />}
       />
-      <div class="spread total-line">
-        <span class="subject">
-          Total del cubo
-          <Show when={props.view.partial}>
-            {" "}
-            <Badge tone="warning" title={`Faltan: ${props.view.missing.join(", ")}`}>
-              parcial
-            </Badge>
-          </Show>
+      <TotalLine
+        label={
+          <>
+            Total del cubo
+            <Show when={props.view.partial}>
+              {" "}
+              <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
+                parcial
+              </Tag>
+            </Show>
+          </>
+        }
+      >
+        <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
+        <span class="meta">
+          coste <Amount value={props.view.totalCost} />
         </span>
-        <span class="row">
-          <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
-          <span class="tiny">
-            coste <Amount value={props.view.totalCost} />
-          </span>
-        </span>
-      </div>
+      </TotalLine>
       <Show when={props.view.partial}>
-        <p class="note">
-          Faltan precios de {props.view.missing.join(", ")}: el total solo cubre lo que sí tiene
-          precio, y los pesos dentro del cubo no se calculan sobre un total parcial.
-        </p>
+        <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
+          {pricesOf(props.view.missing)}: el total solo cubre lo que sí tiene precio, y los pesos
+          dentro del cubo no se calculan sobre un total parcial.
+        </Pending>
       </Show>
     </Show>
   </Section>

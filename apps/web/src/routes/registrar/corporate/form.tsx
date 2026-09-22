@@ -4,9 +4,9 @@
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
 import { accounts, corporateActionDraft, Quantity } from "@atlas/domain";
-import { A, useNavigate, useParams } from "@solidjs/router";
+import { useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Amount, Badge, Callout, EmptyState } from "../../../components/index.js";
+import { Amount, Notice, Tag } from "../../../components/index.js";
 import { displayName, nameIndex } from "../../../format/names.js";
 import { toAppError } from "../../../ledger/errors.js";
 import { attempt } from "../../../ledger/query.js";
@@ -25,6 +25,7 @@ import { RequireLedger } from "../../guard.jsx";
 import { DuplicateDialog } from "../DuplicateDialog.jsx";
 import { FormActions } from "../FormActions.jsx";
 import { FormFields } from "../FormFields.jsx";
+import { NoForm, Reloaded } from "../FormNotices.jsx";
 import { Preview } from "../Preview.jsx";
 import { feeLinesError, toCorporateParams } from "./params.js";
 
@@ -131,102 +132,99 @@ export default function CorporateFormRoute(): JSX.Element {
           <Show
             when={form()}
             fallback={
-              <>
-                <PageHeader title="Evento corporativo" />
-                <EmptyState what="No hay ningún formulario para ese tipo de evento corporativo.">
-                  <A href="/registrar">Ver qué se puede registrar</A>
-                </EmptyState>
-              </>
+              <NoForm
+                title="Evento corporativo"
+                what="No hay ningún formulario para ese tipo de evento corporativo."
+              />
             }
           >
             {(current) => (
               <>
                 <PageHeader title={current().title} lead={current().when} />
 
-                <Callout tone="info" title="Qué va a pasar">
+                <Notice severity="info" title="Qué va a pasar">
                   {current().effect}
-                </Callout>
+                </Notice>
 
                 <Show when={conflict()}>
-                  <Callout tone="warning" title="El libro ha cambiado">
-                    Otra pestaña o la CLI han escrito mientras rellenabas. Vuelve a ver el efecto
-                    antes de confirmar. No se ha pisado nada.
-                  </Callout>
+                  <Reloaded />
                 </Show>
 
-                <form class="form" onSubmit={(event) => event.preventDefault()}>
-                  <FormFields
-                    fields={fields()}
-                    values={values()}
-                    state={snapshot.state}
-                    onChange={setValues}
-                    prefix="ca"
-                    errors={errors()}
-                  />
+                <div class="register">
+                  <form class="form" onSubmit={(event) => event.preventDefault()}>
+                    <FormFields
+                      fields={fields()}
+                      values={values()}
+                      state={snapshot.state}
+                      onChange={setValues}
+                      prefix="ca"
+                      errors={errors()}
+                    />
 
-                  <Show when={draft()?.no_fractions === true}>
-                    <Callout tone="info" title="Sin picos">
-                      Ninguna cuenta queda con fracciones, así que no se genera ninguna venta
-                      forzosa.
-                    </Callout>
-                  </Show>
+                    <Show when={draft()?.no_fractions === true}>
+                      <Notice severity="info" title="Sin picos">
+                        Ninguna cuenta queda con fracciones, así que no se genera ninguna venta
+                        forzosa.
+                      </Notice>
+                    </Show>
 
-                  <Show when={(draft()?.fractional.length ?? 0) > 0}>
-                    <Callout tone="warning" title="Picos que se venden">
-                      <For each={draft()?.fractional ?? []}>
-                        {(row) => (
-                          <p class="tiny flush">
-                            {displayName(names, row.account_id)}:{" "}
-                            <Amount quantity={Quantity.parse(row.quantity)} />
-                          </p>
-                        )}
-                      </For>
-                      Esa venta genera ganancia patrimonial. La aplicación la calcula al registrar
-                      el evento.
-                    </Callout>
-                  </Show>
+                    <Show when={(draft()?.fractional.length ?? 0) > 0}>
+                      <Notice severity="caution" title="Picos que se venden">
+                        <For each={draft()?.fractional ?? []}>
+                          {(row) => (
+                            <p class="meta">
+                              {displayName(names, row.account_id)}:{" "}
+                              <Amount quantity={Quantity.parse(row.quantity)} />
+                            </p>
+                          )}
+                        </For>
+                        Esa venta genera ganancia patrimonial. La aplicación la calcula al registrar
+                        el evento.
+                      </Notice>
+                    </Show>
 
-                  <FormActions
-                    problem={preview() === undefined ? problem() : undefined}
-                    blocked={blocked()}
-                  >
-                    <button
-                      type="button"
-                      disabled={draft() === undefined}
-                      onClick={() => void onPreview()}
+                    <FormActions
+                      problem={preview() === undefined ? problem() : undefined}
+                      blocked={blocked()}
                     >
-                      Ver el efecto
-                    </button>
-                  </FormActions>
-                </form>
+                      <button
+                        type="button"
+                        disabled={draft() === undefined}
+                        onClick={() => void onPreview()}
+                      >
+                        Ver el efecto
+                      </button>
+                    </FormActions>
+                  </form>
 
-                <Show when={preview()}>
-                  {(shown) => (
-                    <div class="stack">
-                      <Preview preview={shown()} names={names} />
-                      <Callout tone="info" title="Guarda el documento">
-                        Copia la nota del emisor a tu carpeta de documentos: el libro guarda la
-                        referencia, no el fichero.
-                      </Callout>
-                      <FormActions problem={problem()}>
-                        <button
-                          type="button"
-                          class="secondary"
-                          onClick={() => setPreview(undefined)}
-                        >
-                          Volver a los datos
-                        </button>
-                        <button
-                          type="button"
-                          disabled={store.writing()}
-                          onClick={() => void onConfirm()}
-                        >
-                          Registrar
-                        </button>
-                      </FormActions>
-                    </div>
-                  )}
-                </Show>
+                  <Show when={preview()}>
+                    {(shown) => (
+                      <section class="effect" aria-label="El efecto">
+                        <Preview preview={shown()} names={names} />
+                        <Notice severity="info" title="Guarda el documento">
+                          Copia la nota del emisor a tu carpeta de documentos: tus datos guardan la
+                          referencia, no el archivo.
+                        </Notice>
+                        <FormActions problem={problem()}>
+                          <button
+                            type="button"
+                            class="secondary"
+                            onClick={() => setPreview(undefined)}
+                          >
+                            Volver a los datos
+                          </button>
+                          <button
+                            type="button"
+                            disabled={store.writing()}
+                            onClick={() => void onConfirm()}
+                          >
+                            Registrar
+                          </button>
+                        </FormActions>
+                      </section>
+                    )}
+                  </Show>
+                </div>
 
                 <DuplicateDialog
                   duplicates={duplicate()}
@@ -234,7 +232,7 @@ export default function CorporateFormRoute(): JSX.Element {
                   onConfirm={() => void onConfirm(true)}
                 >
                   <p>
-                    <Badge tone="warning">ojo</Badge> Un evento corporativo repetido transforma los
+                    <Tag tone="caution">ojo</Tag> Un evento corporativo repetido transforma los
                     lotes dos veces: comprueba que no es el mismo antes de insistir.
                   </p>
                 </DuplicateDialog>

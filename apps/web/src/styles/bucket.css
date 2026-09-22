@@ -1,0 +1,54 @@
+/*
+ * The bucket (docs/design/system.md §7.6): what a position says under its row
+ * — the thesis it belongs to and the condition that would prove it wrong — and
+ * the mark of the one view that joins the bucket and the core.
+ */
+
+/* A figure and its percentage, side by side, wrapping if they must. */
+.figure-pair {
+  align-items: baseline;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  justify-content: flex-end;
+}
+
+/* The thesis of a position: its state on one line, its invalidation under it. */
+.thesis-line {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+.thesis-text {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+}
+
+/* The only view that joins the two books says so, in the colour of context. */
+.joined {
+  align-items: start;
+  background-color: var(--c-accent-soft);
+  border-radius: var(--radius-md);
+  color: var(--c-accent-soft-text);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  padding: var(--space-3);
+}
+
+.joined > .icon-sm {
+  flex: none;
+  margin-top: var(--space-0);
+}
+
+/* The hero of a card that is not the summary's band: a figure and its note. */
+.card > .hero-figure {
+  margin-bottom: var(--space-1);
+}
+
+.card > .hero-figure + .card-note {
+  margin: 0 0 var(--space-3);
+}

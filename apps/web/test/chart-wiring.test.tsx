@@ -11,10 +11,10 @@ import {
   Chart,
   type ChartSeries,
   chartOptions,
+  gapsOf,
   hasIsolatedPoint,
 } from "../src/components/chart/Chart.jsx";
 import { rangeCounts, rangeIndices } from "../src/components/chart/ranges.js";
-import { MASK } from "../src/format/money.js";
 
 const disposers: (() => void)[] = [];
 
@@ -52,12 +52,27 @@ describe("the axis of a chart is an amount", () => {
    * this, taking the privacy flag out of the axis left every chart showing
    * absolute amounts in privacy mode and the whole suite green.
    */
-  it("asks for the mask when privacy is on", () => {
-    expect(yLabels(true)).toEqual([MASK, MASK]);
+  it("carries no figure at all when privacy is on", () => {
+    // Not even the mask: four dots on each line of the grid would add noise
+    // and say nothing. The shape of the lines is what stays useful in public.
+    expect(yLabels(true)).toEqual(["", ""]);
+    expect(yLabels(true).join("")).not.toMatch(/\d/);
   });
 
   it("shows the figures when privacy is off", () => {
     expect(yLabels(false)).toEqual(["1 k", "25 k"]);
+  });
+
+  it("leaves a month and its year room enough not to run into the next", () => {
+    const year = Array.from({ length: 13 }, (_, month) => month * 30 * DAY);
+    const series: ChartSeries[] = [
+      { label: "Núcleo", values: year.map(() => 1), colour: "--c-series-core" },
+    ];
+    const options = chartOptions({ x: year, series, width: 1600, height: 220 }, false);
+    const axis = options.axes?.[0] as { space?: number } | undefined;
+    expect(axis?.space).toBeGreaterThanOrEqual(80);
+    // And half a label of room past the last tick, which sits on the edge.
+    expect(options.padding?.[1]).toBeGreaterThanOrEqual(24);
   });
 
   it("dates the X axis with the span the data covers", () => {
@@ -69,6 +84,31 @@ describe("the axis of a chart is an amount", () => {
 });
 
 describe("a hole is a hole", () => {
+  /**
+   * The line stops at a hole, and the stretch it skips is **shown** as a band
+   * from the last known point to the next one, so a gap reads as a gap and
+   * not as a chart that failed to load (docs/design/system.md §5.15).
+   */
+  it("shades the stretch where no series has a value, from known point to known point", () => {
+    // Each series misses one date, never the same: the hole is each line
+    // stopping, and a band across the chart would say the other one lacks it too.
+    expect(gapsOf(X, SERIES)).toEqual([]);
+    const both: ChartSeries[] = [
+      { label: "Núcleo", values: [100, null, 300], colour: "--c-series-core" },
+      { label: "Cubo", values: [10, null, 30], colour: "--c-series-bucket" },
+    ];
+    expect(gapsOf(X, both)).toEqual([{ from: 0, to: 2 * DAY }]);
+    // A chart with no hole has nothing to shade.
+    const full: ChartSeries[] = [{ label: "Núcleo", values: [1, 2, 3], colour: "--c-series-core" }];
+    expect(gapsOf(X, full)).toEqual([]);
+    // A series with no value at all is not "a hole everywhere": it is absent.
+    const absent: ChartSeries[] = [
+      ...full,
+      { label: "Cubo", values: [null, null, null], colour: "--c-series-bucket" },
+    ];
+    expect(gapsOf(X, absent)).toEqual([]);
+  });
+
   /**
    * `spanGaps: true` makes uPlot join the two ends of a gap with a straight
    * line — the interpolation the whole feature exists to refuse. It is the
@@ -251,13 +291,14 @@ describe("the allocation bar", () => {
   });
 
   /** A partial core has no current weights: the top bar says so instead of lying. */
-  it("draws an empty bar, not a wrong one, when there is no current weight", () => {
+  it("draws only the target, never an empty rail, when there is no current weight", () => {
     const host = mount(() => (
       <Allocation segments={[{ key: "equity", label: "Renta variable", targetPct: "100" }]} />
     ));
     const titles = [...host.querySelectorAll("rect title")].map((t) => t.textContent ?? "");
+    const labels = [...host.querySelectorAll(".alloc-label")].map((l) => l.textContent);
 
-    expect(titles.some((t) => t.includes("Sin datos"))).toBe(true);
+    expect(labels).toEqual(["Objetivo"]);
     expect(titles.filter((t) => t.startsWith("Actual:"))).toHaveLength(0);
   });
 

@@ -20,7 +20,7 @@ import {
   washSaleWindowEnd,
 } from "@atlas/domain";
 import { describeFinding } from "../format/messages/findings.js";
-import { describeWarning } from "../format/messages/warnings.js";
+import { describeWarning, describeWarningGroup } from "../format/messages/warnings.js";
 import type { NameIndex } from "../format/names.js";
 import { countOf } from "../format/number.js";
 
@@ -39,13 +39,17 @@ export interface AttentionItem {
    * now it is one, with the count.
    */
   count: number;
+  /** The events the warnings of this item come from, so a list can link each one. */
+  eventIds: string[];
+  /** The warnings it stands for, each one to be told in the detail of a gathered item. */
+  warnings: Warning[];
 }
 
 /** Where each code is fixed. A code missing from here is a bug the test catches. */
 const DESTINATIONS: Record<string, { label: string; to: string }> = {
   invalid_events: { label: "Ver la verificación", to: "/ajustes/verificacion" },
   integrity_finding: { label: "Ver la verificación", to: "/ajustes/verificacion" },
-  export_overdue: { label: "Exportar el libro", to: "/ajustes" },
+  export_overdue: { label: "Exportar tus datos", to: "/ajustes" },
   // Prices and rates are fixed by recording a valuation.
   stale_price: { label: "Registrar valoración", to: "/registrar/valuation" },
   stale_fx_rate: { label: "Registrar valoración", to: "/registrar/valuation" },
@@ -54,8 +58,8 @@ const DESTINATIONS: Record<string, { label: string; to: string }> = {
   partial_net_worth: { label: "Registrar valoración", to: "/registrar/valuation" },
   missing_benchmark_price: { label: "Registrar valoración", to: "/registrar/valuation" },
   // Portfolio rules: the core and the bucket screens (next feature) explain them.
-  deviation_above_threshold: { label: "Ver el núcleo", to: "/nucleo" },
-  satellite_below_minimum: { label: "Ver el núcleo", to: "/nucleo" },
+  deviation_above_threshold: { label: "Ver la cartera", to: "/cartera" },
+  satellite_below_minimum: { label: "Ver la cartera", to: "/cartera" },
   asset_without_target: { label: "Revisar la configuración", to: "/ajustes/configuracion" },
   unknown_target_weight: { label: "Revisar la configuración", to: "/ajustes/configuracion" },
   missing_benchmark_asset: { label: "Revisar la configuración", to: "/ajustes/configuracion" },
@@ -177,13 +181,21 @@ export interface AttentionInput {
   saleDates?: ReadonlyMap<string, CivilDate>;
 }
 
-const itemOf = (code: string, message: string, count = 1): AttentionItem => ({
+const itemOf = (
+  code: string,
+  message: string,
+  count = 1,
+  eventIds: string[] = [],
+  warnings: Warning[] = [],
+): AttentionItem => ({
   code,
   severity: severityOf(code),
   message,
   action: DESTINATIONS[code] ?? FALLBACK,
   rank: rankOf(code),
   count,
+  eventIds,
+  warnings,
 });
 
 /** The last day on which the window a wash-sale warning talks about is open. */
@@ -208,7 +220,13 @@ const windowEndOf = (
  * wash-sale ones are about **a sale** — eleven purchases inside the window of
  * one loss are one thing to know, not eleven.
  */
+/** Rules whose repeats are one thing to do: all of them, one item, one sentence. */
+const GATHERED = new Set(["stale_price", "stale_fx_rate", "deviation_above_threshold"]);
+
 const groupKey = (warning: Warning): string => {
+  if (GATHERED.has(warning.code)) {
+    return warning.code;
+  }
   const d = warning.details;
   const subject =
     warning.code === "wash_sale_window_repurchase"
@@ -228,7 +246,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "invalid_events",
-        `${countOf(input.invalidCount, "evento inválido", "eventos inválidos")} en el libro: se puede consultar, pero no registrar hasta rectificarlos.`,
+        `${countOf(input.invalidCount, "movimiento inválido", "movimientos inválidos")} en tus datos: se puede consultar, pero no registrar hasta rectificarlos.`,
       ),
     );
   }
@@ -244,7 +262,10 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
   // projection and from three views that share rules — and that is one warning,
   // not two of a kind: exact copies go first, then the repeats are counted.
   const seen = new Set<string>();
-  const groups = new Map<string, { warning: Warning; count: number }>();
+  const groups = new Map<
+    string,
+    { warning: Warning; count: number; events: Set<string>; all: Warning[] }
+  >();
   for (const warning of input.warnings) {
     const identity = `${warning.code}|${warning.event_id}|${JSON.stringify(warning.details)}`;
     if (seen.has(identity)) {
@@ -256,16 +277,23 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
       continue;
     }
     const key = groupKey(warning);
-    const group = groups.get(key);
-    if (group === undefined) {
-      groups.set(key, { warning, count: 1 });
-    } else {
-      group.count += 1;
+    const group = groups.get(key) ?? { warning, count: 0, events: new Set<string>(), all: [] };
+    group.count += 1;
+    group.all.push(warning);
+    if (warning.event_id !== "") {
+      group.events.add(warning.event_id);
     }
+    groups.set(key, group);
   }
-  for (const { warning, count } of groups.values()) {
+  for (const { warning, count, events, all } of groups.values()) {
     // `input` **is** the prose context: it carries the catalogue and the mode.
-    items.push(itemOf(warning.code, describeWarning(warning, input), count));
+    // A gathered rule says its number in the sentence, so it carries no count.
+    const gathered = count > 1 ? describeWarningGroup(warning.code, all, input) : undefined;
+    items.push(
+      gathered === undefined
+        ? itemOf(warning.code, describeWarning(warning, input), count, [...events], all)
+        : itemOf(warning.code, gathered, 1, [...events], all),
+    );
   }
 
   if (input.openOrders.length > 0) {
@@ -293,8 +321,8 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
       itemOf(
         "export_overdue",
         input.exportOverdueDays === "never"
-          ? "El libro vive en el navegador y nunca se ha exportado: si borras los datos del sitio, se pierde."
-          : `El libro vive en el navegador y la última exportación es de hace ${countOf(input.exportOverdueDays, "día", "días")}: si borras los datos del sitio, se pierde lo registrado desde entonces.`,
+          ? "Tus datos viven en el navegador y nunca se han exportado: si borras los datos del sitio, se pierden."
+          : `Tus datos viven en el navegador y la última exportación es de hace ${countOf(input.exportOverdueDays, "día", "días")}: si borras los datos del sitio, se pierde lo registrado desde entonces.`,
       ),
     );
   }

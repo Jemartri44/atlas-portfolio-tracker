@@ -208,7 +208,12 @@ export const bucketPositions = (
         warnings,
         "stale_price",
         `${assetId}: price is ${price.age_days} days old (limit ${settings.stale_price_days})`,
-        { asset_id: assetId, age_days: price.age_days, date: price.date },
+        {
+          asset_id: assetId,
+          age_days: price.age_days,
+          date: price.date,
+          limit_days: settings.stale_price_days,
+        },
         price.event_id,
       );
     }

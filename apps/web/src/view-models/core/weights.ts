@@ -15,7 +15,7 @@ import {
   type Warning,
 } from "@atlas/domain";
 import { valueLabel } from "../../format/labels.js";
-import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
+import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../../format/names.js";
 
 export interface WeightRow {
   assetId: string;
@@ -31,6 +31,8 @@ export interface WeightRow {
    * corrections.
    */
   quantity: Quantity;
+  /** What the quantity counts: "part.", "acc.", "uds.". */
+  units: string;
   /** Absent means "no price", which is not the same as zero. Carries its currency. */
   unitValue?: Money;
   priceDate?: string;
@@ -91,6 +93,7 @@ const rowOf = (
   name: displayName(names, row.asset_id),
   assetClass: row.asset_class,
   quantity: row.quantity,
+  units: unitsOf(names, row.asset_id),
   ...(row.price === undefined
     ? {}
     : {

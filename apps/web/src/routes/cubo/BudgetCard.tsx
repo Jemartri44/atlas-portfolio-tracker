@@ -1,4 +1,5 @@
-// The budget of the bucket and its two control rules (17 and 18).
+// The budget of the bucket and its two control rules, stop and harvest, each
+// headed by what it asks in plain words and the threshold the user set.
 //
 // **This is one of the two bounded exceptions to compartmentalisation**
 // (constitution III): the weight of the bucket is measured over *total* net
@@ -10,16 +11,56 @@
 // "within limits": the absence of a measurement is not a pass.
 
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Badge, Callout, Figure, Section, StatLine } from "../../components/index.js";
+import {
+  Amount,
+  Figure,
+  Icon,
+  type NoticeItem,
+  NoticeList,
+  Section,
+  StatLine,
+  Tag,
+  TotalLine,
+} from "../../components/index.js";
+import { formatPercent, meaningfulDecimals } from "../../format/number.js";
 import type { ControlsView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
 
-export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): JSX.Element => (
-  <Section title="Presupuesto y control del cubo">
+/** The thresholds of the two rules, as configured; absent when not set. */
+export interface BucketLimits {
+  stopLossPct?: string | undefined;
+  maxWeightPct?: string | undefined;
+}
+
+const UNSET = "Todavía no tiene umbral: fíjalo en Ajustes → Configuración.";
+
+const pct = (value: string): string =>
+  formatPercent(value, { decimals: meaningfulDecimals(value) });
+
+const Rule = (props: { title: string; ask: string; limit: string | undefined }): JSX.Element => (
+  <>
+    <h3 class="block-title">{props.title}</h3>
+    <p class="card-note">
+      {props.limit === undefined ? UNSET : props.ask.replace("{x}", pct(props.limit))}
+    </p>
+  </>
+);
+
+export const BudgetCard = (props: {
+  view: ControlsView;
+  worth: NetWorthView;
+  limits: BucketLimits;
+  /** What the budget warns of that no line of the card already says: a cap passed. */
+  notices: readonly NoticeItem[];
+}): JSX.Element => (
+  <Section title="Presupuesto y control" class="span-5">
+    <Show when={props.notices.length > 0}>
+      <NoticeList items={props.notices} label="Avisos del presupuesto" />
+    </Show>
     <StatLine label="Aporte bruto acumulado">
       <Amount value={props.view.contributionGross} />
       <Show when={props.view.budget !== undefined}>
-        <span class="tiny">
+        <span class="meta">
           de <Amount value={props.view.budget} /> previstos
           <Show when={props.view.monthsElapsed !== undefined}>
             {" "}
@@ -40,13 +81,17 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
       />
     </StatLine>
 
-    <h3 class="block-title">Regla de parada (17)</h3>
+    <Rule
+      title="Regla de parada"
+      ask="Dejar de aportar al cubo si la pérdida acumulada pasa del {x} de lo aportado."
+      limit={props.limits.stopLossPct}
+    />
     <Show
       when={props.view.lossUnavailable === undefined}
       fallback={
-        <p class="note flush">
-          <Badge tone="warning">no evaluada</Badge> {props.view.lossUnavailable}. Sin ese dato no
-          hay control de pérdida acumulada; no es que no la haya.
+        <p class="card-note">
+          <Tag tone="caution">no evaluada</Tag> {props.view.lossUnavailable}. Sin ese dato no hay
+          control de pérdida acumulada; no es que no la haya.
         </p>
       }
     >
@@ -55,17 +100,24 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
       </StatLine>
     </Show>
 
-    <h3 class="block-title">Regla de recogida (18)</h3>
-    <Callout tone="info" title="Excepción acotada a la compartimentación">
-      El peso del cubo se mide sobre el <strong>patrimonio total</strong>, que suma los dos libros.
-      Es un control de presupuesto, no una métrica de cartera, y por eso el desglose va al lado.
-    </Callout>
+    <Rule
+      title="Regla de recogida"
+      ask="Pasar el exceso a la cartera principal si el cubo pesa más del {x} de tu patrimonio."
+      limit={props.limits.maxWeightPct}
+    />
+    <p class="joined">
+      <Icon name="info" class="icon-sm" />
+      <span>
+        Es la única cifra que suma el cubo y la cartera principal: el peso se mide sobre todo tu
+        patrimonio, y por eso el desglose va al lado.
+      </span>
+    </p>
     <Show
       when={props.view.weightUnavailable === undefined}
       fallback={
-        <p class="note flush">
-          <Badge tone="warning">no evaluada</Badge> {props.view.weightUnavailable}. Sin ese dato no
-          hay control de peso del cubo; no es que esté dentro.
+        <p class="card-note">
+          <Tag tone="caution">no evaluada</Tag> {props.view.weightUnavailable}. Sin ese dato no hay
+          control de peso del cubo; no es que esté dentro.
         </p>
       }
     >
@@ -74,25 +126,25 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
       </StatLine>
     </Show>
 
-    <div class="breakdown">
-      <For each={props.worth.blocks}>
-        {(block) => (
-          <div class="spread stat-line">
-            <span class="subject tiny">{block.label}</span>
-            <Amount value={block.subtotal} />
-          </div>
-        )}
-      </For>
-      <div class="spread total-line">
-        <span class="subject">
+    <For each={props.worth.blocks}>
+      {(block) => (
+        <StatLine label={block.label}>
+          <Amount value={block.subtotal} />
+        </StatLine>
+      )}
+    </For>
+    <TotalLine
+      label={
+        <>
           Patrimonio total
           <Show when={props.worth.partial}>
             {" "}
-            <Badge tone="warning">parcial</Badge>
+            <Tag icon="half">parcial</Tag>
           </Show>
-        </span>
-        <Amount value={props.worth.total} />
-      </div>
-    </div>
+        </>
+      }
+    >
+      <Amount value={props.worth.total} />
+    </TotalLine>
   </Section>
 );

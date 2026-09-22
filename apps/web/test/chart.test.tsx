@@ -13,7 +13,7 @@
 
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
-import { axisAmount, axisDate, spanOf } from "../src/components/chart/axis.js";
+import { axisAmount, axisDate, axisDates, spanOf } from "../src/components/chart/axis.js";
 import { ChartLegend } from "../src/components/chart/ChartLegend.jsx";
 import { ChartTable } from "../src/components/chart/ChartTable.jsx";
 import { MASK } from "../src/format/money.js";
@@ -40,13 +40,13 @@ afterEach(() => {
 const DIGITS = /\d/;
 
 describe("the axis of a chart is an amount", () => {
-  it("shows the mask instead of the figure when privacy is on", () => {
+  it("shows no figure at all when privacy is on", () => {
     expect(axisAmount(12_345, false)).toBe("12 k");
-    expect(axisAmount(12_345, true)).toBe(MASK);
+    expect(axisAmount(12_345, true)).toBe("");
     expect(axisAmount(2_500_000, false)).toBe("2,5 M");
-    expect(axisAmount(2_500_000, true)).toBe(MASK);
+    expect(axisAmount(2_500_000, true)).toBe("");
     expect(axisAmount(750, false)).toBe("750");
-    expect(axisAmount(750, true)).toBe(MASK);
+    expect(axisAmount(750, true)).toBe("");
   });
 
   it("gives nothing for a value that is not a number", () => {
@@ -62,8 +62,16 @@ describe("the axis of a chart is an amount", () => {
     // 2027-06-30, as seconds since the epoch.
     const when = Date.UTC(2027, 5, 30) / 1000;
     expect(axisDate(when, "years")).toBe("2027");
-    expect(axisDate(when, "months")).toContain("27");
+    expect(axisDate(when, "months")).toMatch(/^\p{L}+\.? 2027$/u);
     expect(axisDate(when, "days")).toContain("30");
+  });
+
+  it("writes each month once, however many ticks fall in it", () => {
+    const at = (month: number, day: number): number => Date.UTC(2026, month, day) / 1000;
+    const labels = axisDates([at(8, 1), at(8, 8), at(8, 15), at(9, 1), at(9, 8)], "months");
+    expect(labels.filter((label) => label !== "")).toHaveLength(2);
+    expect(labels[1]).toBe("");
+    expect(labels[3]).toBe(axisDate(at(9, 1), "months"));
   });
 });
 
@@ -111,13 +119,15 @@ describe("the equivalent table of a chart", () => {
     const host = mount(() => (
       <ChartTable headers={["Núcleo", "Cubo"]} rows={rows} caption="Evolución" />
     ));
-    const card = host.querySelector("ul.datalist li");
-    const lines = [...(card?.querySelectorAll(".sub") ?? [])].map((node) => node.textContent ?? "");
+    const card = host.querySelector("ul.rows li");
+    const lines = [...(card?.querySelectorAll(".sub > span") ?? [])].map(
+      (node) => node.textContent ?? "",
+    );
 
-    // With its currency: on a card there is no header to say EUR either.
-    expect(lines).toEqual(["Núcleo 1.234,56\u00a0EUR", "Cubo sin dato"]);
+    // With its currency: on a card there is no header to say € either.
+    expect(lines).toEqual(["Núcleo 1.234,56\u00a0€", "Cubo sin dato"]);
     // And nothing numeric is left loose on the card's first line.
-    expect(card?.querySelector(".head")?.textContent).toBe("30/06/2027");
+    expect(card?.querySelector(".title")?.textContent).toBe("30/06/2027");
   });
 
   it("says once, above the table, what is missing and why", () => {
@@ -126,11 +136,21 @@ describe("the equivalent table of a chart", () => {
         headers={["Núcleo"]}
         rows={rows}
         caption="Evolución"
-        missing="Faltan 3 puntos: no hay precio de Global Bond Index Fund."
+        missing={{
+          line: "En 3 de 24 fechas falta algún precio.",
+          from: ["Global Bond Index Fund", "USD"],
+        }}
       />
     ));
 
-    expect(host.textContent).toContain("Faltan 3 puntos");
+    expect(host.querySelector(".gap-note")?.textContent).toBe(
+      "En 3 de 24 fechas falta algún precio.",
+    );
+    // The list goes folded under the line, not in it.
+    const folded = host.querySelector(".gap-note + details");
+    expect(folded?.textContent).toContain("Global Bond Index Fund, USD");
+    // No band drawn, no swatch of one.
+    expect(host.querySelector(".swatch-gap")).toBeNull();
   });
 });
 
@@ -149,7 +169,7 @@ describe("the legend of a chart", () => {
     expect(host.textContent).toContain("Cubo");
     expect(host.querySelectorAll(".entry.is-dashed")).toHaveLength(1);
     expect(host.querySelectorAll(".entry.is-solid")).toHaveLength(1);
-    expect(host.querySelector(".swatch.is-core")).not.toBeNull();
+    expect(host.querySelector(".key.is-core")).not.toBeNull();
   });
 
   it("is a list, so a screen reader announces how many series there are", () => {

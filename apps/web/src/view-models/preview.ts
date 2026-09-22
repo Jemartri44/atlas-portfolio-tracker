@@ -7,9 +7,9 @@
 // Here the rows that do not move are counted instead of listed, and what is
 // new comes first, because it is what the user came to check.
 
-import type { EventPreview, FiscalLot, PhysicalPosition, Quantity } from "@atlas/domain";
+import type { EventPreview, FiscalLot, Money, PhysicalPosition, Quantity } from "@atlas/domain";
 import { formatDate } from "../format/date.js";
-import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
+import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../format/names.js";
 
 export interface ChangeRow {
   key: string;
@@ -21,10 +21,24 @@ export interface ChangeRow {
   isNew: boolean;
   /** A lot the event closes. */
   closed: boolean;
+  /** What the quantities count: "part.", "acc.", "uds.", kept beside the mask. */
+  units: string;
+}
+
+/** The cash of one account in one currency, before and after: amounts, so the mask covers them. */
+export interface CashRow {
+  key: string;
+  label: string;
+  before: Money;
+  after: Money;
+  /** The balance ends below zero: said with a word, not only a sign. */
+  short: boolean;
 }
 
 export interface PreviewChanges {
   positions: ChangeRow[];
+  /** Only the accounts and currencies whose balance moves (`previewEvent`). */
+  cash: CashRow[];
   unchangedPositions: number;
   lots: ChangeRow[];
   unchangedLots: number;
@@ -42,7 +56,7 @@ const newFirst = (rows: ChangeRow[]): ChangeRow[] => [
 const positionKey = (row: PhysicalPosition): string => `${row.account_id}|${row.asset_id}`;
 
 export const previewChanges = (
-  preview: Pick<EventPreview, "before" | "after">,
+  preview: Pick<EventPreview, "before" | "after"> & Partial<Pick<EventPreview, "cash">>,
   names: NameIndex = NO_NAMES,
 ): PreviewChanges => {
   const positions = new Map<string, ChangeRow>();
@@ -57,6 +71,7 @@ export const previewChanges = (
       after: after?.quantity,
       isNew: before === undefined,
       closed: false,
+      units: unitsOf(names, row.asset_id),
     });
   }
 
@@ -72,6 +87,7 @@ export const previewChanges = (
       after: after?.quantity,
       isNew: before === undefined,
       closed: after?.closed === true && before?.closed !== true,
+      units: unitsOf(names, lot.asset_id),
     });
   }
 
@@ -80,6 +96,13 @@ export const previewChanges = (
   const lotRows = [...lots.values()];
   return {
     positions: newFirst(positionRows.filter(moved)),
+    cash: (preview.cash ?? []).map((row) => ({
+      key: `${row.account_id}|${row.currency}`,
+      label: `${displayName(names, row.account_id)} · ${row.currency}`,
+      before: row.before,
+      after: row.after,
+      short: row.after.isNegative(),
+    })),
     unchangedPositions: positionRows.filter((row) => !moved(row)).length,
     lots: newFirst(lotRows.filter(moved)),
     unchangedLots: lotRows.filter((row) => !moved(row)).length,

@@ -45,7 +45,9 @@ export interface AppError {
  * away in the technical detail.
  */
 export const messageWithLine = (error: AppError): string =>
-  error.line === undefined ? error.message : `Línea ${error.line} del fichero: ${error.message}`;
+  error.line === undefined || error.message.includes(`línea ${error.line}`)
+    ? error.message
+    : `Línea ${error.line} del archivo: ${error.message}`;
 
 export type LoadPhase =
   | { phase: "unconfigured" }
@@ -186,7 +188,7 @@ export const today = (): CivilDate => madridDateOf(new Date());
 export const requireDeps = (): UseCaseDeps => {
   const current = store.deps();
   if (current === undefined) {
-    throw new Error("no hay ningún libro abierto");
+    throw new Error("no hay datos abiertos");
   }
   return current;
 };

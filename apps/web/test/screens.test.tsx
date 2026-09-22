@@ -24,8 +24,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { formatMoney, MASK } from "../src/format/money.js";
 import { loadInto } from "../src/ledger/actions.js";
 import { store } from "../src/ledger/state.js";
+import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
-import Nucleo from "../src/routes/nucleo/index.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
 
@@ -103,10 +103,10 @@ describe("Núcleo cuts the ledger by the date asked", () => {
    * place where that decision is made.
    */
   it("shows the figures of the date in the address, not of the last event", async () => {
-    const early = text(await show("/nucleo?fecha=2027-01-31", Nucleo));
+    const early = text(await show("/cartera?fecha=2027-01-31", Cartera));
     expect(early).toContain(coreTotalAt("2027-01-31"));
 
-    const late = text(await show("/nucleo?fecha=2027-12-31", Nucleo));
+    const late = text(await show("/cartera?fecha=2027-12-31", Cartera));
     expect(late).toContain(coreTotalAt("2027-12-31"));
 
     // And the two are genuinely different books, not the same one twice.
@@ -115,7 +115,7 @@ describe("Núcleo cuts the ledger by the date asked", () => {
   });
 
   it("says «sin dato» instead of a zero where a price is missing", async () => {
-    const host = await show("/nucleo?fecha=2027-06-30", Nucleo);
+    const host = await show("/cartera?fecha=2027-06-30", Cartera);
     const shown = text(host);
 
     expect(shown).toContain("sin dato");
@@ -146,7 +146,9 @@ describe("Cubo cuts the ledger by the date asked", () => {
     expect(shown).not.toContain("Renta variable");
     expect(shown).not.toContain("Money Market Fund");
     // The one bounded exception is the net worth, and it travels labelled.
-    expect(shown).toContain("Excepción acotada");
+    expect(shown).toContain("Es la única cifra que suma el cubo y la cartera principal");
+    // Said in plain words, never by the number of a rule of a private plan.
+    expect(shown).not.toMatch(/regla \d|\(1[5-9]\)|compartimentación/i);
   });
 });
 
@@ -179,7 +181,7 @@ describe("the privacy mode covers the two screens", () => {
    */
   it("leaves no amount, price or quantity visible on Núcleo", async () => {
     store.setPrivacy(true);
-    const shown = text(await show("/nucleo?fecha=2027-01-31", Nucleo));
+    const shown = text(await show("/cartera?fecha=2027-01-31", Cartera));
 
     expect(shown).toContain(MASK);
     expect(DECIMAL.test(withoutPercentages(shown))).toBe(false);
@@ -194,13 +196,16 @@ describe("the privacy mode covers the two screens", () => {
     // Including the ones a warning **says**. This is the sentence the review of
     // feature 007 found (N11), and the bucket screen has its own call to the
     // catalogue: masking it in the summary would not have masked it here.
-    expect(shown).toContain(`El aporte bruto al cubo (${MASK}) pasa del 80 % del tope de ${MASK}`);
+    // The mask keeps its unit, and nothing else of the figure (D2).
+    expect(shown).toContain(
+      `El aporte bruto al cubo (${MASK} €) pasa del 80 % del tope de ${MASK} €`,
+    );
   });
 
   /** And with the mask off they are all there: the test is not passing on an empty page. */
   it("shows them all again when privacy is off", async () => {
     store.setPrivacy(false);
-    const shown = text(await show("/nucleo?fecha=2027-01-31", Nucleo));
+    const shown = text(await show("/cartera?fecha=2027-01-31", Cartera));
 
     expect(shown).not.toContain(MASK);
     expect(shown).toContain(coreTotalAt("2027-01-31"));
@@ -214,13 +219,13 @@ describe("the privacy mode covers the two screens", () => {
     const shown = text(await show("/cubo?fecha=2027-12-31", Cubo));
 
     expect(shown).toContain(
-      "El aporte bruto al cubo (5.000,00 EUR) pasa del 80 % del tope de 6.000,00 EUR",
+      "El aporte bruto al cubo (5.000,00 €) pasa del 80 % del tope de 6.000,00 €",
     );
   });
 
   it("still shows the percentages, which are the useful thing in public", async () => {
     store.setPrivacy(true);
-    const shown = text(await show("/nucleo?fecha=2027-01-31", Nucleo));
+    const shown = text(await show("/cartera?fecha=2027-01-31", Cartera));
 
     expect(shown).toMatch(/\d+,\d+ %/);
     expect(shown).toMatch(/[+−]\d+,\d+ pp/);
@@ -442,7 +447,7 @@ describe("the privacy mode covers the prose of the warnings", () => {
     const shown = attention(await show("/", Resumen));
 
     expect(shown).not.toContain(MASK);
-    expect(shown).toContain("500,00 EUR");
+    expect(shown).toContain("500,00 €");
     expect(shown).toContain("0,5 títulos");
   });
 });

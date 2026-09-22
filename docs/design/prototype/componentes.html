@@ -1,0 +1,129 @@
+<!-- biome-ignore-all lint/a11y: frozen visual reference; its links are placeholders -->
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Componentes · Atlas</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+<svg width="0" height="0" class="sr-only" aria-hidden="true"><defs><symbol id="i-summary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5a7.5 7.5 0 1 1 15 0"/><path d="M12 16.5 15.5 11"/><path d="M3.5 20h17"/></symbol><symbol id="i-movements" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" stroke-width="2.6"/></symbol><symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-portfolio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z"/><path d="M15 3.9a8.5 8.5 0 0 1 5.1 5.1H15z"/></symbol><symbol id="i-bucket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5h6"/><path d="M10 3.5v6L5 18.2a1.8 1.8 0 0 0 1.6 2.8h10.8a1.8 1.8 0 0 0 1.6-2.8L14 9.5v-6"/><path d="M7.3 14.5h9.4"/></symbol><symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-eyeoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5l17 17"/><path d="M10.6 5.6c.5-.1.9-.1 1.4-.1 6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-2.9 3.7M6.6 6.6A16.5 16.5 0 0 0 2.5 12S6 18.5 12 18.5c1.8 0 3.4-.6 4.8-1.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol><symbol id="i-browser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9h18"/><path d="M6.2 6.8h.01M8.7 6.8h.01" stroke-width="2.2"/></symbol><symbol id="i-laptop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="5" width="15" height="10.5" rx="1.5"/><path d="M2.5 19h19"/></symbol><symbol id="i-caution" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.3 2.9 17.6A2 2 0 0 0 4.6 20.5h14.8a2 2 0 0 0 1.7-2.9L13.7 4.3a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 16.8h.01" stroke-width="2.2"/></symbol><symbol id="i-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8.3 3.5h7.4l4.8 4.8v7.4l-4.8 4.8H8.3l-4.8-4.8V8.3z"/><path d="M12 8v5M12 16.2h.01" stroke-width="2.2"/></symbol><symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 7.8h.01" stroke-width="2.2"/></symbol><symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol><symbol id="i-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></symbol><symbol id="i-chevdown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol><symbol id="i-buy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M5 20h14"/></symbol><symbol id="i-sell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M5 20h14"/></symbol><symbol id="i-dividend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7" rx="7" ry="2.8"/><path d="M5 7v5c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V7"/><path d="M5 12v5c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-5"/></symbol><symbol id="i-valuation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z"/><circle cx="8.2" cy="8.2" r="1.4"/></symbol><symbol id="i-cashin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M15 14.5h2.5"/></symbol><symbol id="i-transfer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M13.5 4.5 17 8l-3.5 3.5"/><path d="M20 16H7M10.5 12.5 7 16l3.5 3.5"/></symbol><symbol id="i-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14.5V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4.5 14v4.5a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V14"/></symbol><symbol id="i-import" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10.5M7.5 10 12 14.5 16.5 10"/><path d="M4.5 14v4.5a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V14"/></symbol><symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.4 3.5 5.2 3.5 8.5s-1.2 6.1-3.5 8.5c-2.3-2.4-3.5-5.2-3.5-8.5s1.2-6.1 3.5-8.5z"/></symbol><symbol id="i-half" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor" stroke="none"/></symbol><symbol id="i-reversed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></symbol><symbol id="i-flask" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5h6"/><path d="M10 3.5v6L5 18.2a1.8 1.8 0 0 0 1.6 2.8h10.8a1.8 1.8 0 0 0 1.6-2.8L14 9.5v-6"/></symbol></defs></svg>
+<div class="app">
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#"><svg class="mark" aria-hidden="true"><use href="#i-globe"/></svg><span>Atlas</span></a>
+    <nav class="nav" aria-label="Secciones">
+      <ul class="nav-list">
+        <li><a class="nav-link" href="#"><span class="indicator"><svg class="icon" aria-hidden="true"><use href="#i-summary"/></svg></span><span class="nav-label">Resumen</span></a></li><li><a class="nav-link" href="#"><span class="indicator"><svg class="icon" aria-hidden="true"><use href="#i-movements"/></svg></span><span class="nav-label">Movimientos</span></a></li><li><a class="nav-link" href="#"><span class="indicator"><svg class="icon" aria-hidden="true"><use href="#i-portfolio"/></svg></span><span class="nav-label">Cartera</span></a></li><li><a class="nav-link" href="#"><span class="indicator"><svg class="icon" aria-hidden="true"><use href="#i-bucket"/></svg></span><span class="nav-label">Cubo</span></a></li>
+        <li class="nav-action-item"><a class="nav-action" href="#" aria-label="Registrar una operación"><span class="plate"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span><span class="nav-label">Registrar</span></a></li>
+      </ul>
+    </nav>
+    <div class="status">
+      <a class="source" href="#" title="Tus datos viven en este navegador. Última exportación: 09/09/2026."><svg class="icon-sm" aria-hidden="true"><use href="#i-browser"/></svg><span class="where">Navegador</span><span class="age is-overdue"><svg class="icon-sm" aria-hidden="true"><use href="#i-caution"/></svg><span>hace 9 días</span></span></a>
+      <button class="privacy" type="button" aria-pressed="true" aria-label="Ocultar importes y cantidades"><span class="pill"><svg class="icon-sm" aria-hidden="true"><use href="#i-eyeoff"/></svg><span class="short">Oculto</span><span class="long">Importes ocultos</span></span></button>
+      <a class="icon-button" href="#" aria-label="Ajustes"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg></a>
+    </div>
+  </div>
+</header>
+<main class="page" id="contenido">
+
+
+<div class="page-head">
+  <div class="titles"><h1>Componentes</h1><p class="sub">Hoja de referencia del sistema · privacidad activada</p></div>
+  
+</div>
+<div class="grid">
+  <section class="card span-6"><div class="card-head"><h2>Botones</h2></div>
+    <div class="btn-row">
+      <button class="btn primary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Registrar</button>
+      <button class="btn" type="button">Exportar</button>
+      <button class="btn quiet" type="button">Ver todos</button>
+    </div>
+    <div class="btn-row spaced">
+      <button class="btn danger" type="button">Anular movimiento</button>
+      <button class="btn danger solid" type="button">Sí, anularlo</button>
+      <button class="btn" type="button" disabled>Guardar</button>
+    </div>
+    <h3 class="block-title">Etiquetas de estado</h3>
+    <div class="btn-row">
+      <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-half"/></svg>parcial</span>
+      <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-reversed"/></svg>anulado</span>
+      <span class="tag">corrige a otro</span>
+      <span class="tag is-accent">Propuesta</span>
+      <span class="tag is-caution"><svg class="icon" aria-hidden="true"><use href="#i-caution"/></svg>fuera de umbral</span>
+      <span class="tag is-danger"><svg class="icon" aria-hidden="true"><use href="#i-danger"/></svg>inválido</span>
+      <span class="tag is-done"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>hecho</span>
+    </div>
+    <h3 class="block-title">Máscara y figuras</h3>
+    <p>Aporte al cubo <span class="mask" title="Importe oculto"><span class="dots" aria-hidden="true">••••</span><span class="unit" aria-hidden="true">€</span><span class="sr-only">importe oculto</span></span> de un tope de <span class="mask" title="Importe oculto"><span class="dots" aria-hidden="true">••••</span><span class="unit" aria-hidden="true">€</span><span class="sr-only">importe oculto</span></span> · 40 % usado · <span class="nodata">sin dato</span> · <span class="num pos">+12,4 %</span> · <span class="num neg">−8,1 %</span></p>
+  </section>
+
+  <section class="card span-6"><div class="card-head"><h2>Avisos</h2><span class="aside">un solo componente</span></div>
+    <ul class="notices">
+      
+<li><a class="notice is-danger" href="#">
+  <svg class="notice-icon" aria-hidden="true"><use href="#i-danger"/></svg>
+  <span class="notice-body"><span class="notice-text">2 movimientos inválidos en el fichero: se puede consultar, no registrar.</span><span class="notice-action">Ver la verificación<svg class="icon-sm" aria-hidden="true"><use href="#i-arrow"/></svg></span></span>
+</a></li>
+      
+<li><a class="notice is-caution" href="#">
+  <svg class="notice-icon" aria-hidden="true"><use href="#i-caution"/></svg>
+  <span class="notice-body"><span class="notice-text">Renta fija está 2,4 puntos por debajo de su objetivo (umbral: 2 puntos).</span><span class="notice-action">Ver cartera<svg class="icon-sm" aria-hidden="true"><use href="#i-arrow"/></svg></span></span>
+</a></li>
+      
+<li><a class="notice is-info" href="#">
+  <svg class="notice-icon" aria-hidden="true"><use href="#i-info"/></svg>
+  <span class="notice-body"><span class="notice-text">Una orden de compra de Small Cap Index Fund lleva 6 días sin ejecutarse.</span><span class="notice-action">Ver la orden<svg class="icon-sm" aria-hidden="true"><use href="#i-arrow"/></svg></span></span>
+</a></li>
+    </ul>
+  </section>
+
+  <section class="card span-6"><div class="card-head"><h2>No se puede calcular todavía</h2></div>
+    <div class="pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><div class="pending-body"><p class="pending-text">Faltan 4 precios a 18/09/2026 para calcular los pesos actuales.</p><a class="btn quiet" href="#">Registrar valoraciones<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></div></div>
+    <h3 class="block-title">Estado vacío</h3>
+    <div class="empty">
+      <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-flask"/></svg></span>
+      <p class="what">Todavía no hay ninguna tesis</p>
+      <p class="why">El cubo empieza cuando abres la primera: qué compras, por qué, y cuándo sabrás que te equivocaste.</p>
+      <a class="btn primary" href="#"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Abrir una tesis</a>
+    </div>
+  </section>
+
+  <section class="card span-6"><div class="card-head"><h2>Formulario</h2></div>
+    <div class="form-demo">
+      <div class="field"><label for="f-acc">Cuenta</label><div class="control is-select"><select class="input" id="f-acc"><option>Fondos indexados · MyInvestor</option></select><svg class="icon-sm chev" aria-hidden="true"><use href="#i-chevdown"/></svg></div></div>
+      <div class="field"><label for="f-amt">Importe</label><div class="control has-suffix"><input class="input" id="f-amt" inputmode="decimal" value="600.00" aria-invalid="true" aria-describedby="f-amt-e"><span class="suffix">€</span></div>
+        <p class="field-error" id="f-amt-e"><svg class="icon" aria-hidden="true"><use href="#i-danger"/></svg>Usa la coma para los decimales: 600,00</p></div>
+      <div class="field"><label for="f-q">Participaciones</label><div class="control"><input class="input num" id="f-q" inputmode="decimal" value="8,4521"></div><p class="hint">Las que dice el extracto, con todos sus decimales.</p></div>
+    </div>
+    <details class="disclosure"><summary><span>Más datos: referencia, notas, orden, tesis</span><svg class="icon-sm chev" aria-hidden="true"><use href="#i-chevdown"/></svg></summary></details>
+  </section>
+
+  <section class="card span-6"><div class="card-head"><h2>Controles</h2></div>
+    <div class="btn-row">
+      <div class="segmented" role="group" aria-label="Rango"><button type="button" aria-pressed="false" disabled><span>1M</span></button><button type="button" aria-pressed="true"><span>1A</span></button><button type="button" aria-pressed="false"><span>5A</span></button><button type="button" aria-pressed="false"><span>Todo</span></button></div>
+      <button class="asof" type="button"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span class="today">Hoy</span><span class="num">18/09/2026</span></button>
+    </div>
+    <div class="btn-row spaced">
+      <button class="privacy" type="button" aria-pressed="true"><span class="pill"><svg class="icon-sm" aria-hidden="true"><use href="#i-eyeoff"/></svg><span>Importes ocultos</span></span></button>
+      <button class="privacy" type="button" aria-pressed="false"><span class="pill"><svg class="icon-sm" aria-hidden="true"><use href="#i-eye"/></svg><span>Importes visibles</span></span></button>
+    </div>
+    <ul class="rows spaced">
+      <li><a class="row has-lead is-reversed" href="#"><span class="lead"><svg class="icon" aria-hidden="true"><use href="#i-buy"/></svg></span><span class="main"><span class="title truncate">Money Market Fund</span><span class="sub truncate">Compra · Fondos indexados · <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-reversed"/></svg>anulado</span></span></span><span class="figs"><span class="fig"><span class="mask" title="Importe oculto"><span class="dots" aria-hidden="true">••••</span><span class="unit" aria-hidden="true">€</span><span class="sr-only">importe oculto</span></span></span><span class="fig-sub num">03/09/2026</span></span></a></li>
+    </ul>
+  </section>
+
+  <section class="card span-6" aria-busy="true"><div class="card-head"><h2>Cargando</h2></div>
+    <div class="skel-lines"><span class="skel is-figure"></span><span class="skel w-90"></span><span class="skel w-70"></span><span class="skel w-90"></span><span class="skel w-50"></span></div>
+  </section>
+</div>
+</main>
+</div>
+</body>
+</html>

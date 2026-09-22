@@ -9,8 +9,10 @@ export default function NoExisteRoute(): JSX.Element {
   return (
     <>
       <PageHeader title="Aquí no hay nada" />
-      <EmptyState what="Esa dirección no corresponde a ninguna pantalla.">
-        <A href="/">Volver al resumen</A>
+      <EmptyState glyph="summary" what="Esa dirección no corresponde a ninguna pantalla.">
+        <A href="/" role="button" class="secondary">
+          Volver al resumen
+        </A>
       </EmptyState>
     </>
   );

@@ -1,5 +1,6 @@
 // The three field lists of an event: what it says, where it points and the line
-// of the file it came from.
+// of the file it came from (docs/design/system.md §7.3: the data in two
+// columns, the linked movements as rows, the technical record folded).
 //
 // The detail is where the ledger gets **checked**, so nothing is hidden: every
 // field the line carries is printed, amounts and quantities through `Amount` so
@@ -10,28 +11,20 @@
 
 import { A } from "@solidjs/router";
 import { For, type JSX, Match, Show, Switch } from "solid-js";
-import { Amount, Figure } from "../../components/index.js";
+import {
+  Amount,
+  Disclosure,
+  Figure,
+  Icon,
+  Parts,
+  Section,
+  StatLine,
+  TotalLine,
+} from "../../components/index.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { eventLabel } from "../../format/labels.js";
 import type { DetailField, DetailView } from "../../view-models/index.js";
-import type { Part } from "../../view-models/structured.js";
-
-/** A sentence made of text and figures; each figure goes through the gate. */
-export const Parts = (props: { parts: readonly Part[] }): JSX.Element => (
-  <For each={props.parts}>
-    {(part) => (
-      <Switch>
-        <Match when={"amount" in part && part}>
-          {(figure) => <Amount value={figure().amount} decimals={figure().decimals} />}
-        </Match>
-        <Match when={"quantity" in part && part}>
-          {(figure) => <Amount quantity={figure().quantity} />}
-        </Match>
-        <Match when={"text" in part && part}>{(words) => words().text}</Match>
-      </Switch>
-    )}
-  </For>
-);
+import { resultWord, type SaleResultView } from "../../view-models/sale.js";
 
 const Value = (props: { field: DetailField }): JSX.Element => (
   <Switch>
@@ -39,14 +32,14 @@ const Value = (props: { field: DetailField }): JSX.Element => (
       <Amount value={props.field.amount} decimals={props.field.decimals} />
     </Match>
     <Match when={props.field.kind === "quantity"}>
-      <Amount quantity={props.field.quantity} />
+      <Amount quantity={props.field.quantity} of={props.field.of} />
     </Match>
     <Match when={props.field.kind === "date"}>{formatDate(props.field.text as string)}</Match>
     <Match when={props.field.kind === "percent"}>
       <Figure value={props.field.text} unit="percent" />
     </Match>
     <Match when={props.field.kind === "effects"}>
-      <ul class="flush">
+      <ul class="sentences">
         <For each={props.field.sentences ?? []}>
           {(sentence) => (
             <li>
@@ -57,91 +50,174 @@ const Value = (props: { field: DetailField }): JSX.Element => (
       </ul>
     </Match>
     <Match when={props.field.kind === "settings"}>
-      <dl class="fields">
+      <dl class="facts is-nested">
         <For each={props.field.rows ?? []}>
           {(row) => (
-            <>
+            <div class="fact">
               <dt>{row.label}</dt>
               <dd>
                 <Parts parts={row.parts} />
               </dd>
-            </>
+            </div>
           )}
         </For>
       </dl>
     </Match>
-    <Match when={true}>
-      {props.field.text}
-      {/* The identifier stays where the ledger is checked, next to the name. */}
-      <Show when={props.field.hint !== undefined}>
-        {" "}
-        <code class="tiny">{props.field.hint}</code>
-      </Show>
-    </Match>
+    <Match when={true}>{props.field.text}</Match>
   </Switch>
 );
 
+/** Label and value, in two columns: the data of the event as it was written. */
+export const Facts = (props: { fields: readonly DetailField[] }): JSX.Element => (
+  <dl class="facts">
+    <For each={props.fields}>
+      {(field) => (
+        <div class="fact">
+          <dt>{field.label}</dt>
+          <dd>
+            <Value field={field} />
+          </dd>
+        </div>
+      )}
+    </For>
+  </dl>
+);
+
+/** The fields as a card of their own: what the correction form starts from. */
 export const EventFields = (props: {
   fields: readonly DetailField[];
   title?: string;
 }): JSX.Element => (
-  <section class="card">
-    <header>
-      <h2>{props.title ?? "Datos del evento"}</h2>
-    </header>
-    <dl class="fields">
-      <For each={props.fields}>
-        {(field) => (
-          <>
-            <dt>{field.label}</dt>
-            <dd>
-              <Value field={field} />
-            </dd>
-          </>
-        )}
-      </For>
-    </dl>
-  </section>
+  <Section title={props.title ?? "Datos del movimiento"}>
+    <Facts fields={props.fields} />
+  </Section>
 );
 
 export const EventLinks = (props: { links: DetailView["links"] }): JSX.Element => (
   <Show when={props.links.length > 0}>
-    <section class="card">
-      <header>
-        <h2>Enlaces</h2>
-      </header>
-      <dl class="fields">
+    <Section title="Movimientos enlazados" class="span-4">
+      <ul class="rows">
         <For each={props.links}>
           {(link) => (
-            <>
-              <dt>{link.label}</dt>
-              <dd>
-                <A href={link.to}>{link.text}</A>
-              </dd>
-            </>
+            <li>
+              <A href={link.to} class="row">
+                <span class="main">
+                  <span class="title truncate">{link.text}</span>
+                  <span class="sub">{link.label}</span>
+                </span>
+                <Icon name="chevright" class="icon-sm chev" />
+              </A>
+            </li>
           )}
         </For>
-      </dl>
-    </section>
+      </ul>
+    </Section>
   </Show>
 );
 
 /**
- * The technical block: the one place an identifier is shown as such, because
- * it is what the CLI asks for and what a repaired file is checked against.
+ * What a movement sold, from every gain the ledger booked for it: a sale books
+ * one, a corporate action can book one per account (`view-models/sale.ts`).
+ * With several, a line per sale and the total; nothing is computed here.
+ */
+export const SaleResult = (props: { view: SaleResultView | undefined }): JSX.Element => (
+  <Show when={props.view}>
+    {(view) => (
+      <>
+        <h2 class="block-title">
+          {view().lines.length === 1 ? "Resultado de la venta" : "Resultado de las ventas"}
+        </h2>
+        <Show
+          when={view().total}
+          fallback={
+            <For each={view().lines}>
+              {(line) => (
+                <>
+                  <StatLine label="Importe obtenido en euros">
+                    <Amount value={line.proceeds} />
+                  </StatLine>
+                  <StatLine label="Coste de lo vendido">
+                    <Amount value={line.cost} />
+                  </StatLine>
+                  <TotalLine label={resultWord(line.result)}>
+                    <Amount value={line.result} signed coloured />
+                  </TotalLine>
+                </>
+              )}
+            </For>
+          }
+        >
+          {(total) => (
+            <>
+              <For each={view().lines}>
+                {(line) => (
+                  <StatLine label={line.where}>
+                    <Amount value={line.result} signed coloured />
+                  </StatLine>
+                )}
+              </For>
+              <TotalLine label={`${resultWord(total())} total`}>
+                <Amount value={total()} signed coloured />
+              </TotalLine>
+            </>
+          )}
+        </Show>
+        <p class="card-note">
+          Es el resultado fiscal registrado, calculado con FIFO: el coste es el de los lotes más
+          antiguos.
+          <Show when={view().rounded}>
+            {" "}
+            Se redondea al céntimo una vez por operación, como se declara
+            {view().total === undefined ? ": puede diferir en un céntimo de la resta." : "."}
+          </Show>
+        </p>
+      </>
+    )}
+  </Show>
+);
+
+/**
+ * The technical record, folded: the one place an identifier is shown as such,
+ * because it is what the CLI asks for and what a repaired file is checked
+ * against.
  */
 export const EventEnvelope = (props: {
   envelope: readonly DetailField[];
   position: number;
+  /**
+   * The identifiers behind the names of the data (`acc_mi`, `ast_world`, the
+   * ULID of an order): here and nowhere else, folded, where the ledger is
+   * checked and a repair is written (review of 2026-09-19).
+   */
+  identifiers?: readonly DetailField[];
+  /** Bookkeeping of the line: its origin, and the rate of 1 of an operation in euros. */
+  technical?: readonly DetailField[];
 }): JSX.Element => (
-  <section class="card">
-    <header>
-      <h2>La línea del libro</h2>
-    </header>
-    <dl class="fields">
+  <Disclosure label="Registro técnico">
+    <dl class="facts">
+      <For each={props.technical ?? []}>
+        {(field) => (
+          <div class="fact">
+            <dt>{field.label}</dt>
+            <dd>
+              <Value field={field} />
+            </dd>
+          </div>
+        )}
+      </For>
+      <For each={props.identifiers ?? []}>
+        {(field) => (
+          <div class="fact">
+            <dt>{field.label}</dt>
+            <dd>
+              <code>{field.hint}</code>
+            </dd>
+          </div>
+        )}
+      </For>
       <For each={props.envelope}>
         {(field) => (
-          <>
+          <div class="fact">
             <dt>{field.label}</dt>
             <dd>
               <Switch fallback={<code>{field.text}</code>}>
@@ -151,13 +227,13 @@ export const EventEnvelope = (props: {
                 <Match when={field.name === "type"}>{eventLabel(field.text as string)}</Match>
               </Switch>
             </dd>
-          </>
+          </div>
         )}
       </For>
     </dl>
-    <p class="note">
-      Línea {props.position + 1} del fichero. Con este identificador puedes rectificar también desde
-      la CLI.
+    <p class="card-note">
+      Línea {props.position + 1} del archivo de datos. Con este identificador puedes rectificar
+      también desde la CLI.
     </p>
-  </section>
+  </Disclosure>
 );

@@ -1,14 +1,17 @@
-// "¿Qué dice exactamente este evento y sigue vigente?"
+// "¿Qué dice exactamente este movimiento y sigue vigente?"
 //
-// Every field with a legible name, the state in words, the cross references as
-// links and the identifier ready to copy — which is what `atlas edit` or
-// `atlas delete` need from a terminal (FR-040). Rectifying lives here too,
-// because this is where the user realises something is wrong.
+// It opens with one sentence — what happened, for how much, when and where —
+// and then every field with a legible name, the state in words, the linked
+// movements as rows and the identifier ready to copy in the folded technical
+// record, which is what `atlas edit` or `atlas delete` need from a terminal
+// (FR-040, docs/design/system.md §7.3). Rectifying lives here too, because this
+// is where the user realises something is wrong: «Corregir» is secondary and
+// «Anular» destructive, never the look of a main action.
 
 import { ledgerEntries } from "@atlas/domain";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Badge, Callout, Dialog, EmptyState, Field } from "../../components/index.js";
+import { Dialog, EmptyState, Field, Notice, Parts, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -16,8 +19,11 @@ import { store } from "../../ledger/state.js";
 import { reverse } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { detailView } from "../../view-models/index.js";
+import { saleResult } from "../../view-models/sale.js";
+import { movementSentence } from "../../view-models/sentence.js";
 import { RequireLedger } from "../guard.jsx";
-import { EventEnvelope, EventFields, EventLinks } from "./DetailFields.jsx";
+import { EventEnvelope, EventLinks, Facts, SaleResult } from "./DetailFields.jsx";
+import { doneUrl, Rectified } from "./Rectified.jsx";
 
 export default function MovimientoDetalleRoute(): JSX.Element {
   const params = useParams<{ id: string }>();
@@ -28,17 +34,14 @@ export default function MovimientoDetalleRoute(): JSX.Element {
   const [dependents, setDependents] = createSignal<
     readonly { id: string; type: string; error: string }[]
   >([]);
-  const [priorYear, setPriorYear] = createSignal(false);
 
   const onReverse = async (): Promise<void> => {
     setError(undefined);
     const result = await reverse(params.id, reason().trim());
     if (result.ok) {
       setAsking(false);
-      setPriorYear(result.value.priorYear);
-      if (!result.value.priorYear) {
-        navigate("/movimientos");
-      }
+      // To the reversal it wrote, with the confirmation in the address.
+      navigate(doneUrl(result.value.reversal.id, "anulado", result.value.priorYear));
       return;
     }
     if (result.failure.kind === "dependents") {
@@ -48,7 +51,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
     }
     setError(
       result.failure.kind === "conflict"
-        ? "El libro ha cambiado desde que se cargó: se ha recargado, vuelve a intentarlo."
+        ? "Tus datos han cambiado desde que se cargaron: se han recargado, vuelve a intentarlo."
         : result.failure.kind === "error"
           ? result.failure.error.message
           : "No se ha podido anular.",
@@ -58,17 +61,16 @@ export default function MovimientoDetalleRoute(): JSX.Element {
   return (
     <RequireLedger skeleton={6}>
       {(snapshot) => {
-        // A memo, not an arrow: this is read four times per render and
-        // `ledgerEntries` projects and sorts the **whole** ledger. Measured:
-        // 0,60 ms with the 200 events of the golden file and 10,66 ms with
-        // 5.000, which at twenty years is a tenth of a second on a phone every
-        // time any signal changes (turning privacy on, opening a dialog). The
-        // sibling route already does it this way.
+        // A memo, not an arrow: `ledgerEntries` projects and sorts the whole
+        // ledger (10,66 ms with 5.000 events), and this is read four times per
+        // render — a tenth of a second on a phone each time a signal changes.
         const entry = createMemo(() =>
           ledgerEntries(snapshot.state, snapshot.events).find(
             (candidate) => candidate.event.id === params.id,
           ),
         );
+        const names = nameIndex(snapshot.state);
+        const refs = eventReferences(snapshot.events, names);
 
         return (
           <Show
@@ -76,16 +78,16 @@ export default function MovimientoDetalleRoute(): JSX.Element {
             fallback={
               <>
                 <PageHeader title="Movimiento" />
-                <EmptyState what="Ese movimiento no está en el libro.">
-                  <A href="/movimientos">Volver al libro</A>
+                <EmptyState glyph="movements" what="Ese movimiento no está en tus datos.">
+                  <A href="/movimientos" role="button" class="secondary">
+                    Volver a los movimientos
+                  </A>
                 </EmptyState>
               </>
             }
           >
             {(found) => {
-              const view = createMemo(() =>
-                detailView(found(), nameIndex(snapshot.state), eventReferences(snapshot.events)),
-              );
+              const view = createMemo(() => detailView(found(), names, refs));
               return (
                 <>
                   <PageHeader
@@ -103,11 +105,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                           </A>
                         </Show>
                         <Show when={view().status !== "reversed" && view().status !== "reversal"}>
-                          <button
-                            type="button"
-                            class="secondary outline"
-                            onClick={() => setAsking(true)}
-                          >
+                          <button type="button" class="danger" onClick={() => setAsking(true)}>
                             Anular
                           </button>
                         </Show>
@@ -115,35 +113,30 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                     }
                   />
 
-                  <Show when={priorYear()}>
-                    <Callout tone="warning" title="Ejercicio anterior">
-                      El evento rectificado pertenece a un ejercicio anterior: puede afectar a una
-                      declaración ya presentada.
-                    </Callout>
-                  </Show>
+                  <Rectified />
 
                   <Show when={error() !== undefined}>
-                    <Callout tone="error" title="No se ha podido rectificar">
+                    <Notice severity="danger" title="No se ha podido rectificar">
                       {error()}
-                    </Callout>
+                    </Notice>
                   </Show>
 
                   <Show when={view().editHint}>
                     {(hint) => (
-                      <Callout tone="info" title="Este evento no se corrige">
+                      <Notice severity="info" title="Este evento no se corrige">
                         {hint()}
-                      </Callout>
+                      </Notice>
                     )}
                   </Show>
 
                   <Show when={view().invalidReason !== undefined}>
-                    <Callout tone="error" title="Este evento es inválido">
+                    <Notice severity="danger" title="Este evento es inválido">
                       {view().invalidReason}
-                    </Callout>
+                    </Notice>
                   </Show>
 
                   <Show when={dependents().length > 0}>
-                    <Callout tone="error" title="Hay movimientos que dependen de este">
+                    <Notice severity="danger" title="Hay movimientos que dependen de este">
                       <p>
                         Anúlalos o corrígelos antes: si este desapareciera, dejarían de cuadrar.
                       </p>
@@ -151,28 +144,37 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                         <For each={dependents()}>
                           {(item) => (
                             <li>
-                              <A href={`/movimientos/${item.id}`}>
-                                {eventReferences(snapshot.events)(item.id)}
-                              </A>
+                              <A href={`/movimientos/${item.id}`}>{refs(item.id)}</A>
                             </li>
                           )}
                         </For>
                       </ul>
-                    </Callout>
+                    </Notice>
                   </Show>
 
-                  <div class="stack">
-                    <Show when={view().status !== "current"}>
-                      <div class="row wrap">
-                        <Badge tone={view().status === "reversed" ? "negative" : "neutral"}>
-                          {view().statusLabel}
-                        </Badge>
-                      </div>
-                    </Show>
-
-                    <EventFields fields={view().fields} />
+                  <div class="grid">
+                    <section class="card span-8" aria-label="El movimiento">
+                      <p class="sentence">
+                        <Parts parts={movementSentence(found(), names, refs)} />
+                      </p>
+                      <Show when={view().status !== "current"}>
+                        <p>
+                          <Tag icon={view().status === "reversed" ? "reversed" : undefined}>
+                            {view().statusLabel}
+                          </Tag>
+                        </p>
+                      </Show>
+                      <h2 class="block-title">Datos</h2>
+                      <Facts fields={view().fields} />
+                      <SaleResult view={saleResult(snapshot.state.gains, view().id, names)} />
+                      <EventEnvelope
+                        envelope={view().envelope}
+                        technical={view().technical}
+                        position={found().position}
+                        identifiers={view().fields.filter((field) => field.hint !== undefined)}
+                      />
+                    </section>
                     <EventLinks links={view().links} />
-                    <EventEnvelope envelope={view().envelope} position={found().position} />
                   </div>
 
                   <Dialog
@@ -186,7 +188,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                         </button>
                         <button
                           type="button"
-                          class="destructive"
+                          class="danger solid"
                           disabled={reason().trim() === "" || store.writing()}
                           onClick={() => void onReverse()}
                         >
@@ -197,14 +199,14 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   >
                     <p>
                       No se borra nada: se registra una anulación que deja este movimiento sin
-                      efecto. El original sigue en el libro, marcado como anulado.
+                      efecto. El original sigue en tus datos, marcado como anulado.
                     </p>
                     <Field
                       id="reverse-reason"
                       kind="text"
                       label="Motivo"
                       required
-                      hint="Queda registrado en el libro."
+                      hint="Queda registrado junto a la anulación."
                       value={reason()}
                       onInput={setReason}
                     />

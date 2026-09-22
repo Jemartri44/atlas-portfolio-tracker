@@ -44,13 +44,11 @@ export const Dialog = (props: DialogProps): JSX.Element => {
       }}
     >
       <Show when={props.open}>
-        <article>
-          <header>
-            <h2>{props.title}</h2>
-          </header>
+        <div class="dialog-body">
+          <h2>{props.title}</h2>
           {props.children}
           <div class="dialog-actions">{props.actions}</div>
-        </article>
+        </div>
       </Show>
     </dialog>
   );
@@ -61,6 +59,8 @@ interface ConfirmDialogProps {
   title: string;
   /** What the confirming button says; the cancel one always says "Cancelar". */
   confirm: string;
+  /** The confirmation destroys something: it looks like it, never like the primary. */
+  destructive?: boolean | undefined;
   onConfirm: () => void;
   onClose: () => void;
   children: JSX.Element;
@@ -82,7 +82,11 @@ export const ConfirmDialog = (props: ConfirmDialogProps): JSX.Element => (
         <button type="button" class="secondary" onClick={() => props.onClose()}>
           Cancelar
         </button>
-        <button type="button" onClick={() => props.onConfirm()}>
+        <button
+          type="button"
+          class={props.destructive === true ? "danger solid" : undefined}
+          onClick={() => props.onConfirm()}
+        >
           {props.confirm}
         </button>
       </>

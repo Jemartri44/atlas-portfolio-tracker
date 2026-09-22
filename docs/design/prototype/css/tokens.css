@@ -1,0 +1,271 @@
+/*
+ * Atlas design tokens. Every value the interface uses lives here; nothing
+ * outside this file writes a colour, a size, a radius or a shadow by hand.
+ *
+ * Direction: "papel y tinta". A warm paper canvas, white sheets, ink text and
+ * ONE accent, a Prussian ink blue, reserved for what can be pressed. Data
+ * colours (asset classes, chart series) are a separate, validated set and never
+ * double as the accent. Status colours are reserved for status and always ship
+ * with an icon and a word.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ---- Type ---------------------------------------------------------- */
+
+  /* System fonts only (no remote fonts, CSP font-src 'self'). Explicit
+     families first so every platform gets its best UI face with tabular
+     figures: Segoe UI on Windows, Roboto on Android, SF on Apple. */
+  --font-sans:
+    "Segoe UI Variable Text", "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, "Ubuntu Sans",
+    "Noto Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-mono:
+    ui-monospace, "Cascadia Mono", "Roboto Mono", "Ubuntu Sans Mono", Menlo, Consolas, monospace;
+
+  /* Phone scale. Nothing that is read goes below --text-xs (13px). */
+  --text-xs: 0.8125rem; /* 13 · captions, tags, column heads, tab labels */
+  --text-sm: 0.875rem; /* 14 · second line of a row, hints, meta */
+  --text-md: 1rem; /* 16 · body, first line of a row, controls */
+  --text-lg: 1.125rem; /* 18 · card titles */
+  --text-xl: 1.375rem; /* 22 · page title */
+  --text-2xl: 1.625rem; /* 26 · a figure that is the answer of a card */
+  --text-display: 2.25rem; /* 36 · the one hero figure of a screen */
+
+  --lh-tight: 1.15;
+  --lh-snug: 1.3;
+  --lh-body: 1.5;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  --tracking-tight: -0.015em;
+  --tracking-display: -0.025em;
+
+  /* ---- Space (4px grid) ---------------------------------------------- */
+
+  --space-0: 0.125rem; /* 2 */
+  --space-1: 0.25rem; /* 4 */
+  --space-2: 0.5rem; /* 8 */
+  --space-3: 0.75rem; /* 12 */
+  --space-4: 1rem; /* 16 */
+  --space-5: 1.25rem; /* 20 */
+  --space-6: 1.5rem; /* 24 */
+  --space-7: 2rem; /* 32 */
+  --space-8: 2.5rem; /* 40 */
+  --space-9: 3rem; /* 48 */
+
+  /* ---- Shape ---------------------------------------------------------- */
+
+  --radius-sm: 0.375rem; /* 6 · tags inside rows, skeleton lines */
+  --radius-md: 0.5rem; /* 8 · buttons, fields, segmented items */
+  --radius-lg: 0.75rem; /* 12 · cards, notices, panels */
+  --radius-xl: 1rem; /* 16 · dialogs, the tab-bar action */
+  --radius-pill: 999px;
+
+  --border: 1px;
+  --border-strong: 2px; /* focus ring, current-step ring */
+
+  /* ---- Sizes ---------------------------------------------------------- */
+
+  --tap: 2.75rem; /* 44 · minimum touch target */
+  --control-h: 2.75rem; /* 44 · field and button height */
+  --icon-sm: 1rem;
+  --icon-md: 1.25rem;
+  --icon-lg: 1.5rem;
+  --dot: 0.5rem;
+  --swatch-w: 0.75rem;
+  --swatch-h: 0.25rem;
+  --bar-h: 0.75rem; /* allocation bars */
+  --gauge-w: 4.5rem; /* deviation gauge */
+  --chart-h: 11.5rem;
+  --chart-h-wide: 15rem;
+
+  /* ---- Layout --------------------------------------------------------- */
+
+  --gutter: var(--space-4);
+  --grid-gap: var(--space-3);
+  --content-max: 105rem; /* 1680 */
+  --reading-max: 40rem; /* forms and prose */
+  --statusbar-h: 3.25rem; /* 52 */
+  --tabbar-h: 4rem; /* 64 */
+  --topbar-h: 4rem; /* 64 */
+  --label-col: 4.5rem; /* the label column of the allocation bars */
+
+  /* ---- Motion --------------------------------------------------------- */
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+
+  /* ---- Colour: light -------------------------------------------------- */
+
+  --c-canvas: #f3f2ee; /* the page: warm paper */
+  --c-surface: #ffffff; /* cards, bars, dialogs */
+  --c-raised: #ffffff; /* the current tab on its track */
+  --c-fill: #f0efea; /* wells: segmented track, pending block, skeleton */
+  --c-fill-hover: #e9e7e1;
+  --c-border: #e3e1db; /* hairlines */
+  --c-border-control: #8f8c84; /* field and secondary-button outline, 3:1 */
+
+  --c-text: #1c1b18; /* ink */
+  --c-text-2: #54524c; /* second line, labels */
+  --c-text-3: #66645d; /* meta, captions, the mask */
+
+  --c-accent: #1f4f7c; /* Prussian ink: links, primary, current tab, focus */
+  --c-accent-hover: #183f63;
+  --c-accent-soft: #e4ecf5; /* current tab pill, privacy-on pill */
+  --c-accent-soft-text: #1f4f7c;
+  --c-on-accent: #ffffff;
+
+  --c-positive: #1b6a44; /* gains: always with a sign */
+  --c-negative: #a2392b; /* losses: always with a sign */
+
+  --c-caution: #80530a; /* needs a look */
+  --c-caution-icon: #a8700f;
+  --c-caution-soft: #faf0dc;
+  --c-danger: #9e2f27; /* a real problem; destructive actions */
+  --c-danger-soft: #fbe9e5;
+  --c-danger-border: #e3aca3;
+  --c-on-danger: #ffffff;
+  --c-done: #1b6a44; /* a completed step */
+
+  /* Data colours: validated as a set (lightness band, chroma, CVD ΔE ≥ 8,
+     normal-vision ΔE ≥ 15, ≥ 3:1 on the surface). Order is the domain order. */
+  --c-class-equity: #4166b4;
+  --c-class-fixed-income: #178a70;
+  --c-class-gold: #b07f1f;
+  --c-class-crypto: #8a58a8;
+
+  --c-series-core: #4166b4;
+  --c-series-bucket: #b07f1f;
+  --c-series-cash: #178a70;
+  --c-series-index: #8a8880;
+
+  --c-chart-grid: #ebe9e3;
+  --c-chart-axis: #c9c6be;
+  --c-chart-gap: #f3f1ec;
+  --c-chart-gap-edge: #d6d3cb;
+
+  /* ---- Elevation ------------------------------------------------------ */
+
+  --shadow-1: 0 1px 2px rgb(28 27 24 / 0.05);
+  --shadow-2: 0 1px 2px rgb(28 27 24 / 0.05), 0 4px 12px rgb(28 27 24 / 0.06);
+  --shadow-3: 0 16px 40px rgb(28 27 24 / 0.18);
+  --shadow-bar: 0 -1px 0 var(--c-border), 0 -6px 16px rgb(28 27 24 / 0.04);
+}
+
+/* Desktop steps: a little more type where there is distance to the eye. */
+@media (min-width: 64rem) {
+  :root {
+    --text-md: 0.9375rem; /* 15 */
+    --text-lg: 1.0625rem; /* 17 */
+    --text-xl: 1.625rem; /* 26 */
+    --text-2xl: 1.75rem; /* 28 */
+    --text-display: 2.75rem; /* 44 */
+    --gutter: var(--space-7);
+    --grid-gap: var(--space-5);
+    --chart-h: var(--chart-h-wide);
+  }
+}
+
+@media (min-width: 40rem) and (max-width: 63.99rem) {
+  :root {
+    --gutter: var(--space-6);
+    --grid-gap: var(--space-4);
+  }
+}
+
+/* ---- Colour: dark ---------------------------------------------------- */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c-canvas: #161615;
+    --c-surface: #1f1f1d;
+    --c-raised: #3a3a36;
+    --c-fill: #2a2a27;
+    --c-fill-hover: #33332f;
+    --c-border: #30302d;
+    --c-border-control: #76746d;
+    --c-text: #edece8;
+    --c-text-2: #bdbbb4;
+    --c-text-3: #9e9c95;
+    --c-accent: #8fb6e3;
+    --c-accent-hover: #a9c8ec;
+    --c-accent-soft: #223246;
+    --c-accent-soft-text: #a9c8ec;
+    --c-on-accent: #0f1c2c;
+    --c-positive: #6fc79a;
+    --c-negative: #f0917e;
+    --c-caution: #e8b659;
+    --c-caution-icon: #d9a441;
+    --c-caution-soft: #352a14;
+    --c-danger: #f29a8a;
+    --c-danger-soft: #3b1f1b;
+    --c-danger-border: #7a3a30;
+    --c-on-danger: #2a0f0b;
+    --c-done: #6fc79a;
+    --c-class-equity: #5b8fd6;
+    --c-class-fixed-income: #2a9f80;
+    --c-class-gold: #b98521;
+    --c-class-crypto: #a476c8;
+    --c-series-core: #5b8fd6;
+    --c-series-bucket: #b98521;
+    --c-series-cash: #2a9f80;
+    --c-series-index: #8f8d86;
+    --c-chart-grid: #2a2a27;
+    --c-chart-axis: #45443f;
+    --c-chart-gap: #242422;
+    --c-chart-gap-edge: #3a3a36;
+    --shadow-1: 0 0 0 transparent;
+    --shadow-2: 0 4px 16px rgb(0 0 0 / 0.3);
+    --shadow-3: 0 16px 48px rgb(0 0 0 / 0.5);
+    --shadow-bar: 0 -1px 0 var(--c-border);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-canvas: #161615;
+  --c-surface: #1f1f1d;
+  --c-raised: #3a3a36;
+  --c-fill: #2a2a27;
+  --c-fill-hover: #33332f;
+  --c-border: #30302d;
+  --c-border-control: #76746d;
+  --c-text: #edece8;
+  --c-text-2: #bdbbb4;
+  --c-text-3: #9e9c95;
+  --c-accent: #8fb6e3;
+  --c-accent-hover: #a9c8ec;
+  --c-accent-soft: #223246;
+  --c-accent-soft-text: #a9c8ec;
+  --c-on-accent: #0f1c2c;
+  --c-positive: #6fc79a;
+  --c-negative: #f0917e;
+  --c-caution: #e8b659;
+  --c-caution-icon: #d9a441;
+  --c-caution-soft: #352a14;
+  --c-danger: #f29a8a;
+  --c-danger-soft: #3b1f1b;
+  --c-danger-border: #7a3a30;
+  --c-on-danger: #2a0f0b;
+  --c-done: #6fc79a;
+  --c-class-equity: #5b8fd6;
+  --c-class-fixed-income: #2a9f80;
+  --c-class-gold: #b98521;
+  --c-class-crypto: #a476c8;
+  --c-series-core: #5b8fd6;
+  --c-series-bucket: #b98521;
+  --c-series-cash: #2a9f80;
+  --c-series-index: #8f8d86;
+  --c-chart-grid: #2a2a27;
+  --c-chart-axis: #45443f;
+  --c-chart-gap: #242422;
+  --c-chart-gap-edge: #3a3a36;
+  --shadow-1: 0 0 0 transparent;
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 0.3);
+  --shadow-3: 0 16px 48px rgb(0 0 0 / 0.5);
+  --shadow-bar: 0 -1px 0 var(--c-border);
+}

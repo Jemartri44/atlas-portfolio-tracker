@@ -10,8 +10,8 @@ import { WARNING_MESSAGES } from "../src/format/messages/warnings.js";
 import { namingOf } from "../src/format/names.js";
 import { meaningfulDecimals } from "../src/format/number.js";
 import { figuresOf } from "../src/format/privacy.js";
+import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
-import Nucleo from "../src/routes/nucleo/index.jsx";
 import { show, text, today, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
@@ -48,22 +48,25 @@ describe("figures and units", () => {
 
   it("gives decimals that say something: 0 %, not 0,0000 %", () => {
     expect(meaningfulDecimals("0")).toBe(0);
+    // A whole percentage reads whole: «55 %», never «55,00 %».
+    expect(meaningfulDecimals("55")).toBe(0);
+    expect(meaningfulDecimals("100.00")).toBe(0);
     expect(meaningfulDecimals("0.0000")).toBe(0);
     expect(meaningfulDecimals("0.5165")).toBe(2);
     expect(meaningfulDecimals("0.0012")).toBe(4);
   });
 
   it("keeps the unit of an amount a message says on the same line as the figure", () => {
-    expect(figuresOf(false).money("5000")).toBe("5.000,00\u00a0EUR");
+    expect(figuresOf(false).money("5000")).toBe("5.000,00\u00a0€");
   });
 
   it("writes an amount always with its currency", async () => {
     today("2026-09-18");
-    // On a card of the bucket the header that said EUR is not there.
-    expect(text(await show("/cubo", Cubo))).toContain("coste 199,49 EUR");
+    // On a card of the bucket the header that said € is not there.
+    expect(text(await show("/cubo", Cubo))).toContain("coste 199,49 €");
   });
 
   it("gives a percentage the decimals that say something", async () => {
-    expect(text(await show("/nucleo?fecha=2029-06-30", Nucleo))).not.toContain("0,0000");
+    expect(text(await show("/cartera?fecha=2029-06-30", Cartera))).not.toContain("0,0000");
   });
 });

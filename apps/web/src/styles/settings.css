@@ -1,0 +1,193 @@
+/*
+ * Settings and the first run (docs/design/system.md §7.1 and §7.7): the groups
+ * of the configuration that fold under their title, the file picker dressed as
+ * a button, the choice of theme, the links to the events of a finding, and the
+ * two option cards of «¿Dónde guardamos tus datos?».
+ */
+
+/* ---- A card that folds: the title and its context are the target -------- */
+
+/* Closed, it is as tall as its title, never stretched to its neighbour. */
+.fold {
+  align-self: start;
+}
+
+.fold > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-2) var(--space-3);
+  list-style: none;
+  min-height: var(--tap);
+}
+
+.fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold > summary > h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fold > summary > .aside {
+  align-items: center;
+  color: var(--c-text-3);
+  display: inline-flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+}
+
+.fold > summary > .chev {
+  color: var(--c-text-3);
+  flex: none;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.fold[open] > summary > .chev {
+  transform: rotate(180deg);
+}
+
+.fold-body {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.settings-foot {
+  display: grid;
+  gap: var(--grid-gap);
+}
+
+/* ---- Controls of the settings -------------------------------------------- */
+
+/* A file picker that reads as a button: the input itself stays for the keyboard. */
+.file-button {
+  align-items: center;
+  background-color: var(--c-surface);
+  border: var(--border) solid var(--c-border-control);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: var(--fw-semibold);
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding-inline: var(--space-4);
+}
+
+.file-button:hover {
+  background-color: var(--c-fill);
+}
+
+.file-button:focus-within {
+  outline: var(--border-strong) solid var(--c-accent);
+  outline-offset: var(--space-0);
+}
+
+.theme-choice {
+  border: 0;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.theme-choice > legend {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--space-1);
+  padding: 0;
+}
+
+/* The events a finding or a warning names, one link each. */
+.event-links {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-1) var(--space-3);
+}
+
+.event-links > a {
+  align-items: center;
+  display: inline-flex;
+  min-height: var(--tap);
+}
+
+/* ---- First run: a choice, not a screen of data --------------------------- */
+
+.choices {
+  display: grid;
+  gap: var(--grid-gap);
+}
+
+.choice {
+  align-content: start;
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.choice > p {
+  margin: 0;
+}
+
+.choice-glyph {
+  align-items: center;
+  background-color: var(--c-accent-soft);
+  border-radius: var(--radius-pill);
+  color: var(--c-accent-soft-text);
+  display: flex;
+  height: var(--glyph-size);
+  justify-content: center;
+  width: var(--glyph-size);
+}
+
+.choice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* The title and its tag on one line, the tag flush with the text under it. */
+.choice-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+/* The folder where this browser has none: one line saying where it works. */
+.choice-elsewhere {
+  align-items: start;
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.choice-elsewhere > .icon-sm {
+  color: var(--c-text-3);
+  flex: none;
+  margin-top: var(--space-0);
+}
+
+@media (min-width: 64rem) {
+  .first-run {
+    margin-inline: auto;
+    max-width: var(--choice-max);
+  }
+
+  .choices:not(.is-single) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .choices.is-single {
+    max-width: var(--reading-max);
+  }
+
+  .choice.is-single {
+    max-width: var(--reading-max);
+  }
+}

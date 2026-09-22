@@ -15,7 +15,11 @@ import { SETTING_LABELS, settingLabel, valueLabel } from "../format/labels.js";
 import { displayName, type NameIndex } from "../format/names.js";
 import { formatExact, NBSP } from "../format/number.js";
 
-export type Part = { text: string } | { amount: Money; decimals?: number } | { quantity: Quantity };
+/** `field`: the field of a form a figure comes from, when it was just typed. */
+export type Part =
+  | { text: string }
+  | { amount: Money; decimals?: number; field?: string }
+  | { quantity: Quantity; of?: string; one?: string; field?: string };
 
 export type Sentence = Part[];
 
@@ -187,17 +191,15 @@ const settingParts = (key: string, value: unknown, names: NameIndex): Part[] => 
     case "transfer_max_days":
       return [t(`${String(value)} días`)];
     case "savings_tax_brackets":
-      // The brackets of the law, not the user's money: they stay visible.
-      return [
-        t(
-          (value as { up_to?: string; rate_pct: string }[])
-            .map(
-              (bracket) =>
-                `${bracket.up_to === undefined ? "el resto" : `hasta ${formatExact(bracket.up_to)}${NBSP}EUR`} al ${formatExact(bracket.rate_pct)}${NBSP}%`,
-            )
-            .join(" · "),
-        ),
-      ];
+      // The limits of the brackets are amounts, and privacy has one rule for
+      // every amount: masked. Only the rates stay visible.
+      return (value as { up_to?: string; rate_pct: string }[]).flatMap((bracket, index) => [
+        ...(index > 0 ? [t(" · ")] : []),
+        ...(bracket.up_to === undefined
+          ? [t("el resto")]
+          : [t("hasta "), money(bracket.up_to, "EUR")]),
+        t(` al ${formatExact(bracket.rate_pct)}${NBSP}%`),
+      ]);
     case "job_frequencies":
       return [
         t(

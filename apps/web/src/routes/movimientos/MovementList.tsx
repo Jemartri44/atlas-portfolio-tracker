@@ -1,99 +1,100 @@
-// The rows of the ledger, described as columns and painted by `DataTable`:
-// cards under 1024px, dense table from there up. The layout used to live here;
-// since feature 007 it is shared with Núcleo and Cubo, and what is left is what
-// is genuinely about a movement — which figure matters, and what a reversed row
-// looks like.
+// The rows of the ledger (docs/design/system.md §7.3): on a phone, grouped by
+// day, each movement a row in two lines with the glyph of its type; from
+// 1024px, the dense table. What is genuinely about a movement — which figure
+// matters, what a reversed row looks like — lives in `MovementLine`.
 
 import { A } from "@solidjs/router";
-import { type JSX, Show } from "solid-js";
-import { Amount, Badge, type DataColumn, DataTable } from "../../components/index.js";
-import { formatDate } from "../../format/date.js";
+import { For, type JSX, Show } from "solid-js";
+import { type DataColumn, DataTable } from "../../components/index.js";
+import { formatDate, formatLongDate } from "../../format/date.js";
 import type { MovementRow } from "../../view-models/index.js";
-
-const StatusBadge = (props: { row: MovementRow }): JSX.Element => (
-  <>
-    <Show when={props.row.status !== "current"}>
-      <Badge tone={props.row.status === "reversed" ? "negative" : "neutral"}>
-        {props.row.statusLabel}
-      </Badge>
-    </Show>
-    <Show when={props.row.invalidReason !== undefined}>
-      {" "}
-      <Badge tone="negative" title={props.row.invalidReason}>
-        inválido
-      </Badge>
-    </Show>
-  </>
-);
-
-/** The figure of a movement: its amount, or its quantity when it has no amount. */
-const Figure = (props: { row: MovementRow }): JSX.Element => (
-  <Show
-    when={props.row.amount !== undefined}
-    fallback={
-      <Show when={props.row.quantity !== undefined} fallback={<span class="tiny">—</span>}>
-        <Amount quantity={props.row.quantity} />
-      </Show>
-    }
-  >
-    <Amount value={props.row.amount} />
-  </Show>
-);
+import { MovementFigure, MovementLine, MovementState } from "./MovementLine.jsx";
 
 const COLUMNS: readonly DataColumn<MovementRow>[] = [
   {
     key: "date",
     header: "Fecha",
-    card: "meta",
     cell: (row) => (
       <>
         <A href={`/movimientos/${row.id}`}>{formatDate(row.date)}</A>
         <Show when={row.administrative}>
-          <span class="tiny" title="Fecha de registro: este tipo no tiene fecha de negocio">
+          <span class="meta" title="Fecha de registro: este tipo no tiene fecha de negocio">
             {" "}
             (registro)
           </span>
         </Show>
       </>
     ),
-    // On the card the whole row is already the link, and a link inside a link
-    // is not markup, it is a tap that does the wrong thing.
-    cardCell: (row) => <span class="tiny">{formatDate(row.date)}</span>,
   },
-  { key: "type", header: "Tipo", card: "title", cell: (row) => row.typeLabel },
+  { key: "type", header: "Tipo", cell: (row) => row.typeLabel },
   {
     key: "subject",
     header: "Cuenta y activo",
-    card: "sub",
     cell: (row) => row.subtitle,
     hint: (row) => row.subtitle,
   },
   {
     key: "status",
     header: "Estado",
-    card: "meta",
     cell: (row) => (
-      <Show when={row.status !== "current"} fallback={<span class="tiny">vigente</span>}>
-        <StatusBadge row={row} />
+      <Show when={row.status !== "current" || row.invalidReason !== undefined}>
+        <MovementState row={row} />
       </Show>
     ),
-    cardCell: (row) => <StatusBadge row={row} />,
   },
   {
     key: "figure",
     header: "Importe o cantidad",
     numeric: true,
-    card: "figure",
-    cell: (row) => <Figure row={row} />,
+    cell: (row) => <MovementFigure row={row} />,
   },
 ];
 
+interface Day {
+  date: string;
+  rows: MovementRow[];
+}
+
+/** Consecutive rows of the same date, in the order the domain gave them. */
+export const byDay = (rows: readonly MovementRow[]): Day[] => {
+  const days: Day[] = [];
+  for (const row of rows) {
+    const last = days[days.length - 1];
+    if (last?.date === row.date) {
+      last.rows.push(row);
+    } else {
+      days.push({ date: row.date, rows: [row] });
+    }
+  }
+  return days;
+};
+
 export const MovementList = (props: { rows: readonly MovementRow[] }): JSX.Element => (
-  <DataTable
-    label="Movimientos"
-    columns={COLUMNS}
-    rows={props.rows}
-    href={(row) => `/movimientos/${row.id}`}
-    rowClass={(row) => (row.status === "reversed" ? "is-reversed" : undefined)}
-  />
+  <>
+    <div class="days only-narrow">
+      <For each={byDay(props.rows)}>
+        {(day) => (
+          <section class="day" aria-label={formatLongDate(day.date)}>
+            <h2 class="day-title">{formatLongDate(day.date)}</h2>
+            <ul class="rows">
+              <For each={day.rows}>
+                {(row) => (
+                  <li>
+                    <MovementLine row={row} dated={false} />
+                  </li>
+                )}
+              </For>
+            </ul>
+          </section>
+        )}
+      </For>
+    </div>
+    <DataTable
+      label="Movimientos"
+      columns={COLUMNS}
+      rows={props.rows}
+      tableOnly
+      rowClass={(row) => (row.status === "reversed" ? "is-reversed" : undefined)}
+    />
+  </>
 );

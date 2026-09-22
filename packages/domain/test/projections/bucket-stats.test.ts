@@ -265,6 +265,47 @@ describe("bucketStats: what the operation says about the operator", () => {
     expect(without.vs_index_missing).toBe(1);
   });
 
+  it("says the result against the index as a share of what was put in", () => {
+    const indexed = (b: LedgerBuilder): LedgerBuilder => {
+      b.valuation({ account_id: "acc_fund", asset_id: "ast_world", date: "2027-01-01" });
+      b.valuation({
+        account_id: "acc_fund",
+        asset_id: "ast_world",
+        date: "2027-06-01",
+        unit_value: "231",
+      });
+      return b;
+    };
+    const config = { bucket_benchmark_asset_id: "ast_world" };
+    // +10 against the index over 5.000 contributed.
+    const one = report(indexed(bucket([{ id: "t1", buyPrice: "10", sellPrice: "12" }])), config);
+    expect(one.stats.vs_index_pct?.toString()).toBe("0.2");
+
+    // One thesis that cannot be compared makes the total partial: no share.
+    const partial = indexed(bucket([{ id: "t1", buyPrice: "10", sellPrice: "12" }]));
+    trade(partial, {
+      id: "t2",
+      asset: "ast_spec2",
+      buyPrice: "10",
+      sellPrice: "11",
+      buyDate: "2026-12-01",
+      sellDate: "2027-02-01",
+    });
+    const mixed = report(partial, config).stats;
+    expect(mixed.vs_index_missing).toBe(1);
+    expect(mixed.vs_index_total_eur).toBeDefined();
+    expect(mixed.vs_index_pct).toBeUndefined();
+
+    // Nothing contributed: nothing to be a share of.
+    const unfunded = new LedgerBuilder();
+    catalogue(unfunded);
+    trade(unfunded, { id: "t1", buyPrice: "10", sellPrice: "12" });
+    const none = report(indexed(unfunded), config);
+    expect(none.controls.contribution_gross_eur.isZero()).toBe(true);
+    expect(none.stats.vs_index_total_eur).toBeDefined();
+    expect(none.stats.vs_index_pct).toBeUndefined();
+  });
+
   it("stops warning about the sample once there are a hundred closed theses", () => {
     const b = new LedgerBuilder();
     catalogue(b);

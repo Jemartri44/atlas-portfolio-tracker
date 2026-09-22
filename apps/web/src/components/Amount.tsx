@@ -8,7 +8,10 @@
 // Three rules it enforces on its own, so no screen can forget them:
 //   1. `undefined` is "sin dato", never a zero (constitution V).
 //   2. The sign and a label carry the meaning too, never colour alone.
-//   3. The mask has a fixed width, so turning privacy on does not reflow the page.
+//   3. The mask is always the same four dots in a box of fixed width, so it
+//      measures the same whatever it hides; its **unit** stays — "•••• €",
+//      "•••• part." — because it says what kind of figure is hidden and never
+//      how big it is (D2 of docs/design/system.md).
 //   4. An amount always carries its currency: there is no way to ask for a bare
 //      figure. Tables used to drop it where the header "said EUR" — on a phone
 //      the header is not there, and "coste 199,49" is not an amount.
@@ -22,9 +25,9 @@ import { createMemo, type JSX, Show } from "solid-js";
 import {
   type AmountDisplay,
   amountDisplay,
-  formatMoney,
+  currencyUnit,
+  formatMoneyNumber,
   formatQuantity,
-  formatUnitValue,
 } from "../format/money.js";
 import { usePrivacy } from "../ledger/state.js";
 
@@ -37,6 +40,12 @@ interface CommonProps {
   coloured?: boolean | undefined;
   /** What is missing, when there is no data: it goes in the title. */
   missingReason?: string | undefined;
+  /**
+   * The user typed this figure on this very screen: masking it back at them
+   * hides nothing from anyone looking over their shoulder that the field did
+   * not already show. Only a form sets it, and only for what was typed.
+   */
+  revealed?: boolean | undefined;
 }
 
 interface MoneyProps extends CommonProps {
@@ -52,6 +61,14 @@ interface QuantityProps extends CommonProps {
   quantity: Quantity | undefined;
   value?: never;
   decimals?: number | undefined;
+  /** What the units are, when it is known: "part.", "acc.", "uds.". */
+  of?: string | undefined;
+  /**
+   * The unit when the quantity is exactly one: «1 participación», never «1
+   * participaciones». Only when the figure shows: under the mask the plural
+   * stays, or the unit would say how much it hides.
+   */
+  one?: string | undefined;
 }
 
 export type AmountProps = MoneyProps | QuantityProps;
@@ -77,12 +94,20 @@ export const Amount = (props: AmountProps): JSX.Element => {
       return formatQuantity(props.quantity as Quantity, props.decimals);
     }
     const money = props.value as Money;
-    return props.unit === true
-      ? formatUnitValue(money, props.decimals)
-      : formatMoney(money, {
-          ...(props.decimals === undefined ? {} : { decimals: props.decimals }),
-          ...(props.signed === undefined ? {} : { signed: props.signed }),
-        });
+    return formatMoneyNumber(money, {
+      decimals: props.decimals ?? (props.unit === true ? 4 : 2),
+      ...(props.signed === undefined ? {} : { signed: props.signed }),
+    });
+  };
+
+  /** The unit written after the figure, which the mask keeps. */
+  const unit = (): string | undefined => {
+    if (isQuantity(props)) {
+      const shown = !privacy() || props.revealed === true;
+      const exactlyOne = /^1(\.0*)?$/.test(props.quantity?.toString() ?? "");
+      return shown && exactlyOne && props.one !== undefined ? props.one : props.of;
+    }
+    return props.value === undefined ? undefined : currencyUnit(props.value.currency);
   };
 
   // Everything this component decides is decided by `amountDisplay`, in the
@@ -90,7 +115,8 @@ export const Amount = (props: AmountProps): JSX.Element => {
   const display = createMemo<AmountDisplay>(() =>
     amountDisplay({
       formatted: missing() ? undefined : shown(),
-      privacy: privacy(),
+      unit: unit(),
+      privacy: privacy() && props.revealed !== true,
       kind: isQuantity(props) ? "cantidad" : "importe",
       ...(props.coloured === true ? { sign: signOfValue(props) } : {}),
       ...(props.class === undefined ? {} : { extra: props.class }),
@@ -100,8 +126,25 @@ export const Amount = (props: AmountProps): JSX.Element => {
 
   return (
     <span class={display().class} title={display().label === "" ? undefined : display().label}>
-      <Show when={display().state === "masked"} fallback={display().text}>
-        <span aria-hidden="true">{display().text}</span>
+      <Show
+        when={display().state === "masked"}
+        fallback={
+          <>
+            {display().text}
+            <Show when={display().unit !== ""}>
+              <span class="unit">{`\u00a0${display().unit}`}</span>
+            </Show>
+          </>
+        }
+      >
+        <span class="dots" aria-hidden="true">
+          {display().text}
+        </span>
+        <Show when={display().unit !== ""}>
+          <span class="unit" aria-hidden="true">
+            {display().unit}
+          </span>
+        </Show>
         <span class="sr-only">{display().label}</span>
       </Show>
     </span>

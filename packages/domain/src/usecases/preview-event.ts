@@ -16,13 +16,15 @@
 
 import type { Ulid } from "../ids/ulid.js";
 import { createUlidGenerator } from "../ids/ulid.js";
+import { type Currency, Money } from "../money/money.js";
 import { fiscalLots } from "../projections/lots.js";
 import { type PhysicalPosition, physicalPositions } from "../projections/positions.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { FiscalLot, LedgerState, RealizedGain, Warning } from "../projections/state.js";
-import type { AssetId, Draft, LedgerEvent, SupportedEvent } from "../schema/events.js";
+import type { AccountId, AssetId, Draft, LedgerEvent, SupportedEvent } from "../schema/events.js";
 import type { UseCaseDeps } from "./deps.js";
 import { checkInvalid, completeDraft, duplicatesOf, type RecordOptions } from "./record-event.js";
+import { prepareCorrection } from "./rectify.js";
 
 /** Positions and open lots of the assets a candidate touches, at one point in time. */
 export interface EventEffect {
@@ -30,11 +32,25 @@ export interface EventEffect {
   lots: FiscalLot[];
 }
 
+/** The cash of one account in one currency, before and after the candidate. */
+export interface CashChange {
+  account_id: AccountId;
+  currency: Currency;
+  before: Money;
+  after: Money;
+}
+
 export interface EventPreview<E extends SupportedEvent = SupportedEvent> {
   /** The event as it would be written: envelope and fingerprint included. */
   candidate: E;
   before: EventEffect;
   after: EventEffect;
+  /**
+   * The cash the candidate moves: every account and currency whose balance
+   * would change, before and after. A purchase that leaves the account short
+   * says so here, before it is written; one that moves no cash has none.
+   */
+  cash: CashChange[];
   /** Gains the candidate itself would book. */
   gains: RealizedGain[];
   /** Warnings the candidate itself raises. */
@@ -61,6 +77,23 @@ const effectOf = (state: LedgerState, assets: readonly AssetId[]): EventEffect =
   lots: fiscalLots(state).filter((lot) => assets.includes(lot.asset_id)),
 });
 
+const balanceOf = (state: LedgerState, key: string, currency: Currency): Money =>
+  state.cash.get(key) ?? Money.zero(currency);
+
+/** Every account and currency whose balance differs, in the order the ledger met them. */
+const cashChanges = (before: LedgerState, after: LedgerState): CashChange[] => {
+  const changes: CashChange[] = [];
+  for (const key of new Set([...before.cash.keys(), ...after.cash.keys()])) {
+    const [account_id, currency] = key.split("|") as [AccountId, Currency];
+    const was = balanceOf(before, key, currency);
+    const now = balanceOf(after, key, currency);
+    if (!was.eq(now)) {
+      changes.push({ account_id, currency, before: was, after: now });
+    }
+  }
+  return changes;
+};
+
 export interface PreviewOptions extends RecordOptions {
   /** Assets whose effect is shown; by default the ones the candidate references. */
   assets?: readonly AssetId[];
@@ -80,10 +113,56 @@ export const previewEvent = async <E extends SupportedEvent>(
     candidate,
     before: effectOf(before, assets),
     after: effectOf(after, assets),
+    cash: cashChanges(before, after),
     gains: after.gains.filter((gain) => gain.event_id === candidate.id),
     warnings: after.warnings.filter((warning) => warning.event_id === candidate.id),
     duplicates: duplicatesOf(before.fingerprints, candidate),
     newlyInvalid: affected.map((entry) => ({ ...entry })),
+    events,
+    state: before,
+    etag,
+  };
+};
+
+/**
+ * What a correction would do: the ledger **with the original reversed and the
+ * corrected event in its place**, the very pair `correctEvent` appends and the
+ * very check it runs (`prepareCorrection`). Adding the corrected event to the
+ * ledger as it is counted the movement twice — a deposit corrected from 8.700
+ * to 8.000 € showed 18.092,05 € of cash instead of 9.392,05 — and refused a
+ * purchase whose order the original itself had filled (review of 2026-09-19).
+ *
+ * A dependent event the correction would break is refused here as the write
+ * refuses it, so there is nothing to list in `newlyInvalid`. The duplicates are
+ * counted on the ledger after the correction, where the original no longer
+ * holds its fingerprint: a correction identical to its original repeats nothing.
+ */
+export const previewCorrection = async <E extends SupportedEvent>(
+  deps: UseCaseDeps,
+  targetId: string,
+  replacement: Draft<E>,
+  reason: string,
+  options: PreviewOptions = {},
+): Promise<EventPreview<E>> => {
+  const { events, etag } = await deps.store.load();
+  const {
+    target,
+    event,
+    state: after,
+  } = prepareCorrection(deps, events, targetId, replacement, reason);
+  const before = projectLedger(events, { collectErrors: true });
+  const assets = options.assets ?? [
+    ...new Set([...assetsOf(target as SupportedEvent), ...assetsOf(event)]),
+  ];
+  return {
+    candidate: event,
+    before: effectOf(before, assets),
+    after: effectOf(after, assets),
+    cash: cashChanges(before, after),
+    gains: after.gains.filter((gain) => gain.event_id === event.id),
+    warnings: after.warnings.filter((warning) => warning.event_id === event.id),
+    duplicates: duplicatesOf(after.fingerprints, event),
+    newlyInvalid: [],
     events,
     state: before,
     etag,

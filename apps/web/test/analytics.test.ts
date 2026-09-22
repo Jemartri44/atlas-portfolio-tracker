@@ -291,7 +291,10 @@ describe("the series, as uPlot eats them", () => {
     expect(plot.values).toHaveLength(3);
     expect(plot.values[0]?.some((value) => value === null)).toBe(true);
     expect(plot.drawn).toBeLessThan(plot.total);
-    expect(plot.missing).toContain("No se interpola");
+    // One line, and what lacks the datum apart, to be folded under it.
+    expect(plot.missing?.line).toMatch(/^En \d+ de \d+ fechas falta algún precio: /);
+    expect(plot.missing?.line).not.toContain("\n");
+    expect(plot.missing?.from.length).toBeGreaterThan(0);
   });
 
   it("agrees with netWorth at every date it draws", () => {

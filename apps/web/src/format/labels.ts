@@ -54,7 +54,7 @@ export const FIELD_LABELS: Record<string, string> = {
   account_id: "Cuenta",
   name: "Nombre",
   platform: "Plataforma",
-  book: "Libro",
+  book: "Cartera",
   base_currency: "Divisa de la cuenta",
   country: "País",
   active: "Activa",
@@ -70,7 +70,7 @@ export const FIELD_LABELS: Record<string, string> = {
   market_value_in: "Valor de mercado de lo recibido",
   fee_kind: "Tipo de comisión",
   neutrality_regime: "Régimen de neutralidad",
-  income_eur: "Renta imputada (EUR)",
+  income_eur: "Renta imputada (€)",
   income_base: "Base de la renta",
   issuer_country: "País del emisor",
   ticker: "Ticker",
@@ -148,7 +148,7 @@ export const fieldLabel = (field: string): string => FIELD_LABELS[field] ?? fiel
 
 /** Values of the enumerations, in Spanish. */
 export const VALUE_LABELS: Record<string, string> = {
-  core: "Núcleo",
+  core: "Cartera principal",
   bucket: "Cubo",
   equity: "Renta variable",
   fixed_income: "Renta fija",

@@ -14,7 +14,7 @@ import {
   type Quantity,
   type Warning,
 } from "@atlas/domain";
-import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
+import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../../format/names.js";
 
 export interface BucketPositionRow {
   accountId: string;
@@ -23,6 +23,8 @@ export interface BucketPositionRow {
   accountName: string;
   /** `Quantity`, never a string: see the note in `core/weights.ts`. */
   quantity: Quantity;
+  /** What the quantity counts: "acc.", "uds.". */
+  units: string;
   unitCost?: Money;
   cost?: Money;
   /** The price in its own currency; absent means "no price", not zero. */
@@ -78,6 +80,7 @@ const rowOf = (
   name: displayName(names, row.asset_id),
   accountName: displayName(names, row.account_id),
   quantity: row.quantity,
+  units: unitsOf(names, row.asset_id),
   ...(row.unit_cost_eur === undefined ? {} : { unitCost: row.unit_cost_eur }),
   ...(row.cost_eur === undefined ? {} : { cost: row.cost_eur }),
   ...(row.price === undefined

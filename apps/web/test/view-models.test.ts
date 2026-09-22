@@ -70,7 +70,7 @@ describe("attentionItems", () => {
     });
     expect(items[0]?.code).toBe("invalid_events");
     expect(items[0]?.severity).toBe("error");
-    expect(items[0]?.message).toContain("2 eventos inválidos");
+    expect(items[0]?.message).toContain("2 movimientos inválidos");
     expect(items[0]?.action.to).toBe("/ajustes/verificacion");
   });
 
@@ -253,7 +253,9 @@ describe("movementRows", () => {
     expect(buy?.figureLabel === "importe liquidado" || buy?.figureLabel === "cantidad").toBe(true);
     expect(byType.get("cash_deposit")?.figureLabel).toBe("importe");
     expect(byType.get("dividend")?.figureLabel).toBe("importe bruto");
-    expect(byType.get("valuation")?.figureLabel).toBe("valor unitario");
+    expect(byType.get("valuation")?.figureLabel).toBe("precio");
+    expect(byType.get("valuation")?.price).toBe(true);
+    expect(byType.get("buy")?.price).toBeUndefined();
     expect(byType.get("transfer")?.figureLabel).toBe("cantidad traspasada");
     expect(byType.get("order_placed")?.figureLabel).toBe("importe pedido");
     // A reversal records no figure: it has nothing to show, not a zero.
@@ -324,12 +326,14 @@ describe("movementRows", () => {
 });
 
 describe("detailView", () => {
-  it("shows every field of the event with a legible name", () => {
+  it("shows every field of the event with a legible name, bookkeeping folded", () => {
     const events = goldenEvents();
     const state = projectLedger(events, { collectErrors: true });
     const entry = ledgerEntries(state, events).find((row) => row.event.type === "buy");
     const view = detailView(entry as never);
-    const names = view.fields.map((field) => field.name);
+    // Every field is somewhere: in sight, or the bookkeeping in the technical record.
+    const names = [...view.fields, ...view.technical].map((field) => field.name);
+    expect(view.technical.map((field) => field.name)).toContain("source");
     const event = entry?.event as unknown as Record<string, unknown>;
     for (const name of Object.keys(event)) {
       if (["schema_version", "id", "recorded_at", "type", "fingerprint"].includes(name)) {
@@ -439,7 +443,11 @@ describe("netWorthView", () => {
     const state = projectLedger(events, { collectErrors: true, asOf: "2029-06-30" });
     const settings = settingsAt(state, "2029-06-30").settings;
     const view = netWorthView(netWorth(state, "2029-06-30", settings));
-    expect(view.blocks.map((block) => block.label)).toEqual(["Núcleo", "Cubo", "Efectivo"]);
+    expect(view.blocks.map((block) => block.label)).toEqual([
+      "Cartera principal",
+      "Cubo",
+      "Efectivo",
+    ]);
     const sum = view.blocks.reduce(
       (total, block) => total.add((block.subtotal as Money).roundToCents()),
       Money.zero("EUR"),
@@ -550,7 +558,7 @@ describe("the names of the catalogue reach every screen", () => {
       expect(missing).not.toMatch(/^ast_/);
     }
     // The core keeps its asset classes, in Spanish and not as an enum.
-    const core = view.blocks.find((block) => block.label === "Núcleo");
+    const core = view.blocks.find((block) => block.label === "Cartera principal");
     expect(core?.lines.map((line) => line.name)).toContain("Renta variable");
   });
 

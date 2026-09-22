@@ -154,13 +154,17 @@ export const describeError = (error: DomainError): string => {
     case "unknown_order":
       return `La orden ${text(d.order_id)} no existe en esa fecha.`;
     case "order_closed":
-      return `La orden ${text(d.order_id)} ya está cerrada (${text(d.stage)}).`;
+      return d.stage === "filled"
+        ? `La orden ${text(d.order_id)} ya se ejecutó: otra operación la cerró.`
+        : `La orden ${text(d.order_id)} está cancelada: ya no se puede ejecutar.`;
     case "order_mismatch":
       return `La orden ${text(d.order_id)} no coincide con la cuenta, el activo o el sentido de la operación.`;
     case "unknown_request":
       return `La solicitud de traspaso ${text(d.request_id)} no existe en esa fecha.`;
     case "request_closed":
-      return `La solicitud de traspaso ${text(d.request_id)} ya está cerrada (${text(d.stage)}).`;
+      return d.stage === "completed"
+        ? `La solicitud de traspaso ${text(d.request_id)} ya se completó.`
+        : `La solicitud de traspaso ${text(d.request_id)} está cancelada: ya no admite más pasos.`;
     case "request_mismatch":
       return `La solicitud de traspaso ${text(d.request_id)} se refiere a otras cuentas o activos.`;
     case "ledger_has_invalid_events": {

@@ -307,7 +307,7 @@ const listSourceFiles = (dir: string): string[] =>
  *
  * So both directions are checked, over the real files: every class the
  * stylesheet targets is written by the markup, and every class the markup
- * writes literally is declared by our CSS or by vendored Pico (a misspelt
+ * writes literally is declared by our CSS or by vendored uPlot (a misspelt
  * class is the same defect mirrored).
  */
 
@@ -437,7 +437,14 @@ const mineClasses = (expression: string, found: MarkupClasses): void => {
   }
 };
 
-const STYLESHEETS = ["base.css", "layout.css", "components.css", "tokens.css"];
+/**
+ * Every stylesheet of `src/styles` except the one that only imports the rest:
+ * read from the folder, so a new layer of the design system cannot be left
+ * out of the check by forgetting to add it to a list.
+ */
+const STYLESHEETS = readdirSync(join(webSrc, "styles")).filter(
+  (name) => name.endsWith(".css") && name !== "index.css",
+);
 
 const ourClasses = (): Set<string> =>
   new Set(
@@ -480,77 +487,6 @@ const RUNTIME_CLASSES = [
   {
     name: "u-wrap",
     reason: "la escribe uPlot al construir la gráfica; nuestro CSS solo la centra",
-  },
-];
-
-/**
- * The declarations of one selector, as written in a stylesheet. At-rule
- * wrappers (`@media …`) do not match, their inner rules do, which is all this
- * needs.
- */
-const declarationsOf = (css: string, selector: string): string[] => {
-  const normalise = (text: string): string => text.trim().replace(/\s+/g, " ");
-  const found: string[] = [];
-  for (const match of css.replace(/\/\*[\s\S]*?\*\//g, " ").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const selectors = (match[1] as string).split(",").map(normalise);
-    if (!selectors.includes(selector)) {
-      continue;
-    }
-    found.push(
-      ...(match[2] as string)
-        .split(";")
-        .map(normalise)
-        .filter((one) => one !== ""),
-    );
-  }
-  return found;
-};
-
-/**
- * Declarations the shell cannot lose. Every one of them is here because Pico's
- * own `nav` rules either win on specificity or fill in where we say nothing,
- * and the damage is only visible in a browser: the bottom bar came out with
- * 37px slots and the labels cut to "sum" and "Movim", and the status bar was
- * 15px wider than the phone, which scrolled the whole page sideways.
- *
- * A test with no DOM cannot measure a layout. What it can do is refuse to let
- * the line that fixes it disappear again without anybody noticing.
- */
-const SHELL_RULES = [
-  {
-    selector: ".nav ul",
-    declaration: "flex: 1 1 auto",
-    reason: "Pico hace del <nav> un flex row: sin crecer, los cinco huecos salen a 37px",
-  },
-  {
-    selector: ".nav li",
-    declaration: "min-width: 0",
-    reason: "un hueco tiene que poder encogerse por debajo de su palabra más larga",
-  },
-  {
-    selector: ".nav li",
-    declaration: "flex: 0 0 auto",
-    reason: "en la barra lateral `flex: 1 1 0` reparte la altura: 180px de vacío entre destinos",
-  },
-  {
-    selector: ".nav a",
-    declaration: "margin: 0",
-    reason: "Pico da margen negativo a `nav li a` y cada destino se solapaba con el vecino",
-  },
-  {
-    selector: ".nav .label",
-    declaration: "font-size: var(--t-nav)",
-    reason: "«Movimientos» a 12px pide 76px de un hueco de 72",
-  },
-  {
-    selector: ".statusbar .actions",
-    declaration: "flex: 0 0 auto",
-    reason: "los interruptores y el engranaje no encogen: lo que cede es el chip",
-  },
-  {
-    selector: ".ledger-chip",
-    declaration: "min-width: 0",
-    reason: "sin esto el chip empuja la barra de estado fuera de la pantalla",
   },
 ];
 
@@ -702,7 +638,8 @@ describe("architecture: apps/web", () => {
               (SENSITIVE_DETAIL.test(read[1] as string) && NOT_A_FIGURE[where] === undefined) ||
               A_FIGURE_ANYWAY.has(where);
             const call = wrappingCall(printed, read.index as number);
-            const wrapped = call === "f.money" || call === "f.quantity";
+            // `f.titles` is `f.quantity` with its word, «título» or «títulos».
+            const wrapped = call === "f.money" || call === "f.quantity" || call === "f.titles";
             if (sensitive) {
               checked += 1;
               if (!wrapped) {
@@ -787,28 +724,22 @@ describe("architecture: apps/web", () => {
 
   /** Direction two: an element with no rule, which is the same typo mirrored. */
   it("writes no class the stylesheet does not declare", () => {
-    // Both vendored stylesheets count as declarations: the `.u-*` classes are
+    // The vendored stylesheet counts as a declaration: the `.u-*` classes are
     // uPlot's own, written by it at runtime and styled by it.
-    const vendored = [
-      join(webRoot, "vendor", "pico", "pico.css"),
-      join(webRoot, "vendor", "uplot", "uPlot.css"),
-    ].flatMap((path) => [...cssClassesOf(readFileSync(path, "utf8"))]);
+    const vendored = [join(webRoot, "vendor", "uplot", "uPlot.css")].flatMap((path) => [
+      ...cssClassesOf(readFileSync(path, "utf8")),
+    ]);
     const declared = new Set([...ourClasses(), ...vendored]);
     const violations = [...markupClasses().literal].filter((name) => !declared.has(name)).sort();
     expect(violations).toEqual([]);
   });
-  /**
-   * The declarations of `layout.css` that keep the shell inside a 360px screen
-   * with its labels readable, and the rail with its destinations together. See
-   * `SHELL_RULES` for why each one exists.
+  /*
+   * The shell used to be guarded here by declarations that had to exist in
+   * `layout.css`, each one there to beat a default of Pico. Pico is gone
+   * (ADR-0023), and what those rules protected — a navigation that fits, a
+   * screen whose content is shown at every width — is now checked on what the
+   * browser **applies**, in `apps/web/test/shell.test.tsx`.
    */
-  it("keeps the declarations that hold the shell together", () => {
-    const layout = readFileSync(join(webSrc, "styles", "layout.css"), "utf8");
-    const missing = SHELL_RULES.filter(
-      (rule) => !declarationsOf(layout, rule.selector).includes(rule.declaration),
-    ).map((rule) => `${rule.selector} { ${rule.declaration} } — ${rule.reason}`);
-    expect(missing).toEqual([]);
-  });
 
   /**
    * FR-047: a `catch` that does nothing is a defect. It is how a failure becomes
@@ -875,9 +806,34 @@ describe("architecture: apps/web", () => {
     expect(violations.sort()).toEqual([]);
   });
 
-  /** And the step of the scale that the bar's label uses has to exist. */
-  it("declares the type token of the bottom bar", () => {
+  /**
+   * Nothing that is read goes below 13px (brief §10 and §13): the bottom bar
+   * used to carry its labels at 10px, and a test demanded that token. Now the
+   * scale itself is checked — every `--text-*` step, at every width — and every
+   * `font-size` of our stylesheets has to come from it, or be relative to a
+   * figure that does (the dots of the mask, the euro of a hero figure).
+   */
+  it("keeps every step of the type scale at 13px or more", () => {
     const tokens = readFileSync(join(webSrc, "styles", "tokens.css"), "utf8");
-    expect(declarationsOf(tokens, ":root")).toContain("--t-nav: 0.625rem");
+    const steps = [...tokens.matchAll(/--text-[a-z0-9-]+:\s*([\d.]+)rem/g)].map((match) =>
+      Number.parseFloat(match[1] as string),
+    );
+    expect(steps.length).toBeGreaterThan(7);
+    expect(steps.filter((rem) => rem * 16 < 13)).toEqual([]);
+
+    const loose: string[] = [];
+    for (const name of STYLESHEETS) {
+      const css = readFileSync(join(webSrc, "styles", name), "utf8").replace(
+        /\/\*[\s\S]*?\*\//g,
+        "",
+      );
+      for (const match of css.matchAll(/font-size:\s*([^;]+);/g)) {
+        const value = (match[1] as string).trim();
+        if (!/^(var\(--(text|t)-[a-z0-9-]+\)|inherit|[\d.]+em)$/.test(value)) {
+          loose.push(`${name}: font-size: ${value}`);
+        }
+      }
+    }
+    expect(loose).toEqual([]);
   });
 });

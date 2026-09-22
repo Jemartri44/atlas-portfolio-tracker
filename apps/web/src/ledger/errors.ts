@@ -20,6 +20,9 @@ import { store } from "./state.js";
  * snapshot yet and `nameIndex` answers with an empty index, which resolves
  * every identifier to itself — the behaviour this had before.
  */
+/** What the browser throws when a chosen file cannot be read. */
+const FILE_READ_ERRORS = new Set(["NotReadableError", "NotFoundError", "EncodingError"]);
+
 export const toAppError = (error: unknown): AppError => {
   if (error instanceof DomainError) {
     const line = error.details.line;
@@ -36,28 +39,42 @@ export const toAppError = (error: unknown): AppError => {
     return {
       code: "permission_denied",
       message:
-        "El navegador ha denegado el acceso a la carpeta del libro. Vuelve a conectarla para seguir.",
-      action: { label: "Abrir el libro", to: "/libro" },
+        "El navegador ha denegado el acceso a la carpeta de tus datos. Vuelve a conectarla para seguir.",
+      action: { label: "Abrir tus datos", to: "/libro" },
     };
   }
   if (error instanceof DOMException && error.name === "QuotaExceededError") {
     return {
       code: "storage_full",
       message:
-        "No cabe en el almacenamiento del navegador: no se ha escrito nada. Exporta el libro y libera espacio del sitio antes de volver a intentarlo.",
-      action: { label: "Exportar el libro", to: "/ajustes" },
+        "No cabe en el almacenamiento del navegador: no se ha escrito nada. Exporta tus datos y libera espacio del sitio antes de volver a intentarlo.",
+      action: { label: "Exportar tus datos", to: "/ajustes" },
+    };
+  }
+  // Reading a file the user chose: it moved, it was a folder, the permission
+  // lapsed, it is not text. The browser says so in English; the user reads it
+  // in Spanish, with what to do (review of 2026-09-19).
+  if (error instanceof DOMException && FILE_READ_ERRORS.has(error.name)) {
+    return {
+      code: "file_unreadable",
+      message:
+        "No se ha podido leer el archivo: puede que se haya movido, que no sea un archivo de texto o que el navegador ya no tenga permiso. Vuelve a elegirlo; no se ha tocado nada.",
     };
   }
   if (error instanceof Error && error.name === "StorageUnavailable") {
     return {
       code: "storage_unavailable",
       message:
-        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados). Abre el libro desde un fichero, o usa otro navegador.",
-      action: { label: "Abrir el libro", to: "/libro" },
+        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados). Abre tus datos desde una carpeta, o usa otro navegador.",
+      action: { label: "Abrir tus datos", to: "/libro" },
     };
   }
+  // Never swallowed: what failed goes after a sentence in Spanish, so the
+  // screen still says what happened and nothing is hidden.
   return {
     code: "unexpected",
-    message: error instanceof Error ? error.message : String(error),
+    message: `Algo ha fallado sin que la aplicación lo esperase; no se ha escrito nada. Detalle: ${
+      error instanceof Error ? error.message : String(error)
+    }`,
   };
 };

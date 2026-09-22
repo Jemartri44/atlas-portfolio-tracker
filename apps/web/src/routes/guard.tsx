@@ -5,7 +5,7 @@
 
 import { A, Navigate } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
-import { Callout, ErrorView, Skeleton } from "../components/index.js";
+import { ErrorView, Notice, Skeleton } from "../components/index.js";
 import type { AppError, LedgerSnapshot } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
 
@@ -50,10 +50,10 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
           fallback={
             <Show when={failure()}>
               {(error) => (
-                <ErrorView error={error()} title="No se ha podido leer el libro">
+                <ErrorView error={error()} title="No se han podido leer tus datos">
                   <Show when={error().action === undefined}>
                     <A href="/libro" role="button">
-                      Abrir otro libro
+                      Abrir otro archivo
                     </A>
                   </Show>
                 </ErrorView>
@@ -65,9 +65,9 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
             <Show
               when={props.writes !== true || store.invalidCount() === 0}
               fallback={
-                <Callout
-                  tone="error"
-                  title="El libro tiene eventos inválidos"
+                <Notice
+                  severity="danger"
+                  title="Tus datos tienen movimientos inválidos"
                   action={
                     <A href="/ajustes/verificacion" role="button">
                       Ver la verificación
@@ -76,7 +76,7 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
                 >
                   Mientras haya eventos inválidos solo se puede registrar un cambio de
                   configuración. Rectifica lo que falla y vuelve.
-                </Callout>
+                </Notice>
               }
             >
               {props.children(snapshot())}

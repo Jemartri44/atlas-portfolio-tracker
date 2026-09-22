@@ -9,7 +9,7 @@
 // scrolled into view, and the reason travels inside the bar.
 
 import { createEffect, type JSX, Show } from "solid-js";
-import { Callout, ErrorView } from "../../components/index.js";
+import { ErrorView, Notice } from "../../components/index.js";
 import type { AppError } from "../../ledger/state.js";
 
 /** Brings an element to the middle of the screen, where it cannot be missed. */
@@ -17,9 +17,16 @@ export const reveal = (element: Element | null | undefined): void => {
   element?.scrollIntoView?.({ block: "center" });
 };
 
-/** Brings the first field with an error into view and moves the focus to it. */
+/**
+ * Brings the first field with an error into view and moves the focus to it,
+ * unfolding «Más datos» first when that is where it waits.
+ */
 export const revealField = (id: string): void => {
   const control = document.getElementById(id);
+  const folded = control?.closest("details");
+  if (folded instanceof HTMLDetailsElement) {
+    folded.open = true;
+  }
   reveal(control?.closest(".field") ?? control);
   control?.focus({ preventScroll: true });
 };
@@ -50,9 +57,9 @@ export const FormActions = (props: FormActionsProps): JSX.Element => {
       <div ref={problems}>
         <Show when={props.problem}>
           {(problem) => (
-            <Callout tone="error" title="No se puede registrar así">
+            <Notice severity="danger" title="No se puede registrar así">
               {problem()}
-            </Callout>
+            </Notice>
           )}
         </Show>
         <Show when={props.failure}>
@@ -65,7 +72,7 @@ export const FormActions = (props: FormActionsProps): JSX.Element => {
         </Show>
       </div>
       <div class="actions-bar">
-        <Show when={props.blocked}>{(reason) => <p class="tiny reason">{reason()}</p>}</Show>
+        <Show when={props.blocked}>{(reason) => <p class="reason">{reason()}</p>}</Show>
         {props.children}
       </div>
     </>
