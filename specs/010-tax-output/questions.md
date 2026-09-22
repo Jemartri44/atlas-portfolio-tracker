@@ -878,7 +878,13 @@ actualizar»**: son cambios de `docs/` que **no** me correspondía hacer.
   qué**, commitear la predicción y después comparar. Si se mueve algo no predicho, **parar**.
 - **`tests/fiscal-criteria.test.ts`** compara la tabla de `docs/fiscal-questions.md` con el catálogo
   de `packages/domain/src/tax/criteria.ts`. Documento y catálogo, **en el mismo commit**. No se
-  desactiva ni se relaja jamás.
+  desactiva ni se relaja jamás. **Lee su cabecera antes de fiarte de él**: garantiza que cada fila
+  tiene entrada y cada entrada tiene fila, que toda certeza y todo riesgo del catálogo es **uno de
+  los que nombra su fila**, y que la certeza más dudosa y cada riesgo de la fila los lleva alguien.
+  Lo que **no** garantiza, en una fila que nombra varias lecturas (solo la #2 y la #24), es atar
+  **cada variante a la suya**: la celda es prosa y emparejar cada paréntesis con un identificador
+  exigiría analizar español. Eso lo sostienen hoy los comentarios por variante de `criteria.ts` y
+  la lectura humana.
 - **Un identificador de criterio nunca cambia de significado**: una lectura nueva estrena
   identificador. Por eso existen `2:fund_2m` y `2:fund_1y` y se retiró el `2:fund` a secas.
 - **Hay dos tablas de ventanas a propósito**: la de `settings.ts` y `SCENARIO_WASH_SALE_WINDOW` en

@@ -4,8 +4,32 @@
 // `docs/fiscal-questions.md` and their certainty and direction of risk. The
 // document is where the direction decides them; the catalogue of the code is a
 // copy. This test reads the table of the document and fails when the two
-// disagree, so a criterion that moves in the document cannot keep its old
-// certainty in the report.
+// disagree.
+//
+// **What it guarantees, exactly** — it is worth saying, because it has been
+// described as "the catalogue follows whatever the document says", and that is
+// more than it holds:
+//
+//   1. Every row of the table has at least one entry in the catalogue, and
+//      every entry of the catalogue has a row.
+//   2. Every certainty and every risk an entry carries is **one of those the
+//      row names**. For the rows that name a single certainty and a single
+//      risk —most of them— that is exact: the entry has to say that and
+//      nothing else.
+//   3. The **weakest** certainty of the row is carried by something, and every
+//      risk of the row is carried by something. So a row that says "disputed
+//      for a, medium for b" cannot end up with every variant on medium.
+//
+// **What it does not guarantee**: on a row that names several readings, it
+// does not tie **each variant to its own one**. The cell is prose —"En
+// disputa (valores no UE) / Baja (cripto) / Media (fondos)"— and pairing each
+// parenthesis with an identifier would mean parsing Spanish, which breaks the
+// day somebody rewords the sentence and gives a false green in between. So a
+// variant of such a row could take a certainty that belongs to its sibling and
+// this test would stay green. What holds that today is the per-variant comment
+// in `packages/domain/src/tax/criteria.ts`, which states the reason for each
+// one, and reading it against the document. Only rows #2 and #24 name more
+// than one reading; anywhere else point 2 is already exact.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -93,7 +117,7 @@ describe("the fiscal criteria of the code and of docs/fiscal-questions.md", () =
     expect(rows().every((row) => row.certainty.size > 0 && row.risk.size > 0)).toBe(true);
   });
 
-  it("says of every criterion what the document says: its certainty and its direction of risk", () => {
+  it("gives every criterion a certainty and a risk the document names for its row", () => {
     const mismatches: string[] = [];
     for (const row of rows()) {
       const mine = Object.entries(FISCAL_CRITERIA).filter(([, entry]) => entry.doc === row.id);
