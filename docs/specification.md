@@ -164,25 +164,11 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 
 ### 5.1 Entidad Settings
 
-| Parámetro | Valor inicial | Uso |
-|---|---|---|
-| `target_weights{}` | Por definir (P1 del plan) | Cálculo de aportación y desviaciones |
-| `deviation_threshold_pp` | 5 puntos porcentuales | Regla 3 del plan |
-| `satellite_min_weight_pct` | 10% | Regla 6b del plan |
-| `monthly_contribution_eur` | Por definir | Reparto mensual |
-| `bucket_pct_of_contribution` | Por definir | Presupuesto del cubo |
-| `bucket_max_cumulative_contribution` | Por definir | Regla 17 |
-| `bucket_stop_loss_pct` | Por definir | Regla 17 |
-| `bucket_max_weight_pct` | Por definir | Regla 18 |
-| `bucket_benchmark_asset_id` | Por definir | Regla 16: activo que hace de índice de referencia del cubo |
-| `stale_price_days` | 5 | Aviso de antigüedad |
-| `model_720_alert_threshold_eur` | 45.000€ | Margen sobre los 50.000€ |
-| `model_721_alert_threshold_eur` | 45.000€ | Ídem para cripto |
-| `savings_tax_brackets[]` | Ver `business-rules.md` §5.1 | Motor fiscal |
-| `tax_residence` | España | `business-rules.md` §5.9 |
-| `job_frequencies{}` | Ver §9.4 | Programación de trabajos |
-| `notification_email` | — | Destino SES |
-| `alert_channels{}` | — | Qué avisa por correo y qué solo en la interfaz |
+`Settings` es el conjunto de parámetros que la aplicación **lee** en lugar de llevarlos escritos en el fuente: pesos objetivo, umbrales, frecuencias, destinatarios, criterios fiscales y residencia. Existe por el principio IV de la constitución —nada codificado que deba ser configurable—: estos valores cambian con la vida, con la cartera y con la normativa, y obligar a editar código para mover un porcentaje garantiza que no se mueva. No vive en un fichero aparte: cada cambio es un evento `settings_changed` del libro mayor (ADR-0006) y registra la configuración vigente **entera**, de modo que un cálculo de hoy se reproduce dentro de quince años aunque el valor por defecto del código haya cambiado (ADR-0022).
+
+**La lista normativa de parámetros es `business-rules.md` §7**, con el valor inicial y la regla asociada de cada uno. Manda ella, y esta especificación **no la repite**: la tabla que había aquí se quedó desfasada durante meses —le faltaban los criterios fiscales que el motor ya usaba y le sobraba alguno que nunca existió en el código—, que es lo que pasa siempre con una lista duplicada. Cualquier parámetro nuevo se añade en §7 y solo en §7.
+
+**Previsión, todavía fuera de la lista normativa:** `alert_channels{}` —qué avisa por correo y qué se queda solo en la interfaz— es una previsión de la **Fase 4 (automatización)**, coherente con la columna «Notifica» y el principio de notificación de §9.5, pero **no existe en el código ni en §7**. Se anota aquí para no perderla; entra en §7 el día que la Fase 4 la implemente, no antes.
 
 ### 5.2 Requisitos
 
@@ -616,11 +602,11 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Lenguaje del backend**: TypeScript en todo, dominio compartido (ADR-0001). Trampa derivada: los importes se serializan como cadenas, nunca como números JSON.
 - [x] **Corrección de errores de registro**: libro append-only con rectificación; lotes como proyección (ADR-0003).
 - [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
-- [ ] **Retención a cuenta en reembolsos de fondos.** Registrarla en las ventas de fondos para que la salida de la Renta cuadre.
+- [x] **Retención a cuenta en reembolsos de fondos.** Hecho: `sell.withholding` (`data-schema.md` §6.2), con su equivalente por cuenta en `forced_sale` (§6.5). Sale del efectivo que entra, no toca el valor de transmisión ni el coste de los lotes, y la salida fiscal la suma a las retenciones del ejercicio (criterio #12).
 - [ ] **Valoración a 31 de diciembre.** El Modelo 720 exige valor de mercado a fin de año. Foto manual anual guardada como dato de Nivel 1, no como precio scrapeado.
 - [ ] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio.
-- [ ] **Tests de propiedades** para el motor FIFO (suma de lotes = posición; recalcular = almacenado; split e inverso dejan el coste intacto).
+- [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).
-- [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos.
+- [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos. Está todo salvo **`.editorconfig`, que no existe**; el escaneo de secretos es `gitleaks` en `.githooks/pre-commit`, local por clon y no en CI.
 - [x] **Protección de ramas** en GitHub para `main` y `develop` (hecho por el usuario).
 - [x] **Revisión externa (*challenge*) del 2026-08-30**: diez hallazgos aplicados (ADR-0012, ADR-0013, `docs/data-schema.md`); preguntas al asesor consolidadas en `docs/fiscal-questions.md`.
