@@ -185,7 +185,10 @@ atlas tax 2028 --json     # el informe entero, con los importes como cadenas dec
 atlas tax 2025 --boxes    # la misma base ordenada por casillas del Modelo 100
 atlas m720 2027           # bienes en el extranjero a 31/12 y si hay que presentar
 atlas m721 2027           # lo mismo para las criptomonedas en tenencia directa
+atlas filed renta 2027 --receipt 100-2027-… --set base=1950.00   # registra lo presentado
 ```
+
+**`atlas filed <renta|720|721> <año>`** registra lo que de verdad se presentó. Propone lo que la aplicación calcula —nadie quiere teclear doce cifras— y `--set <clave>=<importe>`, repetible, sustituye cualquiera de ellas por lo declarado. **Lo presentado es un hecho, no un cálculo** (ADR-0020): el libro guarda lo declarado aunque hoy se calcule otra cosa, y guarda al lado lo que la aplicación calculaba ese día y la configuración con que lo hizo, para poder distinguir después un cambio del motor de un cambio del libro. Una complementaria es otra presentación con `--supersedes <id>`, nunca una anulación.
 
 **`atlas tax <año> --boxes`** ordena las cifras como las pide el Modelo 100 de **ese** ejercicio: número de casilla, rótulo **literal** del impreso y la orden del BOE en que se comprobó, con su fecha. Las casillas son **datos por ejercicio**: un año sin correspondencia comprobada sale por conceptos y **sin ningún número**, y nunca se usa la casilla de otro año, porque la Agencia Tributaria renumera el impreso cada campaña y una casilla heredada es una cifra creíble y falsa. Hoy están comprobadas las de **2025**.
 

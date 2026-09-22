@@ -19,6 +19,7 @@ import { accountCommand, assetCommand, settingsCommand } from "./commands/catalo
 import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
 import { exportCommand } from "./commands/export.js";
+import { filedCommand } from "./commands/filed.js";
 import { m720Command, m721Command } from "./commands/informative.js";
 import { contributeCommand, costsCommand, weightsCommand } from "./commands/portfolio.js";
 import {
@@ -62,6 +63,7 @@ export const COMMANDS: Record<string, Command> = {
   gains: gainsCommand,
   income: incomeCommand,
   tax: taxCommand,
+  filed: filedCommand,
   m720: m720Command,
   m721: m721Command,
   check: checkCommand,
@@ -102,6 +104,7 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   gains: 2,
   income: 2,
   tax: 2,
+  filed: 3,
   m720: 2,
   m721: 2,
   check: 1,
@@ -136,6 +139,7 @@ comandos:
   positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
   tax <año> [--lots] [--boxes]   base del ahorro: total fiscal de núcleo y cubo, no la cuota
   m720 <año>   m721 <año>        bienes en el extranjero a 31/12 y si hay que presentar
+  filed <renta|720|721> <año> [--set <clave>=<importe>]… [--receipt …] [--filed-at …]
   weights [--date]   contribute [--amount <eur>] [--date]   costs [--date]
   networth [--date]   bucket [--date]
   transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]

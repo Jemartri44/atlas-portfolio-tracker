@@ -2,7 +2,7 @@
 // `--flag=value`, boolean flags (no value or followed by another flag) and `--`
 // to stop flag parsing.
 
-export type FlagValue = string | true;
+export type FlagValue = string | true | string[];
 export type Flags = Map<string, FlagValue>;
 
 export interface ParsedArgs {
@@ -57,6 +57,16 @@ const OPPOSITES: Readonly<Record<string, string>> = {
   "no-wash-sale-transfer-counts": "wash-sale-transfer-counts",
 };
 
+/**
+ * Flags that may be written more than once, each occurrence keeping its value.
+ *
+ * Only these: everywhere else a repeated flag is a mistake, and the last one
+ * winning in silence is how a user writes two values and records one. `--set`
+ * of `atlas filed` is repeatable because a return declares a dozen figures and
+ * the user corrects them one at a time (prompt 010, block 5).
+ */
+export const REPEATABLE_FLAGS: ReadonlySet<string> = new Set(["set"]);
+
 /** Words that read as a yes or a no after a flag that takes none. */
 const YES_OR_NO = new Set(["true", "false", "sí", "si", "no", "0", "1"]);
 
@@ -97,9 +107,17 @@ export const parseArgs = (
     if (body.length === 0 || body.startsWith("-")) {
       throw new UsageError(`opción no válida: ${token}`);
     }
+    const add = (name: string, value: string): void => {
+      if (!REPEATABLE_FLAGS.has(name)) {
+        flags.set(name, value);
+        return;
+      }
+      const seen = flags.get(name);
+      flags.set(name, [...(Array.isArray(seen) ? seen : []), value]);
+    };
     const equals = body.indexOf("=");
     if (equals >= 0) {
-      flags.set(body.slice(0, equals), body.slice(equals + 1));
+      add(body.slice(0, equals), body.slice(equals + 1));
       continue;
     }
     const next = argv[i + 1];
@@ -110,7 +128,7 @@ export const parseArgs = (
       flags.set(body, true);
       continue;
     }
-    flags.set(body, next);
+    add(body, next);
     i += 1;
   }
   return { positionals, flags };
@@ -124,7 +142,22 @@ export const stringFlag = (flags: Flags, name: string): string | undefined => {
   if (value === true) {
     throw new UsageError(`--${name} necesita un valor`);
   }
+  if (Array.isArray(value)) {
+    throw new UsageError(`--${name} se ha escrito ${value.length} veces y aquí se lee una sola`);
+  }
   return value;
+};
+
+/** Every value of a repeatable flag, in the order they were written. */
+export const listFlag = (flags: Flags, name: string): string[] => {
+  const value = flags.get(name);
+  if (value === undefined) {
+    return [];
+  }
+  if (value === true) {
+    throw new UsageError(`--${name} necesita un valor`);
+  }
+  return Array.isArray(value) ? value : [value];
 };
 
 export const requireFlag = (flags: Flags, name: string): string => {

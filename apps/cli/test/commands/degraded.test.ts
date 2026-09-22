@@ -86,6 +86,9 @@ const INVOCATIONS: { command: string; argv: string[]; readOnly: boolean }[] = [
   // wrong ones.
   { command: "m720", argv: ["m720", "2027"], readOnly: false },
   { command: "m721", argv: ["m721", "2027"], readOnly: false },
+  // `filed` writes, and it computes what to propose with the same engine: on a
+  // degraded ledger it refuses before proposing anything.
+  { command: "filed", argv: ["filed", "renta", "2027"], readOnly: false },
   {
     command: "add",
     argv: [
