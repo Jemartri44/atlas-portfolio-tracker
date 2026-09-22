@@ -741,9 +741,9 @@ desviación están en `implementation-notes.md`; esto es el estado y el camino.
 
 - Worktree propio de la rama `feature/010-tax-output` (fuera del repositorio), `git status`
   **limpio**: nada sin commitear, nada sin seguir.
-- **26 commits por delante de `origin/develop`**, ya **rebasados** sobre `f29ebc1`, el `develop`
-  que trae `docs/spec-coherence`. Si `develop` se vuelve a mover, rebase otra vez antes de la PR.
-- **Sin PR y sin `push`**: la rama vive solo en local. La dirección pidió avisar antes de fusionar.
+- Rebasada sobre el `develop` del día y **fusionada en `develop` el 2026-09-23** por PR, después
+  de la revisión adversarial de cierre (ver más abajo, «5 bis», y `implementation-notes.md` §7).
+  Si `develop` se vuelve a mover, rebase otra vez antes de seguir.
 - Hooks activos en este worktree (`git config core.hooksPath .githooks`).
 
 **Aviso del rebase**: hubo que **saltar** el commit `e9b2a7a` (`git rebase --skip`). Traía
@@ -870,6 +870,70 @@ tabla). El techo de arranque **no se sube sin la dirección**.
 Y sigue en pie, al final de este documento, la tabla **«Documentos que la dirección tendrá que
 actualizar»**: son cambios de `docs/` que **no** me correspondía hacer.
 
+### 5 bis. Trabajo posterior, anotado en la revisión adversarial (2026-09-23)
+
+Lo encontró la revisión, no se arregla en esta mitad de la feature y **se deja escrito para que no
+se pierda**. Ninguno bloquea la fusión; los bloques afectados van indicados.
+
+1. **El dorado nunca ejercita la ventana de dos meses en un fondo.** `synthetic-v1.jsonl` está
+   **congelado** y su `settings_changed` fija `fund: "1y"` y `money_market: "1y"`, que es el
+   parámetro fiscal más consecuente que ha tocado esta rama: la regresión que vigila el fichero
+   dorado nunca pasa por la conducta nueva. **No se toca el fichero congelado** —regenerarlo
+   rompería lo único que prueba que el motor no se mueve—. Dos formas de cubrirlo, a elegir en el
+   bloque del motor: (a) un *fixture* nuevo y pequeño, `tests/fixtures/ledger/fund-2m-v1.jsonl`,
+   con un reembolso con pérdida de un fondo y una aportación mensual dentro de los dos meses, con
+   su informe congelado aparte, como se hizo con `tax-hand-v1.jsonl`; o (b) un test de dominio
+   sin fichero, en `test/tax/wash-sale.test.ts`, que fije a mano las dos lecturas (a dos meses
+   difiere, a un año difiere más) y la cifra de cada una. La (b) es más barata y no crea otro
+   fichero congelado; la (a) es la que vigila el motor entero. **Recomendada la (b) más una línea
+   en `hand-checked.test.ts`.**
+2. **El año mínimo de presentación es 2018 para los tres modelos**, y el **720 existe desde el
+   ejercicio 2012**. La justificación escrita en `FIRST_FILING_YEAR`
+   (`packages/domain/src/schema/events.ts`) alude al **régimen de compensación de la Renta**, que
+   no alcanza a un modelo informativo: no hay razón para que el libro rechace un 720 de 2015 que
+   el usuario quiera registrar. Afecta al **bloque 3**; se arregla con una constante por modelo,
+   como ya la hay para el 721.
+3. **`compact` queda bloqueado para siempre si una huella no se puede verificar.** Verifica todas
+   las huellas antes de reescribir y se niega si alguna falla (`CompactRejectedError`), pero
+   compactar es **la única vía de migrar el libro a una versión de esquema nueva**. Un libro con
+   una huella rota —o simplemente ilegible en su versión— no se puede volver a compactar nunca, y
+   no hay procedimiento de recuperación escrito. Hace falta al menos una salida explícita y
+   registrada (una confirmación que reselle marcando la huella como no verificable), decidida por
+   la dirección.
+4. **«Editados a mano» se dice también cuando el caso es «no verificable».** El dominio distingue
+   los dos (`FingerprintCheck.reason` vale `"digest"` o `"unreadable"`) y `deepCheck` escribe dos
+   mensajes distintos, pero los dos viajan bajo el **mismo código**, `filing_fingerprint_mismatch`,
+   y las dos interfaces lo traducen por «se han editado a mano». Un libro cuyas líneas no se
+   pueden leer en la versión que declara la huella no es un libro editado, y acusar de eso es
+   grave. O un código propio, o un `reason` en los detalles que las interfaces lean.
+5. **`computed.as_of` solo se valida como fecha.** Puede ser anterior a `filed_at`, anterior al
+   propio ejercicio declarado o futura. Es la fecha con la que la comparación relee el prefijo del
+   libro, así que una fecha absurda produce causas absurdas sin que nada avise. La muestra
+   `SAMPLES.tax_return_filed` ya lleva un `as_of` **posterior** a su `filed_at`.
+6. **Un mensaje de la comprobación profunda imprime el recuento de líneas donde dice «versión de
+   esquema»**: `packages/domain/src/projections/deep-check.ts`, el caso `"unreadable"`, escribe
+   `schema version ${check.declared_lines}`. Debería ser la versión de la huella.
+7. **La lectura alternativa de un ejercicio no soportado lanza en vez de informar.** Es el patrón
+   que `movedTaxYears` ya tuvo que rodear con un `try/catch` sobre `tax_year_unsupported`.
+8. **El aviso de ejercicio cerrado puede callarse.** Si la lectura anterior es **inválida** y la
+   posterior válida, `closedYearImpact` no compara nada (es el fallo seguro que se añadió a
+   propósito); si además el cambio **no cae por fecha** en el ejercicio declarado, el aviso no sale
+   en absoluto. Es el único hueco conocido de una garantía que se vende como «nunca en silencio».
+9. **La huella de duplicados de una presentación incluye `filed_at`**, así que el mismo
+   justificante registrado dos veces con fechas distintas no se detecta como repetición. El
+   `receipt_reference` sí identifica la presentación.
+10. **La nota N17 omite una fase al resumir** la compensación y deja ver una cadena que no cierra;
+    el motor sí hace las dos fases. Es prosa de este documento.
+11. **Los 200,00 € del criterio #19 dejan de verse ya**, y la decisión de qué enseñar llega en el
+    bloque 2. **Le pasa ahora lo mismo al #18**, que subió a certeza alta el 2026-09-23: los dos
+    aplican una lectura con dinero detrás y ninguno aparece ya en el apartado de dudosos. Se
+    deciden **juntos** en el bloque 2.
+12. **El test antideriva de criterios no ata cada variante a su lectura** en las filas que nombran
+    varias (solo la #2 y la #24). La cabecera del test dice ahora exactamente qué garantiza y qué
+    no. Atarlo exigiría emparejar paréntesis de prosa española con identificadores, que es frágil;
+    si alguna vez compensa, la forma sería llevar esa correspondencia al documento en un formato
+    legible por máquina (una fila por variante), no analizar la frase.
+
 ### 6. Trampas que morderían al siguiente
 
 - **`npm run lint | tail` esconde el rojo**: el código de salida de la tubería es el de `tail`. Dos
@@ -924,3 +988,17 @@ actualizar»**: son cambios de `docs/` que **no** me correspondía hacer.
 | La visibilidad de #19 y sus 200 € | **Pendiente, para el bloque 2**, como se pidió; anotada arriba |
 | Rebase sobre el `develop` nuevo antes de la PR | **Hecho** sobre `f29ebc1`; cuatro conflictos en `docs/`, resueltos conservando la estructura de `develop` |
 | Dejar el traspaso escrito y commiteado donde lo busque quien siga | **Esto** |
+
+### 8. La revisión adversarial de cierre (2026-09-23)
+
+Nueve hallazgos, todos aplicados antes de fusionar; el resumen está en `implementation-notes.md`
+§7 y el trabajo posterior que dejó anotado, en el apartado «5 bis» de arriba. Lo que **cambia de
+conducta** respecto de lo que dice el resto de este documento:
+
+- La causa «configuración» de la comparación lee las **dos** lecturas del prefijo con el mismo
+  `computed.as_of`; el desplazamiento por fecha lo absorbe la causa de los eventos posteriores.
+- `taxChain` anota el diferido al cierre de **cada** ejercicio que recorre (`ChainCore.deferrals`),
+  y `movedTaxYears` compara las **tres** cifras de una Renta, no dos.
+- El criterio **#18** pasa a certeza **alta** y el **#23** a riesgo **agresivo**.
+- `previewEvent` y `previewCorrection` devuelven `closed` y `unfiledPastYears`.
+- El motivo `filed_earlier` de `filings.ts` se llama ahora `filed_later`, que es lo que comprueba.

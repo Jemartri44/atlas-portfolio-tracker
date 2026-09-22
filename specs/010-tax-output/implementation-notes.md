@@ -2,7 +2,7 @@
 
 Documento **vivo**, escrito mientras se implementa. Recoge lo que se desvía del plan y por qué, lo que se preguntó y se respondió, y lo que queda. Se cierra con la feature.
 
-**Estado al 2026-09-22**: bloques **0 y 1 completos**, más los dos lotes de corrección de criterios que la dirección encargó en marcha. **Bloques 2, 3, 4 y 5 sin empezar.** Rama rebasada sobre `develop` (`f29ebc1`), pipeline verde: 163 ficheros de test, **1.562 tests**, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, paquete web dentro de presupuesto.
+**Estado al 2026-09-23**: bloques **0 y 1 completos**, más los dos lotes de corrección de criterios que la dirección encargó en marcha y **la revisión adversarial de cierre** (apartado 7). **Bloques 2, 3, 4 y 5 sin empezar.** Pipeline verde: 163 ficheros de test, **1.576 tests**, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, paquete web dentro de presupuesto.
 
 ---
 
@@ -32,7 +32,7 @@ Etiquetas y prosa de #17 a #24, y el cambio de comportamiento de la ventana de l
 2. **§1.3 daba a `integrity` el hallazgo `filing_fingerprint_mismatch`.** `integrity(state)` no tiene las líneas crudas, y dárselas obligaría a **rehacer el digest del libro entero en cada pantalla**. Partido en dos: `integrity` comprueba el **recuento** contra la posición (`filing_fingerprint_lines`, barato, siempre) y `deepCheck` comprueba el **digest** (`filing_fingerprint_mismatch`, a petición). Los dos códigos traducidos en las dos interfaces.
 3. **Los lectores de los importes de los modelos** se llaman `modelThresholdOf(settings, model)` y no `model720ThresholdOf`: una función por concepto, con el modelo como parámetro, ya que el 720 y el 721 comparten maquinaria (decisión (j)).
 4. **§1.6 hacía que los casos de uso devolvieran el aviso entero.** Cablearlo así metió **el motor fiscal en el trozo de arranque de la web** (+4,9 KB) y lo paró la comprobación automática. Partido en **hecho** (`filings/touched.ts`, solo proyecciones, +0,4 KB, lo devuelven `recordEvent`, `correctEvent` y `reverseEvent`, así que **ninguna interfaz puede olvidarse de avisar**) y **cifra** (`closedYearImpact`, que lee la cadena y la pone quien ya tiene el motor cargado). Medido, no razonado.
-5. **El diferido por ejercicio** no se anota dentro de `walkWashSales`, como sugería §1.5: se obtiene ejecutando la cadena del ejercicio que lo necesita, que son solo los declarados y por tanto pocos. Evita tocar el fichero más peligroso del proyecto sin necesidad.
+5. ~~**El diferido por ejercicio** no se anota dentro de `walkWashSales`, como sugería §1.5.~~ **Revocada el 2026-09-23** por la revisión adversarial: sin él, `chainFigures(chain, year)` devolvía el diferido del ejercicio para el que se construyó la cadena y no el pedido, y `movedTaxYears` no podía comparar la tercera cifra. `walkWashSales` recibe ahora el año de cada evento y toma una instantánea de lo diferido al cierre de **cada ejercicio que cruza**, en la misma pasada (`pendingByYear`). El plan §1.5 pedía justo eso.
 
 ## 3. Hallazgos durante la implementación
 
@@ -73,3 +73,21 @@ El techo del **arranque** lo subió la dirección dos veces (71,5 y luego 74,0) 
 Bloques **2** (la Renta por casillas, con los datos de 2025 ya investigados en `questions.md`), **3** (Modelos 720 y 721, con sus dos cálculos a mano §6.1 y §6.2), **4** (la pantalla `/fiscal` y la tarjeta del Resumen), **5** (`atlas tax --boxes`, `m720`, `m721`, `filed`), las demostraciones §7 y §8, la verificación en navegador y el apriete final de los dos techos del paquete.
 
 **Al cablear la cifra del aviso de ejercicio cerrado** en la CLI y en la web hay que escribir el test estático que la dirección pidió: que **enumere** los módulos que importan `recordEvent`, `correctEvent` o `reverseEvent` fuera del dominio y exija que cada uno alcance `closedYearImpact`, de modo que una tercera interfaz **rompa el test hasta que alguien la añada**.
+
+---
+
+## 7. La revisión adversarial de cierre (2026-09-23)
+
+Encargo de la dirección antes de fusionar. Nueve hallazgos, todos aplicados; el detalle de cada uno está en el commit que lo arregla y en `questions.md`. Lo que conviene que sepa quien siga:
+
+1. **La causa «configuración» de la comparación mentía.** R0 y R1 diferían en **dos** cosas, la configuración y la fecha de consulta, y la resta se rotulaba solo con una. Medido: una Renta de 2026 presentada dentro del prefijo de la de 2027, cuyas cifras se calcularon antes, imputaba **−500,00 € a «configuración»** sin haber tocado un solo ajuste. R1 lee ahora con el mismo `computed.as_of` que R0, y el desplazamiento por fecha lo absorbe la causa de los eventos posteriores, que es donde pertenece. **El test viejo no probaba nada**: «las cuatro causas suman la diferencia» es una identidad algebraica que cumple cualquier reparto. El nuevo ancla el reparto en el caso donde la fecha importa.
+2. **`chainFigures` ignoraba el año para la cifra `deferred`** (arriba, desviación 5). Con ello, `movedTaxYears` compara ya **las tres** cifras que declara una Renta, y hay un test de un ejercicio en el que **solo** se mueve el diferido: antes ese cambio de configuración no pedía confirmación.
+3. **Los cálculos a mano eran un espejo del código.** `HAND_SETTINGS` fija las tres familias tipo a tipo y los cuatro escalares. Medido antes y después: con los valores por defecto, mover la categoría de renta de los fondos tumbaba 11 casos y bajar el límite al 30 % tumbaba 6; ahora, ninguno.
+4. **Seis mutantes sobrevivían a la suite entera** en la validación de forma de `tax_return_filed` y en la receta de la huella. Ahora mueren los seis, comprobado mutando uno a uno. El más importante: **la receta del digest está fijada a un literal** de una entrada conocida, porque la huella es dato persistido en el libro y cualquier retoque de la receta invalidaría en silencio todas las ya escritas. *Causa común de los cinco de validación*: `LedgerBuilder` **no valida nada** —no solo las presentaciones: ningún tipo de evento pasa por `validateShape`—, así que la cobertura de la validación tiene que venir de tests que la llamen directamente, y ahí es donde están.
+5. **La cita del art. 4.9 del RD 1082/2012 estaba truncada donde más duele**, en cuatro sitios. El texto del BOE continúa «a los efectos de aquellas disposiciones que regulen regímenes específicos de inversión», y el art. 33.5 f) LIRPF no es obviamente una de ellas. **La decisión no cambia** —la sostienen la DGT V2067-06 y el manual del Modelo 100—, pero la cita ahora va entera y dice dónde se acaba su apoyo.
+6. **El criterio #23 cruzaba otra vez las dos columnas** (la tercera vez, en la ronda cuyo objeto era dejar de cruzarlas): su dirección es **agresiva**, porque si el criterio está mal se deduce de más.
+7. **El #18 sube a certeza alta**, con la fuente verificada en esta pasada: el Manual práctico de Renta 2025 de la AEAT, capítulo 11, actualizado el 17/03/2026, dice literalmente que la recompra existe cuando los valores homogéneos «continúan en el patrimonio del contribuyente tras la transmisión». Predicción escrita y comiteada antes; el `diff` del dorado fue **exactamente** la entrada prevista y nada más.
+8. **La vista previa avisa ya donde avisa la escritura**: `previewEvent` y `previewCorrection` devuelven `closed` y `unfiledPastYears`, que el plan §1.6 enumeraba y no estaban. No cuesta una proyección más ni un byte de arranque en la web (medido: 72,3 KB).
+9. **El test antideriva de criterios prometía más de lo que garantiza.** Se ha corregido la descripción, no el test: atarlo variante a variante exigiría analizar prosa española. Lo que garantiza y lo que no está escrito en su cabecera y en el traspaso (pendiente 12).
+
+**Lo que la revisión dejó anotado sin hacer** está en `questions.md`, apartado «5 bis»: doce cosas, ninguna bloqueante, con el bloque al que afecta cada una.
