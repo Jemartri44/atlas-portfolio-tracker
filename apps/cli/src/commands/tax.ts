@@ -56,7 +56,8 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
   "2:listed_1y": "ventana de un año (cotizados, la lectura prudente)",
   "2:crypto": "ventana de un año (cripto)",
   "2:crypto_2m": "ventana de dos meses (cripto, la lectura menos prudente)",
-  "2:fund": "ventana de un año (fondos)",
+  "2:fund_2m": "ventana de dos meses (fondos)",
+  "2:fund_1y": "ventana de un año (fondos, la lectura prudente)",
   "2:other": "ventana configurada que ninguna lectura del documento sostiene",
   "2b": "un traspaso entrante es una adquisición",
   "3": "comisiones en la base (art. 35)",
@@ -355,7 +356,9 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
         ...(report.anchor === undefined
           ? []
           : [
-              `Anclado en lo declarado en ${report.anchor.year}: calculado ${report.anchor.computed.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}; declarado ${report.anchor.declared.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}.`,
+              report.anchor.before_ledger === true
+                ? `Anclado en lo declarado en ${report.anchor.year}, anterior a tus datos: ${report.anchor.declared.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}. Vienen de lo declarado, no de un cálculo.`
+                : `Anclado en lo declarado en ${report.anchor.year}: calculado ${report.anchor.computed.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}; declarado ${report.anchor.declared.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}.`,
             ]),
       ].join("\n"),
     ),

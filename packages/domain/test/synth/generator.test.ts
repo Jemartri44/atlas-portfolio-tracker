@@ -12,11 +12,14 @@ import type {
   EventOf,
   OrderUpdatedEvent,
   SellEvent,
+  SettingsChangedEvent,
   SupportedEvent,
 } from "../../src/schema/events.js";
+import { ASSET_TYPES } from "../../src/schema/events.js";
 import { decodeLine, encodeLine } from "../../src/schema/line.js";
 import { generateLedger } from "../../src/synth/scenario.js";
 import { summarizeLedger } from "../../src/synth/summary.js";
+import { taxYear } from "../../src/tax/year.js";
 import { fixtureLines, fixtureText } from "../fixtures-path.js";
 import { checkInvariants } from "./invariants.js";
 
@@ -307,5 +310,54 @@ describe("generateLedger: the scenario contains every rare case", () => {
     expect(dividend.currency).toBe("USD");
     expect(Number(dividend.withholding_origin)).toBeGreaterThan(0);
     expect(Number(dividend.withholding_spain)).toBeGreaterThan(0);
+  });
+});
+
+describe("the settings the scenario writes: a second table, on purpose", () => {
+  /**
+   * The scenario writes its own wash-sale window instead of reading the
+   * documented default, so that moving a default never rewrites a frozen
+   * fixture. The price of that is drift, and this is the guard against it: the
+   * table has to name **every asset type except `etf`**, which is left out
+   * deliberately so the golden exercises the fallback and the report lists it
+   * in `settings.from_code`.
+   */
+  it("names every asset type except etf, so nothing else rides a default unnoticed", () => {
+    const settings = generateLedger({ seed: 1 }).find(
+      (event) => event.type === "settings_changed",
+    ) as SettingsChangedEvent;
+    const named = Object.keys(settings.settings.wash_sale_window).sort();
+    expect(named).toEqual(ASSET_TYPES.filter((type) => type !== "etf").sort());
+    // And the fiscal date rule, for the same reason.
+    expect(Object.keys(settings.settings.fiscal_date_rule).sort()).toEqual(
+      ASSET_TYPES.filter((type) => type !== "etf").sort(),
+    );
+  });
+
+  /**
+   * The **third** family the engine reads, `income_category`, which the guard
+   * above did not cover: the scenario writes none of it, so the golden report
+   * reads the documented default for all seven types.
+   *
+   * That is not something this test can fix by pinning it: the settings line
+   * lives in the frozen `.jsonl` (prompt 003, decision (i)) and writing a
+   * family into it would rewrite the fixture. What it can do is **say it out
+   * loud and hold it**, because the consequence is real and already happened:
+   * moving `DEFAULT_INCOME_CATEGORY.etc` in block 0 of feature 010 moved the
+   * golden report, and the only thing standing between that and a silent
+   * rewrite is the prediction written before regenerating. If somebody ever
+   * writes a partial family here, this fails and the prediction gets written.
+   */
+  it("writes no income category, so the golden reads the documented default for all seven", () => {
+    const settings = generateLedger({ seed: 1 }).find(
+      (event) => event.type === "settings_changed",
+    ) as SettingsChangedEvent;
+    expect(settings.settings.income_category).toBeUndefined();
+    // And the report says so, type by type, where the reader can see it.
+    const fromCode = taxYear(generateLedger({ seed: 1 }), 2027, { today: "2030-01-01" }).settings
+      .from_code;
+    expect(fromCode.filter((entry) => entry.startsWith("income_category.")).sort()).toEqual(
+      ASSET_TYPES.map((type) => `income_category.${type}`).sort(),
+    );
   });
 });

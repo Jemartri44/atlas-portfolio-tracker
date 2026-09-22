@@ -98,6 +98,21 @@ const tupleOf = (event: FingerprintInput): string[] | undefined => {
       ];
     case "corporate_action":
       return ["", "", "", event.asset_id, event.type, event.effective_date, event.kind, "", ""];
+    // A filing is identified by what the tax agency returned: the same model,
+    // year and receipt recorded twice is the same filing, not two. A
+    // supplementary return has its own receipt, so it never collides.
+    case "tax_return_filed":
+      return [
+        "",
+        "",
+        "",
+        "",
+        event.type,
+        event.filed_at,
+        event.model,
+        String(event.tax_year),
+        event.receipt_reference,
+      ];
     default:
       return undefined;
   }

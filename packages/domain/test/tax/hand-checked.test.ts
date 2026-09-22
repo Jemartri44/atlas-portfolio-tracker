@@ -200,8 +200,10 @@ describe("the hand-checked ledger, year by year", () => {
     ]);
     // What travelled and is pending is at stake under #15.
     expect(eur(doubtful(report, "15")?.exposure_eur)).toBe("15");
-    // #18 the other way would count Y1 too, but no fund_y is left to carry it.
-    expect(doubtful(report, "18")?.reason).toBe("no_carrier_left");
+    // #18 the other way would count Y1 too, but it is of high certainty since
+    // 2026-09-23 (the manual of the AEAT says it literally) and no longer
+    // offers an alternative reading.
+    expect(doubtful(report, "18")).toBeUndefined();
   });
 
   it("2023: releases through the transfers, a swap, and two years that compete", () => {

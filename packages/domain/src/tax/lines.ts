@@ -70,7 +70,9 @@ export const windowCriterion = (type: AssetType, window: string): CriterionId =>
   if (type === "crypto") {
     return window === "1y" ? "2:crypto" : window === "2m" ? "2:crypto_2m" : "2:other";
   }
-  return window === "1y" ? "2:fund" : "2:other";
+  // A year is no longer a window nobody supports: it is the conservative side
+  // of the same dispute, and it is labelled as such (criterion #2).
+  return window === "2m" ? "2:fund_2m" : window === "1y" ? "2:fund_1y" : "2:other";
 };
 
 const money = (amount: string, currency: string): Money => Money.parse(amount, currency);

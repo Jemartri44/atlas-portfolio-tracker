@@ -10,7 +10,9 @@ import { fiscalLots } from "../../src/projections/lots.js";
 import { positionOf } from "../../src/projections/positions.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { BuyEvent, Draft, LedgerEvent, SupportedEvent } from "../../src/schema/events.js";
+import { previewCorrection, previewEvent } from "../../src/usecases/preview-event.js";
 import { loadAndProject } from "../../src/usecases/project-ledger.js";
+import { recordEvent } from "../../src/usecases/record-event.js";
 import { correctEvent, isPriorYear, reverseEvent } from "../../src/usecases/rectify.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 import { TestStore } from "../memory-store.js";
@@ -301,5 +303,153 @@ describe("rectifying corporate actions", () => {
     const { state } = await loadAndProject(deps);
     expect(positionOf(state, "acc_fund", "ast_world").toString()).toBe("20");
     expect(state.lotCounts.has(action.id)).toBe(false);
+  });
+});
+
+describe("every write says which filed return it reaches (ADR-0020)", () => {
+  /** A ledger with a sale of 2027 and the return of 2027 already filed. */
+  const filedLedger = () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-11" });
+    const sell = b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-06-01",
+      quantity: "5",
+    });
+    const filing = b.filed({ tax_year: 2027, filed_at: "2028-06-18" });
+    return { events: b.build(), sell, filing };
+  };
+
+  it("names it when reversing something of that year, and says nothing with nothing filed", async () => {
+    const { events, sell, filing } = filedLedger();
+    const deps = testDeps(new TestStore(events), "2029-03-01T10:00:00.000Z");
+    const result = await reverseEvent(deps, sell.id, "wrong quantity");
+    expect(result.closed).toEqual([
+      {
+        model: "renta",
+        year: 2027,
+        filing_id: filing.id,
+        filed_at: "2028-06-18",
+        by_date: true,
+      },
+    ]);
+    // Reversing the only sale of 2027 leaves the year without figures at all,
+    // so it is neither filed-and-touched nor a past year worth filing.
+    expect(result.unfiledPastYears).toEqual([]);
+
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-11" });
+    const alone = b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-06-01",
+      quantity: "5",
+    });
+    const plain = testDeps(new TestStore(b.build()), "2029-03-01T10:00:00.000Z");
+    const nothing = await recordEvent(plain, {
+      type: "standalone_fee",
+      account_id: "acc_fund",
+      value_date: "2027-09-01",
+      amount: "10",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2027-09-01",
+      description: "custodia",
+    });
+    expect(nothing.closed).toEqual([]);
+    // 2027 has figures and no return recorded: a note, not a warning (Q8).
+    expect(nothing.unfiledPastYears).toEqual([2027]);
+    expect(alone.id).toBeTruthy();
+  });
+
+  it("names it when correcting into that year, and when recording a new event in it", async () => {
+    const { events, sell, filing } = filedLedger();
+    const deps = testDeps(new TestStore(events), "2029-03-01T10:00:00.000Z");
+    const corrected = await correctEvent(
+      deps,
+      sell.id,
+      { ...draftOf(sell), quantity: "4" },
+      "wrong quantity",
+    );
+    expect(corrected.closed.map((entry) => [entry.year, entry.by_date])).toEqual([[2027, true]]);
+
+    const fresh = testDeps(new TestStore(events), "2029-03-01T10:00:00.000Z");
+    const recorded = await recordEvent(fresh, {
+      type: "standalone_fee",
+      account_id: "acc_fund",
+      value_date: "2027-09-01",
+      amount: "10",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2027-09-01",
+      description: "custodia",
+    });
+    expect(recorded.closed.map((entry) => [entry.year, entry.filing_id])).toEqual([
+      [2027, filing.id],
+    ]);
+  });
+
+  /**
+   * And the preview says the same, because the house rule is that a preview
+   * fails —and warns— exactly where the write does. It used to return neither
+   * of the two, so the interface could show a clean preview of a movement that
+   * lands in a filed year and only warn once it was already written.
+   */
+  it("says it in the preview too, for a new event and for a correction", async () => {
+    const { events, sell, filing } = filedLedger();
+    const preview = await previewEvent(
+      testDeps(new TestStore(events), "2029-03-01T10:00:00.000Z"),
+      {
+        type: "standalone_fee",
+        account_id: "acc_fund",
+        value_date: "2027-09-01",
+        amount: "10",
+        currency: "EUR",
+        fx_rate: "1",
+        fx_rate_date: "2027-09-01",
+        description: "custodia",
+      },
+    );
+    expect(preview.closed.map((entry) => [entry.year, entry.filing_id, entry.by_date])).toEqual([
+      [2027, filing.id, true],
+    ]);
+    expect(preview.unfiledPastYears).toEqual([]);
+
+    const corrected = await previewCorrection(
+      testDeps(new TestStore(events), "2029-03-01T10:00:00.000Z"),
+      sell.id,
+      { ...draftOf(sell), quantity: "4" },
+      "wrong quantity",
+    );
+    expect(corrected.closed.map((entry) => [entry.year, entry.by_date])).toEqual([[2027, true]]);
+
+    // And a past year with figures and nothing filed is a note here too (Q8).
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-11" });
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-06-01",
+      quantity: "5",
+    });
+    const unfiled = await previewEvent(
+      testDeps(new TestStore(b.build()), "2029-03-01T10:00:00.000Z"),
+      {
+        type: "standalone_fee",
+        account_id: "acc_fund",
+        value_date: "2027-09-01",
+        amount: "10",
+        currency: "EUR",
+        fx_rate: "1",
+        fx_rate_date: "2027-09-01",
+        description: "custodia",
+      },
+    );
+    expect(unfiled.closed).toEqual([]);
+    expect(unfiled.unfiledPastYears).toEqual([2027]);
   });
 });

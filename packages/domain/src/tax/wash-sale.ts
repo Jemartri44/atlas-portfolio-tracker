@@ -160,8 +160,20 @@ export interface WashSaleResult {
   deferrals: Deferral[];
   /** Deferred losses still on lots after the whole ledger. */
   pending: PendingDeferral[];
-  /** The same, at the cutoff: before the first entry the caller says is after it. */
-  pendingAtCutoff: PendingDeferral[];
+  /**
+   * The same at the close of **every tax year the walk crosses**: the entry
+   * for 2027 is the snapshot taken at the first journal entry of a later year,
+   * which is what was still deferred at 31/12/2027. The last year it names
+   * holds what the whole ledger leaves.
+   *
+   * One walk, not one per year. The chain of tax years needs this figure for
+   * every year it walks —the income tax declares it, and a change of settings
+   * that moves only the deferred loss of a past year has to be seen— and
+   * re-walking the journal once per year would multiply the most expensive
+   * pass of the engine by the life of the ledger. Empty when the caller does
+   * not say which year an entry belongs to.
+   */
+  pendingByYear: Map<number, PendingDeferral[]>;
 }
 
 interface Acquired {
@@ -209,7 +221,10 @@ class Walker {
   private releasing: Release[] = [];
   readonly outcomes: WashSaleOutcome[] = [];
   readonly deferrals: Deferral[] = [];
-  atCutoff: PendingDeferral[] | undefined;
+  /** What was still deferred at the close of each year the walk crosses. */
+  readonly byYear = new Map<number, PendingDeferral[]>();
+  /** The highest year seen so far: the journal is walked in the order it was applied. */
+  private lastYear: number | undefined;
 
   constructor(
     private readonly state: LedgerState,
@@ -217,7 +232,7 @@ class Walker {
     private readonly acquired: Map<AssetId, Acquired[]>,
     private readonly firstOpen: Map<string, number>,
     private readonly scales: Map<AssetId, ScaleMark[]>,
-    private readonly afterCutoff: (eventId: Ulid) => boolean,
+    private readonly yearOf: ((eventId: Ulid) => number) | undefined,
   ) {
     for (const list of acquired.values()) {
       for (const entry of list) {
@@ -228,12 +243,34 @@ class Walker {
 
   walk(): void {
     this.state.lotJournal.forEach((entry, index) => {
-      if (this.atCutoff === undefined && this.afterCutoff(this.eventOf(entry))) {
-        this.atCutoff = this.pending();
-      }
+      this.closeYearsBefore(entry);
       this.apply(entry, index);
     });
-    this.atCutoff ??= this.pending();
+    if (this.lastYear !== undefined) {
+      this.byYear.set(this.lastYear, this.pending());
+    }
+  }
+
+  /**
+   * Snapshots what is deferred at the close of every year this entry leaves
+   * behind. One snapshot serves them all: between the last entry of 2027 and
+   * the first of 2030 nothing happens, so 2027, 2028 and 2029 close on exactly
+   * the same state.
+   */
+  private closeYearsBefore(entry: LotJournalEntry): void {
+    if (this.yearOf === undefined) {
+      return;
+    }
+    const year = this.yearOf(this.eventOf(entry));
+    if (this.lastYear !== undefined && year > this.lastYear) {
+      const snapshot = this.pending();
+      for (let closed = this.lastYear; closed < year; closed += 1) {
+        this.byYear.set(closed, snapshot);
+      }
+    }
+    if (this.lastYear === undefined || year > this.lastYear) {
+      this.lastYear = year;
+    }
   }
 
   private eventOf(entry: LotJournalEntry): Ulid {
@@ -766,7 +803,8 @@ export const walkWashSales = (
   state: LedgerState,
   today: CivilDate,
   eventTypes: Map<Ulid, string>,
-  afterCutoff: (eventId: Ulid) => boolean = () => false,
+  /** The tax year an event belongs to; without it no year is closed on the way. */
+  yearOf?: (eventId: Ulid) => number,
 ): WashSaleResult => {
   const firstOpen = new Map<string, number>();
   const scales = new Map<AssetId, ScaleMark[]>();
@@ -798,13 +836,13 @@ export const walkWashSales = (
     acquisitionsOf(state, eventTypes),
     firstOpen,
     scales,
-    afterCutoff,
+    yearOf,
   );
   walker.walk();
   return {
     outcomes: walker.outcomes,
     deferrals: walker.deferrals,
     pending: walker.pending(),
-    pendingAtCutoff: walker.atCutoff as PendingDeferral[],
+    pendingByYear: walker.byYear,
   };
 };

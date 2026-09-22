@@ -276,10 +276,11 @@ describe("atlas settings set: a change that moves a past tax year", () => {
       date,
       "--yes",
     ];
-    // A fund loss of −20 deferred by a repurchase within the year, and a gain of +50.
+    // A fund loss of −20 deferred by a repurchase inside its window —two months
+    // since the correction of criterion #2— and a gain of +50.
     expect(await h.exec(trade("buy", "ast_world", "2027-01-11", "10"))).toBe(0);
     expect(await h.exec(trade("sell", "ast_world", "2027-06-01", "8"))).toBe(0);
-    expect(await h.exec(trade("buy", "ast_world", "2027-09-01", "8"))).toBe(0);
+    expect(await h.exec(trade("buy", "ast_world", "2027-07-01", "8"))).toBe(0);
     expect(await h.exec(trade("buy", "ast_bonds", "2027-01-11", "10"))).toBe(0);
     expect(await h.exec(trade("sell", "ast_bonds", "2027-10-01", "15"))).toBe(0);
     h.reset();
@@ -386,6 +387,88 @@ describe("atlas settings set: assignments keyed by asset type", () => {
     expect(written.settings.savings_offset_limit_pct).toBe("20");
     expect(written.settings.loss_carryforward_years).toBe(5);
     expect(written.settings.treaty_withholding_pct).toEqual({ US: "15", CH: "15" });
+  });
+
+  it("sets the figures of the informative returns and the season of the tax return", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(
+      await h.exec([
+        "settings",
+        "set",
+        "--model-720-threshold-eur",
+        "60000",
+        "--model-720-increase-eur",
+        "25000",
+        "--model-720-alert-threshold-eur",
+        "55000",
+        "--model-721-threshold-eur",
+        "40000",
+        "--model-721-increase-eur",
+        "15000",
+        "--model-721-alert-threshold-eur",
+        "35000",
+        "--renta-season-start",
+        "04-11",
+        "--renta-season-end",
+        "07-01",
+      ]),
+    ).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as { settings: Record<string, string> };
+    expect(written.settings.model_720_threshold_eur).toBe("60000");
+    expect(written.settings.model_720_increase_eur).toBe("25000");
+    expect(written.settings.model_720_alert_threshold_eur).toBe("55000");
+    expect(written.settings.model_721_threshold_eur).toBe("40000");
+    expect(written.settings.model_721_increase_eur).toBe("15000");
+    expect(written.settings.model_721_alert_threshold_eur).toBe("35000");
+    expect(written.settings.renta_season_start).toBe("04-11");
+    expect(written.settings.renta_season_end).toBe("07-01");
+  });
+
+  it("refuses a warning above its threshold and a season that is not MM-DD", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--model-720-alert-threshold-eur", "50000.01"])).toBe(
+      1,
+    );
+    expect(await h.exec(["settings", "set", "--renta-season-start", "abril"])).toBe(1);
+    expect((await h.store.load()).events).toHaveLength(seed().length);
+  });
+
+  /**
+   * Criterion #2b was readable by the engine and not writable by anybody: the
+   * same class of defect as a control that saves nothing. Three states, so two
+   * flags, like `--neutrality-regime`.
+   */
+  it("says yes, no, or nothing at all about a transfer in counting as a repurchase (#2b)", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    const written = async (): Promise<Record<string, unknown>> => {
+      const { events } = await h.store.load();
+      return (events[events.length - 1] as unknown as { settings: Record<string, unknown> })
+        .settings;
+    };
+    expect(await h.exec(["settings", "set", "--no-wash-sale-transfer-counts"])).toBe(0);
+    expect((await written()).wash_sale_transfer_counts).toBe(false);
+    expect(await h.exec(["settings", "set", "--wash-sale-transfer-counts"])).toBe(0);
+    expect((await written()).wash_sale_transfer_counts).toBe(true);
+    // Nothing said leaves what is in force alone.
+    expect(await h.exec(["settings", "set", "--stale-price-days", "9"])).toBe(0);
+    expect((await written()).wash_sale_transfer_counts).toBe(true);
+  });
+
+  it("refuses the two ways of writing #2b at once, and the word after the flag", async () => {
+    /** `EX_USAGE`: the command was written wrong, not the configuration. */
+    const USAGE = 64;
+    const h = harness({ events: seed(), confirm: true });
+    expect(
+      await h.exec([
+        "settings",
+        "set",
+        "--wash-sale-transfer-counts",
+        "--no-wash-sale-transfer-counts",
+      ]),
+    ).toBe(USAGE);
+    expect(await h.exec(["settings", "set", "--wash-sale-transfer-counts", "false"])).toBe(USAGE);
+    expect((await h.store.load()).events).toHaveLength(seed().length);
   });
 
   it("rejects a category the enumeration does not have", async () => {

@@ -62,6 +62,15 @@ export const FINDING_TEXTS: Record<string, FindingText> = {
     what: "La huella guardada de un evento no coincide con sus campos: alguien lo editó a mano.",
     todo: "En tus datos nada se edita: un movimiento equivocado se anula y se registra corregido. Recupera la copia anterior a la edición.",
   },
+  // --- What was filed (ADR-0020) ----------------------------------------
+  filing_fingerprint_lines: {
+    what: "Una declaración presentada dice que se calculó sobre un número de movimientos distinto de los que tiene delante en el archivo.",
+    todo: "Alguien ha insertado o quitado una línea antes de esa declaración. Recupera la copia anterior y compárala: lo que consta en Hacienda no se puede recalcular sin esos movimientos.",
+  },
+  filing_fingerprint_mismatch: {
+    what: "Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó.",
+    todo: "Se han editado a mano. Recupera la copia anterior a la edición: sin ellos, la aplicación no puede explicar por qué lo declarado y lo calculado difieren.",
+  },
   projection_not_reproducible: {
     what: "Volver a leer el archivo da un resultado distinto del que tienes en pantalla.",
     todo: "Es el fallo más grave que hay: no registres nada. Exporta tus datos tal como están, guárdalos aparte y revísalos antes de seguir.",

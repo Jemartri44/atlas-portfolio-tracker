@@ -6,7 +6,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { DecimalString } from "../money/decimal.js";
 import type { Currency } from "../money/money.js";
-import type { Settings } from "../settings/settings.js";
+import type { IncomeCategory, Settings } from "../settings/settings.js";
 import type { Envelope, ReservedEventType } from "./envelope.js";
 
 export type AccountId = string;
@@ -107,13 +107,19 @@ export interface AssetFields {
   transferable: boolean;
   reference_etf_id?: AssetId;
   /**
-   * Where it trades: MIC code or the market's name (ADR-0021). Optional, and
-   * nothing reads it yet. It exists because the wash-sale window of article
-   * 33.5.f) LIRPF talks about regulated markets **of the EU**, so a Nasdaq
-   * share may well fall under letter g) and its one-year window instead of the
-   * two months the project applies by default. That question is open
+   * Where it trades: MIC code or the market's name (ADR-0021). Optional.
+   *
+   * It exists because the wash-sale window of article 33.5.f) LIRPF talks
+   * about regulated markets **of the EU**, so a Nasdaq share may well fall
+   * under letter g) and its one-year window instead of the two months the
+   * project applies by default. That question is still open
    * (`docs/fiscal-questions.md` #2), and it cannot be answered either way if
    * the catalogue does not say where the thing trades.
+   *
+   * The tax engine **reads it** (feature 009): each transmission line carries
+   * it, and the doubtful item of criterion `2:listed` lists the markets at
+   * stake, so that the reading of the dispute can be checked market by market.
+   * Nothing chooses a window with it yet: that is the criterion's to decide.
    */
   market?: string;
   /**
@@ -525,9 +531,13 @@ export interface CorporateActionEvent extends Envelope {
   effects: Effect[];
   /**
    * Whether the operation takes the neutrality regime, i.e. the tax deferral of
-   * a merger, exchange or spin-off (ADR-0021). Optional, and **nothing reads
-   * it**: which primitives an exchange composes into is still the user's
-   * choice, and `KIND_RULES` does not look at this field.
+   * a merger, exchange or spin-off (ADR-0021). Optional. It does not decide
+   * which primitives an exchange composes into —that is still the user's
+   * choice, and `KIND_RULES` does not look at this field— but the tax engine
+   * **reads it** (feature 009): an exchange that says nothing about the regime
+   * is exposed as doubtful under criteria #7 and #13, and one that says the
+   * regime does **not** apply while keeping date and cost gets its own note,
+   * `tax_neutrality_contradiction`.
    *
    * It exists because the deferral is conditional —the AEAT manual requires the
    * acquiring entity to be Spanish or within Directive 2009/133/EC— so a merger
@@ -562,6 +572,129 @@ export interface ThesisClosedEvent extends Envelope {
   type: "thesis_closed";
   thesis_id: string;
   closing_notes: string;
+}
+
+// --- What was filed (ADR-0020) ---------------------------------------------
+
+/** The returns the ledger keeps a record of having filed. */
+export const FILING_MODELS = ["renta", "720", "721"] as const;
+export type FilingModel = (typeof FILING_MODELS)[number];
+
+/**
+ * The categories an informative return declares separately, each with its own
+ * threshold: cash accounts and securities in the 720, and the single one of
+ * the 721. A category absent from a filing is a category **not declared**.
+ */
+export const FILING_CATEGORIES = ["accounts", "securities", "crypto"] as const;
+export type FilingCategory = (typeof FILING_CATEGORIES)[number];
+
+/**
+ * The first tax year a filing may name. 2018 is the regime of compensation the
+ * engine implements (`FIRST_SUPPORTED_YEAR`), and 2023 is the first year the
+ * 721 existed (Orden HFP/886/2023). A test keeps the first level with the
+ * engine: the schema cannot import the tax module.
+ */
+export const FIRST_FILING_YEAR = 2018;
+export const FIRST_FILING_YEAR_721 = 2023;
+
+/** A negative balance still pending, as the return declares it: by origin year and category. */
+export interface FiledPendingLoss {
+  origin_year: number;
+  category: IncomeCategory;
+  /** Negative, with its sign, as the engine and `FiledAnchor` carry it. */
+  amount_eur: DecimalString;
+}
+
+/** What a `renta` declares of the savings base. */
+export interface FiledRentaFigures {
+  savings_base_eur: DecimalString;
+  pending_losses: FiledPendingLoss[];
+  /** Losses still deferred by the wash-sale rule at 31/12. Negative; for comparison only (feature 009, Q9). */
+  deferred_losses_eur: DecimalString;
+}
+
+/**
+ * One asset as an informative return declares it. Cash is **the account**; a
+ * security is **(account, asset)**. Without this list there is no way to know
+ * when the taxpayer stopped holding something that was declared, which is the
+ * second trigger of having to file again (prompt 010, P3).
+ */
+export interface FiledItem {
+  category: FilingCategory;
+  account_id: AccountId;
+  /** Absent on a cash account: the item is the account itself. */
+  asset_id?: AssetId;
+  /** Cash: the balance at 31/12 and the average of the fourth quarter (P2). */
+  balance_eur?: DecimalString;
+  q4_average_eur?: DecimalString;
+  /** Securities and crypto: the value at 31/12. */
+  value_eur?: DecimalString;
+}
+
+/** What a `720` or a `721` declares, by category and asset by asset. */
+export interface FiledInformativeFigures {
+  accounts?: { balance_eur: DecimalString; q4_average_eur: DecimalString };
+  securities?: { value_eur: DecimalString };
+  crypto?: { value_eur: DecimalString };
+  items: FiledItem[];
+}
+
+export type FiledFigures = FiledRentaFigures | FiledInformativeFigures;
+
+/**
+ * What the application computed the day the filing was recorded, in the same
+ * shape as what was declared, plus what it takes to reproduce it: the day of
+ * the calculation and the **whole resolved configuration**, because the
+ * `settings_changed` in force alone does not reproduce a reading that fell
+ * back to the code for anything (`settings.from_code`).
+ */
+export type FiledComputed<F extends FiledFigures = FiledFigures> = F & {
+  as_of: CivilDate;
+  /** Id of the `settings_changed` in force, or `"default"`. */
+  settings_origin: string;
+  settings: Settings;
+};
+
+/**
+ * The ledger as it stood **before** the filing. Not the raw bytes: those change
+ * with the first `compact`, and a false alarm there would be worse than no
+ * check at all. The digest is taken over the `lines` first lines migrated to
+ * `schema_version` and written canonically, and `compact` verifies every
+ * fingerprint before rewriting and seals them again afterwards.
+ */
+export interface LedgerFingerprint {
+  schema_version: number;
+  /** How many lines of the file the digest covers: every event before this one. */
+  lines: number;
+  /** Lower-case hex SHA-256. */
+  sha256: string;
+}
+
+/**
+ * The record of a return actually filed (ADR-0020). It is **a fact, not a
+ * calculation**: what it declares is what was filed, even when the application
+ * computes something else today. Comparing the two is the point.
+ *
+ * A supplementary return is a new event with `supersedes`, never a `reversal`:
+ * the first filing did happen. A `reversal` of a filing is for a return that
+ * was never filed at all, and one that another filing supersedes cannot be
+ * reversed, like anything else already consumed (ADR-0003).
+ */
+export interface TaxReturnFiledEvent extends Envelope {
+  type: "tax_return_filed";
+  model: FilingModel;
+  tax_year: number;
+  /** The day it was filed. After 31/12 of `tax_year`, and never in the future. */
+  filed_at: CivilDate;
+  /** The reference of the receipt the tax agency returns. */
+  receipt_reference: string;
+  /** The filing this one replaces: a supplementary return. */
+  supersedes?: Ulid;
+  declared: FiledFigures;
+  computed: FiledComputed;
+  ledger_fingerprint: LedgerFingerprint;
+  notes?: string;
+  fingerprint: string;
 }
 
 // --- Rectification --------------------------------------------------------
@@ -600,6 +733,7 @@ export type SupportedEvent =
   | CorporateActionEvent
   | ThesisOpenedEvent
   | ThesisClosedEvent
+  | TaxReturnFiledEvent
   | ReversalEvent;
 
 export type LedgerEvent = SupportedEvent | ReservedEvent;

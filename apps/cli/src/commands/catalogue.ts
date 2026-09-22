@@ -228,15 +228,29 @@ const SETTINGS_DECIMALS = [
   "bucket-max-cumulative-contribution",
   "bucket-stop-loss-pct",
   "bucket-max-weight-pct",
+  "model-720-threshold-eur",
+  "model-720-increase-eur",
   "model-720-alert-threshold-eur",
+  "model-721-threshold-eur",
+  "model-721-increase-eur",
   "model-721-alert-threshold-eur",
   "savings-offset-limit-pct",
+  // Copied verbatim, like the two below: the domain validates the form.
+  "renta-season-start",
+  "renta-season-end",
   "tax-residence",
   "notification-email",
 ];
 const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days", "loss-carryforward-years"];
 /** Free-text settings: the benchmark is an `asset_id`, checked against the catalogue when queried. */
 const SETTINGS_STRINGS = ["bucket-benchmark-asset"];
+/**
+ * Criterion #2b, in the three states the setting has: said yes, said no, and
+ * **not said**, which is what every ledger written before ADR-0014 carries and
+ * which reads as the prudent side (a transfer in acquires homogeneous
+ * securities, so it defers the loss).
+ */
+const SETTINGS_BOOLEANS = ["wash-sale-transfer-counts", "no-wash-sale-transfer-counts"];
 
 export const parseAssignments = (raw: string, flag: string): Record<string, string> => {
   const result: Record<string, string> = {};
@@ -332,7 +346,35 @@ const confirmMovedYears = async (
     ctx.io.out(
       "Este cambio mueve la base del ahorro de ejercicios anteriores (`atlas tax <año>`):",
     );
-    ctx.io.out(rows(bases));
+    ctx.io.out(
+      table(
+        [
+          "ejercicio",
+          "base antes EUR",
+          "base después EUR",
+          "pendiente antes",
+          "pendiente después",
+          "diferido antes",
+          "diferido después",
+        ],
+        bases.map((impact) => [
+          String(impact.year),
+          impact.before.amount.toString(),
+          impact.after.amount.toString(),
+          impact.pending_before.amount.toString(),
+          impact.pending_after.amount.toString(),
+          impact.deferred_before.amount.toString(),
+          impact.deferred_after.amount.toString(),
+        ]),
+      ),
+    );
+    // A year can keep its base and leave a different balance pending, which is
+    // what moves the years after it.
+    if (bases.every((impact) => impact.before.eq(impact.after))) {
+      ctx.io.out(
+        "La base no cambia en ninguno, pero sí lo que dejan pendiente de compensar: eso mueve los ejercicios siguientes.",
+      );
+    }
   }
   ctx.io.out("Puede afectar a una declaración ya presentada.");
   return confirm(ctx, "¿Continuar? [s/N] ");
@@ -372,6 +414,7 @@ export const settingsCommand = async (
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
       ...SETTINGS_STRINGS,
+      ...SETTINGS_BOOLEANS,
       ...GLOBAL_FLAGS,
     ]);
     const { state, events } = await loadForQuery(ctx);
@@ -428,6 +471,16 @@ export const settingsCommand = async (
     const benchmark = stringFlag(flags, "bucket-benchmark-asset");
     if (benchmark !== undefined) {
       patch.bucket_benchmark_asset_id = benchmark;
+    }
+    const counts = booleanFlag(flags, "wash-sale-transfer-counts");
+    const doesNot = booleanFlag(flags, "no-wash-sale-transfer-counts");
+    if (counts && doesNot) {
+      throw new UsageError(
+        "--wash-sale-transfer-counts y --no-wash-sale-transfer-counts son excluyentes",
+      );
+    }
+    if (counts || doesNot) {
+      patch.wash_sale_transfer_counts = counts;
     }
     const settings = mergeSettings(current, patch as Partial<Settings>);
     if (!(await confirmSilencedWarnings(ctx, state, current, settings))) {

@@ -6,6 +6,7 @@
 
 import type { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
+import type { Filing } from "./filings.js";
 import type {
   FiscalLot,
   GainByLot,
@@ -135,6 +136,28 @@ const thesisOf = (thesis: Thesis) => ({
   result_eur_rounded: text(thesis.result_eur.roundToCents()),
 });
 
+/**
+ * A filing in the snapshot: its identity, what it declares and where it sits in
+ * the chain. **Without the digest of its fingerprint**, on purpose: `compact`
+ * seals the fingerprints again over the rewritten prefix, and a snapshot that
+ * carried the digest would make `compact` abort over a change `compact` itself
+ * had just made. How many lines it covers, and in which schema version, do not
+ * move: those are what the verification needs.
+ */
+const filingOf = (filing: Filing) => ({
+  event_id: filing.event_id,
+  model: filing.model,
+  tax_year: filing.tax_year,
+  filed_at: filing.filed_at,
+  receipt_reference: filing.receipt_reference,
+  supersedes: filing.supersedes,
+  superseded_by: filing.superseded_by,
+  declared: filing.declared,
+  computed: filing.computed,
+  fingerprint_lines: filing.fingerprint.lines,
+  notes: filing.notes,
+});
+
 /** Messages are wording, not projection: a rephrasing must not change the snapshot. */
 const warningOf = (warning: Warning) => ({
   code: warning.code,
@@ -196,6 +219,7 @@ export const snapshotOf = (state: LedgerState): Snapshot => {
     orders: [...state.orders.values()],
     transfer_requests: [...state.transferRequests.values()],
     theses: [...state.theses.values()].map(thesisOf),
+    filings: [...state.filings.values()].map(filingOf),
     warnings: state.warnings.map(warningOf),
     invalid: state.invalid.map(invalidOf),
   }) as Snapshot;

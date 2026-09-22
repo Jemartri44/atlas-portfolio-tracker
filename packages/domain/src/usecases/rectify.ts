@@ -6,6 +6,7 @@
 import { yearOf } from "../dates/civil-date.js";
 import { todayInMadrid } from "../dates/madrid.js";
 import { DependentEventsError, DuplicateFingerprintError, NotFoundError } from "../errors.js";
+import { type ClosedYear, closedYearsTouched, unfiledPastYears } from "../filings/touched.js";
 import { createUlidGenerator } from "../ids/ulid.js";
 import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState, Warning } from "../projections/state.js";
@@ -23,6 +24,15 @@ export interface ReverseResult {
   reversal: ReversalEvent;
   /** The reversed event has its business date in a tax year before the current one: a filed return may be affected. */
   priorYear: boolean;
+  /**
+   * Returns already filed that this rectification reaches (ADR-0020). More
+   * precise than `priorYear`, which only knows the year is past, and past is
+   * not the same as filed. The **figure** it moves is put on by whoever has
+   * the tax engine loaded (`closedYearImpact`).
+   */
+  closed: ClosedYear[];
+  /** Past years with figures and no filing recorded: a note, not a warning (Q8). */
+  unfiledPastYears: number[];
   warnings: Warning[];
   etag: string;
 }
@@ -81,11 +91,15 @@ export const reverseEvent = async (
     { type: "reversal", reverses_id: targetId, reason },
     createUlidGenerator(deps).next(),
   );
-  const state = checkCandidate(events, [...events, reversal], [reversal.id], targetId);
+  const candidate = [...events, reversal];
+  const state = checkCandidate(events, candidate, [reversal.id], targetId);
+  const today = todayInMadrid(deps.clock);
   const appended = await deps.store.append([reversal], etag);
   return {
     reversal,
     priorYear: isPriorYear(deps, state, target),
+    closed: closedYearsTouched(events, candidate, today, state),
+    unfiledPastYears: unfiledPastYears(today, state),
     warnings: [],
     etag: appended.etag,
   };
@@ -157,11 +171,14 @@ export const correctEvent = async <E extends SupportedEvent>(
   if (duplicates.length > 0 && options.confirmDuplicate !== true) {
     throw new DuplicateFingerprintError((event as { fingerprint: string }).fingerprint, duplicates);
   }
+  const today = todayInMadrid(deps.clock);
   const appended = await deps.store.append([reversal, event], etag);
   return {
     reversal,
     event,
     priorYear: isPriorYear(deps, state, target),
+    closed: closedYearsTouched(events, [...events, reversal, event], today, state),
+    unfiledPastYears: unfiledPastYears(today, state),
     warnings: state.warnings.filter((warning) => warning.event_id === event.id),
     etag: appended.etag,
   };

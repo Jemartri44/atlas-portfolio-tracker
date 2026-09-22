@@ -342,6 +342,26 @@ const SCENARIO_FISCAL_DATE_RULE: Settings["fiscal_date_rule"] = {
   money_market: "value_date",
 };
 
+/**
+ * The window the synthetic scenario writes down, **on purpose a second table
+ * and not the documented default**.
+ *
+ * It looks like duplication and it is not. The golden file is **frozen once
+ * merged** (prompt 003, decision (i)), and a generator that read
+ * `DEFAULT_WASH_SALE_WINDOW` would rewrite it every time the code changed its
+ * mind about a criterion: moving the fund from a year to two months
+ * (criterion #2, 2026-09-22) would have rewritten the settings line of a file
+ * whose whole purpose is not to move. The scenario is **data**, and data says
+ * what it says; the default is **what the code believes today**. A fixture
+ * that follows the code proves nothing about the code.
+ *
+ * What that costs is drift, and drift is what a test is for:
+ * `test/synth/generator.test.ts` checks that this table names **every asset
+ * type except `etf`**, so a type added to the enum cannot ride a default here
+ * without somebody noticing. `etf` is left out deliberately, and always was:
+ * the golden relies on it falling back, which is what makes the report list it
+ * in `settings.from_code`.
+ */
 const SCENARIO_WASH_SALE_WINDOW: Settings["wash_sale_window"] = {
   stock: "2m",
   etc: "2m",

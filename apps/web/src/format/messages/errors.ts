@@ -44,7 +44,11 @@ const notTheFormat = (d: Details): string =>
 const MONEY_SETTINGS: ReadonlySet<string> = new Set([
   "monthly_contribution_eur",
   "bucket_max_cumulative_contribution",
+  "model_720_threshold_eur",
+  "model_720_increase_eur",
   "model_720_alert_threshold_eur",
+  "model_721_threshold_eur",
+  "model_721_increase_eur",
   "model_721_alert_threshold_eur",
 ]);
 
@@ -166,6 +170,25 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   },
   invalid_wash_sale_window: (d) =>
     `La ventana de recompra de ${enumValue(d.asset_type)} no es válida: elige dos meses, un año o un número de días.`,
+  // --- What was filed (ADR-0020) -----------------------------------------
+  filing_year_unsupported: (d) =>
+    `El ${enumValue(d.model)} no existe para el ejercicio ${num(d.tax_year)}: el primero que puedes registrar es ${num(d.first_supported)}.`,
+  filed_at_not_after_year: (d) =>
+    `Una declaración del ejercicio ${num(d.tax_year)} no se pudo presentar el ${day(d.filed_at)}: la fecha tiene que ser posterior al final de ese ejercicio.`,
+  filed_at_in_future: (d) =>
+    `La presentaste el ${day(d.filed_at)}, que es posterior a hoy: no se registra lo que todavía no se ha presentado.`,
+  duplicate_pending_loss: (d) =>
+    `Los saldos pendientes declarados repiten el ejercicio ${num(d.origin_year)} en ${enumValue(d.category)}: cada origen va una sola vez.`,
+  duplicate_filed_item: (d, n) =>
+    `Los bienes declarados repiten ${n.one(d.asset_id ?? d.account_id)}: cada uno va una sola vez.`,
+  alert_above_threshold: (d, _n, f) =>
+    `El aviso previo del Modelo ${num(d.model)} (${f.money(d.alert)}) no puede superar el umbral que obliga a presentarlo (${f.money(d.threshold)}): nunca llegaría a saltar.`,
+  // Named in words and never by its key: there are only two fields, and a
+  // fallback to the raw name would print `renta_season_start` at the user.
+  invalid_renta_season: (d) =>
+    d.value === undefined
+      ? `La temporada de Renta empieza el ${num(d.start)} y termina el ${num(d.end)}: el inicio no puede ser posterior al fin.`
+      : `${text(d.field) === "renta_season_end" ? "El fin" : "El inicio"} de la temporada de Renta se escribe como MM-DD, mes y día (recibido: ${num(d.value)}).`,
   tax_ledger_invalid: (d) =>
     `Tus datos tienen ${num(d.count)} ${Number(d.count) === 1 ? "movimiento inválido" : "movimientos inválidos"}: un cálculo fiscal sobre ellos sería aproximado. Repáralo antes en Ajustes → Verificación.`,
   tax_year_unsupported: (d) =>
@@ -229,6 +252,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     }.`,
   lots_mismatch: (d, n) =>
     `Los lotes fiscales de ${n.one(d.asset_id)} no cuadran con la posición física.`,
+  filing_fingerprint_lines: () =>
+    "Una declaración presentada dice que se calculó sobre otros movimientos de los que tiene delante en el archivo.",
+  filing_fingerprint_mismatch: () =>
+    "Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó.",
   // --- Store and schema --------------------------------------------------
   conflict: () =>
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",

@@ -1,0 +1,87 @@
+// The hand-computed exercise of feature 009, read with the ETC as movable
+// capital income — the reading criterion #24 documents (binding ruling
+// V0267-25) and, since feature 010, the **default**.
+//
+// Every literal here comes from `specs/009-tax-engine/questions.md`, section
+// "Dinero en juego de los dudosos", where the same year is worked out by hand
+// under that reading: gains 462,50; movable capital income 64,00 − 90,00 =
+// −26,00; phase 1 offsets the 26,00 against 25 % of 462,50 = 115,63; phase 2
+// takes the −260,80 carried from 2027; base **175,70**, the same as the other
+// reading. Nothing here was copied from the engine.
+
+import { describe, expect, it } from "vitest";
+import type { Money } from "../../src/money/money.js";
+import { DEFAULT_INCOME_CATEGORY } from "../../src/settings/settings.js";
+import { taxReportJson } from "../../src/tax/json.js";
+import { taxYear } from "../../src/tax/year.js";
+import { exerciseLedger } from "./exercise-ledger.js";
+
+const TODAY = "2029-06-01";
+
+const text = (money: Money | undefined): string =>
+  money === undefined ? "—" : money.amount.toString();
+
+describe("the hand-computed year of feature 009 with the ETC as movable capital income", () => {
+  const { events, id } = exerciseLedger("movable_capital");
+  const report = taxYear(events, 2028, { today: TODAY });
+
+  it("moves E12 and E19 out of the gains and into the movable capital income", () => {
+    expect(
+      report.movable_capital.transmissions.map((l) => [l.event_id, text(l.computable_eur_rounded)]),
+    ).toEqual([
+      [id.E12, "-75"],
+      [id.E19, "-15"],
+    ]);
+    expect(report.capital_gains.lines.map((l) => l.event_id)).not.toContain(id.E12);
+    expect(report.movable_capital.transmissions.map((l) => l.criteria.includes("24:etc"))).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it("offsets 26.00 in phase 1 within the 115.63 of the limit, and still lands on base 175.70", () => {
+    const c = report.compensation;
+    expect(text(c.capital_gain_eur)).toBe("462.5");
+    expect(text(c.movable_capital_eur)).toBe("-26");
+    expect(text(c.limit_eur.capital_gain)).toBe("115.63");
+    expect(
+      c.steps.map((s) => [s.phase, s.from, s.origin_year, s.against, text(s.amount_eur)]),
+    ).toEqual([
+      [1, "movable_capital", 2028, "capital_gain", "26"],
+      [2, "capital_gain", 2027, "capital_gain", "260.8"],
+    ]);
+    expect(text(c.movable_capital_final_eur)).toBe("0");
+    expect(text(report.base_eur)).toBe("175.7");
+    expect(c.pending).toEqual([]);
+  });
+
+  /**
+   * The ETC stays doubtful, and that is the point of the correction of
+   * 2026-09-22: the ratio of V0267-25 is "it is a debt security", not "it is an
+   * ETC", so a physical-gold ETC with a right to delivery is not resolved by
+   * it. A report that hid what is not known would be worse than an
+   * uncomfortable one.
+   */
+  it("keeps the ETC among the doubtful, with the certainty and the risk of the document", () => {
+    const etc = report.doubtful.find((entry) => entry.criterion === "24:etc");
+    expect(etc?.certainty).toBe("medium");
+    expect(etc?.documented_risk).toBe("both");
+    expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("24:etc_gain");
+  });
+
+  /**
+   * The mutant this kills is the one that puts `etc` or `etp` back on
+   * `capital_gain` in `DEFAULT_INCOME_CATEGORY`: a ledger that says nothing
+   * about the income category has to read exactly as the documented one.
+   */
+  it("is what a ledger that says nothing about the income category reads", () => {
+    const fromCode = taxYear(exerciseLedger("from_code").events, 2028, { today: TODAY });
+    expect(DEFAULT_INCOME_CATEGORY.etc).toBe("movable_capital");
+    expect(DEFAULT_INCOME_CATEGORY.etp).toBe("movable_capital");
+    expect(JSON.stringify(taxReportJson(fromCode).movable_capital)).toBe(
+      JSON.stringify(taxReportJson(report).movable_capital),
+    );
+    expect(text(fromCode.base_eur)).toBe("175.7");
+    expect(fromCode.notes.map((n) => n.code)).toContain("tax_settings_default_used");
+  });
+});

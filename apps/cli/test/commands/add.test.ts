@@ -34,9 +34,9 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     // The sale itself warns about the purchase inside the previous window that
     // it leaves in the portfolio, names it by its date and by what of it is
     // still held (10 bought, 6 sold), and the window that actually applies: a
-    // fund has one year, not two months.
+    // fund has **two months** since the correction of criterion #2 (2026-09-22).
     expect(h.text()).toContain("cuando siguen en cartera 4 títulos de una compra del 2027-01-11");
-    expect(h.text()).toContain("ventana de un año");
+    expect(h.text()).toContain("ventana de dos meses");
     expect(h.text()).toContain("puede no ser computable en 2027");
     h.reset();
     return { h, trade };
@@ -44,28 +44,27 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
 
   it("warns before the question when the repurchase falls inside the window", async () => {
     const { h, trade } = await cycle();
-    expect(await h.exec(trade("buy", "2027-06-01", "8", "5"))).toBe(0);
+    expect(await h.exec(trade("buy", "2027-04-01", "8", "5"))).toBe(0);
     const text = h.text();
     // The purchase by its date and quantity, the sale by its asset and date, the
     // year with its number, and no internal identifier in the sentence.
     expect(text).toContain(
-      "Compra del 2027-06-01 de 5 títulos de ast_world dentro de la ventana de su venta con pérdida del 2027-02-10",
+      "Compra del 2027-04-01 de 5 títulos de ast_world dentro de la ventana de su venta con pérdida del 2027-02-10",
     );
-    expect(text).toContain("2028-02-10");
+    expect(text).toContain("2027-04-10");
     expect(text).toContain("no sea computable en 2027");
     expect(text).toContain("atlas tax 2027");
     expect(text).not.toMatch(/ventana de la venta 01[0-9A-Z]{24}/);
-    // The window is a year (ADR-0014): calling it "the two-month rule" next to a
-    // date a year away contradicted the date and was fiscally false.
-    expect(text).toContain("ventana de un año");
-    expect(text).not.toContain("regla de los dos meses");
+    // The window is named by what actually applies (ADR-0014): for a fund, two
+    // months since the correction of criterion #2.
+    expect(text).toContain("ventana de dos meses");
     // The warning comes before the confirmation, not after the write.
-    expect(text.indexOf("Compra del 2027-06-01")).toBeLessThan(text.indexOf("Registrado"));
+    expect(text.indexOf("Compra del 2027-04-01")).toBeLessThan(text.indexOf("Registrado"));
   });
 
   it("does not warn when the repurchase is outside the window, and never blocks", async () => {
     const { h, trade } = await cycle();
-    expect(await h.exec(trade("buy", "2028-03-01", "8", "5"))).toBe(0);
+    expect(await h.exec(trade("buy", "2027-04-12", "8", "5"))).toBe(0);
     expect(h.text()).not.toContain("dentro de la ventana de su venta con pérdida");
     expect(h.text()).toContain("Registrado");
     // Even inside the window the purchase is recorded: it is a warning, not a rejection.

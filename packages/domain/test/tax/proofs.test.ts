@@ -203,30 +203,34 @@ describe("proof 1: no figure of the return depends on a price", () => {
 });
 
 describe("proof 2: the defaults change nothing that already existed", () => {
-  it("every disposal of the synthetic ledger is a capital gain whose own result is its realized gain", () => {
+  it("every disposal of the synthetic ledger has the own result of its realized gain, in the section its category says", () => {
     const events = synthetic();
     const state = projectLedger(events);
     for (const year of YEARS) {
       const report = taxYear(events, year, { today: TODAY });
-      expect(report.movable_capital.transmissions).toEqual([]);
-      const gains = realizedGains(state, year);
-      expect(
-        report.capital_gains.lines.map((line) => [
-          line.event_id,
-          line.account_id,
-          line.own_eur.roundToCents().amount.toString(),
-        ]),
-      ).toEqual(
-        gains.map((gain) => [
-          gain.event_id,
-          gain.account_id,
-          gain.gain_eur_rounded.amount.toString(),
-        ]),
-      );
+      // Since criterion #24 the two sections are both possible, so the proof
+      // is on the two together: every disposal is in one of them, once, with
+      // the result the projection computed. Only an ETC or an ETP can be in
+      // the second one with the defaults.
+      for (const line of report.movable_capital.transmissions) {
+        expect(["etc", "etp"]).toContain(line.asset_type);
+      }
+      const key = (entry: { event_id: string; account_id: string }) =>
+        `${entry.event_id}|${entry.account_id}`;
+      const order = (a: readonly string[], b: readonly string[]) =>
+        (a[0] as string).localeCompare(b[0] as string) ||
+        (a[1] as string).localeCompare(b[1] as string);
+      const lines = [...report.capital_gains.lines, ...report.movable_capital.transmissions]
+        .map((line) => [key(line), line.own_eur.roundToCents().amount.toString()])
+        .sort(order);
+      const gains = realizedGains(state, year)
+        .map((gain) => [key(gain), gain.gain_eur_rounded.amount.toString()])
+        .sort(order);
+      expect(lines).toEqual(gains);
     }
   });
 
-  it("an income category written in full as capital gains gives the same report as none at all", () => {
+  it("an income category written in full gives the same report as none at all", () => {
     const events = synthetic();
     const explicit = events.map((event) =>
       event.type === "settings_changed"

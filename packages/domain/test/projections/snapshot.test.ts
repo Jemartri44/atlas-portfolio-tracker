@@ -91,6 +91,19 @@ const richLedger = (): LedgerEvent[] => {
       },
     ],
   });
+  // A filed return with a supplementary one: the only way `filings` is
+  // anything but an empty list.
+  const original = b.filed({ tax_year: 2027, filed_at: "2028-06-18", notes: "la primera" });
+  b.filed({
+    tax_year: 2027,
+    filed_at: "2028-09-01",
+    supersedes: original.id,
+    declared: {
+      savings_base_eur: "175.70",
+      pending_losses: [{ origin_year: 2026, category: "capital_gain", amount_eur: "-10" }],
+      deferred_losses_eur: "-20",
+    },
+  });
   return b.build();
 };
 
@@ -127,7 +140,21 @@ describe("snapshotOf", () => {
       fiscal_settings: unknown;
       warnings: unknown[];
       invalid: unknown[];
+      filings: Record<string, unknown>[];
     };
+    // What was filed, with its chain resolved and **without** the digest of its
+    // fingerprint: `compact` seals those again and a snapshot that carried
+    // them would make it abort over its own rewrite.
+    expect(
+      snapshot.filings.map((filing) => [filing.tax_year, filing.superseded_by !== undefined]),
+    ).toEqual([
+      [2027, true],
+      [2027, false],
+    ]);
+    expect(snapshot.filings[0]?.notes).toBe("la primera");
+    expect(snapshot.filings[1]?.supersedes).toBe(snapshot.filings[0]?.event_id);
+    expect(snapshot.filings[1]?.fingerprint_lines).toBeGreaterThan(0);
+    expect(JSON.stringify(snapshot.filings)).not.toContain("sha256");
     expect(snapshot.accounts.map((a) => (a as { account_id: string }).account_id)).toEqual([
       "acc_bucket",
       "acc_etf",

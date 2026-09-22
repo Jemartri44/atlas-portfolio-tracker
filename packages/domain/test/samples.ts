@@ -30,6 +30,7 @@ export const ID = {
   corporateAction: "01ARYZ6S41TSV4RRFFQ69G5FAM",
   thesisOpened: "01ARYZ6S41TSV4RRFFQ69G5FAN",
   thesisClosed: "01ARYZ6S41TSV4RRFFQ69G5FAP",
+  taxReturnFiled: "01ARYZ6S41TSV4RRFFQ69G5FAR",
 } as const;
 
 export const envelope = (id: string, type: LedgerEvent["type"]): Envelope => ({
@@ -322,6 +323,33 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
     type: "thesis_closed",
     thesis_id: "th_spec_1",
     closing_notes: "Thesis played out",
+  },
+  tax_return_filed: {
+    ...envelope(ID.taxReturnFiled, "tax_return_filed"),
+    type: "tax_return_filed",
+    model: "renta",
+    tax_year: 2025,
+    filed_at: "2026-06-18",
+    receipt_reference: "100-2025-000000000000",
+    declared: {
+      savings_base_eur: "175.70",
+      pending_losses: [{ origin_year: 2024, category: "capital_gain", amount_eur: "-260.80" }],
+      deferred_losses_eur: "-20.00",
+    },
+    computed: {
+      as_of: "2026-06-20",
+      settings_origin: ID.settings,
+      settings: DEFAULT_SETTINGS,
+      savings_base_eur: "175.70",
+      pending_losses: [{ origin_year: 2024, category: "capital_gain", amount_eur: "-260.80" }],
+      deferred_losses_eur: "-20.00",
+    },
+    ledger_fingerprint: {
+      schema_version: 1,
+      lines: 12,
+      sha256: "0000000000000000000000000000000000000000000000000000000000000000",
+    },
+    fingerprint: "sha256:renta-2025",
   },
   reversal: {
     ...envelope(ID.reversal, "reversal"),

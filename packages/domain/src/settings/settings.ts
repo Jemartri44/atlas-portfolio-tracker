@@ -3,6 +3,7 @@
 // to be verified with the tax advisor); every other parameter is optional until
 // the user sets it.
 
+import { isCivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
 import { Decimal, type DecimalString, isDecimalString } from "../money/decimal.js";
@@ -19,10 +20,12 @@ export type FiscalDateRule = (typeof FISCAL_DATE_RULES)[number];
  *
  * It exists because an ETC is legally a debt note and not a collective
  * investment undertaking, so there is a case for its disposal being movable
- * capital income. That case is **unresolved** (`docs/fiscal-questions.md`), and
- * this feature does not resolve it: **nothing reads this setting yet**. The tax
- * engine of phase 5 will, and then answering the question will be a
- * `settings_changed` and not a migration (ADR-0021).
+ * capital income. ADR-0021 left it as configuration so that the case could be
+ * answered with a `settings_changed` and not a migration, and criterion #24
+ * answered it: since the binding ruling V0267-25, the default of an ETC and an
+ * ETP is `movable_capital`. The **tax engine reads it** (feature 009): it
+ * decides which section of the savings base a disposal lands in, and with it
+ * how its losses offset.
  */
 export const INCOME_CATEGORIES = ["capital_gain", "movable_capital"] as const;
 export type IncomeCategory = (typeof INCOME_CATEGORIES)[number];
@@ -113,8 +116,29 @@ export interface Settings {
    */
   bucket_benchmark_asset_id?: string;
   stale_price_days?: number;
+  /**
+   * The legal figures of the informative returns (Models 720 and 721): the
+   * amount above which a category obliges, the increase over the last filed
+   * return that obliges again, and the amount at which the application warns
+   * before either. They are the law of a given year, not a constant of the
+   * code (constitution IV, prompt 010 decision (i)): a year computed today has
+   * to stay reproducible if the figure changes (ADR-0022). Absent means the
+   * documented default; read through `modelThresholdOf`, `modelIncreaseOf` and
+   * `modelAlertThresholdOf`, never off the field.
+   */
+  model_720_threshold_eur?: DecimalString;
+  model_720_increase_eur?: DecimalString;
   model_720_alert_threshold_eur?: DecimalString;
+  model_721_threshold_eur?: DecimalString;
+  model_721_increase_eur?: DecimalString;
   model_721_alert_threshold_eur?: DecimalString;
+  /**
+   * The income tax season, as `MM-DD`: the weeks in which the fiscal card of
+   * the summary goes to the top. The dates of the campaign move every year,
+   * so they are configuration too. Read through `rentaSeasonOf`.
+   */
+  renta_season_start?: string;
+  renta_season_end?: string;
   savings_tax_brackets?: TaxBracket[];
   tax_residence?: string;
   notification_email?: string;
@@ -138,26 +162,66 @@ export const DEFAULT_FISCAL_DATE_RULE: Record<AssetType, FiscalDateRule> = {
   money_market: "value_date",
 };
 
-/** Same, for the income category: what the system does today, for every type (ADR-0021). */
+/**
+ * Same, for the income category (ADR-0021).
+ *
+ * An **ETC** and an **ETP** are movable capital income, not a capital gain
+ * (criterion #24 of `docs/fiscal-questions.md`): the binding ruling of the DGT
+ * V0267-25, of 13/03/2025, holds that an exchange traded commodity is a debt
+ * security and "in every case" produces income from the assignment of own
+ * capital to third parties (art. 25.2 LIRPF). It is also the prudent side: as
+ * movable capital income a loss offsets gains only up to 25 %.
+ *
+ * The certainty is not the same for the two —high for an ETC, medium for an
+ * ETP, whose legal structure varies by product— and the catalogue of criteria
+ * says so with a variant each. Both stay configurable: answering this with a
+ * `settings_changed` instead of a migration is what ADR-0021 exists for.
+ */
 export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
   stock: "capital_gain",
   etf: "capital_gain",
-  etc: "capital_gain",
-  etp: "capital_gain",
+  etc: "movable_capital",
+  etp: "movable_capital",
   crypto: "capital_gain",
   fund: "capital_gain",
   money_market: "capital_gain",
 };
 
-/** Same, for the wash-sale window (ADR-0013, ADR-0014; verify with the tax advisor). */
+/**
+ * Same, for the wash-sale window (ADR-0013, ADR-0014; verify with the tax
+ * advisor).
+ *
+ * A **fund** takes two months, not a year (criterion #2, corrected on
+ * 2026-09-22). What separates the two months of article 33.5 f) from the year
+ * of g) is being admitted to trading, and article 4.9 of RD 1082/2012 says,
+ * for funds that guarantee daily redemption, that meeting the obligation to
+ * publish the net asset value daily "determinará que las participaciones en
+ * los correspondientes fondos tengan la consideración de valores admitidos a
+ * cotización **a los efectos de aquellas disposiciones que regulen regímenes
+ * específicos de inversión**".
+ *
+ * **That last clause is part of the quote and it narrows it**: article 33.5 f)
+ * LIRPF is not obviously one of those provisions, so the regulation on its own
+ * is arguable and does not carry the decision. What carries it is the doctrine:
+ * the two only consultations on the point (DGT 0011-00 and V2067-06) put fund
+ * units under f), and the help of Modelo 100 for 2025 lists funds with daily
+ * information among the two-month case; its example of the year is a SICAV of
+ * the MAB.
+ *
+ * **A monetary fund too** (`money_market`), for exactly the same reason and
+ * with the same certainty: in this catalogue the type is a **money market
+ * fund** —it carries an ISIN, a TER and `transferable`, which is the Spanish
+ * transfer regime and only exists for collective investment undertakings— not
+ * a treasury bill, a repo or a deposit, which the reasoning would not reach.
+ */
 export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
   stock: "2m",
   etf: "2m",
   etc: "2m",
   etp: "2m",
   crypto: "1y",
-  fund: "1y",
-  money_market: "1y",
+  fund: "2m",
+  money_market: "2m",
 };
 
 /** Provisional defaults (ADR-0013, ADR-0014). Verify with the tax advisor; change via `settings_changed`, not code. */
@@ -184,6 +248,55 @@ export const savingsOffsetLimitPctOf = (settings: Settings): Decimal =>
 export const lossCarryforwardYearsOf = (settings: Settings): number =>
   settings.loss_carryforward_years ?? DEFAULT_LOSS_CARRYFORWARD_YEARS;
 
+/** The informative returns on assets held abroad. */
+export const INFORMATIVE_MODELS = ["720", "721"] as const;
+export type InformativeModel = (typeof INFORMATIVE_MODELS)[number];
+
+/**
+ * The figures of the informative returns as understood in September 2026;
+ * verify, and change them with a `settings_changed`, never here.
+ *
+ * - 720, threshold and increase: arts. 42 bis.4.e), 42 bis.5, 42 ter.4.c) and
+ *   42 ter.5 of RD 1065/2007.
+ * - 721, threshold and increase: arts. 42 quater.5.d) and 42 quater.6.
+ * - The warning: `business-rules.md` §7, which is a choice of the user and not
+ *   a figure of the law.
+ */
+export const DEFAULT_INFORMATIVE_LIMITS = {
+  "720": { threshold: "50000", increase: "20000", alert: "45000" },
+  "721": { threshold: "50000", increase: "20000", alert: "45000" },
+} as const satisfies Record<
+  InformativeModel,
+  { threshold: DecimalString; increase: DecimalString; alert: DecimalString }
+>;
+
+/** The amount above which a category of the model obliges to file. */
+export const modelThresholdOf = (settings: Settings, model: InformativeModel): Decimal =>
+  Decimal.parse(
+    settings[`model_${model}_threshold_eur`] ?? DEFAULT_INFORMATIVE_LIMITS[model].threshold,
+  );
+
+/** The increase over the last filed return of the model that obliges to file again. */
+export const modelIncreaseOf = (settings: Settings, model: InformativeModel): Decimal =>
+  Decimal.parse(
+    settings[`model_${model}_increase_eur`] ?? DEFAULT_INFORMATIVE_LIMITS[model].increase,
+  );
+
+/** The amount at which the application warns, before the threshold obliges. */
+export const modelAlertThresholdOf = (settings: Settings, model: InformativeModel): Decimal =>
+  Decimal.parse(
+    settings[`model_${model}_alert_threshold_eur`] ?? DEFAULT_INFORMATIVE_LIMITS[model].alert,
+  );
+
+/** The income tax season as understood in September 2026: from 1 April to 30 June. */
+export const DEFAULT_RENTA_SEASON = { start: "04-01", end: "06-30" } as const;
+
+/** The season in force, as two `MM-DD`: what the settings say, or its documented default. */
+export const rentaSeasonOf = (settings: Settings): { start: string; end: string } => ({
+  start: settings.renta_season_start ?? DEFAULT_RENTA_SEASON.start,
+  end: settings.renta_season_end ?? DEFAULT_RENTA_SEASON.end,
+});
+
 /** The treaty rate for a country, or nothing when the settings do not know it (#16). */
 export const treatyWithholdingPctOf = (
   settings: Settings,
@@ -200,10 +313,11 @@ export const fiscalDateRuleOf = (settings: Settings, assetType: AssetType): Fisc
 /**
  * The income category in force for an asset type (ADR-0021). Resolved here and
  * not read off the map, so that an absent type —or an absent map, which is what
- * every line written before this feature has— takes the documented default and
+ * every line written before ADR-0021 has— takes the documented default and
  * never a category arrived at by elimination.
  *
- * Nothing in the system calls this yet. It is the door the tax engine opens.
+ * The tax engine calls it for every disposal, and the warning of a settings
+ * change compares the two readings through it.
  */
 export const incomeCategoryOf = (settings: Settings, assetType: AssetType): IncomeCategory =>
   settings.income_category?.[assetType] ?? DEFAULT_INCOME_CATEGORY[assetType];
@@ -216,7 +330,11 @@ const DECIMAL_FIELDS = [
   "bucket_max_cumulative_contribution",
   "bucket_stop_loss_pct",
   "bucket_max_weight_pct",
+  "model_720_threshold_eur",
+  "model_720_increase_eur",
   "model_720_alert_threshold_eur",
+  "model_721_threshold_eur",
+  "model_721_increase_eur",
   "model_721_alert_threshold_eur",
   "savings_offset_limit_pct",
 ] as const;
@@ -233,8 +351,11 @@ interface Range {
  * negative bucket share produces a negative budget and a core larger than the
  * contribution, and one above 100 makes the calculator ask for negative
  * allocations and die on its own invariant. The rest is bounded below only.
+ *
+ * Complete, not partial: every decimal setting has a bound, and the compiler
+ * asks for one the day a new setting joins `DECIMAL_FIELDS`.
  */
-const DECIMAL_RANGES: Partial<Record<(typeof DECIMAL_FIELDS)[number], Range>> = {
+const DECIMAL_RANGES: Record<(typeof DECIMAL_FIELDS)[number], Range> = {
   deviation_threshold_pp: { min: "0" },
   satellite_min_weight_pct: { min: "0", max: "100" },
   monthly_contribution_eur: { min: "0" },
@@ -242,6 +363,12 @@ const DECIMAL_RANGES: Partial<Record<(typeof DECIMAL_FIELDS)[number], Range>> = 
   bucket_max_cumulative_contribution: { min: "0" },
   bucket_stop_loss_pct: { min: "0", max: "100" },
   bucket_max_weight_pct: { min: "0", max: "100" },
+  model_720_threshold_eur: { min: "0" },
+  model_720_increase_eur: { min: "0" },
+  model_720_alert_threshold_eur: { min: "0" },
+  model_721_threshold_eur: { min: "0" },
+  model_721_increase_eur: { min: "0" },
+  model_721_alert_threshold_eur: { min: "0" },
   savings_offset_limit_pct: { min: "0", max: "100" },
 };
 
@@ -383,6 +510,48 @@ const checkTreatyRates = (raw: UnknownRecord): void => {
   }
 };
 
+/**
+ * A warning above its own threshold would never fire: the category would be
+ * obliged before the application said anything. Checked on the figures **in
+ * force**, defaults included, because that is the configuration that will run.
+ */
+const checkInformativeAlerts = (raw: UnknownRecord): void => {
+  const settings = raw as unknown as Settings;
+  for (const model of INFORMATIVE_MODELS) {
+    const alert = modelAlertThresholdOf(settings, model);
+    const threshold = modelThresholdOf(settings, model);
+    if (alert.gt(threshold)) {
+      throw new ValidationError(
+        "alert_above_threshold",
+        `model_${model}_alert_threshold_eur must not be above model_${model}_threshold_eur`,
+        { model, alert: alert.toString(), threshold: threshold.toString() },
+      );
+    }
+  }
+};
+
+/** A day of the year as `MM-DD`, checked against a leap year so that 02-29 exists. */
+const SEASON_FIELDS = ["renta_season_start", "renta_season_end"] as const;
+
+const checkRentaSeason = (raw: UnknownRecord): void => {
+  const invalid = (message: string, details: Record<string, unknown>): never => {
+    throw new ValidationError("invalid_renta_season", message, details);
+  };
+  for (const field of SEASON_FIELDS) {
+    if (field in raw && !isCivilDate(`2024-${String(raw[field])}`)) {
+      invalid(`${field} must be a day of the year as MM-DD`, { field, value: raw[field] });
+    }
+  }
+  const season = rentaSeasonOf(raw as unknown as Settings);
+  if (season.start > season.end) {
+    invalid("renta_season_start must not be after renta_season_end", {
+      field: "renta_season_start",
+      start: season.start,
+      end: season.end,
+    });
+  }
+};
+
 /** Validates a complete settings object (the payload of `settings_changed`). Unknown keys are kept. */
 export const validateSettings = (raw: unknown): Settings => {
   if (!isRecord(raw)) {
@@ -416,9 +585,6 @@ export const validateSettings = (raw: unknown): Settings => {
       return fail(`${field} must be a decimal string`, { field, value });
     }
     const range = DECIMAL_RANGES[field];
-    if (range === undefined) {
-      continue;
-    }
     const parsed = Decimal.parse(value);
     const belowMin = parsed.lt(Decimal.parse(range.min));
     const aboveMax = range.max !== undefined && parsed.gt(Decimal.parse(range.max));
@@ -450,6 +616,8 @@ export const validateSettings = (raw: unknown): Settings => {
       return fail(`${field} must be true or false`, { field, value: raw[field] });
     }
   }
+  checkInformativeAlerts(raw);
+  checkRentaSeason(raw);
   checkTreatyRates(raw);
   if ("target_weights" in raw) {
     const weights = raw.target_weights;
@@ -522,6 +690,14 @@ export const normalizeSettings = (settings: Settings): Settings => {
       settings.wash_sale_transfer_counts ?? DEFAULT_WASH_SALE_TRANSFER_COUNTS,
     savings_offset_limit_pct: settings.savings_offset_limit_pct ?? DEFAULT_SAVINGS_OFFSET_LIMIT_PCT,
     loss_carryforward_years: lossCarryforwardYearsOf(settings),
+    model_720_threshold_eur: modelThresholdOf(settings, "720").toString(),
+    model_720_increase_eur: modelIncreaseOf(settings, "720").toString(),
+    model_720_alert_threshold_eur: modelAlertThresholdOf(settings, "720").toString(),
+    model_721_threshold_eur: modelThresholdOf(settings, "721").toString(),
+    model_721_increase_eur: modelIncreaseOf(settings, "721").toString(),
+    model_721_alert_threshold_eur: modelAlertThresholdOf(settings, "721").toString(),
+    renta_season_start: rentaSeasonOf(settings).start,
+    renta_season_end: rentaSeasonOf(settings).end,
   };
 };
 

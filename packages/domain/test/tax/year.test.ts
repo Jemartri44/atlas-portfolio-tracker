@@ -4,7 +4,6 @@
 
 import { describe, expect, it } from "vitest";
 import type { DomainError } from "../../src/errors.js";
-import { Money } from "../../src/money/money.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { taxReportJson } from "../../src/tax/json.js";
 import { taxYear } from "../../src/tax/year.js";
@@ -80,22 +79,20 @@ describe("the carry-forward", () => {
     sell(b, "stock_s", "2027-06-01", "10", "90");
     buy(b, "stock_t", "2028-01-10", "10", "100");
     sell(b, "stock_t", "2028-06-01", "10", "120");
-    const filed = [
-      {
-        year: 2027,
-        pending: [
-          {
-            origin_year: 2027,
-            category: "capital_gain" as const,
-            amount_eur: Money.parse("-60", "EUR"),
-          },
-        ],
+    // What was declared comes from the ledger, and only from there (ADR-0020).
+    b.filed({
+      tax_year: 2027,
+      filed_at: "2028-06-18",
+      declared: {
+        savings_base_eur: "0",
+        pending_losses: [{ origin_year: 2027, category: "capital_gain", amount_eur: "-60" }],
+        deferred_losses_eur: "0",
       },
-    ];
-    const report = taxYear(b.build(), 2028, { today: "2035-01-01", filed });
+    });
+    const report = taxYear(b.build(), 2028, { today: "2035-01-01" });
     // Declared −60 instead of the computed −100: 200 − 60 = 140.
     expect(text(report.base_eur)).toBe("140");
-    const anchored = taxYear(b.build(), 2027, { today: "2035-01-01", filed });
+    const anchored = taxYear(b.build(), 2027, { today: "2035-01-01" });
     expect(anchored.anchor?.computed.map((p) => text(p.amount_eur))).toEqual(["-100"]);
     expect(anchored.anchor?.declared.map((p) => text(p.amount_eur))).toEqual(["-60"]);
   });
@@ -137,13 +134,19 @@ describe("what the engine refuses", () => {
 });
 
 describe("categories of income (ADR-0021)", () => {
-  it("with the default, every disposal is a capital gain", () => {
+  it("with the default, an ETC is movable capital income and a fund is a capital gain (#24)", () => {
     const b = taxBuilder();
     buy(b, "etc_e", "2027-01-11", "10", "100");
     sell(b, "etc_e", "2027-06-01", "10", "120");
+    buy(b, "fund_f", "2027-01-11", "10", "100");
+    sell(b, "fund_f", "2027-06-01", "10", "120");
     const report = reportOf(b.build(), 2027);
-    expect(report.capital_gains.lines.map((l) => l.category)).toEqual(["capital_gain"]);
-    expect(report.movable_capital.transmissions).toEqual([]);
+    expect(report.capital_gains.lines.map((l) => [l.asset_id, l.category])).toEqual([
+      ["fund_f", "capital_gain"],
+    ]);
+    expect(report.movable_capital.transmissions.map((l) => [l.asset_id, l.category])).toEqual([
+      ["etc_e", "movable_capital"],
+    ]);
   });
 
   it("an ETC set to movable capital goes to movable capital income and offsets as such", () => {
@@ -176,17 +179,23 @@ describe("categories of income (ADR-0021)", () => {
       const etp = sell(b, "etp_p", "2027-06-01", "10", "120");
       return { report: reportOf(b.build(), 2027), etc, etp };
     };
-    // Applied as the document says: the ETC is certain and stops being doubtful.
+    // Applied as the document says. Neither is certain: V0267-25 reasons from
+    // "it is a debt security", which a physical-gold ETC with a right to
+    // delivery does not obviously satisfy, and there is no ruling at all on a
+    // crypto ETP.
     const documented = ledger("movable_capital");
     expect(lineOf(documented.report, documented.etc.id).criteria).toContain("24:etc");
     expect(lineOf(documented.report, documented.etp.id).criteria).toContain("24:etp");
-    const doubted = documented.report.doubtful.map((item) => item.criterion);
-    expect(doubted).not.toContain("24:etc");
-    expect(doubted).toContain("24:etp");
     expect(
-      documented.report.doubtful.find((item) => item.criterion === "24:etp")?.documented_risk,
-    ).toBe("conservative");
-    // Applied the other way round: both doubtful, and aggressive.
+      documented.report.doubtful
+        .filter((item) => item.criterion.startsWith("24:"))
+        .map((item) => [item.criterion, item.certainty, item.documented_risk]),
+    ).toEqual([
+      ["24:etc", "medium", "both"],
+      ["24:etp", "low", "both"],
+    ]);
+    // Applied the other way round: the other two variants, and the risk of the
+    // four runs **both** ways, because article 49.1 is symmetric.
     const opposite = ledger("capital_gain");
     expect(lineOf(opposite.report, opposite.etc.id).criteria).toContain("24:etc_gain");
     expect(lineOf(opposite.report, opposite.etp.id).criteria).toContain("24:etp_gain");
@@ -195,8 +204,8 @@ describe("categories of income (ADR-0021)", () => {
         .filter((item) => item.criterion.startsWith("24:"))
         .map((item) => [item.criterion, item.documented_risk]),
     ).toEqual([
-      ["24:etc_gain", "aggressive"],
-      ["24:etp_gain", "aggressive"],
+      ["24:etc_gain", "both"],
+      ["24:etp_gain", "both"],
     ]);
   });
 
@@ -635,7 +644,10 @@ describe("the settings of the report", () => {
   });
 
   it("compares with the settings before the last change", () => {
-    const b = taxBuilder();
+    // The first change pins the ETC to a capital gain, against the default
+    // (#24): without it the two readings would be the same and there would be
+    // nothing to compare.
+    const b = taxBuilder({ ...DEFAULT_SETTINGS, income_category: { etc: "capital_gain" } });
     b.settings({ ...DEFAULT_SETTINGS, income_category: { etc: "movable_capital" } });
     buy(b, "etc_e", "2027-01-11", "10", "100");
     const sale = sell(b, "etc_e", "2027-06-01", "10", "120");

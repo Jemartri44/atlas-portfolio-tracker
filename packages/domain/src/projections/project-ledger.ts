@@ -20,6 +20,7 @@ import type {
   ReversalEvent,
   SettingsChangedEvent,
   SupportedEvent,
+  TaxReturnFiledEvent,
   ThesisClosedEvent,
   ThesisOpenedEvent,
 } from "../schema/events.js";
@@ -32,6 +33,7 @@ import {
   applyAssetUpdated,
 } from "./catalogue.js";
 import { applyCorporateAction, referencesOf } from "./corporate-actions.js";
+import { applyTaxReturnFiled } from "./filings.js";
 import { noteFxRates } from "./fx-rates.js";
 import {
   applyBuy,
@@ -85,10 +87,17 @@ const THESIS_TYPES = new Set<string>(["thesis_opened", "thesis_closed"]);
 const isThesis = (entry: Positioned): entry is Positioned<ThesisEvent> =>
   THESIS_TYPES.has(entry.event.type);
 
-/** Events with a business date: everything except catalogue, settings, theses and reversals. */
+const isFiling = (entry: Positioned): entry is Positioned<TaxReturnFiledEvent> =>
+  entry.event.type === "tax_return_filed";
+
+/**
+ * Events with a business date: everything except catalogue, settings, theses,
+ * filed returns and reversals. A filing is an administrative document, like a
+ * thesis: it is filtered by `filed_at` and not by the cut of `asOf` (ADR-0016).
+ */
 export type OperationEvent = Exclude<
   SupportedEvent,
-  CatalogueEvent | ReversalEvent | ThesisOpenedEvent | ThesisClosedEvent
+  CatalogueEvent | ReversalEvent | ThesisOpenedEvent | ThesisClosedEvent | TaxReturnFiledEvent
 >;
 
 interface Positioned<E extends SupportedEvent = SupportedEvent> {
@@ -115,6 +124,7 @@ const isCatalogue = (entry: Positioned): entry is Positioned<CatalogueEvent> =>
 export const isOperationEvent = (event: LedgerEvent): event is OperationEvent =>
   !CATALOGUE_TYPES.has(event.type) &&
   event.type !== "reversal" &&
+  event.type !== "tax_return_filed" &&
   !THESIS_TYPES.has(event.type) &&
   !isReservedEventType(event.type);
 
@@ -386,6 +396,14 @@ export const projectLedger = (
         ? applyThesisOpened(state, entry.event, entry.position)
         : applyThesisClosed(state, entry.event, entry.position),
     );
+  }
+
+  // Pass A'': filed returns, in file order. After the catalogue, because the
+  // assets of a 720 name accounts and assets, and after the theses only
+  // because nothing links them: a filing is a document, not an operation, and
+  // each query filters it by its own `filed_at` (ADR-0016).
+  for (const entry of active.filter(isFiling)) {
+    guarded(entry.event, () => applyTaxReturnFiled(state, entry.event, entry.position));
   }
 
   // Pass B: operations and tracking, in chronological order. With `asOf`, what

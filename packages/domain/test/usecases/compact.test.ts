@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ArchiveExistsError, CompactRejectedError, ConflictError } from "../../src/errors.js";
+import { checkFilingFingerprints, fingerprintOfEvents } from "../../src/filings/fingerprint.js";
 import type { LedgerStore, LoadedLedger } from "../../src/ports/ledger-store.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { snapshotOf } from "../../src/projections/snapshot.js";
-import type { LedgerEvent } from "../../src/schema/events.js";
+import type { LedgerEvent, TaxReturnFiledEvent } from "../../src/schema/events.js";
 import { decodeLine, encodeLine } from "../../src/schema/line.js";
 import type { LedgerSchema } from "../../src/schema/migrations/index.js";
 import { archiveNameFor, compactLedger, planCompact } from "../../src/usecases/compact.js";
@@ -193,5 +194,66 @@ describe("planCompact + compactLedger", () => {
   it("names archives by date, lowest version and attempt", () => {
     expect(archiveNameFor("2028-01-15", 1)).toBe("ledger-2028-01-15-v1.jsonl");
     expect(archiveNameFor("2028-01-15", 1, 3)).toBe("ledger-2028-01-15-v1-3.jsonl");
+  });
+});
+
+describe("compact and the fingerprints of the filings (ADR-0020)", () => {
+  /** The legacy v1 lines plus a filing sealed over exactly those. */
+  const withFiling = (): { store: TestStore; filingId: string } => {
+    const b = new LedgerBuilder(200);
+    // A client of version 1 sealed it, over the lines as version 1 writes them:
+    // the case the reseal exists for, because compacting raises them to 2.
+    const beforeFiling = legacy.map((line) => decodeLine(line).event);
+    const filing = b.filed({
+      tax_year: 2027,
+      ledger_fingerprint: fingerprintOfEvents(beforeFiling, 1),
+    });
+    return {
+      store: TestStore.fromLines([...legacy, encodeLine(filing)], TEST_SCHEMA_V2),
+      filingId: filing.id,
+    };
+  };
+
+  it("verifies every fingerprint, rewrites the lines and seals them again at the new version", async () => {
+    const { store, filingId } = withFiling();
+    const sealedAtV1 = (
+      (await store.load()).events.find((event) => event.id === filingId) as TaxReturnFiledEvent
+    ).ledger_fingerprint.sha256;
+    const plan = await planCompact({ store, clock });
+    expect(plan.outdated).toBeGreaterThan(0);
+    const result = await compactLedger({ store, clock }, plan);
+    expect(result.status).toBe("compacted");
+    const { events, lines } = await store.load();
+    const filing = events.find((event) => event.id === filingId) as TaxReturnFiledEvent;
+    // Sealed again at the version the file now carries, over the same count of
+    // lines, and it verifies against the rewritten file.
+    expect(filing.ledger_fingerprint.schema_version).toBe(2);
+    expect(filing.ledger_fingerprint.lines).toBe(legacy.length);
+    // The digest moved, because the content of those lines is now version 2.
+    expect(filing.ledger_fingerprint.sha256).not.toBe(sealedAtV1);
+    expect(
+      checkFilingFingerprints(lines, events, TEST_SCHEMA_V2).map((check) => check.reason),
+    ).toEqual([undefined]);
+  });
+
+  it("refuses to compact a ledger whose filing no longer matches what precedes it", async () => {
+    const { store } = withFiling();
+    const plan = await planCompact({ store, clock });
+    // A line before the filing, edited by hand after it was sealed.
+    const tampered = TestStore.fromLines(
+      (await store.load()).lines.map((line, index) =>
+        index === 1 ? line.replace(/"name":"([^"]*)"/, '"name":"Editado"') : line,
+      ),
+      TEST_SCHEMA_V2,
+    );
+    try {
+      await compactLedger({ store: tampered, clock }, plan);
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(CompactRejectedError);
+      expect((error as CompactRejectedError).code).toBe("filing_fingerprint_mismatch");
+    }
+    // Nothing was written: no archive, and the text is the one it had.
+    expect(tampered.archives.size).toBe(0);
   });
 });

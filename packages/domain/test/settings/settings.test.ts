@@ -9,10 +9,15 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_WASH_SALE_WINDOW,
   fiscalDateRuleOf,
+  INFORMATIVE_MODELS,
   incomeCategoryOf,
   lossCarryforwardYearsOf,
   mergeSettings,
+  modelAlertThresholdOf,
+  modelIncreaseOf,
+  modelThresholdOf,
   normalizeSettings,
+  rentaSeasonOf,
   type Settings,
   savingsOffsetLimitPctOf,
   treatyWithholdingPctOf,
@@ -29,19 +34,30 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.fiscal_date_rule.etc).toBe("trade_date");
     expect(DEFAULT_SETTINGS.fiscal_date_rule.fund).toBe("value_date");
     expect(DEFAULT_SETTINGS.wash_sale_window.stock).toBe("2m");
-    expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("1y");
+    // Two months for a fund since the correction of criterion #2 (2026-09-22):
+    // a fund that publishes its net asset value daily is a security admitted to
+    // trading. A monetary fund stays on a year, which is a noted inconsistency.
+    expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("2m");
+    expect(DEFAULT_SETTINGS.wash_sale_window.money_market).toBe("2m");
+    expect(DEFAULT_SETTINGS.wash_sale_window.crypto).toBe("1y");
     expect(DEFAULT_SETTINGS.wash_sale_window_days).toBeUndefined();
     expect(validateSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS);
   });
 
   /**
-   * ADR-0021: the provision exists so that phase 5 can treat "is an ETC a
-   * capital gain or movable capital income?" as configuration. The default is
-   * what the system does today, for every type, so switching the setting on
-   * changes nothing until somebody reads it — and nobody reads it yet.
+   * ADR-0021 left the income category as configuration so that criterion #24
+   * could be answered with a value instead of a migration, and feature 010
+   * answered it: an ETC and an ETP are movable capital income (binding ruling
+   * V0267-25), everything else is a capital gain.
    */
-  it("starts every asset type as a capital gain, which is today's behaviour", () => {
-    expect(Object.values(DEFAULT_INCOME_CATEGORY)).toEqual(Array(7).fill("capital_gain"));
+  it("makes an ETC and an ETP movable capital income, and everything else a capital gain (#24)", () => {
+    expect(DEFAULT_INCOME_CATEGORY.etc).toBe("movable_capital");
+    expect(DEFAULT_INCOME_CATEGORY.etp).toBe("movable_capital");
+    expect(
+      Object.entries(DEFAULT_INCOME_CATEGORY)
+        .filter(([type]) => type !== "etc" && type !== "etp")
+        .map(([, category]) => category),
+    ).toEqual(Array(5).fill("capital_gain"));
     expect(DEFAULT_SETTINGS.income_category).toEqual(DEFAULT_INCOME_CATEGORY);
   });
 });
@@ -50,11 +66,16 @@ describe("incomeCategoryOf", () => {
   it("resolves the default at the point of use, map absent or type absent", () => {
     const { income_category: _all, ...without } = DEFAULT_SETTINGS;
     // A ledger written before ADR-0021 carries no map at all.
-    expect(incomeCategoryOf(without as Settings, "etc")).toBe("capital_gain");
+    expect(incomeCategoryOf(without as Settings, "etc")).toBe("movable_capital");
+    expect(incomeCategoryOf(without as Settings, "stock")).toBe("capital_gain");
     // A map that mentions other types only.
     const partial = { ...DEFAULT_SETTINGS, income_category: { fund: "movable_capital" as const } };
-    expect(incomeCategoryOf(partial, "etc")).toBe("capital_gain");
+    expect(incomeCategoryOf(partial, "etc")).toBe("movable_capital");
+    expect(incomeCategoryOf(partial, "stock")).toBe("capital_gain");
     expect(incomeCategoryOf(partial, "fund")).toBe("movable_capital");
+    // And what the ledger says wins over the default, in both directions.
+    const pinned = { ...DEFAULT_SETTINGS, income_category: { etc: "capital_gain" as const } };
+    expect(incomeCategoryOf(pinned, "etc")).toBe("capital_gain");
   });
 });
 
@@ -546,5 +567,128 @@ describe("the tax engine settings", () => {
     expect(explicit.wash_sale_transfer_counts).toBe(false);
     expect(explicit.savings_offset_limit_pct).toBe("20");
     expect(explicit.loss_carryforward_years).toBe(5);
+  });
+});
+
+describe("the figures of the informative returns and the tax season (feature 010)", () => {
+  const code = (settings: unknown): string => {
+    try {
+      validateSettings(settings);
+    } catch (error) {
+      return (error as ValidationError).code;
+    }
+    return "accepted";
+  };
+
+  it("have the documented default of September 2026, per model", () => {
+    for (const model of INFORMATIVE_MODELS) {
+      expect(modelThresholdOf(DEFAULT_SETTINGS, model).toString()).toBe("50000");
+      expect(modelIncreaseOf(DEFAULT_SETTINGS, model).toString()).toBe("20000");
+      expect(modelAlertThresholdOf(DEFAULT_SETTINGS, model).toString()).toBe("45000");
+    }
+    expect(rentaSeasonOf(DEFAULT_SETTINGS)).toEqual({ start: "04-01", end: "06-30" });
+  });
+
+  it("are read off the settings when they are there, model by model", () => {
+    const settings: Settings = {
+      ...DEFAULT_SETTINGS,
+      model_720_threshold_eur: "60000",
+      model_720_increase_eur: "25000",
+      model_720_alert_threshold_eur: "55000",
+      model_721_threshold_eur: "40000",
+      model_721_increase_eur: "15000",
+      model_721_alert_threshold_eur: "35000",
+      renta_season_start: "04-11",
+      renta_season_end: "07-01",
+    };
+    expect(modelThresholdOf(settings, "720").toString()).toBe("60000");
+    expect(modelIncreaseOf(settings, "720").toString()).toBe("25000");
+    expect(modelAlertThresholdOf(settings, "720").toString()).toBe("55000");
+    expect(modelThresholdOf(settings, "721").toString()).toBe("40000");
+    expect(modelIncreaseOf(settings, "721").toString()).toBe("15000");
+    expect(modelAlertThresholdOf(settings, "721").toString()).toBe("35000");
+    expect(rentaSeasonOf(settings)).toEqual({ start: "04-11", end: "07-01" });
+    expect(code(settings)).toBe("accepted");
+  });
+
+  it("refuse a negative amount and anything that is not a decimal string", () => {
+    expect(code({ ...DEFAULT_SETTINGS, model_720_threshold_eur: "-1" })).toBe("invalid_settings");
+    expect(code({ ...DEFAULT_SETTINGS, model_721_increase_eur: "-0.01" })).toBe("invalid_settings");
+    expect(code({ ...DEFAULT_SETTINGS, model_720_increase_eur: 20000 })).toBe("invalid_settings");
+    // Zero is a number, not a missing value; the warning has to come down with it.
+    expect(
+      code({
+        ...DEFAULT_SETTINGS,
+        model_721_threshold_eur: "0",
+        model_721_alert_threshold_eur: "0",
+      }),
+    ).toBe("accepted");
+  });
+
+  it("refuse a warning above its own threshold: it would never fire", () => {
+    expect(code({ ...DEFAULT_SETTINGS, model_720_alert_threshold_eur: "50000.01" })).toBe(
+      "alert_above_threshold",
+    );
+    // Exactly at the threshold is fine: the warning fires and the category obliges the cent after.
+    expect(code({ ...DEFAULT_SETTINGS, model_720_alert_threshold_eur: "50000" })).toBe("accepted");
+    expect(code({ ...DEFAULT_SETTINGS, model_721_alert_threshold_eur: "50000.01" })).toBe(
+      "alert_above_threshold",
+    );
+    // Against the figures **in force**: lowering the threshold alone leaves the
+    // default warning of 45.000 above it.
+    expect(code({ ...DEFAULT_SETTINGS, model_720_threshold_eur: "40000" })).toBe(
+      "alert_above_threshold",
+    );
+    expect(
+      code({
+        ...DEFAULT_SETTINGS,
+        model_720_threshold_eur: "40000",
+        model_720_alert_threshold_eur: "39000",
+      }),
+    ).toBe("accepted");
+    try {
+      validateSettings({ ...DEFAULT_SETTINGS, model_721_alert_threshold_eur: "60000" });
+      expect.unreachable();
+    } catch (error) {
+      expect((error as ValidationError).details).toEqual({
+        model: "721",
+        alert: "60000",
+        threshold: "50000",
+      });
+    }
+  });
+
+  it("refuse a season that is not two days of the year, or that ends before it starts", () => {
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_start: "2026-04-01" })).toBe(
+      "invalid_renta_season",
+    );
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_end: "06-31" })).toBe("invalid_renta_season");
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_end: "13-01" })).toBe("invalid_renta_season");
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_start: "07-01" })).toBe("invalid_renta_season");
+    // 29 February exists: the check reads the day against a leap year.
+    expect(code({ ...DEFAULT_SETTINGS, renta_season_start: "02-29" })).toBe("accepted");
+    // A season of one single day is a season.
+    expect(
+      code({ ...DEFAULT_SETTINGS, renta_season_start: "06-30", renta_season_end: "06-30" }),
+    ).toBe("accepted");
+  });
+
+  it("are materialised when the settings are read (ADR-0022)", () => {
+    const normalized = normalizeSettings(DEFAULT_SETTINGS);
+    expect(normalized.model_720_threshold_eur).toBe("50000");
+    expect(normalized.model_720_increase_eur).toBe("20000");
+    expect(normalized.model_720_alert_threshold_eur).toBe("45000");
+    expect(normalized.model_721_threshold_eur).toBe("50000");
+    expect(normalized.model_721_increase_eur).toBe("20000");
+    expect(normalized.model_721_alert_threshold_eur).toBe("45000");
+    expect(normalized.renta_season_start).toBe("04-01");
+    expect(normalized.renta_season_end).toBe("06-30");
+    const explicit = normalizeSettings({
+      ...DEFAULT_SETTINGS,
+      model_720_threshold_eur: "60000",
+      renta_season_end: "07-01",
+    });
+    expect(explicit.model_720_threshold_eur).toBe("60000");
+    expect(explicit.renta_season_end).toBe("07-01");
   });
 });

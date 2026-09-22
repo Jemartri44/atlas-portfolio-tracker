@@ -39,25 +39,49 @@ export interface FiscalCriterion {
  *   dispute; **conservative** if wrong.
  * - `2:crypto`: one year for crypto, by prudence — **low**; conservative.
  * - `2:crypto_2m`: two months for crypto — the less prudent side; aggressive.
- * - `2:fund`: one year for funds, the letter g) of article 33.5, which the
- *   document does not dispute.
- * - `2:other`: any other window (days, or two months for a fund): no reading
- *   of the document supports it.
+ * - `2:fund_2m`: two months for a fund, which is what the document says since
+ *   2026-09-22 — the two consultations on the point put fund units under
+ *   letter f). Its certainty is **medium**, not high, for two reasons: the
+ *   regulatory ground (art. 4.9 RD 1082/2012) calls them securities "admitted
+ *   to trading" only "a los efectos de aquellas disposiciones que regulen
+ *   regímenes específicos de inversión", which article 33.5 f) is not
+ *   obviously one of; and it is written for Spanish funds managed by a SGIIC,
+ *   with nothing resolving a foreign UCITS, which is what is usually bought in
+ *   Spain.
+ * - `2:fund_1y`: one year for a fund, the other side of the same dispute and
+ *   the conservative one.
+ * - `2:other`: any other window —a number of days— that no reading of the
+ *   document supports. Two months for a fund is **not** one of these any more:
+ *   since 2026-09-22 it is `2:fund_2m`, the reading the document holds.
+ *
+ * **A new reading gets a new identifier; an identifier never changes meaning.**
+ * That is why the year of funds is `2:fund_1y` and not the old bare `2:fund`,
+ * which meant "one year, undisputed": keeping the name would have made the same
+ * identifier say one thing in yesterday's documents and another in today's,
+ * with nothing to give it away. `2:listed` and `2:crypto` keep their names
+ * because renaming them now would be a large change for symmetry alone.
  *
  * Criterion #24, the income category of an ETC or an ETP, is labelled the same
  * way, by the reading in force (`income_category`), and that is why it has four
- * variants and not two: the certainty, the direction of the risk and with them
- * whether the criterion is doubtful all depend on which reading is applied.
+ * variants and not two: the certainty and, with it, whether the criterion is
+ * doubtful depend on which reading is applied.
  *
  * - `24:etc`, `24:etp`: movable capital income, what the document says. The ETC
- *   is **high** (a binding ruling, V0267-25, calls it so in every case) and
- *   stops being doubtful; the ETP is **medium**, because it depends on the
- *   structure of each product.
+ *   is **medium**: the ratio of the binding ruling V0267-25 is not "it is an
+ *   ETC" but "it is a debt security, because it carries **obligations to pay**
+ *   for the issuer", and a physical-gold ETC with a right to delivery obliges
+ *   the issuer to **deliver**, not to pay — which the ruling does not resolve.
+ *   The ETP is **low**: there is no consultation at all on crypto ETPs, and the
+ *   DGT does have settled doctrine that crypto held directly is a capital gain.
  * - `24:etc_gain`, `24:etp_gain`: a capital gain, the opposite of the document.
- *   Both doubtful, and **aggressive**: a loss would offset in full what the
- *   documented reading limits to 25 %. Reading an ETC that way goes against a
- *   binding ruling that says "in every case", so it is **low**, not medium;
- *   for an ETP the structure of each product leaves real room, so it is medium.
+ *
+ * All four are **`both`**, and that is the correction of 2026-09-22: article
+ * 49.1 is symmetric and the first reading of it looked at one half only. With a
+ * **loss** on the ETC and **dividends** elsewhere, treating it as movable
+ * capital absorbs the dividends in full instead of up to 25 % and pays **less**
+ * (aggressive); with a **gain** on the ETC and capital losses elsewhere it is
+ * the other way round and pays more (conservative). Both are ordinary in this
+ * portfolio.
  *
  * #18 to #23 were numbered by the direction on 2026-09-18 (questions Q1, Q2 and
  * Q5 of the feature 009). Where the document gives a criterion two certainties
@@ -71,7 +95,8 @@ export const FISCAL_CRITERIA = {
   "2:listed_1y": { doc: "2", certainty: "disputed", risk: "conservative" },
   "2:crypto": { doc: "2", certainty: "low", risk: "conservative" },
   "2:crypto_2m": { doc: "2", certainty: "low", risk: "aggressive" },
-  "2:fund": { doc: "2", certainty: "high", risk: "conservative" },
+  "2:fund_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
+  "2:fund_1y": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:other": { doc: "2", certainty: "low", risk: "both" },
   "2b": { doc: "2b", certainty: "medium", risk: "conservative" },
   "3": { doc: "3", certainty: "high", risk: "conservative" },
@@ -89,16 +114,16 @@ export const FISCAL_CRITERIA = {
   "15": { doc: "15", certainty: "disputed", risk: "conservative" },
   "16": { doc: "16", certainty: "high", risk: "conservative" },
   "17": { doc: "17", certainty: "medium", risk: "aggressive" },
-  "18": { doc: "18", certainty: "medium", risk: "aggressive" },
-  "19": { doc: "19", certainty: "medium", risk: "aggressive" },
-  "20": { doc: "20", certainty: "medium", risk: "both" },
+  "18": { doc: "18", certainty: "high", risk: "aggressive" },
+  "19": { doc: "19", certainty: "high", risk: "aggressive" },
+  "20": { doc: "20", certainty: "medium", risk: "aggressive" },
   "21": { doc: "21", certainty: "low", risk: "conservative" },
   "22": { doc: "22", certainty: "medium", risk: "neutral" },
-  "23": { doc: "23", certainty: "high", risk: "conservative" },
-  "24:etc": { doc: "24", certainty: "high", risk: "conservative" },
-  "24:etc_gain": { doc: "24", certainty: "low", risk: "aggressive" },
-  "24:etp": { doc: "24", certainty: "medium", risk: "conservative" },
-  "24:etp_gain": { doc: "24", certainty: "medium", risk: "aggressive" },
+  "23": { doc: "23", certainty: "high", risk: "aggressive" },
+  "24:etc": { doc: "24", certainty: "medium", risk: "both" },
+  "24:etc_gain": { doc: "24", certainty: "low", risk: "both" },
+  "24:etp": { doc: "24", certainty: "low", risk: "both" },
+  "24:etp_gain": { doc: "24", certainty: "medium", risk: "both" },
 } as const satisfies Record<string, FiscalCriterion>;
 
 export type CriterionId = keyof typeof FISCAL_CRITERIA;
@@ -114,7 +139,8 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "2:listed_1y",
   "2:crypto",
   "2:crypto_2m",
-  "2:fund",
+  "2:fund_2m",
+  "2:fund_1y",
   "2:other",
   "2b",
   "3",

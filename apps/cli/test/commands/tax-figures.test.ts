@@ -110,7 +110,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "0.00",
       "-4.00",
       "0.00",
-      "2:listed* 3 6 14 19*",
+      "2:listed* 3 6 14 19",
     ]);
     // (1,200 − 2) / 1.10 against (1,000 + 2) / 1.20.
     expect(row(gains, "2021-12-01", ID.U3)).toEqual([
@@ -249,7 +249,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "-24.00",
       "0.00",
       "-57.00",
-      "1* 2:listed* 3 6 14 19* 21*",
+      "1* 2:listed* 3 6 14 19 21*",
     ]);
     expect(row(gains, "2022-12-15", ID.Y2).slice(9, 16)).toEqual([
       "80.00",
@@ -258,7 +258,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "0.00",
       "-20.00",
       "0.00",
-      "1* 2:fund 3 6 14 18*",
+      "1* 2:fund_1y* 3 6 14 18",
     ]);
     expect(gains).toContain("Ganancias 0.00 · Pérdidas -107.25 · Saldo -107.25");
     expect(section(text, 2)).toContain("Saldo 50.00");

@@ -66,15 +66,18 @@ export class ArchiveExistsError extends DomainError {
 }
 
 /** `compact` refused to rewrite: invalid events in the ledger, or the rewritten text projects differently. */
+const COMPACT_REFUSALS = {
+  invalid_events: "the ledger has invalid events; rectify them before compacting",
+  projection_changed: "the rewritten ledger projects differently; nothing was written",
+  // Compacting seals the fingerprints of the filings again, and sealing what
+  // does not hold would turn a broken record into a trusted one.
+  filing_fingerprint_mismatch:
+    "a filed return no longer matches the events before it; nothing was written",
+} as const;
+
 export class CompactRejectedError extends DomainError {
-  constructor(code: "invalid_events" | "projection_changed", details: Record<string, unknown>) {
-    super(
-      code,
-      code === "invalid_events"
-        ? "the ledger has invalid events; rectify them before compacting"
-        : "the rewritten ledger projects differently; nothing was written",
-      details,
-    );
+  constructor(code: keyof typeof COMPACT_REFUSALS, details: Record<string, unknown>) {
+    super(code, COMPACT_REFUSALS[code], details);
   }
 }
 

@@ -14,6 +14,7 @@ import type {
   CashWithdrawalEvent,
   CorporateActionEvent,
   DividendEvent,
+  FiledFigures,
   FxExchangeEvent,
   InterestEvent,
   LedgerEvent,
@@ -25,6 +26,7 @@ import type {
   StandaloneFeeEvent,
   SupportedEvent,
   SwapEvent,
+  TaxReturnFiledEvent,
   ThesisClosedEvent,
   ThesisOpenedEvent,
   TransferEvent,
@@ -33,7 +35,7 @@ import type {
   ValuationEvent,
 } from "../src/schema/events.js";
 import { fingerprintOf } from "../src/schema/fingerprint.js";
-import type { Settings } from "../src/settings/settings.js";
+import { DEFAULT_SETTINGS, type Settings } from "../src/settings/settings.js";
 
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const PREFIX = "01ARYZ6S41TSV4RRFFQ69";
@@ -365,6 +367,46 @@ export class LedgerBuilder {
 
   thesisClosed(thesis_id: string, closing_notes = "closed"): ThesisClosedEvent {
     return this.push<ThesisClosedEvent>("thesis_closed", { thesis_id, closing_notes });
+  }
+
+  /**
+   * A filed return (ADR-0020). Defaults to a `renta` that declares nothing, so
+   * a test only writes the figures it is about. The administrative clock moves
+   * to the day it was filed, because `filed_at` may not be after the day the
+   * event was recorded.
+   */
+  filed(
+    overrides: Partial<Fields<TaxReturnFiledEvent>> & Pick<TaxReturnFiledEvent, "tax_year">,
+  ): TaxReturnFiledEvent {
+    const model = overrides.model ?? "renta";
+    const filed_at = overrides.filed_at ?? `${overrides.tax_year + 1}-06-18`;
+    const nothing: FiledFigures =
+      model === "renta"
+        ? { savings_base_eur: "0", pending_losses: [], deferred_losses_eur: "0" }
+        : { items: [] };
+    const declared = overrides.declared ?? nothing;
+    const before = this.recordedOn;
+    this.recordedAt(filed_at);
+    const event = this.push<TaxReturnFiledEvent>("tax_return_filed", {
+      model,
+      filed_at,
+      receipt_reference: `${model}-${String(overrides.tax_year)}-000000000000`,
+      declared,
+      computed: {
+        as_of: filed_at,
+        settings_origin: "default",
+        settings: DEFAULT_SETTINGS,
+        ...(overrides.computed ?? declared),
+      } as TaxReturnFiledEvent["computed"],
+      ledger_fingerprint: {
+        schema_version: 1,
+        lines: this.events.length,
+        sha256: "0".repeat(64),
+      },
+      ...overrides,
+    });
+    this.recordedAt(before);
+    return event;
   }
 }
 

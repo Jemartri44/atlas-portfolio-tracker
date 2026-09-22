@@ -49,8 +49,44 @@ const dist = join(webRoot, "dist");
  * correction as it is written, the stale mark of a row, the singular of one
  * unit, the theme of the browser's bar and the confirmation of a write on the
  * movement it wrote. Measured **69,4 KB**; the ceiling is 70,4.
+ *
+ * **Raised to 71,5 by the direction (feature 010), because the loader
+ * validates.** The eight configured figures of the informative returns and of
+ * the tax season took the boot from 69,4 to 69,9, and the question was whether
+ * validating settings belongs in the boot path at all. It does, and
+ * structurally: `LedgerStore.load()` decodes every line with `decodeLine`,
+ * which validates it against today's rules (trap 10 of `CLAUDE.md`, ADR-0018),
+ * and the web is local-first (ADR-0019), so **opening the ledger is the boot**.
+ * Measured by removing the call: the whole validation of settings is **1,4 KB
+ * gzip** of the boot, 0,5 of it the new parameters. The two ways of getting it
+ * back are worse than a higher ceiling: not validating lets a ledger with a
+ * negative threshold or a category that does not exist **load in silence**,
+ * and splitting the validation in two levels breaks one rule across two places
+ * that will drift apart, without even closing that hole. At 71,5 the
+ * application still boots lighter than before the redesign (72,7 KB): the
+ * budget is not relaxed, it is put where the design puts it. **71,5 is a wall,
+ * not a target**: passing it is a stop-and-ask, and every commit that moves
+ * the bundle records its measurement.
+ *
+ * **Set at 74,0 for the rest of feature 010 by the direction**, after the
+ * filing event took the boot to 71,1 with its own validation — the hardest of
+ * the schema: nested figures, two shapes by model, no repeated origin and no
+ * repeated asset. The reasoning is the invariant, not the kilobytes. A ledger
+ * that is appended to and never deleted for twenty years, whose loader accepts
+ * in silence a line that does not comply, is a bomb that goes off far from
+ * where it was planted; and there is no way around the cost, because if the
+ * ledger is parsed at boot then its validator is in the boot by definition.
+ *
+ * **What is watched is the shape, not the size.** The boot may carry the
+ * loader and what the first screen needs, and nothing of the tax output: the
+ * check below reads the source maps of the boot chunks and fails the build if
+ * anything of `domain/src/tax/` or `domain/src/informative/` is inside, even
+ * with room to spare. A boot of 72 KB with the fiscal screen in it is worse
+ * than one of 74 without it. And when the feature closes, the ceiling comes
+ * back **down** to what is then measured plus a small margin: it is not left
+ * slack "just in case".
  */
-const BOOT_BUDGET_GZIP_BYTES = 70.4 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -124,8 +160,25 @@ const BOOT_BUDGET_GZIP_BYTES = 70.4 * 1024;
  * lists without assets converted away, the rectified movement reached with its
  * confirmation, the page that refuses to correct a reversed one and the closed
  * theses folded. Measured **189,8 KB**; the ceiling is 191,8.
+ *
+ * **Raised as feature 010 lands, step by step and always to what is measured
+ * plus a margin**, so that every rise carries its own reason instead of one
+ * allowance made up front. The prompt of the feature authorises moving this
+ * ceiling (not the boot one) to what the tax output measures.
+ *
+ *  - `tax_return_filed` (ADR-0020): the event, its validation —nested figures,
+ *    two shapes by model, no repeated origin and no repeated asset— and the
+ *    Spanish of its five refusals in both interfaces. The validation is on the
+ *    **read** path, like every other one (see the boot budget above), so the
+ *    boot carries most of it. Measured **193,2 KB**, of which the boot is
+ *    71,1; the ceiling is 194,2.
+ *  - The projection of the filings with their chain, the fingerprint of the
+ *    ledger before each one —a canonical digest that `compact` verifies and
+ *    seals again— and the two findings of the verification, in both
+ *    interfaces. Measured **194,2 KB**, of which the boot is 71,9; the ceiling
+ *    is 195,5.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 191.8 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 195.5 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -223,6 +276,30 @@ const bootAssets = () => {
   return referenced;
 };
 
+/**
+ * Modules that must never be in the boot path, however much room is left. The
+ * whole fiscal output is lazy by design: the screen, the boxes and the
+ * informative returns are opened a few times a year and must not be paid for
+ * on every start. Checked on the **source maps** of the chunks `index.html`
+ * pulls, which name the original module of every byte, so a lazy import that
+ * stops being lazy fails the build instead of being noticed by eye.
+ */
+const LAZY_ONLY = [
+  { path: "/packages/domain/src/tax/", what: "el motor fiscal" },
+  { path: "/packages/domain/src/informative/", what: "los modelos informativos" },
+];
+
+/** The modules a chunk is made of, from its source map; empty when it has none. */
+const modulesOf = (name) => {
+  const map = join(dist, `${name}.map`);
+  if (!statSync(map, { throwIfNoEntry: false })) {
+    return [];
+  }
+  return JSON.parse(readFileSync(map, "utf8")).sources.map((source) =>
+    source.replaceAll("\\", "/").replace(/^(\.\.\/)+/, "/"),
+  );
+};
+
 const kb = (value) => `${(value / 1024).toFixed(1)} KB`;
 
 const boot = bootAssets();
@@ -251,6 +328,27 @@ if (gzipTotal > TOTAL_BUDGET_GZIP_BYTES) {
   problems.push(
     `el bundle entero pesa ${kb(gzipTotal)} gzip y el presupuesto es ${kb(TOTAL_BUDGET_GZIP_BYTES)}`,
   );
+}
+let bootModules = 0;
+for (const name of boot) {
+  if (extname(name) !== ".js") {
+    continue;
+  }
+  const modules = modulesOf(name);
+  bootModules += modules.length;
+  for (const { path, what } of LAZY_ONLY) {
+    const inside = modules.filter((module) => module.includes(path));
+    if (inside.length > 0) {
+      problems.push(
+        `${name} es de arranque y trae ${what}: ${inside.join(", ")} (tiene que cargarse en diferido)`,
+      );
+    }
+  }
+}
+if (bootModules === 0) {
+  // A guard on the guard: without source maps the rule above would pass by
+  // looking at nothing.
+  problems.push("no se ha podido leer el contenido de ningún chunk de arranque");
 }
 if (gzipBoot === 0) {
   // A guard on the guard: if the parsing of index.html ever stops matching, the

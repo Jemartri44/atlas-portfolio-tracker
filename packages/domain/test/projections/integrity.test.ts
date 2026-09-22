@@ -21,6 +21,24 @@ describe("integrity: dangling references", () => {
     ]);
   });
 
+  /**
+   * The cheap half of the fingerprint of a filing (ADR-0020): whether it covers
+   * as many lines as it has in front of it. Whether the **content** of those
+   * lines still hashes the same is the deep check's, because it costs a
+   * re-read of the whole file.
+   */
+  it("says when a filing claims to cover a different number of lines than it has before it", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const filing = b.filed({ tax_year: 2027 });
+    expect(integrity(projectLedger(b.build(), { collectErrors: true }))).toEqual([]);
+    filing.ledger_fingerprint = { ...filing.ledger_fingerprint, lines: 1 };
+    const findings = integrity(projectLedger(b.build(), { collectErrors: true }));
+    expect(findings.map((f) => [f.code, f.severity, f.event_ids])).toEqual([
+      ["filing_fingerprint_lines", "error", [filing.id]],
+    ]);
+  });
+
   it("does not repeat a dangling corrects_id: the projection already rejects it", () => {
     const b = new LedgerBuilder();
     catalogue(b);

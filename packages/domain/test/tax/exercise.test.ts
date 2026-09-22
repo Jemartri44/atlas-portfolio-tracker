@@ -96,7 +96,7 @@ describe("hand-computed exercise, 2028: transmissions", () => {
         text(a.amount_eur),
       ]),
     ).toEqual([[id.E15, "posterior", "20", "-40"]]);
-    expect(line.criteria).toEqual(["1", "2:fund", "3", "6", "14"]);
+    expect(line.criteria).toEqual(["1", "2:fund_1y", "3", "6", "14"]);
   });
 
   it("E12: E7 counts on the edge d − 2m, E14 misses by one day", () => {
@@ -152,7 +152,7 @@ describe("hand-computed exercise, 2028: transmissions", () => {
     expect(line.released.map((r) => [r.origin_event_id, text(r.amount_eur), r.travelled])).toEqual([
       [id.E11, "-30", true],
     ]);
-    expect(line.criteria).toEqual(["1", "2:fund", "3", "6", "14", "15"]);
+    expect(line.criteria).toEqual(["1", "2:fund_1y", "3", "6", "14", "15"]);
     // The lots keep the date of the original purchases through the transfer.
     expect(line.lots.map((lot) => [lot.quantity.toString(), lot.acquisition_date])).toEqual([
       ["120", "2027-02-01"],
@@ -313,10 +313,30 @@ describe("hand-computed exercise, 2028: the doubtful criteria", () => {
     expect(text(doubtful("22")?.exposure_eur)).toBe("0");
   });
 
+  /**
+   * The other reading of the window of a fund (criterion #2, corrected on
+   * 2026-09-22). Hand-computed in
+   * `specs/010-tax-output/fund-window-expectation.md` §3: with two months, E11
+   * defers nothing —its only repurchase, E15 of 1 June 2028, falls outside
+   * [01/01/2028, 01/05/2028]— so its computable goes from −40,00 to −80,00 and
+   * E20 stops releasing the −30,00 that travelled to it, going from +135,00 to
+   * +165,00. Gains 372,50 − 40,00 + 30,00 = 362,50; base 362,50 − 260,80 +
+   * 64,00 = 165,70 against 175,70.
+   */
+  it("#2 of funds: two months would give 10.00 less base and leave 10.00 less deferred", () => {
+    const entry = doubtful("2:fund_1y");
+    expect(text(entry?.base_difference_eur)).toBe("-10");
+    expect(text(entry?.pending_difference_eur)).toBe("0");
+    expect(text(entry?.deferred_difference_eur)).toBe("10");
+    expect(entry?.direction).toBe("conservative");
+    expect(entry?.certainty).toBe("medium");
+  });
+
   it("lists nothing else", () => {
     expect(report2028.doubtful.map((entry) => entry.criterion)).toEqual([
       "1",
       "2:listed",
+      "2:fund_1y",
       "4",
       "15",
       "17",
