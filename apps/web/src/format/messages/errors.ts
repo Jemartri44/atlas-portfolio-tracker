@@ -170,6 +170,17 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   },
   invalid_wash_sale_window: (d) =>
     `La ventana de recompra de ${enumValue(d.asset_type)} no es válida: elige dos meses, un año o un número de días.`,
+  // --- What was filed (ADR-0020) -----------------------------------------
+  filing_year_unsupported: (d) =>
+    `El ${enumValue(d.model)} no existe para el ejercicio ${num(d.tax_year)}: el primero que puedes registrar es ${num(d.first_supported)}.`,
+  filed_at_not_after_year: (d) =>
+    `Una declaración del ejercicio ${num(d.tax_year)} no se pudo presentar el ${day(d.filed_at)}: la fecha tiene que ser posterior al final de ese ejercicio.`,
+  filed_at_in_future: (d) =>
+    `La presentaste el ${day(d.filed_at)}, que es posterior a hoy: no se registra lo que todavía no se ha presentado.`,
+  duplicate_pending_loss: (d) =>
+    `Los saldos pendientes declarados repiten el ejercicio ${num(d.origin_year)} en ${enumValue(d.category)}: cada origen va una sola vez.`,
+  duplicate_filed_item: (d, n) =>
+    `Los bienes declarados repiten ${n.one(d.asset_id ?? d.account_id)}: cada uno va una sola vez.`,
   alert_above_threshold: (d, _n, f) =>
     `El aviso previo del Modelo ${num(d.model)} (${f.money(d.alert)}) no puede superar el umbral que obliga a presentarlo (${f.money(d.threshold)}): nunca llegaría a saltar.`,
   // Named in words and never by its key: there are only two fields, and a

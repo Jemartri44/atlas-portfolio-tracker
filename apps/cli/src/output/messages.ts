@@ -132,6 +132,16 @@ export const describeError = (error: DomainError): string => {
     }
     case "invalid_wash_sale_window":
       return `La ventana de recompra de ${text(d.asset_type)} debe ser "2m", "1y" o "<n>d" (recibido: ${text(d.value)}).`;
+    case "filing_year_unsupported":
+      return `El Modelo ${text(d.model)} no existe para el ejercicio ${text(d.tax_year)}: el primero que se puede registrar es ${text(d.first_supported)}.`;
+    case "filed_at_not_after_year":
+      return `Una declaración del ejercicio ${text(d.tax_year)} no se pudo presentar el ${text(d.filed_at)}: la fecha tiene que ser posterior al 31/12 de ${text(d.tax_year)}.`;
+    case "filed_at_in_future":
+      return `La fecha de presentación (${text(d.filed_at)}) es posterior al día en que se registra (${text(d.recorded_at)}): no se registra lo que aún no se ha presentado.`;
+    case "duplicate_pending_loss":
+      return `Los saldos pendientes declarados repiten el ejercicio ${text(d.origin_year)} en ${text(d.category)}: cada origen y categoría va una sola vez.`;
+    case "duplicate_filed_item":
+      return `Los bienes declarados repiten ${text(d.account_id)}${d.asset_id === undefined ? "" : `/${text(d.asset_id)}`} en ${text(d.category)}: cada bien va una sola vez.`;
     case "alert_above_threshold":
       return `El aviso del Modelo ${text(d.model)} (${text(d.alert)} €) no puede superar el umbral que obliga a presentarlo (${text(d.threshold)} €): nunca llegaría a saltar.`;
     case "invalid_renta_season":

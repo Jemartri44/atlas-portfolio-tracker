@@ -3,13 +3,14 @@
 // and the per-type consistency rules that need no projected state.
 
 import { isCivilDate, isWeekend } from "../dates/civil-date.js";
+import { madridDateOf } from "../dates/madrid.js";
 import { ValidationError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
 import { isUlid } from "../ids/ulid.js";
 import { Decimal, isDecimalString } from "../money/decimal.js";
 import { isCurrency } from "../money/money.js";
 import { isRatioString } from "../money/ratio.js";
-import { validateSettings } from "../settings/settings.js";
+import { INCOME_CATEGORIES, validateSettings } from "../settings/settings.js";
 import { isReservedEventType, isSupportedEventType, type SupportedEventType } from "./envelope.js";
 import {
   ASSET_CLASSES,
@@ -19,6 +20,12 @@ import {
   EFFECT_OPS,
   type EffectOp,
   FEE_KINDS,
+  FILING_CATEGORIES,
+  FILING_MODELS,
+  FIRST_FILING_YEAR,
+  FIRST_FILING_YEAR_721,
+  type FilingCategory,
+  type FilingModel,
   INCOME_BASES,
   type LedgerEvent,
   ORDER_SIDES,
@@ -31,6 +38,11 @@ type RuleKind =
   | "string"
   | "decimal"
   | "positive_decimal"
+  | "negative_decimal"
+  | "non_positive_decimal"
+  | "object"
+  | "non_negative_integer"
+  | "sha256"
   | "boolean"
   | "date"
   | "currency"
@@ -326,7 +338,64 @@ const RULES: Record<SupportedEventType, Rules> = {
     planned_size_eur: req("positive_decimal"),
   },
   thesis_closed: { thesis_id: req("string"), closing_notes: req("string") },
+  tax_return_filed: {
+    model: oneOf(FILING_MODELS),
+    tax_year: req("positive_integer"),
+    filed_at: req("date"),
+    receipt_reference: req("string"),
+    supersedes: opt("ulid"),
+    declared: req("object"),
+    computed: req("object"),
+    ledger_fingerprint: req("object"),
+    notes: opt("string"),
+    fingerprint: req("string"),
+  },
   reversal: { reverses_id: req("ulid"), reason: req("string") },
+};
+
+/** The figures of a `renta`, declared and computed alike. */
+const RENTA_FIGURES: Rules = {
+  savings_base_eur: req("decimal"),
+  pending_losses: req("array"),
+  deferred_losses_eur: req("non_positive_decimal"),
+};
+
+const PENDING_LOSS: Rules = {
+  origin_year: req("positive_integer"),
+  category: oneOf(INCOME_CATEGORIES),
+  amount_eur: req("negative_decimal"),
+};
+
+/** The figures of a `720` or a `721`: totals per category, plus the assets one by one. */
+const INFORMATIVE_FIGURES: Rules = { items: req("array") };
+
+const CATEGORY_TOTAL: Record<FilingCategory, Rules> = {
+  accounts: { balance_eur: req("decimal"), q4_average_eur: req("decimal") },
+  securities: { value_eur: req("decimal") },
+  crypto: { value_eur: req("decimal") },
+};
+
+/** Which categories each model may declare. A `renta` declares none of them. */
+const MODEL_CATEGORIES: Record<FilingModel, readonly FilingCategory[]> = {
+  renta: [],
+  "720": ["accounts", "securities"],
+  "721": ["crypto"],
+};
+
+const ITEM_FIELDS: Record<FilingCategory, Rules> = {
+  accounts: {
+    account_id: req("string"),
+    balance_eur: req("decimal"),
+    q4_average_eur: req("decimal"),
+  },
+  securities: { account_id: req("string"), asset_id: req("string"), value_eur: req("decimal") },
+  crypto: { account_id: req("string"), asset_id: req("string"), value_eur: req("decimal") },
+};
+
+const FINGERPRINT_RULES: Rules = {
+  schema_version: req("positive_integer"),
+  lines: req("non_negative_integer"),
+  sha256: req("sha256"),
 };
 
 const INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
@@ -338,11 +407,22 @@ const isNonNegativeDecimal = (value: unknown): boolean =>
 const isPositiveDecimal = (value: unknown): boolean =>
   isDecimalString(value) && Decimal.parse(value).isPositive();
 
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+
 const CHECKS: Record<RuleKind, (value: unknown, rule: Rule) => boolean> = {
   string: (value, rule) =>
     typeof value === "string" && (rule.optional === true || value.length > 0),
   decimal: (value) => isNonNegativeDecimal(value),
   positive_decimal: (value) => isPositiveDecimal(value),
+  // A pending loss carries its sign, and a balance that is not negative is not
+  // a loss: saying so here is what keeps a declared figure from changing sign
+  // on the way in.
+  negative_decimal: (value) => isDecimalString(value) && Decimal.parse(value).isNegative(),
+  non_positive_decimal: (value) => isDecimalString(value) && !Decimal.parse(value).isPositive(),
+  object: (value) => isRecord(value),
+  non_negative_integer: (value) =>
+    typeof value === "number" && Number.isInteger(value) && value >= 0,
+  sha256: (value) => typeof value === "string" && SHA256_PATTERN.test(value),
   boolean: (value) => typeof value === "boolean",
   date: (value) => isCivilDate(value),
   currency: (value) => isCurrency(value),
@@ -523,6 +603,92 @@ const checkFxDates = (raw: UnknownRecord, fields: readonly string[], path = ""):
   }
 };
 
+/**
+ * The shape of what a filing declares and of what it computed, which the flat
+ * rules cannot express: nested objects, a different shape per model, and the
+ * two lists with no repeated key.
+ */
+const checkFiledFigures = (raw: UnknownRecord, field: "declared" | "computed"): void => {
+  const type = "tax_return_filed";
+  const model = raw.model as FilingModel;
+  const figures = requireRecord(raw[field], type, field);
+  const path = `${field}.`;
+  if (model === "renta") {
+    checkFields(figures, RENTA_FIGURES, type, path);
+    const seen = new Set<string>();
+    (figures.pending_losses as unknown[]).forEach((candidate, index) => {
+      const entry = requireRecord(candidate, type, `${path}pending_losses[${index}]`);
+      checkFields(entry, PENDING_LOSS, type, `${path}pending_losses[${index}].`);
+      // A loss of a year later than the one being declared did not exist yet.
+      if ((entry.origin_year as number) > (raw.tax_year as number)) {
+        throw invalid(
+          "invalid_field",
+          `${type}: ${path}pending_losses[${index}].origin_year is after the tax year`,
+          { type, field: `${path}pending_losses[${index}].origin_year`, value: entry.origin_year },
+        );
+      }
+      const key = `${String(entry.origin_year)}|${String(entry.category)}`;
+      if (seen.has(key)) {
+        throw invalid("duplicate_pending_loss", `${type}: ${path}pending_losses repeats ${key}`, {
+          type,
+          field: `${path}pending_losses`,
+          origin_year: entry.origin_year,
+          category: entry.category,
+        });
+      }
+      seen.add(key);
+    });
+    return;
+  }
+  checkFields(figures, INFORMATIVE_FIGURES, type, path);
+  const allowed = MODEL_CATEGORIES[model];
+  for (const category of FILING_CATEGORIES) {
+    const total = figures[category];
+    if (total === undefined) {
+      continue;
+    }
+    // A category the model does not have is not a total the reader can trust.
+    if (!allowed.includes(category)) {
+      throw invalid("invalid_field", `${type}: a ${model} does not declare ${category}`, {
+        type,
+        field: `${path}${category}`,
+        value: category,
+      });
+    }
+    checkFields(
+      requireRecord(total, type, `${path}${category}`),
+      CATEGORY_TOTAL[category],
+      type,
+      `${path}${category}.`,
+    );
+  }
+  const keys = new Set<string>();
+  (figures.items as unknown[]).forEach((candidate, index) => {
+    const where = `${path}items[${index}]`;
+    const item = requireRecord(candidate, type, where);
+    const category = item.category;
+    if (!allowed.includes(category as FilingCategory)) {
+      throw invalid("invalid_field", `${type}: ${where}.category is not a category of a ${model}`, {
+        type,
+        field: `${where}.category`,
+        value: category,
+      });
+    }
+    checkFields(item, ITEM_FIELDS[category as FilingCategory], type, `${where}.`);
+    const key = `${category as string}|${String(item.account_id)}|${String(item.asset_id ?? "")}`;
+    if (keys.has(key)) {
+      throw invalid("duplicate_filed_item", `${type}: ${path}items repeats ${key}`, {
+        type,
+        field: `${path}items`,
+        category,
+        account_id: item.account_id,
+        asset_id: item.asset_id,
+      });
+    }
+    keys.add(key);
+  });
+};
+
 const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => void>> = {
   buy: (raw) => checkBasis(raw),
   sell: (raw) => checkBasis(raw),
@@ -530,6 +696,55 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
   asset_updated: (raw) => checkAssetClass(raw),
   settings_changed: (raw) => {
     validateSettings(raw.settings);
+  },
+  tax_return_filed: (raw) => {
+    const type = "tax_return_filed";
+    const model = raw.model as FilingModel;
+    const year = raw.tax_year as number;
+    const first = model === "721" ? FIRST_FILING_YEAR_721 : FIRST_FILING_YEAR;
+    if (year < first) {
+      throw invalid("filing_year_unsupported", `${type}: a ${model} cannot be filed for ${year}`, {
+        type,
+        model,
+        tax_year: year,
+        first_supported: first,
+      });
+    }
+    // A return is filed after the year it declares has ended, and nobody
+    // records today what they will file tomorrow.
+    const filedAt = raw.filed_at as string;
+    if (filedAt <= `${year}-12-31`) {
+      throw invalid(
+        "filed_at_not_after_year",
+        `${type}: filed_at must be after 31/12 of the tax year`,
+        { type, field: "filed_at", filed_at: filedAt, tax_year: year },
+      );
+    }
+    const recordedAt = madridDateOf(raw.recorded_at as string);
+    if (filedAt > recordedAt) {
+      throw invalid("filed_at_in_future", `${type}: filed_at is after the day it was recorded`, {
+        type,
+        field: "filed_at",
+        filed_at: filedAt,
+        recorded_at: recordedAt,
+      });
+    }
+    checkFiledFigures(raw, "declared");
+    checkFiledFigures(raw, "computed");
+    const computed = raw.computed as UnknownRecord;
+    checkFields(
+      computed,
+      { as_of: req("date"), settings_origin: req("string"), settings: req("object") },
+      type,
+      "computed.",
+    );
+    validateSettings(computed.settings);
+    checkFields(
+      requireRecord(raw.ledger_fingerprint, type, "ledger_fingerprint"),
+      FINGERPRINT_RULES,
+      type,
+      "ledger_fingerprint.",
+    );
   },
   fx_exchange: (raw) => {
     if (raw.sold_currency === raw.bought_currency) {

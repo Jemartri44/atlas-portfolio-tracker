@@ -36,6 +36,7 @@ export const EVENT_LABELS: Record<string, string> = {
   corporate_action: "Evento corporativo",
   thesis_opened: "Tesis abierta",
   thesis_closed: "Tesis cerrada",
+  tax_return_filed: "Declaración presentada",
   reversal: "Anulación",
 };
 
@@ -139,6 +140,15 @@ export const FIELD_LABELS: Record<string, string> = {
   invalidation: "Condición de invalidación",
   planned_size_eur: "Tamaño previsto",
   closing_notes: "Notas de cierre",
+  // What was filed (ADR-0020)
+  model: "Modelo",
+  tax_year: "Ejercicio",
+  filed_at: "Presentada el",
+  receipt_reference: "Justificante",
+  supersedes: "Sustituye a",
+  declared: "Lo presentado",
+  computed: "Lo calculado entonces",
+  ledger_fingerprint: "Huella de tus datos",
   // Rectification
   reverses_id: "Anula a",
   reason: "Motivo",
@@ -176,6 +186,13 @@ export const VALUE_LABELS: Record<string, string> = {
   discretionary_management: "Gestión discrecional",
   other: "Otra",
   requested: "Solicitado",
+  // The returns a filing may record (ADR-0020). The two forms are known by
+  // their number, so they are said as the tax agency says them.
+  renta: "Renta",
+  "720": "Modelo 720",
+  "721": "Modelo 721",
+  accounts: "Cuentas",
+  securities: "Valores",
   // The scheduled jobs and their frequencies (settings, `job_frequencies`).
   prices: "Precios",
   reminder: "Recordatorio",

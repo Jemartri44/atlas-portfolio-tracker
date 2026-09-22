@@ -548,3 +548,259 @@ describe("transfer fee and dividend source country (challenge 2026-08-31)", () =
     rejects(variant(SAMPLES.dividend, { source_country: "USA" }), "invalid_field");
   });
 });
+
+describe("validateShape: a filed return (ADR-0020)", () => {
+  const filed = SAMPLES.tax_return_filed;
+  /** The 720 of the same day, with its two categories and its two assets. */
+  const m720 = {
+    ...envelope("01ARYZ6S41TSV4RRFFQ69G5FAS", "tax_return_filed"),
+    type: "tax_return_filed",
+    model: "720",
+    tax_year: 2025,
+    filed_at: "2026-03-20",
+    receipt_reference: "720-2025-000000000000",
+    declared: {
+      accounts: { balance_eur: "15500.00", q4_average_eur: "15710.47" },
+      securities: { value_eur: "51000.92" },
+      items: [
+        {
+          category: "accounts",
+          account_id: "acc_ib",
+          balance_eur: "17000.00",
+          q4_average_eur: "15471.34",
+        },
+        { category: "securities", account_id: "acc_ib", asset_id: "etf_us", value_eur: "15000.91" },
+      ],
+    },
+    computed: {
+      as_of: "2026-03-20",
+      settings_origin: "default",
+      settings: filed.computed.settings,
+      accounts: { balance_eur: "15500.00", q4_average_eur: "15710.47" },
+      securities: { value_eur: "51000.92" },
+      items: [
+        {
+          category: "accounts",
+          account_id: "acc_ib",
+          balance_eur: "17000.00",
+          q4_average_eur: "15471.34",
+        },
+      ],
+    },
+    ledger_fingerprint: filed.ledger_fingerprint,
+    fingerprint: "sha256:720-2025",
+  };
+
+  /** A copy of the 720 with one field of `declared` replaced. */
+  const declaring = (changes: Record<string, unknown>) => ({
+    ...m720,
+    declared: { ...m720.declared, ...changes },
+  });
+
+  it("accepts a renta, a 720 and a 721, and a supplementary return", () => {
+    expect(validateShape(filed)).toBe(filed);
+    expect(validateShape(m720)).toBe(m720);
+    expect(validateShape(variant(filed, { supersedes: ID.sell }))).toBeTruthy();
+    const m721 = {
+      ...m720,
+      model: "721",
+      declared: {
+        crypto: { value_eur: "1000.00" },
+        items: [
+          { category: "crypto", account_id: "acc_ib", asset_id: "coin_x", value_eur: "1000.00" },
+        ],
+      },
+      computed: {
+        as_of: "2026-03-20",
+        settings_origin: "default",
+        settings: filed.computed.settings,
+        items: [],
+      },
+    };
+    expect(validateShape(m721)).toBeTruthy();
+    expect(knownFieldsOf("tax_return_filed")).toContain("receipt_reference");
+  });
+
+  it("refuses a year the model did not exist in: 2018 for the Renta, 2023 for the 721", () => {
+    rejects(
+      variant(filed, {
+        tax_year: 2017,
+        filed_at: "2018-06-01",
+        declared: { savings_base_eur: "0", pending_losses: [], deferred_losses_eur: "0" },
+      }),
+      "filing_year_unsupported",
+    );
+    const empty = { savings_base_eur: "0", pending_losses: [], deferred_losses_eur: "0" };
+    expect(
+      validateShape(
+        variant(filed, {
+          tax_year: 2018,
+          filed_at: "2019-06-01",
+          declared: empty,
+          computed: { ...filed.computed, ...empty },
+        }),
+      ),
+    ).toBeTruthy();
+    rejects(
+      {
+        ...m720,
+        model: "721",
+        tax_year: 2022,
+        filed_at: "2023-03-20",
+        declared: { items: [] },
+        computed: {
+          as_of: "2026-03-20",
+          settings_origin: "default",
+          settings: filed.computed.settings,
+          items: [],
+        },
+      },
+      "filing_year_unsupported",
+    );
+  });
+
+  it("refuses a filing dated before the year ended, and one dated after today", () => {
+    // 31 December of the year itself is still inside it; 1 January is not.
+    rejects(variant(filed, { filed_at: "2025-12-31" }), "filed_at_not_after_year");
+    expect(validateShape(variant(filed, { filed_at: "2026-01-01" }))).toBeTruthy();
+    // `recorded_at` of every sample is 1 September 2026 in Madrid.
+    rejects(variant(filed, { filed_at: "2026-09-02" }), "filed_at_in_future");
+    expect(validateShape(variant(filed, { filed_at: "2026-09-01" }))).toBeTruthy();
+  });
+
+  it("refuses figures that are not what they claim to be", () => {
+    rejects(variant(filed, { declared: "175.70" }), "invalid_field");
+    rejects(
+      variant(filed, { ledger_fingerprint: { schema_version: 1, lines: 12, sha256: "no" } }),
+      "invalid_field",
+    );
+    rejects(
+      variant(filed, {
+        ledger_fingerprint: {
+          schema_version: 1,
+          lines: -1,
+          sha256: filed.ledger_fingerprint.sha256,
+        },
+      }),
+      "invalid_field",
+    );
+    // A pending balance that is not negative is not a pending loss, and a
+    // deferred one that is positive is not deferred.
+    rejects(
+      variant(filed, {
+        declared: {
+          ...filed.declared,
+          pending_losses: [{ origin_year: 2024, category: "capital_gain", amount_eur: "260.80" }],
+        },
+      }),
+      "invalid_field",
+    );
+    rejects(
+      variant(filed, { declared: { ...filed.declared, deferred_losses_eur: "20.00" } }),
+      "invalid_field",
+    );
+    rejects(
+      variant(filed, { declared: { ...filed.declared, savings_base_eur: "-1" } }),
+      "invalid_field",
+    );
+    rejects(
+      variant(filed, {
+        declared: {
+          ...filed.declared,
+          pending_losses: [{ origin_year: 2026, category: "capital_gain", amount_eur: "-1" }],
+        },
+      }),
+      "invalid_field",
+    );
+    rejects(
+      variant(filed, {
+        declared: {
+          ...filed.declared,
+          pending_losses: [{ origin_year: 2024, category: "rendimiento", amount_eur: "-1" }],
+        },
+      }),
+      "invalid_field",
+    );
+    rejects(
+      variant(filed, { declared: { ...filed.declared, pending_losses: ["x"] } }),
+      "invalid_field",
+    );
+  });
+
+  it("refuses the same origin twice and the same asset twice", () => {
+    rejects(
+      variant(filed, {
+        declared: {
+          ...filed.declared,
+          pending_losses: [
+            { origin_year: 2024, category: "capital_gain", amount_eur: "-1" },
+            { origin_year: 2024, category: "capital_gain", amount_eur: "-2" },
+          ],
+        },
+      }),
+      "duplicate_pending_loss",
+    );
+    rejects(
+      declaring({
+        items: [
+          { category: "securities", account_id: "acc_ib", asset_id: "etf_us", value_eur: "1" },
+          { category: "securities", account_id: "acc_ib", asset_id: "etf_us", value_eur: "2" },
+        ],
+      }),
+      "duplicate_filed_item",
+    );
+    // The same asset in two accounts is two assets, and it is allowed.
+    expect(
+      validateShape(
+        declaring({
+          items: [
+            { category: "securities", account_id: "acc_ib", asset_id: "etf_us", value_eur: "1" },
+            { category: "securities", account_id: "acc_mi", asset_id: "etf_us", value_eur: "2" },
+          ],
+        }),
+      ),
+    ).toBeTruthy();
+  });
+
+  it("refuses a category the model does not have, and an item of a category it does not have", () => {
+    rejects(declaring({ crypto: { value_eur: "1" } }), "invalid_field");
+    rejects(
+      declaring({
+        items: [{ category: "crypto", account_id: "acc_ib", asset_id: "coin_x", value_eur: "1" }],
+      }),
+      "invalid_field",
+    );
+    // Cash has no asset and needs both balances; a security needs its asset.
+    rejects(
+      declaring({ items: [{ category: "accounts", account_id: "acc_ib", balance_eur: "1" }] }),
+      "missing_field",
+    );
+    rejects(
+      declaring({ items: [{ category: "securities", account_id: "acc_ib", value_eur: "1" }] }),
+      "missing_field",
+    );
+    rejects(declaring({ accounts: { balance_eur: "1" } }), "missing_field");
+    rejects(declaring({ items: ["x"] }), "invalid_field");
+  });
+
+  it("refuses a computed reading that cannot be reproduced", () => {
+    rejects(
+      variant(filed, { computed: { ...filed.computed, settings: undefined } }),
+      "missing_field",
+    );
+    rejects(variant(filed, { computed: { ...filed.computed, as_of: "ayer" } }), "invalid_field");
+    rejects(
+      variant(filed, { computed: { ...filed.computed, settings_origin: "" } }),
+      "invalid_field",
+    );
+    rejects(
+      variant(filed, {
+        computed: {
+          ...filed.computed,
+          settings: { fiscal_date_rule: { fund: "mañana" }, wash_sale_window: {} },
+        },
+      }),
+      "invalid_fiscal_date_rule",
+    );
+  });
+});

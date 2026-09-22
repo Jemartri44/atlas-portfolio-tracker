@@ -77,7 +77,9 @@ describe("the messages", () => {
    */
   it("never names a document, an identifier or an ISO date, in any template", () => {
     const detail = (key: string): unknown => {
-      if (/date|window_end|window_start/.test(key)) return "2027-01-31";
+      if (/date|window_end|window_start|filed_at/.test(key)) return "2027-01-31";
+      if (key === "model") return "720";
+      if (key === "category") return "capital_gain";
       if (key === "thesis_id") return "th_alpha";
       if (key === "theses") return ["th_alpha"];
       if (/^(asset_id|from_asset_id|to_asset_id|existing_asset_id)$/.test(key)) return "ast_world";
@@ -99,7 +101,7 @@ describe("the messages", () => {
       if (key === "offending_error") return "buy: amount is not a valid positive_decimal";
       if (/currency|left|right/.test(key)) return "USD";
       if (key === "parameter") return "ratio";
-      if (/days|_count|theses$|operations|sample|found|supported|line/.test(key)) return "3";
+      if (/days|_count|theses$|operations|sample|found|supported|line|year/.test(key)) return "3";
       if (key === "archive_name") return "ledger-2027.jsonl";
       if (key === "from" || key === "to") return "fund";
       return "12.5";

@@ -15,12 +15,13 @@ import {
 } from "../../src/schema/events.js";
 
 describe("event type discriminator", () => {
-  it("is at schema version 1 with 24 supported types and no reserved type left", () => {
+  it("is at schema version 1 with 25 supported types and no reserved type left", () => {
     expect(CURRENT_SCHEMA_VERSION).toBe(1);
-    // 24 with `swap` (ADR-0021). `docs/data-schema.md` §3 lists one more,
-    // `tax_return_filed`, which ADR-0020 defines and phase 5 implements.
-    expect(SUPPORTED_EVENT_TYPES).toHaveLength(24);
+    // 25: 24 with `swap` (ADR-0021) plus `tax_return_filed` (ADR-0020), which
+    // is a **compatible** change and stays on version 1, like `swap` was.
+    expect(SUPPORTED_EVENT_TYPES).toHaveLength(25);
     expect(isSupportedEventType("swap")).toBe(true);
+    expect(isSupportedEventType("tax_return_filed")).toBe(true);
     expect(RESERVED_EVENT_TYPES).toEqual([]);
     expect(isSupportedEventType("buy")).toBe(true);
     expect(isSupportedEventType("thesis_opened")).toBe(true);

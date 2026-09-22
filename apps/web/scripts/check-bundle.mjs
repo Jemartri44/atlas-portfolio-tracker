@@ -142,8 +142,20 @@ const BOOT_BUDGET_GZIP_BYTES = 71.5 * 1024;
  * lists without assets converted away, the rectified movement reached with its
  * confirmation, the page that refuses to correct a reversed one and the closed
  * theses folded. Measured **189,8 KB**; the ceiling is 191,8.
+ *
+ * **Raised as feature 010 lands, step by step and always to what is measured
+ * plus a margin**, so that every rise carries its own reason instead of one
+ * allowance made up front. The prompt of the feature authorises moving this
+ * ceiling (not the boot one) to what the tax output measures.
+ *
+ *  - `tax_return_filed` (ADR-0020): the event, its validation —nested figures,
+ *    two shapes by model, no repeated origin and no repeated asset— and the
+ *    Spanish of its five refusals in both interfaces. The validation is on the
+ *    **read** path, like every other one (see the boot budget above), so the
+ *    boot carries most of it. Measured **193,2 KB**, of which the boot is
+ *    71,1; the ceiling is 194,2.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 191.8 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 194.2 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

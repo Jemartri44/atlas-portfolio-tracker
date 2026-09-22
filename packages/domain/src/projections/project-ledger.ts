@@ -20,6 +20,7 @@ import type {
   ReversalEvent,
   SettingsChangedEvent,
   SupportedEvent,
+  TaxReturnFiledEvent,
   ThesisClosedEvent,
   ThesisOpenedEvent,
 } from "../schema/events.js";
@@ -85,10 +86,14 @@ const THESIS_TYPES = new Set<string>(["thesis_opened", "thesis_closed"]);
 const isThesis = (entry: Positioned): entry is Positioned<ThesisEvent> =>
   THESIS_TYPES.has(entry.event.type);
 
-/** Events with a business date: everything except catalogue, settings, theses and reversals. */
+/**
+ * Events with a business date: everything except catalogue, settings, theses,
+ * filed returns and reversals. A filing is an administrative document, like a
+ * thesis: it is filtered by `filed_at` and not by the cut of `asOf` (ADR-0016).
+ */
 export type OperationEvent = Exclude<
   SupportedEvent,
-  CatalogueEvent | ReversalEvent | ThesisOpenedEvent | ThesisClosedEvent
+  CatalogueEvent | ReversalEvent | ThesisOpenedEvent | ThesisClosedEvent | TaxReturnFiledEvent
 >;
 
 interface Positioned<E extends SupportedEvent = SupportedEvent> {
@@ -115,6 +120,7 @@ const isCatalogue = (entry: Positioned): entry is Positioned<CatalogueEvent> =>
 export const isOperationEvent = (event: LedgerEvent): event is OperationEvent =>
   !CATALOGUE_TYPES.has(event.type) &&
   event.type !== "reversal" &&
+  event.type !== "tax_return_filed" &&
   !THESIS_TYPES.has(event.type) &&
   !isReservedEventType(event.type);
 
