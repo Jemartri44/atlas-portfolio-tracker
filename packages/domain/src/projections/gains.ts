@@ -61,6 +61,7 @@ export const recordGain = (state: LedgerState, input: GainInput): RealizedGain =
     by_lot: byLot,
   };
   state.gains.push(gain);
+  state.lotJournal.push({ kind: "gain", gain_index: state.gains.length - 1 });
   return gain;
 };
 

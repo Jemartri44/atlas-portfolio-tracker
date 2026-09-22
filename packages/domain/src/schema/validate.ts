@@ -535,6 +535,7 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
     if (raw.sold_currency === raw.bought_currency) {
       throw invalid("invalid_field", "fx_exchange: sold_currency and bought_currency must differ", {
         type: raw.type,
+        field: "bought_currency",
         value: raw.sold_currency,
       });
     }
@@ -576,6 +577,7 @@ function checkDates(raw: UnknownRecord): void {
   if ((raw.value_date as string) < (raw.trade_date as string)) {
     throw invalid("invalid_field", `${raw.type}: value_date must not precede trade_date`, {
       type: raw.type,
+      field: "value_date",
       trade_date: raw.trade_date,
       value_date: raw.value_date,
     });
@@ -611,16 +613,19 @@ function checkTransfer(raw: UnknownRecord): void {
     if (raw.from_account_id === raw.to_account_id) {
       throw invalid("invalid_field", "transfer: custody transfer needs two different accounts", {
         type: raw.type,
+        field: "to_account_id",
       });
     }
     if (raw.nav_out !== undefined || raw.nav_in !== undefined) {
       throw invalid("invalid_field", "transfer: custody transfer carries no nav_out/nav_in", {
         type: raw.type,
+        field: raw.nav_out === undefined ? "nav_in" : "nav_out",
       });
     }
     if (raw.quantity_in !== raw.quantity_out) {
       throw invalid("invalid_field", "transfer: custody transfer keeps the same quantity", {
         type: raw.type,
+        field: "quantity_in",
         quantity_out: raw.quantity_out,
         quantity_in: raw.quantity_in,
       });
@@ -630,6 +635,7 @@ function checkTransfer(raw: UnknownRecord): void {
   if (raw.nav_out === undefined || raw.nav_in === undefined) {
     throw invalid("missing_field", "transfer: fund transfer requires nav_out and nav_in", {
       type: raw.type,
+      field: raw.nav_out === undefined ? "nav_out" : "nav_in",
     });
   }
 }

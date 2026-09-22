@@ -17,15 +17,18 @@
 //
 // This is only the warning. Quantifying the deferred loss, splitting it across
 // the repurchased lots and carrying it through transfers and swaps is the tax
-// engine of phase 5 (decision (g)): nothing here prepares structures for it.
+// engine (`tax/wash-sale.ts`, feature 009), which walks the lot journal after
+// the projection. The warning follows the same rule for what a prior purchase
+// is (#18); how much each purchase defers only the engine knows, which is why
+// the text says "may" and points at `atlas tax`.
 
-import type { CivilDate } from "../dates/civil-date.js";
+import { type CivilDate, yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { Money } from "../money/money.js";
-import type { Quantity } from "../money/quantity.js";
+import { Quantity } from "../money/quantity.js";
 import type { AssetId, AssetType } from "../schema/events.js";
 import { washSaleWindowEnd, washSaleWindowOf, washSaleWindowStart } from "../settings/wash-sale.js";
-import { addWarning, type LedgerState } from "./state.js";
+import { type AssetLots, addWarning, type LedgerState } from "./state.js";
 
 /** An acquisition that counts for the rule (data-schema.md §8.4). */
 export interface Acquisition {
@@ -53,6 +56,12 @@ export const noteAcquisition = (state: LedgerState, acquisition: Acquisition): v
  * Warns when an acquisition falls inside the window of a previous loss-making
  * transmission of the same asset. Runs while applying the buy (or the transfer
  * in), so `state.gains` holds exactly what happened before it in time.
+ *
+ * The warning names the purchase by its date and quantity and the sale by its
+ * asset and date, and says the tax year with its number (feature 009): "this
+ * year" read a year later is false. It says the loss **may** not be computable,
+ * because a purchase only defers the part it covers — and none when earlier
+ * purchases already covered it (#19). The figure is the tax engine's.
  */
 export const warnRepurchase = (
   state: LedgerState,
@@ -60,6 +69,7 @@ export const warnRepurchase = (
   assetId: AssetId,
   assetType: AssetType,
   fiscalDate: CivilDate,
+  quantity: Quantity,
 ): void => {
   const window = washSaleWindowOf(state.fiscalSettings, assetType);
   for (const gain of state.gains) {
@@ -72,13 +82,15 @@ export const warnRepurchase = (
         state,
         "wash_sale_window_repurchase",
         eventId,
-        `buying ${assetId} within the wash-sale window of the sale ${gain.event_id} (${gain.fiscal_date}, loss ${gain.gain_eur.roundToCents().amount.toString()} EUR, window until ${end})`,
+        `buying ${quantity.toString()} of ${assetId} on ${fiscalDate} within the wash-sale window of its loss-making sale of ${gain.fiscal_date} (loss ${gain.gain_eur.roundToCents().amount.toString()} EUR, window until ${end}): that loss may not be computable in ${yearOf(gain.fiscal_date)}`,
         {
           asset_id: assetId,
+          buy_date: fiscalDate,
+          buy_quantity: quantity.toString(),
           sale_event_id: gain.event_id,
           sale_date: gain.fiscal_date,
-          quantity: gain.quantity.toString(),
           loss_eur: gain.gain_eur.roundToCents().amount.toString(),
+          tax_year: yearOf(gain.fiscal_date),
           window_end: end,
           window,
         },
@@ -98,6 +110,16 @@ export const warnRepurchase = (
  * applies: what is already in `state.acquisitions` when the sale is applied
  * came before it, so it is a prior buy; a purchase recorded after the sale
  * finds the loss in `state.gains` and is a repurchase.
+ *
+ * Only a purchase the sale leaves in the patrimony is named (criterion #18):
+ * one whose lots this very sale consumed, or that is already gone, defers
+ * nothing, and the tax engine agrees. It runs after the sale consumed its lots,
+ * so "still held" is "still has an open lot of this asset".
+ *
+ * And it says **how much of it** is still held, in today's units: the sum of
+ * those open lots (feature 009, fiscal review 7a). What was bought is not what
+ * is left after a reverse split, nor after a sale that consumed part of it. A
+ * purchase noted once per account (a grant with a cost) is named once.
  */
 export const warnPriorBuys = (
   state: LedgerState,
@@ -109,19 +131,34 @@ export const warnPriorBuys = (
 ): void => {
   const window = washSaleWindowOf(state.fiscalSettings, assetType);
   const start = washSaleWindowStart(fiscalDate, window);
+  // The sale has just consumed lots of this asset, so its inventory exists.
+  const open = (state.lots.get(assetId) as AssetLots).open;
+  const named = new Set<Ulid>();
   for (const acquisition of state.acquisitions.get(assetId) ?? []) {
-    if (acquisition.fiscal_date >= start && acquisition.fiscal_date <= fiscalDate) {
+    if (named.has(acquisition.event_id)) {
+      continue;
+    }
+    named.add(acquisition.event_id);
+    const lots = open.filter((lot) => lot.source_event_id === acquisition.event_id);
+    if (
+      lots.length > 0 &&
+      acquisition.fiscal_date >= start &&
+      acquisition.fiscal_date <= fiscalDate
+    ) {
+      const held = lots.reduce((sum, lot) => sum.add(lot.quantity), Quantity.ZERO);
       addWarning(
         state,
         "wash_sale_window_prior_buy",
         eventId,
-        `selling ${assetId} at a loss of ${loss.roundToCents().amount.toString()} EUR with a purchase (${acquisition.event_id}, ${acquisition.fiscal_date}) inside the window that opened on ${start}`,
+        `selling ${assetId} at a loss of ${loss.roundToCents().amount.toString()} EUR on ${fiscalDate} while ${held.toString()} of a purchase of ${acquisition.fiscal_date} are still held, inside the window that opened on ${start}: the loss may not be computable in ${yearOf(fiscalDate)}`,
         {
           asset_id: assetId,
+          sale_date: fiscalDate,
           buy_event_id: acquisition.event_id,
           buy_date: acquisition.fiscal_date,
-          quantity: acquisition.quantity.toString(),
+          held_quantity: held.toString(),
           loss_eur: loss.roundToCents().amount.toString(),
+          tax_year: yearOf(fiscalDate),
           window_start: start,
           window,
         },

@@ -343,6 +343,25 @@ describe("the catalogue of names", () => {
  * fallback for a code nobody translated. The rendered tests cover the call
  * sites; these cover the two decisions taken inside.
  */
+describe("the per-asset-type settings errors", () => {
+  it("name the asset type and the value received, which are words and stay visible", () => {
+    const error = (code: string, value: string) =>
+      ({
+        code,
+        message: "english",
+        details: { asset_type: "etc", value },
+      }) as unknown as ProjectionError;
+    const category = describeError(error("invalid_income_category", "rendimiento"), {
+      privacy: true,
+    });
+    expect(category).toContain("etc");
+    expect(category).toContain("rendimiento");
+    const rule = describeError(error("invalid_fiscal_date_rule", "settlement"), { privacy: true });
+    expect(rule).toContain("settlement");
+    expect(rule).toContain("fecha valor");
+  });
+});
+
 describe("the privacy mode inside a message", () => {
   const settingsError = (field: string, value: string) =>
     ({

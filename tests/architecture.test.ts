@@ -148,7 +148,11 @@ describe("architecture: @atlas/domain imports nothing", () => {
         .map((name) => join(domainSrc, "projections", name))
         .concat(join(domainSrc, "projections", "state.ts")),
     );
-    const reads = [/\.valuations\b/, /\{[^{}]*\bvaluations\b[^{}]*\}\s*=[^=]/];
+    const reads = [
+      /\.valuations\b/,
+      /\{[^{}]*\bvaluations\b[^{}]*\}\s*=[^=]/,
+      /\[\s*["'`]valuations["'`]\s*\]/,
+    ];
     const violations = listTsFiles(domainSrc)
       .filter((file) => !allowed.has(file))
       .filter((file) => {
@@ -206,12 +210,71 @@ describe("architecture: @atlas/domain imports nothing", () => {
     const graph = importGraph();
     const pricesFile = join(domainSrc, "projections", "prices.ts");
     const projectLedger = join(domainSrc, "projections", "project-ledger.ts");
-    const fiscal = reachableFrom(graph, projectLedger);
+    // The tax engine (feature 009) is the fiscal path by definition: every file
+    // of `tax/` is a root too, so a price can reach neither the projection nor
+    // the base of the return.
+    const taxDir = join(domainSrc, "tax");
+    const roots = [
+      projectLedger,
+      ...listTsFiles(domainSrc).filter((file) => !relative(taxDir, file).startsWith("..")),
+    ];
+    expect(roots.length).toBeGreaterThan(4);
+    const fiscal = new Map<string, string[]>();
+    for (const root of roots) {
+      for (const [file, chain] of reachableFrom(graph, root)) {
+        if (!fiscal.has(file)) {
+          fiscal.set(file, chain);
+        }
+      }
+    }
     expect(fiscal.size).toBeGreaterThan(1);
     const violations = [...fiscal.entries()]
       .map(([file, chain]) => ({ chain, toPrices: reachableFrom(graph, file).get(pricesFile) }))
       .filter((entry) => entry.toPrices !== undefined)
       .map((entry) => `${asChain(entry.chain)}  ==  then  ==>  ${asChain(entry.toPrices ?? [])}`);
+    expect(violations).toEqual([]);
+  });
+});
+
+/**
+ * Feature 009, decision (f): the tax engine converts every amount at the ECB
+ * rate **of its own operation**, as published and with its date (ADR-0013).
+ * `state.fxRates` is the last rate the ledger knows per currency, a convenience
+ * for valuing cash today; reading it from `tax/` would convert a disposal of
+ * 2027 at a rate of 2029. And `state.valuations` are prices. Neither may be
+ * read there, in either of the two forms a read can take.
+ */
+describe("architecture: the tax engine", () => {
+  it("reads neither the known FX rates nor the valuations of the state", () => {
+    const taxDir = join(domainSrc, "tax");
+    // The three forms a read can take: a property, a destructuring and a
+    // bracket with the name written as a string.
+    const reads = [
+      /\.(?:fxRates|valuations)\b/,
+      /\{[^{}]*\b(?:fxRates|valuations)\b[^{}]*\}\s*=[^=]/,
+      /\[\s*["'`](?:fxRates|valuations)["'`]\s*\]/,
+    ];
+    const files = listTsFiles(taxDir);
+    expect(files.length).toBeGreaterThan(4);
+    const violations = files
+      .filter((file) => reads.some((pattern) => pattern.test(readFileSync(file, "utf8"))))
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * The Modelo 720 view (`projections/valuations.ts`) reads valuations because
+   * the law values that return at market prices. The next feature puts it next
+   * to the tax engine; this keeps the engine from ever reaching it, at any depth.
+   */
+  it("never reaches the valuations view, at any depth", () => {
+    const graph = importGraph();
+    const taxDir = join(domainSrc, "tax");
+    const view = join(domainSrc, "projections", "valuations.ts");
+    const violations = listTsFiles(taxDir)
+      .map((file) => reachableFrom(graph, file).get(view))
+      .filter((chain): chain is string[] => chain !== undefined)
+      .map(asChain);
     expect(violations).toEqual([]);
   });
 });
@@ -557,7 +620,7 @@ describe("architecture: apps/web", () => {
    * readable in public, which is what it is for.
    */
   const SENSITIVE_DETAIL =
-    /_eur$|^(?:amount|quantity|position|available|open|missing|distributed|core|gross|loss|invested|cost)$/;
+    /_eur$|_quantity$|^(?:amount|quantity|position|available|open|missing|distributed|core|gross|loss|invested|cost)$/;
 
   /** A detail whose **name** matches but which is not a figure, with its reason. */
   const NOT_A_FIGURE: Record<string, string> = {

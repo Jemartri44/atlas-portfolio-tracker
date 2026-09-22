@@ -72,6 +72,30 @@ export interface Settings {
    * `washSaleTransferCounts`, never off the field.
    */
   wash_sale_transfer_counts?: boolean;
+  /**
+   * Share, in percent, of the positive balance of one category of the savings
+   * base (capital gains, movable capital income) that a negative balance of the
+   * other can offset (art. 49 LIRPF; fiscal criteria #10 and #22). It has been
+   * 10, 15, 20 and 25 in four consecutive years, so it is configuration and not
+   * a constant (constitution IV, feature 009 Q3). Absent means
+   * `DEFAULT_SAVINGS_OFFSET_LIMIT_PCT`; read through `savingsOffsetLimitPctOf`.
+   */
+  savings_offset_limit_pct?: DecimalString;
+  /**
+   * Tax years a negative balance of the savings base can be carried forward
+   * (art. 49 LIRPF). Absent means `DEFAULT_LOSS_CARRYFORWARD_YEARS`; read
+   * through `lossCarryforwardYearsOf`.
+   */
+  loss_carryforward_years?: number;
+  /**
+   * The withholding rate, in percent, that the double taxation treaty with each
+   * country allows at source, keyed by ISO 3166-1 alpha-2 of the payer (fiscal
+   * criterion #16, feature 009 Q4). **No default on purpose**: each rate is a
+   * figure of a treaty, to be verified one by one. A dividend from a country
+   * missing here gets no deduction calculated, and the tax report says so;
+   * deducting everything withheld abroad would be the aggressive reading.
+   */
+  treaty_withholding_pct?: Record<string, DecimalString>;
   target_weights?: Record<string, DecimalString>;
   deviation_threshold_pp?: DecimalString;
   satellite_min_weight_pct?: DecimalString;
@@ -143,6 +167,32 @@ export const DEFAULT_SETTINGS: Settings = {
   income_category: DEFAULT_INCOME_CATEGORY,
 };
 
+/** A `transfer` in counts as an acquisition for the wash-sale rule: the prudent reading (#2b). */
+export const DEFAULT_WASH_SALE_TRANSFER_COUNTS = true;
+
+/** Art. 49 LIRPF as understood in September 2026: 25 % since 2018. Verify; change with a `settings_changed`. */
+export const DEFAULT_SAVINGS_OFFSET_LIMIT_PCT: DecimalString = "25";
+
+/** Art. 49 LIRPF as understood in September 2026: four years. Verify; change with a `settings_changed`. */
+export const DEFAULT_LOSS_CARRYFORWARD_YEARS = 4;
+
+/** The offset limit in force (#10, #22): what the settings say, or its documented default. */
+export const savingsOffsetLimitPctOf = (settings: Settings): Decimal =>
+  Decimal.parse(settings.savings_offset_limit_pct ?? DEFAULT_SAVINGS_OFFSET_LIMIT_PCT);
+
+/** The carry-forward period in force: what the settings say, or its documented default. */
+export const lossCarryforwardYearsOf = (settings: Settings): number =>
+  settings.loss_carryforward_years ?? DEFAULT_LOSS_CARRYFORWARD_YEARS;
+
+/** The treaty rate for a country, or nothing when the settings do not know it (#16). */
+export const treatyWithholdingPctOf = (
+  settings: Settings,
+  country: string | undefined,
+): Decimal | undefined => {
+  const rate = country === undefined ? undefined : settings.treaty_withholding_pct?.[country];
+  return rate === undefined ? undefined : Decimal.parse(rate);
+};
+
 /** The rule in force for an asset type: what the settings say, or its default (ADR-0018). */
 export const fiscalDateRuleOf = (settings: Settings, assetType: AssetType): FiscalDateRule =>
   settings.fiscal_date_rule[assetType] ?? DEFAULT_FISCAL_DATE_RULE[assetType];
@@ -168,6 +218,7 @@ const DECIMAL_FIELDS = [
   "bucket_max_weight_pct",
   "model_720_alert_threshold_eur",
   "model_721_alert_threshold_eur",
+  "savings_offset_limit_pct",
 ] as const;
 
 interface Range {
@@ -191,10 +242,15 @@ const DECIMAL_RANGES: Partial<Record<(typeof DECIMAL_FIELDS)[number], Range>> = 
   bucket_max_cumulative_contribution: { min: "0" },
   bucket_stop_loss_pct: { min: "0", max: "100" },
   bucket_max_weight_pct: { min: "0", max: "100" },
+  savings_offset_limit_pct: { min: "0", max: "100" },
 };
 
 /** Whole days, and zero days means nothing: a price is stale after a positive number of days. */
-const INTEGER_FIELDS = ["stale_price_days", "transfer_max_days"] as const;
+const INTEGER_FIELDS = [
+  "stale_price_days",
+  "transfer_max_days",
+  "loss_carryforward_years",
+] as const;
 
 /** Criteria that are on or off. Absent is not `false`: each one has its own documented default. */
 const BOOLEAN_FIELDS = ["wash_sale_transfer_counts"] as const;
@@ -260,11 +316,12 @@ const checkWashSaleWindow = (raw: UnknownRecord): void => {
  * siblings (ADR-0018). What is present must still name a category the engine
  * knows: the tolerance is to absence, not to nonsense.
  *
- * It reuses `invalid_settings` instead of a code of its own, unlike the
- * wash-sale window: the window has a code because its form (`"2m"`, `"1y"`,
- * `"<n>d"`) is not guessable, whereas an enumeration of two values is exactly
- * what the generic "that parameter does not take that value" message covers,
- * and `field` names which asset type it was.
+ * A wrong value has a code of its own, like the other two per-asset-type maps
+ * (feature 009, Q13). It used to share `invalid_settings`, on the argument that
+ * an enumeration of two values is what the generic message covers; but since
+ * the tax engine reads it, this is the setting that moves a disposal from one
+ * box of the return to another, and the message has to be able to say so.
+ * A map that is not an object stays `invalid_settings`, as for the window.
  */
 const checkIncomeCategory = (raw: UnknownRecord): void => {
   const categories = raw.income_category;
@@ -274,10 +331,53 @@ const checkIncomeCategory = (raw: UnknownRecord): void => {
   for (const assetType of ASSET_TYPES) {
     const value = isRecord(categories) ? categories[assetType] : undefined;
     if (value !== undefined && !(INCOME_CATEGORIES as readonly unknown[]).includes(value)) {
-      fail(`income_category.${assetType} must be ${INCOME_CATEGORIES.join(" or ")}`, {
-        field: `income_category.${assetType}`,
-        asset_type: assetType,
-        value,
+      throw new ValidationError(
+        "invalid_income_category",
+        `income_category.${assetType} must be ${INCOME_CATEGORIES.join(" or ")}`,
+        { asset_type: assetType, value },
+      );
+    }
+  }
+};
+
+const COUNTRY_PATTERN = /^[A-Z]{2}$/;
+
+/**
+ * The treaty rates (#16): an object keyed by ISO 3166-1 alpha-2, each a
+ * percentage in [0, 100]. The same two-capital-letter rule as `source_country`
+ * and `issuer_country`: a real ISO list is another feature.
+ */
+const checkTreatyRates = (raw: UnknownRecord): void => {
+  if (!("treaty_withholding_pct" in raw)) {
+    return;
+  }
+  const rates = raw.treaty_withholding_pct;
+  const invalid = (message: string, details: Record<string, unknown>): ValidationError =>
+    new ValidationError("invalid_settings", message, details);
+  if (!isRecord(rates)) {
+    throw invalid("treaty_withholding_pct must be an object", {
+      field: "treaty_withholding_pct",
+      value: rates,
+    });
+  }
+  for (const [country, rate] of Object.entries(rates)) {
+    const field = `treaty_withholding_pct.${country}`;
+    if (!COUNTRY_PATTERN.test(country)) {
+      throw invalid(`${field}: the key must be an ISO 3166-1 alpha-2 code`, {
+        field,
+        value: country,
+      });
+    }
+    if (!isDecimalString(rate)) {
+      throw invalid(`${field} must be a decimal string`, { field, value: rate });
+    }
+    const parsed = Decimal.parse(rate);
+    if (parsed.isNegative() || parsed.gt(Decimal.parse("100"))) {
+      throw invalid(`${field} must be between 0 and 100`, {
+        field,
+        value: rate,
+        min: "0",
+        max: "100",
       });
     }
   }
@@ -293,15 +393,16 @@ export const validateSettings = (raw: unknown): Settings => {
     return fail("fiscal_date_rule is required", { field: "fiscal_date_rule" });
   }
   // Partial map (ADR-0018): a missing asset type is fine and takes its default;
-  // a present one must name a rule the engine knows.
+  // a present one must name a rule the engine knows. Its own code, like its
+  // two siblings (feature 009, Q13): a missing map is still `invalid_settings`.
   for (const assetType of ASSET_TYPES) {
     const rule = rules[assetType];
     if (rule !== undefined && !(FISCAL_DATE_RULES as readonly unknown[]).includes(rule)) {
-      return fail(`fiscal_date_rule.${assetType} must be trade_date or value_date`, {
-        field: `fiscal_date_rule.${assetType}`,
-        asset_type: assetType,
-        value: rule,
-      });
+      throw new ValidationError(
+        "invalid_fiscal_date_rule",
+        `fiscal_date_rule.${assetType} must be trade_date or value_date`,
+        { asset_type: assetType, value: rule },
+      );
     }
   }
   checkWashSaleWindow(raw);
@@ -349,6 +450,7 @@ export const validateSettings = (raw: unknown): Settings => {
       return fail(`${field} must be true or false`, { field, value: raw[field] });
     }
   }
+  checkTreatyRates(raw);
   if ("target_weights" in raw) {
     const weights = raw.target_weights;
     if (!isRecord(weights)) {
@@ -408,11 +510,18 @@ export const normalizeSettings = (settings: Settings): Settings => {
       categories[assetType] = DEFAULT_INCOME_CATEGORY[assetType];
     }
   }
+  // The scalar criteria are materialised too, so that the next
+  // `settings_changed` written from what was read records them (ADR-0022): a
+  // tax year recomputed in 2040 must not depend on what the code said then.
   return {
     ...settings,
     fiscal_date_rule: rules,
     wash_sale_window: windows,
     income_category: categories,
+    wash_sale_transfer_counts:
+      settings.wash_sale_transfer_counts ?? DEFAULT_WASH_SALE_TRANSFER_COUNTS,
+    savings_offset_limit_pct: settings.savings_offset_limit_pct ?? DEFAULT_SAVINGS_OFFSET_LIMIT_PCT,
+    loss_carryforward_years: lossCarryforwardYearsOf(settings),
   };
 };
 

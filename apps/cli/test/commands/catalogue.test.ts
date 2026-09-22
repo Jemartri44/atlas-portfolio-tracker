@@ -93,6 +93,68 @@ describe("atlas account / asset", () => {
     expect(await h.exec(["asset", "nope"])).toBe(64);
   });
 
+  it("takes --yes in front of the command, as the usage line puts it", async () => {
+    // It used to read `asset` as the value of --yes: «--yes no admite valor».
+    const h = harness({ events: seed() });
+    expect(
+      await h.exec([
+        "--yes",
+        "asset",
+        "add",
+        "--id",
+        "ast_new",
+        "--type",
+        "fund",
+        "--book",
+        "core",
+        "--asset-class",
+        "equity",
+        "--name",
+        "New",
+        "--currency",
+        "EUR",
+        "--transferable",
+      ]),
+    ).toBe(0);
+    expect(h.text()).toContain("Registrado asset_created");
+  });
+
+  it("refuses --transferable false, and any word the command does not read", async () => {
+    const h = harness({ events: seed() });
+    const before = (await h.store.load()).events.length;
+    const add = (...extra: string[]) =>
+      h.exec([
+        "asset",
+        "add",
+        "--id",
+        "ast_new",
+        "--type",
+        "fund",
+        "--book",
+        "core",
+        "--asset-class",
+        "equity",
+        "--name",
+        "New",
+        "--currency",
+        "EUR",
+        ...extra,
+        "--yes",
+      ]);
+    // It used to record transferable: true.
+    expect(await add("--transferable", "false")).toBe(64);
+    expect(h.err.join("\n")).toContain(
+      "--transferable no lleva valor («false»): pon --transferable para sí y --not-transferable para no",
+    );
+    h.reset();
+    // A word no command expects is named, never ignored.
+    expect(await add("--transferable", "loose")).toBe(64);
+    expect(h.err.join("\n")).toContain(
+      "sobra el argumento «loose»: «atlas asset add» no lo espera",
+    );
+    expect((await h.store.load()).events).toHaveLength(before);
+  });
+
   it("rejects an asset that already exists in the other book", async () => {
     const h = harness({ events: seed() });
     expect(
@@ -114,6 +176,38 @@ describe("atlas account / asset", () => {
       ]),
     ).toBe(1);
     expect(h.text()).toContain("ya existe");
+  });
+
+  it("refuses an ISIN another asset already has, in any book, and names that asset", async () => {
+    const h = harness({ events: seed() });
+    expect(
+      await h.exec([
+        "asset",
+        "add",
+        "--id",
+        "ast_spec",
+        "--type",
+        "fund",
+        "--book",
+        "bucket",
+        "--name",
+        "World again",
+        "--currency",
+        "EUR",
+        "--isin",
+        "XX0000000001",
+        "--transferable",
+        "--yes",
+      ]),
+    ).toBe(1);
+    expect(h.text()).toContain(
+      "El ISIN XX0000000001 ya es del activo ast_world: un mismo valor no puede ser dos activos",
+    );
+    h.reset();
+    expect(await h.exec(["asset", "update", "ast_bonds", "--isin", "XX0000000002", "--yes"])).toBe(
+      1,
+    );
+    expect(h.text()).toContain("ya es del activo ast_gold");
   });
 });
 

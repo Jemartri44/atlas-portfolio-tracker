@@ -4,13 +4,18 @@ import { fiscalDateOf } from "../../src/settings/fiscal-date.js";
 import {
   DEFAULT_FISCAL_DATE_RULE,
   DEFAULT_INCOME_CATEGORY,
+  DEFAULT_LOSS_CARRYFORWARD_YEARS,
+  DEFAULT_SAVINGS_OFFSET_LIMIT_PCT,
   DEFAULT_SETTINGS,
   DEFAULT_WASH_SALE_WINDOW,
   fiscalDateRuleOf,
   incomeCategoryOf,
+  lossCarryforwardYearsOf,
   mergeSettings,
   normalizeSettings,
   type Settings,
+  savingsOffsetLimitPctOf,
+  treatyWithholdingPctOf,
   validateSettings,
 } from "../../src/settings/settings.js";
 
@@ -98,7 +103,15 @@ describe("validateSettings", () => {
   it("keeps rejecting a value that is present and wrong: the tolerance is to absence", () => {
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, fiscal_date_rule: { etf: "settlement" } }),
-    ).toThrow(ValidationError);
+    ).toThrow(expect.objectContaining({ code: "invalid_fiscal_date_rule" }));
+    try {
+      validateSettings({ ...DEFAULT_SETTINGS, fiscal_date_rule: { etf: "settlement" } });
+    } catch (error) {
+      expect((error as ValidationError).details).toEqual({
+        asset_type: "etf",
+        value: "settlement",
+      });
+    }
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, wash_sale_window: { etf: "3m" } }),
     ).toThrow(ValidationError);
@@ -288,10 +301,18 @@ describe("wash_sale_window (ADR-0014)", () => {
   it("rejects an income category that is not one of the two, and a map that is not an object", () => {
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, income_category: { etc: "rendimiento" } }),
-    ).toThrow(ValidationError);
+    ).toThrow(expect.objectContaining({ code: "invalid_income_category" }));
+    try {
+      validateSettings({ ...DEFAULT_SETTINGS, income_category: { etc: "rendimiento" } });
+    } catch (error) {
+      expect((error as ValidationError).details).toEqual({
+        asset_type: "etc",
+        value: "rendimiento",
+      });
+    }
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, income_category: "capital_gain" }),
-    ).toThrow(ValidationError);
+    ).toThrow(expect.objectContaining({ code: "invalid_settings" }));
     expect(() =>
       validateSettings({ ...DEFAULT_SETTINGS, income_category: { not_a_type: "nonsense" } }),
     ).not.toThrow();
@@ -441,5 +462,89 @@ describe("mergeSettings: a per-asset-type map replaces, it does not merge", () =
     expect(fiscalDateRuleOf(next, "fund")).not.toBe("trade_date");
     // And the type that stayed keeps the value that was chosen for it.
     expect(fiscalDateRuleOf(next, "stock")).toBe("value_date");
+  });
+});
+
+/**
+ * Feature 009, Q3 and Q4: the 25 % and the four years of article 49, and the
+ * treaty rates of the double taxation deduction, are configuration. The first
+ * two have documented defaults resolved where they are read; the rates have no
+ * default at all, on purpose.
+ */
+describe("the tax engine settings", () => {
+  it("resolve the offset limit and the carry-forward period to their defaults", () => {
+    expect(savingsOffsetLimitPctOf(DEFAULT_SETTINGS).toString()).toBe(
+      DEFAULT_SAVINGS_OFFSET_LIMIT_PCT,
+    );
+    expect(DEFAULT_SAVINGS_OFFSET_LIMIT_PCT).toBe("25");
+    expect(lossCarryforwardYearsOf(DEFAULT_SETTINGS)).toBe(DEFAULT_LOSS_CARRYFORWARD_YEARS);
+    expect(DEFAULT_LOSS_CARRYFORWARD_YEARS).toBe(4);
+    const custom = {
+      ...DEFAULT_SETTINGS,
+      savings_offset_limit_pct: "20",
+      loss_carryforward_years: 5,
+    };
+    expect(savingsOffsetLimitPctOf(custom).toString()).toBe("20");
+    expect(lossCarryforwardYearsOf(custom)).toBe(5);
+  });
+
+  it("know a treaty rate only when it is written down", () => {
+    const withUs = { ...DEFAULT_SETTINGS, treaty_withholding_pct: { US: "15" } };
+    expect(treatyWithholdingPctOf(withUs, "US")?.toString()).toBe("15");
+    expect(treatyWithholdingPctOf(withUs, "CH")).toBeUndefined();
+    expect(treatyWithholdingPctOf(withUs, undefined)).toBeUndefined();
+    expect(treatyWithholdingPctOf(DEFAULT_SETTINGS, "US")).toBeUndefined();
+  });
+
+  it("validate the offset limit as a percentage and the period as whole years", () => {
+    const code = (extra: Record<string, unknown>): string => {
+      try {
+        validateSettings({ ...DEFAULT_SETTINGS, ...extra });
+      } catch (error) {
+        return (error as ValidationError).code;
+      }
+      return "accepted";
+    };
+    expect(code({ savings_offset_limit_pct: "25" })).toBe("accepted");
+    expect(code({ savings_offset_limit_pct: "100.01" })).toBe("invalid_settings");
+    expect(code({ savings_offset_limit_pct: 25 })).toBe("invalid_settings");
+    expect(code({ loss_carryforward_years: 4 })).toBe("accepted");
+    expect(code({ loss_carryforward_years: 0 })).toBe("invalid_settings");
+    expect(code({ loss_carryforward_years: "4" })).toBe("invalid_settings");
+  });
+
+  it("validate the treaty rates by key and by value", () => {
+    const code = (rates: unknown): string => {
+      try {
+        validateSettings({ ...DEFAULT_SETTINGS, treaty_withholding_pct: rates });
+      } catch (error) {
+        return (error as ValidationError).code;
+      }
+      return "accepted";
+    };
+    expect(code({ US: "15", CH: "15", DE: "0" })).toBe("accepted");
+    expect(code({ US: "100" })).toBe("accepted");
+    expect(code("15")).toBe("invalid_settings");
+    expect(code({ usa: "15" })).toBe("invalid_settings");
+    expect(code({ US: 15 })).toBe("invalid_settings");
+    expect(code({ US: "-1" })).toBe("invalid_settings");
+    expect(code({ US: "100.5" })).toBe("invalid_settings");
+  });
+
+  it("are materialised when the settings are read, so the next change records them (ADR-0022)", () => {
+    const normalized = normalizeSettings(DEFAULT_SETTINGS);
+    expect(normalized.savings_offset_limit_pct).toBe("25");
+    expect(normalized.loss_carryforward_years).toBe(4);
+    expect(normalized.wash_sale_transfer_counts).toBe(true);
+    expect(normalized.treaty_withholding_pct).toBeUndefined();
+    const explicit = normalizeSettings({
+      ...DEFAULT_SETTINGS,
+      wash_sale_transfer_counts: false,
+      savings_offset_limit_pct: "20",
+      loss_carryforward_years: 5,
+    });
+    expect(explicit.wash_sale_transfer_counts).toBe(false);
+    expect(explicit.savings_offset_limit_pct).toBe("20");
+    expect(explicit.loss_carryforward_years).toBe(5);
   });
 });

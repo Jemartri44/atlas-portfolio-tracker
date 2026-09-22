@@ -274,7 +274,7 @@ export const applyBuy = (state: LedgerState, event: BuyEvent, position: number):
     fiscal_date: fiscalDate,
     quantity,
   });
-  warnRepurchase(state, event.id, event.asset_id, asset.asset_type, fiscalDate);
+  warnRepurchase(state, event.id, event.asset_id, asset.asset_type, fiscalDate, quantity);
   warnCurrency(state, event, asset);
   warnFxDate(state, event, fiscalDate);
   warnHolders(state, event.asset_id, event.id);
@@ -304,7 +304,7 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
   }
   adjustCash(state, event.account_id, proceeds.sub(withholding));
   adjustPosition(state, event.account_id, event.asset_id, negative(quantity), event.id);
-  const slices = consume(state, event.asset_id, quantity, event.id);
+  const slices = consume(state, event.asset_id, quantity, event.id, "transmission");
   const gain = recordGain(state, {
     event_id: event.id,
     asset_id: event.asset_id,
@@ -391,7 +391,7 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   adjustCash(state, event.account_id, fee.neg());
   adjustPosition(state, event.account_id, event.from_asset_id, negative(quantityOut), event.id);
   adjustPosition(state, event.account_id, event.to_asset_id, quantityIn, event.id);
-  const slices = consume(state, event.from_asset_id, quantityOut, event.id);
+  const slices = consume(state, event.from_asset_id, quantityOut, event.id, "transmission");
   const gain = recordGain(state, {
     event_id: event.id,
     asset_id: event.from_asset_id,
@@ -418,7 +418,7 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
     fiscal_date: dateIn,
     quantity: quantityIn,
   });
-  warnRepurchase(state, event.id, event.to_asset_id, to.asset_type, dateIn);
+  warnRepurchase(state, event.id, event.to_asset_id, to.asset_type, dateIn, quantityIn);
   if (gain.gain_eur.amount.isNegative()) {
     warnPriorBuys(state, event.id, event.from_asset_id, from.asset_type, dateOut, gain.gain_eur);
   }
@@ -484,7 +484,7 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent): void =>
     warnHolders(state, event.to_asset_id, event.id);
     return;
   }
-  const slices = consume(state, event.from_asset_id, quantityOut, event.id);
+  const slices = consume(state, event.from_asset_id, quantityOut, event.id, "transfer");
   let assigned = Quantity.ZERO;
   slices.forEach((slice, index) => {
     const quantity =
@@ -518,7 +518,14 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent): void =>
       fiscal_date: event.value_date_in,
       quantity: quantityIn,
     });
-    warnRepurchase(state, event.id, event.to_asset_id, toAsset.asset_type, event.value_date_in);
+    warnRepurchase(
+      state,
+      event.id,
+      event.to_asset_id,
+      toAsset.asset_type,
+      event.value_date_in,
+      quantityIn,
+    );
   }
 };
 

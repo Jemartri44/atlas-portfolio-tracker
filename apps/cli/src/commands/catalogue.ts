@@ -7,8 +7,10 @@ import {
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
+  type Money,
   mergeSettings,
   movedFiscalYears,
+  movedTaxYears,
   type Settings,
   settingsAt,
   silencedWarnings,
@@ -228,10 +230,11 @@ const SETTINGS_DECIMALS = [
   "bucket-max-weight-pct",
   "model-720-alert-threshold-eur",
   "model-721-alert-threshold-eur",
+  "savings-offset-limit-pct",
   "tax-residence",
   "notification-email",
 ];
-const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days"];
+const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days", "loss-carryforward-years"];
 /** Free-text settings: the benchmark is an `asset_id`, checked against the catalogue when queried. */
 const SETTINGS_STRINGS = ["bucket-benchmark-asset"];
 
@@ -304,21 +307,33 @@ const confirmMovedYears = async (
   current: Settings,
   next: Settings,
 ): Promise<boolean> => {
-  const moved = movedFiscalYears(events, current, next, yearOf(todayInMadrid(ctx.deps.clock)));
-  if (moved.length === 0) {
+  const year = yearOf(todayInMadrid(ctx.deps.clock));
+  const moved = movedFiscalYears(events, current, next, year);
+  // The base too (feature 009, Q12): the window, the transfer criterion and the
+  // income category move it without moving a single realized gain.
+  const bases = movedTaxYears(events, current, next, year);
+  if (moved.length === 0 && bases.length === 0) {
     return true;
   }
-  ctx.io.out("Este cambio mueve las ganancias realizadas de ejercicios anteriores:");
-  ctx.io.out(
+  const rows = (impacts: readonly { year: number; before: Money; after: Money }[]) =>
     table(
       ["ejercicio", "antes EUR", "después EUR"],
-      moved.map((impact) => [
+      impacts.map((impact) => [
         String(impact.year),
         impact.before.amount.toString(),
         impact.after.amount.toString(),
       ]),
-    ),
-  );
+    );
+  if (moved.length > 0) {
+    ctx.io.out("Este cambio mueve las ganancias realizadas de ejercicios anteriores:");
+    ctx.io.out(rows(moved));
+  }
+  if (bases.length > 0) {
+    ctx.io.out(
+      "Este cambio mueve la base del ahorro de ejercicios anteriores (`atlas tax <año>`):",
+    );
+    ctx.io.out(rows(bases));
+  }
   ctx.io.out("Puede afectar a una declaración ya presentada.");
   return confirm(ctx, "¿Continuar? [s/N] ");
 };
@@ -352,6 +367,7 @@ export const settingsCommand = async (
       "fiscal-date-rule",
       "wash-sale-window",
       "income-category",
+      "treaty-withholding-pct",
       "target-weights",
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
@@ -382,6 +398,14 @@ export const settingsCommand = async (
       patch.income_category = {
         ...current.income_category,
         ...assetTypeAssignments(categories, "income-category"),
+      };
+    }
+    // Merged too: a treaty rate is set one country at a time (feature 009, Q4).
+    const treaties = stringFlag(flags, "treaty-withholding-pct");
+    if (treaties !== undefined) {
+      patch.treaty_withholding_pct = {
+        ...current.treaty_withholding_pct,
+        ...parseAssignments(treaties, "treaty-withholding-pct"),
       };
     }
     const weights = stringFlag(flags, "target-weights");

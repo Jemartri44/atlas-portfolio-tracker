@@ -79,6 +79,18 @@ interface Snapshot {
   lotCounts: Map<Ulid, number>;
   gains: number;
   warnings: number;
+  /**
+   * The acquisitions a `grant` notes for the wash-sale rule and the income in
+   * kind it records. They were left out, so a rejected action kept both: a
+   * phantom acquisition that a real loss could be deferred against, and a
+   * phantom line of `in_kind_income` in the snapshot (question Q14 of the
+   * feature 009). Both lists only grow while an event applies, so their
+   * lengths are enough to put them back.
+   */
+  acquisitions: Map<AssetId, number>;
+  inKindIncome: number;
+  /** The lot journal only grows too (feature 009). */
+  lotJournal: number;
 }
 
 const cloneLot = (lot: FiscalLot): FiscalLot => ({ ...lot, consumptions: [...lot.consumptions] });
@@ -101,6 +113,11 @@ const snapshot = (state: LedgerState, assets: readonly AssetId[]): Snapshot => (
   lotCounts: new Map(state.lotCounts),
   gains: state.gains.length,
   warnings: state.warnings.length,
+  acquisitions: new Map(
+    assets.map((asset) => [asset, state.acquisitions.get(asset)?.length ?? 0] as const),
+  ),
+  inKindIncome: state.inKindIncome.length,
+  lotJournal: state.lotJournal.length,
 });
 
 const restore = (state: LedgerState, saved: Snapshot): void => {
@@ -116,6 +133,15 @@ const restore = (state: LedgerState, saved: Snapshot): void => {
   state.lotCounts = saved.lotCounts;
   state.gains.length = saved.gains;
   state.warnings.length = saved.warnings;
+  for (const [asset, length] of saved.acquisitions) {
+    if (length === 0) {
+      state.acquisitions.delete(asset);
+    } else {
+      (state.acquisitions.get(asset) as unknown[]).length = length;
+    }
+  }
+  state.inKindIncome.length = saved.inKindIncome;
+  state.lotJournal.length = saved.lotJournal;
 };
 
 export const applyCorporateAction = (
@@ -132,7 +158,12 @@ export const applyCorporateAction = (
   if (isLiquidation(event.kind)) {
     requireFullCoverage(state, effects[0] as Resolved<"forced_sale">, event.id);
   }
-  const ctx: EffectContext = { eventId: event.id, position, effectiveDate: event.effective_date };
+  const ctx: EffectContext = {
+    eventId: event.id,
+    position,
+    effectiveDate: event.effective_date,
+    scaleOnly: effects.every((effect) => effect.op === "scale"),
+  };
   const touched = [...new Set(effects.flatMap((effect) => [effect.asset_id, targetOf(effect)]))];
   const saved = snapshot(state, touched);
   try {

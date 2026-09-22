@@ -20,7 +20,12 @@ import type { LedgerState } from "../../src/projections/state.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
 const EVENT = "01ARYZ6S41TSV4RRFFQ69G5FCA";
-const ctx: EffectContext = { eventId: EVENT, position: 99, effectiveDate: "2027-03-01" };
+const ctx: EffectContext = {
+  eventId: EVENT,
+  position: 99,
+  effectiveDate: "2027-03-01",
+  scaleOnly: false,
+};
 
 /** Catalogue plus a second core stock and a fork coin; `setup` adds the operations. */
 const stateWith = (setup: (b: LedgerBuilder) => void): LedgerState => {
@@ -158,6 +163,19 @@ describe("applyScale", () => {
     applyScale(state, scale("4/3"), ctx);
     expect(q(state, "acc_fund", "ast_world")).toBe("40");
     expect(open(state, "ast_world")[0]?.quantity.toString()).toBe("40");
+  });
+
+  it("records only the ratio when an action that only scales finds nothing to scale", () => {
+    const sold = stateWith((b) => {
+      tenShares(b);
+      b.sell({ account_id: "acc_fund", asset_id: "ast_world", quantity: "10" });
+    });
+    const journal = sold.lotJournal.length;
+    applyScale(sold, scale("1/4"), { ...ctx, scaleOnly: true });
+    expect(sold.lotJournal.slice(journal)).toEqual([
+      { kind: "units", asset_id: "ast_world", event_id: EVENT, ratio: "1/4" },
+    ]);
+    expect(open(sold, "ast_world")).toEqual([]);
   });
 
   it("rejects an asset without open lots, whether never held or fully sold", () => {

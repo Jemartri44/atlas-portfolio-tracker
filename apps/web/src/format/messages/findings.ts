@@ -33,6 +33,10 @@ export const FINDING_TEXTS: Record<string, FindingText> = {
     what: "Dos eventos tienen la misma huella: puede ser la misma operación registrada dos veces.",
     todo: "Abre los dos en Movimientos. Si son la misma, anula uno; si son dos operaciones idénticas de verdad, no hay nada que hacer.",
   },
+  duplicate_isin: {
+    what: "Dos activos del catálogo tienen el mismo ISIN: para Hacienda son el mismo valor, y la regla de recompra y el FIFO los tratan como dos.",
+    todo: "Registra las operaciones de ese valor en un solo activo. Mientras los dos existan, las cifras fiscales de ese valor pueden estar mal.",
+  },
   dangling_reference: {
     what: "Un activo apunta a un ETF de referencia que no existe en el catálogo.",
     todo: "Da de alta el activo al que apunta, o quítale la referencia desde la configuración del activo.",

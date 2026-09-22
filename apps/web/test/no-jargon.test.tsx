@@ -80,7 +80,9 @@ describe("the messages", () => {
       if (/date|window_end|window_start/.test(key)) return "2027-01-31";
       if (key === "thesis_id") return "th_alpha";
       if (key === "theses") return ["th_alpha"];
-      if (/^(asset_id|from_asset_id|to_asset_id)$/.test(key)) return "ast_world";
+      if (/^(asset_id|from_asset_id|to_asset_id|existing_asset_id)$/.test(key)) return "ast_world";
+      // A public code the user typed and knows, not an identifier of the application.
+      if (key === "isin") return "IE00BK5BQT80";
       if (key === "account_id") return "acc_mi";
       if (/_ids?$|^(existing|ids|id)$/.test(key)) return ["01ARYZ6S41TSV4RRFFQ6900001"];
       if (/^(assets|missing|extra|partial|accounts|affected)$/.test(key)) return ["ast_world"];

@@ -352,8 +352,11 @@ describe("Resumen applies the rule of `transfer_max_days`", () => {
 /**
  * A loss-making sale of a fund bought inside the wash-sale window, so the
  * summary carries a warning whose figures live **inside the sentence**: "Venta
- * con pérdida de World Index Fund (−525,00 EUR) con una compra del 2026-01-14
- * (10,5 títulos)…". The dates are in the past of any plausible "today", which
+ * con pérdida de World Index Fund del 2026-02-12 (−500,00 EUR) cuando siguen
+ * en cartera 0,5 títulos de una compra del 2026-01-14…". It sells 10 of the
+ * 10.5 bought: a purchase sold whole defers nothing and is not named
+ * (criterion #18, feature 009), and the warning says what is left of it, not
+ * what was bought (fiscal review 7a). The dates are in the past of any plausible "today", which
  * is what keeps this ledger stable: the summary projects at today's date.
  */
 const WASH_SALE = ledgerOf(
@@ -383,7 +386,7 @@ const WASH_SALE = ledgerOf(
     asset_id: "ast_world",
     trade_date: "2026-02-10",
     value_date: "2026-02-12",
-    quantity: "10.5",
+    quantity: "10",
     unit_price: "50",
     currency: "EUR",
     fx_rate: "1",
@@ -429,8 +432,8 @@ describe("the privacy mode covers the prose of the warnings", () => {
     expect(shown).toContain("ventana de un año");
     // And nothing of what it is worth: neither the loss nor the units.
     expect(shown).toContain(MASK);
-    expect(shown).not.toContain("525");
-    expect(shown).not.toContain("10,5");
+    expect(shown).not.toContain("500");
+    expect(shown).not.toContain("0,5 títulos");
     expect(DECIMAL.test(withoutPercentages(shown))).toBe(false);
   });
 
@@ -439,7 +442,7 @@ describe("the privacy mode covers the prose of the warnings", () => {
     const shown = attention(await show("/", Resumen));
 
     expect(shown).not.toContain(MASK);
-    expect(shown).toContain("525,00 EUR");
-    expect(shown).toContain("10,5 títulos");
+    expect(shown).toContain("500,00 EUR");
+    expect(shown).toContain("0,5 títulos");
   });
 });

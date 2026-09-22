@@ -1,0 +1,1948 @@
+{
+  "2026": {
+    "base_eur": "10.43",
+    "capital_gains": {
+      "balance_eur": "0",
+      "foreign_releases_eur": "0",
+      "gains_eur": "0",
+      "lines": [],
+      "losses_eur": "0"
+    },
+    "compensation": {
+      "base_eur": "10.43",
+      "capital_gain_eur": "0",
+      "capital_gain_final_eur": "0",
+      "expired": [],
+      "limit_eur": {
+        "capital_gain": "0",
+        "movable_capital": "2.61"
+      },
+      "limit_pct": "25",
+      "movable_capital_eur": "10.43",
+      "movable_capital_final_eur": "10.43",
+      "pending": [],
+      "steps": []
+    },
+    "double_taxation": {
+      "deductible_eur": "0",
+      "lines": [
+        {
+          "criteria": [
+            "16"
+          ],
+          "event_id": "01M75W8H80JDGKJK8CCDBRNEMS",
+          "foreign_tax_eur": "0.26",
+          "gross_eur": "1.75",
+          "source_country": "US"
+        }
+      ],
+      "not_deductible_eur": "0"
+    },
+    "doubtful": [],
+    "in_kind": [],
+    "movable_capital": {
+      "balance_eur": "10.43",
+      "dividends": [
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_alpha",
+          "criteria": [
+            "6"
+          ],
+          "event_id": "01M75W8H80JDGKJK8CCDBRNEMS",
+          "fiscal_date": "2026-11-11",
+          "gross": {
+            "amount": "2",
+            "currency": "USD",
+            "eur": "1.7525411847",
+            "fx_rate": "1.1412",
+            "fx_rate_date": "2026-11-11"
+          },
+          "gross_eur_rounded": "1.75",
+          "kind": "dividend",
+          "source_country": "US",
+          "withholding_origin": "0.3",
+          "withholding_spain": "0.38"
+        }
+      ],
+      "expenses": [],
+      "foreign_releases_eur": "0",
+      "interest": [
+        {
+          "account_id": "acc_mi",
+          "criteria": [
+            "6"
+          ],
+          "event_id": "01M61TPF802G9VNKVGAFSCMBTG",
+          "fiscal_date": "2026-10-28",
+          "gross": {
+            "amount": "8.68",
+            "currency": "EUR",
+            "eur": "8.68",
+            "fx_rate": "1",
+            "fx_rate_date": "2026-10-28"
+          },
+          "gross_eur_rounded": "8.68",
+          "kind": "interest",
+          "withholding_origin": "0",
+          "withholding_spain": "1.65"
+        }
+      ],
+      "transmissions": []
+    },
+    "notes": [
+      {
+        "code": "tax_quota_not_computed",
+        "details": {},
+        "event_id": "",
+        "message": "this is the savings base, not the tax: the rest of the return is not in the ledger"
+      },
+      {
+        "code": "tax_double_taxation_partial",
+        "details": {},
+        "event_id": "",
+        "message": "only the treaty limit of the double taxation deduction is computed; the effective average rate needs the whole return, and what is not deductible is lost"
+      },
+      {
+        "code": "tax_treaty_rate_missing",
+        "details": {
+          "country": "US",
+          "foreign_tax_eur": "0.26"
+        },
+        "event_id": "01M75W8H80JDGKJK8CCDBRNEMS",
+        "message": "no treaty rate is configured for US: no deduction is calculated"
+      },
+      {
+        "code": "tax_fx_differences_not_computed",
+        "details": {
+          "currencies": [
+            "USD"
+          ],
+          "fx_exchanges": [
+            "01M1HME780HB1ZYBHV3TG6V003",
+            "01M1HME878SE9PKE007PWDX100"
+          ]
+        },
+        "event_id": "",
+        "message": "gains and losses of foreign cash (criterion #4) are not computed"
+      },
+      {
+        "code": "tax_settings_default_used",
+        "details": {
+          "fields": [
+            "income_category.fund",
+            "fiscal_date_rule.etf",
+            "wash_sale_window.etf",
+            "income_category.etf",
+            "income_category.etc",
+            "income_category.etp",
+            "income_category.stock",
+            "income_category.crypto",
+            "income_category.money_market",
+            "wash_sale_transfer_counts",
+            "savings_offset_limit_pct",
+            "loss_carryforward_years"
+          ]
+        },
+        "event_id": "",
+        "message": "some fiscal settings are not in the ledger and were taken from the code (ADR-0022)"
+      }
+    ],
+    "scope": "fiscal_total",
+    "settings": {
+      "from_code": [
+        "income_category.fund",
+        "fiscal_date_rule.etf",
+        "wash_sale_window.etf",
+        "income_category.etf",
+        "income_category.etc",
+        "income_category.etp",
+        "income_category.stock",
+        "income_category.crypto",
+        "income_category.money_market",
+        "wash_sale_transfer_counts",
+        "savings_offset_limit_pct",
+        "loss_carryforward_years"
+      ],
+      "origin": "01NDYZTZ804AP696WA0PA725XK"
+    },
+    "settings_diff": {
+      "base_after_eur": "10.43",
+      "base_before_eur": "10.43",
+      "changes": [],
+      "current_origin": "01NDYZTZ804AP696WA0PA725XK",
+      "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
+    },
+    "today": "2030-01-01",
+    "wash_sale": {
+      "deferred": [],
+      "pending": [],
+      "released": []
+    },
+    "withholdings": {
+      "lines": [
+        {
+          "account_id": "acc_mi",
+          "amount": {
+            "amount": "1.65",
+            "currency": "EUR",
+            "eur": "1.65",
+            "fx_rate": "1",
+            "fx_rate_date": "2026-10-28"
+          },
+          "amount_eur_rounded": "1.65",
+          "criteria": [
+            "6"
+          ],
+          "event_id": "01M61TPF802G9VNKVGAFSCMBTG",
+          "fiscal_date": "2026-10-28",
+          "source": "interest"
+        },
+        {
+          "account_id": "acc_bucket",
+          "amount": {
+            "amount": "0.38",
+            "currency": "USD",
+            "eur": "0.3329828251",
+            "fx_rate": "1.1412",
+            "fx_rate_date": "2026-11-11"
+          },
+          "amount_eur_rounded": "0.33",
+          "criteria": [
+            "6"
+          ],
+          "event_id": "01M75W8H80JDGKJK8CCDBRNEMS",
+          "fiscal_date": "2026-11-11",
+          "source": "dividend"
+        }
+      ],
+      "total_eur": "1.98"
+    },
+    "year": 2026
+  },
+  "2027": {
+    "base_eur": "174.35",
+    "capital_gains": {
+      "balance_eur": "172.53",
+      "foreign_releases_eur": "0",
+      "gains_eur": "267.64",
+      "lines": [
+        {
+          "account_id": "acc_mi",
+          "asset_id": "ast_world",
+          "asset_type": "fund",
+          "book": "core",
+          "category": "capital_gain",
+          "computable_eur": "0",
+          "computable_eur_rounded": "0",
+          "cost_eur": "838.695831628",
+          "criteria": [
+            "1",
+            "2:fund",
+            "3",
+            "6",
+            "14",
+            "18"
+          ],
+          "deferral": {
+            "acquisitions": [
+              {
+                "amount_eur": "-50.8253323997",
+                "event_id": "01MBEBAM80K3CE5XK9JN91KKCC",
+                "fiscal_date": "2027-01-03",
+                "timing": "prior",
+                "units": "4.9233",
+                "via_transfer": false
+              },
+              {
+                "amount_eur": "-39.9950242283",
+                "event_id": "01ME3AEB80NNJANWN0AFEQT9NM",
+                "fiscal_date": "2027-02-05",
+                "timing": "posterior",
+                "units": "3.8742",
+                "via_transfer": false
+              }
+            ],
+            "amount_eur": "-90.820356628",
+            "amount_eur_rounded": "-90.82",
+            "asset_id": "ast_world",
+            "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+            "fiscal_date": "2027-01-06",
+            "sold": "8.7975",
+            "units": "8.7975",
+            "window": "1y",
+            "window_end": "2028-01-06",
+            "window_start": "2026-01-06"
+          },
+          "deferred_eur": "-90.820356628",
+          "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "event_type": "sell",
+          "fee": "0",
+          "fiscal_date": "2027-01-06",
+          "lots": [
+            {
+              "acquisition_date": "2026-08-28",
+              "cost_eur": "243.9",
+              "gain_eur": "-31.375",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-08-28",
+                  "asset_id": "ast_world",
+                  "event_id": "01MBP2GT78JNMNGSE96ZZMH1R7",
+                  "event_type": "buy",
+                  "lot_id": "01MBP2GT78JNMNGSE96ZZMH1R7#0"
+                }
+              ],
+              "lot_id": "01MBP2GT78JNMNGSE96ZZMH1R7#0",
+              "proceeds_eur": "212.525",
+              "quantity": "2.5",
+              "root": {
+                "acquisition_date": "2026-08-28",
+                "asset_id": "ast_world",
+                "cost": {
+                  "amount": "243.9",
+                  "currency": "EUR",
+                  "eur": "243.9",
+                  "fx_rate": "1",
+                  "fx_rate_date": "2026-08-28"
+                },
+                "event_id": "01MBP2GT78JNMNGSE96ZZMH1R7",
+                "event_type": "buy",
+                "quantity": "2.5"
+              }
+            },
+            {
+              "acquisition_date": "2026-09-04",
+              "cost_eur": "594.795831628",
+              "gain_eur": "-59.445356628",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-09-04",
+                  "asset_id": "ast_world",
+                  "event_id": "01M1PS7R5RJ4XWKK5GX24DQ2FE",
+                  "event_type": "buy",
+                  "lot_id": "01M1PS7R5RJ4XWKK5GX24DQ2FE#0"
+                }
+              ],
+              "lot_id": "01M1PS7R5RJ4XWKK5GX24DQ2FE#0",
+              "proceeds_eur": "535.350475",
+              "quantity": "6.2975",
+              "root": {
+                "acquisition_date": "2026-09-04",
+                "asset_id": "ast_world",
+                "cost": {
+                  "amount": "600",
+                  "currency": "EUR",
+                  "eur": "600",
+                  "fx_rate": "1",
+                  "fx_rate_date": "2026-09-04"
+                },
+                "event_id": "01M1PS7R5RJ4XWKK5GX24DQ2FE",
+                "event_type": "buy",
+                "quantity": "6.3526"
+              }
+            }
+          ],
+          "own_eur": "-90.820356628",
+          "proceeds": {
+            "amount": "747.875475",
+            "currency": "EUR",
+            "eur": "747.875475",
+            "fx_rate": "1",
+            "fx_rate_date": "2027-01-06"
+          },
+          "quantity": "8.7975",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_epsilon",
+          "asset_type": "stock",
+          "book": "bucket",
+          "category": "capital_gain",
+          "computable_eur": "-87.6",
+          "computable_eur_rounded": "-87.6",
+          "cost_eur": "571",
+          "criteria": [
+            "1",
+            "2:listed",
+            "3",
+            "6",
+            "14",
+            "18"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01MN8FTA80DDTPKAG5TNV3Q20X",
+          "event_type": "sell",
+          "fee": "1",
+          "fiscal_date": "2027-05-05",
+          "lots": [
+            {
+              "acquisition_date": "2027-03-05",
+              "cost_eur": "571",
+              "gain_eur": "-87.6",
+              "lineage": [
+                {
+                  "acquisition_date": "2027-03-05",
+                  "asset_id": "ast_epsilon",
+                  "event_id": "01MGBDJF80AQMY7TCNE7BB4R42",
+                  "event_type": "buy",
+                  "lot_id": "01MGBDJF80AQMY7TCNE7BB4R42#0"
+                }
+              ],
+              "lot_id": "01MGBDJF80AQMY7TCNE7BB4R42#0",
+              "proceeds_eur": "483.4",
+              "quantity": "40",
+              "root": {
+                "acquisition_date": "2027-03-05",
+                "asset_id": "ast_epsilon",
+                "cost": {
+                  "amount": "571",
+                  "currency": "EUR",
+                  "eur": "571",
+                  "fx_rate": "1",
+                  "fx_rate_date": "2027-03-05"
+                },
+                "event_id": "01MGBDJF80AQMY7TCNE7BB4R42",
+                "event_type": "buy",
+                "quantity": "40"
+              }
+            }
+          ],
+          "own_eur": "-87.6",
+          "proceeds": {
+            "amount": "483.4",
+            "currency": "EUR",
+            "eur": "483.4",
+            "fx_rate": "1",
+            "fx_rate_date": "2027-05-05"
+          },
+          "quantity": "40",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_ibkr",
+          "asset_id": "ast_gold",
+          "asset_type": "etc",
+          "book": "core",
+          "category": "capital_gain",
+          "computable_eur": "-2.1139083171",
+          "computable_eur_rounded": "-2.11",
+          "corporate_action_kind": "reverse_split",
+          "cost_eur": "181.2181062181",
+          "criteria": [
+            "2:listed",
+            "3",
+            "4",
+            "5",
+            "6",
+            "14",
+            "24:etc_gain"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01MQTWHB78RC2FADH9B774BHS5",
+          "event_type": "forced_sale",
+          "fee": "0.5",
+          "fiscal_date": "2027-06-06",
+          "lots": [
+            {
+              "acquisition_date": "2026-09-03",
+              "cost_eur": "181.2181062181",
+              "gain_eur": "-2.1139083171",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-09-03",
+                  "asset_id": "ast_gold",
+                  "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
+                  "event_type": "buy",
+                  "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0"
+                }
+              ],
+              "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
+              "proceeds_eur": "179.104197901",
+              "quantity": "0.25",
+              "root": {
+                "acquisition_date": "2026-09-03",
+                "asset_id": "ast_gold",
+                "cost": {
+                  "amount": "2301.18",
+                  "currency": "USD",
+                  "eur": "2174.6172746173",
+                  "fx_rate": "1.0582",
+                  "fx_rate_date": "2026-09-03"
+                },
+                "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
+                "event_type": "buy",
+                "quantity": "12"
+              }
+            }
+          ],
+          "own_eur": "-2.1139083171",
+          "proceeds": {
+            "amount": "191.14",
+            "currency": "USD",
+            "eur": "179.104197901",
+            "fx_rate": "1.0672",
+            "fx_rate_date": "2027-06-04"
+          },
+          "quantity": "0.25",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_ibkr2",
+          "asset_id": "ast_gold",
+          "asset_type": "etc",
+          "book": "core",
+          "category": "capital_gain",
+          "computable_eur": "-5.4046934669",
+          "computable_eur_rounded": "-5.4",
+          "corporate_action_kind": "reverse_split",
+          "cost_eur": "543.6543186543",
+          "criteria": [
+            "2:listed",
+            "3",
+            "4",
+            "5",
+            "6",
+            "14",
+            "24:etc_gain"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01MQTWHB78RC2FADH9B774BHS5",
+          "event_type": "forced_sale",
+          "fee": "0.5",
+          "fiscal_date": "2027-06-06",
+          "lots": [
+            {
+              "acquisition_date": "2026-09-03",
+              "cost_eur": "543.6543186543",
+              "gain_eur": "-5.4046934669",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-09-03",
+                  "asset_id": "ast_gold",
+                  "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
+                  "event_type": "buy",
+                  "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0"
+                }
+              ],
+              "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
+              "proceeds_eur": "538.2496251874",
+              "quantity": "0.75",
+              "root": {
+                "acquisition_date": "2026-09-03",
+                "asset_id": "ast_gold",
+                "cost": {
+                  "amount": "2301.18",
+                  "currency": "USD",
+                  "eur": "2174.6172746173",
+                  "fx_rate": "1.0582",
+                  "fx_rate_date": "2026-09-03"
+                },
+                "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
+                "event_type": "buy",
+                "quantity": "12"
+              }
+            }
+          ],
+          "own_eur": "-5.4046934669",
+          "proceeds": {
+            "amount": "574.42",
+            "currency": "USD",
+            "eur": "538.2496251874",
+            "fx_rate": "1.0672",
+            "fx_rate_date": "2027-06-04"
+          },
+          "quantity": "0.75",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_delta",
+          "asset_type": "stock",
+          "book": "bucket",
+          "category": "capital_gain",
+          "computable_eur": "175.3",
+          "computable_eur_rounded": "175.3",
+          "cost_eur": "583.6",
+          "criteria": [
+            "1",
+            "3",
+            "6"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01MX28C1803YR20A0EAGQ8XSQM",
+          "event_type": "sell",
+          "fee": "1",
+          "fiscal_date": "2027-08-10",
+          "lots": [
+            {
+              "acquisition_date": "2027-02-10",
+              "cost_eur": "376.2",
+              "gain_eur": "129.7333333333",
+              "lineage": [
+                {
+                  "acquisition_date": "2027-02-10",
+                  "asset_id": "ast_delta",
+                  "event_id": "01MEG6DY80B931VTBH1A0BGNRE",
+                  "event_type": "buy",
+                  "lot_id": "01MEG6DY80B931VTBH1A0BGNRE#0"
+                }
+              ],
+              "lot_id": "01MEG6DY80B931VTBH1A0BGNRE#0",
+              "proceeds_eur": "505.9333333333",
+              "quantity": "20",
+              "root": {
+                "acquisition_date": "2027-02-10",
+                "asset_id": "ast_delta",
+                "cost": {
+                  "amount": "376.2",
+                  "currency": "EUR",
+                  "eur": "376.2",
+                  "fx_rate": "1",
+                  "fx_rate_date": "2027-02-10"
+                },
+                "event_id": "01MEG6DY80B931VTBH1A0BGNRE",
+                "event_type": "buy",
+                "quantity": "20"
+              }
+            },
+            {
+              "acquisition_date": "2027-04-12",
+              "cost_eur": "207.4",
+              "gain_eur": "45.5666666667",
+              "lineage": [
+                {
+                  "acquisition_date": "2027-04-12",
+                  "asset_id": "ast_delta",
+                  "event_id": "01MKD8NS806CJ9SGD5ERZMGPD5",
+                  "event_type": "buy",
+                  "lot_id": "01MKD8NS806CJ9SGD5ERZMGPD5#0"
+                }
+              ],
+              "lot_id": "01MKD8NS806CJ9SGD5ERZMGPD5#0",
+              "proceeds_eur": "252.9666666667",
+              "quantity": "10",
+              "root": {
+                "acquisition_date": "2027-04-12",
+                "asset_id": "ast_delta",
+                "cost": {
+                  "amount": "207.4",
+                  "currency": "EUR",
+                  "eur": "207.4",
+                  "fx_rate": "1",
+                  "fx_rate_date": "2027-04-12"
+                },
+                "event_id": "01MKD8NS806CJ9SGD5ERZMGPD5",
+                "event_type": "buy",
+                "quantity": "10"
+              }
+            }
+          ],
+          "own_eur": "175.3",
+          "proceeds": {
+            "amount": "758.9",
+            "currency": "EUR",
+            "eur": "758.9",
+            "fx_rate": "1",
+            "fx_rate_date": "2027-08-10"
+          },
+          "quantity": "30",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_alpha_spin",
+          "asset_type": "stock",
+          "book": "bucket",
+          "category": "capital_gain",
+          "computable_eur": "3.4256226634",
+          "computable_eur_rounded": "3.43",
+          "corporate_action_kind": "spin_off",
+          "cost_eur": "7.9795879796",
+          "criteria": [
+            "3",
+            "4",
+            "6",
+            "7"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01N1T5TF78RGXZG073WH23MGPM",
+          "event_type": "forced_sale",
+          "fee": "0.5",
+          "fiscal_date": "2027-10-08",
+          "lots": [
+            {
+              "acquisition_date": "2026-09-04",
+              "cost_eur": "7.9795879796",
+              "gain_eur": "3.4256226634",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-09-04",
+                  "asset_id": "ast_alpha_spin",
+                  "event_id": "01N1T5TF78RGXZG073WH23MGPM",
+                  "event_type": "corporate_action:spin_off",
+                  "lot_id": "01N1T5TF78RGXZG073WH23MGPM#0"
+                },
+                {
+                  "acquisition_date": "2026-09-04",
+                  "asset_id": "ast_alpha",
+                  "event_id": "01M1PS7P7828CF37AWMZ0G1BED",
+                  "event_type": "buy",
+                  "lot_id": "01M1PS7P7828CF37AWMZ0G1BED#0"
+                }
+              ],
+              "lot_id": "01N1T5TF78RGXZG073WH23MGPM#0",
+              "proceeds_eur": "11.405210643",
+              "quantity": "0.5",
+              "root": {
+                "acquisition_date": "2026-09-04",
+                "asset_id": "ast_alpha",
+                "cost": {
+                  "amount": "211.1",
+                  "currency": "USD",
+                  "eur": "199.4896994897",
+                  "fx_rate": "1.0582",
+                  "fx_rate_date": "2026-09-04"
+                },
+                "event_id": "01M1PS7P7828CF37AWMZ0G1BED",
+                "event_type": "buy",
+                "quantity": "10"
+              }
+            }
+          ],
+          "own_eur": "3.4256226634",
+          "proceeds": {
+            "amount": "12.345",
+            "currency": "USD",
+            "eur": "11.405210643",
+            "fx_rate": "1.0824",
+            "fx_rate_date": "2027-10-08"
+          },
+          "quantity": "0.5",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_beta_new",
+          "asset_type": "stock",
+          "book": "bucket",
+          "category": "capital_gain",
+          "computable_eur": "1.4070317346",
+          "computable_eur_rounded": "1.41",
+          "corporate_action_kind": "merger",
+          "cost_eur": "24.6563940128",
+          "criteria": [
+            "3",
+            "4",
+            "6",
+            "13"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01N428YK78ARMXKW9TRZB7XV2D",
+          "event_type": "forced_sale",
+          "fee": "0.5",
+          "fiscal_date": "2027-11-05",
+          "lots": [
+            {
+              "acquisition_date": "2026-10-07",
+              "cost_eur": "24.6563940128",
+              "gain_eur": "1.4070317346",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-10-07",
+                  "asset_id": "ast_beta_new",
+                  "event_id": "01N428YK78ARMXKW9TRZB7XV2D",
+                  "event_type": "corporate_action:merger",
+                  "lot_id": "01N428YK78ARMXKW9TRZB7XV2D#0"
+                },
+                {
+                  "acquisition_date": "2026-10-07",
+                  "asset_id": "ast_beta",
+                  "event_id": "01M4BRBD78HXF9SGE8990VQ67M",
+                  "event_type": "buy",
+                  "lot_id": "01M4BRBD78HXF9SGE8990VQ67M#0"
+                }
+              ],
+              "lot_id": "01N428YK78ARMXKW9TRZB7XV2D#0",
+              "proceeds_eur": "26.0634257474",
+              "quantity": "0.3333333333",
+              "root": {
+                "acquisition_date": "2026-10-07",
+                "asset_id": "ast_beta",
+                "cost": {
+                  "amount": "364.35",
+                  "currency": "USD",
+                  "eur": "320.5331221958",
+                  "fx_rate": "1.1367",
+                  "fx_rate_date": "2026-10-07"
+                },
+                "event_id": "01M4BRBD78HXF9SGE8990VQ67M",
+                "event_type": "buy",
+                "quantity": "13"
+              }
+            }
+          ],
+          "own_eur": "1.4070317346",
+          "proceeds": {
+            "amount": "27.449999997205",
+            "currency": "USD",
+            "eur": "26.0634257474",
+            "fx_rate": "1.0532",
+            "fx_rate_date": "2027-11-05"
+          },
+          "quantity": "0.3333333333",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_delta",
+          "asset_type": "stock",
+          "book": "bucket",
+          "category": "capital_gain",
+          "computable_eur": "0",
+          "computable_eur_rounded": "0",
+          "cost_eur": "743.5",
+          "criteria": [
+            "1",
+            "2:listed",
+            "3",
+            "6",
+            "14",
+            "18"
+          ],
+          "deferral": {
+            "acquisitions": [
+              {
+                "amount_eur": "-224.75",
+                "event_id": "01N7P4TX80S2D9FXZN82KE9Z3A",
+                "fiscal_date": "2027-12-20",
+                "timing": "posterior",
+                "units": "25",
+                "via_transfer": false
+              }
+            ],
+            "amount_eur": "-224.75",
+            "amount_eur_rounded": "-224.75",
+            "asset_id": "ast_delta",
+            "event_id": "01N4F4Y58036KX1852YTTM0XD3",
+            "fiscal_date": "2027-11-10",
+            "sold": "25",
+            "units": "25",
+            "window": "2m",
+            "window_end": "2028-01-10",
+            "window_start": "2027-09-10"
+          },
+          "deferred_eur": "-224.75",
+          "event_id": "01N4F4Y58036KX1852YTTM0XD3",
+          "event_type": "sell",
+          "fee": "1",
+          "fiscal_date": "2027-11-10",
+          "lots": [
+            {
+              "acquisition_date": "2027-09-10",
+              "cost_eur": "743.5",
+              "gain_eur": "-224.75",
+              "lineage": [
+                {
+                  "acquisition_date": "2027-09-10",
+                  "asset_id": "ast_delta",
+                  "event_id": "01MZJ2PA80XHBXS2XS5FZYQ1N2",
+                  "event_type": "buy",
+                  "lot_id": "01MZJ2PA80XHBXS2XS5FZYQ1N2#0"
+                }
+              ],
+              "lot_id": "01MZJ2PA80XHBXS2XS5FZYQ1N2#0",
+              "proceeds_eur": "518.75",
+              "quantity": "25",
+              "root": {
+                "acquisition_date": "2027-09-10",
+                "asset_id": "ast_delta",
+                "cost": {
+                  "amount": "743.5",
+                  "currency": "EUR",
+                  "eur": "743.5",
+                  "fx_rate": "1",
+                  "fx_rate_date": "2027-09-10"
+                },
+                "event_id": "01MZJ2PA80XHBXS2XS5FZYQ1N2",
+                "event_type": "buy",
+                "quantity": "25"
+              }
+            }
+          ],
+          "own_eur": "-224.75",
+          "proceeds": {
+            "amount": "518.75",
+            "currency": "EUR",
+            "eur": "518.75",
+            "fx_rate": "1",
+            "fx_rate_date": "2027-11-10"
+          },
+          "quantity": "25",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_alpha",
+          "asset_type": "stock",
+          "book": "bucket",
+          "category": "capital_gain",
+          "computable_eur": "87.50231959454",
+          "computable_eur_rounded": "87.5",
+          "cost_eur": "159.59175959176",
+          "criteria": [
+            "1",
+            "3",
+            "4",
+            "6",
+            "7"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01N8FWT380SW7KKH9M43NPQ2DA",
+          "event_type": "sell",
+          "fee": "1",
+          "fiscal_date": "2027-12-30",
+          "lots": [
+            {
+              "acquisition_date": "2026-09-04",
+              "cost_eur": "159.59175959176",
+              "gain_eur": "87.50231959454",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-09-04",
+                  "asset_id": "ast_alpha",
+                  "event_id": "01M1PS7P7828CF37AWMZ0G1BED",
+                  "event_type": "buy",
+                  "lot_id": "01M1PS7P7828CF37AWMZ0G1BED#0"
+                }
+              ],
+              "lot_id": "01M1PS7P7828CF37AWMZ0G1BED#0",
+              "proceeds_eur": "247.0940791863",
+              "quantity": "10",
+              "root": {
+                "acquisition_date": "2026-09-04",
+                "asset_id": "ast_alpha",
+                "cost": {
+                  "amount": "211.1",
+                  "currency": "USD",
+                  "eur": "199.4896994897",
+                  "fx_rate": "1.0582",
+                  "fx_rate_date": "2026-09-04"
+                },
+                "event_id": "01M1PS7P7828CF37AWMZ0G1BED",
+                "event_type": "buy",
+                "quantity": "10"
+              }
+            }
+          ],
+          "own_eur": "87.50231959454",
+          "proceeds": {
+            "amount": "272.1",
+            "currency": "USD",
+            "eur": "247.0940791863",
+            "fx_rate": "1.1012",
+            "fx_rate_date": "2027-12-30"
+          },
+          "quantity": "10",
+          "released": [],
+          "released_eur": "0"
+        }
+      ],
+      "losses_eur": "-95.11"
+    },
+    "compensation": {
+      "base_eur": "174.35",
+      "capital_gain_eur": "172.53",
+      "capital_gain_final_eur": "172.53",
+      "expired": [],
+      "limit_eur": {
+        "capital_gain": "43.13",
+        "movable_capital": "0.46"
+      },
+      "limit_pct": "25",
+      "movable_capital_eur": "1.82",
+      "movable_capital_final_eur": "1.82",
+      "pending": [],
+      "steps": []
+    },
+    "double_taxation": {
+      "deductible_eur": "0",
+      "lines": [
+        {
+          "criteria": [
+            "16"
+          ],
+          "event_id": "01N94FZW78EQA3J41K0795WXF9",
+          "foreign_tax_eur": "0.27",
+          "gross_eur": "1.82",
+          "source_country": "US"
+        }
+      ],
+      "not_deductible_eur": "0"
+    },
+    "doubtful": [
+      {
+        "base_difference_eur": "-87.5",
+        "certainty": "medium",
+        "criterion": "1",
+        "deferred_difference_eur": "0",
+        "direction": "conservative",
+        "documented_risk": "conservative",
+        "event_ids": [
+          "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "01MN8FTA80DDTPKAG5TNV3Q20X",
+          "01MX28C1803YR20A0EAGQ8XSQM",
+          "01N4F4Y58036KX1852YTTM0XD3",
+          "01N8FWT380SW7KKH9M43NPQ2DA"
+        ],
+        "measure": "difference",
+        "pending_difference_eur": "0"
+      },
+      {
+        "base_difference_eur": "84.16",
+        "certainty": "disputed",
+        "criterion": "2:listed",
+        "deferred_difference_eur": "-84.17",
+        "direction": "aggressive",
+        "documented_risk": "aggressive",
+        "event_ids": [
+          "01MN8FTA80DDTPKAG5TNV3Q20X",
+          "01MQTWHB78RC2FADH9B774BHS5",
+          "01MQTWHB78RC2FADH9B774BHS5",
+          "01N4F4Y58036KX1852YTTM0XD3"
+        ],
+        "markets": [
+          "unknown"
+        ],
+        "measure": "difference",
+        "pending_difference_eur": "0"
+      },
+      {
+        "base_difference_eur": "10.54",
+        "certainty": "disputed",
+        "criterion": "4",
+        "direction": "aggressive",
+        "documented_risk": "both",
+        "event_ids": [
+          "01MQTWHB78RC2FADH9B774BHS5",
+          "01MQTWHB78RC2FADH9B774BHS5",
+          "01N1T5TF78RGXZG073WH23MGPM",
+          "01N428YK78ARMXKW9TRZB7XV2D",
+          "01N8FWT380SW7KKH9M43NPQ2DA"
+        ],
+        "measure": "difference"
+      },
+      {
+        "certainty": "medium",
+        "criterion": "5",
+        "direction": "conservative",
+        "documented_risk": "conservative",
+        "event_ids": [
+          "01MQTWHB78RC2FADH9B774BHS5",
+          "01MQTWHB78RC2FADH9B774BHS5"
+        ],
+        "exposure_eur": "717.35",
+        "measure": "exposure"
+      },
+      {
+        "certainty": "disputed",
+        "criterion": "7",
+        "direction": "aggressive",
+        "documented_risk": "aggressive",
+        "event_ids": [
+          "01N1T5TF78RGXZG073WH23MGPM",
+          "01N8FWT380SW7KKH9M43NPQ2DA"
+        ],
+        "exposure_eur": "167.57",
+        "measure": "exposure"
+      },
+      {
+        "certainty": "disputed",
+        "criterion": "7",
+        "direction": "aggressive",
+        "documented_risk": "aggressive",
+        "event_ids": [
+          "01N1T5TF78RGXZG073WH23MGPM"
+        ],
+        "exposure_eur": "39.9",
+        "measure": "exposure",
+        "reason": "regime_not_recorded"
+      },
+      {
+        "certainty": "disputed",
+        "criterion": "13",
+        "direction": "conservative",
+        "documented_risk": "conservative",
+        "event_ids": [
+          "01N428YK78ARMXKW9TRZB7XV2D"
+        ],
+        "exposure_eur": "1.41",
+        "measure": "exposure"
+      },
+      {
+        "certainty": "disputed",
+        "criterion": "13",
+        "direction": "aggressive",
+        "documented_risk": "conservative",
+        "event_ids": [
+          "01N428YK78ARMXKW9TRZB7XV2D"
+        ],
+        "exposure_eur": "320.53",
+        "measure": "exposure",
+        "reason": "regime_not_recorded"
+      },
+      {
+        "base_difference_eur": "0",
+        "certainty": "medium",
+        "criterion": "18",
+        "direction": "none",
+        "documented_risk": "aggressive",
+        "event_ids": [
+          "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "01MN8FTA80DDTPKAG5TNV3Q20X",
+          "01N4F4Y58036KX1852YTTM0XD3"
+        ],
+        "measure": "difference",
+        "reason": "no_carrier_left"
+      },
+      {
+        "base_difference_eur": "0",
+        "certainty": "low",
+        "criterion": "24:etc_gain",
+        "deferred_difference_eur": "0",
+        "direction": "none",
+        "documented_risk": "aggressive",
+        "event_ids": [
+          "01MQTWHB78RC2FADH9B774BHS5",
+          "01MQTWHB78RC2FADH9B774BHS5"
+        ],
+        "measure": "difference",
+        "pending_difference_eur": "0"
+      }
+    ],
+    "in_kind": [],
+    "movable_capital": {
+      "balance_eur": "1.82",
+      "dividends": [
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_alpha",
+          "criteria": [
+            "6"
+          ],
+          "event_id": "01N94FZW78EQA3J41K0795WXF9",
+          "fiscal_date": "2027-04-15",
+          "gross": {
+            "amount": "2",
+            "currency": "USD",
+            "eur": "1.8201674554",
+            "fx_rate": "1.0988",
+            "fx_rate_date": "2027-04-15"
+          },
+          "gross_eur_rounded": "1.82",
+          "kind": "dividend",
+          "source_country": "US",
+          "withholding_origin": "0.3",
+          "withholding_spain": "0.38"
+        }
+      ],
+      "expenses": [],
+      "foreign_releases_eur": "0",
+      "interest": [],
+      "transmissions": []
+    },
+    "notes": [
+      {
+        "code": "tax_quota_not_computed",
+        "details": {},
+        "event_id": "",
+        "message": "this is the savings base, not the tax: the rest of the return is not in the ledger"
+      },
+      {
+        "code": "tax_double_taxation_partial",
+        "details": {},
+        "event_id": "",
+        "message": "only the treaty limit of the double taxation deduction is computed; the effective average rate needs the whole return, and what is not deductible is lost"
+      },
+      {
+        "code": "tax_treaty_rate_missing",
+        "details": {
+          "country": "US",
+          "foreign_tax_eur": "0.27"
+        },
+        "event_id": "01N94FZW78EQA3J41K0795WXF9",
+        "message": "no treaty rate is configured for US: no deduction is calculated"
+      },
+      {
+        "code": "tax_fx_differences_not_computed",
+        "details": {
+          "currencies": [
+            "USD"
+          ],
+          "fx_exchanges": []
+        },
+        "event_id": "",
+        "message": "gains and losses of foreign cash (criterion #4) are not computed"
+      },
+      {
+        "code": "tax_settings_default_used",
+        "details": {
+          "fields": [
+            "income_category.fund",
+            "fiscal_date_rule.etf",
+            "wash_sale_window.etf",
+            "income_category.etf",
+            "income_category.etc",
+            "income_category.etp",
+            "income_category.stock",
+            "income_category.crypto",
+            "income_category.money_market",
+            "wash_sale_transfer_counts",
+            "savings_offset_limit_pct",
+            "loss_carryforward_years"
+          ]
+        },
+        "event_id": "",
+        "message": "some fiscal settings are not in the ledger and were taken from the code (ADR-0022)"
+      }
+    ],
+    "scope": "fiscal_total",
+    "settings": {
+      "from_code": [
+        "income_category.fund",
+        "fiscal_date_rule.etf",
+        "wash_sale_window.etf",
+        "income_category.etf",
+        "income_category.etc",
+        "income_category.etp",
+        "income_category.stock",
+        "income_category.crypto",
+        "income_category.money_market",
+        "wash_sale_transfer_counts",
+        "savings_offset_limit_pct",
+        "loss_carryforward_years"
+      ],
+      "origin": "01NDYZTZ804AP696WA0PA725XK"
+    },
+    "settings_diff": {
+      "base_after_eur": "174.35",
+      "base_before_eur": "174.35",
+      "changes": [],
+      "current_origin": "01NDYZTZ804AP696WA0PA725XK",
+      "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
+    },
+    "today": "2030-01-01",
+    "wash_sale": {
+      "deferred": [
+        {
+          "acquisitions": [
+            {
+              "amount_eur": "-50.8253323997",
+              "event_id": "01MBEBAM80K3CE5XK9JN91KKCC",
+              "fiscal_date": "2027-01-03",
+              "timing": "prior",
+              "units": "4.9233",
+              "via_transfer": false
+            },
+            {
+              "amount_eur": "-39.9950242283",
+              "event_id": "01ME3AEB80NNJANWN0AFEQT9NM",
+              "fiscal_date": "2027-02-05",
+              "timing": "posterior",
+              "units": "3.8742",
+              "via_transfer": false
+            }
+          ],
+          "amount_eur": "-90.820356628",
+          "amount_eur_rounded": "-90.82",
+          "asset_id": "ast_world",
+          "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "fiscal_date": "2027-01-06",
+          "sold": "8.7975",
+          "units": "8.7975",
+          "window": "1y",
+          "window_end": "2028-01-06",
+          "window_start": "2026-01-06"
+        },
+        {
+          "acquisitions": [
+            {
+              "amount_eur": "-224.75",
+              "event_id": "01N7P4TX80S2D9FXZN82KE9Z3A",
+              "fiscal_date": "2027-12-20",
+              "timing": "posterior",
+              "units": "25",
+              "via_transfer": false
+            }
+          ],
+          "amount_eur": "-224.75",
+          "amount_eur_rounded": "-224.75",
+          "asset_id": "ast_delta",
+          "event_id": "01N4F4Y58036KX1852YTTM0XD3",
+          "fiscal_date": "2027-11-10",
+          "sold": "25",
+          "units": "25",
+          "window": "2m",
+          "window_end": "2028-01-10",
+          "window_start": "2027-09-10"
+        }
+      ],
+      "pending": [
+        {
+          "amount_eur": "-50.8253323997",
+          "asset_id": "ast_world",
+          "lot_id": "01MBEBAM80K3CE5XK9JN91KKCC#0",
+          "origin_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "travelled": false
+        },
+        {
+          "amount_eur": "-39.9950242283",
+          "asset_id": "ast_world",
+          "lot_id": "01ME3AEB80NNJANWN0AFEQT9NM#0",
+          "origin_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "travelled": false
+        },
+        {
+          "amount_eur": "-224.75",
+          "asset_id": "ast_delta",
+          "lot_id": "01N7P4TX80S2D9FXZN82KE9Z3A#0",
+          "origin_event_id": "01N4F4Y58036KX1852YTTM0XD3",
+          "travelled": false
+        }
+      ],
+      "released": []
+    },
+    "withholdings": {
+      "lines": [
+        {
+          "account_id": "acc_bucket",
+          "amount": {
+            "amount": "0.38",
+            "currency": "USD",
+            "eur": "0.3458318165",
+            "fx_rate": "1.0988",
+            "fx_rate_date": "2027-04-15"
+          },
+          "amount_eur_rounded": "0.35",
+          "criteria": [
+            "6"
+          ],
+          "event_id": "01N94FZW78EQA3J41K0795WXF9",
+          "fiscal_date": "2027-04-15",
+          "source": "dividend"
+        }
+      ],
+      "total_eur": "0.35"
+    },
+    "year": 2027
+  },
+  "2028": {
+    "base_eur": "111.13",
+    "capital_gains": {
+      "balance_eur": "94.86",
+      "foreign_releases_eur": "0",
+      "gains_eur": "176.81",
+      "lines": [
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_beta_new",
+          "asset_type": "stock",
+          "book": "bucket",
+          "category": "capital_gain",
+          "computable_eur": "-81.9504769249",
+          "computable_eur_rounded": "-81.95",
+          "cost_eur": "295.876728183",
+          "criteria": [
+            "1",
+            "2:listed",
+            "3",
+            "4",
+            "5",
+            "6",
+            "14"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01N99MS980M9HHX4EMDCANXBYD",
+          "event_type": "sell",
+          "fee": "1",
+          "fiscal_date": "2028-01-09",
+          "lots": [
+            {
+              "acquisition_date": "2026-10-07",
+              "cost_eur": "295.876728183",
+              "gain_eur": "-81.9504769249",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-10-07",
+                  "asset_id": "ast_beta_new",
+                  "event_id": "01N428YK78ARMXKW9TRZB7XV2D",
+                  "event_type": "corporate_action:merger",
+                  "lot_id": "01N428YK78ARMXKW9TRZB7XV2D#0"
+                },
+                {
+                  "acquisition_date": "2026-10-07",
+                  "asset_id": "ast_beta",
+                  "event_id": "01M4BRBD78HXF9SGE8990VQ67M",
+                  "event_type": "buy",
+                  "lot_id": "01M4BRBD78HXF9SGE8990VQ67M#0"
+                }
+              ],
+              "lot_id": "01N428YK78ARMXKW9TRZB7XV2D#0",
+              "proceeds_eur": "213.9262512581",
+              "quantity": "4",
+              "root": {
+                "acquisition_date": "2026-10-07",
+                "asset_id": "ast_beta",
+                "cost": {
+                  "amount": "364.35",
+                  "currency": "USD",
+                  "eur": "320.5331221958",
+                  "fx_rate": "1.1367",
+                  "fx_rate_date": "2026-10-07"
+                },
+                "event_id": "01M4BRBD78HXF9SGE8990VQ67M",
+                "event_type": "buy",
+                "quantity": "13"
+              }
+            }
+          ],
+          "own_eur": "-81.9504769249",
+          "proceeds": {
+            "amount": "233.8",
+            "currency": "USD",
+            "eur": "213.9262512581",
+            "fx_rate": "1.0929",
+            "fx_rate_date": "2028-01-07"
+          },
+          "quantity": "4",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_mi",
+          "asset_id": "ast_mm",
+          "asset_type": "money_market",
+          "book": "core",
+          "category": "capital_gain",
+          "computable_eur": "29.3619049973",
+          "computable_eur_rounded": "29.36",
+          "cost_eur": "1239.9980150027",
+          "criteria": [
+            "1",
+            "3",
+            "6"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01NJYMFH80AWMAY0T3631A31HN",
+          "event_type": "sell",
+          "fee": "0",
+          "fiscal_date": "2028-05-08",
+          "lots": [
+            {
+              "acquisition_date": "2026-09-04",
+              "cost_eur": "1239.9980150027",
+              "gain_eur": "29.3619049973",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-09-04",
+                  "asset_id": "ast_mm",
+                  "event_id": "01M1PS7N80HK088D7010QSGMEQ",
+                  "event_type": "buy",
+                  "lot_id": "01M1PS7N80HK088D7010QSGMEQ#0"
+                }
+              ],
+              "lot_id": "01M1PS7N80HK088D7010QSGMEQ#0",
+              "proceeds_eur": "1269.35992",
+              "quantity": "12.4937",
+              "root": {
+                "acquisition_date": "2026-09-04",
+                "asset_id": "ast_mm",
+                "cost": {
+                  "amount": "3100",
+                  "currency": "EUR",
+                  "eur": "3100",
+                  "fx_rate": "1",
+                  "fx_rate_date": "2026-09-04"
+                },
+                "event_id": "01M1PS7N80HK088D7010QSGMEQ",
+                "event_type": "buy",
+                "quantity": "31.2343"
+              }
+            }
+          ],
+          "own_eur": "29.3619049973",
+          "proceeds": {
+            "amount": "1269.35992",
+            "currency": "EUR",
+            "eur": "1269.35992",
+            "fx_rate": "1",
+            "fx_rate_date": "2028-05-08"
+          },
+          "quantity": "12.4937",
+          "released": [],
+          "released_eur": "0",
+          "withholding": {
+            "amount": "1.5",
+            "currency": "EUR",
+            "eur": "1.5",
+            "fx_rate": "1",
+            "fx_rate_date": "2028-05-08"
+          }
+        },
+        {
+          "account_id": "acc_bucket",
+          "asset_id": "ast_epsilon",
+          "asset_type": "stock",
+          "book": "bucket",
+          "category": "capital_gain",
+          "computable_eur": "147.45",
+          "computable_eur_rounded": "147.45",
+          "cost_eur": "450.05",
+          "criteria": [
+            "1",
+            "3",
+            "6"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01NP0FJV80F4D8ENCZZRFTSFRS",
+          "event_type": "sell",
+          "fee": "1",
+          "fiscal_date": "2028-06-15",
+          "lots": [
+            {
+              "acquisition_date": "2028-01-15",
+              "cost_eur": "450.05",
+              "gain_eur": "147.45",
+              "lineage": [
+                {
+                  "acquisition_date": "2028-01-15",
+                  "asset_id": "ast_epsilon",
+                  "event_id": "01N9S35K80Q2QR8FAZEQQ1JAZ5",
+                  "event_type": "buy",
+                  "lot_id": "01N9S35K80Q2QR8FAZEQQ1JAZ5#0"
+                }
+              ],
+              "lot_id": "01N9S35K80Q2QR8FAZEQQ1JAZ5#0",
+              "proceeds_eur": "597.5",
+              "quantity": "35",
+              "root": {
+                "acquisition_date": "2028-01-15",
+                "asset_id": "ast_epsilon",
+                "cost": {
+                  "amount": "450.05",
+                  "currency": "EUR",
+                  "eur": "450.05",
+                  "fx_rate": "1",
+                  "fx_rate_date": "2028-01-14"
+                },
+                "event_id": "01N9S35K80Q2QR8FAZEQQ1JAZ5",
+                "event_type": "buy",
+                "quantity": "35"
+              }
+            }
+          ],
+          "own_eur": "147.45",
+          "proceeds": {
+            "amount": "597.5",
+            "currency": "EUR",
+            "eur": "597.5",
+            "fx_rate": "1",
+            "fx_rate_date": "2028-06-15"
+          },
+          "quantity": "35",
+          "released": [],
+          "released_eur": "0"
+        }
+      ],
+      "losses_eur": "-81.95"
+    },
+    "compensation": {
+      "base_eur": "111.13",
+      "capital_gain_eur": "94.86",
+      "capital_gain_final_eur": "94.86",
+      "expired": [],
+      "limit_eur": {
+        "capital_gain": "23.72",
+        "movable_capital": "4.07"
+      },
+      "limit_pct": "25",
+      "movable_capital_eur": "16.27",
+      "movable_capital_final_eur": "16.27",
+      "pending": [],
+      "steps": []
+    },
+    "double_taxation": {
+      "deductible_eur": "0",
+      "lines": [],
+      "not_deductible_eur": "0"
+    },
+    "doubtful": [
+      {
+        "base_difference_eur": "87.5",
+        "certainty": "medium",
+        "criterion": "1",
+        "deferred_difference_eur": "0",
+        "direction": "aggressive",
+        "documented_risk": "conservative",
+        "event_ids": [
+          "01N99MS980M9HHX4EMDCANXBYD",
+          "01NJYMFH80AWMAY0T3631A31HN",
+          "01NP0FJV80F4D8ENCZZRFTSFRS"
+        ],
+        "measure": "difference",
+        "pending_difference_eur": "0"
+      },
+      {
+        "base_difference_eur": "-76.65",
+        "certainty": "disputed",
+        "criterion": "2:listed",
+        "deferred_difference_eur": "-7.52",
+        "direction": "conservative",
+        "documented_risk": "aggressive",
+        "event_ids": [
+          "01N99MS980M9HHX4EMDCANXBYD",
+          "01NP0FJV80F4D8ENCZZRFTSFRS"
+        ],
+        "markets": [
+          "unknown"
+        ],
+        "measure": "difference",
+        "pending_difference_eur": "0"
+      },
+      {
+        "base_difference_eur": "-11.86",
+        "certainty": "disputed",
+        "criterion": "4",
+        "direction": "conservative",
+        "documented_risk": "both",
+        "event_ids": [
+          "01N99MS980M9HHX4EMDCANXBYD"
+        ],
+        "measure": "difference"
+      },
+      {
+        "certainty": "medium",
+        "criterion": "5",
+        "direction": "conservative",
+        "documented_risk": "conservative",
+        "event_ids": [
+          "01N99MS980M9HHX4EMDCANXBYD"
+        ],
+        "exposure_eur": "213.93",
+        "measure": "exposure"
+      }
+    ],
+    "in_kind": [],
+    "movable_capital": {
+      "balance_eur": "16.27",
+      "dividends": [],
+      "expenses": [],
+      "foreign_releases_eur": "0",
+      "interest": [
+        {
+          "account_id": "acc_mi",
+          "criteria": [
+            "6"
+          ],
+          "event_id": "01NJ4WGB8053XBFPHBVK7CW7B8",
+          "fiscal_date": "2028-04-28",
+          "gross": {
+            "amount": "16.27",
+            "currency": "EUR",
+            "eur": "16.27",
+            "fx_rate": "1",
+            "fx_rate_date": "2028-04-28"
+          },
+          "gross_eur_rounded": "16.27",
+          "kind": "interest",
+          "withholding_origin": "0",
+          "withholding_spain": "3.09"
+        }
+      ],
+      "transmissions": []
+    },
+    "notes": [
+      {
+        "code": "tax_quota_not_computed",
+        "details": {},
+        "event_id": "",
+        "message": "this is the savings base, not the tax: the rest of the return is not in the ledger"
+      },
+      {
+        "code": "tax_fx_differences_not_computed",
+        "details": {
+          "currencies": [
+            "USD"
+          ],
+          "fx_exchanges": []
+        },
+        "event_id": "",
+        "message": "gains and losses of foreign cash (criterion #4) are not computed"
+      },
+      {
+        "code": "tax_settings_default_used",
+        "details": {
+          "fields": [
+            "income_category.fund",
+            "fiscal_date_rule.etf",
+            "wash_sale_window.etf",
+            "income_category.etf",
+            "income_category.etc",
+            "income_category.etp",
+            "income_category.stock",
+            "income_category.crypto",
+            "income_category.money_market",
+            "wash_sale_transfer_counts",
+            "savings_offset_limit_pct",
+            "loss_carryforward_years"
+          ]
+        },
+        "event_id": "",
+        "message": "some fiscal settings are not in the ledger and were taken from the code (ADR-0022)"
+      }
+    ],
+    "scope": "fiscal_total",
+    "settings": {
+      "from_code": [
+        "income_category.fund",
+        "fiscal_date_rule.etf",
+        "wash_sale_window.etf",
+        "income_category.etf",
+        "income_category.etc",
+        "income_category.etp",
+        "income_category.stock",
+        "income_category.crypto",
+        "income_category.money_market",
+        "wash_sale_transfer_counts",
+        "savings_offset_limit_pct",
+        "loss_carryforward_years"
+      ],
+      "origin": "01NDYZTZ804AP696WA0PA725XK"
+    },
+    "settings_diff": {
+      "base_after_eur": "111.13",
+      "base_before_eur": "111.13",
+      "changes": [],
+      "current_origin": "01NDYZTZ804AP696WA0PA725XK",
+      "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
+    },
+    "today": "2030-01-01",
+    "wash_sale": {
+      "deferred": [],
+      "pending": [
+        {
+          "amount_eur": "-50.8253323997",
+          "asset_id": "ast_world",
+          "lot_id": "01MBEBAM80K3CE5XK9JN91KKCC#0",
+          "origin_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "travelled": false
+        },
+        {
+          "amount_eur": "-39.9950242283",
+          "asset_id": "ast_world",
+          "lot_id": "01ME3AEB80NNJANWN0AFEQT9NM#0",
+          "origin_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "travelled": false
+        },
+        {
+          "amount_eur": "-224.75",
+          "asset_id": "ast_delta",
+          "lot_id": "01N7P4TX80S2D9FXZN82KE9Z3A#0",
+          "origin_event_id": "01N4F4Y58036KX1852YTTM0XD3",
+          "travelled": false
+        }
+      ],
+      "released": []
+    },
+    "withholdings": {
+      "lines": [
+        {
+          "account_id": "acc_mi",
+          "amount": {
+            "amount": "1.5",
+            "currency": "EUR",
+            "eur": "1.5",
+            "fx_rate": "1",
+            "fx_rate_date": "2028-05-08"
+          },
+          "amount_eur_rounded": "1.5",
+          "criteria": [
+            "6",
+            "12"
+          ],
+          "event_id": "01NJYMFH80AWMAY0T3631A31HN",
+          "fiscal_date": "2028-05-08",
+          "source": "sell"
+        },
+        {
+          "account_id": "acc_mi",
+          "amount": {
+            "amount": "3.09",
+            "currency": "EUR",
+            "eur": "3.09",
+            "fx_rate": "1",
+            "fx_rate_date": "2028-04-28"
+          },
+          "amount_eur_rounded": "3.09",
+          "criteria": [
+            "6"
+          ],
+          "event_id": "01NJ4WGB8053XBFPHBVK7CW7B8",
+          "fiscal_date": "2028-04-28",
+          "source": "interest"
+        }
+      ],
+      "total_eur": "4.59"
+    },
+    "year": 2028
+  },
+  "2029": {
+    "base_eur": "0",
+    "capital_gains": {
+      "balance_eur": "0",
+      "foreign_releases_eur": "0",
+      "gains_eur": "0",
+      "lines": [],
+      "losses_eur": "0"
+    },
+    "compensation": {
+      "base_eur": "0",
+      "capital_gain_eur": "0",
+      "capital_gain_final_eur": "0",
+      "expired": [],
+      "limit_eur": {
+        "capital_gain": "0",
+        "movable_capital": "0"
+      },
+      "limit_pct": "25",
+      "movable_capital_eur": "0",
+      "movable_capital_final_eur": "0",
+      "pending": [],
+      "steps": []
+    },
+    "double_taxation": {
+      "deductible_eur": "0",
+      "lines": [],
+      "not_deductible_eur": "0"
+    },
+    "doubtful": [
+      {
+        "base_difference_eur": "0",
+        "certainty": "disputed",
+        "criterion": "2:listed",
+        "deferred_difference_eur": "-7.52",
+        "direction": "none",
+        "documented_risk": "aggressive",
+        "event_ids": [],
+        "markets": [],
+        "measure": "difference",
+        "pending_difference_eur": "0"
+      }
+    ],
+    "in_kind": [],
+    "movable_capital": {
+      "balance_eur": "0",
+      "dividends": [],
+      "expenses": [],
+      "foreign_releases_eur": "0",
+      "interest": [],
+      "transmissions": []
+    },
+    "notes": [
+      {
+        "code": "tax_quota_not_computed",
+        "details": {},
+        "event_id": "",
+        "message": "this is the savings base, not the tax: the rest of the return is not in the ledger"
+      },
+      {
+        "code": "tax_settings_default_used",
+        "details": {
+          "fields": [
+            "income_category.fund",
+            "fiscal_date_rule.etf",
+            "wash_sale_window.etf",
+            "income_category.etf",
+            "income_category.etc",
+            "income_category.etp",
+            "income_category.stock",
+            "income_category.crypto",
+            "income_category.money_market",
+            "wash_sale_transfer_counts",
+            "savings_offset_limit_pct",
+            "loss_carryforward_years"
+          ]
+        },
+        "event_id": "",
+        "message": "some fiscal settings are not in the ledger and were taken from the code (ADR-0022)"
+      }
+    ],
+    "scope": "fiscal_total",
+    "settings": {
+      "from_code": [
+        "income_category.fund",
+        "fiscal_date_rule.etf",
+        "wash_sale_window.etf",
+        "income_category.etf",
+        "income_category.etc",
+        "income_category.etp",
+        "income_category.stock",
+        "income_category.crypto",
+        "income_category.money_market",
+        "wash_sale_transfer_counts",
+        "savings_offset_limit_pct",
+        "loss_carryforward_years"
+      ],
+      "origin": "01NDYZTZ804AP696WA0PA725XK"
+    },
+    "settings_diff": {
+      "base_after_eur": "0",
+      "base_before_eur": "0",
+      "changes": [],
+      "current_origin": "01NDYZTZ804AP696WA0PA725XK",
+      "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
+    },
+    "today": "2030-01-01",
+    "wash_sale": {
+      "deferred": [],
+      "pending": [
+        {
+          "amount_eur": "-50.8253323997",
+          "asset_id": "ast_world",
+          "lot_id": "01MBEBAM80K3CE5XK9JN91KKCC#0",
+          "origin_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "travelled": false
+        },
+        {
+          "amount_eur": "-39.9950242283",
+          "asset_id": "ast_world",
+          "lot_id": "01ME3AEB80NNJANWN0AFEQT9NM#0",
+          "origin_event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+          "travelled": false
+        },
+        {
+          "amount_eur": "-224.75",
+          "asset_id": "ast_delta",
+          "lot_id": "01N7P4TX80S2D9FXZN82KE9Z3A#0",
+          "origin_event_id": "01N4F4Y58036KX1852YTTM0XD3",
+          "travelled": false
+        }
+      ],
+      "released": []
+    },
+    "withholdings": {
+      "lines": [],
+      "total_eur": "0"
+    },
+    "year": 2029
+  }
+}

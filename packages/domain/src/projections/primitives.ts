@@ -31,6 +31,8 @@ import { noteAcquisition, warnPriorBuys } from "./wash-sale.js";
 
 export interface EffectContext {
   eventId: Ulid;
+  /** Every effect of the action is a `scale`: it may find nothing to scale. */
+  scaleOnly: boolean;
   /** File position of the corporate action: FIFO tie-break of the lots a `grant` creates. */
   position: number;
   effectiveDate: CivilDate;
@@ -104,6 +106,21 @@ export const applyScale = (
   effect: Resolved<"scale">,
   ctx: EffectContext,
 ): void => {
+  // A split of an asset nobody holds transforms nothing, and it still happened:
+  // the units of the asset are others from then on. An action that only
+  // scales is recorded without open lots, and the journal keeps its ratio for
+  // the tax engine (verifier of feature 009): selling everything at a loss, a
+  // reverse split while holding nothing and a repurchase inside the window
+  // compared units of before and after without knowing it.
+  if (ctx.scaleOnly && (state.lots.get(effect.asset_id)?.open ?? []).length === 0) {
+    state.lotJournal.push({
+      kind: "units",
+      asset_id: effect.asset_id,
+      event_id: ctx.eventId,
+      ratio: effect.ratio,
+    });
+    return;
+  }
   const lots = requireOpenLots(state, effect.asset_id, ctx.eventId);
   const ratio = Ratio.parse(effect.ratio);
   const holdings = holdingsOf(state, effect.asset_id);
@@ -115,6 +132,13 @@ export const applyScale = (
 
   lots.forEach((lot, index) => {
     lot.quantity = scaledLots[index] as Quantity;
+    state.lotJournal.push({
+      kind: "scale",
+      lot_id: lot.id,
+      event_id: ctx.eventId,
+      quantity_after: lot.quantity,
+      ratio: effect.ratio,
+    });
   });
   holdings.forEach((holding, index) => {
     adjustPosition(
@@ -138,7 +162,13 @@ export const applyConvert = (
   const holdings = holdingsOf(state, effect.asset_id);
   const scaledPositions = scaledHoldings(holdings, ratio);
 
-  const slices = consume(state, effect.asset_id, openQuantity(state, effect.asset_id), ctx.eventId);
+  const slices = consume(
+    state,
+    effect.asset_id,
+    openQuantity(state, effect.asset_id),
+    ctx.eventId,
+    "convert",
+  );
   const scaledLots = scaleQuantities(
     slices.map((slice) => slice.quantity),
     ratio,
@@ -194,7 +224,7 @@ export const applyCarveOut = (
     const carved = lot.cost_eur.mul(share);
     // Subtraction, so that origin + carved is exactly the cost before.
     lot.cost_eur = lot.cost_eur.sub(carved);
-    openLot(state, {
+    const into = openLot(state, {
       asset_id: to.asset_id,
       acquisition_date: lot.acquisition_date,
       quantity: scaledLots[index] as Quantity,
@@ -202,6 +232,15 @@ export const applyCarveOut = (
       source_event_id: ctx.eventId,
       position: lot.position,
       source_lot_id: lot.id,
+    });
+    // After the `open`: the journal says the new lot exists, then that a share
+    // of the origin's cost went into it.
+    state.lotJournal.push({
+      kind: "carve",
+      lot_id: lot.id,
+      into_lot_id: into.id,
+      event_id: ctx.eventId,
+      cost_share: share,
     });
   });
   holdings.forEach((holding, index) => {
@@ -275,7 +314,7 @@ export const applyForcedSale = (
     // computed on the full proceeds (ADR-0021, fiscal question #12).
     adjustCash(state, entry.account_id, proceeds.sub(entry.withholding));
     adjustPosition(state, entry.account_id, asset.asset_id, negative(entry.quantity), ctx.eventId);
-    const slices = consume(state, asset.asset_id, entry.quantity, ctx.eventId);
+    const slices = consume(state, asset.asset_id, entry.quantity, ctx.eventId, "transmission");
     const gain = recordGain(state, {
       event_id: ctx.eventId,
       asset_id: asset.asset_id,

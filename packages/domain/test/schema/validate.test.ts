@@ -350,6 +350,34 @@ describe("validateShape: consistency rules", () => {
     ).toBeTruthy();
   });
 
+  it("names the field every refusal is about, so no message says undefined", () => {
+    const fieldOf = (raw: unknown): unknown => {
+      try {
+        validateShape(raw);
+      } catch (error) {
+        return (error as ValidationError).details.field;
+      }
+      throw new Error("expected a ValidationError");
+    };
+    expect(fieldOf(variant(SAMPLES.transfer, { nav_in: undefined }))).toBe("nav_in");
+    expect(fieldOf(variant(SAMPLES.transfer, { nav_out: undefined }))).toBe("nav_out");
+    const custody = variant(SAMPLES.transfer, {
+      to_asset_id: "ast_world",
+      to_account_id: "acc_other",
+      quantity_in: "4",
+      nav_out: undefined,
+      nav_in: undefined,
+    });
+    expect(fieldOf({ ...custody, to_account_id: "acc_fund" })).toBe("to_account_id");
+    expect(fieldOf({ ...custody, nav_out: "1" })).toBe("nav_out");
+    expect(fieldOf({ ...custody, nav_in: "1" })).toBe("nav_in");
+    expect(fieldOf({ ...custody, quantity_in: "3" })).toBe("quantity_in");
+    expect(
+      fieldOf(variant(SAMPLES.fx_exchange, { sold_currency: "USD", fx_rate_sold: "1.0783" })),
+    ).toBe("bought_currency");
+    expect(fieldOf(variant(SAMPLES.buy, { value_date: "2000-01-01" }))).toBe("value_date");
+  });
+
   it("transfer: fund mode needs both navs, custody mode needs neither", () => {
     rejects(variant(SAMPLES.transfer, { nav_in: undefined }), "missing_field");
     const custody = variant(SAMPLES.transfer, {

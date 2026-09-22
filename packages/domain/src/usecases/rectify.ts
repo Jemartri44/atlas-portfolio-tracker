@@ -7,12 +7,17 @@ import { yearOf } from "../dates/civil-date.js";
 import { todayInMadrid } from "../dates/madrid.js";
 import { DependentEventsError, DuplicateFingerprintError, NotFoundError } from "../errors.js";
 import { createUlidGenerator } from "../ids/ulid.js";
-import { businessDateOf, isOperationEvent } from "../projections/project-ledger.js";
+import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState, Warning } from "../projections/state.js";
 import type { Draft, LedgerEvent, ReversalEvent, SupportedEvent } from "../schema/events.js";
 import type { UseCaseDeps } from "./deps.js";
 import { describeAffected, newlyInvalid } from "./invalid-events.js";
-import { completeDraft, duplicatesOf, type RecordOptions } from "./record-event.js";
+import {
+  checkIsinUnique,
+  completeDraft,
+  duplicatesOf,
+  type RecordOptions,
+} from "./record-event.js";
 
 export interface ReverseResult {
   reversal: ReversalEvent;
@@ -112,6 +117,8 @@ export const correctEvent = async <E extends SupportedEvent>(
     [reversal.id, event.id],
     targetId,
   );
+  // A correction introduces an ISIN exactly as a new event does.
+  checkIsinUnique(state, event, () => projectLedger(events, { collectErrors: true }));
   const duplicates = duplicatesOf(state.fingerprints, event);
   if (duplicates.length > 0 && options.confirmDuplicate !== true) {
     throw new DuplicateFingerprintError((event as { fingerprint: string }).fingerprint, duplicates);

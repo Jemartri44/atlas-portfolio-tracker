@@ -10,6 +10,8 @@ import {
   ValidationError,
 } from "../errors.js";
 import { createUlidGenerator } from "../ids/ulid.js";
+import { normalizeIsin } from "../projections/isin.js";
+import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState, Warning } from "../projections/state.js";
 import { CURRENT_SCHEMA_VERSION } from "../schema/envelope.js";
 import type { Draft, LedgerEvent, SupportedEvent } from "../schema/events.js";
@@ -69,6 +71,61 @@ export const duplicatesOf = (
 };
 
 /**
+ * One ISIN, one asset (ADR-0009, feature 009 review): FIFO and the wash-sale
+ * rule work on homogeneous securities, and the system knows them by
+ * `asset_id`. Two assets with the same ISIN — the same ETF in the core and in
+ * the bucket, say — are one security to the tax agency and two to the engine:
+ * a loss in one and a repurchase in the other fourteen days later is computed
+ * whole when it should be deferred whole, aggressively and in silence.
+ *
+ * Checked **when an ISIN is introduced**: an `asset_created` that carries one,
+ * or an `asset_updated` that changes it, recorded or written as a correction.
+ * Never on load and never in the projection: a ledger already written with a
+ * duplicate must stay readable (ADR-0018), and `integrity` reports it instead.
+ * An update that keeps the ISIN it had is not blocked either, so such a ledger
+ * can still be repaired.
+ *
+ * Against the **catalogue in force** of the candidate ledger, not the raw
+ * lines: a reversed `asset_created` holds no ISIN, and neither does a reversed
+ * change (verifier of feature 009). And the ISIN compared as the tax agency
+ * reads it, upper case and without spaces. `before` is only projected when
+ * there is a clash, to tell an update that keeps its own ISIN from one that
+ * takes another's; collecting errors, so that an invalid event elsewhere in
+ * the ledger does not answer for this one.
+ */
+export const checkIsinUnique = (
+  after: LedgerState,
+  event: SupportedEvent,
+  before: () => LedgerState,
+): void => {
+  if (
+    (event.type !== "asset_created" && event.type !== "asset_updated") ||
+    event.isin === undefined
+  ) {
+    return;
+  }
+  const isin = normalizeIsin(event.isin);
+  const holder = [...after.assets.values()].find(
+    (asset) =>
+      asset.asset_id !== event.asset_id &&
+      asset.isin !== undefined &&
+      normalizeIsin(asset.isin) === isin,
+  );
+  if (holder === undefined) {
+    return;
+  }
+  const own = before().assets.get(event.asset_id)?.isin;
+  if (event.type === "asset_updated" && own !== undefined && normalizeIsin(own) === isin) {
+    return;
+  }
+  throw new ValidationError(
+    "duplicate_isin",
+    `ISIN ${event.isin} already belongs to asset ${holder.asset_id}; record the operations on that asset`,
+    { isin: event.isin, asset_id: event.asset_id, existing_asset_id: holder.asset_id },
+  );
+};
+
+/**
  * Decides whether the candidate ledger may be written (ADR-0015). Everything
  * but `settings_changed` still demands a valid ledger, exactly as before; a
  * `settings_changed` only has to leave no *new* invalid event, unless the
@@ -89,6 +146,7 @@ export const checkInvalid = (
   if (own !== undefined) {
     throw own.error;
   }
+  checkIsinUnique(state, event, () => projectLedger(events, { collectErrors: true }));
   if (event.type !== "settings_changed") {
     /*
      * An event that was already invalid before this mutation blocks it, but it

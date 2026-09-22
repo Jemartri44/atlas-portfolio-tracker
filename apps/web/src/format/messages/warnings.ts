@@ -7,7 +7,7 @@ import { valueLabel } from "../labels.js";
 import { type Naming, NO_NAMES, namingOf } from "../names.js";
 import { countOf } from "../number.js";
 import { type Figures, figuresOf, maskFigures, type Prose } from "../privacy.js";
-import { count, type Details, day, days, pct, pp, text } from "./prose.js";
+import { count, type Details, day, days, enumValue, num, pct, pp, text } from "./prose.js";
 
 /** The wash-sale window by its real name: calling a one-year window "two months" is fiscally false. */
 const windowText = (window: unknown): string => {
@@ -108,13 +108,40 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `La tesis ${n.thesis(d.thesis_id)} está cerrada, pero ${n.one(d.account_id)} sigue teniendo ${n.one(d.asset_id)} (${f.quantity(d.position)}).`,
   // --- Wash-sale window --------------------------------------------------
   wash_sale_window_repurchase: (d, n, f) =>
-    `Recompra de ${n.one(d.asset_id)} dentro de la ventana de la venta del ${day(d.sale_date)} (pérdida ${f.money(d.loss_eur)}): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${day(d.window_end)} (${windowText(d.window)}).`,
+    `Compra del ${day(d.buy_date)} de ${f.quantity(d.buy_quantity)} títulos de ${n.one(d.asset_id)} dentro de la ventana de su venta con pérdida del ${day(d.sale_date)} (${f.money(d.loss_eur)}; ${windowText(d.window)}, hasta el ${day(d.window_end)}): puede hacer que esa pérdida no sea computable en ${num(d.tax_year)}.`,
   wash_sale_window_prior_buy: (d, n, f) =>
-    `Venta con pérdida de ${n.one(d.asset_id)} (${f.money(d.loss_eur)}) con una compra del ${day(d.buy_date)} (${f.quantity(d.quantity)} títulos) dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio.`,
+    `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) cuando siguen en cartera ${f.quantity(d.held_quantity)} títulos de una compra del ${day(d.buy_date)}, dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${num(d.tax_year)}.`,
 
   // --- Swap (ADR-0021) ----------------------------------------------------
   swap_fiscal_dates_differ: (d, n) =>
     `En la permuta, ${n.one(d.from_asset_id)} tiene fecha fiscal ${day(d.fiscal_date_out)} y ${n.one(d.to_asset_id)} la tiene ${day(d.fiscal_date_in)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas.`,
+
+  // --- Tax report (feature 009) --------------------------------------------
+  tax_quota_not_computed: () =>
+    "Esto es la base del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en el libro.",
+  tax_double_taxation_partial: () =>
+    "Doble imposición: solo se calcula el primer límite, el del convenio. El segundo exige la declaración entera, y lo que no se deduce se pierde.",
+  // The country is the code the ledger keeps (US, IE): `num` leaves it as it is.
+  tax_treaty_rate_missing: (d, _n, f) =>
+    `No hay tipo de convenio configurado para ${num(d.country)}: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos.`,
+  tax_dividend_without_country: (d, _n, f) =>
+    `El dividendo no dice qué país lo pagó: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos en origen.`,
+  tax_fx_differences_not_computed: (d) =>
+    `Las diferencias de cambio del efectivo en divisa (${(Array.isArray(d.currencies) ? d.currencies : [d.currencies]).map((code) => num(code)).join(", ")}) no se calculan: es un criterio en disputa y faltan los lotes de divisa.`,
+  tax_in_kind_income_not_integrated: (d, _n, f) =>
+    `Renta en especie registrada (${f.money(d.income_eur)}) y no integrada: el criterio vigente no declara nada al recibirla.`,
+  tax_window_open: (d, n, f) =>
+    `La pérdida de ${n.one(d.asset_id)} (${f.money(d.loss_eur)}) es provisional: su ventana de recompra sigue abierta hasta el ${day(d.window_end)}.`,
+  tax_neutrality_contradiction: (d) =>
+    `El evento corporativo (${enumValue(d.kind)}) dice que no se acoge al régimen de neutralidad y aun así conserva fecha y coste: si no hay régimen, falta su ganancia.`,
+  tax_loss_expires: (d, _n, f) =>
+    `Caduca al cierre del ejercicio un saldo negativo de ${num(d.origin_year)} de ${f.money(d.amount_eur)} que no ha podido compensarse.`,
+  tax_release_category_differs: (d, _n, f) =>
+    `Se liberan ${f.money(d.amount_eur)} diferidos de una pérdida de la otra categoría de renta: se integran donde nació la pérdida.`,
+  tax_duplicate_isin: (d, n) =>
+    `El ISIN ${text(d.isin)} lo comparten ${n.many(d.assets)}: para Hacienda son el mismo valor y el cálculo fiscal los trata como distintos. Registra ese valor en un solo activo.`,
+  tax_settings_default_used: (d) =>
+    `Hay ${countOf(count(d.fields), "parámetro fiscal", "parámetros fiscales")} que no están en el libro y se han tomado del código. Guardar la configuración los dejará fijados.`,
 };
 
 /**

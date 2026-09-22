@@ -132,6 +132,16 @@ export const describeError = (error: DomainError): string => {
     }
     case "invalid_wash_sale_window":
       return `La ventana de recompra de ${text(d.asset_type)} debe ser "2m", "1y" o "<n>d" (recibido: ${text(d.value)}).`;
+    case "tax_ledger_invalid":
+      return `El libro tiene ${text(d.count)} eventos inválidos y un cálculo fiscal sobre él sería aproximado: repáralos antes (\`atlas check\`). Inválidos: ${((d.invalid as { id: string; type: string; code: string }[] | undefined) ?? []).map((entry) => `${entry.type} ${entry.id} (${entry.code})`).join(", ")}.`;
+    case "tax_year_unsupported":
+      return `El motor fiscal aplica el régimen de compensación vigente desde ${text(d.first_supported)}; ${text(d.year)} es anterior (o no es un año).`;
+    case "duplicate_isin":
+      return `El ISIN ${text(d.isin)} ya es del activo ${text(d.existing_asset_id)}: un mismo valor no puede ser dos activos, porque la regla de recompra y el FIFO los tratarían como distintos (ADR-0009). Registra las operaciones en ${text(d.existing_asset_id)}.`;
+    case "invalid_fiscal_date_rule":
+      return `La fecha fiscal de ${text(d.asset_type)} debe ser trade_date (contratación) o value_date (fecha valor) (recibido: ${text(d.value)}): decide el ejercicio de cada operación (ADR-0013).`;
+    case "invalid_income_category":
+      return `La categoría de renta de ${text(d.asset_type)} debe ser capital_gain (ganancia patrimonial) o movable_capital (rendimiento del capital mobiliario) (recibido: ${text(d.value)}): decide en qué parte de la base del ahorro entra cada transmisión (ADR-0021).`;
     case "negative_target_weight":
       return `El peso objetivo de ${text(d.asset_id)} no puede ser negativo (recibido: ${text(d.value)}).`;
     case "reversal_of_reversal":
@@ -321,11 +331,35 @@ export const describeWarning = (warning: Warning): string => {
     case "thesis_size_exceeded":
       return `La tesis ${text(d.thesis_id)} lleva ${text(d.invested_eur)} EUR invertidos, por encima de los ${text(d.planned_size_eur)} EUR previstos.`;
     case "wash_sale_window_repurchase":
-      return `Recompra de ${text(d.asset_id)} dentro de la ventana de la venta ${text(d.sale_event_id)} (${text(d.sale_date)}, pérdida ${text(d.loss_eur)} EUR): esa pérdida no será computable este ejercicio. La ventana llega hasta el ${text(d.window_end)} (${windowText(d.window)}, business-rules.md §5.4). El diferimiento lo calculará el motor fiscal.`;
+      return `Compra del ${text(d.buy_date)} de ${text(d.buy_quantity)} títulos de ${text(d.asset_id)} dentro de la ventana de su venta con pérdida del ${text(d.sale_date)} (${text(d.loss_eur)} EUR; ${windowText(d.window)}, hasta el ${text(d.window_end)}): puede hacer que esa pérdida no sea computable en ${text(d.tax_year)}. Cuánto difiere, lo dice \`atlas tax ${text(d.tax_year)}\` (business-rules.md §5.4).`;
     case "wash_sale_window_prior_buy":
-      return `Venta con pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) con una compra del ${text(d.buy_date)} (${text(d.buy_event_id)}, ${text(d.quantity)} títulos) dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida no será computable este ejercicio (business-rules.md §5.4).`;
+      return `Venta con pérdida de ${text(d.asset_id)} del ${text(d.sale_date)} (${text(d.loss_eur)} EUR) cuando siguen en cartera ${text(d.held_quantity)} títulos de una compra del ${text(d.buy_date)}, dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${text(d.tax_year)}. Cuánto, lo dice \`atlas tax ${text(d.tax_year)}\` (business-rules.md §5.4).`;
     case "swap_fiscal_dates_differ":
       return `En la permuta, ${text(d.from_asset_id)} tiene fecha fiscal ${text(d.fiscal_date_out)} y ${text(d.to_asset_id)} la tiene ${text(d.fiscal_date_in)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas (ADR-0013).`;
+    case "tax_quota_not_computed":
+      return "Esto es la BASE del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en el libro.";
+    case "tax_double_taxation_partial":
+      return "Doble imposición: solo se calcula el primer límite (impuesto extranjero limitado al tipo del convenio). El segundo (tipo medio efectivo) exige la declaración entera; y lo que no se deduce se pierde, no hay arrastre.";
+    case "tax_treaty_rate_missing":
+      return `No hay tipo de convenio configurado para ${text(d.country)}: no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos. Fíjalo con \`atlas settings set --treaty-withholding-pct ${text(d.country)}=<tipo>\`.`;
+    case "tax_dividend_without_country":
+      return `El dividendo no dice qué país lo pagó (source_country): no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos en origen.`;
+    case "tax_fx_differences_not_computed":
+      return `Las diferencias de cambio del efectivo en divisa (${((d.currencies as string[] | undefined) ?? []).join(", ")}) NO se calculan: criterio #4, en disputa, sin lotes de divisa. Cambios de divisa del ejercicio: ${((d.fx_exchanges as string[] | undefined) ?? []).join(", ") || "ninguno"}.`;
+    case "tax_in_kind_income_not_integrated":
+      return `Renta en especie registrada (${text(d.income_eur)} EUR, base ${text(d.base) === "general" ? "general" : "del ahorro"}) y NO integrada: el criterio vigente (#8) no declara nada al recibirla.`;
+    case "tax_window_open":
+      return `La pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) es PROVISIONAL: su ventana de recompra sigue abierta hasta el ${text(d.window_end)} y una compra antes de esa fecha la diferiría.`;
+    case "tax_neutrality_contradiction":
+      return `El evento corporativo (${text(d.kind)}) dice que NO se acoge al régimen de neutralidad y aun así se registró conservando fecha y coste: si no hay régimen, es una permuta sujeta y falta su ganancia.`;
+    case "tax_loss_expires":
+      return `CADUCA al cierre de este ejercicio un saldo negativo de ${text(d.origin_year)} (${text(d.category) === "capital_gain" ? "ganancias y pérdidas patrimoniales" : "rendimientos del capital mobiliario"}) de ${text(d.amount_eur)} EUR que no ha podido compensarse.`;
+    case "tax_release_category_differs":
+      return `Se liberan aquí ${text(d.amount_eur)} EUR diferidos de una pérdida de la otra categoría de renta: se integran donde nació la pérdida.`;
+    case "tax_duplicate_isin":
+      return `El ISIN ${text(d.isin)} lo comparten ${((d.assets as string[] | undefined) ?? []).join(", ")}: para Hacienda son el mismo valor, y la regla de recompra y el FIFO de este informe los tratan como distintos. Sus cifras pueden estar mal: registra ese valor en un solo activo (\`atlas check\`).`;
+    case "tax_settings_default_used":
+      return `Parámetros fiscales que no están en el libro y se han tomado del código (ADR-0022): ${((d.fields as string[] | undefined) ?? []).join(", ")}. El próximo \`atlas settings set\` los dejará fijados.`;
     case "thesis_closed_with_position":
       return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
     default:
