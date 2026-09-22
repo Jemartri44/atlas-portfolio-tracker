@@ -46,18 +46,25 @@ export interface FiscalCriterion {
  *
  * Criterion #24, the income category of an ETC or an ETP, is labelled the same
  * way, by the reading in force (`income_category`), and that is why it has four
- * variants and not two: the certainty, the direction of the risk and with them
- * whether the criterion is doubtful all depend on which reading is applied.
+ * variants and not two: the certainty and, with it, whether the criterion is
+ * doubtful depend on which reading is applied.
  *
  * - `24:etc`, `24:etp`: movable capital income, what the document says. The ETC
- *   is **high** (a binding ruling, V0267-25, calls it so in every case) and
- *   stops being doubtful; the ETP is **medium**, because it depends on the
- *   structure of each product.
+ *   is **medium**: the ratio of the binding ruling V0267-25 is not "it is an
+ *   ETC" but "it is a debt security, because it carries **obligations to pay**
+ *   for the issuer", and a physical-gold ETC with a right to delivery obliges
+ *   the issuer to **deliver**, not to pay — which the ruling does not resolve.
+ *   The ETP is **low**: there is no consultation at all on crypto ETPs, and the
+ *   DGT does have settled doctrine that crypto held directly is a capital gain.
  * - `24:etc_gain`, `24:etp_gain`: a capital gain, the opposite of the document.
- *   Both doubtful, and **aggressive**: a loss would offset in full what the
- *   documented reading limits to 25 %. Reading an ETC that way goes against a
- *   binding ruling that says "in every case", so it is **low**, not medium;
- *   for an ETP the structure of each product leaves real room, so it is medium.
+ *
+ * All four are **`both`**, and that is the correction of 2026-09-22: article
+ * 49.1 is symmetric and the first reading of it looked at one half only. With a
+ * **loss** on the ETC and **dividends** elsewhere, treating it as movable
+ * capital absorbs the dividends in full instead of up to 25 % and pays **less**
+ * (aggressive); with a **gain** on the ETC and capital losses elsewhere it is
+ * the other way round and pays more (conservative). Both are ordinary in this
+ * portfolio.
  *
  * #18 to #23 were numbered by the direction on 2026-09-18 (questions Q1, Q2 and
  * Q5 of the feature 009). Where the document gives a criterion two certainties
@@ -90,15 +97,15 @@ export const FISCAL_CRITERIA = {
   "16": { doc: "16", certainty: "high", risk: "conservative" },
   "17": { doc: "17", certainty: "medium", risk: "aggressive" },
   "18": { doc: "18", certainty: "medium", risk: "aggressive" },
-  "19": { doc: "19", certainty: "medium", risk: "aggressive" },
-  "20": { doc: "20", certainty: "medium", risk: "both" },
+  "19": { doc: "19", certainty: "high", risk: "aggressive" },
+  "20": { doc: "20", certainty: "medium", risk: "aggressive" },
   "21": { doc: "21", certainty: "low", risk: "conservative" },
   "22": { doc: "22", certainty: "medium", risk: "neutral" },
   "23": { doc: "23", certainty: "high", risk: "conservative" },
-  "24:etc": { doc: "24", certainty: "high", risk: "conservative" },
-  "24:etc_gain": { doc: "24", certainty: "low", risk: "aggressive" },
-  "24:etp": { doc: "24", certainty: "medium", risk: "conservative" },
-  "24:etp_gain": { doc: "24", certainty: "medium", risk: "aggressive" },
+  "24:etc": { doc: "24", certainty: "medium", risk: "both" },
+  "24:etc_gain": { doc: "24", certainty: "low", risk: "both" },
+  "24:etp": { doc: "24", certainty: "low", risk: "both" },
+  "24:etp_gain": { doc: "24", certainty: "medium", risk: "both" },
 } as const satisfies Record<string, FiscalCriterion>;
 
 export type CriterionId = keyof typeof FISCAL_CRITERIA;

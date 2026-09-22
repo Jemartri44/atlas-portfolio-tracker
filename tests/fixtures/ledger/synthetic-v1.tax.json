@@ -988,6 +988,20 @@
         ],
         "measure": "difference",
         "reason": "no_carrier_left"
+      },
+      {
+        "base_difference_eur": "0",
+        "certainty": "medium",
+        "criterion": "24:etc",
+        "deferred_difference_eur": "0",
+        "direction": "none",
+        "documented_risk": "both",
+        "event_ids": [
+          "01MQTWHB78RC2FADH9B774BHS5",
+          "01MQTWHB78RC2FADH9B774BHS5"
+        ],
+        "measure": "difference",
+        "pending_difference_eur": "0"
       }
     ],
     "in_kind": [],

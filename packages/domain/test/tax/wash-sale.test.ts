@@ -302,8 +302,10 @@ describe("mandatory edge cases", () => {
     expect(text(lineOf(report, first.id).deferred_eur)).toBe("-200");
     expect(text(lineOf(report, second.id).deferred_eur)).toBe("0");
     expect(lineOf(report, second.id).criteria).toContain("19");
-    const doubtful = report.doubtful.find((entry) => entry.criterion === "19");
-    expect(text(doubtful?.base_difference_eur)).toBe("200");
+    // The criterion is still named on the line, and it is **not** doubtful: the
+    // binding ruling V3282-18 resolves this very question, so the report does
+    // not offer an alternative reading of it (certainty high, feature 009 Q8).
+    expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("19");
   });
 
   it("#19: a repurchase bought before two losses defers only the first, whichever buy carries it", () => {

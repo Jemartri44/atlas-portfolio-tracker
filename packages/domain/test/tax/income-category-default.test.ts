@@ -55,10 +55,18 @@ describe("the hand-computed year of feature 009 with the ETC as movable capital 
     expect(c.pending).toEqual([]);
   });
 
-  it("stops doubting the ETC: the binding ruling makes criterion #24 certain", () => {
-    const doubted = report.doubtful.map((entry) => entry.criterion);
-    expect(doubted).not.toContain("24:etc");
-    expect(doubted).not.toContain("24:etc_gain");
+  /**
+   * The ETC stays doubtful, and that is the point of the correction of
+   * 2026-09-22: the ratio of V0267-25 is "it is a debt security", not "it is an
+   * ETC", so a physical-gold ETC with a right to delivery is not resolved by
+   * it. A report that hid what is not known would be worse than an
+   * uncomfortable one.
+   */
+  it("keeps the ETC among the doubtful, with the certainty and the risk of the document", () => {
+    const etc = report.doubtful.find((entry) => entry.criterion === "24:etc");
+    expect(etc?.certainty).toBe("medium");
+    expect(etc?.documented_risk).toBe("both");
+    expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("24:etc_gain");
   });
 
   /**

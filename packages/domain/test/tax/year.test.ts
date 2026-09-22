@@ -179,17 +179,23 @@ describe("categories of income (ADR-0021)", () => {
       const etp = sell(b, "etp_p", "2027-06-01", "10", "120");
       return { report: reportOf(b.build(), 2027), etc, etp };
     };
-    // Applied as the document says: the ETC is certain and stops being doubtful.
+    // Applied as the document says. Neither is certain: V0267-25 reasons from
+    // "it is a debt security", which a physical-gold ETC with a right to
+    // delivery does not obviously satisfy, and there is no ruling at all on a
+    // crypto ETP.
     const documented = ledger("movable_capital");
     expect(lineOf(documented.report, documented.etc.id).criteria).toContain("24:etc");
     expect(lineOf(documented.report, documented.etp.id).criteria).toContain("24:etp");
-    const doubted = documented.report.doubtful.map((item) => item.criterion);
-    expect(doubted).not.toContain("24:etc");
-    expect(doubted).toContain("24:etp");
     expect(
-      documented.report.doubtful.find((item) => item.criterion === "24:etp")?.documented_risk,
-    ).toBe("conservative");
-    // Applied the other way round: both doubtful, and aggressive.
+      documented.report.doubtful
+        .filter((item) => item.criterion.startsWith("24:"))
+        .map((item) => [item.criterion, item.certainty, item.documented_risk]),
+    ).toEqual([
+      ["24:etc", "medium", "both"],
+      ["24:etp", "low", "both"],
+    ]);
+    // Applied the other way round: the other two variants, and the risk of the
+    // four runs **both** ways, because article 49.1 is symmetric.
     const opposite = ledger("capital_gain");
     expect(lineOf(opposite.report, opposite.etc.id).criteria).toContain("24:etc_gain");
     expect(lineOf(opposite.report, opposite.etp.id).criteria).toContain("24:etp_gain");
@@ -198,8 +204,8 @@ describe("categories of income (ADR-0021)", () => {
         .filter((item) => item.criterion.startsWith("24:"))
         .map((item) => [item.criterion, item.documented_risk]),
     ).toEqual([
-      ["24:etc_gain", "aggressive"],
-      ["24:etp_gain", "aggressive"],
+      ["24:etc_gain", "both"],
+      ["24:etp_gain", "both"],
     ]);
   });
 
