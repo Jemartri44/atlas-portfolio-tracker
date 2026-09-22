@@ -164,25 +164,11 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 
 ### 5.1 Entidad Settings
 
-| Parámetro | Valor inicial | Uso |
-|---|---|---|
-| `target_weights{}` | Por definir (P1 del plan) | Cálculo de aportación y desviaciones |
-| `deviation_threshold_pp` | 5 puntos porcentuales | Regla 3 del plan |
-| `satellite_min_weight_pct` | 10% | Regla 6b del plan |
-| `monthly_contribution_eur` | Por definir | Reparto mensual |
-| `bucket_pct_of_contribution` | Por definir | Presupuesto del cubo |
-| `bucket_max_cumulative_contribution` | Por definir | Regla 17 |
-| `bucket_stop_loss_pct` | Por definir | Regla 17 |
-| `bucket_max_weight_pct` | Por definir | Regla 18 |
-| `bucket_benchmark_asset_id` | Por definir | Regla 16: activo que hace de índice de referencia del cubo |
-| `stale_price_days` | 5 | Aviso de antigüedad |
-| `model_720_alert_threshold_eur` | 45.000€ | Margen sobre los 50.000€ |
-| `model_721_alert_threshold_eur` | 45.000€ | Ídem para cripto |
-| `savings_tax_brackets[]` | Ver `business-rules.md` §5.1 | Motor fiscal |
-| `tax_residence` | España | `business-rules.md` §5.9 |
-| `job_frequencies{}` | Ver §9.4 | Programación de trabajos |
-| `notification_email` | — | Destino SES |
-| `alert_channels{}` | — | Qué avisa por correo y qué solo en la interfaz |
+`Settings` es el conjunto de parámetros que la aplicación **lee** en lugar de llevarlos escritos en el fuente: pesos objetivo, umbrales, frecuencias, destinatarios, criterios fiscales y residencia. Existe por el principio IV de la constitución —nada codificado que deba ser configurable—: estos valores cambian con la vida, con la cartera y con la normativa, y obligar a editar código para mover un porcentaje garantiza que no se mueva. No vive en un fichero aparte: cada cambio es un evento `settings_changed` del libro mayor (ADR-0006) y registra la configuración vigente **entera**, de modo que un cálculo de hoy se reproduce dentro de quince años aunque el valor por defecto del código haya cambiado (ADR-0022).
+
+**La lista normativa de parámetros es `business-rules.md` §7**, con el valor inicial y la regla asociada de cada uno. Manda ella, y esta especificación **no la repite**: la tabla que había aquí se quedó desfasada durante meses —le faltaban los criterios fiscales que el motor ya usaba y le sobraba alguno que nunca existió en el código—, que es lo que pasa siempre con una lista duplicada. Cualquier parámetro nuevo se añade en §7 y solo en §7.
+
+**Previsión, todavía fuera de la lista normativa:** `alert_channels{}` —qué avisa por correo y qué se queda solo en la interfaz— es una previsión de la **Fase 4 (automatización)**, coherente con la columna «Notifica» y el principio de notificación de §9.5, pero **no existe en el código ni en §7**. Se anota aquí para no perderla; entra en §7 el día que la Fase 4 la implemente, no antes.
 
 ### 5.2 Requisitos
 
