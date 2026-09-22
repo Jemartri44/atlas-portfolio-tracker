@@ -354,6 +354,54 @@ Ninguna bloquea. Las anoto porque la dirección pidió que se dijera lo que pare
 
 ---
 
+## Criterios firmes: qué se ve y qué no (decisión de la dirección, 2026-09-23)
+
+**El problema.** La 009 fijó que **dudoso es todo lo que no es certeza alta** (Q8), y el informe
+enseña el dinero en juego solo de los dudosos. El 2026-09-23 los criterios **#18** y **#19**
+subieron a certeza alta porque los respalda el Manual práctico de Renta 2025. Consecuencia no
+buscada: los dos **desaparecieron del apartado de dudosos**, y con ellos el importe de su lectura
+contraria —200,00 € en el caso del #19—. La regla se cumple y la información se pierde.
+
+Lo que se perdía no era un cálculo caro: `doubtful()` ya lo hacía y lo tiraba en su última línea,
+un `.filter(isDoubtful)`.
+
+**Las tres opciones que se plantearon:**
+
+1. **(a) Dejarlo así.** Coste cero. La regla queda limpia y la información se pierde.
+2. **(b) Partir en dos en vez de filtrar.** `doubtful` conserva exactamente lo que conserva hoy
+   —«esto no lo sabemos»— y el informe gana una lista hermana, `settled`, con los criterios de
+   certeza alta que sí mueven una cifra: «esto sí lo sabemos, y esto es lo que hay detrás si
+   Hacienda lo lee al revés». No cuesta un cálculo más; cuesta una clave nueva en el informe, con
+   su predicción previa.
+3. **(c) Ampliar «dudoso» a todo lo que tenga riesgo agresivo.** Recupera la información sin campo
+   nuevo, pero un criterio de certeza alta pasaría a presentarse como algo que no sabemos.
+
+**Elegida la (b)**, por el motivo que la dirección resumió mejor que la propuesta: **«no sé cómo se
+lee» y «sé cómo se lee, y esto es lo que hay detrás» no son la misma cosa**, y meterlas en el mismo
+apartado destruye información en las dos direcciones. La (c) se descartó porque convertir «dudoso»
+en «todo lo que puede salir caro» vacía la palabra y el apartado deja de servir para lo único que
+sirve.
+
+**Condiciones con las que se aceptó**, todas aplicadas en el commit que la introduce:
+
+1. **El nombre de la clave dice qué es, no de dónde viene**: `settled`, criterios asentados, nunca
+   «no dudosos» ni un nombre por descarte. El tipo que comparten las dos listas pasa a llamarse
+   `CriterionStake`: las dos guardan lo mismo, *lo que un criterio pone en juego*.
+2. **No se filtra por importe distinto de cero.** Si la lectura contraria no mueve nada, la entrada
+   aparece igual, con su cero. «Lo hemos comprobado y no cambia nada» es información, y además es
+   la que tranquiliza; filtrar por interés es exactamente lo que hizo perder esto. La única
+   exclusión sigue siendo la que ya existía y no es de importe: un criterio que **ninguna cifra del
+   ejercicio aplica** no aparece en ninguna de las dos listas.
+3. **El contrato de la salida se actualiza en el mismo commit**: `atlas tax` pasa de diez apartados
+   a once, y `README.md` lo dice.
+4. **Privacidad desde el primer commit**: dirección y certeza visibles, importe enmascarado, igual
+   que en los dudosos.
+
+La predicción del movimiento del fichero dorado está en
+[`settled-criteria-expectation.md`](settled-criteria-expectation.md).
+
+---
+
 ## Casillas de 2025
 
 Fuentes:
