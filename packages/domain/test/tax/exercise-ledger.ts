@@ -4,11 +4,7 @@
 // hand calculation and not from the engine.
 
 import type { LedgerEvent } from "../../src/schema/events.js";
-import {
-  DEFAULT_INCOME_CATEGORY,
-  DEFAULT_SETTINGS,
-  type IncomeCategory,
-} from "../../src/settings/settings.js";
+import { DEFAULT_SETTINGS, type IncomeCategory } from "../../src/settings/settings.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 
 export type Label = `E${number}`;
@@ -72,9 +68,22 @@ export const exerciseLedger = (reading: CategoryReading = "capital_gain"): Exerc
       fund: "value_date",
       money_market: "value_date",
     },
+    // Written out type by type, not extended from the documented default:
+    // five of the seven were still coming from the code, so a change to any of
+    // them would have moved the literals of a hand calculation in silence.
     ...(reading === "from_code"
       ? {}
-      : { income_category: { ...DEFAULT_INCOME_CATEGORY, etc: reading, etp: reading } }),
+      : {
+          income_category: {
+            stock: "capital_gain",
+            etf: "capital_gain",
+            etc: reading,
+            etp: reading,
+            crypto: "capital_gain",
+            fund: "capital_gain",
+            money_market: "capital_gain",
+          },
+        }),
     wash_sale_transfer_counts: true,
     savings_offset_limit_pct: "25",
     loss_carryforward_years: 4,

@@ -6,23 +6,33 @@
 // answers and the hand-computed returns"); none was copied from the engine's
 // output. A discrepancy is investigated and written down there before a
 // literal is touched.
+//
+// And the ledger is built on `HAND_SETTINGS`, which writes the configuration
+// down in full, instead of on the documented defaults: a calculation whose
+// literals move when the code changes its mind about a default is a mirror of
+// the engine, not a check on it.
 
 import { describe, expect, it } from "vitest";
 import { closedYearImpact } from "../../src/filings/closed-years.js";
 import type { FilingCauses, FilingFigure } from "../../src/filings/comparison.js";
 import type { Money } from "../../src/money/money.js";
 import type { LedgerEvent, TaxReturnFiledEvent } from "../../src/schema/events.js";
-import { DEFAULT_SETTINGS, normalizeSettings } from "../../src/settings/settings.js";
+import { normalizeSettings } from "../../src/settings/settings.js";
 import { taxYear } from "../../src/tax/year.js";
-import { buy, sell, taxBuilder } from "./helpers.js";
+import { buy, HAND_SETTINGS, sell, taxBuilder } from "./helpers.js";
 
 const text = (money: Money | undefined): string =>
   money === undefined ? "—" : money.amount.toString();
 
-/** The configuration in force when the first return was filed: the 25 % limit. */
-const AT_25 = normalizeSettings(DEFAULT_SETTINGS);
+/**
+ * The configuration in force when the first return was filed: the 25 % limit.
+ * `HAND_SETTINGS`, not the defaults — every value this exercise depends on is
+ * written down there, so no change of a documented default can move a literal
+ * of this file without the file saying so.
+ */
+const AT_25 = normalizeSettings(HAND_SETTINGS);
 /** The one in force after C11, which lowers the limit to 20 %. */
-const AT_20 = normalizeSettings({ ...DEFAULT_SETTINGS, savings_offset_limit_pct: "20" });
+const AT_20 = normalizeSettings({ ...HAND_SETTINGS, savings_offset_limit_pct: "20" });
 
 interface Exercise {
   events: LedgerEvent[];
@@ -34,7 +44,7 @@ interface Exercise {
  * where a step needs it, so each step is read on the ledger it had then.
  */
 const exercise = (upTo = "C11", computedBase = "30"): Exercise => {
-  const b = taxBuilder();
+  const b = taxBuilder(HAND_SETTINGS);
   const id: Record<string, string> = {};
   const stop = (label: string) => upTo === label;
   id.C1 = buy(b, "fund_f", "2027-01-11", "100", "10").id;
@@ -94,7 +104,7 @@ const exercise = (upTo = "C11", computedBase = "30"): Exercise => {
     return { events: b.build(), id };
   }
   id.C10 = b.interest({ account_id: "acc_a", value_date: "2027-12-28", gross: "20" }).id;
-  id.C11 = b.settings({ ...DEFAULT_SETTINGS, savings_offset_limit_pct: "20" }).id;
+  id.C11 = b.settings({ ...HAND_SETTINGS, savings_offset_limit_pct: "20" }).id;
   return { events: b.build(), id };
 };
 

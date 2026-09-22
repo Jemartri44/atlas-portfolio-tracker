@@ -884,9 +884,15 @@ actualizar»**: son cambios de `docs/` que **no** me correspondía hacer.
 - **Hay dos tablas de ventanas a propósito**: la de `settings.ts` y `SCENARIO_WASH_SALE_WINDOW` en
   `synth/scenario.ts`. **Unificarlas rompe el `.jsonl` dorado**, que está congelado. El comentario
   largo en `scenario.ts` lo explica y hay un test que vigila la deriva.
-- **El libro calculado a mano (`test/tax/exercise-ledger.ts`) fija sus ajustes explícitamente**
-  (`income_category`, `wash_sale_window`, `fiscal_date_rule`). Un cálculo a mano que hereda valores
-  por defecto es un espejo del código, no un cálculo. Si se añade un ajuste que le afecte, **fijarlo**.
+- **Los libros calculados a mano fijan su configuración entera y explícita**, con `HAND_SETTINGS`
+  de `test/tax/helpers.ts`: las **tres familias tipo a tipo** (`fiscal_date_rule`,
+  `wash_sale_window`, `income_category`) y los **cuatro escalares**
+  (`wash_sale_transfer_counts`, `savings_offset_limit_pct`, `loss_carryforward_years`,
+  `treaty_withholding_pct`), con el modelo de `tests/fixtures/ledger/tax-hand-v1.jsonl`. Un cálculo
+  a mano que hereda valores por defecto es un espejo del código, no un cálculo. **Extender un valor
+  por defecto no es fijarlo**: escribirlo como `{ ...DEFAULT_INCOME_CATEGORY, etc: … }` dejó cinco
+  de los siete tipos viniendo del código y la anotación de que «ya no hereda ninguno» fue falsa
+  durante un día. Si se añade un ajuste que les afecte, **fijarlo, escrito entero**.
 - **El techo de arranque del paquete web es de la dirección.** La comprobación automática prohíbe
   `domain/src/tax/` y `domain/src/informative/` en cualquier trozo de arranque; lo que se vigila es
   **la forma**. No esconderle aristas con importaciones dinámicas.
@@ -908,7 +914,7 @@ actualizar»**: son cambios de `docs/` que **no** me correspondía hacer.
 | #18 y #19 se quedan en `aggressive`: subir la certeza no cambia la dirección | **Hecho**, catálogo y documento |
 | Escribir esa distinción en la leyenda de `docs/fiscal-questions.md` | **Hecho**, línea de leyenda nueva |
 | `money_market` también a dos meses, con la salvedad de parar si puede designar algo que no sea IIC | **Hecho**; verificado antes (ISIN, TER, `transferable`, y `business-rules.md` / `specification.md` describen `fixed_income` como «fondos indexados o **monetarios**»): designa un fondo monetario, no un instrumento ajeno a la IIC |
-| Revisar si el libro a mano hereda algún otro ajuste en vez de fijarlo | **Hecho**: quedaba `fiscal_date_rule`; fijado. Ya no hereda ninguno |
+| Revisar si el libro a mano hereda algún otro ajuste en vez de fijarlo | **Hecho a medias, y anotado como completo por error.** Se fijó `fiscal_date_rule`, pero `income_category` se escribió extendiendo el valor por defecto (cinco de siete tipos seguían viniendo del código) y el libro de §6.3 montaba sobre `taxBuilder()`, que no fija ningún escalar. **Cerrado en la revisión adversarial del 2026-09-22** con `HAND_SETTINGS` |
 | La visibilidad de #19 y sus 200 € | **Pendiente, para el bloque 2**, como se pidió; anotada arriba |
 | Rebase sobre el `develop` nuevo antes de la PR | **Hecho** sobre `f29ebc1`; cuatro conflictos en `docs/`, resueltos conservando la estructura de `develop` |
 | Dejar el traspaso escrito y commiteado donde lo busque quien siga | **Esto** |
