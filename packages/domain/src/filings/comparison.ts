@@ -36,9 +36,19 @@ export interface FilingCauses {
   at_filing: Money;
   /** The same ledger and the same settings, read by the engine of today. */
   engine: Money;
-  /** The same ledger, read with the settings in force now. */
+  /**
+   * The same ledger **and the same day of the query**, read with the settings
+   * in force now. The two readings behind this figure differ in one thing
+   * only, which is what lets it be labelled "the configuration".
+   */
   settings: Money;
-  /** Everything recorded after the filing. */
+  /**
+   * Everything that happened after the figures were computed: the lines
+   * recorded since, and the passing of time itself. Time is not decoration
+   * here — a return of an earlier year filed after that day anchors the chain
+   * where nothing anchored it before, and moves the figure without a single
+   * line being added or a single criterion being read differently.
+   */
   later_events: Money;
 }
 
@@ -130,9 +140,15 @@ export const filingComparison = (
   // where the filing sits: otherwise it points at other lines entirely.
   const fingerprintOk = filing.fingerprint.lines === filing.position;
   const prefix = events.slice(0, filing.fingerprint.lines);
+  // Both readings of the prefix are taken **on the day the figures were
+  // computed**, so the only thing between them is the configuration. Reading
+  // the second one today would put the shift of the date inside the cause
+  // called "the configuration", and the user would be told he read a criterion
+  // the other way when what happened is that the world moved on. The shift is
+  // left to `later_events`, which is where it belongs.
   const asOf = filing.computed.as_of;
   const r0 = fingerprintOk ? readingOf(prefix, year, asOf, filing.computed.settings) : undefined;
-  const r1 = fingerprintOk ? readingOf(prefix, year, today, state.fiscalSettings) : undefined;
+  const r1 = fingerprintOk ? readingOf(prefix, year, asOf, state.fiscalSettings) : undefined;
   const figures: FilingFigure[] = [];
   for (const figure of new Set([...declared.keys(), ...then.keys(), ...current.keys()])) {
     const declaredAmount = declared.get(figure) ?? zero();
