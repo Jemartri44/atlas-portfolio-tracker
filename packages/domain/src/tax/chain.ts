@@ -105,6 +105,30 @@ export const categoryOf = (state: LedgerState, assetId: string): IncomeCategory 
   );
 
 /**
+ * The figures of a year as the chain computes them, keyed the way a filing
+ * names them: `savings_base`, `pending:<year>:<category>` and `deferred`.
+ * Shared by the warning of a closed year and by the comparison with what was
+ * filed, so that the two never name the same figure differently.
+ */
+export const chainFigures = (chain: ChainCore, year: number): Map<string, Money> => {
+  const figures = new Map<string, Money>();
+  figures.set("savings_base", chain.bases.get(year) as Money);
+  // Always there: the chain walks every year from its first up to this one.
+  for (const entry of chain.pendings.get(year) as PendingLoss[]) {
+    figures.set(`pending:${entry.origin_year}:${entry.category}`, entry.amount_eur);
+  }
+  // What the wash-sale rule still holds deferred at 31/12 of that year, the
+  // third figure a `renta` declares (feature 009, Q9).
+  figures.set(
+    "deferred",
+    chain.pendingDeferrals
+      .reduce((total, entry) => total.add(entry.amount_eur), zero())
+      .roundToCents(),
+  );
+  return figures;
+};
+
+/**
  * What the ledger says was declared, as far as the carry-forward is concerned.
  *
  * Only `renta`, only in force on the day of the query, and only the pending

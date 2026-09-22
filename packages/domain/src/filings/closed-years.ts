@@ -21,16 +21,15 @@
 // enough to run before every write.
 
 import type { CivilDate } from "../dates/civil-date.js";
-import { yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
-import { Money } from "../money/money.js";
-import { closedYears, type Filing } from "../projections/filings.js";
-import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
+import type { Money } from "../money/money.js";
+import type { Filing } from "../projections/filings.js";
+import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState } from "../projections/state.js";
 import type { FiledRentaFigures, FilingModel, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { isInvalid, taxChain } from "../tax/chain.js";
-import type { PendingLoss } from "../tax/report.js";
+import { chainFigures, isInvalid, taxChain } from "../tax/chain.js";
+import { type ClosedYear, closedYearsTouched } from "./touched.js";
 
 /** One reading of the ledger: the events, and the settings to read them with. */
 export interface Reading {
@@ -60,31 +59,6 @@ export interface ClosedYearImpact {
 
 const text = (money: Money): string => money.amount.toString();
 
-/** The tax years the events added by the change belong to, by their business date. */
-const touchedYears = (before: Reading, after: Reading, state: LedgerState): Set<number> => {
-  const known = new Set(before.events.map((event) => event.id));
-  const years = new Set<number>();
-  const yearOfEvent = (event: LedgerEvent): void => {
-    if (isOperationEvent(event)) {
-      years.add(yearOf(businessDateOf(state, event)));
-    }
-  };
-  for (const event of after.events) {
-    if (known.has(event.id)) {
-      continue;
-    }
-    if (event.type === "reversal") {
-      // A reversal has no date of its own: what it moves is the year of what
-      // it annuls, which is always in the file (the projection refuses one
-      // that annuls nothing).
-      yearOfEvent(after.events.find((entry) => entry.id === event.reverses_id) as LedgerEvent);
-      continue;
-    }
-    yearOfEvent(event);
-  }
-  return years;
-};
-
 /**
  * The figures of a `renta` as the chain computes them for one year, or nothing
  * when that reading cannot be computed (invalid events, ADR-0015). Nothing is
@@ -97,24 +71,11 @@ const figuresOf = (
   year: number,
   today: CivilDate,
 ): Map<string, string> | undefined => {
-  const figures = new Map<string, string>();
   const chain = taxChain(reading.events, year, { today }, reading.settings);
   if (isInvalid(chain)) {
     return undefined;
   }
-  figures.set("savings_base", text(chain.bases.get(year) as Money));
-  // Always there: the chain walks every year from its first up to this one.
-  for (const entry of chain.pendings.get(year) as PendingLoss[]) {
-    figures.set(`pending:${entry.origin_year}:${entry.category}`, text(entry.amount_eur));
-  }
-  // What the wash-sale rule still holds deferred at 31/12 of that year, which
-  // is the third figure a `renta` declares (feature 009, Q9).
-  const deferred = chain.pendingDeferrals.reduce(
-    (total, entry) => total.add(entry.amount_eur),
-    Money.zero("EUR"),
-  );
-  figures.set("deferred", text(deferred.roundToCents()));
-  return figures;
+  return new Map([...chainFigures(chain, year)].map(([figure, amount]) => [figure, text(amount)]));
 };
 
 /**
@@ -130,6 +91,10 @@ const declaredFigures = (filing: Filing): string[] => {
     "deferred",
   ];
 };
+
+/** The filing behind a fact, which the projected state still holds by its id. */
+const filingOf = (state: LedgerState, closed: ClosedYear): Filing =>
+  state.filings.get(closed.filing_id) as Filing;
 
 /**
  * What a change does to the years that are already filed.
@@ -155,14 +120,13 @@ export const closedYearImpact = (
       collectErrors: true,
       ...(after.settings === undefined ? {} : { settings: after.settings }),
     });
-  const closed = closedYears(state, today);
+  const closed = closedYearsTouched(before.events, after.events, today, state);
   if (closed.length === 0) {
     return [];
   }
-  const touched = touchedYears(before, after, state);
   const impacts: ClosedYearImpact[] = [];
   for (const entry of closed) {
-    const byDate = touched.has(entry.year);
+    const byDate = entry.by_date;
     const moves: MovedFigure[] = [];
     // Only the income tax has figures the chain can compare; the assets of a
     // 720 are valued at market and live in their own module (block 3).
@@ -170,7 +134,7 @@ export const closedYearImpact = (
     const is = entry.model === "renta" ? figuresOf(after, entry.year, today) : undefined;
     if (was !== undefined && is !== undefined) {
       for (const figure of new Set([
-        ...declaredFigures(entry.filing),
+        ...declaredFigures(filingOf(state, entry)),
         ...was.keys(),
         ...is.keys(),
       ])) {
@@ -185,43 +149,12 @@ export const closedYearImpact = (
       impacts.push({
         model: entry.model,
         year: entry.year,
-        filing_id: entry.filing.event_id,
-        filed_at: entry.filing.filed_at,
+        filing_id: entry.filing_id,
+        filed_at: entry.filed_at,
         by_date: byDate,
         moves,
       });
     }
   }
   return impacts;
-};
-
-/**
- * Past tax years with figures in the ledger and **no** filing recorded.
- *
- * Not a warning: a note (Q8). A past year without a filing may simply not have
- * been filed yet, or the user may not have recorded it, and saying "careful,
- * you filed this" of a year nobody filed would be the warning that gets
- * ignored. The years are listed so the interfaces can say it calmly.
- */
-export const unfiledPastYears = (
-  events: readonly LedgerEvent[],
-  today: CivilDate,
-  /** The projection of `events`, when the caller already has it. */
-  projected?: LedgerState,
-): number[] => {
-  const state = projected ?? projectLedger(events, { collectErrors: true });
-  const currentYear = yearOf(today);
-  const filed = new Set(
-    closedYears(state, today)
-      .filter((entry) => entry.model === "renta")
-      .map((entry) => entry.year),
-  );
-  const years = new Set<number>();
-  for (const gain of state.gains) {
-    years.add(gain.year);
-  }
-  for (const income of state.income) {
-    years.add(income.year);
-  }
-  return [...years].filter((year) => year < currentYear && !filed.has(year)).sort((a, b) => a - b);
 };

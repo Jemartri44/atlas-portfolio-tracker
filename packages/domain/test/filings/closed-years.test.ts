@@ -5,7 +5,9 @@
 // figure of a year already filed.
 
 import { describe, expect, it } from "vitest";
-import { closedYearImpact, unfiledPastYears } from "../../src/filings/closed-years.js";
+import { closedYearImpact } from "../../src/filings/closed-years.js";
+import { unfiledPastYears } from "../../src/filings/touched.js";
+import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { LedgerEvent } from "../../src/schema/events.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import type { LedgerBuilder } from "../ledger-builder.js";
@@ -186,6 +188,9 @@ describe("what a change does to a year already filed", () => {
   });
 });
 
+const unfiled = (events: readonly LedgerEvent[], today: string): number[] =>
+  unfiledPastYears(today, projectLedger(events, { collectErrors: true }));
+
 describe("past years with nothing filed", () => {
   it("lists them, and stops listing one once its return is recorded", () => {
     const b = taxBuilder();
@@ -193,12 +198,12 @@ describe("past years with nothing filed", () => {
     sell(b, "stock_s", "2027-06-01", "10", "120");
     // Income alone is enough to make a year worth filing.
     b.interest({ account_id: "acc_a", value_date: "2028-03-01", gross: "40" });
-    expect(unfiledPastYears(b.build(), TODAY)).toEqual([2027, 2028]);
+    expect(unfiled(b.build(), TODAY)).toEqual([2027, 2028]);
     fileReturn(b, 2027, "200");
-    expect(unfiledPastYears(b.build(), TODAY)).toEqual([2028]);
+    expect(unfiled(b.build(), TODAY)).toEqual([2028]);
     // On 1 June 2028 the return of 2027 had not been filed yet (it was on the
     // 18th), and 2028 is the current year, which nobody files yet.
-    expect(unfiledPastYears(b.build(), "2028-06-01")).toEqual([2027]);
-    expect(unfiledPastYears(b.build(), "2028-06-18")).toEqual([]);
+    expect(unfiled(b.build(), "2028-06-01")).toEqual([2027]);
+    expect(unfiled(b.build(), "2028-06-18")).toEqual([]);
   });
 });

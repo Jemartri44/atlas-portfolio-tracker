@@ -2,6 +2,7 @@
 // shape, projects the ledger with the new event placed chronologically and
 // appends only if every invariant still holds (data-schema.md §7.1).
 
+import { todayInMadrid } from "../dates/madrid.js";
 import type { AffectedEvent } from "../errors.js";
 import {
   DependentEventsError,
@@ -9,6 +10,7 @@ import {
   InvalidLedgerError,
   ValidationError,
 } from "../errors.js";
+import { type ClosedYear, closedYearsTouched, unfiledPastYears } from "../filings/touched.js";
 import { createUlidGenerator } from "../ids/ulid.js";
 import { normalizeIsin } from "../projections/isin.js";
 import { projectLedger } from "../projections/project-ledger.js";
@@ -37,6 +39,16 @@ export interface RecordResult<E extends SupportedEvent = SupportedEvent> {
   etag: string;
   /** Events that were valid before and are not after; only ever non-empty with `acceptInvalid`. */
   newlyInvalid: AffectedEvent[];
+  /**
+   * Returns already filed that this write reaches (ADR-0020): the **fact**,
+   * which every write carries so that no interface can forget to say it. How
+   * much it moves is the **figure**, and it is put on by whoever already has
+   * the tax engine loaded (`closedYearImpact`); dragging the engine in here
+   * would put it in the boot path of the web, measured at 4,9 KB gzip.
+   */
+  closed: ClosedYear[];
+  /** Past years with figures and no filing recorded: a note, not a warning (Q8). */
+  unfiledPastYears: number[];
 }
 
 /** Envelope + fingerprint on top of a draft. Exported for correctEvent. */
@@ -191,11 +203,14 @@ export const recordEvent = async <E extends SupportedEvent>(
   if (duplicates.length > 0 && options.confirmDuplicate !== true) {
     throw new DuplicateFingerprintError((event as { fingerprint: string }).fingerprint, duplicates);
   }
+  const today = todayInMadrid(deps.clock);
   const appended = await deps.store.append([event], etag);
   return {
     event,
     warnings: state.warnings.filter((warning) => warning.event_id === event.id),
     etag: appended.etag,
     newlyInvalid: affected,
+    closed: closedYearsTouched(events, [...events, event], today, state),
+    unfiledPastYears: unfiledPastYears(today, state),
   };
 };
