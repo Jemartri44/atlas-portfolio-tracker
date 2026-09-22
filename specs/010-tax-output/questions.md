@@ -44,7 +44,7 @@ Las fuentes oficiales se consultaron el 2026-09-19 con dos búsquedas independie
 | **Q10** | Las filas del formulario frente a las líneas del motor (**ficha F5**) | Por origen de la pérdida; lo liberado de años anteriores en 0395; atribución fija del #21 | Cambia filas, nunca totales |
 | **Q11** | Qué es «algo que hacer» para la tarjeta del Resumen | Temporada **o** algo que hacer; «no se puede determinar» también cuenta | La tarjeta calla un 720 sin valorar |
 
-Más abajo están también las **fichas F1–F5** (F4 no tiene pregunta propia: es la clasificación del 720), las **notas N1–N15**, las **casillas de 2025** con su fuente, el **procedimiento para añadir un ejercicio**, los **cuatro cálculos a mano** y la **lista de documentos** que la dirección tendrá que actualizar.
+Más abajo están también las **fichas F1–F5** (F4 no tiene pregunta propia: es la clasificación del 720), las **notas N1–N15**, las **casillas de 2025** con su fuente, el **procedimiento para añadir un ejercicio**, los **cuatro cálculos a mano**, la **lista de documentos** que la dirección tendrá que actualizar y, al final del todo, el **traspaso** con el estado de la rama.
 
 ---
 
@@ -729,3 +729,186 @@ No he tocado `docs/`, salvo el primer commit que trae la PR #60.
 | `docs/specification.md` | §13: lo que la Fase 5 ya entrega; §14.1: la valoración a 31/12 resuelta como Nivel 1 |
 | `docs/` (nuevo o en `business-rules.md`) | El procedimiento para añadir un ejercicio de casillas |
 | ADR-0020 | Si se acepta Q1: la huella y el resellado en `compact` |
+
+---
+
+## Traspaso (2026-09-22)
+
+Escrito para **quien siga, sea o no quien empezó**. El detalle técnico y el porqué de cada
+desviación están en `implementation-notes.md`; esto es el estado y el camino.
+
+### 1. Estado del árbol
+
+- Worktree `/home/jemar/projects/atlas-portfolio-tracker-010`, rama `feature/010-tax-output`,
+  HEAD `6d9e206`, `git status` **limpio**: nada sin commitear, nada sin seguir.
+- **26 commits por delante de `origin/develop`**, ya **rebasados** sobre `f29ebc1`, el `develop`
+  que trae `docs/spec-coherence`. Si `develop` se vuelve a mover, rebase otra vez antes de la PR.
+- **Sin PR y sin `push`**: la rama vive solo en local. La dirección pidió avisar antes de fusionar.
+- Hooks activos en este worktree (`git config core.hooksPath .githooks`).
+
+**Aviso del rebase**: hubo que **saltar** el commit `e9b2a7a` (`git rebase --skip`). Traía
+`docs/prompts/010-tax-output.md`, `README.md` y `docs/fiscal-questions.md` en un estado **anterior**
+al de `develop`; aplicarlo habría **revertido el criterio #24**. Comprobado antes de saltarlo: el
+contenido válido es el de `develop`. Si alguien ve ese commit «perdido» en el reflog, está bien perdido.
+
+### 2. Lo hecho, bloque por bloque
+
+Cubre las entradas **1 a 16** de la tabla de commits del plan, más cuatro encargos que llegaron en
+marcha. En orden real:
+
+| # | Asunto del commit | Qué |
+|---|---|---|
+| 1 | `docs(010): spec, plan and questions for the tax output` | artefactos Spec Kit |
+| 2 | `docs(010): record the answers and the hand-computed returns` | respuestas y los cuatro cálculos a mano, antes de una sola línea de código |
+| 3 | `fix(tax): start the year chain at the first filed return` | **bloque 0.1**, la corrección P5 |
+| 4 | `feat(settings): add the informative return thresholds and the tax season` | **bloque 0.2**, ocho parámetros nuevos |
+| 5 | `docs(010): predict what the ETC and ETP income category moves` | predicción escrita antes de tocar el dorado |
+| 6 | `test(tax): pin the hand-computed year of feature 009 to capital gains` | fija el libro a mano antes del cambio de valor por defecto |
+| 7 | `feat(settings): make ETC and ETP movable capital income by default` | **bloque 0.3** |
+| 8 | `feat(cli): let settings set write the transfer rule of the wash sale` | ampliación autorizada |
+| 9 | `docs(domain): say what the fiscal engine now reads in these comments` | los cuatro comentarios que mentían, verificados uno a uno |
+| 10 | `build(web): raise the boot ceiling: the loader validates what it reads` | techo de arranque a 74,0 KB, **autorizado por la dirección** |
+| 11 | `docs(010): predict what the filing event moves in the golden snapshot` | predicción |
+| 12 | `feat(schema): add the tax_return_filed event` | **bloque 1.1–1.2**, 25 tipos de evento |
+| 13 | `build(web): keep the tax output out of the boot, checked on the bundle` | la comprobación automática de **forma**, no de tamaño |
+| 14 | `feat(projections): project filed returns and their supplementary chain` | **1.4** |
+| 15 | `feat(ledger): fingerprint the ledger before a filed return` | **1.3**, con resellado en `compact` |
+| 16 | `refactor(tax): share one year chain that anchors on the filed returns` | **1.5**, `tax/chain.ts`; `TaxOptions` se queda en `{today}` |
+| 17 | `feat(filings): warn when an event moves a closed tax year` | **1.6**, el **hecho** (`filings/touched.ts`) |
+| 18 | `feat(filings): say from every write which filed return it reaches` | la **cifra** (`filings/closed-years.ts`) |
+| 19 | `feat(tax): compare what was filed with what the ledger says today` | **1.7** y el cálculo a mano §6.3 (entrada 16 de la tabla, plegada aquí) |
+| 20 | `docs(010): predict what the criteria labels move in the golden report` | predicción |
+| 21 | `fix(tax): correct the certainty and the risk of criteria 17 to 24` | lote de revisión adversarial |
+| 22 | `docs(010): predict what the two-month window for funds moves` | predicción |
+| 23 | `fix(tax): read the wash-sale window of a fund as two months` | cambio de conducta, con `2:fund_2m` / `2:fund_1y` |
+| 24 | `docs(010): predict the monetary funds moving to two months` | predicción |
+| 25 | `fix(tax): read the window of a monetary fund as two months too` | extensión a `money_market` |
+| 26 | `docs(010): implementation notes of blocks 0 and 1` | cierre del tramo |
+
+**Bloques 2, 3, 4 y 5: sin empezar.** Nada de la Renta por casillas, de los modelos informativos,
+de la pantalla `/fiscal` ni de los comandos de la CLI existe todavía.
+
+### 3. Dónde paré dentro del bloque 2, y el paso siguiente
+
+**Paré antes de la primera línea: el bloque 2 tiene cero código.** No existe
+`packages/domain/src/tax/boxes/` ni ningún tipo, test o fichero suyo.
+
+Lo único que llegué a hacer del bloque 2 fue **mirar sus fuentes**, y hay un hallazgo que condiciona
+el primer commit:
+
+- La investigación de casillas ya está **hecha y commiteada** en el apartado «Casillas de 2025» de
+  este mismo documento: cada casilla de 2025 con su etiqueta, su página y sus fuentes.
+- Intenté **re-verificarla contra el BOE**. `BOE-A-2026-7041` resuelve y confirma la
+  **Orden HAC/277/2026, de 25 de marzo** (Modelo 100 del ejercicio 2025), y el índice del manual de
+  la AEAT es alcanzable, pero el **Anexo I se publica como imágenes PNG** y la herramienta de
+  descarga disponible **no puede leerlas**. Los números y etiquetas de casilla **no se han podido
+  re-verificar contra la imagen primaria**.
+- Consecuencia: `boxes/years/2025.ts` debe llevar en sus datos `source`, `url` y `checked_at` de la
+  investigación de la fase de especificación (**2026-09-19**, certeza alta) y **decirlo con
+  honradez** en el mensaje del commit. Quien tenga un visor de imágenes, que la confirme y suba
+  `checked_at`.
+
+**Paso siguiente concreto**, entrada 20 de la tabla del plan,
+`feat(tax): lay the savings base out by concept and 2025 box`, en este orden:
+
+1. `packages/domain/src/tax/boxes/concepts.ts` — los identificadores estables de concepto (plan §2.1).
+2. `packages/domain/src/tax/boxes/rows.ts` — las filas por origen de la pérdida (plan §2.2, ficha F5).
+3. `packages/domain/src/tax/boxes/years/2025.ts` — las casillas **como datos por ejercicio** (plan §2.3).
+4. El redondeo y lo que no se calcula entero (plan §2.4), con Q3 ya respondida.
+
+Antes de escribir: releer §2 del plan y, aquí, **Q2, Q3, Q10, el §6.4** (la Renta de 2025 por
+casillas, recalculada tras Q2) y el **procedimiento para añadir un ejercicio nuevo**. El §6.4 y el
+test de Q10 son el cálculo a mano que hay que fijar: **se rehacen a mano, nunca desde la salida del
+código**.
+
+### 4. La tubería, verificada hoy sobre `6d9e206`
+
+| Medida | Valor |
+|---|---|
+| Tests | **163 ficheros, 1.562 tests**, todos verdes |
+| Cobertura `packages/domain` | **100 %** sentencias (4.684), **100 %** ramas (2.427), **100 %** funciones (1.053), **100 %** líneas (4.462) |
+| Biome (`npm run lint`) | salida **0**, 488 ficheros |
+| `tsc -b` | salida **0** |
+| Paquete web, arranque | **72,3 KB** gzip sobre un presupuesto de **74,0** |
+| Paquete web, total | **194,6 KB** gzip sobre un presupuesto de **195,5** |
+| Test de arquitectura | verde (`domain` no importa nada) |
+
+Los dos presupuestos hay que **apretarlos a la medida real** al cerrar la feature (entrada 28 de la
+tabla). El techo de arranque **no se sube sin la dirección**.
+
+### 5. Congelado, pendiente de decisión, y preguntas abiertas
+
+**Congelado por la dirección** (no tocar; avisar al llegar al bloque del motor):
+
+1. El defecto de `windowCriterion` con un **ETC declarado capital mobiliario**: recibe `2:listed` y
+   una alternativa de un año que el art. 25.2 no contempla. La autorización cubrió **solo fondos**.
+2. El **test de definitividad** (una transmisión solo libera el diferimiento si ella misma es
+   definitiva; DGT V3282-18 y Manual práctico de Renta 2025, cap. 11, texto de marzo de 2026),
+   con la ventana del propio activo. Decidido, pero para el bloque del motor.
+3. El criterio **#21**, la cita del **art. 35** en líneas de capital mobiliario y la atadura de las
+   comisiones a valores negociables.
+
+**A decidir en el bloque 2, al diseñar la salida**:
+
+4. **Una cifra grande deja de verse porque hemos dejado de dudar de ella.** Con #19 en certeza alta
+   desaparece del apartado de dudosos y con él los **200,00 €** en juego de la lectura contraria.
+   Es lo que manda la regla de la 009, pero la información se pierde. La dirección pidió
+   **plantearlo aquí**, que es donde se elige qué ve el usuario y dónde.
+
+**Abiertas, sin resolver y sin actuar**:
+
+5. **Homogeneidad tras un `convert`**: una compra nueva en el activo de destino nunca se empareja
+   con una pérdida anterior en el de origen. Con la V0796-26 parece correcto, pero **nadie lo ha
+   comprobado para el traspaso entre fondos**, donde se cruza con el #2b. Anotado en
+   `docs/fiscal-questions.md`.
+6. **N11 y N21 de `specs/009-tax-engine/questions.md`**: la dirección dijo expresamente
+   **no actuar sobre ellas**.
+7. **La web no alcanza `wash_sale_transfer_counts`**: Configuración no tiene control booleano y es
+   el **único** parámetro booleano de los 31 de `Settings`. La CLI ya lo cubre. Trabajo **posterior**
+   a la 010; la dirección pidió no construirlo ahora.
+
+Y sigue en pie, al final de este documento, la tabla **«Documentos que la dirección tendrá que
+actualizar»**: son cambios de `docs/` que **no** me correspondía hacer.
+
+### 6. Trampas que morderían al siguiente
+
+- **`npm run lint | tail` esconde el rojo**: el código de salida de la tubería es el de `tail`. Dos
+  commits entraron rotos por esto. **Ejecutar `npm run lint` a pelo.**
+- **Ficheros dorados**: antes de regenerar cualquiera, escribir **qué líneas se van a mover y por
+  qué**, commitear la predicción y después comparar. Si se mueve algo no predicho, **parar**.
+- **`tests/fiscal-criteria.test.ts`** compara la tabla de `docs/fiscal-questions.md` con el catálogo
+  de `packages/domain/src/tax/criteria.ts`. Documento y catálogo, **en el mismo commit**. No se
+  desactiva ni se relaja jamás.
+- **Un identificador de criterio nunca cambia de significado**: una lectura nueva estrena
+  identificador. Por eso existen `2:fund_2m` y `2:fund_1y` y se retiró el `2:fund` a secas.
+- **Hay dos tablas de ventanas a propósito**: la de `settings.ts` y `SCENARIO_WASH_SALE_WINDOW` en
+  `synth/scenario.ts`. **Unificarlas rompe el `.jsonl` dorado**, que está congelado. El comentario
+  largo en `scenario.ts` lo explica y hay un test que vigila la deriva.
+- **El libro calculado a mano (`test/tax/exercise-ledger.ts`) fija sus ajustes explícitamente**
+  (`income_category`, `wash_sale_window`, `fiscal_date_rule`). Un cálculo a mano que hereda valores
+  por defecto es un espejo del código, no un cálculo. Si se añade un ajuste que le afecte, **fijarlo**.
+- **El techo de arranque del paquete web es de la dirección.** La comprobación automática prohíbe
+  `domain/src/tax/` y `domain/src/informative/` en cualquier trozo de arranque; lo que se vigila es
+  **la forma**. No esconderle aristas con importaciones dinámicas.
+- **Cobertura al 100 %**: no se llega con tests de relleno; si aparece una rama muerta, se **borra**
+  con un comentario que explique el invariante.
+- **Fechas en los tests**: un festivo o un domingo hace que el BCE no publique tipo y la CLI rechace
+  la operación. Usar días hábiles (pasó con un 2027-04-11 en domingo).
+- **Al cablear la cifra del aviso de ejercicio cerrado** en la CLI y en la web, escribir el test
+  estático que pidió la dirección: que **enumere** los módulos que importan `recordEvent`,
+  `correctEvent` o `reverseEvent` fuera del dominio y exija que cada uno alcance `closedYearImpact`,
+  de modo que **una tercera interfaz rompa el test** hasta que alguien la añada.
+- **Nunca `git push` a `develop` ni a `main`, nunca fusionar**, y no abrir la PR hasta tenerlo todo
+  verde. Commits en inglés, una sola línea, **sin coautoría de ninguna IA**.
+
+### 7. Lo que pedía el último mensaje de la dirección
+
+| Encargo | Estado |
+|---|---|
+| #18 y #19 se quedan en `aggressive`: subir la certeza no cambia la dirección | **Hecho**, catálogo y documento |
+| Escribir esa distinción en la leyenda de `docs/fiscal-questions.md` | **Hecho**, línea de leyenda nueva |
+| `money_market` también a dos meses, con la salvedad de parar si puede designar algo que no sea IIC | **Hecho**; verificado antes (ISIN, TER, `transferable`, y `business-rules.md` / `specification.md` describen `fixed_income` como «fondos indexados o **monetarios**»): designa un fondo monetario, no un instrumento ajeno a la IIC |
+| Revisar si el libro a mano hereda algún otro ajuste en vez de fijarlo | **Hecho**: quedaba `fiscal_date_rule`; fijado. Ya no hereda ninguno |
+| La visibilidad de #19 y sus 200 € | **Pendiente, para el bloque 2**, como se pidió; anotada arriba |
+| Rebase sobre el `develop` nuevo antes de la PR | **Hecho** sobre `f29ebc1`; cuatro conflictos en `docs/`, resueltos conservando la estructura de `develop` |
+| Dejar el traspaso escrito y commiteado donde lo busque quien siga | **Esto** |
