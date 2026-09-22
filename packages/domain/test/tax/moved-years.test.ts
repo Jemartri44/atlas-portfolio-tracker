@@ -15,13 +15,15 @@ describe("movedTaxYears", () => {
     return b.build();
   };
 
+  /**
+   * The change goes from the ETC pinned to a capital gain to the default of
+   * criterion #24, movable capital income. Reading it the other way round
+   * would compare the default with itself and move nothing.
+   */
+  const AS_GAIN = { ...DEFAULT_SETTINGS, income_category: { etc: "capital_gain" as const } };
+
   it("sees a change of income category that moves the base without moving any realized gain", () => {
-    const moved = movedTaxYears(
-      ledger(),
-      DEFAULT_SETTINGS,
-      { ...DEFAULT_SETTINGS, income_category: { etc: "movable_capital" } },
-      2029,
-    );
+    const moved = movedTaxYears(ledger(), AS_GAIN, DEFAULT_SETTINGS, 2029);
     // 500 − 200 = 300 as capital gains; 375 with the ETC as movable capital.
     expect(moved.map((m) => [m.year, text(m.before), text(m.after)])).toEqual([
       [2027, "300", "375"],
@@ -30,12 +32,7 @@ describe("movedTaxYears", () => {
 
   it("sees the last closed year, the one declared in May", () => {
     // Standing in 2028, 2027 is the year about to be declared: it must be seen.
-    const moved = movedTaxYears(
-      ledger(),
-      DEFAULT_SETTINGS,
-      { ...DEFAULT_SETTINGS, income_category: { etc: "movable_capital" } },
-      2028,
-    );
+    const moved = movedTaxYears(ledger(), AS_GAIN, DEFAULT_SETTINGS, 2028);
     expect(moved.map((m) => [m.year, text(m.before), text(m.after)])).toEqual([
       [2027, "300", "375"],
     ]);
@@ -43,14 +40,7 @@ describe("movedTaxYears", () => {
 
   it("says nothing when the base does not move, or for the current year", () => {
     expect(movedTaxYears(ledger(), DEFAULT_SETTINGS, DEFAULT_SETTINGS, 2029)).toEqual([]);
-    expect(
-      movedTaxYears(
-        ledger(),
-        DEFAULT_SETTINGS,
-        { ...DEFAULT_SETTINGS, income_category: { etc: "movable_capital" } },
-        2027,
-      ),
-    ).toEqual([]);
+    expect(movedTaxYears(ledger(), AS_GAIN, DEFAULT_SETTINGS, 2027)).toEqual([]);
   });
 
   it("follows a figure into a year the other reading does not reach", () => {

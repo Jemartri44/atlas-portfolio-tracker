@@ -160,12 +160,26 @@ export const DEFAULT_FISCAL_DATE_RULE: Record<AssetType, FiscalDateRule> = {
   money_market: "value_date",
 };
 
-/** Same, for the income category: what the system does today, for every type (ADR-0021). */
+/**
+ * Same, for the income category (ADR-0021).
+ *
+ * An **ETC** and an **ETP** are movable capital income, not a capital gain
+ * (criterion #24 of `docs/fiscal-questions.md`): the binding ruling of the DGT
+ * V0267-25, of 13/03/2025, holds that an exchange traded commodity is a debt
+ * security and "in every case" produces income from the assignment of own
+ * capital to third parties (art. 25.2 LIRPF). It is also the prudent side: as
+ * movable capital income a loss offsets gains only up to 25 %.
+ *
+ * The certainty is not the same for the two —high for an ETC, medium for an
+ * ETP, whose legal structure varies by product— and the catalogue of criteria
+ * says so with a variant each. Both stay configurable: answering this with a
+ * `settings_changed` instead of a migration is what ADR-0021 exists for.
+ */
 export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
   stock: "capital_gain",
   etf: "capital_gain",
-  etc: "capital_gain",
-  etp: "capital_gain",
+  etc: "movable_capital",
+  etp: "movable_capital",
   crypto: "capital_gain",
   fund: "capital_gain",
   money_market: "capital_gain",

@@ -40,13 +40,19 @@ describe("DEFAULT_SETTINGS", () => {
   });
 
   /**
-   * ADR-0021: the provision exists so that phase 5 can treat "is an ETC a
-   * capital gain or movable capital income?" as configuration. The default is
-   * what the system does today, for every type, so switching the setting on
-   * changes nothing until somebody reads it — and nobody reads it yet.
+   * ADR-0021 left the income category as configuration so that criterion #24
+   * could be answered with a value instead of a migration, and feature 010
+   * answered it: an ETC and an ETP are movable capital income (binding ruling
+   * V0267-25), everything else is a capital gain.
    */
-  it("starts every asset type as a capital gain, which is today's behaviour", () => {
-    expect(Object.values(DEFAULT_INCOME_CATEGORY)).toEqual(Array(7).fill("capital_gain"));
+  it("makes an ETC and an ETP movable capital income, and everything else a capital gain (#24)", () => {
+    expect(DEFAULT_INCOME_CATEGORY.etc).toBe("movable_capital");
+    expect(DEFAULT_INCOME_CATEGORY.etp).toBe("movable_capital");
+    expect(
+      Object.entries(DEFAULT_INCOME_CATEGORY)
+        .filter(([type]) => type !== "etc" && type !== "etp")
+        .map(([, category]) => category),
+    ).toEqual(Array(5).fill("capital_gain"));
     expect(DEFAULT_SETTINGS.income_category).toEqual(DEFAULT_INCOME_CATEGORY);
   });
 });
@@ -55,11 +61,16 @@ describe("incomeCategoryOf", () => {
   it("resolves the default at the point of use, map absent or type absent", () => {
     const { income_category: _all, ...without } = DEFAULT_SETTINGS;
     // A ledger written before ADR-0021 carries no map at all.
-    expect(incomeCategoryOf(without as Settings, "etc")).toBe("capital_gain");
+    expect(incomeCategoryOf(without as Settings, "etc")).toBe("movable_capital");
+    expect(incomeCategoryOf(without as Settings, "stock")).toBe("capital_gain");
     // A map that mentions other types only.
     const partial = { ...DEFAULT_SETTINGS, income_category: { fund: "movable_capital" as const } };
-    expect(incomeCategoryOf(partial, "etc")).toBe("capital_gain");
+    expect(incomeCategoryOf(partial, "etc")).toBe("movable_capital");
+    expect(incomeCategoryOf(partial, "stock")).toBe("capital_gain");
     expect(incomeCategoryOf(partial, "fund")).toBe("movable_capital");
+    // And what the ledger says wins over the default, in both directions.
+    const pinned = { ...DEFAULT_SETTINGS, income_category: { etc: "capital_gain" as const } };
+    expect(incomeCategoryOf(pinned, "etc")).toBe("capital_gain");
   });
 });
 

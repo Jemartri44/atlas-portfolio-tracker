@@ -11,6 +11,8 @@
 
 import { describe, expect, it } from "vitest";
 import type { Money } from "../../src/money/money.js";
+import { DEFAULT_INCOME_CATEGORY } from "../../src/settings/settings.js";
+import { taxReportJson } from "../../src/tax/json.js";
 import { taxYear } from "../../src/tax/year.js";
 import { exerciseLedger } from "./exercise-ledger.js";
 
@@ -57,5 +59,21 @@ describe("the hand-computed year of feature 009 with the ETC as movable capital 
     const doubted = report.doubtful.map((entry) => entry.criterion);
     expect(doubted).not.toContain("24:etc");
     expect(doubted).not.toContain("24:etc_gain");
+  });
+
+  /**
+   * The mutant this kills is the one that puts `etc` or `etp` back on
+   * `capital_gain` in `DEFAULT_INCOME_CATEGORY`: a ledger that says nothing
+   * about the income category has to read exactly as the documented one.
+   */
+  it("is what a ledger that says nothing about the income category reads", () => {
+    const fromCode = taxYear(exerciseLedger("from_code").events, 2028, { today: TODAY });
+    expect(DEFAULT_INCOME_CATEGORY.etc).toBe("movable_capital");
+    expect(DEFAULT_INCOME_CATEGORY.etp).toBe("movable_capital");
+    expect(JSON.stringify(taxReportJson(fromCode).movable_capital)).toBe(
+      JSON.stringify(taxReportJson(report).movable_capital),
+    );
+    expect(text(fromCode.base_eur)).toBe("175.7");
+    expect(fromCode.notes.map((n) => n.code)).toContain("tax_settings_default_used");
   });
 });

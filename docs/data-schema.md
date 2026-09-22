@@ -395,7 +395,7 @@ Contexto original: Existen porque la revisión adversarial de `docs/fiscal-quest
 
 | Campo | Dónde | Forma | Por defecto |
 |---|---|---|---|
-| `income_category` | `Settings` | `Record<AssetType, "capital_gain" \| "movable_capital">` | `capital_gain` en todos |
+| `income_category` | `Settings` | `Record<AssetType, "capital_gain" \| "movable_capital">` | `movable_capital` en `etc` y `etp`, `capital_gain` en el resto (criterio **#24**, feature 010; antes `capital_gain` en todos) |
 | `market` | `asset_created` | Código MIC o nombre del mercado, opcional | ausente |
 | `issuer_country` | `asset_created` | ISO 3166-1 alfa-2, opcional | ausente |
 | `fee_kind` | `standalone_fee` | `custody \| administration \| connectivity \| discretionary_management \| other`, opcional | `other` |

@@ -137,13 +137,19 @@ describe("what the engine refuses", () => {
 });
 
 describe("categories of income (ADR-0021)", () => {
-  it("with the default, every disposal is a capital gain", () => {
+  it("with the default, an ETC is movable capital income and a fund is a capital gain (#24)", () => {
     const b = taxBuilder();
     buy(b, "etc_e", "2027-01-11", "10", "100");
     sell(b, "etc_e", "2027-06-01", "10", "120");
+    buy(b, "fund_f", "2027-01-11", "10", "100");
+    sell(b, "fund_f", "2027-06-01", "10", "120");
     const report = reportOf(b.build(), 2027);
-    expect(report.capital_gains.lines.map((l) => l.category)).toEqual(["capital_gain"]);
-    expect(report.movable_capital.transmissions).toEqual([]);
+    expect(report.capital_gains.lines.map((l) => [l.asset_id, l.category])).toEqual([
+      ["fund_f", "capital_gain"],
+    ]);
+    expect(report.movable_capital.transmissions.map((l) => [l.asset_id, l.category])).toEqual([
+      ["etc_e", "movable_capital"],
+    ]);
   });
 
   it("an ETC set to movable capital goes to movable capital income and offsets as such", () => {
@@ -635,7 +641,10 @@ describe("the settings of the report", () => {
   });
 
   it("compares with the settings before the last change", () => {
-    const b = taxBuilder();
+    // The first change pins the ETC to a capital gain, against the default
+    // (#24): without it the two readings would be the same and there would be
+    // nothing to compare.
+    const b = taxBuilder({ ...DEFAULT_SETTINGS, income_category: { etc: "capital_gain" } });
     b.settings({ ...DEFAULT_SETTINGS, income_category: { etc: "movable_capital" } });
     buy(b, "etc_e", "2027-01-11", "10", "100");
     const sale = sell(b, "etc_e", "2027-06-01", "10", "120");

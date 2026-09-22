@@ -223,7 +223,7 @@
   "2027": {
     "base_eur": "174.35",
     "capital_gains": {
-      "balance_eur": "172.53",
+      "balance_eur": "180.04",
       "foreign_releases_eur": "0",
       "gains_eur": "267.64",
       "lines": [
@@ -419,144 +419,6 @@
             "fx_rate_date": "2027-05-05"
           },
           "quantity": "40",
-          "released": [],
-          "released_eur": "0"
-        },
-        {
-          "account_id": "acc_ibkr",
-          "asset_id": "ast_gold",
-          "asset_type": "etc",
-          "book": "core",
-          "category": "capital_gain",
-          "computable_eur": "-2.1139083171",
-          "computable_eur_rounded": "-2.11",
-          "corporate_action_kind": "reverse_split",
-          "cost_eur": "181.2181062181",
-          "criteria": [
-            "2:listed",
-            "3",
-            "4",
-            "5",
-            "6",
-            "14",
-            "24:etc_gain"
-          ],
-          "deferred_eur": "0",
-          "event_id": "01MQTWHB78RC2FADH9B774BHS5",
-          "event_type": "forced_sale",
-          "fee": "0.5",
-          "fiscal_date": "2027-06-06",
-          "lots": [
-            {
-              "acquisition_date": "2026-09-03",
-              "cost_eur": "181.2181062181",
-              "gain_eur": "-2.1139083171",
-              "lineage": [
-                {
-                  "acquisition_date": "2026-09-03",
-                  "asset_id": "ast_gold",
-                  "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
-                  "event_type": "buy",
-                  "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0"
-                }
-              ],
-              "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
-              "proceeds_eur": "179.104197901",
-              "quantity": "0.25",
-              "root": {
-                "acquisition_date": "2026-09-03",
-                "asset_id": "ast_gold",
-                "cost": {
-                  "amount": "2301.18",
-                  "currency": "USD",
-                  "eur": "2174.6172746173",
-                  "fx_rate": "1.0582",
-                  "fx_rate_date": "2026-09-03"
-                },
-                "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
-                "event_type": "buy",
-                "quantity": "12"
-              }
-            }
-          ],
-          "own_eur": "-2.1139083171",
-          "proceeds": {
-            "amount": "191.14",
-            "currency": "USD",
-            "eur": "179.104197901",
-            "fx_rate": "1.0672",
-            "fx_rate_date": "2027-06-04"
-          },
-          "quantity": "0.25",
-          "released": [],
-          "released_eur": "0"
-        },
-        {
-          "account_id": "acc_ibkr2",
-          "asset_id": "ast_gold",
-          "asset_type": "etc",
-          "book": "core",
-          "category": "capital_gain",
-          "computable_eur": "-5.4046934669",
-          "computable_eur_rounded": "-5.4",
-          "corporate_action_kind": "reverse_split",
-          "cost_eur": "543.6543186543",
-          "criteria": [
-            "2:listed",
-            "3",
-            "4",
-            "5",
-            "6",
-            "14",
-            "24:etc_gain"
-          ],
-          "deferred_eur": "0",
-          "event_id": "01MQTWHB78RC2FADH9B774BHS5",
-          "event_type": "forced_sale",
-          "fee": "0.5",
-          "fiscal_date": "2027-06-06",
-          "lots": [
-            {
-              "acquisition_date": "2026-09-03",
-              "cost_eur": "543.6543186543",
-              "gain_eur": "-5.4046934669",
-              "lineage": [
-                {
-                  "acquisition_date": "2026-09-03",
-                  "asset_id": "ast_gold",
-                  "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
-                  "event_type": "buy",
-                  "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0"
-                }
-              ],
-              "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
-              "proceeds_eur": "538.2496251874",
-              "quantity": "0.75",
-              "root": {
-                "acquisition_date": "2026-09-03",
-                "asset_id": "ast_gold",
-                "cost": {
-                  "amount": "2301.18",
-                  "currency": "USD",
-                  "eur": "2174.6172746173",
-                  "fx_rate": "1.0582",
-                  "fx_rate_date": "2026-09-03"
-                },
-                "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
-                "event_type": "buy",
-                "quantity": "12"
-              }
-            }
-          ],
-          "own_eur": "-5.4046934669",
-          "proceeds": {
-            "amount": "574.42",
-            "currency": "USD",
-            "eur": "538.2496251874",
-            "fx_rate": "1.0672",
-            "fx_rate_date": "2027-06-04"
-          },
-          "quantity": "0.75",
           "released": [],
           "released_eur": "0"
         },
@@ -957,22 +819,35 @@
           "released_eur": "0"
         }
       ],
-      "losses_eur": "-95.11"
+      "losses_eur": "-87.6"
     },
     "compensation": {
       "base_eur": "174.35",
-      "capital_gain_eur": "172.53",
-      "capital_gain_final_eur": "172.53",
+      "capital_gain_eur": "180.04",
+      "capital_gain_final_eur": "174.35",
       "expired": [],
       "limit_eur": {
-        "capital_gain": "43.13",
-        "movable_capital": "0.46"
+        "capital_gain": "45.01",
+        "movable_capital": "0"
       },
       "limit_pct": "25",
-      "movable_capital_eur": "1.82",
-      "movable_capital_final_eur": "1.82",
+      "movable_capital_eur": "-5.69",
+      "movable_capital_final_eur": "0",
       "pending": [],
-      "steps": []
+      "steps": [
+        {
+          "against": "capital_gain",
+          "amount_eur": "5.69",
+          "criteria": [
+            "10",
+            "22"
+          ],
+          "from": "movable_capital",
+          "limited": true,
+          "origin_year": 2027,
+          "phase": 1
+        }
+      ]
     },
     "double_taxation": {
       "deductible_eur": "0",
@@ -1113,25 +988,11 @@
         ],
         "measure": "difference",
         "reason": "no_carrier_left"
-      },
-      {
-        "base_difference_eur": "0",
-        "certainty": "low",
-        "criterion": "24:etc_gain",
-        "deferred_difference_eur": "0",
-        "direction": "none",
-        "documented_risk": "aggressive",
-        "event_ids": [
-          "01MQTWHB78RC2FADH9B774BHS5",
-          "01MQTWHB78RC2FADH9B774BHS5"
-        ],
-        "measure": "difference",
-        "pending_difference_eur": "0"
       }
     ],
     "in_kind": [],
     "movable_capital": {
-      "balance_eur": "1.82",
+      "balance_eur": "-5.69",
       "dividends": [
         {
           "account_id": "acc_bucket",
@@ -1158,7 +1019,146 @@
       "expenses": [],
       "foreign_releases_eur": "0",
       "interest": [],
-      "transmissions": []
+      "transmissions": [
+        {
+          "account_id": "acc_ibkr",
+          "asset_id": "ast_gold",
+          "asset_type": "etc",
+          "book": "core",
+          "category": "movable_capital",
+          "computable_eur": "-2.1139083171",
+          "computable_eur_rounded": "-2.11",
+          "corporate_action_kind": "reverse_split",
+          "cost_eur": "181.2181062181",
+          "criteria": [
+            "2:listed",
+            "3",
+            "4",
+            "5",
+            "6",
+            "14",
+            "24:etc"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01MQTWHB78RC2FADH9B774BHS5",
+          "event_type": "forced_sale",
+          "fee": "0.5",
+          "fiscal_date": "2027-06-06",
+          "lots": [
+            {
+              "acquisition_date": "2026-09-03",
+              "cost_eur": "181.2181062181",
+              "gain_eur": "-2.1139083171",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-09-03",
+                  "asset_id": "ast_gold",
+                  "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
+                  "event_type": "buy",
+                  "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0"
+                }
+              ],
+              "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
+              "proceeds_eur": "179.104197901",
+              "quantity": "0.25",
+              "root": {
+                "acquisition_date": "2026-09-03",
+                "asset_id": "ast_gold",
+                "cost": {
+                  "amount": "2301.18",
+                  "currency": "USD",
+                  "eur": "2174.6172746173",
+                  "fx_rate": "1.0582",
+                  "fx_rate_date": "2026-09-03"
+                },
+                "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
+                "event_type": "buy",
+                "quantity": "12"
+              }
+            }
+          ],
+          "own_eur": "-2.1139083171",
+          "proceeds": {
+            "amount": "191.14",
+            "currency": "USD",
+            "eur": "179.104197901",
+            "fx_rate": "1.0672",
+            "fx_rate_date": "2027-06-04"
+          },
+          "quantity": "0.25",
+          "released": [],
+          "released_eur": "0"
+        },
+        {
+          "account_id": "acc_ibkr2",
+          "asset_id": "ast_gold",
+          "asset_type": "etc",
+          "book": "core",
+          "category": "movable_capital",
+          "computable_eur": "-5.4046934669",
+          "computable_eur_rounded": "-5.4",
+          "corporate_action_kind": "reverse_split",
+          "cost_eur": "543.6543186543",
+          "criteria": [
+            "2:listed",
+            "3",
+            "4",
+            "5",
+            "6",
+            "14",
+            "24:etc"
+          ],
+          "deferred_eur": "0",
+          "event_id": "01MQTWHB78RC2FADH9B774BHS5",
+          "event_type": "forced_sale",
+          "fee": "0.5",
+          "fiscal_date": "2027-06-06",
+          "lots": [
+            {
+              "acquisition_date": "2026-09-03",
+              "cost_eur": "543.6543186543",
+              "gain_eur": "-5.4046934669",
+              "lineage": [
+                {
+                  "acquisition_date": "2026-09-03",
+                  "asset_id": "ast_gold",
+                  "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
+                  "event_type": "buy",
+                  "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0"
+                }
+              ],
+              "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
+              "proceeds_eur": "538.2496251874",
+              "quantity": "0.75",
+              "root": {
+                "acquisition_date": "2026-09-03",
+                "asset_id": "ast_gold",
+                "cost": {
+                  "amount": "2301.18",
+                  "currency": "USD",
+                  "eur": "2174.6172746173",
+                  "fx_rate": "1.0582",
+                  "fx_rate_date": "2026-09-03"
+                },
+                "event_id": "01M1M6TY80A45SV7BY1V6AFX8V",
+                "event_type": "buy",
+                "quantity": "12"
+              }
+            }
+          ],
+          "own_eur": "-5.4046934669",
+          "proceeds": {
+            "amount": "574.42",
+            "currency": "USD",
+            "eur": "538.2496251874",
+            "fx_rate": "1.0672",
+            "fx_rate_date": "2027-06-04"
+          },
+          "quantity": "0.75",
+          "released": [],
+          "released_eur": "0"
+        }
+      ]
     },
     "notes": [
       {
