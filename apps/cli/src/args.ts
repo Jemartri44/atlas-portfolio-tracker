@@ -42,6 +42,8 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "no-neutrality-regime",
   "not-transferable",
   "transferable",
+  "wash-sale-transfer-counts",
+  "no-wash-sale-transfer-counts",
 ]);
 
 /** The flags that say "no" to another one, both ways: the way to write that no. */
@@ -50,6 +52,8 @@ const OPPOSITES: Readonly<Record<string, string>> = {
   "no-neutrality-regime": "neutrality-regime",
   transferable: "not-transferable",
   "not-transferable": "transferable",
+  "wash-sale-transfer-counts": "no-wash-sale-transfer-counts",
+  "no-wash-sale-transfer-counts": "wash-sale-transfer-counts",
 };
 
 /** Words that read as a yes or a no after a flag that takes none. */

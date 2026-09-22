@@ -244,6 +244,13 @@ const SETTINGS_DECIMALS = [
 const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days", "loss-carryforward-years"];
 /** Free-text settings: the benchmark is an `asset_id`, checked against the catalogue when queried. */
 const SETTINGS_STRINGS = ["bucket-benchmark-asset"];
+/**
+ * Criterion #2b, in the three states the setting has: said yes, said no, and
+ * **not said**, which is what every ledger written before ADR-0014 carries and
+ * which reads as the prudent side (a transfer in acquires homogeneous
+ * securities, so it defers the loss).
+ */
+const SETTINGS_BOOLEANS = ["wash-sale-transfer-counts", "no-wash-sale-transfer-counts"];
 
 export const parseAssignments = (raw: string, flag: string): Record<string, string> => {
   const result: Record<string, string> = {};
@@ -379,6 +386,7 @@ export const settingsCommand = async (
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
       ...SETTINGS_STRINGS,
+      ...SETTINGS_BOOLEANS,
       ...GLOBAL_FLAGS,
     ]);
     const { state, events } = await loadForQuery(ctx);
@@ -435,6 +443,16 @@ export const settingsCommand = async (
     const benchmark = stringFlag(flags, "bucket-benchmark-asset");
     if (benchmark !== undefined) {
       patch.bucket_benchmark_asset_id = benchmark;
+    }
+    const counts = booleanFlag(flags, "wash-sale-transfer-counts");
+    const doesNot = booleanFlag(flags, "no-wash-sale-transfer-counts");
+    if (counts && doesNot) {
+      throw new UsageError(
+        "--wash-sale-transfer-counts y --no-wash-sale-transfer-counts son excluyentes",
+      );
+    }
+    if (counts || doesNot) {
+      patch.wash_sale_transfer_counts = counts;
     }
     const settings = mergeSettings(current, patch as Partial<Settings>);
     if (!(await confirmSilencedWarnings(ctx, state, current, settings))) {

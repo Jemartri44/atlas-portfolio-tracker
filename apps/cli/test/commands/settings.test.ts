@@ -433,6 +433,43 @@ describe("atlas settings set: assignments keyed by asset type", () => {
     expect((await h.store.load()).events).toHaveLength(seed().length);
   });
 
+  /**
+   * Criterion #2b was readable by the engine and not writable by anybody: the
+   * same class of defect as a control that saves nothing. Three states, so two
+   * flags, like `--neutrality-regime`.
+   */
+  it("says yes, no, or nothing at all about a transfer in counting as a repurchase (#2b)", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    const written = async (): Promise<Record<string, unknown>> => {
+      const { events } = await h.store.load();
+      return (events[events.length - 1] as unknown as { settings: Record<string, unknown> })
+        .settings;
+    };
+    expect(await h.exec(["settings", "set", "--no-wash-sale-transfer-counts"])).toBe(0);
+    expect((await written()).wash_sale_transfer_counts).toBe(false);
+    expect(await h.exec(["settings", "set", "--wash-sale-transfer-counts"])).toBe(0);
+    expect((await written()).wash_sale_transfer_counts).toBe(true);
+    // Nothing said leaves what is in force alone.
+    expect(await h.exec(["settings", "set", "--stale-price-days", "9"])).toBe(0);
+    expect((await written()).wash_sale_transfer_counts).toBe(true);
+  });
+
+  it("refuses the two ways of writing #2b at once, and the word after the flag", async () => {
+    /** `EX_USAGE`: the command was written wrong, not the configuration. */
+    const USAGE = 64;
+    const h = harness({ events: seed(), confirm: true });
+    expect(
+      await h.exec([
+        "settings",
+        "set",
+        "--wash-sale-transfer-counts",
+        "--no-wash-sale-transfer-counts",
+      ]),
+    ).toBe(USAGE);
+    expect(await h.exec(["settings", "set", "--wash-sale-transfer-counts", "false"])).toBe(USAGE);
+    expect((await h.store.load()).events).toHaveLength(seed().length);
+  });
+
   it("rejects a category the enumeration does not have", async () => {
     const h = harness({ events: seed(), confirm: true });
     expect(await h.exec(["settings", "set", "--income-category", "etc=rendimiento"])).toBe(1);
