@@ -160,6 +160,8 @@ El método de imputación es **primera entrada, primera salida**, aplicado por p
 
 **Comisiones en la base fiscal** (art. 35 LIRPF): la de compra se suma al coste de adquisición; la de venta se resta del valor de transmisión; las de **custodia, administración o conectividad no son deducibles** en la ganancia patrimonial, porque no son inherentes a la adquisición ni a la transmisión (`docs/fiscal-questions.md` #3, certeza alta). Se guardan aparte del precio.
 
+No deducibles **de la ganancia patrimonial** no quiere decir no deducibles en absoluto: el art. 26.1.a) permite restar del rendimiento íntegro del capital mobiliario los gastos de **administración y depósito** de valores negociables (nunca la gestión discrecional de carteras). El motor fiscal resta por eso las comisiones sueltas marcadas `custody` o `administration` (`standalone_fee.fee_kind`, criterio #23); `connectivity`, `discretionary_management` y `other` no se restan, y una comisión sin marcar es `other`, así que **sin clasificar nada no cambia nada**. Clasificar cada comisión es del usuario, y marcar como custodia lo que no lo es es la lectura agresiva.
+
 **Retención a cuenta en reembolsos de fondos:** el comercializador retiene sobre la plusvalía; se registra en la venta (`withholding`) para que cuadre la declaración.
 
 Casos límite a cubrir en tests:
@@ -178,18 +180,25 @@ La ventana es de **dos meses** para valores admitidos a negociación (acciones, 
 
 → La app alerta al intentar registrar una recompra que active la regla, y **aplica el diferimiento completo** en el motor fiscal: la parte de la pérdida proporcional a la cantidad recomprada queda pendiente, asociada a los lotes recomprados, y se libera cuando estos se transmiten; si esos lotes se traspasan o se canjean antes (`transfer`, `convert`, `carve_out`), el diferimiento viaja con los lotes descendientes y se libera cuando estos se transmiten (pregunta #15, **verificar**). Es el error más común en operativa activa.
 
+La ley no cierra cuatro cosas que el motor no puede dejar de decidir, y que van numeradas en `docs/fiscal-questions.md` con su certeza y la dirección de su riesgo: solo cuenta la recompra que **sigue en el patrimonio** tras la venta (#18); cada unidad recomprada difiere **una sola** unidad vendida, atendiendo las pérdidas por orden cronológico (#19); la regla mira el **resultado neto de la operación**, no lote a lote (#20); y lo que una transmisión libera se suma a su resultado y **vuelve a pasar** por la regla (#21). El detalle está en `data-schema.md` §8.4.
+
 ### 5.5 Compensación de pérdidas
 
 - Las pérdidas patrimoniales compensan primero con ganancias patrimoniales del mismo ejercicio.
-- El remanente compensa con rendimientos del capital mobiliario **hasta el 25 %** del saldo positivo de esos rendimientos (art. 49 LIRPF; porcentaje vigente **desde 2018**, tras el régimen transitorio del 10-15-20 % de 2015-2017; `docs/fiscal-questions.md` #10).
+- El remanente compensa con rendimientos del capital mobiliario **hasta el 25 %** del saldo positivo de esos rendimientos (art. 49 LIRPF; porcentaje vigente **desde 2018**, tras el régimen transitorio del 10-15-20 % de 2015-2017; `docs/fiscal-questions.md` #10). **El cruce va en los dos sentidos**: un saldo negativo de rendimientos del capital mobiliario compensa el saldo positivo de ganancias patrimoniales con el mismo límite.
 - Lo no compensado se arrastra hasta **4 ejercicios** siguientes.
 
-→ La app mantiene el saldo de pérdidas pendientes por ejercicio de origen.
+**El orden, que decide qué caduca** (criterio #22, tomado del manual práctico de IRPF de la AEAT): **fase 1**, el ejercicio —cada categoría se integra por separado y el saldo negativo de una compensa el positivo de la otra hasta el límite—; **fase 2**, lo pendiente de ejercicios anteriores —primero contra el saldo positivo restante de **su misma categoría**, sin límite, y después contra el de la otra, donde el límite es **conjunto** con lo ya compensado en la fase 1—. Entre ejercicios pendientes, los **más antiguos primero**, que es lo que minimiza lo que caduca. El límite se redondea a céntimos half-up, como cualquier otra cifra (#6). El motor compensa siempre el máximo posible: no compensar no es una opción que se deje al usuario.
+
+El porcentaje y los cuatro años son **configuración**, no constantes del código (`savings_offset_limit_pct` y `loss_carryforward_years`, §7): el primero ya fue 10, 15 y 20 entre 2015 y 2017.
+
+→ La app mantiene el saldo de pérdidas pendientes **por ejercicio de origen y por categoría**, con el último ejercicio en que se puede usar cada uno. Separarlos por categoría no es cosmético: un saldo negativo de ganancias patrimoniales y uno de rendimientos del capital mobiliario compensan de forma distinta, sin límite dentro de su categoría y con el límite en la otra.
 
 ### 5.6 Dividendos y rendimientos extranjeros
 
 - Tributan como **rendimiento del capital mobiliario** en la base del ahorro.
 - Si hubo retención en origen, corresponde la **deducción por doble imposición internacional**.
+- La deducción tiene dos límites y el motor solo calcula el primero: el **tipo del convenio** con el país del pagador (`treaty_withholding_pct`, §7). Sin ese tipo configurado, o sin `source_country` en el dividendo, no se calcula nada y la salida dice por qué; deducir todo lo retenido sería justo el exceso que el convenio manda reclamar en origen. El segundo límite (el tipo medio efectivo del contribuyente) no es calculable desde el libro, porque el motor no ve la base general; la salida lo dice, y dice también que el exceso **se pierde**, sin arrastre en IRPF.
 - Se registra: importe bruto, retención en origen, retención en España, divisa, tipo de cambio de la fecha y **país del pagador** (`source_country`): de su convenio dependen el tipo deducible y el límite de la deducción (pregunta #16).
 
 ### 5.7 Divisa
@@ -256,6 +265,8 @@ Cada evento registrado guarda su **fuente documental** (URL o PDF del emisor).
 
 Ninguno de estos valores va codificado en el fuente. Los valores marcados como *pendiente* dependen del plan financiero privado.
 
+Algunos parámetros tienen un **valor por defecto documentado** (el que aplica mientras el libro no diga otra cosa). Ese valor por defecto **se materializa en el libro** en cuanto se escribe un `settings_changed`, porque cada uno registra la configuración vigente **entera**, no un parche (ADR-0022): un ejercicio calculado hoy se reproduce dentro de quince años aunque el valor por defecto del código haya cambiado, que es lo que un cálculo fiscal necesita.
+
 | Parámetro | Valor inicial | Regla asociada |
 |---|---|---|
 | `target_weights{}` | Pendiente (claves: `asset_id` del núcleo; suman 100) | 1, 2 |
@@ -275,6 +286,10 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 | `wash_sale_window{}` | fondos/cripto `"1y"`; cotizados `"2m"` (de fecha a fecha; `wash_sale_window_days` en días es la forma antigua aceptada). **Mapa parcial**: un tipo de activo ausente toma su valor por defecto, para que añadir un tipo nuevo no invalide la configuración ya escrita (ADR-0018) | 5.4 |
 | `wash_sale_transfer_counts` | `true`: un traspaso entrante cuenta como adquisición a efectos de la regla de recompra | 5.4 |
 | `income_category` | Por tipo de activo: `capital_gain` (ganancia patrimonial, art. 33) o `movable_capital` (rendimiento del capital mobiliario por transmisión, art. 25.2). **Por defecto `capital_gain` en todos**; existe para que el asunto de los ETC pueda resolverse sin tocar código (ADR-0021) | 5.1 |
+| `savings_offset_limit_pct` | `"25"` (%). Parte del saldo positivo de una categoría de la base del ahorro que puede compensar el saldo negativo de la otra (art. 49). Fue 10, 15 y 20 en 2015-2017, así que es configuración y no una constante | 5.5 |
+| `loss_carryforward_years` | `4`. Ejercicios a los que se arrastra un saldo negativo de la base del ahorro (art. 49) | 5.5 |
+| `treaty_withholding_pct{}` | **Sin valor por defecto, a propósito**: tipo máximo de retención en origen que el convenio de doble imposición permite a cada país, por clave ISO 3166-1 alfa-2. Son cifras de tratados, verificables una a una; un dividendo de un país que no esté aquí, o sin `source_country`, no recibe deducción calculada y la salida dice por qué | 5.6 |
+| `transfer_max_days` | Pendiente. Días que puede estar abierta una solicitud de traspaso antes de que la aplicación avise; contados hasta la fecha de la consulta, no hasta hoy | 5.2 |
 | `tax_residence` | España | 5.9 |
 | `notification_email` | — | — |
 | `job_frequencies{}` | Ver especificación | — |
@@ -283,3 +298,4 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 - Historial de cambios de configuración: cambiar los pesos objetivo altera el cálculo de desviaciones históricas.
 - Validación: los pesos objetivo suman 100%; los umbrales deben ser coherentes entre sí.
 - **Aviso al modificar un umbral que esté silenciando una alerta activa.**
+- **Aviso al cambiar un parámetro fiscal que mueve un ejercicio ya cerrado.** La ventana de recompra, `wash_sale_transfer_counts`, `income_category` y los dos parámetros de la compensación mueven la **base del ahorro** de un ejercicio pasado sin mover ninguna ganancia realizada, así que el aviso compara las dos cosas —las ganancias realizadas y la base— con la configuración en vigor y con la propuesta, y dice qué ejercicios se mueven antes de guardar.

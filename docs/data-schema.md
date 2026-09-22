@@ -114,12 +114,20 @@ Los eventos `*_updated` llevan el **estado completo resultante** (no un diff), i
 `account_id`, `name`, `platform`, `book` (`core` | `bucket`), `base_currency`, `country` (ISO 3166-1, para el Modelo 720), `active`
 
 **`asset_created` / `asset_updated`**
-`asset_id`, `asset_type` (`fund` | `etf` | `etc` | `etp` | `stock` | `crypto` | `money_market`; se llama `asset_type` en la línea porque `type` es el tipo de evento del envoltorio), `book`, `asset_class?` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin?`, `ticker?`, `name`, `currency`, `ter?`, `transferable`, `reference_etf_id?`, `active`
+`asset_id`, `asset_type` (`fund` | `etf` | `etc` | `etp` | `stock` | `crypto` | `money_market`; se llama `asset_type` en la línea porque `type` es el tipo de evento del envoltorio), `book`, `asset_class?` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin?`, `ticker?`, `name`, `currency`, `ter?`, `transferable`, `reference_etf_id?`, `market?` (código MIC o nombre del mercado donde cotiza), `issuer_country?` (ISO 3166-1 alfa-2 del emisor), `active`
+
+`market` e `issuer_country` los añadió ADR-0021 para que preguntas fiscales abiertas se puedan responder sin migrar: la ventana del art. 33.5.f) habla de mercados regulados **de la UE**, y varios ETC de oro y ETP de cripto están domiciliados en Jersey o las Islas Caimán. El motor fiscal enseña el `market` de cada valor cotizado con pérdida al declarar el criterio #2 en disputa, pero **no clasifica**: el sistema no tiene la lista de mercados regulados de la UE.
 
 Validación (ADR-0009): un `asset_id` no puede existir en los dos libros. Un cambio puro de identificador (mismo producto) es `asset_updated`; cualquier otro cambio es activo nuevo + `corporate_action` (ver §6.5). En particular, `asset_updated` **rechaza** un cambio de `asset_type` o de `currency`: alteraría en silencio la `fiscal_date` (ADR-0013) o la base de coste de todas las operaciones pasadas del activo.
 
+**Un ISIN, un activo** (feature 009). Se rechaza al registrar un `asset_created`, o un `asset_updated` que **cambie** el ISIN, cuyo ISIN ya sea de otro activo del catálogo, en cualquiera de los dos libros: para la Agencia Tributaria son un mismo valor y para el FIFO y la regla de recompra serían dos, que es exactamente el silencio que ADR-0009 evita. El error (`duplicate_isin`) nombra el activo que hay que usar. Se compara en mayúsculas y sin espacios, y **contra el catálogo proyectado del libro candidato**, no contra las líneas crudas: así, rehacer un alta anulada no choca consigo misma y anular un cambio de ISIN sí se ve. **No es una validación de carga**: un libro ya escrito con el ISIN repetido se sigue cargando y lo dicen `integrity` (`duplicate_isin`, error) y el informe fiscal (`tax_duplicate_isin`).
+
 **`settings_changed`**
 `settings`: objeto completo con todos los parámetros de `business-rules.md` §7. La proyección `settingsAt(date)` devuelve el último `settings_changed` con `recorded_at ≤ date`.
+
+**Al leer**, los mapas por tipo de activo son tolerantes: un tipo ausente toma su valor por defecto documentado (ADR-0018). **Al escribir**, se materializan (ADR-0022): la línea que se escribe fija los tres mapas completos (`fiscal_date_rule`, `wash_sale_window`, `income_category`) y los criterios escalares con valor por defecto —`wash_sale_transfer_counts`, `savings_offset_limit_pct` y `loss_carryforward_years`—, de modo que un ejercicio calculado hoy se reproduce años después aunque el valor por defecto del código cambie. `treaty_withholding_pct` no se materializa: no tiene valor por defecto, y no tenerlo es la decisión.
+
+Un valor desconocido en cualquiera de los tres mapas tiene **código de error propio** —`invalid_fiscal_date_rule`, `invalid_wash_sale_window`, `invalid_income_category`, todos con el tipo de activo y el valor recibido—, porque cada uno mueve una cosa distinta y el mensaje tiene que poder decirla: el ejercicio de cada operación, la ventana de la regla de recompra o la casilla de la declaración en la que acaba una transmisión. Que el mapa **falte**, o que no sea un objeto, sigue siendo `invalid_settings`, como cualquier otro parámetro mal escrito.
 
 Un `settings_changed` que reinterpreta el pasado (p. ej. un cambio de `fiscal_date_rule`) puede dejar eventos históricos inválidos bajo la regla nueva. Es el **único** evento que se admite registrar aun así, con confirmación explícita que lista los eventos afectados (los hechos no cambian; cambia su interpretación, y no hay nada que rectificar antes). Las consultas de solo lectura proyectan entonces en modo degradado (`collectErrors`) con un aviso en cabecera; las mutaciones siguen exigiendo un libro válido (*challenge* 2026-08-31, hallazgo 2; feature 004).
 
@@ -145,6 +153,11 @@ Admite `order_id?`. Efecto: consume lotes FIFO del `asset_id` en todas las cuent
 Un `transfer` **no lleva comisión**: la comisión real de un traspaso de custodia (el cargo del depositario) se registra como `standalone_fee` (mueve efectivo, no toca la base fiscal; su deducibilidad está en la pregunta fiscal #3). El `fee?` que este evento tuvo hasta la feature 004 se aceptaba y se ignoraba (*challenge* 2026-08-31, hallazgo 6).
 
 **Dos modos:** (a) *traspaso fiscal* entre fondos distintos: ambos activos deben ser `transferable`; (b) *traspaso de custodia* (`from_asset_id == to_asset_id`, cuentas distintas): admitido para cualquier activo, sin `nav_*`, solo mueve `physicalPositions`; los lotes fiscales no cambian (ADR-0012). En el modo (a), efecto: consume `quantity_out` de lotes origen en FIFO; por cada lote consumido crea un lote destino con la **misma `acquisition_date`** y el **mismo coste total** (repartiendo `quantity_in` en proporción a la cantidad consumida de cada lote); `unit_cost_eur` destino = coste heredado / cantidad recibida. No genera ganancia ni pérdida.
+
+**`swap`** (ADR-0021)
+`account_id`, `trade_date`, `value_date`, `from_asset_id`, `quantity_out`, `market_value_out`, `to_asset_id`, `quantity_in`, `market_value_in`, `currency`, `fx_rate`, `fx_rate_date`, `fee`, `thesis_id?` (obligatorio en cuentas `bucket`, para el activo **recibido**), `broker_ref?`, `source`, `notes?`, `fingerprint`
+
+Permuta de un activo por otro (cripto por cripto es el caso que la motiva; `fx_exchange` es solo para divisas). Es una **transmisión más una adquisición**, no un traspaso: se valora por el art. 37.1.h LIRPF, **el mayor** entre el valor de mercado de lo entregado y el de lo recibido, y por eso se guardan los dos y ninguno se deriva del otro. La comisión resta de lo transmitido (criterio #17). El lote recibido nace con la fecha del swap y **sin heredar antigüedad ni coste**. Aviso `swap_fiscal_dates_differ` si las dos patas tienen reglas de fecha fiscal distintas. El vocabulario es a propósito el de `transfer` (`from_*`, `quantity_out`, `to_*`, `quantity_in`); lo que los distingue es el tipo, los dos `market_value_*` que un traspaso no tiene y la ausencia de `nav_*`.
 
 **`transfer_requested`** (sin efecto sobre lotes)
 `from_account_id`, `from_asset_id`, `to_account_id`, `to_asset_id`, `quantity_out?` o `amount_eur?`, `requested_date`, `notes?`
@@ -176,18 +189,20 @@ Efecto: suma el neto al efectivo; alimenta `investmentIncome` (rendimiento del c
 Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimientos del capital mobiliario y deducción por doble imposición.
 
 **`cash_deposit` / `cash_withdrawal`**
-`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date?`, `notes?`, `fingerprint`
+`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date`, `notes?`, `fingerprint`
 
 **`standalone_fee`**
-`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date?`, `description`, `fingerprint`. No afecta a la base fiscal de ningún lote.
+`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date`, `description`, `fee_kind?` (`custody` | `administration` | `connectivity` | `discretionary_management` | `other`; ausente equivale a `other`), `fingerprint`. No afecta a la base fiscal de ningún lote. `fee_kind` existe porque el art. 26.1.a) permite deducir del rendimiento del capital mobiliario los gastos de **administración y depósito** de valores negociables y no los demás: el motor fiscal deduce las marcadas `custody` o `administration` (criterio #23) y deja fuera al resto, así que **sin marcar nada no cambia nada** (ADR-0021).
 
 **`valuation`**
-`account_id`, `asset_id`, `date`, `quantity`, `unit_value`, `currency`, `fx_rate`, `fx_rate_date?`, `source`. Foto manual de Nivel 1 (p. ej. 31/12 para el Modelo 720). No toca lotes.
+`account_id`, `asset_id`, `date`, `quantity`, `unit_value`, `currency`, `fx_rate`, `fx_rate_date`, `source`. Foto manual de Nivel 1 (p. ej. 31/12 para el Modelo 720). No toca lotes.
 
-`fx_rate_date?` se añadió en la feature 005 (*challenge* 3, hallazgo 6): estos cuatro eventos guardaban el tipo del BCE **sin la fecha del tipo**, y el 31/12 cae en fin de semana dos de cada siete años, así que el tipo aplicado a una valoración de fin de año no era reproducible desde la tabla oficial. Es opcional y compatible (ADR-0018).
+`fx_rate_date` se añadió como **opcional** en la feature 005 (*challenge* 3, hallazgo 6): estos cuatro eventos guardaban el tipo del BCE **sin la fecha del tipo**, y el 31/12 cae en fin de semana dos de cada siete años, así que el tipo aplicado a una valoración de fin de año no era reproducible desde la tabla oficial. Desde la feature 008 es **obligatorio** en los cuatro (ADR-0021). Hacerlo obligatorio es un endurecimiento, y ADR-0018 solo lo permite dentro de la versión 1 mientras el libro real esté vacío: por eso se hizo entonces y por eso ya no se puede volver a hacer sin `schema_version = 2`.
 
 **`corporate_action`** (ADR-0011)
-`kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/` o URL del emisor), `effects[]` (primitivas, ver §6.5), `notes?`, `fingerprint`
+`kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/` o URL del emisor), `effects[]` (primitivas, ver §6.5), `neutrality_regime?` (booleano: si la operación se acoge al régimen de neutralidad), `notes?`, `fingerprint`
+
+`neutrality_regime` lo añadió ADR-0021 y **no decide nada**: en qué primitivas se compone un canje sigue siendo elección del usuario. Existe porque el diferimiento es condicional (la AEAT exige que la entidad adquirente sea española o esté en la Directiva 2009/133/CE), y sin el régimen un canje es una permuta plenamente sujeta por el art. 37.1.h. El motor fiscal lo lee para decir cuánto hay en juego: un `convert` sin régimen escrito sale en los criterios dudosos (#7 y #13, motivo `regime_not_recorded`), y un régimen declarado que contradice lo registrado sale como nota.
 
 Afecta a los lotes del `asset_id` en **todas** las cuentas (los lotes fiscales son globales, ADR-0009); `forced_sale` vende y cobra **cuenta a cuenta** según `per_account[]` (§6.5), sin reparto automático.
 
@@ -219,10 +234,10 @@ Cada efecto admite `asset_id?`: el activo sobre el que actúa, por defecto el `a
 | `scale` | `ratio` | `quantity × ratio` en cada lote; coste total y `acquisition_date` intactos |
 | `convert` | `to_asset_id`, `ratio` | Cada lote pasa a `to_asset_id` con `quantity × ratio`; coste total y fecha intactos; `source_lot_id` enlaza |
 | `carve_out` | `to_asset_id`, `ratio`, `cost_share` | Por cada lote crea otro en `to_asset_id` con `quantity × ratio`, coste `cost × cost_share` y la misma fecha; el lote origen queda con `cost × (1 − cost_share)` |
+| `forced_sale` | `per_account[]` de `{account_id, quantity, fee?, withholding?}` (`quantity` puede ser `"all"`), `unit_price`, `currency`, `fx_rate`, `fx_rate_date` | Como un `sell` FIFO por cada cuenta, con la comisión de cada bróker anotada por cuenta: hecho imponible. Los picos (contrasplit, liberadas, escisión) se liquidan **cuenta a cuenta**, como hace cada bróker (hallazgo 8) |
+| `grant` | `per_account[]` de `{account_id, quantity}`, `asset_id`, `unit_cost`, `currency`, `fx_rate`, `fx_rate_date`, `acquisition_date`, `income_eur?`, `income_base?` | Lotes nuevos por cuenta con `cost_eur = quantity × unit_cost / fx_rate`. No toca el efectivo: un desembolso del titular es un `buy` |
 
 **`ratio`** es una cadena decimal (`"4"`, `"0.25"`) **o una fracción `"nuevas/antiguas"` de enteros positivos** (`"4/3"`, `"1/3"`): un contrasplit 1:3 o "una nueva por cada tres" no tienen decimal exacto y guardarlos redondeados dejaría el libro a 1e-10 del bróker para siempre. Cantidad nueva = `quantity × nuevas / antiguas`; la división va a 10 decimales (ADR-0005) solo cuando no es exacta y, en ese caso, el total del activo se calcula una vez y el último lote y la última cuenta reciben el resto exacto, de modo que Σ lotes = Σ posiciones se mantiene.
-| `forced_sale` | `per_account[]` de `{account_id, quantity, fee?}` (`quantity` puede ser `"all"`), `unit_price`, `currency`, `fx_rate`, `fx_rate_date` | Como un `sell` FIFO por cada cuenta, con la comisión de cada bróker anotada por cuenta: hecho imponible. Los picos (contrasplit, liberadas, escisión) se liquidan **cuenta a cuenta**, como hace cada bróker (hallazgo 8) |
-| `grant` | `per_account[]` de `{account_id, quantity}`, `asset_id`, `unit_cost`, `currency`, `fx_rate`, `fx_rate_date`, `acquisition_date` | Lotes nuevos por cuenta con `cost_eur = quantity × unit_cost / fx_rate`. No toca el efectivo: un desembolso del titular es un `buy` |
 
 Ejemplo (fusión 2 antiguas → 1 nueva, con 10 y 7 títulos en dos cuentas; los picos de la nueva se liquidan a 40 € cuenta a cuenta):
 
@@ -233,6 +248,10 @@ Ejemplo (fusión 2 antiguas → 1 nueva, con 10 y 7 títulos en dos cuentas; los
    {"op":"forced_sale","asset_id":"ast_new","per_account":[{"account_id":"acc_b","quantity":"0.5"}],"unit_price":"40","currency":"EUR","fx_rate":"1","fx_rate_date":"2031-03-12"}
  ],"notes":"Absorción de OLD por NEW. El canje conserva antigüedad; el pico de acc_b (3,5 → 3) tributa."}
 ```
+
+**`withholding?` de `forced_sale`** (ADR-0021) es la retención a cuenta que practica **cada bróker**, en la divisa del efecto, con el mismo tratamiento que la de un `sell`: sale del efectivo que entra y no toca ni el valor de transmisión ni el coste de los lotes. Vive **por cuenta** y no en el efecto, porque una venta forzosa se liquida cuenta a cuenta y repartir un importe único entre cuentas sería una cifra inventada, igual que ya pasó con la comisión.
+
+**`income_eur?` e `income_base?` de `grant`** (ADR-0021) dicen que lo recibido **es renta en el momento de recibirlo** —un *fork*, un *airdrop*, las acciones de una escisión fuera del régimen de neutralidad, un dividendo en especie— y a qué base iría (`general` | `savings`). Los dos viajan juntos: uno sin el otro se rechaza. Se guardan y se enseñan, y **no entran en ninguna cifra de la declaración**: el criterio vigente (#8) es coste cero y nada que declarar en la recepción. Está en disputa, así que el motor fiscal lo saca en los criterios dudosos, con `income_eur` como exposición y la base que diga el evento.
 
 **Compensación en efectivo de una fusión** ("más 3 € por acción antigua"): `forced_sale` es siempre una venta, así que se registra como venta **parcial** de las antiguas antes del `convert`, con la cantidad y el precio que fijen el usuario y el asesor (`docs/fiscal-questions.md` #13). Si el asesor concluye que el efectivo reduce el coste de las nuevas en vez de tributar como transmisión, hará falta una primitiva nueva (ADR); hasta entonces el asistente `merger` de la CLI solo liquida picos y el componente en efectivo se registra con `raw`.
 
@@ -265,8 +284,8 @@ Consecuencias: registrar tarde es normal (importar un extracto semanas después,
 | `pendingTransfers` | Solicitudes de traspaso sin `transfer` final | ADR-0010 |
 | `pendingOrders` | Órdenes (`order_placed`) sin `buy`/`sell` que las cierre ni cancelación | ADR-0012 |
 | `theses` | Tesis abiertas y cerradas: estado, `buy`/`sell` enlazados, invertido, `result_eur`, comisiones acumuladas, `days_open` y, desde la feature 005, `benchmark_equivalent_eur` y `result_vs_index_eur` (o *sin dato* si falta un precio del índice) | Regla 16; los precios son informativos y nunca tocan la fiscalidad |
-| `realizedGains(year)` | Ganancias y pérdidas por operación y lote, con diferimientos | Motor fiscal |
-| `deferredLosses` | Pérdidas pendientes por regla de los dos meses, asociadas a lotes | §8.4 |
+| `realizedGains(year)` | Ganancias y pérdidas por operación y lote, **sin diferimientos**: el resultado propio de cada transmisión, redondeado una vez por operación (ADR-0005) | La regla de recompra no se aplica aquí: la aplica `taxYear` (§8.4) |
+| `lotJournal` | Lo que el motor FIFO hizo a cada lote, en orden: `open`, `consume` (con su propósito: transmisión, traspaso o canje), `carve`, `scale` y `units` (con la razón exacta del evento) y `gain` | Estado de la proyección, **nunca en la instantánea**. No decide nada: deja por escrito lo que el único motor de lotes decidió, para que el motor fiscal arrastre por encima una magnitud más —la pérdida diferida— sin un segundo FIFO que pudiera discrepar del primero (feature 009) |
 | `investmentIncome(year)` | Dividendos y retenciones | §6.2 |
 | `valuations(date)` | Valoraciones registradas | Modelo 720 |
 | `manualPrices(date)` | Último precio manual por activo (la `valuation` más reciente con `date ≤` la pedida, de cualquier cuenta), en su divisa y en EUR, con antigüedad y marca `stale` (`stale_price_days`) | Informativo: ningún cálculo fiscal lo usa (constitución II); nunca se interpola (feature 004) |
@@ -276,9 +295,16 @@ Consecuencias: registrar tarde es normal (importar un extracto semanas después,
 | `netWorth(date)` | Patrimonio total **siempre desglosado**: núcleo valorado, cubo valorado y efectivo por cuenta y divisa, con marca de parcialidad si falta un precio o un tipo de cambio. En la salida de texto, el total y los subtotales son la **suma de las cifras mostradas** (las partes tienen que cuadrar con el total a la vista); el valor exacto sin redondear va en `--json` | Excepción 2 de la constitución III; denominador de la regla 18 (feature 005) |
 | `bucketPositions(date)` | Posiciones abiertas del cubo: cantidad, coste medio, precio manual con antigüedad, valor, P&L latente, tesis asociada, días abierta, plazo superado y condición de invalidación | Especificación §6.2 (feature 005) |
 | `bucketStats(date)` | Estadísticas de operativa del cubo sobre tesis cerradas: tasa de acierto, ganancia y pérdida medias, esperanza, número de operaciones con aviso de significancia, comisiones sobre capital operado, máxima caída del resultado realizado y resultado frente al índice | Reglas 14 y 16 (feature 005) |
-| `integrity` | Comprobaciones: posiciones físicas ≥ 0, lotes fiscales = suma física por activo, huellas únicas, referencias colgantes (`corrects_id` a un evento inexistente o no anulado) | Verificación trimestral |
+| `integrity` | Comprobaciones: posiciones físicas ≥ 0, lotes fiscales = suma física por activo, huellas únicas, referencias colgantes (`corrects_id` a un evento inexistente o no anulado), un mismo ISIN en dos activos (`duplicate_isin`) | Verificación trimestral |
 | `deepCheck` | Sobre las líneas crudas (`atlas check --deep`): ids duplicados, huella que no coincide con los campos del evento (la huella cubre el tuple de negocio de §4, no `fee`: una comisión editada a mano no se detecta por huella), líneas no canónicas, campos que el tipo no define (`unknown_field`, solo en líneas de la versión actual), líneas de versiones antiguas (sugiere `compact`), proyección no reproducible | Verificación trimestral |
 | `snapshotOf` | Instantánea canónica de todas las proyecciones (claves ordenadas, decimales como texto) | *Golden files*, `compact`, `check --deep` |
+
+**El motor fiscal no es una proyección** (feature 009). `taxYear(events, año, { today })` recorre el estado ya proyectado y su diario de lotes y devuelve el informe del ejercicio: transmisiones por categoría de renta, rendimientos del capital mobiliario, la regla de recompra calculada (§8.4), la integración y compensación del art. 49, los saldos negativos pendientes por ejercicio de origen y categoría con su caducidad, la base del ahorro, las retenciones, la deducción por doble imposición, los criterios dudosos con el dinero en juego y lo que el motor declara no calcular. Dos negativas explícitas:
+
+- **Un libro con eventos inválidos no da cifras.** Las consultas de solo lectura siguen proyectando en modo degradado (ADR-0015), pero una base calculada saltándose un evento sería aproximada, así que la respuesta es el error `tax_ledger_invalid` con la lista de lo que hay que reparar, no un número.
+- **Un ejercicio anterior a 2018 tampoco.** El régimen de compensación vigente (el 25 %, art. 49) empieza ahí; antes hubo un transitorio del 10-15-20 %. Es `tax_year_unsupported`, y lo lanza también cuando el ejercicio pedido es válido pero el libro tiene cifras anteriores a 2018.
+
+`movedTaxYears(events, actual, siguiente, año)` compara la base del ahorro de cada ejercicio cerrado con la configuración en vigor y con la propuesta: es lo que permite que `atlas settings set` avise de que un cambio de configuración mueve un ejercicio pasado aunque no mueva ninguna ganancia realizada.
 
 ## 8. FIFO y reglas fiscales aplicadas
 
@@ -298,7 +324,37 @@ Tras un `convert` (fusión, cambio de clase…), los lotes pasan al activo nuevo
 
 ### 8.4 Regla de recompra con pérdidas ("dos meses" / "un año")
 
-Para cada transmisión con pérdida de un activo —**tanto una venta ordinaria como una venta forzosa** de acción corporativa (liquidación de un fondo, pico en efectivo de un contrasplit, pata en dinero de una fusión): se dice con nombre propio porque el código lo hacía mal precisamente por no estar dicho— se buscan adquisiciones del mismo `asset_id` en `[fiscal_date − W, fiscal_date + W]`, **ambos extremos incluidos y también el propio día de la venta** (el día cero pertenece a los dos lados de la ventana; para no avisar dos veces, manda la posición en el fichero: una compra anterior es `wash_sale_window_prior_buy` y una posterior, `wash_sale_window_repurchase`), con la ventana `W = Settings.wash_sale_window[asset.type]`, expresada como `"2m"`, `"1y"` o `"<n>d"` y contada **de fecha a fecha** en meses o años naturales, no en días (por defecto `"1y"` para `fund`, `money_market` y `crypto`; `"2m"` para `stock`, `etc`, `etp`; ADR-0013 y pregunta fiscal #14, *verificar*). La forma antigua `wash_sale_window_days` (entero de días) se sigue aceptando al cargar y equivale a `"<n>d"`. Cuentan como adquisición `buy`, `grant` con coste y —salvo que `Settings.wash_sale_transfer_counts` diga lo contrario— un `transfer` **entrante**, que es una adquisición de valores homogéneos aunque no tribute en origen (`docs/fiscal-questions.md` #2b). **No** cuentan `scale` (acciones liberadas) ni `grant` con coste cero: no hay desembolso. La pérdida se difiere en la proporción `min(cantidad recomprada, cantidad vendida) / cantidad vendida`, se asocia a los lotes recomprados (los más cercanos en fecha primero) y se libera, como pérdida computable, en el ejercicio en que esos lotes se transmitan. El diferimiento **viaja con el lote**: si un lote recomprado se consume por `transfer`, `convert` o `carve_out` (reparto por `cost_share`) antes de liberarse, pasa a sus lotes descendientes (`source_lot_id`) y se libera cuando **estos** se transmiten (pregunta fiscal #15, *verificar*). La app avisa en el momento de registrar la recompra.
+Para cada transmisión con pérdida de un activo —**tanto una venta ordinaria como una venta forzosa** de acción corporativa (liquidación de un fondo, pico en efectivo de un contrasplit, pata en dinero de una fusión): se dice con nombre propio porque el código lo hacía mal precisamente por no estar dicho— se buscan adquisiciones del mismo `asset_id` en `[fiscal_date − W, fiscal_date + W]`, **ambos extremos incluidos y también el propio día de la venta** (el día cero pertenece a los dos lados de la ventana; para no avisar dos veces, manda la posición en el fichero: una compra anterior es `wash_sale_window_prior_buy` y una posterior, `wash_sale_window_repurchase`), con la ventana `W = Settings.wash_sale_window[asset.type]`, expresada como `"2m"`, `"1y"` o `"<n>d"` y contada **de fecha a fecha** en meses o años naturales, no en días (por defecto `"1y"` para `fund`, `money_market` y `crypto`; `"2m"` para `stock`, `etc`, `etp`; ADR-0013 y pregunta fiscal #14, *verificar*). La forma antigua `wash_sale_window_days` (entero de días) se sigue aceptando al cargar y equivale a `"<n>d"`. Cuentan como adquisición `buy`, `grant` con coste y —salvo que `Settings.wash_sale_transfer_counts` diga lo contrario— un `transfer` **entrante**, que es una adquisición de valores homogéneos aunque no tribute en origen (`docs/fiscal-questions.md` #2b). **No** cuentan `scale` (acciones liberadas) ni `grant` con coste cero: no hay desembolso. La pérdida se difiere en la proporción `min(cantidad recomprada, cantidad vendida) / cantidad vendida`, se asocia a los lotes recomprados (los más cercanos en fecha primero; a igual distancia, el orden de la segunda pasada de §7.1) y se libera, como pérdida computable, en el ejercicio en que esos lotes se transmitan. El diferimiento **viaja con el lote**: si un lote recomprado se consume por `transfer`, `convert` o `carve_out` (reparto por `cost_share`) antes de liberarse, pasa a sus lotes descendientes (`source_lot_id`) y se libera cuando **estos** se transmiten (pregunta fiscal #15, *verificar*).
+
+**Quién avisa y quién calcula** (feature 009). La proyección solo **avisa**, en las dos direcciones de la ventana; quien cuantifica la pérdida diferida, la reparte entre los lotes recomprados, la hace viajar y la libera es el motor fiscal (`taxYear`, §7), que recorre el diario de lotes después de la proyección. **No hay un segundo FIFO**: qué lotes consumió cada venta no se vuelve a decidir, se lee.
+
+#### Las cuatro reglas finas: criterios #18 a #21
+
+Lo anterior deja abiertas cuatro cosas que el motor no puede dejar de decidir. Las fijó la dirección el 2026-09-18 y están numeradas en `docs/fiscal-questions.md`:
+
+- **#18 — solo cuenta lo que sigue en el patrimonio.** Una adquisición de la ventana difiere únicamente por las unidades que **siguen en cartera** tras la transmisión con pérdida: ni las que esa misma venta consumió por FIFO ni las ya transmitidas. Sin lote portador, el diferimiento no tendría dónde viajar ni cuándo liberarse (art. 33.5 *in fine*, «que permanezcan en el patrimonio»). Con aportación mensual y un reembolso total, esto es lo que evita diferir una pérdida que no tiene a qué agarrarse.
+- **#19 — cada unidad recomprada difiere una sola vez.** Cada unidad adquirida difiere como mucho una unidad transmitida, y las transmisiones con pérdida se atienden en orden cronológico. Una recompra que llega cuando la pérdida ya está cubierta por adquisiciones anteriores **no difiere nada**, aunque su aviso haya salido.
+- **#20 — la unidad es la operación, no el lote.** La regla mira el **resultado neto de la transmisión**: una venta que consume un lote con ganancia y otro con pérdida se juzga por su saldo, igual que el redondeo del #6.
+- **#21 — lo liberado vuelve a pasar por la regla.** Lo que una transmisión libera se suma a su propio resultado y la regla se aplica al total: si con la pérdida liberada la transmisión pierde y hay una adquisición en su ventana, se vuelve a diferir.
+
+#### Un split entre la pérdida y la recompra no excluye la recompra
+
+El diario de lotes (§7) guarda en cada `scale` la **razón exacta** del evento (`"2"`, `"1/4"`), y deja una entrada `units` cuando se registra un split de un activo que nadie tenía —admitido solo si el evento no tiene más efectos que `scale`—. Con la razón siempre escrita, el motor convierte lo comprado después a las unidades de la venta: 20 títulos tras un 2:1 son 10 de los de antes. Una división que no sale exacta se redondea a diez decimales, como cualquier reparto (ADR-0005). Lo asignado y lo usado por el #19 se guardan en las unidades de la propia compra; en el informe, lo diferido va en unidades de la venta y cada adquisición en las suyas.
+
+#### Provisionalidad
+
+Si el último día de la ventana **posterior** es igual o mayor que la fecha de la consulta, la transmisión sale marcada como **provisional** hasta esa fecha: una compra registrada ese mismo día todavía difiere, y decirlo computable sería adelantarse.
+
+#### Los dos avisos y sus detalles
+
+Los dos salen en `atlas check` y en la previsualización de `atlas add buy|sell`, y los dos dicen que la pérdida **puede** no ser computable y remiten a `atlas tax <año>` para la cifra: cuánto difiere cada adquisición solo lo sabe el motor (#19).
+
+| Aviso | Cuándo | Detalles |
+|---|---|---|
+| `wash_sale_window_repurchase` | Al registrar una adquisición dentro de la ventana de una transmisión con pérdida anterior | `asset_id`, `buy_date`, `buy_quantity` (**lo comprado**), `sale_event_id`, `sale_date`, `loss_eur`, `tax_year` (el de la venta), `window_end`, `window` |
+| `wash_sale_window_prior_buy` | Al registrar una transmisión con pérdida que tiene adquisiciones en la ventana anterior | `asset_id`, `sale_date`, `buy_event_id`, `buy_date`, `held_quantity` (**lo que de esa compra sigue en cartera**, en las unidades de hoy), `loss_eur`, `tax_year`, `window_start`, `window` |
+
+El aviso de compra previa nombra **solo** las compras que la venta deja en cartera (#18) y dice cuánto de ellas queda, sumando sus lotes abiertos: lo comprado no es lo que queda tras un contrasplit ni tras una venta que consumió parte. Una compra anotada una vez por cuenta (un `grant` con coste en dos cuentas) se nombra una sola vez. Que una misma clave signifique «lo comprado» en un aviso y «lo que queda» en el otro sería una trampa, y por eso se llaman distinto.
 
 ### 8.5 Transformaciones por evento corporativo
 
@@ -352,3 +408,17 @@ Contexto original: Existen porque la revisión adversarial de `docs/fiscal-quest
 **El calendario lo manda la última.** Hacer obligatorio `fx_rate_date` es un **endurecimiento**, y ADR-0018 solo lo permite dentro de la v1 **mientras el libro real esté vacío**: el cargador juzga las líneas viejas con las reglas de hoy, así que endurecer con datos dentro deja el libro entero ilegible. Por tanto las nueve se implementan **antes de que se registre la primera operación real**. Pasado ese punto exigen `schema_version = 2` y migración.
 
 Las ocho primeras son **compatibles** en el sentido de ADR-0018 (campos opcionales y un tipo de evento nuevo) y no urgen por sí solas; van juntas porque se consumen a la vez.
+
+**Quién los consume, desde la feature 009.** Dejaron de ser previsiones: el motor fiscal los lee, y ninguno cambió de forma ni de valor por defecto al hacerlo.
+
+| Campo | Qué hace con él el motor fiscal |
+|---|---|
+| `income_category` | Decide si una transmisión entra en las ganancias y pérdidas patrimoniales (art. 33) o en los rendimientos del capital mobiliario (art. 25.2), que compensan distinto |
+| `market` | Se enseña, sin clasificar, en cada pérdida de un valor cotizado que declara el criterio #2 en disputa: el sistema no sabe qué mercados son de la UE |
+| `issuer_country` | Todavía no lo lee nadie |
+| `fee_kind` | Las comisiones sueltas marcadas `custody` o `administration` se deducen del rendimiento íntegro del capital mobiliario (art. 26.1.a, criterio #23); el resto, no |
+| `withholding` de `forced_sale` | Suma a las retenciones a cuenta del ejercicio, como la de un `sell` |
+| `income_eur`, `income_base` | No se integran (criterio #8 vigente): salen en los criterios dudosos, con `income_eur` como exposición y la base que dice el evento |
+| `swap` | Transmisión más adquisición, valorada por el art. 37.1.h; la comisión resta de lo transmitido (criterio #17) |
+| `neutrality_regime` | No decide nada; un `convert` sin régimen escrito sale en los dudosos (#7 y #13) y un régimen que contradice lo registrado sale como nota |
+| `fx_rate_date` | Convierte cada operación a su fecha fiscal, sin la cual nada de lo anterior es reproducible |
