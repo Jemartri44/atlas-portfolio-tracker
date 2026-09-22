@@ -406,3 +406,17 @@ Contexto original: Existen porque la revisión adversarial de `docs/fiscal-quest
 **El calendario lo manda la última.** Hacer obligatorio `fx_rate_date` es un **endurecimiento**, y ADR-0018 solo lo permite dentro de la v1 **mientras el libro real esté vacío**: el cargador juzga las líneas viejas con las reglas de hoy, así que endurecer con datos dentro deja el libro entero ilegible. Por tanto las nueve se implementan **antes de que se registre la primera operación real**. Pasado ese punto exigen `schema_version = 2` y migración.
 
 Las ocho primeras son **compatibles** en el sentido de ADR-0018 (campos opcionales y un tipo de evento nuevo) y no urgen por sí solas; van juntas porque se consumen a la vez.
+
+**Quién los consume, desde la feature 009.** Dejaron de ser previsiones: el motor fiscal los lee, y ninguno cambió de forma ni de valor por defecto al hacerlo.
+
+| Campo | Qué hace con él el motor fiscal |
+|---|---|
+| `income_category` | Decide si una transmisión entra en las ganancias y pérdidas patrimoniales (art. 33) o en los rendimientos del capital mobiliario (art. 25.2), que compensan distinto |
+| `market` | Se enseña, sin clasificar, en cada pérdida de un valor cotizado que declara el criterio #2 en disputa: el sistema no sabe qué mercados son de la UE |
+| `issuer_country` | Todavía no lo lee nadie |
+| `fee_kind` | Las comisiones sueltas marcadas `custody` o `administration` se deducen del rendimiento íntegro del capital mobiliario (art. 26.1.a, criterio #23); el resto, no |
+| `withholding` de `forced_sale` | Suma a las retenciones a cuenta del ejercicio, como la de un `sell` |
+| `income_eur`, `income_base` | No se integran (criterio #8 vigente): salen en los criterios dudosos, con `income_eur` como exposición y la base que dice el evento |
+| `swap` | Transmisión más adquisición, valorada por el art. 37.1.h; la comisión resta de lo transmitido (criterio #17) |
+| `neutrality_regime` | No decide nada; un `convert` sin régimen escrito sale en los dudosos (#7 y #13) y un régimen que contradice lo registrado sale como nota |
+| `fx_rate_date` | Convierte cada operación a su fecha fiscal, sin la cual nada de lo anterior es reproducible |
