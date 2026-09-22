@@ -33,7 +33,7 @@ import {
   type SwapEvent,
 } from "../schema/events.js";
 import { incomeCategoryOf, type Settings } from "../settings/settings.js";
-import { type CriterionId, sortCriteria } from "./criteria.js";
+import { type CriterionId, categoryCriterion, sortCriteria } from "./criteria.js";
 import type {
   Converted,
   DeferralLine,
@@ -341,7 +341,9 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
     criteria.add("13");
   }
   if (asset.asset_type === "etc" || asset.asset_type === "etp") {
-    criteria.add("etc_etp_category");
+    criteria.add(
+      categoryCriterion(asset.asset_type, incomeCategoryOf(ctx.settings, asset.asset_type)),
+    );
   }
   const lots: TransmissionLot[] = gain.by_lot.map((slice) => {
     const lineage = lineageOf(ctx, slice.lot_id);

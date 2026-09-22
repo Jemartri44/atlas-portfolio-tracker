@@ -82,15 +82,18 @@ const DOCUMENT_SILENT: Record<string, { certainty?: string; risk?: string }> = {
   "2:crypto": {
     risk: "the document gives crypto a certainty (low) and no direction of risk: one year by prudence defers more, the conservative side",
   },
+  "24:etc_gain": {
+    risk: "the document gives the risk of its own reading, movable capital income; a capital gain is the opposite one, and offsetting a loss in full is the aggressive side",
+  },
+  "24:etp_gain": {
+    risk: "the same, for an ETP",
+  },
   "2:fund": {
     certainty:
       "the document states no certainty for the one year of funds, the letter g) of article 33.5, which it does not dispute",
     risk: "and no direction either: one year is the longer window, the conservative side",
   },
 };
-
-/** In the catalogue and not in the table: the question of ETC and ETP, which has no number. */
-const NOT_IN_THE_TABLE = new Set(["ETC/ETP"]);
 
 describe("the fiscal criteria of the code and of docs/fiscal-questions.md", () => {
   it("finds the table, all of it", () => {
@@ -131,7 +134,7 @@ describe("the fiscal criteria of the code and of docs/fiscal-questions.md", () =
   it("has nothing the document does not have", () => {
     const documented = new Set(rows().map((row) => row.id));
     const extra = [...new Set(Object.values(FISCAL_CRITERIA).map((entry) => entry.doc))].filter(
-      (id) => !documented.has(id) && !NOT_IN_THE_TABLE.has(id),
+      (id) => !documented.has(id),
     );
     expect(extra).toEqual([]);
   });

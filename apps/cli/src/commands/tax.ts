@@ -80,7 +80,10 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
   "21": "lo liberado vuelve a pasar por la regla",
   "22": "orden de la compensación entre ejercicios",
   "23": "gastos de administración y depósito (art. 26.1.a)",
-  etc_etp_category: "ETC y ETP: ¿ganancia patrimonial o capital mobiliario?",
+  "24:etc": "ETC como rendimiento del capital mobiliario (la consulta V0267-25)",
+  "24:etc_gain": "ETC como ganancia patrimonial (lo contrario de la consulta V0267-25)",
+  "24:etp": "ETP como rendimiento del capital mobiliario",
+  "24:etp_gain": "ETP como ganancia patrimonial",
 };
 
 const criteriaText = (ids: readonly CriterionId[]): string =>

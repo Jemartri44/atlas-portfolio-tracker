@@ -111,7 +111,7 @@ describe("hand-computed exercise, 2028: transmissions", () => {
         text(a.amount_eur),
       ]),
     ).toEqual([[id.E7, "prior", "5", "-75"]]);
-    expect(line.criteria).toEqual(["1", "2:listed", "3", "6", "14", "etc_etp_category"]);
+    expect(line.criteria).toEqual(["1", "2:listed", "3", "6", "14", "24:etc_gain"]);
   });
 
   it("E13: the cash in lieu of the reverse split, 45.00 − 40.00", () => {
@@ -143,7 +143,7 @@ describe("hand-computed exercise, 2028: transmissions", () => {
       ]),
     ).toEqual([[id.E22, "posterior", "2", "-10"]]);
     expect(line.deferral?.window_end).toBe("2029-01-02");
-    expect(line.criteria).toEqual(["1", "2:listed", "3", "6", "14", "21", "etc_etp_category"]);
+    expect(line.criteria).toEqual(["1", "2:listed", "3", "6", "14", "21", "24:etc_gain"]);
   });
 
   it("E20: 600.00 + 135.00 of cost, releases −30.00 that travelled through the transfer (#15)", () => {
@@ -309,7 +309,7 @@ describe("hand-computed exercise, 2028: the doubtful criteria", () => {
   it("#1, the category of ETC and #22 move nothing this year", () => {
     expect(text(doubtful("1")?.base_difference_eur)).toBe("0");
     expect(doubtful("1")?.direction).toBe("none");
-    expect(text(doubtful("etc_etp_category")?.base_difference_eur)).toBe("0");
+    expect(text(doubtful("24:etc_gain")?.base_difference_eur)).toBe("0");
     expect(text(doubtful("22")?.exposure_eur)).toBe("0");
   });
 
@@ -322,7 +322,7 @@ describe("hand-computed exercise, 2028: the doubtful criteria", () => {
       "17",
       "21",
       "22",
-      "etc_etp_category",
+      "24:etc_gain",
     ]);
   });
 });

@@ -162,6 +162,44 @@ describe("categories of income (ADR-0021)", () => {
     expect(text(report.base_eur)).toBe("375");
   });
 
+  it("#24: names the reading each of ETC and ETP applies, and only doubts what it should", () => {
+    // The document (the binding ruling V0267-25) says movable capital income.
+    const ledger = (category: "capital_gain" | "movable_capital") => {
+      const b = taxBuilder({
+        ...DEFAULT_SETTINGS,
+        income_category: { etc: category, etp: category },
+      });
+      b.asset("etp_p", { asset_type: "etp", asset_class: "crypto", transferable: false });
+      buy(b, "etc_e", "2027-01-11", "10", "100");
+      const etc = sell(b, "etc_e", "2027-06-01", "10", "120");
+      buy(b, "etp_p", "2027-01-11", "10", "100");
+      const etp = sell(b, "etp_p", "2027-06-01", "10", "120");
+      return { report: reportOf(b.build(), 2027), etc, etp };
+    };
+    // Applied as the document says: the ETC is certain and stops being doubtful.
+    const documented = ledger("movable_capital");
+    expect(lineOf(documented.report, documented.etc.id).criteria).toContain("24:etc");
+    expect(lineOf(documented.report, documented.etp.id).criteria).toContain("24:etp");
+    const doubted = documented.report.doubtful.map((item) => item.criterion);
+    expect(doubted).not.toContain("24:etc");
+    expect(doubted).toContain("24:etp");
+    expect(
+      documented.report.doubtful.find((item) => item.criterion === "24:etp")?.documented_risk,
+    ).toBe("conservative");
+    // Applied the other way round: both doubtful, and aggressive.
+    const opposite = ledger("capital_gain");
+    expect(lineOf(opposite.report, opposite.etc.id).criteria).toContain("24:etc_gain");
+    expect(lineOf(opposite.report, opposite.etp.id).criteria).toContain("24:etp_gain");
+    expect(
+      opposite.report.doubtful
+        .filter((item) => item.criterion.startsWith("24:"))
+        .map((item) => [item.criterion, item.documented_risk]),
+    ).toEqual([
+      ["24:etc_gain", "aggressive"],
+      ["24:etp_gain", "aggressive"],
+    ]);
+  });
+
   it("a release of a loss of the other category is integrated where the loss came from", () => {
     const b = taxBuilder({ ...DEFAULT_SETTINGS, income_category: { etc: "movable_capital" } });
     buy(b, "etc_e", "2027-01-11", "10", "100");

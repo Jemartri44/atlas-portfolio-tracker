@@ -50,6 +50,7 @@ import { compensate, type YearBalances } from "./compensation.js";
 import {
   CRITERION_IDS,
   type CriterionId,
+  categoryCriterion,
   FISCAL_CRITERIA,
   isDoubtful,
   sortCriteria,
@@ -496,12 +497,21 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
         ];
   };
   const listed = ["stock", "etf", "etc", "etp"] as const;
-  const categories = Object.fromEntries(
-    (["etc", "etp"] as const).map((type) => [
-      type,
-      incomeCategoryOf(settings, type) === "capital_gain" ? "movable_capital" : "capital_gain",
-    ]),
-  );
+  // #24, one reading per type: which of the four variants each one applies
+  // depends on its own `income_category`, so they are not flipped together.
+  const category = (type: "etc" | "etp"): { criterion: CriterionId; settings: Settings } => {
+    const applied = incomeCategoryOf(settings, type);
+    return {
+      criterion: categoryCriterion(type, applied),
+      settings: {
+        ...settings,
+        income_category: {
+          ...settings.income_category,
+          [type]: applied === "capital_gain" ? "movable_capital" : "capital_gain",
+        },
+      },
+    };
+  };
   return [
     { criterion: "1", settings: { ...settings, fiscal_date_rule: flipped } },
     ...windows("2:listed", listed, "2m", "1y"),
@@ -515,10 +525,8 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
         wash_sale_transfer_counts: settings.wash_sale_transfer_counts === false,
       },
     },
-    {
-      criterion: "etc_etp_category",
-      settings: { ...settings, income_category: { ...settings.income_category, ...categories } },
-    },
+    category("etc"),
+    category("etp"),
   ];
 };
 

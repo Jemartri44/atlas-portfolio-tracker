@@ -42,9 +42,20 @@ export interface FiscalCriterion {
  * - `2:fund`: one year for funds, the letter g) of article 33.5, which the
  *   document does not dispute.
  * - `2:other`: any other window (days, or two months for a fund): no reading
- *   of the document supports it. `etc_etp_category` is the finding the review calls
- * the largest in amount and that has no number: whether the disposal of an ETC
- * or an ETP is a capital gain or movable capital income.
+ *   of the document supports it.
+ *
+ * Criterion #24, the income category of an ETC or an ETP, is labelled the same
+ * way, by the reading in force (`income_category`), and that is why it has four
+ * variants and not two: the certainty, the direction of the risk and with them
+ * whether the criterion is doubtful all depend on which reading is applied.
+ *
+ * - `24:etc`, `24:etp`: movable capital income, what the document says. The ETC
+ *   is **high** (a binding ruling, V0267-25, calls it so in every case) and
+ *   stops being doubtful; the ETP is **medium**, because it depends on the
+ *   structure of each product.
+ * - `24:etc_gain`, `24:etp_gain`: a capital gain, the opposite of the document.
+ *   Both doubtful, and **aggressive**: a loss would offset in full what the
+ *   documented reading limits to 25 %.
  *
  * #18 to #23 were numbered by the direction on 2026-09-18 (questions Q1, Q2 and
  * Q5 of the feature 009). Where the document gives a criterion two certainties
@@ -82,7 +93,10 @@ export const FISCAL_CRITERIA = {
   "21": { doc: "21", certainty: "low", risk: "conservative" },
   "22": { doc: "22", certainty: "medium", risk: "neutral" },
   "23": { doc: "23", certainty: "high", risk: "conservative" },
-  etc_etp_category: { doc: "ETC/ETP", certainty: "disputed", risk: "both" },
+  "24:etc": { doc: "24", certainty: "high", risk: "conservative" },
+  "24:etc_gain": { doc: "24", certainty: "medium", risk: "aggressive" },
+  "24:etp": { doc: "24", certainty: "medium", risk: "conservative" },
+  "24:etp_gain": { doc: "24", certainty: "medium", risk: "aggressive" },
 } as const satisfies Record<string, FiscalCriterion>;
 
 export type CriterionId = keyof typeof FISCAL_CRITERIA;
@@ -122,8 +136,17 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "21",
   "22",
   "23",
-  "etc_etp_category",
+  "24:etc",
+  "24:etc_gain",
+  "24:etp",
+  "24:etp_gain",
 ];
+
+/** Which variant of criterion #24 an ETC or an ETP applies, by the reading in force. */
+export const categoryCriterion = (
+  type: "etc" | "etp",
+  category: "capital_gain" | "movable_capital",
+): CriterionId => (category === "movable_capital" ? `24:${type}` : `24:${type}_gain`);
 
 /** Doubtful is anything that is not high certainty (feature 009, Q8). */
 export const isDoubtful = (id: CriterionId): boolean => FISCAL_CRITERIA[id].certainty !== "high";

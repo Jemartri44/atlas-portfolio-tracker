@@ -439,7 +439,7 @@
             "5",
             "6",
             "14",
-            "etc_etp_category"
+            "24:etc_gain"
           ],
           "deferred_eur": "0",
           "event_id": "01MQTWHB78RC2FADH9B774BHS5",
@@ -508,7 +508,7 @@
             "5",
             "6",
             "14",
-            "etc_etp_category"
+            "24:etc_gain"
           ],
           "deferred_eur": "0",
           "event_id": "01MQTWHB78RC2FADH9B774BHS5",
@@ -1116,11 +1116,11 @@
       },
       {
         "base_difference_eur": "0",
-        "certainty": "disputed",
-        "criterion": "etc_etp_category",
+        "certainty": "medium",
+        "criterion": "24:etc_gain",
         "deferred_difference_eur": "0",
         "direction": "none",
-        "documented_risk": "both",
+        "documented_risk": "aggressive",
         "event_ids": [
           "01MQTWHB78RC2FADH9B774BHS5",
           "01MQTWHB78RC2FADH9B774BHS5"
