@@ -348,13 +348,23 @@ const confirmMovedYears = async (
     );
     ctx.io.out(
       table(
-        ["ejercicio", "base antes EUR", "base después EUR", "pendiente antes", "pendiente después"],
+        [
+          "ejercicio",
+          "base antes EUR",
+          "base después EUR",
+          "pendiente antes",
+          "pendiente después",
+          "diferido antes",
+          "diferido después",
+        ],
         bases.map((impact) => [
           String(impact.year),
           impact.before.amount.toString(),
           impact.after.amount.toString(),
           impact.pending_before.amount.toString(),
           impact.pending_after.amount.toString(),
+          impact.deferred_before.amount.toString(),
+          impact.deferred_after.amount.toString(),
         ]),
       ),
     );

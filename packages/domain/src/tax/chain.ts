@@ -74,6 +74,13 @@ export interface ChainCore {
   bases: Map<number, Money>;
   /** What each year of the chain leaves pending, by origin and category. */
   pendings: Map<number, PendingLoss[]>;
+  /**
+   * What the wash-sale rule still held deferred at 31/12 of each year of the
+   * chain. Per year, like the other two, because it is the **third figure an
+   * income tax return declares**: a reader asking for the figures of 2027 on a
+   * chain built for 2028 has to get the deferred loss of 2027.
+   */
+  deferrals: Map<number, Money>;
 }
 
 /** A reading that could not be computed because the ledger has invalid events under it. */
@@ -112,6 +119,11 @@ export const categoryOf = (state: LedgerState, assetId: string): IncomeCategory 
  */
 export const chainFigures = (chain: ChainCore, year: number): Map<string, Money> => {
   const figures = new Map<string, Money>();
+  // The three come from the three per-year maps, so all three answer for the
+  // **year asked**. The deferred one used to be read off the cutoff of the
+  // year the chain was built for, which is right only while every caller asks
+  // for that same year — an invariant nothing enforced, on a figure a return
+  // declares.
   figures.set("savings_base", chain.bases.get(year) as Money);
   // Always there: the chain walks every year from its first up to this one.
   for (const entry of chain.pendings.get(year) as PendingLoss[]) {
@@ -119,12 +131,7 @@ export const chainFigures = (chain: ChainCore, year: number): Map<string, Money>
   }
   // What the wash-sale rule still holds deferred at 31/12 of that year, the
   // third figure a `renta` declares (feature 009, Q9).
-  figures.set(
-    "deferred",
-    chain.pendingDeferrals
-      .reduce((total, entry) => total.add(entry.amount_eur), zero())
-      .roundToCents(),
-  );
+  figures.set("deferred", chain.deferrals.get(year) as Money);
   return figures;
 };
 
@@ -187,7 +194,7 @@ export const taxChain = (
   );
   const types = new Map<Ulid, string>([...byId].map(([id, event]) => [id, event.type]));
   const entryYear = yearOfEntry(state, byId);
-  const walk = walkWashSales(state, options.today, types, (eventId) => entryYear(eventId) > year);
+  const walk = walkWashSales(state, options.today, types, entryYear);
   const lots = new Map<string, FiscalLot>();
   for (const entry of state.lots.values()) {
     for (const lot of [...entry.open, ...entry.closed]) {
@@ -261,11 +268,25 @@ export const taxChain = (
   const firstFigureYear = Math.min(...years);
   const bases = new Map<number, Money>();
   const pendings = new Map<number, PendingLoss[]>();
+  const deferrals = new Map<number, Money>();
+  // `pendingByYear` names every year the lot journal crosses. A year before
+  // the first of them has nothing deferred yet; one after the last keeps what
+  // the whole ledger leaves, which is the entry of that last year.
+  const walked = [...walk.pendingByYear.keys()];
+  const lastWalked = walked.length === 0 ? undefined : Math.max(...walked);
+  const deferredAt = (y: number): PendingDeferral[] =>
+    walk.pendingByYear.get(lastWalked !== undefined && y > lastWalked ? lastWalked : y) ?? [];
   for (let y = firstYear; y <= year; y += 1) {
     compensation = compensate(y, balances.get(y) ?? zeroBalances(), pending, rules);
     bases.set(y, compensation.base_eur);
     pending = compensation.pending;
     pendings.set(y, pending);
+    deferrals.set(
+      y,
+      deferredAt(y)
+        .reduce((total, entry) => total.add(entry.amount_eur), zero())
+        .roundToCents(),
+    );
     const anchored = filed.find((entry) => entry.year === y);
     if (anchored !== undefined) {
       const declared = anchored.pending.map((entry) => ({
@@ -293,9 +314,10 @@ export const taxChain = (
     expenses,
     compensation,
     ...(anchor === undefined ? {} : { anchor }),
-    pendingDeferrals: walk.pendingAtCutoff,
+    pendingDeferrals: deferredAt(year),
     firstYear,
     bases,
     pendings,
+    deferrals,
   };
 };

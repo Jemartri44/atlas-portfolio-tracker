@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { type ChainCore, chainFigures, taxChain } from "../../src/tax/chain.js";
 import { taxYear } from "../../src/tax/year.js";
 import type { LedgerBuilder } from "../ledger-builder.js";
-import { buy, sell, taxBuilder, text } from "./helpers.js";
+import { buy, HAND_SETTINGS, sell, taxBuilder, text } from "./helpers.js";
 
 const TODAY = "2035-01-01";
 
@@ -111,5 +112,71 @@ describe("where the chain of years starts (P5)", () => {
     // The day before it was filed, the return does not exist yet (ADR-0016).
     expect(text(taxYear(events, 2026, { today: "2026-06-17" }).base_eur)).toBe("300");
     expect(text(taxYear(events, 2026, { today: "2026-06-18" }).base_eur)).toBe("0");
+  });
+});
+
+describe("the figures of a year, on a chain built for another one", () => {
+  /**
+   * A loss of 2027 deferred by a repurchase inside its window, released by the
+   * sale of 2028. At 31/12/2027 the rule holds −200,00 deferred; at 31/12/2028
+   * it holds nothing.
+   *
+   * `chainFigures(chain, year)` used to take the deferred figure from the
+   * cutoff of the year the **chain** was built for, so asking a chain of 2028
+   * for the figures of 2027 answered 0,00 where the return of 2027 declares
+   * −200,00. Two of the three figures came out by year and the third did not,
+   * on the three figures an income tax return declares.
+   */
+  const deferredAndReleased = () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2027-01-10", "10", "100");
+    // −200,00, and the buy of July falls inside the two-month window.
+    sell(b, "stock_s", "2027-06-01", "10", "80");
+    buy(b, "stock_s", "2027-07-01", "10", "80");
+    sell(b, "stock_s", "2028-06-01", "10", "90");
+    return b.build();
+  };
+
+  const deferredOf = (year: number, chainFor: number): string =>
+    text(
+      chainFigures(
+        taxChain(deferredAndReleased(), chainFor, { today: TODAY }) as ChainCore,
+        year,
+      ).get("deferred"),
+    );
+
+  it("answers with the deferred loss of the year asked, not of the year the chain was built for", () => {
+    expect(deferredOf(2027, 2027)).toBe("-200");
+    expect(deferredOf(2028, 2028)).toBe("0");
+    // The one that used to answer 0,00.
+    expect(deferredOf(2027, 2028)).toBe("-200");
+  });
+
+  it("keeps what the whole ledger leaves for every year after the last one it walks", () => {
+    expect(deferredOf(2029, 2029)).toBe("0");
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2027-01-10", "10", "100");
+    sell(b, "stock_s", "2027-06-01", "10", "80");
+    buy(b, "stock_s", "2027-07-01", "10", "80");
+    const stillDeferred = b.build();
+    const figures = (year: number) =>
+      text(
+        chainFigures(taxChain(stillDeferred, year, { today: TODAY }) as ChainCore, year).get(
+          "deferred",
+        ),
+      );
+    expect(figures(2027)).toBe("-200");
+    expect(figures(2030)).toBe("-200");
+  });
+
+  it("has nothing deferred in a year the ledger does not reach yet", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    fileReturnOf2025(b);
+    buy(b, "stock_s", "2027-01-10", "10", "100");
+    sell(b, "stock_s", "2027-06-01", "10", "80");
+    buy(b, "stock_s", "2027-07-01", "10", "80");
+    const chain = taxChain(b.build(), 2027, { today: TODAY }) as ChainCore;
+    expect(text(chainFigures(chain, 2025).get("deferred"))).toBe("0");
+    expect(text(chainFigures(chain, 2027).get("deferred"))).toBe("-200");
   });
 });

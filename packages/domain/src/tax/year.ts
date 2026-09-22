@@ -127,7 +127,11 @@ const computeCore = (
   };
 };
 
-/** A tax year whose savings base, or what it leaves pending, moves with a change of settings. */
+/**
+ * A tax year one of whose three declared figures —the savings base, what it
+ * leaves pending, what it still holds deferred— moves with a change of
+ * settings.
+ */
 export interface MovedTaxYear {
   year: number;
   before: Money;
@@ -140,6 +144,15 @@ export interface MovedTaxYear {
    */
   pending_before: Money;
   pending_after: Money;
+  /**
+   * What the wash-sale rule still holds deferred at 31/12 of that year. The
+   * third figure a return declares, and the one a change of window moves first:
+   * reading two months where a year was read releases a loss that was deferred
+   * and changes nothing else about that year. Without it the warning stayed
+   * silent on exactly the change it exists for (plan §1.5).
+   */
+  deferred_before: Money;
+  deferred_after: Money;
 }
 
 /**
@@ -189,17 +202,26 @@ export const movedTaxYears = (
     const was = before.bases.get(year) ?? zero();
     const is = after.bases.get(year) ?? zero();
     // The base is not the whole of it: a year can keep the same base and leave
-    // a different balance pending, which moves **the years after it**. The
-    // warning has to see that too (feature 010, §1.5).
+    // a different balance pending, or the same base and a different deferred
+    // loss, and either moves **the years after it**. The warning compares the
+    // three figures a return declares (feature 010, §1.5).
     const pendingBefore = before.pendings.get(year) ?? [];
     const pendingAfter = after.pendings.get(year) ?? [];
-    if (!was.eq(is) || pendingText(pendingBefore) !== pendingText(pendingAfter)) {
+    const deferredBefore = before.deferrals.get(year) ?? zero();
+    const deferredAfter = after.deferrals.get(year) ?? zero();
+    if (
+      !was.eq(is) ||
+      pendingText(pendingBefore) !== pendingText(pendingAfter) ||
+      !deferredBefore.eq(deferredAfter)
+    ) {
       moved.push({
         year,
         before: was,
         after: is,
         pending_before: sum(pendingBefore.map((entry) => entry.amount_eur)),
         pending_after: sum(pendingAfter.map((entry) => entry.amount_eur)),
+        deferred_before: deferredBefore,
+        deferred_after: deferredAfter,
       });
     }
   }

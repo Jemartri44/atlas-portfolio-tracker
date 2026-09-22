@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { movedTaxYears } from "../../src/tax/year.js";
-import { buy, sell, taxBuilder, text } from "./helpers.js";
+import { buy, HAND_SETTINGS, sell, taxBuilder, text } from "./helpers.js";
 
 describe("movedTaxYears", () => {
   const ledger = () => {
@@ -137,6 +137,52 @@ describe("movedTaxYears", () => {
     buy(old, "stock_s", "2016-01-11", "10", "100");
     sell(old, "stock_s", "2016-06-01", "10", "90");
     expect(movedTaxYears(old.build(), DEFAULT_SETTINGS, DEFAULT_SETTINGS, 2029)).toEqual([]);
+  });
+
+  /**
+   * A year whose **only** moving figure is the deferred loss, which the
+   * warning used to miss entirely: it compared the base and what the year left
+   * pending, two of the three figures a return declares.
+   *
+   * 2026 has a gain of 300,00 and a loss of 300,00 whose repurchase of 1
+   * September falls **outside** the two months and **inside** the year. Read at
+   * two months the loss is computable and cancels the gain; read at a year it
+   * is deferred and the base becomes 300,00. From 2027 on the ledger is empty,
+   * so base and pending are 0,00 either way and the **only** difference is the
+   * 300,00 the rule still holds deferred — the very thing a change of window
+   * moves first.
+   */
+  it("sees a year where nothing moves but the deferred loss", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_t", "2026-01-10", "10", "100");
+    sell(b, "stock_t", "2026-03-01", "10", "130");
+    buy(b, "stock_s", "2026-01-10", "10", "100");
+    sell(b, "stock_s", "2026-06-01", "10", "70");
+    buy(b, "stock_s", "2026-09-01", "10", "70");
+    const atOneYear = {
+      ...HAND_SETTINGS,
+      wash_sale_window: { ...HAND_SETTINGS.wash_sale_window, stock: "1y" as const },
+    };
+    const moved = movedTaxYears(b.build(), HAND_SETTINGS, atOneYear, 2029);
+    expect(
+      moved.map((entry) => [
+        entry.year,
+        text(entry.before),
+        text(entry.after),
+        text(entry.deferred_before),
+        text(entry.deferred_after),
+      ]),
+    ).toEqual([
+      [2026, "0", "300", "0", "-300"],
+      [2027, "0", "0", "0", "-300"],
+      [2028, "0", "0", "0", "-300"],
+    ]);
+    // And the years that move only there leave the same balance pending.
+    expect(moved.map((entry) => [text(entry.pending_before), text(entry.pending_after)])).toEqual([
+      ["0", "0"],
+      ["0", "0"],
+      ["0", "0"],
+    ]);
   });
 
   it("lets any other error through: a duplicated id is not something to hide", () => {
