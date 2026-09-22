@@ -152,6 +152,11 @@ Un `transfer` **no lleva comisión**: la comisión real de un traspaso de custod
 
 **Dos modos:** (a) *traspaso fiscal* entre fondos distintos: ambos activos deben ser `transferable`; (b) *traspaso de custodia* (`from_asset_id == to_asset_id`, cuentas distintas): admitido para cualquier activo, sin `nav_*`, solo mueve `physicalPositions`; los lotes fiscales no cambian (ADR-0012). En el modo (a), efecto: consume `quantity_out` de lotes origen en FIFO; por cada lote consumido crea un lote destino con la **misma `acquisition_date`** y el **mismo coste total** (repartiendo `quantity_in` en proporción a la cantidad consumida de cada lote); `unit_cost_eur` destino = coste heredado / cantidad recibida. No genera ganancia ni pérdida.
 
+**`swap`** (ADR-0021)
+`account_id`, `trade_date`, `value_date`, `from_asset_id`, `quantity_out`, `market_value_out`, `to_asset_id`, `quantity_in`, `market_value_in`, `currency`, `fx_rate`, `fx_rate_date`, `fee`, `thesis_id?` (obligatorio en cuentas `bucket`, para el activo **recibido**), `broker_ref?`, `source`, `notes?`, `fingerprint`
+
+Permuta de un activo por otro (cripto por cripto es el caso que la motiva; `fx_exchange` es solo para divisas). Es una **transmisión más una adquisición**, no un traspaso: se valora por el art. 37.1.h LIRPF, **el mayor** entre el valor de mercado de lo entregado y el de lo recibido, y por eso se guardan los dos y ninguno se deriva del otro. La comisión resta de lo transmitido (criterio #17). El lote recibido nace con la fecha del swap y **sin heredar antigüedad ni coste**. Aviso `swap_fiscal_dates_differ` si las dos patas tienen reglas de fecha fiscal distintas. El vocabulario es a propósito el de `transfer` (`from_*`, `quantity_out`, `to_*`, `quantity_in`); lo que los distingue es el tipo, los dos `market_value_*` que un traspaso no tiene y la ausencia de `nav_*`.
+
 **`transfer_requested`** (sin efecto sobre lotes)
 `from_account_id`, `from_asset_id`, `to_account_id`, `to_asset_id`, `quantity_out?` o `amount_eur?`, `requested_date`, `notes?`
 
@@ -182,18 +187,20 @@ Efecto: suma el neto al efectivo; alimenta `investmentIncome` (rendimiento del c
 Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimientos del capital mobiliario y deducción por doble imposición.
 
 **`cash_deposit` / `cash_withdrawal`**
-`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date?`, `notes?`, `fingerprint`
+`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date`, `notes?`, `fingerprint`
 
 **`standalone_fee`**
-`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date?`, `description`, `fingerprint`. No afecta a la base fiscal de ningún lote.
+`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date`, `description`, `fee_kind?` (`custody` | `administration` | `connectivity` | `discretionary_management` | `other`; ausente equivale a `other`), `fingerprint`. No afecta a la base fiscal de ningún lote. `fee_kind` existe porque el art. 26.1.a) permite deducir del rendimiento del capital mobiliario los gastos de **administración y depósito** de valores negociables y no los demás: el motor fiscal deduce las marcadas `custody` o `administration` (criterio #23) y deja fuera al resto, así que **sin marcar nada no cambia nada** (ADR-0021).
 
 **`valuation`**
-`account_id`, `asset_id`, `date`, `quantity`, `unit_value`, `currency`, `fx_rate`, `fx_rate_date?`, `source`. Foto manual de Nivel 1 (p. ej. 31/12 para el Modelo 720). No toca lotes.
+`account_id`, `asset_id`, `date`, `quantity`, `unit_value`, `currency`, `fx_rate`, `fx_rate_date`, `source`. Foto manual de Nivel 1 (p. ej. 31/12 para el Modelo 720). No toca lotes.
 
-`fx_rate_date?` se añadió en la feature 005 (*challenge* 3, hallazgo 6): estos cuatro eventos guardaban el tipo del BCE **sin la fecha del tipo**, y el 31/12 cae en fin de semana dos de cada siete años, así que el tipo aplicado a una valoración de fin de año no era reproducible desde la tabla oficial. Es opcional y compatible (ADR-0018).
+`fx_rate_date` se añadió como **opcional** en la feature 005 (*challenge* 3, hallazgo 6): estos cuatro eventos guardaban el tipo del BCE **sin la fecha del tipo**, y el 31/12 cae en fin de semana dos de cada siete años, así que el tipo aplicado a una valoración de fin de año no era reproducible desde la tabla oficial. Desde la feature 008 es **obligatorio** en los cuatro (ADR-0021). Hacerlo obligatorio es un endurecimiento, y ADR-0018 solo lo permite dentro de la versión 1 mientras el libro real esté vacío: por eso se hizo entonces y por eso ya no se puede volver a hacer sin `schema_version = 2`.
 
 **`corporate_action`** (ADR-0011)
-`kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/` o URL del emisor), `effects[]` (primitivas, ver §6.5), `notes?`, `fingerprint`
+`kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/` o URL del emisor), `effects[]` (primitivas, ver §6.5), `neutrality_regime?` (booleano: si la operación se acoge al régimen de neutralidad), `notes?`, `fingerprint`
+
+`neutrality_regime` lo añadió ADR-0021 y **no decide nada**: en qué primitivas se compone un canje sigue siendo elección del usuario. Existe porque el diferimiento es condicional (la AEAT exige que la entidad adquirente sea española o esté en la Directiva 2009/133/CE), y sin el régimen un canje es una permuta plenamente sujeta por el art. 37.1.h. El motor fiscal lo lee para decir cuánto hay en juego: un `convert` sin régimen escrito sale en los criterios dudosos (#7 y #13, motivo `regime_not_recorded`), y un régimen declarado que contradice lo registrado sale como nota.
 
 Afecta a los lotes del `asset_id` en **todas** las cuentas (los lotes fiscales son globales, ADR-0009); `forced_sale` vende y cobra **cuenta a cuenta** según `per_account[]` (§6.5), sin reparto automático.
 
@@ -227,8 +234,8 @@ Cada efecto admite `asset_id?`: el activo sobre el que actúa, por defecto el `a
 | `carve_out` | `to_asset_id`, `ratio`, `cost_share` | Por cada lote crea otro en `to_asset_id` con `quantity × ratio`, coste `cost × cost_share` y la misma fecha; el lote origen queda con `cost × (1 − cost_share)` |
 
 **`ratio`** es una cadena decimal (`"4"`, `"0.25"`) **o una fracción `"nuevas/antiguas"` de enteros positivos** (`"4/3"`, `"1/3"`): un contrasplit 1:3 o "una nueva por cada tres" no tienen decimal exacto y guardarlos redondeados dejaría el libro a 1e-10 del bróker para siempre. Cantidad nueva = `quantity × nuevas / antiguas`; la división va a 10 decimales (ADR-0005) solo cuando no es exacta y, en ese caso, el total del activo se calcula una vez y el último lote y la última cuenta reciben el resto exacto, de modo que Σ lotes = Σ posiciones se mantiene.
-| `forced_sale` | `per_account[]` de `{account_id, quantity, fee?}` (`quantity` puede ser `"all"`), `unit_price`, `currency`, `fx_rate`, `fx_rate_date` | Como un `sell` FIFO por cada cuenta, con la comisión de cada bróker anotada por cuenta: hecho imponible. Los picos (contrasplit, liberadas, escisión) se liquidan **cuenta a cuenta**, como hace cada bróker (hallazgo 8) |
-| `grant` | `per_account[]` de `{account_id, quantity}`, `asset_id`, `unit_cost`, `currency`, `fx_rate`, `fx_rate_date`, `acquisition_date` | Lotes nuevos por cuenta con `cost_eur = quantity × unit_cost / fx_rate`. No toca el efectivo: un desembolso del titular es un `buy` |
+| `forced_sale` | `per_account[]` de `{account_id, quantity, fee?, withholding?}` (`quantity` puede ser `"all"`), `unit_price`, `currency`, `fx_rate`, `fx_rate_date` | Como un `sell` FIFO por cada cuenta, con la comisión de cada bróker anotada por cuenta: hecho imponible. Los picos (contrasplit, liberadas, escisión) se liquidan **cuenta a cuenta**, como hace cada bróker (hallazgo 8) |
+| `grant` | `per_account[]` de `{account_id, quantity}`, `asset_id`, `unit_cost`, `currency`, `fx_rate`, `fx_rate_date`, `acquisition_date`, `income_eur?`, `income_base?` | Lotes nuevos por cuenta con `cost_eur = quantity × unit_cost / fx_rate`. No toca el efectivo: un desembolso del titular es un `buy` |
 
 Ejemplo (fusión 2 antiguas → 1 nueva, con 10 y 7 títulos en dos cuentas; los picos de la nueva se liquidan a 40 € cuenta a cuenta):
 
@@ -239,6 +246,10 @@ Ejemplo (fusión 2 antiguas → 1 nueva, con 10 y 7 títulos en dos cuentas; los
    {"op":"forced_sale","asset_id":"ast_new","per_account":[{"account_id":"acc_b","quantity":"0.5"}],"unit_price":"40","currency":"EUR","fx_rate":"1","fx_rate_date":"2031-03-12"}
  ],"notes":"Absorción de OLD por NEW. El canje conserva antigüedad; el pico de acc_b (3,5 → 3) tributa."}
 ```
+
+**`withholding?` de `forced_sale`** (ADR-0021) es la retención a cuenta que practica **cada bróker**, en la divisa del efecto, con el mismo tratamiento que la de un `sell`: sale del efectivo que entra y no toca ni el valor de transmisión ni el coste de los lotes. Vive **por cuenta** y no en el efecto, porque una venta forzosa se liquida cuenta a cuenta y repartir un importe único entre cuentas sería una cifra inventada, igual que ya pasó con la comisión.
+
+**`income_eur?` e `income_base?` de `grant`** (ADR-0021) dicen que lo recibido **es renta en el momento de recibirlo** —un *fork*, un *airdrop*, las acciones de una escisión fuera del régimen de neutralidad, un dividendo en especie— y a qué base iría (`general` | `savings`). Los dos viajan juntos: uno sin el otro se rechaza. Se guardan y se enseñan, y **no entran en ningún cálculo**: el criterio vigente (#8) es coste cero y nada que declarar en la recepción, está en disputa, y el motor fiscal lo saca en los criterios dudosos con `income_eur` como exposición.
 
 **Compensación en efectivo de una fusión** ("más 3 € por acción antigua"): `forced_sale` es siempre una venta, así que se registra como venta **parcial** de las antiguas antes del `convert`, con la cantidad y el precio que fijen el usuario y el asesor (`docs/fiscal-questions.md` #13). Si el asesor concluye que el efectivo reduce el coste de las nuevas en vez de tributar como transmisión, hará falta una primitiva nueva (ADR); hasta entonces el asistente `merger` de la CLI solo liquida picos y el componente en efectivo se registra con `raw`.
 
