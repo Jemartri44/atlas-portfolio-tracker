@@ -602,11 +602,11 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Lenguaje del backend**: TypeScript en todo, dominio compartido (ADR-0001). Trampa derivada: los importes se serializan como cadenas, nunca como números JSON.
 - [x] **Corrección de errores de registro**: libro append-only con rectificación; lotes como proyección (ADR-0003).
 - [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
-- [ ] **Retención a cuenta en reembolsos de fondos.** Registrarla en las ventas de fondos para que la salida de la Renta cuadre.
+- [x] **Retención a cuenta en reembolsos de fondos.** Hecho: `sell.withholding` (`data-schema.md` §6.2), con su equivalente por cuenta en `forced_sale` (§6.5). Sale del efectivo que entra, no toca el valor de transmisión ni el coste de los lotes, y la salida fiscal la suma a las retenciones del ejercicio (criterio #12).
 - [ ] **Valoración a 31 de diciembre.** El Modelo 720 exige valor de mercado a fin de año. Foto manual anual guardada como dato de Nivel 1, no como precio scrapeado.
 - [ ] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio.
-- [ ] **Tests de propiedades** para el motor FIFO (suma de lotes = posición; recalcular = almacenado; split e inverso dejan el coste intacto).
+- [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).
-- [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos.
+- [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos. Está todo salvo **`.editorconfig`, que no existe**; el escaneo de secretos es `gitleaks` en `.githooks/pre-commit`, local por clon y no en CI.
 - [x] **Protección de ramas** en GitHub para `main` y `develop` (hecho por el usuario).
 - [x] **Revisión externa (*challenge*) del 2026-08-30**: diez hallazgos aplicados (ADR-0012, ADR-0013, `docs/data-schema.md`); preguntas al asesor consolidadas en `docs/fiscal-questions.md`.
