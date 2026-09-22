@@ -193,12 +193,20 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
  *
  * A **fund** takes two months, not a year (criterion #2, corrected on
  * 2026-09-22). What separates the two months of article 33.5 f) from the year
- * of g) is being admitted to trading, and article 4.9 of RD 1082/2012 says
- * that publishing the net asset value daily "determina que las participaciones
- * tengan la consideración de valores admitidos a cotización". The two only
- * consultations on the point (DGT 0011-00 and V2067-06) put fund units under
- * f), and the help of Modelo 100 for 2025 lists funds with daily information
- * among the two-month case; its example of the year is a SICAV of the MAB.
+ * of g) is being admitted to trading, and article 4.9 of RD 1082/2012 says,
+ * for funds that guarantee daily redemption, that meeting the obligation to
+ * publish the net asset value daily "determinará que las participaciones en
+ * los correspondientes fondos tengan la consideración de valores admitidos a
+ * cotización **a los efectos de aquellas disposiciones que regulen regímenes
+ * específicos de inversión**".
+ *
+ * **That last clause is part of the quote and it narrows it**: article 33.5 f)
+ * LIRPF is not obviously one of those provisions, so the regulation on its own
+ * is arguable and does not carry the decision. What carries it is the doctrine:
+ * the two only consultations on the point (DGT 0011-00 and V2067-06) put fund
+ * units under f), and the help of Modelo 100 for 2025 lists funds with daily
+ * information among the two-month case; its example of the year is a SICAV of
+ * the MAB.
  *
  * **A monetary fund too** (`money_market`), for exactly the same reason and
  * with the same certainty: in this catalogue the type is a **money market

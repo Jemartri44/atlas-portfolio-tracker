@@ -40,15 +40,19 @@ export interface FiscalCriterion {
  * - `2:crypto`: one year for crypto, by prudence — **low**; conservative.
  * - `2:crypto_2m`: two months for crypto — the less prudent side; aggressive.
  * - `2:fund_2m`: two months for a fund, which is what the document says since
- *   2026-09-22 — a fund that publishes its net asset value daily is a security
- *   "admitted to trading" (art. 4.9 RD 1082/2012), and that is letter f). Its
- *   certainty is **medium**, not high: the regulatory ground is written for
- *   Spanish funds managed by a SGIIC, and nothing resolves a foreign UCITS,
- *   which is what is usually bought in Spain.
+ *   2026-09-22 — the two consultations on the point put fund units under
+ *   letter f). Its certainty is **medium**, not high, for two reasons: the
+ *   regulatory ground (art. 4.9 RD 1082/2012) calls them securities "admitted
+ *   to trading" only "a los efectos de aquellas disposiciones que regulen
+ *   regímenes específicos de inversión", which article 33.5 f) is not
+ *   obviously one of; and it is written for Spanish funds managed by a SGIIC,
+ *   with nothing resolving a foreign UCITS, which is what is usually bought in
+ *   Spain.
  * - `2:fund_1y`: one year for a fund, the other side of the same dispute and
  *   the conservative one.
- * - `2:other`: any other window (days, or two months for a fund): no reading
- *   of the document supports it.
+ * - `2:other`: any other window —a number of days— that no reading of the
+ *   document supports. Two months for a fund is **not** one of these any more:
+ *   since 2026-09-22 it is `2:fund_2m`, the reading the document holds.
  *
  * **A new reading gets a new identifier; an identifier never changes meaning.**
  * That is why the year of funds is `2:fund_1y` and not the old bare `2:fund`,
