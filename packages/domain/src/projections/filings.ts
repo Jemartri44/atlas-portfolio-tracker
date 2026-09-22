@@ -95,8 +95,10 @@ export const applyTaxReturnFiled = (
             ? "other_year"
             : target.superseded_by !== undefined
               ? "already_superseded"
-              : target.filed_at > event.filed_at
-                ? "filed_earlier"
+              : // The one being replaced was filed **after** this one: a
+                // supplementary return cannot supersede a later return.
+                target.filed_at > event.filed_at
+                ? "filed_later"
                 : undefined;
     if (reason !== undefined) {
       refuse(

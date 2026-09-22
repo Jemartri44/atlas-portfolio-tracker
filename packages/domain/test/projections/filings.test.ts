@@ -125,7 +125,7 @@ describe("the chain of supplementary returns", () => {
     const earlier = base();
     const late = earlier.filed({ tax_year: 2027, filed_at: "2028-09-01" });
     earlier.filed({ tax_year: 2027, filed_at: "2028-07-01", supersedes: late.id });
-    expect(reasonOf(earlier.build())).toBe("filed_earlier");
+    expect(reasonOf(earlier.build())).toBe("filed_later");
     expect(refusal(earlier.build())).toBe("filing_supersedes_invalid");
   });
 });
