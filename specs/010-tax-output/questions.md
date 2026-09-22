@@ -693,6 +693,26 @@ Convenciones:
 - `acc_ib` (`IE`): `etf_w`, `stock_s`, `stock_t`, `coin_c` y `etc_g`.
 - Todo en EUR salvo el dividendo. `treaty_withholding_pct: { US: "15" }`. `income_category`, por defecto, **con `etc` en `movable_capital`**.
 
+> **La configuración que este cálculo nombra** *(añadido el 2026-09-23, antes del test; ningún
+> literal se mueve)*. Como el §6.3, este libro **fija su configuración entera y explícita**, y
+> conviene decir de qué depende cada cifra, porque una de esas lecturas dejó de ser el valor por
+> defecto después de escribirlo:
+>
+> - **`wash_sale_window.fund` y `.money_market`: un año.** El reembolso del 03/03/2025 difiere
+>   20/40 gracias a la suscripción del **05/05/2025**, y eso solo ocurre con la ventana de un año:
+>   a dos meses la ventana acabaría el 03/05 y la suscripción quedaría fuera, sin diferimiento.
+>   El cálculo se escribió el 2026-09-19, cuando el valor por defecto de los fondos era un año; el
+>   **2026-09-22** pasó a dos meses (criterio #2). Se fija la lectura de un año, que es una
+>   configuración legítima y sigue siendo la que el cálculo describe, en vez de mover el libro o
+>   las cifras. La ventana de un año del 03/03/2025 es `[03/03/2024, 03/03/2026]`, así que la
+>   compra del 10/01/2024 queda **fuera** y el diferimiento es exactamente el de la suscripción.
+> - **`wash_sale_window.stock`: dos meses.** La venta del 02/06/2025 da −50,00 computables porque
+>   la compra del 20/01/2025 queda fuera de `[02/04/2025, 02/08/2025]`; con un año entraría.
+> - **`income_category.etc`: `movable_capital`** (respuesta a Q2), que es lo que lleva el ETC a la
+>   0031 y lo saca del apartado de ganancias.
+> - **`savings_offset_limit_pct`: 25** y **`loss_carryforward_years`: 4**, que es lo que mantiene
+>   vivo el pendiente de 2023 en 2025. La fase 1 no llega a actuar: los dos saldos son positivos.
+
 | Fecha | Evento | Resultado |
 |---|---|---|
 | 10/01/2024 | Compra de 100 `fund_a` a 10,00 | |

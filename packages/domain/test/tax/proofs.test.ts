@@ -22,7 +22,8 @@ import type {
 } from "../../src/schema/events.js";
 import { decodeLine } from "../../src/schema/line.js";
 import { DEFAULT_INCOME_CATEGORY } from "../../src/settings/settings.js";
-import { taxReportJson } from "../../src/tax/json.js";
+import { taxBoxes } from "../../src/tax/boxes/boxes.js";
+import { taxBoxesJson, taxReportJson } from "../../src/tax/json.js";
 import { taxYear } from "../../src/tax/year.js";
 import { fixtureLines, fixtureText } from "../fixtures-path.js";
 import { taxLedgerOf, taxOpArb } from "../properties/tax-ledgers.js";
@@ -117,6 +118,15 @@ const withMorePrices = (events: readonly LedgerEvent[]): LedgerEvent[] => [
 const json = (events: readonly LedgerEvent[], year: number): string =>
   JSON.stringify(taxReportJson(taxYear(events, year, { today: TODAY })));
 
+/**
+ * The same for the layout by box (feature 010, block 2). It is a layer over the
+ * report and reads no price of its own, but saying so is not proving it: the
+ * proof is that deleting every price of the ledger leaves it identical byte for
+ * byte, exactly as for the report underneath.
+ */
+const boxesJson = (events: readonly LedgerEvent[], year: number): string =>
+  JSON.stringify(taxBoxesJson(taxBoxes(events, year, { today: TODAY })));
+
 const synthetic = (): LedgerEvent[] =>
   fixtureLines("synthetic-v1.jsonl").map((line) => decodeLine(line).event);
 
@@ -129,6 +139,7 @@ describe("proof 1: no figure of the return depends on a price", () => {
     expect(stripped.length).toBeLessThan(events.length);
     for (const year of YEARS) {
       expect(json(stripped, year)).toBe(json(events, year));
+      expect(boxesJson(stripped, year)).toBe(boxesJson(events, year));
     }
   });
 
@@ -138,25 +149,40 @@ describe("proof 1: no figure of the return depends on a price", () => {
     expect(events.length - stripped.length).toBe(4);
     for (const year of [2027, 2028]) {
       expect(json(stripped, year)).toBe(json(events, year));
+      expect(boxesJson(stripped, year)).toBe(boxesJson(events, year));
     }
   });
 
-  it("holds on random ledgers, in both directions: without their valuations, and with more of them", () => {
-    fc.assert(
-      fc.property(
-        fc.array(taxOpArb, { minLength: 5, maxLength: 35 }),
-        fc.integer({ min: 0, max: 8 }),
-        (ops, offset) => {
-          const events = taxLedgerOf(ops);
-          const year = 2027 + offset;
-          const reference = json(withoutPrices(events), year);
-          expect(json(events, year)).toBe(reference);
-          expect(json(withMorePrices(events), year)).toBe(reference);
-        },
-      ),
-      { numRuns: 200 },
-    );
-  });
+  /**
+   * Generous, like the other property suites: it walks 200 random ledgers and
+   * builds six outputs of each one (the report and the layout by box, three
+   * times over), and a loaded machine must not turn a green suite red.
+   */
+  const BUDGET_MS = 120_000;
+
+  it(
+    "holds on random ledgers, in both directions: without their valuations, and with more of them",
+    () => {
+      fc.assert(
+        fc.property(
+          fc.array(taxOpArb, { minLength: 5, maxLength: 35 }),
+          fc.integer({ min: 0, max: 8 }),
+          (ops, offset) => {
+            const events = taxLedgerOf(ops);
+            const year = 2027 + offset;
+            const reference = json(withoutPrices(events), year);
+            expect(json(events, year)).toBe(reference);
+            expect(json(withMorePrices(events), year)).toBe(reference);
+            const boxes = boxesJson(withoutPrices(events), year);
+            expect(boxesJson(events, year)).toBe(boxes);
+            expect(boxesJson(withMorePrices(events), year)).toBe(boxes);
+          },
+        ),
+        { numRuns: 200 },
+      );
+    },
+    BUDGET_MS,
+  );
 
   it("does not integrate the value of income in kind: removing it moves no figure of the base", () => {
     const b = exerciseLedger().events;

@@ -1,6 +1,11 @@
 // Projection warnings in Spanish, with the remedy of the web. Same contract as
 // the errors: keyed by `code`, unknown codes fall back to the domain message,
 // and the drift test keeps this catalogue level with the CLI's.
+//
+// LINE BUDGET: it is a **catalogue**, one entry per warning code the domain can
+// raise, and the exhaustiveness test demands that every one of them be here.
+// Splitting it by subject would only move the same entries to another file and
+// make "is this code translated?" a question with several places to look.
 
 import type { Warning } from "@atlas/domain";
 import { valueLabel } from "../labels.js";
@@ -62,6 +67,16 @@ const gapText = (d: Details, n: Naming): string => {
 
 /** "de hace 17 días (01/09/2026)": the age of a price or a rate, and its date. */
 const age = (d: Details): string => `de hace ${days(d.age_days)} (${day(d.date)})`;
+
+/** Why a box of the return is not the whole of what the form will hold. */
+const PARTIAL_BOX: Record<string, string> = {
+  reductions_unknown:
+    "La base liquidable resta dos remanentes de reducciones que no están en tus datos: te damos la base imponible, no el importe de la casilla",
+  treaty_limit_only:
+    "La deducción por doble imposición es la menor de dos límites y solo conocemos el primero: te damos ese, no el importe de la casilla",
+  ledger_withholdings_only:
+    "Solo contamos las retenciones que constan en tus datos, que no tienen por qué ser todas",
+};
 
 export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) => string> = {
   // --- Core weights ------------------------------------------------------
@@ -164,6 +179,18 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `El ISIN ${text(d.isin)} lo comparten ${n.many(d.assets)}: para Hacienda son el mismo valor y el cálculo fiscal los trata como distintos. Registra ese valor en un solo activo.`,
   tax_settings_default_used: (d) =>
     `Hay ${countOf(count(d.fields), "parámetro fiscal", "parámetros fiscales")} que no están en tus datos y se han tomado del código. Guardar la configuración los dejará fijados.`,
+  // --- The return laid out by box (feature 010) --------------------------
+  tax_boxes_missing_year: (d) =>
+    `Las casillas de ${year(d.year)} no están comprobadas en el formulario oficial: te damos los importes por conceptos, sin números de casilla. Nunca usamos la casilla de otro ejercicio.`,
+  tax_box_missing: (d) =>
+    `Hay ${countOf(count(d.concepts), "importe", "importes")} sin casilla en el formulario de ${year(d.year)}: van por concepto y sin número.`,
+  tax_box_value_missing: (d) =>
+    `${countOf(count(d.boxes), "casilla pide", "casillas piden")} algo que no está en tus datos, como el NIF de una gestora. Lo decimos en vez de inventarlo.`,
+  tax_box_partial: (d) => `${PARTIAL_BOX[text(d.reason)] ?? "Esta casilla no se calcula entera"}.`,
+  tax_box_rounding_differs: (d) =>
+    `El formulario redondea cada valor y hace él mismo la resta: en ${countOf(count(d.boxes), "una casilla", "algunas casillas")} sale un céntimo distinto del nuestro. Te enseñamos los dos.`,
+  tax_box_repurchase_has_no_number: () =>
+    "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.",
 };
 
 /**

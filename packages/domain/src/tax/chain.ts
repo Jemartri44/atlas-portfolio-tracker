@@ -170,6 +170,21 @@ export const filedAnchors = (state: LedgerState, today: CivilDate): FiledAnchor[
   return anchors;
 };
 
+/**
+ * What the wash-sale rule still held deferred at the close of a year.
+ *
+ * `pendingByYear` names every year the lot journal crosses. A year before the
+ * first of them has nothing deferred yet; one after the last keeps what the
+ * whole ledger leaves, which is the entry of that last year. Exported because
+ * the layout by box needs the same reading for the year asked **and for the one
+ * before it**, and two copies of this rule would drift apart.
+ */
+export const deferredAt = (walk: WashSaleResult, year: number): PendingDeferral[] => {
+  const walked = [...walk.pendingByYear.keys()];
+  const last = walked.length === 0 ? undefined : Math.max(...walked);
+  return walk.pendingByYear.get(last !== undefined && year > last ? last : year) ?? [];
+};
+
 export const taxChain = (
   events: readonly LedgerEvent[],
   year: number,
@@ -269,13 +284,6 @@ export const taxChain = (
   const bases = new Map<number, Money>();
   const pendings = new Map<number, PendingLoss[]>();
   const deferrals = new Map<number, Money>();
-  // `pendingByYear` names every year the lot journal crosses. A year before
-  // the first of them has nothing deferred yet; one after the last keeps what
-  // the whole ledger leaves, which is the entry of that last year.
-  const walked = [...walk.pendingByYear.keys()];
-  const lastWalked = walked.length === 0 ? undefined : Math.max(...walked);
-  const deferredAt = (y: number): PendingDeferral[] =>
-    walk.pendingByYear.get(lastWalked !== undefined && y > lastWalked ? lastWalked : y) ?? [];
   for (let y = firstYear; y <= year; y += 1) {
     compensation = compensate(y, balances.get(y) ?? zeroBalances(), pending, rules);
     bases.set(y, compensation.base_eur);
@@ -283,7 +291,7 @@ export const taxChain = (
     pendings.set(y, pending);
     deferrals.set(
       y,
-      deferredAt(y)
+      deferredAt(walk, y)
         .reduce((total, entry) => total.add(entry.amount_eur), zero())
         .roundToCents(),
     );
@@ -314,7 +322,7 @@ export const taxChain = (
     expenses,
     compensation,
     ...(anchor === undefined ? {} : { anchor }),
-    pendingDeferrals: deferredAt(year),
+    pendingDeferrals: deferredAt(walk, year),
     firstYear,
     bases,
     pendings,

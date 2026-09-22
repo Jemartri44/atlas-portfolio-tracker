@@ -810,7 +810,22 @@ export const taxYear = (
   events: readonly LedgerEvent[],
   year: number,
   options: TaxOptions,
-): TaxYearReport => {
+): TaxYearReport => taxYearWithChain(events, year, options).report;
+
+/**
+ * The same report **and the walk of the years behind it**.
+ *
+ * The layout by box needs two things the report does not carry: what each year
+ * of the chain left deferred, so it can say which original loss every deferred
+ * amount belongs to (ficha F5), and what the year before left pending, for
+ * annex C.3. Handing over the chain that was walked anyway is what keeps the
+ * layout from projecting the ledger a second time to find out.
+ */
+export const taxYearWithChain = (
+  events: readonly LedgerEvent[],
+  year: number,
+  options: TaxOptions,
+): { report: TaxYearReport; chain: ChainCore } => {
   if (!Number.isInteger(year) || year < FIRST_SUPPORTED_YEAR) {
     throw new DomainError(
       "tax_year_unsupported",
@@ -865,7 +880,7 @@ export const taxYear = (
   const stakes = criterionStakes(core, events, year, options);
   const notes = notesOf(core, year, settings.from_code, inKind, ddi.notes);
   const diff = settingsDiff(core, events, year, options);
-  return {
+  const report: TaxYearReport = {
     year,
     scope: "fiscal_total",
     today: options.today,
@@ -929,6 +944,7 @@ export const taxYear = (
     notes,
     ...(diff === undefined ? {} : { settings_diff: diff }),
   };
+  return { report, chain: core };
 };
 
 const notesOf = (

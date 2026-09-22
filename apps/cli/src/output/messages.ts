@@ -384,11 +384,37 @@ export const describeWarning = (warning: Warning): string => {
       return `El ISIN ${text(d.isin)} lo comparten ${((d.assets as string[] | undefined) ?? []).join(", ")}: para Hacienda son el mismo valor, y la regla de recompra y el FIFO de este informe los tratan como distintos. Sus cifras pueden estar mal: registra ese valor en un solo activo (\`atlas check\`).`;
     case "tax_settings_default_used":
       return `Parámetros fiscales que no están en el libro y se han tomado del código (ADR-0022): ${((d.fields as string[] | undefined) ?? []).join(", ")}. El próximo \`atlas settings set\` los dejará fijados.`;
+    case "tax_boxes_missing_year":
+      return `Las casillas de ${text(d.year)} no están comprobadas en un formulario oficial: los importes salen por conceptos, sin número de casilla. Nunca se usa la casilla de otro ejercicio.`;
+    case "tax_box_missing":
+      return `Sin casilla en el formulario de ${text(d.year)}: ${listOf(d.concepts)}. Esos importes salen por concepto y sin número.`;
+    case "tax_box_value_missing":
+      return `Falta en tus datos lo que piden estas casillas: ${listOf(d.boxes)}. El libro no guarda el NIF de un tercero y aquí no se inventa ninguno.`;
+    case "tax_box_partial":
+      return `${PARTIAL_BOX[text(d.reason)] ?? warning.message} (casillas ${listOf(d.boxes)}).`;
+    case "tax_box_rounding_differs":
+      return `El formulario redondea cada valor y hace él mismo la resta: en ${listOf(d.boxes)} sale un céntimo distinto del que calcula el motor. Se enseñan los dos.`;
+    case "tax_box_repurchase_has_no_number":
+      return "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.";
     case "thesis_closed_with_position":
       return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
     default:
       return warning.message;
   }
+};
+
+/** A list of codes or box numbers, as the message prints them. */
+const listOf = (value: unknown): string =>
+  ((Array.isArray(value) ? value : [value]) as unknown[]).map((entry) => text(entry)).join(", ");
+
+/** Why a box of the return is not the whole of what the form will hold. */
+const PARTIAL_BOX: Record<string, string> = {
+  reductions_unknown:
+    "La base liquidable resta dos remanentes de reducciones que no están en el libro: se da la base imponible y no el importe de la casilla",
+  treaty_limit_only:
+    "La deducción por doble imposición es la menor de dos límites y el motor solo conoce el primero: se da ese, nunca como importe de la casilla",
+  ledger_withholdings_only:
+    "Solo se cuentan las retenciones que constan en el libro, que no tienen por qué ser todas",
 };
 
 export const describeDuplicate = (error: DuplicateFingerprintError): string =>

@@ -167,6 +167,17 @@ export { type BusinessDates, fiscalDateOf } from "./settings/fiscal-date.js";
 export * from "./settings/settings.js";
 export { washSaleWindowEnd } from "./settings/wash-sale.js";
 export * from "./synth/index.js";
+export { taxBoxes } from "./tax/boxes/boxes.js";
+export {
+  type ConceptId,
+  ROW_FIELDS,
+  type RowFieldId,
+  SECTIONS,
+  type SectionId,
+  transmissionSection,
+} from "./tax/boxes/concepts.js";
+export type * from "./tax/boxes/report.js";
+export { BOX_YEARS } from "./tax/boxes/years/index.js";
 export {
   type Certainty,
   CRITERION_IDS,
@@ -176,7 +187,7 @@ export {
   isDoubtful,
   type RiskDirection,
 } from "./tax/criteria.js";
-export { taxReportJson } from "./tax/json.js";
+export { taxBoxesJson, taxReportJson } from "./tax/json.js";
 export type * from "./tax/report.js";
 export {
   FIRST_SUPPORTED_YEAR,

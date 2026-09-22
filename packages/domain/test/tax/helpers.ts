@@ -1,10 +1,14 @@
 // Small ledgers for the tax engine tests.
 
-import type { Money } from "../../src/money/money.js";
+import { Money } from "../../src/money/money.js";
+import type { RealizedGain } from "../../src/projections/state.js";
 import type { LedgerEvent } from "../../src/schema/events.js";
 import { DEFAULT_SETTINGS, type Settings } from "../../src/settings/settings.js";
+import { boxesOf } from "../../src/tax/boxes/boxes.js";
+import type { BoxEntry } from "../../src/tax/boxes/report.js";
+import { categoryOf } from "../../src/tax/chain.js";
 import type { TaxYearReport, TransmissionLine } from "../../src/tax/report.js";
-import { taxYear } from "../../src/tax/year.js";
+import { taxYear, taxYearWithChain } from "../../src/tax/year.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 
 export const text = (money: Money | undefined): string =>
@@ -152,3 +156,49 @@ export const transfer = (
     quantity_in: quantityIn,
     value_date_in: date,
   });
+
+/**
+ * The invariant of the rows by origin of the loss (ficha F5): the gains of the
+ * form, less the losses it declares imputable, less what earlier years bring
+ * into this one, is the balance of capital gains the engine computed.
+ *
+ * Checked on the **exact** amounts, before the rounding of each box: the
+ * engine adds up one rounded figure per operation and the form adds up one per
+ * row, and the two roundings are not the same arithmetic. What has to hold to
+ * the last decimal is that the layout **moves** figures between rows and never
+ * creates or loses one.
+ */
+export const rowsAddUpToTheEngine = (
+  events: readonly LedgerEvent[],
+  year: number,
+  today = "2035-01-01",
+): { rows: string; engine: string } => {
+  const { report, chain } = taxYearWithChain(events, year, { today });
+  const boxes = boxesOf(report, chain);
+  const zero = Money.zero("EUR");
+  const sumOf = (predicate: (entry: BoxEntry) => boolean): Money =>
+    boxes.entries
+      .filter((entry) => predicate(entry) && entry.exact_eur !== undefined)
+      .reduce((total, entry) => total.add(entry.exact_eur as Money), zero);
+  const rows = sumOf(
+    (entry) =>
+      entry.row !== undefined &&
+      /^gp\.(iic|etf|listed_shares|crypto|other)\.(gain|loss_imputable)$/.test(entry.concept),
+  ).add(sumOf((entry) => entry.concept === "gp.prior_years.loss"));
+  // What the engine puts into the balance of capital gains: what each disposal
+  // of the category computes, plus every release of a loss of this category
+  // that happened on a disposal of the other one.
+  const foreign = chain.walk.outcomes
+    .filter((outcome) => (chain.state.gains[outcome.gain_index] as RealizedGain).year === year)
+    .flatMap((outcome) => outcome.foreign_released)
+    .filter(
+      (release) =>
+        categoryOf(chain.state, (chain.state.gains[release.origin] as RealizedGain).asset_id) ===
+        "capital_gain",
+    )
+    .reduce((total, release) => total.add(release.amount_eur), zero);
+  const engine = report.capital_gains.lines
+    .reduce((total, line) => total.add(line.computable_eur), zero)
+    .add(foreign);
+  return { rows: rows.amount.toString(), engine: engine.amount.toString() };
+};
