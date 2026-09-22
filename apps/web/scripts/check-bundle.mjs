@@ -172,8 +172,13 @@ const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
  *    **read** path, like every other one (see the boot budget above), so the
  *    boot carries most of it. Measured **193,2 KB**, of which the boot is
  *    71,1; the ceiling is 194,2.
+ *  - The projection of the filings with their chain, the fingerprint of the
+ *    ledger before each one —a canonical digest that `compact` verifies and
+ *    seals again— and the two findings of the verification, in both
+ *    interfaces. Measured **194,2 KB**, of which the boot is 71,9; the ceiling
+ *    is 195,5.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 194.2 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 195.5 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

@@ -16,19 +16,14 @@
 // architecture test keeps `prices.ts` out of reach and a test deletes every
 // price of a ledger and compares the report byte for byte.
 
-import { type CivilDate, yearOf } from "../dates/civil-date.js";
+import { yearOf } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import { Money } from "../money/money.js";
 import { sharedIsins } from "../projections/isin.js";
-import {
-  businessDateOf,
-  type OperationEvent,
-  projectLedger,
-} from "../projections/project-ledger.js";
-import type { FiscalLot, LedgerState, RealizedGain, Warning } from "../projections/state.js";
+import type { LedgerState, RealizedGain, Warning } from "../projections/state.js";
 import {
   ASSET_TYPES,
   type AssetType,
@@ -40,13 +35,10 @@ import {
   DEFAULT_SETTINGS,
   type IncomeCategory,
   incomeCategoryOf,
-  lossCarryforwardYearsOf,
   type Settings,
-  savingsOffsetLimitPctOf,
   treatyWithholdingPctOf,
 } from "../settings/settings.js";
 import { washSaleWindowOf } from "../settings/wash-sale.js";
-import { compensate, type YearBalances } from "./compensation.js";
 import {
   CRITERION_IDS,
   type CriterionId,
@@ -58,19 +50,13 @@ import {
 import {
   currencyFirstGain,
   deferralLine,
-  expenseLines,
   incomeLine,
-  type LineContext,
   transmissionLine,
   withholdingLines,
 } from "./lines.js";
 import type {
-  AnchorDifference,
-  Compensation,
   DoubleTaxationLine,
   DoubtfulItem,
-  ExpenseLine,
-  FiledAnchor,
   IncomeLine,
   InKindLine,
   PendingLoss,
@@ -78,187 +64,51 @@ import type {
   TaxYearReport,
   TransmissionLine,
 } from "./report.js";
-import { type PendingDeferral, type WashSaleOutcome, walkWashSales } from "./wash-sale.js";
+import type { WashSaleOutcome } from "./wash-sale.js";
 
 const EUR = "EUR";
 
-/** The regime of compensation the engine implements is the one in force since 2018 (A13). */
-export const FIRST_SUPPORTED_YEAR = 2018;
+export { FIRST_SUPPORTED_YEAR, type TaxOptions } from "./chain.js";
 
-export interface TaxOptions {
-  /** The date of the query: it decides what is provisional. */
-  today: CivilDate;
-  /** What was declared, when the ledger knows it (ADR-0020): it anchors the carry-forward. */
-  filed?: readonly FiledAnchor[];
-}
+import {
+  type ChainCore,
+  categoryOf,
+  FIRST_SUPPORTED_YEAR,
+  type Invalid,
+  isInvalid,
+  type TaxOptions,
+  taxChain,
+} from "./chain.js";
 
 const zero = (): Money => Money.zero(EUR);
 
 const sum = (values: readonly Money[]): Money => values.reduce((total, v) => total.add(v), zero());
 
-/** Everything the engine computes for one reading of the settings. */
-interface Core {
-  state: LedgerState;
-  ctx: LineContext;
+/** The chain of years plus the lines of the one asked. */
+interface Core extends ChainCore {
   transmissions: TransmissionLine[];
   /** The outcome of the rule behind each transmission line, in the same order. */
   outcomes: WashSaleOutcome[];
   income: IncomeLine[];
-  expenses: ExpenseLine[];
-  compensation: Compensation;
-  anchor?: AnchorDifference;
-  /** Deferred losses still sitting on lots at 31/12 of the year. */
-  pendingDeferrals: PendingDeferral[];
-  firstYear: number;
-  /** The savings base of every year of the chain, up to the one asked. */
-  bases: Map<number, Money>;
 }
 
-/** A reading that could not be computed because the ledger has invalid events under it. */
-interface Invalid {
-  invalid: { id: Ulid; type: string; code: string }[];
-}
-
-const isInvalid = (result: Core | Invalid): result is Invalid => "invalid" in result;
-
-/** The year of the business date of an event of the lot journal: they are all operations. */
-const yearOfEntry = (state: LedgerState, events: Map<Ulid, LedgerEvent>) => {
-  const cache = new Map<Ulid, number>();
-  return (eventId: Ulid): number => {
-    let year = cache.get(eventId);
-    if (year === undefined) {
-      year = yearOf(businessDateOf(state, events.get(eventId) as OperationEvent));
-      cache.set(eventId, year);
-    }
-    return year;
-  };
-};
-
-const categoryOf = (state: LedgerState, assetId: string): IncomeCategory =>
-  incomeCategoryOf(
-    state.fiscalSettings,
-    (state.assets.get(assetId) as { asset_type: AssetType }).asset_type,
-  );
-
+/**
+ * Everything the engine computes for one reading of the settings: the chain of
+ * years (`taxChain`) plus the lines of the year asked. The chain is shared
+ * with the warning of a settings change, the warning of a closed year and the
+ * comparison with what was filed, so that the four never disagree.
+ */
 const computeCore = (
   events: readonly LedgerEvent[],
   year: number,
   options: TaxOptions,
   settings?: Settings,
 ): Core | Invalid => {
-  const state = projectLedger(events, {
-    collectErrors: true,
-    ...(settings === undefined ? {} : { settings }),
-  });
-  if (state.invalid.length > 0) {
-    return {
-      invalid: state.invalid.map((entry) => ({
-        id: entry.event.id,
-        type: entry.event.type,
-        code: entry.error.code,
-      })),
-    };
+  const chain = taxChain(events, year, options, settings);
+  if (isInvalid(chain)) {
+    return chain;
   }
-  const byId = new Map<Ulid, LedgerEvent>(
-    events.filter((event) => !state.reversed.has(event.id)).map((event) => [event.id, event]),
-  );
-  const types = new Map<Ulid, string>([...byId].map(([id, event]) => [id, event.type]));
-  const entryYear = yearOfEntry(state, byId);
-  const walk = walkWashSales(state, options.today, types, (eventId) => entryYear(eventId) > year);
-  const lots = new Map<string, FiscalLot>();
-  for (const entry of state.lots.values()) {
-    for (const lot of [...entry.open, ...entry.closed]) {
-      lots.set(lot.id, lot);
-    }
-  }
-  const carved = new Set<string>();
-  for (const entry of state.lotJournal) {
-    if (entry.kind === "carve") {
-      carved.add(entry.lot_id);
-      carved.add(entry.into_lot_id);
-    }
-  }
-  const ctx: LineContext = {
-    state,
-    settings: state.fiscalSettings,
-    events: byId,
-    lots,
-    carved,
-    walk,
-  };
-
-  // Every year of the ledger, because the carry-forward chains them.
-  const balances = new Map<number, YearBalances>();
-  const add = (y: number, category: IncomeCategory, amount: Money): void => {
-    const current = balances.get(y) ?? { capital_gain: zero(), movable_capital: zero() };
-    current[category] = current[category].add(amount);
-    balances.set(y, current);
-  };
-  for (const outcome of walk.outcomes) {
-    const gain = state.gains[outcome.gain_index] as RealizedGain;
-    add(gain.year, categoryOf(state, gain.asset_id), outcome.computable_eur.roundToCents());
-    for (const release of outcome.foreign_released) {
-      const origin = state.gains[release.origin] as RealizedGain;
-      add(gain.year, categoryOf(state, origin.asset_id), release.amount_eur.roundToCents());
-    }
-  }
-  for (const income of state.income) {
-    add(income.year, "movable_capital", income.gross_eur.roundToCents());
-  }
-  const expenses = expenseLines(ctx);
-  for (const expense of expenses) {
-    add(yearOf(expense.fiscal_date), "movable_capital", expense.amount_eur_rounded);
-  }
-  const years = [...balances.keys()];
-  // The chain starts at the earliest of three: the year asked, the first year
-  // with figures and the **first filed return** (prompt 010, P5). Walking only
-  // the years with figures drops in silence a return filed for a year earlier
-  // than the ledger, and with it the losses it declares pending: the way the
-  // user brings in what he carried from before the application. Never before
-  // 2018: the event refuses an earlier `tax_year`, and so does the guard.
-  const filedYears = (options.filed ?? []).map((entry) => entry.year);
-  const firstYear = Math.min(year, ...years, ...filedYears);
-  if (firstYear < FIRST_SUPPORTED_YEAR) {
-    throw new DomainError(
-      "tax_year_unsupported",
-      `the engine applies the compensation regime in force since ${FIRST_SUPPORTED_YEAR}; ${firstYear} is earlier`,
-      { year: firstYear, first_supported: FIRST_SUPPORTED_YEAR },
-    );
-  }
-
-  const rules = {
-    limitPct: savingsOffsetLimitPctOf(state.fiscalSettings),
-    carryYears: lossCarryforwardYearsOf(state.fiscalSettings),
-  };
-  let pending: PendingLoss[] = [];
-  let compensation = compensate(firstYear, zeroBalances(), [], rules);
-  let anchor: AnchorDifference | undefined;
-  // `Infinity` when the ledger has no figures at all: any anchor precedes it.
-  const firstFigureYear = Math.min(...years);
-  const bases = new Map<number, Money>();
-  for (let y = firstYear; y <= year; y += 1) {
-    compensation = compensate(y, balances.get(y) ?? zeroBalances(), pending, rules);
-    bases.set(y, compensation.base_eur);
-    pending = compensation.pending;
-    const filed = options.filed?.find((entry) => entry.year === y);
-    if (filed !== undefined) {
-      const declared = filed.pending.map((entry) => ({
-        origin_year: entry.origin_year,
-        category: entry.category,
-        amount_eur: entry.amount_eur,
-        expires_after: entry.origin_year + rules.carryYears,
-      }));
-      anchor = {
-        year: y,
-        computed: pending,
-        declared,
-        // Nothing was computed for a year the ledger does not reach: the
-        // figures come from what was declared, they do not differ from it.
-        ...(y < firstFigureYear ? { before_ledger: true } : {}),
-      };
-      pending = declared;
-    }
-  }
+  const { state, ctx, walk, expenses } = chain;
 
   const outcomes = walk.outcomes.filter(
     (outcome) => (state.gains[outcome.gain_index] as RealizedGain).year === year,
@@ -268,25 +118,27 @@ const computeCore = (
     .filter((entry) => entry.year === year)
     .map((entry) => incomeLine(ctx, entry));
   return {
-    state,
-    ctx,
+    ...chain,
     transmissions,
     outcomes,
     income,
     expenses: expenses.filter((expense) => yearOf(expense.fiscal_date) === year),
-    compensation,
-    ...(anchor === undefined ? {} : { anchor }),
-    pendingDeferrals: walk.pendingAtCutoff,
-    firstYear,
-    bases,
   };
 };
 
-/** A tax year whose savings base moves with a change of settings. */
+/** A tax year whose savings base, or what it leaves pending, moves with a change of settings. */
 export interface MovedTaxYear {
   year: number;
   before: Money;
   after: Money;
+  /**
+   * What the year leaves pending to offset, added up with its sign. A year can
+   * keep the same base and leave a different balance pending, and that moves
+   * **the years after it**: the warning has to see it, and the interfaces have
+   * to be able to say "the base does not change, what it carries does".
+   */
+  pending_before: Money;
+  pending_after: Money;
 }
 
 /**
@@ -309,10 +161,13 @@ export const movedTaxYears = (
 ): MovedTaxYear[] => {
   const last = currentYear - 1;
   const options = { today: `${currentYear}-01-01` };
-  const basesOf = (settings: Settings): Map<number, Money> | undefined => {
+  // The chain, not the report: no alternative readings and no difference with
+  // the previous settings, which is what makes this cheap enough to run on
+  // every keystroke of the configuration screen.
+  const chainOf = (settings: Settings): ChainCore | undefined => {
     try {
-      const core = computeCore(events, Math.max(last, FIRST_SUPPORTED_YEAR), options, settings);
-      return isInvalid(core) ? undefined : core.bases;
+      const chain = taxChain(events, Math.max(last, FIRST_SUPPORTED_YEAR), options, settings);
+      return isInvalid(chain) ? undefined : chain;
     } catch (error) {
       if (error instanceof DomainError && error.code === "tax_year_unsupported") {
         return undefined;
@@ -320,26 +175,42 @@ export const movedTaxYears = (
       throw error;
     }
   };
-  const before = basesOf(current);
-  const after = basesOf(next);
+  const before = chainOf(current);
+  const after = chainOf(next);
   if (before === undefined || after === undefined) {
     return [];
   }
   // A change of fiscal date can move a figure into a year the other reading
   // does not even reach: every year of either chain, zero where it is absent.
   const moved: MovedTaxYear[] = [];
-  const years = [...new Set([...before.keys(), ...after.keys()])].sort((a, b) => a - b);
+  const years = [...new Set([...before.bases.keys(), ...after.bases.keys()])].sort((a, b) => a - b);
   for (const year of years.filter((y) => y <= last)) {
-    const was = before.get(year) ?? zero();
-    const is = after.get(year) ?? zero();
-    if (!was.eq(is)) {
-      moved.push({ year, before: was, after: is });
+    const was = before.bases.get(year) ?? zero();
+    const is = after.bases.get(year) ?? zero();
+    // The base is not the whole of it: a year can keep the same base and leave
+    // a different balance pending, which moves **the years after it**. The
+    // warning has to see that too (feature 010, §1.5).
+    const pendingBefore = before.pendings.get(year) ?? [];
+    const pendingAfter = after.pendings.get(year) ?? [];
+    if (!was.eq(is) || pendingText(pendingBefore) !== pendingText(pendingAfter)) {
+      moved.push({
+        year,
+        before: was,
+        after: is,
+        pending_before: sum(pendingBefore.map((entry) => entry.amount_eur)),
+        pending_after: sum(pendingAfter.map((entry) => entry.amount_eur)),
+      });
     }
   }
   return moved;
 };
 
-const zeroBalances = (): YearBalances => ({ capital_gain: zero(), movable_capital: zero() });
+/** What a year leaves pending, as a text that can be compared as a whole. */
+const pendingText = (pending: readonly PendingLoss[]): string =>
+  pending
+    .map((entry) => `${entry.origin_year}|${entry.category}|${entry.amount_eur.amount.toString()}`)
+    .sort()
+    .join(",");
 
 /** A transmission line is one account of one event: a forced sale can have several. */
 const lineKey = (line: TransmissionLine): string => `${line.event_id}|${line.account_id}`;

@@ -346,7 +346,25 @@ const confirmMovedYears = async (
     ctx.io.out(
       "Este cambio mueve la base del ahorro de ejercicios anteriores (`atlas tax <año>`):",
     );
-    ctx.io.out(rows(bases));
+    ctx.io.out(
+      table(
+        ["ejercicio", "base antes EUR", "base después EUR", "pendiente antes", "pendiente después"],
+        bases.map((impact) => [
+          String(impact.year),
+          impact.before.amount.toString(),
+          impact.after.amount.toString(),
+          impact.pending_before.amount.toString(),
+          impact.pending_after.amount.toString(),
+        ]),
+      ),
+    );
+    // A year can keep its base and leave a different balance pending, which is
+    // what moves the years after it.
+    if (bases.every((impact) => impact.before.eq(impact.after))) {
+      ctx.io.out(
+        "La base no cambia en ninguno, pero sí lo que dejan pendiente de compensar: eso mueve los ejercicios siguientes.",
+      );
+    }
   }
   ctx.io.out("Puede afectar a una declaración ya presentada.");
   return confirm(ctx, "¿Continuar? [s/N] ");

@@ -4,7 +4,6 @@
 
 import { describe, expect, it } from "vitest";
 import type { DomainError } from "../../src/errors.js";
-import { Money } from "../../src/money/money.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { taxReportJson } from "../../src/tax/json.js";
 import { taxYear } from "../../src/tax/year.js";
@@ -80,22 +79,20 @@ describe("the carry-forward", () => {
     sell(b, "stock_s", "2027-06-01", "10", "90");
     buy(b, "stock_t", "2028-01-10", "10", "100");
     sell(b, "stock_t", "2028-06-01", "10", "120");
-    const filed = [
-      {
-        year: 2027,
-        pending: [
-          {
-            origin_year: 2027,
-            category: "capital_gain" as const,
-            amount_eur: Money.parse("-60", "EUR"),
-          },
-        ],
+    // What was declared comes from the ledger, and only from there (ADR-0020).
+    b.filed({
+      tax_year: 2027,
+      filed_at: "2028-06-18",
+      declared: {
+        savings_base_eur: "0",
+        pending_losses: [{ origin_year: 2027, category: "capital_gain", amount_eur: "-60" }],
+        deferred_losses_eur: "0",
       },
-    ];
-    const report = taxYear(b.build(), 2028, { today: "2035-01-01", filed });
+    });
+    const report = taxYear(b.build(), 2028, { today: "2035-01-01" });
     // Declared −60 instead of the computed −100: 200 − 60 = 140.
     expect(text(report.base_eur)).toBe("140");
-    const anchored = taxYear(b.build(), 2027, { today: "2035-01-01", filed });
+    const anchored = taxYear(b.build(), 2027, { today: "2035-01-01" });
     expect(anchored.anchor?.computed.map((p) => text(p.amount_eur))).toEqual(["-100"]);
     expect(anchored.anchor?.declared.map((p) => text(p.amount_eur))).toEqual(["-60"]);
   });

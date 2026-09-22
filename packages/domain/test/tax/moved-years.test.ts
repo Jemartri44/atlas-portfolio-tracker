@@ -24,9 +24,37 @@ describe("movedTaxYears", () => {
 
   it("sees a change of income category that moves the base without moving any realized gain", () => {
     const moved = movedTaxYears(ledger(), AS_GAIN, DEFAULT_SETTINGS, 2029);
-    // 500 − 200 = 300 as capital gains; 375 with the ETC as movable capital.
-    expect(moved.map((m) => [m.year, text(m.before), text(m.after)])).toEqual([
-      [2027, "300", "375"],
+    // 500 − 200 = 300 as capital gains; with the ETC as movable capital income
+    // the −200 only offsets 25 % of the 500, so the base is 375 and **−75 stay
+    // pending**: 2028 keeps its base of 0 and inherits a different balance,
+    // which is why it is listed too (feature 010, §1.5).
+    expect(
+      moved.map((m) => [
+        m.year,
+        text(m.before),
+        text(m.after),
+        text(m.pending_before),
+        text(m.pending_after),
+      ]),
+    ).toEqual([
+      [2027, "300", "375", "0", "-75"],
+      [2028, "0", "0", "0", "-75"],
+    ]);
+  });
+
+  it("reads the same change backwards: what was pending stops being pending", () => {
+    const moved = movedTaxYears(ledger(), DEFAULT_SETTINGS, AS_GAIN, 2029);
+    expect(
+      moved.map((m) => [
+        m.year,
+        text(m.before),
+        text(m.after),
+        text(m.pending_before),
+        text(m.pending_after),
+      ]),
+    ).toEqual([
+      [2027, "375", "300", "-75", "0"],
+      [2028, "0", "0", "-75", "0"],
     ]);
   });
 
