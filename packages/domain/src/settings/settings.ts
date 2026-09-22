@@ -20,10 +20,12 @@ export type FiscalDateRule = (typeof FISCAL_DATE_RULES)[number];
  *
  * It exists because an ETC is legally a debt note and not a collective
  * investment undertaking, so there is a case for its disposal being movable
- * capital income. That case is **unresolved** (`docs/fiscal-questions.md`), and
- * this feature does not resolve it: **nothing reads this setting yet**. The tax
- * engine of phase 5 will, and then answering the question will be a
- * `settings_changed` and not a migration (ADR-0021).
+ * capital income. ADR-0021 left it as configuration so that the case could be
+ * answered with a `settings_changed` and not a migration, and criterion #24
+ * answered it: since the binding ruling V0267-25, the default of an ETC and an
+ * ETP is `movable_capital`. The **tax engine reads it** (feature 009): it
+ * decides which section of the savings base a disposal lands in, and with it
+ * how its losses offset.
  */
 export const INCOME_CATEGORIES = ["capital_gain", "movable_capital"] as const;
 export type IncomeCategory = (typeof INCOME_CATEGORIES)[number];
@@ -285,10 +287,11 @@ export const fiscalDateRuleOf = (settings: Settings, assetType: AssetType): Fisc
 /**
  * The income category in force for an asset type (ADR-0021). Resolved here and
  * not read off the map, so that an absent type —or an absent map, which is what
- * every line written before this feature has— takes the documented default and
+ * every line written before ADR-0021 has— takes the documented default and
  * never a category arrived at by elimination.
  *
- * Nothing in the system calls this yet. It is the door the tax engine opens.
+ * The tax engine calls it for every disposal, and the warning of a settings
+ * change compares the two readings through it.
  */
 export const incomeCategoryOf = (settings: Settings, assetType: AssetType): IncomeCategory =>
   settings.income_category?.[assetType] ?? DEFAULT_INCOME_CATEGORY[assetType];

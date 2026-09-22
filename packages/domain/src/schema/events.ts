@@ -107,13 +107,19 @@ export interface AssetFields {
   transferable: boolean;
   reference_etf_id?: AssetId;
   /**
-   * Where it trades: MIC code or the market's name (ADR-0021). Optional, and
-   * nothing reads it yet. It exists because the wash-sale window of article
-   * 33.5.f) LIRPF talks about regulated markets **of the EU**, so a Nasdaq
-   * share may well fall under letter g) and its one-year window instead of the
-   * two months the project applies by default. That question is open
+   * Where it trades: MIC code or the market's name (ADR-0021). Optional.
+   *
+   * It exists because the wash-sale window of article 33.5.f) LIRPF talks
+   * about regulated markets **of the EU**, so a Nasdaq share may well fall
+   * under letter g) and its one-year window instead of the two months the
+   * project applies by default. That question is still open
    * (`docs/fiscal-questions.md` #2), and it cannot be answered either way if
    * the catalogue does not say where the thing trades.
+   *
+   * The tax engine **reads it** (feature 009): each transmission line carries
+   * it, and the doubtful item of criterion `2:listed` lists the markets at
+   * stake, so that the reading of the dispute can be checked market by market.
+   * Nothing chooses a window with it yet: that is the criterion's to decide.
    */
   market?: string;
   /**
@@ -525,9 +531,13 @@ export interface CorporateActionEvent extends Envelope {
   effects: Effect[];
   /**
    * Whether the operation takes the neutrality regime, i.e. the tax deferral of
-   * a merger, exchange or spin-off (ADR-0021). Optional, and **nothing reads
-   * it**: which primitives an exchange composes into is still the user's
-   * choice, and `KIND_RULES` does not look at this field.
+   * a merger, exchange or spin-off (ADR-0021). Optional. It does not decide
+   * which primitives an exchange composes into —that is still the user's
+   * choice, and `KIND_RULES` does not look at this field— but the tax engine
+   * **reads it** (feature 009): an exchange that says nothing about the regime
+   * is exposed as doubtful under criteria #7 and #13, and one that says the
+   * regime does **not** apply while keeping date and cost gets its own note,
+   * `tax_neutrality_contradiction`.
    *
    * It exists because the deferral is conditional —the AEAT manual requires the
    * acquiring entity to be Spanish or within Directive 2009/133/EC— so a merger
