@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fingerprintOfEvents } from "../../src/filings/fingerprint.js";
 import { deepCheck } from "../../src/projections/deep-check.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { LedgerEvent } from "../../src/schema/events.js";
@@ -129,5 +130,48 @@ describe("deepCheck", () => {
       fingerprint: "x",
     } as LedgerEvent;
     expect(deepCheck([], [reserved], projectLedger([]))).toEqual([]);
+  });
+});
+
+describe("deepCheck and the fingerprint of a filing (ADR-0020)", () => {
+  const sealedLedger = (): string[] => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.deposit({ account_id: "acc_fund" });
+    const before = b.build();
+    b.filed({ tax_year: 2027, ledger_fingerprint: fingerprintOfEvents(before) });
+    return b.build().map(encodeLine);
+  };
+
+  it("finds nothing when the events before it are the ones it was sealed on", () => {
+    expect(check(sealedLedger())).toEqual([]);
+  });
+
+  it("says the events before a filing are not the ones it was computed on", () => {
+    const lines = sealedLedger();
+    lines[1] = (lines[1] as string).replace(/"name":"[^"]*"/, '"name":"Editada"');
+    const findings = check(lines);
+    expect(findings.map((f) => `${f.severity}:${f.code}`)).toEqual([
+      "error:filing_fingerprint_mismatch",
+    ]);
+    expect(findings[0]?.message).toContain("edited by hand");
+  });
+
+  /**
+   * A line before a filing that carries a **newer** version than the
+   * fingerprint. It cannot happen by writing —the loader refuses a version it
+   * does not know, so an old client never writes after a new one— so it means
+   * the file was edited. The fingerprint is then unverifiable, which is not
+   * the same as wrong, and the message says so.
+   */
+  it("says a fingerprint cannot be verified when a line before it is newer than its version", () => {
+    const lines = sealedLedger().map((line, index) =>
+      index === 1 ? JSON.stringify({ ...JSON.parse(line), schema_version: 2 }) : line,
+    );
+    const findings = check(lines, TEST_SCHEMA_V2 as never);
+    expect(findings.map((f) => f.code)).toContain("filing_fingerprint_mismatch");
+    expect(findings.find((f) => f.code === "filing_fingerprint_mismatch")?.message).toContain(
+      "cannot be read",
+    );
   });
 });

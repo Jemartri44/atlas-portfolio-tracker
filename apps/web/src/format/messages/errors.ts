@@ -252,6 +252,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     }.`,
   lots_mismatch: (d, n) =>
     `Los lotes fiscales de ${n.one(d.asset_id)} no cuadran con la posición física.`,
+  filing_fingerprint_lines: () =>
+    "Una declaración presentada dice que se calculó sobre otros movimientos de los que tiene delante en el archivo.",
+  filing_fingerprint_mismatch: () =>
+    "Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó.",
   // --- Store and schema --------------------------------------------------
   conflict: () =>
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",

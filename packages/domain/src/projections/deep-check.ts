@@ -2,6 +2,7 @@
 // projection cannot see because it only ever receives decoded events. Run by
 // `atlas check --deep`; `integrity` stays the cheap projection-level check.
 
+import { checkFilingFingerprints } from "../filings/fingerprint.js";
 import { isSupportedEventType } from "../schema/envelope.js";
 import type { LedgerEvent, SupportedEvent } from "../schema/events.js";
 import { fingerprintOf } from "../schema/fingerprint.js";
@@ -127,6 +128,23 @@ export const deepCheck = (
 ): IntegrityFinding[] => {
   const { findings, duplicates } = lineChecks(lines, schema);
   findings.push(...fingerprintChecks(events));
+  // What the ledger looked like the day a return was filed. Re-reading and
+  // re-migrating every line before it is exactly the kind of work this check
+  // exists for; `integrity` only compares the line count (ADR-0020).
+  for (const check of checkFilingFingerprints(lines, events, schema)) {
+    if (check.reason === undefined || check.reason === "lines") {
+      continue;
+    }
+    findings.push(
+      error(
+        "filing_fingerprint_mismatch",
+        check.reason === "digest"
+          ? `the events before filing ${check.filing_id} are not the ones it was computed on (edited by hand?)`
+          : `the events before filing ${check.filing_id} cannot be read at schema version ${check.declared_lines}`,
+        [check.filing_id],
+      ),
+    );
+  }
   if (!duplicates) {
     const reread = lines.map((line) => decodeLine(line, schema).event);
     const again = projectLedger(reread, { collectErrors: true, settings: state.fiscalSettings });

@@ -228,6 +228,10 @@ export const describeError = (error: DomainError): string => {
       return `Posición negativa en ${text(d.key ?? "una cuenta")}: falta una compra o sobra una venta.`;
     case "lots_mismatch":
       return `Los lotes fiscales de ${text(d.asset_id)} no suman la posición física.`;
+    case "filing_fingerprint_lines":
+      return `Una declaración presentada dice que se calculó sobre otros movimientos de los que tiene delante en el fichero: se ha insertado o quitado una línea antes de ella.`;
+    case "filing_fingerprint_mismatch":
+      return `Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó (editados a mano). Recupera la copia anterior a la edición.`;
     case "duplicate_id":
       return "Dos líneas del libro tienen el mismo identificador: el fichero está corrupto.";
     case "invalid_line":

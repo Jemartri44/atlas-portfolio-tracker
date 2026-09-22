@@ -76,6 +76,21 @@ export const integrity = (state: LedgerState): IntegrityFinding[] => {
       event_ids: [],
     });
   }
+  // The fingerprint of a filing says how many lines of the file it covers, and
+  // that has to be exactly the lines before it. Comparing two numbers is
+  // cheap and catches a line inserted before a filing by hand; whether the
+  // **content** of those lines still hashes the same needs re-reading the
+  // file, and that is the deep check's job.
+  for (const filing of state.filings.values()) {
+    if (filing.fingerprint.lines !== filing.position) {
+      findings.push({
+        severity: "error",
+        code: "filing_fingerprint_lines",
+        message: `filing ${filing.event_id} says its fingerprint covers ${filing.fingerprint.lines} lines and it is line ${filing.position}`,
+        event_ids: [filing.event_id],
+      });
+    }
+  }
   for (const { event, error } of state.invalid) {
     findings.push({
       severity: "error",

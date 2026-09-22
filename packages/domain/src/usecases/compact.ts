@@ -10,6 +10,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { todayInMadrid } from "../dates/madrid.js";
 import { ArchiveExistsError, CompactRejectedError, ConflictError } from "../errors.js";
+import { checkFilingFingerprints, resealFilings } from "../filings/fingerprint.js";
 import type { Clock } from "../ports/clock.js";
 import type { LedgerStore } from "../ports/ledger-store.js";
 import { projectLedger } from "../projections/project-ledger.js";
@@ -116,8 +117,22 @@ export const compactLedger = async (
       targetVersion: plan.targetVersion,
     };
   }
+  // The fingerprints of the filings are verified **before** the shape of the
+  // lines changes, which is the whole reason the guarantee survives a
+  // compaction: they are checked against the file as it is, and sealed again
+  // over the file as it will be. A broken one stops the rewrite; recovering
+  // from it is a decision of the user, not of a batch job.
+  const broken = checkFilingFingerprints(lines, events, store.schema).filter(
+    (check) => check.reason !== undefined,
+  );
+  if (broken.length > 0) {
+    throw new CompactRejectedError("filing_fingerprint_mismatch", {
+      affected: broken.map((check) => ({ id: check.filing_id, reason: check.reason })),
+    });
+  }
+  const sealed = resealFilings(events, plan.targetVersion);
   const before = snapshotOf(projectLedger(events, { collectErrors: true }));
-  const rewritten = events.map(encodeLine).map((line) => decodeLine(line, store.schema).event);
+  const rewritten = sealed.map(encodeLine).map((line) => decodeLine(line, store.schema).event);
   const after = snapshotOf(projectLedger(rewritten, { collectErrors: true }));
   const keys = snapshotDiff(before, after);
   if (keys.length > 0) {
@@ -127,12 +142,12 @@ export const compactLedger = async (
   for (let attempt = 1; ; attempt += 1) {
     const archiveName = attempt === 1 ? plan.archiveName : `${base}-${attempt}.jsonl`;
     try {
-      const replaced = await store.replace(events, etag, archiveName);
+      const replaced = await store.replace(sealed, etag, archiveName);
       return {
         status: "compacted",
         archiveName,
         linesBefore: lines.length,
-        linesAfter: events.length,
+        linesAfter: sealed.length,
         versions: plan.versions,
         targetVersion: plan.targetVersion,
         etag: replaced.etag,
