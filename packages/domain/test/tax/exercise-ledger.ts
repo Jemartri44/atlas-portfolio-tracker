@@ -4,7 +4,11 @@
 // hand calculation and not from the engine.
 
 import type { LedgerEvent } from "../../src/schema/events.js";
-import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
+import {
+  DEFAULT_INCOME_CATEGORY,
+  DEFAULT_SETTINGS,
+  type IncomeCategory,
+} from "../../src/settings/settings.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 
 export type Label = `E${number}`;
@@ -16,11 +20,32 @@ export interface Exercise {
   settingsId: string;
 }
 
-export const exerciseLedger = (): Exercise => {
+/**
+ * Which reading of criterion #24 the ledger writes down for an ETC and an ETP.
+ * `"from_code"` leaves `income_category` out of the `settings_changed`, so the
+ * documented default applies at reading time.
+ */
+export type CategoryReading = IncomeCategory | "from_code";
+
+/**
+ * The hand calculation of feature 009 says, in so many words, "everything a
+ * capital gain", so the ledger writes it down instead of borrowing whatever
+ * the code says today: the default of an ETC changed in feature 010 (criterion
+ * #24) and the literals of `exercise.test.ts` have to keep meaning what they
+ * were computed to mean (note N17). The same document also works the exercise
+ * out with the ETC as movable capital income, and that reading has its own
+ * test.
+ */
+export const exerciseLedger = (reading: CategoryReading = "capital_gain"): Exercise => {
   const b = new LedgerBuilder();
   const id: Record<string, string> = {};
+  // `exactOptionalPropertyTypes`: the key is left out, not set to `undefined`.
+  const { income_category: _fromCode, ...withoutCategory } = DEFAULT_SETTINGS;
   const settings = b.settings({
-    ...DEFAULT_SETTINGS,
+    ...withoutCategory,
+    ...(reading === "from_code"
+      ? {}
+      : { income_category: { ...DEFAULT_INCOME_CATEGORY, etc: reading, etp: reading } }),
     wash_sale_transfer_counts: true,
     savings_offset_limit_pct: "25",
     loss_carryforward_years: 4,
