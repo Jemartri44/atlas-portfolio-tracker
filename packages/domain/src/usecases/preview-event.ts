@@ -14,6 +14,8 @@
 // whether a repetition is legitimate is the user's call (ADR-0012), and the
 // interface has to be able to ask before writing.
 
+import { todayInMadrid } from "../dates/madrid.js";
+import { type ClosedYear, closedYearsTouched, unfiledPastYears } from "../filings/touched.js";
 import type { Ulid } from "../ids/ulid.js";
 import { createUlidGenerator } from "../ids/ulid.js";
 import { type Currency, Money } from "../money/money.js";
@@ -57,6 +59,14 @@ export interface EventPreview<E extends SupportedEvent = SupportedEvent> {
   warnings: Warning[];
   /** Ids of the recorded events carrying the same fingerprint; writing needs confirmation. */
   duplicates: Ulid[];
+  /**
+   * The tax years already filed that writing this would reach, and the past
+   * years with figures and no return recorded. The same two the write returns:
+   * a preview that does not warn where the write warns sends the user into the
+   * write to be surprised there (plan §1.6).
+   */
+  closed: ClosedYear[];
+  unfiledPastYears: number[];
   /** Events already recorded that the candidate would leave invalid (only a settings change can). */
   newlyInvalid: { id: Ulid; type: string; error: string }[];
   /** The ledger as loaded and projected (degraded mode), so nobody projects it again. */
@@ -109,6 +119,7 @@ export const previewEvent = async <E extends SupportedEvent>(
   const { affected, state: after } = checkInvalid(events, candidate, options);
   const before = projectLedger(events, { collectErrors: true });
   const assets = options.assets ?? assetsOf(candidate);
+  const today = todayInMadrid(deps.clock);
   return {
     candidate,
     before: effectOf(before, assets),
@@ -118,6 +129,8 @@ export const previewEvent = async <E extends SupportedEvent>(
     warnings: after.warnings.filter((warning) => warning.event_id === candidate.id),
     duplicates: duplicatesOf(before.fingerprints, candidate),
     newlyInvalid: affected.map((entry) => ({ ...entry })),
+    closed: closedYearsTouched(events, [...events, candidate], today, after),
+    unfiledPastYears: unfiledPastYears(today, after),
     events,
     state: before,
     etag,
@@ -147,6 +160,7 @@ export const previewCorrection = async <E extends SupportedEvent>(
   const { events, etag } = await deps.store.load();
   const {
     target,
+    reversal,
     event,
     state: after,
   } = prepareCorrection(deps, events, targetId, replacement, reason);
@@ -154,6 +168,7 @@ export const previewCorrection = async <E extends SupportedEvent>(
   const assets = options.assets ?? [
     ...new Set([...assetsOf(target as SupportedEvent), ...assetsOf(event)]),
   ];
+  const today = todayInMadrid(deps.clock);
   return {
     candidate: event,
     before: effectOf(before, assets),
@@ -163,6 +178,8 @@ export const previewCorrection = async <E extends SupportedEvent>(
     warnings: after.warnings.filter((warning) => warning.event_id === event.id),
     duplicates: duplicatesOf(after.fingerprints, event),
     newlyInvalid: [],
+    closed: closedYearsTouched(events, [...events, reversal, event], today, after),
+    unfiledPastYears: unfiledPastYears(today, after),
     events,
     state: before,
     etag,
