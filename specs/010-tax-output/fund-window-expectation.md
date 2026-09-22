@@ -134,3 +134,27 @@ Rellenado después, sin tocar nada de lo de arriba.
 La dirección pedía unificar `SCENARIO_WASH_SALE_WINDOW` con `DEFAULT_WASH_SALE_WINDOW` o dejar escrito por qué son dos. **Se quedan en dos**, y el motivo se comprobó intentándolo: al unificarlas, el generador empezó a escribir `fund: "2m"` y **el fichero dorado dejó de reproducirse byte a byte**. El dorado está **congelado una vez fusionado** (decisión (i) de la 003), y un generador que lee el valor por defecto lo reescribe cada vez que el código cambia de opinión sobre un criterio. El escenario es **dato**; el valor por defecto es **lo que el código cree hoy**; un *fixture* que sigue al código no demuestra nada del código.
 
 Lo que eso cuesta es deriva, y contra la deriva hay ahora un test: el escenario **tiene que nombrar todos los tipos de activo menos `etf`**, que se deja fuera a propósito para que el dorado ejercite el respaldo por defecto y el informe lo liste en `settings.from_code`. Un tipo nuevo en la enumeración no puede colarse aquí sin que alguien lo vea.
+
+---
+
+## 6. Segunda parte: los monetarios, también a dos meses (2026-09-22)
+
+La dirección nombró solo `fund` por descuido y lo corrige: **`money_market` pasa igualmente a `2m`**, con el mismo fundamento y la misma certeza, y con las mismas variantes del criterio #2.
+
+**Salvedad comprobada antes de aplicarlo.** La dirección pedía parar si `money_market` pudiera designar algo que **no** sea una IIC —letras del Tesoro, un repo, un depósito—, porque entonces el fundamento no le alcanzaría. No es el caso: en este proyecto `money_market` es un **fondo monetario**. Lo dicen las tres fuentes internas: `business-rules.md` y `specification.md` describen la clase `fixed_income` como «Fondos indexados o **monetarios**»; el generador sintético crea su `ast_mm` como «Money Market **Fund**», con ISIN, TER y `transferable: true`; y `transferable` es precisamente el régimen de traspaso español, que **solo** existe para las IIC. Así que el art. 4.9 del RD 1082/2012 le alcanza igual que a cualquier otro fondo.
+
+**Predicción: el fichero dorado no se mueve ni un byte.**
+
+- Los tres `settings_changed` del libro sintético fijan `money_market: "1y"` **explícitamente**, igual que el `fund`.
+- El informe congelado **no tiene ninguna transmisión de `ast_mm`**: la única línea que lleva una variante de `2:fund` es la de `ast_world`, y esa ya se movió en la primera parte.
+- La alternativa de fondos ya agrupaba `fund` y `money_market`, y en ese libro los dos aplican el año: sigue habiendo **una** alternativa, con los mismos ceros.
+- El libro a mano de la 009 y `tax-hand-v1.jsonl` fijan también su ventana: **sin cambios**.
+
+**Lo que sí se mueve son los tests del valor por defecto**, y solo ellos: los dos que afirman `money_market → "1y"` (`settings.test.ts` y `settings/wash-sale.test.ts`), que pasan a `"2m"`.
+
+**Y dos cosas más que la dirección pide en el mismo lote:**
+
+1. **La leyenda de la tabla de criterios** deja escrito qué responde cada columna, porque es la segunda vez que se confunden: la **dirección** dice *hacia qué lado falla si falla*; la **certeza**, *qué probabilidad hay de que falle*; y **subir la certeza nunca cambia la dirección**.
+2. **Todo lo que el libro a mano de la 009 hereda en vez de fijar, se fija.** Ya se fijaron `income_category` (nota N17) y `wash_sale_window`; queda **`fiscal_date_rule`**, que sigue viniendo de `DEFAULT_SETTINGS`. Se fija también, para que no haya una tercera vez. Un cálculo a mano cuyos literales dependen de lo que el código crea hoy no es un cálculo a mano.
+
+**Pregunta abierta anotada, para el bloque 2**: con `19` en certeza alta desaparece del apartado de dudosos y **con él los 200,00 € en juego de esa lectura**. Una cifra grande deja de verse porque se ha dejado de dudar de ella. No se resuelve aquí: se decide dónde la ve el usuario cuando se diseñe la salida por casillas y el informe.
