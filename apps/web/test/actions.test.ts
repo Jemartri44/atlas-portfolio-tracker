@@ -9,13 +9,8 @@
 import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
 import { type Draft, decodeLine, type SupportedEvent, type UseCaseDeps } from "@atlas/domain";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  bootDecision,
-  loadInto,
-  reloadLedger,
-  restoreLedger,
-  toAppError,
-} from "../src/ledger/actions.js";
+import { bootDecision, loadInto, reloadLedger, restoreLedger } from "../src/ledger/actions.js";
+import { toAppError } from "../src/ledger/errors.js";
 import { validateImport } from "../src/ledger/export.js";
 import { store } from "../src/ledger/state.js";
 import {
@@ -118,7 +113,9 @@ describe("opening a ledger", () => {
     const phase = store.load();
     expect(phase.phase).toBe("failed");
     expect(phase.phase === "failed" && phase.error.line).toBe(201);
-    expect(phase.phase === "failed" && phase.error.message).toContain("no es válido");
+    expect(phase.phase === "failed" && phase.error.message).toContain("no es válida");
+    // Named by its label, never by the key of the schema.
+    expect(phase.phase === "failed" && phase.error.message).toContain("«Identificador»");
   });
 
   it("refuses a ledger written by a newer schema, and says what to do", async () => {

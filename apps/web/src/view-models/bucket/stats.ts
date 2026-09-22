@@ -11,7 +11,7 @@
 //     it — the exception is a budget control, not a portfolio metric.
 
 import type { BucketControls, BucketReport, BucketStats, Money, Warning } from "@atlas/domain";
-import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
+import { displayName, displayThesis, type NameIndex, NO_NAMES } from "../../format/names.js";
 
 export interface StatsView {
   closedTheses: number;
@@ -70,11 +70,11 @@ const gapText = (
   return `${REASONS[gap.reason] ?? gap.reason}${detail}`;
 };
 
-export const statsView = (stats: BucketStats): StatsView => ({
+export const statsView = (stats: BucketStats, names: NameIndex = NO_NAMES): StatsView => ({
   closedTheses: stats.closed_theses,
   measuredTheses: stats.measured_theses,
   realizedOperations: stats.realized_operations,
-  excluded: stats.excluded.map((entry) => entry.thesis_id),
+  excluded: stats.excluded.map((entry) => displayThesis(names, entry.thesis_id)),
   ...(stats.hit_rate === undefined ? {} : { hitRatePct: stats.hit_rate.toString() }),
   ...(stats.average_win_eur === undefined ? {} : { averageWin: stats.average_win_eur }),
   ...(stats.average_loss_eur === undefined ? {} : { averageLoss: stats.average_loss_eur }),
@@ -115,6 +115,6 @@ export const bucketReportView = (
   report: BucketReport,
   names: NameIndex = NO_NAMES,
 ): { stats: StatsView; controls: ControlsView } => ({
-  stats: statsView(report.stats),
+  stats: statsView(report.stats, names),
   controls: controlsView(report.controls, names),
 });

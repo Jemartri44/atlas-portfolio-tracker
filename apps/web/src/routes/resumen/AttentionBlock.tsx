@@ -29,7 +29,13 @@ export const AttentionBlock = (props: { items: readonly AttentionItem[] }): JSX.
         <For each={props.items}>
           {(item) => (
             <A href={item.action.to} class={`item is-${item.severity}`}>
-              <span class="text">{item.message}</span>
+              <span class="text">
+                {item.message}
+                <Show when={item.count > 1}>
+                  {" "}
+                  <span class="tiny">({item.count} avisos iguales)</span>
+                </Show>
+              </span>
               <span class="go" aria-hidden="true">
                 {item.action.label} →
               </span>

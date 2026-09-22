@@ -4,11 +4,25 @@
 // what is true, and the domain does not order warnings. The texts come from the
 // message catalogue and the destinations from the table below, which is what
 // makes SC-008 checkable — every code shown has a screen where it is fixed.
+//
+// LINE BUDGET: three tables — where each code is fixed, how important it is
+// and how severe — that have to be read side by side to review the order of the
+// list, plus the forty lines that apply them. Splitting the tables from the
+// function would leave two halves that only make sense together.
 
-import type { IntegrityFinding, OpenOrder, OpenTransfer, Warning } from "@atlas/domain";
+import {
+  type CivilDate,
+  type IntegrityFinding,
+  type OpenOrder,
+  type OpenTransfer,
+  type Warning,
+  type WashSaleWindow,
+  washSaleWindowEnd,
+} from "@atlas/domain";
+import { describeFinding } from "../format/messages/findings.js";
 import { describeWarning } from "../format/messages/warnings.js";
 import type { NameIndex } from "../format/names.js";
-import { maskFigures } from "../format/privacy.js";
+import { countOf } from "../format/number.js";
 
 export type AttentionSeverity = "error" | "warning" | "info";
 
@@ -19,6 +33,12 @@ export interface AttentionItem {
   action: { label: string; to: string };
   /** Rank inside the list; lower comes first. */
   rank: number;
+  /**
+   * How many warnings this item stands for. The same rule tripped by eleven
+   * purchases used to be eleven items in a row, pushing everything else down;
+   * now it is one, with the count.
+   */
+  count: number;
 }
 
 /** Where each code is fixed. A code missing from here is a bug the test catches. */
@@ -63,12 +83,15 @@ const DESTINATIONS: Record<string, { label: string; to: string }> = {
 };
 
 /**
- * Importance, top to bottom: a degraded ledger (nothing can be recorded), the
- * conduct rules of the plan that are already breached, the fiscal cost already
- * incurred, what is pending with the broker, and what is missing in order to be
- * able to compute at all.
+ * Importance, top to bottom. **Losing the data comes first**: a ledger that
+ * lives only in the browser and has not been exported is one "clear site data"
+ * away from being gone, and nothing else on the list survives that. Then a
+ * degraded ledger (nothing can be recorded), the conduct rules of the plan that
+ * are already breached, the fiscal cost already incurred, what is pending with
+ * the broker, and what is missing in order to be able to compute at all.
  */
 const RANKS: readonly string[] = [
+  "export_overdue",
   "invalid_events",
   "integrity_finding",
   "bucket_stop_loss_reached",
@@ -88,7 +111,6 @@ const RANKS: readonly string[] = [
   "same_asset_two_accounts",
   "pending_orders",
   "pending_transfers",
-  "export_overdue",
   "stale_price",
   "stale_fx_rate",
   "partial_core_total",
@@ -106,11 +128,12 @@ const RANKS: readonly string[] = [
 ];
 
 const SEVERITIES: Record<string, AttentionSeverity> = {
+  // An error, not a warning: it is the one item that can cost everything.
+  export_overdue: "error",
   invalid_events: "error",
   integrity_finding: "error",
   bucket_stop_loss_reached: "error",
   bucket_contribution_exceeded: "error",
-  export_overdue: "warning",
   transfer_overdue: "warning",
   deviation_above_threshold: "warning",
   satellite_below_minimum: "warning",
@@ -145,15 +168,58 @@ export interface AttentionInput {
   names?: NameIndex;
   /** Privacy mode: the figures of a warning travel **inside** its sentence. */
   privacy: boolean;
+  /**
+   * The date the list is read at. A wash-sale window that had already closed
+   * by then is history, not something to act on, and is left out.
+   */
+  date?: CivilDate;
+  /** Fiscal date of each sale, to know when the window of a loss closes. */
+  saleDates?: ReadonlyMap<string, CivilDate>;
 }
 
-const itemOf = (code: string, message: string): AttentionItem => ({
+const itemOf = (code: string, message: string, count = 1): AttentionItem => ({
   code,
   severity: severityOf(code),
   message,
   action: DESTINATIONS[code] ?? FALLBACK,
   rank: rankOf(code),
+  count,
 });
+
+/** The last day on which the window a wash-sale warning talks about is open. */
+const windowEndOf = (
+  warning: Warning,
+  saleDates: ReadonlyMap<string, CivilDate> | undefined,
+): CivilDate | undefined => {
+  if (warning.code === "wash_sale_window_repurchase") {
+    return warning.details.window_end as CivilDate | undefined;
+  }
+  if (warning.code === "wash_sale_window_prior_buy") {
+    const sale = saleDates?.get(warning.event_id);
+    return sale === undefined
+      ? undefined
+      : washSaleWindowEnd(sale, warning.details.window as WashSaleWindow);
+  }
+  return undefined;
+};
+
+/**
+ * What makes two warnings "the same one": the rule and what it is about. The
+ * wash-sale ones are about **a sale** — eleven purchases inside the window of
+ * one loss are one thing to know, not eleven.
+ */
+const groupKey = (warning: Warning): string => {
+  const d = warning.details;
+  const subject =
+    warning.code === "wash_sale_window_repurchase"
+      ? d.sale_event_id
+      : warning.code === "wash_sale_window_prior_buy"
+        ? warning.event_id
+        : [d.asset_id, d.thesis_id, d.asset_class, d.currency, d.from_asset_id, d.to_asset_id]
+            .filter((part) => part !== undefined)
+            .join("|");
+  return `${warning.code}|${String(subject)}`;
+};
 
 export const attentionItems = (input: AttentionInput): AttentionItem[] => {
   const items: AttentionItem[] = [];
@@ -162,37 +228,44 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "invalid_events",
-        `${input.invalidCount} ${
-          input.invalidCount === 1 ? "evento inválido" : "eventos inválidos"
-        } en el libro: las consultas siguen, registrar no (ADR-0015).`,
+        `${countOf(input.invalidCount, "evento inválido", "eventos inválidos")} en el libro: se puede consultar, pero no registrar hasta rectificarlos.`,
       ),
     );
   }
 
-  // The message of a finding is the domain's own, in English and free-form, and
-  // it carries the evidence: "open lots 23.0274 differ from physical positions
-  // 20" is a position, read out loud in the first screen of the application.
+  // The explanation of a finding in Spanish. Its evidence — the domain's own
+  // message, in English, with identifiers and figures — stays in the
+  // verification screen, folded away, where it can be checked.
   for (const finding of input.findings) {
-    items.push(
-      itemOf(
-        "integrity_finding",
-        `${finding.code}: ${maskFigures(finding.message, input.privacy)}${
-          finding.event_ids.length === 0 ? "" : ` (${finding.event_ids.join(", ")})`
-        }`,
-      ),
-    );
+    items.push(itemOf("integrity_finding", describeFinding(finding).what));
   }
 
-  // One entry per distinct warning; the domain can repeat a code per asset.
+  // The same warning can arrive twice — the summary gathers them from the
+  // projection and from three views that share rules — and that is one warning,
+  // not two of a kind: exact copies go first, then the repeats are counted.
   const seen = new Set<string>();
+  const groups = new Map<string, { warning: Warning; count: number }>();
   for (const warning of input.warnings) {
-    const key = `${warning.code}|${warning.details.asset_id ?? ""}|${warning.details.asset_class ?? ""}|${warning.details.currency ?? ""}|${warning.event_id}`;
-    if (seen.has(key)) {
+    const identity = `${warning.code}|${warning.event_id}|${JSON.stringify(warning.details)}`;
+    if (seen.has(identity)) {
       continue;
     }
-    seen.add(key);
+    seen.add(identity);
+    const end = windowEndOf(warning, input.saleDates);
+    if (end !== undefined && input.date !== undefined && end < input.date) {
+      continue;
+    }
+    const key = groupKey(warning);
+    const group = groups.get(key);
+    if (group === undefined) {
+      groups.set(key, { warning, count: 1 });
+    } else {
+      group.count += 1;
+    }
+  }
+  for (const { warning, count } of groups.values()) {
     // `input` **is** the prose context: it carries the catalogue and the mode.
-    items.push(itemOf(warning.code, describeWarning(warning, input)));
+    items.push(itemOf(warning.code, describeWarning(warning, input), count));
   }
 
   if (input.openOrders.length > 0) {
@@ -200,9 +273,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "pending_orders",
-        `${input.openOrders.length} ${
-          input.openOrders.length === 1 ? "orden dada sin ejecutar" : "órdenes dadas sin ejecutar"
-        }; la más antigua lleva ${oldest} días.`,
+        `${countOf(input.openOrders.length, "orden dada sin ejecutar", "órdenes dadas sin ejecutar")}; la más antigua lleva ${countOf(oldest, "día", "días")}.`,
       ),
     );
   }
@@ -212,9 +283,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "pending_transfers",
-        `${input.openTransfers.length} ${
-          input.openTransfers.length === 1 ? "traspaso en curso" : "traspasos en curso"
-        }; el más antiguo lleva ${oldest} días.`,
+        `${countOf(input.openTransfers.length, "traspaso en curso", "traspasos en curso")}; el más antiguo lleva ${countOf(oldest, "día", "días")}.`,
       ),
     );
   }
@@ -225,7 +294,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
         "export_overdue",
         input.exportOverdueDays === "never"
           ? "El libro vive en el navegador y nunca se ha exportado: si borras los datos del sitio, se pierde."
-          : `El libro vive en el navegador y la última exportación es de hace ${input.exportOverdueDays} días.`,
+          : `El libro vive en el navegador y la última exportación es de hace ${countOf(input.exportOverdueDays, "día", "días")}: si borras los datos del sitio, se pierde lo registrado desde entonces.`,
       ),
     );
   }

@@ -74,8 +74,8 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
                     </A>
                   }
                 >
-                  Sobre un libro degradado solo puede escribirse un cambio de configuración
-                  (ADR-0015). Rectifica lo que falla y vuelve.
+                  Mientras haya eventos inválidos solo se puede registrar un cambio de
+                  configuración. Rectifica lo que falla y vuelve.
                 </Callout>
               }
             >

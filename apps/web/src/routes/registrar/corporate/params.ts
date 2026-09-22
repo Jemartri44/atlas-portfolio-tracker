@@ -5,11 +5,21 @@
 // piece of judgement it contains is visible: **filling the price of the
 // leftovers is what asks for a forced sale**. Leaving it empty means the issuer
 // settled nothing, and the domain then produces no sale at all.
+//
+// Numbers are read like every other number of the application
+// (`format/input.ts`): `1.200,50` is twelve hundred, `1.5` is refused.
 
 import type { CorporateActionParams } from "@atlas/domain";
+import { parseDecimalInput } from "../../../format/input.js";
 import type { CorporateForm } from "../../../view-models/forms/corporate.js";
 import type { FormValues } from "../../../view-models/forms/index.js";
 import { normaliseDecimal } from "../../../view-models/forms/index.js";
+
+/** The accounts a fee line may name: by their name, which is what the user knows. */
+export interface NamedAccount {
+  account_id: string;
+  name: string;
+}
 
 const text = (values: FormValues, name: string): string | undefined => {
   const raw = (values[name] ?? "").trim();
@@ -21,27 +31,71 @@ const decimal = (values: FormValues, name: string): string | undefined => {
   return raw === undefined ? undefined : normaliseDecimal(raw);
 };
 
+/** A ratio as the domain takes it: a fraction as written, a decimal read the Spanish way. */
+const ratioOf = (values: FormValues): string | undefined => {
+  const raw = text(values, "ratio");
+  return raw === undefined || raw.includes("/") ? raw : normaliseDecimal(raw);
+};
+
+/** The account a fee line names, by its name or its identifier, ignoring case. */
+const accountNamed = (accounts: readonly NamedAccount[], typed: string): string | undefined => {
+  const wanted = typed.trim().toLowerCase();
+  return accounts.find(
+    (account) =>
+      account.name.toLowerCase() === wanted || account.account_id.toLowerCase() === wanted,
+  )?.account_id;
+};
+
+const lines = (raw: string): string[] =>
+  raw
+    .split(/[\n;]/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+
 /**
- * The per-account fees, **one pair per line**: `cuenta = importe`.
- *
- * Not comma-separated like the CLI's `--fees`, and the reason is the language:
- * the user writes `1,20`, and a comma cannot be the decimal separator and the
- * pair separator at the same time — `acc_a=1,20` would read as "acc_a costs 1"
- * plus a stray "20". One per line is unambiguous and types fine on a phone.
- *
- * A malformed line is skipped rather than guessed at; the domain then refuses a
- * fee for an account that is not selling, which is where that check belongs.
+ * What is wrong with the fee lines, or nothing. A fee that cannot be read is
+ * **refused**, never skipped: a skipped fee overstates the gain of the forced
+ * sale, and the user would pay tax on money they never received.
  */
-const feesOf = (values: FormValues): Record<string, string> | undefined => {
+export const feeLinesError = (
+  values: FormValues,
+  accounts: readonly NamedAccount[],
+): string | undefined => {
+  const raw = text(values, "cash_fees");
+  if (raw === undefined || text(values, "cash_unit_price") === undefined) {
+    return undefined;
+  }
+  for (const line of lines(raw)) {
+    const [account = "", amount = "", extra] = line.split("=");
+    if (extra !== undefined || account.trim() === "" || amount.trim() === "") {
+      return `No se entiende «${line}»: escribe una cuenta y su comisión, así: «Cubo especulativo = 1,50».`;
+    }
+    if (accountNamed(accounts, account) === undefined) {
+      return `No hay ninguna cuenta llamada «${account.trim()}».`;
+    }
+    const parsed = parseDecimalInput(amount);
+    if (!parsed.ok) {
+      return `La comisión de «${account.trim()}»: ${parsed.message}`;
+    }
+  }
+  return undefined;
+};
+
+/** The per-account fees, **one pair per line**: `cuenta = importe`. */
+const feesOf = (
+  values: FormValues,
+  accounts: readonly NamedAccount[],
+): Record<string, string> | undefined => {
   const raw = text(values, "cash_fees");
   if (raw === undefined) {
     return undefined;
   }
   const fees: Record<string, string> = {};
-  for (const line of raw.split(/[\n;]/)) {
-    const [account, amount] = line.split("=").map((part) => part.trim());
-    if (account !== undefined && account !== "" && amount !== undefined && amount !== "") {
-      fees[account] = normaliseDecimal(amount);
+  for (const line of lines(raw)) {
+    const [account = "", amount = ""] = line.split("=");
+    const id = accountNamed(accounts, account);
+    if (id !== undefined && amount.trim() !== "") {
+      fees[id] = normaliseDecimal(amount);
     }
   }
   return Object.keys(fees).length === 0 ? undefined : fees;
@@ -50,9 +104,12 @@ const feesOf = (values: FormValues): Record<string, string> | undefined => {
 export const toCorporateParams = (
   form: CorporateForm,
   values: FormValues,
+  /** Required: without the accounts a fee line cannot be resolved, and a lost fee overstates the gain. */
+  accounts: readonly NamedAccount[],
 ): CorporateActionParams => {
   const price = decimal(values, "cash_unit_price");
-  const fees = feesOf(values);
+  const fees = feesOf(values, accounts);
+  const ratio = ratioOf(values);
   return {
     kind: form.kind,
     asset_id: values.asset_id ?? "",
@@ -62,7 +119,7 @@ export const toCorporateParams = (
     ...(text(values, "to_asset_id") === undefined
       ? {}
       : { to_asset_id: text(values, "to_asset_id") as string }),
-    ...(text(values, "ratio") === undefined ? {} : { ratio: text(values, "ratio") as string }),
+    ...(ratio === undefined ? {} : { ratio }),
     ...(decimal(values, "cost_share") === undefined
       ? {}
       : { cost_share: decimal(values, "cost_share") as string }),

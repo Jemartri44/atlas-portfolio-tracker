@@ -9,6 +9,9 @@
 //   1. `undefined` is "sin dato", never a zero (constitution V).
 //   2. The sign and a label carry the meaning too, never colour alone.
 //   3. The mask has a fixed width, so turning privacy on does not reflow the page.
+//   4. An amount always carries its currency: there is no way to ask for a bare
+//      figure. Tables used to drop it where the header "said EUR" — on a phone
+//      the header is not there, and "coste 199,49" is not an amount.
 //
 // The three live in `format/money.ts` as `amountDisplay`, a pure function with
 // its own tests: inside this JSX they were unreachable, and three mutations of
@@ -40,8 +43,6 @@ interface MoneyProps extends CommonProps {
   value: Money | undefined;
   /** Decimals; two by default (the cent). */
   decimals?: number | undefined;
-  /** Hide the currency (a column that already says EUR in its header). */
-  currency?: boolean | undefined;
   /** A unit value, four decimals. */
   unit?: boolean | undefined;
   quantity?: never;
@@ -81,7 +82,6 @@ export const Amount = (props: AmountProps): JSX.Element => {
       : formatMoney(money, {
           ...(props.decimals === undefined ? {} : { decimals: props.decimals }),
           ...(props.signed === undefined ? {} : { signed: props.signed }),
-          ...(props.currency === undefined ? {} : { currency: props.currency }),
         });
   };
 

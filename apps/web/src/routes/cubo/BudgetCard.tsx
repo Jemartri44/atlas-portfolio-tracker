@@ -20,7 +20,7 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
       <Amount value={props.view.contributionGross} />
       <Show when={props.view.budget !== undefined}>
         <span class="tiny">
-          de <Amount value={props.view.budget} currency={false} /> previstos
+          de <Amount value={props.view.budget} /> previstos
           <Show when={props.view.monthsElapsed !== undefined}>
             {" "}
             ({props.view.monthsElapsed} {props.view.monthsElapsed === 1 ? "mes" : "meses"})
@@ -29,14 +29,13 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
       </Show>
     </StatLine>
     <StatLine label="Resultado realizado">
-      <Amount value={props.view.realized} signed coloured currency={false} />
+      <Amount value={props.view.realized} signed coloured />
     </StatLine>
     <StatLine label="Resultado latente">
       <Amount
         value={props.view.unrealized}
         signed
         coloured
-        currency={false}
         missingReason="falta el precio de alguna posición"
       />
     </StatLine>
@@ -80,7 +79,7 @@ export const BudgetCard = (props: { view: ControlsView; worth: NetWorthView }): 
         {(block) => (
           <div class="spread stat-line">
             <span class="subject tiny">{block.label}</span>
-            <Amount value={block.subtotal} currency={false} />
+            <Amount value={block.subtotal} />
           </div>
         )}
       </For>

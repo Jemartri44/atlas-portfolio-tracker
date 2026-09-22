@@ -112,7 +112,7 @@ export const amountDisplay = (input: AmountInput): AmountDisplay => {
       state: "masked",
       text: MASK,
       class: classes("num", "mask", input.extra),
-      label: `${input.kind} oculto`,
+      label: input.kind === "cantidad" ? "cantidad oculta" : "importe oculto",
     };
   }
   return {

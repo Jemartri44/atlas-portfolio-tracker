@@ -21,9 +21,11 @@ import {
   yearOf,
 } from "@atlas/domain";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Callout, ErrorView } from "../../components/index.js";
+import { Callout } from "../../components/index.js";
+import { formatDate } from "../../format/date.js";
+import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
-import { toAppError } from "../../ledger/actions.js";
+import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
 import { store, today } from "../../ledger/state.js";
 import { changeSettings } from "../../ledger/write.js";
@@ -41,6 +43,7 @@ import {
   withText,
 } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
+import { FormActions } from "../registrar/FormActions.jsx";
 import {
   FiscalCard,
   IdentityCard,
@@ -68,7 +71,19 @@ export default function ConfiguracionRoute(): JSX.Element {
         const resolution = () => settingsAt(snapshot.state, date);
         const current = (): Settings => resolution().settings;
 
-        const coreAssets = () => assetsOf(snapshot.state).filter((asset) => asset.book === "core");
+        // Weights are asked for active assets only; an inactive one appears only
+        // while it still carries a weight, so that saving never drops it unseen.
+        const coreAssets = () =>
+          assetsOf(snapshot.state).filter(
+            (asset) =>
+              asset.book === "core" &&
+              (asset.active || (current().target_weights?.[asset.asset_id] ?? "") !== ""),
+          );
+        /** Where the configuration in force comes from, said as a person would. */
+        const origin = (): string =>
+          resolution().origin === "default"
+            ? "la de partida, porque todavía no has registrado ningún cambio"
+            : `la del ${eventReferences(snapshot.events)(resolution().origin).toLowerCase()}`;
         const values = (): Record<string, string> =>
           weightValues(
             current(),
@@ -122,6 +137,8 @@ export default function ConfiguracionRoute(): JSX.Element {
             setInvalidating(undefined);
             discard();
             setSaved(true);
+            // The confirmation is at the top: take the user there to read it.
+            window.scrollTo?.({ top: 0 });
             return;
           }
           if (result.failure.kind === "dependents") {
@@ -154,7 +171,7 @@ export default function ConfiguracionRoute(): JSX.Element {
           <>
             <PageHeader
               title="Configuración"
-              lead={`Vigente el ${date} (origen: ${resolution().origin}). Guardar escribe un evento con la configuración completa.`}
+              lead={`En vigor el ${formatDate(date)}: ${origin()}. Guardar registra un cambio con la configuración completa.`}
             />
 
             <Show when={saved()}>
@@ -162,10 +179,6 @@ export default function ConfiguracionRoute(): JSX.Element {
                 Se ha registrado un cambio de configuración con todos los parámetros.
               </Callout>
             </Show>
-            <Show when={error()}>
-              {(failure) => <ErrorView error={failure()} title="No se ha podido guardar" />}
-            </Show>
-
             <div class="stack">
               <WeightsCard
                 assets={coreAssets()}
@@ -177,11 +190,16 @@ export default function ConfiguracionRoute(): JSX.Element {
               <FiscalCard draft={draft()} />
 
               <Callout tone="info" title="Lo que no se edita aquí">
-                Los tramos del ahorro y las frecuencias de los avisos programados los usará el motor
-                fiscal y la Fase 4; se editan desde la CLI hasta que existan sus pantallas.
+                Los tramos de la base del ahorro y la frecuencia de los avisos automáticos todavía
+                no tienen pantalla: de momento se cambian desde la CLI.
               </Callout>
 
-              <div class="actions-bar">
+              {/* The error of a save goes next to the button that caused it. */}
+              <FormActions
+                failure={error()}
+                failureTitle="No se ha podido guardar"
+                blocked={touched() ? undefined : "No has cambiado nada todavía."}
+              >
                 <button type="button" class="secondary" disabled={!touched()} onClick={discard}>
                   Descartar cambios
                 </button>
@@ -192,7 +210,7 @@ export default function ConfiguracionRoute(): JSX.Element {
                 >
                   Guardar configuración
                 </button>
-              </div>
+              </FormActions>
             </div>
 
             <SettingsDialogs

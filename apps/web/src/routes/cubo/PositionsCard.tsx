@@ -35,7 +35,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     key: "cost",
     header: "Coste medio",
     numeric: true,
-    cell: (row) => <Amount value={row.unitCost} unit currency={false} />,
+    cell: (row) => <Amount value={row.unitCost} unit />,
   },
   {
     key: "price",
@@ -54,10 +54,10 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
   },
   {
     key: "pl",
-    header: "P&L latente",
+    header: "Resultado latente",
     numeric: true,
     card: "meta",
-    cell: (row) => <Amount value={row.unrealized} signed coloured currency={false} />,
+    cell: (row) => <Amount value={row.unrealized} signed coloured />,
     // One "sin dato", not two: a row with no price used to read
     // "Alpha Spin-off · sin dato · sin dato … sin dato" (seen in a screenshot).
     cardCell: (row) => (
@@ -66,7 +66,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
         fallback={<Amount value={undefined} missingReason="sin precio a esa fecha" />}
       >
         <span class="row">
-          <Amount value={row.unrealized} signed coloured currency={false} />
+          <Amount value={row.unrealized} signed coloured />
           <Figure value={row.unrealizedPct} unit="percent" coloured />
         </span>
       </Show>
@@ -89,7 +89,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
 const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
   <Show when={props.row.thesisId !== undefined}>
     <span class="row wrap">
-      <Badge>{props.row.thesisId}</Badge>
+      <Badge>tesis abierta</Badge>
       <span class="tiny">
         {props.row.daysOpen} de {props.row.horizonDays} días
       </span>
@@ -128,9 +128,9 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
           </Show>
         </span>
         <span class="row">
-          <Amount value={props.view.totalValue} />
+          <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
           <span class="tiny">
-            coste <Amount value={props.view.totalCost} currency={false} />
+            coste <Amount value={props.view.totalCost} />
           </span>
         </span>
       </div>

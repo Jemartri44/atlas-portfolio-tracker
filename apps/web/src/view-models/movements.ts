@@ -7,8 +7,9 @@
 // domain (decision (c)).
 
 import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
-import { eventLabel, STATUS_LABELS } from "../format/labels.js";
-import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
+import type { EventReferences } from "../format/events.js";
+import { eventLabel, STATUS_LABELS, valueLabel } from "../format/labels.js";
+import { displayName, displayThesis, type NameIndex, NO_NAMES } from "../format/names.js";
 
 export interface MovementRow {
   id: string;
@@ -98,10 +99,15 @@ const figureOf = (entry: LedgerEntry): Figure => {
  * With names, not identifiers: "Beta Biotech · Cubo especulativo" is an
  * application and "ast_delta · acc_bucket" is a debug dump, and this line is
  * repeated on every row of the ledger (review of 2026-09-18). The thesis and
- * the reversed event keep their identifier: they are events, not catalogue
- * entries, and they have no name to show.
+ * the reversed event have no name, so they are said by what they are: "tesis
+ * sobre Alpha Robotics (abierta el 01/09/2026)", "anula Dividendo del
+ * 12/03/2027" — never by their identifier.
  */
-const subtitleOf = (entry: LedgerEntry, names: NameIndex): string => {
+const subtitleOf = (
+  entry: LedgerEntry,
+  names: NameIndex,
+  events: EventReferences | undefined,
+): string => {
   const event = entry.event as Record<string, unknown>;
   const parts: string[] = [];
   if (entry.asset_id !== undefined) {
@@ -114,21 +120,25 @@ const subtitleOf = (entry: LedgerEntry, names: NameIndex): string => {
     parts.push(`→ ${displayName(names, event.to_asset_id ?? event.to_account_id ?? "")}`);
   }
   if (entry.event.type === "corporate_action") {
-    parts.push(String(event.kind ?? ""));
+    parts.push(valueLabel(event.kind ?? ""));
   }
-  if (entry.event.type === "reversal") {
-    parts.push(`anula ${String(event.reverses_id ?? "")}`);
+  if (entry.event.type === "reversal" && typeof event.reverses_id === "string") {
+    parts.push(events === undefined ? "anula un movimiento" : `anula ${events(event.reverses_id)}`);
   }
   if (entry.event.type === "settings_changed") {
     parts.push("configuración completa");
   }
   if (entry.thesis_id !== undefined) {
-    parts.push(`tesis ${entry.thesis_id}`);
+    parts.push(`tesis ${displayThesis(names, entry.thesis_id)}`);
   }
   return parts.filter((part) => part !== "").join(" · ");
 };
 
-export const movementRow = (entry: LedgerEntry, names: NameIndex = NO_NAMES): MovementRow => {
+export const movementRow = (
+  entry: LedgerEntry,
+  names: NameIndex = NO_NAMES,
+  events?: EventReferences,
+): MovementRow => {
   const figure = figureOf(entry);
   return {
     id: entry.event.id,
@@ -139,7 +149,7 @@ export const movementRow = (entry: LedgerEntry, names: NameIndex = NO_NAMES): Mo
     administrative: entry.business_date === undefined,
     status: entry.status,
     statusLabel: STATUS_LABELS[entry.status] ?? entry.status,
-    subtitle: subtitleOf(entry, names),
+    subtitle: subtitleOf(entry, names, events),
     ...(figure.amount === undefined ? {} : { amount: figure.amount }),
     ...(figure.quantity === undefined ? {} : { quantity: figure.quantity }),
     ...(figure.label === undefined ? {} : { figureLabel: figure.label }),
@@ -150,7 +160,8 @@ export const movementRow = (entry: LedgerEntry, names: NameIndex = NO_NAMES): Mo
 export const movementRows = (
   entries: readonly LedgerEntry[],
   names: NameIndex = NO_NAMES,
-): MovementRow[] => entries.map((entry) => movementRow(entry, names));
+  events?: EventReferences,
+): MovementRow[] => entries.map((entry) => movementRow(entry, names, events));
 
 /** Page size of the progressive load: twenty years of ledger never paint at once. */
 export const PAGE_SIZE = 20;

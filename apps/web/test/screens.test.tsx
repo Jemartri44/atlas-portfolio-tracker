@@ -425,7 +425,7 @@ describe("the privacy mode covers the prose of the warnings", () => {
 
     // The warning is there, with its name, its dates and its window intact.
     expect(shown).toContain("Venta con pérdida de World Index Fund");
-    expect(shown).toContain("2026-01-14");
+    expect(shown).toContain("14/01/2026");
     expect(shown).toContain("ventana de un año");
     // And nothing of what it is worth: neither the loss nor the units.
     expect(shown).toContain(MASK);

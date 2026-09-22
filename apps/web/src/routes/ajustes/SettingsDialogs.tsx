@@ -11,8 +11,10 @@
 import type { FiscalYearImpact, Warning } from "@atlas/domain";
 import { For, type JSX } from "solid-js";
 import { Amount, ConfirmDialog } from "../../components/index.js";
+import { eventLabel } from "../../format/labels.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
+import { countOf } from "../../format/number.js";
 import { maskFigures } from "../../format/privacy.js";
 import { usePrivacy } from "../../ledger/state.js";
 
@@ -47,7 +49,7 @@ export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
         onClose={() => props.onDismiss("silenced")}
         onConfirm={() => props.onSave()}
       >
-        <p>Subir un umbral no debe apagar un aviso vivo sin que te enteres (constitución IV):</p>
+        <p>Con la configuración nueva, estos avisos que hoy están activos dejarían de salir:</p>
         <ul>
           <For each={props.silenced ?? []}>
             {(warning) => (
@@ -108,15 +110,20 @@ export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
         onConfirm={() => props.onSave(true)}
       >
         <p>
-          Con la configuración nueva, {props.invalidating?.length} eventos ya registrados dejan de
-          ser válidos. Los hechos no cambian, cambia su interpretación (ADR-0015): las consultas
-          seguirán avisando y no podrás registrar hasta rectificarlos.
+          Con la configuración nueva,{" "}
+          {countOf(
+            props.invalidating?.length ?? 0,
+            "movimiento ya registrado deja",
+            "movimientos ya registrados dejan",
+          )}{" "}
+          de ser válidos. Los hechos no cambian, cambia cómo se leen: las consultas seguirán
+          avisando y no podrás registrar nada más hasta rectificarlos.
         </p>
         <ul>
           <For each={props.invalidating ?? []}>
             {(item) => (
               <li>
-                {item.type}: {maskFigures(item.error, privacy())}
+                {eventLabel(item.type)}: {maskFigures(item.error, privacy())}
               </li>
             )}
           </For>

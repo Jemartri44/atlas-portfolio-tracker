@@ -17,6 +17,7 @@ import {
   PriceDetail,
   Section,
 } from "../../components/index.js";
+import { formatDate } from "../../format/date.js";
 import type { WeightClassRow, WeightRow, WeightsView } from "../../view-models/core/index.js";
 
 const ASSET_COLUMNS: readonly DataColumn<WeightRow>[] = [
@@ -133,7 +134,7 @@ export const WeightsCard = (props: { view: WeightsView }): JSX.Element => {
         <div class="spread total-line">
           <span class="subject">Total del núcleo</span>
           <span class="row">
-            <Amount value={props.view.total} />
+            <Amount value={props.view.total} missingReason="ninguna posición tiene precio" />
             <Show when={props.view.partial}>
               <Badge tone="warning" title={`Faltan: ${props.view.missing.join(", ")}`}>
                 parcial
@@ -144,8 +145,8 @@ export const WeightsCard = (props: { view: WeightsView }): JSX.Element => {
 
         <Show when={props.view.partial}>
           <p class="note">
-            Faltan precios de {props.view.missing.join(", ")} a {props.view.date}: los pesos no se
-            calculan sobre un total parcial.
+            Faltan precios de {props.view.missing.join(", ")} a {formatDate(props.view.date)}: los
+            pesos no se calculan sobre un total parcial.
           </p>
         </Show>
 

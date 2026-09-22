@@ -402,7 +402,7 @@ export const projectLedger = (
       noteFxRates(state, entry.event, entry.date);
     });
   }
-  thesisWarnings(state);
+  thesisWarnings(state, options.asOf);
   return state;
 };
 

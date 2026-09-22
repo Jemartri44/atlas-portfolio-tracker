@@ -361,4 +361,32 @@ describe("theses: bucket buys and sells", () => {
     b.thesisOpened({ thesis_id: "th2" });
     expect(codes(projectLedger(b.build()))).toEqual([]);
   });
+
+  /**
+   * The summary warned "la tesis está cerrada" at a date on which the bucket
+   * screen, cutting the same ledger, showed it open: the theses are applied
+   * whole and the warning read their status at the end of the ledger.
+   */
+  it("reads closed and open at the date asked, like every other view of a thesis", () => {
+    const b = new LedgerBuilder();
+    bucketCatalogue(b);
+    b.recordedAt("2027-01-10");
+    b.thesisOpened({ thesis_id: "th1" });
+    buyWithThesis(b, "th1", { trade_date: "2027-01-11", value_date: "2027-01-13" });
+    b.recordedAt("2027-06-01");
+    b.thesisClosed("th1");
+    b.recordedAt("2027-09-01");
+    b.thesisOpened({ thesis_id: "th2" });
+    const events = b.build();
+
+    // Before the closing, nothing is closed yet.
+    expect(codes(projectLedger(events, { asOf: "2027-03-01" }))).toEqual([]);
+    // Between the closing and the next thesis, the pair is uncovered.
+    const summer = projectLedger(events, { asOf: "2027-07-01" });
+    expect(codes(summer)).toEqual(["thesis_closed_with_position"]);
+    expect(summer.warnings[0]?.details).toMatchObject({ thesis_id: "th1", position: "10" });
+    // Once the newer thesis exists, it takes the pair over, as without a date.
+    expect(codes(projectLedger(events, { asOf: "2027-12-31" }))).toEqual([]);
+    expect(codes(projectLedger(events))).toEqual([]);
+  });
 });
