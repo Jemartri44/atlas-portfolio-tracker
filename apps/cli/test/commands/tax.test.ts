@@ -38,11 +38,12 @@ describe("atlas tax", () => {
       "4. Compensación (art. 49 LIRPF)",
       "5. Saldos negativos pendientes",
       "BASE IMPONIBLE DEL AHORRO 2027",
-      "6. Retenciones a cuenta",
-      "7. Doble imposición internacional",
-      "8. Criterios dudosos",
-      "9. Criterios firmes",
-      "10. Lo que este motor no calcula",
+      "6. Lo declarado en este ejercicio",
+      "7. Retenciones a cuenta",
+      "8. Doble imposición internacional",
+      "9. Criterios dudosos",
+      "10. Criterios firmes",
+      "11. Lo que este motor no calcula",
       "Leyenda de criterios",
     ]) {
       expect(text).toContain(heading);
@@ -63,10 +64,10 @@ describe("atlas tax", () => {
     // #18 is high certainty since 2026-09-23, so it left the doubtful section.
     // What it would move read the other way —nothing here— has to be visible
     // somewhere, and that somewhere is section 9.
-    expect(part(8)).not.toContain("18 solo cuenta la recompra");
-    expect(part(9)).toContain("18 solo cuenta la recompra");
-    expect(part(9)).toContain("base 0.00");
-    expect(part(9)).toContain("La lectura de estos no está en duda");
+    expect(part(9)).not.toContain("18 solo cuenta la recompra");
+    expect(part(10)).toContain("18 solo cuenta la recompra");
+    expect(part(10)).toContain("base 0.00");
+    expect(part(10)).toContain("La lectura de estos no está en duda");
   });
 
   it("opens every transmission into its lots and their lineage with --lots", async () => {
@@ -112,7 +113,7 @@ describe("atlas tax", () => {
   it("shows the difference with the previous settings", async () => {
     const h = golden();
     expect(await h.exec(["tax", "2028"])).toBe(0);
-    expect(h.text()).toContain("11. Diferencias con la configuración anterior");
+    expect(h.text()).toContain("12. Diferencias con la configuración anterior");
   });
 
   it("refuses a year before the regime, and a word that is not a year", async () => {

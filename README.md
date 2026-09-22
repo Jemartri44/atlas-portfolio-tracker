@@ -182,25 +182,33 @@ Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae 
 atlas tax 2028            # la base imponible del ahorro del ejercicio, por apartados
 atlas tax 2028 --lots     # además, los lotes que consumió cada operación y su linaje
 atlas tax 2028 --json     # el informe entero, con los importes como cadenas decimales
+atlas tax 2025 --boxes    # la misma base ordenada por casillas del Modelo 100
+atlas m720 2027           # bienes en el extranjero a 31/12 y si hay que presentar
+atlas m721 2027           # lo mismo para las criptomonedas en tenencia directa
 ```
+
+**`atlas tax <año> --boxes`** ordena las cifras como las pide el Modelo 100 de **ese** ejercicio: número de casilla, rótulo **literal** del impreso y la orden del BOE en que se comprobó, con su fecha. Las casillas son **datos por ejercicio**: un año sin correspondencia comprobada sale por conceptos y **sin ningún número**, y nunca se usa la casilla de otro año, porque la Agencia Tributaria renumera el impreso cada campaña y una casilla heredada es una cifra creíble y falsa. Hoy están comprobadas las de **2025**.
+
+**`atlas m720 <año>`** y **`atlas m721 <año>`** valoran a 31/12 lo que hay en cuentas cuyo país no es España —una cuenta española en ómnibus queda fuera aunque el fondo sea extranjero— y dicen si hay obligación de presentar, por categoría: cuentas (con el saldo a 31/12 **y** el saldo medio del cuarto trimestre) y valores en el 720, criptomonedas en tenencia directa en el 721. Es la **única** ruta fiscal que lee precios, y solo de Nivel 1: una `valuation` registrada a mano. **Nunca dice «no obligado» con datos incompletos**: si falta una valoración o alguna está marcada, el veredicto es «no se puede determinar» con lo que falta como acción, salvo que lo que sí se conoce ya supere el umbral, y entonces obliga y dice con qué valores marcados se decidió.
 
 `atlas tax <año> [--lots] [--json]` calcula la **base, no la cuota**: no aplica tramos, no resta el mínimo personal y no dice lo que se paga. La cabecera lo recuerda, y avisa además de que el informe es un **total fiscal** —núcleo y cubo agregados por contribuyente, la excepción de la constitución III—, de con qué configuración se ha calculado y de qué fecha se ha tomado como día de la consulta.
 
 Ninguna cifra fiscal mira un precio: la declaración sale del libro y solo del libro. Cada línea dice de qué **criterios fiscales** depende (los de `docs/fiscal-questions.md`), y los dudosos van marcados con un asterisco y explicados en la leyenda del final.
 
-Once apartados, en este orden:
+Doce apartados, en este orden:
 
 1. **Ganancias y pérdidas patrimoniales** (art. 33), una línea por operación: fecha fiscal, evento, activo, libro, cuenta, cantidad, importe transmitido en su divisa con el tipo del BCE y su fecha, transmisión y coste en euros, resultado propio, lo liberado, lo diferido, lo computable y sus criterios. Con `--lots`, debajo, los lotes que consumió y de dónde venía cada uno.
 2. **Rendimientos del capital mobiliario** (art. 25): dividendos, intereses, las transmisiones cuya categoría de renta configurada los lleve aquí, y los gastos de administración y depósito deducibles (art. 26.1.a).
 3. **Regla de recompra**: lo diferido en el ejercicio con su ventana y las adquisiciones que lo causan, lo liberado con la pérdida de la que viene, y lo que sigue diferido a 31/12 y en qué lotes.
 4. **Compensación** (art. 49), paso a paso, con el límite del 25 % en los dos sentidos.
 5. **Saldos negativos pendientes**, por ejercicio de origen y categoría, con el último ejercicio en que se pueden usar y un aviso de lo que caduca. Debajo, en una línea destacada, la **base imponible del ahorro**.
-6. **Retenciones a cuenta**, que se restan de la cuota que este motor no calcula.
-7. **Doble imposición internacional**: lo deducible hasta el tipo del convenio de cada país y lo que excede, que se pierde. Sin el tipo del convenio configurado, o sin el país del pagador, no se calcula y se dice por qué.
-8. **Criterios dudosos**: los criterios cuya **lectura está abierta** —todo lo que el documento no da por certeza alta—, con cuánto dinero hay en juego si el criterio está mal y en qué dirección, medido como diferencia real de base cuando el criterio es configuración y como exposición cuando no lo es. Nunca con un precio de por medio: lo que no se puede cuantificar desde el libro se dice así.
-9. **Criterios firmes**: los de certeza alta que la declaración aplica, con lo que moverían **leídos al revés**. Existe porque un criterio que deja de ser dudoso no deja de tener dinero detrás: cuando el #18 y el #19 subieron a certeza alta se llevaron su importe con ellos, y «no sé cómo se lee» y «sé cómo se lee, y esto es lo que hay detrás» no son lo mismo. Una lectura contraria que no mueve nada **aparece igual, con su cero**: comprobado y sin efecto es información, y es la que tranquiliza. Lo único que no sale en ninguno de los dos apartados es un criterio que ninguna cifra del ejercicio aplica.
-10. **Lo que este motor no calcula**, y avisos.
-11. **Diferencias con la configuración anterior**, cuando el libro tiene algún `settings_changed`: qué operaciones cambian respecto de la configuración anterior (o de los valores por defecto documentados, si solo hay una).
+6. **Lo declarado en este ejercicio**: si consta una Renta presentada, su fecha y su justificante, y cifra a cifra lo declarado, lo que la aplicación calculaba aquel día y lo que calcula hoy, con la diferencia repartida en sus cuatro causas (lo que cambiaste al presentar, un cambio del motor, un cambio de configuración y los eventos registrados después). Si no consta ninguna, lo dice y explica cómo registrarla. Se imprime **siempre**: un apartado que aparece y desaparece renumeraría a los de debajo, y esta numeración es un contrato.
+7. **Retenciones a cuenta**, que se restan de la cuota que este motor no calcula.
+8. **Doble imposición internacional**: lo deducible hasta el tipo del convenio de cada país y lo que excede, que se pierde. Sin el tipo del convenio configurado, o sin el país del pagador, no se calcula y se dice por qué.
+9. **Criterios dudosos**: los criterios cuya **lectura está abierta** —todo lo que el documento no da por certeza alta—, con cuánto dinero hay en juego si el criterio está mal y en qué dirección, medido como diferencia real de base cuando el criterio es configuración y como exposición cuando no lo es. Nunca con un precio de por medio: lo que no se puede cuantificar desde el libro se dice así.
+10. **Criterios firmes**: los de certeza alta que la declaración aplica, con lo que moverían **leídos al revés**. Existe porque un criterio que deja de ser dudoso no deja de tener dinero detrás: cuando el #18 y el #19 subieron a certeza alta se llevaron su importe con ellos, y «no sé cómo se lee» y «sé cómo se lee, y esto es lo que hay detrás» no son lo mismo. Una lectura contraria que no mueve nada **aparece igual, con su cero**: comprobado y sin efecto es información, y es la que tranquiliza. Lo único que no sale en ninguno de los dos apartados es un criterio que ninguna cifra del ejercicio aplica.
+11. **Lo que este motor no calcula**, y avisos.
+12. **Diferencias con la configuración anterior**, cuando el libro tiene algún `settings_changed`: qué operaciones cambian respecto de la configuración anterior (o de los valores por defecto documentados, si solo hay una).
 
 Dos cosas que el comando se niega a hacer:
 

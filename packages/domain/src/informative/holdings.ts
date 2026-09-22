@@ -113,7 +113,7 @@ export const foreignHoldingsAt = (
   events: readonly LedgerEvent[],
   date: CivilDate,
 ): ForeignHoldings => {
-  const state = projectLedger(events, { asOf: date });
+  const state = projectLedger(events, { asOf: date, collectErrors: true });
   const { accounts: all, changed } = accountsAt(events, date);
   const accounts = new Map<AccountId, AccountAt>();
   const excluded: { account_id: AccountId; reason: "domestic_account" }[] = [];

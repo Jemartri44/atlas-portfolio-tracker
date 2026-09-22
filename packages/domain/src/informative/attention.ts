@@ -51,6 +51,12 @@ export interface FiscalAttention {
   season: boolean;
   /** Past years with figures and no income tax return recorded. */
   unfiled_years: number[];
+  /**
+   * Invalid events in the ledger. With any, the informative returns are not
+   * computed at all —they would value the wrong quantities— and the card says
+   * so instead of going quiet, which would look like "nothing to do".
+   */
+  invalid_events: number;
   todo: InformativeTodo[];
   /** The card goes to the top of the summary: season, or something to do. */
   prominent: boolean;
@@ -94,9 +100,9 @@ export const fiscalAttention = (
   const state = projectLedger(events, { collectErrors: true });
   const season = inSeason(state.fiscalSettings, today);
   const unfiled = unfiledPastYears(today, state);
-  const foreign = [...accountsAt(events, today).accounts.values()].some(
-    (account) => account.country !== "ES",
-  );
+  const foreign =
+    state.invalid.length === 0 &&
+    [...accountsAt(events, today).accounts.values()].some((account) => account.country !== "ES");
   const year = yearOf(today) - 1;
   const todo: InformativeTodo[] = [];
   if (foreign) {
@@ -119,7 +125,8 @@ export const fiscalAttention = (
     today,
     season,
     unfiled_years: unfiled,
+    invalid_events: state.invalid.length,
     todo,
-    prominent: season || todo.length > 0,
+    prominent: season || todo.length > 0 || state.invalid.length > 0,
   };
 };

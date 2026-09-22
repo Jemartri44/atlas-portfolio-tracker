@@ -19,6 +19,7 @@
 // such: the model is about one date, and that date has not arrived.
 
 import type { CivilDate } from "../dates/civil-date.js";
+import { DomainError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Money } from "../money/money.js";
 import type { Filing } from "../projections/filings.js";
@@ -304,6 +305,23 @@ export const informativeReturn = (
   const closed = exists && end < options.today;
   const holdings = foreignHoldingsAt(events, closed ? end : options.today);
   const state: LedgerState = holdings.state;
+  // The same refusal as the income tax (feature 009, Q11): a projection that
+  // skipped an event values the wrong quantities, and the answer to that is the
+  // list of what to repair, not a verdict about whether a return is due.
+  if (state.invalid.length > 0) {
+    throw new DomainError(
+      "tax_ledger_invalid",
+      `the ledger has ${state.invalid.length} invalid events; repair them before computing an informative return`,
+      {
+        count: state.invalid.length,
+        invalid: state.invalid.map((entry) => ({
+          id: entry.event.id,
+          type: entry.event.type,
+          code: entry.error.code,
+        })),
+      },
+    );
+  }
   const settings = state.fiscalSettings;
   const limits: Limits = {
     threshold: modelThresholdOf(settings, model),

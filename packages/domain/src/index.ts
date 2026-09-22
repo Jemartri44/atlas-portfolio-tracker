@@ -15,6 +15,8 @@ export {
 } from "./dates/civil-date.js";
 export { madridDateOf, todayInMadrid } from "./dates/madrid.js";
 export * from "./errors.js";
+export { type ClosedYearImpact, closedYearImpact, type Reading } from "./filings/closed-years.js";
+export { fingerprintOfEvents } from "./filings/fingerprint.js";
 export { sha256Hex, utf8Encode } from "./ids/sha256.js";
 export { createUlidGenerator, isUlid, type Ulid, type UlidGenerator } from "./ids/ulid.js";
 export {

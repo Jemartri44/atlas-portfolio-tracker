@@ -13,6 +13,8 @@ import {
   type Money,
   type TaxYearReport,
   type TransmissionLine,
+  taxBoxes,
+  taxBoxesJson,
   taxReportJson,
   taxYear,
   todayInMadrid,
@@ -22,8 +24,9 @@ import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 import { render } from "./shared.js";
+import { renderBoxes } from "./tax-boxes.js";
 
-const USAGE = "uso: atlas tax <año> [--lots] [--json]";
+const USAGE = "uso: atlas tax <año> [--lots] [--boxes] [--json]";
 
 /** A figure of the return: always two decimals, so a column reads as money. */
 const cents = (money: Money | undefined): string => {
@@ -240,6 +243,49 @@ const stakeTable = (items: readonly CriterionStake[]): string =>
 
 const section = (title: string, body: string): string => `\n${title}\n${body}`;
 
+const CAUSE: Record<string, string> = {
+  at_filing: "lo que cambiaste al presentar",
+  engine: "cambio del motor",
+  settings: "cambio de configuración",
+  later_events: "eventos registrados después",
+};
+
+/**
+ * What was filed for this year, next to what the ledger says today (ADR-0020).
+ *
+ * It is printed **always**, with its own sentence when there is no filing: a
+ * section that appears and disappears would renumber the ones after it, and
+ * the numbering of this output is a contract (README).
+ */
+const filingText = (report: TaxYearReport): string => {
+  const filing = report.filing;
+  if (filing === undefined) {
+    return "No consta ninguna Renta presentada de este ejercicio. Si la presentaste, regístrala con `atlas filed renta <año>`: es lo que cierra el ejercicio y ancla el arrastre.";
+  }
+  const lines = [
+    `Declarado el ${filing.filed_at} (justificante ${filing.receipt_reference}).${filing.chain.length > 1 ? ` Cadena de ${filing.chain.length} presentaciones; en vigor la última.` : ""}`,
+    filing.fingerprint_ok
+      ? ""
+      : "La huella del libro no cuadra con los eventos anteriores a la presentación: no se puede reproducir el cálculo de aquel día, así que no se reparten las causas. Ejecuta `atlas check --deep`.",
+    table(
+      ["cifra", "declarado", "calculado entonces", "hoy", "por qué difiere"],
+      filing.figures.map((figure) => [
+        figure.figure,
+        cents(figure.declared),
+        cents(figure.computed_then),
+        cents(figure.now),
+        figure.causes === undefined
+          ? ""
+          : Object.entries(figure.causes)
+              .filter(([, amount]) => !amount.isZero())
+              .map(([cause, amount]) => `${CAUSE[cause] ?? cause} ${cents(amount)}`)
+              .join(" · "),
+      ]),
+    ),
+  ];
+  return lines.filter((line) => line !== "").join("\n");
+};
+
 export const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
   const out: string[] = [
     `TOTAL FISCAL ${report.year} — núcleo y cubo agregados por contribuyente (constitución III).`,
@@ -383,9 +429,10 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
   out.push(
     `\nBASE IMPONIBLE DEL AHORRO ${report.year}: ${cents(report.base_eur)} EUR (base, no cuota)`,
   );
+  out.push(section("6. Lo declarado en este ejercicio", filingText(report)));
   out.push(
     section(
-      "6. Retenciones a cuenta (se restan de la cuota, que este motor no calcula)",
+      "7. Retenciones a cuenta (se restan de la cuota, que este motor no calcula)",
       `${table(
         ["fecha", "evento", "origen", "importe", "EUR"],
         report.withholdings.lines.map((line) => [
@@ -400,7 +447,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
   );
   out.push(
     section(
-      "7. Doble imposición internacional (#16, solo el primer límite)",
+      "8. Doble imposición internacional (#16, solo el primer límite)",
       `${table(
         [
           "evento",
@@ -425,19 +472,19 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
   );
   out.push(
     section(
-      "8. Criterios dudosos: qué hay en juego si el criterio está mal",
+      "9. Criterios dudosos: qué hay en juego si el criterio está mal",
       stakeTable(report.doubtful),
     ),
   );
   out.push(
     section(
-      "9. Criterios firmes: lo que moverían leídos al revés",
+      "10. Criterios firmes: lo que moverían leídos al revés",
       `${stakeTable(report.settled)}\nLa lectura de estos no está en duda; la cifra dice qué habría detrás si lo estuviera.`,
     ),
   );
   out.push(
     section(
-      "10. Lo que este motor no calcula, y avisos",
+      "11. Lo que este motor no calcula, y avisos",
       report.notes.map((note) => `- ${describeWarning(note)}`).join("\n"),
     ),
   );
@@ -445,7 +492,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
     const diff = report.settings_diff;
     out.push(
       section(
-        `11. Diferencias con la configuración anterior (${diff.previous_origin} → ${diff.current_origin})`,
+        `12. Diferencias con la configuración anterior (${diff.previous_origin} → ${diff.current_origin})`,
         diff.invalid_before !== undefined
           ? `La configuración anterior deja ${diff.invalid_before} eventos inválidos: no hay cifra con la que comparar.`
           : `Base antes ${cents(diff.base_before_eur)} · ahora ${cents(diff.base_after_eur)}\n${
@@ -492,13 +539,19 @@ export const taxCommand = async (
   positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  assertKnownFlags(flags, ["lots", ...GLOBAL_FLAGS]);
+  assertKnownFlags(flags, ["lots", "boxes", ...GLOBAL_FLAGS]);
   const year = Number(positionals[1]);
   if (positionals[1] === undefined || !Number.isInteger(year)) {
     throw new UsageError(USAGE);
   }
   const { events } = await ctx.deps.store.load();
-  const report = taxYear(events, year, { today: todayInMadrid(ctx.deps.clock) });
+  const today = todayInMadrid(ctx.deps.clock);
+  if (booleanFlag(flags, "boxes")) {
+    const boxes = taxBoxes(events, year, { today });
+    render(ctx, taxBoxesJson(boxes), renderBoxes(boxes));
+    return 0;
+  }
+  const report = taxYear(events, year, { today });
   render(ctx, taxReportJson(report), renderTaxReport(report, booleanFlag(flags, "lots")));
   return 0;
 };

@@ -33,6 +33,7 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "json",
   // Of a command.
   "all",
+  "boxes",
   "closed",
   "deep",
   "history",

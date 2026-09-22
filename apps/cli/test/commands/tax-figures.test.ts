@@ -196,7 +196,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
     // 65 − 16.25, never the 234.09 of gains.
     expect(text).toContain("BASE IMPONIBLE DEL AHORRO 2021: 48.75 EUR (base, no cuota)");
 
-    const withheld = section(text, 6);
+    const withheld = section(text, 7);
     expect(row(withheld, "2021-12-31", ID.I1)).toEqual([
       "2021-12-31",
       ID.I1,
@@ -207,13 +207,13 @@ describe("atlas tax prints the figures worked out by hand", () => {
     expect(withheld).toContain("Total 7.60");
 
     // 7.50 withheld in the US, 3.75 deductible: the treaty's 15 % of 25.
-    const foreign = section(text, 7);
+    const foreign = section(text, 8);
     expect(row(foreign, ID.U2)).toEqual([ID.U2, "US", "25.00", "7.50", "15", "3.75", "3.75"]);
     expect(foreign).toContain("Deducible 3.75 · No deducible 3.75");
 
     // #4: documented "both", and here it is the conservative side: the columns
     // must not be confused.
-    const doubtful = section(text, 8);
+    const doubtful = section(text, 9);
     expect(row(doubtful, "4 ")).toEqual([
       "4 ganancia en divisa y diferencias de cambio",
       "en disputa",
@@ -312,7 +312,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "2026",
     ]);
     expect(text).toContain("BASE IMPONIBLE DEL AHORRO 2022: 37.50 EUR (base, no cuota)");
-    expect(section(text, 6)).toContain("Total 9.50");
+    expect(section(text, 7)).toContain("Total 9.50");
   });
 
   it("2023: releases, the swap and its fee, and the order of two years at stake", async () => {
@@ -349,7 +349,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
     expect(row(offset, "2 ", "rendimientos")[4]).toBe("5.00");
     expect(row(section(text, 5), "2020")[2]).toBe("-209.91");
     expect(text).toContain("BASE IMPONIBLE DEL AHORRO 2023: 15.00 EUR (base, no cuota)");
-    const doubtful = section(text, 8);
+    const doubtful = section(text, 9);
     expect(row(doubtful, "17 ").slice(1, 5)).toEqual([
       "media",
       "agresivo",
@@ -381,7 +381,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "CADUCA al cierre de 2024: -202.41 de 2020 (ganancias y pérdidas patrimoniales).",
     );
     expect(text).toContain("BASE IMPONIBLE DEL AHORRO 2024: 67.50 EUR (base, no cuota)");
-    expect(section(text, 6)).toContain("Total 19.00");
-    expect(row(section(text, 8), "22 ")[3]).toBe("exposición 7.50");
+    expect(section(text, 7)).toContain("Total 19.00");
+    expect(row(section(text, 9), "22 ")[3]).toBe("exposición 7.50");
   });
 });
