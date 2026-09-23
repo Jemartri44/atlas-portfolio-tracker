@@ -290,6 +290,7 @@ Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, 
 
 - **Móvil**: título y fecha larga. Después, *Patrimonio total* (cifra, barra de proporción, tres partes con porcentaje e importe, y el desglose plegado); *Atención* (4 grupos y «Ver N avisos más»); *Últimos movimientos* (5 filas **cortadas por la fecha consultada**, con el pie «Ver todos los movimientos»); y *Evolución del patrimonio* (rango, gráfica, leyenda, línea del hueco y datos plegados).
 - **Escritorio**: la banda de patrimonio a lo ancho (12); debajo, *Atención* (7) y *Últimos movimientos* (5); y *Evolución* a lo ancho (12).
+- ***Declaración*** (4), la puerta a `/fiscal` (§7.8). Es la única tarjeta que **cambia de sitio**: va la **primera** en campaña de la Renta o cuando haya algo del 720 o del 721 que hacer, y la **última** el resto del año. En campaña lo dice con «Campaña de la Renta» al lado del título. Se carga **después** de la primera pintada, porque es la única que pregunta algo al motor fiscal y el motor no está en el arranque; mientras tanto ocupa su sitio con un esqueleto de dos líneas.
 - **Parcial**: «◐ parcial» junto a la cifra, sin barra ni porcentajes, y un bloque *pendiente* con la acción de registrar valoraciones.
 - **Vacío**: los primeros pasos con su estado (cuenta, activo, pesos objetivo y primera compra), visibles hasta la primera compra (D4). En escritorio, cuatro tarjetas en fila.
 
