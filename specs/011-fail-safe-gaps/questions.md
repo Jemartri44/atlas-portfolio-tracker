@@ -303,6 +303,35 @@ Los dos se han fijado a una fecha propia, que es lo que el arreglo hace posible.
 
 **La propuesta.** `.githooks/pre-commit` ya ejecuta `gitleaks`; que ejecute también el analizador y rechace el commit si no está limpio. Coste: unos segundos por commit sobre 559 ficheros —medido: **~150 ms**—. Efecto: la clase entera de fallo desaparece, en vez de repetirse una ronda más.
 
+### P9 — El techo del paquete web se agota al pintar el ancla **(bloquea la mitad web del bloque 6)**
+
+**Medido, no estimado.** El encargo dice que si no cabe, se para y se avisa, y que el techo no se sube por iniciativa del implementador ni se esconde con una importación dinámica. No cabe **por 23 bytes**.
+
+| Momento | Arranque | Total | Margen del total |
+|---|---|---|---|
+| `develop`, antes de empezar | 72,9 | 235,0 | 1,0 KB |
+| tras el bloque 2 (estado vacío de la tarjeta) | 72,9 | 235,2 | 0,8 KB |
+| tras el bloque 4 (motivo nuevo + cierre del mapa) | 73,0 | 235,5 | 0,5 KB |
+| tras el bloque 5 (tercer desenlace, en dos interfaces) | 73,0 | 235,9 | **0,1 KB** |
+| tras la mitad **de dominio** del bloque 6 | 73,0 | 235,9 | 0,1 KB |
+| **con el ancla pintada en la web** | 73,0 | **236,0 → la comprobación falla** | **−23 bytes** |
+
+Exacto: **241.687 bytes** gzip de JS y CSS contra un techo de **241.664** (236,0 × 1024). El `build` sale en rojo con `el bundle entero pesa 236.0 KB gzip y el presupuesto es 236.0 KB`.
+
+**El arranque no es el problema**: 73,0 contra 73,5, con 0,5 KB de margen. Lo que se agota es el **total**, y el trozo que crece es el de la pantalla fiscal, que es perezoso — o sea, bytes que solo se descargan quien abre `/fiscal`.
+
+**Lo que está hecho y committeado**, porque no cuesta un byte de web: el dominio conserva **todas** las anclas, la consola las imprime todas, el dorado se movió exactamente en las cuatro líneas predichas y el mutante 8a muere. **Lo que falta es pintarlo en la pantalla**, que es la mitad que da valor al usuario y la que no cabe. El trabajo está escrito y medido, guardado como parche en mi scratchpad (`011-block6-web.patch`, 142 líneas): la tarjeta de pérdidas pendientes gana un `Notice` por ancla, encima de la tabla, con los dos importes por `Amount` y el hecho visible con la privacidad puesta.
+
+**Lo que no hago, y por qué:** no subo el techo (es de la dirección), no meto una importación dinámica (el encargo lo prohíbe por nombre) y no recorto el texto del aviso para que quepa por los pelos, porque eso es doblar el diseño para que quepa en un número y el margen volvería a agotarse en el bloque 8.
+
+**Tres salidas, y la elige la dirección:**
+
+- **(i) Subir el techo del total.** Es lo que se ha hecho cada vez que se apretó, y `check-bundle.mjs` lleva el motivo escrito de cada subida. Con el ancla pintada mediría **236,1**; a lo medido más 1 KB serían **237,1**, que deja sitio al bloque 8.
+- **(ii) Pagarlo con algo que sobre.** No he buscado dónde recortar porque recortar otra pantalla para pagar ésta es una decisión de producto, no mía. Si la dirección quiere, lo mido.
+- **(iii) Dejar la mitad web del bloque 6 fuera de esta ronda.** El dominio ya conserva las anclas y la consola las dice; la pantalla seguiría sin contarlo, que es el defecto que el bloque existe para cerrar. **La desaconsejo**: el usuario mira la pantalla, no la consola.
+
+**Y el bloque 8 todavía no ha medido.** Sus mensajes —el hallazgo de la huella no verificable y la nota de la comparación— también llegan a la web. Con 0,1 KB de margen, van a chocar con lo mismo.
+
 ---
 
 ## 4. Observaciones sobre el propio encargo
@@ -473,6 +502,38 @@ KILLED   6 let the guard swallow any error
 **El cierre del mapa de la web no es vacío**, comprobado quitando una entrada: `typecheck` en rojo nombrando `no_carrier_left`.
 
 Y una rama que la cobertura cazó: el `lines.length > 0` del caso nuevo no tenía su lado falso. En vez de borrarla, el caso que la ejerce —**un ejercicio al que ningún criterio se aplica**, aunque su lectura alternativa siga sin poder calcularse— es el invariante que la función ya declaraba: un criterio se deja fuera **solo** cuando ninguna cifra del ejercicio lo aplica.
+
+### Bloque 6 — el ancla de lo declarado
+
+Tres tests escritos antes, en rojo por lo que tenían que estar:
+
+```
+× keeps every substitution the chain applied, not the last one
+× carries what it computed and what was declared, for each one
+× is an empty list, not a missing field, when nothing was filed
+  AssertionError: expected undefined to deeply equal []
+```
+
+**Mutante 8a, muerto:** `KILLED   8a keep only the last substitution`. *(El 8b —no pintarla en la web— se queda sin matar mientras la pantalla no la pinte: ver P9.)*
+
+**El fichero dorado se movió, y exactamente como estaba predicho.** Predicción escrita y comiteada **antes** de regenerar (`anchors-expectation.md`), y comparada después de dos formas:
+
+```
+$ diff antes.json después.json
+2a3    >     "anchors": [],
+224a226  >     "anchors": [],
+1378a1381 >     "anchors": [],
+1839a1843 >     "anchors": [],
+líneas añadidas: 4 · líneas quitadas: 0
+
+comparación clave por clave: 4 diferencias
+  + /2026/anchors = []
+  + /2027/anchors = []
+  + /2028/anchors = []
+  + /2029/anchors = []
+```
+
+Ni una cifra movida, y `synthetic-v1.jsonl`, `synthetic-v1.snapshot.json` y `tax-hand-v1.jsonl` intactos.
 
 ### Bloque 5 — el aviso que se calla
 
