@@ -234,8 +234,43 @@ const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
  * 59 chunks: **zero modules in more than one**. The boot moves 72,8 → **72,9**
  * for `Money.centsText()`, which lives in the core because it replaced six
  * copies of the same two-decimal rule.
+ *
+ * **Raised to 236,7 by the direction (feature 011), and the reason matters
+ * more than the number.** The gaps of the fail-safe took the total from 235,0
+ * to **236,0 KB** — 236.022 exactly, which is **23 bytes** over the old
+ * ceiling — and the last thing in is the one the user most needs: the screen
+ * saying that the pending losses it shows are **not** the ones the engine
+ * computed but the ones a filed return declared (block 6). What grew, in
+ * order: the empty state of the settled criteria in both interfaces (+0,2),
+ * the reason of a reading that predates the supported regime and the closing
+ * of the map of reasons (+0,3), the third outcome of the closed-year warning
+ * with its three causes in two interfaces (+0,4), and the anchor beside the
+ * figure it affects (+0,1).
+ *
+ * **This ceiling is a ratchet against growth nobody has looked at, not a limit
+ * that comes from outside**: nobody charges by the byte, the application is
+ * served from its own origin and the total is small for what it does. What
+ * protects the user is the other two, and **neither is touched**: the ceiling
+ * of the **boot**, which still has half a kilobyte of margin, and the check of
+ * **shape**, which forbids the tax engine from travelling in a boot chunk.
+ * Giving up telling the user that the figure in front of him is not the one
+ * the engine computed, to save twenty-three bytes of a lazily loaded chunk,
+ * would be the inversion that decision is there to prevent.
+ *
+ * The 0,7 is **measured plus what block 8 needs** and no more: its messages —
+ * the finding of a fingerprint that could not be verified and the note of the
+ * comparison over an unverified prefix— reach both interfaces, and three such
+ * texts in two interfaces measured 0,4 in block 5. If block 8 does not fit,
+ * the implementer stops again rather than spend a cushion nobody sized.
+ * Checked again on the source maps of the 59 chunks: **zero modules in more
+ * than one** (296 modules), so none of this is repetition.
+ *
+ * *Noted for later, deliberately not done here: **17,6 of the 22,3 KB of the
+ * tax engine are the literal table of the boxes of 2025**, a datum only needed
+ * when the card of the boxes is opened, which could travel in a chunk of its
+ * own.*
  */
-const TOTAL_BUDGET_GZIP_BYTES = 236.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 236.7 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
