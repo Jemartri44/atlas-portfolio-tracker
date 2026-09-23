@@ -353,7 +353,8 @@ ningún tipo puede forzar es que una interfaz **diga algo** sobre un campo opcio
 no lee.
 
 La regla que se saca, para la feature que la aplique: **una salvedad fiscal es una nota del informe,
-no una decisión de la interfaz.** Donde el motor emite la salvedad como dato (`TaxBoxes.notes`, que
+no una decisión de la interfaz.** Escrita como **ADR-0024, en estado Propuesta**, con las tres
+divergencias como evidencia y lo que costaría aplicarla. Donde el motor emite la salvedad como dato (`TaxBoxes.notes`, que
 son `Warning` con código), perderla es no pintar algo que existe, y eso lo caza un test genérico
 («toda nota del informe llega a la pantalla»). Las tres discrepancias de arriba están, las tres, en
 campos que **no** son notas. Convertirlas en notas es trabajo posterior y no es gratis: cambia la
@@ -411,3 +412,29 @@ la tarjeta enseñaba encima su estado vacío, «No arrastras pérdidas», justo 
 
 Arranque **72,9 KB** de 73,5 y total **234,8** de 236,0: el signo simplificó una condición y el
 total baja una décima. Ningún techo se mueve.
+
+### 10.8 Abierto: la cobertura intermitente
+
+**No está cerrado.** Se quitó el mecanismo sospechoso —`byDate || moves.length > 0` pasó a ser dos
+`if` separados, sin cortocircuito— pero **no se ha demostrado que el problema no vuelva**. Para
+quien se lo encuentre:
+
+- **Qué pasó**: una ejecución de CI falló con ramas al 99,96 % en `packages/domain/src/filings/
+  closed-years.ts`, línea de esa condición. Relanzada **la misma revisión**, pasó.
+- **Qué se midió**: en local, 100 % en más de una decena de ejecuciones, con `TZ=UTC`, con 2, 4 y un
+  solo *worker*, y con los gemelos compilados quitados. Nunca se reprodujo. El fichero lo cubre un
+  único test determinista, sin `fast-check` y sin reloj.
+- **Qué hacer si vuelve**: mirar **qué expresión** nombra el informe de cobertura, no el fichero.
+  Si es otro cortocircuito, el arreglo es el mismo: partirlo en dos preguntas. Si es una condición
+  ya partida, entonces la hipótesis del cortocircuito era falsa y hay que buscar en el proveedor
+  (`@vitest/coverage-v8` remapea con los *source maps*) antes que en el código. **Lo que no se
+  hace** es bajar el umbral ni excluir un fichero: la dirección lo dejó dicho.
+
+### 10.9 La trampa del `tail`, otra vez
+
+El §3 de estas notas ya avisaba de que `npm run lint | tail` esconde el código de salida, porque el
+de la tubería es el de `tail`. **Volvió a morder en esta pasada**: un commit entró con Biome en rojo
+por leer el resultado así, y se reconstruyó con `git reset --soft` —el mismo remedio de la vez
+anterior—. Una lección que hay que reaprender está mal escrita, así que se escribe como hábito y no
+como advertencia: **ejecutar el comando redirigiendo a un fichero y leer `$?`**, nunca a través de
+una tubería que se lo coma. Los 55 commits de la rama están verdes uno a uno.
