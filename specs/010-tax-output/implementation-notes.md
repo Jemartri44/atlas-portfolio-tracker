@@ -396,3 +396,18 @@ correspondencia **no se toca**; lo que cambia es que el importe lleva su signo s
 año normal —todos menos 2025— no hay casilla al lado que lo diga. Quince literales de los dos
 cálculos a mano de casillas movieron **solo el signo**: el guion que los actualizó aborta si cambia
 una magnitud, y no cambió ninguna.
+
+### 10.6 Capturas de esta pasada
+
+**16**, en `~/atlas-private/capturas/2026-09-23-fiscal-revision-3/`, con la misma matriz de antes más
+tres del ejercicio en que un saldo caduca: 2031 en monitor y en móvil, y 2030 al lado para ver la
+diferencia. Ningún error de página y `scrollWidth === clientWidth` en las dieciséis.
+
+Mirarlas encontró **un defecto que había metido el propio arreglo**: con el saldo caducado pintado,
+la tarjeta enseñaba encima su estado vacío, «No arrastras pérdidas», justo sobre una tabla con
+−5.000,00 € caducados. El estado vacío es de la **tarjeta**, no de una de sus dos tablas.
+
+### 10.7 Los techos, remedidos
+
+Arranque **72,9 KB** de 73,5 y total **234,8** de 236,0: el signo simplificó una condición y el
+total baja una décima. Ningún techo se mueve.
