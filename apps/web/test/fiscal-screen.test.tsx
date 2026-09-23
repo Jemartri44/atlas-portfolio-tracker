@@ -78,6 +78,34 @@ describe("the fiscal screen", () => {
     // No amount survives: every figure goes through the mask.
     expect(host.querySelectorAll(".mask").length).toBeGreaterThan(0);
   });
+
+  /**
+   * The mask is the most fragile invariant of this application and the one
+   * that is easiest to break without anybody noticing: it lives in the **call**
+   * that renders a figure, not in a formatting function, so only a rendered
+   * screen sees it. Two mutants of this screen survived the whole suite —
+   * dropping the guard on the share of the threshold, and printing the moved
+   * figures of a filed year as raw strings — and these are what kill them.
+   */
+  it("does not show how much of the threshold with privacy on", async () => {
+    store.setPrivacy(true);
+    const host = await open();
+    await settle();
+    // The threshold is a **public** figure, so a percentage of it is the
+    // user's own amount said another way (decision (k)).
+    expect(text(host)).toContain("Modelo 720");
+    expect(text(host)).not.toContain("Del umbral");
+    expect(host.innerHTML).not.toMatch(/\d,\d\s?%|\d+\s?%/);
+  });
+
+  it("shows how much of the threshold with privacy off", async () => {
+    // The other half of the mutant: a guard that hides it always would pass
+    // the test above and lose the figure.
+    const host = await open();
+    await settle();
+    expect(text(host)).toContain("Del umbral");
+    expect(text(host)).toMatch(/%/);
+  });
 });
 
 describe("a ledger with nothing in it", () => {

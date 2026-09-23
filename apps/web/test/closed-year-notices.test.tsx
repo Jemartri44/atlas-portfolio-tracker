@@ -9,12 +9,16 @@
 // different in each screen is the warning nobody recognises.
 
 import { describe, expect, it } from "vitest";
+import { MASK } from "../src/format/money.js";
+import { store } from "../src/ledger/state.js";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Detalle from "../src/routes/movimientos/detail.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
 import {
   choose,
+  DECIMAL,
+  figuresLeft,
   openLedger,
   press,
   settle,
@@ -98,6 +102,39 @@ describe("a write that reaches a filed return", () => {
     expect(text(dialog)).toContain("Cae en ese ejercicio y mueve lo que declaraste");
     expect(text(dialog)).toContain("lo aplazado por recompra a 31 de diciembre");
     expect(text(dialog)).toContain("Puede que toque presentar una complementaria");
+  });
+
+  /**
+   * A filed base is as private as any other figure, and this notice is the one
+   * place of the application that prints an amount that does not come from the
+   * screen the user is on. Replacing its two `Amount` calls with the raw
+   * strings of the impact survived the whole suite: the mask lives in the
+   * call, so only a rendered notice sees it.
+   */
+  it("masks the figures it moves when privacy is on", async () => {
+    store.setPrivacy(true);
+    await withFiling();
+    const sale = goldenEvents().find(
+      (event) =>
+        event.type === "sell" && (event as { value_date?: string }).value_date === "2027-01-06",
+    );
+    const host = await show(
+      `/movimientos/${(sale as { id: string }).id}`,
+      Detalle,
+      "/movimientos/:id",
+    );
+    await press(host, "Anular");
+    await settle(60);
+    const dialog = host.querySelector("dialog");
+    const shown = text(dialog);
+    // It still says which return it reaches and which figure moves: what is
+    // hidden is the money, not the warning.
+    expect(shown).toContain("Afecta a la Renta de 2027");
+    expect(shown).toContain("lo aplazado por recompra a 31 de diciembre");
+    expect(shown).toContain(MASK);
+    // And not one amount survives, in the text or in an attribute.
+    expect(DECIMAL.test(figuresLeft(shown))).toBe(false);
+    expect(DECIMAL.test(dialog?.innerHTML ?? "")).toBe(false);
   });
 
   it("says so in Configuración, where not a single event moves", async () => {

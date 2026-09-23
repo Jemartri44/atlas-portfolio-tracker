@@ -12,6 +12,7 @@
 // like every other figure of the application: a filed base is as private as
 // any other.
 
+import type { FilingModel } from "@atlas/domain";
 import { Money } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { For, type JSX, Show } from "solid-js";
@@ -19,7 +20,12 @@ import { formatDate } from "../format/date.js";
 import { Amount } from "./Amount.jsx";
 import { Notice } from "./Notice.jsx";
 
-const MODEL_NAMES: Record<string, string> = {
+/**
+ * Keyed by `FilingModel`: with an open key a model added tomorrow would fall
+ * through to the `??` and the notice would name it `721` in the middle of a
+ * Spanish sentence. Closed, the compiler asks for its name instead.
+ */
+const MODEL_NAMES: Record<FilingModel, string> = {
   renta: "la Renta",
   "720": "el Modelo 720",
   "721": "el Modelo 721",
@@ -49,7 +55,7 @@ export const ClosedYearNotice = (props: { impacts: readonly ClosedYearImpact[] }
     {(impact) => (
       <Notice
         severity="caution"
-        title={`Afecta a ${MODEL_NAMES[impact.model] ?? impact.model} de ${impact.year}, que presentaste el ${formatDate(impact.filed_at)}`}
+        title={`Afecta a ${MODEL_NAMES[impact.model]} de ${impact.year}, que presentaste el ${formatDate(impact.filed_at)}`}
       >
         <Show
           when={impact.moves.length > 0}
