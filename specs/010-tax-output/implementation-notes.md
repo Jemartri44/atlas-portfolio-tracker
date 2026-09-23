@@ -306,3 +306,93 @@ No se arregla aquí porque hay que decidir **qué significa `expired`** —la le
 «éste es su último ejercicio», la del campo `expires_after` es «el último en que se puede
 compensar», y las dos no pueden ser ciertas a la vez— y eso es una decisión fiscal.
 
+---
+
+## 10. La tercera pasada (2026-09-23)
+
+### 10.1 La caducidad: el motor está bien, la pantalla no
+
+Medido con el caso mínimo que distingue las dos hipótesis —una pérdida de 5.000,00 € en 2027, sin
+ganancias hasta el cuarto año siguiente, y una ganancia suficiente justo en ese año—:
+
+| Ganancia en | Base del ejercicio | Pasos de compensación |
+|---|---|---|
+| 2030 | 0,00 | fase 2, origen 2027, **5.000,00** |
+| **2031** | **0,00** | fase 2, origen 2027, **5.000,00** |
+| 2032 | 5.000,00 | ninguno |
+
+Y con una ganancia **parcial** de 2.000,00 en 2031: compensa 2.000,00 y reporta los 3.000,00
+restantes en `expired` con `expires_after: 2031`; en 2032 ya no hay nada. **El motor compensa en
+2031 y no compensa en 2032, que es exactamente el artículo 49.1.b.** `expires_after: 2031` significa
+«se puede usar durante 2031» y `expired` en el ejercicio Y significa «lo que quedaba murió al cierre
+de Y», que es lo que dice la consola («CADUCA al cierre de 2031»).
+
+Luego **no es un defecto de cálculo, es de presentación**, y son dos:
+
+1. `YearView.empty` no miraba `expired`, así que el ejercicio en que un saldo muere la pantalla
+   decía «No hay nada que declarar». **Arreglado**: un saldo caducado cuenta como algo que declarar,
+   y la tarjeta enseña «Caducadas al cerrar 2031, sin llegar a compensarse».
+2. `expiring: loss.expires_after === year` se calcula **sobre `pending`**, y en el ejercicio en que
+   se cumpliría la igualdad el saldo ya está en `expired`: la condición no se cumple nunca y el
+   aviso es código muerto. **Sin tocar**, a la espera de la dirección.
+
+### 10.2 Por qué dos interfaces que leen del mismo motor pueden discrepar
+
+Tres discrepancias en esta feature, y las tres tienen la misma forma: **el motor exporta campos, no
+afirmaciones.**
+
+| Qué pasó | Por qué el tipo no lo impide |
+|---|---|
+| La consola dice qué caduca (desde `expired`) y la web no (mira `pending`) | Nada ata «si enseñas lo pendiente, enseña lo que caducó»: son dos campos independientes de la misma estructura |
+| La web decía que una casilla es parcial con importe y la consola no | Las dos tenían `entry.partial` delante; una no lo leyó **en esa posición** |
+| `CRITERION_LABELS` y `CRITERION_NAMES` | `Record<CriterionId, string>` obliga a que ninguna olvide un criterio; nada obliga a que digan lo mismo |
+
+Una unión cerrada **sí** impide olvidarse de un caso: añadir `nothing_recorded` al veredicto rompió
+la compilación en los tres sitios que había que tocar, y eso es el mecanismo que funciona. Lo que
+ningún tipo puede forzar es que una interfaz **diga algo** sobre un campo opcional que sencillamente
+no lee.
+
+La regla que se saca, para la feature que la aplique: **una salvedad fiscal es una nota del informe,
+no una decisión de la interfaz.** Donde el motor emite la salvedad como dato (`TaxBoxes.notes`, que
+son `Warning` con código), perderla es no pintar algo que existe, y eso lo caza un test genérico
+(«toda nota del informe llega a la pantalla»). Las tres discrepancias de arriba están, las tres, en
+campos que **no** son notas. Convertirlas en notas es trabajo posterior y no es gratis: cambia la
+forma del informe y las dos interfaces.
+
+### 10.3 Los ficheros compilados commiteados
+
+Ocho, en `packages/domain/test/`: `ledger-builder` y `tax/helpers`, cada uno con su `.js`, su
+`.js.map`, su `.d.ts` y su `.d.ts.map`, entrados en `928a740` con el bloque 5.
+
+**Un gemelo compilado eclipsa a su fuente**: los tests importan `./helpers.js`, Vite resuelve eso al
+fichero real cuando existe, y el `.ts` de al lado no se lee. Comprobado poniendo un `throw` en la
+primera línea de `helpers.ts`: **la suite entera pasó en verde**. 61 ficheros de test importan de
+`ledger-builder` y 27 de `helpers`. Que hoy no mintieran —quitados los ocho, salen los mismos tests
+con la misma cobertura— fue suerte: el `.js` se había compilado después de la última edición del
+`.ts`.
+
+Fuera los ocho, patrones en `.gitignore` con su motivo, y **la comprobación que de verdad lo
+sujeta** en `tests/architecture.test.ts`, sobre `git ls-files` y no sobre el árbol de trabajo,
+porque `.gitignore` no protege ni de un `git add -f` ni de un fichero ya seguido. Dos reglas: ningún
+fichero seguido que sea el gemelo compilado de una fuente seguida, y ningún *source map* fuera de
+`vendor/`. Probadas las dos volviendo a añadir un artefacto con `-f`.
+
+### 10.4 La cobertura intermitente
+
+La condición que falló era `if (byDate || moves.length > 0)`. Reescrita como **dos preguntas
+separadas**, cada una con su `if` y su salida, sin un solo operador de cortocircuito: la conducta es
+idéntica y ninguna rama puede atribuirse a la otra.
+
+**Lo que no se puede afirmar**: que quede demostrado determinista. El fallo se vio **una vez**, en
+CI, y no se ha reproducido en local ni una sola vez —una decena de ejecuciones, con `TZ=UTC`, con 2,
+4 y un solo *worker*, y con los ficheros compilados quitados—, así que repetir la ejecución no
+prueba nada. Lo que se ha hecho es **quitar el mecanismo sospechoso**, no comprobar su ausencia.
+
+### 10.5 El signo
+
+Un concepto sin signo en un ejercicio sin tabla comprobada salía como magnitud: `5,69 €` para una
+cifra de `−5,69 €`. Con tabla, el número de casilla lo resuelve (0429 positivo, 0430 negativo) y esa
+correspondencia **no se toca**; lo que cambia es que el importe lleva su signo siempre, porque en el
+año normal —todos menos 2025— no hay casilla al lado que lo diga. Quince literales de los dos
+cálculos a mano de casillas movieron **solo el signo**: el guion que los actualizó aborta si cambia
+una magnitud, y no cambió ninguna.
