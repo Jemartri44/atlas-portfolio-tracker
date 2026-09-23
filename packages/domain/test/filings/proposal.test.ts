@@ -183,3 +183,61 @@ describe("what a return proposes to declare", () => {
     expect(byHand.supersedes).toBe("01ARYZ6S41TSV4RRFFQ69G5FAV");
   });
 });
+
+/**
+ * **The bytes of the line, pinned.**
+ *
+ * The proposal is being refactored to stop taking the fields of a figure back
+ * out of its own key (`"pending.2027.capital_gain"` split on the dots) and to
+ * read them off the typed figure instead. That is a change of an in-memory
+ * contract and **nothing else may move**: the ledger is append-only, the
+ * fingerprint of a line is its bytes, and a correction already writes lines
+ * that are identical byte for byte. What is typed goes in as it was typed —
+ * `1950` stays `1950`, never normalised to `1950.00`.
+ *
+ * So the text of the line is written down here, whole. If a refactor moves a
+ * character, this fails, and that is the point.
+ */
+describe("what is written to the ledger, byte for byte", () => {
+  const line = (declared: ReadonlyMap<string, string>): string => {
+    const events = ledger().build();
+    const proposal = filingProposal(events, "renta", 2027, { today: TODAY });
+    const draft = proposal.draft(declared, {
+      filed_at: "2028-06-18",
+      receipt_reference: "100-2027-ABCDEFGHIJKL",
+    });
+    // Only the part the proposal builds: the envelope and the fingerprint are
+    // put on by `recordEvent` and are not what this is about.
+    return JSON.stringify(draft.declared);
+  };
+
+  it("writes the figures exactly as they were typed", () => {
+    expect(line(new Map([["base", "1950"]]))).toBe(
+      '{"savings_base_eur":"1950","pending_losses":[{"origin_year":2027,"category":"capital_gain","amount_eur":"-5000.00"}],"deferred_losses_eur":"0.00"}',
+    );
+  });
+
+  it("writes what it computed when the user changes nothing", () => {
+    expect(line(new Map())).toBe(
+      '{"savings_base_eur":"0.00","pending_losses":[{"origin_year":2027,"category":"capital_gain","amount_eur":"-5000.00"}],"deferred_losses_eur":"0.00"}',
+    );
+  });
+
+  it("keeps the order of the keys inside a pending loss", () => {
+    // The order of the keys is part of the bytes: a line is never rewritten,
+    // so what `JSON.stringify` emits today is what a ledger of 2046 holds.
+    const declared = JSON.parse(line(new Map())) as {
+      pending_losses: Record<string, unknown>[];
+    };
+    expect(Object.keys(declared.pending_losses[0] as object)).toEqual([
+      "origin_year",
+      "category",
+      "amount_eur",
+    ]);
+    expect(Object.keys(declared)).toEqual([
+      "savings_base_eur",
+      "pending_losses",
+      "deferred_losses_eur",
+    ]);
+  });
+});
