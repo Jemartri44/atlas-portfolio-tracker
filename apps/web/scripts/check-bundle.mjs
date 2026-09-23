@@ -222,8 +222,20 @@ const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
  * boxes of 2025 with their literal labels), 9,9 the stylesheet, **10,5 the
  * fiscal screens and their view-models**, 6,8 the service worker, and the rest
  * the other eleven screens.
+ *
+ * **Second review of the same day: 234,9 KB, ceiling 236,0.** The 1,9 KB are
+ * three things and all three were asked for: the Spanish name of every
+ * concept of the return moved into the domain, so the console and the screen
+ * cannot call the same figure two different things (**+0,6** on the tax
+ * engine chunk, `concepts.ts`); the citation of the official image and the
+ * certainty of each box, plus the operations that tell two entries of the
+ * same criterion apart (**+0,3** on the fiscal screens); and the rest, spread
+ * over the screens that now say more. Checked again on the source maps of the
+ * 59 chunks: **zero modules in more than one**. The boot moves 72,8 → **72,9**
+ * for `Money.centsText()`, which lives in the core because it replaced six
+ * copies of the same two-decimal rule.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 234.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 236.0 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

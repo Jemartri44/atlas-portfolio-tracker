@@ -2,7 +2,7 @@
 
 Documento **vivo**, escrito mientras se implementa. Recoge lo que se desvía del plan y por qué, lo que se preguntó y se respondió, y lo que queda. Se cierra con la feature.
 
-**Estado al 2026-09-23**: **los seis bloques completos** (0 y 1 del primer implementador; 2, 3, 4 y 5 del segundo), más los dos lotes de corrección de criterios y **la revisión adversarial de cierre** (apartado 7). Pipeline verde: **1.736 tests** en 185 ficheros, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, arranque **72,8 KB** de 73,5 y total **233,0** de 234,0.
+**Estado al 2026-09-23**: **los seis bloques completos** (0 y 1 del primer implementador; 2, 3, 4 y 5 del segundo), más los dos lotes de corrección de criterios y **la revisión adversarial de cierre** (apartado 7). Pipeline verde: **1.736 tests** en 185 ficheros, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, arranque **72,9 KB** de 73,5 y total **234,9** de 236,0.
 
 ---
 
@@ -108,7 +108,8 @@ La regla que se saca de aquí: **un cálculo a mano escribe todos los campos que
 | La CLI del bloque 5 | 72,2 | 195,4 |
 | La pantalla fiscal (bloque 4) | 72,8 | 226,5 |
 | El formulario, la tarjeta y los avisos | **72,8** | **233,0** |
-| Techo (apretado al cerrar) | **73,5** | **234,0** |
+| La segunda revisión adversarial | **72,9** | **234,9** |
+| Techo | **73,5** | **236,0** |
 
 **Desglose del total, medido sobre el `dist` (gzip)**, porque autorizar una subida no es entenderla:
 
