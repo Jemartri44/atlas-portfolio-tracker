@@ -8,7 +8,7 @@
 // All three come from the domain, so the CLI and the web cannot disagree about
 // what a change does. Here there is only the wording left.
 
-import type { FiscalYearImpact, Warning } from "@atlas/domain";
+import type { FilingModel, FiscalYearImpact, Warning } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { For, type JSX, Show } from "solid-js";
 import { Amount, ClosedYearNotice, ConfirmDialog } from "../../components/index.js";
@@ -40,6 +40,34 @@ interface DialogsProps {
   names?: NameIndex;
 }
 
+const IN_MODEL: Record<FilingModel, string> = {
+  renta: "en la Renta",
+  "720": "en el Modelo 720",
+  "721": "en el Modelo 721",
+};
+
+/**
+ * The headline of the question about past years, which is the first thing
+ * read. It says gains move **only** when a realized gain moves: since the
+ * review of feature 011 a change of the fiscal date rule reaches a Modelo 720
+ * or 721 too, which declares no gains, and the headline said otherwise. With
+ * no gain moving it names the one model reached, or stays neutral when
+ * returns of several models are.
+ */
+export const movedTitle = (
+  moved: readonly FiscalYearImpact[],
+  closedYears: readonly ClosedYearImpact[],
+): string => {
+  if (moved.length > 0) {
+    return "Este cambio mueve ganancias de ejercicios anteriores";
+  }
+  const models = [...new Set(closedYears.map((impact) => impact.model))];
+  if (models.length === 1) {
+    return `Este cambio puede afectar a lo que declaraste ${IN_MODEL[models[0] as FilingModel]}`;
+  }
+  return "Este cambio puede afectar a declaraciones ya presentadas";
+};
+
 export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
   const privacy = usePrivacy();
 
@@ -66,7 +94,7 @@ export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
 
       <ConfirmDialog
         open={props.moved !== undefined}
-        title="Este cambio mueve ganancias de ejercicios anteriores"
+        title={movedTitle(props.moved ?? [], props.closedYears)}
         confirm="Guardar de todas formas"
         onClose={() => props.onDismiss("moved")}
         onConfirm={() => props.onSave()}
