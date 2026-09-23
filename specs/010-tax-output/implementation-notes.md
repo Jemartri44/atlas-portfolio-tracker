@@ -2,7 +2,7 @@
 
 Documento **vivo**, escrito mientras se implementa. Recoge lo que se desvía del plan y por qué, lo que se preguntó y se respondió, y lo que queda. Se cierra con la feature.
 
-**Estado al 2026-09-23**: **los seis bloques completos** (0 y 1 del primer implementador; 2, 3, 4 y 5 del segundo), más los dos lotes de corrección de criterios y **la revisión adversarial de cierre** (apartado 7). Pipeline verde: **1.733 tests**, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, arranque **72,8 KB** de 73,5 y total **233,0** de 234,0.
+**Estado al 2026-09-23**: **los seis bloques completos** (0 y 1 del primer implementador; 2, 3, 4 y 5 del segundo), más los dos lotes de corrección de criterios y **la revisión adversarial de cierre** (apartado 7). Pipeline verde: **1.736 tests** en 185 ficheros, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, arranque **72,8 KB** de 73,5 y total **233,0** de 234,0.
 
 ---
 
