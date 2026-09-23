@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -1130,6 +1131,63 @@ describe("architecture: no interface writes over a filed return in silence", () 
       }
     }
     expect(violations.sort()).toEqual([]);
+  });
+});
+
+/**
+ * **No compiled output is committed**, and this is not tidiness either.
+ *
+ * `packages/domain/test/` carried eight of them —`ledger-builder.js`,
+ * `tax/helpers.js`, their maps and their declarations— emitted by a `tsc`
+ * without an outDir and added by hand. A compiled twin **shadows its source**:
+ * the tests import `./helpers.js`, Vite resolves that to the real file when
+ * there is one, and the `.ts` beside it is never read. Measured: with a
+ * `throw` at the top of `helpers.ts` the whole suite stayed green, so for a
+ * while the tests were validating code nobody edits. That they happened to
+ * agree was luck, not design.
+ *
+ * `.gitignore` carries the patterns, but it protects from neither `git add -f`
+ * nor a file that is already tracked, so **what is asked here is the index**:
+ * a tracked file that is the compiled twin of a tracked source fails the
+ * build. Source maps are asked for separately, because one whose source was
+ * deleted has no twin left to give it away.
+ */
+describe("architecture: no compiled output is committed", () => {
+  /** What `git` says is in the index. Never the working tree. */
+  const tracked = (): string[] => {
+    const out = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" });
+    const files = out.split("\n").filter((line) => line.length > 0);
+    // A guard on the guard: without git this would pass by looking at nothing.
+    if (files.length < 100) {
+      throw new Error(`git ls-files devolvió ${files.length} ficheros: no se puede comprobar`);
+    }
+    return files;
+  };
+
+  const SUFFIXES = [".js.map", ".d.ts.map", ".d.ts", ".js", ".jsx"];
+
+  it("keeps out every file that is the compiled twin of a source", () => {
+    const files = new Set(tracked());
+    const twins = [...files]
+      .filter((file) => {
+        const suffix = SUFFIXES.find((candidate) => file.endsWith(candidate));
+        if (suffix === undefined) {
+          return false;
+        }
+        const base = file.slice(0, -suffix.length);
+        return files.has(`${base}.ts`) || files.has(`${base}.tsx`);
+      })
+      .sort();
+    expect(twins).toEqual([]);
+  });
+
+  it("keeps out every source map, wherever it is", () => {
+    // A `.map` is never written by hand. `vendor/` is exempt because what is
+    // vendored is somebody else's build, kept on purpose (ADR-0005, ADR-0017).
+    const maps = tracked()
+      .filter((file) => file.endsWith(".map") && !file.includes("/vendor/"))
+      .sort();
+    expect(maps).toEqual([]);
   });
 });
 
