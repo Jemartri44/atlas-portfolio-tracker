@@ -131,16 +131,38 @@ export const deepCheck = (
   // What the ledger looked like the day a return was filed. Re-reading and
   // re-migrating every line before it is exactly the kind of work this check
   // exists for; `integrity` only compares the line count (ADR-0020).
+  // The three reasons of a fingerprint check reach the interfaces as **three
+  // codes**, because `IntegrityFinding` has no field for a detail and because
+  // that is what lets each interface choose its own words. `lines` has its own
+  // code in `integrity`; the other two are told apart here.
+  //
+  // Each code is written as a **literal** in its own call, never as a ternary
+  // inside one: the anti-drift test of the messages scans the sources for
+  // `error("<code>"`, so a ternary would hide **both** codes from it and the
+  // translation that already exists would be reported as a dead entry
+  // (measured, feature 011).
   for (const check of checkFilingFingerprints(lines, events, schema)) {
     if (check.reason === undefined || check.reason === "lines") {
       continue;
     }
+    if (check.reason === "digest") {
+      findings.push(
+        error(
+          "filing_fingerprint_mismatch",
+          `the events before filing ${check.filing_id} are not the ones it was computed on (edited by hand?)`,
+          [check.filing_id],
+        ),
+      );
+      continue;
+    }
+    // Not an edit: the lines before it cannot be re-read at the version the
+    // fingerprint declares, so the fingerprint cannot be **verified**, which is
+    // not the same as being wrong. The version is the one thing that says what
+    // to do about it.
     findings.push(
       error(
-        "filing_fingerprint_mismatch",
-        check.reason === "digest"
-          ? `the events before filing ${check.filing_id} are not the ones it was computed on (edited by hand?)`
-          : `the events before filing ${check.filing_id} cannot be read at schema version ${check.declared_lines}`,
+        "filing_fingerprint_unreadable",
+        `the events before filing ${check.filing_id} cannot be read at schema version ${check.declared_lines}`,
         [check.filing_id],
       ),
     );

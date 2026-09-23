@@ -71,6 +71,14 @@ export const FINDING_TEXTS: Record<string, FindingText> = {
     what: "Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó.",
     todo: "Se han editado a mano. Recupera la copia anterior a la edición: sin ellos, la aplicación no puede explicar por qué lo declarado y lo calculado difieren.",
   },
+  // **No es una edición**, y por eso no comparte código con el de arriba: los
+  // movimientos están ahí, pero escritos en un formato que esta versión no
+  // sabe releer en el punto en que la huella lo declara. Mandar restaurar una
+  // copia de seguridad no arreglaría nada y acusaría de algo que no ha pasado.
+  filing_fingerprint_unreadable: {
+    what: "Los movimientos anteriores a una declaración presentada no se pueden leer en el formato que dice su huella, así que no se puede comprobar.",
+    todo: "No es una edición y no hay copia que restaurar. El detalle técnico de abajo dice en qué formato habría que poder leerlos; conserva el archivo tal como está y no lo edites a mano.",
+  },
   projection_not_reproducible: {
     what: "Volver a leer el archivo da un resultado distinto del que tienes en pantalla.",
     todo: "Es el fallo más grave que hay: no registres nada. Exporta tus datos tal como están, guárdalos aparte y revísalos antes de seguir.",

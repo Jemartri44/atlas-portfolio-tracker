@@ -232,6 +232,11 @@ export const describeError = (error: DomainError): string => {
       return `Una declaración presentada dice que se calculó sobre otros movimientos de los que tiene delante en el fichero: se ha insertado o quitado una línea antes de ella.`;
     case "filing_fingerprint_mismatch":
       return `Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó (editados a mano). Recupera la copia anterior a la edición.`;
+    // No es una edición: están, pero no se pueden releer en el formato que la
+    // huella declara. Acusar de manipular el libro a quien tiene esto, y
+    // mandarle restaurar una copia, sería falso dos veces.
+    case "filing_fingerprint_unreadable":
+      return `Los movimientos anteriores a una declaración presentada no se pueden leer en el formato que dice su huella: no se puede comprobar. No es una edición y no hay copia que restaurar.`;
     case "duplicate_id":
       return "Dos líneas del libro tienen el mismo identificador: el fichero está corrupto.";
     case "invalid_line":
