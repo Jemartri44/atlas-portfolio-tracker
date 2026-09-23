@@ -73,6 +73,34 @@ describe("the anchor of what was filed, on the screen", () => {
     expect(anchor?.matches).toBe(false);
   });
 
+  /**
+   * Oldest origin first, and within one year the category, whatever order the
+   * engine and the return list them in: the origin is what decides until
+   * when a loss can be offset, so it is what the eye reads down the list
+   * (second review of feature 011: dropping the sort passed the suite).
+   */
+  it("orders the rows by origin, then by category, whatever order they arrive in", () => {
+    const view = yearView(
+      reportWith([
+        {
+          year: 2028,
+          computed: [
+            { ...loss(2027, "-5"), category: "movable_capital" as const },
+            loss(2027, "-7"),
+          ],
+          declared: [loss(2028, "-200"), loss(2026, "-300")],
+        },
+      ]),
+      NO_NAMES,
+    );
+    expect(view.anchors[0]?.rows.map((row) => `${row.origin_year} ${row.category}`)).toEqual([
+      "2026 capital_gain",
+      "2027 capital_gain",
+      "2027 movable_capital",
+      "2028 capital_gain",
+    ]);
+  });
+
   it("says it matches when what was declared is what the engine computed", () => {
     const view = yearView(
       reportWith([{ year: 2028, computed: [loss(2027, "-300")], declared: [loss(2027, "-300")] }]),
