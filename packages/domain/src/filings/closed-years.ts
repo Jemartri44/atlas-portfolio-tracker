@@ -40,7 +40,7 @@ import { type ClosedYear, closedYearsTouched, earliestReached } from "./touched.
 /** One reading of the ledger: the events, and the settings to read them with. */
 export interface Reading {
   events: readonly LedgerEvent[];
-  /** An explicit override; absent means the last `settings_changed` of the ledger. */
+  /** An explicit override; absent means the last `settings_changed` in force (not annulled). */
   settings?: Settings;
 }
 
@@ -142,12 +142,25 @@ const reachesInformative = (
 };
 
 /** The settings a reading is read with: its override, or the last recorded. */
+/**
+ * The settings **in force** on one side: the override, else the last
+ * `settings_changed` that nothing annulled — the rule the projection applies
+ * (`resolveFiscalSettings` over the events that survive their reversals).
+ * The last line written is not enough: after annulling a change of the fiscal
+ * date rule it is still the annulled change, and the warning went silent
+ * exactly when the rule moved back (second review of feature 011).
+ */
 const settingsOf = (reading: Reading): Settings | undefined => {
   if (reading.settings !== undefined) {
     return reading.settings;
   }
-  const recorded = reading.events.filter((event) => event.type === "settings_changed");
-  return (recorded[recorded.length - 1] as SettingsChangedEvent | undefined)?.settings;
+  const annulled = new Set(
+    reading.events.flatMap((event) => (event.type === "reversal" ? [event.reverses_id] : [])),
+  );
+  const inForce = reading.events.filter(
+    (event) => event.type === "settings_changed" && !annulled.has(event.id),
+  );
+  return (inForce[inForce.length - 1] as SettingsChangedEvent | undefined)?.settings;
 };
 
 /**

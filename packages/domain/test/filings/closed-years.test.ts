@@ -293,6 +293,32 @@ describe("what a change does to a year already filed", () => {
       const otherThreshold = { ...DEFAULT_SETTINGS, deviation_threshold_pp: "9" };
       expect(closedYearImpact({ events }, { events, settings: otherThreshold }, TODAY)).toEqual([]);
     });
+
+    /**
+     * Annulling a change of the fiscal date rule moves it back, and moves the
+     * operations back across 31 December with it: the warning must compare
+     * the settings **in force** on each side, not the last line written, which
+     * after a reversal is still the annulled change (second review of 011).
+     */
+    it("warns for the reversal of a change of the fiscal date rule", () => {
+      const b = with720();
+      const change = b.settings({
+        ...DEFAULT_SETTINGS,
+        fiscal_date_rule: { ...DEFAULT_SETTINGS.fiscal_date_rule, stock: "value_date" as const },
+      });
+      const before = b.build();
+      b.reversal(change.id, "me equivoqué de regla");
+      const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
+      expect(impact?.model).toBe("720");
+    });
+
+    it("stays silent for the reversal of a change that did not touch the rule", () => {
+      const b = with720();
+      const change = b.settings({ ...DEFAULT_SETTINGS, deviation_threshold_pp: "9" });
+      const before = b.build();
+      b.reversal(change.id, "umbral equivocado");
+      expect(closedYearImpact({ events: before }, { events: b.build() }, TODAY)).toEqual([]);
+    });
   });
 
   it("says nothing of an event with no business date, like a change of the catalogue", () => {
