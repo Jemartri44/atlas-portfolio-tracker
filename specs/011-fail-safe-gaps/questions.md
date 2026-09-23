@@ -770,6 +770,17 @@ KILLED   R13 hide the matching sentence in the card
 1. **Anular una presentación se acepta sin marcarla inválida.** Anterior a esta ronda, y la dirección lo deja expresamente fuera: registrar una presentación por error es un error de tecleo y la vía de corrección es la de siempre.
 2. **La carrera del almacén `blob`.** Compara el etag al leer los bytes actuales y después escribe sin condición, así que otra escritura en ese intervalo —otra pestaña, la consola sobre la misma carpeta— se pisaría. Afecta a toda escritura, no solo a la renuncia; ADR-0025 ya no promete lo contrario.
 3. **El punto ciego del escáner de mensajes** (E2), que el ternario usó tres veces.
+4. **El título del diálogo de ejercicio cerrado** dice «Este cambio mueve ganancias de ejercicios anteriores» también cuando lo único afectado es un Modelo 720, que no declara ganancias. Visto en la captura de Configuración de esta ronda. El cuerpo es correcto; el título es anterior a la revisión y no lo toco sin que la dirección lo pida.
+
+### Lo que la tubería completa encontró al cerrar
+
+**Un desliz mío**: el commit del ancla por origen dejó `view-models/fiscal/year.ts` en 272 líneas y rompió la regla de las 250 de la web (`architecture.test.ts`). No lo vi porque, en ese commit, ejecuté solo los tests de la web que tocaba, no la batería entera. Arreglado moviendo la vista del ancla a `view-models/fiscal/anchor.ts` (commit aparte, `refactor`). La lección es la de siempre: **la batería entera antes de dar un bloque por cerrado**, no la del fichero.
+
+Después, en verde: `lint`, `typecheck`, 190 ficheros y 1.840 tests, dominio al **100 %** en las cuatro métricas, `build` con la comprobación de forma. Los doce mutantes de la revisión, relanzados sobre el árbol final, **muertos**.
+
+**Trinquete remedido**: arranque **73,49** (75.251 bytes contra 75.264: **trece bytes de margen**) y total **237,7** contra 237,9. **No he movido ningún techo**: subirlos es decisión de la dirección. El desglose y la duplicación (cero módulos en más de un trozo, de 297) están en `check-bundle.mjs`. Aviso de que con trece bytes el siguiente cambio del arranque, por pequeño que sea, rompe el `build`.
+
+**Capturas** en `~/atlas-private/capturas/2026-09-23-fail-safe-gaps/revision/` (diez, sin desplazamiento lateral en ninguna): el ancla por origen a 400×890 DPR 3, 2045×1141 y 360, con privacidad a los dos tamaños reales y en oscuro; el ancla que coincide con lo calculado; y Configuración con un 720 de 2027 registrado: cambiar un umbral **no avisa** y cambiar la fecha fiscal de un tipo de activo **sí** («Afecta al Modelo 720 de 2027…»).
 
 ---
 
