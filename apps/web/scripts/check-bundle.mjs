@@ -77,6 +77,15 @@ const dist = join(webRoot, "dist");
  * where it was planted; and there is no way around the cost, because if the
  * ledger is parsed at boot then its validator is in the boot by definition.
  *
+ * **Tightened to what the feature measures, as the direction asks at the close
+ * of every feature**: the whole tax output is in and the boot measures **72,8
+ * KB**, which is *lower* than the 72,3 it measured before the fiscal screen
+ * existed plus what the screen's shared code adds, and lower than the 74,0 it
+ * was allowed. The ceiling comes down to **73,5**. What is inside, gzip: the
+ * domain in one chunk without its fiscal half (37,6), Solid, the router, the
+ * shell and the first screen (25,2), and the stylesheet (9,9). Nothing of
+ * `tax/` or `informative/`, which the shape check below holds.
+ *
  * **What is watched is the shape, not the size.** The boot may carry the
  * loader and what the first screen needs, and nothing of the tax output: the
  * check below reads the source maps of the boot chunks and fails the build if
@@ -86,7 +95,7 @@ const dist = join(webRoot, "dist");
  * back **down** to what is then measured plus a small margin: it is not left
  * slack "just in case".
  */
-const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -203,6 +212,16 @@ const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
  *    engine from the write layer, which is lazily loaded like the screen, so
  *    the boot does not move: 72,8 KB. Measured total **233,0 KB**; the ceiling
  *    is 234,0.
+ *
+ * **Trinquete de cierre (2026-09-23)**: measured **233,0 KB** with everything
+ * in, and the ceiling stays at 234,0, which is that plus one. The breakdown,
+ * checked against the source maps of the 58 chunks —**no module appears in
+ * more than one**, so none of this is repetition—: 37,6 the domain without its
+ * fiscal half, 25,2 Solid with the router and the shell, 24,6 uPlot (lazy,
+ * two screens), **22,3 the tax engine** (of which 17,6 is the table of the
+ * boxes of 2025 with their literal labels), 9,9 the stylesheet, **10,5 the
+ * fiscal screens and their view-models**, 6,8 the service worker, and the rest
+ * the other eleven screens.
  */
 const TOTAL_BUDGET_GZIP_BYTES = 234.0 * 1024;
 
