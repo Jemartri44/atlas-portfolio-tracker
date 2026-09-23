@@ -59,6 +59,13 @@ export interface BoxRowView {
   box?: string;
   /** Its label, word for word from the form. */
   label?: string;
+  /**
+   * Where the number and the label were read, and how firm that reading is.
+   * A box that carries a number the user types into a real return has to say
+   * where it comes from; a number with no source behind it is a number
+   * somebody remembers.
+   */
+  checked?: string;
   amount_eur?: Money;
   /** What the form will compute, when it differs by a cent from the engine. */
   form_eur?: Money;
@@ -82,6 +89,13 @@ export interface BoxBlockView {
    * forty-odd rows it stopped being a caveat and became the wallpaper.
    */
   some_without_box: boolean;
+  /**
+   * The official images the boxes of this block were read in, once each. The
+   * URL is shown as text, not as a link: it is a **citation**, which is also
+   * what `check-bundle.mjs` says when it lets `boe.es` through the rule that
+   * forbids a foreign origin — the page never asks the BOE for anything.
+   */
+  sources: { key: string; page: string; url: string }[];
 }
 
 export interface BoxesView {
@@ -99,13 +113,24 @@ const operationOf = (entry: BoxEntry, names: NameIndex): string | undefined => {
   return entry.origin_year === undefined ? undefined : `De ${entry.origin_year}`;
 };
 
+/** "Comprobada en la pág. 14 el 23/09/2026", and whether that reading is firm. */
+const checkedText = (entry: BoxEntry): string | undefined => {
+  if (entry.source === undefined || entry.checked_at === undefined) {
+    return undefined;
+  }
+  const where = `Comprobada en la pág. ${entry.source.page} el ${formatDate(entry.checked_at)}`;
+  return entry.certainty === "high" ? where : `${where}, sin confirmar`;
+};
+
 const rowView = (entry: BoxEntry, index: number, names: NameIndex): BoxRowView => {
   const operation = operationOf(entry, names);
+  const checked = checkedText(entry);
   return {
     key: `${entry.concept}:${index}`,
     name: conceptName(entry.concept),
     ...(entry.box === undefined ? {} : { box: entry.box }),
     ...(entry.label === undefined ? {} : { label: entry.label }),
+    ...(checked === undefined ? {} : { checked }),
     ...(entry.amount_eur === undefined ? {} : { amount_eur: entry.amount_eur }),
     ...(entry.form_eur === undefined ? {} : { form_eur: entry.form_eur }),
     ...(entry.text === undefined ? {} : { text: entry.text }),
@@ -123,12 +148,23 @@ export const boxesView = (boxes: TaxBoxes, names: NameIndex): BoxesView => ({
     const entries = boxes.entries
       .map((entry, index) => ({ entry, index }))
       .filter(({ entry }) => blockOfConcept(entry.concept) === block);
+    const sources = new Map<string, { key: string; page: string; url: string }>();
+    for (const { entry } of entries) {
+      if (entry.source !== undefined) {
+        sources.set(entry.source.url, {
+          key: entry.source.url,
+          page: entry.source.page,
+          url: entry.source.url,
+        });
+      }
+    }
     return {
       key: block,
       title: BLOCK_TITLES[block],
       rows: entries.map(({ entry, index }) => rowView(entry, index, names)),
       some_without_box:
         boxes.mapping === "checked" && entries.some(({ entry }) => entry.box === undefined),
+      sources: [...sources.values()],
     };
   }).filter((block) => block.rows.length > 0),
 });

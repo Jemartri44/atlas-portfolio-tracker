@@ -53,6 +53,21 @@ export const BoxesCard = (props: { view: BoxesView }): JSX.Element => (
               {props.view.year}: van por concepto, sin número.
             </p>
           </Show>
+          <Show when={block.sources.length > 0}>
+            <p class="card-note box-sources">
+              Estos números y sus rótulos se leyeron en el anexo oficial:{" "}
+              <For each={block.sources}>
+                {(source, index) => (
+                  <>
+                    {index() > 0 ? " · " : ""}
+                    <span class="box-source">
+                      pág. {source.page}, {source.url}
+                    </span>
+                  </>
+                )}
+              </For>
+            </p>
+          </Show>
           <ul class="boxes">
             <For each={block.rows}>
               {(row) => (
@@ -64,6 +79,9 @@ export const BoxesCard = (props: { view: BoxesView }): JSX.Element => (
                     </Show>
                     <Show when={row.label}>
                       {(label) => <span class="box-official">{label()}</span>}
+                    </Show>
+                    <Show when={row.checked}>
+                      {(checked) => <span class="box-official">{checked()}</span>}
                     </Show>
                     <Show when={row.partial}>
                       {(partial) => <span class="box-partial">Ojo: {partial()}</span>}

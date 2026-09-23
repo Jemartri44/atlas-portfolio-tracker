@@ -250,7 +250,7 @@ const ALLOWED_URLS = [
   {
     url: "https://www.boe.es",
     reason:
-      "la fuente de las casillas del Modelo 100: el BOE donde se comprobó cada número y cada rótulo (feature 010, bloque 2). Es una cita que la pantalla enseña, no una petición: el navegador no descarga nada de ahí",
+      "la fuente de las casillas del Modelo 100: el BOE donde se comprobó cada número y cada rótulo (feature 010, bloque 2). Es una **cita**, no una petición: `BoxesCard` la imprime como texto bajo el título de cada bloque —nunca como enlace, así que el navegador no pide nada a ese origen— y `apps/web/test/fiscal-boxes.test.ts` comprueba que se enseña",
   },
 ];
 

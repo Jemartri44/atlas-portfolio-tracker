@@ -19,6 +19,23 @@ const entry = (concept: BoxEntry["concept"], box?: string): BoxEntry => ({
   ...(box === undefined ? {} : { box, label: `rótulo de ${box}` }),
 });
 
+/** The same, with the official image it was read in, as the year table gives it. */
+const checkedEntry = (
+  concept: BoxEntry["concept"],
+  box: string,
+  page: string,
+  certainty: BoxEntry["certainty"] = "high",
+): BoxEntry => ({
+  ...entry(concept, box),
+  source: {
+    document: "Orden HAC/277/2026, anexo I",
+    page,
+    url: `https://www.boe.es/datos/imagenes/disp/2026/76/7041_16815484_${page}.png`,
+  },
+  checked_at: "2026-09-23",
+  ...(certainty === undefined ? {} : { certainty }),
+});
+
 const boxesOf = (mapping: TaxBoxes["mapping"], entries: BoxEntry[]): TaxBoxes => ({
   year: 2026,
   scope: "fiscal_total",
@@ -79,5 +96,63 @@ describe("the return laid out by box", () => {
     expect(row?.name).toBe("Base imponible del ahorro");
     expect(row?.label).toBe("rótulo de 0460");
     expect(row?.box).toBe("0460");
+  });
+});
+
+/**
+ * A number the user types into a real return has to say **where it comes
+ * from**. The screen showed neither the official image nor how firm the
+ * reading of it was — and `check-bundle.mjs` let `boe.es` through its rule
+ * against foreign origins saying it was "a citation the screen shows", which
+ * was not true while nothing showed it.
+ */
+describe("where a box number comes from", () => {
+  it("says on the row where it was checked and when", () => {
+    const view = boxesView(
+      boxesOf("checked", [checkedEntry("base.savings", "0460", "19")]),
+      NO_NAMES,
+    );
+    const [row] = view.blocks.flatMap((block) => block.rows);
+    expect(row?.checked).toBe("Comprobada en la pág. 19 el 23/09/2026");
+  });
+
+  it("marks a box whose reading is not firm, and leaves the firm ones plain", () => {
+    const view = boxesView(
+      boxesOf("checked", [
+        checkedEntry("base.savings", "0460", "19", "medium"),
+        checkedEntry("rcm.interest", "0027", "5"),
+      ]),
+      NO_NAMES,
+    );
+    const rows = view.blocks.flatMap((block) => block.rows);
+    expect(rows.map((row) => row.checked)).toEqual([
+      "Comprobada en la pág. 5 el 23/09/2026",
+      "Comprobada en la pág. 19 el 23/09/2026, sin confirmar",
+    ]);
+  });
+
+  it("cites the official image once per block, never once per row", () => {
+    const view = boxesView(
+      boxesOf("checked", [
+        checkedEntry("rcm.interest", "0027", "5"),
+        checkedEntry("rcm.dividends", "0029", "5"),
+        checkedEntry("base.savings", "0460", "19"),
+      ]),
+      NO_NAMES,
+    );
+    const rcm = view.blocks.find((block) => block.key === "rcm");
+    expect(rcm?.rows.length).toBe(2);
+    // Two boxes of the same page: one citation, not two.
+    expect(rcm?.sources.map((source) => source.page)).toEqual(["5"]);
+    expect(rcm?.sources[0]?.url).toContain("https://www.boe.es/");
+    expect(view.blocks.find((block) => block.key === "base")?.sources.length).toBe(1);
+  });
+
+  it("cites nothing in a year nobody checked", () => {
+    const view = boxesView(boxesOf("none", [entry("base.savings")]), NO_NAMES);
+    expect(view.blocks.flatMap((block) => block.sources)).toEqual([]);
+    expect(
+      view.blocks.flatMap((block) => block.rows).every((row) => row.checked === undefined),
+    ).toBe(true);
   });
 });

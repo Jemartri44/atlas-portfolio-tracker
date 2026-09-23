@@ -208,6 +208,16 @@
   font-size: var(--text-xs);
 }
 
+/* The citation of the official image: a URL shown as text, never fetched.
+   It breaks anywhere so it cannot push the card sideways on a phone. */
+.box-sources {
+  overflow-wrap: anywhere;
+}
+
+.box-source {
+  color: var(--c-text-3);
+}
+
 .box-partial {
   color: var(--c-caution);
 }
