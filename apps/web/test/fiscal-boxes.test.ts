@@ -65,6 +65,14 @@ describe("the return laid out by box", () => {
     expect(rcm?.some_without_box).toBe(false);
   });
 
+  it("leaves out the blocks the year has nothing in", () => {
+    // Eleven blocks always exist in the form; painting the empty ones gives
+    // the reader ten headings with nothing under them to scroll past before
+    // the one that has his figure in it.
+    const view = boxesView(boxesOf("none", [entry("base.savings")]), NO_NAMES);
+    expect(view.blocks.map((block) => block.key)).toEqual(["base"]);
+  });
+
   it("keeps the literal label of the form beside what the figure is", () => {
     const view = boxesView(boxesOf("checked", [entry("base.savings", "0460")]), NO_NAMES);
     const [row] = view.blocks.flatMap((block) => block.rows);

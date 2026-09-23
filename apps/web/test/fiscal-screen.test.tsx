@@ -61,6 +61,44 @@ describe("the fiscal screen", () => {
     expect(shown).not.toContain("base.savings");
   });
 
+  /**
+   * Four things the screen decided and nothing checked: a mutant of each one
+   * survived the whole suite, and every one of them is something the reader
+   * sees.
+   */
+  it("says plainly which data the ledger does not hold, instead of a blank", () => {
+    // The NIF of a fund is not in the ledger and is never invented (#F2).
+    return open(2027).then((host) => {
+      expect(text(host)).toContain("No está en tus datos");
+    });
+  });
+
+  it("tags the criteria that are not settled, and only those", async () => {
+    const host = await open(2027);
+    const tags = [...host.querySelectorAll(".base-card .tag, .tag")].map(text);
+    expect(tags.length).toBeGreaterThan(0);
+    // Beside a figure, a tag exists to say "careful, this reading is open".
+    // Tagging the settled ones instead turns the warning into decoration: the
+    // rows that deserve a second look stop standing out.
+    const beside = [...host.querySelectorAll("td .tag, .row-meta .tag")].map(text);
+    expect(beside.length).toBeGreaterThan(0);
+    expect(beside).not.toContain("criterio firme");
+    expect(beside.some((label) => /en disputa|certeza media|certeza baja/.test(label))).toBe(true);
+  });
+
+  it("shows three criteria and folds the rest", async () => {
+    // Ten entries in a row took four phone screens of the screen whose figure
+    // at the top is what the user came for.
+    const host = await open(2027);
+    const doubtful = [...host.querySelectorAll(".card")].find((card) =>
+      text(card).includes("Criterios en duda"),
+    );
+    const lists = [...(doubtful?.querySelectorAll("ul.stakes") ?? [])];
+    expect(lists.length).toBe(2);
+    expect(lists[0]?.querySelectorAll("li").length).toBe(3);
+    expect(text(doubtful)).toMatch(/Ver \d+ criterios más/);
+  });
+
   it("shows the informative returns with their verdict", async () => {
     const host = await open();
     const shown = text(host);
