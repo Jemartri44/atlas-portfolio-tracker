@@ -400,6 +400,44 @@ Los dos tests escritos antes, vistos en rojo:
 
 Y al ponerlos en verde aparecieron **P6 y P7**, que es lo que ha parado el bloque.
 
+### Bloque 2 — la asimetría de los criterios firmes
+
+Los dos tests escritos antes. El de la web se vio en rojo **dos veces y por motivos distintos**, y la primera no valía: apuntaba al ejercicio 2029 del libro dorado, que está **vacío** (sin líneas, sin pendientes y base 0), así que la pantalla enseñaba su único estado vacío y la tarjeta no se pintaba por otra razón. Apuntado a **2028** —con cifras, cuatro dudosos y ningún criterio firme que mueva nada— se vio en rojo por lo que tenía que verse:
+
+```
+× says that no settled criterion moves anything, instead of empty headings
+  AssertionError: expected '\n10. Criterios firmes: lo que moverí…' to contain 'Ninguno'
+× keeps the card of the settled criteria when none of them moves anything
+  AssertionError: expected undefined to be defined
+```
+
+**Mutante 9, muerto en las dos interfaces**, con dos sustituciones en el fichero de la web y las dos afirmadas:
+
+```
+KILLED   9a hide the web card when it is empty
+KILLED   9b print the empty table again in the console
+```
+
+*(Y el guion de mutación hizo su trabajo: abortó dos veces por un ancla que aparecía **dos** veces —las dos tarjetas comparten esas tres líneas—, en vez de dar por muerto un mutante que nunca se escribió. Es la lección de §3 de las notas de la 010, funcionando.)*
+
+### Bloque 3 — la huella de duplicados
+
+Un test escrito antes, rojo por la colisión que no ocurría:
+
+```
+× identifies a filing by model, year and receipt, not by the date it was filed
+  AssertionError: expected 'sha256:b6be9fcf…' to be 'sha256:ea209d06…'
+```
+
+Y **ningún fichero dorado se movió**, que era la predicción: `git status tests/fixtures/` vacío después del cambio, con la suite entera en verde.
+
+**Mutante 4, muerto en sus dos mitades:**
+
+```
+KILLED   4a put filed_at back into the tuple
+KILLED   4b take receipt_reference out of the tuple
+```
+
 ---
 
 ## 7. Decisiones tomadas sobre la marcha
