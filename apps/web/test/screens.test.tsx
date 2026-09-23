@@ -43,9 +43,9 @@ class MemoryBlob implements LedgerBlob {
   }
 }
 
-const deps = (text: string = goldenText()): UseCaseDeps => ({
+const deps = (text: string = goldenText(), instant = "2029-07-01T10:00:00.000Z"): UseCaseDeps => ({
   store: new BlobLedgerStore(new MemoryBlob(text)),
-  clock: { now: () => new Date("2029-07-01T10:00:00.000Z") },
+  clock: { now: () => new Date(instant) },
   random: (target) => target.fill(7),
 });
 
@@ -424,7 +424,15 @@ describe("the privacy mode covers the prose of the warnings", () => {
     );
 
   beforeEach(async () => {
-    await loadInto({ deps: deps(WASH_SALE), source: { kind: "browser", persisted: false } });
+    // Standing inside the window: the sale is of 12/02/2026 and the window of
+    // a fund set to one year closes in 2027, so the warning this test is about
+    // only exists before then. It used to stand on the **wall clock**, which
+    // happened to be inside the window while this was written and would have
+    // silently emptied the block the day it was not (feature 011, P7).
+    await loadInto({
+      deps: deps(WASH_SALE, "2026-06-01T10:00:00.000Z"),
+      source: { kind: "browser", persisted: false },
+    });
   });
 
   it("masks the amount and the quantity a warning says", async () => {

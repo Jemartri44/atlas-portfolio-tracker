@@ -246,7 +246,11 @@ describe("the screens", () => {
     const shown = text(host);
     expect(shown).not.toMatch(ULID);
     expect(shown).not.toMatch(/ADR-|constituci|<n>d|2m, 1y|ast_world/);
-    expect(shown).toContain("la del cambio de configuración del 01/09/2026");
+    // The settings in force on the day the tests stand on (01/07/2029), which
+    // is the last `settings_changed` of the golden ledger before it. This used
+    // to say 01/09/2026, the one in force on the **wall clock**: a literal that
+    // would have flipped by itself in March 2028 (feature 011, P7).
+    expect(shown).toContain("la del cambio de configuración del 07/03/2028");
     expect(optionsOf(host, "wsw-fund")).toEqual([
       // Two months for a fund since the correction of criterion #2 (2026-09-22).
       "Por defecto (2 meses)",

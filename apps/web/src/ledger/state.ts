@@ -181,8 +181,21 @@ export const usePrivacy = (): (() => boolean) => store.privacy;
 export const useLoad = (): (() => LoadPhase) => store.load;
 export const useSnapshot = (): (() => LedgerSnapshot | undefined) => store.snapshot;
 
-/** Today in Europe/Madrid, from the clock the use cases use. */
-export const today = (): CivilDate => madridDateOf(new Date());
+/**
+ * Today in Europe/Madrid, from the clock the use cases use — which is what
+ * this comment always said and what the code did **not** do: it read
+ * `new Date()`, the wall clock (feature 010, follow-up 2).
+ *
+ * A component that reads the wall clock while the domain reads an injected one
+ * makes the two look at different days, and nothing that depends on the date
+ * can be tested deterministically. In production both are the system clock, so
+ * nothing changes there; what changes is that they can no longer disagree.
+ *
+ * Before a ledger is open there are no dependencies yet —the chip of the
+ * source and the date picker are painted then— so it falls back to the wall
+ * clock, which is the same clock the use cases will bring.
+ */
+export const today = (): CivilDate => madridDateOf(store.deps()?.clock.now() ?? new Date());
 
 /** The dependencies of the use cases; only defined once a ledger is open. */
 export const requireDeps = (): UseCaseDeps => {
