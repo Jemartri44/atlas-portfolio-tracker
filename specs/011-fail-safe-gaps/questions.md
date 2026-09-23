@@ -229,6 +229,40 @@ FR-004 dice que el mensaje nuevo no prometa una salida bloqueada. Mi propuesta d
 
 Y en el bloque 8 pasaría a nombrar la salida («…puedes compactar autorizándolo expresamente, y quedará registrado»). **¿Le parece bien a la dirección ese reparto en dos pasos**, o prefiere que el bloque 0 ya nombre la salida y el bloque 8 se dé por hecho? *(No bloquea: si no hay respuesta, hago los dos pasos.)*
 
+### P6 — La comparación `as_of ≤ filed_at` rechaza una línea legítima **(bloquea el bloque 1)**
+
+**Encontrado al implementarlo, y contradice al encargo.** El encargo da por sentado que `as_of` posterior a `filed_at` es una incoherencia —«calculado dos días después de presentarlo»— y de ahí deduce que «no futura» sobra. **Al escribir la comparación, cuatro tests de las dos interfaces se pusieron rojos, y ninguno estaba fijando un defecto: son el camino de producción.**
+
+| Qué se rompió | Por qué |
+|---|---|
+| `apps/cli/test/commands/filed.test.ts` ×2 | `atlas filed 720 2027 --filed-at 2028-03-15` con el reloj en 2028-06-10: `filingProposal` escribe `as_of: options.today` = **2028-06-10**, posterior al `filed_at` que el usuario declara |
+| `apps/web/test/presentar.test.tsx` ×2 | lo mismo desde el formulario: `filed_at` tecleado 2028-06-12, `as_of` el día de hoy |
+
+**`as_of` es «el día del cálculo»** (`data-schema.md` §6.6, y `filingProposal` lo escribe como `options.today`). Cuando el usuario **presenta en Hacienda y lo registra después** —que es el flujo que ADR-0020 describe como normal, «un paso manual nuevo que el usuario tiene que hacer una vez al año»—, el cálculo es **posterior** a la presentación. No es absurdo: es lo que pasa. Forzar `as_of ≤ filed_at` obligaría a escribir un `as_of` que la aplicación no usó, que es afirmar lo que no se ha comprobado — justo lo que esta ronda existe para impedir.
+
+**Lo que sí es absurdo y nadie comprueba: `as_of` en el futuro** (`as_of > recorded_at`). Sin la comparación con `filed_at`, esa **ya no se deduce** y pasa a ser la segunda que hay que escribir. El recuento vuelve a ser dos:
+
+1. `as_of ≥ ${tax_year}-12-31` — cubre el ejercicio.
+2. `as_of ≤ recorded_at` (en `Europe/Madrid`, como ya hace `filed_at`) — no se calcula en el futuro.
+
+Y con eso, **la muestra `SAMPLES.tax_return_filed` no era incoherente**: `as_of` 2026-06-20 con `filed_at` 2026-06-18 es exactamente «presenté el 18 y lo registré el 20». La he dejado como estaba, a la espera.
+
+**¿Cambio la segunda comparación a `recorded_at`, o la dirección sostiene `filed_at` a sabiendas de que entonces registrar una presentación pasada exige inventar un `as_of`?**
+
+### P7 — La comparación que sí es buena choca con un defecto conocido y fuera de alcance **(bloquea el bloque 1)**
+
+Incluso con **sólo** la primera comparación (`as_of ≥ 31/12`), un test de la web se queda rojo, y el motivo no es la regla: es el **seguimiento 2 de `implementation-notes.md` §6 de la 010**, *«`today()` de la web no lee el reloj de los casos de uso: su comentario dice que sí, pero usa `new Date()`»*, que §4 de este encargo deja **expresamente fuera de alcance**.
+
+`apps/web/src/ledger/state.ts:185` es `export const today = (): CivilDate => madridDateOf(new Date());`. En `presentar.test.tsx` el reloj inyectado es 2029-07-01 y el libro dorado declara el ejercicio **2027**, pero `filingProposal` recibe `today()` = **la fecha real del sistema**, hoy 2026-09-23. Resultado: la web escribe `as_of` = 2026-09-23 para un ejercicio que acaba el 2027-12-31, y la regla —con razón— lo rechaza.
+
+En **producción** no pasa: la fecha real es la de verdad y un ejercicio que se declara ya ha terminado. Pasa **en el test**, porque el libro dorado vive en el futuro respecto del reloj real. Tres salidas, y ninguna la elijo yo:
+
+- **(i) Arreglar `today()`** para que lea el reloj de los casos de uso. Son pocas líneas, deja el test coherente y mata de paso el seguimiento 2 — pero está **fuera de alcance** por escrito.
+- **(ii) Tocar el test de la web** para que su combinación sea coherente. Frágil: vuelve a romperse cuando la fecha real avance.
+- **(iii) No rechazar**, y emitir un aviso. Contradice el encargo, que pide rechazo con código propio.
+
+**El bloque 1 queda parado hasta que la dirección elija.** Los bloques 2 a 7 no dependen de él y sigo por ellos; el trabajo hecho está guardado como parche en mi scratchpad (`011-block1-wip.patch`) y el árbol está limpio y verde.
+
 ---
 
 ## 4. Observaciones sobre el propio encargo
@@ -323,7 +357,48 @@ No los toco (§2 bis): los traslada la dirección. Lista mínima, que se complet
 
 ## 6. Cómo vi cada test en rojo
 
-*(Se rellena durante la implementación, arreglo por arreglo: el test que escribí antes, o el commit que revertí para verlo fallar. Un test que no he visto fallar no es un test.)*
+Arreglo por arreglo. Un test que no he visto fallar no es un test.
+
+### Bloque 0 — los dos mensajes
+
+**Los tres tests se escribieron antes que el arreglo** y se vieron en rojo, cada uno por su motivo, no por un error de compilación:
+
+```
+× says a fingerprint cannot be verified, under a code of its own
+  AssertionError: expected [ 'outdated_lines', …(1) ] to include 'filing_fingerprint_unreadable'
+× names the schema version of the fingerprint, not the count of lines it covers
+  AssertionError: the given combination of arguments (undefined and string) is invalid …
+× carries the declared version on every check, not only on the one that fails
+  AssertionError: expected [ [ undefined, undefined ] ] to deeply equal [ [ undefined, 1 ] ]
+```
+
+Y el de los mensajes, visto en rojo **antes** de traducir nada:
+
+```
+FAIL tests/messages.test.ts > translates every finding the domain can raise
+  AssertionError: expected [ 'filing_fingerprint_unreadable' ] to deeply equal []
+```
+
+**Mutantes 1 y 2 del encargo, los tres muertos**, con un guion que afirma que la sustitución ocurre (`assert original.count(old) == 1`), comprueba el fichero después y lo restaura:
+
+```
+KILLED   1a swap the codes (unreadable under digest's code)
+KILLED   1b swap the codes (digest under unreadable's code)
+KILLED   2 print the line count where the version goes
+```
+
+*(Y una lección de método propia: el primer commit del bloque 0 entró con **Biome en rojo**. Leí el `$?` del `lint` y comiteé igual sin mirarlo. Reconstruido con `--amend`. El hábito que falta no es redirigir a fichero —eso ya lo hacía—: es **no commitear hasta haber leído el resultado**.)*
+
+### Bloque 1 — `computed.as_of`
+
+Los dos tests escritos antes, vistos en rojo:
+
+```
+× refuses a calculation that does not cover the year it declares
+× refuses a calculation dated after the filing itself
+```
+
+Y al ponerlos en verde aparecieron **P6 y P7**, que es lo que ha parado el bloque.
 
 ---
 

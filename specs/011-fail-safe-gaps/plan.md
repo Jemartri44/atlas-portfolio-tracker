@@ -4,7 +4,7 @@
 
 **Entrada**: `docs/prompts/011-fail-safe-gaps.md` y la especificación de esta carpeta.
 
-**Estado**: **aprobado por la dirección el 2026-09-23**, con las dos comprobaciones previas hechas y reportadas en [`questions.md`](questions.md). P1 resuelta con una regla que no era ninguna de las dos que propuse (§1); P4 aprobada con cuatro exigencias sobre el evento nuevo (§8); P2, P3 y P5 conformes. **Dos correcciones de la dirección a este plan**: la forma del ancla pasa a lista siempre presente (§6) y el ternario del bloque 0 queda prohibido (§0).
+**Estado**: **aprobado por la dirección el 2026-09-23**, con las dos comprobaciones previas hechas y reportadas en [`questions.md`](questions.md). **El bloque 1 está parado** por dos hallazgos posteriores, P6 y P7, que contradicen al encargo y no los resuelvo yo; los demás siguen. P1 resuelta con una regla que no era ninguna de las dos que propuse (§1); P4 aprobada con cuatro exigencias sobre el evento nuevo (§8); P2, P3 y P5 conformes. **Dos correcciones de la dirección a este plan**: la forma del ancla pasa a lista siempre presente (§6) y el ternario del bloque 0 queda prohibido (§0).
 
 ---
 
@@ -366,4 +366,4 @@ Más `notes?`. Fechado por su `recorded_at`, lo que lo hace un **documento admin
 8 cierra el bloque 0 (el mensaje nombra la salida) y depende de una ADR que acepta la dirección
 ```
 
-**Bloqueos**: ninguno para los bloques 0–7, que arrancan ya. El bloque 8 espera a que la dirección **acepte** la ADR que voy a proponer; su forma está aprobada de antemano (§8), así que el único paso pendiente es el cambio de estado. Si tardara, los bloques 0–7 se entregan igual y el 8 espera él solo, que es lo que pide la decisión (l).
+**Bloqueos**: el **bloque 1**, por P6 y P7 (ver `questions.md`); el resto de 0–7 sigue. El bloque 8 espera a que la dirección **acepte** la ADR que voy a proponer; su forma está aprobada de antemano (§8), así que el único paso pendiente es el cambio de estado. Si tardara, los bloques 0–7 se entregan igual y el 8 espera él solo, que es lo que pide la decisión (l).
