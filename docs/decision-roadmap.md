@@ -32,7 +32,7 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | — | *Fase 5 (motor fiscal): feature `009-tax-engine`* | Salida fiscal por casillas | `docs/prompts/009-tax-engine.md`, ADR-0020, ADR-0021, `docs/fiscal-questions.md` | **Prompt escrito** 2026-09-18, requiere la 008 fusionada. Decisión de fondo: el motor calcula **la base, no la cuota** (no ve el resto de la declaración), **toda cifra dice de qué criterio depende** y hay un apartado con las que penden de un criterio en disputa, su importe y la dirección del riesgo. La salida por casillas, el 720/721, `tax_return_filed` y la pantalla web son la feature siguiente |
 | 6 | Importadores | Fase 4 | ADRs según hallazgos de Fase 0 | Pendiente; bloqueada por la Fase 0 (IBKR y exportación de fondos de MyInvestor). *Desde el 2026-09-24, el cotejo de `fx_rate` con el BCE, los festivos TARGET y las fuentes de precios pasan a la Ronda 8 (ADR-0029, ADR-0031)* |
 | 7 | Aplicación web: framework, offline, auth, API | Fase 2 | **ADR-0017** (*stack*), **ADR-0019** (local-first, sin servidor), `docs/prompts/006-web-shell.md` (pantallas y navegación) | **Cerrada** 2026-09-18. La autenticación desaparece del alcance: sin servidor no hay nada que autenticar; Cognito protegerá la API en la Fase 4. *La Ronda 8 propone sustituir Cognito por Google verificado en la Lambda (ADR-0027)* |
-| 8 | Capa en la nube: sincronización, acceso, plataforma, BCE, precios, tareas y copias | Fase 4 | **ADR-0026 a ADR-0032** (Propuestas) | **Abierta** 2026-09-24. Siete ADRs propuestas, con la investigación del mismo día incorporada. Espera a la dirección: la opción de sincronización, la de la operación antes de la publicación del BCE y la vía de acceso con Google. Plan por etapas abajo |
+| 8 | Capa en la nube: sincronización, acceso, plataforma, BCE, precios, tareas y copias | Fase 4 | **ADR-0026 a ADR-0032** | **Cerrada** 2026-09-24. Siete ADRs aceptadas por la dirección el mismo día, con la investigación incorporada. Plan por etapas abajo; los documentos que cambian están listados y los encarga la dirección |
 | 9 | Salida fiscal | Fase 5 | **ADR-0020**, **ADR-0021**, `docs/fiscal-questions.md`, `docs/data-schema.md` §3 | **Desbloqueada**: los 16 criterios fiscales están respondidos con su grado de certeza y el registro de lo declarado está decidido (ADR-0020, 2026-09-18). Queda el formato de la salida, que se decide al escribir el prompt de la fase. **Revisión adversarial del 2026-09-18**: 3 criterios incorrectos y 6 en disputa; ninguno se resuelve sin asesor, pero ADR-0021 fija las nueve previsiones del esquema para que la fase pueda escribirse igualmente |
 
 ---
@@ -131,41 +131,50 @@ Antes de la Fase 2. Decisiones: Svelte o Solid (tras prototipo); **librería de 
 
 ## Ronda 8 — Capa en la nube
 
-**Abierta el 2026-09-24.** La dirección fija el marco: la nube es una **capa añadida** sobre lo local (ADR-0019 sigue en pie); aporta sincronización, tareas programadas y correos; **no se gasta dinero** (coste estimado ≈ 0,01-0,05 $/mes, cubierto por los créditos, según la investigación del mismo día). La Ronda 8 original (cuentas, *bootstrap*, promoción, copia fuera de AWS, alarmas) queda dentro.
+**Cerrada el 2026-09-24.** La dirección fija el marco: la nube es una **capa añadida** sobre lo local (ADR-0019 sigue en pie); aporta sincronización, tareas programadas y correos; **no se gasta dinero** (coste estimado ≈ 0,01-0,05 $/mes, cubierto por los créditos, según la investigación del mismo día). **El modelo de dominio no cambia y todo lo que se añade es compatible** según ADR-0018 (la lista, en ADR-0026). La Ronda 8 original (cuentas, *bootstrap*, promoción, copia fuera de AWS, alarmas) queda dentro.
 
-| ADR | Qué fija | Qué falta |
-|---|---|---|
-| 0026 | Sincronización del libro entre dispositivos; la API solo añade; réplicas idénticas; detección de un remoto reescrito | **La dirección elige la opción** (recomendada: la 2, cola local y reaplicación de lo pendiente) |
-| 0027 | Acceso solo con Google verificado en la Lambda, lista permitida en SSM, sesión propia; sustituye a Cognito | **La dirección elige la vía** (recomendada: la c, código de autorización con la Lambda como cliente; la a rompe la CSP) |
-| 0028 | Organización con cuenta miembro dedicada, `eu-west-1`, `dev`/`prod` por sufijo, línea base de seguridad a coste cero, plan Free de CloudFront con WAF, CSP en una CloudFront Function, OIDC | Nada de la dirección; puntos **SIN VERIFICAR** abajo |
-| 0029 | BCE: histórico oficial en local, forma canónica, días sin publicación por ausencia, calendario TARGET como comprobación, hallazgos de integridad | **La dirección elige qué pasa antes de la publicación** (recomendada: la B, borrador fuera del libro) |
-| 0030 | `broker_settled_eur`, dato informativo; compatible según ADR-0018 | Nada; va antes de la primera operación real |
-| 0031 | Precios de cierre: EODHD, Alpha Vantage, CoinGecko; Yahoo, Stooq y Morningstar excluidos; `price_symbols` en el catálogo; cascada y fallo | La tensión entre las condiciones de CoinGecko y guardar histórico |
-| 0032 | Cuatro capas de copia, restauración en seis pasos, ensayo trimestral y anual, nunca en `dev` | Nada de la dirección |
+| ADR | Qué fija |
+|---|---|
+| 0026 | Sincronización: **opción 2**, cola local por dispositivo, reaplicación línea a línea sobre el remoto y lo que no cabe retenido, nunca perdido. La API solo añade; réplicas idénticas; detección de un remoto reescrito |
+| 0027 | Acceso solo con Google verificado en la Lambda, **vía c** (código de autorización con la Lambda como cliente; corrige el texto de apertura de la dirección); secreto de cliente en SSM; lista permitida en SSM; sesión propia. La verificación en dos pasos de Google es **requisito operativo del usuario**. Sustituye a Cognito |
+| 0028 | Organización con **dos cuentas miembro**, `atlas-dev` y `atlas-prod`; `eu-west-1`; línea base de seguridad a coste cero; plan Free de CloudFront con WAF; CSP en `'self'` servida por una CloudFront Function; OIDC; Budgets antes de créditos con alarma a 1 $; destinatario del correo solo en SSM y correos sin importes por defecto; revisión del plazo de versiones al pasar el libro de 1 MB |
+| 0029 | BCE: histórico oficial en local, forma canónica del histórico, días sin publicación por ausencia, calendario TARGET como comprobación, hallazgos de integridad. **Opción B**: borrador fuera del libro, que no es un hecho y nunca se confirma solo. Tras un cambio de `fiscal_date_rule`, el motor nunca recalcula en silencio: aviso, hallazgo, nota y corrección propuesta |
+| 0030 | `broker_settled_eur`, dato informativo; compatible según ADR-0018; antes de la primera operación real |
+| 0031 | Precios de cierre: EODHD, Alpha Vantage y CoinGecko; Yahoo, Stooq y Morningstar excluidos; `price_symbols` en el catálogo; de cripto solo el último valor; fondos fuera de `EUFUND` por ETF de referencia, marcado como aproximación |
+| 0032 | Cuatro capas de copia, restauración en seis pasos, ensayo trimestral y anual, nunca con datos reales en `atlas-dev` |
 
-**Preguntas abiertas que no son de estas ADRs:** qué hace el motor fiscal con el tipo guardado cuando cambia `fiscal_date_rule` (ADR-0029, consecuencias); si los correos llevan importes (salen del perímetro: los guarda el proveedor de correo; se propone que por defecto no); y de dónde sale el destinatario, porque hoy hay dos sitios (`notification_email` en `Settings` y la dirección verificada en SSM).
+**SIN VERIFICAR**, con una condición (decisión de la dirección): **cada feature que dependa de uno de estos puntos lo verifica, con fuente, antes de escribir código**, y lo que encuentre se escribe en su ADR el mismo día. Son: si Google admite forzar la reautenticación en cada acceso, los valores de `iss` y la dirección de sus claves, las condiciones del borrado de un cliente OAuth sin uso y si hay API para gestionarlo (feature 015); que las SCP no se aplican a la cuenta de gestión, si una cuenta nueva tiene cuota para reservar concurrencia y qué hace CloudFront al superar el millón de peticiones del plan Free (017 y 018); y el coste de S3 Object Lock (si alguna vez se propone).
 
-**SIN VERIFICAR** (la investigación no lo cubrió): si Google admite el flujo implícito para un cliente nuevo, los valores de `iss` y la dirección de sus claves, las condiciones del borrado de un cliente OAuth sin uso, si se puede forzar la reautenticación y si hay API para gestionar el cliente; si una cuenta nueva tiene cuota para reservar concurrencia de Lambda; que las SCP no se aplican a la cuenta de gestión; qué hace CloudFront al superar el millón de peticiones del plan Free; cómo configurar Budgets para medir antes de créditos; y el coste de S3 Object Lock.
+**Documentos que hay que actualizar**, que la dirección encarga aparte:
+
+- La constitución (Restricciones técnicas: Cognito; secretos).
+- `CLAUDE.md` (*stack*, seguridad, entornos por cuenta, «el único secreto es el token de IBKR»).
+- `docs/specification.md` §7, §9.2-§9.5, §10, §11.3-§11.8 y §14.1.
+- `docs/data-schema.md` §1, §4, §6.1 (`price_symbols`) y §6.2 (`broker_settled_eur`).
+- `docs/business-rules.md` §7 (`notification_email` sale; interruptor de importes en el correo).
+- `docs/fiscal-questions.md`: nota en el #4 (ADR-0030) y el **criterio nuevo** de ADR-0029 punto 10, con certeza media y riesgo conservador.
+- Notas fechadas en ADR-0013 (forma canónica del tipo) y ADR-0019 (Cognito y la sincronización).
+- `docs/prompts/000-director-handoff.md` §6 y §9 (la Fase 4 deja de estar descartada; la verificación en dos pasos, como requisito operativo del usuario).
 
 ### Plan por etapas
 
 **Etapa 1 — Local, sin nube** (sin cuenta de AWS; lo que cuesta es dar de alta las claves gratuitas de las fuentes de precios, tarea del usuario):
 
-- **012 — Tipos del BCE** (ADR-0029, ADR-0030). Bloque 0: `broker_settled_eur`. Después: descarga desde la consola a `reference/ecb/`, resolución del tipo, calendario como comprobación, propuesta al registrar en la consola y en la web (escritorio por la carpeta, móvil importando), confirmación ante un tipo distinto, hallazgos en `check --deep` con su nota en el informe fiscal, y la opción que elija la dirección para antes de la publicación. **Requiere esa decisión.**
+- **012 — Tipos del BCE** (ADR-0029, ADR-0030). Bloque 0: `broker_settled_eur`. Después: descarga desde la consola a `reference/ecb/`, resolución del tipo, calendario como comprobación, propuesta al registrar en la consola y en la web (escritorio por la carpeta, móvil importando), confirmación ante un tipo distinto, hallazgos en `check --deep` con su nota en el informe fiscal, y los borradores de la opción B para antes de la publicación, más el aviso, la nota y la corrección propuesta tras un cambio de `fiscal_date_rule`.
 - **013 — Precios de cierre** (ADR-0031). `price_symbols` con la propuesta de OpenFIGI, el puerto y sus tres adaptadores, el almacén, la cascada, el estado de cada fuente, el presupuesto de llamadas y la atribución de CoinGecko. Requiere la 012 (la conversión a euros usa el histórico).
 
 **Etapa 2 — La nube, escrita y probada sin desplegar** (sin cuenta de AWS; instalar Terraform o la CLI de AWS en local lo decide el usuario):
 
-- **014 — Núcleo de sincronización** (ADR-0026). El caso de uso puro de reaplicación, el marcador, lo retenido y lo descartado, los adaptadores locales y un remoto de pruebas en memoria. El contrato HTTP se escribe en `docs/api.md` en el encargo, antes de implementar. **Requiere la elección de la dirección.**
-- **015 — API y acceso** (ADR-0026, ADR-0027). `apps/api`: inicio de sesión, sesión, lista permitida, `LedgerStore` sobre S3 con `If-Match`, rutas de sincronización y de datos de referencia; en la SPA, el inicio de sesión, la sincronización y el hash del cuerpo. Probada con dobles de S3, SSM y Google.
-- **016 — Tareas programadas y correo** (§9.5 de la especificación, ADR-0029, ADR-0031, ADR-0032). Solo las que **no** dependen de los importadores: BCE diario, precios diarios, desviaciones y reglas del cubo semanales, recordatorio mensual (siempre; con los días desde el último inicio de sesión y el recordatorio de la copia fuera de AWS), volcado mensual, integridad y ensayo de restauración trimestrales, preparación de la Renta en enero y umbrales del 720/721. El puerto `Notifier` y su adaptador de SES.
+- **014 — Núcleo de sincronización** (ADR-0026). El caso de uso puro de reaplicación, el marcador, lo retenido y lo descartado, los adaptadores locales y un remoto de pruebas en memoria. El contrato HTTP se escribe en `docs/api.md` en el encargo, antes de implementar.
+- **015 — API y acceso** (ADR-0026, ADR-0027). `apps/api`: inicio de sesión por código de autorización, sesión, lista permitida, `LedgerStore` sobre S3 con `If-Match`, rutas de sincronización y de datos de referencia; en la SPA, el inicio de sesión, la sincronización y el hash del cuerpo. Probada con dobles de S3, SSM y Google.
+- **016 — Tareas programadas y correo** (§9.5 de la especificación, ADR-0029, ADR-0031, ADR-0032). Solo las que **no** dependen de los importadores: BCE diario, precios diarios, desviaciones y reglas del cubo semanales, recordatorio mensual (siempre; sin importes salvo que se activen; con los días desde el último inicio de sesión y el recordatorio de la copia fuera de AWS), volcado mensual, integridad y ensayo de restauración trimestrales, preparación de la Renta en enero y umbrales del 720/721. El puerto `Notifier` y su adaptador de SES.
 - **017 — Infraestructura como código** (ADR-0028). Módulos de Terraform, *bootstrap*, la CloudFront Function de la CSP, el guion del plan de tarifa plana y los flujos de GitHub Actions con OIDC; solo `fmt` y `validate`.
 
 **Etapa 3 — Despliegue** (con el visto bueno del usuario):
 
-- Tareas del usuario, con procedimiento escrito: la organización y la cuenta miembro, el MFA de los dos root, los clientes OAuth de `dev` y `prod`, la verificación de la dirección en SES, las claves en SSM y la lista permitida.
-- **018 — Despliegue en `dev`**, con datos sintéticos: extremo a extremo (acceso, dos dispositivos sincronizando, tareas), y los ensayos de restauración y de pérdida de la cuenta.
-- **019 — Promoción a `prod`**: el mismo artefacto, la primera subida del libro real desde el portátil y el ensayo de restauración en memoria.
+- Tareas del usuario, con procedimiento escrito: la organización y las dos cuentas miembro, el MFA de los tres root, la verificación en dos pasos de su cuenta de Google, la petición de aumento de la cuota de concurrencia si hace falta, los clientes OAuth de `dev` y `prod`, la verificación de la dirección en SES, las claves en SSM y la lista permitida.
+- **018 — Despliegue en `atlas-dev`**, con datos sintéticos: extremo a extremo (acceso, dos dispositivos sincronizando, tareas), y los ensayos de restauración y de pérdida de la cuenta.
+- **019 — Promoción a `atlas-prod`**: el mismo artefacto, la primera subida del libro real desde el portátil y el ensayo de restauración en memoria.
 
 **Bloqueadas por los importadores** (Ronda 6): la importación diaria de IBKR por Flex Query (a `imports/`, nunca al libro sin confirmación), la conciliación semanal contra IBKR y la rotación del token Flex.
 
