@@ -160,17 +160,47 @@ const informativeFigures = (report: InformativeReturn): FilingFigureProposal[] =
   return figures;
 };
 
-/** The figures of a `renta`, in the shape the event declares them. */
-const rentaDeclared = (values: ReadonlyMap<string, string>): Record<string, unknown> => ({
-  savings_base_eur: values.get("base") as string,
-  pending_losses: [...values]
-    .filter(([key]) => key.startsWith("pending."))
-    .map(([key, amount]) => {
-      const [, year, category] = key.split(".") as [string, string, string];
-      return { origin_year: Number(year), category, amount_eur: amount };
-    }),
-  deferred_losses_eur: values.get("deferred") as string,
-});
+/**
+ * The figures of a `renta`, in the shape the event declares them.
+ *
+ * It reads the origin year and the category **off the figure**, which carries
+ * both typed, instead of taking them back out of the text of its own key
+ * (`"pending.2027.capital_gain"` split on the dots). The key is a handle for
+ * the interfaces —a map key, the id of a field— and nothing here has to
+ * understand it; a string that the domain writes and then parses back is a
+ * type it gave up, and the compiler stops helping the day a category is added.
+ *
+ * What is **not** touched is the value: whatever the user typed goes in as it
+ * was typed. The ledger is append-only, a line's fingerprint is its bytes, and
+ * `proposal.test.ts` pins the text of this object whole.
+ */
+const rentaDeclared = (
+  figures: readonly FilingFigureProposal[],
+  values: ReadonlyMap<string, string>,
+): Record<string, unknown> => {
+  const pending: { origin_year: number; category: IncomeCategory; amount_eur: string }[] = [];
+  let base = "";
+  let deferred = "";
+  for (const figure of figures) {
+    const value = values.get(figure.key) as string;
+    if (figure.kind === "savings_base") {
+      base = value;
+    } else if (figure.kind === "deferred") {
+      deferred = value;
+    } else {
+      pending.push({
+        origin_year: figure.origin_year as number,
+        category: figure.category as IncomeCategory,
+        amount_eur: value,
+      });
+    }
+  }
+  return {
+    savings_base_eur: base,
+    pending_losses: pending,
+    deferred_losses_eur: deferred,
+  };
+};
 
 /** The same for a `720` or a `721`: the totals by category and the list of assets. */
 const informativeDeclared = (
@@ -250,7 +280,7 @@ export const filingProposal = (
         }
       }
       const shape = (source: ReadonlyMap<string, string>): Record<string, unknown> =>
-        model === "renta" ? rentaDeclared(source) : informativeDeclared(figures, source);
+        model === "renta" ? rentaDeclared(figures, source) : informativeDeclared(figures, source);
       const supersedes = meta.supersedes ?? inForce?.event_id;
       return {
         type: "tax_return_filed",
