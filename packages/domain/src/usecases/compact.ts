@@ -20,7 +20,7 @@ import type { Clock } from "../ports/clock.js";
 import type { LedgerStore } from "../ports/ledger-store.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import { snapshotDiff, snapshotOf } from "../projections/snapshot.js";
-import type { FilingFingerprintWaivedEvent } from "../schema/events.js";
+import type { FilingFingerprintWaivedEvent, TaxReturnFiledEvent } from "../schema/events.js";
 import { decodeLine, encodeLine, parseLine } from "../schema/line.js";
 
 export interface CompactDeps {
@@ -82,20 +82,25 @@ export type CompactResult =
       versions: VersionCount[];
       targetVersion: number;
       etag: string;
+      /**
+       * The waivers that **are now in the ledger**, known only once the
+       * rewrite has gone through: an interface says "it is recorded" from
+       * here, never before (review of feature 011, decision (g)).
+       */
+      waived: UnverifiedFiling[];
     };
 
 const MAX_ARCHIVE_ATTEMPTS = 99;
 
 /**
- * The line that records a waiver. It says **which** filing and **why** —never
- * the two reasons under one word— and what the fingerprint declared, which
- * after resealing the ledger holds nowhere else. Its `recorded_at` is when the
- * user gave it for good, which is half of the sentence `check` has to keep
- * saying for ever.
- *
- * `lines` is not a reason a user can waive: a fingerprint that covers the
- * wrong count of lines is caught by `integrity` without re-reading anything,
- * and it is refused, not accepted.
+ * The line that records a waiver. It says **which** filing and **why**, and
+ * the why is **the real reason of the check, passed through as it is**: `lines`,
+ * `digest` or `unreadable`. It used to be a ternary that folded everything that
+ * was not `unreadable` into `digest`, so a `lines` case wrote for ever, in a
+ * file that only grows, a reason that was false (review of feature 011; the
+ * third time a ternary bit in this round). It also carries what the fingerprint
+ * declared, which after resealing the ledger holds nowhere else, and its
+ * `recorded_at` is when the user gave it for good.
  */
 const waiverEvent = (
   check: FingerprintCheck,
@@ -108,7 +113,8 @@ const waiverEvent = (
   recorded_at: at.toISOString(),
   type: "filing_fingerprint_waived",
   filing_id: check.filing_id,
-  reason: check.reason === "unreadable" ? "unreadable" : "digest",
+  // Only broken checks reach here, so the reason is always there.
+  reason: check.reason as FilingFingerprintWaivedEvent["reason"],
   declared_schema_version: check.declared_schema_version,
   declared_lines: check.declared_lines,
 });
@@ -214,7 +220,28 @@ export const compactLedger = async (
   const at = clock.now();
   const waivers = waived.map((check, index) => waiverEvent(check, plan.targetVersion, at, index));
   const sealed = [...resealFilings(events, plan.targetVersion), ...waivers];
-  const before = snapshotOf(projectLedger([...events, ...waivers], { collectErrors: true }));
+  // **The one change the waiver authorises, declared before comparing.** The
+  // snapshot carries the count of lines of every filing's fingerprint, and
+  // resealing sets it to where the filing really sits: for a `lines` case that
+  // is a change, and it made every such compaction fail with
+  // `projection_changed`, leaving the ledger frozen — the thing ADR-0025
+  // exists to prevent. So the reading **before** the rewrite is taken with
+  // that count already set, **for the waived filings only and on that field
+  // only**. The comparison is not loosened: any other change of any filing,
+  // and every change of anything else, still stops the rewrite.
+  const waivedIds = new Set(waived.map((check) => check.filing_id));
+  const expected = events.map((event, position) =>
+    waivedIds.has(event.id)
+      ? {
+          ...(event as TaxReturnFiledEvent),
+          ledger_fingerprint: {
+            ...(event as TaxReturnFiledEvent).ledger_fingerprint,
+            lines: position,
+          },
+        }
+      : event,
+  );
+  const before = snapshotOf(projectLedger([...expected, ...waivers], { collectErrors: true }));
   const rewritten = sealed.map(encodeLine).map((line) => decodeLine(line, store.schema).event);
   const after = snapshotOf(projectLedger(rewritten, { collectErrors: true }));
   const keys = snapshotDiff(before, after);
@@ -234,6 +261,7 @@ export const compactLedger = async (
         versions: plan.versions,
         targetVersion: plan.targetVersion,
         etag: replaced.etag,
+        waived: waivers.map((waiver) => ({ filing_id: waiver.filing_id, reason: waiver.reason })),
       };
     } catch (error) {
       if (!(error instanceof ArchiveExistsError) || attempt >= MAX_ARCHIVE_ATTEMPTS) {

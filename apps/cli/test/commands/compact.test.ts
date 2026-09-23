@@ -137,6 +137,23 @@ describe("atlas compact and a fingerprint that cannot be verified", () => {
     return [...legacyLines, JSON.stringify(filing)];
   };
 
+  /**
+   * When the compaction does **not** go through, nothing may have announced
+   * that the waiver is recorded: it is not (review of feature 011).
+   */
+  it("says nothing is recorded when the compaction does not go through", async () => {
+    const h = harness({
+      lines: tampered(),
+      schema: TEST_SCHEMA_V2,
+      instant: "2028-01-15T10:00:00.000Z",
+      confirm: false,
+    });
+    await h.exec(["compact", "--accept-unverified", "01ARYZ6S41TSV4RRFFQ69G5FKM"]);
+    expect(h.text()).toContain("Cancelado.");
+    expect(h.text()).not.toContain("Registrado");
+    expect(h.text()).not.toContain("Queda registrado");
+  });
+
   it("refuses by default: nobody compacts a broken fingerprint by accident", async () => {
     const h = harness({
       lines: tampered(),
@@ -158,13 +175,44 @@ describe("atlas compact and a fingerprint that cannot be verified", () => {
     });
     const code = await h.exec(["compact", "--accept-unverified", "01ARYZ6S41TSV4RRFFQ69G5FKM"]);
     expect(code).toBe(0);
-    // What it costs is on screen **before** the question, named one by one.
-    expect(h.text()).toContain("renunciando a verificar la huella");
-    expect(h.text()).toContain("01ARYZ6S41TSV4RRFFQ69G5FKM");
-    expect(h.text()).toContain("`atlas check` lo dirá siempre");
+    // What it costs is on screen **before** the question, named one by one —
+    // and "it is recorded" only **after** the compaction has gone through,
+    // never before: that is not known until then.
+    const text = h.text();
+    expect(text).toContain("renunciando a verificar la huella");
+    expect(text).toContain("01ARYZ6S41TSV4RRFFQ69G5FKM");
+    expect(text.indexOf("Registrado en tus propios datos")).toBeGreaterThan(
+      text.indexOf("Compactado:"),
+    );
     const { events } = await h.store.load();
     const waiver = events.find((event) => event.type === "filing_fingerprint_waived");
     expect(waiver).toBeDefined();
+  });
+
+  /**
+   * **The review found it by trying**: `atlas delete <waiver> --reason limpiar`
+   * returned 0, and afterwards `atlas check` answered "Libro íntegro: sin
+   * hallazgos". The way out had become a way of cleaning the record.
+   */
+  it("refuses to annul the waiver, and check keeps saying it", async () => {
+    const h = harness({
+      lines: tampered(),
+      schema: TEST_SCHEMA_V2,
+      instant: "2028-01-15T10:00:00.000Z",
+      confirm: true,
+    });
+    await h.exec(["compact", "--accept-unverified", "01ARYZ6S41TSV4RRFFQ69G5FKM"]);
+    const { events } = await h.store.load();
+    const waiver = events.find((event) => event.type === "filing_fingerprint_waived");
+    h.reset();
+    expect(await h.exec(["delete", waiver?.id as string, "--reason", "limpiar", "--yes"])).toBe(
+      EXIT.domain,
+    );
+    expect(h.text()).toContain("No se puede anular la renuncia");
+    h.reset();
+    await h.exec(["check"]);
+    expect(h.text()).not.toContain("Libro íntegro");
+    expect(h.text()).toContain("nunca llegó a comprobarse");
   });
 
   it("says it for ever afterwards, in check", async () => {

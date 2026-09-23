@@ -60,6 +60,8 @@ describe("planCompact + compactLedger", () => {
       versions: plan.versions,
       targetVersion: 2,
       etag: "1",
+      // Nothing waived: nothing recorded.
+      waived: [],
     });
     expect(store.archives.get("ledger-2028-01-15-v1.jsonl")).toBe(original);
     const reloaded = await store.load();
@@ -362,6 +364,95 @@ describe("compact and the fingerprints of the filings (ADR-0020)", () => {
       (event) => event.type === "filing_fingerprint_waived",
     ) as { reason: string };
     expect(waiver.reason).toBe("unreadable");
+  });
+
+  /**
+   * **Nobody is locked out for any reason, `lines` included** (review of
+   * feature 011, blocking 2). Adding or removing a line before a filing is the
+   * most likely hand edit there is, and with the filing in force it had no way
+   * out: the console said it would record the waiver and then failed with a
+   * `projection_changed` that explained nothing, because resealing moves the
+   * count of lines the snapshot carries for that filing.
+   *
+   * And the waiver records **the real reason**: it used to fold everything
+   * that was not `unreadable` into `digest`, writing for ever a reason that was
+   * false.
+   */
+  it("lets a fingerprint that covers another count of lines be waived, recording lines", async () => {
+    const { store, filingId } = withFiling();
+    const original = (await store.load()).lines;
+    const inserted = encodeLine(new LedgerBuilder(500).account("acc_inserted"));
+    const shifted = TestStore.fromLines(
+      [original[0] as string, inserted, ...original.slice(1)],
+      TEST_SCHEMA_V2,
+    );
+    const plan = await planCompact({ store: shifted, clock });
+    expect(plan.unverified).toEqual([{ filing_id: filingId, reason: "lines" }]);
+    const result = await compactLedger({ store: shifted, clock }, plan, {
+      acceptUnverified: [filingId],
+    });
+    expect(result.status).toBe("compacted");
+    const { events, lines } = await shifted.load();
+    const waiver = events.find((event) => event.type === "filing_fingerprint_waived") as {
+      reason: string;
+      declared_lines: number;
+    };
+    expect(waiver.reason).toBe("lines");
+    // What the fingerprint said it covered, which the ledger holds nowhere else now.
+    expect(waiver.declared_lines).toBe(legacy.length);
+    // And the filing is sealed again over the prefix it really has.
+    const filing = events.find((event) => event.id === filingId) as TaxReturnFiledEvent;
+    expect(filing.ledger_fingerprint.lines).toBe(legacy.length + 1);
+    expect(
+      checkFilingFingerprints(lines, events, TEST_SCHEMA_V2).map((check) => check.reason),
+    ).toEqual([undefined]);
+  });
+
+  /**
+   * The comparison of the snapshot is the net of `compact`, and it is **not**
+   * loosened to make room for this case: what the waiver authorises is the one
+   * change resealing makes to the **one** filing the user named, and anything
+   * else that moves still stops the rewrite.
+   */
+  it("still refuses any other change of the projection when a lines case is waived", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.deposit({ account_id: "acc_fund" });
+    const filing = b.filed({
+      tax_year: 2027,
+      ledger_fingerprint: { schema_version: 1, lines: 2, sha256: "0".repeat(64) },
+    });
+    const events = b.build();
+    const doubling: LedgerSchema = {
+      version: 2,
+      migrations: new Map([
+        [1, (line) => (line.type === "cash_deposit" ? { ...line, amount: "10000" } : line)],
+      ]),
+    };
+    let replaced = false;
+    const lying: LedgerStore = {
+      schema: doubling,
+      load: async (): Promise<LoadedLedger> => ({
+        events,
+        etag: "0",
+        lines: events.map(encodeLine),
+      }),
+      append: () => Promise.reject(new Error("unused")),
+      replace: async () => {
+        replaced = true;
+        return { etag: "1" };
+      },
+    };
+    const plan = await planCompact({ store: lying, clock });
+    expect(plan.unverified).toEqual([{ filing_id: filing.id, reason: "lines" }]);
+    const error = await compactLedger({ store: lying, clock }, plan, {
+      acceptUnverified: [filing.id],
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(CompactRejectedError);
+    expect((error as CompactRejectedError).code).toBe("projection_changed");
+    // The cash still stops it; the count of lines of the waived filing does not.
+    expect((error as CompactRejectedError).details.keys).toEqual(["cash"]);
+    expect(replaced).toBe(false);
   });
 
   it("writes no waiver when the compaction does not go through", async () => {

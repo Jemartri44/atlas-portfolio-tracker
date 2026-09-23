@@ -19,13 +19,25 @@ const REASON: Record<string, string> = {
   lines: "la huella cubre un número de movimientos distinto del que tiene delante",
 };
 
-/** What the user is giving up, one filing at a time, before being asked. */
+/**
+ * What the user is giving up, one filing at a time, **before** being asked.
+ * It says what will be given up and nothing about it being recorded: that is
+ * not known until the rewrite has gone through, and saying it first is
+ * affirming what has not happened (review of feature 011, decision (g)).
+ */
 const describeWaivers = (waiving: readonly UnverifiedFiling[]): string =>
   [
     "Vas a compactar renunciando a verificar la huella de estas declaraciones:",
     ...waiving.map((entry) => `  ${entry.filing_id}: ${REASON[entry.reason] ?? entry.reason}`),
-    "Queda registrado en tus propios datos, con su motivo y la fecha de hoy, y `atlas check` lo dirá siempre.",
   ].join("\n");
+
+/** And what **is** recorded, said once the compaction has finished. */
+const describeRecorded = (waived: readonly UnverifiedFiling[]): string[] =>
+  waived.length === 0
+    ? []
+    : [
+        `Registrado en tus propios datos: ${waived.length === 1 ? "la renuncia a verificar la huella" : `las ${waived.length} renuncias a verificar la huella`}, con su motivo y la fecha de hoy. \`atlas check\` lo dirá siempre.`,
+      ];
 
 const describePlan = (plan: CompactPlan): string =>
   [
@@ -71,6 +83,7 @@ export const compactCommand = async (
       ? [
           `Compactado: ${result.linesBefore} líneas → ${result.linesAfter} líneas en schema_version ${result.targetVersion}.`,
           `Original archivado en archive/${result.archiveName}.`,
+          ...describeRecorded(result.waived),
           table(
             ["schema_version", "líneas antes"],
             result.versions.map((v) => [String(v.version), String(v.lines)]),

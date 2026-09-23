@@ -168,8 +168,8 @@ const PER_ACCOUNT_RULES: Partial<Record<EffectOp, Rules>> = {
   grant: { account_id: req("string"), quantity: req("positive_decimal") },
 };
 
-/** Why a fingerprint could not be verified (ADR-0025): never the two under one word. */
-const WAIVER_REASONS = ["digest", "unreadable"] as const;
+/** Why a fingerprint could not be verified (ADR-0025, as amended): three reasons, never folded into one another. */
+const WAIVER_REASONS = ["lines", "digest", "unreadable"] as const;
 
 const RULES: Record<SupportedEventType, Rules> = {
   account_created: ACCOUNT,

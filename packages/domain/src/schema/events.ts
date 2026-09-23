@@ -731,11 +731,13 @@ export interface FilingFingerprintWaivedEvent extends Envelope {
   /** The filing whose fingerprint could not be verified. */
   filing_id: Ulid;
   /**
-   * Why it could not be verified. **Never the two under one word**: `digest`
-   * means the figures of the prefix do not add up to what it recorded, and
-   * `unreadable` that they cannot even be read at the version it declares.
+   * Why it could not be verified, **never folded into another**: `lines` means
+   * the fingerprint covers a different number of lines than precede the filing
+   * —a line was added or removed before it, the most likely hand edit—,
+   * `digest` that the prefix does not add up to what it recorded, and
+   * `unreadable` that it cannot even be read at the version it declares.
    */
-  reason: "digest" | "unreadable";
+  reason: "lines" | "digest" | "unreadable";
   /** What the fingerprint declared. After compacting, the ledger holds it nowhere else. */
   declared_schema_version: number;
   declared_lines: number;

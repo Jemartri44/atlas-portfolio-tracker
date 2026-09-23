@@ -28,15 +28,15 @@ import type { LedgerState } from "./state.js";
 /** One filing of the ledger, with its place in the chain of supplementary returns resolved. */
 /**
  * What the ledger records about a fingerprint the user accepted as
- * unverifiable (ADR-0025). It says **which** filing, **why** —never the two
- * reasons under one word— what the fingerprint declared, which after
+ * unverifiable (ADR-0025, as amended). It says **which** filing, **why** —one
+ * of three reasons, never folded into another— what the fingerprint declared, which after
  * resealing the ledger holds nowhere else, and **when the user gave it for
  * good**, which is half of the sentence `check` has to keep saying for ever.
  */
 export interface FingerprintWaiver {
   waiver_id: Ulid;
   filing_id: Ulid;
-  reason: "digest" | "unreadable";
+  reason: "lines" | "digest" | "unreadable";
   declared_schema_version: number;
   declared_lines: number;
   accepted_on: CivilDate;
