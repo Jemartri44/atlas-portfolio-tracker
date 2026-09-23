@@ -257,6 +257,14 @@ Lo que el motor calcula son **conceptos** —el interés del año, el valor de t
 
 **Procedimiento para añadir un ejercicio.** No es copiar el anterior. Se espera a la orden del BOE que aprueba el impreso; se lee cada concepto **en el formulario de ese año**; se transcribe el rótulo palabra por palabra, con la URL de la imagen del anexo y la fecha en que se comprobó; y solo después se compara con el año anterior, como control. La tabla vive como dato, y ningún `if` sobre un ejercicio se escribe fuera de ella. Hoy está comprobado **2025**.
 
+### 5.12 Lo presentado es un hecho, y cierra el ejercicio
+
+La aplicación deja constancia de cada declaración **realmente presentada** —la Renta, el 720 y el 721— con su justificante, sus cifras y su fecha (ADR-0020). Lo presentado es **un hecho, no un cálculo**: se guarda tal como se declaró aunque el motor calcule hoy otra cosa, y al lado se guarda lo que la aplicación calculaba aquel día y la configuración con la que lo hizo, para poder distinguir después un cambio del motor de un cambio del libro.
+
+- **Una complementaria sustituye, no anula.** Es otra presentación que nombra a la que reemplaza; la primera ocurrió y sigue constando. A una fecha dada, la vigente es la última presentada hasta ese día.
+- **Un ejercicio con presentación vigente está cerrado** para ese modelo. Escribir en él no se prohíbe —hacerlo tarde puede ser legítimo, y a veces obligatorio—, pero **nunca se hace en silencio**: la aplicación avisa antes de confirmar, diciendo qué declaración habría que mirar y cuánto se mueve. Avisa en los dos casos: cuando lo registrado cae por fecha dentro del ejercicio cerrado, y cuando mueve una cifra declarada aunque su propia fecha sea de otro año.
+- Un ejercicio pasado **con cifras y sin presentación registrada** no da aviso: da una nota, por si falta registrarla.
+
 ---
 
 ## 6. Eventos corporativos
