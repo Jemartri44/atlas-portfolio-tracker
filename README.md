@@ -103,7 +103,7 @@ atlas bucket --date 2028-12-31    # el cubo: posiciones, tesis frente al índice
 atlas networth --date 2028-12-31  # patrimonio total, siempre desglosado (núcleo + cubo + efectivo)
 atlas thesis show th_delta        # la ficha de una tesis: hipótesis, plazo, operaciones y resultado
 atlas check              # integridad del libro (proyección)
-atlas check --deep       # además, líneas crudas: ids duplicados, huellas manipuladas, líneas no canónicas o antiguas
+atlas check --deep       # además, líneas crudas: ids duplicados, huellas manipuladas o ilegibles, líneas no canónicas o antiguas
 
 # Rectificar (el libro nunca se edita: anulación + evento corregido)
 atlas edit <id> --reason "precio mal tecleado" --unit-price 123.45
@@ -281,7 +281,9 @@ atlas --ledger demo.jsonl compact            # reescribe el libro a la versión 
 atlas --ledger demo.jsonl backup --to /ruta/copias   # copia ledger-<fecha>.jsonl, releída y verificada por etag
 ```
 
-`compact` es la única operación que reescribe el libro: guarda antes los bytes originales en `archive/ledger-<fecha>-v<n>.jsonl` (nunca sobrescribe un archivo), es no-op si todas las líneas están en la versión actual y aborta sin escribir si la proyección cambiaría o hay eventos inválidos.
+`compact` es la única operación que reescribe el libro: guarda antes los bytes originales en `archive/ledger-<fecha>-v<n>.jsonl` (nunca sobrescribe un archivo), es no-op si todas las líneas están en la versión actual y aborta sin escribir si la proyección cambiaría, si hay eventos inválidos o si la huella de alguna declaración presentada no se puede verificar.
+
+Como compactar es la única forma de migrar el libro a una versión de esquema nueva, una huella que no se puede verificar tiene una salida, que hay que pedir por su nombre, declaración a declaración: `atlas compact --accept-unverified <id>` (repetible). Antes de la pregunta se nombra a qué se renuncia; la renuncia se escribe en el libro **dentro de la misma compactación** (`filing_fingerprint_waived`, ADR-0025), no se puede anular, y `atlas check` la sigue diciendo siempre.
 
 ## Idioma
 

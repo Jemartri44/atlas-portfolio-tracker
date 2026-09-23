@@ -14,13 +14,19 @@
 //     warning (S8, question Q8). Saying "careful, you filed this" of a year
 //     nobody filed is the warning that gets ignored.
 
+import type { FilingModel } from "@atlas/domain";
 import type { ClosedYearImpact, ClosedYearNotCompared } from "@atlas/domain/fiscal";
 
-/** After the preposition `a`, where Spanish contracts `a el` into `al`. */
-const MODEL: Record<string, string> = {
-  renta: "a la Renta",
-  "720": "al Modelo 720",
-  "721": "al Modelo 721",
+/**
+ * The return after the preposition `a`, where Spanish contracts `a el` into
+ * `al`, and the participle that agrees with it: the Renta is feminine, a
+ * «Modelo» masculine. Keyed by `FilingModel`, so a model added tomorrow asks
+ * the compiler for its name and its gender instead of borrowing another's.
+ */
+const MODEL: Record<FilingModel, { readonly name: string; readonly filed: string }> = {
+  renta: { name: "a la Renta", filed: "presentada" },
+  "720": { name: "al Modelo 720", filed: "presentado" },
+  "721": { name: "al Modelo 721", filed: "presentado" },
 };
 
 /** The figure of a filing as it names it: `savings_base`, `pending:2024:…`, `deferred`. */
@@ -59,8 +65,8 @@ const NOT_COMPARED: Record<ClosedYearNotCompared, string> = {
 /** One line per filed year the write reaches, with what it moves. */
 export const closedYearLines = (impacts: readonly ClosedYearImpact[]): string[] =>
   impacts.map((impact) => {
-    const what = MODEL[impact.model] ?? `a ${impact.model}`;
-    const head = `Aviso: afecta ${what} de ${impact.year}, presentada el ${impact.filed_at}.`;
+    const { name, filed } = MODEL[impact.model];
+    const head = `Aviso: afecta ${name} de ${impact.year}, ${filed} el ${impact.filed_at}.`;
     const where = impact.by_date ? " La fecha de lo que vas a registrar cae en ese ejercicio." : "";
     // **Never "no mueve ninguna cifra declarada" without having compared.**
     // An empty list used to mean both that and "I could not compare", and the
