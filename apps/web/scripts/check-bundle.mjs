@@ -177,8 +177,19 @@ const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
  *    seals again— and the two findings of the verification, in both
  *    interfaces. Measured **194,2 KB**, of which the boot is 71,9; the ceiling
  *    is 195,5.
+ *  - **The fiscal screen** (block 4), which brings the tax engine into the web
+ *    for the first time. Two lazily loaded chunks, measured one by one:
+ *    **20,9 KB** the engine itself —the chain of years, the offsetting, the
+ *    wash-sale rule, the layout by box with the table of 2025 word for word
+ *    from the BOE, and the two informative returns— and **9,1 KB** the screen
+ *    and its view-models. Neither is on the boot path: `@atlas/domain/fiscal`
+ *    is a door of its own precisely so that the barrel the first screen
+ *    imports does not carry them, and the shape check below holds it. The boot
+ *    went from 72,2 to **72,8 KB**, which is the shared code the screen uses
+ *    (the card, the table, the disclosure), and stays under its ceiling.
+ *    Measured total **226,5 KB**; the ceiling is 227,5.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 195.5 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 227.5 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -201,6 +212,11 @@ const ALLOWED_URLS = [
   {
     url: "https://action",
     reason: "centinela inerte de @solidjs/router para las server actions; no hay servidor",
+  },
+  {
+    url: "https://www.boe.es",
+    reason:
+      "la fuente de las casillas del Modelo 100: el BOE donde se comprobó cada número y cada rótulo (feature 010, bloque 2). Es una cita que la pantalla enseña, no una petición: el navegador no descarga nada de ahí",
   },
 ];
 

@@ -1,4 +1,4 @@
-// Router and shell. Twelve routes, all readable and navigable
+// Router and shell. Thirteen routes, all readable and navigable
 // (`specs/006-web-shell/contracts/routes.md`), each screen lazily loaded so the
 // first paint only carries what the summary needs.
 
@@ -18,6 +18,7 @@ const Cartera = lazy(() => import("./routes/cartera/index.jsx"));
 const Ajustes = lazy(() => import("./routes/ajustes/index.jsx"));
 const Configuracion = lazy(() => import("./routes/ajustes/configuracion.jsx"));
 const Verificacion = lazy(() => import("./routes/ajustes/verificacion.jsx"));
+const Fiscal = lazy(() => import("./routes/fiscal/index.jsx"));
 const Libro = lazy(() => import("./routes/libro/index.jsx"));
 const NoExiste = lazy(() => import("./routes/no-existe.jsx"));
 
@@ -46,6 +47,7 @@ export const App = () => (
     <Route path="/ajustes" component={Ajustes} />
     <Route path="/ajustes/configuracion" component={Configuracion} />
     <Route path="/ajustes/verificacion" component={Verificacion} />
+    <Route path="/fiscal" component={Fiscal} />
     <Route path="/libro" component={Libro} />
     <Route path="*" component={NoExiste} />
   </Router>
