@@ -8,7 +8,7 @@ Esto es el resultado de comprobarlas **una por una contra el código fusionado e
 (2026-09-23, `d4e41e5`). **Es un inventario, no trabajo hecho**: nada de código se ha tocado aquí.
 La dirección decide qué entra en la próxima ronda.
 
-**Tres están hechas** (1, 2 y 11) y **nueve siguen vivas**.
+**Tres estaban hechas** (1, 2 y 11) y **nueve seguían vivas**. **Las nueve las cerró la feature 011** (PR #69, fusionada en `develop` el 2026-09-23 a las 22:21, hora de Madrid): el detalle, con el commit de cada una, en «Estado tras la feature 011», al final. La tabla de abajo se conserva como estaba el inventario al cerrar la 010.
 
 | # | Qué era | Estado | Qué cuesta | Qué se pierde si no se hace |
 |---|---|---|---|---|
@@ -40,3 +40,33 @@ imprime **siempre** el apartado 10 de criterios firmes, y la web envuelve su tar
 que la esconde cuando no hay ninguno, sin estado vacío —la tarjeta de los dudosos sí lo tiene—. No
 se pierde ninguna cifra, pero es exactamente la clase de divergencia que motiva el
 [ADR-0024](adr/0024-fiscal-caveats-are-report-notes.md).
+
+## Estado tras la feature 011
+
+Comprobado contra el código fusionado en `develop` (`65added`, 2026-09-23). **Las nueve quedan hechas**, y también la asimetría «de paso». Donde el arreglo no es el que el inventario proponía, se dice.
+
+| # | Commit | Qué hay hoy en el código |
+|---|---|---|
+| 3 | `15c9664`, con `9b8bdd1` y `bef0ea5` tras la revisión | La salida existe y queda registrada (ADR-0025): `atlas compact --accept-unverified <filing_id>`, repetible, escribe un `filing_fingerprint_waived` dentro de la misma reescritura. Admite los **tres** motivos (`lines`, `digest`, `unreadable`), no dos; una renuncia no se puede anular (`waiver_not_reversible`) y `check` la dice siempre. `docs/data-schema.md` §5 y §6.7 |
+| 4 | `4809eba` | `deep-check.ts` emite `filing_fingerprint_unreadable` para el caso ilegible y deja `filing_fingerprint_mismatch` para el resumen que no cuadra. Las dos interfaces dicen del primero que no es una edición y que no hay copia que restaurar |
+| 5 | `fe39b96` | `computed.as_of` se valida con **dos** comparaciones, no tres: no anterior al 31/12 del ejercicio (`as_of_before_year_end`) y no posterior al día en que se registra (`as_of_in_future`). La comparación con `filed_at` que proponía el inventario se descartó: registrar después de presentar la produce siempre. La muestra `SAMPLES.tax_return_filed` no era incoherente y se quedó como estaba |
+| 6 | `e20747a` | El mensaje nombra la versión de esquema que declara la huella (`declared_schema_version`), no el recuento de líneas |
+| 7 | `bb5b4c2` (y `658ca41` en la web) | Las lecturas alternativas degradan en vez de lanzar. Eran **cuatro** sin guardia, no tres: faltaba `filingComparison`, que se ejecuta antes que las otras. El criterio sale `not_quantifiable` con `unsupported_under_alternative`, la diferencia de configuración lleva `unsupported_before` y el aviso de ejercicio cerrado, `chain_unsupported`. La afirmación de que el mensaje «culpa al ejercicio que el usuario pidió» era falsa: nombra el año al que llega la cadena |
+| 8 | `097d660`, con `a3c5826` y `f98a407` tras las revisiones | El aviso de ejercicio cerrado tiene tres desenlaces en una unión cerrada; «no se pudo comparar» avisa con su motivo (`invalid_reading`, `chain_unsupported`, `by_design`). Un 720 o un 721 solo avisa cuando la escritura puede alcanzarlo, también al anular un cambio de la regla de fecha fiscal |
+| 9 | `ac1416a` | La tupla de la huella de una presentación es `type`, `model`, `tax_year` y `receipt_reference`. **No hizo falta `schema_version = 2`**: el tipo existía solo desde la feature 010, fusionada el mismo día, y no podía haber ninguna línea escrita cuya huella cambiase |
+| 10 | `9d0414b` | N17 escribe la cadena entera, con la fase 2 y los −260,80 arrastrados de 2027 |
+| 12 | `afd4d6a` | `docs/fiscal-questions.md` tiene una fila por variante y `tests/fiscal-criteria.test.ts` ata cada variante a su certeza y a su riesgo, sin exenciones |
+| De paso | `8b76aa7` | La web conserva la tarjeta de criterios firmes cuando ninguno mueve nada, con estado vacío, y la consola dice «Ninguno» en vez de una tabla vacía |
+
+Además, la 011 añadió `anchors` al informe fiscal (`512e362`, `6f19dd9`): **todas** las Rentas en las que la cadena se ancló, no solo la última, con lo calculado y lo declarado de cada una, en la consola y en la web.
+
+## Lo que la 011 deja apuntado para la ronda siguiente
+
+Tomado de `specs/011-fail-safe-gaps/questions.md` y comprobado en el código fusionado. **Nada de esto está decidido**: es material para la dirección.
+
+1. **La ventana entre comprobar el etag y escribir, en los dos almacenes.** `FileLedgerStore` (el de la consola) compara el etag en `currentBytes` y después escribe un temporal y lo renombra, sin cerrojo entre las dos cosas; el almacén `blob` de la web compara al leer y escribe sin condición. Otra escritura en ese intervalo se pisaría. Afecta a toda escritura, no solo a la renuncia; ADR-0025 lo dice así.
+2. **El punto ciego del escáner de mensajes** (E2 de la 011). `tests/messages.test.ts` no cuenta como código del dominio lo que se emite con el ayudante `error(…)` de `deep-check.ts`, y un ternario dentro de un constructor esconde los dos códigos a la vez. En la 011 se prohibió el ternario y se dejó el escáner como estaba: arreglarlo obliga a la consola a traducir todos los hallazgos.
+3. **Anular una presentación se sigue aceptando** como cualquier otra anulación, salvo que otra la sustituya. Es anterior a la 011 y la dirección lo dejó fuera a propósito: registrar una presentación por error se corrige por la vía de siempre.
+4. **Propuesta de herramienta, sin decidir (P8 de la 011):** que `.githooks/pre-commit`, que hoy solo ejecuta `gitleaks`, ejecute también Biome y rechace el commit en rojo. Un commit con el analizador en rojo entró tres rondas seguidas. Es configuración de herramientas: la decide el usuario.
+5. **El texto de `tax_year_unsupported` confunde** (E1 de la 011): quien pide 2018 lee que «2017 es anterior» sin que se le diga por qué la cadena llega hasta ahí. No se tocó.
+
