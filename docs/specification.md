@@ -1,7 +1,7 @@
 # Especificación — Aplicación de gestión de cartera
 
 **Fecha:** agosto 2026
-**Estado:** definición de requisitos. Sin implementar.
+**Estado:** especificación de producto, viva. Ya no es un documento sin implementar: el estado fase a fase está en §13.
 **Documentos relacionados:** `business-rules.md` (reglas de dominio, referenciadas aquí por número) y `plan-financiero.md` (plan de inversión personal; **privado, no está en el repositorio**; las referencias a "regla N del plan" o "P1/P2/P3" apuntan a él).
 
 **Convención de idioma:** prosa en español; identificadores, nombres de campo, tipos y código en inglés, tal como aparecerán en el fuente.
@@ -77,7 +77,7 @@ El cubo nunca entra en el cálculo de los pesos objetivo del núcleo. Es un pres
 El saldo de efectivo de cada cuenta (`cash_balance`) es **derivado**: resulta de `cash_deposit`, `cash_withdrawal`, compras, ventas, dividendos y comisiones. Se usa para conciliar con el bróker y para la vista de patrimonio. No hay cuentas bancarias puras: el colchón se gestiona fuera de la app (ADR-0004).
 
 **Asset** (activo)
-`id`, `type` (`fund` | `etc` | `etp` | `stock` | `crypto` | `money_market`), `book`, `asset_class` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin`, `ticker`, `name`, `currency`, `ter`, `transferable` (bool), `reference_etf_id` (solo fondos, ver §7), `active` (bool)
+`id`, `type` (`fund` | `etf` | `etc` | `etp` | `stock` | `crypto` | `money_market`), `book`, `asset_class` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin`, `ticker`, `name`, `currency`, `ter`, `transferable` (bool), `reference_etf_id` (solo fondos, ver §7), `active` (bool)
 
 Los identificadores cambian con el tiempo. El `id` interno es inmutable; ISIN y ticker son atributos que se versionan.
 
@@ -89,7 +89,7 @@ Los identificadores cambian con el tiempo. El `id` interno es inmutable; ISIN y 
 **Transaction** (operación)
 `id`, `trade_date`, `value_date`, `type`, `asset_id`, `account_id`, `quantity`, `unit_price`, `currency`, `fx_rate`, `fee`, `notes`, `reverses_transaction_id` (opcional), `corrects_transaction_id` (opcional)
 
-Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `interest`, `fx_exchange`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `valuation`, `reversal`; más los eventos de seguimiento sin efecto contable `order_placed`/`order_updated` y `transfer_requested`/`transfer_request_updated` (ADR-0010, ADR-0012). Detalle en `docs/data-schema.md`.
+Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `interest`, `fx_exchange`, `swap`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `valuation`, `reversal`; los eventos de seguimiento sin efecto contable `order_placed`/`order_updated` y `transfer_requested`/`transfer_request_updated` (ADR-0010, ADR-0012); las tesis del cubo `thesis_opened`/`thesis_closed`; y `tax_return_filed`, la constancia de lo declarado (ADR-0020). Con el catálogo y la configuración, **25 tipos**. Detalle en `docs/data-schema.md`.
 
 **El libro es append-only** (ADR-0003): las operaciones nunca se editan ni se borran. *Editar* en la interfaz escribe un `reversal` de la original más la operación correcta enlazada por `corrects_transaction_id`; *Eliminar* escribe solo el `reversal`. La proyección de lotes ignora las parejas anuladas. Si la rectificación afecta a un ejercicio fiscal ya declarado, la app lo advierte.
 
@@ -559,6 +559,8 @@ Requisitos que no son técnicos pero deciden si el sistema sigue vivo en 2046:
 
 ## 13. Fases
 
+**Estado a 2026-09-23:** entregadas las fases 1, 2, 3 y 5, más la aplicación web entera. Sin empezar: la Fase 4 (automatización) y toda la infraestructura en la nube; los datos viven en un fichero local o en el navegador.
+
 **Fase 0 — Validación (antes de escribir nada)**
 1. **Pasar la cuenta AWS al Paid Plan** y configurar alerta de presupuesto en 1$.
 2. Probar la Flex Query de IBKR: configurar un informe, descargarlo por API, ver qué campos trae realmente.
@@ -582,6 +584,8 @@ Lambdas programadas, correos, precios automáticos.
 **Fase 5 — Motor fiscal**
 FIFO consolidado, conversión de divisa por fecha valor, regla de los dos meses, dividendos y doble imposición, salida agregada por casilla.
 
+**Entregada** (features 008, 009 y 010): las previsiones del esquema (ADR-0021); el ejercicio consolidado con la regla de recompra aplicada, la compensación del art. 49 y el arrastre a cuatro ejercicios; la constancia de lo declarado (`tax_return_filed`, ADR-0020) con la comparación entre lo presentado y lo calculado y el aviso al escribir en un ejercicio cerrado; la Renta ordenada **por casillas del Modelo 100 del ejercicio**, con 2025 como único año comprobado; los Modelos 720 y 721 con su veredicto a prueba de datos incompletos; y las dos salidas, `atlas tax`, `atlas m720`, `atlas m721` y `atlas filed` en la consola y la pantalla `/fiscal` en la web. Lo que **no** hace: no calcula la cuota, y ninguna cifra fiscal mira un precio de mercado salvo la valoración a 31/12 de los modelos informativos, que es dato de Nivel 1.
+
 **Orden deliberado:** el motor fiscal va al final porque no se necesita hasta la primera declaración, pero **el modelo de datos de la Fase 1 tiene que soportarlo desde el primer día**. Si los lotes o los traspasos se modelan mal, la Fase 5 obliga a rehacer todo.
 
 ---
@@ -603,7 +607,7 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Corrección de errores de registro**: libro append-only con rectificación; lotes como proyección (ADR-0003).
 - [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
 - [x] **Retención a cuenta en reembolsos de fondos.** Hecho: `sell.withholding` (`data-schema.md` §6.2), con su equivalente por cuenta en `forced_sale` (§6.5). Sale del efectivo que entra, no toca el valor de transmisión ni el coste de los lotes, y la salida fiscal la suma a las retenciones del ejercicio (criterio #12).
-- [ ] **Valoración a 31 de diciembre.** El Modelo 720 exige valor de mercado a fin de año. Foto manual anual guardada como dato de Nivel 1, no como precio scrapeado.
+- [x] **Valoración a 31 de diciembre.** Resuelta como se preveía (feature 010): los Modelos 720 y 721 valoran con la `valuation` registrada a mano, dato de **Nivel 1**, convertida al tipo del BCE de esa fecha. Es la única ruta fiscal que lee precios; si falta alguno, el veredicto es «no se puede determinar» y nunca «no obligado» (§5.8 de `business-rules.md`).
 - [ ] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio.
 - [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).

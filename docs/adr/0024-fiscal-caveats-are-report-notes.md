@@ -1,6 +1,7 @@
 # ADR-0024 — Una salvedad fiscal es una nota del informe, no una decisión de la interfaz
 
-**Estado:** Propuesta (2026-09-23).
+**Estado:** Aceptada (2026-09-23), por decisión de la dirección, que además fija dentro de la
+decisión el criterio de qué es una nota y qué es un dato.
 
 ## Contexto
 
@@ -61,6 +62,19 @@ comprobada, que un criterio está en duda— se emite como **dato con código** 
 interfaz solo elige palabras y sitio. Lo que la interfaz decide es **cómo** se dice y **dónde**,
 nunca **si** se dice.
 
+**Qué es nota y qué es dato.** La regla señala ella misma el hueco que la haría degenerar —si todo
+cabe en una nota, la nota no obliga a nada—, así que el criterio se escribe aquí, dentro de la
+decisión y no como comentario.
+
+Es **nota** todo lo que el motor sabe y que **cambiaría lo que el usuario hace o teclea** si lo
+supiera, **sin cambiar la cifra**: que no está calculada entera, que deja de poder usarse a partir
+de una fecha, que su correspondencia con la casilla no está comprobada, o que depende de un criterio
+en duda. Es **dato** la cifra, su identidad y su clasificación.
+
+La prueba, cuando haya duda: si saberlo puede llevar a **escribir un número distinto** en la
+declaración, o a **hacer algo antes de una fecha**, es nota. Si solo describe lo que la cifra ya es,
+es dato.
+
 No se aplica retroactivamente en esta feature: las tres divergencias ya están corregidas una a una y
 convertirlas en notas cambia la forma del informe y las dos interfaces, que es trabajo con su propio
 riesgo fiscal. La regla gobierna **lo que se escriba a partir de ahora** y la feature que decida
@@ -71,9 +85,9 @@ migrar lo existente.
 - Una salvedad nueva se añade en **un sitio** (el informe), y las interfaces que no la pinten fallan
   un test genérico en vez de callar. Añadir una tercera interfaz deja de multiplicar las ocasiones
   de divergir.
-- Hace falta un test genérico —«toda nota del informe llega a la salida»— por interfaz, y un
-  criterio escrito de qué es una nota y qué es un dato. Sin ese criterio la regla degenera en
-  convertir todo en notas.
+- Hace falta un test genérico —«toda nota del informe llega a la salida»— por interfaz. El criterio
+  de qué es una nota y qué es un dato queda escrito arriba, en la decisión; sin él la regla
+  degeneraría en convertir todo en notas.
 - Se vuelve más difícil que una interfaz «mejore» un aviso por su cuenta: si quiere decir más, lo
   dice el motor para las dos. Eso es deliberado.
 - Lo ya existente queda **mezclado** mientras no se migre: `TaxBoxes.notes` sigue la regla y

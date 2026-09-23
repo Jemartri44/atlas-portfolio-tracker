@@ -192,6 +192,8 @@ La ley no cierra cuatro cosas que el motor no puede dejar de decidir, y que van 
 
 El porcentaje y los cuatro años son **configuración**, no constantes del código (`savings_offset_limit_pct` y `loss_carryforward_years`, §7): el primero ya fue 10, 15 y 20 entre 2015 y 2017.
 
+**El arrastre se ancla en lo declarado** (ADR-0020). El motor recorre la cadena de ejercicios desde el primero que importa, y en cada uno en que consta una **Renta presentada** —solo `renta`, solo la vigente el día de la consulta, nunca un 720 ni un 721— sustituye lo pendiente que él había calculado por **lo que aquella declaración dio por pendiente**, y sigue la cadena desde ahí. Una Renta presentada de un ejercicio anterior a los datos del libro es la vía por la que entra lo que se arrastraba de antes de usar la aplicación. El informe lleva las dos cifras y su diferencia: lo declarado manda, pero la cifra que el motor calculaba no se tira.
+
 → La app mantiene el saldo de pérdidas pendientes **por ejercicio de origen y por categoría**, con el último ejercicio en que se puede usar cada uno. Separarlos por categoría no es cosmético: un saldo negativo de ganancias patrimoniales y uno de rendimientos del capital mobiliario compensan de forma distinta, sin límite dentro de su categoría y con el límite en la otra.
 
 ### 5.6 Dividendos y rendimientos extranjeros
@@ -217,10 +219,24 @@ Toda operación en divisa distinta del euro requiere conversión al **tipo de ca
 - Aplica a IBKR y a cualquier entidad extranjera. **No aplica a MyInvestor** — pero no por ser entidad española: el criterio legal es dónde están **situados** los bienes, y un fondo luxemburgués está en el extranjero. Lo que salva el caso es que en cuenta ómnibus la titular formal es la comercializadora española, que informa por sus propios modelos. **Comprar un fondo extranjero en una plataforma extranjera cambiaría la respuesta.**
 - Se repite si el valor sube más de 20.000€ sobre la última declaración presentada **o si se deja de ser titular** de un bien previamente declarado (extinción). Sin el segundo disparador, la aplicación diría "no hace falta declarar" en un año en que sí hace falta.
 
-**Modelo 721** — equivalente para criptoactivos en el extranjero por encima de 50.000€.
-- **No aplica a un ETP**, que es un valor, no una tenencia de criptoactivos.
+**Las dos cifras de una cuenta.** Una cuenta se juzga por el **saldo a 31/12** y por el **saldo medio del cuarto trimestre**, los dos, tanto para el umbral como para la subida de 20.000€ (criterio #11). El saldo medio es la media de los saldos al cierre de cada día natural entre el 1 de octubre —o el primer movimiento de la cuenta, si es posterior— y el 31 de diciembre, con una cuenta cancelada contando cero desde su cierre. Las dos cifras se convierten con el **último tipo del BCE que el libro conoce** para esa divisa, y la aplicación **lo marca** cuando no es el de fin de año. El día de referencia no es el 31/12 a secas sino el **último día hábil** hasta él inclusive, porque el BCE no publica en fin de semana. Dentro de la categoría, los saldos **negativos netean** con los positivos.
 
-→ La app avisa al acercarse a los umbrales, con margen configurable.
+**Los valores van en un bloque único.** Valores, instituciones de inversión colectiva y seguros comparten un solo umbral (art. 42 ter.4.c), así que fondos, ETF, ETC, ETP y acciones se suman juntos, y **la clave con la que cada uno se rellene en el impreso no mueve el umbral**. Qué clave le corresponde a cada vehículo es una pregunta abierta de `docs/fiscal-questions.md`, no un criterio aplicado: la aplicación decide si hay que presentar, no rellena el modelo. **Ningún ETP va al 721**: es un valor.
+
+De las tres categorías del modelo, la aplicación calcula **dos** —cuentas y valores—: en el libro no hay inmuebles.
+
+**Modelo 721** — equivalente para los criptoactivos **custodiados por un tercero en el extranjero** por encima de 50.000€, con un umbral único **sobre el conjunto**, no por categorías como el 720. **La autocustodia queda fuera** (criterio #11). Existe desde el ejercicio **2023** (Orden HFP/886/2023), y un ejercicio anterior no tiene 721.
+- **No aplica a un ETP**, que es un valor, no una tenencia de criptoactivos.
+- La regla de los 20.000€ y la extinción **también se le aplican** (art. 42 quater.6), pero cuenta **solo el saldo a 31/12**, nunca la media.
+- **La aplicación sobredeclara, a propósito y dicho.** El libro no distingue una cuenta de autocustodia de la de un custodio extranjero, así que cuenta **todo** lo que hay en una cuenta cuyo país no es España y emite una nota que lo dice: «se cuenta todo lo que hay en cuentas extranjeras; si alguna es de autocustodia, no entraría». Sobredeclarar en una declaración informativa es la dirección prudente, y un campo nuevo en la cuenta no se justifica mientras la cripto sea vía ETP.
+
+**Nunca se dice «no obligado» con datos incompletos.** El veredicto solo puede ser «no obligado» con todos los bienes de la categoría valorados y ninguna valoración marcada; si falta algo, es «no se puede determinar», con lo que falta como acción. La excepción es que lo que sí se conoce ya supere el umbral: entonces obliga igual, y la salida nombra con qué valores marcados se decidió. Todas las comparaciones son **estrictamente mayores**: 50.000,00€ no obliga y 50.000,01€ sí.
+
+**Y una categoría sin ningún bien registrado tampoco es «no obligado»: es «nada registrado».** Un libro en el que no se ha anotado nada del extranjero no es un libro que se calculó y salió por debajo del umbral, y decirle «no estás obligado» a quien no ha metido nada es exactamente la clase de afirmación que esta aplicación no hace.
+
+El veredicto solo existe para un 31 de diciembre que ya ha pasado; del año en curso se enseña lo que hay el día de la consulta, dicho como tal.
+
+→ La app avisa al acercarse a los umbrales, con margen configurable (§7).
 
 ### 5.10 Fecha fiscal por tipo de activo
 
@@ -233,6 +249,25 @@ La fecha que determina el ejercicio, la antigüedad del lote, el tipo de cambio 
 - Perder la residencia fiscal **elimina el derecho al traspaso**, que es la base de toda la arquitectura de vehículos.
 
 → La residencia fiscal es un campo de configuración (`tax_residence`), no una constante. Un cambio invalida las funciones de traspaso.
+
+### 5.11 Las casillas de la Renta son datos por ejercicio
+
+Lo que el motor calcula son **conceptos** —el interés del año, el valor de transmisión de una venta, lo que compensa una pérdida de 2023—, y un concepto no depende de ningún impreso. La **casilla** sí: la Agencia Tributaria renumera el Modelo 100 cada campaña (en 2025 los ETF estrenaron un apartado propio, 2224-2236, que en 2024 no existía). Por eso las casillas son **datos por ejercicio** y la tabla de un año **no se hereda nunca**: una casilla prestada es una cifra creíble y falsa que el usuario teclea en una declaración real.
+
+- Un ejercicio sin tabla comprobada sale por conceptos y **sin ningún número**, y lo dice.
+- Un concepto sin fila en la tabla de su año sale sin número, y lo dice.
+- No hay respaldo ni «año más cercano»: la tabla de otro ejercicio no se consulta en ningún momento.
+
+**Procedimiento para añadir un ejercicio.** No es copiar el anterior. Se espera a la orden del BOE que aprueba el impreso; se lee cada concepto **en el formulario de ese año**; se transcribe el rótulo palabra por palabra, con la URL de la imagen del anexo y la fecha en que se comprobó; y solo después se compara con el año anterior, como control. La tabla vive como dato, y ningún `if` sobre un ejercicio se escribe fuera de ella. Hoy está comprobado **2025**.
+
+### 5.12 Lo presentado es un hecho, y cierra el ejercicio
+
+La aplicación deja constancia de cada declaración **realmente presentada** —la Renta, el 720 y el 721— con su justificante, sus cifras y su fecha (ADR-0020). Lo presentado es **un hecho, no un cálculo**: se guarda tal como se declaró aunque el motor calcule hoy otra cosa, y al lado se guarda lo que la aplicación calculaba aquel día y la configuración con la que lo hizo, para poder distinguir después un cambio del motor de un cambio del libro.
+
+- **Una complementaria sustituye, no anula.** Es otra presentación que nombra a la que reemplaza; la primera ocurrió y sigue constando. A una fecha dada, la vigente es la última presentada hasta ese día.
+- **Un ejercicio con presentación vigente está cerrado** para ese modelo. Escribir en él no se prohíbe —hacerlo tarde puede ser legítimo, y a veces obligatorio—, pero **no debe hacerse en silencio**: la aplicación avisa antes de confirmar, diciendo qué declaración habría que mirar y cuánto se mueve. Avisa en los dos casos: cuando lo registrado cae por fecha dentro del ejercicio cerrado, y cuando mueve una cifra declarada aunque su propia fecha sea de otro año.
+- **Con una salvedad, y hay que conocerla.** Si el libro tiene eventos inválidos, la comparación entre las dos lecturas no se hace —una comparación aproximada sobre un libro roto sería peor que ninguna (ADR-0015)—, y si además el cambio no cae por fecha dentro del ejercicio, **no sale ningún aviso**. Es el único hueco conocido de la garantía, está identificado en `pendientes-post-010.md` (pendiente 8) y se cierra en la ronda siguiente. Mientras dure, un libro con eventos inválidos se repara antes de escribir sobre un ejercicio ya declarado.
+- Un ejercicio pasado **con cifras y sin presentación registrada** no da aviso: da una nota, por si falta registrarla.
 
 ---
 
@@ -279,8 +314,13 @@ Algunos parámetros tienen un **valor por defecto documentado** (el que aplica m
 | `bucket_max_weight_pct` | Pendiente | 18 |
 | `bucket_benchmark_asset_id` | Pendiente (`asset_id` del índice de referencia) | 16 |
 | `stale_price_days` | 5 | — |
-| `model_720_alert_threshold_eur` | 45.000€ | 5.8 |
-| `model_721_alert_threshold_eur` | 45.000€ | 5.8 |
+| `model_720_threshold_eur` | 50.000€. Importe por encima del cual una categoría del Modelo 720 obliga a presentar (arts. 42 bis.4.e y 42 ter.4.c RD 1065/2007) | 5.8 |
+| `model_720_increase_eur` | 20.000€. Subida sobre la última presentada que vuelve a obligar (arts. 42 bis.5 y 42 ter.5) | 5.8 |
+| `model_720_alert_threshold_eur` | 45.000€. Importe al que la aplicación avisa, antes de que el umbral obligue. No es una cifra de la ley: es una elección del usuario, y la validación exige que no supere al umbral | 5.8 |
+| `model_721_threshold_eur` | 50.000€ (art. 42 quater.5.d) | 5.8 |
+| `model_721_increase_eur` | 20.000€ (art. 42 quater.6) | 5.8 |
+| `model_721_alert_threshold_eur` | 45.000€, con el mismo criterio que el del 720 | 5.8 |
+| `renta_season_start`, `renta_season_end` | `04-01` y `06-30`, como `MM-DD`. Semanas en que la tarjeta fiscal del Resumen sube arriba del todo: las fechas de la campaña se mueven cada año, así que también son configuración | — |
 | `savings_tax_brackets[]` | Ver 5.1 | 5.1 |
 | `fiscal_date_rule{}` | cotizados → contratación; fondos → fecha valor. **Mapa parcial**, como el anterior (ADR-0018) | 5.10 |
 | `wash_sale_window{}` | cripto `"1y"`; cotizados **y fondos, monetarios incluidos** `"2m"` (de fecha a fecha; `wash_sale_window_days` en días es la forma antigua aceptada). **Mapa parcial**: un tipo de activo ausente toma su valor por defecto, para que añadir un tipo nuevo no invalide la configuración ya escrita (ADR-0018) | 5.4 |
@@ -298,4 +338,4 @@ Algunos parámetros tienen un **valor por defecto documentado** (el que aplica m
 - Historial de cambios de configuración: cambiar los pesos objetivo altera el cálculo de desviaciones históricas.
 - Validación: los pesos objetivo suman 100%; los umbrales deben ser coherentes entre sí.
 - **Aviso al modificar un umbral que esté silenciando una alerta activa.**
-- **Aviso al cambiar un parámetro fiscal que mueve un ejercicio ya cerrado.** La ventana de recompra, `wash_sale_transfer_counts`, `income_category` y los dos parámetros de la compensación mueven la **base del ahorro** de un ejercicio pasado sin mover ninguna ganancia realizada, así que el aviso compara las dos cosas —las ganancias realizadas y la base— con la configuración en vigor y con la propuesta, y dice qué ejercicios se mueven antes de guardar.
+- **Aviso al cambiar un parámetro fiscal que mueve un ejercicio ya cerrado.** La ventana de recompra, `wash_sale_transfer_counts`, `income_category` y los dos parámetros de la compensación mueven la **base del ahorro** de un ejercicio pasado sin mover ninguna ganancia realizada, así que el aviso relee cada ejercicio pasado con la configuración en vigor y con la propuesta y compara las **tres** cifras que fija una Renta —la base del ahorro, los saldos pendientes y el diferido al cierre—, porque un ejercicio puede conservar la base y aun así mover los siguientes. Dice qué ejercicios se mueven antes de guardar.
