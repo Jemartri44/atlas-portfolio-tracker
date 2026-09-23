@@ -112,6 +112,38 @@ export default defineConfig(({ command }) => ({
     sourcemap: true,
     // No `minify: "esbuild"` here on purpose (see the header).
     chunkSizeWarningLimit: 300,
+    rollupOptions: {
+      output: {
+        /*
+         * **The domain travels in one chunk** (feature 010, block 4).
+         *
+         * The browser downloads the domain at boot: the first screen projects
+         * the ledger, so there is no way around it (ADR-0007). What there is a
+         * way around is downloading it **in pieces**: when the fiscal engine
+         * became reachable from a lazily loaded corner of the summary, the
+         * grouping split the domain into two boot chunks to let the fiscal
+         * chunk import only its half, and the same code cost 1,3 KB gzip more
+         * — compression does not cross a chunk boundary, and each half pays
+         * its own import plumbing. Measured: 73,0 KB before the card, 74,3
+         * with it and 72,7 with this group, against a ceiling of 74,0.
+         *
+         * The test keeps out exactly what must **not** be on the boot path:
+         * `tax/`, `informative/`, the `fiscal.ts` door and the three modules
+         * of `filings/` that reach the tax chain. They are grouped by whoever
+         * imports them, which is only ever a lazily loaded screen, and
+         * `scripts/check-bundle.mjs` fails the build if any of them turns up
+         * in a chunk `index.html` preloads.
+         */
+        advancedChunks: {
+          groups: [
+            {
+              name: "domain",
+              test: /packages[\\/]domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|filings[\\/](?:closed-years|comparison|proposal)))/,
+            },
+          ],
+        },
+      },
+    },
   },
   server: { port: 5173 },
   preview: { port: 4173 },

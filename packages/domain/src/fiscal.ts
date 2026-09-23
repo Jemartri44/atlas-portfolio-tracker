@@ -27,6 +27,13 @@ export {
 } from "./filings/closed-years.js";
 export type { FilingCauses, FilingComparison, FilingFigure } from "./filings/comparison.js";
 export {
+  type FigureKind,
+  type FilingFigureProposal,
+  type FilingMeta,
+  type FilingProposal,
+  filingProposal,
+} from "./filings/proposal.js";
+export {
   type FiscalAttention,
   fiscalAttention,
   type InformativeTodo,

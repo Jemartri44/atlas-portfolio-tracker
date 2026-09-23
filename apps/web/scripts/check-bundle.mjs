@@ -188,8 +188,17 @@ const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
  *    went from 72,2 to **72,8 KB**, which is the shared code the screen uses
  *    (the card, the table, the disclosure), and stays under its ceiling.
  *    Measured total **226,5 KB**; the ceiling is 227,5.
+ *  - **Recording what was filed** from the web (block 4): the proposal of a
+ *    return in the domain —which figures it declares, how they are named and
+ *    what event comes out of them, shared with the console so the two record
+ *    the same filing—, the form with a field per figure, and the card of the
+ *    summary that leads to the screen and knows when to go first. The card
+ *    loads what it needs from the engine **after** the first paint, so the
+ *    boot carries none of it: it measures 72,7 KB, lower than before the
+ *    screen existed, because the domain now travels in one chunk
+ *    (`vite.config.ts`). Measured total **231,5 KB**; the ceiling is 232,5.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 227.5 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 232.5 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

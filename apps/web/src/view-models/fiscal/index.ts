@@ -6,6 +6,7 @@ export {
   boxesView,
   PARTIAL_TEXTS,
 } from "./boxes.js";
+export { type FilingField, filingFields, filingTitle } from "./filing.js";
 export {
   CATEGORY_TITLES,
   type CategoryView,
