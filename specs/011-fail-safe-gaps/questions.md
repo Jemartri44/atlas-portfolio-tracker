@@ -770,7 +770,6 @@ KILLED   R13 hide the matching sentence in the card
 1. **Anular una presentación se acepta sin marcarla inválida.** Anterior a esta ronda, y la dirección lo deja expresamente fuera: registrar una presentación por error es un error de tecleo y la vía de corrección es la de siempre.
 2. **La carrera del almacén `blob`.** Compara el etag al leer los bytes actuales y después escribe sin condición, así que otra escritura en ese intervalo —otra pestaña, la consola sobre la misma carpeta— se pisaría. Afecta a toda escritura, no solo a la renuncia; ADR-0025 ya no promete lo contrario.
 3. **El punto ciego del escáner de mensajes** (E2), que el ternario usó tres veces.
-4. **El título del diálogo de ejercicio cerrado** dice «Este cambio mueve ganancias de ejercicios anteriores» también cuando lo único afectado es un Modelo 720, que no declara ganancias. Visto en la captura de Configuración de esta ronda. El cuerpo es correcto; el título es anterior a la revisión y no lo toco sin que la dirección lo pida.
 
 ### Lo que la tubería completa encontró al cerrar
 
@@ -780,7 +779,16 @@ Después, en verde: `lint`, `typecheck`, 190 ficheros y 1.840 tests, dominio al 
 
 **Trinquete remedido**: arranque **73,49** (75.251 bytes contra 75.264: **trece bytes de margen**) y total **237,7** contra 237,9. **No he movido ningún techo**: subirlos es decisión de la dirección. El desglose y la duplicación (cero módulos en más de un trozo, de 297) están en `check-bundle.mjs`. Aviso de que con trece bytes el siguiente cambio del arranque, por pequeño que sea, rompe el `build`.
 
-**Capturas** en `~/atlas-private/capturas/2026-09-23-fail-safe-gaps/revision/` (diez, sin desplazamiento lateral en ninguna): el ancla por origen a 400×890 DPR 3, 2045×1141 y 360, con privacidad a los dos tamaños reales y en oscuro; el ancla que coincide con lo calculado; y Configuración con un 720 de 2027 registrado: cambiar un umbral **no avisa** y cambiar la fecha fiscal de un tipo de activo **sí** («Afecta al Modelo 720 de 2027…»).
+### Lo que la dirección contestó al cierre
+
+- **El aviso al cambiar la regla de fecha fiscal con un 720 registrado se queda así**: es el único evento sin fecha de negocio que puede cruzar operaciones al otro lado del 31/12.
+- **El titular del diálogo, arreglado.** Decía «Este cambio mueve ganancias de ejercicios anteriores» también cuando lo único alcanzado era un 720, que no declara ganancias. Era anterior a la ronda, pero **esta ronda lo hizo alcanzable** —antes un informativo no llegaba a ese diálogo—, y es la decisión (g) en lo primero que se lee. Ahora dice que mueve ganancias **solo** cuando una ganancia se mueve; si no, nombra el modelo alcanzado («Este cambio puede afectar a lo que declaraste en el Modelo 720») y queda neutro si son varios modelos. La consola no tenía el defecto: sus titulares ya salían solo cuando lo que anuncian se mueve. Visto en rojo antes, con la función devolviendo el titular de antes: cuatro de cinco, `expected 'Este cambio mueve ganancias de ejerci…' to be 'Este cambio puede afectar a lo que de…'`.
+- **El techo de arranque sube a 73,7** por decisión de la dirección: trece bytes no eran margen sino una alarma. La tendencia queda escrita sin suavizar en `check-bundle.mjs`: 72,9 al empezar la ronda, 73,49 al cerrarla, seis décimas en una ronda, y las tres partidas son hechos que hay que poder decir siempre.
+- **La lección del fichero de 272 líneas**, en palabras de la dirección: **ejecutar solo los tests del trozo que tocas no es ejecutar los tests**.
+
+Tubería completa después de esto: `lint`, `typecheck`, 191 ficheros y 1.845 tests, dominio al 100 %, `build` con el arranque en 73,5 contra 73,7 y el total en 237,7 contra 237,9.
+
+**Capturas** en `~/atlas-private/capturas/2026-09-23-fail-safe-gaps/revision/` (diez, sin desplazamiento lateral en ninguna): el ancla por origen a 400×890 DPR 3, 2045×1141 y 360, con privacidad a los dos tamaños reales y en oscuro; el ancla que coincide con lo calculado; y Configuración con un 720 de 2027 registrado: cambiar un umbral **no avisa** y cambiar la fecha fiscal de un tipo de activo **sí** («Afecta al Modelo 720 de 2027…»), y la captura de este último está retomada con el titular nuevo.
 
 ---
 
