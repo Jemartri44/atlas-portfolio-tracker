@@ -28,7 +28,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0022](0022-settings-recorded-in-full.md) | Un `settings_changed` registra la configuración vigente entera | Aceptada |
 | [0023](0023-own-base-stylesheet.md) | Base de estilos propia en lugar de Pico CSS | Aceptada |
 | [0024](0024-fiscal-caveats-are-report-notes.md) | Una salvedad fiscal es una nota del informe, no una decisión de la interfaz | Aceptada |
-| [0025](0025-recorded-fingerprint-waiver.md) | La salida de compact ante una huella no verificable queda registrada en el libro | Propuesta |
+| [0025](0025-recorded-fingerprint-waiver.md) | La salida de compact ante una huella no verificable queda registrada en el libro | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 

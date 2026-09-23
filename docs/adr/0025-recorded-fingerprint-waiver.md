@@ -1,6 +1,6 @@
 # ADR-0025 — La salida de `compact` ante una huella no verificable queda registrada en el libro
 
-**Estado:** Propuesta (2026-09-23). Nace de la pendiente 3 de `docs/pendientes-post-010.md` y del bloque 8 del prompt 011, cuyas decisiones (a), (b) y (d) fija la dirección. **La forma de abajo está aprobada de antemano por la dirección; lo que queda es aceptarla.**
+**Estado:** Aceptada (2026-09-23), por decisión de la dirección, que añade la condición de atomicidad de la sección «La renuncia y la compactación son todo o nada». Nace de la pendiente 3 de `docs/pendientes-post-010.md` y del bloque 8 del prompt 011, cuyas decisiones (a), (b) y (d) fija la dirección.
 
 ## Contexto
 
@@ -40,6 +40,12 @@ Más `notes?`. Es un **documento administrativo**, como una presentación: no ti
 
 **`schema_version` sigue en 1.** ADR-0018 clasifica «añadir un tipo de evento» como cambio **compatible**, con dos precedentes que dejaron la versión en 1: `swap` (ADR-0021) y `tax_return_filed` (ADR-0020). Un cliente antiguo que se encuentre la línea la rechazará por tipo desconocido, que es exactamente lo que le pasa hoy con `swap`.
 
+**La renuncia y la compactación son todo o nada** (condición de la dirección). Una renuncia escrita sin que la compactación llegue a completarse sería **una línea que afirma un hecho que no ocurrió**: una huella dada por buena que nunca llegó a saltarse. Y en un libro de solo añadir esa línea no se puede borrar después — la única forma de «retirarla» sería una anulación que habla de algo que nunca pasó.
+
+Se garantiza por **dónde se escribe**: la renuncia entra en la **misma lista de eventos** que `compactLedger` entrega a `LedgerStore.replace`, no en una escritura propia anterior. `replace` es la única operación que reescribe el libro y archiva el original **antes** de reemplazarlo; o sustituye el fichero entero —con la renuncia dentro— o no sustituye nada. Cualquier fallo posterior a construir la lista y anterior al reemplazo —un etag que ha cambiado, la proyección que difiere, un archivo que ya existe, la red— **deja el libro exactamente como estaba, sin renuncia**. Nada escribe la renuncia por separado, y ese es el invariante: **no hay ningún camino que escriba la renuncia y no reescriba el libro.**
+
+Queda probado con un test que **interrumpe la compactación después del punto en que la renuncia se escribiría** y comprueba que el libro no la tiene.
+
 **Una salida explícita registra el hecho, no lo borra.** `check` y `check --deep` lo siguen diciendo **siempre**, sin caducar y sin esconderse, con las palabras del caso —no verificable, y lo diste por bueno tú el tal día—, ni como acusación de haber editado a mano ni como certificado de que todo está bien. Si el aviso desapareciera, la salida se convertiría en una forma de limpiar el expediente, y entonces no sería una salida: sería un borrado.
 
 **Y la comparación de lo declarado lo advierte.** `filingComparison` reparte la diferencia entre lo declarado y lo calculado en cuatro causas, y una de ellas —«el motor calcula distinto que entonces»— solo se sostiene si se puede afirmar que **lo demás es igual**, es decir, si el prefijo está verificado. Cuando no lo esté, la comparación no atribuye con seguridad a esa causa y lo dice como **nota del informe con su código**, no como frase que cada interfaz decida poner (ADR-0024).
@@ -51,4 +57,5 @@ Más `notes?`. Es un **documento administrativo**, como una presentación: no ti
 - Se vuelve más difícil, **a propósito**: compactar con una huella rota exige nombrar la presentación y deja rastro permanente. Nadie lo hace por inercia.
 - Lo que **no** cambia: la huella conserva su significado, resellar sigue siendo lo que hace `compact`, y lo presentado sigue siendo intocable.
 - **Aceptado a sabiendas:** el aviso de `check` no caduca nunca, así que un libro con una renuncia lo dirá durante veinte años. Es lo que se quiere: el hecho no prescribe.
+- **La renuncia no existe sin la compactación que la motiva**, y eso acota lo que puede salir mal: un intento fallido no deja rastro, y un rastro implica que el libro se reescribió.
 - Relacionadas: ADR-0003 (append-only), ADR-0006 (`compact`), ADR-0018 (qué cambio de esquema es compatible), ADR-0020 (lo declarado es un hecho) y ADR-0024 (la salvedad la emite el motor).
