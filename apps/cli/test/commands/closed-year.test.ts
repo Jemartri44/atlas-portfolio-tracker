@@ -169,6 +169,36 @@ describe("a write that reaches a filed return", () => {
     expect(text).toContain("afecta a la Renta de 2027");
   });
 
+  /**
+   * The participle agrees with the return too: the Renta is feminine, a
+   * «Modelo» masculine. The line used to read «afecta al Modelo 720 de 2027,
+   * presentada el …» for every model.
+   */
+  it("makes the participle agree: presentado for a model, presentada for the Renta", async () => {
+    const b = filed("2027-12-30", "2028-01-03");
+    b.filed(
+      {
+        model: "720",
+        tax_year: 2027,
+        filed_at: "2028-03-20",
+        receipt_reference: "720-2027-ABCDEFGHIJKL",
+        declared: { items: [] },
+        computed: {
+          as_of: "2028-03-20",
+          settings_origin: "event",
+          settings: CLI_SETTINGS,
+          items: [],
+        },
+        ledger_fingerprint: FINGERPRINT,
+      },
+      "2028-03-20",
+    );
+    const text = await run(["settings", "set", "--fiscal-date-rule", "etf=value_date"], b.build());
+    expect(text).toContain("afecta al Modelo 720 de 2027, presentado el 2028-03-20.");
+    expect(text).not.toContain("Modelo 720 de 2027, presentada");
+    expect(text).toContain("afecta a la Renta de 2027, presentada el 2028-06-10.");
+  });
+
   it("warns on a corporate action by its date alone, which moves no figure", async () => {
     // A split does not change a single euro of the return, but it lands in a
     // year that was filed and rewrites the lots of it: the user has to know
