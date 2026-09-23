@@ -455,6 +455,38 @@ KILLED   3c let the last day of the year through as too early
 
 *(Y un tercer test se puso rojo por su cuenta, el de las plantillas de mensajes de la web: su catálogo de «qué detalle del dominio es una fecha» no conocía `as_of`, así que lo renderizaba como `12.5` y saltaba la regla de los decimales con punto. Añadido `as_of` —y `recorded_at`— a esa lista, que es dato del test, no una relajación de la regla.)*
 
+### Bloque 4 — la lectura alternativa que no se puede calcular
+
+**Ocho tests escritos antes**, los ocho en rojo con el mismo `DomainError: the engine applies the compensation regime in force since 2018; 2017 is earlier` — que es el defecto, no un fallo de compilación.
+
+**Mutantes 5 y 6, los seis muertos**, cada guardia por separado:
+
+```
+KILLED   5a drop the guard of the filing comparison
+KILLED   5b drop the guard of the criteria readings
+KILLED   5c drop the guard of the previous settings
+KILLED   5d drop the guard of the closed-year figures
+KILLED   5e drop the guard of movedTaxYears
+KILLED   6 let the guard swallow any error
+```
+
+**El cierre del mapa de la web no es vacío**, comprobado quitando una entrada: `typecheck` en rojo nombrando `no_carrier_left`.
+
+Y una rama que la cobertura cazó: el `lines.length > 0` del caso nuevo no tenía su lado falso. En vez de borrarla, el caso que la ejerce —**un ejercicio al que ningún criterio se aplica**, aunque su lectura alternativa siga sin poder calcularse— es el invariante que la función ya declaraba: un criterio se deja fuera **solo** cuando ninguna cifra del ejercicio lo aplica.
+
+### Bloque 5 — el aviso que se calla
+
+El caso que hoy calla, **escrito primero y visto en rojo**: libro con eventos inválidos en las dos lecturas y una recompra de enero de 2028 —fuera del ejercicio presentado por fecha— que movería la base de 2027. Antes: `impacts` vacío, silencio. Ahora: `{ status: "not_compared", reason: "invalid_reading" }`.
+
+**Mutante 7, muerto en sus dos mitades:**
+
+```
+KILLED   7a never emit the third outcome
+KILLED   7b emit it always, even when it was compared
+```
+
+*(Y el guion volvió a abortar por un ancla que ya no existía —el `figuresOf` del bloque 4 había cambiado esas líneas—, antes de escribir nada. El lote se rehízo **entero**, no se continuó.)*
+
 ### P7 — el reloj de la web
 
 El arreglo se vio en rojo **antes de existir**, en los tres tests que destapó, y la suite entera lo confirmó: **3 rojos de 450**, los tres por bombas de relojería, ninguno por la regla. El detalle está en P7.
