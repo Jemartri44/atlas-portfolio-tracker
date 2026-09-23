@@ -2,7 +2,7 @@
 
 Documento **vivo**, escrito mientras se implementa. Recoge lo que se desvía del plan y por qué, lo que se preguntó y se respondió, y lo que queda. Se cierra con la feature.
 
-**Estado al 2026-09-23**: **los seis bloques completos** (0 y 1 del primer implementador; 2, 3, 4 y 5 del segundo), más los dos lotes de corrección de criterios y **la revisión adversarial de cierre** (apartado 7). Pipeline verde: **1.733 tests**, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, arranque **72,8 KB** de 74,0 y total **233,0** de 234,0.
+**Estado al 2026-09-23**: **los seis bloques completos** (0 y 1 del primer implementador; 2, 3, 4 y 5 del segundo), más los dos lotes de corrección de criterios y **la revisión adversarial de cierre** (apartado 7). Pipeline verde: **1.733 tests**, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, arranque **72,8 KB** de 73,5 y total **233,0** de 234,0.
 
 ---
 
@@ -108,7 +108,7 @@ La regla que se saca de aquí: **un cálculo a mano escribe todos los campos que
 | La CLI del bloque 5 | 72,2 | 195,4 |
 | La pantalla fiscal (bloque 4) | 72,8 | 226,5 |
 | El formulario, la tarjeta y los avisos | **72,8** | **233,0** |
-| Techo | **74,0** | **234,0** |
+| Techo (apretado al cerrar) | **73,5** | **234,0** |
 
 **Desglose del total, medido sobre el `dist` (gzip)**, porque autorizar una subida no es entenderla:
 
@@ -124,9 +124,9 @@ La regla que se saca de aquí: **un cálculo a mano escribe todos los campos que
 | `fiscal-status-*.js` | **0,4** | lo que la tarjeta del Resumen carga tras pintar |
 | resto | ~96 | las otras once pantallas, los mensajes, los formularios y el *service worker* (6,8 entre `sw.js` y Workbox) |
 
-**Duplicación entre trozos: ninguna.** Comprobado leyendo los *source maps* de los 40 trozos y cruzando qué módulo aparece en cuáles: **cero módulos en más de un trozo**. Los 37,5 KB que sube el total son pantallas y motor, no repetición.
+**Duplicación entre trozos: ninguna.** Comprobado leyendo los *source maps* de los 58 trozos y cruzando qué módulo aparece en cuáles: **cero módulos en más de un trozo**. Los 37,5 KB que sube el total son pantallas y motor, no repetición.
 
-El techo del **arranque** lo subió la dirección dos veces (71,5 y luego 74,0) con su motivo escrito en `check-bundle.mjs`; el del **total** sube paso a paso y siempre a lo medido. **Al cerrar la feature hay que apretarlos los dos** a lo que entonces se mida más un margen pequeño, y dejar escrito qué hay dentro.
+El techo del **arranque** lo subió la dirección dos veces (71,5 y luego 74,0) con su motivo escrito en `check-bundle.mjs`; el del **total** sube paso a paso y siempre a lo medido. **Al cerrar la feature se han apretado los dos** a lo medido más un margen pequeño —arranque **73,5** sobre 72,8 y total **234,0** sobre 233,0—, con el desglose de arriba escrito en `check-bundle.mjs`.
 
 **Comprobación nueva y automática**: la construcción **falla** si un trozo de arranque trae cualquier módulo de `domain/src/tax/` o `domain/src/informative/`, leído de los *source maps*. Probado que no es vacía: con una importación de `tax/criteria.ts` en el camino de escritura, falla con 71,2 KB, muy por debajo del techo. Lo que se vigila es **la forma**, no el tamaño.
 
@@ -140,7 +140,7 @@ El techo del **arranque** lo subió la dirección dos veces (71,5 y luego 74,0) 
 
 ## 6. Lo que queda
 
-Nada de los seis bloques. Lo que queda es de la entrega: el **apriete final de los dos techos** del paquete a lo medido más un margen pequeño, y la PR.
+Nada de los seis bloques y nada de la entrega: los dos techos del paquete están apretados a lo medido más un margen pequeño, y la PR está abierta contra `develop`.
 
 Trabajo posterior a la feature, anotado para quien siga:
 
