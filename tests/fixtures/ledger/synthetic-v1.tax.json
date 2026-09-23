@@ -1,5 +1,6 @@
 {
   "2026": {
+    "anchors": [],
     "base_eur": "10.43",
     "capital_gains": {
       "balance_eur": "0",
@@ -222,6 +223,7 @@
     "year": 2026
   },
   "2027": {
+    "anchors": [],
     "base_eur": "174.35",
     "capital_gains": {
       "balance_eur": "180.04",
@@ -1376,6 +1378,7 @@
     "year": 2027
   },
   "2028": {
+    "anchors": [],
     "base_eur": "111.13",
     "capital_gains": {
       "balance_eur": "94.86",
@@ -1837,6 +1840,7 @@
     "year": 2028
   },
   "2029": {
+    "anchors": [],
     "base_eur": "0",
     "capital_gains": {
       "balance_eur": "0",

@@ -965,7 +965,7 @@ export const taxYearWithChain = (
       })),
     },
     compensation: core.compensation,
-    ...(core.anchor === undefined ? {} : { anchor: core.anchor }),
+    anchors: core.anchors,
     ...(filing === undefined ? {} : { filing }),
     base_eur: core.compensation.base_eur,
     withholdings: {

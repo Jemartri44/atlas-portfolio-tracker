@@ -66,7 +66,14 @@ export interface ChainCore {
   walk: WashSaleResult;
   expenses: ExpenseLine[];
   compensation: Compensation;
-  anchor?: AnchorDifference;
+  /**
+   * **Every** substitution the walk applied, oldest first — one per year of
+   * the chain with a return on record, not the last one. It used to be a
+   * single `let` overwritten at each of them, so with two returns filed the
+   * first substitution disappeared without a trace and no interface could tell
+   * the user about it (feature 011, block 6).
+   */
+  anchors: AnchorDifference[];
   /** Deferred losses still sitting on lots at 31/12 of the year asked. */
   pendingDeferrals: PendingDeferral[];
   firstYear: number;
@@ -323,7 +330,7 @@ export const taxChain = (
   };
   let pending: PendingLoss[] = [];
   let compensation = compensate(firstYear, zeroBalances(), [], rules);
-  let anchor: AnchorDifference | undefined;
+  const anchors: AnchorDifference[] = [];
   // `Infinity` when the ledger has no figures at all: any anchor precedes it.
   const firstFigureYear = Math.min(...years);
   const bases = new Map<number, Money>();
@@ -348,14 +355,14 @@ export const taxChain = (
         amount_eur: entry.amount_eur,
         expires_after: entry.origin_year + rules.carryYears,
       }));
-      anchor = {
+      anchors.push({
         year: y,
         computed: pending,
         declared,
         // Nothing was computed for a year the ledger does not reach: the
         // figures come from what was declared, they do not differ from it.
         ...(y < firstFigureYear ? { before_ledger: true } : {}),
-      };
+      });
       pending = declared;
     }
   }
@@ -366,7 +373,7 @@ export const taxChain = (
     walk,
     expenses,
     compensation,
-    ...(anchor === undefined ? {} : { anchor }),
+    anchors,
     pendingDeferrals: deferredAt(walk, year),
     firstYear,
     bases,

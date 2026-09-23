@@ -352,7 +352,15 @@ export interface TaxYearReport {
     }[];
   };
   compensation: Compensation;
-  anchor?: AnchorDifference;
+  /**
+   * Every year of the chain whose pending losses the engine **replaced** with
+   * what a filed return declared, oldest first, and empty when there was
+   * none. A list and not an optional field, like every other list of this
+   * report: "there were no substitutions" and "an empty list" mean the same
+   * thing, and a field that is sometimes missing invites reading "I do not
+   * know" where the answer is "there were none".
+   */
+  anchors: AnchorDifference[];
   /**
    * Present only when an income tax return is in force for the year
    * (ADR-0020): what it declared, what the application computed the day it was

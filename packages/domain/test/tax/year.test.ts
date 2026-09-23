@@ -1,3 +1,4 @@
+import type { AnchorDifference, TaxYearReport } from "../../src/tax/report.js";
 // The tax year as a whole (feature 009): the year a disposal falls in, the
 // carry-forward and its anchor, the refusals, the doubtful criteria and the
 // notes. The wash-sale rule has its own file.
@@ -8,6 +9,10 @@ import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { taxReportJson } from "../../src/tax/json.js";
 import { taxYear } from "../../src/tax/year.js";
 import { buy, lineOf, reportOf, sell, taxBuilder, text, transfer } from "./helpers.js";
+
+/** The last substitution the chain applied, which is what these cases look at. */
+const lastAnchor = (report: TaxYearReport): AnchorDifference | undefined =>
+  report.anchors[report.anchors.length - 1];
 
 const codeOf = (run: () => unknown): string => {
   try {
@@ -93,8 +98,8 @@ describe("the carry-forward", () => {
     // Declared −60 instead of the computed −100: 200 − 60 = 140.
     expect(text(report.base_eur)).toBe("140");
     const anchored = taxYear(b.build(), 2027, { today: "2035-01-01" });
-    expect(anchored.anchor?.computed.map((p) => text(p.amount_eur))).toEqual(["-100"]);
-    expect(anchored.anchor?.declared.map((p) => text(p.amount_eur))).toEqual(["-60"]);
+    expect(lastAnchor(anchored)?.computed.map((p) => text(p.amount_eur))).toEqual(["-100"]);
+    expect(lastAnchor(anchored)?.declared.map((p) => text(p.amount_eur))).toEqual(["-60"]);
   });
 
   it("chains through years with no figures, and a year before the first one is simply empty", () => {

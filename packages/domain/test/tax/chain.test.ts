@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { type ChainCore, chainFigures, taxChain } from "../../src/tax/chain.js";
+import type { AnchorDifference, TaxYearReport } from "../../src/tax/report.js";
 import { taxYear } from "../../src/tax/year.js";
 import type { LedgerBuilder } from "../ledger-builder.js";
 import { buy, HAND_SETTINGS, sell, taxBuilder, text } from "./helpers.js";
+
+/** The last substitution the chain applied, which is what these cases look at. */
+const lastAnchor = (report: TaxYearReport): AnchorDifference | undefined =>
+  report.anchors[report.anchors.length - 1];
 
 const TODAY = "2035-01-01";
 
@@ -65,16 +70,18 @@ describe("where the chain of years starts (P5)", () => {
 
   it("the anchor of a year the ledger does not reach is what was brought in, not a difference", () => {
     const y2025 = taxYear(ledgerFrom2026(), 2025, { today: TODAY });
-    expect(y2025.anchor?.before_ledger).toBe(true);
-    expect(y2025.anchor?.computed).toEqual([]);
-    expect(y2025.anchor?.declared.map((p) => [p.origin_year, text(p.amount_eur)])).toEqual([
+    expect(lastAnchor(y2025)?.before_ledger).toBe(true);
+    expect(lastAnchor(y2025)?.computed).toEqual([]);
+    expect(lastAnchor(y2025)?.declared.map((p) => [p.origin_year, text(p.amount_eur)])).toEqual([
       [2022, "-100"],
       [2023, "-400"],
     ]);
     // An empty ledger and a filed return: the anchor still precedes it.
     const onlyTheReturn = taxBuilder();
     fileReturnOf2025(onlyTheReturn);
-    expect(taxYear(onlyTheReturn.build(), 2025, { today: TODAY }).anchor?.before_ledger).toBe(true);
+    expect(lastAnchor(taxYear(onlyTheReturn.build(), 2025, { today: TODAY }))?.before_ledger).toBe(
+      true,
+    );
   });
 
   it("without the filed return the same ledger forgets those losses: the proof is not empty", () => {
@@ -101,7 +108,7 @@ describe("where the chain of years starts (P5)", () => {
     const report = taxYear(b.build(), 2027, { today: TODAY });
     // The anchor reported is the last one walked, and what expires in 2027 is
     // what the return of 2026 declared.
-    expect(report.anchor?.year).toBe(2026);
+    expect(lastAnchor(report)?.year).toBe(2026);
     expect(report.compensation.expired.map((p) => [p.origin_year, text(p.amount_eur)])).toEqual([
       [2023, "-200"],
     ]);

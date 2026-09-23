@@ -378,13 +378,14 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
           (p) =>
             `CADUCA al cierre de ${report.year}: ${eur(p.amount_eur)} de ${p.origin_year} (${CATEGORY[p.category]}).`,
         ),
-        ...(report.anchor === undefined
-          ? []
-          : [
-              report.anchor.before_ledger === true
-                ? `Anclado en lo declarado en ${report.anchor.year}, anterior a tus datos: ${report.anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}. Vienen de lo declarado, no de un cálculo.`
-                : `Anclado en lo declarado en ${report.anchor.year}: calculado ${report.anchor.computed.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}; declarado ${report.anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}.`,
-            ]),
+        // One line per substitution, oldest first: with two returns filed the
+        // report used to carry only the last, and the text said "anclado en"
+        // as if there had been one (feature 011, block 6).
+        ...report.anchors.map((anchor) =>
+          anchor.before_ledger === true
+            ? `Anclado en lo declarado en ${anchor.year}, anterior a tus datos: ${anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}. Vienen de lo declarado, no de un cálculo.`
+            : `Anclado en lo declarado en ${anchor.year}: calculado ${anchor.computed.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}; declarado ${anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}.`,
+        ),
       ].join("\n"),
     ),
   );
