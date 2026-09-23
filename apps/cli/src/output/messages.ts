@@ -138,6 +138,10 @@ export const describeError = (error: DomainError): string => {
       return `Una declaración del ejercicio ${text(d.tax_year)} no se pudo presentar el ${text(d.filed_at)}: la fecha tiene que ser posterior al 31/12 de ${text(d.tax_year)}.`;
     case "filed_at_in_future":
       return `La fecha de presentación (${text(d.filed_at)}) es posterior al día en que se registra (${text(d.recorded_at)}): no se registra lo que aún no se ha presentado.`;
+    case "as_of_before_year_end":
+      return `El cálculo que acompaña a la declaración es del ${text(d.as_of)}, anterior al cierre del ejercicio ${text(d.tax_year)}: no puede cubrirlo entero, así que sus cifras estarían a medias.`;
+    case "as_of_in_future":
+      return `El cálculo que acompaña a la declaración es del ${text(d.as_of)}, posterior al día en que se registra (${text(d.recorded_at)}): no se calcula en el futuro.`;
     case "duplicate_pending_loss":
       return `Los saldos pendientes declarados repiten el ejercicio ${text(d.origin_year)} en ${text(d.category)}: cada origen y categoría va una sola vez.`;
     case "duplicate_filed_item":

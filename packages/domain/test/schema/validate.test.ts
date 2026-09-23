@@ -695,6 +695,48 @@ describe("validateShape: a filed return (ADR-0020)", () => {
     expect(validateShape(variant(filed, { filed_at: "2026-09-01" }))).toBeTruthy();
   });
 
+  /**
+   * `computed.as_of` is the date the comparison of ADR-0020 **re-reads the
+   * prefix of the ledger with**, so an absurd one splits the difference
+   * between what was declared and what is computed into four causes that are
+   * false, and nothing says so.
+   *
+   * The rule is not a date picked out of the air: it is that `as_of` **covers
+   * the whole year it declares**. A calculation made with a cut that leaves
+   * half the return out declares incomplete figures. The cut of the ledger
+   * **includes its own date** (`asOf` skips only what comes *after* it), so a
+   * calculation made on 31 December of the year covers it whole and is valid;
+   * 30 December is not.
+   */
+  it("refuses a calculation that does not cover the year it declares", () => {
+    const withAsOf = (as_of: string) => variant(filed, { computed: { ...filed.computed, as_of } });
+    rejects(withAsOf("2025-12-30"), "as_of_before_year_end");
+    // The last day of the year is inside it, and the cut includes its own date.
+    expect(validateShape(withAsOf("2025-12-31"))).toBeTruthy();
+    // A whole year early: the ledger could not hold what had not happened yet.
+    rejects(withAsOf("2025-06-18"), "as_of_before_year_end");
+  });
+
+  /**
+   * And nothing is computed **after** the line that carries it was written.
+   *
+   * The bound is `recorded_at` and **not** `filed_at`: recording a return
+   * after filing it is the ordinary flow —file at the tax agency one day, note
+   * it here another— and `as_of` is the day the application computed, so it
+   * comes **after** `filed_at` every time. Rejecting that would reject the
+   * ordinary case (feature 011, P6).
+   *
+   * There is no third comparison. "`as_of` not in the future" **is** this one.
+   */
+  it("refuses a calculation dated after the line that carries it", () => {
+    const withAsOf = (as_of: string) => variant(filed, { computed: { ...filed.computed, as_of } });
+    // `recorded_at` of every sample is 1 September 2026 in Madrid.
+    rejects(withAsOf("2026-09-02"), "as_of_in_future");
+    expect(validateShape(withAsOf("2026-09-01"))).toBeTruthy();
+    // Computed after it was filed, which is what recording it later looks like.
+    expect(validateShape(withAsOf("2026-08-20"))).toBeTruthy();
+  });
+
   it("refuses figures that are not what they claim to be", () => {
     rejects(variant(filed, { declared: "175.70" }), "invalid_field");
     rejects(

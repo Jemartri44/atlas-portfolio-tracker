@@ -77,7 +77,11 @@ describe("the messages", () => {
    */
   it("never names a document, an identifier or an ISO date, in any template", () => {
     const detail = (key: string): unknown => {
-      if (/date|window_end|window_start|filed_at/.test(key)) return "2027-01-31";
+      // Which details of the domain are civil dates. `as_of` and `recorded_at`
+      // joined the list with the validation of `computed.as_of` (feature 011).
+      if (/date|window_end|window_start|filed_at|as_of|recorded_at/.test(key)) {
+        return "2027-01-31";
+      }
       if (key === "model") return "720";
       if (key === "category") return "capital_gain";
       if (key === "thesis_id") return "th_alpha";

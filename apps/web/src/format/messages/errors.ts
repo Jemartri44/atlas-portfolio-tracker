@@ -177,6 +177,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `Una declaración del ejercicio ${num(d.tax_year)} no se pudo presentar el ${day(d.filed_at)}: la fecha tiene que ser posterior al final de ese ejercicio.`,
   filed_at_in_future: (d) =>
     `La presentaste el ${day(d.filed_at)}, que es posterior a hoy: no se registra lo que todavía no se ha presentado.`,
+  as_of_before_year_end: (d) =>
+    `El cálculo guardado con la declaración es del ${day(d.as_of)}, anterior al cierre de ${num(d.tax_year)}: no cubre el ejercicio entero.`,
+  as_of_in_future: (d) =>
+    `El cálculo guardado con la declaración es del ${day(d.as_of)}, posterior al día en que se registra: no se calcula en el futuro.`,
   duplicate_pending_loss: (d) =>
     `Los saldos pendientes declarados repiten el ejercicio ${num(d.origin_year)} en ${enumValue(d.category)}: cada origen va una sola vez.`,
   duplicate_filed_item: (d, n) =>
