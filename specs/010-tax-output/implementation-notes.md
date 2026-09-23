@@ -332,9 +332,9 @@ Luego **no es un defecto de cálculo, es de presentación**, y son dos:
 1. `YearView.empty` no miraba `expired`, así que el ejercicio en que un saldo muere la pantalla
    decía «No hay nada que declarar». **Arreglado**: un saldo caducado cuenta como algo que declarar,
    y la tarjeta enseña «Caducadas al cerrar 2031, sin llegar a compensarse».
-2. `expiring: loss.expires_after === year` se calcula **sobre `pending`**, y en el ejercicio en que
-   se cumpliría la igualdad el saldo ya está en `expired`: la condición no se cumple nunca y el
-   aviso es código muerto. **Sin tocar**, a la espera de la dirección.
+2. `expiring: loss.expires_after === year` se calculaba **sobre `pending`**, y en el ejercicio en
+   que se cumpliría la igualdad el saldo ya está en `expired`: la condición no se cumplía nunca.
+   **Resuelto conservando el aviso y haciéndolo disparar donde sirve** (§10.10).
 
 ### 10.2 Por qué dos interfaces que leen del mismo motor pueden discrepar
 
@@ -400,9 +400,9 @@ una magnitud, y no cambió ninguna.
 
 ### 10.6 Capturas de esta pasada
 
-**16**, en `~/atlas-private/capturas/2026-09-23-fiscal-revision-3/`, con la misma matriz de antes más
-tres del ejercicio en que un saldo caduca: 2031 en monitor y en móvil, y 2030 al lado para ver la
-diferencia. Ningún error de página y `scrollWidth === clientWidth` en las dieciséis.
+**18**, en `~/atlas-private/capturas/2026-09-23-fiscal-revision-3/`, con la misma matriz de antes más
+cinco de la caducidad: el ejercicio en que el saldo muere (2031, monitor y móvil), el aviso de «le
+queda un año» (2030) y el de «este es el último y todavía corre» (2026, monitor y móvil). Ningún error de página y `scrollWidth === clientWidth` en las dieciséis.
 
 Mirarlas encontró **un defecto que había metido el propio arreglo**: con el saldo caducado pintado,
 la tarjeta enseñaba encima su estado vacío, «No arrastras pérdidas», justo sobre una tabla con
@@ -438,3 +438,29 @@ por leer el resultado así, y se reconstruyó con `git reset --soft` —el mismo
 anterior—. Una lección que hay que reaprender está mal escrita, así que se escribe como hábito y no
 como advertencia: **ejecutar el comando redirigiendo a un fichero y leer `$?`**, nunca a través de
 una tubería que se lo coma. Los 55 commits de la rama están verdes uno a uno.
+
+### 10.10 El aviso de caducidad: conservado, no borrado
+
+De las dos opciones que dio la dirección —que dispare o que se borre— se elige **que dispare**, por
+una razón y una comprobación:
+
+- **La razón.** La tabla dice el año de caducidad en una columna, y una columna no grita. El único
+  momento en que el usuario puede hacer algo es **durante** el último ejercicio en que la pérdida se
+  puede usar: realizar ganancias antes del 31 de diciembre para absorberla. Borrar el aviso deja ese
+  momento sin nada que lo distinga de otro año cualquiera.
+- **La comprobación.** Sin él, la pantalla del ejercicio en que el saldo muere no se diferencia de
+  la del anterior más que por en qué tabla sale la misma fila.
+
+Dispara en dos momentos, y **ninguno de los dos sale de `pending` con `expires_after === year`**,
+que es la condición imposible:
+
+| Cuándo | De dónde sale | Qué dice |
+|---|---|---|
+| Su último ejercicio, **y todavía corriendo** | `expired` del ejercicio, cuando `report.year` es el año de `report.today` | «Este es el último ejercicio para usarlas … lo que no compenses antes del 31 de diciembre se pierde» |
+| Un ejercicio antes | `pending` con `expires_after === year + 1` | «Les queda este ejercicio y el siguiente» |
+| Un ejercicio ya cerrado | nada | la tabla lo dice en pasado, que es lo que es |
+
+Los dos disparadores tienen su test y **matan su mutante**. Y mirar la captura del primero encontró
+lo de siempre: la tabla de abajo seguía titulada «Caducadas al cerrar 2026» **mientras 2026 corría**,
+debajo de un aviso que decía que aún hay tiempo. El título depende ahora de si el ejercicio está en
+curso. Es el segundo defecto de esta pasada que encuentra una captura y no un test.
