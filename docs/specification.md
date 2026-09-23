@@ -89,7 +89,7 @@ Los identificadores cambian con el tiempo. El `id` interno es inmutable; ISIN y 
 **Transaction** (operación)
 `id`, `trade_date`, `value_date`, `type`, `asset_id`, `account_id`, `quantity`, `unit_price`, `currency`, `fx_rate`, `fee`, `notes`, `reverses_transaction_id` (opcional), `corrects_transaction_id` (opcional)
 
-Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `interest`, `fx_exchange`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `valuation`, `reversal`; más los eventos de seguimiento sin efecto contable `order_placed`/`order_updated` y `transfer_requested`/`transfer_request_updated` (ADR-0010, ADR-0012). Detalle en `docs/data-schema.md`.
+Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `interest`, `fx_exchange`, `swap`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `valuation`, `reversal`; los eventos de seguimiento sin efecto contable `order_placed`/`order_updated` y `transfer_requested`/`transfer_request_updated` (ADR-0010, ADR-0012); las tesis del cubo `thesis_opened`/`thesis_closed`; y `tax_return_filed`, la constancia de lo declarado (ADR-0020). Con el catálogo y la configuración, **25 tipos**. Detalle en `docs/data-schema.md`.
 
 **El libro es append-only** (ADR-0003): las operaciones nunca se editan ni se borran. *Editar* en la interfaz escribe un `reversal` de la original más la operación correcta enlazada por `corrects_transaction_id`; *Eliminar* escribe solo el `reversal`. La proyección de lotes ignora las parejas anuladas. Si la rectificación afecta a un ejercicio fiscal ya declarado, la app lo advierte.
 
