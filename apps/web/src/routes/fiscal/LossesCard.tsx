@@ -79,7 +79,20 @@ export const LossesCard = (props: {
       />
     </Show>
     <Show when={props.expired.length > 0}>
-      <p class="card-note">Caducadas al cerrar {props.year}, sin llegar a compensarse:</p>
+      {/*
+        In the past tense only when it **is** the past. While the year is
+        still running the same balance is still usable, and a table headed
+        "caducadas" under a notice saying "you have until 31 December" is the
+        card contradicting itself again, in the other direction.
+      */}
+      <p class="card-note">
+        <Show
+          when={props.expiring.some((loss) => loss.when === "last")}
+          fallback={<>Caducadas al cerrar {props.year}, sin llegar a compensarse:</>}
+        >
+          Lo que no compenses antes de que acabe {props.year} se pierde:
+        </Show>
+      </p>
       <DataTable label="Pérdidas caducadas" size="sm" rows={props.expired} columns={COLUMNS} />
     </Show>
   </Section>

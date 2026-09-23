@@ -272,6 +272,9 @@ describe("the year a pending loss expires", () => {
     const shown = text(await openYear(2031));
     expect(shown).toContain("Este es el último ejercicio para usarlas");
     expect(shown).toContain("lo que no compenses antes del 31 de diciembre se pierde");
+    // And the table below does not speak of it in the past while it lasts.
+    expect(shown).toContain("Lo que no compenses antes de que acabe 2031 se pierde");
+    expect(shown).not.toContain("Caducadas al cerrar");
   });
 
   it("gives a heads-up the year before, without alarming", async () => {
