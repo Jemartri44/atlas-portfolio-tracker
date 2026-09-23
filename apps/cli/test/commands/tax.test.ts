@@ -70,6 +70,25 @@ describe("atlas tax", () => {
     expect(part(10)).toContain("La lectura de estos no está en duda");
   });
 
+  /**
+   * "Checked and it moves nothing" is information, and it is the same argument
+   * that split the settled criteria from the doubtful ones instead of
+   * filtering them (feature 010, block 2). A year where no settled criterion
+   * moves anything has to **say so**, in both interfaces; what it printed was
+   * the headings of a table with no rows under them.
+   */
+  it("says that no settled criterion moves anything, instead of empty headings", async () => {
+    const h = golden();
+    // 2028 of the golden ledger: figures, and no settled criterion that moves.
+    expect(await h.exec(["tax", "2028"])).toBe(0);
+    const text = h.text();
+    const part = text.slice(text.indexOf("\n10. "), text.indexOf("\n11. "));
+    expect(part).toContain("10. Criterios firmes");
+    expect(part).toContain("Ninguno");
+    // The orphan headings of the table, with nothing under them.
+    expect(part).not.toContain("riesgo documentado");
+  });
+
   it("opens every transmission into its lots and their lineage with --lots", async () => {
     const h = golden();
     expect(await h.exec(["tax", "2027", "--lots"])).toBe(0);

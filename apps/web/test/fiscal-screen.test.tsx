@@ -95,6 +95,25 @@ describe("the fiscal screen", () => {
     expect(beside.some((label) => /en disputa|certeza media|certeza baja/.test(label))).toBe(true);
   });
 
+  /**
+   * The same question, answered the same way by the two interfaces (ADR-0024).
+   * The console printed its section always; the screen wrapped the card in a
+   * `Show` that hid it when there was nothing, with no empty state — while its
+   * sibling, the doubtful one, had one. No figure was lost, and the two still
+   * answered differently.
+   */
+  it("keeps the card of the settled criteria when none of them moves anything", async () => {
+    // 2028 of the golden ledger: figures, four doubtful criteria and **no**
+    // settled one that moves anything.
+    const host = await open(2028);
+    const card = [...host.querySelectorAll(".card")].find((entry) =>
+      text(entry).includes("Criterios firmes"),
+    );
+    expect(card).toBeDefined();
+    expect(text(card)).toContain("Ninguno");
+    expect(card?.querySelectorAll("ul.stakes").length).toBe(0);
+  });
+
   it("shows three criteria and folds the rest", async () => {
     // Ten entries in a row took four phone screens of the screen whose figure
     // at the top is what the user came for.

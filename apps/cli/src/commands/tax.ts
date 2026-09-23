@@ -439,7 +439,14 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
   out.push(
     section(
       "10. Criterios firmes: lo que moverían leídos al revés",
-      `${stakeTable(report.settled)}\nLa lectura de estos no está en duda; la cifra dice qué habría detrás si lo estuviera.`,
+      // "Checked and it moves nothing" is information, and saying it is the
+      // same argument that split this list from the doubtful one instead of
+      // filtering it. With nothing to show, a table prints its headings and a
+      // separator and no rows: orphan headings say less than a sentence, and
+      // the screen says it too (ADR-0024).
+      report.settled.length === 0
+        ? "Ninguno de tus criterios firmes movería nada leído al revés. Se ha comprobado; no es que no se haya mirado."
+        : `${stakeTable(report.settled)}\nLa lectura de estos no está en duda; la cifra dice qué habría detrás si lo estuviera.`,
     ),
   );
   out.push(
