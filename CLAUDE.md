@@ -113,7 +113,7 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 6. **Corporate actions are first-class transactions** with their own lot-transformation logic. No manual patches on the database.
 7. **The own ledger is the source of truth.** Broker statements are for reconciliation, not for feeding the system.
 8. **The ledger is append-only.** Transactions are never edited or deleted; "edit" = `reversal` + corrected transaction (ADR-0003). Reversing an event that later events consumed is **rejected** (rectify the dependants first). Amounts are serialised as strings in JSON, never as JSON numbers.
-9. **Fiscal date depends on asset type** (`trade_date` for listed securities, `value_date` for funds, configurable, ADR-0013); the wash-sale window is one year for funds and crypto, two months for listed securities (configurable, verify with advisor).
+9. **Fiscal date depends on asset type** (`trade_date` for listed securities, `value_date` for funds, configurable, ADR-0013); the wash-sale window is **two months for securities admitted to trading — funds among them, money-market funds included** (criterion #2, default `2:fund_2m` since 2026-09-22, medium certainty, aggressive direction), **one year for those not admitted**, and **one year for crypto out of prudence**, not by the letter of art. 33.5.g). All of it is per-asset-type configuration (`wash_sale_window`), never a constant; verify with the advisor.
 10. **Loader rejects newer schema versions; `append` never re-serialises existing lines.** An old client must never rewrite a newer ledger.
 
 ## Design principles
