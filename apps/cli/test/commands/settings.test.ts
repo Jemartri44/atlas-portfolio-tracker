@@ -227,7 +227,9 @@ describe("atlas settings set: a change that moves a past tax year", () => {
     expect(text).toContain("mueve las ganancias realizadas de ejercicios anteriores");
     expect(text).toContain("2027");
     expect(text).toContain("2028");
-    expect(text).toContain("Puede afectar a una declaración ya presentada");
+    // "A past year" and "a year you filed" are not the same thing: with nothing
+    // filed, the output says so instead of warning about a return nobody made.
+    expect(text).toContain("Ninguno de esos ejercicios consta como declarado");
     expect(text).toContain("Registrado");
   });
 

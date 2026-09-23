@@ -23,10 +23,17 @@ import { fiscalLots } from "../projections/lots.js";
 import { type PhysicalPosition, physicalPositions } from "../projections/positions.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { FiscalLot, LedgerState, RealizedGain, Warning } from "../projections/state.js";
-import type { AccountId, AssetId, Draft, LedgerEvent, SupportedEvent } from "../schema/events.js";
+import type {
+  AccountId,
+  AssetId,
+  Draft,
+  LedgerEvent,
+  ReversalEvent,
+  SupportedEvent,
+} from "../schema/events.js";
 import type { UseCaseDeps } from "./deps.js";
 import { checkInvalid, completeDraft, duplicatesOf, type RecordOptions } from "./record-event.js";
-import { prepareCorrection } from "./rectify.js";
+import { checkCandidate, findTarget, prepareCorrection } from "./rectify.js";
 
 /** Positions and open lots of the assets a candidate touches, at one point in time. */
 export interface EventEffect {
@@ -67,6 +74,17 @@ export interface EventPreview<E extends SupportedEvent = SupportedEvent> {
    */
   closed: ClosedYear[];
   unfiledPastYears: number[];
+  /**
+   * The events the write would **append**, in file order: one for a record, the
+   * reversal and its replacement for a correction.
+   *
+   * It is here so that whoever already has the tax engine loaded can put the
+   * **figure** on the warning of a closed year (`closedYearImpact`) without
+   * rebuilding the candidate itself, which is the one thing a preview must not
+   * do twice: a preview that builds a different event from the one the write
+   * appends warns about something else (plan §1.6).
+   */
+  candidates: readonly SupportedEvent[];
   /** Events already recorded that the candidate would leave invalid (only a settings change can). */
   newlyInvalid: { id: Ulid; type: string; error: string }[];
   /** The ledger as loaded and projected (degraded mode), so nobody projects it again. */
@@ -131,6 +149,7 @@ export const previewEvent = async <E extends SupportedEvent>(
     newlyInvalid: affected.map((entry) => ({ ...entry })),
     closed: closedYearsTouched(events, [...events, candidate], today, after),
     unfiledPastYears: unfiledPastYears(today, after),
+    candidates: [candidate],
     events,
     state: before,
     etag,
@@ -150,6 +169,50 @@ export const previewEvent = async <E extends SupportedEvent>(
  * counted on the ledger after the correction, where the original no longer
  * holds its fingerprint: a correction identical to its original repeats nothing.
  */
+/**
+ * What a **reversal** would do: the ledger with the target annulled and nothing
+ * in its place.
+ *
+ * It exists for the same reason as the other two: the destructive dialogue has
+ * to say which filed return it reaches **before** the confirmation, and that
+ * needs the reversal as the write will append it, not a rebuilt lookalike
+ * (prompt 010, §4.4).
+ */
+export const previewReversal = async (
+  deps: UseCaseDeps,
+  targetId: string,
+  reason: string,
+): Promise<EventPreview> => {
+  const { events, etag } = await deps.store.load();
+  const target = findTarget(events, targetId);
+  const reversal = completeDraft<ReversalEvent>(
+    deps,
+    { type: "reversal", reverses_id: targetId, reason },
+    createUlidGenerator(deps).next(),
+  );
+  const candidate = [...events, reversal];
+  const after = checkCandidate(events, candidate, [reversal.id], targetId);
+  const before = projectLedger(events, { collectErrors: true });
+  const assets = assetsOf(target as SupportedEvent);
+  const today = todayInMadrid(deps.clock);
+  return {
+    candidate: reversal as unknown as SupportedEvent,
+    before: effectOf(before, assets),
+    after: effectOf(after, assets),
+    cash: cashChanges(before, after),
+    gains: [],
+    warnings: [],
+    duplicates: [],
+    newlyInvalid: [],
+    closed: closedYearsTouched(events, candidate, today, after),
+    unfiledPastYears: unfiledPastYears(today, after),
+    candidates: [reversal as unknown as SupportedEvent],
+    events,
+    state: before,
+    etag,
+  };
+};
+
 export const previewCorrection = async <E extends SupportedEvent>(
   deps: UseCaseDeps,
   targetId: string,
@@ -180,6 +243,7 @@ export const previewCorrection = async <E extends SupportedEvent>(
     newlyInvalid: [],
     closed: closedYearsTouched(events, [...events, reversal, event], today, after),
     unfiledPastYears: unfiledPastYears(today, after),
+    candidates: [reversal, event],
     events,
     state: before,
     etag,

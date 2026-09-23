@@ -902,3 +902,130 @@ describe("architecture: apps/web", () => {
     expect(loose).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Feature 010, block 5. Nobody writes over a filed return in silence.
+// ---------------------------------------------------------------------------
+
+/**
+ * The **fact** that a write reaches a closed year comes free with the use case
+ * (`RecordResult.closed`), so the domain cannot forget it. The **figure** —how
+ * much of what was declared moves— is put on by each interface, because it is
+ * the interface that decides when to say it, and an interface that forgets is
+ * exactly the silence ADR-0020 forbids.
+ *
+ * So the writers are enumerated here, by hand and by name:
+ *
+ *   - the list is **closed**: a third interface (an API, a bot, an importer)
+ *     breaks this test the day it imports a write use case, and the only way
+ *     to make it green is to add it to the list, which is the moment someone
+ *     has to ask whether it warns;
+ *   - and every one of them has to **reach** `closedYearImpact`, through its
+ *     own imports at any depth, which is what a module that only records has
+ *     to acquire.
+ *
+ * Reaching it is a necessary condition, not a sufficient one: what the user
+ * reads is checked by the tests of each interface (`apps/cli/test/commands/
+ * closed-year.test.ts`). What this catches is the whole flow going in with no
+ * way of saying it at all.
+ */
+describe("architecture: no interface writes over a filed return in silence", () => {
+  const WRITE_USE_CASES = ["recordEvent", "correctEvent", "reverseEvent"];
+  const IMPACT = "closedYearImpact";
+
+  /** The named bindings a file takes from `@atlas/domain`, imports only. */
+  const domainBindings = (source: string): Set<string> => {
+    const found = new Set<string>();
+    for (const match of source.matchAll(
+      /import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]@atlas\/domain['"]/g,
+    )) {
+      for (const binding of (match[1] as string).split(",")) {
+        const name = binding
+          .trim()
+          .replace(/^type\s+/, "")
+          .split(/\s+as\s+/)[0];
+        if (name !== undefined && name.length > 0) {
+          found.add(name);
+        }
+      }
+    }
+    return found;
+  };
+
+  /** A relative specifier as a file on disk: `.js` and `.jsx` are written, `.ts`/`.tsx` exist. */
+  const fileOf = (from: string, specifier: string): string | undefined => {
+    if (!specifier.startsWith(".")) {
+      return undefined;
+    }
+    const target = resolve(dirname(from), specifier);
+    const bare = target.replace(/\.(js|jsx)$/, "");
+    const candidates = [
+      target,
+      `${bare}.ts`,
+      `${bare}.tsx`,
+      join(target, "index.ts"),
+      join(target, "index.tsx"),
+    ];
+    return candidates.find((path) => {
+      try {
+        return statSync(path).isFile();
+      } catch {
+        return false;
+      }
+    });
+  };
+
+  /** The text with its comments removed: a name written in prose is not a call. */
+  const codeOf = (source: string): string =>
+    source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
+
+  const appFiles = (): string[] =>
+    readdirSync(join(repoRoot, "apps")).flatMap((app) => {
+      const src = join(repoRoot, "apps", app, "src");
+      try {
+        return statSync(src).isDirectory() ? listSourceFiles(src) : [];
+      } catch {
+        return [];
+      }
+    });
+
+  it("enumerates every module that writes, and asks each to reach the impact", () => {
+    const sources = new Map(appFiles().map((file) => [file, readFileSync(file, "utf8")]));
+    const writers = [...sources]
+      .filter(([, source]) =>
+        WRITE_USE_CASES.some((useCase) => domainBindings(source).has(useCase)),
+      )
+      .map(([file]) => relative(repoRoot, file))
+      .sort();
+    // The closed list. Adding an interface here is the question "does it warn?"
+    expect(writers).toEqual([
+      "apps/cli/src/commands/corporate-actions.ts",
+      "apps/cli/src/commands/rectify.ts",
+      "apps/cli/src/commands/shared.ts",
+      "apps/web/src/ledger/write.ts",
+    ]);
+
+    const graph = new Map(
+      [...sources].map(([file, source]) => [
+        file,
+        specifiersOf(source)
+          .map((specifier) => fileOf(file, specifier))
+          .filter((target): target is string => target !== undefined),
+      ]),
+    );
+    const silent = writers.filter((name) => {
+      const root = join(repoRoot, name);
+      // Two conditions, and the second is the one that bites. Reaching the
+      // impact through the graph is not enough: every CLI command imports
+      // `shared.ts` for the confirmation, and `shared.ts` names the impact, so
+      // the graph alone calls a module that warns nobody "covered". The module
+      // has to **name** the warning in its own code as well, which is what
+      // disappears the day somebody deletes the call.
+      const reaches = [...reachableFrom(graph, root).keys()].some((file) =>
+        domainBindings(sources.get(file) ?? "").has(IMPACT),
+      );
+      return !reaches || !/\bclosedYear/.test(codeOf(sources.get(root) ?? ""));
+    });
+    expect(silent).toEqual([]);
+  });
+});

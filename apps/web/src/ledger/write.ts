@@ -16,15 +16,21 @@
 
 import {
   type AffectedEvent,
+  type ClosedYearImpact,
   ConflictError,
+  closedYearImpact,
   correctEvent,
   DependentEventsError,
+  DomainError,
   type Draft,
   DuplicateFingerprintError,
   type EventPreview,
+  type LedgerEvent,
   type PreviewOptions,
   previewCorrection,
   previewEvent,
+  previewReversal,
+  type Reading,
   type RecordOptions,
   type RecordResult,
   type ReverseResult,
@@ -32,6 +38,7 @@ import {
   reverseEvent,
   type Settings,
   type SupportedEvent,
+  todayInMadrid,
   type UseCaseDeps,
 } from "@atlas/domain";
 import { reloadLedger } from "./actions.js";
@@ -137,6 +144,74 @@ export const correct = async <E extends SupportedEvent>(
     const result = await correctEvent<E>(requireDeps(), id, draft, reason, options);
     return { event: result.event, priorYear: result.priorYear };
   });
+
+/**
+ * Which filed returns a change would reach, and how much it moves of each
+ * declared figure (ADR-0020, amended; prompt 010, FR-018).
+ *
+ * The screens ask this **before** the question, which is the only moment it is
+ * useful; it never refuses anything. The fast path is the one that matters: a
+ * ledger with nothing filed —every ledger today— stops at reading the file,
+ * without a single projection.
+ *
+ * Best effort on purpose: when the candidate cannot even be built, nothing is
+ * said here and the write raises the same error right after, with its own
+ * message. A warning that throws would turn a filing into a locked ledger.
+ */
+const impactOf = async (
+  candidates: (deps: UseCaseDeps, events: readonly LedgerEvent[]) => Promise<Reading>,
+): Promise<readonly ClosedYearImpact[]> => {
+  try {
+    const deps = requireDeps();
+    const { events } = await deps.store.load();
+    if (!events.some((event) => event.type === "tax_return_filed")) {
+      return [];
+    }
+    return closedYearImpact({ events }, await candidates(deps, events), todayInMadrid(deps.clock));
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return [];
+    }
+    throw error;
+  }
+};
+
+/** For something about to be recorded: the draft with everything it drags along. */
+export const closedYearsOfDraft = async (
+  draft: Draft<SupportedEvent>,
+  options: PreviewOptions = {},
+): Promise<readonly ClosedYearImpact[]> =>
+  impactOf(async (deps, events) => ({
+    events: [...events, ...(await previewEvent(deps, draft, options)).candidates],
+  }));
+
+/** For a correction: the pair `correct` writes, the reversal and the new event. */
+export const closedYearsOfCorrection = async (
+  id: string,
+  draft: Draft<SupportedEvent>,
+  reason: string,
+): Promise<readonly ClosedYearImpact[]> =>
+  impactOf(async (deps, events) => ({
+    events: [...events, ...(await previewCorrection(deps, id, draft, reason)).candidates],
+  }));
+
+/** For an annulment, which moves a figure exactly as recording one does. */
+export const closedYearsOfReversal = async (
+  id: string,
+  reason: string,
+): Promise<readonly ClosedYearImpact[]> =>
+  impactOf(async (deps, events) => ({
+    events: [...events, ...(await previewReversal(deps, id, reason)).candidates],
+  }));
+
+/**
+ * And for a settings change, where not a single event moves: the same ledger
+ * read with other rules can empty a year that was filed (feature 009, Q12).
+ */
+export const closedYearsOfSettings = async (
+  settings: Settings,
+): Promise<readonly ClosedYearImpact[]> =>
+  impactOf(async (_deps, events) => ({ events, settings }));
 
 export const changeSettings = async (
   settings: Settings,

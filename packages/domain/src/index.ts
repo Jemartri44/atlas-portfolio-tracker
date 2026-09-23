@@ -221,6 +221,7 @@ export {
   type PreviewOptions,
   previewCorrection,
   previewEvent,
+  previewReversal,
 } from "./usecases/preview-event.js";
 export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
 export {

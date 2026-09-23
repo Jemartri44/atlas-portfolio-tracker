@@ -160,11 +160,13 @@ export class Events {
     value_date: string,
     quantity: string,
     unit_price: string,
+    /** Defaults to the value date; the two only differ when the test needs them to. */
+    trade_date = value_date,
   ): LedgerEvent {
     return this.push("sell", {
       account_id,
       asset_id,
-      trade_date: value_date,
+      trade_date,
       value_date,
       quantity,
       unit_price,
