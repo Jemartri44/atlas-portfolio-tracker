@@ -73,6 +73,11 @@ const COMPACT_REFUSALS = {
   // does not hold would turn a broken record into a trusted one.
   filing_fingerprint_mismatch:
     "a filed return no longer matches the events before it; nothing was written",
+  // Told apart from the one above because **only one of the two is an
+  // accusation**: this one is a prefix that cannot be re-read at the version
+  // the fingerprint declares, which is not an edit and no backup fixes.
+  filing_fingerprint_unreadable:
+    "the events before a filed return cannot be read at the version its fingerprint declares; nothing was written",
 } as const;
 
 export class CompactRejectedError extends DomainError {

@@ -10,11 +10,17 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { todayInMadrid } from "../dates/madrid.js";
 import { ArchiveExistsError, CompactRejectedError, ConflictError } from "../errors.js";
-import { checkFilingFingerprints, resealFilings } from "../filings/fingerprint.js";
+import {
+  checkFilingFingerprints,
+  type FingerprintCheck,
+  resealFilings,
+} from "../filings/fingerprint.js";
+import { systemUlid } from "../ids/ulid.js";
 import type { Clock } from "../ports/clock.js";
 import type { LedgerStore } from "../ports/ledger-store.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import { snapshotDiff, snapshotOf } from "../projections/snapshot.js";
+import type { FilingFingerprintWaivedEvent } from "../schema/events.js";
 import { decodeLine, encodeLine, parseLine } from "../schema/line.js";
 
 export interface CompactDeps {
@@ -25,6 +31,22 @@ export interface CompactDeps {
 export interface VersionCount {
   version: number;
   lines: number;
+}
+
+/** A filing whose fingerprint `planCompact` could not verify, and why. */
+export interface UnverifiedFiling {
+  filing_id: string;
+  reason: "lines" | "digest" | "unreadable";
+}
+
+/** What the caller may accept, by name, so that the ledger can be compacted at all. */
+export interface CompactOptions {
+  /**
+   * Filings whose fingerprint the user accepts as **unverifiable**, one by
+   * one. Never a blanket `--force`: accepting one leaves every other one
+   * protected, and each acceptance is recorded in the ledger (ADR-0025).
+   */
+  acceptUnverified?: readonly string[];
 }
 
 export interface CompactPlan {
@@ -38,6 +60,11 @@ export interface CompactPlan {
   outdated: number;
   /** `ledger-<YYYY-MM-DD>-v<n>.jsonl`; a suffix is added on collision. */
   archiveName: string;
+  /**
+   * Filings whose fingerprint does not verify, so the caller can name them
+   * before deciding. Empty is the normal case and the fast path.
+   */
+  unverified: UnverifiedFiling[];
 }
 
 export type CompactResult =
@@ -58,6 +85,33 @@ export type CompactResult =
     };
 
 const MAX_ARCHIVE_ATTEMPTS = 99;
+
+/**
+ * The line that records a waiver. It says **which** filing and **why** —never
+ * the two reasons under one word— and what the fingerprint declared, which
+ * after resealing the ledger holds nowhere else. Its `recorded_at` is when the
+ * user gave it for good, which is half of the sentence `check` has to keep
+ * saying for ever.
+ *
+ * `lines` is not a reason a user can waive: a fingerprint that covers the
+ * wrong count of lines is caught by `integrity` without re-reading anything,
+ * and it is refused, not accepted.
+ */
+const waiverEvent = (
+  check: FingerprintCheck,
+  version: number,
+  at: Date,
+  sequence: number,
+): FilingFingerprintWaivedEvent => ({
+  schema_version: version,
+  id: systemUlid(at, sequence),
+  recorded_at: at.toISOString(),
+  type: "filing_fingerprint_waived",
+  filing_id: check.filing_id,
+  reason: check.reason === "unreadable" ? "unreadable" : "digest",
+  declared_schema_version: check.declared_schema_version,
+  declared_lines: check.declared_lines,
+});
 
 export const archiveNameFor = (date: CivilDate, version: number, attempt = 1): string =>
   `ledger-${date}-v${version}${attempt === 1 ? "" : `-${attempt}`}.jsonl`;
@@ -98,12 +152,19 @@ export const planCompact = async ({ store, clock }: CompactDeps): Promise<Compac
     targetVersion,
     outdated,
     archiveName: archiveNameFor(todayInMadrid(clock), lowest),
+    unverified: checkFilingFingerprints(lines, events, store.schema)
+      .filter((check) => check.reason !== undefined)
+      .map((check) => ({
+        filing_id: check.filing_id,
+        reason: check.reason as NonNullable<FingerprintCheck["reason"]>,
+      })),
   };
 };
 
 export const compactLedger = async (
-  { store }: CompactDeps,
+  { store, clock }: CompactDeps,
   plan: CompactPlan,
+  options: CompactOptions = {},
 ): Promise<CompactResult> => {
   const { events, etag, lines } = await store.load();
   if (etag !== plan.etag) {
@@ -125,13 +186,35 @@ export const compactLedger = async (
   const broken = checkFilingFingerprints(lines, events, store.schema).filter(
     (check) => check.reason !== undefined,
   );
-  if (broken.length > 0) {
-    throw new CompactRejectedError("filing_fingerprint_mismatch", {
-      affected: broken.map((check) => ({ id: check.filing_id, reason: check.reason })),
-    });
+  // **The way out, and it has to be asked for by name** (ADR-0025). Refusing is
+  // still what happens by default; what the user may say is "I accept that the
+  // fingerprint of **this** filing cannot be verified", one at a time, staying
+  // protected on every other. A blanket force would give up the whole
+  // guarantee to fix one line.
+  const accepted = new Set(options.acceptUnverified ?? []);
+  const waived = broken.filter((check) => accepted.has(check.filing_id));
+  const refused = broken.filter((check) => !accepted.has(check.filing_id));
+  if (refused.length > 0) {
+    // Which of the two, because **only one of them accuses anybody of
+    // anything**. Two calls with the code written as a literal and never one
+    // call with a ternary: the anti-drift test of the messages scans the
+    // sources for `new CompactRejectedError("<code>"`, so a ternary hides
+    // **both** codes from it and the translations that exist are reported as
+    // dead entries (measured twice, feature 011).
+    const affected = refused.map((check) => ({ id: check.filing_id, reason: check.reason }));
+    if (refused.every((check) => check.reason === "unreadable")) {
+      throw new CompactRejectedError("filing_fingerprint_unreadable", { affected });
+    }
+    throw new CompactRejectedError("filing_fingerprint_mismatch", { affected });
   }
-  const sealed = resealFilings(events, plan.targetVersion);
-  const before = snapshotOf(projectLedger(events, { collectErrors: true }));
+  // The waiver travels **inside the same list** handed to `replace`, never on
+  // its own: the waiver and the rewrite are all or nothing. A waiver without
+  // its compaction would state a fact that did not happen, and an append-only
+  // ledger could not take it back.
+  const at = clock.now();
+  const waivers = waived.map((check, index) => waiverEvent(check, plan.targetVersion, at, index));
+  const sealed = [...resealFilings(events, plan.targetVersion), ...waivers];
+  const before = snapshotOf(projectLedger([...events, ...waivers], { collectErrors: true }));
   const rewritten = sealed.map(encodeLine).map((line) => decodeLine(line, store.schema).event);
   const after = snapshotOf(projectLedger(rewritten, { collectErrors: true }));
   const keys = snapshotDiff(before, after);

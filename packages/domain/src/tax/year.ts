@@ -921,6 +921,20 @@ export const taxYearWithChain = (
   const settings = settingsFromCode(state);
   const stakes = criterionStakes(core, events, year, options);
   const notes = notesOf(core, year, settings.from_code, inKind, ddi.notes);
+  // **A cause that cannot be sustained is not attributed in silence**
+  // (ADR-0024, prompt 011 decision (e)). The comparison already omitted the
+  // four causes when the prefix could not be trusted; omitting is not warning,
+  // and this is the datum with a code that says so.
+  if (filing?.unverified_prefix !== undefined) {
+    notes.push(
+      note(
+        "tax_filing_prefix_unverified",
+        filing.filing_id,
+        "the prefix of the ledger this filing was computed on is not verified, so the difference is not split into its causes",
+        { reason: filing.unverified_prefix },
+      ),
+    );
+  }
   const diff = settingsDiff(core, events, year, options);
   const report: TaxYearReport = {
     year,

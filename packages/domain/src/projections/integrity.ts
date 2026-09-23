@@ -91,6 +91,19 @@ export const integrity = (state: LedgerState): IntegrityFinding[] => {
       });
     }
   }
+  // **An explicit way out records the fact; it does not erase it** (ADR-0025).
+  // It never expires and never hides: without it, after `resealFilings` had
+  // written the fingerprints again over the rewritten prefix, nothing in the
+  // file would say that one of them was never checked — and the way out would
+  // have become a way of cleaning the record.
+  for (const waiver of state.fingerprintWaivers.values()) {
+    findings.push({
+      severity: "warning",
+      code: "filing_fingerprint_waived",
+      message: `the fingerprint of filing ${waiver.filing_id} was never verified (${waiver.reason}) and you accepted it on ${waiver.accepted_on}`,
+      event_ids: [waiver.waiver_id, waiver.filing_id],
+    });
+  }
   for (const { event, error } of state.invalid) {
     findings.push({
       severity: "error",

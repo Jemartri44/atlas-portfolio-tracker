@@ -156,6 +156,11 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   // --- Tax report (feature 009) --------------------------------------------
   tax_quota_not_computed: () =>
     "Esto es la base del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en tus datos.",
+  // **Una causa que no se puede sostener no se reparte en silencio**
+  // (ADR-0024). Omitir las causas es lo que el código ya hacía; decir por qué
+  // es lo que no hacía.
+  tax_filing_prefix_unverified: (d) =>
+    `La huella de la declaración presentada no cubre los movimientos que tiene delante${d.reason === "waived" ? " y la diste por no verificable" : ""}: la diferencia con lo declarado no se reparte en sus cuatro causas.`,
   tax_double_taxation_partial: () =>
     "Doble imposición: solo se calcula el primer límite, el del convenio. El segundo exige la declaración entera, y lo que no se deduce se pierde.",
   // The country is the code the ledger keeps (US, IE): `num` leaves it as it is.

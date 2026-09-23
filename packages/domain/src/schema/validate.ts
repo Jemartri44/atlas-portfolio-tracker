@@ -168,6 +168,9 @@ const PER_ACCOUNT_RULES: Partial<Record<EffectOp, Rules>> = {
   grant: { account_id: req("string"), quantity: req("positive_decimal") },
 };
 
+/** Why a fingerprint could not be verified (ADR-0025): never the two under one word. */
+const WAIVER_REASONS = ["digest", "unreadable"] as const;
+
 const RULES: Record<SupportedEventType, Rules> = {
   account_created: ACCOUNT,
   account_updated: ACCOUNT,
@@ -348,6 +351,13 @@ const RULES: Record<SupportedEventType, Rules> = {
     ledger_fingerprint: req("object"),
     notes: opt("string"),
     fingerprint: req("string"),
+  },
+  filing_fingerprint_waived: {
+    filing_id: req("ulid"),
+    reason: oneOf(WAIVER_REASONS),
+    declared_schema_version: req("positive_integer"),
+    declared_lines: req("non_negative_integer"),
+    notes: opt("string"),
   },
   reversal: { reverses_id: req("ulid"), reason: req("string") },
 };

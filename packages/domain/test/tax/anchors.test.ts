@@ -71,6 +71,42 @@ describe("the anchors of what was filed", () => {
     ]);
   });
 
+  /**
+   * **A cause that cannot be sustained is not attributed in silence**
+   * (ADR-0024, ADR-0025). The four causes of the comparison include "the
+   * engine computes differently than it did then", and that one only holds if
+   * everything else is equal — which can only be said of a **verified**
+   * prefix. Omitting the causes is what the code already did; saying why is
+   * what it did not.
+   */
+  it("warns as a note of the report when the prefix it read is not verified", () => {
+    const b = taxBuilder();
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    sell(b, "stock_s", "2027-06-01", "10", "120");
+    const filing = b.filed({
+      tax_year: 2027,
+      filed_at: "2028-06-18",
+      declared: { savings_base_eur: "200", pending_losses: [], deferred_losses_eur: "0" },
+    });
+    // The user accepted that this fingerprint could never be verified, so that
+    // the ledger could be compacted at all.
+    b.raw({
+      ...b.nextEnvelope("filing_fingerprint_waived"),
+      type: "filing_fingerprint_waived",
+      filing_id: filing.id,
+      reason: "digest",
+      declared_schema_version: 1,
+      declared_lines: 9,
+    } as never);
+    const report = taxYear(b.build(), 2027, { today: TODAY });
+    expect(report.filing?.unverified_prefix).toBe("waived");
+    expect(report.filing?.fingerprint_ok).toBe(false);
+    expect(report.filing?.figures.every((figure) => figure.causes === undefined)).toBe(true);
+    const note = report.notes.find((entry) => entry.code === "tax_filing_prefix_unverified");
+    expect(note?.details.reason).toBe("waived");
+    expect(note?.event_id).toBe(filing.id);
+  });
+
   it("is an empty list, not a missing field, when nothing was filed", () => {
     const b = taxBuilder();
     buy(b, "stock_s", "2027-01-11", "10", "100");

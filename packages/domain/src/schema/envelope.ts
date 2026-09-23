@@ -31,6 +31,7 @@ export const SUPPORTED_EVENT_TYPES = [
   "thesis_opened",
   "thesis_closed",
   "tax_return_filed",
+  "filing_fingerprint_waived",
   "reversal",
 ] as const;
 

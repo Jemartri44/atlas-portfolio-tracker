@@ -19,7 +19,7 @@ import type {
   ValuationEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import type { Filing } from "./filings.js";
+import type { Filing, FingerprintWaiver } from "./filings.js";
 import type { KnownFxRate } from "./fx-rates.js";
 import type { Acquisition } from "./wash-sale.js";
 
@@ -324,6 +324,14 @@ export interface LedgerState {
   theses: Map<string, Thesis>;
   /** Filed returns by event id, in file order, with their chain resolved (ADR-0020). */
   filings: Map<Ulid, Filing>;
+  /**
+   * Fingerprints of filings the user accepted as **unverifiable** so that the
+   * ledger could be compacted (ADR-0025), by the id of the waiver. It is kept
+   * in the state so that `integrity` —and with it `atlas check` and the
+   * verification screen— can say it **always**, without re-reading the file:
+   * an explicit way out records the fact, it does not erase it.
+   */
+  fingerprintWaivers: Map<Ulid, FingerprintWaiver>;
   /** reversed event id → reversal id. */
   reversed: Map<Ulid, Ulid>;
   warnings: Warning[];
@@ -363,6 +371,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   transferRequests: new Map(),
   theses: new Map(),
   filings: new Map(),
+  fingerprintWaivers: new Map(),
   reversed: new Map(),
   warnings: [],
   invalid: [],

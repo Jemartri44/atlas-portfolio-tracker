@@ -240,7 +240,11 @@ export const describeError = (error: DomainError): string => {
     // huella declara. Acusar de manipular el libro a quien tiene esto, y
     // mandarle restaurar una copia, sería falso dos veces.
     case "filing_fingerprint_unreadable":
-      return `Los movimientos anteriores a una declaración presentada no se pueden leer en el formato que dice su huella: no se puede comprobar. No es una edición y no hay copia que restaurar.`;
+      return `Los movimientos anteriores a una declaración presentada no se pueden leer en el formato que dice su huella: no se puede comprobar. No es una edición y no hay copia que restaurar; para poder compactar, acéptalo a propósito con «atlas compact --accept-unverified <id>», y quedará registrado.`;
+    case "tax_filing_prefix_unverified":
+      return `La huella de la declaración presentada no cubre los movimientos que tiene delante${d.reason === "waived" ? " y la diste por no verificable" : ""}: la diferencia con lo declarado no se reparte en sus cuatro causas, porque una de ellas solo se sostiene si todo lo demás está comprobado.`;
+    case "filing_fingerprint_waived":
+      return `La huella de una declaración presentada nunca llegó a comprobarse y lo diste por bueno para poder compactar: queda registrado, con su motivo y su fecha.`;
     case "duplicate_id":
       return "Dos líneas del libro tienen el mismo identificador: el fichero está corrupto.";
     case "invalid_line":

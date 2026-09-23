@@ -260,6 +260,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Una declaración presentada dice que se calculó sobre otros movimientos de los que tiene delante en el archivo.",
   filing_fingerprint_mismatch: () =>
     "Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó.",
+  filing_fingerprint_unreadable: () =>
+    "Los movimientos anteriores a una declaración presentada no se pueden leer en el formato que dice su huella: no se puede comprobar.",
+  filing_fingerprint_waived: () =>
+    "La huella de una declaración presentada nunca llegó a comprobarse, y tú lo diste por bueno para poder compactar.",
   // --- Store and schema --------------------------------------------------
   conflict: () =>
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",

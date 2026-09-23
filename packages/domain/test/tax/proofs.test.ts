@@ -345,16 +345,26 @@ describe("proof 1 bis: the return reads no price, with the 720 inside", () => {
    */
   const withoutFileFacts = (report: Record<string, unknown>): string => {
     const filing = report.filing as
-      | { fingerprint_ok: boolean; figures: Record<string, unknown>[] }
+      | {
+          fingerprint_ok: boolean;
+          unverified_prefix?: string;
+          figures: Record<string, unknown>[];
+        }
       | undefined;
     return JSON.stringify({
       ...report,
+      // And the note that says **why** the prefix is not verified, which is
+      // the same file fact seen from the report (feature 011, block 8).
+      notes: (report.notes as { code: string }[]).filter(
+        (entry) => entry.code !== "tax_filing_prefix_unverified",
+      ),
       ...(filing === undefined
         ? {}
         : {
             filing: {
               ...filing,
               fingerprint_ok: "about the file, not about the figures",
+              unverified_prefix: "about the file, not about the figures",
               figures: filing.figures.map(({ causes: _causes, ...rest }) => rest),
             },
           }),

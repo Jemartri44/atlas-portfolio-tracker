@@ -77,6 +77,20 @@ export interface FilingComparison {
    * `atlas check --deep` and the verification screen do.
    */
   fingerprint_ok: boolean;
+  /**
+   * Why the prefix this comparison reads **cannot be trusted**, when it
+   * cannot. `line_count` is the fingerprint naming a different number of lines
+   * than precede the filing; `waived` is the user having accepted that it
+   * could never be verified so the ledger could be compacted (ADR-0025).
+   *
+   * It matters because of what the four causes claim. One of them —"the engine
+   * computes differently than it did then"— only holds if **everything else is
+   * equal**, and that can only be said of a verified prefix. Omitting the
+   * causes is what the code already did; **saying why** is what it did not
+   * (ADR-0024: the caveat is a datum of the report, not a sentence an
+   * interface decides to add).
+   */
+  unverified_prefix?: "line_count" | "waived";
   figures: FilingFigure[];
 }
 
@@ -148,7 +162,13 @@ export const filingComparison = (
   const current = chainFigures(now, year);
   // The prefix the fingerprint names. Only usable when the count still matches
   // where the filing sits: otherwise it points at other lines entirely.
-  const fingerprintOk = filing.fingerprint.lines === filing.position;
+  const countOk = filing.fingerprint.lines === filing.position;
+  // And a fingerprint the user accepted as unverifiable never held either: the
+  // way out records the fact, so everything downstream keeps knowing it.
+  const waived = [...state.fingerprintWaivers.values()].some(
+    (waiver) => waiver.filing_id === filing.event_id,
+  );
+  const fingerprintOk = countOk && !waived;
   const prefix = events.slice(0, filing.fingerprint.lines);
   // Both readings of the prefix are taken **on the day the figures were
   // computed**, so the only thing between them is the configuration. Reading
@@ -187,6 +207,8 @@ export const filingComparison = (
     receipt_reference: filing.receipt_reference,
     chain: chainOf(state, filing),
     fingerprint_ok: fingerprintOk,
+    ...(countOk ? {} : { unverified_prefix: "line_count" as const }),
+    ...(countOk && waived ? { unverified_prefix: "waived" as const } : {}),
     figures,
   };
 };

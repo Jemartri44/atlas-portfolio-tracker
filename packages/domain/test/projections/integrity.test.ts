@@ -50,3 +50,42 @@ describe("integrity: dangling references", () => {
     expect(findings[0]?.event_ids).toEqual([correction.id]);
   });
 });
+
+/**
+ * **An explicit way out records the fact; it does not erase it** (ADR-0025).
+ *
+ * After `resealFilings` has written the fingerprints again over the rewritten
+ * prefix, nothing in the file would say that one of them was never checked.
+ * This line is the only trace left, so the verification says it **always** —
+ * without expiring and without hiding— and with the words of the case: not
+ * verifiable, and you gave it for good on such a day. If the warning went
+ * away, the way out would have become a way of cleaning the record.
+ */
+describe("a fingerprint the user accepted as unverifiable", () => {
+  it("is said by the verification for ever, with its reason and its date", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.recordedAt("2030-02-11");
+    const waiver = b.raw({
+      ...b.nextEnvelope("filing_fingerprint_waived"),
+      type: "filing_fingerprint_waived",
+      filing_id: "01ARYZ6S41TSV4RRFFQ69G5FAR",
+      reason: "unreadable",
+      declared_schema_version: 1,
+      declared_lines: 7,
+    } as never);
+    const findings = integrity(projectLedger(b.build(), { collectErrors: true }));
+    const waived = findings.find((finding) => finding.code === "filing_fingerprint_waived");
+    expect(waived?.severity).toBe("warning");
+    expect(waived?.message).toContain("unreadable");
+    expect(waived?.message).toContain("2030-02-11");
+    expect(waived?.event_ids).toEqual([waiver.id, "01ARYZ6S41TSV4RRFFQ69G5FAR"]);
+  });
+
+  it("says nothing when there is none, which is every ledger today", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const findings = integrity(projectLedger(b.build(), { collectErrors: true }));
+    expect(findings.map((finding) => finding.code)).not.toContain("filing_fingerprint_waived");
+  });
+});

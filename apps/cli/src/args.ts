@@ -65,7 +65,13 @@ const OPPOSITES: Readonly<Record<string, string>> = {
  * of `atlas filed` is repeatable because a return declares a dozen figures and
  * the user corrects them one at a time (prompt 010, block 5).
  */
-export const REPEATABLE_FLAGS: ReadonlySet<string> = new Set(["set"]);
+export const REPEATABLE_FLAGS: ReadonlySet<string> = new Set([
+  "set",
+  // One filing at a time (ADR-0025): accepting that the fingerprint of **this**
+  // one cannot be verified leaves every other one protected, which a blanket
+  // `--force` would not.
+  "accept-unverified",
+]);
 
 /** Words that read as a yes or a no after a flag that takes none. */
 const YES_OR_NO = new Set(["true", "false", "sí", "si", "no", "0", "1"]);

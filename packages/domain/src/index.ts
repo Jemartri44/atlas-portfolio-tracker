@@ -177,10 +177,12 @@ export * from "./synth/index.js";
 export {
   archiveNameFor,
   type CompactDeps,
+  type CompactOptions,
   type CompactPlan,
   type CompactResult,
   compactLedger,
   planCompact,
+  type UnverifiedFiling,
   type VersionCount,
 } from "./usecases/compact.js";
 export type { UseCaseDeps } from "./usecases/deps.js";

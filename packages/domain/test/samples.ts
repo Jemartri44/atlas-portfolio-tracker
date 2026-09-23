@@ -31,6 +31,7 @@ export const ID = {
   thesisOpened: "01ARYZ6S41TSV4RRFFQ69G5FAN",
   thesisClosed: "01ARYZ6S41TSV4RRFFQ69G5FAP",
   taxReturnFiled: "01ARYZ6S41TSV4RRFFQ69G5FAR",
+  filingWaived: "01ARYZ6S41TSV4RRFFQ69G5FAT",
 } as const;
 
 export const envelope = (id: string, type: LedgerEvent["type"]): Envelope => ({
@@ -350,6 +351,14 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
       sha256: "0000000000000000000000000000000000000000000000000000000000000000",
     },
     fingerprint: "sha256:renta-2025",
+  },
+  filing_fingerprint_waived: {
+    ...envelope(ID.filingWaived, "filing_fingerprint_waived"),
+    type: "filing_fingerprint_waived",
+    filing_id: ID.taxReturnFiled,
+    reason: "unreadable",
+    declared_schema_version: 1,
+    declared_lines: 12,
   },
   reversal: {
     ...envelope(ID.reversal, "reversal"),

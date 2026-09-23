@@ -8,6 +8,7 @@
 // not be computed on a state that already contains the future.
 
 import type { CivilDate } from "../dates/civil-date.js";
+import { madridDateOf } from "../dates/madrid.js";
 import { DomainError, ProjectionError, UnsupportedEventError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { isReservedEventType } from "../schema/envelope.js";
@@ -16,6 +17,7 @@ import type {
   AccountUpdatedEvent,
   AssetCreatedEvent,
   AssetUpdatedEvent,
+  FilingFingerprintWaivedEvent,
   LedgerEvent,
   ReversalEvent,
   SettingsChangedEvent,
@@ -97,7 +99,12 @@ const isFiling = (entry: Positioned): entry is Positioned<TaxReturnFiledEvent> =
  */
 export type OperationEvent = Exclude<
   SupportedEvent,
-  CatalogueEvent | ReversalEvent | ThesisOpenedEvent | ThesisClosedEvent | TaxReturnFiledEvent
+  | CatalogueEvent
+  | ReversalEvent
+  | ThesisOpenedEvent
+  | ThesisClosedEvent
+  | TaxReturnFiledEvent
+  | FilingFingerprintWaivedEvent
 >;
 
 interface Positioned<E extends SupportedEvent = SupportedEvent> {
@@ -125,6 +132,9 @@ export const isOperationEvent = (event: LedgerEvent): event is OperationEvent =>
   !CATALOGUE_TYPES.has(event.type) &&
   event.type !== "reversal" &&
   event.type !== "tax_return_filed" &&
+  // An administrative document too, like a filing: no business date, and the
+  // cut of `asOf` does not reach it (ADR-0025, ADR-0016).
+  event.type !== "filing_fingerprint_waived" &&
   !THESIS_TYPES.has(event.type) &&
   !isReservedEventType(event.type);
 
@@ -404,6 +414,22 @@ export const projectLedger = (
   // each query filters it by its own `filed_at` (ADR-0016).
   for (const entry of active.filter(isFiling)) {
     guarded(entry.event, () => applyTaxReturnFiled(state, entry.event, entry.position));
+  }
+
+  // And the waivers of a fingerprint nobody could verify, which are documents
+  // about a filing and are read in the same pass (ADR-0025).
+  for (const entry of active) {
+    if (entry.event.type === "filing_fingerprint_waived") {
+      const waiver = entry.event;
+      state.fingerprintWaivers.set(waiver.id, {
+        waiver_id: waiver.id,
+        filing_id: waiver.filing_id,
+        reason: waiver.reason,
+        declared_schema_version: waiver.declared_schema_version,
+        declared_lines: waiver.declared_lines,
+        accepted_on: madridDateOf(waiver.recorded_at),
+      });
+    }
   }
 
   // Pass B: operations and tracking, in chronological order. With `asOf`, what
