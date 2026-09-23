@@ -26,10 +26,16 @@ import type { Money } from "../money/money.js";
 import type { Filing } from "../projections/filings.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState } from "../projections/state.js";
-import type { FiledRentaFigures, FilingModel, LedgerEvent } from "../schema/events.js";
-import type { Settings } from "../settings/settings.js";
+import {
+  ASSET_TYPES,
+  type FiledRentaFigures,
+  type FilingModel,
+  type LedgerEvent,
+  type SettingsChangedEvent,
+} from "../schema/events.js";
+import { DEFAULT_FISCAL_DATE_RULE, type Settings } from "../settings/settings.js";
 import { chainFigures, isInvalid, isUnsupported, taxChain, tryReading } from "../tax/chain.js";
-import { type ClosedYear, closedYearsTouched } from "./touched.js";
+import { type ClosedYear, closedYearsTouched, earliestReached } from "./touched.js";
 
 /** One reading of the ledger: the events, and the settings to read them with. */
 export interface Reading {
@@ -119,6 +125,48 @@ const figuresOf = (
   return new Map([...chainFigures(chain, year)].map(([figure, amount]) => [figure, text(amount)]));
 };
 
+/**
+ * Whether a write can move the 720 or the 721 of `year`: it reaches a business
+ * date on or before the close of that year, or it changes the rule that decides
+ * those dates.
+ */
+const reachesInformative = (
+  year: number,
+  earliest: CivilDate | undefined,
+  ruleMoved: boolean,
+): boolean => {
+  if (ruleMoved) {
+    return true;
+  }
+  return earliest !== undefined && earliest <= `${year}-12-31`;
+};
+
+/** The settings a reading is read with: its override, or the last recorded. */
+const settingsOf = (reading: Reading): Settings | undefined => {
+  if (reading.settings !== undefined) {
+    return reading.settings;
+  }
+  const recorded = reading.events.filter((event) => event.type === "settings_changed");
+  return (recorded[recorded.length - 1] as SettingsChangedEvent | undefined)?.settings;
+};
+
+/**
+ * Whether the two readings date operations differently. It is the one event
+ * with no business date that **can** move an informative return: a change of
+ * `fiscal_date_rule` moves operations across 31 December, and the holdings on
+ * that day with them. Nothing else of the settings moves a figure that was
+ * filed —a threshold changes a verdict, not a value—.
+ */
+const fiscalDateRuleChanged = (before: Reading, after: Reading): boolean => {
+  const was = settingsOf(before)?.fiscal_date_rule;
+  const is = settingsOf(after)?.fiscal_date_rule;
+  return ASSET_TYPES.some(
+    (type) =>
+      (was?.[type] ?? DEFAULT_FISCAL_DATE_RULE[type]) !==
+      (is?.[type] ?? DEFAULT_FISCAL_DATE_RULE[type]),
+  );
+};
+
 /** Whether a reading gave figures at all. */
 const computed = (
   reading: Map<string, string> | ClosedYearNotCompared,
@@ -170,6 +218,10 @@ export const closedYearImpact = (
   if (closed.length === 0) {
     return [];
   }
+  // What an informative return can be moved by: something dated on or before
+  // the close of its year, or a change of the rule that decides those dates.
+  const earliest = earliestReached(before.events, after.events, state);
+  const ruleMoved = fiscalDateRuleChanged(before, after);
   const impacts: ClosedYearImpact[] = [];
   for (const entry of closed) {
     const byDate = entry.by_date;
@@ -207,6 +259,15 @@ export const closedYearImpact = (
     // holds the domain at 100 % of branches turned a green commit red. The
     // behaviour is identical; what changes is that each branch is its own
     // statement and cannot be attributed to the other.
+    // **An informative return is warned about only when the write can reach
+    // it** (review of feature 011, blocking 3). Its figures are never compared
+    // —they are market values that live in another module— so without this
+    // gate the third outcome fired on every write, a purchase of two years
+    // later or a new asset included, and a warning that fires always is learnt
+    // to be ignored, and with it the one of the Renta.
+    if (entry.model !== "renta" && !reachesInformative(entry.year, earliest, ruleMoved)) {
+      continue;
+    }
     const impact = (): ClosedYearImpact => ({
       model: entry.model,
       year: entry.year,

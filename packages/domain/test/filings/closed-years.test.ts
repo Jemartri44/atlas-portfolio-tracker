@@ -214,6 +214,87 @@ describe("what a change does to a year already filed", () => {
     expect(impact?.comparison).toEqual({ status: "not_compared", reason: "by_design" });
   });
 
+  /**
+   * **When a write can affect an informative return, and only then** (review of
+   * feature 011, blocking 3). With a 720 of 2027 on record, a purchase of 2029
+   * or a plain `asset_created` said «Puede que toque una complementaria»: a
+   * warning that fires always is learnt to be ignored, and with it the one of
+   * the Renta, which is the one that matters.
+   *
+   * The horizon is derived from how the 720 and the 721 are really valued:
+   * the holdings and the cash **on 31 December**, and the daily balances of
+   * the fourth quarter, all of them projected with `asOf` = 31/12, which cuts by
+   * **business date**. So what can move them is what has a business date **on
+   * or before the close** of that year — not only inside it: a purchase of 2025
+   * still in the portfolio moves the 720 of 2027.
+   */
+  describe("an informative return, and the writes that can reach it", () => {
+    const with720 = () => {
+      const b = taxBuilder();
+      buy(b, "stock_s", "2025-03-10", "10", "100");
+      b.filed({ tax_year: 2027, model: "720", filed_at: "2028-03-20" });
+      return b;
+    };
+
+    it("stays silent for an operation dated after the close of its year", () => {
+      const b = with720();
+      const before = b.build();
+      buy(b, "stock_t", "2029-02-05", "10", "100");
+      expect(closedYearImpact({ events: before }, { events: b.build() }, TODAY)).toEqual([]);
+    });
+
+    it("stays silent for an event with no business date, like a new asset", () => {
+      const b = with720();
+      const before = b.build();
+      b.asset("fund_new");
+      expect(closedYearImpact({ events: before }, { events: b.build() }, TODAY)).toEqual([]);
+    });
+
+    it("stays silent for a tracking event, which moves neither holdings nor cash", () => {
+      const b = with720();
+      const before = b.build();
+      b.orderPlaced({ account_id: "acc_a", asset_id: "stock_s", requested_date: "2026-05-04" });
+      expect(closedYearImpact({ events: before }, { events: b.build() }, TODAY)).toEqual([]);
+    });
+
+    it("warns for an operation dated before the year, which is still in the holdings", () => {
+      const b = with720();
+      const before = b.build();
+      buy(b, "stock_t", "2026-06-01", "10", "100");
+      const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
+      expect(impact?.model).toBe("720");
+      expect(impact?.by_date).toBe(false);
+      expect(impact?.comparison).toEqual({ status: "not_compared", reason: "by_design" });
+    });
+
+    it("warns for the reversal of something dated on or before the close", () => {
+      const b = with720();
+      const bought = buy(b, "stock_t", "2026-06-01", "10", "100");
+      const before = b.build();
+      b.reversal(bought.id, "duplicada");
+      expect(closedYearImpact({ events: before }, { events: b.build() }, TODAY)).toHaveLength(1);
+    });
+
+    /**
+     * The one event with no business date that **can** move them: a change of
+     * the fiscal date rule moves operations across 31 December, and the
+     * holdings on that day with them. A change of anything else —a threshold,
+     * a target weight— moves no figure of a return that was filed.
+     */
+    it("warns for a change of the fiscal date rule, and not for any other setting", () => {
+      const events = with720().build();
+      const byValueDate = {
+        ...DEFAULT_SETTINGS,
+        fiscal_date_rule: { ...DEFAULT_SETTINGS.fiscal_date_rule, stock: "value_date" as const },
+      };
+      expect(closedYearImpact({ events }, { events, settings: byValueDate }, TODAY)).toHaveLength(
+        1,
+      );
+      const otherThreshold = { ...DEFAULT_SETTINGS, deviation_threshold_pp: "9" };
+      expect(closedYearImpact({ events }, { events, settings: otherThreshold }, TODAY)).toEqual([]);
+    });
+  });
+
   it("says nothing of an event with no business date, like a change of the catalogue", () => {
     const b = taxBuilder();
     buy(b, "stock_s", "2027-01-11", "10", "100");
