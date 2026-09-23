@@ -6,7 +6,7 @@
 import { BrowserLedgerBlob } from "@atlas/adapters/browser";
 import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
-import { Icon, Notice, Section, Switch } from "../../components/index.js";
+import { Icon, type IconName, Notice, Section, Switch } from "../../components/index.js";
 import { formatInstantDate } from "../../format/date.js";
 import { countOf } from "../../format/number.js";
 import { changeLedger } from "../../ledger/actions.js";
@@ -28,6 +28,27 @@ const Fact = (props: { label: string; children: JSX.Element }): JSX.Element => (
     <dt>{props.label}</dt>
     <dd>{props.children}</dd>
   </div>
+);
+
+/** A row of this screen that leads somewhere: an icon, what it is and one line. */
+const LinkRow = (props: {
+  to: string;
+  icon: IconName;
+  title: string;
+  children: JSX.Element;
+}): JSX.Element => (
+  <li>
+    <A href={props.to} class="row has-lead">
+      <span class="lead" aria-hidden="true">
+        <Icon name={props.icon} />
+      </span>
+      <span class="main">
+        <span class="title">{props.title}</span>
+        <span class="sub">{props.children}</span>
+      </span>
+      <Icon name="chevright" class="icon-sm chev" />
+    </A>
+  </li>
 );
 
 export default function AjustesRoute(): JSX.Element {
@@ -200,36 +221,18 @@ export default function AjustesRoute(): JSX.Element {
 
           <Section title="Configuración y verificación">
             <ul class="rows">
-              <li>
-                <A href="/ajustes/configuracion" class="row has-lead">
-                  <span class="lead" aria-hidden="true">
-                    <Icon name="settings" />
-                  </span>
-                  <span class="main">
-                    <span class="title">Configuración</span>
-                    <span class="sub">
-                      Umbrales, pesos objetivo, porcentaje del cubo, fecha fiscal y ventana de
-                      recompra.
-                    </span>
-                  </span>
-                  <Icon name="chevright" class="icon-sm chev" />
-                </A>
-              </li>
-              <li>
-                <A href="/ajustes/verificacion" class="row has-lead">
-                  <span class="lead" aria-hidden="true">
-                    <Icon name="shield" />
-                  </span>
-                  <span class="main">
-                    <span class="title">Verificación</span>
-                    <span class="sub">
-                      Comprueba que tus datos están íntegros: posiciones, lotes, huellas y
-                      referencias.
-                    </span>
-                  </span>
-                  <Icon name="chevright" class="icon-sm chev" />
-                </A>
-              </li>
+              {/* The fiscal screen has no place in the bottom bar (P1 of the
+                  prompt): it is reached from the summary and from here. */}
+              <LinkRow to="/fiscal" icon="catalogue" title="Declaración">
+                La base del ahorro por ejercicio, las casillas del Modelo 100, el Modelo 720 y el
+                721, y lo que ya has presentado.
+              </LinkRow>
+              <LinkRow to="/ajustes/configuracion" icon="settings" title="Configuración">
+                Umbrales, pesos objetivo, porcentaje del cubo, fecha fiscal y ventana de recompra.
+              </LinkRow>
+              <LinkRow to="/ajustes/verificacion" icon="shield" title="Verificación">
+                Comprueba que tus datos están íntegros: posiciones, lotes, huellas y referencias.
+              </LinkRow>
             </ul>
           </Section>
         </div>

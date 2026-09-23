@@ -161,3 +161,49 @@ describe("priceAt: the single gate", () => {
     expect(priceAt(state, "ast_world", "2027-12-31", DEFAULT_SETTINGS)).toBeUndefined();
   });
 });
+
+describe("the date of the rate, which is not the date of the price", () => {
+  it("carries the fx_rate_date of the valuation, and not its date", () => {
+    // 31 December 2028 falls on a Sunday, so the ECB rate a valuation of that
+    // day applies is the one of Friday the 29th. The gate used to date the
+    // rate with the day of the price, and the Modelo 720 has to be able to say
+    // which rate was applied (feature 010, block 3).
+    const b = withPrices();
+    b.valuation({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      date: "2028-12-31",
+      unit_value: "200",
+      currency: "USD",
+      fx_rate: "1.1",
+      fx_rate_date: "2028-12-29",
+    });
+    const price = priceAt(project(b), "ast_gold", "2028-12-31", DEFAULT_SETTINGS);
+    expect(price?.date).toBe("2028-12-31");
+    expect(price?.fx_rate_date).toBe("2028-12-29");
+    expect(price?.unit_value_eur.amount.toString()).toBe("181.8181818182");
+  });
+
+  it("dates an external quote that carries no rate date with the quote itself", () => {
+    // Phase 4 will fill this from an adapter; nothing passes it today, and a
+    // source that gives a quote without the day of its rate has said all it
+    // knows: the day of the quote is the only honest answer.
+    const external: ExternalPrices = {
+      at: () => ({
+        date: "2028-12-31",
+        unit_value: Decimal.parse("50"),
+        currency: "USD",
+        fx_rate: Decimal.parse("1.25"),
+      }),
+    };
+    const price = priceAt(
+      project(withPrices()),
+      "ast_spec",
+      "2028-12-31",
+      DEFAULT_SETTINGS,
+      external,
+    );
+    expect(price?.origin).toBe("external");
+    expect(price?.fx_rate_date).toBe("2028-12-31");
+  });
+});

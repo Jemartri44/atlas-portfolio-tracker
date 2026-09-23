@@ -10,13 +10,13 @@ import {
   type Money,
   mergeSettings,
   movedFiscalYears,
-  movedTaxYears,
   type Settings,
   settingsAt,
   silencedWarnings,
   todayInMadrid,
   yearOf,
 } from "@atlas/domain";
+import { closedYearImpact, movedTaxYears } from "@atlas/domain/fiscal";
 import {
   assertKnownFlags,
   booleanFlag,
@@ -26,6 +26,7 @@ import {
   UsageError,
 } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
+import { closedYearLines } from "../output/closed-years.js";
 import { table } from "../output/table.js";
 import { confirm, confirmAndRecord, fieldOf, loadForQuery, renderQuery } from "./shared.js";
 
@@ -376,7 +377,22 @@ const confirmMovedYears = async (
       );
     }
   }
-  ctx.io.out("Puede afectar a una declaración ya presentada.");
+  // "A past year" and "a year you filed" are not the same thing, and only the
+  // second one may need a supplementary return (prompt 010, FR-018). The impact
+  // names the filing and says which declared figure moves.
+  const declared = closedYearLines(
+    closedYearImpact(
+      { events, settings: current },
+      { events, settings: next },
+      todayInMadrid(ctx.deps.clock),
+    ),
+  );
+  for (const line of declared) {
+    ctx.io.out(line);
+  }
+  if (declared.length === 0) {
+    ctx.io.out("Ninguno de esos ejercicios consta como declarado.");
+  }
   return confirm(ctx, "¿Continuar? [s/N] ");
 };
 

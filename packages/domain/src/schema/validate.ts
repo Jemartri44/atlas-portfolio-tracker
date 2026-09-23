@@ -23,7 +23,6 @@ import {
   FILING_CATEGORIES,
   FILING_MODELS,
   FIRST_FILING_YEAR,
-  FIRST_FILING_YEAR_721,
   type FilingCategory,
   type FilingModel,
   INCOME_BASES,
@@ -701,7 +700,7 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
     const type = "tax_return_filed";
     const model = raw.model as FilingModel;
     const year = raw.tax_year as number;
-    const first = model === "721" ? FIRST_FILING_YEAR_721 : FIRST_FILING_YEAR;
+    const first = FIRST_FILING_YEAR[model];
     if (year < first) {
       throw invalid("filing_year_unsupported", `${type}: a ${model} cannot be filed for ${year}`, {
         type,

@@ -25,7 +25,7 @@ import {
   transferWatch,
 } from "@atlas/domain";
 import { A } from "@solidjs/router";
-import { For, type JSX, Show } from "solid-js";
+import { For, type JSX, lazy, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
 import { Icon, Notice, Section } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
@@ -46,6 +46,13 @@ import { MovementLine } from "../movimientos/MovementLine.jsx";
 import { AttentionBlock } from "./AttentionBlock.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
 import { NetWorthBlock } from "./NetWorthBlock.jsx";
+
+/**
+ * The card that leads to the fiscal screen, loaded **after** the summary: it
+ * is the only card that asks the tax engine anything, and the engine is not on
+ * the boot path.
+ */
+const FiscalCard = lazy(() => import("./FiscalCard.jsx"));
 
 /** How many recent movements the summary shows (prompt §3.6). */
 const RECENT = 5;
@@ -142,6 +149,7 @@ export default function ResumenRoute(): JSX.Element {
                     <Icon name="chevright" class="icon-sm" />
                   </A>
                 </Section>
+                <FiscalCard events={snapshot.events} date={date} />
                 <SeriesCard
                   title="Evolución del patrimonio"
                   class="span-12"

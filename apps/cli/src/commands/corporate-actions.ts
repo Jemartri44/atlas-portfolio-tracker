@@ -33,10 +33,11 @@ import {
   UsageError,
 } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS, summarize } from "../context.js";
+import { unfiledYearsNote } from "../output/closed-years.js";
 import { previewData, renderPreview } from "../output/preview.js";
 import { keyValue } from "../output/table.js";
 import { parseAssignments } from "./catalogue.js";
-import { confirm } from "./shared.js";
+import { closedYearNotes, confirm } from "./shared.js";
 
 // `--neutrality-regime` / `--no-neutrality-regime` are common to every kind
 // rather than listed per kind: the field is on the event, not on the `kind`,
@@ -320,6 +321,12 @@ export const corporateActionCommand = async (
     ctx.io.out(renderPreview(preview));
   }
   adviseAfter(ctx, params, preview);
+  // A corporate action lands on a date of its own and rewrites lots: it moves a
+  // filed return as surely as a sale does. This path does not go through
+  // `confirmAndRecord`, so it asks for the warning itself (prompt 010, FR-018).
+  for (const line of await closedYearNotes(ctx, draft)) {
+    ctx.io.out(line);
+  }
   if (!(await confirm(ctx, "¿Registrar? [s/N] "))) {
     ctx.io.out("Cancelado.");
     return 0;
@@ -328,7 +335,10 @@ export const corporateActionCommand = async (
     confirmDuplicate: ctx.confirmDuplicate,
   });
   ctx.io.out(`Registrado ${summarize(result.event)}.`);
-  for (const line of describeWarnings(result.warnings)) {
+  for (const line of [
+    ...describeWarnings(result.warnings),
+    ...unfiledYearsNote(result.unfiledPastYears),
+  ]) {
     ctx.io.out(line);
   }
   return 0;

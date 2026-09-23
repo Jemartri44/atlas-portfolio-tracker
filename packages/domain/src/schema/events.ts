@@ -589,13 +589,24 @@ export const FILING_CATEGORIES = ["accounts", "securities", "crypto"] as const;
 export type FilingCategory = (typeof FILING_CATEGORIES)[number];
 
 /**
- * The first tax year a filing may name. 2018 is the regime of compensation the
- * engine implements (`FIRST_SUPPORTED_YEAR`), and 2023 is the first year the
- * 721 existed (Orden HFP/886/2023). A test keeps the first level with the
- * engine: the schema cannot import the tax module.
+ * The first tax year each model may be filed for, **one figure per model**,
+ * because the three have nothing to do with each other:
+ *
+ * - `renta`: 2018, which is the regime of offsetting the engine implements
+ *   (`FIRST_SUPPORTED_YEAR`). A test keeps the two level; the schema cannot
+ *   import the tax module.
+ * - `720`: **2012**, the first year it existed (Ley 7/2012 and RD 1558/2012,
+ *   filed between February and April 2013). It used to take 2018 as well, on
+ *   the argument of the offsetting regime — which has nothing to say about an
+ *   informative return: there is no reason for the ledger to refuse a 720 of
+ *   2015 that the user wants to record.
+ * - `721`: 2023, the first year of the model (Orden HFP/886/2023).
  */
-export const FIRST_FILING_YEAR = 2018;
-export const FIRST_FILING_YEAR_721 = 2023;
+export const FIRST_FILING_YEAR: Record<FilingModel, number> = {
+  renta: 2018,
+  "720": 2012,
+  "721": 2023,
+};
 
 /** A negative balance still pending, as the return declares it: by origin year and category. */
 export interface FiledPendingLoss {

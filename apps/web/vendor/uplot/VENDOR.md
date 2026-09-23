@@ -14,7 +14,7 @@
 | Size | 145.423 bytes raw; minified by Rolldown to ~50 KB, **21,6 KB gzip** in the bundle. The CSS is 1.857 bytes raw, 0,7 KB gzip |
 | License | MIT (Leon Sorokin). Full text in `LICENSE`, copied from the tarball |
 
-Why vendored and not an npm dependency: ADR-0017 and `docs/dependencies.md`. uPlot is a single dependency-free file; vendoring it makes the health of its repository irrelevant, because the code that works today is ours and will keep working in 2036. Same treatment as Pico (`vendor/pico/`) and `big.js` (ADR-0005).
+Why vendored and not an npm dependency: ADR-0017 and `docs/dependencies.md`. uPlot is a single dependency-free file; vendoring it makes the health of its repository irrelevant, because the code that works today is ours and will keep working in 2036. Same treatment as `big.js` (ADR-0005). Pico was vendored here too until ADR-0023 replaced it with our own style base.
 
 **On the size**: ADR-0017 quotes "23 KB", which is the **minified** figure it compares against Chart.js (66 KB) and ECharts (197 KB). Measured on 2026-09-18, the minified file is 49,9 KB and **21,6 KB gzip**. The two numbers are not in conflict; the unit simply was not gzip. It is the reason the bundle budget was split in two (arranque / total) in feature 007.
 
@@ -30,7 +30,7 @@ The **ESM source** (`uPlot.esm.js`), not the minified IIFE:
 
 - `src/components/chart/Chart.tsx` imports `../../../vendor/uplot/uPlot.js`; it is the **only** importer, so uPlot lands in the lazily loaded chunks of `/nucleo` and `/cubo` and never in the boot path.
 - `src/styles/index.css` imports `../../vendor/uplot/uPlot.css` after Pico and before our layers, so `src/styles/components.css` can restyle `.u-*` with our own tokens.
-- `biome.json` excludes this directory, like `vendor/pico`.
+- `biome.json` excludes this directory.
 - No remote fonts, no remote assets, no network: uPlot draws on a `<canvas>` (constitution, security).
 - The architecture test that checks every class in the markup is declared somewhere reads this stylesheet too: the `.u-*` classes uPlot writes at runtime are declared here, not by us.
 

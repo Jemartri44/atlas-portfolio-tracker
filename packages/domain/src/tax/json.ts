@@ -7,6 +7,7 @@ import { Decimal } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import { sortKeysDeep } from "../projections/snapshot.js";
+import type { TaxBoxes } from "./boxes/report.js";
 import type { TaxYearReport } from "./report.js";
 
 const isConverted = (value: Record<string, unknown>): boolean =>
@@ -39,3 +40,12 @@ const plain = (value: unknown): unknown => {
 
 export const taxReportJson = (report: TaxYearReport): Record<string, unknown> =>
   sortKeysDeep(plain(report)) as Record<string, unknown>;
+
+/**
+ * The same for the layout by box. It is what `atlas tax --boxes --json` prints
+ * and what the proof without prices compares byte for byte, so it goes through
+ * the same door: decimals as strings, keys sorted, nothing that depends on the
+ * moment of execution.
+ */
+export const taxBoxesJson = (boxes: TaxBoxes): Record<string, unknown> =>
+  sortKeysDeep(plain(boxes)) as Record<string, unknown>;

@@ -77,6 +77,15 @@ const dist = join(webRoot, "dist");
  * where it was planted; and there is no way around the cost, because if the
  * ledger is parsed at boot then its validator is in the boot by definition.
  *
+ * **Tightened to what the feature measures, as the direction asks at the close
+ * of every feature**: the whole tax output is in and the boot measures **72,8
+ * KB**, which is *lower* than the 72,3 it measured before the fiscal screen
+ * existed plus what the screen's shared code adds, and lower than the 74,0 it
+ * was allowed. The ceiling comes down to **73,5**. What is inside, gzip: the
+ * domain in one chunk without its fiscal half (37,6), Solid, the router, the
+ * shell and the first screen (25,2), and the stylesheet (9,9). Nothing of
+ * `tax/` or `informative/`, which the shape check below holds.
+ *
  * **What is watched is the shape, not the size.** The boot may carry the
  * loader and what the first screen needs, and nothing of the tax output: the
  * check below reads the source maps of the boot chunks and fails the build if
@@ -86,7 +95,7 @@ const dist = join(webRoot, "dist");
  * back **down** to what is then measured plus a small margin: it is not left
  * slack "just in case".
  */
-const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -177,8 +186,56 @@ const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
  *    seals again— and the two findings of the verification, in both
  *    interfaces. Measured **194,2 KB**, of which the boot is 71,9; the ceiling
  *    is 195,5.
+ *  - **The fiscal screen** (block 4), which brings the tax engine into the web
+ *    for the first time. Two lazily loaded chunks, measured one by one:
+ *    **20,9 KB** the engine itself —the chain of years, the offsetting, the
+ *    wash-sale rule, the layout by box with the table of 2025 word for word
+ *    from the BOE, and the two informative returns— and **9,1 KB** the screen
+ *    and its view-models. Neither is on the boot path: `@atlas/domain/fiscal`
+ *    is a door of its own precisely so that the barrel the first screen
+ *    imports does not carry them, and the shape check below holds it. The boot
+ *    went from 72,2 to **72,8 KB**, which is the shared code the screen uses
+ *    (the card, the table, the disclosure), and stays under its ceiling.
+ *    Measured total **226,5 KB**; the ceiling is 227,5.
+ *  - **Recording what was filed** from the web (block 4): the proposal of a
+ *    return in the domain —which figures it declares, how they are named and
+ *    what event comes out of them, shared with the console so the two record
+ *    the same filing—, the form with a field per figure, and the card of the
+ *    summary that leads to the screen and knows when to go first. The card
+ *    loads what it needs from the engine **after** the first paint, so the
+ *    boot carries none of it: it measures 72,7 KB, lower than before the
+ *    screen existed, because the domain now travels in one chunk
+ *    (`vite.config.ts`). Measured total **231,5 KB**; the ceiling is 232,5.
+ *  - The warning of a year already filed in the four places the web writes —
+ *    Registrar, Corregir, Anular and Configuración— with the figures it moves,
+ *    and the way into the fiscal screen from Ajustes. The warning asks the
+ *    engine from the write layer, which is lazily loaded like the screen, so
+ *    the boot does not move: 72,8 KB. Measured total **233,0 KB**; the ceiling
+ *    is 234,0.
+ *
+ * **Trinquete de cierre (2026-09-23)**: measured **233,0 KB** with everything
+ * in, and the ceiling stays at 234,0, which is that plus one. The breakdown,
+ * checked against the source maps of the 58 chunks —**no module appears in
+ * more than one**, so none of this is repetition—: 37,6 the domain without its
+ * fiscal half, 25,2 Solid with the router and the shell, 24,6 uPlot (lazy,
+ * two screens), **22,3 the tax engine** (of which 17,6 is the table of the
+ * boxes of 2025 with their literal labels), 9,9 the stylesheet, **10,5 the
+ * fiscal screens and their view-models**, 6,8 the service worker, and the rest
+ * the other eleven screens.
+ *
+ * **Second review of the same day: 234,9 KB, ceiling 236,0.** The 1,9 KB are
+ * three things and all three were asked for: the Spanish name of every
+ * concept of the return moved into the domain, so the console and the screen
+ * cannot call the same figure two different things (**+0,6** on the tax
+ * engine chunk, `concepts.ts`); the citation of the official image and the
+ * certainty of each box, plus the operations that tell two entries of the
+ * same criterion apart (**+0,3** on the fiscal screens); and the rest, spread
+ * over the screens that now say more. Checked again on the source maps of the
+ * 59 chunks: **zero modules in more than one**. The boot moves 72,8 → **72,9**
+ * for `Money.centsText()`, which lives in the core because it replaced six
+ * copies of the same two-decimal rule.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 195.5 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 236.0 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -201,6 +258,11 @@ const ALLOWED_URLS = [
   {
     url: "https://action",
     reason: "centinela inerte de @solidjs/router para las server actions; no hay servidor",
+  },
+  {
+    url: "https://www.boe.es",
+    reason:
+      "la fuente de las casillas del Modelo 100: el BOE donde se comprobó cada número y cada rótulo (feature 010, bloque 2). Es una **cita**, no una petición: `BoxesCard` la imprime como texto bajo el título de cada bloque —nunca como enlace, así que el navegador no pide nada a ese origen— y `apps/web/test/fiscal-boxes.test.ts` comprueba que se enseña",
   },
 ];
 

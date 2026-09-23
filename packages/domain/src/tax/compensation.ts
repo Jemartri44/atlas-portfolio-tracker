@@ -15,6 +15,27 @@
 // choice. What is left is carried with its year and category of origin, and
 // what reaches the end of its fourth year expires.
 //
+// **The 25 % limit is joint, and the form says exactly which boxes it joins.**
+// Page 19 of the Modelo 100 of 2025 (Orden HAC/277/2026, anexo I) carries the
+// note twice, once per direction:
+//
+//   «la suma de los importes consignados en las casillas [0436] + [0443] +
+//    [0444] + [0445] + [0447] no podrá superar el 25 por 100 del importe de la
+//    casilla [0424]»
+//
+// and the same with [0446] + [0453] + [0454] + [0455] + [0448] over [0429].
+// Read against this file: `room[capital_gain]` is that first sum —the phase-1
+// offset of a negative balance of movable capital income (0436) and the
+// phase-2 crossings of each origin year, 2021 to 2024 (0443, 0444, 0445 and
+// 0447)— and `room[movable_capital]` is the second one. **Those five and no
+// more**: an offset that does not cross categories never touches `room`, which
+// is why the boxes of a year against its own category (0439–0442 and
+// 0449–0452) are absent from both sums.
+//
+// It was verified against the image of the form on 2026-09-23, and it is
+// written here and not only in the layout by box because this is where someone
+// will read it when they come to change the limit.
+//
 // The practical case of the manual (4,000 of gains, −800 of movable capital
 // income in the year, 700 and 2,100 of pending losses and 500 of pending
 // negative income; base 200) is a test of this file, as it is.

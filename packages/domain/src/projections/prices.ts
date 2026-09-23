@@ -36,6 +36,8 @@ export interface ExternalQuote {
   currency: Currency;
   /** ECB rate as published (ADR-0013); `1` for euros. */
   fx_rate: Decimal;
+  /** Date of that rate. Absent means the day of the quote itself. */
+  fx_rate_date?: CivilDate;
 }
 
 /** The optional external source of the gate. Pure and synchronous, by the same rule. */
@@ -53,6 +55,18 @@ export interface PriceLookup {
   currency: Currency;
   /** ECB rate as published (ADR-0013). */
   fx_rate: Decimal;
+  /**
+   * The day of that rate, which is **not** the day of the price: a valuation
+   * carries its own `fx_rate_date`, and they differ whenever the market and
+   * the ECB disagree about what day it is — a 31 December that falls on a
+   * Sunday being the ordinary case.
+   *
+   * It used to be dropped here, and the price was dated with the day of the
+   * valuation for both. Nothing noticed until the Modelo 720 had to say
+   * whether the rate applied is the one the law asks for (feature 010, block
+   * 3), which is a question about **this** date and not about the other.
+   */
+  fx_rate_date: CivilDate;
   /** `unit_value / fx_rate`, 10 decimals. */
   unit_value_eur: Money;
   /** Days from the price to the date asked; never negative. */
@@ -73,12 +87,19 @@ export const positionValueOf = (
 const lookupOf = (
   assetId: AssetId,
   origin: PriceOrigin,
-  quote: { date: CivilDate; unit_value: Decimal; currency: Currency; fx_rate: Decimal },
+  quote: {
+    date: CivilDate;
+    unit_value: Decimal;
+    currency: Currency;
+    fx_rate: Decimal;
+    fx_rate_date?: CivilDate;
+  },
   date: CivilDate,
   staleAfter: number | undefined,
   eventId?: Ulid,
 ): PriceLookup => {
-  const fx = FxRate.of(quote.fx_rate, quote.currency, quote.date);
+  const rateDate = quote.fx_rate_date ?? quote.date;
+  const fx = FxRate.of(quote.fx_rate, quote.currency, rateDate);
   const ageDays = daysBetween(quote.date, date);
   return {
     asset_id: assetId,
@@ -88,6 +109,7 @@ const lookupOf = (
     unit_value: quote.unit_value,
     currency: quote.currency,
     fx_rate: quote.fx_rate,
+    fx_rate_date: rateDate,
     unit_value_eur: fx.toEur(Money.of(quote.unit_value, quote.currency)),
     age_days: ageDays,
     stale: staleAfter !== undefined && ageDays > staleAfter,
@@ -101,11 +123,13 @@ const fromValuation = (
   unit_value: Decimal;
   currency: Currency;
   fx_rate: Decimal;
+  fx_rate_date: CivilDate;
 } => ({
   date: event.date,
   unit_value: Decimal.parse(event.unit_value),
   currency: event.currency,
   fx_rate: Decimal.parse(event.fx_rate),
+  fx_rate_date: event.fx_rate_date,
 });
 
 /**

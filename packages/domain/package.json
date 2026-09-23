@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./fiscal": {
+      "types": "./dist/fiscal.d.ts",
+      "import": "./dist/fiscal.js"
     }
   },
   "files": [

@@ -242,6 +242,8 @@ export const describeError = (error: DomainError): string => {
       return `El sobre de la línea no es válido: falta o sobra ${text(d.field)}.`;
     case "invalid_currency":
       return `Divisa no válida: ${text(d.value)} (tres letras, ISO 4217).`;
+    case "fx_rate_unknown":
+      return `El libro tiene saldo en ${text(d.currency)} y no conoce ningún tipo del BCE para esa divisa: no se puede valorar. No debería poder pasar —toda operación lleva su tipo—, así que es un defecto: repórtalo con el libro a mano.`;
     case "invalid_fx_rate":
       return `Tipo de cambio no válido: ${text(d.value)}.`;
     case "invalid_instant":
@@ -384,11 +386,49 @@ export const describeWarning = (warning: Warning): string => {
       return `El ISIN ${text(d.isin)} lo comparten ${((d.assets as string[] | undefined) ?? []).join(", ")}: para Hacienda son el mismo valor, y la regla de recompra y el FIFO de este informe los tratan como distintos. Sus cifras pueden estar mal: registra ese valor en un solo activo (\`atlas check\`).`;
     case "tax_settings_default_used":
       return `Parámetros fiscales que no están en el libro y se han tomado del código (ADR-0022): ${((d.fields as string[] | undefined) ?? []).join(", ")}. El próximo \`atlas settings set\` los dejará fijados.`;
+    case "tax_boxes_missing_year":
+      return `Las casillas de ${text(d.year)} no están comprobadas en un formulario oficial: los importes salen por conceptos, sin número de casilla. Nunca se usa la casilla de otro ejercicio.`;
+    case "tax_box_missing":
+      return `Sin casilla en el formulario de ${text(d.year)}: ${listOf(d.concepts)}. Esos importes salen por concepto y sin número.`;
+    case "tax_box_value_missing":
+      return `Falta en tus datos lo que piden estas casillas: ${listOf(d.boxes)}. El libro no guarda el NIF de un tercero y aquí no se inventa ninguno.`;
+    case "tax_box_partial":
+      return `${PARTIAL_BOX[text(d.reason)] ?? warning.message} (casillas ${listOf(d.boxes)}).`;
+    case "tax_box_rounding_differs":
+      return `El formulario redondea cada valor y hace él mismo la resta: en ${listOf(d.boxes)} sale un céntimo distinto del que calcula el motor. Se enseñan los dos.`;
+    case "tax_box_repurchase_has_no_number":
+      return "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.";
+    case "informative_current_year":
+      return `El modelo va de lo que hay a 31/12 y ese día no ha llegado: esto es el estado a ${text(d.as_of)}, sin veredicto.`;
+    case "informative_model_did_not_exist":
+      return `El modelo ${text(d.model)} no existía en ${text(d.year)}: no hay nada que presentar por ese ejercicio (existe desde ${text(d.first_year)}).`;
+    case "informative_domestic_accounts_left_out":
+      return `Quedan fuera las cuentas registradas en España (${listOf(d.accounts)}) aunque lo que tengan sea extranjero: ante el registro el titular es la comercializadora (business-rules.md §5.8).`;
+    case "informative_account_changed_country":
+      return `Alguna cuenta ha cambiado de país (${listOf(d.accounts)}): cuenta el país que tenía a 31/12, tomado del día en que se registró cada cambio.`;
+    case "informative_crypto_custody_unknown":
+      return "Se cuenta todo lo que hay en cuentas extranjeras; si alguna es de autocustodia, no entraría. El libro no distingue las dos cosas.";
+    case "informative_criteria_not_numbered":
+      return "El método del saldo medio del trimestre y la clasificación de ETF, ETC y ETP se apoyan en criterios que la dirección todavía no ha numerado (fichas F3 y F4).";
     case "thesis_closed_with_position":
       return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
     default:
       return warning.message;
   }
+};
+
+/** A list of codes or box numbers, as the message prints them. */
+const listOf = (value: unknown): string =>
+  ((Array.isArray(value) ? value : [value]) as unknown[]).map((entry) => text(entry)).join(", ");
+
+/** Why a box of the return is not the whole of what the form will hold. */
+const PARTIAL_BOX: Record<string, string> = {
+  reductions_unknown:
+    "La base liquidable resta dos remanentes de reducciones que no están en el libro: se da la base imponible y no el importe de la casilla",
+  treaty_limit_only:
+    "La deducción por doble imposición es la menor de dos límites y el motor solo conoce el primero: se da ese, nunca como importe de la casilla",
+  ledger_withholdings_only:
+    "Solo se cuentan las retenciones que constan en el libro, que no tienen por qué ser todas",
 };
 
 export const describeDuplicate = (error: DuplicateFingerprintError): string =>

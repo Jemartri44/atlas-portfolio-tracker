@@ -9,8 +9,9 @@
 // what a change does. Here there is only the wording left.
 
 import type { FiscalYearImpact, Warning } from "@atlas/domain";
-import { For, type JSX } from "solid-js";
-import { Amount, ConfirmDialog } from "../../components/index.js";
+import type { ClosedYearImpact } from "@atlas/domain/fiscal";
+import { For, type JSX, Show } from "solid-js";
+import { Amount, ClosedYearNotice, ConfirmDialog } from "../../components/index.js";
 import { eventLabel } from "../../format/labels.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
@@ -29,6 +30,8 @@ interface DialogsProps {
   /** Defined while the question is open; `undefined` closes it. */
   silenced: readonly Warning[] | undefined;
   moved: readonly FiscalYearImpact[] | undefined;
+  /** Filed returns this change would move, with the figures it moves (FR-018). */
+  closedYears: readonly ClosedYearImpact[];
   invalidating: readonly InvalidatedEvent[] | undefined;
   onDismiss: (which: "silenced" | "moved" | "invalidating") => void;
   /** Save again; `acceptInvalid` only for the third question (ADR-0015). */
@@ -72,34 +75,37 @@ export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
           Los hechos no cambian, cambia su lectura: una declaración ya presentada puede dejar de
           cuadrar.
         </p>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Ejercicio</th>
-              <th scope="col" class="num">
-                Antes
-              </th>
-              <th scope="col" class="num">
-                Después
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <For each={props.moved ?? []}>
-              {(impact) => (
-                <tr>
-                  <td>{impact.year}</td>
-                  <td class="num">
-                    <Amount value={impact.before} />
-                  </td>
-                  <td class="num">
-                    <Amount value={impact.after} />
-                  </td>
-                </tr>
-              )}
-            </For>
-          </tbody>
-        </table>
+        <ClosedYearNotice impacts={props.closedYears} />
+        <Show when={(props.moved ?? []).length > 0}>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Ejercicio</th>
+                <th scope="col" class="num">
+                  Antes
+                </th>
+                <th scope="col" class="num">
+                  Después
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <For each={props.moved ?? []}>
+                {(impact) => (
+                  <tr>
+                    <td>{impact.year}</td>
+                    <td class="num">
+                      <Amount value={impact.before} />
+                    </td>
+                    <td class="num">
+                      <Amount value={impact.after} />
+                    </td>
+                  </tr>
+                )}
+              </For>
+            </tbody>
+          </table>
+        </Show>
       </ConfirmDialog>
 
       <ConfirmDialog

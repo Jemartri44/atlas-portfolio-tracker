@@ -4,8 +4,9 @@
 // yet it says where the effect will appear (docs/design/system.md §7.4).
 
 import type { EventPreview } from "@atlas/domain";
+import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { type JSX, Show } from "solid-js";
-import { Pending } from "../../components/index.js";
+import { ClosedYearNotice, Pending } from "../../components/index.js";
 import type { NameIndex } from "../../format/names.js";
 import { type AppError, store } from "../../ledger/state.js";
 import { FormActions } from "./FormActions.jsx";
@@ -21,6 +22,8 @@ interface EffectProps {
   problem: string | undefined;
   failure: AppError | undefined;
   confirmLabel: string;
+  /** Filed returns this write would reach, said before the question (FR-018). */
+  closedYears: readonly ClosedYearImpact[];
   onBack: () => void;
   onConfirm: () => void;
 }
@@ -42,6 +45,7 @@ export const Effect = (props: EffectProps): JSX.Element => (
     {(preview) => (
       <section class="effect" aria-label="El efecto">
         <Preview preview={preview()} names={props.names} revealed={props.revealed} />
+        <ClosedYearNotice impacts={props.closedYears} />
         <FormActions problem={props.problem} failure={props.failure}>
           <Show when={!props.wide}>
             <button type="button" class="secondary" onClick={() => props.onBack()}>

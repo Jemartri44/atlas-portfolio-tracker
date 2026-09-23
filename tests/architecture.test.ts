@@ -1,5 +1,6 @@
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -276,6 +277,64 @@ describe("architecture: the tax engine", () => {
       .filter((chain): chain is string[] => chain !== undefined)
       .map(asChain);
     expect(violations).toEqual([]);
+  });
+
+  /**
+   * Feature 010, block 3: the informative returns (Modelo 720 and 721) are the
+   * **only** fiscal route the law makes value things at market price, and they
+   * live in `informative/` for that reason alone. The income tax may not depend
+   * on a price (constitution II), so the fiscal path —everything
+   * `project-ledger.ts` and every file of `tax/` reach— must not reach a single
+   * file of that folder, at any depth.
+   *
+   * The other direction is allowed and is the point: `informative/` reads
+   * `prices.ts` and the catalogue of criteria. A table of criteria is a table;
+   * what must never happen is the return learning what a price is.
+   */
+  it("keeps the informative returns out of reach of every fiscal calculation", () => {
+    const graph = importGraph();
+    const informative = join(domainSrc, "informative");
+    const taxDir = join(domainSrc, "tax");
+    const roots = [join(domainSrc, "projections", "project-ledger.ts"), ...listTsFiles(taxDir)];
+    const violations: string[] = [];
+    for (const root of roots) {
+      for (const [file, chain] of reachableFrom(graph, root)) {
+        if (!relative(informative, file).startsWith("..")) {
+          violations.push(asChain(chain));
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * And they read it at **level 1**: a registered `valuation`, which is a
+   * decision of the user. The specification makes the photograph of the year
+   * end a manual datum on purpose (§7.1 and §14.1), so an automatic quote of
+   * phase 4 must never walk into a tax return. `priceAt` only returns one when
+   * it is handed an `ExternalPrices`, so the rule is that this folder never
+   * names one — checked on the text, where the mistake would be made.
+   */
+  it("never lets an automatic quote into an informative return", () => {
+    const offenders = listTsFiles(join(domainSrc, "informative"))
+      // Comments are not code: what the rule forbids is naming the type or
+      // passing the argument, and both of those are code.
+      .filter((file) =>
+        /\bExternalPrices\b|\bExternalQuote\b|external\s*[:,)]/.test(
+          readFileSync(file, "utf8").replace(/\/\/[^\n]*/g, ""),
+        ),
+      )
+      .map((file) => relative(repoRoot, file));
+    expect(offenders).toEqual([]);
+  });
+
+  /** And the rule is not vacuous: the informative returns do read the price gate. */
+  it("lets the informative returns read a price, which is what they are for", () => {
+    const graph = importGraph();
+    const m720 = join(domainSrc, "informative", "m720.ts");
+    const prices = join(domainSrc, "projections", "prices.ts");
+    expect(reachableFrom(graph, m720).get(prices)).toBeDefined();
+    expect(listTsFiles(join(domainSrc, "informative")).length).toBeGreaterThan(4);
   });
 });
 
@@ -842,5 +901,391 @@ describe("architecture: apps/web", () => {
       }
     }
     expect(loose).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Feature 010, block 5. Nobody writes over a filed return in silence.
+// ---------------------------------------------------------------------------
+
+/**
+ * The **fact** that a write reaches a closed year comes free with the use case
+ * (`RecordResult.closed`), so the domain cannot forget it. The **figure** —how
+ * much of what was declared moves— is put on by each interface, because it is
+ * the interface that decides when to say it, and an interface that forgets is
+ * exactly the silence ADR-0020 forbids.
+ *
+ * So the writers are enumerated here, by hand and by name:
+ *
+ *   - the list is **closed**: a third interface (an API, a bot, an importer)
+ *     breaks this test the day it imports a write use case, and the only way
+ *     to make it green is to add it to the list, which is the moment someone
+ *     has to ask whether it warns;
+ *   - and every one of them has to **reach** `closedYearImpact`, through its
+ *     own imports at any depth, which is what a module that only records has
+ *     to acquire.
+ *
+ * Reaching it is a necessary condition, not a sufficient one: what the user
+ * reads is checked by the tests of each interface (`apps/cli/test/commands/
+ * closed-year.test.ts`). What this catches is the whole flow going in with no
+ * way of saying it at all.
+ */
+/**
+ * The fiscal output has a **door of its own**, `@atlas/domain/fiscal`, and the
+ * barrel does not re-export it.
+ *
+ * This is not tidiness, it is 21 KB gzip on the boot path of the web, measured:
+ * `index.ts` is the module the first screen imports, so anything it exports
+ * and any screen uses ends up in the chunk the browser downloads before
+ * painting. While nothing used the tax engine, tree shaking hid the problem;
+ * the day the fiscal screen imported `taxYear` from the barrel the boot went
+ * from 72,5 to 93,3 KB against a ceiling of 74, and `check-bundle.mjs` refused
+ * the build.
+ *
+ * `check-bundle.mjs` already reads the source maps of the boot chunks and
+ * fails if `tax/` or `informative/` is inside. This says the same thing one
+ * step earlier, where it is cheap to read and cheap to fix: the barrel names
+ * neither of them, nor the two modules of `filings/` that reach the tax chain.
+ */
+describe("architecture: the fiscal output is not in the barrel", () => {
+  it("keeps the tax engine, the informative returns and the comparison out of index.ts", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    const offenders = specifiersOf(barrel).filter((specifier) =>
+      /\.\/(tax|informative)\/|\.\/filings\/(closed-years|comparison)/.test(specifier),
+    );
+    expect(offenders).toEqual([]);
+    // And the door exists and is the one that names them.
+    const door = specifiersOf(readFileSync(join(domainSrc, "fiscal.ts"), "utf8"));
+    expect(door.some((specifier) => specifier.includes("./tax/"))).toBe(true);
+    expect(door.some((specifier) => specifier.includes("./informative/"))).toBe(true);
+  });
+});
+
+describe("architecture: no interface writes over a filed return in silence", () => {
+  const WRITE_USE_CASES = ["recordEvent", "correctEvent", "reverseEvent"];
+  const IMPACT = "closedYearImpact";
+
+  /**
+   * The names a file takes from the domain, imports only — through the barrel
+   * or through the `@atlas/domain/fiscal` door, which is where the tax engine
+   * lives since it had to be kept off the boot path of the web.
+   *
+   * **Both** import forms. A named import is what everything here uses, but
+   * `import * as domain` followed by `domain.recordEvent(…)` writes exactly
+   * the same and used to walk straight past this test, which is the obvious
+   * way around it: with a namespace, the members read off it count as
+   * bindings.
+   */
+  const domainBindings = (source: string): Set<string> => {
+    const found = new Set<string>();
+    for (const match of source.matchAll(
+      /import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]@atlas\/domain(?:\/fiscal)?['"]/g,
+    )) {
+      for (const binding of (match[1] as string).split(",")) {
+        const name = binding
+          .trim()
+          .replace(/^type\s+/, "")
+          .split(/\s+as\s+/)[0];
+        if (name !== undefined && name.length > 0) {
+          found.add(name);
+        }
+      }
+    }
+    for (const match of source.matchAll(
+      /import\s*(?:type\s*)?\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*['"]@atlas\/domain(?:\/fiscal)?['"]/g,
+    )) {
+      for (const use of source.matchAll(
+        new RegExp(`\\b${match[1] as string}\\.([A-Za-z_$][\\w$]*)`, "g"),
+      )) {
+        found.add(use[1] as string);
+      }
+    }
+    return found;
+  };
+
+  /** A relative specifier as a file on disk: `.js` and `.jsx` are written, `.ts`/`.tsx` exist. */
+  const fileOf = (from: string, specifier: string): string | undefined => {
+    if (!specifier.startsWith(".")) {
+      return undefined;
+    }
+    const target = resolve(dirname(from), specifier);
+    const bare = target.replace(/\.(js|jsx)$/, "");
+    const candidates = [
+      target,
+      `${bare}.ts`,
+      `${bare}.tsx`,
+      join(target, "index.ts"),
+      join(target, "index.tsx"),
+    ];
+    return candidates.find((path) => {
+      try {
+        return statSync(path).isFile();
+      } catch {
+        return false;
+      }
+    });
+  };
+
+  /** The text with its comments removed: a name written in prose is not a call. */
+  const codeOf = (source: string): string =>
+    source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
+
+  const appFiles = (): string[] =>
+    readdirSync(join(repoRoot, "apps")).flatMap((app) => {
+      const src = join(repoRoot, "apps", app, "src");
+      try {
+        return statSync(src).isDirectory() ? listSourceFiles(src) : [];
+      } catch {
+        return [];
+      }
+    });
+
+  it("enumerates every module that writes, and asks each to reach the impact", () => {
+    const sources = new Map(appFiles().map((file) => [file, readFileSync(file, "utf8")]));
+    const writers = [...sources]
+      .filter(([, source]) =>
+        WRITE_USE_CASES.some((useCase) => domainBindings(source).has(useCase)),
+      )
+      .map(([file]) => relative(repoRoot, file))
+      .sort();
+    // The closed list. Adding an interface here is the question "does it warn?"
+    expect(writers).toEqual([
+      "apps/cli/src/commands/corporate-actions.ts",
+      "apps/cli/src/commands/rectify.ts",
+      "apps/cli/src/commands/shared.ts",
+      "apps/web/src/ledger/write.ts",
+    ]);
+
+    const graph = new Map(
+      [...sources].map(([file, source]) => [
+        file,
+        specifiersOf(source)
+          .map((specifier) => fileOf(file, specifier))
+          .filter((target): target is string => target !== undefined),
+      ]),
+    );
+    const silent = writers.filter((name) => {
+      const root = join(repoRoot, name);
+      // Two conditions, and the second is the one that bites. Reaching the
+      // impact through the graph is not enough: every CLI command imports
+      // `shared.ts` for the confirmation, and `shared.ts` names the impact, so
+      // the graph alone calls a module that warns nobody "covered". The module
+      // has to **name** the warning in its own code as well, which is what
+      // disappears the day somebody deletes the call.
+      const reaches = [...reachableFrom(graph, root).keys()].some((file) =>
+        domainBindings(sources.get(file) ?? "").has(IMPACT),
+      );
+      return !reaches || !/\bclosedYear/.test(codeOf(sources.get(root) ?? ""));
+    });
+    expect(silent).toEqual([]);
+  });
+
+  /**
+   * The condition above is per **file**, and a file holds more than one
+   * command: `rectify.ts` has `edit` and `delete`, each with its own call, and
+   * deleting the one in `edit` left the whole suite green because `delete`,
+   * two functions below, still named the warning. So for the console the rule
+   * is per **command**.
+   *
+   * It is the console and not the web because the two warn in different
+   * places by design: a console command prints the warning itself, right
+   * before its question, while in the web the screens ask `write.ts` for the
+   * impact and render the notice, so the function that writes is not the one
+   * that warns. What holds the web is the notice being the same component in
+   * the four screens, and its own tests.
+   *
+   * What this does **not** catch: a command that computes the warning and
+   * never prints it, or prints it after writing. Those are read by the tests
+   * of `apps/cli/test/commands/closed-year.test.ts`, which check the order.
+   */
+  it("asks every console command that writes to name the warning itself", () => {
+    const files = appFiles().filter((file) => file.includes(`${sep}cli${sep}`));
+    /** Top-level `const NAME = …` chunks, exported or not, in order. */
+    const chunksOf = (code: string): { name: string; body: string }[] => {
+      const found: { name: string; body: string }[] = [];
+      const starts = [...code.matchAll(/\n(?:export )?const (\w+)\s*=/g)];
+      for (const [index, match] of starts.entries()) {
+        const from = match.index as number;
+        const to = (starts[index + 1]?.index as number | undefined) ?? code.length;
+        found.push({ name: match[1] as string, body: code.slice(from, to) });
+      }
+      return found;
+    };
+    const violations: string[] = [];
+    for (const file of files) {
+      const code = codeOf(readFileSync(file, "utf8"));
+      const chunks = chunksOf(code);
+      // The helpers of the module that carry the warning: a command that calls
+      // one of them is warning, even if it never spells `closedYear` itself.
+      const helpers = chunks
+        .filter((chunk) => /\bclosedYear/.test(chunk.body))
+        .map((chunk) => chunk.name);
+      const carries = new RegExp(`\\b(closedYear${helpers.map((name) => `|${name}`).join("")})`);
+      for (const chunk of chunks) {
+        const writes = WRITE_USE_CASES.some((useCase) =>
+          new RegExp(`\\b${useCase}\\s*\\(`).test(chunk.body),
+        );
+        if (writes && !carries.test(chunk.body)) {
+          violations.push(`${relative(repoRoot, file)}: ${chunk.name} escribe y no avisa`);
+        }
+      }
+    }
+    expect(violations.sort()).toEqual([]);
+  });
+});
+
+/**
+ * **No compiled output is committed**, and this is not tidiness either.
+ *
+ * `packages/domain/test/` carried eight of them —`ledger-builder.js`,
+ * `tax/helpers.js`, their maps and their declarations— emitted by a `tsc`
+ * without an outDir and added by hand. A compiled twin **shadows its source**:
+ * the tests import `./helpers.js`, Vite resolves that to the real file when
+ * there is one, and the `.ts` beside it is never read. Measured: with a
+ * `throw` at the top of `helpers.ts` the whole suite stayed green, so for a
+ * while the tests were validating code nobody edits. That they happened to
+ * agree was luck, not design.
+ *
+ * `.gitignore` carries the patterns, but it protects from neither `git add -f`
+ * nor a file that is already tracked, so **what is asked here is the index**:
+ * a tracked file that is the compiled twin of a tracked source fails the
+ * build. Source maps are asked for separately, because one whose source was
+ * deleted has no twin left to give it away.
+ */
+describe("architecture: no compiled output is committed", () => {
+  /** What `git` says is in the index. Never the working tree. */
+  const tracked = (): string[] => {
+    const out = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" });
+    const files = out.split("\n").filter((line) => line.length > 0);
+    // A guard on the guard: without git this would pass by looking at nothing.
+    if (files.length < 100) {
+      throw new Error(`git ls-files devolvió ${files.length} ficheros: no se puede comprobar`);
+    }
+    return files;
+  };
+
+  const SUFFIXES = [".js.map", ".d.ts.map", ".d.ts", ".js", ".jsx"];
+
+  it("keeps out every file that is the compiled twin of a source", () => {
+    const files = new Set(tracked());
+    const twins = [...files]
+      .filter((file) => {
+        const suffix = SUFFIXES.find((candidate) => file.endsWith(candidate));
+        if (suffix === undefined) {
+          return false;
+        }
+        const base = file.slice(0, -suffix.length);
+        return files.has(`${base}.ts`) || files.has(`${base}.tsx`);
+      })
+      .sort();
+    expect(twins).toEqual([]);
+  });
+
+  it("keeps out every source map, wherever it is", () => {
+    // A `.map` is never written by hand. `vendor/` is exempt because what is
+    // vendored is somebody else's build, kept on purpose (ADR-0005, ADR-0017).
+    const maps = tracked()
+      .filter((file) => file.endsWith(".map") && !file.includes("/vendor/"))
+      .sort();
+    expect(maps).toEqual([]);
+  });
+});
+
+/**
+ * **An object literal asserted into a type** is how the deduction for double
+ * taxation shipped a row with three fields missing.
+ *
+ * The line was `const row = { event_id: line.event_id } as BoxRow;`. It
+ * compiled, because `as` silences the compiler by construction; the other three
+ * fields of `BoxRow` were `undefined` at run time; and both interfaces printed
+ * "undefined undefined" beside every deduction for two whole blocks without a
+ * single test noticing. The invariant that now checks every row of the layout
+ * covers **that** type. This covers the **pattern**, which can be written into
+ * any other.
+ *
+ * Why a test and not a rule of the linter: Biome 2.5.9 has
+ * `nursery/noUnsafeTypeAssertion`, which forbids **every** assertion but `as
+ * const`. Measured on `packages/domain/src`, it flags 20 places, and almost
+ * all of them are `state.gains[index] as RealizedGain` — narrowing an indexed
+ * read under `noUncheckedIndexedAccess`, which fabricates nothing. Replacing
+ * those with a run-time check would add a branch that cannot be reached, and
+ * the domain is held at 100 % of branches: the rule would buy a real barrier
+ * at the price of unreachable code. So the barrier is written here, over the
+ * subset that actually fabricates a value.
+ *
+ * The list is of **files**, not of occurrences: a file that already does it
+ * stays as it is, and a file that starts doing it has to be added by hand,
+ * which is the moment somebody asks whether the object really has every field.
+ *
+ * Three shapes, because the first one alone had two measured holes: an array
+ * of literals (`[{ … }] as T[]`, which reads `}]` and not `}`) and a literal
+ * put in a variable and asserted a few lines below, which is the same
+ * fabrication with a name in the middle. The second is matched by finding the
+ * variables initialised with `{` or `[` and looking for `name as T` — never
+ * `obj.name as T`, which is a property read and fabricates nothing.
+ *
+ * **Known limit**: the comments are stripped with a regular expression, so a
+ * `//` inside a string literal cuts the rest of that line out of the scan. It
+ * is left as it is: parsing TypeScript here to close it would cost more than
+ * the hole, and saying what a test does not guarantee is worth more than
+ * pretending otherwise.
+ */
+describe("architecture: no object literal is asserted into a type", () => {
+  it("keeps the pattern to the files that already carry it", () => {
+    // `}`, or `}]` for an array of literals, followed by `as <name>`. `as
+    // const` is not an assertion of this kind and is allowed.
+    const direct = /\}\s*\]?\s*as\s+(?!const\b)[A-Za-z_$][\w$]*/;
+    /** `const x = {` / `= [`: a literal that gets a name before it is asserted. */
+    const held = /(?:^|\n)\s*(?:const|let)\s+([A-Za-z_$][\w$]*)\s*(?::[^=\n]+)?=\s*[{[]/g;
+    const roots = [
+      join(repoRoot, "packages", "domain", "src"),
+      join(repoRoot, "packages", "adapters", "src"),
+      join(repoRoot, "apps", "cli", "src"),
+      join(repoRoot, "apps", "web", "src"),
+    ];
+    const asserts = (source: string): boolean => {
+      if (direct.test(source)) {
+        return true;
+      }
+      for (const match of source.matchAll(held)) {
+        // `(?<![.\w$])` keeps `figures.items as FiledItem[]` out: reading a
+        // property of something that exists is not fabricating a value.
+        const later = new RegExp(
+          `(?<![.\\w$])${match[1] as string}\\s+as\\s+(?!const\\b)[A-Za-z_$]`,
+        );
+        if (later.test(source)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    const offenders = roots
+      .flatMap((root) => listSourceFiles(root))
+      .filter((file) => {
+        const source = readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, " ")
+          .replace(/\/\/[^\n]*/g, " ");
+        return asserts(source);
+      })
+      .map((file) => relative(repoRoot, file))
+      .sort();
+    // The five added by the second shape are the **boundary of user input**:
+    // a record built from flags or from a form, asserted into a draft and
+    // handed to the domain, which validates its shape before writing a line
+    // (`validateShape`). They fabricate nothing that goes unchecked; they are
+    // on the list so that the sixth one has to be looked at.
+    expect(offenders).toEqual([
+      "apps/cli/src/commands/catalogue.ts",
+      "apps/cli/src/commands/rectify.ts",
+      "apps/cli/src/commands/shared.ts",
+      "apps/web/src/routes/registrar/corporate/form.tsx",
+      "apps/web/src/view-models/forms/values.ts",
+      "apps/web/src/view-models/settings.ts",
+      "packages/domain/src/projections/corporate-action-draft.ts",
+      "packages/domain/src/settings/settings.ts",
+      "packages/domain/src/synth/scenario.ts",
+      "packages/domain/src/usecases/record-event.ts",
+      "packages/domain/src/usecases/rectify.ts",
+    ]);
   });
 });

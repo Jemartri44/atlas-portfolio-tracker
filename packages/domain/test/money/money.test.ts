@@ -95,3 +95,25 @@ describe("Money", () => {
     );
   });
 });
+
+/**
+ * The one definition of "two decimals", which used to be six copies: four in
+ * the console, one in the proposal of a filing and one in the web. Two of them
+ * printed the same figure differently on screens the user opens one after the
+ * other, which is why it lives on `Money` now, like `sumShown`.
+ */
+describe("the amount as it is typed into a return", () => {
+  it("always gives two decimals, padding and rounding half-up", () => {
+    expect(Money.parse("600", "EUR").centsText()).toBe("600.00");
+    expect(Money.parse("174.3", "EUR").centsText()).toBe("174.30");
+    expect(Money.parse("174.35", "EUR").centsText()).toBe("174.35");
+    expect(Money.parse("0", "EUR").centsText()).toBe("0.00");
+    // Half-up, once, like every other fiscal rounding (#6).
+    expect(Money.parse("1.005", "EUR").centsText()).toBe("1.01");
+    expect(Money.parse("-2.345", "EUR").centsText()).toBe("-2.35");
+  });
+
+  it("says nothing about the currency: it is the number a form asks for", () => {
+    expect(Money.parse("12.5", "USD").centsText()).toBe("12.50");
+  });
+});

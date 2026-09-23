@@ -6,7 +6,9 @@
 // rate), and pretending it can would give a believable and false figure
 // (decision (a)). Every figure opens into the events that produce it
 // (decision (c)) and says which fiscal criteria it depends on (decision (b));
-// the doubtful ones get a section of their own with what they put at stake.
+// what each criterion puts at stake gets a section of its own — two, in fact:
+// `doubtful` for the readings that are open and `settled` for the ones that are
+// not but would still move a figure read the other way.
 //
 // The report aggregates **both books**, per taxpayer, and says so
 // (`scope: "fiscal_total"`): the first exception of constitution III, and the
@@ -56,8 +58,8 @@ import {
   withholdingLines,
 } from "./lines.js";
 import type {
+  CriterionStake,
   DoubleTaxationLine,
-  DoubtfulItem,
   IncomeLine,
   InKindLine,
   PendingLoss,
@@ -329,7 +331,7 @@ const doubleTaxation = (core: Core): { lines: DoubleTaxationLine[]; notes: Warni
   return { lines, notes };
 };
 
-// --- Doubtful criteria --------------------------------------------------------
+// --- What each criterion puts at stake -----------------------------------------
 
 interface Figures {
   base: Money;
@@ -346,7 +348,7 @@ const figuresOf = (core: Core): Figures => ({
 const directionOf = (
   baseDifference: Money,
   pendingDifference: Money,
-): DoubtfulItem["direction"] => {
+): CriterionStake["direction"] => {
   if (baseDifference.isNegative()) {
     return "conservative";
   }
@@ -363,8 +365,8 @@ const directionOf = (
 
 const item = (
   criterion: CriterionId,
-  fields: Omit<DoubtfulItem, "criterion" | "certainty" | "documented_risk">,
-): DoubtfulItem => ({
+  fields: Omit<CriterionStake, "criterion" | "certainty" | "documented_risk">,
+): CriterionStake => ({
   criterion,
   certainty: FISCAL_CRITERIA[criterion].certainty,
   documented_risk: FISCAL_CRITERIA[criterion].risk,
@@ -445,13 +447,25 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
   ];
 };
 
-const doubtful = (
+/**
+ * What every criterion the year **applies** puts at stake, in the order of the
+ * document.
+ *
+ * It does not split them: `taxYear` does, into `doubtful` and `settled`. The
+ * split is a partition and not a filter on purpose. It used to end in
+ * `.filter(isDoubtful)`, and the day #18 and #19 rose to high certainty that
+ * line silently stopped showing an amount it had just finished computing.
+ * A criterion is left out here only when **no figure of the year applies it**,
+ * which is not a judgement about the amount: an entry whose other reading moves
+ * nothing is kept, with its zeros.
+ */
+const criterionStakes = (
   core: Core,
   events: readonly LedgerEvent[],
   year: number,
   options: TaxOptions,
-): DoubtfulItem[] => {
-  const items: DoubtfulItem[] = [];
+): CriterionStake[] => {
+  const items: CriterionStake[] = [];
   const all = [...core.transmissions];
   const declaring = (id: CriterionId): TransmissionLine[] =>
     all.filter((line) => line.criteria.includes(id));
@@ -705,8 +719,8 @@ const doubtful = (
       }),
     );
   }
-  const order = (entry: DoubtfulItem): number => CRITERION_IDS.indexOf(entry.criterion);
-  return items.filter((entry) => isDoubtful(entry.criterion)).sort((a, b) => order(a) - order(b));
+  const order = (entry: CriterionStake): number => CRITERION_IDS.indexOf(entry.criterion);
+  return [...items].sort((a, b) => order(a) - order(b));
 };
 
 /** Mergers, spin-offs and restructurings of the year that keep date and cost. */
@@ -796,7 +810,22 @@ export const taxYear = (
   events: readonly LedgerEvent[],
   year: number,
   options: TaxOptions,
-): TaxYearReport => {
+): TaxYearReport => taxYearWithChain(events, year, options).report;
+
+/**
+ * The same report **and the walk of the years behind it**.
+ *
+ * The layout by box needs two things the report does not carry: what each year
+ * of the chain left deferred, so it can say which original loss every deferred
+ * amount belongs to (ficha F5), and what the year before left pending, for
+ * annex C.3. Handing over the chain that was walked anyway is what keeps the
+ * layout from projecting the ledger a second time to find out.
+ */
+export const taxYearWithChain = (
+  events: readonly LedgerEvent[],
+  year: number,
+  options: TaxOptions,
+): { report: TaxYearReport; chain: ChainCore } => {
   if (!Number.isInteger(year) || year < FIRST_SUPPORTED_YEAR) {
     throw new DomainError(
       "tax_year_unsupported",
@@ -848,9 +877,10 @@ export const taxYear = (
       kind: (core.ctx.events.get(entry.event_id) as CorporateActionEvent).kind,
     }));
   const settings = settingsFromCode(state);
+  const stakes = criterionStakes(core, events, year, options);
   const notes = notesOf(core, year, settings.from_code, inKind, ddi.notes);
   const diff = settingsDiff(core, events, year, options);
-  return {
+  const report: TaxYearReport = {
     year,
     scope: "fiscal_total",
     today: options.today,
@@ -906,10 +936,15 @@ export const taxYear = (
       not_deductible_eur: sum(ddi.lines.map((line) => line.not_deductible_eur ?? zero())),
     },
     in_kind: inKind,
-    doubtful: doubtful(core, events, year, options),
+    // One walk, two lists: the reading that is open and the reading that is
+    // settled. Splitting instead of filtering is what keeps a criterion of high
+    // certainty from taking its figure with it when it stops being doubtful.
+    doubtful: stakes.filter((entry) => isDoubtful(entry.criterion)),
+    settled: stakes.filter((entry) => !isDoubtful(entry.criterion)),
     notes,
     ...(diff === undefined ? {} : { settings_diff: diff }),
   };
+  return { report, chain: core };
 };
 
 const notesOf = (

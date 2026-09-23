@@ -157,7 +157,7 @@ describe("atlas weights", () => {
     });
     expect(await h.exec(["weights", "--date", DATE])).toBe(0);
     expect(h.text()).not.toContain("100.00 %");
-    expect(h.text()).toMatch(/TOTAL\s+0\s*$/m);
+    expect(h.text()).toMatch(/TOTAL\s+0\.00\s*$/m);
   });
 
   it("marks the subtotal of the class that hides a missing price", async () => {
@@ -190,8 +190,8 @@ describe("atlas weights", () => {
     h.reset();
     expect(await h.exec(["weights", "--date", DATE])).toBe(0);
     // The gold subtotal says so instead of showing a clean zero.
-    expect(h.text()).toMatch(/\[gold\]\s+0\s+\(parcial\)/);
-    expect(h.text()).toMatch(/\[equity\]\s+600\s{2,}/);
+    expect(h.text()).toMatch(/\[gold\]\s+0\.00\s+\(parcial\)/);
+    expect(h.text()).toMatch(/\[equity\]\s+600\.00\s{2,}/);
   });
 
   it("prints the warnings in Spanish while the domain keeps them in English", async () => {
@@ -221,8 +221,8 @@ describe("atlas contribute", () => {
     const h = await portfolio();
     const before = (await h.store.load()).etag;
     expect(await h.exec(["contribute", "--amount", "1000", "--date", DATE])).toBe(0);
-    expect(h.text()).toContain("Presupuesto del cubo:   100 EUR");
-    expect(h.text()).toContain("A repartir en el núcleo: 900 EUR");
+    expect(h.text()).toContain("Presupuesto del cubo:   100.00 EUR");
+    expect(h.text()).toContain("A repartir en el núcleo: 900.00 EUR");
     expect(h.text()).toContain("La propuesta no se ha registrado");
     expect((await h.store.load()).etag).toBe(before);
   });
@@ -231,7 +231,7 @@ describe("atlas contribute", () => {
     const h = await portfolio();
     expect(await h.exec(["contribute", "--date", DATE])).toBe(0);
     expect(h.text()).toContain("monthly_contribution_eur");
-    expect(h.text()).toContain("Aportación de 500 EUR");
+    expect(h.text()).toContain("Aportación de 500.00 EUR");
   });
 
   it("refuses without an amount, without weights and without the bucket percentage", async () => {

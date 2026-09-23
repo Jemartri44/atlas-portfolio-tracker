@@ -81,6 +81,14 @@ const INVOCATIONS: { command: string; argv: string[]; readOnly: boolean }[] = [
   // a savings base computed over a skipped event is approximate, and the answer
   // to that is the list of what to repair (feature 009, Q11).
   { command: "tax", argv: ["tax", "2027"], readOnly: false },
+  // The informative returns refuse for the same reason: they value the
+  // quantities of one day, and a projection that skipped an event holds the
+  // wrong ones.
+  { command: "m720", argv: ["m720", "2027"], readOnly: false },
+  { command: "m721", argv: ["m721", "2027"], readOnly: false },
+  // `filed` writes, and it computes what to propose with the same engine: on a
+  // degraded ledger it refuses before proposing anything.
+  { command: "filed", argv: ["filed", "renta", "2027"], readOnly: false },
   {
     command: "add",
     argv: [

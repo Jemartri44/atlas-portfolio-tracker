@@ -243,8 +243,15 @@ export interface AnchorDifference {
 
 export type Measure = "difference" | "exposure" | "not_quantifiable";
 
-/** How much a doubtful criterion puts at stake in the year, and in which direction. */
-export interface DoubtfulItem {
+/**
+ * How much a criterion puts at stake in the year, and in which direction.
+ *
+ * The report carries two lists of these and they hold exactly the same shape,
+ * because the question is the same one — *what does this reading put at stake?*
+ * — asked of two different kinds of criterion: `doubtful`, where the reading
+ * itself is open, and `settled`, where it is not (see `TaxYearReport`).
+ */
+export interface CriterionStake {
   criterion: CriterionId;
   certainty: Certainty;
   documented_risk: RiskDirection;
@@ -350,7 +357,32 @@ export interface TaxYearReport {
     not_deductible_eur: Money;
   };
   in_kind: InKindLine[];
-  doubtful: DoubtfulItem[];
+  /**
+   * Criteria whose **reading is open**: anything the document does not hold at
+   * high certainty (feature 009, Q8). What is at stake here is at stake because
+   * nobody knows which way the law is read.
+   */
+  doubtful: CriterionStake[];
+  /**
+   * Criteria whose reading is **settled** —high certainty— and that still move
+   * a figure if they are read the other way.
+   *
+   * It exists because of what happened on 2026-09-23: criteria #18 and #19 rose
+   * to high certainty, left the doubtful section, and took with them the money
+   * their opposite reading puts at stake — 200,00 € in the case of #19. The
+   * figure was still being computed; the last line of the function threw it
+   * away.
+   *
+   * "I do not know how this is read" and "I know how this is read, and this is
+   * what is behind it" are **not the same thing**, and putting them in one list
+   * loses information in both directions. So the list is split, not filtered,
+   * and this half is the settled one. An entry whose other reading moves
+   * **nothing** appears too, with its zeros: "we looked and it changes nothing"
+   * is information, and filtering by amount is what lost this in the first
+   * place. What never appears, here or in `doubtful`, is a criterion **no
+   * figure of the year applies**.
+   */
+  settled: CriterionStake[];
   notes: Warning[];
   settings_diff?: SettingsDiff;
 }

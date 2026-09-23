@@ -14,7 +14,14 @@ export {
   yearOf,
 } from "./dates/civil-date.js";
 export { madridDateOf, todayInMadrid } from "./dates/madrid.js";
+// The fiscal output —the income tax engine, the boxes, the informative
+// returns and the comparison with what was filed— is **not** here: it has an
+// entry point of its own, `@atlas/domain/fiscal` (see `src/fiscal.ts`). A
+// re-export from this barrel puts it on the boot path of the web, because this
+// is the module the first screen imports; measured, it cost 21 KB gzip of
+// boot for a screen that is opened a handful of times a year.
 export * from "./errors.js";
+export { fingerprintOfEvents } from "./filings/fingerprint.js";
 export { sha256Hex, utf8Encode } from "./ids/sha256.js";
 export { createUlidGenerator, isUlid, type Ulid, type UlidGenerator } from "./ids/ulid.js";
 export * from "./money/index.js";
@@ -168,24 +175,6 @@ export * from "./settings/settings.js";
 export { washSaleWindowEnd } from "./settings/wash-sale.js";
 export * from "./synth/index.js";
 export {
-  type Certainty,
-  CRITERION_IDS,
-  type CriterionId,
-  FISCAL_CRITERIA,
-  type FiscalCriterion,
-  isDoubtful,
-  type RiskDirection,
-} from "./tax/criteria.js";
-export { taxReportJson } from "./tax/json.js";
-export type * from "./tax/report.js";
-export {
-  FIRST_SUPPORTED_YEAR,
-  type MovedTaxYear,
-  movedTaxYears,
-  type TaxOptions,
-  taxYear,
-} from "./tax/year.js";
-export {
   archiveNameFor,
   type CompactDeps,
   type CompactPlan,
@@ -201,6 +190,7 @@ export {
   type PreviewOptions,
   previewCorrection,
   previewEvent,
+  previewReversal,
 } from "./usecases/preview-event.js";
 export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
 export {

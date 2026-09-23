@@ -41,7 +41,7 @@ export interface CorrectResult<E extends SupportedEvent = SupportedEvent> extend
   event: E;
 }
 
-const findTarget = (events: readonly LedgerEvent[], targetId: string): LedgerEvent => {
+export const findTarget = (events: readonly LedgerEvent[], targetId: string): LedgerEvent => {
   const target = events.find((event) => event.id === targetId);
   if (target === undefined) {
     throw new NotFoundError(targetId);
@@ -62,7 +62,7 @@ export const isPriorYear = (
  * Checks the candidate ledger and separates the new events' own failures from
  * the events they would break (shared with `recordEvent`, see `newlyInvalid`).
  */
-const checkCandidate = (
+export const checkCandidate = (
   current: readonly LedgerEvent[],
   candidate: readonly LedgerEvent[],
   newIds: readonly string[],

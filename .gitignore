@@ -44,6 +44,33 @@ plan-financiero.md
 coverage/
 dist-test/
 *.tsbuildinfo
+
+# TypeScript output emitted **next to its source**, which happens whenever tsc
+# runs without an outDir. It is never committed, and not for tidiness: a
+# compiled twin **shadows its source**, because Vite resolves `./x.js` to the
+# real file when there is one. Eight of them lived in `packages/domain/test/`
+# for a while, and a `throw` at the top of `helpers.ts` did not break a single
+# test — the suite was reading the compiled copy. `tests/architecture.test.ts`
+# is what actually holds this, because .gitignore protects from neither
+# `git add -f` nor a file that is already tracked.
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+packages/*/test/**/*.js
+packages/*/test/**/*.js.map
+packages/*/test/**/*.d.ts
+packages/*/test/**/*.d.ts.map
+apps/*/src/**/*.js.map
+apps/*/src/**/*.d.ts.map
+apps/*/test/**/*.js
+apps/*/test/**/*.js.map
+apps/*/test/**/*.d.ts
+apps/*/test/**/*.d.ts.map
+tests/**/*.js
+tests/**/*.js.map
+tests/**/*.d.ts
+tests/**/*.d.ts.map
 # The service worker the web dev server generates (excluded in biome.json too)
 apps/web/dev-dist/
 

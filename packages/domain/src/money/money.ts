@@ -111,6 +111,22 @@ export class Money {
     );
   }
 
+  /**
+   * The amount to the cent, **always two decimals**, with no currency: the
+   * shape a figure has when it is typed into a tax form, and the shape it is
+   * written into the ledger with.
+   *
+   * It lives here for the reason `sumShown` does: the console, the web and the
+   * proposal of a filing each carried this same `split(".")` and `padEnd`
+   * under the name `cents` —six copies— and two of them printed the same
+   * figure differently on screens the user opens one after the other. A rule
+   * about how money reads is one rule.
+   */
+  centsText(): string {
+    const [whole, fraction = ""] = this.roundToCents().amount.toString().split(".");
+    return `${whole}.${fraction.padEnd(2, "0")}`;
+  }
+
   toString(): string {
     return `${this.amount.toString()} ${this.currency}`;
   }

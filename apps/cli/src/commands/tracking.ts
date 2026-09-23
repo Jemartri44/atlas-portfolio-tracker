@@ -168,7 +168,7 @@ export const transferCommand = async (
         from_asset_id: simulation.from_asset_id,
         to_asset_id: simulation.to_asset_id,
         quantity: simulation.quantity.toString(),
-        moved_eur: simulation.moved_eur.amount.toString(),
+        moved_eur: eur(simulation.moved_eur),
         taxable: simulation.taxable,
         partial_before: simulation.before.partial,
         partial_after: simulation.after.partial,

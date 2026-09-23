@@ -14,6 +14,7 @@ export default defineConfig({
       "@atlas/adapters/clock": local("./packages/adapters/src/clock/system.ts"),
       "@atlas/adapters/random": local("./packages/adapters/src/random/web-crypto.ts"),
       "@atlas/adapters": local("./packages/adapters/src/index.ts"),
+      "@atlas/domain/fiscal": local("./packages/domain/src/fiscal.ts"),
       "@atlas/domain": local("./packages/domain/src/index.ts"),
     },
   },

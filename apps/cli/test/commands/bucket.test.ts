@@ -185,7 +185,7 @@ describe("atlas bucket", () => {
     expect(text).toContain("Cubo especulativo a 2027-12-31");
     expect(text).toContain("Posiciones abiertas:");
     // Open position: 10 at 12 (+1 of fee) against a price of 15.
-    expect(text).toMatch(/acc_bucket\s+ast_spec\s+10\s+12\.1\s+15/);
+    expect(text).toMatch(/acc_bucket\s+ast_spec\s+10\s+12\.10\s+15/);
     expect(text).toContain("cierra bajo 10");
     expect(text).toContain("Tesis:");
     expect(text).toMatch(/th_a\s+cerrada/);

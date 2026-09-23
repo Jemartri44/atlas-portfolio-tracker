@@ -354,6 +354,54 @@ Ninguna bloquea. Las anoto porque la dirección pidió que se dijera lo que pare
 
 ---
 
+## Criterios firmes: qué se ve y qué no (decisión de la dirección, 2026-09-23)
+
+**El problema.** La 009 fijó que **dudoso es todo lo que no es certeza alta** (Q8), y el informe
+enseña el dinero en juego solo de los dudosos. El 2026-09-23 los criterios **#18** y **#19**
+subieron a certeza alta porque los respalda el Manual práctico de Renta 2025. Consecuencia no
+buscada: los dos **desaparecieron del apartado de dudosos**, y con ellos el importe de su lectura
+contraria —200,00 € en el caso del #19—. La regla se cumple y la información se pierde.
+
+Lo que se perdía no era un cálculo caro: `doubtful()` ya lo hacía y lo tiraba en su última línea,
+un `.filter(isDoubtful)`.
+
+**Las tres opciones que se plantearon:**
+
+1. **(a) Dejarlo así.** Coste cero. La regla queda limpia y la información se pierde.
+2. **(b) Partir en dos en vez de filtrar.** `doubtful` conserva exactamente lo que conserva hoy
+   —«esto no lo sabemos»— y el informe gana una lista hermana, `settled`, con los criterios de
+   certeza alta que sí mueven una cifra: «esto sí lo sabemos, y esto es lo que hay detrás si
+   Hacienda lo lee al revés». No cuesta un cálculo más; cuesta una clave nueva en el informe, con
+   su predicción previa.
+3. **(c) Ampliar «dudoso» a todo lo que tenga riesgo agresivo.** Recupera la información sin campo
+   nuevo, pero un criterio de certeza alta pasaría a presentarse como algo que no sabemos.
+
+**Elegida la (b)**, por el motivo que la dirección resumió mejor que la propuesta: **«no sé cómo se
+lee» y «sé cómo se lee, y esto es lo que hay detrás» no son la misma cosa**, y meterlas en el mismo
+apartado destruye información en las dos direcciones. La (c) se descartó porque convertir «dudoso»
+en «todo lo que puede salir caro» vacía la palabra y el apartado deja de servir para lo único que
+sirve.
+
+**Condiciones con las que se aceptó**, todas aplicadas en el commit que la introduce:
+
+1. **El nombre de la clave dice qué es, no de dónde viene**: `settled`, criterios asentados, nunca
+   «no dudosos» ni un nombre por descarte. El tipo que comparten las dos listas pasa a llamarse
+   `CriterionStake`: las dos guardan lo mismo, *lo que un criterio pone en juego*.
+2. **No se filtra por importe distinto de cero.** Si la lectura contraria no mueve nada, la entrada
+   aparece igual, con su cero. «Lo hemos comprobado y no cambia nada» es información, y además es
+   la que tranquiliza; filtrar por interés es exactamente lo que hizo perder esto. La única
+   exclusión sigue siendo la que ya existía y no es de importe: un criterio que **ninguna cifra del
+   ejercicio aplica** no aparece en ninguna de las dos listas.
+3. **El contrato de la salida se actualiza en el mismo commit**: `atlas tax` pasa de diez apartados
+   a once, y `README.md` lo dice.
+4. **Privacidad desde el primer commit**: dirección y certeza visibles, importe enmascarado, igual
+   que en los dudosos.
+
+La predicción del movimiento del fichero dorado está en
+[`settled-criteria-expectation.md`](settled-criteria-expectation.md).
+
+---
+
 ## Casillas de 2025
 
 Fuentes:
@@ -645,6 +693,26 @@ Convenciones:
 - `acc_ib` (`IE`): `etf_w`, `stock_s`, `stock_t`, `coin_c` y `etc_g`.
 - Todo en EUR salvo el dividendo. `treaty_withholding_pct: { US: "15" }`. `income_category`, por defecto, **con `etc` en `movable_capital`**.
 
+> **La configuración que este cálculo nombra** *(añadido el 2026-09-23, antes del test; ningún
+> literal se mueve)*. Como el §6.3, este libro **fija su configuración entera y explícita**, y
+> conviene decir de qué depende cada cifra, porque una de esas lecturas dejó de ser el valor por
+> defecto después de escribirlo:
+>
+> - **`wash_sale_window.fund` y `.money_market`: un año.** El reembolso del 03/03/2025 difiere
+>   20/40 gracias a la suscripción del **05/05/2025**, y eso solo ocurre con la ventana de un año:
+>   a dos meses la ventana acabaría el 03/05 y la suscripción quedaría fuera, sin diferimiento.
+>   El cálculo se escribió el 2026-09-19, cuando el valor por defecto de los fondos era un año; el
+>   **2026-09-22** pasó a dos meses (criterio #2). Se fija la lectura de un año, que es una
+>   configuración legítima y sigue siendo la que el cálculo describe, en vez de mover el libro o
+>   las cifras. La ventana de un año del 03/03/2025 es `[03/03/2024, 03/03/2026]`, así que la
+>   compra del 10/01/2024 queda **fuera** y el diferimiento es exactamente el de la suscripción.
+> - **`wash_sale_window.stock`: dos meses.** La venta del 02/06/2025 da −50,00 computables porque
+>   la compra del 20/01/2025 queda fuera de `[02/04/2025, 02/08/2025]`; con un año entraría.
+> - **`income_category.etc`: `movable_capital`** (respuesta a Q2), que es lo que lleva el ETC a la
+>   0031 y lo saca del apartado de ganancias.
+> - **`savings_offset_limit_pct`: 25** y **`loss_carryforward_years`: 4**, que es lo que mantiene
+>   vivo el pendiente de 2023 en 2025. La fase 1 no llega a actuar: los dos saldos son positivos.
+
 | Fecha | Evento | Resultado |
 |---|---|---|
 | 10/01/2024 | Compra de 100 `fund_a` a 10,00 | |
@@ -708,6 +776,78 @@ Convenciones:
   - Filas: la venta es una **ganancia de +30,00**. La 0395 lleva **30,00**, que es −100,00 menos los −70,00 que siguen diferidos.
   - Suma: 30,00 − 30,00 = **0,00**, el computable que da el motor ese año.
 - **Año 3**: se vende la recompra, sin más recompras. La 0395 lleva **70,00**, y la suma coincide con el computable del motor.
+
+### §6.5 — La ventana **por defecto** de dos meses en un fondo (2026-09-23, escrito antes del test)
+
+**Por qué existe este cálculo.** Los tres cálculos a mano de la 009 y los cuatro de esta feature
+fijan la ventana de los fondos en **un año**, que era el valor por defecto cuando se escribieron.
+El **2026-09-22** el documento cambió la lectura y el valor por defecto del producto pasó a **dos
+meses** (criterio #2, `2:fund_2m`), y desde entonces **ningún cálculo a mano respaldaba el valor
+por defecto que la aplicación aplica hoy**: un ejercicio cualquiera se leería con una ventana que
+nadie ha comprobado a mano. Esto lo cierra, con el caso mínimo que distingue las dos lecturas: una
+pérdida en un fondo, una suscripción **dentro** de los dos meses y otra **fuera**.
+
+**Configuración**, escrita entera; lo que este cálculo nombra:
+
+- `fiscal_date_rule.fund`: **`value_date`**. Las fechas de este libro coinciden, así que no mueve
+  nada; se fija para que la fecha fiscal de cada operación sea la que dice la tabla.
+- `wash_sale_window.fund`: **`2m`**, que es el objeto del cálculo.
+- `income_category.fund`: `capital_gain`.
+- `wash_sale_transfer_counts`: `true` (no hay traspasos).
+- `savings_offset_limit_pct`: 25 y `loss_carryforward_years`: 4, que fijan hasta cuándo vive lo
+  que queda pendiente.
+
+**Libro** (`acc_a`, todo en EUR, tipo 1,0000):
+
+| Fecha | Evento | |
+|---|---|---|
+| 04/01/2026 | Ingreso de 2.000,00 | |
+| 05/01/2026 | Suscripción de 100 `fund_f` a 10,00 | coste 1.000,00 |
+| 10/03/2026 | Reembolso de 100 `fund_f` a 6,00 | 600,00 |
+| 20/04/2026 | Suscripción de 40 `fund_f` a 6,50 | 260,00 |
+| 15/06/2026 | Suscripción de 60 `fund_f` a 7,00 | 420,00 |
+
+**A mano:**
+
+1. **Pérdida del reembolso**: 600,00 − 1.000,00 = **−400,00**, es decir **−4,00 por
+   participación** sobre las 100 transmitidas.
+2. **La ventana**, contada de fecha a fecha (#14) desde la fecha fiscal del reembolso:
+   **[10/01/2026, 10/05/2026]**.
+   - La suscripción del **05/01/2026** queda **fuera** por cinco días — y además es la que el
+     propio reembolso consume.
+   - La suscripción del **20/04/2026** queda **dentro**: 40 participaciones.
+   - La suscripción del **15/06/2026** queda **fuera** por 36 días.
+3. **Diferido**: 40 × 4,00 = **−160,00**. Las 40 siguen en cartera a 31/12, así que las llevan
+   ellas (#18), y cada participación difiere una sola vez (#19).
+4. **Computable de 2026**: −400,00 + 160,00 = **−240,00**.
+5. **Base del ahorro de 2026**: **0,00**. Un saldo negativo no es base.
+6. **Pendiente de compensar al cerrar 2026**: **−240,00** de ganancias y pérdidas patrimoniales,
+   con origen 2026 y **último ejercicio para usarlo, 2030**.
+7. **Diferido que sigue vivo a 31/12/2026**: **−160,00**, sobre los lotes del 20/04.
+
+**La lectura contraria, que es lo que este cálculo existe para medir.** Con la ventana de **un
+año** —`2:fund_1y`, la lectura prudente— la suscripción del 15/06 también entraría: 40 + 60 = 100
+participaciones recompradas contra 100 transmitidas, y se diferiría la pérdida **entera**.
+
+| | Dos meses (por defecto) | Un año |
+|---|---|---|
+| Diferido en el ejercicio | −160,00 | −400,00 |
+| Computable | −240,00 | 0,00 |
+| Base del ahorro | 0,00 | 0,00 |
+| Pendiente al cerrar 2026 | −240,00 | 0,00 |
+| Diferido vivo a 31/12 | −160,00 | −400,00 |
+
+De donde la ficha del criterio #2 en el apartado de dudosos, con la lectura contraria menos la
+aplicada: **diferencia de base 0,00**, **diferencia de pendiente +240,00** y **diferencia de
+diferido −240,00**. Las dos cifras que se mueven son justo las que una comparación que solo mirara
+la base daría por iguales.
+
+> **Resultado** *(2026-09-23, tras `test/tax/two-month-fund.test.ts`)*: **las trece cifras
+> coinciden al céntimo**, incluidas las tres diferencias de la ficha del criterio. La única
+> corrección fue del **test**, no del cálculo: con la ventana de un año el diferido vivo a 31/12
+> sale repartido en **dos** entradas —−160,00 sobre las 40 participaciones de abril y −240,00
+> sobre las 60 de junio—, porque el motor lo guarda lote a lote, y la primera versión del test
+> miraba solo la primera. El total, −400,00, es el que dice el cálculo.
 
 ---
 

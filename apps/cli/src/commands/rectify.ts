@@ -2,18 +2,57 @@
 
 import {
   correctEvent,
+  DomainError,
   type Draft,
+  type EventPreview,
   type LedgerEvent,
   loadAndProject,
+  previewCorrection,
+  previewReversal,
   reverseEvent,
   type SupportedEvent,
+  todayInMadrid,
 } from "@atlas/domain";
+import { closedYearImpact } from "@atlas/domain/fiscal";
 import { type Flags, requireFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS, summarize } from "../context.js";
+import { closedYearLines, unfiledYearsNote } from "../output/closed-years.js";
 import { priorYearWarning } from "../output/messages.js";
 import { ADD_SPECS } from "./add.js";
 import { requireId } from "./catalogue.js";
 import { confirm, draftOf, fieldOf, preview } from "./shared.js";
+
+/**
+ * Which filed returns a rectification reaches, said **before** the question.
+ *
+ * A correction and an annulment move declared figures exactly as a new event
+ * does, and the one moment the warning is useful is before the confirmation.
+ * Best effort: if the candidate cannot be built, the write raises the same
+ * error right after, with its own message.
+ */
+const closedNotes = async (
+  ctx: Context,
+  preview: () => Promise<EventPreview>,
+): Promise<string[]> => {
+  try {
+    const { events, candidates } = await preview();
+    if (!events.some((event) => event.type === "tax_return_filed")) {
+      return [];
+    }
+    return closedYearLines(
+      closedYearImpact(
+        { events },
+        { events: [...events, ...candidates] },
+        todayInMadrid(ctx.deps.clock),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return [];
+    }
+    throw error;
+  }
+};
 
 const findEvent = (events: readonly LedgerEvent[], id: string): LedgerEvent => {
   const event = events.find((candidate) => candidate.id === id);
@@ -88,6 +127,11 @@ export const editCommand = async (
   }
   preview(ctx, `Evento original ${summarize(target)}:`, draftOf(target));
   preview(ctx, "Evento corregido (se anula el original y se registra este):", draft);
+  for (const line of await closedNotes(ctx, () =>
+    previewCorrection(ctx.deps, id, draft as unknown as Draft<SupportedEvent>, reason),
+  )) {
+    ctx.io.out(line);
+  }
   if (!(await confirm(ctx, "¿Rectificar? [s/N] "))) {
     ctx.io.out("Cancelado.");
     return 0;
@@ -103,7 +147,10 @@ export const editCommand = async (
   if (result.priorYear) {
     ctx.io.out(priorYearWarning);
   }
-  for (const line of describeWarnings(result.warnings)) {
+  for (const line of [
+    ...describeWarnings(result.warnings),
+    ...unfiledYearsNote(result.unfiledPastYears),
+  ]) {
     ctx.io.out(line);
   }
   return 0;
@@ -119,6 +166,9 @@ export const deleteCommand = async (
   const { events } = await loadAndProject(ctx.deps);
   const target = findEvent(events, id);
   preview(ctx, `Evento a anular ${summarize(target)}:`, draftOf(target));
+  for (const line of await closedNotes(ctx, () => previewReversal(ctx.deps, id, reason))) {
+    ctx.io.out(line);
+  }
   if (!(await confirm(ctx, "¿Anular? [s/N] "))) {
     ctx.io.out("Cancelado.");
     return 0;
@@ -127,6 +177,9 @@ export const deleteCommand = async (
   ctx.io.out(`Registrado ${summarize(result.reversal)}.`);
   if (result.priorYear) {
     ctx.io.out(priorYearWarning);
+  }
+  for (const line of unfiledYearsNote(result.unfiledPastYears)) {
+    ctx.io.out(line);
   }
   return 0;
 };

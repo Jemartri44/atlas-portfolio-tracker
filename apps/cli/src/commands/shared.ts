@@ -2,20 +2,22 @@
 
 import { access } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-
 import {
   type CivilDate,
+  DomainError,
   type Draft,
   isCivilDate,
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
   type ProjectedLedger,
+  previewEvent,
   type RecordResult,
   recordEvent,
   type SupportedEvent,
   todayInMadrid,
 } from "@atlas/domain";
+import { closedYearImpact } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import {
   ConfirmationRequired,
@@ -24,6 +26,7 @@ import {
   GLOBAL_FLAGS,
   summarize,
 } from "../context.js";
+import { closedYearLines, unfiledYearsNote } from "../output/closed-years.js";
 import { keyValue } from "../output/table.js";
 
 const FLAG_ALIASES: Record<string, string> = {
@@ -96,6 +99,43 @@ export const confirm = async (ctx: Context, question: string): Promise<boolean> 
   return answer;
 };
 
+/**
+ * Which filed returns a write would reach, and how much it moves of each.
+ *
+ * The **fact** comes free with every write (`RecordResult.closed`), so no
+ * interface can forget to warn; the **figure** is put on here, where the tax
+ * engine is already available. The fast path is the one that matters: a ledger
+ * with nothing filed —every ledger today— stops at reading the file, without a
+ * single projection.
+ *
+ * Best effort on purpose: if the candidate cannot be built, nothing is printed
+ * and the write raises the same error right after, with its own message.
+ */
+export const closedYearNotes = async (
+  ctx: Context,
+  draft: Record<string, unknown>,
+): Promise<string[]> => {
+  try {
+    const { events } = await ctx.deps.store.load();
+    if (!events.some((event) => event.type === "tax_return_filed")) {
+      return [];
+    }
+    const { candidates } = await previewEvent(ctx.deps, draft as unknown as Draft);
+    return closedYearLines(
+      closedYearImpact(
+        { events },
+        { events: [...events, ...candidates] },
+        todayInMadrid(ctx.deps.clock),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return [];
+    }
+    throw error;
+  }
+};
+
 export const confirmAndRecord = async (
   ctx: Context,
   draft: Record<string, unknown>,
@@ -103,7 +143,7 @@ export const confirmAndRecord = async (
   notes: readonly string[] = [],
 ): Promise<RecordResult | undefined> => {
   preview(ctx, "Evento a registrar:", draft);
-  for (const note of notes) {
+  for (const note of [...notes, ...(await closedYearNotes(ctx, draft))]) {
     ctx.io.out(note);
   }
   if (!(await confirm(ctx, "¿Registrar? [s/N] "))) {
@@ -120,7 +160,10 @@ export const confirmAndRecord = async (
       `${result.newlyInvalid.length} eventos registrados quedan inválidos bajo la configuración nueva; las consultas lo avisarán. Ejecuta \`atlas check\`.`,
     );
   }
-  for (const line of describeWarnings(result.warnings)) {
+  for (const line of [
+    ...describeWarnings(result.warnings),
+    ...unfiledYearsNote(result.unfiledPastYears),
+  ]) {
     ctx.io.out(line);
   }
   return result;
