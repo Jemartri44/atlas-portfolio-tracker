@@ -2,7 +2,7 @@
 
 Documento **vivo**, escrito mientras se implementa. Recoge lo que se desvía del plan y por qué, lo que se preguntó y se respondió, y lo que queda. Se cierra con la feature.
 
-**Estado al 2026-09-23**: bloques **0 y 1 completos**, más los dos lotes de corrección de criterios que la dirección encargó en marcha y **la revisión adversarial de cierre** (apartado 7). **Bloques 2, 3, 4 y 5 sin empezar.** Pipeline verde: 163 ficheros de test, **1.576 tests**, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, paquete web dentro de presupuesto.
+**Estado al 2026-09-23**: **los seis bloques completos** (0 y 1 del primer implementador; 2, 3, 4 y 5 del segundo), más los dos lotes de corrección de criterios y **la revisión adversarial de cierre** (apartado 7). Pipeline verde: **1.733 tests**, `packages/domain` al **100 %** de líneas, ramas y funciones, Biome limpio, `tsc -b` limpio, arranque **72,8 KB** de 74,0 y total **233,0** de 234,0.
 
 ---
 
@@ -23,6 +23,24 @@ El evento `tax_return_filed` (tipo 25, `schema_version` sigue en 1), su proyecci
 ### Los dos lotes de criterios (encargo de la dirección, 2026-09-22)
 
 Etiquetas y prosa de #17 a #24, y el cambio de comportamiento de la ventana de los fondos y los monetarios a dos meses. Cada uno con su predicción escrita y comiteada antes, y su comparación después: `criteria-labels-expectation.md` y `fund-window-expectation.md`.
+
+### Bloque 2 — la Renta por casillas
+
+Los **conceptos** (identificadores estables que no dependen de ningún impreso), las **casillas de 2025 como datos**, con su número, su rótulo **literal** y la orden del BOE en que se comprobó cada uno, y la atribución de las pérdidas de ejercicios anteriores a su pérdida de origen (ficha F5). Las 44 casillas se comprobaron **contra las imágenes del anexo I de la Orden HAC/277/2026**, una a una: cero discrepancias con lo que había investigado el implementador anterior, y se subió `checked_at` a 2026-09-23 con la URL de la imagen.
+
+Un ejercicio **sin correspondencia comprobada** sale por conceptos y **sin ningún número**, con su nota. Nunca la casilla de otro año.
+
+### Bloque 3 — Modelos 720 y 721
+
+Fuera de `tax/`, en `informative/`, que es lo que permite seguir demostrando que la Renta no lee precios. Los dos cálculos a mano (§6.1 y §6.2) cuadraron; el veredicto **falla seguro** (nunca «no obligado» con datos incompletos) y dice qué falta como acción.
+
+### Bloque 4 — la pantalla fiscal
+
+`/fiscal` con selector de ejercicio en la URL, la base del ahorro como cifra protagonista rotulada «cartera y cubo juntos», cada total abierto en sus operaciones nombradas por activo y fecha, los dos apartados de criterios con la dirección en palabras, las pérdidas pendientes y lo que caduca, las casillas, el estado del 720 y del 721 y la comparación con lo presentado. `/fiscal/presentar/<modelo>/<año>` registra lo presentado desde la web. La tarjeta del Resumen sube arriba en campaña o cuando hay algo del 720 que hacer, y el aviso de ejercicio ya declarado está en las cuatro escrituras.
+
+### Bloque 5 — la CLI
+
+`atlas tax <año> --boxes`, `atlas m720`, `atlas m721` y `atlas filed <modelo> <año>`, más el aviso de ejercicio cerrado en `add`, `ca`, `edit`, `delete` y `settings set`.
 
 ---
 
@@ -45,6 +63,39 @@ Etiquetas y prosa de #17 a #24, y el cambio de comportamiento de la ventana de l
   - *Segunda pasada (revisión adversarial, 2026-09-22)*: `HAND_SETTINGS` en `test/tax/helpers.ts` fija **las tres familias tipo a tipo y los cuatro escalares**, con el modelo de `tests/fixtures/ledger/tax-hand-v1.jsonl`, y los dos libros a mano lo usan. **Medido en las dos direcciones**: con los valores por defecto, cambiar la categoría de renta de los fondos tumbaba 11 casos y bajar el límite del 25 % al 30 tumbaba 6; con la configuración fijada, las dos mutaciones no mueven un solo literal.
 - **`npm run lint | tail` esconde el código de salida** (el de la tubería es el de `tail`), y dos commits entraron con lint en rojo. Se reconstruyeron con `git reset --soft`. Ejecutar `npm run lint` a pelo.
 
+### Hallazgos de los bloques 2 a 5 (segundo implementador)
+
+- **Una aserción de tipo fabricó un objeto al que le faltaban tres campos.** La deducción por doble imposición construía su fila así: `const row = { event_id: line.event_id } as BoxRow`. El `as` silenció al compilador, los otros tres campos eran `undefined` en ejecución y **las dos interfaces imprimieron «undefined undefined»** al lado de cada deducción durante dos bloques enteros, sin que ningún test lo viera. Lo destapó la pantalla del bloque 4 al primer render. Arreglado leyendo la operación de la línea de renta de la que sale la deducción; con **un invariante sobre todas las filas** (si una fila existe, lleva sus cuatro campos) y **un test de arquitectura sobre el patrón**, que enumera los ficheros que hoy afirman un literal como un tipo y rompe cuando aparece uno nuevo. Comprobado que no es vacío: reintroducida la línea original, el test falla nombrando `draft.ts`.
+  - **Por qué no una regla del analizador**: Biome 2.5.9 trae `nursery/noUnsafeTypeAssertion`, que prohíbe **toda** aserción salvo `as const`. Medida sobre `packages/domain/src`: **20 avisos**, y casi todos son `state.gains[index] as RealizedGain`, es decir, estrechar una lectura indexada bajo `noUncheckedIndexedAccess`, que no fabrica nada. Sustituirlos por una comprobación en ejecución añadiría una rama inalcanzable, y el dominio está al 100 % de ramas: la regla compraría una barrera real al precio de código muerto. La barrera está donde el fallo ocurre, no donde el analizador puede mirar.
+- **El barril del dominio metió el motor fiscal en el arranque de la web.** En cuanto la pantalla importó `taxYear` de `@atlas/domain`, el arranque pasó de 72,5 a **93,3 KB** contra un techo de 74: el barril es un módulo, es lo que importa la primera pantalla, y lo que exporta y alguien usa viaja en su trozo. La solución es **una puerta propia**, `@atlas/domain/fiscal` (`src/fiscal.ts`), y el barril ya no nombra `tax/`, `informative/` ni los tres módulos de `filings/` que alcanzan la cadena fiscal; hay un test de arquitectura que falla si vuelve a hacerlo. La comprobación del paquete ya lo veía, pero un paso más tarde y en un sitio menos legible.
+- **El dominio partido en dos trozos costó 1,3 KB de arranque sin una sola importación nueva.** Al hacerse alcanzable el motor desde un rincón perezoso del Resumen, el agrupador partió el dominio en dos trozos de arranque para que el trozo fiscal importara solo su mitad; la compresión no cruza la frontera de un trozo y cada mitad paga sus importaciones. Fijado a **un solo trozo** en `vite.config.ts`, con el motivo escrito. Medido en las tres variantes: 73,0 sin la tarjeta, 74,3 con ella, **72,7** con el grupo.
+- **Un mutante que sobrevive puede ser un mutante que nunca se aplicó.** Tres veces se dio por muerto un mutante que el script de sustitución no había llegado a escribir, porque el formateador había reordenado el texto que buscaba. **Cualquier script de mutación tiene que afirmar que la sustitución ocurre** (`assert s.count(old) == 1`) y comprobar el fichero después; sin eso, «sobrevive» y «no se aplicó» son indistinguibles. La misma trampa mordió tres veces más editando código con el mismo tipo de script: un `assert` que salta **a mitad de un lote deja los ficheros anteriores escritos y los siguientes no**, así que un lote que falla se vuelve a ejecutar entero, no se continúa.
+
+### El constructor de libros de test, valor por defecto a valor por defecto
+
+Encargo de la dirección tras el tercer tropiezo con él (la comisión de 2 USD de `fx()`, que rompió §6.1 por 1,82 €). **`LedgerBuilder` rellena todos los campos que un test no escribe**, y cualquiera de ellos entra en una cifra fiscal. Esto es lo que trae, para que el siguiente lo lea antes de calcular a mano y no después:
+
+| Dónde | Valores por defecto que pueden contaminar |
+|---|---|
+| `buy` | 10 participaciones a 100,00, **comisión 0**, EUR, tipo 1, fecha 2027-01-11 |
+| `sell` | 1 a 100,00, **comisión 0**, EUR, tipo 1, fecha 2027-06-10 |
+| `swap` | 1 por 1, valores 100,00, **comisión 0**, fecha 2027-06-10 |
+| `fx` | **comisión 2 USD**, 1.085,00 EUR por 1.170,00 USD, **tipo comprado 1,0783**, fecha 2027-05-04 |
+| `deposit` / `withdrawal` | **5.000,00** / **100,00**, EUR, fechas 2026-08-31 / 2027-06-01 |
+| `fee` | **3,00** con descripción «custody» — y un gasto de administración resta de los rendimientos (#23) |
+| `dividend` | bruto 10,00, **retención en origen 0** y en España 0, fecha 2027-04-01 |
+| `interest` | bruto 5,00, retención 0, fecha 2027-04-30 |
+| `valuation` | **5 unidades a 210,00**, fecha **2026-12-31** — contamina cualquier 720 |
+| `orderPlaced` / `thesisOpened` | 500,00 de importe / de tamaño previsto |
+| `account` | país **ES**, libro `core`, divisa EUR |
+| `asset` | tipo **fund**, clase `equity`, divisa EUR, **traspasable** |
+| `corporateAction` | fecha efectiva 2027-03-01 |
+| `filed` | `filed_at` = año + 1 el 18/06; **`computed.settings` = `DEFAULT_SETTINGS`** y `settings_origin: "default"`; **`computed` copia lo declarado** si no se da, lo que anula la causa «lo que corregiste al presentar»; la huella lleva `sha256` falso y `lines` = los eventos escritos hasta ese momento |
+| Sobre `fx_rate_date` | en `buy`, `sell`, `swap`, `deposit`, `withdrawal`, `fee` y `valuation` es `lastWorkingDay(fecha)`; en `dividend`, `interest` y `fx` es un **literal fijo** que no sigue a la fecha si el test la cambia |
+| Sobre la configuración | `taxBuilder()` escribe `DEFAULT_SETTINGS` salvo que se le pase otra cosa: un cálculo a mano usa `HAND_SETTINGS`, que fija las tres familias tipo a tipo y los cuatro escalares |
+
+La regla que se saca de aquí: **un cálculo a mano escribe todos los campos que nombra**, y si un total no cuadra por una cantidad pequeña y redonda, el primer sitio donde mirar es esta tabla.
+
 ## 4. Presupuesto del paquete web
 
 | Punto | Arranque | Total |
@@ -53,8 +104,27 @@ Etiquetas y prosa de #17 a #24, y el cambio de comportamiento de la ventana de l
 | Configuración nueva | 69,9 | 191,5 |
 | Evento `tax_return_filed` | 71,1 | 193,2 |
 | Huella y proyección | 71,9 | 194,2 |
-| El hecho del ejercicio cerrado | **72,3** | **194,6** |
-| Techo | **74,0** | **195,5** |
+| El hecho del ejercicio cerrado | 72,3 | 194,6 |
+| La CLI del bloque 5 | 72,2 | 195,4 |
+| La pantalla fiscal (bloque 4) | 72,8 | 226,5 |
+| El formulario, la tarjeta y los avisos | **72,8** | **233,0** |
+| Techo | **74,0** | **234,0** |
+
+**Desglose del total, medido sobre el `dist` (gzip)**, porque autorizar una subida no es entenderla:
+
+| Trozo | gzip | Qué lleva |
+|---|---|---|
+| `domain-*.js` | 37,6 | el dominio entero **menos** lo fiscal: proyecciones, esquema, dinero, casos de uso. Arranque |
+| `index-*.js` | 25,2 | Solid, el enrutador, el armazón y la primera pantalla. Arranque |
+| `chart-*.js` | 24,6 | uPlot vendorizado, perezoso: solo Cartera y Cubo |
+| `fiscal-*.js` (motor) | **22,3** | `tax/year.ts` (39,6 KB de fuente), `wash-sale.ts` (30,2), `boxes/draft.ts` (18,9), `lines.ts` (18,3), **`boxes/years/2025.ts` (17,6: la tabla de casillas con sus rótulos literales)**, `informative/m720.ts` (15,8), `chain.ts` (12,8), `filings/proposal.ts` (10,2) |
+| `index-*.css` | 9,9 | la hoja entera, incluida `fiscal.css` |
+| `fiscal-*.js` (pantallas) | **7,1** | las siete piezas de `routes/fiscal/` y los nombres de los criterios |
+| `fiscal-*.js` (modelos de vista) | **3,0** | `view-models/fiscal/` |
+| `fiscal-status-*.js` | **0,4** | lo que la tarjeta del Resumen carga tras pintar |
+| resto | ~96 | las otras once pantallas, los mensajes, los formularios y el *service worker* (6,8 entre `sw.js` y Workbox) |
+
+**Duplicación entre trozos: ninguna.** Comprobado leyendo los *source maps* de los 40 trozos y cruzando qué módulo aparece en cuáles: **cero módulos en más de un trozo**. Los 37,5 KB que sube el total son pantallas y motor, no repetición.
 
 El techo del **arranque** lo subió la dirección dos veces (71,5 y luego 74,0) con su motivo escrito en `check-bundle.mjs`; el del **total** sube paso a paso y siempre a lo medido. **Al cerrar la feature hay que apretarlos los dos** a lo que entonces se mida más un margen pequeño, y dejar escrito qué hay dentro.
 
@@ -62,7 +132,7 @@ El techo del **arranque** lo subió la dirección dos veces (71,5 y luego 74,0) 
 
 ## 5. Preguntas abiertas
 
-1. **Una cifra grande deja de verse porque hemos dejado de dudar de ella.** Con el criterio #19 en certeza alta desaparece del apartado de dudosos y con él **los 200,00 € en juego** de la lectura contraria. Es lo que manda la regla de la 009 (dudoso es todo lo que no es certeza alta) y es coherente; pero la información se pierde. **A decidir en el bloque 2**, que es donde se elige qué ve el usuario y dónde.
+1. ~~**Una cifra grande deja de verse porque hemos dejado de dudar de ella.**~~ **Resuelta por la dirección el 2026-09-23**: el informe lleva **dos** listas, `doubtful` y `settled`, con la misma forma, y la segunda enseña los criterios de certeza alta que **leídos al revés** moverían algo. Se parte, no se filtra: una entrada cuya lectura contraria no mueve nada **aparece igual, con sus ceros**, porque «comprobado y sin efecto» es información. Está en las dos interfaces y en el README.
 2. **Congelado por la dirección, para el bloque del motor** (avisar al llegar): el defecto de `windowCriterion` con un ETC declarado capital mobiliario —recibe `2:listed` y una alternativa de un año que el art. 25.2 no contempla— y el **test de definitividad** (una transmisión solo libera el diferimiento si ella misma es definitiva; DGT V3282-18 y Manual práctico de Renta 2025, capítulo 11, **texto nuevo de marzo de 2026**), con la ventana del propio activo.
 3. **Congelado también**: el criterio #21, la cita del art. 35 en líneas de capital mobiliario y la atadura de las comisiones a valores negociables.
 4. **La web no alcanza `wash_sale_transfer_counts`**: Configuración no tiene control booleano. Es el **único** parámetro booleano de los 31 de `Settings`, así que es un control, no una familia. La CLI ya lo cubre. Trabajo posterior a la 010.
@@ -70,9 +140,14 @@ El techo del **arranque** lo subió la dirección dos veces (71,5 y luego 74,0) 
 
 ## 6. Lo que queda
 
-Bloques **2** (la Renta por casillas, con los datos de 2025 ya investigados en `questions.md`), **3** (Modelos 720 y 721, con sus dos cálculos a mano §6.1 y §6.2), **4** (la pantalla `/fiscal` y la tarjeta del Resumen), **5** (`atlas tax --boxes`, `m720`, `m721`, `filed`), las demostraciones §7 y §8, la verificación en navegador y el apriete final de los dos techos del paquete.
+Nada de los seis bloques. Lo que queda es de la entrega: el **apriete final de los dos techos** del paquete a lo medido más un margen pequeño, y la PR.
 
-**Al cablear la cifra del aviso de ejercicio cerrado** en la CLI y en la web hay que escribir el test estático que la dirección pidió: que **enumere** los módulos que importan `recordEvent`, `correctEvent` o `reverseEvent` fuera del dominio y exija que cada uno alcance `closedYearImpact`, de modo que una tercera interfaz **rompa el test hasta que alguien la añada**.
+Trabajo posterior a la feature, anotado para quien siga:
+
+1. **`priorYear` / `isPriorYear` en el dominio** sigue vivo porque la web lo usa en el flujo de rectificación. El aviso de ejercicio **declarado** lo sustituye conceptualmente; retirarlo es una limpieza de una feature posterior, no de esta.
+2. **`today()` de la web no lee el reloj de los casos de uso**: su comentario dice que sí, pero usa `new Date()`. En producción los dos son el reloj del sistema, así que no cambia nada; en un test con reloj fijado, la pantalla y el dominio pueden mirar días distintos. Anotado al tropezar con ello escribiendo los tests del formulario.
+3. **La tarjeta del Resumen y `/fiscal` proyectan el libro por su cuenta.** Con 5.000 eventos el coste es asumible (la tarjeta carga tras pintar y la pantalla es perezosa), pero nadie lo ha medido con la CPU frenada ×4 como pedía el prompt.
+4. **Las dos interfaces tienen su propia lista de nombres de criterios** (`CRITERION_LABELS` en la CLI, `CRITERION_NAMES` en la web). El tipo `Record<CriterionId, string>` garantiza que ninguna se deje uno; nada garantiza que digan lo mismo.
 
 ---
 
@@ -91,3 +166,19 @@ Encargo de la dirección antes de fusionar. Nueve hallazgos, todos aplicados; el
 9. **El test antideriva de criterios prometía más de lo que garantiza.** Se ha corregido la descripción, no el test: atarlo variante a variante exigiría analizar prosa española. Lo que garantiza y lo que no está escrito en su cabecera y en el traspaso (pendiente 12).
 
 **Lo que la revisión dejó anotado sin hacer** está en `questions.md`, apartado «5 bis»: doce cosas, ninguna bloqueante, con el bloque al que afecta cada una.
+---
+
+## 8. Verificación en navegador (2026-09-23)
+
+Hecha con Chromium sin interfaz, sobre el `dist` de producción servido por `npm run preview`, con el libro sintético sembrado en IndexedDB antes de arrancar la aplicación. **24 capturas medidas**, fuera del repositorio, en `~/atlas-private/capturas/2026-09-23-fiscal/`.
+
+Qué se miró, y qué cambió por haberlo mirado:
+
+- **400×890 con densidad 3** (el teléfono del usuario), **2045×1141** (su monitor) y **360** de ancho: `scrollWidth === clientWidth` en las tres, sin desplazamiento lateral, y ningún elemento sobresale del ancho del documento —comprobado en el navegador, no a ojo—.
+- **Con datos y con el libro vacío**; **con la privacidad puesta y quitada**; claro y oscuro.
+- **La pantalla fiscal medía cuatro pantallas de móvil** solo de criterios dudosos: diez entradas seguidas. Ahora enseña tres y pliega el resto, como los avisos del Resumen.
+- **El mismo criterio aparecía dos veces con líneas idénticas.** El motor emite una entrada por motivo —una exposición normal y otra con `regime_not_recorded`—, y la pantalla no enseñaba el motivo. Ahora lo enseña siempre.
+- **El libro vacío** enseñaba seis tarjetas de ceros; ahora enseña **una** con el siguiente paso.
+- **El selector de ejercicio** era una caja vacía de 200 px; ahora es el mismo control compacto que la fecha de consulta, con su icono y su rótulo.
+- **Se registró una presentación desde la propia web**, con el antes y el después: el ejercicio pasa a «2027 · declarado», la tarjeta «Lo presentado» aparece con lo declarado frente a lo calculado y la diferencia plegada, y el pie ofrece la complementaria.
+- **Los dos rechazos del dominio se ven en la pantalla** y dicen qué hacer: una fecha de presentación posterior a hoy («no se registra lo que todavía no se ha presentado») y un importe mal escrito («tiene más de una coma»), este último **en el campo**, sin perder lo tecleado.
