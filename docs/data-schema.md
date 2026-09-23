@@ -271,7 +271,7 @@ Ejemplo (fusión 2 antiguas → 1 nueva, con 10 y 7 títulos en dos cuentas; los
 
 Un `reversal` de una presentación es para una que **nunca llegó a presentarse**. Anular una que otra sustituye se rechaza, como cualquier cosa ya consumida (ADR-0003): al proyectar el libro candidato, el `supersedes` de la complementaria se quedaría apuntando a nada.
 
-Las presentaciones de un `720` o un `721` nombran cuentas y activos del catálogo, y se rechaza la que nombre uno que nadie registró: una presentación que no se puede comparar con nada no sirve para lo único a lo que existe.
+Las presentaciones de un `720` o un `721` nombran cuentas y activos del catálogo, y se rechaza la que nombre uno que nadie registró: una presentación que no se puede comparar con nada no sirve para lo único para lo que existe.
 
 ## 7. Proyecciones
 
@@ -330,7 +330,7 @@ La salida fiscal se compone sobre ese informe, y ninguna de sus piezas vuelve a 
 
 **Un ejercicio con presentación vigente está cerrado** para ese modelo (ADR-0020). Escribir en él —registrar, corregir o anular— **no se rechaza**: hacerlo tarde puede ser legítimo y a veces obligatorio. Lo que no se admite es hacerlo en silencio, así que `closedYearImpact(antes, después, hoy)` avisa en los dos casos: cuando lo que se registra cae **por fecha** dentro de un ejercicio cerrado, y cuando **mueve una cifra declarada** aunque su fecha sea de otro año —una recompra de enero difiere una pérdida de diciembre y cambia la base de un ejercicio ya presentado; la regla por fecha sola no diría nada—. Compara las cifras que fija una Renta: la base del ahorro, cada saldo pendiente por ejercicio de origen y categoría, y el diferido al cierre. `previewEvent` y `previewCorrection` lo devuelven junto con los ejercicios pasados que tienen cifras y ninguna presentación registrada, y las dos interfaces lo enseñan antes de confirmar.
 
-Si alguna de las dos lecturas tiene eventos inválidos, **no compara nada**: una comparación aproximada sobre un libro roto sería peor que ninguna (ADR-0015). Ese es el hueco conocido de la garantía, anotado en `pendientes-post-010.md`.
+Si alguna de las dos lecturas tiene eventos inválidos, **no compara nada**: una comparación aproximada sobre un libro roto sería peor que ninguna (ADR-0015). Ese es el hueco conocido de la garantía, anotado en `docs/pendientes-post-010.md`.
 
 ## 8. FIFO y reglas fiscales aplicadas
 
