@@ -286,6 +286,22 @@ no está en `pending`: la condición no se cumple en ningún ejercicio. Peor, `Y
 5.000,00 € dejan de poder compensarse. La consola sí lo dice, desde `expired`: «CADUCA al cierre de
 2031». Las dos interfaces no responden lo mismo a la misma pregunta.
 
+### 9.6 Lo que se vio al volver a mirar la pantalla
+
+**13 capturas nuevas**, fuera del repositorio, en
+`~/atlas-private/capturas/2026-09-23-fiscal-revision-2/`: la pantalla fiscal a 400×890 con densidad
+3, a 2045×1141 y a 360 de ancho, con el libro sintético y con el libro vacío, clara y oscura, con
+la privacidad puesta y quitada, el formulario de presentar y el Resumen, más **dos con los bloques
+de casillas desplegados**, que es lo que cambia entera. En las trece: ningún error de página y
+`scrollWidth === clientWidth`, comprobado en el navegador elemento a elemento, no a ojo.
+
+**Una cosa que chirría y no se ha tocado**, porque decide cómo se teclea una cifra en un impreso:
+un concepto **sin signo** en un ejercicio **sin tabla comprobada** pierde el signo y no hay nada que
+diga a cuál de las dos casillas iría. En el libro sintético, «Saldo de rendimientos del capital
+mobiliario» sale como **5,69 €** cuando la cifra es **−5,69 €**: con tabla, 2025 lo resuelve con
+`when_negative` (0429 positivo, 0430 negativo) y el número de casilla lo dice; sin tabla —que es el
+caso normal— el lector ve una magnitud y ningún indicio. No es una regresión de esta ronda.
+
 No se arregla aquí porque hay que decidir **qué significa `expired`** —la lectura de la consola es
 «éste es su último ejercicio», la del campo `expires_after` es «el último en que se puede
 compensar», y las dos no pueden ser ciertas a la vez— y eso es una decisión fiscal.
