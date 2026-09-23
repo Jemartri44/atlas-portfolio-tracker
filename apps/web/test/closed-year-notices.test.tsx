@@ -104,6 +104,31 @@ describe("a write that reaches a filed return", () => {
     expect(text(dialog)).toContain("Puede que toque presentar una complementaria");
   });
 
+  it("has the warning in the dialog the moment it opens, not a tick later", async () => {
+    await withFiling();
+    const sale = goldenEvents().find(
+      (event) =>
+        event.type === "sell" && (event as { value_date?: string }).value_date === "2027-01-06",
+    );
+    const host = await show(
+      `/movimientos/${(sale as { id: string }).id}`,
+      Detalle,
+      "/movimientos/:id",
+    );
+    const button = [...host.querySelectorAll("button")].find(
+      (candidate) => candidate.textContent?.trim() === "Anular",
+    );
+    button?.click();
+    // Nothing awaited yet: the dialog must **not** be up. Fired with
+    // `void … .then(…)` it opened on the spot and the impact arrived a tick
+    // later, which is after the user has read the question.
+    const open = () =>
+      [...host.querySelectorAll("dialog")].find((node) => node.hasAttribute("open"));
+    expect(open()).toBeUndefined();
+    await settle(30);
+    expect(text(open())).toContain("Afecta a la Renta de 2027");
+  });
+
   /**
    * A filed base is as private as any other figure, and this notice is the one
    * place of the application that prints an amount that does not come from the

@@ -12,19 +12,10 @@ import { ledgerEntries } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import {
-  ClosedYearNotice,
-  Dialog,
-  EmptyState,
-  Field,
-  Notice,
-  Parts,
-  Tag,
-} from "../../components/index.js";
+import { EmptyState, Notice, Parts, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
-import { store } from "../../ledger/state.js";
 import { closedYearsOfReversal, reverse } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { detailView } from "../../view-models/index.js";
@@ -33,6 +24,7 @@ import { movementSentence } from "../../view-models/sentence.js";
 import { RequireLedger } from "../guard.jsx";
 import { EventEnvelope, EventLinks, Facts, SaleResult } from "./DetailFields.jsx";
 import { doneUrl, Rectified } from "./Rectified.jsx";
+import { ReverseDialog } from "./ReverseDialog.jsx";
 
 export default function MovimientoDetalleRoute(): JSX.Element {
   const params = useParams<{ id: string }>();
@@ -41,22 +33,39 @@ export default function MovimientoDetalleRoute(): JSX.Element {
   const [asking, setAsking] = createSignal(false);
   const [error, setError] = createSignal<string | undefined>(undefined);
   const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
+  /** The warning could not be computed at all: said, never skipped in silence. */
+  const [closedYearsFailed, setClosedYearsFailed] = createSignal(false);
   const [dependents, setDependents] = createSignal<
     readonly { id: string; type: string; error: string }[]
   >([]);
 
   /**
-   * Which filed returns this annulment would reach, computed when the dialog
-   * opens and not after writing: it is the only moment it is useful (FR-018).
+   * Which filed returns this annulment would reach, computed **before** the
+   * dialog opens: it is the only moment it is useful (FR-018), and a warning
+   * that arrives a tick after the question is a warning the user has already
+   * read past. It used to be fired with `void … .then(…)`, so at the instant
+   * the dialog appeared it was not there yet, and a rejection that was not a
+   * `DomainError` ended in a broken promise with nothing on screen. The other
+   * three writes of the application await it; this one does too now.
+   *
    * The reason does not change a figure, so the candidate is built with a
    * placeholder when the field is still empty.
    */
-  const askToReverse = (): void => {
-    setAsking(true);
+  const askToReverse = async (): Promise<void> => {
     setClosedYears([]);
-    void closedYearsOfReversal(params.id, reason().trim() === "" ? "anulación" : reason()).then(
-      setClosedYears,
-    );
+    setClosedYearsFailed(false);
+    try {
+      setClosedYears(
+        await closedYearsOfReversal(params.id, reason().trim() === "" ? "anulación" : reason()),
+      );
+    } catch {
+      // `impactOf` already swallows a `DomainError`: anything that reaches
+      // here is the ledger not being readable, and annulling without knowing
+      // whether it touches a filed return is exactly what ADR-0020 forbids
+      // doing in silence.
+      setClosedYearsFailed(true);
+    }
+    setAsking(true);
   };
 
   const onReverse = async (): Promise<void> => {
@@ -129,7 +138,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                           </A>
                         </Show>
                         <Show when={view().status !== "reversed" && view().status !== "reversal"}>
-                          <button type="button" class="danger" onClick={() => askToReverse()}>
+                          <button type="button" class="danger" onClick={() => void askToReverse()}>
                             Anular
                           </button>
                         </Show>
@@ -201,41 +210,15 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                     <EventLinks links={view().links} />
                   </div>
 
-                  <Dialog
+                  <ReverseDialog
                     open={asking()}
-                    title="Anular el movimiento"
+                    impacts={closedYears()}
+                    failed={closedYearsFailed()}
+                    reason={reason()}
+                    onReason={setReason}
                     onClose={() => setAsking(false)}
-                    actions={
-                      <>
-                        <button type="button" class="secondary" onClick={() => setAsking(false)}>
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          class="danger solid"
-                          disabled={reason().trim() === "" || store.writing()}
-                          onClick={() => void onReverse()}
-                        >
-                          Anular
-                        </button>
-                      </>
-                    }
-                  >
-                    <p>
-                      No se borra nada: se registra una anulación que deja este movimiento sin
-                      efecto. El original sigue en tus datos, marcado como anulado.
-                    </p>
-                    <ClosedYearNotice impacts={closedYears()} />
-                    <Field
-                      id="reverse-reason"
-                      kind="text"
-                      label="Motivo"
-                      required
-                      hint="Queda registrado junto a la anulación."
-                      value={reason()}
-                      onInput={setReason}
-                    />
-                  </Dialog>
+                    onConfirm={() => void onReverse()}
+                  />
                 </>
               );
             }}
