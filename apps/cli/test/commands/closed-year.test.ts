@@ -102,6 +102,27 @@ describe("a write that reaches a filed return", () => {
     expect(text.indexOf("afecta a la Renta")).toBeLessThan(text.indexOf("Registrado"));
   });
 
+  /**
+   * `atlas edit` has its own call, separate from the one `delete` uses, and
+   * nothing covered it: deleting its loop left the whole suite green, because
+   * the architecture test was happy with the **file** naming the warning
+   * somewhere and `delete`, two functions below, names it.
+   */
+  it("says so when correcting, with the figure the correction moves", async () => {
+    const events = filed().build();
+    const sale = events.find((event) => event.type === "sell") as LedgerEvent;
+    // The same sale at 140 instead of 120: 2.000,00 declared becomes 4.000,00.
+    const text = await run(
+      ["edit", sale.id, "--reason", "precio mal tecleado", "--unit-price", "140"],
+      events,
+    );
+    expect(text).toContain("afecta a la Renta de 2027, presentada el 2028-06-10");
+    expect(text).toContain("la base del ahorro pasa de 2000 a 4000");
+    expect(text).toContain("Puede que toque una complementaria");
+    // Before the question, which is the only moment it is still useful.
+    expect(text.indexOf("afecta a la Renta")).toBeLessThan(text.indexOf("Registrados"));
+  });
+
   it("names it when a settings change moves what the return declared", async () => {
     // The sale is traded in 2027 and settled in 2028: reading ETFs by value
     // date empties the year that was filed, without touching one event.
