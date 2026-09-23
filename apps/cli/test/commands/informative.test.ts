@@ -97,7 +97,9 @@ describe("atlas tax --boxes", () => {
     b.asset("etf_a", "etf");
     b.deposit("acc_ib", "2024-01-04", "10000");
     b.buy("acc_ib", "etf_a", "2024-02-10", "100", "100");
-    b.sell("acc_ib", "etf_a", "2025-09-01", "100", "120");
+    // With a withholding, so the return has a box the engine computes and
+    // cannot compute **whole**: only what the ledger holds is in it.
+    b.sell("acc_ib", "etf_a", "2025-09-01", "100", "120", "2025-09-01", "380");
     return b;
   };
 
@@ -116,6 +118,10 @@ describe("atlas tax --boxes", () => {
     expect(text).toContain("Base imponible del ahorro");
     // The NIF is not in the ledger and is not invented.
     expect(text).toContain("falta en tus datos");
+    // A box with a figure that is **not** the whole of what the form will hold
+    // says so beside the figure, as the screen does: the withholdings the
+    // ledger knows about need not be all of them.
+    expect(text).toContain("380.00 — no se calcula entero");
   });
 
   it("gives another year by concept, with no number at all", async () => {

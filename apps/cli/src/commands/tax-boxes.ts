@@ -34,7 +34,16 @@ const BLOCK_TITLES: Record<BoxBlockId, string> = {
   deductions: "Deducciones y pagos a cuenta",
 };
 
-/** What a figure is worth, or why it is not there. */
+/**
+ * What a figure is worth, or why it is not there.
+ *
+ * A box the engine cannot compute **whole** says so even when it does carry an
+ * amount: it used to say it only when the amount was missing altogether, so a
+ * partial figure with a number beside it read as the amount of the box —
+ * exactly what the prompt forbids ("nunca como el importe de la casilla"). The
+ * web already said it; a caveat about a fiscal figure that only one of the two
+ * interfaces makes is a caveat the user meets by chance.
+ */
 const amountText = (entry: BoxEntry): string => {
   if (entry.missing === true) {
     return "falta en tus datos";
@@ -46,9 +55,9 @@ const amountText = (entry: BoxEntry): string => {
     return entry.partial === undefined ? "" : "no se calcula entero";
   }
   const amount = eur(entry.amount_eur);
-  return entry.form_eur === undefined
-    ? amount
-    : `${amount} (el formulario dará ${eur(entry.form_eur)})`;
+  const withForm =
+    entry.form_eur === undefined ? amount : `${amount} (el formulario dará ${eur(entry.form_eur)})`;
+  return entry.partial === undefined ? withForm : `${withForm} — no se calcula entero`;
 };
 
 /** Which operation a per-row field belongs to, by asset and date, never by an identifier. */

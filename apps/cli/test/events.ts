@@ -162,6 +162,8 @@ export class Events {
     unit_price: string,
     /** Defaults to the value date; the two only differ when the test needs them to. */
     trade_date = value_date,
+    /** Withheld on account by the platform: it becomes a payment on account. */
+    withholding?: string,
   ): LedgerEvent {
     return this.push("sell", {
       account_id,
@@ -174,6 +176,7 @@ export class Events {
       fx_rate: "1",
       fx_rate_date: lastWorkingDay(value_date),
       fee: "0",
+      ...(withholding === undefined ? {} : { withholding }),
       source: "manual",
     });
   }
