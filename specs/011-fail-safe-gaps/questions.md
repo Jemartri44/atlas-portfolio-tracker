@@ -354,6 +354,10 @@ Exacto: **242.589** bytes contra **242.381**. Se pasa por **208 bytes**. El **ar
 
 Todo lo demás del bloque 8 está **hecho y verde**: `lint`, `typecheck`, 1.820 tests y **100 %** de dominio. Lo único rojo es `npm run build`, y solo por el techo.
 
+> **Respuesta de la dirección: arranque 73,5 y total 237,9**, lo medido más un margen pequeño en los dos, que es la regla de siempre. **El arranque en 73,3 está justificado**: proyectar la renuncia es lo que permite que `check` a secas la diga **siempre**, y sin eso la salida sería exactamente lo que la decisión (d) prohíbe — una forma de limpiar el expediente. Es el mismo reparto que la 010 eligió para el aviso de ejercicio cerrado: el hecho arriba, la cifra en el trozo perezoso. **Un hecho que hay que poder decir siempre vive donde se proyecta siempre.** Tres condiciones al escribir el trinquete: el desglose con la comprobación de duplicación anotada; **la tendencia del arranque**, no solo el número, para que dentro de un año se sepa si 73,3 es el precio de una decisión o el resultado de no haber mirado; y **la comprobación de forma sigue mandando**: si `tax/` o `informative/` asoman al arranque, se para aunque quepa.
+>
+> Aplicado en `apps/web/scripts/check-bundle.mjs` (commit `d54aa5b`), con las tres condiciones. Sobre la estimación que se quedó corta: «pasa, y lo relevante es que mediste y lo dijiste en vez de apretar para que cuadrara con tu estimación; el margen lo di yo sobre tu número, así que es de los dos».
+
 ---
 
 ## 4. Observaciones sobre el propio encargo
@@ -677,6 +681,95 @@ KILLED   4b take receipt_reference out of the tuple
 
 1. **Un defecto de mi arnés, no de la pantalla.** La primera tanda salió con el reloj real del sistema, y el libro dorado vive en 2026-2029: las presentaciones de 2027 y 2028 estaban **en el futuro**, ninguna en vigor, y la pantalla enseñaba «No hay nada que declarar» sin una sola ancla. Con el reloj fijado en 2030 apareció lo que había que ver. *(Y es la otra cara del arreglo de P7: ahora que `today()` lee un reloj, el arnés puede fijarlo.)*
 2. **Un defecto de verdad: «Afecta a el Modelo 720».** En español `a` + `el` es **al**. Nadie lo había visto porque un 720 solo llegaba a ese aviso cuando lo que se escribía caía **por fecha** dentro de su ejercicio; desde que existe el tercer desenlace llega **siempre que se escribe algo**, y la primera captura del caso nuevo lo enseñó. Arreglado en las dos interfaces, con su test en la consola, que comprueba además que la Renta conserva su artículo.
+
+---
+
+## 6 ter. La revisión adversarial (2026-09-23)
+
+Un revisor en un árbol congelado. **Salió bien** lo que se le pidió romper en primer lugar: trece mutantes aplicados con sustitución afirmada, los trece muertos; la atomicidad entre construir la renuncia y entregarla; las guardias del bloque 4; la privacidad y el libro vacío. **Lo que falló está en los bordes de lo nuevo**, y son tres bloqueantes.
+
+### Bloqueante 1 — la renuncia se podía anular
+
+Reproducido por el revisor con la consola: `atlas delete <renuncia> --reason limpiar` devolvía 0 y después `atlas check` respondía «Libro íntegro: sin hallazgos». **Es exactamente lo que ADR-0025 prohíbe.**
+
+**Decisión de la dirección: una renuncia no se puede anular.** Registra algo que ya pasó —el libro se compactó sin verificar esa huella— y lo que pasó no se deshace anulando la línea que lo cuenta. Implementado **en la proyección**, no solo en el caso de uso: `applyReversal` rechaza la anulación de una renuncia con `waiver_not_reversible`, así que la rechaza `atlas delete`, la rechaza la web y, si alguien la escribe a mano en el fichero, `check` la marca como inválida y **la renuncia sigue diciéndose**. Traducido en las dos interfaces. Visto en rojo antes: `expected [] to deeply equal ["waiver_not_reversible"]`.
+
+### Bloqueante 2 — el motivo falso y el caso `lines` sin salida
+
+**La tercera vez que el ternario muerde en esta ronda, y la peor**, porque esta vez escribía una mentira en un fichero de solo añadir:
+
+| Vez | Dónde | Qué hizo | Qué lo paró |
+|---|---|---|---|
+| 1 | `deep-check.ts`, bloque 0 | escondió dos códigos al escáner de mensajes | medirlo, y escribir la regla en el plan |
+| 2 | `compact.ts`, bloque 8 | lo mismo, en otro fichero y otro constructor | la regla escrita en el plan |
+| 3 | `compact.ts`, bloque 8, **otra línea** | plegaba todo lo que no era `unreadable` en `digest`: un caso `lines` dejaba escrito **para siempre** un motivo falso | la revisión adversarial |
+
+La tercera no la paró mi regla porque la regla hablaba de **códigos de error** y esta era un **valor de un campo**. La lección es más ancha que la que escribí: **un ternario que colapsa un conjunto de valores en otro más pequeño esconde un caso**, sea un código, un motivo o un texto. Ahora el motivo pasa tal cual (`check.reason`), sin ramas.
+
+**Y el caso `lines` con la presentación en vigor no tenía salida.** La consola anunciaba «Queda registrado…» y luego fallaba con un `projection_changed` sin explicación. La causa, medida: resellar pone el recuento de líneas de la huella donde la presentación está de verdad, y la instantánea lleva ese recuento, así que **toda** compactación de un caso `lines` fallaba. El test lo nombró: `expected [ 'cash', 'filings' ] to deeply equal [ 'cash' ]`.
+
+**El mecanismo que propongo y está implementado**: la lectura **anterior** a la reescritura se toma con ese recuento ya puesto, **solo para las presentaciones con renuncia y solo en ese campo**. No afloja la comparación: dos tests lo atan —un caso `lines` con renuncia **compacta**, y el mismo caso con **otro** cambio de proyección de por medio (una migración que dobla un depósito) **sigue fallando** con `projection_changed` nombrando `cash` y ya no `filings`—.
+
+**Un mutante que sobrevivió, y por qué no es un agujero.** Ampliar ese ajuste a **todas** las presentaciones, no solo a las renunciadas (R5), no rompe ningún test. No es que falte uno: es un **mutante equivalente**. Toda presentación que llega a esa línea o pasó la comprobación del recuento —y entonces su recuento ya es su posición, y ponerlo otra vez no cambia nada— o tiene renuncia. Lo que protege a las demás no es restringir el ajuste, es que la comparación sigue siendo exacta en todo lo demás. Está dicho así en el comentario del código, en vez de dejar que la restricción parezca lo que sujeta.
+
+**Y el mensaje**: la consola ya no dice «queda registrado» antes de saberlo. Antes de la pregunta nombra lo que se va a renunciar a verificar; **después** de compactar, y solo si ha compactado, dice lo que ha quedado registrado. Con un test que cancela y comprueba que no aparece.
+
+### Bloqueante 3 — con un 720 registrado, cualquier escritura avisaba
+
+**Decisión de la dirección: el aviso solo sale cuando la escritura puede afectar a esa declaración.** La regla, **derivada de cómo se valoran de verdad** y comprobada leyendo `informative/holdings.ts`, `informative/balances.ts` y `informative/m720.ts`:
+
+| Qué valora el 720/721 | Cómo lo obtiene | Qué puede moverlo |
+|---|---|---|
+| Valores y cripto a 31/12 | `foreignHoldingsAt`: proyecta con `asOf` = 31/12, que corta por **fecha de negocio** | una operación con fecha de negocio **≤ 31/12** de ese año |
+| Efectivo a 31/12 | la misma proyección | lo mismo |
+| Saldo medio del cuarto trimestre | `quarterAverages`: saldos diarios del 1/10 al 31/12 por fecha de negocio | lo mismo |
+| Valoración de un valor | `valuation` con su `date`, que es fecha de negocio | lo mismo |
+| Si una cuenta es extranjera | `accountsAt`: el país de la cuenta **según el día en que se registró cada cambio** | **nada registrado hoy**: un `account_updated` de hoy no llega a un 31/12 pasado |
+| Si un activo es valor o cripto | el `asset_type` del catálogo de hoy | **nada**: la proyección rechaza cambiar el tipo de un activo (`asset_type_change`) |
+
+De ahí sale la regla implementada:
+
+- **Una operación con fecha de negocio anterior o igual al 31/12 de ese ejercicio** puede moverlo — no solo las de dentro del año: una compra de 2025 que sigue en cartera mueve el 720 de 2027.
+- **Una anulación**, por la fecha de lo que anula.
+- **El seguimiento** (órdenes y traspasos solicitados) tiene fecha pero **no mueve** ni posiciones ni efectivo: no avisa.
+- **Un evento sin fecha de negocio no mueve ninguna cifra por sí solo**, como decía la dirección — con **una** excepción que encontré al derivarlo y que no es de catálogo: **un cambio de `fiscal_date_rule`** cambia la fecha de negocio de las operaciones existentes y puede pasarlas de un lado a otro del 31/12, y las tenencias de ese día con ellas. Así que un cambio de configuración avisa **si y solo si** cambia la regla de fecha fiscal; cambiar un umbral o un peso no mueve ninguna cifra declarada. **Lo señalo por si la dirección no lo quiere así.**
+
+Seis tests, uno por fila de la regla. Los cuatro que el código anterior tenía que suspender se vieron en rojo, los cuatro con `expected [ { model: '720', year: 2027, … } ] to deeply equal []`: la operación posterior al cierre, el activo nuevo, el seguimiento y el cambio de umbral. Los dos que avisan —la operación anterior al año y la anulación de algo fechado antes del cierre— ya pasaban, como tenían que pasar: el código anterior avisaba de todo.
+
+### Los no bloqueantes que entraron
+
+- **Una renuncia de una presentación que no existe** es inválida (`waiver_filing_unknown`). Con una precisión que salió al escribirlo: «existe» quiere decir **en el fichero**, no «en vigor». Una presentación **anulada** sigue en el fichero y `compact` sigue comprobando su huella; si su renuncia fuera inválida, el libro volvería a quedar encerrado. Hay un test que lo ata.
+- **El aviso de la renuncia en `atlas check`** se dice en español, con el motivo y la fecha, aunque el escáner no lo exija.
+- **El ancla por origen**, con «coincide con lo calculado» cuando lo declarado es lo calculado, en la vista y en la tarjeta, y con la privacidad puesta se ve el hecho y los orígenes, nunca los importes.
+- **La respuesta a P10**, escrita arriba, en P10.
+- **`docs/fiscal-questions.md`: no eran dos frases, eran doce celdas.** La revisión encontró las dos de #23 y #24; al comprobarlo **mecánicamente** —cada celda de la tabla original, normalizada, contra el documento nuevo— salieron **doce** cuyo texto no sobrevivía literal, porque al moverlas a la columna «Matiz» las había resumido o retocado («solo evita», «entera» por «entero», «e» por «,»…). Ahora están **todas tal cual**, y la misma comprobación sobre las cinco columnas de cada fila y sobre todas las líneas fuera de la tabla da **cero** pérdidas. La del #24 conserva «la primera lectura solo miró una mitad», que es el registro de un error de la dirección, y este proyecto conserva los suyos.
+- **ADR-0025**, enmendada con su fecha y su motivo, y corregida donde prometía más de lo que el adaptador cumple.
+
+### Mutación de la revisión
+
+Un mutante por arreglo, con la disciplina de siempre —sustitución afirmada, fichero comprobado y restaurado, y el lote **entero** otra vez cuando abortó en R5—:
+
+```
+KILLED   R1 accept the reversal of a waiver again
+KILLED   R2 accept a waiver of a filing that is not in the file
+KILLED   R3 fold lines into digest again (the ternary)
+KILLED   R4 drop the authorised change, locking the lines case out
+—        R5 authorise every filing, not only the waived ones   → equivalente, ver arriba
+KILLED   R6 announce the record before the compaction again
+KILLED   R7 warn of an informative return on every write again
+KILLED   R8 cut the informative horizon at the start of the year
+KILLED   R9 ignore a change of the fiscal date rule
+KILLED   R10 count tracking as reaching a date
+KILLED   R11 paint the anchor as one total again
+KILLED   R12 never say it matches
+KILLED   R13 hide the matching sentence in the card
+```
+
+### Para la ronda siguiente, sin tocar ahora
+
+1. **Anular una presentación se acepta sin marcarla inválida.** Anterior a esta ronda, y la dirección lo deja expresamente fuera: registrar una presentación por error es un error de tecleo y la vía de corrección es la de siempre.
+2. **La carrera del almacén `blob`.** Compara el etag al leer los bytes actuales y después escribe sin condición, así que otra escritura en ese intervalo —otra pestaña, la consola sobre la misma carpeta— se pisaría. Afecta a toda escritura, no solo a la renuncia; ADR-0025 ya no promete lo contrario.
+3. **El punto ciego del escáner de mensajes** (E2), que el ternario usó tres veces.
 
 ---
 
