@@ -16,10 +16,11 @@
 // calculation into "what was filed" by pressing enter is exactly what ADR-0020
 // separates.
 
-import { type FilingModel, type Money, todayInMadrid } from "@atlas/domain";
+import { type FilingModel, todayInMadrid } from "@atlas/domain";
 import { filingProposal } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags, listFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { eur } from "../output/format.js";
 import { table } from "../output/table.js";
 import { confirmAndRecord, loadForQuery } from "./shared.js";
 
@@ -29,11 +30,6 @@ const USAGE =
 const MODELS: readonly FilingModel[] = ["renta", "720", "721"];
 
 /** Two decimals always, so the column reads as money. */
-const cents = (money: Money): string => {
-  const [whole, fraction = ""] = money.roundToCents().amount.toString().split(".");
-  return `${whole}.${fraction.padEnd(2, "0")}`;
-};
-
 /** `--set clave=importe`, checked against the keys the return actually has. */
 const overrides = (keys: ReadonlySet<string>, values: readonly string[]): Map<string, string> => {
   const declared = new Map<string, string>();
@@ -67,9 +63,7 @@ export const filedCommand = async (
   const today = todayInMadrid(ctx.deps.clock);
   const { events } = await loadForQuery(ctx);
   const proposal = filingProposal(events, model, year, { today });
-  const computed = new Map(
-    proposal.figures.map((figure) => [figure.key, cents(figure.amount_eur)]),
-  );
+  const computed = new Map(proposal.figures.map((figure) => [figure.key, eur(figure.amount_eur)]));
   const declared = overrides(new Set(computed.keys()), listFlag(flags, "set"));
   ctx.io.out(
     `Lo que la aplicación calcula hoy para ${model === "renta" ? "la Renta" : `el Modelo ${model}`} de ${year}, y lo que vas a declarar:`,

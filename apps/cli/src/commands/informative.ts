@@ -6,7 +6,7 @@
 // The CLI only formats: what counts, what it is worth, whether it obliges and
 // why is decided in `packages/domain/src/informative/` (§2 bis of the prompt).
 
-import { type Money, todayInMadrid } from "@atlas/domain";
+import { todayInMadrid } from "@atlas/domain";
 import type {
   InformativeCategory,
   InformativeItem,
@@ -16,6 +16,7 @@ import type {
 import { informativeReturn } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 import { loadForQuery, renderQuery } from "./shared.js";
@@ -23,14 +24,6 @@ import { loadForQuery, renderQuery } from "./shared.js";
 const USAGE = "uso: atlas m720 <año> [--json] · atlas m721 <año> [--json]";
 
 /** A figure of the model: always two decimals, so a column reads as money. */
-const cents = (money: Money | undefined): string => {
-  if (money === undefined) {
-    return "—";
-  }
-  const [whole, fraction = ""] = money.roundToCents().amount.toString().split(".");
-  return `${whole}.${fraction.padEnd(2, "0")}`;
-};
-
 const VERDICT: Record<InformativeCategory["verdict"], string> = {
   obliged: "OBLIGADO",
   not_obliged: "no obligado",
@@ -56,17 +49,17 @@ const CATEGORY: Record<string, string> = {
 const reasonText = (reason: VerdictReason): string => {
   switch (reason.kind) {
     case "threshold":
-      return `supera el umbral (${cents(reason.after_eur)})`;
+      return `supera el umbral (${eur(reason.after_eur)})`;
     case "first_time_category":
-      return `supera el umbral y esta categoría no se declaró en el ${String(reason.against_year)} (${cents(reason.after_eur)})`;
+      return `supera el umbral y esta categoría no se declaró en el ${String(reason.against_year)} (${eur(reason.after_eur)})`;
     case "increase":
-      return `sube más del límite sobre el ${String(reason.against_year)}: ${cents(reason.before_eur)} → ${cents(reason.after_eur)}`;
+      return `sube más del límite sobre el ${String(reason.against_year)}: ${eur(reason.before_eur)} → ${eur(reason.after_eur)}`;
     case "increase_q4_average":
-      return `el saldo medio del cuarto trimestre sube más del límite sobre el ${String(reason.against_year)}: ${cents(reason.before_eur)} → ${cents(reason.after_eur)}`;
+      return `el saldo medio del cuarto trimestre sube más del límite sobre el ${String(reason.against_year)}: ${eur(reason.before_eur)} → ${eur(reason.after_eur)}`;
     case "extinction":
       return `se ha dejado de tener ${reason.asset_id ?? reason.account_id}, que se declaró en el ${String(reason.against_year)}`;
     default:
-      return `aviso: ${cents(reason.after_eur)}, cerca del umbral`;
+      return `aviso: ${eur(reason.after_eur)}, cerca del umbral`;
   }
 };
 
@@ -76,8 +69,8 @@ const accountRows = (items: readonly InformativeItem[]): string[][] =>
     (item.balances ?? [])
       .map((part) => `${part.amount.amount.toString()} ${part.currency}`)
       .join(" · "),
-    cents(item.value_eur),
-    cents(item.q4_average_eur),
+    eur(item.value_eur),
+    eur(item.q4_average_eur),
     (item.balances ?? [])[0] === undefined ? "" : String((item.balances ?? [])[0]?.days ?? ""),
     item.flags.map((flag) => FLAG[flag]).join("; "),
   ]);
@@ -89,7 +82,7 @@ const assetRows = (items: readonly InformativeItem[]): string[][] =>
     item.quantity?.toString() ?? "",
     item.unit_value === undefined ? "—" : `${item.unit_value} (${item.valuation_date ?? "?"})`,
     item.fx_rate === undefined ? "—" : `${item.fx_rate} (${item.fx_rate_date ?? "?"})`,
-    cents(item.value_eur),
+    eur(item.value_eur),
     item.flags.map((flag) => FLAG[flag]).join("; "),
   ]);
 
@@ -107,8 +100,8 @@ const categoryText = (category: InformativeCategory, index: number): string => {
         );
   const total =
     category.category === "accounts"
-      ? `Total a 31/12 ${cents(category.value_eur)} · medio del cuarto trimestre ${cents(category.q4_average_eur)}`
-      : `Total ${cents(category.value_eur)}`;
+      ? `Total a 31/12 ${eur(category.value_eur)} · medio del cuarto trimestre ${eur(category.q4_average_eur)}`
+      : `Total ${eur(category.value_eur)}`;
   const lines = [heading, body, `${total} → ${VERDICT[category.verdict]}`];
   for (const reason of category.reasons) {
     lines.push(`  · ${reasonText(reason)}`);
@@ -146,7 +139,7 @@ export const renderInformative = (report: InformativeReturn): string => {
   const out: string[] = [
     `MODELO ${report.model} de ${report.year} — núcleo y cubo agregados por contribuyente (constitución III).`,
     `${PERIOD[report.period]}. Fecha de consulta: ${report.today}.`,
-    `Umbral ${cents(report.threshold_eur)} · vuelve a obligar por encima de +${cents(report.increase_eur)} · aviso desde ${cents(report.alert_eur)}.`,
+    `Umbral ${eur(report.threshold_eur)} · vuelve a obligar por encima de +${eur(report.increase_eur)} · aviso desde ${eur(report.alert_eur)}.`,
   ];
   report.categories.forEach((category, index) => {
     out.push(categoryText(category, index + 1));
@@ -163,10 +156,10 @@ export const renderInformative = (report: InformativeReturn): string => {
         ["categoría", "declarado", "declarado medio 4T", "hoy", "hoy medio 4T"],
         report.previous.categories.map((entry) => [
           CATEGORY[entry.category] ?? entry.category,
-          cents(entry.declared_eur),
-          cents(entry.declared_q4_average_eur),
-          cents(entry.computed_eur),
-          cents(entry.computed_q4_average_eur),
+          eur(entry.declared_eur),
+          eur(entry.declared_q4_average_eur),
+          eur(entry.computed_eur),
+          eur(entry.computed_q4_average_eur),
         ]),
       ),
     );
@@ -178,10 +171,10 @@ export const renderInformative = (report: InformativeReturn): string => {
         ["categoría", "declarado", "declarado medio 4T", "hoy", "hoy medio 4T"],
         report.filed.categories.map((entry) => [
           CATEGORY[entry.category] ?? entry.category,
-          cents(entry.declared_eur),
-          cents(entry.declared_q4_average_eur),
-          cents(entry.computed_eur),
-          cents(entry.computed_q4_average_eur),
+          eur(entry.declared_eur),
+          eur(entry.declared_q4_average_eur),
+          eur(entry.computed_eur),
+          eur(entry.computed_q4_average_eur),
         ]),
       ),
     );

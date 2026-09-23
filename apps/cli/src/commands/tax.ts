@@ -3,7 +3,7 @@
 // The CLI only formats: every figure, every criterion and every note comes from
 // `taxYear` in the domain (decision (h) of prompt 006, §2 bis of prompt 009).
 
-import { type Money, todayInMadrid } from "@atlas/domain";
+import { todayInMadrid } from "@atlas/domain";
 import type {
   CriterionId,
   CriterionStake,
@@ -22,6 +22,7 @@ import {
 } from "@atlas/domain/fiscal";
 import { assertKnownFlags, booleanFlag, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 import { render } from "./shared.js";
@@ -30,14 +31,6 @@ import { renderBoxes } from "./tax-boxes.js";
 const USAGE = "uso: atlas tax <año> [--lots] [--boxes] [--json]";
 
 /** A figure of the return: always two decimals, so a column reads as money. */
-const cents = (money: Money | undefined): string => {
-  if (money === undefined) {
-    return "—";
-  }
-  const [whole, fraction = ""] = money.roundToCents().amount.toString().split(".");
-  return `${whole}.${fraction.padEnd(2, "0")}`;
-};
-
 const CERTAINTY: Record<string, string> = {
   high: "alta",
   medium: "media",
@@ -131,12 +124,12 @@ const transmissionTable = (lines: readonly TransmissionLine[]): string =>
       line.quantity.toString(),
       `${line.proceeds.amount.amount.toString()} ${line.proceeds.amount.currency}`,
       `${line.proceeds.fx_rate} (${line.proceeds.fx_rate_date})`,
-      cents(line.proceeds.eur),
-      cents(line.cost_eur),
-      cents(line.own_eur),
-      cents(line.released_eur),
-      cents(line.deferred_eur),
-      `${cents(line.computable_eur_rounded)}${line.provisional_until === undefined ? "" : " (provisional)"}`,
+      eur(line.proceeds.eur),
+      eur(line.cost_eur),
+      eur(line.own_eur),
+      eur(line.released_eur),
+      eur(line.deferred_eur),
+      `${eur(line.computable_eur_rounded)}${line.provisional_until === undefined ? "" : " (provisional)"}`,
       criteriaText(line.criteria),
     ]),
   );
@@ -189,7 +182,7 @@ const incomeTable = (lines: readonly IncomeLine[]): string =>
       line.asset_id ?? "",
       `${line.gross.amount.amount.toString()} ${line.gross.amount.currency}`,
       `${line.gross.fx_rate} (${line.gross.fx_rate_date})`,
-      cents(line.gross_eur_rounded),
+      eur(line.gross_eur_rounded),
       line.withholding_origin.amount.toString(),
       line.withholding_spain.amount.toString(),
       line.source_country ?? "",
@@ -213,14 +206,14 @@ const stake = (item: CriterionStake): string => {
     return `no cuantificable${reason}`;
   }
   if (item.measure === "exposure") {
-    return `exposición ${cents(item.exposure_eur)}${reason}`;
+    return `exposición ${eur(item.exposure_eur)}${reason}`;
   }
-  const parts = [`base ${cents(item.base_difference_eur)}`];
+  const parts = [`base ${eur(item.base_difference_eur)}`];
   if (item.pending_difference_eur !== undefined && !item.pending_difference_eur.isZero()) {
-    parts.push(`pendiente ${cents(item.pending_difference_eur)}`);
+    parts.push(`pendiente ${eur(item.pending_difference_eur)}`);
   }
   if (item.deferred_difference_eur !== undefined && !item.deferred_difference_eur.isZero()) {
-    parts.push(`diferido ${cents(item.deferred_difference_eur)}`);
+    parts.push(`diferido ${eur(item.deferred_difference_eur)}`);
   }
   return `diferencia: ${parts.join(", ")}`;
 };
@@ -272,14 +265,14 @@ const filingText = (report: TaxYearReport): string => {
       ["cifra", "declarado", "calculado entonces", "hoy", "por qué difiere"],
       filing.figures.map((figure) => [
         figure.figure,
-        cents(figure.declared),
-        cents(figure.computed_then),
-        cents(figure.now),
+        eur(figure.declared),
+        eur(figure.computed_then),
+        eur(figure.now),
         figure.causes === undefined
           ? ""
           : Object.entries(figure.causes)
               .filter(([, amount]) => !amount.isZero())
-              .map(([cause, amount]) => `${CAUSE[cause] ?? cause} ${cents(amount)}`)
+              .map(([cause, amount]) => `${CAUSE[cause] ?? cause} ${eur(amount)}`)
               .join(" · "),
       ]),
     ),
@@ -297,7 +290,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
   out.push(
     section(
       "1. Ganancias y pérdidas patrimoniales (art. 33 LIRPF)",
-      `${transmissionTable(gains.lines)}\nGanancias ${cents(gains.gains_eur)} · Pérdidas ${cents(gains.losses_eur)} · Saldo ${cents(gains.balance_eur)}${gains.foreign_releases_eur.isZero() ? "" : ` (incluye ${cents(gains.foreign_releases_eur)} liberados de pérdidas de esta categoría)`}`,
+      `${transmissionTable(gains.lines)}\nGanancias ${eur(gains.gains_eur)} · Pérdidas ${eur(gains.losses_eur)} · Saldo ${eur(gains.balance_eur)}${gains.foreign_releases_eur.isZero() ? "" : ` (incluye ${eur(gains.foreign_releases_eur)} liberados de pérdidas de esta categoría)`}`,
     ),
   );
   if (withLots) {
@@ -324,11 +317,11 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
         line.event_id,
         line.fee_kind,
         `${line.amount.amount.amount.toString()} ${line.amount.amount.currency}`,
-        cents(line.amount_eur_rounded),
+        eur(line.amount_eur_rounded),
         criteriaText(line.criteria),
       ]),
     )}`,
-    `Saldo ${cents(movable.balance_eur)}`,
+    `Saldo ${eur(movable.balance_eur)}`,
   );
   out.push(
     section("2. Rendimientos del capital mobiliario (art. 25 LIRPF)", movableParts.join("\n")),
@@ -345,7 +338,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
             line.event_id,
             line.asset_id,
             line.fiscal_date,
-            cents(line.amount_eur_rounded),
+            eur(line.amount_eur_rounded),
             `${line.units.toString()} de ${line.sold.toString()}`,
             `${line.window} [${line.window_start} … ${line.window_end}]`,
             line.acquisitions
@@ -362,7 +355,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
           wash.released.map((line) => [
             line.event_id,
             `${line.origin_event_id} (${line.origin_fiscal_date})`,
-            cents(line.amount_eur),
+            eur(line.amount_eur),
             line.travelled ? "sí" : "no",
           ]),
         ),
@@ -373,7 +366,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
             line.origin_event_id,
             line.lot_id ?? `espera la recompra ${line.awaiting_event_id ?? ""}`,
             line.asset_id,
-            cents(line.amount_eur),
+            eur(line.amount_eur),
             line.travelled ? "sí" : "no",
           ]),
         ),
@@ -385,7 +378,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
     section(
       "4. Compensación (art. 49 LIRPF)",
       [
-        `Límite conjunto del ${c.limit_pct} %: contra ganancias ${cents(c.limit_eur.capital_gain)}, contra rendimientos ${cents(c.limit_eur.movable_capital)}.`,
+        `Límite conjunto del ${c.limit_pct} %: contra ganancias ${eur(c.limit_eur.capital_gain)}, contra rendimientos ${eur(c.limit_eur.movable_capital)}.`,
         table(
           ["fase", "compensa", "ejercicio de origen", "contra", "importe", "con límite"],
           c.steps.map((step) => [
@@ -393,7 +386,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
             CATEGORY[step.from] as string,
             String(step.origin_year),
             CATEGORY[step.against] as string,
-            cents(step.amount_eur),
+            eur(step.amount_eur),
             step.limited ? "sí" : "no",
           ]),
         ),
@@ -409,26 +402,26 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
           c.pending.map((p) => [
             String(p.origin_year),
             CATEGORY[p.category] as string,
-            cents(p.amount_eur),
+            eur(p.amount_eur),
             String(p.expires_after),
           ]),
         ),
         ...c.expired.map(
           (p) =>
-            `CADUCA al cierre de ${report.year}: ${cents(p.amount_eur)} de ${p.origin_year} (${CATEGORY[p.category]}).`,
+            `CADUCA al cierre de ${report.year}: ${eur(p.amount_eur)} de ${p.origin_year} (${CATEGORY[p.category]}).`,
         ),
         ...(report.anchor === undefined
           ? []
           : [
               report.anchor.before_ledger === true
-                ? `Anclado en lo declarado en ${report.anchor.year}, anterior a tus datos: ${report.anchor.declared.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}. Vienen de lo declarado, no de un cálculo.`
-                : `Anclado en lo declarado en ${report.anchor.year}: calculado ${report.anchor.computed.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}; declarado ${report.anchor.declared.map((p) => `${p.origin_year} ${cents(p.amount_eur)}`).join(", ") || "nada"}.`,
+                ? `Anclado en lo declarado en ${report.anchor.year}, anterior a tus datos: ${report.anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}. Vienen de lo declarado, no de un cálculo.`
+                : `Anclado en lo declarado en ${report.anchor.year}: calculado ${report.anchor.computed.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}; declarado ${report.anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}.`,
             ]),
       ].join("\n"),
     ),
   );
   out.push(
-    `\nBASE IMPONIBLE DEL AHORRO ${report.year}: ${cents(report.base_eur)} EUR (base, no cuota)`,
+    `\nBASE IMPONIBLE DEL AHORRO ${report.year}: ${eur(report.base_eur)} EUR (base, no cuota)`,
   );
   out.push(section("6. Lo declarado en este ejercicio", filingText(report)));
   out.push(
@@ -441,9 +434,9 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
           line.event_id,
           line.source,
           `${line.amount.amount.amount.toString()} ${line.amount.amount.currency}`,
-          cents(line.amount_eur_rounded),
+          eur(line.amount_eur_rounded),
         ]),
-      )}\nTotal ${cents(report.withholdings.total_eur)}`,
+      )}\nTotal ${eur(report.withholdings.total_eur)}`,
     ),
   );
   out.push(
@@ -462,13 +455,13 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
         report.double_taxation.lines.map((line) => [
           line.event_id,
           line.source_country ?? "?",
-          cents(line.gross_eur),
-          cents(line.foreign_tax_eur),
+          eur(line.gross_eur),
+          eur(line.foreign_tax_eur),
           line.treaty_pct ?? "—",
-          cents(line.deductible_eur),
-          cents(line.not_deductible_eur),
+          eur(line.deductible_eur),
+          eur(line.not_deductible_eur),
         ]),
-      )}\nDeducible ${cents(report.double_taxation.deductible_eur)} · No deducible ${cents(report.double_taxation.not_deductible_eur)}`,
+      )}\nDeducible ${eur(report.double_taxation.deductible_eur)} · No deducible ${eur(report.double_taxation.not_deductible_eur)}`,
     ),
   );
   out.push(
@@ -496,7 +489,7 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
         `12. Diferencias con la configuración anterior (${diff.previous_origin} → ${diff.current_origin})`,
         diff.invalid_before !== undefined
           ? `La configuración anterior deja ${diff.invalid_before} eventos inválidos: no hay cifra con la que comparar.`
-          : `Base antes ${cents(diff.base_before_eur)} · ahora ${cents(diff.base_after_eur)}\n${
+          : `Base antes ${eur(diff.base_before_eur)} · ahora ${eur(diff.base_after_eur)}\n${
               diff.changes.length === 0
                 ? "Ninguna operación cambia."
                 : table(

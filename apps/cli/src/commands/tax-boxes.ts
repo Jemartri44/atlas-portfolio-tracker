@@ -8,20 +8,11 @@
 // all, and says so: a box inherited from another year is a believable, wrong
 // figure that the user types into a real return (prompt 010, decision (e)).
 
-import type { Money } from "@atlas/domain";
 import type { BoxBlockId, BoxEntry, TaxBoxes } from "@atlas/domain/fiscal";
 import { BOX_BLOCKS, blockOfConcept, conceptName } from "@atlas/domain/fiscal";
+import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
-
-/** A figure of the return: always two decimals, so a column reads as money. */
-const cents = (money: Money | undefined): string => {
-  if (money === undefined) {
-    return "";
-  }
-  const [whole, fraction = ""] = money.amount.toString().split(".");
-  return `${whole}.${fraction.padEnd(2, "0")}`;
-};
 
 /**
  * What each block of the form is called. **Which** concept goes in which block
@@ -54,10 +45,10 @@ const amountText = (entry: BoxEntry): string => {
   if (entry.amount_eur === undefined) {
     return entry.partial === undefined ? "" : "no se calcula entero";
   }
-  const amount = cents(entry.amount_eur);
+  const amount = eur(entry.amount_eur);
   return entry.form_eur === undefined
     ? amount
-    : `${amount} (el formulario dará ${cents(entry.form_eur)})`;
+    : `${amount} (el formulario dará ${eur(entry.form_eur)})`;
 };
 
 /** Which operation a per-row field belongs to, by asset and date, never by an identifier. */

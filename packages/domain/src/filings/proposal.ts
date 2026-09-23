@@ -91,12 +91,6 @@ export interface FilingProposal {
   draft(declared: ReadonlyMap<string, string>, meta: FilingMeta): Record<string, unknown>;
 }
 
-/** Two decimals always, so a column of a form reads as money. */
-const cents = (money: Money): string => {
-  const [whole, fraction = ""] = money.roundToCents().amount.toString().split(".");
-  return `${whole}.${fraction.padEnd(2, "0")}`;
-};
-
 const rentaFigures = (report: TaxYearReport): FilingFigureProposal[] => [
   { key: "base", kind: "savings_base", amount_eur: report.base_eur },
   ...report.compensation.pending.map(
@@ -242,7 +236,7 @@ export const filingProposal = (
   // configuration and not only the `settings_changed` in force, because with
   // anything taken from the code that line alone does not reproduce it.
   const resolved = settingsAt(state, options.today);
-  const computed = new Map(figures.map((figure) => [figure.key, cents(figure.amount_eur)]));
+  const computed = new Map(figures.map((figure) => [figure.key, figure.amount_eur.centsText()]));
   return {
     model,
     year,

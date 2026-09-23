@@ -46,17 +46,11 @@ const labelOf = (figure: FilingFigureProposal, names: NameIndex): string => {
   }
 };
 
-/** Two decimals, the way an amount is typed into a return. */
-const cents = (figure: FilingFigureProposal): string => {
-  const [whole, fraction = ""] = figure.amount_eur.roundToCents().amount.toString().split(".");
-  return `${whole}.${fraction.padEnd(2, "0")}`;
-};
-
 export const filingFields = (proposal: FilingProposal, names: NameIndex): FilingField[] =>
   proposal.figures.map((figure) => ({
     key: figure.key,
     label: labelOf(figure, names),
-    computed: cents(figure),
+    computed: figure.amount_eur.centsText(),
   }));
 
 /** The title of the screen: what is being recorded. */
