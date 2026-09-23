@@ -194,3 +194,56 @@ export const transmissionSection = (
       return "other";
   }
 };
+
+/**
+ * The blocks the form is read in, in its order. It is **structure**, not
+ * presentation: which figures go together is decided by the Modelo 100, and
+ * both interfaces have to group them the same way or the two outputs stop
+ * being comparable. Each interface puts its own Spanish on them.
+ */
+export const BOX_BLOCKS = [
+  "rcm",
+  "iic",
+  "etf",
+  "listed_shares",
+  "crypto",
+  "other",
+  "prior_years",
+  "offsetting",
+  "base",
+  "annex",
+  "deductions",
+] as const;
+export type BoxBlockId = (typeof BOX_BLOCKS)[number];
+
+/**
+ * Which block a concept belongs to. Total by construction: every concept of
+ * `ConceptId` starts with one of the prefixes below, and the compiler checks it
+ * through the return type, so a concept added tomorrow lands somewhere instead
+ * of silently disappearing from every screen.
+ */
+export const blockOfConcept = (concept: ConceptId): BoxBlockId => {
+  if (concept.startsWith("rcm.")) {
+    return "rcm";
+  }
+  if (concept.startsWith("gp.")) {
+    const section = concept.slice("gp.".length).split(".")[0] as string;
+    if ((SECTIONS as readonly string[]).includes(section)) {
+      return section as BoxBlockId;
+    }
+    if (section === "prior_years") {
+      return "prior_years";
+    }
+    return "offsetting";
+  }
+  if (concept.startsWith("offset.") || concept.startsWith("pending.")) {
+    return "offsetting";
+  }
+  if (concept.startsWith("annex.")) {
+    return "annex";
+  }
+  if (concept.startsWith("base.")) {
+    return "base";
+  }
+  return "deductions";
+};

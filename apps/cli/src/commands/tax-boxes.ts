@@ -8,7 +8,14 @@
 // all, and says so: a box inherited from another year is a believable, wrong
 // figure that the user types into a real return (prompt 010, decision (e)).
 
-import type { BoxEntry, Money, TaxBoxes } from "@atlas/domain";
+import {
+  BOX_BLOCKS,
+  type BoxBlockId,
+  type BoxEntry,
+  blockOfConcept,
+  type Money,
+  type TaxBoxes,
+} from "@atlas/domain";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 
@@ -21,49 +28,25 @@ const cents = (money: Money | undefined): string => {
   return `${whole}.${fraction.padEnd(2, "0")}`;
 };
 
-/** The blocks of the form, in its order, by the prefix of the concepts they hold. */
-const BLOCKS: { title: string; matches: (concept: string) => boolean }[] = [
-  {
-    title: "Rendimientos del capital mobiliario (art. 25 LIRPF)",
-    matches: (concept) => concept.startsWith("rcm."),
-  },
-  {
-    title: "Instituciones de inversión colectiva",
-    matches: (concept) => concept.startsWith("gp.iic."),
-  },
-  {
-    title: "IIC del artículo 75.3.j): fondos y sociedades cotizadas",
-    matches: (concept) => concept.startsWith("gp.etf."),
-  },
-  {
-    title: "Acciones negociadas",
-    matches: (concept) => concept.startsWith("gp.listed_shares."),
-  },
-  { title: "Monedas virtuales", matches: (concept) => concept.startsWith("gp.crypto.") },
-  {
-    title: "Otros elementos patrimoniales",
-    matches: (concept) => concept.startsWith("gp.other."),
-  },
-  {
-    title: "Ejercicios anteriores imputables a este",
-    matches: (concept) => concept.startsWith("gp.prior_years."),
-  },
-  {
-    title: "Integración y compensación",
-    matches: (concept) =>
-      concept.startsWith("gp.gains_total") ||
-      concept.startsWith("gp.losses_total") ||
-      concept.startsWith("gp.balance") ||
-      concept.startsWith("offset.") ||
-      concept.startsWith("pending."),
-  },
-  { title: "Base del ahorro", matches: (concept) => concept.startsWith("base.") },
-  { title: "Anexo C.3: saldos pendientes", matches: (concept) => concept.startsWith("annex.") },
-  {
-    title: "Deducciones y pagos a cuenta",
-    matches: (concept) => concept.startsWith("ddi.") || concept.startsWith("withholding."),
-  },
-];
+/**
+ * What each block of the form is called. **Which** concept goes in which block
+ * is decided by the domain (`blockOfConcept`): it is the structure of the
+ * Modelo 100, and the console and the web have to group it the same way or the
+ * two outputs stop being comparable.
+ */
+const BLOCK_TITLES: Record<BoxBlockId, string> = {
+  rcm: "Rendimientos del capital mobiliario (art. 25 LIRPF)",
+  iic: "Instituciones de inversión colectiva",
+  etf: "IIC del artículo 75.3.j): fondos y sociedades cotizadas",
+  listed_shares: "Acciones negociadas",
+  crypto: "Monedas virtuales",
+  other: "Otros elementos patrimoniales",
+  prior_years: "Ejercicios anteriores imputables a este",
+  offsetting: "Integración y compensación",
+  base: "Base del ahorro",
+  annex: "Anexo C.3: saldos pendientes",
+  deductions: "Deducciones y pagos a cuenta",
+};
 
 /** What a figure is worth, or why it is not there. */
 const amountText = (entry: BoxEntry): string => {
@@ -109,22 +92,11 @@ export const renderBoxes = (boxes: TaxBoxes): string => {
       ? `Casillas de ${boxes.year} comprobadas el ${boxes.source?.checked_at ?? "?"} en ${boxes.source?.document ?? "?"}.`
       : `Las casillas de ${boxes.year} no están comprobadas en un formulario oficial: van los importes por conceptos, sin números. Nunca se usa la casilla de otro ejercicio.`,
   ];
-  const placed = new Set<BoxEntry>();
-  for (const block of BLOCKS) {
-    const entries = boxes.entries.filter((entry) => block.matches(entry.concept));
-    for (const entry of entries) {
-      placed.add(entry);
-    }
+  for (const block of BOX_BLOCKS) {
+    const entries = boxes.entries.filter((entry) => blockOfConcept(entry.concept) === block);
     if (entries.length > 0) {
-      out.push(blockText(block.title, entries));
+      out.push(blockText(BLOCK_TITLES[block], entries));
     }
-  }
-  // Nothing is ever dropped: a concept the blocks above do not name still gets
-  // printed, because a figure of the return that no screen shows is the defect
-  // this whole layer exists to avoid.
-  const rest = boxes.entries.filter((entry) => !placed.has(entry));
-  if (rest.length > 0) {
-    out.push(blockText("Otros conceptos", rest));
   }
   out.push("\nAvisos", boxes.notes.map((note) => `- ${describeWarning(note)}`).join("\n"));
   return out.join("\n");

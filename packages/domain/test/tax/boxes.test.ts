@@ -10,7 +10,13 @@
 
 import { describe, expect, it } from "vitest";
 import { taxBoxes } from "../../src/tax/boxes/boxes.js";
-import { SECTIONS, transmissionSection } from "../../src/tax/boxes/concepts.js";
+import {
+  BOX_BLOCKS,
+  blockOfConcept,
+  type ConceptId,
+  SECTIONS,
+  transmissionSection,
+} from "../../src/tax/boxes/concepts.js";
 import type { BoxEntry, TaxBoxes } from "../../src/tax/boxes/report.js";
 import { buy, HAND_SETTINGS, sell, taxBuilder, text } from "./helpers.js";
 
@@ -300,5 +306,68 @@ describe("the same crossing, the other way round", () => {
     expect(crossed.origin_year).toBe(2023);
     expect(text(crossed.amount_eur)).toBe("100");
     expect(text(entry(boxes, "base.savings").amount_eur)).toBe("900");
+  });
+});
+
+/**
+ * The blocks of the form are **structure**, not presentation: the console and
+ * the web group the figures the same way because they ask the same function.
+ * Both halves are checked — every concept lands in a block, and every block is
+ * reachable — so a concept added tomorrow cannot quietly fall out of both
+ * screens at once.
+ */
+describe("the blocks the form is read in", () => {
+  it("places every concept of the layout, and reaches every block", () => {
+    const concepts: ConceptId[] = [
+      "rcm.interest",
+      "rcm.balance",
+      "gp.iic.gains",
+      "gp.etf.transmission",
+      "gp.listed_shares.losses",
+      "gp.crypto.gain_imputable",
+      "gp.other.loss",
+      "gp.prior_years.loss",
+      "gp.gains_total",
+      "gp.losses_total",
+      "gp.balance",
+      "offset.rcm_against_gp",
+      "pending.capital_gain.against_other",
+      "annex.movable_capital.left",
+      "base.savings",
+      "ddi.deduction",
+      "withholding.rcm",
+    ];
+    const blocks = concepts.map(blockOfConcept);
+    expect(blocks).toEqual([
+      "rcm",
+      "rcm",
+      "iic",
+      "etf",
+      "listed_shares",
+      "crypto",
+      "other",
+      "prior_years",
+      "offsetting",
+      "offsetting",
+      "offsetting",
+      "offsetting",
+      "offsetting",
+      "annex",
+      "base",
+      "deductions",
+      "deductions",
+    ]);
+    expect(new Set(blocks).size).toBe(BOX_BLOCKS.length);
+  });
+
+  it("leaves no figure of a real return without a block", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "fund_f", "2024-02-10", "10", "100");
+    sell(b, "fund_f", "2025-09-01", "10", "120");
+    const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
+    expect(boxes.entries.length).toBeGreaterThan(5);
+    for (const item of boxes.entries) {
+      expect(BOX_BLOCKS).toContain(blockOfConcept(item.concept));
+    }
   });
 });

@@ -178,6 +178,9 @@ export { washSaleWindowEnd } from "./settings/wash-sale.js";
 export * from "./synth/index.js";
 export { taxBoxes } from "./tax/boxes/boxes.js";
 export {
+  BOX_BLOCKS,
+  type BoxBlockId,
+  blockOfConcept,
   type ConceptId,
   ROW_FIELDS,
   type RowFieldId,
@@ -195,6 +198,7 @@ export {
   type FiscalCriterion,
   isDoubtful,
   type RiskDirection,
+  sortCriteria,
 } from "./tax/criteria.js";
 export { taxBoxesJson, taxReportJson } from "./tax/json.js";
 export type * from "./tax/report.js";
