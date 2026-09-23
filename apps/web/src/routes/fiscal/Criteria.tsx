@@ -82,7 +82,17 @@ const Stake = (props: { stake: StakeView }): JSX.Element => (
     </div>
     {/* Two entries of the same criterion differ in **why**, so the reason is
         always shown: without it the screen printed the same line twice. */}
-    <Show when={props.stake.reason}>
+    <Show
+      when={props.stake.reason}
+      fallback={
+        <Show when={props.stake.subjects.length > 0}>
+          <p class="stake-scope">
+            Por {props.stake.subjects.join(", ")}
+            {props.stake.more > 0 ? ` y ${props.stake.more} más` : ""}.
+          </p>
+        </Show>
+      }
+    >
       {(reason) => <p class="stake-scope">{MEASURE_REASONS[reason()]}</p>}
     </Show>
     <p class="stake-scope">

@@ -7,6 +7,7 @@
 // money behind it.
 
 import { describe, expect, it } from "vitest";
+import { MEASURE_REASONS } from "../src/format/criteria.js";
 import { store } from "../src/ledger/state.js";
 import Fiscal from "../src/routes/fiscal/index.jsx";
 import { goldenLines } from "./helpers/golden.js";
@@ -97,6 +98,31 @@ describe("the fiscal screen", () => {
     expect(lists.length).toBe(2);
     expect(lists[0]?.querySelectorAll("li").length).toBe(3);
     expect(text(doubtful)).toMatch(/Ver \d+ criterios más/);
+  });
+
+  it("tells two entries of the same criterion apart by what they come from", async () => {
+    // The engine emits one entry per motive, so the same criterion appears
+    // more than once; only the ones that carry a `reason` had anything on
+    // them. Two identical lines with different amounts beside them say
+    // nothing, so an entry with no motive is named by its operations.
+    const host = await open(2027);
+    const lines = [...host.querySelectorAll(".stakes li")].map(text);
+    // The golden ledger emits this one twice: once for an ordinary exposure
+    // and once because the exchange does not say whether it took the
+    // neutrality regime.
+    const repeated = lines.filter((line) => line.includes("Reparto del coste en una escisión"));
+    expect(repeated.length).toBe(2);
+    expect(repeated[0]).not.toBe(repeated[1]);
+    // The one with no motive is named by the operations behind it.
+    const named = repeated.find((line) => !line.includes("régimen de neutralidad, y sin eso"));
+    expect(named).toMatch(/Por [^·]+ · \d{2}\/\d{2}\/\d{4}/);
+    // And every entry of the list says something about its own scope: either
+    // the motive the engine gave it, or the operations it comes from.
+    const motives = Object.values(MEASURE_REASONS);
+    for (const line of lines) {
+      const named = /Por [^·]+ · \d{2}\/\d{2}\/\d{4}/.test(line);
+      expect(named || motives.some((motive) => line.includes(motive))).toBe(true);
+    }
   });
 
   it("shows the informative returns with their verdict", async () => {

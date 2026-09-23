@@ -13,7 +13,6 @@
 import type { Money } from "@atlas/domain";
 import type {
   CriterionId,
-  CriterionStake,
   ExpenseLine,
   IncomeLine,
   PendingLoss,
@@ -24,6 +23,7 @@ import { FISCAL_CRITERIA, sortCriteria } from "@atlas/domain/fiscal";
 import { formatDate } from "../../format/date.js";
 import type { NameIndex } from "../../format/names.js";
 import { displayName } from "../../format/names.js";
+import { type StakeView, stakeView } from "./stakes.js";
 
 /** One operation behind a total: what it was, when, and how much it puts in. */
 export interface FiscalRow {
@@ -54,22 +54,6 @@ export interface OffsetStep {
   text: string;
   amount_eur: Money;
   limited: boolean;
-}
-
-/** A criterion with what its other reading would move, for either of the two lists. */
-export interface StakeView {
-  criterion: CriterionId;
-  certainty: CriterionStake["certainty"];
-  measure: CriterionStake["measure"];
-  /** The amount, when there is one: a difference on the base or the exposure. */
-  amount_eur?: Money;
-  /** The other two differences, when the alternative reading moves them. */
-  pending_eur?: Money;
-  deferred_eur?: Money;
-  direction: CriterionStake["direction"];
-  reason?: CriterionStake["reason"];
-  operations: number;
-  markets?: readonly string[];
 }
 
 export interface PendingView {
@@ -134,27 +118,6 @@ const expenseRow = (line: ExpenseLine, names: NameIndex): FiscalRow => ({
 const criteriaOf = (rows: readonly FiscalRow[]): readonly CriterionId[] =>
   sortCriteria(rows.flatMap((row) => row.criteria));
 
-const stakeView = (stake: CriterionStake): StakeView => ({
-  criterion: stake.criterion,
-  certainty: stake.certainty,
-  measure: stake.measure,
-  ...(stake.base_difference_eur === undefined
-    ? stake.exposure_eur === undefined
-      ? {}
-      : { amount_eur: stake.exposure_eur }
-    : { amount_eur: stake.base_difference_eur }),
-  ...(stake.pending_difference_eur === undefined
-    ? {}
-    : { pending_eur: stake.pending_difference_eur }),
-  ...(stake.deferred_difference_eur === undefined
-    ? {}
-    : { deferred_eur: stake.deferred_difference_eur }),
-  direction: stake.direction,
-  ...(stake.reason === undefined ? {} : { reason: stake.reason }),
-  operations: stake.event_ids.length,
-  ...(stake.markets === undefined ? {} : { markets: stake.markets }),
-});
-
 const pendingView = (loss: PendingLoss, year: number): PendingView => ({
   key: `${loss.origin_year}:${loss.category}`,
   origin_year: loss.origin_year,
@@ -173,6 +136,12 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
     ...report.movable_capital.interest.map((line) => incomeRow(line, names)),
     ...report.movable_capital.expenses.map((line) => expenseRow(line, names)),
   ].sort((left, right) => left.date.localeCompare(right.date));
+  // What every operation of the year is called, by its event: the rows already
+  // say "asset · date", which is the same thing a criterion has to say to tell
+  // two of its entries apart.
+  const subjectOf = new Map(
+    [...gains, ...movable].map((row) => [row.key, `${row.subject} · ${row.date}`]),
+  );
   const groups: FiscalGroup[] = [
     {
       key: "capital_gain",
@@ -218,8 +187,8 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
     limit_pct: report.compensation.limit_pct,
     pending: report.compensation.pending.map((loss) => pendingView(loss, report.year)),
     expired: report.compensation.expired.map((loss) => pendingView(loss, report.year)),
-    doubtful: report.doubtful.map(stakeView),
-    settled: report.settled.map(stakeView),
+    doubtful: report.doubtful.map((stake) => stakeView(stake, subjectOf)),
+    settled: report.settled.map((stake) => stakeView(stake, subjectOf)),
     empty:
       gains.length === 0 &&
       movable.length === 0 &&
