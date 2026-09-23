@@ -101,6 +101,18 @@ const tupleOf = (event: FingerprintInput): string[] | undefined => {
     // A filing is identified by what the tax agency returned: the same model,
     // year and receipt recorded twice is the same filing, not two. A
     // supplementary return has its own receipt, so it never collides.
+    //
+    // `filed_at` is **not** part of it, and that is the fix of feature 011:
+    // with the date inside, the same receipt recorded twice on two different
+    // days did not even ask for confirmation, and two filings stayed for one —
+    // both feeding the chain of supplementary returns and the anchor of the
+    // year. Changing a persisted tuple is a breaking change (ADR-0018) and it
+    // is done **now**, inside `schema_version = 1`, because `tax_return_filed`
+    // exists only since feature 010, merged on 2026-09-23: there cannot be a
+    // line anywhere in the world whose fingerprint this moves. The argument
+    // does not depend on any fact about the user's private ledger, which is
+    // what makes it a good one; in a year it would cost a migration instead of
+    // a line.
     case "tax_return_filed":
       return [
         "",
@@ -108,7 +120,6 @@ const tupleOf = (event: FingerprintInput): string[] | undefined => {
         "",
         "",
         event.type,
-        event.filed_at,
         event.model,
         String(event.tax_year),
         event.receipt_reference,

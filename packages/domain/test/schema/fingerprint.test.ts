@@ -38,6 +38,36 @@ describe("fingerprintOf", () => {
     );
   });
 
+  /**
+   * A filing is identified by what the tax agency gave back: the same model,
+   * year and receipt recorded twice is **the same filing**, not two, whatever
+   * date each entry carries. With `filed_at` in the tuple the second one did
+   * not even ask for confirmation, and two filings stayed in the ledger for
+   * one — both feeding the chain of supplementary returns and the anchor of
+   * the year (feature 011, block 3).
+   */
+  it("identifies a filing by model, year and receipt, not by the date it was filed", () => {
+    const filed = SAMPLES.tax_return_filed;
+    expect(fp(variant(filed, { filed_at: "2026-06-19" }))).toBe(fingerprintOf(filed));
+    expect(fp(variant(filed, { tax_year: 2024 }))).not.toBe(fingerprintOf(filed));
+    expect(fp(variant(filed, { model: "720" }))).not.toBe(fingerprintOf(filed));
+  });
+
+  it("does not make a supplementary return collide with the one it replaces", () => {
+    const filed = SAMPLES.tax_return_filed;
+    // A supplementary return has a receipt of its own, which is what tells it
+    // apart — and what the comment of the code promised before anything tied it.
+    expect(
+      fp(
+        variant(filed, {
+          receipt_reference: "100-2025-000000000001",
+          supersedes: filed.id,
+          filed_at: "2026-09-01",
+        }),
+      ),
+    ).not.toBe(fingerprintOf(filed));
+  });
+
   it("covers every fingerprinted type and returns undefined for the rest", () => {
     for (const sample of sampleList()) {
       const value = fingerprintOf(sample);
