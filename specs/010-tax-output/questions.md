@@ -842,6 +842,13 @@ aplicada: **diferencia de base 0,00**, **diferencia de pendiente +240,00** y **d
 diferido −240,00**. Las dos cifras que se mueven son justo las que una comparación que solo mirara
 la base daría por iguales.
 
+> **Resultado** *(2026-09-23, tras `test/tax/two-month-fund.test.ts`)*: **las trece cifras
+> coinciden al céntimo**, incluidas las tres diferencias de la ficha del criterio. La única
+> corrección fue del **test**, no del cálculo: con la ventana de un año el diferido vivo a 31/12
+> sale repartido en **dos** entradas —−160,00 sobre las 40 participaciones de abril y −240,00
+> sobre las 60 de junio—, porque el motor lo guarda lote a lote, y la primera versión del test
+> miraba solo la primera. El total, −400,00, es el que dice el cálculo.
+
 ---
 
 ## Documentos que la dirección tendrá que actualizar
