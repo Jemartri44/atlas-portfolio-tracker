@@ -10,7 +10,7 @@
 //   3. the money at stake of a criterion kept apart from its **direction**,
 //      because the direction is shown with privacy on and the amount is not.
 
-import type { Money } from "@atlas/domain";
+import { Money } from "@atlas/domain";
 import type {
   CriterionId,
   ExpenseLine,
@@ -56,9 +56,28 @@ export interface OffsetStep {
   limited: boolean;
 }
 
+/**
+ * A year of the chain whose pending losses the engine **replaced** with what a
+ * filed return declared (ADR-0020). The screen says it **where the figure it
+ * affects is** —the pending losses— because a note at the bottom is a note
+ * nobody reads, and what the user is looking at is not what the engine
+ * computed (feature 011, block 6).
+ */
+export interface AnchorView {
+  key: string;
+  year: number;
+  /** What the engine had computed, and what the return declared. */
+  computed_eur: Money;
+  declared_eur: Money;
+  /** The anchored year is earlier than the ledger: what was carried from before. */
+  before_ledger: boolean;
+}
+
 export interface YearView {
   year: number;
   base_eur: Money;
+  /** Every substitution the chain applied, oldest first; empty when there was none. */
+  anchors: AnchorView[];
   groups: FiscalGroup[];
   steps: OffsetStep[];
   limit_pct: string;
@@ -112,6 +131,10 @@ const expenseRow = (line: ExpenseLine, names: NameIndex): FiscalRow => ({
 
 const criteriaOf = (rows: readonly FiscalRow[]): readonly CriterionId[] =>
   sortCriteria(rows.flatMap((row) => row.criteria));
+
+/** What a set of pending balances adds up to, with its sign. */
+const sumOf = (pending: readonly { amount_eur: Money }[]): Money =>
+  pending.reduce((total, entry) => total.add(entry.amount_eur), Money.zero("EUR"));
 
 /** The whole year, ready to paint. */
 export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
@@ -168,6 +191,13 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
   return {
     year: report.year,
     base_eur: report.base_eur,
+    anchors: report.anchors.map((anchor) => ({
+      key: String(anchor.year),
+      year: anchor.year,
+      computed_eur: sumOf(anchor.computed),
+      declared_eur: sumOf(anchor.declared),
+      before_ledger: anchor.before_ledger === true,
+    })),
     groups,
     steps,
     limit_pct: report.compensation.limit_pct,

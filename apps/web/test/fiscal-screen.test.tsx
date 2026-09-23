@@ -6,11 +6,12 @@
 // with privacy on — the direction and the certainty of a criterion but not the
 // money behind it.
 
+import { DEFAULT_SETTINGS } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { MEASURE_REASONS } from "../src/format/criteria.js";
 import { store } from "../src/ledger/state.js";
 import Fiscal from "../src/routes/fiscal/index.jsx";
-import { goldenLines } from "./helpers/golden.js";
+import { goldenLines, goldenText } from "./helpers/golden.js";
 import {
   openLedger,
   settle,
@@ -22,6 +23,45 @@ import {
 } from "./helpers/render.jsx";
 
 withGoldenLedger();
+
+/**
+ * Two income tax returns on record, of 2027 and 2028, each declaring pending
+ * losses **different** from the ones the golden ledger computes: two
+ * substitutions the chain of 2029 has to walk through.
+ */
+const filedTwice = (): string =>
+  [2027, 2028]
+    .map((year, index) =>
+      JSON.stringify({
+        schema_version: 1,
+        id: `01ARYZ6S41TSV4RRFFQ690000${index}`,
+        recorded_at: `${year + 1}-06-18T18:00:00.000Z`,
+        type: "tax_return_filed",
+        model: "renta",
+        tax_year: year,
+        filed_at: `${year + 1}-06-18`,
+        receipt_reference: `100-${year}-ABCDEFGHIJK${index}`,
+        declared: {
+          savings_base_eur: "0.00",
+          pending_losses: [
+            { origin_year: year, category: "capital_gain", amount_eur: `-${index + 1}00.00` },
+          ],
+          deferred_losses_eur: "0.00",
+        },
+        computed: {
+          as_of: `${year + 1}-06-18`,
+          settings_origin: "default",
+          settings: DEFAULT_SETTINGS,
+          savings_base_eur: "0.00",
+          pending_losses: [],
+          deferred_losses_eur: "0.00",
+        },
+        ledger_fingerprint: { schema_version: 1, lines: 200, sha256: "0".repeat(64) },
+        fingerprint: `sha256:filed-${year}`,
+      }),
+    )
+    .join("\n")
+    .concat("\n");
 
 const open = async (year = 2027) => show(`/fiscal?ejercicio=${year}`, Fiscal, "/fiscal");
 
@@ -112,6 +152,45 @@ describe("the fiscal screen", () => {
     expect(card).toBeDefined();
     expect(text(card)).toContain("Ninguno");
     expect(card?.querySelectorAll("ul.stakes").length).toBe(0);
+  });
+
+  /**
+   * **What the engine substitutes, the screen says** (ADR-0024, feature 011,
+   * block 6). With a return on record the chain replaces the pending losses it
+   * computed with the ones that return declared, so the figure on the screen
+   * is **not** the one the application calculated — and the console said so
+   * while the screen said it nowhere at all: `anchor` was not read once in
+   * `apps/web/src`.
+   *
+   * It goes beside the figure it affects, in the card of the pending losses,
+   * and not in a note at the end.
+   */
+  it("says beside the pending losses when they come from what was filed", async () => {
+    await openLedger(goldenText() + filedTwice());
+    const host = await show("/fiscal?ejercicio=2029", Fiscal, "/fiscal");
+    const card = [...host.querySelectorAll(".card")].find((entry) =>
+      text(entry).includes("Pérdidas pendientes"),
+    );
+    const shown = text(card);
+    // Both returns, not only the last: the chain applied two substitutions.
+    expect(shown).toContain("Anclado en lo que declaraste en 2027");
+    expect(shown).toContain("Anclado en lo que declaraste en 2028");
+    expect(shown).toContain("no de lo que calcula la aplicación");
+  });
+
+  it("keeps the fact with privacy on and hides the amounts", async () => {
+    await openLedger(goldenText() + filedTwice());
+    store.setPrivacy(true);
+    const host = await show("/fiscal?ejercicio=2029", Fiscal, "/fiscal");
+    const card = [...host.querySelectorAll(".card")].find((entry) =>
+      text(entry).includes("Pérdidas pendientes"),
+    );
+    const shown = text(card);
+    // **That** there was a substitution survives the mask; what it is worth
+    // does not, like every other amount of the application.
+    expect(shown).toContain("Anclado en lo que declaraste en 2027");
+    expect(shown).not.toMatch(/\d+,\d{2}\s*€/);
+    store.setPrivacy(false);
   });
 
   it("shows three criteria and folds the rest", async () => {

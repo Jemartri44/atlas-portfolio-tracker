@@ -19,6 +19,7 @@ export {
 export type { ExpiryWarning, PendingView } from "./losses.js";
 export type { StakeView } from "./stakes.js";
 export {
+  type AnchorView,
   type FiscalGroup,
   type FiscalRow,
   hasDisputed,

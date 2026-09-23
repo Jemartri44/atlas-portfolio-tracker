@@ -8,7 +8,7 @@
 import { For, type JSX, Show } from "solid-js";
 import type { DataColumn } from "../../components/index.js";
 import { Amount, DataTable, EmptyState, Notice, Section } from "../../components/index.js";
-import type { ExpiryWarning, PendingView } from "../../view-models/fiscal/index.js";
+import type { AnchorView, ExpiryWarning, PendingView } from "../../view-models/fiscal/index.js";
 
 const CATEGORY_TEXTS: Record<PendingView["category"], string> = {
   capital_gain: "Pérdidas patrimoniales",
@@ -42,8 +42,37 @@ export const LossesCard = (props: {
   pending: readonly PendingView[];
   expired: readonly PendingView[];
   expiring: readonly ExpiryWarning[];
+  anchors: readonly AnchorView[];
 }): JSX.Element => (
   <Section title="Pérdidas pendientes de compensar" class="span-6">
+    {/*
+      **What the engine substitutes, the engine says** (ADR-0024). When a
+      return is on record the chain replaces the pending losses it computed
+      with the ones that return declared, so the figure below is not the one
+      the application calculated — and until feature 011 the screen said so
+      nowhere at all. It goes here, next to the figure it affects, and not in
+      a note at the end. With privacy on the **fact** is still visible; the
+      amounts go through `Amount` like every other amount.
+    */}
+    <For each={props.anchors}>
+      {(anchor) => (
+        <Notice severity="info" title={`Anclado en lo que declaraste en ${anchor.year}`}>
+          <Show
+            when={!anchor.before_ledger}
+            fallback={
+              <>
+                Ese ejercicio es anterior a tus datos, así que lo pendiente viene de lo que
+                declaraste, no de un cálculo: <Amount value={anchor.declared_eur} coloured />.
+              </>
+            }
+          >
+            Lo que arrastras sale de tu declaración y no de lo que calcula la aplicación: ella
+            calculaba <Amount value={anchor.computed_eur} coloured /> y tú declaraste{" "}
+            <Amount value={anchor.declared_eur} coloured />.
+          </Show>
+        </Notice>
+      )}
+    </For>
     <For each={props.expiring}>
       {(loss) => (
         <Show
