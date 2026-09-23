@@ -15,7 +15,6 @@ import type {
   CriterionId,
   ExpenseLine,
   IncomeLine,
-  PendingLoss,
   TaxYearReport,
   TransmissionLine,
 } from "@atlas/domain/fiscal";
@@ -23,6 +22,7 @@ import { FISCAL_CRITERIA, sortCriteria } from "@atlas/domain/fiscal";
 import { formatDate } from "../../format/date.js";
 import type { NameIndex } from "../../format/names.js";
 import { displayName } from "../../format/names.js";
+import { type ExpiryWarning, expiryWarning, type PendingView, pendingView } from "./losses.js";
 import { type StakeView, stakeView } from "./stakes.js";
 
 /** One operation behind a total: what it was, when, and how much it puts in. */
@@ -56,16 +56,6 @@ export interface OffsetStep {
   limited: boolean;
 }
 
-export interface PendingView {
-  key: string;
-  origin_year: number;
-  category: PendingLoss["category"];
-  amount_eur: Money;
-  expires_after: number;
-  /** It is the last year it can be offset in: the screen says so. */
-  expiring: boolean;
-}
-
 export interface YearView {
   year: number;
   base_eur: Money;
@@ -74,6 +64,8 @@ export interface YearView {
   limit_pct: string;
   pending: PendingView[];
   expired: PendingView[];
+  /** What is about to stop being usable, and whether anything can still be done. */
+  expiring: ExpiryWarning[];
   doubtful: StakeView[];
   settled: StakeView[];
   /**
@@ -120,15 +112,6 @@ const expenseRow = (line: ExpenseLine, names: NameIndex): FiscalRow => ({
 
 const criteriaOf = (rows: readonly FiscalRow[]): readonly CriterionId[] =>
   sortCriteria(rows.flatMap((row) => row.criteria));
-
-const pendingView = (loss: PendingLoss, year: number): PendingView => ({
-  key: `${loss.origin_year}:${loss.category}`,
-  origin_year: loss.origin_year,
-  category: loss.category,
-  amount_eur: loss.amount_eur,
-  expires_after: loss.expires_after,
-  expiring: loss.expires_after === year,
-});
 
 /** The whole year, ready to paint. */
 export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
@@ -188,8 +171,18 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
     groups,
     steps,
     limit_pct: report.compensation.limit_pct,
-    pending: report.compensation.pending.map((loss) => pendingView(loss, report.year)),
-    expired: report.compensation.expired.map((loss) => pendingView(loss, report.year)),
+    pending: report.compensation.pending.map((loss) => pendingView(loss)),
+    expired: report.compensation.expired.map((loss) => pendingView(loss)),
+    // Only while the year is running: once it is closed, what expired is a
+    // fact, and the table below says it in the past tense, which is what it is.
+    expiring: [
+      ...(report.year === Number(report.today.slice(0, 4))
+        ? report.compensation.expired.map((loss) => expiryWarning(loss, "last"))
+        : []),
+      ...report.compensation.pending
+        .filter((loss) => loss.expires_after === report.year + 1)
+        .map((loss) => expiryWarning(loss, "next")),
+    ],
     doubtful: report.doubtful.map((stake) => stakeView(stake, subjectOf)),
     settled: report.settled.map((stake) => stakeView(stake, subjectOf)),
     // A balance that **expired** this year counts: it is the year a loss stops

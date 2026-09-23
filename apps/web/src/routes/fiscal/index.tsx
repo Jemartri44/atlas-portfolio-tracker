@@ -197,6 +197,7 @@ export default function FiscalRoute(): JSX.Element {
                           year={year().year}
                           pending={year().pending}
                           expired={year().expired}
+                          expiring={year().expiring}
                         />
                         <BoxesCard view={boxes()} />
                       </Show>

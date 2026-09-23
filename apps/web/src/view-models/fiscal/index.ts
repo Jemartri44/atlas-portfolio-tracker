@@ -16,13 +16,13 @@ export {
   VERDICT_TONES,
   type VerdictTone,
 } from "./informative.js";
+export type { ExpiryWarning, PendingView } from "./losses.js";
 export type { StakeView } from "./stakes.js";
 export {
   type FiscalGroup,
   type FiscalRow,
   hasDisputed,
   type OffsetStep,
-  type PendingView,
   type YearView,
   yearView,
 } from "./year.js";

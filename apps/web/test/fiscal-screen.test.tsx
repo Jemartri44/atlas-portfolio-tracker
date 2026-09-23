@@ -11,7 +11,15 @@ import { MEASURE_REASONS } from "../src/format/criteria.js";
 import { store } from "../src/ledger/state.js";
 import Fiscal from "../src/routes/fiscal/index.jsx";
 import { goldenLines } from "./helpers/golden.js";
-import { openLedger, settle, show, text, ULID, withGoldenLedger } from "./helpers/render.jsx";
+import {
+  openLedger,
+  settle,
+  show,
+  text,
+  today,
+  ULID,
+  withGoldenLedger,
+} from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -246,6 +254,42 @@ describe("the year a pending loss expires", () => {
     const shown = text(await openYear(2030));
     expect(shown).not.toContain("No hay nada que declarar");
     expect(shown).toContain("Se pueden compensar hasta 2031");
+  });
+
+  /**
+   * The warning, which used to be a condition that could never be true: it
+   * asked `pending` for a balance whose last year was the one being looked at,
+   * and in that year the engine already reports what is left of it as expired
+   * at its close. So it never fired once.
+   *
+   * It fires now where the user can still do something —*during* the last
+   * year, by realising gains before 31 December— and one year earlier as a
+   * heads-up. With the year already closed there is nothing to be done and the
+   * table says it in the past tense, which is what it is.
+   */
+  it("warns while the last year is still running, when something can be done", async () => {
+    today("2031-07-01");
+    const shown = text(await openYear(2031));
+    expect(shown).toContain("Este es el último ejercicio para usarlas");
+    expect(shown).toContain("lo que no compenses antes del 31 de diciembre se pierde");
+  });
+
+  it("gives a heads-up the year before, without alarming", async () => {
+    today("2030-07-01");
+    const shown = text(await openYear(2030));
+    expect(shown).toContain("Les queda este ejercicio y el siguiente");
+    expect(shown).toContain("solo se pueden compensar hasta 2031");
+    expect(shown).not.toContain("Este es el último ejercicio para usarlas");
+  });
+
+  it("does not warn about a year that is already over", async () => {
+    // Looking at 2031 from 2033: nothing can be done, and the table below
+    // already says it expired, in the past tense.
+    today("2033-07-01");
+    const shown = text(await openYear(2031));
+    expect(shown).not.toContain("Este es el último ejercicio para usarlas");
+    expect(shown).not.toContain("Les queda este ejercicio");
+    expect(shown).toContain("Caducadas al cerrar 2031");
   });
 });
 

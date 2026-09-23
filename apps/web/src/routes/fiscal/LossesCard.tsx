@@ -8,7 +8,7 @@
 import { For, type JSX, Show } from "solid-js";
 import type { DataColumn } from "../../components/index.js";
 import { Amount, DataTable, EmptyState, Notice, Section } from "../../components/index.js";
-import type { PendingView } from "../../view-models/fiscal/index.js";
+import type { ExpiryWarning, PendingView } from "../../view-models/fiscal/index.js";
 
 const CATEGORY_TEXTS: Record<PendingView["category"], string> = {
   capital_gain: "Pérdidas patrimoniales",
@@ -41,14 +41,25 @@ export const LossesCard = (props: {
   year: number;
   pending: readonly PendingView[];
   expired: readonly PendingView[];
+  expiring: readonly ExpiryWarning[];
 }): JSX.Element => (
   <Section title="Pérdidas pendientes de compensar" class="span-6">
-    <For each={props.pending.filter((loss) => loss.expiring)}>
+    <For each={props.expiring}>
       {(loss) => (
-        <Notice severity="caution" title="Este es el último año para usarlas">
-          Las {CATEGORY_TEXTS[loss.category].toLowerCase()} de {loss.origin_year} caducan al cerrar{" "}
-          {loss.expires_after}: lo que no se compense en este ejercicio se pierde.
-        </Notice>
+        <Show
+          when={loss.when === "last"}
+          fallback={
+            <Notice severity="info" title="Les queda este ejercicio y el siguiente">
+              Las {CATEGORY_TEXTS[loss.category].toLowerCase()} de {loss.origin_year} solo se pueden
+              compensar hasta {loss.expires_after}.
+            </Notice>
+          }
+        >
+          <Notice severity="caution" title="Este es el último ejercicio para usarlas">
+            Las {CATEGORY_TEXTS[loss.category].toLowerCase()} de {loss.origin_year} caducan al
+            cerrar {loss.expires_after}: lo que no compenses antes del 31 de diciembre se pierde.
+          </Notice>
+        </Show>
       )}
     </For>
     {/*
