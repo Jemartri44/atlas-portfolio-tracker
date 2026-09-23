@@ -655,6 +655,28 @@ KILLED   4b take receipt_reference out of the tuple
 
 ---
 
+## 6 bis. Verificación en navegador (2026-09-23)
+
+**20 capturas medidas**, fuera del repositorio, en `~/atlas-private/capturas/2026-09-23-fail-safe-gaps/`, con el guion que las hizo al lado (`011-cdp.mjs`, `011-shots.mjs`, `011-shots-writes.mjs` y las dos semillas). Chromium de Playwright conducido por CDP desde el scratchpad, sin una sola dependencia nueva en el repositorio.
+
+**La matriz**: 400×890 con densidad 3 (el teléfono del usuario), 2045×1141 (su monitor) y 360 de ancho; con datos y con el libro vacío; con la privacidad quitada —que es como se miden los desbordamientos— y puesta; claro y oscuro. En las veinte, `scrollWidth === clientWidth` **comprobado en el navegador**, no a ojo, y ningún elemento sobresale del ancho del documento.
+
+**Qué se miró, y qué enseña:**
+
+- **El ancla de lo declarado**, con **dos** Rentas presentadas: las dos aparecen, en orden, encima de la tabla de pendientes, diciendo lo que la aplicación calculaba y lo que el usuario declaró.
+- **Con la privacidad puesta**: el **hecho** sobrevive («Anclado en lo que declaraste en 2027») y **todos** los importes salen enmascarados, incluidos los dos del ancla.
+- **La tarjeta de criterios firmes vacía**, con su estado nuevo, y con entradas.
+- **Ajustes → Verificación** con el hallazgo de la huella no verificable, sus dos enlaces y la fecha en que el usuario la dio por buena.
+- **El tercer desenlace del aviso de ejercicio cerrado**, en la escritura de **Configuración**, con la causa `by_design` de un Modelo 720.
+- **El libro vacío**, que sigue enseñando un solo estado vacío con el siguiente paso.
+
+**Y dos cosas que solo se vieron mirando**, que es el argumento entero de por qué las capturas no son opcionales:
+
+1. **Un defecto de mi arnés, no de la pantalla.** La primera tanda salió con el reloj real del sistema, y el libro dorado vive en 2026-2029: las presentaciones de 2027 y 2028 estaban **en el futuro**, ninguna en vigor, y la pantalla enseñaba «No hay nada que declarar» sin una sola ancla. Con el reloj fijado en 2030 apareció lo que había que ver. *(Y es la otra cara del arreglo de P7: ahora que `today()` lee un reloj, el arnés puede fijarlo.)*
+2. **Un defecto de verdad: «Afecta a el Modelo 720».** En español `a` + `el` es **al**. Nadie lo había visto porque un 720 solo llegaba a ese aviso cuando lo que se escribía caía **por fecha** dentro de su ejercicio; desde que existe el tercer desenlace llega **siempre que se escribe algo**, y la primera captura del caso nuevo lo enseñó. Arreglado en las dos interfaces, con su test en la consola, que comprueba además que la Renta conserva su artículo.
+
+---
+
 ## 7. Decisiones tomadas sobre la marcha
 
 *(Vacío. Aquí van las que aparezcan al implementar y no estuvieran en el plan, con su motivo.)*
