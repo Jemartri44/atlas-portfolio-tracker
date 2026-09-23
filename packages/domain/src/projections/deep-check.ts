@@ -162,7 +162,7 @@ export const deepCheck = (
     findings.push(
       error(
         "filing_fingerprint_unreadable",
-        `the events before filing ${check.filing_id} cannot be read at schema version ${check.declared_lines}`,
+        `the events before filing ${check.filing_id} cannot be read at schema version ${check.declared_schema_version}, the version its fingerprint declares`,
         [check.filing_id],
       ),
     );
