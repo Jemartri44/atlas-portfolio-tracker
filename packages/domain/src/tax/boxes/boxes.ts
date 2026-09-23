@@ -41,26 +41,33 @@ const mappingOf = (table: YearBoxes, draft: Draft): YearBoxMapping | undefined =
     : (table.by_origin_year[draft.concept]?.[draft.origin_year] ?? table.concepts[draft.concept]);
 
 /**
- * Which of the two boxes a figure goes in, and the amount to type.
+ * Which of the two boxes a figure goes in, and the amount.
  *
- * The form splits a few figures into a positive box and a negative one and each
- * one holds a plain amount; box 0031 is the exception the help spells out, and
- * carries its minus sign.
+ * The form splits a few figures into a positive box and a negative one, and
+ * which of the two a figure lands in is decided here, as it always was.
+ *
+ * **What is never dropped is the sign.** The amount used to be turned into its
+ * magnitude whenever the box carried the sign for it, and that is only legible
+ * while there *is* a box: 2025 is the only year with a checked table and the
+ * user's first real return is 2026, so in the ordinary year the reader saw
+ * `5,69 €` for a figure that is `−5,69 €`, with no number and no label to tell
+ * them otherwise. A figure that is copied into a real return has to say what it
+ * is, and the box beside it —when there is one— says where it goes.
  */
 const shown = (
   concept: ConceptId,
   exact: Money,
   mapping: BoxMapping | undefined,
 ): { box?: string; label?: string; amount: Money } => {
-  const signed = SIGNED_CONCEPTS.has(concept);
-  const amount = signed || !exact.isNegative() ? exact.roundToCents() : exact.neg().roundToCents();
+  const amount = exact.roundToCents();
   if (mapping === undefined) {
     return { amount };
   }
-  const negative = !signed && exact.isNegative() ? mapping.when_negative : undefined;
+  const negative = !SIGNED_CONCEPTS.has(concept) && exact.isNegative();
+  const target = negative ? mapping.when_negative : undefined;
   return {
-    box: negative?.box ?? mapping.box,
-    label: negative?.label ?? mapping.label,
+    box: target?.box ?? mapping.box,
+    label: target?.label ?? mapping.label,
     amount,
   };
 };

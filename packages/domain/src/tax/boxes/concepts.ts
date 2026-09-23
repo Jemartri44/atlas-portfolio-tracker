@@ -246,8 +246,12 @@ export const MISSING_FIELDS: ReadonlySet<RowFieldId> = new Set(["nif"]);
  * Concepts whose box carries a **sign**, because the form says so. The help of
  * Renta WEB for box 0031: "Los rendimientos negativos se consignarán precedidos
  * del signo menos (-)". Everywhere else the form splits positive and negative
- * into two boxes —gains and losses, 0424 and 0425— and each one holds a plain
- * amount, so what the user types is the magnitude.
+ * into two boxes —gains and losses, 0424 and 0425— and the number of the box
+ * is what says which of the two it is.
+ *
+ * It decides **which box**, and nothing else: the amount shown always carries
+ * its own sign, with or without a table, because a year with no checked table
+ * has no box number to say it instead.
  */
 export const SIGNED_CONCEPTS: ReadonlySet<ConceptId> = new Set<ConceptId>([
   "rcm.interest",

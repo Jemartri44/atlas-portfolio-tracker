@@ -96,7 +96,7 @@ describe("a concept with no box in the year that does have a table", () => {
     const left = entry(boxes, "annex.capital_gain.left");
     expect(left.origin_year).toBe(2021);
     expect(left.box).toBeUndefined();
-    expect(text(left.amount_eur)).toBe("40");
+    expect(text(left.amount_eur)).toBe("-40");
     expect(codes(boxes)).toContain("tax_box_missing");
     const missing = boxes.notes.filter((note) => note.code === "tax_box_missing")[0] as {
       details: Record<string, unknown>;
@@ -245,7 +245,7 @@ describe("the two ways the savings base can cross categories", () => {
     const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
     // The balance of capital gains is negative, so it goes in 0425 and not 0424.
     expect(entry(boxes, "gp.balance").box).toBe("0425");
-    expect(text(entry(boxes, "gp.balance").amount_eur)).toBe("100");
+    expect(text(entry(boxes, "gp.balance").amount_eur)).toBe("-100");
     // And it offsets the income of the year up to 25 % of it, which is plenty.
     expect(entry(boxes, "offset.gp_against_rcm").box).toBe("0446");
     expect(text(entry(boxes, "offset.gp_against_rcm").amount_eur)).toBe("100");
@@ -282,7 +282,7 @@ describe("the same crossing, the other way round", () => {
     ).toEqual(["50"]);
     expect(text(total(boxes, "rcm.transmission").amount_eur)).toBe("50");
     // And the −100,00 freed goes where the loss was born.
-    expect(text(entry(boxes, "gp.prior_years.loss").amount_eur)).toBe("100");
+    expect(text(entry(boxes, "gp.prior_years.loss").amount_eur)).toBe("-100");
     expect(entry(boxes, "gp.prior_years.loss").box).toBe("0395");
     expect(entry(boxes, "gp.balance").box).toBe("0425");
   });
@@ -539,5 +539,44 @@ describe("what every figure is called", () => {
     for (const item of boxes.entries) {
       expect(conceptName(item.concept)).toMatch(/\S/);
     }
+  });
+});
+
+/**
+ * **A figure always carries its own sign**, with or without a checked table.
+ *
+ * It used to be turned into its magnitude whenever the form resolves the sign
+ * by sending the figure to a second box, and that only reads correctly while
+ * there *is* a box: 2025 is the only year with a table and the user's first
+ * real return is 2026, so in the ordinary year the reader saw `5,69 €` for a
+ * figure of `−5,69 €`, with no number and no label to say otherwise. The same
+ * class of defect as the internal identifier in the box of the denomination:
+ * the number the user copies into the form was wrong.
+ */
+describe("the sign of a figure", () => {
+  const withLoss = (year: number) => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "fund_f", `${year - 1}-02-10`, "10", "100");
+    sell(b, "fund_f", `${year}-09-01`, "10", "60");
+    return taxBoxes(b.build(), year, { today: TODAY });
+  };
+
+  it("keeps the minus in a year with no checked table", () => {
+    const boxes = withLoss(2026);
+    expect(boxes.mapping).toBe("none");
+    expect(text(entry(boxes, "gp.iic.loss").amount_eur)).toBe("-400");
+    expect(text(total(boxes, "gp.losses_total").amount_eur)).toBe("-400");
+    expect(text(total(boxes, "gp.balance").amount_eur)).toBe("-400");
+  });
+
+  it("keeps it in a year that does have one, and still picks the negative box", () => {
+    // The correspondence does not move: 0424 holds the positive balance and
+    // 0425 the negative one. What changes is that the amount says which.
+    const boxes = withLoss(2025);
+    expect(boxes.mapping).toBe("checked");
+    const balance = total(boxes, "gp.balance");
+    expect(balance.box).toBe("0425");
+    expect(balance.label).toContain("es negativa");
+    expect(text(balance.amount_eur)).toBe("-400");
   });
 });
