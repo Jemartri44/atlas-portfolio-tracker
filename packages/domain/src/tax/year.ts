@@ -79,8 +79,11 @@ import {
   FIRST_SUPPORTED_YEAR,
   type Invalid,
   isInvalid,
+  isUnsupported,
   type TaxOptions,
   taxChain,
+  tryReading,
+  type Unsupported,
 } from "./chain.js";
 
 const zero = (): Money => Money.zero(EUR);
@@ -128,6 +131,18 @@ const computeCore = (
     expenses: expenses.filter((expense) => yearOf(expense.fiscal_date) === year),
   };
 };
+
+/**
+ * The same, for a reading that is **not** the main one: it may reach below the
+ * first supported year, and that is information about the reading, never a
+ * reason to deny the report the user asked for (feature 011, block 4).
+ */
+const tryComputeCore = (
+  events: readonly LedgerEvent[],
+  year: number,
+  options: TaxOptions,
+  settings?: Settings,
+): Core | Invalid | Unsupported => tryReading(() => computeCore(events, year, options, settings));
 
 /**
  * A tax year one of whose three declared figures —the savings base, what it
@@ -181,15 +196,13 @@ export const movedTaxYears = (
   // the previous settings, which is what makes this cheap enough to run on
   // every keystroke of the configuration screen.
   const chainOf = (settings: Settings): ChainCore | undefined => {
-    try {
-      const chain = taxChain(events, Math.max(last, FIRST_SUPPORTED_YEAR), options, settings);
-      return isInvalid(chain) ? undefined : chain;
-    } catch (error) {
-      if (error instanceof DomainError && error.code === "tax_year_unsupported") {
-        return undefined;
-      }
-      throw error;
-    }
+    // The guard this function used to carry alone, now the shared one: it was
+    // the only one in the domain, and the other three readings did without it
+    // (feature 011, block 4).
+    const chain = tryReading(() =>
+      taxChain(events, Math.max(last, FIRST_SUPPORTED_YEAR), options, settings),
+    );
+    return isUnsupported(chain) || isInvalid(chain) ? undefined : chain;
   };
   const before = chainOf(current);
   const after = chainOf(next);
@@ -473,7 +486,24 @@ const criterionStakes = (
 
   for (const alternative of alternatives(core.state.fiscalSettings)) {
     const lines = declaring(alternative.criterion);
-    const other = computeCore(events, year, options, alternative.settings);
+    const other = tryComputeCore(events, year, options, alternative.settings);
+    // The other reading reaches below the first supported year: it cannot be
+    // measured, and the reason is not the same as "it leaves invalid events" —
+    // that one is repaired by fixing the ledger and this one cannot be
+    // repaired at all.
+    if (isUnsupported(other)) {
+      if (lines.length > 0) {
+        items.push(
+          item(alternative.criterion, {
+            measure: "not_quantifiable",
+            event_ids: lines.map((line) => line.event_id),
+            direction: FISCAL_CRITERIA[alternative.criterion].risk,
+            reason: "unsupported_under_alternative",
+          }),
+        );
+      }
+      continue;
+    }
     if (isInvalid(other)) {
       if (lines.length > 0) {
         items.push(
@@ -750,9 +780,21 @@ const settingsDiff = (
     return undefined;
   }
   const previous = history.length > 1 ? history[history.length - 2] : undefined;
-  const other = computeCore(events, year, options, previous?.settings ?? DEFAULT_SETTINGS);
+  const other = tryComputeCore(events, year, options, previous?.settings ?? DEFAULT_SETTINGS);
   const currentOrigin = (history[history.length - 1] as { event_id: Ulid }).event_id;
   const previousOrigin = previous === undefined ? "default" : previous.event_id;
+  // The equivalent of `invalid_before` for the other way a reading can fail:
+  // under the previous settings the chain would start before the first
+  // supported year, so there is no figure to compare either.
+  if (isUnsupported(other)) {
+    return {
+      previous_origin: previousOrigin,
+      current_origin: currentOrigin,
+      base_after_eur: core.compensation.base_eur,
+      unsupported_before: true,
+      changes: [],
+    };
+  }
   if (isInvalid(other)) {
     return {
       previous_origin: previousOrigin,

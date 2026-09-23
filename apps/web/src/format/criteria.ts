@@ -87,6 +87,8 @@ export const MEASURE_LABELS: Record<Measure, string> = {
 export const MEASURE_REASONS: Record<string, string> = {
   invalid_under_alternative:
     "con la otra lectura hay movimientos que dejan de ser válidos, así que no hay una cifra que comparar",
+  unsupported_under_alternative:
+    "con la otra lectura el cálculo tendría que empezar antes del primer ejercicio que la aplicación sabe calcular",
   lot_in_other_currency:
     "el lote se compró en otra divisa y la otra lectura no se puede rehacer con lo registrado",
   regime_not_recorded:

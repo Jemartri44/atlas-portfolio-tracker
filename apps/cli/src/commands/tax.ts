@@ -159,6 +159,8 @@ const incomeTable = (lines: readonly IncomeLine[]): string =>
 const REASONS: Record<NonNullable<CriterionStake["reason"]>, (item: CriterionStake) => string> = {
   invalid_under_alternative: (item) =>
     `con la otra lectura ${String(item.invalid_count)} eventos serían inválidos`,
+  unsupported_under_alternative: () =>
+    "con la otra lectura el cálculo tendría que empezar en un ejercicio anterior al primero que este motor sabe calcular",
   lot_in_other_currency: () => "algún lote se compró en otra divisa",
   regime_not_recorded: () =>
     "sin régimen de neutralidad sería una permuta sujeta, y su valor no está en el libro",

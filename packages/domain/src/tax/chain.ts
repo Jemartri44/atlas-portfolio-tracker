@@ -91,6 +91,51 @@ export interface Invalid {
 export const isInvalid = <T extends object>(result: T | Invalid): result is Invalid =>
   "invalid" in result;
 
+/**
+ * A reading whose chain would have to start **before the first supported
+ * year**, which the engine refuses to compute.
+ *
+ * It is a fact about **that reading**, not about the year asked. An
+ * alternative reading —another configuration, the one a filing was computed
+ * with, the one in force before the last change— can reach a year the good one
+ * does not, because `fiscal_date_rule` moves an operation from one year to the
+ * next. Before feature 011 four of those readings had no guard and the report
+ * of a supported, computable year died with them.
+ */
+export interface Unsupported {
+  unsupported: { year: number; first_supported: number };
+}
+
+export const isUnsupported = <T extends object>(result: T | Unsupported): result is Unsupported =>
+  "unsupported" in result;
+
+/**
+ * Runs an **alternative** reading, turning `tax_year_unsupported` into a value
+ * and **re-raising anything else**.
+ *
+ * Two details that are not optional. It swallows **one code and no other**,
+ * because a guard that swallows everything hides real defects for years — the
+ * kind of comfort that is discovered a decade later. And it tells the case
+ * apart by the **code** of the `DomainError`, never by the text of its
+ * message, which is prose and changes.
+ *
+ * The **main** reading never goes through here: `atlas tax 2017` still fails,
+ * and it should.
+ */
+export const tryReading = <T>(read: () => T): T | Unsupported => {
+  try {
+    return read();
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "tax_year_unsupported") {
+      // Both places that raise it carry the two figures, so there is nothing
+      // to default here.
+      const details = error.details as { year: number; first_supported: number };
+      return { unsupported: { year: details.year, first_supported: details.first_supported } };
+    }
+    throw error;
+  }
+};
+
 /** The year of the business date of an event of the lot journal: they are all operations. */
 const yearOfEntry = (state: LedgerState, events: Map<Ulid, LedgerEvent>) => {
   const cache = new Map<Ulid, number>();

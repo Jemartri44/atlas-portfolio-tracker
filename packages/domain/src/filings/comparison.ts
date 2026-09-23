@@ -26,7 +26,7 @@ import { filingInForce } from "../projections/filings.js";
 import type { LedgerState } from "../projections/state.js";
 import type { FiledRentaFigures, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { type ChainCore, chainFigures, taxChain } from "../tax/chain.js";
+import { type ChainCore, chainFigures, isUnsupported, taxChain, tryReading } from "../tax/chain.js";
 
 const EUR = "EUR";
 
@@ -96,19 +96,29 @@ const declaredFigures = (figures: FiledRentaFigures): Map<string, Money> => {
 };
 
 /**
- * A reading of the prefix of the ledger the fingerprint names.
+ * A reading of the prefix of the ledger the fingerprint names, or nothing when
+ * it cannot be computed.
  *
+ * **There are two ways it can fail and only one of them is impossible here.**
  * A prefix of a valid ledger is itself valid —what makes an event invalid is
- * always something **before** it, and the report refused an invalid ledger
- * before getting here— so there is no "could not be computed" case to handle.
+ * always something *before* it, and the report refused an invalid ledger
+ * before getting here— so `Invalid` never happens. What does happen is the
+ * other one: the settings this reading uses are **not** the ones in force, and
+ * a different `fiscal_date_rule` can move an operation into a year earlier
+ * than the engine can compute. That threw, and took the whole report with it,
+ * until feature 011; the old comment ruled out the first failure and said
+ * nothing about the second, which is how a comment that is true about what it
+ * covers makes you believe it covers everything.
  */
 const readingOf = (
   prefix: readonly LedgerEvent[],
   year: number,
   today: CivilDate,
   settings: Settings,
-): Map<string, Money> =>
-  chainFigures(taxChain(prefix, year, { today }, settings) as ChainCore, year);
+): Map<string, Money> | undefined => {
+  const chain = tryReading(() => taxChain(prefix, year, { today }, settings) as ChainCore);
+  return isUnsupported(chain) ? undefined : chainFigures(chain, year);
+};
 
 /** The whole chain of a (model, year), oldest first. */
 const chainOf = (state: LedgerState, filing: Filing): Ulid[] =>

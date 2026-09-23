@@ -28,7 +28,7 @@ import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState } from "../projections/state.js";
 import type { FiledRentaFigures, FilingModel, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { chainFigures, isInvalid, taxChain } from "../tax/chain.js";
+import { chainFigures, isInvalid, isUnsupported, taxChain, tryReading } from "../tax/chain.js";
 import { type ClosedYear, closedYearsTouched } from "./touched.js";
 
 /** One reading of the ledger: the events, and the settings to read them with. */
@@ -59,24 +59,44 @@ export interface ClosedYearImpact {
 
 const text = (money: Money): string => money.amount.toString();
 
+/** Why one of the two readings could not be computed, when it could not. */
+export type NotCompared =
+  /** The ledger has invalid events under that reading (ADR-0015). */
+  | "invalid_reading"
+  /** That reading makes the chain start before the first supported year. */
+  | "chain_unsupported";
+
 /**
- * The figures of a `renta` as the chain computes them for one year, or nothing
- * when that reading cannot be computed (invalid events, ADR-0015). Nothing is
- * **not** zero: comparing a reading that failed against one that worked would
- * report the whole base as moved, which is exactly the false alarm the warning
- * must not raise.
+ * The figures of a `renta` as the chain computes them for one year, or **why**
+ * that reading could not be computed. Nothing is **not** zero: comparing a
+ * reading that failed against one that worked would report the whole base as
+ * moved, which is exactly the false alarm the warning must not raise.
+ *
+ * The two failures are told apart because they lead to different actions: one
+ * is repaired by fixing the ledger and the other cannot be repaired at all.
+ * The second used to **throw**, and with it died the caller — including
+ * `atlas settings set`, where there is no report to lose: there is a setting
+ * that cannot be changed (feature 011, block 4).
  */
 const figuresOf = (
   reading: Reading,
   year: number,
   today: CivilDate,
-): Map<string, string> | undefined => {
-  const chain = taxChain(reading.events, year, { today }, reading.settings);
+): Map<string, string> | NotCompared => {
+  const chain = tryReading(() => taxChain(reading.events, year, { today }, reading.settings));
+  if (isUnsupported(chain)) {
+    return "chain_unsupported";
+  }
   if (isInvalid(chain)) {
-    return undefined;
+    return "invalid_reading";
   }
   return new Map([...chainFigures(chain, year)].map(([figure, amount]) => [figure, text(amount)]));
 };
+
+/** Whether a reading gave figures at all; `undefined` is a model the chain does not compare. */
+const computed = (
+  reading: Map<string, string> | NotCompared | undefined,
+): reading is Map<string, string> => reading !== undefined && typeof reading !== "string";
 
 /**
  * The names of the figures a filing declares, which are the ones worth
@@ -132,7 +152,7 @@ export const closedYearImpact = (
     // 720 are valued at market and live in their own module (block 3).
     const was = entry.model === "renta" ? figuresOf(before, entry.year, today) : undefined;
     const is = entry.model === "renta" ? figuresOf(after, entry.year, today) : undefined;
-    if (was !== undefined && is !== undefined) {
+    if (computed(was) && computed(is)) {
       for (const figure of new Set([
         ...declaredFigures(filingOf(state, entry)),
         ...was.keys(),
