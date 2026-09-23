@@ -295,6 +295,24 @@ describe("what a change does to a year already filed", () => {
     });
 
     /**
+     * The border this project demands always: an operation dated **exactly**
+     * on 31 December is in the holdings of that day, so it reaches the return
+     * of that year. One day later it does not.
+     */
+    it("warns for an operation dated exactly on 31 December, and not on 1 January", () => {
+      const b = with720();
+      const before = b.build();
+      buy(b, "stock_t", "2027-12-31", "10", "100");
+      const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
+      expect(impact?.model).toBe("720");
+      expect(impact?.year).toBe(2027);
+      const next = with720();
+      const unchanged = next.build();
+      buy(next, "stock_t", "2028-01-01", "10", "100");
+      expect(closedYearImpact({ events: unchanged }, { events: next.build() }, TODAY)).toEqual([]);
+    });
+
+    /**
      * Annulling a change of the fiscal date rule moves it back, and moves the
      * operations back across 31 December with it: the warning must compare
      * the settings **in force** on each side, not the last line written, which
