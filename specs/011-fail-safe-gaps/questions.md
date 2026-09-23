@@ -589,7 +589,16 @@ KILLED   11b accept it without leaving the record
 KILLED   11c make check stop saying it afterwards
 ```
 
-**Y la trampa del ternario volvió a morder**, esta vez en `compact.ts`: al hacer que el rechazo nombre **cuál** de los dos motivos es —porque solo uno de ellos acusa a alguien—, escribí `new CompactRejectedError(cond ? "a" : "b", …)` y el escáner de `tests/messages.test.ts` dejó de ver **los dos** códigos, marcando como muertas las dos traducciones que ya existían. Rehecho con dos `throw` de literal. Es la misma trampa de E2 en otro fichero, y la regla que escribí en el plan —literales, nunca un ternario— es la que la cazó.
+**Y la trampa del ternario volvió a morder**, esta vez en `compact.ts`: al hacer que el rechazo nombre **cuál** de los dos motivos es —porque solo uno de ellos acusa a alguien—, escribí `new CompactRejectedError(cond ? "a" : "b", …)` y el escáner de `tests/messages.test.ts` dejó de ver **los dos** códigos, marcando como muertas las dos traducciones que ya existían. Rehecho con dos `throw` de literal.
+
+**Las dos veces, y por qué importa que sean dos.**
+
+| Cuándo | Qué pasó | Qué lo paró |
+|---|---|---|
+| Bloque 0 | Al emitir el código nuevo con un ternario dentro de `error(…)`, el escáner dejó de ver los dos códigos y la traducción que ya existía pasó a «entrada muerta» | **Medirlo**: cuatro ejecuciones del test, apuntadas en E2, y la regla escrita en el plan — literales, nunca un ternario |
+| Bloque 8 | Lo mismo, en otro fichero (`compact.ts`) y con otro constructor (`CompactRejectedError`) | **La regla escrita**, que ya estaba en el plan cuando volví a caer |
+
+La primera vez costó cuatro ejecuciones y un rato de no entender por qué fallaba el sitio equivocado. La segunda, el tiempo de leer mi propia nota. **Es el argumento entero de por qué se escriben las lecciones**: no para acordarse, sino para que dejen de depender de que uno se acuerde.
 
 ### Bloque 7 — el test antideriva
 

@@ -94,6 +94,30 @@ const dist = join(webRoot, "dist");
  * than one of 74 without it. And when the feature closes, the ceiling comes
  * back **down** to what is then measured plus a small margin: it is not left
  * slack "just in case".
+ *
+ * **Trinquete de cierre de la feature 011 (2026-09-23): measured 73,3, and the
+ * ceiling stays at 73,5**, which is that plus a small margin. The number alone
+ * does not say whether it is a price paid or a drift nobody looked at, so here
+ * is the trend: it came into this round at **72,9**, rose to **73,0** with the
+ * closed map of measure reasons and the reason of a reading that predates the
+ * supported regime, and to **73,3** with the last block — and that last jump
+ * is **one decision, not slack**.
+ *
+ * What it buys: `atlas check` and the verification screen have to say
+ * **always** that the fingerprint of a filing was never verified and that the
+ * user gave it for good (ADR-0025, decision (d) of prompt 011), so the waiver
+ * has to be **projected** — and `project-ledger.ts`, `state.ts` and
+ * `integrity.ts` are the boot path. Without projecting it, plain `check` could
+ * not say it and the way out would have become a way of cleaning the record.
+ * It is the same split feature 010 chose for the warning of a closed year:
+ * **the fact up here, the figure in the lazy chunk**. A fact that must be
+ * sayable always lives where the projection always runs.
+ *
+ * The breakdown, gzip: the domain in one chunk without its fiscal half
+ * (37,8), Solid, the router, the shell and the first screen (25,2), and the
+ * stylesheet (9,9). **Nothing of `tax/` or `informative/`**, which the shape
+ * check below holds and which is what really matters: if either of them shows
+ * up here, the build fails even with room to spare.
  */
 const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
 
@@ -269,8 +293,22 @@ const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
  * tax engine are the literal table of the boxes of 2025**, a datum only needed
  * when the card of the boxes is opened, which could travel in a chunk of its
  * own.*
+ *
+ * **Trinquete de cierre de la feature 011 (2026-09-23): measured 236,9, and
+ * the ceiling comes to 237,9**, which is that plus one, as every time. The
+ * 0,7 of the provisional raise was an estimate of what the last block would
+ * need and it fell short: it counted the texts and not the new event type with
+ * its shape, its label and those of its three fields, nor the projection of
+ * the waiver. Measured, block 8 cost **0,9**: the finding and the error in the
+ * web (+0,2), the note of the report with its translation (+0,2), the event
+ * type (+0,2) and the projection (+0,3).
+ *
+ * Checked again on the source maps of the 59 chunks: **zero modules in more
+ * than one, out of 296**. That datum is worth more than the ceiling: a high
+ * ceiling with hidden duplication under it is a real problem, and a ceiling
+ * that only rises with things somebody decided to put in is not.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 236.7 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 237.9 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
