@@ -82,11 +82,18 @@ const quiet = (): LedgerEvent[] => {
   ] as unknown as LedgerEvent[];
 };
 
+/**
+ * Waits for the status to arrive, instead of guessing how long the dynamic
+ * import takes: under coverage it took longer than the timeout that used to be
+ * here, and the test failed one run in ten for a reason that had nothing to do
+ * with what it checks.
+ */
 const cardOn = async (date: string, ledger: LedgerEvent[] = events): Promise<HTMLElement> => {
   const host = await show("/", () => <FiscalCard events={ledger} date={date} />);
-  // The status arrives after the first paint, on purpose: the tax engine is
-  // not on the boot path.
-  await settle(120);
+  for (let attempt = 0; attempt < 100 && host.querySelector(".skel") !== null; attempt += 1) {
+    await settle(10);
+  }
+  expect(host.querySelector(".skel")).toBeNull();
   return host;
 };
 
@@ -98,7 +105,9 @@ describe("the fiscal card of the summary", () => {
     // No `settle`: this is what the user sees while the chunk is downloading.
     expect(text(host)).toContain("Declaración");
     expect(host.querySelector(".skel")).not.toBeNull();
-    await settle(30);
+    for (let attempt = 0; attempt < 100 && host.querySelector(".skel") !== null; attempt += 1) {
+      await settle(10);
+    }
     expect(text(host)).toContain("Ver la declaración");
   });
 
