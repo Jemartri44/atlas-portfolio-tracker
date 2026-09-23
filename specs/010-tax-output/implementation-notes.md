@@ -182,3 +182,110 @@ Qué se miró, y qué cambió por haberlo mirado:
 - **El selector de ejercicio** era una caja vacía de 200 px; ahora es el mismo control compacto que la fecha de consulta, con su icono y su rótulo.
 - **Se registró una presentación desde la propia web**, con el antes y el después: el ejercicio pasa a «2027 · declarado», la tarjeta «Lo presentado» aparece con lo declarado frente a lo calculado y la diferencia plegada, y el pie ofrece la complementaria.
 - **Los dos rechazos del dominio se ven en la pantalla** y dicen qué hacer: una fecha de presentación posterior a hoy («no se registra lo que todavía no se ha presentado») y un importe mal escrito («tiene más de una coma»), este último **en el campo**, sin perder lo tecleado.
+
+---
+
+## 9. La segunda revisión adversarial (2026-09-23)
+
+Encargo de la dirección con la PR ya abierta. Lo aplicado, por daño.
+
+### 9.1 Los dos bloqueantes
+
+1. **La casilla «Denominación de los valores transmitidos» llevaba el identificador interno.**
+   `draft.ts` construía el campo con `{ text: line.asset_id }` y las dos interfaces pintaban
+   `ast_epsilon` donde va la entidad emisora. Es el **único** campo de la salida que el usuario
+   copia literalmente en Renta WEB, así que no era feo, era falso. Resuelto **en el dominio**
+   (`nameOf(state, asset_id)`, con el identificador como último recurso si el catálogo no le da
+   nombre) y cubierto con tres casos. *Por qué no lo vio nadie*: `LedgerBuilder` da a cada activo
+   `name: asset_id`, así que en los tests el nombre y el identificador son la misma cadena; los
+   casos nuevos **nombran el activo de otra manera**.
+2. **La tarjeta de casillas no decía qué era cada importe.** El modelo de vista tiraba
+   `entry.concept` y la pantalla caía al literal «Sin correspondencia comprobada» en **todas** las
+   filas: es el caso normal, no un borde, porque 2025 es el único ejercicio con tabla comprobada y
+   el primero real del usuario es 2026. Ahora el rótulo humano de cada concepto vive en el dominio
+   (`CONCEPT_NAMES` + `ROW_FIELD_NAMES`, totales por construcción: quitar una entrada no compila,
+   comprobado), las dos interfaces lo leen, y el aviso de «sin casilla comprobada» se dice **una
+   vez por bloque**. La consola además deja de imprimir el `ConceptId` desnudo.
+
+### 9.2 Lo demás, con su test
+
+- **La privacidad de la pantalla fiscal**: mueren los dos mutantes que sobrevivían (quitar la
+  guarda del «% del umbral» y sustituir los dos `Amount` del aviso de ejercicio declarado por
+  cadenas crudas), comprobados uno a uno.
+- **`atlas edit` avisa y ahora se comprueba**: test de conducta con la cifra que mueve, y el test
+  de arquitectura pasa a ser **por comando** y no por fichero (borrar el bucle de `edit` deja de
+  colar porque `delete`, dos funciones más abajo, nombre el aviso).
+- **Los dos tests-barrera**: cerrados los tres agujeros medidos —`[{…}] as T[]`, el literal guardado
+  en una variable y afirmado después, y `import * as domain` + `domain.recordEvent(…)`—, cada uno
+  comprobado con su mutante. El agujero del `//` dentro de una cadena queda **escrito como límite
+  conocido** en la cabecera del test.
+- **Mutantes que ahora mueren**: `missing` siempre falso, etiquetar los criterios firmes en vez de
+  los no firmes, el plegado de la lista a tres y los bloques de casillas vacíos.
+- **La fuente y la certeza por casilla se enseñan**: cada fila dice dónde se comprobó y cuándo (y
+  «sin confirmar» si la lectura no es firme), y cada bloque cita la imagen del anexo del BOE **como
+  texto, nunca como enlace**. Con eso la justificación de `check-bundle.mjs` para dejar pasar el
+  dominio del BOE —«es una cita que la pantalla enseña»— pasa a ser verdad, y lo dice nombrando el
+  test que lo sostiene.
+- **Una sola redacción del dinero**: `Money.centsText()` sustituye a las **seis** copias de `cents`
+  (cuatro en la consola, una en la propuesta y una en la web) y `eur()` de la consola pasa por ella,
+  así que las pantallas que el usuario abre seguidas dejan de escribir la misma cifra de dos formas.
+- **Los dos mapas abiertos** (`PARTIAL_MESSAGES` del dominio y `PARTIAL_TEXTS` de la web) se cierran
+  contra `PartialReason`; de propina, `MODEL_NAMES` del aviso contra `FilingModel`.
+- **`atlas tax --boxes`** dice que una casilla es parcial también cuando trae importe.
+- **El aviso del diálogo de anular se espera**: el diálogo no se abre hasta que se sabe, y un
+  rechazo que no sea del dominio se enseña dentro del propio diálogo en vez de acabar en una
+  promesa rota. El test lo sujeta comprobando que **no** hay diálogo antes de esperar.
+- **`presentar.tsx`**: fuera el `as never` —la aserción vive ahora en `values.ts`, que es el sitio
+  que ya tenía esa responsabilidad y está en la lista del test-barrera— y el error de un importe mal
+  escrito va **en su campo**, sin perder lo tecleado y marcando todos los que estén mal a la vez.
+- **Criterios repetidos**: una entrada sin motivo se distingue por las operaciones de las que sale
+  («Por World Index Fund · 06/01/2027, …»), que es lo que el motor no daba.
+- **La consola**: seis detalles —dinero por el formateador, el volcado de ~1.900 caracteres de
+  configuración resumido antes de la pregunta, el justificante validado pronto y en español, el
+  aviso de que un 720 sin nada registrado se guardaría vacío, los criterios con su rótulo y los días
+  del saldo **por divisa** en vez de los de la primera.
+- **Los documentos**: el sistema visual gana la pantalla `/fiscal` (§7.8), su hoja de estilos y el
+  componente del aviso (§5.18); el README deja de decir que el *stack* lleva Pico, retirada en
+  ADR-0023.
+
+### 9.3 Las dos preguntas, resueltas por la dirección
+
+- **El «% del umbral» baja al dominio** (`InformativeCategory.threshold_share_pct`): era el único
+  número de esa pantalla que no salía del motor. La web solo decide si puede enseñarse.
+- **«No obligado» sobre un libro vacío** deja de decirse: la categoría sin un solo activo registrado
+  tiene veredicto propio, `nothing_recorded`, y las dos interfaces lo traducen por lo que es. El
+  tipo es una unión cerrada, así que añadirlo rompió la compilación en los tres sitios que había que
+  tocar, que es exactamente lo que se quería.
+
+### 9.4 Lo que queda vivo, y por qué
+
+- **El mutante de la guarda `invalidCount() === 0` sobre las tarjetas del 720 y el 721 es
+  equivalente.** Con un libro inválido `taxYear` y `model720` lanzan los dos, así que `report().ok`
+  es falso y el `Show` exterior ya sustituye la rejilla entera por el aviso de «no se puede
+  calcular»: quitar la guarda interior no cambia un píxel. Se deja **a propósito** como defensa en
+  profundidad si esa estructura cambia, y queda escrito aquí que ningún test puede matarlo.
+- **El desplazamiento de un año en lo que caduca no se ha podido matar porque el camino está
+  muerto**, y eso es un defecto, no un mutante: ver §9.5.
+
+### 9.5 Un defecto encontrado, descrito y **sin arreglar**
+
+**El aviso «caducan al cerrar X» de la pantalla fiscal no puede salir nunca, y el ejercicio en que
+una pérdida se pierde dice «No hay nada que declarar».**
+
+Medido con un libro de una sola venta con pérdida de 5.000,00 € en 2027 y cuatro años de arrastre:
+
+| Ejercicio | `compensation.pending` | `compensation.expired` |
+|---|---|---|
+| 2027–2030 | −5.000,00 de 2027, `expires_after` 2031 | vacío |
+| 2031 | **vacío** | −5.000,00 de 2027 |
+
+La web calcula `expiring: loss.expires_after === year` **sobre `pending`**, y en 2031 la pérdida ya
+no está en `pending`: la condición no se cumple en ningún ejercicio. Peor, `YearView.empty` no mira
+`expired`, así que en 2031 la pantalla enseña «No hay nada que declarar en este ejercicio» mientras
+5.000,00 € dejan de poder compensarse. La consola sí lo dice, desde `expired`: «CADUCA al cierre de
+2031». Las dos interfaces no responden lo mismo a la misma pregunta.
+
+No se arregla aquí porque hay que decidir **qué significa `expired`** —la lectura de la consola es
+«éste es su último ejercicio», la del campo `expires_after` es «el último en que se puede
+compensar», y las dos no pueden ser ciertas a la vez— y eso es una decisión fiscal.
+
