@@ -21,22 +21,16 @@ import { Amount } from "./Amount.jsx";
 import { Notice } from "./Notice.jsx";
 
 /**
+ * The name of the model **after the preposition `a`**, where Spanish contracts
+ * `a el` into `al`. The title used to read «Afecta a el Modelo 720», which
+ * nobody had seen because a 720 only reached this notice when the write fell
+ * **by date** in its year; since the third outcome exists it reaches it
+ * whenever anything is written, and the first screenshot of the new case
+ * showed it (feature 011).
+ *
  * Keyed by `FilingModel`: with an open key a model added tomorrow would fall
  * through to the `??` and the notice would name it `721` in the middle of a
  * Spanish sentence. Closed, the compiler asks for its name instead.
- */
-const MODEL_NAMES: Record<FilingModel, string> = {
-  renta: "la Renta",
-  "720": "el Modelo 720",
-  "721": "el Modelo 721",
-};
-
-/**
- * The same name after the preposition `a`, where Spanish contracts `a el` into
- * `al`. The title used to read «Afecta a el Modelo 720», which nobody had seen
- * because a 720 only reached this notice when the write fell **by date** in
- * its year; since the third outcome exists it reaches it whenever anything is
- * written, and the first screenshot of the new case showed it (feature 011).
  */
 const MODEL_AFTER_A: Record<FilingModel, string> = {
   renta: "a la Renta",
