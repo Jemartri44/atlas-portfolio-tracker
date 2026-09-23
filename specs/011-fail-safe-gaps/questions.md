@@ -548,6 +548,17 @@ KILLED   7b emit it always, even when it was compared
 
 *(Y el guion volvió a abortar por un ancla que ya no existía —el `figuresOf` del bloque 4 había cambiado esas líneas—, antes de escribir nada. El lote se rehízo **entero**, no se continuó.)*
 
+### Bloque 7 — el test antideriva
+
+Se ve en rojo **por construcción**: es el mutante que el propio encargo pide, y lo mata en las **dos** direcciones nombrando **las dos** entradas, que es lo que se pedía.
+
+```
+KILLED   10a swap them in the catalogue  — nombra: ['2:fund_2m', '2:fund_1y']
+KILLED   10b swap them in the document   — nombra: ['2:fund_2m', '2:fund_1y']
+```
+
+**Las 34 filas coinciden una a una con el catálogo**, y el test ya no tiene exenciones: `DOCUMENT_SILENT` y la regla de «la certeza más dudosa la lleva alguien» han desaparecido, y una celda que no diga exactamente una de las ocho palabras del vocabulario es una fila que el test **se niega a leer** en vez de leer con holgura.
+
 ### P7 — el reloj de la web
 
 El arreglo se vio en rojo **antes de existir**, en los tres tests que destapó, y la suite entera lo confirmó: **3 rojos de 450**, los tres por bombas de relojería, ninguno por la regla. El detalle está en P7.
