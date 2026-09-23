@@ -12,6 +12,7 @@
 // which are a **reordering** of what the engine already computed (ficha F5).
 
 import { Money } from "../../money/money.js";
+import type { LedgerState } from "../../projections/state.js";
 import type { AssetId } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
@@ -76,6 +77,25 @@ const rowOf = (gain: {
 const sectionOf = (line: TransmissionLine): SectionId =>
   transmissionSection(line.asset_type, "capital_gain") as SectionId;
 
+/**
+ * "Denominación de los valores transmitidos" (box 2226 of 2025 and its
+ * siblings): the name the user gave the security in the catalogue, **never**
+ * the internal identifier.
+ *
+ * This is the one field of the layout whose value the user copies *literally*
+ * into Renta WEB, so `ast_epsilon` there is not an ugly answer, it is a wrong
+ * one. It is resolved here and not in each interface for the same reason the
+ * blocks are: two interfaces resolving it apart would eventually disagree
+ * about what a security is called in a tax return.
+ *
+ * An asset the catalogue has under no name falls back to its identifier, which
+ * is worse than a name and much better than a blank the user does not notice.
+ */
+const nameOf = (state: LedgerState, assetId: AssetId): string => {
+  const { name } = state.assets.get(assetId) as { name: string };
+  return name === "" ? assetId : name;
+};
+
 interface RowTotals {
   gains: Money;
   losses: Money;
@@ -94,6 +114,7 @@ const disposalRows = (
   report: TaxYearReport,
   stillDeferred: Map<number, Money>,
   index: Map<string, number>,
+  state: LedgerState,
 ): { drafts: Draft[]; totals: Map<SectionId, RowTotals> } => {
   const drafts: Draft[] = [];
   const totals = new Map<SectionId, RowTotals>();
@@ -126,7 +147,7 @@ const disposalRows = (
         ...(MISSING_FIELDS.has(field)
           ? { missing: true }
           : field === "name"
-            ? { text: line.asset_id }
+            ? { text: nameOf(state, line.asset_id) }
             : { exact: amount as Money }),
         // The form subtracts the two rounded values itself, and the engine
         // rounds the result once (#6): they can differ by a cent, and the one
@@ -433,7 +454,7 @@ export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] =
   const index = gainIndexOf(chain);
   const now = deferredByOrigin(chain, year);
   const before = deferredByOrigin(chain, year - 1);
-  const disposals = disposalRows(report, now, index);
+  const disposals = disposalRows(report, now, index, chain.state);
   const prior = priorYearRows(chain, year, before, now);
   const drafts: Draft[] = [...disposals.drafts];
   let gains = zero();

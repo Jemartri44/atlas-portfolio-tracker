@@ -440,3 +440,46 @@ describe("the operation a row names", () => {
     expect(named.every((item) => item.row?.fiscal_date === "2025-03-10")).toBe(true);
   });
 });
+
+/**
+ * Box 0327 of 2025, "Denominación de los valores transmitidos (entidad
+ * emisora)", and its siblings 2226 and 1802.
+ *
+ * This is the **only** field of the layout whose value is copied word for word
+ * into Renta WEB, so what it holds is not a matter of taste. It held
+ * `line.asset_id` for two whole blocks and both interfaces painted
+ * `ast_epsilon` where the issuer goes; no test saw it because the test builder
+ * gives every asset `name: asset_id`, which makes the identifier and the name
+ * the same string. So each case here **names the asset something else**.
+ */
+describe("the denomination of the securities transmitted", () => {
+  const named = (id: string, name: string, year: number) => {
+    const b = taxBuilder(HAND_SETTINGS);
+    b.asset(id, { asset_type: "stock", transferable: false, name });
+    buy(b, id, `${year - 1}-02-10`, "10", "10");
+    sell(b, id, `${year}-09-01`, "10", "12");
+    return taxBoxes(b.build(), year, { today: TODAY });
+  };
+
+  it("is what the catalogue calls the security, never the identifier of the ledger", () => {
+    const boxes = named("stock_acme", "Acme Corporation, S.A.", 2025);
+    const name = entry(boxes, "gp.listed_shares.name");
+    expect(name.text).toBe("Acme Corporation, S.A.");
+    expect(name.box).toBe("0327");
+    // The identifier appears nowhere in what the user copies into the form.
+    expect(boxes.entries.some((item) => item.text === "stock_acme")).toBe(false);
+  });
+
+  it("says the same by concept in a year with no checked table", () => {
+    const boxes = named("stock_acme", "Acme Corporation, S.A.", 2026);
+    const name = entry(boxes, "gp.listed_shares.name");
+    expect(name.text).toBe("Acme Corporation, S.A.");
+    expect(name.box).toBeUndefined();
+  });
+
+  it("falls back to the identifier when the catalogue holds no name for it", () => {
+    // Worse than a name, much better than a blank the user does not notice.
+    const boxes = named("stock_anon", "", 2025);
+    expect(entry(boxes, "gp.listed_shares.name").text).toBe("stock_anon");
+  });
+});
