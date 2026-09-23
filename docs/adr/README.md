@@ -29,6 +29,13 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0023](0023-own-base-stylesheet.md) | Base de estilos propia en lugar de Pico CSS | Aceptada |
 | [0024](0024-fiscal-caveats-are-report-notes.md) | Una salvedad fiscal es una nota del informe, no una decisión de la interfaz | Aceptada |
 | [0025](0025-recorded-fingerprint-waiver.md) | La salida de compact ante una huella no verificable queda registrada en el libro | Aceptada |
+| [0026](0026-cloud-sync-layer.md) | La nube como capa sobre lo local: sincronización del libro entre dispositivos | Propuesta |
+| [0027](0027-google-sign-in-verified-by-lambda.md) | Acceso solo con Google, verificado en nuestra Lambda; sin Cognito | Propuesta |
+| [0028](0028-aws-account-and-security-baseline.md) | Cuenta de AWS dedicada, entornos y línea base de seguridad | Propuesta |
+| [0029](0029-ecb-reference-rates.md) | Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad | Propuesta |
+| [0030](0030-broker-settled-eur.md) | Importe en euros liquidado por el bróker, como dato informativo | Propuesta |
+| [0031](0031-daily-close-prices.md) | Precios de cierre diarios: puerto, almacén y política de fallo | Propuesta |
+| [0032](0032-backups-and-restore.md) | Copias de seguridad y restauración del libro | Propuesta |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 
