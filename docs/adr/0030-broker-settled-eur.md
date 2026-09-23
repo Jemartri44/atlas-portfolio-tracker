@@ -1,6 +1,6 @@
 # ADR-0030 — Importe en euros liquidado por el bróker, como dato informativo
 
-**Estado:** Propuesta (2026-09-24). Ronda 8. Decisión de la dirección: **guardar el dato para que exista**. Qué cifra manda en la fiscalidad **no se decide aquí**: es parte de la disputa del criterio #4 de `docs/fiscal-questions.md`. *Verificar con asesor* lo que se haga con él.
+**Estado:** Aceptada (2026-09-24). Ronda 8. Decisión de la dirección: **guardar el dato para que exista**. Qué cifra manda en la fiscalidad **no se decide aquí**: es parte de la disputa del criterio #4 de `docs/fiscal-questions.md`. *Verificar con asesor* lo que se haga con él.
 
 ## Contexto
 

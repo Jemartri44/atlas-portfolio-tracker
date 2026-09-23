@@ -1,12 +1,18 @@
 # ADR-0026 — La nube como capa sobre lo local: sincronización del libro entre dispositivos
 
-**Estado:** Propuesta (2026-09-24). Ronda 8. El marco —la nube se **añade** a lo local y no lo sustituye— lo fija la dirección; **la opción de sincronización la decide la dirección** después de leer este documento. Completa ADR-0019, que no queda reemplazado.
+**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que elige la opción 2. Ronda 8. El marco —la nube se **añade** a lo local y no lo sustituye— lo fija también la dirección. Completa ADR-0019, que no queda reemplazado.
 
 ## Contexto
 
 ADR-0019 dejó la web funcionando entera en el dispositivo y aplazó a propósito una cosa: ver el mismo libro en dos dispositivos sin mover un fichero. Prometía que «el adaptador de S3 se suma a los otros sin tocar ni una línea del dominio». **Esa promesa es verdad solo si toda escritura se hace con conexión.** Un adaptador de S3 da un fichero compartido con escritura condicional (`If-Match`, ADR-0002 y ADR-0006); no dice qué pasa cuando dos dispositivos añaden líneas **sin conexión** y después se sincronizan, que es el caso que la dirección pide resolver.
 
-**Lo que decide la dirección (2026-09-24), con su motivo:** la nube es una capa añadida. La web y la consola siguen funcionando sin conexión y sin servidor, porque eso es lo que ya funciona hoy y lo que protege al usuario si la nube desaparece. La nube aporta tres cosas: sincronización del libro, tareas programadas y correos. El modelo de dominio no cambia por la nube.
+**Lo que decide la dirección (2026-09-24), con su motivo:** la nube es una capa añadida. La web y la consola siguen funcionando sin conexión y sin servidor, porque eso es lo que ya funciona hoy y lo que protege al usuario si la nube desaparece. La nube aporta tres cosas: sincronización del libro, tareas programadas y correos. **El modelo de dominio no cambia, y todo lo que la ronda añade es compatible según ADR-0018** (corregido el mismo día: el primer texto decía «el dominio no cambia», y la ronda sí añade cosas). Lo que se añade:
+
+- el caso de uso puro de reaplicar una cola sobre un libro (este documento);
+- los ficheros de estado del dispositivo, fuera del libro (`sync/`, y `drafts/` de ADR-0029);
+- el campo opcional `broker_settled_eur` (ADR-0030) y el campo opcional `price_symbols` del catálogo (ADR-0031), sin subir `schema_version`;
+- las funciones puras del BCE: lectura del histórico, resolución del tipo, calendario TARGET y hallazgos de integridad (ADR-0029);
+- el puerto `PriceSource` y un puerto de almacén de precios (ADR-0031).
 
 Restricciones que pesan:
 
@@ -51,9 +57,9 @@ Restricciones que pesan:
 - **Réplicas idénticas byte a byte.** La API añade las líneas **tal como las serializó el cliente**, sin re-serializarlas, de modo que el fichero de cada dispositivo sincronizado es exactamente el remoto y se puede comprobar por su hash. El etag del puerto `LedgerStore` sigue siendo opaco: el cliente trabaja con el SHA-256 de los bytes (como `BlobLedgerStore`) y la Lambda traduce a la condición de S3.
 - **Nadie reescribe el remoto sin que se note.** Si el remoto deja de empezar por los bytes que un dispositivo sincronizó, el dispositivo descarga el remoto entero y comprueba que **todo identificador que ya había sincronizado sigue estando**. Una compactación lo cumple (conserva los identificadores). Si falta alguno, el dispositivo **no sube nada** y avisa: alguien ha reescrito el historial.
 
-### Parte B — la sincronización (propuesta: opción 2, a decidir por la dirección)
+### Parte B — la sincronización: opción 2
 
-**Se recomienda la opción 2.** Es la única que conserva el registro sin conexión y detecta los ocho casos **antes** de que lleguen al libro compartido. Su forma:
+**Se elige la opción 2** (decisión de la dirección, 2026-09-24). Motivo: es la única que mantiene el registro sin conexión que prometió ADR-0019 y descubre los conflictos **antes** de que el libro compartido sea inválido. Lo que no cabe se retiene para que decida el usuario y **nunca se pierde**. Su forma:
 
 **En el dispositivo, un solo fichero y un marcador.** El libro local sigue siendo el mismo `ledger.jsonl` (o su equivalente en IndexedDB). Un fichero de estado aparte, `sync/state.json`, recuerda cuántas líneas y qué hash tenía el prefijo sincronizado. Las líneas posteriores a ese prefijo son las **pendientes**. Así la consola no cambia nada para registrar sin conexión: su `append` de siempre crea una línea pendiente. El marcador es una caché: si se pierde, la parte común con el remoto es lo sincronizado.
 

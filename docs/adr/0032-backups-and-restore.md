@@ -1,6 +1,6 @@
 # ADR-0032 — Copias de seguridad y restauración del libro
 
-**Estado:** Propuesta (2026-09-24). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
+**Estado:** Aceptada (2026-09-24). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
 
 ## Contexto
 
@@ -42,7 +42,7 @@ Una observación ordena todo lo demás: **en un libro append-only, un error de r
 5. **Sustituir con el contrato de `LedgerStore.replace`**: primero se archivan los bytes actuales en `archive/pre-restore-<fecha>.jsonl`, que nunca se sobrescribe, y después se escribe con la condición del remoto que se comparó en el paso 3. **Restaurar nunca borra nada.**
 6. **Después**, cada dispositivo detecta que el remoto se ha reescrito, porque le faltan identificadores que ya había sincronizado (ADR-0026, parte A), y se detiene. El procedimiento le manda volver a descargar; lo que solo ese dispositivo tenía vuelve como pendiente y pasa por la reaplicación. **Las réplicas curan la restauración.**
 
-**Si se pierde la cuenta entera:** Terraform levanta la pila en una cuenta miembro nueva, el libro se sube desde una réplica o desde el disco, y `documents/` e `imports/` desde el disco. Se ensaya **una vez** en la etapa de despliegue, antes de fiarse de la nube.
+**Si se pierde la cuenta de producción:** Terraform levanta la pila en una cuenta miembro nueva (ADR-0028: una por entorno), el libro se sube desde una réplica o desde el disco, y `documents/` e `imports/` desde el disco. Se ensaya **una vez** en la etapa de despliegue, con datos sintéticos en `atlas-dev`, antes de fiarse de la nube.
 
 **La prueba de que se puede restaurar:**
 

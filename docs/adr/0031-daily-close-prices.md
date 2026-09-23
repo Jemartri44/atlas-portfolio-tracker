@@ -1,6 +1,6 @@
 # ADR-0031 — Precios de cierre diarios: puerto, almacén y política de fallo
 
-**Estado:** Propuesta (2026-09-24). Ronda 8. Las fuentes son decisión de la dirección, tomada sobre la investigación del 2026-09-24; el puerto, el almacén y la política de fallo desarrollan lo que ya pedía `docs/specification.md` §7.
+**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que además resuelve lo que guarda CoinGecko y lo que pasa con los fondos que `EUFUND` no cubre. Ronda 8. Las fuentes son decisión de la dirección, tomada sobre la investigación del 2026-09-24; el puerto, el almacén y la política de fallo desarrollan lo que ya pedía `docs/specification.md` §7.
 
 ## Contexto
 
@@ -28,7 +28,7 @@ La especificación separa dos niveles de precio (§7.1): el **exacto**, que se t
 
 ## Decisión
 
-**Fuentes** (decisión de la dirección): principal **EODHD Free**, respaldo **Alpha Vantage Free**; cripto, **CoinGecko Demo**, con la atribución **visible** donde se enseñe su cotización. Fondos por `EUFUND` **solo si cubre el ISIN concreto**; si no, extracto o entrada manual. La entrada manual nunca desaparece.
+**Fuentes** (decisión de la dirección): principal **EODHD Free**, respaldo **Alpha Vantage Free**; cripto, **CoinGecko Demo**, con la atribución **visible** donde se enseñe su cotización. Fondos por `EUFUND` **solo si cubre el ISIN concreto**; si no, extracto o entrada manual, y para la evolución, **la aproximación por ETF de referencia** de `docs/specification.md` §7.1, **siempre marcada como aproximación**. La entrada manual nunca desaparece.
 
 **Correspondencia ISIN → símbolo: dato del catálogo, no una búsqueda diaria.** `asset_created`/`asset_updated` ganan `price_symbols?`, un mapa de fuente (`eodhd`, `alpha_vantage`, `coingecko`) a su símbolo. OpenFIGI **propone** el símbolo al dar de alta el activo y el usuario lo confirma; nada lo consulta después. Es un campo opcional nuevo y añadir una fuente es añadir un valor a un enumerado: los dos son cambios **compatibles** según ADR-0018.
 
@@ -46,11 +46,10 @@ La especificación separa dos niveles de precio (§7.1): el **exacto**, que se t
 
 ## Consecuencias
 
-- **Tensión con CoinGecko, sin resolver:** sus condiciones piden refrescar la caché cada 24 h, y §1 del esquema dice que `prices/` se guarda **para siempre**. Hasta que alguien lea esas condiciones con detalle, las cotizaciones de CoinGecko se guardan **solo como último valor conocido**, renovado cada día, y no como histórico propio.
+- **CoinGecko** (decisión de la dirección): sus condiciones piden refrescar la caché cada 24 h, y §1 del esquema dice que `prices/` se guarda **para siempre**. **De cripto solo se guarda el último valor conocido, sin histórico**, renovado cada día, hasta que alguien lea sus condiciones completas. **Las acciones y los ETF sí guardan histórico.**
 - **Una sola clave, un solo presupuesto diario.** Cuando exista la tarea programada, la consola deja de pedir lo que ya pidió la nube y lo descarga de la API; si no, las dos se comen el mismo cupo.
 - EODHD Free solo da **un año de histórico**: lo que no se guarde hoy no se podrá pedir dentro de dos años. Es un motivo más para guardar los cierres, dentro de lo que permitan las condiciones de cada fuente.
 - La divisa de una cotización puede no ser la del activo (por ejemplo, una subunidad de la divisa): se guarda la que devuelve la fuente y la puerta rechaza la que no sepa convertir, en vez de suponer.
-- La aproximación por ETF de referencia de §7.1 sigue sirviendo para la evolución de un fondo que `EUFUND` no cubra.
 - **Ningún cálculo fiscal cambia**: la puerta sigue siendo la única entrada y el Modelo 720 sigue leyendo solo la valoración manual.
-- Al aceptar: `docs/specification.md` §7 (la tabla nombra a Yahoo; §7.3, el riesgo de rascar desde Lambda, cambia de naturaleza: pasa a ser el de condiciones y cupos de una API), `docs/data-schema.md` §1 y §6.1 (`price_symbols`), y `docs/dependencies.md`, que no cambia de paquetes: los adaptadores usan `fetch` de Node.
+- Documentos que hay que actualizar: `docs/specification.md` §7 (la tabla nombra a Yahoo; §7.3, el riesgo de rascar desde Lambda, cambia de naturaleza: pasa a ser el de condiciones y cupos de una API), `docs/data-schema.md` §1 y §6.1 (`price_symbols`), y `docs/dependencies.md`, que no cambia de paquetes: los adaptadores usan `fetch` de Node.
 - Relacionadas: ADR-0005, ADR-0007, ADR-0018, ADR-0026, ADR-0028 y ADR-0029.
