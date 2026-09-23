@@ -118,6 +118,20 @@ const dist = join(webRoot, "dist");
  * stylesheet (9,9). **Nothing of `tax/` or `informative/`**, which the shape
  * check below holds and which is what really matters: if either of them shows
  * up here, the build fails even with room to spare.
+ *
+ * **Remeasured after the review of feature 011 (2026-09-23): 73,49 — 75.251
+ * bytes against a ceiling of 75.264, thirteen bytes of margin.** The ceiling
+ * is **not** moved: raising it is the direction's call, not the
+ * implementer's. What the review added to the boot, +227 bytes measured chunk
+ * by chunk against the head of the PR: the domain **+197** —the projection
+ * refusing to reverse a waiver or to accept one naming no filing, the third
+ * reason of the waiver in the validator, and `earliestReached` in
+ * `filings/touched.ts`, which already lived in the boot— and the stylesheet
+ * **+36**, the rows of the anchor by origin (all the CSS is boot). The first
+ * two are of the same kind as the 73,3: a waiver that could be annulled would
+ * let plain `check` go silent, so the refusal has to live where the
+ * projection always runs. **Nothing of `tax/` or `informative/`**: the shape
+ * check passes and `closed-years.ts` is still lazy.
  */
 const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
 
@@ -307,6 +321,17 @@ const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
  * than one, out of 296**. That datum is worth more than the ceiling: a high
  * ceiling with hidden duplication under it is a real problem, and a ceiling
  * that only rises with things somebody decided to put in is not.
+ *
+ * **Remeasured after the review of feature 011 (2026-09-23): 237,7**, under
+ * the 237,9, so the ceiling stays, with 0,2 of margin. The review cost
+ * **0,8** in all (236,8 → 237,7, chunk by chunk against the head of the PR):
+ * the boot's 0,2 above; the three fiscal chunks **+0,4**, the anchor by origin
+ * and the horizon of the informative returns in `closed-years.ts`; the
+ * translations of the two new errors **+0,1**; and the rest, a few bytes
+ * spread over chunks that import the domain barrel. Checked again on the
+ * source maps: **zero modules in more than one, out of 297** — the extra
+ * module is `view-models/fiscal/anchor.ts`, split out of `year.ts` to keep it
+ * under the 250 lines of the web; it travels in an existing chunk.
  */
 const TOTAL_BUDGET_GZIP_BYTES = 237.9 * 1024;
 
