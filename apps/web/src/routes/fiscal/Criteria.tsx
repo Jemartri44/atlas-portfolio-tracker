@@ -74,17 +74,17 @@ const Stake = (props: { stake: StakeView }): JSX.Element => (
     <div class="stake-figures">
       <Show
         when={props.stake.measure !== "not_quantifiable"}
-        fallback={
-          <span class="stake-measure">
-            {MEASURE_LABELS.not_quantifiable}
-            <Show when={props.stake.reason}>{(reason) => <>: {MEASURE_REASONS[reason()]}</>}</Show>
-          </span>
-        }
+        fallback={<span class="stake-measure">{MEASURE_LABELS.not_quantifiable}</span>}
       >
         <span class="stake-measure">{MEASURE_LABELS[props.stake.measure]}</span>
         <Amount value={props.stake.amount_eur} signed coloured />
       </Show>
     </div>
+    {/* Two entries of the same criterion differ in **why**, so the reason is
+        always shown: without it the screen printed the same line twice. */}
+    <Show when={props.stake.reason}>
+      {(reason) => <p class="stake-scope">{MEASURE_REASONS[reason()]}</p>}
+    </Show>
     <p class="stake-scope">
       {props.stake.operations === 1
         ? "Afecta a 1 operación de este ejercicio."
@@ -93,8 +93,30 @@ const Stake = (props: { stake: StakeView }): JSX.Element => (
   </li>
 );
 
-export const StakeList = (props: { stakes: readonly StakeView[] }): JSX.Element => (
-  <ul class="stakes">
-    <For each={props.stakes}>{(stake) => <Stake stake={stake} />}</For>
-  </ul>
-);
+/**
+ * Three at a time, and the rest folded. With the synthetic ledger the list
+ * reached ten entries and took four phone screens of the one screen whose
+ * figure at the top is what the user came for; the notices of the summary
+ * already follow this rule (`NoticeList`).
+ */
+const FIRST = 3;
+
+export const StakeList = (props: { stakes: readonly StakeView[] }): JSX.Element => {
+  const rest = (): readonly StakeView[] => props.stakes.slice(FIRST);
+  return (
+    <>
+      <ul class="stakes">
+        <For each={props.stakes.slice(0, FIRST)}>{(stake) => <Stake stake={stake} />}</For>
+      </ul>
+      <Show when={rest().length > 0}>
+        <Disclosure
+          label={rest().length === 1 ? "Ver 1 criterio más" : `Ver ${rest().length} criterios más`}
+        >
+          <ul class="stakes">
+            <For each={rest()}>{(stake) => <Stake stake={stake} />}</For>
+          </ul>
+        </Disclosure>
+      </Show>
+    </>
+  );
+};

@@ -8,6 +8,7 @@
 
 import { useSearchParams } from "@solidjs/router";
 import { For, type JSX } from "solid-js";
+import { Icon } from "../../components/index.js";
 
 const PARAM = "ejercicio";
 
@@ -39,10 +40,11 @@ export const YearPicker = (props: {
   choices: readonly YearChoice[];
   onChange: (value: string) => void;
 }): JSX.Element => (
-  <label class="year-picker">
-    <span class="sr-only">Ejercicio</span>
+  <label class="year-picker" title="Ejercicio que estás mirando">
+    <Icon name="calendar" class="icon-sm" />
+    <span class="year-label">Ejercicio</span>
     <select
-      class="control"
+      class="year-select"
       value={String(props.year)}
       onInput={(event) => props.onChange(event.currentTarget.value)}
     >

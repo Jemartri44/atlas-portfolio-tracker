@@ -15,8 +15,8 @@
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
 import { Amount, Figure, Notice, Pending, Section, Tag } from "../../components/index.js";
-import { CRITERION_NAMES } from "../../format/criteria.js";
 import type { CategoryView, InformativeView } from "../../view-models/fiscal/index.js";
+import { CriteriaList } from "./Criteria.jsx";
 
 const Category = (props: { category: CategoryView; year: number; model: string }): JSX.Element => (
   <div class="informative-cat">
@@ -104,11 +104,7 @@ export const InformativeCard = (props: { view: InformativeView }): JSX.Element =
       >
         {(text) => <p class="card-note">{text()}</p>}
       </Show>
-      <Show when={props.view.criteria.length > 0}>
-        <p class="card-note">
-          Depende de: {props.view.criteria.map((id) => CRITERION_NAMES[id]).join("; ")}.
-        </p>
-      </Show>
+      <CriteriaList criteria={props.view.criteria} />
     </Show>
   </Section>
 );
