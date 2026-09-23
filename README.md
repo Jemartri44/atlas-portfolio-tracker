@@ -45,7 +45,7 @@ Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `v
 
 ## La aplicación web
 
-Local-first: **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión (ADR-0019). El *stack* es Solid, con Pico CSS y uPlot vendorizadas (ADR-0017).
+Local-first: **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión (ADR-0019). El *stack* es Solid, con Pico CSS y uPlot vendorizadas (ADR-0017). Seis pantallas: Resumen, Movimientos, Registrar, Cartera, Cubo y Ajustes, más la pantalla fiscal en `/fiscal`, que no ocupa un sitio en la barra porque se abre unas pocas veces al año.
 
 ```bash
 npm run dev                          # http://localhost:5173
@@ -188,7 +188,7 @@ atlas m721 2027           # lo mismo para las criptomonedas en tenencia directa
 atlas filed renta 2027 --receipt 100-2027-… --set base=1950.00   # registra lo presentado
 ```
 
-**`atlas filed <renta|720|721> <año>`** registra lo que de verdad se presentó. Propone lo que la aplicación calcula —nadie quiere teclear doce cifras— y `--set <clave>=<importe>`, repetible, sustituye cualquiera de ellas por lo declarado. **Lo presentado es un hecho, no un cálculo** (ADR-0020): el libro guarda lo declarado aunque hoy se calcule otra cosa, y guarda al lado lo que la aplicación calculaba ese día y la configuración con que lo hizo, para poder distinguir después un cambio del motor de un cambio del libro. Una complementaria es otra presentación con `--supersedes <id>`, nunca una anulación.
+**`atlas filed <renta|720|721> <año>`** registra lo que de verdad se presentó. Propone lo que la aplicación calcula —nadie quiere teclear doce cifras— y `--set <clave>=<importe>`, repetible, sustituye cualquiera de ellas por lo declarado. **Lo presentado es un hecho, no un cálculo** (ADR-0020): el libro guarda lo declarado aunque hoy se calcule otra cosa, y guarda al lado lo que la aplicación calculaba ese día y la configuración con que lo hizo, para poder distinguir después un cambio del motor de un cambio del libro. Una complementaria es otra presentación que **sustituye** a la anterior, nunca una anulación: si ya consta una del mismo modelo y ejercicio, se toma esa, y `--supersedes <id>` sirve para nombrar otra a mano.
 
 **`atlas tax <año> --boxes`** ordena las cifras como las pide el Modelo 100 de **ese** ejercicio: número de casilla, rótulo **literal** del impreso y la orden del BOE en que se comprobó, con su fecha. Las casillas son **datos por ejercicio**: un año sin correspondencia comprobada sale por conceptos y **sin ningún número**, y nunca se usa la casilla de otro año, porque la Agencia Tributaria renumera el impreso cada campaña y una casilla heredada es una cifra creíble y falsa. Hoy están comprobadas las de **2025**.
 
@@ -217,6 +217,8 @@ Dos cosas que el comando se niega a hacer:
 
 - **Dar cifras sobre un libro con eventos inválidos.** Una base calculada saltándose un evento sería aproximada, así que la respuesta es la lista de lo que hay que reparar y una remisión a `atlas check`.
 - **Calcular un ejercicio anterior a 2018**, cuando empieza el régimen de compensación vigente. Tampoco calcula ninguno si el libro tiene cifras anteriores a esa fecha.
+
+**En la web, todo esto vive en `/fiscal`**, a la que se llega desde una tarjeta del Resumen y desde Ajustes —no hay un sexto destino en la barra—: el selector de ejercicio, la base del ahorro como cifra protagonista con su desglose operación a operación, los criterios dudosos y los firmes con su dirección en palabras, las pérdidas pendientes, las casillas, el estado del 720 y del 721, y lo presentado frente a lo calculado. Registrar una presentación se hace desde ahí (`/fiscal/presentar/<modelo>/<año>`), con el formulario precargado con lo calculado y enmascarado hasta que un campo recibe el foco. **En campaña de la Renta, o cuando haya algo del 720 que hacer, la tarjeta del Resumen sube arriba del todo**; el resto del año va discreta, al final.
 
 Y un aviso que llega antes: `atlas settings set` compara la base del ahorro de los ejercicios ya cerrados con la configuración en vigor y con la propuesta, y dice cuáles se mueven. Cambiar la ventana de recompra o la categoría de renta mueve una declaración pasada sin mover ni una ganancia realizada.
 
