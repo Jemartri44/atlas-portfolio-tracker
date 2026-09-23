@@ -51,17 +51,21 @@ export const LossesCard = (props: {
         </Notice>
       )}
     </For>
-    <Show
-      when={props.pending.length > 0}
-      fallback={
-        <EmptyState
-          what="No arrastras pérdidas"
-          why="Cuando un ejercicio cierre con pérdidas sin compensar, aparecerán aquí con el año en que caducan."
-          glyph="check"
-        />
-      }
-    >
+    {/*
+      The empty state is about the **card**, not about one of its two tables:
+      saying "no arrastras pérdidas" above a balance of 5.000,00 € that has
+      just expired is the card contradicting itself, which is what it did the
+      day the year of the expiry started being painted at all.
+    */}
+    <Show when={props.pending.length > 0}>
       <DataTable label="Pérdidas pendientes" size="sm" rows={props.pending} columns={COLUMNS} />
+    </Show>
+    <Show when={props.pending.length === 0 && props.expired.length === 0}>
+      <EmptyState
+        what="No arrastras pérdidas"
+        why="Cuando un ejercicio cierre con pérdidas sin compensar, aparecerán aquí con el año en que caducan."
+        glyph="check"
+      />
     </Show>
     <Show when={props.expired.length > 0}>
       <p class="card-note">Caducadas al cerrar {props.year}, sin llegar a compensarse:</p>

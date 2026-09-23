@@ -238,6 +238,8 @@ describe("the year a pending loss expires", () => {
     expect(shown).not.toContain("No hay nada que declarar");
     expect(shown).toContain("Caducadas al cerrar 2031, sin llegar a compensarse");
     expect(shown).toContain("−5.000,00 €");
+    // And the card does not contradict itself above the table it is showing.
+    expect(shown).not.toContain("No arrastras pérdidas");
   });
 
   it("still says the years in which it is only pending", async () => {
