@@ -768,7 +768,7 @@ KILLED   R13 hide the matching sentence in the card
 ### Para la ronda siguiente, sin tocar ahora
 
 1. **Anular una presentación se acepta sin marcarla inválida.** Anterior a esta ronda, y la dirección lo deja expresamente fuera: registrar una presentación por error es un error de tecleo y la vía de corrección es la de siempre.
-2. **La carrera del almacén `blob`.** Compara el etag al leer los bytes actuales y después escribe sin condición, así que otra escritura en ese intervalo —otra pestaña, la consola sobre la misma carpeta— se pisaría. Afecta a toda escritura, no solo a la renuncia; ADR-0025 ya no promete lo contrario.
+2. **La carrera entre comprobar el etag y escribir, en los dos almacenes.** El `blob` compara el etag al leer los bytes actuales y después escribe sin condición; el de **fichero** —el de la consola— compara en `currentBytes` y después escribe un temporal y lo renombra, sin cerrojo entre las dos cosas. En los dos, otra escritura en ese intervalo se pisaría. Afecta a toda escritura, no solo a la renuncia; ADR-0025 ya no promete lo contrario. La primera versión de esta nota solo nombraba el `blob`, y la segunda revisión encontró el de fichero.
 3. **El punto ciego del escáner de mensajes** (E2), que el ternario usó tres veces.
 
 ### Lo que la tubería completa encontró al cerrar
@@ -787,6 +787,17 @@ Después, en verde: `lint`, `typecheck`, 190 ficheros y 1.840 tests, dominio al 
 - **La lección del fichero de 272 líneas**, en palabras de la dirección: **ejecutar solo los tests del trozo que tocas no es ejecutar los tests**.
 
 Tubería completa después de esto: `lint`, `typecheck`, 191 ficheros y 1.845 tests, dominio al 100 %, `build` con el arranque en 73,5 contra 73,7 y el total en 237,7 contra 237,9.
+
+### Segunda revisión: cuatro cosas antes de fusionar
+
+1. **Anular un cambio de configuración no avisaba al 720.** `settingsOf` tomaba el último `settings_changed` del fichero sin descontar anulaciones: tras cambiar la regla de fecha fiscal y anularlo, la regla efectiva volvía atrás y no salía nada. Ahora compara la configuración **en vigor** de cada lado —la última que nada anuló, la misma regla que aplica la proyección—. Rojo antes: `expected undefined to be '720'`. Repetido con la consola sobre una copia del libro dorado con un 720 de 2025: cambiar la regla avisa y **anular el cambio también avisa** («afecta al Modelo 720 de 2025…»). Un test hermano fija que anular un cambio que no tocaba la regla sigue sin avisar.
+2. **Los dos mutantes supervivientes, muertos**, y no eran equivalentes: `<=` por `<` en el horizonte ahora lo mata una operación fechada **exactamente el 31/12** (y la del 1/1 siguiente no avisa); quitar el orden de las filas del ancla lo mata un test que las recibe desordenadas y con un empate de año resuelto por categoría. Lote aparte con sustitución afirmada: `S1` a `S4` —los dos del revisor, leer la última configuración escrita y ordenar solo por año—, **los cuatro muertos**.
+3. **ADR-0025** nombra ahora la ventana entre comprobar el etag y escribir en **los dos** almacenes: el de fichero —el de la consola— compara en `currentBytes` y después renombra un temporal, sin cerrojo entre las dos cosas. El renombrado hace atómica la sustitución, no la comparación más la sustitución. Anotado para la ronda siguiente, sin tocar los adaptadores.
+4. **La línea de uso** nombra `compact [--yes] [--accept-unverified <id>]…`, con un test que exige que **toda** bandera repetible aparezca en la ayuda. Rojo antes: `--accept-unverified: expected 'uso: atlas …' to contain '--accept-unverified'`.
+
+Visto de paso y **no tocado**: el aviso de la consola dice «afecta al Modelo 720 de 2025, presentada el …», con el participio en femenino para un modelo. Es un texto de concordancia, no de contenido; queda para la dirección.
+
+`docs/data-schema.md` no se toca: la dirección se lo reservó.
 
 **Capturas** en `~/atlas-private/capturas/2026-09-23-fail-safe-gaps/revision/` (diez, sin desplazamiento lateral en ninguna): el ancla por origen a 400×890 DPR 3, 2045×1141 y 360, con privacidad a los dos tamaños reales y en oscuro; el ancla que coincide con lo calculado; y Configuración con un 720 de 2027 registrado: cambiar un umbral **no avisa** y cambiar la fecha fiscal de un tipo de activo **sí** («Afecta al Modelo 720 de 2027…»), y la captura de este último está retomada con el titular nuevo.
 
