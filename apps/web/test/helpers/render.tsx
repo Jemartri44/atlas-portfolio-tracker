@@ -30,9 +30,18 @@ class MemoryBlob implements LedgerBlob {
   }
 }
 
+/**
+ * The day every test stands on, and the one thing that moves it. Since
+ * `today()` of the screens reads the clock of the use cases, moving one and
+ * not the other would put the screen and the domain on different days — the
+ * very defect that made them disagree in the first place.
+ */
+const DEFAULT_INSTANT = "2029-07-01T10:00:00.000Z";
+let instant = DEFAULT_INSTANT;
+
 const deps = (text: string): UseCaseDeps => ({
   store: new BlobLedgerStore(new MemoryBlob(text)),
-  clock: { now: () => new Date("2029-07-01T10:00:00.000Z") },
+  clock: { now: () => new Date(instant) },
   random: (target) => target.fill(7),
 });
 
@@ -58,6 +67,7 @@ export const withGoldenLedger = (): void => {
     document.body.innerHTML = "";
     window.history.replaceState({}, "", "/");
     store.setPrivacy(false);
+    instant = DEFAULT_INSTANT;
     vi.useRealTimers();
   });
 };
@@ -162,8 +172,9 @@ export const press = async (host: HTMLElement, label: string): Promise<void> => 
 export const optionsOf = (host: HTMLElement, id: string): string[] =>
   [...(host.querySelector(`#${id}`) as HTMLSelectElement).options].map((option) => option.text);
 
-/** Moves the clock the screens read "today" from, and only that clock. */
+/** Moves the day the screens **and** the use cases stand on, which is one clock. */
 export const today = (date: string): void => {
+  instant = `${date}T10:00:00.000Z`;
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date(`${date}T10:00:00.000Z`));
+  vi.setSystemTime(new Date(instant));
 };

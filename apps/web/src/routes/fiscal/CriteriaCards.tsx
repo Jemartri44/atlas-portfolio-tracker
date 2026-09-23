@@ -33,14 +33,31 @@ export const DoubtfulCard = (props: { stakes: readonly StakeView[] }): JSX.Eleme
   </Section>
 );
 
+/**
+ * It has an empty state instead of disappearing, and that is the point: the
+ * console printed its section always and the screen hid the card when there
+ * was nothing, so the two interfaces answered the same question differently —
+ * exactly what ADR-0024 is about. "We looked and it moves nothing" **is**
+ * information, by the same argument that split this list from the doubtful one
+ * instead of filtering it.
+ */
 export const SettledCard = (props: { stakes: readonly StakeView[] }): JSX.Element => (
-  <Show when={props.stakes.length > 0}>
-    <Section title="Criterios firmes con dinero detrás" class="span-6">
+  <Section title="Criterios firmes con dinero detrás" class="span-6">
+    <Show
+      when={props.stakes.length > 0}
+      fallback={
+        <EmptyState
+          what="Ninguno de tus criterios firmes movería nada leído al revés"
+          why="Se ha comprobado uno a uno: no es que no se haya mirado."
+          glyph="check"
+        />
+      }
+    >
       <p class="card-note">
         Estas lecturas no están en duda. Se enseñan porque, si alguna vez se leyeran al revés,
         moverían esta cantidad: saberlo es parte de saber qué estás declarando.
       </p>
       <StakeList stakes={props.stakes} />
-    </Section>
-  </Show>
+    </Show>
+  </Section>
 );

@@ -68,6 +68,16 @@ export interface FingerprintCheck {
   /** How many lines the fingerprint says it covers, and where the filing really sits. */
   declared_lines: number;
   position: number;
+  /**
+   * The schema version the fingerprint declares, which is the version the
+   * lines before the filing have to be readable at. It is carried on **every**
+   * check and not only on the one that fails: it is a fact about the
+   * fingerprint, not a detail of its failure — and it is what the one message
+   * of the project that says *from which version* the ledger has to be
+   * migrated needs to print. That message used to print `declared_lines`,
+   * which is a count of lines and not a version (feature 011, block 0).
+   */
+  declared_schema_version: number;
 }
 
 /**
@@ -96,6 +106,7 @@ export const checkFilingFingerprints = (
       filing_id: filing.id,
       declared_lines: declared.lines,
       position,
+      declared_schema_version: declared.schema_version,
     };
     if (declared.lines !== position) {
       checks.push({ ...check, reason: "lines" });

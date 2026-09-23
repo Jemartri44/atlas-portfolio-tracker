@@ -1,3 +1,4 @@
+export type { AnchorRow, AnchorView } from "./anchor.js";
 export {
   BLOCK_TITLES,
   type BoxBlockView,

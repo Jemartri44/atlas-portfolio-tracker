@@ -159,6 +159,8 @@ const incomeTable = (lines: readonly IncomeLine[]): string =>
 const REASONS: Record<NonNullable<CriterionStake["reason"]>, (item: CriterionStake) => string> = {
   invalid_under_alternative: (item) =>
     `con la otra lectura ${String(item.invalid_count)} eventos serían inválidos`,
+  unsupported_under_alternative: () =>
+    "con la otra lectura el cálculo tendría que empezar en un ejercicio anterior al primero que este motor sabe calcular",
   lot_in_other_currency: () => "algún lote se compró en otra divisa",
   regime_not_recorded: () =>
     "sin régimen de neutralidad sería una permuta sujeta, y su valor no está en el libro",
@@ -376,13 +378,14 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
           (p) =>
             `CADUCA al cierre de ${report.year}: ${eur(p.amount_eur)} de ${p.origin_year} (${CATEGORY[p.category]}).`,
         ),
-        ...(report.anchor === undefined
-          ? []
-          : [
-              report.anchor.before_ledger === true
-                ? `Anclado en lo declarado en ${report.anchor.year}, anterior a tus datos: ${report.anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}. Vienen de lo declarado, no de un cálculo.`
-                : `Anclado en lo declarado en ${report.anchor.year}: calculado ${report.anchor.computed.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}; declarado ${report.anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}.`,
-            ]),
+        // One line per substitution, oldest first: with two returns filed the
+        // report used to carry only the last, and the text said "anclado en"
+        // as if there had been one (feature 011, block 6).
+        ...report.anchors.map((anchor) =>
+          anchor.before_ledger === true
+            ? `Anclado en lo declarado en ${anchor.year}, anterior a tus datos: ${anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}. Vienen de lo declarado, no de un cálculo.`
+            : `Anclado en lo declarado en ${anchor.year}: calculado ${anchor.computed.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}; declarado ${anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}.`,
+        ),
       ].join("\n"),
     ),
   );
@@ -439,7 +442,14 @@ export const renderTaxReport = (report: TaxYearReport, withLots: boolean): strin
   out.push(
     section(
       "10. Criterios firmes: lo que moverían leídos al revés",
-      `${stakeTable(report.settled)}\nLa lectura de estos no está en duda; la cifra dice qué habría detrás si lo estuviera.`,
+      // "Checked and it moves nothing" is information, and saying it is the
+      // same argument that split this list from the doubtful one instead of
+      // filtering it. With nothing to show, a table prints its headings and a
+      // separator and no rows: orphan headings say less than a sentence, and
+      // the screen says it too (ADR-0024).
+      report.settled.length === 0
+        ? "Ninguno de tus criterios firmes movería nada leído al revés. Se ha comprobado; no es que no se haya mirado."
+        : `${stakeTable(report.settled)}\nLa lectura de estos no está en duda; la cifra dice qué habría detrás si lo estuviera.`,
     ),
   );
   out.push(

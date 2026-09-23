@@ -94,8 +94,60 @@ const dist = join(webRoot, "dist");
  * than one of 74 without it. And when the feature closes, the ceiling comes
  * back **down** to what is then measured plus a small margin: it is not left
  * slack "just in case".
+ *
+ * **Trinquete de cierre de la feature 011 (2026-09-23): measured 73,3, and the
+ * ceiling stays at 73,5**, which is that plus a small margin. The number alone
+ * does not say whether it is a price paid or a drift nobody looked at, so here
+ * is the trend: it came into this round at **72,9**, rose to **73,0** with the
+ * closed map of measure reasons and the reason of a reading that predates the
+ * supported regime, and to **73,3** with the last block — and that last jump
+ * is **one decision, not slack**.
+ *
+ * What it buys: `atlas check` and the verification screen have to say
+ * **always** that the fingerprint of a filing was never verified and that the
+ * user gave it for good (ADR-0025, decision (d) of prompt 011), so the waiver
+ * has to be **projected** — and `project-ledger.ts`, `state.ts` and
+ * `integrity.ts` are the boot path. Without projecting it, plain `check` could
+ * not say it and the way out would have become a way of cleaning the record.
+ * It is the same split feature 010 chose for the warning of a closed year:
+ * **the fact up here, the figure in the lazy chunk**. A fact that must be
+ * sayable always lives where the projection always runs.
+ *
+ * The breakdown, gzip: the domain in one chunk without its fiscal half
+ * (37,8), Solid, the router, the shell and the first screen (25,2), and the
+ * stylesheet (9,9). **Nothing of `tax/` or `informative/`**, which the shape
+ * check below holds and which is what really matters: if either of them shows
+ * up here, the build fails even with room to spare.
+ *
+ * **Remeasured after the review of feature 011 (2026-09-23): 73,49 — 75.251
+ * bytes against a ceiling of 75.264, thirteen bytes of margin.** The ceiling
+ * is **not** moved: raising it is the direction's call, not the
+ * implementer's. What the review added to the boot, +227 bytes measured chunk
+ * by chunk against the head of the PR: the domain **+197** —the projection
+ * refusing to reverse a waiver or to accept one naming no filing, the third
+ * reason of the waiver in the validator, and `earliestReached` in
+ * `filings/touched.ts`, which already lived in the boot— and the stylesheet
+ * **+36**, the rows of the anchor by origin (all the CSS is boot). The first
+ * two are of the same kind as the 73,3: a waiver that could be annulled would
+ * let plain `check` go silent, so the refusal has to live where the
+ * projection always runs. **Nothing of `tax/` or `informative/`**: the shape
+ * check passes and `closed-years.ts` is still lazy.
+ *
+ * **Raised to 73,7 by the direction (2026-09-23)**: thirteen bytes are not a
+ * margin but an alarm that goes off with the next unrelated change, and a
+ * ceiling that breaks for anything is learnt to be raised without looking. So
+ * it goes back to the usual rule, measured plus a small margin.
+ *
+ * **The trend, not smoothed: 72,9 when feature 011 began, 73,49 when its
+ * review closed — six tenths in one round.** The three items are facts that
+ * must be said **always**, and that is why they live in the boot: the
+ * projection of the waiver (so plain `check` says it), the refusal to reverse
+ * a waiver or to accept one naming no filing (so it cannot be made to go
+ * silent), and the horizon of what a write reaches (so the warning of a
+ * closed year fires when it must and only then). **The next round that wants
+ * to put anything here has to justify it against this line.**
  */
-const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 73.7 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -234,8 +286,68 @@ const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
  * 59 chunks: **zero modules in more than one**. The boot moves 72,8 → **72,9**
  * for `Money.centsText()`, which lives in the core because it replaced six
  * copies of the same two-decimal rule.
+ *
+ * **Raised to 236,7 by the direction (feature 011), and the reason matters
+ * more than the number.** The gaps of the fail-safe took the total from 235,0
+ * to **236,0 KB** — 236.022 exactly, which is **23 bytes** over the old
+ * ceiling — and the last thing in is the one the user most needs: the screen
+ * saying that the pending losses it shows are **not** the ones the engine
+ * computed but the ones a filed return declared (block 6). What grew, in
+ * order: the empty state of the settled criteria in both interfaces (+0,2),
+ * the reason of a reading that predates the supported regime and the closing
+ * of the map of reasons (+0,3), the third outcome of the closed-year warning
+ * with its three causes in two interfaces (+0,4), and the anchor beside the
+ * figure it affects (+0,1).
+ *
+ * **This ceiling is a ratchet against growth nobody has looked at, not a limit
+ * that comes from outside**: nobody charges by the byte, the application is
+ * served from its own origin and the total is small for what it does. What
+ * protects the user is the other two, and **neither is touched**: the ceiling
+ * of the **boot**, which still has half a kilobyte of margin, and the check of
+ * **shape**, which forbids the tax engine from travelling in a boot chunk.
+ * Giving up telling the user that the figure in front of him is not the one
+ * the engine computed, to save twenty-three bytes of a lazily loaded chunk,
+ * would be the inversion that decision is there to prevent.
+ *
+ * The 0,7 is **measured plus what block 8 needs** and no more: its messages —
+ * the finding of a fingerprint that could not be verified and the note of the
+ * comparison over an unverified prefix— reach both interfaces, and three such
+ * texts in two interfaces measured 0,4 in block 5. If block 8 does not fit,
+ * the implementer stops again rather than spend a cushion nobody sized.
+ * Checked again on the source maps of the 59 chunks: **zero modules in more
+ * than one** (296 modules), so none of this is repetition.
+ *
+ * *Noted for later, deliberately not done here: **17,6 of the 22,3 KB of the
+ * tax engine are the literal table of the boxes of 2025**, a datum only needed
+ * when the card of the boxes is opened, which could travel in a chunk of its
+ * own.*
+ *
+ * **Trinquete de cierre de la feature 011 (2026-09-23): measured 236,9, and
+ * the ceiling comes to 237,9**, which is that plus one, as every time. The
+ * 0,7 of the provisional raise was an estimate of what the last block would
+ * need and it fell short: it counted the texts and not the new event type with
+ * its shape, its label and those of its three fields, nor the projection of
+ * the waiver. Measured, block 8 cost **0,9**: the finding and the error in the
+ * web (+0,2), the note of the report with its translation (+0,2), the event
+ * type (+0,2) and the projection (+0,3).
+ *
+ * Checked again on the source maps of the 59 chunks: **zero modules in more
+ * than one, out of 296**. That datum is worth more than the ceiling: a high
+ * ceiling with hidden duplication under it is a real problem, and a ceiling
+ * that only rises with things somebody decided to put in is not.
+ *
+ * **Remeasured after the review of feature 011 (2026-09-23): 237,7**, under
+ * the 237,9, so the ceiling stays, with 0,2 of margin. The review cost
+ * **0,8** in all (236,8 → 237,7, chunk by chunk against the head of the PR):
+ * the boot's 0,2 above; the three fiscal chunks **+0,4**, the anchor by origin
+ * and the horizon of the informative returns in `closed-years.ts`; the
+ * translations of the two new errors **+0,1**; and the rest, a few bytes
+ * spread over chunks that import the domain barrel. Checked again on the
+ * source maps: **zero modules in more than one, out of 297** — the extra
+ * module is `view-models/fiscal/anchor.ts`, split out of `year.ts` to keep it
+ * under the 250 lines of the web; it travels in an existing chunk.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 236.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 237.9 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

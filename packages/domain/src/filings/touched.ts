@@ -61,6 +61,59 @@ export const touchedYears = (
 };
 
 /**
+ * Events that have a date and move **nothing** an informative return values:
+ * an order given or a transfer requested is followed, not held.
+ */
+const TRACKING: ReadonlySet<string> = new Set([
+  "order_placed",
+  "order_updated",
+  "transfer_requested",
+  "transfer_request_updated",
+]);
+
+/**
+ * The earliest business date a change reaches, or nothing when it reaches none.
+ *
+ * It is what decides whether a write can move an **informative** return (the
+ * 720 and the 721), whose figures are the holdings and the cash on 31 December
+ * and the daily balances of the fourth quarter, all projected with `asOf`,
+ * which cuts by business date: a change can only move them if it reaches a date
+ * **on or before** the close of that year (review of feature 011). A reversal
+ * reaches the date of what it annuls; tracking reaches nothing it values; and
+ * an event with no business date reaches no date at all.
+ */
+export const earliestReached = (
+  before: readonly LedgerEvent[],
+  after: readonly LedgerEvent[],
+  state: LedgerState,
+): CivilDate | undefined => {
+  const known = new Set(before.map((event) => event.id));
+  let earliest: CivilDate | undefined;
+  const reach = (event: LedgerEvent): void => {
+    if (!isOperationEvent(event) || TRACKING.has(event.type)) {
+      return;
+    }
+    const date = businessDateOf(state, event);
+    if (earliest === undefined || date < earliest) {
+      earliest = date;
+    }
+  };
+  for (const event of after) {
+    if (known.has(event.id)) {
+      continue;
+    }
+    // Like `touchedYears`: a reversal has no date of its own, what it moves is
+    // what it annuls, which is always in the file.
+    reach(
+      event.type === "reversal"
+        ? (after.find((entry) => entry.id === event.reverses_id) as LedgerEvent)
+        : event,
+    );
+  }
+  return earliest;
+};
+
+/**
  * Every year already filed that is in force on `today`, saying which of them
  * the write falls into by date. It never refuses anything: filing late can be
  * legitimate, and sometimes compulsory. What it must never do is stay silent.

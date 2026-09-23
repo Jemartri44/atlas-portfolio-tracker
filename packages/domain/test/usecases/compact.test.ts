@@ -48,6 +48,8 @@ describe("planCompact + compactLedger", () => {
       targetVersion: 2,
       outdated: 4,
       archiveName: "ledger-2028-01-15-v1.jsonl",
+      // Nothing unverifiable, which is the normal case and the fast path.
+      unverified: [],
     });
     const result = await compactLedger({ store, clock }, plan);
     expect(result).toEqual({
@@ -58,6 +60,8 @@ describe("planCompact + compactLedger", () => {
       versions: plan.versions,
       targetVersion: 2,
       etag: "1",
+      // Nothing waived: nothing recorded.
+      waived: [],
     });
     expect(store.archives.get("ledger-2028-01-15-v1.jsonl")).toBe(original);
     const reloaded = await store.load();
@@ -255,5 +259,218 @@ describe("compact and the fingerprints of the filings (ADR-0020)", () => {
     }
     // Nothing was written: no archive, and the text is the one it had.
     expect(tampered.archives.size).toBe(0);
+  });
+
+  /** The same ledger, with the line before the filing edited after it was sealed. */
+  const tamperedStore = async () => {
+    const { store, filingId } = withFiling();
+    const plan = await planCompact({ store, clock });
+    const tampered = TestStore.fromLines(
+      (await store.load()).lines.map((line, index) =>
+        index === 1 ? line.replace(/"name":"([^"]*)"/, '"name":"Editado"') : line,
+      ),
+      TEST_SCHEMA_V2,
+    );
+    return { tampered, plan, filingId };
+  };
+
+  /**
+   * **Compacting is the only way of migrating the ledger to a new schema
+   * version**, so a ledger that cannot be compacted is frozen forever — a
+   * failure of survival over twenty years, worse than anything the fingerprint
+   * protects against, and the only way round it left to the user is editing
+   * the `.jsonl` by hand, which is exactly what the fingerprint exists to
+   * detect (ADR-0025).
+   */
+  it("lets the user accept one unverifiable fingerprint by name, and records it", async () => {
+    const { tampered, plan, filingId } = await tamperedStore();
+    const result = await compactLedger({ store: tampered, clock }, plan, {
+      acceptUnverified: [filingId],
+    });
+    expect(result.status).toBe("compacted");
+    const { events } = await tampered.load();
+    const waiver = events.find((event) => event.type === "filing_fingerprint_waived") as {
+      filing_id: string;
+      reason: string;
+      declared_schema_version: number;
+      declared_lines: number;
+    };
+    expect(waiver.filing_id).toBe(filingId);
+    // The reason, never the two under one word: the figures do not add up, as
+    // against not being readable at all.
+    expect(waiver.reason).toBe("digest");
+    // What the fingerprint declared: after compacting the ledger holds it
+    // nowhere else, because resealing overwrote it.
+    expect(waiver.declared_schema_version).toBe(1);
+    expect(waiver.declared_lines).toBe(legacy.length);
+  });
+
+  it("does not let a waiver of one filing authorise another", async () => {
+    const { tampered, plan } = await tamperedStore();
+    const error = await compactLedger({ store: tampered, clock }, plan, {
+      acceptUnverified: ["01ARYZ6S41TSV4RRFFQ69G5OTR"],
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(CompactRejectedError);
+    expect((error as CompactRejectedError).code).toBe("filing_fingerprint_mismatch");
+    expect(tampered.archives.size).toBe(0);
+  });
+
+  it("still refuses by default: nobody compacts a broken fingerprint by accident", async () => {
+    const { tampered, plan } = await tamperedStore();
+    const error = await compactLedger({ store: tampered, clock }, plan).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(CompactRejectedError);
+    expect(tampered.archives.size).toBe(0);
+  });
+
+  /**
+   * **The waiver and the compaction are all or nothing** (ADR-0025, condition
+   * of the direction). A waiver written without its compaction would be a line
+   * stating a fact that did not happen — a fingerprint given up that was never
+   * actually skipped — and in an append-only ledger it could not be taken
+   * back.
+   *
+   * The store below fails **at `replace`**, which is after the point where the
+   * waiver is built and the only thing that writes: either the whole file is
+   * replaced, waiver inside, or nothing is.
+   */
+  it("names in the plan what it could not verify, so the caller can decide", async () => {
+    const { tampered, filingId } = await tamperedStore();
+    const plan = await planCompact({ store: tampered, clock });
+    expect(plan.unverified).toEqual([{ filing_id: filingId, reason: "digest" }]);
+  });
+
+  it("names the reason of the refusal, because only one of the two accuses anybody", async () => {
+    // A line before the filing written at a version its fingerprint does not
+    // know: the prefix cannot be **read**, which is not an edit, and no backup
+    // fixes it. Refusing under the same code as "edited by hand" would accuse
+    // the user of something that did not happen (feature 011, decision (g)).
+    const { store, filingId } = withFiling();
+    const plan = await planCompact({ store, clock });
+    const newer = TestStore.fromLines(
+      (await store.load()).lines.map((line, index) =>
+        index === 1 ? JSON.stringify({ ...JSON.parse(line), schema_version: 2 }) : line,
+      ),
+      TEST_SCHEMA_V2,
+    );
+    const error = await compactLedger({ store: newer, clock }, plan).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(CompactRejectedError);
+    expect((error as CompactRejectedError).code).toBe("filing_fingerprint_unreadable");
+    // And it can be accepted like the other one, with its own reason recorded.
+    const accepted = await compactLedger({ store: newer, clock }, plan, {
+      acceptUnverified: [filingId],
+    });
+    expect(accepted.status).toBe("compacted");
+    const waiver = (await newer.load()).events.find(
+      (event) => event.type === "filing_fingerprint_waived",
+    ) as { reason: string };
+    expect(waiver.reason).toBe("unreadable");
+  });
+
+  /**
+   * **Nobody is locked out for any reason, `lines` included** (review of
+   * feature 011, blocking 2). Adding or removing a line before a filing is the
+   * most likely hand edit there is, and with the filing in force it had no way
+   * out: the console said it would record the waiver and then failed with a
+   * `projection_changed` that explained nothing, because resealing moves the
+   * count of lines the snapshot carries for that filing.
+   *
+   * And the waiver records **the real reason**: it used to fold everything
+   * that was not `unreadable` into `digest`, writing for ever a reason that was
+   * false.
+   */
+  it("lets a fingerprint that covers another count of lines be waived, recording lines", async () => {
+    const { store, filingId } = withFiling();
+    const original = (await store.load()).lines;
+    const inserted = encodeLine(new LedgerBuilder(500).account("acc_inserted"));
+    const shifted = TestStore.fromLines(
+      [original[0] as string, inserted, ...original.slice(1)],
+      TEST_SCHEMA_V2,
+    );
+    const plan = await planCompact({ store: shifted, clock });
+    expect(plan.unverified).toEqual([{ filing_id: filingId, reason: "lines" }]);
+    const result = await compactLedger({ store: shifted, clock }, plan, {
+      acceptUnverified: [filingId],
+    });
+    expect(result.status).toBe("compacted");
+    const { events, lines } = await shifted.load();
+    const waiver = events.find((event) => event.type === "filing_fingerprint_waived") as {
+      reason: string;
+      declared_lines: number;
+    };
+    expect(waiver.reason).toBe("lines");
+    // What the fingerprint said it covered, which the ledger holds nowhere else now.
+    expect(waiver.declared_lines).toBe(legacy.length);
+    // And the filing is sealed again over the prefix it really has.
+    const filing = events.find((event) => event.id === filingId) as TaxReturnFiledEvent;
+    expect(filing.ledger_fingerprint.lines).toBe(legacy.length + 1);
+    expect(
+      checkFilingFingerprints(lines, events, TEST_SCHEMA_V2).map((check) => check.reason),
+    ).toEqual([undefined]);
+  });
+
+  /**
+   * The comparison of the snapshot is the net of `compact`, and it is **not**
+   * loosened to make room for this case: what the waiver authorises is the one
+   * change resealing makes to the **one** filing the user named, and anything
+   * else that moves still stops the rewrite.
+   */
+  it("still refuses any other change of the projection when a lines case is waived", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.deposit({ account_id: "acc_fund" });
+    const filing = b.filed({
+      tax_year: 2027,
+      ledger_fingerprint: { schema_version: 1, lines: 2, sha256: "0".repeat(64) },
+    });
+    const events = b.build();
+    const doubling: LedgerSchema = {
+      version: 2,
+      migrations: new Map([
+        [1, (line) => (line.type === "cash_deposit" ? { ...line, amount: "10000" } : line)],
+      ]),
+    };
+    let replaced = false;
+    const lying: LedgerStore = {
+      schema: doubling,
+      load: async (): Promise<LoadedLedger> => ({
+        events,
+        etag: "0",
+        lines: events.map(encodeLine),
+      }),
+      append: () => Promise.reject(new Error("unused")),
+      replace: async () => {
+        replaced = true;
+        return { etag: "1" };
+      },
+    };
+    const plan = await planCompact({ store: lying, clock });
+    expect(plan.unverified).toEqual([{ filing_id: filing.id, reason: "lines" }]);
+    const error = await compactLedger({ store: lying, clock }, plan, {
+      acceptUnverified: [filing.id],
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(CompactRejectedError);
+    expect((error as CompactRejectedError).code).toBe("projection_changed");
+    // The cash still stops it; the count of lines of the waived filing does not.
+    expect((error as CompactRejectedError).details.keys).toEqual(["cash"]);
+    expect(replaced).toBe(false);
+  });
+
+  it("writes no waiver when the compaction does not go through", async () => {
+    const { tampered, plan, filingId } = await tamperedStore();
+    const before = (await tampered.load()).lines;
+    const failing: LedgerStore = {
+      schema: tampered.schema,
+      load: () => tampered.load(),
+      append: (events, etag) => tampered.append(events, etag),
+      replace: () => {
+        throw new ArchiveExistsError("ledger-2027-v1.jsonl");
+      },
+    };
+    await expect(
+      compactLedger({ store: failing, clock }, plan, { acceptUnverified: [filingId] }),
+    ).rejects.toBeInstanceOf(ArchiveExistsError);
+    const { lines, events } = await tampered.load();
+    expect(lines).toEqual(before);
+    expect(events.some((event) => event.type === "filing_fingerprint_waived")).toBe(false);
   });
 });

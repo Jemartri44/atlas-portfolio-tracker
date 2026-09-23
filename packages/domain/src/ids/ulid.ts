@@ -54,6 +54,28 @@ const incrementRandom = (bytes: Uint8Array): void => {
   throw new DomainError("ulid_overflow", "ULID random part overflowed within one millisecond");
 };
 
+/**
+ * A ULID for a line the **application** writes by itself, not the user: the
+ * timestamp of the moment plus a counter instead of randomness.
+ *
+ * Deterministic on purpose. The only line of this kind today is the waiver of
+ * a fingerprint that could not be verified (ADR-0025), written inside a
+ * compaction: compacting the same ledger twice on the same day with the same
+ * acceptance produces the same line, and there is nothing to seed. It is
+ * monotonic where it matters —its timestamp is the moment it is written, later
+ * than every event already in the file— and `sequence` tells apart two lines
+ * of the same instant.
+ */
+export const systemUlid = (at: Date, sequence: number): Ulid => {
+  let remaining = sequence;
+  let suffix = "";
+  for (let i = 0; i < 26 - TIME_CHARS; i += 1) {
+    suffix = ALPHABET.charAt(remaining % 32) + suffix;
+    remaining = Math.floor(remaining / 32);
+  }
+  return encodeTime(at.getTime()) + suffix;
+};
+
 export interface UlidGenerator {
   next(): Ulid;
 }

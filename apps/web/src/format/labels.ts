@@ -37,6 +37,7 @@ export const EVENT_LABELS: Record<string, string> = {
   thesis_opened: "Tesis abierta",
   thesis_closed: "Tesis cerrada",
   tax_return_filed: "Declaración presentada",
+  filing_fingerprint_waived: "Huella de una declaración dada por no verificable",
   reversal: "Anulación",
 };
 
@@ -149,6 +150,10 @@ export const FIELD_LABELS: Record<string, string> = {
   declared: "Lo presentado",
   computed: "Lo calculado entonces",
   ledger_fingerprint: "Huella de tus datos",
+  // A fingerprint given up as unverifiable (ADR-0025)
+  filing_id: "Declaración afectada",
+  declared_schema_version: "Formato que decía la huella",
+  declared_lines: "Movimientos que cubría la huella",
   // Rectification
   reverses_id: "Anula a",
   reason: "Motivo",

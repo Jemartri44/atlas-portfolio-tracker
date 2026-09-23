@@ -14,21 +14,28 @@
 
 import type { FilingModel } from "@atlas/domain";
 import { Money } from "@atlas/domain";
-import type { ClosedYearImpact } from "@atlas/domain/fiscal";
+import type { ClosedYearImpact, ClosedYearNotCompared, MovedFigure } from "@atlas/domain/fiscal";
 import { For, type JSX, Show } from "solid-js";
 import { formatDate } from "../format/date.js";
 import { Amount } from "./Amount.jsx";
 import { Notice } from "./Notice.jsx";
 
 /**
+ * The name of the model **after the preposition `a`**, where Spanish contracts
+ * `a el` into `al`. The title used to read «Afecta a el Modelo 720», which
+ * nobody had seen because a 720 only reached this notice when the write fell
+ * **by date** in its year; since the third outcome exists it reaches it
+ * whenever anything is written, and the first screenshot of the new case
+ * showed it (feature 011).
+ *
  * Keyed by `FilingModel`: with an open key a model added tomorrow would fall
  * through to the `??` and the notice would name it `721` in the middle of a
  * Spanish sentence. Closed, the compiler asks for its name instead.
  */
-const MODEL_NAMES: Record<FilingModel, string> = {
-  renta: "la Renta",
-  "720": "el Modelo 720",
-  "721": "el Modelo 721",
+const MODEL_AFTER_A: Record<FilingModel, string> = {
+  renta: "a la Renta",
+  "720": "al Modelo 720",
+  "721": "al Modelo 721",
 };
 
 const FIGURE_NAMES: Record<string, string> = {
@@ -50,20 +57,49 @@ const figureName = (figure: string): string => {
 
 const euros = (amount: string): Money => Money.parse(amount, "EUR");
 
+/**
+ * Why the comparison was not made, in the words of the person who has to act
+ * on it. **Never «no mueve ninguna cifra declarada»**: that is what an empty
+ * list used to be read as, and saying it without having compared is an
+ * affirmation the application had not checked — on the strength of which one
+ * supplementary return fewer gets filed (feature 011, block 5).
+ */
+const NOT_COMPARED: Record<ClosedYearNotCompared, string> = {
+  invalid_reading:
+    "No se ha podido comparar con lo que declaraste: hay movimientos inválidos en tus datos. Arréglalos en Ajustes → Verificación y vuelve a mirar.",
+  chain_unsupported:
+    "No se ha podido comparar con lo que declaraste: una de las dos lecturas tendría que empezar antes del primer ejercicio que la aplicación sabe calcular.",
+  by_design:
+    "Las cifras de ese modelo son valores a mercado y no se comparan con el motor de la Renta: mira tú si lo que vas a registrar las mueve.",
+};
+
+/** What moved, when there was a comparison at all. */
+const comparedMoves = (impact: ClosedYearImpact): readonly MovedFigure[] =>
+  impact.comparison.status === "compared" ? impact.comparison.moves : [];
+
+/** The reason, when there was not. `compared` never reaches here. */
+const notComparedReason = (impact: ClosedYearImpact): ClosedYearNotCompared =>
+  impact.comparison.status === "compared" ? "by_design" : impact.comparison.reason;
+
 export const ClosedYearNotice = (props: { impacts: readonly ClosedYearImpact[] }): JSX.Element => (
   <For each={props.impacts}>
     {(impact) => (
       <Notice
         severity="caution"
-        title={`Afecta a ${MODEL_NAMES[impact.model]} de ${impact.year}, que presentaste el ${formatDate(impact.filed_at)}`}
+        title={`Afecta ${MODEL_AFTER_A[impact.model]} de ${impact.year}, que presentaste el ${formatDate(impact.filed_at)}`}
       >
         <Show
-          when={impact.moves.length > 0}
+          when={comparedMoves(impact).length > 0}
           fallback={
-            <p>
-              La fecha de lo que vas a registrar cae en ese ejercicio. No mueve ninguna cifra de las
-              que declaraste.
-            </p>
+            <Show
+              when={impact.comparison.status === "compared"}
+              fallback={<p>{NOT_COMPARED[notComparedReason(impact)]}</p>}
+            >
+              <p>
+                La fecha de lo que vas a registrar cae en ese ejercicio. No mueve ninguna cifra de
+                las que declaraste.
+              </p>
+            </Show>
           }
         >
           <p>
@@ -72,7 +108,7 @@ export const ClosedYearNotice = (props: { impacts: readonly ClosedYearImpact[] }
               : "Mueve lo que declaraste:"}
           </p>
           <ul class="moved-figures">
-            <For each={impact.moves}>
+            <For each={comparedMoves(impact)}>
               {(move) => (
                 <li>
                   <span>{figureName(move.figure)}</span>

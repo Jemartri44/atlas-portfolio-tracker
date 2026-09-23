@@ -70,6 +70,7 @@ export {
   type StandaloneFees,
 } from "./projections/costs.js";
 export { deepCheck } from "./projections/deep-check.js";
+export type { FingerprintWaiver } from "./projections/filings.js";
 export { realizedGains } from "./projections/gains.js";
 export { investmentIncome } from "./projections/income.js";
 export { type IntegrityFinding, integrity } from "./projections/integrity.js";
@@ -177,10 +178,12 @@ export * from "./synth/index.js";
 export {
   archiveNameFor,
   type CompactDeps,
+  type CompactOptions,
   type CompactPlan,
   type CompactResult,
   compactLedger,
   planCompact,
+  type UnverifiedFiling,
   type VersionCount,
 } from "./usecases/compact.js";
 export type { UseCaseDeps } from "./usecases/deps.js";

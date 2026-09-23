@@ -26,7 +26,7 @@ import { filingInForce } from "../projections/filings.js";
 import type { LedgerState } from "../projections/state.js";
 import type { FiledRentaFigures, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { type ChainCore, chainFigures, taxChain } from "../tax/chain.js";
+import { type ChainCore, chainFigures, isUnsupported, taxChain, tryReading } from "../tax/chain.js";
 
 const EUR = "EUR";
 
@@ -77,6 +77,20 @@ export interface FilingComparison {
    * `atlas check --deep` and the verification screen do.
    */
   fingerprint_ok: boolean;
+  /**
+   * Why the prefix this comparison reads **cannot be trusted**, when it
+   * cannot. `line_count` is the fingerprint naming a different number of lines
+   * than precede the filing; `waived` is the user having accepted that it
+   * could never be verified so the ledger could be compacted (ADR-0025).
+   *
+   * It matters because of what the four causes claim. One of them —"the engine
+   * computes differently than it did then"— only holds if **everything else is
+   * equal**, and that can only be said of a verified prefix. Omitting the
+   * causes is what the code already did; **saying why** is what it did not
+   * (ADR-0024: the caveat is a datum of the report, not a sentence an
+   * interface decides to add).
+   */
+  unverified_prefix?: "line_count" | "waived";
   figures: FilingFigure[];
 }
 
@@ -96,19 +110,29 @@ const declaredFigures = (figures: FiledRentaFigures): Map<string, Money> => {
 };
 
 /**
- * A reading of the prefix of the ledger the fingerprint names.
+ * A reading of the prefix of the ledger the fingerprint names, or nothing when
+ * it cannot be computed.
  *
+ * **There are two ways it can fail and only one of them is impossible here.**
  * A prefix of a valid ledger is itself valid —what makes an event invalid is
- * always something **before** it, and the report refused an invalid ledger
- * before getting here— so there is no "could not be computed" case to handle.
+ * always something *before* it, and the report refused an invalid ledger
+ * before getting here— so `Invalid` never happens. What does happen is the
+ * other one: the settings this reading uses are **not** the ones in force, and
+ * a different `fiscal_date_rule` can move an operation into a year earlier
+ * than the engine can compute. That threw, and took the whole report with it,
+ * until feature 011; the old comment ruled out the first failure and said
+ * nothing about the second, which is how a comment that is true about what it
+ * covers makes you believe it covers everything.
  */
 const readingOf = (
   prefix: readonly LedgerEvent[],
   year: number,
   today: CivilDate,
   settings: Settings,
-): Map<string, Money> =>
-  chainFigures(taxChain(prefix, year, { today }, settings) as ChainCore, year);
+): Map<string, Money> | undefined => {
+  const chain = tryReading(() => taxChain(prefix, year, { today }, settings) as ChainCore);
+  return isUnsupported(chain) ? undefined : chainFigures(chain, year);
+};
 
 /** The whole chain of a (model, year), oldest first. */
 const chainOf = (state: LedgerState, filing: Filing): Ulid[] =>
@@ -138,7 +162,13 @@ export const filingComparison = (
   const current = chainFigures(now, year);
   // The prefix the fingerprint names. Only usable when the count still matches
   // where the filing sits: otherwise it points at other lines entirely.
-  const fingerprintOk = filing.fingerprint.lines === filing.position;
+  const countOk = filing.fingerprint.lines === filing.position;
+  // And a fingerprint the user accepted as unverifiable never held either: the
+  // way out records the fact, so everything downstream keeps knowing it.
+  const waived = [...state.fingerprintWaivers.values()].some(
+    (waiver) => waiver.filing_id === filing.event_id,
+  );
+  const fingerprintOk = countOk && !waived;
   const prefix = events.slice(0, filing.fingerprint.lines);
   // Both readings of the prefix are taken **on the day the figures were
   // computed**, so the only thing between them is the configuration. Reading
@@ -177,6 +207,8 @@ export const filingComparison = (
     receipt_reference: filing.receipt_reference,
     chain: chainOf(state, filing),
     fingerprint_ok: fingerprintOk,
+    ...(countOk ? {} : { unverified_prefix: "line_count" as const }),
+    ...(countOk && waived ? { unverified_prefix: "waived" as const } : {}),
     figures,
   };
 };

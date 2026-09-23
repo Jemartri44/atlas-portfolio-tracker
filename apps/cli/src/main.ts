@@ -144,7 +144,8 @@ comandos:
   networth [--date]   bucket [--date]
   transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
   export --format jsonl|csv [--out <ruta>]
-  synth --out <ruta> [--seed <n>]   compact [--yes]   backup --to <directorio>`;
+  synth --out <ruta> [--seed <n>]   backup --to <directorio>
+  compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fingerprintOfEvents } from "../../src/filings/fingerprint.js";
+import { checkFilingFingerprints, fingerprintOfEvents } from "../../src/filings/fingerprint.js";
 import { deepCheck } from "../../src/projections/deep-check.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { LedgerEvent } from "../../src/schema/events.js";
@@ -143,6 +143,12 @@ describe("deepCheck and the fingerprint of a filing (ADR-0020)", () => {
     return b.build().map(encodeLine);
   };
 
+  /** The same ledger with a line before the filing written at a version the fingerprint does not know. */
+  const unreadableLedger = (): string[] =>
+    sealedLedger().map((line, index) =>
+      index === 1 ? JSON.stringify({ ...JSON.parse(line), schema_version: 2 }) : line,
+    );
+
   it("finds nothing when the events before it are the ones it was sealed on", () => {
     expect(check(sealedLedger())).toEqual([]);
   });
@@ -162,16 +168,47 @@ describe("deepCheck and the fingerprint of a filing (ADR-0020)", () => {
    * fingerprint. It cannot happen by writing —the loader refuses a version it
    * does not know, so an old client never writes after a new one— so it means
    * the file was edited. The fingerprint is then unverifiable, which is not
-   * the same as wrong, and the message says so.
+   * the same as wrong.
+   *
+   * It carries a **code of its own** (feature 011, block 0): a ledger whose
+   * lines cannot be re-read at the version its fingerprint declares is not a
+   * ledger somebody edited, and telling the user to restore the copy from
+   * before the edit —which is what the other code's text says— fixes nothing.
    */
-  it("says a fingerprint cannot be verified when a line before it is newer than its version", () => {
-    const lines = sealedLedger().map((line, index) =>
-      index === 1 ? JSON.stringify({ ...JSON.parse(line), schema_version: 2 }) : line,
-    );
+  it("says a fingerprint cannot be verified, under a code of its own", () => {
+    const lines = unreadableLedger();
     const findings = check(lines, TEST_SCHEMA_V2 as never);
-    expect(findings.map((f) => f.code)).toContain("filing_fingerprint_mismatch");
-    expect(findings.find((f) => f.code === "filing_fingerprint_mismatch")?.message).toContain(
+    expect(findings.map((f) => f.code)).toContain("filing_fingerprint_unreadable");
+    expect(findings.map((f) => f.code)).not.toContain("filing_fingerprint_mismatch");
+    expect(findings.find((f) => f.code === "filing_fingerprint_unreadable")?.message).toContain(
       "cannot be read",
     );
+  });
+
+  /**
+   * The one message of the project that tells the user **from which schema
+   * version** the ledger has to be migrated. It used to print
+   * `declared_lines`, which is how many lines the fingerprint covers: a number
+   * that is not a version, printed right on the path where the version is the
+   * only thing that says what to do.
+   */
+  it("names the schema version of the fingerprint, not the count of lines it covers", () => {
+    const message = check(unreadableLedger(), TEST_SCHEMA_V2 as never).find(
+      (f) => f.code === "filing_fingerprint_unreadable",
+    )?.message;
+    expect(message).toContain("schema version 1");
+    // Eight lines precede the filing: that count must not be where the version goes.
+    expect(message).not.toContain("schema version 8");
+  });
+
+  it("carries the declared version on every check, not only on the one that fails", () => {
+    const lines = sealedLedger();
+    const events = lines.map((line) => decodeLine(line).event);
+    expect(
+      checkFilingFingerprints(lines, events).map((entry) => [
+        entry.reason,
+        entry.declared_schema_version,
+      ]),
+    ).toEqual([[undefined, 1]]);
   });
 });

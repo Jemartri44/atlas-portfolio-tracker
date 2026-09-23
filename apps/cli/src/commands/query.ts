@@ -3,10 +3,12 @@
 import {
   cashBalances,
   deepCheck,
+  type FingerprintWaiver,
   fiscalLots,
   type IntegrityFinding,
   integrity,
   investmentIncome,
+  type LedgerState,
   loadAndProject,
   Money,
   ProjectionError,
@@ -310,6 +312,30 @@ export const valuationsCommand = async (
   return 0;
 };
 
+/** Why a fingerprint could not be verified, said the way the reader needs it. */
+const WAIVER_REASONS: Record<FingerprintWaiver["reason"], string> = {
+  lines: "la huella cubría otro número de movimientos",
+  digest: "los movimientos ya no eran los que había cuando se presentó",
+  unreadable: "los movimientos no se podían leer en el formato que decía la huella",
+};
+
+/**
+ * The text of a finding. The domain speaks English by contract; the CLI still
+ * prints most findings in it —a known gap, left for a later round— but **this
+ * one is read for twenty years**, so it is said in Spanish with its reason and
+ * its date (review of feature 011).
+ */
+const describeFindingIn = (state: LedgerState | undefined, finding: IntegrityFinding): string => {
+  const waiver =
+    finding.code === "filing_fingerprint_waived"
+      ? state?.fingerprintWaivers.get(finding.event_ids[0] as string)
+      : undefined;
+  if (waiver === undefined) {
+    return finding.message;
+  }
+  return `La huella de la declaración ${waiver.filing_id} nunca llegó a comprobarse (${WAIVER_REASONS[waiver.reason]}) y lo diste por bueno el ${waiver.accepted_on} para poder compactar.`;
+};
+
 export const checkCommand = async (
   ctx: Context,
   _positionals: string[],
@@ -320,8 +346,11 @@ export const checkCommand = async (
   let findings: IntegrityFinding[];
   let deepFindings: IntegrityFinding[] = [];
   let warnings: Warning[] = [];
+  let state: LedgerState | undefined;
   try {
-    const { state, events, lines } = await loadAndProject(ctx.deps, { collectErrors: true });
+    const loaded = await loadAndProject(ctx.deps, { collectErrors: true });
+    state = loaded.state;
+    const { events, lines } = loaded;
     findings = integrity(state);
     warnings = state.warnings;
     if (deep) {
@@ -346,7 +375,12 @@ export const checkCommand = async (
       : table(
           ["nivel", "código", "mensaje", "eventos"],
           [
-            ...all.map((f) => [f.severity, f.code, f.message, f.event_ids.join(", ")]),
+            ...all.map((f) => [
+              f.severity,
+              f.code,
+              describeFindingIn(state, f),
+              f.event_ids.join(", "),
+            ]),
             // The domain writes in English and the CLI translates by `code`
             // (the contract of `errors.ts`): `check` was still printing the raw
             // message, so the only place that lists every warning of the ledger

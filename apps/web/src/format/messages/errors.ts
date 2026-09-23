@@ -177,6 +177,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `Una declaración del ejercicio ${num(d.tax_year)} no se pudo presentar el ${day(d.filed_at)}: la fecha tiene que ser posterior al final de ese ejercicio.`,
   filed_at_in_future: (d) =>
     `La presentaste el ${day(d.filed_at)}, que es posterior a hoy: no se registra lo que todavía no se ha presentado.`,
+  as_of_before_year_end: (d) =>
+    `El cálculo guardado con la declaración es del ${day(d.as_of)}, anterior al cierre de ${num(d.tax_year)}: no cubre el ejercicio entero.`,
+  as_of_in_future: (d) =>
+    `El cálculo guardado con la declaración es del ${day(d.as_of)}, posterior al día en que se registra: no se calcula en el futuro.`,
   duplicate_pending_loss: (d) =>
     `Los saldos pendientes declarados repiten el ejercicio ${num(d.origin_year)} en ${enumValue(d.category)}: cada origen va una sola vez.`,
   duplicate_filed_item: (d, n) =>
@@ -209,6 +213,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   reversal_of_reversal: () =>
     "No se puede anular una anulación: vuelve a registrar el evento original.",
   already_reversed: () => "Ese evento ya está anulado.",
+  // Lo que registra ya pasó: la compactación ocurrió sin verificar esa huella,
+  // y anular la línea que lo cuenta no la deshace (ADR-0025).
+  waiver_not_reversible: () =>
+    "No se puede anular la renuncia a verificar una huella: registra una compactación que ya ocurrió, y anular la línea que lo cuenta no la deshace.",
+  waiver_filing_unknown: () =>
+    "Una renuncia a verificar una huella nombra una declaración que no está en tus datos.",
   reversal_target_missing: () => "El movimiento que se quiere anular no está en tus datos.",
   not_found: () => "Ese movimiento no está en tus datos.",
   dependent_events: () => "Hay movimientos posteriores que se apoyan en este: rectifícalos antes.",
@@ -256,6 +266,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Una declaración presentada dice que se calculó sobre otros movimientos de los que tiene delante en el archivo.",
   filing_fingerprint_mismatch: () =>
     "Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó.",
+  filing_fingerprint_unreadable: () =>
+    "Los movimientos anteriores a una declaración presentada no se pueden leer en el formato que dice su huella: no se puede comprobar.",
+  filing_fingerprint_waived: () =>
+    "La huella de una declaración presentada nunca llegó a comprobarse, y tú lo diste por bueno para poder compactar.",
   // --- Store and schema --------------------------------------------------
   conflict: () =>
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",

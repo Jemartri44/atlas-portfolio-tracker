@@ -22,6 +22,7 @@ import { FISCAL_CRITERIA, sortCriteria } from "@atlas/domain/fiscal";
 import { formatDate } from "../../format/date.js";
 import type { NameIndex } from "../../format/names.js";
 import { displayName } from "../../format/names.js";
+import { type AnchorView, anchorView } from "./anchor.js";
 import { type ExpiryWarning, expiryWarning, type PendingView, pendingView } from "./losses.js";
 import { type StakeView, stakeView } from "./stakes.js";
 
@@ -59,6 +60,8 @@ export interface OffsetStep {
 export interface YearView {
   year: number;
   base_eur: Money;
+  /** Every substitution the chain applied, oldest first; empty when there was none. */
+  anchors: AnchorView[];
   groups: FiscalGroup[];
   steps: OffsetStep[];
   limit_pct: string;
@@ -168,6 +171,7 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
   return {
     year: report.year,
     base_eur: report.base_eur,
+    anchors: report.anchors.map((anchor) => anchorView(anchor)),
     groups,
     steps,
     limit_pct: report.compensation.limit_pct,

@@ -135,6 +135,40 @@ describe("a write that reaches a filed return", () => {
     expect(text).toContain("la base del ahorro pasa de 2000 a 0");
   });
 
+  /**
+   * **Found by looking at the screen**, which is where the last three defects
+   * of feature 010 came from too. Nobody had seen it because a 720 only
+   * reached this warning when the write fell **by date** inside its year;
+   * since the third outcome exists it reaches it whenever anything is written,
+   * and the first screenshot of the new case read «Afecta a el Modelo 720».
+   */
+  it("contracts the preposition: al Modelo 720, never «a el Modelo 720»", async () => {
+    // The straddling sale, so the Renta moves too and both articles show.
+    const b = filed("2027-12-30", "2028-01-03");
+    b.filed(
+      {
+        model: "720",
+        tax_year: 2027,
+        filed_at: "2028-03-20",
+        receipt_reference: "720-2027-ABCDEFGHIJKL",
+        declared: { items: [] },
+        computed: {
+          as_of: "2028-03-20",
+          settings_origin: "event",
+          settings: CLI_SETTINGS,
+          items: [],
+        },
+        ledger_fingerprint: FINGERPRINT,
+      },
+      "2028-03-20",
+    );
+    const text = await run(["settings", "set", "--fiscal-date-rule", "etf=value_date"], b.build());
+    expect(text).toContain("afecta al Modelo 720 de 2027");
+    expect(text).not.toContain("a el Modelo");
+    // And the Renta keeps its own article.
+    expect(text).toContain("afecta a la Renta de 2027");
+  });
+
   it("warns on a corporate action by its date alone, which moves no figure", async () => {
     // A split does not change a single euro of the return, but it lands in a
     // year that was filed and rewrites the lots of it: the user has to know

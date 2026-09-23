@@ -21,8 +21,11 @@
 // and friends, ADR-0019), and the architecture test holds both ends of it.
 
 export {
+  type ClosedYearComparison,
   type ClosedYearImpact,
+  type ClosedYearNotCompared,
   closedYearImpact,
+  type MovedFigure,
   type Reading,
 } from "./filings/closed-years.js";
 export type { FilingCauses, FilingComparison, FilingFigure } from "./filings/comparison.js";

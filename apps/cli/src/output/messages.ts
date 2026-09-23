@@ -138,6 +138,10 @@ export const describeError = (error: DomainError): string => {
       return `Una declaración del ejercicio ${text(d.tax_year)} no se pudo presentar el ${text(d.filed_at)}: la fecha tiene que ser posterior al 31/12 de ${text(d.tax_year)}.`;
     case "filed_at_in_future":
       return `La fecha de presentación (${text(d.filed_at)}) es posterior al día en que se registra (${text(d.recorded_at)}): no se registra lo que aún no se ha presentado.`;
+    case "as_of_before_year_end":
+      return `El cálculo que acompaña a la declaración es del ${text(d.as_of)}, anterior al cierre del ejercicio ${text(d.tax_year)}: no puede cubrirlo entero, así que sus cifras estarían a medias.`;
+    case "as_of_in_future":
+      return `El cálculo que acompaña a la declaración es del ${text(d.as_of)}, posterior al día en que se registra (${text(d.recorded_at)}): no se calcula en el futuro.`;
     case "duplicate_pending_loss":
       return `Los saldos pendientes declarados repiten el ejercicio ${text(d.origin_year)} en ${text(d.category)}: cada origen y categoría va una sola vez.`;
     case "duplicate_filed_item":
@@ -162,6 +166,12 @@ export const describeError = (error: DomainError): string => {
       return `El peso objetivo de ${text(d.asset_id)} no puede ser negativo (recibido: ${text(d.value)}).`;
     case "reversal_of_reversal":
       return "No se puede anular una anulación: registra de nuevo el evento original.";
+    // What it records already happened: the ledger was compacted without
+    // verifying that fingerprint, and annulling the line does not undo it.
+    case "waiver_not_reversible":
+      return "No se puede anular la renuncia a verificar una huella: registra una compactación que ya ocurrió, y anular la línea que lo cuenta no la deshace. No hay nada que deshacer.";
+    case "waiver_filing_unknown":
+      return `La renuncia nombra la declaración ${text(d.filing_id)}, que no está en tus datos: es una renuncia a nada.`;
     case "already_reversed":
       return "Ese evento ya está anulado.";
     case "reversal_target_missing":
@@ -232,6 +242,15 @@ export const describeError = (error: DomainError): string => {
       return `Una declaración presentada dice que se calculó sobre otros movimientos de los que tiene delante en el fichero: se ha insertado o quitado una línea antes de ella.`;
     case "filing_fingerprint_mismatch":
       return `Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó (editados a mano). Recupera la copia anterior a la edición.`;
+    // No es una edición: están, pero no se pueden releer en el formato que la
+    // huella declara. Acusar de manipular el libro a quien tiene esto, y
+    // mandarle restaurar una copia, sería falso dos veces.
+    case "filing_fingerprint_unreadable":
+      return `Los movimientos anteriores a una declaración presentada no se pueden leer en el formato que dice su huella: no se puede comprobar. No es una edición y no hay copia que restaurar; para poder compactar, acéptalo a propósito con «atlas compact --accept-unverified <id>», y quedará registrado.`;
+    case "tax_filing_prefix_unverified":
+      return `La huella de la declaración presentada no cubre los movimientos que tiene delante${d.reason === "waived" ? " y la diste por no verificable" : ""}: la diferencia con lo declarado no se reparte en sus cuatro causas, porque una de ellas solo se sostiene si todo lo demás está comprobado.`;
+    case "filing_fingerprint_waived":
+      return `La huella de una declaración presentada nunca llegó a comprobarse y lo diste por bueno para poder compactar: queda registrado, con su motivo y su fecha.`;
     case "duplicate_id":
       return "Dos líneas del libro tienen el mismo identificador: el fichero está corrupto.";
     case "invalid_line":

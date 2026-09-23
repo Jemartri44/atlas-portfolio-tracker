@@ -15,13 +15,16 @@ import {
 } from "../../src/schema/events.js";
 
 describe("event type discriminator", () => {
-  it("is at schema version 1 with 25 supported types and no reserved type left", () => {
+  it("is at schema version 1 with 26 supported types and no reserved type left", () => {
     expect(CURRENT_SCHEMA_VERSION).toBe(1);
-    // 25: 24 with `swap` (ADR-0021) plus `tax_return_filed` (ADR-0020), which
-    // is a **compatible** change and stays on version 1, like `swap` was.
-    expect(SUPPORTED_EVENT_TYPES).toHaveLength(25);
+    // 26: 24 with `swap` (ADR-0021), plus `tax_return_filed` (ADR-0020) and
+    // `filing_fingerprint_waived` (ADR-0025). Adding an event type is a
+    // **compatible** change and stays on version 1, which is why the three of
+    // them did.
+    expect(SUPPORTED_EVENT_TYPES).toHaveLength(26);
     expect(isSupportedEventType("swap")).toBe(true);
     expect(isSupportedEventType("tax_return_filed")).toBe(true);
+    expect(isSupportedEventType("filing_fingerprint_waived")).toBe(true);
     expect(RESERVED_EVENT_TYPES).toEqual([]);
     expect(isSupportedEventType("buy")).toBe(true);
     expect(isSupportedEventType("thesis_opened")).toBe(true);

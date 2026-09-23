@@ -271,7 +271,10 @@ export interface CriterionStake {
   /**
    * Why the measure is what it is, as a code the interfaces translate:
    * `invalid_under_alternative` (the other reading leaves `invalid_count`
-   * events invalid), `lot_in_other_currency` (#4 cannot be recomputed in the
+   * events invalid), `unsupported_under_alternative` (the other reading makes
+   * the chain start before the first year the engine can compute, which no
+   * repair of the ledger fixes), `lot_in_other_currency` (#4 cannot be
+   * recomputed in the
    * currency of the sale), `regime_not_recorded` (an exchange without a word on
    * the neutrality regime: its taxable value is not in the ledger),
    * `no_carrier_left` (#18 read the other way would defer onto no lot: none of
@@ -279,6 +282,7 @@ export interface CriterionStake {
    */
   reason?:
     | "invalid_under_alternative"
+    | "unsupported_under_alternative"
     | "lot_in_other_currency"
     | "regime_not_recorded"
     | "no_carrier_left";
@@ -295,6 +299,12 @@ export interface SettingsDiff {
   base_after_eur: Money;
   /** How many events the previous settings leave invalid, when they do. */
   invalid_before?: number;
+  /**
+   * The previous settings reach below the first supported year, so there is no
+   * figure to compare either — the sibling of `invalid_before` for the other
+   * way a reading can fail (feature 011, block 4).
+   */
+  unsupported_before?: boolean;
   changes: {
     event_id: Ulid;
     what: "entered" | "left" | "category" | "computable";
@@ -342,7 +352,15 @@ export interface TaxYearReport {
     }[];
   };
   compensation: Compensation;
-  anchor?: AnchorDifference;
+  /**
+   * Every year of the chain whose pending losses the engine **replaced** with
+   * what a filed return declared, oldest first, and empty when there was
+   * none. A list and not an optional field, like every other list of this
+   * report: "there were no substitutions" and "an empty list" mean the same
+   * thing, and a field that is sometimes missing invites reading "I do not
+   * know" where the answer is "there were none".
+   */
+  anchors: AnchorDifference[];
   /**
    * Present only when an income tax return is in force for the year
    * (ADR-0020): what it declared, what the application computed the day it was

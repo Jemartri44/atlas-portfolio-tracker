@@ -3,6 +3,7 @@
 import { DEFAULT_SETTINGS, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
+import { CLI_SETTINGS, Events } from "../events.js";
 import { harness, seed } from "../harness.js";
 
 const DATE = "2027-06-30";
@@ -590,5 +591,64 @@ describe("atlas settings set: a change that reinterprets the past (ADR-0015)", (
       ]),
     ).toBe(EXIT.domain);
     expect(h.text()).toContain("--accept-invalid solo se admite");
+  });
+});
+
+/**
+ * The one place of the four where the user is **writing** and not consulting.
+ *
+ * `atlas settings set` computes the warning of a closed year with **two
+ * different configurations**, which is exactly the mechanism that drags the
+ * chain below the first supported year. There is no report to lose here:
+ * before feature 011 the command died —exit code 1, before the question— and
+ * the setting never reached the ledger.
+ */
+describe("atlas settings set: a change whose other reading predates the regime", () => {
+  /** A sale traded in 2017 and settled in 2018, with the Renta of 2018 filed. */
+  const straddling = () => {
+    const b = new Events();
+    b.settings(CLI_SETTINGS);
+    b.account("acc_es");
+    b.asset("fnd_a", "fund");
+    b.deposit("acc_es", "2017-06-01", "60000");
+    b.buy("acc_es", "fnd_a", "2017-06-01", "500", "100");
+    b.sell("acc_es", "fnd_a", "2018-01-03", "100", "120", "2017-12-28");
+    b.filed(
+      {
+        model: "renta",
+        tax_year: 2018,
+        filed_at: "2019-06-10",
+        receipt_reference: "100-2018-ABCDEFGHIJKL",
+        declared: { savings_base_eur: "2000.00", pending_losses: [], deferred_losses_eur: "0.00" },
+        computed: {
+          as_of: "2019-06-10",
+          settings_origin: "event",
+          settings: CLI_SETTINGS,
+          savings_base_eur: "2000.00",
+          pending_losses: [],
+          deferred_losses_eur: "0.00",
+        },
+        ledger_fingerprint: { schema_version: 1, lines: 5, sha256: "0".repeat(64) },
+      },
+      "2019-06-10",
+    );
+    return b.build();
+  };
+
+  it("asks and writes instead of dying before the question", async () => {
+    const h = harness({
+      events: straddling(),
+      confirm: true,
+      instant: "2026-09-01T10:00:00.000Z",
+    });
+    expect(await h.exec(["settings", "set", "--fiscal-date-rule", "fund=trade_date"])).toBe(0);
+    expect(h.text()).not.toContain("tax_year_unsupported");
+    const { events } = await h.store.load();
+    const last = events[events.length - 1] as unknown as {
+      type: string;
+      settings: { fiscal_date_rule: Record<string, string> };
+    };
+    expect(last.type).toBe("settings_changed");
+    expect(last.settings.fiscal_date_rule.fund).toBe("trade_date");
   });
 });

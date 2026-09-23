@@ -13,13 +13,26 @@
 // the engine, not a check on it.
 
 import { describe, expect, it } from "vitest";
-import { closedYearImpact } from "../../src/filings/closed-years.js";
+import {
+  type ClosedYearImpact,
+  closedYearImpact,
+  type MovedFigure,
+} from "../../src/filings/closed-years.js";
 import type { FilingCauses, FilingFigure } from "../../src/filings/comparison.js";
 import type { Money } from "../../src/money/money.js";
 import type { LedgerEvent, TaxReturnFiledEvent } from "../../src/schema/events.js";
 import { normalizeSettings } from "../../src/settings/settings.js";
 import { taxYear } from "../../src/tax/year.js";
 import { buy, HAND_SETTINGS, sell, taxBuilder } from "./helpers.js";
+
+/** What a comparison that **was** made says moved; it fails loudly if it was not made. */
+const movesOf = (impact: ClosedYearImpact | undefined): readonly MovedFigure[] => {
+  const comparison = impact?.comparison;
+  if (comparison?.status !== "compared") {
+    throw new Error(`expected a comparison, got ${JSON.stringify(comparison)}`);
+  }
+  return comparison.moves;
+};
 
 const text = (money: Money | undefined): string =>
   money === undefined ? "—" : money.amount.toString();
@@ -132,7 +145,7 @@ describe("the hand-computed supplementary return, step by step (§6.3)", () => {
     expect(impact?.year).toBe(2027);
     expect(impact?.filing_id).toBe(before.id.F1);
     expect(impact?.by_date).toBe(true);
-    expect(impact?.moves.map((move) => [move.figure, move.before, move.after])).toEqual([
+    expect(movesOf(impact).map((move) => [move.figure, move.before, move.after])).toEqual([
       ["pending:2027:capital_gain", "-290", "-190"],
     ]);
   });
@@ -144,7 +157,7 @@ describe("the hand-computed supplementary return, step by step (§6.3)", () => {
     const events = after.events.filter((event) => event.id !== after.id.C11);
     const [impact] = closedYearImpact({ events: before.events }, { events }, "2029-01-10");
     expect(impact?.filing_id).toBe(after.id.F2);
-    expect(impact?.moves.map((move) => [move.figure, move.before, move.after])).toEqual([
+    expect(movesOf(impact).map((move) => [move.figure, move.before, move.after])).toEqual([
       ["savings_base", "30", "45"],
       ["pending:2027:capital_gain", "-190", "-185"],
     ]);
@@ -159,7 +172,7 @@ describe("the hand-computed supplementary return, step by step (§6.3)", () => {
       "2029-01-10",
     );
     expect(rest).toEqual([]);
-    expect(impact?.moves.map((move) => [move.figure, move.before, move.after])).toEqual([
+    expect(movesOf(impact).map((move) => [move.figure, move.before, move.after])).toEqual([
       ["savings_base", "45", "48"],
       ["pending:2027:capital_gain", "-185", "-188"],
     ]);

@@ -168,6 +168,9 @@ const PER_ACCOUNT_RULES: Partial<Record<EffectOp, Rules>> = {
   grant: { account_id: req("string"), quantity: req("positive_decimal") },
 };
 
+/** Why a fingerprint could not be verified (ADR-0025, as amended): three reasons, never folded into one another. */
+const WAIVER_REASONS = ["lines", "digest", "unreadable"] as const;
+
 const RULES: Record<SupportedEventType, Rules> = {
   account_created: ACCOUNT,
   account_updated: ACCOUNT,
@@ -348,6 +351,13 @@ const RULES: Record<SupportedEventType, Rules> = {
     ledger_fingerprint: req("object"),
     notes: opt("string"),
     fingerprint: req("string"),
+  },
+  filing_fingerprint_waived: {
+    filing_id: req("ulid"),
+    reason: oneOf(WAIVER_REASONS),
+    declared_schema_version: req("positive_integer"),
+    declared_lines: req("non_negative_integer"),
+    notes: opt("string"),
   },
   reversal: { reverses_id: req("ulid"), reason: req("string") },
 };
@@ -737,6 +747,37 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
       type,
       "computed.",
     );
+    // `computed.as_of` is the date the comparison of ADR-0020 re-reads the
+    // prefix of the ledger with, so an absurd one splits the difference
+    // between declared and computed into four causes that are false, with
+    // nothing to say so.
+    //
+    // **The rule is that `as_of` covers the whole year it declares**: a
+    // calculation made with a cut that leaves half the return out declares
+    // incomplete figures. The cut of the ledger includes its own date (`asOf`
+    // skips only what comes *after* it), so 31 December of the year covers it
+    // whole and is valid.
+    //
+    // The upper bound is `recorded_at` and **not** `filed_at`. Recording a
+    // return after filing it is the ordinary flow —file at the tax agency one
+    // day, note it here another— and `as_of` is the day the application
+    // computed, so it comes after `filed_at` every time. Two comparisons, and
+    // only two: "not in the future" is the second one, not a third.
+    const asOf = computed.as_of as string;
+    if (asOf < `${year}-12-31`) {
+      throw invalid(
+        "as_of_before_year_end",
+        `${type}: computed.as_of does not cover the whole tax year it declares`,
+        { type, field: "computed.as_of", as_of: asOf, tax_year: year },
+      );
+    }
+    if (asOf > recordedAt) {
+      throw invalid(
+        "as_of_in_future",
+        `${type}: computed.as_of is after the day the line was recorded`,
+        { type, field: "computed.as_of", as_of: asOf, recorded_at: recordedAt },
+      );
+    }
     validateSettings(computed.settings);
     checkFields(
       requireRecord(raw.ledger_fingerprint, type, "ledger_fingerprint"),

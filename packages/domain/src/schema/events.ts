@@ -708,6 +708,42 @@ export interface TaxReturnFiledEvent extends Envelope {
   fingerprint: string;
 }
 
+/**
+ * The user accepted, **on purpose and by name**, that the fingerprint of one
+ * filing could not be verified, so that the ledger could be compacted
+ * (ADR-0025). Compacting is the only way of migrating the file to a new schema
+ * version, so a ledger that cannot be compacted is frozen forever — a failure
+ * of survival over twenty years, and worse than anything the fingerprint
+ * protects against.
+ *
+ * It is written **inside the compaction and never on its own**: the waiver and
+ * the rewrite are all or nothing, because a waiver without its compaction
+ * would be a line stating a fact that did not happen, and in an append-only
+ * ledger it could not be taken back.
+ *
+ * It says nothing **about** the filing being wrong and does not touch it
+ * (ADR-0020): what it records is that nobody could check it, and when the user
+ * accepted that. It is an **administrative document**, like a filing: it has
+ * no business date and the cut of `asOf` does not reach it (ADR-0016).
+ */
+export interface FilingFingerprintWaivedEvent extends Envelope {
+  type: "filing_fingerprint_waived";
+  /** The filing whose fingerprint could not be verified. */
+  filing_id: Ulid;
+  /**
+   * Why it could not be verified, **never folded into another**: `lines` means
+   * the fingerprint covers a different number of lines than precede the filing
+   * —a line was added or removed before it, the most likely hand edit—,
+   * `digest` that the prefix does not add up to what it recorded, and
+   * `unreadable` that it cannot even be read at the version it declares.
+   */
+  reason: "lines" | "digest" | "unreadable";
+  /** What the fingerprint declared. After compacting, the ledger holds it nowhere else. */
+  declared_schema_version: number;
+  declared_lines: number;
+  notes?: string;
+}
+
 // --- Rectification --------------------------------------------------------
 
 export interface ReversalEvent extends Envelope {
@@ -721,6 +757,7 @@ export interface ReversalEvent extends Envelope {
 export type ReservedEvent = Envelope & { type: ReservedEventType } & Record<string, unknown>;
 
 export type SupportedEvent =
+  | FilingFingerprintWaivedEvent
   | AccountCreatedEvent
   | AccountUpdatedEvent
   | AssetCreatedEvent
