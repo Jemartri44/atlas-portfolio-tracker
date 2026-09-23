@@ -132,8 +132,22 @@ const dist = join(webRoot, "dist");
  * let plain `check` go silent, so the refusal has to live where the
  * projection always runs. **Nothing of `tax/` or `informative/`**: the shape
  * check passes and `closed-years.ts` is still lazy.
+ *
+ * **Raised to 73,7 by the direction (2026-09-23)**: thirteen bytes are not a
+ * margin but an alarm that goes off with the next unrelated change, and a
+ * ceiling that breaks for anything is learnt to be raised without looking. So
+ * it goes back to the usual rule, measured plus a small margin.
+ *
+ * **The trend, not smoothed: 72,9 when feature 011 began, 73,49 when its
+ * review closed — six tenths in one round.** The three items are facts that
+ * must be said **always**, and that is why they live in the boot: the
+ * projection of the waiver (so plain `check` says it), the refusal to reverse
+ * a waiver or to accept one naming no filing (so it cannot be made to go
+ * silent), and the horizon of what a write reaches (so the warning of a
+ * closed year fires when it must and only then). **The next round that wants
+ * to put anything here has to justify it against this line.**
  */
-const BOOT_BUDGET_GZIP_BYTES = 73.5 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 73.7 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
