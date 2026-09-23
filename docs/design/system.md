@@ -254,7 +254,11 @@ Bloques en `--c-fill`, de radio 6, **sin brillo animado**, con la forma y el alt
 
 `<dialog>` nativo, radio 16, `--shadow-3`. Lleva título, una frase, la lista de lo que depende y un aviso si afecta a un ejercicio fiscal ya declarado. Las acciones son «Cancelar» (secundario) y la confirmación destructiva. En el móvil van a lo ancho y apiladas.
 
-### 5.18 Primeros pasos (`.steps`)
+### 5.18 Aviso de ejercicio ya declarado (`ClosedYearNotice`)
+
+Un `.notice` de gravedad *precaución*, **el mismo en las cuatro escrituras** (Registrar, Corregir, Anular y Configuración) porque el aviso que cambia de forma en cada pantalla es el que nadie reconoce. Lleva en el título el modelo, el ejercicio y la fecha en que se presentó; debajo, una frase que dice si cae en ese ejercicio por fecha o si mueve lo declarado, y la lista `.moved-figures` con cada cifra y su paso «antes → después». **Los importes van por `Amount`**, como cualquier otro: una base declarada es tan privada como el resto. Se calcula **antes** de abrir la pregunta, nunca después; si no se puede calcular, se dice con otro aviso en el mismo sitio.
+
+### 5.19 Primeros pasos (`.steps`)
 
 Lista numerada con el estado de cada paso: **hecho** (círculo lleno con ✓), **actual** (anillo de acento y botón principal) y **pendiente** (anillo fino y chevrón). Arriba, «1 de 4» y una barra de cuatro segmentos. En escritorio, cuatro tarjetas en fila.
 
@@ -318,6 +322,12 @@ Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, 
 
 *Tus datos* (dónde están, exportar, importar, cambiar de archivo y reconectar), *Privacidad y apariencia* y *Verificación*, que agrupa sus hallazgos igual que Atención. La **Configuración** va en grupos plegables, con los pesos objetivo y su total en vivo. Se piden pesos **solo de activos vivos** (`view-models/weighted.ts`): no de uno dado de baja ni de uno que una fusión o un cambio de clase convirtió en otro y ya no tiene nada, aunque el catálogo lo siga dando por activo; uno que aún lleve peso sí sale, para que guardar nunca quite un peso sin verlo. La *Verificación* nombra `atlas backup` solo cuando los datos están en una carpeta del ordenador; en el móvil dice que la copia es exportar y guardar el archivo fuera del dispositivo. Con la privacidad activa **se enmascaran todos sus importes**, incluidos los tramos de la base del ahorro y los umbrales de los modelos 720 y 721: una sola regla. El índice de referencia del cubo no ofrece activos dados de baja. En escritorio, dos columnas de tarjetas, y los formularios nunca pasan de su ancho de lectura.
 
+### 7.8 Declaración (`/fiscal`)
+
+Fuera de la barra, porque se abre unas pocas veces al año y se llega desde la tarjeta del Resumen. Abre con la **base del ahorro** como cifra protagonista, rotulada «cartera y cubo juntos» —la primera excepción de la constitución III, dicha siempre, nunca en silencio—; el selector de ejercicio va en la URL (`?ejercicio=`) y es el mismo control compacto que la fecha de consulta. Cada total se abre en sus operaciones, **nombradas por activo y fecha**, jamás por el identificador de un evento. Los criterios van en dos tarjetas que no se mezclan, *en duda* y *firmes con dinero detrás*: se enseñan **tres y se pliega el resto**, y cada entrada dice de qué operaciones viene o por qué motivo la emitió el motor, para que dos entradas del mismo criterio no se lean iguales. Debajo, lo pendiente de compensar y lo que caduca, **la declaración por casillas** (cada cifra con lo que es, el rótulo literal del formulario cuando el ejercicio está comprobado, y la cita del anexo del BOE una vez por bloque), el estado de los modelos 720 y 721 y la comparación con lo presentado. `/fiscal/presentar/<modelo>/<año>` registra lo presentado: los importes llegan con lo que la aplicación calcula y el error de una cifra mal escrita se marca **en su campo**.
+
+Con el libro vacío no enseña seis tarjetas de ceros: una sola con el siguiente paso.
+
 ---
 
 ## 8. Decisiones tomadas
@@ -362,5 +372,6 @@ Aprobadas por la dirección el 2026-09-19.
 | Cubo: tesis de una posición, la vista que junta los dos libros | `styles/bucket.css` |
 | Ajustes, grupos plegables y primer arranque | `styles/settings.css` |
 | Armazón: cabecera, navegación, página y rejilla | `styles/layout.css` |
+| Declaración: cifras movidas, criterio con lo que arriesga, casilla con su rótulo y lo presentado | `styles/fiscal.css` |
 
 Cada hoja tiene menos de 250 líneas o explica en su cabecera por qué no. Se conservan `Amount` como única puerta de la privacidad, la doble presentación de `DataTable`, uPlot, el `<dialog>` nativo y la ausencia de estilos en línea (CSP).

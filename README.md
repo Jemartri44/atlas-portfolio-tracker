@@ -45,7 +45,7 @@ Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `v
 
 ## La aplicación web
 
-Local-first: **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión (ADR-0019). El *stack* es Solid, con Pico CSS y uPlot vendorizadas (ADR-0017). Seis pantallas: Resumen, Movimientos, Registrar, Cartera, Cubo y Ajustes, más la pantalla fiscal en `/fiscal`, que no ocupa un sitio en la barra porque se abre unas pocas veces al año.
+Local-first: **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión (ADR-0019). El *stack* es Solid, con uPlot vendorizada (ADR-0017) y una base de estilos propia: Pico CSS se retiró en ADR-0023 y `docs/design/system.md` la sustituye entera. Seis pantallas: Resumen, Movimientos, Registrar, Cartera, Cubo y Ajustes, más la pantalla fiscal en `/fiscal`, que no ocupa un sitio en la barra porque se abre unas pocas veces al año.
 
 ```bash
 npm run dev                          # http://localhost:5173
