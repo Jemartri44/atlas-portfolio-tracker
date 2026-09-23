@@ -229,6 +229,14 @@ export const compactLedger = async (
   // that count already set, **for the waived filings only and on that field
   // only**. The comparison is not loosened: any other change of any filing,
   // and every change of anything else, still stops the rewrite.
+  //
+  // Said exactly, because a mutation found it: restricting this to the waived
+  // filings **states the intent** but is not what protects the others. Every
+  // filing that reaches this line either passed the count check —so its count
+  // already equals its position, and setting it again changes nothing— or was
+  // waived. Widening it to every filing is therefore an equivalent mutant
+  // (recorded in `questions.md`); what guards everything else is that the
+  // comparison stays exact on every other field and every other key.
   const waivedIds = new Set(waived.map((check) => check.filing_id));
   const expected = events.map((event, position) =>
     waivedIds.has(event.id)
