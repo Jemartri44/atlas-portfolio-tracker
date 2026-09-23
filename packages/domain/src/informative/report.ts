@@ -90,11 +90,25 @@ export interface InformativeCategory {
   /** Every asset has a value and none of them is flagged. */
   complete: boolean;
   /**
+   * What the category is of the threshold, as a percentage with one decimal
+   * ("62.5"). Computed here and not in each interface: it is a derived value
+   * like every other, and two interfaces dividing it apart is two answers to
+   * "how close am I". Absent when the threshold is zero, which the settings
+   * allow and which has no percentage.
+   */
+  threshold_share_pct?: string;
+  /**
    * `not_applicable` when there is no verdict to give: a 31 December that has
    * not arrived, or a year before the model existed. It is not "no": it is the
    * question not being asked yet.
+   *
+   * `nothing_recorded` is the category with **no asset at all** in it. It is
+   * not `not_obliged` either: a ledger where nothing abroad has been written
+   * down is not a ledger that was computed and came out under the threshold,
+   * and telling somebody who has entered nothing that they are "not obliged"
+   * is exactly the kind of statement this project does not make.
    */
-  verdict: "obliged" | "not_obliged" | "undetermined" | "not_applicable";
+  verdict: "obliged" | "not_obliged" | "nothing_recorded" | "undetermined" | "not_applicable";
   reasons: VerdictReason[];
   /** What is missing before the category can be decided, as an action. */
   missing: { account_id: AccountId; asset_id?: AssetId; flag: ValueFlag }[];

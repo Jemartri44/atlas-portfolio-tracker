@@ -34,6 +34,9 @@ const cents = (money: Money | undefined): string => {
 const VERDICT: Record<InformativeCategory["verdict"], string> = {
   obliged: "OBLIGADO",
   not_obliged: "no obligado",
+  // Not the same as "no obligado": nothing has been written down in this
+  // category, so there is nothing to be under the threshold.
+  nothing_recorded: "no hay nada registrado",
   undetermined: "NO SE PUEDE DETERMINAR",
   not_applicable: "sin veredicto",
 };

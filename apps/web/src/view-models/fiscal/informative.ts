@@ -11,7 +11,6 @@
 //      an amount in disguise. The verdict is not, and it stays visible.
 
 import type { FilingCategory, Money } from "@atlas/domain";
-import { Decimal } from "@atlas/domain";
 import type { InformativeCategory, InformativeReturn, VerdictReason } from "@atlas/domain/fiscal";
 import { formatDate } from "../../format/date.js";
 import type { NameIndex } from "../../format/names.js";
@@ -26,6 +25,11 @@ export const CATEGORY_TITLES: Record<FilingCategory, string> = {
 export const VERDICT_TEXTS: Record<InformativeCategory["verdict"], string> = {
   obliged: "Hay que presentarlo",
   not_obliged: "No hay que presentarlo",
+  // A ledger with nothing recorded abroad has not been computed and come out
+  // under the threshold: it has nothing in it. Telling somebody who has
+  // entered nothing that they do not have to file is a statement about their
+  // situation that this screen has no basis for.
+  nothing_recorded: "No has registrado nada aquí",
   undetermined: "No se puede determinar",
   not_applicable: "Todavía no toca",
 };
@@ -35,6 +39,8 @@ export type VerdictTone = "caution" | "done" | "neutral";
 export const VERDICT_TONES: Record<InformativeCategory["verdict"], VerdictTone> = {
   obliged: "caution",
   not_obliged: "done",
+  // Neutral, not `done`: nothing was resolved here.
+  nothing_recorded: "neutral",
   undetermined: "neutral",
   not_applicable: "neutral",
 };
@@ -107,21 +113,16 @@ const missingText = (missing: InformativeCategory["missing"][number], names: Nam
   return `Falta el tipo de cambio del 31 de diciembre para ${what}.`;
 };
 
-/** How much of the threshold the category is, as a plain percentage string. */
-const HUNDRED = Decimal.parse("100");
-
-const shareOf = (value: Money, threshold: Money): string | undefined =>
-  threshold.isZero()
-    ? undefined
-    : value.amount.div(threshold.amount).mul(HUNDRED).round(1).toString();
-
 const categoryView = (
   category: InformativeCategory,
-  report: InformativeReturn,
   names: NameIndex,
   privacy: boolean,
 ): CategoryView => {
-  const share = privacy ? undefined : shareOf(category.value_eur, report.threshold_eur);
+  // The percentage comes from the domain: it is a derived value like the rest
+  // and the console has to show the same one. What is decided here is only
+  // whether it may be shown at all — with privacy on it is money by another
+  // name, because the threshold is public (decision (k)).
+  const share = privacy ? undefined : category.threshold_share_pct;
   return {
     key: category.category,
     title: CATEGORY_TITLES[category.category],
@@ -149,7 +150,7 @@ export const informativeView = (
   period: report.period,
   periodText: PERIOD_TEXTS[report.period],
   threshold_eur: report.threshold_eur,
-  categories: report.categories.map((category) => categoryView(category, report, names, privacy)),
+  categories: report.categories.map((category) => categoryView(category, names, privacy)),
   excluded: report.excluded.map((entry) => displayName(names, entry.account_id)),
   ...(report.filed === undefined
     ? {}

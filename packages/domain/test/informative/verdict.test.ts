@@ -275,3 +275,50 @@ describe("the invariant behind the conversion of a balance", () => {
     expect(codeOf(() => toEurAt(state, "USD", amount))).toBe("fx_rate_unknown");
   });
 });
+
+/**
+ * How close the category is to the threshold, computed **here**.
+ *
+ * It used to be divided in the web view-model, which made it the only figure
+ * of that card that did not come out of the engine. Everything derived is
+ * recomputed from the ledger and computed in one place, so that the console
+ * and the screen cannot answer "how close am I to having to file" with two
+ * different numbers.
+ */
+describe("how much of the threshold a category is", () => {
+  it("gives the percentage with one decimal, from the engine", () => {
+    // 50.000 of a threshold of 50.000.
+    expect(categoryOf(report({ unit: "500" }), "securities").threshold_share_pct).toBe("100");
+    // 45.000 of 50.000.
+    expect(categoryOf(report({ unit: "450" }), "securities").threshold_share_pct).toBe("90");
+    // 37.512,30 of 50.000 = 75,0246 %, one decimal.
+    expect(categoryOf(report({ unit: "375.123" }), "securities").threshold_share_pct).toBe("75");
+    expect(categoryOf(report({ unit: "390" }), "securities").threshold_share_pct).toBe("78");
+  });
+
+  it("has no percentage when the user set the threshold to zero", () => {
+    const b = new LedgerBuilder();
+    b.settings({ ...SETTINGS, model_720_threshold_eur: "0" });
+    b.account("acc_ib", { platform: "ibkr", country: "IE" });
+    b.asset("etf_a", { asset_type: "etf", transferable: false });
+    b.deposit({ account_id: "acc_ib", value_date: "2027-01-04", amount: "200000" });
+    b.buy({
+      account_id: "acc_ib",
+      asset_id: "etf_a",
+      value_date: "2027-01-05",
+      quantity: "100",
+      unit_price: "100",
+    });
+    b.valuation({
+      account_id: "acc_ib",
+      asset_id: "etf_a",
+      date: "2027-12-31",
+      quantity: "100",
+      unit_value: "500",
+    });
+    const securities = categoryOf(model720(b.build(), 2027, { today: TODAY }), "securities");
+    // A share of nothing is not zero per cent, it is no answer at all.
+    expect(securities.threshold_share_pct).toBeUndefined();
+    expect(securities.verdict).toBe("obliged");
+  });
+});

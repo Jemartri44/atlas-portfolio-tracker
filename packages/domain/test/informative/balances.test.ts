@@ -79,7 +79,11 @@ describe("the period the average covers", () => {
     b.account("acc_empty", { platform: "ibkr", country: "IE" });
     const report = model720(b.build(), 2027, { today: TODAY });
     expect(accountsOf(report).items).toEqual([]);
-    expect(accountsOf(report).verdict).toBe("not_obliged");
+    // **Not** "not obliged": nothing was computed and came out under the
+    // threshold, there is nothing here at all. The two answers look the same
+    // on screen and mean very different things to somebody who has not
+    // finished entering their accounts.
+    expect(accountsOf(report).verdict).toBe("nothing_recorded");
   });
 });
 

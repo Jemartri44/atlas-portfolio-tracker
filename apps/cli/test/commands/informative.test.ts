@@ -75,7 +75,10 @@ describe("atlas m721", () => {
     const h = await run(["m721", "2027"]);
     expect(h.text()).toContain("MODELO 721 de 2027");
     expect(h.text()).toContain("Criptomonedas");
-    expect(h.text()).toContain("Total 0.00 → no obligado");
+    // Nothing of the category is in the ledger, which is not the same as a
+    // category that was added up and came out under the threshold.
+    expect(h.text()).toContain("Total 0.00 → no hay nada registrado");
+    expect(h.text()).not.toContain("no obligado");
   });
 
   it("has no 2022", async () => {

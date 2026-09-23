@@ -14,7 +14,7 @@
 // law says "superior a", and the hand-computed exercise §6.2 sits on both
 // edges on purpose.
 
-import type { Decimal } from "../money/decimal.js";
+import { Decimal } from "../money/decimal.js";
 import type { Money } from "../money/money.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { InformativeCategory, InformativeItem, VerdictReason } from "./report.js";
@@ -56,6 +56,17 @@ export interface VerdictInput {
 }
 
 const above = (amount: Money, limit: Decimal): boolean => amount.amount.gt(limit);
+
+const HUNDRED = Decimal.parse("100");
+
+/**
+ * How much of the threshold the category is. It is the one figure of the
+ * informative card that is not an amount of the ledger, and it used to be
+ * divided in the web view-model: down here, the console and the screen cannot
+ * answer "how close am I to having to file" differently.
+ */
+const shareOf = (value: Money, threshold: Decimal): string | undefined =>
+  threshold.isZero() ? undefined : value.amount.div(threshold).mul(HUNDRED).round(1).toString();
 
 /** The two figures a category is judged on: at 31 December and, for cash, on average. */
 const figures = (input: VerdictInput): { value: Money; average: boolean }[] => [
@@ -121,12 +132,21 @@ export const verdictOf = (
   | "reasons"
   | "missing"
   | "decided_with"
+  | "threshold_share_pct"
 > => {
   const complete = input.missing.length === 0 && input.flagged.length === 0;
   const reasons = reasonsOf(input);
   const obliged = reasons.length > 0;
   // Incomplete and not obliged with what is known: the answer is not "no".
-  const verdict = obliged ? "obliged" : complete ? "not_obliged" : "undetermined";
+  // Nothing written down at all is not "no" either, and it is not the same
+  // thing as a category that was computed and came out under the threshold.
+  const verdict = obliged
+    ? "obliged"
+    : input.items.length === 0
+      ? "nothing_recorded"
+      : complete
+        ? "not_obliged"
+        : "undetermined";
   if (verdict === "not_obliged") {
     for (const figure of figures(input)) {
       if (
@@ -151,6 +171,7 @@ export const verdictOf = (
     verdict === "obliged" && input.flagged.length > 0 && reasonsOf(withoutFlagged).length === 0
       ? input.flagged
       : [];
+  const share = shareOf(input.value_eur, input.limits.threshold);
   return {
     category,
     items: [...input.items],
@@ -160,5 +181,6 @@ export const verdictOf = (
     reasons,
     missing: input.missing,
     decided_with: decided,
+    ...(share === undefined ? {} : { threshold_share_pct: share }),
   };
 };
