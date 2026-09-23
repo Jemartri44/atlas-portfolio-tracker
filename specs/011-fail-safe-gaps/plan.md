@@ -4,7 +4,7 @@
 
 **Entrada**: `docs/prompts/011-fail-safe-gaps.md` y la especificación de esta carpeta.
 
-**Estado**: **aprobado por la dirección el 2026-09-23**, con las dos comprobaciones previas hechas y reportadas en [`questions.md`](questions.md). **El bloque 1 está parado** por dos hallazgos posteriores, P6 y P7, que contradicen al encargo y no los resuelvo yo; los demás siguen. P1 resuelta con una regla que no era ninguna de las dos que propuse (§1); P4 aprobada con cuatro exigencias sobre el evento nuevo (§8); P2, P3 y P5 conformes. **Dos correcciones de la dirección a este plan**: la forma del ancla pasa a lista siempre presente (§6) y el ternario del bloque 0 queda prohibido (§0).
+**Estado**: **aprobado por la dirección el 2026-09-23**, con las dos comprobaciones previas hechas y reportadas en [`questions.md`](questions.md). P6 y P7, levantados al implementar el bloque 1, **retiraron dos instrucciones del encargo** y **ampliaron el alcance** con el reloj de la web; los dos están resueltos y aplicados. P1 resuelta con una regla que no era ninguna de las dos que propuse (§1); P4 aprobada con cuatro exigencias sobre el evento nuevo (§8); P2, P3 y P5 conformes. **Dos correcciones de la dirección a este plan**: la forma del ancla pasa a lista siempre presente (§6) y el ternario del bloque 0 queda prohibido (§0).
 
 ---
 
@@ -105,13 +105,15 @@ Ficheros que se tocan, por bloque, en §1–§8.
 
 | # | Comparación | ¿Se escribe? | Por qué |
 |---|---|---|---|
-| 1 | **`as_of ≥ ${tax_year}-12-31`** | **Sí** | Nada la deduce. Un `as_of` anterior al último día del ejercicio declara cifras de un ejercicio a medias. El 31/12 **es válido**, por el corte inclusivo. |
-| 2 | `as_of ≤ filed_at` | **Sí** | Nada la deduce, y es la que la muestra incumple hoy. |
-| 3 | `as_of` no futura (`as_of ≤ recorded_at`) | **No** | Se deduce: la 2 da `as_of ≤ filed_at` y la que ya existe da `filed_at ≤ recorded_at`. Una rama que ningún test puede cubrir **no se escribe**, y menos se escribe para justificarla después. |
+| 1 | **`as_of ≥ ${tax_year}-12-31`** (`as_of_before_year_end`) | **Sí** | Nada la deduce. Un `as_of` anterior al último día del ejercicio declara cifras de un ejercicio a medias. El 31/12 **es válido**, por el corte inclusivo. |
+| 2 | **`as_of ≤ recorded_at`** (`as_of_in_future`) | **Sí** | Calcular con un corte posterior al momento en que la línea entra en el libro es imposible. |
+| 3 | `as_of ≤ filed_at` | **No** | **Retirada por la dirección (P6)**: `as_of` es el día del cálculo, y registrar una presentación después de haberla presentado —el flujo corriente— la produce **siempre**. Rechazaría el caso normal. |
+
+Con la 2 en su forma buena, «no futura» **es** la 2 y no una tercera. Y la muestra `SAMPLES.tax_return_filed` **no se toca**: su `as_of` dos días posterior a `filed_at` es «presenté el 18, lo registré el 20».
 
 **Códigos.** Uno por comparación, con sus **dos** traducciones: `as_of_before_year_end` y `as_of_after_filing`. Van a `apps/cli/src/output/messages.ts` y a `apps/web/src/format/messages/errors.ts` (son códigos de error del dominio, no hallazgos: ahí sí los exige `tests/messages.test.ts` en las dos).
 
-**La muestra.** `packages/domain/test/samples.ts`: `computed.as_of` del `tax_return_filed` pasa de `2026-06-20` a `2026-06-18`, el mismo día de `filed_at`. Se ejecuta la suite entera antes y después: si algún test esperaba la incoherencia, se dice en `questions.md` (era un test que fijaba un defecto).
+**La muestra se queda como estaba** (P6): lo que parecía una incoherencia es el flujo corriente.
 
 **Endurecimiento.** Rechazar formas que hoy se aceptan es un cambio **rompedor** en el sentido de ADR-0018, y se aplica dentro de la v1 por la misma razón que el bloque 3: el evento existe desde la 010, fusionada el **2026-09-23**, el libro real está vacío y **ningún fichero del repositorio contiene una línea `tax_return_filed`** (comprobación previa 1).
 
@@ -366,4 +368,4 @@ Más `notes?`. Fechado por su `recorded_at`, lo que lo hace un **documento admin
 8 cierra el bloque 0 (el mensaje nombra la salida) y depende de una ADR que acepta la dirección
 ```
 
-**Bloqueos**: el **bloque 1**, por P6 y P7 (ver `questions.md`); el resto de 0–7 sigue. El bloque 8 espera a que la dirección **acepte** la ADR que voy a proponer; su forma está aprobada de antemano (§8), así que el único paso pendiente es el cambio de estado. Si tardara, los bloques 0–7 se entregan igual y el 8 espera él solo, que es lo que pide la decisión (l).
+**Bloqueos**: ninguno en 0–7. El bloque 8 espera a que la dirección **acepte** la ADR. El bloque 8 espera a que la dirección **acepte** la ADR que voy a proponer; su forma está aprobada de antemano (§8), así que el único paso pendiente es el cambio de estado. Si tardara, los bloques 0–7 se entregan igual y el 8 espera él solo, que es lo que pide la decisión (l).

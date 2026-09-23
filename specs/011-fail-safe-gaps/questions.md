@@ -247,7 +247,18 @@ Y en el bloque 8 pasaría a nombrar la salida («…puedes compactar autorizánd
 
 Y con eso, **la muestra `SAMPLES.tax_return_filed` no era incoherente**: `as_of` 2026-06-20 con `filed_at` 2026-06-18 es exactamente «presenté el 18 y lo registré el 20». La he dejado como estaba, a la espera.
 
-**¿Cambio la segunda comparación a `recorded_at`, o la dirección sostiene `filed_at` a sabiendas de que entonces registrar una presentación pasada exige inventar un `as_of`?**
+> **Respuesta de la dirección: tenías razón, y retiro la comparación.** «Mi error estaba en la premisa, no en el razonamiento: di por hecho que `as_of` era el cálculo **que acompañó a la presentación**, y no lo es. Es el corte con el que la aplicación calculó **cuando registraste** lo que ya habías presentado. Y el flujo normal —presentas en Hacienda un día y lo apuntas aquí otro— produce `as_of` posterior a `filed_at` **siempre**. Mi comparación no rechazaba un caso raro: rechazaba el caso corriente.»
+>
+> **Y la muestra tampoco era incoherente**: «me equivoqué al mandarte corregirla. *Presenté el 18, lo registré el 20* es exactamente lo que dice.»
+>
+> **La segunda comparación pasa a ser `as_of ≤ recorded_at`**, «y es mejor comparación que la mía: calcular con un corte posterior al momento en que la línea entra en el libro es imposible, así que la comparación dice algo que de verdad no puede pasar».
+
+**Implementado así**, con los códigos `as_of_before_year_end` y `as_of_in_future`. La muestra se quedó como estaba. **Dos errores del encargo retirados, y los dos eran de la dirección**, escritos aquí a petición suya: una instrucción borrada en silencio vuelve tres rondas después porque alguien cree que se olvidó.
+
+| Retirada | Qué decía | Por qué se cae |
+|---|---|---|
+| La comparación `as_of ≤ filed_at` | §3 bloque 1 del encargo la daba por buena y deducía de ella que «no futura» sobraba | `as_of` es el día del cálculo, no el de la presentación: registrar después de presentar la produce siempre |
+| «Corrige la muestra» | §3 bloque 1: «`as_of` el 2026-06-20 y `filed_at` el 2026-06-18: calculado dos días después de presentarlo. Corrígela» | No hay nada que corregir: es «presenté el 18, lo registré el 20» |
 
 ### P7 — La comparación que sí es buena choca con un defecto conocido y fuera de alcance **(bloquea el bloque 1)**
 
@@ -261,7 +272,36 @@ En **producción** no pasa: la fecha real es la de verdad y un ejercicio que se 
 - **(ii) Tocar el test de la web** para que su combinación sea coherente. Frágil: vuelve a romperse cuando la fecha real avance.
 - **(iii) No rechazar**, y emitir un aviso. Contradice el encargo, que pide rechazo con código propio.
 
-**El bloque 1 queda parado hasta que la dirección elija.** Los bloques 2 a 7 no dependen de él y sigo por ellos; el trabajo hecho está guardado como parche en mi scratchpad (`011-block1-wip.patch`) y el árbol está limpio y verde.
+> **Respuesta de la dirección: se amplía el alcance y el seguimiento 2 entra.** «Un componente que lee el reloj de pared en vez del reloj inyectado **es un defecto**, no una preferencia de estilo: la aplicación se comporta distinto según cuándo la mires y no hay forma de escribir un test determinista sobre nada que dependa de la fecha. El límite de alcance lo puse yo **antes de saber que el bloque 1 chocaba con él**: un límite que te obliga a elegir entre un test frágil y renunciar a una validación correcta está puesto en el sitio equivocado. **Se mueve el límite, no la validación.**» Las otras dos salidas quedan descartadas por lo mismo que el campo opcional del ancla: **no se dobla el diseño para que un test pueda expresarse**. En su propio commit, con el motivo escrito, y **midiendo el radio antes de tocar**.
+
+**El radio, medido antes de tocar nada.** `today()` lo llaman **diez** ficheros de `apps/web/src`, pero todos llaman al **mismo ayudante**: el arreglo es **una línea** en `apps/web/src/ledger/state.ts`, que pasa a leer `store.deps()?.clock.now()` y cae al reloj de pared cuando todavía no hay libro abierto (el chip del origen y el selector de fecha se pintan antes). Ningún sitio de llamada cambia. No hay cascada, así que no paré.
+
+Lo que sí hay, y es del mismo tamaño: **13 ficheros de test y 23 llamadas** usan el ayudante `today("YYYY-MM-DD")`, que movía el reloj de pared con `vi.setSystemTime`. Resuelto **en el ayudante**, no en los 23 sitios: el instante de las dependencias pasa a ser una variable que ese ayudante mueve y el `afterEach` restaura, de modo que la pantalla y el dominio siguen mirando **el mismo día**, que es justo el defecto que se arregla.
+
+**Y destapó dos bombas de relojería.** Con la suite entera, **tres** tests rojos de 450, ninguno por la regla nueva:
+
+| Test | Qué daba por bueno | Cuándo habría reventado solo |
+|---|---|---|
+| `no-jargon.test.tsx` | «la del cambio de configuración del **01/09/2026**», la vigente según el reloj **de pared** | en **marzo de 2028**, al pasar el `settings_changed` siguiente del libro dorado |
+| `screens.test.tsx` ×2 | un aviso de recompra cuya ventana de un año sigue abierta | al pasar **2027**, cuando la ventana cierra y el bloque de Atención se queda sin ese aviso |
+
+Los dos se han fijado a una fecha propia, que es lo que el arreglo hace posible. **Ese es el argumento entero**: no eran tests que el cambio rompiera, eran tests que solo funcionaban hoy.
+
+### P8 — Propuesta: que el hook de pre-commit no deje pasar el analizador en rojo
+
+**No lo hago**, y lo escribo aquí porque la dirección lo pide así: añadir configuración de herramientas es decisión del usuario y se la propone la dirección, no yo.
+
+**El hecho.** Un commit con Biome en rojo ha entrado **tres rondas seguidas**:
+
+| Cuándo | Cómo se leyó el resultado | Cómo se arregló |
+|---|---|---|
+| Feature 009/010, §3 de `implementation-notes.md` | `npm run lint \| tail` — el código de salida de la tubería es el de `tail` | `git reset --soft`, dos commits reconstruidos |
+| Feature 010, §10.9 de las mismas notas | lo mismo, **otra vez**, con la advertencia ya escrita | `git reset --soft` |
+| Feature 011, bloque 0 | redirigido a fichero y `$?` leído… y comiteado sin mirarlo | `git commit --amend` |
+
+**Lo que dice el patrón.** Las dos primeras veces se corrigió el hábito («no uses tubería»); la tercera lo hizo alguien que **ya tenía ese hábito** y falló igual, un paso más allá. Cuando algo muerde tres veces, el problema deja de ser de quien lo sufre: **es que nada lo impide**.
+
+**La propuesta.** `.githooks/pre-commit` ya ejecuta `gitleaks`; que ejecute también el analizador y rechace el commit si no está limpio. Coste: unos segundos por commit sobre 559 ficheros —medido: **~150 ms**—. Efecto: la clase entera de fallo desaparece, en vez de repetirse una ronda más.
 
 ---
 
@@ -387,7 +427,7 @@ KILLED   1b swap the codes (digest under unreadable's code)
 KILLED   2 print the line count where the version goes
 ```
 
-*(Y una lección de método propia: el primer commit del bloque 0 entró con **Biome en rojo**. Leí el `$?` del `lint` y comiteé igual sin mirarlo. Reconstruido con `--amend`. El hábito que falta no es redirigir a fichero —eso ya lo hacía—: es **no commitear hasta haber leído el resultado**.)*
+*(Y una lección de método propia: el primer commit del bloque 0 entró con **Biome en rojo**. Redirigí a fichero y leí el `$?`… y comiteé igual sin mirarlo. Reconstruido con `--amend`. **La lección no es redirigir: es no commitear hasta haber leído el resultado.** Redirigir sin mirar es el mismo error con un paso más — confirmado por la dirección, que además señala que van **tres rondas seguidas** con esta trampa y que eso ya no es un problema de hábito. Ver la propuesta P8.)*
 
 ### Bloque 1 — `computed.as_of`
 
@@ -398,7 +438,26 @@ Los dos tests escritos antes, vistos en rojo:
 × refuses a calculation dated after the filing itself
 ```
 
-Y al ponerlos en verde aparecieron **P6 y P7**, que es lo que ha parado el bloque.
+Y al ponerlos en verde aparecieron **P6 y P7**, que pararon el bloque. Resueltos los dos, se rehízo con las comparaciones buenas, vistas en rojo otra vez:
+
+```
+× refuses a calculation that does not cover the year it declares
+× refuses a calculation dated after the line that carries it
+```
+
+**Mutante 3, muerto en sus tres formas:**
+
+```
+KILLED   3a drop the comparison against the end of the tax year
+KILLED   3b drop the comparison against recorded_at
+KILLED   3c let the last day of the year through as too early
+```
+
+*(Y un tercer test se puso rojo por su cuenta, el de las plantillas de mensajes de la web: su catálogo de «qué detalle del dominio es una fecha» no conocía `as_of`, así que lo renderizaba como `12.5` y saltaba la regla de los decimales con punto. Añadido `as_of` —y `recorded_at`— a esa lista, que es dato del test, no una relajación de la regla.)*
+
+### P7 — el reloj de la web
+
+El arreglo se vio en rojo **antes de existir**, en los tres tests que destapó, y la suite entera lo confirmó: **3 rojos de 450**, los tres por bombas de relojería, ninguno por la regla. El detalle está en P7.
 
 ### Bloque 2 — la asimetría de los criterios firmes
 
