@@ -28,6 +28,29 @@
   white-space: nowrap;
 }
 
+/* ---- The anchor of what was filed, origin by origin (feature 011) -------- */
+
+/* A line per origin: the name on one side and its figures on the other,
+   wrapping as a whole on a narrow phone instead of pushing the page wider. */
+.anchor-rows {
+  display: grid;
+  gap: var(--space-1);
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.anchor-rows li {
+  column-gap: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.anchor-amounts {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- The header: which tax year ----------------------------------------- */
 
 /* The same control as the date of the analytical screens (§5.13), with a

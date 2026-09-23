@@ -57,19 +57,51 @@ export const LossesCard = (props: {
     <For each={props.anchors}>
       {(anchor) => (
         <Notice severity="info" title={`Anclado en lo que declaraste en ${anchor.year}`}>
-          <Show
-            when={!anchor.before_ledger}
-            fallback={
-              <>
-                Ese ejercicio es anterior a tus datos, así que lo pendiente viene de lo que
-                declaraste, no de un cálculo: <Amount value={anchor.declared_eur} coloured />.
-              </>
-            }
-          >
-            Lo que arrastras sale de tu declaración y no de lo que calcula la aplicación: ella
-            calculaba <Amount value={anchor.computed_eur} coloured /> y tú declaraste{" "}
-            <Amount value={anchor.declared_eur} coloured />.
-          </Show>
+          <p>
+            <Show
+              when={!anchor.before_ledger}
+              fallback={
+                <>
+                  Ese ejercicio es anterior a tus datos, así que lo pendiente viene de lo que
+                  declaraste, no de un cálculo.
+                </>
+              }
+            >
+              <Show
+                when={!anchor.matches}
+                fallback={
+                  <>
+                    Lo que arrastras sale de tu declaración, y{" "}
+                    <strong>coincide con lo calculado</strong>.
+                  </>
+                }
+              >
+                Lo que arrastras sale de tu declaración y no de lo que calcula la aplicación:
+              </Show>
+            </Show>
+          </p>
+          {/*
+            By origin, never as a total: the origin is what decides until when
+            a balance can be offset, and two substitutions with the same total
+            would otherwise read the same.
+          */}
+          <ul class="anchor-rows">
+            <For each={anchor.rows}>
+              {(row) => (
+                <li>
+                  <span>
+                    {CATEGORY_TEXTS[row.category]} de {row.origin_year}
+                  </span>
+                  <span class="anchor-amounts">
+                    <Show when={!anchor.before_ledger && !anchor.matches}>
+                      calculaba <Amount value={row.computed_eur} coloured />, declaraste{" "}
+                    </Show>
+                    <Amount value={row.declared_eur} coloured />
+                  </span>
+                </li>
+              )}
+            </For>
+          </ul>
         </Notice>
       )}
     </For>
