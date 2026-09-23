@@ -11,7 +11,13 @@
 // `test/criteria.test.ts` checks the other half: that no name smuggles the
 // identifier back in.
 
-import type { Certainty, CriterionId, Measure, RiskDirection } from "@atlas/domain/fiscal";
+import type {
+  Certainty,
+  CriterionId,
+  CriterionStake,
+  Measure,
+  RiskDirection,
+} from "@atlas/domain/fiscal";
 
 /** What the criterion says, in one line a person can read. */
 export const CRITERION_NAMES: Record<CriterionId, string> = {
@@ -83,8 +89,17 @@ export const MEASURE_LABELS: Record<Measure, string> = {
   not_quantifiable: "no se puede medir desde tus datos",
 };
 
-/** Why a criterion cannot be measured, when the engine says why. */
-export const MEASURE_REASONS: Record<string, string> = {
+/**
+ * Why a criterion cannot be measured, when the engine says why.
+ *
+ * **Closed against the union of the domain**, like `PARTIAL_TEXTS` and
+ * `MODEL_NAMES` of feature 010: it was a `Record<string, string>`, so a reason
+ * added to the engine broke nothing here and the screen painted a hole where
+ * the explanation goes. The console's map was already typed against the union
+ * and stopped the build; this one did not, which is the asymmetry. Now the
+ * build stops here too until somebody writes the words.
+ */
+export const MEASURE_REASONS: Record<NonNullable<CriterionStake["reason"]>, string> = {
   invalid_under_alternative:
     "con la otra lectura hay movimientos que dejan de ser válidos, así que no hay una cifra que comparar",
   unsupported_under_alternative:
