@@ -418,9 +418,28 @@ export const projectLedger = (
 
   // And the waivers of a fingerprint nobody could verify, which are documents
   // about a filing and are read in the same pass (ADR-0025).
+  //
+  // The filing a waiver names has to be **in the file**, not necessarily in
+  // force: a reversed filing is still checked by `compact`, so a waiver for it
+  // is the only way out and stays valid. A waiver of something that is not in
+  // the file at all is a waiver of nothing, and it is invalid.
+  const filingIds = new Set(
+    events.filter((event) => event.type === "tax_return_filed").map((event) => event.id),
+  );
   for (const entry of active) {
-    if (entry.event.type === "filing_fingerprint_waived") {
-      const waiver = entry.event;
+    if (entry.event.type !== "filing_fingerprint_waived") {
+      continue;
+    }
+    const waiver = entry.event;
+    guarded(waiver, () => {
+      if (!filingIds.has(waiver.filing_id)) {
+        throw new ProjectionError(
+          "waiver_filing_unknown",
+          waiver.id,
+          `waiver names filing ${waiver.filing_id}, which is not in the file`,
+          { filing_id: waiver.filing_id },
+        );
+      }
       state.fingerprintWaivers.set(waiver.id, {
         waiver_id: waiver.id,
         filing_id: waiver.filing_id,
@@ -429,7 +448,7 @@ export const projectLedger = (
         declared_lines: waiver.declared_lines,
         accepted_on: madridDateOf(waiver.recorded_at),
       });
-    }
+    });
   }
 
   // Pass B: operations and tracking, in chronological order. With `asOf`, what
@@ -470,6 +489,20 @@ const applyReversal = (
       "reversal_of_reversal",
       event.id,
       "a reversal cannot be reversed; record the original event again",
+      { reverses_id: event.reverses_id },
+    );
+  }
+  // **A waiver cannot be reversed** (ADR-0025, as amended). It records
+  // something that already happened —the ledger was compacted without
+  // verifying that fingerprint— and what happened is not undone by annulling
+  // the line that tells it: the compaction stays compacted. Accepting it made
+  // `check` answer "sin hallazgos" afterwards, which turned the way out into a
+  // way of cleaning the record.
+  if (target.type === "filing_fingerprint_waived") {
+    throw new ProjectionError(
+      "waiver_not_reversible",
+      event.id,
+      "a waiver records a compaction that already happened; it cannot be reversed",
       { reverses_id: event.reverses_id },
     );
   }

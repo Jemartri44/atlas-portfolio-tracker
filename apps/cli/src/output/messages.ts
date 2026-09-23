@@ -166,6 +166,12 @@ export const describeError = (error: DomainError): string => {
       return `El peso objetivo de ${text(d.asset_id)} no puede ser negativo (recibido: ${text(d.value)}).`;
     case "reversal_of_reversal":
       return "No se puede anular una anulación: registra de nuevo el evento original.";
+    // What it records already happened: the ledger was compacted without
+    // verifying that fingerprint, and annulling the line does not undo it.
+    case "waiver_not_reversible":
+      return "No se puede anular la renuncia a verificar una huella: registra una compactación que ya ocurrió, y anular la línea que lo cuenta no la deshace. No hay nada que deshacer.";
+    case "waiver_filing_unknown":
+      return `La renuncia nombra la declaración ${text(d.filing_id)}, que no está en tus datos: es una renuncia a nada.`;
     case "already_reversed":
       return "Ese evento ya está anulado.";
     case "reversal_target_missing":

@@ -213,6 +213,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   reversal_of_reversal: () =>
     "No se puede anular una anulación: vuelve a registrar el evento original.",
   already_reversed: () => "Ese evento ya está anulado.",
+  // Lo que registra ya pasó: la compactación ocurrió sin verificar esa huella,
+  // y anular la línea que lo cuenta no la deshace (ADR-0025).
+  waiver_not_reversible: () =>
+    "No se puede anular la renuncia a verificar una huella: registra una compactación que ya ocurrió, y anular la línea que lo cuenta no la deshace.",
+  waiver_filing_unknown: () =>
+    "Una renuncia a verificar una huella nombra una declaración que no está en tus datos.",
   reversal_target_missing: () => "El movimiento que se quiere anular no está en tus datos.",
   not_found: () => "Ese movimiento no está en tus datos.",
   dependent_events: () => "Hay movimientos posteriores que se apoyan en este: rectifícalos antes.",
