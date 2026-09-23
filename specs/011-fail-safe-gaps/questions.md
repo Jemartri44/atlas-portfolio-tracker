@@ -442,7 +442,10 @@ No los toco (§2 bis): los traslada la dirección. Lista mínima, que se complet
 | `docs/business-rules.md` **§5.12** | El párrafo «Con una salvedad, y hay que conocerla», que describe el hueco del aviso de ejercicio cerrado como abierto y dice que «se cierra en la ronda siguiente»: es ésta (bloque 5). |
 | `docs/pendientes-post-010.md` | Las nueve pendientes vivas pasan a hechas, o a lo que la dirección decida. |
 | `docs/prompts/README.md` | La entrada del prompt 011. |
-| `docs/adr/README.md` | El índice, si la ADR del bloque 8 se acepta. |
+| `docs/adr/README.md` | **Hecho**: la ADR-0025 está en el índice, aceptada. |
+| `docs/data-schema.md` **§5** | El contrato de `compact` gana su salida explícita, por presentación y registrada, y deja de ser cierto que «hoy no hay salida». |
+| `docs/business-rules.md` **§5.12** | El párrafo «Con una salvedad, y hay que conocerla» describe el hueco del aviso como abierto y dice que «se cierra en la ronda siguiente»: **es ésta**. |
+| `docs/fiscal-questions.md` | **Ya cambiado en esta rama**, con permiso expreso (decisión (k)): una fila por variante. Nada más de `docs/` se ha tocado salvo la ADR nueva. |
 
 ---
 
