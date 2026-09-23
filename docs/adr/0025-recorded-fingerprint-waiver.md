@@ -1,6 +1,6 @@
 # ADR-0025 — La salida de `compact` ante una huella no verificable queda registrada en el libro
 
-**Estado:** Aceptada (2026-09-23), por decisión de la dirección, que añade la condición de atomicidad de la sección «La renuncia y la compactación son todo o nada». Nace de la pendiente 3 de `docs/pendientes-post-010.md` y del bloque 8 del prompt 011, cuyas decisiones (a), (b) y (d) fija la dirección.
+**Estado:** Aceptada (2026-09-23), por decisión de la dirección, que añade la condición de atomicidad de la sección «La renuncia y la compactación son todo o nada». **Enmendada el mismo día** tras la revisión adversarial de la feature 011 (ver «Enmienda del 2026-09-23» al final), con la enmienda aceptada por la dirección. Nace de la pendiente 3 de `docs/pendientes-post-010.md` y del bloque 8 del prompt 011, cuyas decisiones (a), (b) y (d) fija la dirección.
 
 ## Contexto
 
@@ -30,7 +30,7 @@ Pesan tres restricciones. El libro es **append-only** (ADR-0003): nada se edita 
 | Campo | Por qué |
 |---|---|
 | `filing_id` | Qué presentación. Una renuncia no autoriza a las demás |
-| `reason` (`digest` \| `unreadable`) | **Nunca juntas en un «no verificable» genérico**: una significa que las cifras no cuadran y la otra que no se pueden leer, y no llevan a la misma acción |
+| `reason` (`lines` \| `digest` \| `unreadable`) | **Nunca juntos en un «no verificable» genérico, y ninguno plegado en otro**: `lines` significa que la huella cubre otro número de movimientos —se añadió o se quitó una línea antes de la presentación, la edición a mano más probable—, `digest` que las cifras no cuadran y `unreadable` que no se pueden leer; no llevan a la misma acción. *(Enmendado el 2026-09-23: el texto original solo contemplaba los dos últimos.)* |
 | `declared_schema_version`, `declared_lines` | Lo que la huella declaraba en ese momento. Después de compactar, el libro ya no los tiene en ninguna parte |
 | `recorded_at` (del sobre) | **Cuándo lo dio por bueno el usuario**: es la mitad de la frase que `check` tiene que seguir diciendo para siempre |
 
@@ -42,7 +42,9 @@ Más `notes?`. Es un **documento administrativo**, como una presentación: no ti
 
 **La renuncia y la compactación son todo o nada** (condición de la dirección). Una renuncia escrita sin que la compactación llegue a completarse sería **una línea que afirma un hecho que no ocurrió**: una huella dada por buena que nunca llegó a saltarse. Y en un libro de solo añadir esa línea no se puede borrar después — la única forma de «retirarla» sería una anulación que habla de algo que nunca pasó.
 
-Se garantiza por **dónde se escribe**: la renuncia entra en la **misma lista de eventos** que `compactLedger` entrega a `LedgerStore.replace`, no en una escritura propia anterior. `replace` es la única operación que reescribe el libro y archiva el original **antes** de reemplazarlo; o sustituye el fichero entero —con la renuncia dentro— o no sustituye nada. Cualquier fallo posterior a construir la lista y anterior al reemplazo —un etag que ha cambiado, la proyección que difiere, un archivo que ya existe, la red— **deja el libro exactamente como estaba, sin renuncia**. Nada escribe la renuncia por separado, y ese es el invariante: **no hay ningún camino que escriba la renuncia y no reescriba el libro.**
+Se garantiza por **dónde se escribe**: la renuncia entra en la **misma lista de eventos** que `compactLedger` entrega a `LedgerStore.replace`, no en una escritura propia anterior. `replace` es la única operación que reescribe el libro y archiva el original **antes** de reemplazarlo; o sustituye el fichero entero —con la renuncia dentro— o no sustituye nada. Cualquier fallo que el dominio detecte antes de entregar la lista —un etag que ha cambiado desde la carga, la proyección que difiere, un archivo que ya existe— **deja el libro exactamente como estaba, sin renuncia**. Nada escribe la renuncia por separado, y ese es el invariante que garantiza el dominio: **no hay ningún camino que escriba la renuncia y no reescriba el libro.**
+
+**Lo que este documento no garantiza, dicho para no afirmar lo que el código no cumple** (corregido el 2026-09-23 tras la revisión): que una escritura **concurrente** entre la comprobación del etag y la escritura se detecte depende del **adaptador**. El almacén `blob` —el de la web, sobre el navegador o sobre una carpeta— compara el etag al leer los bytes actuales y después escribe **sin condición**, de modo que otra escritura en ese intervalo (otra pestaña, la consola sobre la misma carpeta) se pisaría. Es anterior a esta decisión, afecta a toda escritura y no solo a la renuncia, y queda anotado para una ronda siguiente.
 
 Queda probado con un test que **interrumpe la compactación después del punto en que la renuncia se escribiría** y comprueba que el libro no la tiene.
 
@@ -59,3 +61,13 @@ Queda probado con un test que **interrumpe la compactación después del punto e
 - **Aceptado a sabiendas:** el aviso de `check` no caduca nunca, así que un libro con una renuncia lo dirá durante veinte años. Es lo que se quiere: el hecho no prescribe.
 - **La renuncia no existe sin la compactación que la motiva**, y eso acota lo que puede salir mal: un intento fallido no deja rastro, y un rastro implica que el libro se reescribió.
 - Relacionadas: ADR-0003 (append-only), ADR-0006 (`compact`), ADR-0018 (qué cambio de esquema es compatible), ADR-0020 (lo declarado es un hecho) y ADR-0024 (la salvedad la emite el motor).
+
+## Enmienda del 2026-09-23 (revisión adversarial de la feature 011)
+
+Aceptada por la dirección el mismo día. La revisión reprodujo tres huecos en la forma original, y los tres eran la misma clase de fallo que esta decisión existe para cerrar.
+
+1. **Una renuncia no se puede anular.** Anularla se aceptaba, y después `atlas check` respondía «Libro íntegro: sin hallazgos»: la salida convertida en una forma de limpiar el expediente, exactamente lo que la sección de la decisión prohíbe. La renuncia registra **algo que ya pasó** —el libro se compactó sin verificar esa huella— y lo que pasó no se deshace anulando la línea que lo cuenta. Si el usuario se arrepiente, no hay nada que deshacer. La proyección rechaza la anulación con su propio código (`waiver_not_reversible`) y la renuncia sigue diciéndose.
+2. **El motivo registrado es el real, y son tres.** Un ternario convertía todo lo que no era `unreadable` en `digest`, así que un caso `lines` dejaba escrito para siempre, en un fichero de solo añadir, un motivo falso. El campo admite `lines`, `digest` y `unreadable`, y el motivo pasa tal cual.
+3. **Nadie queda encerrado por ningún motivo, tampoco por `lines`.** Con la presentación en vigor, un caso `lines` no tenía salida: resellar mueve el recuento de líneas que la instantánea lleva de esa presentación, y la compactación fallaba siempre con `projection_changed`. La lectura **anterior** a la reescritura se toma con ese recuento ya puesto, **solo para las presentaciones con renuncia y solo en ese campo**; la comparación sigue siendo exacta en todo lo demás, que es la red de `compact` y no se afloja.
+
+Y dos precisiones que salen de lo mismo: una renuncia que nombra una presentación **que no está en el fichero** es una renuncia a nada y es inválida (`waiver_filing_unknown`); la de una presentación **anulada** sigue siendo válida, porque `compact` sigue comprobando esa huella y la renuncia es su única salida. Y la consola solo dice «queda registrado» **después** de que la compactación termine, nunca antes: antes no se sabe.
