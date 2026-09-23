@@ -929,15 +929,50 @@ describe("architecture: apps/web", () => {
  * closed-year.test.ts`). What this catches is the whole flow going in with no
  * way of saying it at all.
  */
+/**
+ * The fiscal output has a **door of its own**, `@atlas/domain/fiscal`, and the
+ * barrel does not re-export it.
+ *
+ * This is not tidiness, it is 21 KB gzip on the boot path of the web, measured:
+ * `index.ts` is the module the first screen imports, so anything it exports
+ * and any screen uses ends up in the chunk the browser downloads before
+ * painting. While nothing used the tax engine, tree shaking hid the problem;
+ * the day the fiscal screen imported `taxYear` from the barrel the boot went
+ * from 72,5 to 93,3 KB against a ceiling of 74, and `check-bundle.mjs` refused
+ * the build.
+ *
+ * `check-bundle.mjs` already reads the source maps of the boot chunks and
+ * fails if `tax/` or `informative/` is inside. This says the same thing one
+ * step earlier, where it is cheap to read and cheap to fix: the barrel names
+ * neither of them, nor the two modules of `filings/` that reach the tax chain.
+ */
+describe("architecture: the fiscal output is not in the barrel", () => {
+  it("keeps the tax engine, the informative returns and the comparison out of index.ts", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    const offenders = specifiersOf(barrel).filter((specifier) =>
+      /\.\/(tax|informative)\/|\.\/filings\/(closed-years|comparison)/.test(specifier),
+    );
+    expect(offenders).toEqual([]);
+    // And the door exists and is the one that names them.
+    const door = specifiersOf(readFileSync(join(domainSrc, "fiscal.ts"), "utf8"));
+    expect(door.some((specifier) => specifier.includes("./tax/"))).toBe(true);
+    expect(door.some((specifier) => specifier.includes("./informative/"))).toBe(true);
+  });
+});
+
 describe("architecture: no interface writes over a filed return in silence", () => {
   const WRITE_USE_CASES = ["recordEvent", "correctEvent", "reverseEvent"];
   const IMPACT = "closedYearImpact";
 
-  /** The named bindings a file takes from `@atlas/domain`, imports only. */
+  /**
+   * The named bindings a file takes from the domain, imports only — through
+   * the barrel or through the `@atlas/domain/fiscal` door, which is where the
+   * tax engine lives since it had to be kept off the boot path of the web.
+   */
   const domainBindings = (source: string): Set<string> => {
     const found = new Set<string>();
     for (const match of source.matchAll(
-      /import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]@atlas\/domain['"]/g,
+      /import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]@atlas\/domain(?:\/fiscal)?['"]/g,
     )) {
       for (const binding of (match[1] as string).split(",")) {
         const name = binding

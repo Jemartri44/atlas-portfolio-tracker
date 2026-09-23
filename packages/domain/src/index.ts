@@ -14,18 +14,16 @@ export {
   yearOf,
 } from "./dates/civil-date.js";
 export { madridDateOf, todayInMadrid } from "./dates/madrid.js";
+// The fiscal output —the income tax engine, the boxes, the informative
+// returns and the comparison with what was filed— is **not** here: it has an
+// entry point of its own, `@atlas/domain/fiscal` (see `src/fiscal.ts`). A
+// re-export from this barrel puts it on the boot path of the web, because this
+// is the module the first screen imports; measured, it cost 21 KB gzip of
+// boot for a screen that is opened a handful of times a year.
 export * from "./errors.js";
-export { type ClosedYearImpact, closedYearImpact, type Reading } from "./filings/closed-years.js";
 export { fingerprintOfEvents } from "./filings/fingerprint.js";
 export { sha256Hex, utf8Encode } from "./ids/sha256.js";
 export { createUlidGenerator, isUlid, type Ulid, type UlidGenerator } from "./ids/ulid.js";
-export {
-  type FiscalAttention,
-  fiscalAttention,
-  type InformativeTodo,
-} from "./informative/attention.js";
-export { informativeReturn, model720, model721 } from "./informative/m720.js";
-export type * from "./informative/report.js";
 export * from "./money/index.js";
 export type { Clock } from "./ports/clock.js";
 export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
@@ -176,39 +174,6 @@ export { type BusinessDates, fiscalDateOf } from "./settings/fiscal-date.js";
 export * from "./settings/settings.js";
 export { washSaleWindowEnd } from "./settings/wash-sale.js";
 export * from "./synth/index.js";
-export { taxBoxes } from "./tax/boxes/boxes.js";
-export {
-  BOX_BLOCKS,
-  type BoxBlockId,
-  blockOfConcept,
-  type ConceptId,
-  ROW_FIELDS,
-  type RowFieldId,
-  SECTIONS,
-  type SectionId,
-  transmissionSection,
-} from "./tax/boxes/concepts.js";
-export type * from "./tax/boxes/report.js";
-export { BOX_YEARS } from "./tax/boxes/years/index.js";
-export {
-  type Certainty,
-  CRITERION_IDS,
-  type CriterionId,
-  FISCAL_CRITERIA,
-  type FiscalCriterion,
-  isDoubtful,
-  type RiskDirection,
-  sortCriteria,
-} from "./tax/criteria.js";
-export { taxBoxesJson, taxReportJson } from "./tax/json.js";
-export type * from "./tax/report.js";
-export {
-  FIRST_SUPPORTED_YEAR,
-  type MovedTaxYear,
-  movedTaxYears,
-  type TaxOptions,
-  taxYear,
-} from "./tax/year.js";
 export {
   archiveNameFor,
   type CompactDeps,

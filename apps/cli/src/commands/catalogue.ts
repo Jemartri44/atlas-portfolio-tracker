@@ -4,20 +4,19 @@ import {
   ASSET_TYPES,
   accounts,
   assets,
-  closedYearImpact,
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
   type Money,
   mergeSettings,
   movedFiscalYears,
-  movedTaxYears,
   type Settings,
   settingsAt,
   silencedWarnings,
   todayInMadrid,
   yearOf,
 } from "@atlas/domain";
+import { closedYearImpact, movedTaxYears } from "@atlas/domain/fiscal";
 import {
   assertKnownFlags,
   booleanFlag,

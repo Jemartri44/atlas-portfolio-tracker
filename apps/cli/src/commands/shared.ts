@@ -2,10 +2,8 @@
 
 import { access } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-
 import {
   type CivilDate,
-  closedYearImpact,
   DomainError,
   type Draft,
   isCivilDate,
@@ -19,6 +17,7 @@ import {
   type SupportedEvent,
   todayInMadrid,
 } from "@atlas/domain";
+import { closedYearImpact } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import {
   ConfirmationRequired,

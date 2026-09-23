@@ -14,7 +14,7 @@
 //     warning (S8, question Q8). Saying "careful, you filed this" of a year
 //     nobody filed is the warning that gets ignored.
 
-import type { ClosedYearImpact } from "@atlas/domain";
+import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 
 const MODEL: Record<string, string> = {
   renta: "la Renta",

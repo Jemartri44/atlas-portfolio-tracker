@@ -16,15 +16,13 @@ import {
   type FilingCategory,
   type FilingModel,
   fingerprintOfEvents,
-  type InformativeReturn,
-  informativeReturn,
   type Money,
   normalizeSettings,
   settingsAt,
-  type TaxYearReport,
-  taxYear,
   todayInMadrid,
 } from "@atlas/domain";
+import type { InformativeReturn, TaxYearReport } from "@atlas/domain/fiscal";
+import { informativeReturn, taxYear } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags, listFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";

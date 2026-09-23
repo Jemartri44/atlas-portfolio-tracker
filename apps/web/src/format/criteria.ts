@@ -11,7 +11,7 @@
 // `test/criteria.test.ts` checks the other half: that no name smuggles the
 // identifier back in.
 
-import type { Certainty, CriterionId, Measure, RiskDirection } from "@atlas/domain";
+import type { Certainty, CriterionId, Measure, RiskDirection } from "@atlas/domain/fiscal";
 
 /** What the criterion says, in one line a person can read. */
 export const CRITERION_NAMES: Record<CriterionId, string> = {

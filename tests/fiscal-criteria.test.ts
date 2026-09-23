@@ -34,7 +34,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { FISCAL_CRITERIA } from "@atlas/domain";
+import { FISCAL_CRITERIA } from "@atlas/domain/fiscal";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");

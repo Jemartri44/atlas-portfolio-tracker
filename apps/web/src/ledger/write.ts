@@ -16,9 +16,7 @@
 
 import {
   type AffectedEvent,
-  type ClosedYearImpact,
   ConflictError,
-  closedYearImpact,
   correctEvent,
   DependentEventsError,
   DomainError,
@@ -30,7 +28,6 @@ import {
   previewCorrection,
   previewEvent,
   previewReversal,
-  type Reading,
   type RecordOptions,
   type RecordResult,
   type ReverseResult,
@@ -41,6 +38,8 @@ import {
   todayInMadrid,
   type UseCaseDeps,
 } from "@atlas/domain";
+import type { ClosedYearImpact, Reading } from "@atlas/domain/fiscal";
+import { closedYearImpact } from "@atlas/domain/fiscal";
 import { reloadLedger } from "./actions.js";
 import { toAppError } from "./errors.js";
 import type { AppError } from "./state.js";

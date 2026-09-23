@@ -8,14 +8,9 @@
 // all, and says so: a box inherited from another year is a believable, wrong
 // figure that the user types into a real return (prompt 010, decision (e)).
 
-import {
-  BOX_BLOCKS,
-  type BoxBlockId,
-  type BoxEntry,
-  blockOfConcept,
-  type Money,
-  type TaxBoxes,
-} from "@atlas/domain";
+import type { Money } from "@atlas/domain";
+import type { BoxBlockId, BoxEntry, TaxBoxes } from "@atlas/domain/fiscal";
+import { BOX_BLOCKS, blockOfConcept } from "@atlas/domain/fiscal";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 

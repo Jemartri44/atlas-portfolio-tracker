@@ -3,22 +3,23 @@
 // The CLI only formats: every figure, every criterion and every note comes from
 // `taxYear` in the domain (decision (h) of prompt 006, §2 bis of prompt 009).
 
+import { type Money, todayInMadrid } from "@atlas/domain";
+import type {
+  CriterionId,
+  CriterionStake,
+  IncomeLine,
+  TaxYearReport,
+  TransmissionLine,
+} from "@atlas/domain/fiscal";
 import {
   CRITERION_IDS,
-  type CriterionId,
-  type CriterionStake,
   FISCAL_CRITERIA,
-  type IncomeLine,
   isDoubtful,
-  type Money,
-  type TaxYearReport,
-  type TransmissionLine,
   taxBoxes,
   taxBoxesJson,
   taxReportJson,
   taxYear,
-  todayInMadrid,
-} from "@atlas/domain";
+} from "@atlas/domain/fiscal";
 import { assertKnownFlags, booleanFlag, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { describeWarning } from "../output/messages.js";

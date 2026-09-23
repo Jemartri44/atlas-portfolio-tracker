@@ -7,7 +7,7 @@
 // nobody wrote "criterio #18", and that the two ends of the risk are said in
 // words, because the direction is what survives the privacy mask.
 
-import { CRITERION_IDS, FISCAL_CRITERIA } from "@atlas/domain";
+import { CRITERION_IDS, FISCAL_CRITERIA } from "@atlas/domain/fiscal";
 import { describe, expect, it } from "vitest";
 import {
   CERTAINTY_LABELS,

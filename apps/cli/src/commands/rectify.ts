@@ -1,7 +1,6 @@
 // atlas edit <id> --reason … [campos] · atlas delete <id> --reason …
 
 import {
-  closedYearImpact,
   correctEvent,
   DomainError,
   type Draft,
@@ -14,6 +13,7 @@ import {
   type SupportedEvent,
   todayInMadrid,
 } from "@atlas/domain";
+import { closedYearImpact } from "@atlas/domain/fiscal";
 import { type Flags, requireFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS, summarize } from "../context.js";
 import { closedYearLines, unfiledYearsNote } from "../output/closed-years.js";

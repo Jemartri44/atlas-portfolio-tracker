@@ -6,15 +6,14 @@
 // The CLI only formats: what counts, what it is worth, whether it obliges and
 // why is decided in `packages/domain/src/informative/` (§2 bis of the prompt).
 
-import {
-  type InformativeCategory,
-  type InformativeItem,
-  type InformativeReturn,
-  informativeReturn,
-  type Money,
-  todayInMadrid,
-  type VerdictReason,
-} from "@atlas/domain";
+import { type Money, todayInMadrid } from "@atlas/domain";
+import type {
+  InformativeCategory,
+  InformativeItem,
+  InformativeReturn,
+  VerdictReason,
+} from "@atlas/domain/fiscal";
+import { informativeReturn } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { describeWarning } from "../output/messages.js";
