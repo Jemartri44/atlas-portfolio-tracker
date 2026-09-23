@@ -5,9 +5,9 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 ## Estado
 
 - **Fases 1, 2 y 3 completas.** El libro mayor con lotes FIFO, traspasos y eventos corporativos; la aportación mensual repartida según los pesos objetivo; y el seguimiento del cubo especulativo frente a su índice. Todo se usa desde la CLI `atlas`.
-- **La web, completa.** Resumen, Movimientos, Registrar, la cartera principal (Núcleo), Cubo, Ajustes y libro, con gráficas y todos los asistentes. Funciona entera en el dispositivo, sin servidor y sin cuenta.
+- **La web, completa.** Resumen, Movimientos, Registrar, Cartera, Cubo, Ajustes y libro, con gráficas y todos los asistentes, más la pantalla fiscal fuera de la barra. Funciona entera en el dispositivo, sin servidor y sin cuenta.
 - **Las previsiones fiscales del esquema, integradas.** El libro ya guarda los datos que necesitará el cálculo de la Renta (ADR-0021).
-- **El motor fiscal, terminado** (Fase 5, primera mitad): la base imponible del ahorro de un ejercicio, con la regla de recompra calculada, la compensación del art. 49 y el arrastre a cuatro ejercicios, y `atlas tax <año>` como salida. La salida por casillas de la Renta, los modelos informativos y la pantalla fiscal de la web son lo siguiente.
+- **La Fase 5, terminada.** El motor: la base imponible del ahorro de un ejercicio, con la regla de recompra calculada, la compensación del art. 49 y el arrastre a cuatro ejercicios. Y la salida: la Renta por casillas del Modelo 100 del ejercicio, los Modelos 720 y 721, la constancia de lo presentado frente a lo calculado, y todo ello en la consola y en la pantalla fiscal de la web.
 - **Sin infraestructura en la nube todavía.** Ni API ni AWS: los datos viven en un fichero local o en el navegador.
 
 Cada funcionalidad tiene su especificación en [`specs/`](specs/).
@@ -117,7 +117,7 @@ atlas export --format csv --out ledger.csv
 
 ### El ciclo mensual (Fase 2)
 
-Los precios son manuales hasta la Fase 4: se registran como `valuation` y la aplicación siempre muestra de cuándo es cada uno. Ningún cálculo fiscal los mira. El ciclo sigue sobre el libro del ejemplo anterior.
+Los precios son manuales hasta la Fase 4: se registran como `valuation` y la aplicación siempre muestra de cuándo es cada uno. Ninguna cifra de la Renta los mira; la única ruta fiscal que lee un precio es la valoración a 31/12 de los Modelos 720 y 721. El ciclo sigue sobre el libro del ejemplo anterior.
 
 ```bash
 # 0. Una vez: el resto del núcleo, los pesos objetivo por activo (suman 100) y qué parte de la aportación va al cubo
@@ -174,7 +174,7 @@ atlas thesis show th_delta --date 2028-12-31
 
 `atlas networth` es la única vista que suma los dos libros, y lo hace **siempre desglosada**: núcleo, cubo y efectivo por cuenta y divisa, con el tipo de cambio aplicado y de cuándo es. Si falta un precio o un tipo, el total sale marcado como parcial y dice qué falta.
 
-Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (dos meses para cotizados, un año para fondos y cripto, contados de fecha a fecha): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar; el diferimiento lo calculará el motor fiscal de la Fase 5.
+Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (por defecto dos meses para cotizados y fondos, monetarios incluidos, y un año para la cripto, contados de fecha a fecha y configurables por tipo de activo): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar, y el motor fiscal **calcula el diferimiento**: la pérdida queda asociada a los lotes recomprados, viaja con ellos si se traspasan o se canjean, y se libera cuando se transmiten.
 
 ### La Renta (Fase 5)
 
