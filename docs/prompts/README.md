@@ -4,7 +4,7 @@ Un fichero por feature, numerado igual que `specs/NNN-<name>/`. Los escribe la d
 
 | Prompt | Feature | Estado |
 |---|---|---|
-| [000](000-director-handoff.md) | Relevo de la dirección: papel, ciclo de una feature con subagentes, procedimiento de revisión, estado, bloqueos y lecciones | **v5**, 2026-09-18 (PR #56): la dirección orquesta y no ejecuta; verificador, documentación e integración son agentes delegados |
+| [000](000-director-handoff.md) | Relevo de la dirección: papel, ciclo de una feature con subagentes, procedimiento de revisión, estado, bloqueos y lecciones | **v5**, 2026-09-18 (PR #56): la dirección orquesta y no ejecuta; verificador, documentación e integración son agentes delegados. Estado (§5, §6 y §8) al día a 2026-09-23, con la Fase 5 cerrada |
 | [001](001-ledger-core.md) | Libro mayor: esqueleto, dinero, eventos, proyecciones, FIFO, CLI | Fusionada (PR #10, 2026-08-30) |
 | [001-fixes](001-review-fixes.md) | Correcciones tras la revisión de la PR #10 (`unit_price` opcional, `asset_type` inmutable, nits) | Fusionada (PR #12, 2026-08-30) |
 | [002](002-corporate-actions.md) | Eventos corporativos (cinco primitivas, tabla por `kind`, asistentes de CLI), tesis del cubo, `valuations(date)` | Fusionada (PR #15, 2026-08-30) |
