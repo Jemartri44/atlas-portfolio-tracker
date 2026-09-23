@@ -121,6 +121,24 @@ describe("atlas filed renta", () => {
 });
 
 describe("atlas filed 720", () => {
+  it("says when there is nothing abroad and the filing would go empty", async () => {
+    // Registering a filing whose assets are not in the ledger is legitimate,
+    // so it is not refused. What is not acceptable is writing a declaration
+    // with no figure in it and saying nothing about it.
+    const b = new Events();
+    b.settings(CLI_SETTINGS);
+    b.account("acc_es");
+    const h = harness({
+      events: b.build(),
+      instant: "2028-06-10T10:00:00.000Z",
+      confirm: false,
+    });
+    expect(await h.exec(["filed", "720", "2027", "--receipt", "720-2027-ABCDEFGHIJKL"])).toBe(0);
+    expect(h.text()).toContain("no hay nada registrado en el extranjero en 2027");
+    expect(h.text()).toContain("se guarda sin ninguna cifra");
+    expect(h.text()).toContain("Cancelado.");
+  });
+
   it("declares the categories that have assets, with their list", async () => {
     const { h, code } = await run([
       "filed",
