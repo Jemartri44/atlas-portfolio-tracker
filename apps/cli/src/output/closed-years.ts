@@ -16,10 +16,11 @@
 
 import type { ClosedYearImpact, ClosedYearNotCompared } from "@atlas/domain/fiscal";
 
+/** After the preposition `a`, where Spanish contracts `a el` into `al`. */
 const MODEL: Record<string, string> = {
-  renta: "la Renta",
-  "720": "el Modelo 720",
-  "721": "el Modelo 721",
+  renta: "a la Renta",
+  "720": "al Modelo 720",
+  "721": "al Modelo 721",
 };
 
 /** The figure of a filing as it names it: `savings_base`, `pending:2024:…`, `deferred`. */
@@ -58,8 +59,8 @@ const NOT_COMPARED: Record<ClosedYearNotCompared, string> = {
 /** One line per filed year the write reaches, with what it moves. */
 export const closedYearLines = (impacts: readonly ClosedYearImpact[]): string[] =>
   impacts.map((impact) => {
-    const what = MODEL[impact.model] ?? impact.model;
-    const head = `Aviso: afecta a ${what} de ${impact.year}, presentada el ${impact.filed_at}.`;
+    const what = MODEL[impact.model] ?? `a ${impact.model}`;
+    const head = `Aviso: afecta ${what} de ${impact.year}, presentada el ${impact.filed_at}.`;
     const where = impact.by_date ? " La fecha de lo que vas a registrar cae en ese ejercicio." : "";
     // **Never "no mueve ninguna cifra declarada" without having compared.**
     // An empty list used to mean both that and "I could not compare", and the

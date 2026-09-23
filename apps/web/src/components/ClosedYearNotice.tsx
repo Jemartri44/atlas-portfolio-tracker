@@ -31,6 +31,19 @@ const MODEL_NAMES: Record<FilingModel, string> = {
   "721": "el Modelo 721",
 };
 
+/**
+ * The same name after the preposition `a`, where Spanish contracts `a el` into
+ * `al`. The title used to read «Afecta a el Modelo 720», which nobody had seen
+ * because a 720 only reached this notice when the write fell **by date** in
+ * its year; since the third outcome exists it reaches it whenever anything is
+ * written, and the first screenshot of the new case showed it (feature 011).
+ */
+const MODEL_AFTER_A: Record<FilingModel, string> = {
+  renta: "a la Renta",
+  "720": "al Modelo 720",
+  "721": "al Modelo 721",
+};
+
 const FIGURE_NAMES: Record<string, string> = {
   savings_base: "la base del ahorro",
   deferred: "lo aplazado por recompra a 31 de diciembre",
@@ -79,7 +92,7 @@ export const ClosedYearNotice = (props: { impacts: readonly ClosedYearImpact[] }
     {(impact) => (
       <Notice
         severity="caution"
-        title={`Afecta a ${MODEL_NAMES[impact.model]} de ${impact.year}, que presentaste el ${formatDate(impact.filed_at)}`}
+        title={`Afecta ${MODEL_AFTER_A[impact.model]} de ${impact.year}, que presentaste el ${formatDate(impact.filed_at)}`}
       >
         <Show
           when={comparedMoves(impact).length > 0}
