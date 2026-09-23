@@ -332,6 +332,28 @@ Exacto: **241.687 bytes** gzip de JS y CSS contra un techo de **241.664** (236,0
 
 **Y el bloque 8 todavía no ha medido.** Sus mensajes —el hallazgo de la huella no verificable y la nota de la comparación— también llegan a la web. Con 0,1 KB de margen, van a chocar con lo mismo.
 
+### P10 — El bloque 8 se pasa del techo que acabas de poner, por 208 bytes **(bloquea la entrega)**
+
+Paré otra vez, que es lo que pediste: «si el 8 no cabe cuando llegues, para otra vez; prefiero decidirlo dos veces que dejarte un colchón que se gaste solo».
+
+| | Arranque | Total |
+|---|---|---|
+| techo | 73,5 (intacto) | **236,7** |
+| con el ancla pintada | 73,0 | 236,0 |
+| **con el bloque 8 dentro** | **73,3** | **236,9** |
+
+Exacto: **242.589** bytes contra **242.381**. Se pasa por **208 bytes**. El **arranque no se toca y sigue por debajo**: 73,3 de 73,5, aunque con menos margen que antes.
+
+**Por qué el arranque sube 0,3.** El hecho de una renuncia tiene que poder decirlo `atlas check` **y la pantalla de Verificación**, que lee `integrity(state)`, y eso obliga a proyectar la renuncia: `project-ledger.ts`, `state.ts` e `integrity.ts` están en el camino de arranque. Es el mismo reparto que la 010 eligió para el aviso de ejercicio cerrado —el **hecho** en el arranque, la **cifra** en el trozo perezoso— y por la misma razón: sin proyectarla, `check` a secas no podría decirlo y la salida se convertiría en una forma de limpiar el expediente.
+
+**Por qué el total sube 0,9 y no 0,4 como estimé.** Mi estimación contaba solo los textos. Lo que de verdad entró: los dos textos del hallazgo y del error en la web (+0,2), la nota nueva del informe con su traducción (+0,2), el tipo de evento con su forma, su rótulo y los de sus tres campos (+0,2) y la proyección de la renuncia con su tipo (+0,3). **La estimación era mía y era baja**; lo digo porque el margen que pediste «no más» lo pedí yo mal calculado.
+
+**Comprobado otra vez sobre los mapas de origen de los 59 trozos: cero módulos en más de uno** (296 módulos). No hay duplicación escondida bajo el techo.
+
+**Lo que no hago:** subirlo por mi cuenta. La decisión es tuya, y el cierre de ronda lleva el trinquete que pediste —los dos techos a lo medido más un margen pequeño, con lo que hay dentro escrito—, así que basta con que digas el número. Con lo medido hoy serían **73,5 el arranque** (sin tocar, y ya es lo medido más 0,2) y **237,9 el total** (lo medido más uno, como se ha hecho siempre).
+
+Todo lo demás del bloque 8 está **hecho y verde**: `lint`, `typecheck`, 1.820 tests y **100 %** de dominio. Lo único rojo es `npm run build`, y solo por el techo.
+
 ---
 
 ## 4. Observaciones sobre el propio encargo
@@ -547,6 +569,27 @@ KILLED   7b emit it always, even when it was compared
 ```
 
 *(Y el guion volvió a abortar por un ancla que ya no existía —el `figuresOf` del bloque 4 había cambiado esas líneas—, antes de escribir nada. El lote se rehízo **entero**, no se continuó.)*
+
+### Bloque 8 — la salida registrada de `compact`
+
+Los tests escritos antes, en rojo:
+
+```
+× lets the user accept one unverifiable fingerprint by name, and records it
+× writes no waiver when the compaction does not go through
+```
+
+**La atomicidad que exigió la dirección, probada.** El test interrumpe la compactación **en `replace`**, que es después del punto en que la renuncia se construye y lo único que escribe, y comprueba que el libro queda **byte a byte como estaba** y sin renuncia. El invariante es de dónde se escribe: la renuncia viaja **dentro de la misma lista** que se entrega a `replace`, y no hay ningún camino que la escriba por separado.
+
+**Mutante 11, muerto en sus tres mitades:**
+
+```
+KILLED   11a accept the compaction without the user asking for it
+KILLED   11b accept it without leaving the record
+KILLED   11c make check stop saying it afterwards
+```
+
+**Y la trampa del ternario volvió a morder**, esta vez en `compact.ts`: al hacer que el rechazo nombre **cuál** de los dos motivos es —porque solo uno de ellos acusa a alguien—, escribí `new CompactRejectedError(cond ? "a" : "b", …)` y el escáner de `tests/messages.test.ts` dejó de ver **los dos** códigos, marcando como muertas las dos traducciones que ya existían. Rehecho con dos `throw` de literal. Es la misma trampa de E2 en otro fichero, y la regla que escribí en el plan —literales, nunca un ternario— es la que la cazó.
 
 ### Bloque 7 — el test antideriva
 
