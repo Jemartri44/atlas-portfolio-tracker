@@ -1064,3 +1064,61 @@ describe("architecture: no interface writes over a filed return in silence", () 
     expect(silent).toEqual([]);
   });
 });
+
+/**
+ * **An object literal asserted into a type** is how the deduction for double
+ * taxation shipped a row with three fields missing.
+ *
+ * The line was `const row = { event_id: line.event_id } as BoxRow;`. It
+ * compiled, because `as` silences the compiler by construction; the other three
+ * fields of `BoxRow` were `undefined` at run time; and both interfaces printed
+ * "undefined undefined" beside every deduction for two whole blocks without a
+ * single test noticing. The invariant that now checks every row of the layout
+ * covers **that** type. This covers the **pattern**, which can be written into
+ * any other.
+ *
+ * Why a test and not a rule of the linter: Biome 2.5.9 has
+ * `nursery/noUnsafeTypeAssertion`, which forbids **every** assertion but `as
+ * const`. Measured on `packages/domain/src`, it flags 20 places, and almost
+ * all of them are `state.gains[index] as RealizedGain` — narrowing an indexed
+ * read under `noUncheckedIndexedAccess`, which fabricates nothing. Replacing
+ * those with a run-time check would add a branch that cannot be reached, and
+ * the domain is held at 100 % of branches: the rule would buy a real barrier
+ * at the price of unreachable code. So the barrier is written here, over the
+ * subset that actually fabricates a value.
+ *
+ * The list is of **files**, not of occurrences: a file that already does it
+ * stays as it is, and a file that starts doing it has to be added by hand,
+ * which is the moment somebody asks whether the object really has every field.
+ */
+describe("architecture: no object literal is asserted into a type", () => {
+  it("keeps the pattern to the files that already carry it", () => {
+    // `}` followed by `as <name>`, which is an object (or a block) handed over
+    // as a type. `as const` is not an assertion of this kind and is allowed.
+    const pattern = /\}\s*as\s+(?!const\b)[A-Za-z_$][\w$]*/;
+    const roots = [
+      join(repoRoot, "packages", "domain", "src"),
+      join(repoRoot, "packages", "adapters", "src"),
+      join(repoRoot, "apps", "cli", "src"),
+      join(repoRoot, "apps", "web", "src"),
+    ];
+    const offenders = roots
+      .flatMap((root) => listSourceFiles(root))
+      .filter((file) => {
+        const source = readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, " ")
+          .replace(/\/\/[^\n]*/g, " ");
+        return pattern.test(source);
+      })
+      .map((file) => relative(repoRoot, file))
+      .sort();
+    expect(offenders).toEqual([
+      "apps/web/src/routes/registrar/corporate/form.tsx",
+      "packages/domain/src/projections/corporate-action-draft.ts",
+      "packages/domain/src/settings/settings.ts",
+      "packages/domain/src/synth/scenario.ts",
+      "packages/domain/src/usecases/record-event.ts",
+      "packages/domain/src/usecases/rectify.ts",
+    ]);
+  });
+});
