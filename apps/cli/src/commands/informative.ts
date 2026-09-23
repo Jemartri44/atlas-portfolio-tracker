@@ -16,6 +16,7 @@ import type {
 import { informativeReturn } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { CRITERION_LABELS } from "../output/criteria.js";
 import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
@@ -63,6 +64,24 @@ const reasonText = (reason: VerdictReason): string => {
   }
 };
 
+/**
+ * How many days the average of the fourth quarter covers, **per currency**.
+ *
+ * The column used to print the days of the first balance and call it the
+ * account's: an account with euros since January and dollars since November
+ * has two different periods behind its average, and one of them was shown as
+ * if it were both. One figure when they agree, one per currency when they do
+ * not, in the same order as the balances beside it.
+ */
+const daysText = (item: InformativeItem): string => {
+  const days = (item.balances ?? []).map((part) => part.days);
+  const distinct = [...new Set(days)];
+  if (days.length === 0) {
+    return "";
+  }
+  return distinct.length === 1 ? String(distinct[0]) : days.join(" · ");
+};
+
 const accountRows = (items: readonly InformativeItem[]): string[][] =>
   items.map((item) => [
     item.account_id,
@@ -71,7 +90,7 @@ const accountRows = (items: readonly InformativeItem[]): string[][] =>
       .join(" · "),
     eur(item.value_eur),
     eur(item.q4_average_eur),
-    (item.balances ?? [])[0] === undefined ? "" : String((item.balances ?? [])[0]?.days ?? ""),
+    daysText(item),
     item.flags.map((flag) => FLAG[flag]).join("; "),
   ]);
 
@@ -179,7 +198,16 @@ export const renderInformative = (report: InformativeReturn): string => {
       ),
     );
   }
-  out.push(`\nCriterios de los que depende: ${report.criteria.join(", ")}.`);
+  // With their names: `6, 25` is an index of the code, not something a person
+  // reads beside a return. `atlas tax` has put the label beside the identifier
+  // since it existed; this printed the bare list.
+  out.push(
+    "\nCriterios de los que depende:",
+    table(
+      ["criterio", "qué dice"],
+      report.criteria.map((id) => [id, CRITERION_LABELS[id]]),
+    ),
+  );
   out.push("\nAvisos", report.notes.map((note) => `- ${describeWarning(note)}`).join("\n"));
   return out.join("\n");
 };

@@ -42,7 +42,11 @@ describe("atlas m720", () => {
     expect(text).toContain("Quedan fuera por ser cuentas españolas: acc_es");
     expect(text).toContain("Total a 31/12 100.00");
     expect(text).toContain("no obligado");
-    expect(text).toContain("Criterios de los que depende: 6, 11");
+    expect(text).toContain("Criterios de los que depende:");
+    // With their names, not the bare identifiers: `6, 11` is an index of the
+    // code and `atlas tax` has printed the label beside it since it existed.
+    expect(text).toContain("redondeo half-up una vez por operación");
+    expect(text).toMatch(/\b6\b/);
   });
 
   it("says what is missing instead of saying no", async () => {

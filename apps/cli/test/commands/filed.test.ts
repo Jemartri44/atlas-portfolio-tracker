@@ -98,8 +98,21 @@ describe("atlas filed renta", () => {
     expect(h.text()).toContain("base");
   });
 
+  it("asks for the receipt before anything is printed, in Spanish", async () => {
+    // `validateShape` refuses it too, but after the table, after the notes and
+    // after the question, and in English.
+    const { h, code } = await run(["filed", "renta", "2027", "--yes"]);
+    expect(code).not.toBe(0);
+    expect(h.text()).toContain("falta --receipt");
+    // And nothing of the return is printed before the complaint.
+    expect(h.text()).not.toContain("Lo que la aplicación calcula");
+  });
+
   it("writes nothing without a confirmation", async () => {
-    const { h, code } = await run(["filed", "renta", "2027"], false);
+    const { h, code } = await run(
+      ["filed", "renta", "2027", "--receipt", "100-2027-ABCDEFGHIJKL"],
+      false,
+    );
     expect(code).toBe(0);
     expect(h.text()).toContain("Cancelado.");
     const { events } = await h.store.load();

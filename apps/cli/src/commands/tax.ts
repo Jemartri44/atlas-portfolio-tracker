@@ -22,6 +22,7 @@ import {
 } from "@atlas/domain/fiscal";
 import { assertKnownFlags, booleanFlag, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { CRITERION_LABELS } from "../output/criteria.js";
 import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
@@ -44,44 +45,6 @@ const RISK: Record<string, string> = {
   both: "ambas",
   neutral: "neutro",
   none: "ninguna",
-};
-
-/** Short Spanish name of each criterion of `docs/fiscal-questions.md`. */
-export const CRITERION_LABELS: Record<CriterionId, string> = {
-  "1": "fecha fiscal por tipo de activo",
-  "2:listed": "ventana de dos meses (cotizados)",
-  "2:listed_1y": "ventana de un año (cotizados, la lectura prudente)",
-  "2:crypto": "ventana de un año (cripto)",
-  "2:crypto_2m": "ventana de dos meses (cripto, la lectura menos prudente)",
-  "2:fund_2m": "ventana de dos meses (fondos)",
-  "2:fund_1y": "ventana de un año (fondos, la lectura prudente)",
-  "2:other": "ventana configurada que ninguna lectura del documento sostiene",
-  "2b": "un traspaso entrante es una adquisición",
-  "3": "comisiones en la base (art. 35)",
-  "4": "ganancia en divisa y diferencias de cambio",
-  "5": "tipo del BCE del último día publicado",
-  "6": "redondeo half-up una vez por operación",
-  "7": "reparto del coste en una escisión y régimen de neutralidad",
-  "8": "fork o airdrop a coste cero",
-  "9": "pérdida por liquidación de la sociedad",
-  "10": "compensación hasta el 25 % y arrastre a cuatro años",
-  "11": "Modelo 720",
-  "12": "retención en reembolsos de fondos",
-  "13": "canje con compensación en efectivo y régimen de neutralidad",
-  "14": "ventana contada de fecha a fecha",
-  "15": "el diferimiento viaja con los lotes descendientes",
-  "16": "deducción por doble imposición",
-  "17": "la comisión de una permuta resta de lo transmitido",
-  "18": "solo cuenta la recompra que sigue en el patrimonio",
-  "19": "cada unidad recomprada difiere una sola vez",
-  "20": "la regla mira la operación, no el lote",
-  "21": "lo liberado vuelve a pasar por la regla",
-  "22": "orden de la compensación entre ejercicios",
-  "23": "gastos de administración y depósito (art. 26.1.a)",
-  "24:etc": "ETC como rendimiento del capital mobiliario (la consulta V0267-25)",
-  "24:etc_gain": "ETC como ganancia patrimonial (lo contrario de la consulta V0267-25)",
-  "24:etp": "ETP como rendimiento del capital mobiliario",
-  "24:etp_gain": "ETP como ganancia patrimonial",
 };
 
 const criteriaText = (ids: readonly CriterionId[]): string =>
@@ -152,9 +115,9 @@ const lotTable = (lines: readonly TransmissionLine[]): string =>
         line.event_id,
         lot.lot_id,
         lot.quantity.toString(),
-        lot.cost_eur.amount.toString(),
-        lot.proceeds_eur.amount.toString(),
-        lot.gain_eur.amount.toString(),
+        eur(lot.cost_eur),
+        eur(lot.proceeds_eur),
+        eur(lot.gain_eur),
         lot.acquisition_date,
         lot.lineage.map((step) => `${step.event_type} ${step.lot_id}`).join(" ← "),
         `${lot.root.event_type} ${lot.root.event_id}: ${lot.root.cost.amount.amount.toString()} ${lot.root.cost.amount.currency} al ${lot.root.cost.fx_rate} (${lot.root.cost.fx_rate_date})`,
@@ -183,8 +146,11 @@ const incomeTable = (lines: readonly IncomeLine[]): string =>
       `${line.gross.amount.amount.toString()} ${line.gross.amount.currency}`,
       `${line.gross.fx_rate} (${line.gross.fx_rate_date})`,
       eur(line.gross_eur_rounded),
-      line.withholding_origin.amount.toString(),
-      line.withholding_spain.amount.toString(),
+      // In the currency of the operation, like the gross above it and with
+      // every decimal it was recorded with (ADR-0013): a withholding is not a
+      // euro figure and the column used to print it with no currency at all.
+      `${line.withholding_origin.amount.toString()} ${line.withholding_origin.currency}`,
+      `${line.withholding_spain.amount.toString()} ${line.withholding_spain.currency}`,
       line.source_country ?? "",
       criteriaText(line.criteria),
     ]),

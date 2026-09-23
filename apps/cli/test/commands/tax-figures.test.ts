@@ -141,8 +141,10 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "30 USD",
       "1.20 (2021-11-15)",
       "25.00",
-      "9",
-      "0",
+      // With their currency: a withholding at source is in the currency of the
+      // dividend, and the column used to print the number bare.
+      "9 USD",
+      "0 USD",
       "US",
       "6",
     ]);

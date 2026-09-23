@@ -29,7 +29,6 @@ const USAGE =
 
 const MODELS: readonly FilingModel[] = ["renta", "720", "721"];
 
-/** Two decimals always, so the column reads as money. */
 /** `--set clave=importe`, checked against the keys the return actually has. */
 const overrides = (keys: ReadonlySet<string>, values: readonly string[]): Map<string, string> => {
   const declared = new Map<string, string>();
@@ -65,6 +64,16 @@ export const filedCommand = async (
   const proposal = filingProposal(events, model, year, { today });
   const computed = new Map(proposal.figures.map((figure) => [figure.key, eur(figure.amount_eur)]));
   const declared = overrides(new Set(computed.keys()), listFlag(flags, "set"));
+  // Before the table, the notes and the question, and in Spanish:
+  // `validateShape` refuses an empty `receipt_reference` too, but it does it
+  // after all of that and in the language of the domain. What is missing here
+  // is an argument of the command.
+  const receipt = (stringFlag(flags, "receipt") ?? "").trim();
+  if (receipt === "") {
+    throw new UsageError(
+      "falta --receipt: es el número de justificante que da la Agencia Tributaria al presentar; sin él no hay forma de encontrar esta declaración después",
+    );
+  }
   ctx.io.out(
     `Lo que la aplicación calcula hoy para ${model === "renta" ? "la Renta" : `el Modelo ${model}`} de ${year}, y lo que vas a declarar:`,
   );
@@ -78,12 +87,21 @@ export const filedCommand = async (
   const supersedes = stringFlag(flags, "supersedes");
   const draft = proposal.draft(declared, {
     filed_at: stringFlag(flags, "filed-at") ?? today,
-    receipt_reference: stringFlag(flags, "receipt") ?? "",
+    receipt_reference: receipt,
     ...(notes === undefined ? {} : { notes }),
     ...(supersedes === undefined ? {} : { supersedes }),
   });
   await confirmAndRecord(ctx, draft, [
     "Lo que se guarda es lo que declaras, aunque la aplicación calcule otra cosa: es un hecho con consecuencias legales (ADR-0020).",
+    // A 720 or a 721 of a ledger with nothing abroad has no figure at all. It
+    // is not refused —registering a filing whose assets are not in the ledger
+    // is legitimate— but it is said: what would be written otherwise is an
+    // empty declaration, and nothing on screen said so.
+    ...(proposal.figures.length === 0
+      ? [
+          `Ojo: no hay nada registrado en el extranjero en ${year}, así que esta presentación se guarda sin ninguna cifra. Si presentaste algo, regístralo antes.`,
+        ]
+      : []),
     ...(proposal.supersedes === undefined && supersedes === undefined
       ? []
       : ["Es una complementaria: sustituye a la presentación que ya consta, no la anula."]),
