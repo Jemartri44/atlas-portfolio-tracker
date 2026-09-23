@@ -17,6 +17,7 @@ import {
   settingsAt,
   type UseCaseDeps,
 } from "@atlas/domain";
+import type { ClosedYearImpact, MovedFigure } from "@atlas/domain/fiscal";
 import { beforeEach, describe, expect, it } from "vitest";
 import { loadInto } from "../src/ledger/actions.js";
 import { store } from "../src/ledger/state.js";
@@ -27,6 +28,15 @@ import {
   closedYearsOfSettings,
 } from "../src/ledger/write.js";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
+
+/** What a comparison that **was** made says moved; it fails loudly if it was not made. */
+const movesOf = (impact: ClosedYearImpact | undefined): readonly MovedFigure[] => {
+  const comparison = impact?.comparison;
+  if (comparison?.status !== "compared") {
+    throw new Error(`expected a comparison, got ${JSON.stringify(comparison)}`);
+  }
+  return comparison.moves;
+};
 
 const FILING_ID = "01P0000000000000000000FEED";
 
@@ -146,7 +156,7 @@ describe("what a write does to a filed return", () => {
     expect(impacts[0]?.year).toBe(2027);
     expect(impacts[0]?.filed_at).toBe("2028-06-10");
     expect(impacts[0]?.by_date).toBe(true);
-    expect(impacts[0]?.moves.map((move) => move.figure)).toContain("savings_base");
+    expect(movesOf(impacts[0]).map((move) => move.figure)).toContain("savings_base");
   });
 
   it("names it when annulling and when correcting an event of that year", async () => {
@@ -160,7 +170,7 @@ describe("what a write does to a filed return", () => {
     const corrected = { ...draft, unit_price: "70.00" } as unknown as Draft<SupportedEvent>;
     const impacts = await closedYearsOfCorrection(id, corrected, "precio mal copiado");
     expect(impacts[0]?.year).toBe(2027);
-    expect(impacts[0]?.moves.length).toBeGreaterThan(0);
+    expect(movesOf(impacts[0]).length).toBeGreaterThan(0);
   });
 
   it("names it when the settings move a year nobody touched", async () => {

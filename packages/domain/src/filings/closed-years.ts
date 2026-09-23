@@ -46,6 +46,39 @@ export interface MovedFigure {
   after: string;
 }
 
+/**
+ * What the warning found out about the declared figures — **three** outcomes,
+ * in a closed union (ADR-0024, feature 011, block 5).
+ *
+ * It used to be `moves: MovedFigure[]`, and an empty list meant two different
+ * things: "compared, and nothing moves" and "could not compare". Both
+ * interfaces read the empty list as the first one and said «no mueve ninguna
+ * cifra declarada» — an affirmation the application had not checked, on the
+ * strength of which the user files one supplementary return fewer. **Saying
+ * nothing is not helping; affirming falsely is doing harm.**
+ *
+ * A closed union and not one more optional field, on purpose: an interface can
+ * destructure an optional field and drop it with nothing failing, which is the
+ * hole ADR-0024 describes. Adding a case here broke the compilation where it
+ * had to be handled.
+ */
+export type ClosedYearComparison =
+  | { status: "compared"; moves: MovedFigure[] }
+  | { status: "not_compared"; reason: ClosedYearNotCompared };
+
+/**
+ * Why it could not be compared, distinguishing the causes the engine knows —
+ * they do not lead to the same action. The first is repaired by fixing the
+ * ledger; the second cannot be repaired at all; **the third is not broken**.
+ */
+export type ClosedYearNotCompared =
+  /** One of the two readings has invalid events under it (ADR-0015). */
+  | "invalid_reading"
+  /** One of the two readings makes the chain start before the first supported year. */
+  | "chain_unsupported"
+  /** A 720 or a 721: its figures are market values the chain does not compare. */
+  | "by_design";
+
 export interface ClosedYearImpact {
   model: FilingModel;
   year: number;
@@ -53,18 +86,11 @@ export interface ClosedYearImpact {
   filed_at: CivilDate;
   /** The date of what is being recorded falls in that tax year. */
   by_date: boolean;
-  /** What of the declared figures moves; empty means it only falls by date. */
-  moves: MovedFigure[];
+  /** What the comparison found, or why it was not made. */
+  comparison: ClosedYearComparison;
 }
 
 const text = (money: Money): string => money.amount.toString();
-
-/** Why one of the two readings could not be computed, when it could not. */
-export type NotCompared =
-  /** The ledger has invalid events under that reading (ADR-0015). */
-  | "invalid_reading"
-  /** That reading makes the chain start before the first supported year. */
-  | "chain_unsupported";
 
 /**
  * The figures of a `renta` as the chain computes them for one year, or **why**
@@ -82,7 +108,7 @@ const figuresOf = (
   reading: Reading,
   year: number,
   today: CivilDate,
-): Map<string, string> | NotCompared => {
+): Map<string, string> | ClosedYearNotCompared => {
   const chain = tryReading(() => taxChain(reading.events, year, { today }, reading.settings));
   if (isUnsupported(chain)) {
     return "chain_unsupported";
@@ -93,10 +119,10 @@ const figuresOf = (
   return new Map([...chainFigures(chain, year)].map(([figure, amount]) => [figure, text(amount)]));
 };
 
-/** Whether a reading gave figures at all; `undefined` is a model the chain does not compare. */
+/** Whether a reading gave figures at all. */
 const computed = (
-  reading: Map<string, string> | NotCompared | undefined,
-): reading is Map<string, string> => reading !== undefined && typeof reading !== "string";
+  reading: Map<string, string> | ClosedYearNotCompared,
+): reading is Map<string, string> => typeof reading !== "string";
 
 /**
  * The names of the figures a filing declares, which are the ones worth
@@ -147,12 +173,19 @@ export const closedYearImpact = (
   const impacts: ClosedYearImpact[] = [];
   for (const entry of closed) {
     const byDate = entry.by_date;
-    const moves: MovedFigure[] = [];
     // Only the income tax has figures the chain can compare; the assets of a
-    // 720 are valued at market and live in their own module (block 3).
-    const was = entry.model === "renta" ? figuresOf(before, entry.year, today) : undefined;
-    const is = entry.model === "renta" ? figuresOf(after, entry.year, today) : undefined;
-    if (computed(was) && computed(is)) {
+    // 720 are valued at market and live in their own module (block 3), and
+    // that is a **reason**, not an empty result.
+    const was = entry.model === "renta" ? figuresOf(before, entry.year, today) : "by_design";
+    const is = entry.model === "renta" ? figuresOf(after, entry.year, today) : "by_design";
+    const comparison = ((): ClosedYearComparison => {
+      if (!computed(was)) {
+        return { status: "not_compared", reason: was };
+      }
+      if (!computed(is)) {
+        return { status: "not_compared", reason: is };
+      }
+      const moves: MovedFigure[] = [];
       for (const figure of new Set([
         ...declaredFigures(filingOf(state, entry)),
         ...was.keys(),
@@ -164,7 +197,8 @@ export const closedYearImpact = (
           moves.push({ figure, before: left, after: right });
         }
       }
-    }
+      return { status: "compared", moves };
+    })();
     // **Two reasons to warn, asked one at a time.** They used to be one
     // `byDate || moves.length > 0`, and the coverage of that expression came
     // and went between runs of the same commit: v8 attributes the halves of a
@@ -179,13 +213,21 @@ export const closedYearImpact = (
       filing_id: entry.filing_id,
       filed_at: entry.filed_at,
       by_date: byDate,
-      moves,
+      comparison,
     });
     if (byDate) {
       impacts.push(impact());
       continue;
     }
-    if (moves.length > 0) {
+    // **Not being able to compare is a reason to warn**, and the third one:
+    // before feature 011 this combination —an earlier reading that cannot be
+    // computed and a change dated outside the filed year— pushed nothing at
+    // all, and the guarantee written at the top of this file was false.
+    if (comparison.status === "not_compared") {
+      impacts.push(impact());
+      continue;
+    }
+    if (comparison.moves.length > 0) {
       impacts.push(impact());
     }
   }
