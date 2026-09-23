@@ -77,7 +77,7 @@ El cubo nunca entra en el cálculo de los pesos objetivo del núcleo. Es un pres
 El saldo de efectivo de cada cuenta (`cash_balance`) es **derivado**: resulta de `cash_deposit`, `cash_withdrawal`, compras, ventas, dividendos y comisiones. Se usa para conciliar con el bróker y para la vista de patrimonio. No hay cuentas bancarias puras: el colchón se gestiona fuera de la app (ADR-0004).
 
 **Asset** (activo)
-`id`, `type` (`fund` | `etc` | `etp` | `stock` | `crypto` | `money_market`), `book`, `asset_class` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin`, `ticker`, `name`, `currency`, `ter`, `transferable` (bool), `reference_etf_id` (solo fondos, ver §7), `active` (bool)
+`id`, `type` (`fund` | `etf` | `etc` | `etp` | `stock` | `crypto` | `money_market`), `book`, `asset_class` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin`, `ticker`, `name`, `currency`, `ter`, `transferable` (bool), `reference_etf_id` (solo fondos, ver §7), `active` (bool)
 
 Los identificadores cambian con el tiempo. El `id` interno es inmutable; ISIN y ticker son atributos que se versionan.
 
