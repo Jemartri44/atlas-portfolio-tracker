@@ -371,3 +371,72 @@ describe("the blocks the form is read in", () => {
     }
   });
 });
+
+/**
+ * A row of the layout says **which operation** a field belongs to, and both
+ * interfaces print it as "activo · fecha". The deduction for double taxation
+ * used to hand over `{ event_id } as BoxRow`: it compiled, the other three
+ * fields were undefined at run time, and the screens printed "undefined
+ * undefined" beside the deduction of a foreign dividend.
+ *
+ * So the invariant is checked over a return that has one of everything, and it
+ * is checked on the **whole row**, not on the concept that failed: the cast
+ * that broke it can be written again anywhere.
+ */
+describe("the operation a row names", () => {
+  it("is complete wherever there is one, deduction for double taxation included", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2024-02-10", "10", "100");
+    sell(b, "stock_s", "2025-09-01", "10", "120");
+    b.dividend({
+      account_id: "acc_a",
+      asset_id: "stock_s",
+      value_date: "2025-03-10",
+      gross: "100",
+      withholding_origin: "15",
+      source_country: "US",
+    });
+    const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
+    // The deduction is there: otherwise this would pass by checking nothing.
+    expect(boxes.entries.some((item) => item.concept === "ddi.income")).toBe(true);
+    for (const item of boxes.entries) {
+      if (item.row === undefined) {
+        continue;
+      }
+      expect(Object.keys(item.row).sort()).toEqual([
+        "account_id",
+        "asset_id",
+        "event_id",
+        "fiscal_date",
+      ]);
+      expect(item.row.fiscal_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  it("only gives a deduction to the dividend that was taxed abroad", () => {
+    // Two dividends, one taxed at source and one not: the deduction is about
+    // the first and names it, and the second produces no line at all.
+    const b = taxBuilder(HAND_SETTINGS);
+    b.dividend({
+      account_id: "acc_a",
+      asset_id: "stock_s",
+      value_date: "2025-03-10",
+      gross: "100",
+      withholding_origin: "15",
+      source_country: "US",
+    });
+    b.dividend({
+      account_id: "acc_a",
+      asset_id: "fund_f",
+      value_date: "2025-05-10",
+      gross: "40",
+      withholding_origin: "0",
+    });
+    const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
+    const ddi = boxes.entries.filter((item) => item.concept.startsWith("ddi."));
+    expect(ddi.length).toBeGreaterThan(0);
+    const named = ddi.filter((item) => item.row !== undefined);
+    expect(named.map((item) => item.row?.asset_id)).toEqual(["stock_s", "stock_s"]);
+    expect(named.every((item) => item.row?.fiscal_date === "2025-03-10")).toBe(true);
+  });
+});

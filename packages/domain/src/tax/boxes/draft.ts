@@ -12,10 +12,11 @@
 // which are a **reordering** of what the engine already computed (ficha F5).
 
 import { Money } from "../../money/money.js";
+import type { AssetId } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
-import type { TaxYearReport, TransmissionLine } from "../report.js";
+import type { IncomeLine, TaxYearReport, TransmissionLine } from "../report.js";
 import type { WashSaleOutcome } from "../wash-sale.js";
 import {
   type ConceptId,
@@ -358,8 +359,27 @@ const annexC3 = (report: TaxYearReport, year: number): Draft[] => {
 /** The double taxation deduction (#16) and the payments on account. */
 const deductions = (report: TaxYearReport, categories: Map<string, IncomeCategory>): Draft[] => {
   const drafts: Draft[] = [];
-  for (const line of report.double_taxation.lines) {
-    const row = { event_id: line.event_id } as BoxRow;
+  // Which operation each deduction is about. Only a **dividend** produces one
+  // (`doubleTaxation` in `year.ts`), and a dividend always names its asset, so
+  // the row is read off the income line and nothing has to be invented. It
+  // used to build `{ event_id } as BoxRow` and hand that over as a whole row:
+  // the cast compiled, the other three fields were undefined at run time, and
+  // both interfaces printed "undefined undefined" beside the deduction of a
+  // foreign dividend (found rendering the screen of block 4, 2026-09-23).
+  const deduction = new Map(report.double_taxation.lines.map((line) => [line.event_id, line]));
+  for (const income of report.movable_capital.dividends.filter(
+    (line): line is IncomeLine & { asset_id: AssetId } => line.asset_id !== undefined,
+  )) {
+    const line = deduction.get(income.event_id);
+    if (line === undefined) {
+      continue;
+    }
+    const row: BoxRow = {
+      event_id: income.event_id,
+      account_id: income.account_id,
+      asset_id: income.asset_id,
+      fiscal_date: income.fiscal_date,
+    };
     drafts.push(
       { concept: "ddi.income", row, exact: line.gross_eur, criteria: line.criteria },
       { concept: "ddi.foreign_tax", row, exact: line.foreign_tax_eur, criteria: line.criteria },
