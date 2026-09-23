@@ -5,6 +5,13 @@
  * shapes the screen needs and no other screen has — the head of a total that
  * opens, a criterion with what it puts at stake, a box of the form beside its
  * label, and a figure declared next to the one computed today.
+ *
+ * LINE BUDGET: the four shapes above belong to one screen and are read
+ * together; the last of them grew a line of its own when the box row stopped
+ * saying "sin correspondencia comprobada" on every row and started carrying
+ * what the figure is, the literal label of the form and where it was checked.
+ * Split in two files, a reader of the box row would have to open both to know
+ * which of its five lines is which.
  */
 
 /* ---- The warning of a year already filed -------------------------------- */
@@ -188,9 +195,17 @@
 }
 
 .box-op,
+.box-official,
 .box-partial {
   color: var(--c-text-3);
   font-size: var(--text-sm);
+}
+
+/* The label of the form, word for word: it is what the user matches against
+   Renta WEB, and it is long, so it sits under the name of the figure instead
+   of competing with it. */
+.box-official {
+  font-size: var(--text-xs);
 }
 
 .box-partial {

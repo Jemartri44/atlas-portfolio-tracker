@@ -10,8 +10,8 @@
 // and says so. Never the box of another year (prompt 010, decision (e)).
 
 import type { Money } from "@atlas/domain";
-import type { BoxBlockId, BoxEntry, TaxBoxes } from "@atlas/domain/fiscal";
-import { BOX_BLOCKS, blockOfConcept } from "@atlas/domain/fiscal";
+import type { BoxBlockId, BoxEntry, PartialReason, TaxBoxes } from "@atlas/domain/fiscal";
+import { BOX_BLOCKS, blockOfConcept, conceptName } from "@atlas/domain/fiscal";
 import { formatDate } from "../../format/date.js";
 import type { NameIndex } from "../../format/names.js";
 import { displayName } from "../../format/names.js";
@@ -30,8 +30,15 @@ export const BLOCK_TITLES: Record<BoxBlockId, string> = {
   deductions: "Deducciones y pagos a cuenta",
 };
 
-/** Why a box is not the whole of what the form will hold, said to the user. */
-export const PARTIAL_TEXTS: Record<string, string> = {
+/**
+ * Why a box is not the whole of what the form will hold, said to the user.
+ *
+ * Keyed by `PartialReason` and not by `string`: with an open key a reason the
+ * domain adds tomorrow resolves to `undefined` here, the row loses its caveat
+ * and the box is painted as if the engine had computed it whole. That is the
+ * quietest way this screen could lie.
+ */
+export const PARTIAL_TEXTS: Record<PartialReason, string> = {
   reductions_unknown:
     "falta restar las reducciones que no están en tus datos, así que esta casilla puede salir menor",
   treaty_limit_only:
@@ -41,6 +48,13 @@ export const PARTIAL_TEXTS: Record<string, string> = {
 
 export interface BoxRowView {
   key: string;
+  /**
+   * What the figure **is**, from the domain. Always present, and the only
+   * thing that says which number is the transmission value and which the
+   * acquisition one in a year with no checked table — which is every year but
+   * 2025, and the user's first real return is 2026.
+   */
+  name: string;
   /** The number of the box, when the year has a checked mapping. */
   box?: string;
   /** Its label, word for word from the form. */
@@ -62,6 +76,12 @@ export interface BoxBlockView {
   key: BoxBlockId;
   title: string;
   rows: BoxRowView[];
+  /**
+   * The year has a checked table and some of these rows still have no box in
+   * it. Said **once for the block** and not on every row: repeated on each of
+   * forty-odd rows it stopped being a caveat and became the wallpaper.
+   */
+  some_without_box: boolean;
 }
 
 export interface BoxesView {
@@ -83,6 +103,7 @@ const rowView = (entry: BoxEntry, index: number, names: NameIndex): BoxRowView =
   const operation = operationOf(entry, names);
   return {
     key: `${entry.concept}:${index}`,
+    name: conceptName(entry.concept),
     ...(entry.box === undefined ? {} : { box: entry.box }),
     ...(entry.label === undefined ? {} : { label: entry.label }),
     ...(entry.amount_eur === undefined ? {} : { amount_eur: entry.amount_eur }),
@@ -98,12 +119,16 @@ export const boxesView = (boxes: TaxBoxes, names: NameIndex): BoxesView => ({
   year: boxes.year,
   checked: boxes.mapping === "checked",
   ...(boxes.source === undefined ? {} : { source: boxes.source }),
-  blocks: BOX_BLOCKS.map((block) => ({
-    key: block,
-    title: BLOCK_TITLES[block],
-    rows: boxes.entries
+  blocks: BOX_BLOCKS.map((block) => {
+    const entries = boxes.entries
       .map((entry, index) => ({ entry, index }))
-      .filter(({ entry }) => blockOfConcept(entry.concept) === block)
-      .map(({ entry, index }) => rowView(entry, index, names)),
-  })).filter((block) => block.rows.length > 0),
+      .filter(({ entry }) => blockOfConcept(entry.concept) === block);
+    return {
+      key: block,
+      title: BLOCK_TITLES[block],
+      rows: entries.map(({ entry, index }) => rowView(entry, index, names)),
+      some_without_box:
+        boxes.mapping === "checked" && entries.some(({ entry }) => entry.box === undefined),
+    };
+  }).filter((block) => block.rows.length > 0),
 });

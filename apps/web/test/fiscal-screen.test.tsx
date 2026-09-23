@@ -48,6 +48,19 @@ describe("the fiscal screen", () => {
     expect(text(host)).toContain("nunca se usa la casilla de otro ejercicio");
   });
 
+  it("says what each figure is, instead of the same caveat on every row", async () => {
+    // 2027 has no checked table, which is the ordinary case: the card used to
+    // paint "Sin correspondencia comprobada" on forty-odd rows, five in a row
+    // per asset, and the reader could not tell the transmission value from the
+    // acquisition value.
+    const host = await open(2027);
+    const shown = text(host);
+    expect(shown).toContain("Base imponible del ahorro");
+    expect(shown).not.toContain("Sin correspondencia comprobada");
+    // And never the identifier the code knows a concept by.
+    expect(shown).not.toContain("base.savings");
+  });
+
   it("shows the informative returns with their verdict", async () => {
     const host = await open();
     const shown = text(host);

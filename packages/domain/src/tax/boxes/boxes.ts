@@ -24,7 +24,7 @@ import type { TaxYearReport } from "../report.js";
 import { taxYearWithChain } from "../year.js";
 import { type ConceptId, SIGNED_CONCEPTS } from "./concepts.js";
 import { type Draft, draftEntries } from "./draft.js";
-import type { BoxEntry, BoxMapping, TaxBoxes } from "./report.js";
+import type { BoxEntry, BoxMapping, PartialReason, TaxBoxes } from "./report.js";
 import { boxesOfYear, type YearBoxes, type YearBoxMapping } from "./years/index.js";
 
 const note = (code: string, message: string, details: Record<string, unknown>): Warning => ({
@@ -71,7 +71,7 @@ interface Collected {
   /** Boxes whose value the ledger does not hold. */
   missingValues: Set<string>;
   /** Boxes the engine cannot compute in full, by the reason why. */
-  partial: Map<string, Set<string>>;
+  partial: Map<PartialReason, Set<string>>;
   /** Rows where the form's own subtraction differs from the engine's result. */
   rounding: string[];
 }
@@ -125,7 +125,12 @@ const entryOf = (draft: Draft, table: YearBoxes | undefined, found: Collected): 
   };
 };
 
-const PARTIAL_MESSAGES: Record<string, string> = {
+/**
+ * Keyed by `PartialReason`, not by `string`: an open key lets a reason added
+ * tomorrow resolve to `undefined`, and the note that says the engine cannot
+ * compute a box whole disappears while the box keeps its figure.
+ */
+const PARTIAL_MESSAGES: Record<PartialReason, string> = {
   reductions_unknown:
     "the box takes the base less two remainders of reductions the ledger does not hold",
   treaty_limit_only:
@@ -163,7 +168,7 @@ const notesOf = (year: number, table: YearBoxes | undefined, found: Collected): 
   }
   for (const [reason, boxes] of [...found.partial].sort()) {
     notes.push(
-      note("tax_box_partial", PARTIAL_MESSAGES[reason] as string, {
+      note("tax_box_partial", PARTIAL_MESSAGES[reason], {
         reason,
         boxes: [...boxes].sort(),
       }),

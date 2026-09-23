@@ -120,8 +120,15 @@ describe("atlas tax --boxes", () => {
     expect(await h.exec(["tax", "2026", "--boxes"])).toBe(0);
     expect(h.text()).toContain("no están comprobadas en un formulario oficial");
     expect(h.text()).toContain("Nunca se usa la casilla de otro ejercicio");
-    expect(h.text()).toContain("(sin correspondencia comprobada)");
+    // Every figure still says **what it is**: the year with no table is the
+    // normal case (2025 is the only one checked and the first real return is
+    // 2026), so a column of amounts with no concept beside them would be the
+    // ordinary output, not an edge case.
+    expect(h.text()).toContain("Base imponible del ahorro");
+    expect(h.text()).toContain("Saldo de rendimientos del capital mobiliario");
     expect(h.text()).not.toContain("0460");
+    // And no raw ConceptId reaches the reader.
+    expect(h.text()).not.toContain("base.savings");
   });
 
   it("emits the layout with --json", async () => {

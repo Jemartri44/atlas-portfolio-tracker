@@ -47,14 +47,23 @@ export const BoxesCard = (props: { view: BoxesView }): JSX.Element => (
     <For each={props.view.blocks}>
       {(block) => (
         <Disclosure label={<span class="group-head">{block.title}</span>}>
+          <Show when={block.some_without_box}>
+            <p class="card-note">
+              Algunas de estas filas no tienen casilla comprobada en el formulario de{" "}
+              {props.view.year}: van por concepto, sin número.
+            </p>
+          </Show>
           <ul class="boxes">
             <For each={block.rows}>
               {(row) => (
                 <li class="box-row">
                   <span class="box-main">
-                    <span class="box-label">{row.label ?? "Sin correspondencia comprobada"}</span>
+                    <span class="box-label">{row.name}</span>
                     <Show when={row.operation}>
                       {(operation) => <span class="box-op">{operation()}</span>}
+                    </Show>
+                    <Show when={row.label}>
+                      {(label) => <span class="box-official">{label()}</span>}
                     </Show>
                     <Show when={row.partial}>
                       {(partial) => <span class="box-partial">Ojo: {partial()}</span>}

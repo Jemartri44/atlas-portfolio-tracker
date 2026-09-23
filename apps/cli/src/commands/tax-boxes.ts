@@ -10,7 +10,7 @@
 
 import type { Money } from "@atlas/domain";
 import type { BoxBlockId, BoxEntry, TaxBoxes } from "@atlas/domain/fiscal";
-import { BOX_BLOCKS, blockOfConcept } from "@atlas/domain/fiscal";
+import { BOX_BLOCKS, blockOfConcept, conceptName } from "@atlas/domain/fiscal";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 
@@ -68,15 +68,23 @@ const rowOf = (entry: BoxEntry): string =>
       : `de ${String(entry.origin_year)}`
     : `${entry.row.asset_id} ${entry.row.fiscal_date}`;
 
+/**
+ * The columns are "what it is" first and the literal label of the form second,
+ * because most years have no checked table —2025 is the only one that has one—
+ * and in those years the second column is empty. The raw `ConceptId` is gone:
+ * `gp.listed_shares.transmission` is a key of the code, not something a person
+ * reads beside Renta WEB (the same reason `atlas tax` prints the name of a
+ * criterion and not its number).
+ */
 const blockText = (title: string, entries: readonly BoxEntry[]): string =>
   `\n${title}\n${table(
-    ["casilla", "rótulo", "importe", "operación", "concepto"],
+    ["casilla", "concepto", "rótulo del formulario", "importe", "operación"],
     entries.map((entry) => [
       entry.box ?? "—",
-      entry.label ?? "(sin correspondencia comprobada)",
+      conceptName(entry.concept),
+      entry.label ?? "—",
       amountText(entry),
       rowOf(entry),
-      entry.concept,
     ]),
   )}`;
 

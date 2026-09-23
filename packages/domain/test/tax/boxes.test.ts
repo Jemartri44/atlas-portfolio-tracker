@@ -14,6 +14,7 @@ import {
   BOX_BLOCKS,
   blockOfConcept,
   type ConceptId,
+  conceptName,
   SECTIONS,
   transmissionSection,
 } from "../../src/tax/boxes/concepts.js";
@@ -481,5 +482,62 @@ describe("the denomination of the securities transmitted", () => {
     // Worse than a name, much better than a blank the user does not notice.
     const boxes = named("stock_anon", "", 2025);
     expect(entry(boxes, "gp.listed_shares.name").text).toBe("stock_anon");
+  });
+});
+
+/**
+ * What each figure **is**, in Spanish.
+ *
+ * It matters more than the literal label of the form: 2025 is the only year
+ * with a checked box table and the user's first real return is 2026, so in the
+ * normal case there is no label at all and this is the only thing that tells
+ * the reader which number is the transmission value and which the acquisition
+ * one. Both interfaces read it from here for the same reason they read the
+ * blocks from here.
+ */
+describe("what every figure is called", () => {
+  it("names a field of a disposal by the field, not by its section", () => {
+    // The section is already said by the block the row is in, and saying it
+    // again in every row is what made the card unreadable.
+    expect(conceptName("gp.listed_shares.transmission")).toBe("Importe de las transmisiones");
+    expect(conceptName("gp.iic.transmission")).toBe("Importe de las transmisiones");
+    expect(conceptName("gp.crypto.acquisition")).toBe("Valor de adquisición");
+    expect(conceptName("gp.etf.loss_imputable")).toBe("Pérdida patrimonial computable");
+  });
+
+  it("names the two totals a section prints under its rows", () => {
+    expect(conceptName("gp.iic.gains")).toBe("Suma de ganancias patrimoniales");
+    expect(conceptName("gp.other.losses")).toBe("Suma de pérdidas patrimoniales");
+  });
+
+  it("names the concepts that do not belong to one disposal", () => {
+    expect(conceptName("rcm.interest")).toBe("Intereses");
+    expect(conceptName("base.savings")).toBe("Base imponible del ahorro");
+    // `prior_years` is not a section, although `loss` is a field of a row:
+    // the name is read off the concept itself, not off the field.
+    expect(conceptName("gp.prior_years.loss")).toBe(
+      "Pérdida de un ejercicio anterior imputable a este",
+    );
+  });
+
+  it("leaves no figure of a real return without a name", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "fund_f", "2024-02-10", "10", "100");
+    sell(b, "fund_f", "2025-09-01", "10", "80");
+    buy(b, "stock_s", "2024-02-10", "10", "100");
+    sell(b, "stock_s", "2025-09-01", "10", "120");
+    b.dividend({
+      account_id: "acc_a",
+      asset_id: "stock_s",
+      value_date: "2025-03-10",
+      gross: "100",
+      withholding_origin: "15",
+      source_country: "US",
+    });
+    const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
+    expect(boxes.entries.length).toBeGreaterThan(20);
+    for (const item of boxes.entries) {
+      expect(conceptName(item.concept)).toMatch(/\S/);
+    }
   });
 });
