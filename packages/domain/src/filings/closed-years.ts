@@ -145,15 +145,28 @@ export const closedYearImpact = (
         }
       }
     }
-    if (byDate || moves.length > 0) {
-      impacts.push({
-        model: entry.model,
-        year: entry.year,
-        filing_id: entry.filing_id,
-        filed_at: entry.filed_at,
-        by_date: byDate,
-        moves,
-      });
+    // **Two reasons to warn, asked one at a time.** They used to be one
+    // `byDate || moves.length > 0`, and the coverage of that expression came
+    // and went between runs of the same commit: v8 attributes the halves of a
+    // short-circuit by the order they are evaluated, so a run in which the
+    // left half is always true never records the right one, and the gate that
+    // holds the domain at 100 % of branches turned a green commit red. The
+    // behaviour is identical; what changes is that each branch is its own
+    // statement and cannot be attributed to the other.
+    const impact = (): ClosedYearImpact => ({
+      model: entry.model,
+      year: entry.year,
+      filing_id: entry.filing_id,
+      filed_at: entry.filed_at,
+      by_date: byDate,
+      moves,
+    });
+    if (byDate) {
+      impacts.push(impact());
+      continue;
+    }
+    if (moves.length > 0) {
+      impacts.push(impact());
     }
   }
   return impacts;
