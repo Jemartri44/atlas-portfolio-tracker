@@ -7,6 +7,20 @@
  * label, and a figure declared next to the one computed today.
  */
 
+/* ---- The warning of a year already filed -------------------------------- */
+
+.moved-figures {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+}
+
+.moved-amounts {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ---- The header: which tax year ----------------------------------------- */
 
 /* The same control as the date of the analytical screens (§5.13), with a

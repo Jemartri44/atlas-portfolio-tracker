@@ -20,6 +20,7 @@ import {
   type Warning,
   yearOf,
 } from "@atlas/domain";
+import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Notice } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
@@ -28,7 +29,7 @@ import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
 import { store, today } from "../../ledger/state.js";
-import { changeSettings } from "../../ledger/write.js";
+import { changeSettings, closedYearsOfSettings } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   candidateSettings,
@@ -55,6 +56,7 @@ export default function ConfiguracionRoute(): JSX.Element {
   const [error, setError] = createSignal<AppError | undefined>(undefined);
   const [silenced, setSilenced] = createSignal<readonly Warning[] | undefined>(undefined);
   const [moved, setMoved] = createSignal<readonly FiscalYearImpact[] | undefined>(undefined);
+  const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
   const [invalidating, setInvalidating] = createSignal<readonly InvalidatedEvent[] | undefined>(
     undefined,
   );
@@ -116,8 +118,14 @@ export default function ConfiguracionRoute(): JSX.Element {
               return;
             }
             const movedResult = movedFiscalYears(snapshot.events, current(), next, yearOf(date));
-            if (movedResult.length > 0 && moved() === undefined) {
+            // A filed return can move without a single realized gain moving:
+            // the window, the transfer criterion and the income category change
+            // the base on their own (FR-018). So the question is asked for
+            // either of the two, and it names the return.
+            const declaredResult = await closedYearsOfSettings(next);
+            if ((movedResult.length > 0 || declaredResult.length > 0) && moved() === undefined) {
               setMoved(movedResult);
+              setClosedYears(declaredResult);
               return;
             }
           }
@@ -209,6 +217,7 @@ export default function ConfiguracionRoute(): JSX.Element {
             <SettingsDialogs
               silenced={silenced()}
               moved={moved()}
+              closedYears={closedYears()}
               invalidating={invalidating()}
               onDismiss={(which) => {
                 if (which === "silenced") {

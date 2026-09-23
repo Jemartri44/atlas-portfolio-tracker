@@ -9,14 +9,23 @@
 // «Anular» destructive, never the look of a main action.
 
 import { ledgerEntries } from "@atlas/domain";
+import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Dialog, EmptyState, Field, Notice, Parts, Tag } from "../../components/index.js";
+import {
+  ClosedYearNotice,
+  Dialog,
+  EmptyState,
+  Field,
+  Notice,
+  Parts,
+  Tag,
+} from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { store } from "../../ledger/state.js";
-import { reverse } from "../../ledger/write.js";
+import { closedYearsOfReversal, reverse } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { detailView } from "../../view-models/index.js";
 import { saleResult } from "../../view-models/sale.js";
@@ -31,9 +40,24 @@ export default function MovimientoDetalleRoute(): JSX.Element {
   const [reason, setReason] = createSignal("");
   const [asking, setAsking] = createSignal(false);
   const [error, setError] = createSignal<string | undefined>(undefined);
+  const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
   const [dependents, setDependents] = createSignal<
     readonly { id: string; type: string; error: string }[]
   >([]);
+
+  /**
+   * Which filed returns this annulment would reach, computed when the dialog
+   * opens and not after writing: it is the only moment it is useful (FR-018).
+   * The reason does not change a figure, so the candidate is built with a
+   * placeholder when the field is still empty.
+   */
+  const askToReverse = (): void => {
+    setAsking(true);
+    setClosedYears([]);
+    void closedYearsOfReversal(params.id, reason().trim() === "" ? "anulación" : reason()).then(
+      setClosedYears,
+    );
+  };
 
   const onReverse = async (): Promise<void> => {
     setError(undefined);
@@ -105,7 +129,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                           </A>
                         </Show>
                         <Show when={view().status !== "reversed" && view().status !== "reversal"}>
-                          <button type="button" class="danger" onClick={() => setAsking(true)}>
+                          <button type="button" class="danger" onClick={() => askToReverse()}>
                             Anular
                           </button>
                         </Show>
@@ -201,6 +225,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                       No se borra nada: se registra una anulación que deja este movimiento sin
                       efecto. El original sigue en tus datos, marcado como anulado.
                     </p>
+                    <ClosedYearNotice impacts={closedYears()} />
                     <Field
                       id="reverse-reason"
                       kind="text"

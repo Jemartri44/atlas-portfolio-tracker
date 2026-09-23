@@ -197,8 +197,14 @@ const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
  *    boot carries none of it: it measures 72,7 KB, lower than before the
  *    screen existed, because the domain now travels in one chunk
  *    (`vite.config.ts`). Measured total **231,5 KB**; the ceiling is 232,5.
+ *  - The warning of a year already filed in the four places the web writes —
+ *    Registrar, Corregir, Anular and Configuración— with the figures it moves,
+ *    and the way into the fiscal screen from Ajustes. The warning asks the
+ *    engine from the write layer, which is lazily loaded like the screen, so
+ *    the boot does not move: 72,8 KB. Measured total **233,0 KB**; the ceiling
+ *    is 234,0.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 232.5 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 234.0 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

@@ -8,6 +8,7 @@
 // beside it, and touching the form takes it away (docs/design/system.md §7.4).
 
 import type { EventPreview, LedgerEvent, LedgerState } from "@atlas/domain";
+import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Field } from "../../components/index.js";
@@ -16,7 +17,7 @@ import { countOf } from "../../format/number.js";
 import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
 import { today } from "../../ledger/state.js";
-import { correct, previewCorrectionDraft, previewDraft, recordDraft } from "../../ledger/write.js";
+import { correct, recordDraft } from "../../ledger/write.js";
 import { GRID, mediaQuery } from "../../shell/media.js";
 import type { EventFormSpec, FormValues } from "../../view-models/forms/index.js";
 import {
@@ -35,6 +36,7 @@ import { Effect } from "./Effect.jsx";
 import { FormActions, revealField } from "./FormActions.jsx";
 import { FormFields } from "./FormFields.jsx";
 import { Reloaded, ThesisFirst } from "./FormNotices.jsx";
+import { previewStep } from "./preview-step.js";
 
 interface EventFormProps {
   spec: EventFormSpec;
@@ -59,6 +61,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const [typed, setTyped] = createSignal<ReadonlySet<string>>(new Set());
   const revealed = (name: string): boolean => props.correcting === undefined || typed().has(name);
   const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
+  const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
   // A refusal about one field goes under it; the rest, next to the button.
   const [fieldErrors, setFieldErrors] = createSignal<Record<string, string>>({});
   const [problem, setProblem] = createSignal<string | undefined>(undefined);
@@ -109,15 +112,13 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     }
     setFieldErrors({});
     try {
-      // A correction is previewed as it will be written: the original reversed
-      // and the corrected event in its place, never the two added together.
-      const draft = toDraft(props.spec, values());
-      const correcting = props.correcting;
-      setPreview(
-        await (correcting === undefined
-          ? previewDraft(draft)
-          : previewCorrectionDraft(correcting.id, draft, reason().trim())),
+      const step = await previewStep(
+        toDraft(props.spec, values()),
+        props.correcting,
+        reason().trim(),
       );
+      setPreview(step.preview);
+      setClosedYears(step.closedYears);
       setStep("preview");
       if (!wide()) {
         window.scrollTo?.({ top: 0 });
@@ -229,6 +230,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
           problem={problem()}
           failure={failure()}
           confirmLabel={props.correcting === undefined ? "Registrar" : "Rectificar"}
+          closedYears={closedYears()}
           onBack={() => setStep("form")}
           onConfirm={() => void onConfirm()}
         />
