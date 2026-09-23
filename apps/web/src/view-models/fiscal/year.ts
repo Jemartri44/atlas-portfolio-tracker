@@ -76,7 +76,10 @@ export interface YearView {
   expired: PendingView[];
   doubtful: StakeView[];
   settled: StakeView[];
-  /** Nothing happened this year: no operation of any kind and no balance. */
+  /**
+   * Nothing happened this year: no operation of any kind, no balance pending
+   * and none that expired at its close.
+   */
   empty: boolean;
 }
 
@@ -189,10 +192,14 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
     expired: report.compensation.expired.map((loss) => pendingView(loss, report.year)),
     doubtful: report.doubtful.map((stake) => stakeView(stake, subjectOf)),
     settled: report.settled.map((stake) => stakeView(stake, subjectOf)),
+    // A balance that **expired** this year counts: it is the year a loss stops
+    // being usable, which is the one thing about it that hurts, and the screen
+    // used to answer "No hay nada que declarar" precisely then.
     empty:
       gains.length === 0 &&
       movable.length === 0 &&
       report.compensation.pending.length === 0 &&
+      report.compensation.expired.length === 0 &&
       report.base_eur.isZero(),
   };
 };

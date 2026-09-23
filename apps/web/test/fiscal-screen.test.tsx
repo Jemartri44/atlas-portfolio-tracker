@@ -172,6 +172,81 @@ describe("the fiscal screen", () => {
   });
 });
 
+/**
+ * The year a loss stops being usable.
+ *
+ * A balance of 2027 with four years of carry-forward lives through 2031 and is
+ * gone in 2032; in 2031 the engine offsets what it can and reports the rest as
+ * expired at its close (checked: with a gain in 2031 it is offset, with a gain
+ * in 2032 it is not). The screen used to answer "No hay nada que declarar"
+ * that very year, because `empty` looked at what was pending and never at what
+ * had just died.
+ */
+describe("the year a pending loss expires", () => {
+  /** A sale at a loss in 2027 and nothing else: 5.000,00 down, usable to 2031. */
+  const WITH_LOSS = [
+    goldenLines().find((line) => line.includes('"type":"settings_changed"')) as string,
+    goldenLines().find((line) => line.includes('"type":"account_created"')) as string,
+    goldenLines().find((line) => line.includes('"type":"asset_created"')) as string,
+    JSON.stringify({
+      schema_version: 1,
+      id: `01P${"0".repeat(20)}BY1`,
+      recorded_at: "2027-01-05T18:00:00.000Z",
+      type: "buy",
+      account_id: "acc_mi",
+      asset_id: "ast_world",
+      trade_date: "2027-01-05",
+      value_date: "2027-01-05",
+      quantity: "100",
+      unit_price: "100",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2027-01-05",
+      fee: "0",
+      source: "manual",
+      fingerprint: "sha256:buy",
+    }),
+    JSON.stringify({
+      schema_version: 1,
+      id: `01P${"0".repeat(20)}SX1`,
+      recorded_at: "2027-06-01T18:00:00.000Z",
+      type: "sell",
+      account_id: "acc_mi",
+      asset_id: "ast_world",
+      trade_date: "2027-06-01",
+      value_date: "2027-06-01",
+      quantity: "100",
+      unit_price: "50",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2027-06-01",
+      fee: "0",
+      source: "manual",
+      fingerprint: "sha256:sell",
+    }),
+  ].join("\n");
+
+  const openYear = async (year: number) => {
+    await openLedger(`${WITH_LOSS}\n`);
+    const host = await show(`/fiscal?ejercicio=${year}`, Fiscal, "/fiscal");
+    await settle(30);
+    return host;
+  };
+
+  it("does not say there is nothing to declare the year a balance dies", async () => {
+    const shown = text(await openYear(2031));
+    expect(shown).not.toContain("No hay nada que declarar");
+    expect(shown).toContain("Caducadas al cerrar 2031, sin llegar a compensarse");
+    expect(shown).toContain("−5.000,00 €");
+  });
+
+  it("still says the years in which it is only pending", async () => {
+    const shown = text(await openYear(2030));
+    expect(shown).not.toContain("No hay nada que declarar");
+    expect(shown).toContain("Se pueden compensar hasta 2031");
+  });
+});
+
 describe("a ledger with nothing in it", () => {
   /** Only the catalogue: no purchase, no cash, no return. */
   const SETUP_ONLY = [
