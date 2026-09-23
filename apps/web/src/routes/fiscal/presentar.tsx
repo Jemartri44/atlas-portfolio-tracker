@@ -25,6 +25,7 @@ import { today } from "../../ledger/state.js";
 import { recordDraft } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { filingFields, filingTitle } from "../../view-models/fiscal/index.js";
+import { asEventDraft } from "../../view-models/forms/values.js";
 import { RequireLedger } from "../guard.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
 
@@ -44,6 +45,12 @@ export default function PresentarRoute(): JSX.Element {
   const [typed, setTyped] = createSignal<Record<string, string>>({});
   const [meta, setMeta] = createSignal({ filed_at: today(), receipt: "", notes: "" });
   const [problem, setProblem] = createSignal<string | undefined>();
+  /**
+   * What is wrong with one figure, **on that figure**. An amount with two
+   * commas in it is a mistake in a field, and the notice above the button
+   * makes the reader hunt for which of a dozen fields it is about.
+   */
+  const [fieldProblem, setFieldProblem] = createSignal<Record<string, string>>({});
   const [failure, setFailure] = createSignal<AppError | undefined>();
   const [busy, setBusy] = createSignal(false);
 
@@ -72,7 +79,9 @@ export default function PresentarRoute(): JSX.Element {
         const record = async (): Promise<void> => {
           setProblem(undefined);
           setFailure(undefined);
+          setFieldProblem({});
           const declared = new Map<string, string>();
+          const wrong: Record<string, string> = {};
           for (const field of fields()) {
             const raw = typed()[field.key];
             if (raw === undefined) {
@@ -80,10 +89,18 @@ export default function PresentarRoute(): JSX.Element {
             }
             const parsed = parseDecimalInput(raw);
             if (!parsed.ok) {
-              setProblem(`${field.label}: ${parsed.message}`);
-              return;
+              wrong[field.key] = parsed.message;
+              continue;
             }
             declared.set(field.key, parsed.value);
+          }
+          if (Object.keys(wrong).length > 0) {
+            // Every one of them at once, and nothing typed is lost: sending
+            // the reader back one field at a time is how a form of a dozen
+            // amounts becomes a dozen round trips.
+            setFieldProblem(wrong);
+            setProblem("Hay una cifra que no se entiende. Está marcada abajo.");
+            return;
           }
           const current = meta();
           if (current.receipt.trim() === "") {
@@ -99,7 +116,7 @@ export default function PresentarRoute(): JSX.Element {
           });
           setBusy(true);
           try {
-            const result = await recordDraft(draft as never);
+            const result = await recordDraft(asEventDraft(draft));
             if (result.ok) {
               navigate(`/fiscal?ejercicio=${year}`, { replace: true });
               return;
@@ -149,6 +166,7 @@ export default function PresentarRoute(): JSX.Element {
                       sensitive
                       label={field.label}
                       value={shown(field.key, field.computed)}
+                      error={fieldProblem()[field.key]}
                       onInput={(value) => setTyped({ ...typed(), [field.key]: value })}
                     />
                   )}

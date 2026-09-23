@@ -96,6 +96,22 @@ describe("recording what was filed", () => {
     expect(blob.text).toBe(goldenText());
   });
 
+  it("marks the figure that is not a number, on that figure", async () => {
+    // A mistake in a field is said in the field. The notice above the button
+    // used to carry it, and a form with a dozen amounts made the reader hunt
+    // for which one it was about.
+    const host = await openForm();
+    type(host, "f-base", "1,2,3");
+    type(host, "f-receipt", "100-2027-ABCDEFGHIJKL");
+    await press(host, "Registrar lo presentado");
+    const field = host.querySelector("#f-base") as HTMLInputElement;
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(text(host.querySelector("#f-base-error"))).toContain("coma");
+    // And nothing typed is lost.
+    expect(field.value).toBe("1,2,3");
+    expect(blob.text).toBe(goldenText());
+  });
+
   it("writes what the form says, not what the application computes", async () => {
     const host = await openForm();
     type(host, "f-base", "200,00");

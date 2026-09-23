@@ -108,8 +108,23 @@ export const toDraft = (spec: EventFormSpec, values: FormValues): Draft<Supporte
       draft[field.name] = value;
     }
   }
-  return draft as unknown as Draft<SupportedEvent>;
+  return asEventDraft(draft);
 };
+
+/**
+ * A record built from what a person typed, handed to the domain as a draft.
+ *
+ * **The one place** the application makes that assertion. It is not a promise
+ * that the object is well formed — nothing here checks a single field — it is
+ * the boundary between untyped input and a domain that validates it:
+ * `recordEvent` runs `validateShape` before a line is written, and a draft
+ * that does not comply is refused there with its own message. A screen that
+ * writes its own `as never` puts that boundary wherever it happens to be
+ * editing, which is how `presentar.tsx` ended up silencing the compiler on
+ * the only event the web writes without a typed form behind it.
+ */
+export const asEventDraft = (draft: Record<string, unknown>): Draft<SupportedEvent> =>
+  draft as unknown as Draft<SupportedEvent>;
 
 /**
  * Values of an existing event, to correct it: the draft it came from, as text
