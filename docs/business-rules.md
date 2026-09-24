@@ -323,7 +323,7 @@ Algunos parámetros tienen un **valor por defecto documentado** (el que aplica m
 | `model_721_alert_threshold_eur` | 45.000€, con el mismo criterio que el del 720 | 5.8 |
 | `renta_season_start`, `renta_season_end` | `04-01` y `06-30`, como `MM-DD`. Semanas en que la tarjeta fiscal del Resumen sube arriba del todo: las fechas de la campaña se mueven cada año, así que también son configuración | — |
 | `savings_tax_brackets[]` | Ver 5.1 | 5.1 |
-| `fiscal_date_rule{}` | cotizados → contratación; fondos → fecha valor. **Mapa parcial**, como el anterior (ADR-0018) | 5.10 |
+| `fiscal_date_rule{}` | cotizados → contratación; fondos → fecha valor. **Mapa parcial**, como el anterior (ADR-0018). Cambiarlo puede dejar el `fx_rate` guardado de una línea sin corresponder a la fecha fiscal nueva; el motor nunca recalcula en silencio, lo señala `check --deep` y la corrección es la de siempre, anulación más línea nueva (ADR-0029, punto 10; criterio nuevo en `docs/fiscal-questions.md`) | 5.10 |
 | `wash_sale_window{}` | cripto `"1y"`; cotizados **y fondos, monetarios incluidos** `"2m"` (de fecha a fecha; `wash_sale_window_days` en días es la forma antigua aceptada). **Mapa parcial**: un tipo de activo ausente toma su valor por defecto, para que añadir un tipo nuevo no invalide la configuración ya escrita (ADR-0018) | 5.4 |
 | `wash_sale_transfer_counts` | `true`: un traspaso entrante cuenta como adquisición a efectos de la regla de recompra | 5.4 |
 | `income_category` | Por tipo de activo: `capital_gain` (ganancia patrimonial, art. 33) o `movable_capital` (rendimiento del capital mobiliario por transmisión, art. 25.2). **Por defecto `movable_capital` para `etc` y `etp`** (criterio **#24**: consulta vinculante DGT V0267-25, un ETC es un valor de deuda) y `capital_gain` para el resto. **Mapa parcial** (ADR-0018). Es el campo que ADR-0021 dejó previsto para resolver el asunto de los ETC sin tocar código | 5.1 |
@@ -332,7 +332,7 @@ Algunos parámetros tienen un **valor por defecto documentado** (el que aplica m
 | `treaty_withholding_pct{}` | **Sin valor por defecto, a propósito**: tipo máximo de retención en origen que el convenio de doble imposición permite a cada país, por clave ISO 3166-1 alfa-2. Son cifras de tratados, verificables una a una; un dividendo de un país que no esté aquí, o sin `source_country`, no recibe deducción calculada y la salida dice por qué | 5.6 |
 | `transfer_max_days` | Pendiente. Días que puede estar abierta una solicitud de traspaso antes de que la aplicación avise; contados hasta la fecha de la consulta, no hasta hoy | 5.2 |
 | `tax_residence` | España | 5.9 |
-| `notification_email` | — | — |
+| ~~`notification_email`~~ | **Sale de `Settings` (ADR-0028, Ronda 8).** El destinatario del correo, y un interruptor que decide si los correos llevan importes (por defecto, no), viven **solo en SSM Parameter Store**, nunca en `Settings` ni en el repositorio: una foto completa del libro (`settings_changed`) escrita por un cliente antiguo los borraría sin avisar (ADR-0026, caso 6; enmienda de ADR-0018, `docs/data-schema.md` §5). El campo `notification_email` se sigue **aceptando al cargar** líneas `settings_changed` ya escritas, para no invalidarlas (ADR-0018: retirarlo del validador sería endurecer), pero la interfaz deja de ofrecerlo | — |
 | `job_frequencies{}` | Ver especificación | — |
 
 **Requisitos:**
