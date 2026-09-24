@@ -107,6 +107,15 @@ describe("preparePendingDraft", () => {
     await expect(preparePendingDraft(deps, undefined, 30, goldBuy)).rejects.toMatchObject({
       code: "draft_not_needed",
     });
+    // Nor when the user typed half of it: only a pair nobody typed waits
+    // (review of PR #75) — the half typed is the user's, and the ledger's
+    // validation says what is missing.
+    await expect(
+      preparePendingDraft(deps, history, 30, { ...goldBuy, fx_rate_date: "2026-04-01" }),
+    ).rejects.toMatchObject({ code: "draft_not_needed" });
+    await expect(
+      preparePendingDraft(deps, history, 30, { ...goldBuy, fx_rate: "1.11" }),
+    ).rejects.toMatchObject({ code: "draft_not_needed" });
     // Nor when the user typed the rate.
     await expect(
       preparePendingDraft(deps, history, 30, {

@@ -176,6 +176,29 @@ describe("ruleChangeRates: said before the change is confirmed (mutant 15)", () 
     ).toEqual([]);
   });
 
+  it("does not call late a rate dated on the new fiscal date itself (review of PR #75)", () => {
+    // Bought on the 2nd, settled on the 6th, at the rate of the 6th: by the
+    // value date its rate is exactly the one of its fiscal date.
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      trade_date: "2026-01-02",
+      value_date: "2026-01-06",
+      currency: "USD",
+      fx_rate: "1.1195",
+      fx_rate_date: "2026-01-06",
+    });
+    const events = b.build();
+    expect(
+      ruleChangeRates(history, events, DEFAULT_SETTINGS, rules({ etc: "value_date" }), 30).lines,
+    ).toEqual([]);
+    expect(
+      ruleChangeRates(undefined, events, DEFAULT_SETTINGS, rules({ etc: "value_date" }), 30).lines,
+    ).toEqual([expect.objectContaining({ verdict: "unverifiable" })]);
+  });
+
   it("cannot verify what the history does not reach", () => {
     const b = new LedgerBuilder();
     catalogue(b);

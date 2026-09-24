@@ -200,6 +200,23 @@ describe("rateConfirmations", () => {
       fx_rate_date: "2026-01-02",
     };
     expect(rateConfirmations(history, state, dated, 30)).toHaveLength(1);
+    // The official value with the wrong date alone still asks (review of PR
+    // #75): Saturday the 3rd takes Friday's 1.1169, dated the 2nd.
+    const saturday = {
+      ...goldBuy,
+      trade_date: "2026-01-03",
+      fx_rate: "1.1169",
+      fx_rate_date: "2026-01-03",
+    };
+    expect(rateConfirmations(history, state, saturday, 30)).toEqual([
+      {
+        point: expect.objectContaining({ rate: "1.1169", rate_date: "2026-01-03" }),
+        official: { rate: "1.1169", date: "2026-01-02" },
+      },
+    ]);
+    expect(
+      rateConfirmations(history, state, { ...saturday, fx_rate_date: "2026-01-02" }, 30),
+    ).toEqual([]);
   });
 
   it("asks nothing where the history cannot say", () => {

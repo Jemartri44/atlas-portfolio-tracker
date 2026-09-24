@@ -112,6 +112,48 @@ describe("the notes of the ECB rates in the report", () => {
     );
   });
 
+  it("follows a lot through its lineage and to its root, each on its own (review of PR #75)", () => {
+    // Bought in one fund, transferred to another, sold from there: the sale
+    // depends on the purchase (the root) and on the transfer (the lineage).
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const buy = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      trade_date: "2027-03-01",
+      value_date: "2027-03-01",
+      quantity: "10",
+      unit_price: "10",
+    });
+    const moved = b.transfer({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      quantity_out: "10",
+      nav_out: "11",
+      value_date_out: "2027-09-01",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_bonds",
+      quantity_in: "11",
+      nav_in: "10",
+      value_date_in: "2027-09-01",
+    });
+    const sell = b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      trade_date: "2028-05-02",
+      value_date: "2028-05-02",
+      quantity: "11",
+      unit_price: "12",
+    });
+    const events = b.build();
+    const noted = (event_id: string) =>
+      taxYear(events, 2028, { today, rateFindings: [{ event_id, code: "fx_rate_mismatch" }] })
+        .notes.filter((entry) => entry.code === "tax_fx_rate_finding")
+        .map((entry) => [entry.event_id, entry.details.events]);
+    expect(noted(buy.id)).toEqual([[sell.id, [buy.id]]]);
+    expect(noted(moved.id)).toEqual([[sell.id, [moved.id]]]);
+  });
+
   it("notes a dividend with its own finding, and carries the notes to the boxes", () => {
     const { events, dividend } = ledger();
     const { report, chain } = taxYearWithChain(events, 2028, {

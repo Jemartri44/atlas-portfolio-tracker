@@ -84,6 +84,33 @@ describe("resolveRate", () => {
     });
   });
 
+  it("does not call stale a currency still published only because F is past the history (review of PR #75)", () => {
+    // Two months after the last publication, the dollar is not stale: the
+    // ECB kept publishing it until the end of the history, which simply does
+    // not reach F yet.
+    expect(resolve("USD", "2026-06-01")).toEqual({
+      kind: "not_yet_published",
+      currency: "USD",
+      latest: "2026-03-31",
+    });
+  });
+
+  it("knows a weekend right after a history that ends on a Friday (review of PR #75)", () => {
+    // The same history without its last two days: it ends on Friday the 27th.
+    const [header, ...rows] = ecbFixture("eurofxref-hist.csv").split("\n");
+    const friday = readEcbZipCsv(
+      [header, ...rows.filter((row) => !row.startsWith("2026-03-3"))].join("\n"),
+    );
+    expect(isDecided(friday, "2026-03-28")).toBe(true);
+    expect(resolveRate(friday, "USD", "2026-03-29", 30)).toMatchObject({
+      kind: "resolved",
+      date: "2026-03-27",
+    });
+    expect(resolveRate(friday, "USD", "2026-03-30", 30)).toMatchObject({
+      kind: "not_yet_published",
+    });
+  });
+
   it("never makes the euro wait", () => {
     expect(resolve("EUR", "2026-06-06")).toEqual({ kind: "euro", rate: "1", date: "2026-06-05" });
     expect(resolve("EUR", "2026-06-03")).toEqual({ kind: "euro", rate: "1", date: "2026-06-03" });
