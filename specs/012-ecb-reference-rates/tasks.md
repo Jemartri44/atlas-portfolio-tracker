@@ -71,5 +71,5 @@ Orden del encargo (§3). Cada tarea, un commit atómico en verde (`lint`, tests 
 ## Cierre
 
 - [x] T035 Revisión por mutación (los 26 de §5 más los de D4).
-- [ ] T036 Verificación en el navegador con capturas en `~/atlas-private/capturas/`.
-- [ ] T037 `questions.md` al día; PR a `develop`.
+- [x] T036 Verificación en el navegador con capturas en `~/atlas-private/capturas/`.
+- [x] T037 `questions.md` al día; PR a `develop`.
