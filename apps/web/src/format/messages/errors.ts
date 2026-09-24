@@ -224,6 +224,16 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   dependent_events: () => "Hay movimientos posteriores que se apoyan en este: rectifícalos antes.",
   invalid_local_config: () =>
     "La configuración local de la carpeta (atlas.config.json) no se entiende. Corrígela en la carpeta o bórrala para volver a los valores por defecto.",
+  invalid_price_config: () =>
+    "La configuración de las fuentes de precios de la carpeta no se entiende. La escribe el usuario: corrígela desde la consola.",
+  invalid_price_status: () =>
+    "El registro de las fuentes de precios de la carpeta no se entiende: la consola no descargará nada hasta que se arregle.",
+  invalid_symbols_file: () =>
+    "La correspondencia de símbolos de la carpeta no se entiende. Se arregla desde la consola, declarando otra vez los símbolos.",
+  price_file_newer_version: (d, n) =>
+    `Los precios de ${n.one(d.asset_id)} los escribió una versión más nueva de la aplicación: ese activo se queda sin precio automático. Recarga la aplicación para actualizarla.`,
+  price_line_invalid: (d, n) =>
+    `Los precios de ${n.one(d.asset_id)} tienen una línea que no se entiende: ese activo se queda sin precio automático, porque nunca se leen a medias.`,
   second_live_correction: () =>
     "Ese movimiento ya tiene una corrección en vigor: solo puede tener una. Para cambiarlo otra vez, edita la corrección, no el original.",
   broker_settled_eur_in_eur: () =>
