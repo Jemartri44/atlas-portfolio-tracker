@@ -603,6 +603,15 @@ const LAZY_ONLY = [
   { path: "/packages/adapters/src/ledger-store/browser/transfer.ts", what: "exportar e importar" },
   // Block 6: the correction chain of the rates after a change of rule.
   { path: "/src/ledger/rate-corrections.ts", what: "la corrección de los tipos del BCE" },
+  // Feature 013: **nothing of the automatic prices on the boot path**, from its
+  // first commit. The door, the folder of the domain and the reader of the web.
+  { path: "/packages/domain/src/quotes/", what: "los precios automáticos" },
+  { path: "/packages/domain/src/quotes.ts", what: "la puerta de los precios automáticos" },
+  {
+    path: "/packages/adapters/src/ledger-store/browser/prices.ts",
+    what: "la lectura de los precios",
+  },
+  { path: "/src/prices/", what: "los precios automáticos de la web" },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */

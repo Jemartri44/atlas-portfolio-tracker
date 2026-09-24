@@ -143,13 +143,7 @@ const assetItems = (
   const source = category === "crypto" ? holdings.crypto : holdings.securities;
   return source
     .map((position) => {
-      const valued = valueAt(
-        holdings.state,
-        position.asset_id,
-        position.quantity,
-        year,
-        holdings.state.fiscalSettings,
-      );
+      const valued = valueAt(holdings.state, position.asset_id, position.quantity, year);
       return {
         category,
         account_id: position.account_id,

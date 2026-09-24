@@ -13,17 +13,26 @@
 
 import { type CivilDate, daysBetween } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
-import { Decimal } from "../money/decimal.js";
+import type { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
 import { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
-import type { AssetId, ValuationEvent } from "../schema/events.js";
+import type { AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
+import { latestValuations, manualPriceOf } from "./manual-price.js";
 import type { LedgerState } from "./state.js";
 
-/** Where a price came from. The manual one always wins (decision (j) of prompt 005). */
+/** Where a price came from. */
 export type PriceOrigin = "manual" | "external";
+
+/**
+ * The sources of automatic daily closes (ADR-0031; CoinGecko left the feature
+ * by decision D-Q5 of the direction). Declared here, with every type of the
+ * gate: the modules of `quotes/` import them from this file, never the other
+ * way round (§6.4 (b) of prompt 013).
+ */
+export type QuoteSource = "eodhd" | "alpha_vantage";
 
 /**
  * A quote from outside the ledger, already parsed and in memory. Phase 4 will
@@ -116,22 +125,6 @@ const lookupOf = (
   };
 };
 
-const fromValuation = (
-  event: ValuationEvent,
-): {
-  date: CivilDate;
-  unit_value: Decimal;
-  currency: Currency;
-  fx_rate: Decimal;
-  fx_rate_date: CivilDate;
-} => ({
-  date: event.date,
-  unit_value: Decimal.parse(event.unit_value),
-  currency: event.currency,
-  fx_rate: Decimal.parse(event.fx_rate),
-  fx_rate_date: event.fx_rate_date,
-});
-
 /**
  * The dates on which the ledger knows **any** price at all, sorted and without
  * repeats.
@@ -139,29 +132,16 @@ const fromValuation = (
  * It lives here, and not in whoever asks, for the reason this module exists:
  * "on which days does a price exist" is a question about prices, and
  * `state.valuations` is read behind this one door (the architecture test
- * enforces it). When phase 4 adds automatic quotes, the dates of the external
- * source are added **here** and every caller gains them for free.
+ * enforces it). **The dates of the automatic quotes are not added here**
+ * (feature 013, §6.4 (h)): they reach the views of presentation as data of
+ * their own (`quoteDates` of `@atlas/domain/quotes`), never through the state
+ * of the ledger, which the fiscal path reads.
  *
  * The time series uses it: between two valuations the ledger knows nothing new,
  * so these are the only dates worth projecting at.
  */
 export const priceDates = (state: LedgerState): CivilDate[] =>
   [...new Set(state.valuations.map((event) => event.date))].sort();
-
-/**
- * Last manual price per asset on or before `date`. `state.valuations` is
- * already in (date, file position) order, so the last one seen wins and a tie
- * is broken by file position (decision (b) of prompt 004).
- */
-const latestValuations = (state: LedgerState, date: CivilDate): Map<AssetId, ValuationEvent> => {
-  const latest = new Map<AssetId, ValuationEvent>();
-  for (const event of state.valuations) {
-    if (event.date <= date) {
-      latest.set(event.asset_id, event);
-    }
-  }
-  return latest;
-};
 
 /**
  * **The gate.** The price of one asset at one date, with its origin.
@@ -183,7 +163,7 @@ export const priceAt = (
     return lookupOf(
       assetId,
       "manual",
-      fromValuation(manual),
+      manualPriceOf(manual),
       date,
       settings.stale_price_days,
       manual.id,
@@ -211,7 +191,7 @@ export const manualPrices = (
   for (const [assetId, event] of latestValuations(state, date)) {
     prices.set(
       assetId,
-      lookupOf(assetId, "manual", fromValuation(event), date, settings.stale_price_days, event.id),
+      lookupOf(assetId, "manual", manualPriceOf(event), date, settings.stale_price_days, event.id),
     );
   }
   if (external === undefined) {

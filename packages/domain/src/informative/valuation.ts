@@ -2,8 +2,9 @@
 // (feature 010, block 3; criterion #11).
 //
 // This is the only fiscal calculation of the project that reads a price, and it
-// reads it through the single door, `prices.ts`, and only at **level 1**: a
-// registered `valuation`, which is a decision of the user. The specification
+// reads it only at **level 1**: a registered `valuation`, which is a decision of
+// the user, through the manual leaf (`projections/manual-price.ts`), which
+// knows nothing of the automatic quotes (feature 013). The specification
 // makes the year-end photograph a manual datum on purpose (§7.1 and §14.1);
 // an automatic quote of phase 4 must never walk into a tax return.
 //
@@ -26,10 +27,9 @@ import { FxRate } from "../money/fx-rate.js";
 import { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import type { KnownFxRate } from "../projections/fx-rates.js";
-import { priceAt } from "../projections/prices.js";
+import { manualPriceAt } from "../projections/manual-price.js";
 import type { LedgerState } from "../projections/state.js";
 import type { AssetId } from "../schema/events.js";
-import type { Settings } from "../settings/settings.js";
 import type { ValueFlag } from "./report.js";
 
 const EUR = "EUR";
@@ -83,15 +83,15 @@ export const valueAt = (
   assetId: AssetId,
   quantity: Quantity,
   year: number,
-  settings: Settings,
 ): ValuedAsset => {
   const end = yearEnd(year);
-  // **Level 1 only**, and structurally so: the gate is called with four
-  // arguments and the fifth is the external source, so nothing it returns here
-  // can be an automatic quote. An architecture test keeps the whole folder from
-  // ever naming one; a runtime check of `origin` would be a branch no test
-  // could reach, which is worse than the rule written where it is enforced.
-  const price = priceAt(state, assetId, end, settings);
+  // **Level 1 only**, and structurally so (feature 013, §6.5 (a) of its
+  // prompt): the manual leaf takes no external source at all, and an
+  // architecture test reads the import graph so that nothing of this folder
+  // reaches the price gate or an automatic quote, at any depth. A runtime
+  // check of an origin would be a branch no test could reach, which is worse
+  // than the rule written where it is enforced.
+  const price = manualPriceAt(state, assetId, end);
   if (price === undefined) {
     return { flags: ["price_missing"] };
   }

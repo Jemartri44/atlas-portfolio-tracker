@@ -101,6 +101,7 @@ export default defineConfig(({ command }) => ({
       // otherwise swallow `@atlas/domain/fiscal`.
       "@atlas/domain/ecb": repo("../../packages/domain/src/ecb.ts"),
       "@atlas/domain/fiscal": repo("../../packages/domain/src/fiscal.ts"),
+      "@atlas/domain/quotes": repo("../../packages/domain/src/quotes.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
       "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),
       "@atlas/adapters/reference": repo(
@@ -141,7 +142,8 @@ export default defineConfig(({ command }) => ({
          * of `filings/` that reach the tax chain — and, since feature 012,
          * everything of the ECB (`ecb/`, the `ecb.ts` door and the local
          * configuration in `config/`), which must never be on the boot path
-         * either (decision (r) of its prompt). **The store of the browser rides
+         * either (decision (r) of its prompt); and, since feature 013, the
+         * automatic daily closes (`quotes/` and the `quotes.ts` door). **The store of the browser rides
          * in the same chunk** (`blob.ts`, and `idb.ts`, `indexeddb.ts`,
          * `folder.ts` and the `index.ts` of `browser/`): it is boot too —
          * opening the ledger is the boot. Once the lazy screens of the ECB
@@ -156,7 +158,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
             },
           ],
         },

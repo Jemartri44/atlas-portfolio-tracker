@@ -22,6 +22,7 @@ export default defineConfig({
       "@atlas/adapters": local("./packages/adapters/src/index.ts"),
       "@atlas/domain/ecb": local("./packages/domain/src/ecb.ts"),
       "@atlas/domain/fiscal": local("./packages/domain/src/fiscal.ts"),
+      "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),
       "@atlas/domain": local("./packages/domain/src/index.ts"),
     },
   },
