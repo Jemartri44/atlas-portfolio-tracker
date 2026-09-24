@@ -1,6 +1,6 @@
 # ADR-0030 — Importe en euros liquidado por el bróker, como dato informativo
 
-**Estado:** Aceptada (2026-09-24). Ronda 8. Decisión de la dirección: **guardar el dato para que exista**. Qué cifra manda en la fiscalidad **no se decide aquí**: es parte de la disputa del criterio #4 de `docs/fiscal-questions.md`. *Verificar con asesor* lo que se haga con él.
+**Estado:** Aceptada (2026-09-24). **Enmendada el mismo día** al contestar las preguntas del prompt 012 (ver al final). Ronda 8. Decisión de la dirección: **guardar el dato para que exista**. Qué cifra manda en la fiscalidad **no se decide aquí**: es parte de la disputa del criterio #4 de `docs/fiscal-questions.md`. *Verificar con asesor* lo que se haga con él.
 
 ## Contexto
 
@@ -22,7 +22,7 @@ Qué dicen de esto los extractos reales de MyInvestor e IBKR **no se sabe todav�
 
 Se añade **`broker_settled_eur?`** (decimal como cadena, ADR-0005) a `buy`, `sell`, `dividend`, `interest` y `standalone_fee`:
 
-- **Qué es:** el movimiento total de euros que el extracto del bróker atribuye a esa operación, tal cual figura, en valor absoluto; el sentido lo da el tipo de evento. Si el extracto carga la comisión en euros por separado, **se incluye**: el campo es lo que salió o entró de la cuenta en euros por esa operación.
+- **Qué es:** el movimiento total de euros que el extracto del bróker atribuye a esa operación, tal cual figura, en valor absoluto (**precisado en la enmienda**: el signo lo da el evento; cero solo en `dividend` e `interest`); el sentido lo da el tipo de evento. Si el extracto carga la comisión en euros por separado, **se incluye**: el campo es lo que salió o entró de la cuenta en euros por esa operación.
 - **Cuándo:** solo si `currency` no es `EUR`; en euros sería redundante y se rechaza. Nunca se rellena con un valor calculado: si el extracto no lo da, el campo no está.
 - **Qué no hace:** **ninguna proyección, ningún cálculo fiscal y ningún saldo lo leen.** Se enseña junto al importe convertido al tipo del BCE, y nada más. Lo vigila un test de arquitectura del mismo tipo que el que ya guarda la puerta de los precios (`tests/architecture.test.ts`, que impide que nada salvo una lista cerrada de ficheros lea `state.valuations`): solo una lista cerrada de módulos puede leer el campo.
 - **No entra en la huella de idempotencia** (`data-schema.md` §4): la misma operación registrada a mano y después importada tiene que seguir detectándose como duplicado, lleve o no el campo.
@@ -38,3 +38,7 @@ Se añade **`broker_settled_eur?`** (decimal como cadena, ADR-0005) a `buy`, `se
 - La lista de eventos se puede ampliar (a `swap`, al efectivo de un `corporate_action` o de un `forced_sale`) con el mismo argumento de compatibilidad, cuando un extracto real lo pida.
 - Se vuelve más fácil cuantificar la disputa del #4 cuando alguien la revise. Se vuelve más difícil nada: el campo es opcional.
 - Relacionadas: ADR-0005, ADR-0012, ADR-0013, ADR-0018, ADR-0021 y ADR-0029.
+
+## Enmienda del 2026-09-24 (prompt de la feature 012)
+
+Decidida por la dirección al contestar las preguntas del prompt 012 (`docs/prompts/012-ecb-reference-rates.md`, §6 (n)). **El signo de `broker_settled_eur` lo da el tipo de evento**, y eso es lo que quería decir «en valor absoluto»: el negativo se rechaza siempre. **En `dividend` e `interest` se admite el cero**, y es el **neto** que entró en la cuenta: un dividendo retenido entero en origen es un cero **conocido**, que no puede confundirse con uno desconocido. **En `buy`, `sell` y `standalone_fee`, estrictamente positivo**: un cero no describe ningún movimiento real. Si el extracto no da la cifra, el campo se omite, y omitido significa desconocido, nunca cero. *(La primera redacción de esta enmienda rechazaba todo cero; la corrigió la dirección el mismo día, en la segunda pasada de la verificación del prompt.)*
