@@ -379,8 +379,21 @@ const BOOT_BUDGET_GZIP_BYTES = 73.7 * 1024;
  * of the ECB in it (the shape check holds it): the store of the browser, now
  * shared with the lazy screens, had to be kept in the boot chunk by hand
  * (`vite.config.ts`), and what is left is compression across the new border.
+ *
+ * **Feature 012, block 4 (2026-09-24): measured 251,2, ceiling 252,2.** The
+ * rates of the ledger checked against the history, in both interfaces and in
+ * the tax report, all of it lazy. Chunk by chunk against block 3: the check
+ * itself and its findings with their facts (**+1,6**, `ecb`); the section
+ * «Tipos del BCE» of the verification, which says «sin contrastar» and never
+ * «sin hallazgos» without a history (**+0,9**); the seven findings of the ECB
+ * in the Spanish catalogue of the web (**+0,5**, `attention`); the notes of
+ * the report on a line whose rate is in doubt, and their Spanish (**+0,6**,
+ * the fiscal chunks and `warnings`); the findings fetched for the fiscal
+ * screen (**+0,4**); and the runtime chunk the bundler adds for the new
+ * dynamic imports (**+0,2**, lazy). The boot moves 73,6 → **73,7**: 41 bytes
+ * of the entry, the table of the new lazy chunks; nothing of the ECB.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 247.8 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 252.2 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
