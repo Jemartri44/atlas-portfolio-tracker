@@ -280,6 +280,22 @@ describe("theses: bucket buys and sells", () => {
     expect(failure(b.build()).code).toBe("thesis_not_open");
   });
 
+  it("lets a correction of a correction keep the thesis window of the root (second review of PR #75)", () => {
+    const b = new LedgerBuilder();
+    bucketCatalogue(b);
+    b.thesisOpened({ thesis_id: "th1" });
+    const wrong = buyWithThesis(b, "th1", { unit_price: "55" });
+    b.thesisClosed("th1");
+    b.reversal(wrong.id, "price typo");
+    const first = buyWithThesis(b, "th1", { unit_price: "54" });
+    first.corrects_id = wrong.id;
+    b.reversal(first.id, "still a typo");
+    const second = buyWithThesis(b, "th1");
+    second.corrects_id = first.id;
+    const state = projectLedger(b.build());
+    expect(state.theses.get("th1")?.buys.map((leg) => leg.event_id)).toEqual([second.id]);
+  });
+
   it("rejects thesis_id outside the bucket", () => {
     const buy = new LedgerBuilder();
     bucketCatalogue(buy);
