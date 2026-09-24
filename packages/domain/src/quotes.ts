@@ -48,6 +48,7 @@ export {
   encodeCloseLine,
   linesToAppend,
   PRICE_LINE_VERSION,
+  priceFileName,
   readCloseFile,
   readCloses,
   type UnreadableCloses,

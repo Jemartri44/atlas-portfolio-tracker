@@ -17,20 +17,10 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import type { AssetId } from "@atlas/domain";
-import type { PriceStore, PriceTransaction } from "@atlas/domain/quotes";
+import { type PriceStore, type PriceTransaction, priceFileName } from "@atlas/domain/quotes";
 import { type HeldLock, LedgerLockedError, withFolderLock } from "../ledger-store/folder-lock.js";
 
 export const PRICES_DIR = "prices";
-
-/** An asset id that can be a file name, and nothing else: no separator, no dot at the start. */
-const SAFE_ID = /^[A-Za-z0-9_][A-Za-z0-9_-]*$/;
-
-export class UnsafeAssetId extends Error {
-  constructor(readonly assetId: string) {
-    super(`${assetId} cannot name a file of prices`);
-    this.name = "UnsafeAssetId";
-  }
-}
 
 const readOrUndefined = async (path: string): Promise<string | undefined> => {
   try {
@@ -61,16 +51,13 @@ export class FilePriceStore implements PriceStore {
   }
 
   private fileOf(assetId: AssetId): string {
-    if (!SAFE_ID.test(assetId)) {
-      throw new UnsafeAssetId(assetId);
-    }
-    return join(this.dir, `${assetId}.jsonl`);
+    return join(this.dir, priceFileName(assetId));
   }
 
   config = () => readOrUndefined(join(this.dir, "config.json"));
   symbols = () => readOrUndefined(join(this.dir, "symbols.json"));
   status = () => readOrUndefined(join(this.dir, "_status.json"));
-  closes = async (assetId: AssetId) => readOrUndefined(this.fileOf(assetId));
+  closes = (assetId: AssetId) => readOrUndefined(this.fileOf(assetId));
 
   private async writeAtomically(path: string, text: string, lock: HeldLock): Promise<void> {
     await fs.mkdir(this.dir, { recursive: true });

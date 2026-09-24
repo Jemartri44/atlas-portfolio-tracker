@@ -11,7 +11,7 @@ import {
   LOCK_FILE,
   LockLostError,
 } from "../src/ledger-store/folder-lock.js";
-import { FilePriceStore, UnsafeAssetId } from "../src/prices/file-store.js";
+import { FilePriceStore } from "../src/prices/file-store.js";
 import { readSecrets, SecretsError, secretsPath } from "../src/prices/secrets.js";
 
 const KEY = "TEST-KEY-013";
@@ -87,11 +87,16 @@ describe("FilePriceStore", () => {
     expect(await readdir(join(ledger, "prices"))).toEqual([]);
   });
 
-  it("refuses an asset id that is not a plain file name", async () => {
+  it("keeps an asset id that could not name a file inside prices/, encoded", async () => {
     const store = new FilePriceStore(ledger);
-    for (const id of ["../ledger", "a/b", ".hidden", ""]) {
-      await expect(store.closes(id)).rejects.toBeInstanceOf(UnsafeAssetId);
+    for (const id of ["../ledger", "a/b", ".hidden", "..", "x y"]) {
+      await store.transact((tx) => tx.appendCloses(id, ["{}"]));
+      expect(await store.closes(id)).toBe("{}\n");
     }
+    expect((await readdir(join(ledger, "prices"))).sort()).toEqual(
+      ["%2E..jsonl", "%2E.%2Fledger.jsonl", "%2Ehidden.jsonl", "a%2Fb.jsonl", "x%20y.jsonl"].sort(),
+    );
+    expect((await readdir(ledger)).sort()).toEqual(["prices"]);
   });
 
   it("gives up at once on any other error", async () => {

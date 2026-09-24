@@ -32,7 +32,7 @@ export { MemoryLedgerStore } from "./ledger-store/memory.js";
 export { ALPHA_VANTAGE_API, AlphaVantagePriceSource } from "./prices/alpha-vantage.js";
 export { EODHD_API, EodhdPriceSource } from "./prices/eodhd.js";
 export { ExactJsonUnsupported } from "./prices/exact-json.js";
-export { FilePriceStore, PRICES_DIR, UnsafeAssetId } from "./prices/file-store.js";
+export { FilePriceStore, PRICES_DIR } from "./prices/file-store.js";
 export {
   type Keys,
   readSecrets,

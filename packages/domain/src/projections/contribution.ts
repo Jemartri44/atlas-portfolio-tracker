@@ -14,6 +14,7 @@ import { Decimal } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
+import type { ExternalPrices } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
 import { coreWeights } from "./weights.js";
 
@@ -56,6 +57,8 @@ export interface ContributionInput {
   amount?: string;
   date: CivilDate;
   settings: Settings;
+  /** The automatic closes (feature 013), through the gate like every view. */
+  external?: ExternalPrices;
 }
 
 const fail = (code: string, message: string, details: Record<string, unknown> = {}): never => {
@@ -162,7 +165,7 @@ export const contributionPlan = (
     fail("missing_bucket_pct", "bucket_pct_of_contribution is not configured", {});
   }
   const { amount, origin } = amountOf(input);
-  const weights = coreWeights(state, date, settings);
+  const weights = coreWeights(state, date, settings, input.external);
   if (weights.missing_prices.length > 0) {
     fail("missing_manual_prices", "some core assets held have no manual price", {
       assets: weights.missing_prices,

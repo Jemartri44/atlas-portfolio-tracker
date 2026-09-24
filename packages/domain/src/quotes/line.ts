@@ -23,6 +23,15 @@ import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
 import { isQuoteSource } from "./sources.js";
 
+/**
+ * The name of the file of an asset in `prices/`: `<asset_id>.jsonl`. The
+ * ledger accepts any text as an `asset_id`, so what could not name a file —
+ * a separator, a leading dot — is percent-encoded; an ordinary id is itself.
+ * The console that writes and the web that reads use this one function.
+ */
+export const priceFileName = (assetId: AssetId): string =>
+  `${encodeURIComponent(assetId).replace(/^\./, "%2E")}.jsonl`;
+
 /** The version of a line this code reads and writes. */
 export const PRICE_LINE_VERSION = 1;
 
