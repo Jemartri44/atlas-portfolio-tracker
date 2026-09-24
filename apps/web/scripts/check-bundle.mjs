@@ -433,8 +433,18 @@ const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
  * (**+0,7**, `ecb`); the write of the chain (**+0,4**, `rate-corrections`);
  * and the two chunks of Spanish errors, now one (**−0,2**). The boot does not
  * move: nothing of it is in the boot, and the shape check holds it.
+ *
+ * **Review of PR #75 (2026-09-24): measured 261,0, ceiling 262,0.** What the
+ * boot sheds does not vanish, it moves to chunks of its own: the folder of
+ * the disk and the export and import of the ledger (`folder`, `transfer`), and
+ * the list of drafts behind the form route instead of a route of its own —
+ * each a few hundred bytes of chunk frame and preload table (**+0,3**) —, and
+ * the new note of a rate not contrasted and the import refused when the
+ * ledger changed under it (**+0,1**). The direction accepted the growth of
+ * the feature (22,9 KB of new screens and ECB domain, no module in two
+ * chunks), with the breakdown written here and the ratchet at the close.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 260.7 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 262.0 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
