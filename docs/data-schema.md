@@ -2,21 +2,27 @@
 
 Referencia viva del formato del libro mayor y de las proyecciones. Decisiones de fondo en ADR-0002, ADR-0003, ADR-0005 y ADR-0006. Prosa en español; identificadores en inglés tal como aparecen en el fichero y en el código.
 
-> **Estado:** secciones 1-8 cerradas (Rondas 2 y 4, 2026-08-30) y revisadas tras el *challenge* externo del mismo día (ADR-0012, ADR-0013). Sigue siendo `schema_version = 1`; la feature 001 (PR #10, 2026-08-30) lo implementa en `packages/domain`. Cada cambio de formato posterior incrementa la versión (§5).
+> **Estado:** secciones 1-8 cerradas (Rondas 2 y 4, 2026-08-30) y revisadas tras el *challenge* externo del mismo día (ADR-0012, ADR-0013). Sigue siendo `schema_version = 1`; la feature 001 (PR #10, 2026-08-30) lo implementa en `packages/domain`. Cada cambio de formato posterior incrementa la versión (§5). **Ampliada con la capa en la nube** (ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0031, ADR-0032; Ronda 8, 2026-09-24): ninguno de estos ficheros nuevos entra en el libro ni en su `schema_version`.
 
 ## 1. Distribución del bucket
 
 | Prefijo | Contenido | Retención |
 |---|---|---|
 | `ledger/ledger.jsonl` | El libro: un evento por línea, append-only | Para siempre. Versiones no vigentes de S3: 365 días |
-| `archive/ledger-<YYYY-MM-DD>-v<n>.jsonl` | Fichero anterior a cada compactación, sin tocar. `<YYYY-MM-DD>` es el día de la compactación en `Europe/Madrid` y `<n>` la **menor** `schema_version` presente en el fichero archivado; ante colisión, sufijo `-2`, `-3`… En local (`FileLedgerStore`), `archive/` es un directorio junto al libro | Para siempre |
-| `reference/ecb/eurofxref-hist.csv` | Histórico oficial del BCE, íntegro, refrescado a diario | Se sobrescribe |
-| `prices/<asset_id>.jsonl` | Precios informativos (Nivel 2), una línea por fecha y fuente | Para siempre |
-| `documents/<event_id>/<fichero>` | Fuente documental de eventos corporativos (PDF, HTML) | Para siempre |
-| `imports/<source>/<YYYY-MM-DD>-<hash>.<ext>` | Extractos importados, tal cual llegaron | Para siempre |
-| `backups/<YYYY-MM>/ledger.jsonl`, `positions.json` | Copia mensual del libro y de la proyección de posiciones valorada | Para siempre |
+| `archive/ledger-<YYYY-MM-DD>-v<n>.jsonl` | Fichero anterior a cada compactación, sin tocar. `<YYYY-MM-DD>` es el día de la compactación en `Europe/Madrid` y `<n>` la **menor** `schema_version` presente en el fichero archivado; ante colisión, sufijo `-2`, `-3`… En local (`FileLedgerStore`), `archive/` es un directorio junto al libro. También archiva los bytes previos a una **restauración** (`archive/pre-restore-<fecha>.jsonl`, nunca sobrescrito, ADR-0032) y los previos a una sincronización que reordena líneas pendientes (ADR-0026) | Para siempre |
+| `reference/ecb/eurofxref-hist.csv` | Histórico oficial del BCE, **byte a byte**, refrescado a diario; también en local, junto al libro, como `archive/` (ADR-0029) | Se sobrescribe **solo si el fichero nuevo contiene, con el mismo valor numérico, todos los tipos del anterior**; si no, se conservan los dos y sale un hallazgo (ADR-0029) |
+| `prices/<asset_id>.jsonl` | Precios informativos (Nivel 2), una línea por fecha y fuente. De cripto (CoinGecko) solo el último valor conocido, sin histórico, renovado a diario; acciones y ETF sí guardan histórico (ADR-0031) | Para siempre, salvo cripto |
+| `prices/symbols.json` | **Fuera del libro** (ADR-0031, enmienda): correspondencia de cada activo a su símbolo por fuente (`eodhd`, `alpha_vantage`, `coingecko`), propuesta por OpenFIGI al dar de alta el activo y confirmada por el usuario. Es configuración de la descarga de precios, no un hecho de la cartera; si se pierde, se rehace | Se sobrescribe |
+| `prices/_status.json` | Estado de cada fuente de precios: fallos seguidos, último éxito, tipo del último fallo (ADR-0031) | Se sobrescribe |
+| `documents/<event_id>/<fichero>` | Fuente documental de eventos corporativos (PDF, HTML). Se sube por la API con la regla de añadir y nunca sobrescribir; no se sincroniza entre dispositivos (ADR-0026) | Para siempre |
+| `imports/<source>/<YYYY-MM-DD>-<hash>.<ext>` | Extractos importados, tal cual llegaron. Misma regla que `documents/` | Para siempre |
+| `backups/<YYYY-MM>/ledger.jsonl`, `reference/ecb/eurofxref-hist.csv`, `prices/`, `positions.json` | Copia mensual del libro, el histórico del BCE, los precios y la proyección de posiciones valorada (ADR-0032, amplía el contenido original) | Para siempre |
+| `sync/state.json` *(por dispositivo, fuera del bucket, junto al libro local)* | Cuántas líneas y qué hash tenía el prefijo sincronizado con el remoto. No es una simple caché: si no se puede leer, `compact` se niega (ADR-0026) | Se sobrescribe |
+| `sync/held.jsonl`, `sync/discarded.jsonl` *(por dispositivo, local)* | Líneas retenidas por la sincronización, con su motivo, y las descartadas explícitamente por el usuario (ADR-0026) | Para siempre |
+| `sync/devices/<dispositivo>.json` *(en el bucket)* | Cuántas líneas pendientes y retenidas tiene cada dispositivo sincronizado, y cuándo sincronizó por última vez; lo consultan `compact` y la restauración antes de actuar (ADR-0026) | Se sobrescribe por dispositivo |
+| `drafts/` *(por dispositivo, local)* | Operaciones en divisa registradas antes de que el BCE publique el tipo de su fecha fiscal: no son un hecho, no cuentan en ninguna cifra y nunca se confirman solas (ADR-0029, opción B) | Hasta que se confirman o se descartan |
 
-Un solo bucket privado por entorno (`dev`, `prod`), cifrado por defecto, versionado activado, sin acceso público.
+Un solo bucket privado por entorno (`dev`, `prod`, cada uno su propia cuenta AWS miembro, ADR-0028), cifrado con SSE-S3 por defecto, versionado activado, sin acceso público, solo accesible a través de CloudFront con Origin Access Control salvo para la administración.
 
 ## 2. Envoltorio de cada línea
 
@@ -83,7 +89,7 @@ Son **26 tipos**. La forma exacta de cada evento (campos obligatorios, validacio
 | `amount?` | decimal | Importe bruto liquidado en `currency` (sin comisión). Si está presente, **es la base de coste o de transmisión** (ADR-0012) |
 | `currency` | ISO 4217 | Divisa del precio y la comisión |
 | `fx_rate` | decimal | Tipo del BCE **tal cual lo publica**: unidades de `currency` por EUR, todos sus decimales; `"1"` si EUR. `eur = amount / fx_rate` (ADR-0013). Validación: si `currency` es `EUR`, `fx_rate` debe ser exactamente `"1"` (rechazo; *challenge* 2026-08-31, hallazgo 5) |
-| `fx_rate_date` | fecha | Fecha del tipo aplicado. Si `fiscal_date` no tiene publicación (fin de semana, festivo TARGET), el último anterior. Nunca un sábado ni un domingo (el BCE no publica: rechazo); los festivos TARGET no se validan hasta que exista `reference/ecb/` (Ronda 6) |
+| `fx_rate_date` | fecha | Fecha del tipo aplicado. Si `fiscal_date` no tiene publicación (fin de semana, festivo TARGET), el último anterior. Nunca un sábado ni un domingo (el BCE no publica: rechazo). **El cargador sigue sin validar festivos TARGET al cargar** (sería un endurecimiento retroactivo, ADR-0018); la comprobación contra el calendario y contra el histórico oficial (`reference/ecb/`) es de `check --deep` y de la propuesta al registrar, ambas fuera del cargador (ADR-0029, que resuelve lo que la Ronda 6 tenía pendiente) |
 | `fee` | decimal | Comisión en `currency` |
 | `broker_ref?` | cadena | Identificador del bróker (`tradeID` de IBKR, referencia de MyInvestor) |
 | `fingerprint` | cadena | Huella de idempotencia: hash de (`source`, `broker_ref` si existe, `account_id`, `asset_id`, `type`, `value_date`, `quantity`, `amount` o `unit_price`, `currency`). En manual **no** entra el `id` propio: así dos entradas idénticas avisan, y una repetición legítima se confirma con `--confirm-duplicate`. **Huella repetida = aviso con confirmación**, no rechazo (ADR-0012). Una presentación (§6.6) tiene su propia tupla: `type`, `model`, `tax_year` y `receipt_reference`, **sin `filed_at`** |
@@ -94,6 +100,7 @@ Son **26 tipos**. La forma exacta de cada evento (campos obligatorios, validacio
 
 - `schema_version` empieza en `1`. Cada cambio incompatible del formato de cualquier evento incrementa la versión global.
 - **Qué es incompatible (ADR-0018).** Compatible, sin versión nueva: añadir un campo opcional, añadir un valor a un enumerado, relajar una validación, aceptar una forma antigua además de la nueva. Rompedor, con versión nueva y su migración: endurecer o eliminar una regla de forma existente, quitar un valor de un enumerado, cambiar el significado de un campo. El cargador valida cada línea con las reglas de hoy, así que endurecer sin migrar deja **ilegible el libro entero**, no degradado. Mientras el libro real esté vacío se admite endurecer dentro de la v1 regenerando el *golden*; **desde el primer evento real, no**.
+- **Enmienda del 2026-09-24 (ADR-0018, Ronda 8): un campo opcional nuevo no siempre es compatible.** La regla de arriba vale para una operación (`buy`, `sell`…), donde un cliente antiguo nunca reescribe la línea. Pero en un evento que guarda el **estado completo** — `settings_changed` y los `*_updated` del catálogo (§6.1, ADR-0022) —, un campo opcional nuevo es compatible **para leer** (un cliente antiguo carga la línea) pero **no para escribir**: al registrar la foto siguiente, un cliente antiguo la escribe **sin** ese campo, que desaparece del estado sin que nada lo avise. Por eso un campo nuevo que tenga que vivir en una de esas fotos **o va fuera del libro** —como la correspondencia de símbolos de precios (`prices/symbols.json`, ADR-0031) y el interruptor de importes del correo (SSM, ADR-0028) en esta misma ronda— **o sube `schema_version`**, para que un cliente antiguo se niegue a escribir sobre ese libro. `broker_settled_eur` (ADR-0030, §6.2) no está sujeto a esta enmienda: vive en operaciones, no en una foto completa.
 - Al cargar, cada línea pasa por la cadena `migrate(v) → v+1` hasta la versión actual, en memoria. Las funciones de migración son puras, viven en `packages/domain/schema/migrations/` y tienen como fixtures líneas reales de la versión antigua.
 - El fichero **nunca** se reescribe por una migración.
 - `compact` (comando de CLI, acción deliberada): reescribe el libro entero a la versión actual y archiva el original en `archive/`. Se ejecuta cuando la cadena de migraciones pendientes molesta, no de forma automática. Contrato (feature 003): (1) el almacén guarda los bytes originales, tal cual, en `archive/` **antes** de reemplazar el libro y nunca sobrescribe un archivo (`LedgerStore.replace`, la única operación que reescribe); (2) es no-op si ninguna línea está por debajo de la versión actual (canonicalizar líneas escritas por otro cliente no es motivo); (3) aborta sin escribir si hay eventos inválidos o si la proyección del libro reescrito difiere de la original (`snapshotOf`); (4) **verifica todas las huellas de las presentaciones** (§6.6) **antes** de reescribir y se niega con `CompactRejectedError` si alguna falla, y después del reescrito las **vuelve a sellar** sobre el prefijo nuevo. La huella se toma sobre las líneas migradas a su versión y escritas en forma canónica, no sobre los bytes, precisamente para que compactar no la rompa; sellar una que no cuadra convertiría un registro roto en uno de fiar, así que no se hace. El rechazo nombra su motivo: `filing_fingerprint_unreadable` si **todas** las huellas rechazadas son ilegibles, y `filing_fingerprint_mismatch` en cualquier otro caso. (5) **La salida existe, se pide por su nombre y queda registrada** (ADR-0025, feature 011): `atlas compact --accept-unverified <filing_id>`, repetible, acepta que la huella de **esa** presentación no se pueda verificar —por cualquiera de los tres motivos, `lines`, `digest` o `unreadable`— y deja las demás protegidas; una huella rota que no se nombra sigue deteniendo la compactación. Por cada presentación aceptada se escribe un `filing_fingerprint_waived` (§6.7) **dentro de la misma lista** que se entrega a `replace`, así que la renuncia y la reescritura son todo o nada: si la compactación no termina, el libro queda como estaba y sin renuncia. La consola nombra antes de la pregunta a qué se renuncia, y solo **después** de compactar dice lo que ha quedado registrado. Para que un caso `lines` también tenga salida, la lectura anterior a la reescritura se toma con el recuento de líneas de la huella ya en su sitio, **solo para las presentaciones con renuncia y solo en ese campo**; la comparación de la proyección sigue siendo exacta en todo lo demás.
@@ -104,13 +111,17 @@ Son **26 tipos**. La forma exacta de cada evento (campos obligatorios, validacio
 - `load` devuelve, además de los eventos migrados en memoria, las **líneas crudas** en orden de fichero (`lines`): son la entrada de las comprobaciones profundas de §7 (`integrity`).
 - `settingsAt(date)` y cualquier comparación entre una fecha de negocio y `recorded_at` convierte `recorded_at` a fecha en `Europe/Madrid` y usa "hasta el fin de ese día".
 
+**Operaciones sobre líneas crudas del puerto `LedgerStore` (ADR-0026, Ronda 8).** `append` y `replace` reciben `LedgerEvent[]` ya migrados en memoria y los vuelven a serializar (`encodeLine`); eso hace imposible que la réplica de un dispositivo sincronizado sea idéntica byte a byte al remoto. El puerto gana **dos operaciones que escriben los bytes tal cual, sin volver a serializarlos**: añadir líneas crudas al final, y reemplazar el contenido por líneas crudas archivando antes el original — con los mismos etag, archivo y rechazos que `append` y `replace`. Las cumplen los cuatro adaptadores (memoria, fichero, navegador, S3) y pasan los mismos tests de contrato. **Las usan solo la sincronización y la restauración** (ADR-0032): `replace` seguiría siendo un `compact` sin resellar las presentaciones si se usara para restaurar con una `schema_version` más nueva.
+
+**Cerrojo consultivo de los almacenes locales (ADR-0026, Ronda 8, feature 012).** El almacén de fichero (consola) y el de carpeta del navegador (web de escritorio) tienen una ventana entre comprobar el etag y escribir (ADR-0025) que ninguna escritura condicional cierra por sí sola en el sistema de ficheros local. Antes de comparar el etag y hasta renombrar el fichero, los dos toman un cerrojo **en la propia carpeta del libro**: consultivo (solo lo respetan la consola y la web de Atlas), sin ruptura automática (la caducidad es solo informativa; romperlo es un acto explícito del usuario, con la comprobación de que sigue siendo suyo justo antes de renombrar, como reducción de riesgo y no como garantía), y con mensaje claro de quién lo tiene y desde cuándo. La adquisición tiene que ser atómica: en la consola, crear el fichero del cerrojo de forma exclusiva lo es. **Si la File System Access API permite crear un fichero de forma exclusiva en la carpeta del navegador está SIN VERIFICAR**; si no lo permite, la feature 012 para y lo dice, sin fingir exclusión con un testigo releído. IndexedDB, que no vive en una carpeta, necesita en su lugar una **primitiva de comparar y escribir en una sola transacción**, que hoy no tiene (`LedgerBlob` de `packages/adapters/src/ledger-store/blob.ts` separa `read` y `write`).
+
 ## 6. Semántica de cada evento
 
 Todos llevan el envoltorio de §2. Los ejemplos omiten `schema_version`, `id` y `recorded_at`. Campos marcados `?` son opcionales. Numéricos siempre como cadenas.
 
 ### 6.1 Catálogo
 
-Los eventos `*_updated` llevan el **estado completo resultante** (no un diff), igual que `settings_changed`: más bytes, mucha más legibilidad.
+Los eventos `*_updated` llevan el **estado completo resultante** (no un diff), igual que `settings_changed`: más bytes, mucha más legibilidad. **Por eso un campo nuevo en estos eventos exige la enmienda de ADR-0018 de §5** (Ronda 8): un cliente antiguo que escriba la foto siguiente la escribe sin el campo que no conoce, y el campo desaparece del estado sin avisar. Ni `price_symbols` (correspondencia de símbolos de precios) ni el interruptor de importes del correo viven aquí por ese motivo: el primero va en `prices/symbols.json` (§1, ADR-0031) y el segundo en SSM (ADR-0028).
 
 **`account_created` / `account_updated`**
 `account_id`, `name`, `platform`, `book` (`core` | `bucket`), `base_currency`, `country` (ISO 3166-1, para el Modelo 720), `active`
@@ -135,8 +146,10 @@ Un `settings_changed` que reinterpreta el pasado (p. ej. un cambio de `fiscal_da
 
 ### 6.2 Operaciones
 
+**`broker_settled_eur?` (ADR-0030, Ronda 8, bloque 0 de la feature `012`).** Campo opcional en `buy`, `sell`, `dividend`, `interest` y `standalone_fee`: el movimiento total de euros que el extracto del bróker atribuye a la operación, tal cual figura, en valor absoluto (el sentido lo da el tipo de evento); si el extracto carga la comisión en euros por separado, se incluye. Solo tiene sentido si `currency` no es `EUR` (en euros se rechaza, sería redundante) y **nunca se rellena con un valor calculado**: si el extracto no lo trae, el campo no está. **Puramente informativo**: ninguna proyección, cálculo fiscal ni saldo lo lee — solo una lista cerrada de módulos puede leerlo, vigilada por un test de arquitectura — y **no entra en la huella de idempotencia** (§4), para que la misma operación registrada a mano y luego importada se siga detectando como duplicado. Es un cambio **compatible** según ADR-0018 (campo opcional de una operación, no de una foto completa): no sube `schema_version`.
+
 **`buy`**
-Comunes (§4) + `order_id?` (cierra un `order_placed`) + `thesis_id?` (obligatorio si la cuenta es del libro `bucket`; debe existir un `thesis_opened` previo con ese id).
+Comunes (§4) + `order_id?` (cierra un `order_placed`) + `thesis_id?` (obligatorio si la cuenta es del libro `bucket`; debe existir un `thesis_opened` previo con ese id) + `broker_settled_eur?` (ADR-0030).
 
 ```json
 {"type":"buy","account_id":"acc_ibkr","asset_id":"ast_xau","trade_date":"2026-09-01","value_date":"2026-09-03","quantity":"12","unit_price":"215.30","currency":"USD","fx_rate":"1.0857","fx_rate_date":"2026-09-01","fee":"1.50","source":"manual","fingerprint":"sha256:…"}
@@ -145,7 +158,7 @@ Comunes (§4) + `order_id?` (cierra un `order_placed`) + `thesis_id?` (obligator
 Efecto: crea un lote con `acquisition_date = fiscal_date`, `cost_eur = ((amount ?? quantity × unit_price) + fee) / fx_rate`.
 
 **`sell`**
-Comunes + `withholding?` (retención a cuenta practicada, en `currency`) + `thesis_id?` (en cuentas `bucket`, enlaza la venta con su tesis abierta, igual que en `buy`; sin él se acepta con aviso).
+Comunes + `withholding?` (retención a cuenta practicada, en `currency`) + `thesis_id?` (en cuentas `bucket`, enlaza la venta con su tesis abierta, igual que en `buy`; sin él se acepta con aviso) + `broker_settled_eur?` (ADR-0030).
 
 Admite `order_id?`. Efecto: consume lotes FIFO del `asset_id` en todas las cuentas (§8.1); valor de transmisión `((amount ?? quantity × unit_price) − fee) / fx_rate`; genera ganancia o pérdida por lote consumido; comprueba la regla de recompra (§8.4). Rechaza si la cantidad supera la posición física de la cuenta.
 
@@ -181,12 +194,12 @@ Un `buy`/`sell` con `order_id` cierra la orden. Un `order_placed` sin cierre es 
 Efecto: resta `sold_amount` y suma `bought_amount` en `cashBalances` de la cuenta. Los tipos BCE de ambas divisas se guardan para la futura proyección de diferencias de cambio (Fase 5).
 
 **`interest`** (ADR-0012)
-`account_id`, `value_date`, `gross`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `broker_ref?`, `fingerprint`
+`account_id`, `value_date`, `gross`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `broker_ref?`, `fingerprint`, `broker_settled_eur?` (ADR-0030)
 
 Efecto: suma el neto al efectivo; alimenta `investmentIncome` (rendimiento del capital mobiliario con retención).
 
 **`dividend`**
-`account_id`, `asset_id`, `value_date`, `gross`, `withholding_origin`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `source_country?` (ISO 3166-1 del **pagador**, no del depositario; del convenio con ese país dependen el tipo deducible y el límite de la deducción por doble imposición, pregunta fiscal #16), `per_unit?`, `broker_ref?`, `fingerprint`
+`account_id`, `asset_id`, `value_date`, `gross`, `withholding_origin`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `source_country?` (ISO 3166-1 del **pagador**, no del depositario; del convenio con ese país dependen el tipo deducible y el límite de la deducción por doble imposición, pregunta fiscal #16), `per_unit?`, `broker_ref?`, `fingerprint`, `broker_settled_eur?` (ADR-0030)
 
 Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimientos del capital mobiliario y deducción por doble imposición.
 
@@ -194,7 +207,7 @@ Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimien
 `account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date`, `notes?`, `fingerprint`
 
 **`standalone_fee`**
-`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date`, `description`, `fee_kind?` (`custody` | `administration` | `connectivity` | `discretionary_management` | `other`; ausente equivale a `other`), `fingerprint`. No afecta a la base fiscal de ningún lote. `fee_kind` existe porque el art. 26.1.a) permite deducir del rendimiento del capital mobiliario los gastos de **administración y depósito** de valores negociables y no los demás: el motor fiscal deduce las marcadas `custody` o `administration` (criterio #23) y deja fuera al resto, así que **sin marcar nada no cambia nada** (ADR-0021).
+`account_id`, `value_date`, `amount`, `currency`, `fx_rate`, `fx_rate_date`, `description`, `fee_kind?` (`custody` | `administration` | `connectivity` | `discretionary_management` | `other`; ausente equivale a `other`), `fingerprint`, `broker_settled_eur?` (ADR-0030). No afecta a la base fiscal de ningún lote. `fee_kind` existe porque el art. 26.1.a) permite deducir del rendimiento del capital mobiliario los gastos de **administración y depósito** de valores negociables y no los demás: el motor fiscal deduce las marcadas `custody` o `administration` (criterio #23) y deja fuera al resto, así que **sin marcar nada no cambia nada** (ADR-0021).
 
 **`valuation`**
 `account_id`, `asset_id`, `date`, `quantity`, `unit_value`, `currency`, `fx_rate`, `fx_rate_date`, `source`. Foto manual de Nivel 1 (p. ej. 31/12 para el Modelo 720). No toca lotes.
@@ -214,6 +227,8 @@ Afecta a los lotes del `asset_id` en **todas** las cuentas (los lotes fiscales s
 `reverses_id`, `reason`. Anula el evento referenciado a todos los efectos; la proyección ignora ambos. Un `reversal` de un `reversal` está prohibido (se registra de nuevo el evento original). Tampoco se anula un `filing_fingerprint_waived` (`waiver_not_reversible`, §6.7): registra una compactación que ya ocurrió.
 
 **Eventos ya consumidos (hallazgo 3 del *challenge*):** `reverseEvent` y `correctEvent` re-proyectan el libro completo sin la pareja y **rechazan** la operación si algún evento posterior deja de ser válido (una venta que consumía el lote anulado y se queda sin lotes, un `transfer` cuyos lotes destino ya se vendieron, un `account_updated` que cambia `book` con posiciones vivas, un `asset_created` con eventos que lo referencian…), listando los eventos afectados. Para anular algo consumido hay que rectificar primero lo que dependía de ello. La proyección ante un estado inválido **falla ruidosamente**; nunca produce cantidades negativas en silencio.
+
+**Una operación anulada tiene como mucho una corrección viva (ADR-0026, Parte C, Ronda 8).** Una segunda línea con `corrects_id` apuntando a una operación que ya tiene una corrección no anulada es **inválida** (`dangling_correction` ya exige que el original esté anulado; esta regla añade que solo puede haber una corrección sin anular por original). Es un **endurecimiento de la proyección**, y ADR-0018 lo admite porque **no puede invalidar ningún libro escrito por la aplicación**: corregir el original una segunda vez exige anularlo de nuevo, y eso ya falla hoy con `already_reversed`. Solo un libro editado a mano, o la fusión de dos colas de dispositivos sin conexión (ADR-0026), podría producir dos correcciones vivas; la regla protege también a quien usa la consola y la web a la vez sobre la misma carpeta, sin nube.
 
 Cualquier evento puede llevar `corrects_id` apuntando al evento que sustituye. La CLI y la web implementan *Editar* como `reversal` + evento nuevo con `corrects_id`, y *Eliminar* como `reversal` solo. Si lo que se registra, corrige o anula alcanza un ejercicio con una **presentación vigente**, la app avisa antes de confirmar: bien porque cae por fecha fiscal dentro de él, bien porque mueve una cifra declarada aunque su fecha sea de otro año (§7). Un ejercicio pasado con cifras y **sin** presentación registrada no da aviso: da una nota tranquila.
 
