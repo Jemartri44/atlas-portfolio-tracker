@@ -1,8 +1,9 @@
 <!--
 Sync Impact Report
 - Version change: 1.5.0 → 1.6.0
-- Modified principles: VI (cost restriction: "coste indefinidamente dentro del always-free de AWS" → "coste mínimo con alarma de presupuesto", ADR-0028, Ronda 8, 2026-09-24)
-- Modified sections: Restricciones técnicas (Plataforma: coste mínimo en vez de always-free, acceso con Google verificado en la Lambda sustituye a Cognito con MFA —ADR-0027—, excepción declarada a "Terraform para todo; nada creado a mano" con su condición de retirada —ADR-0028—; Seguridad: los secretos en SSM ya no son solo el token Flex de IBKR, se añaden el secreto de cliente de Google y la clave de sesión —ADR-0027— y las claves de las fuentes de precios —ADR-0031—)
+- Modified principles: IV (configuration that is personal data or a secret —email recipients, the sign-in allow-list, keys— is still never hard-coded, but lives outside the ledger: SSM Parameter Store in the cloud or local configuration outside the repository; everything else stays in `Settings`. ADR-0027, ADR-0028, ADR-0031, Ronda 8, 2026-09-24); VI (cost restriction: "coste indefinidamente dentro del always-free de AWS" → "coste mínimo con alarma de presupuesto", ADR-0028, Ronda 8, 2026-09-24)
+- Modified sections: Restricciones técnicas (Plataforma: coste mínimo en vez de always-free, acceso con Google verificado en la Lambda sustituye a Cognito con MFA —ADR-0027—, excepción declarada a "Terraform para todo; nada creado a mano" con su condición de retirada —ADR-0028—; Seguridad: los secretos en SSM ya no son solo el token Flex de IBKR, se añaden el secreto de cliente de Google y la clave de sesión —ADR-0027— y las claves de las fuentes de precios —ADR-0031—, que en local van en un fichero de configuración fuera del repositorio y solo en la nube en SSM)
+- Version bump rationale: MINOR, like 1.1.0, 1.4.0 and 1.5.0: principles IV and VI are narrowed or re-scoped with their reason written, not removed or redefined
 - Added sections: none
 - Removed sections: none
 - Templates requiring updates: none
@@ -53,7 +54,8 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 ### IV. Nada codificado que deba ser configurable
 
-- Umbrales, pesos objetivo, frecuencias, tipos impositivos, destinatarios y residencia fiscal son configuración (`Settings`), con historial de cambios y validación.
+- Umbrales, pesos objetivo, frecuencias, tipos impositivos y residencia fiscal son configuración (`Settings`), con historial de cambios y validación.
+- **La configuración que es dato personal o secreto** —destinatarios del correo, lista permitida de acceso, claves— tampoco se escribe en el código, pero vive **fuera del libro**: en SSM Parameter Store en la nube, o en configuración local fuera del repositorio (ADR-0027, ADR-0028, ADR-0031; enmienda 1.6.0). Todo lo demás sigue en `Settings`.
 - Modificar un umbral que silencia una alerta activa DEBE advertirse explícitamente.
 - Las cifras fiscales se documentan como "según se entienden en {fecha}, verificar"; nunca como constantes del código.
 
@@ -91,7 +93,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 ## Restricciones técnicas
 
 - **Plataforma:** AWS con **coste mínimo y alarma de presupuesto** (ADR-0028), no dentro del *always-free* indefinidamente (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, **acceso solo con Google verificado en la Lambda, sin Cognito** (ADR-0027), EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano, **salvo las excepciones declaradas en ADR-0028, cada una con su condición de retirada**. Antes de introducir un servicio nuevo, verificar que su coste es mínimo a esta escala.
-- **Seguridad:** nunca credenciales de brókers. Secretos, todos en SSM Parameter Store como `SecureString`: el token Flex de IBKR (solo lectura), el secreto del cliente OAuth de Google y la clave de sesión (ADR-0027), y las claves de las fuentes de precios (ADR-0031). Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
+- **Seguridad:** nunca credenciales de brókers. Secretos en SSM Parameter Store como `SecureString`: el token Flex de IBKR (solo lectura) y el secreto del cliente OAuth de Google y la clave de sesión (ADR-0027). Las claves de las fuentes de precios (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, en SSM. Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
 - **Privacidad:** nunca se registran en logs importes, posiciones, saldos ni identificadores de cuenta. Nada personal en el repositorio público: ni dominio real, ni importes, ni el plan financiero (`plan-financiero.md`, ignorado por git).
 - **Idioma:** todo lo técnico (código, identificadores, commits, ramas, ficheros, infraestructura) en inglés. Documentos, especificaciones y esta constitución en español con identificadores en inglés.
 - **Entornos:** `dev` (rama `develop`) y `prod` (rama `main`) con pilas separadas. Se construye una vez y se promociona. Datos de producción jamás en `dev`.
