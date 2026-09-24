@@ -412,8 +412,18 @@ const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
  * screen (**+0,4**); and the runtime chunk the bundler adds for the new
  * dynamic imports (**+0,2**, lazy). The boot moves 73,6 → **73,7**: 41 bytes
  * of the entry, the table of the new lazy chunks; nothing of the ECB.
+ *
+ * **Feature 012, block 5 (2026-09-24): measured 256,8, ceiling 257,8.** The
+ * drafts of operations whose ECB rate is not published yet, all of it lazy.
+ * Chunk by chunk against block 4: the list «Borradores» (**+2,1**); saving a
+ * draft from the form and recording it from its values (**+0,4** `EventForm`,
+ * **+0,4** the form route); the store of the drafts, the counter of the frame
+ * and the saving, three chunks of their own (**+0,6**, **+0,6**, **+0,3**);
+ * the names of the list, split out of the chunks that shared them (**+0,6**,
+ * with **−0,4** in `prose`); the Spanish of the new errors (**+0,1**); and a
+ * few tenths across the chunks that import them.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 252.2 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 257.8 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
