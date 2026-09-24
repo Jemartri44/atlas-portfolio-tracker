@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { Decimal } from "../../src/money/decimal.js";
+import type { ExternalPrices } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { coreWeights } from "../../src/projections/weights.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
@@ -304,5 +306,34 @@ describe("coreWeights as of a date", () => {
     );
     expect(whole.rows.map((row) => row.quantity.toString())).toEqual(["100", "10"]);
     expect(whole.total_eur.amount.toString()).toBe("11000");
+  });
+});
+
+const noRate013 = (asset: string): ExternalPrices => ({
+  at: (assetId) =>
+    assetId === asset
+      ? {
+          date: "2028-01-05",
+          unit_value: Decimal.parse("5000"),
+          currency: "GBX",
+          source: "eodhd",
+          fx_missing: "currency_not_published",
+        }
+      : undefined,
+});
+
+describe("coreWeights with a quote that has no rate (feature 013)", () => {
+  it("never adds it up in euros: the total is partial, and it is said", () => {
+    const state = projectLedger(balanced().build());
+    const result = coreWeights(
+      state,
+      "2028-01-10",
+      settings({ target_weights: TARGETS }),
+      noRate013("ast_gold"),
+    );
+    expect(result.partial).toBe(true);
+    expect(result.missing_prices).toEqual(["ast_gold"]);
+    expect(result.rows.find((row) => row.asset_id === "ast_gold")?.price?.currency).toBe("GBX");
+    expect(codes(result)).toContain("price_without_eur_value");
   });
 });

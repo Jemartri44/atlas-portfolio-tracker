@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { Decimal } from "../../src/money/decimal.js";
 import { Quantity } from "../../src/money/quantity.js";
 import { bucketPositions } from "../../src/projections/bucket.js";
+import type { ExternalPrices } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { Account } from "../../src/projections/state.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
@@ -251,5 +253,33 @@ describe("bucketPositions", () => {
     expect(view.rows).toEqual([]);
     expect(view.partial).toBe(false);
     expect(view.total_value_eur.isZero()).toBe(true);
+  });
+});
+
+const noRate013 = (asset: string): ExternalPrices => ({
+  at: (assetId, date) =>
+    assetId === asset
+      ? {
+          date,
+          unit_value: Decimal.parse("5000"),
+          currency: "GBX",
+          source: "eodhd",
+          fx_missing: "currency_not_published",
+        }
+      : undefined,
+});
+
+describe("bucketPositions with a quote that has no rate (feature 013)", () => {
+  it("shows the quote, adds nothing in euros and says why", () => {
+    const view = bucketPositions(
+      project(openBucket()),
+      "2027-06-30",
+      DEFAULT_SETTINGS,
+      noRate013("ast_spec"),
+    );
+    expect(view.rows[0]?.price?.currency).toBe("GBX");
+    expect(view.rows[0]?.value_eur).toBeUndefined();
+    expect(view.partial).toBe(true);
+    expect(view.warnings.map((w) => w.code)).toContain("price_without_eur_value");
   });
 });

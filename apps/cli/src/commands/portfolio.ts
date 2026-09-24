@@ -28,7 +28,7 @@ const priceCell = (price: PriceLookup | undefined): string[] =>
     : [
         price.unit_value.toString(),
         price.currency,
-        price.fx_rate.toString(),
+        price.fx_rate?.toString() ?? "sin tipo del BCE",
         price.date,
         `${price.age_days}${price.stale ? " ⚠" : ""}`,
       ];
@@ -132,7 +132,7 @@ const jsonWeights = (weights: CoreWeights) => ({
     quantity: row.quantity.toString(),
     unit_value: row.price?.unit_value.toString(),
     currency: row.price?.currency,
-    fx_rate: row.price?.fx_rate.toString(),
+    fx_rate: row.price?.fx_rate?.toString(),
     price_date: row.price?.date,
     price_age_days: row.price?.age_days,
     price_stale: row.price?.stale,

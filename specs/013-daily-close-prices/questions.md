@@ -243,3 +243,23 @@ Visto bueno al plan, con estas decisiones. Lo que cambian en `spec.md` y `plan.m
 - **Las cuatro propuestas del plan, aceptadas** salvo la de CoinGecko (retirada por D-Q5): liquidativo real = `valuation` o cierre de `EUFUND`; `currency_mismatch`, que no cuenta como fallo seguido; `secrets_too_open`, con el `chmod 600`, y todo lo demás sigue.
 - **Q9** anotada como errata.
 - **Las comprobaciones con la clave**: se añade la cuarta, si el plan gratuito de EODHD cubre cripto (§1.8). El procedimiento queda listo para que la dirección lo pase al terminar; no bloquean la construcción.
+
+### 7.2 La puerta: P2 y `unit_value_eur` opcional (2026-09-24)
+
+**Quién llama a la puerta y qué ve distinto** (enumerado a mano; el compilador no lo dice, porque la firma no cambia):
+
+| Quien llama | Qué ve distinto con P2 y `unit_value_eur` opcional |
+|---|---|
+| `bucket.ts` `bucketPositions` (`priceAt`) | Una cotización más reciente que la valoración gana; una cotización sin tipo cuenta como sin precio en euros (`missing`, `partial`) y se dice con `price_without_eur_value` |
+| `bucket.ts` comparación con el índice (`priceAt`, línea 317) | Sin valor en euros en el final o en una compra, hueco `no_price` con `fx_missing`; el aviso `missing_benchmark_price` dice por qué |
+| `bucket.ts` `thesisView` (`priceAt`) | P2; sin valor en euros, `positionValueOf` no da valor (como sin precio) |
+| `weights.ts` `coreWeights` (`manualPrices`) | P2; sin valor en euros, el activo entra en `missing_prices`, el total es parcial (no se calculan pesos, como hoy) y se dice con `price_without_eur_value` |
+| `costs.ts` `costSummary` (`manualPrices`) | P2; sin valor en euros, `partial` (antes solo sin precio) |
+| `networth.ts` (vía `coreWeights` y `bucketPositions`) | Hereda las dos: el total parcial ya lista los activos sin precio en euros. **No cambia de código** |
+| `bucket-stats.ts` (reenvía `external`) | Hereda `bucketPositions` |
+| `simulate-transfer.ts` (`manualPrices` sin fuente) | Nada: solo precios manuales, y una `valuation` siempre lleva tipo (el `as Money` lo dice con su invariante) |
+| `informative/valuation.ts` (720) | **Nada**: ya no llama a la puerta, lee la hoja (bloque 1) |
+| `series.ts` (`priceDates`) | Nada: las fechas automáticas llegan aparte (bloque 5) |
+| Consola `portfolio.ts` (`fx_rate`) | Sin tipo, «sin tipo del BCE»; el resto de la presentación, en el bloque 4 |
+
+**Arranque**: +258 bytes (dominio +249, entrada +9), techo subido exactamente eso en su propio commit (`7a13a1f`, D-Q7). Un intento de ahorro: el mensaje inglés del aviso se acortó (−5 bytes).

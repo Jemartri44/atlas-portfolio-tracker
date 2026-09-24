@@ -13,7 +13,14 @@ import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { type ExternalPrices, type PriceLookup, positionValueOf, priceAt } from "./prices.js";
+import {
+  type ExternalPrices,
+  type FxMissing,
+  type PriceLookup,
+  positionValueOf,
+  priceAt,
+  warnWithoutEur,
+} from "./prices.js";
 import type { FiscalLot, LedgerState, Thesis, ThesisLeg, ThesisView, Warning } from "./state.js";
 import { openThesisOn, theses } from "./theses.js";
 
@@ -157,7 +164,21 @@ export interface BenchmarkGap {
   reason: "no_benchmark" | "unknown_asset" | "no_price" | "no_linked_buys" | "no_asset_price";
   asset_id?: AssetId;
   date?: CivilDate;
+  /** A quote exists, but without its value in euros (feature 013, §6.4 (i)). */
+  fx_missing?: FxMissing;
 }
+
+/** The gap of a price that is missing, or that has no value in euros and says why. */
+const noPrice = (
+  price: PriceLookup | undefined,
+  assetId: AssetId,
+  date: CivilDate,
+): BenchmarkGap => ({
+  reason: "no_price",
+  asset_id: assetId,
+  date,
+  ...(price?.fx_missing === undefined ? {} : { fx_missing: price.fx_missing }),
+});
 
 export interface BucketThesisView extends ThesisView {
   /** Latent gain of the live position of the pair (account, asset); zero when there is none. */
@@ -196,6 +217,9 @@ export const bucketPositions = (
     const rowValue = positionValueOf(price, quantity);
     if (rowValue === undefined) {
       missing.push(assetId);
+      if (price !== undefined) {
+        warnWithoutEur(warnings, price);
+      }
     } else {
       value = value.add(rowValue);
     }
@@ -302,20 +326,20 @@ const benchmarkEquivalentOf = (
       ? (lastFiscalDateOf(thesis.sells) ?? (thesis.closed_at as CivilDate))
       : date;
   const endPrice = priceAt(state, benchmarkId, end, settings, external);
-  if (endPrice === undefined) {
-    gaps.push({ reason: "no_price", asset_id: benchmarkId, date: end });
+  const endEur = endPrice?.unit_value_eur;
+  if (endEur === undefined) {
+    gaps.push(noPrice(endPrice, benchmarkId, end));
     return undefined;
   }
   let equivalent = Money.zero(EUR);
   for (const leg of thesis.buys) {
     const price = priceAt(state, benchmarkId, leg.fiscal_date, settings, external);
-    if (price === undefined) {
-      gaps.push({ reason: "no_price", asset_id: benchmarkId, date: leg.fiscal_date });
+    const eur = price?.unit_value_eur;
+    if (eur === undefined) {
+      gaps.push(noPrice(price, benchmarkId, leg.fiscal_date));
       return undefined;
     }
-    equivalent = equivalent.add(
-      leg.amount_eur.mul(endPrice.unit_value_eur.amount.div(price.unit_value_eur.amount)),
-    );
+    equivalent = equivalent.add(leg.amount_eur.mul(endEur.amount.div(eur.amount)));
   }
   return equivalent;
 };
@@ -432,8 +456,8 @@ const benchmarkWarningsOf = (rows: readonly BucketThesisView[]): Warning[] => {
           once(
             `price|${gap.asset_id}|${gap.date}`,
             "missing_benchmark_price",
-            `no price for the benchmark ${gap.asset_id} at ${gap.date}`,
-            { asset_id: gap.asset_id, date: gap.date },
+            `no price in euros for the benchmark ${gap.asset_id} at ${gap.date}`,
+            { asset_id: gap.asset_id, date: gap.date, fx_missing: gap.fx_missing },
           );
           break;
         default:

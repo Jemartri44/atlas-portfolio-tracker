@@ -142,7 +142,9 @@ export const simulateTransfer = (
     });
   }
 
-  const unit = (from.price as PriceLookup).unit_value_eur;
+  // Manual prices only (the call above passes no external source), and a
+  // `valuation` always carries its ECB rate: its value in euros is always there.
+  const unit = (from.price as PriceLookup).unit_value_eur as Money;
   const moved = Money.of(unit.amount.mul(quantity.value), "EUR");
   const warnings: Warning[] = [];
   const rows = before.rows.map((row) => {

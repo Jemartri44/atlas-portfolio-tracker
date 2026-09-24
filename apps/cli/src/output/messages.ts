@@ -8,6 +8,20 @@ import type {
 } from "@atlas/domain";
 import { table } from "./table.js";
 
+/** Why a quote has no value in euros (feature 013, §6.4 (i)). */
+export const fxMissingText = (reason: unknown): string => {
+  switch (reason) {
+    case "not_yet_published":
+      return "el BCE aún no ha publicado el tipo de esa fecha";
+    case "currency_not_published":
+      return "el BCE no publica esa divisa; una subunidad como GBX no es su divisa";
+    case "currency_stale":
+      return "el BCE dejó de publicar esa divisa";
+    default:
+      return "no hay histórico del BCE; descárgalo con «atlas fx update»";
+  }
+};
+
 const text = (value: unknown): string =>
   typeof value === "string" ? value : JSON.stringify(value);
 
@@ -384,7 +398,11 @@ export const describeWarning = (warning: Warning): string => {
     case "unknown_benchmark_asset":
       return `El índice de referencia ${text(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`;
     case "missing_benchmark_price":
-      return `Falta el precio del índice ${text(d.asset_id)} a ${text(d.date)}: la comparación queda sin dato (nunca se estima).`;
+      return d.fx_missing === undefined
+        ? `Falta el precio del índice ${text(d.asset_id)} a ${text(d.date)}: la comparación queda sin dato (nunca se estima).`
+        : `El índice ${text(d.asset_id)} tiene cotización a ${text(d.date)}, pero sin tipo del BCE (${fxMissingText(d.fx_missing)}): falta su valor en euros y la comparación queda sin dato.`;
+    case "price_without_eur_value":
+      return `${text(d.asset_id)}: la cotización en ${text(d.currency)} del ${text(d.date)} no tiene tipo del BCE (${fxMissingText(d.reason)}); se enseña en su divisa y falta su valor en euros, así que no suma en ningún total.`;
     case "stale_price":
       return `${text(d.asset_id)}: el precio es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una valoración más reciente.`;
     case "currency_mismatch":
