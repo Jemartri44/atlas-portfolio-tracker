@@ -50,7 +50,7 @@ export const officialRatesOf = (
   }));
 
 /** Where to write a value: a top-level field, or one of an effect. */
-const setPath = (target: Record<string, unknown>, path: string, value: string): void => {
+export const setPath = (target: Record<string, unknown>, path: string, value: string): void => {
   const match = /^effects\[(\d+)\]\.(.+)$/.exec(path);
   if (match === null) {
     target[path] = value;

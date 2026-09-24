@@ -2,6 +2,7 @@
 
 export { systemClock } from "./clock/system.js";
 export { readLocalConfig } from "./config/local-config.js";
+export { DRAFTS_DIR, FileDraftStore } from "./drafts/file-drafts.js";
 export {
   ECB_DIR,
   EcbHistoryDamaged,

@@ -22,6 +22,10 @@
       "types": "./dist/ledger-store/browser/reference.d.ts",
       "import": "./dist/ledger-store/browser/reference.js"
     },
+    "./drafts": {
+      "types": "./dist/ledger-store/browser/drafts.d.ts",
+      "import": "./dist/ledger-store/browser/drafts.js"
+    },
     "./clock": {
       "types": "./dist/clock/system.d.ts",
       "import": "./dist/clock/system.js"

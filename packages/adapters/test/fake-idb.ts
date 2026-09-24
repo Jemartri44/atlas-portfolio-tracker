@@ -75,6 +75,17 @@ class FakeObjectStore {
       return undefined;
     });
   }
+
+  /** Keys in key order, as IndexedDB returns them. */
+  getAllKeys(): FakeRequest {
+    return this.request(() => [...this.values.keys()].sort());
+  }
+
+  getAll(): FakeRequest {
+    return this.request(() =>
+      [...this.values.keys()].sort().map((key) => structuredClone(this.values.get(key))),
+    );
+  }
 }
 
 export class FakeTransaction {
@@ -286,8 +297,12 @@ export class FakeDatabase {
  */
 export class FakeIdbFactory {
   readonly databases = new Map<string, FakeDatabase>();
+  /** The version each database was last opened at. */
+  readonly versions = new Map<string, number>();
+  /** Another tab holds an older version open: the next upgrade is blocked. */
+  blocked = false;
 
-  open(name: string, _version?: number): unknown {
+  open(name: string, version = 1): unknown {
     const request: {
       result?: unknown;
       onsuccess: (() => void) | null;
@@ -303,7 +318,13 @@ export class FakeIdbFactory {
         this.databases.set(name, db);
       }
       request.result = db;
-      if (created) {
+      const upgrade = created || version > (this.versions.get(name) ?? 0);
+      if (upgrade && this.blocked) {
+        request.onblocked?.();
+        return;
+      }
+      if (upgrade) {
+        this.versions.set(name, version);
         request.onupgradeneeded?.();
       }
       request.onsuccess?.();

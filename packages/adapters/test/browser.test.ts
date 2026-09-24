@@ -5,11 +5,13 @@
 // replaces. Each case names the mutant of prompt 012 §5 it kills.
 
 import { ConflictError, sha256Hex } from "@atlas/domain";
-import { describe, expect, it } from "vitest";
+import type { PendingDraft } from "@atlas/domain/ecb";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { BlobLedgerStore } from "../src/ledger-store/blob.js";
-import { LEDGER_STORE } from "../src/ledger-store/browser/idb.js";
+import { BrowserDraftStore } from "../src/ledger-store/browser/drafts.js";
+import { DRAFT_STORE, LEDGER_STORE } from "../src/ledger-store/browser/idb.js";
 import { BrowserLedgerBlob, type StoredLedger } from "../src/ledger-store/browser/indexeddb.js";
-import { FakeDatabase } from "./fake-idb.js";
+import { FakeDatabase, FakeIdbFactory } from "./fake-idb.js";
 import { account, deposit, lineOf } from "./fixtures.js";
 import { ledgerStoreContract } from "./ledger-store.contract.js";
 
@@ -141,5 +143,86 @@ describe("BrowserLedgerBlob", () => {
     expect(await blob.lastExportAt()).toBe("2026-09-01T09:00:00.000Z");
     await blob.replaceText("");
     expect(await blob.lastExportAt()).toBeUndefined();
+  });
+});
+
+const draftOf = (id: string): PendingDraft => ({
+  draft_format: 1,
+  id,
+  saved_at: "2026-04-01T10:00:00.000Z",
+  event: { type: "buy", currency: "USD", trade_date: "2026-04-01" },
+});
+
+describe("BrowserDraftStore (feature 012, block 5)", () => {
+  const drafts = () => {
+    const db = new FakeDatabase([LEDGER_STORE, DRAFT_STORE]);
+    return { db, store: new BrowserDraftStore(() => Promise.resolve(db.asIdb())) };
+  };
+  const first = "01K00000000000000000000001";
+  const second = "01K00000000000000000000002";
+
+  it("saves, lists in the order they were saved and removes, apart from the ledger", async () => {
+    const { db, store } = drafts();
+    expect(await store.list()).toEqual({ drafts: [], unreadable: [] });
+    await store.save(draftOf(second));
+    await store.save(draftOf(first));
+    expect((await store.list()).drafts.map((draft) => draft.id)).toEqual([first, second]);
+    await store.remove(first);
+    expect((await store.list()).drafts.map((draft) => draft.id)).toEqual([second]);
+    // Nothing of it reaches the ledger's store.
+    expect(db.store(LEDGER_STORE).size).toBe(0);
+  });
+
+  it("never overwrites a draft with the same id", async () => {
+    const { store } = drafts();
+    await store.save(draftOf(first));
+    await expect(store.save({ ...draftOf(first), saved_at: "later" })).rejects.toBeDefined();
+    expect((await store.list()).drafts[0]?.saved_at).toBe("2026-04-01T10:00:00.000Z");
+  });
+
+  it("names the records it cannot read", async () => {
+    const { db, store } = drafts();
+    db.store(DRAFT_STORE).set(first, "{");
+    db.store(DRAFT_STORE).set(second, JSON.stringify(draftOf(first)));
+    expect(await store.list()).toEqual({ drafts: [], unreadable: [first, second] });
+  });
+});
+
+describe("openAtlasDb, version 2", () => {
+  const holder = globalThis as { indexedDB?: unknown };
+  afterEach(() => {
+    delete holder.indexedDB;
+    vi.resetModules();
+  });
+
+  it("adds the drafts store to a database of version 1 and keeps its ledger", async () => {
+    const factory = new FakeIdbFactory();
+    const old = new FakeDatabase([LEDGER_STORE, "handles"]);
+    old.store(LEDGER_STORE).set("current", { text: "x", updatedAt: "2026-09-01" });
+    factory.databases.set("atlas", old);
+    factory.versions.set("atlas", 1);
+    holder.indexedDB = factory;
+    vi.resetModules();
+    const { openAtlasDb } = await import("../src/ledger-store/browser/idb.js");
+    await openAtlasDb();
+    expect(old.objectStoreNames.contains(DRAFT_STORE)).toBe(true);
+    expect(old.store(LEDGER_STORE).get("current")).toEqual({ text: "x", updatedAt: "2026-09-01" });
+    expect(factory.versions.get("atlas")).toBe(2);
+  });
+
+  it("says another tab blocks the upgrade, not that the browser keeps no data", async () => {
+    const factory = new FakeIdbFactory();
+    factory.databases.set("atlas", new FakeDatabase([LEDGER_STORE, "handles"]));
+    factory.versions.set("atlas", 1);
+    factory.blocked = true;
+    holder.indexedDB = factory;
+    vi.resetModules();
+    const idb = await import("../src/ledger-store/browser/idb.js");
+    const failure = await idb.openAtlasDb().catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(idb.StorageUnavailable);
+    expect((failure as Error).cause).toBe(idb.BLOCKED);
+    // Once the other tab is gone, the next attempt opens it.
+    factory.blocked = false;
+    await expect(idb.openAtlasDb()).resolves.toBeDefined();
   });
 });

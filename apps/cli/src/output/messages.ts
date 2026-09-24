@@ -242,6 +242,10 @@ export const describeError = (error: DomainError): string => {
       return "--broker-settled-eur no puede ser cero en una compra, una venta o una comisión: si el extracto no da la cifra, no lo indiques (sin él, la cifra queda como desconocida).";
     case "ecb_history_unreadable":
       return `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Vuelve a descargarlo con \`atlas fx update\`.`;
+    case "draft_not_needed":
+      return "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, sin --draft.";
+    case "draft_unreadable":
+      return "Un borrador de drafts/ no tiene el formato esperado: no se ha tocado. Revísalo a mano; puede ser la única copia de una operación.";
     case "ecb_history_empty":
       return "El histórico del BCE no trae ninguna publicación: no se ha usado. Vuelve a descargarlo con `atlas fx update`.";
     case "dangling_correction":

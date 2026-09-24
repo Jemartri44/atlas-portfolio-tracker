@@ -14,6 +14,17 @@ export {
 export { type BrokerSettlement, brokerSettlementOf } from "./ecb/broker-settlement.js";
 export { checkLedgerRates, foreignRatesOf, type RateCheck } from "./ecb/check.js";
 export {
+  DRAFT_FORMAT,
+  type DraftStatus,
+  type PendingDraft,
+  type PreparedDraft,
+  parsePendingDraft,
+  pendingDraftStatus,
+  preparePendingDraft,
+  recordPendingDraft,
+  serializePendingDraft,
+} from "./ecb/drafts.js";
+export {
   asciiText,
   type CurrencySeries,
   type EcbHistory,
@@ -46,6 +57,7 @@ export {
 } from "./ecb/target.js";
 export { checkHistoryUpdate, type HistoryConflict, type HistoryUpdate } from "./ecb/update.js";
 export { type EcbUpdateResult, updateEcbHistory } from "./ecb/update-history.js";
+export type { PendingDraftStore } from "./ports/draft-store.js";
 export type {
   DownloadedHistory,
   EcbHistoryStore,

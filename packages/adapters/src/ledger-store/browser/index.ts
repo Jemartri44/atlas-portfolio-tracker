@@ -15,6 +15,7 @@ export {
   supportsDirectoryPicker,
 } from "./folder.js";
 export {
+  BLOCKED,
   openAtlasDb,
   requestPersistentStorage,
   StorageUnavailable,

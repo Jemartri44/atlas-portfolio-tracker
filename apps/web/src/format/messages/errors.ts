@@ -234,6 +234,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Lo liquidado por el bróker en euros no puede ser cero en una compra, una venta o una comisión. Si el extracto no da la cifra, déjalo vacío.",
   ecb_history_unreadable: (d) =>
     `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Descárgalo otra vez con la consola o importa el archivo del BCE.`,
+  draft_not_needed: () =>
+    "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, no hace falta borrador.",
+  draft_unreadable: () =>
+    "Un borrador guardado en este navegador no tiene el formato esperado: no se ha tocado.",
   ecb_history_empty: () =>
     "El histórico del BCE no trae ninguna publicación: no se ha usado. Descárgalo otra vez con la consola o importa el archivo del BCE.",
   dangling_correction: () => "La corrección apunta a un movimiento que no está anulado.",

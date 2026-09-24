@@ -1,14 +1,24 @@
-// Minimal promise wrapper over IndexedDB. One database (`atlas`, version 1)
-// with two stores: `ledger` (the ledger text and its archives) and `handles`
+// Minimal promise wrapper over IndexedDB. One database (`atlas`, version 2)
+// with three stores: `ledger` (the ledger text and its archives), `handles`
 // (the directory handle of the File System Access path, which is
-// structured-cloneable). No dependency: it is thirty lines of callbacks.
+// structured-cloneable) and, since version 2 (feature 012, block 5), `drafts`
+// (operations recorded before their ECB rate, outside the ledger). No
+// dependency: it is thirty lines of callbacks.
 
 export const DB_NAME = "atlas";
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 export const LEDGER_STORE = "ledger";
 export const HANDLE_STORE = "handles";
+export const DRAFT_STORE = "drafts";
 
-/** Raised when the browser has no usable IndexedDB (Safari in private mode, blocked site data). */
+/** The cause of a `StorageUnavailable` that is only another tab holding an older version. */
+export const BLOCKED = "blocked";
+
+/**
+ * Raised when the browser has no usable IndexedDB (Safari in private mode,
+ * blocked site data) — or, with the cause `BLOCKED`, when another tab keeps
+ * the previous version of the database open and the upgrade cannot run.
+ */
 export class StorageUnavailable extends Error {
   constructor(cause?: unknown) {
     super("el navegador no permite guardar datos de este sitio");
@@ -35,16 +45,20 @@ export const openAtlasDb = (): Promise<IDBDatabase> => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = () => {
         const db = request.result;
-        if (!db.objectStoreNames.contains(LEDGER_STORE)) {
-          db.createObjectStore(LEDGER_STORE);
-        }
-        if (!db.objectStoreNames.contains(HANDLE_STORE)) {
-          db.createObjectStore(HANDLE_STORE);
+        // Whatever version it comes from, what is missing is created and
+        // nothing that exists is touched.
+        for (const name of [LEDGER_STORE, HANDLE_STORE, DRAFT_STORE]) {
+          if (!db.objectStoreNames.contains(name)) {
+            db.createObjectStore(name);
+          }
         }
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(new StorageUnavailable(request.error));
-      request.onblocked = () => reject(new StorageUnavailable());
+      // Another tab still has the previous version open: said apart (the
+      // cause "blocked"), never as a browser that keeps no data, which is
+      // false and sends the user to change a setting that is fine.
+      request.onblocked = () => reject(new StorageUnavailable(BLOCKED));
     }).catch((error: unknown) => {
       open = undefined;
       throw error;

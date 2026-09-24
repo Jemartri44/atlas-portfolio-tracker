@@ -106,6 +106,7 @@ export default defineConfig(({ command }) => ({
       "@atlas/adapters/reference": repo(
         "../../packages/adapters/src/ledger-store/browser/reference.ts",
       ),
+      "@atlas/adapters/drafts": repo("../../packages/adapters/src/ledger-store/browser/drafts.ts"),
       "@atlas/adapters/browser": repo("../../packages/adapters/src/ledger-store/browser/index.ts"),
       "@atlas/adapters/clock": repo("../../packages/adapters/src/clock/system.ts"),
       "@atlas/adapters/random": repo("../../packages/adapters/src/random/web-crypto.ts"),

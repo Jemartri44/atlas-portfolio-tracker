@@ -13,6 +13,7 @@ export default defineConfig({
       "@atlas/adapters/reference": local(
         "./packages/adapters/src/ledger-store/browser/reference.ts",
       ),
+      "@atlas/adapters/drafts": local("./packages/adapters/src/ledger-store/browser/drafts.ts"),
       "@atlas/adapters/browser": local("./packages/adapters/src/ledger-store/browser/index.ts"),
       "@atlas/adapters/clock": local("./packages/adapters/src/clock/system.ts"),
       "@atlas/adapters/random": local("./packages/adapters/src/random/web-crypto.ts"),
