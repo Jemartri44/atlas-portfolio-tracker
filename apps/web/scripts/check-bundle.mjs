@@ -491,8 +491,22 @@ const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024 + 258;
  * two catalogues and the boot of the gate (that one measured apart, in the
  * boot). The screens of the prices come in block 5 and will be measured then;
  * this is not the final measure of the feature.
+ *
+ * **Feature 013, block 5 (2026-09-25): measured 267,19 (273.607 bytes),
+ * ceiling 267,5** — the rule of always (decision P10): the measure plus a
+ * small margin, in a commit of its own. Chunk by chunk against `develop`
+ * (262,1): the door of the automatic prices and its reader, a chunk of its
+ * own (`quotes`, **+2,1**: the lines, the close in force, the ECB conversion,
+ * the approximation, the import by hand); the card «Precios automáticos» of
+ * Ajustes (**+0,9**, `ajustes`); the Spanish of the codes of prices
+ * (**+0,5** across `warnings` and `errors`); the charts chunk, which carries
+ * the price marks of the shared components (**+0,5**); the gate in the domain
+ * (**+0,3**, the boot, measured apart); and the three screens that pass the
+ * quotes to the gate and say their problems (**+0,5** across `cartera`,
+ * `PageHeader`, `core`, `history` and `EventForm`). The boot stays in its own
+ * ceiling. The trend: 237,9 → 262,1 in feature 012; 262,1 → 267,2 in this one.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 263.2 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 267.5 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
