@@ -3,7 +3,7 @@
 // network: `fetch` is a double —, and `reference/ecb/` on the disk under the
 // lock of the folder.
 
-import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import { EcbHistoryDamaged, FileEcbHistoryStore, fileOfSource } from "../src/ecb/history-store.js";
 import { ECB_API_URL, ECB_ZIP_URL, EcbDownloadFailed, EcbFxRateSource } from "../src/ecb/source.js";
 import { entryOfZip, ZipUnreadable } from "../src/ecb/zip.js";
-import { LedgerLockedError, LOCK_FILE } from "../src/ledger-store/folder-lock.js";
+import { LedgerLockedError, LOCK_FILE, LockLostError } from "../src/ledger-store/folder-lock.js";
 
 const fixtures = resolve(dirname(fileURLToPath(import.meta.url)), "../../../tests/fixtures/ecb");
 const csv = async (): Promise<Buffer> => readFile(join(fixtures, "eurofxref-hist.csv"));
@@ -225,6 +225,25 @@ describe("FileEcbHistoryStore", () => {
     const api = await readFile(join(fixtures, "api-exr.csv"));
     await expect(failing.activate(downloaded(api, "api"))).rejects.toThrow("disco lleno");
     expect((await failing.active())?.meta.source).toBe("zip");
+  });
+
+  it("renames nothing once its lock is no longer its own (review of PR #75)", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "atlas-ecb-"));
+    const content = await csv();
+    await new FileEcbHistoryStore(folder).activate(downloaded(content));
+    // Somebody breaks the lock and takes it again before the manifest.
+    const stolen = new FileEcbHistoryStore(folder, {
+      beforeManifest: async () => {
+        await rm(join(folder, LOCK_FILE));
+        await writeFile(
+          join(folder, LOCK_FILE),
+          JSON.stringify({ holder: "cli", token: "otro", since: "2026-09-24T09:00:00.000Z" }),
+        );
+      },
+    });
+    const api = await readFile(join(fixtures, "api-exr.csv"));
+    await expect(stolen.activate(downloaded(api, "api"))).rejects.toBeInstanceOf(LockLostError);
+    expect((await new FileEcbHistoryStore(folder).manifest())?.active.source).toBe("zip");
   });
 
   it("refuses a stored file that is not the one its manifest records", async () => {

@@ -1,13 +1,13 @@
 // `drafts/` on the disk (feature 012, block 5): one file per draft, every write
 // under the lock of the ledger folder (mutant 23 of prompt 012 §5).
 
-import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PendingDraft } from "@atlas/domain/ecb";
 import { describe, expect, it } from "vitest";
 import { DRAFTS_DIR, FileDraftStore } from "../src/drafts/file-drafts.js";
-import { LedgerLockedError, LOCK_FILE } from "../src/ledger-store/folder-lock.js";
+import { LedgerLockedError, LOCK_FILE, LockLostError } from "../src/ledger-store/folder-lock.js";
 
 const folder = (): Promise<string> => mkdtemp(join(tmpdir(), "atlas-012-drafts-"));
 
@@ -75,6 +75,24 @@ describe("FileDraftStore", () => {
     await expect(store.save(draftOf(second))).rejects.toBeInstanceOf(LedgerLockedError);
     await expect(store.remove(first)).rejects.toBeInstanceOf(LedgerLockedError);
     expect((await store.list()).drafts.map((draft) => draft.id)).toEqual([first]);
+  });
+
+  it("writes and removes nothing once its lock is no longer its own (review of PR #75)", async () => {
+    const dir = await folder();
+    // Somebody breaks the lock and takes it again, right before the commit.
+    const stolen = new FileDraftStore(dir, {
+      beforeCommit: async () => {
+        await rm(join(dir, LOCK_FILE));
+        await lockHeld(dir);
+      },
+    });
+    await expect(stolen.save(draftOf(first))).rejects.toBeInstanceOf(LockLostError);
+    expect(await new FileDraftStore(dir).list()).toEqual({ drafts: [], unreadable: [] });
+    await rm(join(dir, LOCK_FILE));
+    await new FileDraftStore(dir).save(draftOf(first));
+    await expect(stolen.remove(first)).rejects.toBeInstanceOf(LockLostError);
+    await rm(join(dir, LOCK_FILE));
+    expect((await new FileDraftStore(dir).list()).drafts.map((draft) => draft.id)).toEqual([first]);
   });
 
   it("fails when the folder cannot be listed for another reason", async () => {

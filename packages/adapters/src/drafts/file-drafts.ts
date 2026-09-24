@@ -27,8 +27,11 @@ const hasCode = (error: unknown, code: string): boolean =>
   (error as { code?: string }).code === code;
 
 export class FileDraftStore implements PendingDraftStore {
-  /** `folder` is the ledger's folder. */
-  constructor(private readonly folder: string) {}
+  /** `folder` is the ledger's folder; `beforeCommit` is a seam for the tests of the lock. */
+  constructor(
+    private readonly folder: string,
+    private readonly options: { beforeCommit?: () => Promise<void> } = {},
+  ) {}
 
   private get dir(): string {
     return join(this.folder, DRAFTS_DIR);
@@ -75,6 +78,7 @@ export class FileDraftStore implements PendingDraftStore {
         await handle.close();
       }
       try {
+        await this.options.beforeCommit?.();
         await lock.assertOwned();
         await fs.rename(temporary, path);
       } finally {
@@ -85,6 +89,7 @@ export class FileDraftStore implements PendingDraftStore {
 
   remove(id: string): Promise<void> {
     return withFolderLock(this.folder, async (lock) => {
+      await this.options.beforeCommit?.();
       await lock.assertOwned();
       await fs.rm(join(this.dir, `${id}.json`), { force: true });
     });
