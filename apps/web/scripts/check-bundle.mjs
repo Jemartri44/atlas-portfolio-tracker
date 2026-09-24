@@ -481,8 +481,18 @@ const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024 + 258;
  * writing, conditionally, and refusing a draft that vanished instead of
  * recording it as new (+0,4 across `drafts`, the store of drafts and the
  * Spanish of `draft_changed`), all lazy. The boot does not move (73,7).
+ *
+ * **Feature 013, block 2 (2026-09-24): measured 263,03 (269.344 bytes),
+ * ceiling 263,2.** Only the Spanish of the new codes of the domain of prices
+ * (the files of prices that do not read, the configuration, the status, the
+ * symbols, the weights that rest on an approximation and the quote without a
+ * value in euros), which the messages test demands in both interfaces from the
+ * commit that adds the codes: **+0,9** over the 262,1 of `develop` across the
+ * two catalogues and the boot of the gate (that one measured apart, in the
+ * boot). The screens of the prices come in block 5 and will be measured then;
+ * this is not the final measure of the feature.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 263.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 263.2 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
