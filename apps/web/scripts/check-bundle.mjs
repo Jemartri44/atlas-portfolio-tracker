@@ -461,6 +461,12 @@ const bootAssets = () => {
 const LAZY_ONLY = [
   { path: "/packages/domain/src/tax/", what: "el motor fiscal" },
   { path: "/packages/domain/src/informative/", what: "los modelos informativos" },
+  // Feature 012, decision (r): **nothing of the ECB on the boot path**, the
+  // history, its reading, the proposal, the findings, the drafts, the note and
+  // the local configuration. If any of it shows up here, the build stops.
+  { path: "/packages/domain/src/ecb/", what: "los tipos del BCE" },
+  { path: "/packages/domain/src/ecb.ts", what: "la puerta del BCE" },
+  { path: "/packages/domain/src/config/", what: "la configuración local" },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */

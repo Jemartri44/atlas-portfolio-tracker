@@ -130,7 +130,10 @@ export default defineConfig(({ command }) => ({
          *
          * The test keeps out exactly what must **not** be on the boot path:
          * `tax/`, `informative/`, the `fiscal.ts` door and the three modules
-         * of `filings/` that reach the tax chain. They are grouped by whoever
+         * of `filings/` that reach the tax chain — and, since feature 012,
+         * everything of the ECB (`ecb/`, the `ecb.ts` door and the local
+         * configuration in `config/`), which must never be on the boot path
+         * either (decision (r) of its prompt). They are grouped by whoever
          * imports them, which is only ever a lazily loaded screen, and
          * `scripts/check-bundle.mjs` fails the build if any of them turns up
          * in a chunk `index.html` preloads.
@@ -139,7 +142,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/]domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|filings[\\/](?:closed-years|comparison|proposal)))/,
+              test: /packages[\\/]domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|filings[\\/](?:closed-years|comparison|proposal)))/,
             },
           ],
         },
