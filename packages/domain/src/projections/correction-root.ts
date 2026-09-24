@@ -38,8 +38,12 @@ export const correctionRoots = (events: readonly LedgerEvent[]): ReadonlyMap<Uli
         return;
       }
       if (onPath.has(current)) {
-        // A loop written by hand has no first event: each member is its own
-        // root (and the projection rejects them as dangling corrections).
+        // A loop (`A→B, B→A`) can only come from a file edited by hand and
+        // has no first event: each member is its own root. What the
+        // projection does with it depends on the reversals in the file (none:
+        // dangling corrections; both: nothing is rejected and both are
+        // inactive). A correction of a loop member gets that member's root
+        // only if the member comes first in the file; otherwise its own.
         for (const member of path) {
           roots.set(member, member);
         }
