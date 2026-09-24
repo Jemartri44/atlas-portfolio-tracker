@@ -303,6 +303,33 @@ describe("projectLedger: rectification", () => {
     );
   });
 
+  it("judges one live correction per root of the chain, not per corrects_id (review of PR #75)", () => {
+    // O, R(O), C1→O, R(C1), C2→C1, C3→O: C2 and C3 correct the same fact.
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const original = b.buy({ account_id: "acc_fund", asset_id: "ast_world", unit_price: "10" });
+    b.reversal(original.id);
+    const c1 = b.buy({ account_id: "acc_fund", asset_id: "ast_world", unit_price: "11" });
+    c1.corrects_id = original.id;
+    b.reversal(c1.id);
+    const c2 = b.buy({ account_id: "acc_fund", asset_id: "ast_world", unit_price: "12" });
+    c2.corrects_id = c1.id;
+    const c3 = b.buy({ account_id: "acc_fund", asset_id: "ast_world", unit_price: "13" });
+    c3.corrects_id = original.id;
+    const collected = projectLedger(b.build(), { collectErrors: true });
+    expect(collected.invalid.map((entry) => [entry.error.code, entry.event.id])).toEqual([
+      ["second_live_correction", c3.id],
+    ]);
+    expect(collected.invalid[0]?.error.details).toMatchObject({
+      corrects_id: original.id,
+      root_id: original.id,
+      live_correction_id: c2.id,
+    });
+    expect(fiscalLots(collected, "ast_world").map((lot) => lot.cost_eur.amount.toString())).toEqual(
+      ["120"],
+    );
+  });
+
   it("counts as live a correction written before its reversal, which the file accepts", () => {
     const b = new LedgerBuilder();
     catalogue(b);

@@ -35,6 +35,7 @@ import {
   applyAssetUpdated,
 } from "./catalogue.js";
 import { applyCorporateAction, referencesOf } from "./corporate-actions.js";
+import { correctionRoots } from "./correction-root.js";
 import { applyTaxReturnFiled } from "./filings.js";
 import { noteFxRates } from "./fx-rates.js";
 import {
@@ -373,6 +374,12 @@ export const projectLedger = (
   // hardening of the projection that no ledger written by the application can
   // fail: correcting the same original again requires reversing it again,
   // which `already_reversed` has always refused.
+  //
+  // "The same original" is the **root** of the chain (`correction-root.ts`):
+  // a correction of a correction corrects the same fact, and judging by
+  // `corrects_id` alone let `O, R(O), C1→O, R(C1), C2→C1, C3→O` keep two live
+  // corrections of O (adversarial review of PR #75).
+  const roots = correctionRoots(events);
   const accepted = new Map<Ulid, Ulid[]>();
   events.forEach((event, position) => {
     const original = event.corrects_id;
@@ -391,7 +398,8 @@ export const projectLedger = (
       );
       return;
     }
-    const earlier = accepted.get(original) ?? [];
+    const root = roots.get(event.id) as Ulid;
+    const earlier = accepted.get(root) ?? [];
     const live = earlier.find((id) => {
       const reversal = state.reversed.get(id);
       return reversal === undefined || (state.positionOf.get(reversal) as number) > position;
@@ -402,13 +410,13 @@ export const projectLedger = (
         new ProjectionError(
           "second_live_correction",
           event.id,
-          `${original} already has a live correction, ${live}, at this point of the file`,
-          { corrects_id: original, live_correction_id: live },
+          `${root} already has a live correction, ${live}, at this point of the file`,
+          { corrects_id: original, root_id: root, live_correction_id: live },
         ),
       );
       return;
     }
-    accepted.set(original, [...earlier, event.id]);
+    accepted.set(root, [...earlier, event.id]);
   });
 
   const active: Positioned[] = [];
@@ -489,7 +497,18 @@ export const projectLedger = (
   // Pass B: operations and tracking, in chronological order. With `asOf`, what
   // happens after that date simply has not happened yet: it enters no lot, no
   // position, no cash, no gain, no pending order, no valuation and no warning.
-  for (const entry of orderForProjection(state, active.filter(isOperation))) {
+  //
+  // A correction is the same economic fact as its original, so it takes the
+  // original's place: the position of the **root** of its chain orders it
+  // among the operations of its date and breaks the FIFO tie between lots of
+  // the same date (decision of the direction on the review of PR #75). Its
+  // own position, at the end of the file, would make a rate correction change
+  // which lot a sale consumes.
+  const inPlace = active.filter(isOperation).map((entry) => ({
+    ...entry,
+    position: state.positionOf.get(roots.get(entry.event.id) as Ulid) as number,
+  }));
+  for (const entry of orderForProjection(state, inPlace)) {
     if (options.asOf !== undefined && entry.date > options.asOf) {
       continue;
     }
