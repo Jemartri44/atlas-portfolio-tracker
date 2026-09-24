@@ -25,7 +25,7 @@ import {
   transferWatch,
 } from "@atlas/domain";
 import { A } from "@solidjs/router";
-import { For, type JSX, lazy, Show } from "solid-js";
+import { createMemo, For, type JSX, lazy, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
 import { Icon, Notice, Section } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
@@ -33,6 +33,7 @@ import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { daysSinceExport } from "../../ledger/source.js";
 import { store, today } from "../../ledger/state.js";
+import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   attentionItems,
@@ -81,6 +82,12 @@ export default function ResumenRoute(): JSX.Element {
         const names = nameIndex(snapshot.state);
         const settings = settingsAt(dated, date).settings;
         const worth = netWorth(dated, date, settings);
+        // The net worth with the automatic prices, once they are read (after
+        // the first paint): until then, and without any, the manual ones.
+        const prices = useQuotes(snapshot.state);
+        const liveWorth = createMemo(() =>
+          netWorthView(netWorth(dated, date, settings, prices.external(dated)), names),
+        );
         const weights = coreWeights(dated, date, settings);
         // `transferWatch`, not `pendingTransfers`: it is the one that applies
         // `transfer_max_days` and emits `transfer_overdue`. Reading the plain
@@ -128,11 +135,12 @@ export default function ResumenRoute(): JSX.Element {
           <>
             <PageHeader title="Resumen" lead={formatLongDate(date)} />
 
+            <QuotesNotice quotes={prices.quotes()} />
             <div class="grid">
               <Show when={onboarding}>{(steps) => <FirstSteps onboarding={steps()} />}</Show>
 
               <Show when={moved}>
-                <NetWorthBlock view={netWorthView(worth, names)} />
+                <NetWorthBlock view={liveWorth()} />
                 <AttentionBlock items={items} />
                 <Section title="Últimos movimientos" class="span-5" label="Últimos movimientos">
                   <ul class="rows">

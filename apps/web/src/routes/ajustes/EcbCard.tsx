@@ -23,6 +23,8 @@ const PROBLEMS = {
     "El histórico de la carpeta no se puede leer. No se usa; descárgalo otra vez con la consola.",
   storage:
     "Este navegador no permite guardar datos del sitio: no puede guardar un histórico importado.",
+  config:
+    "La configuración local de la carpeta no se entiende: corrígela en la carpeta o bórrala para volver a los valores por defecto.",
 } as const;
 
 export const EcbCard = (): JSX.Element => {
@@ -109,7 +111,14 @@ export const EcbCard = (): JSX.Element => {
               </p>
             </Show>
             <Show when={loaded().problem}>
-              {(problem) => <p class="card-note">{PROBLEMS[problem()]}</p>}
+              {(problem) => (
+                <p class="card-note">
+                  {PROBLEMS[problem()]}
+                  <Show when={loaded().configField}>
+                    {(field) => <> No se entiende «{field()}».</>}
+                  </Show>
+                </p>
+              )}
             </Show>
           </>
         )}

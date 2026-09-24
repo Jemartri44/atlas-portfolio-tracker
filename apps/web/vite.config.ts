@@ -108,6 +108,7 @@ export default defineConfig(({ command }) => ({
         "../../packages/adapters/src/ledger-store/browser/reference.ts",
       ),
       "@atlas/adapters/folder": repo("../../packages/adapters/src/ledger-store/browser/folder.ts"),
+      "@atlas/adapters/prices": repo("../../packages/adapters/src/ledger-store/browser/prices.ts"),
       "@atlas/adapters/transfer": repo(
         "../../packages/adapters/src/ledger-store/browser/transfer.ts",
       ),

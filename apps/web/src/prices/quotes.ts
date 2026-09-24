@@ -1,0 +1,138 @@
+// Where the web gets the automatic daily closes (feature 013, block 5).
+//
+// **The web downloads nothing and writes nothing in the folder.** On the
+// desktop it reads `prices/` from the folder linked for reading — what the
+// console downloaded — and converts with the ECB history it already reads from
+// the same folder; on the phone, or without a folder, the files **imported by
+// hand**. On the phone there are no automatic prices until the cloud exists
+// (features 014-016): said as such, not softened.
+//
+// The console downloads the prices **of the assets of its own ledger** (P5):
+// an asset created only in this web has no automatic price until it reaches
+// the console's ledger (export and import) or the sync exists.
+//
+// Loaded lazily: nothing of it is on the boot path, and the build fails if it
+// ever is.
+
+import { queryFolderPermission, rememberedFolder } from "@atlas/adapters/folder";
+import {
+  assetOfPriceFile,
+  importedPrices,
+  readFolderPrices,
+  saveImportedPrices,
+} from "@atlas/adapters/prices";
+import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
+import {
+  type EffectiveClose,
+  externalPricesOf,
+  readCloseFile,
+  readCloses,
+  type UnreadableCloses,
+} from "@atlas/domain/quotes";
+import { loadWebHistory, type WebHistory } from "../ecb/history.js";
+
+export interface WebQuotes {
+  readonly closes: ReadonlyMap<AssetId, readonly EffectiveClose[]>;
+  /** Where they came from; absent when there are none. */
+  readonly origin?: "folder" | "imported";
+  /** When the import was made. */
+  readonly importedAt?: string;
+  /** Files that do not read: their assets have no automatic price, and it is said. */
+  readonly unreadable: readonly UnreadableCloses[];
+  /** The folder is linked and lost its permission, or this browser keeps nothing. */
+  readonly problem?: "permission" | "storage";
+  readonly history: WebHistory;
+}
+
+const fromFolder = async (
+  assetIds: readonly AssetId[],
+): Promise<{ files?: Map<AssetId, string>; problem?: "permission" }> => {
+  const handle = await rememberedFolder();
+  if (handle === undefined) {
+    return {};
+  }
+  if ((await queryFolderPermission(handle)) !== "granted") {
+    return { problem: "permission" };
+  }
+  const files = await readFolderPrices(handle, assetIds);
+  return files.size === 0 ? {} : { files };
+};
+
+/** The closes for the assets given: the folder's, else the imported ones, else none. */
+export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQuotes> => {
+  const history = await loadWebHistory();
+  try {
+    const folder = await fromFolder(assetIds);
+    const problem = folder.problem === undefined ? {} : { problem: folder.problem };
+    if (folder.files !== undefined) {
+      const read = readCloses(folder.files);
+      return { closes: read.closes, unreadable: read.unreadable, origin: "folder", history };
+    }
+    const imported = await importedPrices();
+    if (imported === undefined) {
+      return { closes: new Map(), unreadable: [], history, ...problem };
+    }
+    const wanted = new Set(assetIds);
+    const read = readCloses(
+      new Map(Object.entries(imported.files).filter(([assetId]) => wanted.has(assetId))),
+    );
+    return {
+      closes: read.closes,
+      unreadable: read.unreadable,
+      origin: "imported",
+      importedAt: imported.imported_at,
+      history,
+      ...problem,
+    };
+  } catch {
+    // Without a store to read from (private mode, blocked site data): said.
+    return { closes: new Map(), unreadable: [], history, problem: "storage" };
+  }
+};
+
+/** The quotes of the ledger `state` at any date, for the gate; nothing without closes. */
+export const externalOf = (
+  quotes: WebQuotes | undefined,
+  state: LedgerState,
+): ExternalPrices | undefined =>
+  quotes === undefined || quotes.closes.size === 0
+    ? undefined
+    : externalPricesOf(state, {
+        closes: quotes.closes,
+        ...(quotes.history.history === undefined ? {} : { history: quotes.history.history }),
+        staleDays: quotes.history.staleDays,
+      });
+
+export type PricesImport =
+  | { readonly kind: "imported"; readonly assets: readonly AssetId[] }
+  | { readonly kind: "refused"; readonly file: string; readonly code: string };
+
+/**
+ * Imports the files of `prices/` the user chose, in the format of `prices/` —
+ * not a new one. Each is read **before** anything is kept, with the reader of
+ * the domain: one that does not read refuses the whole import, never half.
+ */
+export const importPriceFiles = async (
+  files: readonly { name: string; text: string }[],
+  now: Date = new Date(),
+): Promise<PricesImport> => {
+  const incoming: Record<AssetId, string> = {};
+  for (const { name, text } of files) {
+    const assetId = assetOfPriceFile(name);
+    if (assetId === undefined) {
+      return { kind: "refused", file: name, code: "not_a_price_file" };
+    }
+    try {
+      readCloseFile(assetId, text);
+    } catch (error) {
+      return { kind: "refused", file: name, code: (error as { code: string }).code };
+    }
+    incoming[assetId] = text;
+  }
+  const before = await importedPrices();
+  await saveImportedPrices({
+    files: { ...(before?.files ?? {}), ...incoming },
+    imported_at: now.toISOString(),
+  });
+  return { kind: "imported", assets: Object.keys(incoming) };
+};

@@ -25,6 +25,12 @@ export interface PriceInfo {
   ageDays?: number | undefined;
   /** Older than `stale_price_days`: shown, with its age, never hidden. */
   stale: boolean;
+  /** «manual», or the source of an automatic close (feature 013). */
+  priceOrigin?: string | undefined;
+  /** An approximation through the reference ETF: marked wherever it is shown (P3). */
+  approximate?: boolean | undefined;
+  /** Why the quote has no value in euros; it is then never added up in euros. */
+  eurMissing?: string | undefined;
 }
 
 /**
@@ -39,6 +45,19 @@ export const Price = (props: { price: PriceInfo; marked?: boolean }): JSX.Elemen
       unit
       missingReason="no hay precio registrado a esa fecha"
     />
+    <Show when={props.price.approximate === true}>
+      <span class="stale-mark" title="Aproximado con el movimiento de su ETF de referencia">
+        ≈<span class="sr-only"> aproximado</span>
+      </span>
+    </Show>
+    <Show when={props.price.eurMissing}>
+      {(reason) => (
+        <span class="stale-mark" title={`Sin valor en euros: ${reason()}`}>
+          <Icon name="caution" class="icon-sm" />
+          <span class="sr-only">sin valor en euros</span>
+        </span>
+      )}
+    </Show>
     <Show when={props.marked === true && props.price.stale}>
       <span
         class="stale-mark"
@@ -71,6 +90,11 @@ export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX
         {props.price.stale ? ", caducado" : ""})
       </Show>
       <Show when={props.withAge !== true && props.price.stale}> (caducado)</Show>
+      <Show when={props.price.priceOrigin}>{(origin) => <> · {origin()}</>}</Show>
+      <Show when={props.price.approximate === true}> · aproximado con su ETF de referencia</Show>
+      <Show when={props.price.eurMissing}>
+        {(reason) => <> · falta su valor en euros ({reason()})</>}
+      </Show>
     </span>
   </Show>
 );

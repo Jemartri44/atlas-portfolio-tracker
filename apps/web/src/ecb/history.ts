@@ -42,7 +42,15 @@ export interface WebHistory {
    * permission, its file is not the one its manifest records, it does not
    * read, or this browser keeps no data at all. Said, never swallowed.
    */
-  problem?: "permission" | "damaged" | "unreadable" | "storage";
+  problem?: "permission" | "damaged" | "unreadable" | "storage" | "config";
+  /**
+   * With `problem: "config"`: the key of `atlas.config.json` that is not
+   * understood (`invalid_local_config`). A local configuration that does not
+   * read is said as such, never as a browser that keeps no data (feature 013,
+   * §6.4 (d): it used to reach the `catch` of `loadWebHistory` and say
+   * «storage», which was false).
+   */
+  configField?: string;
 }
 
 interface Manifest {
@@ -58,10 +66,19 @@ const fromFolder = async (): Promise<WebHistory | undefined> => {
     return { staleDays: DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days, problem: "permission" };
   }
   const config = await readFolderText(handle, ["atlas.config.json"]);
-  const staleDays =
-    config === undefined
-      ? DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days
-      : parseLocalConfig(config).ecb_stale_currency_days;
+  let staleDays = DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days;
+  if (config !== undefined) {
+    try {
+      staleDays = parseLocalConfig(config).ecb_stale_currency_days;
+    } catch (error) {
+      const field = (error as { details?: { field?: unknown } }).details?.field;
+      return {
+        staleDays,
+        problem: "config",
+        ...(typeof field === "string" ? { configField: field } : {}),
+      };
+    }
+  }
   const manifest = await readFolderText(handle, ["reference", "ecb", "manifest.json"]);
   if (manifest === undefined) {
     return undefined;
@@ -126,9 +143,11 @@ const load = (): Promise<WebHistory> =>
     }
     const staleDays = folder?.staleDays ?? DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days;
     const imported = await fromImport(staleDays);
-    return imported === undefined
-      ? { staleDays, ...(folder?.problem === undefined ? {} : { problem: folder.problem }) }
-      : { ...imported, ...(folder?.problem === undefined ? {} : { problem: folder.problem }) };
+    const problem = {
+      ...(folder?.problem === undefined ? {} : { problem: folder.problem }),
+      ...(folder?.configField === undefined ? {} : { configField: folder.configField }),
+    };
+    return imported === undefined ? { staleDays, ...problem } : { ...imported, ...problem };
   })();
 
 /** Forget what was read, after linking a folder or importing a file. */

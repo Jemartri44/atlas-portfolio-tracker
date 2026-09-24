@@ -6,16 +6,17 @@
 // presentation. Recomputing `|deviation| > threshold` in the interface would be
 // the second place the rule lives.
 
-import {
-  type ClassSubtotal,
-  type CoreWeightRow,
-  type CoreWeights,
+import type {
+  ClassSubtotal,
+  CoreWeightRow,
+  CoreWeights,
   Money,
-  type Quantity,
-  type Warning,
+  Quantity,
+  Warning,
 } from "@atlas/domain";
 import { valueLabel } from "../../format/labels.js";
 import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../../format/names.js";
+import { priceFieldsOf } from "../price-info.js";
 
 export interface WeightRow {
   assetId: string;
@@ -38,6 +39,9 @@ export interface WeightRow {
   priceDate?: string;
   ageDays?: number;
   stale: boolean;
+  priceOrigin?: string;
+  approximate?: boolean;
+  eurMissing?: string;
   value?: Money;
   weightPct?: string;
   targetPct: string;
@@ -94,14 +98,7 @@ const rowOf = (
   assetClass: row.asset_class,
   quantity: row.quantity,
   units: unitsOf(names, row.asset_id),
-  ...(row.price === undefined
-    ? {}
-    : {
-        unitValue: Money.of(row.price.unit_value, row.price.currency),
-        priceDate: row.price.date,
-        ageDays: row.price.age_days,
-      }),
-  stale: row.price?.stale === true,
+  ...priceFieldsOf(row.price),
   ...(row.value_eur === undefined ? {} : { value: row.value_eur }),
   ...(row.weight_pct === undefined ? {} : { weightPct: row.weight_pct.toString() }),
   targetPct: row.target_pct.toString(),

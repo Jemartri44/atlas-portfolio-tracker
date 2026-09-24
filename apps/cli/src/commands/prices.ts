@@ -9,6 +9,7 @@
 import { FilePriceStore } from "@atlas/adapters";
 import { type AssetId, settingsAt, todayInMadrid } from "@atlas/domain";
 import {
+  type AssetOutcome,
   checkSymbols,
   type PriceStatus,
   type PriceStore,
@@ -38,7 +39,8 @@ const USAGE_PRICES =
 const NO_KEYS =
   "No hay claves de fuentes de precios configuradas: sin precios automáticos. La entrada manual (`atlas add valuation`) sigue funcionando igual.";
 
-const OUTCOME_TEXT: Record<string, string> = {
+/** Every outcome, by type: an outcome added without its words does not compile. */
+const OUTCOME_TEXT: Record<AssetOutcome, string> = {
   updated: "actualizado",
   unchanged: "sin cierres nuevos",
   up_to_date: "ya al día (sin gastar cupo)",
@@ -53,12 +55,13 @@ const updateText = (report: UpdateReport, failing: readonly QuoteSource[]): stri
   const rows = report.assets.map((asset) => [
     asset.asset_id,
     asset.group === "bucket" ? "cubo" : asset.group === "reference" ? "referencia" : "núcleo",
-    OUTCOME_TEXT[asset.outcome] as string,
+    OUTCOME_TEXT[asset.outcome],
     asset.source === undefined ? "" : SOURCE_NAMES[asset.source],
     asset.added === 0 ? "" : String(asset.added),
     asset.failures.map((f) => `${SOURCE_NAMES[f.source]}: ${FAILURE_TEXT[f.kind]}`).join("; "),
   ]);
-  const count = (outcome: string) => report.assets.filter((a) => a.outcome === outcome).length;
+  const count = (outcome: AssetOutcome) =>
+    report.assets.filter((a) => a.outcome === outcome).length;
   return [
     table(["activo", "prioridad", "resultado", "fuente", "líneas", "fallos"], rows),
     "",
