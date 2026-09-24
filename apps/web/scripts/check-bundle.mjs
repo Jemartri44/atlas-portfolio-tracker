@@ -166,8 +166,19 @@ const dist = join(webRoot, "dist");
  * in the boot**: reading the drafts, counting them and painting the count
  * arrive after the first screen, and the shape check holds it. The trend:
  * 72,9 → 73,49 in feature 011, 73,5 → 73,9 in this one.
+ *
+ * **Brought down after the review of PR #75 (2026-09-24): measured 73,69
+ * (75.313 bytes plus 140 of the registration of the service worker), ceiling
+ * 73,8.** The reviewer found what the boot did not need: the whole module of
+ * folders for the one function that says whether the browser has pickers
+ * (−0,17 KB of the domain chunk, `picker.ts` stays), the export and the import
+ * of the ledger (now `@atlas/adapters/transfer`), and the route of the list of
+ * drafts, which the form route serves (−0,10 of the entry). What stays of the
+ * feature in the boot, against block 4: the database in version 2 (D8) and
+ * the place of the counter of drafts in the frame; it is below where block 4
+ * left it (75.457). The margin is the usual one, a tenth.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
