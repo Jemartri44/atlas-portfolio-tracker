@@ -25,6 +25,10 @@ const paint = (slot: HTMLElement, total: number): void => {
   const link = document.createElement("a");
   link.href = "/registrar/borradores";
   link.className = "source";
+  // The chip beside it gives way on a narrow bar; the count never does (a
+  // "2" clipped to half was measured at 400 px). Set through the CSSOM, which
+  // the policy of styles allows, so the boot stylesheet does not grow.
+  link.style.flexShrink = "0";
   const said = countOf(total, "borrador pendiente", "borradores pendientes");
   link.title = `${said}: no cuentan en ninguna cifra hasta que los registras.`;
   link.setAttribute("aria-label", said);
