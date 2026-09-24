@@ -1,6 +1,6 @@
 # ADR-0029 — Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad
 
-**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que elige la opción B para la operación registrada antes de la publicación y fija qué pasa tras un cambio de `fiscal_date_rule`. **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final). Ronda 8. Las decisiones de fuente, forma canónica y resolución de los días sin publicación son también de la dirección. Recoge lo que la Ronda 6 tenía pendiente del hallazgo 5 del *challenge* 2 (cotejo de `fx_rate` y festivos TARGET).
+**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que elige la opción B para la operación registrada antes de la publicación y fija qué pasa tras un cambio de `fiscal_date_rule`. **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final), y otra vez al contestar las preguntas del prompt 012. Ronda 8. Las decisiones de fuente, forma canónica y resolución de los días sin publicación son también de la dirección. Recoge lo que la Ronda 6 tenía pendiente del hallazgo 5 del *challenge* 2 (cotejo de `fx_rate` y festivos TARGET).
 
 ## Contexto
 
@@ -59,3 +59,7 @@ ADR-0006 (decisión 4) previó guardar el histórico oficial del BCE **íntegro*
 ## Enmienda del 2026-09-24 (revisión de la PR #72)
 
 Decidida por la dirección el mismo día. **La dirección del riesgo del criterio nuevo es «Ambas», no «conservador»**: la columna dice qué pasa si el criterio está mal (nota al criterio #23 de `docs/fiscal-questions.md`), y aquí puede fallar en los dos sentidos. La dirección reconoce el error como suyo. `fx_rate_date_not_latest` pasa a significar «distinto de la última publicación en o antes de la fecha fiscal», y la fecha de tipo posterior a la fiscal se señala sin necesidad del histórico. Y la corrección propuesta puede ser una cadena de anulaciones, que se enseña entera con sus avisos de ejercicio presentado.
+
+## Segunda enmienda del 2026-09-24 (prompt de la feature 012)
+
+Decidida por la dirección al contestar las preguntas del prompt 012 (`docs/prompts/012-ecb-reference-rates.md`, §6 (m)). **Punto 6: la comprobación cruzada con el calendario TARGET cubre solo los años que usa el libro**, desde la primera `fx_rate_date` registrada, y **con el libro vacío, el año en curso y el anterior**, para que `atlas fx update` no compruebe nada en falso. Una discrepancia es un **aviso, nunca un bloqueo**: la fuente de verdad sigue siendo la ausencia en el histórico. No se codifican calendarios históricos. Motivo: el calendario es el de hoy y el histórico empieza en 1999; compararlo con años que el libro no usa solo daría hallazgos sin consecuencia.

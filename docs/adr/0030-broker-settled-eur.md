@@ -1,6 +1,6 @@
 # ADR-0030 — Importe en euros liquidado por el bróker, como dato informativo
 
-**Estado:** Aceptada (2026-09-24). Ronda 8. Decisión de la dirección: **guardar el dato para que exista**. Qué cifra manda en la fiscalidad **no se decide aquí**: es parte de la disputa del criterio #4 de `docs/fiscal-questions.md`. *Verificar con asesor* lo que se haga con él.
+**Estado:** Aceptada (2026-09-24). **Enmendada el mismo día** al contestar las preguntas del prompt 012 (ver al final). Ronda 8. Decisión de la dirección: **guardar el dato para que exista**. Qué cifra manda en la fiscalidad **no se decide aquí**: es parte de la disputa del criterio #4 de `docs/fiscal-questions.md`. *Verificar con asesor* lo que se haga con él.
 
 ## Contexto
 
@@ -38,3 +38,7 @@ Se añade **`broker_settled_eur?`** (decimal como cadena, ADR-0005) a `buy`, `se
 - La lista de eventos se puede ampliar (a `swap`, al efectivo de un `corporate_action` o de un `forced_sale`) con el mismo argumento de compatibilidad, cuando un extracto real lo pida.
 - Se vuelve más fácil cuantificar la disputa del #4 cuando alguien la revise. Se vuelve más difícil nada: el campo es opcional.
 - Relacionadas: ADR-0005, ADR-0012, ADR-0013, ADR-0018, ADR-0021 y ADR-0029.
+
+## Enmienda del 2026-09-24 (prompt de la feature 012)
+
+Decidida por la dirección al contestar las preguntas del prompt 012 (`docs/prompts/012-ecb-reference-rates.md`, §6 (n)). **`broker_settled_eur` es estrictamente positivo**: el signo lo da el tipo de evento, y eso es lo que quería decir «en valor absoluto». El cero y el negativo se rechazan. Si el extracto no da la cifra, el campo se omite, y omitido significa desconocido, nunca cero.
