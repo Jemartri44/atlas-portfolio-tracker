@@ -573,6 +573,31 @@ describe("architecture: the tax engine", () => {
     ]);
   });
 
+  /**
+   * And the correspondence of symbols never enters the catalogue of the ledger
+   * (ADR-0031, amendment): a full snapshot `asset_updated` written by an old
+   * client would erase it. It lives in `prices/symbols.json`; the fields of an
+   * asset are frozen here, so a `price_symbols` added to them turns this red.
+   */
+  it("keeps the symbols of the prices out of the fields of an asset", () => {
+    expect(interfaceKeys(join(domainSrc, "schema", "events.ts"), "AssetFields")).toEqual([
+      "asset_id",
+      "asset_type",
+      "book",
+      "asset_class",
+      "isin",
+      "ticker",
+      "name",
+      "currency",
+      "ter",
+      "transferable",
+      "reference_etf_id",
+      "market",
+      "issuer_country",
+      "active",
+    ]);
+  });
+
   /** And nothing that builds the state or the settings knows about prices. */
   it("builds no state and no settings from anything that knows prices", () => {
     const graph = importGraph();

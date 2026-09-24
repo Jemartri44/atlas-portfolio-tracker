@@ -315,6 +315,11 @@ Visto bueno al plan, con estas decisiones. Lo que cambian en `spec.md` y `plan.m
 - **Queda sin corregir, dicho**: la tarjeta de la aportación sigue diciendo «Falta el precio a … Oro X. Regístralo con una valoración» cuando el activo tiene una cotización sin tipo del BCE: es el mensaje de `missing_manual_prices` del dominio, que no distingue los dos casos; el remedio que propone (una valoración) sí lo resuelve. Y el patrimonio parcial de Cubo dice «falta Oro X» por lo mismo. Cambiarlo toca el dominio del arranque.
 - **Lo que no se pudo capturar**: **la carpeta sin permiso**. El selector de carpetas del navegador no se puede conducir sin pantalla, y un asa de carpeta de mentira no se puede guardar en IndexedDB. Está cubierto por el test de la web (`prices.test.tsx`, «reads prices/ … and says a lost permission») y por el aviso `QuotesNotice`, pero **no está visto en pantalla**.
 
+### 7.8 Los últimos mutantes (2026-09-25)
+
+- **16** (la correspondencia en `asset_updated`): no la cazaba nada —la lista congelada era la de `LedgerState` y `Settings`—; nuevo test que congela los campos de `AssetFields`, y el mutante (`price_symbols?` en el activo) muere. **13 bis c** (el lector de `prices/config.json` acepta una clave desconocida) y **13 bis d** (la configuración de precios en `atlas.config.json`): muertos.
+- **Recuento**: 19 del bloque 1, 6 de la puerta, 28 del bloque 2, 17 del bloque 3, 8 del bloque 4, 9 del bloque 5 y estos 3: **90 mutantes, todos muertos**; **cuatro sobrevivieron a la primera** (9d, 9e, 12 bis a y 13a) y uno no llegó a aplicarse (9b, dicho como `ERROR` por el guion) y se mataron con tests nuevos, y los defectos que solo encontró la pantalla están en §7.7. Los de CoinGecko y OpenFIGI (11, parte de 12 ter y 14, 16 en su parte de OpenFIGI) quedan **retirados por la dirección** con esas fuentes.
+
 ---
 
 ## 8. Bloque 6 — la prueba con las claves del usuario (procedimiento; **pendiente**)
