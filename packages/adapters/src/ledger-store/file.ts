@@ -4,6 +4,13 @@
 // bytes verbatim before the new lines, and `replace` (compact only) saves the
 // original bytes under archive/ next to the ledger before rewriting it. Both
 // writes go through a temporary file that replaces the ledger atomically.
+//
+// Every write happens under the advisory lock of the folder (`folder-lock.ts`,
+// ADR-0026 Part B): taken **before** the etag is compared and released only
+// **after** the rename, so no other Atlas console writer can slip in between.
+// That closes the window ADR-0025 recorded, between console writers and only
+// there: the browser no longer writes in this folder (feature 012, decision of
+// the direction), because it has no way to take the lock exclusively.
 
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
@@ -20,6 +27,7 @@ import {
   type LoadedLedger,
   ValidationError,
 } from "@atlas/domain";
+import { type HeldLock, withFolderLock } from "./folder-lock.js";
 
 const NEWLINE = 0x0a;
 
@@ -29,11 +37,27 @@ const hasCode = (error: unknown, code: string): boolean =>
 const serialise = (events: readonly LedgerEvent[]): string =>
   events.map((event) => `${encodeLine(event)}\n`).join("");
 
+export interface FileLedgerStoreOptions {
+  /**
+   * **Test seam only**: runs with the lock held, after the temporary file is
+   * written and right before the ownership check and the rename. It is how the
+   * tests break the lock, or fail a write half way, at the one moment that
+   * matters.
+   */
+  beforeCommit?: () => Promise<void>;
+}
+
 export class FileLedgerStore implements LedgerStore {
   constructor(
     private readonly path: string,
     readonly schema: LedgerSchema = CURRENT_LEDGER_SCHEMA,
+    private readonly options: FileLedgerStoreOptions = {},
   ) {}
+
+  /** The folder of the ledger: where the lock, `archive/` and the rest live. */
+  get folder(): string {
+    return dirname(this.path);
+  }
 
   private async readBytes(): Promise<Buffer> {
     try {
@@ -58,8 +82,14 @@ export class FileLedgerStore implements LedgerStore {
     return lines;
   }
 
-  /** Writes `bytes` to a temporary file, fsyncs it and renames it over the ledger. */
-  private async writeAtomically(bytes: Buffer): Promise<void> {
+  /**
+   * Writes `bytes` to a temporary file, fsyncs it, checks that the lock is
+   * still this writer's own and renames it over the ledger. The check is a
+   * **risk reduction, not a guarantee** (ADR-0026, third amendment): if the
+   * user broke a lock whose owner was alive, it makes a double write less
+   * likely and cannot make it impossible.
+   */
+  private async writeAtomically(bytes: Buffer, lock: HeldLock): Promise<void> {
     const temporary = `${this.path}.tmp-${process.pid}-${Date.now()}`;
     const handle = await fs.open(temporary, "w");
     try {
@@ -68,7 +98,13 @@ export class FileLedgerStore implements LedgerStore {
     } finally {
       await handle.close();
     }
-    await fs.rename(temporary, this.path);
+    try {
+      await this.options.beforeCommit?.();
+      await lock.assertOwned();
+      await fs.rename(temporary, this.path);
+    } finally {
+      await fs.rm(temporary, { force: true });
+    }
   }
 
   async load(): Promise<LoadedLedger> {
@@ -99,11 +135,13 @@ export class FileLedgerStore implements LedgerStore {
   }
 
   async append(events: readonly LedgerEvent[], etag: string): Promise<{ etag: string }> {
-    const bytes = await this.currentBytes(etag);
-    const separator = bytes.length > 0 && bytes[bytes.length - 1] !== NEWLINE ? "\n" : "";
-    const next = Buffer.concat([bytes, Buffer.from(separator + serialise(events), "utf8")]);
-    await this.writeAtomically(next);
-    return { etag: FileLedgerStore.etagOf(next) };
+    return withFolderLock(this.folder, async (lock) => {
+      const bytes = await this.currentBytes(etag);
+      const separator = bytes.length > 0 && bytes[bytes.length - 1] !== NEWLINE ? "\n" : "";
+      const next = Buffer.concat([bytes, Buffer.from(separator + serialise(events), "utf8")]);
+      await this.writeAtomically(next, lock);
+      return { etag: FileLedgerStore.etagOf(next) };
+    });
   }
 
   async replace(
@@ -116,26 +154,28 @@ export class FileLedgerStore implements LedgerStore {
         archive_name: archiveName,
       });
     }
-    const bytes = await this.currentBytes(etag);
-    const archiveDir = join(dirname(this.path), "archive");
-    await fs.mkdir(archiveDir, { recursive: true });
-    let archive: fs.FileHandle;
-    try {
-      archive = await fs.open(join(archiveDir, archiveName), "wx");
-    } catch (error) {
-      if (hasCode(error, "EEXIST")) {
-        throw new ArchiveExistsError(archiveName);
+    return withFolderLock(this.folder, async (lock) => {
+      const bytes = await this.currentBytes(etag);
+      const archiveDir = join(this.folder, "archive");
+      await fs.mkdir(archiveDir, { recursive: true });
+      let archive: fs.FileHandle;
+      try {
+        archive = await fs.open(join(archiveDir, archiveName), "wx");
+      } catch (error) {
+        if (hasCode(error, "EEXIST")) {
+          throw new ArchiveExistsError(archiveName);
+        }
+        throw error;
       }
-      throw error;
-    }
-    try {
-      await archive.writeFile(bytes);
-      await archive.sync();
-    } finally {
-      await archive.close();
-    }
-    const next = Buffer.from(serialise(events), "utf8");
-    await this.writeAtomically(next);
-    return { etag: FileLedgerStore.etagOf(next) };
+      try {
+        await archive.writeFile(bytes);
+        await archive.sync();
+      } finally {
+        await archive.close();
+      }
+      const next = Buffer.from(serialise(events), "utf8");
+      await this.writeAtomically(next, lock);
+      return { etag: FileLedgerStore.etagOf(next) };
+    });
   }
 }
