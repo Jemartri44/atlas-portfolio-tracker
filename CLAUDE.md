@@ -57,14 +57,14 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 | Frontend | Static SPA with Vite (Svelte or Solid), served from S3 through CloudFront |
 | Backend | Lambda (Node) with Function URL (no API Gateway). TypeScript everywhere, domain in a shared package. ADR-0001 |
 | Data | S3 only. One `ledger/ledger.jsonl` event log (transactions + account/asset catalogue + `settings_changed`), `schema_version` per line, migrated on load, explicit `compact`. Loaded whole into memory; conditional writes (`If-Match`). ECB FX history stored verbatim. ADR-0002, ADR-0006, `docs/data-schema.md` |
-| Auth | Google Sign-In, verified by our own Lambda; no Cognito. Authorization-code flow with PKCE, the Lambda as the OAuth client; session is our own signed cookie. Allow-list of `{sub, email}` in SSM. ADR-0027 |
+| Auth | Sign-in with Google, verified by our own Lambda; no Cognito. Authorization-code flow with PKCE, with the Lambda as the OAuth client; session is our own signed cookie. Allow-list of `{sub, email}` in SSM. ADR-0027 |
 | Scheduling | EventBridge Scheduler |
-| Email | SES |
+| Email | SES in `eu-west-1`, in the sandbox (sends only to the user's own verified address). The recipient lives in SSM, never in the repo or `Settings`; no amounts by default, with an opt-in switch also in SSM. ADR-0028 |
 | Secrets | SSM Parameter Store standard tier (free), not Secrets Manager |
 | Infrastructure | Terraform |
 | Domain | Own subdomain (value lives in `terraform.tfvars`, outside the repo), CNAME to CloudFront, ACM certificate in us-east-1 |
 
-**Cost constraint:** minimum cost with a budget alarm (ADR-0028), not "always-free indefinitely" — the cloud layer costs an estimated ≈ $0.01-0.05/month, covered by AWS credits while they last and paid afterwards; a Budgets alarm fires at $1. Before introducing a new service, verify its cost stays minimal at this scale.
+**Cost constraint:** minimum cost with a budget alarm (ADR-0028), not "always-free indefinitely" — the cloud layer costs an estimated ≈ $0.01-0.05/month, covered by AWS credits while they last and paid afterwards; a Budgets alarm fires at $1, measured on the cost **before credits** (an alarm that stays silent while credits last protects nothing). Before introducing a new service, verify its cost stays minimal at this scale.
 
 ## Code architecture (ADR-0007)
 
@@ -74,7 +74,7 @@ Monorepo with npm workspaces, **hexagonal architecture** with a pure functional 
 packages/domain    pure core: types, money, events, projections, FIFO, tax, use cases, PORTS (interfaces). No I/O, no runtime npm deps.
 packages/adapters  port implementations: S3/file/memory LedgerStore, IBKR/MyInvestor StatementSource, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
 apps/cli           Phase-1 interface over a local file or S3.
-apps/api           Lambda Function URL: validates JWT, composes domain + adapters.
+apps/api           Lambda Function URL behind CloudFront (/api/*): verifies the Google token at sign-in, issues its own session, composes domain + adapters.
 apps/web           Vite SPA; uses domain to project/simulate offline.
 infra/             Terraform.
 ```
@@ -169,13 +169,13 @@ Mandatory edge cases: several lots with the same date, fractions, reverse split 
 | `DEBUG` | Execution detail, disabled in production |
 
 - Structured JSON logs with `request_id` to correlate across Lambdas.
-- **Never log amounts, positions, balances or account identifiers.** CloudWatch is less protected than the database.
+- **Never log amounts, positions, balances or account identifiers**, nor tokens, email addresses or Google `sub` identifiers (ADR-0028, row 16; ADR-0027). CloudWatch is less protected than the database.
 - Retention: 30 days in production, 7 in dev.
 
 ### Security
 
-- **Never store broker credentials.** Secrets, all in SSM Parameter Store as `SecureString`: the read-only IBKR Flex token, the Google OAuth client secret and the session signing key (ADR-0027), and the price source API keys (ADR-0031).
-- Private S3, served only through CloudFront with Origin Access Control.
+- **Never store broker credentials.** Secrets in SSM Parameter Store as `SecureString`: the read-only IBKR Flex token, the Google OAuth client secret and the session signing key (ADR-0027). Price source API keys (ADR-0031): locally, in a configuration file outside the repository; in the cloud, in SSM.
+- Private S3. Two buckets per environment: the SPA bucket, served only through CloudFront with Origin Access Control; and the data bucket, **never** a CloudFront origin, reachable only by the Lambda roles (and short-lived administration credentials for `compact` and restore). The API Lambda itself is reached only through CloudFront, under `/api/*` (ADR-0028).
 - Least-privilege IAM: one role per Lambda.
 - **No third-party analytics, no external CDNs, no remote fonts.** Everything from the own origin. Strict CSP.
 - Validation always on the backend. The frontend is convenience, not a security control.
@@ -183,7 +183,7 @@ Mandatory edge cases: several lots with the same date, fractions, reverse split 
 
 ### Infrastructure
 
-- Terraform for every AWS resource. Nothing created by hand in the console.
+- Terraform for every AWS resource. Nothing created by hand in the console, **except the exceptions declared in ADR-0028, each with its withdrawal condition**: the CloudFront flat-rate plan subscription is a versioned, idempotent AWS CLI script in the repo, retired once the Terraform provider supports it; the organization and member accounts, the Google OAuth client per environment, each account's Terraform bootstrap and any concurrency quota request are documented manual steps.
 - Remote state in S3 with locking.
 - `terraform plan` on the PR, `apply` only after approval.
 
