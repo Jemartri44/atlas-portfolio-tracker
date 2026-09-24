@@ -1053,10 +1053,10 @@ const rateNotes = (
       event_id: line.event_id,
       depends: [
         line.event_id,
-        ...line.lots.flatMap((lot) => [
-          ...lot.lineage.map((step) => step.event_id),
-          lot.root.event_id,
-        ]),
+        // The lineage runs from the lot consumed back to the root acquisition,
+        // which is its last step (`lineageOf`): the root needs no entry of its
+        // own — the review of PR #75 found that entry to be an equivalent mutant.
+        ...line.lots.flatMap((lot) => lot.lineage.map((step) => step.event_id)),
       ],
     })),
     ...core.income.map((line) => ({ event_id: line.event_id, depends: [line.event_id] })),
