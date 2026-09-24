@@ -21,7 +21,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0015](0015-degraded-projection-and-settings-acceptance.md) | Proyección degradada en consultas y aceptación de settings_changed que invalida el pasado | Aceptada |
 | [0016](0016-project-ledger-as-of.md) | Consulta del libro a una fecha con asOf | Aceptada |
 | [0017](0017-web-stack.md) | Stack de la aplicacion web | Aceptada; la parte de Pico, reemplazada por 0023 |
-| [0018](0018-schema-evolution-rules.md) | Evolucion del esquema y endurecimiento de validaciones | Aceptada |
+| [0018](0018-schema-evolution-rules.md) | Evolucion del esquema y endurecimiento de validaciones | Aceptada; enmendada el 2026-09-24 (un campo nuevo en una foto completa) |
 | [0019](0019-web-local-first.md) | Aplicacion web local-first sin servidor | Aceptada |
 | [0020](0020-tax-return-filed.md) | Constancia de lo declarado: evento `tax_return_filed` | Aceptada |
 | [0021](0021-fiscal-schema-provisions.md) | Previsiones del esquema para la Fase 5: guardar el dato sin decidir el criterio | Aceptada |

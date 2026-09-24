@@ -35,3 +35,17 @@ Además, y para que **añadir un tipo de activo no vuelva a ser un cambio romped
 - El bloque 0 de la feature 005 implementa el tipo nuevo y la tolerancia de los mapas; ambos son cambios **compatibles**, así que no tocan `schema_version` ni el *golden*.
 - Toda propuesta futura de endurecer una validación debe responder antes a una pregunta: *¿existe ya un libro real?* Si la respuesta es sí, el cambio no es una línea de validación, es una versión de esquema.
 - Lo que se vuelve más fácil: añadir tipos de activo, campos opcionales y formas nuevas sin miedo. Lo que se vuelve más difícil, a propósito: endurecer sobre la marcha.
+
+## Enmienda del 2026-09-24: un campo nuevo en una foto completa
+
+Decidida por la dirección en la Ronda 8. La destapó el **caso 6 de ADR-0026** (revisión de la PR #72): una correspondencia de símbolos de precios añadida como campo opcional de `asset_updated` la borraría un cliente antiguo al registrar un cambio del activo, sin avisar a nadie.
+
+La regla de arriba clasifica «añadir un campo opcional» como compatible, y eso **no es verdad sin matiz** para los eventos que guardan el **estado completo**, `settings_changed` y los `*_updated` del catálogo (ADR-0022, `docs/data-schema.md` §6.1). En ellos, añadir un campo opcional es compatible **para leer**, porque un cliente antiguo carga la línea, pero **no para escribir**: un cliente antiguo que escribe la foto siguiente la escribe **sin** ese campo, y el campo desaparece del estado sin que nada lo diga.
+
+Por tanto, un campo nuevo que tenga que vivir en uno de esos eventos:
+
+- **o va fuera de ellos**, como hicieron en la Ronda 8 la correspondencia de símbolos (`prices/symbols.json`, ADR-0031) y el interruptor de importes del correo (SSM, ADR-0028);
+- **o sube `schema_version`**, de modo que el cliente antiguo, que no conoce la versión, **se niega a escribir** sobre ese libro (`docs/data-schema.md` §5).
+
+Añadir un campo opcional a un evento que **no** guarda el estado completo (una operación, por ejemplo `broker_settled_eur` de ADR-0030) sigue siendo compatible en los dos sentidos: ningún cliente antiguo reescribe esa línea.
+
