@@ -21,6 +21,7 @@ import {
 import { assertKnownFlags, type Flags, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { day, describeCalendar, describeRejected, sourceName } from "../output/ecb.js";
+import { correctRates } from "./rule-change.js";
 import { render } from "./shared.js";
 
 const describeUpdate = (result: EcbUpdateResult): string[] => {
@@ -47,8 +48,11 @@ export const fxCommand = async (
   positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  assertKnownFlags(flags, [...GLOBAL_FLAGS]);
   const sub = positionals[1];
+  if (sub === "correct") {
+    return correctRates(ctx, flags);
+  }
+  assertKnownFlags(flags, [...GLOBAL_FLAGS]);
   const folder = dirname(ctx.ledgerPath);
   const store = new FileEcbHistoryStore(folder);
   if (sub === "status") {

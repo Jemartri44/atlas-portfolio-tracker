@@ -130,7 +130,7 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   compact: 1,
   backup: 1,
   lock: { show: 2, break: 2 },
-  fx: { update: 2, status: 2 },
+  fx: { update: 2, status: 2, correct: 2 },
   draft: { list: 2, confirm: 3, discard: 3 },
 };
 
@@ -168,6 +168,7 @@ comandos:
   compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada
   lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición
   fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor
+  fx correct [--reason …]        corrige los tipos que no son los de su fecha fiscal (tras cambiar fiscal_date_rule)
   add … --draft                  guarda como borrador una operación cuyo tipo del BCE aún no se ha publicado
   draft list|confirm <id>|discard <id>   los borradores: no cuentan en ninguna cifra hasta registrarlos`;
 
