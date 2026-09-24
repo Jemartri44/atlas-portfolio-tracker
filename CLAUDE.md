@@ -175,7 +175,7 @@ Mandatory edge cases: several lots with the same date, fractions, reverse split 
 ### Security
 
 - **Never store broker credentials.** Secrets in SSM Parameter Store as `SecureString`: the read-only IBKR Flex token, the Google OAuth client secret and the session signing key (ADR-0027). Price source API keys (ADR-0031): locally, in a configuration file outside the repository; in the cloud, in SSM.
-- Private S3. Two buckets per environment: the SPA bucket, served only through CloudFront with Origin Access Control; and the data bucket, **never** a CloudFront origin, reachable only by the Lambda roles (and short-lived administration credentials for `compact` and restore). The API Lambda itself is reached only through CloudFront, under `/api/*` (ADR-0028).
+- Private S3. Each account has several buckets (SPA, data, Terraform state, CloudTrail); the one that matters here is the **data bucket, which is never a CloudFront origin**. It is reachable only by the Lambda roles and, always with short-lived credentials, by the administration operations defined in ADR-0026, ADR-0027 and ADR-0032. Only the SPA bucket is served, through CloudFront with Origin Access Control. The API Lambda itself is reached only through CloudFront, under `/api/*` (ADR-0028).
 - Least-privilege IAM: one role per Lambda.
 - **No third-party analytics, no external CDNs, no remote fonts.** Everything from the own origin. Strict CSP.
 - Validation always on the backend. The frontend is convenience, not a security control.
@@ -183,7 +183,7 @@ Mandatory edge cases: several lots with the same date, fractions, reverse split 
 
 ### Infrastructure
 
-- Terraform for every AWS resource. Nothing created by hand in the console, **except the exceptions declared in ADR-0028, each with its withdrawal condition**: the CloudFront flat-rate plan subscription is a versioned, idempotent AWS CLI script in the repo, retired once the Terraform provider supports it; the organization and member accounts, the Google OAuth client per environment, each account's Terraform bootstrap and any concurrency quota request are documented manual steps.
+- Terraform for every AWS resource. Nothing created by hand in the console, **except the exceptions declared in ADR-0028, each with its withdrawal condition**: the CloudFront flat-rate plan subscription is a versioned, idempotent AWS CLI script in the repo, retired once the Terraform provider supports it; each account's bootstrap (`infra/bootstrap/`) is Terraform applied by hand once per member account; the organization and member accounts, the Google OAuth client per environment and any concurrency quota request are documented manual steps.
 - Remote state in S3 with locking.
 - `terraform plan` on the PR, `apply` only after approval.
 
