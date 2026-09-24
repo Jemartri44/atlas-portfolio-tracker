@@ -16,6 +16,7 @@ import { type BrowserSource, daysSinceExport, sourceLabel } from "../../ledger/s
 import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { ImportControls } from "../libro/ImportControls.jsx";
+import { EcbCard } from "./EcbCard.jsx";
 
 const THEMES = [
   { value: "system", label: "Sistema" },
@@ -199,6 +200,8 @@ export default function AjustesRoute(): JSX.Element {
               </div>
             </fieldset>
           </Section>
+
+          <EcbCard />
 
           <Section title="Configuración y verificación">
             <ul class="rows">

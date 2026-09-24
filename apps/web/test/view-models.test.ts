@@ -820,15 +820,19 @@ describe("the form specs", () => {
 
   it("leaves an empty optional field out of the draft, never sends it empty", () => {
     const spec = FORM_SPECS.find((candidate) => candidate.slug === "cash-in");
-    const draft = toDraft(spec as never, {
-      account_id: "acc_mi",
-      value_date: "2027-03-01",
-      amount: "1.000,50",
-      currency: "EUR",
-      fx_rate: "1",
-      fx_rate_date: "",
-      notes: "",
-    }) as unknown as Record<string, unknown>;
+    const draft = toDraft(
+      spec as never,
+      {
+        account_id: "acc_mi",
+        value_date: "2027-03-01",
+        amount: "1.000,50",
+        currency: "EUR",
+        fx_rate: "1",
+        fx_rate_date: "",
+        notes: "",
+      },
+      projectLedger(goldenEvents() as SupportedEvent[], { collectErrors: true }),
+    ) as unknown as Record<string, unknown>;
     expect(draft).toEqual({
       type: "cash_deposit",
       account_id: "acc_mi",
@@ -866,34 +870,74 @@ describe("the form specs", () => {
     });
   };
 
+  const goldenState = () =>
+    projectLedger(goldenEvents() as SupportedEvent[], { collectErrors: true });
+
   it("fills a hidden required field, and the draft in euros is valid for the domain", () => {
     const spec = FORM_SPECS.find((candidate) => candidate.slug === "buy");
-    const draft = toDraft(spec as never, {
-      ...initialValues(spec as never, "2027-05-04"),
-      account_id: "acc_mi",
-      asset_id: "ast_world",
-      quantity: "10",
-      unit_price: "100",
-    }) as unknown as Record<string, unknown>;
+    const draft = toDraft(
+      spec as never,
+      {
+        ...initialValues(spec as never, "2027-05-04"),
+        account_id: "acc_mi",
+        asset_id: "ast_world",
+        quantity: "10",
+        unit_price: "100",
+      },
+      goldenState(),
+    ) as unknown as Record<string, unknown>;
     expect(draft.fx_rate).toBe("1");
     expect(draft.currency).toBe("EUR");
-    // Taken from `trade_date`, the earliest business date of the form, so it can
-    // never be later than the fiscal date whichever rule applies to the asset.
     expect(draft.fx_rate_date).toBe("2027-05-04");
     expect(() => accepted(draft)).not.toThrow();
+  });
+
+  /**
+   * **The date of the euro rate comes from the fiscal date** (decision (w) of
+   * prompt 012; mutant 19). `ast_world` is a fund: its fiscal date is the value
+   * date. Taking it from `trade_date`, as the form used to, dated the rate of
+   * a fund bought on Friday and settled on Tuesday on the Friday — a date that
+   * is not the last publication on or before the fiscal date, which is the
+   * application provoking its own `fx_rate_date_not_latest`.
+   */
+  it("dates the euro rate from the fiscal date, never from trade_date", () => {
+    const spec = FORM_SPECS.find((candidate) => candidate.slug === "buy");
+    const draft = toDraft(
+      spec as never,
+      {
+        ...initialValues(spec as never, "2027-05-07"),
+        value_date: "2027-05-11",
+        account_id: "acc_mi",
+        asset_id: "ast_world",
+        quantity: "10",
+        unit_price: "100",
+      },
+      goldenState(),
+    ) as unknown as Record<string, unknown>;
+    expect(draft.fx_rate_date).toBe("2027-05-11");
+    // Without the state there is no fiscal date, and no date is made up.
+    const blind = toDraft(spec as never, {
+      ...initialValues(spec as never, "2027-05-07"),
+      asset_id: "ast_world",
+    }) as unknown as Record<string, unknown>;
+    expect(blind.fx_rate_date).toBeUndefined();
   });
 
   it("takes the rate date back to the last working day when the operation is on a weekend", () => {
     const spec = FORM_SPECS.find((candidate) => candidate.slug === "valuation");
     // 2028-12-31 is a Sunday: the ECB publishes no rate, and the schema rejects
     // a weekend date. The one that applies is Friday's.
-    const draft = toDraft(spec as never, {
-      ...initialValues(spec as never, "2028-12-31"),
-      account_id: "acc_mi",
-      asset_id: "ast_world",
-      quantity: "10",
-      unit_value: "100",
-    }) as unknown as Record<string, unknown>;
+    const draft = toDraft(
+      spec as never,
+      {
+        ...initialValues(spec as never, "2028-12-31"),
+        account_id: "acc_mi",
+        asset_id: "ast_world",
+        quantity: "10",
+        unit_value: "100",
+      },
+      goldenState(),
+    ) as unknown as Record<string, unknown>;
     expect(draft.fx_rate_date).toBe("2028-12-29");
     expect(() => accepted(draft)).not.toThrow();
   });
@@ -902,8 +946,11 @@ describe("the form specs", () => {
     const filled = ["buy", "sell", "dividend", "cash-in", "cash-out", "valuation"];
     for (const slug of filled) {
       const spec = FORM_SPECS.find((candidate) => candidate.slug === slug);
-      const values = initialValues(spec as never, "2027-05-04");
-      const draft = toDraft(spec as never, values) as unknown as Record<string, unknown>;
+      const values = { ...initialValues(spec as never, "2027-05-04"), asset_id: "ast_world" };
+      const draft = toDraft(spec as never, values, goldenState()) as unknown as Record<
+        string,
+        unknown
+      >;
       expect({ slug, date: draft.fx_rate_date }).toEqual({ slug, date: "2027-05-04" });
     }
   });

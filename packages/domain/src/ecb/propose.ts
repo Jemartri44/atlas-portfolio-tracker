@@ -79,10 +79,24 @@ export const proposeRates = (
   const proposed: OfficialRate[] = [];
   for (const official of officialRatesOf(history, state, draft, staleDays)) {
     const { point, resolution } = official;
-    if (point.rate !== undefined || point.rate_date !== undefined) {
+    if (resolution.kind === "euro") {
+      // The euro's rate is always 1: what is missing of it is filled, alone.
+      if (point.rate === undefined) {
+        setPath(next, point.path, resolution.rate);
+      }
+      if (point.rate_date === undefined) {
+        setPath(next, point.datePath, resolution.date);
+      }
+      proposed.push(official);
       continue;
     }
-    if (resolution.kind !== "resolved" && resolution.kind !== "euro") {
+    // In another currency the rate and its date go together: a typed half is
+    // the user's, and the confirmation says whether it is the official one.
+    if (
+      resolution.kind !== "resolved" ||
+      point.rate !== undefined ||
+      point.rate_date !== undefined
+    ) {
       continue;
     }
     setPath(next, point.path, resolution.rate);

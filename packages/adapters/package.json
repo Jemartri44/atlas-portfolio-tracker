@@ -18,6 +18,10 @@
       "types": "./dist/ledger-store/browser/index.d.ts",
       "import": "./dist/ledger-store/browser/index.js"
     },
+    "./reference": {
+      "types": "./dist/ledger-store/browser/reference.d.ts",
+      "import": "./dist/ledger-store/browser/reference.js"
+    },
     "./clock": {
       "types": "./dist/clock/system.d.ts",
       "import": "./dist/clock/system.js"

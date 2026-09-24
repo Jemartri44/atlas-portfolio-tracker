@@ -11,9 +11,7 @@ import type { EventPreview, LedgerEvent, LedgerState } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Field } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
-import { countOf } from "../../format/number.js";
 import { toAppError } from "../../ledger/errors.js";
 import type { AppError } from "../../ledger/state.js";
 import { today } from "../../ledger/state.js";
@@ -35,8 +33,10 @@ import { DuplicateDialog } from "./DuplicateDialog.jsx";
 import { Effect } from "./Effect.jsx";
 import { FormActions, revealField } from "./FormActions.jsx";
 import { FormFields } from "./FormFields.jsx";
-import { Reloaded, ThesisFirst } from "./FormNotices.jsx";
+import { CorrectionReason, dependentsSentence, Reloaded, ThesisFirst } from "./FormNotices.jsx";
 import { previewStep } from "./preview-step.js";
+import { RateHint } from "./RateNotes.jsx";
+import { useFormRates } from "./rates.js";
 
 interface EventFormProps {
   spec: EventFormSpec;
@@ -70,6 +70,14 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const [reason, setReason] = createSignal("");
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
   const [conflict, setConflict] = createSignal(false);
+  const rates = useFormRates({
+    spec: props.spec,
+    state: props.state,
+    values,
+    setValues,
+    typed,
+    correcting: props.correcting !== undefined,
+  });
 
   /** Why "Ver el efecto" cannot be pressed yet, said next to it. */
   const blocked = (): string | undefined =>
@@ -111,9 +119,10 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       return;
     }
     setFieldErrors({});
+    rates.check(values());
     try {
       const step = await previewStep(
-        toDraft(props.spec, values()),
+        toDraft(props.spec, values(), props.state),
         props.correcting,
         reason().trim(),
       );
@@ -137,7 +146,10 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     setProblem(undefined);
     setFailure(undefined);
     setDuplicate(undefined);
-    const draft = toDraft(props.spec, values());
+    if (!rates.cleared()) {
+      return;
+    }
+    const draft = toDraft(props.spec, values(), props.state);
     const result =
       props.correcting === undefined
         ? await recordDraft(draft, { confirmDuplicate })
@@ -160,9 +172,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       return;
     }
     if (result.failure.kind === "dependents") {
-      setProblem(
-        `${countOf(result.failure.affected.length, "movimiento posterior depende", "movimientos posteriores dependen")} de este: rectifícalos antes.`,
-      );
+      setProblem(dependentsSentence(result.failure.affected.length));
       return;
     }
     setFailure(result.failure.error);
@@ -191,18 +201,10 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
               revealed={revealed}
               onTyped={(name) => setTyped(new Set([...typed(), name]))}
             />
+            <RateHint rates={rates} currency={values().currency ?? ""} />
 
             <Show when={props.correcting !== undefined}>
-              <Field
-                id="correct-reason"
-                kind="text"
-                label="Motivo de la rectificación"
-                required
-                hint="Se anula el original y se registra el corregido; el motivo queda registrado."
-                value={reason()}
-                onInput={setReason}
-                class="full"
-              />
+              <CorrectionReason value={reason()} onInput={setReason} />
             </Show>
 
             <FormActions
@@ -230,6 +232,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
           problem={problem()}
           failure={failure()}
           confirmLabel={props.correcting === undefined ? "Registrar" : "Rectificar"}
+          rates={rates}
           closedYears={closedYears()}
           onBack={() => setStep("form")}
           onConfirm={() => void onConfirm()}

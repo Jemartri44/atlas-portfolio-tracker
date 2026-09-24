@@ -9,7 +9,8 @@
 //      ambiguous refused with a sentence). No rounding, no completion, no
 //      guessing: the domain decides whether the value is acceptable.
 
-import { type Draft, isCivilDate, lastWorkingDay, type SupportedEvent } from "@atlas/domain";
+import type { Draft, LedgerState, SupportedEvent } from "@atlas/domain";
+import { proposeRates } from "@atlas/domain/ecb";
 import { decimalForInput, parseDecimalInput, parseIntegerInput } from "../../format/input.js";
 import type { EventFormSpec, FieldSpec } from "./specs.js";
 
@@ -69,33 +70,32 @@ const fieldValue = (field: FieldSpec, raw: string): string | boolean | number | 
   return text;
 };
 
-/**
- * What a hidden but still required field is worth: its `initial` if it has one
- * (the euro rate is "1"), or the last working day on or before the date of the
- * field it is filled from (`hiddenFrom`).
- *
- * It exists because of a real defect: `fx_rate_date` has no `initial`, so a
- * purchase in euros produced a draft **without** it and the domain rejected it
- * with `fx_rate_date is required`. Every operation in euros — buy, sell,
- * dividend, interest — was unrecordable from the web, and a test froze the
- * behaviour as if it were correct by checking that the field was absent
- * without checking that the draft was valid.
- */
-const hiddenValue = (field: FieldSpec, values: FormValues): string => {
-  if (field.hiddenFrom === undefined) {
-    return field.initial ?? "";
-  }
-  const source = (values[field.hiddenFrom] ?? "").trim();
-  return isCivilDate(source) ? lastWorkingDay(source) : "";
-};
+/** What a hidden but still required field is worth: its `initial` (the euro rate is "1"). */
+const hiddenValue = (field: FieldSpec): string => field.initial ?? "";
 
 /**
  * The draft for the use case: the type, plus every visible field that has a
- * value. Hidden fields keep a value when they are required by the schema (the
- * euro exchange rate is "1" and its date comes from the operation's own date),
- * and are dropped when they are not.
+ * value. Hidden fields keep a value when they are required by the schema, and
+ * are dropped when they are not.
+ *
+ * **The date of the euro rate**, which is hidden and has no `initial`, is
+ * filled from the operation's **fiscal date** (decision (w) of prompt 012):
+ * the last working day on or before it, by `fiscal_date_rule` of the asset —
+ * which is why the projected `state` is needed. It used to be taken from
+ * `trade_date`, and for a fund, whose fiscal date is the value date, that was
+ * the application provoking its own finding. Without the state, or before
+ * the asset is chosen, it is left out, and the domain says it is missing:
+ * never a date from the wrong rule.
+ *
+ * The defect this replaced first, for the record: the date used to be absent
+ * altogether and every operation in euros was refused with `fx_rate_date is
+ * required`.
  */
-export const toDraft = (spec: EventFormSpec, values: FormValues): Draft<SupportedEvent> => {
+export const toDraft = (
+  spec: EventFormSpec,
+  values: FormValues,
+  state?: LedgerState,
+): Draft<SupportedEvent> => {
   const draft: Record<string, unknown> = { type: spec.type };
   for (const field of spec.fields) {
     const raw = values[field.name] ?? "";
@@ -103,10 +103,13 @@ export const toDraft = (spec: EventFormSpec, values: FormValues): Draft<Supporte
     if (!visible && field.required !== true) {
       continue;
     }
-    const value = fieldValue(field, visible ? raw : hiddenValue(field, values));
+    const value = fieldValue(field, visible ? raw : hiddenValue(field));
     if (value !== undefined) {
       draft[field.name] = value;
     }
+  }
+  if (state !== undefined && draft.currency === "EUR" && draft.fx_rate_date === undefined) {
+    return asEventDraft(proposeRates(undefined, state, draft, 0).draft);
   }
   return asEventDraft(draft);
 };

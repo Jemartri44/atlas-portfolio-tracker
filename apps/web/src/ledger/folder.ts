@@ -59,3 +59,13 @@ export const readLinkedFolder = async (path: readonly string[]): Promise<string 
   }
   return readFolderText(handle, path);
 };
+
+/** Asks for the folder (a user gesture) and remembers it, to read from it. `false` when cancelled. */
+export const linkFolder = async (): Promise<boolean> => {
+  const handle = await pickFolder();
+  if (handle === undefined) {
+    return false;
+  }
+  await rememberFolder(handle);
+  return true;
+};

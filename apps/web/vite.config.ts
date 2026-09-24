@@ -103,6 +103,9 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/fiscal": repo("../../packages/domain/src/fiscal.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
       "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),
+      "@atlas/adapters/reference": repo(
+        "../../packages/adapters/src/ledger-store/browser/reference.ts",
+      ),
       "@atlas/adapters/browser": repo("../../packages/adapters/src/ledger-store/browser/index.ts"),
       "@atlas/adapters/clock": repo("../../packages/adapters/src/clock/system.ts"),
       "@atlas/adapters/random": repo("../../packages/adapters/src/random/web-crypto.ts"),
@@ -133,7 +136,13 @@ export default defineConfig(({ command }) => ({
          * of `filings/` that reach the tax chain — and, since feature 012,
          * everything of the ECB (`ecb/`, the `ecb.ts` door and the local
          * configuration in `config/`), which must never be on the boot path
-         * either (decision (r) of its prompt). They are grouped by whoever
+         * either (decision (r) of its prompt). **The store of the browser rides
+         * in the same chunk** (`blob.ts`, and `idb.ts`, `indexeddb.ts`,
+         * `folder.ts` and the `index.ts` of `browser/`): it is boot too —
+         * opening the ledger is the boot. Once the lazy screens of the ECB
+         * shared the folder reader with the boot, the bundler split the whole
+         * store into a boot chunk of its own, and that plumbing cost 0,5 KB
+         * gzip (measured, feature 012). They are grouped by whoever
          * imports them, which is only ever a lazily loaded screen, and
          * `scripts/check-bundle.mjs` fails the build if any of them turns up
          * in a chunk `index.html` preloads.
@@ -142,7 +151,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/]domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|filings[\\/](?:closed-years|comparison|proposal)))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|folder|index)\.ts))/,
             },
           ],
         },

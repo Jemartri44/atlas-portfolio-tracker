@@ -13,6 +13,7 @@ export {
 } from "./config/local-config.js";
 export { type BrokerSettlement, brokerSettlementOf } from "./ecb/broker-settlement.js";
 export {
+  asciiText,
   type CurrencySeries,
   type EcbHistory,
   type EcbSource,

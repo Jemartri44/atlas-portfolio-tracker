@@ -230,3 +230,26 @@ describe("without a history", () => {
     expect(unpublishedRates(undefined, state, goldBuy, 30)).toEqual([]);
   });
 });
+
+describe("the euro's missing half", () => {
+  it("dates a euro rate of 1 that has no date, and leaves a foreign half alone", () => {
+    const euro = {
+      ...goldBuy,
+      asset_id: "ast_world",
+      currency: "EUR",
+      fx_rate: "1",
+      value_date: "2026-01-10",
+    };
+    expect(proposeRates(undefined, state, euro, 30).draft).toMatchObject({
+      fx_rate: "1",
+      fx_rate_date: "2026-01-09",
+    });
+    const dated = { ...euro, fx_rate: undefined, fx_rate_date: "2026-01-08" };
+    expect(proposeRates(undefined, state, dated, 30).draft).toMatchObject({
+      fx_rate: "1",
+      fx_rate_date: "2026-01-08",
+    });
+    const half = { ...goldBuy, fx_rate: "1.2" };
+    expect(proposeRates(history, state, half, 30).draft).not.toHaveProperty("fx_rate_date");
+  });
+});
