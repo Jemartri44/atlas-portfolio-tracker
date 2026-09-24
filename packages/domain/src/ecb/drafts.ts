@@ -27,7 +27,7 @@
 //   `held.jsonl`.
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
-import { ValidationError } from "../errors.js";
+import { DomainError, ValidationError } from "../errors.js";
 import { createUlidGenerator, isUlid, type Ulid } from "../ids/ulid.js";
 import type { PendingDraftStore } from "../ports/draft-store.js";
 import { projectLedger } from "../projections/project-ledger.js";
@@ -54,6 +54,24 @@ export interface PendingDraft {
   readonly event: Fields;
   /** The id its confirmation writes it with, stamped before writing (`recordPendingDraft`). */
   readonly pending_event_id?: Ulid;
+}
+
+/**
+ * The draft is no longer as it was read: removed, or stamped with another id —
+ * almost surely confirmed somewhere else meanwhile (third review of PR #75).
+ * The confirmation stops: it never writes the draft again, and never records
+ * the operation as a new one.
+ */
+export class DraftChangedError extends DomainError {
+  constructor(id: string, now: "gone" | "stamped") {
+    super(
+      "draft_changed",
+      now === "gone"
+        ? `draft ${id} is no longer there: it was confirmed or discarded elsewhere`
+        : `draft ${id} was stamped with another id: it is being confirmed elsewhere`,
+      { id, now },
+    );
+  }
 }
 
 const unreadable = (message: string): ValidationError =>
@@ -251,10 +269,11 @@ export const recordPendingDraft = async (
   event: Fields,
   options: RecordOptions = {},
 ): Promise<DraftRecord> => {
+  // Reused when the draft carries one — a cut, or another console — and
+  // stamped **conditionally**: only over the draft as it was read. The ledger
+  // refuses a second event with the same id (`duplicate_id`).
   const id = draft.pending_event_id ?? createUlidGenerator(deps).next();
-  if (draft.pending_event_id === undefined) {
-    await drafts.update({ ...draft, pending_event_id: id });
-  }
+  await drafts.update({ ...draft, pending_event_id: id }, draft.pending_event_id);
   const result = await recordEvent(deps, event as unknown as Draft, { ...options, id });
   try {
     await drafts.remove(draft.id);

@@ -212,7 +212,21 @@ describe("BrowserDraftStore (feature 012, block 5)", () => {
   it("writes a draft again with the id its confirmation stamped (second review of PR #75)", async () => {
     const { store } = drafts();
     await store.save(draftOf(first));
-    await store.update({ ...draftOf(first), pending_event_id: second });
+    await store.update({ ...draftOf(first), pending_event_id: second }, undefined);
+    // Read before that stamp, or gone: refused, in one transaction, nothing written.
+    await expect(
+      store.update(
+        { ...draftOf(first), pending_event_id: "01K00000000000000000000003" },
+        undefined,
+      ),
+    ).rejects.toMatchObject({ code: "draft_changed", details: { now: "stamped" } });
+    await store.remove(first);
+    await expect(
+      store.update({ ...draftOf(first), pending_event_id: second }, second),
+    ).rejects.toMatchObject({ code: "draft_changed", details: { now: "gone" } });
+    expect((await store.list()).drafts).toEqual([]);
+    await store.save(draftOf(first));
+    await store.update({ ...draftOf(first), pending_event_id: second }, undefined);
     expect((await store.list()).drafts).toEqual([{ ...draftOf(first), pending_event_id: second }]);
   });
 

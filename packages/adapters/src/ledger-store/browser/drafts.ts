@@ -7,7 +7,12 @@
 // `drafts` store of the same database (version 2). Clearing the site's data
 // loses them, as it loses the ledger kept here; the interface says so.
 
-import { type PendingDraft, type PendingDraftStore, parsePendingDraft } from "@atlas/domain/ecb";
+import {
+  DraftChangedError,
+  type PendingDraft,
+  type PendingDraftStore,
+  parsePendingDraft,
+} from "@atlas/domain/ecb";
 import { DRAFT_STORE, openAtlasDb } from "./idb.js";
 
 /** Settles when the transaction commits, or fails with what aborted it. */
@@ -54,12 +59,36 @@ export class BrowserDraftStore implements PendingDraftStore {
     await committed(tx);
   }
 
-  /** The same draft again (the id its confirmation stamped): over the one there is. */
-  async update(draft: PendingDraft): Promise<void> {
+  /**
+   * The same draft again, with the id its confirmation stamped — only if it is
+   * still there, without a stamp or with exactly `readStamp`: read and written
+   * in **one** read-write transaction (third review of PR #75). Never
+   * re-creates a draft another tab confirmed.
+   */
+  async update(draft: PendingDraft, readStamp: string | undefined): Promise<void> {
     const db = await this.open();
     const tx = db.transaction(DRAFT_STORE, "readwrite");
-    tx.objectStore(DRAFT_STORE).put(JSON.stringify(draft), draft.id);
+    const store = tx.objectStore(DRAFT_STORE);
+    let refusal: DraftChangedError | undefined;
+    const get = store.get(draft.id);
+    get.onsuccess = () => {
+      if (get.result === undefined) {
+        refusal = new DraftChangedError(draft.id, "gone");
+      } else {
+        const stamp = (JSON.parse(String(get.result)) as { pending_event_id?: string })
+          .pending_event_id;
+        if (stamp !== undefined && stamp !== readStamp) {
+          refusal = new DraftChangedError(draft.id, "stamped");
+        }
+      }
+      if (refusal === undefined) {
+        store.put(JSON.stringify(draft), draft.id);
+      }
+    };
     await committed(tx);
+    if (refusal !== undefined) {
+      throw refusal;
+    }
   }
 
   async remove(id: string): Promise<void> {

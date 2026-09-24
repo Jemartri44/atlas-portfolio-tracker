@@ -4,10 +4,12 @@
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { PendingDraft } from "@atlas/domain/ecb";
+import { DraftChangedError, type PendingDraft, recordPendingDraft } from "@atlas/domain/ecb";
 import { describe, expect, it } from "vitest";
 import { DRAFTS_DIR, FileDraftStore } from "../src/drafts/file-drafts.js";
 import { LedgerLockedError, LOCK_FILE, LockLostError } from "../src/ledger-store/folder-lock.js";
+import { MemoryLedgerStore } from "../src/ledger-store/memory.js";
+import { account } from "./fixtures.js";
 
 const folder = (): Promise<string> => mkdtemp(join(tmpdir(), "atlas-012-drafts-"));
 
@@ -56,7 +58,7 @@ describe("FileDraftStore", () => {
   it("writes a draft again with the id its confirmation stamped (second review of PR #75)", async () => {
     const store = new FileDraftStore(await folder());
     await store.save(draftOf(first));
-    await store.update({ ...draftOf(first), pending_event_id: second });
+    await store.update({ ...draftOf(first), pending_event_id: second }, undefined);
     expect((await store.list()).drafts).toEqual([{ ...draftOf(first), pending_event_id: second }]);
   });
 
@@ -106,5 +108,69 @@ describe("FileDraftStore", () => {
     const dir = await folder();
     await writeFile(join(dir, DRAFTS_DIR), "a file where the folder should be");
     await expect(new FileDraftStore(dir).list()).rejects.toMatchObject({ code: "ENOTDIR" });
+  });
+});
+
+describe("two confirmations at once (third review of PR #75)", () => {
+  /** The operation of the draft: a deposit into the account of the fixtures. */
+  const deposit = {
+    type: "cash_deposit",
+    account_id: "acc_test",
+    value_date: "2026-09-01",
+    amount: "100",
+    currency: "EUR",
+    fx_rate: "1",
+    fx_rate_date: "2026-09-01",
+  };
+  const setup = async () => {
+    const dir = await folder();
+    let counter = 0;
+    const deps = {
+      store: MemoryLedgerStore.fromEvents([account]),
+      clock: { now: () => new Date("2026-09-24T10:00:00.000Z") },
+      random: (target: Uint8Array) => {
+        counter += 1;
+        target.fill(counter % 251);
+      },
+    };
+    const store = new FileDraftStore(dir);
+    const draft: PendingDraft = { ...draftOf(first), event: deposit };
+    await store.save(draft);
+    return { dir, deps, store, draft };
+  };
+  const deposits = async (deps: { store: MemoryLedgerStore }) =>
+    (await deps.store.load()).events.filter((event) => event.type === "cash_deposit").length;
+
+  it("never re-creates the draft another console confirmed: the reviewer's order", async () => {
+    const { deps, store, draft } = await setup();
+    // Console 2 read the draft before console 1 confirmed it.
+    const readByTwo = (await store.list()).drafts[0] as PendingDraft;
+    // Console 1: stamps, records and removes.
+    const one = await recordPendingDraft(deps, store, draft, deposit);
+    expect(one.draftRemoved).toBe(true);
+    // Console 2: the stamp is refused — the draft is gone — and nothing else happens.
+    await expect(recordPendingDraft(deps, store, readByTwo, deposit)).rejects.toBeInstanceOf(
+      DraftChangedError,
+    );
+    expect(await store.list()).toEqual({ drafts: [], unreadable: [] });
+    expect(await deposits(deps)).toBe(1);
+  });
+
+  it("refuses to stamp over another console's stamp, and reuses its own", async () => {
+    const { store, draft } = await setup();
+    await store.update({ ...draft, pending_event_id: second }, undefined);
+    // Read before that stamp: refused.
+    await expect(
+      store.update({ ...draft, pending_event_id: "01K00000000000000000000003" }, undefined),
+    ).rejects.toMatchObject({ code: "draft_changed", details: { now: "stamped" } });
+    // Read with it: the same stamp is written again.
+    await store.update({ ...draft, pending_event_id: second }, second);
+    expect((await store.list()).drafts[0]?.pending_event_id).toBe(second);
+    // A draft that is gone is never re-created.
+    await store.remove(draft.id);
+    await expect(
+      store.update({ ...draft, pending_event_id: second }, second),
+    ).rejects.toMatchObject({ code: "draft_changed", details: { now: "gone" } });
+    expect(await store.list()).toEqual({ drafts: [], unreadable: [] });
   });
 });

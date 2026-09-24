@@ -12,6 +12,7 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import {
+  DraftChangedError,
   type PendingDraft,
   type PendingDraftStore,
   parsePendingDraft,
@@ -69,13 +70,32 @@ export class FileDraftStore implements PendingDraftStore {
     return this.write(draft);
   }
 
-  /** The same draft again, with the id its confirmation stamped: written like a new one. */
-  update(draft: PendingDraft): Promise<void> {
-    return this.write(draft);
+  /**
+   * The same draft again, with the id its confirmation stamped — only if it is
+   * still there, without a stamp or with exactly `readStamp`: checked and
+   * written **under the same lock** (third review of PR #75). A console that
+   * read the draft before another confirmed it never re-creates it.
+   */
+  update(draft: PendingDraft, readStamp: string | undefined): Promise<void> {
+    return this.write(draft, async () => {
+      let current: PendingDraft;
+      try {
+        current = parsePendingDraft(await fs.readFile(join(this.dir, `${draft.id}.json`), "utf8"));
+      } catch (error) {
+        if ((error as { code?: string }).code === "ENOENT") {
+          throw new DraftChangedError(draft.id, "gone");
+        }
+        throw error;
+      }
+      if (current.pending_event_id !== undefined && current.pending_event_id !== readStamp) {
+        throw new DraftChangedError(draft.id, "stamped");
+      }
+    });
   }
 
-  private write(draft: PendingDraft): Promise<void> {
+  private write(draft: PendingDraft, check?: () => Promise<void>): Promise<void> {
     return withFolderLock(this.folder, async (lock) => {
+      await check?.();
       await fs.mkdir(this.dir, { recursive: true });
       const path = join(this.dir, `${draft.id}.json`);
       const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;

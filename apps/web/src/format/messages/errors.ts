@@ -236,6 +236,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Descárgalo otra vez con la consola o importa el archivo del BCE.`,
   draft_not_needed: () =>
     "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, no hace falta borrador.",
+  draft_changed: (d) =>
+    d.now === "gone"
+      ? "Ese borrador ya no está en este navegador: se ha confirmado o descartado en otra pestaña. No se ha registrado nada; mira tus movimientos y tus borradores."
+      : "Ese borrador se está confirmando en otra pestaña: no se ha registrado nada. Mira tus borradores dentro de un momento.",
   draft_unreadable: () =>
     "Un borrador guardado en este navegador no tiene el formato esperado: no se ha tocado.",
   ecb_history_empty: () =>

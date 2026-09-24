@@ -244,6 +244,10 @@ export const describeError = (error: DomainError): string => {
       return `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Vuelve a descargarlo con \`atlas fx update\`.`;
     case "draft_not_needed":
       return "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, sin --draft.";
+    case "draft_changed":
+      return d.now === "gone"
+        ? "Ese borrador ya no está en drafts/: se ha confirmado o descartado desde otra orden. No se ha registrado nada; consulta `atlas draft list` y el libro."
+        : "Ese borrador se está confirmando desde otra orden (ya lleva el id de su registro): no se ha registrado nada. Espera y consulta `atlas draft list`.";
     case "draft_unreadable":
       return "Un borrador de drafts/ no tiene el formato esperado: no se ha tocado. Revísalo a mano; puede ser la única copia de una operación.";
     case "ecb_history_empty":
