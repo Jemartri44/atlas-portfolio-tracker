@@ -415,3 +415,9 @@ Todos muertos con tests nuevos, cada uno con la sustitución afirmada: **W1** (q
 - **El rechazo de un `event_id` repetido existe, y es un rechazo** (lo pedía la dirección antes de seguir): la pasada 0 de la proyección lanza `duplicate_id` **siempre**, también en modo degradado, y `recordEvent` proyecta el libro candidato antes de añadir, así que el `append` no llega a ocurrir. Test nuevo (`duplicate-id.test.ts`): un evento con un id ya presente se rechaza con `duplicate_id` y el libro no crece, incluso con `confirmDuplicate`. Pasó a la primera: el rechazo ya estaba, este test lo fija.
 - **Rojo primero**: las dos consolas con el orden del revisor (sobre `FileDraftStore` y el caso de uso real: la segunda confirmación se rechaza, no queda borrador y hay un solo depósito) y el sello de otra consola, rojos sobre el código anterior; el borrador desaparecido en la web, rojo sobre la web anterior (registraba). Mutantes: `update` sin condición en la consola y en IndexedDB, y la web que registra como nueva — muertos los tres.
 - **Paquete**: total 262,1 → techo **263,0** en su propio commit; el arranque no se mueve (73,7).
+
+## 13. Cuarta pasada de la revisión de la PR #75 (2026-09-24)
+
+- **Limpia**: ningún hallazgo, sobre `0c3a4da` (el último commit de la rama antes de fusionar). La PR se fusionó en `develop` el 2026-09-24 a las 06:36, hora de Madrid.
+- **Recuento de la revisión** (lo escribe la dirección al cerrar): de las cuatro pasadas, **dos arreglos abrieron un defecto nuevo**. El bloqueante de la primera (§10.1, el desempate FIFO) era anterior a la feature. El de la segunda (§11.1) nació de la decisión 6 de la dirección, tomada al arreglar la primera. El de la tercera (§12.1) nació del arreglo de la segunda. La cuarta, limpia.
+
