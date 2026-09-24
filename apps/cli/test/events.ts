@@ -73,7 +73,7 @@ export class Events {
     };
   }
 
-  private push(type: string, fields: Record<string, unknown>, recordedOn?: string): LedgerEvent {
+  push(type: string, fields: Record<string, unknown>, recordedOn?: string): LedgerEvent {
     const event = {
       ...this.envelope(type, recordedOn),
       ...fields,

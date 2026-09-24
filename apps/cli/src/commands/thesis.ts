@@ -12,6 +12,7 @@ import { assertKnownFlags, booleanFlag, type Flags, requireFlag, UsageError } fr
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { eur } from "../output/format.js";
 import { keyValue, table } from "../output/table.js";
+import { loadQuotes, sayNotes } from "../prices/load.js";
 import { requireId } from "./catalogue.js";
 import { confirmAndRecord, dateFlag, loadForQuery, renderQuery } from "./shared.js";
 
@@ -185,7 +186,9 @@ export const thesisCommand = async (
     const date = dateFlag(ctx, flags);
     const { state } = await loadForQuery(ctx, date);
     const includeClosed = booleanFlag(flags, "closed");
-    const view = bucketTheses(state, date, settingsAt(state, date).settings);
+    const quotes = await loadQuotes(ctx, state);
+    sayNotes(ctx, quotes.notes);
+    const view = bucketTheses(state, date, settingsAt(state, date).settings, quotes.external);
     const rows = view.rows.filter((thesis) => includeClosed || thesis.status === "open");
     renderQuery(
       ctx,
@@ -240,9 +243,14 @@ export const thesisCommand = async (
     assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
     const date = dateFlag(ctx, flags);
     const { state } = await loadForQuery(ctx, date);
-    const thesis = bucketTheses(state, date, settingsAt(state, date).settings).rows.find(
-      (candidate) => candidate.thesis_id === thesisId,
-    );
+    const quotes = await loadQuotes(ctx, state);
+    sayNotes(ctx, quotes.notes);
+    const thesis = bucketTheses(
+      state,
+      date,
+      settingsAt(state, date).settings,
+      quotes.external,
+    ).rows.find((candidate) => candidate.thesis_id === thesisId);
     if (thesis === undefined) {
       throw new DomainError("unknown_thesis", `thesis ${thesisId} does not exist`, {
         thesis_id: thesisId,
