@@ -1,7 +1,7 @@
 <!--
 Sync Impact Report
 - Version change: 1.5.0 → 1.6.0
-- Modified principles: IV (configuration that is personal data or a secret —email recipients, the sign-in allow-list, keys— is still never hard-coded, but lives outside the ledger: SSM Parameter Store in the cloud or local configuration outside the repository; everything else stays in `Settings`. ADR-0027, ADR-0028, ADR-0031, Ronda 8, 2026-09-24); VI (cost restriction: "coste indefinidamente dentro del always-free de AWS" → "coste mínimo con alarma de presupuesto", ADR-0028, Ronda 8, 2026-09-24)
+- Modified principles: IV (configurable values are still never hard-coded, but not all of them live in `Settings`: configuration that affects ledger figures stays in `Settings`; configuration that is personal data or a secret —email recipient, sign-in allow-list, keys— and operational configuration no figure reads —price sources, email— lives outside the ledger, in SSM Parameter Store in the cloud or local configuration outside the repository; a new field in a full-state event follows the ADR-0018 amendment. ADR-0018, ADR-0027, ADR-0028, ADR-0031, Ronda 8, 2026-09-24); VI (cost restriction: "coste indefinidamente dentro del always-free de AWS" → "coste mínimo con alarma de presupuesto", ADR-0028, Ronda 8, 2026-09-24)
 - Modified sections: Restricciones técnicas (Plataforma: coste mínimo en vez de always-free, acceso con Google verificado en la Lambda sustituye a Cognito con MFA —ADR-0027—, excepción declarada a "Terraform para todo; nada creado a mano" con su condición de retirada —ADR-0028—; Seguridad: los secretos en SSM ya no son solo el token Flex de IBKR, se añaden el secreto de cliente de Google y la clave de sesión —ADR-0027— y las claves de las fuentes de precios —ADR-0031—, que en local van en un fichero de configuración fuera del repositorio y solo en la nube en SSM)
 - Version bump rationale: MINOR, like 1.1.0, 1.4.0 and 1.5.0: principles IV and VI are narrowed or re-scoped with their reason written, not removed or redefined
 - Added sections: none
@@ -54,8 +54,10 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 ### IV. Nada codificado que deba ser configurable
 
-- Umbrales, pesos objetivo, frecuencias, tipos impositivos y residencia fiscal son configuración (`Settings`), con historial de cambios y validación.
-- **La configuración que es dato personal o secreto** —destinatarios del correo, lista permitida de acceso, claves— tampoco se escribe en el código, pero vive **fuera del libro**: en SSM Parameter Store en la nube, o en configuración local fuera del repositorio (ADR-0027, ADR-0028, ADR-0031; enmienda 1.6.0). Todo lo demás sigue en `Settings`.
+- **Lo configurable nunca se escribe en el código.**
+- **Vive en `Settings`** la configuración que afecta a cifras del libro —umbrales, pesos objetivo, frecuencias, tipos impositivos, criterios fiscales y residencia fiscal—, con historial de cambios y validación.
+- **Vive fuera del libro** —en SSM Parameter Store en la nube, o en configuración local fuera del repositorio— la configuración que es **dato personal o secreto** (destinatario del correo, lista permitida de acceso, claves) y la **configuración operativa que ninguna cifra lee** (las fuentes de precios con su orden y su presupuesto, el correo y su interruptor de importes). ADR-0027, ADR-0028, ADR-0031; enmienda 1.6.0.
+- Un campo nuevo en un evento que guarda el estado completo (`settings_changed`, `*_updated`) sigue la enmienda de ADR-0018: o va fuera del libro o sube `schema_version`.
 - Modificar un umbral que silencia una alerta activa DEBE advertirse explícitamente.
 - Las cifras fiscales se documentan como "según se entienden en {fecha}, verificar"; nunca como constantes del código.
 
