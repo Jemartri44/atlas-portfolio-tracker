@@ -1,14 +1,15 @@
-// The three questions a configuration change has to ask before it is written,
-// each one about damage that is invisible in the form:
+// The questions a configuration change has to ask before it is written, each
+// one about damage that is invisible in the form:
 //
 //   1. which live warnings this change switches off (constitution IV),
-//   2. which closed tax years it moves (ADR-0013),
-//   3. which events already in the ledger stop being valid (ADR-0015).
+//   2. which lines keep an ECB rate of another date (criterion 25, feature 012),
+//   3. which closed tax years it moves (ADR-0013),
+//   4. which events already in the ledger stop being valid (ADR-0015).
 //
 // All three come from the domain, so the CLI and the web cannot disagree about
 // what a change does. Here there is only the wording left.
 
-import type { FilingModel, FiscalYearImpact, Warning } from "@atlas/domain";
+import type { FilingModel, FiscalYearImpact, LedgerEvent, Warning } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { For, type JSX, Show } from "solid-js";
 import { Amount, ClosedYearNotice, ConfirmDialog } from "../../components/index.js";
@@ -18,6 +19,8 @@ import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { maskFigures } from "../../format/privacy.js";
 import { usePrivacy } from "../../ledger/state.js";
+import { RuleChangeDialog } from "./RuleChangeDialog.jsx";
+import type { RuleChangeQuestion } from "./rule-change.js";
 
 /** An event that the new configuration would leave invalid (ADR-0015). */
 export interface InvalidatedEvent {
@@ -38,6 +41,9 @@ interface DialogsProps {
   onSave: (acceptInvalid?: boolean) => void;
   /** The catalogue, so a silenced warning names its asset. */
   names?: NameIndex;
+  /** The ECB rates a change of `fiscal_date_rule` leaves behind (criterion 25). */
+  rates: RuleChangeQuestion;
+  events: readonly LedgerEvent[];
 }
 
 const IN_MODEL: Record<FilingModel, string> = {
@@ -73,6 +79,16 @@ export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
 
   return (
     <>
+      <RuleChangeDialog
+        impact={props.rates.impact()}
+        events={props.events}
+        names={props.names ?? NO_NAMES}
+        onClose={props.rates.clear}
+        onConfirm={() => {
+          props.rates.answer();
+          props.onSave();
+        }}
+      />
       <ConfirmDialog
         open={props.silenced !== undefined}
         title="Este cambio silencia avisos activos"

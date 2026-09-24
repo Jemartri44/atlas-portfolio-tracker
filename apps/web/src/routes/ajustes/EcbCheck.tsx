@@ -11,6 +11,7 @@ import { Notice, type NoticeItem, NoticeList, Section, Tag } from "../../compone
 import { formatDate } from "../../format/date.js";
 import { countOf } from "../../format/number.js";
 import { today } from "../../ledger/state.js";
+import { RateCorrections } from "./RateCorrections.jsx";
 
 const check = async (state: LedgerState, events: readonly LedgerEvent[]) => {
   const [{ loadWebHistory }, { checkLedgerRates }] = await Promise.all([
@@ -87,6 +88,7 @@ export const EcbCheck = (props: {
           </Switch>
         )}
       </Show>
+      <RateCorrections state={props.state} events={props.events} />
     </Section>
   );
 };

@@ -561,6 +561,8 @@ const LAZY_ONLY = [
   { path: "/src/ledger/drafts.ts", what: "los borradores" },
   { path: "/src/shell/draft-counter.ts", what: "el contador de borradores" },
   { path: "/src/routes/registrar/borradores.tsx", what: "la lista de borradores" },
+  // Block 6: the correction chain of the rates after a change of rule.
+  { path: "/src/ledger/rate-corrections.ts", what: "la corrección de los tipos del BCE" },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */

@@ -47,6 +47,7 @@ import { weightedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
 import { FiscalCard } from "./FiscalCard.jsx";
+import { useRuleChangeQuestion } from "./rule-change.js";
 import { IdentityCard, type SettingsDraft, ThresholdsCard, WeightsCard } from "./SettingsCards.jsx";
 import { type InvalidatedEvent, SettingsDialogs } from "./SettingsDialogs.jsx";
 
@@ -61,6 +62,7 @@ export default function ConfiguracionRoute(): JSX.Element {
     undefined,
   );
   const [saved, setSaved] = createSignal(false);
+  const rates = useRuleChangeQuestion();
 
   return (
     <RequireLedger skeleton={10}>
@@ -117,6 +119,10 @@ export default function ConfiguracionRoute(): JSX.Element {
               setSilenced(silencedResult.silenced);
               return;
             }
+            // The ECB rates of the lines whose fiscal date moves (criterion 25).
+            if (await rates.ask(snapshot.events, current(), next)) {
+              return;
+            }
             const movedResult = movedFiscalYears(snapshot.events, current(), next, yearOf(date));
             // A filed return can move without a single realized gain moving:
             // the window, the transfer criterion and the income category change
@@ -132,6 +138,7 @@ export default function ConfiguracionRoute(): JSX.Element {
           const result = await changeSettings(next, acceptInvalid ? { acceptInvalid: true } : {});
           setSilenced(undefined);
           setMoved(undefined);
+          rates.clear();
           if (result.ok) {
             setInvalidating(undefined);
             discard();
@@ -215,6 +222,8 @@ export default function ConfiguracionRoute(): JSX.Element {
             </div>
 
             <SettingsDialogs
+              rates={rates}
+              events={snapshot.events}
               silenced={silenced()}
               moved={moved()}
               closedYears={closedYears()}
