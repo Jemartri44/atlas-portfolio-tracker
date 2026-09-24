@@ -164,7 +164,9 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 
 ### 5.1 Entidad Settings
 
-`Settings` es el conjunto de parámetros que la aplicación **lee** en lugar de llevarlos escritos en el fuente: pesos objetivo, umbrales, frecuencias, destinatarios, criterios fiscales y residencia. Existe por el principio IV de la constitución —nada codificado que deba ser configurable—: estos valores cambian con la vida, con la cartera y con la normativa, y obligar a editar código para mover un porcentaje garantiza que no se mueva. No vive en un fichero aparte: cada cambio es un evento `settings_changed` del libro mayor (ADR-0006) y registra la configuración vigente **entera**, de modo que un cálculo de hoy se reproduce dentro de quince años aunque el valor por defecto del código haya cambiado (ADR-0022).
+`Settings` es el conjunto de parámetros que la aplicación **lee** en lugar de llevarlos escritos en el fuente: pesos objetivo, umbrales, frecuencias, criterios fiscales y residencia. Existe por el principio IV de la constitución —nada codificado que deba ser configurable—: estos valores cambian con la vida, con la cartera y con la normativa, y obligar a editar código para mover un porcentaje garantiza que no se mueva. No vive en un fichero aparte: cada cambio es un evento `settings_changed` del libro mayor (ADR-0006) y registra la configuración vigente **entera**, de modo que un cálculo de hoy se reproduce dentro de quince años aunque el valor por defecto del código haya cambiado (ADR-0022).
+
+**No toda la configuración vive en `Settings`** (principio IV de la constitución, enmendado en la 1.6.0). Nada configurable se escribe en el código, pero en `Settings` vive solo la configuración que **afecta a cifras del libro**. La que es **dato personal o secreto** (destinatario del correo, lista permitida de acceso, claves) y la **configuración operativa que ninguna cifra lee** (fuentes de precios, correo) viven **fuera del libro**, en SSM Parameter Store en la nube o en un fichero de configuración local fuera del repositorio (ADR-0027, ADR-0028, ADR-0031; detalle en §11.8). Un campo nuevo en `settings_changed` sigue además la enmienda de ADR-0018.
 
 **La lista normativa de parámetros es `business-rules.md` §7**, con el valor inicial y la regla asociada de cada uno. Manda ella, y esta especificación **no la repite**: la tabla que había aquí se quedó desfasada durante meses —le faltaban los criterios fiscales que el motor ya usaba y le sobraba alguno que nunca existió en el código—, que es lo que pasa siempre con una lista duplicada. Cualquier parámetro nuevo se añade en §7 y solo en §7.
 
@@ -247,19 +249,21 @@ Es el libro con más funcionalidad propia: es una parte pequeña de la cartera p
 
 ## 7. Fuentes de datos
 
+> **Vigente desde ADR-0031 (2026-09-24, Ronda 8).** Yahoo Finance, Stooq y Morningstar quedan **descartados**: las condiciones de Yahoo prohíben por escrito el acceso automatizado, Stooq responde con un reto anti-*bot* y Morningstar solo ofrece API de empresa (investigación del 2026-09-24). Las fuentes de precio de cierre diario son APIs gratuitas con clave: **EODHD** (principal), **Alpha Vantage** (respaldo) y **CoinGecko** (cripto, con atribución visible). La tabla de abajo queda como referencia histórica salvo la fila corregida.
+
 | Dato | Fuente | Fiabilidad | Riesgo |
 |---|---|---|---|
-| Acciones, ETFs, ETCs | Yahoo Finance (scraping / API no oficial) | Buena | IPs de AWS bloqueadas por antibot |
-| Cripto | CoinGecko o similar | Buena | Límites de uso en plan gratuito |
+| Acciones, ETFs, ETCs | **EODHD (principal), Alpha Vantage (respaldo)**, APIs con clave gratuita (ADR-0031) | Buena | Cupo diario (20-25 llamadas) y condiciones de uso de una API gratuita |
+| Cripto | CoinGecko Demo | Buena | Límites de uso en plan gratuito; sin histórico, solo el último valor (ADR-0031) |
 | Tipos de cambio | BCE (CSV/API oficial) | Excelente | Ninguno |
-| Valor liquidativo de fondos | **Aproximación por ETF equivalente** | Buena para consulta | No sirve para fiscalidad |
+| Valor liquidativo de fondos | `EUFUND` de EODHD si cubre el ISIN; si no, **aproximación por ETF equivalente**, siempre marcada como tal (ADR-0031) | Buena para consulta | No sirve para fiscalidad |
 | Valor liquidativo exacto | Entrada manual al registrar la operación | Exacta | Requiere disciplina |
 | Operaciones IBKR | Flex Query (API con token) | Excelente | Token a rotar |
 | Operaciones MyInvestor | Subida de extracto o entrada manual | Buena | Formato puede cambiar |
 
 ### 7.1 Estrategia de precios: dos niveles
 
-El error de diseño a evitar es intentar obtener el valor liquidativo oficial de los fondos por scraping. Yahoo Finance cubre mal los fondos UCITS irlandeses, y depender de ello hace frágil todo el sistema.
+El error de diseño a evitar es intentar obtener el valor liquidativo oficial de los fondos por *scraping*. Yahoo Finance cubre mal los fondos UCITS irlandeses, y depender de ello hace frágil todo el sistema — motivo por el que ADR-0031 lo descarta directamente junto con Stooq y Morningstar.
 
 **Nivel 1 — Precio exacto (para fiscalidad y libro mayor).**
 Se introduce a mano en el momento de registrar la operación, o llega del extracto del bróker. Es el único que alimenta cálculos fiscales. Nunca se estima.
@@ -271,21 +275,22 @@ Estos precios son **exclusivamente informativos** y la interfaz los marca como a
 
 ### 7.2 Arquitectura de fuentes: patrón adaptador
 
-Cada fuente es un módulo intercambiable con la misma interfaz (`getPrice(asset, date)`). Requisitos:
+Cada fuente es un adaptador del puerto `PriceSource` (`packages/domain/src/ports/`, ADR-0031), asíncrono, que pide cierres diarios de un símbolo entre dos fechas. Requisitos:
 
-- **Cascada de respaldo**: fuente primaria → secundaria → último valor conocido → entrada manual.
+- **Cascada de respaldo**: fuente primaria (EODHD) → secundaria (Alpha Vantage) → último valor conocido con su antigüedad → entrada manual, que gana siempre.
 - **Antigüedad siempre visible.** Si un precio lleva más de `stale_price_days` sin refrescarse, la interfaz lo indica.
 - **Nunca interpolar ni estimar en silencio.**
-- **Registro de fallos**: si una fuente falla repetidamente, aviso por correo. Es lo que te va a avisar de que Yahoo ha empezado a bloquear las IPs de Lambda.
+- **Registro de fallos con tipo** (`unavailable`, `not_found`, `rate_limited`, `blocked`, `invalid_response`, `budget_exhausted`); si una fuente falla repetidamente, aviso por correo. Es lo que avisará de que una fuente ha cambiado sus condiciones o agotado su cupo.
+- **Correspondencia ISIN → símbolo** en `prices/symbols.json`, fuera del libro (ADR-0031): configuración de la descarga, propuesta por OpenFIGI y confirmada por el usuario al dar de alta el activo, nunca un hecho de la cartera.
 
-### 7.3 ⚠ Riesgo conocido: scraping desde Lambda
+### 7.3 ⚠ Riesgo conocido: condiciones y cupos de una API gratuita
 
-Los rangos de IP de AWS son bloqueados con frecuencia por sistemas antibot. El scraping puede funcionar durante meses y dejar de hacerlo sin previo aviso.
+> **Vigente desde ADR-0031 (2026-09-24).** El riesgo ya no es el bloqueo de las IPs de AWS por sistemas anti-*bot* de *scraping* (Yahoo, Stooq y Morningstar quedan descartados, §7): es que una API gratuita con clave cambie sus condiciones, reduzca su cupo diario o cierre el plan gratuito.
 
 Mitigaciones, en orden:
 1. Diseño con adaptadores y respaldo manual (arriba). El sistema degrada, no se rompe.
-2. Cachear agresivamente: una consulta al día por activo es suficiente.
-3. Si se vuelve inviable: mover el recolector a una máquina propia que empuje los precios a la API. Rompe la autonomía del sistema pero resuelve el bloqueo.
+2. **Presupuesto de llamadas diario**, priorizado: primero las posiciones del cubo, después el índice de referencia y los ETF de referencia, después el resto del núcleo (ADR-0031). Lo que no quepa ese día conserva su último valor con su antigüedad.
+3. Si una fuente deja de servir: sustituirla por otra de la misma categoría (acciones/ETF, cripto) tras la misma investigación que hizo ADR-0031, o volver a la entrada manual.
 
 **Norma:** el sistema debe seguir siendo plenamente funcional con cero fuentes automáticas de precios. Todo lo automático es comodidad, no requisito.
 
@@ -332,43 +337,54 @@ Trabajo programado que compara las posiciones del libro mayor contra el extracto
 
 ### 9.2 Componentes
 
+> **Diagrama y decisiones vigentes desde ADR-0026, ADR-0027 y ADR-0028 (2026-09-24, Ronda 8).** Cognito desaparece: el acceso es solo con Google, verificado por la propia Lambda (ADR-0027). Cada entorno es una cuenta de AWS miembro dedicada (`atlas-dev`, `atlas-prod`) dentro de una organización, no una pila con sufijo compartiendo cuenta (ADR-0028, detalle en §11.3).
+
 ```
 Navegador (PC / móvil)
     │
-    ├── CloudFront ──── S3 (SPA estática, privada vía OAC)
-    │      <dominio de la app>
-    │
-    └── Lambda Function URL ─── Lambda (API) ─── S3 (libro mayor JSONL versionado,
-           (valida JWT de Cognito)                 configuración, precios cacheados,
-                                                   documentos de eventos)
+    └── CloudFront  <dominio de la app>   [plan Free de tarifa plana + WAF]
+           │
+           ├── /*      ──── S3 (SPA estática, privada vía OAC)
+           │
+           └── /api/*  ──── Lambda Function URL ─── Lambda (API) ─── S3 (datos: libro mayor
+                            (AuthType=AWS_IAM;                        JSONL versionado, precios,
+                             OAC firma la petición;                   histórico del BCE,
+                             la Lambda verifica la sesión             documentos de eventos;
+                             propia y, en el acceso,                  nunca origen de CloudFront)
+                             el ID token de Google)
 
 EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
                                 │
-                                └── SSM Parameter Store (token IBKR)
+                                └── SSM Parameter Store (token IBKR, secreto de
+                                    cliente de Google, clave de sesión, claves
+                                    de las fuentes de precios, destinatario del
+                                    correo)
 ```
 
 **Decisiones deliberadas para minimizar coste y servicios:**
 
-- **Lambda Function URL en vez de API Gateway.** Un servicio menos. La Lambda valida el JWT de Cognito directamente.
+- **Lambda Function URL en vez de API Gateway.** Un servicio menos. **La Lambda solo se alcanza a través de CloudFront**, en la misma distribución que la SPA y bajo `/api/*` (ADR-0028, fila 6): mismo origen, así que la cookie de sesión es del mismo sitio y no hace falta CORS. El navegador nunca llama a la Function URL directamente. Con Origin Access Control, CloudFront sobrescribe la cabecera `Authorization` para firmar la petición a la Function URL, así que la sesión y el acceso viajan en cookie o en cabeceras propias, nunca en `Authorization` (ADR-0027).
+- **Acceso solo con Google, verificado en la propia Lambda; sin Cognito ni Lambda@Edge** (ADR-0027). Código de autorización con PKCE, la Lambda como cliente OAuth: el token de Google nunca toca la SPA. Sesión propia en una cookie `__Host-` firmada, con lista permitida de `{sub, email}` en SSM. Detalle en §10.
 - **SSM Parameter Store en vez de Secrets Manager.** El estándar es gratuito; Secrets Manager cuesta ~0,40$/secreto/mes.
 - **DNS en el registrador, no en Route 53.** Un CNAME del subdominio propio a la distribución de CloudFront evita los 0,50$/mes de zona alojada. Certificado en ACM (gratuito), **obligatoriamente en us-east-1** para CloudFront. El dominio real vive en `terraform.tfvars`, fuera del repositorio.
-- **S3 como único almacén** (ADR-0002, ADR-0006): un único `ledger/ledger.jsonl` con **todos los eventos** (operaciones, catálogo de cuentas y activos, cambios de configuración); la Lambda lo carga entero, proyecta y guarda con escritura condicional (`If-Match`). El versionado del bucket da historial y backup sin servicios adicionales. Esquema y distribución del bucket en `docs/data-schema.md`.
+- **S3 como único almacén** (ADR-0002, ADR-0006): un único `ledger/ledger.jsonl` con **todos los eventos** (operaciones, catálogo de cuentas y activos, cambios de configuración); la Lambda lo carga entero, proyecta y guarda con escritura condicional (`If-Match`). El versionado del bucket da historial y backup sin servicios adicionales. La Lambda solo añade: nunca reescribe ni borra líneas (ADR-0026). Esquema y distribución del bucket en `docs/data-schema.md`.
+- **Plan Free de tarifa plana de CloudFront** como cortafuegos de aplicación: 0$, cubre 1 M de peticiones y 100 GB al mes, e incluye una *web ACL* de WAF con limitación de tasa por IP (ADR-0028).
 
 ### 9.3 Costes
 
-Servicios en la categoría **Always Free**, perpetua e independiente de la antigüedad de la cuenta:
+> **Rehecha desde ADR-0028 (2026-09-24, Ronda 8).** La tabla de abajo mezclaba límites de un modelo de precios anterior y contaba con Cognito; la restricción deja de ser «*always-free* indefinidamente» y pasa a ser **coste mínimo con alarma de presupuesto** (constitución, principio VI).
 
 | Servicio | Límite gratuito mensual | Uso previsto |
 |---|---|---|
 | Lambda | 1M invocaciones, 400.000 GB-segundo | Unos cientos de invocaciones |
-| CloudFront | 1 TB de salida, 10M peticiones | Unos MB |
-| SNS | 1M publicaciones | Marginal |
-| SSM Parameter Store (estándar) | Gratuito | 1-2 parámetros |
-| Cognito | Miles de usuarios activos | 1 usuario |
-| SES | 0,10$ por 1.000 correos | ~20 correos/mes |
-| S3 | 5 GB (solo primeros 12 meses) | Unos MB de libro, configuración y precios → céntimos al año después |
+| CloudFront (plan Free de tarifa plana) | 1 M de peticiones, 100 GB de salida, WAF con 5 reglas incluido | Unos MB; qué ocurre al superar el millón de peticiones está **sin verificar** (ADR-0028) |
+| SSM Parameter Store (estándar) | Gratuito | Varios parámetros: token IBKR, secreto de cliente de Google, clave de sesión, claves de las fuentes de precios, destinatario del correo |
+| Acceso con Google (Lambda propia) | Sin coste de AWS | 1 usuario; sin Cognito |
+| SES (*sandbox*) | 0,10$ por 1.000 correos | ~10 correos/mes ≈ 0,001$ |
+| S3 (versionado, SSE-S3) | Sin nivel gratuito perpetuo | Unos MB de libro, configuración, histórico del BCE y precios → céntimos al año |
+| EODHD, Alpha Vantage, CoinGecko | Planes gratuitos con clave | Cupos diarios (20-25 llamadas; CoinGecko 10.000 créditos/mes) |
 
-**Coste estimado: entre 0 y 1$ al mes, indefinidamente.**
+**Coste estimado: ≈ 0,01-0,05 $/mes**, cubierto por los créditos de la cuenta mientras duren (investigación del 2026-09-24); agotados los créditos, la cuenta paga ese coste. **Alarma de AWS Budgets a 1 $** por correo, que mide el coste antes de aplicar créditos (ADR-0028).
 
 ### 9.4 ⚠ Trampa crítica del Free Plan
 
@@ -376,32 +392,35 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 **En el Free Plan, cuando se agotan los créditos o vencen los seis meses, la cuenta se cierra automáticamente**, sin factura previa ni periodo de gracia. Quedan 90 días para pasar al Paid Plan y recuperar los datos antes de que se borren.
 
-**Acción obligatoria: pasar al Paid Plan desde el principio.** Con tarjeta asociada y usando solo servicios always-free, la facturación es cero pero la cuenta no se cierra.
+**Acción obligatoria: pasar al Paid Plan desde el principio.** Con tarjeta asociada y usando solo servicios de coste mínimo, la facturación queda cubierta por los créditos mientras duren y después es mínima, pero la cuenta no se cierra. Esto se aplica a la **cuenta de gestión**, que pasa al Paid Plan **antes** de crear la organización y las dos cuentas miembro dedicadas, `atlas-dev` y `atlas-prod` (ADR-0028, detalle en §11.3). Si una cuenta en el Free Plan puede crear una organización: **sin verificar**; no hace falta saberlo si se sigue este orden.
 
-**Además:** alerta de presupuesto (AWS Budgets) en 1$, con aviso por correo. Es la red que avisa si algo se sale de los límites gratuitos.
+**Además:** alerta de presupuesto (AWS Budgets) en 1$, con aviso por correo, que mide el coste **antes** de aplicar los créditos. Es la red que avisa si algo se sale de lo previsto (ADR-0028).
 
 ### 9.5 Lambdas programadas
 
+> **Actualizada desde ADR-0029, ADR-0031 y ADR-0032 (2026-09-24, Ronda 8).** La importación diaria de IBKR y la conciliación semanal siguen **bloqueadas por la Ronda 6** (los importadores): entran cuando la Fase 0 los desbloquee. Las tareas de BCE, precios, integridad y volcado sí están diseñadas en esta ronda (feature `016`, sin desplegar todavía).
+
 | Frecuencia | Función | Notifica |
 |---|---|---|
-| Diaria | Actualizar precios (posiciones del cubo y ETFs de referencia) | Solo si una tesis se acerca a su condición de invalidación |
-| Diaria | Actualizar tipos de cambio del BCE | No |
-| Diaria | Importar operaciones nuevas de IBKR vía Flex Query | Solo si hay operaciones nuevas o discrepancias |
+| Diaria | Actualizar precios de cierre: EODHD, respaldo Alpha Vantage, cripto CoinGecko (ADR-0031) | Solo si una tesis se acerca a su condición de invalidación |
+| Diaria | Actualizar el histórico del BCE, byte a byte, con el calendario TARGET como comprobación cruzada (ADR-0029) | No, salvo hallazgo de integridad |
+| Diaria *(bloqueada, Ronda 6)* | Importar operaciones nuevas de IBKR vía Flex Query | Solo si hay operaciones nuevas o discrepancias |
 | Semanal | Comprobar desviaciones de pesos y reglas del cubo | Sí, si se supera algún umbral |
-| Semanal | Conciliar posiciones del libro contra extracto de IBKR | Sí, si divergen |
-| Mensual | Recordatorio de aportación con el reparto calculado | Sí, siempre |
-| Mensual | Volcado completo del libro mayor a S3 | Solo si falla |
-| Trimestral | Verificación de integridad: recalcular todo desde cero y comparar | Sí, si hay discrepancia |
+| Semanal *(bloqueada, Ronda 6)* | Conciliar posiciones del libro contra extracto de IBKR | Sí, si divergen |
+| Mensual | Recordatorio de aportación con el reparto calculado, **sin importes salvo que se active** (ADR-0028); con los días desde el último inicio de sesión (ADR-0027) y el recordatorio de la copia fuera de AWS (ADR-0032) | Sí, siempre |
+| Mensual | Volcado del libro mayor, el histórico del BCE, los precios y `positions.json` a `backups/<YYYY-MM>/`, para siempre (ADR-0032) | Solo si falla |
+| Trimestral | Verificación de integridad: recalcular todo desde cero y comparar, **más el ensayo automático de restauración** (carga el último volcado en memoria y compara la proyección con la del libro vivo, ADR-0032) | Sí, si hay discrepancia |
 | Anual (enero) | Preparar datos de la Renta del ejercicio anterior | Sí |
 | Anual | Comprobar umbrales de los Modelos 720 y 721 | Sí, si se acerca a 50.000€ |
+| Anual | Ensayo manual de restauración desde el último volcado, en máquina del usuario (constitución VI, ADR-0032) | — (procedimiento manual) |
 
 **Todas las frecuencias y umbrales son configurables** (`job_frequencies`, ver §5).
 
-**Principio de notificación:** el correo mensual siempre llega. Los demás solo cuando hay algo que hacer. Un sistema que envía correos rutinarios acaba filtrado a los seis meses.
+**Principio de notificación:** el correo mensual siempre llega. Los demás solo cuando hay algo que hacer. Un sistema que envía correos rutinarios acaba filtrado a los seis meses. El destinatario del correo vive **solo en SSM**, nunca en `Settings` ni en el repositorio (ADR-0028).
 
 ### 9.6 Frontend
 
-> **Vigente desde ADR-0017 y ADR-0019 (2026-09-18).** El *stack* está decidido con investigación verificada (Solid con versión fijada, uPlot vendorizada, sin librería de componentes, tablas HTML nativas; la base de estilos es propia desde ADR-0023, que retiró Pico), así que la comparativa de abajo es **histórica**. Y la web **no necesita servidor ni autenticación**: funciona en el dispositivo, sobre el mismo fichero que la CLI en escritorio y sobre el almacenamiento del navegador en el móvil. Lo que esta sección y la §9.2 describen detrás de Cognito y una Lambda es la **sincronización de la Fase 4**, no un requisito para que la web exista.
+> **Vigente desde ADR-0017 y ADR-0019 (2026-09-18).** El *stack* está decidido con investigación verificada (Solid con versión fijada, uPlot vendorizada, sin librería de componentes, tablas HTML nativas; la base de estilos es propia desde ADR-0023, que retiró Pico), así que la comparativa de abajo es **histórica** y la decisión abierta «¿Svelte o Solid?» de §14 queda resuelta: **Solid**. Y la web **no necesita servidor para funcionar**: funciona en el dispositivo, sobre el mismo fichero que la CLI en escritorio y sobre el almacenamiento del navegador en el móvil. Lo que esta sección y la §9.2 describen detrás de una Lambda es la **sincronización de la Fase 4** (ADR-0026), no un requisito para que la web exista. **Desde ADR-0027 (2026-09-24, Ronda 8) esa Lambda ya no valida contra Cognito**: verifica el acceso con Google.
 
 **Requisito:** compila a archivos estáticos servibles desde S3, sin servidor de renderizado.
 
@@ -413,11 +432,11 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 | Vite + React | Ecosistema enorme | Árbol de dependencias grande |
 | Astro | Pensado para estático | Puede quedarse corto con estado |
 
-**Recomendación: Svelte o Solid con Vite.** Suficientes para una app con estado y con un árbol de dependencias auditable de verdad.
+**Recomendación (histórica): Svelte o Solid con Vite.** Suficientes para una app con estado y con un árbol de dependencias auditable de verdad. **Decidido: Solid** (ADR-0017, 2026-09-18).
 
 **Requisitos transversales:**
 - Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada en móvil.
-- **Modo privacidad**: un interruptor, **activado por defecto al iniciar sesión**, que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. La máscara mide siempre lo mismo y conserva la unidad («•••• €», «•••• part.»), que dice qué se oculta sin decir cuánto. Lo que el usuario escribe no se oculta; lo que la aplicación precarga en un campo (corregir un movimiento, la configuración) sí, hasta que el campo recibe el foco. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
+- **Modo privacidad**: un interruptor, **activado por defecto** (mientras el usuario no lo apague en ese dispositivo), que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. La máscara mide siempre lo mismo y conserva la unidad («•••• €», «•••• part.»), que dice qué se oculta sin decir cuánto. Lo que el usuario escribe no se oculta; lo que la aplicación precarga en un campo (corregir un movimiento, la configuración) sí, hasta que el campo recibe el foco. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
 - Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
 - Funciona sin conexión para consulta (los datos cacheados siguen visibles con su antigüedad marcada).
 - **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. El sistema está en `docs/design/system.md` y la base de estilos es propia (ADR-0023).
@@ -428,9 +447,11 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 Son datos financieros personales completos. Nivel de exigencia alto.
 
-- **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. El único secreto es el token Flex de IBKR, que es de **solo lectura** y va en SSM Parameter Store como `SecureString`, jamás en el frontend.
+> **Acceso y secretos vigentes desde ADR-0027 (2026-09-24, Ronda 8)**, que sustituye a «Cognito con MFA» en todo este documento.
+
+- **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. Los secretos van en SSM Parameter Store como `SecureString`, jamás en el frontend ni en el repositorio: el token Flex de IBKR (**solo lectura**) y el secreto del cliente OAuth de Google y la clave de firma de la sesión (ADR-0027). **Las claves de las fuentes de precios** EODHD, Alpha Vantage y CoinGecko (ADR-0031) van **en local, en un fichero de configuración fuera del repositorio, y en la nube, en SSM**.
 - **S3 privado**, servido solo vía CloudFront con Origin Access Control. Sin buckets públicos.
-- **Cognito con MFA obligatorio.** Sin excepciones ni "recordar dispositivo" indefinido.
+- **Acceso solo con Google, verificado en la propia Lambda de la API; sin Cognito ni Lambda@Edge** (ADR-0027). Código de autorización con PKCE y `state`: la Lambda es el cliente OAuth y canjea el código directamente con Google, así que el token nunca toca la SPA ni la URL. Verificación completa del ID token (firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`) y lista permitida de `{sub, email}` en SSM, consultada en cada petición con una caché de pocos minutos. Sesión propia en una cookie `__Host-` firmada (`HttpOnly`, `Secure`, `SameSite=Strict`), sin *refresh token*: al caducar, se repite el flujo con Google. **La verificación en dos pasos de la cuenta de Google es un requisito operativo del usuario**, no algo que la aplicación pueda comprobar (`docs/prompts/000-director-handoff.md`).
 - **IAM de mínimo privilegio**: cada Lambda con su rol y solo los permisos que necesita.
 - **Cifrado en reposo** en S3, y en tránsito por TLS.
 - **Sin analítica de terceros, sin CDN externos, sin fuentes remotas.** Todo se sirve desde tu propio origen. Un script de terceros en una app financiera es una vía de exfiltración.
@@ -473,21 +494,23 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
 
 ### 11.3 Entornos
 
+> **Vigente desde ADR-0028 (2026-09-24, Ronda 8).** El aislamiento pasa a ser **por cuenta**, no por pila con sufijo: la dirección cambió su decisión inicial el mismo día.
+
 | Entorno | Rama | Infraestructura | Datos |
 |---|---|---|---|
-| `dev` | `develop` | Pila completa separada, sufijo en todos los recursos | Datos sintéticos |
-| `prod` | `main` | Pila de producción | Datos reales |
+| `dev` | `develop` | **Cuenta AWS miembro dedicada `atlas-dev`**, dentro de una organización cuya cuenta de gestión **es** la cuenta personal del usuario; recursos con sufijo del entorno | Datos sintéticos |
+| `prod` | `main` | **Cuenta AWS miembro dedicada `atlas-prod`** | Datos reales |
 
-- **Aislamiento total**: cuentas o al menos pilas independientes, sin recursos compartidos.
-- **Despliegue a producción solo desde `main`**, tras PR aprobada y CI en verde.
+- **Aislamiento por construcción**: una cuenta AWS por entorno, no solo pilas o políticas independientes. Ningún rol de `atlas-dev` existe en `atlas-prod`, así que «datos de producción jamás en dev» es mecánico, no una convención. La cuenta de gestión no está sin recursos —**es** la cuenta personal del usuario, con sus otras cosas—, y lo compensan el MFA del *root* de las tres cuentas y las SCP sobre las dos cuentas miembro (que **no alcanzan a la cuenta de gestión**, sin verificar con fuente).
+- **Despliegue a producción solo desde `main`**, tras PR aprobada y CI en verde; el rol de despliegue de `atlas-prod` exige además el *environment* `prod` de GitHub con aprobación obligatoria.
 - **Los artefactos que se despliegan a producción son los mismos que se validaron en dev.** Se construye una vez y se promociona; no se reconstruye por entorno.
 - **Datos de producción jamás en dev.** Generador de datos sintéticos como parte del repositorio.
 
 ### 11.4 Infraestructura
 
-- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola.
-- Estado remoto en S3 con el bloqueo nativo de S3.
-- Módulos reutilizables y ficheros `.tfvars` por entorno.
+- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola, **salvo las excepciones declaradas por ADR-0028, cada una con su condición de retirada**: la suscripción al plan de tarifa plana de CloudFront, que tampoco se hace a mano sino con un **guion idempotente de la CLI de AWS versionado en el repositorio**, y se retira cuando el proveedor de Terraform lo soporte; la organización y las dos cuentas miembro, el cliente OAuth de Google por entorno (ADR-0027), el *bootstrap* de Terraform de cada cuenta, y la petición de aumento de cuota de concurrencia si hace falta.
+- Estado remoto en S3 con el bloqueo nativo de S3, uno por cuenta miembro.
+- Módulos reutilizables (`infra/modules/atlas/`) y una carpeta por entorno (`infra/envs/dev/`, `infra/envs/prod/`), cada una contra su cuenta. **Las carpetas se versionan; solo sus ficheros `.tfvars` quedan fuera del repositorio.**
 - `terraform plan` obligatorio en la PR, `apply` solo tras aprobación.
 
 ### 11.5 Tests
@@ -529,8 +552,14 @@ GitHub Actions:
 
 ### 11.8 Gestión de secretos
 
+> **Ampliada desde ADR-0027, ADR-0028 y ADR-0031 (2026-09-24, Ronda 8).**
+
 - **SSM Parameter Store** (nivel estándar, gratuito) con parámetros cifrados de tipo `SecureString`.
 - Token Flex de IBKR: **solo lectura**, rotado anualmente, jamás en el frontend ni en el repositorio.
+- **Secreto del cliente OAuth de Google y clave de firma de la sesión** (ADR-0027), uno por entorno: `dev` nunca acepta la cuenta de Google que da acceso a `prod`.
+- **Claves de las fuentes de precios** EODHD, Alpha Vantage y CoinGecko (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, SSM. Con ellas van el orden de las fuentes y su presupuesto: configuración operativa de la máquina que descarga, que ninguna cifra del libro lee.
+- **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo** (ADR-0028): en SSM. No van en el repositorio porque son datos personales y el repositorio es público; y no van en `Settings` porque **ninguna cifra del libro los lee** y quien los usa es la Lambda (la API, que comprueba la lista; la que envía el correo, el destinatario): un dato personal que solo usa el servidor vive donde lo lee el servidor (principio IV). El campo `notification_email` de `Settings` se sigue aceptando al cargar (ADR-0018), pero deja de leerse; la web todavía lo ofrece en Ajustes y **se retira con la feature 016** (tareas y correo).
+- **Interruptor de importes del correo** (ADR-0028, fila 18): también en SSM, junto al destinatario. No es dato personal ni secreto: es configuración operativa que ninguna cifra lee, y además un campo nuevo, que en `Settings` —una foto completa— un cliente antiguo borraría sin avisar al escribir la foto siguiente (ADR-0026, caso 6; enmienda de ADR-0018).
 - Sin secretos en variables de entorno de la Lambda visibles en la consola.
 - `.gitignore` estricto y escaneo de secretos en CI.
 
@@ -592,7 +621,7 @@ FIFO consolidado, conversión de divisa por fecha valor, regla de los dos meses,
 
 ## 14. Decisiones abiertas
 
-- [ ] **¿Svelte o Solid?** Ambos válidos. Decidir por preferencia tras un prototipo pequeño.
+- [x] **¿Svelte o Solid?** **Solid** (ADR-0017, 2026-09-18).
 - [x] **¿DynamoDB, o JSON en S3 con versionado?** S3 (ADR-0002).
 - [ ] **Umbrales del cubo (reglas 17 y 18)**: dependen de la conversación P3 del plan financiero.
 - [ ] **Pesos objetivo**: dependen de la decisión P1 del plan financiero.
@@ -608,7 +637,7 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
 - [x] **Retención a cuenta en reembolsos de fondos.** Hecho: `sell.withholding` (`data-schema.md` §6.2), con su equivalente por cuenta en `forced_sale` (§6.5). Sale del efectivo que entra, no toca el valor de transmisión ni el coste de los lotes, y la salida fiscal la suma a las retenciones del ejercicio (criterio #12).
 - [x] **Valoración a 31 de diciembre.** Resuelta como se preveía (feature 010): los Modelos 720 y 721 valoran con la `valuation` registrada a mano, dato de **Nivel 1**, convertida al tipo del BCE de esa fecha. Es la única ruta fiscal que lee precios; si falta alguno, el veredicto es «no se puede determinar» y nunca «no obligado» (§5.8 de `business-rules.md`).
-- [ ] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio.
+- [x] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio. Resuelto (ADR-0028, 2026-09-24): un rol de despliegue por cuenta miembro; el de `atlas-dev` solo desde `develop`, el de `atlas-prod` solo desde el *environment* `prod` con aprobación obligatoria, y un rol de `terraform plan` de solo lectura que nunca se usa para una PR desde un *fork*.
 - [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).
 - [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos. Está todo salvo **`.editorconfig`, que no existe**; el escaneo de secretos es `gitleaks` en `.githooks/pre-commit`, local por clon y no en CI.

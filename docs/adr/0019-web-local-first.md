@@ -36,3 +36,9 @@ La web funciona **entera en el navegador**, sin servidor y sin cuenta en ningún
 - Importar el adaptador de navegador **no puede arrastrar `node:fs`** al *bundle*: hay que verificarlo, no suponerlo.
 - El riesgo real pasa a ser la pérdida de datos del navegador (borrar los datos del sitio borra el libro si vive en IndexedDB). Se mitiga con exportación a fichero visible y recordada, y con la copia de la CLI. La web **nunca** presenta IndexedDB como un almacén definitivo.
 - Lo que se gana: la aplicación entera es utilizable —y regalable a cualquiera— sin cuenta, sin coste y sin conexión. Lo que se pospone a propósito: ver el mismo libro en dos dispositivos sin mover un fichero.
+
+---
+
+## Nota del 2026-09-24 (Ronda 8): lo que se pospuso, cerrado, y sin Cognito
+
+Lo que este ADR pospuso a propósito —«ver el mismo libro en dos dispositivos sin mover un fichero»— lo resuelve **ADR-0026**: cola local por dispositivo, reaplicación línea a línea sobre el remoto, con lo que no cabe retenido para que decida el usuario. La frase «Cuando llegue la Fase 4, Cognito protegerá la API, no la aplicación local» **deja de ser cierta en la parte de Cognito**: **ADR-0027** sustituye Cognito por acceso solo con Google, verificado en la propia Lambda. Lo que sigue vigente sin cambios: la aplicación local no tiene ni necesita autenticación, y sin nube sigue funcionando entera, sin cuenta y sin conexión.

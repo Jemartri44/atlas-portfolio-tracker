@@ -1,8 +1,9 @@
 <!--
 Sync Impact Report
-- Version change: 1.4.0 → 1.5.0
-- Modified principles: III (second bounded exception: total net worth and the bucket's weight over it — rule 18 — aggregate both books as a budget control, always broken down; phase 3)
-- Modified sections: none
+- Version change: 1.5.0 → 1.6.0
+- Modified principles: IV (configurable values are still never hard-coded, but not all of them live in `Settings`: configuration that affects ledger figures stays in `Settings`; configuration that is personal data or a secret —email recipient, sign-in allow-list, keys— and operational configuration no figure reads —price sources, email— lives outside the ledger, in SSM Parameter Store in the cloud or local configuration outside the repository; a new field in a full-state event follows the ADR-0018 amendment. ADR-0018, ADR-0027, ADR-0028, ADR-0031, Ronda 8, 2026-09-24); VI (cost restriction: "coste indefinidamente dentro del always-free de AWS" → "coste mínimo con alarma de presupuesto", ADR-0028, Ronda 8, 2026-09-24)
+- Modified sections: Restricciones técnicas (Plataforma: coste mínimo en vez de always-free, acceso con Google verificado en la Lambda sustituye a Cognito con MFA —ADR-0027—, excepción declarada a "Terraform para todo; nada creado a mano" con su condición de retirada —ADR-0028—; Seguridad: los secretos en SSM ya no son solo el token Flex de IBKR, se añaden el secreto de cliente de Google y la clave de sesión —ADR-0027— y las claves de las fuentes de precios —ADR-0031—, que en local van en un fichero de configuración fuera del repositorio y solo en la nube en SSM)
+- Version bump rationale: MINOR, like 1.1.0, 1.4.0 and 1.5.0: principles IV and VI are narrowed or re-scoped with their reason written, not removed or redefined
 - Added sections: none
 - Removed sections: none
 - Templates requiring updates: none
@@ -53,7 +54,10 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 ### IV. Nada codificado que deba ser configurable
 
-- Umbrales, pesos objetivo, frecuencias, tipos impositivos, destinatarios y residencia fiscal son configuración (`Settings`), con historial de cambios y validación.
+- **Lo configurable nunca se escribe en el código.**
+- **Vive en `Settings`** la configuración que afecta a cifras del libro —umbrales, pesos objetivo, frecuencias, tipos impositivos, criterios fiscales y residencia fiscal—, con historial de cambios y validación.
+- **Vive fuera del libro** —en SSM Parameter Store en la nube, o en configuración local fuera del repositorio— la configuración que es **dato personal o secreto** (destinatario del correo, lista permitida de acceso, claves) y la **configuración operativa que ninguna cifra lee** (las fuentes de precios con su orden y su presupuesto, el correo y su interruptor de importes). ADR-0027, ADR-0028, ADR-0031; enmienda 1.6.0.
+- Un campo nuevo en un evento que guarda el estado completo (`settings_changed`, `*_updated`) sigue la enmienda de ADR-0018: o va fuera del libro o sube `schema_version`.
 - Modificar un umbral que silencia una alerta activa DEBE advertirse explícitamente.
 - Las cifras fiscales se documentan como "según se entienden en {fecha}, verificar"; nunca como constantes del código.
 
@@ -72,7 +76,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 - Pocas dependencias, con presupuesto explícito: cada paquete nuevo requiere justificación. Preferir la biblioteca estándar.
 - Formatos abiertos. El libro mayor DEBE ser legible sin la aplicación, y exportable a CSV/JSON en un clic.
-- Cero servicios de pago de terceros en el camino crítico. Coste indefinidamente dentro del always-free de AWS.
+- Cero servicios de pago de terceros en el camino crítico. **Coste mínimo, con alarma de presupuesto** (ADR-0028, Ronda 8, 2026-09-24): sustituye a "coste indefinidamente dentro del *always-free* de AWS", porque la capa en la nube se apoya en créditos que se acaban; cuando se agoten, la cuenta paga el coste mínimo estimado y Budgets avisa si se sale de lo previsto.
 - Prueba de restauración anual desde el backup.
 - El esquema de datos y la lógica de transformación de lotes se documentan en el repositorio.
 
@@ -90,8 +94,8 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 ## Restricciones técnicas
 
-- **Plataforma:** AWS dentro del always-free (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, Cognito con MFA, EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano. Antes de introducir un servicio nuevo, verificar que es gratuito a esta escala.
-- **Seguridad:** nunca credenciales de brókers (solo el token Flex de IBKR, de solo lectura, en SSM como `SecureString`). Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
+- **Plataforma:** AWS con **coste mínimo y alarma de presupuesto** (ADR-0028), no dentro del *always-free* indefinidamente (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, **acceso solo con Google verificado en la Lambda, sin Cognito** (ADR-0027), EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano, **salvo las excepciones declaradas en ADR-0028, cada una con su condición de retirada**. Antes de introducir un servicio nuevo, verificar que su coste es mínimo a esta escala.
+- **Seguridad:** nunca credenciales de brókers. Secretos en SSM Parameter Store como `SecureString`: el token Flex de IBKR (solo lectura) y el secreto del cliente OAuth de Google y la clave de sesión (ADR-0027). Las claves de las fuentes de precios (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, en SSM. Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
 - **Privacidad:** nunca se registran en logs importes, posiciones, saldos ni identificadores de cuenta. Nada personal en el repositorio público: ni dominio real, ni importes, ni el plan financiero (`plan-financiero.md`, ignorado por git).
 - **Idioma:** todo lo técnico (código, identificadores, commits, ramas, ficheros, infraestructura) en inglés. Documentos, especificaciones y esta constitución en español con identificadores en inglés.
 - **Entornos:** `dev` (rama `develop`) y `prod` (rama `main`) con pilas separadas. Se construye una vez y se promociona. Datos de producción jamás en `dev`.
@@ -112,4 +116,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.5.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-18
+**Version**: 1.6.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-24
