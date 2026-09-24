@@ -142,7 +142,7 @@ describe("the fiscal screen", () => {
   it("says which lines depend on an ECB rate in doubt, citing criterion 25", async () => {
     await openSmallLedger();
     const host = await show("/fiscal?ejercicio=2026", Fiscal);
-    await until(() => text(host).includes("Líneas con un tipo del BCE en duda (criterio 25)"));
+    await until(() => text(host).includes("Tipos del BCE de estas líneas (criterio 25)"));
     expect(text(host)).toContain("depende de un tipo del BCE que no es el oficial de su fecha");
   });
 });

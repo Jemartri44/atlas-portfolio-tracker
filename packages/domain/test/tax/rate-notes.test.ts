@@ -74,6 +74,44 @@ describe("the notes of the ECB rates in the report", () => {
     expect(plain.notes.some((entry) => entry.code === "tax_fx_rate_finding")).toBe(false);
   });
 
+  it("says a rate it could not contrast is not contrasted, never that it is wrong (review of PR #75)", () => {
+    const { events, buy, sell, dividend } = ledger();
+    const { report, chain } = taxYearWithChain(events, 2028, {
+      today,
+      rateFindings: [
+        { event_id: buy.id, code: "fx_rate_currency_stale" },
+        { event_id: buy.id, code: "fx_rate_not_yet_in_history" },
+        { event_id: dividend.id, code: "fx_rate_currency_unlisted" },
+        { event_id: dividend.id, code: "fx_rate_mismatch" },
+      ],
+    });
+    const byCode = (code: string) =>
+      report.notes
+        .filter((entry) => entry.code === code)
+        .map((entry) => [entry.event_id, entry.details]);
+    expect(byCode("tax_fx_rate_unverified")).toEqual([
+      [
+        sell.id,
+        {
+          criterion: "25",
+          events: [buy.id],
+          codes: ["fx_rate_currency_stale", "fx_rate_not_yet_in_history"],
+        },
+      ],
+      [
+        dividend.id,
+        { criterion: "25", events: [dividend.id], codes: ["fx_rate_currency_unlisted"] },
+      ],
+    ]);
+    // The sale depends on no contradicted rate: no «not the official one».
+    expect(byCode("tax_fx_rate_finding")).toEqual([
+      [dividend.id, { criterion: "25", events: [dividend.id], codes: ["fx_rate_mismatch"] }],
+    ]);
+    expect(boxesOf(report, chain).notes.map((entry) => entry.code)).toContain(
+      "tax_fx_rate_unverified",
+    );
+  });
+
   it("notes a dividend with its own finding, and carries the notes to the boxes", () => {
     const { events, dividend } = ledger();
     const { report, chain } = taxYearWithChain(events, 2028, {

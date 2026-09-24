@@ -1018,11 +1018,23 @@ export const taxYearWithChain = (
  * one of the fiscal date in force, and a line with another one is corrected by
  * rectification, never recalculated.
  *
- * Two notes, each with its own literal: the findings of the check against the
- * ECB history, when there is one; and `fx_rate_date_after_fiscal_date`, which
+ * Three notes, each with its own literal: a rate the ECB history contradicts;
+ * a rate it could not contrast; and `fx_rate_date_after_fiscal_date`, which
  * the projection sees **without** a history and which carries the note
  * anyway.
  */
+/**
+ * The findings of the ECB check that say a rate **is wrong**: the history
+ * contradicts it. Any other one — a currency the ECB does not publish, or
+ * stopped publishing, a line more recent than the history — says it could not
+ * be contrasted, and gets a note of its own.
+ */
+const WRONG_RATE_CODES: ReadonlySet<string> = new Set([
+  "fx_rate_mismatch",
+  "fx_rate_date_unpublished",
+  "fx_rate_date_not_latest",
+]);
+
 const rateNotes = (
   core: Core,
   findings: readonly { event_id: string; code: string }[],
@@ -1051,22 +1063,40 @@ const rateNotes = (
     ...core.expenses.map((line) => ({ event_id: line.event_id, depends: [line.event_id] })),
   ];
   const notes: Warning[] = [];
+  /** The events a line depends on whose findings include one of `codes`, with those codes. */
+  const matching = (depends: readonly string[], wanted: (code: string) => boolean) => {
+    const events = depends.filter((id) =>
+      [...(byEvent.get(id) ?? [])].some((code) => wanted(code)),
+    );
+    const codes = [
+      ...new Set(events.flatMap((id) => [...(byEvent.get(id) as Set<string>)].filter(wanted))),
+    ].sort();
+    return { events, codes };
+  };
   for (const line of lines) {
     const depends = [...new Set(line.depends)];
-    const found = depends.filter((id) => byEvent.has(id));
-    if (found.length > 0) {
+    // Each finding says **what it is** (review of PR #75): a rate the history
+    // contradicts is not the same as one it could not contrast, and saying «not
+    // the official one» of the second would state what nobody checked.
+    const wrong = matching(depends, (code) => WRONG_RATE_CODES.has(code));
+    if (wrong.events.length > 0) {
       notes.push(
         note(
           "tax_fx_rate_finding",
           line.event_id,
           "this line depends on an ECB rate that is not the official one of its date; the figure is computed with the rate of the ledger",
-          {
-            criterion: "25",
-            events: found,
-            codes: [
-              ...new Set(found.flatMap((id) => [...(byEvent.get(id) as Set<string>)])),
-            ].sort(),
-          },
+          { criterion: "25", events: wrong.events, codes: wrong.codes },
+        ),
+      );
+    }
+    const unverified = matching(depends, (code) => !WRONG_RATE_CODES.has(code));
+    if (unverified.events.length > 0) {
+      notes.push(
+        note(
+          "tax_fx_rate_unverified",
+          line.event_id,
+          "this line depends on an ECB rate the history could not contrast; nothing is said of whether it is right, and the figure is computed with the rate of the ledger",
+          { criterion: "25", events: unverified.events, codes: unverified.codes },
         ),
       );
     }

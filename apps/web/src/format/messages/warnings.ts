@@ -174,6 +174,8 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `Renta en especie registrada (${f.money(d.income_eur)}) y no integrada: el criterio vigente no declara nada al recibirla.`,
   tax_fx_rate_finding: () =>
     "Esta línea depende de un tipo del BCE que no es el oficial de su fecha. La cifra se calcula con el tipo de tus datos; si está mal, corrige el movimiento (anular y registrar de nuevo) y compruébalo antes de declarar.",
+  tax_fx_rate_unverified: () =>
+    "Esta línea depende de un tipo del BCE que el histórico no ha podido contrastar: no se dice si es bueno ni malo. La cifra se calcula con el tipo de tus datos.",
   tax_fx_rate_date_after_fiscal_date: () =>
     "Esta línea depende de un tipo del BCE fechado después de su fecha fiscal. La cifra se calcula con el tipo de tus datos; el aplicable es el último publicado en o antes de la fecha fiscal.",
   tax_window_open: (d, n, f) =>

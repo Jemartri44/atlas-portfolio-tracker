@@ -11,7 +11,11 @@ import { eventReferences, inSentence } from "../../format/events.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import type { NameIndex } from "../../format/names.js";
 
-const CODES = new Set(["tax_fx_rate_finding", "tax_fx_rate_date_after_fiscal_date"]);
+const CODES = new Set([
+  "tax_fx_rate_finding",
+  "tax_fx_rate_unverified",
+  "tax_fx_rate_date_after_fiscal_date",
+]);
 
 export const RateNotes = (props: {
   notes: readonly Warning[];
@@ -24,7 +28,7 @@ export const RateNotes = (props: {
   return (
     <Show when={shown().length > 0}>
       <div class="span-12">
-        <Notice severity="caution" title="Líneas con un tipo del BCE en duda (criterio 25)">
+        <Notice severity="caution" title="Tipos del BCE de estas líneas (criterio 25)">
           <ul class="sentences">
             <For each={shown()}>
               {(note) => (

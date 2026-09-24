@@ -413,6 +413,8 @@ export const describeWarning = (warning: Warning): string => {
       return `Renta en especie registrada (${text(d.income_eur)} EUR, base ${text(d.base) === "general" ? "general" : "del ahorro"}) y NO integrada: el criterio vigente (#8) no declara nada al recibirla.`;
     case "tax_fx_rate_finding":
       return `Esta línea depende de un tipo del BCE que no es el oficial de su fecha (${(d.codes as string[]).join(", ")}; eventos ${(d.events as string[]).join(", ")}). La cifra se calcula con el tipo del libro; si está mal, corrígelo anulando y registrando de nuevo (criterio 25), y compruébalo antes de declarar.`;
+    case "tax_fx_rate_unverified":
+      return `Esta línea depende de un tipo del BCE que el histórico no ha podido contrastar (${(d.codes as string[]).join(", ")}; eventos ${(d.events as string[]).join(", ")}): no se dice si es bueno ni malo. La cifra se calcula con el tipo del libro (criterio 25).`;
     case "tax_fx_rate_date_after_fiscal_date":
       return `Esta línea depende de un tipo del BCE fechado después de su fecha fiscal (eventos ${(d.events as string[]).join(", ")}). La cifra se calcula con el tipo del libro; el aplicable es el último publicado en o antes de la fecha fiscal (criterio 25).`;
     case "tax_window_open":

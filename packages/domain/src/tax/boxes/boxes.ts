@@ -146,7 +146,11 @@ const PARTIAL_MESSAGES: Record<PartialReason, string> = {
 };
 
 /** The notes of the report about the ECB rates of a line (feature 012). */
-const RATE_NOTES = new Set(["tax_fx_rate_finding", "tax_fx_rate_date_after_fiscal_date"]);
+const RATE_NOTES = new Set([
+  "tax_fx_rate_finding",
+  "tax_fx_rate_unverified",
+  "tax_fx_rate_date_after_fiscal_date",
+]);
 
 const notesOf = (year: number, table: YearBoxes | undefined, found: Collected): Warning[] => {
   const notes: Warning[] = [];
