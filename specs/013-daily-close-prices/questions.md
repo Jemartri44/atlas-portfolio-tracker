@@ -303,3 +303,65 @@ Visto bueno al plan, con estas decisiones. Lo que cambian en `spec.md` y `plan.m
 - **Arranque**: 75.712 bytes, dentro del techo de 75.829. Frente a `develop` (75.418), **+294** en toda la feature: los +258 de la puerta (bloque 2 de la puerta, medido y autorizado) más **+36** del campo `external?` de `contributionPlan` (bloque 4), que cabe en el techo ya subido y dentro del tope de +0,3 KB (307 bytes) de D-Q7. **Total**: 267,19 KB (273.607 bytes), techo **267,5** en su propio commit (`0ec32be`), con el desglose trozo a trozo contra `develop` en el comentario de `check-bundle.mjs` (el trozo `quotes` +2,1; `ajustes` +0,9; mensajes +0,5; `chart` +0,5; dominio +0,3; pantallas +0,5).
 - **Las series** (la gráfica de la evolución del patrimonio) **siguen con las fechas de las valoraciones**: `netWorthSeries` proyecta desde los eventos y no recibe fuente externa. §6.4 (h) permite usar fechas automáticas, no lo exige; la función `quoteDates` está en `@atlas/domain/quotes` para cuando se haga. **Pendiente, dicho**.
 - **Mutantes del bloque 5** (`mut-013/block5-013.log`): 20 (un módulo de precios en el marco: el *build* se para, y lo dice `LAZY_ONLY`: «es de arranque y trae los precios automáticos»), 12 quater (el `atlas.config.json` otra vez como «storage»), la marca de aproximación, la de «sin valor en euros», el origen, el teléfono que no dice nada, las pantallas que no pasan las cotizaciones, 15 (la web que escribe en la carpeta: el test existente, sin tocarlo) y una importación a medias. Todos muertos a la primera.
+
+### 7.7 Verificación en el navegador (2026-09-25)
+
+- **Cómo**: el Chromium de Playwright (`chromium_headless_shell-1234`) desde el *scratchpad* contra `vite preview` del paquete construido; el libro sembrado desde el *scratchpad* con activos **inventados** (`013-shots/seed.mjs`: un fondo con ETF de referencia, un ETF, un ETC en dólares, una acción del cubo con su tesis) y los precios escritos como los escribe la consola, cargados en el navegador como los guarda la web (el libro y la importación a mano en IndexedDB). **16 capturas** y `medidas.json` en `~/atlas-private/capturas/2026-09-25-precios/`: Cartera, Cubo, Resumen y Ajustes a **400×890 con DPR 3**, a **2045×1141** y a **360** de ancho; Cartera en oscuro, con la privacidad puesta, y sin precios; Ajustes con el libro vacío.
+- **Medido en el navegador**: `scrollWidth === clientWidth` en las 16; ningún error de consola; **ninguna petición a otro origen**.
+- **Lo que encontró mirar la pantalla, y ningún test** (la lección de siempre, otra vez):
+  1. **La tarjeta de Ajustes decía «Sin precios automáticos» teniéndolos**: se pintaba antes de abrir el libro y leía los precios de un catálogo vacío. Ahora el recurso depende del libro abierto. El test que se añadió comprueba el caso bueno; **no reproduce el orden de la carrera** (los tests abren el libro antes de pintar), y se dice.
+  2. **La tarjeta de pesos decía «Falta el precio de Oro X»** de un activo que tenía cotización sin valor en euros, y **no enseñaba** ni ese motivo ni el aviso de la aproximación (la tarjeta no pinta la lista de avisos). Ahora los dos avisos salen en la tarjeta y el «falta el precio» solo nombra lo que de verdad no tiene precio.
+  3. **En pantalla ancha no se decía de dónde venía un precio**: la tabla solo tenía la cifra. Nueva columna «Origen» («EODHD · 24/09/2026», «manual · 15/09/2026») en Cartera y Cubo; en el teléfono, el origen va delante en la línea del precio, para que no lo corte la elipsis.
+- **Queda sin corregir, dicho**: la tarjeta de la aportación sigue diciendo «Falta el precio a … Oro X. Regístralo con una valoración» cuando el activo tiene una cotización sin tipo del BCE: es el mensaje de `missing_manual_prices` del dominio, que no distingue los dos casos; el remedio que propone (una valoración) sí lo resuelve. Y el patrimonio parcial de Cubo dice «falta Oro X» por lo mismo. Cambiarlo toca el dominio del arranque.
+- **Lo que no se pudo capturar**: **la carpeta sin permiso**. El selector de carpetas del navegador no se puede conducir sin pantalla, y un asa de carpeta de mentira no se puede guardar en IndexedDB. Está cubierto por el test de la web (`prices.test.tsx`, «reads prices/ … and says a lost permission») y por el aviso `QuotesNotice`, pero **no está visto en pantalla**.
+
+---
+
+## 8. Bloque 6 — la prueba con las claves del usuario (procedimiento; **pendiente**)
+
+La feature está construida con dobles; **se da por verificada solo con las claves del usuario**. Lo ejecuta él, en su máquina, **en una carpeta de prueba que no es la de su libro**, y anota lo que se pide. **No tiene que pasar ninguna clave a nadie.** CoinGecko y OpenFIGI ya no forman parte (D-Q5, D-Q6).
+
+1. **Crear las dos claves gratuitas**: EODHD Free en `https://eodhd.com/register` y Alpha Vantage en `https://www.alphavantage.co/support/#api-key`.
+2. **Guardarlas fuera de la carpeta del libro**, solo legibles por él:
+   ```bash
+   mkdir -p ~/.config/atlas
+   printf '{"eodhd":"%s","alpha_vantage":"%s"}\n' 'SU_CLAVE_EODHD' 'SU_CLAVE_AV' > ~/.config/atlas/secrets.json
+   chmod 600 ~/.config/atlas/secrets.json
+   ```
+3. **Las comprobaciones del bloque 0 que faltan** (§1.8), con la clave de EODHD: índices, cuántos de sus ISIN cubre `EUFUND` (**solo el recuento**), la unidad de los cierres de Londres y si el plan gratuito cubre cripto (`BTC-EUR.CC`). Anotar los códigos HTTP y los dos valores de Londres.
+4. **Un libro de prueba** con activos que tienen posición hoy, y a cada uno un **valor público** (los del libro sintético son inventados; aquí solo se les da un símbolo real para que haya algo que descargar):
+   ```bash
+   T=~/atlas-prueba-013 && mkdir -p $T
+   atlas synth --out $T/ledger.jsonl
+   A="atlas --ledger $T/ledger.jsonl"
+   $A prices symbols set ast_world --currency EUR --eodhd IWDA.AS                      # un ETF europeo
+   $A prices symbols set ast_gold  --currency USD --eodhd AAPL.US --alpha-vantage AAPL # una acción de EE. UU.
+   $A prices symbols set ast_btc   --currency EUR --eodhd BTC-EUR.CC                   # cripto por EODHD (D-Q5)
+   $A prices symbols set ast_mm    --currency EUR --eodhd <ISIN_PÚBLICO>.EUFUND        # solo si el punto 3 dijo que EUFUND está en el plan gratuito
+   $A prices symbols set ast_delta --currency GBX --eodhd CSPX.LSE --alpha-vantage CSPX.LON  # Londres: ver qué dice del GBX frente a GBP
+   $A fx update     # el histórico del BCE, para que las cotizaciones en dólares tengan valor en euros
+   ```
+   Cada `set` gasta **una llamada del cupo por fuente** (confirma la divisa con los metadatos de la fuente). Si la fuente dice otra divisa, la consola lo enseña y pide confirmarla (o `--accept-currency`): anotar qué dijo.
+5. **Descargar dos veces seguidas y ver el estado**, copiando la salida **sin claves**:
+   ```bash
+   $A prices update; echo "salida $?"
+   $A prices update; echo "salida $?"
+   $A prices status
+   $A weights; $A bucket; $A networth
+   ```
+6. **Forzar un fallo**: cambiar a propósito una letra de la clave de EODHD en `secrets.json`, poner `{"failure_threshold":1}` en `$T/prices/config.json` y repetir `prices update`: tiene que decir que EODHD ha rechazado la clave y salir con **7**. Devolver la clave buena.
+7. **La web de escritorio con otro perfil del navegador** (o `chromium --user-data-dir=/tmp/atlas-prueba-013`), **nunca el perfil del libro real**: importar el libro de prueba, enlazar la carpeta `$T` en Ajustes → «Tipos del BCE» → «Leer de la carpeta de la consola», y mirar Cartera, Cubo y Ajustes → «Precios automáticos». `~/.config/atlas/` **no está** dentro de `$T`, así que la web no puede leer las claves.
+8. **Buscar la clave en lo escrito**: `grep -rF "$(jq -r .eodhd ~/.config/atlas/secrets.json | cut -c1-8)" $T && echo FUGA || echo limpio` (y lo mismo con la de Alpha Vantage).
+
+**Cuenta como «sí»**: cada fuente responde para su activo; la segunda ejecución **no gasta cupo** en lo que ya está al día (lo que llega a gastar es un festivo o un símbolo sin cierres nuevos, que no se puede saber sin preguntar); ninguna salida ni fichero contiene una clave; y la web enseña lo que la consola descargó. **Un «sí» que no venga de las claves reales no vale.** Resultado: *pendiente*.
+
+---
+
+## 9. Documentos que la dirección tendrá que actualizar al cerrar
+
+- **ADR-0031**: lo verificado en §1, con sus fuentes; **la retirada de CoinGecko y de OpenFIGI** (D-Q5, D-Q6) y lo que decía de ellos (atribución, caché de 24 h, `cache/`, clave en cabecera, proponedor); el contraste de divisa al declarar y la confirmación explícita (D-Q2); el día del cupo (D-Q3); la clasificación de fallos (D-Q4, el 403 como `not_found`); el cierre vigente único por activo y fecha (D-Q10); `currency_mismatch` fuera de los seis tipos del puerto y fuera de los fallos seguidos; qué cuenta como fallo seguido; el nombre de fichero codificado (`priceFileName`); `prices/config.json` y `~/.config/atlas/secrets.json`.
+- **`docs/data-schema.md` §1**: las filas de `prices/<asset_id>.jsonl` (campos y regla de la última línea), `prices/symbols.json` (formato de `plan.md` §4 con `currency_check` y `currency_confirmed_over`), `prices/_status.json` (`calls_at`, sin direcciones), `prices/config.json`, el fichero de secretos fuera de la carpeta; **quitar** «de cripto (CoinGecko) solo el último valor» de la fila de `prices/`.
+- **ADR-0032 y ADR-0026**: ya **no** hace falta excluir `cache/` (no existe tras D-Q5); sí conviene decir que `prices/` no guarda nada que no pueda viajar (no hay claves en la carpeta).
+- **`docs/specification.md` §7** (la tabla y §7.2: CoinGecko fuera, «la entrada manual gana siempre» → P2; Alpha Vantage gratuito solo ve 100 días) y **§11.8** («con ellas van el orden de las fuentes y su presupuesto» deja de ser cierto con P1; CoinGecko fuera).
+- **`docs/prompts/README.md`** al cerrar, y en el prompt 013 §7, la errata de Q9.
+- **El comentario de `bucket-stats`/series**: las series del patrimonio siguen sin fechas automáticas (§7.6); si la dirección lo quiere, es trabajo aparte.
