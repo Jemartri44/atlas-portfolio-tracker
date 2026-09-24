@@ -169,8 +169,9 @@ describe("architecture: @atlas/domain imports nothing", () => {
    * figure and no balance reads it. A closed list of modules may: the
    * validation, and the one function that sets it beside the ECB figure for the
    * interfaces to show. Checked in the domain **and** in both interfaces, with
-   * the three ways of reading a field the test of the valuations above learnt
-   * — a dot, a destructuring (which once slipped past it) and a string index.
+   * the ways of reading a field the test of the valuations above learnt — a
+   * dot, a destructuring (which once slipped past it), a string index — and a
+   * destructured parameter, which slipped past this one.
    */
   it("keeps every read of broker_settled_eur on a closed list", () => {
     const allowed = new Set([
@@ -181,6 +182,11 @@ describe("architecture: @atlas/domain imports nothing", () => {
       /\.broker_settled_eur\b/,
       /\{[^{}]*\bbroker_settled_eur\b[^{}]*\}\s*=[^=]/,
       /\[\s*["'`]broker_settled_eur["'`]\s*\]/,
+      // A destructured parameter, `({ broker_settled_eur }: T) =>`, which the
+      // assignment pattern above does not see (review of PR #75): the pattern,
+      // an optional annotation, the closing parenthesis and then an arrow, a
+      // body or a return type.
+      /[(,]\s*\{[^{}]*\bbroker_settled_eur\b[^{}]*\}\s*(?::\s*(?:\{[^{}]*\}|[^(){}]*))?\s*\)\s*(?:=>|\{|:)/,
     ];
     const apps = join(repoRoot, "apps");
     const files = [
