@@ -138,10 +138,15 @@ describe("the file of the keys", () => {
     expect(error.code).toBe(code);
     expect(error.key).toBe(key);
     expect(`${error.message} ${JSON.stringify(error)} ${String(error.stack)}`).not.toContain(KEY);
+    // Not even a piece of it: Node's SyntaxError quotes a cut of the text,
+    // "TEST-KEY-0", which a search for the whole key would not see.
+    expect(error.message).toBe(`${code}: ${path}${key === undefined ? "" : ` (${key})`}`);
   };
 
   it("says a file that does not parse without its content, not even the SyntaxError", async () => {
     await refused(await write(`{"eodhd": "${KEY}",`), "secrets_unreadable");
+    // The SyntaxError of Node quotes the text it could not read: a key without quotes.
+    await refused(await write(`{"eodhd": ${KEY}}`), "secrets_unreadable");
     await refused(await write(`["${KEY}"]`), "secrets_unreadable");
   });
 
