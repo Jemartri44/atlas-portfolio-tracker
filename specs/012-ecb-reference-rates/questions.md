@@ -348,3 +348,46 @@ Todos muertos, cada uno por el test que lo nombra, con el runner de §2 ter (afi
 - **Qué pasaba** (reproducido por el revisor con la consola): dos compras del mismo día de un ETC en dólares (2 a 100 USD y 2 a 200 USD) y una venta de 2. `atlas fx correct` decía solo «1.1169 → 1.1195», pero la ganancia de 2026 pasaba de 356,26 a 178,03 EUR, porque la venta pasaba a consumir el lote de 200 USD. El desempate FIFO entre lotes de la misma fecha es la **posición en el fichero**, y una corrección se añade al final: el lote corregido saltaba detrás del otro. Viene de la feature 001 (`atlas edit` hace lo mismo); esta feature lo automatizaba en lote y lo presentaba como un cambio de tipo.
 - **Decisión de la dirección** (va con su enmienda a la ADR que corresponda, que escribe la dirección al cerrar): *una corrección representa el mismo hecho económico, y corregir un dato de una compra no cambia cuándo ocurrió*. **El lote de una corrección hereda la clave de orden de la raíz de su cadena**: la posición en el fichero del evento original, siguiendo `corrects_id` hasta el principio. Sin campo nuevo: se deriva de la cadena.
 - **Predicción de los dorados, escrita y comiteada antes del arreglo**: **no se mueve ninguno**. `synthetic-v1.jsonl` tiene **una sola** corrección (línea 119, un **dividendo** que corrige la línea 64): no abre lote, y es el único evento de su fecha de negocio (2027-04-15), así que llevarlo a la posición de su raíz no cambia su orden relativo con nada. `synthetic-v1.snapshot.json` no guarda la posición de ningún lote. `tax-hand-v1.jsonl` y `valid-v1.jsonl` no tienen correcciones. Si se mueve algo, paro.
+- **Arreglo** (`3f7b0d3`): `projections/correction-root.ts` da la raíz de cada cadena (sigue `corrects_id`; una corrección de algo que no está en el fichero empieza su propia cadena; un bucle escrito a mano deja a cada miembro como su propia raíz). La proyección ordena las operaciones de la pasada B, y desempata los lotes, con la posición de la raíz. Los lotes guardan esa posición (`FiscalLot.position`, comentado). **Una sola noción de raíz para las dos reglas**: esta y la de una corrección viva (§10.3).
+- **Rojo primero**, con el caso del revisor tal cual: la ganancia pasaba de 366,39 a **187,32** (la venta consumía el lote de 200 USD); con el arreglo, **366,8**, que es solo el cambio de tipo (200/1,1169 → 200/1,1195). Casos: el del revisor con `correctEvent` (el camino de `atlas edit`), **una corrección de una corrección**, y la cadena de `atlas fx correct` tras cambiar la regla; y en la consola, `atlas edit` sobre dos compras del mismo día. Los cuatro, rojos sin el arreglo. Mutantes: los lotes con la posición propia de la corrección — muerto; la raíz como el evento corregido y no el primero de la cadena — muerto.
+- **La predicción se cumplió**: la suite entera en verde sin regenerar ningún dorado.
+- **Lo que esto corrige de §9.12**: escribí que la compra corregida «conserva el lote que consume la venta». Era cierto en cantidad y falso en **cuál**: con dos lotes del mismo día, la corrección saltaba detrás. La conclusión de §9.12 (la cadena no necesita anular las ventas dependientes, porque ninguna queda inválida) sigue en pie, y ahora también la de que la venta consume el mismo lote.
+
+### 10.2 La nota del informe decía «no es el oficial» de lo que no se había contrastado
+
+- `rateNotes` separa ahora lo que el histórico **contradice** (`fx_rate_mismatch`, `fx_rate_date_unpublished`, `fx_rate_date_not_latest` → `tax_fx_rate_finding`) de lo que **no pudo contrastar** (divisa no publicada, dejada de publicar, línea más reciente que el histórico, y cualquier código que no sea de los tres → **`tax_fx_rate_unverified`**, nota nueva: «no se dice si es bueno ni malo»). Las dos citan el criterio 25; traducidas en las dos interfaces; pasan a las casillas; «Declaración» las enseña. Test con los tres códigos de «sin contrastar» y uno de «contradicho»; mutante (todo como contradicho) — muerto.
+
+### 10.3 Una sola corrección viva por raíz
+
+- La regla de ADR-0026 Parte C se juzga ahora por la **raíz** de la cadena, con la misma función que §10.1. El caso del revisor, `O, R(O), C1→O, R(C1), C2→C1, C3→O`, rechaza C3 (`second_live_correction`, con `root_id` en los detalles). Rojo primero; mutante (juzgar por `corrects_id`) — muerto.
+
+### 10.4 `broker_settled_eur` por desestructuración en parámetros
+
+- El test de arquitectura caza ahora `({ broker_settled_eur }: T) =>` y `function f(x, { broker_settled_eur }: Record<…>)`. Mutantes, uno de cada forma — muertos (el segundo sobrevivió a la primera versión del patrón, que no admitía genéricos en la anotación).
+
+### 10.5 Importar podía perder una línea de otra pestaña
+
+- El plan de importación guarda el etag del libro al preguntar; `replaceLedgerText` compara en la misma transacción y **se niega si cambió** (`LedgerChangedSinceAsked`, con cuántas líneas hay ahora). La web lo dice: «Mientras decidías, los datos de este navegador han cambiado… ahora tienen N movimientos. No se ha importado nada». Tests en el adaptador y en la pantalla; mutante (sin comparar) — muerto. `exportedEtag` **quitado**: nadie lo leía.
+
+### 10.6 Un borrador que podía acabar duplicado
+
+- **Confirmar es idempotente**: `draftRecordedAs` (dominio) da los eventos en vigor con la huella del borrador **registrados a partir de que se guardó** (uno idéntico anterior es otra operación). Si los hay, confirmar solo quita el borrador: en la consola, `atlas draft confirm` lo dice y sale con 0; en la web, el duplicado de un formulario que viene de un borrador ya registrado lo quita y lleva a la lista, que lo dice; la lista marca esos borradores «Ya está en tus datos».
+- **Un fallo al quitar el borrador se enseña**: en la web, tras registrar bien, el libro se recarga y se lleva el formulario con lo que dijera, así que el aviso va a la lista de borradores (`?no-quitado=`), donde queda el borrador para descartarlo.
+- Tests en el dominio, la consola y la web; mutantes (confirmar dos veces en la web y en la consola) — muertos.
+
+### 10.7 Los mutantes que sobrevivían
+
+Todos muertos con tests nuevos, cada uno con la sustitución afirmada: **W1** (quitar el borrador antes de registrar: test con el registro rechazado por conflicto), `currency_stale` por sus dos lados, el fin de semana de `isDecided` (un histórico que acaba en viernes), `waitingRatesOf` por cada mitad del par, el límite de `late`, `rateConfirmations` por la fecha sola (el sábado toma el valor del viernes), el linaje en `rateNotes`, `assertOwned` en el almacén de borradores (guardar y quitar, con una costura `beforeCommit`) y en el del BCE, la guarda `rates.cleared()` (quitando el sí a través de la pregunta del duplicado), la nota de fecha posterior en «Declaración», la propuesta al corregir, y los borradores ilegibles en el contador.
+
+**Uno no se mata porque era equivalente, y se ha quitado el código**: la raíz por separado en `rateNotes`. El linaje de un lote termina siempre en su raíz (`lineageOf` empuja el lote raíz como último paso), así que añadir `lot.root.event_id` no podía cambiar nada. En vez de dejar código que ningún test puede distinguir, se ha quitado, con el motivo en el comentario.
+
+### 10.8 Menores
+
+- **Temporales huérfanos**: al empezar cada orden, `sweepOrphanTemporaries` quita los `ledger.jsonl.tmp-*` **solo tomando el cerrojo**: si alguien lo tiene, no toca nada (su temporal puede ser la escritura en curso). Lo dice por la salida de errores. Test con cerrojo ajeno (no se toca) y sin él (se quita); mutante (barrer con el cerrojo ajeno) — muerto.
+- **Cerrojo vacío**: un `ledger.lock` vacío es `BEING_WRITTEN`, «Hay una escritura en curso», y el remedio es esperar: ya no dice «no se entiende» ni sugiere `atlas lock break`. Mutante — muerto.
+
+### 10.9 El paquete
+
+- **Fuera del arranque**: el módulo de carpetas entero (queda `picker.ts`, con `supportsDirectoryPicker`; lo demás es `@atlas/adapters/folder`), exportar e importar (`@atlas/adapters/transfer`) y la ruta de borradores (la sirve `/registrar/:tipo`). `check-bundle.mjs` exige ahora que `folder.ts` y `transfer.ts` no estén en el arranque.
+- **Arranque**: medido **73,71** (75.483 bytes), 26 por encima del bloque 4. El techo **baja de 74,0 a 73,8** (`6055e81`); no queda por debajo de 73,7 medido, así que no baja más.
+- **Total**: **261,7**, techo **262,0** en su propio commit (`29d0e20`), con el desglose y sin módulos en dos trozos; el trinquete al cerrar es de la dirección.
