@@ -48,6 +48,17 @@ export {
 } from "./ecb/propose.js";
 export { isDecided, type RateResolution, resolveRate } from "./ecb/resolve.js";
 export {
+  type PreparedRateCorrections,
+  prepareRateCorrections,
+  type RateCorrection,
+  type RuleChangeImpact,
+  type RuleChangeLine,
+  type RuleChangeVerdict,
+  rateCorrections,
+  ruleChangeRates,
+  writeRateCorrections,
+} from "./ecb/rule-change.js";
+export {
   type CalendarDisagreement,
   calendarYears,
   crossCheckCalendar,
