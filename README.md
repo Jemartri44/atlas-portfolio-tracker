@@ -55,16 +55,12 @@ npm run preview                      # sirve el build de producción en :4173
 
 ### Cómo abrir un libro
 
-Al arrancar por primera vez la aplicación pregunta dónde está el libro. Hay dos vías, y **cuál puedes usar depende del navegador**:
+**El libro de la web vive siempre en el almacenamiento del navegador** de ese dispositivo, también en el ordenador, y se importa y se exporta con un botón. Hasta la feature 012 la web de escritorio escribía en el mismo `ledger.jsonl` que la CLI; **ya no lo hace**, porque el navegador no puede tomar en exclusiva el cerrojo de la carpeta y dos escritores podrían pisarse una línea (ADR-0019, enmienda del 2026-09-24). Hasta que exista la sincronización, la web y la CLI del mismo ordenador **no comparten un libro vivo**: se pasa de una a otra exportando e importando.
 
-| Vía | Dónde funciona | Qué hace |
-|---|---|---|
-| **La carpeta de mi ordenador** (recomendada) | Chrome y Edge de escritorio | Eliges la carpeta que contiene tu `ledger.jsonl` y la web escribe en **ese mismo fichero**, el que usa la CLI. Sin copias ni sincronización. Puede crear `archive/` igual que `atlas compact` |
-| **El almacenamiento del navegador** | Todos, y es la **única** vía en el móvil, Firefox y Safari | El libro vive dentro del navegador de ese dispositivo. Se importa y se exporta con un botón |
+En Chrome y Edge de escritorio se puede **enlazar la carpeta del libro solo para leer**: para importar el libro de la CLI (con confirmación) y para leer el histórico del BCE que descarga `atlas fx update`. La web nunca escribe en ella. Si el navegador pierde el permiso de lectura, la aplicación lo dice y basta volver a enlazarla.
 
-Dos cosas que conviene saber y que la aplicación te recuerda:
+Una cosa que conviene saber y que la aplicación te recuerda:
 
-- **El permiso del fichero no sobrevive al cierre de todas las pestañas** (así funciona la File System Access API): al volver, la aplicación recuerda *qué carpeta era* y basta un clic en «Reconectar».
 - **El almacenamiento del navegador no es un almacén definitivo**: si borras los datos del sitio, el libro se va con ellos. Por eso la aplicación avisa cuando llevas más de una semana sin exportar. En el ordenador, `atlas backup` sigue siendo la copia de referencia.
 
 El modo privacidad está **activado por defecto**: oculta importes y cantidades, y deja a la vista porcentajes, pesos, desviaciones y fechas. Se conmuta desde la cabecera y se recuerda en el dispositivo.
