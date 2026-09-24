@@ -222,6 +222,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   reversal_target_missing: () => "El movimiento que se quiere anular no está en tus datos.",
   not_found: () => "Ese movimiento no está en tus datos.",
   dependent_events: () => "Hay movimientos posteriores que se apoyan en este: rectifícalos antes.",
+  invalid_local_config: () =>
+    "La configuración local de la carpeta (atlas.config.json) no se entiende. Corrígela en la carpeta o bórrala para volver a los valores por defecto.",
   dangling_correction: () => "La corrección apunta a un movimiento que no está anulado.",
   dangling_reference: (d) =>
     `Hay ${countOf(count(d.event_ids ?? d.ids), "referencia", "referencias")} a movimientos que no están en tus datos.`,

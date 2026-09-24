@@ -230,6 +230,8 @@ export const describeError = (error: DomainError): string => {
       return `El libro generado no supera la verificación (${text(d.invalid)}, ${text(d.findings)}): es un error del generador.`;
     case "missing_basis":
       return `Falta la base de la operación ${text(d.type ?? "")}: indica --amount o --unit-price.`;
+    case "invalid_local_config":
+      return `La configuración local atlas.config.json de la carpeta del libro no se entiende${d.field === undefined ? "" : ` (${text(d.field)})`}: corrígela o bórrala para volver a los valores por defecto.`;
     case "dangling_correction":
       return `La corrección apunta a ${text(d.corrects_id)}, que no está anulado: una corrección va siempre con su anulación (ADR-0003).`;
     case "dangling_reference":

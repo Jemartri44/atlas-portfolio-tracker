@@ -13,6 +13,10 @@
     "./fiscal": {
       "types": "./dist/fiscal.d.ts",
       "import": "./dist/fiscal.js"
+    },
+    "./ecb": {
+      "types": "./dist/ecb.d.ts",
+      "import": "./dist/ecb.js"
     }
   },
   "files": [

@@ -99,6 +99,7 @@ export default defineConfig(({ command }) => ({
     alias: {
       // The subpaths first: aliases match by prefix, so the barrel would
       // otherwise swallow `@atlas/domain/fiscal`.
+      "@atlas/domain/ecb": repo("../../packages/domain/src/ecb.ts"),
       "@atlas/domain/fiscal": repo("../../packages/domain/src/fiscal.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
       "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),
