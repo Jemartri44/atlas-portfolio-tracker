@@ -91,9 +91,17 @@ export const isWeekend = (date: CivilDate): boolean => {
 };
 
 /**
- * Last working day on or before `date`: on a day the ECB does not publish, the
- * last published rate applies (ADR-0013). TARGET holidays are not known until
- * `reference/ecb/` exists (round 6), so only weekends are rolled back.
+ * Last working day on or before `date`, rolling back **weekends only**.
+ *
+ * It stays this way on purpose now that `reference/ecb/` exists (feature 012,
+ * ADR-0029). The days the ECB did not publish come from the absence in the
+ * official history (`ecb/resolve.ts`), with the TARGET calendar as a
+ * cross-check only (`ecb/target.ts`); and the loader keeps rejecting a weekend
+ * `fx_rate_date` and nothing more, because validating holidays on load would
+ * be a hardening that ADR-0018 no longer admits inside version 1. The callers
+ * that date an ECB rate use it for the euro, whose rate of 1 was never
+ * published, and for the valuation at 31 December (`rateDayOf`), which the
+ * ADR does not touch.
  */
 export const lastWorkingDay = (date: CivilDate): CivilDate =>
   isWeekend(date) ? lastWorkingDay(addDays(date, -1)) : date;

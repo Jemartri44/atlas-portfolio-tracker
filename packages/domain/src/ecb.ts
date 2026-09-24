@@ -12,3 +12,25 @@ export {
   parseLocalConfig,
 } from "./config/local-config.js";
 export { type BrokerSettlement, brokerSettlementOf } from "./ecb/broker-settlement.js";
+export {
+  type CurrencySeries,
+  type EcbHistory,
+  type EcbSource,
+  isPublication,
+  latestPublication,
+  rateOn,
+  readEcbApiCsv,
+  readEcbHistory,
+  readEcbZipCsv,
+  sameRate,
+} from "./ecb/history.js";
+export { isDecided, type RateResolution, resolveRate } from "./ecb/resolve.js";
+export {
+  type CalendarDisagreement,
+  calendarYears,
+  crossCheckCalendar,
+  easterSunday,
+  isTargetClosingDay,
+  targetHolidays,
+} from "./ecb/target.js";
+export { checkHistoryUpdate, type HistoryConflict, type HistoryUpdate } from "./ecb/update.js";

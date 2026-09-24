@@ -23,3 +23,7 @@ export const fixtureLines = (name: string): string[] => {
   }
   return lines;
 };
+
+/** The synthetic ECB histories of `tests/fixtures/ecb/` (feature 012), as text. */
+export const ecbFixture = (name: "eurofxref-hist.csv" | "api-exr.csv"): string =>
+  readFileSync(resolve(fixturesDir, "..", "ecb", name), "utf8");

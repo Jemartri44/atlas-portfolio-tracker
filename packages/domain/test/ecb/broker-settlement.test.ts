@@ -101,6 +101,7 @@ describe("brokerSettlementOf", () => {
       figures({ type: "buy", ...usd, unit_price: "1", fee: "5", broker_settled_eur: "1" }),
     ).toBeUndefined();
     expect(figures({ type: "buy", ...usd, amount: "1", broker_settled_eur: "1" })).toBeUndefined();
+    expect(figures({ type: "sell", ...usd, amount: "1", broker_settled_eur: "1" })).toBeUndefined();
     expect(
       figures({
         type: "buy",

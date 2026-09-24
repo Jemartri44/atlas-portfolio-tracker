@@ -1041,6 +1041,24 @@ describe("architecture: the fiscal output is not in the barrel", () => {
   });
 });
 
+describe("architecture: the ECB is not in the barrel", () => {
+  /**
+   * Feature 012, decision (r): nothing of the ECB on the boot path of the web.
+   * The barrel is on it, so the ECB lives behind a door of its own
+   * (`@atlas/domain/ecb`), like the fiscal output; `check-bundle.mjs` checks
+   * the real output, and this checks the source.
+   */
+  it("keeps the ECB and the local configuration out of index.ts", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    const offenders = specifiersOf(barrel).filter((specifier) =>
+      /\.\/(ecb|config)\/|\.\/ecb\.js/.test(specifier),
+    );
+    expect(offenders).toEqual([]);
+    const door = specifiersOf(readFileSync(join(domainSrc, "ecb.ts"), "utf8"));
+    expect(door.some((specifier) => specifier.includes("./ecb/"))).toBe(true);
+  });
+});
+
 describe("architecture: no interface writes over a filed return in silence", () => {
   const WRITE_USE_CASES = ["recordEvent", "correctEvent", "reverseEvent"];
   const IMPACT = "closedYearImpact";

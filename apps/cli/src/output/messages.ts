@@ -240,6 +240,10 @@ export const describeError = (error: DomainError): string => {
       return "--broker-settled-eur nunca es negativo: el sentido lo da el tipo de operación. Indica lo que movió el bróker, sin signo.";
     case "broker_settled_eur_zero":
       return "--broker-settled-eur no puede ser cero en una compra, una venta o una comisión: si el extracto no da la cifra, no lo indiques (sin él, la cifra queda como desconocida).";
+    case "ecb_history_unreadable":
+      return `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Vuelve a descargarlo con \`atlas fx update\`.`;
+    case "ecb_history_empty":
+      return "El histórico del BCE no trae ninguna publicación: no se ha usado. Vuelve a descargarlo con `atlas fx update`.";
     case "dangling_correction":
       return `La corrección apunta a ${text(d.corrects_id)}, que no está anulado: una corrección va siempre con su anulación (ADR-0003).`;
     case "dangling_reference":
