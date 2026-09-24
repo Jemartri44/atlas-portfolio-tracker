@@ -119,7 +119,7 @@ Qué se enseña de una URL al fallar: **nada de la URL**. El mensaje dice la fue
 
 ### 1.8 Lo que tiene que comprobar el usuario con su clave de EODHD
 
-Tres llamadas (cuatro con la de índices europeos), **1 del cupo cada una**, en su máquina, **sin pasarme la clave ni los ISIN**. La dirección se las hace llegar si lo aprueba:
+Cinco o seis llamadas, **1 del cupo cada una**, en su máquina, **sin pasarme la clave ni los ISIN**. La dirección se las hace llegar si lo aprueba:
 
 ```bash
 K=$(jq -r .eodhd ~/.config/atlas/secrets.json)   # o la clave a mano
@@ -133,6 +133,8 @@ curl -s -o /dev/null -w 'EUFUND eod %{http_code}\n' "https://eodhd.com/api/eod/I
 # 3. La unidad de Londres (un ETF público en libras, p. ej. CSPX.LSE): el cierre y la divisa que dice el listado
 curl -s "https://eodhd.com/api/eod/CSPX.LSE?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05" | jq '.[0].close'
 curl -s "https://eodhd.com/api/exchange-symbol-list/LSE?api_token=$K&fmt=json&symbols=CSPX" | jq '.[0].Currency'
+# 4. Cripto en el plan gratuito (D-Q5): el formato de la bolsa virtual CC es <PAR>.CC
+curl -s -o /dev/null -w 'BTC-EUR.CC %{http_code}\n' "https://eodhd.com/api/eod/BTC-EUR.CC?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05"
 ```
 
 Qué anotar: los códigos HTTP, el recuento de `EUFUND` (no los ISIN) y los dos valores de Londres (para ver si el cierre está en peniques mientras el listado dice `GBP`, que es lo que afirma un informe de terceros no verificado). Si el parámetro `symbols=` no filtra en `EUFUND`, la respuesta entera es muy grande: entonces `| jq '[.[] | select(.Code=="ISIN1" or .Code=="ISIN2")] | length'`.
@@ -222,3 +224,22 @@ Cuadra todo lo mirado:
 ## 5. Documentos (para que los traslade la dirección al cerrar)
 
 Además de la lista de §5 del encargo, lo verificado aquí: ADR-0031 (§1 entero; el contraste de divisa de Q2; el día del cupo de Q3; la tabla de §1.6 con sus huecos; Q5), `docs/data-schema.md` §1 (formatos de `plan.md` §4) y `docs/specification.md` §7 (Alpha Vantage gratuito solo ve 100 días).
+
+---
+
+## 6. Respuestas de la dirección (2026-09-24)
+
+Visto bueno al plan, con estas decisiones. Lo que cambian en `spec.md` y `plan.md` ya está aplicado.
+
+- **D-Q5 — CoinGecko sale de la feature 013.** *Motivo de la dirección:* sus condiciones describen el plan Demo como un plan «para probar», y el de uso personal es de pago; una fuente permanente sobre él se apoya en una zona gris de sus condiciones, y el proyecto no hace eso. **Los precios de cripto serán de EODHD si su plan gratuito los cubre** (cuarta comprobación con la clave del usuario, §1.8), **y si no, entrada manual.** **Quedan retiradas por la dirección** estas piezas del encargo que lo exigían: el adaptador de CoinGecko (bloque 3), la regla «solo el último valor» por fuente (§6.2 P4, bloque 2), el fichero propio en `cache/` y su exclusión de copias y exportación (§6.3 (b), §6.4 (g)), la caducidad de 24 horas (§6.3 (c), §6.4 (h) en lo que toca a CoinGecko), la atribución con su enlace y sus excepciones en `ALLOWED_URLS` y en «names no remote origin» (§6.2 P9, §6.4 (c) en esa parte, bloque 5), la clave en cabecera (§6.4 (e) en esa parte), la dirección `api.coingecko.com` del test de direcciones, y los mutantes 11 y 12 ter en lo que tocan a CoinGecko. ADR-0031 no se toca: la enmienda la escribe la dirección al cerrar.
+- **D-Q6 — Sin OpenFIGI.** *Motivo:* una traducción de códigos de bolsa sin documentar no es base para decidir qué precio es de qué activo. **La correspondencia ISIN → símbolo la declara el usuario** en `prices/symbols.json`, con su divisa, y la aplicación **la confirma con la fuente** al darla de alta. Retirados: el proponedor, sus *fixtures* (`tests/fixtures/openfigi/`), la pregunta en `atlas asset add` y la dirección de OpenFIGI del test de direcciones; el mutante 16 queda en «meter la correspondencia en `asset_updated`».
+- **D-Q1 — Números JSON por su texto exacto** (`JSON.parse` con `context.source`). **Si esa función no existe en el entorno, se para con un error claro**; nunca se lee como coma flotante. Test que lo fija.
+- **D-Q2 — El contraste de divisa, al confirmar la correspondencia**, no en cada descarga. Si los metadatos de la fuente contradicen la divisa declarada, **ni se rechaza ni se acepta en silencio**: se enseña el desacuerdo y el usuario **confirma una vez y de forma explícita** la divisa declarada, y queda guardado que la confirmó. Nunca se supone.
+- **D-Q3 — Cupo de Alpha Vantage en ventana móvil de 24 horas**; EODHD por día GMT.
+- **D-Q4 — Fallos de Alpha Vantage por el cuerpo; el 403 de EODHD, `not_found` de ese símbolo**, no `blocked` de la fuente.
+- **D-Q7 — Arranque:** se autoriza subir el techo **exactamente lo que midan** los cambios del dominio de la puerta (P2, `unit_value_eur` opcional, `networth.ts`), **con un tope de +0,3 KB**, en su propio commit, con desglose y tendencia. Si pasa del tope, se para. Nada de descarga de precios en el arranque.
+- **D-Q8 — La hoja leída en un solo sitio** (la puerta importa la hoja). La cabecera de la hoja dice que **cualquier cambio en ella cambia el 720** y que por eso lleva el test de salida fiscal idéntica y los mutantes del 720.
+- **D-Q10 — El desempate lo resuelve la consola al escribir**: **un solo cierre por activo y fecha**, con su fuente. La web no necesita el orden de las fuentes y no lee `prices/config.json`. *Cómo lo aplico* (lectura mía, dicha para que la dirección la vea): el fichero sigue siendo de solo añadir, así que el cierre vigente de una fecha es **la última línea de esa fecha**; la consola añade una línea para una fecha solo si no hay ninguna, si es de la **misma** fuente con un valor numéricamente distinto (corrección), o si es de una fuente **anterior** en el orden que la de la línea vigente (la principal sustituye al respaldo). Un respaldo nunca sustituye a la principal. El lector toma la última línea de cada fecha y no conoce el orden.
+- **Las cuatro propuestas del plan, aceptadas** salvo la de CoinGecko (retirada por D-Q5): liquidativo real = `valuation` o cierre de `EUFUND`; `currency_mismatch`, que no cuenta como fallo seguido; `secrets_too_open`, con el `chmod 600`, y todo lo demás sigue.
+- **Q9** anotada como errata.
+- **Las comprobaciones con la clave**: se añade la cuarta, si el plan gratuito de EODHD cubre cripto (§1.8). El procedimiento queda listo para que la dirección lo pase al terminar; no bloquean la construcción.

@@ -2,7 +2,7 @@
 
 **Rama**: `feature/013-daily-close-prices` | **Fecha**: 2026-09-24 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Preguntas y bloque 0**: [`questions.md`](questions.md)
 
-**Estado**: **propuesta, en el alto.** Lo marcado «propuesta» lo decide la dirección (`questions.md` §2 y §3).
+**Estado**: **aprobado por la dirección el 2026-09-24**, con las decisiones de `questions.md` §6. CoinGecko y OpenFIGI fuera (D-Q5, D-Q6); un solo cierre vigente por activo y fecha (D-Q10); techo del arranque con tope de +0,3 KB (D-Q7).
 
 ## Contexto técnico
 
@@ -10,7 +10,7 @@
 |---|---|
 | Lenguaje | TypeScript estricto, ESM, Node 22 (`.nvmrc`) |
 | Dependencias nuevas | **Ninguna.** Descarga con el `fetch` de Node, inyectable; JSON con la biblioteca estándar, leyendo el **texto** de cada número (`JSON.parse` con `context.source`, comprobado en Node 22.23: Q1) |
-| Tests | vitest; `packages/domain` al 100 % de líneas y ramas; red nunca; respuestas sintéticas con el formato real en `tests/fixtures/{eodhd,alpha-vantage,coingecko,openfigi}/`, generadas por un guion determinista como `tests/fixtures/ecb/make-synthetic.mjs`; clave centinela `TEST-KEY-013` |
+| Tests | vitest; `packages/domain` al 100 % de líneas y ramas; red nunca; respuestas sintéticas con el formato real en `tests/fixtures/{eodhd,alpha-vantage}/`, generadas por un guion determinista como `tests/fixtures/ecb/make-synthetic.mjs`; clave centinela `TEST-KEY-013` |
 | Paquete web, partida | arranque **73,7 / 73,8 KB** gzip (**75.418 / 75.571 bytes**), total **262,1 / 263,0** (medido sobre `6a8ac2d`) |
 
 ## Comprobación contra la constitución
@@ -21,7 +21,7 @@
 | II. Fiscalidad solo del libro | Guardianes por alcance antes de crear nada (§2); el 720 por la hoja manual; test de salida fiscal idéntica con cotizaciones que ganarían en una vista | Sí |
 | III. Compartimentación | La puerta no cambia de firma; cubo y núcleo siguen en sus vistas. La prioridad del cupo (cubo primero) no mezcla cifras | Sí |
 | IV. Nada configurable en el código | Orden de fuentes, cupos y umbral de fallos en `prices/config.json`; claves en `~/.config/atlas/secrets.json`; `stale_price_days` ya en `Settings`. La prioridad es **fija** por ADR-0031, no configurable | Sí |
-| V. Fallo seguro | Cascada, último valor con antigüedad, CoinGecko caducado que deja de enseñarse, nunca convertir sin tipo, cero fuentes = todo igual | Sí |
+| V. Fallo seguro | Cascada, último valor con antigüedad, nunca convertir sin tipo, cero fuentes = todo igual | Sí |
 | VI. Veinte años | Ficheros JSON Lines y JSON legibles, sin dependencias | Sí |
 | VII. Tests primero | Los mutantes de §5 del encargo, cada uno visto morir | Previsto |
 
@@ -31,9 +31,9 @@
 |---|---|---|
 | La puerta de presentación (P2) y sus tipos | `packages/domain/src/projections/prices.ts` (existe) | barril, como hoy |
 | **La hoja manual** | `packages/domain/src/projections/manual-price.ts` (nueva) | barril y `@atlas/domain/fiscal` (la usa el 720) |
-| **El dominio de precios automáticos** | `packages/domain/src/quotes/` (nueva): `line.ts` (la línea y su lectura), `select.ts` (qué cierre se lee, P7), `external.ts` (construye el `ExternalPrices` con el tipo del BCE, CoinGecko y la aproximación), `approximation.ts`, `budget.ts`, `priority.ts`, `status.ts`, `symbols.ts`, `config.ts`, `cascade.ts` (el caso de uso), `coingecko-cache.ts` | **`@atlas/domain/quotes`** (`packages/domain/src/quotes.ts`), **nunca** en el barril |
+| **El dominio de precios automáticos** | `packages/domain/src/quotes/` (nueva): `line.ts` (la línea y su lectura), `select.ts` (qué cierre se lee, P7), `external.ts` (construye el `ExternalPrices` con el tipo del BCE y la aproximación), `approximation.ts`, `budget.ts`, `priority.ts`, `status.ts`, `symbols.ts`, `config.ts`, `cascade.ts` (el caso de uso) | **`@atlas/domain/quotes`** (`packages/domain/src/quotes.ts`), **nunca** en el barril |
 | Los puertos | `packages/domain/src/ports/price-source.ts` (`PriceSource`) y `ports/price-store.ts` (`PriceStore`: cierres, `symbols.json`, `_status.json`, `config.json`, la caché) | por `@atlas/domain/quotes` |
-| Los adaptadores | `packages/adapters/src/prices/`: `eodhd.ts`, `alpha-vantage.ts`, `coingecko.ts`, `openfigi.ts` (proponedor, no es un `PriceSource`), `file-store.ts`, `secrets.ts`, `redact.ts`, `json-numbers.ts` | solo por el barril `"."` de Node; **ninguna subruta nueva** para la web |
+| Los adaptadores | `packages/adapters/src/prices/`: `eodhd.ts`, `alpha-vantage.ts`, `file-store.ts`, `secrets.ts`, `redact.ts`, `json-numbers.ts` | solo por el barril `"."` de Node; **ninguna subruta nueva** para la web |
 | Lectura en la web | `packages/adapters/src/ledger-store/browser/prices.ts` (leer de la carpeta con `readFolderText`, importar a IndexedDB) | **subruta nueva `./prices`** en `exports`, que el test de direcciones mira por construcción (§2, mutante 14) |
 
 El nombre `quotes/` y no `prices/` es a propósito: evita confundir el módulo con `projections/prices.ts`, la puerta, que sigue siendo la única entrada a un precio.
@@ -95,30 +95,28 @@ La contrapartida (Q8): un cambio de la hoja para la presentación cambiaría el 
 {"schema_version":1,"date":"2026-09-23","close":"101.5","currency":"EUR","source":"eodhd","fetched_at":"2026-09-24T06:00:02.000Z"}
 ```
 
-Exactamente los campos de ADR-0031. `close` cadena decimal positiva (el texto que dio la fuente, sin reformatear); `currency` código de 3 letras **tal como se declaró** (incluidas subunidades como `GBX`); `source` ∈ {`eodhd`, `alpha_vantage`}; nunca `coingecko` (va a la caché). Identidad (`date`, `source`); igualdad numérica. Lector: §2.5 de `questions.md` (propuesta).
+Exactamente los campos de ADR-0031. `close` cadena decimal positiva (el texto que dio la fuente, sin reformatear); `currency` código de 3 letras **tal como se declaró** (incluidas subunidades como `GBX`); `source` ∈ {`eodhd`, `alpha_vantage`}. **El cierre vigente de una fecha es la última línea de esa fecha** (D-Q10); la consola solo añade una línea para una fecha si no hay ninguna, si es de la misma fuente con otro valor numérico, o si es de una fuente anterior en el orden a la de la vigente. Igualdad numérica, nunca de cadena. Lector: §2.5 de `questions.md` (propuesta).
 
 **`prices/symbols.json`** — se sobrescribe entero, bajo el cerrojo:
 
 ```json
-{"symbols_format":1,"assets":{"<asset_id>":{"currency":"USD","eodhd":"AAPL.US","alpha_vantage":"AAPL","coingecko":"bitcoin","confirmed_at":"2026-09-24T08:00:00.000Z","currency_checked":{"eodhd":"2026-09-24"}}}}
+{"symbols_format":1,"assets":{"<asset_id>":{"currency":"USD","eodhd":"AAPL.US","alpha_vantage":"AAPL","confirmed_at":"2026-09-24T08:00:00.000Z","currency_check":{"eodhd":{"found":"USD","at":"2026-09-24T08:00:00.000Z"},"alpha_vantage":{"found":"USD","at":"…"}},"currency_confirmed_over":{"eodhd":"GBP"}}}}
 ```
 
-`currency` obligatorio (la divisa **de la cotización**, no la del activo); cada fuente opcional; `currency_checked` según Q2. Solo lo escribe una confirmación del usuario.
+`currency` obligatorio (la divisa **de la cotización**, no la del activo); cada fuente opcional; `currency_check` guarda lo que dijo la fuente al confirmar; `currency_confirmed_over` guarda la divisa de la fuente que el usuario **aceptó contradecir de forma explícita** (D-Q2). Una fuente cuyos metadatos contradicen la declarada sin esa confirmación no se descarga (`currency_mismatch`). Solo lo escribe una orden del usuario.
 
 **`prices/_status.json`** — se sobrescribe, bajo el cerrojo:
 
 ```json
-{"status_format":1,"sources":{"eodhd":{"consecutive_failures":0,"last_success":"2026-09-24T06:00:05Z","last_failure":{"kind":"not_found","at":"…","asset_id":"…"},"spent":{"window":"gmt_day","day":"2026-09-24","calls":3}},"alpha_vantage":{"…":"…","spent":{"window":"rolling_24h","calls_at":["…"]}},"coingecko":{"…":"…","spent":{"window":"utc_month","month":"2026-09","calls":14}}},"assets":{"<asset_id>":{"last_failure":{"kind":"currency_mismatch","declared":"GBX","found":"GBP","at":"…"}}}}
+{"status_format":1,"sources":{"eodhd":{"consecutive_failures":0,"last_success":"2026-09-24T06:00:05Z","last_failure":{"kind":"not_found","at":"…","asset_id":"…"},"spent":{"window":"gmt_day","day":"2026-09-24","calls":3}},"alpha_vantage":{"…":"…","spent":{"window":"rolling_24h","calls_at":["…"]}}},"assets":{"<asset_id>":{"last_failure":{"kind":"currency_mismatch","declared":"GBX","found":"GBP","at":"…"}}}}
 ```
 
 Nunca una URL, nunca un mensaje de la fuente (solo el tipo de fallo). «Lo gastado» incluye lo **reservado** (§5).
 
-**`cache/coingecko.json`** — §2.2 de `questions.md` (propuesta de nombre).
-
 **`prices/config.json`** — lo escribe el usuario; la aplicación nunca:
 
 ```json
-{"source_order":["eodhd","alpha_vantage"],"daily_calls":{"eodhd":20,"alpha_vantage":25},"monthly_calls":{"coingecko":10000},"failure_threshold":3}
+{"source_order":["eodhd","alpha_vantage"],"daily_calls":{"eodhd":20,"alpha_vantage":25},"failure_threshold":3}
 ```
 
 Todas las claves opcionales con esos valores por defecto; una clave desconocida o un valor inválido es `invalid_price_config` con **el nombre** de la clave. Sin fichero, los valores por defecto.
@@ -126,7 +124,7 @@ Todas las claves opcionales con esos valores por defecto; una clave desconocida 
 **`~/.config/atlas/secrets.json`** (o `$XDG_CONFIG_HOME/atlas/secrets.json`) — lo escribe el usuario, permisos `600`:
 
 ```json
-{"eodhd":"…","alpha_vantage":"…","coingecko":"…"}
+{"eodhd":"…","alpha_vantage":"…"}
 ```
 
 Cualquier clave opcional (sin ella, esa fuente no se llama). Errores: `secrets_unreadable` (sin el texto ni el `SyntaxError`), `secrets_unknown_key` (con el nombre, nunca el valor), `secrets_invalid_value` (con el nombre), `secrets_too_open` (§2.4), `secrets_inside_ledger_folder` (una carpeta dentro de la otra, en los dos sentidos, con rutas reales resueltas).
@@ -138,31 +136,30 @@ Orden de una ejecución de `atlas prices update`, con los puertos inyectados:
 1. **Fuera del cerrojo**: cargar el libro de la consola, proyectarlo a hoy (`Europe/Madrid`), leer `config.json`, `symbols.json`, las claves. Sin claves o sin ninguna correspondencia: decirlo y terminar con 0, sin tocar la red.
 2. **Prioridad** (fija, ADR-0031): posiciones abiertas del cubo; después `bucket_benchmark_asset_id` y los `reference_etf_id` de los fondos con posición; después el resto del núcleo con posición. Dentro de cada grupo, por `asset_id`. Un activo sin posición que no es referencia no gasta cupo. Un activo al día (§2.6 de `questions.md`) no se pide.
 3. **Bajo el cerrojo**: releer `_status.json`, calcular lo que queda de cada cupo y **reservar** tantas llamadas como activos quepan en la fuente principal; escribir `_status.json`. Soltar.
-4. **Fuera del cerrojo**: llamar. Tras un `unavailable` o `not_found` en la principal, se pasa al respaldo, que **reserva su llamada bajo el cerrojo** antes (un paso de cerrojo por reserva adicional). Un `blocked` o `rate_limited` retira esa fuente del resto de la ejecución. CoinGecko: una sola llamada con todas las criptos.
-5. **Bajo el cerrojo**: releer cada `prices/<asset_id>.jsonl` que se va a tocar, decidir por identidad y valor numérico qué líneas son nuevas, escribirlas (fichero entero nuevo = bytes anteriores + líneas nuevas, temporal `"wx"`, `sync`, `assertOwned`, renombrado); sobrescribir la caché de CoinGecko; actualizar `_status.json` (fallos seguidos, último éxito, **devolver lo reservado que no se llamó**). Si el proceso muere antes, lo reservado se pierde a favor del proveedor.
+4. **Fuera del cerrojo**: llamar. Tras un `unavailable` o `not_found` en la principal, se pasa al respaldo, que **reserva su llamada bajo el cerrojo** antes (un paso de cerrojo por reserva adicional). Un `blocked` o `rate_limited` retira esa fuente del resto de la ejecución.
+5. **Bajo el cerrojo**: releer cada `prices/<asset_id>.jsonl` que se va a tocar, decidir por identidad y valor numérico qué líneas son nuevas, escribirlas (fichero entero nuevo = bytes anteriores + líneas nuevas, temporal `"wx"`, `sync`, `assertOwned`, renombrado); actualizar `_status.json` (fallos seguidos, último éxito, **devolver lo reservado que no se llamó**). Si el proceso muere antes, lo reservado se pierde a favor del proveedor.
 6. Decir: activos actualizados por fuente, fallos por tipo, cuántos se quedaron fuera por cupo, cuánto queda de cada cupo, las fuentes que superaron el umbral (código de salida **3**, propuesta).
 
-**Nombres de las órdenes (propuesta):** `atlas prices update`, `atlas prices status`, `atlas prices symbols [<asset_id>]` (ver), `atlas prices symbols set <asset_id> --currency <C> [--eodhd S] [--alpha-vantage S] [--coingecko ID]`, `atlas prices symbols remove <asset_id>`, `atlas prices symbols propose <asset_id>` (OpenFIGI, Q6, con confirmación); y en `atlas asset add`, si hay ISIN y terminal interactivo, la pregunta de si pedir la propuesta. `atlas prices export --out <fichero>` **no**: la web importa los ficheros de `prices/` tal cual (§6).
+**Nombres de las órdenes (propuesta):** `atlas prices update`, `atlas prices status`, `atlas prices symbols [<asset_id>]` (ver), `atlas prices symbols set <asset_id> --currency <C> [--eodhd S] [--alpha-vantage S] [--accept-currency]` (confirma con la fuente: 1 llamada del cupo por fuente; con desacuerdo, lo enseña y pide la confirmación explícita, D-Q2), `atlas prices symbols remove <asset_id>`. `atlas prices export --out <fichero>` **no**: la web importa los ficheros de `prices/` tal cual (§6).
 
 ## 6. La web (solo lee)
 
-- **Escritorio con carpeta**: `browser/prices.ts` lee `prices/*.jsonl` de los activos del libro de la web (por `asset_id`), `cache/coingecko.json` y, **Q10**, `prices/config.json` solo por `source_order`. Carga diferida, al abrir una vista con valores. Si la carpeta perdió el permiso o un fichero no se lee: `problem`, dicho como en el histórico del BCE.
-- **Importación a mano** (escritorio sin carpeta y móvil): se eligen los ficheros de `prices/` y `cache/coingecko.json` (`<input type="file" multiple>`), se validan con el mismo lector del dominio y se guardan en IndexedDB **bajo una clave propia del almacén existente** (`prices:imported`), como el histórico del BCE importado: **sin subir `DB_VERSION`**, que se abriría en el arranque. El valor de CoinGecko importado caduca igual, a las 24 h de su `fetched_at`.
+- **Escritorio con carpeta**: `browser/prices.ts` lee `prices/*.jsonl` de los activos del libro de la web (por `asset_id`) y nada más: ni `prices/config.json` (D-Q10) ni nada fuera de `prices/`. Carga diferida, al abrir una vista con valores. Si la carpeta perdió el permiso o un fichero no se lee: `problem`, dicho como en el histórico del BCE.
+- **Importación a mano** (escritorio sin carpeta y móvil): se eligen los ficheros de `prices/` (`<input type="file" multiple>`), se validan con el mismo lector del dominio y se guardan en IndexedDB **bajo una clave propia del almacén existente** (`prices:imported`), como el histórico del BCE importado: **sin subir `DB_VERSION`**, que se abriría en el arranque.
 - **El móvil** dice: «En el teléfono no hay precios automáticos hasta que exista la sincronización con la nube. Puedes importar a mano los ficheros de precios que descarga la consola.» Y en cualquier dispositivo, un activo del libro de la web sin fichero en `prices/`: «La consola descarga los precios de los activos de su libro; este activo no está en él».
-- **Atribución**: componente `CoinGeckoCredit` («Powered by CoinGecko», enlace a `https://www.coingecko.com` con `rel="noopener noreferrer"`), encima o debajo de todo bloque con un valor de CoinGecko; la dirección exacta entra en `ALLOWED_URLS` y en el test «names no remote origin» con su motivo, sin comodín.
 - **El arreglo de `ecb/history.ts`**: `parseLocalConfig` dentro de su propio `try`; `problem: "config"` con el campo que no entiende, traducido con `invalid_local_config`.
 
 ## 7. Coste en el paquete web
 
-**Arranque** (no sube, §6.2 P10): lo único de la feature en el arranque es el dominio del barril que ya está en él. Medido con un ensayo desechado (`questions.md` Q7): **+121 bytes** del trozo del dominio y +9 de la entrada, **23 bytes de margen**, sin `networth.ts`. Si al implementarlo no cabe, **se para** con la medida (Q7).
+**Arranque** (D-Q7: sube exactamente lo que midan los cambios de la puerta, tope +0,3 KB, en su propio commit): lo único de la feature en el arranque es el dominio del barril que ya está en él. Medido con un ensayo desechado (`questions.md` Q7): **+121 bytes** del trozo del dominio y +9 de la entrada, **23 bytes de margen**, sin `networth.ts`. Si al implementarlo no cabe, **se para** con la medida (Q7).
 
 **Total** (sube con la regla de siempre, §6.2 P10), estimación trozo a trozo, todo diferido:
 
 | Trozo | Estimación gzip |
 |---|---|
-| `@atlas/domain/quotes` en la web (lectura de líneas, selección, `ExternalPrices`, aproximación, caducidad de CoinGecko, `quoteDates`) | +4,0 a +5,0 KB |
+| `@atlas/domain/quotes` en la web (lectura de líneas, selección, `ExternalPrices`, aproximación, `quoteDates`) | +4,0 a +5,0 KB |
 | Lector de la carpeta e importación (`./prices` de adaptadores) y su pantalla de importación en Ajustes | +2,0 a +2,5 KB |
-| Las vistas existentes (Resumen, Cartera, Cubo, contribución): origen, fuente, antigüedad, aproximación, «falta el valor en euros», atribución | +2,0 a +3,0 KB |
+| Las vistas existentes (Resumen, Cartera, Cubo, contribución): origen, fuente, antigüedad, aproximación, «falta el valor en euros» | +2,0 a +3,0 KB |
 | Mensajes en castellano de los códigos nuevos | +0,8 a +1,2 KB |
 | Arreglo de `ecb/history.ts` | +0,1 KB |
 | **Total** | **+9 a +12 KB** → **271 a 274 KB**; el techo se fija a lo medido más un margen pequeño, en su propio commit |
