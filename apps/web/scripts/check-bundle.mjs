@@ -181,8 +181,23 @@ const dist = join(webRoot, "dist");
  * final measure is **73,71: 75.483 bytes, 26 above block 4** (75.457), which
  * is the new names in the table of lazy chunks of the entry. The margin is the
  * usual one, a tenth.
+ *
+ * **Feature 013, the price gate (2026-09-24): measured 75.676 bytes, ceiling
+ * 75.829 = 73,8 KB + 258 bytes, exactly what the change measured (decision
+ * D-Q7 of the direction: exactly the measure, capped at +0,3 KB, in its own
+ * commit).** Byte by byte against `develop` (75.418): the domain chunk
+ * **+249** — P2 in `priceAt` and `manualPrices` (the more recent date wins,
+ * the manual one on the same date), `unit_value_eur` optional with the reason
+ * it is missing, the warning `price_without_eur_value` said by the weights and
+ * the bucket, the gap of the index that says why, and the manual leaf the 720
+ * reads (`manual-price.ts`, which the gate imports: the valuations are read in
+ * one place, decision D-Q8) —; the entry **+9**, the new names in the table of
+ * lazy chunks. **Nothing of the download or of the store of prices is in the
+ * boot**: `quotes/`, its door and the reader of the web are in LAZY_ONLY from
+ * their first commit. The trend: 73,5 → 73,9 → 73,7 in feature 012; 73,7 →
+ * 73,9 in this one.
  */
-const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024 + 258;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
