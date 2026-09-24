@@ -12,6 +12,7 @@ const MovimientoDetalle = lazy(() => import("./routes/movimientos/detail.jsx"));
 const MovimientoEditar = lazy(() => import("./routes/movimientos/edit.jsx"));
 const Registrar = lazy(() => import("./routes/registrar/index.jsx"));
 const RegistrarForm = lazy(() => import("./routes/registrar/form.jsx"));
+const Borradores = lazy(() => import("./routes/registrar/borradores.jsx"));
 const CorporateForm = lazy(() => import("./routes/registrar/corporate/form.jsx"));
 const Cubo = lazy(() => import("./routes/cubo/index.jsx"));
 const Cartera = lazy(() => import("./routes/cartera/index.jsx"));
@@ -40,6 +41,7 @@ export const App = () => (
     <Route path="/movimientos/:id" component={MovimientoDetalle} />
     <Route path="/movimientos/:id/editar" component={MovimientoEditar} />
     <Route path="/registrar" component={Registrar} />
+    <Route path="/registrar/borradores" component={Borradores} />
     <Route path="/registrar/evento-corporativo/:kind" component={CorporateForm} />
     <Route path="/registrar/:tipo" component={RegistrarForm} />
     <Route path="/cartera" component={Cartera} />

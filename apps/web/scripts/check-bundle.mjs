@@ -543,6 +543,13 @@ const LAZY_ONLY = [
   { path: "/packages/domain/src/ecb/", what: "los tipos del BCE" },
   { path: "/packages/domain/src/ecb.ts", what: "la puerta del BCE" },
   { path: "/packages/domain/src/config/", what: "la configuración local" },
+  // Block 5: the drafts, their store and their counter. The frame keeps only
+  // the place of the counter; reading and painting it arrive later.
+  { path: "/packages/adapters/src/ledger-store/browser/drafts.ts", what: "los borradores" },
+  { path: "/src/ledger/draft-store.ts", what: "los borradores" },
+  { path: "/src/ledger/drafts.ts", what: "los borradores" },
+  { path: "/src/shell/draft-counter.ts", what: "el contador de borradores" },
+  { path: "/src/routes/registrar/borradores.tsx", what: "la lista de borradores" },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */

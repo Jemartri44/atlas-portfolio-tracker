@@ -21,6 +21,20 @@ import { LedgerChip } from "./LedgerChip.jsx";
 import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
 
+/**
+ * The drafts waiting for their ECB rate (feature 012, block 5): on every
+ * screen, but of the ECB, so it arrives in a chunk of its own after the first
+ * paint. The frame only keeps its place in the bar.
+ */
+const DraftSlot = (): JSX.Element => (
+  <span
+    class="draft-slot"
+    ref={(slot) =>
+      void import("./draft-counter.js").then((module) => module.mountDraftCounter(slot))
+    }
+  />
+);
+
 const DegradedBand = (): JSX.Element => (
   <Show when={store.invalidCount() > 0}>
     <aside class="band" role="status">
@@ -115,6 +129,7 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
         </Show>
         <div class="status">
           <LedgerChip />
+          <DraftSlot />
           <PrivacyToggle />
           <SettingsButton />
         </div>

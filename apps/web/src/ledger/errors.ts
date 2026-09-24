@@ -68,6 +68,16 @@ export const toAppError = (error: unknown): AppError => {
         "No se ha podido leer el archivo: puede que se haya movido, que no sea un archivo de texto o que el navegador ya no tenga permiso. Vuelve a elegirlo; no se ha tocado nada.",
     };
   }
+  // Another tab still has the previous version of the database open (feature
+  // 012 added the store of drafts). It is not the browser refusing to keep
+  // data, and saying so sent the user to change a setting that was fine.
+  if (error instanceof Error && error.name === "StorageUnavailable" && error.cause === "blocked") {
+    return {
+      code: "storage_blocked",
+      message:
+        "Hay otra pestaña de Atlas abierta con una versión anterior de la aplicación y no deja actualizar el almacenamiento. Ciérrala y recarga esta; tus datos no se han tocado.",
+    };
+  }
   if (error instanceof Error && error.name === "StorageUnavailable") {
     return {
       code: "storage_unavailable",

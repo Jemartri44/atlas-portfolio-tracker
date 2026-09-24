@@ -15,7 +15,12 @@ const whose = (basis: "fiscal" | "business"): string =>
   basis === "fiscal" ? "la fecha fiscal" : "la fecha de la operación";
 
 /** Beside the fields: what the history proposed, or why it did not. */
-export const RateHint = (props: { rates: FormRates; currency: string }): JSX.Element => (
+export const RateHint = (props: {
+  rates: FormRates;
+  currency: string;
+  /** Keeps the operation as a draft, without a rate, until the ECB publishes it (block 5). */
+  onDraft?: (() => void) | undefined;
+}): JSX.Element => (
   <Case>
     <Match when={props.rates.hint().kind === "proposed" && props.rates.hint()}>
       {(hint) => {
@@ -37,7 +42,17 @@ export const RateHint = (props: { rates: FormRates; currency: string }): JSX.Ele
           <Notice severity="caution" title="El BCE todavía no ha publicado este tipo">
             El tipo de {waiting.currency} de {formatDate(waiting.reference)} aún no está en el
             histórico, que llega hasta el {formatDate(waiting.latest)}. Si ya lo tienes, tecléalo;
-            no se inventa ninguno.
+            no se inventa ninguno. Si no, guárdalo como borrador: no cuenta en ninguna cifra y lo
+            registras cuando el BCE lo publique.
+            <Show when={props.onDraft}>
+              {(onDraft) => (
+                <div class="button-row">
+                  <button type="button" class="secondary" onClick={() => onDraft()()}>
+                    Guardar como borrador
+                  </button>
+                </div>
+              )}
+            </Show>
           </Notice>
         );
       }}
