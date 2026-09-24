@@ -175,8 +175,12 @@ const dist = join(webRoot, "dist");
  * of the ledger (now `@atlas/adapters/transfer`), and the route of the list of
  * drafts, which the form route serves (−0,10 of the entry). What stays of the
  * feature in the boot, against block 4: the database in version 2 (D8) and
- * the place of the counter of drafts in the frame; it is below where block 4
- * left it (75.457). The margin is the usual one, a tenth.
+ * the place of the counter of drafts in the frame. With the rest of the
+ * review in (the import refused when the ledger changed, the idempotent
+ * confirmation of a draft, the note of a rate not contrasted — all lazy), the
+ * final measure is **73,71: 75.483 bytes, 26 above block 4** (75.457), which
+ * is the new names in the table of lazy chunks of the entry. The margin is the
+ * usual one, a tenth.
  */
 const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024;
 
@@ -451,7 +455,9 @@ const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024;
  * the list of drafts behind the form route instead of a route of its own —
  * each a few hundred bytes of chunk frame and preload table (**+0,3**) —, and
  * the new note of a rate not contrasted and the import refused when the
- * ledger changed under it (**+0,1**). The direction accepted the growth of
+ * ledger changed under it (**+0,1**). Final measure with the whole review in:
+ * **261,7** (the idempotent confirmation of a draft and the mutants' seams,
+ * +0,7 across `EventForm`, `borradores` and `write-step`). The direction accepted the growth of
  * the feature (22,9 KB of new screens and ECB domain, no module in two
  * chunks), with the breakdown written here and the ratchet at the close.
  */
