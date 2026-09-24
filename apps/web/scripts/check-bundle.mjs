@@ -460,8 +460,14 @@ const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024;
  * +0,7 across `EventForm`, `borradores` and `write-step`). The direction accepted the growth of
  * the feature (22,9 KB of new screens and ECB domain, no module in two
  * chunks), with the breakdown written here and the ratchet at the close.
+ *
+ * **Third pass of the review of PR #75 (2026-09-24): measured 262,1, ceiling
+ * 263,0.** Confirming a draft through the domain with the id stamped before
+ * writing, conditionally, and refusing a draft that vanished instead of
+ * recording it as new (+0,4 across `drafts`, the store of drafts and the
+ * Spanish of `draft_changed`), all lazy. The boot does not move (73,7).
  */
-const TOTAL_BUDGET_GZIP_BYTES = 262.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 263.0 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
