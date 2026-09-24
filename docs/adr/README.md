@@ -34,7 +34,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0028](0028-aws-account-and-security-baseline.md) | Cuentas de AWS dedicadas, entornos y línea base de seguridad | Aceptada |
 | [0029](0029-ecb-reference-rates.md) | Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad | Aceptada; enmendada tres veces el 2026-09-24 (la última: lo verificado por la feature 012 y la confirmación de un borrador) |
 | [0030](0030-broker-settled-eur.md) | Importe en euros liquidado por el bróker, como dato informativo | Aceptada |
-| [0031](0031-daily-close-prices.md) | Precios de cierre diarios: puerto, almacén y política de fallo | Aceptada |
+| [0031](0031-daily-close-prices.md) | Precios de cierre diarios: puerto, almacén y política de fallo | Aceptada; enmendada dos veces el 2026-09-24 (los símbolos salen del libro; claves fuera de la carpeta, precedencia de la puerta, el 720 cerrado por estructura, aproximación por ETF, CoinGecko en `cache/`, divisa, cupo y lista SIN VERIFICAR) |
 | [0032](0032-backups-and-restore.md) | Copias de seguridad y restauración del libro | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
