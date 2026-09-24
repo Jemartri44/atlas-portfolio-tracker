@@ -226,6 +226,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "La configuración local de la carpeta (atlas.config.json) no se entiende. Corrígela en la carpeta o bórrala para volver a los valores por defecto.",
   second_live_correction: () =>
     "Ese movimiento ya tiene una corrección en vigor: solo puede tener una. Para cambiarlo otra vez, edita la corrección, no el original.",
+  broker_settled_eur_in_eur: () =>
+    "Lo liquidado por el bróker en euros solo se indica en una operación en otra divisa: en euros repetiría el importe.",
+  broker_settled_eur_negative: () =>
+    "Lo liquidado por el bróker en euros nunca es negativo: el sentido lo da el tipo de movimiento.",
+  broker_settled_eur_zero: () =>
+    "Lo liquidado por el bróker en euros no puede ser cero en una compra, una venta o una comisión. Si el extracto no da la cifra, déjalo vacío.",
   dangling_correction: () => "La corrección apunta a un movimiento que no está anulado.",
   dangling_reference: (d) =>
     `Hay ${countOf(count(d.event_ids ?? d.ids), "referencia", "referencias")} a movimientos que no están en tus datos.`,

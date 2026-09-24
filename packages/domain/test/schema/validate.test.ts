@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
-import { FIRST_FILING_YEAR, feeKindOf } from "../../src/schema/events.js";
+import { FIRST_FILING_YEAR, feeKindOf, type SupportedEvent } from "../../src/schema/events.js";
 import { FX_FIELDS, knownFieldsOf, validateShape } from "../../src/schema/validate.js";
 import { FIRST_SUPPORTED_YEAR } from "../../src/tax/chain.js";
 import { envelope, ID, SAMPLES, sampleList, variant } from "../samples.js";
@@ -970,5 +970,74 @@ describe("validateShape: a filed return (ADR-0020)", () => {
       }),
       "invalid_fiscal_date_rule",
     );
+  });
+});
+
+/**
+ * `broker_settled_eur` (ADR-0030, with the amendment of prompt 012 (n)): what
+ * the broker really moved in euros, never computed. Mutants 14 and 18 of
+ * prompt 012 §5.
+ */
+describe("validateShape: broker_settled_eur", () => {
+  const inDollars = (sample: SupportedEvent): SupportedEvent =>
+    ({ ...sample, currency: "USD", fx_rate: "1.1", fx_rate_date: "2026-09-01" }) as SupportedEvent;
+  const types = [
+    SAMPLES.buy,
+    SAMPLES.sell,
+    SAMPLES.dividend,
+    SAMPLES.interest,
+    SAMPLES.standalone_fee,
+  ];
+
+  it("is a known, optional field of exactly the five operations", () => {
+    for (const sample of sampleList()) {
+      const type = sample.type as Parameters<typeof knownFieldsOf>[0];
+      expect(knownFieldsOf(type).includes("broker_settled_eur"), type).toBe(
+        ["buy", "sell", "dividend", "interest", "standalone_fee"].includes(type),
+      );
+    }
+    for (const sample of types) {
+      expect(validateShape(inDollars(sample))).toBeTruthy();
+      expect(
+        validateShape(variant(inDollars(sample), { broker_settled_eur: "1234.56" })),
+      ).toBeTruthy();
+    }
+  });
+
+  it("is refused in euros, where it would only repeat the amount", () => {
+    for (const sample of types) {
+      rejects(
+        variant(sample, { currency: "EUR", fx_rate: "1", broker_settled_eur: "10" }),
+        "broker_settled_eur_in_eur",
+      );
+    }
+  });
+
+  it("is never negative: the event type gives the sign", () => {
+    for (const sample of types) {
+      rejects(
+        variant(inDollars(sample), { broker_settled_eur: "-10" }),
+        "broker_settled_eur_negative",
+      );
+    }
+  });
+
+  it("admits a known zero only where it can happen: a dividend or an interest", () => {
+    // A dividend withheld whole at source: nothing entered, and that is known.
+    expect(
+      validateShape(variant(inDollars(SAMPLES.dividend), { broker_settled_eur: "0" })),
+    ).toBeTruthy();
+    expect(
+      validateShape(variant(inDollars(SAMPLES.interest), { broker_settled_eur: "0.00" })),
+    ).toBeTruthy();
+    // A purchase, a sale or a fee that moved nothing describes no real movement.
+    for (const sample of [SAMPLES.buy, SAMPLES.sell, SAMPLES.standalone_fee]) {
+      rejects(variant(inDollars(sample), { broker_settled_eur: "0" }), "broker_settled_eur_zero");
+    }
+  });
+
+  it("is a decimal string like every amount of the ledger", () => {
+    rejects(variant(inDollars(SAMPLES.buy), { broker_settled_eur: 10 }), "invalid_field");
+    rejects(variant(inDollars(SAMPLES.buy), { broker_settled_eur: "1e3" }), "invalid_field");
   });
 });

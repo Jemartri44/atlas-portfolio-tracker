@@ -174,6 +174,16 @@ export interface BuyEvent extends Envelope, OperationFields {
   type: "buy";
   order_id?: Ulid;
   thesis_id?: string;
+  /**
+   * Euros the broker's statement says moved in the account for this operation,
+   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
+   * (n)). The sign comes from the event type, so it is never negative; zero
+   * only in `dividend` and `interest` (a dividend withheld whole at source is a
+   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
+   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
+   * it** — a closed list of modules may, and the architecture test holds it.
+   */
+  broker_settled_eur?: DecimalString;
 }
 
 export interface SellEvent extends Envelope, OperationFields {
@@ -181,6 +191,16 @@ export interface SellEvent extends Envelope, OperationFields {
   order_id?: Ulid;
   withholding?: DecimalString;
   thesis_id?: string;
+  /**
+   * Euros the broker's statement says moved in the account for this operation,
+   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
+   * (n)). The sign comes from the event type, so it is never negative; zero
+   * only in `dividend` and `interest` (a dividend withheld whole at source is a
+   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
+   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
+   * it** — a closed list of modules may, and the architecture test holds it.
+   */
+  broker_settled_eur?: DecimalString;
 }
 
 /**
@@ -265,6 +285,16 @@ export interface DividendEvent extends Envelope {
   broker_ref?: string;
   fingerprint: string;
   notes?: string;
+  /**
+   * Euros the broker's statement says moved in the account for this operation,
+   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
+   * (n)). The sign comes from the event type, so it is never negative; zero
+   * only in `dividend` and `interest` (a dividend withheld whole at source is a
+   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
+   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
+   * it** — a closed list of modules may, and the architecture test holds it.
+   */
+  broker_settled_eur?: DecimalString;
 }
 
 export interface InterestEvent extends Envelope {
@@ -279,6 +309,16 @@ export interface InterestEvent extends Envelope {
   broker_ref?: string;
   fingerprint: string;
   notes?: string;
+  /**
+   * Euros the broker's statement says moved in the account for this operation,
+   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
+   * (n)). The sign comes from the event type, so it is never negative; zero
+   * only in `dividend` and `interest` (a dividend withheld whole at source is a
+   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
+   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
+   * it** — a closed list of modules may, and the architecture test holds it.
+   */
+  broker_settled_eur?: DecimalString;
 }
 
 export interface FxExchangeEvent extends Envelope {
@@ -332,6 +372,16 @@ export interface StandaloneFeeEvent extends Envelope {
   /** What the charge is (ADR-0021). Absent means `other`; read through `feeKindOf`. */
   fee_kind?: FeeKind;
   fingerprint: string;
+  /**
+   * Euros the broker's statement says moved in the account for this operation,
+   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
+   * (n)). The sign comes from the event type, so it is never negative; zero
+   * only in `dividend` and `interest` (a dividend withheld whole at source is a
+   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
+   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
+   * it** — a closed list of modules may, and the architecture test holds it.
+   */
+  broker_settled_eur?: DecimalString;
 }
 
 export interface ValuationEvent extends Envelope {

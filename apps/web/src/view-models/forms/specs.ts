@@ -183,6 +183,19 @@ const fxRate = (dateField: string): FieldSpec[] => [
   },
 ];
 
+/**
+ * What the broker really moved in euros (ADR-0030): informative, never
+ * computed, only for an operation in another currency — so, like the rate, it
+ * is not even asked for in euros. Left empty, it is unknown, never zero.
+ */
+const brokerSettled = (): FieldSpec => ({
+  name: "broker_settled_eur",
+  label: "Euros según el bróker",
+  kind: "decimal",
+  hint: "Lo que movió el bróker en euros según el extracto, comisión incluida. Solo informativo: si no lo sabes, déjalo vacío.",
+  visibleWhen: { field: "currency", notEquals: "EUR" },
+});
+
 const notes = (): FieldSpec => ({
   name: "notes",
   label: "Notas",
@@ -223,6 +236,7 @@ const tradeFields = (): FieldSpec[] => [
   currency(),
   ...fxRate("trade_date"),
   { name: "fee", label: "Comisión", kind: "decimal", initial: "0", required: true },
+  brokerSettled(),
   { name: "broker_ref", label: "Referencia del bróker", kind: "text" },
   {
     name: "source",
@@ -336,6 +350,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       },
       currency(),
       ...fxRate("value_date"),
+      brokerSettled(),
       {
         name: "source_country",
         label: "País del pagador",

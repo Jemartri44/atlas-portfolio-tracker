@@ -12,6 +12,7 @@
 // read together, and the classification is the thing worth reviewing as a whole.
 
 import { type Effect, type LedgerEntry, Money, Quantity, type Settings } from "@atlas/domain";
+import { brokerSettlementOf } from "@atlas/domain/ecb";
 import type { EventReferences } from "../format/events.js";
 import {
   eventLabel,
@@ -118,6 +119,7 @@ const AMOUNT_FIELDS = new Set([
   "bought_amount",
   "nav_in",
   "nav_out",
+  "broker_settled_eur",
 ]);
 
 const QUANTITY_FIELDS = new Set(["quantity", "quantity_in", "quantity_out"]);
@@ -311,6 +313,36 @@ const fieldOf = (
   return { name, label, kind: "text", text: valueLabel(value) };
 };
 
+/**
+ * The euros the broker moved, **beside** the same movement at the ECB rate the
+ * line recorded (ADR-0030): two derived rows right after the broker's figure.
+ * The domain puts them side by side (`brokerSettlementOf`); nothing here reads
+ * the field by name, and no figure of the application uses it.
+ */
+const withBrokerComparison = (
+  event: Record<string, unknown>,
+  fields: DetailField[],
+): DetailField[] => {
+  const settlement = brokerSettlementOf(event);
+  const at = fields.findIndex((field) => field.name === "broker_settled_eur");
+  if (settlement === undefined || at < 0) {
+    return fields;
+  }
+  const derived = (name: string, amount: Money): DetailField => ({
+    name,
+    label: fieldLabel(name),
+    kind: "amount",
+    amount,
+    decimals: 2,
+  });
+  return [
+    ...fields.slice(0, at + 1),
+    derived("broker_settled_ecb_eur", settlement.ecb_eur),
+    derived("broker_settled_difference_eur", settlement.difference_eur),
+    ...fields.slice(at + 1),
+  ];
+};
+
 /** The fields of an event with legible names, for the detail and for the correction screen. */
 export const eventFields = (
   event: Record<string, unknown>,
@@ -333,7 +365,7 @@ export const eventFields = (
       fields.push(field);
     }
   }
-  return { envelope, fields, technical };
+  return { envelope, fields: withBrokerComparison(event, fields), technical };
 };
 
 export const detailView = (

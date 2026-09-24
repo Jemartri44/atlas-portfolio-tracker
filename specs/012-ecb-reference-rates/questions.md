@@ -227,3 +227,15 @@ Todo lo que he mirado cuadra con el encargo. Lo que he mirado:
 ### 9.3 Bloque 0, paso 2 — una sola corrección viva
 
 - **Predicción de los ficheros dorados, escrita antes de correr la suite**: no se mueve ninguno. `synthetic-v1.jsonl` tiene una sola línea con `corrects_id` (contado con `grep -c`), y los demás, ninguna: la regla no puede disparar en ellos. `synthetic-v1.snapshot.json`, `synthetic-v1.tax.json` y `tax-hand-v1.jsonl`, igual.
+- **Rojo**: los tres tests de la regla se escribieron antes que ella y fallaron; el caso de §3 (anulación de C1 **después** de C2) falló por la razón buena: la proyección lo aceptaba. **Mutantes**: aceptar dos correcciones vivas (5) — muerto; juzgar «viva» con el conjunto final de anulaciones (17) — muerto; escribir la pareja de `correctEvent` en dos escrituras con un almacén que falla en la segunda (4) — muerto.
+- **La predicción se cumplió**: la suite entera en verde sin regenerar ningún dorado.
+- **El argumento de ADR-0026 Parte C se sostiene** (§6): ningún camino de la aplicación escribe dos correcciones vivas.
+
+### 9.4 Bloque 0, paso 3 — `broker_settled_eur`
+
+- **Rojo**: los cinco tests de validación fallaron antes de existir el campo (el campo desconocido se rechazaba).
+- **Códigos nuevos**, cada uno con su literal y en su llamada: `broker_settled_eur_in_eur`, `broker_settled_eur_negative`, `broker_settled_eur_zero`. Los caza el escáner de `tests/messages.test.ts` (`invalid(`), y los traducen las dos interfaces.
+- **Quién lo lee** (lista cerrada, test de arquitectura con las tres formas de lectura): `schema/validate.ts` y `ecb/broker-settlement.ts`, la única función que lo pone al lado del importe al tipo del BCE. Las interfaces lo enseñan a través de ella: la web, en el detalle del movimiento (dos filas derivadas, enmascaradas); **la consola no tiene un detalle de movimiento**, así que lo dice en la vista previa de `atlas add`, antes de confirmar, que es el único sitio donde enseña un movimiento entero. Que la dirección diga si quiere más.
+- **En la web, solo en los formularios de compra, venta y dividendo**: el interés y la comisión suelta no tienen formulario en la web (se registran desde la consola, que sí lleva el *flag* en los cinco).
+- **Mutantes**: leerlo fuera de la lista (por punto, en el dominio; por desestructuración, en la web) — muertos; meterlo en la huella — muerto; aceptarlo en euros — muerto; aceptar un cero en una compra — muerto; rechazar el cero de un dividendo — muerto; escribirlo como `"0"` cuando no se conoce (web y consola) — muertos.
+- **Paquete web**: arranque **73,4** (73,5 en `develop`): el dominio +108 bytes por la regla de una corrección viva y **+208 bytes por la validación de `broker_settled_eur`** (dicho aparte, como pidió la dirección), medido quitando cada una y construyendo otra vez; la escritura en la carpeta que sale del arranque, −0,4. Total **238,9**; el techo del total sube a **239,9** en su propio commit (`0fcf20c`), con la tendencia escrita en `check-bundle.mjs`. Todo lo del BCE queda fuera del arranque, y la comprobación de forma del *build* lo exige desde `f276cd9`.

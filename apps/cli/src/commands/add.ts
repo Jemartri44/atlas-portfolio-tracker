@@ -30,7 +30,16 @@ const CASH = ["account", "value-date", "amount", "currency", "fx-rate", "fx-rate
 export const ADD_SPECS: Record<string, DraftSpec> = {
   buy: {
     type: "buy",
-    flags: [...COMMON, "asset", "quantity", "unit-price", "amount", "order", "thesis"],
+    flags: [
+      ...COMMON,
+      "asset",
+      "quantity",
+      "unit-price",
+      "amount",
+      "order",
+      "thesis",
+      "broker-settled-eur",
+    ],
     defaults: { fee: "0", source: "manual" },
   },
   sell: {
@@ -44,6 +53,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "order",
       "withholding",
       "thesis",
+      "broker-settled-eur",
     ],
     defaults: { fee: "0", source: "manual" },
   },
@@ -80,6 +90,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "per-unit",
       "broker-ref",
       "notes",
+      "broker-settled-eur",
     ],
     defaults: { withholding_origin: "0", withholding_spain: "0" },
   },
@@ -95,6 +106,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "fx-rate-date",
       "broker-ref",
       "notes",
+      "broker-settled-eur",
     ],
     defaults: { withholding_spain: "0" },
   },
@@ -155,6 +167,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "fx-rate-date",
       "description",
       "fee-kind",
+      "broker-settled-eur",
     ],
   },
   valuation: {

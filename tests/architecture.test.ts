@@ -165,6 +165,46 @@ describe("architecture: @atlas/domain imports nothing", () => {
   });
 
   /**
+   * **`broker_settled_eur` is informative** (ADR-0030): no projection, no tax
+   * figure and no balance reads it. A closed list of modules may: the
+   * validation, and the one function that sets it beside the ECB figure for the
+   * interfaces to show. Checked in the domain **and** in both interfaces, with
+   * the three ways of reading a field the test of the valuations above learnt
+   * — a dot, a destructuring (which once slipped past it) and a string index.
+   */
+  it("keeps every read of broker_settled_eur on a closed list", () => {
+    const allowed = new Set([
+      join(domainSrc, "schema", "validate.ts"),
+      join(domainSrc, "ecb", "broker-settlement.ts"),
+    ]);
+    const reads = [
+      /\.broker_settled_eur\b/,
+      /\{[^{}]*\bbroker_settled_eur\b[^{}]*\}\s*=[^=]/,
+      /\[\s*["'`]broker_settled_eur["'`]\s*\]/,
+    ];
+    const apps = join(repoRoot, "apps");
+    const files = [
+      ...listTsFiles(domainSrc),
+      ...readdirSync(apps).flatMap((app) => {
+        const src = join(apps, app, "src");
+        return statSync(src, { throwIfNoEntry: false })?.isDirectory() === true
+          ? listSourceFiles(src)
+          : [];
+      }),
+    ];
+    const violations = files
+      .filter((file) => !allowed.has(file))
+      .filter((file) => {
+        const code = readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, " ")
+          .replace(/\/\/[^\n]*/g, " ");
+        return reads.some((pattern) => pattern.test(code));
+      })
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+  });
+
+  /**
    * And the gate stays a gate: `prices.ts` may lean on the types of the state
    * and on money and dates, never on a projection the state does not already
    * carry. A door that starts importing the rest of the house is no longer a

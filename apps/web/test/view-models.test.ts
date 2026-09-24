@@ -368,6 +368,38 @@ describe("detailView", () => {
     );
   });
 
+  it("shows the broker's euros beside the same movement at the ECB rate, as masked amounts", () => {
+    const events = goldenEvents();
+    const state = projectLedger(events, { collectErrors: true });
+    const entry = ledgerEntries(state, events).find(
+      (row) =>
+        row.event.type === "buy" &&
+        (row.event as unknown as { currency: string }).currency !== "EUR" &&
+        (row.event as unknown as { unit_price?: string }).unit_price !== undefined,
+    );
+    if (entry === undefined) {
+      throw new Error("el golden no trae ninguna compra en divisa");
+    }
+    const withBroker = {
+      ...entry,
+      event: { ...entry.event, broker_settled_eur: "999.99" },
+    } as typeof entry;
+    const fields = detailView(withBroker).fields;
+    const at = fields.findIndex((field) => field.name === "broker_settled_eur");
+    expect(
+      fields.slice(at, at + 3).map((field) => [field.name, field.kind, field.amount?.currency]),
+    ).toEqual([
+      ["broker_settled_eur", "amount", "EUR"],
+      ["broker_settled_ecb_eur", "amount", "EUR"],
+      ["broker_settled_difference_eur", "amount", "EUR"],
+    ]);
+    expect(fields[at]?.label).toBe("Euros según el bróker");
+    // Without the field, nothing is added.
+    expect(detailView(entry).fields.some((field) => field.name.startsWith("broker_settled"))).toBe(
+      false,
+    );
+  });
+
   /*
    * "Corregir" and the screen behind it have to resolve the same thing.
    * `editable` used to be a blacklist while `routes/movimientos/edit.tsx`
@@ -918,5 +950,35 @@ describe("the form specs", () => {
     // Ambiguous: it goes back as typed, and `inputErrors` stops the form first.
     expect(normaliseDecimal("1000.25")).toBe("1000.25");
     expect(normaliseDecimal("1.5")).toBe("1.5");
+  });
+});
+
+describe("the broker's euros in the forms", () => {
+  it("are asked only for an operation in another currency, and dropped in euros", () => {
+    for (const slug of ["buy", "sell", "dividend"]) {
+      const spec = FORM_SPECS.find((candidate) => candidate.slug === slug);
+      const field = spec?.fields.find((candidate) => candidate.name === "broker_settled_eur");
+      expect(field?.visibleWhen, slug).toEqual({ field: "currency", notEquals: "EUR" });
+      expect(field?.required, slug).toBeUndefined();
+      const values = { ...initialValues(spec as never), broker_settled_eur: "10", currency: "EUR" };
+      expect(
+        (toDraft(spec as never, values) as Record<string, unknown>).broker_settled_eur,
+        slug,
+      ).toBeUndefined();
+      expect(
+        (toDraft(spec as never, { ...values, currency: "USD" }) as Record<string, unknown>)
+          .broker_settled_eur,
+      ).toBe("10");
+      // Not typed means **unknown**: it is left out, never written as "0".
+      expect(
+        (
+          toDraft(spec as never, { ...initialValues(spec as never), currency: "USD" }) as Record<
+            string,
+            unknown
+          >
+        ).broker_settled_eur,
+        slug,
+      ).toBeUndefined();
+    }
   });
 });
