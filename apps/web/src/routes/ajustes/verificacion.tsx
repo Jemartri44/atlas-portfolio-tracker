@@ -26,7 +26,8 @@ import { describeFinding } from "../../format/messages/findings.js";
 import { nameIndex } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { maskFigures } from "../../format/privacy.js";
-import { store, usePrivacy } from "../../ledger/state.js";
+import { canLinkFolder } from "../../ledger/source.js";
+import { usePrivacy } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { attentionItems } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
@@ -220,7 +221,7 @@ export default function VerificacionRoute(): JSX.Element {
               <Notice severity="info" title="La copia de seguridad sigue siendo tuya">
                 La verificación dice si tus datos son coherentes, no si están a salvo.{" "}
                 <Show
-                  when={store.source()?.kind === "directory"}
+                  when={canLinkFolder()}
                   fallback="Para tener una copia, exporta tus datos desde Ajustes y guarda el archivo fuera de este dispositivo."
                 >
                   Exporta desde Ajustes, o haz la copia desde la línea de órdenes con{" "}

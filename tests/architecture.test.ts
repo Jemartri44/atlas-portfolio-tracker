@@ -730,6 +730,46 @@ describe("architecture: apps/web", () => {
    * web imports subpaths only. `scripts/check-bundle.mjs` verifies the same
    * thing on the built output; this one says it in the source, where the fix is.
    */
+  /**
+   * **The browser never writes in a folder of the disk** (feature 012,
+   * decision of the direction). The File System Access API cannot create a
+   * file exclusively, so the web cannot take the lock of the console's folder;
+   * without the lock, a write of the web there could overwrite a line of the
+   * console in silence. So the web keeps its ledger in its own storage and
+   * only **reads** from the folder, and every writing primitive of the API is
+   * forbidden here, in the web and in the browser adapters. IndexedDB's own
+   * `"readwrite"` transactions are not this: they are positional, never a
+   * `mode:` option.
+   */
+  it("never writes in a folder of the disk from the browser", () => {
+    const writing = [
+      /\.createWritable\s*\(/,
+      /\.createSyncAccessHandle\s*\(/,
+      /\bcreate\s*:\s*true\b/,
+      /\.removeEntry\s*\(/,
+      /\.move\s*\(/,
+      /\bmode\s*:\s*["'`]readwrite["'`]/,
+      /showSaveFilePicker/,
+    ];
+    const browserAdapters = join(
+      repoRoot,
+      "packages",
+      "adapters",
+      "src",
+      "ledger-store",
+      "browser",
+    );
+    const violations = [...listSourceFiles(webSrc), ...listSourceFiles(browserAdapters)]
+      .filter((file) => {
+        const code = readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, " ")
+          .replace(/\/\/[^\n]*/g, " ");
+        return writing.some((pattern) => pattern.test(code));
+      })
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+  });
+
   it("never imports node builtins or the adapters barrel", () => {
     const violations: string[] = [];
     for (const file of listSourceFiles(webSrc)) {

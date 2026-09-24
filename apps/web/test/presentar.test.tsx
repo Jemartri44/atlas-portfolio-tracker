@@ -7,39 +7,22 @@
 // wrong: the figures **come preloaded**, a preloaded figure is **masked** until
 // its field has the focus (§5.10), and what is written is what is on the form.
 
-import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
+import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { decodeLine, type UseCaseDeps } from "@atlas/domain";
 import { beforeEach, describe, expect, it } from "vitest";
 import { loadInto } from "../src/ledger/actions.js";
 import { store } from "../src/ledger/state.js";
 import Presentar from "../src/routes/fiscal/presentar.jsx";
 import { goldenText } from "./helpers/golden.js";
+import { MemoryBlob } from "./helpers/memory-blob.js";
 import { press, settle, show, text, type, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
-class WritableBlob implements LedgerBlob {
-  readonly label = "memoria";
-  text: string;
-  readonly archives = new Map<string, string>();
-  constructor(text: string) {
-    this.text = text;
-  }
-  async read(): Promise<Uint8Array> {
-    return new TextEncoder().encode(this.text);
-  }
-  async write(bytes: Uint8Array): Promise<void> {
-    this.text = new TextDecoder().decode(bytes);
-  }
-  async writeArchive(name: string, bytes: Uint8Array): Promise<void> {
-    this.archives.set(name, new TextDecoder().decode(bytes));
-  }
-}
-
-let blob: WritableBlob;
+let blob: MemoryBlob;
 
 const open = async (): Promise<void> => {
-  blob = new WritableBlob(goldenText());
+  blob = new MemoryBlob(goldenText());
   let counter = 0;
   const deps: UseCaseDeps = {
     store: new BlobLedgerStore(blob),

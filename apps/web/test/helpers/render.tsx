@@ -5,7 +5,7 @@
 //
 // Only for files that declare `@vitest-environment happy-dom`.
 
-import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
+import { BlobLedgerStore } from "@atlas/adapters/blob";
 import type { UseCaseDeps } from "@atlas/domain";
 import { Route, Router } from "@solidjs/router";
 import type { JSX } from "solid-js";
@@ -15,20 +15,7 @@ import { loadInto } from "../../src/ledger/actions.js";
 import { store } from "../../src/ledger/state.js";
 import { AppShell } from "../../src/shell/AppShell.jsx";
 import { goldenText } from "./golden.js";
-
-class MemoryBlob implements LedgerBlob {
-  readonly label = "memoria";
-  constructor(readonly text: string) {}
-  async read(): Promise<Uint8Array> {
-    return new TextEncoder().encode(this.text);
-  }
-  async write(): Promise<void> {
-    throw new Error("estas pruebas no escriben");
-  }
-  async writeArchive(): Promise<void> {
-    throw new Error("estas pruebas no escriben");
-  }
-}
+import { MemoryBlob } from "./memory-blob.js";
 
 /**
  * The day every test stands on, and the one thing that moves it. Since
@@ -40,7 +27,7 @@ const DEFAULT_INSTANT = "2029-07-01T10:00:00.000Z";
 let instant = DEFAULT_INSTANT;
 
 const deps = (text: string): UseCaseDeps => ({
-  store: new BlobLedgerStore(new MemoryBlob(text)),
+  store: new BlobLedgerStore(new MemoryBlob(text, true)),
   clock: { now: () => new Date(instant) },
   random: (target) => target.fill(7),
 });

@@ -21,7 +21,6 @@ if (root !== null) {
     return <App />;
   }, root);
 
-  // Reopen whatever ledger was open. It can end in "reconnect", which needs a
-  // click, so it is a screen and not a silent retry (research.md §4).
+  // Reopen whatever ledger was open, with no click: it lives in this browser.
   void restoreLedger();
 }

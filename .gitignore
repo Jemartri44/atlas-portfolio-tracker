@@ -43,6 +43,7 @@ plan-financiero.md
 # Build and test output
 coverage/
 dist-test/
+dist-test-browser/
 *.tsbuildinfo
 
 # TypeScript output emitted **next to its source**, which happens whenever tsc

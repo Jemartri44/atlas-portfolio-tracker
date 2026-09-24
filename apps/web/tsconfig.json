@@ -10,7 +10,7 @@
     "jsxImportSource": "solid-js",
     "types": ["node", "vite-plugin-pwa/client"]
   },
-  "include": ["src", "test"],
+  "include": ["src", "test", "../../packages/adapters/test/fake-idb.ts"],
   "references": [
     {
       "path": "../../packages/domain"

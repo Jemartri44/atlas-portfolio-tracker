@@ -4,15 +4,14 @@
 // `replace` (compact only) saves the original bytes under an archive name that
 // is never overwritten, and a line written by a newer schema aborts the load.
 //
-// It knows nothing about files, directories or IndexedDB: that is the whole
-// point. The three byte-level methods of `LedgerBlob` are the only thing that
-// changes between the disk and the browser, and they are the only thing that
-// cannot be tested in Node. This class is exercised by the same contract tests
+// It knows nothing about IndexedDB: that is the whole point. The two
+// byte-level methods of `LedgerBlob` are the only thing that changes with the
+// medium, and the comparison of the etag lives **inside** the one that writes,
+// so it happens in the same atomic step as the write (feature 012, block 0). This class is exercised by the same contract tests
 // that `MemoryLedgerStore` and `FileLedgerStore` pass.
 
 import {
   ArchiveExistsError,
-  ConflictError,
   CURRENT_LEDGER_SCHEMA,
   decodeLine,
   encodeLine,
@@ -29,17 +28,33 @@ const NEWLINE = 0x0a;
 
 /**
  * Access to the bytes of the ledger and of its archives. Implemented by the
- * browser handles (`./browser`) and by a trivial in-memory double in the tests.
+ * browser's own storage (`./browser`) and by trivial in-memory doubles in the
+ * tests.
+ *
+ * **There is no way to write without comparing** (feature 012, block 0). A
+ * `read` followed by a separate `write` was a window: another tab could write
+ * in between, and one of the two lines was lost without anyone knowing. So the
+ * only write is `update`, which compares and writes as **one** atomic step of
+ * the medium — one IndexedDB transaction in the browser.
  */
 export interface LedgerBlob {
-  /** Human description for the interface: "ledger.jsonl en Cartera", "almacenamiento del navegador". */
+  /** Human description for the interface: "almacenamiento del navegador". */
   readonly label: string;
   /** Current bytes; empty when the ledger does not exist yet. */
   read(): Promise<Uint8Array>;
-  /** Replaces the content with these bytes, atomically where the medium allows it. */
-  write(bytes: Uint8Array): Promise<void>;
-  /** Writes an archive under that name; must reject when it already exists. */
-  writeArchive(name: string, bytes: Uint8Array): Promise<void>;
+  /**
+   * In one atomic step: reads the current bytes, throws ConflictError unless
+   * their SHA-256 is `expectedEtag`, saves them under `archiveName` when one is
+   * given (BlobArchiveExists, and nothing written, when it already exists) and
+   * replaces them with `produce(current)`. Resolves with the bytes written.
+   * `produce` must be synchronous: nothing may wait between the read and the
+   * write.
+   */
+  update(
+    expectedEtag: string,
+    produce: (current: Uint8Array) => Uint8Array,
+    archiveName?: string,
+  ): Promise<Uint8Array>;
 }
 
 /** Raised by a blob when the archive it was asked to write is already there. */
@@ -103,20 +118,12 @@ export class BlobLedgerStore implements LedgerStore {
     return { events, etag: sha256Hex(bytes), lines };
   }
 
-  /** The current bytes, or ConflictError when they are not the ones the caller read. */
-  private async currentBytes(etag: string): Promise<Uint8Array> {
-    const bytes = await this.blob.read();
-    if (sha256Hex(bytes) !== etag) {
-      throw new ConflictError();
-    }
-    return bytes;
-  }
-
   async append(events: readonly LedgerEvent[], etag: string): Promise<{ etag: string }> {
-    const bytes = await this.currentBytes(etag);
-    const separator = bytes.length > 0 && bytes[bytes.length - 1] !== NEWLINE ? "\n" : "";
-    const next = concat(bytes, utf8Encode(separator + serialise(events)));
-    await this.blob.write(next);
+    const addition = serialise(events);
+    const next = await this.blob.update(etag, (bytes) => {
+      const separator = bytes.length > 0 && bytes[bytes.length - 1] !== NEWLINE ? "\n" : "";
+      return concat(bytes, utf8Encode(separator + addition));
+    });
     return { etag: sha256Hex(next) };
   }
 
@@ -130,17 +137,16 @@ export class BlobLedgerStore implements LedgerStore {
         archive_name: archiveName,
       });
     }
-    const bytes = await this.currentBytes(etag);
+    const content = utf8Encode(serialise(events));
+    let next: Uint8Array;
     try {
-      await this.blob.writeArchive(archiveName, bytes);
+      next = await this.blob.update(etag, () => content, archiveName);
     } catch (error) {
       if (error instanceof BlobArchiveExists) {
         throw new ArchiveExistsError(archiveName);
       }
       throw error;
     }
-    const next = utf8Encode(serialise(events));
-    await this.blob.write(next);
     return { etag: sha256Hex(next) };
   }
 }

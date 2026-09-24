@@ -68,10 +68,7 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
 );
 
 /** Whether a ledger is open or on its way: only the first run has none. */
-const hasLedger = (): boolean => {
-  const phase = store.load().phase;
-  return phase !== "unconfigured" && phase !== "reconnect";
-};
+const hasLedger = (): boolean => store.load().phase !== "unconfigured";
 
 /**
  * Settings are current on their page, on everything under it, and — with data

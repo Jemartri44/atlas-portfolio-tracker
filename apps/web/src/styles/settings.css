@@ -149,30 +149,6 @@
   margin-top: var(--space-2);
 }
 
-/* The title and its tag on one line, the tag flush with the text under it. */
-.choice-head {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
-}
-
-/* The folder where this browser has none: one line saying where it works. */
-.choice-elsewhere {
-  align-items: start;
-  color: var(--c-text-2);
-  display: flex;
-  font-size: var(--text-sm);
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.choice-elsewhere > .icon-sm {
-  color: var(--c-text-3);
-  flex: none;
-  margin-top: var(--space-0);
-}
-
 @media (min-width: 64rem) {
   .first-run {
     margin-inline: auto;

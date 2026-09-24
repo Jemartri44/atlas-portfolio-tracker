@@ -6,7 +6,7 @@
 // This is the part where a bug costs data, so it is tested against the real
 // golden ledger instead of a toy one.
 
-import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
+import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { type Draft, decodeLine, type SupportedEvent, type UseCaseDeps } from "@atlas/domain";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bootDecision, loadInto, reloadLedger, restoreLedger } from "../src/ledger/actions.js";
@@ -21,30 +21,7 @@ import {
   reverse,
 } from "../src/ledger/write.js";
 import { goldenText } from "./helpers/golden.js";
-
-class MemoryBlob implements LedgerBlob {
-  readonly label = "memoria";
-  text: string;
-  readonly archives = new Map<string, string>();
-  writes = 0;
-
-  constructor(text: string) {
-    this.text = text;
-  }
-
-  async read(): Promise<Uint8Array> {
-    return new TextEncoder().encode(this.text);
-  }
-
-  async write(bytes: Uint8Array): Promise<void> {
-    this.writes += 1;
-    this.text = new TextDecoder().decode(bytes);
-  }
-
-  async writeArchive(name: string, bytes: Uint8Array): Promise<void> {
-    this.archives.set(name, new TextDecoder().decode(bytes));
-  }
-}
+import { MemoryBlob } from "./helpers/memory-blob.js";
 
 /**
  * A fixed clock and a **varying** random source: with both fixed, two events
@@ -338,12 +315,14 @@ describe("changing the configuration", () => {
  * landed on the opening screen instead of the summary (review of 2026-09-18).
  */
 describe("the boot", () => {
+  const removed: string[] = [];
   const fakeWindow = (stored: string | undefined): void => {
+    removed.length = 0;
     (globalThis as { window?: unknown }).window = {
       localStorage: {
         getItem: (key: string) => (key === "atlas.source" ? (stored ?? null) : null),
         setItem: () => undefined,
-        removeItem: () => undefined,
+        removeItem: (key: string) => removed.push(key),
       },
     };
   };
@@ -361,14 +340,12 @@ describe("the boot", () => {
   });
 
   it("reads the remembered choice as a rule", () => {
-    // A ledger inside this browser is reopened with no gesture at all: on a
-    // phone it is the only path there is (decision (l)).
-    expect(bootDecision("browser", false)).toBe("browser");
-    expect(bootDecision("browser", true)).toBe("browser");
-    // A folder is only worth trying where the API exists.
-    expect(bootDecision("directory", true)).toBe("directory");
-    expect(bootDecision("directory", false)).toBe("nothing");
-    expect(bootDecision(undefined, true)).toBe("nothing");
+    // A ledger inside this browser is reopened with no gesture at all.
+    expect(bootDecision("browser")).toBe("browser");
+    // The web no longer writes in the console's folder (feature 012): a
+    // session that did is not reopened, and the opening screen says why.
+    expect(bootDecision("directory")).toBe("retired-folder");
+    expect(bootDecision(undefined)).toBe("nothing");
   });
 
   it("ends unconfigured when nothing was remembered", async () => {
@@ -391,10 +368,11 @@ describe("the boot", () => {
     }
   });
 
-  it("does not try a folder on a browser that has no file access", async () => {
+  it("does not reopen a folder: says the web no longer writes there, once", async () => {
     fakeWindow("directory");
     await restoreLedger();
-    expect(store.load().phase).toBe("unconfigured");
+    expect(store.load()).toEqual({ phase: "unconfigured", retiredFolder: true });
+    expect(removed).toEqual(["atlas.source"]);
   });
 });
 

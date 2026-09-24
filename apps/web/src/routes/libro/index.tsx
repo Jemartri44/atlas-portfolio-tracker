@@ -1,28 +1,27 @@
-// "¿Dónde guardamos tus datos?" — first run and change of file.
+// "Tus datos" — first run, and where a ledger is brought in.
 //
-// The folder goes first where it exists, because it writes the **same**
-// `ledger.jsonl` the CLI uses and there is no copy to keep in sync (ADR-0019).
-// Where it does not exist — every phone, Firefox, Safari (research.md §4) — the
-// browser is the one card, with its limitation written down, never dressed up
-// as a definitive store, and the folder is one line under it saying where it
-// can be used: half a phone screen for an option a phone cannot take was noise
-// (review of 2026-09-19). One primary button per screen: with the folder
-// available, the browser's is secondary.
+// **The ledger of the web lives in this browser**, on every device (feature
+// 012). Until then, on a desktop, the web could write the same `ledger.jsonl`
+// as the console; it no longer does, because two programs writing the same
+// file could overwrite each other's line and the browser has no way to take
+// the folder's lock (decision of the direction; `specs/012-ecb-reference-
+// rates/questions.md`). The folder is still there to **read**: the console's
+// ledger is imported from it, with a confirmation when it replaces something.
 //
-// Two option cards, side by side on a wide screen and centred, because this is
-// a choice and not a screen of data (docs/design/system.md §7.1). Reconnecting
-// is one card. There is no navigation until something is open (D8).
+// One card, never dressed up as a definitive store; the consequence of having
+// two ledgers until the synchronisation exists is written, not hidden. There
+// is no navigation until something is open (D8).
 
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { ErrorView, Icon, Notice, Tag } from "../../components/index.js";
+import { ErrorView, Icon, Notice } from "../../components/index.js";
 import { countOf } from "../../format/number.js";
-import { openBrowserLedger, openDirectoryLedger, reconnect } from "../../ledger/actions.js";
+import { openBrowserLedger } from "../../ledger/actions.js";
 import { toAppError } from "../../ledger/errors.js";
-import { importLedger } from "../../ledger/export.js";
-import { canUseDirectory } from "../../ledger/source.js";
-import { type AppError, messageWithLine, store } from "../../ledger/state.js";
+import { canLinkFolder } from "../../ledger/source.js";
+import { type AppError, store } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { ImportControls } from "./ImportControls.jsx";
 
 export default function LibroRoute(): JSX.Element {
   const navigate = useNavigate();
@@ -32,16 +31,20 @@ export default function LibroRoute(): JSX.Element {
 
   const phase = () => store.load();
   const isOpen = (): boolean => phase().phase === "ready";
+  const retiredFolder = (): boolean => {
+    const current = phase();
+    return current.phase === "unconfigured" && current.retiredFolder === true;
+  };
   const failedError = (): AppError | undefined => {
     const current = phase();
     return current.phase === "failed" ? current.error : undefined;
   };
 
-  const run = async (action: () => Promise<void>): Promise<void> => {
+  const open = async (): Promise<void> => {
     setBusy(true);
     setError(undefined);
     try {
-      await action();
+      await openBrowserLedger();
       if (store.load().phase === "ready") {
         navigate("/", { replace: true });
       }
@@ -52,112 +55,22 @@ export default function LibroRoute(): JSX.Element {
     }
   };
 
-  const onImport = async (event: Event): Promise<void> => {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (file === undefined) {
-      return;
-    }
-    setBusy(true);
-    setError(undefined);
-    try {
-      // `importLedger` validates before opening anything: a file that is not a
-      // ledger leaves the state exactly as it was (inventory V6).
-      const events = await importLedger(await file.text());
-      setImported(events);
-      navigate("/", { replace: true });
-    } catch (failure) {
-      setError(messageWithLine(toAppError(failure)));
-    } finally {
-      setBusy(false);
-      input.value = "";
-    }
-  };
-
-  const Folder = (): JSX.Element => (
-    <article class="card choice" aria-labelledby="h-folder">
-      <span class="choice-glyph" aria-hidden="true">
-        <Icon name="laptop" />
-      </span>
-      <div class="choice-head">
-        <h2 id="h-folder">Una carpeta de tu ordenador</h2>
-        <Tag tone="done" icon="check">
-          Recomendado
-        </Tag>
-      </div>
-      <p>
-        Eliges la carpeta que contiene tu <code>ledger.jsonl</code> y Atlas escribe en{" "}
-        <strong>ese mismo archivo</strong>, el que usa la CLI. Sin copias y sin sincronizar nada. El
-        permiso se recuerda; en una sesión nueva basta un clic.
-      </p>
-      <div class="choice-actions">
-        <button type="button" disabled={busy()} onClick={() => void run(openDirectoryLedger)}>
-          {phase().phase === "reconnect" ? "Elegir otra carpeta" : "Elegir la carpeta"}
-        </button>
-      </div>
-    </article>
-  );
-
-  /** The folder where this browser cannot open one: said in a line, not offered. */
-  const FolderElsewhere = (): JSX.Element => (
-    <p class="choice-elsewhere">
-      <Icon name="laptop" class="icon-sm" />
-      <span>
-        En el ordenador, con Chrome o Edge, Atlas puede guardar tus datos en una carpeta tuya, en el
-        mismo archivo que usa la CLI.
-      </span>
-    </p>
-  );
-
-  const Browser = (): JSX.Element => (
-    <article class="card choice" aria-labelledby="h-browser">
-      <span class="choice-glyph" aria-hidden="true">
-        <Icon name="browser" />
-      </span>
-      <h2 id="h-browser">El almacenamiento del navegador</h2>
-      <p>
-        Tus datos viven dentro del navegador de este dispositivo. Es la vía del móvil, de Firefox y
-        de Safari, que no abren archivos del disco.
-      </p>
-      <p class="card-note">
-        <strong>No es un almacén definitivo</strong>: si borras los datos del sitio, se van con
-        ellos. Expórtalos con frecuencia; Atlas te lo recordará.
-      </p>
-      <div class="choice-actions">
-        <button
-          type="button"
-          class={canUseDirectory() ? "secondary" : undefined}
-          disabled={busy()}
-          onClick={() => void run(openBrowserLedger)}
-        >
-          Usar el almacenamiento del navegador
-        </button>
-        <label class="file-button">
-          <Icon name="import" class="icon-sm" />
-          <span>Importar un archivo</span>
-          <input
-            type="file"
-            class="sr-only"
-            accept=".jsonl,.json,application/x-ndjson,text/plain"
-            disabled={busy()}
-            onChange={(event) => void onImport(event)}
-          />
-        </label>
-      </div>
-      <Show when={imported() !== undefined}>
-        <p class="card-note">
-          {countOf(imported() ?? 0, "movimiento importado", "movimientos importados")}.
-        </p>
-      </Show>
-    </article>
-  );
-
   return (
     <div class="first-run">
       <PageHeader
-        title={isOpen() ? "Cambiar de archivo" : "¿Dónde guardamos tus datos?"}
+        title={isOpen() ? "Cambiar de archivo" : "Tus datos"}
         lead="Atlas funciona en este dispositivo: sin servidor, sin cuenta, sin subir nada a ningún sitio."
       />
+
+      <Show when={retiredFolder()}>
+        <Notice severity="caution" title="La web ya no escribe en la carpeta de la consola">
+          Hasta ahora, en este ordenador, la web guardaba tus datos en la misma carpeta que la
+          consola. Dos programas escribiendo el mismo archivo a la vez podían pisarse una línea, y
+          el navegador no tiene forma de evitarlo. Desde ahora la web guarda tus datos en este
+          navegador y de la carpeta solo lee. Tu <code>ledger.jsonl</code> sigue intacto: impórtalo
+          desde la carpeta para seguir aquí.
+        </Notice>
+      </Show>
 
       <Show when={error() !== undefined}>
         <Notice severity="danger" title="No se ha podido abrir">
@@ -179,58 +92,48 @@ export default function LibroRoute(): JSX.Element {
         {(failure) => <ErrorView error={failure()} title="Tus datos no se han podido leer" />}
       </Show>
 
-      <Show
-        when={phase().phase === "reconnect"}
-        fallback={
-          <Show
-            when={canUseDirectory()}
-            fallback={
-              <div class="choices is-single">
-                <Browser />
-                <FolderElsewhere />
-              </div>
-            }
-          >
-            <div class="choices">
-              <Folder />
-              <Browser />
-            </div>
-          </Show>
-        }
-      >
-        <article class="card choice is-single" aria-labelledby="h-reconnect">
+      <div class="choices is-single">
+        <article class="card choice" aria-labelledby="h-browser">
           <span class="choice-glyph" aria-hidden="true">
-            <Icon name="laptop" />
+            <Icon name="browser" />
           </span>
-          <h2 id="h-reconnect">Reconectar la carpeta</h2>
+          <h2 id="h-browser">Tus datos, en este navegador</h2>
           <p>
-            El navegador recuerda qué carpeta era, pero el permiso caduca al cerrar todas las
-            pestañas: hace falta un clic tuyo para devolverlo.
+            Atlas guarda tus datos dentro del navegador de este dispositivo. Puedes empezar de cero
+            o traer los que ya tengas: un archivo exportado o, en el ordenador, el libro de la
+            consola.
           </p>
+          <p class="card-note">
+            <strong>No es un almacén definitivo</strong>: si borras los datos del sitio, se van con
+            ellos. Expórtalos con frecuencia; Atlas te lo recordará.
+          </p>
+          <Show when={canLinkFolder()}>
+            <p class="card-note">
+              La web y la consola <strong>no comparten un libro vivo</strong>: lo que registres en
+              una no aparece en la otra hasta que exportes e importes.
+            </p>
+          </Show>
           <div class="choice-actions">
-            <button
-              type="button"
-              disabled={busy()}
-              onClick={() => {
-                const current = phase();
-                if (current.phase === "reconnect") {
-                  void run(() => reconnect(current.handle));
-                }
-              }}
-            >
-              Reconectar
-            </button>
-            <button
-              type="button"
-              class="secondary"
-              disabled={busy()}
-              onClick={() => void run(openDirectoryLedger)}
-            >
-              Elegir otra carpeta
+            <button type="button" disabled={busy()} onClick={() => void open()}>
+              {isOpen() ? "Seguir con los datos de este navegador" : "Empezar en este navegador"}
             </button>
           </div>
+          <ImportControls
+            busy={busy()}
+            setBusy={setBusy}
+            onError={setError}
+            onImported={(events) => {
+              setImported(events);
+              navigate("/", { replace: true });
+            }}
+          />
+          <Show when={imported() !== undefined}>
+            <p class="card-note">
+              {countOf(imported() ?? 0, "movimiento importado", "movimientos importados")}.
+            </p>
+          </Show>
         </article>
-      </Show>
+      </div>
     </div>
   );
 }

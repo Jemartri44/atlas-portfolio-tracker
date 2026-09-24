@@ -14,7 +14,6 @@ import {
   daysSinceExport,
   EXPORT_REMINDER_DAYS,
   exportIsOverdue,
-  type LedgerSource,
   rememberedKind,
   sourceLabel,
   sourceShortLabel,
@@ -25,13 +24,6 @@ const browser = (lastExportAt?: string): BrowserSource => ({
   persisted: true,
   ...(lastExportAt === undefined ? {} : { lastExportAt }),
 });
-
-const directory: LedgerSource = {
-  kind: "directory",
-  directoryName: "atlas",
-  fileName: "ledger.jsonl",
-  permission: "granted",
-};
 
 describe("daysSinceExport", () => {
   it("counts whole days, and a day is 86.400.000 ms", () => {
@@ -63,28 +55,21 @@ describe("exportIsOverdue", () => {
     expect(exportIsOverdue(browser("2026-09-10T00:00:00.000Z"), "2026-09-18")).toBe(true);
     expect(exportIsOverdue(browser("2026-06-18T00:00:00.000Z"), "2026-09-18")).toBe(true);
   });
-
-  it("says nothing about a ledger that is a file on the disk", () => {
-    // There the CLI and the backup already exist: nothing to nag about.
-    expect(exportIsOverdue(directory, "2026-09-18")).toBe(false);
-  });
 });
 
 describe("sourceLabel", () => {
-  it("names the file and its folder, or the browser storage", () => {
-    expect(sourceLabel(directory)).toBe("ledger.jsonl · atlas");
+  it("names the browser storage, where the ledger of the web always lives", () => {
     expect(sourceLabel(browser())).toBe("Almacenamiento del navegador");
   });
 });
 
 describe("sourceShortLabel", () => {
   it("says the same thing in what the status bar of a phone has", () => {
-    expect(sourceShortLabel(directory)).toBe("ledger.jsonl");
     expect(sourceShortLabel(browser())).toBe("Navegador");
   });
 
   it("is never longer than the full label", () => {
-    for (const source of [directory, browser(), browser("2026-09-11T08:00:00.000Z")]) {
+    for (const source of [browser(), browser("2026-09-11T08:00:00.000Z")]) {
       expect(sourceShortLabel(source).length).toBeLessThanOrEqual(sourceLabel(source).length);
     }
   });

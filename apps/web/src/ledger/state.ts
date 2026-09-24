@@ -19,7 +19,7 @@ import {
   type UseCaseDeps,
 } from "@atlas/domain";
 import { createMemo, createRoot, createSignal } from "solid-js";
-import type { DirectorySource, LedgerSource } from "./source.js";
+import type { LedgerSource } from "./source.js";
 
 export interface LedgerSnapshot {
   events: readonly LedgerEvent[];
@@ -50,8 +50,12 @@ export const messageWithLine = (error: AppError): string =>
     : `Línea ${error.line} del archivo: ${error.message}`;
 
 export type LoadPhase =
-  | { phase: "unconfigured" }
-  | { phase: "reconnect"; directory: DirectorySource; handle: FileSystemDirectoryHandle }
+  /**
+   * Nothing open. `retiredFolder`: the last session wrote in the console's
+   * folder, which the web no longer does (feature 012), and the opening screen
+   * has to say so instead of starting from an empty ledger as if nothing were.
+   */
+  | { phase: "unconfigured"; retiredFolder?: true }
   | { phase: "loading"; source?: LedgerSource }
   | { phase: "ready"; source: LedgerSource; snapshot: LedgerSnapshot }
   | { phase: "failed"; source?: LedgerSource; error: AppError };

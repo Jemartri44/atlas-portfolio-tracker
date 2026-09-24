@@ -35,11 +35,18 @@ export const toAppError = (error: unknown): AppError => {
       ...(typeof line === "number" ? { line } : {}),
     };
   }
+  if (error instanceof Error && error.name === "NoLedgerInFolder") {
+    return {
+      code: "no_ledger_in_folder",
+      message:
+        "En esa carpeta no hay ningún ledger.jsonl: elige la carpeta donde la consola guarda tus datos. No se ha tocado nada.",
+    };
+  }
   if (error instanceof DOMException && error.name === "NotAllowedError") {
     return {
       code: "permission_denied",
       message:
-        "El navegador ha denegado el acceso a la carpeta de tus datos. Vuelve a conectarla para seguir.",
+        "El navegador ha denegado el permiso para leer la carpeta. Vuelve a elegirla y concédelo para seguir; no se ha tocado nada.",
       action: { label: "Abrir tus datos", to: "/libro" },
     };
   }
@@ -65,7 +72,7 @@ export const toAppError = (error: unknown): AppError => {
     return {
       code: "storage_unavailable",
       message:
-        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados). Abre tus datos desde una carpeta, o usa otro navegador.",
+        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados), y tus datos viven en él. Permite los datos del sitio o usa otro navegador.",
       action: { label: "Abrir tus datos", to: "/libro" },
     };
   }
