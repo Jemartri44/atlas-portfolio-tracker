@@ -32,7 +32,8 @@ import { createUlidGenerator, isUlid, type Ulid } from "../ids/ulid.js";
 import type { PendingDraftStore } from "../ports/draft-store.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState } from "../projections/state.js";
-import type { Draft } from "../schema/events.js";
+import type { Draft, LedgerEvent } from "../schema/events.js";
+import { fingerprintOf } from "../schema/fingerprint.js";
 import type { UseCaseDeps } from "../usecases/deps.js";
 import { previewEvent } from "../usecases/preview-event.js";
 import { type RecordOptions, type RecordResult, recordEvent } from "../usecases/record-event.js";
@@ -197,6 +198,30 @@ export const pendingDraftStatus = (
     return { kind: "needs_rate", currencies: [...new Set(missing.map((point) => point.currency))] };
   }
   return { kind: "confirmable", event, proposed };
+};
+
+/**
+ * The events already in the ledger that **are** this draft: in force, with its
+ * fingerprint (which does not include the rate), and recorded at or after the
+ * draft was saved. That is a confirmation whose removal of the draft did not
+ * happen — a cut, or a failure of the store of drafts —, and confirming again
+ * only removes the draft, never offers to record it twice (review of PR #75).
+ * An identical operation recorded **before** the draft was saved is another
+ * operation, and it is not this.
+ */
+export const draftRecordedAs = (
+  state: LedgerState,
+  events: readonly LedgerEvent[],
+  draft: PendingDraft,
+): string[] => {
+  const fingerprint = fingerprintOf(draft.event as unknown as Draft);
+  const same = new Set(
+    fingerprint === undefined ? [] : (state.fingerprints.get(fingerprint) ?? []),
+  );
+  // `fingerprints` holds only the events in force: a reversed one is not there.
+  return events
+    .filter((event) => same.has(event.id) && event.recorded_at >= draft.saved_at)
+    .map((event) => event.id);
 };
 
 /**

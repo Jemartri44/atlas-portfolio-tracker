@@ -16,6 +16,7 @@ export { checkLedgerRates, foreignRatesOf, type RateCheck } from "./ecb/check.js
 export {
   DRAFT_FORMAT,
   type DraftStatus,
+  draftRecordedAs,
   type PendingDraft,
   type PreparedDraft,
   parsePendingDraft,

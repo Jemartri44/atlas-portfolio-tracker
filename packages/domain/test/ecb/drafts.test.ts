@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DRAFT_FORMAT,
+  draftRecordedAs,
   type PendingDraft,
   parsePendingDraft,
   pendingDraftStatus,
@@ -286,5 +287,34 @@ describe("recordPendingDraft", () => {
       DuplicateFingerprintError,
     );
     expect(drafts.saved.size).toBe(1);
+  });
+});
+
+describe("draftRecordedAs (review of PR #75)", () => {
+  it("finds the confirmation whose removal of the draft did not happen, and nothing else", async () => {
+    const store = seeded();
+    const deps = testDeps(store);
+    const { draft } = await preparePendingDraft(deps, history, 30, goldBuy);
+    const project = async () => {
+      const { events: now } = await store.load();
+      return { state: projectLedger(now), now };
+    };
+    let { state, now } = await project();
+    expect(draftRecordedAs(state, now, draft)).toEqual([]);
+    // Confirmed, and the store of drafts failed to remove it.
+    const result = await recordPendingDraft(
+      deps,
+      { ...new MemoryDrafts(), remove: async () => {} } as never,
+      draft,
+      { ...goldBuy, fx_rate: "1.1104", fx_rate_date: "2026-04-01" },
+    );
+    ({ state, now } = await project());
+    expect(draftRecordedAs(state, now, draft)).toEqual([result.event.id]);
+    // An identical operation recorded before the draft was saved is another one.
+    expect(draftRecordedAs(state, now, { ...draft, saved_at: "2099-01-01T00:00:00.000Z" })).toEqual(
+      [],
+    );
+    // A draft without a fingerprint of its own matches nothing.
+    expect(draftRecordedAs(state, now, { ...draft, event: { type: "valuation" } })).toEqual([]);
   });
 });
