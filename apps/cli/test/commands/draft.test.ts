@@ -219,7 +219,7 @@ describe("a pending draft (mutant 12)", () => {
     expect((await atlas({}, "positions")).err).not.toContain("Pendiente");
   });
 
-  it("left in both places by a cut, is caught by the fingerprint on the second confirm", async () => {
+  it("left in both places by a cut, is only removed on the second confirm", async () => {
     const { atlas, drafts, dir, ledgerText } = await setup();
     const id = idOf((await atlas({}, ...goldBuy, "--draft")).out);
     const file = join(dir, "drafts", `${id}.json`);
@@ -229,10 +229,13 @@ describe("a pending draft (mutant 12)", () => {
     // The cut: the ledger has the line and the draft is still there.
     await writeFile(file, copy);
     const lines = (await ledgerText()).split("\n").length;
+    expect((await atlas({}, "draft", "list")).out).toContain("Ya está registrado");
+    // Confirming again only removes the draft: never a second line (review of PR #75).
     const again = await atlas({}, "draft", "confirm", id, "--yes");
-    expect(again.code).toBe(3);
+    expect(again.code).toBe(0);
+    expect(again.out).toContain("ya estaba registrado");
     expect((await ledgerText()).split("\n").length).toBe(lines);
-    expect(await drafts()).toEqual([`${id}.json`]);
+    expect(await drafts()).toEqual([]);
   });
 
   it("can be discarded, after a yes", async () => {

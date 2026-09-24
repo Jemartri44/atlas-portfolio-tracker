@@ -14,10 +14,11 @@ import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { BrowserDraftStore } from "@atlas/adapters/drafts";
 import { saveImportedHistory } from "@atlas/adapters/reference";
 import type { UseCaseDeps } from "@atlas/domain";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
 import { reloadWebHistory } from "../src/ecb/history.js";
 import { loadInto } from "../src/ledger/actions.js";
+import * as draftStore from "../src/ledger/draft-store.js";
 import { toAppError } from "../src/ledger/errors.js";
 import { store } from "../src/ledger/state.js";
 import Borradores from "../src/routes/registrar/borradores.jsx";
@@ -185,6 +186,41 @@ describe("a draft from the form", () => {
     expect(events()).toBe(recorded + 1);
     const last = store.snapshot()?.events.at(-1) as unknown as Record<string, unknown>;
     expect(last).toMatchObject({ type: "buy", fx_rate: "1.1104", fx_rate_date: "2026-04-01" });
+    expect((await drafts.list()).drafts).toEqual([]);
+  });
+
+  it("says so when the draft cannot be removed, and a second confirmation only removes it (review of PR #75)", async () => {
+    await openWritable();
+    const id = await saveGoldDraft();
+    await importHistory(later);
+    const recorded = events();
+    const confirm = async (): Promise<HTMLElement> => {
+      const host = await show(`/registrar/buy?borrador=${id}`, RegistrarForm, "/registrar/:tipo");
+      await until(() => value(host, "f-fx_rate") === "1,1104");
+      await press(host, "Ver el efecto");
+      await until(() => host.querySelector("section.effect") !== null);
+      (
+        [...host.querySelectorAll("section.effect button")].find(
+          (button) => button.textContent?.trim() === "Registrar",
+        ) as HTMLButtonElement
+      ).click();
+      return host;
+    };
+    // The store of drafts fails once, after the line was written.
+    const failing = vi.spyOn(draftStore.drafts, "remove").mockRejectedValueOnce(new Error("x"));
+    const first = await confirm();
+    // The form route serves the list, where it is said and the draft is left.
+    await until(() => text(first).includes("Registrado, pero el borrador sigue aquí"));
+    await until(() => text(first).includes("Ya está en tus datos"));
+    expect(events()).toBe(recorded + 1);
+    expect((await drafts.list()).drafts.map((draft) => draft.id)).toEqual([id]);
+    failing.mockRestore();
+    // Confirming it again records nothing: it only removes the draft.
+    const second = await confirm();
+    await until(() => window.location.search.includes("ya="));
+    expect(window.location.pathname).toBe("/registrar/borradores");
+    expect(text(second)).not.toContain("Ya hay un movimiento igual");
+    expect(events()).toBe(recorded + 1);
     expect((await drafts.list()).drafts).toEqual([]);
   });
 

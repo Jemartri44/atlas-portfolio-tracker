@@ -2,10 +2,11 @@
 // says of each one today, in the shape the screen paints. The rule is the
 // domain's (`pendingDraftStatus`); nothing here decides anything.
 
-import type { CivilDate, LedgerState } from "@atlas/domain";
+import type { CivilDate, LedgerEvent, LedgerState } from "@atlas/domain";
 import {
   DEFAULT_LOCAL_CONFIG,
   type DraftStatus,
+  draftRecordedAs,
   type PendingDraft,
   pendingDraftStatus,
 } from "@atlas/domain/ecb";
@@ -18,6 +19,8 @@ export type RowStatus =
 export interface DraftRow {
   draft: PendingDraft;
   status: RowStatus;
+  /** Recorded already: its confirmation did not remove it. Only removing is left. */
+  recorded: string[];
   /** The asset, or the account, the operation is about. */
   subject?: string;
   date: CivilDate;
@@ -39,6 +42,7 @@ const statusOf = (status: DraftStatus): RowStatus =>
 export const draftRows = (
   drafts: readonly PendingDraft[],
   state: LedgerState,
+  events: readonly LedgerEvent[],
   web: WebHistory | undefined,
 ): DraftRow[] =>
   drafts.map((draft) => {
@@ -48,6 +52,7 @@ export const draftRows = (
     );
     return {
       draft,
+      recorded: draftRecordedAs(state, events, draft),
       status: statusOf(
         pendingDraftStatus(
           web?.history,

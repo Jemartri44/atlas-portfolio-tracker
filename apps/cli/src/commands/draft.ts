@@ -16,6 +16,7 @@ import { FileDraftStore, readLocalConfig } from "@atlas/adapters";
 import { type CivilDate, loadAndProject } from "@atlas/domain";
 import {
   type DraftStatus,
+  draftRecordedAs,
   type EcbHistory,
   type PendingDraft,
   pendingDraftStatus,
@@ -99,10 +100,11 @@ const find = async (ctx: Context, id: string | undefined): Promise<PendingDraft 
 const listDrafts = async (ctx: Context): Promise<number> => {
   const { drafts, unreadable } = await storeOf(ctx).list();
   const { history, problem, staleDays } = await ecbOf(ctx);
-  const { state } = await loadAndProject(ctx.deps, { collectErrors: true });
+  const { state, events } = await loadAndProject(ctx.deps, { collectErrors: true });
   const rows = drafts.map((draft) => ({
     draft,
     status: pendingDraftStatus(history, state, draft, staleDays),
+    recorded: draftRecordedAs(state, events, draft),
   }));
   const lines = [
     drafts.length === 0
@@ -111,7 +113,12 @@ const listDrafts = async (ctx: Context): Promise<number> => {
     ...(problem === undefined
       ? []
       : [`El histórico del BCE guardado no se puede usar (${problem}).`]),
-    ...rows.flatMap(({ draft, status }) => [summaryOf(draft), `  ${describeStatus(status)}`]),
+    ...rows.flatMap(({ draft, status, recorded }) => [
+      summaryOf(draft),
+      recorded.length > 0
+        ? `  Ya está registrado (${recorded.join(", ")}): \`atlas draft confirm ${draft.id}\` solo quitará el borrador.`
+        : `  ${describeStatus(status)}`,
+    ]),
     ...unreadable.map(
       (name) =>
         `drafts/${name} no se puede leer: no se ha tocado. Revísalo a mano; puede ser la única copia de una operación.`,
@@ -145,7 +152,17 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
     return EXIT.domain;
   }
   const { history, staleDays } = await ecbOf(ctx);
-  const { state } = await loadAndProject(ctx.deps, { collectErrors: true });
+  const { state, events } = await loadAndProject(ctx.deps, { collectErrors: true });
+  // Confirmed already, and the draft was not removed (a cut, a failure of
+  // drafts/): confirming again only removes it — never a second line.
+  const recorded = draftRecordedAs(state, events, draft);
+  if (recorded.length > 0) {
+    await storeOf(ctx).remove(draft.id);
+    ctx.io.out(
+      `El borrador ${draft.id} ya estaba registrado (${recorded.join(", ")}): se quita de drafts/ sin registrarlo otra vez.`,
+    );
+    return EXIT.ok;
+  }
   const status = pendingDraftStatus(history, state, draft, staleDays);
   if (status.kind !== "confirmable") {
     ctx.io.out(describeStatus(status));

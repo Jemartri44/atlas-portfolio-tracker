@@ -28,6 +28,9 @@ const StatusLine = (props: { row: DraftRow }): JSX.Element => {
   return (
     <p class="card-note">
       {(() => {
+        if (props.row.recorded.length > 0) {
+          return "Ya está en tus datos: se registró, pero el borrador no se quitó. Descártalo; no se registrará dos veces.";
+        }
         const current = status();
         switch (current.kind) {
           case "no_history":
@@ -55,7 +58,7 @@ const StatusLine = (props: { row: DraftRow }): JSX.Element => {
 };
 
 export default function BorradoresRoute(): JSX.Element {
-  const [search] = useSearchParams<{ guardado?: string }>();
+  const [search] = useSearchParams<{ guardado?: string; ya?: string; "no-quitado"?: string }>();
   const [listed, { refetch }] = createResource(listDrafts);
   const [history] = createResource(async () =>
     (await import("../../ecb/history.js")).loadWebHistory(),
@@ -71,7 +74,8 @@ export default function BorradoresRoute(): JSX.Element {
   return (
     <RequireLedger skeleton={4}>
       {(snapshot) => {
-        const rows = (): DraftRow[] => draftRows(listed()?.drafts ?? [], snapshot.state, history());
+        const rows = (): DraftRow[] =>
+          draftRows(listed()?.drafts ?? [], snapshot.state, snapshot.events, history());
         const names = nameIndex(snapshot.state);
         return (
           <>
@@ -80,6 +84,19 @@ export default function BorradoresRoute(): JSX.Element {
               lead="Operaciones guardadas antes de que el BCE publique su tipo. No cuentan en ninguna cifra hasta que las registras."
             />
             <div class="stack">
+              <Show when={search["no-quitado"]}>
+                <Notice severity="caution" title="Registrado, pero el borrador sigue aquí">
+                  El movimiento se ha registrado, pero no se ha podido quitar su borrador de este
+                  navegador. Descártalo abajo: confirmarlo otra vez no lo registra dos veces, solo
+                  lo quita.
+                </Notice>
+              </Show>
+              <Show when={search.ya}>
+                <Notice severity="info" title="Ese borrador ya estaba registrado">
+                  Estaba en tus datos desde una confirmación anterior: se ha quitado el borrador sin
+                  registrarlo otra vez.
+                </Notice>
+              </Show>
               <Show when={search.guardado}>
                 <Notice severity="info" title="Borrador guardado">
                   Cuando el BCE publique el tipo, aparecerá aquí listo para registrarlo con el tipo
@@ -114,7 +131,13 @@ export default function BorradoresRoute(): JSX.Element {
                           >
                             <StatusLine row={row} />
                             <div class="button-row">
-                              <Show when={row.status.kind === "confirmable" && spec}>
+                              <Show
+                                when={
+                                  row.status.kind === "confirmable" &&
+                                  row.recorded.length === 0 &&
+                                  spec
+                                }
+                              >
                                 {(found) => (
                                   <A
                                     href={`/registrar/${found().slug}?borrador=${row.draft.id}`}
