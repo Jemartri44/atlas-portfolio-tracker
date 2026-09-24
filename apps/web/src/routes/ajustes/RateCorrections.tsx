@@ -7,7 +7,13 @@
 
 import type { LedgerEvent, LedgerState } from "@atlas/domain";
 import { createResource, createSignal, For, type JSX, Show } from "solid-js";
-import { ClosedYearNotice, ConfirmDialog, ErrorView, Notice } from "../../components/index.js";
+import {
+  ClosedYearNotice,
+  ConfirmDialog,
+  ErrorView,
+  Notice,
+  Section,
+} from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences, inSentence } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -82,12 +88,14 @@ export const RateCorrections = (props: {
               >;
               return (
                 <Show when={prepared.corrections.length > 0}>
-                  <Notice severity="caution" title="Corrección propuesta">
-                    {countOf(prepared.corrections.length, "línea tiene", "líneas tienen")} un tipo
-                    del BCE de otro día que el de su fecha fiscal, lo que deja un cambio de la regla
-                    de la fecha fiscal (criterio 25). Las cifras siguen usando el tipo de tus datos.
-                    La corrección anula cada línea y la registra de nuevo con el tipo oficial, todas
-                    de una vez.
+                  <Section title="Corrección propuesta de los tipos del BCE">
+                    <p class="card-note">
+                      {countOf(prepared.corrections.length, "línea tiene", "líneas tienen")} un tipo
+                      del BCE de otro día que el de su fecha fiscal, lo que deja un cambio de la
+                      regla de la fecha fiscal (criterio 25). Las cifras siguen usando el tipo de
+                      tus datos. La corrección anula cada línea y la registra de nuevo con el tipo
+                      oficial, todas de una vez.
+                    </p>
                     <ul class="sentences">
                       <For each={prepared.corrections}>
                         {(line) => (
@@ -106,7 +114,7 @@ export const RateCorrections = (props: {
                         Escribir la corrección
                       </button>
                     </div>
-                  </Notice>
+                  </Section>
                 </Show>
               );
             })()}

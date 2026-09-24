@@ -163,8 +163,8 @@ describe("a change of fiscal_date_rule in Configuración (mutant 15)", () => {
 describe("the correction in «Verificación» (mutant 20)", () => {
   const proposal = (host: HTMLElement): string =>
     text(
-      [...host.querySelectorAll(".notice, [role='status'], aside, div")].find((node) =>
-        text(node).startsWith("Corrección propuesta"),
+      [...host.querySelectorAll("section")].find((node) =>
+        text(node.querySelector("h2")).startsWith("Corrección propuesta"),
       ),
     );
 

@@ -79,70 +79,74 @@ export default function BorradoresRoute(): JSX.Element {
               title="Borradores"
               lead="Operaciones guardadas antes de que el BCE publique su tipo. No cuentan en ninguna cifra hasta que las registras."
             />
-            <Show when={search.guardado}>
-              <Notice severity="info" title="Borrador guardado">
-                Cuando el BCE publique el tipo, aparecerá aquí listo para registrarlo con el tipo
-                oficial. No se registra solo.
-              </Notice>
-            </Show>
-            <Notice severity="info" title="Viven solo en este navegador">
-              Si borras los datos del sitio, los borradores se pierden, igual que tus datos si no
-              los has exportado. La exportación del libro no los incluye: no son movimientos.
-            </Notice>
-            <Show
-              when={listed.state === "ready" && history.state === "ready"}
-              fallback={<p class="card-note">Leyendo los borradores…</p>}
-            >
-              <Show
-                when={rows().length > 0 || (listed()?.unreadable.length ?? 0) > 0}
-                fallback={<EmptyState what="No hay borradores pendientes." />}
-              >
-                <div class="stack">
-                  <For each={rows()}>
-                    {(row) => {
-                      const spec = FORM_SPECS.find((one) => one.type === row.draft.event.type);
-                      const type = String(row.draft.event.type);
-                      const subject =
-                        row.subject === undefined ? "" : ` · ${names[row.subject] ?? row.subject}`;
-                      return (
-                        <Section
-                          title={`${EVENT_LABELS[type] ?? type}${subject}`}
-                          aside={`${formatDate(row.date)} · ${row.currency}`}
-                        >
-                          <StatusLine row={row} />
-                          <div class="button-row">
-                            <Show when={row.status.kind === "confirmable" && spec}>
-                              {(found) => (
-                                <A
-                                  href={`/registrar/${found().slug}?borrador=${row.draft.id}`}
-                                  role="button"
-                                >
-                                  Revisar y registrar
-                                </A>
-                              )}
-                            </Show>
-                            <button
-                              type="button"
-                              class="secondary"
-                              onClick={() => setDiscarding(row.draft.id)}
-                            >
-                              Descartar
-                            </button>
-                          </div>
-                        </Section>
-                      );
-                    }}
-                  </For>
-                  <For each={listed()?.unreadable ?? []}>
-                    {(key) => (
-                      <Notice severity="caution" title="Un borrador no se puede leer">
-                        El borrador {key} no tiene el formato esperado. No se ha tocado.
-                      </Notice>
-                    )}
-                  </For>
-                </div>
+            <div class="stack">
+              <Show when={search.guardado}>
+                <Notice severity="info" title="Borrador guardado">
+                  Cuando el BCE publique el tipo, aparecerá aquí listo para registrarlo con el tipo
+                  oficial. No se registra solo.
+                </Notice>
               </Show>
-            </Show>
+              <Notice severity="info" title="Viven solo en este navegador">
+                Si borras los datos del sitio, los borradores se pierden, igual que tus datos si no
+                los has exportado. La exportación del libro no los incluye: no son movimientos.
+              </Notice>
+              <Show
+                when={listed.state === "ready" && history.state === "ready"}
+                fallback={<p class="card-note">Leyendo los borradores…</p>}
+              >
+                <Show
+                  when={rows().length > 0 || (listed()?.unreadable.length ?? 0) > 0}
+                  fallback={<EmptyState what="No hay borradores pendientes." />}
+                >
+                  <div class="stack">
+                    <For each={rows()}>
+                      {(row) => {
+                        const spec = FORM_SPECS.find((one) => one.type === row.draft.event.type);
+                        const type = String(row.draft.event.type);
+                        const subject =
+                          row.subject === undefined
+                            ? ""
+                            : ` · ${names[row.subject] ?? row.subject}`;
+                        return (
+                          <Section
+                            title={`${EVENT_LABELS[type] ?? type}${subject}`}
+                            aside={`${formatDate(row.date)} · ${row.currency}`}
+                          >
+                            <StatusLine row={row} />
+                            <div class="button-row">
+                              <Show when={row.status.kind === "confirmable" && spec}>
+                                {(found) => (
+                                  <A
+                                    href={`/registrar/${found().slug}?borrador=${row.draft.id}`}
+                                    role="button"
+                                  >
+                                    Revisar y registrar
+                                  </A>
+                                )}
+                              </Show>
+                              <button
+                                type="button"
+                                class="secondary"
+                                onClick={() => setDiscarding(row.draft.id)}
+                              >
+                                Descartar
+                              </button>
+                            </div>
+                          </Section>
+                        );
+                      }}
+                    </For>
+                    <For each={listed()?.unreadable ?? []}>
+                      {(key) => (
+                        <Notice severity="caution" title="Un borrador no se puede leer">
+                          El borrador {key} no tiene el formato esperado. No se ha tocado.
+                        </Notice>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </Show>
+            </div>
             <ConfirmDialog
               open={discarding() !== undefined}
               title="¿Descartar el borrador?"
