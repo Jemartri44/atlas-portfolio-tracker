@@ -16,6 +16,7 @@ export type {
 } from "./ports/price-source.js";
 export { SOURCE_FAILURE_KINDS } from "./ports/price-source.js";
 export type { PriceFiles, PriceStore, PriceTransaction } from "./ports/price-store.js";
+export type { FxMissing, QuoteSource } from "./projections/prices.js";
 export {
   type AssetOutcome,
   type AssetReport,

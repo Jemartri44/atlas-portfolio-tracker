@@ -1,0 +1,26 @@
+{
+    "bestMatches": [
+        {
+            "1. symbol": "SYNTH.DEX",
+            "2. name": "Synthetic ETF",
+            "3. type": "ETF",
+            "4. region": "XETRA",
+            "5. marketOpen": "08:00",
+            "6. marketClose": "20:00",
+            "7. timezone": "UTC+01",
+            "8. currency": "EUR",
+            "9. matchScore": "1.0000"
+        },
+        {
+            "1. symbol": "SYNTH.LON",
+            "2. name": "Synthetic ETF",
+            "3. type": "ETF",
+            "4. region": "United Kingdom",
+            "5. marketOpen": "08:00",
+            "6. marketClose": "16:30",
+            "7. timezone": "UTC+00",
+            "8. currency": "GBX",
+            "9. matchScore": "0.8000"
+        }
+    ]
+}
