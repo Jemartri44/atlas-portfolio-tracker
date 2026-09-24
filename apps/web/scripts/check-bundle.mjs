@@ -422,8 +422,19 @@ const BOOT_BUDGET_GZIP_BYTES = 74.0 * 1024;
  * the names of the list, split out of the chunks that shared them (**+0,6**,
  * with **−0,4** in `prose`); the Spanish of the new errors (**+0,1**); and a
  * few tenths across the chunks that import them.
+ *
+ * **Feature 012, block 6 (2026-09-24): measured 259,7, ceiling 260,7.** What a
+ * change of `fiscal_date_rule` does to the ECB rates (criterion 25), all of it
+ * lazy. Chunk by chunk against block 5: the question before saving in
+ * «Configuración» and its dialog (**+1,0**, `configuracion`); the proposal of
+ * the correction chain in «Verificación», shown whole with the filed returns
+ * it reaches (**+1,0**, `verificacion`); the rule itself — the lines a change
+ * leaves, the lines to correct and the chain — in the chunk of the ECB
+ * (**+0,7**, `ecb`); the write of the chain (**+0,4**, `rate-corrections`);
+ * and the two chunks of Spanish errors, now one (**−0,2**). The boot does not
+ * move: nothing of it is in the boot, and the shape check holds it.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 257.8 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 260.7 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
