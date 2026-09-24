@@ -505,8 +505,16 @@ const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024 + 258;
  * quotes to the gate and say their problems (**+0,5** across `cartera`,
  * `PageHeader`, `core`, `history` and `EventForm`). The boot stays in its own
  * ceiling. The trend: 237,9 → 262,1 in feature 012; 262,1 → 267,2 in this one.
+ *
+ * **Feature 013, after looking at the screens (2026-09-25): measured 267,47
+ * (273.891 bytes), ceiling 267,8.** What the screenshots found missing, all
+ * lazy: the notices of a quote without its value in euros and of a weight
+ * resting on an approximation in the card of the weights, which said
+ * «falta el precio» of an asset that had one, and the column «Origen» of the
+ * tables of assets on a wide screen, where the source of a price was not said
+ * (+0,3 across `cartera`, `cubo` and the price components).
  */
-const TOTAL_BUDGET_GZIP_BYTES = 267.5 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 267.8 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
