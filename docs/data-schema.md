@@ -22,10 +22,10 @@ Referencia viva del formato del libro mayor y de las proyecciones. Decisiones de
 | `sync/devices/<dispositivo>.json` *(en el bucket)* | Cuántas líneas pendientes y retenidas tiene cada dispositivo sincronizado, y cuándo sincronizó por última vez; lo consultan `compact` y la restauración antes de actuar (ADR-0026) | Se sobrescribe por dispositivo |
 | `drafts/` *(por dispositivo, local)* | Operaciones en divisa registradas antes de que el BCE publique el tipo de su fecha fiscal: no son un hecho, no cuentan en ninguna cifra y nunca se confirman solas (ADR-0029, opción B) | Hasta que se confirman o se descartan |
 
-**Dos buckets privados por entorno** (`dev`, `prod`, cada uno en su propia cuenta AWS miembro, ADR-0028), los dos con Block Public Access y cifrados con SSE-S3:
+Cada entorno (`dev`, `prod`) vive en su propia cuenta AWS miembro (ADR-0028), y cada cuenta tiene **varios buckets privados**, todos con Block Public Access y cifrados con SSE-S3: el de la SPA, el de datos, el del estado de Terraform y el de CloudTrail. Lo que importa aquí es la frontera entre los dos primeros:
 
-- **El de la SPA**, con los ficheros estáticos de la web. Es el único origen S3 de CloudFront, que lo lee con Origin Access Control.
-- **El de datos**, el de la tabla de arriba (`ledger/`, `archive/`, `reference/`, `prices/`, `documents/`, `imports/`, `backups/`, `sync/`), con versionado activado. **Nunca es origen de CloudFront**: solo lo alcanzan los roles de las Lambdas, con los permisos de ADR-0028 (el de la API, sin ningún permiso de borrado; las tareas programadas escriben `backups/`), y la administración, con credenciales de vida corta, para `compact` y la restauración (ADR-0026, Parte A; ADR-0032). Si fuera origen de CloudFront, el libro quedaría al alcance de Internet sin pasar por la Lambda, que es la que impone la regla de solo añadir (ADR-0026, Parte A).
+- **El de la SPA**, con los ficheros estáticos de la web. Es el origen S3 de CloudFront, que lo lee con Origin Access Control.
+- **El de datos**, el de la tabla de arriba (`ledger/`, `archive/`, `reference/`, `prices/`, `documents/`, `imports/`, `backups/`, `sync/`), con versionado activado. **Nunca es origen de CloudFront**: solo lo alcanzan los roles de las Lambdas, con los permisos de ADR-0028 (el de la API, sin ningún permiso de borrado; las tareas programadas escriben `backups/`), y la administración, **siempre con credenciales de vida corta**, para las operaciones de administración que definen ADR-0026, ADR-0027 y ADR-0032. Si fuera origen de CloudFront, el libro quedaría al alcance de Internet sin pasar por la Lambda, que es la que impone la regla de solo añadir (ADR-0026, Parte A).
 
 ## 2. Envoltorio de cada línea
 
