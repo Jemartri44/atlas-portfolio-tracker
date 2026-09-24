@@ -365,8 +365,22 @@ const BOOT_BUDGET_GZIP_BYTES = 73.7 * 1024;
  * lock and the rule as the only things that may grow the boot; the
  * validation of the new field is said here apart, as it asked. Nothing of the
  * ECB is in the boot, and the shape check below now holds that too.
+ *
+ * **Feature 012, block 3 (2026-09-24): measured 246,8, ceiling 247,8.** The
+ * ECB reaches the web, and all of it lazily: the reading, the resolution, the
+ * proposal and the check of the rates, in a chunk of their own (**+3,0**,
+ * `ecb`); where the web finds the history — the folder of the console, or a
+ * copy imported by hand, the ZIP read with the platform's
+ * `DecompressionStream` — (**+1,6**, `history`); the proposal and the
+ * confirmation in the form (**+1,8**, `EventForm`); the card «Tipos del BCE»
+ * in Ajustes (**+1,4**); and the rest, a few tenths across the chunks that
+ * import them. Chunk by chunk against block 2, with **zero modules in more
+ * than one chunk out of 313**. The boot moves 73,4 → **73,6** without a byte
+ * of the ECB in it (the shape check holds it): the store of the browser, now
+ * shared with the lazy screens, had to be kept in the boot chunk by hand
+ * (`vite.config.ts`), and what is left is compression across the new border.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 239.9 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 247.8 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
