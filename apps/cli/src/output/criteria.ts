@@ -47,4 +47,5 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
   "24:etc_gain": "ETC como ganancia patrimonial (lo contrario de la consulta V0267-25)",
   "24:etp": "ETP como rendimiento del capital mobiliario",
   "24:etp_gain": "ETP como ganancia patrimonial",
+  "25": "el tipo del BCE es el de la fecha fiscal vigente; otro se corrige, no se recalcula",
 };

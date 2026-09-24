@@ -60,7 +60,8 @@ describe("the notes of the ECB rates in the report", () => {
         code: "tax_fx_rate_finding",
         event_id: sell.id,
         message: expect.any(String),
-        details: { events: [buy.id], codes: ["fx_rate_mismatch"] },
+        // Criterion 25 (ADR-0029, point 10): corrected by rectification, never recalculated.
+        details: { criterion: "25", events: [buy.id], codes: ["fx_rate_mismatch"] },
       },
     ]);
     // The figures are the ledger's, with or without the note.
@@ -95,7 +96,12 @@ describe("the notes of the ECB rates in the report", () => {
     const report = taxYear(events, 2028, { today });
     expect(
       report.notes.filter((entry) => entry.code === "tax_fx_rate_date_after_fiscal_date"),
-    ).toEqual([expect.objectContaining({ event_id: sell.id, details: { events: [buy.id] } })]);
+    ).toEqual([
+      expect.objectContaining({
+        event_id: sell.id,
+        details: { criterion: "25", events: [buy.id] },
+      }),
+    ]);
   });
 
   it("notes a standalone fee with a finding, on its own line", () => {

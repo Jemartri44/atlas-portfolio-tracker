@@ -1014,6 +1014,10 @@ export const taxYearWithChain = (
  * The note **moves no figure**: the engine keeps computing with the `fx_rate`
  * of the ledger, which is the only source of the tax (trap 7 of CLAUDE.md).
  *
+ * Both cite criterion 25 (ADR-0029, point 10): the rate that applies is the
+ * one of the fiscal date in force, and a line with another one is corrected by
+ * rectification, never recalculated.
+ *
  * Two notes, each with its own literal: the findings of the check against the
  * ECB history, when there is one; and `fx_rate_date_after_fiscal_date`, which
  * the projection sees **without** a history and which carries the note
@@ -1057,6 +1061,7 @@ const rateNotes = (
           line.event_id,
           "this line depends on an ECB rate that is not the official one of its date; the figure is computed with the rate of the ledger",
           {
+            criterion: "25",
             events: found,
             codes: [
               ...new Set(found.flatMap((id) => [...(byEvent.get(id) as Set<string>)])),
@@ -1072,7 +1077,7 @@ const rateNotes = (
           "tax_fx_rate_date_after_fiscal_date",
           line.event_id,
           "this line depends on an ECB rate dated after its fiscal date; the figure is computed with the rate of the ledger",
-          { events: late },
+          { criterion: "25", events: late },
         ),
       );
     }

@@ -55,6 +55,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "24:etc_gain": "Un ETC tributa como ganancia patrimonial",
   "24:etp": "Un ETP tributa como rendimiento del capital mobiliario",
   "24:etp_gain": "Un ETP tributa como ganancia patrimonial",
+  "25": "El tipo del BCE es el de la fecha fiscal vigente; si no, se corrige",
 };
 
 /** How firm the reading of the law is. */
