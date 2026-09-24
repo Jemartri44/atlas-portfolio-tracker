@@ -33,6 +33,17 @@ const held = (): string =>
   (factory.databases.get("atlas")?.store("ledger").get("current") as { text: string } | undefined)
     ?.text ?? "";
 
+/** Waits for what the screen or the storage has to end up saying, instead of guessing a delay. */
+const until = async (condition: () => boolean, ms = 3000): Promise<void> => {
+  const deadline = Date.now() + ms;
+  while (!condition()) {
+    if (Date.now() > deadline) {
+      throw new Error("no llegó a pasar");
+    }
+    await settle(5);
+  }
+};
+
 const choose = async (host: HTMLElement, content: string): Promise<void> => {
   const input = host.querySelector('input[type="file"]') as HTMLInputElement;
   Object.defineProperty(input, "files", {
@@ -53,6 +64,7 @@ describe("importing over the ledger of this browser", () => {
     const host = await show("/libro", Libro);
     const golden = goldenText();
     await choose(host, golden);
+    await until(() => held() === golden);
     expect(held()).toBe(golden);
     expect(text(host)).not.toContain("¿Sustituir");
   });
@@ -63,6 +75,7 @@ describe("importing over the ledger of this browser", () => {
     const smaller = `${current.split("\n").slice(0, 3).join("\n")}\n`;
     const host = await show("/libro", Libro);
     await choose(host, smaller);
+    await until(() => text(host).includes("¿Sustituir"));
     const said = text(host);
     expect(said).toContain("¿Sustituir los datos de este navegador?");
     expect(said).toContain(`Este navegador tiene ${current.split("\n").length - 1} movimientos`);
@@ -73,8 +86,9 @@ describe("importing over the ledger of this browser", () => {
     expect(text(host)).not.toContain("¿Sustituir");
     expect(held()).toBe(current);
     await choose(host, smaller);
+    await until(() => text(host).includes("¿Sustituir"));
     button(host, "Sustituir").click();
-    await settle(60);
+    await until(() => held() === smaller);
     expect(held()).toBe(smaller);
   });
 
@@ -82,6 +96,7 @@ describe("importing over the ledger of this browser", () => {
     const current = held();
     const host = await show("/libro", Libro);
     await choose(host, "no es un libro\n");
+    await until(() => text(host).includes("No se ha podido abrir"));
     expect(text(host)).not.toContain("¿Sustituir");
     expect(text(host)).toContain("No se ha podido abrir");
     expect(held()).toBe(current);
