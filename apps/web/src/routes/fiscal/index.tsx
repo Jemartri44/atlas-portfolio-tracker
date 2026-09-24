@@ -28,6 +28,7 @@ import { DoubtfulCard, SettledCard } from "./CriteriaCards.jsx";
 import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
 import { LossesCard } from "./LossesCard.jsx";
+import { RateNotes } from "./RateNotes.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
 
 /**
@@ -190,6 +191,12 @@ export default function FiscalRoute(): JSX.Element {
               }
             >
               <div class="grid">
+                <RateNotes
+                  notes={((computed) => (computed.ok ? computed.value.notes : []))(report())}
+                  events={snapshot.events}
+                  names={names}
+                  privacy={privacy()}
+                />
                 <Show when={view()}>
                   {(year) => (
                     <>
