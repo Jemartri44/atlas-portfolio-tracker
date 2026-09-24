@@ -145,6 +145,9 @@ const PARTIAL_MESSAGES: Record<PartialReason, string> = {
   ledger_withholdings_only: "only the withholdings recorded in the ledger are counted",
 };
 
+/** The notes of the report about the ECB rates of a line (feature 012). */
+const RATE_NOTES = new Set(["tax_fx_rate_finding", "tax_fx_rate_date_after_fiscal_date"]);
+
 const notesOf = (year: number, table: YearBoxes | undefined, found: Collected): Warning[] => {
   const notes: Warning[] = [];
   if (table === undefined) {
@@ -203,7 +206,13 @@ export const boxesOf = (report: TaxYearReport, chain: ChainCore): TaxBoxes => {
     rounding: [],
   };
   const entries = draftEntries(report, chain).map((draft) => entryOf(draft, table, found));
-  const notes = notesOf(report.year, table, found);
+  const notes = [
+    ...notesOf(report.year, table, found),
+    // A figure of a box that comes from a line with a rate in doubt carries
+    // the same note (ADR-0029, point 8): the boxes are read on their own, and
+    // the salvedad has to be there too.
+    ...report.notes.filter((entry) => RATE_NOTES.has(entry.code)),
+  ];
   // The repurchase has no numbered box: Renta WEB carries a mark in its capture
   // window, so the output says what it is instead of inventing a number (N12).
   if (report.wash_sale.deferred.length > 0 || report.wash_sale.released.length > 0) {

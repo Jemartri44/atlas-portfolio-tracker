@@ -26,6 +26,7 @@ import { CRITERION_LABELS } from "../output/criteria.js";
 import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
+import { rateFindingsOf } from "./rates.js";
 import { render } from "./shared.js";
 import { renderBoxes } from "./tax-boxes.js";
 
@@ -516,12 +517,15 @@ export const taxCommand = async (
   }
   const { events } = await ctx.deps.store.load();
   const today = todayInMadrid(ctx.deps.clock);
+  // The findings of the ECB check note the lines that depend on them; they
+  // move no figure (ADR-0029, point 8).
+  const options = { today, rateFindings: await rateFindingsOf(ctx) };
   if (booleanFlag(flags, "boxes")) {
-    const boxes = taxBoxes(events, year, { today });
+    const boxes = taxBoxes(events, year, options);
     render(ctx, taxBoxesJson(boxes), renderBoxes(boxes));
     return 0;
   }
-  const report = taxYear(events, year, { today });
+  const report = taxYear(events, year, options);
   render(ctx, taxReportJson(report), renderTaxReport(report, booleanFlag(flags, "lots")));
   return 0;
 };

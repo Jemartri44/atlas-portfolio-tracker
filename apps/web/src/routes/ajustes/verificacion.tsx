@@ -31,6 +31,7 @@ import { usePrivacy } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { attentionItems } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
+import { EcbCheck } from "./EcbCheck.jsx";
 
 /** How many events a notice lists in sight; more than that wait folded. */
 const IN_SIGHT = 3;
@@ -168,6 +169,12 @@ export default function VerificacionRoute(): JSX.Element {
                   />
                 </Show>
               </Section>
+
+              <EcbCheck
+                state={snapshot.state}
+                events={snapshot.events}
+                items={(found) => findingItems(found, privacy(), events)}
+              />
 
               <Section
                 title="Comprobación profunda"

@@ -920,7 +920,10 @@ export const taxYearWithChain = (
     }));
   const settings = settingsFromCode(state);
   const stakes = criterionStakes(core, events, year, options);
-  const notes = notesOf(core, year, settings.from_code, inKind, ddi.notes);
+  const notes = [
+    ...notesOf(core, year, settings.from_code, inKind, ddi.notes),
+    ...rateNotes(core, options.rateFindings ?? []),
+  ];
   // **A cause that cannot be sustained is not attributed in silence**
   // (ADR-0024, prompt 011 decision (e)). The comparison already omitted the
   // four causes when the prefix could not be trusted; omitting is not warning,
@@ -1001,6 +1004,80 @@ export const taxYearWithChain = (
     ...(diff === undefined ? {} : { settings_diff: diff }),
   };
   return { report, chain: core };
+};
+
+/**
+ * **A line of the report that depends on a rate in doubt says so** (ADR-0029,
+ * point 8; ADR-0024). "Depends" includes the acquisitions (decision (q) of
+ * prompt 012): a sale depends on itself **and on the purchases whose lots it
+ * consumes**, whose rate fixed the cost — the lineage of each lot says which.
+ * The note **moves no figure**: the engine keeps computing with the `fx_rate`
+ * of the ledger, which is the only source of the tax (trap 7 of CLAUDE.md).
+ *
+ * Two notes, each with its own literal: the findings of the check against the
+ * ECB history, when there is one; and `fx_rate_date_after_fiscal_date`, which
+ * the projection sees **without** a history and which carries the note
+ * anyway.
+ */
+const rateNotes = (
+  core: Core,
+  findings: readonly { event_id: string; code: string }[],
+): Warning[] => {
+  const byEvent = new Map<string, Set<string>>();
+  for (const finding of findings) {
+    byEvent.set(finding.event_id, (byEvent.get(finding.event_id) ?? new Set()).add(finding.code));
+  }
+  const afterFiscal = new Set(
+    core.state.warnings
+      .filter((warning) => warning.code === "fx_rate_date_after_fiscal_date")
+      .map((warning) => warning.event_id),
+  );
+  const lines: { event_id: string; depends: string[] }[] = [
+    ...core.transmissions.map((line) => ({
+      event_id: line.event_id,
+      depends: [
+        line.event_id,
+        ...line.lots.flatMap((lot) => [
+          ...lot.lineage.map((step) => step.event_id),
+          lot.root.event_id,
+        ]),
+      ],
+    })),
+    ...core.income.map((line) => ({ event_id: line.event_id, depends: [line.event_id] })),
+    ...core.expenses.map((line) => ({ event_id: line.event_id, depends: [line.event_id] })),
+  ];
+  const notes: Warning[] = [];
+  for (const line of lines) {
+    const depends = [...new Set(line.depends)];
+    const found = depends.filter((id) => byEvent.has(id));
+    if (found.length > 0) {
+      notes.push(
+        note(
+          "tax_fx_rate_finding",
+          line.event_id,
+          "this line depends on an ECB rate that is not the official one of its date; the figure is computed with the rate of the ledger",
+          {
+            events: found,
+            codes: [
+              ...new Set(found.flatMap((id) => [...(byEvent.get(id) as Set<string>)])),
+            ].sort(),
+          },
+        ),
+      );
+    }
+    const late = depends.filter((id) => afterFiscal.has(id));
+    if (late.length > 0) {
+      notes.push(
+        note(
+          "tax_fx_rate_date_after_fiscal_date",
+          line.event_id,
+          "this line depends on an ECB rate dated after its fiscal date; the figure is computed with the rate of the ledger",
+          { events: late },
+        ),
+      );
+    }
+  }
+  return notes;
 };
 
 const notesOf = (

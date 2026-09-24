@@ -244,3 +244,99 @@ describe("atlas add with the ECB history", () => {
     expect(result.text).toContain("fx_rate");
   });
 });
+
+describe("atlas check and the ECB rates (block 4)", () => {
+  it("contrasts the rates with the history, in Spanish, and says until when", async () => {
+    const { atlas } = await setup();
+    await atlas(undefined, ...buy("gold", "USD", "2026-01-02", "2026-01-06"), "--yes");
+    await atlas(
+      undefined,
+      ...buy("gold", "USD", "2026-01-05", "2026-01-07"),
+      "--fx-rate",
+      "1.1169",
+      "--fx-rate-date",
+      "2026-01-02",
+      "--yes",
+      "--confirm-fx-rate",
+    );
+    const deep = await atlas(undefined, "check", "--deep");
+    expect(deep.text).toContain("fx_rate_date_not_latest");
+    expect(deep.text).toContain(
+      "para la fecha fiscal (05/01/2026) el tipo aplicable es 1.1182 del 05/01/2026, no el del 02/01/2026",
+    );
+    expect(deep.text).toContain(
+      "Tipos del BCE: 2 contrastados con el histórico oficial, que llega hasta el 31/03/2026.",
+    );
+    expect(deep.text).not.toContain("is the one of");
+  });
+
+  it("never says «sin hallazgos» of rates nobody contrasted (mutants 9 and 25)", async () => {
+    const { atlas } = await setup(false);
+    await atlas(
+      undefined,
+      ...buy("gold", "USD", "2026-01-02", "2026-01-06"),
+      "--fx-rate",
+      "1.1",
+      "--fx-rate-date",
+      "2026-01-02",
+      "--yes",
+    );
+    const plain = await atlas(undefined, "check");
+    expect(plain.text).not.toContain("sin hallazgos");
+    expect(plain.text).toContain("Libro íntegro en lo comprobado.");
+    expect(plain.text).toContain("Tipos del BCE sin contrastar (1): atlas check no los contrasta");
+    const deep = await atlas(undefined, "check", "--deep");
+    expect(deep.text).not.toContain("sin hallazgos");
+    expect(deep.text).toContain(
+      "Tipos del BCE sin contrastar (1): no hay histórico junto al libro",
+    );
+  });
+
+  it("says «sin hallazgos» when there is nothing in another currency to contrast", async () => {
+    const { atlas } = await setup(false);
+    await atlas(undefined, ...buy("fund", "EUR", "2026-01-02", "2026-01-06"), "--yes");
+    expect((await atlas(undefined, "check")).text).toBe("Libro íntegro: sin hallazgos.");
+  });
+});
+
+describe("the tax report and the ECB rates (block 4)", () => {
+  it("notes the sale whose purchase has a rate that is not the official one, and moves no figure", async () => {
+    const { atlas } = await setup();
+    await atlas(
+      undefined,
+      ...buy("gold", "USD", "2026-01-02", "2026-01-06"),
+      "--fx-rate",
+      "1.2",
+      "--fx-rate-date",
+      "2026-01-02",
+      "--yes",
+      "--confirm-fx-rate",
+    );
+    const sell = [
+      "add",
+      "sell",
+      "--account",
+      "acc",
+      "--asset",
+      "gold",
+      "--trade-date",
+      "2026-02-02",
+      "--value-date",
+      "2026-02-04",
+      "--quantity",
+      "1",
+      "--unit-price",
+      "120",
+      "--currency",
+      "USD",
+      "--yes",
+    ];
+    expect((await atlas(undefined, ...sell)).code).toBe(0);
+    const report = await atlas(undefined, "tax", "2026");
+    expect(report.code).toBe(0);
+    expect(report.text).toContain(
+      "Esta línea depende de un tipo del BCE que no es el oficial de su fecha (fx_rate_mismatch",
+    );
+    expect(report.text).toContain("La cifra se calcula con el tipo del libro");
+  });
+});

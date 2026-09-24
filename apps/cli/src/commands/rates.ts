@@ -15,10 +15,18 @@
 
 import { dirname } from "node:path";
 import { FileEcbHistoryStore, readLocalConfig } from "@atlas/adapters";
-import { DomainError, loadAndProject } from "@atlas/domain";
 import {
+  DomainError,
+  type LedgerEvent,
+  type LedgerState,
+  loadAndProject,
+  todayInMadrid,
+} from "@atlas/domain";
+import {
+  checkLedgerRates,
   type EcbHistory,
   proposeRates,
+  type RateCheck,
   type RateMismatch,
   rateConfirmations,
   readEcbHistory,
@@ -111,4 +119,47 @@ export const confirmRates = async (
     );
   }
   return answer;
+};
+
+/** The ledger's rates against the history next to it, or `unchecked` without one. */
+export const ratesOf = async (
+  ctx: Context,
+  state: LedgerState,
+  events: readonly LedgerEvent[],
+): Promise<RateCheck> => {
+  const folder = dirname(ctx.ledgerPath);
+  const active = await new FileEcbHistoryStore(folder).active();
+  const { ecb_stale_currency_days } = await readLocalConfig(folder);
+  return checkLedgerRates(
+    active === undefined ? undefined : readEcbHistory(active.text, active.meta.source),
+    state,
+    events,
+    ecb_stale_currency_days,
+    todayInMadrid(ctx.deps.clock),
+  );
+};
+
+/**
+ * The findings of the ECB check, by event, for the notes of the tax report
+ * (ADR-0029, point 8). With no history, none: the report still notes a rate
+ * dated after its fiscal date, which the projection sees on its own.
+ */
+export const rateFindingsOf = async (
+  ctx: Context,
+): Promise<{ event_id: string; code: string }[]> => {
+  try {
+    const { state, events } = await loadAndProject(ctx.deps, { collectErrors: true });
+    const check = await ratesOf(ctx, state, events);
+    return check.kind === "unchecked"
+      ? []
+      : check.findings.flatMap((finding) =>
+          finding.event_ids.map((event_id) => ({ event_id, code: finding.code })),
+        );
+  } catch (error) {
+    if (error instanceof DomainError) {
+      // The report itself will say what is wrong with the ledger.
+      return [];
+    }
+    throw error;
+  }
 };

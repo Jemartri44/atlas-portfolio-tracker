@@ -53,6 +53,14 @@ export const FIRST_SUPPORTED_YEAR = 2018;
 export interface TaxOptions {
   /** The date of the query: it decides what is provisional, and what was filed by then. */
   today: CivilDate;
+  /**
+   * The findings of the ECB check on the ledger's rates, by event (feature
+   * 012, ADR-0029 point 8), when the caller has a history to check them
+   * against. The engine **computes nothing with them**: it computes with the
+   * `fx_rate` of the ledger, always. It only notes which lines depend on a
+   * rate with a finding.
+   */
+  rateFindings?: readonly { event_id: string; code: string }[];
 }
 
 const zero = (): Money => Money.zero(EUR);

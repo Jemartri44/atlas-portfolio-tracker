@@ -172,6 +172,10 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `Las diferencias de cambio del efectivo en divisa (${(Array.isArray(d.currencies) ? d.currencies : [d.currencies]).map((code) => num(code)).join(", ")}) no se calculan: es un criterio en disputa y faltan los lotes de divisa.`,
   tax_in_kind_income_not_integrated: (d, _n, f) =>
     `Renta en especie registrada (${f.money(d.income_eur)}) y no integrada: el criterio vigente no declara nada al recibirla.`,
+  tax_fx_rate_finding: () =>
+    "Esta línea depende de un tipo del BCE que no es el oficial de su fecha. La cifra se calcula con el tipo de tus datos; si está mal, corrige el movimiento (anular y registrar de nuevo) y compruébalo antes de declarar.",
+  tax_fx_rate_date_after_fiscal_date: () =>
+    "Esta línea depende de un tipo del BCE fechado después de su fecha fiscal. La cifra se calcula con el tipo de tus datos; el aplicable es el último publicado en o antes de la fecha fiscal.",
   tax_window_open: (d, n, f) =>
     `La pérdida de ${n.one(d.asset_id)} (${f.money(d.loss_eur)}) es provisional: su ventana de recompra sigue abierta hasta el ${day(d.window_end)}.`,
   tax_neutrality_contradiction: (d) =>

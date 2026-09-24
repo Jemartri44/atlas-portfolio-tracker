@@ -34,3 +34,42 @@ export const describeCalendar = (disagreements: readonly CalendarDisagreement[])
             : `  ${day(entry.date)}: día de cierre con publicación.`,
         ),
       ];
+
+const rate = (value: string | undefined): string => (value === undefined ? "?" : value);
+const when = (value: string | undefined): string => (value === undefined ? "?" : day(value));
+const whose = (basis: string | undefined): string =>
+  basis === "fiscal" ? "la fecha fiscal" : "la fecha de la operación";
+
+/**
+ * The findings of the ECB check, in Spanish (decision (z) of prompt 012): a
+ * catalogue **limited to the codes of the ECB** — translating every finding of
+ * the console is another feature —, and the drift test of the messages
+ * demands an entry here for each code the domain can raise. Each with the
+ * facts the domain gave, and what to do.
+ */
+export const describeEcbFinding = (
+  code: string,
+  d: Readonly<Record<string, string>>,
+): string | undefined => {
+  const where = `${d.field ?? "fx_rate"} (${d.currency ?? "?"})`;
+  switch (code) {
+    case "fx_rate_mismatch":
+      return `${where}: ${rate(d.rate)} del ${when(d.rate_date)} no es el tipo oficial de ese día, ${rate(d.official)}. Si es un error, corrígelo con atlas edit.`;
+    case "fx_rate_date_unpublished":
+      return `${where}: el BCE no publicó tipo de ${d.currency ?? "?"} el ${when(d.rate_date)}. Corrígelo con el último publicado en o antes de ${whose(d.basis)}.`;
+    case "fx_rate_date_not_latest":
+      return `${where}: para ${whose(d.basis)} (${when(d.reference)}) el tipo aplicable es ${rate(d.official)} del ${when(d.official_date)}, no el del ${when(d.rate_date)}. Si la regla de la fecha fiscal cambió, la corrección es anular y registrar de nuevo, nunca recalcular.`;
+    case "fx_rate_currency_unlisted":
+      return `${where}: el BCE no publica ${d.currency ?? "esa divisa"} (o no la publicaba el ${when(d.reference)}): el tipo no se puede contrastar con el oficial.`;
+    case "fx_rate_currency_stale":
+      return `${where}: el BCE dejó de publicar ${d.currency ?? "esa divisa"} el ${when(d.last)}: el tipo no se puede contrastar con el oficial.`;
+    case "fx_rate_not_yet_in_history":
+      return `${where}: el histórico llega hasta el ${when(d.latest)} y ${whose(d.basis)} es el ${when(d.reference)}: sin contrastar. Actualízalo con atlas fx update.`;
+    case "target_calendar_mismatch":
+      return d.kind === "working_day_without_publication"
+        ? `El ${when(d.date)} es hábil según el calendario TARGET y el histórico no trae publicación: o le falta un día o el calendario cambió. No bloquea nada.`
+        : `El ${when(d.date)} es de cierre según el calendario TARGET y el histórico trae publicación: o el calendario cambió o el archivo está mal. No bloquea nada.`;
+    default:
+      return undefined;
+  }
+};

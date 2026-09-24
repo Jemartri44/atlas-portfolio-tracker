@@ -12,6 +12,7 @@ export {
   parseLocalConfig,
 } from "./config/local-config.js";
 export { type BrokerSettlement, brokerSettlementOf } from "./ecb/broker-settlement.js";
+export { checkLedgerRates, foreignRatesOf, type RateCheck } from "./ecb/check.js";
 export {
   asciiText,
   type CurrencySeries,

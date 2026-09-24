@@ -407,6 +407,10 @@ export const describeWarning = (warning: Warning): string => {
       return `Las diferencias de cambio del efectivo en divisa (${((d.currencies as string[] | undefined) ?? []).join(", ")}) NO se calculan: criterio #4, en disputa, sin lotes de divisa. Cambios de divisa del ejercicio: ${((d.fx_exchanges as string[] | undefined) ?? []).join(", ") || "ninguno"}.`;
     case "tax_in_kind_income_not_integrated":
       return `Renta en especie registrada (${text(d.income_eur)} EUR, base ${text(d.base) === "general" ? "general" : "del ahorro"}) y NO integrada: el criterio vigente (#8) no declara nada al recibirla.`;
+    case "tax_fx_rate_finding":
+      return `Esta línea depende de un tipo del BCE que no es el oficial de su fecha (${(d.codes as string[]).join(", ")}; eventos ${(d.events as string[]).join(", ")}). La cifra se calcula con el tipo del libro; si está mal, corrígelo anulando y registrando de nuevo (criterio 25), y compruébalo antes de declarar.`;
+    case "tax_fx_rate_date_after_fiscal_date":
+      return `Esta línea depende de un tipo del BCE fechado después de su fecha fiscal (eventos ${(d.events as string[]).join(", ")}). La cifra se calcula con el tipo del libro; el aplicable es el último publicado en o antes de la fecha fiscal (criterio 25).`;
     case "tax_window_open":
       return `La pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) es PROVISIONAL: su ventana de recompra sigue abierta hasta el ${text(d.window_end)} y una compra antes de esa fecha la diferiría.`;
     case "tax_neutrality_contradiction":
