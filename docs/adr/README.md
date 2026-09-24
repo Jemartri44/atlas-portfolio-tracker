@@ -21,7 +21,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0015](0015-degraded-projection-and-settings-acceptance.md) | Proyección degradada en consultas y aceptación de settings_changed que invalida el pasado | Aceptada |
 | [0016](0016-project-ledger-as-of.md) | Consulta del libro a una fecha con asOf | Aceptada |
 | [0017](0017-web-stack.md) | Stack de la aplicacion web | Aceptada; la parte de Pico, reemplazada por 0023 |
-| [0018](0018-schema-evolution-rules.md) | Evolucion del esquema y endurecimiento de validaciones | Aceptada |
+| [0018](0018-schema-evolution-rules.md) | Evolucion del esquema y endurecimiento de validaciones | Aceptada; enmendada el 2026-09-24 (un campo nuevo en una foto completa) |
 | [0019](0019-web-local-first.md) | Aplicacion web local-first sin servidor | Aceptada |
 | [0020](0020-tax-return-filed.md) | Constancia de lo declarado: evento `tax_return_filed` | Aceptada |
 | [0021](0021-fiscal-schema-provisions.md) | Previsiones del esquema para la Fase 5: guardar el dato sin decidir el criterio | Aceptada |
@@ -29,6 +29,13 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0023](0023-own-base-stylesheet.md) | Base de estilos propia en lugar de Pico CSS | Aceptada |
 | [0024](0024-fiscal-caveats-are-report-notes.md) | Una salvedad fiscal es una nota del informe, no una decisión de la interfaz | Aceptada |
 | [0025](0025-recorded-fingerprint-waiver.md) | La salida de compact ante una huella no verificable queda registrada en el libro | Aceptada |
+| [0026](0026-cloud-sync-layer.md) | La nube como capa sobre lo local: sincronización del libro entre dispositivos | Aceptada |
+| [0027](0027-google-sign-in-verified-by-lambda.md) | Acceso solo con Google, verificado en nuestra Lambda; sin Cognito | Aceptada |
+| [0028](0028-aws-account-and-security-baseline.md) | Cuentas de AWS dedicadas, entornos y línea base de seguridad | Aceptada |
+| [0029](0029-ecb-reference-rates.md) | Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad | Aceptada |
+| [0030](0030-broker-settled-eur.md) | Importe en euros liquidado por el bróker, como dato informativo | Aceptada |
+| [0031](0031-daily-close-prices.md) | Precios de cierre diarios: puerto, almacén y política de fallo | Aceptada |
+| [0032](0032-backups-and-restore.md) | Copias de seguridad y restauración del libro | Aceptada |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 
