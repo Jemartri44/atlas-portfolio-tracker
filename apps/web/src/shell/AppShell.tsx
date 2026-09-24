@@ -30,7 +30,11 @@ const DraftSlot = (): JSX.Element => (
   <span
     class="draft-slot"
     ref={(slot) =>
-      void import("./draft-counter.js").then((module) => module.mountDraftCounter(slot))
+      // A counter that cannot load (an installed app that lost the network
+      // before caching its chunk) leaves the place empty, never an error.
+      void import("./draft-counter.js")
+        .then((module) => module.mountDraftCounter(slot))
+        .catch(() => undefined)
     }
   />
 );
