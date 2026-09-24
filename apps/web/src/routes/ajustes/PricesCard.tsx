@@ -24,8 +24,14 @@ const PROBLEMS = {
 } as const;
 
 export const PricesCard = (): JSX.Element => {
-  const ids = () => [...(store.snapshot()?.state.assets.keys() ?? [])];
-  const [quotes, { refetch }] = createResource(async () => (await prices()).loadWebQuotes(ids()));
+  // Keyed on the ledger: Ajustes can be painted before the ledger is open, and
+  // reading the prices of an empty catalogue said «sin precios» of a device
+  // that had them (seen on the screen, 2026-09-25; no test had caught it).
+  const [quotes, { refetch }] = createResource(
+    () => ({ snapshot: store.snapshot() }),
+    async ({ snapshot }) =>
+      (await prices()).loadWebQuotes([...(snapshot?.state.assets.keys() ?? [])]),
+  );
   const [busy, setBusy] = createSignal(false);
   const [said, setSaid] = createSignal<{ tone: "info" | "danger" | "caution"; text: string }>();
 

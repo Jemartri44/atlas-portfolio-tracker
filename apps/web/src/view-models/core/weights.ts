@@ -75,6 +75,8 @@ export interface WeightsView {
   /** Names of what has a position and no price, ready to print. */
   missing: string[];
   stale: string[];
+  /** What the automatic prices say about the weights: a quote without euros, an approximation. */
+  priceNotes: readonly Warning[];
   warnings: readonly Warning[];
 }
 
@@ -125,13 +127,22 @@ const classOf = (
 export const weightsView = (view: CoreWeights, names: NameIndex = NO_NAMES): WeightsView => {
   const offTarget = subjectsOf(view.warnings, "deviation_above_threshold", "asset_id");
   const belowMinimum = subjectsOf(view.warnings, "satellite_below_minimum", "asset_class");
+  const withoutEur = subjectsOf(view.warnings, "price_without_eur_value", "asset_id");
   const rows = view.rows.map((row) => rowOf(row, names, offTarget));
   return {
     date: view.date,
     classes: view.by_class.map((subtotal) => classOf(subtotal, rows, belowMinimum)),
     ...(view.partial && view.total_eur.isZero() ? {} : { total: view.total_eur }),
     partial: view.partial,
-    missing: view.missing_prices.map((id) => displayName(names, id)),
+    // A quote without its value in euros is not a missing price (feature 013):
+    // it is said apart, with its reason, and a valuation is not its only remedy.
+    missing: view.missing_prices
+      .filter((id) => !withoutEur.has(id))
+      .map((id) => displayName(names, id)),
+    priceNotes: view.warnings.filter(
+      (warning) =>
+        warning.code === "price_without_eur_value" || warning.code === "weights_use_approximation",
+    ),
     stale: view.stale_prices.map((id) => displayName(names, id)),
     warnings: view.warnings,
   };

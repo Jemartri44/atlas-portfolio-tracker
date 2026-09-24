@@ -83,6 +83,7 @@ export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX
   <Show when={props.price.unitValue !== undefined}>
     <span>
       <Price price={props.price} />
+      <Show when={props.price.priceOrigin}>{(origin) => <> · {origin()}</>}</Show>
       <Show when={props.price.priceDate}>{(date) => <> · {formatDate(date())}</>}</Show>
       <Show when={props.withAge === true && props.price.ageDays !== undefined}>
         {" "}
@@ -90,11 +91,27 @@ export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX
         {props.price.stale ? ", caducado" : ""})
       </Show>
       <Show when={props.withAge !== true && props.price.stale}> (caducado)</Show>
-      <Show when={props.price.priceOrigin}>{(origin) => <> · {origin()}</>}</Show>
       <Show when={props.price.approximate === true}> · aproximado con su ETF de referencia</Show>
       <Show when={props.price.eurMissing}>
         {(reason) => <> · falta su valor en euros ({reason()})</>}
       </Show>
     </span>
+  </Show>
+);
+
+/**
+ * Where a price comes from and of which day, for a column of a wide table
+ * (feature 013): «EODHD · 24/09/2026», «manual · 15/09/2026». On a phone the
+ * same is said by `PriceDetail`.
+ */
+export const PriceSource = (props: { price: PriceInfo }): JSX.Element => (
+  <Show when={props.price.priceDate}>
+    {(date) => (
+      <span class="meta">
+        {props.price.priceOrigin ?? ""}
+        {props.price.priceOrigin === undefined ? "" : " · "}
+        {formatDate(date())}
+      </span>
+    )}
   </Show>
 );

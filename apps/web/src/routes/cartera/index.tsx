@@ -113,6 +113,7 @@ export default function CarteraRoute(): JSX.Element {
                 date={date()}
                 settings={settings()}
                 absorbed={absorbed()}
+                names={names}
               />
               <ContributionCard view={plan()} error={planError()} />
               <CostsCard view={costs()} />

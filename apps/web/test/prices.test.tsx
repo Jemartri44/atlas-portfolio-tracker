@@ -170,6 +170,17 @@ describe("a price on the screen", () => {
   });
 });
 
+describe("Ajustes with prices imported", () => {
+  it("says where they come from and how many assets have one", async () => {
+    await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "999") }]);
+    const host = await show("/ajustes", Ajustes);
+    await settle(30);
+    expect(text(host)).toContain(
+      "Importados a mano en este navegador: un activo, con cierres hasta el",
+    );
+  });
+});
+
 describe("Ajustes on a device without folders (the phone)", () => {
   it("says there are no automatic prices until the cloud exists, and offers the import", async () => {
     const host = await show("/ajustes", Ajustes);
