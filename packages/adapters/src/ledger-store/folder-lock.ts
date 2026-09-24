@@ -24,7 +24,7 @@
 import { randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { hostname } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 export const LOCK_FILE = "ledger.lock";
 
@@ -37,6 +37,16 @@ export interface FolderLockInfo {
   host?: string;
 }
 
+/**
+ * A lock file that exists and is still empty: another writer has just created
+ * it exclusively and has not written who it is yet. A write is starting — not
+ * an unreadable lock, and nothing to break (review of PR #75).
+ */
+export const BEING_WRITTEN = "being_written";
+
+/** What a lock file says: who holds it, that it is being written, or `undefined` when unreadable. */
+export type FolderLockState = FolderLockInfo | typeof BEING_WRITTEN | undefined;
+
 const hasCode = (error: unknown, code: string): boolean =>
   typeof error === "object" && error !== null && (error as { code?: string }).code === code;
 
@@ -48,12 +58,14 @@ const hasCode = (error: unknown, code: string): boolean =>
 export class LedgerLockedError extends Error {
   constructor(
     readonly folder: string,
-    readonly info: FolderLockInfo | undefined,
+    readonly info: FolderLockState,
   ) {
     super(
       info === undefined
         ? `the ledger folder ${folder} is locked by a writer that does not identify itself`
-        : `the ledger folder ${folder} is locked by ${info.holder} since ${info.since}`,
+        : info === BEING_WRITTEN
+          ? `the ledger folder ${folder} is locked by a write that is just starting`
+          : `the ledger folder ${folder} is locked by ${info.holder} since ${info.since}`,
     );
     this.name = "LedgerLockedError";
   }
@@ -70,7 +82,10 @@ export class LockLostError extends Error {
   }
 }
 
-const parse = (text: string): FolderLockInfo | undefined => {
+const parse = (text: string): FolderLockState => {
+  if (text === "") {
+    return BEING_WRITTEN;
+  }
   try {
     const value = JSON.parse(text) as Partial<FolderLockInfo>;
     return typeof value.holder === "string" &&
@@ -85,9 +100,7 @@ const parse = (text: string): FolderLockInfo | undefined => {
 };
 
 /** What the lock file of `folder` says; `null` when there is no lock. */
-export const readFolderLock = async (
-  folder: string,
-): Promise<FolderLockInfo | undefined | null> => {
+export const readFolderLock = async (folder: string): Promise<FolderLockState | null> => {
   try {
     return parse(await fs.readFile(join(folder, LOCK_FILE), "utf8"));
   } catch (error) {
@@ -140,7 +153,10 @@ export const acquireFolderLock = async (
   } finally {
     await handle.close();
   }
-  const owned = async (): Promise<boolean> => (await readFolderLock(folder))?.token === info.token;
+  const owned = async (): Promise<boolean> => {
+    const current = await readFolderLock(folder);
+    return typeof current === "object" && current?.token === info.token;
+  };
   return {
     info,
     assertOwned: async () => {
@@ -185,5 +201,45 @@ export const withFolderLock = async <T>(
     return await write(lock);
   } finally {
     await lock.release();
+  }
+};
+
+/**
+ * Removes the temporary files a write of the ledger left behind when it was
+ * killed before its rename (`ledger.jsonl.tmp-<pid>-<time>`; review of PR
+ * #75). Only under the lock: every writer creates its temporary holding it,
+ * so while this holds it, any temporary is an orphan. If somebody holds the
+ * lock, nothing is touched — their temporary may be the write in progress.
+ * Returns the names removed.
+ */
+export const sweepOrphanTemporaries = async (ledgerPath: string): Promise<string[]> => {
+  const folder = dirname(ledgerPath);
+  const prefix = `${basename(ledgerPath)}.tmp-`;
+  const orphans = async (): Promise<string[]> => {
+    try {
+      return (await fs.readdir(folder)).filter((name) => name.startsWith(prefix));
+    } catch (error) {
+      if (hasCode(error, "ENOENT")) {
+        return [];
+      }
+      throw error;
+    }
+  };
+  if ((await orphans()).length === 0) {
+    return [];
+  }
+  try {
+    return await withFolderLock(folder, async () => {
+      const found = await orphans();
+      for (const name of found) {
+        await fs.rm(join(folder, name), { force: true });
+      }
+      return found;
+    });
+  } catch (error) {
+    if (error instanceof LedgerLockedError) {
+      return [];
+    }
+    throw error;
   }
 };

@@ -16,13 +16,16 @@ export { BlobArchiveExists, BlobLedgerStore, type LedgerBlob } from "./ledger-st
 export { FileLedgerStore, type FileLedgerStoreOptions } from "./ledger-store/file.js";
 export {
   acquireFolderLock,
+  BEING_WRITTEN,
   breakFolderLock,
   type FolderLockInfo,
+  type FolderLockState,
   type HeldLock,
   LedgerLockedError,
   LOCK_FILE,
   LockLostError,
   readFolderLock,
+  sweepOrphanTemporaries,
   withFolderLock,
 } from "./ledger-store/folder-lock.js";
 export { MemoryLedgerStore } from "./ledger-store/memory.js";

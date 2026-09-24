@@ -18,6 +18,7 @@ import {
   LOCK_FILE,
   LockLostError,
   readFolderLock,
+  sweepOrphanTemporaries,
 } from "../src/ledger-store/folder-lock.js";
 import { account, deposit, futureLine, lineOf } from "./fixtures.js";
 import { ledgerStoreContract } from "./ledger-store.contract.js";
@@ -239,7 +240,8 @@ describe("FileLedgerStore: the folder lock", () => {
     const { path, dir } = await fresh(`${lineOf(account)}\n`);
     const store = new FileLedgerStore(path, undefined, {
       beforeCommit: async () => {
-        seen.push((await readFolderLock(dir))?.holder ?? null);
+        const lock = await readFolderLock(dir);
+        seen.push(typeof lock === "object" ? (lock?.holder ?? null) : (lock ?? null));
       },
     });
     await store.append([deposit], (await store.load()).etag);
@@ -307,5 +309,13 @@ describe("FileLedgerStore: the folder lock", () => {
     await expect(acquireFolderLock(join(dir, "blocker"))).rejects.toMatchObject({
       code: expect.stringMatching(/^E/),
     });
+  });
+});
+
+describe("sweepOrphanTemporaries (review of PR #75)", () => {
+  it("does nothing in a folder that does not exist yet", async () => {
+    expect(
+      await sweepOrphanTemporaries(join(tmpdir(), "atlas-012-nowhere", "ledger.jsonl")),
+    ).toEqual([]);
   });
 });

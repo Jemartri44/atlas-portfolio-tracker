@@ -8,7 +8,7 @@ import { dirname } from "node:path";
 import { breakFolderLock, readFolderLock, readLocalConfig } from "@atlas/adapters";
 import { assertKnownFlags, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
-import { describeLock, LOCK_REMEDY } from "../output/lock.js";
+import { describeLock, remedyFor } from "../output/lock.js";
 import { confirm, render } from "./shared.js";
 
 export const lockCommand = async (
@@ -35,7 +35,7 @@ export const lockCommand = async (
   const { lock_stale_minutes } = await readLocalConfig(folder);
   const description = describeLock(info, now, lock_stale_minutes);
   if (sub === "show") {
-    render(ctx, { locked: true, lock: info ?? null }, `${description}\n${LOCK_REMEDY}`);
+    render(ctx, { locked: true, lock: info ?? null }, `${description}\n${remedyFor(info)}`);
     return 0;
   }
   ctx.io.out(description);

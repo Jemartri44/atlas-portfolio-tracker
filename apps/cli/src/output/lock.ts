@@ -2,7 +2,7 @@
 // feature 012). Who holds it, since when, whether it looks abandoned, and the
 // two ways out: wait, or break it knowing what that means.
 
-import type { FolderLockInfo } from "@atlas/adapters";
+import { BEING_WRITTEN, type FolderLockInfo, type FolderLockState } from "@atlas/adapters";
 import { madridDateOf } from "@atlas/domain";
 
 const MINUTE = 60_000;
@@ -29,11 +29,10 @@ const who = (info: FolderLockInfo): string => {
 };
 
 /** The lock described in one paragraph; `now` and the stale threshold decide the last sentence. */
-export const describeLock = (
-  info: FolderLockInfo | undefined,
-  now: Date,
-  staleMinutes: number,
-): string => {
+export const describeLock = (info: FolderLockState, now: Date, staleMinutes: number): string => {
+  if (info === BEING_WRITTEN) {
+    return "Hay una escritura en curso: otra orden de la consola acaba de tomar el cerrojo de la carpeta del libro y todavía no ha dicho quién es.";
+  }
   if (info === undefined) {
     return "La carpeta del libro tiene un cerrojo que no dice de quién es (el fichero ledger.lock no se entiende).";
   }
@@ -47,6 +46,16 @@ export const describeLock = (
       : "";
   return `La carpeta del libro está bloqueada por ${who(info)} desde el ${when(info.since)}${age}.${stale}`;
 };
+
+/**
+ * The remedy for the lock `info` describes: a write that is just starting only
+ * needs a moment — suggesting `lock break` there would teach breaking a lock
+ * that is about to be released (review of PR #75).
+ */
+export const remedyFor = (info: FolderLockState): string =>
+  info === BEING_WRITTEN
+    ? "Espera un momento y repite: la escritura suele durar menos de un segundo. No hay nada que romper."
+    : LOCK_REMEDY;
 
 /** The remedy, always the same two options, and the honest limit of the second. */
 export const LOCK_REMEDY =

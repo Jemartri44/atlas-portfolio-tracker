@@ -9,6 +9,7 @@ import {
   LedgerLockedError,
   LockLostError,
   readLocalConfig,
+  sweepOrphanTemporaries,
   systemClock,
   webCryptoRandom,
 } from "@atlas/adapters";
@@ -50,7 +51,7 @@ import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
-import { describeLock, LOCK_LOST, LOCK_REMEDY } from "./output/lock.js";
+import { describeLock, LOCK_LOST, remedyFor } from "./output/lock.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 
 export const COMMANDS: Record<string, Command> = {
@@ -253,6 +254,7 @@ const dispatch = async (
     if (name !== "draft") {
       remindAt(ledgerPath);
     }
+    await sweepTemporaries(io, ledgerPath);
     return await command(ctx, positionals, flags);
   } catch (error) {
     if (error instanceof LedgerLockedError) {
@@ -274,6 +276,24 @@ const dispatch = async (
   }
 };
 
+/**
+ * The temporaries of a write killed before its rename, removed at the start of
+ * every command — only when nobody holds the lock (review of PR #75). Best
+ * effort: a folder that cannot be swept must not stop the command.
+ */
+const sweepTemporaries = async (io: Io, ledgerPath: string): Promise<void> => {
+  try {
+    const removed = await sweepOrphanTemporaries(ledgerPath);
+    if (removed.length > 0) {
+      io.err(
+        `Se ${removed.length === 1 ? "ha quitado un fichero temporal" : `han quitado ${removed.length} ficheros temporales`} de una escritura interrumpida (${removed.join(", ")}): el libro no se había tocado.`,
+      );
+    }
+  } catch {
+    // Nothing to say: the next write writes its own temporary anyway.
+  }
+};
+
 /** The lock of the folder is held: who, since when, and the two ways out. */
 const reportLocked = async (io: Io, error: LedgerLockedError): Promise<number> => {
   const { lock_stale_minutes } = await readLocalConfig(error.folder).catch(() => ({
@@ -282,7 +302,7 @@ const reportLocked = async (io: Io, error: LedgerLockedError): Promise<number> =
   io.err(
     `Error: ${describeLock(error.info, new Date(), lock_stale_minutes ?? Number.POSITIVE_INFINITY)}`,
   );
-  io.err(LOCK_REMEDY);
+  io.err(remedyFor(error.info));
   return EXIT.locked;
 };
 
