@@ -36,7 +36,9 @@ import { ConfirmationRequired, type Context } from "../context.js";
 import { day } from "../output/ecb.js";
 
 /** The history in force, or `undefined` — with the reason when there is one but it cannot be used. */
-const historyOf = async (ctx: Context): Promise<{ history?: EcbHistory; problem?: string }> => {
+export const historyOf = async (
+  ctx: Context,
+): Promise<{ history?: EcbHistory; problem?: string }> => {
   try {
     const active = await new FileEcbHistoryStore(dirname(ctx.ledgerPath)).active();
     return active === undefined ? {} : { history: readEcbHistory(active.text, active.meta.source) };
@@ -53,6 +55,9 @@ export interface RatedDraft {
   mismatches: RateMismatch[];
   /** A rate the ECB has not published yet and nobody typed: it cannot be recorded as it is. */
   waiting: boolean;
+  /** The history in force, for the draft that waits for it. */
+  history?: EcbHistory;
+  staleDays: number;
 }
 
 export const rateDraft = async (
@@ -66,7 +71,7 @@ export const rateDraft = async (
     state = (await loadAndProject(ctx.deps, { collectErrors: true })).state;
   } catch (error) {
     if (error instanceof DomainError) {
-      return { draft, notes: [], mismatches: [], waiting: false };
+      return { draft, notes: [], mismatches: [], waiting: false, staleDays: stale };
     }
     throw error;
   }
@@ -90,13 +95,20 @@ export const rateDraft = async (
       waiting ||= point.rate === undefined;
       notes.push(
         point.rate === undefined
-          ? `El BCE todavía no ha publicado el tipo de ${point.currency} del ${day(point.reference)} (el último publicado es del ${day(resolution.latest)}). Guárdala como borrador hasta que se publique, o teclea el tipo con --fx-rate y --fx-rate-date.`
+          ? `El BCE todavía no ha publicado el tipo de ${point.currency} del ${day(point.reference)} (el último publicado es del ${day(resolution.latest)}). Se puede guardar como borrador hasta que se publique, o teclear el tipo con --fx-rate y --fx-rate-date.`
           : `El tipo de ${point.currency} del ${day(point.reference)} aún no está en el histórico (llega hasta el ${day(resolution.latest)}): el tecleado no se puede comprobar contra el oficial.`,
       );
     }
   }
   const mismatches = rateConfirmations(history, state, proposal.draft, stale);
-  return { draft: proposal.draft, notes, mismatches, waiting };
+  return {
+    draft: proposal.draft,
+    notes,
+    mismatches,
+    waiting,
+    ...(history === undefined ? {} : { history }),
+    staleDays: stale,
+  };
 };
 
 /** The explicit yes for each typed rate that is not the official one. */

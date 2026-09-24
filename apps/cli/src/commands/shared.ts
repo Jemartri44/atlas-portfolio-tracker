@@ -12,6 +12,7 @@ import {
   loadAndProject,
   type ProjectedLedger,
   previewEvent,
+  type RecordOptions,
   type RecordResult,
   recordEvent,
   type SupportedEvent,
@@ -158,6 +159,9 @@ export const confirmAndRecord = async (
   draft: Record<string, unknown>,
   /** Lines printed between the preview and the question: what the user has to know *before* saying yes. */
   notes: readonly string[] = [],
+  /** How to write it; a plain record by default (a draft records and then removes itself). */
+  write: (options: RecordOptions) => Promise<RecordResult> = (options) =>
+    recordEvent(ctx.deps, draft as unknown as Draft, options),
 ): Promise<RecordResult | undefined> => {
   preview(ctx, "Evento a registrar:", draft);
   for (const note of [...brokerNote(draft), ...notes, ...(await closedYearNotes(ctx, draft))]) {
@@ -167,7 +171,7 @@ export const confirmAndRecord = async (
     ctx.io.out("Cancelado.");
     return undefined;
   }
-  const result = await recordEvent(ctx.deps, draft as unknown as Draft, {
+  const result = await write({
     confirmDuplicate: ctx.confirmDuplicate,
     acceptInvalid: ctx.acceptInvalid,
   });

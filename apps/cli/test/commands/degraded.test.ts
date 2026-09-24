@@ -152,6 +152,9 @@ const INVOCATIONS: {
   { command: "backup", argv: ["backup", "--to", "/dev/null"], readOnly: false },
   { command: "lock", argv: ["lock", "show"], readOnly: true, folderOnly: true },
   { command: "fx", argv: ["fx", "status"], readOnly: true, folderOnly: true },
+  // The drafts live in the folder, outside the ledger; the ledger is read only
+  // to say whether their rate is published, never to show its figures.
+  { command: "draft", argv: ["draft", "list"], readOnly: true, folderOnly: true },
 ];
 
 const HEADER = "inválido";

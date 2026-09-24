@@ -9,8 +9,9 @@ import {
   todayInMadrid,
 } from "@atlas/domain";
 import type { Flags } from "../args.js";
-import { UsageError } from "../args.js";
+import { booleanFlag, UsageError } from "../args.js";
 import { type Context, describeWarnings, EXIT } from "../context.js";
+import { saveAsDraft } from "./draft.js";
 import { confirmRates, rateDraft } from "./rates.js";
 import { confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
 
@@ -243,13 +244,26 @@ export const addCommand = async (
       "un traspaso no lleva comisión: registra el cargo del depositario con `atlas add fee` (standalone_fee)",
     );
   }
+  // `--draft` is not a field of the operation: it says where to keep it.
+  const asDraft = booleanFlag(flags, "draft");
+  flags.delete("draft");
   const rated = await rateDraft(ctx, draftFromFlags(spec, flags));
   const draft = rated.draft;
   if (rated.waiting) {
     for (const note of rated.notes) {
       ctx.io.out(note);
     }
+    if (asDraft) {
+      return saveAsDraft(ctx, draft, rated.history, rated.staleDays);
+    }
+    ctx.io.out("Para guardarla como borrador, repite el comando con --draft.");
     return EXIT.domain;
+  }
+  if (asDraft) {
+    // Nothing waits for the ECB: a draft would only be a second copy.
+    throw new UsageError(
+      "--draft solo sirve para una operación cuyo tipo del BCE aún no se ha publicado: esta se registra como siempre",
+    );
   }
   // A swap shows them too: it is a disposal and an acquisition at once, so both
   // halves of the wash-sale rule can fire and the user has to see them before

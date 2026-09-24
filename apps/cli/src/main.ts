@@ -28,6 +28,7 @@ import { bucketCommand, netWorthCommand } from "./commands/bucket.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
 import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
+import { draftCommand, pendingDraftsNote } from "./commands/draft.js";
 import { exportCommand } from "./commands/export.js";
 import { filedCommand } from "./commands/filed.js";
 import { fxCommand } from "./commands/fx.js";
@@ -86,6 +87,7 @@ export const COMMANDS: Record<string, Command> = {
   backup: backupCommand,
   lock: lockCommand,
   fx: fxCommand,
+  draft: draftCommand,
 };
 
 /**
@@ -129,6 +131,7 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   backup: 1,
   lock: { show: 2, break: 2 },
   fx: { update: 2, status: 2 },
+  draft: { list: 2, confirm: 3, discard: 3 },
 };
 
 /** Refuses the first word a command does not read. */
@@ -164,7 +167,9 @@ comandos:
   synth --out <ruta> [--seed <n>]   backup --to <directorio>
   compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada
   lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición
-  fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor`;
+  fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor
+  add … --draft                  guarda como borrador una operación cuyo tipo del BCE aún no se ha publicado
+  draft list|confirm <id>|discard <id>   los borradores: no cuentan en ninguna cifra hasta registrarlos`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
@@ -197,6 +202,29 @@ export const run = async (
   /** The source of the ECB history; replaced in tests, which never touch the network. */
   fxSource?: () => FxRateSource,
 ): Promise<number> => {
+  let remind: string | undefined;
+  const code = await dispatch(argv, io, compose, fxSource, (path) => {
+    remind = path;
+  });
+  // Said after every command, whatever it did, failures included: a draft
+  // nobody remembers is an operation that never reaches the ledger.
+  if (remind !== undefined) {
+    const note = await pendingDraftsNote(remind);
+    if (note !== undefined) {
+      io.err(note);
+    }
+  }
+  return code;
+};
+
+const dispatch = async (
+  argv: readonly string[],
+  io: Io,
+  compose: (ledgerPath: string) => UseCaseDeps,
+  fxSource: (() => FxRateSource) | undefined,
+  /** Where the reminder of pending drafts looks, once a command is going to run. */
+  remindAt: (ledgerPath: string) => void,
+): Promise<number> => {
   try {
     const { positionals, flags } = parseArgs(argv);
     const name = positionals[0];
@@ -221,6 +249,9 @@ export const run = async (
       json: booleanFlag(flags, "json"),
       ...(fxSource === undefined ? {} : { fxSource }),
     };
+    if (name !== "draft") {
+      remindAt(ledgerPath);
+    }
     return await command(ctx, positionals, flags);
   } catch (error) {
     if (error instanceof LedgerLockedError) {
