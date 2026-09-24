@@ -57,14 +57,14 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 | Frontend | Static SPA with Vite (Svelte or Solid), served from S3 through CloudFront |
 | Backend | Lambda (Node) with Function URL (no API Gateway). TypeScript everywhere, domain in a shared package. ADR-0001 |
 | Data | S3 only. One `ledger/ledger.jsonl` event log (transactions + account/asset catalogue + `settings_changed`), `schema_version` per line, migrated on load, explicit `compact`. Loaded whole into memory; conditional writes (`If-Match`). ECB FX history stored verbatim. ADR-0002, ADR-0006, `docs/data-schema.md` |
-| Auth | Cognito with MFA, single user. The Lambda validates the JWT |
+| Auth | Google Sign-In, verified by our own Lambda; no Cognito. Authorization-code flow with PKCE, the Lambda as the OAuth client; session is our own signed cookie. Allow-list of `{sub, email}` in SSM. ADR-0027 |
 | Scheduling | EventBridge Scheduler |
 | Email | SES |
 | Secrets | SSM Parameter Store standard tier (free), not Secrets Manager |
 | Infrastructure | Terraform |
 | Domain | Own subdomain (value lives in `terraform.tfvars`, outside the repo), CNAME to CloudFront, ACM certificate in us-east-1 |
 
-**Cost constraint:** the project must stay inside the AWS always-free tier indefinitely. Before introducing a new service, verify it is free at this scale.
+**Cost constraint:** minimum cost with a budget alarm (ADR-0028), not "always-free indefinitely" — the cloud layer costs an estimated ≈ $0.01-0.05/month, covered by AWS credits while they last and paid afterwards; a Budgets alarm fires at $1. Before introducing a new service, verify its cost stays minimal at this scale.
 
 ## Code architecture (ADR-0007)
 
@@ -143,7 +143,7 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 
 ### Environments
 
-- `dev` (branch `develop`) and `prod` (branch `main`), with fully separate infrastructure stacks and a suffix on every resource.
+- `dev` (branch `develop`) and `prod` (branch `main`), each a **dedicated AWS member account** (`atlas-dev`, `atlas-prod`) inside an AWS Organization, not just a suffix in a shared account — isolation by construction, at no extra AWS cost. ADR-0028. Resources still carry the environment suffix so a name says where it lives.
 - **Build once, promote.** The artefact deployed to production is the same one validated in dev.
 - **Production data never in dev.** Synthetic data generator in the repository.
 
@@ -174,7 +174,7 @@ Mandatory edge cases: several lots with the same date, fractions, reverse split 
 
 ### Security
 
-- **Never store broker credentials.** The only secret is the read-only IBKR Flex token, in SSM Parameter Store as a `SecureString`.
+- **Never store broker credentials.** Secrets, all in SSM Parameter Store as `SecureString`: the read-only IBKR Flex token, the Google OAuth client secret and the session signing key (ADR-0027), and the price source API keys (ADR-0031).
 - Private S3, served only through CloudFront with Origin Access Control.
 - Least-privilege IAM: one role per Lambda.
 - **No third-party analytics, no external CDNs, no remote fonts.** Everything from the own origin. Strict CSP.
