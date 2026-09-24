@@ -232,6 +232,8 @@ export const describeError = (error: DomainError): string => {
       return `Falta la base de la operación ${text(d.type ?? "")}: indica --amount o --unit-price.`;
     case "invalid_local_config":
       return `La configuración local atlas.config.json de la carpeta del libro no se entiende${d.field === undefined ? "" : ` (${text(d.field)})`}: corrígela o bórrala para volver a los valores por defecto.`;
+    case "second_live_correction":
+      return `${text(d.corrects_id)} ya tiene una corrección en vigor en ese punto del libro (${text(d.live_correction_id)}): una operación anulada solo puede tener una. Anula antes esa corrección, o corrígela a ella (ADR-0026).`;
     case "dangling_correction":
       return `La corrección apunta a ${text(d.corrects_id)}, que no está anulado: una corrección va siempre con su anulación (ADR-0003).`;
     case "dangling_reference":

@@ -246,6 +246,98 @@ describe("projectLedger: rectification", () => {
     expect(failure(c.build()).code).toBe("dangling_correction");
   });
 
+  /**
+   * **An annulled operation has at most one live correction** (ADR-0026, Part
+   * C), judged **in file order** (decision (k) of prompt 012): a correction is
+   * valid only if, at that point of the file, every earlier correction of the
+   * same original is reversed. It is not how `dangling_correction` works, which
+   * looks at the final set of reversals.
+   */
+  it("rejects a second live correction, judged at its position in the file (mutants 5 and 17)", () => {
+    const setup = () => {
+      const b = new LedgerBuilder();
+      catalogue(b);
+      const original = b.buy({ account_id: "acc_fund", asset_id: "ast_world", unit_price: "10" });
+      b.reversal(original.id);
+      const first = b.buy({ account_id: "acc_fund", asset_id: "ast_world", unit_price: "11" });
+      first.corrects_id = original.id;
+      return { b, original, first };
+    };
+    const second = (b: LedgerBuilder, originalId: string) => {
+      const event = b.buy({ account_id: "acc_fund", asset_id: "ast_world", unit_price: "12" });
+      event.corrects_id = originalId;
+      return event;
+    };
+
+    // C1 reversed **before** C2: one live correction at every point. Valid.
+    const valid = setup();
+    valid.b.reversal(valid.first.id);
+    second(valid.b, valid.original.id);
+    expect(
+      fiscalLots(projectLedger(valid.b.build()), "ast_world")[0]?.cost_eur.amount.toString(),
+    ).toBe("120");
+
+    // C1 reversed **after** C2: at the end only one is live, but at C2 there
+    // were two. Invalid in C2 (the final-set reading would accept it).
+    const late = setup();
+    const c2 = second(late.b, late.original.id);
+    late.b.reversal(late.first.id);
+    const error = failure(late.b.build());
+    expect(error.code).toBe("second_live_correction");
+    expect(error.eventId).toBe(c2.id);
+    expect(error.details).toMatchObject({
+      corrects_id: late.original.id,
+      live_correction_id: late.first.id,
+    });
+
+    // And plainly, with nothing reversed.
+    const plain = setup();
+    const c2plain = second(plain.b, plain.original.id);
+    const collected = projectLedger(plain.b.build(), { collectErrors: true });
+    expect(collected.invalid.map((entry) => [entry.error.code, entry.event.id])).toEqual([
+      ["second_live_correction", c2plain.id],
+    ]);
+    // The first correction stays in force; the second counts nowhere.
+    expect(fiscalLots(collected, "ast_world").map((lot) => lot.cost_eur.amount.toString())).toEqual(
+      ["110"],
+    );
+  });
+
+  it("counts as live a correction written before its reversal, which the file accepts", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const original = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    const early = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    // Not dangling: `dangling_correction` looks at the final set of reversals.
+    early.corrects_id = original.id;
+    b.reversal(original.id);
+    const proper = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    proper.corrects_id = original.id;
+    const state = projectLedger(b.build(), { collectErrors: true });
+    expect(state.invalid.map((entry) => [entry.error.code, entry.event.id])).toEqual([
+      ["second_live_correction", proper.id],
+    ]);
+  });
+
+  it("does not count as live a correction it already rejected", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const original = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    b.reversal(original.id);
+    const first = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    first.corrects_id = original.id;
+    const rejected = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    rejected.corrects_id = original.id;
+    b.reversal(first.id);
+    const third = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    third.corrects_id = original.id;
+    const state = projectLedger(b.build(), { collectErrors: true });
+    expect(state.invalid.map((entry) => [entry.error.code, entry.event.id])).toEqual([
+      ["second_live_correction", rejected.id],
+    ]);
+    expect(third.id).not.toBe(rejected.id);
+  });
+
   it("rejects duplicate ids even when collecting errors", () => {
     const b = new LedgerBuilder();
     catalogue(b);

@@ -206,3 +206,24 @@ Todo lo que he mirado cuadra con el encargo. Lo que he mirado:
 - **D7 — Identificador del criterio nuevo: `25`**, catálogo y dos tablas en el mismo commit.
 - **D8 — Subir `DB_VERSION`** de IndexedDB para los borradores, con el arreglo de `onblocked`. `schema_version` del libro no se toca.
 - **D9 — Permiso de commit** en la rama durante toda la feature; nunca de fusionar.
+
+---
+
+## 9. Diario de implementación
+
+### 9.1 Bloque 0, paso 1 — el cerrojo de la consola (2026-09-24)
+
+- **Rojo antes del arreglo**: los seis tests nuevos de `packages/adapters/test/file.test.ts` («the folder lock») se escribieron antes que el cerrojo y fallaron los seis; el de concurrencia, por la razón buena: `expected 1, received 2` (las dos escrituras concurrentes «ganaban», es decir, una línea se perdía).
+- **Mutantes** (runner en el *scratchpad*, `012-mut/mutate.mjs`: afirma que cada sustitución ocurre exactamente una vez, restaura y compara el fichero; desde el bloque de IndexedDB, además, se niega a correr si hay un gemelo compilado junto a una fuente): no tomarlo en `append` — muerto; no tomarlo en `replace` — muerto; `"w"` en vez de `"wx"` — muerto; soltarlo antes de renombrar — muerto; no soltarlo si la escritura falla — muerto; quitar la comprobación de pertenencia — muerto; romper solo un cerrojo caducado (mutante 2) — muerto.
+- `backup --to` y `export --out` escriben donde diga el usuario, fuera del libro, y no toman el cerrojo; `synth --out` escribe con `FileLedgerStore`, así que sí.
+
+### 9.2 Bloque 0, paso 1 — IndexedDB y la carpeta de solo lectura (2026-09-24)
+
+- **Un gemelo compilado eclipsó a su fuente, otra vez** (lección 5 de §2 ter). Un `tsc -b` intermedio, con un `tsconfig` mal puesto, emitió `indexeddb.js` e `idb.js` **dentro de `src/`**. Vite resolvía `./indexeddb.js` al gemelo, y los cuatro primeros mutantes de IndexedDB **sobrevivieron** porque nunca se ejecutaron. El test de arquitectura que vigila los gemelos solo mira el índice de git, así que no lo vio (no estaban añadidos). Se borraron, se repitió el lote entero y el *runner* se niega ahora a correr con gemelos presentes. Nada de esto llegó a un commit.
+- **El doble de IndexedDB serializa todas las transacciones**, así que la carrera entre dos pestañas no siempre se reproduce con él: el mutante 3 (leer y escribir en dos transacciones) **sobrevivía al test de concurrencia**. Lo mata un test estructural: cada `append`, `replace`, exportación e importación abre **exactamente una** transacción, y de lectura y escritura. El de concurrencia se queda, porque cuesta poco y caza la versión ingenua.
+- **Mutantes**: dos transacciones en `update` (3) — muerto; exportación que lee y anota en dos transacciones (24a, D4) — muerto; exportación que reescribe el texto (24b) — muerto; importación que hereda la fecha (D4) — muerto; importar sin preguntar (FR-006) — muerto; la web vuelve a pedir `readwrite` a la carpeta — muerto (test de arquitectura); la web crea un fichero en la carpeta — muerto (ídem).
+- **Paquete web** tras el paso: arranque **73,1** (−0,4: sale la escritura en la carpeta), total **237,9** (+0,1, la confirmación de importar y la carpeta de solo lectura, en trozos perezosos). Ningún techo se mueve.
+
+### 9.3 Bloque 0, paso 2 — una sola corrección viva
+
+- **Predicción de los ficheros dorados, escrita antes de correr la suite**: no se mueve ninguno. `synthetic-v1.jsonl` tiene una sola línea con `corrects_id` (contado con `grep -c`), y los demás, ninguna: la regla no puede disparar en ellos. `synthetic-v1.snapshot.json`, `synthetic-v1.tax.json` y `tax-hand-v1.jsonl`, igual.

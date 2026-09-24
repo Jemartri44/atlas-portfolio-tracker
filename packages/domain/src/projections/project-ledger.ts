@@ -362,19 +362,54 @@ export const projectLedger = (
       guarded(event, () => applyReversal(state, events, event));
     }
   }
-  for (const event of events) {
-    if (event.corrects_id !== undefined && !state.reversed.has(event.corrects_id)) {
+  // Corrections. A correction needs its original reversed (anywhere in the
+  // file: `dangling_correction`), and **an annulled operation has at most one
+  // live correction** (ADR-0026, Part C). That second rule is judged **in file
+  // order** (prompt 012, decision (k)), unlike the first: a correction is valid
+  // only if, at its own position, every earlier correction of the same
+  // original is already reversed. It is how the engine projects, line after
+  // line, and it says the same over a local ledger as over a queue replayed by
+  // the synchronisation (feature 014), which adds lines one at a time. It is a
+  // hardening of the projection that no ledger written by the application can
+  // fail: correcting the same original again requires reversing it again,
+  // which `already_reversed` has always refused.
+  const accepted = new Map<Ulid, Ulid[]>();
+  events.forEach((event, position) => {
+    const original = event.corrects_id;
+    if (original === undefined) {
+      return;
+    }
+    if (!state.reversed.has(original)) {
       reject(
         event,
         new ProjectionError(
           "dangling_correction",
           event.id,
-          `corrects_id ${event.corrects_id} does not point to a reversed event`,
-          { corrects_id: event.corrects_id },
+          `corrects_id ${original} does not point to a reversed event`,
+          { corrects_id: original },
         ),
       );
+      return;
     }
-  }
+    const earlier = accepted.get(original) ?? [];
+    const live = earlier.find((id) => {
+      const reversal = state.reversed.get(id);
+      return reversal === undefined || (state.positionOf.get(reversal) as number) > position;
+    });
+    if (live !== undefined) {
+      reject(
+        event,
+        new ProjectionError(
+          "second_live_correction",
+          event.id,
+          `${original} already has a live correction, ${live}, at this point of the file`,
+          { corrects_id: original, live_correction_id: live },
+        ),
+      );
+      return;
+    }
+    accepted.set(original, [...earlier, event.id]);
+  });
 
   const active: Positioned[] = [];
   events.forEach((event, position) => {
