@@ -2,7 +2,7 @@
 // amendment of prompt 012 (m)).
 //
 // The closing days of TARGET: weekends, 1 January, Good Friday, Easter Monday,
-// 1 May, 25 and 26 December (`ecb.europa.eu/paym/target/t2`). It is a
+// 1 May, 25 and 26 December (the TARGET page of ecb.europa.eu). It is a
 // documented reference datum, not a fiscal criterion, and **never the source
 // of truth**: that is the absence of a day in the history. A disagreement is a
 // warning, never a block — either the file is incomplete or the calendar

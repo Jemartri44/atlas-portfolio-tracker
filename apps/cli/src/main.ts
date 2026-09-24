@@ -3,6 +3,8 @@
 
 import { createInterface } from "node:readline/promises";
 import {
+  EcbDownloadFailed,
+  EcbHistoryDamaged,
   FileLedgerStore,
   LedgerLockedError,
   LockLostError,
@@ -18,6 +20,7 @@ import {
   SchemaTooNewError,
   type UseCaseDeps,
 } from "@atlas/domain";
+import type { FxRateSource } from "@atlas/domain/ecb";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
 import { backupCommand } from "./commands/backup.js";
@@ -27,6 +30,7 @@ import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
 import { exportCommand } from "./commands/export.js";
 import { filedCommand } from "./commands/filed.js";
+import { fxCommand } from "./commands/fx.js";
 import { m720Command, m721Command } from "./commands/informative.js";
 import { lockCommand } from "./commands/lock.js";
 import { contributeCommand, costsCommand, weightsCommand } from "./commands/portfolio.js";
@@ -81,6 +85,7 @@ export const COMMANDS: Record<string, Command> = {
   compact: compactCommand,
   backup: backupCommand,
   lock: lockCommand,
+  fx: fxCommand,
 };
 
 /**
@@ -123,6 +128,7 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   compact: 1,
   backup: 1,
   lock: { show: 2, break: 2 },
+  fx: { update: 2, status: 2 },
 };
 
 /** Refuses the first word a command does not read. */
@@ -157,7 +163,8 @@ comandos:
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   backup --to <directorio>
   compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada
-  lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición`;
+  lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición
+  fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
@@ -187,6 +194,8 @@ export const run = async (
   argv: readonly string[],
   io: Io,
   compose: (ledgerPath: string) => UseCaseDeps = composeDeps,
+  /** The source of the ECB history; replaced in tests, which never touch the network. */
+  fxSource?: () => FxRateSource,
 ): Promise<number> => {
   try {
     const { positionals, flags } = parseArgs(argv);
@@ -209,11 +218,24 @@ export const run = async (
       confirmDuplicate: booleanFlag(flags, "confirm-duplicate"),
       acceptInvalid: booleanFlag(flags, "accept-invalid"),
       json: booleanFlag(flags, "json"),
+      ...(fxSource === undefined ? {} : { fxSource }),
     };
     return await command(ctx, positionals, flags);
   } catch (error) {
     if (error instanceof LedgerLockedError) {
       return reportLocked(io, error);
+    }
+    if (error instanceof EcbDownloadFailed) {
+      io.err(
+        `Error: no se ha podido descargar el histórico del BCE. El ZIP: ${error.zip}. La API: ${error.api}. No se ha tocado el histórico que había.`,
+      );
+      return EXIT.domain;
+    }
+    if (error instanceof EcbHistoryDamaged) {
+      io.err(
+        `Error: reference/ecb/${error.file} no es el archivo que registra su manifiesto: alguien lo ha cambiado. No se ha usado; bórralo junto con reference/ecb/manifest.json y descárgalo otra vez con \`atlas fx update\`.`,
+      );
+      return EXIT.domain;
     }
     return report(io, error);
   }

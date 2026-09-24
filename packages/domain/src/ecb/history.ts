@@ -185,6 +185,29 @@ export const readEcbApiCsv = (text: string): EcbHistory => {
   );
 };
 
+/**
+ * The text of a downloaded history. Both sources are plain ASCII (verified on
+ * the real files); a byte outside it means the bytes are not the history, and
+ * reading them anyway would be guessing.
+ */
+export const asciiText = (bytes: Uint8Array): string => {
+  const parts: string[] = [];
+  const CHUNK = 8192;
+  for (let start = 0; start < bytes.length; start += CHUNK) {
+    const slice = bytes.subarray(start, start + CHUNK);
+    const offender = slice.findIndex((byte) => byte > 0x7f);
+    if (offender >= 0) {
+      throw new ValidationError(
+        "ecb_history_unreadable",
+        `byte ${start + offender} is not ASCII: these bytes are not the ECB history`,
+        { byte: start + offender },
+      );
+    }
+    parts.push(String.fromCharCode(...slice));
+  }
+  return parts.join("");
+};
+
 /** Reads a stored history in the format its provenance says. */
 export const readEcbHistory = (text: string, source: EcbSource): EcbHistory =>
   source === "zip" ? readEcbZipCsv(text) : readEcbApiCsv(text);

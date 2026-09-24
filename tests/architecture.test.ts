@@ -1059,6 +1059,36 @@ describe("architecture: the ECB is not in the barrel", () => {
   });
 });
 
+describe("architecture: the ECB is downloaded by the console only", () => {
+  /**
+   * The web downloads nothing from a third party (ADR-0028, ADR-0029): **the
+   * addresses of the ECB live in `@atlas/adapters`, outside every subpath the
+   * web imports, and never in the domain**, which the web bundles whole. The
+   * check of origins of the bundle catches a URL that reaches the output; this
+   * catches it in the source, before, and also without its scheme.
+   */
+  it("keeps the ECB's addresses out of the domain and of everything the web bundles", () => {
+    const adapters = join(repoRoot, "packages", "adapters", "src");
+    const webReachable = [
+      ...listTsFiles(domainSrc),
+      ...listSourceFiles(webSrc),
+      join(adapters, "ledger-store", "blob.ts"),
+      ...listSourceFiles(join(adapters, "ledger-store", "browser")),
+      ...listSourceFiles(join(adapters, "clock")),
+      ...listSourceFiles(join(adapters, "random")),
+    ];
+    const violations = webReachable
+      // Inside a string, with or without its scheme. Comments are not stripped
+      // first: a line comment starts with the `//` of every `https://`, and
+      // stripping them hid the very address this looks for.
+      .filter((file) => /["'`][^"'`\n]*ecb\.europa\.eu/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+    // And the one place they do live is where the test above does not look.
+    expect(readFileSync(join(adapters, "ecb", "source.ts"), "utf8")).toContain("ecb.europa.eu");
+  });
+});
+
 describe("architecture: no interface writes over a filed return in silence", () => {
   const WRITE_USE_CASES = ["recordEvent", "correctEvent", "reverseEvent"];
   const IMPACT = "closedYearImpact";

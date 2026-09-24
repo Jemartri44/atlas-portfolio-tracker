@@ -1,4 +1,5 @@
 import type { LedgerEvent, UseCaseDeps, Warning } from "@atlas/domain";
+import type { FxRateSource } from "@atlas/domain/ecb";
 import type { Flags } from "./args.js";
 import { describeWarning } from "./output/messages.js";
 
@@ -17,6 +18,8 @@ export interface Context {
   confirmDuplicate: boolean;
   acceptInvalid: boolean;
   json: boolean;
+  /** The source of the ECB history (`atlas fx update`); the ECB itself when absent. */
+  fxSource?: () => FxRateSource;
 }
 
 export type Command = (ctx: Context, positionals: string[], flags: Flags) => Promise<number>;

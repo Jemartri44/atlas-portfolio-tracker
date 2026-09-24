@@ -151,6 +151,7 @@ const INVOCATIONS: {
   { command: "synth", argv: ["synth", "--out", "/dev/null"], readOnly: false },
   { command: "backup", argv: ["backup", "--to", "/dev/null"], readOnly: false },
   { command: "lock", argv: ["lock", "show"], readOnly: true, folderOnly: true },
+  { command: "fx", argv: ["fx", "status"], readOnly: true, folderOnly: true },
 ];
 
 const HEADER = "inválido";

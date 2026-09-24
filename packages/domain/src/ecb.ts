@@ -24,6 +24,7 @@ export {
   readEcbZipCsv,
   sameRate,
 } from "./ecb/history.js";
+export { firstRateDateOf } from "./ecb/ledger-rates.js";
 export { isDecided, type RateResolution, resolveRate } from "./ecb/resolve.js";
 export {
   type CalendarDisagreement,
@@ -34,3 +35,11 @@ export {
   targetHolidays,
 } from "./ecb/target.js";
 export { checkHistoryUpdate, type HistoryConflict, type HistoryUpdate } from "./ecb/update.js";
+export { type EcbUpdateResult, updateEcbHistory } from "./ecb/update-history.js";
+export type {
+  DownloadedHistory,
+  EcbHistoryStore,
+  FxRateSource,
+  StoredHistory,
+  StoredHistoryMeta,
+} from "./ports/fx-rate-source.js";

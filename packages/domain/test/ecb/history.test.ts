@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  asciiText,
   isPublication,
   lastIndexOnOrBefore,
   latestPublication,
@@ -124,6 +125,15 @@ describe("the API's CSV", () => {
 });
 
 describe("the helpers", () => {
+  it("reads ASCII bytes as text, and refuses any other byte", () => {
+    const long = new Uint8Array(20_000).fill(0x41);
+    expect(asciiText(long)).toHaveLength(20_000);
+    expect(asciiText(new TextEncoder().encode("Date,USD,\n"))).toBe("Date,USD,\n");
+    const bad = new Uint8Array(9000).fill(0x41);
+    bad[8500] = 0xc3;
+    expect(code(() => asciiText(bad))).toBe("ecb_history_unreadable");
+  });
+
   it("splits a CSV line with quotes, and compares rates as numbers", () => {
     expect(splitCsvLine('a,"b,c",d')).toEqual(["a", "b,c", "d"]);
     expect(splitCsvLine("")).toEqual([""]);
