@@ -164,7 +164,9 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 
 ### 5.1 Entidad Settings
 
-`Settings` es el conjunto de parámetros que la aplicación **lee** en lugar de llevarlos escritos en el fuente: pesos objetivo, umbrales, frecuencias, destinatarios, criterios fiscales y residencia. Existe por el principio IV de la constitución —nada codificado que deba ser configurable—: estos valores cambian con la vida, con la cartera y con la normativa, y obligar a editar código para mover un porcentaje garantiza que no se mueva. No vive en un fichero aparte: cada cambio es un evento `settings_changed` del libro mayor (ADR-0006) y registra la configuración vigente **entera**, de modo que un cálculo de hoy se reproduce dentro de quince años aunque el valor por defecto del código haya cambiado (ADR-0022).
+`Settings` es el conjunto de parámetros que la aplicación **lee** en lugar de llevarlos escritos en el fuente: pesos objetivo, umbrales, frecuencias, criterios fiscales y residencia. Existe por el principio IV de la constitución —nada codificado que deba ser configurable—: estos valores cambian con la vida, con la cartera y con la normativa, y obligar a editar código para mover un porcentaje garantiza que no se mueva. No vive en un fichero aparte: cada cambio es un evento `settings_changed` del libro mayor (ADR-0006) y registra la configuración vigente **entera**, de modo que un cálculo de hoy se reproduce dentro de quince años aunque el valor por defecto del código haya cambiado (ADR-0022).
+
+**La configuración que es dato personal o secreto no vive en `Settings`** (principio IV de la constitución, enmendado en la 1.6.0): los destinatarios del correo, la lista permitida de acceso y las claves tampoco están escritos en el código, pero viven **fuera del libro**, en SSM Parameter Store en la nube o en un fichero de configuración local fuera del repositorio (ADR-0027, ADR-0028, ADR-0031; detalle en §11.8).
 
 **La lista normativa de parámetros es `business-rules.md` §7**, con el valor inicial y la regla asociada de cada uno. Manda ella, y esta especificación **no la repite**: la tabla que había aquí se quedó desfasada durante meses —le faltaban los criterios fiscales que el motor ya usaba y le sobraba alguno que nunca existió en el código—, que es lo que pasa siempre con una lista duplicada. Cualquier parámetro nuevo se añade en §7 y solo en §7.
 
@@ -340,14 +342,16 @@ Trabajo programado que compara las posiciones del libro mayor contra el extracto
 ```
 Navegador (PC / móvil)
     │
-    ├── CloudFront ──── S3 (SPA estática, privada vía OAC)
-    │      <dominio de la app>            [plan Free de tarifa plana + WAF]
-    │
-    └── Lambda Function URL ─── Lambda (API) ─── S3 (libro mayor JSONL versionado,
-           (OAC firma la petición;            configuración, precios cacheados,
-            la Lambda verifica la             histórico del BCE, documentos de eventos)
-            sesión propia y, en el
-            acceso, el ID token de Google)
+    └── CloudFront  <dominio de la app>   [plan Free de tarifa plana + WAF]
+           │
+           ├── /*      ──── S3 (SPA estática, privada vía OAC)
+           │
+           └── /api/*  ──── Lambda Function URL ─── Lambda (API) ─── S3 (datos: libro mayor
+                            (AuthType=AWS_IAM;                        JSONL versionado, precios,
+                             OAC firma la petición;                   histórico del BCE,
+                             la Lambda verifica la sesión             documentos de eventos;
+                             propia y, en el acceso,                  nunca origen de CloudFront)
+                             el ID token de Google)
 
 EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
                                 │
@@ -359,7 +363,7 @@ EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
 
 **Decisiones deliberadas para minimizar coste y servicios:**
 
-- **Lambda Function URL en vez de API Gateway.** Un servicio menos. Con Origin Access Control, CloudFront sobrescribe la cabecera `Authorization` para firmar la petición a la Function URL, así que la sesión y el acceso viajan en cookie o en cabeceras propias, nunca en `Authorization` (ADR-0027).
+- **Lambda Function URL en vez de API Gateway.** Un servicio menos. **La Lambda solo se alcanza a través de CloudFront**, en la misma distribución que la SPA y bajo `/api/*` (ADR-0028, fila 6): mismo origen, así que la cookie de sesión es del mismo sitio y no hace falta CORS. El navegador nunca llama a la Function URL directamente. Con Origin Access Control, CloudFront sobrescribe la cabecera `Authorization` para firmar la petición a la Function URL, así que la sesión y el acceso viajan en cookie o en cabeceras propias, nunca en `Authorization` (ADR-0027).
 - **Acceso solo con Google, verificado en la propia Lambda; sin Cognito ni Lambda@Edge** (ADR-0027). Código de autorización con PKCE, la Lambda como cliente OAuth: el token de Google nunca toca la SPA. Sesión propia en una cookie `__Host-` firmada, con lista permitida de `{sub, email}` en SSM. Detalle en §10.
 - **SSM Parameter Store en vez de Secrets Manager.** El estándar es gratuito; Secrets Manager cuesta ~0,40$/secreto/mes.
 - **DNS en el registrador, no en Route 53.** Un CNAME del subdominio propio a la distribución de CloudFront evita los 0,50$/mes de zona alojada. Certificado en ACM (gratuito), **obligatoriamente en us-east-1** para CloudFront. El dominio real vive en `terraform.tfvars`, fuera del repositorio.
@@ -416,7 +420,7 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 ### 9.6 Frontend
 
-> **Vigente desde ADR-0017 y ADR-0019 (2026-09-18).** El *stack* está decidido con investigación verificada (Solid con versión fijada, uPlot vendorizada, sin librería de componentes, tablas HTML nativas; la base de estilos es propia desde ADR-0023, que retiró Pico), así que la comparativa de abajo es **histórica** y la decisión abierta «¿Svelte o Solid?» de §14 queda resuelta: **Solid**. Y la web **no necesita servidor para funcionar**: funciona en el dispositivo, sobre el mismo fichero que la CLI en escritorio y sobre el almacenamiento del navegador en el móvil. Lo que esta sección y la §9.2 describen detrás de una Lambda es la **sincronización de la Fase 4** (ADR-0026), no un requisito para que la web exista. **Desde ADR-0027 (2026-09-24, Ronda 8) esa Lambda ya no valida contra Cognito**: verifica el acceso con Google. El modo privacidad, más abajo, se activa por defecto **al iniciar sesión con Google** cuando la sincronización está activa; sin nube, se activa por defecto sin más, porque no hay sesión que iniciar.
+> **Vigente desde ADR-0017 y ADR-0019 (2026-09-18).** El *stack* está decidido con investigación verificada (Solid con versión fijada, uPlot vendorizada, sin librería de componentes, tablas HTML nativas; la base de estilos es propia desde ADR-0023, que retiró Pico), así que la comparativa de abajo es **histórica** y la decisión abierta «¿Svelte o Solid?» de §14 queda resuelta: **Solid**. Y la web **no necesita servidor para funcionar**: funciona en el dispositivo, sobre el mismo fichero que la CLI en escritorio y sobre el almacenamiento del navegador en el móvil. Lo que esta sección y la §9.2 describen detrás de una Lambda es la **sincronización de la Fase 4** (ADR-0026), no un requisito para que la web exista. **Desde ADR-0027 (2026-09-24, Ronda 8) esa Lambda ya no valida contra Cognito**: verifica el acceso con Google.
 
 **Requisito:** compila a archivos estáticos servibles desde S3, sin servidor de renderizado.
 
@@ -432,7 +436,7 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 **Requisitos transversales:**
 - Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada en móvil.
-- **Modo privacidad**: un interruptor, **activado por defecto al iniciar sesión**, que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. La máscara mide siempre lo mismo y conserva la unidad («•••• €», «•••• part.»), que dice qué se oculta sin decir cuánto. Lo que el usuario escribe no se oculta; lo que la aplicación precarga en un campo (corregir un movimiento, la configuración) sí, hasta que el campo recibe el foco. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
+- **Modo privacidad**: un interruptor, **activado por defecto** (mientras el usuario no lo apague en ese dispositivo), que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. La máscara mide siempre lo mismo y conserva la unidad («•••• €», «•••• part.»), que dice qué se oculta sin decir cuánto. Lo que el usuario escribe no se oculta; lo que la aplicación precarga en un campo (corregir un movimiento, la configuración) sí, hasta que el campo recibe el foco. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
 - Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
 - Funciona sin conexión para consulta (los datos cacheados siguen visibles con su antigüedad marcada).
 - **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. El sistema está en `docs/design/system.md` y la base de estilos es propia (ADR-0023).
@@ -445,7 +449,7 @@ Son datos financieros personales completos. Nivel de exigencia alto.
 
 > **Acceso y secretos vigentes desde ADR-0027 (2026-09-24, Ronda 8)**, que sustituye a «Cognito con MFA» en todo este documento.
 
-- **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. Los secretos van en SSM Parameter Store como `SecureString`, jamás en el frontend ni en el repositorio: el token Flex de IBKR (**solo lectura**), el secreto del cliente OAuth de Google y la clave de firma de la sesión (ADR-0027), y las claves de las fuentes de precios EODHD, Alpha Vantage y CoinGecko (ADR-0031).
+- **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. Los secretos van en SSM Parameter Store como `SecureString`, jamás en el frontend ni en el repositorio: el token Flex de IBKR (**solo lectura**) y el secreto del cliente OAuth de Google y la clave de firma de la sesión (ADR-0027). **Las claves de las fuentes de precios** EODHD, Alpha Vantage y CoinGecko (ADR-0031) van **en local, en un fichero de configuración fuera del repositorio, y en la nube, en SSM**.
 - **S3 privado**, servido solo vía CloudFront con Origin Access Control. Sin buckets públicos.
 - **Acceso solo con Google, verificado en la propia Lambda de la API; sin Cognito ni Lambda@Edge** (ADR-0027). Código de autorización con PKCE y `state`: la Lambda es el cliente OAuth y canjea el código directamente con Google, así que el token nunca toca la SPA ni la URL. Verificación completa del ID token (firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`) y lista permitida de `{sub, email}` en SSM, consultada en cada petición con una caché de pocos minutos. Sesión propia en una cookie `__Host-` firmada (`HttpOnly`, `Secure`, `SameSite=Strict`), sin *refresh token*: al caducar, se repite el flujo con Google. **La verificación en dos pasos de la cuenta de Google es un requisito operativo del usuario**, no algo que la aplicación pueda comprobar (`docs/prompts/000-director-handoff.md`).
 - **IAM de mínimo privilegio**: cada Lambda con su rol y solo los permisos que necesita.
@@ -494,19 +498,19 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
 
 | Entorno | Rama | Infraestructura | Datos |
 |---|---|---|---|
-| `dev` | `develop` | **Cuenta AWS miembro dedicada `atlas-dev`**, dentro de una organización con la cuenta personal del usuario como cuenta de gestión; recursos con sufijo del entorno | Datos sintéticos |
+| `dev` | `develop` | **Cuenta AWS miembro dedicada `atlas-dev`**, dentro de una organización cuya cuenta de gestión **es** la cuenta personal del usuario; recursos con sufijo del entorno | Datos sintéticos |
 | `prod` | `main` | **Cuenta AWS miembro dedicada `atlas-prod`** | Datos reales |
 
-- **Aislamiento por construcción**: una cuenta AWS por entorno, no solo pilas o políticas independientes. Ningún rol de `atlas-dev` existe en `atlas-prod`, así que «datos de producción jamás en dev» es mecánico, no una convención. La cuenta de gestión no está sin recursos —vive en ella la cuenta personal del usuario—, y lo compensan el MFA del *root* de las tres cuentas y las SCP sobre las dos cuentas miembro (que **no alcanzan a la cuenta de gestión**, sin verificar con fuente).
+- **Aislamiento por construcción**: una cuenta AWS por entorno, no solo pilas o políticas independientes. Ningún rol de `atlas-dev` existe en `atlas-prod`, así que «datos de producción jamás en dev» es mecánico, no una convención. La cuenta de gestión no está sin recursos —**es** la cuenta personal del usuario, con sus otras cosas—, y lo compensan el MFA del *root* de las tres cuentas y las SCP sobre las dos cuentas miembro (que **no alcanzan a la cuenta de gestión**, sin verificar con fuente).
 - **Despliegue a producción solo desde `main`**, tras PR aprobada y CI en verde; el rol de despliegue de `atlas-prod` exige además el *environment* `prod` de GitHub con aprobación obligatoria.
 - **Los artefactos que se despliegan a producción son los mismos que se validaron en dev.** Se construye una vez y se promociona; no se reconstruye por entorno.
 - **Datos de producción jamás en dev.** Generador de datos sintéticos como parte del repositorio.
 
 ### 11.4 Infraestructura
 
-- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola, **salvo las excepciones declaradas por ADR-0028, cada una con su condición de retirada**: la suscripción al plan de tarifa plana de CloudFront (mientras el proveedor de Terraform no lo soporte), la organización y las dos cuentas miembro, el cliente OAuth de Google por entorno (ADR-0027), el *bootstrap* de Terraform de cada cuenta, y la petición de aumento de cuota de concurrencia si hace falta.
+- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola, **salvo las excepciones declaradas por ADR-0028, cada una con su condición de retirada**: la suscripción al plan de tarifa plana de CloudFront, que tampoco se hace a mano sino con un **guion idempotente de la CLI de AWS versionado en el repositorio**, y se retira cuando el proveedor de Terraform lo soporte; la organización y las dos cuentas miembro, el cliente OAuth de Google por entorno (ADR-0027), el *bootstrap* de Terraform de cada cuenta, y la petición de aumento de cuota de concurrencia si hace falta.
 - Estado remoto en S3 con el bloqueo nativo de S3, uno por cuenta miembro.
-- Módulos reutilizables (`infra/modules/atlas/`) y ficheros `.tfvars` por entorno (`infra/envs/dev/`, `infra/envs/prod/`), fuera del repositorio.
+- Módulos reutilizables (`infra/modules/atlas/`) y una carpeta por entorno (`infra/envs/dev/`, `infra/envs/prod/`), cada una contra su cuenta. **Las carpetas se versionan; solo sus ficheros `.tfvars` quedan fuera del repositorio.**
 - `terraform plan` obligatorio en la PR, `apply` solo tras aprobación.
 
 ### 11.5 Tests
@@ -554,7 +558,8 @@ GitHub Actions:
 - Token Flex de IBKR: **solo lectura**, rotado anualmente, jamás en el frontend ni en el repositorio.
 - **Secreto del cliente OAuth de Google y clave de firma de la sesión** (ADR-0027), uno por entorno: `dev` nunca acepta la cuenta de Google que da acceso a `prod`.
 - **Claves de las fuentes de precios** EODHD, Alpha Vantage y CoinGecko (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, SSM.
-- **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo con su interruptor de importes** (ADR-0028): los dos en SSM, nunca en `Settings` ni en el repositorio, porque una foto completa del libro escrita por un cliente antiguo los borraría sin avisar (ADR-0026, caso 6; ADR-0018).
+- **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo** (ADR-0028): en SSM, nunca en `Settings` ni en el repositorio, porque son datos personales y el repositorio es público. El campo `notification_email` de `Settings` se sigue aceptando al cargar (ADR-0018), pero deja de leerse; la web todavía lo ofrece en Ajustes y **se retira con la feature 016** (tareas y correo).
+- **Interruptor de importes del correo** (ADR-0028, fila 18): también en SSM, junto al destinatario. Aquí el motivo es otro: es un campo nuevo, y en `Settings` —una foto completa— un cliente antiguo que escribiera la foto siguiente lo borraría sin avisar (ADR-0026, caso 6; enmienda de ADR-0018).
 - Sin secretos en variables de entorno de la Lambda visibles en la consola.
 - `.gitignore` estricto y escaneo de secretos en CI.
 
