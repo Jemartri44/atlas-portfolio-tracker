@@ -114,6 +114,16 @@ Una fila **por identificador del catálogo** (`packages/domain/src/tax/criteria.
 
 > **Nota al criterio 16 (2026-09-18).** El tipo de cada convenio **no está en ningún sitio** del sistema. Se configura por país y **no tiene valores por defecto**: si un país no tiene tipo configurado, **no se calcula deducción** y la salida lo dice. Deducir todo lo retenido sin conocer el convenio sería agresivo.
 
+> **Nota al criterio 4 (2026-09-24, Ronda 8, ADR-0030).** El libro gana `broker_settled_eur?`, el importe en euros que el extracto del bróker atribuye a una operación en divisa, tal cual figura. **El dato existe; ninguna cifra lo usa.** Qué cifra manda cuando el bróker convierte automáticamente sigue sin decidirse: sigue formando parte de la disputa de este criterio, ahora **cuantificable** porque el dato para compararla ya se guarda. *Verificar con asesor.*
+
+### Criterio nuevo, pendiente de entrar en las tablas (ADR-0029, punto 10; Ronda 8, 2026-09-24)
+
+**Qué pasa con el tipo del BCE guardado cuando cambia `fiscal_date_rule`.** El tipo guardado en una línea corresponde a la fecha fiscal según la regla vigente **al registrar**; si la regla cambia (ADR-0013), esa línea puede dejar de tener el tipo de su fecha fiscal nueva. El libro sigue siendo la única fuente de la fiscalidad y el motor **nunca recalcula en silencio** con otro tipo: el aviso de cambio de configuración lo dice **antes** de confirmar el `settings_changed`; la comprobación de integridad lo señala después (`fx_rate_date_not_latest`, `fx_rate_mismatch`); el informe fiscal lleva una nota con código mientras queden líneas así; y la solución es la corrección de siempre —anulación más línea nueva con el tipo bueno—, que la aplicación propone y puede ser una **cadena** de anulaciones si el lote ya se vendió.
+
+Certeza **media** (la de los criterios #1 y #5, de los que depende) y riesgo **Ambas**: la columna de riesgo dice qué pasa si el criterio está mal, no cómo de prudente es el motor, y aquí el tipo guardado puede ser mayor o menor que el correcto, y la corrección propuesta puede subir o bajar la cifra en los dos sentidos (ADR-0029, enmienda del 2026-09-24: la primera redacción decía «conservador», y la dirección reconoce el error como propio).
+
+**Deliberadamente fuera de las dos tablas de arriba.** `tests/fiscal-criteria.test.ts` empareja cada fila de la tabla de variantes con un identificador exacto de `packages/domain/src/tax/criteria.ts`, y ese catálogo **todavía no tiene** un identificador para este criterio: entra en código con la feature `012` (BCE, Ronda 8, etapa 1). Añadir aquí una fila numerada sin su pareja en el catálogo rompería el emparejamiento exacto que ata los dos documentos. Cuando la 012 dé de alta el identificador, este criterio pasa a la tabla numerada y a la de variantes, con la misma certeza y el mismo riesgo escritos aquí.
+
 ---
 
 ## Los criterios en disputa, uno por uno
