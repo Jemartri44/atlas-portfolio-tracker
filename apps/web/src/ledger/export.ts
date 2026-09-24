@@ -7,6 +7,7 @@
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { BrowserLedgerBlob } from "@atlas/adapters/browser";
+import { etagOfText, exportLedgerText, replaceLedgerText } from "@atlas/adapters/transfer";
 import { loadInto } from "./actions.js";
 import { store } from "./state.js";
 import { openBrowserStorage } from "./store.js";
@@ -18,9 +19,9 @@ export const EXPORT_FILE_NAME = "ledger.jsonl";
  * text and the date in **one** transaction (feature 012, D4), so the date can
  * never claim an export that left out a line another tab recorded meanwhile.
  */
-export const exportLedger = async (blob: BrowserLedgerBlob): Promise<void> => {
+export const exportLedger = async (): Promise<void> => {
   const when = new Date();
-  const text = await blob.exportText(when);
+  const text = await exportLedgerText(when);
   const file = new Blob([text], { type: "application/x-ndjson" });
   const url = URL.createObjectURL(file);
   const anchor = document.createElement("a");
@@ -43,6 +44,11 @@ export interface ImportPlan {
   events: number;
   /** Lines of the ledger this browser holds now, which the import would replace. */
   replaces: number;
+  /**
+   * The etag of that ledger: the yes is to replacing **this** one, and the
+   * import is refused if another tab changed it in between (review of PR #75).
+   */
+  etag: string;
 }
 
 /**
@@ -56,7 +62,11 @@ export interface ImportPlan {
 export const planImport = async (text: string): Promise<ImportPlan> => {
   const events = await validateImport(text);
   const current = await new BrowserLedgerBlob().text();
-  return { events, replaces: current.split("\n").filter((line) => line !== "").length };
+  return {
+    events,
+    replaces: current.split("\n").filter((line) => line !== "").length,
+    etag: etagOfText(current),
+  };
 };
 
 /**
@@ -74,9 +84,9 @@ export const planImport = async (text: string): Promise<ImportPlan> => {
  * state the user had is exactly the state they keep. Whoever calls it has
  * already confirmed the replacement (`planImport`).
  */
-export const importLedger = async (text: string): Promise<number> => {
+export const importLedger = async (text: string, plan: ImportPlan): Promise<number> => {
   const events = await validateImport(text);
-  await new BrowserLedgerBlob().replaceText(text);
+  await replaceLedgerText(text, plan.etag);
   // Opened after the replacement, so it reads the export date of the ledger
   // now there — none — and not the one of the ledger it replaced (D4).
   await loadInto(await openBrowserStorage());

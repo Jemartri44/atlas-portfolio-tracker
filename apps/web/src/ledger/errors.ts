@@ -9,6 +9,7 @@
 import { DomainError } from "@atlas/domain";
 import { describeError } from "../format/messages/errors.js";
 import { nameIndex } from "../format/names.js";
+import { countOf } from "../format/number.js";
 import type { AppError } from "./state.js";
 import { store } from "./state.js";
 
@@ -66,6 +67,15 @@ export const toAppError = (error: unknown): AppError => {
       code: "file_unreadable",
       message:
         "No se ha podido leer el archivo: puede que se haya movido, que no sea un archivo de texto o que el navegador ya no tenga permiso. Vuelve a elegirlo; no se ha tocado nada.",
+    };
+  }
+  // The ledger of this browser changed between the question and the yes of an
+  // import (another tab recorded something): the yes was about another ledger.
+  if (error instanceof Error && error.name === "LedgerChangedSinceAsked") {
+    const lines = (error as Error & { lines?: number }).lines ?? 0;
+    return {
+      code: "ledger_changed_since_asked",
+      message: `Mientras decidías, los datos de este navegador han cambiado (otra pestaña ha registrado algo): ahora tienen ${countOf(lines, "movimiento", "movimientos")}. No se ha importado nada; vuelve a elegir el archivo para ver qué sustituiría.`,
     };
   }
   // Another tab still has the previous version of the database open (feature

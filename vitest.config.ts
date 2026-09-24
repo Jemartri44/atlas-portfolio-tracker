@@ -13,6 +13,8 @@ export default defineConfig({
       "@atlas/adapters/reference": local(
         "./packages/adapters/src/ledger-store/browser/reference.ts",
       ),
+      "@atlas/adapters/folder": local("./packages/adapters/src/ledger-store/browser/folder.ts"),
+      "@atlas/adapters/transfer": local("./packages/adapters/src/ledger-store/browser/transfer.ts"),
       "@atlas/adapters/drafts": local("./packages/adapters/src/ledger-store/browser/drafts.ts"),
       "@atlas/adapters/browser": local("./packages/adapters/src/ledger-store/browser/index.ts"),
       "@atlas/adapters/clock": local("./packages/adapters/src/clock/system.ts"),

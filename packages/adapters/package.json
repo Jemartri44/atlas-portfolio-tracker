@@ -26,6 +26,14 @@
       "types": "./dist/ledger-store/browser/drafts.d.ts",
       "import": "./dist/ledger-store/browser/drafts.js"
     },
+    "./folder": {
+      "types": "./dist/ledger-store/browser/folder.d.ts",
+      "import": "./dist/ledger-store/browser/folder.js"
+    },
+    "./transfer": {
+      "types": "./dist/ledger-store/browser/transfer.d.ts",
+      "import": "./dist/ledger-store/browser/transfer.js"
+    },
     "./clock": {
       "types": "./dist/clock/system.d.ts",
       "import": "./dist/clock/system.js"

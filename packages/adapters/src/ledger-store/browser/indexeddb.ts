@@ -26,9 +26,9 @@ import { ConflictError, sha256Hex } from "@atlas/domain";
 import { BlobArchiveExists, type LedgerBlob } from "../blob.js";
 import { LEDGER_STORE, openAtlasDb, StorageUnavailable } from "./idb.js";
 
-const CURRENT_KEY = "current";
+export const CURRENT_KEY = "current";
 /** The date of the last export, apart from the text so that writing it never rewrites the ledger. */
-const META_KEY = "current:meta";
+export const META_KEY = "current:meta";
 const ARCHIVE_PREFIX = "archive/";
 
 export interface StoredLedger {
@@ -38,23 +38,21 @@ export interface StoredLedger {
   lastExportAt?: string;
 }
 
-interface StoredMeta {
+export interface StoredMeta {
   lastExportAt: string;
-  /** SHA-256 of the exact text that export handed over. */
-  exportedEtag: string;
 }
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 
-type Opener = () => Promise<IDBDatabase>;
+export type Opener = () => Promise<IDBDatabase>;
 
 /**
  * One transaction over the ledger store. `body` issues requests with plain
  * callbacks and sets the outcome; the promise settles when the transaction
  * commits (with the outcome) or aborts (with the error that caused it).
  */
-const transact = <T>(
+export const transact = <T>(
   open: Opener,
   mode: IDBTransactionMode,
   body: (store: IDBObjectStore, tx: IDBTransaction, settle: Settle<T>) => void,
@@ -81,7 +79,7 @@ const transact = <T>(
       }),
   );
 
-interface Settle<T> {
+export interface Settle<T> {
   ok(value: T): void;
   /** Aborts the transaction: nothing it wrote stays. */
   fail(error: unknown): void;
@@ -149,44 +147,6 @@ export class BrowserLedgerBlob implements LedgerBlob {
     return transact<string>(this.open, "readonly", (store, _tx, settle) => {
       const get = store.get(CURRENT_KEY);
       get.onsuccess = () => settle.ok((get.result as StoredLedger | undefined)?.text ?? "");
-    });
-  }
-
-  /**
-   * The text to export, and the date of this export recorded **in the same
-   * transaction**: the date can never claim an export that did not include the
-   * last line recorded (feature 012, D4). Only the date is written; the text
-   * of the ledger is not touched. `undefined` date when there is no ledger.
-   */
-  exportText(when: Date): Promise<string> {
-    return transact<string>(this.open, "readwrite", (store, _tx, settle) => {
-      const get = store.get(CURRENT_KEY);
-      get.onsuccess = () => {
-        const stored = get.result as StoredLedger | undefined;
-        if (stored !== undefined) {
-          const meta: StoredMeta = {
-            lastExportAt: when.toISOString(),
-            exportedEtag: sha256Hex(encoder.encode(stored.text)),
-          };
-          store.put(meta, META_KEY);
-        }
-        settle.ok(stored?.text ?? "");
-      };
-    });
-  }
-
-  /**
-   * Replaces the whole ledger with an imported file: a **deliberate
-   * overwrite**, not a conditional write, and the interface asks for an
-   * explicit confirmation before calling it when there is a ledger already.
-   * The caller validates the text **before**. The date of the last export
-   * belonged to the ledger being replaced, so it goes with it (D4).
-   */
-  replaceText(text: string): Promise<void> {
-    return transact<void>(this.open, "readwrite", (store, _tx, settle) => {
-      const record: StoredLedger = { text, updatedAt: new Date().toISOString() };
-      store.put(record, CURRENT_KEY);
-      store.delete(META_KEY).onsuccess = () => settle.ok(undefined);
     });
   }
 

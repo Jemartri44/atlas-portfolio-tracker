@@ -571,6 +571,13 @@ const LAZY_ONLY = [
   { path: "/src/ledger/drafts.ts", what: "los borradores" },
   { path: "/src/shell/draft-counter.ts", what: "el contador de borradores" },
   { path: "/src/routes/registrar/borradores.tsx", what: "la lista de borradores" },
+  // Review of PR #75: a folder of the disk and the export and import of the
+  // ledger are not the boot's either.
+  {
+    path: "/packages/adapters/src/ledger-store/browser/folder.ts",
+    what: "el acceso a una carpeta",
+  },
+  { path: "/packages/adapters/src/ledger-store/browser/transfer.ts", what: "exportar e importar" },
   // Block 6: the correction chain of the rates after a change of rule.
   { path: "/src/ledger/rate-corrections.ts", what: "la corrección de los tipos del BCE" },
 ];

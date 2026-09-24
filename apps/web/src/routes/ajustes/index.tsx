@@ -3,7 +3,6 @@
 // and close), *Privacidad y apariencia*, and the way into the configuration and
 // the verification. On a wide screen, two columns of cards.
 
-import { BrowserLedgerBlob } from "@atlas/adapters/browser";
 import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Icon, type IconName, Notice, Section, Switch } from "../../components/index.js";
@@ -69,7 +68,7 @@ export default function AjustesRoute(): JSX.Element {
     setBusy(true);
     setError(undefined);
     try {
-      await exportLedger(new BrowserLedgerBlob());
+      await exportLedger();
       setMessage("Datos exportados. Guarda el archivo donde tengas la copia de seguridad.");
     } catch (failure) {
       setError(toAppError(failure).message);

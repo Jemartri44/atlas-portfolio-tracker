@@ -149,7 +149,8 @@ describe("a draft from the form", () => {
   it("waits in the list, and is never recorded by itself when the rate arrives", async () => {
     const id = await saveGoldDraft();
     const recorded = events();
-    let host = await show("/registrar/borradores", Borradores, "/registrar/borradores");
+    // Served by the form route, as the application routes it.
+    let host = await show("/registrar/borradores", RegistrarForm, "/registrar/:tipo");
     await until(() => text(host).includes("Esperando el tipo de USD del 01/04/2026"));
     expect(text(host)).toContain("Viven solo en este navegador");
     expect(text(host)).not.toContain("Revisar y registrar");
@@ -201,7 +202,11 @@ describe("a draft from the form", () => {
     const host = await show("/registrar/borradores", Borradores, "/registrar/borradores");
     await until(() => text(host).includes("Esperando el tipo"));
     await press(host, "Descartar");
-    const dialog = document.querySelector("dialog") as HTMLElement;
+    // The form route left behind shows the list too, since it serves
+    // `/registrar/borradores`: the dialog is the one that opened.
+    const dialog = [...host.querySelectorAll("dialog")].find((node) =>
+      node.hasAttribute("open"),
+    ) as HTMLElement;
     await press(dialog, "Descartar");
     await until(() => text(host).includes("No hay borradores pendientes."));
     expect((await drafts.list()).drafts).toEqual([]);

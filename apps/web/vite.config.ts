@@ -106,6 +106,10 @@ export default defineConfig(({ command }) => ({
       "@atlas/adapters/reference": repo(
         "../../packages/adapters/src/ledger-store/browser/reference.ts",
       ),
+      "@atlas/adapters/folder": repo("../../packages/adapters/src/ledger-store/browser/folder.ts"),
+      "@atlas/adapters/transfer": repo(
+        "../../packages/adapters/src/ledger-store/browser/transfer.ts",
+      ),
       "@atlas/adapters/drafts": repo("../../packages/adapters/src/ledger-store/browser/drafts.ts"),
       "@atlas/adapters/browser": repo("../../packages/adapters/src/ledger-store/browser/index.ts"),
       "@atlas/adapters/clock": repo("../../packages/adapters/src/clock/system.ts"),
@@ -152,7 +156,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|folder|index)\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
             },
           ],
         },

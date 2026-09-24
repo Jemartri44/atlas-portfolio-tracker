@@ -14,37 +14,18 @@
 // of the API in the browser code.
 //
 // Availability, measured (research.md §4 of feature 006): Chrome and Edge on
-// the desktop only. The caller checks `supportsDirectoryPicker()` first.
+// the desktop only. The caller checks `supportsDirectoryPicker()` first
+// (`picker.ts`, the only part of folders on the boot path). This module is
+// `@atlas/adapters/folder`, loaded lazily.
 //
 // Permissions are not permanent: once every tab of the origin is closed the
 // site loses access, so the handle is kept in IndexedDB (it is serialisable)
 // and the permission is asked again from a user gesture.
 
 import { HANDLE_STORE, idbDelete, idbGet, idbPut } from "./idb.js";
+import { type DirectoryPickerOptions, supportsDirectoryPicker } from "./picker.js";
 
 const HANDLE_KEY = "directory";
-
-interface DirectoryPickerOptions {
-  mode?: "read";
-  id?: string;
-  startIn?: FileSystemHandle | string;
-}
-
-declare global {
-  interface Window {
-    /** Not in lib.dom yet; the shape is the one the File System Access spec defines. */
-    showDirectoryPicker?: (options?: DirectoryPickerOptions) => Promise<FileSystemDirectoryHandle>;
-  }
-
-  /** Also missing from lib.dom: the permission half of the spec, which is what survives a reload. */
-  interface FileSystemHandle {
-    queryPermission?: (options?: { mode?: "read" }) => Promise<PermissionState>;
-    requestPermission?: (options?: { mode?: "read" }) => Promise<PermissionState>;
-  }
-}
-
-export const supportsDirectoryPicker = (): boolean =>
-  typeof window !== "undefined" && typeof window.showDirectoryPicker === "function";
 
 /** Opens the picker, for reading. `undefined` when the user cancels; throws only on a real failure. */
 export const pickFolder = async (): Promise<FileSystemDirectoryHandle | undefined> => {

@@ -44,16 +44,16 @@ export const ImportControls = (props: {
     }
   };
 
-  const commit = async (text: string): Promise<void> => {
+  const commit = async (text: string, plan: ImportPlan): Promise<void> => {
     setPending(undefined);
-    props.onImported(await importLedger(text));
+    props.onImported(await importLedger(text, plan));
   };
 
   /** Validates first; asks only when there is something to replace. */
   const offer = async (text: string, from: string): Promise<void> => {
     const plan = await planImport(text);
     if (plan.replaces === 0) {
-      await commit(text);
+      await commit(text, plan);
       return;
     }
     setPending({ text, plan, from });
@@ -113,7 +113,7 @@ export const ImportControls = (props: {
                 <button
                   type="button"
                   disabled={props.busy}
-                  onClick={() => void guarded(() => commit(current().text))}
+                  onClick={() => void guarded(() => commit(current().text, current().plan))}
                 >
                   Sustituir
                 </button>

@@ -4,13 +4,19 @@
 // it exported, and an import that does not inherit the date of the ledger it
 // replaces. Each case names the mutant of prompt 012 §5 it kills.
 
-import { ConflictError, sha256Hex } from "@atlas/domain";
+import { ConflictError } from "@atlas/domain";
 import type { PendingDraft } from "@atlas/domain/ecb";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BlobLedgerStore } from "../src/ledger-store/blob.js";
 import { BrowserDraftStore } from "../src/ledger-store/browser/drafts.js";
 import { DRAFT_STORE, LEDGER_STORE } from "../src/ledger-store/browser/idb.js";
 import { BrowserLedgerBlob, type StoredLedger } from "../src/ledger-store/browser/indexeddb.js";
+import {
+  etagOfText,
+  exportLedgerText,
+  LedgerChangedSinceAsked,
+  replaceLedgerText,
+} from "../src/ledger-store/browser/transfer.js";
 import { FakeDatabase, FakeIdbFactory } from "./fake-idb.js";
 import { account, deposit, lineOf } from "./fixtures.js";
 import { ledgerStoreContract } from "./ledger-store.contract.js";
@@ -26,8 +32,18 @@ const browser = (text?: string, extra: Partial<StoredLedger> = {}) => {
       ...extra,
     });
   }
-  const blob = new BrowserLedgerBlob(() => Promise.resolve(db.asIdb()));
-  return { db, blob, store: new BlobLedgerStore(blob) };
+  const open = () => Promise.resolve(db.asIdb());
+  const blob = new BrowserLedgerBlob(open);
+  return {
+    db,
+    blob,
+    store: new BlobLedgerStore(blob),
+    exportText: (when: Date) => exportLedgerText(when, open),
+    /** An import confirmed on the ledger as it is now. */
+    replaceText: async (next: string) =>
+      replaceLedgerText(next, etagOfText(await blob.text()), open),
+    replaceAsked: (next: string, etag: string) => replaceLedgerText(next, etag, open),
+  };
 };
 
 const other = { ...deposit, id: "01ARYZ6S41TSV4RRFFQ69G5FA2" };
@@ -60,7 +76,7 @@ describe("BrowserLedgerBlob", () => {
   });
 
   it("reads, compares and writes in one read-write transaction, whatever it writes (mutants 3 and 24)", async () => {
-    const { store, blob, db } = browser(`${lineOf(account)}\n`);
+    const { store, db, exportText, replaceAsked } = browser(`${lineOf(account)}\n`);
     const { etag } = await store.load();
     const count = async (action: () => Promise<unknown>): Promise<IDBTransactionMode[]> => {
       const from = db.created.length;
@@ -70,8 +86,9 @@ describe("BrowserLedgerBlob", () => {
     expect(await count(() => store.append([deposit], etag))).toEqual(["readwrite"]);
     const next = (await store.load()).etag;
     expect(await count(() => store.replace([account], next, "a.jsonl"))).toEqual(["readwrite"]);
-    expect(await count(() => blob.exportText(new Date()))).toEqual(["readwrite"]);
-    expect(await count(() => blob.replaceText(""))).toEqual(["readwrite"]);
+    expect(await count(() => exportText(new Date()))).toEqual(["readwrite"]);
+    const now = etagOfText(`${lineOf(account)}\n`);
+    expect(await count(() => replaceAsked("", now))).toEqual(["readwrite"]);
   });
 
   it("writes nothing when the archive already exists or the production fails", async () => {
@@ -95,12 +112,12 @@ describe("BrowserLedgerBlob", () => {
 
   it("records the export date with the very text it exported, and only the date (mutant 24)", async () => {
     for (const exportFirst of [true, false]) {
-      const { store, blob, db } = browser(`${lineOf(account)}\n`);
+      const { store, blob, db, exportText } = browser(`${lineOf(account)}\n`);
       const { etag } = await store.load();
       const when = new Date("2026-09-24T10:00:00.000Z");
       const exported = exportFirst
-        ? (await Promise.all([blob.exportText(when), store.append([deposit], etag)]))[0]
-        : (await Promise.all([store.append([deposit], etag), blob.exportText(when)]))[1];
+        ? (await Promise.all([exportText(when), store.append([deposit], etag)]))[0]
+        : (await Promise.all([store.append([deposit], etag), exportText(when)]))[1];
       // The line recorded meanwhile is still there: the export put nothing back.
       expect(await blob.text()).toBe(`${lineOf(account)}\n${lineOf(deposit)}\n`);
       const marked = db.commits.filter((commit) => commit.written.includes("current:meta"));
@@ -110,39 +127,51 @@ describe("BrowserLedgerBlob", () => {
       expect(commit.written).toEqual(["current:meta"]);
       // …and, at the moment it was, the ledger was exactly what was handed over.
       expect((commit.snapshot.get("current") as StoredLedger).text).toBe(exported);
-      expect(commit.snapshot.get("current:meta")).toEqual({
-        lastExportAt: when.toISOString(),
-        exportedEtag: sha256Hex(new TextEncoder().encode(exported)),
-      });
+      expect(commit.snapshot.get("current:meta")).toEqual({ lastExportAt: when.toISOString() });
       expect(await blob.lastExportAt()).toBe(when.toISOString());
     }
   });
 
   it("does not mark an export of nothing", async () => {
-    const { blob, db } = browser();
-    expect(await blob.exportText(new Date())).toBe("");
+    const { blob, db, exportText } = browser();
+    expect(await exportText(new Date())).toBe("");
     expect(db.commits).toEqual([]);
     expect(await blob.lastExportAt()).toBeUndefined();
   });
 
   it("does not inherit the export date of the ledger an import replaces (D4)", async () => {
-    const { blob } = browser(`${lineOf(account)}\n`);
-    await blob.exportText(new Date("2026-09-20T10:00:00.000Z"));
+    const { blob, exportText, replaceText } = browser(`${lineOf(account)}\n`);
+    await exportText(new Date("2026-09-20T10:00:00.000Z"));
     expect(await blob.lastExportAt()).toBe("2026-09-20T10:00:00.000Z");
-    await blob.replaceText(`${lineOf(deposit)}\n`);
+    await replaceText(`${lineOf(deposit)}\n`);
     expect(await blob.text()).toBe(`${lineOf(deposit)}\n`);
     expect(await blob.lastExportAt()).toBeUndefined();
   });
 
   it("still reads, and keeps, the export date a record carried before feature 012", async () => {
-    const { blob, store } = browser(`${lineOf(account)}\n`, {
+    const { blob, store, replaceText } = browser(`${lineOf(account)}\n`, {
       lastExportAt: "2026-09-01T09:00:00.000Z",
     });
     expect(await blob.lastExportAt()).toBe("2026-09-01T09:00:00.000Z");
     await store.append([deposit], (await store.load()).etag);
     expect(await blob.lastExportAt()).toBe("2026-09-01T09:00:00.000Z");
-    await blob.replaceText("");
+    await replaceText("");
     expect(await blob.lastExportAt()).toBeUndefined();
+  });
+
+  it("refuses an import if the ledger changed between the question and the yes (review of PR #75)", async () => {
+    const { blob, store, replaceAsked } = browser(`${lineOf(account)}\n`);
+    // Asked on the ledger of one line…
+    const asked = etagOfText(await blob.text());
+    // …another tab records one more before the yes.
+    await store.append([deposit], (await store.load()).etag);
+    const refusal = await replaceAsked(`${lineOf(other)}\n`, asked).catch(
+      (error: unknown) => error,
+    );
+    expect(refusal).toBeInstanceOf(LedgerChangedSinceAsked);
+    expect((refusal as LedgerChangedSinceAsked).lines).toBe(2);
+    // Nothing replaced: the line of the other tab is still there.
+    expect(await blob.text()).toBe(`${lineOf(account)}\n${lineOf(deposit)}\n`);
   });
 });
 

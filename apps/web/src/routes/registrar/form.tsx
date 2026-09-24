@@ -6,7 +6,7 @@
 // through every validation of a record.
 
 import { useParams, useSearchParams } from "@solidjs/router";
-import { createResource, type JSX, Show } from "solid-js";
+import { createResource, type JSX, lazy, Show } from "solid-js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { type EventFormSpec, formSpec, valuesOfEvent } from "../../view-models/forms/index.js";
 import { RequireLedger } from "../guard.jsx";
@@ -23,7 +23,24 @@ const draftFor = async (id: string | undefined, spec: EventFormSpec | undefined)
     : { id, values: valuesOfEvent(spec, draft.event) };
 };
 
+/**
+ * `/registrar/borradores` is the list of drafts, served by this route and not
+ * by one of its own: a route in the table of the entry costs the boot about a
+ * hundred bytes, and the list is not the boot's (review of PR #75).
+ */
+const Borradores = lazy(() => import("./borradores.jsx"));
+export const DRAFTS_SLUG = "borradores";
+
 export default function RegistrarFormRoute(): JSX.Element {
+  const params = useParams<{ tipo: string }>();
+  return (
+    <Show when={params.tipo !== DRAFTS_SLUG} fallback={<Borradores />}>
+      <EventFormRoute />
+    </Show>
+  );
+}
+
+const EventFormRoute = (): JSX.Element => {
   const params = useParams<{ tipo: string }>();
   const [search] = useSearchParams<{ borrador?: string }>();
   const spec = () => formSpec(params.tipo);
@@ -65,4 +82,4 @@ export default function RegistrarFormRoute(): JSX.Element {
       )}
     </RequireLedger>
   );
-}
+};

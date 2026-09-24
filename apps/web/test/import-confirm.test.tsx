@@ -92,6 +92,33 @@ describe("importing over the ledger of this browser", () => {
     expect(held()).toBe(smaller);
   });
 
+  it("imports nothing if another tab recorded a line between the question and the yes (review of PR #75)", async () => {
+    const current = held();
+    const smaller = `${current.split("\n").slice(0, 3).join("\n")}\n`;
+    const host = await show("/libro", Libro);
+    await choose(host, `${current.split("\n").slice(0, 2).join("\n")}\n`);
+    await until(() => text(host).includes("¿Sustituir"));
+    // Another tab: one more line, written straight into the stored ledger.
+    const record = factory.databases.get("atlas")?.store("ledger").get("current") as {
+      text: string;
+    };
+    const extra = current.split("\n")[0] as string;
+    const moved = `${current}${extra.replace(/"id":"[^"]+"/, '"id":"01ARYZ6S41TSV4RRFFQ69G5FZZ"')}\n`;
+    factory.databases
+      .get("atlas")
+      ?.store("ledger")
+      .set("current", { ...record, text: moved });
+    button(host, "Sustituir").click();
+    await until(() => text(host).includes("Mientras decidías"));
+    expect(text(host)).toContain(
+      `ahora tienen ${moved.split("\n").filter((line) => line !== "").length} movimientos`,
+    );
+    expect(held()).toBe(moved);
+    expect(held()).not.toBe(smaller);
+    // Put it back as it was, for the next test.
+    factory.databases.get("atlas")?.store("ledger").set("current", record);
+  });
+
   it("refuses a file that is not a ledger before asking anything", async () => {
     const current = held();
     const host = await show("/libro", Libro);

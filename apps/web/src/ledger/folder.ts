@@ -10,7 +10,7 @@ import {
   rememberedFolder,
   rememberFolder,
   requestFolderPermission,
-} from "@atlas/adapters/browser";
+} from "@atlas/adapters/folder";
 
 export const LEDGER_FILE = "ledger.jsonl";
 

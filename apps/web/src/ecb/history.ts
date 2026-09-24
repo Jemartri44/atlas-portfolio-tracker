@@ -10,7 +10,7 @@
 // Everything here is loaded lazily: nothing of the ECB is on the boot path
 // (decision (r)), and the build fails if it ever is.
 
-import { queryFolderPermission, readFolderText, rememberedFolder } from "@atlas/adapters/browser";
+import { queryFolderPermission, readFolderText, rememberedFolder } from "@atlas/adapters/folder";
 import { importedHistory, saveImportedHistory } from "@atlas/adapters/reference";
 import { sha256Hex, utf8Encode } from "@atlas/domain";
 import {
