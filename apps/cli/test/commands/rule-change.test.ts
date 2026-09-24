@@ -205,3 +205,62 @@ describe("atlas fx correct (mutant 20)", () => {
     );
   });
 });
+
+describe("atlas edit keeps the lot in the place of the original (review of PR #75)", () => {
+  it("a rate correction does not change which lot a sale consumes", async () => {
+    const { atlas, text, id } = await setup();
+    // A second purchase of the same day, dearer, and a sale of 1: FIFO takes
+    // the first one, the one recorded first.
+    const dear = goldBuy.map((word) => (word === "100" ? "200" : word));
+    expect((await atlas([], ...dear)).code).toBe(0);
+    const dearId = String(JSON.parse((await text()).trimEnd().split("\n").at(-1) as string).id);
+    const sell = [
+      "add",
+      "sell",
+      "--account",
+      "acc",
+      "--asset",
+      "gold",
+      "--trade-date",
+      "2026-02-02",
+      "--value-date",
+      "2026-02-04",
+      "--quantity",
+      "1",
+      "--unit-price",
+      "300",
+      "--currency",
+      "USD",
+      "--fx-rate",
+      "1.1",
+      "--fx-rate-date",
+      "2026-02-02",
+      "--yes",
+    ];
+    expect((await atlas([], ...sell)).code).toBe(0);
+    const edited = await atlas(
+      [],
+      "edit",
+      id,
+      "--reason",
+      "tipo",
+      "--fx-rate",
+      "1.1195",
+      "--fx-rate-date",
+      "2026-01-06",
+      "--yes",
+      "--confirm-fx-rate",
+    );
+    expect(edited.code).toBe(0);
+    const lots = JSON.parse((await atlas([], "lots", "gold", "--json")).text).data as {
+      source_event_id: string;
+      quantity: string;
+      original_quantity: string;
+    }[];
+    // The dear purchase is still whole: the sale consumed the corrected one.
+    const dearLot = lots.find((lot) => lot.source_event_id === dearId);
+    expect(dearLot).toMatchObject({ quantity: "1", original_quantity: "1" });
+    // And the corrected one, consumed, is no longer an open lot.
+    expect(lots.map((lot) => lot.source_event_id)).toEqual([dearId]);
+  });
+});
