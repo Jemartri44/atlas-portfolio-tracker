@@ -358,7 +358,10 @@ describe("updatePrices", () => {
     const eodhd = new FakeSource(
       "eodhd",
       (symbol) => {
-        if (symbol === "SPEC.US") {
+        // Another console writes the close of ast_spec while this one is
+        // already asking for another asset: after the download of ast_spec,
+        // before its write.
+        if (symbol === "INDEX.INDX") {
           store.files.set(
             "ast_spec.jsonl",
             `${encodeCloseLine({ schema_version: 1, date: "2027-01-05", close: "10.00", currency: "USD", source: "eodhd", fetched_at: "2027-01-06T07:00:00.000Z" })}\n`,
@@ -378,6 +381,28 @@ describe("updatePrices", () => {
       outcome: "unreadable",
       error: "price_file_newer_version",
     });
+  });
+
+  it("only appends: the bytes already there are never rewritten", async () => {
+    const { store, input } = setup(() => closes(["2027-01-05", "10"]));
+    const first = `${encodeCloseLine({ schema_version: 1, date: "2027-01-04", close: "9.50", currency: "USD", source: "alpha_vantage", fetched_at: "2027-01-05T00:00:00.000Z" })}\n`;
+    store.files.set("ast_spec.jsonl", first);
+    await updatePrices(input);
+    const after = store.files.get("ast_spec.jsonl") ?? "";
+    expect(after.startsWith(first)).toBe(true);
+    expect(after.split("\n").filter(Boolean)).toHaveLength(2);
+  });
+
+  it("writes the declared currency, never the currency of the asset", async () => {
+    const { store, input } = setup();
+    store.files.set(
+      "symbols.json",
+      symbolsFile({ ast_spec: { currency: "GBX", eodhd: "SPEC.LSE" } }),
+    );
+    await updatePrices(input);
+    expect(readCloseFile("ast_spec", store.files.get("ast_spec.jsonl") ?? "")[0]?.currency).toBe(
+      "GBX",
+    );
   });
 
   it("reports the sources over the threshold of consecutive failures", async () => {
