@@ -23,16 +23,14 @@ export const writeStep = async (
   if (target.fromDraft !== undefined) {
     // A draft: the id stamped before writing, the event written with it, and
     // the draft removed after (second review of PR #75, `ledger/drafts.ts`).
+    // A draft gone meanwhile (another tab) is refused there: never recorded
+    // as a new operation (third review of PR #75).
     const { confirmDraft } = await import("../../ledger/drafts.js");
-    const confirmed = await confirmDraft(
+    return confirmDraft(
       target.fromDraft.id,
       draft as unknown as Record<string, unknown>,
       confirmDuplicate,
     );
-    if (confirmed !== undefined) {
-      return confirmed;
-    }
-    // The draft is gone meanwhile (another tab): recorded as always.
   }
   const result =
     target.correcting === undefined

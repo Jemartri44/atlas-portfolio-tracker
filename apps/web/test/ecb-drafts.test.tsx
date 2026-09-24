@@ -311,6 +311,27 @@ describe("a draft from the form", () => {
     expect((await drafts.list()).drafts).toEqual([]);
   });
 
+  it("records nothing when its draft was confirmed in another tab meanwhile (third review of PR #75)", async () => {
+    await openWritable();
+    const id = await saveGoldDraft();
+    await importHistory(later);
+    const recorded = events();
+    const host = await show(`/registrar/buy?borrador=${id}`, RegistrarForm, "/registrar/:tipo");
+    await until(() => value(host, "f-fx_rate") === "1,1104");
+    await press(host, "Ver el efecto");
+    await until(() => host.querySelector("section.effect") !== null);
+    // Another tab confirms it: the draft is gone before the yes here.
+    await drafts.remove(id);
+    (
+      [...host.querySelectorAll("section.effect button")].find(
+        (button) => button.textContent?.trim() === "Registrar",
+      ) as HTMLButtonElement
+    ).click();
+    await until(() => text(host).includes("Ese borrador ya no está en este navegador"));
+    expect(events()).toBe(recorded);
+    expect(window.location.pathname).toBe("/registrar/buy");
+  });
+
   it("says a draft that is gone is gone", async () => {
     const host = await show(
       "/registrar/buy?borrador=01K00000000000000000000009",

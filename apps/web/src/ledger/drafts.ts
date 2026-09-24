@@ -8,6 +8,7 @@
 
 import {
   DEFAULT_LOCAL_CONFIG,
+  DraftChangedError,
   draftRecordedAs,
   preparePendingDraft,
   recordPendingDraft,
@@ -15,6 +16,7 @@ import {
 import type { WebHistory } from "../ecb/history.js";
 import { doneUrl } from "../routes/movimientos/Rectified.jsx";
 import { refreshDrafts, drafts as store } from "./draft-store.js";
+import { toAppError } from "./errors.js";
 import { store as ledger, requireDeps } from "./state.js";
 import { runWrite, type WriteResult } from "./write.js";
 
@@ -52,16 +54,22 @@ export const saveDraft = async (
  * - written, but the draft could not be removed: the list says that too — the
  *   reload of the ledger takes the form away with anything it would say.
  *
- * `undefined` when the draft is no longer in this browser.
+ * A draft no longer in this browser is refused (`draft_changed`), never
+ * recorded as a new operation.
  */
 export const confirmDraft = async (
   id: string,
   event: Record<string, unknown>,
   confirmDuplicate: boolean,
-): Promise<WriteResult<string> | undefined> => {
+): Promise<WriteResult<string>> => {
   const draft = (await store.list()).drafts.find((entry) => entry.id === id);
   if (draft === undefined) {
-    return undefined;
+    // Confirmed or discarded in another tab: said, and **nothing** recorded —
+    // never the operation as a new one (third review of PR #75).
+    return {
+      ok: false,
+      failure: { kind: "error", error: toAppError(new DraftChangedError(id, "gone")) },
+    };
   }
   const already = draftRecordedAs(ledger.snapshot()?.events ?? [], draft);
   if (already.length > 0) {
