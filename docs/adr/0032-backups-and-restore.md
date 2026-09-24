@@ -1,6 +1,6 @@
 # ADR-0032 — Copias de seguridad y restauración del libro
 
-**Estado:** Aceptada (2026-09-24). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
+**Estado:** Aceptada (2026-09-24). **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
 
 ## Contexto
 
@@ -33,14 +33,14 @@ Una observación ordena todo lo demás: **en un libro append-only, un error de r
 3. **Volcado mensual** en `backups/<YYYY-MM>/`: el libro, el histórico del BCE, los precios y `positions.json` (la proyección valorada, legible sin la aplicación). Para siempre.
 4. **Copia fuera de AWS** en un disco del usuario: `atlas backup` se amplía para llevarse también `documents/` e `imports/`, que los dispositivos **no** replican y sin los que un evento corporativo pierde su fuente documental obligatoria. El correo mensual lo recuerda.
 
-**Cómo se restaura el libro.** Es una operación de administración, con credenciales de vida corta y desde la consola; **nunca por la API**, que solo sabe añadir (ADR-0026). En este orden, y sin saltarse ninguno:
+**Cómo se restaura el libro.** Es una operación de administración sobre la copia de referencia, con credenciales de vida corta y desde la consola; **nunca por la API**, que solo sabe añadir (ADR-0026). **Se niega si hay líneas pendientes en alguna cola conocida** (ADR-0026, Parte A). En este orden, y sin saltarse ninguno:
 
 1. **Elegir la copia candidata**: una versión anterior del objeto, un volcado, la réplica de un dispositivo o la copia del disco.
 2. **Comprobarla antes de tocar nada**: carga con el esquema actual, `check --deep` sin errores (los hallazgos, listados) y la proyección calculada.
 3. **Compararla con el remoto actual por identificador**: qué eventos tiene cada uno que no tenga el otro. Si la candidata es un prefijo del remoto, se dice «se pierde esta cola»; cualquier otra forma se explica evento a evento.
 4. **Confirmación explícita**, con esa lista delante.
-5. **Sustituir con el contrato de `LedgerStore.replace`**: primero se archivan los bytes actuales en `archive/pre-restore-<fecha>.jsonl`, que nunca se sobrescribe, y después se escribe con la condición del remoto que se comparó en el paso 3. **Restaurar nunca borra nada.**
-6. **Después**, cada dispositivo detecta que el remoto se ha reescrito, porque le faltan identificadores que ya había sincronizado (ADR-0026, parte A), y se detiene. El procedimiento le manda volver a descargar; lo que solo ese dispositivo tenía vuelve como pendiente y pasa por la reaplicación. **Las réplicas curan la restauración.**
+5. ~~**Sustituir con el contrato de `LedgerStore.replace`**~~ **Sustituir con la operación de líneas crudas del puerto** (corregido en la enmienda): `replace` recibe eventos ya migrados y los vuelve a serializar, así que con una versión 2 del esquema restaurar sería un `compact` sin resellar las presentaciones, con todas sus huellas ilegibles (ADR-0026, Parte A). La operación de líneas crudas escribe **los bytes de la copia tal cual**. Primero se archivan los bytes actuales en `archive/pre-restore-<fecha>.jsonl`, que nunca se sobrescribe, y después se escribe con la condición del remoto que se comparó en el paso 3. **Restaurar nunca borra nada.**
+6. **Después**, cada dispositivo detecta que el remoto se ha reescrito, porque el hash de su prefijo sincronizado ya no coincide (ADR-0026, Parte A), y se detiene. El procedimiento le manda volver a descargar. ~~Lo que solo ese dispositivo tenía vuelve como pendiente y pasa por la reaplicación. **Las réplicas curan la restauración.**~~ **Corregido en la enmienda:** lo que solo ese dispositivo tenía **queda retenido para revisión** y **nunca se vuelve a subir solo**, porque podría deshacer la restauración. El usuario decide, línea a línea, qué vuelve a registrar.
 
 **Si se pierde la cuenta de producción:** Terraform levanta la pila en una cuenta miembro nueva (ADR-0028: una por entorno), el libro se sube desde una réplica o desde el disco, y `documents/` e `imports/` desde el disco. Se ensaya **una vez** en la etapa de despliegue, con datos sintéticos en `atlas-dev`, antes de fiarse de la nube.
 
@@ -57,3 +57,7 @@ Una observación ordena todo lo demás: **en un libro append-only, un error de r
 - La copia fuera de AWS de `documents/` e `imports/` depende de que el usuario la haga: es la única capa manual, y por eso la recuerda el correo.
 - No se propone ahora bloquear los objetos de `backups/` contra el borrado (S3 Object Lock): cubriría un compromiso de la administración, pero su coste y su encaje con Terraform están **SIN VERIFICAR**. Queda anotado.
 - Relacionadas: ADR-0002, ADR-0003, ADR-0006, ADR-0025 (el contrato de `replace`), ADR-0026, ADR-0027 y ADR-0028.
+
+## Enmienda del 2026-09-24 (revisión de la PR #72)
+
+Decidida por la dirección el mismo día. El paso 5 se apoyaba en `LedgerStore.replace`, que vuelve a serializar eventos migrados; ahora usa la operación de líneas crudas de ADR-0026. El paso 6 daba por hecho que lo pendiente de un dispositivo volvía a subir, cosa que ADR-0026 no definía y que podía deshacer la restauración; ahora queda retenido para revisión. Y la restauración se niega si hay pendientes en alguna cola conocida.

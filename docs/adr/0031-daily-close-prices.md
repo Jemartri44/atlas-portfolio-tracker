@@ -1,6 +1,6 @@
 # ADR-0031 — Precios de cierre diarios: puerto, almacén y política de fallo
 
-**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que además resuelve lo que guarda CoinGecko y lo que pasa con los fondos que `EUFUND` no cubre. Ronda 8. Las fuentes son decisión de la dirección, tomada sobre la investigación del 2026-09-24; el puerto, el almacén y la política de fallo desarrollan lo que ya pedía `docs/specification.md` §7.
+**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que además resuelve lo que guarda CoinGecko y lo que pasa con los fondos que `EUFUND` no cubre. **Enmendada el mismo día** tras la revisión de la PR #72: la correspondencia de símbolos sale del libro (ver al final). Ronda 8. Las fuentes son decisión de la dirección, tomada sobre la investigación del 2026-09-24; el puerto, el almacén y la política de fallo desarrollan lo que ya pedía `docs/specification.md` §7.
 
 ## Contexto
 
@@ -30,7 +30,7 @@ La especificación separa dos niveles de precio (§7.1): el **exacto**, que se t
 
 **Fuentes** (decisión de la dirección): principal **EODHD Free**, respaldo **Alpha Vantage Free**; cripto, **CoinGecko Demo**, con la atribución **visible** donde se enseñe su cotización. Fondos por `EUFUND` **solo si cubre el ISIN concreto**; si no, extracto o entrada manual, y para la evolución, **la aproximación por ETF de referencia** de `docs/specification.md` §7.1, **siempre marcada como aproximación**. La entrada manual nunca desaparece.
 
-**Correspondencia ISIN → símbolo: dato del catálogo, no una búsqueda diaria.** `asset_created`/`asset_updated` ganan `price_symbols?`, un mapa de fuente (`eodhd`, `alpha_vantage`, `coingecko`) a su símbolo. OpenFIGI **propone** el símbolo al dar de alta el activo y el usuario lo confirma; nada lo consulta después. Es un campo opcional nuevo y añadir una fuente es añadir un valor a un enumerado: los dos son cambios **compatibles** según ADR-0018.
+**Correspondencia ISIN → símbolo: configuración de la descarga, no una búsqueda diaria.** ~~`asset_created`/`asset_updated` ganan `price_symbols?`, un mapa de fuente (`eodhd`, `alpha_vantage`, `coingecko`) a su símbolo.~~ **Corregido en la enmienda:** la correspondencia **no va en el libro**. Es configuración para descargar precios, que son informativos, no un hecho de la cartera, y una foto completa `asset_updated` escrita por un cliente antiguo la borraría sin avisar (ADR-0026, caso 6). Vive **con los precios**, en `prices/symbols.json` (junto a `prices/` en local, en el bucket en la nube): por activo, un mapa de fuente (`eodhd`, `alpha_vantage`, `coingecko`) a su símbolo. OpenFIGI **propone** el símbolo al dar de alta el activo y el usuario lo confirma; nada lo consulta después. Si el fichero se pierde, se rehace.
 
 **Puerto `PriceSource`** en `packages/domain/src/ports/`, asíncrono, un adaptador por fuente. Pide cierres diarios de un símbolo entre dos fechas y devuelve cotizaciones (`date`, `close`, `currency`) o un fallo **con tipo**: `unavailable`, `not_found`, `rate_limited`, `blocked`, `invalid_response`, `budget_exhausted`. La cascada vive en un caso de uso del dominio que recibe los puertos (ADR-0007) y lo que escribe pasa por un puerto de almacén de precios, igual que el libro pasa por `LedgerStore`.
 
@@ -51,5 +51,9 @@ La especificación separa dos niveles de precio (§7.1): el **exacto**, que se t
 - EODHD Free solo da **un año de histórico**: lo que no se guarde hoy no se podrá pedir dentro de dos años. Es un motivo más para guardar los cierres, dentro de lo que permitan las condiciones de cada fuente.
 - La divisa de una cotización puede no ser la del activo (por ejemplo, una subunidad de la divisa): se guarda la que devuelve la fuente y la puerta rechaza la que no sepa convertir, en vez de suponer.
 - **Ningún cálculo fiscal cambia**: la puerta sigue siendo la única entrada y el Modelo 720 sigue leyendo solo la valoración manual.
-- Documentos que hay que actualizar: `docs/specification.md` §7 (la tabla nombra a Yahoo; §7.3, el riesgo de rascar desde Lambda, cambia de naturaleza: pasa a ser el de condiciones y cupos de una API), `docs/data-schema.md` §1 y §6.1 (`price_symbols`), y `docs/dependencies.md`, que no cambia de paquetes: los adaptadores usan `fetch` de Node.
+- Documentos que hay que actualizar: `docs/specification.md` §7 (la tabla nombra a Yahoo; §7.3, el riesgo de rascar desde Lambda, cambia de naturaleza: pasa a ser el de condiciones y cupos de una API), `docs/data-schema.md` §1 (`prices/symbols.json` y `prices/_status.json`), y `docs/dependencies.md`, que no cambia de paquetes: los adaptadores usan `fetch` de Node.
 - Relacionadas: ADR-0005, ADR-0007, ADR-0018, ADR-0026, ADR-0028 y ADR-0029.
+
+## Enmienda del 2026-09-24 (revisión de la PR #72)
+
+Decidida por la dirección el mismo día. La correspondencia de símbolos iba como campo opcional de `asset_created`/`asset_updated`. Un cliente antiguo que escribiera un `asset_updated` —una foto completa, ADR-0022— lo borraría sin avisar, aunque añadir el campo fuera compatible según ADR-0018. En vez de parchearlo, sale del libro: es configuración de la descarga de precios, que son informativos, y vive en `prices/symbols.json`.
