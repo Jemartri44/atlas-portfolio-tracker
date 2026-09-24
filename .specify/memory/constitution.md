@@ -1,8 +1,8 @@
 <!--
 Sync Impact Report
-- Version change: 1.4.0 → 1.5.0
-- Modified principles: III (second bounded exception: total net worth and the bucket's weight over it — rule 18 — aggregate both books as a budget control, always broken down; phase 3)
-- Modified sections: none
+- Version change: 1.5.0 → 1.6.0
+- Modified principles: VI (cost restriction: "coste indefinidamente dentro del always-free de AWS" → "coste mínimo con alarma de presupuesto", ADR-0028, Ronda 8, 2026-09-24)
+- Modified sections: Restricciones técnicas (Plataforma: coste mínimo en vez de always-free, acceso con Google verificado en la Lambda sustituye a Cognito con MFA —ADR-0027—, excepción declarada a "Terraform para todo; nada creado a mano" con su condición de retirada —ADR-0028—; Seguridad: los secretos en SSM ya no son solo el token Flex de IBKR, se añaden el secreto de cliente de Google y la clave de sesión —ADR-0027— y las claves de las fuentes de precios —ADR-0031—)
 - Added sections: none
 - Removed sections: none
 - Templates requiring updates: none
@@ -72,7 +72,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 - Pocas dependencias, con presupuesto explícito: cada paquete nuevo requiere justificación. Preferir la biblioteca estándar.
 - Formatos abiertos. El libro mayor DEBE ser legible sin la aplicación, y exportable a CSV/JSON en un clic.
-- Cero servicios de pago de terceros en el camino crítico. Coste indefinidamente dentro del always-free de AWS.
+- Cero servicios de pago de terceros en el camino crítico. **Coste mínimo, con alarma de presupuesto** (ADR-0028, Ronda 8, 2026-09-24): sustituye a "coste indefinidamente dentro del *always-free* de AWS", porque la capa en la nube se apoya en créditos que se acaban; cuando se agoten, la cuenta paga el coste mínimo estimado y Budgets avisa si se sale de lo previsto.
 - Prueba de restauración anual desde el backup.
 - El esquema de datos y la lógica de transformación de lotes se documentan en el repositorio.
 
@@ -90,8 +90,8 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 ## Restricciones técnicas
 
-- **Plataforma:** AWS dentro del always-free (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, Cognito con MFA, EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano. Antes de introducir un servicio nuevo, verificar que es gratuito a esta escala.
-- **Seguridad:** nunca credenciales de brókers (solo el token Flex de IBKR, de solo lectura, en SSM como `SecureString`). Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
+- **Plataforma:** AWS con **coste mínimo y alarma de presupuesto** (ADR-0028), no dentro del *always-free* indefinidamente (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, **acceso solo con Google verificado en la Lambda, sin Cognito** (ADR-0027), EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano, **salvo las excepciones declaradas en ADR-0028, cada una con su condición de retirada**. Antes de introducir un servicio nuevo, verificar que su coste es mínimo a esta escala.
+- **Seguridad:** nunca credenciales de brókers. Secretos, todos en SSM Parameter Store como `SecureString`: el token Flex de IBKR (solo lectura), el secreto del cliente OAuth de Google y la clave de sesión (ADR-0027), y las claves de las fuentes de precios (ADR-0031). Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
 - **Privacidad:** nunca se registran en logs importes, posiciones, saldos ni identificadores de cuenta. Nada personal en el repositorio público: ni dominio real, ni importes, ni el plan financiero (`plan-financiero.md`, ignorado por git).
 - **Idioma:** todo lo técnico (código, identificadores, commits, ramas, ficheros, infraestructura) en inglés. Documentos, especificaciones y esta constitución en español con identificadores en inglés.
 - **Entornos:** `dev` (rama `develop`) y `prod` (rama `main`) con pilas separadas. Se construye una vez y se promociona. Datos de producción jamás en `dev`.
@@ -112,4 +112,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.5.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-18
+**Version**: 1.6.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-24
