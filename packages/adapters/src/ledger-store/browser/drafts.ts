@@ -54,6 +54,14 @@ export class BrowserDraftStore implements PendingDraftStore {
     await committed(tx);
   }
 
+  /** The same draft again (the id its confirmation stamped): over the one there is. */
+  async update(draft: PendingDraft): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction(DRAFT_STORE, "readwrite");
+    tx.objectStore(DRAFT_STORE).put(JSON.stringify(draft), draft.id);
+    await committed(tx);
+  }
+
   async remove(id: string): Promise<void> {
     const db = await this.open();
     const tx = db.transaction(DRAFT_STORE, "readwrite");

@@ -21,10 +21,12 @@ import { loadInto } from "../src/ledger/actions.js";
 import * as draftStore from "../src/ledger/draft-store.js";
 import { toAppError } from "../src/ledger/errors.js";
 import { store } from "../src/ledger/state.js";
+import { recordDraft } from "../src/ledger/write.js";
 import Borradores from "../src/routes/registrar/borradores.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { mountDraftCounter } from "../src/shell/draft-counter.js";
+import { asEventDraft } from "../src/view-models/forms/values.js";
 import { goldenText } from "./helpers/golden.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
 import {
@@ -262,6 +264,51 @@ describe("a draft from the form", () => {
     await settle(200);
     expect(blob.text.split("\n").filter((line) => line !== "").length).toBe(recorded);
     expect((await drafts.list()).drafts.map((draft) => draft.id)).toEqual([id]);
+  });
+
+  it("never takes a twin recorded by hand for the draft: it asks the duplicate question (second review of PR #75)", async () => {
+    await openWritable();
+    const id = await saveGoldDraft();
+    await importHistory(later);
+    // The same purchase, recorded by hand with its rate: another operation.
+    const twin = await recordDraft(
+      asEventDraft({
+        type: "buy",
+        account_id: "acc_ibkr",
+        asset_id: "ast_gold",
+        trade_date: "2026-04-01",
+        value_date: "2026-04-01",
+        quantity: "1",
+        unit_price: "100",
+        currency: "USD",
+        fx_rate: "1.1104",
+        fx_rate_date: "2026-04-01",
+        fee: "0",
+        source: "manual",
+      }),
+    );
+    expect(twin.ok).toBe(true);
+    const recorded = events();
+    const host = await show(`/registrar/buy?borrador=${id}`, RegistrarForm, "/registrar/:tipo");
+    await until(() => value(host, "f-fx_rate") === "1,1104");
+    await press(host, "Ver el efecto");
+    await until(() => host.querySelector("section.effect") !== null);
+    (
+      [...host.querySelectorAll("section.effect button")].find(
+        (button) => button.textContent?.trim() === "Registrar",
+      ) as HTMLButtonElement
+    ).click();
+    await until(() => text(host).includes("Ya existe un movimiento igual"));
+    expect(events()).toBe(recorded);
+    expect((await drafts.list()).drafts.map((draft) => draft.id)).toEqual([id]);
+    // Said yes to the question, both purchases are there and the draft goes.
+    const dialog = [...host.querySelectorAll("dialog")].find((node) =>
+      node.hasAttribute("open"),
+    ) as HTMLElement;
+    await press(dialog, "Registrar de todas formas");
+    await until(() => events() === recorded + 1);
+    await until(() => window.location.pathname.startsWith("/movimientos/"));
+    expect((await drafts.list()).drafts).toEqual([]);
   });
 
   it("says a draft that is gone is gone", async () => {

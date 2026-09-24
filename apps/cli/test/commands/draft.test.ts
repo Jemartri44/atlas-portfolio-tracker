@@ -223,11 +223,13 @@ describe("a pending draft (mutant 12)", () => {
     const { atlas, drafts, dir, ledgerText } = await setup();
     const id = idOf((await atlas({}, ...goldBuy, "--draft")).out);
     const file = join(dir, "drafts", `${id}.json`);
-    const copy = await readFile(file);
+    const copy = JSON.parse(await readFile(file, "utf8"));
     await atlas({ fx: source(await laterCsv()) }, "fx", "update");
     await atlas({}, "draft", "confirm", id, "--yes");
-    // The cut: the ledger has the line and the draft is still there.
-    await writeFile(file, copy);
+    // The cut: the ledger has the line and the draft is still there, with the
+    // id its confirmation stamped before writing (second review of PR #75).
+    const written = JSON.parse((await ledgerText()).trimEnd().split("\n").at(-1) as string);
+    await writeFile(file, JSON.stringify({ ...copy, pending_event_id: written.id }));
     const lines = (await ledgerText()).split("\n").length;
     expect((await atlas({}, "draft", "list")).out).toContain("Ya está registrado");
     // Confirming again only removes the draft: never a second line (review of PR #75).
@@ -236,6 +238,28 @@ describe("a pending draft (mutant 12)", () => {
     expect(again.out).toContain("ya estaba registrado");
     expect((await ledgerText()).split("\n").length).toBe(lines);
     expect(await drafts()).toEqual([]);
+  });
+
+  it("never takes a twin recorded by hand for the draft: it asks the duplicate question (second review of PR #75)", async () => {
+    const { atlas, drafts, ledgerText } = await setup();
+    const id = idOf((await atlas({}, ...goldBuy, "--draft")).out);
+    await atlas({ fx: source(await laterCsv()) }, "fx", "update");
+    // The same purchase, recorded by hand with its rate: another operation.
+    const byHand = [...goldBuy, "--fx-rate", "1.1104", "--fx-rate-date", "2026-04-01", "--yes"];
+    expect((await atlas({}, ...byHand)).code).toBe(0);
+    const lines = (await ledgerText()).trimEnd().split("\n").length;
+    expect((await atlas({}, "draft", "list")).out).not.toContain("Ya está registrado");
+    // Confirming it is the question of ADR-0012, never a silent removal.
+    const asked = await atlas({}, "draft", "confirm", id, "--yes");
+    expect(asked.code).toBe(3);
+    expect(asked.out).not.toContain("ya estaba registrado");
+    expect(await drafts()).toEqual([`${id}.json`]);
+    expect((await ledgerText()).trimEnd().split("\n")).toHaveLength(lines);
+    // Said yes to it, both purchases are in the ledger.
+    const confirmed = await atlas({}, "draft", "confirm", id, "--yes", "--confirm-duplicate");
+    expect(confirmed.code).toBe(0);
+    expect(await drafts()).toEqual([]);
+    expect((await atlas({}, "positions")).out).toMatch(/gold[^\n]*\b2\b/);
   });
 
   it("can be discarded, after a yes", async () => {

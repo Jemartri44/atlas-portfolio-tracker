@@ -209,6 +209,13 @@ describe("BrowserDraftStore (feature 012, block 5)", () => {
     expect((await store.list()).drafts[0]?.saved_at).toBe("2026-04-01T10:00:00.000Z");
   });
 
+  it("writes a draft again with the id its confirmation stamped (second review of PR #75)", async () => {
+    const { store } = drafts();
+    await store.save(draftOf(first));
+    await store.update({ ...draftOf(first), pending_event_id: second });
+    expect((await store.list()).drafts).toEqual([{ ...draftOf(first), pending_event_id: second }]);
+  });
+
   it("names the records it cannot read", async () => {
     const { db, store } = drafts();
     db.store(DRAFT_STORE).set(first, "{");

@@ -1,41 +1,17 @@
 // What "Registrar" and "Guardar como borrador" ask, in one place: the form is
 // long enough already (decision (g) of prompt 007).
 //
-// Writing records the event, or corrects the original, and — when the form
-// came from a draft — removes the draft **after** the record is written: a
-// cut in between leaves it in both places, and recording the draft again is
-// caught by the duplicate fingerprint (feature 012, block 5; ADR-0012).
+// Writing records the event, or corrects the original, or — when the form
+// came from a draft — confirms the draft (`ledger/drafts.ts`): the id it will
+// have is stamped on the draft first, so a retry after a cut knows exactly
+// whether its line is in the ledger, and never guesses by the fingerprint.
 
 import type { WebHistory } from "../../ecb/history.js";
-import { store } from "../../ledger/state.js";
 import { correct, recordDraft, type WriteResult } from "../../ledger/write.js";
 import type { toDraft } from "../../view-models/forms/index.js";
 import { doneUrl } from "../movimientos/Rectified.jsx";
 
 type Draft = ReturnType<typeof toDraft>;
-
-/**
- * The draft was recorded already — a confirmation whose removal of the draft
- * failed —: remove it, and go to the list, which says so. Never a second line
- * (review of PR #75). `undefined` when the duplicate is another operation.
- */
-const alreadyRecorded = async (id: string): Promise<string | undefined> => {
-  const [drafts, { draftRecordedAs }] = await Promise.all([
-    import("../../ledger/draft-store.js"),
-    import("@atlas/domain/ecb"),
-  ]);
-  const draft = await drafts.findDraft(id);
-  const snapshot = store.snapshot();
-  if (draft === undefined || snapshot === undefined) {
-    return undefined;
-  }
-  const recorded = draftRecordedAs(snapshot.state, snapshot.events, draft);
-  if (recorded.length === 0) {
-    return undefined;
-  }
-  await drafts.discardDraft(id);
-  return `/registrar/borradores?ya=${recorded[0]}`;
-};
 
 /** Writes; on success, the address of the movement written, to go to. */
 export const writeStep = async (
@@ -44,28 +20,26 @@ export const writeStep = async (
   reason: string,
   confirmDuplicate: boolean,
 ): Promise<WriteResult<string>> => {
+  if (target.fromDraft !== undefined) {
+    // A draft: the id stamped before writing, the event written with it, and
+    // the draft removed after (second review of PR #75, `ledger/drafts.ts`).
+    const { confirmDraft } = await import("../../ledger/drafts.js");
+    const confirmed = await confirmDraft(
+      target.fromDraft.id,
+      draft as unknown as Record<string, unknown>,
+      confirmDuplicate,
+    );
+    if (confirmed !== undefined) {
+      return confirmed;
+    }
+    // The draft is gone meanwhile (another tab): recorded as always.
+  }
   const result =
     target.correcting === undefined
       ? await recordDraft(draft, { confirmDuplicate })
       : await correct(target.correcting.id, draft, reason, { confirmDuplicate });
   if (!result.ok) {
-    if (result.failure.kind === "duplicate" && target.fromDraft !== undefined) {
-      const done = await alreadyRecorded(target.fromDraft.id);
-      if (done !== undefined) {
-        return { ok: true, value: done };
-      }
-    }
     return result;
-  }
-  if (target.fromDraft !== undefined) {
-    try {
-      await (await import("../../ledger/draft-store.js")).discardDraft(target.fromDraft.id);
-    } catch {
-      // The line is written and the ledger reloads, which takes the form
-      // away with anything it would say: the list of drafts says it instead,
-      // where the draft that is left can be removed. Said, never swallowed.
-      return { ok: true, value: `/registrar/borradores?no-quitado=${result.value.event.id}` };
-    }
   }
   // To the movement written, with what was done and, for a past tax year, the
   // warning: the reload that follows the write cannot take them away.

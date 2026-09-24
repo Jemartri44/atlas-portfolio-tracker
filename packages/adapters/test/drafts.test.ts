@@ -53,6 +53,13 @@ describe("FileDraftStore", () => {
     expect(await readdir(dir)).not.toContain(LOCK_FILE);
   });
 
+  it("writes a draft again with the id its confirmation stamped (second review of PR #75)", async () => {
+    const store = new FileDraftStore(await folder());
+    await store.save(draftOf(first));
+    await store.update({ ...draftOf(first), pending_event_id: second });
+    expect((await store.list()).drafts).toEqual([{ ...draftOf(first), pending_event_id: second }]);
+  });
+
   it("names the files it cannot read instead of skipping them", async () => {
     const dir = await folder();
     const store = new FileDraftStore(dir);

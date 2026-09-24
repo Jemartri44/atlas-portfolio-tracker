@@ -15,6 +15,7 @@ export { type BrokerSettlement, brokerSettlementOf } from "./ecb/broker-settleme
 export { checkLedgerRates, foreignRatesOf, type RateCheck } from "./ecb/check.js";
 export {
   DRAFT_FORMAT,
+  type DraftRecord,
   type DraftStatus,
   draftRecordedAs,
   type PendingDraft,

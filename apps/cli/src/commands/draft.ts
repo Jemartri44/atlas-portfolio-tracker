@@ -104,7 +104,7 @@ const listDrafts = async (ctx: Context): Promise<number> => {
   const rows = drafts.map((draft) => ({
     draft,
     status: pendingDraftStatus(history, state, draft, staleDays),
-    recorded: draftRecordedAs(state, events, draft),
+    recorded: draftRecordedAs(events, draft),
   }));
   const lines = [
     drafts.length === 0
@@ -155,7 +155,7 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
   const { state, events } = await loadAndProject(ctx.deps, { collectErrors: true });
   // Confirmed already, and the draft was not removed (a cut, a failure of
   // drafts/): confirming again only removes it — never a second line.
-  const recorded = draftRecordedAs(state, events, draft);
+  const recorded = draftRecordedAs(events, draft);
   if (recorded.length > 0) {
     await storeOf(ctx).remove(draft.id);
     ctx.io.out(
@@ -175,11 +175,18 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
         ]
       : [],
   );
-  const result = await confirmAndRecord(ctx, status.event, notes, (options) =>
-    recordPendingDraft(ctx.deps, storeOf(ctx), draft, status.event, options),
-  );
+  let removed = true;
+  const result = await confirmAndRecord(ctx, status.event, notes, async (options) => {
+    const recorded = await recordPendingDraft(ctx.deps, storeOf(ctx), draft, status.event, options);
+    removed = recorded.draftRemoved;
+    return recorded;
+  });
   if (result !== undefined) {
-    ctx.io.out(`Borrador ${draft.id} registrado y quitado de drafts/.`);
+    ctx.io.out(
+      removed
+        ? `Borrador ${draft.id} registrado y quitado de drafts/.`
+        : `Borrador ${draft.id} registrado, pero no se ha podido quitar de drafts/: \`atlas draft confirm ${draft.id}\` lo quitará sin registrarlo otra vez.`,
+    );
   }
   return EXIT.ok;
 };

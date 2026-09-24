@@ -52,7 +52,7 @@ export const draftRows = (
     );
     return {
       draft,
-      recorded: draftRecordedAs(state, events, draft),
+      recorded: draftRecordedAs(events, draft),
       status: statusOf(
         pendingDraftStatus(
           web?.history,

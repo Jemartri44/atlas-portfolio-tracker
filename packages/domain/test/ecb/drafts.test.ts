@@ -18,6 +18,7 @@ import type { PendingDraftStore } from "../../src/ports/draft-store.js";
 import { cashBalances } from "../../src/projections/cash.js";
 import { physicalPositions } from "../../src/projections/positions.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
+import { recordEvent } from "../../src/usecases/record-event.js";
 import { ecbFixture } from "../fixtures-path.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 import { TestStore } from "../memory-store.js";
@@ -62,6 +63,9 @@ class MemoryDrafts implements PendingDraftStore {
     return { drafts: [...this.saved.values()], unreadable: [] };
   }
   async save(draft: PendingDraft) {
+    this.saved.set(draft.id, draft);
+  }
+  async update(draft: PendingDraft) {
     this.saved.set(draft.id, draft);
   }
   async remove(id: string) {
@@ -289,41 +293,106 @@ describe("recordPendingDraft", () => {
     await drafts.save(draft);
     const event = { ...goldBuy, fx_rate: "1.1104", fx_rate_date: "2026-04-01" };
     // A cut between recording and removing: the operation is in both places.
-    await recordPendingDraft(deps, { ...drafts, remove: async () => {} } as never, draft, event);
-    expect(drafts.saved.size).toBe(1);
-    // Confirming it again is refused by the fingerprint, and the draft stays.
-    await expect(recordPendingDraft(deps, drafts, draft, event)).rejects.toBeInstanceOf(
-      DuplicateFingerprintError,
+    await recordPendingDraft(
+      deps,
+      {
+        ...drafts,
+        update: (next: PendingDraft) => drafts.update(next),
+        remove: async () => {},
+      } as never,
+      draft,
+      event,
     );
+    expect(drafts.saved.size).toBe(1);
+    // Confirming it again with its stamped id is refused — the id is in the
+    // ledger already —, and the draft stays for the interface to remove.
+    await expect(
+      recordPendingDraft(deps, drafts, drafts.saved.get(draft.id) as PendingDraft, event),
+    ).rejects.toBeDefined();
     expect(drafts.saved.size).toBe(1);
   });
 });
 
-describe("draftRecordedAs (review of PR #75)", () => {
-  it("finds the confirmation whose removal of the draft did not happen, and nothing else", async () => {
+describe("a confirmation retried knows its own line, and nothing else (second review of PR #75)", () => {
+  const confirmed = { ...goldBuy, fx_rate: "1.1104", fx_rate_date: "2026-04-01" };
+
+  it("keeps a draft whose twin was recorded by hand, and asks the duplicate question", async () => {
+    // The reviewer's case: a draft of 1 ast_gold, then an identical purchase
+    // recorded by hand. Confirming must not take the draft for recorded.
     const store = seeded();
     const deps = testDeps(store);
+    const drafts = new MemoryDrafts();
     const { draft } = await preparePendingDraft(deps, history, 30, goldBuy);
-    const project = async () => {
-      const { events: now } = await store.load();
-      return { state: projectLedger(now), now };
-    };
-    let { state, now } = await project();
-    expect(draftRecordedAs(state, now, draft)).toEqual([]);
-    // Confirmed, and the store of drafts failed to remove it.
-    const result = await recordPendingDraft(
+    await drafts.save(draft);
+    await recordEvent(deps, confirmed as never);
+    expect(draftRecordedAs((await store.load()).events, draft)).toEqual([]);
+    await expect(recordPendingDraft(deps, drafts, draft, confirmed)).rejects.toBeInstanceOf(
+      DuplicateFingerprintError,
+    );
+    expect([...drafts.saved.keys()]).toEqual([draft.id]);
+    // Said yes to the question, it is recorded: two purchases, as there were.
+    const second = await recordPendingDraft(
       deps,
-      { ...new MemoryDrafts(), remove: async () => {} } as never,
-      draft,
-      { ...goldBuy, fx_rate: "1.1104", fx_rate_date: "2026-04-01" },
+      drafts,
+      drafts.saved.get(draft.id) as PendingDraft,
+      confirmed,
+      {
+        confirmDuplicate: true,
+      },
     );
-    ({ state, now } = await project());
-    expect(draftRecordedAs(state, now, draft)).toEqual([result.event.id]);
-    // An identical operation recorded before the draft was saved is another one.
-    expect(draftRecordedAs(state, now, { ...draft, saved_at: "2099-01-01T00:00:00.000Z" })).toEqual(
-      [],
+    expect(second.draftRemoved).toBe(true);
+    const state = projectLedger((await store.load()).events);
+    expect(
+      physicalPositions(state)
+        .find((row) => row.asset_id === "ast_gold")
+        ?.quantity.toString(),
+    ).toBe("2");
+  });
+
+  it("stamps the id before writing, writes with it, and a retry after a cut finds exactly it", async () => {
+    const store = seeded();
+    const deps = testDeps(store);
+    const drafts = new MemoryDrafts();
+    const { draft } = await preparePendingDraft(deps, history, 30, goldBuy);
+    await drafts.save(draft);
+    expect(draftRecordedAs((await store.load()).events, draft)).toEqual([]);
+    // The cut: the store of drafts fails once the line is written. And the
+    // stamp is written **before** the line: at that moment the ledger has
+    // not grown yet.
+    const before = (await store.load()).lines.length;
+    const linesWhenStamped: number[] = [];
+    const failing = {
+      ...drafts,
+      update: async (next: PendingDraft) => {
+        linesWhenStamped.push((await store.load()).lines.length);
+        await drafts.update(next);
+      },
+      remove: async () => {
+        throw new Error("disco lleno");
+      },
+    };
+    const result = await recordPendingDraft(deps, failing as never, draft, confirmed);
+    expect(result.draftRemoved).toBe(false);
+    expect(linesWhenStamped).toEqual([before]);
+    const stamped = drafts.saved.get(draft.id) as PendingDraft;
+    expect(stamped.pending_event_id).toBe(result.event.id);
+    expect(draftRecordedAs((await store.load()).events, stamped)).toEqual([result.event.id]);
+    // The stamp survives a retry that is refused: the id never changes.
+    await expect(recordPendingDraft(deps, drafts, stamped, confirmed)).rejects.toBeDefined();
+    expect(drafts.saved.get(draft.id)?.pending_event_id).toBe(result.event.id);
+  });
+
+  it("reads and writes the stamp in the file of a draft", () => {
+    const stamped: PendingDraft = {
+      draft_format: 1,
+      id: "01K00000000000000000000000",
+      saved_at: "2026-04-01T10:00:00.000Z",
+      event: goldBuy,
+      pending_event_id: "01K00000000000000000000001",
+    };
+    expect(parsePendingDraft(serializePendingDraft(stamped))).toEqual(stamped);
+    expect(() => parsePendingDraft(JSON.stringify({ ...stamped, pending_event_id: "x" }))).toThrow(
+      ValidationError,
     );
-    // A draft without a fingerprint of its own matches nothing.
-    expect(draftRecordedAs(state, now, { ...draft, event: { type: "valuation" } })).toEqual([]);
   });
 });

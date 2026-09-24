@@ -66,6 +66,15 @@ export class FileDraftStore implements PendingDraftStore {
   }
 
   save(draft: PendingDraft): Promise<void> {
+    return this.write(draft);
+  }
+
+  /** The same draft again, with the id its confirmation stamped: written like a new one. */
+  update(draft: PendingDraft): Promise<void> {
+    return this.write(draft);
+  }
+
+  private write(draft: PendingDraft): Promise<void> {
     return withFolderLock(this.folder, async (lock) => {
       await fs.mkdir(this.dir, { recursive: true });
       const path = join(this.dir, `${draft.id}.json`);

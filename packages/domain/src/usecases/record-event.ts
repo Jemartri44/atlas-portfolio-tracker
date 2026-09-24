@@ -23,6 +23,13 @@ import type { UseCaseDeps } from "./deps.js";
 import { describeAffected, newlyInvalid } from "./invalid-events.js";
 
 export interface RecordOptions {
+  /**
+   * The id the event is written with, chosen beforehand: a draft stamps it
+   * before its confirmation writes, so that a retry knows **exactly** whether
+   * the line is in the ledger already (review of PR #75). Nobody else passes
+   * it; without it a fresh id is generated.
+   */
+  id?: string;
   /** Write even if another event carries the same fingerprint. */
   confirmDuplicate?: boolean;
   /**
@@ -190,7 +197,7 @@ export const recordEvent = async <E extends SupportedEvent>(
   options: RecordOptions = {},
 ): Promise<RecordResult<E>> => {
   const { events, etag } = await deps.store.load();
-  const event = completeDraft<E>(deps, draft, createUlidGenerator(deps).next());
+  const event = completeDraft<E>(deps, draft, options.id ?? createUlidGenerator(deps).next());
   if (options.acceptInvalid === true && event.type !== "settings_changed") {
     throw new ValidationError(
       "accept_invalid_not_allowed",

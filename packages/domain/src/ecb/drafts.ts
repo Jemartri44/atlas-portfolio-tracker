@@ -33,7 +33,6 @@ import type { PendingDraftStore } from "../ports/draft-store.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState } from "../projections/state.js";
 import type { Draft, LedgerEvent } from "../schema/events.js";
-import { fingerprintOf } from "../schema/fingerprint.js";
 import type { UseCaseDeps } from "../usecases/deps.js";
 import { previewEvent } from "../usecases/preview-event.js";
 import { type RecordOptions, type RecordResult, recordEvent } from "../usecases/record-event.js";
@@ -53,6 +52,8 @@ export interface PendingDraft {
   readonly saved_at: string;
   /** The operation as it would be recorded, **without** the rates still to be published. */
   readonly event: Fields;
+  /** The id its confirmation writes it with, stamped before writing (`recordPendingDraft`). */
+  readonly pending_event_id?: Ulid;
 }
 
 const unreadable = (message: string): ValidationError =>
@@ -72,7 +73,7 @@ export const parsePendingDraft = (text: string): PendingDraft => {
   if (!isRecord(parsed) || parsed.draft_format !== DRAFT_FORMAT) {
     throw unreadable("the draft is not of a known format");
   }
-  const { id, saved_at, event } = parsed;
+  const { id, saved_at, event, pending_event_id } = parsed;
   if (
     !isUlid(id) ||
     typeof saved_at !== "string" ||
@@ -81,7 +82,16 @@ export const parsePendingDraft = (text: string): PendingDraft => {
   ) {
     throw unreadable("the draft lacks its id, its date or its operation");
   }
-  return { draft_format: DRAFT_FORMAT, id, saved_at, event };
+  if (pending_event_id !== undefined && !isUlid(pending_event_id)) {
+    throw unreadable("the id stamped for its confirmation is not an id");
+  }
+  return {
+    draft_format: DRAFT_FORMAT,
+    id,
+    saved_at,
+    event,
+    ...(pending_event_id === undefined ? {} : { pending_event_id }),
+  };
 };
 
 export const serializePendingDraft = (draft: PendingDraft): string =>
@@ -201,34 +211,38 @@ export const pendingDraftStatus = (
 };
 
 /**
- * The events already in the ledger that **are** this draft: in force, with its
- * fingerprint (which does not include the rate), and recorded at or after the
- * draft was saved. That is a confirmation whose removal of the draft did not
- * happen — a cut, or a failure of the store of drafts —, and confirming again
- * only removes the draft, never offers to record it twice (review of PR #75).
- * An identical operation recorded **before** the draft was saved is another
- * operation, and it is not this.
+ * The event of the ledger that **is** this draft: the one with exactly the id
+ * its confirmation stamped on it before writing (`pending_event_id`). That is
+ * a confirmation whose removal of the draft did not happen — a cut, or a
+ * failure of the store of drafts —, and confirming again only removes the
+ * draft. Nothing else is: an identical operation has another id, and it goes
+ * through the duplicate question of ADR-0012 like any other (review of PR #75,
+ * which found that guessing by the fingerprint deleted the only copy of an
+ * operation).
  */
-export const draftRecordedAs = (
-  state: LedgerState,
-  events: readonly LedgerEvent[],
-  draft: PendingDraft,
-): string[] => {
-  const fingerprint = fingerprintOf(draft.event as unknown as Draft);
-  const same = new Set(
-    fingerprint === undefined ? [] : (state.fingerprints.get(fingerprint) ?? []),
-  );
-  // `fingerprints` holds only the events in force: a reversed one is not there.
-  return events
-    .filter((event) => same.has(event.id) && event.recorded_at >= draft.saved_at)
-    .map((event) => event.id);
-};
+export const draftRecordedAs = (events: readonly LedgerEvent[], draft: PendingDraft): string[] =>
+  draft.pending_event_id === undefined
+    ? []
+    : events.filter((event) => event.id === draft.pending_event_id).map((event) => event.id);
+
+export interface DraftRecord extends RecordResult {
+  /** False when the line was written and the draft could not be removed: said, never swallowed. */
+  draftRemoved: boolean;
+}
 
 /**
  * Records a confirmable draft — the event `pendingDraftStatus` gave, after the
- * user's yes — with every validation of a record, and only then removes the
- * draft. A refusal (the ledger changed, a duplicate) leaves the draft where it
- * was.
+ * user's yes — with every validation of a record, in three steps:
+ *
+ * 1. **the draft keeps the id the event will have** (`pending_event_id`),
+ *    stamped before anything is written — the same one on every retry;
+ * 2. the event is recorded **with that id**, with the duplicate question of
+ *    ADR-0012 if its fingerprint repeats;
+ * 3. the draft is removed.
+ *
+ * A refusal leaves the draft where it was. A cut after 2 leaves it in both
+ * places, and `draftRecordedAs` then knows, without guessing, that it is this
+ * one.
  */
 export const recordPendingDraft = async (
   deps: UseCaseDeps,
@@ -236,8 +250,16 @@ export const recordPendingDraft = async (
   draft: PendingDraft,
   event: Fields,
   options: RecordOptions = {},
-): Promise<RecordResult> => {
-  const result = await recordEvent(deps, event as unknown as Draft, options);
-  await drafts.remove(draft.id);
-  return result;
+): Promise<DraftRecord> => {
+  const id = draft.pending_event_id ?? createUlidGenerator(deps).next();
+  if (draft.pending_event_id === undefined) {
+    await drafts.update({ ...draft, pending_event_id: id });
+  }
+  const result = await recordEvent(deps, event as unknown as Draft, { ...options, id });
+  try {
+    await drafts.remove(draft.id);
+  } catch {
+    return { ...result, draftRemoved: false };
+  }
+  return { ...result, draftRemoved: true };
 };
