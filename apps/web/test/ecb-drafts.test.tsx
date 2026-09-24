@@ -24,6 +24,7 @@ import { store } from "../src/ledger/state.js";
 import Borradores from "../src/routes/registrar/borradores.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
+import { mountDraftCounter } from "../src/shell/draft-counter.js";
 import { goldenText } from "./helpers/golden.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
 import {
@@ -93,10 +94,14 @@ const value = (host: HTMLElement, id: string): string =>
   (host.querySelector(`#${id}`) as HTMLInputElement | null)?.value ?? "";
 
 /** The golden ledger in a store that writes, for the one test that records. */
+/** The bytes of the writable ledger, to change them underneath a form. */
+let written: MemoryBlob | undefined;
+
 const openWritable = async (): Promise<void> => {
   let counter = 0;
+  written = new MemoryBlob(goldenText());
   const deps: UseCaseDeps = {
-    store: new BlobLedgerStore(new MemoryBlob(goldenText())),
+    store: new BlobLedgerStore(written),
     clock: { now: () => new Date("2029-07-01T10:00:00.000Z") },
     random: (target) => {
       counter += 1;
@@ -145,6 +150,18 @@ describe("a draft from the form", () => {
     const link = host.querySelector('a[href="/registrar/borradores"]') as HTMLAnchorElement;
     expect(link.getAttribute("aria-label")).toBe("1 borrador pendiente");
     expect(text(link)).toBe("1");
+  });
+
+  it("counts a draft it cannot read too (review of PR #75)", async () => {
+    const holderDb = (globalThis as unknown as { indexedDB: FakeIdbFactory }).indexedDB;
+    await drafts.list(); // opens the database, with its store of drafts
+    holderDb.databases.get("atlas")?.store("drafts").set("01K0000000000000000000000Z", "{");
+    const slot = document.createElement("span");
+    document.body.append(slot);
+    mountDraftCounter(slot);
+    await until(() => slot.textContent === "1");
+    expect(slot.querySelector("a")?.getAttribute("aria-label")).toBe("1 borrador pendiente");
+    holderDb.databases.get("atlas")?.store("drafts").delete("01K0000000000000000000000Z");
   });
 
   it("waits in the list, and is never recorded by itself when the rate arrives", async () => {
@@ -222,6 +239,29 @@ describe("a draft from the form", () => {
     expect(text(second)).not.toContain("Ya hay un movimiento igual");
     expect(events()).toBe(recorded + 1);
     expect((await drafts.list()).drafts).toEqual([]);
+  });
+
+  it("keeps the draft when the record is refused (review of PR #75, mutant W1)", async () => {
+    await openWritable();
+    const id = await saveGoldDraft();
+    await importHistory(later);
+    const host = await show(`/registrar/buy?borrador=${id}`, RegistrarForm, "/registrar/:tipo");
+    await until(() => value(host, "f-fx_rate") === "1,1104");
+    await press(host, "Ver el efecto");
+    await until(() => host.querySelector("section.effect") !== null);
+    // Another tab writes meanwhile: the record is refused as a conflict.
+    const blob = written as MemoryBlob;
+    const first = blob.text.split("\n")[0] as string;
+    blob.text = `${blob.text}${first.replace(/"id":"[^"]+"/, '"id":"01ARYZ6S41TSV4RRFFQ69G5FZY"')}\n`;
+    const recorded = blob.text.split("\n").filter((line) => line !== "").length;
+    (
+      [...host.querySelectorAll("section.effect button")].find(
+        (button) => button.textContent?.trim() === "Registrar",
+      ) as HTMLButtonElement
+    ).click();
+    await settle(200);
+    expect(blob.text.split("\n").filter((line) => line !== "").length).toBe(recorded);
+    expect((await drafts.list()).drafts.map((draft) => draft.id)).toEqual([id]);
   });
 
   it("says a draft that is gone is gone", async () => {
