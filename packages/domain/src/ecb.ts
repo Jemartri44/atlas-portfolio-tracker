@@ -24,7 +24,15 @@ export {
   readEcbZipCsv,
   sameRate,
 } from "./ecb/history.js";
-export { firstRateDateOf } from "./ecb/ledger-rates.js";
+export { firstRateDateOf, type RatePoint, ratePointsOf } from "./ecb/ledger-rates.js";
+export {
+  type OfficialRate,
+  officialRatesOf,
+  proposeRates,
+  type RateMismatch,
+  rateConfirmations,
+  unpublishedRates,
+} from "./ecb/propose.js";
 export { isDecided, type RateResolution, resolveRate } from "./ecb/resolve.js";
 export {
   type CalendarDisagreement,

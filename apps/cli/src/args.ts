@@ -29,6 +29,7 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   // Global.
   "yes",
   "confirm-duplicate",
+  "confirm-fx-rate",
   "accept-invalid",
   "json",
   // Of a command.

@@ -10,7 +10,8 @@ import {
 } from "@atlas/domain";
 import type { Flags } from "../args.js";
 import { UsageError } from "../args.js";
-import { type Context, describeWarnings } from "../context.js";
+import { type Context, describeWarnings, EXIT } from "../context.js";
+import { confirmRates, rateDraft } from "./rates.js";
 import { confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
 
 const COMMON = [
@@ -242,12 +243,23 @@ export const addCommand = async (
       "un traspaso no lleva comisión: registra el cargo del depositario con `atlas add fee` (standalone_fee)",
     );
   }
-  const draft = draftFromFlags(spec, flags);
+  const rated = await rateDraft(ctx, draftFromFlags(spec, flags));
+  const draft = rated.draft;
+  if (rated.waiting) {
+    for (const note of rated.notes) {
+      ctx.io.out(note);
+    }
+    return EXIT.domain;
+  }
   // A swap shows them too: it is a disposal and an acquisition at once, so both
   // halves of the wash-sale rule can fire and the user has to see them before
   // saying yes, which is the only moment the warning is still useful.
   const notes =
     name === "buy" || name === "sell" || name === "swap" ? await tradeNotes(ctx, draft) : [];
-  await confirmAndRecord(ctx, draft, notes);
+  if (!(await confirmRates(ctx, rated.mismatches))) {
+    ctx.io.out("Cancelado.");
+    return 0;
+  }
+  await confirmAndRecord(ctx, draft, [...rated.notes, ...notes]);
   return 0;
 };

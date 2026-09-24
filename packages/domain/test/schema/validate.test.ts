@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
-import { FIRST_FILING_YEAR, feeKindOf, type SupportedEvent } from "../../src/schema/events.js";
-import { FX_FIELDS, knownFieldsOf, validateShape } from "../../src/schema/validate.js";
+import {
+  EFFECT_OPS,
+  FIRST_FILING_YEAR,
+  feeKindOf,
+  type SupportedEvent,
+} from "../../src/schema/events.js";
+import {
+  FX_FIELDS,
+  knownEffectFieldsOf,
+  knownFieldsOf,
+  validateShape,
+} from "../../src/schema/validate.js";
 import { FIRST_SUPPORTED_YEAR } from "../../src/tax/chain.js";
 import { envelope, ID, SAMPLES, sampleList, variant } from "../samples.js";
 import { TEST_SCHEMA_V2 } from "./test-schema.js";
@@ -396,30 +406,48 @@ describe("validateShape: consistency rules", () => {
 });
 
 describe("ECB rate rules (data-schema.md §4)", () => {
-  it("declares every fx_rate field of every event type in one of the two tables", () => {
-    const declared = new Set<string>();
-    for (const pairs of Object.values(FX_FIELDS.pairs)) {
-      for (const [, rate] of pairs) {
-        declared.add(rate);
-      }
-    }
-    for (const dates of Object.values(FX_FIELDS.dates)) {
-      for (const field of dates) {
-        declared.add(field);
-      }
-    }
+  /**
+   * **The guardian of the one enumeration, pair by pair** (decision (bb) of
+   * prompt 012). It used to gather the field names of every type in a single
+   * set, so a type with an undeclared `fx_rate` passed because another type
+   * declared a field with the same name — and the check against the ECB would
+   * have skipped it without a word. Now each (event type, field) and each
+   * (operation of an effect, field) has to be declared in its own row.
+   */
+  it("declares every fx_rate field of every event type and of every effect in its own row", () => {
+    const declared = (
+      pairs: readonly (readonly [string, string])[] | undefined,
+      dates: readonly string[] | undefined,
+      field: string,
+    ): boolean => (pairs ?? []).some(([, rate]) => rate === field) || (dates ?? []).includes(field);
+    const missing: string[] = [];
     for (const sample of sampleList()) {
       const type = sample.type as Parameters<typeof knownFieldsOf>[0];
-      for (const field of knownFieldsOf(type)) {
-        if (field.startsWith("fx_rate")) {
-          expect({ type, field, declared: declared.has(field) }).toEqual({
-            type,
-            field,
-            declared: true,
-          });
+      for (const field of knownFieldsOf(type).filter((name) => name.startsWith("fx_rate"))) {
+        if (!declared(FX_FIELDS.pairs[type], FX_FIELDS.dates[type], field)) {
+          missing.push(`${type}.${field}`);
         }
       }
+      for (const [currency, rate] of FX_FIELDS.pairs[type] ?? []) {
+        expect(knownFieldsOf(type), `${type} ${currency}`).toContain(currency);
+        expect(knownFieldsOf(type), `${type} ${rate}`).toContain(rate);
+      }
     }
+    for (const op of EFFECT_OPS) {
+      for (const field of knownEffectFieldsOf(op).filter((name) => name.startsWith("fx_rate"))) {
+        if (!declared(FX_FIELDS.effectPairs[op], FX_FIELDS.effectDates[op], field)) {
+          missing.push(`effects.${op}.${field}`);
+        }
+      }
+      for (const [currency, rate] of FX_FIELDS.effectPairs[op] ?? []) {
+        expect(knownEffectFieldsOf(op)).toContain(currency);
+        expect(knownEffectFieldsOf(op)).toContain(rate);
+      }
+    }
+    expect(missing).toEqual([]);
+    // And it sees them: a guardian that finds nothing would pass by looking at nothing.
+    expect(Object.keys(FX_FIELDS.pairs).length).toBeGreaterThan(8);
+    expect(Object.keys(FX_FIELDS.effectPairs).sort()).toEqual(["forced_sale", "grant"]);
   });
 
   it('requires exactly "1" when the currency is the euro', () => {

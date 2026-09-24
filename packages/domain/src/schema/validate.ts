@@ -502,10 +502,8 @@ const checkEffects = (raw: UnknownRecord): void => {
     checkFields(effect, EFFECT_COMMON, raw.type, path);
     const op = effect.op as EffectOp;
     checkFields(effect, EFFECT_RULES[op], raw.type, path);
-    if (op === "forced_sale" || op === "grant") {
-      checkFxPairs({ ...effect, type: raw.type }, [["currency", "fx_rate"]], path);
-      checkFxDates({ ...effect, type: raw.type }, ["fx_rate_date"], path);
-    }
+    checkFxPairs({ ...effect, type: raw.type }, FX_EFFECT_PAIRS[op] ?? [], path);
+    checkFxDates({ ...effect, type: raw.type }, FX_EFFECT_DATES[op] ?? [], path);
     if (op === "grant") {
       checkGrantIncome(effect, raw.type, path);
     }
@@ -593,6 +591,24 @@ const FX_DATE_FIELDS: Partial<Record<SupportedEventType, readonly string[]>> = {
   cash_deposit: ["fx_rate_date"],
   cash_withdrawal: ["fx_rate_date"],
   standalone_fee: ["fx_rate_date"],
+};
+
+/**
+ * The ECB rates **inside the effects** of a corporate action, by operation of
+ * the effect: a dimension of their own, because the two tables above go by
+ * event type and an effect is not one (decision (bb) of prompt 012). The
+ * validation of `effects[]` reads it here, at the same point as before, and
+ * the check against the ECB history walks it with the other two: **one
+ * enumeration of the rate fields of the schema, and only one**.
+ */
+const FX_EFFECT_PAIRS: Partial<Record<EffectOp, readonly (readonly [string, string])[]>> = {
+  forced_sale: [["currency", "fx_rate"]],
+  grant: [["currency", "fx_rate"]],
+};
+
+const FX_EFFECT_DATES: Partial<Record<EffectOp, readonly string[]>> = {
+  forced_sale: ["fx_rate_date"],
+  grant: ["fx_rate_date"],
 };
 
 /** The euro is its own reference: the ECB publishes 1, not 1.0000 (challenge 2026-08-31, finding 5). */
@@ -988,8 +1004,23 @@ const checkEnvelope = (raw: UnknownRecord, schema: LedgerSchema): void => {
 
 const ENVELOPE_FIELDS = ["schema_version", "id", "recorded_at", "type", "corrects_id"] as const;
 
-/** Where every ECB rate and rate date lives, by event type; the cover is checked in the tests. */
-export const FX_FIELDS = { pairs: FX_PAIRS, dates: FX_DATE_FIELDS } as const;
+/**
+ * Where every ECB rate and rate date lives: by event type, and by operation of
+ * an effect. **The** enumeration: the validation and the check against the ECB
+ * history both read it, and a test holds it field by field, type by type.
+ */
+export const FX_FIELDS = {
+  pairs: FX_PAIRS,
+  dates: FX_DATE_FIELDS,
+  effectPairs: FX_EFFECT_PAIRS,
+  effectDates: FX_EFFECT_DATES,
+} as const;
+
+/** The fields an effect of `op` may carry. */
+export const knownEffectFieldsOf = (op: EffectOp): readonly string[] => [
+  ...Object.keys(EFFECT_COMMON),
+  ...Object.keys(EFFECT_RULES[op]),
+];
 
 /** Top-level fields a line of `type` may carry: envelope plus the type's rules (`settings` for settings_changed). */
 export const knownFieldsOf = (type: SupportedEventType): readonly string[] => [

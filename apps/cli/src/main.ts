@@ -144,7 +144,7 @@ const assertArity = (positionals: readonly string[]): void => {
   }
 };
 
-export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--accept-invalid] [--json] <comando> …
+export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--confirm-fx-rate] [--accept-invalid] [--json] <comando> …
 
 comandos:
   account add|update|list        asset add|update|list        settings set|show
@@ -216,6 +216,7 @@ export const run = async (
       ledgerPath,
       yes: booleanFlag(flags, "yes"),
       confirmDuplicate: booleanFlag(flags, "confirm-duplicate"),
+      confirmFxRate: booleanFlag(flags, "confirm-fx-rate"),
       acceptInvalid: booleanFlag(flags, "accept-invalid"),
       json: booleanFlag(flags, "json"),
       ...(fxSource === undefined ? {} : { fxSource }),
