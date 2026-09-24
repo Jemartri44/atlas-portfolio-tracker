@@ -55,7 +55,17 @@ const brokenLedger = () =>
  * The last test checks the table covers `COMMANDS`, so a new command cannot be
  * added without deciding which side it is on.
  */
-const INVOCATIONS: { command: string; argv: string[]; readOnly: boolean }[] = [
+const INVOCATIONS: {
+  command: string;
+  argv: string[];
+  readOnly: boolean;
+  /**
+   * The command acts on the **folder**, not on the ledger (feature 012: the
+   * lock). It neither reads nor writes the ledger, so neither side applies;
+   * it is still listed, so the question is asked for every new command.
+   */
+  folderOnly?: true;
+}[] = [
   { command: "positions", argv: ["positions"], readOnly: true },
   { command: "weights", argv: ["weights"], readOnly: true },
   { command: "contribute", argv: ["contribute", "--amount", "100"], readOnly: true },
@@ -140,12 +150,15 @@ const INVOCATIONS: { command: string; argv: string[]; readOnly: boolean }[] = [
   { command: "compact", argv: ["compact", "--yes"], readOnly: false },
   { command: "synth", argv: ["synth", "--out", "/dev/null"], readOnly: false },
   { command: "backup", argv: ["backup", "--to", "/dev/null"], readOnly: false },
+  { command: "lock", argv: ["lock", "show"], readOnly: true, folderOnly: true },
 ];
 
 const HEADER = "inválido";
 
 describe("degraded projection on read-only commands", () => {
-  const readOnly = INVOCATIONS.filter((entry) => entry.readOnly && entry.command !== "check");
+  const readOnly = INVOCATIONS.filter(
+    (entry) => entry.readOnly && entry.command !== "check" && entry.folderOnly !== true,
+  );
 
   it.each(readOnly)("$command answers and warns on a degraded ledger", async ({ argv }) => {
     const h = brokenLedger();

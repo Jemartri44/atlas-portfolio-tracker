@@ -2,7 +2,14 @@
 // atlas — command-line interface over a local ledger.jsonl (specs/001-ledger-core/contracts/cli.md).
 
 import { createInterface } from "node:readline/promises";
-import { FileLedgerStore, systemClock, webCryptoRandom } from "@atlas/adapters";
+import {
+  FileLedgerStore,
+  LedgerLockedError,
+  LockLostError,
+  readLocalConfig,
+  systemClock,
+  webCryptoRandom,
+} from "@atlas/adapters";
 import {
   ConflictError,
   DependentEventsError,
@@ -21,6 +28,7 @@ import { corporateActionCommand } from "./commands/corporate-actions.js";
 import { exportCommand } from "./commands/export.js";
 import { filedCommand } from "./commands/filed.js";
 import { m720Command, m721Command } from "./commands/informative.js";
+import { lockCommand } from "./commands/lock.js";
 import { contributeCommand, costsCommand, weightsCommand } from "./commands/portfolio.js";
 import {
   cashCommand,
@@ -37,6 +45,7 @@ import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
+import { describeLock, LOCK_LOST, LOCK_REMEDY } from "./output/lock.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 
 export const COMMANDS: Record<string, Command> = {
@@ -71,6 +80,7 @@ export const COMMANDS: Record<string, Command> = {
   synth: synthCommand,
   compact: compactCommand,
   backup: backupCommand,
+  lock: lockCommand,
 };
 
 /**
@@ -112,6 +122,7 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   synth: 1,
   compact: 1,
   backup: 1,
+  lock: { show: 2, break: 2 },
 };
 
 /** Refuses the first word a command does not read. */
@@ -145,7 +156,8 @@ comandos:
   transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   backup --to <directorio>
-  compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada`;
+  compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada
+  lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
@@ -200,8 +212,23 @@ export const run = async (
     };
     return await command(ctx, positionals, flags);
   } catch (error) {
+    if (error instanceof LedgerLockedError) {
+      return reportLocked(io, error);
+    }
     return report(io, error);
   }
+};
+
+/** The lock of the folder is held: who, since when, and the two ways out. */
+const reportLocked = async (io: Io, error: LedgerLockedError): Promise<number> => {
+  const { lock_stale_minutes } = await readLocalConfig(error.folder).catch(() => ({
+    lock_stale_minutes: undefined,
+  }));
+  io.err(
+    `Error: ${describeLock(error.info, new Date(), lock_stale_minutes ?? Number.POSITIVE_INFINITY)}`,
+  );
+  io.err(LOCK_REMEDY);
+  return EXIT.locked;
 };
 
 const report = (io: Io, error: unknown): number => {
@@ -233,6 +260,10 @@ const report = (io: Io, error: unknown): number => {
   if (error instanceof DomainError) {
     io.err(`Error (${error.code}): ${describeError(error)}`);
     return EXIT.domain;
+  }
+  if (error instanceof LockLostError) {
+    io.err(`Error: ${LOCK_LOST}`);
+    return EXIT.locked;
   }
   throw error;
 };

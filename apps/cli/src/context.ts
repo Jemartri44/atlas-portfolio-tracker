@@ -36,6 +36,7 @@ export const EXIT = {
   duplicate: 3,
   noTty: 4,
   schemaTooNew: 5,
+  locked: 6,
   usage: 64,
 } as const;
 
