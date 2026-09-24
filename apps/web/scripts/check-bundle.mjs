@@ -346,8 +346,27 @@ const BOOT_BUDGET_GZIP_BYTES = 73.7 * 1024;
  * source maps: **zero modules in more than one, out of 297** — the extra
  * module is `view-models/fiscal/anchor.ts`, split out of `year.ts` to keep it
  * under the 250 lines of the web; it travels in an existing chunk.
+ *
+ * **Feature 012, block 0 (2026-09-24): measured 238,9, ceiling 239,9** —
+ * measured plus one, as every time. The trend, chunk by chunk against
+ * `develop` (237,8): the import of a ledger now asks before replacing one and
+ * can read the console's folder, **+1,6** in a lazy chunk of its own
+ * (`ImportControls`, with the export and the folder reader it pulls), of
+ * which **−1,1** comes back out of the screens that used to carry the export,
+ * the folder writer and the choice of storage (`libro`, `ajustes`, `export`,
+ * `guard`, `verificacion`); the broker's euros beside the ECB figure in the
+ * detail of a movement **+0,4**; the Spanish of the new codes **+0,3**; the
+ * field in the forms and its label **+0,2**; and the domain **+0,3** — which
+ * is **boot**, see below. The boot itself went **down**, 73,5 → 73,4: the web
+ * no longer writes in the folder, and the writer left the boot chunk
+ * (**−0,4**), while the domain took **+108 bytes** for the rule of one live
+ * correction and **+208 bytes** for the validation of `broker_settled_eur`
+ * (measured by taking each out and building again). The direction named the
+ * lock and the rule as the only things that may grow the boot; the
+ * validation of the new field is said here apart, as it asked. Nothing of the
+ * ECB is in the boot, and the shape check below now holds that too.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 237.9 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 239.9 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
