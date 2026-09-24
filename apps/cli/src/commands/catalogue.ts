@@ -28,6 +28,7 @@ import {
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { closedYearLines } from "../output/closed-years.js";
 import { table } from "../output/table.js";
+import { confirmRuleChangeRates } from "./rule-change.js";
 import { confirm, confirmAndRecord, fieldOf, loadForQuery, renderQuery } from "./shared.js";
 
 const ACCOUNT_FLAGS = ["id", "name", "platform", "book", "base-currency", "country", "inactive"];
@@ -503,11 +504,21 @@ export const settingsCommand = async (
       ctx.io.out("Cancelado.");
       return 0;
     }
+    const rates = await confirmRuleChangeRates(ctx, events, current, settings);
+    if (!rates.go) {
+      ctx.io.out("Cancelado.");
+      return 0;
+    }
     if (!(await confirmMovedYears(ctx, events, current, settings))) {
       ctx.io.out("Cancelado.");
       return 0;
     }
-    await confirmAndRecord(ctx, { type: "settings_changed", settings });
+    const recorded = await confirmAndRecord(ctx, { type: "settings_changed", settings });
+    if (recorded !== undefined && rates.lines > 0) {
+      ctx.io.out(
+        "Los tipos de esas líneas no se han tocado. Para proponer su corrección: `atlas fx correct`.",
+      );
+    }
     return 0;
   }
   throw new UsageError("uso: atlas settings set|show [--at YYYY-MM-DD]");

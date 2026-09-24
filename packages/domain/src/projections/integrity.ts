@@ -14,6 +14,13 @@ export interface IntegrityFinding {
   code: string;
   message: string;
   event_ids: string[];
+  /**
+   * The facts of the finding, for an interface to say them in its own words
+   * (feature 012: the findings of the ECB carry the field, the rates and the
+   * dates, so the console and the web can say them in Spanish). Optional: the
+   * older findings say all they have to say with their code.
+   */
+  details?: Readonly<Record<string, string>>;
 }
 
 export const integrity = (state: LedgerState): IntegrityFinding[] => {

@@ -9,8 +9,10 @@ import {
   todayInMadrid,
 } from "@atlas/domain";
 import type { Flags } from "../args.js";
-import { UsageError } from "../args.js";
-import { type Context, describeWarnings } from "../context.js";
+import { booleanFlag, UsageError } from "../args.js";
+import { type Context, describeWarnings, EXIT } from "../context.js";
+import { saveAsDraft } from "./draft.js";
+import { confirmRates, rateDraft } from "./rates.js";
 import { confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
 
 const COMMON = [
@@ -30,7 +32,16 @@ const CASH = ["account", "value-date", "amount", "currency", "fx-rate", "fx-rate
 export const ADD_SPECS: Record<string, DraftSpec> = {
   buy: {
     type: "buy",
-    flags: [...COMMON, "asset", "quantity", "unit-price", "amount", "order", "thesis"],
+    flags: [
+      ...COMMON,
+      "asset",
+      "quantity",
+      "unit-price",
+      "amount",
+      "order",
+      "thesis",
+      "broker-settled-eur",
+    ],
     defaults: { fee: "0", source: "manual" },
   },
   sell: {
@@ -44,6 +55,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "order",
       "withholding",
       "thesis",
+      "broker-settled-eur",
     ],
     defaults: { fee: "0", source: "manual" },
   },
@@ -80,6 +92,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "per-unit",
       "broker-ref",
       "notes",
+      "broker-settled-eur",
     ],
     defaults: { withholding_origin: "0", withholding_spain: "0" },
   },
@@ -95,6 +108,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "fx-rate-date",
       "broker-ref",
       "notes",
+      "broker-settled-eur",
     ],
     defaults: { withholding_spain: "0" },
   },
@@ -155,6 +169,7 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
       "fx-rate-date",
       "description",
       "fee-kind",
+      "broker-settled-eur",
     ],
   },
   valuation: {
@@ -229,12 +244,36 @@ export const addCommand = async (
       "un traspaso no lleva comisión: registra el cargo del depositario con `atlas add fee` (standalone_fee)",
     );
   }
-  const draft = draftFromFlags(spec, flags);
+  // `--draft` is not a field of the operation: it says where to keep it.
+  const asDraft = booleanFlag(flags, "draft");
+  flags.delete("draft");
+  const rated = await rateDraft(ctx, draftFromFlags(spec, flags));
+  const draft = rated.draft;
+  if (rated.waiting) {
+    for (const note of rated.notes) {
+      ctx.io.out(note);
+    }
+    if (asDraft) {
+      return saveAsDraft(ctx, draft, rated.history, rated.staleDays);
+    }
+    ctx.io.out("Para guardarla como borrador, repite el comando con --draft.");
+    return EXIT.domain;
+  }
+  if (asDraft) {
+    // Nothing waits for the ECB: a draft would only be a second copy.
+    throw new UsageError(
+      "--draft solo sirve para una operación cuyo tipo del BCE aún no se ha publicado: esta se registra como siempre",
+    );
+  }
   // A swap shows them too: it is a disposal and an acquisition at once, so both
   // halves of the wash-sale rule can fire and the user has to see them before
   // saying yes, which is the only moment the warning is still useful.
   const notes =
     name === "buy" || name === "sell" || name === "swap" ? await tradeNotes(ctx, draft) : [];
-  await confirmAndRecord(ctx, draft, notes);
+  if (!(await confirmRates(ctx, rated.mismatches))) {
+    ctx.io.out("Cancelado.");
+    return 0;
+  }
+  await confirmAndRecord(ctx, draft, [...rated.notes, ...notes]);
   return 0;
 };

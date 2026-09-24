@@ -1,10 +1,12 @@
 // The three things a form may have to say above everything else: the data
 // changed underneath it, the record touched a year already declared, or a
-// purchase of the bucket has no thesis yet (rule 15).
+// purchase of the bucket has no thesis yet (rule 15) — and two small pieces of
+// the form of a correction: its reason and the refusal of its dependants.
 
 import { A } from "@solidjs/router";
 import type { JSX } from "solid-js";
-import { EmptyState, Notice } from "../../components/index.js";
+import { EmptyState, Field, Notice } from "../../components/index.js";
+import { countOf } from "../../format/number.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 
 export const Reloaded = (): JSX.Element => (
@@ -41,3 +43,24 @@ export const NoForm = (props: { title: string; what: string }): JSX.Element => (
     </EmptyState>
   </>
 );
+
+/** The reason of a correction: it is written into the ledger with the pair. */
+export const CorrectionReason = (props: {
+  value: string;
+  onInput: (value: string) => void;
+}): JSX.Element => (
+  <Field
+    id="correct-reason"
+    kind="text"
+    label="Motivo de la rectificación"
+    required
+    hint="Se anula el original y se registra el corregido; el motivo queda registrado."
+    value={props.value}
+    onInput={props.onInput}
+    class="full"
+  />
+);
+
+/** The movements that depend on the one being corrected, in one sentence. */
+export const dependentsSentence = (count: number): string =>
+  `${countOf(count, "movimiento posterior depende", "movimientos posteriores dependen")} de este: rectifícalos antes.`;

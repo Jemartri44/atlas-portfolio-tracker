@@ -36,6 +36,7 @@ import { CURRENT_LEDGER_SCHEMA, type LedgerSchema } from "./migrations/index.js"
 type RuleKind =
   | "string"
   | "decimal"
+  | "signed_decimal"
   | "positive_decimal"
   | "negative_decimal"
   | "non_positive_decimal"
@@ -177,12 +178,18 @@ const RULES: Record<SupportedEventType, Rules> = {
   asset_created: ASSET,
   asset_updated: ASSET,
   settings_changed: {},
-  buy: { ...OPERATION, order_id: opt("ulid"), thesis_id: opt("string") },
+  buy: {
+    ...OPERATION,
+    order_id: opt("ulid"),
+    thesis_id: opt("string"),
+    broker_settled_eur: opt("signed_decimal"),
+  },
   sell: {
     ...OPERATION,
     order_id: opt("ulid"),
     withholding: opt("decimal"),
     thesis_id: opt("string"),
+    broker_settled_eur: opt("signed_decimal"),
   },
   swap: {
     account_id: req("string"),
@@ -234,6 +241,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     broker_ref: opt("string"),
     fingerprint: req("string"),
     notes: opt("string"),
+    broker_settled_eur: opt("signed_decimal"),
   },
   interest: {
     account_id: req("string"),
@@ -246,6 +254,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     broker_ref: opt("string"),
     fingerprint: req("string"),
     notes: opt("string"),
+    broker_settled_eur: opt("signed_decimal"),
   },
   fx_exchange: {
     account_id: req("string"),
@@ -275,6 +284,7 @@ const RULES: Record<SupportedEventType, Rules> = {
     description: req("string"),
     fee_kind: { kind: "enum", optional: true, values: FEE_KINDS },
     fingerprint: req("string"),
+    broker_settled_eur: opt("signed_decimal"),
   },
   valuation: {
     account_id: req("string"),
@@ -422,6 +432,9 @@ const CHECKS: Record<RuleKind, (value: unknown, rule: Rule) => boolean> = {
   string: (value, rule) =>
     typeof value === "string" && (rule.optional === true || value.length > 0),
   decimal: (value) => isNonNegativeDecimal(value),
+  // Any decimal string: the sign is judged by a rule of its own, with a code
+  // that says what is wrong (`broker_settled_eur`).
+  signed_decimal: (value) => isDecimalString(value),
   positive_decimal: (value) => isPositiveDecimal(value),
   // A pending loss carries its sign, and a balance that is not negative is not
   // a loss: saying so here is what keeps a declared figure from changing sign
@@ -489,10 +502,8 @@ const checkEffects = (raw: UnknownRecord): void => {
     checkFields(effect, EFFECT_COMMON, raw.type, path);
     const op = effect.op as EffectOp;
     checkFields(effect, EFFECT_RULES[op], raw.type, path);
-    if (op === "forced_sale" || op === "grant") {
-      checkFxPairs({ ...effect, type: raw.type }, [["currency", "fx_rate"]], path);
-      checkFxDates({ ...effect, type: raw.type }, ["fx_rate_date"], path);
-    }
+    checkFxPairs({ ...effect, type: raw.type }, FX_EFFECT_PAIRS[op] ?? [], path);
+    checkFxDates({ ...effect, type: raw.type }, FX_EFFECT_DATES[op] ?? [], path);
     if (op === "grant") {
       checkGrantIncome(effect, raw.type, path);
     }
@@ -580,6 +591,24 @@ const FX_DATE_FIELDS: Partial<Record<SupportedEventType, readonly string[]>> = {
   cash_deposit: ["fx_rate_date"],
   cash_withdrawal: ["fx_rate_date"],
   standalone_fee: ["fx_rate_date"],
+};
+
+/**
+ * The ECB rates **inside the effects** of a corporate action, by operation of
+ * the effect: a dimension of their own, because the two tables above go by
+ * event type and an effect is not one (decision (bb) of prompt 012). The
+ * validation of `effects[]` reads it here, at the same point as before, and
+ * the check against the ECB history walks it with the other two: **one
+ * enumeration of the rate fields of the schema, and only one**.
+ */
+const FX_EFFECT_PAIRS: Partial<Record<EffectOp, readonly (readonly [string, string])[]>> = {
+  forced_sale: [["currency", "fx_rate"]],
+  grant: [["currency", "fx_rate"]],
+};
+
+const FX_EFFECT_DATES: Partial<Record<EffectOp, readonly string[]>> = {
+  forced_sale: ["fx_rate_date"],
+  grant: ["fx_rate_date"],
 };
 
 /** The euro is its own reference: the ECB publishes 1, not 1.0000 (challenge 2026-08-31, finding 5). */
@@ -699,8 +728,17 @@ const checkFiledFigures = (raw: UnknownRecord, field: "declared" | "computed"): 
 };
 
 const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => void>> = {
-  buy: (raw) => checkBasis(raw),
-  sell: (raw) => checkBasis(raw),
+  buy: (raw) => {
+    checkBasis(raw);
+    checkBrokerSettled(raw, false);
+  },
+  sell: (raw) => {
+    checkBasis(raw);
+    checkBrokerSettled(raw, false);
+  },
+  dividend: (raw) => checkBrokerSettled(raw, true),
+  interest: (raw) => checkBrokerSettled(raw, true),
+  standalone_fee: (raw) => checkBrokerSettled(raw, false),
   asset_created: (raw) => checkAssetClass(raw),
   asset_updated: (raw) => checkAssetClass(raw),
   settings_changed: (raw) => {
@@ -801,6 +839,46 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
   transfer: (raw) => checkTransfer(raw),
   corporate_action: (raw) => checkEffects(raw),
 };
+
+/**
+ * `broker_settled_eur` (ADR-0030, amended by prompt 012 (n)): the euros the
+ * broker really moved for the event, as its statement prints them. Each wrong
+ * case with its own code, never folded into another: in euros it would only
+ * repeat the amount; negative, it contradicts the event type, which gives the
+ * sign; zero, it is a known zero only where it can happen — a dividend or an
+ * interest withheld whole — and describes no movement anywhere else. Absent
+ * means **unknown**, never zero: that is why the field is optional and never
+ * filled in by the application.
+ */
+function checkBrokerSettled(raw: UnknownRecord, zeroAllowed: boolean): void {
+  const value = raw.broker_settled_eur;
+  if (value === undefined) {
+    return;
+  }
+  const details = { type: raw.type, field: "broker_settled_eur", value };
+  if (raw.currency === "EUR") {
+    throw invalid(
+      "broker_settled_eur_in_eur",
+      `${raw.type}: broker_settled_eur only exists for an operation in another currency`,
+      details,
+    );
+  }
+  const amount = Decimal.parse(value as string);
+  if (amount.isNegative()) {
+    throw invalid(
+      "broker_settled_eur_negative",
+      `${raw.type}: broker_settled_eur is never negative; the event type gives the sign`,
+      details,
+    );
+  }
+  if (!zeroAllowed && !amount.isPositive()) {
+    throw invalid(
+      "broker_settled_eur_zero",
+      `${raw.type}: broker_settled_eur cannot be zero here; leave it out when it is not known`,
+      details,
+    );
+  }
+}
 
 function checkBasis(raw: UnknownRecord): void {
   checkDates(raw);
@@ -926,8 +1004,23 @@ const checkEnvelope = (raw: UnknownRecord, schema: LedgerSchema): void => {
 
 const ENVELOPE_FIELDS = ["schema_version", "id", "recorded_at", "type", "corrects_id"] as const;
 
-/** Where every ECB rate and rate date lives, by event type; the cover is checked in the tests. */
-export const FX_FIELDS = { pairs: FX_PAIRS, dates: FX_DATE_FIELDS } as const;
+/**
+ * Where every ECB rate and rate date lives: by event type, and by operation of
+ * an effect. **The** enumeration: the validation and the check against the ECB
+ * history both read it, and a test holds it field by field, type by type.
+ */
+export const FX_FIELDS = {
+  pairs: FX_PAIRS,
+  dates: FX_DATE_FIELDS,
+  effectPairs: FX_EFFECT_PAIRS,
+  effectDates: FX_EFFECT_DATES,
+} as const;
+
+/** The fields an effect of `op` may carry. */
+export const knownEffectFieldsOf = (op: EffectOp): readonly string[] => [
+  ...Object.keys(EFFECT_COMMON),
+  ...Object.keys(EFFECT_RULES[op]),
+];
 
 /** Top-level fields a line of `type` may carry: envelope plus the type's rules (`settings` for settings_changed). */
 export const knownFieldsOf = (type: SupportedEventType): readonly string[] => [

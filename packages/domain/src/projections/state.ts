@@ -65,7 +65,11 @@ export interface FiscalLot {
   original_cost_eur: Money;
   source_event_id: Ulid;
   source_lot_id?: string;
-  /** File position of the event that created the lot: FIFO tie-break on equal dates. */
+  /**
+   * File position of the event that created the lot — of the **root** of its
+   * correction chain when that event is a correction, which is the same fact
+   * (review of PR #75) —: FIFO tie-break on equal dates.
+   */
   position: number;
   closed: boolean;
   consumptions: LotConsumption[];

@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +11,15 @@ import {
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { FileLedgerStore } from "../src/ledger-store/file.js";
+import {
+  acquireFolderLock,
+  breakFolderLock,
+  LedgerLockedError,
+  LOCK_FILE,
+  LockLostError,
+  readFolderLock,
+  sweepOrphanTemporaries,
+} from "../src/ledger-store/folder-lock.js";
 import { account, deposit, futureLine, lineOf } from "./fixtures.js";
 import { ledgerStoreContract } from "./ledger-store.contract.js";
 
@@ -155,5 +164,158 @@ describe("FileLedgerStore", () => {
     await expect(at("future-version.jsonl").load()).rejects.toBeInstanceOf(SchemaTooNewError);
     await expect(at("number-amount.jsonl").load()).rejects.toBeInstanceOf(ValidationError);
     expect(futureLine()).toContain('"schema_version":2');
+  });
+});
+
+// The advisory lock of the folder (ADR-0026, Part B; prompt 012, block 0).
+// Each case names the mutant of prompt 012 §5 it kills.
+describe("FileLedgerStore: the folder lock", () => {
+  const lockPath = (dir: string): string => join(dir, LOCK_FILE);
+  const foreignLock = (since: string): string =>
+    `${JSON.stringify({ holder: "cli", token: "someone-else", since, pid: 1, host: "otra" })}\n`;
+
+  it("loses no line when two writers append on the same etag at once (mutant 1: no lock)", async () => {
+    for (let round = 0; round < 50; round += 1) {
+      const { path } = await fresh(`${lineOf(account)}\n`);
+      const { etag } = await new FileLedgerStore(path).load();
+      const outcomes = await Promise.allSettled([
+        new FileLedgerStore(path).append([deposit], etag),
+        new FileLedgerStore(path).append([{ ...deposit, id: "01ARYZ6S41TSV4RRFFQ69G5FA2" }], etag),
+      ]);
+      const won = outcomes.filter((outcome) => outcome.status === "fulfilled");
+      expect(won).toHaveLength(1);
+      for (const outcome of outcomes) {
+        if (outcome.status === "rejected") {
+          expect(
+            outcome.reason instanceof ConflictError || outcome.reason instanceof LedgerLockedError,
+          ).toBe(true);
+        }
+      }
+      expect((await new FileLedgerStore(path).load()).events).toHaveLength(2);
+    }
+  });
+
+  it("does not write while another writer holds the lock, however old (mutants 1 and 2)", async () => {
+    const { path, dir } = await fresh(`${lineOf(account)}\n`);
+    const store = new FileLedgerStore(path);
+    const { etag } = await store.load();
+    const held = foreignLock("2020-01-01T00:00:00.000Z");
+    await writeFile(lockPath(dir), held);
+    const append = await store.append([deposit], etag).catch((error: unknown) => error);
+    expect(append).toBeInstanceOf(LedgerLockedError);
+    expect((append as LedgerLockedError).info).toMatchObject({
+      holder: "cli",
+      since: "2020-01-01T00:00:00.000Z",
+    });
+    await expect(store.replace([account], etag, "a.jsonl")).rejects.toBeInstanceOf(
+      LedgerLockedError,
+    );
+    expect(await readFile(path, "utf8")).toBe(`${lineOf(account)}\n`);
+    expect(await readFile(lockPath(dir), "utf8")).toBe(held);
+    expect((await readdir(dir)).sort()).toEqual(["ledger.jsonl", LOCK_FILE]);
+  });
+
+  it("still locks when the lock file cannot be read", async () => {
+    const { path, dir } = await fresh(`${lineOf(account)}\n`);
+    await writeFile(lockPath(dir), "escrito a mano");
+    const store = new FileLedgerStore(path);
+    const error = await store.append([deposit], (await store.load()).etag).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(LedgerLockedError);
+    expect((error as LedgerLockedError).info).toBeUndefined();
+  });
+
+  it("writes again once the user breaks the lock", async () => {
+    const { path, dir } = await fresh(`${lineOf(account)}\n`);
+    await writeFile(lockPath(dir), foreignLock("2020-01-01T00:00:00.000Z"));
+    expect(await breakFolderLock(dir)).toBe(true);
+    expect(await breakFolderLock(dir)).toBe(false);
+    const store = new FileLedgerStore(path);
+    await store.append([deposit], (await store.load()).etag);
+    expect((await store.load()).events).toHaveLength(2);
+    expect(await readdir(dir)).toEqual(["ledger.jsonl"]);
+  });
+
+  it("holds the lock until the rename, in append and in replace (mutants 1 and 4)", async () => {
+    const seen: (string | null)[] = [];
+    const { path, dir } = await fresh(`${lineOf(account)}\n`);
+    const store = new FileLedgerStore(path, undefined, {
+      beforeCommit: async () => {
+        const lock = await readFolderLock(dir);
+        seen.push(typeof lock === "object" ? (lock?.holder ?? null) : (lock ?? null));
+      },
+    });
+    await store.append([deposit], (await store.load()).etag);
+    await store.replace([account], (await store.load()).etag, "a.jsonl");
+    expect(seen).toEqual(["cli", "cli"]);
+    expect(await readFolderLock(dir)).toBeNull();
+  });
+
+  it("releases the lock when the write fails half way (mutant 1: not released on failure)", async () => {
+    const { path, dir } = await fresh(`${lineOf(account)}\n`);
+    const store = new FileLedgerStore(path, undefined, {
+      beforeCommit: async () => {
+        throw new Error("disco lleno");
+      },
+    });
+    await expect(store.append([deposit], (await store.load()).etag)).rejects.toThrow("disco lleno");
+    await expect(store.replace([], (await store.load()).etag, "a.jsonl")).rejects.toThrow(
+      "disco lleno",
+    );
+    expect(await readFolderLock(dir)).toBeNull();
+    expect(await readFile(path, "utf8")).toBe(`${lineOf(account)}\n`);
+    expect((await readdir(dir)).sort()).toEqual(["archive", "ledger.jsonl"]);
+  });
+
+  it("does not rename when its lock was broken and taken by someone else (mutant 1: no ownership check)", async () => {
+    const { path, dir } = await fresh(`${lineOf(account)}\n`);
+    const intruder = foreignLock("2026-09-24T01:00:00.000Z");
+    const store = new FileLedgerStore(path, undefined, {
+      beforeCommit: async () => {
+        await breakFolderLock(dir);
+        await writeFile(lockPath(dir), intruder);
+      },
+    });
+    await expect(store.append([deposit], (await store.load()).etag)).rejects.toBeInstanceOf(
+      LockLostError,
+    );
+    expect(await readFile(path, "utf8")).toBe(`${lineOf(account)}\n`);
+    // The lock of the other writer is not ours to release.
+    expect(await readFile(lockPath(dir), "utf8")).toBe(intruder);
+    expect((await readdir(dir)).sort()).toEqual(["ledger.jsonl", LOCK_FILE]);
+  });
+
+  it("writes the lock with who holds it and since when", async () => {
+    const { dir } = await fresh();
+    const lock = await acquireFolderLock(dir, new Date("2026-09-24T01:02:03.000Z"));
+    expect(await readFolderLock(dir)).toEqual(lock.info);
+    expect(lock.info).toMatchObject({
+      holder: "cli",
+      since: "2026-09-24T01:02:03.000Z",
+      pid: process.pid,
+    });
+    await expect(acquireFolderLock(dir)).rejects.toBeInstanceOf(LedgerLockedError);
+    await lock.assertOwned();
+    await lock.release();
+    expect(await readFolderLock(dir)).toBeNull();
+    await lock.release();
+  });
+
+  it("rethrows unexpected errors of the lock file", async () => {
+    const { dir } = await fresh();
+    await mkdir(lockPath(dir));
+    await expect(readFolderLock(dir)).rejects.toMatchObject({ code: "EISDIR" });
+    await expect(breakFolderLock(dir)).rejects.toMatchObject({ code: expect.stringMatching(/^E/) });
+    await writeFile(join(dir, "blocker"), "");
+    await expect(acquireFolderLock(join(dir, "blocker"))).rejects.toMatchObject({
+      code: expect.stringMatching(/^E/),
+    });
+  });
+});
+
+describe("sweepOrphanTemporaries (review of PR #75)", () => {
+  it("does nothing in a folder that does not exist yet", async () => {
+    expect(
+      await sweepOrphanTemporaries(join(tmpdir(), "atlas-012-nowhere", "ledger.jsonl")),
+    ).toEqual([]);
   });
 });

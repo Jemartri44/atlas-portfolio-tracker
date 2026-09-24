@@ -10,7 +10,7 @@
 // forgetting to cut the ledger by the date asked — every one of which left the
 // rest of the suite green.
 
-import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
+import { BlobLedgerStore } from "@atlas/adapters/blob";
 import {
   coreWeights,
   fingerprintOf,
@@ -28,23 +28,10 @@ import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
-
-class MemoryBlob implements LedgerBlob {
-  readonly label = "memoria";
-  constructor(readonly text: string) {}
-  async read(): Promise<Uint8Array> {
-    return new TextEncoder().encode(this.text);
-  }
-  async write(): Promise<void> {
-    throw new Error("estas pantallas no escriben");
-  }
-  async writeArchive(): Promise<void> {
-    throw new Error("estas pantallas no escriben");
-  }
-}
+import { MemoryBlob } from "./helpers/memory-blob.js";
 
 const deps = (text: string = goldenText(), instant = "2029-07-01T10:00:00.000Z"): UseCaseDeps => ({
-  store: new BlobLedgerStore(new MemoryBlob(text)),
+  store: new BlobLedgerStore(new MemoryBlob(text, true)),
   clock: { now: () => new Date(instant) },
   random: (target) => target.fill(7),
 });

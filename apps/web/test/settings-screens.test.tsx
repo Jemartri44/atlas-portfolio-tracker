@@ -89,18 +89,19 @@ describe("the settings", () => {
 });
 
 describe("the first run", () => {
-  it("offers what this browser can do, and says the folder in one line", async () => {
+  it("keeps the data in this browser, with one primary button and no folder where there is none", async () => {
     // happy-dom has no folder picker, like a phone, Firefox or Safari.
     const host = await show("/libro", Libro);
     const choices = [...host.querySelectorAll(".choices > .choice")];
     expect(choices.map((choice) => text(choice.querySelector("h2")))).toEqual([
-      "El almacenamiento del navegador",
+      "Tus datos, en este navegador",
     ]);
-    // Its button is the one primary action of the screen.
-    expect(choices[0]?.querySelector("button")?.classList.contains("secondary")).toBe(false);
-    const elsewhere = host.querySelector(".choices > .choice-elsewhere");
-    expect(text(elsewhere)).toContain("Chrome o Edge");
-    expect(elsewhere?.querySelector("button")).toBeNull();
+    const primary = [...host.querySelectorAll(".choice button")].filter(
+      (button) => !button.classList.contains("secondary"),
+    );
+    expect(primary.map(text)).toEqual(["Seguir con los datos de este navegador"]);
+    expect(text(host)).not.toContain("carpeta de la consola");
+    expect(text(host)).toContain("No es un almacén definitivo");
   });
 
   it("says once that nothing was touched when a chosen file cannot be read", async () => {
@@ -117,26 +118,20 @@ describe("the first run", () => {
     expect(said.match(/no se ha tocado nada/gi)).toHaveLength(1);
   });
 
-  it("offers the folder first where there is one, with the one primary button", async () => {
+  it("offers to import from the console's folder where there is one, and says the two are apart", async () => {
     const picker = window as unknown as { showDirectoryPicker?: () => Promise<never> };
     picker.showDirectoryPicker = () => Promise.reject(new Error("no se usa"));
     withStyles(2045, 1141);
     try {
       const host = await show("/libro", Libro);
-      const choices = [...host.querySelectorAll(".choices > .choice")];
-      expect(choices.map((choice) => text(choice.querySelector("h2")))).toEqual([
-        "Una carpeta de tu ordenador",
-        "El almacenamiento del navegador",
-      ]);
-      // «Recomendado» beside its title, not indented under it.
-      const tag = choices[0]?.querySelector(".choice-head > .tag") as HTMLElement;
-      expect(tag).not.toBeNull();
-      // A tag with no box has no padding to indent its words with.
-      expect(getComputedStyle(tag).getPropertyValue("padding-inline")).toMatch(/^0(px)?$/);
-      const primary = [...host.querySelectorAll(".choice button")].filter(
-        (button) => !button.classList.contains("secondary"),
+      const buttons = [...host.querySelectorAll(".choice button")];
+      expect(buttons.filter((button) => !button.classList.contains("secondary")).map(text)).toEqual(
+        ["Seguir con los datos de este navegador"],
       );
-      expect(primary.map(text)).toEqual(["Elegir la carpeta"]);
+      const folder = buttons.find((button) => text(button).includes("carpeta de la consola"));
+      expect(folder?.classList.contains("secondary")).toBe(true);
+      // The consequence of the decision of feature 012, written and not hidden.
+      expect(text(host)).toContain("no comparten un libro vivo");
     } finally {
       delete picker.showDirectoryPicker;
       withoutStyles();

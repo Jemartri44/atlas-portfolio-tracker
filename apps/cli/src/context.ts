@@ -1,4 +1,5 @@
 import type { LedgerEvent, UseCaseDeps, Warning } from "@atlas/domain";
+import type { FxRateSource } from "@atlas/domain/ecb";
 import type { Flags } from "./args.js";
 import { describeWarning } from "./output/messages.js";
 
@@ -17,6 +18,10 @@ export interface Context {
   confirmDuplicate: boolean;
   acceptInvalid: boolean;
   json: boolean;
+  /** `--confirm-fx-rate`: the explicit yes to a typed rate that is not the official one. */
+  confirmFxRate?: boolean;
+  /** The source of the ECB history (`atlas fx update`); the ECB itself when absent. */
+  fxSource?: () => FxRateSource;
 }
 
 export type Command = (ctx: Context, positionals: string[], flags: Flags) => Promise<number>;
@@ -25,6 +30,7 @@ export const GLOBAL_FLAGS = [
   "ledger",
   "yes",
   "confirm-duplicate",
+  "confirm-fx-rate",
   "accept-invalid",
   "json",
 ] as const;
@@ -36,13 +42,14 @@ export const EXIT = {
   duplicate: 3,
   noTty: 4,
   schemaTooNew: 5,
+  locked: 6,
   usage: 64,
 } as const;
 
 /** Raised when a confirmation is needed but stdin is not interactive and --yes was not given. */
 export class ConfirmationRequired extends Error {
-  constructor() {
-    super("hace falta confirmar y no hay terminal interactiva: añade --yes");
+  constructor(message = "hace falta confirmar y no hay terminal interactiva: añade --yes") {
+    super(message);
     this.name = "ConfirmationRequired";
   }
 }

@@ -222,6 +222,28 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   reversal_target_missing: () => "El movimiento que se quiere anular no está en tus datos.",
   not_found: () => "Ese movimiento no está en tus datos.",
   dependent_events: () => "Hay movimientos posteriores que se apoyan en este: rectifícalos antes.",
+  invalid_local_config: () =>
+    "La configuración local de la carpeta (atlas.config.json) no se entiende. Corrígela en la carpeta o bórrala para volver a los valores por defecto.",
+  second_live_correction: () =>
+    "Ese movimiento ya tiene una corrección en vigor: solo puede tener una. Para cambiarlo otra vez, edita la corrección, no el original.",
+  broker_settled_eur_in_eur: () =>
+    "Lo liquidado por el bróker en euros solo se indica en una operación en otra divisa: en euros repetiría el importe.",
+  broker_settled_eur_negative: () =>
+    "Lo liquidado por el bróker en euros nunca es negativo: el sentido lo da el tipo de movimiento.",
+  broker_settled_eur_zero: () =>
+    "Lo liquidado por el bróker en euros no puede ser cero en una compra, una venta o una comisión. Si el extracto no da la cifra, déjalo vacío.",
+  ecb_history_unreadable: (d) =>
+    `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Descárgalo otra vez con la consola o importa el archivo del BCE.`,
+  draft_not_needed: () =>
+    "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, no hace falta borrador.",
+  draft_changed: (d) =>
+    d.now === "gone"
+      ? "Ese borrador ya no está en este navegador: se ha confirmado o descartado en otra pestaña. No se ha registrado nada; mira tus movimientos y tus borradores."
+      : "Ese borrador se está confirmando en otra pestaña: no se ha registrado nada. Mira tus borradores dentro de un momento.",
+  draft_unreadable: () =>
+    "Un borrador guardado en este navegador no tiene el formato esperado: no se ha tocado.",
+  ecb_history_empty: () =>
+    "El histórico del BCE no trae ninguna publicación: no se ha usado. Descárgalo otra vez con la consola o importa el archivo del BCE.",
   dangling_correction: () => "La corrección apunta a un movimiento que no está anulado.",
   dangling_reference: (d) =>
     `Hay ${countOf(count(d.event_ids ?? d.ids), "referencia", "referencias")} a movimientos que no están en tus datos.`,

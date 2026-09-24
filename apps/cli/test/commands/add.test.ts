@@ -409,3 +409,61 @@ describe("atlas add swap", () => {
     expect(h.text()).toContain("to_asset_id");
   });
 });
+
+/**
+ * `broker_settled_eur` from the console (ADR-0030): a flag with a value, shown
+ * beside the ECB figure before confirming, and refused where it does not
+ * belong with the reason in Spanish.
+ */
+describe("atlas add --broker-settled-eur", () => {
+  const dollarBuy = [
+    "add",
+    "buy",
+    "--account",
+    "acc_etf",
+    "--asset",
+    "ast_gold",
+    "--trade-date",
+    "2027-03-01",
+    "--value-date",
+    "2027-03-03",
+    "--quantity",
+    "10",
+    "--unit-price",
+    "100",
+    "--fee",
+    "5",
+    "--currency",
+    "USD",
+    "--fx-rate",
+    "1.25",
+    "--fx-rate-date",
+    "2027-03-01",
+  ];
+
+  it("records it as typed and shows it beside the ECB figure", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec([...dollarBuy, "--broker-settled-eur", "810", "--yes"])).toBe(0);
+    expect(h.text()).toContain(
+      "Según el bróker se movieron 810.00 €; al tipo del BCE del libro son 804.00 €",
+    );
+    expect(h.text()).toContain("ninguna cifra de la aplicación lo usa");
+    const { events } = await h.store.load();
+    expect((events.at(-1) as { broker_settled_eur?: string }).broker_settled_eur).toBe("810");
+  });
+
+  it("says nothing about it when it is not given", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec([...dollarBuy, "--yes"])).toBe(0);
+    expect(h.text()).not.toContain("Según el bróker");
+    // Not given means unknown: absent from the line, never a "0".
+    const { lines } = await h.store.load();
+    expect(lines.at(-1)).not.toContain("broker_settled_eur");
+  });
+
+  it("refuses a zero on a purchase, with the reason", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec([...dollarBuy, "--broker-settled-eur", "0", "--yes"])).toBe(1);
+    expect(h.text()).toContain("no puede ser cero en una compra");
+  });
+});

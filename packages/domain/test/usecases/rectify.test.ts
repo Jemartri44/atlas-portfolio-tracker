@@ -453,3 +453,40 @@ describe("every write says which filed return it reaches (ADR-0020)", () => {
     expect(unfiled.unfiledPastYears).toEqual([2027]);
   });
 });
+
+/**
+ * **The pair of reversal and correction is written in one write or not at all**
+ * (ADR-0003; prompt 012 §5, mutant 4). Written in two, a failure between them
+ * leaves the original annulled with no new version: the operation disappears
+ * from the ledger. The store here fails on its **second** write, so a split
+ * pair is caught with the reversal alone.
+ */
+describe("correctEvent writes the pair at once", () => {
+  class SecondWriteFails extends TestStore {
+    writes = 0;
+    override async append(events: readonly LedgerEvent[], etag: string): Promise<{ etag: string }> {
+      this.writes += 1;
+      if (this.writes > 1) {
+        throw new Error("disco lleno en la segunda escritura");
+      }
+      return super.append(events, etag);
+    }
+  }
+
+  it("never leaves the reversal without its correction", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const wrong = b.buy({ account_id: "acc_fund", asset_id: "ast_world", unit_price: "132.45" });
+    const store = new SecondWriteFails(b.build());
+    const deps = testDeps(store, "2028-03-01T10:00:00.000Z");
+    await correctEvent(deps, wrong.id, { ...draftOf(wrong), unit_price: "123.45" }, "typo").catch(
+      () => undefined,
+    );
+    const { events } = await store.load();
+    const reversal = events.find((event) => event.type === "reversal");
+    const correction = events.find((event) => event.corrects_id === wrong.id);
+    // Either both are there or neither is.
+    expect(reversal === undefined).toBe(correction === undefined);
+    expect(store.writes).toBe(1);
+  });
+});

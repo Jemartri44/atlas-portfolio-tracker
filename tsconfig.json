@@ -17,6 +17,9 @@
       "path": "packages/adapters/tsconfig.browser.json"
     },
     {
+      "path": "packages/adapters/tsconfig.test-browser.json"
+    },
+    {
       "path": "apps/cli"
     },
     {

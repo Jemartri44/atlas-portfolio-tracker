@@ -41,6 +41,35 @@ export const FINDING_TEXTS: Record<string, FindingText> = {
     what: "Un activo apunta a un ETF de referencia que no existe en el catálogo.",
     todo: "Da de alta el activo al que apunta, o quítale la referencia desde la configuración del activo.",
   },
+  // --- The ECB rates against the official history (feature 012) ---------
+  fx_rate_mismatch: {
+    what: "Un tipo del BCE del libro no es el oficial de su fecha.",
+    todo: "Si es un error, corrige el movimiento: se anula y se registra de nuevo con el tipo bueno. Si lo confirmaste a sabiendas, no hay nada que hacer.",
+  },
+  fx_rate_date_unpublished: {
+    what: "Un tipo del libro está fechado en un día en que el BCE no publicó.",
+    todo: "Corrige el movimiento con el último tipo publicado en o antes de su fecha fiscal.",
+  },
+  fx_rate_date_not_latest: {
+    what: "La fecha del tipo no es la última publicación en o antes de la fecha fiscal del movimiento.",
+    todo: "Corrige el movimiento con el tipo que corresponde. Si cambió la regla de la fecha fiscal, la solución es la misma: anular y registrar de nuevo, nunca recalcular.",
+  },
+  fx_rate_currency_unlisted: {
+    what: "El BCE no publica la divisa de un movimiento, o no la publicaba en su fecha.",
+    todo: "Ese tipo no se puede contrastar con el oficial: revísalo con el extracto.",
+  },
+  fx_rate_currency_stale: {
+    what: "El BCE dejó de publicar la divisa de un movimiento antes de su fecha.",
+    todo: "Ese tipo no se puede contrastar con el oficial: revísalo con el extracto.",
+  },
+  fx_rate_not_yet_in_history: {
+    what: "El histórico del BCE no llega todavía a la fecha de un movimiento: su tipo está sin contrastar.",
+    todo: "Actualiza el histórico (la consola lo descarga, o impórtalo en Ajustes).",
+  },
+  target_calendar_mismatch: {
+    what: "El calendario TARGET y el histórico del BCE no coinciden en un día de los años que usa el libro.",
+    todo: "No bloquea nada: o al histórico le falta un día o el calendario cambió. Descarga de nuevo el histórico y, si sigue, avísalo.",
+  },
   // --- deepCheck(): the raw lines and the fingerprints -------------------
   duplicate_id: {
     what: "Dos líneas del archivo tienen el mismo identificador.",

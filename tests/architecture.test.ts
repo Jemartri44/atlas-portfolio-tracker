@@ -165,6 +165,52 @@ describe("architecture: @atlas/domain imports nothing", () => {
   });
 
   /**
+   * **`broker_settled_eur` is informative** (ADR-0030): no projection, no tax
+   * figure and no balance reads it. A closed list of modules may: the
+   * validation, and the one function that sets it beside the ECB figure for the
+   * interfaces to show. Checked in the domain **and** in both interfaces, with
+   * the ways of reading a field the test of the valuations above learnt — a
+   * dot, a destructuring (which once slipped past it), a string index — and a
+   * destructured parameter, which slipped past this one.
+   */
+  it("keeps every read of broker_settled_eur on a closed list", () => {
+    const allowed = new Set([
+      join(domainSrc, "schema", "validate.ts"),
+      join(domainSrc, "ecb", "broker-settlement.ts"),
+    ]);
+    const reads = [
+      /\.broker_settled_eur\b/,
+      /\{[^{}]*\bbroker_settled_eur\b[^{}]*\}\s*=[^=]/,
+      /\[\s*["'`]broker_settled_eur["'`]\s*\]/,
+      // A destructured parameter, `({ broker_settled_eur }: T) =>`, which the
+      // assignment pattern above does not see (review of PR #75): the pattern,
+      // an optional annotation, the closing parenthesis and then an arrow, a
+      // body or a return type.
+      /[(,]\s*\{[^{}]*\bbroker_settled_eur\b[^{}]*\}\s*(?::\s*(?:\{[^{}]*\}|[^(){}]*))?\s*\)\s*(?:=>|\{|:)/,
+    ];
+    const apps = join(repoRoot, "apps");
+    const files = [
+      ...listTsFiles(domainSrc),
+      ...readdirSync(apps).flatMap((app) => {
+        const src = join(apps, app, "src");
+        return statSync(src, { throwIfNoEntry: false })?.isDirectory() === true
+          ? listSourceFiles(src)
+          : [];
+      }),
+    ];
+    const violations = files
+      .filter((file) => !allowed.has(file))
+      .filter((file) => {
+        const code = readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, " ")
+          .replace(/\/\/[^\n]*/g, " ");
+        return reads.some((pattern) => pattern.test(code));
+      })
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+  });
+
+  /**
    * And the gate stays a gate: `prices.ts` may lean on the types of the state
    * and on money and dates, never on a projection the state does not already
    * carry. A door that starts importing the rest of the house is no longer a
@@ -730,6 +776,46 @@ describe("architecture: apps/web", () => {
    * web imports subpaths only. `scripts/check-bundle.mjs` verifies the same
    * thing on the built output; this one says it in the source, where the fix is.
    */
+  /**
+   * **The browser never writes in a folder of the disk** (feature 012,
+   * decision of the direction). The File System Access API cannot create a
+   * file exclusively, so the web cannot take the lock of the console's folder;
+   * without the lock, a write of the web there could overwrite a line of the
+   * console in silence. So the web keeps its ledger in its own storage and
+   * only **reads** from the folder, and every writing primitive of the API is
+   * forbidden here, in the web and in the browser adapters. IndexedDB's own
+   * `"readwrite"` transactions are not this: they are positional, never a
+   * `mode:` option.
+   */
+  it("never writes in a folder of the disk from the browser", () => {
+    const writing = [
+      /\.createWritable\s*\(/,
+      /\.createSyncAccessHandle\s*\(/,
+      /\bcreate\s*:\s*true\b/,
+      /\.removeEntry\s*\(/,
+      /\.move\s*\(/,
+      /\bmode\s*:\s*["'`]readwrite["'`]/,
+      /showSaveFilePicker/,
+    ];
+    const browserAdapters = join(
+      repoRoot,
+      "packages",
+      "adapters",
+      "src",
+      "ledger-store",
+      "browser",
+    );
+    const violations = [...listSourceFiles(webSrc), ...listSourceFiles(browserAdapters)]
+      .filter((file) => {
+        const code = readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, " ")
+          .replace(/\/\/[^\n]*/g, " ");
+        return writing.some((pattern) => pattern.test(code));
+      })
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+  });
+
   it("never imports node builtins or the adapters barrel", () => {
     const violations: string[] = [];
     for (const file of listSourceFiles(webSrc)) {
@@ -958,6 +1044,54 @@ describe("architecture: the fiscal output is not in the barrel", () => {
     const door = specifiersOf(readFileSync(join(domainSrc, "fiscal.ts"), "utf8"));
     expect(door.some((specifier) => specifier.includes("./tax/"))).toBe(true);
     expect(door.some((specifier) => specifier.includes("./informative/"))).toBe(true);
+  });
+});
+
+describe("architecture: the ECB is not in the barrel", () => {
+  /**
+   * Feature 012, decision (r): nothing of the ECB on the boot path of the web.
+   * The barrel is on it, so the ECB lives behind a door of its own
+   * (`@atlas/domain/ecb`), like the fiscal output; `check-bundle.mjs` checks
+   * the real output, and this checks the source.
+   */
+  it("keeps the ECB and the local configuration out of index.ts", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    const offenders = specifiersOf(barrel).filter((specifier) =>
+      /\.\/(ecb|config)\/|\.\/ecb\.js/.test(specifier),
+    );
+    expect(offenders).toEqual([]);
+    const door = specifiersOf(readFileSync(join(domainSrc, "ecb.ts"), "utf8"));
+    expect(door.some((specifier) => specifier.includes("./ecb/"))).toBe(true);
+  });
+});
+
+describe("architecture: the ECB is downloaded by the console only", () => {
+  /**
+   * The web downloads nothing from a third party (ADR-0028, ADR-0029): **the
+   * addresses of the ECB live in `@atlas/adapters`, outside every subpath the
+   * web imports, and never in the domain**, which the web bundles whole. The
+   * check of origins of the bundle catches a URL that reaches the output; this
+   * catches it in the source, before, and also without its scheme.
+   */
+  it("keeps the ECB's addresses out of the domain and of everything the web bundles", () => {
+    const adapters = join(repoRoot, "packages", "adapters", "src");
+    const webReachable = [
+      ...listTsFiles(domainSrc),
+      ...listSourceFiles(webSrc),
+      join(adapters, "ledger-store", "blob.ts"),
+      ...listSourceFiles(join(adapters, "ledger-store", "browser")),
+      ...listSourceFiles(join(adapters, "clock")),
+      ...listSourceFiles(join(adapters, "random")),
+    ];
+    const violations = webReachable
+      // Inside a string, with or without its scheme. Comments are not stripped
+      // first: a line comment starts with the `//` of every `https://`, and
+      // stripping them hid the very address this looks for.
+      .filter((file) => /["'`][^"'`\n]*ecb\.europa\.eu/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+    // And the one place they do live is where the test above does not look.
+    expect(readFileSync(join(adapters, "ecb", "source.ts"), "utf8")).toContain("ecb.europa.eu");
   });
 });
 

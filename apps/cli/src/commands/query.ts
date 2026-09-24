@@ -17,10 +17,13 @@ import {
   valuations,
   type Warning,
 } from "@atlas/domain";
+import { foreignRatesOf, type RateCheck } from "@atlas/domain/ecb";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { day, describeEcbFinding } from "../output/ecb.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
+import { ratesOf } from "./rates.js";
 import { dateFlag, loadForQuery, originOf, render, renderQuery } from "./shared.js";
 
 const yearOf = (positionals: string[], usage: string): number => {
@@ -326,6 +329,10 @@ const WAIVER_REASONS: Record<FingerprintWaiver["reason"], string> = {
  * its date (review of feature 011).
  */
 const describeFindingIn = (state: LedgerState | undefined, finding: IntegrityFinding): string => {
+  const ecb = describeEcbFinding(finding.code, finding.details ?? {});
+  if (ecb !== undefined) {
+    return ecb;
+  }
   const waiver =
     finding.code === "filing_fingerprint_waived"
       ? state?.fingerprintWaivers.get(finding.event_ids[0] as string)
@@ -334,6 +341,32 @@ const describeFindingIn = (state: LedgerState | undefined, finding: IntegrityFin
     return finding.message;
   }
   return `La huella de la declaración ${waiver.filing_id} nunca llegó a comprobarse (${WAIVER_REASONS[waiver.reason]}) y lo diste por bueno el ${waiver.accepted_on} para poder compactar.`;
+};
+
+/**
+ * What the check says about the ECB rates, always: contrasted until when, or
+ * **without contrasting** and why — never folded into "no findings"
+ * (decisions (f) and (z) of prompt 012).
+ */
+const ratesLine = (rates: RateCheck | undefined, deep: boolean): string[] => {
+  if (rates === undefined) {
+    return [];
+  }
+  if (rates.kind === "checked") {
+    return rates.compared === 0
+      ? []
+      : [
+          `Tipos del BCE: ${rates.compared} contrastados con el histórico oficial, que llega hasta el ${day(rates.latest)}.`,
+        ];
+  }
+  if (rates.rates === 0) {
+    return [];
+  }
+  return [
+    deep
+      ? `Tipos del BCE sin contrastar (${rates.rates}): no hay histórico junto al libro. Descárgalo con atlas fx update; mientras tanto, ni se dan por buenos ni por malos.`
+      : `Tipos del BCE sin contrastar (${rates.rates}): atlas check no los contrasta; hazlo con atlas check --deep y el histórico descargado.`,
+  ];
 };
 
 export const checkCommand = async (
@@ -347,6 +380,7 @@ export const checkCommand = async (
   let deepFindings: IntegrityFinding[] = [];
   let warnings: Warning[] = [];
   let state: LedgerState | undefined;
+  let rates: RateCheck | undefined;
   try {
     const loaded = await loadAndProject(ctx.deps, { collectErrors: true });
     state = loaded.state;
@@ -355,6 +389,13 @@ export const checkCommand = async (
     warnings = state.warnings;
     if (deep) {
       deepFindings = deepCheck(lines, events, state, ctx.deps.store.schema);
+      rates = await ratesOf(ctx, state, events);
+      if (rates.kind === "checked") {
+        deepFindings.push(...rates.findings);
+      }
+    } else {
+      // Plain `check` never contrasts the rates: it says so, it does not call them fine.
+      rates = { kind: "unchecked", rates: foreignRatesOf(state, events).length };
     }
   } catch (error) {
     // Duplicate ids stop the projection even when collecting errors: report them as the single finding.
@@ -366,28 +407,34 @@ export const checkCommand = async (
     ];
   }
   const all = [...findings, ...deepFindings];
+  const unchecked = rates?.kind === "unchecked" && rates.rates > 0;
   // `check` is the tool that lists the invalid events: it does not need the header.
   render(
     ctx,
-    { findings, deep: deepFindings, warnings },
-    all.length === 0 && warnings.length === 0
-      ? "Libro íntegro: sin hallazgos."
-      : table(
-          ["nivel", "código", "mensaje", "eventos"],
-          [
-            ...all.map((f) => [
-              f.severity,
-              f.code,
-              describeFindingIn(state, f),
-              f.event_ids.join(", "),
-            ]),
-            // The domain writes in English and the CLI translates by `code`
-            // (the contract of `errors.ts`): `check` was still printing the raw
-            // message, so the only place that lists every warning of the ledger
-            // spoke a different language from the rest of the application.
-            ...warnings.map((w) => ["warning", w.code, describeWarning(w), w.event_id]),
-          ],
-        ),
+    { findings, deep: deepFindings, warnings, rates: rates ?? null },
+    [
+      all.length === 0 && warnings.length === 0
+        ? unchecked
+          ? "Libro íntegro en lo comprobado."
+          : "Libro íntegro: sin hallazgos."
+        : table(
+            ["nivel", "código", "mensaje", "eventos"],
+            [
+              ...all.map((f) => [
+                f.severity,
+                f.code,
+                describeFindingIn(state, f),
+                f.event_ids.join(", "),
+              ]),
+              // The domain writes in English and the CLI translates by `code`
+              // (the contract of `errors.ts`): `check` was still printing the raw
+              // message, so the only place that lists every warning of the ledger
+              // spoke a different language from the rest of the application.
+              ...warnings.map((w) => ["warning", w.code, describeWarning(w), w.event_id]),
+            ],
+          ),
+      ...ratesLine(rates, deep),
+    ].join("\n"),
   );
   return all.some((f) => f.severity === "error") ? 1 : 0;
 };

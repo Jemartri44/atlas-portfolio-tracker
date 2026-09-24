@@ -21,6 +21,24 @@ import { LedgerChip } from "./LedgerChip.jsx";
 import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
 
+/**
+ * The drafts waiting for their ECB rate (feature 012, block 5): on every
+ * screen, but of the ECB, so it arrives in a chunk of its own after the first
+ * paint. The frame only keeps its place in the bar.
+ */
+const DraftSlot = (): JSX.Element => (
+  <span
+    class="draft-slot"
+    ref={(slot) =>
+      // A counter that cannot load (an installed app that lost the network
+      // before caching its chunk) leaves the place empty, never an error.
+      void import("./draft-counter.js")
+        .then((module) => module.mountDraftCounter(slot))
+        .catch(() => undefined)
+    }
+  />
+);
+
 const DegradedBand = (): JSX.Element => (
   <Show when={store.invalidCount() > 0}>
     <aside class="band" role="status">
@@ -68,10 +86,7 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
 );
 
 /** Whether a ledger is open or on its way: only the first run has none. */
-const hasLedger = (): boolean => {
-  const phase = store.load().phase;
-  return phase !== "unconfigured" && phase !== "reconnect";
-};
+const hasLedger = (): boolean => store.load().phase !== "unconfigured";
 
 /**
  * Settings are current on their page, on everything under it, and — with data
@@ -118,6 +133,7 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
         </Show>
         <div class="status">
           <LedgerChip />
+          <DraftSlot />
           <PrivacyToggle />
           <SettingsButton />
         </div>

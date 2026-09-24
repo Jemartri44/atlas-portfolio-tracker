@@ -230,6 +230,28 @@ export const describeError = (error: DomainError): string => {
       return `El libro generado no supera la verificación (${text(d.invalid)}, ${text(d.findings)}): es un error del generador.`;
     case "missing_basis":
       return `Falta la base de la operación ${text(d.type ?? "")}: indica --amount o --unit-price.`;
+    case "invalid_local_config":
+      return `La configuración local atlas.config.json de la carpeta del libro no se entiende${d.field === undefined ? "" : ` (${text(d.field)})`}: corrígela o bórrala para volver a los valores por defecto.`;
+    case "second_live_correction":
+      return `${text(d.corrects_id)} ya tiene una corrección en vigor en ese punto del libro (${text(d.live_correction_id)}): una operación anulada solo puede tener una. Anula antes esa corrección, o corrígela a ella (ADR-0026).`;
+    case "broker_settled_eur_in_eur":
+      return "--broker-settled-eur solo se indica en una operación en otra divisa: en euros repetiría el importe.";
+    case "broker_settled_eur_negative":
+      return "--broker-settled-eur nunca es negativo: el sentido lo da el tipo de operación. Indica lo que movió el bróker, sin signo.";
+    case "broker_settled_eur_zero":
+      return "--broker-settled-eur no puede ser cero en una compra, una venta o una comisión: si el extracto no da la cifra, no lo indiques (sin él, la cifra queda como desconocida).";
+    case "ecb_history_unreadable":
+      return `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Vuelve a descargarlo con \`atlas fx update\`.`;
+    case "draft_not_needed":
+      return "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, sin --draft.";
+    case "draft_changed":
+      return d.now === "gone"
+        ? "Ese borrador ya no está en drafts/: se ha confirmado o descartado desde otra orden. No se ha registrado nada; consulta `atlas draft list` y el libro."
+        : "Ese borrador se está confirmando desde otra orden (ya lleva el id de su registro): no se ha registrado nada. Espera y consulta `atlas draft list`.";
+    case "draft_unreadable":
+      return "Un borrador de drafts/ no tiene el formato esperado: no se ha tocado. Revísalo a mano; puede ser la única copia de una operación.";
+    case "ecb_history_empty":
+      return "El histórico del BCE no trae ninguna publicación: no se ha usado. Vuelve a descargarlo con `atlas fx update`.";
     case "dangling_correction":
       return `La corrección apunta a ${text(d.corrects_id)}, que no está anulado: una corrección va siempre con su anulación (ADR-0003).`;
     case "dangling_reference":
@@ -393,6 +415,12 @@ export const describeWarning = (warning: Warning): string => {
       return `Las diferencias de cambio del efectivo en divisa (${((d.currencies as string[] | undefined) ?? []).join(", ")}) NO se calculan: criterio #4, en disputa, sin lotes de divisa. Cambios de divisa del ejercicio: ${((d.fx_exchanges as string[] | undefined) ?? []).join(", ") || "ninguno"}.`;
     case "tax_in_kind_income_not_integrated":
       return `Renta en especie registrada (${text(d.income_eur)} EUR, base ${text(d.base) === "general" ? "general" : "del ahorro"}) y NO integrada: el criterio vigente (#8) no declara nada al recibirla.`;
+    case "tax_fx_rate_finding":
+      return `Esta línea depende de un tipo del BCE que no es el oficial de su fecha (${(d.codes as string[]).join(", ")}; eventos ${(d.events as string[]).join(", ")}). La cifra se calcula con el tipo del libro; si está mal, corrígelo anulando y registrando de nuevo (criterio 25), y compruébalo antes de declarar.`;
+    case "tax_fx_rate_unverified":
+      return `Esta línea depende de un tipo del BCE que el histórico no ha podido contrastar (${(d.codes as string[]).join(", ")}; eventos ${(d.events as string[]).join(", ")}): no se dice si es bueno ni malo. La cifra se calcula con el tipo del libro (criterio 25).`;
+    case "tax_fx_rate_date_after_fiscal_date":
+      return `Esta línea depende de un tipo del BCE fechado después de su fecha fiscal (eventos ${(d.events as string[]).join(", ")}). La cifra se calcula con el tipo del libro; el aplicable es el último publicado en o antes de la fecha fiscal (criterio 25).`;
     case "tax_window_open":
       return `La pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) es PROVISIONAL: su ventana de recompra sigue abierta hasta el ${text(d.window_end)} y una compra antes de esa fecha la diferiría.`;
     case "tax_neutrality_contradiction":

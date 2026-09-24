@@ -135,14 +135,6 @@ export const requireAvailable = (
   }
 };
 
-/** File position that decides "before in the file" for theses: a correction inherits the position of the event it corrects (spec A6). */
-const logicalPositionOf = (
-  state: LedgerState,
-  event: { corrects_id?: string },
-  position: number,
-): number =>
-  event.corrects_id === undefined ? position : (state.positionOf.get(event.corrects_id) as number);
-
 /** The thesis a bucket operation links to; `undefined` outside the bucket or for an unlinked sell. */
 const thesisOf = (
   state: LedgerState,
@@ -184,7 +176,11 @@ const thesisOf = (
     event.thesis_id,
     event.account_id,
     event.asset_id,
-    logicalPositionOf(state, event, position),
+    // Already the position of the root of the event's correction chain
+    // (`project-ledger.ts`, pass B, from `correction-root.ts`): a correction,
+    // and a correction of a correction, keep the thesis window of the fact
+    // they correct (spec A6; second review of PR #75).
+    position,
     event.id,
   );
 };
@@ -227,7 +223,11 @@ const swapThesisOf = (
     event.thesis_id,
     event.account_id,
     event.to_asset_id,
-    logicalPositionOf(state, event, position),
+    // Already the position of the root of the event's correction chain
+    // (`project-ledger.ts`, pass B, from `correction-root.ts`): a correction,
+    // and a correction of a correction, keep the thesis window of the fact
+    // they correct (spec A6; second review of PR #75).
+    position,
     event.id,
   );
 };

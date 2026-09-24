@@ -24,7 +24,11 @@ const webFindings = join(repoRoot, "apps", "web", "src", "format", "messages", "
 const integrityFiles = [
   join(domainSrc, "projections", "integrity.ts"),
   join(domainSrc, "projections", "deep-check.ts"),
+  // Feature 012: the findings of the ECB check, which both interfaces say.
+  join(domainSrc, "ecb", "check.ts"),
 ];
+const ecbCheck = join(domainSrc, "ecb", "check.ts");
+const cliEcb = join(repoRoot, "apps", "cli", "src", "output", "ecb.ts");
 
 const listTsFiles = (dir: string): string[] =>
   readdirSync(dir).flatMap((entry) => {
@@ -148,6 +152,46 @@ describe("Spanish messages: the integrity findings", () => {
     );
     const codes = findingCodes();
     expect(translated.filter((code) => !codes.has(code)).sort()).toEqual([]);
+  });
+});
+
+/**
+ * **The findings of the ECB are said in Spanish in the console too**
+ * (decision (z) of prompt 012). The console has no catalogue of findings — it
+ * printed the domain's English, a gap noted for a later feature —, so it gets
+ * one **limited to the codes of the ECB**, and this test holds it both ways:
+ * every code the ECB check can raise is translated there, and nothing else.
+ * With it, the blind spot of the `error(`/`warning(` helpers (E2 of feature
+ * 011) no longer applies to these codes: `findingCodes` scans the module.
+ */
+describe("Spanish messages: the findings of the ECB in the console", () => {
+  const ecbCodes = (): Set<string> => {
+    const codes = new Set<string>();
+    const source = readFileSync(ecbCheck, "utf8");
+    for (const match of source.matchAll(/(?:warning|error)\(\s*"([a-z_0-9]+)"/g)) {
+      codes.add(match[1] as string);
+    }
+    for (const match of source.matchAll(/code:\s*"([a-z_0-9]+)"/g)) {
+      codes.add(match[1] as string);
+    }
+    return codes;
+  };
+  const cliEcbCodes = (): Set<string> =>
+    new Set(
+      [...readFileSync(cliEcb, "utf8").matchAll(/case "([a-z_0-9]+)":/g)].map(
+        (match) => match[1] as string,
+      ),
+    );
+
+  it("finds the codes, so the check below cannot pass by looking at nothing", () => {
+    expect(ecbCodes().size).toBeGreaterThanOrEqual(7);
+  });
+
+  it("translates every one of them, and nothing that is not one", () => {
+    const codes = ecbCodes();
+    const cli = cliEcbCodes();
+    expect([...codes].filter((code) => !cli.has(code)).sort()).toEqual([]);
+    expect([...cli].filter((code) => !codes.has(code)).sort()).toEqual([]);
   });
 });
 

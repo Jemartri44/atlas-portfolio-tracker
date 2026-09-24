@@ -70,8 +70,13 @@ const changedUnderneath = async (deps: UseCaseDeps): Promise<boolean> => {
   return etag !== snapshot.etag;
 };
 
-/** Runs a write, translating the three answers the interface has to act on. */
-const write = async <T>(run: () => Promise<T>): Promise<WriteResult<T>> => {
+/**
+ * Runs a write, translating the three answers the interface has to act on.
+ * Exported for the one write that is not a use case of the barrel: the chain
+ * of ECB rate corrections (feature 012, block 6), which lives behind the door
+ * of the ECB so that nothing of it lands where the forms are.
+ */
+export const runWrite = async <T>(run: () => Promise<T>): Promise<WriteResult<T>> => {
   store.setWriting(true);
   try {
     if (await changedUnderneath(requireDeps())) {
@@ -128,10 +133,10 @@ export const recordDraft = async <E extends SupportedEvent>(
   draft: Draft<E>,
   options: RecordOptions = {},
 ): Promise<WriteResult<RecordResult<E>>> =>
-  write(() => recordEvent<E>(requireDeps(), draft, options));
+  runWrite(() => recordEvent<E>(requireDeps(), draft, options));
 
 export const reverse = async (id: string, reason: string): Promise<WriteResult<ReverseResult>> =>
-  write(() => reverseEvent(requireDeps(), id, reason));
+  runWrite(() => reverseEvent(requireDeps(), id, reason));
 
 export const correct = async <E extends SupportedEvent>(
   id: string,
@@ -139,7 +144,7 @@ export const correct = async <E extends SupportedEvent>(
   reason: string,
   options: RecordOptions = {},
 ): Promise<WriteResult<{ event: E; priorYear: boolean }>> =>
-  write(async () => {
+  runWrite(async () => {
     const result = await correctEvent<E>(requireDeps(), id, draft, reason, options);
     return { event: result.event, priorYear: result.priorYear };
   });
@@ -216,4 +221,4 @@ export const changeSettings = async (
   settings: Settings,
   options: RecordOptions = {},
 ): Promise<WriteResult<RecordResult>> =>
-  write(() => recordEvent(requireDeps(), { type: "settings_changed", settings }, options));
+  runWrite(() => recordEvent(requireDeps(), { type: "settings_changed", settings }, options));

@@ -83,6 +83,13 @@ export interface FiscalCriterion {
  * the other way round and pays more (conservative). Both are ordinary in this
  * portfolio.
  *
+ * #25 is the ECB rate of a line after a change of `fiscal_date_rule` (ADR-0029,
+ * point 10; feature 012): the rate is the one of the fiscal date in force, and
+ * a line with another one is corrected by rectification, never recalculated.
+ * **Medium**, the certainty of #1 and #5 it rests on; **both**, because the
+ * stored rate can be above or below the right one, and so can the figure the
+ * proposed correction leaves.
+ *
  * #18 to #23 were numbered by the direction on 2026-09-18 (questions Q1, Q2 and
  * Q5 of the feature 009). Where the document gives a criterion two certainties
  * (#21 "media-baja", #22 "alta (orden) / media (redondeo)"), the catalogue
@@ -124,6 +131,7 @@ export const FISCAL_CRITERIA = {
   "24:etc_gain": { doc: "24", certainty: "low", risk: "both" },
   "24:etp": { doc: "24", certainty: "low", risk: "both" },
   "24:etp_gain": { doc: "24", certainty: "medium", risk: "both" },
+  "25": { doc: "25", certainty: "medium", risk: "both" },
 } as const satisfies Record<string, FiscalCriterion>;
 
 export type CriterionId = keyof typeof FISCAL_CRITERIA;
@@ -168,6 +176,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "24:etc_gain",
   "24:etp",
   "24:etp_gain",
+  "25",
 ];
 
 /** Which variant of criterion #24 an ETC or an ETP applies, by the reading in force. */

@@ -37,10 +37,7 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
   };
 
   return (
-    <Show
-      when={phase().phase !== "unconfigured" && phase().phase !== "reconnect"}
-      fallback={<Navigate href="/libro" />}
-    >
+    <Show when={phase().phase !== "unconfigured"} fallback={<Navigate href="/libro" />}>
       <Show
         when={phase().phase !== "loading"}
         fallback={<Skeleton lines={props.skeleton ?? 4} tall />}

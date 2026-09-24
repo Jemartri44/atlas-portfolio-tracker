@@ -10,10 +10,17 @@ export default defineConfig({
     // would otherwise swallow `@atlas/adapters/blob`.
     alias: {
       "@atlas/adapters/blob": local("./packages/adapters/src/ledger-store/blob.ts"),
+      "@atlas/adapters/reference": local(
+        "./packages/adapters/src/ledger-store/browser/reference.ts",
+      ),
+      "@atlas/adapters/folder": local("./packages/adapters/src/ledger-store/browser/folder.ts"),
+      "@atlas/adapters/transfer": local("./packages/adapters/src/ledger-store/browser/transfer.ts"),
+      "@atlas/adapters/drafts": local("./packages/adapters/src/ledger-store/browser/drafts.ts"),
       "@atlas/adapters/browser": local("./packages/adapters/src/ledger-store/browser/index.ts"),
       "@atlas/adapters/clock": local("./packages/adapters/src/clock/system.ts"),
       "@atlas/adapters/random": local("./packages/adapters/src/random/web-crypto.ts"),
       "@atlas/adapters": local("./packages/adapters/src/index.ts"),
+      "@atlas/domain/ecb": local("./packages/domain/src/ecb.ts"),
       "@atlas/domain/fiscal": local("./packages/domain/src/fiscal.ts"),
       "@atlas/domain": local("./packages/domain/src/index.ts"),
     },

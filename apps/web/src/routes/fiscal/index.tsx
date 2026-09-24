@@ -14,7 +14,7 @@
 import { yearOf } from "@atlas/domain";
 import { informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
-import { createMemo, type JSX, Show } from "solid-js";
+import { createMemo, createResource, type JSX, Show } from "solid-js";
 import { EmptyState, Notice, Section } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
@@ -28,6 +28,7 @@ import { DoubtfulCard, SettledCard } from "./CriteriaCards.jsx";
 import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
 import { LossesCard } from "./LossesCard.jsx";
+import { RateNotes } from "./RateNotes.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
 
 /**
@@ -85,7 +86,20 @@ export default function FiscalRoute(): JSX.Element {
         );
         const picked = useYear(() => current - 1);
         const year = (): number => picked.year();
-        const options = { today: today() };
+        // The findings of the ECB check note the lines that depend on them and
+        // move no figure (ADR-0029, point 8); they arrive after the first
+        // paint, and the report is computed again with them.
+        const [rateFindings] = createResource(() =>
+          import("../../ecb/findings.js").then((module) =>
+            module.rateFindingsOf(snapshot.state, snapshot.events),
+          ),
+        );
+        const options = () => {
+          const findings = rateFindings();
+          return findings === undefined
+            ? { today: today() }
+            : { today: today(), rateFindings: findings };
+        };
 
         /**
          * The whole year, computed once. A failure is **shown**, not thrown: a
@@ -94,18 +108,18 @@ export default function FiscalRoute(): JSX.Element {
          */
         const report = createMemo(() => {
           try {
-            return { ok: true as const, value: taxYear(snapshot.events, year(), options) };
+            return { ok: true as const, value: taxYear(snapshot.events, year(), options()) };
           } catch (error) {
             return { ok: false as const, error: toAppError(error) };
           }
         });
         const boxes = createMemo(() =>
-          boxesView(taxBoxes(snapshot.events, year(), options), names),
+          boxesView(taxBoxes(snapshot.events, year(), options()), names),
         );
         const informative = createMemo(() =>
           (["720", "721"] as const).map((model) =>
             informativeView(
-              informativeReturn(snapshot.events, model, year(), options),
+              informativeReturn(snapshot.events, model, year(), options()),
               names,
               privacy(),
             ),
@@ -177,6 +191,12 @@ export default function FiscalRoute(): JSX.Element {
               }
             >
               <div class="grid">
+                <RateNotes
+                  notes={((computed) => (computed.ok ? computed.value.notes : []))(report())}
+                  events={snapshot.events}
+                  names={names}
+                  privacy={privacy()}
+                />
                 <Show when={view()}>
                   {(year) => (
                     <>

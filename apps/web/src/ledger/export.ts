@@ -7,15 +7,21 @@
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { BrowserLedgerBlob } from "@atlas/adapters/browser";
+import { etagOfText, exportLedgerText, replaceLedgerText } from "@atlas/adapters/transfer";
 import { loadInto } from "./actions.js";
 import { store } from "./state.js";
 import { openBrowserStorage } from "./store.js";
 
 export const EXPORT_FILE_NAME = "ledger.jsonl";
 
-/** Triggers the download of the exact text and records the export date. */
-export const exportLedger = async (blob: BrowserLedgerBlob): Promise<void> => {
-  const text = await blob.text();
+/**
+ * Triggers the download of the exact text and records the export date — the
+ * text and the date in **one** transaction (feature 012, D4), so the date can
+ * never claim an export that left out a line another tab recorded meanwhile.
+ */
+export const exportLedger = async (): Promise<void> => {
+  const when = new Date();
+  const text = await exportLedgerText(when);
   const file = new Blob([text], { type: "application/x-ndjson" });
   const url = URL.createObjectURL(file);
   const anchor = document.createElement("a");
@@ -23,15 +29,44 @@ export const exportLedger = async (blob: BrowserLedgerBlob): Promise<void> => {
   anchor.download = EXPORT_FILE_NAME;
   anchor.click();
   URL.revokeObjectURL(url);
-  const when = new Date();
-  await blob.markExported(when);
   const current = store.load();
-  if (current.phase === "ready" && current.source.kind === "browser") {
+  if (current.phase === "ready") {
     store.setLoad({
       ...current,
       source: { ...current.source, lastExportAt: when.toISOString() },
     });
   }
+};
+
+/** What an import would do, said before doing it. */
+export interface ImportPlan {
+  /** Movements in the file. */
+  events: number;
+  /** Lines of the ledger this browser holds now, which the import would replace. */
+  replaces: number;
+  /**
+   * The etag of that ledger: the yes is to replacing **this** one, and the
+   * import is refused if another tab changed it in between (review of PR #75).
+   */
+  etag: string;
+}
+
+/**
+ * Reads the file as a ledger **before** anything else, and says what it would
+ * replace. Importing is a deliberate overwrite of the whole ledger of this
+ * browser, not a conditional write: when there is something to replace, the
+ * interface asks for an explicit confirmation with these two numbers before
+ * calling `importLedger` (feature 012, block 0). It used to replace without
+ * asking.
+ */
+export const planImport = async (text: string): Promise<ImportPlan> => {
+  const events = await validateImport(text);
+  const current = await new BrowserLedgerBlob().text();
+  return {
+    events,
+    replaces: current.split("\n").filter((line) => line !== "").length,
+    etag: etagOfText(current),
+  };
 };
 
 /**
@@ -46,13 +81,15 @@ export const exportLedger = async (blob: BrowserLedgerBlob): Promise<void> => {
  * `specs/006-web-shell/questions.md`).
  *
  * If the text is not a ledger this throws before touching anything, and the
- * state the user had is exactly the state they keep.
+ * state the user had is exactly the state they keep. Whoever calls it has
+ * already confirmed the replacement (`planImport`).
  */
-export const importLedger = async (text: string): Promise<number> => {
+export const importLedger = async (text: string, plan: ImportPlan): Promise<number> => {
   const events = await validateImport(text);
-  const opened = await openBrowserStorage();
-  await new BrowserLedgerBlob().replaceText(text);
-  await loadInto(opened);
+  await replaceLedgerText(text, plan.etag);
+  // Opened after the replacement, so it reads the export date of the ledger
+  // now there — none — and not the one of the ledger it replaced (D4).
+  await loadInto(await openBrowserStorage());
   return events;
 };
 
@@ -77,11 +114,7 @@ class MemoryText {
     return this.bytes;
   }
 
-  async write(): Promise<void> {
+  async update(): Promise<Uint8Array> {
     throw new Error("el archivo importado no se escribe");
-  }
-
-  async writeArchive(): Promise<void> {
-    throw new Error("el archivo importado no se archiva");
   }
 }

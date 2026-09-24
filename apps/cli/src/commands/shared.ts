@@ -12,11 +12,13 @@ import {
   loadAndProject,
   type ProjectedLedger,
   previewEvent,
+  type RecordOptions,
   type RecordResult,
   recordEvent,
   type SupportedEvent,
   todayInMadrid,
 } from "@atlas/domain";
+import { brokerSettlementOf } from "@atlas/domain/ecb";
 import { closedYearImpact } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import {
@@ -27,6 +29,7 @@ import {
   summarize,
 } from "../context.js";
 import { closedYearLines, unfiledYearsNote } from "../output/closed-years.js";
+import { eur } from "../output/format.js";
 import { keyValue } from "../output/table.js";
 
 const FLAG_ALIASES: Record<string, string> = {
@@ -136,21 +139,39 @@ export const closedYearNotes = async (
   }
 };
 
+/**
+ * The euros the broker moved beside the same movement at the ECB rate
+ * (ADR-0030), said before confirming — the one moment the console shows a
+ * single movement whole. Informative, and said so: no figure uses it.
+ */
+export const brokerNote = (draft: Record<string, unknown>): string[] => {
+  const settlement = brokerSettlementOf(draft);
+  if (settlement === undefined) {
+    return [];
+  }
+  return [
+    `Según el bróker se movieron ${eur(settlement.broker_eur)} €; al tipo del BCE del libro son ${eur(settlement.ecb_eur)} € (diferencia: ${eur(settlement.difference_eur)} €). Es un dato informativo: ninguna cifra de la aplicación lo usa.`,
+  ];
+};
+
 export const confirmAndRecord = async (
   ctx: Context,
   draft: Record<string, unknown>,
   /** Lines printed between the preview and the question: what the user has to know *before* saying yes. */
   notes: readonly string[] = [],
+  /** How to write it; a plain record by default (a draft records and then removes itself). */
+  write: (options: RecordOptions) => Promise<RecordResult> = (options) =>
+    recordEvent(ctx.deps, draft as unknown as Draft, options),
 ): Promise<RecordResult | undefined> => {
   preview(ctx, "Evento a registrar:", draft);
-  for (const note of [...notes, ...(await closedYearNotes(ctx, draft))]) {
+  for (const note of [...brokerNote(draft), ...notes, ...(await closedYearNotes(ctx, draft))]) {
     ctx.io.out(note);
   }
   if (!(await confirm(ctx, "¿Registrar? [s/N] "))) {
     ctx.io.out("Cancelado.");
     return undefined;
   }
-  const result = await recordEvent(ctx.deps, draft as unknown as Draft, {
+  const result = await write({
     confirmDuplicate: ctx.confirmDuplicate,
     acceptInvalid: ctx.acceptInvalid,
   });

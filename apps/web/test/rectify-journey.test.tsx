@@ -7,13 +7,14 @@
 // the review of 2026-09-19). Now the write leads to the movement it wrote, with
 // the confirmation and the warning, and the corrected original offers no form.
 
-import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
+import { BlobLedgerStore } from "@atlas/adapters/blob";
 import type { UseCaseDeps } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { loadInto } from "../src/ledger/actions.js";
 import Detail from "../src/routes/movimientos/detail.jsx";
 import Edit from "../src/routes/movimientos/edit.jsx";
 import { goldenText } from "./helpers/golden.js";
+import { MemoryBlob } from "./helpers/memory-blob.js";
 import { press, settle, showInShell, text, type, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
@@ -21,22 +22,10 @@ withGoldenLedger();
 /** A deposit of 8.700 € on 05/09/2028: a past tax year for the clock of these tests, 2029. */
 const DEPOSIT = "01NWVBBZ78ZF4XD31K965DE3ET";
 
-class WritableBlob implements LedgerBlob {
-  readonly label = "memoria";
-  constructor(public text: string) {}
-  async read(): Promise<Uint8Array> {
-    return new TextEncoder().encode(this.text);
-  }
-  async write(bytes: Uint8Array): Promise<void> {
-    this.text = new TextDecoder().decode(bytes);
-  }
-  async writeArchive(): Promise<void> {}
-}
-
 const openWritable = async (): Promise<void> => {
   let counter = 0;
   const deps: UseCaseDeps = {
-    store: new BlobLedgerStore(new WritableBlob(goldenText())),
+    store: new BlobLedgerStore(new MemoryBlob(goldenText())),
     clock: { now: () => new Date("2029-07-01T10:00:00.000Z") },
     random: (target) => {
       counter += 1;

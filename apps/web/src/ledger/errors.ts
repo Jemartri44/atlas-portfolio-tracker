@@ -9,6 +9,7 @@
 import { DomainError } from "@atlas/domain";
 import { describeError } from "../format/messages/errors.js";
 import { nameIndex } from "../format/names.js";
+import { countOf } from "../format/number.js";
 import type { AppError } from "./state.js";
 import { store } from "./state.js";
 
@@ -35,11 +36,18 @@ export const toAppError = (error: unknown): AppError => {
       ...(typeof line === "number" ? { line } : {}),
     };
   }
+  if (error instanceof Error && error.name === "NoLedgerInFolder") {
+    return {
+      code: "no_ledger_in_folder",
+      message:
+        "En esa carpeta no hay ningún ledger.jsonl: elige la carpeta donde la consola guarda tus datos. No se ha tocado nada.",
+    };
+  }
   if (error instanceof DOMException && error.name === "NotAllowedError") {
     return {
       code: "permission_denied",
       message:
-        "El navegador ha denegado el acceso a la carpeta de tus datos. Vuelve a conectarla para seguir.",
+        "El navegador ha denegado el permiso para leer la carpeta. Vuelve a elegirla y concédelo para seguir; no se ha tocado nada.",
       action: { label: "Abrir tus datos", to: "/libro" },
     };
   }
@@ -61,11 +69,30 @@ export const toAppError = (error: unknown): AppError => {
         "No se ha podido leer el archivo: puede que se haya movido, que no sea un archivo de texto o que el navegador ya no tenga permiso. Vuelve a elegirlo; no se ha tocado nada.",
     };
   }
+  // The ledger of this browser changed between the question and the yes of an
+  // import (another tab recorded something): the yes was about another ledger.
+  if (error instanceof Error && error.name === "LedgerChangedSinceAsked") {
+    const lines = (error as Error & { lines?: number }).lines ?? 0;
+    return {
+      code: "ledger_changed_since_asked",
+      message: `Mientras decidías, los datos de este navegador han cambiado (otra pestaña ha registrado algo): ahora tienen ${countOf(lines, "movimiento", "movimientos")}. No se ha importado nada; vuelve a elegir el archivo para ver qué sustituiría.`,
+    };
+  }
+  // Another tab still has the previous version of the database open (feature
+  // 012 added the store of drafts). It is not the browser refusing to keep
+  // data, and saying so sent the user to change a setting that was fine.
+  if (error instanceof Error && error.name === "StorageUnavailable" && error.cause === "blocked") {
+    return {
+      code: "storage_blocked",
+      message:
+        "Hay otra pestaña de Atlas abierta con una versión anterior de la aplicación y no deja actualizar el almacenamiento. Ciérrala y recarga esta; tus datos no se han tocado.",
+    };
+  }
   if (error instanceof Error && error.name === "StorageUnavailable") {
     return {
       code: "storage_unavailable",
       message:
-        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados). Abre tus datos desde una carpeta, o usa otro navegador.",
+        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados), y tus datos viven en él. Permite los datos del sitio o usa otro navegador.",
       action: { label: "Abrir tus datos", to: "/libro" },
     };
   }

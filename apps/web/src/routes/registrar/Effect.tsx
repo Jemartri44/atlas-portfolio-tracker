@@ -11,6 +11,8 @@ import type { NameIndex } from "../../format/names.js";
 import { type AppError, store } from "../../ledger/state.js";
 import { FormActions } from "./FormActions.jsx";
 import { Preview } from "./Preview.jsx";
+import { RateConfirm } from "./RateNotes.jsx";
+import type { FormRates } from "./rates.js";
 
 interface EffectProps {
   /** The effect to show; absent while the form has not been sent to see it. */
@@ -26,6 +28,8 @@ interface EffectProps {
   closedYears: readonly ClosedYearImpact[];
   onBack: () => void;
   onConfirm: () => void;
+  /** The typed rates that are not the official one, with their yes (feature 012). */
+  rates?: FormRates;
 }
 
 export const Effect = (props: EffectProps): JSX.Element => (
@@ -46,13 +50,18 @@ export const Effect = (props: EffectProps): JSX.Element => (
       <section class="effect" aria-label="El efecto">
         <Preview preview={preview()} names={props.names} revealed={props.revealed} />
         <ClosedYearNotice impacts={props.closedYears} />
+        <Show when={props.rates}>{(rates) => <RateConfirm rates={rates()} />}</Show>
         <FormActions problem={props.problem} failure={props.failure}>
           <Show when={!props.wide}>
             <button type="button" class="secondary" onClick={() => props.onBack()}>
               Volver a los datos
             </button>
           </Show>
-          <button type="button" disabled={store.writing()} onClick={() => props.onConfirm()}>
+          <button
+            type="button"
+            disabled={store.writing() || props.rates?.cleared() === false}
+            onClick={() => props.onConfirm()}
+          >
             {props.confirmLabel}
           </button>
         </FormActions>

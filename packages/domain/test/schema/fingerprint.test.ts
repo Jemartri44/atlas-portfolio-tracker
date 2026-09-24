@@ -17,6 +17,22 @@ describe("fingerprintOf", () => {
     ).toBe(first);
   });
 
+  it("leaves broker_settled_eur out: typed by hand or imported, it is the same operation (mutant 14)", () => {
+    // ADR-0030: the same operation registered by hand and later imported with
+    // the broker's euros has to be caught as a duplicate, carrying it or not.
+    for (const sample of [
+      SAMPLES.buy,
+      SAMPLES.sell,
+      SAMPLES.dividend,
+      SAMPLES.interest,
+      SAMPLES.standalone_fee,
+    ]) {
+      const plain = variant(sample, { currency: "USD", fx_rate: "1.1" });
+      expect(fp({ ...plain, broker_settled_eur: "123.45" }), sample.type).toBe(fp(plain));
+      expect(fp(plain)).toBeDefined();
+    }
+  });
+
   it("does not include the own id: two identical manual entries collide", () => {
     const a = variant(SAMPLES.buy, { id: "01ARYZ6S41TSV4RRFFQ69G5FA5" });
     const b = variant(SAMPLES.buy, {

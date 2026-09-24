@@ -20,6 +20,7 @@ import { closedYearLines, unfiledYearsNote } from "../output/closed-years.js";
 import { priorYearWarning } from "../output/messages.js";
 import { ADD_SPECS } from "./add.js";
 import { requireId } from "./catalogue.js";
+import { confirmRates, rateDraft } from "./rates.js";
 import { confirm, draftOf, fieldOf, preview } from "./shared.js";
 
 /**
@@ -127,6 +128,12 @@ export const editCommand = async (
   }
   preview(ctx, `Evento original ${summarize(target)}:`, draftOf(target));
   preview(ctx, "Evento corregido (se anula el original y se registra este):", draft);
+  // The corrected line carries its rate like a new one: if it is not the
+  // official one, it asks the same explicit yes (feature 012, block 3).
+  if (!(await confirmRates(ctx, (await rateDraft(ctx, draft)).mismatches))) {
+    ctx.io.out("Cancelado.");
+    return 0;
+  }
   for (const line of await closedNotes(ctx, () =>
     previewCorrection(ctx.deps, id, draft as unknown as Draft<SupportedEvent>, reason),
   )) {

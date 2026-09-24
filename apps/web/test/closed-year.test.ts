@@ -7,7 +7,7 @@
 // and change the settings— can ask, and that a ledger with nothing filed says
 // nothing at all. What the screens do with it belongs to the screen tests.
 
-import { BlobLedgerStore, type LedgerBlob } from "@atlas/adapters/blob";
+import { BlobLedgerStore } from "@atlas/adapters/blob";
 import {
   type Draft,
   decodeLine,
@@ -28,6 +28,7 @@ import {
   closedYearsOfSettings,
 } from "../src/ledger/write.js";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
+import { MemoryBlob } from "./helpers/memory-blob.js";
 
 /** What a comparison that **was** made says moved; it fails loudly if it was not made. */
 const movesOf = (impact: ClosedYearImpact | undefined): readonly MovedFigure[] => {
@@ -39,28 +40,6 @@ const movesOf = (impact: ClosedYearImpact | undefined): readonly MovedFigure[] =
 };
 
 const FILING_ID = "01P0000000000000000000FEED";
-
-class MemoryBlob implements LedgerBlob {
-  readonly label = "memoria";
-  text: string;
-  readonly archives = new Map<string, string>();
-
-  constructor(text: string) {
-    this.text = text;
-  }
-
-  async read(): Promise<Uint8Array> {
-    return new TextEncoder().encode(this.text);
-  }
-
-  async write(bytes: Uint8Array): Promise<void> {
-    this.text = new TextDecoder().decode(bytes);
-  }
-
-  async writeArchive(name: string, bytes: Uint8Array): Promise<void> {
-    this.archives.set(name, new TextDecoder().decode(bytes));
-  }
-}
 
 /** The settings the golden ledger is read with: a filing has to carry them (S13). */
 const goldenSettings = (): Settings =>

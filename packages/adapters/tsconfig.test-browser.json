@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "test",
+    "outDir": "dist-test-browser",
+    "tsBuildInfoFile": "dist-test-browser/tsconfig.test-browser.tsbuildinfo",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": [
+    "test/browser.test.ts",
+    "test/fake-idb.ts",
+    "test/fake-idb.test.ts",
+    "test/fixtures.ts",
+    "test/ledger-store.contract.ts"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.browser.json"
+    },
+    {
+      "path": "./tsconfig.json"
+    },
+    {
+      "path": "../domain"
+    }
+  ]
+}

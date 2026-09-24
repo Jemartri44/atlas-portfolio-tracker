@@ -3,7 +3,6 @@
 // and close), *Privacidad y apariencia*, and the way into the configuration and
 // the verification. On a wide screen, two columns of cards.
 
-import { BrowserLedgerBlob } from "@atlas/adapters/browser";
 import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Icon, type IconName, Notice, Section, Switch } from "../../components/index.js";
@@ -11,10 +10,12 @@ import { formatInstantDate } from "../../format/date.js";
 import { countOf } from "../../format/number.js";
 import { changeLedger } from "../../ledger/actions.js";
 import { toAppError } from "../../ledger/errors.js";
-import { exportLedger, importLedger } from "../../ledger/export.js";
+import { exportLedger } from "../../ledger/export.js";
 import { type BrowserSource, daysSinceExport, sourceLabel } from "../../ledger/source.js";
-import { messageWithLine, store, today } from "../../ledger/state.js";
+import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { ImportControls } from "../libro/ImportControls.jsx";
+import { EcbCard } from "./EcbCard.jsx";
 
 const THEMES = [
   { value: "system", label: "Sistema" },
@@ -67,33 +68,12 @@ export default function AjustesRoute(): JSX.Element {
     setBusy(true);
     setError(undefined);
     try {
-      await exportLedger(new BrowserLedgerBlob());
+      await exportLedger();
       setMessage("Datos exportados. Guarda el archivo donde tengas la copia de seguridad.");
     } catch (failure) {
       setError(toAppError(failure).message);
     } finally {
       setBusy(false);
-    }
-  };
-
-  const onImport = async (event: Event): Promise<void> => {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (file === undefined) {
-      return;
-    }
-    setBusy(true);
-    setError(undefined);
-    try {
-      const events = await importLedger(await file.text());
-      setMessage(
-        `${countOf(events, "movimiento importado", "movimientos importados")}: los datos que había en este navegador se han sustituido.`,
-      );
-    } catch (failure) {
-      setError(messageWithLine(toAppError(failure)));
-    } finally {
-      setBusy(false);
-      input.value = "";
     }
   };
 
@@ -159,19 +139,20 @@ export default function AjustesRoute(): JSX.Element {
                       <Icon name="export" class="icon-sm" />
                       Exportar tus datos
                     </button>
-                    <label class="file-button">
-                      <Icon name="import" class="icon-sm" />
-                      <span>Importar un archivo</span>
-                      <input
-                        type="file"
-                        class="sr-only"
-                        accept=".jsonl,.json,application/x-ndjson,text/plain"
-                        disabled={busy()}
-                        onChange={(event) => void onImport(event)}
-                      />
-                    </label>
                   </div>
-                  <p class="card-note">Importar sustituye lo que haya en este navegador.</p>
+                  <ImportControls
+                    busy={busy()}
+                    setBusy={setBusy}
+                    onError={setError}
+                    onImported={(events) =>
+                      setMessage(
+                        `${countOf(events, "movimiento importado", "movimientos importados")}: los datos que había en este navegador se han sustituido.`,
+                      )
+                    }
+                  />
+                  <p class="card-note">
+                    Importar sustituye lo que haya en este navegador, y antes te pregunta.
+                  </p>
                 </Show>
 
                 <div class="button-row">
@@ -218,6 +199,8 @@ export default function AjustesRoute(): JSX.Element {
               </div>
             </fieldset>
           </Section>
+
+          <EcbCard />
 
           <Section title="Configuración y verificación">
             <ul class="rows">

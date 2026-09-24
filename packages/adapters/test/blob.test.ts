@@ -1,10 +1,9 @@
 // The browser store enters the project with the same level of proof as the file
 // one: it runs the port contract of specs/001-ledger-core (ADR-0019). The bytes
-// live in a `MemoryBlob` here, which is why no browser is needed — the two real
-// handles (`../src/ledger-store/browser/`) are twenty lines each over the same
-// three methods and are verified by hand (prompt §5).
+// live in a `MemoryBlob` here; the real IndexedDB handle runs the same contract
+// over a double of IndexedDB in `browser.test.ts` (feature 012).
 
-import { ArchiveExistsError, ConflictError, ValidationError } from "@atlas/domain";
+import { ArchiveExistsError, ConflictError, sha256Hex, ValidationError } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { BlobArchiveExists, BlobLedgerStore, type LedgerBlob } from "../src/ledger-store/blob.js";
 import { account, deposit, lineOf } from "./fixtures.js";
@@ -26,15 +25,23 @@ class MemoryBlob implements LedgerBlob {
     return this.bytes;
   }
 
-  async write(bytes: Uint8Array): Promise<void> {
-    this.bytes = new Uint8Array(bytes);
-  }
-
-  async writeArchive(name: string, bytes: Uint8Array): Promise<void> {
-    if (this.archives.has(name)) {
-      throw new BlobArchiveExists(name);
+  async update(
+    expectedEtag: string,
+    produce: (current: Uint8Array) => Uint8Array,
+    archiveName?: string,
+  ): Promise<Uint8Array> {
+    if (sha256Hex(this.bytes) !== expectedEtag) {
+      throw new ConflictError();
     }
-    this.archives.set(name, decoder.decode(bytes));
+    const next = produce(this.bytes);
+    if (archiveName !== undefined) {
+      if (this.archives.has(archiveName)) {
+        throw new BlobArchiveExists(archiveName);
+      }
+      this.archives.set(archiveName, decoder.decode(this.bytes));
+    }
+    this.bytes = new Uint8Array(next);
+    return next;
   }
 
   get text(): string {
@@ -123,7 +130,7 @@ describe("BlobLedgerStore", () => {
     const blob = new MemoryBlob(`${lineOf(account)}\n`);
     const store = new BlobLedgerStore(blob);
     const { etag } = await store.load();
-    blob.writeArchive = () => Promise.reject(new Error("disco lleno"));
+    blob.update = () => Promise.reject(new Error("disco lleno"));
     await expect(store.replace([account], etag, "x.jsonl")).rejects.toThrow("disco lleno");
   });
 });

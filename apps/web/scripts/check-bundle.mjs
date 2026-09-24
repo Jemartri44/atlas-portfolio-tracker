@@ -146,8 +146,43 @@ const dist = join(webRoot, "dist");
  * silent), and the horizon of what a write reaches (so the warning of a
  * closed year fires when it must and only then). **The next round that wants
  * to put anything here has to justify it against this line.**
+ *
+ * **Feature 012, block 5 (2026-09-24): measured 73,9 (75.590 bytes plus the
+ * registration of the service worker), ceiling 74,0. For the direction to
+ * review, and to revert on its own if it says no.** The prompt names the lock
+ * and the rule of one live correction as the only things that may grow the
+ * boot; this is neither, and it is said here and in `questions.md` §9. Byte
+ * by byte against block 4 (75.317): the domain chunk **+31** — the database
+ * of the browser goes to version 2 with a store for the drafts, the decision
+ * D8 of the direction, and the upgrade can only run where the database is
+ * opened, which is the boot; with it, an upgrade blocked by another tab is
+ * said apart instead of as «el navegador no permite guardar datos» —; the
+ * entry **+228** — the route `/registrar/borradores` (**+109**, what any lazy
+ * route costs in the table of its chunks) and the place of the counter of
+ * drafts in the frame with its lazy import (**+108**; the prompt allows the
+ * frame to keep the place, the counter itself is lazy and plain DOM, because a
+ * Solid component there moved Solid into a boot chunk of its own, +0,6 KB) —;
+ * and the stylesheet **+14**, the place without a box. **Nothing of the ECB
+ * in the boot**: reading the drafts, counting them and painting the count
+ * arrive after the first screen, and the shape check holds it. The trend:
+ * 72,9 → 73,49 in feature 011, 73,5 → 73,9 in this one.
+ *
+ * **Brought down after the review of PR #75 (2026-09-24): measured 73,69
+ * (75.313 bytes plus 140 of the registration of the service worker), ceiling
+ * 73,8.** The reviewer found what the boot did not need: the whole module of
+ * folders for the one function that says whether the browser has pickers
+ * (−0,17 KB of the domain chunk, `picker.ts` stays), the export and the import
+ * of the ledger (now `@atlas/adapters/transfer`), and the route of the list of
+ * drafts, which the form route serves (−0,10 of the entry). What stays of the
+ * feature in the boot, against block 4: the database in version 2 (D8) and
+ * the place of the counter of drafts in the frame. With the rest of the
+ * review in (the import refused when the ledger changed, the idempotent
+ * confirmation of a draft, the note of a rate not contrasted — all lazy), the
+ * final measure is **73,71: 75.483 bytes, 26 above block 4** (75.457), which
+ * is the new names in the table of lazy chunks of the entry. The margin is the
+ * usual one, a tenth.
  */
-const BOOT_BUDGET_GZIP_BYTES = 73.7 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -346,8 +381,93 @@ const BOOT_BUDGET_GZIP_BYTES = 73.7 * 1024;
  * source maps: **zero modules in more than one, out of 297** — the extra
  * module is `view-models/fiscal/anchor.ts`, split out of `year.ts` to keep it
  * under the 250 lines of the web; it travels in an existing chunk.
+ *
+ * **Feature 012, block 0 (2026-09-24): measured 238,9, ceiling 239,9** —
+ * measured plus one, as every time. The trend, chunk by chunk against
+ * `develop` (237,8): the import of a ledger now asks before replacing one and
+ * can read the console's folder, **+1,6** in a lazy chunk of its own
+ * (`ImportControls`, with the export and the folder reader it pulls), of
+ * which **−1,1** comes back out of the screens that used to carry the export,
+ * the folder writer and the choice of storage (`libro`, `ajustes`, `export`,
+ * `guard`, `verificacion`); the broker's euros beside the ECB figure in the
+ * detail of a movement **+0,4**; the Spanish of the new codes **+0,3**; the
+ * field in the forms and its label **+0,2**; and the domain **+0,3** — which
+ * is **boot**, see below. The boot itself went **down**, 73,5 → 73,4: the web
+ * no longer writes in the folder, and the writer left the boot chunk
+ * (**−0,4**), while the domain took **+108 bytes** for the rule of one live
+ * correction and **+208 bytes** for the validation of `broker_settled_eur`
+ * (measured by taking each out and building again). The direction named the
+ * lock and the rule as the only things that may grow the boot; the
+ * validation of the new field is said here apart, as it asked. Nothing of the
+ * ECB is in the boot, and the shape check below now holds that too.
+ *
+ * **Feature 012, block 3 (2026-09-24): measured 246,8, ceiling 247,8.** The
+ * ECB reaches the web, and all of it lazily: the reading, the resolution, the
+ * proposal and the check of the rates, in a chunk of their own (**+3,0**,
+ * `ecb`); where the web finds the history — the folder of the console, or a
+ * copy imported by hand, the ZIP read with the platform's
+ * `DecompressionStream` — (**+1,6**, `history`); the proposal and the
+ * confirmation in the form (**+1,8**, `EventForm`); the card «Tipos del BCE»
+ * in Ajustes (**+1,4**); and the rest, a few tenths across the chunks that
+ * import them. Chunk by chunk against block 2, with **zero modules in more
+ * than one chunk out of 313**. The boot moves 73,4 → **73,6** without a byte
+ * of the ECB in it (the shape check holds it): the store of the browser, now
+ * shared with the lazy screens, had to be kept in the boot chunk by hand
+ * (`vite.config.ts`), and what is left is compression across the new border.
+ *
+ * **Feature 012, block 4 (2026-09-24): measured 251,2, ceiling 252,2.** The
+ * rates of the ledger checked against the history, in both interfaces and in
+ * the tax report, all of it lazy. Chunk by chunk against block 3: the check
+ * itself and its findings with their facts (**+1,6**, `ecb`); the section
+ * «Tipos del BCE» of the verification, which says «sin contrastar» and never
+ * «sin hallazgos» without a history (**+0,9**); the seven findings of the ECB
+ * in the Spanish catalogue of the web (**+0,5**, `attention`); the notes of
+ * the report on a line whose rate is in doubt, and their Spanish (**+0,6**,
+ * the fiscal chunks and `warnings`); the findings fetched for the fiscal
+ * screen (**+0,4**); and the runtime chunk the bundler adds for the new
+ * dynamic imports (**+0,2**, lazy). The boot moves 73,6 → **73,7**: 41 bytes
+ * of the entry, the table of the new lazy chunks; nothing of the ECB.
+ *
+ * **Feature 012, block 5 (2026-09-24): measured 256,8, ceiling 257,8.** The
+ * drafts of operations whose ECB rate is not published yet, all of it lazy.
+ * Chunk by chunk against block 4: the list «Borradores» (**+2,1**); saving a
+ * draft from the form and recording it from its values (**+0,4** `EventForm`,
+ * **+0,4** the form route); the store of the drafts, the counter of the frame
+ * and the saving, three chunks of their own (**+0,6**, **+0,6**, **+0,3**);
+ * the names of the list, split out of the chunks that shared them (**+0,6**,
+ * with **−0,4** in `prose`); the Spanish of the new errors (**+0,1**); and a
+ * few tenths across the chunks that import them.
+ *
+ * **Feature 012, block 6 (2026-09-24): measured 259,7, ceiling 260,7.** What a
+ * change of `fiscal_date_rule` does to the ECB rates (criterion 25), all of it
+ * lazy. Chunk by chunk against block 5: the question before saving in
+ * «Configuración» and its dialog (**+1,0**, `configuracion`); the proposal of
+ * the correction chain in «Verificación», shown whole with the filed returns
+ * it reaches (**+1,0**, `verificacion`); the rule itself — the lines a change
+ * leaves, the lines to correct and the chain — in the chunk of the ECB
+ * (**+0,7**, `ecb`); the write of the chain (**+0,4**, `rate-corrections`);
+ * and the two chunks of Spanish errors, now one (**−0,2**). The boot does not
+ * move: nothing of it is in the boot, and the shape check holds it.
+ *
+ * **Review of PR #75 (2026-09-24): measured 261,0, ceiling 262,0.** What the
+ * boot sheds does not vanish, it moves to chunks of its own: the folder of
+ * the disk and the export and import of the ledger (`folder`, `transfer`), and
+ * the list of drafts behind the form route instead of a route of its own —
+ * each a few hundred bytes of chunk frame and preload table (**+0,3**) —, and
+ * the new note of a rate not contrasted and the import refused when the
+ * ledger changed under it (**+0,1**). Final measure with the whole review in:
+ * **261,7** (the idempotent confirmation of a draft and the mutants' seams,
+ * +0,7 across `EventForm`, `borradores` and `write-step`). The direction accepted the growth of
+ * the feature (22,9 KB of new screens and ECB domain, no module in two
+ * chunks), with the breakdown written here and the ratchet at the close.
+ *
+ * **Third pass of the review of PR #75 (2026-09-24): measured 262,1, ceiling
+ * 263,0.** Confirming a draft through the domain with the id stamped before
+ * writing, conditionally, and refusing a draft that vanished instead of
+ * recording it as new (+0,4 across `drafts`, the store of drafts and the
+ * Spanish of `draft_changed`), all lazy. The boot does not move (73,7).
  */
-const TOTAL_BUDGET_GZIP_BYTES = 237.9 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 263.0 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -461,6 +581,28 @@ const bootAssets = () => {
 const LAZY_ONLY = [
   { path: "/packages/domain/src/tax/", what: "el motor fiscal" },
   { path: "/packages/domain/src/informative/", what: "los modelos informativos" },
+  // Feature 012, decision (r): **nothing of the ECB on the boot path**, the
+  // history, its reading, the proposal, the findings, the drafts, the note and
+  // the local configuration. If any of it shows up here, the build stops.
+  { path: "/packages/domain/src/ecb/", what: "los tipos del BCE" },
+  { path: "/packages/domain/src/ecb.ts", what: "la puerta del BCE" },
+  { path: "/packages/domain/src/config/", what: "la configuración local" },
+  // Block 5: the drafts, their store and their counter. The frame keeps only
+  // the place of the counter; reading and painting it arrive later.
+  { path: "/packages/adapters/src/ledger-store/browser/drafts.ts", what: "los borradores" },
+  { path: "/src/ledger/draft-store.ts", what: "los borradores" },
+  { path: "/src/ledger/drafts.ts", what: "los borradores" },
+  { path: "/src/shell/draft-counter.ts", what: "el contador de borradores" },
+  { path: "/src/routes/registrar/borradores.tsx", what: "la lista de borradores" },
+  // Review of PR #75: a folder of the disk and the export and import of the
+  // ledger are not the boot's either.
+  {
+    path: "/packages/adapters/src/ledger-store/browser/folder.ts",
+    what: "el acceso a una carpeta",
+  },
+  { path: "/packages/adapters/src/ledger-store/browser/transfer.ts", what: "exportar e importar" },
+  // Block 6: the correction chain of the rates after a change of rule.
+  { path: "/src/ledger/rate-corrections.ts", what: "la corrección de los tipos del BCE" },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */

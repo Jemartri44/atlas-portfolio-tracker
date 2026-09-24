@@ -171,7 +171,14 @@ describe("a write that reaches a filed return", () => {
     choose(host, "fdr-stock", "value_date");
     await press(host, "Guardar configuración");
     await settle(60);
-    const dialog = [...host.querySelectorAll("dialog")].find((node) => node.hasAttribute("open"));
+    const open = () =>
+      [...host.querySelectorAll("dialog")].find((node) => node.hasAttribute("open"));
+    // First the question about the ECB rates of the lines whose fiscal date
+    // moves (feature 012, block 6), then the one about the filed return.
+    expect(text(open())).toContain("Este cambio deja tipos del BCE de otra fecha");
+    await press(open() as HTMLElement, "Guardar de todas formas");
+    await settle(60);
+    const dialog = open();
     expect(text(dialog)).toContain("Afecta a la Renta de 2027");
     expect(text(dialog)).toContain("Puede que toque presentar una complementaria");
   });

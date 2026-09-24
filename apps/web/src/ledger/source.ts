@@ -1,21 +1,23 @@
 // Where the ledger comes from, and what this browser can actually offer.
 //
-// Measured, not assumed (research.md §4): the File System Access API exists
-// only in Chrome and Edge on the desktop — **not in any mobile browser** — so
-// on the phone, which is the daily device, the ledger always lives in the
-// browser and the export reminder is the only safety net (decision (l)).
+// **The ledger of the web always lives in the browser** (feature 012). Until
+// then, on a desktop with the File System Access API, the web wrote the same
+// `ledger.jsonl` as the console; it no longer does, because the browser cannot
+// take the folder's lock exclusively and two writers could overwrite each
+// other's line (decision of the direction; `specs/012-ecb-reference-rates/
+// questions.md` §1 and §8). The folder can still be **linked for reading**, on
+// the desktop only (research.md §4 of feature 006): to import the console's
+// ledger and to read the ECB history. So the export reminder is the safety net
+// everywhere, not only on the phone.
 
 import { supportsDirectoryPicker } from "@atlas/adapters/browser";
 
+/**
+ * What a session remembers. `directory` is only ever **read**, from a session
+ * of before feature 012: it is how the boot knows to say that the web no longer
+ * writes in the folder instead of opening an empty ledger in silence.
+ */
 export type LedgerSourceKind = "directory" | "browser";
-
-export interface DirectorySource {
-  kind: "directory";
-  /** Folder the user chose, to show it. */
-  directoryName: string;
-  fileName: string;
-  permission: "granted" | "prompt" | "denied";
-}
 
 export interface BrowserSource {
   kind: "browser";
@@ -25,10 +27,10 @@ export interface BrowserSource {
   persisted: boolean;
 }
 
-export type LedgerSource = DirectorySource | BrowserSource;
+export type LedgerSource = BrowserSource;
 
-/** Which paths this browser can offer, so the interface never shows a dead button. */
-export const canUseDirectory = (): boolean => supportsDirectoryPicker();
+/** Whether this browser can link a folder to read, so the interface never shows a dead button. */
+export const canLinkFolder = (): boolean => supportsDirectoryPicker();
 
 const KEY = "atlas.source";
 
@@ -46,7 +48,7 @@ export const rememberedKind = (): LedgerSourceKind | undefined => {
   return value === "directory" || value === "browser" ? value : undefined;
 };
 
-export const rememberKind = (kind: LedgerSourceKind): void => {
+export const rememberKind = (kind: "browser"): void => {
   try {
     storage()?.setItem(KEY, kind);
   } catch {
@@ -77,18 +79,12 @@ export const daysSinceExport = (source: BrowserSource, today: string): number | 
 
 /** Whether the export reminder is due: never exported, or more than a week ago. */
 export const exportIsOverdue = (source: LedgerSource, today: string): boolean => {
-  if (source.kind !== "browser") {
-    return false;
-  }
   const days = daysSinceExport(source, today);
   return days === undefined || days > EXPORT_REMINDER_DAYS;
 };
 
 /** Where the ledger is, written in full: the settings screen has the room. */
-export const sourceLabel = (source: LedgerSource): string =>
-  source.kind === "directory"
-    ? `${source.fileName} · ${source.directoryName}`
-    : "Almacenamiento del navegador";
+export const sourceLabel = (_source: LedgerSource): string => "Almacenamiento del navegador";
 
 /**
  * The same thing in as few words as possible, for the chip of the status bar
@@ -97,5 +93,4 @@ export const sourceLabel = (source: LedgerSource): string =>
  * a third of the width (review of 2026-09-18). The full sentence stays one tap
  * away, in the chip's `title` and in Ajustes.
  */
-export const sourceShortLabel = (source: LedgerSource): string =>
-  source.kind === "directory" ? source.fileName : "Navegador";
+export const sourceShortLabel = (_source: LedgerSource): string => "Navegador";

@@ -11,32 +11,28 @@ import type { EventPreview, LedgerEvent, LedgerState } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
-import { Field } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
-import { countOf } from "../../format/number.js";
-import { toAppError } from "../../ledger/errors.js";
-import type { AppError } from "../../ledger/state.js";
 import { today } from "../../ledger/state.js";
-import { correct, recordDraft } from "../../ledger/write.js";
 import { GRID, mediaQuery } from "../../shell/media.js";
 import type { EventFormSpec, FormValues } from "../../view-models/forms/index.js";
 import {
   errorsAfterEdit,
-  fieldErrorOf,
   initialValues,
-  inputErrors,
   missingRequired,
   missingSentence,
   toDraft,
 } from "../../view-models/forms/index.js";
 import { isBucketAccount } from "../../view-models/options.js";
-import { doneUrl } from "../movimientos/Rectified.jsx";
 import { DuplicateDialog } from "./DuplicateDialog.jsx";
 import { Effect } from "./Effect.jsx";
-import { FormActions, revealField } from "./FormActions.jsx";
+import { FormActions } from "./FormActions.jsx";
 import { FormFields } from "./FormFields.jsx";
-import { Reloaded, ThesisFirst } from "./FormNotices.jsx";
+import { CorrectionReason, dependentsSentence, Reloaded, ThesisFirst } from "./FormNotices.jsx";
+import { useFormProblems } from "./form-problems.js";
 import { previewStep } from "./preview-step.js";
+import { RateHint } from "./RateNotes.jsx";
+import { useFormRates } from "./rates.js";
+import { draftStep, writeStep } from "./write-step.js";
 
 interface EventFormProps {
   spec: EventFormSpec;
@@ -45,6 +41,8 @@ interface EventFormProps {
   events?: readonly LedgerEvent[];
   /** Correcting an existing event instead of recording a new one. */
   correcting?: { id: string; values: FormValues };
+  /** Recording a draft (block 5): its values, the rate left for the history to propose. */
+  fromDraft?: { id: string; values: FormValues } | undefined;
 }
 
 type Step = "form" | "preview";
@@ -53,7 +51,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const navigate = useNavigate();
   const wide = mediaQuery(GRID);
   const [values, setValues] = createSignal<FormValues>(
-    props.correcting?.values ?? initialValues(props.spec, today()),
+    props.correcting?.values ?? props.fromDraft?.values ?? initialValues(props.spec, today()),
   );
   const [step, setStep] = createSignal<Step>("form");
   // What the user typed, by field: in the draft and not in the fields, which a
@@ -62,14 +60,19 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const revealed = (name: string): boolean => props.correcting === undefined || typed().has(name);
   const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
   const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
-  // A refusal about one field goes under it; the rest, next to the button.
-  const [fieldErrors, setFieldErrors] = createSignal<Record<string, string>>({});
-  const [problem, setProblem] = createSignal<string | undefined>(undefined);
-  // The whole error of a write, with the button that fixes it (inventory V6).
-  const [failure, setFailure] = createSignal<AppError | undefined>(undefined);
+  const { fieldErrors, setFieldErrors, problem, setProblem, failure, setFailure, readable, place } =
+    useFormProblems(props.spec.fields);
   const [reason, setReason] = createSignal("");
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
   const [conflict, setConflict] = createSignal(false);
+  const rates = useFormRates({
+    spec: props.spec,
+    state: props.state,
+    values,
+    setValues,
+    typed,
+    correcting: props.correcting !== undefined,
+  });
 
   /** Why "Ver el efecto" cannot be pressed yet, said next to it. */
   const blocked = (): string | undefined =>
@@ -94,26 +97,14 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     }
   };
 
-  const showFieldErrors = (errors: Record<string, string>): void => {
-    setFieldErrors(errors);
-    const first = props.spec.fields.find((field) => errors[field.name] !== undefined);
-    if (first !== undefined) {
-      revealField(`f-${first.name}`);
-    }
-  };
-
   const onPreview = async (): Promise<void> => {
-    setProblem(undefined);
-    setFailure(undefined);
-    const unreadable = inputErrors(props.spec.fields, values());
-    if (Object.keys(unreadable).length > 0) {
-      showFieldErrors(unreadable);
+    if (!readable(values())) {
       return;
     }
-    setFieldErrors({});
+    rates.check(values());
     try {
       const step = await previewStep(
-        toDraft(props.spec, values()),
+        toDraft(props.spec, values(), props.state),
         props.correcting,
         reason().trim(),
       );
@@ -124,12 +115,19 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
         window.scrollTo?.({ top: 0 });
       }
     } catch (refusal) {
-      const onField = fieldErrorOf(refusal, props.spec.fields, values());
-      if (onField === undefined) {
-        setProblem(toAppError(refusal).message);
-      } else {
-        showFieldErrors({ [onField.field]: onField.message });
-      }
+      place(refusal, values());
+    }
+  };
+
+  /** Keeps it as a draft, without a rate: the ECB has not published it yet (block 5). */
+  const onDraft = async (): Promise<void> => {
+    if (!readable(values())) {
+      return;
+    }
+    try {
+      navigate(await draftStep(toDraft(props.spec, values(), props.state), rates.web()));
+    } catch (refusal) {
+      place(refusal, values());
     }
   };
 
@@ -137,17 +135,17 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     setProblem(undefined);
     setFailure(undefined);
     setDuplicate(undefined);
-    const draft = toDraft(props.spec, values());
-    const result =
-      props.correcting === undefined
-        ? await recordDraft(draft, { confirmDuplicate })
-        : await correct(props.correcting.id, draft, reason().trim(), { confirmDuplicate });
+    if (!rates.cleared()) {
+      return;
+    }
+    const result = await writeStep(
+      toDraft(props.spec, values(), props.state),
+      props,
+      reason().trim(),
+      confirmDuplicate,
+    );
     if (result.ok) {
-      // To the movement written, with what was done and, for a past tax year,
-      // the warning: the reload that follows the write cannot take them away.
-      const priorYear = "priorYear" in result.value && result.value.priorYear;
-      const done = props.correcting === undefined ? "registrado" : "corregido";
-      navigate(doneUrl(result.value.event.id, done, priorYear));
+      navigate(result.value);
       return;
     }
     if (result.failure.kind === "duplicate") {
@@ -160,9 +158,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       return;
     }
     if (result.failure.kind === "dependents") {
-      setProblem(
-        `${countOf(result.failure.affected.length, "movimiento posterior depende", "movimientos posteriores dependen")} de este: rectifícalos antes.`,
-      );
+      setProblem(dependentsSentence(result.failure.affected.length));
       return;
     }
     setFailure(result.failure.error);
@@ -191,18 +187,18 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
               revealed={revealed}
               onTyped={(name) => setTyped(new Set([...typed(), name]))}
             />
+            <RateHint
+              rates={rates}
+              currency={values().currency ?? ""}
+              onDraft={
+                props.correcting === undefined && props.fromDraft === undefined
+                  ? () => void onDraft()
+                  : undefined
+              }
+            />
 
             <Show when={props.correcting !== undefined}>
-              <Field
-                id="correct-reason"
-                kind="text"
-                label="Motivo de la rectificación"
-                required
-                hint="Se anula el original y se registra el corregido; el motivo queda registrado."
-                value={reason()}
-                onInput={setReason}
-                class="full"
-              />
+              <CorrectionReason value={reason()} onInput={setReason} />
             </Show>
 
             <FormActions
@@ -230,6 +226,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
           problem={problem()}
           failure={failure()}
           confirmLabel={props.correcting === undefined ? "Registrar" : "Rectificar"}
+          rates={rates}
           closedYears={closedYears()}
           onBack={() => setStep("form")}
           onConfirm={() => void onConfirm()}

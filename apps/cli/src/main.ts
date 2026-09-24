@@ -2,7 +2,17 @@
 // atlas — command-line interface over a local ledger.jsonl (specs/001-ledger-core/contracts/cli.md).
 
 import { createInterface } from "node:readline/promises";
-import { FileLedgerStore, systemClock, webCryptoRandom } from "@atlas/adapters";
+import {
+  EcbDownloadFailed,
+  EcbHistoryDamaged,
+  FileLedgerStore,
+  LedgerLockedError,
+  LockLostError,
+  readLocalConfig,
+  sweepOrphanTemporaries,
+  systemClock,
+  webCryptoRandom,
+} from "@atlas/adapters";
 import {
   ConflictError,
   DependentEventsError,
@@ -11,6 +21,7 @@ import {
   SchemaTooNewError,
   type UseCaseDeps,
 } from "@atlas/domain";
+import type { FxRateSource } from "@atlas/domain/ecb";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
 import { backupCommand } from "./commands/backup.js";
@@ -18,9 +29,12 @@ import { bucketCommand, netWorthCommand } from "./commands/bucket.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
 import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
+import { draftCommand, pendingDraftsNote } from "./commands/draft.js";
 import { exportCommand } from "./commands/export.js";
 import { filedCommand } from "./commands/filed.js";
+import { fxCommand } from "./commands/fx.js";
 import { m720Command, m721Command } from "./commands/informative.js";
+import { lockCommand } from "./commands/lock.js";
 import { contributeCommand, costsCommand, weightsCommand } from "./commands/portfolio.js";
 import {
   cashCommand,
@@ -37,6 +51,7 @@ import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
+import { describeLock, LOCK_LOST, remedyFor } from "./output/lock.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 
 export const COMMANDS: Record<string, Command> = {
@@ -71,6 +86,9 @@ export const COMMANDS: Record<string, Command> = {
   synth: synthCommand,
   compact: compactCommand,
   backup: backupCommand,
+  lock: lockCommand,
+  fx: fxCommand,
+  draft: draftCommand,
 };
 
 /**
@@ -112,6 +130,9 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   synth: 1,
   compact: 1,
   backup: 1,
+  lock: { show: 2, break: 2 },
+  fx: { update: 2, status: 2, correct: 2 },
+  draft: { list: 2, confirm: 3, discard: 3 },
 };
 
 /** Refuses the first word a command does not read. */
@@ -127,7 +148,7 @@ const assertArity = (positionals: readonly string[]): void => {
   }
 };
 
-export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--accept-invalid] [--json] <comando> …
+export const USAGE = `uso: atlas [--ledger <ruta>] [--yes] [--confirm-duplicate] [--confirm-fx-rate] [--accept-invalid] [--json] <comando> …
 
 comandos:
   account add|update|list        asset add|update|list        settings set|show
@@ -145,7 +166,12 @@ comandos:
   transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   backup --to <directorio>
-  compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada`;
+  compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada
+  lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición
+  fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor
+  fx correct [--reason …]        corrige los tipos que no son los de su fecha fiscal (tras cambiar fiscal_date_rule)
+  add … --draft                  guarda como borrador una operación cuyo tipo del BCE aún no se ha publicado
+  draft list|confirm <id>|discard <id>   los borradores: no cuentan en ninguna cifra hasta registrarlos`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
@@ -175,6 +201,31 @@ export const run = async (
   argv: readonly string[],
   io: Io,
   compose: (ledgerPath: string) => UseCaseDeps = composeDeps,
+  /** The source of the ECB history; replaced in tests, which never touch the network. */
+  fxSource?: () => FxRateSource,
+): Promise<number> => {
+  let remind: string | undefined;
+  const code = await dispatch(argv, io, compose, fxSource, (path) => {
+    remind = path;
+  });
+  // Said after every command, whatever it did, failures included: a draft
+  // nobody remembers is an operation that never reaches the ledger.
+  if (remind !== undefined) {
+    const note = await pendingDraftsNote(remind);
+    if (note !== undefined) {
+      io.err(note);
+    }
+  }
+  return code;
+};
+
+const dispatch = async (
+  argv: readonly string[],
+  io: Io,
+  compose: (ledgerPath: string) => UseCaseDeps,
+  fxSource: (() => FxRateSource) | undefined,
+  /** Where the reminder of pending drafts looks, once a command is going to run. */
+  remindAt: (ledgerPath: string) => void,
 ): Promise<number> => {
   try {
     const { positionals, flags } = parseArgs(argv);
@@ -195,13 +246,64 @@ export const run = async (
       ledgerPath,
       yes: booleanFlag(flags, "yes"),
       confirmDuplicate: booleanFlag(flags, "confirm-duplicate"),
+      confirmFxRate: booleanFlag(flags, "confirm-fx-rate"),
       acceptInvalid: booleanFlag(flags, "accept-invalid"),
       json: booleanFlag(flags, "json"),
+      ...(fxSource === undefined ? {} : { fxSource }),
     };
+    if (name !== "draft") {
+      remindAt(ledgerPath);
+    }
+    await sweepTemporaries(io, ledgerPath);
     return await command(ctx, positionals, flags);
   } catch (error) {
+    if (error instanceof LedgerLockedError) {
+      return reportLocked(io, error);
+    }
+    if (error instanceof EcbDownloadFailed) {
+      io.err(
+        `Error: no se ha podido descargar el histórico del BCE. El ZIP: ${error.zip}. La API: ${error.api}. No se ha tocado el histórico que había.`,
+      );
+      return EXIT.domain;
+    }
+    if (error instanceof EcbHistoryDamaged) {
+      io.err(
+        `Error: reference/ecb/${error.file} no es el archivo que registra su manifiesto: alguien lo ha cambiado. No se ha usado; bórralo junto con reference/ecb/manifest.json y descárgalo otra vez con \`atlas fx update\`.`,
+      );
+      return EXIT.domain;
+    }
     return report(io, error);
   }
+};
+
+/**
+ * The temporaries of a write killed before its rename, removed at the start of
+ * every command — only when nobody holds the lock (review of PR #75). Best
+ * effort: a folder that cannot be swept must not stop the command.
+ */
+const sweepTemporaries = async (io: Io, ledgerPath: string): Promise<void> => {
+  try {
+    const removed = await sweepOrphanTemporaries(ledgerPath);
+    if (removed.length > 0) {
+      io.err(
+        `Se ${removed.length === 1 ? "ha quitado un fichero temporal" : `han quitado ${removed.length} ficheros temporales`} de una escritura interrumpida (${removed.join(", ")}): el libro no se había tocado.`,
+      );
+    }
+  } catch {
+    // Nothing to say: the next write writes its own temporary anyway.
+  }
+};
+
+/** The lock of the folder is held: who, since when, and the two ways out. */
+const reportLocked = async (io: Io, error: LedgerLockedError): Promise<number> => {
+  const { lock_stale_minutes } = await readLocalConfig(error.folder).catch(() => ({
+    lock_stale_minutes: undefined,
+  }));
+  io.err(
+    `Error: ${describeLock(error.info, new Date(), lock_stale_minutes ?? Number.POSITIVE_INFINITY)}`,
+  );
+  io.err(remedyFor(error.info));
+  return EXIT.locked;
 };
 
 const report = (io: Io, error: unknown): number => {
@@ -233,6 +335,10 @@ const report = (io: Io, error: unknown): number => {
   if (error instanceof DomainError) {
     io.err(`Error (${error.code}): ${describeError(error)}`);
     return EXIT.domain;
+  }
+  if (error instanceof LockLostError) {
+    io.err(`Error: ${LOCK_LOST}`);
+    return EXIT.locked;
   }
   throw error;
 };
