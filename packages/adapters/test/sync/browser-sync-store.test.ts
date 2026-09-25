@@ -132,6 +132,18 @@ describe("step 6 in the browser", () => {
     expect(parseHeld(await web.held())).toEqual([...first, ...second]);
   });
 
+  it("refuses an archive name that is not a plain file name, writing nothing", async () => {
+    const { web } = await scenario();
+    const state = await web.sync.read();
+    const before = new Map(web.db.store(LEDGER_STORE));
+    for (const bad of ["", "a/b.jsonl", "a\\b.jsonl"]) {
+      await expect(
+        web.sync.commit(state, { ledger: { replace: [], archive: bad }, marker: markerFor([], 0) }),
+      ).rejects.toMatchObject({ code: "invalid_archive_name" });
+    }
+    expect(new Map(web.db.store(LEDGER_STORE))).toEqual(before);
+  });
+
   it("writes nothing at all when its archive already exists", async () => {
     const { web } = await scenario();
     const state = await web.sync.read();

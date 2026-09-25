@@ -19,6 +19,7 @@ import {
   type LedgerSchema,
   rawLinesText,
   sha256Hex,
+  ValidationError,
 } from "@atlas/domain";
 import type { DeviceChange, DeviceState, SyncStateStore } from "@atlas/domain/sync";
 import {
@@ -158,6 +159,20 @@ export class BrowserSyncStore implements SyncStateStore {
   async commit(expected: DeviceState, change: DeviceChange): Promise<void> {
     // The lines are checked before the transaction opens: nothing but
     // IndexedDB may sit between its read and its write.
+    // The archive name is checked as every store of the ledger checks it
+    // (review of PR #83): never a path.
+    if (change.ledger !== undefined && "replace" in change.ledger) {
+      const name = change.ledger.archive;
+      if (name.length === 0 || /[/\\]/.test(name)) {
+        throw new ValidationError(
+          "invalid_archive_name",
+          "archive name must be a plain file name",
+          {
+            archive_name: name,
+          },
+        );
+      }
+    }
     const ledgerText =
       change.ledger === undefined
         ? undefined

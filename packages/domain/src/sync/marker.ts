@@ -9,7 +9,6 @@
 // held back (plan §10.1): a line of the ledger does not keep them.
 
 import { ValidationError } from "../errors.js";
-import { isRecord } from "../guards.js";
 import { prefixSha256 } from "./lines.js";
 
 export const SYNC_FORMAT = 1;
@@ -50,15 +49,23 @@ const isStringList = (value: unknown): value is string[] =>
  * this code knows is unreadable, and unreadable is the safe side (compact and
  * `acceptInvalid` refuse; a sync rebuilds it).
  */
-export const parseMarker = (text: string): SyncMarker => {
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * The one reading of a marker: the marker, or why it is not one. Without
+ * imports, so that the web can ask «configured?» with **the same rule** as
+ * everybody else without loading the errors of the domain (review of PR #83).
+ */
+const readMarker = (text: string): SyncMarker | "json" | "format" | "fields" | "confirmations" => {
   let value: unknown;
   try {
     value = JSON.parse(text);
   } catch {
-    throw unreadable("json");
+    return "json";
   }
-  if (!isRecord(value) || value.sync_format !== SYNC_FORMAT) {
-    throw unreadable("format");
+  if (!isObject(value) || value.sync_format !== SYNC_FORMAT) {
+    return "format";
   }
   const { status, synced_lines, synced_sha256, confirmations } = value;
   if (
@@ -68,27 +75,30 @@ export const parseMarker = (text: string): SyncMarker => {
     synced_lines < 0 ||
     typeof synced_sha256 !== "string" ||
     !/^[0-9a-f]{64}$/.test(synced_sha256) ||
-    !Array.isArray(confirmations)
+    !Array.isArray(confirmations) ||
+    ["remote_etag", "last_sync_at", "disabled_at"].some(
+      (key) => value[key] !== undefined && typeof value[key] !== "string",
+    )
   ) {
-    throw unreadable("fields");
+    return "fields";
   }
-  for (const key of ["remote_etag", "last_sync_at", "disabled_at"]) {
-    if (value[key] !== undefined && typeof value[key] !== "string") {
-      throw unreadable("fields");
-    }
+  const confirmationsOk = confirmations.every(
+    (entry: unknown) =>
+      isObject(entry) &&
+      typeof entry.line_sha256 === "string" &&
+      isStringList(entry.duplicates) &&
+      isStringList(entry.closed) &&
+      typeof entry.confirmed_at === "string",
+  );
+  return confirmationsOk ? (value as unknown as SyncMarker) : "confirmations";
+};
+
+export const parseMarker = (text: string): SyncMarker => {
+  const read = readMarker(text);
+  if (typeof read === "string") {
+    throw unreadable(read);
   }
-  for (const entry of confirmations) {
-    if (
-      !isRecord(entry) ||
-      typeof entry.line_sha256 !== "string" ||
-      !isStringList(entry.duplicates) ||
-      !isStringList(entry.closed) ||
-      typeof entry.confirmed_at !== "string"
-    ) {
-      throw unreadable("confirmations");
-    }
-  }
-  return value as unknown as SyncMarker;
+  return read;
 };
 
 export const serializeMarker = (marker: SyncMarker): string => `${JSON.stringify(marker)}\n`;
@@ -144,12 +154,10 @@ export const syncConfigured = (presence: SyncPresence): boolean =>
  * `disabled` is configured; unreadable is configured too.
  */
 export const syncConfiguredByText = (present: boolean, markerText: string | undefined): boolean => {
-  if (!present) {
-    return false;
+  if (!present || markerText === undefined) {
+    return present;
   }
-  try {
-    return (JSON.parse(markerText ?? "null") as { status?: unknown } | null)?.status !== "disabled";
-  } catch {
-    return true;
-  }
+  const read = readMarker(markerText);
+  // Unreadable is configured, exactly as `syncConfigured` says it: the safe side.
+  return typeof read === "string" || read.status !== "disabled";
 };

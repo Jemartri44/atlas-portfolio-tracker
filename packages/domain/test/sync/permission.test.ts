@@ -74,6 +74,10 @@ describe("the refusals of a synced device", () => {
     expect(syncConfiguredByText(true, undefined)).toBe(true);
     expect(syncConfiguredByText(true, "{")).toBe(true);
     expect(syncConfiguredByText(true, "null")).toBe(true);
+    // Not a marker, although it says `disabled`: unreadable, so configured,
+    // exactly as `syncConfigured` reads it (review of PR #83).
+    expect(syncConfiguredByText(true, '{"status":"disabled"}')).toBe(true);
+    expect(syncConfigured({ present: true, marker: "unreadable" })).toBe(true);
     expect(syncConfiguredByText(true, serializeMarker(markerFor([], 0)))).toBe(true);
     expect(
       syncConfiguredByText(true, serializeMarker({ ...markerFor([], 0), status: "disabled" })),

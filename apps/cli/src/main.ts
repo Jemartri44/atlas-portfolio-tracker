@@ -298,9 +298,19 @@ const dispatch = async (
 const sweepTemporaries = async (io: Io, ledgerPath: string): Promise<void> => {
   try {
     const removed = await sweepOrphanTemporaries(ledgerPath);
-    if (removed.length > 0) {
+    // Said as it is (review of PR #83): a temporary of the ledger means the
+    // ledger was not replaced; one of `sync/` means a sync was cut, and the
+    // ledger may have been rewritten already — the next sync recognises it.
+    const ledger = removed.filter((name) => !name.startsWith("sync"));
+    const sync = removed.filter((name) => name.startsWith("sync"));
+    if (ledger.length > 0) {
       io.err(
-        `Se ${removed.length === 1 ? "ha quitado un fichero temporal" : `han quitado ${removed.length} ficheros temporales`} de una escritura interrumpida (${removed.join(", ")}): el libro no se había tocado.`,
+        `Se ${ledger.length === 1 ? "ha quitado un fichero temporal" : `han quitado ${ledger.length} ficheros temporales`} de una escritura interrumpida (${ledger.join(", ")}): el libro no se había tocado.`,
+      );
+    }
+    if (sync.length > 0) {
+      io.err(
+        `Se ${sync.length === 1 ? "ha quitado un fichero temporal" : `han quitado ${sync.length} ficheros temporales`} de una sincronización interrumpida (${sync.join(", ")}): el libro pudo quedar ya reescrito, y la próxima sincronización lo reconoce sin perder nada.`,
       );
     }
   } catch {
