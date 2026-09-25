@@ -349,3 +349,22 @@ describe("architecture (015): nothing of the access on the boot path", () => {
     }
   });
 });
+
+describe("architecture (015): the service worker leaves the API alone", () => {
+  /**
+   * Found by looking at the screen (E1): the PWA answered **every** navigation
+   * with `index.html` (`navigateFallback`), so `GET /api/auth/login` and the
+   * return from Google never reached the Lambda once the service worker was
+   * installed — the SPA painted «Aquí no hay nada». A navigation under
+   * `/api/` is the API's, always.
+   */
+  it("never answers a navigation under /api/ with the shell of the SPA", () => {
+    const config = readFileSync(join(repoRoot, "apps", "web", "vite.config.ts"), "utf8");
+    expect(config).toContain("navigateFallbackDenylist: [/^\\/api\\//]");
+    const script = readFileSync(
+      join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
+      "utf8",
+    );
+    expect(script).toContain("navigateFallbackDenylist");
+  });
+});

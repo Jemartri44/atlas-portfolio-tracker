@@ -90,6 +90,11 @@ export default defineConfig(({ command }) => ({
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
         // The ledger lives on the device: nothing to fetch, nothing to fall back to.
         navigateFallback: "index.html",
+        // Except under /api/: the sign-in (`/api/auth/login`) and the return
+        // from Google are navigations the Lambda must answer. Found on the
+        // screen in feature 015: with the service worker installed, the SPA
+        // painted «Aquí no hay nada» instead of going to Google.
+        navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
       },
       devOptions: { enabled: false },

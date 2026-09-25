@@ -806,6 +806,20 @@ const modulesOf = (name) => {
 
 const kb = (value) => `${(value / 1024).toFixed(1)} KB`;
 
+/**
+ * Feature 015: the service worker answers every navigation with the shell of
+ * the SPA (`navigateFallback`) **except under `/api/`**, which is the API's:
+ * the start of a sign-in and the return from Google. Checked on the output,
+ * so a change of the plugin that drops `navigateFallbackDenylist` stops the
+ * build instead of breaking the sign-in of an installed PWA.
+ */
+const serviceWorker = readFileSync(join(dist, "sw.js"), "utf8");
+if (
+  !/NavigationRoute\([^)]*\),\s*\{\s*denylist:\s*\[\s*\/\^\\\/api\\\/\/\s*\]/.test(serviceWorker)
+) {
+  problems.push("sw.js: la navegación a /api/ no está excluida del navigateFallback de la SPA");
+}
+
 const boot = bootAssets();
 const gzipBoot = sizes
   .filter((entry) => boot.has(entry.name))
