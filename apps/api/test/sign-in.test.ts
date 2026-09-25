@@ -337,8 +337,14 @@ describe("the device of the web (R20, R21)", () => {
     ]) {
       api.jar.clear();
       await api.signIn(ALLOWED, presented);
-      const assigned = JSON.parse((await api.call("GET", "/api/session")).body).device_id;
+      const view = await api.call("GET", "/api/session");
+      expect(view.statusCode).toBe(200);
+      const assigned = JSON.parse(view.body).device_id as string;
       expect(assigned).not.toBe(presented);
+      expect(JSON.parse(api.s3.text(`sync/devices/${assigned}.json`) as string)).toMatchObject({
+        type: "web",
+        state: "active",
+      });
     }
     expect(api.s3.text(`sync/devices/${forgotten}.json`)).toContain('"forgotten"');
     expect(api.s3.calls.some((call) => call.includes(".."))).toBe(false);
