@@ -205,7 +205,7 @@ La feature 014 (PR #83) construyó el núcleo de esta ADR sin desplegar: el caso
 
 **Lo que encontró el bloque 0 sobre IndexedDB** (`questions.md` §1.1 y §1.2). La durabilidad de una transacción es una pista del navegador, y **ningún navegador asegura en disco por defecto**: Chromium usa `relaxed` desde la versión 121 o posterior (la versión exacta no está verificada), Firefox usa SQLite con `synchronous = NORMAL` y WebKit solo hace el *checkpoint* completo con `strict`. Los tres respetan `durability: "strict"`, así que la transacción que escribe lo retenido lo pide (`BrowserSyncStore.commit`). La atomicidad de una transacción que escribe varias claves se probó en Chromium: abortar a mitad, fallar a mitad y matar el navegador a mitad dejaron las claves como estaban, 20 veces de 20. Lo que no se probó es un corte de corriente.
 
-**«Sincronización configurada»** (D-Q6): existe `sync/`, o en la web alguna clave `sync:*`, **y** el marcador no dice `disabled`. Un marcador ausente o ilegible cuenta como configurada. Desactivar deja el marcador con `status: "disabled"` y conserva lo retenido. Detalle y consecuencia para `acceptInvalid`, en la nota del mismo día de ADR-0015.
+**«Sincronización configurada»** (D-Q6, con su enmienda del 2026-09-25 para la web): existe `sync/`, o en la web alguna clave `sync:*`, **y** el marcador no dice `disabled`. Un marcador ausente o ilegible cuenta como configurada. Desactivar deja el marcador con `status: "disabled"` y conserva lo retenido. Detalle y consecuencia para `acceptInvalid`, en la nota del mismo día de ADR-0015.
 
 **Lo que decidieron las revisiones:**
 
