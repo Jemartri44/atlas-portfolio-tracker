@@ -83,6 +83,8 @@ Hazlo ahora y repítelo de vez en cuando (por ejemplo, cuando llegue el correo m
 2. Repasa la lista. Es normal ver varias sesiones en el mismo dispositivo.
 3. En cualquiera que no reconozcas, o que ya no uses: púlsalo y **Cerrar sesión**. Si una no te cuadra, cambia además la contraseña.
 
+> **Con Atlas ya desplegado, cerrar la sesión en Google no cierra Atlas.** Atlas tiene su propia sesión, y quien haya entrado en tu cuenta de Google puede haber sacado un token de consola que vale hasta 90 días. Si sospechas que alguien ha usado tu cuenta, sigue el orden de ADR-0033, punto 8: **quitar tu cuenta de la lista permitida, recuperar la cuenta de Google, revocar todos los tokens de consola y solo después volver a ponerla en la lista**; si la repones antes, los tokens del intruso vuelven a valer. Mira también las emisiones recientes de tokens en la web de Atlas. El procedimiento paso a paso llegará con el despliegue.
+
 **Aplicaciones y servicios de terceros:**
 
 1. Abre `https://myaccount.google.com/linkedapps` (la página de conexiones con terceros; también se llega desde **Seguridad**).
