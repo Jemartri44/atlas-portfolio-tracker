@@ -24,9 +24,10 @@ keywords = ["atlasdt1"]
 # The token_id alone is public by design (ADR-0033, point 1; docs/api.md §2.1: it names the SSM
 # parameter, is listed by the web, may be logged and is returned by /api/auth/console/revoke).
 # The default generic-api-key rule flags it when it sits under a key named token_id/tokenId;
-# this allowlist lifts only that case: that key name and a value of exactly 22 base64url chars.
+# this allowlist lifts only that case: that key name and a value of exactly 22 base64url chars,
+# not followed by `.` or `=` (so `<token_id>.<secret>` without the prefix is still reported).
 [[allowlists]]
 description = "Public console device-token id (ADR-0033)"
 targetRules = ["generic-api-key"]
 regexTarget = "match"
-regexes = ['''(?i)\btoken_?id\b["']?\s*[:=]\s*["']?[A-Za-z0-9_-]{22}(?:[^A-Za-z0-9_-]|$)''']
+regexes = ['''(?i)\btoken_?id\b["']?\s*[:=]\s*["']?[A-Za-z0-9_-]{22}(?:[^A-Za-z0-9_.=-]|$)''']
