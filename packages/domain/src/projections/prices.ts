@@ -218,15 +218,21 @@ const choose = (
   date: CivilDate,
   staleAfter: number | undefined,
 ): PriceLookup | undefined => {
-  const newer = quote !== undefined && (manual === undefined || quote.date > manual.date);
-  if (newer && (manual === undefined || quote.fx_rate !== undefined)) {
+  if (
+    quote !== undefined &&
+    (manual === undefined || (quote.date > manual.date && quote.fx_rate !== undefined))
+  ) {
     return lookupOf(assetId, "external", quote, date, staleAfter);
   }
+  // The newest quote that exists, not the one the source fell back to: a
+  // close with euros older than the valuation must not hide a newer one
+  // without them (second pass of the review of PR #78).
+  const newest = quote?.newer ?? quote;
   return manual === undefined
     ? undefined
     : {
         ...lookupOf(assetId, "manual", manualPriceOf(manual), date, staleAfter, manual.id),
-        ...(newer ? { newer_quote: quote } : {}),
+        ...(newest !== undefined && newest.date > manual.date ? { newer_quote: newest } : {}),
       };
 };
 

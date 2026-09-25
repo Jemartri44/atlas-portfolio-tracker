@@ -192,6 +192,26 @@ describe("EODHD", () => {
   });
 });
 
+describe("a currency of the source that is not a code (D-Q2)", () => {
+  it("is a disagreement to confirm, never the silence of a source that says nothing", async () => {
+    const eodhd = new EodhdPriceSource(
+      KEY,
+      answering(200, '[{"Code":"SYNTH","Currency":"GBp"}]').fetchUrl,
+    );
+    expect(await eodhd.currencyOf("SYNTH.LSE")).toEqual({ ok: true, value: "GBp" });
+    const unknown = new EodhdPriceSource(
+      KEY,
+      answering(200, '[{"Code":"SYNTH","Currency":"Unknown"}]').fetchUrl,
+    );
+    expect(await unknown.currencyOf("SYNTH.LSE")).toEqual({ ok: true, value: undefined });
+    const alpha = new AlphaVantagePriceSource(
+      KEY,
+      answering(200, '{"bestMatches":[{"1. symbol":"SYNTH.LON","8. currency":"GBp"}]}').fetchUrl,
+    );
+    expect(await alpha.currencyOf("SYNTH.LON")).toEqual({ ok: true, value: "GBp" });
+  });
+});
+
 describe("Alpha Vantage's pace", () => {
   it("never calls twice within a second", async () => {
     let clock = 10_000;

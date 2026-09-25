@@ -15,7 +15,7 @@
 import type { CivilDate } from "@atlas/domain";
 import type { DailyClose, PriceSource, SourceResult } from "@atlas/domain/quotes";
 import { ask, type Fetch, failure } from "./fetch.js";
-import { closeOf } from "./shape.js";
+import { closeOf, saidCurrency } from "./shape.js";
 
 export const ALPHA_VANTAGE_API = "https://www.alphavantage.co/query";
 
@@ -142,7 +142,7 @@ export class AlphaVantagePriceSource implements PriceSource {
     const currency = match?.["8. currency"];
     return {
       ok: true,
-      value: typeof currency === "string" && /^[A-Z]{3}$/.test(currency) ? currency : undefined,
+      value: saidCurrency(currency),
     };
   }
 }

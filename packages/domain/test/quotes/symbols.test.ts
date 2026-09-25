@@ -49,7 +49,7 @@ describe("prices/symbols.json", () => {
       [entry({ currency_check: { eodhd: { at: 1 } } }), "a.currency_check.eodhd"],
       [entry({ currency_check: { eodhd: { at: AT, found: 1 } } }), "a.currency_check.eodhd"],
       [entry({ currency_check: { eodhd: { at: AT, url: "x" } } }), "a.currency_check.eodhd"],
-      [entry({ currency_confirmed_over: { eodhd: "gbp" } }), "a.currency_confirmed_over.eodhd"],
+      [entry({ currency_confirmed_over: { eodhd: "" } }), "a.currency_confirmed_over.eodhd"],
     ];
     for (const [text, field] of cases) {
       expect(() => parseSymbols(text), text).toThrow(
@@ -107,6 +107,24 @@ describe("the declared currency (D-Q2)", () => {
       currency: "EUR",
       confirmed_at: AT,
     });
+  });
+
+  it("keeps a currency of the source that is not a code, as a disagreement confirmed explicitly", () => {
+    const { entry, pending } = declareSymbols(
+      { currency: "GBX", eodhd: "X.LSE" },
+      { eodhd: "GBp" },
+      AT,
+      [],
+    );
+    expect(pending).toEqual([{ source: "eodhd", declared: "GBX", found: "GBp" }]);
+    const confirmed = declareSymbols({ currency: "GBX", eodhd: "X.LSE" }, { eodhd: "GBp" }, AT, [
+      "eodhd",
+    ]).entry;
+    expect(
+      parseSymbols(serializeSymbols({ symbols_format: 1, assets: { a: confirmed } })).assets.a,
+    ).toEqual(confirmed);
+    expect(currencyAgrees(confirmed, "eodhd")).toBe(true);
+    expect(currencyAgrees(entry, "eodhd")).toBe(false);
   });
 
   it("refuses a declared currency that is not a code", () => {

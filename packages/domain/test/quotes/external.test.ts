@@ -110,13 +110,31 @@ describe("the automatic closes as quotes", () => {
     expect(SUBUNITS).toEqual({ GBX: { of: "GBP", per: "100" } });
   });
 
-  it("stops looking back when no close of that currency can convert", () => {
+  it("keeps looking back across a change of currency until a close converts", () => {
     const external = externalPricesOf(
       state(),
-      book({ ast_gold: [line("2027-01-04", "1", "ILA"), line("2027-01-05", "2", "ILA")] }),
+      book({
+        ast_gold: [
+          line("2027-01-04", "9"),
+          line("2027-01-05", "1", "ILA"),
+          line("2027-01-06", "2", "ILA"),
+        ],
+      }),
     );
-    expect(external.at("ast_gold", "2027-01-05")).toMatchObject({
-      date: "2027-01-05",
+    const quote = external.at("ast_gold", "2027-01-06");
+    expect(quote).toMatchObject({ date: "2027-01-04", currency: "EUR" });
+    expect(quote?.newer).toMatchObject({
+      date: "2027-01-06",
+      currency: "ILA",
+      fx_missing: "currency_not_published",
+    });
+    // Without any close that converts, the newest is all there is.
+    const none = externalPricesOf(
+      state(),
+      book({ ast_gold: [line("2027-01-05", "1", "ILA"), line("2027-01-06", "2", "ILA")] }),
+    );
+    expect(none.at("ast_gold", "2027-01-06")).toMatchObject({
+      date: "2027-01-06",
       fx_missing: "currency_not_published",
     });
   });

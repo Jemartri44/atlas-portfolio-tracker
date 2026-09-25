@@ -1,0 +1,8 @@
+// An interface the architecture test reads as text: its keys, and the index
+// signatures that would let any key through (feature 013, review of PR #78).
+export interface Probe {
+  plain: string;
+  [quote: `price_${string}`]: string | undefined;
+  "quoted"?: number;
+  readonly [key: string]: unknown;
+}

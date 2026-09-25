@@ -84,11 +84,18 @@ const bySource = <T>(
 const isCheck = (item: unknown): item is CurrencyCheck =>
   isObject(item) &&
   typeof item.at === "string" &&
-  (item.found === undefined || typeof item.found === "string") &&
+  (item.found === undefined || isSaid(item.found)) &&
   Object.keys(item).every((key) => key === "at" || key === "found");
 
 const isCurrency = (item: unknown): item is string =>
   typeof item === "string" && CURRENCY.test(item);
+
+/**
+ * What a source said of the currency: kept as it came, also when it is not a
+ * code (`GBp`), because that is a disagreement to confirm, never a silence.
+ */
+const isSaid = (item: unknown): item is string =>
+  typeof item === "string" && item.length > 0 && item.length <= 16;
 
 const entryOf = (assetId: string, value: unknown): SymbolEntry => {
   if (!isObject(value)) {
@@ -115,7 +122,7 @@ const entryOf = (assetId: string, value: unknown): SymbolEntry => {
     bySource(value.currency_check, `${assetId}.currency_check`, isCheck);
   }
   if (value.currency_confirmed_over !== undefined) {
-    bySource(value.currency_confirmed_over, `${assetId}.currency_confirmed_over`, isCurrency);
+    bySource(value.currency_confirmed_over, `${assetId}.currency_confirmed_over`, isSaid);
   }
   return value as unknown as SymbolEntry;
 };

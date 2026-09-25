@@ -271,6 +271,42 @@ describe("priceAt: the single gate", () => {
     });
   });
 
+  it("carries the newest quote even when the one with euros is older than the valuation", () => {
+    // The case of the reviewer: a valuation on 2027-01-04, the last close that
+    // converts on 2026-12-31 and a close without a rate on 2027-01-06.
+    const b = withPrices();
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2027-01-04",
+      unit_value: "100",
+    });
+    const state = project(b);
+    const external: ExternalPrices = {
+      at: () => ({
+        date: "2026-12-31",
+        unit_value: Decimal.parse("95"),
+        currency: "EUR",
+        fx_rate: Decimal.ONE,
+        source: "eodhd",
+        newer: {
+          date: "2027-01-06",
+          unit_value: Decimal.parse("7"),
+          currency: "USD",
+          source: "eodhd",
+          fx_missing: "not_yet_published",
+        },
+      }),
+    };
+    for (const price of [
+      priceAt(state, "ast_world", "2027-01-06", DEFAULT_SETTINGS, external),
+      manualPrices(state, "2027-01-06", DEFAULT_SETTINGS, external).get("ast_world"),
+    ]) {
+      expect(price).toMatchObject({ origin: "manual", date: "2027-01-04" });
+      expect(price?.newer_quote).toMatchObject({ date: "2027-01-06", currency: "USD" });
+    }
+  });
+
   it("carries the approximation mark of a quote", () => {
     const approximate: ExternalPrices = {
       at: (_assetId, date) => ({

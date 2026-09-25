@@ -133,6 +133,12 @@ const interfaceKeys = (file: string, name: string): string[] => {
       }
       line = "";
     }
+    // An index signature lets any key through, whatever its form: it is read
+    // as a key of its own, which no frozen list contains (second pass of the
+    // review of PR #78).
+    if (char === "[" && depth === 1 && /^\s*(?:readonly\s+)?$/.test(line)) {
+      keys.push("[index signature]");
+    }
     if ("{([<".includes(char)) {
       depth += 1;
     } else if ("})]>".includes(char) && !(char === ">" && source[index - 1] === "=")) {
@@ -509,6 +515,21 @@ describe("architecture: the tax engine", () => {
    * themselves are frozen: a new one turns this red until somebody adds it
    * here by hand, knowingly.
    */
+  /**
+   * The reading of keys cannot be dodged by a key it does not see (second
+   * pass of the review of PR #78): an index signature, whatever its form,
+   * lets any key through, so it is a failure of the frozen list.
+   */
+  it("reads an index signature as a key it refuses", () => {
+    const probe = join(repoRoot, "tests", "fixtures", "architecture-013", "index-signature.ts.txt");
+    expect(interfaceKeys(probe, "Probe")).toEqual([
+      "plain",
+      "[index signature]",
+      "quoted",
+      "[index signature]",
+    ]);
+  });
+
   it("freezes the keys of LedgerState and Settings", () => {
     const state = interfaceKeys(join(domainSrc, "projections", "state.ts"), "LedgerState");
     expect(state).toEqual([

@@ -18,7 +18,7 @@ import type { CivilDate } from "@atlas/domain";
 import type { DailyClose, PriceSource, SourceResult } from "@atlas/domain/quotes";
 import { JsonNumber, parseExactJson } from "./exact-json.js";
 import { type Answer, ask, type Fetch, failure } from "./fetch.js";
-import { closeOf } from "./shape.js";
+import { closeOf, saidCurrency } from "./shape.js";
 
 export const EODHD_API = "https://eodhd.com/api";
 
@@ -129,7 +129,7 @@ export class EodhdPriceSource implements PriceSource {
     const currency = row?.Currency;
     return {
       ok: true,
-      value: typeof currency === "string" && /^[A-Z]{3}$/.test(currency) ? currency : undefined,
+      value: saidCurrency(currency),
     };
   }
 }

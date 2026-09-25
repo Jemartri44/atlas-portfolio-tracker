@@ -415,3 +415,14 @@ Sin bloqueantes: con cierres de 98.765 € posteriores a todas las valoraciones,
 **Rojo primero** (`mut-013/review-013.log`): cada arreglo tiene su mutante que devuelve el código a su forma anterior, y **los 21 mueren**. Van F1a a F1e, F2, F3a y F3b, F4, F5a y F5b, F6a y F6b, F7, R17, R18, R19, el ritmo de Alpha Vantage, el nombre de la clave desconocida, los ficheros acompañantes y el borrado.
 
 **Lo que queda dicho y no se cambia**: el patrimonio parcial de Cubo y el aviso de la aportación, cuando un activo **solo** tiene cotización sin tipo, siguen diciendo que falta su precio en euros. Es cierto, y el remedio que proponen lo resuelve.
+
+## 11. Segunda pasada de la revisión de la PR #78 (2026-09-25)
+
+Sin bloqueantes; los puntos 1 a 7 de §10 cerrados, y mueren los nueve mutantes del revisor sobre los arreglos. Cuatro detalles, cada uno con su test **visto en rojo** sobre el código anterior (los cinco tests nuevos fallaron juntos antes de tocar nada) y su mutante (`mut-013/second-013.log`, cinco de cinco muertos):
+
+1. **Una firma de índice esquivaba la congelación de claves** (`[quote: \`price_${string}\`]: string | undefined`), porque `interfaceKeys` no leía lo que va entre corchetes. Ahora cualquier firma de índice de la interfaz, con `readonly` o sin él, se lee como una clave `[index signature]` que ninguna lista congelada contiene. Un fichero de texto de prueba (`tests/fixtures/architecture-013/index-signature.ts.txt`) fija las dos formas. Mutantes: una firma de índice en `Settings` y otra en `LedgerState`, las dos rojas.
+2. **`newer_quote` se calculaba contra la cotización de la vuelta atrás.** Ahora se calcula contra la más nueva que existe (`quote.newer ?? quote`). Lo prueba el caso del revisor: valoración el 2027-01-04, cierre convertible el 2026-12-31 y cierre sin tipo el 2027-01-06. Sale la manual, con la del 06 al lado.
+3. **La vuelta atrás ya no se corta** en el primer `currency_not_published` ni en `no_history`. Sigue hasta un cierre que convierta, también de otra divisa (por ejemplo un euro anterior a unos cierres en ILA).
+4. **Una divisa de la fuente que no son tres mayúsculas** (`GBp`) se dice tal como viene (`saidCurrency` de los adaptadores), y es un **desacuerdo que el usuario confirma**. Solo «nada», el texto vacío y `Unknown` cuentan como que la fuente no dice la divisa. `symbols.json` acepta lo dicho por la fuente (hasta 16 caracteres) en `currency_check` y en `currency_confirmed_over`. La divisa **declarada** sigue siendo un código de tres mayúsculas.
+
+**Arranque**: 75.694 bytes, **+276** frente a `develop`, dentro del techo de `develop` + 307. **Total**: 267,7 KB.

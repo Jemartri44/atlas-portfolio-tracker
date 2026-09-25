@@ -184,12 +184,9 @@ const closeQuoteAt = (
     if (quote.fx_rate !== undefined) {
       return newest === undefined ? quote : { ...quote, newer: newest };
     }
+    // On, whatever the reason: an earlier close may be of another currency,
+    // one that converts (second pass of the review of PR #78).
     newest ??= quote;
-    // Without a history, or with a currency the ECB never published, no
-    // earlier close of the same currency converts either.
-    if (quote.fx_missing === "no_history" || quote.fx_missing === "currency_not_published") {
-      break;
-    }
   }
   return newest;
 };
