@@ -231,8 +231,16 @@ const dist = join(webRoot, "dist");
  * `DependentEventsError` (domain chunk +42 over the raw-line operations, the
  * rest of it gzip moving). The read of «is this browser synced?» is lazy: the
  * write path of the web loads it from the store of the sync.
+ *
+ * **Then +5 more, to 75.843 — the cap of D-Q7 itself (+140 over `develop`).**
+ * Measured after the sentence of `raw_line_break` changed (D-Q18): the boot
+ * code did not move (domain chunk 41.482, the same bytes); the entry went from
+ * 24.068 to 24.073 because the table of lazy chunks names them **by their
+ * hash**, and a new hash compresses differently. Noise of the hashes, not
+ * code — and it is why the ceiling now sits on the cap: a change of a lazy
+ * chunk can move the boot a few bytes either way.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 5;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
