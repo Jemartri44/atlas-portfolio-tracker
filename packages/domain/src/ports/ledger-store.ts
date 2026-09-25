@@ -32,4 +32,23 @@ export interface LedgerStore {
     etag: string,
     archiveName: string,
   ): Promise<{ etag: string }>;
+  /**
+   * Appends `lines` **exactly as given**, each followed by `"\n"`, never
+   * re-serialised (ADR-0026, Part A, amendment): what makes the replica of a
+   * synced device byte-for-byte the remote. Every line is checked first as the
+   * loader would read it (`rawLinesText`); a stale `etag` is a ConflictError.
+   * In every failure nothing is written.
+   */
+  appendLines(lines: readonly string[], etag: string): Promise<{ etag: string }>;
+  /**
+   * Replaces the whole content by `lines`, exactly as given, after saving the
+   * current bytes verbatim under `archiveName`, with the same checks and
+   * refusals as `replace` and `appendLines`. Used by the sync and the restore
+   * only, never by `compact`.
+   */
+  replaceLines(
+    lines: readonly string[],
+    etag: string,
+    archiveName: string,
+  ): Promise<{ etag: string }>;
 }

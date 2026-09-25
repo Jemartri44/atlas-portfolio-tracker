@@ -309,6 +309,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   filing_fingerprint_waived: () =>
     "La huella de una declaración presentada nunca llegó a comprobarse, y tú lo diste por bueno para poder compactar.",
   // --- Store and schema --------------------------------------------------
+  raw_line_break: (d) =>
+    `La línea ${text(d.line)} de tus datos lleva dentro un salto de línea o un retorno de carro, lo normal en un fichero guardado con finales de línea de Windows. No es un error tuyo, pero así no se puede escribir tal cual: pasa el fichero a finales de línea LF (las cifras no cambian), impórtalo y vuelve a intentarlo.`,
   conflict: () =>
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",
   schema_too_new: (d) =>

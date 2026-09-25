@@ -48,8 +48,22 @@ const browser = (text?: string, extra: Partial<StoredLedger> = {}) => {
 
 const other = { ...deposit, id: "01ARYZ6S41TSV4RRFFQ69G5FA2" };
 
-ledgerStoreContract("browser (IndexedDB double)", (lines) =>
-  Promise.resolve(browser(textOf(lines)).store),
+const databases = new WeakMap<BlobLedgerStore, FakeDatabase>();
+
+ledgerStoreContract(
+  "browser (IndexedDB double)",
+  (lines) => {
+    const opened = browser(textOf(lines));
+    databases.set(opened.store, opened.db);
+    return Promise.resolve(opened.store);
+  },
+  async (store, name) =>
+    (
+      databases
+        .get(store as BlobLedgerStore)
+        ?.store(LEDGER_STORE)
+        .get(`archive/${name}`) as { text: string } | undefined
+    )?.text,
 );
 
 describe("BrowserLedgerBlob", () => {

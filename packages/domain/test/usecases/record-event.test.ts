@@ -138,6 +138,8 @@ describe("recordEvent", () => {
         load: () => store.load(),
         append: () => Promise.reject(new ConflictError()),
         replace: () => Promise.reject(new ConflictError()),
+        appendLines: () => Promise.reject(new ConflictError()),
+        replaceLines: () => Promise.reject(new ConflictError()),
       },
     };
     await expect(recordEvent(racing, buyDraft)).rejects.toBeInstanceOf(ConflictError);

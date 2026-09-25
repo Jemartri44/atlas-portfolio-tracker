@@ -34,10 +34,17 @@ const fresh = async (content?: string): Promise<{ path: string; dir: string }> =
   return { path, dir };
 };
 
-ledgerStoreContract("file", async (lines) => {
-  const { path } = await fresh(lines.map((line) => `${line}\n`).join(""));
-  return new FileLedgerStore(path);
-});
+ledgerStoreContract(
+  "file",
+  async (lines) => {
+    const { path } = await fresh(lines.map((line) => `${line}\n`).join(""));
+    return new FileLedgerStore(path);
+  },
+  async (store, name) =>
+    readFile(join((store as FileLedgerStore).folder, "archive", name), "utf8").catch(
+      () => undefined,
+    ),
+);
 
 describe("FileLedgerStore", () => {
   it("treats a missing file as empty and creates it on the first append", async () => {

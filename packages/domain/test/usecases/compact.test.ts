@@ -178,6 +178,8 @@ describe("planCompact + compactLedger", () => {
         lines: events.map(encodeLine),
       }),
       append: () => Promise.reject(new Error("unused")),
+      appendLines: () => Promise.reject(new Error("unused")),
+      replaceLines: () => Promise.reject(new Error("unused")),
       replace: async () => {
         replaced = true;
         return { etag: "1" };
@@ -438,6 +440,8 @@ describe("compact and the fingerprints of the filings (ADR-0020)", () => {
         lines: events.map(encodeLine),
       }),
       append: () => Promise.reject(new Error("unused")),
+      appendLines: () => Promise.reject(new Error("unused")),
+      replaceLines: () => Promise.reject(new Error("unused")),
       replace: async () => {
         replaced = true;
         return { etag: "1" };
@@ -462,6 +466,8 @@ describe("compact and the fingerprints of the filings (ADR-0020)", () => {
       schema: tampered.schema,
       load: () => tampered.load(),
       append: (events, etag) => tampered.append(events, etag),
+      appendLines: () => Promise.reject(new Error("unused")),
+      replaceLines: () => Promise.reject(new Error("unused")),
       replace: () => {
         throw new ArchiveExistsError("ledger-2027-v1.jsonl");
       },

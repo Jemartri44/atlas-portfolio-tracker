@@ -5,7 +5,11 @@ import { webCryptoRandom } from "../src/random/web-crypto.js";
 import { account, deposit, lineOf } from "./fixtures.js";
 import { ledgerStoreContract } from "./ledger-store.contract.js";
 
-ledgerStoreContract("memory", (lines) => Promise.resolve(MemoryLedgerStore.fromLines(lines)));
+ledgerStoreContract(
+  "memory",
+  (lines) => Promise.resolve(MemoryLedgerStore.fromLines(lines)),
+  async (store, name) => (store as MemoryLedgerStore).archives.get(name),
+);
 
 describe("MemoryLedgerStore", () => {
   it("can be seeded from events and renders the file text", async () => {

@@ -232,6 +232,8 @@ describe("correctEvent", () => {
         load: () => store.load(),
         append: () => Promise.reject(new ConflictError()),
         replace: () => Promise.reject(new ConflictError()),
+        appendLines: () => Promise.reject(new ConflictError()),
+        replaceLines: () => Promise.reject(new ConflictError()),
       },
     };
     await expectRejection(correctEvent<BuyEvent>(racing, buy.id, draftOf(buy), "x"), ConflictError);

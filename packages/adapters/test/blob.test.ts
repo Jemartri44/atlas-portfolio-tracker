@@ -51,8 +51,17 @@ class MemoryBlob implements LedgerBlob {
 
 const textOf = (lines: readonly string[]): string => lines.map((line) => `${line}\n`).join("");
 
-ledgerStoreContract("blob", (lines) =>
-  Promise.resolve(new BlobLedgerStore(new MemoryBlob(textOf(lines)))),
+const blobs = new WeakMap<BlobLedgerStore, MemoryBlob>();
+
+ledgerStoreContract(
+  "blob",
+  (lines) => {
+    const blob = new MemoryBlob(textOf(lines));
+    const store = new BlobLedgerStore(blob);
+    blobs.set(store, blob);
+    return Promise.resolve(store);
+  },
+  async (store, name) => blobs.get(store as BlobLedgerStore)?.archives.get(name),
 );
 
 describe("BlobLedgerStore", () => {

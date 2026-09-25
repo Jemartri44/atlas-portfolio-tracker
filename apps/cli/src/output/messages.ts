@@ -232,6 +232,8 @@ export const describeError = (error: DomainError): string => {
       )}`;
     case "projection_changed":
       return `La reescritura cambiaría la proyección (${text(d.keys)}): no se ha escrito nada.`;
+    case "raw_line_break":
+      return `La línea ${text(d.line)} lleva dentro un salto de línea o un retorno de carro (\\r), lo normal en un fichero guardado con finales de línea de Windows. No es un error tuyo, pero así no se puede escribir tal cual: pasa el fichero a finales de línea LF (las cifras no cambian) y vuelve a intentarlo.`;
     case "archive_exists":
       return `El archivo ${text(d.archive_name)} ya existe y nunca se sobrescribe.`;
     case "ledger_missing":
