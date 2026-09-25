@@ -271,3 +271,12 @@ Decidida por la dirección, que aceptó esta ADR, tras la segunda ronda de revis
 3. es de tipo consola.
 
 Además, solo **tras un inicio de sesión con Google y PKCE completo**, como toda emisión, y **revocando antes cualquier token anterior de ese dispositivo**. **La confirmación previa la hace la página de la Lambda tras la vuelta de Google**, con los datos del servidor: el nombre del dispositivo, la fecha de su última publicación y cuántas líneas tiene pendientes, si se sabe; sin esa confirmación explícita no hay reemisión. La consola no muestra nada propio. **Fuera de la reemisión, la consola sigue sin proponer nunca un identificador.** El riesgo de una carpeta copiada que reemite para el mismo dispositivo se acepta y se documenta, como el de la web.
+
+## Nota del 2026-09-25 (bloque 0 de la feature 015): `mfa_required` no se emite
+
+Decidida por la dirección en el alto del plan de la 015 (`specs/015-api-access/questions.md` §1.2 y §8, Q2). El punto 2 decía «**emitir exige `amr` con `mfa` si Google lo permite**», SIN VERIFICAR. **Verificado con fuente** (documentación de Google consultada el 2026-09-25: *OpenID Connect*, `developers.google.com/identity/openid-connect/openid-connect`; su referencia; y el *security bundle*, `developers.google.com/identity/siwg/security-bundle`):
+
+- `amr` y `auth_time` se piden con el parámetro `claims`, pero solo llegan si la aplicación está **publicada y verificada por Google** y tiene activadas las «Authentication strength claims» de una función marcada como **Beta**; «The amr claim is included in the ID token only when information is available on the authentication method used, it may not be present even when requested».
+- `prompt` solo admite `none`, `consent` y `select_account`, y «Google does not support Google Account reauth requests»: **no se puede forzar la reautenticación**.
+
+**Decisión:** `mfa_required` **no se emite** y la Lambda **no pide** `amr`. Exigirlo dejaría al usuario sin poder emitir tokens en cuanto la reclamación faltara, y pedirlo sin exigirlo no protege de nada. La pantalla interactiva de Google (`prompt=select_account`) se mantiene. **La verificación en dos pasos de la cuenta de Google sigue siendo un requisito operativo del usuario**, como en ADR-0027 (`docs/runbooks/google-2-step-verification.md`). Si Google documentara algún día una forma estable de exigir `mfa` a un cliente corriente, esta ADR se revisa («Cuándo habría que revisarla»).
