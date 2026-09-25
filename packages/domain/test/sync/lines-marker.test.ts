@@ -105,3 +105,22 @@ describe("the marker", () => {
     );
   });
 });
+
+describe("the archives of the sync", () => {
+  it("are named by kind, Madrid date and time, and the start of the etag (D-Q12)", async () => {
+    const { syncArchiveName } = await import("../../src/sync/archive.js");
+    const etag = "0123456789abcdef".repeat(4);
+    expect(syncArchiveName("sync", new Date("2026-09-25T04:12:05Z"), etag)).toBe(
+      "pre-sync-2026-09-25T061205-0123456789ab.jsonl",
+    );
+    expect(syncArchiveName("join", new Date("2026-12-31T23:30:00Z"), etag)).toBe(
+      "pre-join-2027-01-01T003000-0123456789ab.jsonl",
+    );
+    expect(syncArchiveName("redownload", new Date("2026-01-01T00:00:00Z"), etag)).toBe(
+      "pre-redownload-2026-01-01T010000-0123456789ab.jsonl",
+    );
+    expect(syncArchiveName("sync", new Date("2026-01-01T00:00:00Z"), etag, 3)).toBe(
+      "pre-sync-2026-01-01T010000-0123456789ab-3.jsonl",
+    );
+  });
+});

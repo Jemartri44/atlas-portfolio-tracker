@@ -234,3 +234,25 @@ describe("resolving (R18)", () => {
     });
   });
 });
+
+describe("finding what is held back", () => {
+  it("names a unit by its id, and refuses one that is not there", async () => {
+    const { heldUnitById, assertRedoRecorded } = await import("../../src/sync/resolve.js");
+    const units = unresolvedHeld(
+      holdRecords(linesOf([deposit]), "client", { code: "new_duplicate", details: {} }, "t"),
+    );
+    expect(heldUnitById(units, units[0]?.unit as string)).toBe(units[0]);
+    expect(() => heldUnitById(units, "nope")).toThrow(ValidationError);
+    const started = unresolvedHeld([
+      ...holdRecords(linesOf([deposit]), "client", { code: "new_duplicate", details: {} }, "t"),
+      ...redoStarted(units[0] as never, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", "t"),
+    ])[0] as never;
+    expect(() => assertRedoRecorded(started, [deposit])).toThrow(ValidationError);
+    expect(() =>
+      assertRedoRecorded(started, [
+        { ...deposit, id: "01ARYZ6S41TSV4RRFFQ69ZZZZZ" } as LedgerEvent,
+      ]),
+    ).not.toThrow();
+    expect(() => assertRedoRecorded(units[0] as never, [])).not.toThrow();
+  });
+});

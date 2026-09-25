@@ -22,6 +22,8 @@ export interface FileOps {
   mkdir(path: string): Promise<void>;
   /** `fsync` of a directory, so that a rename in it is on disk too. */
   syncDir(path: string): Promise<void>;
+  /** Whether a directory exists (`sync/` says the folder is synced). */
+  isDirectory(path: string): Promise<boolean>;
 }
 
 export const nodeFileOps: FileOps = {
@@ -31,6 +33,16 @@ export const nodeFileOps: FileOps = {
   rm: (path) => fs.rm(path, { force: true }),
   mkdir: async (path) => {
     await fs.mkdir(path, { recursive: true });
+  },
+  isDirectory: async (path) => {
+    try {
+      return (await fs.stat(path)).isDirectory();
+    } catch (error) {
+      if ((error as { code?: string }).code === "ENOENT") {
+        return false;
+      }
+      throw error;
+    }
   },
   syncDir: async (path) => {
     const handle = await fs.open(path, "r");

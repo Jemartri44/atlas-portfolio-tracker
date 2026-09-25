@@ -235,3 +235,26 @@ export const redoFinished = (
 /** Whether the redo that started with `unit.redo` is already in the ledger, by that exact id. */
 export const redoRecorded = (unit: HeldUnit, ledger: readonly LedgerEvent[]): boolean =>
   unit.redo !== undefined && ledger.some((event) => event.id === unit.redo);
+
+/** The unit held back with that id (the hash of its first line), or `held_unit_unknown`. */
+export const heldUnitById = (units: readonly HeldUnit[], id: string): HeldUnit => {
+  const unit = units.find((entry) => entry.unit === id);
+  if (unit === undefined) {
+    throw new ValidationError("held_unit_unknown", "nothing is held back with that id", {
+      unit: id,
+    });
+  }
+  return unit;
+};
+
+/**
+ * A redo of a line is finished only by an event with **exactly** the id it
+ * sealed (plan §10.2): otherwise `redo_not_recorded`, and nothing moves.
+ */
+export const assertRedoRecorded = (unit: HeldUnit, ledger: readonly LedgerEvent[]): void => {
+  if (unit.redo !== undefined && !redoRecorded(unit, ledger)) {
+    throw new ValidationError("redo_not_recorded", "the redo is not in the ledger yet", {
+      event_id: unit.redo,
+    });
+  }
+};

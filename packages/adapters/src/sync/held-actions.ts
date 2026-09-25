@@ -1,0 +1,173 @@
+// Resolving what the sync held back, and deactivating it, over a device's own
+// store (ADR-0026, Part B; plan §10 and §12.4; §6.2 P4). Every action is one
+// write of the store on what it read, and **none of them needs the ledger to
+// be valid** (decision D-Q1): the user can always get out of where the sync
+// left them. Which resolutions exist is the domain's (`resolutionsFor`).
+
+import { decodeLines } from "@atlas/domain";
+import type { DeviceState, SyncStateStore } from "@atlas/domain/sync";
+import {
+  assertRedoRecorded,
+  confirmHeld,
+  deactivatePermission,
+  discardHeld,
+  type HeldUnit,
+  heldUnitById,
+  markerFor,
+  parseHeld,
+  type RedoPlan,
+  type Refusal,
+  type Resolution,
+  redoFinished,
+  redoPlan,
+  redoStarted,
+  resolutionsFor,
+  type SyncMarker,
+  syncArchiveName,
+  unresolvedHeld,
+} from "@atlas/domain/sync";
+import type { SyncOptions } from "./client.js";
+
+const markerOf = (state: DeviceState): SyncMarker | undefined =>
+  state.presence.present && typeof state.presence.marker === "object"
+    ? state.presence.marker
+    : undefined;
+
+/** The ids the remote certainly has: those of the synced prefix. Known without a connection. */
+const remoteIdsOf = (state: DeviceState): Set<string> =>
+  new Set(
+    state.ledger.events.slice(0, markerOf(state)?.synced_lines ?? 0).map((event) => event.id),
+  );
+
+export interface HeldView {
+  readonly unit: HeldUnit;
+  readonly resolutions: readonly Resolution[];
+}
+
+/** What is held back now, each unit with what can be done with it. */
+export const heldUnits = async (
+  store: SyncStateStore,
+  options: SyncOptions,
+): Promise<HeldView[]> => {
+  const state = await store.read();
+  const remoteIds = remoteIdsOf(state);
+  return unresolvedHeld(parseHeld(state.heldText)).map((unit: HeldUnit) => ({
+    unit,
+    resolutions: resolutionsFor(unit, decodeLines(unit.lines, options.schema), remoteIds),
+  }));
+};
+
+const unitOf = (state: DeviceState, id: string): HeldUnit =>
+  heldUnitById(unresolvedHeld(parseHeld(state.heldText)), id);
+
+/**
+ * **Confirm**: the unit goes back to the queue in its local order and the
+ * marker remembers the confirmation; the next sync uploads it declared.
+ */
+export const confirmHeldUnit = async (
+  store: SyncStateStore,
+  id: string,
+  options: SyncOptions,
+): Promise<void> => {
+  const state = await store.read();
+  const unit = unitOf(state, id);
+  const marker = markerOf(state) ?? markerFor(state.ledger.lines, 0);
+  const now = options.now().toISOString();
+  const done = confirmHeld(
+    unit,
+    decodeLines(unit.lines, options.schema),
+    remoteIdsOf(state),
+    { lines: state.ledger.lines, synced: marker.synced_lines },
+    now,
+  );
+  const pending = state.ledger.lines.length > marker.synced_lines;
+  await store.commit(state, {
+    held: done.records,
+    // Back in its local order, in front of what is still pending: a move,
+    // so the bytes before are archived like any sync that reorders.
+    ledger: pending
+      ? {
+          replace: done.lines,
+          archive: syncArchiveName("sync", options.now(), state.ledger.etag),
+        }
+      : { append: unit.lines },
+    marker: { ...marker, confirmations: [...marker.confirmations, ...done.confirmations] },
+  });
+};
+
+/** **Discard**, explicit: the unit, or only the reversal of a pair, whose correction stays held. */
+export const discardHeldUnit = async (
+  store: SyncStateStore,
+  id: string,
+  options: SyncOptions,
+  only: "unit" | "reversal" = "unit",
+): Promise<void> => {
+  const state = await store.read();
+  const done = discardHeld(unitOf(state, id), options.now().toISOString(), only);
+  await store.commit(state, { held: done.records, discarded: done.discarded });
+};
+
+/**
+ * **Redo**, first half: the plan the interface preloads, and — for a line —
+ * the id the new event will carry, sealed before anything is recorded.
+ */
+export const startRedo = async (
+  store: SyncStateStore,
+  id: string,
+  eventId: string,
+  options: SyncOptions,
+): Promise<RedoPlan> => {
+  const state = await store.read();
+  const unit = unitOf(state, id);
+  const plan = redoPlan(unit, decodeLines(unit.lines, options.schema), remoteIdsOf(state));
+  if (plan.kind === "record") {
+    await store.commit(state, { held: redoStarted(unit, eventId, options.now().toISOString()) });
+  }
+  return plan;
+};
+
+/**
+ * **Redo**, second half, once the new event is in the ledger: the held lines go
+ * to `discarded` with the id that replaced them. A redo of a line is only
+ * finished by an event with **exactly** the sealed id.
+ */
+export const finishRedo = async (
+  store: SyncStateStore,
+  id: string,
+  eventId: string,
+  options: SyncOptions,
+): Promise<void> => {
+  const state = await store.read();
+  const unit = unitOf(state, id);
+  assertRedoRecorded(unit, state.ledger.events);
+  const done = redoFinished(unit, unit.redo ?? eventId, options.now().toISOString());
+  await store.commit(state, { held: done.records, discarded: done.discarded });
+};
+
+/**
+ * **Deactivate** the sync, explicitly (ADR-0026, second amendment): refused
+ * with pending lines (P4) or an unreadable marker; the marker stays, saying
+ * `disabled`, and what is held back **stays** (D-Q6), so compact and the
+ * import are admitted again and nothing the user has not resolved is lost.
+ */
+export const deactivateSync = async (
+  store: SyncStateStore,
+  options: SyncOptions,
+): Promise<Refusal | undefined> => {
+  const state = await store.read();
+  if (!state.presence.present) {
+    // Never synced: there is nothing to deactivate, and nothing is created.
+    return undefined;
+  }
+  const marker = markerOf(state);
+  const pending = marker === undefined ? 0 : state.ledger.lines.length - marker.synced_lines;
+  const refusal = deactivatePermission(state.presence, pending);
+  if (refusal !== undefined) {
+    return refusal;
+  }
+  const base = marker ?? markerFor(state.ledger.lines, state.ledger.lines.length);
+  await store.commit(state, {
+    marker: { ...base, status: "disabled", disabled_at: options.now().toISOString() },
+  });
+  return undefined;
+};

@@ -380,6 +380,10 @@ export const describeError = (error: DomainError): string => {
       return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
     case "redo_filing_in_remote":
       return "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.";
+    case "held_unit_unknown":
+      return "No hay nada retenido con ese identificador: puede que ya se haya resuelto.";
+    case "redo_not_recorded":
+      return `Todavía no está registrada la operación que rehace lo retenido (${text(d.event_id)}): regístrala primero; lo retenido sigue donde estaba.`;
     case "resolution_not_offered":
       return `Esa resolución no se ofrece para lo retenido por «${text(d.reason)}».`;
     case "sync_marker_unreadable":

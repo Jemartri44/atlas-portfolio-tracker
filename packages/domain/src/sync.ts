@@ -14,6 +14,8 @@ export {
   type RemoteLedger,
   type RemoteSnapshot,
 } from "./ports/remote-ledger.js";
+export type { DeviceChange, DeviceState, SyncStateStore } from "./ports/sync-state-store.js";
+export { syncArchiveName } from "./sync/archive.js";
 export {
   type HoldReason,
   type Inspection,
@@ -87,8 +89,10 @@ export {
   type RemoteRules,
 } from "./sync/remote.js";
 export {
+  assertRedoRecorded,
   confirmHeld,
   discardHeld,
+  heldUnitById,
   type RedoPlan,
   type Resolution,
   redoFinished,

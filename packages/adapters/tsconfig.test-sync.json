@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "test",
+    "outDir": "dist-test-sync",
+    "tsBuildInfoFile": "dist-test-sync/tsconfig.test-sync.tsbuildinfo",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["test/sync", "test/fake-idb.ts", "test/fixtures.ts"],
+  "references": [
+    {
+      "path": "./tsconfig.json"
+    },
+    {
+      "path": "./tsconfig.browser.json"
+    },
+    {
+      "path": "../domain"
+    }
+  ]
+}

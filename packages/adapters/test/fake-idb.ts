@@ -234,6 +234,8 @@ export class FakeDatabase {
   readonly commits: Commit[] = [];
   /** Every transaction ever created, with its mode: what a test counts. */
   readonly created: IDBTransactionMode[] = [];
+  /** The durability each transaction asked for, in the same order (feature 014). */
+  readonly durability: IDBTransactionDurability[] = [];
   private readonly stores = new Map<string, Values>();
   private readonly pending: FakeTransaction[] = [];
   private running: FakeTransaction | undefined;
@@ -259,9 +261,14 @@ export class FakeDatabase {
     return values;
   }
 
-  transaction(storeName: string, mode: IDBTransactionMode = "readonly"): FakeTransaction {
+  transaction(
+    storeName: string,
+    mode: IDBTransactionMode = "readonly",
+    options?: IDBTransactionOptions,
+  ): FakeTransaction {
     const tx = new FakeTransaction(this, storeName, mode);
     this.created.push(mode);
+    this.durability.push(options?.durability ?? "default");
     this.pending.push(tx);
     queueMicrotask(() => this.schedule());
     return tx;
