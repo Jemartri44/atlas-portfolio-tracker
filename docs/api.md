@@ -169,7 +169,7 @@ Cuerpo:
     { "line": "<la línea exacta, sin salto de línea final>" },
     { "line": "<…>", "confirm_duplicate": true },
     { "line": "<la anulación>", "has_correction": true },
-    { "line": "<la corrección, con corrects_id a la operación anulada>" }
+    { "line": "<la corrección, con corrects_id a la operación anulada>", "chain_continues": false }
   ]
 }
 ```
@@ -177,6 +177,7 @@ Cuerpo:
 - `line`: el texto exacto de una línea del libro, como cadena JSON. La API escribe `line` + `"\n"` en UTF-8, **sin volver a serializar**. Una cadena con `"\n"` o `"\r"` es `400 body_invalid`.
 - `confirm_duplicate`: la confirmación explícita, **por línea**, de una huella repetida (ADR-0012; ADR-0026, Parte A). Sin ella, una huella repetida es un rechazo de esa línea.
 - `has_correction`: la declaración de que **esta anulación tiene corrección**. Solo vale en una línea de tipo `reversal` (`400 body_invalid` si no).
+- `chain_continues`: en la corrección de una pareja, que **la pareja siguiente pertenece a la misma cadena** de correcciones de tipos. Solo vale en una línea con `corrects_id` (`400 body_invalid` si no); por defecto, `false`.
 - Cualquier otro campo es `400 body_invalid`, y en particular un `device_id` (§2.3).
 
 **Si `If-Match` no es el etag actual: `412 precondition_failed`**, sin escribir nada. También si otro escritor gana la carrera entre la lectura de la Lambda y su `PutObject` condicional. El cliente vuelve al paso 1 de la sincronización.
@@ -191,13 +192,14 @@ Cuerpo:
 | 4 | `recorded_at` no es posterior a la hora de la Lambda más la tolerancia (ADR-0026, caso 8; tolerancia configurable, valor **[PENDIENTE]**, lo fija la 015) | `recorded_at_in_future` |
 | 5 | El libro proyectado con la línea añadida sigue siendo válido | `domain_rejected`, con `details.domain_code` |
 | 6 | Si la huella está repetida, la línea trae `confirm_duplicate` | `duplicate_unconfirmed`, con los `id` que la repiten |
-| 7 | Una línea que **sella el prefijo** (`tax_return_filed`, `filing_fingerprint_waived`) cuadra con el prefijo sobre el que cae | **[PENDIENTE]**: ADR-0026 no lo pide a la API, y la proyección de hoy no comprueba la huella de una presentación al registrarla (solo `check --deep` y `compact`). Propuesta: rechazarla con `seal_mismatch` |
+| 7 | Una `tax_return_filed` **sella el prefijo**: su `ledger_fingerprint` cuadra con el prefijo sobre el que cae, remoto más las líneas ya aceptadas de la petición (decisión de la dirección, 2026-09-25: «lo que sella el prefijo no se mueve de sitio», defendido también en el servidor; la proyección no lo comprueba al registrar, solo `check --deep` y `compact`). `filing_fingerprint_waived` solo se escribe dentro de una compactación, que no pasa por la API | `seal_mismatch` |
 
 **La pareja de anulación y corrección cuenta como una sola línea** (ADR-0026, segunda y tercera enmiendas):
 
 - Una línea con `has_correction` **tiene que traer en la misma petición, detrás de ella**, la línea cuyo `corrects_id` es el `reverses_id` de la anulación. Si no la trae: `pair_incomplete`, en el índice de la anulación. Es la única forma que tiene la API de negarse a **partir una pareja entre dos peticiones**, porque no ve la cola del dispositivo: por eso el cliente **declara**.
 - La pareja **se evalúa entera**: si falla la anulación o falla la corrección, el rechazo se da **en el índice de la anulación**, con `code: "pair_rejected"`, el código de la que falló en `details.member_code` y cuál fue en `details.member` (`reversal` \| `correction`). No se escribe ninguna de las dos.
-- Si la corrección no va inmediatamente detrás de su anulación, **[PENDIENTE]**: la aplicación siempre las escribe juntas (`rectify.ts` añade `[reversal, event]` en una sola escritura), pero ADR-0026 solo dice «que la acompaña en la cola». Propuesta: exigir que sean contiguas (`pair_not_contiguous`).
+- **La corrección va justo detrás de su anulación** (decisión de la dirección, 2026-09-25): la aplicación siempre las escribe juntas (`rectify.ts` añade `[reversal, event]` en una sola escritura), y exigirlo hace inequívoca la pareja. Una línea con `corrects_id` que no va inmediatamente detrás de la anulación de su objetivo con `has_correction`, o una anulación con `has_correction` cuya línea siguiente no es su corrección, se rechaza con `pair_not_contiguous` en el índice de la anulación (o de la corrección suelta).
+- **Una cadena de correcciones de tipos es una sola unidad** (decisión de la dirección, 2026-09-25): las varias parejas que la aplicación escribe de una vez al corregir los tipos del BCE (`writeRateCorrections`) se aceptan enteras o no se acepta ninguna. El cliente lo declara con `"chain_continues": true` en la **corrección** de cada pareja que no es la última de la cadena: la línea siguiente tiene que ser otra anulación con `has_correction` (si no, `pair_incomplete`). Si falla cualquier miembro, el rechazo se da en el índice de **la primera anulación de la cadena**, con `code: "pair_rejected"`, y `details` dice qué miembro falló (`member_index`, `member`, `member_code`).
 
 **El rechazo es por línea:** la API escribe **el tramo válido hasta la primera línea rechazada**, en un solo `PutObject` condicional, y devuelve el motivo de esa línea. Nada de lo que va detrás se escribe, aunque fuera válido.
 
@@ -278,7 +280,7 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `not_found` | 404 | Ruta que no existe |
 | `internal` | 500 | Cualquier otro fallo; nada escrito |
 
-Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_incomplete`, `pair_rejected` y, si la dirección los acepta, `seal_mismatch` y `pair_not_contiguous`.
+Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected` y `seal_mismatch`.
 
 Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a una respuesta sin este formato (el hash del cuerpo rechazado por AWS, el WAF, un error de CloudFront). Nunca se trata como un rechazo de líneas: la sincronización para y lo dice.
 
@@ -287,6 +289,7 @@ Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a un
 | Pieza | Feature |
 |---|---|
 | El caso de uso puro que reaplica y acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto, el marcador, lo retenido y lo descartado, y un **remoto simulado** que cumple §5 sin HTTP | **014** |
+| Las órdenes de administración de la consola contra el almacén remoto: `compact` del remoto, restaurar y olvidar un dispositivo, **fuera de la API** (ADR-0026, Parte A) | **015** |
 | La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
 | El correo mensual con los inicios de sesión de la consola y los tokens vivos y emitidos | **016** |
 | El prefijo de SSM y sus permisos, la política de origen que reenvía `x-atlas-device-token`, la CSP que respeta la `sandbox` de §4.2 | **017** |
