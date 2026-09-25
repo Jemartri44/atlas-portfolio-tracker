@@ -86,7 +86,32 @@ El proyecto se usa desde WSL, y es lo recomendado. Si algún día ejecutas la co
 
 ## 4. Comprobar que la consola las lee
 
-Se hace en una **carpeta de prueba** con un libro sintético, nunca en la de tu libro. La consola se ejecuta con Node desde tu clon del repositorio, ya compilado (si no lo está, sigue el paso 3 de [la prueba de la 013](013-daily-close-prices-live-test.md)). Si tu clon no está en `~/projects/atlas-portfolio-tracker`, cambia la primera línea.
+Se hace en una **carpeta de prueba** con un libro sintético, nunca en la de tu libro. La consola no está en el `PATH`: se ejecuta con Node desde tu clon del repositorio, después de compilarlo.
+
+### Antes: pon al día tu clon y compílalo (obligatorio)
+
+**Hazlo siempre, aunque ya lo compilaras otro día.** Una compilación de antes de la feature 013 no conoce las órdenes de precios, y lo que sigue fallaría con «comando desconocido: prices». Si tu clon no está en `~/projects/atlas-portfolio-tracker`, cambia la primera línea.
+
+Primero, mira si el clon tiene cambios sin guardar:
+
+```bash
+REPO=~/projects/atlas-portfolio-tracker
+cd "$REPO" && git status --short
+```
+
+**Si escribe algo, para aquí**: tienes cambios sin guardar en el clon, y cambiar de rama podría mezclarlos. Si no escribe nada, trae `develop` y compila (`npm ci` reinstala las dependencias **de tu clon**, sin tocar nada fuera de él; tarda un par de minutos):
+
+```bash
+cd "$REPO" && git switch develop && git pull
+npm ci && npm run build
+echo "salida $?"
+```
+
+**Cuenta como «sí»:** la última línea es `salida 0`. Es el mismo paso 3 de [la prueba de la 013](013-daily-close-prices-live-test.md).
+
+### El libro de prueba
+
+En la misma terminal (si abres otra, repite también la línea de `REPO`):
 
 ```bash
 REPO=~/projects/atlas-portfolio-tracker
@@ -111,6 +136,7 @@ Si no sale eso, lo que dice la consola (nunca enseña una clave):
 
 | Mensaje | Qué pasa | Qué hacer |
 |---|---|---|
+| «Error de uso: comando desconocido: prices», con `salida 64` | La consola compilada es anterior a las órdenes de precios | Repite «Antes: pon al día tu clon y compílalo», al principio de este paso |
 | «No hay claves de fuentes de precios configuradas» | No encuentra el fichero | Comprueba la ruta con `ls -l ~/.config/atlas/secrets.json` |
 | «No se usan las claves de …: otros usuarios de la máquina pueden leer ese fichero» | Permisos distintos de `600` | `chmod 600 ~/.config/atlas/secrets.json` |
 | «… no se puede leer como JSON» | Falta una comilla, sobra una coma… | Vuelve a crearlo con el bloque del paso 3 |
