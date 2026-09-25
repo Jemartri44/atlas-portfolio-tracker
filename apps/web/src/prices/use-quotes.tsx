@@ -51,6 +51,18 @@ export const QuotesNotice = (props: { quotes: WebQuotes | undefined }): JSX.Elem
         <Show when={quotes().problem}>
           {(problem) => <Notice severity="caution">{PROBLEMS[problem()]}</Notice>}
         </Show>
+        <Show when={quotes().symbolsNotice}>
+          {(said) => <Notice severity="caution">{said()}</Notice>}
+        </Show>
+        <Show when={quotes().mismatched.length > 0}>
+          <Notice severity="caution">
+            {`Hay cierres guardados en una divisa que no es la declarada para su fuente (${quotes()
+              .mismatched.map((m) => m.asset_id)
+              .join(
+                ", ",
+              )}): no se usan en ninguna cifra en euros. Púrgalos desde la consola con «atlas prices purge»: la próxima descarga vuelve a pedir esos días una vez.`}
+          </Notice>
+        </Show>
         <Show when={quotes().unreadable.length > 0}>
           <Notice severity="caution">
             {`Los precios automáticos de ${quotes().unreadable.length === 1 ? "un activo no se pueden leer" : `${quotes().unreadable.length} activos no se pueden leer`}: esos activos se quedan sin precio automático, porque nunca se leen a medias. Descárgalos otra vez con la consola.`}

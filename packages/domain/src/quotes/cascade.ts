@@ -23,7 +23,7 @@
 import { addDays, addYears, type CivilDate } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
 import type { DailyClose, PriceSource, SourceFailureKind } from "../ports/price-source.js";
-import type { PriceStore } from "../ports/price-store.js";
+import type { PriceStore, PriceTransaction } from "../ports/price-store.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { LedgerState } from "../projections/state.js";
 import type { AssetId } from "../schema/events.js";
@@ -31,6 +31,7 @@ import type { Settings } from "../settings/settings.js";
 import { parsePriceConfig } from "./config.js";
 import { effectiveCloses, encodeCloseLine, linesToAppend, readCloseFile } from "./line.js";
 import { downloadPlan, type PriorityGroup } from "./priority.js";
+import { QUOTE_SOURCES } from "./sources.js";
 import {
   type AssetFailure,
   applyOutcomes,
@@ -94,6 +95,8 @@ export interface UpdateReport {
 
 interface Download {
   readonly asset_id: AssetId;
+  /** The days a purge had asked for again, now asked once: cleared when stored. */
+  readonly refetched?: Partial<Record<QuoteSource, readonly CivilDate[]>>;
   readonly source: QuoteSource;
   readonly currency: string;
   readonly closes: readonly DailyClose[];
@@ -125,6 +128,58 @@ const outcomeOf = (failures: readonly { kind: QuoteFailureKind }[]): AssetOutcom
     return "currency_mismatch";
   }
   return kinds.size === 1 && kinds.has("budget_exhausted") ? "out_of_budget" : "failed";
+};
+
+/**
+ * Clears the days a purge asked for again once they were asked — only those it
+ * asked, read again under the lock: a purge made meanwhile is left owed. A day
+ * asked that has no close in force now is left as a **hole** (`unserved_days`)
+ * and said by `prices status`, never chased again (third pass of the review of
+ * PR #80: a source that does not have a day today will not have it tomorrow).
+ */
+const clearRefetched = async (
+  tx: PriceTransaction,
+  assetId: AssetId,
+  asked: Partial<Record<QuoteSource, readonly CivilDate[]>>,
+  inForce: ReadonlySet<CivilDate>,
+): Promise<void> => {
+  const file = parseSymbols(await tx.symbols());
+  const current = file.assets[assetId];
+  if (current === undefined) {
+    return;
+  }
+  const owed: Partial<Record<QuoteSource, CivilDate[]>> = {};
+  const unserved: Partial<Record<QuoteSource, CivilDate[]>> = {};
+  for (const source of QUOTE_SOURCES) {
+    const days = current.refetch_days?.[source] ?? [];
+    const left = days.filter((date) => !(asked[source] ?? []).includes(date));
+    if (left.length > 0) {
+      owed[source] = left;
+    }
+    const holes = [
+      ...new Set([
+        ...(current.unserved_days?.[source] ?? []),
+        ...days.filter((date) => (asked[source] ?? []).includes(date) && !inForce.has(date)),
+      ]),
+    ].sort();
+    if (holes.length > 0) {
+      unserved[source] = holes;
+    }
+  }
+  const { refetch_days: _asked, unserved_days: _holes, ...rest } = current;
+  await tx.writeSymbols(
+    serializeSymbols({
+      ...file,
+      assets: {
+        ...file.assets,
+        [assetId]: {
+          ...rest,
+          ...(Object.keys(owed).length === 0 ? {} : { refetch_days: owed }),
+          ...(Object.keys(unserved).length === 0 ? {} : { unserved_days: unserved }),
+        },
+      },
+    }),
+  );
 };
 
 /** Downloads the closes of the day; see the header for the rules. */
@@ -198,7 +253,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       if (
         current !== undefined &&
         current[source] === entry[source] &&
-        current.currency === entry.currency
+        current.currencies[source] === entry.currencies[source]
       ) {
         await tx.writeSymbols(
           serializeSymbols({
@@ -221,7 +276,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       kind: "currency_mismatch",
       source,
       at,
-      declared: entry.currency,
+      declared: entry.currencies[source] as string,
       found: result.value as string,
     });
     return { entry: checked, kind: "currency_mismatch" };
@@ -245,7 +300,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         kind: "currency_mismatch",
         source,
         at: input.now().toISOString(),
-        declared: entry.currency,
+        declared: entry.currencies[source] as string,
         found: entry.currency_check?.[source]?.found as string,
       });
       return false;
@@ -266,11 +321,18 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       reports.push({ asset_id, group, outcome: "currency_mismatch", added: 0, failures });
       continue;
     }
-    if (last !== undefined && last >= lastMarketDayBefore(today)) {
+    // The days a purge promised to ask for again (second pass of the review
+    // of PR #80): the download starts at the first of them, whichever source
+    // answers, and not after the last close, which may be of another source.
+    const owed = Object.values(entry.refetch_days ?? {})
+      .flat()
+      .sort()[0];
+    if (owed === undefined && last !== undefined && last >= lastMarketDayBefore(today)) {
       reports.push({ asset_id, group, outcome: "up_to_date", added: 0, failures });
       continue;
     }
-    const from = last === undefined ? addYears(today, -1) : addDays(last, 1);
+    const after = last === undefined ? addYears(today, -1) : addDays(last, 1);
+    const from = owed !== undefined && owed < after ? owed : after;
     // **Never the value of the day in course** (review of PR #78): asked in
     // the afternoon, a source gives a price of mid-session, and stored as the
     // close of today it would stay one for good. Only days before today.
@@ -314,7 +376,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       }
       outcomes.push({ source, at, ok: true });
       const found = result.value.find(
-        (close) => close.currency !== undefined && close.currency !== entry.currency,
+        (close) => close.currency !== undefined && close.currency !== entry.currencies[source],
       );
       if (found !== undefined) {
         // The source said the currency and it is not the declared one: never
@@ -324,15 +386,17 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
           kind: "currency_mismatch",
           source,
           at,
-          declared: entry.currency,
+          declared: entry.currencies[source] as string,
           found: found.currency as string,
         });
         continue;
       }
       downloads.push({
         asset_id,
+        ...(entry.refetch_days === undefined ? {} : { refetched: entry.refetch_days }),
         source,
-        currency: entry.currency,
+        // The currency **of the source that brought it**, never of another.
+        currency: entry.currencies[source] as string,
         closes: result.value.filter((close) => close.date >= from && close.date <= to),
       });
       failuresOf.set(asset_id, undefined);
@@ -370,6 +434,14 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         await tx.appendCloses(download.asset_id, lines.map(encodeCloseLine));
       }
       added.set(download.asset_id, lines.length);
+      if (download.refetched !== undefined) {
+        await clearRefetched(
+          tx,
+          download.asset_id,
+          download.refetched,
+          new Set(effectiveCloses([...existing, ...lines]).map((close) => close.date)),
+        );
+      }
     }
     const next = withAssetFailures(
       applyOutcomes(parseStatus(await tx.status()), outcomes),

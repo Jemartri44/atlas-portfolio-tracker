@@ -19,6 +19,12 @@ export interface ImportedPrices {
   readonly files: Readonly<Record<AssetId, string>>;
   /** ISO 8601 UTC of the last import. */
   readonly imported_at: string;
+  /**
+   * The text of `prices/symbols.json` imported with them, exactly as imported:
+   * what says which closes are stored in a currency their source does not
+   * declare (second pass of the review of PR #80). Absent when never imported.
+   */
+  readonly symbols?: string;
 }
 
 /** The files of `prices/` of the assets given, from the folder; absent files are skipped. */

@@ -27,12 +27,14 @@ import { type EcbHistory, readEcbHistory } from "@atlas/domain/ecb";
 import {
   externalPricesOf,
   type PriceSource,
+  parseSymbols,
   type QuoteSource,
   readCloses,
   type UnreadableCloses,
 } from "@atlas/domain/quotes";
 import type { Context } from "../context.js";
 import { describeError } from "../output/messages.js";
+import { mismatchedNotes } from "../output/prices.js";
 
 /** What the tests replace: the sources (never the network) and where the keys are. */
 export interface PriceEnvironment {
@@ -128,9 +130,26 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
     }
     throw error;
   }
-  const read = readCloses(files);
+  let symbols: ReturnType<typeof parseSymbols>;
+  try {
+    symbols = parseSymbols(await store.symbols());
+  } catch (error) {
+    // A correspondence that does not read — or of a newer format — cannot say
+    // which closes are stored in the wrong currency: the views go on with the
+    // manual prices and say why, like a configuration that does not read
+    // (second pass of the review of PR #80), never falling to reading the
+    // closes as they are.
+    if (error instanceof DomainError) {
+      return {
+        notes: [`Aviso: ${describeError(error)} Mientras tanto no se usan precios automáticos.`],
+      };
+    }
+    throw error;
+  }
+  const read = readCloses(files, symbols);
   const { history, note } = await historyOf(folder);
-  const notes = read.unreadable.map(
+  const notes = [...mismatchedNotes(read.mismatched)];
+  const unreadableNotes = read.unreadable.map(
     (problem: UnreadableCloses) =>
       `Aviso: ${describeError(new DomainError(problem.code, problem.code, { asset_id: problem.asset_id, line: problem.line, field: "línea" }))}`,
   );
@@ -140,6 +159,6 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
       ...(history === undefined ? {} : { history }),
       staleDays: config.ecb_stale_currency_days,
     }),
-    notes: note === undefined ? notes : [...notes, note],
+    notes: [...notes, ...unreadableNotes, ...(note === undefined ? [] : [note])],
   };
 };

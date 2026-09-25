@@ -230,6 +230,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "El registro de las fuentes de precios de la carpeta no se entiende: la consola no descargará nada hasta que se arregle.",
   invalid_symbols_file: () =>
     "La correspondencia de símbolos de la carpeta no se entiende. Se arregla desde la consola, declarando otra vez los símbolos.",
+  symbols_file_newer_version: () =>
+    "La correspondencia de símbolos de la carpeta es de una versión más nueva de la aplicación. Recarga la aplicación para actualizarla.",
+  symbols_misstored_pending: (d, n) =>
+    `${n.one(d.asset_id)} tiene cierres guardados en una divisa equivocada, pendientes de purgar desde la consola: mientras tanto no se puede quitar esa fuente ni el activo.`,
+  symbols_not_declared: (d, n) =>
+    `${n.one(d.asset_id)} no tiene símbolo declarado para esa fuente: no hay con qué comparar sus cierres. Se declara desde la consola.`,
   price_file_newer_version: (d, n) =>
     `Los precios de ${n.one(d.asset_id)} los escribió una versión más nueva de la aplicación: ese activo se queda sin precio automático. Recarga la aplicación para actualizarla.`,
   price_line_invalid: (d, n) =>

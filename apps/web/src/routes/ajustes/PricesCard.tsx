@@ -129,6 +129,7 @@ export const PricesCard = (): JSX.Element => {
             <Show when={loaded().problem}>
               {(problem) => <p class="card-note">{PROBLEMS[problem()]}</p>}
             </Show>
+            <Show when={loaded().symbolsNotice}>{(said) => <p class="card-note">{said()}</p>}</Show>
           </>
         )}
       </Show>
@@ -142,7 +143,7 @@ export const PricesCard = (): JSX.Element => {
           <input
             type="file"
             class="sr-only"
-            accept=".jsonl"
+            accept=".jsonl,.json"
             multiple
             disabled={busy()}
             onChange={(event) => void onImport(event)}

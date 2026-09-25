@@ -10,13 +10,16 @@ import { FilePriceStore } from "@atlas/adapters";
 import { type AssetId, settingsAt, todayInMadrid } from "@atlas/domain";
 import {
   type AssetOutcome,
+  assertNothingMisstored,
   checkSymbols,
+  isQuoteSource,
   type PriceStatus,
   type PriceStore,
   parsePriceConfig,
   parseStatus,
   parseSymbols,
   priceStatusView,
+  purgeMismatched,
   QUOTE_SOURCES,
   type QuoteSource,
   readCloses,
@@ -28,13 +31,13 @@ import {
 } from "@atlas/domain/quotes";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
-import { FAILURE_TEXT, SOURCE_NAMES } from "../output/prices.js";
+import { FAILURE_TEXT, mismatchedNotes, SOURCE_NAMES, unservedNotes } from "../output/prices.js";
 import { table } from "../output/table.js";
 import { folderOf, keysFor, sourcesFor } from "../prices/load.js";
 import { confirm, loadForQuery, render } from "./shared.js";
 
 const USAGE_PRICES =
-  "uso: atlas prices update | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> --currency <divisa> [--eodhd <símbolo>] [--alpha-vantage <símbolo>] [--accept-currency] | atlas prices symbols remove <activo>";
+  "uso: atlas prices update | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> [--eodhd <símbolo>] [--alpha-vantage <símbolo>] --currency <divisa> [--eodhd-currency <divisa>] [--alpha-vantage-currency <divisa>] [--accept-currency] | atlas prices symbols remove <activo> | atlas prices purge <activo> --source eodhd|alpha_vantage [--yes]";
 
 const NO_KEYS =
   "No hay claves de fuentes de precios configuradas: sin precios automáticos. La entrada manual (`atlas add valuation`) sigue funcionando igual.";
@@ -116,10 +119,11 @@ const status = async (ctx: Context): Promise<number> => {
       files.set(id, text);
     }
   }
+  const read = readCloses(files, symbols);
   const view = priceStatusView(
     await statusOf(store),
     config,
-    readCloses(files).closes,
+    read.closes,
     ids,
     today,
     ctx.deps.clock.now(),
@@ -166,8 +170,42 @@ const status = async (ctx: Context): Promise<number> => {
             }`,
       ]),
     ),
+    ...mismatchedNotes(read.mismatched),
+    ...unservedNotes(read.unserved),
   ].join("\n");
-  render(ctx, view, text);
+  render(ctx, { ...view, mismatched: read.mismatched, unserved: read.unserved }, text);
+  return EXIT.ok;
+};
+
+const purge = async (ctx: Context, assetId: string, flags: Flags): Promise<number> => {
+  const source = stringFlag(flags, "source");
+  if (source === undefined || !isQuoteSource(source)) {
+    throw new UsageError("uso: atlas prices purge <activo> --source eodhd|alpha_vantage [--yes]");
+  }
+  const store = new FilePriceStore(folderOf(ctx));
+  const read = readCloses(
+    new Map([[assetId, (await store.closes(assetId)) ?? ""]]),
+    parseSymbols(await store.symbols()),
+  );
+  const count = read.mismatched.find((m) => m.source === source)?.count ?? 0;
+  if (
+    count > 0 &&
+    !(await confirm(
+      ctx,
+      `¿Quitar de prices/ ${count === 1 ? "1 cierre" : `${count} cierres`} de ${SOURCE_NAMES[source]} de ${assetId} guardados en una divisa que no es la declarada? La próxima descarga vuelve a pedir esos días una vez; los que ninguna fuente sirva quedan como hueco. [s/N] `,
+    ))
+  ) {
+    ctx.io.out("No se ha quitado nada.");
+    return EXIT.ok;
+  }
+  const removed = await purgeMismatched(store, assetId, source);
+  render(
+    ctx,
+    { asset_id: assetId, source, removed },
+    removed === 0
+      ? `${assetId} no tiene cierres de ${SOURCE_NAMES[source]} en otra divisa que la declarada: no se ha quitado nada.`
+      : `Quitados ${removed === 1 ? "1 cierre" : `${removed} cierres`} de ${SOURCE_NAMES[source]} de ${assetId}; la próxima descarga vuelve a pedir esos días una vez, y los que ninguna fuente sirva quedan como hueco, dicho en «atlas prices status».`,
+  );
   return EXIT.ok;
 };
 
@@ -188,12 +226,13 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
     ctx,
     Object.fromEntries(entries),
     table(
-      ["activo", "divisa declarada", "EODHD", "Alpha Vantage", "contraste con la fuente"],
+      ["activo", "EODHD", "Alpha Vantage", "contraste con la fuente"],
       entries.map(([id, entry]) => [
         id,
-        entry.currency,
-        entry.eodhd ?? "",
-        entry.alpha_vantage ?? "",
+        // Each symbol with the currency declared for it (fix of 013).
+        ...QUOTE_SOURCES.map((s) =>
+          entry[s] === undefined ? "" : `${entry[s]} (${entry.currencies[s] as string})`,
+        ),
         QUOTE_SOURCES.filter((s) => entry[s] !== undefined)
           .map((s) =>
             entry.currency_check?.[s] === undefined
@@ -209,29 +248,71 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
   return EXIT.ok;
 };
 
-const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<number> => {
-  const currency = stringFlag(flags, "currency");
-  if (currency === undefined) {
+/**
+ * The declaration from the flags: each symbol with **its own** currency
+ * (`--eodhd-currency`, `--alpha-vantage-currency`), and `--currency` for every
+ * source that has none of its own. A London share quotes in pounds at EODHD
+ * and in pence at Alpha Vantage (fix of 013): one currency for both made one
+ * of them ask forever, or stored its closes a hundred times too high.
+ */
+const declarationOf = (flags: Flags): SymbolDeclaration => {
+  const common = stringFlag(flags, "currency");
+  const symbols = {
+    eodhd: stringFlag(flags, "eodhd"),
+    alpha_vantage: stringFlag(flags, "alpha-vantage"),
+  };
+  const own = {
+    eodhd: stringFlag(flags, "eodhd-currency"),
+    alpha_vantage: stringFlag(flags, "alpha-vantage-currency"),
+  };
+  const flagOf = { eodhd: "eodhd", alpha_vantage: "alpha-vantage" } as const;
+  // Nothing is dropped in silence (review of PR #80): a currency for a source
+  // without its symbol, or a declaration without any symbol, is a mistake.
+  for (const source of QUOTE_SOURCES) {
+    if (own[source] !== undefined && symbols[source] === undefined) {
+      throw new UsageError(
+        `--${flagOf[source]}-currency sin --${flagOf[source]}: una divisa sin su símbolo no declara nada`,
+      );
+    }
+  }
+  if (symbols.eodhd === undefined && symbols.alpha_vantage === undefined) {
     throw new UsageError(
-      "falta --currency: la divisa de la cotización se declara, nunca se supone",
+      "no se declara ningún símbolo: añade --eodhd <símbolo>, --alpha-vantage <símbolo> o los dos",
     );
   }
+  const currencies: Partial<Record<QuoteSource, string>> = {};
+  for (const source of QUOTE_SOURCES) {
+    if (symbols[source] === undefined) {
+      continue;
+    }
+    const currency = own[source] ?? common;
+    if (currency === undefined) {
+      throw new UsageError(
+        `falta la divisa de ${SOURCE_NAMES[source]} (--currency, o --${source === "eodhd" ? "eodhd" : "alpha-vantage"}-currency): la divisa de la cotización se declara, nunca se supone`,
+      );
+    }
+    currencies[source] = currency;
+  }
+  return {
+    ...(symbols.eodhd === undefined ? {} : { eodhd: symbols.eodhd }),
+    ...(symbols.alpha_vantage === undefined ? {} : { alpha_vantage: symbols.alpha_vantage }),
+    currencies,
+  };
+};
+
+const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<number> => {
+  const declaration = declarationOf(flags);
   const { state } = await loadForQuery(ctx);
   if (!state.assets.has(assetId)) {
     throw new UsageError(`${assetId} no está en el catálogo de este libro`);
   }
-  const eodhd = stringFlag(flags, "eodhd");
-  const alpha = stringFlag(flags, "alpha-vantage");
-  const declaration: SymbolDeclaration = {
-    currency,
-    ...(eodhd === undefined ? {} : { eodhd }),
-    ...(alpha === undefined ? {} : { alpha_vantage: alpha }),
-  };
   const { keys, note } = await keysFor(ctx);
   if (note !== undefined) {
     ctx.io.err(note);
   }
   const store = new FilePriceStore(folderOf(ctx));
+  // Closes stored wrong keep their source declared: refused before any call.
+  await assertNothingMisstored(store, assetId, declaration);
   const now = () => ctx.deps.clock.now();
   const check = await checkSymbols({ declaration, store, sources: sourcesFor(ctx, keys), now });
   if (!check.ok) {
@@ -258,7 +339,7 @@ const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<
       booleanFlag(flags, "accept-currency") ||
       (await confirm(
         ctx,
-        `¿Confirmas ${currency} como divisa de sus cierres, contra lo que dice la fuente? [s/N] `,
+        `¿Confirmas ${pending.map((d) => `${d.declared} para ${SOURCE_NAMES[d.source]}`).join(" y ")} como divisa de sus cierres, contra lo que dice la fuente? [s/N] `,
       ));
     if (!accepted) {
       ctx.io.out("No se ha guardado nada.");
@@ -278,7 +359,11 @@ const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<
     ctx,
     { asset_id: assetId, declaration, checks: check.checks, unchecked: check.unchecked },
     [
-      `Símbolos de ${assetId} guardados en prices/symbols.json (divisa de la cotización: ${currency}).`,
+      `Símbolos de ${assetId} guardados en prices/symbols.json (${QUOTE_SOURCES.filter(
+        (s) => declaration[s] !== undefined,
+      )
+        .map((s) => `${SOURCE_NAMES[s]} en ${declaration.currencies[s] as string}`)
+        .join(", ")}).`,
       ...(unchecked.length === 0
         ? []
         : [
@@ -299,6 +384,14 @@ export const pricesCommand = async (
     assertKnownFlags(flags, [...GLOBAL_FLAGS]);
     return sub === "update" ? update(ctx) : status(ctx);
   }
+  if (sub === "purge") {
+    assertKnownFlags(flags, ["source", ...GLOBAL_FLAGS]);
+    const assetId = positionals[2];
+    if (assetId === undefined) {
+      throw new UsageError(USAGE_PRICES);
+    }
+    return purge(ctx, assetId, flags);
+  }
   if (sub !== "symbols") {
     throw new UsageError(USAGE_PRICES);
   }
@@ -307,7 +400,9 @@ export const pricesCommand = async (
     assertKnownFlags(flags, [
       "currency",
       "eodhd",
+      "eodhd-currency",
       "alpha-vantage",
+      "alpha-vantage-currency",
       "accept-currency",
       ...GLOBAL_FLAGS,
     ]);
