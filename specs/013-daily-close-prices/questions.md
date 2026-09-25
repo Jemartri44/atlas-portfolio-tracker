@@ -119,25 +119,9 @@ Qué se enseña de una URL al fallar: **nada de la URL**. El mensaje dice la fue
 
 ### 1.8 Lo que tiene que comprobar el usuario con su clave de EODHD
 
-Cinco o seis llamadas, **1 del cupo cada una**, en su máquina, **sin pasarme la clave ni los ISIN**. La dirección se las hace llegar si lo aprueba:
+Siete llamadas, **1 del cupo cada una**, en su máquina, **sin pasar a nadie la clave ni los ISIN**: los índices (`GSPC.INDX`, `STOXX50E.INDX`), cuántos de sus ISIN cubre `EUFUND` y si el plan gratuito sirve sus cierres (**solo el recuento**), la unidad de los cierres de Londres frente a la divisa del listado, y si el plan gratuito cubre cripto (`BTC-EUR.CC`, D-Q5).
 
-```bash
-K=$(jq -r .eodhd ~/.config/atlas/secrets.json)   # o la clave a mano
-# 1. Índices en el plan gratuito
-curl -s -o /dev/null -w 'GSPC.INDX %{http_code}\n' "https://eodhd.com/api/eod/GSPC.INDX?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05"
-curl -s -o /dev/null -w 'STOXX50E.INDX %{http_code}\n' "https://eodhd.com/api/eod/STOXX50E.INDX?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05"
-# 2. EUFUND: cuántos de sus ISIN cubre (sustituir ISIN1,ISIN2,… por los suyos; no copiar la salida, solo el recuento)
-curl -s "https://eodhd.com/api/exchange-symbol-list/EUFUND?api_token=$K&fmt=json&symbols=ISIN1,ISIN2" | jq length
-#    y si el fin de día del plan gratuito los sirve (uno cualquiera de los cubiertos):
-curl -s -o /dev/null -w 'EUFUND eod %{http_code}\n' "https://eodhd.com/api/eod/ISIN1.EUFUND?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05"
-# 3. La unidad de Londres (un ETF público en libras, p. ej. CSPX.LSE): el cierre y la divisa que dice el listado
-curl -s "https://eodhd.com/api/eod/CSPX.LSE?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05" | jq '.[0].close'
-curl -s "https://eodhd.com/api/exchange-symbol-list/LSE?api_token=$K&fmt=json&symbols=CSPX" | jq '.[0].Currency'
-# 4. Cripto en el plan gratuito (D-Q5): el formato de la bolsa virtual CC es <PAR>.CC
-curl -s -o /dev/null -w 'BTC-EUR.CC %{http_code}\n' "https://eodhd.com/api/eod/BTC-EUR.CC?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05"
-```
-
-Qué anotar: los códigos HTTP, el recuento de `EUFUND` (no los ISIN) y los dos valores de Londres (para ver si el cierre está en peniques mientras el listado dice `GBP`, que es lo que afirma un informe de terceros no verificado). Si el parámetro `symbols=` no filtra en `EUFUND`, la respuesta entera es muy grande: entonces `| jq '[.[] | select(.Code=="ISIN1" or .Code=="ISIN2")] | length'`.
+**El procedimiento se ha movido a un documento propio**, escrito para el usuario: [`docs/runbooks/013-daily-close-prices-live-test.md`](../../docs/runbooks/013-daily-close-prices-live-test.md), parte A. Al moverlo (2026-09-25) se corrigió: `jq` no está instalado en la máquina del usuario y se sustituyó por `node -e`; el ejemplo de Londres pasó de `CSPX.LSE` a `TSCO.LSE`, porque la divisa de CSPX en Londres no está verificada aquí y Tesco es el caso que §1.4 sí vio en `GBX`; y el recuento de `EUFUND` cuenta los ISIN del usuario también si `symbols=` no filtra.
 
 ---
 
@@ -326,39 +310,18 @@ Visto bueno al plan, con estas decisiones. Lo que cambian en `spec.md` y `plan.m
 
 La feature está construida con dobles; **se da por verificada solo con las claves del usuario**. Lo ejecuta él, en su máquina, **en una carpeta de prueba que no es la de su libro**, y anota lo que se pide. **No tiene que pasar ninguna clave a nadie.** CoinGecko y OpenFIGI ya no forman parte (D-Q5, D-Q6).
 
-1. **Crear las dos claves gratuitas**: EODHD Free en `https://eodhd.com/register` y Alpha Vantage en `https://www.alphavantage.co/support/#api-key`.
-2. **Guardarlas fuera de la carpeta del libro**, solo legibles por él:
-   ```bash
-   mkdir -p ~/.config/atlas
-   printf '{"eodhd":"%s","alpha_vantage":"%s"}\n' 'SU_CLAVE_EODHD' 'SU_CLAVE_AV' > ~/.config/atlas/secrets.json
-   chmod 600 ~/.config/atlas/secrets.json
-   ```
-3. **Las comprobaciones del bloque 0 que faltan** (§1.8), con la clave de EODHD: índices, cuántos de sus ISIN cubre `EUFUND` (**solo el recuento**), la unidad de los cierres de Londres y si el plan gratuito cubre cripto (`BTC-EUR.CC`). Anotar los códigos HTTP y los dos valores de Londres.
-4. **Un libro de prueba** con activos que tienen posición hoy, y a cada uno un **valor público** (los del libro sintético son inventados; aquí solo se les da un símbolo real para que haya algo que descargar):
-   ```bash
-   T=~/atlas-prueba-013 && mkdir -p $T
-   atlas synth --out $T/ledger.jsonl
-   A="atlas --ledger $T/ledger.jsonl"
-   $A prices symbols set ast_world --currency EUR --eodhd IWDA.AS                      # un ETF europeo
-   $A prices symbols set ast_gold  --currency USD --eodhd AAPL.US --alpha-vantage AAPL # una acción de EE. UU.
-   $A prices symbols set ast_btc   --currency EUR --eodhd BTC-EUR.CC                   # cripto por EODHD (D-Q5)
-   $A prices symbols set ast_mm    --currency EUR --eodhd <ISIN_PÚBLICO>.EUFUND        # solo si el punto 3 dijo que EUFUND está en el plan gratuito
-   $A prices symbols set ast_delta --currency GBX --eodhd CSPX.LSE --alpha-vantage CSPX.LON  # Londres: ver qué dice del GBX frente a GBP
-   $A fx update     # el histórico del BCE, para que las cotizaciones en dólares tengan valor en euros
-   ```
-   Cada `set` gasta **una llamada del cupo por fuente** (confirma la divisa con los metadatos de la fuente). Si la fuente dice otra divisa, la consola lo enseña y pide confirmarla (o `--accept-currency`): anotar qué dijo.
-5. **Descargar dos veces seguidas y ver el estado**, copiando la salida **sin claves**:
-   ```bash
-   $A prices update; echo "salida $?"
-   $A prices update; echo "salida $?"
-   $A prices status
-   $A weights; $A bucket; $A networth
-   ```
-6. **Forzar un fallo**: cambiar a propósito una letra de la clave de EODHD en `secrets.json`, poner `{"failure_threshold":1}` en `$T/prices/config.json` y repetir `prices update`: tiene que decir que EODHD ha rechazado la clave y salir con **7**. Devolver la clave buena.
-7. **La web de escritorio con otro perfil del navegador** (o `chromium --user-data-dir=/tmp/atlas-prueba-013`), **nunca el perfil del libro real**: importar el libro de prueba, enlazar la carpeta `$T` en Ajustes → «Tipos del BCE» → «Leer de la carpeta de la consola», y mirar Cartera, Cubo y Ajustes → «Precios automáticos». `~/.config/atlas/` **no está** dentro de `$T`, así que la web no puede leer las claves.
-8. **Buscar la clave en lo escrito**: `grep -rF "$(jq -r .eodhd ~/.config/atlas/secrets.json | cut -c1-8)" $T && echo FUGA || echo limpio` (y lo mismo con la de Alpha Vantage).
+**El procedimiento se ha movido a un documento propio**, escrito para el usuario, con pasos numerados, qué anotar, qué cuenta como «sí» y una plantilla de vuelta: [`docs/runbooks/013-daily-close-prices-live-test.md`](../../docs/runbooks/013-daily-close-prices-live-test.md), parte B. Se ensayó el 2026-09-25 en el *scratchpad*, en todo lo que no necesita claves (`npm ci`, `npm run build`, `synth`, `fx update`, `prices symbols set` sin claves, `prices update` sin claves, con un `secrets.json` abierto y con el cupo a 0, las vistas y `npm run preview`). Lo que hubo que corregir para que funcione tal cual:
 
-**Cuenta como «sí»**: cada fuente responde para su activo; la segunda ejecución **no gasta cupo** en lo que ya está al día (lo que llega a gastar es un festivo o un símbolo sin cierres nuevos, que no se puede saber sin preguntar); ninguna salida ni fichero contiene una clave; y la web enseña lo que la consola descargó. **Un «sí» que no venga de las claves reales no vale.** Resultado: *pendiente*.
+- **`atlas` no está en el `PATH`**: se invoca `node apps/cli/dist/main.js` desde el clon, tras `npm run build`, con una función de la terminal que fija `--ledger`.
+- **`jq` no está instalado**: cada `jq` pasa a `node -e` o `node -p`, que ya hace falta para la consola.
+- **`ast_delta` no descarga nada hoy**: en el libro sintético no tiene posición hasta el 2027-02-10, y `downloadPlan` solo pide los activos con posición (o de referencia) a la fecha de hoy. A la fecha de la prueba descargan `ast_alpha` (cubo), `ast_world` (índice del cubo), `ast_bonds`, `ast_btc`, `ast_gold` y `ast_mm`. Londres pasa a `ast_alpha`.
+- **Alpha Vantage no se probaba**: solo se llama si EODHD falla, y todo tenía símbolo de EODHD. `ast_gold` lleva ahora solo el de Alpha Vantage.
+- **El fallo forzado no llamaba a nadie**: con todo al día, la segunda descarga no gasta cupo y no hay 401 que ver. Ahora se borra el fichero de precios de un activo de prueba, y la clave mala va en **una copia** (`XDG_CONFIG_HOME` apuntando a otra carpeta), sin tocar el fichero real.
+- **El cupo**: las comprobaciones con `curl` gastan cupo de EODHD que la consola no conoce. La prueba va en **dos días** (parte A y parte B), unas 7 y 10 llamadas.
+- **Las claves** se escriben con `read -s` y `umask 077`, así que ni se ven ni quedan en el historial, y el fichero nace con `600`.
+- **La web**: `npm run preview` (`http://localhost:4173`) en un perfil nuevo del navegador; «Importar desde la carpeta de la consola» enlaza la carpeta para leer, y hay un camino a mano si el selector no la alcanza (WSL).
+
+**Cuenta como «sí»** lo mismo que antes: cada fuente responde para su activo; la segunda ejecución no gasta cupo en lo que ya está al día; ninguna salida ni fichero contiene una clave; y la web enseña lo que la consola descargó. **Un «sí» que no venga de las claves reales no vale.** Resultado: *pendiente*.
 
 ---
 
