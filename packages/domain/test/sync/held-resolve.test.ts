@@ -16,15 +16,45 @@ import {
 import { lineSha256 } from "../../src/sync/lines.js";
 import {
   confirmHeld,
+  decisionOf,
   discardHeld,
+  type RedoPlan,
   redoFinished,
   redoneLines,
-  redoPlan,
-  redoRecorded,
-  redoStarted,
   resolutionsFor,
+  sealedIds,
+  startRedoPlan,
 } from "../../src/sync/resolve.js";
 import { baseLedger, correction, device, linesOf } from "./helpers.js";
+
+type Unit = NonNullable<ReturnType<typeof unresolvedHeld>[number]>;
+
+/** Ids in order, distinct. */
+const ids = (...list: string[]): (() => string) => {
+  let next = 0;
+  return () => list[next++] ?? `01ZZZZZZZZZZZZZZZZZZZZZZ${next}`;
+};
+
+/** The plan of a redo, over a ledger (the current state), sealing the ids given. */
+const planFor = (
+  unit: Unit,
+  events: readonly LedgerEvent[],
+  ledger: readonly LedgerEvent[] = [],
+  seal: () => string = ids("01ARYZ6S41TSV4RRFFQ69ZZZZA", "01ARYZ6S41TSV4RRFFQ69ZZZZB"),
+): RedoPlan => startRedoPlan(unit, events, new Set(), ledger, seal, "t").plan;
+
+/** The unit as it reads after sealing its redo. */
+const sealedUnit = (
+  records: readonly HeldRecord[],
+  events: readonly LedgerEvent[],
+  seal: () => string,
+): Unit => {
+  const unit = unresolvedHeld(records)[0] as Unit;
+  return unresolvedHeld([
+    ...records,
+    ...startRedoPlan(unit, events, new Set(), [], seal, "t").records,
+  ])[0] as Unit;
+};
 
 const { events } = baseLedger();
 const buy = events[events.length - 1] as BuyEvent;
@@ -103,11 +133,21 @@ describe("the held records", () => {
     ]);
     const resolved = [...records, ...discardHeld(units[0] as never, "t3").records];
     expect(unresolvedHeld(resolved).map((unit) => unit.reason.code)).toEqual(["pair_rejected"]);
+    expect(units[0]?.held_at).toBe("t1");
     const started = [
       ...records,
-      ...redoStarted(units[0] as never, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", "t4"),
+      ...startRedoPlan(
+        units[0] as never,
+        [deposit],
+        new Set(),
+        [],
+        ids("01ARYZ6S41TSV4RRFFQ69ZZZZZ"),
+        "t4",
+      ).records,
     ];
-    expect(unresolvedHeld(started)[0]?.redo).toBe("01ARYZ6S41TSV4RRFFQ69ZZZZZ");
+    expect(unresolvedHeld(started)[0]?.sealed).toEqual({
+      [lineSha256(units[0]?.lines[0] as string)]: "01ARYZ6S41TSV4RRFFQ69ZZZZZ",
+    });
   });
 });
 
@@ -136,7 +176,19 @@ describe("resolving (R18)", () => {
     )[0] as typeof duplicate;
     expect(resolutionsFor(heldFiling, [filing], new Set([filing.id]))).toEqual(["discard"]);
     expect(resolutionsFor(heldFiling, [filing], new Set())).toEqual(["redo", "discard"]);
-    expect(() => redoPlan(heldFiling, [filing], new Set([filing.id]))).toThrow(ValidationError);
+    expect(() => startRedoPlan(heldFiling, [filing], new Set([filing.id]), [], ids(), "t")).toThrow(
+      expect.objectContaining({ code: "redo_filing_in_remote" }),
+    );
+  });
+
+  it("does not offer to redo a correction whose reversal was discarded: only to discard it", () => {
+    const alone = unresolvedHeld(
+      holdRecords(linesOf([pair[1]]), "client", { code: "partner_discarded", details: {} }, "t"),
+    )[0] as typeof duplicate;
+    expect(resolutionsFor(alone, [pair[1]], new Set())).toEqual(["discard"]);
+    expect(() => planFor(alone, [pair[1]])).toThrow(
+      expect.objectContaining({ code: "redo_partner_discarded" }),
+    );
   });
 
   it("confirms by putting the unit back right after the synced prefix and remembering what was confirmed", () => {
@@ -188,42 +240,58 @@ describe("resolving (R18)", () => {
     expect(() => discardHeld(duplicate, "t", "reversal")).toThrow(ValidationError);
   });
 
-  it("plans a redo as a new event, a correction of the same target or the same reversal", () => {
-    expect(redoPlan(duplicate, [deposit], new Set())).toMatchObject({
+  it("plans a redo as a new event, a correction of the same target or the same reversal, with sealed ids", () => {
+    expect(planFor(duplicate, [deposit])).toMatchObject({
       kind: "record",
       draft: { type: "cash_deposit" },
+      id: "01ARYZ6S41TSV4RRFFQ69ZZZZA",
     });
-    expect(redoPlan(heldPair, pair, new Set())).toMatchObject({
+    expect(planFor(heldPair, pair)).toMatchObject({
       kind: "correct",
       target_id: buy.id,
       draft: { quantity: "5" },
+      reversal_id: "01ARYZ6S41TSV4RRFFQ69ZZZZA",
+      id: "01ARYZ6S41TSV4RRFFQ69ZZZZB",
     });
     const lone = b.reversal(deposit.id, "why");
     const heldLone = unresolvedHeld(
       holdRecords(linesOf([lone]), "client", { code: "domain_rejected", details: {} }, "t"),
     )[0] as typeof duplicate;
-    expect(redoPlan(heldLone, [lone], new Set())).toEqual({
+    expect(planFor(heldLone, [lone])).toEqual({
       kind: "reverse",
       target_id: deposit.id,
       reason: "why",
+      draft: { type: "reversal", reverses_id: deposit.id, reason: "why" },
+      id: "01ARYZ6S41TSV4RRFFQ69ZZZZA",
     });
-    const draft = (redoPlan(duplicate, [deposit], new Set()) as { draft: Record<string, unknown> })
-      .draft;
+    const draft = (planFor(duplicate, [deposit]) as { draft: Record<string, unknown> }).draft;
     expect(Object.keys(draft)).not.toContain("id");
     expect(Object.keys(draft)).not.toContain("fingerprint");
   });
 
-  it("seals the id of a redo before recording it, and knows it recorded by that exact id only", () => {
-    const started = unresolvedHeld([
-      ...holdRecords(linesOf([deposit]), "client", duplicate.reason, "t"),
-      ...redoStarted(duplicate, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", "t"),
-    ])[0] as typeof duplicate;
-    expect(redoRecorded(started, [deposit])).toBe(false);
+  it("corrects the version in force: the other device's correction of the same target (case 3)", () => {
+    const other = correction(device(300), buy, { quantity: "7" });
+    const again = correction(device(310), other[1], { quantity: "8" });
+    expect(planFor(heldPair, pair, [buy, ...other])).toMatchObject({ target_id: other[1].id });
+    expect(planFor(heldPair, pair, [buy, ...other, ...again])).toMatchObject({
+      target_id: again[1].id,
+    });
+    // Reversed and not corrected: the target stays, and recording says why it cannot.
+    const gone = device(320).reversal(buy.id);
+    expect(planFor(heldPair, pair, [buy, gone])).toMatchObject({ target_id: buy.id });
+  });
+
+  it("seals the ids of a redo before recording it, keeps them when started again, and knows it recorded by those exact ids only", () => {
+    const records = holdRecords(linesOf([deposit]), "client", duplicate.reason, "t");
+    const started = sealedUnit(records, [deposit], ids("01ARYZ6S41TSV4RRFFQ69ZZZZZ"));
+    const again = startRedoPlan(started, [deposit], new Set(), [], ids("01OTHER"), "t");
+    expect(again).toMatchObject({ plan: { id: "01ARYZ6S41TSV4RRFFQ69ZZZZZ" }, records: [] });
+    expect(redoneLines(started, [deposit], [deposit])).toEqual([]);
     expect(
-      redoRecorded(started, [{ ...deposit, id: "01ARYZ6S41TSV4RRFFQ69ZZZZZ" } as LedgerEvent]),
-    ).toBe(true);
-    expect(redoRecorded(duplicate, [deposit])).toBe(false);
-    const finished = redoFinished(started.lines, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", "t");
+      redoneLines(started, [deposit], [{ ...deposit, id: "01ARYZ6S41TSV4RRFFQ69ZZZZZ" } as never]),
+    ).toEqual(linesOf([deposit]));
+    expect(redoneLines(duplicate, [deposit], [deposit])).toEqual([]);
+    const finished = redoFinished(started, started.lines, "t");
     expect(finished.discarded[0]).toMatchObject({
       reason: { code: "redone" },
       replaced_by: "01ARYZ6S41TSV4RRFFQ69ZZZZZ",
@@ -244,10 +312,11 @@ describe("finding what is held back", () => {
     );
     expect(heldUnitById(units, units[0]?.unit as string)).toBe(units[0]);
     expect(() => heldUnitById(units, "nope")).toThrow(ValidationError);
-    const started = unresolvedHeld([
-      ...holdRecords(linesOf([deposit]), "client", { code: "new_duplicate", details: {} }, "t"),
-      ...redoStarted(units[0] as never, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", "t"),
-    ])[0] as never;
+    const started = sealedUnit(
+      holdRecords(linesOf([deposit]), "client", { code: "new_duplicate", details: {} }, "t"),
+      [deposit],
+      ids("01ARYZ6S41TSV4RRFFQ69ZZZZZ"),
+    ) as never;
     expect(() => assertRedoRecorded(started, [deposit], [deposit])).toThrow(ValidationError);
     expect(
       assertRedoRecorded(
@@ -272,44 +341,108 @@ describe("redoing pairs and chains (B2 of the review of PR #83)", () => {
     holdRecords(linesOf(chain), "client", { code: "pair_rejected", details: {} }, "t"),
   )[0] as NonNullable<ReturnType<typeof unresolvedHeld>[number]>;
 
-  it("plans a chain pair by pair, the first still held first", () => {
-    expect(redoPlan(held, chain, new Set())).toMatchObject({
-      kind: "correct",
-      target_id: first.id,
-    });
+  it("plans a chain pair by pair, the first still held first, sealing only that pair", () => {
+    const started = startRedoPlan(held, chain, new Set(), [], ids("R1", "C1"), "t");
+    expect(started.plan).toMatchObject({ kind: "correct", target_id: first.id });
+    expect(
+      started.records.map((record) => record.kind === "redo_started" && record.event_id),
+    ).toEqual(["R1", "C1"]);
   });
 
-  it("finishes only the pairs whose redo the ledger shows; the rest stays held", async () => {
+  it("finishes only the pairs recorded with their sealed ids; the rest stays held", async () => {
     const { assertRedoRecorded } = await import("../../src/sync/resolve.js");
+    const records = holdRecords(linesOf(chain), "client", held.reason, "t");
+    const sealed = sealedUnit(records, chain, ids("01REDOREVERSAL", "01REDOCORRECTION"));
     const redo = device(3100);
-    const redone = correction(redo, first, { amount: "21" });
-    expect(() => assertRedoRecorded(held, chain, [first, second])).toThrow(ValidationError);
-    expect(assertRedoRecorded(held, chain, [first, second, ...redone])).toEqual(linesOf(pair1));
-    const records = [
-      ...holdRecords(linesOf(chain), "client", held.reason, "t"),
-      ...redoFinished(linesOf(pair1), undefined, "t").records,
-    ];
-    expect(unresolvedHeld(records).flatMap((unit) => unit.lines)).toEqual(linesOf(pair2));
-    // The held pair's own lines never count as its redo.
-    expect(redoneLines(held, chain, [first, second, ...chain])).toEqual([]);
-    // A lone reversal, by a reversal of its target that is not the held one.
-    const lone = redo.reversal(second.id);
-    const heldLone = unresolvedHeld(
-      holdRecords(linesOf([lone]), "client", { code: "domain_rejected", details: {} }, "t"),
-    )[0] as typeof held;
-    expect(redoneLines(heldLone, [lone], [second])).toEqual([]);
-    expect(redoneLines(heldLone, [lone], [second, redo.reversal(second.id)])).toEqual(
-      linesOf([lone]),
+    const [reversal, corrected] = correction(redo, first, { amount: "21" });
+    const redone = [
+      { ...reversal, id: "01REDOREVERSAL" },
+      { ...corrected, id: "01REDOCORRECTION" },
+    ] as LedgerEvent[];
+    expect(() => assertRedoRecorded(sealed, chain, [first, second])).toThrow(ValidationError);
+    // A correction of the same target with other ids is not this redo (R1).
+    expect(() =>
+      assertRedoRecorded(sealed, chain, [
+        first,
+        second,
+        reversal as LedgerEvent,
+        corrected as LedgerEvent,
+      ]),
+    ).toThrow(expect.objectContaining({ code: "redo_not_recorded" }));
+    // Only half of the pair recorded: not finished.
+    expect(redoneLines(sealed, chain, [first, second, redone[0] as LedgerEvent])).toEqual([]);
+    expect(assertRedoRecorded(sealed, chain, [first, second, ...redone])).toEqual(linesOf(pair1));
+    const finished = redoFinished(sealed, linesOf(pair1), "t");
+    expect(finished.discarded.map((record) => record.replaced_by)).toEqual([
+      "01REDOREVERSAL",
+      "01REDOCORRECTION",
+    ]);
+    expect(unresolvedHeld([...records, ...finished.records]).flatMap((unit) => unit.lines)).toEqual(
+      linesOf(pair2),
     );
+    // Nothing sealed: nothing is its redo, not even the held pair's own lines.
+    expect(redoneLines(held, chain, [first, second, ...chain])).toEqual([]);
+    // A lone reversal, by its sealed reversal only.
+    const lone = redo.reversal(second.id);
+    const loneRecords = holdRecords(
+      linesOf([lone]),
+      "client",
+      { code: "domain_rejected", details: {} },
+      "t",
+    );
+    const heldLone = sealedUnit(loneRecords, [lone], ids("01LONE"));
+    expect(redoneLines(heldLone, [lone], [second, redo.reversal(second.id)])).toEqual([]);
+    expect(
+      redoneLines(
+        heldLone,
+        [lone],
+        [second, { ...redo.reversal(second.id), id: "01LONE" } as never],
+      ),
+    ).toEqual(linesOf([lone]));
   });
 
-  it("redoes a correction held on its own as a correction, keeping what it corrects (NB5)", () => {
+  it("redoes a correction a rewrite left on its own as a correction, keeping what it corrects (NB5)", () => {
     const alone = unresolvedHeld(
-      holdRecords(linesOf([pair1[1]]), "client", { code: "partner_discarded", details: {} }, "t"),
+      holdRecords(linesOf([pair1[1]]), "rewrite", { code: "rewritten", details: {} }, "t"),
     )[0] as typeof held;
-    expect(redoPlan(alone, [pair1[1]], new Set())).toMatchObject({
+    expect(planFor(alone, [pair1[1]])).toMatchObject({
       kind: "record",
       draft: { corrects_id: first.id },
     });
+  });
+});
+
+describe("the ids a correction is recorded with", () => {
+  it("gives the sealed reversal, then the sealed corrected event, and nothing more", () => {
+    const heldPair = unresolvedHeld(
+      holdRecords(linesOf(pair), "client", { code: "pair_rejected", details: {} }, "t"),
+    )[0] as Unit;
+    const plan = planFor(heldPair, pair);
+    if (plan.kind !== "correct") {
+      throw new Error("a pair is redone as a correction");
+    }
+    const ids = sealedIds(plan);
+    expect([ids.next(), ids.next(), ids.next()]).toEqual([plan.reversal_id, plan.id, ""]);
+  });
+});
+
+describe("the decisions of discarded.jsonl (second review of PR #83)", () => {
+  it("names a decision by the resolution, the hold and the line: the same retried, another held again", () => {
+    const line = linesOf([deposit])[0] as string;
+    const first = unresolvedHeld(
+      holdRecords([line], "client", { code: "new_duplicate", details: {} }, "t1"),
+    )[0] as Unit;
+    const again = unresolvedHeld(
+      holdRecords([line], "client", { code: "new_duplicate", details: {} }, "t2"),
+    )[0] as Unit;
+    expect(discardHeld(first, "x").discarded[0]?.decision).toBe(
+      discardHeld(first, "y").discarded[0]?.decision,
+    );
+    expect(decisionOf(first, line, "discarded_by_user")).not.toBe(
+      decisionOf(again, line, "discarded_by_user"),
+    );
+    expect(decisionOf(first, line, "discarded_by_user")).not.toBe(
+      decisionOf(first, line, "redone"),
+    );
   });
 });

@@ -333,17 +333,15 @@ describe.each(kinds)("the client over the %s", (_kind, make) => {
     });
     const [view] = await heldUnits(one.sync, options);
     const id = view?.unit.unit as string;
-    const plan = await startRedo(one.sync, id, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", options);
+    const plan = await startRedo(one.sync, id, () => "01ARYZ6S41TSV4RRFFQ69ZZZZZ", options);
     expect(plan).toMatchObject({ kind: "record", draft: { type: "cash_deposit" } });
-    await expect(
-      finishRedo(one.sync, id, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", options),
-    ).rejects.toMatchObject({
+    await expect(finishRedo(one.sync, id, options)).rejects.toMatchObject({
       code: "redo_not_recorded",
     });
     const redo = new Builder(0).recordedOn("2027-08-30");
     const again = { ...redo.deposit("50"), id: "01ARYZ6S41TSV4RRFFQ69ZZZZZ" } as LedgerEvent;
     await one.record([again]);
-    await finishRedo(one.sync, id, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", options);
+    await finishRedo(one.sync, id, options);
     expect(await heldLines(one)).toEqual([]);
     expect(await one.discarded()).toContain('"code":"redone"');
     now = new Date("2027-08-31T10:00:00.000Z");
@@ -419,6 +417,7 @@ describe("starting is explicit (NB3, NB4 of the review of PR #83)", () => {
     });
     expect((await one.sync.read()).presence).toEqual({ present: true, marker: "missing" });
   });
+
 });
 
 describe("the local ledger changing under a sync (step 6)", () => {

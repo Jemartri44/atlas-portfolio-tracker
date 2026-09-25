@@ -38,7 +38,11 @@ export type HeldRecord =
       readonly kind: "redo_started";
       readonly at: string;
       readonly line_sha256: string;
-      /** The id the event that redoes it is recorded with, chosen before writing. */
+      /**
+       * The id the event that redoes **this line** is recorded with, chosen
+       * before writing: of a pair, the reversal's for the reversal and the
+       * correction's for the correction.
+       */
       readonly event_id: string;
     }
   | {
@@ -53,6 +57,12 @@ export type HeldRecord =
 export interface DiscardedRecord {
   readonly discarded_format: 1;
   readonly at: string;
+  /**
+   * The decision it records: the same resolution of the same hold. A retry
+   * of that decision is not written twice; a new decision on the same bytes
+   * always is (second review of PR #83). Absent in records written before.
+   */
+  readonly decision?: string;
   readonly reason: { readonly code: "discarded_by_user" | "redone" };
   readonly replaced_by?: string;
   readonly line: string;
@@ -145,8 +155,13 @@ export interface HeldUnit {
   readonly reason: HeldReason;
   /** Its lines, in the order of the unit. */
   readonly lines: readonly string[];
-  /** The id a redo started with, when one did and did not finish. */
-  readonly redo?: string;
+  /** When it was held back (its latest hold): with the line, it names a decision. */
+  readonly held_at: string;
+  /**
+   * The ids sealed for a redo started and not finished, by the hash of the
+   * line each one redoes. Only an event with exactly that id is its redo.
+   */
+  readonly sealed?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -174,15 +189,20 @@ export const unresolvedHeld = (records: readonly HeldRecord[]): HeldUnit[] => {
   return [...units.values()].map((members) => {
     const sorted = [...members].sort((left, right) => left.member - right.member);
     const first = sorted[0] as Extract<HeldRecord, { kind: "held" }>;
-    const redone = sorted
-      .map((member) => redo.get(lineSha256(member.line)))
-      .find((id) => id !== undefined);
+    const sealed = Object.fromEntries(
+      sorted.flatMap((member) => {
+        const sha = lineSha256(member.line);
+        const id = redo.get(sha);
+        return id === undefined ? [] : [[sha, id] as const];
+      }),
+    );
     return {
       unit: first.unit,
       origin: first.origin,
       reason: first.reason,
       lines: sorted.map((member) => member.line),
-      ...(redone === undefined ? {} : { redo: redone }),
+      held_at: first.at,
+      ...(Object.keys(sealed).length === 0 ? {} : { sealed }),
     };
   });
 };

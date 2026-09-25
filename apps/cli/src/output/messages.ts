@@ -332,7 +332,7 @@ export const describeError = (error: DomainError): string => {
     case "settings_leave_invalid":
       return "Retenida: ese cambio de configuración dejaría inválidas operaciones que ya están en la nube, y la nube nunca recibe un libro inválido. Repara antes esas operaciones y rehaz el cambio.";
     case "partner_discarded":
-      return "Retenida: descartaste la anulación de esta corrección, y una corrección nunca se sube sin su anulación. Descártala también, o rehaz la corrección.";
+      return "Retenida: descartaste la anulación de esta corrección, y una corrección sin su anulación no corrige nada: ni se sube ni se puede rehacer. Solo queda descartarla también; si el cambio sigue siendo cierto, corrige de nuevo la operación que está en vigor.";
     case "absent_after_rewrite":
       return "Retenida tras volver a descargar: la nube se ha reescrito (compactada o restaurada) y ya no tiene esta operación. Nunca se sube sola: regístrala otra vez si sigue siendo cierta, o descártala.";
     case "differs_after_rewrite":
@@ -397,12 +397,14 @@ export const describeError = (error: DomainError): string => {
       return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
     case "redo_filing_in_remote":
       return "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.";
+    case "redo_partner_discarded":
+      return "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.";
     case "accept_invalid_while_synced":
       return `Esta carpeta se sincroniza, y ese cambio de configuración dejaría inválidos ${Array.isArray(d.affected) ? d.affected.length : 0} eventos: el libro quedaría inválido, no se podría sincronizar y la sincronización se pararía. Repara antes esos eventos (atlas check te los enseña), o desactiva la sincronización de forma explícita; --accept-invalid no vale con la sincronización configurada.`;
     case "held_unit_unknown":
       return "No hay nada retenido con ese identificador: puede que ya se haya resuelto.";
     case "redo_not_recorded":
-      return `Todavía no está registrada la operación que rehace lo retenido (${text(d.event_id)}): regístrala primero; lo retenido sigue donde estaba.`;
+      return `Todavía no están registradas, con los identificadores sellados (${Array.isArray(d.sealed) ? d.sealed.join(", ") : "ninguno"}), las operaciones que rehacen lo retenido: regístralas primero; lo retenido sigue donde estaba.`;
     case "resolution_not_offered":
       return `Esa resolución no se ofrece para lo retenido por «${text(d.reason)}».`;
     case "sync_marker_unreadable":

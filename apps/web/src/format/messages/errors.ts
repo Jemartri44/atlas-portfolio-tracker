@@ -378,7 +378,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   settings_leave_invalid: () =>
     "Retenida: ese cambio de configuración dejaría inválidas operaciones que ya están en la nube, y la nube nunca recibe datos inválidos. Repara antes esas operaciones y rehaz el cambio.",
   partner_discarded: () =>
-    "Retenida: descartaste la anulación de esta corrección, y una corrección nunca se sube sin su anulación. Descártala también o rehaz la corrección.",
+    "Retenida: descartaste la anulación de esta corrección, y una corrección sin su anulación no corrige nada: ni se sube ni se puede rehacer. Descártala también; si el cambio sigue siendo cierto, corrige de nuevo la operación en vigor.",
   absent_after_rewrite: () =>
     "Retenida al volver a descargar: la nube se ha reescrito y ya no tiene esta operación. Nunca se sube sola: regístrala otra vez si sigue siendo cierta, o descártala.",
   differs_after_rewrite: () =>
@@ -441,11 +441,13 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `No se suben tus datos a la nube: tienen ${count(d.invalid)} operaciones inválidas, y la nube nunca recibe datos inválidos. Repáralas primero en Ajustes → Verificación.`,
   redo_filing_in_remote: () =>
     "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.",
+  redo_partner_discarded: () =>
+    "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.",
   accept_invalid_while_synced: (d) =>
     `Tus datos se sincronizan, y este cambio dejaría ${count(d.affected)} operaciones inválidas: tus datos quedarían inválidos, no se podrían sincronizar y la sincronización se pararía. Repara antes esas operaciones (Ajustes → Verificación) o desactiva la sincronización de forma explícita.`,
   held_unit_unknown: () => "Ya no hay nada retenido ahí: puede que ya se haya resuelto.",
   redo_not_recorded: () =>
-    "Todavía no está registrada la operación que la rehace: regístrala primero; lo retenido sigue donde estaba.",
+    "Todavía no están registradas las operaciones que la rehacen, con los identificadores que se reservaron: regístralas primero; lo retenido sigue donde estaba.",
   resolution_not_offered: () => "Eso no se puede hacer con esta operación retenida.",
   sync_marker_unreadable: () => "No se puede leer el estado de la sincronización.",
   sync_held_unreadable: () =>

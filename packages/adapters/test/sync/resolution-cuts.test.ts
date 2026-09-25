@@ -3,12 +3,13 @@
 // leaves it in two places, never in none — and repeating the resolution, or
 // syncing, finishes it without duplicating anything.
 
-import type { LedgerEvent } from "@atlas/domain";
+import { correctEvent, type LedgerEvent, recordEvent, type UseCaseDeps } from "@atlas/domain";
 import {
   holdRecords,
   linesOfText,
   parseDiscarded,
   parseHeld,
+  sealedIds,
   unresolvedHeld,
 } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
@@ -149,12 +150,12 @@ describe("finishing a redo, cut at every write", () => {
       const [view] = await heldUnits(two.sync, options);
       const id = view?.unit.unit as string;
       const sealed = "01ARYZ6S41TSV4RRFFQ69ZZZZZ";
-      await startRedo(two.sync, id, sealed, options);
+      await startRedo(two.sync, id, () => sealed, options);
       await two.record([
         { ...twinDeposit(new Builder(990)), id: sealed, amount: "51" } as LedgerEvent,
       ]);
       rec.failAt(pattern);
-      await finishRedo(two.sync, id, sealed, options).catch((error: unknown) => {
+      await finishRedo(two.sync, id, options).catch((error: unknown) => {
         if (!String(error).includes("cut at")) {
           throw error;
         }
@@ -163,12 +164,21 @@ describe("finishing a redo, cut at every write", () => {
       const after = await where(two, line);
       expect(after.held || after.discarded === 1, JSON.stringify(after)).toBe(true);
       if (after.held) {
-        await finishRedo(two.sync, id, sealed, options);
+        await finishRedo(two.sync, id, options);
       }
       expect(await where(two, line)).toEqual({ ledger: 0, held: false, discarded: 1 });
     },
   );
 });
+
+/** Ids in order, distinct: what a ULID generator gives, readable in a test. */
+const sequence = (prefix: string): (() => string) => {
+  let next = 0;
+  return () => {
+    next += 1;
+    return `01${prefix}${String(next).padStart(24 - prefix.length, "0")}`;
+  };
+};
 
 describe("finishing the redo of a chain (B2 of the review of PR #83)", () => {
   it("moves to discarded only the pair redone, and keeps the other held", async () => {
@@ -187,24 +197,154 @@ describe("finishing the redo of a chain (B2 of the review of PR #83)", () => {
     });
     const [view] = await heldUnits(device.sync, options);
     const id = view?.unit.unit as string;
-    await expect(finishRedo(device.sync, id, "x", options)).rejects.toMatchObject({
+    await expect(finishRedo(device.sync, id, options)).rejects.toMatchObject({
       code: "redo_not_recorded",
     });
-    expect(await startRedo(device.sync, id, "x", options)).toMatchObject({
-      kind: "correct",
-      target_id: first.id,
-    });
-    await device.record(new Builder(500).correction(first, { amount: "21" }));
-    await finishRedo(device.sync, id, "x", options);
+    const plan = await startRedo(device.sync, id, sequence("C1"), options);
+    expect(plan).toMatchObject({ kind: "correct", target_id: first.id });
+    if (plan.kind !== "correct") {
+      throw new Error("a pair is redone as a correction");
+    }
+    const [reversal, corrected] = new Builder(500).correction(first, { amount: "21" });
+    await device.record([
+      { ...reversal, id: plan.reversal_id } as LedgerEvent,
+      { ...corrected, id: plan.id } as LedgerEvent,
+    ]);
+    await finishRedo(device.sync, id, options);
     expect(unresolvedHeld(parseHeld(await device.held())).flatMap((unit) => unit.lines)).toEqual(
       linesOf(chain.slice(2)),
     );
     expect(parseDiscarded(await device.discarded()).map((record) => record.line)).toEqual(
       linesOf(chain.slice(0, 2)),
     );
-    expect(await startRedo(device.sync, id, "x", options)).toMatchObject({
+    expect(await startRedo(device.sync, id, sequence("C2"), options)).toMatchObject({
       kind: "correct",
       target_id: second.id,
     });
+  });
+});
+
+const deps = (device: Device): UseCaseDeps => {
+  let tick = Date.parse("2027-09-01T10:00:00.000Z");
+  let random = 0;
+  return {
+    store: device.store,
+    clock: {
+      now: () => {
+        tick += 1000;
+        return new Date(tick);
+      },
+    },
+    random: (target) => {
+      random += 1;
+      target.fill(random % 256);
+    },
+  };
+};
+
+describe("finishing a redo by the ids sealed, never by the target (R1 of the second review of PR #83)", () => {
+  /** Case 3 of ADR-0026 as it is: both devices correct the same buy; the phone's pair is held. */
+  const case3 = async () => {
+    const shared = base();
+    const bucket = SimulatedBucket.inMemory();
+    const options = clock();
+    const laptop = await consoleDevice(shared);
+    const phone = await consoleDevice(shared);
+    await initialiseRemote(laptop.sync, bucket.as("laptop"), options);
+    await replaceFromRemote(phone.sync, bucket.as("phone"), options, "join");
+    const buy = shared[shared.length - 1] as LedgerEvent;
+    await laptop.record(new Builder(100).correction(buy, { fee: "1" }));
+    const pair = new Builder(200).correction(buy, { fee: "2" });
+    await phone.record(pair);
+    await syncDevice(laptop.sync, bucket.as("laptop"), options);
+    expect(await syncDevice(phone.sync, bucket.as("phone"), options)).toMatchObject({
+      held: { code: "pair_rejected" },
+    });
+    const [view] = await heldUnits(phone.sync, options);
+    return { phone, options, id: view?.unit.unit as string, pair };
+  };
+
+  it("refuses to finish when nothing was recorded, though the laptop's correction is there", async () => {
+    const { phone, options, id, pair } = await case3();
+    await startRedo(phone.sync, id, sequence("R1"), options);
+    await expect(finishRedo(phone.sync, id, options)).rejects.toMatchObject({
+      code: "redo_not_recorded",
+    });
+    expect(unresolvedHeld(parseHeld(await phone.held())).flatMap((unit) => unit.lines)).toEqual(
+      linesOf(pair),
+    );
+    expect(await phone.discarded()).toBe("");
+  });
+
+  it("finishes once the reversal and the correction with exactly the sealed ids are recorded", async () => {
+    const { phone, options, id, pair } = await case3();
+    const plan = await startRedo(phone.sync, id, sequence("R1"), options);
+    expect(plan).toMatchObject({ kind: "correct" });
+    if (plan.kind !== "correct") {
+      throw new Error("a pair is redone as a correction");
+    }
+    // The same seal when started again: the ids never change until finished.
+    expect(await startRedo(phone.sync, id, sequence("R9"), options)).toEqual(plan);
+    // Redone as the user would, by the use case, on the current state.
+    await correctEvent(deps(phone), plan.target_id, plan.draft, "redo", {
+      ids: sealedIds(plan),
+    });
+    await finishRedo(phone.sync, id, options);
+    const records = parseDiscarded(await phone.discarded());
+    expect(records.map((record) => [record.line, record.replaced_by])).toEqual([
+      [linesOf(pair)[0], plan.reversal_id],
+      [linesOf(pair)[1], plan.id],
+    ]);
+  });
+});
+
+describe("redoing a lone reversal by its sealed id (second review of PR #83)", () => {
+  it("records it with recordEvent and that id, and finishes by it", async () => {
+    const shared = base();
+    const b = new Builder(400);
+    const deposit = b.deposit("11");
+    const device = await consoleDevice([...shared, deposit]);
+    const options = clock();
+    const lone = new Builder(450).reversal(deposit);
+    await device.sync.commit(await device.sync.read(), {
+      held: holdRecords(linesOf([lone]), "client", { code: "domain_rejected", details: {} }, "t"),
+    });
+    const [view] = await heldUnits(device.sync, options);
+    const id = view?.unit.unit as string;
+    const plan = await startRedo(device.sync, id, sequence("R7"), options);
+    expect(plan).toMatchObject({
+      kind: "reverse",
+      target_id: deposit.id,
+      draft: { type: "reversal", reverses_id: deposit.id },
+    });
+    if (plan.kind !== "reverse") {
+      throw new Error("a lone reversal is redone as a reversal");
+    }
+    await recordEvent(deps(device), plan.draft, { id: plan.id });
+    await finishRedo(device.sync, id, options);
+    expect(parseDiscarded(await device.discarded())).toMatchObject([
+      { line: linesOf([lone])[0], reason: { code: "redone" }, replaced_by: plan.id },
+    ]);
+  });
+});
+
+describe("discarded.jsonl records decisions, not bytes (second review of PR #83)", () => {
+  it("records a new decision on the same bytes, and a retried one once", async () => {
+    const device = await consoleDevice(base());
+    const options = clock();
+    const line = linesOf([new Builder(700).deposit("9")])[0] as string;
+    const holdAndDiscard = async (at: string) => {
+      await device.sync.commit(await device.sync.read(), {
+        held: holdRecords([line], "client", { code: "new_duplicate", details: {} }, at),
+      });
+      const [view] = await heldUnits(device.sync, options);
+      await discardHeldUnit(device.sync, view?.unit.unit as string, options);
+    };
+    await holdAndDiscard("2027-09-01T10:00:00.000Z");
+    // Held again later, the same bytes, and discarded again: a second decision.
+    await holdAndDiscard("2027-09-02T10:00:00.000Z");
+    const records = parseDiscarded(await device.discarded());
+    expect(records.map((record) => record.line)).toEqual([line, line]);
+    expect(new Set(records.map((record) => record.decision)).size).toBe(2);
   });
 });

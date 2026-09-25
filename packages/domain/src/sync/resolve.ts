@@ -27,25 +27,40 @@ export type Resolution = "confirm" | "redo" | "discard";
 const CONFIRMABLE = new Set(["new_duplicate", "new_closed_year", "duplicate_unconfirmed"]);
 
 /**
- * What can be done with a held unit. Discarding always; confirming only a
- * warning; redoing, anything **except a filing the remote already has**
- * (§6.3 (V16)): it would be another `tax_return_filed` replacing the one in
- * force, a filing that did not happen.
+ * Why redoing a unit is not offered, if it is not: a filing the remote
+ * already has (§6.3 (V16)) — it would be another `tax_return_filed` replacing
+ * the one in force, a filing that did not happen —, or a correction whose
+ * reversal the user discarded (second review of PR #83): a correction without
+ * its reversal corrects nothing, and recording it alone is refused
+ * (`dangling_correction`), so only discarding it is offered.
  */
+const redoRefusal = (
+  unit: HeldUnit,
+  events: readonly LedgerEvent[],
+  remoteIds: ReadonlySet<string>,
+): ValidationError | undefined =>
+  events.some((event) => event.type === "tax_return_filed" && remoteIds.has(event.id))
+    ? new ValidationError("redo_filing_in_remote", "the remote already has this filing", {
+        reason: unit.reason.code,
+      })
+    : unit.reason.code === "partner_discarded"
+      ? new ValidationError(
+          "redo_partner_discarded",
+          "a correction without its reversal corrects nothing",
+          { reason: unit.reason.code },
+        )
+      : undefined;
+
+/** What can be done with a held unit. Discarding always; confirming only a warning; redoing, unless refused. */
 export const resolutionsFor = (
   unit: HeldUnit,
   events: readonly LedgerEvent[],
   remoteIds: ReadonlySet<string>,
-): Resolution[] => {
-  const filingInRemote = events.some(
-    (event) => event.type === "tax_return_filed" && remoteIds.has(event.id),
-  );
-  return [
-    ...(CONFIRMABLE.has(unit.reason.code) ? (["confirm"] as const) : []),
-    ...(filingInRemote ? [] : (["redo"] as const)),
-    "discard" as const,
-  ];
-};
+): Resolution[] => [
+  ...(CONFIRMABLE.has(unit.reason.code) ? (["confirm"] as const) : []),
+  ...(redoRefusal(unit, events, remoteIds) === undefined ? (["redo"] as const) : []),
+  "discard" as const,
+];
 
 const refuse = (resolution: Resolution, unit: HeldUnit): ValidationError =>
   new ValidationError("resolution_not_offered", `${resolution} is not offered for this held unit`, {
@@ -67,7 +82,18 @@ const resolved = (
   ...(eventId === undefined ? {} : { event_id: eventId }),
 });
 
+/**
+ * The id of a decision: this resolution of this hold of this line. Repeating
+ * it after a cut gives the same id; a new hold of the same bytes, another.
+ */
+export const decisionOf = (
+  unit: HeldUnit,
+  line: string,
+  resolution: DiscardedRecord["reason"]["code"],
+): string => lineSha256(JSON.stringify([resolution, unit.unit, unit.held_at, lineSha256(line)]));
+
 const discarded = (
+  unit: HeldUnit,
   line: string,
   reason: DiscardedRecord["reason"],
   at: string,
@@ -75,6 +101,7 @@ const discarded = (
 ): DiscardedRecord => ({
   discarded_format: DISCARDED_FORMAT,
   at,
+  decision: decisionOf(unit, line, reason.code),
   reason,
   ...(replacedBy === undefined ? {} : { replaced_by: replacedBy }),
   line,
@@ -147,12 +174,12 @@ export const discardHeld = (
           at,
         ),
       ],
-      discarded: [discarded(reversal, { code: "discarded_by_user" }, at)],
+      discarded: [discarded(unit, reversal, { code: "discarded_by_user" }, at)],
     };
   }
   return {
     records: unit.lines.map((line) => resolved(line, "discarded", at)),
-    discarded: unit.lines.map((line) => discarded(line, { code: "discarded_by_user" }, at)),
+    discarded: unit.lines.map((line) => discarded(unit, line, { code: "discarded_by_user" }, at)),
   };
 };
 
@@ -172,11 +199,33 @@ const withoutEnvelope = (event: LedgerEvent, keepCorrects: boolean): Record<stri
   return keepCorrects && corrects !== undefined ? { ...rest, corrects_id: corrects } : rest;
 };
 
-/** What redoing a unit records, on the current state: a new event, a correction or a reversal. */
+/**
+ * What redoing a unit records, on the current state, **with the ids sealed
+ * for it**: a new event, a correction (its reversal and the corrected event)
+ * or a reversal. Only events with exactly these ids finish the redo.
+ */
 export type RedoPlan =
-  | { readonly kind: "record"; readonly draft: Draft<SupportedEvent> }
-  | { readonly kind: "correct"; readonly target_id: string; readonly draft: Draft<SupportedEvent> }
-  | { readonly kind: "reverse"; readonly target_id: string; readonly reason: string };
+  | { readonly kind: "record"; readonly draft: Draft<SupportedEvent>; readonly id: string }
+  | {
+      readonly kind: "correct";
+      readonly target_id: string;
+      readonly draft: Draft<SupportedEvent>;
+      readonly reversal_id: string;
+      readonly id: string;
+    }
+  | {
+      /**
+       * A lone reversal: recorded by `recordEvent` with its draft and its
+       * sealed id — `reverseEvent` takes no id, and giving it one costs the
+       * boot of the web (second review of PR #83) —, which refuses exactly
+       * what would leave another event invalid.
+       */
+      readonly kind: "reverse";
+      readonly target_id: string;
+      readonly reason: string;
+      readonly draft: Draft<ReversalEvent>;
+      readonly id: string;
+    };
 
 /**
  * The parts a unit is redone by: a line or a pair whole, a chain **pair by
@@ -203,102 +252,145 @@ const partsOf = (
   return parts;
 };
 
-const planOf = (events: readonly LedgerEvent[]): RedoPlan => {
+/**
+ * The version of `targetId` in force in the ledger: while it is reversed and
+ * corrected, its correction. On the current state, the other device's
+ * correction of the same event is what a held one has to correct (case 3).
+ */
+const inForce = (targetId: string, ledger: readonly LedgerEvent[]): string => {
+  let current = targetId;
+  for (;;) {
+    const reversed = ledger.some(
+      (event) => event.type === "reversal" && event.reverses_id === current,
+    );
+    const correction = reversed ? ledger.find((event) => event.corrects_id === current) : undefined;
+    if (correction === undefined) {
+      return current;
+    }
+    current = correction.id;
+  }
+};
+
+const planOf = (
+  events: readonly LedgerEvent[],
+  ids: readonly string[],
+  ledger: readonly LedgerEvent[],
+): RedoPlan => {
   const first = events[0] as LedgerEvent;
   if (first.type !== "reversal") {
     return {
       kind: "record",
       draft: withoutEnvelope(first, true) as unknown as Draft<SupportedEvent>,
+      id: ids[0] as string,
     };
   }
   const reversal = first as ReversalEvent;
   const correction = events[1];
+  const target = inForce(reversal.reverses_id, ledger);
   return correction === undefined
-    ? { kind: "reverse", target_id: reversal.reverses_id, reason: reversal.reason }
+    ? {
+        kind: "reverse",
+        target_id: target,
+        reason: reversal.reason,
+        draft: { type: "reversal", reverses_id: target, reason: reversal.reason },
+        id: ids[0] as string,
+      }
     : {
         kind: "correct",
-        target_id: reversal.reverses_id,
+        target_id: target,
         draft: withoutEnvelope(correction, false) as unknown as Draft<SupportedEvent>,
+        reversal_id: ids[0] as string,
+        id: ids[1] as string,
       };
 };
 
 /**
- * **Redo**: the draft the interface preloads (feature 015). A pair is redone
- * as a correction of the same target; a lone reversal, as that reversal; a
- * line, as a new event (a correction, if it was one). A chain, pair by pair:
- * this plans the first pair still held. Refused for a filing the remote
- * already has (V16).
+ * The ids of a correction, in the order `correctEvent` writes them — the
+ * reversal, then the corrected event — for its option `ids`. Only the sealed
+ * ids: a third would be an empty id, which no event is written with.
  */
-export const redoPlan = (
-  unit: HeldUnit,
-  events: readonly LedgerEvent[],
-  remoteIds: ReadonlySet<string>,
-): RedoPlan => {
-  if (!resolutionsFor(unit, events, remoteIds).includes("redo")) {
-    throw new ValidationError("redo_filing_in_remote", "the remote already has this filing", {
-      reason: unit.reason.code,
-    });
-  }
-  return planOf((partsOf(unit, events)[0] as { events: LedgerEvent[] }).events);
+export const sealedIds = (plan: Extract<RedoPlan, { kind: "correct" }>): { next(): string } => {
+  const queue = [plan.reversal_id, plan.id];
+  return { next: () => queue.shift() ?? "" };
+};
+
+/** The ids sealed for the lines of a part, or `undefined` if any is missing. */
+const sealedOf = (unit: HeldUnit, lines: readonly string[]): string[] | undefined => {
+  const ids = lines.map((line) => unit.sealed?.[lineSha256(line)]);
+  return ids.every((id) => id !== undefined) ? (ids as string[]) : undefined;
 };
 
 /**
- * Before recording the redo of a **line**, the id it will be recorded with is
- * sealed in the held records (plan §10.2, as the drafts of the ECB after
- * §11.1 and §12.1 of feature 012): after a cut, only an event with
- * **exactly** that id is "the redo, already recorded". A pair or a reversal
- * needs no seal: redoing it reverses its target, which the ledger then shows.
+ * **Redo**, started: the draft the interface preloads (feature 015) and the
+ * ids its events will carry, **sealed before anything is recorded** (plan
+ * §10.2, as the drafts of the ECB after §11.1 and §12.1 of feature 012; the
+ * second review of PR #83): the new event of a line; the reversal and the
+ * corrected event of a pair; the reversal of a lone reversal. A chain, pair
+ * by pair: this plans the first pair still held. Started again, the same ids:
+ * nothing new is sealed until the part is finished. Refused when redoing is
+ * not offered.
  */
-export const redoStarted = (unit: HeldUnit, eventId: string, at: string): HeldRecord[] =>
-  unit.lines.map((line) => ({
-    held_format: HELD_FORMAT,
-    kind: "redo_started" as const,
-    at,
-    line_sha256: lineSha256(line),
-    event_id: eventId,
-  }));
+export const startRedoPlan = (
+  unit: HeldUnit,
+  events: readonly LedgerEvent[],
+  remoteIds: ReadonlySet<string>,
+  ledger: readonly LedgerEvent[],
+  newId: () => string,
+  at: string,
+): { plan: RedoPlan; records: HeldRecord[] } => {
+  const refusal = redoRefusal(unit, events, remoteIds);
+  if (refusal !== undefined) {
+    throw refusal;
+  }
+  const part = partsOf(unit, events)[0] as { lines: string[]; events: LedgerEvent[] };
+  const sealed = sealedOf(unit, part.lines);
+  const ids = sealed ?? part.lines.map(() => newId());
+  return {
+    plan: planOf(part.events, ids, ledger),
+    records:
+      sealed === undefined
+        ? part.lines.map((line, index) => ({
+            held_format: HELD_FORMAT,
+            kind: "redo_started" as const,
+            at,
+            line_sha256: lineSha256(line),
+            event_id: ids[index] as string,
+          }))
+        : [],
+  };
+};
 
 /**
- * The lines of a unit whose redo **is in the ledger** (B2 of the review of PR
- * #83), part by part: a line, by the exact id it sealed; a pair, by a
- * correction of its target that is not the held one; a lone reversal, by a
- * reversal of its target that is not the held one. What was not redone stays
- * held back: `discarded.jsonl` only keeps what the user decided.
+ * The lines of a unit whose redo **is in the ledger**, part by part, by
+ * **exactly the ids sealed** for them — never deduced from the target (R1 of
+ * the second review of PR #83: the other device's correction of the same
+ * event is not this redo). What was not redone stays held back:
+ * `discarded.jsonl` only keeps what the user decided.
  */
 export const redoneLines = (
   unit: HeldUnit,
   events: readonly LedgerEvent[],
   ledger: readonly LedgerEvent[],
 ): string[] => {
-  const own = new Set(events.map((event) => event.id));
-  const others = ledger.filter((event) => !own.has(event.id));
+  const recorded = new Set(ledger.map((event) => event.id));
   return partsOf(unit, events).flatMap((part) => {
-    const plan = planOf(part.events);
-    const done =
-      plan.kind === "record"
-        ? unit.redo !== undefined && ledger.some((event) => event.id === unit.redo)
-        : plan.kind === "correct"
-          ? others.some((event) => event.corrects_id === plan.target_id)
-          : others.some(
-              (event) => event.type === "reversal" && event.reverses_id === plan.target_id,
-            );
-    return done ? part.lines : [];
+    const sealed = sealedOf(unit, part.lines);
+    return sealed?.every((id) => recorded.has(id)) ? part.lines : [];
   });
 };
 
-/** Once a redo is in the ledger: **only its lines** go to `discarded`, with what replaced them. */
+/** Once a redo is in the ledger: **only its lines** go to `discarded`, each with the id that replaced it. */
 export const redoFinished = (
+  unit: HeldUnit,
   lines: readonly string[],
-  eventId: string | undefined,
   at: string,
-): { records: HeldRecord[]; discarded: DiscardedRecord[] } => ({
-  records: lines.map((line) => resolved(line, "redone", at, eventId)),
-  discarded: lines.map((line) => discarded(line, { code: "redone" }, at, eventId)),
-});
-
-/** Whether the redo that started with `unit.redo` is already in the ledger, by that exact id. */
-export const redoRecorded = (unit: HeldUnit, ledger: readonly LedgerEvent[]): boolean =>
-  unit.redo !== undefined && ledger.some((event) => event.id === unit.redo);
+): { records: HeldRecord[]; discarded: DiscardedRecord[] } => {
+  const idOf = (line: string): string | undefined => unit.sealed?.[lineSha256(line)];
+  return {
+    records: lines.map((line) => resolved(line, "redone", at, idOf(line))),
+    discarded: lines.map((line) => discarded(unit, line, { code: "redone" }, at, idOf(line))),
+  };
+};
 
 /** The unit held back with that id (the hash of its first line), or `held_unit_unknown`. */
 export const heldUnitById = (units: readonly HeldUnit[], id: string): HeldUnit => {
@@ -312,10 +404,9 @@ export const heldUnitById = (units: readonly HeldUnit[], id: string): HeldUnit =
 };
 
 /**
- * A redo is finished only when the ledger shows it (plan §10.2; B2 of the
- * review of PR #83): a line by exactly the id it sealed, a pair or a chain by
- * the corrections of their targets. Otherwise `redo_not_recorded`, and
- * nothing moves. Returns the lines to finish.
+ * A redo is finished only when the ledger shows it, by the ids sealed (plan
+ * §10.2; B2 and R1 of the reviews of PR #83). Otherwise `redo_not_recorded`,
+ * and nothing moves. Returns the lines to finish.
  */
 export const assertRedoRecorded = (
   unit: HeldUnit,
@@ -325,7 +416,7 @@ export const assertRedoRecorded = (
   const lines = redoneLines(unit, events, ledger);
   if (lines.length === 0) {
     throw new ValidationError("redo_not_recorded", "the redo is not in the ledger yet", {
-      ...(unit.redo === undefined ? {} : { event_id: unit.redo }),
+      ...(unit.sealed === undefined ? {} : { sealed: Object.values(unit.sealed) }),
     });
   }
   return lines;

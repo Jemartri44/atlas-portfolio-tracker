@@ -11,6 +11,7 @@ import {
   ValidationError,
 } from "../errors.js";
 import { type ClosedYear, closedYearsTouched, unfiledPastYears } from "../filings/touched.js";
+import type { UlidGenerator } from "../ids/ulid.js";
 import { createUlidGenerator } from "../ids/ulid.js";
 import { normalizeIsin } from "../projections/isin.js";
 import { projectLedger } from "../projections/project-ledger.js";
@@ -30,6 +31,12 @@ interface RecordBase {
    * it; without it a fresh id is generated.
    */
   id?: string;
+  /**
+   * In a correction, the ids of its reversal and of the corrected event, in
+   * that order, chosen beforehand: the redo of a held pair seals both before
+   * recording them (second review of PR #83). Otherwise fresh ones.
+   */
+  ids?: UlidGenerator;
   /** Write even if another event carries the same fingerprint. */
   confirmDuplicate?: boolean;
 }

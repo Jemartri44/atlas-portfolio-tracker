@@ -21,10 +21,9 @@ import {
   type Refusal,
   type Resolution,
   redoFinished,
-  redoPlan,
-  redoStarted,
   resolutionsFor,
   type SyncMarker,
+  startRedoPlan,
   syncArchiveName,
   unresolvedHeld,
 } from "@atlas/domain/sync";
@@ -60,13 +59,15 @@ export const heldUnits = async (
 };
 
 /**
- * What is not in `discarded.jsonl` yet: a resolution cut after writing there
- * and before marking the line resolved is repeated without recording the same
- * decision twice (B1 and non-blocking 2 of the review of PR #83).
+ * The decisions not in `discarded.jsonl` yet: a resolution cut after writing
+ * there and before marking the line resolved is repeated without recording
+ * the same decision twice (B1 of the review of PR #83) — by the decision,
+ * never by the bytes of the line: a new decision on the same bytes is always
+ * recorded (second review of PR #83).
  */
 const notYetIn = (state: DeviceState, records: readonly DiscardedRecord[]): DiscardedRecord[] => {
-  const there = new Set(parseDiscarded(state.discardedText).map((record) => record.line));
-  return records.filter((record) => !there.has(record.line));
+  const there = new Set(parseDiscarded(state.discardedText).map((record) => record.decision));
+  return records.filter((record) => !there.has(record.decision));
 };
 
 const unitOf = (state: DeviceState, id: string): HeldUnit =>
@@ -131,33 +132,40 @@ export const discardHeldUnit = async (
 };
 
 /**
- * **Redo**, first half: the plan the interface preloads, and — for a line —
- * the id the new event will carry, sealed before anything is recorded.
+ * **Redo**, first half: the plan the interface preloads, with the ids its
+ * events will carry, **sealed before anything is recorded** (`newId` gives
+ * them: a ULID generator of the device). Started again, the same ids.
  */
 export const startRedo = async (
   store: SyncStateStore,
   id: string,
-  eventId: string,
+  newId: () => string,
   options: SyncOptions,
 ): Promise<RedoPlan> => {
   const state = await store.read();
   const unit = unitOf(state, id);
-  const plan = redoPlan(unit, decodeLines(unit.lines, options.schema), remoteIdsOf(state));
-  if (plan.kind === "record") {
-    await store.commit(state, { held: redoStarted(unit, eventId, options.now().toISOString()) });
+  const { plan, records } = startRedoPlan(
+    unit,
+    decodeLines(unit.lines, options.schema),
+    remoteIdsOf(state),
+    state.ledger.events,
+    newId,
+    options.now().toISOString(),
+  );
+  if (records.length > 0) {
+    await store.commit(state, { held: records });
   }
   return plan;
 };
 
 /**
- * **Redo**, second half, once the new event is in the ledger: the held lines go
- * to `discarded` with the id that replaced them. A redo of a line is only
- * finished by an event with **exactly** the sealed id.
+ * **Redo**, second half, once the plan is recorded with its sealed ids: the
+ * redone lines go to `discarded` with the id that replaced each. Only events
+ * with **exactly** the sealed ids finish it.
  */
 export const finishRedo = async (
   store: SyncStateStore,
   id: string,
-  eventId: string,
   options: SyncOptions,
 ): Promise<void> => {
   const state = await store.read();
@@ -167,7 +175,7 @@ export const finishRedo = async (
     decodeLines(unit.lines, options.schema),
     state.ledger.events,
   );
-  const done = redoFinished(lines, unit.redo ?? eventId, options.now().toISOString());
+  const done = redoFinished(unit, lines, options.now().toISOString());
   await store.commit(state, { held: done.records, discarded: notYetIn(state, done.discarded) });
 };
 

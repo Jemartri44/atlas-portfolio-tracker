@@ -94,16 +94,16 @@ export {
 export {
   assertRedoRecorded,
   confirmHeld,
+  decisionOf,
   discardHeld,
   heldUnitById,
   type RedoPlan,
   type Resolution,
   redoFinished,
   redoneLines,
-  redoPlan,
-  redoRecorded,
-  redoStarted,
   resolutionsFor,
+  sealedIds,
+  startRedoPlan,
 } from "./sync/resolve.js";
 export { canonicalForRewrite, classifyAgainst, REWRITTEN_BY_COMPACT } from "./sync/rewrite.js";
 export { SEALS_PREFIX, sealHolds, sealsPrefix } from "./sync/seal.js";
