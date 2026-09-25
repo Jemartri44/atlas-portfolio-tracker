@@ -18,6 +18,7 @@ import {
   confirmHeld,
   discardHeld,
   redoFinished,
+  redoneLines,
   redoPlan,
   redoRecorded,
   redoStarted,
@@ -222,7 +223,7 @@ describe("resolving (R18)", () => {
       redoRecorded(started, [{ ...deposit, id: "01ARYZ6S41TSV4RRFFQ69ZZZZZ" } as LedgerEvent]),
     ).toBe(true);
     expect(redoRecorded(duplicate, [deposit])).toBe(false);
-    const finished = redoFinished(started, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", "t");
+    const finished = redoFinished(started.lines, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", "t");
     expect(finished.discarded[0]).toMatchObject({
       reason: { code: "redone" },
       replaced_by: "01ARYZ6S41TSV4RRFFQ69ZZZZZ",
@@ -247,12 +248,68 @@ describe("finding what is held back", () => {
       ...holdRecords(linesOf([deposit]), "client", { code: "new_duplicate", details: {} }, "t"),
       ...redoStarted(units[0] as never, "01ARYZ6S41TSV4RRFFQ69ZZZZZ", "t"),
     ])[0] as never;
-    expect(() => assertRedoRecorded(started, [deposit])).toThrow(ValidationError);
-    expect(() =>
-      assertRedoRecorded(started, [
-        { ...deposit, id: "01ARYZ6S41TSV4RRFFQ69ZZZZZ" } as LedgerEvent,
-      ]),
-    ).not.toThrow();
-    expect(() => assertRedoRecorded(units[0] as never, [])).not.toThrow();
+    expect(() => assertRedoRecorded(started, [deposit], [deposit])).toThrow(ValidationError);
+    expect(
+      assertRedoRecorded(
+        started,
+        [deposit],
+        [{ ...deposit, id: "01ARYZ6S41TSV4RRFFQ69ZZZZZ" } as LedgerEvent],
+      ),
+    ).toEqual(linesOf([deposit]));
+    // Nothing sealed and nothing in the ledger: not recorded.
+    expect(() => assertRedoRecorded(units[0] as never, [deposit], [])).toThrow(ValidationError);
+  });
+});
+
+describe("redoing pairs and chains (B2 of the review of PR #83)", () => {
+  const b2 = device(3000);
+  const first = b2.deposit({ account_id: "acc_fund", amount: "11" });
+  const second = b2.deposit({ account_id: "acc_fund", amount: "12" });
+  const pair1 = correction(b2, first, { amount: "21" });
+  const pair2 = correction(b2, second, { amount: "22" });
+  const chain = [...pair1, ...pair2];
+  const held = unresolvedHeld(
+    holdRecords(linesOf(chain), "client", { code: "pair_rejected", details: {} }, "t"),
+  )[0] as NonNullable<ReturnType<typeof unresolvedHeld>[number]>;
+
+  it("plans a chain pair by pair, the first still held first", () => {
+    expect(redoPlan(held, chain, new Set())).toMatchObject({
+      kind: "correct",
+      target_id: first.id,
+    });
+  });
+
+  it("finishes only the pairs whose redo the ledger shows; the rest stays held", async () => {
+    const { assertRedoRecorded } = await import("../../src/sync/resolve.js");
+    const redo = device(3100);
+    const redone = correction(redo, first, { amount: "21" });
+    expect(() => assertRedoRecorded(held, chain, [first, second])).toThrow(ValidationError);
+    expect(assertRedoRecorded(held, chain, [first, second, ...redone])).toEqual(linesOf(pair1));
+    const records = [
+      ...holdRecords(linesOf(chain), "client", held.reason, "t"),
+      ...redoFinished(linesOf(pair1), undefined, "t").records,
+    ];
+    expect(unresolvedHeld(records).flatMap((unit) => unit.lines)).toEqual(linesOf(pair2));
+    // The held pair's own lines never count as its redo.
+    expect(redoneLines(held, chain, [first, second, ...chain])).toEqual([]);
+    // A lone reversal, by a reversal of its target that is not the held one.
+    const lone = redo.reversal(second.id);
+    const heldLone = unresolvedHeld(
+      holdRecords(linesOf([lone]), "client", { code: "domain_rejected", details: {} }, "t"),
+    )[0] as typeof held;
+    expect(redoneLines(heldLone, [lone], [second])).toEqual([]);
+    expect(redoneLines(heldLone, [lone], [second, redo.reversal(second.id)])).toEqual(
+      linesOf([lone]),
+    );
+  });
+
+  it("redoes a correction held on its own as a correction, keeping what it corrects (NB5)", () => {
+    const alone = unresolvedHeld(
+      holdRecords(linesOf([pair1[1]]), "client", { code: "partner_discarded", details: {} }, "t"),
+    )[0] as typeof held;
+    expect(redoPlan(alone, [pair1[1]], new Set())).toMatchObject({
+      kind: "record",
+      draft: { corrects_id: first.id },
+    });
   });
 });

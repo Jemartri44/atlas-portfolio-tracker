@@ -93,11 +93,18 @@ export class FolderSyncStore implements SyncStateStore {
       ) {
         throw new ConflictError();
       }
-      if (change.held !== undefined && change.held.length > 0) {
-        await writer.writeFile(
-          HELD_FILE,
-          Buffer.from(expected.heldText + recordsText(change.held)),
-        );
+      // **The destination before the origin** (review of PR #83, B1): a line
+      // that moves is written where it goes before the place it leaves forgets
+      // it, so a cut between the two leaves it in both, never in none. The
+      // order follows the direction of each move, not a fixed list:
+      //   - held back: `held.jsonl` gains it, then the ledger loses it;
+      //   - confirmed: the ledger gains it, then `held.jsonl` marks it resolved;
+      //   - discarded or redone: `discarded.jsonl` gains it, then it is resolved.
+      const held = change.held ?? [];
+      const gained = held.filter((record) => record.kind !== "resolved");
+      const released = held.filter((record) => record.kind === "resolved");
+      if (gained.length > 0) {
+        await writer.writeFile(HELD_FILE, Buffer.from(expected.heldText + recordsText(gained)));
       }
       if (change.discarded !== undefined && change.discarded.length > 0) {
         await writer.writeFile(
@@ -111,6 +118,12 @@ export class FolderSyncStore implements SyncStateStore {
         } else {
           await writer.replaceLines(change.ledger.replace, now.etag, change.ledger.archive);
         }
+      }
+      if (released.length > 0) {
+        await writer.writeFile(
+          HELD_FILE,
+          Buffer.from(expected.heldText + recordsText(gained) + recordsText(released)),
+        );
       }
       if (change.marker !== undefined) {
         await writer.writeFile(MARKER_FILE, Buffer.from(serializeMarker(change.marker)));

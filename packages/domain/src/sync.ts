@@ -98,6 +98,7 @@ export {
   type RedoPlan,
   type Resolution,
   redoFinished,
+  redoneLines,
   redoPlan,
   redoRecorded,
   redoStarted,

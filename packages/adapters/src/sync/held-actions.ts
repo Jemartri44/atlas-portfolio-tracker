@@ -9,11 +9,13 @@ import type { DeviceState, SyncStateStore } from "@atlas/domain/sync";
 import {
   assertRedoRecorded,
   confirmHeld,
+  type DiscardedRecord,
   deactivatePermission,
   discardHeld,
   type HeldUnit,
   heldUnitById,
   markerFor,
+  parseDiscarded,
   parseHeld,
   type RedoPlan,
   type Refusal,
@@ -57,6 +59,16 @@ export const heldUnits = async (
   }));
 };
 
+/**
+ * What is not in `discarded.jsonl` yet: a resolution cut after writing there
+ * and before marking the line resolved is repeated without recording the same
+ * decision twice (B1 and non-blocking 2 of the review of PR #83).
+ */
+const notYetIn = (state: DeviceState, records: readonly DiscardedRecord[]): DiscardedRecord[] => {
+  const there = new Set(parseDiscarded(state.discardedText).map((record) => record.line));
+  return records.filter((record) => !there.has(record.line));
+};
+
 const unitOf = (state: DeviceState, id: string): HeldUnit =>
   heldUnitById(unresolvedHeld(parseHeld(state.heldText)), id);
 
@@ -81,17 +93,28 @@ export const confirmHeldUnit = async (
     now,
   );
   const pending = state.ledger.lines.length > marker.synced_lines;
+  const unchanged = done.lines.length === state.ledger.lines.length;
+  const known = new Set(marker.confirmations.map((entry) => entry.line_sha256));
   await store.commit(state, {
     held: done.records,
     // Back in its local order, in front of what is still pending: a move,
-    // so the bytes before are archived like any sync that reorders.
-    ledger: pending
-      ? {
-          replace: done.lines,
-          archive: syncArchiveName("sync", options.now(), state.ledger.etag),
-        }
-      : { append: unit.lines },
-    marker: { ...marker, confirmations: [...marker.confirmations, ...done.confirmations] },
+    // so the bytes before are archived like any sync that reorders. Nothing
+    // to move when a cut left it there already.
+    ledger: unchanged
+      ? undefined
+      : pending
+        ? {
+            replace: done.lines,
+            archive: syncArchiveName("sync", options.now(), state.ledger.etag),
+          }
+        : { append: done.lines.slice(state.ledger.lines.length) },
+    marker: {
+      ...marker,
+      confirmations: [
+        ...marker.confirmations,
+        ...done.confirmations.filter((entry) => !known.has(entry.line_sha256)),
+      ],
+    },
   });
 };
 
@@ -104,7 +127,7 @@ export const discardHeldUnit = async (
 ): Promise<void> => {
   const state = await store.read();
   const done = discardHeld(unitOf(state, id), options.now().toISOString(), only);
-  await store.commit(state, { held: done.records, discarded: done.discarded });
+  await store.commit(state, { held: done.records, discarded: notYetIn(state, done.discarded) });
 };
 
 /**
@@ -139,9 +162,13 @@ export const finishRedo = async (
 ): Promise<void> => {
   const state = await store.read();
   const unit = unitOf(state, id);
-  assertRedoRecorded(unit, state.ledger.events);
-  const done = redoFinished(unit, unit.redo ?? eventId, options.now().toISOString());
-  await store.commit(state, { held: done.records, discarded: done.discarded });
+  const lines = assertRedoRecorded(
+    unit,
+    decodeLines(unit.lines, options.schema),
+    state.ledger.events,
+  );
+  const done = redoFinished(lines, unit.redo ?? eventId, options.now().toISOString());
+  await store.commit(state, { held: done.records, discarded: notYetIn(state, done.discarded) });
 };
 
 /**
