@@ -78,15 +78,15 @@ export const parseApiConfig = (env: Readonly<Record<string, string | undefined>>
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(dataBucket)) {
     throw invalid("ATLAS_DATA_BUCKET", "not_a_bucket_name");
   }
-  const numbers: Record<string, number> = {};
-  for (const [variable, field] of Object.entries(NUMBERS)) {
+  const number = (variable: keyof typeof NUMBERS): number => {
     const text = required(env, variable);
     if (!/^[1-9]\d{0,8}$/.test(text)) {
       throw invalid(variable, "not_a_positive_integer");
     }
-    numbers[field] = Number(text);
-  }
-  if ((numbers.tokenLifetimeDays as number) > TOKEN_CEILING_DAYS) {
+    return Number(text);
+  };
+  const tokenLifetimeDays = number("ATLAS_TOKEN_LIFETIME_DAYS");
+  if (tokenLifetimeDays > TOKEN_CEILING_DAYS) {
     throw invalid("ATLAS_TOKEN_LIFETIME_DAYS", "above_ceiling");
   }
   return {
@@ -94,6 +94,13 @@ export const parseApiConfig = (env: Readonly<Record<string, string | undefined>>
     ssmPrefix: `/atlas/${environment}/`,
     origin,
     dataBucket,
-    ...(numbers as Omit<ApiConfig, "env" | "ssmPrefix" | "origin" | "dataBucket">),
+    sessionTtlSeconds: number("ATLAS_SESSION_TTL_SECONDS"),
+    loginTtlSeconds: number("ATLAS_LOGIN_TTL_SECONDS"),
+    consoleCodeTtlSeconds: number("ATLAS_CONSOLE_CODE_TTL_SECONDS"),
+    tokenLifetimeDays,
+    recentIssueDays: number("ATLAS_RECENT_ISSUE_DAYS"),
+    clockToleranceSeconds: number("ATLAS_CLOCK_TOLERANCE_SECONDS"),
+    allowListCacheSeconds: number("ATLAS_ALLOW_LIST_CACHE_SECONDS"),
+    secretsCacheSeconds: number("ATLAS_SECRETS_CACHE_SECONDS"),
   };
 };
