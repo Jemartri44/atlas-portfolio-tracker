@@ -592,8 +592,16 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20;
  * **Feature 014, V7 (2026-09-25): measured 272,80 (279.345 bytes), ceiling
  * 273,0.** The web reads whether it is synced before an `acceptInvalid`, from
  * the store of the sync, lazily (+0,6 with the sentence of the refusal).
+ *
+ * **Review of PR #83 (2026-09-25): measured 273,34 (279.905 bytes), ceiling
+ * 273,5.** All of it lazy: the sentences of the new codes (the sync not
+ * configured or deactivated, the empty remote, the deactivation refused
+ * without a marker) and the new wording of `raw_line_break` in `errors`
+ * (+248 bytes), and the write path of the store of the sync — the check of
+ * the name of an archive and the shared reader of the marker — in `write`
+ * (+293); the rest is hash noise across the lazy chunks.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 273.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 273.5 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
