@@ -196,8 +196,21 @@ const dist = join(webRoot, "dist");
  * boot**: `quotes/`, its door and the reader of the web are in LAZY_ONLY from
  * their first commit. The trend: 73,5 → 73,9 → 73,7 in feature 012; 73,7 →
  * 73,9 in this one.
+ *
+ * **Review of PR #78 (2026-09-25): the figure above was wrong, and the ceiling
+ * now holds the cap itself.** At the head of the reviewed branch the review
+ * measured the boot at **+303** over `develop` (75.418), not the +294 this
+ * comment said: the +258 of the gate, the `external?` of `contributionPlan`,
+ * and the entry naming the lazy chunks of the screens of prices. After the
+ * review (the price with euros wins over a newer one without them, the note
+ * of the approximation said by `contributionPlan` itself, and the screens
+ * loading the quotes on demand so that the entry does not preload them):
+ * **75.690 bytes, +272** — domain chunk +265, entry +7. The ceiling is set
+ * to `develop` plus the cap of decision D-Q7 (+0,3 KB, 307 bytes), 75.725,
+ * so that going over the cap stops the build instead of a comment. The trend:
+ * 73,7 → 73,9 in this feature.
  */
-const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024 + 258;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -513,8 +526,14 @@ const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024 + 258;
  * «falta el precio» of an asset that had one, and the column «Origen» of the
  * tables of assets on a wide screen, where the source of a price was not said
  * (+0,3 across `cartera`, `cubo` and the price components).
+ *
+ * **Review of PR #78 (2026-09-25): measured 267,79 (274.219 bytes), ceiling
+ * 268,1.** Deleting the prices imported by hand, the other files of `prices/`
+ * set aside on import, the newer quote without euros said beside a price, and
+ * the note of the approximation in the card of the contribution (+0,3), less
+ * what the screens stopped preloading.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 267.8 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 268.1 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
