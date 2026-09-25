@@ -296,7 +296,7 @@ No es una ruta: es lo que el cliente hace con §5.1 a §5.5, fijado por el códi
 |---|---|
 | `remote_empty` | El remoto está vacío, el libro tiene líneas y no hay nada sincronizado: no se sube línea a línea, se inicializa (§5.5) |
 | `local_prefix_changed` | El prefijo local ya no da el hash del marcador (`details.synced_lines`) |
-| `remote_rewritten` | El prefijo del remoto no da el hash del marcador (§5.1), al leerlo en el paso 1 (`details.synced_lines`, `details.remote_lines`) o al releerlo en el paso 5. Solo se vuelve a descargar cuando el usuario lo pide |
+| `remote_rewritten` | En el paso 1, el prefijo del remoto no da el hash del marcador (§5.1) (`details.synced_lines`, `details.remote_lines`). En el paso 5, el remoto releído ya no empieza por **todo** lo leído en el paso 1, línea a línea, aunque el prefijo del marcador siga cuadrando; esta parada va sin `details` (`syncDevice`, `packages/adapters/src/sync/client.ts`). Solo se vuelve a descargar cuando el usuario lo pide |
 | `remote_schema_too_new` | El remoto tiene una línea de una versión de esquema que este cliente no conoce |
 | `remote_unreadable` | Una línea del remoto no se puede leer (`details.line`) |
 | `remote_ledger_invalid` | El remoto ya tiene eventos inválidos (`details.invalid_count`); no es culpa de ninguna línea de la cola (D-Q11) |
