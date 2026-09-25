@@ -247,6 +247,14 @@ const dist = join(webRoot, "dist");
  * ceiling on the measure itself, any change of a lazy chunk could break the
  * build of the next feature; 20 bytes absorb that noise of the table. The
  * growth cap of D-Q7 still holds: the code of 014 adds +135 to the boot.
+ *
+ * **Second review of PR #83: the 6 bytes over the cap of +140 are noise of
+ * the table of chunks, and the direction accepts them as such** — the domain
+ * chunk did not move. The growth cap of the **code** stays +140. The ids a
+ * redo seals reach `correctEvent` through its option `ids` (+5 in the domain
+ * chunk, 41.487): the code of 014 now adds **+140, the cap itself**. That is
+ * why a lone reversal is redone through `recordEvent` with its id and
+ * `reverseEvent` takes none: giving it one cost +25 more. Measured 75.837.
  */
 const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20;
 
