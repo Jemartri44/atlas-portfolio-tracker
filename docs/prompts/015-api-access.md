@@ -413,7 +413,7 @@ Valen **para cada entrega**, sobre lo que esa entrega construye, y para la featu
     23. **la consola siguiendo una redirección**, **enviando el token a otro origen** o por HTTP, o **poniéndolo en un argumento, una variable de entorno, una URL o la salida**;
     24. **usar un `credentials.json` con permisos abiertos**, **escribirlo sin atomicidad o con otro modo**, o **aceptarlo dentro de la carpeta del libro** (o al revés);
     25. **`logout` borrando la entrada local sin el `200`**;
-    26. **un token en una ruta solo de sesión** (listar, revocar otro, emitir), o **un `device_id` del cuerpo** aceptado;
+    26. **un token en una ruta solo de sesión** (listar los tokens, revocar otro, leer el estado de todos los dispositivos) o **abriendo un intento de emisión** en `GET /api/auth/console/start` (§4.1), o **un `device_id` del cuerpo** aceptado. **No es este mutante** el canje de §4.3 con el token anterior en la cabecera para renovar, que es legítimo (§7.1 bis, N7);
     27. **un `ThrottlingException` de SSM** tratado como token válido, o como inválido para siempre;
     28. **con `amr` verificable, emitir sin `mfa`** (si el bloque 0 lo confirma);
     29. **el nombre del dispositivo sin validar** en el inicio, o **sin escapar** en la lista o en la página manual;
@@ -532,6 +532,7 @@ La revisión (comentario de la PR #89) encontró cinco bloqueantes y trece punto
 - <a id="r1-n4"></a>**N4 — Cada estado intermedio de la escritura de `sync/remote.json` y el marcador es de fallo seguro y está reconocido**, con su test. *Motivo (la revisión):* el texto pedía que un corte dejara la carpeta «como estaba o configurada entera», que con dos escrituras atómicas es imposible. Aplicada en E3, bloque 4.
 - <a id="r1-n5"></a>**N5 — La salida cuando el `device_id` de una carpeta se queda sin credencial**: `atlas remote login`, en una carpeta cuyo `sync/remote.json` nombra un dispositivo sin credencial, **pide a la API reemitir para ese `device_id`**, tras un inicio de sesión con Google y PKCE. **La API solo lo concede si el dispositivo existe, no está olvidado y es de tipo consola**, y eso **revoca cualquier token anterior del dispositivo**. *Motivo (la revisión):* tras `logout` y `login`, o una respuesta de renovación perdida, la carpeta se quedaba con un `sync/remote.json` que nombraba un dispositivo sin token, sin salida, y su `sync/devices/<id>.json` bloqueaba `compact` hasta olvidarlo. Aplicada en E2, bloques 2 y 3, y en el mutante 29 sexies.
 - <a id="r1-n6"></a>**N6 — Una escritura con cookie sin `Origin` se rechaza** (`origin_rejected`), con su mutante. Aplicada en E1, bloque 2, y en el mutante 6.
+- <a id="r1-n7"></a>**N7 — El mutante 26 se reformula**: «emitir» se refiere al inicio de §4.1; el canje de §4.3 con el token anterior para renovar es legítimo y no lo castiga. Aplicada en el mutante 26.
 
 ### 7.2 Respuestas a las preguntas del implementador
 
