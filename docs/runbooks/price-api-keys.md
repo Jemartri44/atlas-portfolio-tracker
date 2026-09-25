@@ -1,0 +1,152 @@
+# Claves de las fuentes de precios (EODHD y Alpha Vantage)
+
+La consola descarga los cierres diarios de tus activos desde dos APIs gratuitas con clave: **EODHD** (la principal) y **Alpha Vantage** (el respaldo). Esta guía explica cómo sacar las dos claves, dónde dejarlas y cómo comprobar que la consola las lee. Tardas unos 15 minutos. Las decisiones de fondo están en ADR-0031; el formato del fichero, en `docs/data-schema.md` §1.
+
+Sin claves, Atlas funciona igual con las valoraciones manuales (`atlas add valuation`). Las claves solo añaden precios automáticos, que son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee.
+
+**Tres reglas, antes de nada:**
+
+1. **Las claves no se le pasan a nadie.** Ni se pegan en el chat, ni se le dan a un asistente, ni a la dirección, ni se escriben en un documento o en un mensaje. **El asistente nunca las ve ni le hace falta**: tú las dejas en tu fichero, y la consola las lee de ahí. Ninguna orden de esta guía lleva una clave escrita.
+2. **Nunca en el repositorio.** El repositorio es público. Una clave que llega a un *commit* hay que darla por perdida y cambiarla.
+3. **Nunca dentro de la carpeta del libro.** Esa carpeta se copia, se exporta y un día se sincronizará; las claves no deben viajar con ella. La consola se niega a trabajar si la carpeta de las claves y la del libro están una dentro de la otra.
+
+---
+
+## 1. EODHD, plan Free
+
+**Qué da:** 20 llamadas al día, con el día contado de medianoche a medianoche GMT (en Madrid, de 01:00 a 01:00 en invierno y de 02:00 a 02:00 en verano), y un año de histórico de cierres. Uso personal. **No pide tarjeta.** Comprobado el 2026-09-25 en `eodhd.com/pricing`, `eodhd.com/financial-apis/api-limits` y `eodhd.com/financial-apis/quick-start-with-our-financial-data-apis`.
+
+1. Abre `https://eodhd.com/register`.
+2. Regístrate con un correo y una contraseña, o con el botón de Google o de GitHub. Cualquiera sirve; si usas Google, que sea con la verificación en dos pasos activada ([guía](google-2-step-verification.md)).
+3. Si te pide confirmar el correo, abre el mensaje que te llega y pulsa el enlace.
+4. Entra en tu panel (*dashboard*). Tu clave es el **API token** que aparece allí. EODHD también la manda en el correo de bienvenida.
+5. **No la copies todavía a ningún sitio.** La pegarás directamente en la terminal en el paso 3 de esta guía.
+
+> La clave `demo` que sale en los ejemplos de la documentación de EODHD **no es la tuya**: solo sirve para seis símbolos de prueba. La tuya es la del panel.
+
+## 2. Alpha Vantage, plan gratuito
+
+**Qué da:** 25 llamadas al día; su hora de reinicio no está documentada, así que la consola cuenta una ventana de 24 horas para no pasarse nunca. El histórico gratuito son los últimos 100 días de mercado. **No pide tarjeta.** Comprobado el 2026-09-25 en `alphavantage.co/support` y `alphavantage.co/premium`.
+
+1. Abre `https://www.alphavantage.co/support/#api-key`.
+2. Rellena el formulario «Claim your free API key»:
+   - **Which of the following best describes you?**: elige *Investor*.
+   - **Organization**: pon tu nombre o `personal`.
+   - **Email**: un correo tuyo que leas; es la vía por la que te avisan.
+3. Pulsa **GET FREE API KEY**. La clave aparece en la misma página, debajo del botón.
+4. **Déjala en esa pestaña** hasta el paso 3 de esta guía, y cópiala **entera y sin espacios**. Alpha Vantage **no rechaza una clave mal copiada**: contesta con un aviso en vez de con un error (ADR-0031), así que un fallo de copia no se nota hasta la primera descarga.
+
+## 3. Guardar las claves en `~/.config/atlas/secrets.json`
+
+### El formato
+
+Un objeto JSON con **solo estas dos entradas**, las dos con texto:
+
+```json
+{"eodhd":"…","alpha_vantage":"…"}
+```
+
+- Los nombres son exactamente `eodhd` y `alpha_vantage`, en minúsculas. **Cualquier otro nombre hace que la consola rechace el fichero entero** (y no enseña el nombre, por si fuera la clave misma).
+- Puedes poner **una sola** de las dos: la consola usará solo esa fuente.
+- Un valor vacío (`""`) no vale.
+- Los permisos tienen que ser `600` (solo tú lees y escribes). **Si otros usuarios de la máquina pueden leerlo, la consola no usa las claves** y te dice el `chmod` que lo arregla.
+- **La aplicación nunca escribe este fichero**: lo escribes tú, y solo tú lo cambias.
+
+Lo lee `packages/adapters/src/prices/secrets.ts` (`readSecrets`), y la consola lo busca con `secretsPath` en `~/.config/atlas/secrets.json`, o en `$XDG_CONFIG_HOME/atlas/secrets.json` si esa variable tiene una ruta absoluta.
+
+### Crearlo (Linux y WSL)
+
+**Si usas WSL, hazlo en la terminal de WSL (Ubuntu), no en PowerShell ni en `cmd`.** El fichero va en el `HOME` de Linux, `/home/<tu usuario>/.config/atlas/secrets.json`, **no** en `C:\Users\…` ni en `/mnt/c/…`: en las unidades de Windows los permisos de Linux no funcionan como aquí, el fichero suele aparecer abierto a todos y la consola no usaría las claves.
+
+Copia este bloque en la terminal. Te pide las dos claves **sin enseñarlas en pantalla**: pega cada una y pulsa Intro. Las claves no quedan en el historial de la terminal, y el fichero nace ya con permisos `600`.
+
+```bash
+mkdir -p ~/.config/atlas
+read -rsp 'Clave de EODHD: ' KE; echo
+read -rsp 'Clave de Alpha Vantage: ' KA; echo
+( umask 077; printf '{"eodhd":"%s","alpha_vantage":"%s"}\n' "$KE" "$KA" > ~/.config/atlas/secrets.json )
+unset KE KA
+chmod 600 ~/.config/atlas/secrets.json
+ls -l ~/.config/atlas/secrets.json
+```
+
+**Cuenta como «sí»:** la última línea empieza por `-rw-------`.
+
+- **Para cambiar una clave**, vuelve a ejecutar el bloque entero con las dos: sustituye el fichero.
+- **Si solo tienes una**, cambia la línea del `printf` por la de esa fuente, por ejemplo `printf '{"eodhd":"%s"}\n' "$KE"`, y no hace falta la otra línea `read`.
+- **No lo abras con el Bloc de notas de Windows** a través de `\\wsl.localhost`: puede cambiar los finales de línea o dejar una copia. Si alguna vez tienes que mirarlo, `nano ~/.config/atlas/secrets.json` desde WSL.
+
+> **El límite de WSL, dicho claro:** el `600` protege frente a otros usuarios de Linux, pero **no frente a un programa de Windows de tu mismo usuario**, que puede leer el fichero a través de `\\wsl$` o `\\wsl.localhost`. Es el mismo límite que ya tienen el libro y el token de la consola (ADR-0033). Lo que protege aquí es tu cuenta de Windows.
+
+> Si `echo $XDG_CONFIG_HOME` escribe algo, la consola busca las claves en esa carpeta (`$XDG_CONFIG_HOME/atlas/secrets.json`) y no en `~/.config`. Lo normal es que no escriba nada.
+
+### Windows sin WSL
+
+El proyecto se usa desde WSL, y es lo recomendado. Si algún día ejecutas la consola directamente en Windows, el fichero va en `%USERPROFILE%\.config\atlas\secrets.json`, con el mismo contenido. **En Windows la consola no puede comprobar los permisos**, así que no hay `chmod` que valga: lo que protege el fichero es que esté dentro de tu carpeta de usuario y que nadie más use tu cuenta de Windows.
+
+## 4. Comprobar que la consola las lee
+
+Se hace en una **carpeta de prueba** con un libro sintético, nunca en la de tu libro. La consola se ejecuta con Node desde tu clon del repositorio, ya compilado (si no lo está, sigue el paso 3 de [la prueba de la 013](013-daily-close-prices-live-test.md)). Si tu clon no está en `~/projects/atlas-portfolio-tracker`, cambia la primera línea.
+
+```bash
+REPO=~/projects/atlas-portfolio-tracker
+P=~/atlas-prueba-claves
+atlas() { node "$REPO/apps/cli/dist/main.js" --ledger "$P/ledger.jsonl" "$@"; }
+mkdir -p "$P"
+atlas synth --out "$P/ledger.jsonl"
+```
+
+### 4a. Que el fichero se lee (no gasta cupo)
+
+```bash
+atlas prices update
+echo "salida $?"
+```
+
+El libro de prueba no tiene ningún símbolo declarado, así que **no se llama a nadie**; la consola solo lee tus claves.
+
+**Cuenta como «sí»:** una tabla con cada activo «sin símbolo declarado (sin gastar cupo)», la última línea **`Cupo que queda hoy: EODHD 20, Alpha Vantage 25.`** y `salida 0`. Esa última línea nombra **solo las fuentes cuya clave se ha leído**: si falta una, falta en el fichero.
+
+Si no sale eso, lo que dice la consola (nunca enseña una clave):
+
+| Mensaje | Qué pasa | Qué hacer |
+|---|---|---|
+| «No hay claves de fuentes de precios configuradas» | No encuentra el fichero | Comprueba la ruta con `ls -l ~/.config/atlas/secrets.json` |
+| «No se usan las claves de …: otros usuarios de la máquina pueden leer ese fichero» | Permisos distintos de `600` | `chmod 600 ~/.config/atlas/secrets.json` |
+| «… no se puede leer como JSON» | Falta una comilla, sobra una coma… | Vuelve a crearlo con el bloque del paso 3 |
+| «la entrada número N no es una clave que se conozca» | Un nombre que no es `eodhd` ni `alpha_vantage` | Vuelve a crearlo con el bloque del paso 3 |
+| «el valor de «eodhd» no es una clave» | Un valor vacío | Vuelve a crearlo; pega la clave antes de pulsar Intro |
+| «el fichero de claves … y la carpeta del libro están uno dentro del otro» | Tu libro está dentro de `~/.config/atlas`, o al revés | Separa las dos carpetas |
+
+### 4b. Que EODHD acepta la clave (gasta 1 llamada)
+
+Opcional; la prueba de la 013 lo vuelve a comprobar. Le da a un activo del libro de prueba un ETF europeo real:
+
+```bash
+atlas prices symbols set ast_world --currency EUR --eodhd IWDA.AS
+echo "salida $?"
+```
+
+**Cuenta como «sí»:** «Símbolos de ast_world guardados en prices/symbols.json (EODHD en …)». Si dice «Error: EODHD ha rechazado la clave al confirmar el símbolo: no se ha guardado nada» y `salida 1`, la clave está mal copiada: vuelve al paso 3 (el «Vuelve a intentarlo más tarde» del mensaje no aplica aquí; reintentar solo gasta otra llamada). Si la consola dice que EODHD da otra divisa y te pide confirmar, responde `N`: aquí solo se comprueba la clave.
+
+**Con Alpha Vantage no hay una comprobación así**: una clave mal copiada no da error (paso 2). Se sabe en la parte B de la prueba de la 013, cuando `ast_gold` sale «actualizado» desde Alpha Vantage.
+
+### 4c. Limpiar
+
+```bash
+rm -rf ~/atlas-prueba-claves
+```
+
+Solo la carpeta de prueba. Las claves se quedan en `~/.config/atlas/secrets.json`.
+
+## 5. El paso siguiente: la prueba real de la 013
+
+Con las claves en su sitio, sigue [`013-daily-close-prices-live-test.md`](013-daily-close-prices-live-test.md) **desde su paso 3** (sus pasos 1 y 2 son esta guía). Son dos partes en dos días distintos, porque las dos gastan el cupo de EODHD, y la feature de precios solo se da por verificada con ella.
+
+## Más adelante (nube)
+
+Cuando Atlas esté desplegado, la descarga diaria la hará una tarea programada en AWS, y allí **las claves irán en SSM Parameter Store como `SecureString`** (ADR-0031; `docs/data-schema.md` §1; `docs/specification.md` §11.8), nunca en el bucket de datos ni en el repositorio. Subirlas es una tarea tuya de la etapa de despliegue (`docs/decision-roadmap.md`, Ronda 8, «Plan por etapas», etapa 3), y **la guiará otro runbook en ese momento**.
+
+La ruta exacta de esos parámetros **aún no está fijada**. La única ruta de SSM documentada hoy es la de los tokens de dispositivo de la consola, `/atlas/<entorno>/device-tokens/` (ADR-0033), que no tiene nada que ver con estas claves.
+
+Tu fichero local no cambia con la nube: la consola lo seguirá leyendo en tu máquina.
