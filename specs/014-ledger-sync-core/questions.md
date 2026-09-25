@@ -1,0 +1,184 @@
+# Preguntas y verificaciones de la feature 014
+
+Fechas en `Europe/Madrid`. Todo lo ejecutado está en el *scratchpad* de la sesión (`014-idb/`, `014-json/`, `014-bundle/`), nunca en el repositorio. Las salidas se citan literalmente.
+
+---
+
+## 0. Estado: alto del plan (2026-09-25)
+
+`spec.md` y `plan.md` escritos; **ninguna línea de código**. Las verificaciones del bloque 0 salen **las cuatro bien** (§1). **Hay una parada**: con lo que el encargo exige, **el arranque del paquete web no cabe en su techo** (§3); lo he medido con un prototipo deshecho y lo dejo a la dirección, como manda §5 del encargo. Y hay dos preguntas que no son de confirmar una propuesta sino de decidir (Q1 y Q6, §5).
+
+---
+
+## 1. Bloque 0 — las verificaciones, con su fuente
+
+### 1.1 Punto 1 — La durabilidad de una transacción de IndexedDB
+
+Consultado el 2026-09-25. Las citas de la especificación, de MDN, de Bugzilla, de chromestatus y del código de los navegadores están descargadas y copiadas **literalmente**; las dos marcadas con (†) se leyeron a través de un resumen automático de la página y pueden no ser literales.
+
+**La especificación** — W3C *Indexed Database API 3.0*, Editor's Draft del 13 de agosto de 2025 (`https://w3c.github.io/IndexedDB/`) y Working Draft de la misma fecha (`https://www.w3.org/TR/2025/WD-IndexedDB-3-20250813/`); el texto de la durabilidad es el mismo en las dos.
+
+- §2.7 *Transactions*: «A transaction has a durability hint. This is a hint to the user agent of whether to prioritize performance or durability when committing the transaction. […] "strict" — The user agent may consider that the transaction has successfully committed only after verifying that all outstanding changes have been successfully written to a persistent storage medium. "relaxed" — The user agent may consider that the transaction has successfully committed as soon as all outstanding changes have been written to the operating system, without subsequent verification. "default" — The user agent should use its default durability behavior for the storage bucket. This is the default for transactions if not otherwise specified.»
+- Nota de §2.7: «In a typical implementation, "strict" is a hint to the user agent to flush any operating system I/O buffers before a complete event is fired.»
+- §5.4 *Committing a transaction*, nota: «Only after the transaction has been successfully written is the complete event fired.»
+
+**Lo que dice**: la durabilidad es una **pista** («may», «should»); qué significa «escrito» y qué es `"default"` lo decide el navegador. `complete` no garantiza por sí solo que esté en disco.
+
+**Lo que hace cada navegador por defecto**:
+
+- **Chromium**: `"default"` es hoy **`relaxed`**. `https://developer.chrome.com/blog/indexeddb-durability-mode-now-defaults-to-relaxed` (actualizado el 2023-11-03): «The default durability mode in IndexedDB is changing from strict to relaxed from Chrome 121.» y «with strict durability, the IndexedDB transaction complete event is not fired until after the data is actually written». En el código actual de Chromium (`components/services/storage/public/cpp/buckets/bucket_info.h`): `durability = blink::mojom::BucketDurability::kRelaxed;`; y `strict` **se respeta**: `content/browser/indexed_db/…/leveldb/backing_store.cc` (`ShouldSyncOnCommit` es cierto con `Strict`) y el motor SQLite nuevo (`sqlite/database_connection.cc`: `Strict` → `"PRAGMA synchronous=FULL"`). La versión exacta del cambio de valor por defecto **no está verificada**: el blog y el anuncio de blink-dev (†) dicen 121, chromestatus (`https://chromestatus.com/feature/5084460341264384`) marca 122 y un comentario de `storage/browser/quota/quota_database.cc` dice M124. Para esta feature da igual: es `relaxed` en todas.
+- **Firefox**: por defecto, SQLite `synchronous = NORMAL` (`dom/indexedDB/ActorsParent.cpp`; comentario de `IndexedDatabaseManager.cpp`: «This guarantees (unlike synchronous = OFF) atomicity and consistency, but not necessarily durability in situations such as power loss»). La opción existe desde Firefox 126 (Bugzilla 1878143) y se respeta desde el 129 (Bugzilla 1883045): `strict` → `EXTRA`, `relaxed` → `OFF`.
+- **Safari/WebKit**: la opción existe desde Safari 15 (changeset 280415, bug 228289 (†)); en `SQLiteIDBBackingStore.cpp`, **solo** con `Strict` se hace `sqliteDB->checkpoint(SQLiteDatabase::CheckpointMode::Full)`. Sin verificar: el nivel de `synchronous` que usa WebKit y si el `fsync` de Apple llega al disco físico.
+- MDN (`https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/transaction`, `…/IDBTransaction/durability`) y `browser-compat-data`: Chrome 83, Firefox 126, Safari 15.
+
+**Conclusión**: **ningún navegador asegura en disco por defecto**. Por la decisión de la dirección, la transacción que escribe lo retenido pide **`durability: "strict"`**, que los tres respetan hoy.
+
+**Probado en Chromium de verdad** (guion `014-idb/drive-014.mjs`, página `014-idb/page.html`, Chromium de Playwright `chromium-1234` = *Chrome for Testing* 151.0.7922.34, sin interfaz, conducido por el protocolo DevTools con el `fetch` y el `WebSocket` de Node 22, sin dependencias), salida literal (`014-idb/drive-014.out`):
+
+```
+support {"ua":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36","hasProp":true,"defaultReports":"default","strictReports":"strict","relaxedReports":"relaxed"}
+```
+
+`strict` se acepta y la transacción lo conserva (`tx.durability === "strict"`).
+
+### 1.2 Punto 2 — Una transacción que escribe varias claves del almacén es atómica, en Chromium
+
+**La especificación**, §2.7.1 (normativo): «The implementation must atomically write any changes to the database made by requests placed against the transaction. That is, either all of the changes must be written, or if an error occurs, […] the implementation must not write any of the changes to the database». §5.5: «All the changes made to the database by the transaction are reverted.» **Salvedad** (§5.6 y §5.10): si el manejador de error de una petición llama a `preventDefault()`, solo se deshace esa petición y la transacción **puede seguir y confirmar el resto**. El plan lo tiene en cuenta: la transacción del paso 6 no cancela ningún error sin abortar después (hoy `BrowserLedgerBlob.update` lo hace así: `preventDefault` y `settle.fail`, que llama a `tx.abort()`).
+
+**Probado** con el mismo guion, **20 rondas**, sobre un almacén `ledger` con las claves `current`, `sync:state`, `sync:held` y `archive/a`, sembradas en cada ronda con valores conocidos en una transacción `strict`:
+
+1. **Aborto explícito a mitad**: tres `put` en una transacción `strict` y `tx.abort()` en el éxito del segundo. Tras el aborto, las tres claves tienen el valor sembrado.
+2. **Aborto por error a mitad**: dos `put`, un `add` sobre `archive/a` que ya existe (sin `preventDefault`) y un cuarto `put`. La transacción aborta con `ConstraintError` y las cuatro claves siguen como estaban.
+3. **El navegador muere a mitad**: tres `put` y una cadena de lecturas que mantiene viva la transacción; `SIGKILL` al proceso entero de Chromium; se relanza con el mismo perfil. Las tres claves tienen el valor sembrado.
+4. **`strict` confirmada y el navegador muere al instante**: tras `complete`, `SIGKILL`, se relanza. Las tres claves tienen el valor nuevo.
+
+Salida literal:
+
+```
+rounds 20 {"abortMid":20,"errorMid":20,"crashMid":20,"strictSurvives":20}
+```
+
+**Lo que prueba y lo que no**: la atomicidad de varias claves se sostiene en los tres modos de aborto, 20 de 20. El punto 4 prueba que `strict` se acepta y que lo confirmado sobrevive a la muerte del **proceso**; no prueba el vaciado al disco ante un corte de corriente, que no se puede provocar desde aquí: eso lo sostienen la especificación y el código de Chromium citados en §1.1.
+
+### 1.3 Punto 3 — La durabilidad de lo retenido en la consola
+
+Es un test con un sistema de ficheros inyectado (§6.3 (V9)), así que se escribe en el bloque 4. Lo que se inyecta y dónde, en `plan.md` §6: `FileLedgerStore` y el almacén de estado de la consola reciben un `FileOps` (`open`, `rename`, `rm`, `readFile`, `mkdir`, `fsyncDir`), por defecto `node:fs/promises`; el test lo envuelve sobre una carpeta temporal, **registra** `write`, `sync`, `rename` y `rm` con su ruta, y **falla si el `sync()` del manejador del temporal de `held.jsonl` no aparece antes del primer `open` del temporal del libro**. Con la misma envoltura se comprueba que toda escritura ocurre con nuestro cerrojo puesto.
+
+### 1.4 Punto 4 — Los bytes de una línea sobreviven al viaje de `docs/api.md` §5.2
+
+Guion `014-json/roundtrip-014.mjs`, sobre el dominio compilado de esta rama y el `fast-check` del repositorio. Por cada línea: el cliente la mete en `{ "lines": [{ "line": … }] }`, `JSON.stringify`, codifica en UTF-8; el servidor decodifica en UTF-8 (con `fatal: true`), `JSON.parse`, y la línea que saca, codificada en UTF-8, se compara **byte a byte** con la original. También el camino de vuelta (la línea escrita con `"\n"` y releída del fichero). Casos:
+
+- las 200 líneas del sintético (`generateLedger({ seed: 42 })`) tal como las escribe `encodeLine`;
+- **5.000 corridas** de `fast-check` (semilla 14) metiendo en `notes` de compras, ventas, depósitos, valoraciones, dividendos y tesis: textos fijos (`ñandú á é í ó ú ü Ñ`, `emoji 📈💶🇪🇸`, comillas dobles, barras invertidas sueltas y dobles, tabuladores y caracteres de control, `U+2028`/`U+2029`), grafemas cualesquiera, y mezclas de `ñ`, `á`, `\`, `"`, `📈`, `U+0000`, saltos de línea y retornos; cada línea se comprueba además sin salto crudo dentro y que se decodifica al mismo evento;
+- tres textos **no canónicos** (espacios, `\/`, una `é` escrita como secuencia de escape `\u00e9` junto a una `é` literal, comillas escapadas).
+
+Salida literal (`014-json/roundtrip-014.out`), código de salida 0:
+
+```
+synthetic events: 200
+plain synthetic lines round-tripped: 200
+fast-check runs with notes: 5000 — all byte-identical
+non-canonical texts round-tripped: 3
+```
+
+**Conclusión**: el contrato de `docs/api.md` §5.2 (la línea como cadena JSON) conserva los bytes. El mismo resultado sostiene el formato de `held.jsonl` (la línea dentro de un registro, como cadena: `plan.md` §5.2).
+
+---
+
+## 2. Lo que el encargo afirma del código, comprobado sobre esta rama
+
+La rama sale de `origin/develop` = `57d0075`. El encargo se comprobó sobre `523abb8`; entre los dos solo cambian documentos: `git diff --stat 523abb8..57d0075 -- packages apps tests` sale vacío.
+
+Comprobado y **cierto**: `LoadedLedger.lines`; `append` y `replace` reserializan con `encodeLine`; el etag de `MemoryLedgerStore` es un contador; `MemoryLedgerStore.replace` **no** valida el nombre del archivo (`file.ts` y `blob.ts` sí, `invalid_archive_name`); el cerrojo **no es reentrante** (`withFolderLock` → `acquireFolderLock` → `open(path, "wx")` → `EEXIST` → `LedgerLockedError`, también contra el propio proceso); `DB_VERSION = 2` con `ledger`, `handles` y `drafts`; las claves `current`, `current:meta`, `archive/…`, `prices:imported` (`browser/prices.ts:15`) y `reference:ecb` (`browser/reference.ts:14`); `openAtlasDb` está en el arranque (el mapa de fuente del trozo `domain-*.js` de `index.html` lista `idb.ts`, `blob.ts`, `indexeddb.ts`, `record-event.ts`, `rectify.ts` y `preview-event.ts`); `correctEvent` añade `[reversal, event]` en una escritura (`rectify.ts:175`); `checkCandidate` en `rectify.ts:144` y `rule-change.ts:270`; `writeRateCorrections` es un solo `append` de la cadena (`rule-change.ts:280-283`); `replaceLedgerText` en `transfer.ts`, llamado desde `importLedger`; `atlas backup` copia solo `ledger.jsonl`; los tests «never writes in a folder of the disk from the browser» (línea 1067) y «keeps out every file that is the compiled twin of a source» (línea 1649, sobre `git ls-files`); `SUPPORTED_EVENT_TYPES` tiene 26 tipos y `RESERVED_EVENT_TYPES` está vacío (`schema/envelope.ts`). Solo `rectify.ts` y `rule-change.ts` escriben `corrects_id`, siempre justo detrás de su anulación (también el sintético, `synth/scenario.ts:975-989`).
+
+**Dos cosas que no cuadran con el encargo**:
+
+1. **El arranque** (§3): el encargo dice que, con `DB_VERSION` sin subir, «lo que sí puede crecer el arranque es cualquier módulo nuevo que alcance la entrada, o un nombre de fragmento más en su tabla». **No es todo**: `blob.ts` y `record-event.ts` **ya** están en el arranque, y el encargo pone en ellos dos cosas obligatorias —las operaciones de líneas crudas de `BlobLedgerStore` (bloque 1) y la negativa de V7 en `checkInvalid`—. Las dos crecen el arranque, y juntas no caben.
+2. **Menor**: el encargo pide para `sync/` la escritura atómica «temporal `"wx"`, `sync`, `assertOwned`, renombrado, como `FileEcbHistoryStore`». `FileEcbHistoryStore` abre el temporal con `"wx"` (`ecb/history-store.ts:89`), pero `FileLedgerStore` lo abre con `"w"` (`file.ts:94`). Para `sync/` uso `"wx"`; `file.ts` no lo cambio salvo que la dirección lo pida.
+
+---
+
+## 3. **Parada: el arranque del paquete web no cabe**
+
+**Partida**, medida con `npm run build` sobre esta rama (guion `014-bundle/measure-014.mjs`, la misma regla que `check-bundle.mjs`, en bytes exactos): **arranque 75.703** (techo 75.725, **22 de margen**), total **276.111** (techo 276.480, 369 de margen). Coincide con el encargo.
+
+**Medido con un prototipo** en el árbol de trabajo, construido y deshecho después (`git checkout -- packages`; ningún commit, ningún gemelo `.js` después):
+
+| Prototipo | Arranque | Δ | Total | Δ |
+|---|---|---|---|---|
+| Partida | 75.703 | — | 276.111 | — |
+| A: `appendLines` y `replaceLines` en `BlobLedgerStore`, compartiendo el cuerpo con `append` y `replace` (validación de cada línea con `decodeLine` y del salto con su código) | 75.797 | **+94** | 276.145 | +34 |
+| A + B: la negativa de V7 en `checkInvalid` (una condición y un código más en `DependentEventsError`) | 75.829 | **+32** (acumulado **+126**) | 276.255 | +110 (acumulado +144) |
+
+`check-bundle.mjs` para el *build* en los dos (`build=1`). **Lo demás de la feature no toca el arranque**: el cliente de la web, la orquestación y el dominio de la sincronización son perezosos y en la 014 ni siquiera entran en el paquete (nada del marco los importa); la negativa de importar, lo retenido en la exportación, V7 en `write.ts` y los mensajes van en trozos perezosos.
+
+**El encargo prohíbe** subir el techo del arranque, esconder algo con una importación dinámica o recortar una comprobación para que quepa. Así que **paro** y la dirección elige. Las opciones que veo, sin elegir:
+
+- **(a) Subir el techo del arranque** lo medido más un margen pequeño (propuesta: +130, a 75.855), en su propio commit y con la medida en el comentario. Coste: 0,13 KB en cada arranque. Es lo que el encargo deja expresamente a la dirección.
+- **(b) Sacar las operaciones crudas de la clase del arranque**: un `RawLineLedgerStore` que extiende `LedgerStore` con las dos operaciones, y un `RawBlobLedgerStore extends BlobLedgerStore` en un módulo perezoso. Ahorra los +94, pero **cambia la letra** de ADR-0026 («el puerto `LedgerStore` gana dos operaciones») y del encargo: el puerto base no las tendría, y el almacén de la web que se abre en el arranque tampoco. Quedaría +32 de V7, que **tampoco cabe** en 22.
+- **(c)** Las dos negativas con coste cero en el arranque no existen: la de V7 tiene que estar en `checkInvalid` por decisión de la dirección (para que la vista previa y el registro fallen igual), y `checkInvalid` es del arranque.
+
+**El total** tampoco cabe (+1,8 a +3 KB estimados, casi todo los mensajes nuevos, perezosos), y ese sí sube con la regla de siempre, en su propio commit, sin preguntar.
+
+---
+
+## 4. Los avisos que «piden confirmación», leídos del código
+
+Leído en `packages/domain/src`, `apps/cli/src/commands` y `apps/web/src` el 2026-09-25. La propuesta, en `plan.md` §8.
+
+**Los que la interfaz pregunta antes de escribir**:
+
+1. **Huella repetida** (`DuplicateFingerprintError`, ADR-0012). Se calcula en `usecases/record-event.ts:81-90` sobre `state.fingerprints` (que salta los anulados, `projections/project-ledger.ts:424-435`), se lanza en `record-event.ts:209-212` y `rectify.ts:170-173`, y la vista previa la devuelve sin lanzar (`preview-event.ts:148, 242`). Consola: falla y se repite con `--confirm-duplicate` (`shared.ts:174-177`, `corporate-actions.ts:334-336`, `rectify.ts:146-152`, `draft.ts:179-183`). Web: `DuplicateDialog.tsx:29-37`, reintento con `confirmDuplicate` (`EventForm.tsx:134-154, 236-240`; `corporate/form.tsx:105-120, 229`). **Solo depende del libro. La hace cumplir el dominio.** Tipos con huella (`schema/fingerprint.ts`): `buy`, `sell`, `swap`, `transfer`, `dividend`, `interest`, `fx_exchange`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `corporate_action`, `tax_return_filed`.
+2. **`settings_changed` que deja eventos inválidos** (`newly_invalid_events`, ADR-0015): `record-event.ts:157-192`. Solo el libro; lo hace cumplir el dominio. Con V7 deja de ser una confirmación cuando la sincronización está configurada.
+3. **Tipo del BCE tecleado que no es el oficial** (`rateConfirmations`, `ecb/propose.ts:119-134`): consola `rates.ts:115-134` (`--confirm-fx-rate`; `--yes` no basta), desde `add.ts:273` y `rectify.ts:133`; web `forms/rates.ts:95-112` → `registrar/rates.ts:98-107`, casilla en `RateNotes.tsx` y comprobación en `EventForm.tsx:138`. **Depende del histórico local del BCE** y de la configuración local, además del libro. **Solo la interfaz.**
+4. **Un cambio de configuración que silencia avisos de umbral** (`silencedWarnings`, `projections/settings-impact.ts:116-133`): consola `catalogue.ts:290-312, 503`; web `configuracion.tsx:117-121` → `SettingsDialogs.tsx:92-109`. Libro, **reloj** y valoraciones. Solo la interfaz.
+5. **Un cambio de regla que deja tipos que no son de la nueva fecha fiscal** (`ruleChangeRates`, `ecb/rule-change.ts:108-159`): consola `rule-change.ts:63-86` desde `catalogue.ts:507`; web `ajustes/rule-change.ts:29-47`. Libro e histórico del BCE. Solo la interfaz.
+6. **Un cambio de configuración que mueve ejercicios pasados** (`movedFiscalYears`, `settings-impact.ts:83-103`; `movedTaxYears`, **`tax/year.ts:187-240`, el motor fiscal**): consola `catalogue.ts:320-398, 512` (los dos); web `configuracion.tsx:126-136` → `SettingsDialogs.tsx:111-153` (solo el primero, y pregunta también si `closedYearsOfSettings` no está vacío, `write.ts:215-218`). Solo la interfaz.
+
+**El ejercicio cerrado** (ADR-0020), que ADR-0026 pone de ejemplo: `closedYearsTouched` (`filings/touched.ts:121-139`) lo devuelven `RecordResult`, `CorrectResult`, `ReverseResult` y la vista previa; **nunca niega** y ningún caso de uso tiene opción para él. Las interfaces lo dicen **delante** de la pregunta general («¿Registrar?», «¿Rectificar?», «¿Anular?»), no como pregunta propia, salvo en los ajustes de la web. Depende del libro y del día de hoy (`closedYears` ignora presentaciones con `filed_at` posterior a hoy, `projections/filings.ts:181-200`). La cifra que mueve (`closedYearImpact`, `@atlas/domain/fiscal`) usa el motor fiscal.
+
+**Parecen confirmaciones y no lo son**: `unfiledPastYears` y `priorYear` (notas); los avisos propios del evento (recompra, stop del cubo); el importe del bróker; las notas del tipo propuesto; un duplicado al guardar un borrador (nota, `draft.ts:77-81`); las notas de la presentación complementaria. Y **son negativas duras, sin confirmación**: `dependent_events`, `ledger_has_invalid_events`, `duplicate_isin`, `filing_already_exists`, `filing_supersedes_invalid`, `conflict`.
+
+**Dos cosas encontradas de paso**, que no son de esta feature y anoto para la dirección: la web **no deja confirmar una presentación duplicada** (`fiscal/presentar.tsx:36-40, 119` no pasa `confirmDuplicate`: termina en «Ya hay una presentación idéntica registrada»), y el formulario de eventos corporativos de la web **no dice el ejercicio cerrado** (`registrar/corporate/form.tsx`), cuando la consola sí.
+
+---
+
+## 5. Preguntas a la dirección
+
+Las que son **decisión** y no confirmación van primero.
+
+- **Q1 — El libro local puede quedar inválido al retener una pareja.** Al retener una pareja, lo que va detrás se queda en el libro local como pendiente (tercera enmienda), pero la pareja sale del libro. En el caso 11 —corregir una compra de 10 a 20 y vender 15— el libro local se queda con la compra de 10 y la venta de 15: **inválido**. Las consultas degradan (ADR-0015) y **las mutaciones se niegan** hasta que el usuario resuelva la retenida. ¿Es lo que se quiere? Alternativas que veo, sin elegir: (a) aceptarlo y decirlo en la explicación de la retenida (la 015 lo enseña); (b) retener también lo que va detrás **y depende** de la unidad retenida (contradice «se queda pendiente, no retenida»); (c) no quitar la unidad retenida del libro local hasta resolverla (contradice «réplica = remoto + cola» y la segunda enmienda).
+- **Q6 — La definición de «sincronización configurada» de V7 choca con desactivar.** V7 dice «que exista `sync/`». Desactivar tiene que conservar lo retenido (P4), que vive en `sync/`, así que tras desactivar `sync/` sigue existiendo y `acceptInvalid` quedaría negado para siempre, cuando la propia nota de ADR-0015 da desactivar como remedio. Y `compact` se niega con `sync/` sin marcador. **Propuesta** (`plan.md` §12.4): desactivar deja el marcador con `status: "disabled"`; «configurada» = existe `sync/` y el marcador no dice `disabled` (ilegible o ausente cuentan como configurada, fallo seguro); en la web, lo mismo con `sync:state`.
+- **Q7 — El arranque** (§3): (a), (b) u otra cosa.
+- **Q2 — La cadena** (`plan.md` §9): toda secuencia contigua de dos o más parejas es una cadena. ¿Confirmas? ¿Y el refinamiento del `reason` idéntico, que retiene menos a cambio de depender de un detalle de `prepareRateCorrections`? Recomiendo no usarlo.
+- **Q3 — La lista de avisos** (`plan.md` §8): entran la huella repetida y el ejercicio cerrado; no entran el tipo del BCE, silenciar umbrales, los tipos tras un cambio de regla ni los ejercicios movidos. ¿Confirmas, o prefieres la alternativa conservadora (retener todo `settings_changed` pendiente si el remoto ganó cualquier línea)?
+- **Q4 — Toda retenida sin resolver bloquea toda la cola**, también las de una reescritura o de unirse. ¿Confirmas?
+- **Q5 — Empezar desde el remoto** al unirse: archivo los bytes locales **y además** retengo lo que el libro local tenía y el remoto no (como tras una reescritura). ¿O basta con archivar?
+- **Q8 — Qué es «el remoto cambió esa cuenta o ese activo»** (caso 4): propongo que cuente también la anulación o la corrección, en la cola del remoto, de un `*_created`/`*_updated` de esa cuenta o ese activo, y, para `settings_changed`, la anulación de un `settings_changed`: las dos cambian la foto en vigor igual que una foto nueva.
+- **Q9 — Reintentos**: tras tres `412` seguidos, o tres cambios del libro local en el paso 6, la sincronización para con su motivo (`remote_contention`, `local_changed`). Constantes con nombre en el cliente, no configuración. ¿Confirmas?
+- **Q10 — `"\r"`** en una línea cruda se rechaza, como en `docs/api.md` §5.2. Consecuencia: un libro escrito a mano con finales de línea de Windows no se puede sincronizar ni restaurar sin compactarlo antes. ¿Confirmas?
+- **Q11 — Un remoto que ya tiene eventos inválidos** (un endurecimiento futuro) para la sincronización con `remote_ledger_invalid`, sin retener nada: no es culpa de ninguna línea. ¿Confirmas?
+- **Q12 — Los nombres de archivo**: `pre-sync-<fecha>T<hora>-<12 hex del etag>.jsonl`, `pre-join-…` y `pre-redownload-…`.
+- **Q13 — La copia de lo retenido**: `ledger-<fecha>.held.jsonl` en `atlas backup`, `ledger.held.jsonl` en la web; sin retenidas sin resolver, no se escribe y se dice. Se copia el fichero entero, con su historial de resoluciones.
+- **Q14 — Rehacer con el identificador sellado antes** (`plan.md` §10.2), como los borradores del BCE tras §11.1 y §12.1 de la 012.
+- **Q15 — La regla del sello en el cliente**, dicha por bytes: una línea que sella solo se reaplica si el prefijo sobre el que caería es, byte a byte, el que tenía delante en local. Es la forma exacta de «el remoto ganó líneas o una pendiente anterior quedó retenida», y además no se engaña con las líneas propias que el remoto ya tenía (respuesta perdida). ¿Confirmas?
+- **Q16 — Qué es «huella repetida» en cada lado.** Al añadir, el remoto usa la regla de siempre (huellas de eventos **no anulados**, `state.fingerprints`). En la inicialización, `docs/api.md` §5.5 y V17 dicen «todo evento cuya huella repite la de uno **anterior en el fichero**», anulado o no: es un superconjunto, y el cliente y el remoto usarían los dos esa regla literal para `confirm_duplicate_ids`. ¿Confirmas que son dos reglas distintas a propósito?
+
+---
+
+## 6. Documentos (para que los traslade la dirección)
+
+Lo que creo que tendrá que cambiar, y que no toco:
+
+- `docs/data-schema.md` §1: los formatos de `sync/state.json`, `sync/held.jsonl` y `sync/discarded.jsonl` que queden (con `status: "disabled"` si Q6 sale así), las claves `sync:*` de IndexedDB, el nombre del archivo de una sincronización que reordena (`pre-sync-…`), los de unirse y volver a descargar, y la copia `ledger-<fecha>.held.jsonl` de `atlas backup`. Y la columna de retención de `held` y `discarded`: «para siempre» se cumple porque los dos son de solo añadir.
+- `docs/data-schema.md` §5: quitar «previsto para la feature de sincronización» del punto (6) de `compact`; los nombres `appendLines` y `replaceLines`; el código `raw_line_break`; que las operaciones crudas las cumplen **tres** adaptadores (el texto dice cuatro, con S3, que es de la 015); y la transacción `strict` de IndexedDB.
+- ADR-0026: lo que el bloque 0 encontró de IndexedDB (ningún navegador asegura en disco por defecto; `strict`, respetado por los tres; atomicidad de varias claves verificada en Chromium) y, si sale así, la definición de «configurada» de Q6.
+- ADR-0015: la nota fechada, si Q6 cambia la definición.
+- `docs/api.md`: nada que el remoto simulado haya contradicho todavía; lo veré al construirlo.
+- `docs/prompts/README.md`.
+
+---
+
+## 7. Gemelos `.js`
+
+Tras el *build* de partida y tras deshacer el prototipo, búsqueda de un `.js` junto a un `.ts`/`.tsx` del mismo nombre fuera de `dist*/` y `node_modules/` en `packages`, `apps` y `tests`: **ninguno** (2026-09-25).
