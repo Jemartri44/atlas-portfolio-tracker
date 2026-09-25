@@ -254,6 +254,16 @@ export interface MismatchedCloses {
 }
 
 /**
+ * Days a purge asked for again once and no source served (third pass of the
+ * review of PR #80): a hole, said while no close fills it.
+ */
+export interface UnservedDays {
+  readonly asset_id: AssetId;
+  readonly source: QuoteSource;
+  readonly dates: readonly CivilDate[];
+}
+
+/**
  * The lines of `lines` whose currency is not the one declared for their
  * source, or the one in which feature 013 stored a source that said another
  * (`misstored`, second pass of the review of PR #80).
@@ -290,10 +300,12 @@ export const readCloses = (
   closes: Map<AssetId, EffectiveClose[]>;
   unreadable: UnreadableCloses[];
   mismatched: MismatchedCloses[];
+  unserved: UnservedDays[];
 } => {
   const closes = new Map<AssetId, EffectiveClose[]>();
   const unreadable: UnreadableCloses[] = [];
   const mismatched: MismatchedCloses[] = [];
+  const unserved: UnservedDays[] = [];
   for (const [assetId, text] of files) {
     let lines: CloseLine[];
     try {
@@ -317,7 +329,15 @@ export const readCloses = (
         dates: ofSource.map((line) => line.date),
       });
     }
-    closes.set(assetId, effectiveCloses(lines.filter((line) => !wrong.includes(line))));
+    const effective = effectiveCloses(lines.filter((line) => !wrong.includes(line)));
+    closes.set(assetId, effective);
+    const filled = new Set(effective.map((close) => close.date));
+    for (const [source, days] of Object.entries(entry?.unserved_days ?? {})) {
+      const dates = days.filter((date) => !filled.has(date));
+      if (dates.length > 0) {
+        unserved.push({ asset_id: assetId, source: source as QuoteSource, dates });
+      }
+    }
   }
-  return { closes, unreadable, mismatched };
+  return { closes, unreadable, mismatched, unserved };
 };

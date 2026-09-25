@@ -62,11 +62,18 @@ export interface SymbolEntry {
    */
   readonly misstored?: Partial<Record<QuoteSource, string>>;
   /**
-   * The day from which the closes of a source have to be asked for again
-   * (written by a purge): the next download of the asset starts there, not
-   * after its last close, and it is cleared once asked.
+   * The days whose closes of a source a purge removed, to be asked for again
+   * **once** (second and third passes of the review of PR #80): the next
+   * download of the asset starts at the first of them, not after its last
+   * close, and they are cleared once asked.
    */
-  readonly refetch_from?: Partial<Record<QuoteSource, CivilDate>>;
+  readonly refetch_days?: Partial<Record<QuoteSource, readonly CivilDate[]>>;
+  /**
+   * The days asked for again that no source served: left as a **hole**, and
+   * said by `prices status` while no close fills them. Never chased again —
+   * a source that does not have a day today will not have it tomorrow.
+   */
+  readonly unserved_days?: Partial<Record<QuoteSource, readonly CivilDate[]>>;
 }
 
 export interface SymbolsFile {
@@ -85,8 +92,14 @@ const ENTRY_KEYS = [
   "currency_check",
   "currency_confirmed_over",
   "misstored",
-  "refetch_from",
+  "refetch_days",
+  "unserved_days",
 ];
+
+const FORMAT_2_ONLY = ["misstored", "refetch_days", "unserved_days"];
+
+const isDays = (item: unknown): item is CivilDate[] =>
+  Array.isArray(item) && item.length > 0 && item.every(isCivilDate);
 
 const wrong = (field: string): ValidationError =>
   new ValidationError("invalid_symbols_file", `prices/symbols.json: ${field} is not valid`, {
@@ -202,9 +215,9 @@ const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry 
     throw wrong(assetId);
   }
   // Format 1 has `currency` where format 2 has `currencies`, never both; and
-  // what format 2 added after it (`misstored`, `refetch_from`) it never had.
+  // what format 2 added after it (`misstored`, the days of a purge) it never had.
   const allowed = legacy
-    ? ENTRY_KEYS.filter((key) => key !== "misstored" && key !== "refetch_from").map((key) =>
+    ? ENTRY_KEYS.filter((key) => !FORMAT_2_ONLY.includes(key)).map((key) =>
         key === "currencies" ? "currency" : key,
       )
     : ENTRY_KEYS;
@@ -231,8 +244,10 @@ const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry 
   if (value.misstored !== undefined) {
     bySource(value.misstored, `${assetId}.misstored`, isCurrency);
   }
-  if (value.refetch_from !== undefined) {
-    bySource(value.refetch_from, `${assetId}.refetch_from`, isCivilDate);
+  for (const key of ["refetch_days", "unserved_days"]) {
+    if (value[key] !== undefined) {
+      bySource(value[key], `${assetId}.${key}`, isDays);
+    }
   }
   // Every field was checked above; format 1's `currency` becomes `currencies`.
   const { currency: _legacy, ...rest } = value;

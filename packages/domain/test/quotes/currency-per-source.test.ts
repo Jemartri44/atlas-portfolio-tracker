@@ -9,7 +9,13 @@ import { readEcbZipCsv } from "../../src/ecb/history.js";
 import { priceAt } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { type UpdatePricesInput, updatePrices } from "../../src/quotes/cascade.js";
-import { checkSymbols, purgeMismatched, recordSymbols } from "../../src/quotes/declare.js";
+import {
+  assertNothingMisstored,
+  checkSymbols,
+  purgeMismatched,
+  recordSymbols,
+  removeSymbols,
+} from "../../src/quotes/declare.js";
 import { approximationAt, externalPricesOf } from "../../src/quotes/external.js";
 import { effectiveCloses, readCloseFile, readCloses } from "../../src/quotes/line.js";
 import {
@@ -93,9 +99,9 @@ describe("the currency declared per source", () => {
         newFile({
           eodhd: "X",
           currencies: { eodhd: "GBP" },
-          refetch_from: { eodhd: "2027-02-30" },
+          refetch_days: { eodhd: ["2027-02-30"] },
         }),
-        "ast_spec.refetch_from.eodhd",
+        "ast_spec.refetch_days.eodhd",
       ],
       [
         JSON.stringify({
@@ -614,7 +620,7 @@ describe("second pass of PR #80: the closes 013 stored wrong under a file of for
     expect(await purgeMismatched(store, "ast_spec", "alpha_vantage")).toBe(1);
     const entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
     expect(entry?.misstored).toBeUndefined();
-    expect(entry?.refetch_from).toEqual({ alpha_vantage: "2027-01-05" });
+    expect(entry?.refetch_days).toEqual({ alpha_vantage: ["2027-01-05"] });
   });
 });
 
@@ -667,7 +673,7 @@ describe("second pass of PR #80: a purge asks for its days again", () => {
     ]);
     // Asked once: the promise is kept, and the next run is up to date again.
     expect(
-      parseSymbols(store.files.get("symbols.json")).assets.ast_spec?.refetch_from,
+      parseSymbols(store.files.get("symbols.json")).assets.ast_spec?.refetch_days,
     ).toBeUndefined();
   });
 });
@@ -691,14 +697,15 @@ describe("second pass of PR #80: the edges of what is carried, purged and asked 
     expect(parseSymbols(raw).assets.ast_spec?.misstored).toBeUndefined();
   });
 
-  it("a new declaration keeps what is owed only for the sources it still declares", async () => {
+  it("a new declaration keeps every day owed, and the marks of the sources it declares", async () => {
     const store = new MemoryPriceStore();
     store.files.set(
       "symbols.json",
       newFile({
         ...LONDON,
-        misstored: { alpha_vantage: "GBP", eodhd: "GBX" },
-        refetch_from: { eodhd: "2027-01-04", alpha_vantage: "2027-01-05" },
+        misstored: { alpha_vantage: "GBP" },
+        refetch_days: { eodhd: ["2027-01-04"], alpha_vantage: ["2027-01-05"] },
+        unserved_days: { eodhd: ["2027-01-03"] },
       }),
     );
     await recordSymbols({
@@ -711,29 +718,30 @@ describe("second pass of PR #80: the edges of what is carried, purged and asked 
     });
     const entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
     expect(entry?.misstored).toEqual({ alpha_vantage: "GBP" });
-    expect(entry?.refetch_from).toEqual({ alpha_vantage: "2027-01-05" });
+    expect(entry?.refetch_days).toEqual({ eodhd: ["2027-01-04"], alpha_vantage: ["2027-01-05"] });
+    expect(entry?.unserved_days).toEqual({ eodhd: ["2027-01-03"] });
   });
 
-  it("a purge keeps the other source's marks and an older day already owed; with nothing left, only clears", async () => {
+  it("a purge keeps the other source's marks and adds its days to those already owed; with nothing left, only clears", async () => {
     const store = new MemoryPriceStore();
     store.files.set(
       "symbols.json",
       newFile({
         ...LONDON,
         misstored: { alpha_vantage: "GBP", eodhd: "GBX" },
-        refetch_from: { alpha_vantage: "2027-01-01" },
+        refetch_days: { alpha_vantage: ["2027-01-01"] },
       }),
     );
     store.files.set("ast_spec.jsonl", line("2027-01-05", "1000", "GBP", "alpha_vantage"));
     expect(await purgeMismatched(store, "ast_spec", "alpha_vantage")).toBe(1);
     let entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
     expect(entry?.misstored).toEqual({ eodhd: "GBX" });
-    expect(entry?.refetch_from).toEqual({ alpha_vantage: "2027-01-01" });
+    expect(entry?.refetch_days).toEqual({ alpha_vantage: ["2027-01-01", "2027-01-05"] });
     // Its mark, with nothing of it left in the file: cleared, nothing owed.
     expect(await purgeMismatched(store, "ast_spec", "eodhd")).toBe(0);
     entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
     expect(entry?.misstored).toBeUndefined();
-    expect(entry?.refetch_from).toEqual({ alpha_vantage: "2027-01-01" });
+    expect(entry?.refetch_days).toEqual({ alpha_vantage: ["2027-01-01", "2027-01-05"] });
   });
 
   it("clears only what it asked: a purge made meanwhile stays owed, and a removal is left as it is", async () => {
@@ -744,7 +752,7 @@ describe("second pass of PR #80: the edges of what is carried, purged and asked 
         newFile({
           ...LONDON,
           currency_check: { eodhd: { at: AT }, alpha_vantage: { at: AT } },
-          refetch_from: { alpha_vantage: "2027-01-04" },
+          refetch_days: { alpha_vantage: ["2027-01-04"] },
         }),
       );
       store.files.set("ast_spec.jsonl", line("2027-01-05", "10", "GBP", "eodhd"));
@@ -777,20 +785,132 @@ describe("second pass of PR #80: the edges of what is carried, purged and asked 
     };
     const purged = await run((store) => {
       const file = JSON.parse(store.files.get("symbols.json") as string);
-      file.assets.ast_spec.refetch_from = { alpha_vantage: "2027-01-04", eodhd: "2027-01-02" };
+      file.assets.ast_spec.refetch_days = { alpha_vantage: ["2027-01-04"], eodhd: ["2027-01-02"] };
       store.files.set("symbols.json", JSON.stringify(file));
     });
-    expect(purged?.refetch_from).toEqual({ eodhd: "2027-01-02" });
+    expect(purged?.refetch_days).toEqual({ eodhd: ["2027-01-02"] });
     // The same source purged again meanwhile, from an earlier day: still owed.
     const again = await run((store) => {
       const file = JSON.parse(store.files.get("symbols.json") as string);
-      file.assets.ast_spec.refetch_from = { alpha_vantage: "2027-01-01" };
+      file.assets.ast_spec.refetch_days = { alpha_vantage: ["2027-01-01"] };
       store.files.set("symbols.json", JSON.stringify(file));
     });
-    expect(again?.refetch_from).toEqual({ alpha_vantage: "2027-01-01" });
+    expect(again?.refetch_days).toEqual({ alpha_vantage: ["2027-01-01"] });
     const removed = await run((store) => {
       store.files.set("symbols.json", JSON.stringify({ symbols_format: 2, assets: {} }));
     });
     expect(removed).toBeUndefined();
+  });
+});
+
+describe("third pass of PR #80: misstored leaves only through a purge", () => {
+  const pending = () =>
+    newFile({
+      ...LONDON,
+      currency_check: { eodhd: { at: AT }, alpha_vantage: { at: AT } },
+      misstored: { alpha_vantage: "GBP" },
+    });
+
+  it("refuses to declare the asset again without the source with closes stored wrong", async () => {
+    const store = new MemoryPriceStore();
+    store.files.set("symbols.json", pending());
+    await expect(
+      recordSymbols({
+        assetId: "ast_spec",
+        declaration: { eodhd: "TSCO.LSE", currencies: { eodhd: "GBP" } },
+        checks: {},
+        accepted: [],
+        store,
+        now: () => new Date(AT),
+      }),
+    ).rejects.toMatchObject({
+      code: "symbols_misstored_pending",
+      details: { asset_id: "ast_spec", source: "alpha_vantage" },
+    });
+    expect(store.files.get("symbols.json")).toBe(pending());
+    // Said before any call is spent, too.
+    await expect(
+      assertNothingMisstored(store, "ast_spec", {
+        eodhd: "TSCO.LSE",
+        currencies: { eodhd: "GBP" },
+      }),
+    ).rejects.toMatchObject({ code: "symbols_misstored_pending" });
+    await assertNothingMisstored(store, "ast_spec", LONDON);
+    await assertNothingMisstored(store, "ast_other", LONDON);
+  });
+
+  it("refuses to remove the asset while it has them", async () => {
+    const store = new MemoryPriceStore();
+    store.files.set("symbols.json", pending());
+    await expect(removeSymbols(store, "ast_spec")).rejects.toMatchObject({
+      code: "symbols_misstored_pending",
+      details: { asset_id: "ast_spec", source: "alpha_vantage" },
+    });
+    await expect(assertNothingMisstored(store, "ast_spec")).rejects.toMatchObject({
+      code: "symbols_misstored_pending",
+    });
+    expect(store.files.get("symbols.json")).toBe(pending());
+    // Once purged, both are allowed.
+    await purgeMismatched(store, "ast_spec", "alpha_vantage");
+    expect(await removeSymbols(store, "ast_spec")).toBe(true);
+  });
+});
+
+describe("third pass of PR #80: the days asked once that the source does not serve", () => {
+  const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
+    `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
+
+  it("are asked once, then left as a hole that is said, until a close fills them", async () => {
+    const store = new MemoryPriceStore();
+    store.files.set(
+      "symbols.json",
+      newFile({ ...LONDON, currency_check: { eodhd: { at: AT }, alpha_vantage: { at: AT } } }),
+    );
+    store.files.set(
+      "ast_spec.jsonl",
+      line("2027-01-04", "1000", "GBP", "alpha_vantage") + line("2027-01-05", "10", "GBP", "eodhd"),
+    );
+    await purgeMismatched(store, "ast_spec", "alpha_vantage");
+    // The source has no close of that day.
+    const eodhd = new FakeSource("eodhd", () => closes(["2027-01-05", "10"]), store);
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.thesisOpened({ thesis_id: "th1" });
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      trade_date: "2027-01-04",
+      thesis_id: "th1",
+    });
+    const run = () =>
+      updatePrices({
+        state: projectLedger(b.build(), { asOf: TODAY }),
+        settings: DEFAULT_SETTINGS,
+        today: TODAY,
+        now: () => new Date("2027-01-06T08:00:00.000Z"),
+        store,
+        sources: { eodhd },
+      });
+    await run();
+    const entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
+    expect(entry?.refetch_days).toBeUndefined();
+    expect(entry?.unserved_days).toEqual({ alpha_vantage: ["2027-01-04"] });
+    const read = () =>
+      readCloses(
+        new Map([["ast_spec", store.files.get("ast_spec.jsonl") ?? ""]]),
+        parseSymbols(store.files.get("symbols.json")),
+      ).unserved;
+    expect(read()).toEqual([
+      { asset_id: "ast_spec", source: "alpha_vantage", dates: ["2027-01-04"] },
+    ]);
+    // Asked once: not chased on the next run.
+    await run();
+    expect(eodhd.calls).toHaveLength(1);
+    // A close of that day that arrives some other way fills the hole.
+    store.files.set(
+      "ast_spec.jsonl",
+      `${store.files.get("ast_spec.jsonl")}${line("2027-01-04", "9.9", "GBP", "eodhd")}`,
+    );
+    expect(read()).toEqual([]);
   });
 });

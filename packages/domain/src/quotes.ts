@@ -31,6 +31,7 @@ export {
   parsePriceConfig,
 } from "./quotes/config.js";
 export {
+  assertNothingMisstored,
   checkSymbols,
   purgeMismatched,
   recordSymbols,
@@ -60,6 +61,7 @@ export {
   readCloseFile,
   readCloses,
   type UnreadableCloses,
+  type UnservedDays,
 } from "./quotes/line.js";
 export { downloadPlan, type PlannedAsset, type PriorityGroup } from "./quotes/priority.js";
 export { isQuoteSource, QUOTE_SOURCES } from "./quotes/sources.js";
