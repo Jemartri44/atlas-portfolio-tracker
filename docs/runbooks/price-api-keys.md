@@ -153,7 +153,20 @@ atlas prices symbols set ast_world --currency EUR --eodhd IWDA.AS
 echo "salida $?"
 ```
 
-**Cuenta como «sí»:** «Símbolos de ast_world guardados en prices/symbols.json (EODHD en …)». Si dice «Error: EODHD ha rechazado la clave al confirmar el símbolo: no se ha guardado nada» y `salida 1`, la clave está mal copiada: vuelve al paso 3 (el «Vuelve a intentarlo más tarde» del mensaje no aplica aquí; reintentar solo gasta otra llamada). Si la consola dice que EODHD da otra divisa y te pide confirmar, responde `N`: aquí solo se comprueba la clave.
+**Cuenta como «sí»:** sale «Símbolos de ast_world guardados en prices/symbols.json (EODHD en …)», `salida 0` y **ninguna línea «Sin contrastar con EODHD»**. Si sale esa línea, la consola **no ha leído tu clave de EODHD** (o no tenía cupo) y no ha llamado a nadie, aunque diga «guardados» y salga con 0: vuelve a 4a.
+
+Si falla, sale una línea «Error: EODHD … al confirmar el símbolo: no se ha guardado nada. Vuelve a intentarlo más tarde.» y `salida 1`. **Solo un mensaje dice que la clave está mal:**
+
+| Lo que dice tras «Error: EODHD» | Qué significa | Qué hacer |
+|---|---|---|
+| «ha rechazado la clave» | **La clave está mal** (mal copiada, incompleta o de otra cuenta) | Vuelve al paso 3 y créala de nuevo. No reintentes antes: cada intento gasta una llamada |
+| «no tiene ese símbolo (o la clave no da acceso a él)» | EODHD no sirve ese símbolo con tu plan. **No dice que la clave esté mal** | Anótalo y sigue con la 013 |
+| «ha limitado las llamadas» | Cupo de EODHD agotado o demasiadas llamadas seguidas | Anótalo y sigue otro día |
+| «no responde» | Sin conexión, o EODHD caído | Comprueba tu conexión; si sigue, anótalo y sigue con la 013 |
+| «ha respondido algo que no se entiende» | EODHD ha contestado algo inesperado | Anótalo y sigue con la 013 |
+| «sin cupo hoy» | La consola ya gastó el cupo de hoy de esta carpeta | Sigue otro día |
+
+Ninguno de esos mensajes enseña la clave: se pueden copiar tal cual. Si la consola dice que EODHD da otra divisa y te pide confirmar, responde `N`: aquí solo se comprueba la clave.
 
 **Con Alpha Vantage no hay una comprobación así**: una clave mal copiada no da error (paso 2). Se sabe en la parte B de la prueba de la 013, cuando `ast_gold` sale «actualizado» desde Alpha Vantage.
 
