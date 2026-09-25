@@ -239,8 +239,16 @@ const dist = join(webRoot, "dist");
  * hash**, and a new hash compresses differently. Noise of the hashes, not
  * code — and it is why the ceiling now sits on the cap: a change of a lazy
  * chunk can move the boot a few bytes either way.
+ *
+ * **Review of PR #83: measured 75.849, ceiling 75.869 — measured + 20 of
+ * noise margin, not growth.** The code of the boot did not move (domain
+ * chunk 41.482, the same bytes as above); the entry went from 24.073 to
+ * 24.079 only because the table of lazy chunks names new hashes. With the
+ * ceiling on the measure itself, any change of a lazy chunk could break the
+ * build of the next feature; 20 bytes absorb that noise of the table. The
+ * growth cap of D-Q7 still holds: the code of 014 adds +135 to the boot.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 5;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
