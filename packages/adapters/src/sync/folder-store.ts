@@ -76,9 +76,13 @@ export class FolderSyncStore implements SyncStateStore {
 
   /**
    * Step 6 and every resolution: **one** hold of the lock, in which everything
-   * read at step 1 is compared and then written in this order — what is held
-   * back (durable before anything else), what is discarded, the ledger, the
-   * marker. A cut between two of them leaves every line at least in one place.
+   * read at step 1 is compared and then written **destination before origin**,
+   * the order deduced from the direction of each move (see the comment inside):
+   * the records of `held.jsonl` that are not a release — `held`, which gains a
+   * line, and `redo_started`, which seals the id a redo will carry —, then
+   * `discarded.jsonl`, the ledger, the records that release a line
+   * (`resolved`) and the marker. A cut between two of them leaves every line
+   * in both places, never in none.
    */
   async commit(expected: DeviceState, change: DeviceChange): Promise<void> {
     await this.ledger.underLock(async (writer) => {

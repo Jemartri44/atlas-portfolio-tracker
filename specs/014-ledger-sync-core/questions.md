@@ -194,6 +194,7 @@ El plan recibe el **visto bueno**. Decisiones, tal como llegaron:
   - **Errata del encargo** (§5, «El paquete web»): suponía que el arranque solo crecería por módulos nuevos o por un nombre de fragmento más; `blob.ts` y `record-event.ts` ya están en él y el encargo pone ahí dos cosas obligatorias.
 - **D-Q1: se acepta** que el libro local quede inválido al retener una pareja, **con una condición**: las acciones de resolver lo retenido (confirmar, rehacer, descartar) **nunca quedan bloqueadas** por el libro local inválido; el usuario siempre puede salir del estado en que la sincronización le dejó. Las consultas degradan (ADR-0015) y la aplicación **dice por qué y dónde resolverlo**.
 - **D-Q6**: «sincronización configurada» = existe `sync/` **y** el marcador no dice `disabled` (en la web, existe `sync:state` y no dice `disabled`). La nota en ADR-0015 la escribe la dirección al cerrar.
+  - **Enmienda de la dirección (2026-09-25, revisión de la PR #84):** en la web cuenta como configurada con que exista **cualquiera** de las claves `sync:state`, `sync:held` o `sync:discarded` (el equivalente de la carpeta `sync/`), y el marcador no diga `disabled`. Es la regla que implementa el código (`browserSyncConfigured`, `packages/adapters/src/ledger-store/browser/sync-store.ts`), más amplia que la de arriba, y la dirección la acepta porque va por el lado seguro: con lo retenido y sin marcador, `acceptInvalid` se niega.
 - **D-Q2**: toda secuencia contigua de dos o más parejas es una cadena, **sin** el refinamiento del `reason`.
 - **D-Q3**: la lista propuesta (huella repetida y ejercicio cerrado).
 - **D-Q4**: toda retenida sin resolver bloquea la cola (ya estaba decidido).
@@ -388,3 +389,13 @@ Cada arreglo, cómo se vio en rojo y qué mutante lo guarda. Los mutantes se apl
   - Arranque: 75.843, techo 75.869; el trozo del dominio está igual.
   - Total: 280.039 bytes, techo 280.064, con 25 bytes de margen.
 - **Documentos** (se añade a §6): `docs/data-schema.md` §1, el campo `replaces` de los registros `resolved` de `held.jsonl`.
+
+## 16. Revisión de la PR #84, el cierre documental (2026-09-25)
+
+- **D-Q1 no se cumple entera.** La nota del cierre en ADR-0026 decía que confirmar, rehacer y descartar nunca se bloquean por el libro local inválido. Confirmar, descartar, `startRedo` y `finishRedo` no proyectan y no se bloquean. Pero rehacer exige registrar lo rehecho entre `startRedo` y `finishRedo`:
+  - **`recordEvent`**, que rehace una línea o una anulación suelta, se niega con `InvalidLedgerError` si, después de registrar, sigue habiendo algún evento que ya era inválido antes (`checkInvalid`, `packages/domain/src/usecases/record-event.ts`, la rama que busca un inválido `preexisting`), **salvo con un `settings_changed`**, que solo se niega por lo que él deja inválido. Por eso rehacer la anulación suelta de la propia venta inválida sí pasa (segunda ronda de la revisión, N1).
+  - **`correctEvent`**, que rehace una pareja, no se niega por los inválidos que ya había, solo por los que deja la corrección (`checkCandidate`, `packages/domain/src/usecases/rectify.ts`).
+  - *Escenario del revisor:* retenida la pareja que corrige una compra de 10 a 20, el libro local se queda con la compra de 10 y la venta de 15 (caso 11), que es inválida. Un `account_updated` retenido por `concurrent_account` no se puede rehacer hasta resolver la pareja.
+  - **Decisión de la dirección:** sin cambios de código en la 014. La nota de ADR-0026 dice ahora la verdad, y pasa a lo heredado por la 015: **decidir si rehacer debe permitirse con el libro inválido por una pareja retenida**, y falta un test de `correctEvent` sobre un libro ya inválido y de rehacer con el libro local inválido.
+- **D-Q6, enmienda:** ver §8.
+
