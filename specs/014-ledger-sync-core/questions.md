@@ -367,3 +367,24 @@ Cada arreglo, cómo se vio en rojo y qué mutante lo guarda. Los mutantes se apl
     - el campo `decision` de `discarded.jsonl`;
     - `join_required`.
   - `docs/api.md`, o la parte del cliente: se para con `join_required` si no hay marcador y hay líneas propias.
+
+## 15. Tercera instrucción de la dirección: las cadenas encadenadas (2026-09-25)
+
+- **Decisión aplicada.** El plan de una cadena traduce los identificadores dentro de la unidad.
+  - **Qué se anota:** al terminar una pareja, cada registro `resolved` con `resolution: "redone"` lleva `replaces`, el `id` del evento retenido al que sustituye, además de `event_id`.
+  - **Dónde queda la traducción:** `unresolvedHeld` expone en la unidad `redone`, que va del `id` retenido al `id` con que se rehízo.
+  - **Qué se corrige:** una pareja posterior que corrige la corrección retenida de una anterior corrige el identificador sellado de esa anterior.
+  - **Si la anterior sigue retenida, la posterior espera:** se niega con `redo_waits_for_pair` (`pair: N`, «Primero la pareja N») antes de sellar nada.
+  - Con el orden local de la unidad, la primera pareja retenida nunca depende de otra posterior. La espera es la guarda que impide ofrecer algo que va a fallar, y se prueba con una cadena desordenada.
+- **Rojo primero:** con una cadena de dos parejas encadenadas, la segunda apuntaba a la corrección retenida, y `correctEvent` fallaba con `NotFoundError`. Ahora la cadena se rehace entera por el caso de uso, y en `discarded.jsonl` quedan los cuatro identificadores sellados.
+- **Mutantes muertos** (`b14.json`):
+  - quitar la traducción;
+  - no esperar nunca;
+  - terminar sin `replaces`.
+- **El objetivo borrado sin corrección se queda como está:** solo queda descartar, y registrar lo niega con su error.
+- **Rehacer una anulación suelta** con `recordEvent` y su identificador sellado: aceptado por la dirección.
+- **Tubería:**
+  - `lint`, `typecheck`, `test:coverage` (2.619 tests, 100 % en `domain`) y `build`, en verde. Sin gemelos `.js`.
+  - Arranque: 75.843, techo 75.869; el trozo del dominio está igual.
+  - Total: 280.039 bytes, techo 280.064, con 25 bytes de margen.
+- **Documentos** (se añade a §6): `docs/data-schema.md` §1, el campo `replaces` de los registros `resolved` de `held.jsonl`.
