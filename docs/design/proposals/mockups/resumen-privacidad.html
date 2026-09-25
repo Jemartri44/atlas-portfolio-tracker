@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resumen con privacidad · propuesta</title>
+<!--
+  Static mockup for docs/design/proposals/2026-09-25-visual-improvements.md.
+  Self-contained: no external resource, no script, no style attribute (the app
+  serves style-src 'self'). Invented data from docs/design/brief.md §9.
+  Tokens copied from docs/design/system.md §3; the ones marked "proposed" are
+  new and explained in the proposal (§5).
+  Open it at 400 px wide (the phone) and at 2045 px (the monitor).
+-->
+<style>
+:root {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, "Ubuntu Sans", "Noto Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --text-xs: 0.8125rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.125rem;
+  --text-xl: 1.375rem; --text-2xl: 1.625rem; --text-display: 2.25rem;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --gutter: 16px; --grid-gap: 12px; --radius-md: 8px; --radius-lg: 12px; --tap: 44px;
+  --c-canvas: #f3f2ee; --c-surface: #ffffff; --c-fill: #f0efea; --c-border: #e3e1db;
+  --c-text: #1c1b18; --c-text-2: #54524c; --c-text-3: #66645d;
+  --c-accent: #1f4f7c; --c-on-accent: #ffffff; --c-accent-soft: #e4ecf5; --c-accent-soft-text: #1f4f7c;
+  --c-caution: #80530a; --c-danger: #9e2f27; --c-danger-soft: #fbe9e5;
+  --c-series-core: #4166b4; --c-series-bucket: #b07f1f; --c-series-cash: #178a70;
+  --c-series-contrib: #8a8880; /* proposed: the contributed-capital spine, neutral like the index */
+  --c-chart-grid: #ebe9e3; --c-chart-axis: #c9c6be; --c-chart-gap: #f3f1ec; --c-chart-gap-edge: #d6d3cb;
+  --chart-core-h: 132px; --chart-strip-h: 44px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-canvas: #161615; --c-surface: #1f1f1d; --c-fill: #2a2a27; --c-border: #30302d;
+    --c-text: #edece8; --c-text-2: #bdbbb4; --c-text-3: #9e9c95;
+    --c-accent: #8fb6e3; --c-on-accent: #0f1c2c; --c-accent-soft: #223246; --c-accent-soft-text: #a9c8ec;
+    --c-caution: #e8b659; --c-danger: #f29a8a; --c-danger-soft: #3b1f1b;
+    --c-series-core: #5b8fd6; --c-series-bucket: #b98521; --c-series-cash: #2a9f80; --c-series-contrib: #8f8d86;
+    --c-chart-grid: #2a2a27; --c-chart-axis: #45443f; --c-chart-gap: #242422; --c-chart-gap-edge: #3a3a36;
+  }
+}
+/* proposed: a step for the 2045 px monitor (proposal §4, M9) */
+@media (min-width: 1800px) {
+  :root { --text-md: 1rem; --text-lg: 1.1875rem; --text-xl: 1.75rem; --text-display: 3rem; --gutter: 40px; --grid-gap: 24px; --chart-core-h: 300px; --chart-strip-h: 64px; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--c-canvas); color: var(--c-text); font: 400 var(--text-md)/1.5 var(--font-sans); }
+.num { font-variant-numeric: tabular-nums; }
+.mask { letter-spacing: 0.08em; color: var(--c-text-3); }
+.bar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: var(--space-3); height: 52px; padding: 0 var(--gutter); background: var(--c-surface); border-bottom: 1px solid var(--c-border); font-size: var(--text-sm); }
+.bar .where { display: flex; gap: var(--space-2); align-items: center; }
+.bar .stale { color: var(--c-caution); }
+.bar .privacy { margin-left: auto; min-height: 36px; padding: 0 var(--space-4); border-radius: 999px; background: var(--c-accent-soft); color: var(--c-accent-soft-text); display: flex; align-items: center; font-weight: 600; }
+.bar .nav { display: none; }
+main { padding: var(--space-4) var(--gutter) 96px; display: grid; gap: var(--grid-gap); }
+h1 { font-size: var(--text-xl); margin: 0; line-height: 1.2; }
+.sub { color: var(--c-text-3); font-size: var(--text-sm); }
+.card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-lg); padding: var(--space-4); }
+.card h2 { font-size: var(--text-lg); margin: 0 0 var(--space-3); line-height: 1.3; display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
+.card h2 small { font-size: var(--text-sm); color: var(--c-text-3); font-weight: 400; }
+/* M2: the data-loss risk goes first, above everything, as one compact line */
+.critical { display: grid; grid-template-columns: 20px 1fr; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--c-danger-soft); border: 1px solid transparent; }
+.critical svg { color: var(--c-danger); margin-top: 3px; }
+.critical a { grid-column: 2; }
+a { color: var(--c-accent); font-weight: 600; text-decoration: none; }
+/* hero */
+.hero { font-size: var(--text-display); line-height: 1.15; font-weight: 600; }
+.hero .unit { font-size: 0.55em; color: var(--c-text-3); margin-left: 4px; }
+.shares { display: flex; gap: 3px; height: 12px; margin: var(--space-3) 0; }
+.shares span { border-radius: 3px; }
+.s-core { background: var(--c-series-core); flex: 87; }
+.s-bucket { background: var(--c-series-bucket); flex: 7; }
+.s-cash { background: var(--c-series-cash); flex: 6; }
+.parts { list-style: none; margin: 0; padding: 0; }
+.parts li { display: grid; grid-template-columns: 20px 1fr auto 72px; gap: var(--space-2); align-items: center; min-height: 44px; border-top: 1px solid var(--c-border); }
+.parts .pct { font-weight: 600; text-align: right; }
+.parts .amt { text-align: right; }
+.key { width: 18px; height: 0; border-top: 2px solid; }
+.k-core { border-color: var(--c-series-core); }
+.k-bucket { border-color: var(--c-series-bucket); border-top-style: dashed; }
+.k-cash { border-color: var(--c-series-cash); border-top-style: dotted; border-top-width: 3px; }
+.k-contrib { border-color: var(--c-series-contrib); border-top-style: dashed; }
+/* the fiscal door, folded to one row outside the tax season (M2) */
+.door { display: flex; align-items: center; gap: var(--space-3); min-height: var(--tap); }
+.door .txt { flex: 1; font-size: var(--text-sm); color: var(--c-text-2); }
+/* chart */
+.range { display: flex; gap: var(--space-1); margin: 0 0 var(--space-2); }
+.range span { min-height: 36px; padding: 0 var(--space-3); display: flex; align-items: center; border-radius: 999px; font-size: var(--text-sm); color: var(--c-text-2); }
+.range .on { background: var(--c-accent-soft); color: var(--c-accent-soft-text); font-weight: 600; }
+.panel { display: grid; grid-template-columns: 1fr; gap: 2px; }
+.panel-label { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-xs); color: var(--c-text-2); margin-top: var(--space-2); }
+.panel-label em { font-style: normal; color: var(--c-text-3); margin-left: auto; }
+svg.plot { display: block; width: 100%; overflow: visible; }
+svg.core { height: var(--chart-core-h); }
+svg.strip { height: var(--chart-strip-h); }
+.plot path { fill: none; vector-effect: non-scaling-stroke; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.plot .grid { stroke: var(--c-chart-grid); stroke-width: 1; }
+.plot .gap { fill: var(--c-chart-gap); stroke: var(--c-chart-gap-edge); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.plot .core { stroke: var(--c-series-core); }
+.plot .contrib { stroke: var(--c-series-contrib); stroke-dasharray: 5 4; stroke-width: 1.5; }
+.plot .bucket { stroke: var(--c-series-bucket); stroke-dasharray: 6 4; }
+.plot .cash { stroke: var(--c-series-cash); stroke-dasharray: 1 5; }
+.xaxis { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--c-text-3); margin-top: var(--space-1); }
+.note { font-size: var(--text-sm); color: var(--c-text-2); margin: var(--space-3) 0 0; }
+/* notices and rows */
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: grid; grid-template-columns: 20px 1fr; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--c-border); }
+.list li:first-child { border-top: 0; }
+.list svg { color: var(--c-caution); margin-top: 3px; }
+.list a { display: block; font-size: var(--text-sm); }
+.rows { list-style: none; margin: 0; padding: 0; }
+.rows li { display: grid; grid-template-columns: 1fr auto; gap: 0 var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--c-border); min-height: 56px; align-content: center; }
+.rows li:first-child { border-top: 0; }
+.rows .t { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rows .m { font-size: var(--text-sm); color: var(--c-text-2); }
+.rows .r { text-align: right; }
+.foot { display: flex; align-items: center; min-height: var(--tap); border-top: 1px solid var(--c-border); margin: var(--space-3) calc(-1 * var(--space-4)) calc(-1 * var(--space-4)); padding: 0 var(--space-4); }
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; height: 64px; background: var(--c-surface); border-top: 1px solid var(--c-border); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; text-align: center; font-size: var(--text-xs); color: var(--c-text-2); }
+.tabbar .cur { color: var(--c-text); font-weight: 600; }
+.tabbar .plus { background: var(--c-accent); color: var(--c-on-accent); border-radius: 12px; margin: 0 8px; padding: 10px 0; font-weight: 600; }
+.chart-card, .worth, .attention, .moves, .door-card { min-width: 0; }
+/* ≥ 1800: the monitor. Everything that answers "how is it going" above the fold. */
+@media (min-width: 1800px) {
+  .bar { height: 64px; }
+  .bar .nav { display: flex; gap: var(--space-2); margin-left: var(--space-6); }
+  .bar .nav span { padding: 8px 14px; border-radius: 8px; color: var(--c-text-2); }
+  .bar .nav .cur { background: var(--c-fill); color: var(--c-text); font-weight: 600; }
+  .bar .nav .plus { background: var(--c-accent); color: var(--c-on-accent); font-weight: 600; }
+  .tabbar { display: none; }
+  main { max-width: 1840px; margin: 0 auto; grid-template-columns: repeat(12, minmax(0, 1fr)); padding-bottom: var(--space-6); }
+  .head { grid-column: 1 / -1; }
+  .critical { grid-column: 1 / -1; grid-template-columns: 20px 1fr auto; align-items: center; }
+  .critical a { grid-column: 3; }
+  .worth { grid-column: 1 / span 8; grid-row: 3; }
+  .door-card { grid-column: 9 / span 4; grid-row: 3; align-self: start; }
+  .chart-card { grid-column: 1 / span 8; grid-row: 4 / span 2; }
+  .attention { grid-column: 9 / span 4; grid-row: 4; }
+  .moves { grid-column: 9 / span 4; grid-row: 5; }
+  .worth .inner { display: grid; grid-template-columns: 1.2fr 2fr; gap: var(--space-6); align-items: center; }
+  .worth .parts li { min-height: 40px; }
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <span class="where"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor"/><path d="M1.5 5.5h13" stroke="currentColor"/></svg>Navegador <span class="stale">· hace 9 días</span></span>
+  <nav class="nav" aria-label="Destinos"><span class="cur">Resumen</span><span>Movimientos</span><span>Cartera</span><span>Cubo</span><span class="plus">+ Registrar</span></nav>
+  <span class="privacy">Oculto</span>
+</header>
+<main>
+  <div class="head"><h1>Resumen</h1><div class="sub">20 de enero de 2029</div></div>
+
+  <div class="critical" role="note">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M6 1.5h6l4.5 4.5v6L12 16.5H6L1.5 12V6z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9 5v5M9 12.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <span>Tus datos viven en el navegador y hace <b>9 días</b> que no los exportas.</span>
+    <a href="#">Exportar ahora →</a>
+  </div>
+
+  <section class="card worth" aria-labelledby="h-worth">
+    <h2 id="h-worth">Patrimonio total <small>sin céntimos</small></h2>
+    <div class="inner">
+      <div>
+        <div class="hero num"><span class="mask">••••</span><span class="unit">€</span></div>
+        <div class="shares" aria-hidden="true"><span class="s-core"></span><span class="s-bucket"></span><span class="s-cash"></span></div>
+      </div>
+      <ul class="parts">
+        <li><span class="key k-core"></span><span>Cartera principal</span><span class="pct num">87 %</span><span class="amt num mask">•••• €</span></li>
+        <li><span class="key k-bucket"></span><span>Cubo</span><span class="pct num">7 %</span><span class="amt num mask">•••• €</span></li>
+        <li><span class="key k-cash"></span><span>Efectivo</span><span class="pct num">6 %</span><span class="amt num mask">•••• €</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card chart-card" aria-labelledby="h-evo">
+    <h2 id="h-evo">Evolución del patrimonio</h2>
+    <div class="range" role="group" aria-label="Rango"><span>1 mes</span><span class="on">1 año</span><span>5 años</span><span>Todo</span></div>
+    <div class="panel">
+      <div class="panel-label"><span class="key k-core"></span>Cartera principal <span class="key k-contrib"></span>aportado <em>sin importes en el eje</em></div>
+      <svg class="plot core" viewBox="0 0 336 132" preserveAspectRatio="none" role="img" aria-label="Cartera principal frente a lo aportado, con dos huecos sin precios">
+        <path class="grid" d="M0 128H336M0 88H336M0 48H336M0 8H336"/>
+        <rect class="gap" x="72.3" y="0" width="54.7" height="132"/>
+        <rect class="gap" x="195.3" y="0" width="27.4" height="132"/>
+        <path class="contrib" d="M4 111.5 H17.7 V109.2 H31.3 V107 H45 V104.8 H58.7 V102.5 H72.3 V100.3 H86 V98.1 H99.7 V95.8 H113.3 V93.6 H127 V91.4 H140.7 V89.1 H154.3 V86.9 H168 V84.7 H181.7 V82.5 H195.3 V80.2 H209 V78 H222.7 V75.8 H236.3 V73.5 H250 V71.3 H263.7 V69.1 H277.3 V66.8 H291 V64.6 H304.7 V62.4 H318.3 V60.1 H332 V57.9"/>
+        <path class="core" d="M4 111.5 L17.7 106.7 L31.3 102.1 L45 97.9 L58.7 94.2 L72.3 91.2 M127 81.4 L140.7 78.2 L154.3 74.1 L168 69.3 L181.7 63.9 L195.3 58 M222.7 46.5 L236.3 41.5 L250 37.2 L263.7 33.8 L277.3 30.9 L291 28.3 L304.7 25.6 L318.3 22.5 L332 18.5"/>
+      </svg>
+      <div class="panel-label"><span class="key k-bucket"></span>Cubo <em>escala propia</em></div>
+      <svg class="plot strip" viewBox="0 0 336 44" preserveAspectRatio="none" role="img" aria-label="Cubo, con su propia escala">
+        <rect class="gap" x="72.3" y="0" width="54.7" height="44"/>
+        <rect class="gap" x="195.3" y="0" width="27.4" height="44"/>
+        <path class="bucket" d="M4 34.5 L17.7 31.5 L31.3 29.2 L45 28 L58.7 27.9 L72.3 28.6 M127 28 L140.7 25.4 L154.3 22.4 L168 19.6 L181.7 17.6 L195.3 16.7 M236.3 18.7 L250 19 L263.7 18.1 L277.3 16.2 L291 13.4 L304.7 10.3 L318.3 7.7 L332 6.1"/>
+      </svg>
+      <div class="panel-label"><span class="key k-cash"></span>Efectivo <em>escala propia</em></div>
+      <svg class="plot strip" viewBox="0 0 336 44" preserveAspectRatio="none" role="img" aria-label="Efectivo, con su propia escala">
+        <path class="cash" d="M4 22 L17.7 15.5 L31.3 9 L45 22 L58.7 15.5 L72.3 9 L86 22 L99.7 15.5 L113.3 9 L127 22 L140.7 15.5 L154.3 9 L168 22 L181.7 26.3 L195.3 19.8 L209 32.8 L222.7 26.3 L236.3 19.8 L250 32.8 L263.7 26.3 L277.3 19.8 L291 32.8 L304.7 26.3 L318.3 19.8 L332 32.8"/>
+      </svg>
+      <div class="xaxis num"><span>ene 2028</span><span>abr 2028</span><span>jul 2028</span><span>oct 2028</span><span>ene 2029</span></div>
+    </div>
+    <p class="note">Lo aportado nunca tiene huecos: sale solo de tus movimientos. En 2 tramos falta algún precio y la línea se corta ahí.</p>
+  </section>
+
+  <section class="card door-card" aria-label="Declaración">
+    <div class="door"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="2" fill="none" stroke="currentColor"/><path d="M6.5 7h7M6.5 10h7M6.5 13h4" stroke="currentColor"/></svg><span class="txt"><b>Declaración</b> · Modelo 720 de 2028 sin decidir: faltan 2 valoraciones a 31/12</span><a href="#">Ver →</a></div>
+  </section>
+
+  <section class="card attention" aria-labelledby="h-att">
+    <h2 id="h-att">Atención <small>4 avisos</small></h2>
+    <ul class="list">
+      <li><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2 16.5 15.5h-15z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 7v4M9 13v.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div><b>3 precios</b> con más de 15 días · World Index Fund, Bitcoin ETP y Physical Gold ETC<a href="#">Registrar valoraciones →</a></div></li>
+      <li><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2 16.5 15.5h-15z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 7v4M9 13v.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div>Renta fija está <b>2,4 puntos</b> por debajo de su objetivo (umbral: 2 puntos).<a href="#">Ver cartera →</a></div></li>
+    </ul>
+    <div class="foot"><a href="#">Ver 2 avisos más</a></div>
+  </section>
+
+  <section class="card moves" aria-labelledby="h-mov">
+    <h2 id="h-mov">Últimos movimientos</h2>
+    <ul class="rows">
+      <li><span class="t">7 valoraciones</span><span class="r num m">31/12/2028</span><span class="m">Fondos indexados · ETC y ETP · Cubo</span><span></span></li>
+      <li><span class="t">World Index Fund</span><span class="r num"><span class="mask">••••</span> part.</span><span class="m">Compra · Fondos indexados</span><span class="r num m">12/12/2028</span></li>
+      <li><span class="t">Alpha Robotics</span><span class="r num"><span class="mask">••••</span> €</span><span class="m">Dividendo · Cubo especulativo</span><span class="r num m">05/12/2028</span></li>
+      <li><span class="t">Fondos indexados</span><span class="r num"><span class="mask">••••</span> €</span><span class="m">Ingreso de efectivo</span><span class="r num m">01/12/2028</span></li>
+    </ul>
+    <div class="foot"><a href="#">Ver todos los movimientos</a></div>
+  </section>
+</main>
+<nav class="tabbar" aria-label="Destinos"><span class="cur">Resumen</span><span>Movimientos</span><span class="plus">+</span><span>Cartera</span><span>Cubo</span></nav>
+</body>
+</html>

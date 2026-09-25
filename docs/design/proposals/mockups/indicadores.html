@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indicadores en línea · propuesta</title>
+<!--
+  Static mockup for docs/design/proposals/2026-09-25-visual-improvements.md.
+  Small hand-drawn SVG indicators that stay readable with the privacy mode on,
+  because they are drawn from percentages and dates, never from amounts.
+  Self-contained: no external resource, no script, no style attribute.
+  Invented data from docs/design/brief.md §9; the index returns and the fiscal
+  dates are invented too and only illustrate the shape.
+-->
+<style>
+:root {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, "Ubuntu Sans", "Noto Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --text-xs: 0.8125rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.125rem; --text-xl: 1.375rem;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px;
+  --gutter: 16px; --grid-gap: 12px; --radius-lg: 12px;
+  --c-canvas: #f3f2ee; --c-surface: #ffffff; --c-fill: #f0efea; --c-border: #e3e1db;
+  --c-text: #1c1b18; --c-text-2: #54524c; --c-text-3: #66645d;
+  --c-accent: #1f4f7c; --c-accent-soft: #e4ecf5; --c-accent-soft-text: #1f4f7c;
+  --c-caution: #80530a; --c-caution-icon: #a8700f; --c-caution-soft: #faf0dc;
+  --c-danger: #9e2f27;
+  --c-class-equity: #4166b4; --c-class-fixed-income: #178a70; --c-class-gold: #b07f1f; --c-class-crypto: #8a58a8;
+  --c-series-index: #8a8880; --c-chart-grid: #ebe9e3; --c-chart-axis: #c9c6be;
+  /* today */
+  --c-positive: #1b6a44; --c-negative: #a2392b;
+  /* proposed (§5.1): the loss leaves the red of danger; both validated for protan/deutan */
+  --c-gain: #0f6b5c; --c-loss: #b04a12;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-canvas: #161615; --c-surface: #1f1f1d; --c-fill: #2a2a27; --c-border: #30302d;
+    --c-text: #edece8; --c-text-2: #bdbbb4; --c-text-3: #9e9c95;
+    --c-accent: #8fb6e3; --c-accent-soft: #223246; --c-accent-soft-text: #a9c8ec;
+    --c-caution: #e8b659; --c-caution-icon: #d9a441; --c-caution-soft: #352a14;
+    --c-danger: #f29a8a;
+    --c-class-equity: #5b8fd6; --c-class-fixed-income: #2a9f80; --c-class-gold: #b98521; --c-class-crypto: #a476c8;
+    --c-series-index: #8f8d86; --c-chart-grid: #2a2a27; --c-chart-axis: #45443f;
+    --c-positive: #6fc79a; --c-negative: #f0917e;
+    --c-gain: #5cc6b0; --c-loss: #f2a066;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--c-canvas); color: var(--c-text); font: 400 var(--text-md)/1.5 var(--font-sans); }
+main { padding: var(--space-4) var(--gutter) var(--space-6); display: grid; gap: var(--grid-gap); max-width: 1680px; margin: 0 auto; }
+@media (min-width: 1024px) { main { grid-template-columns: repeat(2, minmax(0, 1fr)); --gutter: 32px; --grid-gap: 20px; } .wide { grid-column: 1 / -1; } }
+@media (min-width: 1800px) { main { grid-template-columns: repeat(3, minmax(0, 1fr)); } .wide { grid-column: span 2; } }
+h1 { font-size: var(--text-xl); margin: 0; }
+.lead { margin: 0; color: var(--c-text-2); font-size: var(--text-sm); }
+.head { grid-column: 1 / -1; }
+.card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-lg); padding: var(--space-4); min-width: 0; }
+.card h2 { font-size: var(--text-lg); margin: 0 0 var(--space-2); display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.card h2 small { font-size: var(--text-sm); color: var(--c-text-3); font-weight: 400; }
+.num { font-variant-numeric: tabular-nums; }
+.mask { color: var(--c-text-3); letter-spacing: 0.08em; }
+.tag { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 999px; font-size: var(--text-xs); background: var(--c-fill); color: var(--c-text-2); font-weight: 500; }
+.tag.accent { background: var(--c-accent-soft); color: var(--c-accent-soft-text); }
+.tag.caution { background: var(--c-caution-soft); color: var(--c-caution); }
+.note { font-size: var(--text-sm); color: var(--c-text-2); margin: var(--space-3) 0 0; }
+.sw { display: inline-block; width: 12px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.eq { background: var(--c-class-equity); } .fi { background: var(--c-class-fixed-income); } .go { background: var(--c-class-gold); } .cr { background: var(--c-class-crypto); }
+/* A · deviation strips */
+.dev { list-style: none; margin: 0; padding: 0; }
+.dev li { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--c-border); }
+.dev .name { font-weight: 500; }
+.dev .w { text-align: right; font-weight: 600; }
+.dev .t { font-size: var(--text-sm); color: var(--c-text-2); }
+.dev .d { font-size: var(--text-sm); color: var(--c-text-2); text-align: right; }
+.dev svg { grid-column: 1 / -1; width: 100%; height: 20px; display: block; overflow: visible; }
+.scale { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--c-text-3); padding: 0 1px; }
+svg .track { fill: var(--c-fill); }
+svg .band { fill: var(--c-accent-soft); }
+svg .zero { stroke: var(--c-text-3); stroke-width: 1.5; }
+svg .stem { stroke: var(--c-text-2); stroke-width: 3; stroke-linecap: round; }
+svg .dot { fill: var(--c-text); stroke: var(--c-surface); stroke-width: 2; }
+svg .dot.off { fill: var(--c-caution-icon); }
+svg .ring { fill: var(--c-surface); stroke: var(--c-series-index); stroke-width: 2; }
+svg .tick { stroke: var(--c-text-3); stroke-width: 1.5; }
+svg .warn { stroke: var(--c-caution-icon); stroke-width: 2; }
+svg .fillbar { fill: var(--c-accent); }
+svg .grid { stroke: var(--c-chart-grid); }
+svg text { font: 500 12px var(--font-sans); fill: var(--c-text-3); }
+/* B · contribution shares */
+.stack { display: flex; gap: 3px; height: 12px; margin: var(--space-2) 0 var(--space-3); }
+.stack span { border-radius: 3px; }
+.f35 { flex: 35.2; } .f31 { flex: 31.5; } .f22 { flex: 22.2; } .f11 { flex: 11.1; }
+.rows { list-style: none; margin: 0; padding: 0; }
+.rows li { display: grid; grid-template-columns: 1fr auto 64px; gap: var(--space-2); align-items: baseline; min-height: 44px; padding-top: var(--space-2); border-top: 1px solid var(--c-border); }
+.rows .p { font-weight: 600; text-align: right; }
+.rows .a { text-align: right; }
+.rows .sub { grid-column: 1 / -1; font-size: var(--text-sm); color: var(--c-text-2); margin-top: -8px; }
+/* C · meters */
+.meter { margin: var(--space-3) 0 var(--space-4); }
+.meter .lbl { display: flex; justify-content: space-between; gap: var(--space-2); font-size: var(--text-sm); }
+.meter .lbl b { font-variant-numeric: tabular-nums; }
+.meter svg { width: 100%; height: 34px; display: block; overflow: visible; }
+.both { border-left: 3px solid var(--c-accent); padding-left: var(--space-3); }
+/* D · dumbbells */
+.dumb { list-style: none; margin: 0; padding: 0; }
+.dumb li { display: grid; grid-template-columns: 1fr auto; padding: var(--space-2) 0; border-top: 1px solid var(--c-border); }
+.dumb svg { grid-column: 1 / -1; width: 100%; height: 22px; display: block; overflow: visible; }
+.dumb .vs { font-weight: 600; text-align: right; }
+.legend { display: flex; gap: var(--space-4); flex-wrap: wrap; font-size: var(--text-sm); color: var(--c-text-2); margin-top: var(--space-2); }
+.legend svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; }
+/* E · fiscal calendar */
+.cal svg { width: 100%; height: 88px; display: block; overflow: visible; }
+.cal .ev { list-style: none; margin: var(--space-2) 0 0; padding: 0; }
+.cal .ev li { display: grid; grid-template-columns: 88px 1fr; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--c-border); font-size: var(--text-sm); }
+.cal .ev time { font-variant-numeric: tabular-nums; color: var(--c-text-2); }
+svg .season { fill: var(--c-accent-soft); }
+svg .today { stroke: var(--c-accent); stroke-width: 2; }
+svg .mark { fill: var(--c-text); }
+svg .mark.caution { fill: var(--c-caution-icon); }
+svg text.m { font-size: 12px; fill: var(--c-text-3); }
+/* F · gain and loss */
+.gl { display: grid; grid-template-columns: auto 1fr 1fr; gap: var(--space-2) var(--space-4); align-items: baseline; font-variant-numeric: tabular-nums; }
+.gl .h { font-size: var(--text-xs); color: var(--c-text-3); }
+.gl .pos-now { color: var(--c-positive); font-weight: 600; } .gl .neg-now { color: var(--c-negative); font-weight: 600; }
+.gl .pos-new { color: var(--c-gain); font-weight: 600; } .gl .neg-new { color: var(--c-loss); font-weight: 600; }
+.gl .dang { color: var(--c-danger); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <h1>Indicadores en línea</h1>
+    <p class="lead">Con los importes ocultos, que es como se abre Atlas. Todo lo que se dibuja aquí sale de porcentajes y fechas.</p>
+  </div>
+
+  <!-- A -->
+  <section class="card" aria-labelledby="h-a">
+    <h2 id="h-a">Pesos frente al objetivo <small>umbral ±2 pp</small></h2>
+    <div class="scale num" aria-hidden="true"><span>−5 pp</span><span>objetivo</span><span>+5 pp</span></div>
+    <ul class="dev">
+      <li>
+        <span class="name"><span class="sw eq"></span>Renta variable</span><span class="w num">56,1 %</span>
+        <span class="t num">objetivo 55 %</span><span class="d num">+1,1 pp</span>
+        <svg role="img" aria-label="Desviación +1,1 puntos, dentro del umbral"><rect class="track" x="0.00%" y="7" width="100.00%" height="6" rx="3"/><rect class="band" x="30.00%" y="7" width="40.00%" height="6"/><line class="zero" x1="50.00%" y1="2" x2="50.00%" y2="18"/><line class="stem" x1="50.00%" y1="10" x2="61.00%" y2="10"/><circle class="dot" cx="61.00%" cy="10" r="6"/></svg>
+      </li>
+      <li>
+        <span class="name"><span class="sw fi"></span>Renta fija</span><span class="w num">29,5 %</span>
+        <span class="t num">objetivo 30 %</span><span class="d num">−0,5 pp</span>
+        <svg role="img" aria-label="Desviación −0,5 puntos, dentro del umbral"><rect class="track" x="0.00%" y="7" width="100.00%" height="6" rx="3"/><rect class="band" x="30.00%" y="7" width="40.00%" height="6"/><line class="zero" x1="50.00%" y1="2" x2="50.00%" y2="18"/><line class="stem" x1="50.00%" y1="10" x2="45.00%" y2="10"/><circle class="dot" cx="45.00%" cy="10" r="6"/></svg>
+      </li>
+      <li>
+        <span class="name"><span class="sw go"></span>Oro</span><span class="w num">10,2 %</span>
+        <span class="t num">objetivo 10 %</span><span class="d num">+0,2 pp</span>
+        <svg role="img" aria-label="Desviación +0,2 puntos, dentro del umbral"><rect class="track" x="0.00%" y="7" width="100.00%" height="6" rx="3"/><rect class="band" x="30.00%" y="7" width="40.00%" height="6"/><line class="zero" x1="50.00%" y1="2" x2="50.00%" y2="18"/><line class="stem" x1="50.00%" y1="10" x2="52.00%" y2="10"/><circle class="dot" cx="52.00%" cy="10" r="6"/></svg>
+      </li>
+      <li>
+        <span class="name"><span class="sw cr"></span>Cripto <span class="tag caution">⚠ fuera de umbral</span></span><span class="w num">2,6 %</span>
+        <span class="t num">objetivo 5 %</span><span class="d num">−2,4 pp</span>
+        <svg role="img" aria-label="Desviación −2,4 puntos, fuera del umbral"><rect class="track" x="0.00%" y="7" width="100.00%" height="6" rx="3"/><rect class="band" x="30.00%" y="7" width="40.00%" height="6"/><line class="zero" x1="50.00%" y1="2" x2="50.00%" y2="18"/><line class="stem" x1="50.00%" y1="10" x2="26.00%" y2="10"/><circle class="dot off" cx="26.00%" cy="10" r="6"/></svg>
+      </li>
+    </ul>
+    <p class="note">La banda azul es el umbral; el punto se colorea solo cuando el dominio emite el aviso, nunca comparando cifras en la interfaz. El caso de cripto es un ejemplo de estado, no los datos del encargo.</p>
+  </section>
+
+  <!-- B -->
+  <section class="card" aria-labelledby="h-b">
+    <h2 id="h-b">Aportación de enero <span class="tag accent">Propuesta</span></h2>
+    <p class="note">90 % a la cartera, 10 % al cubo. Reparto de la parte de la cartera:</p>
+    <div class="stack" aria-hidden="true"><span class="fi f35"></span><span class="eq f31"></span><span class="cr f22"></span><span class="go f11"></span></div>
+    <ul class="rows">
+      <li><span><span class="sw fi"></span>Renta fija</span><span class="p num">35 %</span><span class="a num mask">•••• €</span><span class="sub">Global Bond Index Fund I · pasa a 30,0 %</span></li>
+      <li><span><span class="sw eq"></span>Renta variable</span><span class="p num">32 %</span><span class="a num mask">•••• €</span><span class="sub">Small Cap Index Fund B · pasa a 55,0 %</span></li>
+      <li><span><span class="sw cr"></span>Cripto</span><span class="p num">22 %</span><span class="a num mask">•••• €</span><span class="sub">Bitcoin ETP · pasa a 4,5 %</span></li>
+      <li><span><span class="sw go"></span>Oro</span><span class="p num">11 %</span><span class="a num mask">•••• €</span><span class="sub">Physical Gold ETC · pasa a 10,1 %</span></li>
+    </ul>
+    <p class="note">Hoy esta tarjeta es una columna de «•••• €». Con el porcentaje de la aportación a la vista, la propuesta se entiende sin enseñar dinero.</p>
+  </section>
+
+  <!-- C -->
+  <section class="card" aria-labelledby="h-c">
+    <h2 id="h-c">Cubo · presupuesto y control</h2>
+    <div class="meter">
+      <div class="lbl"><span>Aportado frente al tope</span><b>40 %</b></div>
+      <svg role="img" aria-label="Aportado el 40 % del tope; aviso al 80 %"><rect class="track" x="0.00%" y="8" width="100.00%" height="10" rx="5"/><rect class="fillbar" x="0.00%" y="8" width="40.00%" height="10" rx="5"/><line class="warn" x1="80.00%" y1="3" x2="80.00%" y2="23"/><text x="80.00%" y="33" text-anchor="middle">80 %</text></svg>
+    </div>
+    <div class="meter">
+      <div class="lbl"><span>Resultado sobre lo aportado</span><b>+31 %</b></div>
+      <svg role="img" aria-label="Resultado +31 % sobre lo aportado; la regla de parada salta en −30 %"><rect class="track" x="0.00%" y="8" width="100.00%" height="10" rx="5"/><line class="zero" x1="42.87%" y1="4" x2="42.87%" y2="22"/><line class="warn" x1="0.17%" y1="3" x2="0.17%" y2="23"/><line class="stem" x1="42.87%" y1="13" x2="87.13%" y2="13"/><circle class="dot" cx="87.13%" cy="13" r="6"/><text x="42.87%" y="33" text-anchor="middle">0</text><text x="0" y="33">parada −30 %</text></svg>
+    </div>
+    <div class="meter both">
+      <div class="lbl"><span>Peso del cubo en tu patrimonio</span><b>6,5 %</b></div>
+      <svg role="img" aria-label="El cubo pesa el 6,5 % del patrimonio; máximo 10 %"><rect class="track" x="0.00%" y="8" width="100.00%" height="10" rx="5"/><rect class="fillbar" x="0.00%" y="8" width="43.33%" height="10" rx="5"/><line class="warn" x1="66.67%" y1="3" x2="66.67%" y2="23"/><text x="66.67%" y="33" text-anchor="middle">máx. 10 %</text></svg>
+      <p class="note">La única cifra que junta cubo y cartera principal.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section class="card" aria-labelledby="h-d">
+    <h2 id="h-d">Tesis frente al índice <small>mismo dinero, mismas fechas</small></h2>
+    <ul class="dumb">
+      <li><span>Alpha Robotics</span><span class="vs num">+2,6 pp</span>
+        <svg role="img" aria-label="Tesis +12,4 %, índice +9,8 %"><line class="grid" x1="35.00%" y1="0" x2="35.00%" y2="22"/><line class="stem" x1="57.87%" y1="11" x2="63.93%" y2="11"/><circle class="ring" cx="57.87%" cy="11" r="5"/><circle class="dot" cx="63.93%" cy="11" r="6"/></svg></li>
+      <li><span>Beta Biotech</span><span class="vs num">−10,4 pp</span>
+        <svg role="img" aria-label="Tesis −8,1 %, índice +2,3 %"><line class="grid" x1="35.00%" y1="0" x2="35.00%" y2="22"/><line class="stem" x1="16.10%" y1="11" x2="40.37%" y2="11"/><circle class="ring" cx="40.37%" cy="11" r="5"/><circle class="dot" cx="16.10%" cy="11" r="6"/></svg></li>
+      <li><span>Gamma Semiconductors</span><span class="vs num">+6,4 pp</span>
+        <svg role="img" aria-label="Tesis +21,0 %, índice +14,6 %"><line class="grid" x1="35.00%" y1="0" x2="35.00%" y2="22"/><line class="stem" x1="69.07%" y1="11" x2="84.00%" y2="11"/><circle class="ring" cx="69.07%" cy="11" r="5"/><circle class="dot" cx="84.00%" cy="11" r="6"/></svg></li>
+    </ul>
+    <div class="legend"><span><svg viewBox="0 0 14 14" aria-hidden="true"><circle class="dot" cx="7" cy="7" r="5"/></svg>la tesis</span><span><svg viewBox="0 0 14 14" aria-hidden="true"><circle class="ring" cx="7" cy="7" r="4.5"/></svg>el índice</span><span>la línea fina es el 0 %</span></div>
+    <p class="note">Escala común de −15 % a +25 %. La diferencia en puntos va en tinta con su signo: el color no la lleva.</p>
+  </section>
+
+  <!-- E -->
+  <section class="card cal wide" aria-labelledby="h-e">
+    <h2 id="h-e">Calendario fiscal de 2029 <small>fechas de ejemplo</small></h2>
+    <svg role="img" aria-label="Año 2029: plazo de los modelos 720 y 721 el 31 de marzo, campaña de la Renta de abril a junio, fin de una ventana de recompra el 15 de marzo, valoración a 31 de diciembre">
+      <rect class="season" x="25.00%" y="18" width="25.00%" height="40"/>
+      <line class="grid" x1="0.00%" y1="18" x2="0.00%" y2="58"/><line class="grid" x1="8.33%" y1="18" x2="8.33%" y2="58"/><line class="grid" x1="16.67%" y1="18" x2="16.67%" y2="58"/><line class="grid" x1="25.00%" y1="18" x2="25.00%" y2="58"/><line class="grid" x1="33.33%" y1="18" x2="33.33%" y2="58"/><line class="grid" x1="41.67%" y1="18" x2="41.67%" y2="58"/><line class="grid" x1="50.00%" y1="18" x2="50.00%" y2="58"/><line class="grid" x1="58.33%" y1="18" x2="58.33%" y2="58"/><line class="grid" x1="66.67%" y1="18" x2="66.67%" y2="58"/><line class="grid" x1="75.00%" y1="18" x2="75.00%" y2="58"/><line class="grid" x1="83.33%" y1="18" x2="83.33%" y2="58"/><line class="grid" x1="91.67%" y1="18" x2="91.67%" y2="58"/><line class="grid" x1="100.00%" y1="18" x2="100.00%" y2="58"/><line class="grid" x1="0" y1="58" x2="100%" y2="58"/>
+      <text class="m" x="4.17%" y="76" text-anchor="middle">ene</text><text class="m" x="12.50%" y="76" text-anchor="middle">feb</text><text class="m" x="20.83%" y="76" text-anchor="middle">mar</text><text class="m" x="29.17%" y="76" text-anchor="middle">abr</text><text class="m" x="37.50%" y="76" text-anchor="middle">may</text><text class="m" x="45.83%" y="76" text-anchor="middle">jun</text><text class="m" x="54.17%" y="76" text-anchor="middle">jul</text><text class="m" x="62.50%" y="76" text-anchor="middle">ago</text><text class="m" x="70.83%" y="76" text-anchor="middle">sep</text><text class="m" x="79.17%" y="76" text-anchor="middle">oct</text><text class="m" x="87.50%" y="76" text-anchor="middle">nov</text><text class="m" x="95.83%" y="76" text-anchor="middle">dic</text>
+      <line class="today" x1="5.33%" y1="10" x2="5.33%" y2="62"/><text x="5.33%" y="10" text-anchor="middle">hoy</text>
+      <svg x="20.67%" y="30" width="12" height="10" overflow="visible"><path class="mark caution" d="M0 0l6 10h-12z"/></svg>
+      <rect class="mark" x="23.83%" y="32" width="1.67%" height="10" rx="2"/>
+      <circle class="mark" cx="99.50%" cy="38" r="5"/>
+      <text x="37.50%" y="42" text-anchor="middle">campaña de la Renta</text>
+    </svg>
+    <ul class="ev">
+      <li><time>15/03/2029</time><span>▲ Termina la ventana de recompra de World Index Fund: la pérdida del 15/01 vuelve a ser computable si no compras antes.</span></li>
+      <li><time>31/03/2029</time><span>■ Plazo de los modelos 720 y 721 de 2028. Hoy: sin decidir, faltan 2 valoraciones.</span></li>
+      <li><time>abr–jun</time><span>Campaña de la Renta de 2028: la tarjeta de Declaración sube al principio del Resumen.</span></li>
+      <li><time>31/12/2029</time><span>● Valoración de fin de año para los modelos 720 y 721 de 2029.</span></li>
+    </ul>
+  </section>
+
+  <!-- F -->
+  <section class="card" aria-labelledby="h-f">
+    <h2 id="h-f">Ganancia, pérdida y problema</h2>
+    <div class="gl">
+      <span class="h"></span><span class="h">Hoy</span><span class="h">Propuesta</span>
+      <span>Ganancia</span><span class="pos-now">+12,4 %</span><span class="pos-new">+12,4 %</span>
+      <span>Pérdida</span><span class="neg-now">−8,1 %</span><span class="neg-new">−8,1 %</span>
+      <span>Problema</span><span class="dang">Anular</span><span class="dang">Anular</span>
+    </div>
+    <p class="note">ΔE en OKLab ×100, peor caso de daltonismo. Hoy: ganancia/pérdida 6,3 en claro y 4,2 en oscuro (deuteranopía), y pérdida/peligro 2,1 con visión normal: el mismo rojo. Propuesta: 8,9 y 9,9, y pérdida/peligro 7,5. El signo sigue siendo obligatorio.</p>
+  </section>
+</main>
+</body>
+</html>
