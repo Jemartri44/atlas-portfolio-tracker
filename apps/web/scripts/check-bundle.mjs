@@ -758,6 +758,18 @@ const LAZY_ONLY = [
   // commit: the domain of the sync and its door, the shared orchestration and
   // the web's own store of sync state. The sync is explicit and lazily loaded.
   { path: "/packages/domain/src/sync/", what: "la sincronización del libro" },
+  // Feature 015: **nothing of the access on the boot path**, from its first
+  // commit. The rules of the access are the API's and never the web's (the
+  // architecture test keeps the web from reaching them at all); the session,
+  // the devices and the screens of the sync are a lazy section of Ajustes.
+  { path: "/packages/domain/src/access/", what: "las reglas del acceso" },
+  { path: "/packages/domain/src/access.ts", what: "la puerta del acceso" },
+  {
+    path: "/packages/adapters/src/ledger-store/browser/web-device.ts",
+    what: "el identificador del dispositivo de la web",
+  },
+  { path: "/src/sync/", what: "la sesión y la sincronización de la web" },
+  { path: "/src/routes/ajustes/sync/", what: "la sección de sincronización de Ajustes" },
   { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
   { path: "/packages/domain/src/ports/remote-ledger.ts", what: "el puerto del remoto" },
   {

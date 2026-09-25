@@ -27,6 +27,7 @@ export default defineConfig({
       "@atlas/domain/fiscal": local("./packages/domain/src/fiscal.ts"),
       "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": local("./packages/domain/src/sync.ts"),
+      "@atlas/domain/access": local("./packages/domain/src/access.ts"),
       "@atlas/domain": local("./packages/domain/src/index.ts"),
     },
   },
@@ -37,6 +38,7 @@ export default defineConfig({
       { extends: true, test: { name: "domain", root: "packages/domain" } },
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },
       { extends: true, test: { name: "cli", root: "apps/cli" } },
+      { extends: true, test: { name: "api", root: "apps/api" } },
       {
         extends: true,
         /*
