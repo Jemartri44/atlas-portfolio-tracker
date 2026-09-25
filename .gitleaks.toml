@@ -9,6 +9,8 @@ useDefault = true
 # Console device token (ADR-0033, docs/api.md §2.1): atlasdt1.<token_id>.<secret>
 # - token_id: 22 chars of base64url, public (it may appear in logs and the web list);
 # - secret:   43 chars of base64url, 256 random bits; this is what gets reported (secretGroup 1).
+# No leading boundary: the prefix is distinctive enough, and a word boundary would miss a token
+# glued to a word character (`FOO_atlasdt1…`, an escaped `\n` in a JSON string or a log line).
 # The trailing guard rejects longer runs, so only the exact format matches. The entropy floor
 # (computed on the secret only) skips obviously fake values such as repeated characters in
 # docs or test fixtures; a random secret scores ~5. The docs' `<token_id>`/`<secret>`
@@ -16,7 +18,7 @@ useDefault = true
 [[rules]]
 id = "atlas-console-device-token"
 description = "Atlas console device token (ADR-0033)"
-regex = '''\batlasdt1\.[A-Za-z0-9_-]{22}\.([A-Za-z0-9_-]{43})(?:[^A-Za-z0-9_-]|$)'''
+regex = '''atlasdt1\.[A-Za-z0-9_-]{22}\.([A-Za-z0-9_-]{43})(?:[^A-Za-z0-9_-]|$)'''
 secretGroup = 1
 entropy = 3.5
 keywords = ["atlasdt1"]
