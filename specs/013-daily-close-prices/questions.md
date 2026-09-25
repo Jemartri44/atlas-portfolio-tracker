@@ -456,3 +456,29 @@ Sin bloqueantes; los puntos 1 a 7 de §10 cerrados, y mueren los nueve mutantes 
   - contrastar una fuente con la divisa de otra;
   - dejar de leer el formato 1.
 - **`docs/` sin tocar**: ADR-0031, `docs/data-schema.md` §1 (`symbols.json` en formato 2) y el procedimiento del bloque 6 (§8, que ahora declara Londres con una divisa por fuente) los pone al día el documentador.
+
+## 13. Revisión de la PR #80 (2026-09-25)
+
+Cinco puntos de la dirección. Cada arreglo tiene su test escrito antes y visto en rojo, y un mutante que lo mata (`mut-013/fix013-review.log`: los once, muertos).
+
+1. **Bloqueante: el formato 1 ya no hereda confirmaciones.**
+   - Al leer un `symbols.json` de la 013 se descarta `currency_confirmed_over` y, con él, el `currency_check` de cada fuente confirmada frente a una divisa distinta de la declarada. Esa fuente queda sin contrastar y se contrasta con la regla del formato 2 antes de su siguiente descarga.
+   - Las fuentes cuyo contraste coincidió con la divisa declarada lo conservan: ahí no hubo nada que confirmar. Si no queda ninguno, desaparece `currency_check`.
+   - Tests: las dos direcciones (GBP confirmado frente al GBX de Alpha Vantage, y GBX confirmado frente al GBP de EODHD) y el recontraste, que ya nunca guarda peniques como libras.
+2. **Las líneas guardadas en una divisa que no es la que ahora declara su fuente quedan fuera de toda cifra en euros.**
+   - `readCloses(files, symbols)` las aparta antes de elegir el cierre en vigor. Dejan un hueco declarado, nunca una cifra cien veces mayor.
+   - `prices status` (texto y JSON, `mismatched`) y el aviso de las vistas de la consola y de la web las señalan.
+   - `atlas prices purge <activo> --source <fuente> [--yes]` las borra, solo las de ese activo y esa fuente, en una transacción bajo el cerrojo. El siguiente `update` las vuelve a descargar. Pide confirmación; sin terminal y sin `--yes` no hace nada (salida 4). El README lo recoge.
+   - Límite: en la web, los precios **importados** a mano no traen `symbols.json`, así que no se pueden filtrar. Solo se filtran los leídos de la carpeta.
+3. **La aproximación con una ETF de referencia de Londres normaliza GBP/GBX con `SUBUNITS`** en vez de devolver `etf_currency_changed`. Solo un cambio de divisa real se queda sin aproximación.
+4. **La consola no descarta opciones en silencio.** Son errores de uso:
+   - `--alpha-vantage-currency` sin `--alpha-vantage`, y lo mismo con EODHD;
+   - un `set` sin ningún símbolo.
+5. **Mutantes de la revisión:**
+   - **M4** muere con un test en el que el usuario cambia la divisa de la fuente mientras se contrasta. El contraste no la pisa.
+   - **M8** muere con un test en el que `--currency GBP --alpha-vantage-currency GBX` declara GBX para Alpha Vantage.
+   - **M2**: la comprobación de la divisa de cada cierre se mantiene. Se prueba con un adaptador simulado que devuelve divisa por cierre. Mueren dos variantes: comparar con la divisa de otra fuente y quitar la comprobación.
+   - **M9, M10 y M11 se dejan vivos, porque son inocuos**:
+     - **M9**: una clave de más en `currencies` no tiene símbolo, así que nunca se descarga ni se contrasta con ella.
+     - **M10**: sobre la misma forma laxa, ninguna lectura consulta la divisa de una fuente sin símbolo.
+     - **M11**: las dos claves a la vez en el formato 1 solo las escribiría una mano ajena. La lectura de la 013 ya se queda con `currency`, y el formato 1 ya no hereda confirmaciones (punto 1).
