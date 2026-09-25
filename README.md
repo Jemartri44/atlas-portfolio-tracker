@@ -113,7 +113,7 @@ atlas export --format csv --out ledger.csv
 
 ### El ciclo mensual (Fase 2)
 
-Los precios son manuales hasta la Fase 4: se registran como `valuation` y la aplicación siempre muestra de cuándo es cada uno. Ninguna cifra de la Renta los mira; la única ruta fiscal que lee un precio es la valoración a 31/12 de los Modelos 720 y 721. El ciclo sigue sobre el libro del ejemplo anterior.
+Los precios se registran a mano como `valuation`, y desde la feature 013 la consola puede además descargar cierres diarios de EODHD y Alpha Vantage (más abajo, «Precios de cierre diarios»). Para enseñar un valor gana el dato más reciente que tenga valor en euros, y la aplicación siempre muestra de cuándo es y de dónde viene. Ninguna cifra de la Renta los mira; la única ruta fiscal que lee un precio es la valoración a 31/12 de los Modelos 720 y 721, y solo la registrada a mano. El ciclo sigue sobre el libro del ejemplo anterior.
 
 ```bash
 # 0. Una vez: el resto del núcleo, los pesos objetivo por activo (suman 100) y qué parte de la aportación va al cubo

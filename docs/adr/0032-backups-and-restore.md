@@ -1,6 +1,6 @@
 # ADR-0032 — Copias de seguridad y restauración del libro
 
-**Estado:** Aceptada (2026-09-24). **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
+**Estado:** Aceptada (2026-09-24). **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final). **Nota del cierre de la feature 013** (2026-09-25): los precios del volcado no necesitan ninguna exclusión (ver al final). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
 
 ## Contexto
 
@@ -61,3 +61,7 @@ Una observación ordena todo lo demás: **en un libro append-only, un error de r
 ## Enmienda del 2026-09-24 (revisión de la PR #72)
 
 Decidida por la dirección el mismo día. El paso 5 se apoyaba en `LedgerStore.replace`, que vuelve a serializar eventos migrados; ahora usa la operación de líneas crudas de ADR-0026. El paso 6 daba por hecho que lo pendiente de un dispositivo volvía a subir, cosa que ADR-0026 no definía y que podía deshacer la restauración; ahora queda retenido para revisión. Y la restauración se niega si hay pendientes en alguna cola conocida. La segunda revisión alineó el paso 6 con ADR-0026: lo retenido tras restaurar es todo lo que el dispositivo tenía y la copia no, no solo lo pendiente.
+
+## Nota del 2026-09-25 (cierre de la feature 013)
+
+La segunda enmienda de ADR-0031 pedía excluir `cache/` de los volcados mensuales, porque allí iban a vivir los datos de CoinGecko, cuyas condiciones desaconsejan acumularlos. **Esa exclusión ya no hace falta**: CoinGecko salió de la feature 013 (ADR-0031, tercera enmienda) y **`cache/` no existe**. Lo que el paso 3 llama «los precios» es `prices/` entero —los cierres, `symbols.json`, `_status.json` y `config.json`—, y **ninguno guarda claves ni direcciones**: las claves viven fuera de la carpeta del libro, en `~/.config/atlas/secrets.json`, y en la nube en SSM (`docs/data-schema.md` §1). Hoy `atlas backup` copia solo el libro; el volcado mensual con precios llegará con las tareas programadas.
