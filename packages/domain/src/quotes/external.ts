@@ -52,6 +52,14 @@ export interface Approximation {
   readonly source: QuoteSource;
 }
 
+/** A close in the unit of its currency: a subunit (GBX) as its currency (GBP). */
+const inUnit = (close: EffectiveClose): { currency: string; value: Decimal } => {
+  const subunit = SUBUNITS[close.currency];
+  return subunit === undefined
+    ? { currency: close.currency, value: Decimal.parse(close.close) }
+    : { currency: subunit.of, value: Decimal.parse(close.close).div(Decimal.parse(subunit.per)) };
+};
+
 /** The approximation of `assetId` on `date` (P3), or why there is none. */
 export const approximationAt = (
   state: LedgerState,
@@ -94,12 +102,17 @@ export const approximationAt = (
   if (then === undefined) {
     return "no_etf_close_at_anchor";
   }
-  if (then.currency !== now.currency) {
+  // Pounds from one source and pence from the other are the same currency in
+  // two units (review of PR #80): both are brought to the unit before the
+  // ratio, and only a real change of currency has no approximation.
+  const nowValue = inUnit(now);
+  const thenValue = inUnit(then);
+  if (thenValue.currency !== nowValue.currency) {
     return "etf_currency_changed";
   }
   return {
     date: now.date,
-    value: anchor.value.mul(Decimal.parse(now.close)).div(Decimal.parse(then.close)),
+    value: anchor.value.mul(nowValue.value).div(thenValue.value),
     currency: anchor.currency,
     anchor: { date: anchor.date, value: anchor.value, kind: anchor.kind },
     etf_id: etfId,

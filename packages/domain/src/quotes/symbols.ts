@@ -145,6 +145,27 @@ const currenciesOf = (
   return value.currencies as Partial<Record<QuoteSource, string>>;
 };
 
+/**
+ * A confirmation of format 1 is **not inherited** (review of PR #80): it was
+ * taken with one currency for every source — the model that was wrong — so
+ * a user who declared GBP and confirmed it over the GBX of Alpha Vantage would
+ * keep storing pence as pounds. Every source confirmed over another currency
+ * is left **uncontrasted** instead, and is contrasted with the rule of format
+ * 2 before its next download.
+ */
+const withoutLegacyConfirmations = (entry: SymbolEntry): SymbolEntry => {
+  const over = entry.currency_confirmed_over;
+  if (over === undefined) {
+    return entry;
+  }
+  const check = { ...entry.currency_check };
+  for (const source of Object.keys(over) as QuoteSource[]) {
+    delete check[source];
+  }
+  const { currency_confirmed_over: _dropped, currency_check: _check, ...rest } = entry;
+  return Object.keys(check).length === 0 ? rest : { ...rest, currency_check: check };
+};
+
 const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry => {
   if (!isObject(value)) {
     throw wrong(assetId);
@@ -176,7 +197,8 @@ const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry 
   // Every field was checked above; format 1's `currency` becomes `currencies`.
   const { currency: _legacy, ...rest } = value;
   const checked = rest as unknown as Omit<SymbolEntry, "currencies">;
-  return { ...checked, currencies: currenciesOf(assetId, value, legacy) };
+  const entry = { ...checked, currencies: currenciesOf(assetId, value, legacy) };
+  return legacy ? withoutLegacyConfirmations(entry) : entry;
 };
 
 /** Parses `prices/symbols.json`; `undefined` (no file) is an empty correspondence. */

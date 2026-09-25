@@ -30,7 +30,13 @@ export {
   type PriceConfig,
   parsePriceConfig,
 } from "./quotes/config.js";
-export { checkSymbols, recordSymbols, removeSymbols, type SymbolCheck } from "./quotes/declare.js";
+export {
+  checkSymbols,
+  purgeMismatched,
+  recordSymbols,
+  removeSymbols,
+  type SymbolCheck,
+} from "./quotes/declare.js";
 export {
   type Approximation,
   type ApproximationGap,
@@ -47,6 +53,8 @@ export {
   effectiveCloses,
   encodeCloseLine,
   linesToAppend,
+  type MismatchedCloses,
+  mismatchedLines,
   PRICE_LINE_VERSION,
   priceFileName,
   readCloseFile,

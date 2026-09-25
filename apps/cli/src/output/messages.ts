@@ -252,6 +252,8 @@ export const describeError = (error: DomainError): string => {
       return `El estado de las fuentes de precios prices/_status.json no se entiende (${text(d.field)}): no se descarga nada hasta arreglarlo, porque dice lo gastado hoy de cada cupo.`;
     case "invalid_symbols_file":
       return `La correspondencia de símbolos prices/symbols.json no se entiende (${text(d.field)}): corrígela, o vuelve a declarar los símbolos con «atlas prices symbols set».`;
+    case "symbols_not_declared":
+      return `${text(d.asset_id)} no tiene símbolo declarado para ${text(d.source)}: no hay con qué comparar sus cierres. Declara antes su símbolo y su divisa con «atlas prices symbols set».`;
     case "price_file_newer_version":
       return `prices/${text(d.asset_id)}.jsonl tiene una línea de una versión más nueva que esta aplicación (línea ${text(d.line)}): ese activo se queda sin precio automático y no se añade nada a su fichero. Actualiza la aplicación.`;
     case "price_line_invalid":

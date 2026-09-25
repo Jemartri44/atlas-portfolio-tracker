@@ -8,11 +8,13 @@
 // calls twice: `checkSymbols` asks (network, outside the lock), and
 // `recordSymbols` writes (under the lock, reading the file again).
 
+import { ValidationError } from "../errors.js";
 import type { PriceSource, SourceFailureKind } from "../ports/price-source.js";
 import type { PriceStore } from "../ports/price-store.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
 import { parsePriceConfig } from "./config.js";
+import { encodeCloseLine, mismatchedLines, readCloseFile } from "./line.js";
 import { QUOTE_SOURCES } from "./sources.js";
 import { parseStatus, reserveCall, serializeStatus } from "./status.js";
 import {
@@ -125,4 +127,39 @@ export const removeSymbols = (store: PriceStore, assetId: AssetId): Promise<bool
     delete assets[assetId];
     await tx.writeSymbols(serializeSymbols({ ...file, assets }));
     return true;
+  });
+
+/**
+ * Purges the closes of `assetId` from `source` whose currency is not the one
+ * that source declares now (review of PR #80): feature 013 stored the pence of
+ * Alpha Vantage as pounds. Only on an explicit request of the user, under the
+ * lock, and only those lines; the next download asks for their days again.
+ * Returns how many were removed.
+ */
+export const purgeMismatched = (
+  store: PriceStore,
+  assetId: AssetId,
+  source: QuoteSource,
+): Promise<number> =>
+  store.transact(async (tx) => {
+    const declared = parseSymbols(await tx.symbols()).assets[assetId]?.currencies;
+    if (declared?.[source] === undefined) {
+      throw new ValidationError(
+        "symbols_not_declared",
+        `${assetId} has no symbol declared for ${source}: there is nothing to compare its closes with`,
+        { asset_id: assetId, source },
+      );
+    }
+    const lines = readCloseFile(assetId, (await tx.closes(assetId)) ?? "");
+    const wrong = mismatchedLines(
+      lines.filter((line) => line.source === source),
+      declared,
+    );
+    if (wrong.length > 0) {
+      await tx.rewriteCloses(
+        assetId,
+        lines.filter((line) => !wrong.includes(line)).map(encodeCloseLine),
+      );
+    }
+    return wrong.length;
   });

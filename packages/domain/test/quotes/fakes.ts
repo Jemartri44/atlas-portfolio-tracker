@@ -47,6 +47,9 @@ export class MemoryPriceStore implements PriceStore {
             `${before}${lines.map((line) => `${line}\n`).join("")}`,
           );
         },
+        rewriteCloses: async (assetId, lines) => {
+          this.files.set(`${assetId}.jsonl`, lines.map((line) => `${line}\n`).join(""));
+        },
         writeStatus: async (text) => {
           this.files.set("_status.json", text);
         },
