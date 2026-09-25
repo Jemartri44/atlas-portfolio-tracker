@@ -63,7 +63,8 @@ export const joinWithMine = (
  * again** after a rewrite (ADR-0026, Part A): the ledger becomes the remote
  * (the store archives the local bytes first), and **everything the device had
  * and the remote does not, or has with other content, is held back** —
- * pending or synced, never uploaded alone. Each line is a unit of its own.
+ * pending or synced, never uploaded alone. Grouped as the queue is: a
+ * reversal and its correction are held back as **one unit**, never split.
  */
 export const replaceWithRemote = (
   local: { readonly lines: readonly string[]; readonly events: readonly LedgerEvent[] },

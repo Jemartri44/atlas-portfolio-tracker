@@ -18,7 +18,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0012](0012-cash-events-and-pending-orders.md) | Eventos de efectivo, base de coste por importe, órdenes pendientes, traspaso de custodia | Aceptada |
 | [0013](0013-fiscal-date-and-wash-sale-window.md) | Fecha fiscal y ventana de recompra por tipo de activo; sentido de `fx_rate` | Aceptada; verificación resuelta el 2026-09-18 |
 | [0014](0014-wash-sale-window-and-deferral-lineage.md) | Ventana de recompra de fecha a fecha y diferimiento ligado al linaje de lotes | Aceptada, verificación fiscal pendiente (criterios #14 y #15) |
-| [0015](0015-degraded-projection-and-settings-acceptance.md) | Proyección degradada en consultas y aceptación de settings_changed que invalida el pasado | Aceptada |
+| [0015](0015-degraded-projection-and-settings-acceptance.md) | Proyección degradada en consultas y aceptación de settings_changed que invalida el pasado | Aceptada; notas del 2026-09-25 (feature 014: `acceptInvalid` se niega con la sincronización configurada, y qué es «configurada») |
 | [0016](0016-project-ledger-as-of.md) | Consulta del libro a una fecha con asOf | Aceptada |
 | [0017](0017-web-stack.md) | Stack de la aplicacion web | Aceptada; la parte de Pico, reemplazada por 0023 |
 | [0018](0018-schema-evolution-rules.md) | Evolucion del esquema y endurecimiento de validaciones | Aceptada; enmendada el 2026-09-24 (un campo nuevo en una foto completa) |
@@ -29,7 +29,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0023](0023-own-base-stylesheet.md) | Base de estilos propia en lugar de Pico CSS | Aceptada |
 | [0024](0024-fiscal-caveats-are-report-notes.md) | Una salvedad fiscal es una nota del informe, no una decisión de la interfaz | Aceptada |
 | [0025](0025-recorded-fingerprint-waiver.md) | La salida de compact ante una huella no verificable queda registrada en el libro | Aceptada |
-| [0026](0026-cloud-sync-layer.md) | La nube como capa sobre lo local: sincronización del libro entre dispositivos | Aceptada; enmendada cuatro veces el 2026-09-24 (la última: cerrojo solo entre consolas, una corrección viva por raíz) |
+| [0026](0026-cloud-sync-layer.md) | La nube como capa sobre lo local: sincronización del libro entre dispositivos | Aceptada; enmendada cuatro veces el 2026-09-24 (la última: cerrojo solo entre consolas, una corrección viva por raíz); notas del 2026-09-25, la última del cierre de la feature 014 |
 | [0027](0027-google-sign-in-verified-by-lambda.md) | Acceso solo con Google, verificado en nuestra Lambda; sin Cognito | Aceptada |
 | [0028](0028-aws-account-and-security-baseline.md) | Cuentas de AWS dedicadas, entornos y línea base de seguridad | Aceptada; nota del 2026-09-25: el usuario descarta la organización y las cuentas miembro, y 0034 (propuesta) la sustituye en parte |
 | [0029](0029-ecb-reference-rates.md) | Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad | Aceptada; enmendada tres veces el 2026-09-24 (la última: lo verificado por la feature 012 y la confirmación de un borrador) |
