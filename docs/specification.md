@@ -249,12 +249,12 @@ Es el libro con más funcionalidad propia: es una parte pequeña de la cartera p
 
 ## 7. Fuentes de datos
 
-> **Vigente desde ADR-0031 (2026-09-24, Ronda 8).** Yahoo Finance, Stooq y Morningstar quedan **descartados**: las condiciones de Yahoo prohíben por escrito el acceso automatizado, Stooq responde con un reto anti-*bot* y Morningstar solo ofrece API de empresa (investigación del 2026-09-24). Las fuentes de precio de cierre diario son APIs gratuitas con clave: **EODHD** (principal), **Alpha Vantage** (respaldo) y **CoinGecko** (cripto, con atribución visible). La tabla de abajo queda como referencia histórica salvo la fila corregida.
+> **Vigente desde ADR-0031 (2026-09-24, Ronda 8).** Yahoo Finance, Stooq y Morningstar quedan **descartados**: las condiciones de Yahoo prohíben por escrito el acceso automatizado, Stooq responde con un reto anti-*bot* y Morningstar solo ofrece API de empresa (investigación del 2026-09-24). Las fuentes de precio de cierre diario son APIs gratuitas con clave: **EODHD** (principal) y **Alpha Vantage** (respaldo). **CoinGecko y OpenFIGI quedaron retirados al cerrar la feature 013** (ADR-0031, tercera enmienda): las condiciones de CoinGecko describen su plan gratuito como para probar, y OpenFIGI no documenta qué bolsa es cada código. La tabla de abajo queda como referencia histórica salvo las filas corregidas.
 
 | Dato | Fuente | Fiabilidad | Riesgo |
 |---|---|---|---|
-| Acciones, ETFs, ETCs | **EODHD (principal), Alpha Vantage (respaldo)**, APIs con clave gratuita (ADR-0031) | Buena | Cupo diario (20-25 llamadas) y condiciones de uso de una API gratuita |
-| Cripto | CoinGecko Demo | Buena | Límites de uso en plan gratuito; sin histórico, solo el último valor (ADR-0031) |
+| Acciones, ETFs, ETCs | **EODHD (principal), Alpha Vantage (respaldo)**, APIs con clave gratuita (ADR-0031) | Buena | Cupo diario (20 y 25 llamadas) y condiciones de uso de una API gratuita. El plan gratuito de Alpha Vantage solo ve **los últimos 100 días de mercado**: sirve para el día a día, no para rellenar un año |
+| Cripto | **EODHD si su plan gratuito la cubre**; si no, entrada manual (ADR-0031, tercera enmienda). ~~CoinGecko Demo~~ | Buena | Cobertura del plan gratuito **SIN VERIFICAR** hasta la prueba con la clave del usuario (`docs/runbooks/013-daily-close-prices-live-test.md`) |
 | Tipos de cambio | BCE (CSV/API oficial) | Excelente | Ninguno |
 | Valor liquidativo de fondos | `EUFUND` de EODHD si cubre el ISIN; si no, **aproximación por ETF equivalente**, siempre marcada como tal (ADR-0031) | Buena para consulta | No sirve para fiscalidad |
 | Valor liquidativo exacto | Entrada manual al registrar la operación | Exacta | Requiere disciplina |
@@ -277,11 +277,11 @@ Estos precios son **exclusivamente informativos** y la interfaz los marca como a
 
 Cada fuente es un adaptador del puerto `PriceSource` (`packages/domain/src/ports/`, ADR-0031), asíncrono, que pide cierres diarios de un símbolo entre dos fechas. Requisitos:
 
-- **Cascada de respaldo**: fuente primaria (EODHD) → secundaria (Alpha Vantage) → último valor conocido con su antigüedad → entrada manual, que gana siempre.
+- **Cascada de respaldo**: fuente primaria (EODHD) → secundaria (Alpha Vantage) → último valor conocido con su antigüedad → entrada manual. ~~La entrada manual gana siempre.~~ **Para enseñar un valor, gana el dato de fecha más reciente, y con la misma fecha la valoración manual**, siempre entre los precios que tienen valor en euros (ADR-0031, segunda y tercera enmiendas). El Modelo 720 y toda ruta fiscal siguen leyendo solo la valoración manual.
 - **Antigüedad siempre visible.** Si un precio lleva más de `stale_price_days` sin refrescarse, la interfaz lo indica.
 - **Nunca interpolar ni estimar en silencio.**
 - **Registro de fallos con tipo** (`unavailable`, `not_found`, `rate_limited`, `blocked`, `invalid_response`, `budget_exhausted`); si una fuente falla repetidamente, aviso por correo. Es lo que avisará de que una fuente ha cambiado sus condiciones o agotado su cupo.
-- **Correspondencia ISIN → símbolo** en `prices/symbols.json`, fuera del libro (ADR-0031): configuración de la descarga, propuesta por OpenFIGI y confirmada por el usuario al dar de alta el activo, nunca un hecho de la cartera.
+- **Correspondencia ISIN → símbolo** en `prices/symbols.json`, fuera del libro (ADR-0031): configuración de la descarga, nunca un hecho de la cartera. ~~Propuesta por OpenFIGI y confirmada por el usuario al dar de alta el activo.~~ **La declara el usuario**, con la divisa de la cotización, y la consola la contrasta con la fuente; si la fuente dice otra divisa, el usuario la confirma una vez y de forma explícita (`atlas prices symbols set`, ADR-0031, tercera enmienda).
 
 ### 7.3 ⚠ Riesgo conocido: condiciones y cupos de una API gratuita
 
@@ -290,7 +290,7 @@ Cada fuente es un adaptador del puerto `PriceSource` (`packages/domain/src/ports
 Mitigaciones, en orden:
 1. Diseño con adaptadores y respaldo manual (arriba). El sistema degrada, no se rompe.
 2. **Presupuesto de llamadas diario**, priorizado: primero las posiciones del cubo, después el índice de referencia y los ETF de referencia, después el resto del núcleo (ADR-0031). Lo que no quepa ese día conserva su último valor con su antigüedad.
-3. Si una fuente deja de servir: sustituirla por otra de la misma categoría (acciones/ETF, cripto) tras la misma investigación que hizo ADR-0031, o volver a la entrada manual.
+3. Si una fuente deja de servir: sustituirla por otra de la misma categoría (acciones/ETF, cripto) tras la misma investigación que hizo ADR-0031, o volver a la entrada manual. Las condiciones del plan gratuito cuentan tanto como las técnicas: CoinGecko se retiró porque las suyas describen ese plan como para probar.
 
 **Norma:** el sistema debe seguir siendo plenamente funcional con cero fuentes automáticas de precios. Todo lo automático es comodidad, no requisito.
 
@@ -382,7 +382,7 @@ EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
 | Acceso con Google (Lambda propia) | Sin coste de AWS | 1 usuario; sin Cognito |
 | SES (*sandbox*) | 0,10$ por 1.000 correos | ~10 correos/mes ≈ 0,001$ |
 | S3 (versionado, SSE-S3) | Sin nivel gratuito perpetuo | Unos MB de libro, configuración, histórico del BCE y precios → céntimos al año |
-| EODHD, Alpha Vantage, CoinGecko | Planes gratuitos con clave | Cupos diarios (20-25 llamadas; CoinGecko 10.000 créditos/mes) |
+| EODHD, Alpha Vantage | Planes gratuitos con clave | Cupos diarios (20 y 25 llamadas). CoinGecko, retirada (ADR-0031, tercera enmienda) |
 
 **Coste estimado: ≈ 0,01-0,05 $/mes**, cubierto por los créditos de la cuenta mientras duren (investigación del 2026-09-24); agotados los créditos, la cuenta paga ese coste. **Alarma de AWS Budgets a 1 $** por correo, que mide el coste antes de aplicar créditos (ADR-0028).
 
@@ -402,7 +402,7 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 | Frecuencia | Función | Notifica |
 |---|---|---|
-| Diaria | Actualizar precios de cierre: EODHD, respaldo Alpha Vantage, cripto CoinGecko (ADR-0031) | Solo si una tesis se acerca a su condición de invalidación |
+| Diaria | Actualizar precios de cierre: EODHD, respaldo Alpha Vantage; cripto por EODHD si su plan gratuito la cubre (ADR-0031, tercera enmienda) | Solo si una tesis se acerca a su condición de invalidación |
 | Diaria | Actualizar el histórico del BCE, byte a byte, con el calendario TARGET como comprobación cruzada (ADR-0029) | No, salvo hallazgo de integridad |
 | Diaria *(bloqueada, Ronda 6)* | Importar operaciones nuevas de IBKR vía Flex Query | Solo si hay operaciones nuevas o discrepancias |
 | Semanal | Comprobar desviaciones de pesos y reglas del cubo | Sí, si se supera algún umbral |
@@ -449,7 +449,7 @@ Son datos financieros personales completos. Nivel de exigencia alto.
 
 > **Acceso y secretos vigentes desde ADR-0027 (2026-09-24, Ronda 8)**, que sustituye a «Cognito con MFA» en todo este documento.
 
-- **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. Los secretos van en SSM Parameter Store como `SecureString`, jamás en el frontend ni en el repositorio: el token Flex de IBKR (**solo lectura**) y el secreto del cliente OAuth de Google y la clave de firma de la sesión (ADR-0027). **Las claves de las fuentes de precios** EODHD, Alpha Vantage y CoinGecko (ADR-0031) van **en local, en un fichero de configuración fuera del repositorio, y en la nube, en SSM**.
+- **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. Los secretos van en SSM Parameter Store como `SecureString`, jamás en el frontend ni en el repositorio: el token Flex de IBKR (**solo lectura**) y el secreto del cliente OAuth de Google y la clave de firma de la sesión (ADR-0027). **Las claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031) van **en local, en un fichero fuera del repositorio y de la carpeta del libro, y en la nube, en SSM** (§11.8).
 - **S3 privado**, servido solo vía CloudFront con Origin Access Control. Sin buckets públicos.
 - **Acceso solo con Google, verificado en la propia Lambda de la API; sin Cognito ni Lambda@Edge** (ADR-0027). Código de autorización con PKCE y `state`: la Lambda es el cliente OAuth y canjea el código directamente con Google, así que el token nunca toca la SPA ni la URL. Verificación completa del ID token (firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`) y lista permitida de `{sub, email}` en SSM, consultada en cada petición con una caché de pocos minutos. Sesión propia en una cookie `__Host-` firmada (`HttpOnly`, `Secure`, `SameSite=Strict`), sin *refresh token*: al caducar, se repite el flujo con Google. **La verificación en dos pasos de la cuenta de Google es un requisito operativo del usuario**, no algo que la aplicación pueda comprobar (`docs/prompts/000-director-handoff.md`).
 - **IAM de mínimo privilegio**: cada Lambda con su rol y solo los permisos que necesita.
@@ -557,7 +557,7 @@ GitHub Actions:
 - **SSM Parameter Store** (nivel estándar, gratuito) con parámetros cifrados de tipo `SecureString`.
 - Token Flex de IBKR: **solo lectura**, rotado anualmente, jamás en el frontend ni en el repositorio.
 - **Secreto del cliente OAuth de Google y clave de firma de la sesión** (ADR-0027), uno por entorno: `dev` nunca acepta la cuenta de Google que da acceso a `prod`.
-- **Claves de las fuentes de precios** EODHD, Alpha Vantage y CoinGecko (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, SSM. Con ellas van el orden de las fuentes y su presupuesto: configuración operativa de la máquina que descarga, que ninguna cifra del libro lee.
+- **Claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031; CoinGecko, retirada en su tercera enmienda): en local, en `~/.config/atlas/secrets.json`, **fuera del repositorio y de la carpeta del libro**, con permisos `600` (con otros permisos, la consola no las usa); en la nube, SSM. ~~Con ellas van el orden de las fuentes y su presupuesto: configuración operativa de la máquina que descarga, que ninguna cifra del libro lee.~~ El orden de las fuentes y su presupuesto **no** van con ellas, porque no son secretos: viven en `prices/config.json`, junto al libro (`docs/data-schema.md` §1).
 - **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo** (ADR-0028): en SSM. No van en el repositorio porque son datos personales y el repositorio es público; y no van en `Settings` porque **ninguna cifra del libro los lee** y quien los usa es la Lambda (la API, que comprueba la lista; la que envía el correo, el destinatario): un dato personal que solo usa el servidor vive donde lo lee el servidor (principio IV). El campo `notification_email` de `Settings` se sigue aceptando al cargar (ADR-0018), pero deja de leerse; la web todavía lo ofrece en Ajustes y **se retira con la feature 016** (tareas y correo).
 - **Interruptor de importes del correo** (ADR-0028, fila 18): también en SSM, junto al destinatario. No es dato personal ni secreto: es configuración operativa que ninguna cifra lee, y además un campo nuevo, que en `Settings` —una foto completa— un cliente antiguo borraría sin avisar al escribir la foto siguiente (ADR-0026, caso 6; enmienda de ADR-0018).
 - Sin secretos en variables de entorno de la Lambda visibles en la consola.
@@ -580,7 +580,7 @@ Requisitos que no son técnicos pero deciden si el sistema sigue vivo en 2046:
 - **Exportación completa a CSV/JSON en un clic**, en cualquier momento y sin depender del código.
 - **El libro mayor debe ser legible sin la aplicación.** Si el proyecto muere, los datos siguen siendo utilizables.
 - **Documentar el esquema** en el propio repositorio, incluida la lógica de transformación de lotes de cada tipo de evento.
-- **Cero dependencia de servicios de pago de terceros** en el camino crítico. Si CoinGecko cierra, se introduce el precio a mano y no pasa nada.
+- **Cero dependencia de servicios de pago de terceros** en el camino crítico. Si una fuente de precios cierra, se introduce el precio a mano y no pasa nada.
 - **Prueba de restauración anual**: reconstruir el sistema desde cero con el backup y verificar que cuadra. Va en la revisión anual del plan.
 - **Idempotencia**: registrar dos veces la misma operación debe detectarse, no duplicarse.
 
