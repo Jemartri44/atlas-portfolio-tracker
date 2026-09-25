@@ -10,11 +10,12 @@ import {
   type BucketPosition,
   type BucketPositions,
   Decimal,
-  Money,
+  type Money,
   type Quantity,
   type Warning,
 } from "@atlas/domain";
 import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../../format/names.js";
+import { priceFieldsOf } from "../price-info.js";
 
 export interface BucketPositionRow {
   accountId: string;
@@ -32,6 +33,10 @@ export interface BucketPositionRow {
   priceDate?: string;
   ageDays?: number;
   stale: boolean;
+  priceOrigin?: string;
+  approximate?: boolean;
+  eurMissing?: string;
+  newerQuote?: string;
   value?: Money;
   unrealized?: Money;
   unrealizedPct?: string;
@@ -83,14 +88,7 @@ const rowOf = (
   units: unitsOf(names, row.asset_id),
   ...(row.unit_cost_eur === undefined ? {} : { unitCost: row.unit_cost_eur }),
   ...(row.cost_eur === undefined ? {} : { cost: row.cost_eur }),
-  ...(row.price === undefined
-    ? {}
-    : {
-        unitValue: Money.of(row.price.unit_value, row.price.currency),
-        priceDate: row.price.date,
-        ageDays: row.price.age_days,
-      }),
-  stale: row.price?.stale === true,
+  ...priceFieldsOf(row.price),
   ...(row.value_eur === undefined ? {} : { value: row.value_eur }),
   ...(row.unrealized_eur === undefined ? {} : { unrealized: row.unrealized_eur }),
   ...(row.unrealized_pct === undefined ? {} : { unrealizedPct: row.unrealized_pct.toString() }),

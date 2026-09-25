@@ -8,6 +8,20 @@ import type {
 } from "@atlas/domain";
 import { table } from "./table.js";
 
+/** Why a quote has no value in euros (feature 013, §6.4 (i)). */
+export const fxMissingText = (reason: unknown): string => {
+  switch (reason) {
+    case "not_yet_published":
+      return "el BCE aún no ha publicado el tipo de esa fecha";
+    case "currency_not_published":
+      return "el BCE no publica esa divisa; una subunidad como GBX no es su divisa";
+    case "currency_stale":
+      return "el BCE dejó de publicar esa divisa";
+    default:
+      return "no hay histórico del BCE; descárgalo con «atlas fx update»";
+  }
+};
+
 const text = (value: unknown): string =>
   typeof value === "string" ? value : JSON.stringify(value);
 
@@ -82,7 +96,7 @@ export const describeError = (error: DomainError): string => {
     case "not_core_asset":
       return `El activo ${text(d.asset_id)} no pertenece al núcleo: el simulador de traspaso solo opera sobre la cartera principal.`;
     case "missing_manual_prices":
-      return `Faltan precios manuales a ${text(d.date)}: ${(d.assets as string[]).join(", ")}. Regístralos con \`atlas add valuation --asset <id> --date ${text(d.date)} …\`.`;
+      return `Faltan precios en euros a ${text(d.date)}: ${(d.assets as string[]).join(", ")}. Registra una valoración (\`atlas add valuation --asset <id> --date ${text(d.date)} …\`), o, si tienen una cotización en otra divisa, descarga el histórico del BCE con \`atlas fx update\`.`;
     case "missing_target_weights":
       return "No hay pesos objetivo configurados: fíjalos con `atlas settings set --target-weights ast_x=60,ast_y=40` (target_weights).";
     case "missing_bucket_pct":
@@ -232,6 +246,16 @@ export const describeError = (error: DomainError): string => {
       return `Falta la base de la operación ${text(d.type ?? "")}: indica --amount o --unit-price.`;
     case "invalid_local_config":
       return `La configuración local atlas.config.json de la carpeta del libro no se entiende${d.field === undefined ? "" : ` (${text(d.field)})`}: corrígela o bórrala para volver a los valores por defecto.`;
+    case "invalid_price_config":
+      return `La configuración de precios prices/config.json no se entiende (${text(d.field)}): corrígela o bórrala para volver a los valores por defecto. La aplicación nunca la escribe.`;
+    case "invalid_price_status":
+      return `El estado de las fuentes de precios prices/_status.json no se entiende (${text(d.field)}): no se descarga nada hasta arreglarlo, porque dice lo gastado hoy de cada cupo.`;
+    case "invalid_symbols_file":
+      return `La correspondencia de símbolos prices/symbols.json no se entiende (${text(d.field)}): corrígela, o vuelve a declarar los símbolos con «atlas prices symbols set».`;
+    case "price_file_newer_version":
+      return `prices/${text(d.asset_id)}.jsonl tiene una línea de una versión más nueva que esta aplicación (línea ${text(d.line)}): ese activo se queda sin precio automático y no se añade nada a su fichero. Actualiza la aplicación.`;
+    case "price_line_invalid":
+      return `prices/${text(d.asset_id)}.jsonl, línea ${text(d.line)}: no se entiende (${text(d.field)}). Ese activo se queda sin precio automático; nunca se lee a medias.`;
     case "second_live_correction":
       return `${text(d.corrects_id)} ya tiene una corrección en vigor en ese punto del libro (${text(d.live_correction_id)}): una operación anulada solo puede tener una. Anula antes esa corrección, o corrígela a ella (ADR-0026).`;
     case "broker_settled_eur_in_eur":
@@ -385,6 +409,10 @@ export const describeWarning = (warning: Warning): string => {
       return `El índice de referencia ${text(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`;
     case "missing_benchmark_price":
       return `Falta el precio del índice ${text(d.asset_id)} a ${text(d.date)}: la comparación queda sin dato (nunca se estima).`;
+    case "weights_use_approximation":
+      return `Los pesos de ${(d.assets as string[]).join(", ")} se apoyan en una aproximación por su ETF de referencia, no en un valor liquidativo: el reparto de la aportación depende de una estimación.`;
+    case "price_without_eur_value":
+      return `${text(d.asset_id)}: la cotización en ${text(d.currency)} del ${text(d.date)} no tiene tipo del BCE (${fxMissingText(d.reason)}); se enseña en su divisa y falta su valor en euros, así que no suma en ningún total.`;
     case "stale_price":
       return `${text(d.asset_id)}: el precio es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una valoración más reciente.`;
     case "currency_mismatch":

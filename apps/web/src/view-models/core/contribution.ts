@@ -6,7 +6,7 @@
 // say every time — that the bucket share is a budget and not an allocation, and
 // that this is a proposal nobody has recorded.
 
-import type { ContributionPlan, Money } from "@atlas/domain";
+import type { ContributionPlan, Money, Warning } from "@atlas/domain";
 import { valueLabel } from "../../format/labels.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 
@@ -34,7 +34,14 @@ export interface ContributionView {
   coreValue: Money;
   surplusDistributed: boolean;
   rows: ContributionRowView[];
+  /** The note of the domain when a weight it used rests on an approximation (P3). */
+  approximation?: Warning;
 }
+
+const approximationOf = (plan: ContributionPlan): { approximation?: Warning } => {
+  const note = plan.warnings.find((warning) => warning.code === "weights_use_approximation");
+  return note === undefined ? {} : { approximation: note };
+};
 
 export const contributionView = (
   plan: ContributionPlan,
@@ -47,6 +54,7 @@ export const contributionView = (
   coreAmount: plan.core_amount_eur,
   coreValue: plan.core_value_eur,
   surplusDistributed: plan.surplus_distributed,
+  ...approximationOf(plan),
   rows: plan.rows.map((row) => ({
     assetId: row.asset_id,
     name: displayName(names, row.asset_id),

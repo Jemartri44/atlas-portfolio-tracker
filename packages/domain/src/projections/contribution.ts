@@ -14,6 +14,7 @@ import { Decimal } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
+import type { ExternalPrices } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
 import { coreWeights } from "./weights.js";
 
@@ -56,6 +57,8 @@ export interface ContributionInput {
   amount?: string;
   date: CivilDate;
   settings: Settings;
+  /** The automatic closes (feature 013), through the gate like every view. */
+  external?: ExternalPrices;
 }
 
 const fail = (code: string, message: string, details: Record<string, unknown> = {}): never => {
@@ -162,9 +165,9 @@ export const contributionPlan = (
     fail("missing_bucket_pct", "bucket_pct_of_contribution is not configured", {});
   }
   const { amount, origin } = amountOf(input);
-  const weights = coreWeights(state, date, settings);
+  const weights = coreWeights(state, date, settings, input.external);
   if (weights.missing_prices.length > 0) {
-    fail("missing_manual_prices", "some core assets held have no manual price", {
+    fail("missing_manual_prices", "some core assets held have no price in euros", {
       assets: weights.missing_prices,
       date,
     });
@@ -179,6 +182,9 @@ export const contributionPlan = (
    * whose deviation the contribution would only make worse. Reject instead.
    * The empty table falls here too.
    */
+  const approximated = weights.rows
+    .filter((row) => row.price?.approximate)
+    .map((row) => row.asset_id);
   const rowWeight = weights.rows.reduce((sum, row) => sum.add(row.target_pct), Decimal.ZERO);
   if (rowWeight.isZero()) {
     fail(
@@ -256,6 +262,20 @@ export const contributionPlan = (
     core_value_eur: total,
     rows,
     surplus_distributed: surplus,
-    warnings: weights.warnings,
+    // The calculator says when a weight it uses rests on an approximation
+    // through the reference ETF (P3): the domain says it, the interfaces only
+    // translate it (ADR-0024; review of PR #78).
+    warnings:
+      approximated.length === 0
+        ? weights.warnings
+        : [
+            ...weights.warnings,
+            {
+              code: "weights_use_approximation",
+              event_id: "",
+              message: "approximated weights",
+              details: { assets: approximated },
+            },
+          ],
   };
 };

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { Decimal } from "../../src/money/decimal.js";
+import type { ExternalPrices } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { coreWeights } from "../../src/projections/weights.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
@@ -304,5 +306,56 @@ describe("coreWeights as of a date", () => {
     );
     expect(whole.rows.map((row) => row.quantity.toString())).toEqual(["100", "10"]);
     expect(whole.total_eur.amount.toString()).toBe("11000");
+  });
+});
+
+const noRate013 = (asset: string): ExternalPrices => ({
+  at: (assetId) =>
+    assetId === asset
+      ? {
+          date: "2028-01-05",
+          unit_value: Decimal.parse("5000"),
+          currency: "GBX",
+          source: "eodhd",
+          fx_missing: "currency_not_published",
+        }
+      : undefined,
+});
+
+describe("coreWeights with a quote that has no rate (feature 013)", () => {
+  it("uses the last price with euros, and carries the newer quote without them as information", () => {
+    const state = projectLedger(balanced().build());
+    const result = coreWeights(
+      state,
+      "2028-01-10",
+      settings({ target_weights: TARGETS }),
+      noRate013("ast_gold"),
+    );
+    // Review of PR #78: a quote in pence of every day must not leave the whole
+    // core without weights while the ledger has a valuation with its rate.
+    expect(result.partial).toBe(false);
+    const gold = result.rows.find((row) => row.asset_id === "ast_gold");
+    expect(gold?.price).toMatchObject({ origin: "manual", currency: "USD" });
+    expect(gold?.price?.newer_quote).toMatchObject({
+      currency: "GBX",
+      fx_missing: "currency_not_published",
+    });
+  });
+
+  it("never adds up in euros a quote that has none, when it is all there is: partial, and said", () => {
+    const b = balanced();
+    const events = b
+      .build()
+      .filter((event) => !(event.type === "valuation" && event.asset_id === "ast_gold"));
+    const result = coreWeights(
+      projectLedger(events),
+      "2028-01-10",
+      settings({ target_weights: TARGETS }),
+      noRate013("ast_gold"),
+    );
+    expect(result.partial).toBe(true);
+    expect(result.missing_prices).toEqual(["ast_gold"]);
+    expect(result.rows.find((row) => row.asset_id === "ast_gold")?.price?.currency).toBe("GBX");
+    expect(codes(result)).toContain("price_without_eur_value");
   });
 });

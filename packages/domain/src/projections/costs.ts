@@ -363,7 +363,8 @@ export const costSummary = (
     const invested = totals.invested.get(assetId) ?? Money.zero(EUR);
     const price = prices.get(assetId);
     const value = positionValueOf(price, quantity);
-    if (quantity.isPositive() && price === undefined) {
+    // Without a price, or with a quote that has no value in euros (feature 013).
+    if (quantity.isPositive() && value === undefined) {
       partial = true;
     }
     const ter = asset.ter === undefined ? undefined : Decimal.parse(asset.ter);

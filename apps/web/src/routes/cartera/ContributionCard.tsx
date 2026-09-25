@@ -21,12 +21,16 @@ import {
   ErrorView,
   Figure,
   Icon,
+  Notice,
   Pending,
   Section,
   Tag,
 } from "../../components/index.js";
 import { formatMonth } from "../../format/date.js";
+import { describeWarning } from "../../format/messages/warnings.js";
+import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import type { AppError } from "../../ledger/state.js";
+import { store } from "../../ledger/state.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 
 /**
@@ -178,6 +182,7 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
 export const ContributionCard = (props: {
   view: ContributionView | undefined;
   error: AppError | undefined;
+  names?: NameIndex;
 }): JSX.Element => (
   <Section
     title={
@@ -196,7 +201,21 @@ export const ContributionCard = (props: {
         </Show>
       }
     >
-      {(view) => <Split view={view()} />}
+      {(view) => (
+        <>
+          <Show when={view().approximation}>
+            {(note) => (
+              <Notice severity="caution">
+                {describeWarning(note(), {
+                  names: props.names ?? NO_NAMES,
+                  privacy: store.privacy(),
+                })}
+              </Notice>
+            )}
+          </Show>
+          <Split view={view()} />
+        </>
+      )}
     </Show>
   </Section>
 );

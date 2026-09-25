@@ -13,6 +13,7 @@ import {
   Pending,
   Price,
   PriceDetail,
+  PriceSource,
   Section,
   Tag,
   TotalLine,
@@ -47,6 +48,11 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     card: "sub",
     cell: (row) => <Price price={row} />,
     cardCell: (row) => <PriceDetail price={row} />,
+  },
+  {
+    key: "source",
+    header: "Origen",
+    cell: (row) => <PriceSource price={row} />,
   },
   {
     key: "value",

@@ -17,6 +17,10 @@
     "./ecb": {
       "types": "./dist/ecb.d.ts",
       "import": "./dist/ecb.js"
+    },
+    "./quotes": {
+      "types": "./dist/quotes.d.ts",
+      "import": "./dist/quotes.js"
     }
   },
   "files": [

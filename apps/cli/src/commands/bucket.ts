@@ -21,7 +21,9 @@ import {
 import { assertKnownFlags, type Flags } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { DASH, eur, pct } from "../output/format.js";
+import { PRICE_HEADERS, priceColumns, priceJson, priceNotes } from "../output/prices.js";
 import { table } from "../output/table.js";
+import { loadQuotes, sayNotes } from "../prices/load.js";
 import { dateFlag, loadForQuery, renderQuery } from "./shared.js";
 import { jsonThesis } from "./thesis.js";
 
@@ -146,7 +148,9 @@ export const netWorthCommand = async (
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
   const date = dateFlag(ctx, flags);
   const { state } = await loadForQuery(ctx, date);
-  const view = netWorth(state, date, settingsAt(state, date).settings);
+  const quotes = await loadQuotes(ctx, state);
+  sayNotes(ctx, quotes.notes);
+  const view = netWorth(state, date, settingsAt(state, date).settings, quotes.external);
   renderQuery(ctx, state, jsonNetWorth(view), netWorthText(view));
   return 0;
 };
@@ -160,10 +164,7 @@ const positionsText = (view: BucketPositions): string[] => [
       "activo",
       "cantidad",
       "coste medio",
-      "precio",
-      "divisa",
-      "precio de",
-      "antigüedad",
+      ...PRICE_HEADERS,
       "valor EUR",
       "P&L EUR",
       "P&L %",
@@ -177,10 +178,7 @@ const positionsText = (view: BucketPositions): string[] => [
       row.asset_id,
       row.quantity.toString(),
       eur(row.unit_cost_eur),
-      row.price === undefined ? "sin precio" : row.price.unit_value.toString(),
-      row.price?.currency ?? "",
-      row.price?.date ?? "",
-      row.price === undefined ? "" : `${row.price.age_days}${row.price.stale ? " ⚠" : ""}`,
+      ...priceColumns(row.price),
       eur(row.value_eur),
       eur(row.unrealized_eur),
       pct(row.unrealized_pct),
@@ -193,6 +191,7 @@ const positionsText = (view: BucketPositions): string[] => [
     ]),
   ),
   `  Total: ${eur(view.total_value_eur)} EUR de valor${view.partial ? ` ${PARTIAL}` : ""}, ${eur(view.total_cost_eur)} EUR de coste`,
+  ...priceNotes(view.rows.map((row) => row.price)),
 ];
 
 /** Theses: the result of each bet and, above all, what the boring alternative would have done. */
@@ -272,11 +271,7 @@ const jsonBucket = (
       quantity: row.quantity.toString(),
       unit_cost_eur: row.unit_cost_eur?.amount.toString(),
       cost_eur: row.cost_eur?.amount.toString(),
-      unit_value: row.price?.unit_value.toString(),
-      currency: row.price?.currency,
-      price_date: row.price?.date,
-      price_age_days: row.price?.age_days,
-      price_stale: row.price?.stale,
+      price: priceJson(row.price),
       value_eur: row.value_eur?.amount.toString(),
       unrealized_eur: row.unrealized_eur?.amount.toString(),
       unrealized_pct: row.unrealized_pct?.toString(),
@@ -337,14 +332,21 @@ export const bucketCommand = async (
   const date = dateFlag(ctx, flags);
   const { state, events } = await loadForQuery(ctx, date);
   const settings = settingsAt(state, date).settings;
-  const positions = bucketPositions(state, date, settings);
-  const { rows: theses, warnings: benchmark } = bucketTheses(state, date, settings);
-  const { stats, controls } = bucketStats(state, events, date, settings, date);
+  const quotes = await loadQuotes(ctx, state);
+  sayNotes(ctx, quotes.notes);
+  const positions = bucketPositions(state, date, settings, quotes.external);
+  const { rows: theses, warnings: benchmark } = bucketTheses(
+    state,
+    date,
+    settings,
+    quotes.external,
+  );
+  const { stats, controls } = bucketStats(state, events, date, settings, date, quotes.external);
   const stopLoss = controls.warnings.filter(
     (warning) => warning.code === "bucket_stop_loss_reached",
   );
   const text = [
-    `Cubo especulativo a ${date} (precios manuales; informativos, nunca fiscales).`,
+    `Cubo especulativo a ${date} (precios informativos, nunca fiscales; gana el más reciente, y con la misma fecha el manual).`,
     // The stop-loss goes at the top, not in a corner: it is the rule the plan
     // wants hardest to ignore (rule 17). It warns; it never blocks (decision (f)).
     ...(stopLoss.length === 0 ? [] : ["", ...describeWarnings(stopLoss)]),

@@ -2,6 +2,7 @@ import type { LedgerEvent, UseCaseDeps, Warning } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
 import type { Flags } from "./args.js";
 import { describeWarning } from "./output/messages.js";
+import type { PriceEnvironment } from "./prices/load.js";
 
 export interface Io {
   out(text: string): void;
@@ -22,6 +23,8 @@ export interface Context {
   confirmFxRate?: boolean;
   /** The source of the ECB history (`atlas fx update`); the ECB itself when absent. */
   fxSource?: () => FxRateSource;
+  /** The sources of prices and where the keys are; replaced in tests, which never touch the network. */
+  prices?: PriceEnvironment;
 }
 
 export type Command = (ctx: Context, positionals: string[], flags: Flags) => Promise<number>;
@@ -43,6 +46,8 @@ export const EXIT = {
   noTty: 4,
   schemaTooNew: 5,
   locked: 6,
+  /** `atlas prices update`: a source reached the threshold of consecutive failures (ADR-0031). */
+  sourcesFailing: 7,
   usage: 64,
 } as const;
 

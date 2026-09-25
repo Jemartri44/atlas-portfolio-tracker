@@ -29,4 +29,15 @@ export {
   withFolderLock,
 } from "./ledger-store/folder-lock.js";
 export { MemoryLedgerStore } from "./ledger-store/memory.js";
+export { ALPHA_VANTAGE_API, AlphaVantagePriceSource } from "./prices/alpha-vantage.js";
+export { EODHD_API, EodhdPriceSource } from "./prices/eodhd.js";
+export { ExactJsonUnsupported } from "./prices/exact-json.js";
+export { FilePriceStore, PRICES_DIR } from "./prices/file-store.js";
+export {
+  type Keys,
+  readSecrets,
+  SecretsError,
+  type SecretsErrorCode,
+  secretsPath,
+} from "./prices/secrets.js";
 export { webCryptoRandom } from "./random/web-crypto.js";

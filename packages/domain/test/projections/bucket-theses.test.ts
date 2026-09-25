@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { Decimal } from "../../src/money/decimal.js";
 import { bucketTheses } from "../../src/projections/bucket.js";
+import type { ExternalPrices } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
@@ -282,5 +284,64 @@ describe("bucketTheses: the result against the index (business rule 16)", () => 
       unit_value: "200",
     });
     expect(view(b)?.benchmark_equivalent_eur?.amount.toString()).toBe("120");
+  });
+});
+
+const noRate013 = (asset: string): ExternalPrices => ({
+  at: (assetId, date) =>
+    assetId === asset
+      ? {
+          date,
+          unit_value: Decimal.parse("5000"),
+          currency: "GBX",
+          source: "eodhd",
+          fx_missing: "currency_not_published",
+        }
+      : undefined,
+});
+
+describe("bucketTheses with a quote of the index that has no rate (feature 013)", () => {
+  it("leaves the comparison out: a price without euros is no price for it", () => {
+    const view = bucketTheses(
+      projectLedger(scenario({ sell: true }).build()),
+      "2027-12-31",
+      withBenchmark(),
+      noRate013("ast_world"),
+    );
+    expect(view.rows[0]?.benchmark_equivalent_eur).toBeUndefined();
+    expect(view.rows[0]?.missing_benchmark[0]).toMatchObject({ reason: "no_price" });
+    expect(view.warnings.map((warning) => warning.code)).toContain("missing_benchmark_price");
+  });
+
+  it("does the same when the quote at the purchase has no rate and the end one has", () => {
+    const start: ExternalPrices = {
+      at: (assetId, date) =>
+        assetId !== "ast_world"
+          ? undefined
+          : date === "2027-12-31"
+            ? {
+                date,
+                unit_value: Decimal.parse("120"),
+                currency: "EUR",
+                fx_rate: Decimal.ONE,
+                source: "eodhd",
+              }
+            : {
+                date,
+                unit_value: Decimal.parse("100"),
+                currency: "USD",
+                source: "eodhd",
+                fx_missing: "not_yet_published",
+              },
+    };
+    const view = bucketTheses(
+      projectLedger(scenario({ sell: false }).build()),
+      "2027-12-31",
+      withBenchmark(),
+      start,
+    );
+    expect(view.rows[0]?.missing_benchmark.find((gap) => gap.reason === "no_price")).toMatchObject({
+      asset_id: "ast_world",
+    });
   });
 });

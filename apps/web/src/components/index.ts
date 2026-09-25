@@ -11,7 +11,7 @@ export { Fold } from "./Fold.jsx";
 export { Icon, type IconName } from "./Icon.jsx";
 export { Notice, type NoticeItem, NoticeList, type Severity } from "./Notice.jsx";
 export { Parts } from "./Parts.jsx";
-export { Price, PriceDetail, type PriceInfo } from "./Price.jsx";
+export { Price, PriceDetail, type PriceInfo, PriceSource } from "./Price.jsx";
 export { Section } from "./Section.jsx";
 export { StandaloneFees, type StandaloneFeesProps } from "./StandaloneFees.jsx";
 export { EmptyState, Pending, Skeleton } from "./States.jsx";

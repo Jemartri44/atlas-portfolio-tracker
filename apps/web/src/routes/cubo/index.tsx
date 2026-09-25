@@ -37,6 +37,7 @@ import {
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { store, usePrivacy } from "../../ledger/state.js";
+import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   bucketPositionsView,
@@ -84,26 +85,32 @@ export default function CuboRoute(): JSX.Element {
         const date = (): string => asOf.date();
         const dated = () => store.projectionAt(date()) ?? snapshot.state;
         const settings = () => settingsAt(dated(), date()).settings;
+        const prices = useQuotes(snapshot.state);
+        const external = () => prices.external(dated());
 
         const positions = createMemo(() =>
-          bucketPositionsView(bucketPositions(dated(), date(), settings()), names),
+          bucketPositionsView(bucketPositions(dated(), date(), settings(), external()), names),
         );
         const theses = createMemo(() =>
-          thesesView(bucketTheses(dated(), date(), settings()), names),
+          thesesView(bucketTheses(dated(), date(), settings(), external()), names),
         );
         const report = createMemo(() =>
           bucketReportView(
-            bucketStats(dated(), snapshot.events, date(), settings(), date()),
+            bucketStats(dated(), snapshot.events, date(), settings(), date(), external()),
             names,
           ),
         );
-        const worth = createMemo(() => netWorthView(netWorth(dated(), date(), settings()), names));
+        const worth = createMemo(() =>
+          netWorthView(netWorth(dated(), date(), settings(), external()), names),
+        );
         // Only the **bucket's** standalone charges: the core's are on `/cartera`
         // with the core's own total, and the two never share one.
         const fees = createMemo(
           () =>
-            costsView(costSummary(dated(), snapshot.events, date(), settings(), date()), names)
-              .standalone.bucket,
+            costsView(
+              costSummary(dated(), snapshot.events, date(), settings(), date(), external()),
+              names,
+            ).standalone.bucket,
         );
         const series = createMemo(() =>
           bucketIndexPlot(
@@ -168,6 +175,7 @@ export default function CuboRoute(): JSX.Element {
                 </div>
               }
             >
+              <QuotesNotice quotes={prices.quotes()} />
               <div class="grid">
                 <For each={stopLoss()}>
                   {(warning) => (

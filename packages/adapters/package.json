@@ -22,6 +22,10 @@
       "types": "./dist/ledger-store/browser/reference.d.ts",
       "import": "./dist/ledger-store/browser/reference.js"
     },
+    "./prices": {
+      "types": "./dist/ledger-store/browser/prices.d.ts",
+      "import": "./dist/ledger-store/browser/prices.js"
+    },
     "./drafts": {
       "types": "./dist/ledger-store/browser/drafts.d.ts",
       "import": "./dist/ledger-store/browser/drafts.js"

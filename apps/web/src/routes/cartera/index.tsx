@@ -19,6 +19,7 @@ import { AsOfPicker, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import { store } from "../../ledger/state.js";
+import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { contributionView, costsView, weightsView } from "../../view-models/core/index.js";
 import { absorbedAssets } from "../../view-models/weighted.js";
@@ -37,23 +38,30 @@ export default function CarteraRoute(): JSX.Element {
         const date = (): string => asOf.date();
         const dated = () => store.projectionAt(date()) ?? snapshot.state;
         const settings = () => settingsAt(dated(), date()).settings;
+        const prices = useQuotes(snapshot.state);
+        const external = () => prices.external(dated());
 
         const weights = createMemo(() =>
-          weightsView(coreWeights(dated(), date(), settings()), names),
+          weightsView(coreWeights(dated(), date(), settings(), external()), names),
         );
         const contribution = createMemo(() =>
-          attempt(() =>
-            contributionView(
-              contributionPlan(dated(), { date: date(), settings: settings() }),
+          attempt(() => {
+            const quotes = external();
+            return contributionView(
+              contributionPlan(dated(), {
+                date: date(),
+                settings: settings(),
+                ...(quotes === undefined ? {} : { external: quotes }),
+              }),
               names,
-            ),
-          ),
+            );
+          }),
         );
         /** Funds converted into another and holding nothing: not listed, not offered. */
         const absorbed = createMemo(() => absorbedAssets(dated(), snapshot.events, date()));
         const costs = createMemo(() =>
           costsView(
-            costSummary(dated(), snapshot.events, date(), settings(), date()),
+            costSummary(dated(), snapshot.events, date(), settings(), date(), external()),
             names,
             absorbed(),
           ),
@@ -82,6 +90,7 @@ export default function CarteraRoute(): JSX.Element {
               }
             />
 
+            <QuotesNotice quotes={prices.quotes()} />
             <div class="grid">
               <WeightsCard
                 view={weights()}
@@ -90,8 +99,9 @@ export default function CarteraRoute(): JSX.Element {
                 date={date()}
                 settings={settings()}
                 absorbed={absorbed()}
+                names={names}
               />
-              <ContributionCard view={plan()} error={planError()} />
+              <ContributionCard view={plan()} error={planError()} names={names} />
               <CostsCard view={costs()} />
             </div>
           </>

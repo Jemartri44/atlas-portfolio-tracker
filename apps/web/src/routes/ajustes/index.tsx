@@ -16,6 +16,7 @@ import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { ImportControls } from "../libro/ImportControls.jsx";
 import { EcbCard } from "./EcbCard.jsx";
+import { PricesCard } from "./PricesCard.jsx";
 
 const THEMES = [
   { value: "system", label: "Sistema" },
@@ -201,6 +202,7 @@ export default function AjustesRoute(): JSX.Element {
           </Section>
 
           <EcbCard />
+          <PricesCard />
 
           <Section title="Configuración y verificación">
             <ul class="rows">

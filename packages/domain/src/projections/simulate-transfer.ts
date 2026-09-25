@@ -83,7 +83,7 @@ export const simulateTransfer = (
    * the transfer are priced: the weights are computed over the whole core.
    */
   if (table.partial) {
-    fail("missing_manual_prices", "some core assets held have no manual price", {
+    fail("missing_manual_prices", "some core assets held have no price in euros", {
       assets: table.missing_prices,
       date,
     });
@@ -142,7 +142,9 @@ export const simulateTransfer = (
     });
   }
 
-  const unit = (from.price as PriceLookup).unit_value_eur;
+  // Manual prices only (the call above passes no external source), and a
+  // `valuation` always carries its ECB rate: its value in euros is always there.
+  const unit = (from.price as PriceLookup).unit_value_eur as Money;
   const moved = Money.of(unit.amount.mul(quantity.value), "EUR");
   const warnings: Warning[] = [];
   const rows = before.rows.map((row) => {

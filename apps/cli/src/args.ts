@@ -33,6 +33,7 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "accept-invalid",
   "json",
   // Of a command.
+  "accept-currency",
   "all",
   "boxes",
   "closed",

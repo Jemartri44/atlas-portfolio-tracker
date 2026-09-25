@@ -12,7 +12,13 @@ import { Quantity } from "../money/quantity.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import { ASSET_CLASSES } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { type ExternalPrices, manualPrices, type PriceLookup, positionValueOf } from "./prices.js";
+import {
+  type ExternalPrices,
+  manualPrices,
+  type PriceLookup,
+  positionValueOf,
+  warnWithoutEur,
+} from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
 
 /** Satellites (business rule 6b): 0 % or at least the minimum, never in between. */
@@ -293,6 +299,9 @@ export const coreWeights = (
         : positionValueOf(price, quantity);
     if (value === undefined) {
       missing.push(assetId);
+      if (price !== undefined) {
+        warnWithoutEur(warnings, price);
+      }
     } else {
       total = total.add(value);
     }

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
+import { Decimal } from "../../src/money/decimal.js";
 import { Money } from "../../src/money/money.js";
 import {
   assertSplit,
   type ContributionRow,
   contributionPlan,
 } from "../../src/projections/contribution.js";
+import type { ExternalPrices } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { coreWeights } from "../../src/projections/weights.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
@@ -379,5 +381,34 @@ describe("contributionPlan", () => {
         Money.parse("90", "EUR"),
       ),
     ).toThrow(ValidationError);
+  });
+});
+
+describe("contributionPlan with an approximation (feature 013, P3)", () => {
+  it("says itself when a weight it uses rests on an approximation; the interfaces only translate it", () => {
+    const external: ExternalPrices = {
+      at: (assetId, date) =>
+        assetId === "ast_world"
+          ? {
+              date,
+              unit_value: Decimal.parse("110"),
+              currency: "EUR",
+              fx_rate: Decimal.ONE,
+              source: "eodhd",
+              approximate: true,
+            }
+          : undefined,
+    };
+    const input = {
+      amount: "100",
+      date: "2028-01-05",
+      settings: settings({ target_weights: { ast_world: "60", ast_bonds: "30", ast_gold: "10" } }),
+    };
+    const plan = contributionPlan(projectLedger(core().build()), { ...input, external });
+    expect(plan.warnings.find((w) => w.code === "weights_use_approximation")?.details).toEqual({
+      assets: ["ast_world"],
+    });
+    const plain = contributionPlan(projectLedger(core().build()), input);
+    expect(plain.warnings.map((w) => w.code)).not.toContain("weights_use_approximation");
   });
 });

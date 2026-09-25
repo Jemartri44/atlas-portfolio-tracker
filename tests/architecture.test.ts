@@ -78,6 +78,82 @@ const reachableFrom = (graph: Map<string, string[]>, root: string): Map<string, 
 const asChain = (files: readonly string[]): string =>
   files.map((file) => relative(domainSrc, file)).join(" -> ");
 
+/**
+ * Everything that **knows about prices** (feature 013, block 1): the gate,
+ * the manual leaf, the two ports of prices and every file of `quotes/` with
+ * its door — the last read **off the folder**, so a module of prices created
+ * tomorrow is covered without anybody writing it down here.
+ */
+const priceRoots = (): string[] => {
+  const projections = join(domainSrc, "projections");
+  return [
+    join(projections, "prices.ts"),
+    join(projections, "manual-price.ts"),
+    join(domainSrc, "ports", "price-source.ts"),
+    join(domainSrc, "ports", "price-store.ts"),
+    join(domainSrc, "quotes.ts"),
+    ...listTsFiles(join(domainSrc, "quotes")),
+  ];
+};
+
+/** The first price root `file` reaches, with the chain; `undefined` when none. */
+const priceReachedFrom = (
+  graph: Map<string, string[]>,
+  file: string,
+  roots: readonly string[],
+): string[] | undefined => {
+  const reach = reachableFrom(graph, file);
+  for (const root of roots) {
+    const chain = reach.get(root);
+    if (chain !== undefined) {
+      return chain;
+    }
+  }
+  return undefined;
+};
+
+/** The body of `export interface <name> {…}` in `file`, comments stripped, and its keys at depth 1. */
+const interfaceKeys = (file: string, name: string): string[] => {
+  const source = readFileSync(file, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/\/\/[^\n]*/g, " ");
+  const start = source.indexOf(`export interface ${name} {`);
+  expect(start).toBeGreaterThanOrEqual(0);
+  const keys: string[] = [];
+  let depth = 0;
+  let line = "";
+  for (let index = source.indexOf("{", start); index < source.length; index += 1) {
+    const char = source[index] as string;
+    if (depth === 1 && (char === "\n" || char === ";")) {
+      // A key with or without quotes: `"quotes": …` is a key as much as
+      // `quotes: …`, and the quoted form slipped past this (review of PR #78).
+      const match = /^\s*(?:readonly\s+)?(?:(["'])([^"']+)\1|([A-Za-z_$][\w$]*))\??\s*:/.exec(line);
+      if (match !== null) {
+        keys.push((match[2] ?? match[3]) as string);
+      }
+      line = "";
+    }
+    // An index signature lets any key through, whatever its form: it is read
+    // as a key of its own, which no frozen list contains (second pass of the
+    // review of PR #78).
+    if (char === "[" && depth === 1 && /^\s*(?:readonly\s+)?$/.test(line)) {
+      keys.push("[index signature]");
+    }
+    if ("{([<".includes(char)) {
+      depth += 1;
+    } else if ("})]>".includes(char) && !(char === ">" && source[index - 1] === "=")) {
+      depth -= 1;
+      if (depth === 0) {
+        break;
+      }
+    }
+    if (depth === 1 && char !== "{" && char !== "\n" && char !== ";") {
+      line += char;
+    }
+  }
+  return keys;
+};
+
 describe("architecture: @atlas/domain imports nothing", () => {
   it("declares no runtime dependencies", () => {
     const manifest = JSON.parse(readFileSync(join(domainRoot, "package.json"), "utf8")) as Record<
@@ -142,10 +218,12 @@ describe("architecture: @atlas/domain imports nothing", () => {
    * `snapshot.ts` serialises it and `valuations.ts` is the Modelo 720 view,
    * which enumerates registered valuations instead of asking what an asset is
    * worth on a date. `state.ts` declares the field and reads nothing.
+   * `manual-price.ts` is the manual leaf the Modelo 720 reads (feature 013,
+   * §6.5 (a)), and the gate reads the valuations **through** it (D-Q8).
    */
   it("keeps every read of the valuations behind the gate of prices.ts", () => {
     const allowed = new Set(
-      ["prices.ts", "valuations.ts", "snapshot.ts", "operations.ts"]
+      ["prices.ts", "manual-price.ts", "valuations.ts", "snapshot.ts", "operations.ts"]
         .map((name) => join(domainSrc, "projections", name))
         .concat(join(domainSrc, "projections", "state.ts")),
     );
@@ -221,11 +299,15 @@ describe("architecture: @atlas/domain imports nothing", () => {
     const projections = join(domainSrc, "projections");
     const pricesFile = join(projections, "prices.ts");
     const typeLayer = reachableFrom(graph, join(projections, "state.ts"));
+    // The manual leaf, named (feature 013, D-Q8): the gate reads the
+    // valuations through it, so they are read in one place.
+    const manualLeaf = join(projections, "manual-price.ts");
     const violations = [...reachableFrom(graph, pricesFile).values()]
       .filter((chain) => {
         const file = chain[chain.length - 1] as string;
         return (
           file !== pricesFile &&
+          file !== manualLeaf &&
           !typeLayer.has(file) &&
           !relative(projections, file).startsWith("..")
         );
@@ -242,7 +324,11 @@ describe("architecture: @atlas/domain imports nothing", () => {
    * - the **fiscal path** is everything `project-ledger.ts` reaches, which is
    *   pass A, pass A' and pass B: the code that creates lots, gains, theses and
    *   fiscal warnings;
-   * - a file is **price-aware** when it reaches `prices.ts`, the single gate.
+   * - a file is **price-aware** when it reaches `prices.ts`, the single gate,
+   *   the manual leaf, a port of prices or any file of `quotes/` (feature 013,
+   *   block 1: before it, a module of prices that did not import `prices.ts`
+   *   was invisible here, and the tax engine could have imported it with this
+   *   test green).
    *
    * The two sets must not meet, at any depth. Checking direct imports against
    * two fixed lists left a new file in neither list and a leak one hop away
@@ -275,8 +361,10 @@ describe("architecture: @atlas/domain imports nothing", () => {
       }
     }
     expect(fiscal.size).toBeGreaterThan(1);
+    const roots2 = priceRoots();
+    expect(roots2).toContain(pricesFile);
     const violations = [...fiscal.entries()]
-      .map(([file, chain]) => ({ chain, toPrices: reachableFrom(graph, file).get(pricesFile) }))
+      .map(([file, chain]) => ({ chain, toPrices: priceReachedFrom(graph, file, roots2) }))
       .filter((entry) => entry.toPrices !== undefined)
       .map((entry) => `${asChain(entry.chain)}  ==  then  ==>  ${asChain(entry.toPrices ?? [])}`);
     expect(violations).toEqual([]);
@@ -374,13 +462,202 @@ describe("architecture: the tax engine", () => {
     expect(offenders).toEqual([]);
   });
 
-  /** And the rule is not vacuous: the informative returns do read the price gate. */
+  /**
+   * **The rule that closes the 720** (feature 013, §6.5 (a) of its prompt):
+   * by reach, not by names. A rule on what an argument is called is dodged by
+   * a fifth argument called otherwise, and forbidding two names is dodged by
+   * importing `bucketPositions`, `coreWeights`, `netWorth` or `costSummary`,
+   * which take the external source and forward it to the gate. So: from any
+   * file of `informative/`, at any depth, nothing price-aware may be reached —
+   * not `prices.ts`, not a file that imports it (which is every file that
+   * could call `priceAt` or `manualPrices`, under any name), not a port of
+   * prices, not a file of `quotes/` — **except the manual leaf**, which is the
+   * one price the informative returns may read and which imports none of
+   * those.
+   */
+  it("reaches nothing of prices from an informative return but the manual leaf", () => {
+    const graph = importGraph();
+    const pricesFile = join(domainSrc, "projections", "prices.ts");
+    const leaf = join(domainSrc, "projections", "manual-price.ts");
+    const forbidden = priceRoots().filter((file) => file !== leaf);
+    const importersOfTheGate = [...graph.entries()]
+      .filter(([, targets]) => targets.includes(pricesFile))
+      .map(([file]) => file);
+    expect(importersOfTheGate.length).toBeGreaterThan(3);
+    const violations: string[] = [];
+    for (const file of listTsFiles(join(domainSrc, "informative"))) {
+      const reach = reachableFrom(graph, file);
+      for (const target of [...forbidden, ...importersOfTheGate]) {
+        const chain = reach.get(target);
+        if (chain !== undefined) {
+          violations.push(asChain(chain));
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+    // And the leaf is a leaf: it reaches nothing price-aware either.
+    expect(priceReachedFrom(graph, leaf, forbidden)).toBeUndefined();
+  });
+
+  /** And the rule is not vacuous: the informative returns do read a price, the manual one. */
   it("lets the informative returns read a price, which is what they are for", () => {
     const graph = importGraph();
     const m720 = join(domainSrc, "informative", "m720.ts");
-    const prices = join(domainSrc, "projections", "prices.ts");
-    expect(reachableFrom(graph, m720).get(prices)).toBeDefined();
+    const leaf = join(domainSrc, "projections", "manual-price.ts");
+    expect(reachableFrom(graph, m720).get(leaf)).toBeDefined();
     expect(listTsFiles(join(domainSrc, "informative")).length).toBeGreaterThan(4);
+  });
+
+  /**
+   * Quotes never enter the state of the ledger nor `Settings` (feature 013,
+   * §6.4 (a) and §6.5 (b)), which the 720 reads. Looking for a type of quote
+   * would let a field with the type written inline through, so the keys
+   * themselves are frozen: a new one turns this red until somebody adds it
+   * here by hand, knowingly.
+   */
+  /**
+   * The reading of keys cannot be dodged by a key it does not see (second
+   * pass of the review of PR #78): an index signature, whatever its form,
+   * lets any key through, so it is a failure of the frozen list.
+   */
+  it("reads an index signature as a key it refuses", () => {
+    const probe = join(repoRoot, "tests", "fixtures", "architecture-013", "index-signature.ts.txt");
+    expect(interfaceKeys(probe, "Probe")).toEqual([
+      "plain",
+      "[index signature]",
+      "quoted",
+      "[index signature]",
+    ]);
+  });
+
+  it("freezes the keys of LedgerState and Settings", () => {
+    const state = interfaceKeys(join(domainSrc, "projections", "state.ts"), "LedgerState");
+    expect(state).toEqual([
+      "accounts",
+      "assets",
+      "settingsHistory",
+      "fiscalSettings",
+      "positions",
+      "cash",
+      "fxRates",
+      "acquisitions",
+      "lots",
+      "lotJournal",
+      "lotCounts",
+      "gains",
+      "income",
+      "inKindIncome",
+      "valuations",
+      "orders",
+      "transferRequests",
+      "theses",
+      "filings",
+      "fingerprintWaivers",
+      "reversed",
+      "warnings",
+      "invalid",
+      "fingerprints",
+      "positionOf",
+      "usage",
+    ]);
+    // The state as it is built is contrasted too, in the domain's own tests
+    // (`test/projections/state-keys.test.ts`), which no reading of the source
+    // can dodge.
+    const settings = interfaceKeys(join(domainSrc, "settings", "settings.ts"), "Settings");
+    expect(settings).toEqual([
+      "fiscal_date_rule",
+      "wash_sale_window",
+      "income_category",
+      "wash_sale_window_days",
+      "wash_sale_transfer_counts",
+      "savings_offset_limit_pct",
+      "loss_carryforward_years",
+      "treaty_withholding_pct",
+      "target_weights",
+      "deviation_threshold_pp",
+      "satellite_min_weight_pct",
+      "monthly_contribution_eur",
+      "bucket_pct_of_contribution",
+      "bucket_max_cumulative_contribution",
+      "bucket_stop_loss_pct",
+      "bucket_max_weight_pct",
+      "bucket_benchmark_asset_id",
+      "stale_price_days",
+      "model_720_threshold_eur",
+      "model_720_increase_eur",
+      "model_720_alert_threshold_eur",
+      "model_721_threshold_eur",
+      "model_721_increase_eur",
+      "model_721_alert_threshold_eur",
+      "renta_season_start",
+      "renta_season_end",
+      "savings_tax_brackets",
+      "tax_residence",
+      "notification_email",
+      "job_frequencies",
+      "transfer_max_days",
+    ]);
+  });
+
+  /**
+   * And the correspondence of symbols never enters the catalogue of the ledger
+   * (ADR-0031, amendment): a full snapshot `asset_updated` written by an old
+   * client would erase it. It lives in `prices/symbols.json`; the fields of an
+   * asset are frozen here, so a `price_symbols` added to them turns this red.
+   */
+  it("keeps the symbols of the prices out of the fields of an asset", () => {
+    expect(interfaceKeys(join(domainSrc, "schema", "events.ts"), "AssetFields")).toEqual([
+      "asset_id",
+      "asset_type",
+      "book",
+      "asset_class",
+      "isin",
+      "ticker",
+      "name",
+      "currency",
+      "ter",
+      "transferable",
+      "reference_etf_id",
+      "market",
+      "issuer_country",
+      "active",
+    ]);
+  });
+
+  /** And nothing that builds the state or the settings knows about prices. */
+  it("builds no state and no settings from anything that knows prices", () => {
+    const graph = importGraph();
+    const roots = priceRoots();
+    const builders = [
+      join(domainSrc, "projections", "project-ledger.ts"),
+      join(domainSrc, "projections", "state.ts"),
+      ...listTsFiles(join(domainSrc, "settings")),
+    ];
+    const violations = builders
+      .map((file) => priceReachedFrom(graph, file, roots))
+      .filter((chain): chain is string[] => chain !== undefined)
+      .map(asChain);
+    expect(violations).toEqual([]);
+  });
+});
+
+/**
+ * The guards above read the graph of **static** imports. A dynamic `import()`
+ * is invisible to it, so one in the domain would dodge every one of them
+ * (feature 013, §6.5 (c)). None exists; none may.
+ */
+describe("architecture: the graph the guards read is the whole graph", () => {
+  it("uses no dynamic import in the domain", () => {
+    const violations = listTsFiles(domainSrc)
+      .filter((file) =>
+        /\bimport\s*\(/.test(
+          readFileSync(file, "utf8")
+            .replace(/\/\*[\s\S]*?\*\//g, " ")
+            .replace(/\/\/[^\n]*/g, " "),
+        ),
+      )
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
   });
 });
 
@@ -1065,33 +1342,102 @@ describe("architecture: the ECB is not in the barrel", () => {
   });
 });
 
-describe("architecture: the ECB is downloaded by the console only", () => {
+describe("architecture: the automatic prices are not in the barrel", () => {
   /**
-   * The web downloads nothing from a third party (ADR-0028, ADR-0029): **the
-   * addresses of the ECB live in `@atlas/adapters`, outside every subpath the
-   * web imports, and never in the domain**, which the web bundles whole. The
-   * check of origins of the bundle catches a URL that reaches the output; this
-   * catches it in the source, before, and also without its scheme.
+   * Feature 013: nothing of the automatic prices on the boot path of the web.
+   * They live behind a door of their own (`@atlas/domain/quotes`), like the
+   * ECB; `check-bundle.mjs` checks the real output, and this the source.
    */
-  it("keeps the ECB's addresses out of the domain and of everything the web bundles", () => {
-    const adapters = join(repoRoot, "packages", "adapters", "src");
-    const webReachable = [
-      ...listTsFiles(domainSrc),
-      ...listSourceFiles(webSrc),
-      join(adapters, "ledger-store", "blob.ts"),
-      ...listSourceFiles(join(adapters, "ledger-store", "browser")),
-      ...listSourceFiles(join(adapters, "clock")),
-      ...listSourceFiles(join(adapters, "random")),
-    ];
+  it("keeps the quotes and the ports of prices out of index.ts", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    const offenders = specifiersOf(barrel).filter((specifier) =>
+      /\.\/quotes\/|\.\/quotes\.js|\.\/ports\/price-(?:source|store)\.js/.test(specifier),
+    );
+    expect(offenders).toEqual([]);
+    const door = specifiersOf(readFileSync(join(domainSrc, "quotes.ts"), "utf8"));
+    expect(door.some((specifier) => specifier.includes("./quotes/"))).toBe(true);
+  });
+});
+
+describe("architecture: the ECB and the prices are downloaded by the console only", () => {
+  const adapters = join(repoRoot, "packages", "adapters");
+  const adaptersSrc = join(adapters, "src");
+
+  /**
+   * Every file of the adapters the web can bundle: what each subpath of
+   * `exports` points at, **read off `package.json`, excluding `"."`** (the
+   * barrel of Node), and everything those files import, at any depth. A
+   * subpath added tomorrow is looked at without anybody writing it here
+   * (feature 013, §6.4 (c)).
+   */
+  const webReachableAdapters = (): string[] => {
+    const exported = JSON.parse(readFileSync(join(adapters, "package.json"), "utf8"))
+      .exports as Record<string, { types: string }>;
+    const pending = Object.entries(exported)
+      .filter(([subpath]) => subpath !== ".")
+      .map(([, target]) =>
+        join(adaptersSrc, target.types.replace(/^\.\/dist\//, "").replace(/\.d\.ts$/, ".ts")),
+      );
+    const seen = new Set<string>();
+    while (pending.length > 0) {
+      const file = pending.pop() as string;
+      if (seen.has(file)) {
+        continue;
+      }
+      seen.add(file);
+      for (const specifier of specifiersOf(readFileSync(file, "utf8"))) {
+        if (specifier.startsWith(".")) {
+          pending.push(resolve(dirname(file), specifier).replace(/\.js$/, ".ts"));
+        }
+      }
+    }
+    return [...seen];
+  };
+
+  /**
+   * The web downloads nothing from a third party (ADR-0028, ADR-0029,
+   * ADR-0031): **the addresses of the ECB and of the APIs of prices live in
+   * `@atlas/adapters`, outside every subpath the web imports, and never in the
+   * domain**, which the web bundles whole. The check of origins of the bundle
+   * catches a URL that reaches the output; this catches it in the source,
+   * before, and also without its scheme. The hosts of the four sources ADR-0031
+   * names are all here, the two that left the feature included (D-Q5, D-Q6):
+   * none of them may reach the web.
+   */
+  it("keeps the addresses of the ECB and of the sources of prices out of what the web bundles", () => {
+    const reachable = webReachableAdapters();
+    expect(reachable.some((file) => file.endsWith(join("browser", "folder.ts")))).toBe(true);
+    const webReachable = [...listTsFiles(domainSrc), ...listSourceFiles(webSrc), ...reachable];
+    const hosts =
+      /["'`][^"'`\n]*(?:ecb\.europa\.eu|eodhd\.com|eodhistoricaldata\.com|alphavantage\.co|api\.coingecko\.com|openfigi\.com)/;
     const violations = webReachable
       // Inside a string, with or without its scheme. Comments are not stripped
       // first: a line comment starts with the `//` of every `https://`, and
       // stripping them hid the very address this looks for.
-      .filter((file) => /["'`][^"'`\n]*ecb\.europa\.eu/.test(readFileSync(file, "utf8")))
+      .filter((file) => hosts.test(readFileSync(file, "utf8")))
       .map((file) => relative(repoRoot, file));
     expect(violations).toEqual([]);
-    // And the one place they do live is where the test above does not look.
-    expect(readFileSync(join(adapters, "ecb", "source.ts"), "utf8")).toContain("ecb.europa.eu");
+    // And the places they do live are where the test above does not look.
+    expect(readFileSync(join(adaptersSrc, "ecb", "source.ts"), "utf8")).toContain("ecb.europa.eu");
+    expect(readFileSync(join(adaptersSrc, "prices", "eodhd.ts"), "utf8")).toContain("eodhd.com");
+    expect(readFileSync(join(adaptersSrc, "prices", "alpha-vantage.ts"), "utf8")).toContain(
+      "alphavantage.co",
+    );
+    expect(reachable.some((file) => file.includes(join("src", "prices")))).toBe(false);
+  });
+
+  /** And the web never reads the keys: nothing it bundles names the file or its reader. */
+  it("never lets the web reach the file of the keys", () => {
+    const offenders = [
+      ...listTsFiles(domainSrc),
+      ...listSourceFiles(webSrc),
+      ...webReachableAdapters(),
+    ]
+      .filter((file) =>
+        /secrets\.json|readSecrets|prices\/secrets/.test(readFileSync(file, "utf8")),
+      )
+      .map((file) => relative(repoRoot, file));
+    expect(offenders).toEqual([]);
   });
 });
 

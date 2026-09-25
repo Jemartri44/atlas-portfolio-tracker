@@ -12,26 +12,16 @@ import {
   coreWeights,
   costSummary,
   Decimal,
-  type PriceLookup,
   settingsAt,
   type Warning,
 } from "@atlas/domain";
 import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { eur, pct, pp } from "../output/format.js";
+import { PRICE_HEADERS, priceColumns, priceJson, priceNotes } from "../output/prices.js";
 import { table } from "../output/table.js";
+import { loadQuotes, sayNotes } from "../prices/load.js";
 import { dateFlag, loadForQuery, renderQuery } from "./shared.js";
-
-const priceCell = (price: PriceLookup | undefined): string[] =>
-  price === undefined
-    ? ["sin precio", "", "", "", ""]
-    : [
-        price.unit_value.toString(),
-        price.currency,
-        price.fx_rate.toString(),
-        price.date,
-        `${price.age_days}${price.stale ? " ⚠" : ""}`,
-      ];
 
 /** Warnings at the foot of the table, in the one format the CLI uses for them. */
 const warningLines = (warnings: readonly Warning[]): string[] =>
@@ -60,7 +50,7 @@ export const weightsText = (weights: CoreWeights): string => {
     row.asset_id,
     row.asset_class,
     row.quantity.toString(),
-    ...priceCell(row.price),
+    ...priceColumns(row.price),
     eur(row.value_eur),
     pct(row.weight_pct),
     pct(row.target_pct),
@@ -75,23 +65,20 @@ export const weightsText = (weights: CoreWeights): string => {
     "",
     "",
     "",
+    "",
     eur(subtotal.value_eur),
     subtotal.partial ? PARTIAL : pct(subtotal.weight_pct),
     pct(subtotal.target_pct),
     pp(subtotal.deviation_pp),
   ]);
   return [
-    `Pesos del núcleo a ${weights.date} (precios manuales; informativos, nunca fiscales):`,
+    `Pesos del núcleo a ${weights.date} (precios informativos, nunca fiscales; gana el más reciente, y con la misma fecha el manual):`,
     table(
       [
         "activo",
         "clase",
         "cantidad",
-        "precio",
-        "divisa",
-        "tipo BCE",
-        "precio de",
-        "antigüedad",
+        ...PRICE_HEADERS,
         "valor EUR",
         "peso",
         "objetivo",
@@ -109,6 +96,7 @@ export const weightsText = (weights: CoreWeights): string => {
           "",
           "",
           "",
+          "",
           eur(weights.total_eur),
           totalWeightCell(weights),
           "",
@@ -116,6 +104,7 @@ export const weightsText = (weights: CoreWeights): string => {
         ],
       ],
     ),
+    ...priceNotes(weights.rows.map((row) => row.price)),
     ...warningLines(weights.warnings),
   ].join("\n");
 };
@@ -130,12 +119,7 @@ const jsonWeights = (weights: CoreWeights) => ({
     asset_id: row.asset_id,
     asset_class: row.asset_class,
     quantity: row.quantity.toString(),
-    unit_value: row.price?.unit_value.toString(),
-    currency: row.price?.currency,
-    fx_rate: row.price?.fx_rate.toString(),
-    price_date: row.price?.date,
-    price_age_days: row.price?.age_days,
-    price_stale: row.price?.stale,
+    price: priceJson(row.price),
     value_eur: row.value_eur?.amount.toString(),
     weight_pct: row.weight_pct?.toString(),
     target_pct: row.target_pct.toString(),
@@ -160,7 +144,9 @@ export const weightsCommand = async (
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
   const date = dateFlag(ctx, flags);
   const { state } = await loadForQuery(ctx, date);
-  const weights = coreWeights(state, date, settingsAt(state, date).settings);
+  const quotes = await loadQuotes(ctx, state);
+  const weights = coreWeights(state, date, settingsAt(state, date).settings, quotes.external);
+  sayNotes(ctx, quotes.notes);
   renderQuery(ctx, state, jsonWeights(weights), weightsText(weights));
   return 0;
 };
@@ -214,11 +200,15 @@ export const contributeCommand = async (
   const date = dateFlag(ctx, flags);
   const { state } = await loadForQuery(ctx, date);
   const amount = stringFlag(flags, "amount");
+  const quotes = await loadQuotes(ctx, state);
+  const settings = settingsAt(state, date).settings;
   const plan = contributionPlan(state, {
     ...(amount === undefined ? {} : { amount }),
     date,
-    settings: settingsAt(state, date).settings,
+    settings,
+    ...(quotes.external === undefined ? {} : { external: quotes.external }),
   });
+  sayNotes(ctx, quotes.notes);
   renderQuery(
     ctx,
     state,
@@ -283,7 +273,16 @@ export const costsCommand = async (
   assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
   const date = dateFlag(ctx, flags);
   const { state, events } = await loadForQuery(ctx, date);
-  const summary = costSummary(state, events, date, settingsAt(state, date).settings, date);
+  const quotes = await loadQuotes(ctx, state);
+  sayNotes(ctx, quotes.notes);
+  const summary = costSummary(
+    state,
+    events,
+    date,
+    settingsAt(state, date).settings,
+    date,
+    quotes.external,
+  );
   const { rows, totals } = summary.core;
   const text = [
     `Costes a ${date}.`,

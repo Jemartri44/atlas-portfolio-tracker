@@ -101,7 +101,9 @@ describe("atlas weights", () => {
     const h = await portfolio();
     expect(await h.exec(["weights", "--date", DATE])).toBe(0);
     expect(h.text()).toContain("Pesos del núcleo a 2027-06-30");
-    expect(h.text()).toMatch(/ast_world\s+equity\s+6\s+100\s+EUR\s+1\s+2027-06-30\s+0\s+600/);
+    expect(h.text()).toMatch(
+      /ast_world\s+equity\s+6\s+100\s+EUR\s+1\s+2027-06-30\s+0\s+manual\s+600/,
+    );
     expect(h.text()).toContain("[equity]");
     expect(h.text()).toContain("TOTAL");
     expect(h.text()).toContain("1000");

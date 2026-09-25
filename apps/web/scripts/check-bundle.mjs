@@ -181,8 +181,36 @@ const dist = join(webRoot, "dist");
  * final measure is **73,71: 75.483 bytes, 26 above block 4** (75.457), which
  * is the new names in the table of lazy chunks of the entry. The margin is the
  * usual one, a tenth.
+ *
+ * **Feature 013, the price gate (2026-09-24): measured 75.676 bytes, ceiling
+ * 75.829 = 73,8 KB + 258 bytes, exactly what the change measured (decision
+ * D-Q7 of the direction: exactly the measure, capped at +0,3 KB, in its own
+ * commit).** Byte by byte against `develop` (75.418): the domain chunk
+ * **+249** — P2 in `priceAt` and `manualPrices` (the more recent date wins,
+ * the manual one on the same date), `unit_value_eur` optional with the reason
+ * it is missing, the warning `price_without_eur_value` said by the weights and
+ * the bucket, the gap of the index that says why, and the manual leaf the 720
+ * reads (`manual-price.ts`, which the gate imports: the valuations are read in
+ * one place, decision D-Q8) —; the entry **+9**, the new names in the table of
+ * lazy chunks. **Nothing of the download or of the store of prices is in the
+ * boot**: `quotes/`, its door and the reader of the web are in LAZY_ONLY from
+ * their first commit. The trend: 73,5 → 73,9 → 73,7 in feature 012; 73,7 →
+ * 73,9 in this one.
+ *
+ * **Review of PR #78 (2026-09-25): the figure above was wrong, and the ceiling
+ * now holds the cap itself.** At the head of the reviewed branch the review
+ * measured the boot at **+303** over `develop` (75.418), not the +294 this
+ * comment said: the +258 of the gate, the `external?` of `contributionPlan`,
+ * and the entry naming the lazy chunks of the screens of prices. After the
+ * review (the price with euros wins over a newer one without them, the note
+ * of the approximation said by `contributionPlan` itself, and the screens
+ * loading the quotes on demand so that the entry does not preload them):
+ * **75.690 bytes, +272** — domain chunk +265, entry +7. The ceiling is set
+ * to `develop` plus the cap of decision D-Q7 (+0,3 KB, 307 bytes), 75.725,
+ * so that going over the cap stops the build instead of a comment. The trend:
+ * 73,7 → 73,9 in this feature.
  */
-const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -466,8 +494,46 @@ const BOOT_BUDGET_GZIP_BYTES = 73.8 * 1024;
  * writing, conditionally, and refusing a draft that vanished instead of
  * recording it as new (+0,4 across `drafts`, the store of drafts and the
  * Spanish of `draft_changed`), all lazy. The boot does not move (73,7).
+ *
+ * **Feature 013, block 2 (2026-09-24): measured 263,03 (269.344 bytes),
+ * ceiling 263,2.** Only the Spanish of the new codes of the domain of prices
+ * (the files of prices that do not read, the configuration, the status, the
+ * symbols, the weights that rest on an approximation and the quote without a
+ * value in euros), which the messages test demands in both interfaces from the
+ * commit that adds the codes: **+0,9** over the 262,1 of `develop` across the
+ * two catalogues and the boot of the gate (that one measured apart, in the
+ * boot). The screens of the prices come in block 5 and will be measured then;
+ * this is not the final measure of the feature.
+ *
+ * **Feature 013, block 5 (2026-09-25): measured 267,19 (273.607 bytes),
+ * ceiling 267,5** — the rule of always (decision P10): the measure plus a
+ * small margin, in a commit of its own. Chunk by chunk against `develop`
+ * (262,1): the door of the automatic prices and its reader, a chunk of its
+ * own (`quotes`, **+2,1**: the lines, the close in force, the ECB conversion,
+ * the approximation, the import by hand); the card «Precios automáticos» of
+ * Ajustes (**+0,9**, `ajustes`); the Spanish of the codes of prices
+ * (**+0,5** across `warnings` and `errors`); the charts chunk, which carries
+ * the price marks of the shared components (**+0,5**); the gate in the domain
+ * (**+0,3**, the boot, measured apart); and the three screens that pass the
+ * quotes to the gate and say their problems (**+0,5** across `cartera`,
+ * `PageHeader`, `core`, `history` and `EventForm`). The boot stays in its own
+ * ceiling. The trend: 237,9 → 262,1 in feature 012; 262,1 → 267,2 in this one.
+ *
+ * **Feature 013, after looking at the screens (2026-09-25): measured 267,47
+ * (273.891 bytes), ceiling 267,8.** What the screenshots found missing, all
+ * lazy: the notices of a quote without its value in euros and of a weight
+ * resting on an approximation in the card of the weights, which said
+ * «falta el precio» of an asset that had one, and the column «Origen» of the
+ * tables of assets on a wide screen, where the source of a price was not said
+ * (+0,3 across `cartera`, `cubo` and the price components).
+ *
+ * **Review of PR #78 (2026-09-25): measured 267,79 (274.219 bytes), ceiling
+ * 268,1.** Deleting the prices imported by hand, the other files of `prices/`
+ * set aside on import, the newer quote without euros said beside a price, and
+ * the note of the approximation in the card of the contribution (+0,3), less
+ * what the screens stopped preloading.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 263.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 268.1 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -603,6 +669,15 @@ const LAZY_ONLY = [
   { path: "/packages/adapters/src/ledger-store/browser/transfer.ts", what: "exportar e importar" },
   // Block 6: the correction chain of the rates after a change of rule.
   { path: "/src/ledger/rate-corrections.ts", what: "la corrección de los tipos del BCE" },
+  // Feature 013: **nothing of the automatic prices on the boot path**, from its
+  // first commit. The door, the folder of the domain and the reader of the web.
+  { path: "/packages/domain/src/quotes/", what: "los precios automáticos" },
+  { path: "/packages/domain/src/quotes.ts", what: "la puerta de los precios automáticos" },
+  {
+    path: "/packages/adapters/src/ledger-store/browser/prices.ts",
+    what: "la lectura de los precios",
+  },
+  { path: "/src/prices/", what: "los precios automáticos de la web" },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */

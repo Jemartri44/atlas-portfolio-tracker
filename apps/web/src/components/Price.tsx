@@ -25,6 +25,14 @@ export interface PriceInfo {
   ageDays?: number | undefined;
   /** Older than `stale_price_days`: shown, with its age, never hidden. */
   stale: boolean;
+  /** «manual», or the source of an automatic close (feature 013). */
+  priceOrigin?: string | undefined;
+  /** An approximation through the reference ETF: marked wherever it is shown (P3). */
+  approximate?: boolean | undefined;
+  /** Why the quote has no value in euros; it is then never added up in euros. */
+  eurMissing?: string | undefined;
+  /** A more recent quote without a value in euros, in words: shown beside the price used. */
+  newerQuote?: string | undefined;
 }
 
 /**
@@ -39,6 +47,27 @@ export const Price = (props: { price: PriceInfo; marked?: boolean }): JSX.Elemen
       unit
       missingReason="no hay precio registrado a esa fecha"
     />
+    <Show when={props.price.approximate === true}>
+      <span class="stale-mark" title="Aproximado con el movimiento de su ETF de referencia">
+        ≈<span class="sr-only"> aproximado</span>
+      </span>
+    </Show>
+    <Show when={props.price.eurMissing}>
+      {(reason) => (
+        <span class="stale-mark" title={`Sin valor en euros: ${reason()}`}>
+          <Icon name="caution" class="icon-sm" />
+          <span class="sr-only">sin valor en euros</span>
+        </span>
+      )}
+    </Show>
+    <Show when={props.price.newerQuote}>
+      {(newer) => (
+        <span class="stale-mark" title={`Se usa el último precio con valor en euros: ${newer()}`}>
+          <Icon name="info" class="icon-sm" />
+          <span class="sr-only">{newer()}</span>
+        </span>
+      )}
+    </Show>
     <Show when={props.marked === true && props.price.stale}>
       <span
         class="stale-mark"
@@ -64,6 +93,7 @@ export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX
   <Show when={props.price.unitValue !== undefined}>
     <span>
       <Price price={props.price} />
+      <Show when={props.price.priceOrigin}>{(origin) => <> · {origin()}</>}</Show>
       <Show when={props.price.priceDate}>{(date) => <> · {formatDate(date())}</>}</Show>
       <Show when={props.withAge === true && props.price.ageDays !== undefined}>
         {" "}
@@ -71,6 +101,28 @@ export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX
         {props.price.stale ? ", caducado" : ""})
       </Show>
       <Show when={props.withAge !== true && props.price.stale}> (caducado)</Show>
+      <Show when={props.price.approximate === true}> · aproximado con su ETF de referencia</Show>
+      <Show when={props.price.eurMissing}>
+        {(reason) => <> · falta su valor en euros ({reason()})</>}
+      </Show>
+      <Show when={props.price.newerQuote}>{(newer) => <> · {newer()}</>}</Show>
     </span>
+  </Show>
+);
+
+/**
+ * Where a price comes from and of which day, for a column of a wide table
+ * (feature 013): «EODHD · 24/09/2026», «manual · 15/09/2026». On a phone the
+ * same is said by `PriceDetail`.
+ */
+export const PriceSource = (props: { price: PriceInfo }): JSX.Element => (
+  <Show when={props.price.priceDate}>
+    {(date) => (
+      <span class="meta">
+        {props.price.priceOrigin ?? ""}
+        {props.price.priceOrigin === undefined ? "" : " · "}
+        {formatDate(date())}
+      </span>
+    )}
   </Show>
 );

@@ -13,7 +13,13 @@ import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { type ExternalPrices, type PriceLookup, positionValueOf, priceAt } from "./prices.js";
+import {
+  type ExternalPrices,
+  type PriceLookup,
+  positionValueOf,
+  priceAt,
+  warnWithoutEur,
+} from "./prices.js";
 import type { FiscalLot, LedgerState, Thesis, ThesisLeg, ThesisView, Warning } from "./state.js";
 import { openThesisOn, theses } from "./theses.js";
 
@@ -196,6 +202,9 @@ export const bucketPositions = (
     const rowValue = positionValueOf(price, quantity);
     if (rowValue === undefined) {
       missing.push(assetId);
+      if (price !== undefined) {
+        warnWithoutEur(warnings, price);
+      }
     } else {
       value = value.add(rowValue);
     }
@@ -302,20 +311,20 @@ const benchmarkEquivalentOf = (
       ? (lastFiscalDateOf(thesis.sells) ?? (thesis.closed_at as CivilDate))
       : date;
   const endPrice = priceAt(state, benchmarkId, end, settings, external);
-  if (endPrice === undefined) {
+  const endEur = endPrice?.unit_value_eur;
+  if (endEur === undefined) {
     gaps.push({ reason: "no_price", asset_id: benchmarkId, date: end });
     return undefined;
   }
   let equivalent = Money.zero(EUR);
   for (const leg of thesis.buys) {
     const price = priceAt(state, benchmarkId, leg.fiscal_date, settings, external);
-    if (price === undefined) {
+    const eur = price?.unit_value_eur;
+    if (eur === undefined) {
       gaps.push({ reason: "no_price", asset_id: benchmarkId, date: leg.fiscal_date });
       return undefined;
     }
-    equivalent = equivalent.add(
-      leg.amount_eur.mul(endPrice.unit_value_eur.amount.div(price.unit_value_eur.amount)),
-    );
+    equivalent = equivalent.add(leg.amount_eur.mul(endEur.amount.div(eur.amount)));
   }
   return equivalent;
 };

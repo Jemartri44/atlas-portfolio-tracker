@@ -15,7 +15,7 @@
 // would these weights change", so it lives next to them.
 
 import type { LedgerState, Settings } from "@atlas/domain";
-import { type JSX, Show } from "solid-js";
+import { For, type JSX, Show } from "solid-js";
 import { Allocation, type AllocationSegment } from "../../components/chart/index.js";
 import {
   Amount,
@@ -23,15 +23,20 @@ import {
   DataTable,
   Disclosure,
   Figure,
+  Notice,
   Pending,
   Price,
   PriceDetail,
+  PriceSource,
   Section,
   Tag,
 } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { pricesOf } from "../../format/messages/prose.js";
+import { describeWarning } from "../../format/messages/warnings.js";
+import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import { formatDecimalString } from "../../format/number.js";
+import { usePrivacy } from "../../ledger/state.js";
 import type { WeightRow, WeightsView } from "../../view-models/core/index.js";
 import { ClassRows, ClassTable } from "./Classes.jsx";
 import { Gauge } from "./Gauge.jsx";
@@ -58,6 +63,11 @@ const assetColumns = (threshold: string | undefined): readonly DataColumn<Weight
     card: "sub",
     cell: (row) => <Price price={row} marked />,
     cardCell: (row) => <PriceDetail price={row} withAge />,
+  },
+  {
+    key: "source",
+    header: "Origen",
+    cell: (row) => <PriceSource price={row} />,
   },
   {
     key: "value",
@@ -114,9 +124,12 @@ interface WeightsCardProps {
   settings: Settings;
   /** Funds a merger or a class change converted away: nothing of them to transfer. */
   absorbed: ReadonlySet<string>;
+  /** The catalogue's names, for the notes of the automatic prices. */
+  names?: NameIndex;
 }
 
 export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
+  const privacy = usePrivacy();
   const segments = (): AllocationSegment[] =>
     props.view.classes.map((row) => ({
       key: row.assetClass,
@@ -141,7 +154,14 @@ export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
       >
         <Allocation segments={segments()} />
 
-        <Show when={props.view.partial}>
+        <For each={props.view.priceNotes}>
+          {(warning) => (
+            <Notice severity="caution">
+              {describeWarning(warning, { names: props.names ?? NO_NAMES, privacy: privacy() })}
+            </Notice>
+          )}
+        </For>
+        <Show when={props.view.partial && props.view.missing.length > 0}>
           <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
             {pricesOf(props.view.missing)} a {formatDate(props.view.date)}: los pesos no se calculan
             sobre un total parcial.
