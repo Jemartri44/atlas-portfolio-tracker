@@ -4,13 +4,14 @@
 import { describe, expect, it } from "vitest";
 import { fingerprintOfEvents, resealFilings } from "../../src/filings/fingerprint.js";
 import type { BuyEvent, LedgerEvent, TaxReturnFiledEvent } from "../../src/schema/events.js";
+import { unresolvedHeld } from "../../src/sync/held.js";
 import { initRefusal, joinWithMine, replaceWithRemote } from "../../src/sync/join.js";
 import {
   canonicalForRewrite,
   classifyAgainst,
   REWRITTEN_BY_COMPACT,
 } from "../../src/sync/rewrite.js";
-import { baseLedger, byTradeDate, device, linesOf, reorderable } from "./helpers.js";
+import { baseLedger, byTradeDate, correction, device, linesOf, reorderable } from "./helpers.js";
 
 describe("classifying against a rewritten remote (V2, V15)", () => {
   const { events } = baseLedger();
@@ -70,9 +71,9 @@ describe("classifying against a rewritten remote (V2, V15)", () => {
       "t",
     );
     expect(join.map((record) => record.kind === "held" && record.reason.code)).toEqual([
-      "absent_at_join",
-      "absent_at_join",
       "differs_at_join",
+      "absent_at_join",
+      "absent_at_join",
     ]);
     const differs = replaceWithRemote(
       local,
@@ -82,6 +83,34 @@ describe("classifying against a rewritten remote (V2, V15)", () => {
     );
     expect(differs.map((record) => record.kind === "held" && record.reason.code)).toEqual([
       "differs_after_rewrite",
+    ]);
+  });
+});
+
+describe("downloading again never splits a pair (NB5 of the review of PR #83)", () => {
+  it("holds a reversal and its correction back as one unit", () => {
+    const { events } = baseLedger();
+    const b = device(700);
+    const deposit = b.deposit({ account_id: "acc_fund" });
+    const pair = correction(b, deposit, { amount: "9" });
+    const local = {
+      lines: linesOf([...events, deposit, ...pair]),
+      events: [...events, deposit, ...pair],
+    };
+    const records = replaceWithRemote(local, [...events, deposit], "rewrite", "t");
+    const units = unresolvedHeld(records);
+    expect(units.map((unit) => [unit.reason.code, unit.lines])).toEqual([
+      ["absent_after_rewrite", linesOf(pair)],
+    ]);
+    const changed = replaceWithRemote(
+      local,
+      [...events, { ...deposit, amount: "1" } as LedgerEvent],
+      "join",
+      "t",
+    );
+    expect(unresolvedHeld(changed).map((unit) => [unit.reason.code, unit.lines.length])).toEqual([
+      ["differs_at_join", 1],
+      ["absent_at_join", 2],
     ]);
   });
 });

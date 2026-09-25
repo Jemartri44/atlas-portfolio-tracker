@@ -110,6 +110,7 @@ const correctsOf = (raw: UnknownRecord): unknown => raw.corrects_id;
 const readLine = (
   line: string,
   rules: RemoteRules,
+  entry?: AppendEntry,
 ): { event: LedgerEvent; raw: UnknownRecord } | Rejection => {
   let raw: unknown;
   try {
@@ -125,6 +126,15 @@ const readLine = (
       code: "schema_version_unsupported",
       details: { found: raw.schema_version, supported: rules.schema.version },
     };
+  }
+  // Row 3, **before** the line is decoded (`docs/api.md` §5.2; review of PR
+  // #83, non-blocking 7): a declaration the line does not admit is said as
+  // such, whatever else is wrong with the line.
+  if (
+    (entry?.has_correction === true && raw.type !== "reversal") ||
+    (entry?.chain_continues === true && raw.corrects_id === undefined)
+  ) {
+    return { code: "pair_declaration_invalid", details: {} };
   }
   let event: LedgerEvent;
   try {
@@ -192,18 +202,12 @@ const formUnits = (
     };
     for (;;) {
       const entry = entries[index] as AppendEntry;
-      const read = readLine(entry.line, rules);
+      const read = readLine(entry.line, rules, entry);
       const firstId = members[0]?.event.id;
       if ("code" in read) {
         return stop(read, firstId);
       }
       const id = firstId ?? read.event.id;
-      if (
-        (entry.has_correction === true && read.event.type !== "reversal") ||
-        (entry.chain_continues === true && correctsOf(read.raw) === undefined)
-      ) {
-        return stop({ code: "pair_declaration_invalid", details: {} }, id);
-      }
       const position = members.length;
       if (position === 0 && correctsOf(read.raw) !== undefined) {
         // A correction with no declared reversal right before it (P7).

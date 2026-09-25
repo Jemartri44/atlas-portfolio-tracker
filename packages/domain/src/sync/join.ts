@@ -10,6 +10,7 @@ import type { LedgerEvent } from "../schema/events.js";
 import { type HeldRecord, holdRecords } from "./held.js";
 import type { Refusal } from "./permission.js";
 import { classifyAgainst } from "./rewrite.js";
+import { unitsOf } from "./units.js";
 
 /** The events of a ledger that are invalid now, with their code. */
 const invalidOf = (events: readonly LedgerEvent[]): { id: string; code: string }[] => {
@@ -71,6 +72,13 @@ export const replaceWithRemote = (
   at: string,
 ): HeldRecord[] => {
   const { absent, differs } = classifyAgainst(local, remote);
+  const kept = new Set([...absent, ...differs]);
+  const differing = new Set(differs);
+  // In local order, grouped as the queue is: a reversal and its correction are
+  // held back **as one unit**, never split (non-blocking 5 of the review of
+  // PR #83), so neither can be redone or confirmed without the other.
+  const lines = local.lines.filter((line) => kept.has(line));
+  const events = local.events.filter((_event, index) => kept.has(local.lines[index] as string));
   // Four literals, each in its own place: what the remote lacks and what it
   // has otherwise are two different things to look at, and so are a rewrite
   // and a join.
@@ -84,8 +92,12 @@ export const replaceWithRemote = (
           absent: { code: "absent_after_rewrite", details: {} },
           differs: { code: "differs_after_rewrite", details: {} },
         };
-  return [
-    ...absent.flatMap((line) => holdRecords([line], origin, reasons.absent, at)),
-    ...differs.flatMap((line) => holdRecords([line], origin, reasons.differs, at)),
-  ];
+  return unitsOf(lines, events).flatMap((unit) =>
+    holdRecords(
+      unit.lines,
+      origin,
+      unit.lines.some((line) => differing.has(line)) ? reasons.differs : reasons.absent,
+      at,
+    ),
+  );
 };

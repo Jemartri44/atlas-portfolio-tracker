@@ -182,6 +182,17 @@ describe("acceptAppend: the table of §5.2, in its order", () => {
     });
   });
 
+  it("row 3 goes before row 4: a declaration on an invalid deposit is pair_declaration_invalid", () => {
+    const b = device(450);
+    const line = encodeLine(b.deposit({ account_id: "acc_fund" })).replace(
+      '"amount":"5000"',
+      '"amount":5000',
+    );
+    expect(acceptAppend(remote, [{ line, has_correction: true }], rules).rejected).toMatchObject({
+      code: "pair_declaration_invalid",
+    });
+  });
+
   it("row 4: a line whose shape the domain refuses is line_invalid, with the domain's code", () => {
     const b = device(500);
     const line = encodeLine(b.deposit({ account_id: "acc_fund" })).replace(

@@ -172,6 +172,26 @@ describe.each(kinds)("the client over the %s", (_kind, make) => {
     expect(await bucket.text()).toBe(textOf(shared));
   });
 
+  it("stops, writing nothing, when the remote was rewritten between the upload and reading it again (M12)", async () => {
+    const { bucket, options, one, shared } = await pair(make);
+    await one.record([new Builder(100).deposit("50")]);
+    const before = await one.text();
+    let reads = 0;
+    bucket.onCall = async (what) => {
+      if (what === "read") {
+        reads += 1;
+        if (reads === 2) {
+          await bucket.rewrite(textOf(shared.slice(0, -1)));
+        }
+      }
+    };
+    expect(await syncDevice(one.sync, bucket.as("one"), options)).toMatchObject({
+      status: "stopped",
+      stop: { code: "remote_rewritten" },
+    });
+    expect(await one.text()).toBe(before);
+  });
+
   it("does not upload over a remote this client cannot read (case 6)", async () => {
     const { bucket, options, one, shared } = await pair(make);
     await one.record([new Builder(100).deposit("50")]);
@@ -293,6 +313,11 @@ describe.each(kinds)("the client over the %s", (_kind, make) => {
     });
     expect((await bucket.text()).endsWith(textOf([twin]))).toBe(true);
     expect(await two.text()).toBe(await bucket.text());
+    // Once in the remote, its confirmation is not kept in the marker any more (M26).
+    expect((await two.sync.read()).presence).toMatchObject({
+      present: true,
+      marker: { confirmations: [] },
+    });
   });
 
   it("discards explicitly, and redoes a line by the id sealed before recording it", async () => {
