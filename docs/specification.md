@@ -337,7 +337,7 @@ Trabajo programado que compara las posiciones del libro mayor contra el extracto
 
 ### 9.2 Componentes
 
-> **Diagrama y decisiones vigentes desde ADR-0026, ADR-0027 y ADR-0028 (2026-09-24, Ronda 8).** Cognito desaparece: el acceso es solo con Google, verificado por la propia Lambda (ADR-0027). Cada entorno es una cuenta de AWS miembro dedicada (`atlas-dev`, `atlas-prod`) dentro de una organización, no una pila con sufijo compartiendo cuenta (ADR-0028, detalle en §11.3).
+> **Diagrama y decisiones vigentes desde ADR-0026, ADR-0027 y ADR-0028 (2026-09-24, Ronda 8).** Cognito desaparece: el acceso es solo con Google, verificado por la propia Lambda (ADR-0027). **Desde el 2026-09-25 no hay cuentas miembro dedicadas** (decisión del usuario; ADR-0034): `dev` y `prod` son dos pilas en una cuenta de AWS que el usuario comparte con otros proyectos, separadas por nombre, etiqueta, estado, prefijo de SSM, roles y un límite de permisos por entorno (detalle en §11.3).
 
 ```
 Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
@@ -379,11 +379,11 @@ EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
 
 | Servicio | Límite gratuito mensual | Uso previsto |
 |---|---|---|
-| Lambda | 1M invocaciones, 400.000 GB-segundo | Unos cientos de invocaciones |
-| CloudFront (plan Free de tarifa plana) | 1 M de peticiones, 100 GB de salida, WAF con 5 reglas incluido | Unos MB; qué ocurre al superar el millón de peticiones está **sin verificar** (ADR-0028) |
-| SSM Parameter Store (estándar) | Gratuito | Varios parámetros: token IBKR, secreto de cliente de Google, clave de sesión, claves de las fuentes de precios, destinatario del correo |
+| Lambda | 1M invocaciones, 400.000 GB-segundo, **por cuenta y compartido** con los otros proyectos de la cuenta (ADR-0034) | Unos cientos de invocaciones; si los otros proyectos agotan el nivel gratuito, Atlas paga su parte a precio de lista, céntimos |
+| CloudFront (plan Free de tarifa plana) | 1 M de peticiones, 100 GB de salida, WAF con 5 reglas incluido; **como mucho 3 planes Free por cuenta**, sin ampliación (ADR-0034, F9) | Unos MB. Al superar lo incluido **no hay cargos por exceso**; un exceso sostenido durante meses puede reducir la calidad de entrega (ADR-0034, F9). Con un solo plan Free libre, `dev` va con CloudFront de pago por uso, sin WAF (ADR-0034, fila 19) |
+| SSM Parameter Store (estándar) | Gratuito; cupo de 10.000 parámetros y rendimiento **por cuenta y región, compartidos** (ADR-0034) | Varios parámetros: token IBKR, secreto de cliente de Google, clave de sesión, claves de las fuentes de precios, destinatario del correo, tokens de la consola |
 | Acceso con Google (Lambda propia) | Sin coste de AWS | 1 usuario; sin Cognito |
-| SES (*sandbox*) | 0,10$ por 1.000 correos | ~10 correos/mes ≈ 0,001$ |
+| SES | 0,10$ por 1.000 correos | ~10 correos/mes ≈ 0,001$. El *sandbox* es por cuenta y región y la cuenta compartida puede estar ya fuera: el rol que envía está acotado por IAM al remitente de Atlas y a la dirección del usuario (ADR-0034, fila 12) |
 | S3 (versionado, SSE-S3) | Sin nivel gratuito perpetuo | Unos MB de libro, configuración, histórico del BCE y precios → céntimos al año |
 | EODHD, Alpha Vantage | Planes gratuitos con clave | Cupos diarios (20 y 25 llamadas). CoinGecko, retirada (ADR-0031, tercera enmienda) |
 
@@ -395,9 +395,9 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 **En el Free Plan, cuando se agotan los créditos o vencen los seis meses, la cuenta se cierra automáticamente**, sin factura previa ni periodo de gracia. Quedan 90 días para pasar al Paid Plan y recuperar los datos antes de que se borren.
 
-**Acción obligatoria: pasar al Paid Plan desde el principio.** Con tarjeta asociada y usando solo servicios de coste mínimo, la facturación queda cubierta por los créditos mientras duren y después es mínima, pero la cuenta no se cierra. Esto se aplica a la **cuenta de gestión**, que pasa al Paid Plan **antes** de crear la organización y las dos cuentas miembro dedicadas, `atlas-dev` y `atlas-prod` (ADR-0028, detalle en §11.3). Si una cuenta en el Free Plan puede crear una organización: **sin verificar**; no hace falta saberlo si se sigue este orden.
+**Acción obligatoria: pasar al Paid Plan desde el principio.** Con tarjeta asociada y usando solo servicios de coste mínimo, la facturación queda cubierta por los créditos mientras duren y después es mínima, pero la cuenta no se cierra. Desde el 2026-09-25 Atlas se despliega en una cuenta que el usuario **ya tiene en el Paid Plan** y comparte con otros proyectos (ADR-0034), así que no hay organización ni cuentas miembro que crear. Una cuenta que esté usando el AWS Free Tier **no puede suscribir** los planes de tarifa plana de CloudFront (ADR-0034, F9): se comprueba antes de desplegar.
 
-**Además:** alerta de presupuesto (AWS Budgets) en 1$, con aviso por correo, que mide el coste **antes** de aplicar los créditos. Es la red que avisa si algo se sale de lo previsto (ADR-0028).
+**Además:** alerta de presupuesto (AWS Budgets) en 1$, con aviso por correo, que mide el coste **antes** de aplicar los créditos. Es la red que avisa si algo se sale de lo previsto (ADR-0028). En la cuenta compartida, el presupuesto **filtra por la etiqueta de asignación de costes `project=atlas`**, que activa el *bootstrap* con Terraform (`aws_ce_cost_allocation_tag`), salvo que la cuenta sea miembro de una organización ajena. Los impuestos no se etiquetan; lo que pase de los niveles gratuitos compartidos sale en las líneas de los recursos de Atlas, y lo arbitrario es cómo se reparte entre proyectos lo que cubre el nivel gratuito (ADR-0034, fila 9).
 
 ### 9.5 Lambdas programadas
 
@@ -419,7 +419,7 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 **Todas las frecuencias y umbrales son configurables** (`job_frequencies`, ver §5).
 
-**Principio de notificación:** el correo mensual siempre llega. Los demás solo cuando hay algo que hacer. Un sistema que envía correos rutinarios acaba filtrado a los seis meses. El destinatario del correo vive **solo en SSM**, nunca en `Settings` ni en el repositorio (ADR-0028).
+**Principio de notificación:** el correo mensual siempre llega. Los demás solo cuando hay algo que hacer. Un sistema que envía correos rutinarios acaba filtrado a los seis meses. El destinatario del correo tiene **una sola fuente, `terraform.tfvars`**, fuera del repositorio, de la que Terraform escribe el parámetro de SSM que lee la Lambda y la condición de IAM del envío; nunca va en `Settings` ni en el repositorio (ADR-0028, ADR-0034).
 
 ### 9.6 Frontend
 
@@ -502,23 +502,23 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
 
 ### 11.3 Entornos
 
-> **Vigente desde ADR-0028 (2026-09-24, Ronda 8).** El aislamiento pasa a ser **por cuenta**, no por pila con sufijo: la dirección cambió su decisión inicial el mismo día.
+> **Vigente desde ADR-0034 (2026-09-25)**, que sustituye en parte a ADR-0028: el usuario decidió no crear organización ni cuentas miembro. Hasta ese día el aislamiento era **por cuenta**; ahora es **por políticas**, dentro de una cuenta que el usuario comparte con otros proyectos.
 
 | Entorno | Rama | Infraestructura | Datos |
 |---|---|---|---|
-| `dev` | `develop` | **Cuenta AWS miembro dedicada `atlas-dev`**, dentro de una organización cuya cuenta de gestión **es** la cuenta personal del usuario; recursos con sufijo del entorno | Datos sintéticos |
-| `prod` | `main` | **Cuenta AWS miembro dedicada `atlas-prod`** | Datos reales |
+| `dev` | `develop` | Pila `atlas-dev-*` en la cuenta compartida del usuario, **en reposo** cuando no se usa (distribución de CloudFront desactivada, que se activa desde el pipeline con una variable del despliegue y nunca a mano; tareas programadas desactivadas; sin las claves de precios del usuario) | Datos sintéticos |
+| `prod` | `main` | Pila `atlas-prod-*` en la misma cuenta | Datos reales |
 
-- **Aislamiento por construcción**: una cuenta AWS por entorno, no solo pilas o políticas independientes. Ningún rol de `atlas-dev` existe en `atlas-prod`, así que «datos de producción jamás en dev» es mecánico, no una convención. La cuenta de gestión no está sin recursos —**es** la cuenta personal del usuario, con sus otras cosas—, y lo compensan el MFA del *root* de las tres cuentas y las SCP sobre las dos cuentas miembro (que **no alcanzan a la cuenta de gestión**, sin verificar con fuente).
-- **Despliegue a producción solo desde `main`**, tras PR aprobada y CI en verde; el rol de despliegue de `atlas-prod` exige además el *environment* `prod` de GitHub con aprobación obligatoria.
+- **Aislamiento por políticas, no por cuenta**: todo recurso lleva el prefijo `atlas-<entorno>-` y las etiquetas `project=atlas` y `env=<entorno>`; SSM, bajo `/atlas/<entorno>/`; cada entorno tiene su estado de Terraform, sus roles y **un límite de permisos** que ningún rol suyo puede quitarse. «Datos de producción jamás en dev» lo garantizan **dos cerraduras independientes**: la política de cada rol de `dev`, que solo nombra recursos de `dev`, y la política del bucket de datos de `prod`, que niega a todo principal que no sea de `prod`. **Frente a quien administra la cuenta no hay aislamiento**, y los parámetros de SSM no tienen política de recurso: el riesgo que queda está escrito en ADR-0034.
+- **Despliegue a producción solo desde `main`**, tras PR aprobada y CI en verde; el rol de despliegue de `prod` exige además el *environment* `prod` de GitHub con aprobación obligatoria.
 - **Los artefactos que se despliegan a producción son los mismos que se validaron en dev.** Se construye una vez y se promociona; no se reconstruye por entorno.
 - **Datos de producción jamás en dev.** Generador de datos sintéticos como parte del repositorio.
 
 ### 11.4 Infraestructura
 
-- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola, **salvo las excepciones declaradas por ADR-0028, cada una con su condición de retirada**: la suscripción al plan de tarifa plana de CloudFront, que tampoco se hace a mano sino con un **guion idempotente de la CLI de AWS versionado en el repositorio**, y se retira cuando el proveedor de Terraform lo soporte; la organización y las dos cuentas miembro, el cliente OAuth de Google por entorno (ADR-0027), el *bootstrap* de Terraform de cada cuenta, y la petición de aumento de cuota de concurrencia si hace falta.
-- Estado remoto en S3 con el bloqueo nativo de S3, uno por cuenta miembro.
-- Módulos reutilizables (`infra/modules/atlas/`) y una carpeta por entorno (`infra/envs/dev/`, `infra/envs/prod/`), cada una contra su cuenta. **Las carpetas se versionan; solo sus ficheros `.tfvars` quedan fuera del repositorio.**
+- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola, **salvo las excepciones declaradas por ADR-0028 y ADR-0034, cada una con su condición de retirada**: la suscripción al plan de tarifa plana de CloudFront, que tampoco se hace a mano sino con un **guion idempotente de la CLI de AWS versionado en el repositorio**, y se retira cuando el proveedor de Terraform lo soporte; el cliente OAuth de Google por entorno (ADR-0027), el *bootstrap* de Terraform, **por entorno dentro de la cuenta compartida** y con su estado en local, fuera del repositorio, que **se vuelve a aplicar a mano cada vez que cambia `infra/bootstrap/`, primero en `dev` y después en `prod`** (ADR-0034, fila 20), y la petición de aumento de cuota de concurrencia si hace falta. **Los valores de los secretos no los crea Terraform**: los crea y los rota un guion versionado, ejecutado con el rol de administración del entorno (ADR-0034, fila 21). La activación de la etiqueta de asignación de costes la hace el propio *bootstrap*, salvo que la cuenta sea miembro de una organización ajena, y entonces es un paso manual de quien la administre. La organización y las cuentas miembro de ADR-0028 **no existen** (decisión del usuario del 2026-09-25).
+- Estado remoto en S3 con el bloqueo nativo de S3, en **un bucket propio de Atlas** con una clave por entorno; cada rol solo alcanza la de su entorno (ADR-0034).
+- Módulos reutilizables (`infra/modules/atlas/`) y una carpeta por entorno (`infra/envs/dev/`, `infra/envs/prod/`), las dos contra la misma cuenta. **Las carpetas se versionan; solo sus ficheros `.tfvars` quedan fuera del repositorio.**
 - `terraform plan` obligatorio en la PR, `apply` solo tras aprobación.
 
 ### 11.5 Tests
@@ -566,7 +566,7 @@ GitHub Actions:
 - Token Flex de IBKR: **solo lectura**, rotado anualmente, jamás en el frontend ni en el repositorio.
 - **Secreto del cliente OAuth de Google y clave de firma de la sesión** (ADR-0027), uno por entorno: `dev` nunca acepta la cuenta de Google que da acceso a `prod`.
 - **Claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031; CoinGecko, retirada en su tercera enmienda): en local, en `~/.config/atlas/secrets.json`, **fuera del repositorio y de la carpeta del libro**, con permisos `600` (con otros permisos, la consola no las usa); en la nube, SSM. ~~Con ellas van el orden de las fuentes y su presupuesto: configuración operativa de la máquina que descarga, que ninguna cifra del libro lee.~~ El orden de las fuentes y su presupuesto **no** van con ellas, porque no son secretos: viven en `prices/config.json`, junto al libro (`docs/data-schema.md` §1).
-- **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo** (ADR-0028): en SSM. No van en el repositorio porque son datos personales y el repositorio es público; y no van en `Settings` porque **ninguna cifra del libro los lee** y quien los usa es la Lambda (la API, que comprueba la lista; la que envía el correo, el destinatario): un dato personal que solo usa el servidor vive donde lo lee el servidor (principio IV). El campo `notification_email` de `Settings` se sigue aceptando al cargar (ADR-0018), pero deja de leerse; la web todavía lo ofrece en Ajustes y **se retira con la feature 016** (tareas y correo).
+- **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo** (ADR-0028): en SSM. La lista la crea y la rota el guion de secretos con el rol de administración, nunca Terraform; el destinatario sale de `terraform.tfvars`, de donde Terraform escribe también la condición de IAM de SES (ADR-0034, filas 12 y 21). No van en el repositorio porque son datos personales y el repositorio es público; y no van en `Settings` porque **ninguna cifra del libro los lee** y quien los usa es la Lambda (la API, que comprueba la lista; la que envía el correo, el destinatario): un dato personal que solo usa el servidor vive donde lo lee el servidor (principio IV). El campo `notification_email` de `Settings` se sigue aceptando al cargar (ADR-0018), pero deja de leerse; la web todavía lo ofrece en Ajustes y **se retira con la feature 016** (tareas y correo).
 - **Interruptor de importes del correo** (ADR-0028, fila 18): también en SSM, junto al destinatario. No es dato personal ni secreto: es configuración operativa que ninguna cifra lee, y además un campo nuevo, que en `Settings` —una foto completa— un cliente antiguo borraría sin avisar al escribir la foto siguiente (ADR-0026, caso 6; enmienda de ADR-0018).
 - **Tokens de dispositivo de la consola** (ADR-0033): en la nube, un parámetro `SecureString` estándar por token bajo `/atlas/<entorno>/device-tokens/<id>`, con **solo el hash** del secreto, el par `{sub, email}`, el nombre, el dispositivo, la emisión, la caducidad y la revocación; se escribe solo al crearlo y al revocarlo, y la API nunca lo borra. **No va en el bucket de datos**, que se copia y se restaura: una restauración podría reactivar tokens revocados. En local, el token vive en `~/.config/atlas/credentials.json` (o `$XDG_CONFIG_HOME/atlas/`), hermano de `secrets.json` y con sus mismas reglas (`600`, fuera de la carpeta del libro, nunca en una copia, exportación ni sincronización), pero **lo escribe la consola**. En WSL, el `600` no protege frente a un proceso de Windows del mismo usuario; es el mismo límite que ya tienen `secrets.json` y la réplica del libro.
 - Sin secretos en variables de entorno de la Lambda visibles en la consola.
@@ -646,7 +646,7 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
 - [x] **Retención a cuenta en reembolsos de fondos.** Hecho: `sell.withholding` (`data-schema.md` §6.2), con su equivalente por cuenta en `forced_sale` (§6.5). Sale del efectivo que entra, no toca el valor de transmisión ni el coste de los lotes, y la salida fiscal la suma a las retenciones del ejercicio (criterio #12).
 - [x] **Valoración a 31 de diciembre.** Resuelta como se preveía (feature 010): los Modelos 720 y 721 valoran con la `valuation` registrada a mano, dato de **Nivel 1**, convertida al tipo del BCE de esa fecha. Es la única ruta fiscal que lee precios; si falta alguno, el veredicto es «no se puede determinar» y nunca «no obligado» (§5.8 de `business-rules.md`).
-- [x] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio. Resuelto (ADR-0028, 2026-09-24): un rol de despliegue por cuenta miembro; el de `atlas-dev` solo desde `develop`, el de `atlas-prod` solo desde el *environment* `prod` con aprobación obligatoria, y un rol de `terraform plan` de solo lectura que nunca se usa para una PR desde un *fork*.
+- [x] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio. Resuelto (ADR-0028, 2026-09-24; cuenta compartida desde ADR-0034, 2026-09-25): un rol de despliegue por entorno en la misma cuenta, que solo puede crear roles con el límite de permisos de su entorno; el de `dev` solo desde `develop`, el de `prod` solo desde el *environment* `prod` con aprobación obligatoria, y un rol de `terraform plan` de solo lectura que nunca se usa para una PR desde un *fork*.
 - [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).
 - [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos. Está todo salvo **`.editorconfig`, que no existe**; el escaneo de secretos es `gitleaks` en `.githooks/pre-commit`, local por clon y no en CI.
