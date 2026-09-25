@@ -22,6 +22,7 @@ import {
   declareSymbols,
   parseSymbols,
   type SymbolDeclaration,
+  type SymbolEntry,
   serializeSymbols,
 } from "./symbols.js";
 
@@ -109,11 +110,40 @@ export const recordSymbols = (input: {
   }
   return input.store.transact(async (tx) => {
     const file = parseSymbols(await tx.symbols());
+    const before = file.assets[input.assetId];
     await tx.writeSymbols(
-      serializeSymbols({ ...file, assets: { ...file.assets, [input.assetId]: entry } }),
+      serializeSymbols({
+        ...file,
+        assets: { ...file.assets, [input.assetId]: { ...entry, ...carried(before, entry) } },
+      }),
     );
     return [];
   });
+};
+
+/**
+ * What a new declaration keeps of the one before, for the sources it still
+ * declares: the closes 013 stored wrong are still wrong (`misstored`), and the
+ * days a purge promised to ask for again are still owed (`refetch_from`).
+ */
+const carried = (
+  before: SymbolEntry | undefined,
+  entry: SymbolEntry,
+): Pick<SymbolEntry, "misstored" | "refetch_from"> => {
+  const keep = <T>(
+    record: Partial<Record<QuoteSource, T>> | undefined,
+  ): Partial<Record<QuoteSource, T>> | undefined => {
+    const kept = Object.fromEntries(
+      Object.entries(record ?? {}).filter(([source]) => entry[source as QuoteSource] !== undefined),
+    ) as Partial<Record<QuoteSource, T>>;
+    return Object.keys(kept).length === 0 ? undefined : kept;
+  };
+  const misstored = keep(before?.misstored);
+  const refetch = keep(before?.refetch_from);
+  return {
+    ...(misstored === undefined ? {} : { misstored }),
+    ...(refetch === undefined ? {} : { refetch_from: refetch }),
+  };
 };
 
 /** Removes the correspondence of `assetId`; `false` when it had none. */
@@ -133,7 +163,10 @@ export const removeSymbols = (store: PriceStore, assetId: AssetId): Promise<bool
  * Purges the closes of `assetId` from `source` whose currency is not the one
  * that source declares now (review of PR #80): feature 013 stored the pence of
  * Alpha Vantage as pounds. Only on an explicit request of the user, under the
- * lock, and only those lines; the next download asks for their days again.
+ * lock, and only those lines. **The next download asks for their days again**
+ * (second pass of the review): the first purged day is written down for that
+ * source (`refetch_from`), because the last close of the asset — of another
+ * source, maybe of a later day — would otherwise leave them out for good.
  * Returns how many were removed.
  */
 export const purgeMismatched = (
@@ -142,8 +175,9 @@ export const purgeMismatched = (
   source: QuoteSource,
 ): Promise<number> =>
   store.transact(async (tx) => {
-    const declared = parseSymbols(await tx.symbols()).assets[assetId]?.currencies;
-    if (declared?.[source] === undefined) {
+    const file = parseSymbols(await tx.symbols());
+    const entry = file.assets[assetId];
+    if (entry?.currencies[source] === undefined) {
       throw new ValidationError(
         "symbols_not_declared",
         `${assetId} has no symbol declared for ${source}: there is nothing to compare its closes with`,
@@ -153,7 +187,7 @@ export const purgeMismatched = (
     const lines = readCloseFile(assetId, (await tx.closes(assetId)) ?? "");
     const wrong = mismatchedLines(
       lines.filter((line) => line.source === source),
-      declared,
+      entry,
     );
     if (wrong.length > 0) {
       await tx.rewriteCloses(
@@ -161,5 +195,33 @@ export const purgeMismatched = (
         lines.filter((line) => !wrong.includes(line)).map(encodeCloseLine),
       );
     }
+    const first = wrong.map((line) => line.date).sort()[0];
+    const owed = entry.refetch_from?.[source];
+    const { [source]: _purged, ...misstored } = entry.misstored ?? {};
+    const { misstored: _before, ...rest } = entry;
+    if (first === undefined && entry.misstored?.[source] === undefined) {
+      return 0;
+    }
+    await tx.writeSymbols(
+      serializeSymbols({
+        ...file,
+        assets: {
+          ...file.assets,
+          [assetId]: {
+            ...rest,
+            // Nothing stored wrong of that source is left.
+            ...(Object.keys(misstored).length === 0 ? {} : { misstored }),
+            ...(first === undefined
+              ? {}
+              : {
+                  refetch_from: {
+                    ...entry.refetch_from,
+                    [source]: owed !== undefined && owed < first ? owed : first,
+                  },
+                }),
+          },
+        },
+      }),
+    );
     return wrong.length;
   });

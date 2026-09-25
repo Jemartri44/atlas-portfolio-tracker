@@ -22,7 +22,7 @@ import { Decimal, type DecimalString, isDecimalString } from "../money/decimal.j
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
 import { isQuoteSource } from "./sources.js";
-import type { SymbolsFile } from "./symbols.js";
+import type { SymbolEntry, SymbolsFile } from "./symbols.js";
 
 /**
  * The name of the file of an asset in `prices/`: `<asset_id>.jsonl`. The
@@ -244,20 +244,32 @@ export interface MismatchedCloses {
   readonly asset_id: AssetId;
   readonly source: QuoteSource;
   readonly declared: string;
+  /**
+   * Present when they are the closes feature 013 stored in this currency
+   * although the source said another one (`misstored` of the correspondence).
+   */
+  readonly misstored?: string;
   readonly count: number;
   readonly dates: readonly CivilDate[];
 }
 
-/** The lines of `lines` whose currency is not the one declared for their source. */
+/**
+ * The lines of `lines` whose currency is not the one declared for their
+ * source, or the one in which feature 013 stored a source that said another
+ * (`misstored`, second pass of the review of PR #80).
+ */
 export const mismatchedLines = (
   lines: readonly CloseLine[],
-  declared: Partial<Record<QuoteSource, string>> | undefined,
+  entry: Pick<SymbolEntry, "currencies" | "misstored"> | undefined,
 ): CloseLine[] =>
-  declared === undefined
+  entry === undefined
     ? []
     : lines.filter((line) => {
-        const currency = declared[line.source];
-        return currency !== undefined && line.currency !== currency;
+        const currency = entry.currencies[line.source];
+        return (
+          (currency !== undefined && line.currency !== currency) ||
+          entry.misstored?.[line.source] === line.currency
+        );
       });
 
 /**
@@ -291,14 +303,16 @@ export const readCloses = (
       unreadable.push({ asset_id: assetId, code, line: details.line as number });
       continue;
     }
-    const declared = symbols?.assets[assetId]?.currencies;
-    const wrong = mismatchedLines(lines, declared);
+    const entry = symbols?.assets[assetId];
+    const wrong = mismatchedLines(lines, entry);
     for (const source of new Set(wrong.map((line) => line.source))) {
       const ofSource = wrong.filter((line) => line.source === source);
+      const misstored = (entry as SymbolEntry).misstored?.[source];
       mismatched.push({
         asset_id: assetId,
         source,
-        declared: (declared as Partial<Record<QuoteSource, string>>)[source] as string,
+        declared: (entry as SymbolEntry).currencies[source] as string,
+        ...(misstored === undefined ? {} : { misstored }),
         count: ofSource.length,
         dates: ofSource.map((line) => line.date),
       });

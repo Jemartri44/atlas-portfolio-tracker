@@ -23,7 +23,7 @@
 import { addDays, addYears, type CivilDate } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
 import type { DailyClose, PriceSource, SourceFailureKind } from "../ports/price-source.js";
-import type { PriceStore } from "../ports/price-store.js";
+import type { PriceStore, PriceTransaction } from "../ports/price-store.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { LedgerState } from "../projections/state.js";
 import type { AssetId } from "../schema/events.js";
@@ -94,6 +94,8 @@ export interface UpdateReport {
 
 interface Download {
   readonly asset_id: AssetId;
+  /** The days a purge had asked for again, now asked: cleared when stored. */
+  readonly refetched?: Partial<Record<QuoteSource, CivilDate>>;
   readonly source: QuoteSource;
   readonly currency: string;
   readonly closes: readonly DailyClose[];
@@ -125,6 +127,37 @@ const outcomeOf = (failures: readonly { kind: QuoteFailureKind }[]): AssetOutcom
     return "currency_mismatch";
   }
   return kinds.size === 1 && kinds.has("budget_exhausted") ? "out_of_budget" : "failed";
+};
+
+/**
+ * Clears the days a purge asked for again once they were asked — only those it
+ * asked, read again under the lock: a purge made meanwhile is left owed.
+ */
+const clearRefetched = async (
+  tx: PriceTransaction,
+  assetId: AssetId,
+  asked: Partial<Record<QuoteSource, CivilDate>>,
+): Promise<void> => {
+  const file = parseSymbols(await tx.symbols());
+  const current = file.assets[assetId];
+  if (current?.refetch_from === undefined) {
+    return;
+  }
+  const left = Object.fromEntries(
+    Object.entries(current.refetch_from).filter(
+      ([source, date]) => asked[source as QuoteSource] !== date,
+    ),
+  );
+  const { refetch_from: _asked, ...rest } = current;
+  await tx.writeSymbols(
+    serializeSymbols({
+      ...file,
+      assets: {
+        ...file.assets,
+        [assetId]: Object.keys(left).length === 0 ? rest : { ...rest, refetch_from: left },
+      },
+    }),
+  );
 };
 
 /** Downloads the closes of the day; see the header for the rules. */
@@ -266,11 +299,16 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       reports.push({ asset_id, group, outcome: "currency_mismatch", added: 0, failures });
       continue;
     }
-    if (last !== undefined && last >= lastMarketDayBefore(today)) {
+    // The days a purge promised to ask for again (second pass of the review
+    // of PR #80): the download starts at the first of them, whichever source
+    // answers, and not after the last close, which may be of another source.
+    const owed = Object.values(entry.refetch_from ?? {}).sort()[0];
+    if (owed === undefined && last !== undefined && last >= lastMarketDayBefore(today)) {
       reports.push({ asset_id, group, outcome: "up_to_date", added: 0, failures });
       continue;
     }
-    const from = last === undefined ? addYears(today, -1) : addDays(last, 1);
+    const after = last === undefined ? addYears(today, -1) : addDays(last, 1);
+    const from = owed !== undefined && owed < after ? owed : after;
     // **Never the value of the day in course** (review of PR #78): asked in
     // the afternoon, a source gives a price of mid-session, and stored as the
     // close of today it would stay one for good. Only days before today.
@@ -331,6 +369,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       }
       downloads.push({
         asset_id,
+        ...(entry.refetch_from === undefined ? {} : { refetched: entry.refetch_from }),
         source,
         // The currency **of the source that brought it**, never of another.
         currency: entry.currencies[source] as string,
@@ -371,6 +410,9 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         await tx.appendCloses(download.asset_id, lines.map(encodeCloseLine));
       }
       added.set(download.asset_id, lines.length);
+      if (download.refetched !== undefined) {
+        await clearRefetched(tx, download.asset_id, download.refetched);
+      }
     }
     const next = withAssetFailures(
       applyOutcomes(parseStatus(await tx.status()), outcomes),

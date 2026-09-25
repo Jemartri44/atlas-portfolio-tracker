@@ -39,7 +39,7 @@ describe("prices/symbols.json", () => {
       });
     const cases: [string, string][] = [
       ["no", "json"],
-      ['{"symbols_format":3,"assets":{}}', "symbols_format"],
+      ['{"symbols_format":"2","assets":{}}', "symbols_format"],
       ['{"symbols_format":1,"assets":[]}', "symbols_format"],
       ['{"symbols_format":1,"assets":{"a":1}}', "a"],
       [entry({ coingecko: "bitcoin" }), "a.coingecko"],

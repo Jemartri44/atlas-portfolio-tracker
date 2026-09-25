@@ -14,6 +14,7 @@
 // contradict the declaration without that confirmation is not downloaded
 // (`currency_mismatch`).
 
+import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
@@ -50,6 +51,22 @@ export interface SymbolEntry {
   readonly currency_check?: Partial<Record<QuoteSource, CurrencyCheck>>;
   /** The currency of the source the user accepted to contradict, explicitly (D-Q2). */
   readonly currency_confirmed_over?: Partial<Record<QuoteSource, string>>;
+  /**
+   * The currency in which feature 013 stored the closes of a source **that
+   * said another one** (second pass of the review of PR #80): a file of
+   * format 1 confirmed the currency of the asset over what the source said
+   * (`currency_confirmed_over`), and every close of that source was stored
+   * with the currency of the asset — pence as pounds. Those lines are left out
+   * of every figure in euros until they are purged; never written by anything
+   * but the reading of format 1, and kept when the file is written again.
+   */
+  readonly misstored?: Partial<Record<QuoteSource, string>>;
+  /**
+   * The day from which the closes of a source have to be asked for again
+   * (written by a purge): the next download of the asset starts there, not
+   * after its last close, and it is cleared once asked.
+   */
+  readonly refetch_from?: Partial<Record<QuoteSource, CivilDate>>;
 }
 
 export interface SymbolsFile {
@@ -67,6 +84,8 @@ const ENTRY_KEYS = [
   "confirmed_at",
   "currency_check",
   "currency_confirmed_over",
+  "misstored",
+  "refetch_from",
 ];
 
 const wrong = (field: string): ValidationError =>
@@ -159,20 +178,35 @@ const withoutLegacyConfirmations = (entry: SymbolEntry): SymbolEntry => {
     return entry;
   }
   const check = { ...entry.currency_check };
+  // What the source said is in `currency_confirmed_over`; the closes of that
+  // source were stored with the currency of the asset, which is another one:
+  // exactly the defect (second pass of the review of PR #80).
+  const misstored: Partial<Record<QuoteSource, string>> = {};
   for (const source of Object.keys(over) as QuoteSource[]) {
     delete check[source];
+    const stored = entry.currencies[source];
+    if (stored !== undefined && stored !== over[source]) {
+      misstored[source] = stored;
+    }
   }
   const { currency_confirmed_over: _dropped, currency_check: _check, ...rest } = entry;
-  return Object.keys(check).length === 0 ? rest : { ...rest, currency_check: check };
+  return {
+    ...rest,
+    ...(Object.keys(check).length === 0 ? {} : { currency_check: check }),
+    ...(Object.keys(misstored).length === 0 ? {} : { misstored }),
+  };
 };
 
 const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry => {
   if (!isObject(value)) {
     throw wrong(assetId);
   }
-  // Format 1 has `currency` where format 2 has `currencies`, never both.
+  // Format 1 has `currency` where format 2 has `currencies`, never both; and
+  // what format 2 added after it (`misstored`, `refetch_from`) it never had.
   const allowed = legacy
-    ? ENTRY_KEYS.map((key) => (key === "currencies" ? "currency" : key))
+    ? ENTRY_KEYS.filter((key) => key !== "misstored" && key !== "refetch_from").map((key) =>
+        key === "currencies" ? "currency" : key,
+      )
     : ENTRY_KEYS;
   for (const key of Object.keys(value)) {
     if (!allowed.includes(key)) {
@@ -194,6 +228,12 @@ const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry 
   if (value.currency_confirmed_over !== undefined) {
     bySource(value.currency_confirmed_over, `${assetId}.currency_confirmed_over`, isSaid);
   }
+  if (value.misstored !== undefined) {
+    bySource(value.misstored, `${assetId}.misstored`, isCurrency);
+  }
+  if (value.refetch_from !== undefined) {
+    bySource(value.refetch_from, `${assetId}.refetch_from`, isCivilDate);
+  }
   // Every field was checked above; format 1's `currency` becomes `currencies`.
   const { currency: _legacy, ...rest } = value;
   const checked = rest as unknown as Omit<SymbolEntry, "currencies">;
@@ -211,6 +251,18 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
     raw = JSON.parse(text);
   } catch {
     throw wrong("json");
+  }
+  if (
+    isObject(raw) &&
+    typeof raw.symbols_format === "number" &&
+    raw.symbols_format > SYMBOLS_FORMAT
+  ) {
+    // Written by a newer application: said as such, never read as it goes.
+    throw new ValidationError(
+      "symbols_file_newer_version",
+      `prices/symbols.json has format ${raw.symbols_format}, newer than ${SYMBOLS_FORMAT}`,
+      { format: raw.symbols_format },
+    );
   }
   if (
     !isObject(raw) ||
