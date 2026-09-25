@@ -22,6 +22,15 @@ export const fxMissingText = (reason: unknown): string => {
   }
 };
 
+/**
+ * The safe way out of a ledger with Windows line endings (decision D-Q18 of
+ * feature 014): `compact` does not normalise, so the message gives the exact
+ * order, with nothing but the Node the console already runs on. It copies the
+ * file first, refusing to overwrite a copy, and only then rewrites `\r\n` as
+ * `\n`. Exported so that a test runs it for real.
+ */
+export const RAW_LINE_BREAK_FIX = `node -e "const fs=require('fs'),f='ledger.jsonl';fs.copyFileSync(f,f+'.crlf',fs.constants.COPYFILE_EXCL);fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/\\r\\n/g,'\\n'))"`;
+
 const text = (value: unknown): string =>
   typeof value === "string" ? value : JSON.stringify(value);
 
@@ -393,7 +402,7 @@ export const describeError = (error: DomainError): string => {
     case "sync_held_unreadable":
       return `El fichero de ${d.file === "held" ? "lo retenido (sync/held.jsonl)" : "lo descartado (sync/discarded.jsonl)"} no se puede leer en la línea ${text(d.line)}. No se toca: revísalo antes de seguir.`;
     case "raw_line_break":
-      return `La línea ${text(d.line)} lleva dentro un salto de línea o un retorno de carro (\\r), lo normal en un fichero guardado con finales de línea de Windows. No es un error tuyo, pero así no se puede escribir tal cual: pasa el fichero a finales de línea LF (las cifras no cambian) y vuelve a intentarlo.`;
+      return `La línea ${text(d.line)} lleva dentro un salto de línea o un retorno de carro (\\r): el libro tiene finales de línea de Windows, que solo deja una edición a mano. Así no se escribe tal cual, y atlas no lo arregla solo. Conviértelo a finales LF desde la carpeta del libro, con una copia previa en ledger.jsonl.crlf (se niega si ya existe): ${RAW_LINE_BREAK_FIX} — y después vuelve a sincronizar.`;
     case "archive_exists":
       return `El archivo ${text(d.archive_name)} ya existe y nunca se sobrescribe.`;
     case "ledger_missing":

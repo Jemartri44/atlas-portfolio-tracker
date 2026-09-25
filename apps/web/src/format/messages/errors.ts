@@ -443,7 +443,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   sync_held_unreadable: () =>
     "No se pueden leer las operaciones retenidas o descartadas. No se tocan: hay que revisarlas antes de seguir.",
   raw_line_break: (d) =>
-    `La línea ${text(d.line)} de tus datos lleva dentro un salto de línea o un retorno de carro, lo normal en un fichero guardado con finales de línea de Windows. No es un error tuyo, pero así no se puede escribir tal cual: pasa el fichero a finales de línea LF (las cifras no cambian), impórtalo y vuelve a intentarlo.`,
+    `La línea ${text(d.line)} de tus datos lleva dentro un salto de línea o un retorno de carro: el fichero tiene finales de línea de Windows, que solo deja una edición a mano, y así no se escribe tal cual. Conviértelo a finales LF en la consola, desde la carpeta del libro, con la orden que da «atlas» para este mismo error (copia antes el fichero en ledger.jsonl.crlf y cambia solo los finales de línea); después impórtalo y vuelve a sincronizar.`,
   conflict: () =>
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",
   schema_too_new: (d) =>

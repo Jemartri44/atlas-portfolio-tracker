@@ -12,6 +12,7 @@ import {
   acquireFolderLock,
   LedgerLockedError,
   LOCK_FILE,
+  sweepOrphanTemporaries,
 } from "../src/ledger-store/folder-lock.js";
 import { account, deposit, lineOf } from "./fixtures.js";
 import { nonCanonical } from "./ledger-store.contract.js";
@@ -136,5 +137,31 @@ describe("FileLedgerStore.underLock", () => {
       }),
     ).rejects.toThrow("boom");
     await expect(stat(join(dir, LOCK_FILE))).rejects.toThrow();
+  });
+});
+
+describe("sweepOrphanTemporaries in sync/ (feature 014, D-Q19)", () => {
+  it("removes the temporaries of the state of the sync, only with nobody holding the lock", async () => {
+    const { path, dir } = await fresh([lineOf(account)]);
+    const { mkdir } = await import("node:fs/promises");
+    await mkdir(join(dir, "sync"));
+    const orphans = [
+      "state.json.tmp-4242-1",
+      "held.jsonl.tmp-4242-2",
+      "discarded.jsonl.tmp-4242-3",
+    ];
+    for (const name of orphans) {
+      await writeFile(join(dir, "sync", name), "half");
+    }
+    await writeFile(join(dir, "sync", "held.jsonl"), "kept");
+    await writeFile(join(dir, "sync", "notes.tmp-1-1"), "not ours");
+    const lock = await acquireFolderLock(dir);
+    expect(await sweepOrphanTemporaries(path)).toEqual([]);
+    await lock.release();
+    expect((await sweepOrphanTemporaries(path)).sort()).toEqual(
+      orphans.map((name) => join("sync", name)).sort(),
+    );
+    const { readdir } = await import("node:fs/promises");
+    expect((await readdir(join(dir, "sync"))).sort()).toEqual(["held.jsonl", "notes.tmp-1-1"]);
   });
 });
