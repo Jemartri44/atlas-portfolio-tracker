@@ -702,6 +702,16 @@ const LAZY_ONLY = [
     what: "la lectura de los precios",
   },
   { path: "/src/prices/", what: "los precios automáticos de la web" },
+  // Feature 014: **nothing of the sync on the boot path**, from its first
+  // commit: the domain of the sync and its door, the shared orchestration and
+  // the web's own store of sync state. The sync is explicit and lazily loaded.
+  { path: "/packages/domain/src/sync/", what: "la sincronización del libro" },
+  { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
+  { path: "/packages/adapters/src/sync/", what: "la orquestación de la sincronización" },
+  {
+    path: "/packages/adapters/src/ledger-store/browser/sync-store.ts",
+    what: "el estado de la sincronización en el navegador",
+  },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */

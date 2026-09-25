@@ -102,8 +102,13 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/ecb": repo("../../packages/domain/src/ecb.ts"),
       "@atlas/domain/fiscal": repo("../../packages/domain/src/fiscal.ts"),
       "@atlas/domain/quotes": repo("../../packages/domain/src/quotes.ts"),
+      "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
       "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),
+      "@atlas/adapters/sync-client": repo("../../packages/adapters/src/sync/client.ts"),
+      "@atlas/adapters/sync": repo(
+        "../../packages/adapters/src/ledger-store/browser/sync-store.ts",
+      ),
       "@atlas/adapters/reference": repo(
         "../../packages/adapters/src/ledger-store/browser/reference.ts",
       ),

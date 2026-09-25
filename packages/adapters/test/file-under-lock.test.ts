@@ -90,7 +90,11 @@ describe("FileLedgerStore.underLock", () => {
     await store.underLock(async (writer) => {
       const { etag } = await writer.load();
       const appended = await writer.appendLines([odd], etag);
-      await writer.replaceLines([lineOf(account), odd, odd.replace("5FA1", "5FA2")], appended.etag, "a.jsonl");
+      await writer.replaceLines(
+        [lineOf(account), odd, odd.replace("5FA1", "5FA2")],
+        appended.etag,
+        "a.jsonl",
+      );
     });
     expect(await readFile(path, "utf8")).toBe(
       `${lineOf(account)}\n${odd}\n${odd.replace("5FA1", "5FA2")}\n`,

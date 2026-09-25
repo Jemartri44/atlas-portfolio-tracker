@@ -21,6 +21,10 @@
     "./quotes": {
       "types": "./dist/quotes.d.ts",
       "import": "./dist/quotes.js"
+    },
+    "./sync": {
+      "types": "./dist/sync.d.ts",
+      "import": "./dist/sync.js"
     }
   },
   "files": [
