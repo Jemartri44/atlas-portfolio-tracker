@@ -18,7 +18,15 @@ export interface DeviceState {
   readonly discardedText: string;
 }
 
-/** What one write of the store changes, in this order: held, discarded, ledger, marker. */
+/**
+ * What one write of the store changes. **Not a fixed order**: a store writes
+ * the destination of every line that moves before its origin forgets it
+ * (review of PR #83, B1), so the order follows the direction of each move —
+ * held back: `held` gains it, then the ledger loses it; confirmed: the ledger
+ * gains it, then a `resolved` record releases it; discarded or redone:
+ * `discarded` gains it, then it is resolved. A cut between two writes leaves
+ * a line in both places, never in none.
+ */
 export interface DeviceChange {
   readonly held?: readonly HeldRecord[];
   readonly discarded?: readonly DiscardedRecord[];
