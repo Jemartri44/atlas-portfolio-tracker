@@ -307,7 +307,7 @@ No es una ruta: es lo que el cliente hace con §5.1 a §5.5, fijado por el códi
 
 Y un **aviso**, no una parada: `publish_failed` (`details.remote_code`, `details.status`), cuando todo está escrito y solo falló publicar el estado de la cola (§5.3). Lo publica la sincronización siguiente.
 
-**Lo que se retiene**, solo por un rechazo de una línea o unidad: en el paso 3, por el propio cliente, y en el paso 4, por un `rejected.code` de §5.2, que se retiene tal cual. En el paso 3, los motivos son estos:
+**Lo que se retiene** al sincronizar, por un rechazo de una línea o unidad: en el paso 3, por el propio cliente, y en el paso 4, por un `rejected.code` de §5.2, que se retiene tal cual. En el paso 3, los motivos son estos:
 
 - `pair_not_contiguous`: una corrección que no va justo detrás de la anulación de su objetivo;
 - `seals_prefix`: una línea que sella el prefijo y ya no caería sobre el mismo;
@@ -315,7 +315,7 @@ Y un **aviso**, no una parada: `publish_failed` (`details.remote_code`, `details
 - `pair_rejected`, `settings_leave_invalid` y `domain_rejected`: rechazos del dominio;
 - `new_duplicate` y `new_closed_year`: avisos nuevos (D-Q3).
 
-Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene con `absent_after_rewrite`, `differs_after_rewrite`, `absent_at_join` y `differs_at_join`, en las mismas unidades que la cola. Mientras quede algo retenido sin resolver, no se sube nada.
+Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene con `absent_after_rewrite`, `differs_after_rewrite`, `absent_at_join` y `differs_at_join`, en las mismas unidades que la cola. Y al descartar solo la anulación de una pareja, su corrección se retiene otra vez, sola, con `partner_discarded` (`discardHeld`, `packages/domain/src/sync/resolve.ts`): a esa solo se le ofrece descartar, y rehacerla se niega con `redo_partner_discarded`. Mientras quede algo retenido sin resolver, no se sube nada.
 
 ## 6. Datos de referencia
 
