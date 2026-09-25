@@ -234,3 +234,7 @@ La verificación concluyó que **el diseño de base aguanta**: PKCE, nada por la
 ## Nota del 2026-09-25 (prompt de la feature 014)
 
 **Cómo se liga a su sesión el identificador de dispositivo de la web la decide la feature 015**, no la 014. El punto 6 lo mandaba a `docs/api.md` «como punto de la 014», y `docs/api.md` §5.4 lo deja escrito con lo que está fijado —el dispositivo sale de la credencial, nunca del cuerpo— y tres opciones sin elegir. *Por qué en la 015:* es la feature que construye la sesión de la web, la API y la sincronización desde la SPA, así que es donde las opciones se pueden probar contra el flujo real de ADR-0027; la 014 no tiene sesión ni HTTP, y su remoto simulado recibe el dispositivo como parámetro. Decidirlo antes sería elegir sin poder probar.
+
+## Nota del 2026-09-25 (regla de `gitleaks`)
+
+**El usuario aprobó la regla de `gitleaks`** que dejaban propuesta el punto 1 y el punto 8 de la revisión. Está en `.gitleaks.toml`, que extiende la configuración por defecto, con el identificador `atlas-console-device-token`: reconoce `atlasdt1.<token_id>.<secret>` con el formato exacto de `docs/api.md` §2.1 y un secreto de entropía alta. Una lista de permitidos acotada deja pasar el `token_id` solo bajo una clave `token_id`, porque es público (punto 1). La decisión no cambia.
