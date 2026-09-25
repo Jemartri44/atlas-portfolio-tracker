@@ -14,7 +14,7 @@ Tras la feature 001, toda consulta de la CLI proyecta el libro en modo estricto:
 
 ## Decisión
 
-Opción 2. `recordEvent` gana `acceptInvalid`, admitido **solo** para `settings_changed`: sin él, rechaza listando los eventos que pasan a ser inválidos (espejo de `reverseEvent` con los dependientes); la CLI exige el flag explícito `--accept-invalid`. Todas las consultas de solo lectura proyectan con `collectErrors: true` y, si hay inválidos, imprimen cabecera de aviso e incluyen `invalid_count` en `--json`. Las demás mutaciones siguen exigiendo un libro válido.
+Opción 2. `recordEvent` gana `acceptInvalid`, admitido **solo** para `settings_changed`: sin él, rechaza listando los eventos que pasan a ser inválidos (espejo de `reverseEvent` con los dependientes); la CLI exige el flag explícito `--accept-invalid`. Todas las consultas de solo lectura proyectan con `collectErrors: true` y, si hay inválidos, imprimen cabecera de aviso e incluyen `invalid_count` en `--json`. ~~Las demás mutaciones siguen exigiendo un libro válido.~~ Las demás mutaciones se niegan así: `recordEvent` se niega mientras queden eventos inválidos anteriores, salvo con un `settings_changed`; `correctEvent` y `reverseEvent` solo se niegan por los inválidos que ellos mismos crean (precisado en la nota del 2026-09-25, al final).
 
 ## Consecuencias
 
@@ -36,3 +36,13 @@ Decidida por la dirección durante la feature 014 (D-Q6, `specs/014-ledger-sync-
 Es una sola regla, `syncConfigured` en `packages/domain/src/sync/marker.ts`, con su variante sobre los textos crudos (`syncConfiguredByText`) para que la web la consulte sin cargar el lector del marcador. La leen `folderSyncPresence` (`packages/adapters/src/sync/folder-store.ts`) y `browserSyncConfigured` (`packages/adapters/src/ledger-store/browser/sync-store.ts`), y la consola y la web se la pasan al caso de uso (`syncConfigured` en `RecordOptions`).
 
 **Con la sincronización configurada, `acceptInvalid` se niega en `checkInvalid`** (`packages/domain/src/usecases/record-event.ts`), así que la vista previa y el registro fallan igual: es un código más de `DependentEventsError`, `accept_invalid_while_synced`. Quien pasa `acceptInvalid: true` tiene que decir en los tipos si la sincronización está configurada, y si no lo dice se niega también (fallo seguro). Sin `acceptInvalid`, la negativa de siempre (`newly_invalid_events`) no cambia. **La salida, dicha en las dos interfaces:** reparar antes los eventos afectados, o desactivar la sincronización de forma explícita, que deja el marcador en `disabled` y conserva lo retenido.
+
+## Nota del 2026-09-25 (revisión del cierre de la feature 014): qué exige cada mutación
+
+La decisión decía «las demás mutaciones siguen exigiendo un libro válido». **El código no exige eso a todas**, y así lo hace desde antes de la 014. La revisión de la PR #84 lo vio al contrastar la nota del cierre de ADR-0026. La regla exacta:
+
+- **`recordEvent`** se niega con `InvalidLedgerError` si, después de registrar, sigue habiendo algún evento que ya era inválido antes, salvo con un `settings_changed` (`checkInvalid`, `packages/domain/src/usecases/record-event.ts`). Un evento que repara al inválido, como la anulación de la propia venta inválida, pasa. También se niega por lo que el evento nuevo deja inválido.
+- **Un `settings_changed`** solo se niega por lo que él deja inválido (`newly_invalid_events`, o `acceptInvalid` según la decisión de arriba y la nota del cierre de la 014).
+- **`correctEvent` y `reverseEvent`** solo se niegan por los inválidos que ellos mismos crean (`checkCandidate`, `packages/domain/src/usecases/rectify.ts`): los que ya había no los bloquean.
+
+Las consultas siguen degradando igual. Esta nota describe el código; si alguna de estas reglas debe cambiar, lo decide la dirección (la 015 hereda la pregunta de rehacer con el libro inválido, ADR-0026).

@@ -20,7 +20,7 @@ Restricciones que pesan:
 
 - El libro es append-only (ADR-0003) y **el orden canónico es la posición en el fichero** (ADR-0006, `data-schema.md` §2), precisamente porque dos dispositivos con relojes distintos generan identificadores desordenados.
 - `append` nunca re-serializa lo que ya está escrito, y el cargador rechaza versiones de esquema más nuevas (`data-schema.md` §5).
-- Las mutaciones exigen un libro válido; las consultas degradan (ADR-0015).
+- ~~Las mutaciones exigen un libro válido;~~ `recordEvent` se niega mientras queden eventos inválidos anteriores, salvo con un `settings_changed`; `correctEvent` y `reverseEvent` solo se niegan por los inválidos que ellos mismos crean; las consultas degradan (ADR-0015, con su nota del 2026-09-25; precisado en la nota del cierre de la feature 014, abajo).
 - Una huella repetida es un **aviso con confirmación**, nunca un rechazo ni un silencio (ADR-0012).
 - `settings_changed` y los `*_updated` del catálogo guardan el **estado completo**, no un parche (ADR-0022, `data-schema.md` §6.1): el último que se aplica gana entero.
 - La validación está siempre en el backend (constitución, Seguridad).
@@ -233,6 +233,8 @@ La feature 014 (PR #83) construyó el núcleo de esta ADR sin desplegar: el caso
 - **D-Q10 y D-Q18.** Una línea cruda con `"\r"` se rechaza (`raw_line_break`). El mensaje de la consola da la orden exacta para convertir el libro a finales LF, con una copia previa que nunca se sobrescribe, y el contrato de `compact` no cambia.
 - **D-Q11.** Un remoto que ya tiene eventos inválidos para la sincronización (`remote_ledger_invalid`) sin retener nada.
 - **D-Q17.** La negativa a importar y lo retenido en la exportación de la web (P2 y P3) pasan a la 015. **La 015 no puede permitir configurar la sincronización en la web sin ellos** (`specs/014-ledger-sync-core/deferred/`).
+
+**Corrección a «Restricciones que pesan»** (revisión de la PR #84): «las mutaciones exigen un libro válido» no era la regla del código. `recordEvent` se niega mientras queden eventos inválidos anteriores, salvo con un `settings_changed`; `correctEvent` y `reverseEvent` solo se niegan por los inválidos que ellos mismos crean (ADR-0015, nota del 2026-09-25).
 
 **Corrección a «Consecuencias».** Las operaciones de líneas crudas las cumplen hoy **tres** adaptadores: memoria, fichero y navegador. El de S3 es de la 015 y pasará los mismos tests de contrato.
 
