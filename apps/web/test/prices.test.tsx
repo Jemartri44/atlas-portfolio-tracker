@@ -11,7 +11,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
 import { Price, PriceDetail } from "../src/components/Price.jsx";
 import { loadWebHistory, reloadWebHistory } from "../src/ecb/history.js";
-import { externalOf, importPriceFiles, loadWebQuotes } from "../src/prices/quotes.js";
+import { externalOf, forgetPrices, importPriceFiles, loadWebQuotes } from "../src/prices/quotes.js";
 import Ajustes from "../src/routes/ajustes/index.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";
 import { settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
@@ -90,7 +90,7 @@ describe("importing prices by hand", () => {
     const imported = await importPriceFiles([
       { name: "ast_world.jsonl", text: line("2029-06-29", "999") },
     ]);
-    expect(imported).toEqual({ kind: "imported", assets: ["ast_world"] });
+    expect(imported).toEqual({ kind: "imported", assets: ["ast_world"], ignored: [] });
     const quotes = await loadWebQuotes(["ast_world", "ast_bonds"]);
     expect(quotes.origin).toBe("imported");
     expect(quotes.closes.get("ast_world")?.[0]?.close).toBe("999");
@@ -101,6 +101,42 @@ describe("importing prices by hand", () => {
     const host = await show("/cartera", Cartera);
     await settle(20);
     expect(text(host)).toContain("EODHD");
+  });
+});
+
+describe("the other files of prices/ and deleting what was imported", () => {
+  it("leaves symbols.json aside with a note instead of refusing the import", async () => {
+    const outcome = await importPriceFiles([
+      { name: "ast_world.jsonl", text: line("2029-06-29", "999") },
+      { name: "symbols.json", text: "{}" },
+      { name: "_status.json", text: "{}" },
+    ]);
+    expect(outcome).toEqual({
+      kind: "imported",
+      assets: ["ast_world"],
+      ignored: ["symbols.json", "_status.json"],
+    });
+  });
+
+  it("deletes the prices imported by hand, and nothing else", async () => {
+    await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "999") }]);
+    expect((await loadWebQuotes(["ast_world"])).origin).toBe("imported");
+    await forgetPrices();
+    expect((await loadWebQuotes(["ast_world"])).closes.size).toBe(0);
+  });
+
+  it("offers to delete them in Ajustes only when there are imported prices", async () => {
+    await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "999") }]);
+    const host = await show("/ajustes", Ajustes);
+    await settle(30);
+    const button = [...host.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Borrar los precios importados"),
+    );
+    expect(button).toBeDefined();
+    button?.click();
+    await settle(30);
+    expect(text(host)).toContain("Precios importados borrados de este navegador");
+    expect(text(host)).toContain("Sin precios automáticos en este dispositivo");
   });
 });
 

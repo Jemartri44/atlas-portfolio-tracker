@@ -22,14 +22,21 @@ export type SecretsErrorCode =
   | "secrets_too_open"
   | "secrets_inside_ledger_folder";
 
-/** Never carries a value: only the code, the path and, at most, the name of a key. */
+/**
+ * Never carries a value: only the code, the path and, at most, **a known key**
+ * or **the position** of an unknown one — never its name, because a user who
+ * swapped name and value would see the key on the screen (review of PR #78).
+ */
 export class SecretsError extends Error {
   constructor(
     readonly code: SecretsErrorCode,
     readonly path: string,
     readonly key?: string,
+    readonly position?: number,
   ) {
-    super(`${code}: ${path}${key === undefined ? "" : ` (${key})`}`);
+    super(
+      `${code}: ${path}${key === undefined ? "" : ` (${key})`}${position === undefined ? "" : ` (#${position})`}`,
+    );
     this.name = "SecretsError";
   }
 }
@@ -98,9 +105,9 @@ export const readSecrets = async (path: string, ledgerFolder: string): Promise<K
     throw new SecretsError("secrets_unreadable", path);
   }
   const keys: Keys = {};
-  for (const [name, value] of Object.entries(raw)) {
+  for (const [index, [name, value]] of Object.entries(raw).entries()) {
     if (!KEYS.includes(name)) {
-      throw new SecretsError("secrets_unknown_key", path, name);
+      throw new SecretsError("secrets_unknown_key", path, undefined, index + 1);
     }
     if (typeof value !== "string" || value.trim() === "") {
       throw new SecretsError("secrets_invalid_value", path, name);

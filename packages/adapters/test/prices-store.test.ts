@@ -137,15 +137,18 @@ describe("the file of the keys", () => {
   });
 
   /** Every error, whatever it is: never the content and never a value. */
-  const refused = async (path: string, code: string, key?: string) => {
+  const refused = async (path: string, code: string, key?: string, position?: number) => {
     const error = (await readSecrets(path, ledger).catch((caught) => caught)) as SecretsError;
     expect(error).toBeInstanceOf(SecretsError);
     expect(error.code).toBe(code);
     expect(error.key).toBe(key);
+    expect(error.position).toBe(position);
     expect(`${error.message} ${JSON.stringify(error)} ${String(error.stack)}`).not.toContain(KEY);
     // Not even a piece of it: Node's SyntaxError quotes a cut of the text,
     // "TEST-KEY-0", which a search for the whole key would not see.
-    expect(error.message).toBe(`${code}: ${path}${key === undefined ? "" : ` (${key})`}`);
+    expect(error.message).toBe(
+      `${code}: ${path}${key === undefined ? "" : ` (${key})`}${position === undefined ? "" : ` (#${position})`}`,
+    );
   };
 
   it("says a file that does not parse without its content, not even the SyntaxError", async () => {
@@ -155,11 +158,19 @@ describe("the file of the keys", () => {
     await refused(await write(`["${KEY}"]`), "secrets_unreadable");
   });
 
-  it("names a key it does not know, or a value it cannot use, never the value", async () => {
+  it("says where a key it does not know is, never its name; and names a value it cannot use, never the value", async () => {
     await refused(
       await write(JSON.stringify({ coingecko: KEY })),
       "secrets_unknown_key",
-      "coingecko",
+      undefined,
+      1,
+    );
+    // Name and value swapped: the name is the key, and it is never said.
+    await refused(
+      await write(JSON.stringify({ eodhd: "x", [KEY]: "eodhd" })),
+      "secrets_unknown_key",
+      undefined,
+      2,
     );
     await refused(
       await write(JSON.stringify({ eodhd: 7, x: KEY })),

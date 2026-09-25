@@ -24,16 +24,46 @@ type Body = Record<string, unknown>;
 const isObject = (value: unknown): value is Body =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/**
+ * At most one call a second: the free key limits the bursts, and the only
+ * word it says about it is «1 request per second» (questions.md §1.4; review
+ * of PR #78). A call waits for the second to pass instead of being refused.
+ */
+export const ALPHA_VANTAGE_SPACING_MS = 1000;
+
+export interface Pace {
+  readonly now: () => number;
+  readonly sleep: (ms: number) => Promise<void>;
+}
+
+const REAL_PACE: Pace = {
+  now: () => Date.now(),
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+};
+
 export class AlphaVantagePriceSource implements PriceSource {
   readonly name = "alpha_vantage";
+  private lastCall: number | undefined;
 
   constructor(
     private readonly key: string,
     private readonly fetchUrl: Fetch = (url) => fetch(url),
+    private readonly pace: Pace = REAL_PACE,
   ) {}
+
+  private async spaced(): Promise<void> {
+    if (this.lastCall !== undefined) {
+      const wait = this.lastCall + ALPHA_VANTAGE_SPACING_MS - this.pace.now();
+      if (wait > 0) {
+        await this.pace.sleep(wait);
+      }
+    }
+    this.lastCall = this.pace.now();
+  }
 
   /** The body of an answer, or the failure it means. */
   private async get(query: string, expected: string): Promise<SourceResult<Body>> {
+    await this.spaced();
     const answer = await ask(
       this.fetchUrl,
       `${ALPHA_VANTAGE_API}?${query}&apikey=${encodeURIComponent(this.key)}`,

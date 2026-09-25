@@ -17,6 +17,7 @@
 import { queryFolderPermission, rememberedFolder } from "@atlas/adapters/folder";
 import {
   assetOfPriceFile,
+  forgetImportedPrices,
   importedPrices,
   readFolderPrices,
   saveImportedPrices,
@@ -103,8 +104,16 @@ export const externalOf = (
         staleDays: quotes.history.staleDays,
       });
 
+/** The files of `prices/` that the console writes and that are not prices. */
+const COMPANIONS = ["symbols.json", "_status.json", "config.json"];
+
 export type PricesImport =
-  | { readonly kind: "imported"; readonly assets: readonly AssetId[] }
+  | {
+      readonly kind: "imported";
+      readonly assets: readonly AssetId[];
+      /** Files of `prices/` that are not prices (its correspondence, its status): left aside. */
+      readonly ignored: readonly string[];
+    }
   | { readonly kind: "refused"; readonly file: string; readonly code: string };
 
 /**
@@ -117,7 +126,15 @@ export const importPriceFiles = async (
   now: Date = new Date(),
 ): Promise<PricesImport> => {
   const incoming: Record<AssetId, string> = {};
+  const ignored: string[] = [];
   for (const { name, text } of files) {
+    // The other files of the folder `prices/` come along when a whole folder
+    // is chosen: they are not prices, and they are left aside with a note
+    // instead of refusing the import (review of PR #78).
+    if (COMPANIONS.includes(name)) {
+      ignored.push(name);
+      continue;
+    }
     const assetId = assetOfPriceFile(name);
     if (assetId === undefined) {
       return { kind: "refused", file: name, code: "not_a_price_file" };
@@ -134,5 +151,8 @@ export const importPriceFiles = async (
     files: { ...(before?.files ?? {}), ...incoming },
     imported_at: now.toISOString(),
   });
-  return { kind: "imported", assets: Object.keys(incoming) };
+  return { kind: "imported", assets: Object.keys(incoming), ignored };
 };
+
+/** Deletes the prices imported by hand in this browser. */
+export const forgetPrices = (): Promise<void> => forgetImportedPrices();

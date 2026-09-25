@@ -143,6 +143,23 @@ atlas add buy --account acc_fund --asset ast_bonds --order <order_id> \
 
 Antes de traspasar entre fondos, `atlas transfer simulate --from-asset ast_world --to-asset ast_bonds --quantity 10 --date 2028-01-31` enseña los pesos antes y después y recuerda que un traspaso no es hecho imponible. Necesita el precio de **los dos** fondos a esa fecha (paso 1 del mes siguiente); sin `--date`, usa la de hoy.
 
+### Precios de cierre diarios (feature 013)
+
+La consola descarga los cierres diarios de los activos **de su libro** desde dos APIs gratuitas con clave, EODHD (principal) y Alpha Vantage (respaldo), y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes.
+
+```bash
+# Las claves van fuera de la carpeta del libro, solo legibles por ti; la aplicación nunca las escribe
+mkdir -p ~/.config/atlas && printf '{"eodhd":"…","alpha_vantage":"…"}\n' > ~/.config/atlas/secrets.json && chmod 600 ~/.config/atlas/secrets.json
+
+atlas prices symbols set ast_world --currency EUR --eodhd XX0000000001.EUFUND   # el símbolo y la divisa de la cotización, contrastada con la fuente
+atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo
+atlas prices status      # cada fuente con su cupo de hoy y sus fallos, y la antigüedad del último cierre de cada activo
+```
+
+Para enseñar un valor gana el precio más reciente **que tenga valor en euros**, y con la misma fecha el manual. Si hay una cotización más nueva sin valor en euros, se enseña a su lado.
+
+**Cambio en `--json`**: en `weights` y `bucket`, el precio de cada fila pasa a ser un objeto `price` con `unit_value`, `currency`, `fx_rate`, `fx_rate_date`, `fx_missing`, `unit_value_eur`, `price_date`, `price_age_days`, `price_stale`, `origin`, `source`, `approximate` y `newer_quote`. Hasta la feature 012 eran campos sueltos de la fila (`unit_value`, `currency`, `fx_rate`, `price_date`, `price_age_days`, `price_stale`).
+
 ### El cubo especulativo (Fase 3)
 
 El cubo es el libro donde se aprende: cada tesis se escribe **antes** de comprar (regla 15) y se mide contra la alternativa aburrida, el índice de referencia (regla 16). El índice es un activo más del catálogo, y sus precios salen de las mismas `valuation` que todo lo demás.

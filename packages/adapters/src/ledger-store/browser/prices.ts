@@ -53,3 +53,11 @@ export const saveImportedPrices = (prices: ImportedPrices): Promise<void> =>
 
 export const importedPrices = (): Promise<ImportedPrices | undefined> =>
   idbGet<ImportedPrices>(LEDGER_STORE, KEY);
+
+/**
+ * Deletes the prices imported by hand: the manual prices and the ledger are
+ * untouched. Written as an empty value and not with `idbDelete`, which nothing
+ * on the boot path used: importing it put it in the chunk the first screen
+ * downloads (+35 bytes, measured).
+ */
+export const forgetImportedPrices = (): Promise<void> => idbPut(LEDGER_STORE, KEY, undefined);

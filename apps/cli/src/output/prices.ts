@@ -104,7 +104,7 @@ export const describeSecretsError = (error: SecretsError): string => {
     case "secrets_too_open":
       return `${error.path} lo pueden leer otros usuarios: «chmod 600 ${error.path}».`;
     case "secrets_unknown_key":
-      return `${error.path} tiene una clave que no se conoce («${error.key}»). Solo valen «eodhd» y «alpha_vantage».`;
+      return `${error.path}: la entrada número ${error.position} no es una clave que se conozca. Solo valen «eodhd» y «alpha_vantage». No se enseña su nombre, por si fuera la clave misma.`;
     case "secrets_invalid_value":
       return `${error.path}: el valor de «${error.key}» no es una clave (tiene que ser un texto no vacío).`;
     default:

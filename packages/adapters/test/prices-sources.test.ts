@@ -192,6 +192,29 @@ describe("EODHD", () => {
   });
 });
 
+describe("Alpha Vantage's pace", () => {
+  it("never calls twice within a second", async () => {
+    let clock = 10_000;
+    const waits: number[] = [];
+    const pace = {
+      now: () => clock,
+      sleep: async (ms: number) => {
+        waits.push(ms);
+        clock += ms;
+      },
+    };
+    const { urls, fetchUrl } = answering(200, fixture("alpha-vantage", "daily-synth.json"));
+    const source = new AlphaVantagePriceSource(KEY, fetchUrl, pace);
+    await source.dailyCloses("A", "2027-01-01", "2027-01-06");
+    clock += 300;
+    await source.currencyOf("A");
+    clock += 1500;
+    await source.dailyCloses("B", "2027-01-01", "2027-01-06");
+    expect(waits).toEqual([700]);
+    expect(urls).toHaveLength(3);
+  });
+});
+
 describe("Alpha Vantage", () => {
   it("reads the closes of the window, oldest first, as their text", async () => {
     const { urls, fetchUrl } = answering(200, fixture("alpha-vantage", "daily-synth.json"));

@@ -64,7 +64,11 @@ export const PricesCard = (): JSX.Element => {
         outcome.kind === "imported"
           ? {
               tone: "info",
-              text: `Precios importados de ${outcome.assets.length === 1 ? "un activo" : `${outcome.assets.length} activos`}.`,
+              text: `Precios importados de ${outcome.assets.length === 1 ? "un activo" : `${outcome.assets.length} activos`}.${
+                outcome.ignored.length === 0
+                  ? ""
+                  : ` No se han importado ${outcome.ignored.map((name) => `«${name}»`).join(", ")}: no son precios.`
+              }`,
             }
           : {
               tone: "caution",
@@ -76,6 +80,23 @@ export const PricesCard = (): JSX.Element => {
     } finally {
       setBusy(false);
       input.value = "";
+      refetch();
+    }
+  };
+
+  const onForget = async (): Promise<void> => {
+    setBusy(true);
+    setSaid(undefined);
+    try {
+      await (await prices()).forgetPrices();
+      setSaid({
+        tone: "info",
+        text: "Precios importados borrados de este navegador. Las valoraciones que registras a mano siguen ahí.",
+      });
+    } catch (failure) {
+      setSaid({ tone: "danger", text: toAppError(failure).message });
+    } finally {
+      setBusy(false);
       refetch();
     }
   };
@@ -127,6 +148,11 @@ export const PricesCard = (): JSX.Element => {
             onChange={(event) => void onImport(event)}
           />
         </label>
+        <Show when={quotes()?.origin === "imported"}>
+          <button type="button" class="secondary" disabled={busy()} onClick={() => void onForget()}>
+            Borrar los precios importados
+          </button>
+        </Show>
       </div>
       <Show
         when={canLinkFolder()}
