@@ -164,6 +164,31 @@ describe("reading prices from the folder the console writes", () => {
   });
 });
 
+describe("closes stored in the wrong currency (review of PR #80)", () => {
+  it("are left out of the figures in euros of the web, and said", async () => {
+    const symbols = JSON.stringify({
+      symbols_format: 2,
+      assets: {
+        ast_world: {
+          eodhd: "W.LSE",
+          currencies: { eodhd: "GBX" },
+          confirmed_at: "x",
+        },
+      },
+    });
+    await rememberFolder(
+      fakeFolder({
+        "prices/ast_world.jsonl": line("2029-06-29", "1000", "GBP"),
+        "prices/symbols.json": symbols,
+      }),
+    );
+    await reloadWebHistory();
+    const quotes = await loadWebQuotes(["ast_world"]);
+    expect(quotes.closes.get("ast_world")).toEqual([]);
+    expect(quotes.mismatched).toMatchObject([{ asset_id: "ast_world", source: "eodhd", count: 1 }]);
+  });
+});
+
 describe("a local configuration that does not read (§6.4 (d))", () => {
   it("is said with the key it does not understand, never as a browser that keeps no data", async () => {
     await rememberFolder(fakeFolder({ "atlas.config.json": '{"ecb_stale_days": 3}' }));

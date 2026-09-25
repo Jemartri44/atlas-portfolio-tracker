@@ -14,7 +14,7 @@
 // Loaded lazily: nothing of it is on the boot path, and the build fails if it
 // ever is.
 
-import { queryFolderPermission, rememberedFolder } from "@atlas/adapters/folder";
+import { queryFolderPermission, readFolderText, rememberedFolder } from "@atlas/adapters/folder";
 import {
   assetOfPriceFile,
   forgetImportedPrices,
@@ -26,8 +26,11 @@ import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
 import {
   type EffectiveClose,
   externalPricesOf,
+  type MismatchedCloses,
+  parseSymbols,
   readCloseFile,
   readCloses,
+  type SymbolsFile,
   type UnreadableCloses,
 } from "@atlas/domain/quotes";
 import { loadWebHistory, type WebHistory } from "../ecb/history.js";
@@ -40,6 +43,12 @@ export interface WebQuotes {
   readonly importedAt?: string;
   /** Files that do not read: their assets have no automatic price, and it is said. */
   readonly unreadable: readonly UnreadableCloses[];
+  /**
+   * Closes stored in a currency their source does not declare in
+   * `prices/symbols.json` (feature 013 stored pence as pounds): left out, and
+   * said. Only known where the folder gives the correspondence.
+   */
+  readonly mismatched: readonly MismatchedCloses[];
   /** The folder is linked and lost its permission, or this browser keeps nothing. */
   readonly problem?: "permission" | "storage";
   readonly history: WebHistory;
@@ -47,7 +56,7 @@ export interface WebQuotes {
 
 const fromFolder = async (
   assetIds: readonly AssetId[],
-): Promise<{ files?: Map<AssetId, string>; problem?: "permission" }> => {
+): Promise<{ files?: Map<AssetId, string>; symbols?: SymbolsFile; problem?: "permission" }> => {
   const handle = await rememberedFolder();
   if (handle === undefined) {
     return {};
@@ -56,7 +65,18 @@ const fromFolder = async (
     return { problem: "permission" };
   }
   const files = await readFolderPrices(handle, assetIds);
-  return files.size === 0 ? {} : { files };
+  if (files.size === 0) {
+    return {};
+  }
+  const text = await readFolderText(handle, ["prices", "symbols.json"]);
+  let symbols: SymbolsFile | undefined;
+  try {
+    symbols = parseSymbols(text);
+  } catch {
+    // A correspondence that does not read cannot say which closes are wrong.
+    symbols = undefined;
+  }
+  return symbols === undefined ? { files } : { files, symbols };
 };
 
 /** The closes for the assets given: the folder's, else the imported ones, else none. */
@@ -66,12 +86,18 @@ export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQu
     const folder = await fromFolder(assetIds);
     const problem = folder.problem === undefined ? {} : { problem: folder.problem };
     if (folder.files !== undefined) {
-      const read = readCloses(folder.files);
-      return { closes: read.closes, unreadable: read.unreadable, origin: "folder", history };
+      const read = readCloses(folder.files, folder.symbols);
+      return {
+        closes: read.closes,
+        unreadable: read.unreadable,
+        mismatched: read.mismatched,
+        origin: "folder",
+        history,
+      };
     }
     const imported = await importedPrices();
     if (imported === undefined) {
-      return { closes: new Map(), unreadable: [], history, ...problem };
+      return { closes: new Map(), unreadable: [], mismatched: [], history, ...problem };
     }
     const wanted = new Set(assetIds);
     const read = readCloses(
@@ -80,6 +106,7 @@ export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQu
     return {
       closes: read.closes,
       unreadable: read.unreadable,
+      mismatched: [],
       origin: "imported",
       importedAt: imported.imported_at,
       history,
@@ -87,7 +114,7 @@ export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQu
     };
   } catch {
     // Without a store to read from (private mode, blocked site data): said.
-    return { closes: new Map(), unreadable: [], history, problem: "storage" };
+    return { closes: new Map(), unreadable: [], mismatched: [], history, problem: "storage" };
   }
 };
 
