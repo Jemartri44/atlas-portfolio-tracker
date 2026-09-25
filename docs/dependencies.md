@@ -9,7 +9,7 @@ Constitución VI y ADR-0007: pocas dependencias, cada una justificada. Esta es l
 | `big.js` (**vendorizada**, `packages/domain/vendor/`) | `domain` | Decimal exacto (ADR-0005). No es dependencia npm |
 | `uPlot` (**vendorizada**, `apps/web/vendor/`) | `web` | Series temporales y barras, 23 KB sin dependencias (ADR-0017). El anillo de reparto se escribe a mano en SVG. No es dependencia npm |
 | `@aws-sdk/client-s3` | `adapters` | Libro, documentos, importaciones (ADR-0002) |
-| `@aws-sdk/client-ssm` | `adapters` | Token de IBKR (Fase 4) |
+| `@aws-sdk/client-ssm` | `adapters` | Parameter Store: la API **lee** la lista permitida, el identificador y el secreto del cliente de Google y la clave de sesión (ADR-0027), y **lee y escribe** los registros de los tokens de dispositivo de la consola, solo bajo `/atlas/<entorno>/device-tokens/` (ADR-0033, punto 9); las órdenes de administración revocan esos registros (ADR-0033, punto 8); más adelante, el token Flex de IBKR (Fase 4). **Presupuestado, no instalado**: instalarlo en la feature 015 es decisión del usuario (`docs/prompts/015-api-access.md` §7 P3) |
 | `@aws-sdk/client-ses` | `adapters` | Correo (Fase 4) |
 | `solid-js` (**fijada a 1.9.x**) | `web` | Framework de la SPA (ADR-0017). 4 paquetes, 5,33 KB gzip, compila con `tsc` 7 sin herramienta extra |
 | `@solidjs/router` (**versión exacta fijada**) | `web` | Rutas de la SPA; sin dependencias propias. Llegó a 1.0.0 después de ADR-0017 |
