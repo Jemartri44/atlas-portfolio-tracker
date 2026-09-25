@@ -222,8 +222,17 @@ const dist = join(webRoot, "dist");
  * which the load of the store now shares too —; the entry **−2**. Nothing of
  * the sync engine is in the boot: its folders are in LAZY_ONLY. The trend:
  * 73,9 → 74,0.
+ *
+ * **Feature 014, the refusal of `acceptInvalid` on a synced ledger (V7):
+ * measured 75.838 bytes, +135 over `develop` altogether, +5 over the ceiling
+ * above; the ceiling rises exactly that, inside the cap of +140 of D-Q7.** The
+ * refusal lives in `checkInvalid`, which is boot, so that the preview and the
+ * record fail alike: one more condition and one more code of
+ * `DependentEventsError` (domain chunk +42 over the raw-line operations, the
+ * rest of it gzip moving). The read of «is this browser synced?» is lazy: the
+ * write path of the web loads it from the store of the sync.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -563,8 +572,12 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108;
  * the eighteen failures of the remote one by one) in the catalogue of errors
  * (+2,5). The domain of the sync is not in the bundle yet: nothing of the web
  * imports it until feature 015 gives it a button. The trend: 269,6 → 272,2.
+ *
+ * **Feature 014, V7 (2026-09-25): measured 272,80 (279.345 bytes), ceiling
+ * 273,0.** The web reads whether it is synced before an `acceptInvalid`, from
+ * the store of the sync, lazily (+0,6 with the sentence of the refusal).
  */
-const TOTAL_BUDGET_GZIP_BYTES = 272.3 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 273.0 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -714,6 +727,11 @@ const LAZY_ONLY = [
   // the web's own store of sync state. The sync is explicit and lazily loaded.
   { path: "/packages/domain/src/sync/", what: "la sincronización del libro" },
   { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
+  { path: "/packages/domain/src/ports/remote-ledger.ts", what: "el puerto del remoto" },
+  {
+    path: "/packages/domain/src/ports/sync-state-store.ts",
+    what: "el puerto del estado de la sincronización",
+  },
   { path: "/packages/adapters/src/sync/", what: "la orquestación de la sincronización" },
   {
     path: "/packages/adapters/src/ledger-store/browser/sync-store.ts",
