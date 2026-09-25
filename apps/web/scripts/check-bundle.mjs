@@ -532,8 +532,13 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307;
  * set aside on import, the newer quote without euros said beside a price, and
  * the note of the approximation in the card of the contribution (+0,3), less
  * what the screens stopped preloading.
+ *
+ * **Review of PR #80 (2026-09-25): measured 268,74 (275.194 bytes), ceiling
+ * 269,0.** The web reads `prices/symbols.json` to leave out the closes stored
+ * in a currency their source no longer declares, and says so beside the
+ * prices (+0,95, lazy with the quotes).
  */
-const TOTAL_BUDGET_GZIP_BYTES = 268.1 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 269.0 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
