@@ -188,14 +188,20 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
     ctx,
     Object.fromEntries(entries),
     table(
-      ["activo", "divisa declarada", "EODHD", "Alpha Vantage", "confirmada contra la fuente"],
+      ["activo", "divisa declarada", "EODHD", "Alpha Vantage", "contraste con la fuente"],
       entries.map(([id, entry]) => [
         id,
         entry.currency,
         entry.eodhd ?? "",
         entry.alpha_vantage ?? "",
-        QUOTE_SOURCES.filter((s) => entry.currency_confirmed_over?.[s] !== undefined)
-          .map((s) => `${SOURCE_NAMES[s]} dice ${entry.currency_confirmed_over?.[s]}`)
+        QUOTE_SOURCES.filter((s) => entry[s] !== undefined)
+          .map((s) =>
+            entry.currency_check?.[s] === undefined
+              ? `${SOURCE_NAMES[s]}: sin contrastar (se contrasta antes de su primera descarga)`
+              : entry.currency_confirmed_over?.[s] !== undefined
+                ? `${SOURCE_NAMES[s]} dice ${entry.currency_confirmed_over?.[s]}, confirmada la declarada`
+                : `${SOURCE_NAMES[s]}: ${entry.currency_check?.[s]?.found ?? "sus datos no dicen la divisa"}`,
+          )
           .join("; "),
       ]),
     ),
@@ -276,7 +282,7 @@ const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<
       ...(unchecked.length === 0
         ? []
         : [
-            `Sin confirmar contra ${unchecked.join(" ni ")}: no hay clave o no queda cupo hoy. Se confirmará cuando vuelvas a declararlo.`,
+            `Sin contrastar con ${unchecked.join(" ni ")}: no hay clave o no queda cupo hoy. Se contrastará antes de su primera descarga, y hasta entonces no se descarga nada de esa fuente.`,
           ]),
     ].join("\n"),
   );

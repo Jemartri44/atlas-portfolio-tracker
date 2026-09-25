@@ -39,7 +39,16 @@ const symbols = async (dir: string, assets: Record<string, Record<string, unknow
       assets: Object.fromEntries(
         Object.entries(assets).map(([id, entry]) => [
           id,
-          { confirmed_at: "2027-01-01T00:00:00.000Z", ...entry },
+          {
+            confirmed_at: "2027-01-01T00:00:00.000Z",
+            // Contrasted with its sources unless the test says otherwise.
+            currency_check: Object.fromEntries(
+              ["eodhd", "alpha_vantage"]
+                .filter((source) => entry[source] !== undefined)
+                .map((source) => [source, { at: "2027-01-01T00:00:00.000Z" }]),
+            ),
+            ...entry,
+          },
         ]),
       ),
     }),
@@ -187,6 +196,31 @@ describe("the key never comes out, with the real adapters and a fetch that fails
   });
 });
 
+describe("a Node that cannot read a JSON number by its text (D-Q1)", () => {
+  it("stops with its own message, spends no call and writes nothing", async () => {
+    const f = await folder(ledger());
+    await symbols(f.dir, { fund_a: { currency: "EUR", eodhd: "A.EUFUND" } });
+    const { run } = await import("../../src/main.js");
+    const lines: string[] = [];
+    const io = {
+      out: (t: string) => lines.push(t),
+      err: (t: string) => lines.push(t),
+      confirm: async () => undefined,
+    };
+    const old = ((text: string, reviver: (key: string, value: unknown) => unknown) =>
+      JSON.parse(text, (key, value) => reviver(key, value))) as never;
+    const code = await run(["--ledger", f.ledger, "prices", "update"], io, f.compose, undefined, {
+      secretsPath: f.secrets,
+      sources: (keys) => ({
+        eodhd: new EodhdPriceSource(keys.eodhd as string, async () => new Response("[]"), old),
+      }),
+    });
+    expect(code).toBe(1);
+    expect(lines.join("\n")).toContain("no deja leer el texto exacto de un número JSON");
+    await expect(readFile(join(f.dir, "prices", "_status.json"), "utf8")).rejects.toThrow();
+  });
+});
+
 describe("atlas prices symbols", () => {
   it("declares a correspondence, confirmed against the source, and never assumes the currency", async () => {
     const f = await folder(ledger());
@@ -283,7 +317,10 @@ describe("atlas prices symbols", () => {
       "B.DEX",
     );
     expect(result.code).toBe(0);
-    expect(result.text).toContain("Sin confirmar contra Alpha Vantage");
+    expect(result.text).toContain("Sin contrastar con Alpha Vantage");
+    expect((await f.atlas("prices", "symbols", "etf_b")).text).toContain(
+      "Alpha Vantage: sin contrastar",
+    );
   });
 
   it("refuses a usage it does not know", async () => {

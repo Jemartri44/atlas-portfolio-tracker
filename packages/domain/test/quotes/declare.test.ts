@@ -93,6 +93,34 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
     expect(store.files.has("symbols.json")).toBe(false);
   });
 
+  it("stops before reserving anything when a source cannot run in this runtime (D-Q1)", async () => {
+    const store = new MemoryPriceStore();
+    const s = sources(store);
+    const eodhd = Object.assign(s.eodhd, {
+      ready: () => {
+        throw new Error("no exact JSON numbers here");
+      },
+    });
+    await expect(
+      checkSymbols({
+        declaration: { currency: "EUR", eodhd: "X" },
+        store,
+        sources: { ...s, eodhd },
+        now,
+      }),
+    ).rejects.toThrow("no exact JSON numbers here");
+    expect(store.transactions).toBe(0);
+    // A source without a symbol in the declaration is not asked whether it can run.
+    expect(
+      await checkSymbols({
+        declaration: { currency: "EUR", alpha_vantage: "X" },
+        store,
+        sources: { ...s, eodhd },
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("writes nothing while a disagreement is not confirmed, and keeps the confirmation", async () => {
     const store = new MemoryPriceStore();
     const declaration = { currency: "GBX", eodhd: "CSPX.LSE" };

@@ -44,6 +44,11 @@ export const checkSymbols = async (input: {
   const checks: Partial<Record<QuoteSource, string | undefined>> = {};
   const unchecked: QuoteSource[] = [];
   for (const source of QUOTE_SOURCES) {
+    if (input.declaration[source] !== undefined) {
+      input.sources[source]?.ready?.();
+    }
+  }
+  for (const source of QUOTE_SOURCES) {
     const symbol = input.declaration[source];
     if (symbol === undefined) {
       continue;

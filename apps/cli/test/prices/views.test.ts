@@ -130,6 +130,20 @@ describe("the views with automatic prices", () => {
     expect(contribute.text).toContain("el reparto de la aportación depende de una estimación");
   });
 
+  it("degrade with a local configuration that does not read: said with its key, the view goes on", async () => {
+    const f = await folder(ledger());
+    await writePrices(f.dir, { fund_a: line("2027-06-01", "120") });
+    await writeFile(join(f.dir, "atlas.config.json"), '{"ecb_stale_days": 3}');
+    const weights = await f.atlas("weights", "--date", "2027-06-09");
+    expect(weights.code).toBe(0);
+    expect(weights.err).toContain("atlas.config.json");
+    expect(weights.err).toContain("ecb_stale_days");
+    expect(weights.err).toContain("no se usan precios automáticos");
+    expect(weights.text).toMatch(
+      /fund_a\s+equity\s+10\s+110\s+EUR\s+1\s+2027-05-31\s+9 ⚠\s+manual/,
+    );
+  });
+
   it("say a file of prices that does not read, and leave that asset without an automatic price", async () => {
     const f = await folder(ledger());
     await writePrices(f.dir, { fund_a: '{"schema_version":2}\n' });

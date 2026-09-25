@@ -125,9 +125,11 @@ const interfaceKeys = (file: string, name: string): string[] => {
   for (let index = source.indexOf("{", start); index < source.length; index += 1) {
     const char = source[index] as string;
     if (depth === 1 && (char === "\n" || char === ";")) {
-      const match = /^\s*(?:readonly\s+)?([A-Za-z_$][\w$]*)\??\s*:/.exec(line);
+      // A key with or without quotes: `"quotes": …` is a key as much as
+      // `quotes: …`, and the quoted form slipped past this (review of PR #78).
+      const match = /^\s*(?:readonly\s+)?(?:(["'])([^"']+)\1|([A-Za-z_$][\w$]*))\??\s*:/.exec(line);
       if (match !== null) {
-        keys.push(match[1] as string);
+        keys.push((match[2] ?? match[3]) as string);
       }
       line = "";
     }
@@ -537,6 +539,9 @@ describe("architecture: the tax engine", () => {
       "positionOf",
       "usage",
     ]);
+    // The state as it is built is contrasted too, in the domain's own tests
+    // (`test/projections/state-keys.test.ts`), which no reading of the source
+    // can dodge.
     const settings = interfaceKeys(join(domainSrc, "settings", "settings.ts"), "Settings");
     expect(settings).toEqual([
       "fiscal_date_rule",

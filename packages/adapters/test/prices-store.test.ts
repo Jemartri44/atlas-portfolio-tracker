@@ -216,7 +216,15 @@ describe("two consoles downloading at once, on the disk", () => {
       JSON.stringify({
         symbols_format: 1,
         assets: Object.fromEntries(
-          ids.map((id) => [id, { currency: "EUR", eodhd: `${id}.XETRA`, confirmed_at: "x" }]),
+          ids.map((id) => [
+            id,
+            {
+              currency: "EUR",
+              eodhd: `${id}.XETRA`,
+              confirmed_at: "x",
+              currency_check: { eodhd: { at: "x" } },
+            },
+          ]),
         ),
       }),
     );

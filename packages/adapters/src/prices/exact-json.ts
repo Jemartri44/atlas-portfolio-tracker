@@ -27,7 +27,7 @@ type Reviver = (
   value: unknown,
   context?: { source?: string },
 ) => unknown;
-type Parse = (text: string, reviver: Reviver) => unknown;
+export type Parse = (text: string, reviver: Reviver) => unknown;
 
 /** Parses `text`, every number as a `JsonNumber` with its source text. Throws `SyntaxError` on bad JSON. */
 export const parseExactJson = (

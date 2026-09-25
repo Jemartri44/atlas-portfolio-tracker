@@ -110,7 +110,16 @@ export const symbolsFile = (assets: Record<string, Record<string, unknown>>): st
     assets: Object.fromEntries(
       Object.entries(assets).map(([id, entry]) => [
         id,
-        { confirmed_at: "2027-01-01T00:00:00.000Z", ...entry },
+        {
+          confirmed_at: "2027-01-01T00:00:00.000Z",
+          // Contrasted with every source it names, unless the test says otherwise.
+          currency_check: Object.fromEntries(
+            ["eodhd", "alpha_vantage"]
+              .filter((source) => entry[source] !== undefined)
+              .map((source) => [source, { at: "2027-01-01T00:00:00.000Z" }]),
+          ),
+          ...entry,
+        },
       ]),
     ),
   });

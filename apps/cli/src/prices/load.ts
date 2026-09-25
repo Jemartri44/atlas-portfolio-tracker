@@ -113,11 +113,23 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
   if (files.size === 0) {
     return { notes: [] };
   }
+  let config: Awaited<ReturnType<typeof readLocalConfig>>;
+  try {
+    config = await readLocalConfig(folder);
+  } catch (error) {
+    // A local configuration that does not read degrades the automatic prices,
+    // it does not bring down the view (review of PR #78, the same defect the
+    // web had): said with the key it does not understand, and the view goes on
+    // with the manual prices.
+    if (error instanceof DomainError) {
+      return {
+        notes: [`Aviso: ${describeError(error)} Mientras tanto no se usan precios automáticos.`],
+      };
+    }
+    throw error;
+  }
   const read = readCloses(files);
-  const [{ history, note }, config] = await Promise.all([
-    historyOf(folder),
-    readLocalConfig(folder),
-  ]);
+  const { history, note } = await historyOf(folder);
   const notes = read.unreadable.map(
     (problem: UnreadableCloses) =>
       `Aviso: ${describeError(new DomainError(problem.code, problem.code, { asset_id: problem.asset_id, line: problem.line, field: "línea" }))}`,

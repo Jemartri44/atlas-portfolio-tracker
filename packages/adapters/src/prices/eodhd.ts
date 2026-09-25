@@ -43,9 +43,9 @@ const kindOfStatus = (status: number) => {
 };
 
 /** The body of a 200 as JSON with exact numbers, or `undefined` when it is not JSON. */
-const jsonOf = (answer: Answer): unknown => {
+const jsonOf = (answer: Answer, parse?: Parameters<typeof parseExactJson>[1]): unknown => {
   try {
-    return parseExactJson(answer.text);
+    return parseExactJson(answer.text, parse);
   } catch (error) {
     if (error instanceof SyntaxError) {
       return undefined;
@@ -60,7 +60,14 @@ export class EodhdPriceSource implements PriceSource {
   constructor(
     private readonly key: string,
     private readonly fetchUrl: Fetch = (url) => fetch(url),
+    /** The `JSON.parse` of the runtime; replaced in tests by one without `context`. */
+    private readonly parse?: Parameters<typeof parseExactJson>[1],
   ) {}
+
+  /** Stops, with `ExactJsonUnsupported`, where a number could only be read as a float (D-Q1). */
+  ready(): void {
+    parseExactJson("[1]", this.parse);
+  }
 
   private async get(path: string, query: string): Promise<SourceResult<unknown>> {
     const answer = await ask(
@@ -73,7 +80,7 @@ export class EodhdPriceSource implements PriceSource {
     if (answer.status !== 200) {
       return failure(kindOfStatus(answer.status));
     }
-    const body = jsonOf(answer);
+    const body = jsonOf(answer, this.parse);
     return body === undefined ? failure("invalid_response") : { ok: true, value: body };
   }
 

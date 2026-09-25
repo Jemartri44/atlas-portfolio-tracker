@@ -44,7 +44,7 @@ import {
   spentAt,
   withAssetFailures,
 } from "./status.js";
-import { currencyAgrees, parseSymbols, type SymbolEntry } from "./symbols.js";
+import { currencyAgrees, parseSymbols, type SymbolEntry, serializeSymbols } from "./symbols.js";
 
 export interface UpdatePricesInput {
   /** The ledger **of the console**, projected at `today` (P5). */
@@ -138,6 +138,9 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
   if (available.length === 0) {
     return { no_sources: true, assets: [], remaining: {}, failing: [] };
   }
+  for (const source of available) {
+    input.sources[source]?.ready?.();
+  }
 
   const outcomes: CallOutcome[] = [];
   const downloads: Download[] = [];
@@ -161,13 +164,77 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       return true;
     });
 
+  /** Contrasts the declared currency with the metadata of `source`, and records it. */
+  const contrast = async (
+    assetId: AssetId,
+    entry: SymbolEntry,
+    source: QuoteSource,
+  ): Promise<{ entry: SymbolEntry; kind?: QuoteFailureKind }> => {
+    if (!(await reserve(source))) {
+      return { entry, kind: "budget_exhausted" };
+    }
+    const result = await (input.sources[source] as PriceSource)
+      .currencyOf(entry[source] as string)
+      .catch(() => ({ ok: false, kind: "unavailable" }) as const);
+    const at = input.now().toISOString();
+    if (!result.ok) {
+      outcomes.push({ source, at, ok: false, kind: result.kind });
+      failuresOf.set(assetId, { kind: result.kind, source, at });
+      if (RETIRES_SOURCE.includes(result.kind)) {
+        retired.set(source, result.kind);
+      }
+      return { entry, kind: result.kind };
+    }
+    outcomes.push({ source, at, ok: true });
+    const check = result.value === undefined ? { at } : { found: result.value, at };
+    const checked: SymbolEntry = {
+      ...entry,
+      currency_check: { ...entry.currency_check, [source]: check },
+    };
+    await store.transact(async (tx) => {
+      const file = parseSymbols(await tx.symbols());
+      const current = file.assets[assetId];
+      // Only onto the declaration it was made for: one changed meanwhile is left as it is.
+      if (
+        current !== undefined &&
+        current[source] === entry[source] &&
+        current.currency === entry.currency
+      ) {
+        await tx.writeSymbols(
+          serializeSymbols({
+            ...file,
+            assets: {
+              ...file.assets,
+              [assetId]: {
+                ...current,
+                currency_check: { ...current.currency_check, [source]: check },
+              },
+            },
+          }),
+        );
+      }
+    });
+    if (currencyAgrees(checked, source)) {
+      return { entry: checked };
+    }
+    failuresOf.set(assetId, {
+      kind: "currency_mismatch",
+      source,
+      at,
+      declared: entry.currency,
+      found: result.value as string,
+    });
+    return { entry: checked, kind: "currency_mismatch" };
+  };
+
   for (const { asset_id, group } of downloadPlan(input.state, input.settings)) {
-    const entry: SymbolEntry | undefined = symbols.assets[asset_id];
-    const candidates = available.filter((source) => entry?.[source] !== undefined);
-    if (entry === undefined || candidates.length === 0) {
+    const declared: SymbolEntry | undefined = symbols.assets[asset_id];
+    const candidates = available.filter((source) => declared?.[source] !== undefined);
+    if (declared === undefined || candidates.length === 0) {
       reports.push({ asset_id, group, outcome: "no_symbol", added: 0, failures: [] });
       continue;
     }
+    let entry: SymbolEntry = declared;
     const failures: { source: QuoteSource; kind: QuoteFailureKind }[] = [];
     const usable = candidates.filter((source) => {
       if (currencyAgrees(entry, source)) {
@@ -204,6 +271,10 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       continue;
     }
     const from = last === undefined ? addYears(today, -1) : addDays(last, 1);
+    // **Never the value of the day in course** (review of PR #78): asked in
+    // the afternoon, a source gives a price of mid-session, and stored as the
+    // close of today it would stay one for good. Only days before today.
+    const to = addDays(today, -1);
     let answered: QuoteSource | undefined;
     for (const source of usable) {
       const retiredBy = retired.get(source);
@@ -211,13 +282,25 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         failures.push({ source, kind: retiredBy });
         continue;
       }
+      // A correspondence declared without contrasting it with this source (no
+      // key or no budget then) is contrasted **before its first download**:
+      // a price is never downloaded for a currency nobody checked (review of
+      // PR #78; the case GBX against GBP that decision D-Q2 is there for).
+      if (entry.currency_check?.[source] === undefined) {
+        const checked = await contrast(asset_id, entry, source);
+        entry = checked.entry;
+        if (checked.kind !== undefined) {
+          failures.push({ source, kind: checked.kind });
+          continue;
+        }
+      }
       if (!(await reserve(source))) {
         failures.push({ source, kind: "budget_exhausted" });
         continue;
       }
       const symbol = entry[source] as string;
       const result = await (input.sources[source] as PriceSource)
-        .dailyCloses(symbol, from, today)
+        .dailyCloses(symbol, from, to)
         .catch(() => ({ ok: false, kind: "unavailable" }) as const);
       const at = input.now().toISOString();
       if (!result.ok) {
@@ -250,7 +333,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         asset_id,
         source,
         currency: entry.currency,
-        closes: result.value.filter((close) => close.date >= from && close.date <= today),
+        closes: result.value.filter((close) => close.date >= from && close.date <= to),
       });
       failuresOf.set(asset_id, undefined);
       answered = source;

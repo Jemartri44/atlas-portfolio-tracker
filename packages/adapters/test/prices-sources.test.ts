@@ -55,6 +55,22 @@ describe("exact JSON numbers (D-Q1)", () => {
   });
 });
 
+describe("EODHD where a number cannot be read by its text (D-Q1)", () => {
+  const old = ((text: string, reviver: (key: string, value: unknown) => unknown) =>
+    JSON.parse(text, (key, value) => reviver(key, value))) as never;
+
+  it("says it before anything, and never reads a close as a float", async () => {
+    const { urls, fetchUrl } = answering(200, fixture("eodhd", "eod-synth.json"));
+    const source = new EodhdPriceSource(KEY, fetchUrl, old);
+    expect(() => source.ready()).toThrow(ExactJsonUnsupported);
+    await expect(source.dailyCloses("X", "2027-01-04", "2027-01-06")).rejects.toThrow(
+      ExactJsonUnsupported,
+    );
+    expect(urls).toHaveLength(1);
+    expect(() => new EodhdPriceSource(KEY, fetchUrl).ready()).not.toThrow();
+  });
+});
+
 describe("EODHD", () => {
   it("reads the closes as traded, as the exact text of their number", async () => {
     const { urls, fetchUrl } = answering(200, fixture("eodhd", "eod-synth.json"));

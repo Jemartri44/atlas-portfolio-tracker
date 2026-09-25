@@ -59,4 +59,12 @@ export interface PriceSource {
    * metadata do not say. Costs a call of the quota.
    */
   currencyOf(symbol: string): Promise<SourceResult<string | undefined>>;
+  /**
+   * Throws when this runtime cannot run the adapter at all — EODHD cannot read
+   * the exact text of a JSON number without `context.source` (decision D-Q1).
+   * Called **before** reserving any call: that is not a source that does not
+   * answer, and it must stop the run with its own message, not spend the
+   * budget as «unavailable» (review of PR #78).
+   */
+  ready?(): void;
 }
