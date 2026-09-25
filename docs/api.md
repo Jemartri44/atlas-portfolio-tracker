@@ -176,8 +176,9 @@ Cuerpo:
 
 - `line`: el texto exacto de una línea del libro, como cadena JSON. La API escribe `line` + `"\n"` en UTF-8, **sin volver a serializar**. Una cadena con `"\n"` o `"\r"` es `400 body_invalid`.
 - `confirm_duplicate`: la confirmación explícita, **por línea**, de una huella repetida (ADR-0012; ADR-0026, Parte A). Sin ella, una huella repetida es un rechazo de esa línea.
-- `has_correction`: la declaración de que **esta anulación tiene corrección**. Solo vale en una línea de tipo `reversal` (`400 body_invalid` si no).
-- `chain_continues`: en la corrección de una pareja, que **la pareja siguiente pertenece a la misma cadena** de correcciones de tipos. Solo vale en una línea con `corrects_id` (`400 body_invalid` si no); por defecto, `false`.
+- `has_correction`: la declaración de que **esta anulación tiene corrección**. Solo vale en una línea que se lee como `reversal`.
+- `chain_continues`: en la corrección de una pareja, que **la pareja siguiente pertenece a la misma cadena** de correcciones de tipos. Solo vale en una línea con `corrects_id`; por defecto, `false`.
+- **`400 body_invalid` es solo para la forma de la petición** (un campo desconocido, un tipo que no es el suyo, un `device_id`, un salto de línea en `line`), **nunca depende del contenido de una línea**. Lo que sí depende de él es un rechazo **por línea**, dentro del `200`, en el orden de la tabla de abajo: una línea ilegible es `line_unreadable` lleve o no `has_correction`, y una declaración en una línea legible que no la admite (`has_correction` en algo que no es una anulación, `chain_continues` en algo sin `corrects_id`) es `pair_declaration_invalid` (decisión de la dirección, 2026-09-25, por coherencia con §7: el cliente retiene los rechazos por línea y para ante un `400`).
 - Cualquier otro campo es `400 body_invalid`, y en particular un `device_id` (§2.3).
 
 **Si `If-Match` no es el etag actual: `412 precondition_failed`**, sin escribir nada. También si otro escritor gana la carrera entre la lectura de la Lambda y su `PutObject` condicional. El cliente vuelve al paso 1 de la sincronización.
@@ -200,7 +201,7 @@ Cuerpo:
 - Una línea con `has_correction` **tiene que traer en la misma petición, detrás de ella**, la línea cuyo `corrects_id` es el `reverses_id` de la anulación. Si no la trae: `pair_incomplete`, en el índice de la anulación. Es la única forma que tiene la API de negarse a **partir una pareja entre dos peticiones**, porque no ve la cola del dispositivo: por eso el cliente **declara**.
 - La pareja **se evalúa entera, como la escribe la aplicación** (decisión de la dirección, 2026-09-25; `checkCandidate` en `rectify.ts` y `rule-change.ts`): el libro se proyecta con la anulación **y** la corrección añadidas juntas, **nunca con la anulación sola**. Una compra de 10, una venta de 10 y la corrección de la compra a 12 **se aceptan**, aunque la anulación sola dejaría la venta sin lotes. Si falla la unidad, el rechazo se da **en el índice de la anulación**, con `code: "pair_rejected"` y en `details`: `member` (`reversal` \| `correction` \| `other`) y `member_code`, el código del dominio. **`other`** es un tercer evento del libro que la unidad deja inválido (`DependentEventsError`), y entonces `details.affected` lista los `event_id` afectados con su código. No se escribe ninguna de las dos.
 - **La corrección va justo detrás de su anulación** (decisión de la dirección, 2026-09-25): la aplicación siempre las escribe juntas (`rectify.ts` añade `[reversal, event]` en una sola escritura), y exigirlo hace inequívoca la pareja. Una línea con `corrects_id` que no va inmediatamente detrás de la anulación de su objetivo con `has_correction`, o una anulación con `has_correction` cuya línea siguiente no es su corrección, se rechaza con `pair_not_contiguous` en el índice de la anulación (o de la corrección suelta).
-- **Una cadena de correcciones de tipos es una sola unidad** (decisión de la dirección, 2026-09-25): las varias parejas que la aplicación escribe de una vez al corregir los tipos del BCE (`writeRateCorrections`) se aceptan enteras o no se acepta ninguna. El cliente lo declara con `"chain_continues": true` en la **corrección** de cada pareja que no es la última de la cadena: la línea siguiente tiene que ser otra anulación con `has_correction` (si no, `pair_incomplete`). Si falla cualquier miembro, el rechazo se da en el índice de **la primera anulación de la cadena**, con `code: "pair_rejected"`, y `details` dice qué miembro falló (`member_index`, `member`, `member_code`).
+- **Una cadena de correcciones de tipos es una sola unidad** (decisión de la dirección, 2026-09-25): las varias parejas que la aplicación escribe de una vez al corregir los tipos del BCE (`writeRateCorrections`) se aceptan enteras o no se acepta ninguna. El cliente lo declara con `"chain_continues": true` en la **corrección** de cada pareja que no es la última de la cadena: la línea siguiente tiene que ser otra anulación con `has_correction` (si no, `pair_incomplete`). La cadena **se proyecta entera**, con todos sus miembros añadidos juntos, como hace la aplicación (`rule-change.ts:270-275`). Si falla, el rechazo se da en el índice de **la primera anulación de la cadena**, con `code: "pair_rejected"`, y `details` dice qué miembro falló (`member_index`, `member` —`reversal` \| `correction` \| `other`— y `member_code`); con `other`, `details.affected` lista los `event_id` del tercer evento o eventos que la cadena deja inválidos, con su código.
 
 **El rechazo es por línea:** la API escribe **el tramo válido hasta la primera línea rechazada**, en un solo `PutObject` condicional, y devuelve el motivo de esa línea. Nada de lo que va detrás se escribe, aunque fuera válido.
 
@@ -249,13 +250,23 @@ La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la creden
 
 ### 5.5 Inicializar un remoto vacío
 
-`PUT /api/ledger`, solo con **`If-Match: "<sha256 de cero bytes>"`**, es decir, sobre un remoto **vacío o inexistente** (`412 precondition_failed` si no lo está). Cuerpo:
+`PUT /api/ledger`, solo con **`If-Match: "<sha256 de cero bytes>"`**, es decir, sobre un remoto **vacío o inexistente**: sin `If-Match`, `428 precondition_required`; con otro valor o con un remoto que no está vacío, `412 precondition_failed`. *(Para la 015, SIN VERIFICAR: con el objeto inexistente S3 no admite `If-Match`, y la Lambda traduce esta condición a `If-None-Match: *` en su `PutObject`.)* Cuerpo:
 
 ```json
-{ "content": "<los bytes enteros del libro del primer dispositivo, como cadena, con sus saltos de línea>" }
+{ "content": "<los bytes enteros del libro del primer dispositivo, como cadena, con sus saltos de línea>", "confirm_duplicate_ids": ["<id>", "…"] }
 ```
 
-Es como **el primer dispositivo** sube su libro (decisión de la dirección, 2026-09-25): **los bytes enteros**, escritos con la operación de líneas crudas, **no línea a línea** por §5.2. Así una presentación o una renuncia de una carpeta ya compactada viaja **con su prefijo intacto**, y su sello sigue cuadrando. La API comprueba antes de escribir que el contenido **carga** con su esquema (ninguna versión más nueva, ninguna línea ilegible) y que su proyección es **válida** (`init_rejected`, con el código y la línea en `details`); no aplica las reglas de §5.2 que solo tienen sentido línea a línea (la tolerancia del reloj, la confirmación de duplicados, la declaración de parejas). Respuesta `200 { "etag": "…", "lines": n }`.
+Es como **el primer dispositivo** sube su libro (decisión de la dirección, 2026-09-25): **los bytes enteros**, escritos con la operación de líneas crudas, **no línea a línea** por §5.2. Así una presentación o una renuncia de una carpeta ya compactada viaja **con su prefijo intacto**, y su sello sigue cuadrando. La API comprueba antes de escribir que el contenido **carga** con su esquema (ninguna versión más nueva, ninguna línea ilegible), que su proyección es **válida**, y **las dos reglas de ADR-0026 que valen para toda línea que entra en el remoto** (decisión de la dirección, 2026-09-25; nota fechada en ADR-0026): ningún `recorded_at` más allá de la tolerancia del reloj, y **toda huella repetida confirmada** por su `id` en `confirm_duplicate_ids` (el cliente pone ahí las líneas cuya huella ya estaba repetida al registrarlas, que el usuario confirmó entonces). Cualquier fallo es `init_rejected`, con el código (`line_unreadable`, `schema_version_unsupported`, `domain_rejected`, `recorded_at_in_future`, `duplicate_unconfirmed`…) y la línea en `details`, y no se escribe nada. Las declaraciones de pareja y de cadena no se aplican: no hay cola que partir, porque sube el libro entero. **El cliente se niega a inicializar antes de llamar si su libro no es válido** (por ejemplo, con un `settings_changed` registrado con `acceptInvalid`), y lo explica: hay que repararlo primero. Un `init_rejected` nunca es el camino normal, y nunca deja al dispositivo parado sin explicación. Respuesta `200 { "etag": "…", "lines": n }`.
+
+### 5.6 Qué es «el mismo evento» tras una reescritura del remoto
+
+No es una ruta: es la regla con la que un cliente clasifica lo que retiene al volver a descargar un remoto reescrito (ADR-0026, Parte A y nota fechada del 2026-09-25; ADR-0032, paso 3). **Detectar** la reescritura es por el hash de los bytes del prefijo (§5.1). **Clasificar** es por `event_id` y forma canónica: los dos eventos, **migrados a la versión de esquema actual**, se comparan en su serialización canónica (`encodeLine`) **ignorando exactamente estos campos, y ninguno más**:
+
+| Tipo | Campo ignorado | Por qué |
+|---|---|---|
+| `tax_return_filed` | `ledger_fingerprint` | `compact` lo vuelve a sellar por definición sobre el prefijo reescrito (`resealFilings`, `packages/domain/src/filings/fingerprint.ts`; ADR-0025) |
+
+`filing_fingerprint_waived` no tiene ningún campo en la lista: `compact` escribe renuncias **nuevas** y no reescribe las que ya había. La lista es cerrada: un campo nuevo que `compact` reescriba por definición entra aquí, en la nota de ADR-0026 y en el test a la vez. Mismo `event_id` y misma forma canónica: no se retiene. Mismo `event_id` y cualquier otra diferencia: conflicto real, se retiene. `event_id` ausente del remoto nuevo: se retiene. **Nunca se ofrece rehacer una presentación que el remoto ya tiene.**
 
 ## 6. Datos de referencia
 
@@ -288,13 +299,13 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `pkce_mismatch` | 400 | El verificador no corresponde al `code_challenge` |
 | `body_invalid` | 400 | Cuerpo que no cumple el de la ruta (campo desconocido, `device_id`, salto de línea en `line`…) |
 | `body_not_json` | 415 | Cuerpo que no es JSON en una ruta que escribe |
-| `precondition_required` | 428 | `POST /api/ledger/lines` sin `If-Match` |
+| `precondition_required` | 428 | `POST /api/ledger/lines` o `PUT /api/ledger` sin `If-Match` |
 | `init_rejected` | 422 | La inicialización de §5.5 trae un contenido que no carga o no proyecta válido; nada escrito |
 | `precondition_failed` | 412 | `If-Match` distinto del etag actual; nada escrito |
 | `not_found` | 404 | Ruta que no existe |
 | `internal` | 500 | Cualquier otro fallo; nada escrito |
 
-Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected`, `seal_mismatch` y `waiver_not_appendable`.
+Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_declaration_invalid`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected`, `seal_mismatch` y `waiver_not_appendable`.
 
 **Qué hace el cliente con cada respuesta** (decisión de la dirección, 2026-09-25): **solo un `rejected.code` retiene** la línea (o la unidad) con su motivo. Un `412` vuelve a empezar la sincronización. Cualquier otra cosa —un 5xx, `transport_rejected`, un fallo de red, `session_invalid`, `device_token_expired` o `device_token_revoked`— **para la sincronización y deja todo pendiente**, para reintentarla después; nunca retiene.
 
