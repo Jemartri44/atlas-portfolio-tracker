@@ -105,6 +105,9 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
       "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),
+      "@atlas/adapters/web-device": repo(
+        "../../packages/adapters/src/ledger-store/browser/web-device.ts",
+      ),
       "@atlas/adapters/sync-client": repo("../../packages/adapters/src/sync/client.ts"),
       "@atlas/adapters/sync": repo(
         "../../packages/adapters/src/ledger-store/browser/sync-store.ts",

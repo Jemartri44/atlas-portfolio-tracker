@@ -17,6 +17,7 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import { ImportControls } from "../libro/ImportControls.jsx";
 import { EcbCard } from "./EcbCard.jsx";
 import { PricesCard } from "./PricesCard.jsx";
+import { SessionCard } from "./sync/SessionCard.jsx";
 
 const THEMES = [
   { value: "system", label: "Sistema" },
@@ -201,6 +202,9 @@ export default function AjustesRoute(): JSX.Element {
             </fieldset>
           </Section>
 
+          <div id="sincronizacion">
+            <SessionCard />
+          </div>
           <EcbCard />
           <PricesCard />
 

@@ -65,6 +65,10 @@
     "./identity": {
       "types": "./dist/identity/index.d.ts",
       "import": "./dist/identity/index.js"
+    },
+    "./web-device": {
+      "types": "./dist/ledger-store/browser/web-device.d.ts",
+      "import": "./dist/ledger-store/browser/web-device.js"
     }
   },
   "files": [
