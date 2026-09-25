@@ -6,7 +6,12 @@
 // Lambda. Pure: the MAC, the RSA signature and every read are the adapters'.
 // The barrel never re-exports any of it, and the web never reaches it.
 
-export { type AllowEntry, isAllowed, parseAllowList } from "./access/allow-list.js";
+export {
+  type AllowEntry,
+  isAllowed,
+  parseAllowList,
+  subjectAllowed,
+} from "./access/allow-list.js";
 export { bodyTooLarge, expectEmptyObject, MAX_BODY_BYTES, readJsonBody } from "./access/body.js";
 export {
   API_ERRORS,

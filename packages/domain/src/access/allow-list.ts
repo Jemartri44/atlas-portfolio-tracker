@@ -50,3 +50,13 @@ export const parseAllowList = (text: string): readonly AllowEntry[] => {
 
 export const isAllowed = (entries: readonly AllowEntry[], pair: AllowEntry): boolean =>
   entries.some((entry) => entry.sub === pair.sub && entry.email === pair.email);
+
+/**
+ * The check of **every request with the cookie** (ADR-0027, amendment): the
+ * cookie carries only the `sub` — no cookie carries the e-mail (decision of
+ * 2026-09-25) —, so what is asked again is that an entry with that `sub` is
+ * still in the list. The pair, both together, was checked when the session
+ * was issued; removing the entry closes the session at the next request.
+ */
+export const subjectAllowed = (entries: readonly AllowEntry[], sub: string): boolean =>
+  entries.some((entry) => entry.sub === sub);

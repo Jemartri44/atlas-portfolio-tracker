@@ -3,7 +3,7 @@
 // R21, R30).
 
 import { describe, expect, it } from "vitest";
-import { isAllowed, parseAllowList } from "../../src/access/allow-list.js";
+import { isAllowed, parseAllowList, subjectAllowed } from "../../src/access/allow-list.js";
 import { parseApiConfig, TOKEN_CEILING_DAYS } from "../../src/access/config.js";
 import {
   deviceKey,
@@ -120,6 +120,13 @@ describe("the allow list: the pair, together and exact (R17)", () => {
     expect(isAllowed(list, { sub: "222", email: "a@example.test" })).toBe(false);
     expect(isAllowed(list, { sub: "111", email: "A@example.test" })).toBe(false);
     expect(isAllowed([], { sub: "111", email: "a@example.test" })).toBe(false);
+  });
+
+  it("asks again, on every request with the cookie, that the sub still has an entry", () => {
+    const list = parseAllowList(text);
+    expect(subjectAllowed(list, "111")).toBe(true);
+    expect(subjectAllowed(list, "333")).toBe(false);
+    expect(subjectAllowed([], "111")).toBe(false);
   });
 
   it("refuses to read anything but its exact form", () => {
