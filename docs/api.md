@@ -58,7 +58,7 @@ Solo pueden cachearse los negativos que no pueden volver a valer (revocado, cadu
 
 | Ruta | Sesión (web) | Token (consola) |
 |---|---|---|
-| §5 Sincronización: leer el libro, añadir líneas, publicar el estado de **su** cola | Sí | Sí |
+| §5 Sincronización: leer el libro, añadir líneas, inicializar un remoto vacío (§5.5), publicar el estado de **su** cola | Sí | Sí |
 | §6 Datos de referencia | Sí | Sí |
 | §4.4 Revocar **el propio** token | — | Sí |
 | §4.5 Listar tokens y revocar uno cualquiera; leer el estado de todos los dispositivos | Sí | **No**: `403 forbidden_for_credential` |
@@ -188,16 +188,17 @@ Cuerpo:
 |---|---|---|
 | 1 | La línea es JSON y tiene `schema_version` | `line_unreadable` |
 | 2 | `schema_version` no es más nueva que la que conoce la Lambda | `schema_version_unsupported` |
-| 3 | La línea se decodifica y valida con el dominio (forma, `id` no repetido…) | `line_invalid`, con el código del dominio en `details.domain_code` |
+| 3 | La línea se decodifica y valida su forma con el dominio | `line_invalid`, con el código del dominio en `details.domain_code` |
 | 4 | `recorded_at` no es posterior a la hora de la Lambda más la tolerancia (ADR-0026, caso 8; tolerancia configurable, valor **[PENDIENTE]**, lo fija la 015) | `recorded_at_in_future` |
-| 5 | El libro proyectado con la línea añadida sigue siendo válido | `domain_rejected`, con `details.domain_code` |
+| 5 | El libro proyectado con la línea añadida sigue siendo válido. Un `id` repetido lo detecta la proyección (`duplicate_id`), así que es de esta fila, no de la 3 (decisión de la dirección, 2026-09-25). Una anulación con corrección no se proyecta sola: la unidad entera, abajo | `domain_rejected`, con `details.domain_code` |
 | 6 | Si la huella está repetida, la línea trae `confirm_duplicate` | `duplicate_unconfirmed`, con los `id` que la repiten |
-| 7 | Una `tax_return_filed` **sella el prefijo**: su `ledger_fingerprint` cuadra con el prefijo sobre el que cae, remoto más las líneas ya aceptadas de la petición (decisión de la dirección, 2026-09-25: «lo que sella el prefijo no se mueve de sitio», defendido también en el servidor; la proyección no lo comprueba al registrar, solo `check --deep` y `compact`). `filing_fingerprint_waived` solo se escribe dentro de una compactación, que no pasa por la API | `seal_mismatch` |
+| 7 | Una `tax_return_filed` **sella el prefijo**: su `ledger_fingerprint` cuadra con el prefijo sobre el que cae, remoto más las líneas ya aceptadas de la petición (decisión de la dirección, 2026-09-25: «lo que sella el prefijo no se mueve de sitio», defendido también en el servidor; la proyección no lo comprueba al registrar, solo `check --deep` y `compact`) | `seal_mismatch` |
+| 8 | La línea no es una `filing_fingerprint_waived`: una renuncia solo nace dentro de una compactación, que es de administración, y **nunca llega por esta ruta**; solo viaja dentro de los bytes de la inicialización (§5.5) (decisión de la dirección, 2026-09-25) | `waiver_not_appendable` |
 
 **La pareja de anulación y corrección cuenta como una sola línea** (ADR-0026, segunda y tercera enmiendas):
 
 - Una línea con `has_correction` **tiene que traer en la misma petición, detrás de ella**, la línea cuyo `corrects_id` es el `reverses_id` de la anulación. Si no la trae: `pair_incomplete`, en el índice de la anulación. Es la única forma que tiene la API de negarse a **partir una pareja entre dos peticiones**, porque no ve la cola del dispositivo: por eso el cliente **declara**.
-- La pareja **se evalúa entera**: si falla la anulación o falla la corrección, el rechazo se da **en el índice de la anulación**, con `code: "pair_rejected"`, el código de la que falló en `details.member_code` y cuál fue en `details.member` (`reversal` \| `correction`). No se escribe ninguna de las dos.
+- La pareja **se evalúa entera, como la escribe la aplicación** (decisión de la dirección, 2026-09-25; `checkCandidate` en `rectify.ts` y `rule-change.ts`): el libro se proyecta con la anulación **y** la corrección añadidas juntas, **nunca con la anulación sola**. Una compra de 10, una venta de 10 y la corrección de la compra a 12 **se aceptan**, aunque la anulación sola dejaría la venta sin lotes. Si falla la unidad, el rechazo se da **en el índice de la anulación**, con `code: "pair_rejected"` y en `details`: `member` (`reversal` \| `correction` \| `other`) y `member_code`, el código del dominio. **`other`** es un tercer evento del libro que la unidad deja inválido (`DependentEventsError`), y entonces `details.affected` lista los `event_id` afectados con su código. No se escribe ninguna de las dos.
 - **La corrección va justo detrás de su anulación** (decisión de la dirección, 2026-09-25): la aplicación siempre las escribe juntas (`rectify.ts` añade `[reversal, event]` en una sola escritura), y exigirlo hace inequívoca la pareja. Una línea con `corrects_id` que no va inmediatamente detrás de la anulación de su objetivo con `has_correction`, o una anulación con `has_correction` cuya línea siguiente no es su corrección, se rechaza con `pair_not_contiguous` en el índice de la anulación (o de la corrección suelta).
 - **Una cadena de correcciones de tipos es una sola unidad** (decisión de la dirección, 2026-09-25): las varias parejas que la aplicación escribe de una vez al corregir los tipos del BCE (`writeRateCorrections`) se aceptan enteras o no se acepta ninguna. El cliente lo declara con `"chain_continues": true` en la **corrección** de cada pareja que no es la última de la cadena: la línea siguiente tiene que ser otra anulación con `has_correction` (si no, `pair_incomplete`). Si falla cualquier miembro, el rechazo se da en el índice de **la primera anulación de la cadena**, con `code: "pair_rejected"`, y `details` dice qué miembro falló (`member_index`, `member`, `member_code`).
 
@@ -219,7 +220,9 @@ Respuesta `200` siempre que `If-Match` cuadró:
 }
 ```
 
-- `accepted`: cuántas entradas de `lines` se escribieron, desde la primera. Con `accepted: 0` no se escribió nada y `etag` es el mismo.
+- `etag`: el SHA-256 del libro remoto después de escribir.
+- `lines`: cuántas líneas tiene el libro remoto después de escribir (no las de la petición).
+- `accepted`: cuántas entradas de `lines` de la petición se escribieron, desde la primera. Con `accepted: 0` no se escribió nada y `etag` es el mismo.
 - `rejected`: ausente si se escribieron todas.
 - **Una respuesta perdida no pierde nada:** el cliente nunca da una línea por subida con este `200`; vuelve a leer el remoto (§5.1) y comprueba que sus líneas están dentro, byte a byte, antes de quitarlas de su cola (ADR-0026, pasos 2 y 5).
 - `details` puede contener lo que el dominio diga de la línea (un importe, una cantidad): va al cliente del propio usuario, **nunca a un registro**.
@@ -232,17 +235,27 @@ Respuesta `200` siempre que `If-Match` cuadró:
 { "pending": 2, "held": 1, "last_sync_at": "2026-10-01T10:00:00Z" }
 ```
 
-La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la credencial** (§2.3), esos tres campos y `published_at` (su hora). `pending` y `held` son enteros ≥ 0 (`400 body_invalid` si no). Respuesta `200 { "device_id": "…", "published_at": "…" }`. Es lo que miran `compact` y la restauración antes de actuar (ADR-0026, paso 7; ADR-0032): se niegan si algún dispositivo conocido tiene `pending` o `held` mayor que cero.
+La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la credencial** (§2.3), esos tres campos y `published_at` (su hora). `pending` y `held` son enteros ≥ 0 (`400 body_invalid` si no). Respuesta `200 { "device_id": "…", "published_at": "…" }`. Es lo que miran `compact` y la restauración antes de actuar (ADR-0026, paso 7; ADR-0032): se niegan si algún dispositivo conocido tiene **`pending`** mayor que cero. **`held` no bloquea** (decisión de la dirección, 2026-09-25, como dicen ADR-0026, Parte A, y ADR-0032): lo retenido vive en el dispositivo y nunca se sube solo; se publica para que se vea.
 
 `GET /api/sync/devices` (**solo sesión**) → `200 { "devices": [ { "device_id", "pending", "held", "last_sync_at", "published_at" } ] }`.
 
 ### 5.4 Cómo se liga a su sesión el identificador de dispositivo de la web
 
-**[PENDIENTE] — lo decide la dirección antes de la 015.** Lo que está fijado: la API toma el dispositivo de la credencial y **nunca del cuerpo** (ADR-0033, punto 6), para que quien robe una credencial no pueda publicar el estado de otro dispositivo, del que dependen `compact` y la restauración. Para la consola lo resuelve el token (el `device_id` que la API asignó al canjear). La web no tiene token: su credencial es una sesión corta que se renueva pasando por Google, y su identificador de dispositivo tiene que **sobrevivir** a las sesiones, porque su cola vive en su IndexedDB. Lo que el revisor de ADR-0033 dejó abierto es cómo se ata ese identificador a la sesión. Opciones, sin elegir:
+**[PENDIENTE] — la decide la 015** (nota del 2026-09-25 en ADR-0033). Lo que está fijado: la API toma el dispositivo de la credencial y **nunca del cuerpo** (ADR-0033, punto 6), para que quien robe una credencial no pueda publicar el estado de otro dispositivo, del que dependen `compact` y la restauración. Para la consola lo resuelve el token (el `device_id` que la API asignó al canjear). La web no tiene token: su credencial es una sesión corta que se renueva pasando por Google, y su identificador de dispositivo tiene que **sobrevivir** a las sesiones, porque su cola vive en su IndexedDB. Lo que el revisor de ADR-0033 dejó abierto es cómo se ata ese identificador a la sesión. Opciones, sin elegir:
 
 - **(a) Asignado por la API al iniciar sesión y firmado dentro de la cookie.** La web guarda su `device_id` en IndexedDB y lo presenta **en el inicio de sesión** (`GET /api/auth/login?device_id=…`, no en cada petición); la API lo mete en la cookie transitoria y, tras verificar a Google, en la cookie de sesión. La primera vez, la API asigna uno. *Inconveniente:* la API no puede saber si ese identificador es de ese navegador; quien tenga la cuenta de Google podría iniciar sesión presentando el de otro dispositivo.
 - **(b) Un registro de dispositivos web en SSM**, como el de los tokens de la consola, con un secreto propio del navegador guardado en IndexedDB y presentado al iniciar sesión. *Inconveniente:* es una credencial de larga duración en la página, lo que ADR-0027 y ADR-0033 evitaron.
 - **(c) Sin identificador persistente en la web:** cada sesión es un dispositivo nuevo, y `compact` mira todos los que tengan algo pendiente. *Inconveniente:* se acumulan dispositivos muertos que hay que olvidar a mano.
+
+### 5.5 Inicializar un remoto vacío
+
+`PUT /api/ledger`, solo con **`If-Match: "<sha256 de cero bytes>"`**, es decir, sobre un remoto **vacío o inexistente** (`412 precondition_failed` si no lo está). Cuerpo:
+
+```json
+{ "content": "<los bytes enteros del libro del primer dispositivo, como cadena, con sus saltos de línea>" }
+```
+
+Es como **el primer dispositivo** sube su libro (decisión de la dirección, 2026-09-25): **los bytes enteros**, escritos con la operación de líneas crudas, **no línea a línea** por §5.2. Así una presentación o una renuncia de una carpeta ya compactada viaja **con su prefijo intacto**, y su sello sigue cuadrando. La API comprueba antes de escribir que el contenido **carga** con su esquema (ninguna versión más nueva, ninguna línea ilegible) y que su proyección es **válida** (`init_rejected`, con el código y la línea en `details`); no aplica las reglas de §5.2 que solo tienen sentido línea a línea (la tolerancia del reloj, la confirmación de duplicados, la declaración de parejas). Respuesta `200 { "etag": "…", "lines": n }`.
 
 ## 6. Datos de referencia
 
@@ -276,11 +289,14 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `body_invalid` | 400 | Cuerpo que no cumple el de la ruta (campo desconocido, `device_id`, salto de línea en `line`…) |
 | `body_not_json` | 415 | Cuerpo que no es JSON en una ruta que escribe |
 | `precondition_required` | 428 | `POST /api/ledger/lines` sin `If-Match` |
+| `init_rejected` | 422 | La inicialización de §5.5 trae un contenido que no carga o no proyecta válido; nada escrito |
 | `precondition_failed` | 412 | `If-Match` distinto del etag actual; nada escrito |
 | `not_found` | 404 | Ruta que no existe |
 | `internal` | 500 | Cualquier otro fallo; nada escrito |
 
-Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected` y `seal_mismatch`.
+Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected`, `seal_mismatch` y `waiver_not_appendable`.
+
+**Qué hace el cliente con cada respuesta** (decisión de la dirección, 2026-09-25): **solo un `rejected.code` retiene** la línea (o la unidad) con su motivo. Un `412` vuelve a empezar la sincronización. Cualquier otra cosa —un 5xx, `transport_rejected`, un fallo de red, `session_invalid`, `device_token_expired` o `device_token_revoked`— **para la sincronización y deja todo pendiente**, para reintentarla después; nunca retiene.
 
 Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a una respuesta sin este formato (el hash del cuerpo rechazado por AWS, el WAF, un error de CloudFront). Nunca se trata como un rechazo de líneas: la sincronización para y lo dice.
 

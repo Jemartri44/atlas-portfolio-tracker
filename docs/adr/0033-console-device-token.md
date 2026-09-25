@@ -230,3 +230,7 @@ La verificación concluyó que **el diseño de base aguanta**: PKCE, nada por la
 - **F18** — CloudFront, registros en tiempo real: `docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/real-time-logs.html` (`cs-headers`: «The HTTP headers (names and values) in the viewer request»).
 - **Prueba 2** (Node 22.23.2): `fetch` con una cabecera propia y con `Authorization` hacia un servidor que redirige a otro origen. En el destino llega la cabecera propia y no llega `Authorization`.
 - **Prueba 3** (máquina del usuario, WSL2): con `cmd.exe /c type` sobre la ruta `\\wsl.localhost\…` de un fichero de prueba del usuario, Windows **lee** el fichero con permisos `600` y recibe «Acceso denegado» con `000`.
+
+## Nota del 2026-09-25 (prompt de la feature 014)
+
+**Cómo se liga a su sesión el identificador de dispositivo de la web la decide la feature 015**, no la 014. El punto 6 lo mandaba a `docs/api.md` «como punto de la 014», y `docs/api.md` §5.4 lo deja escrito con lo que está fijado —el dispositivo sale de la credencial, nunca del cuerpo— y tres opciones sin elegir. *Por qué en la 015:* es la feature que construye la sesión de la web, la API y la sincronización desde la SPA, así que es donde las opciones se pueden probar contra el flujo real de ADR-0027; la 014 no tiene sesión ni HTTP, y su remoto simulado recibe el dispositivo como parámetro. Decidirlo antes sería elegir sin poder probar.

@@ -1,6 +1,6 @@
 # ADR-0026 — La nube como capa sobre lo local: sincronización del libro entre dispositivos
 
-**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que elige la opción 2. Ronda 8. El marco —la nube se **añade** a lo local y no lo sustituye— lo fija también la dirección. Completa ADR-0019, que no queda reemplazado. **Enmendada el mismo día** tres veces, tras las tres pasadas de revisión de la PR #72, con las decisiones de la dirección: ver las enmiendas al final. **Enmendada otra vez al cerrar la feature 012** (Partes B y C; ver «Enmienda del 2026-09-24 (cierre de la feature 012)»). **Nota del cierre de la feature 013** (2026-09-25): no hay nada de `prices/` que excluir de la sincronización (ver al final). **Nota del 2026-09-25 (ADR-0033 aceptada):** la consola se autentica con un token de dispositivo propio (ver al final).
+**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que elige la opción 2. Ronda 8. El marco —la nube se **añade** a lo local y no lo sustituye— lo fija también la dirección. Completa ADR-0019, que no queda reemplazado. **Enmendada el mismo día** tres veces, tras las tres pasadas de revisión de la PR #72, con las decisiones de la dirección: ver las enmiendas al final. **Enmendada otra vez al cerrar la feature 012** (Partes B y C; ver «Enmienda del 2026-09-24 (cierre de la feature 012)»). **Nota del cierre de la feature 013** (2026-09-25): no hay nada de `prices/` que excluir de la sincronización (ver al final). **Nota del 2026-09-25 (ADR-0033 aceptada):** la consola se autentica con un token de dispositivo propio (ver al final). **Nota del 2026-09-25 (prompt de la 014):** al volver a descargar tras una reescritura, lo que se retiene se decide por `event_id` (ver al final).
 
 ## Contexto
 
@@ -184,3 +184,13 @@ ADR-0033 cierra lo que «Quién sincroniza» dejaba por decidir: **la consola se
 - Consecuencias: olvidar un dispositivo perdido empieza por revocar su token.
 
 El contrato HTTP que esta ADR encarga a la 014 (rutas, cuerpos, códigos, el rechazo por línea y la pareja de anulación y corrección) está en `docs/api.md`.
+
+## Nota del 2026-09-25 (prompt de la feature 014): qué se retiene al volver a descargar
+
+Decidida por la dirección tras la verificación del prompt de la 014 (`docs/prompts/014-ledger-sync-core.md`, §6.3 (V2)). La Parte A dice que, al volver a descargar un remoto reescrito, se retiene «todo lo que el dispositivo tenía y el remoto nuevo no». **Qué es «lo mismo» ahí se juzga por `event_id`, no por los bytes**, igual que ADR-0032, paso 3 («compararla con el remoto actual por identificador»), porque `compact` reescribe los bytes de cada línea sin cambiar qué hecho es:
+
+- un evento que el remoto nuevo tiene con el **mismo `event_id` y la misma forma canónica** (el evento migrado a la versión actual y serializado con `encodeLine`) **no se retiene**;
+- uno con el **mismo `event_id` y contenido distinto** es un conflicto real y **se retiene para revisión**;
+- uno que el remoto nuevo **no tiene** se retiene.
+
+**Detectar** que el remoto se ha reescrito **sigue siendo por el hash de los bytes del prefijo** (Parte A, enmienda): eso no cambia, y es lo que impide que una reescritura que conserva los identificadores pase sin que se note. Son dos comparaciones con dos propósitos: la del hash decide **si** hubo reescritura; la del identificador, **qué** del dispositivo falta después.
