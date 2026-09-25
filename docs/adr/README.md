@@ -36,7 +36,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0030](0030-broker-settled-eur.md) | Importe en euros liquidado por el bróker, como dato informativo | Aceptada |
 | [0031](0031-daily-close-prices.md) | Precios de cierre diarios: puerto, almacén y política de fallo | Aceptada; enmendada dos veces el 2026-09-24 (los símbolos salen del libro; claves fuera de la carpeta, precedencia de la puerta, el 720 cerrado por estructura, aproximación por ETF, divisa, cupo y lista SIN VERIFICAR) y una tercera al cerrar la 013, el 2026-09-25 (lo verificado; CoinGecko y OpenFIGI retirados; divisa declarada por fuente y confirmada por el usuario, con `purge` de los cierres mal guardados; un cierre en vigor por fecha; precio con valor en euros, `GBX`, nunca el día en curso) |
 | [0032](0032-backups-and-restore.md) | Copias de seguridad y restauración del libro | Aceptada |
-| [0033](0033-console-device-token.md) | Acceso de la consola a la API: token de dispositivo emitido al final de un inicio de sesión que abre la propia consola | Propuesta (2026-09-25) |
+| [0033](0033-console-device-token.md) | Acceso de la consola a la API: token de dispositivo emitido al final de un inicio de sesión que abre la propia consola | Propuesta (2026-09-25); revisada el mismo día (emisión solo desde la consola, 90 días, `credentials.json`, SSM), pendiente de que el usuario la acepte |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 
