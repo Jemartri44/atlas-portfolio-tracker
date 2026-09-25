@@ -1,6 +1,6 @@
 # ADR-0034 — Despliegue en una cuenta de AWS compartida con otros proyectos
 
-**Estado:** Propuesta (2026-09-25). La acepta o la corrige la dirección; esta ADR no se acepta sola. **Sustituye en parte a ADR-0028**: sus filas 1, 2, 3, 10 y 12, la parte de la fila 13 que habla de cuentas, la salvaguarda de la fila 17, el bloque «Terraform» y dos de sus excepciones escritas. El resto de ADR-0028 sigue en pie (ver «Qué queda de ADR-0028»). Los hechos de la plataforma proceden de la documentación de AWS consultada el 2026-09-25 (fuentes F1-F10 al final); lo que no se pudo comprobar va marcado **SIN VERIFICAR**.
+**Estado:** Propuesta (2026-09-25). La acepta o la corrige la dirección; esta ADR no se acepta sola. **Sustituye en parte a ADR-0028**: sus filas 1, 2, 3, 10 y 12, la parte de la fila 13 que habla de cuentas, la salvaguarda y la fuente única de la fila 17, el bloque «Terraform» y dos de sus excepciones escritas; y a ADR-0027 en quién crea el parámetro de la lista permitida. El resto de ADR-0028 sigue en pie (ver «Qué queda de ADR-0028»). Los hechos de la plataforma proceden de la documentación de AWS consultada el 2026-09-25 (fuentes F1-F10 al final); lo que no se pudo comprobar va marcado **SIN VERIFICAR**.
 
 ## Contexto
 

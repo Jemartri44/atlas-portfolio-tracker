@@ -74,3 +74,8 @@ Decidida por la dirección el mismo día. La verificación compara también `sta
 - **La cookie de sesión se firma con la subclave `session`**, derivada con HKDF de la clave de sesión, y **lleva un campo `typ`**; el código de la consola se firma con otra subclave, `console_code`, y cada verificador rechaza el tipo ajeno (ADR-0033, punto 2, bloqueante B3).
 
 Rutas, cabeceras y códigos: `docs/api.md`.
+
+## Nota del 2026-09-25 (cuenta compartida, ADR-0034 propuesta)
+
+Con Atlas en una cuenta de AWS compartida con otros proyectos (ADR-0028, nota del mismo día), **los valores de los secretos nunca pasan por Terraform** (ADR-0034, fila 21). Lo que cambia aquí: **«Terraform crea el parámetro con un valor de relleno e ignora los cambios de valor» deja de valer** para la lista permitida, el secreto del cliente y la clave de sesión. Los **crea y los rota un guion versionado**, ejecutado con el rol de administración del entorno, y Terraform solo referencia sus ARN en las políticas. El motivo: el `sub` de OIDC de un `pull_request` no lleva la rama de destino, así que el rol de `terraform plan` está al alcance de cualquier rama del repositorio, y ni él ni el estado deben contener un secreto.
+

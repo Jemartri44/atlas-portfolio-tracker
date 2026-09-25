@@ -30,7 +30,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0024](0024-fiscal-caveats-are-report-notes.md) | Una salvedad fiscal es una nota del informe, no una decisión de la interfaz | Aceptada |
 | [0025](0025-recorded-fingerprint-waiver.md) | La salida de compact ante una huella no verificable queda registrada en el libro | Aceptada |
 | [0026](0026-cloud-sync-layer.md) | La nube como capa sobre lo local: sincronización del libro entre dispositivos | Aceptada; enmendada cuatro veces el 2026-09-24 (la última: cerrojo solo entre consolas, una corrección viva por raíz); notas del 2026-09-25, la última del cierre de la feature 014 |
-| [0027](0027-google-sign-in-verified-by-lambda.md) | Acceso solo con Google, verificado en nuestra Lambda; sin Cognito | Aceptada |
+| [0027](0027-google-sign-in-verified-by-lambda.md) | Acceso solo con Google, verificado en nuestra Lambda; sin Cognito | Aceptada; nota del 2026-09-25 (cuenta compartida, ADR-0034: los valores de los secretos no los crea Terraform) |
 | [0028](0028-aws-account-and-security-baseline.md) | Cuentas de AWS dedicadas, entornos y línea base de seguridad | Aceptada; nota del 2026-09-25: el usuario descarta la organización y las cuentas miembro, y 0034 (propuesta) la sustituye en parte |
 | [0029](0029-ecb-reference-rates.md) | Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad | Aceptada; enmendada tres veces el 2026-09-24 (la última: lo verificado por la feature 012 y la confirmación de un borrador) |
 | [0030](0030-broker-settled-eur.md) | Importe en euros liquidado por el bróker, como dato informativo | Aceptada |
