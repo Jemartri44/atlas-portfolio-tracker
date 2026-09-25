@@ -335,7 +335,7 @@ git checkout main && git merge --no-ff hotfix/<version> && git tag -a v<version>
 git checkout develop && git merge --no-ff hotfix/<version> && git branch -d hotfix/<version>
 ```
 
-Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea. Hooks: `git config core.hooksPath .githooks`.
+Los mensajes de commit siguen [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …), en inglés y en una sola línea. Hooks: `git config core.hooksPath .githooks`. El `pre-commit` pasa `gitleaks` (reglas del proyecto en `.gitleaks.toml`) y Biome sobre los ficheros preparados, y aborta el commit si alguno falla; los detalles están en [`.githooks/README.md`](.githooks/README.md).
 
 ## Licencia
 

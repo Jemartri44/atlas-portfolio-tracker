@@ -493,7 +493,11 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
   `test(tax): cover the two-month rule`
 - **Ninguna herramienta de IA puede figurar como coautora ni aparecer en los mensajes de commit.**
 - Commits atómicos: un cambio conceptual por commit.
-- Hooks de git versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` ejecuta `gitleaks`. El asistente de código tiene el mismo control en `.claude/settings.json`.
+- Hooks de git versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` hace dos comprobaciones sobre lo preparado, y cualquiera de las dos que falle aborta el commit:
+  - **`gitleaks`**, con las reglas por defecto más las del proyecto en `.gitleaks.toml`: la regla `atlas-console-device-token` reconoce el token de dispositivo de la consola (`atlasdt1.<token_id>.<secret>`, ADR-0033, `docs/api.md` §2.1) y deja pasar el `token_id` solo, que es público.
+  - **Biome** en modo de comprobación (`biome check`, las mismas reglas que `npm run lint`), solo sobre los ficheros preparados que Biome trata (`.ts`, `.tsx`, `.js`, `.json`, `.css`, `.html`…), con el binario del repositorio (`node_modules/.bin/biome`). Si no hay ninguno, no se ejecuta. Si falla, `npm run format` arregla el formato y los arreglos seguros; lo demás se corrige a mano.
+  - Si falta la herramienta (`gitleaks` sin instalar, o Biome sin `npm ci`), el hook avisa y **no bloquea**. En una emergencia, `git commit --no-verify` se salta las dos comprobaciones; la CI sigue ejecutando `npm run lint`.
+  - El asistente de código tiene el mismo control de los mensajes en `.claude/settings.json`.
 - Plantilla de PR con la checklist de la constitución en `.github/pull_request_template.md`.
 
 ### 11.3 Entornos
