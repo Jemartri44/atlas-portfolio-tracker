@@ -248,3 +248,16 @@ No habrá cuentas miembro dedicadas: `dev` y `prod` viven en una cuenta que el u
 - **Punto 9, el cupo de parámetros**: los 10.000 parámetros estándar son de la cuenta y la región, y la API nunca borra un token. Si otro proyecto llena el cupo, `PutParameter` falla y no se emiten tokens; la comprobación C16 de ADR-0034 cuenta el total, y por encima de 9.000 la administración poda los caducados.
 - **Punto 9, la auditoría en CloudTrail**: se apoyaba en el *trail* de ADR-0028 (fila 10), y ADR-0034 no crea ninguno. **Sin *trail* en la cuenta**, el historial gratuito cubre 90 días y un token vive hasta 120: la emisión de un token vivo de más de 90 días ya no está en CloudTrail. Su `issued_at` sigue en el registro y en la lista de la web; lo que se pierde es el contraste con CloudTrail, no el dato.
 - **Punto 8, revocar todos sin Google**: la hace el rol de administración del entorno, asumido con MFA independiente de Google (ADR-0034, fila 16), en lugar de la administración desde la cuenta de gestión.
+
+## Nota del 2026-09-25 (revisión del prompt de la feature 015): la cuenta de Google robada
+
+Decidida por la dirección tras la revisión de la PR #89 (hallazgo B3; `docs/prompts/015-api-access.md` §7.1 bis). **El orden del punto 8 y de «Consecuencias» no bastaba**: solo hablaba de tokens, y la **sesión web** del intruso, una cookie firmada que dura lo que dure la sesión, volvía a pasar la lista permitida en cuanto se reponía el par. Con ella podía leer el libro, añadir líneas y revocar los tokens del usuario. **El procedimiento pasa a ser este, en este orden:**
+
+1. quitar el par de la lista permitida;
+2. recuperar la cuenta de Google;
+3. revocar todos los tokens de consola (`atlas admin revoke-all-tokens`, con el rol de administración);
+4. **rotar la clave de sesión** con el guion de secretos (ADR-0034, fila 21) **y esperar a que venza su caché en la Lambda**: cierra las sesiones web (ADR-0027) e invalida los códigos de consola pendientes;
+5. **revisar las líneas añadidas al libro en esa ventana** (rectificarlas o restaurar, ADR-0032) y **olvidar los dispositivos que creó el intruso**;
+6. **solo entonces**, reponer el par.
+
+Donde el punto 8 y «Consecuencias» dan el orden de cuatro pasos, vale este. El procedimiento escrito lo redacta la feature 015.
