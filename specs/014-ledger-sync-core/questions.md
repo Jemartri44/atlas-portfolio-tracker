@@ -278,3 +278,40 @@ El plan recibe el **visto bueno**. Decisiones, tal como llegaron:
 - **D-Q19: el barrido de temporales huérfanos incluye `sync/`** (`state.json`, `held.jsonl` y `discarded.jsonl` con `.tmp-<pid>-<hora>`), con el mismo criterio que el del libro: solo sin cerrojo vivo. Test y dos mutantes (no barrer `sync/`; barrer un fichero bueno): muertos.
 
 **Documentos** (se añade a §6): el prompt de la 015 recoge P2 y P3 de la web como requisito duro para permitir configurar la sincronización en la web, con `deferred/p2-p3-web.patch` como punto de partida; `docs/data-schema.md` §1, que el barrido de temporales alcanza `sync/`.
+
+## 13. Revisión del PR #83 (2026-09-25)
+
+Cada arreglo, cómo se vio en rojo y qué mutante lo guarda. Los mutantes se aplican uno a uno con una sola sustitución comprobada; el fichero se restaura después y, si hay gemelos `.js`, no se ejecuta nada (`014-mut/mutate-014.mjs`, lotes `b8.json`, `b9.json` y `b10.json`).
+
+- **B1 — primero el destino, después el origen.** `FolderSyncStore.commit` separa los registros de lo retenido. Los que **ganan** una línea se escriben primero; después, `discarded.jsonl`, el libro, los que la **liberan** (`resolved`) y el marcador. Confirmar escribe el libro antes de dar la línea por resuelta. Descartar y rehacer escriben `discarded.jsonl` antes de darla por resuelta. En la web, la transacción única ya lo daba.
+  - **Rojo primero:** `resolution-cuts.test.ts` corta confirmar, descartar y terminar de rehacer en cada escritura y repite la orden. Contra el orden fijo antiguo fallaron 5; con el arreglo pasan 18.
+  - **Por qué se puede repetir:** `confirmHeld` y las acciones son idempotentes. No vuelven a insertar una línea que ya está en el libro, ni duplican un descartado o una confirmación.
+  - **Mutante del orden fijo antiguo:** todo lo retenido primero (`const gained = held;`). Muerto por los cortes y por la propiedad.
+- **B2 — `finishRedo` saca solo las parejas rehechas.** `redoneLines(unit, events, ledger)` devuelve las líneas de las partes cuyo rehacer está en el libro. `assertRedoRecorded` se niega con `redo_not_recorded` si no hay ninguna. El resto de la cadena sigue retenida.
+  - Test en el dominio (`held-resolve.test.ts`) y otro en el adaptador: una cadena de dos parejas, rehecha solo la primera.
+  - **Mutantes muertos:** «terminar toda la cadena» (`return part.lines;`) y «terminar sin rehacer» (`assertRedoRecorded` que no se niega).
+- **No bloqueante 1 — la propiedad ya ve B1.**
+  - **Lo que hace ahora:** los dispositivos confirman, descartan y rehacen lo retenido, con un corte opcional en cada escritura de una resolución. Solo cuentan como conservadas las líneas retenidas sin resolver, no las archivadas ni las ya resueltas.
+  - **Primera versión, todavía verde con B1 deshecho.** Instrumentada, solo llegaban a resolverse **4 unidades en 120 corridas**: casi nunca había nada retenido.
+  - **Segunda versión:** empieza con un preludio en el que cada dispositivo vende 6 de los 10 y la web sincroniza primero. Así cada consola empieza con una venta retenida. La resolución elige, a partir del dispositivo sorteado, el primero que tiene algo retenido. Con eso llegan a resolverse 224 unidades y 48 cortes caen dentro de una resolución.
+  - **Con B1 deshecho, roja:** una venta descartada con el corte en `discarded.jsonl.tmp` desaparece. Con el arreglo, verde.
+  - **Límite que queda:** en la propiedad, los cortes caen al descartar. Confirmar y rehacer se cortan en `resolution-cuts.test.ts`, porque a una venta que no cabe no se le ofrece confirmar, y su rehacer se niega en local.
+- **No bloqueantes 2 a 7 y 9.** Los arreglos están en `5b4b2ee`, `d52c965`, `46defbc` y `66600d8`. Cada uno tiene su test en rojo primero.
+  - desactivar con el marcador ausente se niega (`deactivate_refused_marker_missing`);
+  - `syncDevice` exige que la sincronización esté configurada (`sync_not_configured`, `sync_deactivated`);
+  - el cliente se para con `remote_empty` si nunca sincronizó, el remoto está vacío y el libro no;
+  - volver a descargar agrupa las parejas en unidades enteras;
+  - la fila 3 de §5.2 se comprueba antes de decodificar;
+  - un único lector del marcador;
+  - el nombre del archivo, validado en la web;
+  - el mensaje del barrido distingue los temporales de `sync/`;
+  - la frase web de `raw_line_break`.
+  
+  **Mutantes de la revisión** (`b8.json`): M5, M12 y M26, los tres muertos.
+- **No bloqueante 8 — margen del paquete.**
+  - **Arranque:** mide **75.849**. El fragmento del dominio está igual (41.482). La entrada pasó de 24.073 a 24.079 solo porque la tabla de fragmentos perezosos nombra hashes nuevos. **Techo 75.869 = lo medido + 20 de margen de ruido de esa tabla, no crecimiento**, en su propio commit. El código de la 014 sigue sumando +135 al arranque, dentro del tope de +140 de D-Q7.
+  - **Total:** mide **273,34 KB** (279.905 bytes). Techo **273,5**, en su propio commit.
+    - La causa, comparando fragmento a fragmento con la cabeza anterior a la revisión: `errors` +248 (las frases de los códigos nuevos), `write` +293 (la validación del nombre del archivo y el lector compartido del marcador en el almacén de la sincronización).
+    - El resto es ruido de hashes. Todo es perezoso.
+  - Sin esto, el *build* de esta rama fallaba.
+- **Tubería completa:** `lint`, `typecheck`, `test:coverage` (265 ficheros, 2.602 tests, 100 % en `domain`) y `build`, en verde. Sin gemelos `.js`.
