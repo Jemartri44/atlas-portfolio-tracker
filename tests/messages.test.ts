@@ -112,6 +112,12 @@ const NOT_SHOWN: Record<string, string> = {
   archive_exists: "solo lo levanta compact (comando de CLI)",
   missing_migration: "solo ocurre con un libro de una versión sin migración escrita",
   ulid_overflow: "agotar los ids de un milisegundo: prácticamente imposible",
+  // Feature 015: raised only inside the Lambda of the API, which answers with
+  // a code of docs/api.md §7 (remote_unavailable, device_forgotten) or refuses
+  // to start; neither interface ever holds one of these errors.
+  allow_list_unreadable: "solo en la Lambda: responde remote_unavailable",
+  api_config_invalid: "solo en la Lambda: no arranca",
+  device_id_invalid: "solo en la Lambda: nunca construye la clave de un id que no vale",
 };
 
 /**

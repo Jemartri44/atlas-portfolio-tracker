@@ -73,6 +73,12 @@ export const REMOTE_FAILURE_CODES = [
   "init_rejected",
   "not_found",
   "internal",
+  // Feature 015 (docs/api.md §2 and §7): the device of the credential is
+  // missing, of another type or forgotten; a transient failure of SSM or S3
+  // that may be retried; a body over the bound of the Lambda. None holds a line.
+  "device_forgotten",
+  "remote_unavailable",
+  "body_too_large",
   "transport_rejected",
   "network_failed",
 ] as const;
