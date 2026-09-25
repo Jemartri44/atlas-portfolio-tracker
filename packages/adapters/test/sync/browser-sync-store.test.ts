@@ -21,7 +21,6 @@ import {
 import { IMPORTED_PRICES_KEY } from "../../src/ledger-store/browser/prices.js";
 import { IMPORTED_HISTORY_KEY } from "../../src/ledger-store/browser/reference.js";
 import {
-  BrowserSyncStore,
   browserSyncPresence,
   SYNC_DISCARDED_KEY,
   SYNC_HELD_KEY,

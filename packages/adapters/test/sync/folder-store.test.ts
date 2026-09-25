@@ -3,7 +3,7 @@
 // ledger loses the line (V9), and every cut between two writes leaving every
 // line at least in one place.
 
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ConflictError } from "@atlas/domain";
 import {
