@@ -13,7 +13,7 @@ status=0
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "pre-commit: WARNING gitleaks is not installed; secret scan skipped." >&2
   echo "            Install it and re-run: gitleaks git --staged --no-banner" >&2
-elif ! gitleaks git --staged --no-banner --redact; then
+elif ! gitleaks git --staged --no-banner --redact --verbose; then
   echo "pre-commit: gitleaks flagged the staged changes; commit aborted." >&2
   echo "            Remove the secret from the staged files (and rotate it if it is real)." >&2
   status=1
