@@ -1,14 +1,14 @@
 <!--
 Sync Impact Report
-- Version change: 1.6.0 → 1.6.1
+- Version change: 1.6.1 → 1.6.2
 - Modified principles: none
-- Modified sections: Restricciones técnicas (Seguridad: the console's device tokens are registered in SSM as `SecureString`, hash only, one parameter per token; locally the console keeps its token in a credentials file outside the repository and the ledger folder. ADR-0033, accepted 2026-09-25)
-- Version bump rationale: PATCH, a clarification of where an already-allowed kind of secret lives; no principle added, removed or re-scoped
+- Modified sections: Restricciones técnicas (Plataforma: the exceptions to "nothing created by hand" are declared in ADR-0028 and ADR-0034, the latter adding the bootstrap inside the shared account and the secrets script. ADR-0034, accepted 2026-09-25)
+- Version bump rationale: PATCH, a citation of where already-allowed exceptions are written; no principle added, removed or re-scoped
 - Added sections: none
 - Removed sections: none
 - Templates requiring updates: none
 - Follow-up TODOs: advisor answers in docs/fiscal-questions.md may change Settings defaults, not this document.
-- Previous: 1.5.0 → 1.6.0 (2026-09-24) re-scoped IV (configuration outside the ledger) and VI (minimum cost with a budget alarm), and amended Restricciones técnicas for ADR-0027, ADR-0028 and ADR-0031.
+- Previous: 1.6.0 → 1.6.1 (2026-09-25) clarified in Restricciones técnicas (Seguridad) where the console's device tokens live (ADR-0033); 1.5.0 → 1.6.0 (2026-09-24) re-scoped IV (configuration outside the ledger) and VI (minimum cost with a budget alarm), and amended Restricciones técnicas for ADR-0027, ADR-0028 and ADR-0031.
 -->
 
 # Constitución de Atlas Portfolio Tracker
@@ -95,7 +95,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 ## Restricciones técnicas
 
-- **Plataforma:** AWS con **coste mínimo y alarma de presupuesto** (ADR-0028), no dentro del *always-free* indefinidamente (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, **acceso solo con Google verificado en la Lambda, sin Cognito** (ADR-0027), EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano, **salvo las excepciones declaradas en ADR-0028, cada una con su condición de retirada**. Antes de introducir un servicio nuevo, verificar que su coste es mínimo a esta escala.
+- **Plataforma:** AWS con **coste mínimo y alarma de presupuesto** (ADR-0028), no dentro del *always-free* indefinidamente (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, **acceso solo con Google verificado en la Lambda, sin Cognito** (ADR-0027), EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano, **salvo las excepciones declaradas en ADR-0028 y ADR-0034 (*bootstrap* de la cuenta compartida y guion de los secretos), cada una con su condición de retirada**. Antes de introducir un servicio nuevo, verificar que su coste es mínimo a esta escala.
 - **Seguridad:** nunca credenciales de brókers. Secretos en SSM Parameter Store como `SecureString`: el token Flex de IBKR (solo lectura) y el secreto del cliente OAuth de Google y la clave de sesión (ADR-0027). Las claves de las fuentes de precios (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, en SSM. El registro de los tokens de dispositivo de la consola (ADR-0033): en SSM, un `SecureString` por token con solo el hash del secreto; en local, el token vive en un fichero de credenciales fuera del repositorio y de la carpeta del libro, que solo escribe la consola. Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
 - **Privacidad:** nunca se registran en logs importes, posiciones, saldos ni identificadores de cuenta. Nada personal en el repositorio público: ni dominio real, ni importes, ni el plan financiero (`plan-financiero.md`, ignorado por git).
 - **Idioma:** todo lo técnico (código, identificadores, commits, ramas, ficheros, infraestructura) en inglés. Documentos, especificaciones y esta constitución en español con identificadores en inglés.
@@ -117,4 +117,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.6.1 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-25
+**Version**: 1.6.2 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-25
