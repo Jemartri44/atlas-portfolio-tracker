@@ -44,6 +44,7 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--c-canvas); color: var(--c-text); font: 400 var(--text-md)/1.5 var(--font-sans); }
+a { color: var(--c-accent); font-weight: 600; text-decoration: none; }
 .num { font-variant-numeric: tabular-nums; }
 .mask { letter-spacing: 0.08em; color: var(--c-text-3); }
 .bar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: var(--space-3); height: 52px; padding: 0 var(--gutter); background: var(--c-surface); border-bottom: 1px solid var(--c-border); font-size: var(--text-sm); }
@@ -61,7 +62,6 @@ h1 { font-size: var(--text-xl); margin: 0; line-height: 1.2; }
 .critical { display: grid; grid-template-columns: 20px 1fr; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--c-danger-soft); border: 1px solid transparent; }
 .critical svg { color: var(--c-danger); margin-top: 3px; }
 .critical a { grid-column: 2; }
-a { color: var(--c-accent); font-weight: 600; text-decoration: none; }
 /* hero */
 .hero { font-size: var(--text-display); line-height: 1.15; font-weight: 600; }
 .hero .unit { font-size: 0.55em; color: var(--c-text-3); margin-left: 4px; }
@@ -83,7 +83,8 @@ a { color: var(--c-accent); font-weight: 600; text-decoration: none; }
 .door { display: flex; align-items: center; gap: var(--space-3); min-height: var(--tap); }
 .door .txt { flex: 1; font-size: var(--text-sm); color: var(--c-text-2); }
 /* chart */
-.range { display: flex; gap: var(--space-1); margin: 0 0 var(--space-2); }
+.range { display: flex; gap: var(--space-1); margin: 0 0 var(--space-2); padding: 0; border: 0; min-width: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .range span { min-height: 36px; padding: 0 var(--space-3); display: flex; align-items: center; border-radius: 999px; font-size: var(--text-sm); color: var(--c-text-2); }
 .range .on { background: var(--c-accent-soft); color: var(--c-accent-soft-text); font-weight: 600; }
 .panel { display: grid; grid-template-columns: 1fr; gap: 2px; }
@@ -152,7 +153,7 @@ svg.strip { height: var(--chart-strip-h); }
   <div class="critical" role="note">
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M6 1.5h6l4.5 4.5v6L12 16.5H6L1.5 12V6z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9 5v5M9 12.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
     <span>Tus datos viven en el navegador y hace <b>9 días</b> que no los exportas.</span>
-    <a href="#">Exportar ahora →</a>
+    <a href="/ajustes">Exportar ahora →</a>
   </div>
 
   <section class="card worth" aria-labelledby="h-worth">
@@ -172,7 +173,7 @@ svg.strip { height: var(--chart-strip-h); }
 
   <section class="card chart-card" aria-labelledby="h-evo">
     <h2 id="h-evo">Evolución del patrimonio</h2>
-    <div class="range" role="group" aria-label="Rango"><span>1 mes</span><span class="on">1 año</span><span>5 años</span><span>Todo</span></div>
+    <fieldset class="range"><legend class="sr">Rango</legend><span>1 mes</span><span class="on">1 año</span><span>5 años</span><span>Todo</span></fieldset>
     <div class="panel">
       <div class="panel-label"><span class="key k-core"></span>Cartera principal <span class="key k-contrib"></span>aportado <em>sin importes en el eje</em></div>
       <svg class="plot core" viewBox="0 0 336 132" preserveAspectRatio="none" role="img" aria-label="Cartera principal frente a lo aportado, con dos huecos sin precios">
@@ -198,16 +199,16 @@ svg.strip { height: var(--chart-strip-h); }
   </section>
 
   <section class="card door-card" aria-label="Declaración">
-    <div class="door"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="2" fill="none" stroke="currentColor"/><path d="M6.5 7h7M6.5 10h7M6.5 13h4" stroke="currentColor"/></svg><span class="txt"><b>Declaración</b> · Modelo 720 de 2028 sin decidir: faltan 2 valoraciones a 31/12</span><a href="#">Ver →</a></div>
+    <div class="door"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="2" fill="none" stroke="currentColor"/><path d="M6.5 7h7M6.5 10h7M6.5 13h4" stroke="currentColor"/></svg><span class="txt"><b>Declaración</b> · Modelo 720 de 2028 sin decidir: faltan 2 valoraciones a 31/12</span><a href="/fiscal">Ver →</a></div>
   </section>
 
   <section class="card attention" aria-labelledby="h-att">
     <h2 id="h-att">Atención <small>4 avisos</small></h2>
     <ul class="list">
-      <li><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2 16.5 15.5h-15z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 7v4M9 13v.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div><b>3 precios</b> con más de 15 días · World Index Fund, Bitcoin ETP y Physical Gold ETC<a href="#">Registrar valoraciones →</a></div></li>
-      <li><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2 16.5 15.5h-15z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 7v4M9 13v.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div>Renta fija está <b>2,4 puntos</b> por debajo de su objetivo (umbral: 2 puntos).<a href="#">Ver cartera →</a></div></li>
+      <li><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2 16.5 15.5h-15z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 7v4M9 13v.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div><b>3 precios</b> con más de 15 días · World Index Fund, Bitcoin ETP y Physical Gold ETC<a href="/registrar/valuation">Registrar valoraciones →</a></div></li>
+      <li><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2 16.5 15.5h-15z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 7v4M9 13v.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div>Renta fija está <b>2,4 puntos</b> por debajo de su objetivo (umbral: 2 puntos).<a href="/cartera">Ver cartera →</a></div></li>
     </ul>
-    <div class="foot"><a href="#">Ver 2 avisos más</a></div>
+    <div class="foot"><a href="/?avisos=todos">Ver 2 avisos más</a></div>
   </section>
 
   <section class="card moves" aria-labelledby="h-mov">
@@ -218,7 +219,7 @@ svg.strip { height: var(--chart-strip-h); }
       <li><span class="t">Alpha Robotics</span><span class="r num"><span class="mask">••••</span> €</span><span class="m">Dividendo · Cubo especulativo</span><span class="r num m">05/12/2028</span></li>
       <li><span class="t">Fondos indexados</span><span class="r num"><span class="mask">••••</span> €</span><span class="m">Ingreso de efectivo</span><span class="r num m">01/12/2028</span></li>
     </ul>
-    <div class="foot"><a href="#">Ver todos los movimientos</a></div>
+    <div class="foot"><a href="/movimientos">Ver todos los movimientos</a></div>
   </section>
 </main>
 <nav class="tabbar" aria-label="Destinos"><span class="cur">Resumen</span><span>Movimientos</span><span class="plus">+</span><span>Cartera</span><span>Cubo</span></nav>
