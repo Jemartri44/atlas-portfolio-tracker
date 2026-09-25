@@ -28,15 +28,17 @@ Paso a paso, con los límites de cada plan y cómo comprobar que la consola las 
 
 ### 2. Guárdalas fuera de la carpeta del libro, solo legibles por ti
 
-Copia esto en una terminal. Te pide las dos claves **sin enseñarlas en pantalla** (pégalas y pulsa Intro), y el fichero nace ya con permisos `600`. Las claves no quedan en el historial de la terminal.
+Copia esto en una terminal, **entero, de la `{` a la `}`** (las llaves hacen que la terminal lo lea completo antes de ejecutarlo). Te pide las dos claves **sin enseñarlas en pantalla** (pégalas y pulsa Intro), y el fichero nace ya con permisos `600`. Las claves no quedan en el historial de la terminal.
 
 ```bash
+{
 mkdir -p ~/.config/atlas
 read -rsp 'Clave de EODHD: ' KE; echo
 read -rsp 'Clave de Alpha Vantage: ' KA; echo
 ( umask 077; printf '{"eodhd":"%s","alpha_vantage":"%s"}\n' "$KE" "$KA" > ~/.config/atlas/secrets.json )
 unset KE KA
 ls -l ~/.config/atlas/secrets.json
+}
 ```
 
 **Cuenta como «sí»:** la última línea empieza por `-rw-------`. Si no, ejecuta `chmod 600 ~/.config/atlas/secrets.json`: la consola **se niega a usar** un fichero de claves que otros pueden leer, y te lo dice.

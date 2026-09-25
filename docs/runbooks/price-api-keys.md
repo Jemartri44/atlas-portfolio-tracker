@@ -58,9 +58,10 @@ Lo lee `packages/adapters/src/prices/secrets.ts` (`readSecrets`), y la consola l
 
 **Si usas WSL, hazlo en la terminal de WSL (Ubuntu), no en PowerShell ni en `cmd`.** El fichero va en el `HOME` de Linux, `/home/<tu usuario>/.config/atlas/secrets.json`, **no** en `C:\Users\…` ni en `/mnt/c/…`: en las unidades de Windows los permisos de Linux no funcionan como aquí, el fichero suele aparecer abierto a todos y la consola no usaría las claves.
 
-Copia este bloque en la terminal. Te pide las dos claves **sin enseñarlas en pantalla**: pega cada una y pulsa Intro. Las claves no quedan en el historial de la terminal, y el fichero nace ya con permisos `600`.
+Copia este bloque **entero, de la `{` a la `}`**, en la terminal. Las llaves hacen que la terminal lo lea completo antes de ejecutarlo, así que las preguntas no se comen las líneas siguientes del bloque. Te pide las dos claves **sin enseñarlas en pantalla**: pega cada una y pulsa Intro. Las claves no quedan en el historial de la terminal, y el fichero nace ya con permisos `600`.
 
 ```bash
+{
 D="${XDG_CONFIG_HOME:-$HOME/.config}/atlas"
 mkdir -p "$D"
 read -rsp 'Clave de EODHD: ' KE; echo
@@ -69,6 +70,7 @@ read -rsp 'Clave de Alpha Vantage: ' KA; echo
 unset KE KA
 chmod 600 "$D/secrets.json"
 ls -l "$D/secrets.json"
+}
 ```
 
 **Cuenta como «sí»:** la última línea empieza por `-rw-------`.
