@@ -217,8 +217,11 @@ export type RedoPlan =
       /**
        * A lone reversal: recorded by `recordEvent` with its draft and its
        * sealed id — `reverseEvent` takes no id, and giving it one costs the
-       * boot of the web (second review of PR #83) —, which refuses exactly
-       * what would leave another event invalid.
+       * boot of the web (second review of PR #83) —, which refuses what the
+       * reversal itself would leave invalid and, like every event that is not
+       * a `settings_changed`, any event that was invalid before and still is
+       * after it (`checkInvalid`). The reversal of an invalid event repairs it,
+       * so it passes.
        */
       readonly kind: "reverse";
       readonly target_id: string;
