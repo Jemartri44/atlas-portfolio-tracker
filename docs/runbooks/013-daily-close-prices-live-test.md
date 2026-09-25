@@ -21,6 +21,8 @@ Lo que tienes que devolver está en la plantilla del final. Registro de la featu
 
 ### 1. Crea las dos claves gratuitas
 
+Paso a paso, con los límites de cada plan y cómo comprobar que la consola las lee: [`price-api-keys.md`](price-api-keys.md). Si ya la has seguido, salta al paso 3.
+
 - EODHD, plan Free: `https://eodhd.com/register`
 - Alpha Vantage, plan gratuito: `https://www.alphavantage.co/support/#api-key`
 
