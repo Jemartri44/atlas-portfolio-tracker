@@ -6,7 +6,6 @@
 import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
 import { type Accessor, createResource, type JSX, Show } from "solid-js";
 import { Notice } from "../components/index.js";
-import { symbolsNotice } from "./notices.js";
 import type { WebQuotes } from "./quotes.js";
 
 // Imported when the screen asks, not with it: a static import made every
@@ -52,8 +51,8 @@ export const QuotesNotice = (props: { quotes: WebQuotes | undefined }): JSX.Elem
         <Show when={quotes().problem}>
           {(problem) => <Notice severity="caution">{PROBLEMS[problem()]}</Notice>}
         </Show>
-        <Show when={quotes().symbols}>
-          {(symbols) => <Notice severity="caution">{symbolsNotice(symbols())}</Notice>}
+        <Show when={quotes().symbolsNotice}>
+          {(said) => <Notice severity="caution">{said()}</Notice>}
         </Show>
         <Show when={quotes().mismatched.length > 0}>
           <Notice severity="caution">
@@ -61,7 +60,7 @@ export const QuotesNotice = (props: { quotes: WebQuotes | undefined }): JSX.Elem
               .mismatched.map((m) => m.asset_id)
               .join(
                 ", ",
-              )}): no se usan en ninguna cifra en euros. Púrgalos desde la consola con «atlas prices purge» y se volverán a descargar.`}
+              )}): no se usan en ninguna cifra en euros. Púrgalos desde la consola con «atlas prices purge»: la próxima descarga vuelve a pedir esos días una vez.`}
           </Notice>
         </Show>
         <Show when={quotes().unreadable.length > 0}>

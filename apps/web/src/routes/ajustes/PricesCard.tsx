@@ -13,7 +13,6 @@ import { formatDate, formatInstantDate } from "../../format/date.js";
 import { toAppError } from "../../ledger/errors.js";
 import { canLinkFolder } from "../../ledger/source.js";
 import { store } from "../../ledger/state.js";
-import { symbolsNotice } from "../../prices/notices.js";
 
 const prices = () => import("../../prices/quotes.js");
 
@@ -130,9 +129,7 @@ export const PricesCard = (): JSX.Element => {
             <Show when={loaded().problem}>
               {(problem) => <p class="card-note">{PROBLEMS[problem()]}</p>}
             </Show>
-            <Show when={loaded().symbols}>
-              {(symbols) => <p class="card-note">{symbolsNotice(symbols())}</p>}
-            </Show>
+            <Show when={loaded().symbolsNotice}>{(said) => <p class="card-note">{said()}</p>}</Show>
           </>
         )}
       </Show>

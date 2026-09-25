@@ -55,6 +55,8 @@ export interface WebQuotes {
    * (the closes are used as they are), or one that does not read (none used).
    */
   readonly symbols?: SymbolsProblem;
+  /** What the screens say of `symbols`, here and not in a module of its own (the boot). */
+  readonly symbolsNotice?: string;
   /** The folder is linked and lost its permission, or this browser keeps nothing. */
   readonly problem?: "permission" | "storage";
   readonly history: WebHistory;
@@ -63,6 +65,14 @@ export interface WebQuotes {
 export type SymbolsProblem =
   | { readonly problem: "missing" }
   | { readonly problem: "unreadable"; readonly code: string };
+
+/** Why the currency of the automatic prices could not be checked. */
+const symbolsNotice = (symbols: SymbolsProblem): string =>
+  symbols.problem === "missing"
+    ? "Sin prices/symbols.json junto a ellos no se puede comprobar la divisa de los precios automáticos: se usan tal como están. Si los importaste a mano, importa también ese fichero."
+    : symbols.code === "symbols_file_newer_version"
+      ? "prices/symbols.json es de una versión más nueva de la aplicación: no se usan precios automáticos. Recarga la aplicación para actualizarla."
+      : "prices/symbols.json no se entiende: no se puede comprobar la divisa de los precios automáticos, y no se usan. Vuelve a declarar los símbolos desde la consola.";
 
 /** The correspondence of a text of `symbols.json`, or why there is none. */
 const symbolsOf = (text: string | undefined): SymbolsFile | SymbolsProblem => {
@@ -83,17 +93,23 @@ const symbolsOf = (text: string | undefined): SymbolsFile | SymbolsProblem => {
 const withSymbols = (
   files: ReadonlyMap<AssetId, string>,
   text: string | undefined,
-): Pick<WebQuotes, "closes" | "unreadable" | "mismatched" | "symbols"> => {
+): Pick<WebQuotes, "closes" | "unreadable" | "mismatched" | "symbols" | "symbolsNotice"> => {
   const symbols = symbolsOf(text);
   if ("problem" in symbols && symbols.problem === "unreadable") {
-    return { closes: new Map(), unreadable: [], mismatched: [], symbols };
+    return {
+      closes: new Map(),
+      unreadable: [],
+      mismatched: [],
+      symbols,
+      symbolsNotice: symbolsNotice(symbols),
+    };
   }
   const read = readCloses(files, "problem" in symbols ? undefined : symbols);
   return {
     closes: read.closes,
     unreadable: read.unreadable,
     mismatched: read.mismatched,
-    ...("problem" in symbols ? { symbols } : {}),
+    ...("problem" in symbols ? { symbols, symbolsNotice: symbolsNotice(symbols) } : {}),
   };
 };
 
