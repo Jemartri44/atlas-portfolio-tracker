@@ -18,7 +18,7 @@ git config core.hooksPath .githooks
 
 On failure: `npm run format` applies the formatting and safe lint fixes (then `git add` them); `npm run lint` checks the whole repository; other lint errors are fixed by hand.
 
-A missing tool warns and does not block: `gitleaks` not installed, or Biome not installed because `npm ci` was not run.
+A missing tool warns and does not block: `gitleaks` not installed, Biome not installed because `npm ci` was not run, or a Biome that does not start (`biome --version` fails: no `node` on the `PATH`, as when nvm is not loaded in a GUI client, or `node_modules` installed from another platform).
 
 Emergency only: `git commit --no-verify` skips both checks. CI still runs `npm run lint`.
 

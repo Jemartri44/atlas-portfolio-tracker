@@ -30,6 +30,10 @@ if ((${#files[@]} > 0)); then
   biome=node_modules/.bin/biome
   if [[ ! -x "$biome" ]]; then
     echo "pre-commit: WARNING Biome is not installed (run npm ci); lint and format check skipped." >&2
+  elif ! "$biome" --version >/dev/null 2>&1; then
+    # e.g. no node on PATH (nvm not loaded in a GUI client) or node_modules from another platform.
+    echo "pre-commit: WARNING Biome does not run here (is node on PATH? run npm ci on this" >&2
+    echo "            platform); lint and format check skipped." >&2
   else
     # Biome reads the working tree; warn when it differs from what is being committed.
     if [[ -n "$(git diff --name-only -- "${files[@]}")" ]]; then
