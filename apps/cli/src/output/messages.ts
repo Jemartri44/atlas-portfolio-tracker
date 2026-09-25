@@ -25,6 +25,54 @@ export const fxMissingText = (reason: unknown): string => {
 const text = (value: unknown): string =>
   typeof value === "string" ? value : JSON.stringify(value);
 
+/**
+ * The failures of the remote one by one (`docs/api.md` §7; feature 014), each
+ * with its own sentence: none holds a line back, and each asks for something
+ * different.
+ */
+export const describeRemoteFailure = (code: unknown): string => {
+  switch (code) {
+    case "unauthenticated":
+      return "la nube pide iniciar sesión.";
+    case "credentials_ambiguous":
+      return "la petición llevaba dos credenciales a la vez; es un fallo de la aplicación.";
+    case "session_invalid":
+      return "la sesión ha caducado: vuelve a iniciar sesión.";
+    case "device_token_invalid":
+      return "el token de este dispositivo no vale: vuelve a iniciar sesión desde la consola.";
+    case "device_token_revoked":
+      return "el token de este dispositivo está revocado: vuelve a iniciar sesión desde la consola.";
+    case "device_token_expired":
+      return "el token de este dispositivo ha caducado: vuelve a iniciar sesión desde la consola.";
+    case "not_allowed":
+      return "esa cuenta de Google no está en la lista permitida.";
+    case "forbidden_for_credential":
+      return "esta credencial no puede usar esa ruta; es un fallo de la aplicación.";
+    case "origin_rejected":
+      return "la petición no venía de la propia aplicación.";
+    case "body_invalid":
+      return "la nube no ha entendido la forma de la petición; es un fallo de la aplicación.";
+    case "body_not_json":
+      return "la petición no era JSON; es un fallo de la aplicación.";
+    case "precondition_required":
+      return "la petición no decía sobre qué versión de la nube escribía; es un fallo de la aplicación.";
+    case "precondition_failed":
+      return "otro dispositivo ha escrito en la nube a la vez.";
+    case "init_rejected":
+      return "la nube no ha aceptado el libro para empezar.";
+    case "not_found":
+      return "la ruta de la nube no existe; es un fallo de la aplicación.";
+    case "internal":
+      return "la nube ha tenido un fallo interno y no ha escrito nada.";
+    case "transport_rejected":
+      return "la petición la ha rechazado la red antes de llegar a la nube (CloudFront o el cortafuegos).";
+    case "network_failed":
+      return "no hay conexión con la nube.";
+    default:
+      return `la nube ha respondido ${text(code)}.`;
+  }
+};
+
 export const describeError = (error: DomainError): string => {
   const d = error.details;
   switch (error.code) {
@@ -232,6 +280,112 @@ export const describeError = (error: DomainError): string => {
       )}`;
     case "projection_changed":
       return `La reescritura cambiaría la proyección (${text(d.keys)}): no se ha escrito nada.`;
+    // --- The sync of the ledger (feature 014) -------------------------------
+    // Why a line is held back. It left the ledger and waits in sync/held.jsonl;
+    // nothing behind it is uploaded until it is resolved (confirm, redo or
+    // discard), and resolving never needs the rest of the ledger to be valid.
+    case "domain_rejected":
+      return `Retenida: sobre lo que ya hay en la nube, el libro la rechaza (${text(d.domain_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Rehazla sobre el estado actual o descártala. Mientras, lo que va detrás espera, y tu libro local puede quedar incompleto hasta que la resuelvas.`;
+    case "pair_rejected":
+      return `Retenida la corrección entera (anulación y operación corregida, juntas): sobre lo que ya hay en la nube no cabe (${text(d.member)}: ${text(d.member_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Ninguna de las dos se ha subido. Rehazla o descártala; hasta entonces lo que va detrás espera y tu libro local puede quedar incompleto.`;
+    case "pair_not_contiguous":
+      return "Retenida: la operación corregida no va justo detrás de su anulación, que es como la aplicación las escribe siempre. Descártala o rehaz la corrección.";
+    case "pair_incomplete":
+      return "La nube ha rechazado una anulación que anunciaba su corrección y no la traía detrás: se sube siempre la pareja entera.";
+    case "pair_declaration_invalid":
+      return "La nube ha rechazado la petición: una línea declaraba ser una anulación con corrección, o parte de una cadena, sin serlo.";
+    case "line_unreadable":
+      return `La nube no ha podido leer una línea${d.line === undefined ? "" : ` (la ${text(d.line)})`}. Queda retenida.`;
+    case "line_invalid":
+      return `La nube ha rechazado una línea por su forma (${text(d.domain_code)}). Queda retenida.`;
+    case "schema_version_unsupported":
+      return `La nube no conoce todavía el formato ${text(d.found)} de esta línea (entiende hasta el ${text(d.supported)}). Queda retenida hasta que la nube se actualice.`;
+    case "recorded_at_in_future":
+      return `Retenida: su fecha de registro (${text(d.recorded_at)}) va por delante del reloj de la nube. Revisa la hora de este dispositivo y rehaz la operación.`;
+    case "duplicate_unconfirmed":
+      return `La nube pide confirmar una operación que repite la huella de otra (${text(d.existing ?? d.id)}). Queda retenida: confírmala si de verdad son dos.`;
+    case "seal_mismatch":
+      return "Retenida: la declaración ya no cuadra con los movimientos que tendría delante en la nube. Regístrala otra vez sobre el libro actual.";
+    case "waiver_not_appendable":
+      return "Una renuncia a verificar una huella solo nace dentro de una compactación, y nunca se sube línea a línea. Queda retenida.";
+    case "seals_prefix":
+      return "Retenida: es una declaración (o una renuncia) que sella los movimientos que tiene delante, y en la nube ya no son los mismos. Regístrala otra vez sobre el libro actual; no se mueve de sitio sola.";
+    case "concurrent_settings":
+      return "Retenida: la configuración también cambió en otro dispositivo, y cada cambio guarda la configuración entera. Subirla borraría ese otro cambio: rehazla sobre la configuración actual.";
+    case "concurrent_account":
+      return `Retenida: la cuenta ${text(d.account_id)} también cambió en otro dispositivo, y cada cambio la guarda entera. Rehaz el cambio sobre la cuenta actual.`;
+    case "concurrent_asset":
+      return `Retenida: el activo ${text(d.asset_id)} también cambió en otro dispositivo, y cada cambio lo guarda entero. Rehaz el cambio sobre el activo actual.`;
+    case "new_duplicate":
+      return `Retenida: con lo que ha llegado de otro dispositivo, repite la huella de ${text(d.existing)}. Confírmala si son operaciones distintas, o descártala si es la misma.`;
+    case "new_closed_year":
+      return `Retenida: cae en un ejercicio que otro dispositivo ha marcado como presentado (${text(d.filings)}). Confírmala si de verdad corresponde ahí; puede tocar rectificar la declaración.`;
+    case "settings_leave_invalid":
+      return "Retenida: ese cambio de configuración dejaría inválidas operaciones que ya están en la nube, y la nube nunca recibe un libro inválido. Repara antes esas operaciones y rehaz el cambio.";
+    case "partner_discarded":
+      return "Retenida: descartaste la anulación de esta corrección, y una corrección nunca se sube sin su anulación. Descártala también, o rehaz la corrección.";
+    case "absent_after_rewrite":
+      return "Retenida tras volver a descargar: la nube se ha reescrito (compactada o restaurada) y ya no tiene esta operación. Nunca se sube sola: regístrala otra vez si sigue siendo cierta, o descártala.";
+    case "differs_after_rewrite":
+      return "Retenida tras volver a descargar: la nube reescrita tiene esta misma operación con otro contenido. Compara las dos y rehaz o descarta la tuya.";
+    case "absent_at_join":
+      return "Retenida al unirte empezando desde la nube: la nube no tiene esta operación de tu libro anterior, que queda archivado. Regístrala si sigue siendo cierta, o descártala.";
+    case "differs_at_join":
+      return "Retenida al unirte empezando desde la nube: la nube tiene esta operación con otro contenido. Compara y rehaz o descarta la tuya.";
+    case "discarded_by_user":
+      return "Descartada por ti: queda en sync/discarded.jsonl, fuera del libro.";
+    case "redone":
+      return "Rehecha: la sustituye la operación registrada otra vez sobre el estado actual.";
+    // Why a sync stops: nothing is lost and nothing is held back.
+    case "local_prefix_changed":
+      return "No se sincroniza: lo que este dispositivo tenía por sincronizado ya no es lo que dice su marcador (el libro local se ha reescrito fuera de la sincronización). No se ha subido nada.";
+    case "remote_rewritten":
+      return "No se sincroniza: el libro de la nube se ha reescrito (compactado o restaurado) desde la última vez. No se ha subido nada. Cuando quieras, vuelve a descargarlo: lo que tenías y la nube no quedará retenido para que lo revises.";
+    case "remote_schema_too_new":
+      return `No se sincroniza: el libro de la nube usa un formato (${text(d.found)}) más nuevo que el que entiende esta versión (${text(d.supported)}). Actualiza la aplicación; lo pendiente espera aquí.`;
+    case "remote_unreadable":
+      return `No se sincroniza: no se puede leer el libro de la nube${d.line === undefined ? "" : ` (línea ${text(d.line)})`}. Lo pendiente espera aquí.`;
+    case "remote_ledger_invalid":
+      return "No se sincroniza: el libro de la nube tiene operaciones inválidas, y sobre él no se sube nada hasta repararlo. Lo pendiente espera aquí.";
+    case "remote_failed":
+      return `No se sincroniza: ${describeRemoteFailure(d.remote_code)} Lo pendiente sigue pendiente; vuelve a intentarlo después.`;
+    case "remote_contention":
+      return `No se sincroniza: otro dispositivo ha escrito en la nube ${text(d.attempts)} veces seguidas mientras lo intentábamos. Vuelve a intentarlo.`;
+    case "local_changed":
+      return `No se sincroniza: el libro de esta carpeta ha cambiado ${text(d.attempts)} veces mientras sincronizábamos (otra consola escribe a la vez). Vuelve a intentarlo cuando termine.`;
+    case "publish_failed":
+      return `Sincronizado, pero no se ha podido publicar el estado de la cola de este dispositivo (${describeRemoteFailure(d.remote_code)}). Se publicará en la próxima sincronización.`;
+    // What a synced folder or browser refuses.
+    case "compact_refused_folder_synced":
+      return "Esta carpeta está sincronizada: es una réplica de la nube, y compactarla la dejaría sin sentido. La compactación se hace sobre la copia de la nube, como operación de administración.";
+    case "compact_refused_marker_unreadable":
+      return "No se compacta: el marcador de la sincronización (sync/state.json) no se puede leer, y sin él no se sabe si la carpeta está sincronizada. Sincroniza primero, que lo reconstruye.";
+    case "compact_refused_marker_missing":
+      return "No se compacta: existe la carpeta sync/ pero falta su marcador (sync/state.json), así que esta carpeta se sincroniza. Sincroniza primero, o desactiva la sincronización de forma explícita.";
+    case "rewrite_refused_pending_here":
+      return `No se reescribe la nube: esta carpeta tiene ${text(d.pending)} líneas pendientes de subir. Sincroniza primero.`;
+    case "rewrite_refused_pending_devices":
+      return `No se reescribe la nube: hay dispositivos con líneas pendientes de subir (${text(d.devices)}). Que sincronicen primero, u olvida un dispositivo perdido.`;
+    case "rewrite_refused_marker_unreadable":
+      return "No se reescribe la nube: el marcador de la sincronización no se puede leer. Sincroniza primero, que lo reconstruye.";
+    case "rewrite_refused_marker_missing":
+      return "No se reescribe la nube: existe sync/ pero falta su marcador. Sincroniza primero.";
+    case "import_refused_synced":
+      return "No se importa: este libro se sincroniza, y sustituirlo borraría lo pendiente. Desactiva antes la sincronización.";
+    case "deactivate_refused_pending":
+      return `No se desactiva la sincronización: hay ${text(d.pending)} líneas pendientes que nunca llegarían a la nube. Sincroniza primero; lo retenido se queda aquí de todas formas.`;
+    case "deactivate_refused_marker_unreadable":
+      return "No se desactiva: el marcador de la sincronización no se puede leer. Sincroniza primero, que lo reconstruye.";
+    case "init_refused_invalid_ledger":
+      return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
+    case "redo_filing_in_remote":
+      return "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.";
+    case "resolution_not_offered":
+      return `Esa resolución no se ofrece para lo retenido por «${text(d.reason)}».`;
+    case "sync_marker_unreadable":
+      return `El marcador de la sincronización (sync/state.json) no se puede leer (${text(d.reason)}).`;
+    case "sync_held_unreadable":
+      return `El fichero de ${d.file === "held" ? "lo retenido (sync/held.jsonl)" : "lo descartado (sync/discarded.jsonl)"} no se puede leer en la línea ${text(d.line)}. No se toca: revísalo antes de seguir.`;
     case "raw_line_break":
       return `La línea ${text(d.line)} lleva dentro un salto de línea o un retorno de carro (\\r), lo normal en un fichero guardado con finales de línea de Windows. No es un error tuyo, pero así no se puede escribir tal cual: pasa el fichero a finales de línea LF (las cifras no cambian) y vuelve a intentarlo.`;
     case "archive_exists":

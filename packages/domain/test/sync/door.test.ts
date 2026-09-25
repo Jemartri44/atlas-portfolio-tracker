@@ -3,11 +3,11 @@
 
 import { describe, expect, it } from "vitest";
 import { DomainError } from "../../src/errors.js";
-import { RemoteError, SYNC_ENGINE } from "../../src/sync.js";
+import { RemoteError, reapplyUnits } from "../../src/sync.js";
 
 describe("the door of the sync", () => {
   it("exports the engine", () => {
-    expect(SYNC_ENGINE).toBe("reapply");
+    expect(typeof reapplyUnits).toBe("function");
   });
 
   it("says a failure of the remote with its own code, status and details", () => {

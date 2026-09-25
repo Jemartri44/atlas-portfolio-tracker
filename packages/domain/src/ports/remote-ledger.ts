@@ -6,10 +6,15 @@
 
 import { DomainError } from "../errors.js";
 
-/** The remote ledger as downloaded: its exact bytes and their etag (`docs/api.md` §5.1). */
+/**
+ * The remote ledger as downloaded (`docs/api.md` §5.1): its text, decoded from
+ * its exact UTF-8 bytes (the domain has no decoder of its own; every line was
+ * written from a string, so decoding loses nothing), and the etag of those
+ * bytes.
+ */
 export interface RemoteSnapshot {
-  readonly bytes: Uint8Array;
-  /** SHA-256 hex of `bytes`; of zero bytes when the remote is empty or absent. */
+  readonly text: string;
+  /** SHA-256 hex of the bytes; of zero bytes when the remote is empty or absent. */
   readonly etag: string;
 }
 
@@ -44,6 +49,33 @@ export interface DeviceQueueState {
   readonly held: number;
   readonly last_sync_at: string;
 }
+
+/**
+ * Every code a request of the sync can fail with, **closed**: those of
+ * `docs/api.md` §7 the routes of §5 can answer, and the two the client names
+ * for what never reached the API. None of them holds a line back (V4); each
+ * is translated on its own by both interfaces.
+ */
+export const REMOTE_FAILURE_CODES = [
+  "unauthenticated",
+  "credentials_ambiguous",
+  "session_invalid",
+  "device_token_invalid",
+  "device_token_revoked",
+  "device_token_expired",
+  "not_allowed",
+  "forbidden_for_credential",
+  "origin_rejected",
+  "body_invalid",
+  "body_not_json",
+  "precondition_required",
+  "precondition_failed",
+  "init_rejected",
+  "not_found",
+  "internal",
+  "transport_rejected",
+  "network_failed",
+] as const;
 
 /**
  * A request that did not get a line-by-line answer. `code` is one of the
