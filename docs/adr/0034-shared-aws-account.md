@@ -1,6 +1,6 @@
 # ADR-0034 — Despliegue en una cuenta de AWS compartida con otros proyectos
 
-**Estado:** Propuesta (2026-09-25). La acepta o la corrige la dirección; esta ADR no se acepta sola. **Sustituye en parte a ADR-0028**: sus filas 1, 2, 3, 10 y 12, la parte de la fila 13 que habla de cuentas, la salvaguarda y la fuente única de la fila 17, el bloque «Terraform» y dos de sus excepciones escritas; y a ADR-0027 en quién crea los parámetros de la lista permitida, del secreto del cliente de Google y de la clave de sesión. El resto de ADR-0028 sigue en pie (ver «Qué queda de ADR-0028»). Los hechos de la plataforma proceden de la documentación de AWS consultada el 2026-09-25 (fuentes F1-F15 al final); lo que no se pudo comprobar va marcado **SIN VERIFICAR**.
+**Estado:** **Aceptada (2026-09-25)** por la dirección: desarrolla la decisión del usuario del 2026-09-25 de desplegar en su cuenta AWS existente, de pago y compartida, con coste mínimo; los detalles de aislamiento los decide la dirección por la delegación del usuario; el usuario puede revocarla. Pasó tres rondas de revisión adversarial en la PR #87. **Sustituye en parte a ADR-0028**: sus filas 1, 2, 3, 10 y 12, la parte de la fila 13 que habla de cuentas, la salvaguarda y la fuente única de la fila 17, el bloque «Terraform» y dos de sus excepciones escritas; y a ADR-0027 en quién crea los parámetros de la lista permitida, del secreto del cliente de Google y de la clave de sesión. El resto de ADR-0028 sigue en pie (ver «Qué queda de ADR-0028»). Los hechos de la plataforma proceden de la documentación de AWS consultada el 2026-09-25 (fuentes F1-F15 al final); lo que no se pudo comprobar va marcado **SIN VERIFICAR**.
 
 ## Contexto
 
@@ -65,7 +65,7 @@
 
 ## Decisión
 
-**Se propone desplegar Atlas en la cuenta compartida con dos entornos permanentes, `dev` y `prod`, separados por nombre, etiqueta, estado, prefijo de SSM, roles y límite de permisos; con el bucket de datos cerrado por política a todo principal salvo los roles de Atlas de su entorno; con SSE-S3; con un presupuesto filtrado por la etiqueta `project=atlas`; y sin crear ningún recurso de ámbito de cuenta que la cuenta ya tenga.**
+**Se despliega Atlas en la cuenta compartida con dos entornos permanentes, `dev` y `prod`, separados por nombre, etiqueta, estado, prefijo de SSM, roles y límite de permisos; con el bucket de datos cerrado por política a todo principal salvo los roles de Atlas de su entorno; con SSE-S3; con un presupuesto filtrado por la etiqueta `project=atlas`; y sin crear ningún recurso de ámbito de cuenta que la cuenta ya tenga.**
 
 | # | Qué | Motivo |
 |---|---|---|
