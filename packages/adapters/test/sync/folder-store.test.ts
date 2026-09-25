@@ -7,6 +7,7 @@ import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ConflictError } from "@atlas/domain";
 import {
+  holdRecords,
   linesOfText,
   markerFor,
   parseHeld,
@@ -121,6 +122,15 @@ describe("step 6 in the console", () => {
       status: "synced",
     });
     expect(calls).toEqual(["read", "read", "publish"]);
+  });
+
+  it("only ever appends to what is held back and discarded (append-only, kept for ever)", async () => {
+    const device = await consoleDevice(base());
+    const first = holdRecords(["a"], "client", { code: "x", details: {} }, "t");
+    const second = holdRecords(["b"], "client", { code: "y", details: {} }, "t");
+    await device.sync.commit(await device.sync.read(), { held: first, discarded: [] });
+    await device.sync.commit(await device.sync.read(), { held: second });
+    expect(parseHeld(await device.held())).toEqual([...first, ...second]);
   });
 
   it("writes nothing when anything read at step 1 changed", async () => {

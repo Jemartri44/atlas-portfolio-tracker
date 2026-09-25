@@ -3,7 +3,13 @@
 // `durability: "strict"`, all of it or nothing.
 
 import { ArchiveExistsError, ConflictError } from "@atlas/domain";
-import { markerFor, parseHeld, serializeMarker, unresolvedHeld } from "@atlas/domain/sync";
+import {
+  holdRecords,
+  markerFor,
+  parseHeld,
+  serializeMarker,
+  unresolvedHeld,
+} from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
 import { BlobLedgerStore } from "../../src/ledger-store/blob.js";
 import { LEDGER_STORE } from "../../src/ledger-store/browser/idb.js";
@@ -115,6 +121,15 @@ describe("step 6 in the browser", () => {
         values.set(k, v);
       }
     }
+  });
+
+  it("only ever appends to what is held back", async () => {
+    const web = webDevice(base());
+    const first = holdRecords(["a"], "client", { code: "x", details: {} }, "t");
+    const second = holdRecords(["b"], "client", { code: "y", details: {} }, "t");
+    await web.sync.commit(await web.sync.read(), { held: first });
+    await web.sync.commit(await web.sync.read(), { held: second });
+    expect(parseHeld(await web.held())).toEqual([...first, ...second]);
   });
 
   it("writes nothing at all when its archive already exists", async () => {

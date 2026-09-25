@@ -2,10 +2,10 @@
 // on the double of IndexedDB; each with its store of sync state and a clock
 // that moves one second per reading.
 
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CURRENT_LEDGER_SCHEMA, type LedgerEvent } from "@atlas/domain";
+import { CURRENT_LEDGER_SCHEMA, type LedgerEvent, type LedgerStore } from "@atlas/domain";
 import { BlobLedgerStore } from "../../src/ledger-store/blob.js";
 import { LEDGER_STORE } from "../../src/ledger-store/browser/idb.js";
 import { BrowserLedgerBlob } from "../../src/ledger-store/browser/indexeddb.js";
@@ -31,6 +31,8 @@ export const clock = (start = "2027-08-30T09:00:00.000Z"): SyncOptions => {
 export interface Device {
   readonly kind: "console" | "web";
   readonly sync: SyncStateStore;
+  /** The ordinary store of the ledger, as the application records with it. */
+  readonly store: LedgerStore;
   /** Appends events as the application records them (the ordinary `append`). */
   record(events: readonly LedgerEvent[]): Promise<void>;
   /** The exact text of the local ledger. */
@@ -38,6 +40,8 @@ export interface Device {
   /** The exact text of what is held back and of what was discarded. */
   held(): Promise<string>;
   discarded(): Promise<string>;
+  /** The texts of every archive the device keeps (the bytes before a move). */
+  archives(): Promise<string[]>;
 }
 
 export interface ConsoleDevice extends Device {
@@ -59,6 +63,7 @@ export const consoleDevice = async (
     kind: "console",
     dir,
     ledger,
+    store: ledger,
     sync: new FolderSyncStore(ledger, ops),
     record: async (more) => {
       await ledger.append(more, (await ledger.load()).etag);
@@ -66,6 +71,10 @@ export const consoleDevice = async (
     text: () => readFile(path, "utf8"),
     held: () => optional("held.jsonl"),
     discarded: () => optional("discarded.jsonl"),
+    archives: async () => {
+      const names = await readdir(join(dir, "archive")).catch(() => [] as string[]);
+      return Promise.all(names.map((name) => readFile(join(dir, "archive", name), "utf8")));
+    },
   };
 };
 
@@ -87,6 +96,7 @@ export const webDevice = (events: readonly LedgerEvent[]): WebDevice => {
     kind: "web",
     db,
     open,
+    store: ledger,
     sync: new BrowserSyncStore(open),
     record: async (more) => {
       await ledger.append(more, (await ledger.load()).etag);
@@ -94,5 +104,9 @@ export const webDevice = (events: readonly LedgerEvent[]): WebDevice => {
     text: async () => (db.store(LEDGER_STORE).get("current") as { text: string }).text,
     held: async () => key("sync:held"),
     discarded: async () => key("sync:discarded"),
+    archives: async () =>
+      [...db.store(LEDGER_STORE).entries()]
+        .filter(([name]) => name.startsWith("archive/"))
+        .map(([, value]) => (value as { text: string }).text),
   };
 };
