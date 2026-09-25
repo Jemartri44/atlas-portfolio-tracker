@@ -1,10 +1,54 @@
 #!/usr/bin/env bash
-# Runs gitleaks on the staged changes before every commit.
-# Install: https://github.com/gitleaks/gitleaks#installing
+# Pre-commit checks on the staged changes; any failure aborts the commit.
+#  1. gitleaks: secret scan (default rules + .gitleaks.toml).
+#     Install: https://github.com/gitleaks/gitleaks#installing
+#  2. Biome: format + lint of the staged files Biome handles, same rules as `npm run lint`.
+#     Uses the repository's own binary (node_modules/.bin/biome, from `npm ci`).
+# A missing tool is a warning, never a block. Emergency bypass: git commit --no-verify.
 set -u
+cd "$(git rev-parse --show-toplevel)" || exit 1
+status=0
+
+# 1. Secret scan.
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "pre-commit: WARNING gitleaks is not installed; secret scan skipped." >&2
   echo "            Install it and re-run: gitleaks git --staged --no-banner" >&2
-  exit 0
+elif ! gitleaks git --staged --no-banner --redact; then
+  echo "pre-commit: gitleaks flagged the staged changes; commit aborted." >&2
+  echo "            Remove the secret from the staged files (and rotate it if it is real)." >&2
+  status=1
 fi
-gitleaks git --staged --no-banner --redact
+
+# 2. Biome, only on staged files it can handle (added, copied, modified or renamed).
+files=()
+while IFS= read -r -d '' f; do
+  case "$f" in
+    *.js | *.jsx | *.mjs | *.cjs | *.ts | *.tsx | *.mts | *.cts | *.json | *.jsonc | *.css | *.html | *.graphql | *.gql)
+      files+=("$f")
+      ;;
+  esac
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+if ((${#files[@]} > 0)); then
+  biome=node_modules/.bin/biome
+  if [[ ! -x "$biome" ]]; then
+    echo "pre-commit: WARNING Biome is not installed (run npm ci); lint and format check skipped." >&2
+  else
+    # Biome reads the working tree; warn when it differs from what is being committed.
+    if [[ -n "$(git diff --name-only -- "${files[@]}")" ]]; then
+      echo "pre-commit: note: some staged files have unstaged edits; Biome checks the working copy." >&2
+    fi
+    if ! "$biome" check --no-errors-on-unmatched --files-ignore-unknown=true "${files[@]}"; then
+      echo "pre-commit: Biome found problems in the staged files; commit aborted." >&2
+      echo "            Fix format and safe lint fixes: npm run format   (then git add the files)" >&2
+      echo "            Check the whole repository:     npm run lint" >&2
+      echo "            Lint errors without an automatic fix must be fixed by hand." >&2
+      status=1
+    fi
+  fi
+fi
+
+if ((status != 0)); then
+  echo "pre-commit: emergency only: git commit --no-verify skips every check, gitleaks included." >&2
+fi
+exit "$status"
