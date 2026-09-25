@@ -6,7 +6,8 @@
 //
 //   node apps/api/dist-test/apps/api/test/support/local-server.js --port 0 [--account allowed|stranger|unverified]
 //
-// It prints `http://127.0.0.1:<port>`. The fake provider shows three synthetic
+// It prints `http://127.0.0.1:<port>`. The fake provider lives under `/api/`
+// (the service worker leaves those navigations alone) and shows three synthetic
 // accounts to choose from, or chooses the one of `--account` by itself. Two
 // hooks of the test move the world from outside, as an admin would:
 // `/__test/forget-this-device?id=` and `/__test/advance?ms=` (the clock).
@@ -75,8 +76,10 @@ server.listen(Number(argument("port") ?? 0), "127.0.0.1", () => {
   ssm.set(names.clientId, "local-client");
   ssm.set(names.clientSecret, "local-secret");
   ssm.set(names.sessionKey, base64url(randomBytes(32)));
-  const google = new TestOnlyFakeGoogle("local-secret", `${origin}/__fake-google/authorize`, () =>
-    Math.floor(now / 1000),
+  const google = new TestOnlyFakeGoogle(
+    "local-secret",
+    `${origin}/api/__fake-google/authorize`,
+    () => Math.floor(now / 1000),
   );
   // An http origin only here: the parser of the real configuration refuses it.
   const config: ApiConfig = {
@@ -109,7 +112,7 @@ server.listen(Number(argument("port") ?? 0), "127.0.0.1", () => {
     request.on("data", (chunk: Buffer) => chunks.push(chunk));
     request.on("end", () => {
       void (async () => {
-        if (url.pathname === "/__fake-google/authorize") {
+        if (url.pathname === "/api/__fake-google/authorize") {
           const choose = (name: string) => {
             const back = google.authorize(url.toString(), ACCOUNTS[name] as FakeAccount);
             response
