@@ -315,3 +315,55 @@ Cada arreglo, cómo se vio en rojo y qué mutante lo guarda. Los mutantes se apl
     - El resto es ruido de hashes. Todo es perezoso.
   - Sin esto, el *build* de esta rama fallaba.
 - **Tubería completa:** `lint`, `typecheck`, `test:coverage` (265 ficheros, 2.602 tests, 100 % en `domain`) y `build`, en verde. Sin gemelos `.js`.
+
+## 14. Segunda revisión del PR #83 (2026-09-25)
+
+- **R1: terminar un rehacer solo con los identificadores sellados.**
+  - **Qué se sella:** antes de registrar nada, `startRedo` sella un `event_id` por cada línea de la parte que se rehace:
+    - el evento nuevo, si es una línea;
+    - la anulación y la corrección, si es una pareja;
+    - la anulación, si es una anulación suelta.
+  - **Se sella una sola vez:** si se vuelve a empezar, devuelve los mismos identificadores y no sella otros hasta que esa parte termine.
+  - **Qué cuenta como rehecho:** `redoneLines` solo da por rehecha una parte si todos sus identificadores sellados están en el libro, y nunca lo deduce por el objetivo.
+  - **Qué queda anotado:** cada línea pasa a `discarded.jsonl` con el identificador que la sustituyó (`replaced_by`).
+  - **Cómo llegan los identificadores a los casos de uso:**
+    - una corrección los recibe en `correctEvent`, mediante la opción `ids` (con `sealedIds(plan)`);
+    - una línea o una anulación suelta se registra con `recordEvent`, con su borrador y su `id`.
+    - `reverseEvent` no recibe ningún identificador: dárselo costaba +25 bytes en el arranque, por encima del tope.
+  - **Rojo primero:** con el caso 3 tal cual, `finishRedo` terminaba sin que se hubiera registrado nada (`promise resolved instead of rejecting`).
+  - **Mutantes muertos** (`b13.json`):
+    - volver a deducir por el objetivo, que mata la propiedad y los tests de unidad;
+    - que baste la mitad de una pareja;
+    - la anulación sin su identificador sellado;
+    - una corrección que ignora los `ids`.
+- **Error del propio encargo, encontrado al escribir el test del caso 3.** El plan de rehacer una pareja corregía **el objetivo original**, que el otro dispositivo ya había anulado; registrarlo habría fallado siempre. Ahora corrige **la versión en vigor**: sigue la cadena de correcciones del libro local (`inForce`). El mutante que vuelve al objetivo original muere.
+  - **Límite que queda:** si el objetivo está anulado sin corrección (borrado), el plan lo sigue nombrando, y registrar lo niega con su error. Solo queda descartar.
+  - **Otro límite:** en una cadena cuya segunda pareja corrige la corrección retenida de la primera, esa segunda apunta a un evento que no llegó a estar en el libro.
+- **La propiedad, ahora:**
+  - **Preludio:** la web registra un depósito que todos reciben; después cada dispositivo vende y corrige ese depósito, que es el caso 3 con una venta retenida.
+  - **La resolución:** elige la unidad retenida al azar. Un rehacer puede quedarse sin registrar y, entonces, terminarlo tiene que negarse.
+  - **Criterio:** una línea en `discarded.jsonl` con el motivo `redone` solo cuenta como conservada si su identificador sellado está en el remoto, o en una línea que el usuario descartó.
+  - **Semillas:** corre con 14, 83, 2026 y 4242, 60 corridas cada una.
+  - **Con R1 deshecho, roja; con el arreglo, verde.**
+- **Los tres restos:**
+  - **Rehacer una corrección cuya anulación se descartó ya no se ofrece.** Se niega con `redo_partner_discarded`, y las frases de `partner_discarded` explican que una corrección sin su anulación no corrige nada. El mutante muere.
+  - **`sync/` sin marcador y con libro propio no se fusiona.** `inspect` se para con `join_required` (`own_lines`) cuando no hay marcador y la cola tiene líneas que el remoto no tiene y no están retenidas.
+    - Se prueba en el dominio y en la consola, donde no se toca ni el remoto ni el libro.
+    - Sin líneas propias, reconstruir el marcador sigue funcionando.
+    - Estaba en rojo primero, y el mutante muere.
+  - **`discarded.jsonl` registra decisiones, no bytes.**
+    - Cada registro lleva `decision`: el hash de la resolución, la unidad, la hora en que se retuvo y la línea.
+    - Repetir la misma decisión no se duplica; los mismos bytes retenidos otra vez y descartados otra vez sí se anotan.
+    - El mutante que deduplica por la línea muere.
+- **Arranque:** mide **75.837 bytes** (techo 75.869).
+  - El trozo del dominio suma +5 (41.487) por la opción `ids` de `correctEvent`, así que el código de la 014 queda en **+140, justo el tope**.
+  - El comentario del techo recoge que los 6 bytes de ruido de la tabla están aceptados.
+  - Total: 273,4 KB (techo 273,5).
+- **Tubería:** `lint`, `typecheck`, `test:coverage` (265 ficheros, 2.615 tests, 100 % en `domain`) y `build`, en verde. Sin gemelos `.js`.
+  - Un test web ajeno (`prices.test.tsx`, «cannot check the currency of prices imported without symbols.json») falló una vez con la máquina cargada y pasó en tres repeticiones seguidas: parece dependiente del tiempo.
+- **Documentos** (se añade a §6):
+  - `docs/data-schema.md` §1:
+    - `redo_started` va por línea (el de la anulación y el de la corrección);
+    - el campo `decision` de `discarded.jsonl`;
+    - `join_required`.
+  - `docs/api.md`, o la parte del cliente: se para con `join_required` si no hay marcador y hay líneas propias.
