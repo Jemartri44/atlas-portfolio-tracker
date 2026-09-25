@@ -1,6 +1,6 @@
 # ADR-0007 — Estructura del código: monorepo, arquitectura hexagonal y CLI primero
 
-**Estado:** Aceptada (2026-08-30).
+**Estado:** Aceptada (2026-08-30). Nota del 2026-09-25 sobre los adaptadores de `PriceSource` (ver al final).
 
 ## Contexto
 
@@ -31,7 +31,7 @@ infra/               Terraform.
 |---|---|---|
 | `LedgerStore` | Cargar el libro (eventos migrados y líneas crudas) y guardarlo con escritura condicional: `append` y `replace` (reescritura completa tras archivar el original, solo para `compact`; *añadido el 2026-08-30 al preparar la feature 003*) | S3, fichero local, memoria |
 | `StatementSource` | Obtener movimientos de un origen externo | IBKR Flex (API), MyInvestor (fichero), CSV de exchange; futuro: PSD2/bancos, APIs de brókers |
-| `PriceSource` | Precio informativo de un activo en una fecha | Yahoo, CoinGecko, manual |
+| `PriceSource` | Precio informativo de un activo en una fecha | ~~Yahoo, CoinGecko, manual~~ EODHD y Alpha Vantage (ADR-0031; nota al final) |
 | `FxRateSource` | Tipo de cambio BCE por fecha | CSV íntegro del BCE |
 | `DocumentStore` | Guardar fuentes documentales y extractos importados | S3, fichero local |
 | `Notifier` | Enviar avisos | SES, consola |
@@ -50,3 +50,7 @@ El AWS SDK solo aparece en `adapters` (S3 para el libro y documentos, SSM para e
 
 - Lint y formato quedan abiertos en ADR-0008 (Biome frente a ESLint + Prettier); no bloquea el primer código porque el formato se puede aplicar después.
 - Los casos de uso (`recordTransaction`, `importStatement`, `projectPositions`…) viven en `domain/usecases` y reciben los puertos por parámetro; CLI, API y web solo los invocan.
+
+## Nota del 2026-09-25 (cierre de la feature 013)
+
+Los adaptadores que la tabla preveía para `PriceSource` —Yahoo y CoinGecko— **están retirados por ADR-0031**: Yahoo porque sus condiciones prohíben el acceso automatizado, y CoinGecko en su tercera enmienda, porque sus condiciones describen el plan gratuito como para probar. Los adaptadores que existen son **EODHD** y **Alpha Vantage** (`packages/adapters/src/prices/`). La entrada manual no es un adaptador del puerto: es la `valuation` del libro, que la puerta de precios lee aparte. Nada más de esta ADR cambia.
