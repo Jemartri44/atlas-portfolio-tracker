@@ -1,0 +1,464 @@
+# Prompt 015 — Feature `015-api-access`
+
+> Copia este texto íntegro al asistente implementador, o indícale que lea `docs/prompts/015-api-access.md`.
+>
+> **Requisito previo, ya cumplido.** La feature 014 (el núcleo de la sincronización) está fusionada en `develop` (PR #83) con su cierre documental (PR #84). **ADR-0033** (el token de dispositivo de la consola) está aceptada desde el 2026-09-25 (PR #81) y **ADR-0034** (la cuenta de AWS compartida) también (PR #87). `docs/api.md` es el contrato HTTP que esta feature implementa; lo escribió el prompt de la 014 y lo puso al día su cierre.
+>
+> **Esta feature es la segunda de la etapa 2 de la Ronda 8: la nube escrita y probada, sin desplegar nada.** Ni cuenta de AWS, ni Terraform, ni una llamada a AWS real, ni un céntimo. Construyes **la API** (`apps/api`, la Lambda que irá detrás de CloudFront bajo `/api/*`), **el inicio de sesión con Google** de la web (ADR-0027), **el token de dispositivo de la consola** (ADR-0033), **la sincronización sobre HTTP** con el adaptador de S3 de `LedgerStore`, **las interfaces de la sincronización** en la consola y en la web, y **las órdenes de administración** contra el remoto con sus procedimientos escritos. Todo se prueba con **dobles** de S3, SSM y Google (`docs/decision-roadmap.md`, Ronda 8, entrada de la 015: «Probada con dobles de S3, SSM y Google»). **Si este prompt y la hoja de ruta o una ADR discrepan, mandan la hoja de ruta y la ADR**, y la discrepancia va a `questions.md`.
+>
+> **Es la feature más grande de la ronda, y este prompt propone partirla en cinco entregas ordenadas**, cada una con su PR contra `develop` desde la misma rama (§3, «La partición»). La partición es una **propuesta**: la confirma la dirección (§8, P2).
+>
+> **§8 recoge las preguntas que este prompt no puede contestar**, porque son decisiones que nadie ha tomado. **Una bloquea el alto del plan** (§8, P1: cómo se liga el dispositivo de la web a su sesión, `docs/api.md` §5.4). Donde el texto depende de una, la cita como «§8 P1». **§7 está vacío a propósito**: es donde la dirección responderá a esas preguntas y a las tuyas, y donde se anotarán los errores de este prompt, como en los catorce anteriores.
+
+---
+
+Eres el asistente implementador del proyecto **Atlas Portfolio Tracker** (`~/projects/atlas-portfolio-tracker`). Vas a construir **la capa de acceso y la API** que convierte el núcleo de la sincronización de la 014 en algo que se puede usar: la Lambda que valida con el dominio y solo sabe añadir, el acceso con Google verificado en la propia Lambda, la credencial de la consola, el almacén de S3 con escrituras condicionales, los clientes HTTP de la web y de la consola, los botones y las órdenes de sincronizar, y las órdenes de administración que reescriben el remoto. **Nada de esto puede dejar entrar a quien no está en la lista permitida, revivir un token revocado, perder una línea del libro ni mover una cifra fiscal, y lo primero que construyes, en cada entrega, son los tests que lo demuestran.**
+
+## 0. Seis cosas que tienes que entender antes de leer nada más
+
+**Esta feature abre la primera puerta a Internet.** Hasta hoy, Atlas funciona entero sin servidor (ADR-0019). Desde esta feature hay una Lambda que, una vez desplegada, escribe el libro compartido y dice quién puede leerlo. Los defectos que cuestan aquí no son de cifras sino de **identidad**: una cookie que se acepta con la firma de otro propósito, un token revocado que vuelve a valer leyendo una versión anterior de su registro, una revocación que tarda lo que viva una instancia caliente. ADR-0033 los enumera como bloqueantes (**B1**, **B2** y **B3** de su «Verificación de seguridad») y esta feature los convierte en tests y mutantes **antes** que en código.
+
+**La API solo sabe añadir, y valida con el dominio que ya existe** (ADR-0026, Parte A). La semántica de las rutas de sincronización **ya está escrita y probada como código puro**: `parseAppendBody`, `acceptAppend`, `parsePublishBody`, `parseInitBody`, `acceptInit` e `initDuplicateIds` (`packages/domain/src/sync/remote.ts`), sobre el puerto `RemoteLedger` (`packages/domain/src/ports/remote-ledger.ts`). **La Lambda las llama; no las reescribe.** Lo que tú añades es el transporte (HTTP, cabeceras, cookies), la identidad (quién llama y desde qué dispositivo) y el almacén real (S3 con `If-Match`). Ni una regla de la sincronización nace en `apps/api`.
+
+**Los secretos y los datos personales nunca pasan por un registro, un fichero del repositorio ni una URL.** El token, su hash, el correo y el `sub` no se registran nunca; como mucho, el `token_id` público (ADR-0033, punto 10; ADR-0028, fila 16; `docs/api.md` §1). El token de Google no toca nunca la SPA (ADR-0027, vía c). El token de la consola no va nunca en un argumento, una variable de entorno, una URL ni la salida de la consola (ADR-0033, punto 3). Los valores de los secretos de la nube los crea un guion con el rol de administración, **nunca Terraform ni esta feature** (ADR-0034, fila 21): tú fijas **sus nombres y sus formatos**, no sus valores.
+
+**Nada de AWS real, y nada de Google real.** Los adaptadores de S3 y de SSM se prueban con dobles que imitan la semántica documentada de cada servicio (y que tienes que **verificar con fuente** antes de imitarla: bloque 0 de cada entrega); el proveedor de identidad, con un doble que firma ID tokens con claves RSA generadas en el propio test. Lo que solo se puede comprobar en la plataforma real —que el navegador real del usuario vuelve a `127.0.0.1`, que `PutParameter` sin sobrescribir es atómico— se verifica **con fuente** o se prepara como **procedimiento para el usuario** y se espera su resultado (§3, E2, bloque 0). **Ninguna prueba se sustituye por un ensayo que devuelve lo que tú le has dicho.**
+
+**La web no puede configurar la sincronización sin P2 y P3 dentro** (requisito duro heredado de la 014, D-Q17; `specs/014-ledger-sync-core/deferred/README.md`). P2 es la negativa a importar un libro en una web sincronizada (`import_refused_synced`) y P3, lo retenido en la exportación de la web (`ledger.held.jsonl`). Hasta que estén, **ningún módulo de la web puede alcanzar** las operaciones que configuran la sincronización, y un guardián lo comprueba desde la primera entrega (§3, E1, bloque 1).
+
+**El paquete web no tiene margen.** Arranque: **75.843 bytes con techo 75.869**; total: **280.039 con techo 280.064, 25 bytes de margen** (`docs/decision-roadmap.md`, «Etapas pendientes», 015; medidas del cierre de la 014, `specs/014-ledger-sync-core/questions.md` §15). P2 y P3 midieron **75.861** en el árbol de la 014, 18 bytes por encima del tope que la dirección les dio entonces. Todo lo de esta feature en la web va **en carga diferida**; si el arranque no cabe, **se para** (§5).
+
+## 1. Lee antes de hacer nada, en este orden
+
+1. `CLAUDE.md` entero. Te afectan de lleno las *domain traps* **7** (el libro propio es la fuente de verdad), **8** (append-only) y **10** (el cargador rechaza versiones más nuevas; `append` nunca reserializa); las tablas *Stack* y *Security*; *Logging* (qué no se registra nunca); y *Working on a feature*.
+2. `.specify/memory/constitution.md` **1.6.2**: **I**, **IV** (el dato personal o secreto vive fuera del libro: SSM o configuración local), **V** (fallo seguro), **VI** (pocas dependencias) y «Restricciones técnicas» (Plataforma y **Seguridad**: validación siempre en el backend, CSP restrictiva, sin terceros, IAM de mínimo privilegio, los tokens de consola en SSM).
+3. **Las ADRs, enteras y con sus enmiendas y notas**:
+   - **ADR-0027 entera** (acceso con Google, vía c, sesión propia), con su enmienda y sus dos notas del 2026-09-25 (la rama de consola de la vuelta de Google y las subclaves HKDF; los secretos que ya no crea Terraform). **Es la entrega 1.**
+   - **ADR-0033 entera**, con la «Revisión», la «Verificación de seguridad» (B1, B2, B3 y los diez no bloqueantes), las fuentes F1-F18, las pruebas 1-3 y sus notas del 2026-09-25 (la ligadura de la web es de la 015; `gitleaks`; la cuenta compartida). **Es la entrega 2.** Léela dos veces: casi cada frase es un test.
+   - **ADR-0026 entera**, con sus cuatro enmiendas y sus notas; sobre todo la Parte A (la API solo añade; `compact` y restaurar, fuera de la API), la Parte B (los siete pasos; «Quién sincroniza») y **la nota del cierre de la feature 014**, que termina con la lista de lo que queda para esta feature.
+   - **ADR-0032 entera** (restaurar en seis pasos con líneas crudas; las cuatro capas de copia) con sus notas; la última asigna a esta feature **el camino de `atlas backup` para `documents/` e `imports/`**.
+   - **ADR-0034 entera**, con atención a las filas **6** (la política del bucket niega los objetos al principal del usuario), **9** (los parámetros de los tokens, con etiqueta si `PutParameter` lo admite al crearlos: SIN VERIFICAR, de la 015), **13** (cupos compartidos: un `ThrottlingException` de SSM es un fallo transitorio que **nunca** deja pasar un token), **16** (el rol de administración con MFA independiente de Google; el *root* solo para desbloquear, «el procedimiento de la 015 lo dice así») y **21** (los valores de los secretos no pasan por Terraform).
+   - **ADR-0028** con sus dos notas (qué filas siguen en pie; permisos del rol de la API en SSM, sin `DeleteParameter` ni `LabelParameterVersion`; la cabecera fuera de los registros del WAF y de los de tiempo real).
+   - **ADR-0015** con sus notas del 2026-09-25 («sincronización configurada»; `acceptInvalid` con la sincronización configurada; qué exige cada mutación), ADR-0003, ADR-0012, ADR-0018 con su enmienda, ADR-0019 con su enmienda y ADR-0025.
+   - ADR-0029 y ADR-0031 para los datos de referencia (`reference/ecb/`, `prices/`) que la API sirve (§3, E3).
+4. **`docs/api.md` entero.** Es el contrato que implementas. Lo que marca **[PENDIENTE]** lo propone tu plan y lo decide la dirección (§6.2 y §8 P10); **no lo cambies tú**: `questions.md`, apartado «Documentos».
+5. `docs/decision-roadmap.md`, **Ronda 8** entera, y sobre todo la entrada de la **015** en «Plan por etapas» (lo que la 014 le deja) y la sección **«Etapas pendientes»** (lo que hereda de ADR-0034, el margen del paquete, los [PENDIENTE], lo SIN VERIFICAR y lo que no tenía dueño). Y la regla de lo **SIN VERIFICAR**: *cada feature que dependa de uno de esos puntos lo verifica, con fuente, antes de escribir código, y lo que encuentre se escribe en su ADR el mismo día* (lo escribe la dirección, a partir de tu `questions.md`).
+6. `docs/data-schema.md` §1 (las filas de `sync/`, `sync/devices/`, `documents/`, `imports/`, `archive/`, `backups/`, `~/.config/atlas/credentials.json` y la frontera entre los buckets) y **§5 entero** (el contrato de `compact`, las operaciones de líneas crudas, el cerrojo, la transacción de IndexedDB).
+7. `docs/specification.md` §9.2, §9.5, §9.6 (el modo privacidad, activado por defecto), §10 (seguridad), §11.7 (registros) y §11.8 (secretos: «sin secretos en variables de entorno de la Lambda»).
+8. **`specs/014-ledger-sync-core/questions.md` entero**, y con más atención §3 (la parada del arranque y cómo se midió), §8 y §12 (las decisiones D-Q1 a D-Q19), §13 a §16 (las tres revisiones y la del cierre documental). Y **`specs/014-ledger-sync-core/deferred/`**: el `README.md` y `p2-p3-web.patch`, que es tu punto de partida para P2 y P3.
+9. `docs/prompts/014-ledger-sync-core.md`, §2 bis, §2 ter y §5, y `docs/prompts/013-daily-close-prices.md`, §2 bis y §2 ter: las reglas de operación y la disciplina de mutación siguen valiendo enteras.
+10. `docs/runbooks/google-2-step-verification.md` (su último párrafo promete «el procedimiento paso a paso» de una cuenta robada) y `docs/runbooks/013-daily-close-prices-live-test.md` (el modelo de un procedimiento que ejecuta el usuario).
+11. **El código. Todo lo que este prompt afirma de él está comprobado sobre `develop` (`f7ba7e4`) el 2026-09-25; compruébalo tú otra vez antes de tocarlo.**
+    - **No existe `apps/api`.** Los *workspaces* son `packages/*` y `apps/*` (`package.json`), así que la carpeta nueva entra sola; su nombre de paquete es `@atlas/api` (`CLAUDE.md`, regla 5).
+    - **El dominio de la sincronización**: `packages/domain/src/sync/` detrás de `@atlas/domain/sync` (`archive`, `client-plan`, `evaluate`, `held`, `join`, `lines`, `marker`, `permission`, `reapply`, `remote`, `resolve`, `rewrite`, `seal`, `units`). **`permission.ts`** ya tiene las negativas puras que usarás: `compactPermission`, **`rewritePermission`** (la de `compact` del remoto y restaurar: solo las pendientes bloquean, V5), `importPermission` (P2), `deactivatePermission` y `syncPermission`.
+    - **Los puertos**: `packages/domain/src/ports/remote-ledger.ts` (`RemoteLedger`: `read`, `append`, `init`, `publish`; `RemoteSnapshot` entrega **texto** y el etag de los bytes; **`REMOTE_FAILURE_CODES`**, la lista cerrada de fallos que no son de una línea) y `ports/sync-state-store.ts`. `ports/ledger-store.ts`, con `appendLines` y `replaceLines`.
+    - **Los clientes de la 014**: `packages/adapters/src/sync/client.ts` (`syncDevice`, `initialiseRemote`, `replaceFromRemote`, `joinWithOwnLines`, `MAX_REMOTE_RACES`, `MAX_LOCAL_CHANGES`), `held-actions.ts` (`heldUnits`, `confirmHeldUnit`, `discardHeldUnit`, `startRedo`, `finishRedo`, `deactivateSync`) y `folder-store.ts`; en la web, `packages/adapters/src/ledger-store/browser/sync-store.ts` (`BrowserSyncStore`, `browserSyncConfigured`). **Ninguno tiene interfaz todavía**: ni orden de la consola ni pantalla.
+    - **Los remotos simulados**: `packages/adapters/test/sync/simulated-remote.ts` (en memoria y en un directorio), con sus recorridos (`walks.test.ts`), los cortes (`resolution-cuts.test.ts`) y la propiedad (`no-line-lost.property.test.ts`).
+    - **Los tests de contrato del almacén**: `packages/adapters/test/ledger-store.contract.ts`. El adaptador de S3 los tiene que pasar igual que memoria, fichero y navegador (ADR-0026, nota del cierre de la 014).
+    - **Lo que se descarga la web y lo que reescribe su libro**: `apps/web/src/ledger/export.ts` (`exportLedger`, `importLedger`) y `packages/adapters/src/ledger-store/browser/transfer.ts` (`exportLedgerText`, `replaceLedgerText`). Son los dos ficheros que toca el parche de P2 y P3.
+    - **La copia de la consola**: `apps/cli/src/commands/backup.ts` copia el libro y, aparte, lo retenido (`ledger-<fecha>.held.jsonl`); **no copia `documents/` ni `imports/`**. Y `apps/cli/src/commands/corporate-actions.ts:225` dice hoy al usuario que copie el documento fuente a `documents/` **a mano**: nada sube hoy un documento al bucket.
+    - **Los mensajes**: `apps/cli/src/output/messages.ts` y `apps/web/src/format/messages/errors.ts`. Los de `sync_deactivated` (líneas 390 y 434) y `join_required` (404 y 448) son los que la hoja de ruta pide rehacer (§3, E3, bloque 5). `tests/messages.test.ts` los ata a las listas del dominio.
+    - **La consola**: `apps/cli/src/main.ts` (`ARITY`, con `lock`, `fx`, `prices` y `draft` como modelo de subórdenes) y `apps/cli/src/args.ts`.
+    - **Los guardianes**: `tests/architecture.test.ts` —«never writes in a folder of the disk from the browser», «names no remote origin in its sources» (solo mira `apps/web/src`, línea 1128), «keeps out every file that is the compiled twin of a source», los siete de «the sync engine» (bloque 2 de la 014) y las puertas fuera del barril— y `tests/messages.test.ts`.
+    - **El paquete web**: `apps/web/scripts/check-bundle.mjs` (`BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20`, línea 259; `TOTAL_BUDGET_GZIP_BYTES = 273.5 * 1024`, línea 612; `LAZY_ONLY`, línea 723) y `packages/adapters/package.json` (`exports`, con `./sync` y `./sync-client` ya dados de alta).
+    - **Las dependencias**: `docs/dependencies.md` ya presupuesta `@aws-sdk/client-s3` y `@aws-sdk/client-ssm` (runtime, en `adapters`) y `esbuild` (desarrollo, «empaquetado de Lambda»), pero **ninguno está instalado** (`packages/adapters/package.json` solo depende de `@atlas/domain`). Instalarlos es instalar paquetes: §2 bis y §8 P3.
+
+Si algo es ambiguo, contradictorio o te bloquea, **no lo resuelvas**: `specs/015-api-access/questions.md` y avisa. Nada fiscal ni estructural se decide aquí, y nada de seguridad tampoco.
+
+## 2. Flujo de trabajo
+
+1. Worktree separado, rama desde `develop` **actualizado**:
+   ```bash
+   cd ~/projects/atlas-portfolio-tracker && git fetch origin && git worktree add ../atlas-portfolio-tracker-015 -b feature/015-api-access origin/develop
+   cd ../atlas-portfolio-tracker-015 && git config core.hooksPath .githooks && nvm use && npm ci
+   ```
+2. Spec Kit en `specs/015-api-access/` (español, identificadores en inglés): **un solo `spec.md` y un solo `plan.md`** para las cinco entregas, con las entregas como historias o fases, y `tasks.md` agrupado por entrega. **Para después de `spec.md` y `plan.md`**, con tus preguntas en `questions.md`, y espera el visto bueno antes de escribir código: **quien contesta es la dirección**. Tienen que llegar con ese alto, no dentro del primer commit:
+   - **las verificaciones del bloque 0 de la entrega 1** (§3, E1), cada una con su fuente, su fecha y lo que dice; y **la lista de las de las entregas 2 a 5**, con cuándo las harás (cada una, antes del primer código de su entrega);
+   - **la tabla de reglas de seguridad**, una fila por regla de ADR-0027, ADR-0033 y `docs/api.md` §1-§4, con el test que la ata y el mutante que la rompe (§5): es el índice de las entregas 1 y 2, y la dirección la revisa antes que nada;
+   - **los formatos, escritos como contrato**: la cookie de sesión, la cookie transitoria y el código de la consola (campos, `typ`, subclave, caducidad); el registro del token en SSM (campos y serialización); los **nombres y formatos de los parámetros de SSM** que lee la Lambda (lista permitida, identificador y secreto del cliente de Google, clave de sesión), que el guion de secretos de la 017 creará tal cual (ADR-0034, fila 21); `credentials.json`; y dónde recuerda una carpeta de la consola con qué remoto se sincroniza (§8 P7);
+   - **las propuestas para cada [PENDIENTE] de `docs/api.md`** (§6.2), marcadas como propuestas;
+   - **cómo se ejercitan en un navegador real, sin AWS**, el inicio de sesión y las pantallas de la sincronización, para las capturas del verificador (§6.2 (i));
+   - **la línea de partida del paquete web** medida con `npm run build` sobre tu `develop`, y **tu estimación trozo a trozo** de lo que añade cada entrega al arranque y al total (§5);
+   - **la partición en entregas** tal como la vas a seguir, o lo que cambiarías y por qué (§3, «La partición»).
+3. Implementación **por entregas, en el orden de §3**, y dentro de cada una por bloques; commits atómicos, Conventional Commits en inglés.
+4. **Cada entrega termina así**, y no empieza la siguiente sin la palabra de la dirección:
+   - la tubería entera en verde y la rama empujada;
+   - **congelas un commit** y lo dices (su SHA) en `questions.md` y en tu informe: sobre ese commit la dirección lanza el verificador y los revisores, **cada uno en un worktree desacoplado y congelado** (`git worktree add --detach ../atlas-wt-015-rev-E<n>-<revisor> <sha>`), nunca en el tuyo (`docs/prompts/000-director-handoff.md` §4 y §7: un revisor y un implementador no comparten worktree);
+   - **mientras dura la revisión no empujas nada a la rama**: puedes preparar en `questions.md` el plan de la entrega siguiente, no código;
+   - con los hallazgos que la dirección elija, los arreglas con tests en rojo primero, **vuelves a mirar alrededor** (§2 ter) y repites los lotes de mutación afectados;
+   - **abres tú la PR a `develop`** con la plantilla (`.github/pull_request_template.md`) y su lista **rellenada con honestidad**. **No la fusionas nunca**: revisa y fusiona la dirección. Antes de dar por integrada una entrega y seguir, `git log origin/develop..feature/015-api-access` tiene que salir **vacío** (`docs/prompts/000-director-handoff.md` §7: una PR fusionada con el nombre de una rama no prueba que la rama entera esté en `develop`), y la entrega siguiente empieza con `git merge origin/develop` en tu rama.
+
+## 2 bis. Reglas de operación
+
+- **`packages/domain` al 100 % de líneas y ramas.** Bloqueante. Una rama muerta **se borra**, con un comentario que explique el invariante.
+- **Ninguna regla fuera del dominio.** Qué credencial vale, en qué orden se comprueba un token, cuándo ha caducado, qué reclamaciones de un ID token se exigen, qué par está en la lista, qué ruta admite qué credencial, qué se acepta al añadir y qué se niega al administrar **lo decide `packages/domain`**, en funciones puras sobre datos ya leídos. Las primitivas criptográficas (`node:crypto`: HMAC, HKDF, RS256, `randomBytes`, `timingSafeEqual`; Web Crypto en la web) y la E/S viven en `packages/adapters` o en `apps/*`, detrás de puertos del dominio cuando el dominio los necesite (ADR-0007). **El dominio no importa nada** y el test de arquitectura lo sigue comprobando.
+- **Dependencias: solo las de `docs/dependencies.md`, y ni siquiera esas sin permiso.** `@aws-sdk/client-s3`, `@aws-sdk/client-ssm` y `esbuild` están presupuestados, pero **instalar un paquete es decisión del usuario** (`CLAUDE.md`, *Code conventions → Git*: «Ask the user before installing … packages»). Hasta que la dirección conteste §8 P3, **no tocas ningún `package.json` ni el *lockfile***. Cualquier otro paquete, aunque sea de desarrollo, **es una pregunta en `questions.md`**, nunca un `npm install`. Para el navegador, el Chromium de Playwright de `~/.cache/ms-playwright/`, conducido **desde tu scratchpad**; nunca Playwright en un `package.json`.
+- **Ninguna llamada a AWS ni a Google desde un test.** Los tests usan dobles; los dobles imitan **lo que verificaste con fuente** (bloque 0), no lo que supones, y cada comportamiento imitado cita su fuente en un comentario. Leer la documentación pública de un proveedor en el bloque 0 **no** es un test: es investigación, y se escribe con su dirección y su fecha.
+- **Nada del SDK de AWS alcanzable desde la web ni desde el dominio**: solo `packages/adapters` lo importa (`CLAUDE.md`, *Code architecture*), en subrutas de `exports` que la web no importa, y un test de arquitectura lo comprueba **derivando la lista de lo que alcanza la web de `exports`**, no de una lista escrita a mano (la regla del bloque 1 de la 013). Lo mismo para las direcciones de Google: nunca en `packages/domain` ni en nada que empaquete la web.
+- **`Authorization` no se lee ni se escribe en ningún sitio** (ADR-0027, hecho 1; `docs/api.md` §1). Toda credencial va en la cookie o en `x-atlas-device-token`.
+- **Nunca se registra** un token, su hash, un secreto, el correo, el `sub`, un código de un solo uso, un verificador PKCE, una línea del libro, un importe, una posición ni una cuenta. Registros en JSON con `request_id`; como mucho, el `token_id` (`docs/api.md` §1; ADR-0033, punto 10). **Un test con valores centinela** —un correo, un `sub`, un secreto de token, una línea con un importe reconocible— corre todas las rutas y **falla si cualquier línea de registro los contiene**, como el de la clave de la 013. Un mutante que registre cualquiera de ellos tiene que matarlo.
+- **Toda escritura en la carpeta del libro, bajo el cerrojo; nada de la red con el cerrojo tomado** (ADR-0026, Parte B; prompt 014, §6.1 (e)). En la 014 el remoto era local y rápido; ahora es la red, y **el diseño no cambia**: se descarga fuera y se compara y escribe dentro.
+- **Toda lectura seguida de escritura en IndexedDB, en una sola transacción**, como `LedgerBlob.update` y `BrowserSyncStore`. Nada asíncrono que no sea IndexedDB entre la lectura y la escritura.
+- **No toques `docs/`, `.githooks/`, `.claude/`, `.specify/` ni `CLAUDE.md`**, con una sola excepción: **proponer una ADR con `/adr`**, en estado `Propuesta`. Lo que creas que debe cambiar en ellos —en `docs/api.md` también— va a `questions.md`, apartado «Documentos». **Los procedimientos (runbooks) los escribes en `specs/015-api-access/runbooks/`**, y la dirección los traslada a `docs/runbooks/` al cerrar (§3, E5).
+- **No toques el esquema del libro.** Esta feature **no añade ningún tipo de evento ni ningún campo** y no sube `schema_version`. Si algo parece pedirlo, **para**.
+- **Cada código con su literal, en su propia llamada**: cada rechazo de la API, cada negativa, cada fallo del cliente. Ninguno se pliega en otro (el ternario de la 011).
+- **Las fechas que escribas en cualquier documento van en `Europe/Madrid`**, no en UTC.
+- **Verifica antes de tocar lo que este prompt afirma del código.** Si algo de aquí no cuadra con lo que ves, **para y dilo**: encontrar un error de este prompt es trabajo hecho.
+- **Commits de una línea, en inglés, Conventional Commits, sin rastro de IA** ni en el asunto ni en el cuerpo ni en la PR. **`npm run lint` verde antes de cada commit** y otra vez como último paso. **Empuja tu rama cada pocos commits**, siempre en verde (§2 ter), tu rama y solo tu rama, y **nunca fusiones nada**.
+- **Los ficheros temporales de tu scratchpad llevan el nombre de la rama como prefijo** (`feature-015-api-access-…`, o `015-api-access-…` si el nombre se hace largo), también los lotes de mutación y los guiones de medida: otros agentes comparten el scratchpad de la sesión (`docs/prompts/000-director-handoff.md` §7).
+
+## 2 ter. Lo que las rondas anteriores aprendieron a golpes
+
+Siguen valiendo enteras las lecciones de §2 ter de los prompts 012, 013 y 014: **un test que no has visto fallar no es un test**; **un mutante que sobrevive puede ser un mutante que nunca se aplicó** (el guion de mutación **afirma que la sustitución ocurre** —el patrón aparece exactamente las veces que dice—, restaura el fichero y **lo compara byte a byte** con el original, y **se niega a correr si hay un gemelo `.js`** junto a una fuente); **un resultado leído a través de una tubería se come el error** (redirige a un fichero y lee `$?`); **mirar la pantalla encuentra lo que ningún test encuentra**; **un ternario que colapsa un conjunto en otro más pequeño esconde un caso**; **el compilador no enumera a las consumidoras de un tipo que solo se transporta**; **una verificación que no se escribe con su fuente no es una verificación**; **comprobar y escribir van siempre juntos**; y **lo verificado en la plataforma real no se sustituye por un ensayo**.
+
+Y cuatro que costaron las tres pasadas de la 014, todas de aplicación directa aquí:
+
+- **Un arreglo que reconoce algo por parecido abre el defecto siguiente.** En la 014, dos arreglos seguidos abrieron un defecto de la misma familia: **una deducción donde hacía falta una identidad exacta** (`docs/prompts/000-director-handoff.md` §7, la última lección; `specs/014-ledger-sync-core/questions.md` §13-§15). Aquí la tentación está en todas partes: una sesión reconocida por el `sub` sin mirar el `typ`, un token por su prefijo, un dispositivo por su nombre, un registro de SSM por el nombre del parámetro sin comparar el `token_id` que guarda dentro (B1). **Cuando un arreglo reconozca algo, pregunta si lo reconoce por identidad o por parecido.**
+- **Un orden fijo donde hacía falta uno que dependiera de la dirección del movimiento.** Aquí: renovar un token **revoca el anterior antes de crear el nuevo** (ADR-0033, punto 2); olvidar un dispositivo **empieza por revocar su token** (ADR-0033, punto 8); ante una cuenta de Google robada, **revocar todos los tokens va antes de reponer el par** en la lista permitida (ADR-0033, punto 8). Cada orden tiene su test de corte entre los dos pasos, y su mutante que los invierte.
+- **Sube la rama a menudo, porque las sesiones se caen.** Ya pasó dos veces (`docs/prompts/000-director-handoff.md` §7, lección de la 010 y la 013): tras una caída, lo primero es empujar lo que no estaba empujado. Empuja cada pocos commits, siempre en verde.
+- **Un `tsc -b` puede emitir gemelos `.js` junto a las fuentes, y los tests los leen en su lugar** (`specs/013-daily-close-prices/questions.md` §10). Una carpeta nueva (`apps/api`) con su `tsconfig` es exactamente donde vuelve a pasar. **Antes de dar por buena una suite verde y antes de cada lote de mutación**, busca en el árbol de trabajo un `.js` junto a un `.ts` del mismo nombre fuera de `dist*/`; si hay alguno, bórralo y repite.
+
+## 3. Alcance, por entregas y en este orden
+
+### La partición: cinco entregas, una rama, cinco PRs (propuesta; §8 P2)
+
+| Entrega | Qué | Depende de | Cierra |
+|---|---|---|---|
+| **E1** | El esqueleto de `apps/api`, el acceso de la web con Google y la sesión (ADR-0027) | — | ADR-0027 entera; `docs/api.md` §1, §2 (salvo el token), §3 y §7 |
+| **E2** | El token de dispositivo de la consola (ADR-0033) | E1 (la vuelta de Google, las subclaves HKDF, la lista permitida) | ADR-0033 entera; `docs/api.md` §2.1-§2.3 y §4 |
+| **E3** | La sincronización sobre HTTP: el `LedgerStore` de S3, las rutas de §5 y §6, los clientes HTTP, las órdenes de sincronizar de la consola y lo heredado de la 014 | E1 y E2 (las dos credenciales) | ADR-0026 en la API; `docs/api.md` §5 y §6 |
+| **E4** | La web sincronizada: **P2 y P3 primero**, la ligadura del dispositivo de la web (§8 P1) y las pantallas de la sincronización | E3 y la respuesta a §8 P1 | El requisito duro de la 014 |
+| **E5** | La administración contra el remoto (`compact`, restaurar, olvidar un dispositivo), `atlas backup` de `documents/` e `imports/` y los procedimientos escritos | E2 (el registro de tokens) y E3 (el almacén de S3) | ADR-0032 (restaurar) y los procedimientos de ADR-0033 y ADR-0034 |
+
+**Por qué partirla.** La 014 tenía un solo frente —el motor, sin interfaces ni red— y necesitó **tres pasadas de revisión**, y en dos de ellas el arreglo anterior había abierto el defecto siguiente (`specs/014-ledger-sync-core/questions.md` §13-§15). Esta feature tiene **cinco frentes de naturaleza distinta**: identidad web, credencial de larga duración, almacén remoto con escrituras condicionales, interfaz de usuario al límite del paquete, y operaciones de administración que reescriben el libro compartido. Una sola PR con los cinco sería imposible de revisar a fondo, y **lo más caro de equivocarse —la identidad— quedaría mezclado con lo más voluminoso —la interfaz—**. Partida:
+
+- **cada revisión mira una sola superficie**, con su propia tabla de reglas y sus propios mutantes;
+- **el orden sigue las dependencias**: E2 necesita la vuelta de Google de E1; E3 necesita las dos credenciales; E4 necesita E3 y una decisión que todavía no existe (§8 P1); E5 necesita el almacén de S3 y el registro de tokens;
+- **E1, E2 y E3 no esperan a §8 P1** si la dirección decide que la cookie de sesión de E1 se puede cerrar sin ella (§8 P1 dice qué opciones cambian la cookie);
+- **la 016 puede empezar en cuanto E3 esté en `develop`**: solo necesita de la 015 el `LedgerStore` de S3 y el registro de tokens (`docs/decision-roadmap.md`, «Etapas pendientes»);
+- **la 019 necesita E4 y E5** (P2 y P3, las órdenes de administración y el procedimiento de restaurar: «Etapas pendientes», 019), y así queda claro qué le falta.
+
+**Una rama y cinco PRs, no cinco ramas.** `CLAUDE.md` fija «un spec ↔ una rama». Hay precedente de una rama fusionada en dos PRs: la 010 (PR #65 y PR #66, `docs/prompts/README.md`). Tras cada fusión, la rama sigue desde `develop` actualizado (§2, punto 4). Si la dirección prefiere otra forma (una sola PR al final, o subramas por entrega), lo dice en §8 P2.
+
+### E1 — El esqueleto de la API, el acceso de la web y la sesión (ADR-0027)
+
+#### Bloque 0 — Verificar antes de escribir código
+
+Con fuente, fecha y lo que dice, en `questions.md`. Son los SIN VERIFICAR que la hoja de ruta asigna a la 015 para el acceso con Google (Ronda 8, «SIN VERIFICAR»):
+
+1. **Los valores exactos de `iss`** que Google pone en un ID token y **la dirección de sus claves públicas** (el documento de descubrimiento de OpenID de Google y su `jwks_uri`), con **cómo indica cuánto se pueden cachear** (ADR-0027: «cacheadas según sus cabeceras de caché»). Y los algoritmos de firma que usa (ADR-0027 verifica **RS256** con `node:crypto`).
+2. **Si Google permite forzar que el usuario vuelva a autenticarse** en cada acceso (`prompt`, `max_age`, `auth_time`) y **si el ID token puede decir cómo se autenticó** (`amr`, con `mfa` entre sus valores, «si se piden y están habilitadas en la configuración», ADR-0033, F5): qué hay que pedir, a quién se habilita y si un cliente OAuth corriente lo recibe. **Es el punto 2 de ADR-0033 y bloquea E2**: si se puede, emitir un token de consola exige `mfa` (`403 mfa_required`); si no, la verificación en dos pasos sigue siendo un requisito operativo del usuario. Lo verificas aquí porque es la misma documentación.
+3. **Las condiciones del borrado de un cliente OAuth sin uso** (ADR-0027, «Riesgo»: seis meses, aviso previo, si se recupera) y **si hay una API para gestionar el cliente y su pantalla de consentimiento** (ADR-0027: «si existe una API para gestionarlos con Terraform: SIN VERIFICAR»).
+4. **El formato del evento que la Function URL entrega a la Lambda** (carga útil 2.0: cabeceras, cookies, cuerpo en base64 o no) y **cómo se devuelven varias `Set-Cookie`**, con la documentación de AWS Lambda; y los límites de tamaño de petición y respuesta de una Function URL síncrona. El libro cabe hoy con mucho (ADR-0002: menos de 1-2 MB en veinte años), pero el límite se escribe.
+
+**Qué se hace si sale mal**: si Google no documenta `iss` o `jwks_uri` de forma estable, **para**: no se verifica una firma contra una dirección supuesta. Si no se puede pedir `amr`, no es un fallo: se escribe con su cita, `mfa_required` queda sin emitir y la dirección lo pasa a ADR-0033 (§8 P15). Si el borrado del cliente no se puede evitar ni recuperar, se escribe y lo recoge el procedimiento de E5.
+
+#### Bloque 1 — Los guardianes, antes que el código
+
+Antes de crear `apps/api`, **los tests de arquitectura tienen que cubrir lo que vas a crear**, y los ves fallar con un módulo vacío:
+
+- **`apps/api` no es alcanzable** desde la web, desde la consola ni desde el dominio; y **el dominio no importa nada** (el test existente, que tiene que seguir mirando `apps/api` sin tocarlo).
+- **El SDK de AWS y las direcciones de Google, solo donde toca** (§2 bis): nunca en el dominio ni en lo que alcanza la web, con la lista de lo que alcanza la web **derivada de `exports`**.
+- **`Authorization`** no aparece como cabecera leída ni escrita en ningún fichero de `apps/` ni de `packages/`.
+- **La web no puede configurar la sincronización** mientras no estén P2 y P3 (§0): ningún módulo de `apps/web/src` alcanza `initialiseRemote`, `replaceFromRemote`, `joinWithOwnLines` ni nada que cree las claves `sync:*`. **Este guardián solo se afloja en E4, en el mismo commit que hace alcanzable la configuración, y solo después de los commits de P2 y P3** (§3, E4, bloque 1). Su comentario lo dice.
+- **Nada de la API ni del acceso en el arranque de la web**: los módulos nuevos de la web van en `LAZY_ONLY` desde su primer commit.
+- **El test de los registros con centinelas** (§2 bis), vacío pero corriendo sobre el manejador.
+
+#### Bloque 2 — El esqueleto de la Lambda
+
+- **`apps/api`** (`@atlas/api`): un manejador de la Function URL que **compone** dominio y adaptadores y no decide nada. El enrutado, la forma del error de `docs/api.md` §7 (`{ "error": { "code", "details" } }`, sin frase), `404 not_found`, `500 internal` sin escribir nada, el cuerpo JSON obligatorio en toda petición que escribe (`415 body_not_json`), `400 credentials_ambiguous` **sin mirar ninguna de las dos credenciales** (`docs/api.md` §2), `401 unauthenticated` y la comprobación de `Origin` con cookie en toda escritura (`403 origin_rejected`). **Ninguna ruta de datos redirige** (§1).
+- **La configuración de la Lambda**: el entorno (`dev` o `prod`) y con él el prefijo `/atlas/<entorno>/` de SSM; el origen propio; la duración de la sesión y demás valores de §6.2. **Ningún secreto en una variable de entorno** (`docs/specification.md` §11.8). Los secretos se leen de SSM con un adaptador de solo lectura, con la caché que proponga el plan (§6.2 (c)); **la lista permitida se vuelve a consultar en cada petición** con su caché de pocos minutos (ADR-0027, enmienda).
+- **Los registros**: JSON con `request_id`, nivel y código del resultado, y nada más de lo que §2 bis prohíbe.
+- **El artefacto**: cómo se construye el paquete de la Lambda depende de §8 P3 (`esbuild` está presupuestado para eso). Sin respuesta, E1 lo deja en `tsc` y lo dice.
+
+#### Bloque 3 — El acceso de la web (ADR-0027, vía c; `docs/api.md` §3)
+
+- **`GET /api/auth/login`**: crea el intento (`state`, `nonce`, verificador PKCE S256) en la **cookie transitoria** `SameSite=Lax`, de un solo uso y que caduca en minutos, y redirige a Google. **La cookie transitoria va firmada** para que nadie la fabrique; con qué subclave y con qué `typ`, lo propone el plan (§6.2 (b)), con la regla de ADR-0033, punto 2: **cada propósito con su subclave HKDF y su `typ`, y cada verificador rechaza el ajeno**.
+- **`GET /api/auth/callback`**, rama de la web: verifica **en el orden de ADR-0027 y rechazando al primer fallo**: `state` contra la cookie transitoria; el canje del código con el verificador PKCE, **directamente con Google** desde la Lambda; y sobre el ID token, la firma contra las claves de Google, `aud` igual al cliente **del entorno**, `iss`, `exp`, `nonce`, `email_verified` y **el par `{sub, email}`, los dos, en una misma entrada de la lista permitida**. Solo entonces emite la cookie de sesión `__Host-…` (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`), **firmada con la subclave `session` derivada con HKDF de la clave de sesión y con su `typ`**, que lleva solo `sub`, emisión, caducidad y un identificador de sesión (ADR-0027; ADR-0033, punto 2), más lo que decida §8 P1. Sin *refresh token*.
+- **Qué comprueba una petición con cookie**: firma y `typ` (`401 session_invalid`), caducidad, y **otra vez la lista permitida** (`403 not_allowed`).
+- **Cerrar la sesión**: `POST /api/auth/logout` está **[PENDIENTE]** en `docs/api.md` §3 (la propuesta: borra la cookie y responde `204`); tu plan lo propone y la dirección lo decide.
+- **La página de acceso denegado**: ADR-0027 dice que **enseña el `sub` a quien lo pide, nunca al registro**. Una página sin *script* y sin nada externo, que no pone el `sub` en ninguna URL. Dónde vive y cómo se pide, en el plan; `docs/api.md` no la describe (§8 P8).
+- **Cómo sabe la SPA si tiene sesión**, si la cookie es `HttpOnly`: `docs/api.md` no tiene ruta para ello (§8 P8). El plan propone una y la dirección la escribe en el contrato antes de que la implementes.
+- **La web**: un botón de iniciar y cerrar sesión, **en carga diferida**, en el sitio que diga el plan (la sincronización es de Ajustes o de una pantalla propia; nunca en el marco del arranque). **La web sigue funcionando entera sin sesión y sin conexión** (ADR-0019; ADR-0027: «la web estática no se protege con inicio de sesión»): el inicio de sesión solo sirve para sincronizar. La CSP de la SPA no cambia (`script-src 'self'`, `connect-src 'self'`): ir a `/api/auth/login` es una navegación al propio origen.
+
+### E2 — El token de dispositivo de la consola (ADR-0033; `docs/api.md` §2.1-§2.3 y §4)
+
+#### Bloque 0 — Verificar antes de escribir código
+
+Los SIN VERIFICAR de ADR-0033 que son de la 015 («Consecuencias → SIN VERIFICAR»), más uno de ADR-0034:
+
+1. **Que `PutParameter` sin `Overwrite` sea atómico ante dos peticiones simultáneas** con el mismo nombre (una gana y la otra recibe `ParameterAlreadyExists`), con la documentación de SSM. **El uso único del código descansa en ello** (ADR-0033, punto 2). **Si no lo es, para y dilo** (ADR-0033 lo exige así).
+2. **Que `PutParameter` admita etiquetas al crear** un `SecureString` estándar, y con qué restricción (ADR-0034, fila 9: los parámetros de los tokens, «la 015 los crea con etiqueta si `PutParameter` lo admite al crear»). Si lo admite, se crean con `project=atlas` y `env=<entorno>` (ADR-0034, fila 3); si no, se escribe y la dirección lo anota en ADR-0034.
+3. **El comportamiento de `GetParameter` con un selector** (`nombre:versión`, `nombre:etiqueta`, ADR-0033, F17), para que el doble de SSM lo imite exactamente y el mutante de B1 muera contra él.
+4. **Que la vuelta a `http://127.0.0.1:<puerto>` funcione en el navegador real del usuario**, y que las **restricciones de acceso a la red local** que están introduciendo los navegadores no afecten a una navegación de primer nivel desde un origen público (ADR-0033, SIN VERIFICAR). Primero con fuente (la documentación de Chromium sobre *Local Network Access*). Después, **con un procedimiento corto que ejecuta el usuario** en su Windows con WSL, sin Google: una página de prueba servida en local que redirige a un servidor en `127.0.0.1` dentro de WSL. Lo preparas en `questions.md` con lo que tiene que hacer y anotar, y **esperas su resultado** antes de dar E2 por verificada (§8 P14).
+5. **Que `Content-Security-Policy: sandbox`, sin `allow-same-origin`, impida a la SPA leer la página del código** de la variante manual (ADR-0033, SIN VERIFICAR): con fuente (la especificación de HTML y CSP) y **con una prueba en Chromium de verdad**, conducido desde tu scratchpad: la SPA intenta leer la página y no puede.
+6. **WSL en modo NAT y abrir el navegador desde WSL** (ADR-0033, prueba 1 y F4): lo que diga la documentación de Microsoft, y el mismo procedimiento del usuario del punto 4 si su máquina lo permite. La consola **siempre imprime la URL**, así que abrir el navegador no puede ser un requisito.
+7. **Si E1 bloque 0, punto 2, dijo que `amr` es verificable**, qué valor exacto se exige.
+
+Los otros tres SIN VERIFICAR de ADR-0033 **no son de esta feature**: los permisos de KMS para `aws/ssm` y que la función de la CSP de CloudFront respete la `sandbox` de la página son de la 017, y las copias de respaldo de los editores solo afectaban a la opción a, descartada.
+
+**Qué se hace si sale mal**: el punto 1 para la entrega. El 4 o el 6 negativos no paran: la variante manual cubre el caso, y se escribe. El 5 negativo **para la variante manual**, no el resto.
+
+#### Bloque 1 — Las reglas, en el dominio (tabla del alto)
+
+Funciones puras, al 100 %, cada regla con su test y su mutante de §5:
+
+- **El formato** `atlasdt1.<token_id>.<secret>` y la expresión exacta de `docs/api.md` §2.1: lo que no cuadre es `device_token_invalid` **antes** de construir ningún nombre de parámetro (B1).
+- **El orden de la comprobación** de `docs/api.md` §2.2: formato; registro **sin caché positiva y sin selector de versión**, con **su propio `token_id` igual al pedido**; hash en tiempo constante; no revocado; no caducado —**antes de `expires_at` y antes de `issued_at` más 120 días, el techo fijo en el código**—; y el par en la lista permitida. Solo pueden cachearse los negativos que no pueden volver a valer (revocado, caducado); **un «no existe» no se cachea** (B2).
+- **La caducidad**: `expires_at` = emisión + la caducidad configurada (90 días), **nunca** más que el techo; **una configuración mayor que el techo se rechaza al arrancar**, y **cambiar la configuración nunca alarga un token emitido** (ADR-0033, punto 7).
+- **El alcance** de `docs/api.md` §2.3: qué ruta admite qué credencial (`403 forbidden_for_credential`), y **el dispositivo, siempre de la credencial**: un `device_id` en el cuerpo es `400 body_invalid`.
+- **Un `ThrottlingException` de SSM es un fallo transitorio con su código y nunca deja pasar un token** (ADR-0033, nota del 2026-09-25; ADR-0034, fila 13). `docs/api.md` §7 no tiene ese código: §8 P8.
+
+#### Bloque 2 — La API: inicio, vuelta, canje, revocación y lista
+
+- **`GET /api/auth/console/start`** (`docs/api.md` §4.1): valida `port` (1024-65535), `state`, `code_challenge` (S256), `code_challenge_method`, `device_name` y `mode`, **cada fallo con el nombre del parámetro en `details`** (`400 console_start_invalid`), y guarda los parámetros en la cookie transitoria junto a los suyos. Pide a Google **una pantalla interactiva** (`prompt=select_account`, ADR-0033, punto 2).
+- **La rama de consola de `GET /api/auth/callback`** (§4.2): verifica todo lo de E1, lista permitida incluida, y **no emite cookie de sesión**: emite el **código de un solo uso** firmado con la subclave **`console_code`** y su `typ`, con el `token_id` que tendrá el token, el `code_challenge`, el par, el nombre y su caducidad. **`mode=loopback`**: `302` al literal `http://127.0.0.1:<port>/callback`, **nunca a otro host**. **`mode=manual`**: la página propia de la Lambda **sin *script***, con `Content-Security-Policy: sandbox`, `Cache-Control: no-store` y `Referrer-Policy: no-referrer`, que **pide confirmar expresamente el nombre del dispositivo antes de enseñar el código**, con la hora del intento y el aviso de ADR-0033, punto 2. Con `amr` verificable y sin `mfa`: `403 mfa_required` y ningún código.
+- **`POST /api/auth/console/token`** (§4.3): firma y `typ` del código, caducidad, verificador contra el `code_challenge`, lista permitida otra vez. **El uso único es obligatorio**: el registro se crea **sin sobrescribir** con el `token_id` del código; si ya existe, `409 console_code_used`. **El `device_id` lo asigna la API** en el primer canje. **Renovación**: con el token anterior en la cabecera —caducado sí, revocado no—, la API conserva el `device_id` y **revoca el anterior antes de crear el nuevo**. Devuelve el token **una sola vez**.
+- **`POST /api/auth/console/revoke`** (§4.4): revoca **ese** token y solo ese.
+- **`GET /api/devices/tokens`** y **`POST /api/devices/tokens/<token_id>/revoke`** (§4.5), **solo con sesión**: la lista con nombre, emisión, caducidad, estado, `last_sync_at` leído de `sync/devices/<device_id>.json` (nunca guardado en el registro) y las emisiones recientes; sin correo ni `sub`. `<token_id>` pasa la regla de §2.1 **antes** de construir el nombre del parámetro.
+- **El registro en SSM** (ADR-0033, punto 9; `docs/data-schema.md` §1): un `SecureString` por token en `/atlas/<entorno>/device-tokens/<token_id>`, **escrito solo al crearlo y al revocarlo**, **nunca borrado por la API**; el rol de la API no tiene `DeleteParameter` ni `LabelParameterVersion`. **Escribe en el plan la lista exacta de acciones de SSM y de S3 que usa la Lambda**: es lo que la 017 convertirá en su política (`docs/decision-roadmap.md`, «Etapas pendientes», 017).
+
+#### Bloque 3 — La consola: `atlas remote login` y `logout` (ADR-0033, puntos 2, 3, 4, 7 y 8)
+
+- **`atlas remote login`**: `state` y verificador PKCE propios; un servidor de un solo uso con `node:http` **solo en `127.0.0.1`**, en el puerto 0, abierto solo mientras dura el intento; **un `state` erróneo se ignora y el puerto sigue esperando**; la página que sirve **no carga nada externo** y lleva `Referrer-Policy: no-referrer`. **Imprime siempre la URL** e intenta abrir el navegador sin depender de ello. **`--manual`**: lee el código **sin mostrarlo en pantalla**.
+- **El canje**, con `redirect: "error"`, solo por HTTPS y solo al origen para el que se emite (ADR-0033, punto 4); con el token anterior en la cabecera si lo hay (renovación).
+- **`~/.config/atlas/credentials.json`** (o `$XDG_CONFIG_HOME/atlas/`): escrito **solo** por la consola, al iniciar y al cerrar sesión, **de forma atómica y creado ya con `600`**; con otros permisos **no se usa**; la consola **se niega** si esta carpeta y la del libro están una dentro de la otra; **ni la web ni ninguna copia, exportación o sincronización lo leen** (ADR-0033, punto 3; `docs/data-schema.md` §1). Su forma, en el plan: `docs/data-schema.md` dice «uno por origen» y ADR-0033, punto 6, «cada token corresponde a un solo dispositivo de sincronización y a una sola carpeta»; si hacen falta las dos cosas, el plan lo dice (§8 P7).
+- **`atlas remote logout`**: revoca en el servidor y **solo con el `200`** borra la entrada local; sin él, avisa de que el token sigue vivo. **Borrar solo lo local es una opción explícita**, con el nombre que proponga el plan (ADR-0033, punto 8).
+- **Aviso de caducidad próxima**, con el umbral que proponga el plan (ADR-0033, punto 7). Caducado, la consola sigue funcionando en local; solo sincronizar pide volver a iniciar sesión.
+- **El token nunca** en un argumento, una variable de entorno, una URL, la salida de la consola ni un mensaje de error. Test con un token centinela.
+
+#### Bloque 4 — La pantalla de dispositivos de la web (ADR-0033, punto 8, y «Consecuencias»)
+
+**En un fragmento aparte, fuera del arranque**: la lista de tokens con su estado y su última sincronización, **las emisiones recientes destacadas**, y revocar uno a uno. El nombre del dispositivo **se escapa** donde se muestre. Con el modo privacidad (activado por defecto): la lista no enseña importes, así que no tapa nada; pero si alguna fila enseña algo del libro, lo tapa.
+
+### E3 — La sincronización sobre HTTP (ADR-0026; `docs/api.md` §5 y §6)
+
+#### Bloque 0 — Verificar antes de escribir código
+
+1. **Las escrituras condicionales de S3**: `PutObject` con `If-Match` (sobre el ETag de S3) y con `If-None-Match: *`, **qué devuelve cada una** cuando no se cumple (`412`) y **cuando dos escrituras condicionales compiten** (si la documentación describe un `409` para algún caso de concurrencia, cuál), con la documentación de Amazon S3 y su fecha. **`docs/api.md` §5.5 lo deja SIN VERIFICAR**: con el objeto inexistente, la Lambda traduce `If-Match` del SHA-256 de cero bytes a `If-None-Match: *`. Todo `412` o `409` de S3 es **`412 precondition_failed`** para el cliente, sin escribir nada.
+2. **Que el ETag de S3 no es el SHA-256 de los bytes** (y por eso la API traduce, `docs/api.md` §5): cómo lo obtiene la Lambda de la lectura que acaba de hacer.
+3. **Si CloudFront puede comprimir la respuesta de `GET /api/ledger`** y qué ve el cliente (`docs/api.md` §5.1: el cliente hashea los bytes del fichero, descomprimidos).
+
+**Si el punto 1 no se sostiene** —si S3 no garantiza que una escritura condicional no pisa a otra—, **para**: es la garantía de ADR-0026, Parte A, y no se entrega con un aviso.
+
+#### Bloque 1 — El `LedgerStore` de S3 (ADR-0026, Parte A y nota del cierre de la 014)
+
+- **Las seis operaciones del puerto**, con **`appendLines` y `replaceLines` escribiendo los bytes tal cual**, el etag opaco (el SHA-256 de los bytes, traducido por dentro a la condición de S3), `ConflictError` con un etag viejo, **`archive/` nunca sobrescrito** (`If-None-Match: *`), y **los mismos tests de contrato** que memoria, fichero y navegador (`ledger-store.contract.ts`), contra el doble de S3.
+- **El doble de S3** imita lo verificado en el bloque 0, incluida la carrera entre dos escrituras condicionales, y lo dice en su comentario; su nombre dice que no es de producción.
+- **La API nunca borra ni reescribe**: el camino de la Lambda usa solo `appendLines` (y la inicialización sobre un remoto vacío). `replace` y `replaceLines` son de la administración (E5). Un test de arquitectura comprueba que nada alcanzable desde el manejador de la API llama a una operación que reescribe ni a `DeleteObject`.
+
+#### Bloque 2 — Las rutas de la sincronización (`docs/api.md` §5.1-§5.5)
+
+- **`GET /api/ledger`**: los bytes exactos, `ETag: "<sha256>"`, `application/x-ndjson; charset=utf-8`. **`POST /api/ledger/lines`**: `If-Match` obligatorio (`428`), `412` sin escribir, y **`acceptAppend` del dominio decide todo lo demás**; la Lambda escribe **el tramo aceptado en un solo `PutObject` condicional**. **`PUT /api/ledger`**: solo sobre un remoto vacío, con `acceptInit`. **`PUT /api/sync/devices/self`**: con el `device_id` **de la credencial** (`parsePublishBody` rechaza uno en el cuerpo). **`GET /api/sync/devices`**: solo con sesión.
+- **La tolerancia del reloj** de la fila 5 (`recorded_at_in_future`) está **[PENDIENTE]**: la propone el plan.
+- **La Lambda se despliega antes que los clientes** que escriban una versión nueva (ADR-0026, caso 6): lo dice el plan como consecuencia de despliegue, para la 018.
+
+#### Bloque 3 — Los datos de referencia (`docs/api.md` §6, [PENDIENTE])
+
+`docs/api.md` §6 deja a esta feature **las rutas de lectura** del histórico del BCE (`reference/ecb/`) y de los precios (`prices/`) que la tarea diaria de la 016 escribirá en la nube (ADR-0029, punto 3; ADR-0031, «Dónde se descarga»), **sus formatos** y **cómo sabe un dispositivo qué ha cambiado**. El plan propone las rutas y la dirección las escribe en `docs/api.md` antes de que las implementes. Reglas fijas: **solo lectura**; **nada fuera de esos dos prefijos** (un nombre con `..` o `/` que escape del prefijo se rechaza antes de tocar S3); y **el token solo alcanza el remoto y los datos de referencia** (ADR-0033, punto 6), nunca `documents/`, `imports/`, `backups/` ni `sync/` de otros. Hasta dónde llega esta feature en consumirlas —si la web del móvil ya descarga de ahí el histórico del BCE, o solo existen las rutas y sus clientes— es §8 P12.
+
+#### Bloque 4 — Los clientes HTTP y las órdenes de sincronizar
+
+- **Dos implementaciones de `RemoteLedger` sobre HTTP**: la de la consola, con `x-atlas-device-token`, **`redirect: "error"`**, solo HTTPS y solo al origen del token; la de la web, con la cookie. Las dos con **`x-amz-content-sha256`** sobre **los bytes exactos del cuerpo** en todo `POST` y `PUT` (Web Crypto en la web), **decodificando el cuerpo de `GET /api/ledger` a texto sin perder nada** (`docs/api.md` §5.1, *(014)*), y **traduciendo cada respuesta a la regla de §7**: solo un `rejected.code` retiene; un `412` vuelve al paso 1; **todo lo demás para y deja todo pendiente** (V4), con `transport_rejected` para una respuesta sin la forma de §7 y `network_failed` para lo que no llegó.
+- **Las órdenes de la consola** para sincronizar, ver el estado (pendientes, retenidas, última sincronización), ver lo retenido con su motivo, confirmarlo, rehacerlo y descartarlo, desactivar, inicializar un remoto vacío, unirse desde el remoto o con las líneas propias, y volver a descargar tras una reescritura. **Siempre explícitas**, nunca un efecto de otra orden (ADR-0026, Parte B). Los nombres, en el plan (el modelo es `ARITY`, con `lock` y `draft`).
+- **La consola se sincroniza con su carpeta y la web con su IndexedDB**, nunca una en el almacén de la otra (ADR-0026, «Quién sincroniza»).
+
+#### Bloque 5 — Lo que la 014 le deja a esta feature (`docs/decision-roadmap.md`, entrada de la 015; ADR-0026, nota del cierre de la 014)
+
+Cada punto con su test en rojo primero y, donde haya código, su mutante:
+
+1. **Rehacer tras una pareja registrada a mano solo a medias.** Terminar un rehacer exige **todos** los identificadores sellados de la parte (`redoneLines`, `packages/domain/src/sync/resolve.ts`), así que si el usuario registra a mano solo media pareja, el rehacer se queda para siempre en `redo_not_recorded`. **La salida está por diseñar**: la propone el plan, con una condición que no se negocia: **el rehacer se reconoce solo por los identificadores sellados, nunca por parecido** (R1 de la segunda revisión de la PR #83; la lección de §2 ter).
+2. **`redo_waits_for_pair` solo mira dentro de su unidad** (`resolve.ts:282-293`): una pareja que corrige la corrección retenida **de otra unidad** no espera, y registrarla falla. El plan propone cómo se extiende la espera o la traducción (`replaces`) entre unidades, con un recorrido que lo reproduce primero.
+3. **Los mensajes de desactivar y de `join_required`** tienen que decir que **la única salida es unirse** —desde el remoto o con las líneas propias— y **con qué orden o qué botón**, que ahora existen. No basta con decir que unirse es explícito (`apps/cli/src/output/messages.ts:390` y `:404`; `apps/web/src/format/messages/errors.ts:434` y `:448`).
+4. **Si rehacer debe permitirse con el libro local inválido por una pareja retenida** (D-Q1). Hoy `recordEvent`, con el que se rehace una línea o una anulación suelta, se niega si tras registrar sigue algún inválido anterior (salvo un `settings_changed`), y `correctEvent` solo por lo que él deja inválido. **Es una decisión de la dirección** (§8 P6); hasta que la tome, no cambias la regla.
+5. **Los tests que faltan**: `correctEvent` sobre un libro **ya inválido**, y rehacer con el libro local inválido (hoy «sale de leer el código»: los tests de rehacer parten de libros válidos, y `checkCandidate` sobre un libro degradado solo se prueba con `reverseEvent`).
+6. **El nombre del archivo al repetir en el mismo segundo**: solo `syncDevice` prueba `-2`…`-9`; confirmar lo retenido (`confirmHeldUnit`), unirse y volver a descargar (`replaceFromRemote`, `joinWithOwnLines`) fallan con `archive_exists` tras un corte. Con las órdenes ya al alcance del usuario, reintentan igual que `syncDevice` (`syncArchiveName`, `packages/domain/src/sync/archive.ts`).
+7. **Los huecos de la propiedad «ninguna línea se pierde»** (`no-line-lost.property.test.ts`), tal como los lista la hoja de ruta: **nunca comprueba el final con algo retenido**, porque antes lo resuelve todo; **solo corta en las consolas, no en la web**; y **no ejercita unirse, volver a descargar ni el ejercicio cerrado**. Se cierran los tres, y **cada extensión se ve encontrar un mutante que antes sobrevivía** (la lección de §10.7 de la 014: una propiedad que casi nunca llega al estado que importa no prueba nada; instrumenta cuántas veces llega y escríbelo).
+
+### E4 — La web sincronizada (el requisito duro de la 014; ADR-0026; §8 P1)
+
+#### Bloque 1 — P2 y P3, antes que nada
+
+- **El punto de partida es `specs/014-ledger-sync-core/deferred/p2-p3-web.patch`** con su test (`packages/adapters/test/sync/transfer-sync.test.ts`). Se escribió contra el árbol de la 014: **aplícalo a mano sobre el tuyo**, comprueba que cada test del parche **falla sin el código y pasa con él**, y mide el paquete (§5).
+- **P2**: `replaceLedgerText` lee el estado de la sincronización **en su misma transacción** y se niega con `import_refused_synced` (`importPermission`); con el marcador en `disabled`, admite. **P3**: la exportación devuelve el libro **byte a byte** y, **aparte**, lo retenido sin resolver, que la web descarga como `ledger.held.jsonl`; nunca mezclado.
+- **Solo después**, en su propio commit, **se afloja el guardián de E1** que impide a la web configurar la sincronización, y en ese mismo commit se hace alcanzable la configuración. El historial lo tiene que enseñar en ese orden.
+
+#### Bloque 2 — La ligadura del dispositivo de la web con su sesión (`docs/api.md` §5.4)
+
+**Depende de §8 P1, que nadie ha decidido.** Lo fijado: **el dispositivo sale de la credencial, nunca del cuerpo** (ADR-0033, punto 6; ADR-0026, paso 7), y **el identificador de la web tiene que sobrevivir a las sesiones**, porque su cola vive en su IndexedDB. Con la respuesta, el plan de E4 lo concreta y lo prueba contra el flujo real de E1.
+
+#### Bloque 3 — Las pantallas de la sincronización
+
+Todo **en carga diferida** y en el sitio que proponga el plan:
+
+- el **botón de sincronizar**, con cuántas pendientes hay y **cuánto hace de la última** (ADR-0026, Parte B: sincronización explícita); **nada la dispara al arrancar, con un temporizador ni al recuperar la conexión** (los guardianes de la 014 siguen en verde);
+- **empezar** —inicializar un remoto vacío con los datos enteros, unirse desde el remoto o con las operaciones propias—, siempre como una elección explícita;
+- **lo retenido**, con su motivo visible y las tres resoluciones; **las resoluciones nunca se bloquean por el libro local inválido** (D-Q1), y la pantalla dice por qué el libro está así y dónde se resuelve;
+- **desactivar**, que se niega con pendientes y conserva lo retenido (P4);
+- **volver a descargar** tras una reescritura del remoto, solo cuando el usuario lo pide;
+- que **una vista de antes de sincronizar puede cambiar después** (ADR-0026, Consecuencias: las pendientes cambian de sitio).
+
+**El modo privacidad, activado por defecto** (`docs/specification.md` §9.6), tapa cualquier importe o cantidad de una línea retenida que se enseñe, también en la prosa de los motivos.
+
+### E5 — Administración y procedimientos (ADR-0026, Parte A; ADR-0032; ADR-0033, punto 8; ADR-0034, filas 6, 16 y 21)
+
+#### Bloque 0 — Verificar antes de escribir código
+
+1. **Cómo toma la consola las credenciales de vida corta** del rol `atlas-<entorno>-admin` sin guardarlas nunca: la cadena estándar de credenciales del SDK (perfil, variables de entorno de una sesión asumida), con la documentación del SDK. Qué principal las asume y con qué condición de MFA es la comprobación **C5** de ADR-0034, **SIN VERIFICAR y de la 018**: E5 se construye y se prueba **con dobles** y el procedimiento describe las dos variantes de C5 (IAM Identity Center o un usuario IAM con MFA).
+2. **Que STS rechaza `AssumeRole` con credenciales del *root*** (ADR-0034, fila 16, SIN VERIFICAR con fuente): lo necesita el procedimiento para decir, con fuente, que el *root* solo sirve para desbloquear.
+
+#### Bloque 1 — Las órdenes de administración, fuera de la API
+
+Órdenes de la consola **contra el almacén remoto** (el `LedgerStore` de S3 de E3), con las credenciales del rol de administración, **nunca con el token de dispositivo y nunca por la API** (ADR-0026, Parte A: «`compact` y la restauración son operaciones de administración sobre la copia de referencia, con credenciales de vida corta, fuera del camino que alcanza Internet»). Un test de arquitectura comprueba que **nada de esto es alcanzable desde `apps/api`**. Los nombres, en el plan.
+
+- **`compact` del remoto**: se niega con **`rewritePermission`** (pendientes en la carpeta desde la que se ejecuta o publicadas por **cualquier** dispositivo en `sync/devices/`; el marcador ilegible; `sync/` sin marcador); archiva antes (`archive/`, nunca sobrescrito); compacta con el contrato de siempre (`docs/data-schema.md` §5, puntos 1 a 5, con `--accept-unverified` por presentación, ADR-0025) y con la condición del remoto que se leyó. Después, cada dispositivo detecta la reescritura por el hash de su prefijo y vuelve a descargar cuando el usuario lo pide.
+- **Restaurar**, en **los seis pasos de ADR-0032, en orden y sin saltarse ninguno**: elegir la copia; **comprobarla antes de tocar nada** (carga, `check --deep` sin errores, proyección); **compararla con el remoto por identificador** («se pierde esta cola», o evento a evento); **confirmación explícita** con esa lista delante; **sustituir con `replaceLines`** —nunca con `replace`, que reserializa (ADR-0032, enmienda)—, archivando antes en `archive/pre-restore-<fecha>.jsonl`, nunca sobrescrito, **con la condición del remoto comparado en el paso 3**; y después, lo que el procedimiento manda a cada dispositivo. **Se niega con `rewritePermission`.** **Restaurar nunca borra nada.**
+- **Olvidar un dispositivo**: **empieza por revocar su token** (ADR-0033, punto 8; ADR-0026, Consecuencias) y solo después deja de contar su `sync/devices/<id>.json` para `compact` y restaurar. Borrar el objeto o marcarlo, y qué pasa con un dispositivo de la web (sin token), es §8 P9. El corte entre los dos pasos tiene su test: revocado y sin olvidar es un estado seguro; olvidado y sin revocar, **no puede existir**.
+- **Revocar todos los tokens sin Google**: una operación de administración con credenciales de AWS (ADR-0033, punto 8), que sobrescribe cada registro con `revoked_at` con el mismo formato que escribe la API. **Si es una orden de la consola o solo un procedimiento con la CLI de AWS** es §8 P4.
+
+#### Bloque 2 — `atlas backup` de `documents/` e `imports/` (ADR-0032, capa 4; ADR-0034, fila 6)
+
+La política del bucket niega los objetos a todo lo que no sea un rol de Atlas del entorno, así que **el principal del usuario ya no puede copiarlos a su disco**. **El camino lo elige esta feature** (ADR-0032, nota del 2026-09-25; ADR-0034, fila 6): asumir el rol de administración con MFA en cada copia, o una ruta de la API. **No lo elijas tú**: el plan analiza las dos y la dirección decide (§8 P5), porque una ruta de la API con el token **ampliaría el alcance del token más allá de ADR-0033, punto 6**. Lo que sí es de esta feature, se decida lo que se decida: que `atlas backup` copie también la carpeta local `documents/` (hoy el usuario deja ahí a mano la fuente documental de un evento corporativo, `corporate-actions.ts:225`), **verificada** como el libro y sin sobrescribir nunca.
+
+#### Bloque 3 — Los procedimientos escritos (runbooks)
+
+En `specs/015-api-access/runbooks/`, en español, con órdenes exactas, **probados en todo lo que no necesita AWS real** (contra los dobles o una carpeta de prueba), y con lo que no se pudo probar dicho como tal. La dirección los traslada a `docs/runbooks/` al cerrar. Son **tres**, sin dueño hasta hoy (`docs/decision-roadmap.md`, «Etapas pendientes», 015):
+
+1. **Restaurar el libro** (ADR-0032): los seis pasos, con la orden de E5 en cada uno; cómo se elige la copia (versión anterior de S3, volcado, réplica de un dispositivo, disco); qué hace cada dispositivo después; **la prueba anual** de la constitución VI; y el caso de **perder la cuenta**, que ya no es una cuenta dedicada (ADR-0032, nota del 2026-09-25).
+2. **Revocar todos los tokens sin Google** (ADR-0033, punto 8): con el rol de administración (ADR-0034, fila 16), y el *root* **solo para desbloquear** —reescribir la política de un bucket que deja fuera a todos, o revocar directamente en SSM—, dicho así (ADR-0034, fila 16: «el procedimiento de la 015 lo dice así»).
+3. **Recuperar una cuenta de Google robada** (ADR-0033, punto 8 y Consecuencias), **en este orden y sin saltárselo**: quitar el par de la lista permitida, recuperar la cuenta, **revocar todos los tokens**, y **solo después** reponer el par; con las emisiones recientes de la web como señal. Y el caso distinto de **perder** la cuenta (ADR-0033, Consecuencias): cambiar la entrada de la lista permitida por otra cuenta.
+
+Y en «Documentos» de `questions.md`: que el último párrafo de `docs/runbooks/google-2-step-verification.md` («El procedimiento paso a paso llegará con el despliegue») pase a enlazar el tercero.
+
+## 4. Fuera de alcance y bloqueado
+
+- **Desplegar, y todo lo que toca AWS o Google de verdad** (etapa 3, features 018 y 019): ni Terraform, ni la CLI de AWS contra una cuenta, ni un cliente OAuth real. **Solo con el visto bueno del usuario, y no en esta feature.**
+- **La infraestructura** (017): el prefijo de SSM y sus permisos, la política de origen que reenvía `x-atlas-device-token`, la CloudFront Function de la CSP que respeta la `sandbox` de la página manual, los permisos de KMS para `aws/ssm`, **el guion de los secretos** (ADR-0034, fila 21) y los roles. Esta feature entrega **la lista de permisos** de la Lambda y **los nombres y formatos** de los parámetros, no los recursos.
+- **Las tareas programadas y el correo** (016): el correo mensual con los inicios de sesión de la consola y los tokens vivos y emitidos (ADR-0033, Consecuencias), la tarea diaria que escribe `reference/ecb/` y `prices/` en la nube, y que la consola deje de pedir los precios que ya pidió la nube.
+- **Las comprobaciones C1-C19 de ADR-0034**: las hace el usuario antes de la 018.
+- **Los importadores** (Ronda 6): bloqueados por la Fase 0. Si la subida de `documents/` e `imports/` por la API entra o no en esta feature es parte de §8 P5.
+- **Los dos fallos de la web que encontró la 014** (`specs/014-ledger-sync-core/questions.md` §9): no tienen etapa asignada (§8 P11).
+- **Aceptar una ADR** (puedes proponerla, con `/adr`), reabrir una aceptada, cambiar el esquema del libro o el contrato de `docs/api.md`.
+
+## 5. Criterios de terminado
+
+Valen **para cada entrega**, sobre lo que esa entrega construye, y para la feature entera al final:
+
+- `lint`, `typecheck`, `test:coverage`, `build` y CI en verde; `packages/domain` al **100 %** de líneas y ramas; **el test de arquitectura en verde** (el dominio no importa nada; `apps/api` no es alcanzable; el SDK y Google, solo donde toca).
+- **El bloque 0 de cada entrega escrito y reportado antes de su primer commit de código**, cada verificación con su fuente, su fecha y su salida; lo que no se pudo verificar, dicho como tal, y **la lista de lo que la dirección tiene que escribir en cada ADR** (ADR-0027, ADR-0033, ADR-0034, `docs/api.md` §5.5).
+- **Cada regla de la tabla del alto con su test**, y lo que las preguntas de §8 dejen pendiente, **sin implementar** y dicho en la PR.
+- **Cada código nuevo de rechazo, negativa y fallo, traducido en las dos interfaces**, con `tests/messages.test.ts` extendido y en verde; y **`REMOTE_FAILURE_CODES` sigue siendo la lista cerrada** de lo que el cliente puede recibir sin rechazo por línea (si §8 P8 añade un código transitorio, entra ahí y en las dos interfaces a la vez).
+- **Tests vistos en rojo primero**, y **de cada arreglo, cómo lo viste en rojo** y **qué volviste a mirar alrededor**, escrito en `questions.md`.
+- **Ningún gemelo `.js`** en el árbol de trabajo, comprobado antes de cada lote de mutación y antes de cada PR, con la orden y su salida en `questions.md`.
+- **La salida fiscal no se mueve.** La **predicción** —que no se mueve nada— se escribe en `questions.md` **antes** de correr la suite: `tax` (con `--lots`, `--boxes` y `--json`), `gains`, `income`, `m720`, `m721` y `filed` dan los mismos bytes con y sin `sync/`, sobre `synthetic-v1` y sobre un libro que haya pasado por una sincronización **a través de la API con el doble de S3**; y **ningún fichero dorado cambia** (`git diff tests/fixtures` vacío). **Si alguno tuviera que regenerarse**, la predicción de qué cambia —id por id y clave por clave— se escribe y se commitea **antes** de regenerar, en su propio commit, y **si se mueve algo que no predijiste, se para y se pregunta** (`docs/prompts/000-director-handoff.md` §7: regenerar el *golden* es el momento de mayor riesgo del proyecto).
+- **Revisión por mutación**, con la disciplina de §2 ter: el guion **afirma que cada sustitución ocurrió**, restaura y compara el fichero, y se niega a correr con gemelos. Los lotes, en tu scratchpad con el prefijo de la rama; el recuento, en `questions.md`. Escribe los tests que matan al menos estos mutantes, **cada uno visto morir**:
+  - **E1 — acceso y sesión**:
+    1. **una cookie con la firma o el `typ` de otro propósito** aceptada como sesión: la de `console_code`, la transitoria, o una firmada con la clave de sesión sin derivar (B3);
+    2. **saltarse una comprobación de la vuelta**, cada una por separado: `state`, PKCE, firma, `aud` de otro entorno, `iss`, `exp`, `nonce`, `email_verified` falso, y **el `sub` en la lista con otro correo** (o al revés): el par va junto;
+    3. **aceptar un ID token con otro algoritmo** que RS256 (`none`, HS256 con la clave pública como secreto) o con un `kid` que no está entre las claves;
+    4. **no volver a consultar la lista permitida** en cada petición, o cachearla más de lo configurado;
+    5. **cookie y token a la vez** atendidos por una de las dos, en vez de `credentials_ambiguous`;
+    6. **una escritura con cookie sin comprobar `Origin`**, o con un `Origin` ajeno aceptado;
+    7. **la cookie de sesión** sin `HttpOnly`, sin `Secure`, sin el prefijo `__Host-`, con `SameSite=Lax`, o **la transitoria con `Strict`** (la vuelta de Google no la traería);
+    8. **leer o escribir `Authorization`** en cualquier sitio;
+    9. **registrar** un token, un hash, un secreto, el correo, el `sub`, un código o una línea del libro (el test de los centinelas);
+    10. **el `sub` en una URL** o en un registro desde la página de acceso denegado;
+    11. **una dirección de Google o el SDK de AWS** alcanzables desde la web, y **añadir una subruta a `exports`** sin que el test la mire;
+    12. **la web configurando la sincronización** antes de E4 (el guardián del bloque 1).
+  - **E2 — el token de la consola**:
+    13. **construir el nombre del parámetro sin validar el `token_id`** (con el doble de SSM, `<id>:1` lee la versión anterior a la revocación y el token revocado vuelve a valer), y **aceptar un registro cuyo `token_id` no es el pedido** (B1);
+    14. **cachear un registro válido**, o **cachear un «no existe»** (B2);
+    15. **firmar el código con la subclave `session`** o aceptar una cookie como código (B3);
+    16. **caducidad**: mirar solo `expires_at` (sin el techo de 120 días sobre `issued_at`); **admitir una configuración mayor que el techo**; **alargar un token ya emitido** al cambiar la configuración;
+    17. **un token revocado aceptado**, también para renovar; **uno caducado aceptado** fuera del canje;
+    18. **renovar creando el nuevo antes de revocar el anterior**, o **tomar el `device_id` del cliente**;
+    19. **crear el registro con `Overwrite`** (el segundo canje del mismo código no da `console_code_used`);
+    20. **redirigir a un host que no es el literal `127.0.0.1`**, a `localhost`, o con un puerto fuera de rango;
+    21. **la página manual** con *script*, sin `sandbox`, sin `no-store`, o **enseñando el código antes de confirmar el nombre**;
+    22. **el servidor de la consola cerrándose ante un `state` erróneo**;
+    23. **la consola siguiendo una redirección**, **enviando el token a otro origen** o por HTTP, o **poniéndolo en un argumento, una variable de entorno, una URL o la salida**;
+    24. **usar un `credentials.json` con permisos abiertos**, **escribirlo sin atomicidad o con otro modo**, o **aceptarlo dentro de la carpeta del libro** (o al revés);
+    25. **`logout` borrando la entrada local sin el `200`**;
+    26. **un token en una ruta solo de sesión** (listar, revocar otro, emitir), o **un `device_id` del cuerpo** aceptado;
+    27. **un `ThrottlingException` de SSM** tratado como token válido, o como inválido para siempre;
+    28. **con `amr` verificable, emitir sin `mfa`** (si el bloque 0 lo confirma);
+    29. **el nombre del dispositivo sin validar** en el inicio, o **sin escapar** en la lista o en la página manual.
+  - **E3 — la sincronización sobre HTTP**:
+    30. **el adaptador de S3**: reserializar en una operación de líneas crudas; escribir sin la condición; **sobrescribir un archivo**; y tomar un `409` de S3 por otra cosa que `412`;
+    31. **la API**: aceptar con un `If-Match` viejo; escribir algo en un `412`; escribir detrás de la primera línea rechazada; **reimplementar en `apps/api` una regla de `acceptAppend`** en vez de llamarla (un test de estructura); inicializar un remoto que no está vacío; **un camino de la API que llame a una operación que reescribe o a `DeleteObject`**;
+    32. **los clientes**: `x-amz-content-sha256` ausente o calculado sobre otros bytes; **retener** por un 5xx, un fallo de red o una credencial caducada (V4); tratar `transport_rejected` como rechazo de una línea;
+    33. **los datos de referencia**: servir algo fuera de `reference/ecb/` o `prices/` (un nombre con `..`), o **dejar que el token lea** `documents/`, `imports/` o `backups/`;
+    34. **lo heredado**: terminar un rehacer **por parecido** en vez de por los identificadores sellados; que una pareja de otra unidad **no espere** a la que corrige; confirmar, unirse o volver a descargar **sin reintentar el nombre del archivo**; y cada extensión de la propiedad, **sin ella**, dejando vivo un mutante que con ella muere.
+  - **E4 — la web sincronizada**:
+    35. **importar sobre una web sincronizada**, o **comprobar el estado fuera de la transacción** de la importación (P2);
+    36. **exportar sin lo retenido**, o **con lo retenido mezclado** en el libro exportado (P3);
+    37. **aflojar el guardián de E1 antes que P2 y P3**, o hacer alcanzable la configuración sin él;
+    38. **el dispositivo de la web tomado del cuerpo**, o la ligadura que decida §8 P1 rota;
+    39. **sincronizar sin que el usuario lo pida** (un temporizador, `online`, al arrancar: los guardianes de la 014, sin tocarlos);
+    40. **una resolución de lo retenido bloqueada por el libro local inválido** (D-Q1);
+    41. **un importe de una línea retenida sin tapar** con el modo privacidad puesto (un test que **renderice**, no uno que busque un import: `docs/prompts/000-director-handoff.md` §7).
+  - **E5 — administración**:
+    42. **compactar o restaurar con pendientes** publicadas por **otro** dispositivo o por la propia carpeta, o con el marcador ilegible; y **dejar que las retenidas lo bloqueen** (V5);
+    43. **restaurar con `replace`** en vez de `replaceLines`, **sin archivar**, **sobrescribiendo el archivo**, **sin la comparación por identificador** o **sin la confirmación**;
+    44. **olvidar un dispositivo sin revocar antes su token**, o invertir el orden;
+    45. **una orden de administración alcanzable desde `apps/api`**, o que use el token de dispositivo;
+    46. **revocar todos dejando alguno vivo**, o escribiendo un registro con otro formato que el de la API;
+    47. **una copia de `documents/`** sin verificar, o que sobrescriba.
+  - **Siempre**: 48. **una cifra fiscal que cambie** con `sync/` presente o tras sincronizar por la API (el test que compara byte a byte); y 49. **plegar dos códigos** de rechazo, negativa o fallo en uno.
+- **Verificación en el navegador, con capturas medidas que entregas**, en las entregas con pantallas (E1, E2, E4): a **400×890 con DPR 3** (el teléfono del usuario) y a **2045×1141** (su monitor), más **360** de ancho sin desplazamiento lateral (`scrollWidth === clientWidth` en el navegador); **con el libro vacío y con datos**; **con el modo privacidad puesto y quitado** (los desbordamientos, con la privacidad **quitada**); claro y oscuro al menos una vez. Lo que hay que mirar: sin sesión, con sesión y con la sesión caducada; el acceso denegado; la lista de dispositivos con uno revocado y una emisión reciente; sincronizar con pendientes, con algo retenido y tras una reescritura del remoto; empezar (inicializar y unirse); desactivar con pendientes; importar y exportar en una web sincronizada. Siembra desde tu scratchpad. Las capturas van a `~/atlas-private/capturas/<fecha>-<asunto>/`, **nunca al repositorio**.
+- **El paquete web, medido en cada entrega, y el arranque no tiene margen.** Sobre `develop` a 2026-09-25 (`f7ba7e4`, medidas del cierre de la 014): **arranque 75.843 bytes gzip contra un techo de 75.869** —26 de margen, casi todo ruido de la tabla de fragmentos (`specs/014-ledger-sync-core/questions.md` §13, no bloqueante 8)— y **total 280.039 contra 280.064, 25 de margen**. Las reglas, las de la 014:
+  - **Todo lo de esta feature en la web va en carga diferida**, en `LAZY_ONLY` desde su primer commit. **El techo del arranque no lo sube el implementador.** Si el arranque no cabe, **se para** y se dice con la medida **trozo a trozo** y con un prototipo construido y deshecho, como hizo la 014 (`questions.md` §3: la tabla por prototipo, las opciones sin elegir). Quien decide es la dirección, y su precedente es D-Q7: **se sube exactamente lo medido, con un tope escrito, en su propio commit, con el desglose y la tendencia en el comentario de `check-bundle.mjs`**; si se pasa del tope, se vuelve a parar. No se esconde nada con una importación dinámica que cambie lo que se ve, ni se recorta una comprobación para que quepa. **P2 y P3 midieron 75.861 en el árbol de la 014** (+18 sobre su tope de entonces, por la tabla de precargas de la entrada, no por código en el arranque, `questions.md` §10.8): mídelos en el tuyo **antes** que nada de E4, y si no caben, para (§8 P13).
+  - **El total** sube cuando haga falta con la regla de siempre: **lo medido más un margen pequeño, en su propio commit y antes del commit que lo necesita** (la 014 lo hizo al revés una vez y dejó el *build* en rojo, `questions.md` §10.5), con la medida en el mensaje y en `questions.md` y la tendencia escrita en el comentario de `check-bundle.mjs`.
+- **`docs/` sin cambios**, salvo una ADR nueva en estado `Propuesta` si la propones. Y `specs/015-api-access/questions.md` con: el bloque 0 de cada entrega y sus fuentes, lo preguntado y lo respondido, el SHA congelado de cada entrega, cómo viste fallar cada test, lo medido del paquete, los procedimientos y su resultado, y **la lista de documentos que la dirección tendrá que actualizar** (como mínimo: **`docs/api.md`** —los [PENDIENTE] decididos, la ruta de la sesión, el código transitorio si lo hay, las rutas de §6, la página de acceso denegado, los nombres y formatos de los parámetros de SSM y lo verificado de S3 en §5.5—; **ADR-0027**, **ADR-0033** y **ADR-0034** con lo verificado; `docs/data-schema.md` §1 —`credentials.json`, dónde recuerda una carpeta su remoto, `sync/devices/` si olvidar cambia su forma—; `docs/dependencies.md` si §8 P3 instala algo; los procedimientos para `docs/runbooks/`; el último párrafo de `docs/runbooks/google-2-step-verification.md`; `docs/decision-roadmap.md`; y `docs/prompts/README.md`).
+- **`npm run lint` como último paso** de cada entrega, redirigiendo a un fichero y leyendo `$?`. Commits de una línea, sin rastro de IA, uno a uno en verde, y la rama empujada.
+
+## 6. Decisiones
+
+### 6.1 Lo que ya está decidido, con su fuente (este prompt no lo reabre)
+
+- **(a) Google, verificado en la Lambda por la vía c**, con `state`, PKCE y `nonce`; lista permitida `{sub, email}` en SSM, consultada en cada petición con una caché de pocos minutos; sesión propia en una cookie `__Host-` firmada; sin *refresh token* en la web. *Fuente:* ADR-0027 y su enmienda.
+- **(b) Las firmas se separan por propósito**: subclaves HKDF de la clave de sesión (`session`, `console_code`), un campo `typ` en cada carga y cada verificador rechaza el ajeno; no hay secreto nuevo. *Fuente:* ADR-0033, punto 2 (B3); nota del 2026-09-25 en ADR-0027.
+- **(c) El token de la consola**, su formato, su comprobación sin caché positiva ni selector de versión, 90 días bajo un techo de 120, el registro en SSM escrito dos veces y nunca borrado por la API, el alcance limitado, el dispositivo de la credencial, `credentials.json` con `600` y la emisión solo desde la consola. *Fuente:* ADR-0033 y `docs/api.md` §2 y §4.
+- **(d) La API solo añade y valida con el dominio**; la pareja y la cadena son una sola unidad; el rechazo es por línea. *Fuente:* ADR-0026, Parte A, y `docs/api.md` §5.2.
+- **(e) `compact` del remoto, restaurar y olvidar un dispositivo son órdenes de administración de la consola, fuera de la API.** *Fuente:* ADR-0026, Parte A; ADR-0032; prompt 014, §6.2 P5; `docs/decision-roadmap.md`, entrada de la 015.
+- **(f) La web no configura la sincronización sin P2 y P3.** *Fuente:* D-Q17, `specs/014-ledger-sync-core/questions.md` §12; nota del cierre de la 014 en ADR-0026.
+- **(g) Los procedimientos de restaurar, revocar todos los tokens sin Google y la cuenta de Google robada son de esta feature.** La hoja de ruta dejaba elegir entre la 015 y la 018 y señalaba la 015 como «la candidata natural», porque construye las órdenes («Etapas pendientes», 015); ADR-0034, fila 16, ya dice «el procedimiento de la 015». La dirección los asignó aquí al encargar este prompt.
+- **(h) Los valores de los secretos no pasan por Terraform ni por esta feature**; los crea un guion con el rol de administración. *Fuente:* ADR-0034, fila 21; nota del 2026-09-25 en ADR-0027.
+
+### 6.2 Lo que propone el plan y confirma la dirección en el alto
+
+Sin elegir tú: cada una, **marcada como propuesta** en el plan, con su motivo.
+
+- **(a)** Los [PENDIENTE] de `docs/api.md`: **la caché de la lista permitida** (§2); **la duración de la sesión** («corta», ADR-0027) **y de la cookie transitoria** («minutos»), y **la ruta de cierre de sesión** (§3); **los límites de `device_name`** (§4.1; la propuesta de `docs/api.md`: de 1 a 40 caracteres); **la caducidad del código de la consola** (§4.2; propuesta: 5 minutos); **cuántos días son «emisiones recientes»** (§4.5; propuesta: 7); **la tolerancia de `recorded_at`** (§5.2, fila 5). Todos son configuración fuera del libro (constitución IV); el plan dice **dónde vive cada uno** (una variable de entorno de la Lambda, que no es un secreto, o un parámetro de SSM).
+- **(b)** **Cómo se protege la cookie transitoria** (firma, subclave, `typ`) y **las etiquetas `info` de HKDF**, con la regla de §6.1 (b).
+- **(c)** **Cuánto tiempo cachea cada instancia** el secreto del cliente de Google y la clave de sesión, sabiendo que «cerrar todas las sesiones de golpe es rotar la clave» (ADR-0027) tardará eso en surtir efecto.
+- **(d)** **Los nombres de los parámetros de SSM** y el formato de la lista permitida (y si el correo se compara exacto o normalizado).
+- **(e)** **El umbral del aviso de caducidad** del token (ADR-0033, punto 7) y **el nombre de la opción de borrar solo lo local** al cerrar sesión (punto 8).
+- **(f)** **Los nombres de las órdenes** de la consola (sincronizar, retenidas, administración) y **el sitio de la web** donde van el inicio de sesión, la sincronización y los dispositivos.
+- **(g)** **La salida para un rehacer a medias** (§3, E3, bloque 5, punto 1) y **la espera entre unidades** (punto 2).
+- **(h)** **Las rutas y formatos de los datos de referencia** (§3, E3, bloque 3).
+- **(i)** **Cómo se ejercitan en un navegador real, sin AWS y sin Google**, el inicio de sesión y las pantallas de la sincronización, para las capturas (por ejemplo, un servidor local con `node:http` que compone el manejador con los dobles). Condición: **ningún doble ni el proveedor de identidad falso son alcanzables desde el artefacto de producción**, y un test lo comprueba.
+
+## 7. Respuestas a las preguntas del prompt
+
+*(Vacío: aquí responderá la dirección.)*
+
+## 8. Preguntas abiertas para la dirección
+
+Lo que este prompt no puede decidir porque nadie lo ha decidido. Cada una con lo que la hace necesaria y las opciones que se ven, **sin elegir**.
+
+- **P1 — Cómo se liga el dispositivo de la web a su sesión** (`docs/api.md` §5.4, [PENDIENTE]; ADR-0033, nota del 2026-09-25). **Bloquea el alto del plan**: según la opción, la cookie de sesión de E1 lleva o no un `device_id`, y la ruta de inicio de sesión lo recibe o no. `docs/prompts/000-director-handoff.md` §8, punto 4, pedía decidirla **antes** de escribir este prompt; no está decidida. Las tres opciones de `docs/api.md`, con sus inconvenientes allí escritos: **(a)** asignado por la API al iniciar sesión y firmado dentro de la cookie, presentado por la web al entrar (quien tenga la cuenta de Google podría presentar el de otro dispositivo); **(b)** un registro de dispositivos web en SSM con un secreto del navegador en IndexedDB (una credencial larga en la página, lo que ADR-0027 y ADR-0033 evitaron); **(c)** sin identificador persistente, un dispositivo por sesión (dispositivos muertos que olvidar a mano, y cada sesión caducada deja uno con pendientes que bloquea `compact`). **Una cuarta, añadida por quien redacta este prompt y sin evaluar por ninguna revisión**: **(d)** una segunda cookie `__Host-` `HttpOnly`, de larga duración, firmada con su propia subclave HKDF y su `typ`, que solo dice el `device_id` del navegador y no autentica nada por sí sola; la API la lee al iniciar sesión y copia el `device_id` en la sesión. La página no la puede leer (una XSS no la saca), pero **borrar las cookies sin borrar IndexedDB** crea un dispositivo nuevo con la cola del viejo, y eso habría que tratarlo.
+- **P2 — La partición en cinco entregas** (§3): ¿se confirma, con una rama y cinco PRs sucesivas como la 010? ¿O una sola PR al final, o cinco ramas?
+- **P3 — Instalar el SDK de AWS y `esbuild`.** `@aws-sdk/client-s3` y `@aws-sdk/client-ssm` están en `docs/dependencies.md` (runtime, `adapters`) y `esbuild` también (desarrollo, «empaquetado de Lambda»), pero **ninguno está instalado** y `CLAUDE.md` pide preguntar antes de instalar un paquete. Preguntas: ¿se instalan en esta feature, con versión fijada? ¿Se construye aquí el paquete de la Lambda (la 017 lo necesita, «Etapas pendientes») o en la 017? Y la justificación de `@aws-sdk/client-ssm` en `docs/dependencies.md` dice «Token de IBKR (Fase 4)»; ahora lee la lista permitida, los secretos de la sesión y los tokens de la consola, y escribe estos últimos. Sin respuesta, los adaptadores se escriben contra una interfaz estrecha propia, probada con dobles, y el SDK se enchufa solo en la composición.
+- **P4 — Revocar todos los tokens sin Google: ¿orden de la consola o solo procedimiento?** ADR-0033, punto 8, dice «una operación de administración con credenciales de AWS, con un procedimiento escrito». Una orden reutiliza el formato exacto del registro que escribe la API; un procedimiento con la CLI de AWS no necesita la consola, pero obliga a escribir a mano un JSON que la API lee de forma estricta.
+- **P5 — El camino de `atlas backup` para `documents/` e `imports/` del bucket** (ADR-0032, nota; ADR-0034, fila 6: «lo elige la 015»): **asumir el rol de administración con MFA en cada copia**, o **una ruta de la API**. La ruta, con el token, **ampliaría su alcance** más allá de ADR-0033, punto 6 (leer el remoto y los datos de referencia), y eso es enmendar una ADR. Y una pregunta previa: **hoy nada sube `documents/` ni `imports/` al bucket**. ADR-0026 (Consecuencias) dice que se suben por la API con la regla de añadir, «con su detalle en la feature». ¿Entra la subida en esta feature, o espera a los importadores y a que un evento corporativo necesite su documento en la nube?
+- **P6 — ¿Rehacer se permite con el libro local inválido por una pareja retenida?** (D-Q1; ADR-0026, nota del cierre de la 014; `specs/014-ledger-sync-core/questions.md` §16). Hoy no del todo: `recordEvent` se niega si tras registrar sigue algún inválido anterior. Opciones que se ven: **(a)** que el rehacer registre con la misma regla que `correctEvent` y un `settings_changed` (solo se niega por lo que él deja inválido), con una opción que solo el rehacer pueda pasar; **(b)** dejar la regla y que la interfaz obligue a resolver antes la pareja (incumple la condición de D-Q1); **(c)** otra.
+- **P7 — Dónde recuerda una carpeta de la consola con qué remoto se sincroniza, y la forma de `credentials.json`.** El marcador (`sync/state.json`, `sync_format: 1`) no guarda el origen y se lee de forma estricta, así que un campo nuevo exige subir `sync_format` (una consola de la 014 lo leería como ilegible, que es fallo seguro). `atlas.config.json` rechaza toda clave desconocida y la aplicación nunca lo escribe. Una opción en cada orden es frágil. Y `docs/data-schema.md` §1 dice «un token por origen», mientras ADR-0033, punto 6, dice «un token por dispositivo y por carpeta»: dos carpetas contra el mismo origen en la misma máquina necesitan dos tokens.
+- **P8 — Lo que `docs/api.md` no tiene y la feature necesita**: **(a)** una ruta para que la SPA sepa si tiene sesión (la cookie es `HttpOnly`); **(b)** **un código para un fallo transitorio** de SSM o de S3 (el `ThrottlingException` de ADR-0034, fila 13, «con su código»), que tendría que entrar en `REMOTE_FAILURE_CODES` y en las dos interfaces; **(c)** la página de acceso denegado de ADR-0027, que enseña el `sub` a quien lo pide. La dirección las escribe en el contrato; el plan las propone.
+- **P9 — Olvidar un dispositivo**: ¿se borra `sync/devices/<id>.json` (el rol de administración puede; el bucket es versionado, así que se puede deshacer) o se marca como olvidado? ¿Y qué es olvidar un dispositivo **de la web**, que no tiene token (depende de P1)?
+- **P10 — Los valores de §6.2 (a)**: la dirección los decide en el alto, a la vista de las propuestas del plan.
+- **P11 — Los dos fallos de la web de la 014** (`specs/014-ledger-sync-core/questions.md` §9: la web no deja confirmar una presentación duplicada; el formulario de eventos corporativos no avisa del ejercicio cerrado): ¿entran en E4, que ya toca la web, o siguen sin etapa?
+- **P12 — Hasta dónde llegan aquí los datos de referencia**: ¿solo las rutas y sus clientes, o también que la web del móvil descargue ya de la API el histórico del BCE (hoy lo importa a mano, ADR-0029, punto 3)? Que la consola deje de pedir los precios que ya pidió la nube es de la 016.
+- **P13 — ¿Autoriza la dirección de antemano un tope para el arranque?** La regla de §5 es parar y medir. P2 y P3 ya midieron por encima de su tope en la 014; si se quiere evitar una parada segura, la dirección puede fijar ahora un tope como el de D-Q7 (exactamente lo medido, hasta N bytes, en su propio commit).
+- **P14 — La prueba del *loopback* en el navegador real del usuario** (§3, E2, bloque 0, punto 4) necesita que el usuario ejecute un procedimiento en su máquina. ¿E2 espera su resultado para darse por verificada, o se aplaza a la 018 y E2 se cierra con lo verificado con fuente y dicho como tal?
+- **P15 — Si `amr` resulta verificable**, ¿se exige `mfa` también en el inicio de sesión de la web, o solo al emitir el token de la consola, como dice ADR-0033? Si no resulta verificable, ¿basta con anotarlo en ADR-0033 y en `docs/runbooks/google-2-step-verification.md`?
