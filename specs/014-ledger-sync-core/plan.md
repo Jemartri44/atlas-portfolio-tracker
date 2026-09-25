@@ -2,7 +2,7 @@
 
 **Rama**: `feature/014-ledger-sync-core` | **Fecha**: 2026-09-25 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Bloque 0 y preguntas**: [`questions.md`](questions.md)
 
-**Estado**: **propuesta, en el alto.** Nada de código escrito. Lo que la dirección tiene que confirmar está marcado **[CONFIRMAR]** y numerado en `questions.md` §5; lo que **para** la feature, en `questions.md` §3 (el arranque del paquete web).
+**Estado**: **aprobado por la dirección el 2026-09-25**, con las decisiones de `questions.md` §8. Las marcas **[CONFIRMAR]** y **[PREGUNTA]** quedan como referencia a sus respuestas (D-Qn).
 
 ## Contexto técnico
 

@@ -182,3 +182,37 @@ Lo que creo que tendrá que cambiar, y que no toco:
 ## 7. Gemelos `.js`
 
 Tras el *build* de partida y tras deshacer el prototipo, búsqueda de un `.js` junto a un `.ts`/`.tsx` del mismo nombre fuera de `dist*/` y `node_modules/` en `packages`, `apps` y `tests`: **ninguno** (2026-09-25).
+
+---
+
+## 8. Respuestas de la dirección (2026-09-25)
+
+El plan recibe el **visto bueno**. Decisiones, tal como llegaron:
+
+- **D-Q7, el arranque: (a).** Se sube el techo del arranque **exactamente lo medido** por las operaciones crudas de `blob.ts` y la negativa de `checkInvalid`, **con un tope de +140 bytes**, en su propio commit, con el desglose y la tendencia escritos. *Motivo de la dirección*: son reglas del dominio que viven donde ya está el arranque, y mantener la letra de ADR-0026 vale más que 94 bytes. **Si se pasa del tope, se para.** El total sube con la regla de siempre, en su commit.
+  - **Errata del encargo** (§5, «El paquete web»): suponía que el arranque solo crecería por módulos nuevos o por un nombre de fragmento más; `blob.ts` y `record-event.ts` ya están en él y el encargo pone ahí dos cosas obligatorias.
+- **D-Q1: se acepta** que el libro local quede inválido al retener una pareja, **con una condición**: las acciones de resolver lo retenido (confirmar, rehacer, descartar) **nunca quedan bloqueadas** por el libro local inválido; el usuario siempre puede salir del estado en que la sincronización le dejó. Las consultas degradan (ADR-0015) y la aplicación **dice por qué y dónde resolverlo**.
+- **D-Q6**: «sincronización configurada» = existe `sync/` **y** el marcador no dice `disabled` (en la web, existe `sync:state` y no dice `disabled`). La nota en ADR-0015 la escribe la dirección al cerrar.
+- **D-Q2**: toda secuencia contigua de dos o más parejas es una cadena, **sin** el refinamiento del `reason`.
+- **D-Q3**: la lista propuesta (huella repetida y ejercicio cerrado).
+- **D-Q4**: toda retenida sin resolver bloquea la cola (ya estaba decidido).
+- **D-Q5**: empezar desde el remoto **archiva y además retiene** lo que el libro local tenía y el remoto no.
+- **D-Q8**: la propuesta, confirmada.
+- **D-Q9**: tres `412` y tres cambios locales, como constantes con nombre.
+- **D-Q10**: `"\r"` se rechaza; el mensaje **dice que se compacte primero y cómo** (`atlas compact`), porque un libro con finales de línea de Windows no tiene por qué ser un error del usuario.
+- **D-Q11**: confirmado.
+- **D-Q12, D-Q13, D-Q14 y D-Q15**: confirmados tal como se propusieron.
+- **D-Q16**: en la inicialización, la regla literal de V17 (superconjunto: todo lo del libro local se aceptó en local); al añadir, la regla de siempre.
+- **Los dos fallos ajenos** de §4 **no se arreglan en esta feature**: van a una ronda de arreglos aparte, con su reproducción (§9).
+
+## 9. Fallos ajenos a la feature, para una ronda de arreglos
+
+### 9.1 La web no deja confirmar una presentación duplicada
+
+- **Dónde**: `apps/web/src/routes/fiscal/presentar.tsx:36-40` (texto) y `:119` (`recordDraft(asEventDraft(draft))` sin `confirmDuplicate`).
+- **Reproducción**: en la web, registrar una presentación de un modelo y ejercicio; volver a «Presentar» el mismo modelo y ejercicio y teclear **el mismo justificante** (la propuesta pone `supersedes` a la vigente, así que no choca con `filing_already_exists`; la huella —`type`, `model`, `tax_year`, `receipt_reference`— sí se repite). Resultado: «Ya hay una presentación idéntica registrada.» y ningún camino para confirmarla. En la consola, `atlas filed … --confirm-duplicate` la registra. ADR-0012: una huella repetida es un aviso con confirmación, nunca un rechazo.
+
+### 9.2 El formulario de eventos corporativos de la web no avisa del ejercicio cerrado
+
+- **Dónde**: `apps/web/src/routes/registrar/corporate/form.tsx` no calcula ni enseña `closed` (ni `ClosedYearNotice`); la consola sí (`apps/cli/src/commands/corporate-actions.ts:327-330`).
+- **Reproducción**: con una `tax_return_filed` de `renta` vigente para un ejercicio, registrar en la web un evento corporativo con fecha dentro de ese ejercicio: se registra sin el aviso de ejercicio presentado que la consola imprime antes de preguntar (ADR-0020).

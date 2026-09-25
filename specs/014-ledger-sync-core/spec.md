@@ -4,7 +4,7 @@
 
 **Creada**: 2026-09-25 (Europe/Madrid)
 
-**Estado**: **borrador, en el alto del plan.** Espera el visto bueno de la dirección junto con [`plan.md`](plan.md) y las preguntas de [`questions.md`](questions.md). No hay código escrito.
+**Estado**: **aprobada por la dirección el 2026-09-25**, con las decisiones de [`questions.md`](questions.md) §8.
 
 **Entrada**: `docs/prompts/014-ledger-sync-core.md` entero (§0–§6.3) y `docs/api.md`; ADR-0026 con sus cuatro enmiendas y sus notas (manda sobre el encargo si discrepan), ADR-0032, ADR-0033 (punto 6), ADR-0015 con su nota, ADR-0003, ADR-0006, ADR-0012, ADR-0018 (enmienda), ADR-0019 (enmienda), ADR-0020, ADR-0022, ADR-0025; `docs/data-schema.md` §1, §5 y §6.3; `docs/decision-roadmap.md`, Ronda 8; constitución 1.6.1.
 
