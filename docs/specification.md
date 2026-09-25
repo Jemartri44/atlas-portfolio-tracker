@@ -337,7 +337,7 @@ Trabajo programado que compara las posiciones del libro mayor contra el extracto
 
 ### 9.2 Componentes
 
-> **Diagrama y decisiones vigentes desde ADR-0026, ADR-0027 y ADR-0028 (2026-09-24, Ronda 8).** Cognito desaparece: el acceso es solo con Google, verificado por la propia Lambda (ADR-0027). Cada entorno es una cuenta de AWS miembro dedicada (`atlas-dev`, `atlas-prod`) dentro de una organización, no una pila con sufijo compartiendo cuenta (ADR-0028, detalle en §11.3).
+> **Diagrama y decisiones vigentes desde ADR-0026, ADR-0027 y ADR-0028 (2026-09-24, Ronda 8).** Cognito desaparece: el acceso es solo con Google, verificado por la propia Lambda (ADR-0027). **Desde el 2026-09-25 no hay cuentas miembro dedicadas** (decisión del usuario; ADR-0034): `dev` y `prod` son dos pilas en una cuenta de AWS que el usuario comparte con otros proyectos, separadas por nombre, etiqueta, estado, prefijo de SSM, roles y un límite de permisos por entorno (detalle en §11.3).
 
 ```
 Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
@@ -395,9 +395,9 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 **En el Free Plan, cuando se agotan los créditos o vencen los seis meses, la cuenta se cierra automáticamente**, sin factura previa ni periodo de gracia. Quedan 90 días para pasar al Paid Plan y recuperar los datos antes de que se borren.
 
-**Acción obligatoria: pasar al Paid Plan desde el principio.** Con tarjeta asociada y usando solo servicios de coste mínimo, la facturación queda cubierta por los créditos mientras duren y después es mínima, pero la cuenta no se cierra. Esto se aplica a la **cuenta de gestión**, que pasa al Paid Plan **antes** de crear la organización y las dos cuentas miembro dedicadas, `atlas-dev` y `atlas-prod` (ADR-0028, detalle en §11.3). Si una cuenta en el Free Plan puede crear una organización: **sin verificar**; no hace falta saberlo si se sigue este orden.
+**Acción obligatoria: pasar al Paid Plan desde el principio.** Con tarjeta asociada y usando solo servicios de coste mínimo, la facturación queda cubierta por los créditos mientras duren y después es mínima, pero la cuenta no se cierra. Desde el 2026-09-25 Atlas se despliega en una cuenta que el usuario **ya tiene en el Paid Plan** y comparte con otros proyectos (ADR-0034), así que no hay organización ni cuentas miembro que crear. Una cuenta que esté usando el AWS Free Tier **no puede suscribir** los planes de tarifa plana de CloudFront (ADR-0034, F9): se comprueba antes de desplegar.
 
-**Además:** alerta de presupuesto (AWS Budgets) en 1$, con aviso por correo, que mide el coste **antes** de aplicar los créditos. Es la red que avisa si algo se sale de lo previsto (ADR-0028).
+**Además:** alerta de presupuesto (AWS Budgets) en 1$, con aviso por correo, que mide el coste **antes** de aplicar los créditos. Es la red que avisa si algo se sale de lo previsto (ADR-0028). En la cuenta compartida, el presupuesto **filtra por la etiqueta de asignación de costes `project=atlas`**, que se activa a mano en Billing; los impuestos y lo que pase de los niveles gratuitos compartidos no se etiquetan (ADR-0034, fila 9).
 
 ### 9.5 Lambdas programadas
 
@@ -498,23 +498,23 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
 
 ### 11.3 Entornos
 
-> **Vigente desde ADR-0028 (2026-09-24, Ronda 8).** El aislamiento pasa a ser **por cuenta**, no por pila con sufijo: la dirección cambió su decisión inicial el mismo día.
+> **Vigente desde ADR-0034 (2026-09-25)**, que sustituye en parte a ADR-0028: el usuario decidió no crear organización ni cuentas miembro. Hasta ese día el aislamiento era **por cuenta**; ahora es **por políticas**, dentro de una cuenta que el usuario comparte con otros proyectos.
 
 | Entorno | Rama | Infraestructura | Datos |
 |---|---|---|---|
-| `dev` | `develop` | **Cuenta AWS miembro dedicada `atlas-dev`**, dentro de una organización cuya cuenta de gestión **es** la cuenta personal del usuario; recursos con sufijo del entorno | Datos sintéticos |
-| `prod` | `main` | **Cuenta AWS miembro dedicada `atlas-prod`** | Datos reales |
+| `dev` | `develop` | Pila `atlas-dev-*` en la cuenta compartida del usuario, **en reposo** cuando no se usa (tareas programadas desactivadas, sin las claves de precios del usuario) | Datos sintéticos |
+| `prod` | `main` | Pila `atlas-prod-*` en la misma cuenta | Datos reales |
 
-- **Aislamiento por construcción**: una cuenta AWS por entorno, no solo pilas o políticas independientes. Ningún rol de `atlas-dev` existe en `atlas-prod`, así que «datos de producción jamás en dev» es mecánico, no una convención. La cuenta de gestión no está sin recursos —**es** la cuenta personal del usuario, con sus otras cosas—, y lo compensan el MFA del *root* de las tres cuentas y las SCP sobre las dos cuentas miembro (que **no alcanzan a la cuenta de gestión**, sin verificar con fuente).
-- **Despliegue a producción solo desde `main`**, tras PR aprobada y CI en verde; el rol de despliegue de `atlas-prod` exige además el *environment* `prod` de GitHub con aprobación obligatoria.
+- **Aislamiento por políticas, no por cuenta**: todo recurso lleva el prefijo `atlas-<entorno>-` y las etiquetas `project=atlas` y `env=<entorno>`; SSM, bajo `/atlas/<entorno>/`; cada entorno tiene su estado de Terraform, sus roles y **un límite de permisos** que ningún rol suyo puede quitarse. «Datos de producción jamás en dev» lo garantizan **dos cerraduras independientes**: la política de cada rol de `dev`, que solo nombra recursos de `dev`, y la política del bucket de datos de `prod`, que niega a todo principal que no sea de `prod`. **Frente a quien administra la cuenta no hay aislamiento**, y los parámetros de SSM no tienen política de recurso: el riesgo que queda está escrito en ADR-0034.
+- **Despliegue a producción solo desde `main`**, tras PR aprobada y CI en verde; el rol de despliegue de `prod` exige además el *environment* `prod` de GitHub con aprobación obligatoria.
 - **Los artefactos que se despliegan a producción son los mismos que se validaron en dev.** Se construye una vez y se promociona; no se reconstruye por entorno.
 - **Datos de producción jamás en dev.** Generador de datos sintéticos como parte del repositorio.
 
 ### 11.4 Infraestructura
 
-- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola, **salvo las excepciones declaradas por ADR-0028, cada una con su condición de retirada**: la suscripción al plan de tarifa plana de CloudFront, que tampoco se hace a mano sino con un **guion idempotente de la CLI de AWS versionado en el repositorio**, y se retira cuando el proveedor de Terraform lo soporte; la organización y las dos cuentas miembro, el cliente OAuth de Google por entorno (ADR-0027), el *bootstrap* de Terraform de cada cuenta, y la petición de aumento de cuota de concurrencia si hace falta.
-- Estado remoto en S3 con el bloqueo nativo de S3, uno por cuenta miembro.
-- Módulos reutilizables (`infra/modules/atlas/`) y una carpeta por entorno (`infra/envs/dev/`, `infra/envs/prod/`), cada una contra su cuenta. **Las carpetas se versionan; solo sus ficheros `.tfvars` quedan fuera del repositorio.**
+- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola, **salvo las excepciones declaradas por ADR-0028 y ADR-0034, cada una con su condición de retirada**: la suscripción al plan de tarifa plana de CloudFront, que tampoco se hace a mano sino con un **guion idempotente de la CLI de AWS versionado en el repositorio**, y se retira cuando el proveedor de Terraform lo soporte; el cliente OAuth de Google por entorno (ADR-0027), el *bootstrap* de Terraform, **aplicado una vez para la cuenta compartida** (ADR-0034), la activación de la etiqueta de asignación de costes `project` en Billing (ADR-0034), y la petición de aumento de cuota de concurrencia si hace falta. La organización y las cuentas miembro de ADR-0028 **no existen** (decisión del usuario del 2026-09-25).
+- Estado remoto en S3 con el bloqueo nativo de S3, en **un bucket propio de Atlas** con una clave por entorno; cada rol solo alcanza la de su entorno (ADR-0034).
+- Módulos reutilizables (`infra/modules/atlas/`) y una carpeta por entorno (`infra/envs/dev/`, `infra/envs/prod/`), las dos contra la misma cuenta. **Las carpetas se versionan; solo sus ficheros `.tfvars` quedan fuera del repositorio.**
 - `terraform plan` obligatorio en la PR, `apply` solo tras aprobación.
 
 ### 11.5 Tests
@@ -642,7 +642,7 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
 - [x] **Retención a cuenta en reembolsos de fondos.** Hecho: `sell.withholding` (`data-schema.md` §6.2), con su equivalente por cuenta en `forced_sale` (§6.5). Sale del efectivo que entra, no toca el valor de transmisión ni el coste de los lotes, y la salida fiscal la suma a las retenciones del ejercicio (criterio #12).
 - [x] **Valoración a 31 de diciembre.** Resuelta como se preveía (feature 010): los Modelos 720 y 721 valoran con la `valuation` registrada a mano, dato de **Nivel 1**, convertida al tipo del BCE de esa fecha. Es la única ruta fiscal que lee precios; si falta alguno, el veredicto es «no se puede determinar» y nunca «no obligado» (§5.8 de `business-rules.md`).
-- [x] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio. Resuelto (ADR-0028, 2026-09-24): un rol de despliegue por cuenta miembro; el de `atlas-dev` solo desde `develop`, el de `atlas-prod` solo desde el *environment* `prod` con aprobación obligatoria, y un rol de `terraform plan` de solo lectura que nunca se usa para una PR desde un *fork*.
+- [x] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio. Resuelto (ADR-0028, 2026-09-24; cuenta compartida desde ADR-0034, 2026-09-25): un rol de despliegue por entorno en la misma cuenta, que solo puede crear roles con el límite de permisos de su entorno; el de `dev` solo desde `develop`, el de `prod` solo desde el *environment* `prod` con aprobación obligatoria, y un rol de `terraform plan` de solo lectura que nunca se usa para una PR desde un *fork*.
 - [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).
 - [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos. Está todo salvo **`.editorconfig`, que no existe**; el escaneo de secretos es `gitleaks` en `.githooks/pre-commit`, local por clon y no en CI.
