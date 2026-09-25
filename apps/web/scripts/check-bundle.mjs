@@ -556,8 +556,15 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108;
  * prices, the notice of a correspondence missing or that does not read, the
  * closes 013 stored wrong under format 1 and the days a purge owes (+0,87,
  * lazy with the quotes and Ajustes).
+ *
+ * **Feature 014, the core of the sync (2026-09-25): measured 272,17 (278.700
+ * bytes), ceiling 272,3.** All of it lazy: the Spanish sentences of every
+ * reason the sync holds a line back, stops or refuses (about fifty codes, and
+ * the eighteen failures of the remote one by one) in the catalogue of errors
+ * (+2,5). The domain of the sync is not in the bundle yet: nothing of the web
+ * imports it until feature 015 gives it a button. The trend: 269,6 → 272,2.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 270.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 272.3 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
