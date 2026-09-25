@@ -209,8 +209,21 @@ const dist = join(webRoot, "dist");
  * to `develop` plus the cap of decision D-Q7 (+0,3 KB, 307 bytes), 75.725,
  * so that going over the cap stops the build instead of a comment. The trend:
  * 73,7 → 73,9 in this feature.
+ *
+ * **Feature 014, the raw-line operations (2026-09-25): measured 75.811 bytes,
+ * +108 over `develop` (75.703); the ceiling rises exactly that (decision D-Q7
+ * of the direction: exactly the measure, capped at +140 bytes for this and the
+ * refusal of `acceptInvalid` together, each in its own commit).** They are
+ * rules of the domain that live where the boot already is: the port gains two
+ * operations (ADR-0026, Part A, amendment), and `BlobLedgerStore`, which the
+ * boot opens, has to implement them. Byte by byte: the domain chunk **+110**
+ * — `appendLines` and `replaceLines` of `BlobLedgerStore` sharing their body
+ * with `append` and `replace`, and `rawLinesText`/`decodeLines` of the domain,
+ * which the load of the store now shares too —; the entry **−2**. Nothing of
+ * the sync engine is in the boot: its folders are in LAZY_ONLY. The trend:
+ * 73,9 → 74,0.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
