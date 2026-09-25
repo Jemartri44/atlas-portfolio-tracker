@@ -537,8 +537,14 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307;
  * 269,0.** The web reads `prices/symbols.json` to leave out the closes stored
  * in a currency their source no longer declares, and says so beside the
  * prices (+0,95, lazy with the quotes).
+ *
+ * **Second pass of the review of PR #80 (2026-09-25): measured 269,61
+ * (276.081 bytes), ceiling 270,0.** The correspondence imported with the
+ * prices, the notice of a correspondence missing or that does not read, the
+ * closes 013 stored wrong under format 1 and the days a purge owes (+0,87,
+ * lazy with the quotes and Ajustes).
  */
-const TOTAL_BUDGET_GZIP_BYTES = 269.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 270.0 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
