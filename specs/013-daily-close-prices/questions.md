@@ -482,3 +482,30 @@ Cinco puntos de la dirección. Cada arreglo tiene su test escrito antes y visto 
      - **M9**: una clave de más en `currencies` no tiene símbolo, así que nunca se descarga ni se contrasta con ella.
      - **M10**: sobre la misma forma laxa, ninguna lectura consulta la divisa de una fuente sin símbolo.
      - **M11**: las dos claves a la vez en el formato 1 solo las escribiría una mano ajena. La lectura de la 013 ya se queda con `currency`, y el formato 1 ya no hereda confirmaciones (punto 1).
+
+## 14. Segunda pasada de la revisión de la PR #80 (2026-09-25)
+
+Cuatro puntos de la dirección. Cada uno tiene tests escritos antes y vistos en rojo, y mutantes que los matan (`mut-013/fix013-pass2.log`: catorce, todos muertos; uno, P4d, sobrevivió al principio y lo mata un test añadido).
+
+1. **Bloqueante: con un `symbols.json` de formato 1, las líneas que la 013 guardó mal quedan fuera de toda cifra en euros.**
+   - Al leer el formato 1, `currency_confirmed_over[source]` se toma como lo que dijo la fuente. Si difiere de la divisa del activo, esa fuente queda marcada en el campo nuevo `misstored` con la divisa del activo. Sus líneas guardadas en esa divisa son las del defecto: `readCloses` las deja fuera, `prices status` y las vistas las señalan con un aviso propio («se guardó en GBP, pero esa fuente dijo otra divisa…»), y `purge` las borra.
+   - **Cómo se implementa.** La divisa declarada de esa fuente sigue siendo la del activo, porque no se supone ninguna. La fuente queda sin contrastar, como en §13, y se contrasta antes de su siguiente descarga.
+   - `misstored` es un campo nuevo del formato 2, así que el arreglo no se pierde cuando el fichero se vuelve a escribir. Lo mantienen tanto el contraste como una declaración nueva de esa fuente, y solo `purge` lo quita.
+   - Tests en los dos sentidos: GBP sobre GBX (cien veces más) y GBX sobre GBP (cien veces menos). Se comprueban en el dominio y en la consola, con `weights` antes y después de `prices update`.
+2. **Un `symbols.json` ilegible, o de un formato más nuevo, ya no tumba las vistas de valoración.**
+   - Las vistas se degradan como con `readLocalConfig`: se quedan sin precios automáticos y dicen el motivo.
+   - El formato más nuevo tiene código propio, `symbols_file_newer_version`, traducido en la consola y en la web.
+   - `update`, `status` y `symbols` siguen negándose, porque escribirían el fichero.
+3. **La web.**
+   - La importación a mano admite `symbols.json`. Si no se entiende, rechaza la importación entera. La web lo guarda junto a los precios y lo usa para el filtro; si una importación posterior no lo trae, conserva el anterior.
+   - **Sin `symbols.json`**, la web avisa de que no puede comprobar la divisa y usa los cierres tal como están.
+   - **Con un `symbols.json` ilegible en la carpeta**, la web lo dice y no usa precios automáticos, igual que la consola.
+   - Los avisos salen en Cartera, Resumen, Cubo y Ajustes.
+   - `_status.json` y `config.json` se siguen dejando aparte, con aviso.
+4. **`purge` cumple lo que promete.**
+   - Anota por activo y fuente, en el campo nuevo `refetch_from` de `symbols.json`, el primer día que quitó.
+   - La siguiente descarga del activo empieza en el primer día pendiente, responda la fuente que responda, y no se da por al día mientras quede alguno pendiente.
+   - Una vez pedido, se borra. Solo se borra lo que se pidió: una purga hecha mientras tanto sigue pendiente.
+   - Test con el caso del revisor: una línea mala del día 4 y una buena del 5, que se purga y se vuelve a pedir desde el 4.
+- **Techo total del bundle**: pasa de 269,0 a 270,0 KB. Se midió 269,61 (276.081 bytes), y todo lo añadido es diferido. El arranque, 73,9 KB, sigue bajo su techo.
+- **`docs/` sin tocar**: el documentador debe recoger en `docs/data-schema.md` los campos `misstored` y `refetch_from` del formato 2.
