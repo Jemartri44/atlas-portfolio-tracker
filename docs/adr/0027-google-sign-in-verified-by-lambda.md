@@ -62,3 +62,15 @@ Se adopta el acceso **solo con Google, verificado en la Lambda**, y el token se 
 ## Enmienda del 2026-09-24 (revisión de la PR #72)
 
 Decidida por la dirección el mismo día. La verificación compara también `state` con la cookie transitoria; cada petición vuelve a consultar la lista permitida, con una caché de pocos minutos, para que quitar una entrada no espere a que caduque la sesión; §9.6 de la especificación entra en la lista de documentos; y la cita de la constitución dice ahora lo que la constitución dice (analítica y CDN de terceros, CSP restrictiva), y la del origen propio remite a la especificación.
+
+## Nota del 2026-09-25 (ADR-0033 aceptada)
+
+**La consola entra por ADR-0033**, que completa esta ADR para el cliente que no es un navegador. Lo que cambia aquí:
+
+- **«No hay *refresh token*» vale para la web.** La consola tiene una credencial de larga duración propia, acotada por ADR-0033: 90 días absolutos, con un techo fijo de 120 en el código, revocable uno a uno y comprobada contra la lista permitida en cada petición.
+- **Rotar la clave de sesión no cierra los tokens de consola**; solo invalida los códigos de un solo uso pendientes. Revocarlos es otra operación (ADR-0033, punto 8).
+- **La vuelta de Google (`/api/auth/callback`) gana una rama de consola**: si el intento lo abrió la consola, no emite cookie de sesión, sino un código de un solo uso que redirige al *loopback* `127.0.0.1` o se enseña en una página aislada (variante manual).
+- **La cookie transitoria del intento lleva también los parámetros de la consola** (puerto, `state` de la consola, `code_challenge` y nombre del dispositivo), junto a los suyos.
+- **La cookie de sesión se firma con la subclave `session`**, derivada con HKDF de la clave de sesión, y **lleva un campo `typ`**; el código de la consola se firma con otra subclave, `console_code`, y cada verificador rechaza el tipo ajeno (ADR-0033, punto 2, bloqueante B3).
+
+Rutas, cabeceras y códigos: `docs/api.md`.

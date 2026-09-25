@@ -57,7 +57,7 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 | Frontend | Static SPA with Vite (Svelte or Solid), served from S3 through CloudFront |
 | Backend | Lambda (Node) with Function URL (no API Gateway). TypeScript everywhere, domain in a shared package. ADR-0001 |
 | Data | S3 only. One `ledger/ledger.jsonl` event log (transactions + account/asset catalogue + `settings_changed`), `schema_version` per line, migrated on load, explicit `compact`. Loaded whole into memory; conditional writes (`If-Match`). ECB FX history stored verbatim. ADR-0002, ADR-0006, `docs/data-schema.md` |
-| Auth | Sign-in with Google, verified by our own Lambda; no Cognito. Authorization-code flow with PKCE, with the Lambda as the OAuth client; session is our own signed cookie. Allow-list of `{sub, email}` in SSM. ADR-0027 |
+| Auth | Sign-in with Google, verified by our own Lambda; no Cognito. Authorization-code flow with PKCE, with the Lambda as the OAuth client; session is our own signed cookie. Allow-list of `{sub, email}` in SSM. ADR-0027. The console authenticates with its own device token (`x-atlas-device-token`), issued only at the end of a Google sign-in the console itself opens (loopback + PKCE, manual variant), 90-day absolute expiry under a 120-day hard ceiling, stored in `~/.config/atlas/credentials.json` (`600`), hash registered in SSM; never issued from the web. ADR-0033, contract in `docs/api.md` |
 | Scheduling | EventBridge Scheduler |
 | Email | SES in `eu-west-1`, in the sandbox (sends only to the user's own verified address). The recipient lives in SSM, never in the repo or `Settings`; no amounts by default, with an opt-in switch also in SSM. ADR-0028 |
 | Secrets | SSM Parameter Store standard tier (free), not Secrets Manager |
@@ -169,12 +169,12 @@ Mandatory edge cases: several lots with the same date, fractions, reverse split 
 | `DEBUG` | Execution detail, disabled in production |
 
 - Structured JSON logs with `request_id` to correlate across Lambdas.
-- **Never log amounts, positions, balances or account identifiers**, nor tokens, email addresses or Google `sub` identifiers (ADR-0028, row 16; ADR-0027). CloudWatch is less protected than the database.
+- **Never log amounts, positions, balances or account identifiers**, nor tokens (device tokens included, and their hashes), email addresses or Google `sub` identifiers (ADR-0028, row 16; ADR-0027; ADR-0033: at most the public id of a device token). CloudWatch is less protected than the database.
 - Retention: 30 days in production, 7 in dev.
 
 ### Security
 
-- **Never store broker credentials.** Secrets in SSM Parameter Store as `SecureString`: the read-only IBKR Flex token, the Google OAuth client secret and the session signing key (ADR-0027). Price source API keys (ADR-0031): locally, in a configuration file outside the repository; in the cloud, in SSM.
+- **Never store broker credentials.** Secrets in SSM Parameter Store as `SecureString`: the read-only IBKR Flex token, the Google OAuth client secret and the session signing key (ADR-0027). The console's device tokens are registered in SSM as one `SecureString` per token under `/atlas/<env>/device-tokens/`, hash only, written only on creation and revocation; the console keeps its token in `~/.config/atlas/credentials.json` (`600`, outside the ledger folder, written only by the console, never read by the web, a copy, an export or a sync) (ADR-0033). Price source API keys (ADR-0031): locally, in a configuration file outside the repository; in the cloud, in SSM.
 - Private S3. Each account has several buckets (SPA, data, Terraform state, CloudTrail); the one that matters here is the **data bucket, which is never a CloudFront origin**. It is reachable only by the Lambda roles and, always with short-lived credentials, by the administration operations defined in ADR-0026, ADR-0027 and ADR-0032. Only the SPA bucket is served, through CloudFront with Origin Access Control. The API Lambda itself is reached only through CloudFront, under `/api/*` (ADR-0028).
 - Least-privilege IAM: one role per Lambda.
 - **No third-party analytics, no external CDNs, no remote fonts.** Everything from the own origin. Strict CSP.

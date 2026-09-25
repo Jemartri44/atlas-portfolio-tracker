@@ -1,13 +1,14 @@
 <!--
 Sync Impact Report
-- Version change: 1.5.0 → 1.6.0
-- Modified principles: IV (configurable values are still never hard-coded, but not all of them live in `Settings`: configuration that affects ledger figures stays in `Settings`; configuration that is personal data or a secret —email recipient, sign-in allow-list, keys— and operational configuration no figure reads —price sources, email— lives outside the ledger, in SSM Parameter Store in the cloud or local configuration outside the repository; a new field in a full-state event follows the ADR-0018 amendment. ADR-0018, ADR-0027, ADR-0028, ADR-0031, Ronda 8, 2026-09-24); VI (cost restriction: "coste indefinidamente dentro del always-free de AWS" → "coste mínimo con alarma de presupuesto", ADR-0028, Ronda 8, 2026-09-24)
-- Modified sections: Restricciones técnicas (Plataforma: coste mínimo en vez de always-free, acceso con Google verificado en la Lambda sustituye a Cognito con MFA —ADR-0027—, excepción declarada a "Terraform para todo; nada creado a mano" con su condición de retirada —ADR-0028—; Seguridad: los secretos en SSM ya no son solo el token Flex de IBKR, se añaden el secreto de cliente de Google y la clave de sesión —ADR-0027— y las claves de las fuentes de precios —ADR-0031—, que en local van en un fichero de configuración fuera del repositorio y solo en la nube en SSM)
-- Version bump rationale: MINOR, like 1.1.0, 1.4.0 and 1.5.0: principles IV and VI are narrowed or re-scoped with their reason written, not removed or redefined
+- Version change: 1.6.0 → 1.6.1
+- Modified principles: none
+- Modified sections: Restricciones técnicas (Seguridad: the console's device tokens are registered in SSM as `SecureString`, hash only, one parameter per token; locally the console keeps its token in a credentials file outside the repository and the ledger folder. ADR-0033, accepted 2026-09-25)
+- Version bump rationale: PATCH, a clarification of where an already-allowed kind of secret lives; no principle added, removed or re-scoped
 - Added sections: none
 - Removed sections: none
 - Templates requiring updates: none
 - Follow-up TODOs: advisor answers in docs/fiscal-questions.md may change Settings defaults, not this document.
+- Previous: 1.5.0 → 1.6.0 (2026-09-24) re-scoped IV (configuration outside the ledger) and VI (minimum cost with a budget alarm), and amended Restricciones técnicas for ADR-0027, ADR-0028 and ADR-0031.
 -->
 
 # Constitución de Atlas Portfolio Tracker
@@ -95,7 +96,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 ## Restricciones técnicas
 
 - **Plataforma:** AWS con **coste mínimo y alarma de presupuesto** (ADR-0028), no dentro del *always-free* indefinidamente (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, **acceso solo con Google verificado en la Lambda, sin Cognito** (ADR-0027), EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano, **salvo las excepciones declaradas en ADR-0028, cada una con su condición de retirada**. Antes de introducir un servicio nuevo, verificar que su coste es mínimo a esta escala.
-- **Seguridad:** nunca credenciales de brókers. Secretos en SSM Parameter Store como `SecureString`: el token Flex de IBKR (solo lectura) y el secreto del cliente OAuth de Google y la clave de sesión (ADR-0027). Las claves de las fuentes de precios (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, en SSM. Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
+- **Seguridad:** nunca credenciales de brókers. Secretos en SSM Parameter Store como `SecureString`: el token Flex de IBKR (solo lectura) y el secreto del cliente OAuth de Google y la clave de sesión (ADR-0027). Las claves de las fuentes de precios (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, en SSM. El registro de los tokens de dispositivo de la consola (ADR-0033): en SSM, un `SecureString` por token con solo el hash del secreto; en local, el token vive en un fichero de credenciales fuera del repositorio y de la carpeta del libro, que solo escribe la consola. Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
 - **Privacidad:** nunca se registran en logs importes, posiciones, saldos ni identificadores de cuenta. Nada personal en el repositorio público: ni dominio real, ni importes, ni el plan financiero (`plan-financiero.md`, ignorado por git).
 - **Idioma:** todo lo técnico (código, identificadores, commits, ramas, ficheros, infraestructura) en inglés. Documentos, especificaciones y esta constitución en español con identificadores en inglés.
 - **Entornos:** `dev` (rama `develop`) y `prod` (rama `main`) con pilas separadas. Se construye una vez y se promociona. Datos de producción jamás en `dev`.
@@ -116,4 +117,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.6.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-24
+**Version**: 1.6.1 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-25
