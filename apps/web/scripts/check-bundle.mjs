@@ -608,8 +608,18 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20;
  * (+248 bytes), and the write path of the store of the sync — the check of
  * the name of an archive and the shared reader of the marker — in `write`
  * (+293); the rest is hash noise across the lazy chunks.
+ *
+ * **Feature 015, E1 (2026-09-25): measured 275,55 (282.165 bytes, +2.126),
+ * ceiling 276,0.** All of it lazy, inside the authorisation of the direction
+ * for the whole feature (+24 KB over 280.064, up to 304.640; Q1 of
+ * `specs/015-api-access/questions.md`): the card «Sincronización» of Ajustes
+ * with the client of the session (`ajustes` +1.603), the device id this
+ * browser keeps (`web-device`, new, 411) and the sentences of
+ * `device_forgotten`, `remote_unavailable` and `body_too_large` (`errors`
+ * +109); the rest is hash noise. The boot did not move (75.834, −9). The
+ * trend: 272,2 → 273,3 → 275,6.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 273.5 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 276 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
