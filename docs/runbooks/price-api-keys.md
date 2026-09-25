@@ -167,7 +167,6 @@ Si falla, sale una línea «Error: EODHD … al confirmar el símbolo: no se ha 
 | «ha limitado las llamadas» | Cupo de EODHD agotado o demasiadas llamadas seguidas | Anótalo y sigue otro día |
 | «no responde» | Sin conexión, o EODHD caído | Comprueba tu conexión; si sigue, anótalo y sigue con la 013 |
 | «ha respondido algo que no se entiende» | EODHD ha contestado algo inesperado | Anótalo y sigue con la 013 |
-| «sin cupo hoy» | La consola ya gastó el cupo de hoy de esta carpeta | Sigue otro día |
 
 Ninguno de esos mensajes enseña la clave: se pueden copiar tal cual. Si la consola dice que EODHD da otra divisa y te pide confirmar, responde `N`: aquí solo se comprueba la clave.
 
