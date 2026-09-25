@@ -254,7 +254,7 @@ Es el libro con más funcionalidad propia: es una parte pequeña de la cartera p
 | Dato | Fuente | Fiabilidad | Riesgo |
 |---|---|---|---|
 | Acciones, ETFs, ETCs | **EODHD (principal), Alpha Vantage (respaldo)**, APIs con clave gratuita (ADR-0031) | Buena | Cupo diario (20 y 25 llamadas) y condiciones de uso de una API gratuita. El plan gratuito de Alpha Vantage solo ve **los últimos 100 días de mercado**: sirve para el día a día, no para rellenar un año |
-| Cripto | **EODHD si su plan gratuito la cubre**; si no, entrada manual (ADR-0031, tercera enmienda). ~~CoinGecko Demo~~ | Buena | Cobertura del plan gratuito **SIN VERIFICAR** hasta la prueba con la clave del usuario (`docs/runbooks/013-daily-close-prices-live-test.md`) |
+| Cripto | **EODHD si su plan gratuito la cubre**; si no, entrada manual (ADR-0031, tercera enmienda). ~~CoinGecko Demo~~ | **Sin verificar** | Cobertura del plan gratuito **SIN VERIFICAR** hasta la prueba con la clave del usuario (`docs/runbooks/013-daily-close-prices-live-test.md`) |
 | Tipos de cambio | BCE (CSV/API oficial) | Excelente | Ninguno |
 | Valor liquidativo de fondos | `EUFUND` de EODHD si cubre el ISIN; si no, **aproximación por ETF equivalente**, siempre marcada como tal (ADR-0031) | Buena para consulta | No sirve para fiscalidad |
 | Valor liquidativo exacto | Entrada manual al registrar la operación | Exacta | Requiere disciplina |
