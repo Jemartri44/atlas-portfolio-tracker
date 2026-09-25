@@ -261,3 +261,13 @@ Decidida por la dirección tras la revisión de la PR #89 (hallazgo B3; `docs/pr
 6. **solo entonces**, reponer el par.
 
 Donde el punto 8 y «Consecuencias» dan el orden de cuatro pasos, vale este. El procedimiento escrito lo redacta la feature 015.
+
+## Nota del 2026-09-25 (revisión del prompt de la feature 015): la reemisión para un dispositivo sin credencial
+
+Decidida por la dirección, que aceptó esta ADR, tras la segunda ronda de revisión de la PR #89 (hallazgo R2-B1; `docs/prompts/015-api-access.md` §7.1 bis). El punto 2 dice que **el identificador del dispositivo lo asigna la API al canjear y que la consola nunca lo propone**. **Se autoriza una sola excepción: la reemisión.** Una carpeta cuyo `sync/remote.json` nombra un dispositivo para el que `credentials.json` ya no tiene token (tras `atlas remote logout` y un nuevo inicio de sesión, o una respuesta de renovación perdida) puede pedir el token **para ese `device_id`**. La API solo lo concede si se cumplen **las tres condiciones**:
+
+1. el dispositivo existe;
+2. no está olvidado;
+3. es de tipo consola.
+
+Además, solo **tras un inicio de sesión con Google y PKCE completo**, como toda emisión, y **revocando antes cualquier token anterior de ese dispositivo**. Antes de pedirla, la consola enseña el nombre del dispositivo y su última sincronización y pide confirmación explícita. **Fuera de la reemisión, la consola sigue sin proponer nunca un identificador.** El riesgo de una carpeta copiada que reemite para el mismo dispositivo se acepta y se documenta, como el de la web.
