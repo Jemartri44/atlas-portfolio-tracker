@@ -36,7 +36,7 @@ Hay **dos**, y cada petición lleva **exactamente una**:
 atlasdt1.<token_id>.<secret>
 ```
 
-- `atlasdt1` — prefijo fijo y reconocible (versión 1 del formato), para que un escáner de secretos lo encuentre. La regla de `gitleaks` es configuración de herramientas: **se propone al usuario**, no se añade (ADR-0033, punto 1).
+- `atlasdt1` — prefijo fijo y reconocible (versión 1 del formato), para que un escáner de secretos lo encuentre. La regla de `gitleaks` era configuración de herramientas y se propuso al usuario (ADR-0033, punto 1); **el usuario la aprobó el 2026-09-25** y vive en `.gitleaks.toml` como `atlas-console-device-token`: detecta el token completo con un secreto aleatorio y deja pasar el `token_id` solo y los marcadores de posición de este documento.
 - `<token_id>` — **22 caracteres exactos de `[A-Za-z0-9_-]`** (128 bits aleatorios en base64url sin relleno). Es **público**: nombra el parámetro de SSM, sale en la lista de la web y puede ir a un registro. **Nunca contiene `:` ni `/`**: `GetParameter` interpreta `nombre:versión` y `nombre:etiqueta`, y sin esta regla un token revocado volvería a valer leyendo una versión anterior del registro (ADR-0033, bloqueante B1).
 - `<secret>` — **43 caracteres exactos de `[A-Za-z0-9_-]`** (256 bits de `crypto.randomBytes` en base64url sin relleno). El servidor guarda solo su SHA-256.
 - Expresión completa: `^atlasdt1\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}$`. Lo que no cuadre es `401 device_token_invalid` **antes** de tocar SSM.
