@@ -68,3 +68,12 @@ La especificación (§9-§11) describe la plataforma y la seguridad, pero no la 
 ## Enmienda del 2026-09-24 (revisión de la PR #72)
 
 Decidida por la dirección el mismo día. Se declara como **sustitución** que la restricción deja de ser «dentro del *always-free* indefinidamente» y pasa a **coste mínimo con alarma de presupuesto**, con lo que ocurre al acabarse los créditos. Se fija que la cuenta de gestión pasa al Paid Plan antes de crear la organización. La afirmación sobre las SCP y la cuenta de gestión queda marcada igual en los dos sitios. La PR del proveedor de Terraform queda marcada como sin enlace. El coste de 10 correos era 0,001 $, no 0,002 $. Y el interruptor de importes del correo va a SSM, fuera de las fotos completas del libro.
+
+## Nota del 2026-09-25 (ADR-0033 aceptada)
+
+ADR-0033 (el token de dispositivo de la consola) toca cuatro filas de esta ADR:
+
+- **Fila 7 (permisos del rol de la API):** el rol gana lectura y escritura en SSM **solo bajo `/atlas/<entorno>/device-tokens/`** (`GetParameter`, `GetParametersByPath` y `PutParameter`), **sin `DeleteParameter` ni `LabelParameterVersion`**. Para él, la lista permitida, el secreto del cliente y la clave de sesión siguen siendo de solo lectura. Qué permisos de KMS hacen falta para `aws/ssm` está SIN VERIFICAR (feature 017).
+- **Fila 16 (registros):** ni el token ni su hash; como mucho su identificador público, que permite cruzar con CloudTrail.
+- **Filas 6 y 14 (CloudFront):** la política de origen tiene que reenviar la cabecera `x-atlas-device-token` a la Lambda. `AllViewerExceptHostHeader` la reenvía; con otra política hay que nombrarla. La CloudFront Function de la CSP no puede pisar la `Content-Security-Policy: sandbox` que pone la página del código de la variante manual (SIN VERIFICAR, feature 017).
+- **Fila 15 y registros en tiempo real:** si algún día se activan los registros del WAF, la cabecera se censura con `RedactedFields`; si se activan los registros en tiempo real de CloudFront, el campo `cs-headers` queda fuera.
