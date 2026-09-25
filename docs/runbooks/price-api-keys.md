@@ -61,24 +61,25 @@ Lo lee `packages/adapters/src/prices/secrets.ts` (`readSecrets`), y la consola l
 Copia este bloque en la terminal. Te pide las dos claves **sin enseñarlas en pantalla**: pega cada una y pulsa Intro. Las claves no quedan en el historial de la terminal, y el fichero nace ya con permisos `600`.
 
 ```bash
-mkdir -p ~/.config/atlas
+D="${XDG_CONFIG_HOME:-$HOME/.config}/atlas"
+mkdir -p "$D"
 read -rsp 'Clave de EODHD: ' KE; echo
 read -rsp 'Clave de Alpha Vantage: ' KA; echo
-( umask 077; printf '{"eodhd":"%s","alpha_vantage":"%s"}\n' "$KE" "$KA" > ~/.config/atlas/secrets.json )
+( umask 077; printf '{"eodhd":"%s","alpha_vantage":"%s"}\n' "$KE" "$KA" > "$D/secrets.json" )
 unset KE KA
-chmod 600 ~/.config/atlas/secrets.json
-ls -l ~/.config/atlas/secrets.json
+chmod 600 "$D/secrets.json"
+ls -l "$D/secrets.json"
 ```
 
 **Cuenta como «sí»:** la última línea empieza por `-rw-------`.
 
 - **Para cambiar una clave**, vuelve a ejecutar el bloque entero con las dos: sustituye el fichero.
 - **Si solo tienes una**, cambia la línea del `printf` por la de esa fuente, por ejemplo `printf '{"eodhd":"%s"}\n' "$KE"`, y no hace falta la otra línea `read`.
-- **No lo abras con el Bloc de notas de Windows** a través de `\\wsl.localhost`: puede cambiar los finales de línea o dejar una copia. Si alguna vez tienes que mirarlo, `nano ~/.config/atlas/secrets.json` desde WSL.
+- **No lo abras con el Bloc de notas de Windows** a través de `\\wsl.localhost`: puede cambiar los finales de línea o dejar una copia. Si alguna vez tienes que mirarlo, `nano "${XDG_CONFIG_HOME:-$HOME/.config}/atlas/secrets.json"` desde WSL.
 
 > **El límite de WSL, dicho claro:** el `600` protege frente a otros usuarios de Linux, pero **no frente a un programa de Windows de tu mismo usuario**, que puede leer el fichero a través de `\\wsl$` o `\\wsl.localhost`. Es el mismo límite que ya tienen el libro y el token de la consola (ADR-0033). Lo que protege aquí es tu cuenta de Windows.
 
-> Si `echo $XDG_CONFIG_HOME` escribe algo, la consola busca las claves en esa carpeta (`$XDG_CONFIG_HOME/atlas/secrets.json`) y no en `~/.config`. Lo normal es que no escriba nada.
+> **`${XDG_CONFIG_HOME:-$HOME/.config}`** es `~/.config`, salvo que la variable `XDG_CONFIG_HOME` tenga algo: entonces la consola busca las claves en `$XDG_CONFIG_HOME/atlas/secrets.json`, y el bloque las escribe ahí mismo. Lo normal es que `echo $XDG_CONFIG_HOME` no escriba nada. Las órdenes de esta guía usan esa misma expresión para dar siempre con el fichero que lee la consola.
 
 ### Windows sin WSL
 
@@ -137,8 +138,8 @@ Si no sale eso, lo que dice la consola (nunca enseña una clave):
 | Mensaje | Qué pasa | Qué hacer |
 |---|---|---|
 | «Error de uso: comando desconocido: prices», con `salida 64` | La consola compilada es anterior a las órdenes de precios | Repite «Antes: pon al día tu clon y compílalo», al principio de este paso |
-| «No hay claves de fuentes de precios configuradas» | No encuentra el fichero | Comprueba la ruta con `ls -l ~/.config/atlas/secrets.json` |
-| «No se usan las claves de …: otros usuarios de la máquina pueden leer ese fichero» | Permisos distintos de `600` | `chmod 600 ~/.config/atlas/secrets.json` |
+| «No hay claves de fuentes de precios configuradas» | No encuentra el fichero | Comprueba la ruta con `ls -l "${XDG_CONFIG_HOME:-$HOME/.config}/atlas/secrets.json"`; si no está, créalo con el bloque del paso 3 |
+| «No se usan las claves de …: otros usuarios de la máquina pueden leer ese fichero» | Permisos distintos de `600` | La orden `chmod 600 …` que da el propio mensaje, con la ruta del fichero |
 | «… no se puede leer como JSON» | Falta una comilla, sobra una coma… | Vuelve a crearlo con el bloque del paso 3 |
 | «la entrada número N no es una clave que se conozca» | Un nombre que no es `eodhd` ni `alpha_vantage` | Vuelve a crearlo con el bloque del paso 3 |
 | «el valor de «eodhd» no es una clave» | Un valor vacío | Vuelve a crearlo; pega la clave antes de pulsar Intro |
