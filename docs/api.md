@@ -4,6 +4,8 @@ El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a tr
 
 **Estado:** escrito el 2026-09-25 con `docs/prompts/014-ledger-sync-core.md`. **Nada de esto está implementado.** La **feature 014** construye la sincronización contra un **remoto simulado** que cumple la semántica de las rutas de sincronización (§5) sin HTTP; la **feature 015** implementa la API de verdad, el acceso (§3 y §4) y los clientes HTTP. Lo que este documento no decide va marcado **[PENDIENTE]** y lo decide la dirección; una propuesta marcada como tal no es una decisión.
 
+**Puesto al día el 2026-09-25, al cerrar la feature 014** (PR #83). Sigue sin haber HTTP, pero la semántica de §5 ya está escrita y probada como código puro del dominio, el que llamará la Lambda de la 015: `parseAppendBody`, `acceptAppend`, `parsePublishBody`, `parseInitBody`, `acceptInit` e `initDuplicateIds` (`packages/domain/src/sync/remote.ts`), sobre el puerto `RemoteLedger` (`packages/domain/src/ports/remote-ledger.ts`). Los dos remotos simulados de los tests, en memoria y en un directorio, la cumplen. Lo que el código concretó respecto de la primera redacción está marcado «*(014)*» en §5 y §7, y la parte del cliente está en §5.7.
+
 **Si este documento discrepa de una ADR, manda la ADR**, y la discrepancia se anota en el `questions.md` de la feature que la encuentre.
 
 ## 1. Reglas generales
@@ -154,6 +156,7 @@ El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: 
 - `200`, cuerpo = **los bytes exactos** del libro, `Content-Type: application/x-ndjson; charset=utf-8`, cabecera `ETag: "<sha256>"`. Sin compresión que cambie los bytes que el cliente hashea (si CloudFront comprime, el cliente hashea lo descomprimido: lo que cuenta son los bytes del fichero).
 - El cliente comprueba con este cuerpo el **hash del prefijo** que sincronizó (ADR-0026, Parte A): si los bytes de sus primeras `synced_lines` líneas no dan el hash de su marcador, el remoto se ha reescrito y no sube nada.
 - **La API no interpreta la versión de esquema al servir**: un cliente antiguo que no entiende el remoto lo rechaza al cargar (`docs/data-schema.md` §5), y sus pendientes esperan.
+- *(014)* **El puerto del cliente entrega texto, no bytes** (`RemoteSnapshot`: `text` y `etag`). El dominio no tiene decodificador UTF-8, así que el cliente HTTP decodifica los bytes del cuerpo y entrega el texto; el etag sigue siendo el SHA-256 de los bytes. Decodificar no pierde nada, porque toda línea del remoto se escribió desde una cadena, y el bloque 0 de la 014 lo comprobó byte a byte (`specs/014-ledger-sync-core/questions.md` §1.4).
 
 ### 5.2 Añadir líneas
 
@@ -206,6 +209,12 @@ Cuerpo:
 
 **El rechazo es por línea:** la API escribe **el tramo válido hasta la primera línea rechazada**, en un solo `PutObject` condicional, y devuelve el motivo de esa línea. Nada de lo que va detrás se escribe, aunque fuera válido.
 
+*(014)* Detalles que fija el código (`acceptAppend`):
+
+- `rejected.index` es siempre el de **la primera línea de la unidad** que falla, y `rejected.id`, el de su primer evento si se pudo leer. En una pareja o una cadena, `details.member_index` dice qué miembro falló: en los rechazos de las filas 1 a 5, en `pair_incomplete` y `pair_not_contiguous`, en `duplicate_unconfirmed` y en `seal_mismatch`, además de en `pair_rejected` de una cadena.
+- `duplicate_unconfirmed` lleva en `details.existing` los `id` cuya huella repite. Al añadir, la huella se compara con la de los eventos **no anulados**, la regla de siempre (decisión D-Q16 de la 014; en la inicialización vale la de §5.5).
+- **Un remoto que ya tiene eventos inválidos** (una regla endurecida después) no acepta nada más hasta que se repare. Responde `accepted: 0` y el rechazo en el índice 0, con `code: "domain_rejected"` y en `details` `domain_code: "ledger_has_invalid_events"` e `invalid_count`. El cliente no llega a pedirlo: al leer el remoto, para antes con `remote_ledger_invalid` (§5.7).
+
 Respuesta `200` siempre que `If-Match` cuadró:
 
 ```json
@@ -257,7 +266,7 @@ La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la creden
 { "content": "<los bytes enteros del libro del primer dispositivo, como cadena, con sus saltos de línea>", "confirm_duplicate_ids": ["<id>", "…"] }
 ```
 
-Es como **el primer dispositivo** sube su libro (decisión de la dirección, 2026-09-25): **los bytes enteros**, escritos con la operación de líneas crudas, **no línea a línea** por §5.2. Así una presentación o una renuncia de una carpeta ya compactada viaja **con su prefijo intacto**, y su sello sigue cuadrando. La API comprueba antes de escribir que el contenido **carga** con su esquema (ninguna versión más nueva, ninguna línea ilegible), que su proyección es **válida**, y **las dos reglas de ADR-0026 que valen para toda línea que entra en el remoto** (decisión de la dirección, 2026-09-25; nota fechada en ADR-0026): ningún `recorded_at` más allá de la tolerancia del reloj, y **toda huella repetida confirmada** por su `id` en `confirm_duplicate_ids`. **El cliente la deduce del libro, sin volver a preguntar** (decisión de la dirección, 2026-09-25): toda línea que está en el libro local fue aceptada en local —pasó por `confirmDuplicate`, o la escribió una cadena de correcciones de tipos (`writeRateCorrections`) que el usuario confirmó entera—, así que envía los `id` de todo evento cuya huella repite la de uno anterior en el fichero. Cualquier fallo es `init_rejected`, con el código (`line_unreadable`, `schema_version_unsupported`, `domain_rejected`, `recorded_at_in_future`, `duplicate_unconfirmed`…) y la línea en `details`, y no se escribe nada. Las declaraciones de pareja y de cadena no se aplican: no hay cola que partir, porque sube el libro entero. **El cliente se niega a inicializar antes de llamar si su libro no es válido** (por ejemplo, con un `settings_changed` registrado con `acceptInvalid`), y lo explica: hay que repararlo primero. Un `init_rejected` nunca es el camino normal, y nunca deja al dispositivo parado sin explicación. Respuesta `200 { "etag": "…", "lines": n }`.
+Es como **el primer dispositivo** sube su libro (decisión de la dirección, 2026-09-25): **los bytes enteros**, escritos con la operación de líneas crudas, **no línea a línea** por §5.2. Así una presentación o una renuncia de una carpeta ya compactada viaja **con su prefijo intacto**, y su sello sigue cuadrando. La API comprueba antes de escribir que el contenido **carga** con su esquema (ninguna versión más nueva, ninguna línea ilegible), que su proyección es **válida**, y **las dos reglas de ADR-0026 que valen para toda línea que entra en el remoto** (decisión de la dirección, 2026-09-25; nota fechada en ADR-0026): ningún `recorded_at` más allá de la tolerancia del reloj, y **toda huella repetida confirmada** por su `id` en `confirm_duplicate_ids`. **El cliente la deduce del libro, sin volver a preguntar** (decisión de la dirección, 2026-09-25): toda línea que está en el libro local fue aceptada en local —pasó por `confirmDuplicate`, o la escribió una cadena de correcciones de tipos (`writeRateCorrections`) que el usuario confirmó entera—, así que envía los `id` de todo evento cuya huella repite la de uno anterior en el fichero. Cualquier fallo es `init_rejected`, con el código (`line_unreadable`, `schema_version_unsupported`, `domain_rejected`, `recorded_at_in_future`, `duplicate_unconfirmed`…) y la línea en `details`, y no se escribe nada. *(014)* `details.code` es el código; `details.line` es el número de línea, contando desde 1, en los rechazos de una línea, y `details.id` es el evento en `domain_rejected` y `duplicate_unconfirmed`. Una línea con `"\r"` es `init_rejected` con `code: "raw_line_break"`. Las declaraciones de pareja y de cadena no se aplican: no hay cola que partir, porque sube el libro entero. **El cliente se niega a inicializar antes de llamar si su libro no es válido** (por ejemplo, con un `settings_changed` registrado con `acceptInvalid`), y lo explica: hay que repararlo primero. Un `init_rejected` nunca es el camino normal, y nunca deja al dispositivo parado sin explicación. Respuesta `200 { "etag": "…", "lines": n }`.
 
 ### 5.6 Qué es «el mismo evento» tras una reescritura del remoto
 
@@ -268,6 +277,45 @@ No es una ruta: es la regla con la que un cliente clasifica lo que retiene al vo
 | `tax_return_filed` | `ledger_fingerprint` | `compact` lo vuelve a sellar por definición sobre el prefijo reescrito (`resealFilings`, `packages/domain/src/filings/fingerprint.ts`; ADR-0025) |
 
 `filing_fingerprint_waived` no tiene ningún campo en la lista: `compact` escribe renuncias **nuevas** y no reescribe las que ya había. La lista es cerrada: un campo nuevo que `compact` reescriba por definición entra aquí, en la nota de ADR-0026 y en el test a la vez. Mismo `event_id` y misma forma canónica: no se retiene. Mismo `event_id` y cualquier otra diferencia: conflicto real, se retiene. `event_id` ausente del remoto nuevo: se retiene. **Nunca se ofrece rehacer una presentación que el remoto ya tiene.**
+
+### 5.7 La parte del cliente *(014)*
+
+No es una ruta: es lo que el cliente hace con §5.1 a §5.5, fijado por el código de la 014 (`syncDevice`, `initialiseRemote`, `replaceFromRemote` y `joinWithOwnLines` en `packages/adapters/src/sync/client.ts`; `inspect`, `planUpload` y `settle` en `packages/domain/src/sync/client-plan.ts`). Los dos clientes, la consola sobre su carpeta y la web sobre su IndexedDB, comparten esta orquestación. Cada interfaz traduce cada código con su propia frase (`tests/messages.test.ts`).
+
+**Negativas antes de llamar**, sin tocar nada:
+
+| Código | Cuándo |
+|---|---|
+| `sync_not_configured` | Sincronizar en un dispositivo sin `sync/` (o sin claves `sync:*`). Empezar es siempre una elección explícita: inicializar un remoto vacío (§5.5), unirse desde el remoto o unirse subiendo las líneas propias como pendientes |
+| `sync_deactivated` | Sincronizar con el marcador en `disabled`. Para volver hay que unirse otra vez, de forma explícita |
+| `init_refused_invalid_ledger` | Inicializar con un libro que tiene eventos inválidos; `details.invalid` los lista con su código (§5.5) |
+
+**Paradas**: la sincronización para, **no retiene nada** y deja todo pendiente donde estaba.
+
+| Código | Cuándo |
+|---|---|
+| `remote_empty` | El remoto está vacío, el libro tiene líneas y no hay nada sincronizado: no se sube línea a línea, se inicializa (§5.5) |
+| `local_prefix_changed` | El prefijo local ya no da el hash del marcador (`details.synced_lines`) |
+| `remote_rewritten` | El prefijo del remoto no da el hash del marcador (§5.1), al leerlo en el paso 1 (`details.synced_lines`, `details.remote_lines`) o al releerlo en el paso 5. Solo se vuelve a descargar cuando el usuario lo pide |
+| `remote_schema_too_new` | El remoto tiene una línea de una versión de esquema que este cliente no conoce |
+| `remote_unreadable` | Una línea del remoto no se puede leer (`details.line`) |
+| `remote_ledger_invalid` | El remoto ya tiene eventos inválidos (`details.invalid_count`); no es culpa de ninguna línea de la cola (D-Q11) |
+| `join_required` | No hay marcador legible, y la cola tiene líneas que el remoto no tiene y que no están retenidas (`details.own_lines`). Reconstruir el prefijo común no autoriza a mezclar: unirse es siempre explícito (segunda revisión de la PR #83). Sin líneas propias, el marcador se reconstruye y la sincronización sigue |
+| `remote_failed` | Cualquier respuesta sin rechazo por línea, salvo el `412` al añadir, que vuelve a empezar: `details.remote_code` lleva el código tal cual, de la lista cerrada de §7, y `details.status`, el HTTP |
+| `remote_contention` | Tres `412` seguidos (`MAX_REMOTE_RACES`, D-Q9; `details.attempts`) |
+| `local_changed` | El libro local, lo retenido o el marcador cambiaron entre el paso 1 y el paso 6 tres veces seguidas (`MAX_LOCAL_CHANGES`, D-Q9) |
+
+Y un **aviso**, no una parada: `publish_failed` (`details.remote_code`, `details.status`), cuando todo está escrito y solo falló publicar el estado de la cola (§5.3). Lo publica la sincronización siguiente.
+
+**Lo que se retiene**, solo por un rechazo de una línea o unidad: en el paso 3, por el propio cliente, y en el paso 4, por un `rejected.code` de §5.2, que se retiene tal cual. En el paso 3, los motivos son estos:
+
+- `pair_not_contiguous`: una corrección que no va justo detrás de la anulación de su objetivo;
+- `seals_prefix`: una línea que sella el prefijo y ya no caería sobre el mismo;
+- `concurrent_settings`, `concurrent_account` y `concurrent_asset`: fotos concurrentes (D-Q8);
+- `pair_rejected`, `settings_leave_invalid` y `domain_rejected`: rechazos del dominio;
+- `new_duplicate` y `new_closed_year`: avisos nuevos (D-Q3).
+
+Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene con `absent_after_rewrite`, `differs_after_rewrite`, `absent_at_join` y `differs_at_join`, en las mismas unidades que la cola. Mientras quede algo retenido sin resolver, no se sube nada.
 
 ## 6. Datos de referencia
 
@@ -306,6 +354,8 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `not_found` | 404 | Ruta que no existe |
 | `internal` | 500 | Cualquier otro fallo; nada escrito |
 
+*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed` (§5.7), nunca retiene por ellos, y cada interfaz tiene una frase para cada uno.
+
 Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_declaration_invalid`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected`, `seal_mismatch` y `waiver_not_appendable`.
 
 **Qué hace el cliente con cada respuesta** (decisión de la dirección, 2026-09-25): **solo un `rejected.code` retiene** la línea (o la unidad) con su motivo. Un `412` vuelve a empezar la sincronización. Cualquier otra cosa —un 5xx, `transport_rejected`, un fallo de red, `session_invalid`, `device_token_expired` o `device_token_revoked`— **para la sincronización y deja todo pendiente**, para reintentarla después; nunca retiene.
@@ -316,7 +366,7 @@ Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a un
 
 | Pieza | Feature |
 |---|---|
-| El caso de uso puro que reaplica y acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto, el marcador, lo retenido y lo descartado, y un **remoto simulado** que cumple §5 sin HTTP | **014** |
+| El caso de uso puro que reaplica y acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto, el marcador, lo retenido y lo descartado, y un **remoto simulado** que cumple §5 sin HTTP | **014**, fusionada (PR #83, 2026-09-25) |
 | Las órdenes de administración de la consola contra el almacén remoto: `compact` del remoto, restaurar y olvidar un dispositivo, **fuera de la API** (ADR-0026, Parte A) | **015** |
 | La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
 | El correo mensual con los inicios de sesión de la consola y los tokens vivos y emitidos | **016** |
