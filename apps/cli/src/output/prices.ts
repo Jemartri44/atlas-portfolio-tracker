@@ -118,7 +118,11 @@ export const describeSecretsError = (error: SecretsError): string => {
  * euros, said, and purged on request (review of PR #80).
  */
 export const mismatchedNotes = (mismatched: readonly MismatchedCloses[]): string[] =>
-  mismatched.map(
-    (m) =>
-      `Aviso: ${m.asset_id}: ${m.count === 1 ? "1 cierre" : `${m.count} cierres`} de ${SOURCE_NAMES[m.source]} ${m.count === 1 ? "está guardado" : "están guardados"} en una divisa que no es la declarada para esa fuente (${m.declared}); no se usa en ninguna cifra en euros. Púrgalo con «atlas prices purge ${m.asset_id} --source ${m.source}» y se volverá a descargar.`,
-  );
+  mismatched.map((m) => {
+    const closes = m.count === 1 ? "1 cierre" : `${m.count} cierres`;
+    const what =
+      m.misstored === undefined
+        ? `${m.count === 1 ? "está guardado" : "están guardados"} en una divisa que no es la declarada para esa fuente (${m.declared})`
+        : `se ${m.count === 1 ? "guardó" : "guardaron"} en ${m.misstored}, pero esa fuente dijo otra divisa y la versión anterior la confirmó por encima`;
+    return `Aviso: ${m.asset_id}: ${closes} de ${SOURCE_NAMES[m.source]} ${what}; ${m.count === 1 ? "no se usa" : "no se usan"} en ninguna cifra en euros. Púrga${m.count === 1 ? "lo" : "los"} con «atlas prices purge ${m.asset_id} --source ${m.source}» y se volverán a pedir esos días.`;
+  });

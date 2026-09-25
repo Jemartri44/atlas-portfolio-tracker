@@ -433,6 +433,64 @@ describe("review of PR #80 in the console", () => {
   });
 });
 
+describe("second pass of PR #80 in the console", () => {
+  const line = (close: string, currency: string, source: string) =>
+    `${JSON.stringify({ schema_version: 1, date: "2027-06-08", close, currency, source, fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
+  const legacy = (currency: string, over: Record<string, string>) =>
+    JSON.stringify({
+      symbols_format: 1,
+      assets: {
+        etf_b: {
+          currency,
+          eodhd: "TSCO.LSE",
+          alpha_vantage: "TSCO.LON",
+          confirmed_at: "x",
+          currency_check: { eodhd: { at: "x" }, alpha_vantage: { at: "x" } },
+          currency_confirmed_over: over,
+        },
+      },
+    });
+
+  for (const [currency, over, source, close, name] of [
+    ["GBP", { alpha_vantage: "GBX" }, "alpha_vantage", "1000", "Alpha Vantage"],
+    ["GBX", { eodhd: "GBP" }, "eodhd", "10", "EODHD"],
+  ] as const) {
+    it(`leaves out the closes 013 stored as ${currency} over the ${over[source as keyof typeof over]} of ${name}, before and after an update`, async () => {
+      const f = await folder(ledger());
+      await symbols(f.dir, {});
+      await writeFile(join(f.dir, "prices", "symbols.json"), legacy(currency, over));
+      await writeFile(join(f.dir, "prices", "etf_b.jsonl"), line(close, currency, source));
+      const said = `etf_b: 1 cierre de ${name} se guardó en ${currency}, pero esa fuente dijo otra divisa`;
+      const weights = await f.atlas("weights", "--date", "2027-06-09");
+      expect(weights.err).toContain(said);
+      expect(weights.text).not.toMatch(new RegExp(`etf_b\\s+equity\\s+10\\s+${close}\\b`));
+      await f.atlas("prices", "update");
+      expect((await f.atlas("weights", "--date", "2027-06-09")).err).toContain(said);
+      expect((await f.atlas("prices", "status")).text).toContain(
+        `atlas prices purge etf_b --source ${source}`,
+      );
+    });
+  }
+
+  for (const [what, text, reason] of [
+    ["that does not read", "{", "no se entiende"],
+    ["of a newer format", '{"symbols_format":3,"assets":{}}', "versión más nueva"],
+  ] as const) {
+    it(`a symbols.json ${what} degrades the views to the manual prices, and says why`, async () => {
+      const f = await folder(ledger());
+      await symbols(f.dir, {});
+      await writeFile(join(f.dir, "prices", "symbols.json"), text);
+      await writeFile(join(f.dir, "prices", "etf_b.jsonl"), line("10", "GBP", "eodhd"));
+      const weights = await f.atlas("weights", "--date", "2027-06-09");
+      expect(weights.code).toBe(0);
+      expect(weights.err).toContain(reason);
+      expect(weights.err).toContain("no se usan precios automáticos");
+      // The commands that need it still refuse it: they would write it.
+      expect((await f.atlas("prices", "update")).code).not.toBe(0);
+    });
+  }
+});
+
 describe("atlas prices symbols", () => {
   it("declares a correspondence, confirmed against the source, and never assumes the currency", async () => {
     const f = await folder(ledger());

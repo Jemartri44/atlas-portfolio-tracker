@@ -130,7 +130,23 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
     }
     throw error;
   }
-  const read = readCloses(files, parseSymbols(await store.symbols()));
+  let symbols: ReturnType<typeof parseSymbols>;
+  try {
+    symbols = parseSymbols(await store.symbols());
+  } catch (error) {
+    // A correspondence that does not read — or of a newer format — cannot say
+    // which closes are stored in the wrong currency: the views go on with the
+    // manual prices and say why, like a configuration that does not read
+    // (second pass of the review of PR #80), never falling to reading the
+    // closes as they are.
+    if (error instanceof DomainError) {
+      return {
+        notes: [`Aviso: ${describeError(error)} Mientras tanto no se usan precios automáticos.`],
+      };
+    }
+    throw error;
+  }
+  const read = readCloses(files, symbols);
   const { history, note } = await historyOf(folder);
   const notes = [...mismatchedNotes(read.mismatched)];
   const unreadableNotes = read.unreadable.map(
