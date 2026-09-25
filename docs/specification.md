@@ -506,7 +506,7 @@ Repositorio público en GitHub, así que las prácticas son también parte del e
 
 | Entorno | Rama | Infraestructura | Datos |
 |---|---|---|---|
-| `dev` | `develop` | Pila `atlas-dev-*` en la cuenta compartida del usuario, **en reposo** cuando no se usa (tareas programadas desactivadas, sin las claves de precios del usuario) | Datos sintéticos |
+| `dev` | `develop` | Pila `atlas-dev-*` en la cuenta compartida del usuario, **en reposo** cuando no se usa (distribución de CloudFront desactivada, que se activa desde el pipeline con una variable del despliegue y nunca a mano; tareas programadas desactivadas; sin las claves de precios del usuario) | Datos sintéticos |
 | `prod` | `main` | Pila `atlas-prod-*` en la misma cuenta | Datos reales |
 
 - **Aislamiento por políticas, no por cuenta**: todo recurso lleva el prefijo `atlas-<entorno>-` y las etiquetas `project=atlas` y `env=<entorno>`; SSM, bajo `/atlas/<entorno>/`; cada entorno tiene su estado de Terraform, sus roles y **un límite de permisos** que ningún rol suyo puede quitarse. «Datos de producción jamás en dev» lo garantizan **dos cerraduras independientes**: la política de cada rol de `dev`, que solo nombra recursos de `dev`, y la política del bucket de datos de `prod`, que niega a todo principal que no sea de `prod`. **Frente a quien administra la cuenta no hay aislamiento**, y los parámetros de SSM no tienen política de recurso: el riesgo que queda está escrito en ADR-0034.
