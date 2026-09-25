@@ -177,7 +177,7 @@ comandos:
   lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición
   fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor
   prices update|status           los cierres diarios junto al libro (prices/): descargarlos y ver cada fuente y su cupo
-  prices purge <activo> --source S  quita los cierres guardados en una divisa que su fuente no declara, para volver a descargarlos
+  prices purge <activo> --source S  quita los cierres guardados en una divisa que su fuente no declara; sus días se vuelven a pedir una vez
   prices symbols [set|remove] <activo> [--eodhd S] [--alpha-vantage S] --currency C [--eodhd-currency C] [--alpha-vantage-currency C] [--accept-currency]
   fx correct [--reason …]        corrige los tipos que no son los de su fecha fiscal (tras cambiar fiscal_date_rule)
   add … --draft                  guarda como borrador una operación cuyo tipo del BCE aún no se ha publicado

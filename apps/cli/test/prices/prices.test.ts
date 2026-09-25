@@ -491,6 +491,102 @@ describe("second pass of PR #80 in the console", () => {
   }
 });
 
+describe("third pass of PR #80 in the console", () => {
+  const line = (date: string, close: string, currency: string, source: string) =>
+    `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
+  const pending = JSON.stringify({
+    symbols_format: 2,
+    assets: {
+      etf_b: {
+        eodhd: "TSCO.LSE",
+        alpha_vantage: "TSCO.LON",
+        currencies: { eodhd: "GBP", alpha_vantage: "GBP" },
+        confirmed_at: "x",
+        misstored: { alpha_vantage: "GBP" },
+      },
+    },
+  });
+  const said = "atlas prices purge etf_b --source alpha_vantage";
+
+  it("refuses to declare the asset again without the source with closes stored wrong", async () => {
+    const f = await folder(ledger());
+    await symbols(f.dir, {});
+    await writeFile(join(f.dir, "prices", "symbols.json"), pending);
+    await writeFile(
+      join(f.dir, "prices", "etf_b.jsonl"),
+      line("2027-06-08", "1000", "GBP", "alpha_vantage"),
+    );
+    const set = await f.atlas(
+      "prices",
+      "symbols",
+      "set",
+      "etf_b",
+      "--eodhd",
+      "TSCO.LSE",
+      "--currency",
+      "GBP",
+    );
+    expect(set.code).not.toBe(0);
+    expect(`${set.text}${set.err}`).toContain(said);
+    // Refused before spending a call.
+    expect(f.eodhd.calls).toEqual([]);
+    expect(await readFile(join(f.dir, "prices", "symbols.json"), "utf8")).toBe(pending);
+    expect((await f.atlas("weights", "--date", "2027-06-09")).err).toContain(
+      "etf_b: 1 cierre de Alpha Vantage",
+    );
+  });
+
+  it("refuses to remove the asset while it has them", async () => {
+    const f = await folder(ledger());
+    await symbols(f.dir, {});
+    await writeFile(join(f.dir, "prices", "symbols.json"), pending);
+    await writeFile(
+      join(f.dir, "prices", "etf_b.jsonl"),
+      line("2027-06-08", "1000", "GBP", "alpha_vantage"),
+    );
+    const removed = await f.atlas("prices", "symbols", "remove", "etf_b", "--yes");
+    expect(removed.code).not.toBe(0);
+    expect(`${removed.text}${removed.err}`).toContain(said);
+    expect(await readFile(join(f.dir, "prices", "symbols.json"), "utf8")).toBe(pending);
+  });
+
+  it("promises to ask the days again once, and says the ones no source served as a hole", async () => {
+    const f = await folder(ledger());
+    await symbols(f.dir, {});
+    await writeFile(
+      join(f.dir, "prices", "symbols.json"),
+      JSON.stringify({
+        symbols_format: 2,
+        assets: {
+          etf_b: {
+            eodhd: "TSCO.LSE",
+            alpha_vantage: "TSCO.LON",
+            currencies: { eodhd: "GBP", alpha_vantage: "GBX" },
+            confirmed_at: "x",
+            currency_check: { eodhd: { at: "x" }, alpha_vantage: { at: "x" } },
+          },
+        },
+      }),
+    );
+    await writeFile(
+      join(f.dir, "prices", "etf_b.jsonl"),
+      line("2027-06-04", "1000", "GBP", "alpha_vantage") + line("2027-06-08", "10", "GBP", "eodhd"),
+    );
+    const purged = await f.atlas("prices", "purge", "etf_b", "--source", "alpha_vantage", "--yes");
+    expect(purged.text).toContain("vuelve a pedir esos días una vez");
+    expect(purged.text).toContain("hueco");
+    f.eodhd = new ScriptedSource("eodhd", () => ({
+      ok: true,
+      value: [{ date: "2027-06-08", close: "10" }],
+    }));
+    await f.atlas("prices", "update");
+    const status = await f.atlas("prices", "status");
+    expect(status.text).toContain(
+      "etf_b: 1 día quitado de Alpha Vantage (2027-06-04) se pidió otra vez y ninguna fuente lo sirvió: queda como hueco",
+    );
+  });
+});
+
 describe("atlas prices symbols", () => {
   it("declares a correspondence, confirmed against the source, and never assumes the currency", async () => {
     const f = await folder(ledger());

@@ -10,6 +10,7 @@ import { FilePriceStore } from "@atlas/adapters";
 import { type AssetId, settingsAt, todayInMadrid } from "@atlas/domain";
 import {
   type AssetOutcome,
+  assertNothingMisstored,
   checkSymbols,
   isQuoteSource,
   type PriceStatus,
@@ -30,7 +31,7 @@ import {
 } from "@atlas/domain/quotes";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
-import { FAILURE_TEXT, mismatchedNotes, SOURCE_NAMES } from "../output/prices.js";
+import { FAILURE_TEXT, mismatchedNotes, SOURCE_NAMES, unservedNotes } from "../output/prices.js";
 import { table } from "../output/table.js";
 import { folderOf, keysFor, sourcesFor } from "../prices/load.js";
 import { confirm, loadForQuery, render } from "./shared.js";
@@ -170,8 +171,9 @@ const status = async (ctx: Context): Promise<number> => {
       ]),
     ),
     ...mismatchedNotes(read.mismatched),
+    ...unservedNotes(read.unserved),
   ].join("\n");
-  render(ctx, { ...view, mismatched: read.mismatched }, text);
+  render(ctx, { ...view, mismatched: read.mismatched, unserved: read.unserved }, text);
   return EXIT.ok;
 };
 
@@ -190,7 +192,7 @@ const purge = async (ctx: Context, assetId: string, flags: Flags): Promise<numbe
     count > 0 &&
     !(await confirm(
       ctx,
-      `¿Quitar de prices/ ${count === 1 ? "1 cierre" : `${count} cierres`} de ${SOURCE_NAMES[source]} de ${assetId} guardados en una divisa que no es la declarada? Se volverán a descargar. [s/N] `,
+      `¿Quitar de prices/ ${count === 1 ? "1 cierre" : `${count} cierres`} de ${SOURCE_NAMES[source]} de ${assetId} guardados en una divisa que no es la declarada? La próxima descarga vuelve a pedir esos días una vez; los que ninguna fuente sirva quedan como hueco. [s/N] `,
     ))
   ) {
     ctx.io.out("No se ha quitado nada.");
@@ -202,7 +204,7 @@ const purge = async (ctx: Context, assetId: string, flags: Flags): Promise<numbe
     { asset_id: assetId, source, removed },
     removed === 0
       ? `${assetId} no tiene cierres de ${SOURCE_NAMES[source]} en otra divisa que la declarada: no se ha quitado nada.`
-      : `Quitados ${removed === 1 ? "1 cierre" : `${removed} cierres`} de ${SOURCE_NAMES[source]} de ${assetId}; la próxima descarga vuelve a pedir esos días.`,
+      : `Quitados ${removed === 1 ? "1 cierre" : `${removed} cierres`} de ${SOURCE_NAMES[source]} de ${assetId}; la próxima descarga vuelve a pedir esos días una vez, y los que ninguna fuente sirva quedan como hueco, dicho en «atlas prices status».`,
   );
   return EXIT.ok;
 };
@@ -309,6 +311,8 @@ const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<
     ctx.io.err(note);
   }
   const store = new FilePriceStore(folderOf(ctx));
+  // Closes stored wrong keep their source declared: refused before any call.
+  await assertNothingMisstored(store, assetId, declaration);
   const now = () => ctx.deps.clock.now();
   const check = await checkSymbols({ declaration, store, sources: sourcesFor(ctx, keys), now });
   if (!check.ok) {

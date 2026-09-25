@@ -4,7 +4,12 @@
 
 import type { SecretsError } from "@atlas/adapters";
 import type { PriceLookup } from "@atlas/domain";
-import type { MismatchedCloses, QuoteFailureKind, QuoteSource } from "@atlas/domain/quotes";
+import type {
+  MismatchedCloses,
+  QuoteFailureKind,
+  QuoteSource,
+  UnservedDays,
+} from "@atlas/domain/quotes";
 import { fxMissingText } from "./messages.js";
 
 export const SOURCE_NAMES: Record<QuoteSource, string> = {
@@ -124,5 +129,12 @@ export const mismatchedNotes = (mismatched: readonly MismatchedCloses[]): string
       m.misstored === undefined
         ? `${m.count === 1 ? "está guardado" : "están guardados"} en una divisa que no es la declarada para esa fuente (${m.declared})`
         : `se ${m.count === 1 ? "guardó" : "guardaron"} en ${m.misstored}, pero esa fuente dijo otra divisa y la versión anterior la confirmó por encima`;
-    return `Aviso: ${m.asset_id}: ${closes} de ${SOURCE_NAMES[m.source]} ${what}; ${m.count === 1 ? "no se usa" : "no se usan"} en ninguna cifra en euros. Púrga${m.count === 1 ? "lo" : "los"} con «atlas prices purge ${m.asset_id} --source ${m.source}» y se volverán a pedir esos días.`;
+    return `Aviso: ${m.asset_id}: ${closes} de ${SOURCE_NAMES[m.source]} ${what}; ${m.count === 1 ? "no se usa" : "no se usan"} en ninguna cifra en euros. Púrga${m.count === 1 ? "lo" : "los"} con «atlas prices purge ${m.asset_id} --source ${m.source}» y la próxima descarga vuelve a pedir esos días una vez.`;
   });
+
+/** The days asked for again once that no source served: a hole, said. */
+export const unservedNotes = (unserved: readonly UnservedDays[]): string[] =>
+  unserved.map(
+    (u) =>
+      `Aviso: ${u.asset_id}: ${u.dates.length === 1 ? "1 día quitado" : `${u.dates.length} días quitados`} de ${SOURCE_NAMES[u.source]} (${u.dates.join(", ")}) se ${u.dates.length === 1 ? "pidió" : "pidieron"} otra vez y ninguna fuente ${u.dates.length === 1 ? "lo sirvió: queda como hueco" : "los sirvió: quedan como hueco"}. No se vuelve${u.dates.length === 1 ? "" : "n"} a pedir.`,
+  );
