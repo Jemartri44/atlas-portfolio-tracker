@@ -145,13 +145,26 @@ echo "salida $?"
 
 ### B3. Dar a cada activo un símbolo real
 
-El libro sintético tiene hoy posición en estos activos, que son los que la consola descargará. Cada orden **gasta una llamada por fuente**, porque contrasta la divisa declarada con los datos de la fuente:
+El libro sintético tiene hoy posición en estos activos, que son los que la consola descargará. **La divisa se declara por fuente**: cada símbolo lleva la divisa en la que esa fuente da sus cierres (`--currency` vale para todas las fuentes de la orden que no lleven la suya). Cada orden **gasta una llamada por fuente**, porque contrasta la divisa declarada con los datos de la fuente.
 
 ```bash
 atlas prices symbols set ast_world --currency EUR --eodhd IWDA.AS
 atlas prices symbols set ast_gold  --currency USD --alpha-vantage AAPL
-atlas prices symbols set ast_alpha --currency GBX --eodhd TSCO.LSE --alpha-vantage TSCO.LON
 ```
+
+**Londres (`ast_alpha`)**, con las dos fuentes y una divisa cada una. La de Alpha Vantage es `GBX` (peniques: es lo que dice su búsqueda para `TSCO.LON`). La de EODHD depende de **A3**, el `close` de `TSCO.LSE`:
+
+- si era de **cientos** (peniques), EODHD da los cierres en peniques aunque su listado diga `GBP`: declara `GBX`;
+  ```bash
+  atlas prices symbols set ast_alpha --eodhd TSCO.LSE --eodhd-currency GBX --alpha-vantage TSCO.LON --alpha-vantage-currency GBX
+  ```
+  La consola dirá que EODHD da `GBP` y te pedirá confirmar `GBX`: **confirma con `s`**, porque lo que manda es la unidad de los cierres, no la del listado.
+- si era de **unidades** (libras), declara `GBP`; no debería preguntar nada:
+  ```bash
+  atlas prices symbols set ast_alpha --eodhd TSCO.LSE --eodhd-currency GBP --alpha-vantage TSCO.LON --alpha-vantage-currency GBX
+  ```
+
+Las dos formas dan el mismo valor en euros: la aplicación convierte los peniques con el tipo de la libra por cien.
 
 Y estas dos, **solo si la parte A dijo que sí**:
 
@@ -161,11 +174,11 @@ atlas prices symbols set ast_mm  --currency EUR --eodhd ISIN1.EUFUND        # so
 atlas prices symbols
 ```
 
-- A `ast_world` se le da un ETF europeo; a `ast_gold`, una acción de EE. UU. **solo en Alpha Vantage**, para que esa fuente se pruebe; a `ast_alpha`, una acción de Londres declarada en peniques (`GBX`), con las dos fuentes.
-- **Si la consola dice que la fuente da otra divisa** y te pide confirmar, anota lo que dijo. En `ast_alpha` (Londres) decide con A3: si el cierre de A3 era de **cientos** (peniques), **confirma con `s`**, porque lo que manda es la unidad de los cierres, no la del listado; si era de **unidades** (libras), responde **`N`** y repite la orden con `--currency GBP`. En cualquier otro activo, responde **`N`** y repite la orden con la divisa que dijo la fuente.
+- A `ast_world` se le da un ETF europeo; a `ast_gold`, una acción de EE. UU. **solo en Alpha Vantage**, para que esa fuente se pruebe; a `ast_alpha`, una acción de Londres con las dos fuentes, cada una en su divisa.
+- **Si la consola dice que una fuente da otra divisa** y te pide confirmar, anota lo que dijo. En Londres, sigue lo de arriba. En cualquier otro activo, responde **`N`** y repite la orden con la divisa que dijo esa fuente (en su `--eodhd-currency` o `--alpha-vantage-currency`).
 - **Si una orden falla** (por ejemplo «Error: EODHD no tiene ese símbolo (o la clave no da acceso a él) al confirmar el símbolo: no se ha guardado nada», que es lo que da un 403 en `BTC-EUR.CC` o en `EUFUND`, o «ha rechazado la clave», que es un 401): **anota la línea tal como sale y sigue con la siguiente orden, sin reintentar**. Aunque el mensaje diga «Vuelve a intentarlo más tarde», aquí no hace falta: ese activo se queda sin símbolo y la prueba sigue.
 - **Cada reintento y cada `N` gastan cupo**: la consola pregunta a la fuente **antes** de enseñarte el desacuerdo, así que esa llamada ya está gastada aunque no se guarde nada, y repetir la orden la vuelve a gastar.
-- **Cuenta como «sí»:** cada orden que no falla termina con «Símbolos de … guardados en prices/symbols.json», y la tabla final dice lo que contrastó cada fuente, sin «sin contrastar».
+- **Cuenta como «sí»:** cada orden que no falla termina con «Símbolos de … guardados en prices/symbols.json (EODHD en …, Alpha Vantage en …)», y la tabla final enseña cada símbolo con su divisa, por ejemplo `TSCO.LSE (GBX)` y `TSCO.LON (GBX)`, y lo que contrastó cada fuente, sin «sin contrastar».
 
 ### B4. Descargar dos veces seguidas
 
@@ -183,6 +196,16 @@ atlas prices status
 - en `prices status`, «gastado hoy» cuadra con lo que has hecho, y ninguna fuente tiene fallos seguidos.
 
 Si un activo sale con fallos, anota la línea tal como sale (no lleva claves).
+
+**Si `prices status` avisa de cierres guardados en otra divisa** («… se guardó en GBP, pero esa fuente dijo otra divisa …; no se usa en ninguna cifra en euros»): pasa si esa carpeta ya tenía precios descargados con una versión anterior de la consola, que guardaba una sola divisa por activo. En una carpeta de prueba nueva no debería salir. Si sale, anótalo, y arréglalo así (con el activo y la fuente que diga el aviso):
+
+```bash
+atlas prices symbols set ast_alpha --eodhd TSCO.LSE --eodhd-currency GBX --alpha-vantage TSCO.LON --alpha-vantage-currency GBX   # la misma declaración que hiciste en B3 (GBX o GBP en EODHD, según A3)
+atlas prices purge ast_alpha --source alpha_vantage     # pregunta antes; responde s
+atlas prices update; atlas prices status
+```
+
+`purge` quita solo esos cierres mal guardados, y la siguiente descarga vuelve a pedir esos días **una vez**; los que ninguna fuente sirva quedan como hueco, y `prices status` lo dice. Mientras no los purgues, la consola no te deja quitar ese activo ni declararlo sin esa fuente, y te lo dice con la orden de `purge`.
 
 ### B5. Mirar los precios en las vistas
 
