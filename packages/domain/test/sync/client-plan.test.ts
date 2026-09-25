@@ -143,16 +143,30 @@ describe("inspect: steps 1 and 2", () => {
   });
 
   it("rebuilds the synced prefix without a marker as the part in common", () => {
+    const foreign = device(200).deposit({ account_id: "acc_fund", amount: "3" });
+    const result = inspected(localSide(events, 0, { marker: undefined }), [...events, foreign]);
+    expect(result.synced).toBe(n);
+    expect(result.queue).toEqual([]);
+    expect(result.foreign).toEqual([foreign]);
+  });
+
+  it("never merges a ledger of its own on a rebuilt marker: that is joining, always explicit", () => {
     const b = device(100);
     const pending = b.deposit({ account_id: "acc_fund" });
     const foreign = device(200).deposit({ account_id: "acc_fund", amount: "3" });
-    const result = inspected(localSide([...events, pending], 0, { marker: undefined }), [
-      ...events,
-      foreign,
-    ]);
-    expect(result.synced).toBe(n);
-    expect(result.queue).toEqual(linesOf([pending]));
-    expect(result.foreign).toEqual([foreign]);
+    expect(
+      stopped(
+        localSide([...events, pending], 0, { marker: undefined }),
+        textOf([...events, foreign]),
+      ),
+    ).toEqual({ code: "join_required", details: { own_lines: 1 } });
+    // What the remote already has, or what is already held, is not a ledger of its own.
+    expect(
+      inspected(
+        localSide([...events, pending], 0, { marker: undefined, held: linesOf([pending]) }),
+        [...events],
+      ).queue,
+    ).toEqual([]);
   });
 
   it("takes out of the queue, by exact bytes, what the remote already has and what is already held (R4)", () => {

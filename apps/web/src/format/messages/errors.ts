@@ -443,6 +443,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.",
   redo_partner_discarded: () =>
     "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.",
+  join_required: (d) =>
+    `La sincronización de este navegador perdió su estado, y aquí hay ${count(d.own_lines)} operaciones que la nube no tiene. No se mezclan solas: unirse a la nube es siempre una elección explícita. No se ha tocado nada.`,
   accept_invalid_while_synced: (d) =>
     `Tus datos se sincronizan, y este cambio dejaría ${count(d.affected)} operaciones inválidas: tus datos quedarían inválidos, no se podrían sincronizar y la sincronización se pararía. Repara antes esas operaciones (Ajustes → Verificación) o desactiva la sincronización de forma explícita.`,
   held_unit_unknown: () => "Ya no hay nada retenido ahí: puede que ya se haya resuelto.",

@@ -399,6 +399,8 @@ export const describeError = (error: DomainError): string => {
       return "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.";
     case "redo_partner_discarded":
       return "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.";
+    case "join_required":
+      return `Esta carpeta tiene la sincronización sin su marcador, y el libro tiene ${typeof d.own_lines === "number" ? d.own_lines : 0} líneas que la nube no tiene. Reconstruir el marcador no basta para mezclarlas: unirse a la nube es siempre una elección explícita (desde la nube, o con tus líneas). No se ha tocado nada.`;
     case "accept_invalid_while_synced":
       return `Esta carpeta se sincroniza, y ese cambio de configuración dejaría inválidos ${Array.isArray(d.affected) ? d.affected.length : 0} eventos: el libro quedaría inválido, no se podría sincronizar y la sincronización se pararía. Repara antes esos eventos (atlas check te los enseña), o desactiva la sincronización de forma explícita; --accept-invalid no vale con la sincronización configurada.`;
     case "held_unit_unknown":

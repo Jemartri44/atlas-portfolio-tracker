@@ -418,6 +418,22 @@ describe("starting is explicit (NB3, NB4 of the review of PR #83)", () => {
     expect((await one.sync.read()).presence).toEqual({ present: true, marker: "missing" });
   });
 
+  it("does not merge a ledger of its own on a sync/ without a marker: joining is explicit", async () => {
+    const { bucket, options, one } = await pair((events) => consoleDevice(events));
+    await one.record([new Builder(100).deposit("50")]);
+    const { rm } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    await rm(join((one as unknown as { dir: string }).dir, "sync", "state.json"));
+    const remote = await bucket.text();
+    const local = await one.text();
+    expect(await syncDevice(one.sync, bucket.as("one"), options)).toEqual({
+      status: "stopped",
+      stop: { code: "join_required", details: { own_lines: 1 } },
+    });
+    expect(await bucket.text()).toBe(remote);
+    expect(await one.text()).toBe(local);
+    expect((await one.sync.read()).presence).toEqual({ present: true, marker: "missing" });
+  });
 });
 
 describe("the local ledger changing under a sync (step 6)", () => {

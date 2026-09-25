@@ -158,6 +158,13 @@ export const inspect = (
       queueEvents.push(local.events[synced + index] as LedgerEvent);
     }
   });
+  // Without a marker the synced prefix is rebuilt, and that says what is in
+  // common, never that the rest may be merged: lines of its own that the
+  // remote does not have make it the case of joining, which is always an
+  // explicit choice (second review of PR #83), as for a device never synced.
+  if (marker === undefined && queue.length > 0) {
+    return stop({ code: "join_required", details: { own_lines: queue.length } });
+  }
   const foreign = remoteLines
     .map((line, index) => ({ line, event: remoteEvents[index] as LedgerEvent }))
     .slice(synced)
