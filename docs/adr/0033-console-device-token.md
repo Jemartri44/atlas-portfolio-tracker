@@ -234,3 +234,11 @@ La verificación concluyó que **el diseño de base aguanta**: PKCE, nada por la
 ## Nota del 2026-09-25 (prompt de la feature 014)
 
 **Cómo se liga a su sesión el identificador de dispositivo de la web la decide la feature 015**, no la 014. El punto 6 lo mandaba a `docs/api.md` «como punto de la 014», y `docs/api.md` §5.4 lo deja escrito con lo que está fijado —el dispositivo sale de la credencial, nunca del cuerpo— y tres opciones sin elegir. *Por qué en la 015:* es la feature que construye la sesión de la web, la API y la sincronización desde la SPA, así que es donde las opciones se pueden probar contra el flujo real de ADR-0027; la 014 no tiene sesión ni HTTP, y su remoto simulado recibe el dispositivo como parámetro. Decidirlo antes sería elegir sin poder probar.
+
+## Nota del 2026-09-25 (decisión del usuario; ADR-0034 propuesta)
+
+No habrá cuentas miembro dedicadas: `dev` y `prod` viven en una cuenta que el usuario comparte con otros proyectos (ADR-0028, nota del mismo día; ADR-0034, propuesta). Lo que cambia aquí:
+
+- **Punto 3**: «`dev` y `prod` tienen registros distintos en cuentas distintas» pasa a ser **en prefijos distintos de la misma cuenta** (`/atlas/dev/device-tokens/` y `/atlas/prod/device-tokens/`). La separación la dan las políticas de cada rol, que solo nombran su prefijo, y el límite de permisos de cada entorno (ADR-0034, filas 4 y 7). **SSM no tiene política de recurso**: cualquier rol de la cuenta con `ssm:GetParameter` sobre `*` lee el registro. Guarda hashes, no tokens, pero también el par `{sub, email}` (ADR-0034, «Riesgo que queda», punto 2).
+- **Punto 9**: el rendimiento de SSM (40 lecturas por segundo) y las 20.000 peticiones gratuitas de KMS al mes **son de la cuenta y la región, y se comparten** con los otros proyectos. Leer el registro en cada petición sin caché sigue sobrando para un usuario, salvo que otro proyecto lea SSM de forma intensiva (ADR-0034, comprobación C16). Un `ThrottlingException` de SSM es un fallo transitorio con su código y **nunca** deja pasar un token.
+- **Punto 8, revocar todos sin Google**: la hace el rol de administración del entorno, asumido con MFA independiente de Google (ADR-0034, fila 16), en lugar de la administración desde la cuenta de gestión.

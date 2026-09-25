@@ -65,3 +65,10 @@ Decidida por la dirección el mismo día. El paso 5 se apoyaba en `LedgerStore.r
 ## Nota del 2026-09-25 (cierre de la feature 013)
 
 La segunda enmienda de ADR-0031 pedía excluir `cache/` de los volcados mensuales, porque allí iban a vivir los datos de CoinGecko, cuyas condiciones desaconsejan acumularlos. **Esa exclusión ya no hace falta**: CoinGecko salió de la feature 013 (ADR-0031, tercera enmienda) y **`cache/` no existe**. Lo que el paso 3 llama «los precios» es `prices/` entero —los cierres, `symbols.json`, `_status.json` y `config.json`—, y **ninguno guarda claves ni direcciones**: las claves viven fuera de la carpeta del libro, en `~/.config/atlas/secrets.json`, y en la nube en SSM (`docs/data-schema.md` §1). Hoy `atlas backup` copia solo el libro; el volcado mensual con precios llegará con las tareas programadas.
+
+## Nota del 2026-09-25 (decisión del usuario; ADR-0034 propuesta)
+
+No habrá cuentas miembro dedicadas: Atlas se despliega en una cuenta de AWS que el usuario comparte con otros proyectos, con `dev` y `prod` en ella (ADR-0028, nota del mismo día; ADR-0034, propuesta). Dos cosas cambian aquí:
+
+- **«Si se pierde la cuenta de producción»** deja de ser un caso aparte: la cuenta de `prod` es la de los otros proyectos del usuario. Perderla (cierre, suspensión o compromiso) se recupera igual —Terraform levanta la pila en otra cuenta, el libro vuelve desde una réplica o el disco, y `documents/` e `imports/` desde el disco—, pero **esa otra cuenta no existe todavía** y habría que crearla entonces. Las capas 1 y 4 (réplicas y disco) son las que no dependen de la cuenta, y ahora pesan más.
+- **El ensayo de la etapa de despliegue** no puede perder una cuenta compartida para ensayar: pasa a ser **destruir la pila de `dev` y levantarla desde cero** con Terraform, con datos sintéticos, y comprobar que el libro sintético vuelve entero. La regla de no ensayar nunca con datos reales en `dev` no cambia.
