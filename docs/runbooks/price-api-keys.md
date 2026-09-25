@@ -114,10 +114,10 @@ echo "salida $?"
 
 ### El libro de prueba
 
-En la misma terminal (si abres otra, repite también la línea de `REPO`):
+En la misma terminal. La primera línea conserva la ruta de tu clon que pusiste en «Antes»; si abres otra terminal, vuelve a ejecutar antes la línea `REPO=…` de «Antes», con tu ruta:
 
 ```bash
-REPO=~/projects/atlas-portfolio-tracker
+REPO="${REPO:-$HOME/projects/atlas-portfolio-tracker}"
 P=~/atlas-prueba-claves
 atlas() { node "$REPO/apps/cli/dist/main.js" --ledger "$P/ledger.jsonl" "$@"; }
 mkdir -p "$P"
