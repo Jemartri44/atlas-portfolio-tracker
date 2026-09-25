@@ -300,7 +300,7 @@ Visto bueno al plan, con estas decisiones. Lo que cambian en `spec.md` y `plan.m
 - **Lo que enseña un precio** (`components/Price.tsx`, `view-models/price-info.ts`): su origen (manual, EODHD, Alpha Vantage), la marca de aproximación (≈, siempre), y la de «sin valor en euros» con el motivo. Todo pasa por `Amount` y respeta la privacidad.
 - **Ajustes, «Precios automáticos»**: de dónde vienen, cuántos activos, hasta qué día; importar a mano (`.jsonl` de `prices/`); **en el móvil: «En el teléfono no hay precios automáticos hasta que exista la sincronización con la nube»**, sin «próximamente»; y que la consola descarga los activos **de su libro** (P5).
 - **El defecto de la 012 arreglado** (§6.4 (d)): un `atlas.config.json` mal escrito da `problem: "config"` con la clave que no se entiende, no «storage». Rojo antes (la excepción subía al `catch` de `loadWebHistory`), verde después, y mutante muerto.
-- **Arranque**: 75.712 bytes, dentro del techo de 75.829. Frente a `develop` (75.418), **+294** en toda la feature: los +258 de la puerta (bloque 2 de la puerta, medido y autorizado) más **+36** del campo `external?` de `contributionPlan` (bloque 4), que cabe en el techo ya subido y dentro del tope de +0,3 KB (307 bytes) de D-Q7. **Total**: 267,19 KB (273.607 bytes), techo **267,5** en su propio commit (`0ec32be`), con el desglose trozo a trozo contra `develop` en el comentario de `check-bundle.mjs` (el trozo `quotes` +2,1; `ajustes` +0,9; mensajes +0,5; `chart` +0,5; dominio +0,3; pantallas +0,5).
+- **Arranque** *(cifra corregida en la revisión de la PR #78, §10: en la cabeza de la rama revisada eran **+303**, no +294; la de abajo era la de este bloque antes de las capturas)*: 75.712 bytes, dentro del techo de 75.829. Frente a `develop` (75.418), **+294** en toda la feature: los +258 de la puerta (bloque 2 de la puerta, medido y autorizado) más **+36** del campo `external?` de `contributionPlan` (bloque 4), que cabe en el techo ya subido y dentro del tope de +0,3 KB (307 bytes) de D-Q7. **Total**: 267,19 KB (273.607 bytes), techo **267,5** en su propio commit (`0ec32be`), con el desglose trozo a trozo contra `develop` en el comentario de `check-bundle.mjs` (el trozo `quotes` +2,1; `ajustes` +0,9; mensajes +0,5; `chart` +0,5; dominio +0,3; pantallas +0,5).
 - **Las series** (la gráfica de la evolución del patrimonio) **siguen con las fechas de las valoraciones**: `netWorthSeries` proyecta desde los eventos y no recibe fuente externa. §6.4 (h) permite usar fechas automáticas, no lo exige; la función `quoteDates` está en `@atlas/domain/quotes` para cuando se haga. **Pendiente, dicho**.
 - **Mutantes del bloque 5** (`mut-013/block5-013.log`): 20 (un módulo de precios en el marco: el *build* se para, y lo dice `LAZY_ONLY`: «es de arranque y trae los precios automáticos»), 12 quater (el `atlas.config.json` otra vez como «storage»), la marca de aproximación, la de «sin valor en euros», el origen, el teléfono que no dice nada, las pantallas que no pasan las cotizaciones, 15 (la web que escribe en la carpeta: el test existente, sin tocarlo) y una importación a medias. Todos muertos a la primera.
 
@@ -370,3 +370,48 @@ La feature está construida con dobles; **se da por verificada solo con las clav
 - **`docs/specification.md` §7** (la tabla y §7.2: CoinGecko fuera, «la entrada manual gana siempre» → P2; Alpha Vantage gratuito solo ve 100 días) y **§11.8** («con ellas van el orden de las fuentes y su presupuesto» deja de ser cierto con P1; CoinGecko fuera).
 - **`docs/prompts/README.md`** al cerrar, y en el prompt 013 §7, la errata de Q9.
 - **El comentario de `bucket-stats`/series**: las series del patrimonio siguen sin fechas automáticas (§7.6); si la dirección lo quiere, es trabajo aparte.
+
+---
+
+## 10. Revisión adversarial de la PR #78 (2026-09-25)
+
+Sin bloqueantes: con cierres de 98.765 € posteriores a todas las valoraciones, las 60 salidas fiscales salen idénticas; ninguna fuga de clave en 24 ejecuciones con seis formas de fallo; el cupo aguanta con tres consolas a la vez. Dos defectos de funcionamiento y varios arreglos baratos, **decididos por la dirección** y aplicados así:
+
+1. **Una cotización sin tipo del BCE tapaba una valoración con valor en euros y bloqueaba la aportación** (en Londres en peniques, para siempre).
+   - **Todo cálculo en euros usa el precio más reciente que tenga valor en euros.** La puerta (`choose` en `prices.ts`) elige por P2 **entre los precios con valor en euros**. Una cotización más nueva sin él viaja como `newer_quote`, y las dos interfaces la enseñan al lado, como información y con su motivo.
+   - En los cierres automáticos, `externalPricesOf` vuelve atrás hasta el último cierre que convierte y lleva el más nuevo como `newer`. Deja de mirar atrás cuando ningún cierre de esa divisa puede convertir: sin histórico, o con una divisa que el BCE no publica.
+   - **GBX = GBP / 100**, con la tabla explícita `SUBUNITS` (solo GBX) en `quotes/external.ts`. `fx_rate` es el tipo de la libra por cien (peniques por euro), y una subunidad que no está en la tabla sigue sin tipo.
+   - El mensaje de `missing_manual_prices` dice ahora **precio en euros**, en el dominio y en las dos interfaces, con los dos remedios.
+2. **Nunca se guarda el valor del día en curso.** La cascada pide y guarda hasta **ayer** (`to = today − 1`). Lo prueba el caso del revisor: el miércoles por la tarde llega un «cierre» del miércoles, y no se guarda.
+3. **D-Q1**:
+   - El puerto gana `ready?()`, que la cascada y la declaración llaman **antes de reservar nada**.
+   - `EodhdPriceSource.ready()` lanza `ExactJsonUnsupported` donde `JSON.parse` no da `context`. La consola para con su mensaje, sin gastar cupo y sin escribir `_status.json`.
+   - Tests con un `JSON.parse` sin `context` en el adaptador, en el dominio y en la consola.
+4. **Un `atlas.config.json` mal escrito ya no tumba las vistas de la consola.** Se dice con la clave que no se entiende, y la vista sigue con los precios manuales.
+5. **La congelación de claves**:
+   - `interfaceKeys` lee también las claves entre comillas.
+   - El contraste con `Object.keys(createEmptyState())` va en un test del dominio (`test/projections/state-keys.test.ts`), no en el de arquitectura. Importar el dominio desde el de arquitectura hizo que `tsc -b` compilara **gemelos `.js` junto a 18 fuentes del dominio**. Esos gemelos, ignorados por git, los usaron luego Vite y vitest en lugar de los `.ts`.
+   - Lo cazó el guion de mutación, que se niega a correr con gemelos. Se borraron y se volvió a medir todo: mismas cifras, porque los gemelos eran de fuentes que no habían cambiado desde entonces. Queda dicho aquí.
+6. **Una correspondencia sin contrastar se contrasta antes de su primera descarga.**
+   - Sin `currency_check` de esa fuente, `updatePrices` reserva una llamada, pregunta la divisa a la fuente, lo anota en `symbols.json` bajo el cerrojo y solo si coincide descarga.
+   - Si la declaración cambió entre medias, no se toca.
+   - Si no se pudo contrastar (sin cupo, fallo de la fuente), no se descarga nada.
+   - `atlas prices symbols` dice «sin contrastar».
+7. **El aviso de aproximación lo emite `contributionPlan`**, como nota con código `weights_use_approximation`. Se quitaron los añadidos de la consola y de la web; la web lo pinta en la tarjeta de la aportación. En los pesos, cada fila lleva su marca ≈, que decide el dominio.
+8. **La cifra del arranque**:
+   - Era +303, no +294. El comentario de `check-bundle.mjs` y §7.6 están corregidos.
+   - Tras los arreglos: **75.690 bytes, +272**. Para mantenerse en esa cifra hubo que hacer dos cosas:
+     - las pantallas cargan el módulo de cotizaciones bajo demanda, para que la entrada no lo precargue (−33 bytes);
+     - borrar los precios importados no usa `idbDelete`, que nadie del arranque importaba (−35 bytes).
+   - **El techo del arranque es ahora `develop` + 307** (75.725): pasarse del tope de D-Q7 para el *build*. Ya no depende de un comentario.
+   - Total: 267,79 KB, techo 268,1 en su propio commit.
+9. **R17, R18 y R19** muertos con tests nuevos: una divisa que el BCE dejó de publicar no convierte; el filtro de fechas de la cascada; un éxito limpia el último fallo del activo.
+10. **Menores**:
+    - `--json` de `weights` y `bucket`: el precio de cada fila pasa a ser el objeto `price`. Se dice en la PR y en el README.
+    - `secrets_unknown_key` ya no dice el nombre de la clave, sino su **posición**: si el usuario invierte nombre y valor, la clave no sale en pantalla. Hay un test con el caso invertido.
+    - Alpha Vantage deja **un segundo** entre llamadas.
+    - En la web se pueden **borrar** los precios importados a mano, y una importación con `symbols.json`, `_status.json` o `config.json` los deja aparte con una nota.
+
+**Rojo primero** (`mut-013/review-013.log`): cada arreglo tiene su mutante que devuelve el código a su forma anterior, y **los 21 mueren**. Van F1a a F1e, F2, F3a y F3b, F4, F5a y F5b, F6a y F6b, F7, R17, R18, R19, el ritmo de Alpha Vantage, el nombre de la clave desconocida, los ficheros acompañantes y el borrado.
+
+**Lo que queda dicho y no se cambia**: el patrimonio parcial de Cubo y el aviso de la aportación, cuando un activo **solo** tiene cotización sin tipo, siguen diciendo que falta su precio en euros. Es cierto, y el remedio que proponen lo resuelve.
