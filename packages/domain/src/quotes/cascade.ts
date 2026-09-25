@@ -198,7 +198,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       if (
         current !== undefined &&
         current[source] === entry[source] &&
-        current.currency === entry.currency
+        current.currencies[source] === entry.currencies[source]
       ) {
         await tx.writeSymbols(
           serializeSymbols({
@@ -221,7 +221,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       kind: "currency_mismatch",
       source,
       at,
-      declared: entry.currency,
+      declared: entry.currencies[source] as string,
       found: result.value as string,
     });
     return { entry: checked, kind: "currency_mismatch" };
@@ -245,7 +245,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         kind: "currency_mismatch",
         source,
         at: input.now().toISOString(),
-        declared: entry.currency,
+        declared: entry.currencies[source] as string,
         found: entry.currency_check?.[source]?.found as string,
       });
       return false;
@@ -314,7 +314,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       }
       outcomes.push({ source, at, ok: true });
       const found = result.value.find(
-        (close) => close.currency !== undefined && close.currency !== entry.currency,
+        (close) => close.currency !== undefined && close.currency !== entry.currencies[source],
       );
       if (found !== undefined) {
         // The source said the currency and it is not the declared one: never
@@ -324,7 +324,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
           kind: "currency_mismatch",
           source,
           at,
-          declared: entry.currency,
+          declared: entry.currencies[source] as string,
           found: found.currency as string,
         });
         continue;
@@ -332,7 +332,8 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       downloads.push({
         asset_id,
         source,
-        currency: entry.currency,
+        // The currency **of the source that brought it**, never of another.
+        currency: entry.currencies[source] as string,
         closes: result.value.filter((close) => close.date >= from && close.date <= to),
       });
       failuresOf.set(asset_id, undefined);

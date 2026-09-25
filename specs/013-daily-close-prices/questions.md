@@ -343,7 +343,7 @@ La feature está construida con dobles; **se da por verificada solo con las clav
    $A prices symbols set ast_gold  --currency USD --eodhd AAPL.US --alpha-vantage AAPL # una acción de EE. UU.
    $A prices symbols set ast_btc   --currency EUR --eodhd BTC-EUR.CC                   # cripto por EODHD (D-Q5)
    $A prices symbols set ast_mm    --currency EUR --eodhd <ISIN_PÚBLICO>.EUFUND        # solo si el punto 3 dijo que EUFUND está en el plan gratuito
-   $A prices symbols set ast_delta --currency GBX --eodhd CSPX.LSE --alpha-vantage CSPX.LON  # Londres: ver qué dice del GBX frente a GBP
+   $A prices symbols set ast_delta --eodhd CSPX.LSE --eodhd-currency GBP --alpha-vantage CSPX.LON --alpha-vantage-currency GBX  # Londres: la divisa de cada fuente (§12); anotar si alguna pide confirmación
    $A fx update     # el histórico del BCE, para que las cotizaciones en dólares tengan valor en euros
    ```
    Cada `set` gasta **una llamada del cupo por fuente** (confirma la divisa con los metadatos de la fuente). Si la fuente dice otra divisa, la consola lo enseña y pide confirmarla (o `--accept-currency`): anotar qué dijo.
@@ -426,3 +426,33 @@ Sin bloqueantes; los puntos 1 a 7 de §10 cerrados, y mueren los nueve mutantes 
 4. **Una divisa de la fuente que no son tres mayúsculas** (`GBp`) se dice tal como viene (`saidCurrency` de los adaptadores), y es un **desacuerdo que el usuario confirma**. Solo «nada», el texto vacío y `Unknown` cuentan como que la fuente no dice la divisa. `symbols.json` acepta lo dicho por la fuente (hasta 16 caracteres) en `currency_check` y en `currency_confirmed_over`. La divisa **declarada** sigue siendo un código de tres mayúsculas.
 
 **Arranque**: 75.694 bytes, **+276** frente a `develop`, dentro del techo de `develop` + 307. **Total**: 267,7 KB.
+
+## 12. Arreglo tras la verificación del procedimiento: la divisa por fuente (2026-09-25)
+
+**El defecto** (reproducido por la dirección con `TSCO.LSE`/`TSCO.LON`): `prices/symbols.json` llevaba una sola `currency` por activo para las dos fuentes. En Londres, EODHD dice GBP y Alpha Vantage GBX, así que siempre una de las dos pedía confirmación, y repetir el procedimiento gastaba cupo en cada intento. Y si se confirmaba GBP, los cierres de Alpha Vantage, que llegan en peniques, se guardaban como libras: cien veces más altos cada vez que respondía la fuente de respaldo.
+
+**Decisión de la dirección: la divisa se declara por fuente.** Cómo queda (rama `fix/013-currency-per-source`):
+
+- **`symbols.json` pasa al formato 2**: cada entrada lleva `currencies`, una divisa por cada fuente con símbolo, obligatoria para cada una, y cada fuente se contrasta y se confirma por separado.
+  - **El formato 1 de la 013 se sigue leyendo**: su `currency` se entiende como la de todas sus fuentes, y una fuente ya contrastada que la contradiga pide confirmación como siempre.
+  - Al volver a escribir el fichero se escribe en formato 2, con el mismo significado.
+  - **Una consola de la 013 rechaza el formato 2** (`invalid_symbols_file`) en vez de leerlo mal. Es a propósito: con una sola divisa volvería a guardar los peniques como libras.
+- **Cada cierre se guarda con la divisa de la fuente que lo trajo** (`entry.currencies[source]`), y el contraste de cada fuente se hace contra su propia divisa.
+- **La conversión ya trataba GBX como GBP / 100**: 10 GBP de EODHD y 1.000 GBX de Alpha Vantage dan **el mismo valor en euros** (12,5 € con 0,8 libras por euro), y hay un test que lo fija.
+- **La consola**: `atlas prices symbols set <activo> [--eodhd S] [--alpha-vantage S] --currency C [--eodhd-currency C] [--alpha-vantage-currency C] [--accept-currency]`.
+  - `--currency` vale para toda fuente que no traiga la suya.
+  - Una fuente sin ninguna de las dos es un error de uso que dice cuál falta.
+  - `atlas prices symbols` enseña cada símbolo con su divisa: `TSCO.LSE (GBP)`, `TSCO.LON (GBX)`.
+  - El README lo recoge.
+- **Tests escritos primero y vistos en rojo** (cinco del dominio y tres de la consola, más las dos expectativas de la 013 que cambian de forma):
+  - Londres con las dos fuentes de principio a fin: se declara, se contrasta sin preguntar y cada cierre se guarda en su divisa.
+  - El mismo valor en euros: este test no fue rojo, porque fija una propiedad que ya existía y que el arreglo no puede romper.
+  - Un `symbols.json` de la 013 que se sigue leyendo y con el que se sigue descargando.
+  - Una segunda declaración igual que no pide nada (sin bucle).
+  - Una fuente sin divisa, rechazada.
+- **Mutantes** (`mut-013/fix013.log`), los cuatro muertos:
+  - volver a una divisa por activo;
+  - guardar el cierre con la divisa declarada del activo en vez de la de su fuente;
+  - contrastar una fuente con la divisa de otra;
+  - dejar de leer el formato 1.
+- **`docs/` sin tocar**: ADR-0031, `docs/data-schema.md` §1 (`symbols.json` en formato 2) y el procedimiento del bloque 6 (§8, que ahora declara Londres con una divisa por fuente) los pone al día el documentador.

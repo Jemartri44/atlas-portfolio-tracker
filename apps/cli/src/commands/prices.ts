@@ -34,7 +34,7 @@ import { folderOf, keysFor, sourcesFor } from "../prices/load.js";
 import { confirm, loadForQuery, render } from "./shared.js";
 
 const USAGE_PRICES =
-  "uso: atlas prices update | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> --currency <divisa> [--eodhd <símbolo>] [--alpha-vantage <símbolo>] [--accept-currency] | atlas prices symbols remove <activo>";
+  "uso: atlas prices update | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> [--eodhd <símbolo>] [--alpha-vantage <símbolo>] --currency <divisa> [--eodhd-currency <divisa>] [--alpha-vantage-currency <divisa>] [--accept-currency] | atlas prices symbols remove <activo>";
 
 const NO_KEYS =
   "No hay claves de fuentes de precios configuradas: sin precios automáticos. La entrada manual (`atlas add valuation`) sigue funcionando igual.";
@@ -188,12 +188,13 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
     ctx,
     Object.fromEntries(entries),
     table(
-      ["activo", "divisa declarada", "EODHD", "Alpha Vantage", "contraste con la fuente"],
+      ["activo", "EODHD", "Alpha Vantage", "contraste con la fuente"],
       entries.map(([id, entry]) => [
         id,
-        entry.currency,
-        entry.eodhd ?? "",
-        entry.alpha_vantage ?? "",
+        // Each symbol with the currency declared for it (fix of 013).
+        ...QUOTE_SOURCES.map((s) =>
+          entry[s] === undefined ? "" : `${entry[s]} (${entry.currencies[s] as string})`,
+        ),
         QUOTE_SOURCES.filter((s) => entry[s] !== undefined)
           .map((s) =>
             entry.currency_check?.[s] === undefined
@@ -209,24 +210,54 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
   return EXIT.ok;
 };
 
-const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<number> => {
-  const currency = stringFlag(flags, "currency");
-  if (currency === undefined) {
+/**
+ * The declaration from the flags: each symbol with **its own** currency
+ * (`--eodhd-currency`, `--alpha-vantage-currency`), and `--currency` for every
+ * source that has none of its own. A London share quotes in pounds at EODHD
+ * and in pence at Alpha Vantage (fix of 013): one currency for both made one
+ * of them ask forever, or stored its closes a hundred times too high.
+ */
+const declarationOf = (flags: Flags): SymbolDeclaration => {
+  const common = stringFlag(flags, "currency");
+  const symbols = {
+    eodhd: stringFlag(flags, "eodhd"),
+    alpha_vantage: stringFlag(flags, "alpha-vantage"),
+  };
+  const own = {
+    eodhd: stringFlag(flags, "eodhd-currency"),
+    alpha_vantage: stringFlag(flags, "alpha-vantage-currency"),
+  };
+  const currencies: Partial<Record<QuoteSource, string>> = {};
+  for (const source of QUOTE_SOURCES) {
+    if (symbols[source] === undefined) {
+      continue;
+    }
+    const currency = own[source] ?? common;
+    if (currency === undefined) {
+      throw new UsageError(
+        `falta la divisa de ${SOURCE_NAMES[source]} (--currency, o --${source === "eodhd" ? "eodhd" : "alpha-vantage"}-currency): la divisa de la cotización se declara, nunca se supone`,
+      );
+    }
+    currencies[source] = currency;
+  }
+  if (Object.keys(currencies).length === 0 && common === undefined) {
     throw new UsageError(
       "falta --currency: la divisa de la cotización se declara, nunca se supone",
     );
   }
+  return {
+    ...(symbols.eodhd === undefined ? {} : { eodhd: symbols.eodhd }),
+    ...(symbols.alpha_vantage === undefined ? {} : { alpha_vantage: symbols.alpha_vantage }),
+    currencies,
+  };
+};
+
+const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<number> => {
+  const declaration = declarationOf(flags);
   const { state } = await loadForQuery(ctx);
   if (!state.assets.has(assetId)) {
     throw new UsageError(`${assetId} no está en el catálogo de este libro`);
   }
-  const eodhd = stringFlag(flags, "eodhd");
-  const alpha = stringFlag(flags, "alpha-vantage");
-  const declaration: SymbolDeclaration = {
-    currency,
-    ...(eodhd === undefined ? {} : { eodhd }),
-    ...(alpha === undefined ? {} : { alpha_vantage: alpha }),
-  };
   const { keys, note } = await keysFor(ctx);
   if (note !== undefined) {
     ctx.io.err(note);
@@ -258,7 +289,7 @@ const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<
       booleanFlag(flags, "accept-currency") ||
       (await confirm(
         ctx,
-        `¿Confirmas ${currency} como divisa de sus cierres, contra lo que dice la fuente? [s/N] `,
+        `¿Confirmas ${pending.map((d) => `${d.declared} para ${SOURCE_NAMES[d.source]}`).join(" y ")} como divisa de sus cierres, contra lo que dice la fuente? [s/N] `,
       ));
     if (!accepted) {
       ctx.io.out("No se ha guardado nada.");
@@ -278,7 +309,11 @@ const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<
     ctx,
     { asset_id: assetId, declaration, checks: check.checks, unchecked: check.unchecked },
     [
-      `Símbolos de ${assetId} guardados en prices/symbols.json (divisa de la cotización: ${currency}).`,
+      `Símbolos de ${assetId} guardados en prices/symbols.json (${QUOTE_SOURCES.filter(
+        (s) => declaration[s] !== undefined,
+      )
+        .map((s) => `${SOURCE_NAMES[s]} en ${declaration.currencies[s] as string}`)
+        .join(", ")}).`,
       ...(unchecked.length === 0
         ? []
         : [
@@ -307,7 +342,9 @@ export const pricesCommand = async (
     assertKnownFlags(flags, [
       "currency",
       "eodhd",
+      "eodhd-currency",
       "alpha-vantage",
+      "alpha-vantage-currency",
       "accept-currency",
       ...GLOBAL_FLAGS,
     ]);

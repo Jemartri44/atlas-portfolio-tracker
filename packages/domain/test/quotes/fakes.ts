@@ -123,3 +123,12 @@ export const symbolsFile = (assets: Record<string, Record<string, unknown>>): st
       ]),
     ),
   });
+
+/** A declaration with the same currency for every source it names (the tests written for feature 013). */
+export const declared = (
+  currency: string,
+  symbols: { eodhd?: string; alpha_vantage?: string },
+): { eodhd?: string; alpha_vantage?: string; currencies: Record<string, string> } => ({
+  ...symbols,
+  currencies: Object.fromEntries(Object.keys(symbols).map((source) => [source, currency])),
+});

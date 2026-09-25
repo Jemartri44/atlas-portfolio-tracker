@@ -19,7 +19,16 @@ import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
-export const SYMBOLS_FORMAT = 1;
+/**
+ * Format 2: the currency is declared **per source** (fix of feature 013): a
+ * London share quotes in pounds at EODHD and in pence at Alpha Vantage, and
+ * one currency for the asset made one of the two ask for a confirmation
+ * forever, or stored the closes of the other a hundred times too high.
+ * Format 1, written by feature 013 with one `currency` per asset, is still
+ * read, as the currency of all its sources; it is written as format 2.
+ */
+export const SYMBOLS_FORMAT = 2;
+const LEGACY_FORMAT = 1;
 
 export interface CurrencyCheck {
   /** What the source's metadata said; absent when they do not say. */
@@ -29,10 +38,13 @@ export interface CurrencyCheck {
 }
 
 export interface SymbolEntry {
-  /** The currency of the quote (it may be a subunit such as GBX), declared by the user. */
-  readonly currency: string;
   readonly eodhd?: string;
   readonly alpha_vantage?: string;
+  /**
+   * The currency of the quote **of each source** (it may be a subunit such as
+   * GBX), declared by the user: one per source that has a symbol.
+   */
+  readonly currencies: Partial<Record<QuoteSource, string>>;
   /** ISO 8601 UTC of the declaration. */
   readonly confirmed_at: string;
   readonly currency_check?: Partial<Record<QuoteSource, CurrencyCheck>>;
@@ -49,7 +61,7 @@ export const EMPTY_SYMBOLS: SymbolsFile = { symbols_format: SYMBOLS_FORMAT, asse
 
 const CURRENCY = /^[A-Z]{3}$/;
 const ENTRY_KEYS = [
-  "currency",
+  "currencies",
   "eodhd",
   "alpha_vantage",
   "confirmed_at",
@@ -97,17 +109,54 @@ const isCurrency = (item: unknown): item is string =>
 const isSaid = (item: unknown): item is string =>
   typeof item === "string" && item.length > 0 && item.length <= 16;
 
-const entryOf = (assetId: string, value: unknown): SymbolEntry => {
+/**
+ * The currencies of an entry: its own per source (format 2), or the one of
+ * the asset for every source that has a symbol (format 1, feature 013).
+ */
+const currenciesOf = (
+  assetId: string,
+  value: Record<string, unknown>,
+  legacy: boolean,
+): Partial<Record<QuoteSource, string>> => {
+  if (legacy) {
+    if (!isCurrency(value.currency)) {
+      throw wrong(`${assetId}.currency`);
+    }
+    return Object.fromEntries(
+      QUOTE_SOURCES.filter((source) => value[source] !== undefined).map((source) => [
+        source,
+        value.currency as string,
+      ]),
+    );
+  }
+  if (!isObject(value.currencies)) {
+    throw wrong(`${assetId}.currencies`);
+  }
+  for (const [source, currency] of Object.entries(value.currencies)) {
+    if (!isQuoteSource(source) || !isCurrency(currency)) {
+      throw wrong(`${assetId}.currencies.${source}`);
+    }
+  }
+  for (const source of QUOTE_SOURCES) {
+    if (value[source] !== undefined && value.currencies[source] === undefined) {
+      throw wrong(`${assetId}.currencies.${source}`);
+    }
+  }
+  return value.currencies as Partial<Record<QuoteSource, string>>;
+};
+
+const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry => {
   if (!isObject(value)) {
     throw wrong(assetId);
   }
+  // Format 1 has `currency` where format 2 has `currencies`, never both.
+  const allowed = legacy
+    ? ENTRY_KEYS.map((key) => (key === "currencies" ? "currency" : key))
+    : ENTRY_KEYS;
   for (const key of Object.keys(value)) {
-    if (!ENTRY_KEYS.includes(key)) {
+    if (!allowed.includes(key)) {
       throw wrong(`${assetId}.${key}`);
     }
-  }
-  if (!isCurrency(value.currency)) {
-    throw wrong(`${assetId}.currency`);
   }
   if (typeof value.confirmed_at !== "string") {
     throw wrong(`${assetId}.confirmed_at`);
@@ -124,7 +173,10 @@ const entryOf = (assetId: string, value: unknown): SymbolEntry => {
   if (value.currency_confirmed_over !== undefined) {
     bySource(value.currency_confirmed_over, `${assetId}.currency_confirmed_over`, isSaid);
   }
-  return value as unknown as SymbolEntry;
+  // Every field was checked above; format 1's `currency` becomes `currencies`.
+  const { currency: _legacy, ...rest } = value;
+  const checked = rest as unknown as Omit<SymbolEntry, "currencies">;
+  return { ...checked, currencies: currenciesOf(assetId, value, legacy) };
 };
 
 /** Parses `prices/symbols.json`; `undefined` (no file) is an empty correspondence. */
@@ -138,12 +190,17 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
   } catch {
     throw wrong("json");
   }
-  if (!isObject(raw) || raw.symbols_format !== SYMBOLS_FORMAT || !isObject(raw.assets)) {
+  if (
+    !isObject(raw) ||
+    (raw.symbols_format !== SYMBOLS_FORMAT && raw.symbols_format !== LEGACY_FORMAT) ||
+    !isObject(raw.assets)
+  ) {
     throw wrong("symbols_format");
   }
+  const legacy = raw.symbols_format === LEGACY_FORMAT;
   const assets: Record<AssetId, SymbolEntry> = {};
   for (const [assetId, value] of Object.entries(raw.assets)) {
-    assets[assetId] = entryOf(assetId, value);
+    assets[assetId] = entryOf(assetId, value, legacy);
   }
   return { symbols_format: SYMBOLS_FORMAT, assets };
 };
@@ -151,24 +208,24 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
 export const serializeSymbols = (file: SymbolsFile): string => `${JSON.stringify(file, null, 2)}\n`;
 
 /**
- * Whether `source` may be downloaded for this entry: it has a symbol there,
- * and the source's metadata did not contradict the declared currency — or the
- * user confirmed the declared one over exactly what the source said.
+ * Whether `source` may be downloaded for this entry: its metadata did not
+ * contradict **the currency declared for that source** — or the user confirmed
+ * the declared one over exactly what the source said.
  */
 export const currencyAgrees = (entry: SymbolEntry, source: QuoteSource): boolean => {
   const found = entry.currency_check?.[source]?.found;
   return (
     found === undefined ||
-    found === entry.currency ||
+    found === entry.currencies[source] ||
     entry.currency_confirmed_over?.[source] === found
   );
 };
 
-/** What the user declares for one asset. */
+/** What the user declares for one asset: each symbol with the currency of its quote. */
 export interface SymbolDeclaration {
-  readonly currency: string;
   readonly eodhd?: string;
   readonly alpha_vantage?: string;
+  readonly currencies: Partial<Record<QuoteSource, string>>;
 }
 
 /** A source whose metadata say another currency than the declared one. */
@@ -190,8 +247,10 @@ export const declareSymbols = (
   at: string,
   accepted: readonly QuoteSource[],
 ): { entry: SymbolEntry; pending: CurrencyDisagreement[] } => {
-  if (!isCurrency(declaration.currency)) {
-    throw wrong("currency");
+  for (const source of QUOTE_SOURCES) {
+    if (declaration[source] !== undefined && !isCurrency(declaration.currencies[source])) {
+      throw wrong(`currencies.${source}`);
+    }
   }
   const check: Partial<Record<QuoteSource, CurrencyCheck>> = {};
   const over: Partial<Record<QuoteSource, string>> = {};
@@ -202,20 +261,26 @@ export const declareSymbols = (
     }
     const found = checks[source];
     check[source] = found === undefined ? { at } : { found, at };
-    if (found !== undefined && found !== declaration.currency) {
+    const declared = declaration.currencies[source] as string;
+    if (found !== undefined && found !== declared) {
       if (accepted.includes(source)) {
         over[source] = found;
       } else {
-        pending.push({ source, declared: declaration.currency, found });
+        pending.push({ source, declared, found });
       }
     }
   }
   const entry: SymbolEntry = {
-    currency: declaration.currency,
     ...(declaration.eodhd === undefined ? {} : { eodhd: declaration.eodhd }),
     ...(declaration.alpha_vantage === undefined
       ? {}
       : { alpha_vantage: declaration.alpha_vantage }),
+    currencies: Object.fromEntries(
+      QUOTE_SOURCES.filter((source) => declaration[source] !== undefined).map((source) => [
+        source,
+        declaration.currencies[source] as string,
+      ]),
+    ),
     confirmed_at: at,
     ...(Object.keys(check).length === 0 ? {} : { currency_check: check }),
     ...(Object.keys(over).length === 0 ? {} : { currency_confirmed_over: over }),

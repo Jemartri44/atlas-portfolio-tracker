@@ -7,16 +7,18 @@ import {
   serializeSymbols,
 } from "../../src/quotes/symbols.js";
 
+import { declared } from "./fakes.js";
+
 const AT = "2027-01-01T00:00:00.000Z";
 
 describe("prices/symbols.json", () => {
   it("without a file, is empty; it reads back what it writes", () => {
     expect(parseSymbols(undefined)).toEqual(EMPTY_SYMBOLS);
     const file = {
-      symbols_format: 1,
+      symbols_format: 2,
       assets: {
         ast_x: {
-          currency: "GBX",
+          currencies: { eodhd: "GBX", alpha_vantage: "GBX" },
           eodhd: "CSPX.LSE",
           alpha_vantage: "CSPX.LON",
           confirmed_at: AT,
@@ -33,10 +35,11 @@ describe("prices/symbols.json", () => {
       JSON.stringify({
         symbols_format: 1,
         assets: { a: { currency: "EUR", confirmed_at: AT, ...extra } },
+        // Format 1, of feature 013: still read, and refused the same way.
       });
     const cases: [string, string][] = [
       ["no", "json"],
-      ['{"symbols_format":2,"assets":{}}', "symbols_format"],
+      ['{"symbols_format":3,"assets":{}}', "symbols_format"],
       ['{"symbols_format":1,"assets":[]}', "symbols_format"],
       ['{"symbols_format":1,"assets":{"a":1}}', "a"],
       [entry({ coingecko: "bitcoin" }), "a.coingecko"],
@@ -62,7 +65,7 @@ describe("prices/symbols.json", () => {
 describe("the declared currency (D-Q2)", () => {
   it("is never assumed: a disagreement of the metadata is pending until confirmed", () => {
     const { entry, pending } = declareSymbols(
-      { currency: "GBX", eodhd: "CSPX.LSE", alpha_vantage: "CSPX.LON" },
+      declared("GBX", { eodhd: "CSPX.LSE", alpha_vantage: "CSPX.LON" }),
       { eodhd: "GBP", alpha_vantage: "GBX" },
       AT,
       [],
@@ -74,7 +77,7 @@ describe("the declared currency (D-Q2)", () => {
 
   it("keeps an explicit confirmation over exactly what the source said", () => {
     const { entry, pending } = declareSymbols(
-      { currency: "GBX", eodhd: "CSPX.LSE" },
+      declared("GBX", { eodhd: "CSPX.LSE" }),
       { eodhd: "GBP" },
       AT,
       ["eodhd"],
@@ -90,45 +93,45 @@ describe("the declared currency (D-Q2)", () => {
 
   it("records metadata that say nothing, and leaves unchecked what was not asked", () => {
     const { entry } = declareSymbols(
-      { currency: "EUR", eodhd: "X.EUFUND", alpha_vantage: "X" },
+      declared("EUR", { eodhd: "X.EUFUND", alpha_vantage: "X" }),
       { eodhd: undefined },
       AT,
       [],
     );
     expect(entry).toEqual({
-      currency: "EUR",
+      currencies: { eodhd: "EUR", alpha_vantage: "EUR" },
       eodhd: "X.EUFUND",
       alpha_vantage: "X",
       confirmed_at: AT,
       currency_check: { eodhd: { at: AT } },
     });
     expect(currencyAgrees(entry, "eodhd")).toBe(true);
-    expect(declareSymbols({ currency: "EUR" }, {}, AT, []).entry).toEqual({
-      currency: "EUR",
+    expect(declareSymbols(declared("EUR", {}), {}, AT, []).entry).toEqual({
+      currencies: {},
       confirmed_at: AT,
     });
   });
 
   it("keeps a currency of the source that is not a code, as a disagreement confirmed explicitly", () => {
     const { entry, pending } = declareSymbols(
-      { currency: "GBX", eodhd: "X.LSE" },
+      declared("GBX", { eodhd: "X.LSE" }),
       { eodhd: "GBp" },
       AT,
       [],
     );
     expect(pending).toEqual([{ source: "eodhd", declared: "GBX", found: "GBp" }]);
-    const confirmed = declareSymbols({ currency: "GBX", eodhd: "X.LSE" }, { eodhd: "GBp" }, AT, [
+    const confirmed = declareSymbols(declared("GBX", { eodhd: "X.LSE" }), { eodhd: "GBp" }, AT, [
       "eodhd",
     ]).entry;
     expect(
-      parseSymbols(serializeSymbols({ symbols_format: 1, assets: { a: confirmed } })).assets.a,
+      parseSymbols(serializeSymbols({ symbols_format: 2, assets: { a: confirmed } })).assets.a,
     ).toEqual(confirmed);
     expect(currencyAgrees(confirmed, "eodhd")).toBe(true);
     expect(currencyAgrees(entry, "eodhd")).toBe(false);
   });
 
   it("refuses a declared currency that is not a code", () => {
-    expect(() => declareSymbols({ currency: "euro" }, {}, AT, [])).toThrow(
+    expect(() => declareSymbols(declared("euro", { eodhd: "X" }), {}, AT, [])).toThrow(
       expect.objectContaining({ code: "invalid_symbols_file" }),
     );
   });

@@ -152,6 +152,7 @@ La consola descarga los cierres diarios de los activos **de su libro** desde dos
 mkdir -p ~/.config/atlas && printf '{"eodhd":"…","alpha_vantage":"…"}\n' > ~/.config/atlas/secrets.json && chmod 600 ~/.config/atlas/secrets.json
 
 atlas prices symbols set ast_world --currency EUR --eodhd XX0000000001.EUFUND   # el símbolo y la divisa de la cotización, contrastada con la fuente
+atlas prices symbols set ast_tsco --eodhd TSCO.LSE --eodhd-currency GBP --alpha-vantage TSCO.LON --alpha-vantage-currency GBX   # la divisa es de cada fuente: Londres cotiza en libras en una y en peniques en la otra
 atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo
 atlas prices status      # cada fuente con su cupo de hoy y sus fallos, y la antigüedad del último cierre de cada activo
 ```
