@@ -136,3 +136,20 @@ export type SyncPresence =
 export const syncConfigured = (presence: SyncPresence): boolean =>
   presence.present &&
   !(typeof presence.marker === "object" && presence.marker.status === "disabled");
+
+/**
+ * The same rule over the raw texts a store keeps, without reading the marker
+ * whole: a store that only has to answer «configured?» — the web, before an
+ * `acceptInvalid` — does not need to load the parser. Present and not saying
+ * `disabled` is configured; unreadable is configured too.
+ */
+export const syncConfiguredByText = (present: boolean, markerText: string | undefined): boolean => {
+  if (!present) {
+    return false;
+  }
+  try {
+    return (JSON.parse(markerText ?? "null") as { status?: unknown } | null)?.status !== "disabled";
+  } catch {
+    return true;
+  }
+};

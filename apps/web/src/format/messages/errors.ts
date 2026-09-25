@@ -433,6 +433,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `No se suben tus datos a la nube: tienen ${count(d.invalid)} operaciones inválidas, y la nube nunca recibe datos inválidos. Repáralas primero en Ajustes → Verificación.`,
   redo_filing_in_remote: () =>
     "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.",
+  accept_invalid_while_synced: (d) =>
+    `Tus datos se sincronizan, y este cambio dejaría ${count(d.affected)} operaciones inválidas: tus datos quedarían inválidos, no se podrían sincronizar y la sincronización se pararía. Repara antes esas operaciones (Ajustes → Verificación) o desactiva la sincronización de forma explícita.`,
   held_unit_unknown: () => "Ya no hay nada retenido ahí: puede que ya se haya resuelto.",
   redo_not_recorded: () =>
     "Todavía no está registrada la operación que la rehace: regístrala primero; lo retenido sigue donde estaba.",

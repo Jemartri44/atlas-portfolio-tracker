@@ -69,12 +69,14 @@ export {
   type SyncPresence,
   serializeMarker,
   syncConfigured,
+  syncConfiguredByText,
 } from "./sync/marker.js";
 export {
   compactPermission,
   deactivatePermission,
   importPermission,
   type Refusal,
+  RefusedError,
   rewritePermission,
 } from "./sync/permission.js";
 export { type ReapplyBase, type ReapplyOutcome, reapplyUnits } from "./sync/reapply.js";

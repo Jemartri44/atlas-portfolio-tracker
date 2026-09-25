@@ -122,10 +122,10 @@ const cashChanges = (before: LedgerState, after: LedgerState): CashChange[] => {
   return changes;
 };
 
-export interface PreviewOptions extends RecordOptions {
+export type PreviewOptions = RecordOptions & {
   /** Assets whose effect is shown; by default the ones the candidate references. */
   assets?: readonly AssetId[];
-}
+};
 
 export const previewEvent = async <E extends SupportedEvent>(
   deps: UseCaseDeps,

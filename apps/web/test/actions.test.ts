@@ -7,7 +7,17 @@
 // golden ledger instead of a toy one.
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
-import { type Draft, decodeLine, type SupportedEvent, type UseCaseDeps } from "@atlas/domain";
+import {
+  DEFAULT_SETTINGS,
+  type Draft,
+  decodeLine,
+  encodeLine,
+  fingerprintOf,
+  type LedgerEvent,
+  mergeSettings,
+  type SupportedEvent,
+  type UseCaseDeps,
+} from "@atlas/domain";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bootDecision, loadInto, reloadLedger, restoreLedger } from "../src/ledger/actions.js";
 import { toAppError } from "../src/ledger/errors.js";
@@ -468,5 +478,94 @@ describe("toAppError: the storage that fills up", () => {
     expect(error.code).toBe("storage_full");
     expect(error.message).toContain("no se ha escrito nada");
     expect(error.action?.to).toBe("/ajustes");
+  });
+});
+
+describe("changing the configuration over events it invalidates, with the sync (feature 014, V7)", () => {
+  beforeEach(() => {
+    store.setLoad({ phase: "unconfigured" });
+    store.setDeps(undefined);
+    store.clearCache();
+  });
+
+  /** A fund bought and sold on dates that swap order when read by trade date. */
+  const reorderable = (): string => {
+    let n = 0;
+    const event = (type: string, fields: Record<string, unknown>) => {
+      n += 1;
+      const draft = {
+        schema_version: 1,
+        id: `01ARYZ6S41TSV4RRFFQ690000${"0123456789ABCDEFGH"[n]}`,
+        recorded_at: "2027-08-01T08:00:00.000Z",
+        type,
+        ...fields,
+      } as unknown as LedgerEvent;
+      const fingerprint = fingerprintOf(draft as never);
+      return encodeLine(
+        (fingerprint === undefined ? draft : { ...draft, fingerprint }) as LedgerEvent,
+      );
+    };
+    const trade = (type: string, trade_date: string, value_date: string) =>
+      event(type, {
+        account_id: "acc_fund",
+        asset_id: "ast_world",
+        trade_date,
+        value_date,
+        quantity: "10",
+        unit_price: "100",
+        currency: "EUR",
+        fx_rate: "1",
+        fx_rate_date: value_date,
+        fee: "0",
+        source: "manual",
+      });
+    return [
+      event("settings_changed", { settings: DEFAULT_SETTINGS }),
+      event("account_created", {
+        account_id: "acc_fund",
+        name: "a",
+        platform: "t",
+        book: "core",
+        base_currency: "EUR",
+        country: "ES",
+        active: true,
+      }),
+      event("asset_created", {
+        asset_id: "ast_world",
+        asset_type: "fund",
+        book: "core",
+        asset_class: "equity",
+        name: "w",
+        currency: "EUR",
+        transferable: true,
+        active: true,
+      }),
+      trade("buy", "2027-01-13", "2027-01-15"),
+      trade("sell", "2027-01-12", "2027-01-20"),
+    ]
+      .map((line) => `${line}\n`)
+      .join("");
+  };
+  const byTradeDate = mergeSettings(DEFAULT_SETTINGS, {
+    fiscal_date_rule: { ...DEFAULT_SETTINGS.fiscal_date_rule, fund: "trade_date" },
+  });
+
+  it("is refused with its own message when this browser is synced, and nothing is written", async () => {
+    const blob = new MemoryBlob(reorderable());
+    await open(blob);
+    const before = blob.text;
+    const result = await changeSettings(byTradeDate, true, async () => true);
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.failure.kind).toBe("error");
+    expect(!result.ok && result.failure.kind === "error" && result.failure.error.message).toContain(
+      "Tus datos se sincronizan",
+    );
+    expect(blob.text).toBe(before);
+  });
+
+  it("stays as ADR-0015 when it is not", async () => {
+    const blob = new MemoryBlob(reorderable());
+    await open(blob);
+    expect((await changeSettings(byTradeDate, true, async () => false)).ok).toBe(true);
   });
 });

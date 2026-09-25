@@ -4,12 +4,20 @@
 // remote, restore, forget a device) are feature 015's; this is the pure
 // function they will ask.
 
+import { DomainError } from "../errors.js";
 import type { DeviceQueueState } from "../ports/remote-ledger.js";
 import type { SyncPresence } from "./marker.js";
 
 export interface Refusal {
   readonly code: string;
   readonly details: Readonly<Record<string, unknown>>;
+}
+
+/** A refusal as an error, for the interfaces that stop an order with it. The code is the refusal's. */
+export class RefusedError extends DomainError {
+  constructor(refusal: Refusal) {
+    super(refusal.code, `refused: ${refusal.code}`, { ...refusal.details });
+  }
 }
 
 /** The marker a refusal is about: unreadable, or missing with `sync/` present. */
@@ -71,11 +79,8 @@ export const rewritePermission = (
  * It would wipe what is pending, and an import over a shared ledger is exactly
  * the rewrite the sync detects. Deactivate first, explicitly.
  */
-export const importPermission = (presence: SyncPresence): Refusal | undefined =>
-  presence.present &&
-  !(typeof presence.marker === "object" && presence.marker.status === "disabled")
-    ? { code: "import_refused_synced", details: {} }
-    : undefined;
+export const importPermission = (configured: boolean): Refusal | undefined =>
+  configured ? { code: "import_refused_synced", details: {} } : undefined;
 
 /**
  * Whether the sync may be deactivated: never with pending lines, which would

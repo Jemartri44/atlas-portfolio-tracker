@@ -135,7 +135,7 @@ export default function ConfiguracionRoute(): JSX.Element {
               return;
             }
           }
-          const result = await changeSettings(next, acceptInvalid ? { acceptInvalid: true } : {});
+          const result = await changeSettings(next, acceptInvalid);
           setSilenced(undefined);
           setMoved(undefined);
           rates.clear();

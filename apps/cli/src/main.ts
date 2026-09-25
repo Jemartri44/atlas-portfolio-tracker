@@ -334,7 +334,9 @@ const report = (io: Io, error: unknown): number => {
     io.err(describeDuplicate(error));
     return EXIT.duplicate;
   }
-  if (error instanceof DependentEventsError) {
+  // The refusal of `--accept-invalid` on a synced folder (V7) is not a list of
+  // dependants to rectify: it has its own sentence.
+  if (error instanceof DependentEventsError && error.code !== "accept_invalid_while_synced") {
     io.err(describeDependants(error));
     return EXIT.domain;
   }

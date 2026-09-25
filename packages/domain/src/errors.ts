@@ -116,15 +116,20 @@ export interface AffectedEvent {
  * Writing an event would leave other events invalid: reversing or correcting
  * something later events consumed (`dependent_events`, ADR-0003), or a
  * `settings_changed` that reinterprets the past (`newly_invalid_events`,
- * ADR-0015). The second is the only one that can be accepted on purpose.
+ * ADR-0015). The second is the only one that can be accepted on purpose —
+ * and not while the ledger is synced (`accept_invalid_while_synced`, feature
+ * 014, V7), which shares the message of the second: the interfaces say it.
  */
+/** The two refusals of a settings change that leaves events invalid (ADR-0015; V7 of feature 014). */
+type SettingsRefusalCode = "newly_invalid_events" | "accept_invalid_while_synced";
+
 export class DependentEventsError extends DomainError {
   readonly affected: readonly AffectedEvent[];
 
   constructor(
     targetId: string,
     affected: readonly AffectedEvent[],
-    code: "dependent_events" | "newly_invalid_events" = "dependent_events",
+    code: "dependent_events" | SettingsRefusalCode = "dependent_events",
   ) {
     super(
       code,

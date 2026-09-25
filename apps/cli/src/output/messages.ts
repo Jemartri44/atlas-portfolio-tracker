@@ -380,6 +380,8 @@ export const describeError = (error: DomainError): string => {
       return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
     case "redo_filing_in_remote":
       return "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.";
+    case "accept_invalid_while_synced":
+      return `Esta carpeta se sincroniza, y ese cambio de configuración dejaría inválidos ${Array.isArray(d.affected) ? d.affected.length : 0} eventos: el libro quedaría inválido, no se podría sincronizar y la sincronización se pararía. Repara antes esos eventos (atlas check te los enseña), o desactiva la sincronización de forma explícita; --accept-invalid no vale con la sincronización configurada.`;
     case "held_unit_unknown":
       return "No hay nada retenido con ese identificador: puede que ya se haya resuelto.";
     case "redo_not_recorded":

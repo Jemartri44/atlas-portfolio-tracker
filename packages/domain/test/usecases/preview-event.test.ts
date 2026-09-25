@@ -225,7 +225,7 @@ describe("previewEvent", () => {
         type: "settings_changed" as const,
         settings: mergeSettings(DEFAULT_SETTINGS, { fiscal_date_rule: { fund: "trade_date" } }),
       },
-      { acceptInvalid: true },
+      { acceptInvalid: true, syncConfigured: false },
     );
     // By trade date the sale comes before the purchase and stops being valid.
     expect(preview.newlyInvalid).toHaveLength(1);

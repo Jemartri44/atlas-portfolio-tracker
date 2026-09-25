@@ -1787,6 +1787,7 @@ describe("architecture: the sync engine", () => {
     ...listTsFiles(syncDomain),
     join(domainSrc, "sync.ts"),
     join(domainSrc, "ports", "remote-ledger.ts"),
+    join(domainSrc, "ports", "sync-state-store.ts"),
     ...listTsFiles(adaptersSync),
     browserSyncStore,
   ];
@@ -1978,6 +1979,8 @@ describe("architecture: the sync engine", () => {
     for (const path of [
       "/packages/domain/src/sync/",
       "/packages/domain/src/sync.ts",
+      "/packages/domain/src/ports/remote-ledger.ts",
+      "/packages/domain/src/ports/sync-state-store.ts",
       "/packages/adapters/src/sync/",
       "/packages/adapters/src/ledger-store/browser/sync-store.ts",
     ]) {

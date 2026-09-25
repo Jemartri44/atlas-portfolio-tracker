@@ -27,6 +27,7 @@ import {
   recordsText,
   type SyncPresence,
   serializeMarker,
+  syncConfiguredByText,
 } from "@atlas/domain/sync";
 
 import { LEDGER_STORE, openAtlasDb, StorageUnavailable } from "./idb.js";
@@ -76,7 +77,30 @@ const readRaw = (store: IDBObjectStore, then: (raw: Raw) => void): void => {
     });
 };
 
-/** Whether this browser's ledger is synced, as `acceptInvalid` and the import ask (V7, P2). */
+/**
+ * Whether this browser's ledger is synced, as `acceptInvalid` asks (V7): the
+ * raw keys, read in one transaction, and the rule of the domain over them.
+ */
+export const browserSyncConfigured = (open: Opener = openAtlasDb): Promise<boolean> =>
+  open().then(
+    (db) =>
+      new Promise<boolean>((resolve, reject) => {
+        const tx = db.transaction(LEDGER_STORE, "readonly");
+        let configured = false;
+        readRaw(tx.objectStore(LEDGER_STORE), (raw) => {
+          configured = syncConfiguredByText(
+            raw.marker !== undefined || raw.held !== undefined || raw.discarded !== undefined,
+            raw.marker,
+          );
+        });
+        tx.oncomplete = () => resolve(configured);
+        // The error as the browser gives it: this read sits on the path of a
+        // write that already reports storage failures in its own words.
+        tx.onabort = () => reject(tx.error);
+      }),
+  );
+
+/** Whether this browser's ledger is synced, with the marker read whole (the import asks, P2). */
 export const browserSyncPresence = (open: Opener = openAtlasDb): Promise<SyncPresence> =>
   open().then(
     (db) =>

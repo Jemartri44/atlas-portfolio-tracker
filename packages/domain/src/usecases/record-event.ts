@@ -22,7 +22,7 @@ import { validateShape } from "../schema/validate.js";
 import type { UseCaseDeps } from "./deps.js";
 import { describeAffected, newlyInvalid } from "./invalid-events.js";
 
-export interface RecordOptions {
+interface RecordBase {
   /**
    * The id the event is written with, chosen beforehand: a draft stamps it
    * before its confirmation writes, so that a retry knows **exactly** whether
@@ -32,13 +32,21 @@ export interface RecordOptions {
   id?: string;
   /** Write even if another event carries the same fingerprint. */
   confirmDuplicate?: boolean;
-  /**
-   * Write a `settings_changed` even though it leaves recorded events invalid
-   * (ADR-0015). Admitted for no other event type: the facts do not change, only
-   * their reading, so there is nothing to rectify first.
-   */
-  acceptInvalid?: boolean;
 }
+
+/**
+ * `acceptInvalid` writes a `settings_changed` even though it leaves recorded
+ * events invalid (ADR-0015), and only that type. **With the sync configured it
+ * is refused** (§6.3 (V7) of prompt 014, note of 2026-09-25 in ADR-0015): so
+ * whoever asks for it has to say whether the sync is configured — the adapter
+ * reads it, the domain does no I/O —, and the compiler makes every caller say
+ * it. Not saying it is refused too: the safe side.
+ */
+export type RecordOptions = RecordBase &
+  (
+    | { acceptInvalid?: false; syncConfigured?: boolean }
+    | { acceptInvalid: true; syncConfigured: boolean }
+  );
 
 export interface RecordResult<E extends SupportedEvent = SupportedEvent> {
   event: E;
@@ -185,8 +193,14 @@ export const checkInvalid = (
     return { affected: [], state };
   }
   const affected = describeAffected(fresh);
-  if (affected.length > 0 && options.acceptInvalid !== true) {
-    throw new DependentEventsError(event.id, affected, "newly_invalid_events");
+  // Without the explicit yes it is refused as ever (ADR-0015); with it, it is
+  // refused too unless the sync is known not to be configured (§6.3 (V7)).
+  if (affected.length > 0 && (options.acceptInvalid !== true || options.syncConfigured !== false)) {
+    throw new DependentEventsError(
+      event.id,
+      affected,
+      options.acceptInvalid === true ? "accept_invalid_while_synced" : "newly_invalid_events",
+    );
   }
   return { affected, state };
 };

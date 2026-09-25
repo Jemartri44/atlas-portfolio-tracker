@@ -7,7 +7,6 @@
 // (verified in block 0, point 4).
 
 import { ValidationError } from "../errors.js";
-import { isRecord } from "../guards.js";
 import { lineSha256, linesOfText } from "./lines.js";
 
 export const HELD_FORMAT = 1;
@@ -67,6 +66,12 @@ const unreadable = (file: string, line: number): ValidationError =>
 
 const HELD_KINDS = new Set(["held", "redo_started", "resolved"]);
 
+// A local guard and not the one of `guards.ts`: the web reads these records in
+// a lazy chunk, and every name the boot chunk has to export for it is a byte
+// of the boot.
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 /** Reads `held.jsonl` strictly: a record that is not one is an error, never skipped. */
 export const parseHeld = (text: string): HeldRecord[] =>
   linesOfText(text).map((line, index) => {
@@ -77,7 +82,7 @@ export const parseHeld = (text: string): HeldRecord[] =>
       throw unreadable("held", index + 1);
     }
     if (
-      !isRecord(value) ||
+      !isObject(value) ||
       value.held_format !== HELD_FORMAT ||
       !HELD_KINDS.has(value.kind as string) ||
       typeof value.at !== "string" ||
@@ -99,7 +104,7 @@ export const parseDiscarded = (text: string): DiscardedRecord[] =>
       throw unreadable("discarded", index + 1);
     }
     if (
-      !isRecord(value) ||
+      !isObject(value) ||
       value.discarded_format !== DISCARDED_FORMAT ||
       typeof value.line !== "string"
     ) {

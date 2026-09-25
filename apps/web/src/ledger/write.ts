@@ -14,6 +14,7 @@
 // boot does, writing to it is what a form does, and keeping them in one module
 // meant the boot chunk carried the write flows.
 
+import { browserSyncConfigured } from "@atlas/adapters/sync";
 import {
   type AffectedEvent,
   ConflictError,
@@ -96,7 +97,9 @@ export const runWrite = async <T>(run: () => Promise<T>): Promise<WriteResult<T>
       await reloadLedger();
       return { ok: false, failure: { kind: "conflict" } };
     }
-    if (error instanceof DependentEventsError) {
+    // The refusal of `acceptInvalid` on a synced ledger (V7) is not a list of
+    // dependants to rectify, nor the question of ADR-0015 again: it is said.
+    if (error instanceof DependentEventsError && error.code !== "accept_invalid_while_synced") {
       return {
         ok: false,
         failure: {
@@ -217,8 +220,21 @@ export const closedYearsOfSettings = async (
 ): Promise<readonly ClosedYearImpact[]> =>
   impactOf(async (_deps, events) => ({ events, settings }));
 
+/**
+ * `acceptInvalid` is the explicit yes of ADR-0015 — and, with this browser's
+ * ledger synced, the domain refuses it (§6.3 (V7)): whether it is synced is
+ * read here, from the store, and handed to the use case.
+ */
 export const changeSettings = async (
   settings: Settings,
-  options: RecordOptions = {},
+  acceptInvalid = false,
+  /** Whether this browser's ledger is synced; the store answers it (a test seam for the rest). */
+  synced: () => Promise<boolean> = browserSyncConfigured,
 ): Promise<WriteResult<RecordResult>> =>
-  runWrite(() => recordEvent(requireDeps(), { type: "settings_changed", settings }, options));
+  runWrite(async () =>
+    recordEvent(
+      requireDeps(),
+      { type: "settings_changed", settings },
+      acceptInvalid ? { acceptInvalid: true, syncConfigured: await synced() } : {},
+    ),
+  );

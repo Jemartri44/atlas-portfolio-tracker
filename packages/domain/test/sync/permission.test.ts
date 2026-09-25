@@ -1,11 +1,19 @@
 // What a synced device refuses, each with its literal (bloque 6; V5; P2, P4).
 
 import { describe, expect, it } from "vitest";
-import { markerFor, type SyncPresence } from "../../src/sync/marker.js";
+import { DomainError } from "../../src/errors.js";
+import {
+  markerFor,
+  type SyncPresence,
+  serializeMarker,
+  syncConfigured,
+  syncConfiguredByText,
+} from "../../src/sync/marker.js";
 import {
   compactPermission,
   deactivatePermission,
   importPermission,
+  RefusedError,
   rewritePermission,
 } from "../../src/sync/permission.js";
 
@@ -47,10 +55,28 @@ describe("the refusals of a synced device", () => {
   });
 
   it("import: refused on a synced web, admitted once deactivated (P2)", () => {
-    expect(code(importPermission(enabled))).toBe("import_refused_synced");
-    expect(code(importPermission(unreadable))).toBe("import_refused_synced");
-    expect(importPermission(disabled)).toBeUndefined();
-    expect(importPermission(none)).toBeUndefined();
+    expect(code(importPermission(syncConfigured(enabled)))).toBe("import_refused_synced");
+    expect(code(importPermission(syncConfigured(unreadable)))).toBe("import_refused_synced");
+    expect(importPermission(syncConfigured(disabled))).toBeUndefined();
+    expect(importPermission(syncConfigured(none))).toBeUndefined();
+  });
+
+  it("stops an order as an error with the literal of the refusal", () => {
+    const error = new RefusedError({ code: "compact_refused_folder_synced", details: { x: 1 } });
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error.code).toBe("compact_refused_folder_synced");
+    expect(error.details).toEqual({ x: 1 });
+  });
+
+  it("reads «configured» off the raw text of the marker too (the web, before acceptInvalid)", () => {
+    expect(syncConfiguredByText(false, undefined)).toBe(false);
+    expect(syncConfiguredByText(true, undefined)).toBe(true);
+    expect(syncConfiguredByText(true, "{")).toBe(true);
+    expect(syncConfiguredByText(true, "null")).toBe(true);
+    expect(syncConfiguredByText(true, serializeMarker(markerFor([], 0)))).toBe(true);
+    expect(
+      syncConfiguredByText(true, serializeMarker({ ...markerFor([], 0), status: "disabled" })),
+    ).toBe(false);
   });
 
   it("deactivate: refused with pending lines or an unreadable marker; held lines do not block (P4)", () => {
