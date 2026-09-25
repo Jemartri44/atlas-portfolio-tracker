@@ -226,7 +226,7 @@ La feature 014 (PR #83) construyó el núcleo de esta ADR sin desplegar: el caso
 
 **Otras decisiones de la dirección durante la feature** (`questions.md` §8 y §12):
 
-- **D-Q1.** Al retener una pareja, el libro local puede quedar inválido, porque lo que va detrás se queda pendiente y la pareja sale. Se acepta con una condición: confirmar, rehacer y descartar **nunca se bloquean** por el libro local inválido, porque ninguna de esas acciones proyecta el libro.
+- **D-Q1.** Al retener una pareja, el libro local puede quedar inválido, porque lo que va detrás se queda pendiente y la pareja sale. Se acepta con una condición: las acciones de resolver lo retenido **nunca quedan bloqueadas** por el libro local inválido. **El código la cumple solo en parte** (revisión de la PR #84). Confirmar, descartar, `startRedo` y `finishRedo` no proyectan el libro y no se bloquean. Pero rehacer exige registrar lo rehecho entre `startRedo` y `finishRedo`, y ese registro sí proyecta. `recordEvent`, con el que se rehace una línea o una anulación suelta, se niega con `InvalidLedgerError` mientras el libro local tenga eventos inválidos que no son suyos (`checkInvalid`, `packages/domain/src/usecases/record-event.ts`). *Escenario:* queda retenida la pareja que corrige una compra de 10 a 20, y el libro local se queda con la compra de 10 y la venta de 15, que es inválida (caso 11). Si además está retenido un `account_updated` por `concurrent_account`, rehacerlo falla en `recordEvent` hasta que se resuelva la pareja. `correctEvent`, con el que se rehace una pareja, no se niega por los eventos inválidos que ya había: solo por los que la corrección deja inválidos (`checkCandidate`, `packages/domain/src/usecases/rectify.ts`). Si rehacer debe permitirse con el libro inválido por una pareja retenida lo decide la 015.
 - **D-Q2.** Toda secuencia contigua de dos o más parejas es una cadena.
 - **D-Q3.** Piden confirmación la huella repetida y el ejercicio cerrado.
 - **D-Q9.** Tres `412` seguidos (`remote_contention`) o tres cambios del libro local en el paso 6 (`local_changed`) paran la sincronización.
@@ -243,4 +243,5 @@ La feature 014 (PR #83) construyó el núcleo de esta ADR sin desplegar: el caso
 - un rehacer que no se puede terminar si el usuario registra a mano solo media pareja;
 - `redo_waits_for_pair`, que solo mira dentro de la unidad;
 - los mensajes de desactivar y de `join_required`, que no dicen que la única salida es unirse;
-- los huecos de la propiedad «ninguna línea se pierde».
+- los huecos de la propiedad «ninguna línea se pierde»;
+- decidir si rehacer debe permitirse con el libro inválido por una pareja retenida (D-Q1, arriba).

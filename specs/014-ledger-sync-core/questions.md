@@ -388,3 +388,13 @@ Cada arreglo, cómo se vio en rojo y qué mutante lo guarda. Los mutantes se apl
   - Arranque: 75.843, techo 75.869; el trozo del dominio está igual.
   - Total: 280.039 bytes, techo 280.064, con 25 bytes de margen.
 - **Documentos** (se añade a §6): `docs/data-schema.md` §1, el campo `replaces` de los registros `resolved` de `held.jsonl`.
+
+## 16. Revisión de la PR #84, el cierre documental (2026-09-25)
+
+- **D-Q1 no se cumple entera.** La nota del cierre en ADR-0026 decía que confirmar, rehacer y descartar nunca se bloquean por el libro local inválido. Confirmar, descartar, `startRedo` y `finishRedo` no proyectan y no se bloquean. Pero rehacer exige registrar lo rehecho entre `startRedo` y `finishRedo`:
+  - **`recordEvent`**, que rehace una línea o una anulación suelta, se niega con `InvalidLedgerError` mientras el libro local tenga eventos inválidos ajenos (`checkInvalid`, `packages/domain/src/usecases/record-event.ts`, la rama que busca un inválido `preexisting`).
+  - **`correctEvent`**, que rehace una pareja, no se niega por los inválidos que ya había, solo por los que deja la corrección (`checkCandidate`, `packages/domain/src/usecases/rectify.ts`).
+  - *Escenario del revisor:* retenida la pareja que corrige una compra de 10 a 20, el libro local se queda con la compra de 10 y la venta de 15 (caso 11), que es inválida. Un `account_updated` retenido por `concurrent_account` no se puede rehacer hasta resolver la pareja.
+  - **Decisión de la dirección:** sin cambios de código en la 014. La nota de ADR-0026 dice ahora la verdad, y pasa a lo heredado por la 015: **decidir si rehacer debe permitirse con el libro inválido por una pareja retenida.**
+- **D-Q6, enmienda:** ver §8.
+
