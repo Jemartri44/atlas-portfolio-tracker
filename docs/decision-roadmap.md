@@ -187,7 +187,7 @@ Antes de la Fase 2. Decisiones: Svelte o Solid (tras prototipo); **librería de 
 
 **Etapa 3 — Despliegue** (con el visto bueno del usuario):
 
-- Tareas del usuario, con procedimiento escrito: la organización y las dos cuentas miembro, el MFA de los tres root, la verificación en dos pasos de su cuenta de Google, la petición de aumento de la cuota de concurrencia si hace falta, los clientes OAuth de `dev` y `prod`, la verificación de la dirección en SES, las claves en SSM y la lista permitida.
+- Tareas del usuario, con procedimiento escrito: la organización y las dos cuentas miembro, el MFA de los tres root, la verificación en dos pasos de su cuenta de Google ([`docs/runbooks/google-2-step-verification.md`](runbooks/google-2-step-verification.md)), la petición de aumento de la cuota de concurrencia si hace falta, los clientes OAuth de `dev` y `prod`, la verificación de la dirección en SES, las claves en SSM y la lista permitida.
 - **018 — Despliegue en `atlas-dev`**, con datos sintéticos: extremo a extremo (acceso, dos dispositivos sincronizando, tareas), y los ensayos de restauración y de pérdida de la cuenta.
 - **019 — Promoción a `atlas-prod`**: el mismo artefacto, la primera subida del libro real desde el portátil y el ensayo de restauración en memoria.
 
