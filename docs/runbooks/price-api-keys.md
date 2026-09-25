@@ -138,8 +138,8 @@ Si no sale eso, lo que dice la consola (nunca enseña una clave):
 | Mensaje | Qué pasa | Qué hacer |
 |---|---|---|
 | «Error de uso: comando desconocido: prices», con `salida 64` | La consola compilada es anterior a las órdenes de precios | Repite «Antes: pon al día tu clon y compílalo», al principio de este paso |
-| «No hay claves de fuentes de precios configuradas» | No encuentra el fichero | Comprueba la ruta con `ls -l "${XDG_CONFIG_HOME:-$HOME/.config}/atlas/secrets.json"`; si no está, créalo con el bloque del paso 3 |
-| «No se usan las claves de …: otros usuarios de la máquina pueden leer ese fichero» | Permisos distintos de `600` | La orden `chmod 600 …` que da el propio mensaje, con la ruta del fichero |
+| «No hay claves de fuentes de precios configuradas», **solo** | No encuentra el fichero (si antes sale el aviso de permisos, manda la fila siguiente) | Comprueba la ruta con `ls -l "${XDG_CONFIG_HOME:-$HOME/.config}/atlas/secrets.json"`; si no está, créalo con el bloque del paso 3 |
+| «No se usan las claves de …: otros usuarios de la máquina pueden leer ese fichero», seguido de «No hay claves…» y `salida 1` | Permisos distintos de `600`. **Este aviso manda sobre «No hay claves…»**: el fichero existe, pero la consola no lo usa | La orden `chmod 600 …` que da el propio mensaje, con la ruta del fichero |
 | «… no se puede leer como JSON» | Falta una comilla, sobra una coma… | Vuelve a crearlo con el bloque del paso 3 |
 | «la entrada número N no es una clave que se conozca» | Un nombre que no es `eodhd` ni `alpha_vantage` | Vuelve a crearlo con el bloque del paso 3 |
 | «el valor de «eodhd» no es una clave» | Un valor vacío | Vuelve a crearlo; pega la clave antes de pulsar Intro |
