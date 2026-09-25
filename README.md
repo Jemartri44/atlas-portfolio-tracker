@@ -145,15 +145,17 @@ Antes de traspasar entre fondos, `atlas transfer simulate --from-asset ast_world
 
 ### Precios de cierre diarios (feature 013)
 
-La consola descarga los cierres diarios de los activos **de su libro** desde dos APIs gratuitas con clave, EODHD (principal) y Alpha Vantage (respaldo), y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes.
+La consola descarga los cierres diarios de los activos **de su libro** desde dos APIs gratuitas con clave, EODHD (principal) y Alpha Vantage (respaldo), y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes. Al importar a mano, conviene incluir `prices/symbols.json` junto a los ficheros de precios: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa.
 
 ```bash
 # Las claves van fuera de la carpeta del libro, solo legibles por ti; la aplicación nunca las escribe
 mkdir -p ~/.config/atlas && printf '{"eodhd":"…","alpha_vantage":"…"}\n' > ~/.config/atlas/secrets.json && chmod 600 ~/.config/atlas/secrets.json
 
 atlas prices symbols set ast_world --currency EUR --eodhd XX0000000001.EUFUND   # el símbolo y la divisa de la cotización, contrastada con la fuente
+atlas prices symbols set ast_tsco --eodhd TSCO.LSE --eodhd-currency GBP --alpha-vantage TSCO.LON --alpha-vantage-currency GBX   # la divisa es de cada fuente: Londres cotiza en libras en una y en peniques en la otra
 atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo
 atlas prices status      # cada fuente con su cupo de hoy y sus fallos, y la antigüedad del último cierre de cada activo
+atlas prices purge ast_tsco --source alpha_vantage   # borra los cierres de esa fuente guardados en una divisa que no es la que ahora declara; la próxima descarga vuelve a pedir esos días una vez, y los que ninguna fuente sirva quedan como hueco (lo dice «prices status»)
 ```
 
 Para enseñar un valor gana el precio más reciente **que tenga valor en euros**, y con la misma fecha el manual. Si hay una cotización más nueva sin valor en euros, se enseña a su lado.

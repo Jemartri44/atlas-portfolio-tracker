@@ -24,6 +24,12 @@ export interface PriceFiles {
 export interface PriceTransaction extends PriceFiles {
   /** Appends lines at the end of `prices/<asset_id>.jsonl`; never rewrites a byte already there. */
   appendCloses(assetId: AssetId, lines: readonly string[]): Promise<void>;
+  /**
+   * Rewrites `prices/<asset_id>.jsonl` with `lines`: the one write that is not
+   * an append, and only for purging closes stored in the wrong currency, on
+   * an explicit request of the user (review of PR #80).
+   */
+  rewriteCloses(assetId: AssetId, lines: readonly string[]): Promise<void>;
   /** Replaces `prices/_status.json`. */
   writeStatus(text: string): Promise<void>;
   /** Replaces `prices/symbols.json`. */

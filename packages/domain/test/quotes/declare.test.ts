@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { checkSymbols, recordSymbols, removeSymbols } from "../../src/quotes/declare.js";
 import { parseStatus } from "../../src/quotes/status.js";
 import { parseSymbols } from "../../src/quotes/symbols.js";
-import { closes, FakeSource, MemoryPriceStore } from "./fakes.js";
+import { closes, declared, FakeSource, MemoryPriceStore } from "./fakes.js";
 
 const now = () => new Date("2027-01-06T08:00:00.000Z");
 
@@ -25,7 +25,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
   it("asks each source for its currency, one reserved call each", async () => {
     const store = new MemoryPriceStore();
     const result = await checkSymbols({
-      declaration: { currency: "GBX", eodhd: "CSPX.LSE", alpha_vantage: "CSPX.LON" },
+      declaration: declared("GBX", { eodhd: "CSPX.LSE", alpha_vantage: "CSPX.LON" }),
       store,
       sources: sources(store),
       now,
@@ -44,7 +44,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
     const store = new MemoryPriceStore();
     store.files.set("config.json", '{"daily_calls":{"alpha_vantage":0}}');
     const result = await checkSymbols({
-      declaration: { currency: "EUR", eodhd: "X.EUFUND", alpha_vantage: "X" },
+      declaration: declared("EUR", { eodhd: "X.EUFUND", alpha_vantage: "X" }),
       store,
       sources: { alpha_vantage: sources(store).alpha_vantage },
       now,
@@ -52,7 +52,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
     expect(result).toEqual({ ok: true, checks: {}, unchecked: ["eodhd", "alpha_vantage"] });
     // A source without a symbol in the declaration is not asked at all.
     const only = await checkSymbols({
-      declaration: { currency: "GBX", alpha_vantage: "X.LON" },
+      declaration: declared("GBX", { alpha_vantage: "X.LON" }),
       store,
       sources: sources(store),
       now,
@@ -64,7 +64,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
     const store = new MemoryPriceStore();
     const s = sources(store, new Error("down"));
     expect(
-      await checkSymbols({ declaration: { currency: "EUR", eodhd: "X" }, store, sources: s, now }),
+      await checkSymbols({ declaration: declared("EUR", { eodhd: "X" }), store, sources: s, now }),
     ).toEqual({
       ok: false,
       source: "eodhd",
@@ -81,7 +81,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
     };
     expect(
       await checkSymbols({
-        declaration: { currency: "EUR", eodhd: "X" },
+        declaration: declared("EUR", { eodhd: "X" }),
         store,
         sources: refused,
         now,
@@ -103,7 +103,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
     });
     await expect(
       checkSymbols({
-        declaration: { currency: "EUR", eodhd: "X" },
+        declaration: declared("EUR", { eodhd: "X" }),
         store,
         sources: { ...s, eodhd },
         now,
@@ -113,7 +113,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
     // A source without a symbol in the declaration is not asked whether it can run.
     expect(
       await checkSymbols({
-        declaration: { currency: "EUR", alpha_vantage: "X" },
+        declaration: declared("EUR", { alpha_vantage: "X" }),
         store,
         sources: { ...s, eodhd },
         now,
@@ -123,7 +123,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
 
   it("writes nothing while a disagreement is not confirmed, and keeps the confirmation", async () => {
     const store = new MemoryPriceStore();
-    const declaration = { currency: "GBX", eodhd: "CSPX.LSE" };
+    const declaration = declared("GBX", { eodhd: "CSPX.LSE" });
     const pending = await recordSymbols({
       assetId: "ast_x",
       declaration,
@@ -146,7 +146,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
     ).toEqual([]);
     const other = {
       assetId: "ast_y",
-      declaration: { currency: "EUR" },
+      declaration: declared("EUR", {}),
       checks: {},
       accepted: [],
       store,
@@ -155,7 +155,7 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
     await recordSymbols(other);
     const file = parseSymbols(store.files.get("symbols.json"));
     expect(file.assets.ast_x).toMatchObject({
-      currency: "GBX",
+      currencies: { eodhd: "GBX" },
       currency_confirmed_over: { eodhd: "GBP" },
     });
     expect(Object.keys(file.assets)).toEqual(["ast_x", "ast_y"]);

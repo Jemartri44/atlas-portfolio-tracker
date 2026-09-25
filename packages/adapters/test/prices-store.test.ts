@@ -50,6 +50,14 @@ describe("FilePriceStore", () => {
     expect(await readdir(ledger)).toEqual(["prices"]);
   });
 
+  it("rewrites a file of closes only when asked, under the lock and atomically", async () => {
+    const store = new FilePriceStore(ledger);
+    await store.transact((tx) => tx.appendCloses("ast_a", ['{"a":1}', '{"a":2}']));
+    await store.transact((tx) => tx.rewriteCloses("ast_a", ['{"a":2}']));
+    expect(await store.closes("ast_a")).toBe('{"a":2}\n');
+    expect(await readdir(ledger)).toEqual(["prices"]);
+  });
+
   it("appends after a file that lacks its final newline without touching its bytes", async () => {
     await mkdir(join(ledger, "prices"));
     await writeFile(join(ledger, "prices", "ast_a.jsonl"), '{"a":1}');

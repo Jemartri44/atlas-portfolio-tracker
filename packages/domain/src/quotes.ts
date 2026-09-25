@@ -30,7 +30,14 @@ export {
   type PriceConfig,
   parsePriceConfig,
 } from "./quotes/config.js";
-export { checkSymbols, recordSymbols, removeSymbols, type SymbolCheck } from "./quotes/declare.js";
+export {
+  assertNothingMisstored,
+  checkSymbols,
+  purgeMismatched,
+  recordSymbols,
+  removeSymbols,
+  type SymbolCheck,
+} from "./quotes/declare.js";
 export {
   type Approximation,
   type ApproximationGap,
@@ -47,11 +54,14 @@ export {
   effectiveCloses,
   encodeCloseLine,
   linesToAppend,
+  type MismatchedCloses,
+  mismatchedLines,
   PRICE_LINE_VERSION,
   priceFileName,
   readCloseFile,
   readCloses,
   type UnreadableCloses,
+  type UnservedDays,
 } from "./quotes/line.js";
 export { downloadPlan, type PlannedAsset, type PriorityGroup } from "./quotes/priority.js";
 export { isQuoteSource, QUOTE_SOURCES } from "./quotes/sources.js";

@@ -14,7 +14,7 @@
 // Loaded lazily: nothing of it is on the boot path, and the build fails if it
 // ever is.
 
-import { queryFolderPermission, rememberedFolder } from "@atlas/adapters/folder";
+import { queryFolderPermission, readFolderText, rememberedFolder } from "@atlas/adapters/folder";
 import {
   assetOfPriceFile,
   forgetImportedPrices,
@@ -26,8 +26,11 @@ import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
 import {
   type EffectiveClose,
   externalPricesOf,
+  type MismatchedCloses,
+  parseSymbols,
   readCloseFile,
   readCloses,
+  type SymbolsFile,
   type UnreadableCloses,
 } from "@atlas/domain/quotes";
 import { loadWebHistory, type WebHistory } from "../ecb/history.js";
@@ -40,14 +43,79 @@ export interface WebQuotes {
   readonly importedAt?: string;
   /** Files that do not read: their assets have no automatic price, and it is said. */
   readonly unreadable: readonly UnreadableCloses[];
+  /**
+   * Closes stored in a currency their source does not declare in
+   * `prices/symbols.json` (feature 013 stored pence as pounds): left out, and
+   * said. Only known where the folder gives the correspondence.
+   */
+  readonly mismatched: readonly MismatchedCloses[];
+  /**
+   * Why the currency of the closes could not be checked (second pass of the
+   * review of PR #80), said and never silent: no `symbols.json` beside them
+   * (the closes are used as they are), or one that does not read (none used).
+   */
+  readonly symbols?: SymbolsProblem;
+  /** What the screens say of `symbols`, here and not in a module of its own (the boot). */
+  readonly symbolsNotice?: string;
   /** The folder is linked and lost its permission, or this browser keeps nothing. */
   readonly problem?: "permission" | "storage";
   readonly history: WebHistory;
 }
 
+export type SymbolsProblem =
+  | { readonly problem: "missing" }
+  | { readonly problem: "unreadable"; readonly code: string };
+
+/** Why the currency of the automatic prices could not be checked. */
+const symbolsNotice = (symbols: SymbolsProblem): string =>
+  symbols.problem === "missing"
+    ? "Sin prices/symbols.json junto a ellos no se puede comprobar la divisa de los precios automáticos: se usan tal como están. Si los importaste a mano, importa también ese fichero."
+    : symbols.code === "symbols_file_newer_version"
+      ? "prices/symbols.json es de una versión más nueva de la aplicación: no se usan precios automáticos. Recarga la aplicación para actualizarla."
+      : "prices/symbols.json no se entiende: no se puede comprobar la divisa de los precios automáticos, y no se usan. Vuelve a declarar los símbolos desde la consola.";
+
+/** The correspondence of a text of `symbols.json`, or why there is none. */
+const symbolsOf = (text: string | undefined): SymbolsFile | SymbolsProblem => {
+  if (text === undefined) {
+    return { problem: "missing" };
+  }
+  try {
+    return parseSymbols(text);
+  } catch (error) {
+    return { problem: "unreadable", code: (error as { code: string }).code };
+  }
+};
+
+/**
+ * The closes of `files` read with the correspondence of `text`: all of them
+ * without one (said), none with one that does not read (said).
+ */
+const withSymbols = (
+  files: ReadonlyMap<AssetId, string>,
+  text: string | undefined,
+): Pick<WebQuotes, "closes" | "unreadable" | "mismatched" | "symbols" | "symbolsNotice"> => {
+  const symbols = symbolsOf(text);
+  if ("problem" in symbols && symbols.problem === "unreadable") {
+    return {
+      closes: new Map(),
+      unreadable: [],
+      mismatched: [],
+      symbols,
+      symbolsNotice: symbolsNotice(symbols),
+    };
+  }
+  const read = readCloses(files, "problem" in symbols ? undefined : symbols);
+  return {
+    closes: read.closes,
+    unreadable: read.unreadable,
+    mismatched: read.mismatched,
+    ...("problem" in symbols ? { symbols, symbolsNotice: symbolsNotice(symbols) } : {}),
+  };
+};
+
 const fromFolder = async (
   assetIds: readonly AssetId[],
-): Promise<{ files?: Map<AssetId, string>; problem?: "permission" }> => {
+): Promise<{ files?: Map<AssetId, string>; symbols?: string; problem?: "permission" }> => {
   const handle = await rememberedFolder();
   if (handle === undefined) {
     return {};
@@ -56,7 +124,11 @@ const fromFolder = async (
     return { problem: "permission" };
   }
   const files = await readFolderPrices(handle, assetIds);
-  return files.size === 0 ? {} : { files };
+  if (files.size === 0) {
+    return {};
+  }
+  const symbols = await readFolderText(handle, ["prices", "symbols.json"]);
+  return symbols === undefined ? { files } : { files, symbols };
 };
 
 /** The closes for the assets given: the folder's, else the imported ones, else none. */
@@ -66,20 +138,18 @@ export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQu
     const folder = await fromFolder(assetIds);
     const problem = folder.problem === undefined ? {} : { problem: folder.problem };
     if (folder.files !== undefined) {
-      const read = readCloses(folder.files);
-      return { closes: read.closes, unreadable: read.unreadable, origin: "folder", history };
+      return { ...withSymbols(folder.files, folder.symbols), origin: "folder", history };
     }
     const imported = await importedPrices();
     if (imported === undefined) {
-      return { closes: new Map(), unreadable: [], history, ...problem };
+      return { closes: new Map(), unreadable: [], mismatched: [], history, ...problem };
     }
     const wanted = new Set(assetIds);
-    const read = readCloses(
-      new Map(Object.entries(imported.files).filter(([assetId]) => wanted.has(assetId))),
-    );
     return {
-      closes: read.closes,
-      unreadable: read.unreadable,
+      ...withSymbols(
+        new Map(Object.entries(imported.files).filter(([assetId]) => wanted.has(assetId))),
+        imported.symbols,
+      ),
       origin: "imported",
       importedAt: imported.imported_at,
       history,
@@ -87,7 +157,7 @@ export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQu
     };
   } catch {
     // Without a store to read from (private mode, blocked site data): said.
-    return { closes: new Map(), unreadable: [], history, problem: "storage" };
+    return { closes: new Map(), unreadable: [], mismatched: [], history, problem: "storage" };
   }
 };
 
@@ -104,8 +174,13 @@ export const externalOf = (
         staleDays: quotes.history.staleDays,
       });
 
-/** The files of `prices/` that the console writes and that are not prices. */
-const COMPANIONS = ["symbols.json", "_status.json", "config.json"];
+/**
+ * The files of `prices/` that the console writes, that are not prices and that
+ * the web does not need. `symbols.json` is not one of them: it says which
+ * closes are stored in the wrong currency (second pass of the review of PR #80).
+ */
+const COMPANIONS = ["_status.json", "config.json"];
+const SYMBOLS = "symbols.json";
 
 export type PricesImport =
   | {
@@ -127,7 +202,17 @@ export const importPriceFiles = async (
 ): Promise<PricesImport> => {
   const incoming: Record<AssetId, string> = {};
   const ignored: string[] = [];
+  let symbols: string | undefined;
   for (const { name, text } of files) {
+    if (name === SYMBOLS) {
+      try {
+        parseSymbols(text);
+      } catch (error) {
+        return { kind: "refused", file: name, code: (error as { code: string }).code };
+      }
+      symbols = text;
+      continue;
+    }
     // The other files of the folder `prices/` come along when a whole folder
     // is chosen: they are not prices, and they are left aside with a note
     // instead of refusing the import (review of PR #78).
@@ -147,9 +232,11 @@ export const importPriceFiles = async (
     incoming[assetId] = text;
   }
   const before = await importedPrices();
+  const kept = symbols ?? before?.symbols;
   await saveImportedPrices({
     files: { ...(before?.files ?? {}), ...incoming },
     imported_at: now.toISOString(),
+    ...(kept === undefined ? {} : { symbols: kept }),
   });
   return { kind: "imported", assets: Object.keys(incoming), ignored };
 };

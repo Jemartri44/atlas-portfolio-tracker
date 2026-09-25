@@ -22,6 +22,7 @@ import { Decimal, type DecimalString, isDecimalString } from "../money/decimal.j
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
 import { isQuoteSource } from "./sources.js";
+import type { SymbolEntry, SymbolsFile } from "./symbols.js";
 
 /**
  * The name of the file of an asset in `prices/`: `<asset_id>.jsonl`. The
@@ -235,22 +236,108 @@ export interface UnreadableCloses {
 }
 
 /**
+ * Closes stored in a currency that is not the one their source declares now:
+ * feature 013 stored the pence of Alpha Vantage as pounds when one currency
+ * was declared for the whole asset (review of PR #80).
+ */
+export interface MismatchedCloses {
+  readonly asset_id: AssetId;
+  readonly source: QuoteSource;
+  readonly declared: string;
+  /**
+   * Present when they are the closes feature 013 stored in this currency
+   * although the source said another one (`misstored` of the correspondence).
+   */
+  readonly misstored?: string;
+  readonly count: number;
+  readonly dates: readonly CivilDate[];
+}
+
+/**
+ * Days a purge asked for again once and no source served (third pass of the
+ * review of PR #80): a hole, said while no close fills it.
+ */
+export interface UnservedDays {
+  readonly asset_id: AssetId;
+  readonly source: QuoteSource;
+  readonly dates: readonly CivilDate[];
+}
+
+/**
+ * The lines of `lines` whose currency is not the one declared for their
+ * source, or the one in which feature 013 stored a source that said another
+ * (`misstored`, second pass of the review of PR #80).
+ */
+export const mismatchedLines = (
+  lines: readonly CloseLine[],
+  entry: Pick<SymbolEntry, "currencies" | "misstored"> | undefined,
+): CloseLine[] =>
+  entry === undefined
+    ? []
+    : lines.filter((line) => {
+        const currency = entry.currencies[line.source];
+        return (
+          (currency !== undefined && line.currency !== currency) ||
+          entry.misstored?.[line.source] === line.currency
+        );
+      });
+
+/**
  * The closes in force of every file given, by asset. A file that does not
  * read leaves **its** asset without automatic price — never with the part of
  * it that did read — and is returned with its reason, to be said.
+ *
+ * With the correspondence of symbols, a line whose currency is not the one
+ * its source declares **is left out**, and said (`mismatched`): a hole is
+ * better than a figure a hundred times wrong (review of PR #80). Without a
+ * declaration there is nothing to compare with, and the lines are read as
+ * they are.
  */
 export const readCloses = (
   files: ReadonlyMap<AssetId, string>,
-): { closes: Map<AssetId, EffectiveClose[]>; unreadable: UnreadableCloses[] } => {
+  symbols?: SymbolsFile,
+): {
+  closes: Map<AssetId, EffectiveClose[]>;
+  unreadable: UnreadableCloses[];
+  mismatched: MismatchedCloses[];
+  unserved: UnservedDays[];
+} => {
   const closes = new Map<AssetId, EffectiveClose[]>();
   const unreadable: UnreadableCloses[] = [];
+  const mismatched: MismatchedCloses[] = [];
+  const unserved: UnservedDays[] = [];
   for (const [assetId, text] of files) {
+    let lines: CloseLine[];
     try {
-      closes.set(assetId, effectiveCloses(readCloseFile(assetId, text)));
+      lines = readCloseFile(assetId, text);
     } catch (error) {
       const { code, details } = error as ValidationError;
       unreadable.push({ asset_id: assetId, code, line: details.line as number });
+      continue;
+    }
+    const entry = symbols?.assets[assetId];
+    const wrong = mismatchedLines(lines, entry);
+    for (const source of new Set(wrong.map((line) => line.source))) {
+      const ofSource = wrong.filter((line) => line.source === source);
+      const misstored = (entry as SymbolEntry).misstored?.[source];
+      mismatched.push({
+        asset_id: assetId,
+        source,
+        declared: (entry as SymbolEntry).currencies[source] as string,
+        ...(misstored === undefined ? {} : { misstored }),
+        count: ofSource.length,
+        dates: ofSource.map((line) => line.date),
+      });
+    }
+    const effective = effectiveCloses(lines.filter((line) => !wrong.includes(line)));
+    closes.set(assetId, effective);
+    const filled = new Set(effective.map((close) => close.date));
+    for (const [source, days] of Object.entries(entry?.unserved_days ?? {})) {
+      const dates = days.filter((date) => !filled.has(date));
+      if (dates.length > 0) {
+        unserved.push({ asset_id: assetId, source: source as QuoteSource, dates });
+      }
     }
   }
-  return { closes, unreadable };
+  return { closes, unreadable, mismatched, unserved };
 };

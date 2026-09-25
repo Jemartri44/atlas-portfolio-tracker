@@ -98,6 +98,12 @@ export class FilePriceStore implements PriceStore {
                 lock,
               );
             },
+            rewriteCloses: (assetId, lines) =>
+              this.writeAtomically(
+                this.fileOf(assetId),
+                lines.map((line) => `${line}\n`).join(""),
+                lock,
+              ),
             writeStatus: (text) => this.writeAtomically(join(this.dir, "_status.json"), text, lock),
             writeSymbols: (text) =>
               this.writeAtomically(join(this.dir, "symbols.json"), text, lock),

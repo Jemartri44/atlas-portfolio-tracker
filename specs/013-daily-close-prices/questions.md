@@ -389,3 +389,103 @@ Sin bloqueantes; los puntos 1 a 7 de §10 cerrados, y mueren los nueve mutantes 
 4. **Una divisa de la fuente que no son tres mayúsculas** (`GBp`) se dice tal como viene (`saidCurrency` de los adaptadores), y es un **desacuerdo que el usuario confirma**. Solo «nada», el texto vacío y `Unknown` cuentan como que la fuente no dice la divisa. `symbols.json` acepta lo dicho por la fuente (hasta 16 caracteres) en `currency_check` y en `currency_confirmed_over`. La divisa **declarada** sigue siendo un código de tres mayúsculas.
 
 **Arranque**: 75.694 bytes, **+276** frente a `develop`, dentro del techo de `develop` + 307. **Total**: 267,7 KB.
+
+## 12. Arreglo tras la verificación del procedimiento: la divisa por fuente (2026-09-25)
+
+**El defecto** (reproducido por la dirección con `TSCO.LSE`/`TSCO.LON`): `prices/symbols.json` llevaba una sola `currency` por activo para las dos fuentes. En Londres, EODHD dice GBP y Alpha Vantage GBX, así que siempre una de las dos pedía confirmación, y repetir el procedimiento gastaba cupo en cada intento. Y si se confirmaba GBP, los cierres de Alpha Vantage, que llegan en peniques, se guardaban como libras: cien veces más altos cada vez que respondía la fuente de respaldo.
+
+**Decisión de la dirección: la divisa se declara por fuente.** Cómo queda (rama `fix/013-currency-per-source`):
+
+- **`symbols.json` pasa al formato 2**: cada entrada lleva `currencies`, una divisa por cada fuente con símbolo, obligatoria para cada una, y cada fuente se contrasta y se confirma por separado.
+  - **El formato 1 de la 013 se sigue leyendo**: su `currency` se entiende como la de todas sus fuentes, y una fuente ya contrastada que la contradiga pide confirmación como siempre.
+  - Al volver a escribir el fichero se escribe en formato 2, con el mismo significado.
+  - **Una consola de la 013 rechaza el formato 2** (`invalid_symbols_file`) en vez de leerlo mal. Es a propósito: con una sola divisa volvería a guardar los peniques como libras.
+- **Cada cierre se guarda con la divisa de la fuente que lo trajo** (`entry.currencies[source]`), y el contraste de cada fuente se hace contra su propia divisa.
+- **La conversión ya trataba GBX como GBP / 100**: 10 GBP de EODHD y 1.000 GBX de Alpha Vantage dan **el mismo valor en euros** (12,5 € con 0,8 libras por euro), y hay un test que lo fija.
+- **La consola**: `atlas prices symbols set <activo> [--eodhd S] [--alpha-vantage S] --currency C [--eodhd-currency C] [--alpha-vantage-currency C] [--accept-currency]`.
+  - `--currency` vale para toda fuente que no traiga la suya.
+  - Una fuente sin ninguna de las dos es un error de uso que dice cuál falta.
+  - `atlas prices symbols` enseña cada símbolo con su divisa: `TSCO.LSE (GBP)`, `TSCO.LON (GBX)`.
+  - El README lo recoge.
+- **Tests escritos primero y vistos en rojo** (cinco del dominio y tres de la consola, más las dos expectativas de la 013 que cambian de forma):
+  - Londres con las dos fuentes de principio a fin: se declara, se contrasta sin preguntar y cada cierre se guarda en su divisa.
+  - El mismo valor en euros: este test no fue rojo, porque fija una propiedad que ya existía y que el arreglo no puede romper.
+  - Un `symbols.json` de la 013 que se sigue leyendo y con el que se sigue descargando.
+  - Una segunda declaración igual que no pide nada (sin bucle).
+  - Una fuente sin divisa, rechazada.
+- **Mutantes** (`mut-013/fix013.log`), los cuatro muertos:
+  - volver a una divisa por activo;
+  - guardar el cierre con la divisa declarada del activo en vez de la de su fuente;
+  - contrastar una fuente con la divisa de otra;
+  - dejar de leer el formato 1.
+- **`docs/` sin tocar**: ADR-0031, `docs/data-schema.md` §1 (`symbols.json` en formato 2) y el procedimiento del bloque 6 (§8, que ahora declara Londres con una divisa por fuente) los pone al día el documentador.
+
+## 13. Revisión de la PR #80 (2026-09-25)
+
+Cinco puntos de la dirección. Cada arreglo tiene su test escrito antes y visto en rojo, y un mutante que lo mata (`mut-013/fix013-review.log`: los once, muertos).
+
+1. **Bloqueante: el formato 1 ya no hereda confirmaciones.**
+   - Al leer un `symbols.json` de la 013 se descarta `currency_confirmed_over` y, con él, el `currency_check` de cada fuente confirmada frente a una divisa distinta de la declarada. Esa fuente queda sin contrastar y se contrasta con la regla del formato 2 antes de su siguiente descarga.
+   - Las fuentes cuyo contraste coincidió con la divisa declarada lo conservan: ahí no hubo nada que confirmar. Si no queda ninguno, desaparece `currency_check`.
+   - Tests: las dos direcciones (GBP confirmado frente al GBX de Alpha Vantage, y GBX confirmado frente al GBP de EODHD) y el recontraste, que ya nunca guarda peniques como libras.
+2. **Las líneas guardadas en una divisa que no es la que ahora declara su fuente quedan fuera de toda cifra en euros.**
+   - `readCloses(files, symbols)` las aparta antes de elegir el cierre en vigor. Dejan un hueco declarado, nunca una cifra cien veces mayor.
+   - `prices status` (texto y JSON, `mismatched`) y el aviso de las vistas de la consola y de la web las señalan.
+   - `atlas prices purge <activo> --source <fuente> [--yes]` las borra, solo las de ese activo y esa fuente, en una transacción bajo el cerrojo. El siguiente `update` las vuelve a descargar. Pide confirmación; sin terminal y sin `--yes` no hace nada (salida 4). El README lo recoge.
+   - Límite: en la web, los precios **importados** a mano no traen `symbols.json`, así que no se pueden filtrar. Solo se filtran los leídos de la carpeta.
+3. **La aproximación con una ETF de referencia de Londres normaliza GBP/GBX con `SUBUNITS`** en vez de devolver `etf_currency_changed`. Solo un cambio de divisa real se queda sin aproximación.
+4. **La consola no descarta opciones en silencio.** Son errores de uso:
+   - `--alpha-vantage-currency` sin `--alpha-vantage`, y lo mismo con EODHD;
+   - un `set` sin ningún símbolo.
+5. **Mutantes de la revisión:**
+   - **M4** muere con un test en el que el usuario cambia la divisa de la fuente mientras se contrasta. El contraste no la pisa.
+   - **M8** muere con un test en el que `--currency GBP --alpha-vantage-currency GBX` declara GBX para Alpha Vantage.
+   - **M2**: la comprobación de la divisa de cada cierre se mantiene. Se prueba con un adaptador simulado que devuelve divisa por cierre. Mueren dos variantes: comparar con la divisa de otra fuente y quitar la comprobación.
+   - **M9, M10 y M11 se dejan vivos, porque son inocuos**:
+     - **M9**: una clave de más en `currencies` no tiene símbolo, así que nunca se descarga ni se contrasta con ella.
+     - **M10**: sobre la misma forma laxa, ninguna lectura consulta la divisa de una fuente sin símbolo.
+     - **M11**: las dos claves a la vez en el formato 1 solo las escribiría una mano ajena. La lectura de la 013 ya se queda con `currency`, y el formato 1 ya no hereda confirmaciones (punto 1).
+
+## 14. Segunda pasada de la revisión de la PR #80 (2026-09-25)
+
+Cuatro puntos de la dirección. Cada uno tiene tests escritos antes y vistos en rojo, y mutantes que los matan (`mut-013/fix013-pass2.log`: catorce, todos muertos; uno, P4d, sobrevivió al principio y lo mata un test añadido).
+
+1. **Bloqueante: con un `symbols.json` de formato 1, las líneas que la 013 guardó mal quedan fuera de toda cifra en euros.**
+   - Al leer el formato 1, `currency_confirmed_over[source]` se toma como lo que dijo la fuente. Si difiere de la divisa del activo, esa fuente queda marcada en el campo nuevo `misstored` con la divisa del activo. Sus líneas guardadas en esa divisa son las del defecto: `readCloses` las deja fuera, `prices status` y las vistas las señalan con un aviso propio («se guardó en GBP, pero esa fuente dijo otra divisa…»), y `purge` las borra.
+   - **Cómo se implementa.** La divisa declarada de esa fuente sigue siendo la del activo, porque no se supone ninguna. La fuente queda sin contrastar, como en §13, y se contrasta antes de su siguiente descarga.
+   - `misstored` es un campo nuevo del formato 2, así que el arreglo no se pierde cuando el fichero se vuelve a escribir. Lo mantienen tanto el contraste como una declaración nueva de esa fuente, y solo `purge` lo quita.
+   - Tests en los dos sentidos: GBP sobre GBX (cien veces más) y GBX sobre GBP (cien veces menos). Se comprueban en el dominio y en la consola, con `weights` antes y después de `prices update`.
+2. **Un `symbols.json` ilegible, o de un formato más nuevo, ya no tumba las vistas de valoración.**
+   - Las vistas se degradan como con `readLocalConfig`: se quedan sin precios automáticos y dicen el motivo.
+   - El formato más nuevo tiene código propio, `symbols_file_newer_version`, traducido en la consola y en la web.
+   - `update`, `status` y `symbols` siguen negándose, porque escribirían el fichero.
+3. **La web.**
+   - La importación a mano admite `symbols.json`. Si no se entiende, rechaza la importación entera. La web lo guarda junto a los precios y lo usa para el filtro; si una importación posterior no lo trae, conserva el anterior.
+   - **Sin `symbols.json`**, la web avisa de que no puede comprobar la divisa y usa los cierres tal como están.
+   - **Con un `symbols.json` ilegible en la carpeta**, la web lo dice y no usa precios automáticos, igual que la consola.
+   - Los avisos salen en Cartera, Resumen, Cubo y Ajustes.
+   - `_status.json` y `config.json` se siguen dejando aparte, con aviso.
+4. **`purge` cumple lo que promete.**
+   - Anota por activo y fuente, en el campo nuevo `refetch_from` de `symbols.json`, el primer día que quitó.
+   - La siguiente descarga del activo empieza en el primer día pendiente, responda la fuente que responda, y no se da por al día mientras quede alguno pendiente.
+   - Una vez pedido, se borra. Solo se borra lo que se pidió: una purga hecha mientras tanto sigue pendiente.
+   - Test con el caso del revisor: una línea mala del día 4 y una buena del 5, que se purga y se vuelve a pedir desde el 4.
+- **Techo total del bundle**: pasa de 269,0 a 270,0 KB. Se midió 269,61 (276.081 bytes), y todo lo añadido es diferido. El arranque, 73,9 KB, sigue bajo su techo.
+- **`docs/` sin tocar**: el documentador debe recoger en `docs/data-schema.md` los campos `misstored` y `refetch_from` del formato 2.
+
+## 15. Tercera pasada de la revisión de la PR #80 (2026-09-25)
+
+1. **Bloqueante: `misstored` ya solo desaparece con `purge`.**
+   - Mientras un activo tenga una fuente en `misstored`, se niegan dos cosas: declararlo otra vez sin esa fuente (`recordSymbols`) y quitarlo (`removeSymbols`).
+   - Las dos lo comprueban bajo el cerrojo. La consola, además, lo comprueba antes de gastar ninguna llamada (`assertNothingMisstored`).
+   - El error, `symbols_misstored_pending`, traducido en la consola y en la web, dice qué queda pendiente y da el remedio: `atlas prices purge <activo> --source <fuente>`.
+   - Una declaración nueva conserva `misstored` y todos los días pendientes o sin servir del activo, sea cual sea la fuente, porque cualquier fuente puede traerlos.
+   - Tests en rojo con los dos caminos del revisor, en el dominio y en la consola. Mutantes Q1a a Q1d, que permiten cada camino, todos muertos.
+2. **Lo que se dice de `purge` es verdad.**
+   - **`refetch_from` pasa a ser `refetch_days`**: ya no guarda el primer día, sino la lista de días quitados de cada fuente. La descarga sigue empezando en el primero.
+   - Los días se piden **una vez**. Los que, tras pedirlos, no tienen ningún cierre en vigor pasan a `unserved_days` y no se vuelven a perseguir.
+   - `prices status` los dice como hueco mientras ningún cierre los llene: «1 día quitado de Alpha Vantage (…) se pidió otra vez y ninguna fuente lo sirvió: queda como hueco».
+   - `purge`, su confirmación, el aviso de las vistas, la ayuda y el README dicen «una vez» y avisan del hueco.
+   - Mutantes Q2a a Q2e, todos muertos (`mut-013/fix013-pass3.log`).
+- **Arranque**: la ronda lo dejó 1 byte por encima del techo (75.726 frente a 75.725). La causa era el chunk propio del aviso de la correspondencia, `notices`, nombrado en la tabla de precargas de la entrada. El aviso pasa al módulo diferido de las cotizaciones y el chunk desaparece. Arranque medido: 75.703 bytes.
+- **`docs/` sin tocar**: `docs/data-schema.md` debe recoger en el formato 2 `misstored`, `refetch_days` y `unserved_days`, no `refetch_from` como decía §14.

@@ -579,7 +579,7 @@ describe("updatePrices", () => {
     );
     await updatePrices({ ...input, sources: { alpha_vantage: changing } });
     expect(parseSymbols(store.files.get("symbols.json")).assets.ast_spec).toMatchObject({
-      currency: "EUR",
+      currencies: { alpha_vantage: "EUR" },
       alpha_vantage: "OTHER",
     });
   });
