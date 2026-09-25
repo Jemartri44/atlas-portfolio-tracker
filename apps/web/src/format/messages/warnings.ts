@@ -139,9 +139,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   unknown_benchmark_asset: (d, n) =>
     `El índice de referencia ${n.one(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`,
   missing_benchmark_price: (d, n) =>
-    d.fx_missing === undefined
-      ? `Falta el precio del índice ${n.one(d.asset_id)} a ${day(d.date)}: la comparación queda sin dato (nunca se estima).`
-      : `El índice ${n.one(d.asset_id)} tiene cotización a ${day(d.date)}, pero sin tipo del BCE (${fxMissingText(d.fx_missing)}): falta su valor en euros y la comparación queda sin dato.`,
+    `Falta el precio del índice ${n.one(d.asset_id)} a ${day(d.date)}: la comparación queda sin dato (nunca se estima).`,
   weights_use_approximation: (d, n) =>
     `Los pesos de ${n.many(d.assets)} se apoyan en una aproximación por su ETF de referencia, no en un valor liquidativo: el reparto de la aportación depende de una estimación.`,
   price_without_eur_value: (d, n) =>

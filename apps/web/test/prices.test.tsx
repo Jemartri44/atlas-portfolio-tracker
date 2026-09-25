@@ -195,3 +195,30 @@ describe("Ajustes on a device without folders (the phone)", () => {
     expect(shown).not.toMatch(/próximamente|sincroniza para verlos/i);
   });
 });
+
+describe("the calculator of the contribution in the web", () => {
+  it("says the note of the domain when a weight rests on an approximation, and adds nothing of its own", async () => {
+    const { contributionView } = await import("../src/view-models/core/contribution.js");
+    const note = {
+      code: "weights_use_approximation",
+      event_id: "",
+      message: "x",
+      details: { assets: ["ast_world"] },
+    };
+    const plan = {
+      date: "2029-06-30",
+      amount_eur: Money.of(Decimal.parse("100"), "EUR"),
+      amount_origin: "flag",
+      bucket_budget_eur: Money.of(Decimal.parse("10"), "EUR"),
+      core_amount_eur: Money.of(Decimal.parse("90"), "EUR"),
+      core_value_eur: Money.of(Decimal.parse("90"), "EUR"),
+      surplus_distributed: false,
+      rows: [],
+      warnings: [note],
+    } as never;
+    expect(contributionView(plan).approximation).toBe(note);
+    expect(
+      contributionView({ ...(plan as object), warnings: [] } as never).approximation,
+    ).toBeUndefined();
+  });
+});

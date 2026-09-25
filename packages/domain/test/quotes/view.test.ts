@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { Decimal } from "../../src/money/decimal.js";
-import type { PriceLookup } from "../../src/projections/prices.js";
 import { DEFAULT_PRICE_CONFIG } from "../../src/quotes/config.js";
 import { effectiveCloses } from "../../src/quotes/line.js";
 import { EMPTY_STATUS, reserveCall, withAssetFailures } from "../../src/quotes/status.js";
-import { approximationWarning, priceStatusView } from "../../src/quotes/view.js";
+import { priceStatusView } from "../../src/quotes/view.js";
 
 describe("what `atlas prices status` shows", () => {
   it("each source with what it spent today, and the age of each asset", () => {
@@ -91,27 +89,5 @@ describe("what `atlas prices status` shows", () => {
       consecutive_failures: 0,
       failing: false,
     });
-  });
-});
-
-describe("a weight that rests on an approximation (P3)", () => {
-  const price = (asset_id: string, approximate?: boolean) =>
-    ({
-      asset_id,
-      origin: "external",
-      date: "2027-01-05",
-      unit_value: Decimal.ONE,
-      currency: "EUR",
-      age_days: 0,
-      stale: false,
-      ...(approximate === undefined ? {} : { approximate }),
-    }) as PriceLookup;
-
-  it("is said, with the assets, and nothing is said when none is", () => {
-    expect(approximationWarning([price("a"), price("b", true), undefined])).toMatchObject({
-      code: "weights_use_approximation",
-      details: { assets: ["b"] },
-    });
-    expect(approximationWarning([price("a")])).toBeUndefined();
   });
 });

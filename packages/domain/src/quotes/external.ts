@@ -116,6 +116,18 @@ export interface QuoteBook {
   readonly staleDays: number;
 }
 
+/**
+ * The subunits the ECB does not publish and that are **an exact unit of a
+ * currency it does** (review of PR #78): a quote in pence converts at the rate
+ * of the pound times one hundred. That is a change of unit, not an estimate —
+ * what is never done is treating `GBX` **as** `GBP`, which would read a close
+ * of 5.000 pence as 5.000 pounds. A table, not a rule: a subunit not listed
+ * here has no rate.
+ */
+export const SUBUNITS: Readonly<Record<string, { readonly of: string; readonly per: string }>> = {
+  GBX: { of: "GBP", per: "100" },
+};
+
 const converted = (
   book: QuoteBook,
   quote: Omit<ExternalQuote, "fx_rate" | "fx_rate_date" | "fx_missing">,
@@ -123,18 +135,63 @@ const converted = (
   if (quote.currency !== "EUR" && book.history === undefined) {
     return { ...quote, fx_missing: "no_history" };
   }
+  const subunit = SUBUNITS[quote.currency];
   const rate =
     quote.currency === "EUR"
       ? ({ kind: "euro", rate: "1", date: quote.date } as const)
-      : resolveRate(book.history as EcbHistory, quote.currency, quote.date, book.staleDays);
+      : resolveRate(
+          book.history as EcbHistory,
+          subunit?.of ?? quote.currency,
+          quote.date,
+          book.staleDays,
+        );
   if (rate.kind === "euro" || rate.kind === "resolved") {
+    const published = Decimal.parse(rate.rate);
     return {
       ...quote,
-      fx_rate: Decimal.parse(rate.rate),
+      // Units of the quote's currency per euro: the pound's rate, times the
+      // pence in a pound, for a quote in pence.
+      fx_rate: subunit === undefined ? published : published.mul(Decimal.parse(subunit.per)),
       ...(rate.kind === "euro" ? {} : { fx_rate_date: rate.date }),
     };
   }
   return { ...quote, fx_missing: rate.kind };
+};
+
+/**
+ * The close in force on or before `date` as a quote and, when it has no value
+ * in euros, **the last earlier close that has one**, carrying the newer one as
+ * information (review of PR #78): a close of today, whose ECB rate is not out
+ * yet, does not leave the weights without the close of yesterday, which has.
+ */
+const closeQuoteAt = (
+  book: QuoteBook,
+  closes: readonly EffectiveClose[],
+  date: CivilDate,
+): ExternalQuote | undefined => {
+  let newest: ExternalQuote | undefined;
+  for (let index = closes.length - 1; index >= 0; index -= 1) {
+    const close = closes[index] as EffectiveClose;
+    if (close.date > date) {
+      continue;
+    }
+    const quote = converted(book, {
+      date: close.date,
+      unit_value: Decimal.parse(close.close),
+      currency: close.currency,
+      source: close.source,
+    });
+    if (quote.fx_rate !== undefined) {
+      return newest === undefined ? quote : { ...quote, newer: newest };
+    }
+    newest ??= quote;
+    // Without a history, or with a currency the ECB never published, no
+    // earlier close of the same currency converts either.
+    if (quote.fx_missing === "no_history" || quote.fx_missing === "currency_not_published") {
+      break;
+    }
+  }
+  return newest;
 };
 
 /**
@@ -156,15 +213,7 @@ export const externalPricesOf = (state: LedgerState, book: QuoteBook): ExternalP
         approximate: true,
       });
     }
-    const own = closeOnOrBefore(book.closes.get(assetId) ?? [], date);
-    return own === undefined
-      ? undefined
-      : converted(book, {
-          date: own.date,
-          unit_value: Decimal.parse(own.close),
-          currency: own.currency,
-          source: own.source,
-        });
+    return closeQuoteAt(book, book.closes.get(assetId) ?? [], date);
   },
 });
 

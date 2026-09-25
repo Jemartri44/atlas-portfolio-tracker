@@ -36,6 +36,7 @@ export interface BucketPositionRow {
   priceOrigin?: string;
   approximate?: boolean;
   eurMissing?: string;
+  newerQuote?: string;
   value?: Money;
   unrealized?: Money;
   unrealizedPct?: string;

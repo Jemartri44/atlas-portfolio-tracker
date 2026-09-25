@@ -78,7 +78,6 @@ export {
 } from "./quotes/symbols.js";
 export {
   type AssetStatusView,
-  approximationWarning,
   priceStatusView,
   type SourceStatusView,
 } from "./quotes/view.js";

@@ -96,7 +96,7 @@ export const describeError = (error: DomainError): string => {
     case "not_core_asset":
       return `El activo ${text(d.asset_id)} no pertenece al núcleo: el simulador de traspaso solo opera sobre la cartera principal.`;
     case "missing_manual_prices":
-      return `Faltan precios manuales a ${text(d.date)}: ${(d.assets as string[]).join(", ")}. Regístralos con \`atlas add valuation --asset <id> --date ${text(d.date)} …\`.`;
+      return `Faltan precios en euros a ${text(d.date)}: ${(d.assets as string[]).join(", ")}. Registra una valoración (\`atlas add valuation --asset <id> --date ${text(d.date)} …\`), o, si tienen una cotización en otra divisa, descarga el histórico del BCE con \`atlas fx update\`.`;
     case "missing_target_weights":
       return "No hay pesos objetivo configurados: fíjalos con `atlas settings set --target-weights ast_x=60,ast_y=40` (target_weights).";
     case "missing_bucket_pct":
@@ -408,9 +408,7 @@ export const describeWarning = (warning: Warning): string => {
     case "unknown_benchmark_asset":
       return `El índice de referencia ${text(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`;
     case "missing_benchmark_price":
-      return d.fx_missing === undefined
-        ? `Falta el precio del índice ${text(d.asset_id)} a ${text(d.date)}: la comparación queda sin dato (nunca se estima).`
-        : `El índice ${text(d.asset_id)} tiene cotización a ${text(d.date)}, pero sin tipo del BCE (${fxMissingText(d.fx_missing)}): falta su valor en euros y la comparación queda sin dato.`;
+      return `Falta el precio del índice ${text(d.asset_id)} a ${text(d.date)}: la comparación queda sin dato (nunca se estima).`;
     case "weights_use_approximation":
       return `Los pesos de ${(d.assets as string[]).join(", ")} se apoyan en una aproximación por su ETF de referencia, no en un valor liquidativo: el reparto de la aportación depende de una estimación.`;
     case "price_without_eur_value":

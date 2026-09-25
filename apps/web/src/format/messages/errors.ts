@@ -135,7 +135,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `La cantidad debe ser mayor que cero (recibido: ${f.titles(d.value)}).`,
   // --- Views that need prices or settings --------------------------------
   missing_manual_prices: (d, n) =>
-    `${count(d.assets) === 1 ? "Falta el precio" : "Faltan precios"} a ${day(d.date)}: ${n.many(d.assets)}. ${count(d.assets) === 1 ? "Regístralo" : "Regístralos"} con una valoración.`,
+    `${count(d.assets) === 1 ? "Falta un precio en euros" : "Faltan precios en euros"} a ${day(d.date)}: ${n.many(d.assets)}. Registra una valoración o, si tiene una cotización en otra divisa, trae el histórico del BCE.`,
   missing_target_weights: () =>
     "No hay pesos objetivo configurados: fíjalos en Ajustes → Configuración.",
   missing_bucket_pct: () =>

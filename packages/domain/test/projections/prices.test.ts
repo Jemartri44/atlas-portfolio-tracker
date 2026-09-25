@@ -209,6 +209,68 @@ describe("priceAt: the single gate", () => {
     ).toBe("manual");
   });
 
+  /**
+   * Review of PR #78: among the prices with a value in euros. A newer quote
+   * without one never covers a valuation that has it; it travels as
+   * information. And a quote that brings its own usable fallback keeps it.
+   */
+  it("never lets a newer quote without euros cover a price that has them", () => {
+    const b = withPrices();
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2027-12-24",
+      unit_value: "100",
+    });
+    const state = project(b);
+    const pence: ExternalPrices = {
+      at: (_assetId, date) => ({
+        date,
+        unit_value: Decimal.parse("5000"),
+        currency: "ZZZ",
+        source: "eodhd",
+        fx_missing: "currency_not_published",
+      }),
+    };
+    for (const price of [
+      priceAt(state, "ast_world", "2027-12-31", DEFAULT_SETTINGS, pence),
+      manualPrices(state, "2027-12-31", DEFAULT_SETTINGS, pence).get("ast_world"),
+    ]) {
+      expect(price).toMatchObject({ origin: "manual", date: "2027-12-24" });
+      expect(price?.unit_value_eur?.amount.toString()).toBe("100");
+      expect(price?.newer_quote).toMatchObject({ currency: "ZZZ", date: "2027-12-31" });
+    }
+    // An older quote without euros is simply not the price.
+    const old: ExternalPrices = {
+      at: () => ({ date: "2027-12-01", unit_value: Decimal.ONE, currency: "ZZZ", source: "eodhd" }),
+    };
+    expect(
+      priceAt(state, "ast_world", "2027-12-31", DEFAULT_SETTINGS, old)?.newer_quote,
+    ).toBeUndefined();
+    // The quote of the source with its own fallback: the usable one, and the newer beside it.
+    const fallback: ExternalPrices = {
+      at: (_assetId, date) => ({
+        date: "2027-12-30",
+        unit_value: Decimal.parse("7"),
+        currency: "EUR",
+        fx_rate: Decimal.ONE,
+        source: "eodhd",
+        newer: {
+          date,
+          unit_value: Decimal.parse("8"),
+          currency: "USD",
+          source: "eodhd",
+          fx_missing: "not_yet_published",
+        },
+      }),
+    };
+    expect(priceAt(state, "ast_world", "2027-12-31", DEFAULT_SETTINGS, fallback)).toMatchObject({
+      origin: "external",
+      date: "2027-12-30",
+      newer_quote: { currency: "USD" },
+    });
+  });
+
   it("carries the approximation mark of a quote", () => {
     const approximate: ExternalPrices = {
       at: (_assetId, date) => ({

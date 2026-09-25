@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { readEcbZipCsv } from "../../src/ecb/history.js";
 import { priceAt } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
-import { approximationAt, externalPricesOf, quoteDates } from "../../src/quotes/external.js";
+import {
+  approximationAt,
+  externalPricesOf,
+  quoteDates,
+  SUBUNITS,
+} from "../../src/quotes/external.js";
 import { type CloseLine, type EffectiveClose, effectiveCloses } from "../../src/quotes/line.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
@@ -69,23 +74,63 @@ describe("the automatic closes as quotes", () => {
       source: "eodhd",
     });
     expect(external.at("ast_gold", "2027-01-05")?.fx_rate?.toString()).toBe("1.2");
-    // The 6th has no ECB rate yet: shown in its currency, not converted with the 5th.
+    // The 6th has no ECB rate yet: it is never converted with the rate of the
+    // 5th. The quote in euros is the close of the 4th, with its own rate, and
+    // the 6th travels with it as information (review of PR #78).
     const sixth = external.at("ast_gold", "2027-01-06");
-    expect(sixth?.fx_rate).toBeUndefined();
-    expect(sixth?.fx_missing).toBe("not_yet_published");
+    expect(sixth).toMatchObject({ date: "2027-01-04", fx_rate_date: "2027-01-04" });
+    expect(sixth?.fx_rate?.toString()).toBe("1.2");
+    expect(sixth?.newer).toMatchObject({ date: "2027-01-06", fx_missing: "not_yet_published" });
+    expect(sixth?.newer?.fx_rate).toBeUndefined();
+    // With no earlier close that converts, the newest is all there is.
+    const alone = externalPricesOf(state(), book({ ast_gold: [line("2027-01-06", "125", "USD")] }));
+    expect(alone.at("ast_gold", "2027-01-06")).toMatchObject({ fx_missing: "not_yet_published" });
+    expect(alone.at("ast_gold", "2027-01-06")?.newer).toBeUndefined();
     expect(external.at("ast_gold", "2027-01-03")).toBeUndefined();
     expect(external.at("ast_bonds", "2027-01-05")).toBeUndefined();
   });
 
-  it("never treats a subunit as its currency (GBX is not GBP)", () => {
+  it("converts pence as pounds / 100, an exact unit, and never treats GBX as GBP", () => {
     const external = externalPricesOf(
       state(),
-      book({ ast_gold: [line("2027-01-04", "5000", "GBX")] }),
+      book({
+        ast_gold: [line("2027-01-04", "5000", "GBX")],
+        ast_bonds: [line("2027-01-04", "5000", "ILA")],
+      }),
     );
-    expect(external.at("ast_gold", "2027-01-04")).toMatchObject({
-      currency: "GBX",
+    const pence = external.at("ast_gold", "2027-01-04");
+    // 0.8 pounds per euro is 80 pence per euro: 5000 pence are 62.5 euros, not 6250.
+    expect(pence).toMatchObject({ currency: "GBX", fx_rate_date: "2027-01-04" });
+    expect(pence?.fx_rate?.toString()).toBe("80");
+    // A subunit that is not in the table has no rate at all.
+    expect(external.at("ast_bonds", "2027-01-04")).toMatchObject({
+      currency: "ILA",
       fx_missing: "currency_not_published",
     });
+    expect(SUBUNITS).toEqual({ GBX: { of: "GBP", per: "100" } });
+  });
+
+  it("stops looking back when no close of that currency can convert", () => {
+    const external = externalPricesOf(
+      state(),
+      book({ ast_gold: [line("2027-01-04", "1", "ILA"), line("2027-01-05", "2", "ILA")] }),
+    );
+    expect(external.at("ast_gold", "2027-01-05")).toMatchObject({
+      date: "2027-01-05",
+      fx_missing: "currency_not_published",
+    });
+  });
+
+  it("does not convert a currency the ECB stopped publishing (currency_stale)", () => {
+    const stale = readEcbZipCsv(
+      ["Date,USD,BGN,", "2027-03-01,1.2,N/A,", "2027-01-04,1.2,1.9558,"].join("\n"),
+    );
+    const external = externalPricesOf(state(), {
+      closes: new Map([["ast_gold", effectiveCloses([line("2027-03-01", "10", "BGN")])]]),
+      history: stale,
+      staleDays: 30,
+    });
+    expect(external.at("ast_gold", "2027-03-01")).toMatchObject({ fx_missing: "currency_stale" });
   });
 
   it("converts euros at 1 even without a history, and nothing else", () => {

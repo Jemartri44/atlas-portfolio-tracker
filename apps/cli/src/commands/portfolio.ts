@@ -15,7 +15,6 @@ import {
   settingsAt,
   type Warning,
 } from "@atlas/domain";
-import { approximationWarning } from "@atlas/domain/quotes";
 import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { eur, pct, pp } from "../output/format.js";
@@ -147,13 +146,8 @@ export const weightsCommand = async (
   const { state } = await loadForQuery(ctx, date);
   const quotes = await loadQuotes(ctx, state);
   const weights = coreWeights(state, date, settingsAt(state, date).settings, quotes.external);
-  const approximation = approximationWarning(weights.rows.map((row) => row.price));
-  const shown =
-    approximation === undefined
-      ? weights
-      : { ...weights, warnings: [...weights.warnings, approximation] };
   sayNotes(ctx, quotes.notes);
-  renderQuery(ctx, state, jsonWeights(shown), weightsText(shown));
+  renderQuery(ctx, state, jsonWeights(weights), weightsText(weights));
   return 0;
 };
 
@@ -208,20 +202,12 @@ export const contributeCommand = async (
   const amount = stringFlag(flags, "amount");
   const quotes = await loadQuotes(ctx, state);
   const settings = settingsAt(state, date).settings;
-  const computed = contributionPlan(state, {
+  const plan = contributionPlan(state, {
     ...(amount === undefined ? {} : { amount }),
     date,
     settings,
     ...(quotes.external === undefined ? {} : { external: quotes.external }),
   });
-  // The calculator says when a weight it uses rests on an approximation (P3).
-  const approximation = approximationWarning(
-    coreWeights(state, date, settings, quotes.external).rows.map((row) => row.price),
-  );
-  const plan =
-    approximation === undefined
-      ? computed
-      : { ...computed, warnings: [...computed.warnings, approximation] };
   sayNotes(ctx, quotes.notes);
   renderQuery(
     ctx,

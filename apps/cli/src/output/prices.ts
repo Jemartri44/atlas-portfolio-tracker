@@ -50,12 +50,28 @@ export const priceJson = (price: PriceLookup | undefined) =>
         origin: price.origin,
         source: price.source,
         approximate: price.approximate === true,
+        newer_quote:
+          price.newer_quote === undefined
+            ? undefined
+            : {
+                unit_value: price.newer_quote.unit_value.toString(),
+                currency: price.newer_quote.currency,
+                date: price.newer_quote.date,
+                source: price.newer_quote.source,
+                fx_missing: price.newer_quote.fx_missing,
+              },
       };
 
 /** The notes under a table with prices: what has no value in euros, what is an approximation. */
 export const priceNotes = (prices: readonly (PriceLookup | undefined)[]): string[] => {
   const notes: string[] = [];
   for (const price of prices) {
+    const newer = price?.newer_quote;
+    if (price !== undefined && newer !== undefined) {
+      notes.push(
+        `${price.asset_id}: hay una cotización más reciente (${newer.unit_value.toString()} ${newer.currency} del ${newer.date}) sin valor en euros (${fxMissingText(newer.fx_missing)}); se usa el último precio que sí lo tiene, del ${price.date}.`,
+      );
+    }
     if (price?.fx_missing !== undefined) {
       notes.push(
         `${price.asset_id}: la cotización está en ${price.currency} y falta su valor en euros (${fxMissingText(price.fx_missing)}); no suma en ningún total.`,

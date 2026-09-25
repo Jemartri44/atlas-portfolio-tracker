@@ -83,7 +83,7 @@ export const simulateTransfer = (
    * the transfer are priced: the weights are computed over the whole core.
    */
   if (table.partial) {
-    fail("missing_manual_prices", "some core assets held have no manual price", {
+    fail("missing_manual_prices", "some core assets held have no price in euros", {
       assets: table.missing_prices,
       date,
     });

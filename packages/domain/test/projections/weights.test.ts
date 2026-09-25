@@ -323,10 +323,32 @@ const noRate013 = (asset: string): ExternalPrices => ({
 });
 
 describe("coreWeights with a quote that has no rate (feature 013)", () => {
-  it("never adds it up in euros: the total is partial, and it is said", () => {
+  it("uses the last price with euros, and carries the newer quote without them as information", () => {
     const state = projectLedger(balanced().build());
     const result = coreWeights(
       state,
+      "2028-01-10",
+      settings({ target_weights: TARGETS }),
+      noRate013("ast_gold"),
+    );
+    // Review of PR #78: a quote in pence of every day must not leave the whole
+    // core without weights while the ledger has a valuation with its rate.
+    expect(result.partial).toBe(false);
+    const gold = result.rows.find((row) => row.asset_id === "ast_gold");
+    expect(gold?.price).toMatchObject({ origin: "manual", currency: "USD" });
+    expect(gold?.price?.newer_quote).toMatchObject({
+      currency: "GBX",
+      fx_missing: "currency_not_published",
+    });
+  });
+
+  it("never adds up in euros a quote that has none, when it is all there is: partial, and said", () => {
+    const b = balanced();
+    const events = b
+      .build()
+      .filter((event) => !(event.type === "valuation" && event.asset_id === "ast_gold"));
+    const result = coreWeights(
+      projectLedger(events),
       "2028-01-10",
       settings({ target_weights: TARGETS }),
       noRate013("ast_gold"),

@@ -68,13 +68,29 @@ describe("the views with automatic prices", () => {
     expect(costs.text).toContain("1200.00");
   });
 
-  it("say a quote without an ECB rate in its currency, and never add it up in euros", async () => {
+  it("use the last price with euros, and say the newer quote without them beside it", async () => {
     const f = await folder(ledger());
+    await writePrices(f.dir, { fund_a: line("2027-06-08", "130", "USD") });
+    const weights = await f.atlas("weights", "--date", "2027-06-09");
+    // Review of PR #78: the valuation in euros is used, never covered.
+    expect(weights.text).toMatch(/fund_a\s+equity\s+10\s+110\s+EUR\s+1\s+2027-05-31/);
+    expect(weights.text).toContain(
+      "fund_a: hay una cotización más reciente (130 USD del 2027-06-08) sin valor en euros (no hay histórico del BCE",
+    );
+    expect(weights.text).not.toContain("(parcial)");
+    const json = JSON.parse((await f.atlas("weights", "--date", "2027-06-09", "--json")).out);
+    const fund = json.data.rows.find((row: { asset_id: string }) => row.asset_id === "fund_a");
+    expect(fund.price.newer_quote).toMatchObject({ currency: "USD", fx_missing: "no_history" });
+  });
+
+  it("say a quote without an ECB rate in its currency when it is all there is, and never add it up", async () => {
+    const f = await folder(
+      ledger().filter((event) => !(event.type === "valuation" && event.asset_id === "fund_a")),
+    );
     await writePrices(f.dir, { fund_a: line("2027-06-08", "130", "USD") });
     const weights = await f.atlas("weights", "--date", "2027-06-09");
     expect(weights.text).toMatch(/fund_a\s+equity\s+10\s+130\s+USD\s+sin tipo BCE/);
     expect(weights.text).toContain("fund_a: la cotización está en USD y falta su valor en euros");
-    expect(weights.text).toContain("no hay histórico del BCE");
     expect(weights.text).toContain("(parcial)");
   });
 
@@ -107,7 +123,8 @@ describe("the views with automatic prices", () => {
     expect(weights.text).toMatch(
       /fund_a\s+equity\s+10\s+220\s+EUR\s+1\s+2027-06-08\s+1\s+EODHD ≈ aprox\./,
     );
-    expect(weights.text).toContain("se apoyan en una aproximación por su ETF de referencia");
+    // The weights mark it on the row; the calculator of the contribution says
+    // it, from the domain (ADR-0024, review of PR #78).
     const contribute = await f.atlas("contribute", "--amount", "100", "--date", "2027-06-09");
     expect(contribute.code).toBe(0);
     expect(contribute.text).toContain("el reparto de la aportación depende de una estimación");

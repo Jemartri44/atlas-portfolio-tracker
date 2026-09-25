@@ -31,6 +31,8 @@ export interface PriceInfo {
   approximate?: boolean | undefined;
   /** Why the quote has no value in euros; it is then never added up in euros. */
   eurMissing?: string | undefined;
+  /** A more recent quote without a value in euros, in words: shown beside the price used. */
+  newerQuote?: string | undefined;
 }
 
 /**
@@ -55,6 +57,14 @@ export const Price = (props: { price: PriceInfo; marked?: boolean }): JSX.Elemen
         <span class="stale-mark" title={`Sin valor en euros: ${reason()}`}>
           <Icon name="caution" class="icon-sm" />
           <span class="sr-only">sin valor en euros</span>
+        </span>
+      )}
+    </Show>
+    <Show when={props.price.newerQuote}>
+      {(newer) => (
+        <span class="stale-mark" title={`Se usa el último precio con valor en euros: ${newer()}`}>
+          <Icon name="info" class="icon-sm" />
+          <span class="sr-only">{newer()}</span>
         </span>
       )}
     </Show>
@@ -95,6 +105,7 @@ export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX
       <Show when={props.price.eurMissing}>
         {(reason) => <> · falta su valor en euros ({reason()})</>}
       </Show>
+      <Show when={props.price.newerQuote}>{(newer) => <> · {newer()}</>}</Show>
     </span>
   </Show>
 );

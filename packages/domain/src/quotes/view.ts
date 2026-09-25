@@ -3,8 +3,7 @@
 // something is said).
 
 import { type CivilDate, daysBetween } from "../dates/civil-date.js";
-import type { PriceLookup, QuoteSource } from "../projections/prices.js";
-import type { Warning } from "../projections/state.js";
+import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
 import type { PriceConfig } from "./config.js";
 import type { EffectiveClose } from "./line.js";
@@ -66,25 +65,3 @@ export const priceStatusView = (
     };
   }),
 });
-
-/**
- * The warning a view of weights or of the contribution carries when any
- * weight it uses rests on an approximation through the reference ETF (P3):
- * a split of the contribution that depends on an estimate has to say so
- * (constitution V). `undefined` when none does.
- */
-export const approximationWarning = (
-  prices: Iterable<PriceLookup | undefined>,
-): Warning | undefined => {
-  const assets = [...prices]
-    .filter((price): price is PriceLookup => price?.approximate === true)
-    .map((price) => price.asset_id);
-  return assets.length === 0
-    ? undefined
-    : {
-        code: "weights_use_approximation",
-        event_id: "",
-        message: `the weights of ${assets.join(", ")} rest on an approximation through the reference ETF`,
-        details: { assets },
-      };
-};

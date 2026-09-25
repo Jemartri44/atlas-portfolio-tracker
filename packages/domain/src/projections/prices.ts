@@ -22,7 +22,7 @@ import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
 import { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
-import type { AssetId } from "../schema/events.js";
+import type { AssetId, ValuationEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { latestValuations, manualPriceOf } from "./manual-price.js";
 import type { LedgerState, Warning } from "./state.js";
@@ -67,6 +67,13 @@ export interface ExternalQuote {
   fx_rate_date?: CivilDate;
   /** Why `fx_rate` is absent. */
   fx_missing?: FxMissing;
+  /**
+   * A more recent quote of the same asset that has **no** value in euros,
+   * shown as information next to this one, which has (feature 013, review of
+   * PR #78): a figure in euros is never covered by a newer one that cannot be
+   * added up.
+   */
+  newer?: ExternalQuote;
 }
 
 /** The optional external source of the gate. Pure and synchronous, by the same rule. */
@@ -107,6 +114,8 @@ export interface PriceLookup {
    */
   unit_value_eur?: Money;
   fx_missing?: FxMissing;
+  /** A more recent quote without a value in euros, shown next to this price, never instead of it. */
+  newer_quote?: ExternalQuote;
   /** Days from the price to the date asked; never negative. */
   age_days: number;
   /** Older than `stale_price_days`; always false when the parameter is not set. */
@@ -138,6 +147,7 @@ const lookupOf = (
     ...(eventId === undefined ? {} : { event_id: eventId }),
     ...(quote.source === undefined ? {} : { source: quote.source }),
     ...(quote.approximate === true ? { approximate: true } : {}),
+    ...(quote.newer === undefined ? {} : { newer_quote: quote.newer }),
     date: quote.date,
     unit_value: quote.unit_value,
     currency: quote.currency,
@@ -163,7 +173,7 @@ export const warnWithoutEur = (warnings: Warning[], price: PriceLookup): void =>
   warnings.push({
     code: "price_without_eur_value",
     event_id: "",
-    message: `${price.asset_id}: no value in euros for its ${price.currency} quote (${price.fx_missing})`,
+    message: `${price.asset_id}: no value in euros`,
     details: {
       asset_id: price.asset_id,
       currency: price.currency,
@@ -192,44 +202,54 @@ export const priceDates = (state: LedgerState): CivilDate[] =>
   [...new Set(state.valuations.map((event) => event.date))].sort();
 
 /**
- * Which of the two wins **for showing a value** (decision P2 of the direction,
- * ADR-0031 second amendment; it replaces decision (j) of prompt 005 for views
- * only): the more recent date, and on the same date the manual one, because
- * the user is the authority. An old valuation no longer hides every close
- * after it. The Modelo 720 is not affected: it reads the manual leaf alone.
+ * Which price a view uses (decision P2 of the direction, ADR-0031 second
+ * amendment; it replaces decision (j) of prompt 005 for views only): the more
+ * recent date, and on the same date the manual one, because the user is the
+ * authority — **among the prices that have a value in euros** (review of PR
+ * #78). A newer quote without one never covers a figure that can be added up:
+ * it is carried as `newer_quote`, to be shown, and the last usable figure is
+ * used, with its age. The Modelo 720 is not affected: it reads the manual leaf
+ * alone.
  */
-const quoteWins = (quote: ExternalQuote | undefined, manualDate: CivilDate | undefined) =>
-  quote !== undefined && (manualDate === undefined || quote.date > manualDate);
+const choose = (
+  assetId: AssetId,
+  manual: ValuationEvent | undefined,
+  quote: ExternalQuote | undefined,
+  date: CivilDate,
+  staleAfter: number | undefined,
+): PriceLookup | undefined => {
+  const newer = quote !== undefined && (manual === undefined || quote.date > manual.date);
+  if (newer && (manual === undefined || quote.fx_rate !== undefined)) {
+    return lookupOf(assetId, "external", quote, date, staleAfter);
+  }
+  return manual === undefined
+    ? undefined
+    : {
+        ...lookupOf(assetId, "manual", manualPriceOf(manual), date, staleAfter, manual.id),
+        ...(newer ? { newer_quote: quote } : {}),
+      };
+};
 
-/** **The gate.** The price of one asset at one date, with its origin (P2 above). */
+/** **The gate.** The price of one asset at one date, with its origin (see `choose`). */
 export const priceAt = (
   state: LedgerState,
   assetId: AssetId,
   date: CivilDate,
   settings: Settings,
   external?: ExternalPrices,
-): PriceLookup | undefined => {
-  const manual = latestValuations(state, date).get(assetId);
-  const quote = external?.at(assetId, date);
-  if (quoteWins(quote, manual?.date)) {
-    return lookupOf(assetId, "external", quote as ExternalQuote, date, settings.stale_price_days);
-  }
-  return manual === undefined
-    ? undefined
-    : lookupOf(
-        assetId,
-        "manual",
-        manualPriceOf(manual),
-        date,
-        settings.stale_price_days,
-        manual.id,
-      );
-};
+): PriceLookup | undefined =>
+  choose(
+    assetId,
+    latestValuations(state, date).get(assetId),
+    external?.at(assetId, date),
+    date,
+    settings.stale_price_days,
+  );
 
 /**
  * The same gate for the views that walk every asset (weights, costs, net
- * worth…): one pass over the valuations plus, when a source is given, the
- * quotes that win over them by P2. An asset with no price at all is simply
+ * worth…): one pass over the valuations plus, when a source is given, its
+ * quotes, chosen by the same rule. An asset with no price at all is simply
  * absent: the absence is the datum.
  */
 export const manualPrices = (
@@ -239,22 +259,17 @@ export const manualPrices = (
   external?: ExternalPrices,
 ): Map<AssetId, PriceLookup> => {
   const prices = new Map<AssetId, PriceLookup>();
-  for (const [assetId, event] of latestValuations(state, date)) {
-    prices.set(
+  const latest = latestValuations(state, date);
+  for (const assetId of external === undefined ? latest.keys() : state.assets.keys()) {
+    const price = choose(
       assetId,
-      lookupOf(assetId, "manual", manualPriceOf(event), date, settings.stale_price_days, event.id),
+      latest.get(assetId),
+      external?.at(assetId, date),
+      date,
+      settings.stale_price_days,
     );
-  }
-  if (external === undefined) {
-    return prices;
-  }
-  for (const assetId of state.assets.keys()) {
-    const quote = external.at(assetId, date);
-    if (quoteWins(quote, prices.get(assetId)?.date)) {
-      prices.set(
-        assetId,
-        lookupOf(assetId, "external", quote as ExternalQuote, date, settings.stale_price_days),
-      );
+    if (price !== undefined) {
+      prices.set(assetId, price);
     }
   }
   return prices;

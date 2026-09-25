@@ -301,7 +301,7 @@ const noRate013 = (asset: string): ExternalPrices => ({
 });
 
 describe("bucketTheses with a quote of the index that has no rate (feature 013)", () => {
-  it("leaves the comparison out and says the value in euros is missing, and why", () => {
+  it("leaves the comparison out: a price without euros is no price for it", () => {
     const view = bucketTheses(
       projectLedger(scenario({ sell: true }).build()),
       "2027-12-31",
@@ -309,11 +309,8 @@ describe("bucketTheses with a quote of the index that has no rate (feature 013)"
       noRate013("ast_world"),
     );
     expect(view.rows[0]?.benchmark_equivalent_eur).toBeUndefined();
-    expect(view.rows[0]?.missing_benchmark[0]).toMatchObject({
-      reason: "no_price",
-      fx_missing: "currency_not_published",
-    });
-    expect(view.warnings[0]?.details).toMatchObject({ fx_missing: "currency_not_published" });
+    expect(view.rows[0]?.missing_benchmark[0]).toMatchObject({ reason: "no_price" });
+    expect(view.warnings.map((warning) => warning.code)).toContain("missing_benchmark_price");
   });
 
   it("does the same when the quote at the purchase has no rate and the end one has", () => {
@@ -344,7 +341,7 @@ describe("bucketTheses with a quote of the index that has no rate (feature 013)"
       start,
     );
     expect(view.rows[0]?.missing_benchmark.find((gap) => gap.reason === "no_price")).toMatchObject({
-      fx_missing: "not_yet_published",
+      asset_id: "ast_world",
     });
   });
 });

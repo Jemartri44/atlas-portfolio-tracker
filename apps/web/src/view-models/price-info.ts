@@ -5,6 +5,7 @@
 // domain decides every one of these; the screens only choose the words.
 
 import { Money, type PriceLookup } from "@atlas/domain";
+import { formatDate } from "../format/date.js";
 import { fxMissingText } from "../format/messages/warnings.js";
 
 export interface PriceFields {
@@ -18,6 +19,8 @@ export interface PriceFields {
   approximate?: boolean;
   /** Why the quote has no value in euros, in words; absent when it has one. */
   eurMissing?: string;
+  /** A more recent quote without a value in euros, in words: shown, never used. */
+  newerQuote?: string;
 }
 
 const SOURCES: Record<string, string> = { eodhd: "EODHD", alpha_vantage: "Alpha Vantage" };
@@ -34,4 +37,9 @@ export const priceFieldsOf = (price: PriceLookup | undefined): PriceFields =>
           price.origin === "manual" ? "manual" : (SOURCES[price.source ?? ""] ?? "automático"),
         ...(price.approximate === true ? { approximate: true } : {}),
         ...(price.fx_missing === undefined ? {} : { eurMissing: fxMissingText(price.fx_missing) }),
+        ...(price.newer_quote === undefined
+          ? {}
+          : {
+              newerQuote: `hay una cotización más reciente en ${price.newer_quote.currency}, del ${formatDate(price.newer_quote.date)}, sin valor en euros (${fxMissingText(price.newer_quote.fx_missing)})`,
+            }),
       };

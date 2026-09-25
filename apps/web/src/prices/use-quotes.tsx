@@ -4,10 +4,15 @@
 // screen works exactly as before, with the manual prices.
 
 import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
-import { approximationWarning } from "@atlas/domain/quotes";
 import { type Accessor, createResource, type JSX, Show } from "solid-js";
 import { Notice } from "../components/index.js";
-import { externalOf, loadWebQuotes, type WebQuotes } from "./quotes.js";
+import type { WebQuotes } from "./quotes.js";
+
+// Imported when the screen asks, not with it: a static import made every
+// screen that shows prices name the chunks of the folder, the ECB and the
+// quotes in the table of preloads of the entry, which is on the boot path
+// (+33 bytes measured, review of PR #78).
+const quotesModule = () => import("./quotes.js");
 
 export interface ScreenQuotes {
   readonly quotes: Accessor<WebQuotes | undefined>;
@@ -18,11 +23,18 @@ export interface ScreenQuotes {
 /** Loads the closes of the assets of `state` once, for one screen. */
 export const useQuotes = (state: LedgerState): ScreenQuotes => {
   const ids: AssetId[] = [...state.assets.keys()];
-  const [quotes] = createResource(() => loadWebQuotes(ids));
-  return { quotes, external: (dated) => externalOf(quotes(), dated) };
+  const [loaded] = createResource(async () => {
+    const module = await quotesModule();
+    return { quotes: await module.loadWebQuotes(ids), externalOf: module.externalOf };
+  });
+  return {
+    quotes: () => loaded()?.quotes,
+    external: (dated) => {
+      const current = loaded();
+      return current === undefined ? undefined : current.externalOf(current.quotes, dated);
+    },
+  };
 };
-
-export { approximationWarning };
 
 const PROBLEMS = {
   permission:

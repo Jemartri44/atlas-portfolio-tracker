@@ -42,6 +42,7 @@ export interface WeightRow {
   priceOrigin?: string;
   approximate?: boolean;
   eurMissing?: string;
+  newerQuote?: string;
   value?: Money;
   weightPct?: string;
   targetPct: string;
@@ -139,10 +140,7 @@ export const weightsView = (view: CoreWeights, names: NameIndex = NO_NAMES): Wei
     missing: view.missing_prices
       .filter((id) => !withoutEur.has(id))
       .map((id) => displayName(names, id)),
-    priceNotes: view.warnings.filter(
-      (warning) =>
-        warning.code === "price_without_eur_value" || warning.code === "weights_use_approximation",
-    ),
+    priceNotes: view.warnings.filter((warning) => warning.code === "price_without_eur_value"),
     stale: view.stale_prices.map((id) => displayName(names, id)),
     warnings: view.warnings,
   };
