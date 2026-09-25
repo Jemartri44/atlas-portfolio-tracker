@@ -2,7 +2,7 @@
 
 **Rama**: `feature/015-api-access` (worktree `../atlas-wt-015`) | **Fecha**: 2026-09-25 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Bloque 0 y preguntas**: [`questions.md`](questions.md)
 
-**Estado**: **borrador para el alto**. Todo lo marcado **PROPUESTA** lo decide la dirección, y las preguntas nuevas son Q1 a Q7 de `questions.md` §5.
+**Estado**: **aprobado por la dirección el 2026-09-25**, con las decisiones de `questions.md` §8 (Q1 a Q7 respondidas). Las marcas **PROPUESTA** quedan como referencia a esas respuestas.
 
 **Artefactos**:
 

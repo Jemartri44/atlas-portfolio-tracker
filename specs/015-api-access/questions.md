@@ -303,3 +303,25 @@ Tras el *build* de partida: la búsqueda de un `.js` junto a un `.ts` o un `.tsx
 ```
 find packages apps tests -name '*.js' -not -path '*/node_modules/*' -not -path '*/dist*' | while read f; do b="${f%.js}"; [ -e "$b.ts" -o -e "$b.tsx" ] && echo "TWIN $f"; done
 ```
+
+## 8. Respuestas de la dirección al alto del plan (2026-09-25)
+
+`spec.md` y `plan.md` reciben el **visto bueno**. Decisiones, tal como llegaron:
+
+- **Propuestas del alto (plan §6): aceptadas todas tal como se proponen** — los valores [PENDIENTE] (lista 120 s, sesión 8 h, intento 10 min, `POST /api/auth/logout` → `204`, `device_name` de 1 a 40 con el alfabeto cerrado, código 5 min, «recientes» 7 días, tolerancia 10 min, secretos 300 s), los nombres de SSM, `GET /api/session`, `remote_unavailable`, la página de acceso denegado, el objeto del dispositivo, el `<details>` y el enlace a `127.0.0.1`, `reissue_device_id`, el aviso a 14 días, `--local-only`, las órdenes, las rutas de referencia y **la comparación exacta del correo, exigiendo además `email_verified`** —, **con una precisión: ninguna cookie lleva el correo.** La sesión y la cookie transitoria solo llevan el `sub` y lo imprescindible; así, **firmar sin cifrar es suficiente y queda aprobado**.
+  - *Nota del implementador:* el diseño ya cumplía la precisión en las dos cookies (`data-model.md` §1.2 y §1.3: ninguna lleva el correo). **El código de un solo uso de la consola (E2) no es una cookie y sí lleva el correo** (`data-model.md` §1.4). Queda como pregunta para antes de E2: **Q8** (§9).
+- **Rehacer a medias: opción (a).**
+- **Q1: autorizado el total hasta +24 KB por encima del techo actual** (280.064 + 24.576 = **304.640**), cada subida en su propio commit con la medición. **El arranque sigue con su tope de 76.069.**
+- **Q2: no se emite `mfa_required`.** Nota fechada en ADR-0033 y en el procedimiento de la verificación en dos pasos (hechas en E1, por encargo de la dirección).
+- **Q3: un solo código, `device_forgotten`, con `details.reason`** (`missing`, `wrong_type`, `forgotten`).
+- **Q4: depende del usuario (P3).** Si dice que sí, el SDK entra en E3; si no, la 015 se cierra con dobles y el SDK se conecta al empezar la 017. La dirección lo confirma antes de E3.
+- **Q5: `sync/redo-record.ts`.**
+- **Q6: la IndexedDB copiada se documenta como riesgo aceptado.**
+- **Q7: sección perezosa de Ajustes.**
+- **§6: la errata de `docs/data-schema.md` §1** (cuentas miembro y bucket de CloudTrail) **se corrige en E1** según ADR-0034.
+- **Documentos**: la dirección encarga **en E1** llevar estas decisiones a `docs/api.md` y a `data-model.md`, la nota de Q2 a ADR-0033 y al procedimiento, y la errata de `data-schema.md`. Es una excepción expresa a la regla de §2 bis del encargo («no toques `docs/`»), limitada a esto.
+
+## 9. Preguntas abiertas para antes de E2
+
+- **Q8 — El correo en el código de la consola.** La precisión de §8 («ninguna cookie lleva el correo») vale para las cookies. El código de un solo uso de §4.2 viaja en la URL de vuelta a `127.0.0.1` (queda en el historial del navegador) o se enseña en la página manual, firmado y **sin cifrar**, y ADR-0033 lo liga al par `{sub, email}`. Opciones, sin elegir: **(a)** el código lleva solo el `sub`, y al canjear la API toma el correo de la entrada de la lista permitida con ese `sub` (el par se vuelve a comprobar entero en ese momento; si el `sub` tiene dos entradas, se niega); **(b)** se cifra el código con AES-256-GCM y la subclave `console_code` (autenticado y opaco); **(c)** se acepta el correo legible en el código. Recomiendo **(a)**: no añade primitiva y el par se comprueba igual en el canje.
+- **Q9 — Un objeto de dispositivo ilegible.** Q3 fija tres valores de `details.reason` (`missing`, `wrong_type`, `forgotten`). Un `sync/devices/<id>.json` que existe pero no se lee de forma estricta (a mano, o de una versión más nueva) no es ninguno de los tres. E1 lo niega igual (`403 device_forgotten`, fallo seguro) con un **cuarto valor, `unreadable`**, en lugar de plegarlo en `missing`. ¿Se confirma, o se prefiere plegarlo?

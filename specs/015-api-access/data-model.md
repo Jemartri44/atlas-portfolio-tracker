@@ -1,6 +1,6 @@
 # Modelo de datos y formatos, escritos como contrato: `015-api-access`
 
-Todos los formatos de esta feature viven **fuera del libro**: ninguno añade un tipo de evento ni un campo, ni sube `schema_version` (§2 bis del encargo). Los lectores son **estrictos**: una clave desconocida, un tipo que no es el suyo o un formato que no es `1` hacen el objeto **ilegible**, con su código, y nunca se leen como «vacío» ni como «válido por defecto». Todo lo marcado **PROPUESTA** lo decide la dirección en el alto (plan §6).
+Todos los formatos de esta feature viven **fuera del libro**: ninguno añade un tipo de evento ni un campo, ni sube `schema_version` (§2 bis del encargo). Los lectores son **estrictos**: una clave desconocida, un tipo que no es el suyo o un formato que no es `1` hacen el objeto **ilegible**, con su código, y nunca se leen como «vacío» ni como «válido por defecto». **Aprobado por la dirección el 2026-09-25** (`questions.md` §8), con una precisión: **ninguna cookie lleva el correo**. Queda abierto el correo del código de la consola (§1.4, Q8) y `admin.json` (§9, E5).
 
 Convenciones: los instantes son ISO 8601 en UTC con `Z`, salvo `iat` y `exp` de las cargas firmadas, que son segundos Unix enteros. Los identificadores aleatorios usan base64url sin relleno.
 
@@ -8,7 +8,7 @@ Convenciones: los instantes son ISO 8601 en UTC con `Z`, salvo `iat` y `exp` de 
 
 ## 1. Las cargas firmadas: sesión, intento y código de la consola
 
-### 1.1 La firma (PROPUESTA, §6.2 (b))
+### 1.1 La firma (decidido, §6.2 (b))
 
 - **Clave raíz**: el parámetro `/atlas/<entorno>/auth/session-key` (§4), con 32 bytes aleatorios en base64url (43 caracteres). Si mide menos de 32 bytes, la Lambda **se niega a arrancar**.
 - **Subclaves**: `crypto.hkdfSync("sha256", ikm = clave raíz, salt = vacío, info, 32)`, una por propósito (RFC 5869 admite la sal vacía cuando la clave de entrada ya es aleatoria y uniforme):
@@ -60,7 +60,7 @@ Con `flow: "console"` no lleva `did`, sino un objeto `console`:
 "console": { "mode": "loopback", "port": 49152, "state": "<43 de la consola>", "code_challenge": "<43>", "device_name": "<nombre>", "reissue_device_id": "<22, opcional>" }
 ```
 
-- **PROPUESTA**: la cookie va **firmada, no cifrada**. Lo que lleva (`state`, `nonce`, el verificador) solo le sirve a quien ya tiene el navegador del usuario, y el código de Google pasa por ese mismo navegador. La alternativa es cifrarla con AES-256-GCM y una subclave propia: un poco más de código y ningún secreto nuevo.
+- **Decidido**: la cookie va **firmada, no cifrada**, y **no lleva el correo** (precisión de la dirección). Lo que lleva (`state`, `nonce`, el verificador) solo le sirve a quien ya tiene el navegador del usuario, y el código de Google pasa por ese mismo navegador. La alternativa es cifrarla con AES-256-GCM y una subclave propia: un poco más de código y ningún secreto nuevo.
 
 ### 1.4 El código de un solo uso de la consola
 
@@ -71,7 +71,7 @@ Viaja en `?code=` hacia `127.0.0.1` o se enseña en la página manual.
 ```
 
 - Lleva lo que exige ADR-0033: el `token_id`, el `code_challenge`, el par y el nombre.
-- **Consecuencia escrita (PROPUESTA)**: el código va firmado y no cifrado, así que el correo y el `sub` se pueden leer en base64 en el historial del navegador del propio usuario. Se aceptaría como tal, igual que el `sub` en la cookie. La alternativa es cifrar con AES-256-GCM y la subclave `console_code`, que sigue siendo autenticado, o sacar el correo del código y buscarlo en la lista por su `sub` al canjear.
+- **Abierto (Q8, antes de E2)**: el código va firmado y no cifrado, así que el correo y el `sub` se pueden leer en base64 en el historial del navegador del propio usuario. Se aceptaría como tal, igual que el `sub` en la cookie. La alternativa es cifrar con AES-256-GCM y la subclave `console_code`, que sigue siendo autenticado, o sacar el correo del código y buscarlo en la lista por su `sub` al canjear.
 - Mide unos 400 caracteres: en la variante manual se **pega** en la consola, no se teclea.
 
 ---
@@ -99,22 +99,22 @@ Es un `SecureString` estándar en `/atlas/<entorno>/device-tokens/<token_id>`, y
 { "allow_list_format": 1, "entries": [ { "sub": "<sub>", "email": "<correo>" } ] }
 ```
 
-- **PROPUESTA**: el correo se compara **exacto, byte a byte**, con el de la reclamación `email` del ID token. Normalizarlo sería reconocer por parecido (§2 ter), y la identidad de verdad es el par. El guion de secretos de la 017 escribe el correo tal cual lo muestra Google en la página de acceso denegado, o en la del propio usuario.
+- **Decidido**: el correo se compara **exacto, byte a byte**, y además se exige `email_verified`, con el de la reclamación `email` del ID token. Normalizarlo sería reconocer por parecido (§2 ter), y la identidad de verdad es el par. El guion de secretos de la 017 escribe el correo tal cual lo muestra Google en la página de acceso denegado, o en la del propio usuario.
 - Una lista vacía o ilegible **no deja pasar a nadie**. Ilegible es `remote_unavailable` en las rutas JSON y la página de error en la vuelta de Google, con su código en el registro.
 
-## 4. Los parámetros de SSM que lee la Lambda (PROPUESTA, §6.2 (d))
+## 4. Los parámetros de SSM que lee la Lambda (decidido, §6.2 (d))
 
 El guion de secretos de la 017 los crea **tal cual** (ADR-0034, fila 21). Esta feature fija sus nombres y sus formatos, no sus valores.
 
 | Parámetro | Tipo | Valor | Caché en cada instancia |
 |---|---|---|---|
-| `/atlas/<entorno>/auth/allow-list` | `SecureString` | §3 | **120 s** (PROPUESTA; «pocos minutos», ADR-0027) |
+| `/atlas/<entorno>/auth/allow-list` | `SecureString` | §3 | **120 s** («pocos minutos», ADR-0027) |
 | `/atlas/<entorno>/auth/google-client-id` | `String` (no es secreto) | el identificador del cliente OAuth del entorno | 300 s |
 | `/atlas/<entorno>/auth/google-client-secret` | `SecureString` | el secreto, tal cual | 300 s |
-| `/atlas/<entorno>/auth/session-key` | `SecureString` | 32 bytes aleatorios en base64url (43) | **300 s** (PROPUESTA, §6.2 (c)); es lo que espera el paso 4 del procedimiento de la cuenta robada |
+| `/atlas/<entorno>/auth/session-key` | `SecureString` | 32 bytes aleatorios en base64url (43) | **300 s** (§6.2 (c)); es lo que espera el paso 4 del procedimiento de la cuenta robada |
 | `/atlas/<entorno>/device-tokens/<token_id>` | `SecureString` | §2 | **ninguna** (B2); solo se cachean, si acaso, los negativos que no pueden volver a valer |
 
-## 5. La configuración de la Lambda que no es secreta (variables de entorno; PROPUESTA de valores, §6.2 (a))
+## 5. La configuración de la Lambda que no es secreta (variables de entorno; valores decididos, §6.2 (a))
 
 **Ningún secreto en una variable de entorno** (`docs/specification.md` §11.8). El cargador lee solo esta lista y rechaza la configuración entera si falta una variable, sobra una del prefijo `ATLAS_` o un valor no se entiende.
 
@@ -132,7 +132,7 @@ El guion de secretos de la 017 los crea **tal cual** (ADR-0034, fila 21). Esta f
 | `ATLAS_ALLOW_LIST_CACHE_SECONDS` | Caché de la lista permitida | **120** |
 | `ATLAS_SECRETS_CACHE_SECONDS` | Caché del secreto del cliente y de la clave de sesión | **300** |
 
-## 6. El objeto del dispositivo: `sync/devices/<device_id>.json` (PROPUESTA de la forma exacta, §6.2 (d bis))
+## 6. El objeto del dispositivo: `sync/devices/<device_id>.json` (forma decidida, §6.2 (d bis); `details.reason` de Q3)
 
 ```json
 { "device_format": 1, "device_id": "<22>", "type": "web", "state": "active", "created_at": "…", "pending": 0, "held": 0, "last_sync_at": "…", "published_at": "…" }
@@ -147,7 +147,7 @@ El guion de secretos de la 017 los crea **tal cual** (ADR-0034, fila 21). Esta f
 | `PUT /api/sync/devices/self` | Al publicar la cola | Relee el objeto, se niega si falta, si es de otro tipo o si está olvidado, y reescribe **con `If-Match` sobre lo leído**, conservando `type`, `state`, `created_at`, `device_name` y `forgotten_at`. Si recibe un `412`, relee: olvidado → `device_forgotten`; si no, `412 precondition_failed` (R2-N2) |
 | La administración | Al olvidar (E5) | Reescribe con `If-Match` y `state: "forgotten"`. **Nunca se borra** |
 
-- **Aceptable para una credencial** = el objeto existe, **su `type` es el de la credencial** (cookie → `web`, token → `console`) y **su `state` es `active`**. Cualquier otra cosa es `403 device_forgotten`. Un objeto ilegible también: fallo seguro. Todo `device_id` tiene objeto desde que se asigna, así que uno que falta **nunca** cuenta como vivo (R2-B2).
+- **Aceptable para una credencial** = el objeto existe, **su `type` es el de la credencial** (cookie → `web`, token → `console`) y **su `state` es `active`**. Cualquier otra cosa es `403 device_forgotten`, con `details.reason`: `missing` (no existe), `wrong_type` (otro tipo) o `forgotten` (olvidado) (Q3). Un objeto ilegible también se niega, con `reason: "unreadable"` (fallo seguro; cuarto valor, a confirmar por la dirección: Q9). Todo `device_id` tiene objeto desde que se asigna, así que uno que falta **nunca** cuenta como vivo (R2-B2).
 - `rewritePermission` recibe **solo los objetos `active`**. La función pura que filtra está en el dominio, junto al lector, y su mutante (contar los olvidados) muere.
 - `GET /api/sync/devices` devuelve también `type` y `state`. Es un cambio en `docs/api.md` §5.3, y va a `questions.md` («Documentos»).
 

@@ -1,6 +1,6 @@
 # Contrato HTTP: lo que esta feature añade o concreta sobre `docs/api.md`
 
-`docs/api.md` es el contrato, y **no lo toca esta feature**. Este fichero reúne **las propuestas** para sus [PENDIENTE] y lo que el encargo manda proponer (§6.2 (a), (d bis) y (h); §7 P8). La dirección escribe en `docs/api.md` lo que confirme. Todo lo que sigue es **PROPUESTA** hasta entonces.
+**Aprobado por la dirección el 2026-09-25** (`questions.md` §8) y llevado a `docs/api.md` en E1, por su encargo. Este fichero reúne **las propuestas** para sus [PENDIENTE] y lo que el encargo manda proponer (§6.2 (a), (d bis) y (h); §7 P8). La dirección escribe en `docs/api.md` lo que confirme. Todo lo que sigue es **PROPUESTA** hasta entonces.
 
 ## A. Acceso de la web (§3)
 
@@ -60,7 +60,7 @@ Todas son `text/html; charset=utf-8`, **sin *script* y sin nada externo**, con `
 
 | Código | HTTP | Dónde |
 |---|---|---|
-| `device_forgotten` | 403 | Toda ruta con credencial: el objeto del dispositivo falta, es de otro tipo o está olvidado (B1, R2-B2). Entra en `REMOTE_FAILURE_CODES` |
+| `device_forgotten` | 403 | Toda ruta con credencial: el objeto del dispositivo falta, es de otro tipo o está olvidado (B1, R2-B2), con `details.reason` = `missing` \| `wrong_type` \| `forgotten` (Q3). Entra en `REMOTE_FAILURE_CODES` |
 | `remote_unavailable` | 503, con `Retry-After: 5` y `details.dependency: "ssm" \| "s3"` | Un fallo transitorio de SSM (`ThrottlingException`) o de S3 (5xx, límite): se puede reintentar y nunca deja pasar una credencial (§7 P8 (b)). Entra en `REMOTE_FAILURE_CODES` |
 | `reference_name_invalid` | 400 | §C |
 | Los de la página de error | — (HTML) | §D. No son JSON ni los ve un cliente HTTP |
