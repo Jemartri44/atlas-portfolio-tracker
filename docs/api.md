@@ -93,7 +93,7 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 Todas `text/html; charset=utf-8`, **sin *script* y sin nada externo**, con `Cache-Control: no-store`, `Referrer-Policy: no-referrer` y CSP `default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` (las de la consola, además, `sandbox`, §4.2).
 
 - **Acceso denegado** (`403`): la vuelta de Google fue válida pero el par no está en la lista. Enseña **solo el `sub` de la cuenta que acaba de autenticarse en esa misma petición**, escapado, y cómo darlo de alta. **Nunca el correo.** El `sub` no se registra ni va en ninguna URL.
-- **Error del inicio de sesión** (`400`, `403` o `503`): cualquier otro fallo de la vuelta, con su código literal y una frase por código: `login_attempt_missing`, `login_state_mismatch`, `google_error`, `google_exchange_failed`, `id_token_invalid`, `id_token_audience`, `id_token_issuer`, `id_token_expired`, `id_token_nonce`, `email_not_verified`, `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console` y `remote_unavailable`.
+- **Error del inicio de sesión** (`400`, `403` o `503`): cualquier otro fallo de la vuelta, con su código literal y una frase por código: `login_attempt_missing` (el intento no está o caducó), `login_attempt_invalid` (la cookie del intento no se lee o está repetida; añadido en E1 de la 015, a confirmar por la dirección), `login_state_mismatch`, `google_error`, `google_exchange_failed`, `id_token_invalid`, `id_token_audience`, `id_token_issuer`, `id_token_expired`, `id_token_nonce`, `email_not_verified`, `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console` y `remote_unavailable`.
 
 ## 4. El token de dispositivo de la consola (ADR-0033)
 
