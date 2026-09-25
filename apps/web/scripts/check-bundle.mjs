@@ -209,8 +209,54 @@ const dist = join(webRoot, "dist");
  * to `develop` plus the cap of decision D-Q7 (+0,3 KB, 307 bytes), 75.725,
  * so that going over the cap stops the build instead of a comment. The trend:
  * 73,7 → 73,9 in this feature.
+ *
+ * **Feature 014, the raw-line operations (2026-09-25): measured 75.811 bytes,
+ * +108 over `develop` (75.703); the ceiling rises exactly that (decision D-Q7
+ * of the direction: exactly the measure, capped at +140 bytes for this and the
+ * refusal of `acceptInvalid` together, each in its own commit).** They are
+ * rules of the domain that live where the boot already is: the port gains two
+ * operations (ADR-0026, Part A, amendment), and `BlobLedgerStore`, which the
+ * boot opens, has to implement them. Byte by byte: the domain chunk **+110**
+ * — `appendLines` and `replaceLines` of `BlobLedgerStore` sharing their body
+ * with `append` and `replace`, and `rawLinesText`/`decodeLines` of the domain,
+ * which the load of the store now shares too —; the entry **−2**. Nothing of
+ * the sync engine is in the boot: its folders are in LAZY_ONLY. The trend:
+ * 73,9 → 74,0.
+ *
+ * **Feature 014, the refusal of `acceptInvalid` on a synced ledger (V7):
+ * measured 75.838 bytes, +135 over `develop` altogether, +5 over the ceiling
+ * above; the ceiling rises exactly that, inside the cap of +140 of D-Q7.** The
+ * refusal lives in `checkInvalid`, which is boot, so that the preview and the
+ * record fail alike: one more condition and one more code of
+ * `DependentEventsError` (domain chunk +42 over the raw-line operations, the
+ * rest of it gzip moving). The read of «is this browser synced?» is lazy: the
+ * write path of the web loads it from the store of the sync.
+ *
+ * **Then +5 more, to 75.843 — the cap of D-Q7 itself (+140 over `develop`).**
+ * Measured after the sentence of `raw_line_break` changed (D-Q18): the boot
+ * code did not move (domain chunk 41.482, the same bytes); the entry went from
+ * 24.068 to 24.073 because the table of lazy chunks names them **by their
+ * hash**, and a new hash compresses differently. Noise of the hashes, not
+ * code — and it is why the ceiling now sits on the cap: a change of a lazy
+ * chunk can move the boot a few bytes either way.
+ *
+ * **Review of PR #83: measured 75.849, ceiling 75.869 — measured + 20 of
+ * noise margin, not growth.** The code of the boot did not move (domain
+ * chunk 41.482, the same bytes as above); the entry went from 24.073 to
+ * 24.079 only because the table of lazy chunks names new hashes. With the
+ * ceiling on the measure itself, any change of a lazy chunk could break the
+ * build of the next feature; 20 bytes absorb that noise of the table. The
+ * growth cap of D-Q7 still holds: the code of 014 adds +135 to the boot.
+ *
+ * **Second review of PR #83: the 6 bytes over the cap of +140 are noise of
+ * the table of chunks, and the direction accepts them as such** — the domain
+ * chunk did not move. The growth cap of the **code** stays +140. The ids a
+ * redo seals reach `correctEvent` through its option `ids` (+5 in the domain
+ * chunk, 41.487): the code of 014 now adds **+140, the cap itself**. That is
+ * why a lone reversal is redone through `recordEvent` with its id and
+ * `reverseEvent` takes none: giving it one cost +25 more. Measured 75.837.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -543,8 +589,27 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307;
  * prices, the notice of a correspondence missing or that does not read, the
  * closes 013 stored wrong under format 1 and the days a purge owes (+0,87,
  * lazy with the quotes and Ajustes).
+ *
+ * **Feature 014, the core of the sync (2026-09-25): measured 272,17 (278.700
+ * bytes), ceiling 272,3.** All of it lazy: the Spanish sentences of every
+ * reason the sync holds a line back, stops or refuses (about fifty codes, and
+ * the eighteen failures of the remote one by one) in the catalogue of errors
+ * (+2,5). The domain of the sync is not in the bundle yet: nothing of the web
+ * imports it until feature 015 gives it a button. The trend: 269,6 → 272,2.
+ *
+ * **Feature 014, V7 (2026-09-25): measured 272,80 (279.345 bytes), ceiling
+ * 273,0.** The web reads whether it is synced before an `acceptInvalid`, from
+ * the store of the sync, lazily (+0,6 with the sentence of the refusal).
+ *
+ * **Review of PR #83 (2026-09-25): measured 273,34 (279.905 bytes), ceiling
+ * 273,5.** All of it lazy: the sentences of the new codes (the sync not
+ * configured or deactivated, the empty remote, the deactivation refused
+ * without a marker) and the new wording of `raw_line_break` in `errors`
+ * (+248 bytes), and the write path of the store of the sync — the check of
+ * the name of an archive and the shared reader of the marker — in `write`
+ * (+293); the rest is hash noise across the lazy chunks.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 270.0 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 273.5 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -689,6 +754,21 @@ const LAZY_ONLY = [
     what: "la lectura de los precios",
   },
   { path: "/src/prices/", what: "los precios automáticos de la web" },
+  // Feature 014: **nothing of the sync on the boot path**, from its first
+  // commit: the domain of the sync and its door, the shared orchestration and
+  // the web's own store of sync state. The sync is explicit and lazily loaded.
+  { path: "/packages/domain/src/sync/", what: "la sincronización del libro" },
+  { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
+  { path: "/packages/domain/src/ports/remote-ledger.ts", what: "el puerto del remoto" },
+  {
+    path: "/packages/domain/src/ports/sync-state-store.ts",
+    what: "el puerto del estado de la sincronización",
+  },
+  { path: "/packages/adapters/src/sync/", what: "la orquestación de la sincronización" },
+  {
+    path: "/packages/adapters/src/ledger-store/browser/sync-store.ts",
+    what: "el estado de la sincronización en el navegador",
+  },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */

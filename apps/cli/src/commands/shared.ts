@@ -2,6 +2,7 @@
 
 import { access } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { folderSyncPresence } from "@atlas/adapters";
 import {
   type CivilDate,
   DomainError,
@@ -20,6 +21,7 @@ import {
 } from "@atlas/domain";
 import { brokerSettlementOf } from "@atlas/domain/ecb";
 import { closedYearImpact } from "@atlas/domain/fiscal";
+import { syncConfigured } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import {
   ConfirmationRequired,
@@ -171,10 +173,19 @@ export const confirmAndRecord = async (
     ctx.io.out("Cancelado.");
     return undefined;
   }
-  const result = await write({
-    confirmDuplicate: ctx.confirmDuplicate,
-    acceptInvalid: ctx.acceptInvalid,
-  });
+  const result = await write(
+    ctx.acceptInvalid
+      ? {
+          confirmDuplicate: ctx.confirmDuplicate,
+          acceptInvalid: true,
+          // Read by the adapter and given to the domain (§6.3 (V7)): with the
+          // folder synced, `--accept-invalid` is refused in `checkInvalid`.
+          syncConfigured: syncConfigured(
+            (await folderSyncPresence(dirname(ctx.ledgerPath))).presence,
+          ),
+        }
+      : { confirmDuplicate: ctx.confirmDuplicate },
+  );
   ctx.io.out(`Registrado ${summarize(result.event)}.`);
   if (result.newlyInvalid.length > 0) {
     ctx.io.out(

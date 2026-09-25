@@ -45,6 +45,14 @@
     "./random": {
       "types": "./dist/random/web-crypto.d.ts",
       "import": "./dist/random/web-crypto.js"
+    },
+    "./sync": {
+      "types": "./dist/ledger-store/browser/sync-store.d.ts",
+      "import": "./dist/ledger-store/browser/sync-store.js"
+    },
+    "./sync-client": {
+      "types": "./dist/sync/client.d.ts",
+      "import": "./dist/sync/client.js"
     }
   },
   "files": [

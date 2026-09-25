@@ -92,6 +92,7 @@ describe("the projection cost of a mutation", () => {
           { type: "settings_changed", settings: byTradeDate },
           {
             acceptInvalid: true,
+            syncConfigured: false,
           },
         ),
       ),

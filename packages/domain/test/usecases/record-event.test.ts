@@ -13,6 +13,7 @@ import type { InvalidEvent } from "../../src/projections/state.js";
 import type { BuyEvent } from "../../src/schema/events.js";
 import { encodeLine } from "../../src/schema/line.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
+import { previewEvent } from "../../src/usecases/preview-event.js";
 import { loadAndProject } from "../../src/usecases/project-ledger.js";
 import { duplicatesOf, recordEvent } from "../../src/usecases/record-event.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
@@ -138,6 +139,8 @@ describe("recordEvent", () => {
         load: () => store.load(),
         append: () => Promise.reject(new ConflictError()),
         replace: () => Promise.reject(new ConflictError()),
+        appendLines: () => Promise.reject(new ConflictError()),
+        replaceLines: () => Promise.reject(new ConflictError()),
       },
     };
     await expect(recordEvent(racing, buyDraft)).rejects.toBeInstanceOf(ConflictError);
@@ -235,7 +238,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     const result = await recordEvent(
       testDeps(store),
       { type: "settings_changed", settings: byTradeDate },
-      { acceptInvalid: true },
+      { acceptInvalid: true, syncConfigured: false },
     );
     expect(result.newlyInvalid).toHaveLength(1);
     expect(result.newlyInvalid[0]?.type).toBe("sell");
@@ -249,7 +252,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     await recordEvent(
       deps,
       { type: "settings_changed", settings: byTradeDate },
-      { acceptInvalid: true },
+      { acceptInvalid: true, syncConfigured: false },
     );
     // The ledger is already degraded; this change adds no new invalid event.
     const result = await recordEvent(deps, {
@@ -265,7 +268,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     await recordEvent(
       deps,
       { type: "settings_changed", settings: byTradeDate },
-      { acceptInvalid: true },
+      { acceptInvalid: true, syncConfigured: false },
     );
     const offender = (await loadAndProject({ store }, { collectErrors: true })).state
       .invalid[0] as InvalidEvent;
@@ -298,7 +301,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     await recordEvent(
       deps,
       { type: "settings_changed", settings: byTradeDate },
-      { acceptInvalid: true },
+      { acceptInvalid: true, syncConfigured: false },
     );
     // A buy agreed before the sale gives it lots again under the new rule.
     const result = await recordEvent(deps, {
@@ -314,7 +317,59 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
   it("admits acceptInvalid only for a settings change", async () => {
     const store = seeded();
     await expect(
-      recordEvent(testDeps(store), buyDraft, { acceptInvalid: true }),
+      recordEvent(testDeps(store), buyDraft, { acceptInvalid: true, syncConfigured: false }),
     ).rejects.toMatchObject({ code: "accept_invalid_not_allowed" });
+  });
+});
+
+describe("recordEvent: acceptInvalid with the sync configured (feature 014, V7)", () => {
+  const refusal = async (run: () => Promise<unknown>) => {
+    const error = await run().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(DependentEventsError);
+    expect((error as DependentEventsError).code).toBe("accept_invalid_while_synced");
+    expect((error as DependentEventsError).affected).toHaveLength(1);
+  };
+
+  it("is refused in the record and in the preview alike, and nothing is written", async () => {
+    const store = reorderable();
+    const before = (await store.load()).lines;
+    const draft = { type: "settings_changed" as const, settings: byTradeDate };
+    await refusal(() =>
+      recordEvent(testDeps(store), draft, { acceptInvalid: true, syncConfigured: true }),
+    );
+    await refusal(() =>
+      previewEvent(testDeps(store), draft, { acceptInvalid: true, syncConfigured: true }),
+    );
+    expect((await store.load()).lines).toEqual(before);
+  });
+
+  it("is refused when nobody said whether the sync is configured: the safe side", async () => {
+    const store = reorderable();
+    const loose = { acceptInvalid: true } as unknown as {
+      acceptInvalid: true;
+      syncConfigured: boolean;
+    };
+    await refusal(() =>
+      recordEvent(testDeps(store), { type: "settings_changed", settings: byTradeDate }, loose),
+    );
+  });
+
+  it("stays as ADR-0015 without the sync, and a harmless change is never refused", async () => {
+    const store = reorderable();
+    const result = await recordEvent(
+      testDeps(store),
+      { type: "settings_changed", settings: byTradeDate },
+      { acceptInvalid: true, syncConfigured: false },
+    );
+    expect(result.newlyInvalid).toHaveLength(1);
+    const harmless = reorderable();
+    await recordEvent(
+      testDeps(harmless),
+      {
+        type: "settings_changed",
+        settings: mergeSettings(DEFAULT_SETTINGS, { stale_price_days: 9 }),
+      },
+      { acceptInvalid: true, syncConfigured: true },
+    );
   });
 });

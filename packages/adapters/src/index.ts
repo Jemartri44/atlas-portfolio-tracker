@@ -13,7 +13,12 @@ export {
 export { ECB_API_URL, ECB_ZIP_URL, EcbDownloadFailed, EcbFxRateSource } from "./ecb/source.js";
 export { entryOfZip, ZipUnreadable } from "./ecb/zip.js";
 export { BlobArchiveExists, BlobLedgerStore, type LedgerBlob } from "./ledger-store/blob.js";
-export { FileLedgerStore, type FileLedgerStoreOptions } from "./ledger-store/file.js";
+export {
+  FileLedgerStore,
+  type FileLedgerStoreOptions,
+  type LockedLedgerWriter,
+} from "./ledger-store/file.js";
+export { type FileOps, nodeFileOps, type WritableFile } from "./ledger-store/file-ops.js";
 export {
   acquireFolderLock,
   BEING_WRITTEN,
@@ -41,3 +46,12 @@ export {
   secretsPath,
 } from "./prices/secrets.js";
 export { webCryptoRandom } from "./random/web-crypto.js";
+export * from "./sync/client.js";
+export {
+  DISCARDED_FILE,
+  FolderSyncStore,
+  folderSyncPresence,
+  HELD_FILE,
+  MARKER_FILE,
+  SYNC_DIR,
+} from "./sync/folder-store.js";

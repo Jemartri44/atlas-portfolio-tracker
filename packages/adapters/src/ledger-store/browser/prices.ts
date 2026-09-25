@@ -12,7 +12,9 @@ import { priceFileName } from "@atlas/domain/quotes";
 import { readFolderText } from "./folder.js";
 import { idbGet, idbPut, LEDGER_STORE } from "./idb.js";
 
-const KEY = "prices:imported";
+/** The key of the prices imported by hand, in the `ledger` store (exported for the test of keys of feature 014). */
+export const IMPORTED_PRICES_KEY = "prices:imported";
+const KEY = IMPORTED_PRICES_KEY;
 
 export interface ImportedPrices {
   /** The text of each `prices/<asset_id>.jsonl`, by asset, exactly as imported. */

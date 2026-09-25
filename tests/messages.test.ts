@@ -227,6 +227,10 @@ describe("Spanish messages: the two interfaces stay level", () => {
     const own = new Set([
       "duplicate_fingerprint",
       "newly_invalid_events",
+      // Feature 014 (V7): the third code of DependentEventsError, said by both
+      // interfaces with its own sentence (apps/cli/test/sync/refusals.test.ts
+      // and apps/web/test/actions.test.ts read it).
+      "accept_invalid_while_synced",
       "not_found",
       "invalid_line",
       "invalid_envelope",
@@ -264,5 +268,40 @@ describe("Spanish messages: the two interfaces stay level", () => {
     expect(relative(repoRoot, webErrors)).toBe(
       join("apps", "web", "src", "format", "messages", "errors.ts"),
     );
+  });
+});
+
+/**
+ * **The failures of the remote** (feature 014; `docs/api.md` §7): the client
+ * stops with `remote_failed` and carries the code of the remote as it came, so
+ * each interface says each one with its own sentence, never folded into a
+ * generic one. Held level with the closed list of the domain, both ways.
+ */
+describe("Spanish messages: the failures of the remote, one by one", () => {
+  const listed = (): string[] => {
+    const source = readFileSync(join(domainSrc, "ports", "remote-ledger.ts"), "utf8");
+    const block = /REMOTE_FAILURE_CODES = \[([^\]]*)\]/.exec(source)?.[1] ?? "";
+    return [...block.matchAll(/"([a-z_0-9]+)"/g)].map((match) => match[1] as string).sort();
+  };
+  const cliFailures = (): string[] => {
+    const source = readFileSync(cliMessages, "utf8");
+    const start = source.indexOf("export const describeRemoteFailure");
+    const body = source.slice(start, source.indexOf("export const describeError", start));
+    return [...body.matchAll(/case "([a-z_0-9]+)":/g)].map((match) => match[1] as string).sort();
+  };
+  const webFailures = (): string[] => {
+    const source = readFileSync(webErrors, "utf8");
+    const start = source.indexOf("export const REMOTE_FAILURES");
+    const body = source.slice(start, source.indexOf("};", start));
+    return [...body.matchAll(/^ {2}([a-z_0-9]+):/gm)].map((match) => match[1] as string).sort();
+  };
+
+  it("finds the list, so the check cannot pass by looking at nothing", () => {
+    expect(listed().length).toBeGreaterThanOrEqual(18);
+  });
+
+  it("translates every one of them in both interfaces, and nothing else", () => {
+    expect(cliFailures()).toEqual(listed());
+    expect(webFailures()).toEqual(listed());
   });
 });

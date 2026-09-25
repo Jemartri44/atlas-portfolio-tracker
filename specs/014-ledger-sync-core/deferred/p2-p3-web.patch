@@ -1,0 +1,219 @@
+diff --git a/apps/web/src/ledger/export.ts b/apps/web/src/ledger/export.ts
+index 55c61aa..235b12d 100644
+--- a/apps/web/src/ledger/export.ts
++++ b/apps/web/src/ledger/export.ts
+@@ -7,12 +7,24 @@
+ 
+ import { BlobLedgerStore } from "@atlas/adapters/blob";
+ import { BrowserLedgerBlob } from "@atlas/adapters/browser";
+-import { etagOfText, exportLedgerText, replaceLedgerText } from "@atlas/adapters/transfer";
++import { etagOfText, exportLedgerAndHeld, replaceLedgerText } from "@atlas/adapters/transfer";
+ import { loadInto } from "./actions.js";
+ import { store } from "./state.js";
+ import { openBrowserStorage } from "./store.js";
+ 
+ export const EXPORT_FILE_NAME = "ledger.jsonl";
++/** The operations the sync holds back, exported beside the ledger when there are any. */
++export const EXPORT_HELD_FILE_NAME = "ledger.held.jsonl";
++
++const download = (text: string, name: string): void => {
++  const file = new Blob([text], { type: "application/x-ndjson" });
++  const url = URL.createObjectURL(file);
++  const anchor = document.createElement("a");
++  anchor.href = url;
++  anchor.download = name;
++  anchor.click();
++  URL.revokeObjectURL(url);
++};
+ 
+ /**
+  * Triggers the download of the exact text and records the export date — the
+@@ -21,14 +33,13 @@ export const EXPORT_FILE_NAME = "ledger.jsonl";
+  */
+ export const exportLedger = async (): Promise<void> => {
+   const when = new Date();
+-  const text = await exportLedgerText(when);
+-  const file = new Blob([text], { type: "application/x-ndjson" });
+-  const url = URL.createObjectURL(file);
+-  const anchor = document.createElement("a");
+-  anchor.href = url;
+-  anchor.download = EXPORT_FILE_NAME;
+-  anchor.click();
+-  URL.revokeObjectURL(url);
++  const { text, held } = await exportLedgerAndHeld(when);
++  download(text, EXPORT_FILE_NAME);
++  // What the sync holds back, apart and named as such (§6.2 P3): operations
++  // of the user that are not in the ledger yet. Never mixed into it.
++  if (held !== undefined) {
++    download(held, EXPORT_HELD_FILE_NAME);
++  }
+   const current = store.load();
+   if (current.phase === "ready") {
+     store.setLoad({
+diff --git a/packages/adapters/src/ledger-store/browser/transfer.ts b/packages/adapters/src/ledger-store/browser/transfer.ts
+index 6ff8a8d..e2145ea 100644
+--- a/packages/adapters/src/ledger-store/browser/transfer.ts
++++ b/packages/adapters/src/ledger-store/browser/transfer.ts
+@@ -7,6 +7,13 @@
+ // in (`indexeddb.ts`), for the reasons of feature 012, block 0.
+ 
+ import { sha256Hex } from "@atlas/domain";
++import {
++  importPermission,
++  parseHeld,
++  RefusedError,
++  syncConfiguredByText,
++  unresolvedHeld,
++} from "@atlas/domain/sync";
+ import { openAtlasDb } from "./idb.js";
+ import {
+   CURRENT_KEY,
+@@ -17,6 +24,15 @@ import {
+   transact,
+ } from "./indexeddb.js";
+ 
++// The keys of the state of the sync (`sync-store.ts`), written again here so
++// that the import and the export do not share a chunk with the store of the
++// sync: a shared chunk is a name more in the table of the boot. The tests of
++// the import hold them equal, by setting the keys of the store and expecting
++// the refusal.
++const SYNC_STATE_KEY = "sync:state";
++const SYNC_HELD_KEY = "sync:held";
++const SYNC_DISCARDED_KEY = "sync:discarded";
++
+ const encoder = new TextEncoder();
+ 
+ /**
+@@ -38,6 +54,37 @@ export const exportLedgerText = (when: Date, open: Opener = openAtlasDb): Promis
+     };
+   });
+ 
++/**
++ * The export **with what the sync holds back** (§6.2 P3): the text of the
++ * ledger and, apart, the text of the held records when any is unresolved —
++ * both read, and the date written, in one transaction. The ledger exported is
++ * the ledger, byte for byte; what is held back travels in a file of its own.
++ */
++export const exportLedgerAndHeld = (
++  when: Date,
++  open: Opener = openAtlasDb,
++): Promise<{ text: string; held?: string }> =>
++  transact<{ text: string; held?: string }>(open, "readwrite", (store, _tx, settle) => {
++    const get = store.get(CURRENT_KEY);
++    const held = store.get(SYNC_HELD_KEY);
++    held.onsuccess = () => {
++      const stored = get.result as StoredLedger | undefined;
++      if (stored !== undefined) {
++        const meta: StoredMeta = { lastExportAt: when.toISOString() };
++        store.put(meta, META_KEY);
++      }
++      const heldText = held.result as string | undefined;
++      const unresolved =
++        heldText !== undefined && unresolvedHeld(parseHeld(heldText)).length > 0
++          ? heldText
++          : undefined;
++      settle.ok({
++        text: stored?.text ?? "",
++        ...(unresolved === undefined ? {} : { held: unresolved }),
++      });
++    };
++  });
++
+ /** The ledger of this browser changed between the question and the yes. */
+ export class LedgerChangedSinceAsked extends Error {
+   constructor(
+@@ -67,7 +114,24 @@ export const replaceLedgerText = (
+ ): Promise<void> =>
+   transact<void>(open, "readwrite", (store, _tx, settle) => {
+     const get = store.get(CURRENT_KEY);
+-    get.onsuccess = () => {
++    const marker = store.get(SYNC_STATE_KEY);
++    const held = store.get(SYNC_HELD_KEY);
++    const discarded = store.get(SYNC_DISCARDED_KEY);
++    discarded.onsuccess = () => {
++      // A synced ledger is not replaced by a file (§6.2 P2): checked in this
++      // same transaction, with the state of the sync next to the ledger.
++      const refusal = importPermission(
++        syncConfiguredByText(
++          marker.result !== undefined ||
++            held.result !== undefined ||
++            discarded.result !== undefined,
++          marker.result as string | undefined,
++        ),
++      );
++      if (refusal !== undefined) {
++        settle.fail(new RefusedError(refusal));
++        return;
++      }
+       const current = (get.result as StoredLedger | undefined)?.text ?? "";
+       if (etagOfText(current) !== expectedEtag) {
+         settle.fail(
+diff --git a/packages/adapters/test/sync/transfer-sync.test.ts b/packages/adapters/test/sync/transfer-sync.test.ts
+new file mode 100644
+index 0000000..30489d3
+--- /dev/null
++++ b/packages/adapters/test/sync/transfer-sync.test.ts
+@@ -0,0 +1,63 @@
++// Importing and exporting in a synced browser (§6.2 P2 and P3): the import is
++// refused **in the same transaction** that would replace the ledger, and the
++// export carries what the sync holds back, apart.
++
++import { holdRecords, markerFor, recordsText, serializeMarker } from "@atlas/domain/sync";
++import { describe, expect, it } from "vitest";
++import { LEDGER_STORE } from "../../src/ledger-store/browser/idb.js";
++import { SYNC_HELD_KEY, SYNC_STATE_KEY } from "../../src/ledger-store/browser/sync-store.js";
++import {
++  etagOfText,
++  exportLedgerAndHeld,
++  replaceLedgerText,
++} from "../../src/ledger-store/browser/transfer.js";
++import { base, textOf } from "./builder.js";
++import { webDevice } from "./devices.js";
++
++describe("importing into a synced browser (P2)", () => {
++  const imported = textOf(base().slice(0, 2));
++
++  it.each([
++    ["a marker", SYNC_STATE_KEY, () => serializeMarker(markerFor([], 0))],
++    ["only something held back", SYNC_HELD_KEY, () => ""],
++    ["an unreadable marker", SYNC_STATE_KEY, () => "{"],
++  ])("is refused with %s, in one transaction that writes nothing", async (_what, key, value) => {
++    const web = webDevice(base());
++    const values = web.db.store(LEDGER_STORE);
++    values.set(key, value());
++    const before = new Map(values);
++    const created = web.db.created.length;
++    const error = await replaceLedgerText(imported, etagOfText(await web.text()), web.open).catch(
++      (e: unknown) => e,
++    );
++    expect(error).toMatchObject({ code: "import_refused_synced" });
++    expect(new Map(values)).toEqual(before);
++    expect(web.db.created.slice(created)).toEqual(["readwrite"]);
++  });
++
++  it("is admitted once the sync is deactivated", async () => {
++    const web = webDevice(base());
++    web.db
++      .store(LEDGER_STORE)
++      .set(SYNC_STATE_KEY, serializeMarker({ ...markerFor([], 0), status: "disabled" }));
++    await replaceLedgerText(imported, etagOfText(await web.text()), web.open);
++    expect(await web.text()).toBe(imported);
++  });
++});
++
++describe("exporting a synced browser (P3)", () => {
++  it("gives what is held back apart, only when something is unresolved, and the ledger byte for byte", async () => {
++    const web = webDevice(base());
++    expect(await exportLedgerAndHeld(new Date("2027-01-01T00:00:00Z"), web.open)).toEqual({
++      text: textOf(base()),
++    });
++    const held = recordsText(
++      holdRecords(["x"], "client", { code: "new_duplicate", details: {} }, "t"),
++    );
++    web.db.store(LEDGER_STORE).set(SYNC_HELD_KEY, held);
++    expect(await exportLedgerAndHeld(new Date("2027-01-01T00:00:00Z"), web.open)).toEqual({
++      text: textOf(base()),
++      held,
++    });
++  });
++});

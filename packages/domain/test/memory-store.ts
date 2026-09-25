@@ -7,6 +7,7 @@ import type { LedgerStore, LoadedLedger } from "../src/ports/ledger-store.js";
 import type { LedgerEvent } from "../src/schema/events.js";
 import { decodeLine, encodeLine } from "../src/schema/line.js";
 import { CURRENT_LEDGER_SCHEMA, type LedgerSchema } from "../src/schema/migrations/index.js";
+import { rawLinesText } from "../src/schema/raw-lines.js";
 
 export class TestStore implements LedgerStore {
   private lines: string[];
@@ -59,6 +60,30 @@ export class TestStore implements LedgerStore {
     }
     this.archives.set(archiveName, this.text());
     this.lines = events.map(encodeLine);
+    this.version += 1;
+    return { etag: String(this.version) };
+  }
+
+  async appendLines(lines: readonly string[], etag: string): Promise<{ etag: string }> {
+    rawLinesText(lines, this.schema);
+    this.assertEtag(etag);
+    this.lines.push(...lines);
+    this.version += 1;
+    return { etag: String(this.version) };
+  }
+
+  async replaceLines(
+    lines: readonly string[],
+    etag: string,
+    archiveName: string,
+  ): Promise<{ etag: string }> {
+    rawLinesText(lines, this.schema);
+    this.assertEtag(etag);
+    if (this.archives.has(archiveName)) {
+      throw new ArchiveExistsError(archiveName);
+    }
+    this.archives.set(archiveName, this.text());
+    this.lines = [...lines];
     this.version += 1;
     return { etag: String(this.version) };
   }

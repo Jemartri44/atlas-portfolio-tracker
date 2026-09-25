@@ -10,6 +10,8 @@ export default defineConfig({
     // would otherwise swallow `@atlas/adapters/blob`.
     alias: {
       "@atlas/adapters/blob": local("./packages/adapters/src/ledger-store/blob.ts"),
+      "@atlas/adapters/sync-client": local("./packages/adapters/src/sync/client.ts"),
+      "@atlas/adapters/sync": local("./packages/adapters/src/ledger-store/browser/sync-store.ts"),
       "@atlas/adapters/reference": local(
         "./packages/adapters/src/ledger-store/browser/reference.ts",
       ),
@@ -24,12 +26,13 @@ export default defineConfig({
       "@atlas/domain/ecb": local("./packages/domain/src/ecb.ts"),
       "@atlas/domain/fiscal": local("./packages/domain/src/fiscal.ts"),
       "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),
+      "@atlas/domain/sync": local("./packages/domain/src/sync.ts"),
       "@atlas/domain": local("./packages/domain/src/index.ts"),
     },
   },
   test: {
     passWithNoTests: true,
-    exclude: ["**/node_modules/**", "**/dist/**", "**/dist-test/**"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/dist-test/**", "**/dist-test-sync/**"],
     projects: [
       { extends: true, test: { name: "domain", root: "packages/domain" } },
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },

@@ -7,7 +7,7 @@ import { yearOf } from "../dates/civil-date.js";
 import { todayInMadrid } from "../dates/madrid.js";
 import { DependentEventsError, DuplicateFingerprintError, NotFoundError } from "../errors.js";
 import { type ClosedYear, closedYearsTouched, unfiledPastYears } from "../filings/touched.js";
-import { createUlidGenerator } from "../ids/ulid.js";
+import { createUlidGenerator, type UlidGenerator } from "../ids/ulid.js";
 import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState, Warning } from "../projections/state.js";
 import type { Draft, LedgerEvent, ReversalEvent, SupportedEvent } from "../schema/events.js";
@@ -128,9 +128,9 @@ export const prepareCorrection = <E extends SupportedEvent>(
   targetId: string,
   replacement: Draft<E>,
   reason: string,
+  ids: UlidGenerator = createUlidGenerator(deps),
 ): PreparedCorrection<E> => {
   const target = findTarget(events, targetId);
-  const ids = createUlidGenerator(deps);
   const reversal = completeDraft<ReversalEvent>(
     deps,
     { type: "reversal", reverses_id: targetId, reason },
@@ -166,6 +166,7 @@ export const correctEvent = async <E extends SupportedEvent>(
     targetId,
     replacement,
     reason,
+    options.ids,
   );
   const duplicates = duplicatesOf(state.fingerprints, event);
   if (duplicates.length > 0 && options.confirmDuplicate !== true) {

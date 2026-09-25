@@ -15,5 +15,5 @@
       "path": "../domain"
     }
   ],
-  "exclude": ["test/browser.test.ts", "test/fake-idb.ts", "test/fake-idb.test.ts"]
+  "exclude": ["test/browser.test.ts", "test/fake-idb.ts", "test/fake-idb.test.ts", "test/sync"]
 }

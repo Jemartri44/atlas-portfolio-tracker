@@ -13,12 +13,13 @@
 import {
   ArchiveExistsError,
   CURRENT_LEDGER_SCHEMA,
-  decodeLine,
+  decodeLines,
   encodeLine,
   type LedgerEvent,
   type LedgerSchema,
   type LedgerStore,
   type LoadedLedger,
+  rawLinesText,
   sha256Hex,
   utf8Encode,
   ValidationError,
@@ -102,42 +103,27 @@ export class BlobLedgerStore implements LedgerStore {
   async load(): Promise<LoadedLedger> {
     const bytes = await this.blob.read();
     const lines = linesOf(bytes);
-    const events: LedgerEvent[] = lines.map((line, index) => {
-      try {
-        return decodeLine(line, this.schema).event;
-      } catch (error) {
-        if (error instanceof ValidationError) {
-          throw new ValidationError(error.code, `line ${index + 1}: ${error.message}`, {
-            ...error.details,
-            line: index + 1,
-          });
-        }
-        throw error;
-      }
-    });
+    const events = decodeLines(lines, this.schema);
     return { events, etag: sha256Hex(bytes), lines };
   }
 
-  async append(events: readonly LedgerEvent[], etag: string): Promise<{ etag: string }> {
-    const addition = serialise(events);
+  /** Adds `text` at the end, on `etag`, in the one atomic step of the medium. */
+  private async add(text: string, etag: string): Promise<{ etag: string }> {
     const next = await this.blob.update(etag, (bytes) => {
       const separator = bytes.length > 0 && bytes[bytes.length - 1] !== NEWLINE ? "\n" : "";
-      return concat(bytes, utf8Encode(separator + addition));
+      return concat(bytes, utf8Encode(separator + text));
     });
     return { etag: sha256Hex(next) };
   }
 
-  async replace(
-    events: readonly LedgerEvent[],
-    etag: string,
-    archiveName: string,
-  ): Promise<{ etag: string }> {
+  /** Replaces the whole text by `text`, archiving the current bytes first. */
+  private async put(text: string, etag: string, archiveName: string): Promise<{ etag: string }> {
     if (archiveName.length === 0 || /[/\\]/.test(archiveName)) {
       throw new ValidationError("invalid_archive_name", "archive name must be a plain file name", {
         archive_name: archiveName,
       });
     }
-    const content = utf8Encode(serialise(events));
+    const content = utf8Encode(text);
     let next: Uint8Array;
     try {
       next = await this.blob.update(etag, () => content, archiveName);
@@ -148,5 +134,30 @@ export class BlobLedgerStore implements LedgerStore {
       throw error;
     }
     return { etag: sha256Hex(next) };
+  }
+
+  append(events: readonly LedgerEvent[], etag: string): Promise<{ etag: string }> {
+    return this.add(serialise(events), etag);
+  }
+
+  replace(
+    events: readonly LedgerEvent[],
+    etag: string,
+    archiveName: string,
+  ): Promise<{ etag: string }> {
+    return this.put(serialise(events), etag, archiveName);
+  }
+
+  /** The bytes exactly as given (ADR-0026, Part A, amendment): the sync and the restore only. */
+  async appendLines(lines: readonly string[], etag: string): Promise<{ etag: string }> {
+    return this.add(rawLinesText(lines, this.schema), etag);
+  }
+
+  async replaceLines(
+    lines: readonly string[],
+    etag: string,
+    archiveName: string,
+  ): Promise<{ etag: string }> {
+    return this.put(rawLinesText(lines, this.schema), etag, archiveName);
   }
 }

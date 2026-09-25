@@ -1769,3 +1769,222 @@ describe("architecture: no object literal is asserted into a type", () => {
     ]);
   });
 });
+
+/**
+ * **The sync of the ledger** (feature 014, block 2): the guards are in place
+ * before a line of the engine exists, and everything is read off folders and
+ * off the import graph, never off a list of today's files.
+ */
+describe("architecture: the sync engine", () => {
+  const adaptersRoot = join(repoRoot, "packages", "adapters");
+  const adaptersSrc = join(adaptersRoot, "src");
+  const syncDomain = join(domainSrc, "sync");
+  const browserSyncStore = join(adaptersSrc, "ledger-store", "browser", "sync-store.ts");
+  const adaptersSync = join(adaptersSrc, "sync");
+
+  /** Every file of the sync: its folder of the domain, its door, the remote port and the clients. */
+  const syncFiles = (): string[] => [
+    ...listTsFiles(syncDomain),
+    join(domainSrc, "sync.ts"),
+    join(domainSrc, "ports", "remote-ledger.ts"),
+    join(domainSrc, "ports", "sync-state-store.ts"),
+    ...listTsFiles(adaptersSync),
+    browserSyncStore,
+  ];
+  const isSync = (file: string): boolean => syncFiles().includes(file);
+
+  /** A package subpath as its source file, read off `exports`. */
+  const exportsOf = (root: string): Map<string, string> => {
+    const exported = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).exports as Record<
+      string,
+      { types: string }
+    >;
+    return new Map(
+      Object.entries(exported).map(([subpath, target]) => [
+        subpath,
+        join(root, "src", target.types.replace(/^\.\/dist\//, "").replace(/\.d\.ts$/, ".ts")),
+      ]),
+    );
+  };
+  const packages = new Map<string, Map<string, string>>([
+    ["@atlas/domain", exportsOf(domainRoot)],
+    ["@atlas/adapters", exportsOf(adaptersRoot)],
+  ]);
+
+  /** Where a specifier leads, across the workspace: relative, or a package subpath. */
+  const resolveAcross = (from: string, specifier: string): string | undefined => {
+    if (specifier.startsWith(".")) {
+      const target = resolve(dirname(from), specifier);
+      const bare = target.replace(/\.(js|jsx)$/, "");
+      return [
+        `${bare}.ts`,
+        `${bare}.tsx`,
+        join(target, "index.ts"),
+        join(target, "index.tsx"),
+      ].find((path) => statSync(path, { throwIfNoEntry: false })?.isFile() === true);
+    }
+    for (const [name, subpaths] of packages) {
+      if (specifier === name || specifier.startsWith(`${name}/`)) {
+        return subpaths.get(`.${specifier.slice(name.length)}`);
+      }
+    }
+    return undefined;
+  };
+
+  /** Everything `root` reaches through **static** imports, across packages, with the chain. */
+  const staticReach = (root: string): Map<string, string[]> => {
+    const chains = new Map<string, string[]>([[root, [root]]]);
+    const pending = [root];
+    while (pending.length > 0) {
+      const file = pending.shift() as string;
+      for (const specifier of specifiersOf(readFileSync(file, "utf8"))) {
+        const next = resolveAcross(file, specifier);
+        if (next !== undefined && !chains.has(next)) {
+          chains.set(next, [...(chains.get(file) as string[]), next]);
+          pending.push(next);
+        }
+      }
+    }
+    return chains;
+  };
+  const chainText = (chain: readonly string[]): string =>
+    chain.map((file) => relative(repoRoot, file)).join(" -> ");
+
+  it("has the files it guards, so no rule below passes by looking at nothing", () => {
+    for (const file of [
+      browserSyncStore,
+      join(adaptersSync, "client.ts"),
+      join(adaptersSync, "folder-store.ts"),
+      join(domainSrc, "sync.ts"),
+    ]) {
+      expect(statSync(file, { throwIfNoEntry: false })?.isFile()).toBe(true);
+    }
+    expect(listTsFiles(syncDomain).length).toBeGreaterThan(0);
+  });
+
+  it("is reached from no fiscal calculation, and reaches none", () => {
+    const graph = importGraph();
+    const fiscalRoots = [
+      join(domainSrc, "projections", "project-ledger.ts"),
+      ...listTsFiles(join(domainSrc, "tax")),
+      ...listTsFiles(join(domainSrc, "informative")),
+    ];
+    const into: string[] = [];
+    for (const root of fiscalRoots) {
+      for (const [file, chain] of reachableFrom(graph, root)) {
+        if (isSync(file)) {
+          into.push(asChain(chain));
+        }
+      }
+    }
+    expect(into).toEqual([]);
+    const fiscal = (file: string): boolean =>
+      !relative(join(domainSrc, "tax"), file).startsWith("..") ||
+      !relative(join(domainSrc, "informative"), file).startsWith("..");
+    const out: string[] = [];
+    for (const root of syncFiles()) {
+      for (const [file, chain] of staticReach(root)) {
+        if (fiscal(file)) {
+          out.push(chainText(chain));
+        }
+      }
+    }
+    expect(out).toEqual([]);
+  });
+
+  it("is explicit: no use case that writes and nothing of the boot of the web reaches it", () => {
+    const writers = [
+      join(domainSrc, "usecases", "record-event.ts"),
+      join(domainSrc, "usecases", "rectify.ts"),
+      join(domainSrc, "usecases", "compact.ts"),
+      join(domainSrc, "usecases", "preview-event.ts"),
+      join(domainSrc, "ecb", "rule-change.ts"),
+      join(domainSrc, "ecb", "drafts.ts"),
+      join(repoRoot, "apps", "web", "src", "main.tsx"),
+    ];
+    const violations: string[] = [];
+    for (const root of writers) {
+      for (const [file, chain] of staticReach(root)) {
+        if (isSync(file)) {
+          violations.push(chainText(chain));
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+    // And the boot really is walked: it reaches the store it opens.
+    expect(
+      staticReach(join(repoRoot, "apps", "web", "src", "main.tsx")).has(
+        join(adaptersSrc, "ledger-store", "blob.ts"),
+      ),
+    ).toBe(true);
+  });
+
+  it("has no timer, no reconnection hook and no visibility hook", () => {
+    // Named at all, not only called one way: `addEventListener?.("online", …)`
+    // walked past a pattern that expected `addEventListener(` right after.
+    const triggers = /\bset(?:Interval|Timeout)\b|["'`]online["'`]|\bononline\b|visibilitychange/;
+    const violations = syncFiles()
+      .filter((file) => {
+        const code = readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, " ")
+          .replace(/\/\/[^\n]*/g, " ");
+        return triggers.test(code);
+      })
+      .map((file) => relative(repoRoot, file));
+    expect(violations).toEqual([]);
+  });
+
+  it("has one client per store: the web's reaches no folder, the console's no browser", () => {
+    const folderSide = [
+      join(adaptersSrc, "ledger-store", "file.ts"),
+      join(adaptersSrc, "ledger-store", "folder-lock.ts"),
+      join(adaptersSrc, "ledger-store", "file-ops.ts"),
+      join(adaptersSync, "folder-store.ts"),
+    ];
+    const browserSide = (file: string): boolean =>
+      !relative(join(adaptersSrc, "ledger-store", "browser"), file).startsWith("..");
+    const web = [...staticReach(browserSyncStore), ...staticReach(join(adaptersSync, "client.ts"))]
+      .filter(([file]) => folderSide.includes(file))
+      .map(([, chain]) => chainText(chain));
+    expect(web).toEqual([]);
+    const cli = [
+      ...staticReach(join(adaptersSync, "folder-store.ts")),
+      ...staticReach(join(adaptersSync, "client.ts")),
+    ]
+      .filter(([file]) => browserSide(file))
+      .map(([, chain]) => chainText(chain));
+    expect(cli).toEqual([]);
+    // The shared orchestration is bundled by the web: nothing of Node in it.
+    const node = [...staticReach(join(adaptersSync, "client.ts")).keys()]
+      .filter((file) => specifiersOf(readFileSync(file, "utf8")).some((s) => s.startsWith("node:")))
+      .map((file) => relative(repoRoot, file));
+    expect(node).toEqual([]);
+  });
+
+  it("keeps the sync out of index.ts, behind a door of its own", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    const offenders = specifiersOf(barrel).filter((specifier) =>
+      /\.\/sync\/|\.\/sync\.js|\.\/ports\/remote-ledger\.js/.test(specifier),
+    );
+    expect(offenders).toEqual([]);
+    const door = specifiersOf(readFileSync(join(domainSrc, "sync.ts"), "utf8"));
+    expect(door.some((specifier) => specifier.includes("./sync/"))).toBe(true);
+  });
+
+  it("is in LAZY_ONLY of the check of the bundle, folder by folder", () => {
+    const script = readFileSync(
+      join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
+      "utf8",
+    );
+    for (const path of [
+      "/packages/domain/src/sync/",
+      "/packages/domain/src/sync.ts",
+      "/packages/domain/src/ports/remote-ledger.ts",
+      "/packages/domain/src/ports/sync-state-store.ts",
+      "/packages/adapters/src/sync/",
+      "/packages/adapters/src/ledger-store/browser/sync-store.ts",
+    ]) {
+      expect(script).toContain(`path: "${path}"`);
+    }
+  });
+});

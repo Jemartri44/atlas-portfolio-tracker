@@ -139,6 +139,20 @@ describe("atlas lock", () => {
     expect(await readdir(dir)).not.toContain("ledger.lock");
   });
 
+  it("says the truth of a temporary of sync/: the ledger may have been rewritten (review of PR #83)", async () => {
+    const { ledger, dir } = await folder();
+    expect(await run(["--ledger", ledger, ...account], capture().io)).toBe(0);
+    const { mkdir } = await import("node:fs/promises");
+    await mkdir(join(dir, "sync"));
+    await writeFile(join(dir, "sync", "state.json.tmp-4242-1"), "half");
+    const { io, lines } = capture();
+    expect(await run(["--ledger", ledger, "positions"], io)).toBe(0);
+    const text = lines.join("\n");
+    expect(text).toContain("sincronización interrumpida");
+    expect(text).toContain("pudo quedar ya reescrito");
+    expect(text).not.toContain("el libro no se había tocado");
+  });
+
   it("says nothing was written when its lock was broken mid-write", async () => {
     const { ledger, dir, lock } = await folder();
     const { io, lines } = capture();
