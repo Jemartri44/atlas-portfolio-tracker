@@ -145,7 +145,7 @@ Antes de traspasar entre fondos, `atlas transfer simulate --from-asset ast_world
 
 ### Precios de cierre diarios (feature 013)
 
-La consola descarga los cierres diarios de los activos **de su libro** desde dos APIs gratuitas con clave, EODHD (principal) y Alpha Vantage (respaldo), y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes.
+La consola descarga los cierres diarios de los activos **de su libro** desde dos APIs gratuitas con clave, EODHD (principal) y Alpha Vantage (respaldo), y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes. Al importar a mano, conviene incluir `prices/symbols.json` junto a los ficheros de precios: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa.
 
 ```bash
 # Las claves van fuera de la carpeta del libro, solo legibles por ti; la aplicación nunca las escribe
