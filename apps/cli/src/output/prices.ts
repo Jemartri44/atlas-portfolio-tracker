@@ -4,7 +4,7 @@
 
 import type { SecretsError } from "@atlas/adapters";
 import type { PriceLookup } from "@atlas/domain";
-import type { QuoteFailureKind, QuoteSource } from "@atlas/domain/quotes";
+import type { MismatchedCloses, QuoteFailureKind, QuoteSource } from "@atlas/domain/quotes";
 import { fxMissingText } from "./messages.js";
 
 export const SOURCE_NAMES: Record<QuoteSource, string> = {
@@ -111,3 +111,14 @@ export const describeSecretsError = (error: SecretsError): string => {
       return `${error.path} no se puede leer como JSON. No se enseña su contenido: ábrelo tú y corrígelo.`;
   }
 };
+
+/**
+ * Closes stored in a currency their source does not declare (feature 013
+ * stored the pence of Alpha Vantage as pounds): left out of every figure in
+ * euros, said, and purged on request (review of PR #80).
+ */
+export const mismatchedNotes = (mismatched: readonly MismatchedCloses[]): string[] =>
+  mismatched.map(
+    (m) =>
+      `Aviso: ${m.asset_id}: ${m.count === 1 ? "1 cierre" : `${m.count} cierres`} de ${SOURCE_NAMES[m.source]} ${m.count === 1 ? "está guardado" : "están guardados"} en una divisa que no es la declarada para esa fuente (${m.declared}); no se usa en ninguna cifra en euros. Púrgalo con «atlas prices purge ${m.asset_id} --source ${m.source}» y se volverá a descargar.`,
+  );

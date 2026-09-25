@@ -27,12 +27,14 @@ import { type EcbHistory, readEcbHistory } from "@atlas/domain/ecb";
 import {
   externalPricesOf,
   type PriceSource,
+  parseSymbols,
   type QuoteSource,
   readCloses,
   type UnreadableCloses,
 } from "@atlas/domain/quotes";
 import type { Context } from "../context.js";
 import { describeError } from "../output/messages.js";
+import { mismatchedNotes } from "../output/prices.js";
 
 /** What the tests replace: the sources (never the network) and where the keys are. */
 export interface PriceEnvironment {
@@ -128,9 +130,10 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
     }
     throw error;
   }
-  const read = readCloses(files);
+  const read = readCloses(files, parseSymbols(await store.symbols()));
   const { history, note } = await historyOf(folder);
-  const notes = read.unreadable.map(
+  const notes = [...mismatchedNotes(read.mismatched)];
+  const unreadableNotes = read.unreadable.map(
     (problem: UnreadableCloses) =>
       `Aviso: ${describeError(new DomainError(problem.code, problem.code, { asset_id: problem.asset_id, line: problem.line, field: "línea" }))}`,
   );
@@ -140,6 +143,6 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
       ...(history === undefined ? {} : { history }),
       staleDays: config.ecb_stale_currency_days,
     }),
-    notes: note === undefined ? notes : [...notes, note],
+    notes: [...notes, ...unreadableNotes, ...(note === undefined ? [] : [note])],
   };
 };

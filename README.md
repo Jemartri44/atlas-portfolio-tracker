@@ -155,6 +155,7 @@ atlas prices symbols set ast_world --currency EUR --eodhd XX0000000001.EUFUND   
 atlas prices symbols set ast_tsco --eodhd TSCO.LSE --eodhd-currency GBP --alpha-vantage TSCO.LON --alpha-vantage-currency GBX   # la divisa es de cada fuente: Londres cotiza en libras en una y en peniques en la otra
 atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo
 atlas prices status      # cada fuente con su cupo de hoy y sus fallos, y la antigüedad del último cierre de cada activo
+atlas prices purge ast_tsco --source alpha_vantage   # borra los cierres de esa fuente guardados en una divisa que no es la que ahora declara; se vuelven a descargar
 ```
 
 Para enseñar un valor gana el precio más reciente **que tenga valor en euros**, y con la misma fecha el manual. Si hay una cotización más nueva sin valor en euros, se enseña a su lado.
