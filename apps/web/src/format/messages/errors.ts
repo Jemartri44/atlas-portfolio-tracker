@@ -441,6 +441,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `No se suben tus datos a la nube: tienen ${count(d.invalid)} operaciones inválidas, y la nube nunca recibe datos inválidos. Repáralas primero en Ajustes → Verificación.`,
   redo_filing_in_remote: () =>
     "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.",
+  redo_waits_for_pair: (d) =>
+    `Todavía no: esta pareja corrige otra de la misma cadena que sigue retenida. Primero la pareja ${count(d.pair)}.`,
   redo_partner_discarded: () =>
     "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.",
   join_required: (d) =>

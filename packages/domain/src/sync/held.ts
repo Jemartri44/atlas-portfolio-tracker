@@ -52,6 +52,11 @@ export type HeldRecord =
       readonly line_sha256: string;
       readonly resolution: "confirmed" | "redone" | "discarded";
       readonly event_id?: string;
+      /**
+       * Of a line redone: the id of the held event it replaced, so that a
+       * later pair of its chain that pointed at it points at `event_id`.
+       */
+      readonly replaces?: string;
     };
 
 export interface DiscardedRecord {
@@ -162,6 +167,11 @@ export interface HeldUnit {
    * line each one redoes. Only an event with exactly that id is its redo.
    */
   readonly sealed?: Readonly<Record<string, string>>;
+  /**
+   * What its pairs already redone were redone with: the id of each held
+   * event, and the id that replaced it (third review of PR #83).
+   */
+  readonly redone?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -172,14 +182,21 @@ export interface HeldUnit {
 export const unresolvedHeld = (records: readonly HeldRecord[]): HeldUnit[] => {
   const current = new Map<string, Extract<HeldRecord, { kind: "held" }>>();
   const redo = new Map<string, string>();
+  const unitOfLine = new Map<string, string>();
+  const redone = new Map<string, Record<string, string>>();
   for (const record of records) {
     if (record.kind === "held") {
       current.set(lineSha256(record.line), record);
+      unitOfLine.set(lineSha256(record.line), record.unit);
     } else if (record.kind === "redo_started") {
       redo.set(record.line_sha256, record.event_id);
     } else {
       current.delete(record.line_sha256);
       redo.delete(record.line_sha256);
+      const unit = unitOfLine.get(record.line_sha256);
+      if (record.replaces !== undefined && record.event_id !== undefined && unit !== undefined) {
+        redone.set(unit, { ...redone.get(unit), [record.replaces]: record.event_id });
+      }
     }
   }
   const units = new Map<string, Extract<HeldRecord, { kind: "held" }>[]>();
@@ -189,6 +206,7 @@ export const unresolvedHeld = (records: readonly HeldRecord[]): HeldUnit[] => {
   return [...units.values()].map((members) => {
     const sorted = [...members].sort((left, right) => left.member - right.member);
     const first = sorted[0] as Extract<HeldRecord, { kind: "held" }>;
+    const done = redone.get(first.unit);
     const sealed = Object.fromEntries(
       sorted.flatMap((member) => {
         const sha = lineSha256(member.line);
@@ -203,6 +221,7 @@ export const unresolvedHeld = (records: readonly HeldRecord[]): HeldUnit[] => {
       lines: sorted.map((member) => member.line),
       held_at: first.at,
       ...(Object.keys(sealed).length === 0 ? {} : { sealed }),
+      ...(done === undefined ? {} : { redone: done }),
     };
   });
 };

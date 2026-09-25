@@ -170,12 +170,9 @@ export const finishRedo = async (
 ): Promise<void> => {
   const state = await store.read();
   const unit = unitOf(state, id);
-  const lines = assertRedoRecorded(
-    unit,
-    decodeLines(unit.lines, options.schema),
-    state.ledger.events,
-  );
-  const done = redoFinished(unit, lines, options.now().toISOString());
+  const events = decodeLines(unit.lines, options.schema);
+  const lines = assertRedoRecorded(unit, events, state.ledger.events);
+  const done = redoFinished(unit, events, lines, options.now().toISOString());
   await store.commit(state, { held: done.records, discarded: notYetIn(state, done.discarded) });
 };
 

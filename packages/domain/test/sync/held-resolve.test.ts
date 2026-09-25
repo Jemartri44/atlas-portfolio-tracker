@@ -291,7 +291,7 @@ describe("resolving (R18)", () => {
       redoneLines(started, [deposit], [{ ...deposit, id: "01ARYZ6S41TSV4RRFFQ69ZZZZZ" } as never]),
     ).toEqual(linesOf([deposit]));
     expect(redoneLines(duplicate, [deposit], [deposit])).toEqual([]);
-    const finished = redoFinished(started, started.lines, "t");
+    const finished = redoFinished(started, [deposit], started.lines, "t");
     expect(finished.discarded[0]).toMatchObject({
       reason: { code: "redone" },
       replaced_by: "01ARYZ6S41TSV4RRFFQ69ZZZZZ",
@@ -372,7 +372,7 @@ describe("redoing pairs and chains (B2 of the review of PR #83)", () => {
     // Only half of the pair recorded: not finished.
     expect(redoneLines(sealed, chain, [first, second, redone[0] as LedgerEvent])).toEqual([]);
     expect(assertRedoRecorded(sealed, chain, [first, second, ...redone])).toEqual(linesOf(pair1));
-    const finished = redoFinished(sealed, linesOf(pair1), "t");
+    const finished = redoFinished(sealed, chain, linesOf(pair1), "t");
     expect(finished.discarded.map((record) => record.replaced_by)).toEqual([
       "01REDOREVERSAL",
       "01REDOCORRECTION",
@@ -409,6 +409,69 @@ describe("redoing pairs and chains (B2 of the review of PR #83)", () => {
       kind: "record",
       draft: { corrects_id: first.id },
     });
+  });
+});
+
+describe("a chain whose pairs correct each other (third review of PR #83)", () => {
+  const b3 = device(5000);
+  const start = b3.deposit({ account_id: "acc_fund", amount: "11" });
+  const pair1 = correction(b3, start, { amount: "21" });
+  const pair2 = correction(b3, pair1[1], { amount: "31" });
+  const chain = [...pair1, ...pair2];
+  const records = holdRecords(
+    linesOf(chain),
+    "client",
+    { code: "pair_rejected", details: {} },
+    "t",
+  );
+
+  it("points the later pair at the id the earlier one was redone with", () => {
+    const sealed = sealedUnit(
+      records,
+      chain,
+      ids("01AAAAAAAAAAAAAAAAAAAAAAAR", "01AAAAAAAAAAAAAAAAAAAAAAAC"),
+    );
+    const finished = redoFinished(sealed, chain, linesOf(pair1), "t");
+    expect(finished.records[1]).toMatchObject({
+      event_id: "01AAAAAAAAAAAAAAAAAAAAAAAC",
+      replaces: pair1[1].id,
+    });
+    const after = unresolvedHeld([...records, ...finished.records])[0] as Unit;
+    expect(after.redone).toEqual({
+      [pair1[0].id]: "01AAAAAAAAAAAAAAAAAAAAAAAR",
+      [pair1[1].id]: "01AAAAAAAAAAAAAAAAAAAAAAAC",
+    });
+    expect(planFor(after, pair2, [start])).toMatchObject({
+      kind: "correct",
+      target_id: "01AAAAAAAAAAAAAAAAAAAAAAAC",
+    });
+  });
+
+  it("makes a pair wait for the earlier one it corrects, sealing nothing", () => {
+    // The pairs out of order: the one that corrects the other comes first.
+    const outOfOrder = [...pair2, ...pair1];
+    const unit = unresolvedHeld(
+      holdRecords(linesOf(outOfOrder), "client", { code: "pair_rejected", details: {} }, "t"),
+    )[0] as Unit;
+    expect(() => startRedoPlan(unit, outOfOrder, new Set(), [start], ids(), "t")).toThrow(
+      expect.objectContaining({ code: "redo_waits_for_pair", details: { pair: 2 } }),
+    );
+  });
+
+  it("keeps no translation for a line resolved otherwise, or never held", () => {
+    const unit = unresolvedHeld(records)[0] as Unit;
+    const discarded = discardHeld(unit, "t").records;
+    const stray: HeldRecord = {
+      held_format: 1,
+      kind: "resolved",
+      at: "t",
+      line_sha256: "nowhere",
+      resolution: "redone",
+      event_id: "X",
+      replaces: "Y",
+    };
+    const again = holdRecords(linesOf(chain), "client", unit.reason, "t2");
+    expect(unresolvedHeld([...records, ...discarded, stray, ...again])[0]?.redone).toBeUndefined();
   });
 });
 

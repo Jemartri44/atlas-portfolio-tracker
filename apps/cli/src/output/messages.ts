@@ -397,6 +397,8 @@ export const describeError = (error: DomainError): string => {
       return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
     case "redo_filing_in_remote":
       return "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.";
+    case "redo_waits_for_pair":
+      return `Todavía no: esta pareja corrige otra de la misma cadena que sigue retenida. Primero la pareja ${typeof d.pair === "number" ? d.pair : "anterior"}.`;
     case "redo_partner_discarded":
       return "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.";
     case "join_required":

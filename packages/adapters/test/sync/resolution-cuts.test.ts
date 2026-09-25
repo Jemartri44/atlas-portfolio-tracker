@@ -298,6 +298,47 @@ describe("finishing a redo by the ids sealed, never by the target (R1 of the sec
   });
 });
 
+describe("redoing a chain whose pairs correct each other (third review of PR #83)", () => {
+  it("points the later pair at the id the earlier one was redone with, and redoes the chain whole", async () => {
+    const shared = base();
+    const b = new Builder(400);
+    const deposit = b.deposit("11");
+    const device = await consoleDevice([...shared, deposit]);
+    const options = clock();
+    const first = b.correction(deposit, { amount: "21" });
+    const second = b.correction(first[1], { amount: "31" });
+    const chain = [...first, ...second];
+    await device.sync.commit(await device.sync.read(), {
+      held: holdRecords(linesOf(chain), "client", { code: "pair_rejected", details: {} }, "t"),
+    });
+    const [view] = await heldUnits(device.sync, options);
+    const id = view?.unit.unit as string;
+    const redo = async (seal: string) => {
+      const plan = await startRedo(device.sync, id, sequence(seal), options);
+      if (plan.kind !== "correct") {
+        throw new Error("a pair of a chain is redone as a correction");
+      }
+      await correctEvent(deps(device), plan.target_id, plan.draft, "redo", {
+        ids: sealedIds(plan),
+      });
+      await finishRedo(device.sync, id, options);
+      return plan;
+    };
+    const one = await redo("C1");
+    expect(one.target_id).toBe(deposit.id);
+    const two = await redo("C2");
+    // Not the held correction, which never reached the ledger: its redo.
+    expect(two.target_id).toBe(one.id);
+    expect(await heldUnits(device.sync, options)).toEqual([]);
+    expect(parseDiscarded(await device.discarded()).map((record) => record.replaced_by)).toEqual([
+      one.reversal_id,
+      one.id,
+      two.reversal_id,
+      two.id,
+    ]);
+  });
+});
+
 describe("redoing a lone reversal by its sealed id (second review of PR #83)", () => {
   it("records it with recordEvent and that id, and finishes by it", async () => {
     const shared = base();

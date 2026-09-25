@@ -72,14 +72,14 @@ const resolved = (
   line: string,
   resolution: "confirmed" | "redone" | "discarded",
   at: string,
-  eventId?: string,
+  redo?: { event_id: string | undefined; replaces: string },
 ): HeldRecord => ({
   held_format: HELD_FORMAT,
   kind: "resolved",
   at,
   line_sha256: lineSha256(line),
   resolution,
-  ...(eventId === undefined ? {} : { event_id: eventId }),
+  ...(redo?.event_id === undefined ? {} : { event_id: redo.event_id, replaces: redo.replaces }),
 });
 
 /**
@@ -271,10 +271,33 @@ const inForce = (targetId: string, ledger: readonly LedgerEvent[]): string => {
   }
 };
 
+/**
+ * What a pair of a chain reverses, **translated within the unit** (third
+ * review of PR #83): a later pair that corrects the held correction of an
+ * earlier one — which never reached the ledger — points at the id that
+ * earlier pair was redone with. If that pair is still held, the later one
+ * **waits** (`redo_waits_for_pair`, «primero la pareja N»): nothing that is
+ * bound to fail is offered.
+ */
+const targetOf = (
+  unit: HeldUnit,
+  parts: readonly { events: LedgerEvent[] }[],
+  reversesId: string,
+  ledger: readonly LedgerEvent[],
+): string => {
+  const waiting = parts.findIndex((part) => part.events.some((event) => event.id === reversesId));
+  if (waiting >= 0) {
+    throw new ValidationError("redo_waits_for_pair", "an earlier pair of the chain comes first", {
+      pair: waiting + 1,
+    });
+  }
+  return inForce(unit.redone?.[reversesId] ?? reversesId, ledger);
+};
+
 const planOf = (
   events: readonly LedgerEvent[],
   ids: readonly string[],
-  ledger: readonly LedgerEvent[],
+  target: (reversesId: string) => string,
 ): RedoPlan => {
   const first = events[0] as LedgerEvent;
   if (first.type !== "reversal") {
@@ -286,18 +309,18 @@ const planOf = (
   }
   const reversal = first as ReversalEvent;
   const correction = events[1];
-  const target = inForce(reversal.reverses_id, ledger);
+  const targetId = target(reversal.reverses_id);
   return correction === undefined
     ? {
         kind: "reverse",
-        target_id: target,
+        target_id: targetId,
         reason: reversal.reason,
-        draft: { type: "reversal", reverses_id: target, reason: reversal.reason },
+        draft: { type: "reversal", reverses_id: targetId, reason: reversal.reason },
         id: ids[0] as string,
       }
     : {
         kind: "correct",
-        target_id: target,
+        target_id: targetId,
         draft: withoutEnvelope(correction, false) as unknown as Draft<SupportedEvent>,
         reversal_id: ids[0] as string,
         id: ids[1] as string,
@@ -342,11 +365,18 @@ export const startRedoPlan = (
   if (refusal !== undefined) {
     throw refusal;
   }
-  const part = partsOf(unit, events)[0] as { lines: string[]; events: LedgerEvent[] };
+  const [part, ...later] = partsOf(unit, events) as [
+    { lines: string[]; events: LedgerEvent[] },
+    ...{ lines: string[]; events: LedgerEvent[] }[],
+  ];
+  const plan = (ids: readonly string[]) =>
+    planOf(part.events, ids, (reversesId) => targetOf(unit, [part, ...later], reversesId, ledger));
   const sealed = sealedOf(unit, part.lines);
+  // Planned before sealing: a pair that has to wait seals nothing.
+  plan(part.lines.map(() => ""));
   const ids = sealed ?? part.lines.map(() => newId());
   return {
-    plan: planOf(part.events, ids, ledger),
+    plan: plan(ids),
     records:
       sealed === undefined
         ? part.lines.map((line, index) => ({
@@ -382,12 +412,16 @@ export const redoneLines = (
 /** Once a redo is in the ledger: **only its lines** go to `discarded`, each with the id that replaced it. */
 export const redoFinished = (
   unit: HeldUnit,
+  events: readonly LedgerEvent[],
   lines: readonly string[],
   at: string,
 ): { records: HeldRecord[]; discarded: DiscardedRecord[] } => {
   const idOf = (line: string): string | undefined => unit.sealed?.[lineSha256(line)];
+  const heldIdOf = (line: string): string => (events[unit.lines.indexOf(line)] as LedgerEvent).id;
   return {
-    records: lines.map((line) => resolved(line, "redone", at, idOf(line))),
+    records: lines.map((line) =>
+      resolved(line, "redone", at, { event_id: idOf(line), replaces: heldIdOf(line) }),
+    ),
     discarded: lines.map((line) => discarded(unit, line, { code: "redone" }, at, idOf(line))),
   };
 };
