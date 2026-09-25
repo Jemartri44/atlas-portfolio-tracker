@@ -43,16 +43,26 @@ ls -l ~/.config/atlas/secrets.json
 
 ### 3. Pon al día el repositorio y compílalo
 
-La consola no está en el `PATH`: se ejecuta con Node desde el clon, después de compilarlo. Si tu clon no está en `~/projects/atlas-portfolio-tracker`, cambia la primera línea.
+La consola no está en el `PATH`: se ejecuta con Node desde tu clon del repositorio, después de compilarlo. Si tu clon no está en `~/projects/atlas-portfolio-tracker`, cambia la primera línea.
+
+**3a. Mira primero si el clon tiene cambios sin guardar:**
 
 ```bash
 REPO=~/projects/atlas-portfolio-tracker
-cd "$REPO" && git status --short && git switch develop && git pull
+cd "$REPO" && git status --short
+```
+
+**Si escribe algo, para aquí** y no sigas: tienes cambios sin guardar en el clon, y cambiar de rama podría mezclarlos. Si no escribe nada, sigue.
+
+**3b. Trae `develop` y compila.** `npm ci` borra y reinstala las dependencias **de tu clon** (la carpeta `node_modules`), sin tocar nada fuera de él; tarda un par de minutos.
+
+```bash
+cd "$REPO" && git switch develop && git pull
 npm ci && npm run build
 echo "salida $?"
 ```
 
-**Cuenta como «sí»:** `git status --short` no escribe nada antes de cambiar de rama (si escribe algo, para: tienes cambios sin guardar en el clon), y la última línea es `salida 0`.
+**Cuenta como «sí»:** la última línea es `salida 0`.
 
 ---
 
@@ -62,7 +72,7 @@ Siete llamadas. En la misma terminal:
 
 ```bash
 K=$(node -p "require('$HOME/.config/atlas/secrets.json').eodhd")
-cuenta() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let a;try{a=JSON.parse(s)}catch{console.log("La respuesta no es JSON: clave mala, fuera del plan o sin cupo.");return}const w=process.argv[1].split(",");console.log("filas:",a.length,"· tuyas:",a.filter(r=>w.includes(r.Code)||w.includes(r.Isin)).length)})' "$1"; }
+cuenta() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let a;try{a=JSON.parse(s)}catch{console.log("La respuesta no es JSON: clave mala, fuera del plan o sin cupo.");return}if(!Array.isArray(a)){console.log("La respuesta no es una lista: EODHD ha contestado otra cosa (un error o un aviso). No la copies; anota solo que pasó.");return}const w=process.argv[1].split(",");console.log("filas:",a.length,"· tuyas:",a.filter(r=>r&&(w.includes(r.Code)||w.includes(r.Isin))).length)})' "$1"; }
 ```
 
 **A1. ¿Entran los índices en el plan gratuito?**
@@ -153,7 +163,9 @@ atlas prices symbols
 
 - A `ast_world` se le da un ETF europeo; a `ast_gold`, una acción de EE. UU. **solo en Alpha Vantage**, para que esa fuente se pruebe; a `ast_alpha`, una acción de Londres declarada en peniques (`GBX`), con las dos fuentes.
 - **Si la consola dice que la fuente da otra divisa** y te pide confirmar, anota lo que dijo. En `ast_alpha` (Londres) decide con A3: si el cierre de A3 era de **cientos** (peniques), **confirma con `s`**, porque lo que manda es la unidad de los cierres, no la del listado; si era de **unidades** (libras), responde **`N`** y repite la orden con `--currency GBP`. En cualquier otro activo, responde **`N`** y repite la orden con la divisa que dijo la fuente.
-- **Cuenta como «sí»:** cada orden termina con «Símbolos de … guardados en prices/symbols.json», y la tabla final dice lo que contrastó cada fuente, sin «sin contrastar».
+- **Si una orden falla** (por ejemplo «Error: EODHD no tiene ese símbolo (o la clave no da acceso a él) al confirmar el símbolo: no se ha guardado nada», que es lo que da un 403 en `BTC-EUR.CC` o en `EUFUND`, o «ha rechazado la clave», que es un 401): **anota la línea tal como sale y sigue con la siguiente orden, sin reintentar**. Aunque el mensaje diga «Vuelve a intentarlo más tarde», aquí no hace falta: ese activo se queda sin símbolo y la prueba sigue.
+- **Cada reintento y cada `N` gastan cupo**: la consola pregunta a la fuente **antes** de enseñarte el desacuerdo, así que esa llamada ya está gastada aunque no se guarde nada, y repetir la orden la vuelve a gastar.
+- **Cuenta como «sí»:** cada orden que no falla termina con «Símbolos de … guardados en prices/symbols.json», y la tabla final dice lo que contrastó cada fuente, sin «sin contrastar».
 
 ### B4. Descargar dos veces seguidas
 
@@ -167,12 +179,20 @@ atlas prices status
 
 - las dos acaban en `salida 0`;
 - en la primera, cada activo con símbolo sale «actualizado» con su fuente (EODHD, o Alpha Vantage en `ast_gold`); los que no tienen símbolo (`ast_bonds`, y `ast_btc` o `ast_mm` si no se lo diste) salen «sin símbolo declarado», que es lo esperado;
-- en la segunda, **«ya al día (sin gastar cupo)»**. Un activo puede salir «sin cierres nuevos» si ayer fue festivo en su bolsa: eso sí gasta una llamada, y está bien;
+- en la segunda, **«ya al día (sin gastar cupo)»**. Un activo puede salir «sin cierres nuevos» si ayer fue festivo en su bolsa, **o si la fuente aún no ha publicado el cierre de ayer** (pasa si descargas temprano): eso sí gasta una llamada, y está bien;
 - en `prices status`, «gastado hoy» cuadra con lo que has hecho, y ninguna fuente tiene fallos seguidos.
 
 Si un activo sale con fallos, anota la línea tal como sale (no lleva claves).
 
 ### B5. Mirar los precios en las vistas
+
+**Antes de mirar, lo que va a parecer raro y no lo es.** El libro sintético es inventado: sus cantidades, sus divisas y sus valoraciones no tienen nada que ver con los valores reales que les has dado. Por eso:
+
+- **`ast_alpha` está en USD en el libro**, pero su cotización llega en peniques (`GBX`): comparada con lo que costó, la acción sale con una pérdida de alrededor del **−79 %**. No es un fallo: es un activo inventado al que se le ha puesto el precio de Tesco.
+- **Los pesos salen con «—»** y un aviso de total parcial: tres activos del núcleo no tienen precio (los que no llevan símbolo), y la aplicación **no calcula pesos sobre un total parcial**. Es lo que tiene que hacer.
+- **`ast_btc` sale con valores absurdos**, si le diste símbolo: la cantidad inventada del libro por el precio real del bitcóin.
+
+Nada de eso cuenta como fallo. Lo que se mira aquí es el **origen** y el **valor en euros** de cada precio.
 
 ```bash
 atlas weights; atlas bucket; atlas networth
@@ -208,12 +228,13 @@ atlas prices status
 
 **Nunca con el perfil en el que tengas tu libro real**: la web guarda el libro en el navegador, y al importar el de prueba sustituiría el tuyo.
 
-1. En una terminal nueva (déjala abierta mientras miras la web):
+1. En una terminal nueva (déjala abierta mientras miras la web); `REPO` es la misma carpeta de tu clon que en el paso 3:
    ```bash
-   cd ~/projects/atlas-portfolio-tracker && npm run preview
+   REPO=~/projects/atlas-portfolio-tracker
+   cd "$REPO" && npm run preview
    ```
 2. En Chrome o Edge, crea un perfil nuevo (menú del perfil, arriba a la derecha → «Añadir»), llámalo «Atlas prueba» y abre en él `http://localhost:4173`.
-3. Elige **«Importar desde la carpeta de la consola»** y selecciona `atlas-prueba-013`. Con eso la web importa el libro de prueba y **se queda enlazada a la carpeta solo para leer**: de ahí saca los precios (`prices/`) y el histórico del BCE. Nunca escribe en ella.
+3. La primera página que sale, con un perfil nuevo, es **«Tus datos, en este navegador»**. Debajo del botón «Empezar en este navegador» están «Importar un archivo» y **«Importar desde la carpeta de la consola»**: pulsa este último y selecciona `atlas-prueba-013`. Si la página pregunta **«¿Sustituir los datos de este navegador?»**, pulsa **«Sustituir»**: en este perfil no hay nada tuyo. Con eso la web importa el libro de prueba y **se queda enlazada a la carpeta solo para leer**: de ahí saca los precios (`prices/`) y el histórico del BCE. Nunca escribe en ella.
    - Si usas WSL y el navegador es el de Windows, la carpeta está en la red de WSL: en el selector, escribe `\\wsl.localhost\` en la barra de dirección y baja por tu distribución hasta `home`, tu usuario y `atlas-prueba-013`.
    - Si el selector no te deja elegirla, usa «Importar un archivo» con `ledger.jsonl` y, después, en **Ajustes**, «Importar el histórico» (el fichero `reference/ecb/eurofxref-hist.csv`) y «Importar precios» (todos los ficheros de `prices/`). Anota que tuviste que hacerlo así.
 4. Mira **Cartera**, **Cubo** y **Ajustes → «Precios automáticos»**.
