@@ -340,8 +340,9 @@ Trabajo programado que compara las posiciones del libro mayor contra el extracto
 > **Diagrama y decisiones vigentes desde ADR-0026, ADR-0027 y ADR-0028 (2026-09-24, Ronda 8).** Cognito desaparece: el acceso es solo con Google, verificado por la propia Lambda (ADR-0027). Cada entorno es una cuenta de AWS miembro dedicada (`atlas-dev`, `atlas-prod`) dentro de una organización, no una pila con sufijo compartiendo cuenta (ADR-0028, detalle en §11.3).
 
 ```
-Navegador (PC / móvil)
-    │
+Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
+    │                           │  en cabecera propia, ADR-0033)
+    ├───────────────────────────┘
     └── CloudFront  <dominio de la app>   [plan Free de tarifa plana + WAF]
            │
            ├── /*      ──── S3 (SPA estática, privada vía OAC)
@@ -350,7 +351,8 @@ Navegador (PC / móvil)
                             (AuthType=AWS_IAM;                        JSONL versionado, precios,
                              OAC firma la petición;                   histórico del BCE,
                              la Lambda verifica la sesión             documentos de eventos;
-                             propia y, en el acceso,                  nunca origen de CloudFront)
+                             propia o el token de la                  nunca origen de CloudFront)
+                             consola y, en el acceso,
                              el ID token de Google)
 
 EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
@@ -358,7 +360,8 @@ EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
                                 └── SSM Parameter Store (token IBKR, secreto de
                                     cliente de Google, clave de sesión, claves
                                     de las fuentes de precios, destinatario del
-                                    correo)
+                                    correo; registro de los tokens de consola,
+                                    que lee y escribe la API, ADR-0033)
 ```
 
 **Decisiones deliberadas para minimizar coste y servicios:**
@@ -407,7 +410,7 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 | Diaria *(bloqueada, Ronda 6)* | Importar operaciones nuevas de IBKR vía Flex Query | Solo si hay operaciones nuevas o discrepancias |
 | Semanal | Comprobar desviaciones de pesos y reglas del cubo | Sí, si se supera algún umbral |
 | Semanal *(bloqueada, Ronda 6)* | Conciliar posiciones del libro contra extracto de IBKR | Sí, si divergen |
-| Mensual | Recordatorio de aportación con el reparto calculado, **sin importes salvo que se active** (ADR-0028); con los días desde el último inicio de sesión (ADR-0027) y el recordatorio de la copia fuera de AWS (ADR-0032) | Sí, siempre |
+| Mensual | Recordatorio de aportación con el reparto calculado, **sin importes salvo que se active** (ADR-0028); con los días desde el último inicio de sesión, **contando también los de la consola**, cuántos tokens de consola siguen vivos y cuántos se emitieron en el mes, sin nombres ni importes (ADR-0027, ADR-0033), y el recordatorio de la copia fuera de AWS (ADR-0032) | Sí, siempre |
 | Mensual | Volcado del libro mayor, el histórico del BCE, los precios y `positions.json` a `backups/<YYYY-MM>/`, para siempre (ADR-0032) | Solo si falla |
 | Trimestral | Verificación de integridad: recalcular todo desde cero y comparar, **más el ensayo automático de restauración** (carga el último volcado en memoria y compara la proyección con la del libro vivo, ADR-0032) | Sí, si hay discrepancia |
 | Anual (enero) | Preparar datos de la Renta del ejercicio anterior | Sí |
@@ -452,6 +455,7 @@ Son datos financieros personales completos. Nivel de exigencia alto.
 - **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. Los secretos van en SSM Parameter Store como `SecureString`, jamás en el frontend ni en el repositorio: el token Flex de IBKR (**solo lectura**) y el secreto del cliente OAuth de Google y la clave de firma de la sesión (ADR-0027). **Las claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031) van **en local, en un fichero fuera del repositorio y de la carpeta del libro, y en la nube, en SSM** (§11.8).
 - **S3 privado**, servido solo vía CloudFront con Origin Access Control. Sin buckets públicos.
 - **Acceso solo con Google, verificado en la propia Lambda de la API; sin Cognito ni Lambda@Edge** (ADR-0027). Código de autorización con PKCE y `state`: la Lambda es el cliente OAuth y canjea el código directamente con Google, así que el token nunca toca la SPA ni la URL. Verificación completa del ID token (firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`) y lista permitida de `{sub, email}` en SSM, consultada en cada petición con una caché de pocos minutos. Sesión propia en una cookie `__Host-` firmada (`HttpOnly`, `Secure`, `SameSite=Strict`), sin *refresh token*: al caducar, se repite el flujo con Google. **La verificación en dos pasos de la cuenta de Google es un requisito operativo del usuario**, no algo que la aplicación pueda comprobar (`docs/prompts/000-director-handoff.md`).
+- **La consola, con un token de dispositivo propio** (ADR-0033, aceptada el 2026-09-25). Se emite **solo** al final de un inicio de sesión con Google que abre la propia consola (`atlas remote login`: *loopback* a `127.0.0.1` con PKCE, y una variante manual para WSL en modo NAT o SSH), **nunca desde la web**. Caduca a los 90 días, sin renovarse con el uso, bajo un techo fijo de 120 en el código; se revoca uno a uno desde la web o con `atlas remote logout`. Viaja en la cabecera `x-atlas-device-token`, solo al origen que lo emitió, por HTTPS y sin seguir redirecciones; una petición con cookie **y** token se rechaza. La API guarda solo su hash (SSM), lo comprueba en cada petición sin caché y vuelve a consultar la lista permitida; su alcance es sincronizar y leer, nunca emitir ni revocar otros tokens. Contrato en `docs/api.md`.
 - **IAM de mínimo privilegio**: cada Lambda con su rol y solo los permisos que necesita.
 - **Cifrado en reposo** en S3, y en tránsito por TLS.
 - **Sin analítica de terceros, sin CDN externos, sin fuentes remotas.** Todo se sirve desde tu propio origen. Un script de terceros en una app financiera es una vía de exfiltración.
@@ -560,6 +564,7 @@ GitHub Actions:
 - **Claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031; CoinGecko, retirada en su tercera enmienda): en local, en `~/.config/atlas/secrets.json`, **fuera del repositorio y de la carpeta del libro**, con permisos `600` (con otros permisos, la consola no las usa); en la nube, SSM. ~~Con ellas van el orden de las fuentes y su presupuesto: configuración operativa de la máquina que descarga, que ninguna cifra del libro lee.~~ El orden de las fuentes y su presupuesto **no** van con ellas, porque no son secretos: viven en `prices/config.json`, junto al libro (`docs/data-schema.md` §1).
 - **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo** (ADR-0028): en SSM. No van en el repositorio porque son datos personales y el repositorio es público; y no van en `Settings` porque **ninguna cifra del libro los lee** y quien los usa es la Lambda (la API, que comprueba la lista; la que envía el correo, el destinatario): un dato personal que solo usa el servidor vive donde lo lee el servidor (principio IV). El campo `notification_email` de `Settings` se sigue aceptando al cargar (ADR-0018), pero deja de leerse; la web todavía lo ofrece en Ajustes y **se retira con la feature 016** (tareas y correo).
 - **Interruptor de importes del correo** (ADR-0028, fila 18): también en SSM, junto al destinatario. No es dato personal ni secreto: es configuración operativa que ninguna cifra lee, y además un campo nuevo, que en `Settings` —una foto completa— un cliente antiguo borraría sin avisar al escribir la foto siguiente (ADR-0026, caso 6; enmienda de ADR-0018).
+- **Tokens de dispositivo de la consola** (ADR-0033): en la nube, un parámetro `SecureString` estándar por token bajo `/atlas/<entorno>/device-tokens/<id>`, con **solo el hash** del secreto, el par `{sub, email}`, el nombre, el dispositivo, la emisión, la caducidad y la revocación; se escribe solo al crearlo y al revocarlo, y la API nunca lo borra. **No va en el bucket de datos**, que se copia y se restaura: una restauración podría reactivar tokens revocados. En local, el token vive en `~/.config/atlas/credentials.json` (o `$XDG_CONFIG_HOME/atlas/`), hermano de `secrets.json` y con sus mismas reglas (`600`, fuera de la carpeta del libro, nunca en una copia, exportación ni sincronización), pero **lo escribe la consola**. En WSL, el `600` no protege frente a un proceso de Windows del mismo usuario; es el mismo límite que ya tienen `secrets.json` y la réplica del libro.
 - Sin secretos en variables de entorno de la Lambda visibles en la consola.
 - `.gitignore` estricto y escaneo de secretos en CI.
 
