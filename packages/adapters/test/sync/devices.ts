@@ -47,9 +47,10 @@ export interface ConsoleDevice extends Device {
 
 export const consoleDevice = async (
   events: readonly LedgerEvent[],
-  ops: FileOps = nodeFileOps,
+  opsFor: (dir: string) => FileOps = () => nodeFileOps,
 ): Promise<ConsoleDevice> => {
   const dir = await mkdtemp(join(tmpdir(), "atlas-sync-014-"));
+  const ops = opsFor(dir);
   const path = join(dir, "ledger.jsonl");
   await writeFile(path, textOf(events));
   const ledger = new FileLedgerStore(path, CURRENT_LEDGER_SCHEMA, { fileOps: ops });

@@ -11,7 +11,9 @@
 
 import { idbGet, idbPut, LEDGER_STORE } from "./idb.js";
 
-const KEY = "reference:ecb";
+/** The key of the ECB history imported by hand, in the `ledger` store (exported for the test of keys of feature 014). */
+export const IMPORTED_HISTORY_KEY = "reference:ecb";
+const KEY = IMPORTED_HISTORY_KEY;
 
 export interface ImportedHistory {
   /** The CSV, byte for byte as a string (the history is ASCII). */
