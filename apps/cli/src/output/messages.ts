@@ -383,6 +383,14 @@ export const describeError = (error: DomainError): string => {
       return "No se importa: este libro se sincroniza, y sustituirlo borraría lo pendiente. Desactiva antes la sincronización.";
     case "deactivate_refused_pending":
       return `No se desactiva la sincronización: hay ${text(d.pending)} líneas pendientes que nunca llegarían a la nube. Sincroniza primero; lo retenido se queda aquí de todas formas.`;
+    case "deactivate_refused_marker_missing":
+      return "No se desactiva: existe sync/ pero falta su marcador, así que no se sabe qué líneas están pendientes. Sincroniza primero, que lo reconstruye.";
+    case "sync_not_configured":
+      return "Esta carpeta no está sincronizada. Para empezar hay que elegirlo: subir el libro entero a una nube vacía, o unirse a una que ya tiene libro (empezando desde ella o subiendo tus líneas como pendientes).";
+    case "sync_deactivated":
+      return "La sincronización de esta carpeta está desactivada. Para volver a sincronizar hay que unirse otra vez, de forma explícita.";
+    case "remote_empty":
+      return "La nube está vacía y este libro no ha sincronizado nada: no se sube línea a línea. Inicializa la nube con el libro entero, de forma explícita.";
     case "deactivate_refused_marker_unreadable":
       return "No se desactiva: el marcador de la sincronización no se puede leer. Sincroniza primero, que lo reconstruye.";
     case "init_refused_invalid_ledger":

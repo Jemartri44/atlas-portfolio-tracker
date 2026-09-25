@@ -134,6 +134,14 @@ describe("inspect: steps 1 and 2", () => {
     });
   });
 
+  it("never starts an empty remote line by line: that is the explicit initialisation (V6)", () => {
+    expect(stopped(localSide(events, 0, { marker: undefined }), "")).toEqual({
+      code: "remote_empty",
+      details: {},
+    });
+    expect(inspected(localSide([], 0, { marker: undefined }), "").queue).toEqual([]);
+  });
+
   it("rebuilds the synced prefix without a marker as the part in common", () => {
     const b = device(100);
     const pending = b.deposit({ account_id: "acc_fund" });

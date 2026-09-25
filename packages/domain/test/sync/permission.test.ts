@@ -15,6 +15,7 @@ import {
   importPermission,
   RefusedError,
   rewritePermission,
+  syncPermission,
 } from "../../src/sync/permission.js";
 
 const enabled: SyncPresence = { present: true, marker: markerFor([], 0) };
@@ -86,5 +87,16 @@ describe("the refusals of a synced device", () => {
     });
     expect(code(deactivatePermission(unreadable, 0))).toBe("deactivate_refused_marker_unreadable");
     expect(deactivatePermission(enabled, 0)).toBeUndefined();
+    expect(code(deactivatePermission(missing, 0))).toBe("deactivate_refused_marker_missing");
+  });
+});
+
+describe("whether a sync may run (NB4 of the review of PR #83)", () => {
+  it("only on a configured device: starting is an explicit choice", () => {
+    expect(code(syncPermission(none))).toBe("sync_not_configured");
+    expect(code(syncPermission(disabled))).toBe("sync_deactivated");
+    expect(syncPermission(enabled)).toBeUndefined();
+    expect(syncPermission(missing)).toBeUndefined();
+    expect(syncPermission(unreadable)).toBeUndefined();
   });
 });

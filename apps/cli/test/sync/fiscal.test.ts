@@ -8,7 +8,13 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { FileLedgerStore, FolderSyncStore, initialiseRemote, syncDevice } from "@atlas/adapters";
+import {
+  FileLedgerStore,
+  FolderSyncStore,
+  initialiseRemote,
+  replaceFromRemote,
+  syncDevice,
+} from "@atlas/adapters";
 import {
   CURRENT_LEDGER_SCHEMA,
   decodeLine,
@@ -154,7 +160,7 @@ describe("the fiscal output with sync/ next to the ledger", () => {
     const laptopSync = new FolderSyncStore(new FileLedgerStore(laptop.ledger));
     const phoneSync = new FolderSyncStore(new FileLedgerStore(phone.ledger));
     await initialiseRemote(laptopSync, remote, options);
-    await syncDevice(phoneSync, remote, options);
+    await replaceFromRemote(phoneSync, remote, options, "join");
     // Two sales of the same day, recorded on each device without a connection.
     const sale = (id: string, quantity: string, price: string): LedgerEvent =>
       ({

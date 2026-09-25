@@ -52,6 +52,7 @@ import {
   type SyncStop,
   settle,
   syncArchiveName,
+  syncPermission,
   textOfLines,
   unitAtEntry,
   unresolvedHeld,
@@ -131,6 +132,10 @@ export const syncDevice = async (
   for (;;) {
     // Step 1: the device, then the remote, the store not held.
     const state = await store.read();
+    const refusal = syncPermission(state.presence);
+    if (refusal !== undefined) {
+      return { status: "refused", refusal };
+    }
     const held = unresolvedOf(state);
     const heldLines = held.flatMap((unit) => unit.lines);
     const local = {

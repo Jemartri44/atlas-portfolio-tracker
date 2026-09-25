@@ -49,7 +49,7 @@ const world = async (
   const laptop = await consoleDevice(shared);
   const phone = webDevice(shared);
   await initialiseRemote(laptop.sync, bucket.as("laptop"), options);
-  await syncDevice(phone.sync, bucket.as("phone"), options);
+  await replaceFromRemote(phone.sync, bucket.as("phone"), options, "join");
   return { bucket, options, laptop, phone, written: linesOf(shared) };
 };
 

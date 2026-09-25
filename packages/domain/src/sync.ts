@@ -78,6 +78,7 @@ export {
   type Refusal,
   RefusedError,
   rewritePermission,
+  syncPermission,
 } from "./sync/permission.js";
 export { type ReapplyBase, type ReapplyOutcome, reapplyUnits } from "./sync/reapply.js";
 export {

@@ -427,6 +427,14 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "No se importa: tus datos se sincronizan, e importar otro fichero borraría lo pendiente. Desactiva antes la sincronización.",
   deactivate_refused_pending: () =>
     "No se desactiva la sincronización: hay operaciones pendientes que nunca llegarían a la nube. Sincroniza primero; lo retenido se queda aquí de todas formas.",
+  deactivate_refused_marker_missing: () =>
+    "No se desactiva: falta el estado de la sincronización, así que no se sabe qué operaciones están pendientes. Sincroniza primero.",
+  sync_not_configured: () =>
+    "Tus datos no se sincronizan. Para empezar hay que elegirlo: subirlos enteros a una nube vacía, o unirte a una que ya tiene datos.",
+  sync_deactivated: () =>
+    "La sincronización está desactivada. Para volver a sincronizar hay que unirse otra vez, de forma explícita.",
+  remote_empty: () =>
+    "La nube está vacía y aquí no se ha sincronizado nada: no se sube operación a operación. Inicializa la nube con tus datos enteros, de forma explícita.",
   deactivate_refused_marker_unreadable: () =>
     "No se desactiva: no se puede leer el estado de la sincronización. Sincroniza primero.",
   init_refused_invalid_ledger: (d) =>

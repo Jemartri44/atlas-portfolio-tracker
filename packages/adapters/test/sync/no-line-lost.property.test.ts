@@ -19,7 +19,13 @@ import {
 import { linesOfText, parseDiscarded, parseHeld, unresolvedHeld } from "@atlas/domain/sync";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { discardHeldUnit, heldUnits, initialiseRemote, syncDevice } from "../../src/sync/client.js";
+import {
+  discardHeldUnit,
+  heldUnits,
+  initialiseRemote,
+  replaceFromRemote,
+  syncDevice,
+} from "../../src/sync/client.js";
 import { Builder, base } from "./builder.js";
 import { clock, consoleDevice, type Device, webDevice } from "./devices.js";
 import { type Recording, recording } from "./recording-ops.js";
@@ -158,7 +164,7 @@ describe("no line is lost, whatever the order, the cuts and the answers", () => 
           const [first] = harnesses as [Harness];
           await initialiseRemote(first.device.sync, bucket.as(first.name), options);
           for (const h of harnesses.slice(1)) {
-            await syncDevice(h.device.sync, bucket.as(h.name), options);
+            await replaceFromRemote(h.device.sync, bucket.as(h.name), options, "join");
           }
           const written = new Set(linesOfText(await bucket.text()));
           const noteLocal = async (h: Harness) => {

@@ -106,6 +106,11 @@ export const inspect = (
   const remoteLines = linesOfText(remoteText);
   const marker = local.marker;
   const synced = marker?.synced_lines ?? commonPrefix(local.lines, remoteLines);
+  // An empty remote under a ledger with nothing synced is started by the
+  // explicit initialisation, with the whole bytes (V6), never line by line.
+  if (synced === 0 && remoteLines.length === 0 && local.lines.length > 0) {
+    return stop({ code: "remote_empty", details: {} });
+  }
   if (
     marker !== undefined &&
     (local.lines.length < synced || prefixSha256(local.lines, synced) !== marker.synced_sha256)

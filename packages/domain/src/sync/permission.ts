@@ -94,7 +94,29 @@ export const deactivatePermission = (
   if (markerState(presence) === "unreadable") {
     return { code: "deactivate_refused_marker_unreadable", details: {} };
   }
+  // Without a marker nobody knows which lines are pending: refused as with an
+  // unreadable one (non-blocking 3 of the review of PR #83), never read as
+  // «nothing pending».
+  if (markerState(presence) === "missing") {
+    return { code: "deactivate_refused_marker_missing", details: {} };
+  }
   return pendingHere > 0
     ? { code: "deactivate_refused_pending", details: { pending: pendingHere } }
+    : undefined;
+};
+
+/**
+ * Whether a sync may run at all (non-blocking 4 of the review of PR #83):
+ * only on a device whose sync is configured. Starting is always an explicit
+ * choice — initialising an empty remote with the whole ledger, or joining
+ * from the remote or with the device's own lines —, never a side effect of a
+ * sync that would upload a ledger line by line (V6).
+ */
+export const syncPermission = (presence: SyncPresence): Refusal | undefined => {
+  if (!presence.present) {
+    return { code: "sync_not_configured", details: {} };
+  }
+  return typeof presence.marker === "object" && presence.marker.status === "disabled"
+    ? { code: "sync_deactivated", details: {} }
     : undefined;
 };

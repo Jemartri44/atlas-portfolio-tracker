@@ -38,7 +38,7 @@ const pair = async (make: (events: readonly LedgerEvent[]) => Promise<Device>) =
   const one = await make(shared);
   const two = await make(shared);
   await initialiseRemote(one.sync, bucket.as("one"), options);
-  await syncDevice(two.sync, bucket.as("two"), options);
+  await replaceFromRemote(two.sync, bucket.as("two"), options, "join");
   return { shared, bucket, options, one, two };
 };
 
@@ -358,6 +358,41 @@ describe.each(kinds)("the client over the %s", (_kind, make) => {
     const fresh = await make(base());
     expect(await deactivateSync(fresh.sync, options)).toBeUndefined();
     expect((await fresh.sync.read()).presence).toEqual({ present: false });
+  });
+});
+
+describe("starting is explicit (NB3, NB4 of the review of PR #83)", () => {
+  it.each(kinds)(
+    "a sync of a %s device that never joined is refused, and nothing is uploaded",
+    async (_k, make) => {
+      const bucket = SimulatedBucket.inMemory();
+      const options = clock();
+      const one = await make(base());
+      await initialiseRemote(one.sync, bucket.as("one"), options);
+      const other = await make([...base(), new Builder(700).deposit("3")]);
+      expect(await syncDevice(other.sync, bucket.as("two"), options)).toEqual({
+        status: "refused",
+        refusal: { code: "sync_not_configured", details: {} },
+      });
+      expect(await bucket.text()).toBe(textOf(base()));
+      await deactivateSync(one.sync, options);
+      expect(await syncDevice(one.sync, bucket.as("one"), options)).toMatchObject({
+        refusal: { code: "sync_deactivated" },
+      });
+    },
+  );
+
+  it("refuses to deactivate with the marker missing, and pending lines stay pending", async () => {
+    const { options, one } = await pair((events) => consoleDevice(events));
+    await one.record([new Builder(100).deposit("50")]);
+    const { rm } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    await rm(join((one as { dir: string }).dir, "sync", "state.json"));
+    expect(await deactivateSync(one.sync, options)).toEqual({
+      code: "deactivate_refused_marker_missing",
+      details: {},
+    });
+    expect((await one.sync.read()).presence).toEqual({ present: true, marker: "missing" });
   });
 });
 
