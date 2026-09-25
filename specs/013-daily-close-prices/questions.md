@@ -509,3 +509,20 @@ Cuatro puntos de la dirección. Cada uno tiene tests escritos antes y vistos en 
    - Test con el caso del revisor: una línea mala del día 4 y una buena del 5, que se purga y se vuelve a pedir desde el 4.
 - **Techo total del bundle**: pasa de 269,0 a 270,0 KB. Se midió 269,61 (276.081 bytes), y todo lo añadido es diferido. El arranque, 73,9 KB, sigue bajo su techo.
 - **`docs/` sin tocar**: el documentador debe recoger en `docs/data-schema.md` los campos `misstored` y `refetch_from` del formato 2.
+
+## 15. Tercera pasada de la revisión de la PR #80 (2026-09-25)
+
+1. **Bloqueante: `misstored` ya solo desaparece con `purge`.**
+   - Mientras un activo tenga una fuente en `misstored`, se niegan dos cosas: declararlo otra vez sin esa fuente (`recordSymbols`) y quitarlo (`removeSymbols`).
+   - Las dos lo comprueban bajo el cerrojo. La consola, además, lo comprueba antes de gastar ninguna llamada (`assertNothingMisstored`).
+   - El error, `symbols_misstored_pending`, traducido en la consola y en la web, dice qué queda pendiente y da el remedio: `atlas prices purge <activo> --source <fuente>`.
+   - Una declaración nueva conserva `misstored` y todos los días pendientes o sin servir del activo, sea cual sea la fuente, porque cualquier fuente puede traerlos.
+   - Tests en rojo con los dos caminos del revisor, en el dominio y en la consola. Mutantes Q1a a Q1d, que permiten cada camino, todos muertos.
+2. **Lo que se dice de `purge` es verdad.**
+   - **`refetch_from` pasa a ser `refetch_days`**: ya no guarda el primer día, sino la lista de días quitados de cada fuente. La descarga sigue empezando en el primero.
+   - Los días se piden **una vez**. Los que, tras pedirlos, no tienen ningún cierre en vigor pasan a `unserved_days` y no se vuelven a perseguir.
+   - `prices status` los dice como hueco mientras ningún cierre los llene: «1 día quitado de Alpha Vantage (…) se pidió otra vez y ninguna fuente lo sirvió: queda como hueco».
+   - `purge`, su confirmación, el aviso de las vistas, la ayuda y el README dicen «una vez» y avisan del hueco.
+   - Mutantes Q2a a Q2e, todos muertos (`mut-013/fix013-pass3.log`).
+- **Arranque**: la ronda lo dejó 1 byte por encima del techo (75.726 frente a 75.725). La causa era el chunk propio del aviso de la correspondencia, `notices`, nombrado en la tabla de precargas de la entrada. El aviso pasa al módulo diferido de las cotizaciones y el chunk desaparece. Arranque medido: 75.703 bytes.
+- **`docs/` sin tocar**: `docs/data-schema.md` debe recoger en el formato 2 `misstored`, `refetch_days` y `unserved_days`, no `refetch_from` como decía §14.
