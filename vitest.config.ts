@@ -10,6 +10,9 @@ export default defineConfig({
     // would otherwise swallow `@atlas/adapters/blob`.
     alias: {
       "@atlas/adapters/blob": local("./packages/adapters/src/ledger-store/blob.ts"),
+      "@atlas/adapters/aws": local("./packages/adapters/src/aws/index.ts"),
+      "@atlas/adapters/access": local("./packages/adapters/src/access/crypto.ts"),
+      "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),
       "@atlas/adapters/sync-client": local("./packages/adapters/src/sync/client.ts"),
       "@atlas/adapters/sync": local("./packages/adapters/src/ledger-store/browser/sync-store.ts"),
       "@atlas/adapters/reference": local(

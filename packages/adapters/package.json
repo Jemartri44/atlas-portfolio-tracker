@@ -53,6 +53,18 @@
     "./sync-client": {
       "types": "./dist/sync/client.d.ts",
       "import": "./dist/sync/client.js"
+    },
+    "./aws": {
+      "types": "./dist/aws/index.d.ts",
+      "import": "./dist/aws/index.js"
+    },
+    "./access": {
+      "types": "./dist/access/crypto.d.ts",
+      "import": "./dist/access/crypto.js"
+    },
+    "./identity": {
+      "types": "./dist/identity/index.d.ts",
+      "import": "./dist/identity/index.js"
     }
   },
   "files": [
