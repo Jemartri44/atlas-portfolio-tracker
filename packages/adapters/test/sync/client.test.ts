@@ -387,7 +387,7 @@ describe("starting is explicit (NB3, NB4 of the review of PR #83)", () => {
     await one.record([new Builder(100).deposit("50")]);
     const { rm } = await import("node:fs/promises");
     const { join } = await import("node:path");
-    await rm(join((one as { dir: string }).dir, "sync", "state.json"));
+    await rm(join((one as unknown as { dir: string }).dir, "sync", "state.json"));
     expect(await deactivateSync(one.sync, options)).toEqual({
       code: "deactivate_refused_marker_missing",
       details: {},
