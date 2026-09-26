@@ -45,6 +45,7 @@ describe("routing and the shape of an error (R29)", () => {
         },
         putIfNoneMatch: async () => "created",
         putIfMatch: async () => "written",
+        list: async () => [],
       },
     });
     await api.signIn();

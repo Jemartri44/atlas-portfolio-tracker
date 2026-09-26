@@ -123,6 +123,7 @@ describe("the log of the API (R25)", () => {
           throw new Error(`boom ${SUB} ${EMAIL}`);
         },
         putIfMatch: async () => "written",
+        list: async () => [],
       },
     });
     failing.ssm.set(NAMES.allowList, allowListOf({ sub: SUB, email: EMAIL }));
