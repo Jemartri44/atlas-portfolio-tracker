@@ -759,3 +759,109 @@ Sobre `06a7dbc`, el último commit de código. El congelado solo cambia `questio
 ### 17.5 Congelado
 
 **Commit congelado de la ronda 4: el que contiene esta sección.** Su SHA va en el comentario de la PR y en el informe a la dirección. Desde aquí no se empuja nada a la rama mientras dura la revisión.
+
+## 18. E2 — bloque 0: las verificaciones, con su fuente (2026-09-26)
+
+E1 quedó fusionada en `develop` (PR #90, `490f0e1`); la rama sigue desde ahí. Las páginas se consultaron el 2026-09-26 (hora de Madrid) con `curl` o leídas como texto; las citas son literales. Antes del primer commit de código de E2.
+
+### 18.1 Punto 1 — `PutParameter` sin `Overwrite` ante dos peticiones simultáneas
+
+**Fuente**: la referencia de la API, `https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_PutParameter.html`.
+
+**Lo que dice**:
+
+- `Name`: «A parameter name must be unique within an AWS Region».
+- `Overwrite`: «Overwrite an existing parameter. The default value is `false`.»
+- Error `ParameterAlreadyExists`: «The parameter already exists. You can't create duplicate parameters.» (HTTP 400).
+- Error `TooManyUpdates`: «There are concurrent updates for a resource that supports one update at a time.» (HTTP 400).
+
+**Lo que no dice**: ninguna frase habla literalmente de dos `PutParameter` sin `Overwrite` **a la vez** sobre el mismo nombre. Lo que se sostiene es una deducción de tres afirmaciones documentadas: el nombre es único, sin `Overwrite` un parámetro existente no se sustituye nunca, y un parámetro «admite una actualización a la vez» y rechaza las concurrentes. De ahí, **como mucho una creación gana**; la otra recibe `ParameterAlreadyExists` (si llega después) o `TooManyUpdates` (si se cruzan). Buscado también en re:Post y en las incidencias del proveedor de Terraform: nada contradice esto ni lo afirma con más precisión.
+
+**Decisión de implementación, dentro de lo decidido**: el adaptador traduce `ParameterAlreadyExists` a «ya existe» (`409 console_code_used`) y `TooManyUpdates` a un fallo transitorio (`503 remote_unavailable`, se puede reintentar): si la otra creación ganó, el reintento da `console_code_used`; si ninguna ganó, el reintento crea. **Ninguno de los dos caminos deja dos tokens con el mismo `token_id`.** El doble de SSM imita las dos respuestas.
+
+**No paro E2**, porque la garantía que pide ADR-0033 (el uso único) se sigue de lo documentado. **Pero lo digo para la dirección**: si exige una cita literal sobre la concurrencia, no la hay, y la regla del encargo («si no lo es, para») se tendría que decidir con esta deducción delante. **Queda como pregunta Q11** (§19).
+
+### 18.2 Punto 2 — etiquetas al crear
+
+**Fuentes**:
+
+- la misma referencia, parámetro `Tags`: «Optional metadata that you assign to a resource. […] To add tags to an existing Systems Manager parameter, use the AddTagsToResource operation.»;
+- `https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-ssm-parameter.html`, nota: «To create an SSM parameter, you must have the AWS Identity and Access Management (IAM) permissions ssm:PutParameter and ssm:AddTagsToResource.»;
+- `https://docs.aws.amazon.com/cli/latest/reference/ssm/put-parameter.html`, `--tags`: el mismo texto.
+
+**Conclusión**: `PutParameter` **admite `Tags` al crear**; no hay restricción de nivel (un `SecureString` estándar vale). Etiquetar al crear **exige además `ssm:AddTagsToResource`** sobre el recurso (la nota de CloudFormation; la tabla de acciones de IAM se sirve con JavaScript y no se pudo leer como texto). Las etiquetas solo se ponen **al crear**: la revocación sobrescribe con `Overwrite` y sin `Tags`, y las conserva (las etiquetas son del recurso, no de la versión).
+
+**Hecho**: la API crea los registros con `project=atlas` y `env=<entorno>`. **Para la 017 y ADR-0034 (fila 9)**: el rol de la API necesita `ssm:AddTagsToResource` sobre `/atlas/<entorno>/device-tokens/*` (plan §10 ya lo preveía «solo si»; ahora es «sí»).
+
+### 18.3 Punto 3 — `GetParameter` con selector
+
+**Fuente**: `https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetParameter.html`.
+
+- `Name`: «To query by parameter label, use `"Name": "name:label"`. To query by parameter version, use `"Name": "name:version"`.»
+- Errores: `ParameterNotFound` («The parameter couldn't be found») y `ParameterVersionNotFound` («The specified parameter version wasn't found»).
+- La respuesta lleva `Selector` y `Version`.
+
+**El doble** (`test-only-fake-ssm.ts`) guarda **todas las versiones** de cada parámetro y resuelve `nombre:<n>` a la versión `n` y `nombre:<etiqueta>` a la versión etiquetada, como SSM. Así el mutante de B1 (construir el nombre sin validar el `token_id`, con `<id>:1` para leer la versión anterior a la revocación) muere contra el doble y no contra un supuesto.
+
+### 18.4 Punto 4 — la vuelta a `http://127.0.0.1` y *Local Network Access*
+
+**Fuentes**:
+
+- `https://developer.chrome.com/blog/local-network-access` (9 de junio de 2025; lanzamiento en Chrome 142): el permiso se pide para «requests initiated using the JavaScript `fetch()` API, subresource loading, and subframe navigation». **Las navegaciones de primer nivel no están en la lista.**
+- El *explainer* del WICG, `https://github.com/WICG/local-network-access/blob/main/explainer.md`, sección «Potential future changes» → «Top-level navigations to local network»: «Top-level navigations remain a risk after restrictions on subresource local network requests are in place». Es **trabajo futuro**, fuera del alcance actual.
+- Desde Chrome 146 el permiso se parte en «Local Network» y «Loopback Network» (resultados de búsqueda de fuentes secundarias; no cambia lo anterior).
+
+**Conclusión, con fuente**: el `302` de la vuelta de Google a `http://127.0.0.1:<puerto>/callback` es una **navegación de primer nivel** y **hoy no la restringe** *Local Network Access*. La página que sirve la consola no carga nada, así que no dispara ningún subrecurso local. **Riesgo escrito**: si Chromium extiende LNA a las navegaciones (el *explainer* lo contempla), la variante `--manual` sigue funcionando, porque no navega a `127.0.0.1`.
+
+**La prueba en el navegador real del usuario se aplaza a la 018** (§7 P14). El procedimiento, preparado:
+
+1. En WSL, en una carpeta cualquiera: `node -e 'require("http").createServer((q,s)=>{s.end("LOOPBACK-OK "+q.url)}).listen(49321,"127.0.0.1")'`.
+2. En Windows, abrir en el navegador de siempre (Chrome o Edge) cualquier página pública https que redirija; basta con escribir en la barra `https://httpbin.org/redirect-to?url=http%3A%2F%2F127.0.0.1%3A49321%2Fcallback%3Fcode%3Dx%26state%3Dy`.
+3. **Anotar**: si la pestaña enseña `LOOPBACK-OK /callback?code=x&state=y`; si el navegador pidió algún permiso («acceder a dispositivos de tu red local» o parecido); la versión del navegador (`chrome://version`) y el modo de red de WSL (`wsl --status` o `.wslconfig`).
+4. Parar el servidor con Ctrl+C.
+
+### 18.5 Punto 5 — `Content-Security-Policy: sandbox` y la página del código
+
+**Fuentes**:
+
+- HTML, `https://html.spec.whatwg.org/multipage/browsers.html#sandboxed-origin-browsing-context-flag`: «The sandboxed origin browsing context flag: This flag forces content into an opaque origin, thus preventing it from accessing other content from the same origin», y se pone «unless the tokens contains the `allow-same-origin` keyword».
+- CSP 3, `https://www.w3.org/TR/CSP3/`: `sandbox` no se admite en `<meta>` ni en modo de solo informe; va en la cabecera, como la envía la Lambda.
+
+**La prueba en Chromium de verdad** (Chrome for Testing 153.0.8010.12, `~/.cache/ms-playwright/chromium-1243`, conducido por el protocolo de DevTools con el `WebSocket` de Node 22, desde el *scratchpad*: `sandbox-probe-015.mjs`; sin instalar nada). Un servidor local sirve en el **mismo origen** una SPA con *script* y la página del código con dos variantes: solo `sandbox`, y la cabecera real (`default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; sandbox`, más `no-store` y `no-referrer`). Salida literal:
+
+```
+a contentDocument=null | threw:SecurityError | threw:SecurityError
+b contentDocument=null | threw:SecurityError | threw:SecurityError
+popup-null
+origin seen by the page: null
+details open before: false
+code visible before (innerText): false
+details open after a click: true
+code visible after (innerText): true
+```
+
+- La SPA **no puede leer** la página del código: ni su documento ni su `location` (`SecurityError`), tanto con solo `sandbox` como con la cabecera real; abrirla en una ventana sin gesto del usuario la bloquea el navegador.
+- La página tiene **origen opaco** (`null`).
+- El `<details>` **se despliega** dentro del *sandbox* con un clic real del ratón, sin *script*: antes el código no es texto visible; después, sí.
+
+**Nota de método**: en esta máquina Chromium solo arranca con `--no-sandbox` (el *sandbox* del proceso, que AppArmor no deja crear sin espacios de nombres de usuario); no tiene que ver con la `sandbox` de CSP, que es la que se prueba, y solo se cargaron páginas del servidor local de la prueba.
+
+**Conclusión**: la variante manual **sigue**.
+
+### 18.6 Punto 6 — WSL en modo NAT y abrir el navegador desde WSL
+
+**Fuente**: `https://learn.microsoft.com/en-us/windows/wsl/networking` (actualizada el 2026-06-02), «Default networking mode: NAT» → «Accessing Linux networking apps from Windows (localhost)»: «If you are building a networking app […] in your Linux distribution, you can access it from a Windows app (like your Edge or Chrome internet browser) using `localhost` (just like you normally would).» Y en modo *mirrored*: «the Windows host and WSL2 VM can connect to each other using `localhost` (127.0.0.1)».
+
+**Lo que no dice**: si en modo NAT el reenvío de `localhost` escucha también en el literal `127.0.0.1` de Windows (y no solo en `::1`), que es a donde redirige la Lambda. **Sin verificar**; entra en el procedimiento de §18.4 (paso 3, anotar el modo de red). Si falla, `--manual` lo cubre. **Abrir el navegador desde WSL no es un requisito**: la consola **imprime siempre la URL** e intenta abrirla sin depender de ello.
+
+### 18.7 Punto 7 — el valor de `amr`
+
+Sin objeto: Q2 decidió no emitir `mfa_required` (§8).
+
+### 18.8 Q8 aplicada
+
+El código de la consola lleva **solo el `sub`** (§12, Q8 (a)): `data-model.md` §1.4 está al día. En el canje, la API toma el correo de la lista permitida por ese `sub` y vuelve a comprobar el par entero; si el `sub` tiene dos entradas, se niega (`403 not_allowed`, `details.reason: "ambiguous_subject"`).
+
+## 19. Preguntas nuevas de E2
+
+- **Q11 — La atomicidad de `PutParameter` sin `Overwrite`** (§18.1): documentada por deducción, no con una frase literal. E2 sigue con ella. ¿Basta, o se quiere una segunda barrera que no dependa de SSM (por ejemplo, una escritura condicional de S3 por `token_id`, con su prefijo nuevo y su permiso en la 017)?

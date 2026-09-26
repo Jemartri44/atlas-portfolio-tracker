@@ -1,6 +1,6 @@
 # Modelo de datos y formatos, escritos como contrato: `015-api-access`
 
-Todos los formatos de esta feature viven **fuera del libro**: ninguno añade un tipo de evento ni un campo, ni sube `schema_version` (§2 bis del encargo). Los lectores son **estrictos**: una clave desconocida, un tipo que no es el suyo o un formato que no es `1` hacen el objeto **ilegible**, con su código, y nunca se leen como «vacío» ni como «válido por defecto». **Aprobado por la dirección el 2026-09-25** (`questions.md` §8), con una precisión: **ninguna cookie lleva el correo**. Queda abierto el correo del código de la consola (§1.4, Q8) y `admin.json` (§9, E5).
+Todos los formatos de esta feature viven **fuera del libro**: ninguno añade un tipo de evento ni un campo, ni sube `schema_version` (§2 bis del encargo). Los lectores son **estrictos**: una clave desconocida, un tipo que no es el suyo o un formato que no es `1` hacen el objeto **ilegible**, con su código, y nunca se leen como «vacío» ni como «válido por defecto». **Aprobado por la dirección el 2026-09-25** (`questions.md` §8), con una precisión: **ninguna cookie lleva el correo**. Queda abierto `admin.json` (§9, E5); el correo del código de la consola se decidió en Q8 (a) (§1.4).
 
 Convenciones: los instantes son ISO 8601 en UTC con `Z`, salvo `iat` y `exp` de las cargas firmadas, que son segundos Unix enteros. Los identificadores aleatorios usan base64url sin relleno.
 
@@ -67,11 +67,10 @@ Con `flow: "console"` no lleva `did`, sino un objeto `console`:
 Viaja en `?code=` hacia `127.0.0.1` o se enseña en la página manual.
 
 ```json
-{ "typ": "atlas.console_code", "v": 1, "tid": "<token_id que tendrá el token, 22>", "cc": "<code_challenge, 43>", "sub": "…", "email": "…", "dn": "<nombre>", "rdid": "<22, solo en la reemisión>", "iat": 1790000000, "exp": 1790000300 }
+{ "typ": "atlas.console_code", "v": 1, "tid": "<token_id que tendrá el token, 22>", "cc": "<code_challenge, 43>", "sub": "…", "dn": "<nombre>", "rdid": "<22, solo en la reemisión>", "iat": 1790000000, "exp": 1790000300 }
 ```
 
-- Lleva lo que exige ADR-0033: el `token_id`, el `code_challenge`, el par y el nombre.
-- **Abierto (Q8, antes de E2)**: el código va firmado y no cifrado, así que el correo y el `sub` se pueden leer en base64 en el historial del navegador del propio usuario. Se aceptaría como tal, igual que el `sub` en la cookie. La alternativa es cifrar con AES-256-GCM y la subclave `console_code`, que sigue siendo autenticado, o sacar el correo del código y buscarlo en la lista por su `sub` al canjear.
+- Lleva el `token_id`, el `code_challenge`, el `sub` y el nombre. **No lleva el correo** (Q8 (a), decidido el 2026-09-26): en el canje, la API toma el correo de la entrada de la lista permitida con ese `sub` y vuelve a comprobar el par entero; si el `sub` tiene dos entradas, se niega (`403 not_allowed`, `reason: "ambiguous_subject"`). El par de ADR-0033 se sigue ligando: se comprobó entero en la vuelta de Google y se vuelve a comprobar en el canje.
 - Mide unos 400 caracteres: en la variante manual se **pega** en la consola, no se teclea.
 
 ---
