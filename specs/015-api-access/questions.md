@@ -865,3 +865,162 @@ El código de la consola lleva **solo el `sub`** (§12, Q8 (a)): `data-model.md`
 ## 19. Preguntas nuevas de E2
 
 - **Q11 — La atomicidad de `PutParameter` sin `Overwrite`** (§18.1): documentada por deducción, no con una frase literal. E2 sigue con ella. ¿Basta, o se quiere una segunda barrera que no dependa de SSM (por ejemplo, una escritura condicional de S3 por `token_id`, con su prefijo nuevo y su permiso en la 017)?
+
+## 20. E2 — el token de dispositivo de la consola (2026-09-26)
+
+E1 quedó fusionada en `develop` (PR #90, `490f0e1`). La ronda 5 convergió. E2 sigue el encargo §3 E2, §7.1 y §7.1 bis, y lo decidido en §8 a §17. El bloque 0 está en §18 y la pregunta nueva, en §19 (Q11).
+
+### 20.1 Los retoques de la ronda 5 (`67007c1`)
+
+- **La regla `data:` lee `application/octet-stream`.** Ese tipo es el de los fuentes cuya extensión Vite no conoce (`.tsx` y `.cts`). La regla lo niega **cuando el trozo tiene un fuente de código importado como recurso** (`?inline`, `?url` o `?raw`, según el grafo). Así no hay falsos positivos con un recurso binario legítimo.
+- **El mensaje nombra el módulo** cuando el grafo lo tiene: por ejemplo, `…: lleva código incrustado como URL data: (data:video/mp2t;): packages/domain/src/access/id-token.ts?url&inline`.
+- **El comentario de `vite.config.ts` dice la verdad.** `assetsInlineLimit` no cubre `?inline`, porque Vite lee esa consulta antes de preguntar a la función. Lo que lo para es la regla `data:`.
+- **Además**, el cruce con los *source maps* compara la ruta **sin la consulta**. Si no, un `?url` legítimo daría un falso «su source map nombra … y el grafo no».
+- **Dicho: `?inline` solo** no incrusta un `.tsx` ni un `.mts`. Vite los compila como módulo, y el *build* falla por `MISSING_EXPORT` antes del guardián. La vía que sí incrusta es `?url&inline`, y con ella se hicieron los mutantes.
+
+| Mutante | Sobre `490f0e1` | Con `67007c1` |
+|---|---|---|
+| V5-tsx: `SessionCard.tsx?url&inline` en `main.tsx` | **sobrevive** (`data:application/octet-stream`) | muerto, y el mensaje nombra el módulo |
+| V5-cts: un `probe.cts?url&inline` de la web | **sobrevive** | muerto, y nombra el módulo |
+| V5-ts: `id-token.ts?url&inline` | — | muerto: `(data:video/mp2t;): packages/domain/src/access/id-token.ts?url&inline` |
+| G5, control: V5-tsx con la lectura de `octet-stream` quitada | — | sobrevive, **como tiene que ser**: nada más lo para |
+| El lote V3 de la ronda 4 (V3b, V3c, G4-nolimit, G4-nodata), repetido | — | 4 de 4 muertos |
+
+### 20.2 Qué hay en la rama
+
+| Bloque | Commits | Qué |
+|---|---|---|
+| 0 | `6348306` | Las verificaciones con fuente (§18). `data-model.md` §1.4 queda al día con Q8 (a): el código lleva solo el `sub` |
+| 1, reglas | `0dc54d8`, `23fa3dc` | `access/token.ts`: el formato antes de construir el nombre (B1); el registro, leído solo como el token pedido; el orden de §2.2; la caducidad bajo el techo; y la fila de la lista. `access/console.ts`: el inicio parámetro a parámetro; el nombre del dispositivo; el literal `127.0.0.1`; el canje; la entrada de un `sub`; y la reemisión. `access/credentials.ts`: `credentials.json` como mapa por dispositivo; `sync/remote.json` estricto; qué entrada usa cada orden (B2); las carpetas que no se anidan; y el aviso de caducidad. `signed.ts` recibe el intento de la consola y su código. `routes.ts` recibe las rutas nuevas y sus políticas. `token_expiry_warning_days` (14) entra en `atlas.config.json` |
+| 1, adaptadores | `5dd5f77` | `ParameterStore` ofrece `putNew` (sin `Overwrite`, con etiquetas), `overwrite` (solo para revocar) y `listByPath`, **y nada más** (T26). `TokenRegistry` no cachea nada. `sha256Hex` y `sameSecret` comparan con `timingSafeEqual`. El doble de SSM guarda las versiones, resuelve `nombre:versión` y `nombre:etiqueta`, y responde `ParameterAlreadyExists` y `TooManyUpdates` |
+| 2, API | `f6cbbf7`, `b21b658`, `893fd05`, `407405d` | `console/start`; la rama de consola de la vuelta (*loopback*, manual y reemisión); `console/token` (emitir, renovar y reemitir); `console/revoke`; y `devices/tokens` con su revocación. Las páginas manual y de reemisión llevan `sandbox`. El registro de la Lambda lleva el `token_id` y nada más. El guardián de arquitectura impide borrar y etiquetar |
+| 3, consola | `42179a4` | `atlas remote login` (*loopback*, `--manual`, renovación y reemisión), `atlas remote logout` (`--local-only`) y `atlas remote status` |
+| 4, web | `84cdd35` (techo), `20127d3`, `38f8555` | La tarjeta «Dispositivos de la consola» en la sección de sincronización de Ajustes, en carga diferida |
+
+**Dicho**:
+- `f6cbbf7` no pasa `typecheck`. Un test de la API tenía un tipo sin ajustar, y el *hook* solo mira Biome. `b21b658` lo arregla dos minutos después. La historia no se reescribe.
+- La suite completa encontró dos fallos que la selección de E2 no veía, y los arregla `38f8555`:
+  - el test de `readLocalConfig` de los adaptadores esperaba la configuración sin la clave nueva;
+  - el guardián de «ninguna clase que la hoja no declare» rechazaba la clase `devices`; la tarjeta es ahora una `<section>` con su `aria-label`.
+
+  Desde `23fa3dc` y `20127d3` hasta `38f8555`, la suite completa no estaba en verde. La CI no los vio porque solo corre en la PR.
+
+### 20.3 La tabla de reglas (plan §4.2), con su test y su mutante
+
+| # | Test | Mutantes, todos muertos |
+|---|---|---|
+| T01-T02 | `token.test.ts` (formato, nombre, registro); `console.test.ts` de la API («checks the format before building any name», «a record whose own token id is another»); `token-registry.test.ts` (el doble con selectores) | M13a, M13b, M13c |
+| T03 | `token-registry.test.ts` (`sameSecret`); API («a wrong secret») | M-secret |
+| T04, T17 | `token.test.ts`; API (revocado; renovar con uno revocado) | M17a |
+| T05, T06 | `token.test.ts` (el techo); API («past the ceiling whatever its record says»); `config` (E1) | M16a, M16b, M17b |
+| T07 | `token.test.ts`; API (el par fuera de la lista) | M-list |
+| T08 | API (olvidado, borrado, de tipo `web`) | M46sexies, M-dev |
+| T09 | `token-registry.test.ts` («reads again on every call»); API (se revoca entre dos peticiones) | M14 |
+| T10 | API (SSM limitado: 503 y el reintento pasa) | M27 |
+| T11, T14 | `console.test.ts` del dominio (rutas); API (un token en `console/start` y en la lista) | M26a, M26b |
+| T12 | Dominio y API (un `device_id` en el cuerpo del canje) | — (lo cubren los tests de forma) |
+| T13 | Dominio (cada parámetro con su nombre); API | M29a |
+| T15 | API (`prompt=select_account`) | — |
+| T16, T20 | Dominio (el código con su `typ`); API (sin cookie de sesión; un código de otro propósito; caducado; PKCE; la lista otra vez; y el `sub` con dos entradas) | M15a, M15b, M-pkce, M-listagain, M-ambig |
+| T17 (*loopback*) | Dominio y API (el literal y el puerto) | M20a, M20b |
+| T18 | API (sin *script*, `sandbox`, `no-store`, `no-referrer`, el código solo dentro del `<details>` y partible en el teléfono) | M21a, M21b, M-wbr |
+| T21 | API (dos canjes del mismo código: `409`, un solo registro); `token-registry.test.ts` | M19 |
+| T22 | API (renovar conserva el dispositivo y revoca antes; el corte entre los dos pasos deja el anterior revocado y ningún nuevo) | M18a, M18b |
+| T23 | API (confirmación con los datos del servidor; los cuatro rechazos con su código; todos los tokens vivos revocados antes; el dispositivo, comprobado otra vez en el canje; el nombre del servidor, escapado); consola (reemite tras la confirmación) | M29sex-a a M29sex-e, M29b |
+| T24 | API (`console/revoke` revoca ese y solo ese) | M-revokeother |
+| T25 | API (lista solo con sesión; un registro ilegible sale; `<token_id>` validado antes del nombre; revocar dos veces escribe una) | M-webid, M-rewrite |
+| T26 | Arquitectura: `ParameterStore` ofrece exactamente cuatro operaciones y ningún fuente nombra ni borrar ni etiquetar | — (guardián estático) |
+| T27 | Consola: un `state` erróneo se ignora y el puerto sigue esperando; la página sin nada externo, con `no-referrer` | M22 |
+| T28, T29 | Consola: siempre imprime la URL; `redirect: "error"`; solo `https`; el token nunca en la salida, en un error ni en una URL | M23a, M23b, M23c |
+| T30 | Consola: `600` y atómico, `700` para la carpeta; no se usa con permisos abiertos; se niega dentro de la carpeta del libro | M24a, M24b, M24c |
+| T31, T34 | Dominio (mapa por dispositivo; qué entrada usa cada orden); consola (renueva solo con la entrada que nombra `sync/remote.json`, y las demás intactas) | M29bis, M29quinq |
+| T32 | Dominio (`sync/remote.json` estricto). La escritura bajo el cerrojo es de E3 | — |
+| T33 | Consola (el árbol de la carpeta del libro, igual antes y después de `login`) | — (cubierto por el mismo test) |
+| T35 | Consola (sin el `200` la entrada sigue; `--local-only` no llama al servidor y lo dice) | M25 |
+| T36 | Dominio (umbral −1, 0 y +1); consola (`status` avisa a 13 días) | T36 |
+| T37 | Web (el nombre como texto, nunca como marcado); API (escapado en la página) | M-card, M29b |
+| T38 | Dominio (el borde de 7 días) | T38 |
+
+### 20.4 Cómo se vio cada test en rojo
+
+- **Dominio**: sin `token.ts`, `console.ts` y `credentials.ts`, los tres ficheros de test fallan al cargar. Con ellos, el acceso está al 100 %. `local-config.test.ts` falla (1 de 2) antes de añadir `token_expiry_warning_days`.
+- **API**: con el manejador de E1 puesto otra vez (`git stash`), `console.test.ts` da 23 de 24 en rojo.
+- **Web**: `devices-card.test.tsx` falla al cargar sin el componente. `session-card.test.tsx` se puso al día, porque con sesión ahora pide también la lista.
+- **Consola**: los tests se escribieron después de la orden. El rojo se vio con los mutantes: cada uno de T27 a T36 muere con su test.
+- **Honestidad**: como en E1, en el dominio, los adaptadores y la API escribí el código antes que el test. Comprobé el rojo quitando el código, y la prueba de que cada test ata su regla son los mutantes.
+
+### 20.5 Mutación
+
+- **Lote de E2** (`e2-015.json` y `e2-wbr-015.json`): **52 de 52 muertos**. Cada uno se comprobó aplicado, se restauró y se comparó byte a byte, con el árbol igual y sin gemelos. La orden es la selección de tests de E2: dominio, adaptadores, API, consola, web y arquitectura. Revisé a mano qué test mata una muestra de diez (M18a, M29sex-d, M-rewrite, M24a, M23c, M14, M19, M16b, M26a y M-webid): cada uno muere por el test que lleva su regla.
+- **Guardianes, repetidos** sobre el árbol de E2: estático 10 de 10 y ronda 1 19 de 19.
+- **No aplican**: M28 (Q2, no se emite `mfa_required`). M29 bis de `sync/remote.json` escrito fuera del cerrojo y M29 quater son de E3, que es quien lo escribe.
+- **No repetido**: el lote de 59 mutantes de E1 sobre el manejador se perdió con la mudanza. Los caminos de E1 que tocó E2 (la vuelta de Google y el `catch` común) los cubren sus tests, que siguen en verde.
+
+### 20.6 El paquete web
+
+| | Medida | Techo |
+|---|---|---|
+| Arranque | **75.845** | 75.869; sin tocar |
+| Total | **283.158** | **277 KB (283.648)**, subido en su propio commit **antes** del que lo necesita (`84cdd35`), sobre la medida de 283.119, y dentro de la autorización de Q1 (hasta 304.640). La `<section>` de `38f8555` añade 39 bytes |
+
+- **Del total**, respecto de los 282.280 de E1: `ajustes` +859 (la tarjeta y su cliente), `ecb` +29 e `index` +9 de ruido de *hashes*. La tendencia: 272,2 → 273,3 → 275,6 → 276,5.
+- **El arranque sube +2** en la medida final (+9 en la intermedia), todo en la tabla de precargas de la entrada; no hay código nuevo en él.
+
+### 20.7 Capturas (Chrome for Testing 153, desde el *scratchpad*: `capture-e2-015.mjs`; en `~/personal/atlas/privado/capturas/2026-09-26-015-e2/`)
+
+- **Qué se captura**: la tarjeta de dispositivos, con una emisión reciente, un token antiguo y uno revocado, a 400×890 con DPR 3, a 2045×1141 (claro y oscuro) y a 360 de ancho. También la página manual (cerrada y abierta) y la de reemisión. **Sin desplazamiento lateral** en todas: `scrollWidth === clientWidth`, en `medidas.json`.
+- **Lo que encontró mirar la pantalla**: con la página manual abierta, **el código de unos 400 caracteres no se podía partir y hacía la página cinco veces más ancha que el teléfono** (`scrollWidth` 2.239 frente a 400). El arreglo (`893fd05`) mete un `<wbr>` cada 32 caracteres. Hace falta así: la CSP de la página no admite estilo, y `<wbr>` no añade nada al texto copiado. Tiene su test y su mutante (M-wbr).
+- **Comprobado en Chromium**: el enlace «Sí, es este dispositivo: continuar» de la página de reemisión, **servida con su CSP `sandbox`**, navega al clic hasta el `127.0.0.1` de la consola.
+- **Sin datos del libro**: la tarjeta no lee el libro ni enseña importes, así que el modo privacidad no tiene nada que tapar. Las capturas son con el libro vacío y la privacidad puesta (el valor por defecto). En las capturas de página entera, la barra fija de la aplicación queda dibujada a media página: es un efecto de la captura, no de la pantalla.
+
+### 20.8 Decisiones propias, dichas (a confirmar por la dirección)
+
+- **`reissue_device_unreadable`**, un cuarto código de la reemisión, como `unreadable` en Q9. Existe para no plegar un objeto ilegible en `missing`: página `403` en la vuelta y JSON `403` en el canje.
+- **Revocar desde la web un token que no existe o no se lee**: `404 not_found`, con `details.reason` `token_missing` o `token_unreadable`. No se escribe nada en ninguno de los dos casos.
+- **`not_allowed` con motivo**: `ambiguous_subject` si el `sub` del código tiene dos entradas (Q8 (a)), y `other_subject` si el token para renovar es de otro `sub`.
+- **Renovar y reemitir a la vez** (un token en la cabecera y `rdid` en el código): `400 body_invalid`, con `reason: renewal_and_reissue`. La consola nunca lo pide.
+- **Si al renovar el token anterior ya está revocado**, la consola borra esa entrada local y lo dice. Sin ella, el siguiente `atlas remote login` reemite para ese dispositivo («la consola vuelve a iniciar sesión sin él», §4.3).
+- **El primer canje crea el registro antes que el objeto del dispositivo.** El registro sin sobrescribir es la barrera del uso único. Si el objeto no se pudiera crear, el token nuevo se revoca y no se entrega nada.
+- **`atlas remote status`** enseña la entrada que nombra `sync/remote.json` y las de esta carpeta y su origen, y avisa con el umbral de `atlas.config.json`.
+- **La consola intenta abrir el navegador** con `xdg-open` (o `open` o `explorer.exe`) y no espera. La URL se imprime siempre.
+- **`apps/cli/tsconfig.test.json`** tiene ahora `rootDir: "../.."` e incluye el arnés de la API y sus dobles. Así los tests de la consola corren contra el manejador de verdad.
+
+### 20.9 Documentos (para que los traslade la dirección; §2 bis del encargo)
+
+- **`docs/api.md`**:
+  - §4.2: el correo ya no está pendiente de Q8, porque el código lleva solo el `sub`;
+  - §3.1 y §7: `reissue_device_unreadable`;
+  - §4.5: el `404 not_found` al revocar un token que no existe o no se lee;
+  - §7: los motivos de `not_allowed` (`ambiguous_subject` y `other_subject`) y de `body_invalid` (`renewal_and_reissue`).
+- **Plan §10 y la 017**: el rol de la API necesita **`ssm:AddTagsToResource`** sobre `/atlas/<entorno>/device-tokens/*` (§18.2).
+- **ADR-0034, fila 9**: `PutParameter` admite `Tags` al crear, con `ssm:AddTagsToResource` (§18.2).
+- **ADR-0033**:
+  - los SIN VERIFICAR de la 015, con su fuente (§18.1 a §18.6);
+  - la atomicidad de `PutParameter`, como deducción documentada y no como cita literal (Q11);
+  - la prueba en el navegador real, aplazada a la 018 con su procedimiento (§18.4).
+- **`contracts/cli-commands.md`**: `atlas remote status` y `token_expiry_warning_days`, tal como quedan.
+
+### 20.10 Lo que queda abierto
+
+- **Q11**: la atomicidad de `PutParameter` sin `Overwrite` está documentada por deducción (§18.1).
+- **P14**: la vuelta a `127.0.0.1` en el navegador real del usuario se aplaza a la 018. El procedimiento está en §18.4. Que el reenvío de `localhost` de WSL en modo NAT escuche en el literal `127.0.0.1` está SIN VERIFICAR.
+- **El paso de la CI** (`upload-artifact`) sigue esperando a que el usuario conceda el permiso `workflow`.
+- **El SDK de AWS** no está instalado (E3), así que no hay composición de producción.
+
+### 20.11 Tubería y congelado
+
+Sobre `38f8555`, el último commit de código. El congelado solo añade esta sección a `questions.md`, que ningún test lee.
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage` | 0 | 287 ficheros, 2.836 tests, 425 s; el dominio al 100 % (sentencias 8.120/8.120, ramas 4.803/4.803, funciones 1.811/1.811, líneas 7.721/7.721); ningún `ECONNREFUSED` |
+| `npm run test:coverage`, repetida a continuación | 0 | 2.836 tests, 406 s; el dominio al 100 %; ningún `ECONNREFUSED` |
+| `npm run build` | 0 | Arranque 75.845 y total 283.158 |
+
+- Ningún gemelo `.js`.
+- `git diff 490f0e1 -- tests/fixtures` está vacío: E2 no toca el libro ni la salida fiscal.
+- La CI `verify` solo corre en la PR; su resultado va en la PR.
+
+**Commit congelado de E2: el que contiene esta sección.** Su SHA va en la PR de E2 y en el informe a la dirección. Desde aquí no se empuja nada a la rama mientras dura la revisión.
