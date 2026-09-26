@@ -7,7 +7,7 @@ import { base64url } from "@atlas/adapters/access";
 import { describe, expect, it } from "vitest";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "../../../packages/adapters/test/aws/test-only-fake-ssm.js";
-import { compose } from "../src/compose.js";
+import { compose, composeOrFail } from "../src/compose.js";
 import { NAMES, SESSION_KEY } from "./harness.js";
 
 const ENV = {
@@ -72,6 +72,41 @@ describe("compose (the Lambda of production)", () => {
     ]) {
       await expect(compose(ENV, parts(key).make), String(key)).rejects.toThrow();
     }
+  });
+
+  it("logs only the name of a failure to start, and throws one that says nothing (review of PR #96, N2)", async () => {
+    const arn = "arn:aws:sts::123456789012:assumed-role/atlas-prod-api/SENTINEL";
+    const logs: string[] = [];
+    const { make } = parts(SESSION_KEY);
+    const denied = Object.assign(new Error(`User: ${arn} is not authorized`), {
+      name: "AccessDeniedException",
+    });
+    const failing = {
+      ...make,
+      log: (line: string) => logs.push(line),
+      parameters: () => ({
+        get: async () => {
+          throw denied;
+        },
+        putNew: async () => "created" as const,
+        overwrite: async () => undefined,
+        listByPath: async () => [],
+      }),
+    };
+    const thrown = await composeOrFail(ENV, failing).catch((error: unknown) => error);
+    expect((thrown as Error).message).toBe("compose_failed");
+    expect(String((thrown as Error).stack)).not.toContain(arn);
+    expect(logs).toHaveLength(1);
+    expect(JSON.parse(logs[0] as string)).toMatchObject({
+      level: "ERROR",
+      code: "compose_failed",
+      error_name: "AccessDeniedException",
+    });
+    expect(logs.join("\n")).not.toContain("123456789012");
+    const bad = await composeOrFail({ ...ENV, ATLAS_ENV: "staging" }, failing).catch(
+      (error: unknown) => error,
+    );
+    expect((bad as Error).message).toBe("compose_failed");
   });
 
   it("does not start with a configuration it does not understand", async () => {

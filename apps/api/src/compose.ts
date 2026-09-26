@@ -11,6 +11,7 @@ import { type ObjectStore, type ParameterStore, parameterNames } from "@atlas/ad
 import { GoogleIdentity } from "@atlas/adapters/identity";
 import { parseApiConfig } from "@atlas/domain/access";
 import { createHandler, type Handler } from "./handler.js";
+import { logLine } from "./log.js";
 
 /** What production plugs in: the SDK stores, `fetch` and the log. Simulated in the tests. */
 export interface ProductionParts {
@@ -41,4 +42,34 @@ export const compose = async (
     random: (bytes) => new Uint8Array(randomBytes(bytes)),
     log: parts.log,
   });
+};
+
+/**
+ * The composition, **saying only the name of what failed** (review of PR #96,
+ * security N2): an error of the SDK carries the ARN of the role and the id of
+ * the account in its message, and the runtime would log it whole with its
+ * trace. The log gets the name; the runtime gets an error that says nothing.
+ */
+export const composeOrFail = async (
+  env: Readonly<Record<string, string | undefined>>,
+  parts: ProductionParts,
+): Promise<Handler> => {
+  try {
+    return await compose(env, parts);
+  } catch (error) {
+    const name =
+      error instanceof Error && /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : "unknown";
+    parts.log(
+      logLine({
+        level: "ERROR",
+        request_id: "startup",
+        method: "none",
+        route: "startup",
+        status: 500,
+        code: "compose_failed",
+        error_name: name,
+      }),
+    );
+    throw new Error("compose_failed");
+  }
 };

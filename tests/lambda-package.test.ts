@@ -87,9 +87,8 @@ describe("the package of the Lambda (E3)", () => {
       delete process.env[name];
     }
     try {
-      await expect(import(pathToFileURL(file).href)).rejects.toMatchObject({
-        code: "api_config_invalid",
-      });
+      // Only a generic error: the reason goes to the log by its name (review of PR #96, N2).
+      await expect(import(pathToFileURL(file).href)).rejects.toThrow("compose_failed");
     } finally {
       for (const [name, value] of saved) {
         process.env[name] = value;
