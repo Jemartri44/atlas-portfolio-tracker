@@ -665,6 +665,14 @@ const INLINE_STYLES = [
   { pattern: /<style[\s>]/g, what: "un elemento <style>" },
 ];
 
+/**
+ * A `data:` URL whose MIME type is code: `video/mp2t` is what `.ts` gets (the
+ * MPEG transport stream shares the extension), and every JavaScript,
+ * ECMAScript, TypeScript or JSX type, with or without `x-`.
+ */
+const CODE_DATA_URL =
+  /data:(?:video\/mp2t|(?:text|application)\/(?:x-)?(?:javascript|ecmascript|typescript|jsx|tsx|babel)|text\/jsx|application\/node)[;,]/gi;
+
 const files = (dir) =>
   readdirSync(dir).flatMap((entry) => {
     const path = join(dir, entry);
@@ -704,6 +712,13 @@ for (const path of files(dist)) {
     if (!ALLOWED_URLS.some((allowed) => allowed.url === match[0])) {
       problems.push(`${name}: referencia a un origen ajeno ${match[0]}`);
     }
+  }
+  // Round 4 of the review of PR #90 (V3-inline): code inlined as a `data:`
+  // URL — a source under the inline limit, reached by `new URL(…)` — is text
+  // of a module out of every graph. Whatever its MIME type says it is code,
+  // it stops the build; `vite.config.ts` never inlines one to begin with.
+  for (const match of text.matchAll(CODE_DATA_URL)) {
+    problems.push(`${name}: lleva código incrustado como URL data: (${match[0]})`);
   }
   if ([".js", ".html"].includes(extension)) {
     for (const { pattern, what } of INLINE_STYLES) {

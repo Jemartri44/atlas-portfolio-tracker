@@ -235,6 +235,16 @@ export default defineConfig(({ command }) => ({
   build: {
     target: "es2022",
     sourcemap: true,
+    /*
+     * **A source of code is never inlined** (round 4 of the review of PR #90,
+     * V3-inline). `new URL("…", import.meta.url)` makes the file an asset, and
+     * Vite inlines an asset under 4 KiB as a `data:` URL instead of emitting
+     * it: the text of a vetoed source then travelled inside a chunk, out of
+     * every graph. Emitted, it is a file `check-bundle.mjs` refuses. Anything
+     * else keeps the default of Vite (`undefined`).
+     */
+    assetsInlineLimit: (filePath: string): boolean | undefined =>
+      /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)(\?|$)/.test(filePath) ? false : undefined,
     // No `minify: "esbuild"` here on purpose (see the header).
     chunkSizeWarningLimit: 300,
     rollupOptions: {
