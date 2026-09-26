@@ -273,16 +273,28 @@ describe("architecture (015): the API is a workspace of its own", () => {
     ).toBe(true);
   });
 
-  it("depends only on workspaces of the repository (§2 bis, B4)", () => {
+  it("depends at runtime only on workspaces, and builds with esbuild pinned (§2 bis, B4; §7 P3)", () => {
     const manifest = JSON.parse(readFileSync(join(apiRoot, "package.json"), "utf8")) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
-    const names = [
-      ...Object.keys(manifest.dependencies ?? {}),
-      ...Object.keys(manifest.devDependencies ?? {}),
-    ];
-    expect(names.filter((name) => !name.startsWith("@atlas/"))).toEqual([]);
+    expect(
+      Object.keys(manifest.dependencies ?? {}).filter((name) => !name.startsWith("@atlas/")),
+    ).toEqual([]);
+    // The one tool the user authorised for the API (§12 of questions.md), at an exact version.
+    expect(manifest.devDependencies).toEqual({ esbuild: "0.28.2" });
+  });
+
+  it("gives the adapters the two clients of the SDK the user authorised, pinned, and no other", () => {
+    const manifest = JSON.parse(
+      readFileSync(join(repoRoot, "packages", "adapters", "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+    expect(
+      Object.fromEntries(
+        Object.entries(manifest.dependencies ?? {}).filter(([name]) => !name.startsWith("@atlas/")),
+      ),
+    ).toEqual({ "@aws-sdk/client-s3": "3.1141.0", "@aws-sdk/client-ssm": "3.1141.0" });
+    expect(manifest.devDependencies ?? {}).toEqual({});
   });
 
   it("is reached from nothing: not the web, not the console, not a package", () => {
