@@ -31,6 +31,7 @@ import {
   holdRecords,
   initDuplicateIds,
   initRefusal,
+  initState,
   inspect,
   joinWithMine,
   lineSha256,
@@ -43,6 +44,7 @@ import {
   type Refusal,
   RemoteError,
   type RemoteLedger,
+  type RemoteSnapshot,
   remoteContention,
   remoteFailed,
   replaceWithRemote,
@@ -310,6 +312,32 @@ export const initialiseRemote = async (
     }),
   });
   return { status: "synced", uploaded: state.ledger.lines.length, pending: 0 };
+};
+
+/**
+ * An initialisation cut after uploading (plan §7, S0 and S1): the remote is
+ * **exactly the bytes of this ledger**, so everything is synced, and only the
+ * marker — and `sync/remote.json` first — are left to write. By the bytes,
+ * never by resemblance: anything else is refused, and the user joins.
+ */
+export const finishInitialisation = async (
+  store: SyncStateStore,
+  snapshot: RemoteSnapshot,
+  options: SyncOptions,
+): Promise<SyncOutcome> => {
+  const state = await store.read();
+  if (initState(state.ledger.lines, snapshot.text) !== "same") {
+    return { status: "refused", refusal: { code: "init_remote_not_this_ledger", details: {} } };
+  }
+  const now = options.now();
+  await store.commit(state, {
+    ...identityOf(options),
+    marker: markerFor(state.ledger.lines, state.ledger.lines.length, {
+      remote_etag: snapshot.etag,
+      last_sync_at: now.toISOString(),
+    }),
+  });
+  return { status: "synced", uploaded: 0, pending: 0 };
 };
 
 /**

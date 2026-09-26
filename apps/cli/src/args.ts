@@ -42,6 +42,10 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "history",
   "inactive",
   "local-only",
+  // Feature 015, E3: `atlas sync join` and `atlas sync discard`.
+  "from-remote",
+  "with-own-lines",
+  "reversal-only",
   "lots",
   "manual",
   "neutrality-regime",

@@ -161,6 +161,9 @@ const INVOCATIONS: {
   // The sessions of the console live in credentials.json, outside the folder
   // (feature 015, E2); the ledger is never read nor written by them.
   { command: "remote", argv: ["remote", "status"], readOnly: true, folderOnly: true },
+  // The sync reads the folder's own state (sync/) and its remote; it never
+  // shows the figures of the ledger (feature 015, E3).
+  { command: "sync", argv: ["sync", "held"], readOnly: true, folderOnly: true },
 ];
 
 const HEADER = "inválido";

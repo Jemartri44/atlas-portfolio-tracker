@@ -401,6 +401,8 @@ export const describeError = (error: DomainError): string => {
       return "No se desactiva: el marcador de la sincronización no se puede leer. Sincroniza primero, que lo reconstruye.";
     case "init_refused_invalid_ledger":
       return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
+    case "init_remote_not_this_ledger":
+      return "La nube ya no tiene exactamente este libro: la inicialización no se termina sobre otra cosa. Únete a ella con «atlas sync join --from-remote» o «atlas sync join --with-own-lines».";
     case "redo_filing_in_remote":
       return "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.";
     case "redo_waits_for_pair":
