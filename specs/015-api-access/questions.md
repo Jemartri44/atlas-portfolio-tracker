@@ -1413,3 +1413,21 @@ Sobre `ccdbd40`, el último commit de código. El congelado solo añade esta sec
 - El paso de la CI con `upload-artifact` sigue fuera de la rama, a la espera del permiso `workflow`.
 
 **Commit congelado de E3: el que contiene esta sección.** Su SHA va en la PR de E3. Desde aquí no se empuja nada mientras dura la revisión.
+
+## 25. Decisiones de la dirección sobre E3 (2026-09-26)
+
+Tal como llegaron, con lo que se hizo con cada una.
+
+- **La extensión «termina con líneas retenidas»: se acepta sin un mutante exclusivo.** Aporta cobertura de estados (117 de 240 corridas) y dos comprobaciones: que la réplica empiece por el remoto, y que una línea retenida no esté en la cola. Las razones por las que E1, E2 y P1 no sirven quedan en §24.6. **No se aplaza a la 018.**
+- **Las seis decisiones de §24.9: aceptadas.** Con una condición sobre la segunda (archivar y escribir en S3 son dos escrituras condicionales): **un corte entre las dos tiene que dejar un estado seguro**. El archivo existe, el libro no ha cambiado y el reintento toma el nombre siguiente sin perder ni duplicar nada. **Hecho en `6b01733`**:
+  - test «leaves a safe state when cut between the archive and the ledger, and the retry takes the next name» (`packages/adapters/test/aws/s3-ledger.test.ts`). El proceso muere en la escritura del libro, tras escribir el archivo. Queda el archivo con los bytes exactos del libro, y el libro sin tocar. El reintento con `withArchiveNames` escribe `pre-restore-2.jsonl`, deja el primero intacto y escribe el libro una sola vez: dos archivos, los dos copia exacta;
+  - **su mutante, S3C** (reutilizar un archivo que ya guarda exactamente estos bytes en lugar de tomar el nombre siguiente): **sobrevive** a los tests anteriores (los de `f84b743`) y **muere** con el nuevo;
+  - dos mutantes más del mismo punto, que **ya mataban** los tests anteriores (la carrera perdida y «nunca sobrescribe un archivo») y el nuevo también: S3A (el archivo escrito después del libro) y S3B (el archivo escrito sin `If-None-Match`).
+- **§24.10: los documentos los llevo yo, en esta PR**, por orden expresa de la dirección. **Hecho**:
+  - `docs/api.md`: la nota de puesta al día de E3; §5.1, el cuerpo en base64 si no es UTF-8, la comprobación del ETag fuerte o débil y que CloudFront no comprime `application/x-ndjson`; §5.2, `If-Match` solo fuerte y la carrera verificada (412 o 409, traducidos a 412); §5.3, `reason: last_sync_at`; §5.5, fuera el SIN VERIFICAR, con lo verificado (404 de `If-Match` sin objeto, escritura con `If-None-Match: *`); §6, `W/` y `*` en `If-None-Match`.
+  - `docs/data-schema.md` §1: una fila para `sync/remote.json`, con su lectura, quién lo escribe y cuándo, el estado a medias, la carpeta sin él y su temporal en el barrido. La fila de `credentials.json` deja de decir «sin implementar todavía».
+  - `docs/decision-roadmap.md`: en la 017, `s3:ListBucket` que cubra `ledger/` (y que la API no necesita `s3:GetObject` en `archive/`) y el artefacto de la Lambda (`apps/api/dist-lambda/lambda.zip`, `index.handler`); en la 018, la prueba real de si `s3:ListBucket` con `s3:prefix` convierte el `403` en `404`, y la carrera real de dos `PutObject` condicionales.
+
+**Tubería**: `npm run lint` 0 y `npm run typecheck` 0 antes de cada empuje. Los cambios de esta sección son un test (`6b01733`) y documentos. El test pasa con `--maxWorkers=1`, y sus tres mutantes están arriba. El resto del código es el de `ccdbd40`, con `test:coverage` dos veces en 0 y `build` en 0 (§24.12). La CI `verify` va en el comentario de la PR #96.
+
+**Commit congelado: el que contiene esta sección.** Su SHA va en la PR #96. Desde aquí no se empuja nada mientras dura la revisión.
