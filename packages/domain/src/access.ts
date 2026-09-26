@@ -29,6 +29,19 @@ export {
   TOKEN_CEILING_DAYS,
 } from "./access/config.js";
 export {
+  type ConsoleMode,
+  type ConsoleStart,
+  entryForSubject,
+  isDeviceName,
+  isLoopbackPort,
+  isPkceVerifier,
+  loopbackCallback,
+  parseConsoleStart,
+  parseExchangeBody,
+  type ReissueRefusal,
+  reissueRefusal,
+} from "./access/console.js";
+export {
   cookieValues,
   DEVICE_TOKEN_HEADER,
   LOGIN_COOKIE,
@@ -37,6 +50,23 @@ export {
   presentedCredential,
   SESSION_COOKIE,
 } from "./access/cookies.js";
+export {
+  type CredentialEntry,
+  type CredentialsFile,
+  EMPTY_CREDENTIALS,
+  entryForRemote,
+  entryForStart,
+  expiryWarning,
+  foldersNested,
+  isHttpsOrigin,
+  parseCredentials,
+  parseRemoteJson,
+  type RemoteJson,
+  serializeCredentials,
+  serializeRemoteJson,
+  withEntry,
+  withoutEntry,
+} from "./access/credentials.js";
 export {
   DEVICE_FORMAT,
   type DeviceObject,
@@ -62,6 +92,7 @@ export {
   type Admission,
   admit,
   findRoute,
+  matchRoute,
   originAccepted,
   ROUTES,
   type RoutePolicy,
@@ -75,10 +106,14 @@ export {
   sessionView,
 } from "./access/session.js";
 export {
+  type ConsoleCodePayload,
+  consoleCodePayload,
+  consoleLoginPayload,
   isSubject,
   type LoginPayload,
   loginPayload,
   type PayloadReading,
+  readConsoleCodePayload,
   readLoginPayload,
   readSessionPayload,
   type SessionPayload,
@@ -87,3 +122,22 @@ export {
   sessionPayload,
   splitSigned,
 } from "./access/signed.js";
+export {
+  checkToken,
+  DEVICE_TOKEN,
+  type DeviceTokenParts,
+  formatDeviceToken,
+  newTokenRecord,
+  parseDeviceToken,
+  parseTokenRecord,
+  revokedRecord,
+  serializeTokenRecord,
+  type TokenListItem,
+  type TokenRecord,
+  type TokenStatus,
+  tokenIdOfParameterName,
+  tokenListItem,
+  tokenParameterName,
+  tokenParameterPath,
+  tokenStatus,
+} from "./access/token.js";

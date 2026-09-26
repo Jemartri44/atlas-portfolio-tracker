@@ -9,6 +9,7 @@
 // what is indispensable. That is why signing without encrypting is enough.
 
 import { isRecord } from "../guards.js";
+import { type ConsoleStart, isDeviceName, isLoopbackPort } from "./console.js";
 import { isId22, isId43 } from "./ids.js";
 
 export const SIGNING = {
@@ -49,15 +50,36 @@ export interface SessionPayload {
 export interface LoginPayload {
   readonly typ: "atlas.login";
   readonly v: 1;
-  readonly flow: "web";
+  /** Who opened the attempt: the web, or `atlas remote login` (E2). */
+  readonly flow: "web" | "console";
   readonly iat: number;
   readonly exp: number;
   readonly state: string;
   readonly nonce: string;
   /** The PKCE verifier towards Google. */
   readonly verifier: string;
-  /** The device id the web presented at sign-in, if it did (not a credential). */
+  /** The device id the web presented at sign-in, if it did (not a credential). Web only. */
   readonly did?: string;
+  /** What the console asked at `console/start` (`docs/api.md` §4.1). Console only. */
+  readonly console?: ConsoleStart;
+}
+
+/**
+ * The one-time code of the console (`data-model.md` §1.4), signed with the
+ * subkey `console_code` and its `typ`: the `token_id` the token will have, the
+ * `code_challenge` of the console, the `sub` — **no e-mail** (Q8 (a)) —, the
+ * name, and the device to reissue, if it is a reissue.
+ */
+export interface ConsoleCodePayload {
+  readonly typ: "atlas.console_code";
+  readonly v: 1;
+  readonly tid: string;
+  readonly cc: string;
+  readonly sub: string;
+  readonly dn: string;
+  readonly rdid?: string;
+  readonly iat: number;
+  readonly exp: number;
 }
 
 export type PayloadReading<P> =
@@ -116,18 +138,56 @@ export const readSessionPayload = (
       isId22(value.did),
   );
 
+/** What the console asked, as it travels in the attempt: the same rules as `parseConsoleStart`. */
+const isConsoleStart = (value: unknown): boolean =>
+  isRecord(value) &&
+  exactKeys(
+    value,
+    ["mode", "state", "code_challenge", "device_name"],
+    ["port", "reissue_device_id"],
+  ) &&
+  (value.mode === "manual" || (value.mode === "loopback" && value.port !== undefined)) &&
+  (value.port === undefined || isLoopbackPort(value.port)) &&
+  isId43(value.state) &&
+  isId43(value.code_challenge) &&
+  isDeviceName(value.device_name) &&
+  (value.reissue_device_id === undefined || isId22(value.reissue_device_id));
+
 export const readLoginPayload = (json: string, nowSeconds: number): PayloadReading<LoginPayload> =>
   readPayload<LoginPayload>(
     json,
     "login",
     nowSeconds,
     (value) =>
-      exactKeys(value, ["typ", "v", "flow", "iat", "exp", "state", "nonce", "verifier"], ["did"]) &&
-      value.flow === "web" &&
+      exactKeys(
+        value,
+        ["typ", "v", "flow", "iat", "exp", "state", "nonce", "verifier"],
+        ["did", "console"],
+      ) &&
+      // A web attempt never carries the console's, nor the console's a device of the web.
+      ((value.flow === "web" && value.console === undefined) ||
+        (value.flow === "console" && value.did === undefined && isConsoleStart(value.console))) &&
       isId43(value.state) &&
       isId43(value.nonce) &&
       isId43(value.verifier) &&
       (value.did === undefined || isId22(value.did)),
+  );
+
+export const readConsoleCodePayload = (
+  json: string,
+  nowSeconds: number,
+): PayloadReading<ConsoleCodePayload> =>
+  readPayload<ConsoleCodePayload>(
+    json,
+    "console_code",
+    nowSeconds,
+    (value) =>
+      exactKeys(value, ["typ", "v", "tid", "cc", "sub", "dn", "iat", "exp"], ["rdid"]) &&
+      isId22(value.tid) &&
+      isId43(value.cc) &&
+      isSubject(value.sub) &&
+      isDeviceName(value.dn) &&
+      (value.rdid === undefined || isId22(value.rdid)),
   );
 
 export const sessionPayload = (fields: {
@@ -163,4 +223,44 @@ export const loginPayload = (fields: {
   nonce: fields.nonce,
   verifier: fields.verifier,
   ...(fields.did === undefined ? {} : { did: fields.did }),
+});
+
+/** The attempt of the console: the Lambda's own `state`, `nonce` and verifier, and what the console asked. */
+export const consoleLoginPayload = (fields: {
+  state: string;
+  nonce: string;
+  verifier: string;
+  console: ConsoleStart;
+  now: number;
+  ttlSeconds: number;
+}): LoginPayload => ({
+  typ: "atlas.login",
+  v: 1,
+  flow: "console",
+  iat: fields.now,
+  exp: fields.now + fields.ttlSeconds,
+  state: fields.state,
+  nonce: fields.nonce,
+  verifier: fields.verifier,
+  console: fields.console,
+});
+
+export const consoleCodePayload = (fields: {
+  tokenId: string;
+  codeChallenge: string;
+  sub: string;
+  deviceName: string;
+  reissueDeviceId: string | undefined;
+  now: number;
+  ttlSeconds: number;
+}): ConsoleCodePayload => ({
+  typ: "atlas.console_code",
+  v: 1,
+  tid: fields.tokenId,
+  cc: fields.codeChallenge,
+  sub: fields.sub,
+  dn: fields.deviceName,
+  ...(fields.reissueDeviceId === undefined ? {} : { rdid: fields.reissueDeviceId }),
+  iat: fields.now,
+  exp: fields.now + fields.ttlSeconds,
 });

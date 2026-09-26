@@ -66,6 +66,14 @@ const SENTENCES: Record<LoginPageError, string> = {
     "Atlas no puede comprobar el acceso ahora mismo. Inténtalo de nuevo en unos minutos.",
   internal:
     "Atlas ha tenido un fallo inesperado y no ha iniciado la sesión. Vuelve a empezar desde Atlas.",
+  reissue_device_missing:
+    "El dispositivo que nombra la carpeta no existe en la nube. Inicia sesión desde la consola sin reemitir.",
+  reissue_device_forgotten:
+    "El dispositivo que nombra la carpeta fue olvidado: no se le puede volver a dar un token.",
+  reissue_device_not_console:
+    "El dispositivo que nombra la carpeta no es una consola: no se le puede dar un token.",
+  reissue_device_unreadable:
+    "El registro del dispositivo que nombra la carpeta no se puede leer. No se ha emitido nada.",
 };
 
 export const loginErrorPage = (code: LoginPageError): string =>

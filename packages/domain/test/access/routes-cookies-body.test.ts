@@ -92,9 +92,14 @@ describe("the routes and what each admits (api §2.3)", () => {
     expect(findRoute("GET", "/api/session/")).toBeUndefined();
     expect(findRoute("POST", "/api/session")).toBeUndefined();
     expect(findRoute("GET", "/API/session")).toBeUndefined();
+    // The writes of E1 and E2, each a POST with a JSON body.
     expect(ROUTES.filter((spec) => spec.writes).map((spec) => spec.path)).toEqual([
       "/api/auth/logout",
+      "/api/auth/console/token",
+      "/api/auth/console/revoke",
+      "/api/devices/tokens/{token_id}/revoke",
     ]);
+    expect(ROUTES.filter((spec) => spec.writes).every((spec) => spec.method === "POST")).toBe(true);
   });
 
   it("looks at no credential on the start and the return of a sign-in", () => {

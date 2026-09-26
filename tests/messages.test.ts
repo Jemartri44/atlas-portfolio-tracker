@@ -118,6 +118,10 @@ const NOT_SHOWN: Record<string, string> = {
   allow_list_unreadable: "solo en la Lambda: responde remote_unavailable",
   api_config_invalid: "solo en la Lambda: no arranca",
   device_id_invalid: "solo en la Lambda: nunca construye la clave de un id que no vale",
+  // E2: guards of the names and the tokens the API and the console build
+  // from values they validated first; they can only fire on a bug.
+  token_id_invalid: "solo en la Lambda: nunca construye el nombre de un token_id que no vale",
+  device_token_malformed: "nunca se da formato a un token con partes que no valen",
 };
 
 /**
