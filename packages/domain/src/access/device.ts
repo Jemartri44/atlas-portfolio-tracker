@@ -30,7 +30,7 @@ export interface DeviceObject {
   readonly forgotten_at?: string;
 }
 
-/** Why a credential's device does not let it in (Q3; `unreadable` pending confirmation, Q9). */
+/** Why a credential's device does not let it in (Q3; the fourth, `unreadable`, confirmed in Q9). */
 export type DeviceRefusalReason = "missing" | "wrong_type" | "forgotten" | "unreadable";
 
 /**

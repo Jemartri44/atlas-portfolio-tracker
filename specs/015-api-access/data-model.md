@@ -132,6 +132,8 @@ El guion de secretos de la 017 los crea **tal cual** (ADR-0034, fila 21). Esta f
 | `ATLAS_ALLOW_LIST_CACHE_SECONDS` | Caché de la lista permitida | **120** |
 | `ATLAS_SECRETS_CACHE_SECONDS` | Caché del secreto del cliente y de la clave de sesión | **300** |
 
+**Techos fijos en el código** (revisión de seguridad de la PR #90, S4, 2026-09-26): sesión ≤ 86.400 s (24 h), cookie transitoria ≤ 1.800 s (30 min), código de la consola ≤ 900 s (15 min), cada caché ≤ 3.600 s (1 h), token ≤ 120 días. Por encima, la configuración se rechaza (`above_ceiling`) y la Lambda no arranca.
+
 ## 6. El objeto del dispositivo: `sync/devices/<device_id>.json` (forma decidida, §6.2 (d bis); `details.reason` de Q3)
 
 ```json
@@ -147,7 +149,7 @@ El guion de secretos de la 017 los crea **tal cual** (ADR-0034, fila 21). Esta f
 | `PUT /api/sync/devices/self` | Al publicar la cola | Relee el objeto, se niega si falta, si es de otro tipo o si está olvidado, y reescribe **con `If-Match` sobre lo leído**, conservando `type`, `state`, `created_at`, `device_name` y `forgotten_at`. Si recibe un `412`, relee: olvidado → `device_forgotten`; si no, `412 precondition_failed` (R2-N2) |
 | La administración | Al olvidar (E5) | Reescribe con `If-Match` y `state: "forgotten"`. **Nunca se borra** |
 
-- **Aceptable para una credencial** = el objeto existe, **su `type` es el de la credencial** (cookie → `web`, token → `console`) y **su `state` es `active`**. Cualquier otra cosa es `403 device_forgotten`, con `details.reason`: `missing` (no existe), `wrong_type` (otro tipo) o `forgotten` (olvidado) (Q3). Un objeto ilegible también se niega, con `reason: "unreadable"` (fallo seguro; cuarto valor, a confirmar por la dirección: Q9). Todo `device_id` tiene objeto desde que se asigna, así que uno que falta **nunca** cuenta como vivo (R2-B2).
+- **Aceptable para una credencial** = el objeto existe, **su `type` es el de la credencial** (cookie → `web`, token → `console`) y **su `state` es `active`**. Cualquier otra cosa es `403 device_forgotten`, con `details.reason`: `missing` (no existe), `wrong_type` (otro tipo) o `forgotten` (olvidado) (Q3). Un objeto ilegible también se niega, con `reason: "unreadable"` (fallo seguro; cuarto valor, confirmado por la dirección el 2026-09-26: Q9). Todo `device_id` tiene objeto desde que se asigna, así que uno que falta **nunca** cuenta como vivo (R2-B2).
 - `rewritePermission` recibe **solo los objetos `active`**. La función pura que filtra está en el dominio, junto al lector, y su mutante (contar los olvidados) muere.
 - `GET /api/sync/devices` devuelve también `type` y `state`. Es un cambio en `docs/api.md` §5.3, y va a `questions.md` («Documentos»).
 
