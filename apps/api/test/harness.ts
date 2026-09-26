@@ -2,7 +2,7 @@
 // that keeps what the API sets, so a sign-in can be walked end to end.
 
 import { randomBytes } from "node:crypto";
-import { base64url } from "@atlas/adapters/access";
+import { base64url, pkceChallenge } from "@atlas/adapters/access";
 import { parameterNames } from "@atlas/adapters/aws";
 import { type ApiConfig, parseApiConfig } from "@atlas/domain/access";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
@@ -158,3 +158,36 @@ export const errorOf = (
   result: FunctionUrlResult,
 ): { code: string; details: Record<string, unknown> } =>
   (JSON.parse(result.body) as { error: { code: string; details: Record<string, unknown> } }).error;
+
+/**
+ * A whole `atlas remote login` by loopback, as the console walks it: the
+ * token it keeps and what the exchange answered (E2; used by the tests of E3).
+ */
+export const consoleLogin = async (
+  api: ReturnType<typeof setup>,
+  account: FakeAccount = ALLOWED,
+): Promise<{ token: string; device_id: string; token_id: string }> => {
+  const verifier = base64url(randomBytes(32));
+  const state = base64url(randomBytes(32));
+  const start = await api.call("GET", "/api/auth/console/start", {
+    query: {
+      port: "49152",
+      state,
+      code_challenge: pkceChallenge(verifier),
+      code_challenge_method: "S256",
+      device_name: "sobremesa",
+    },
+    jar: true,
+  });
+  const back = api.google.authorize(start.headers.location as string, account);
+  const done = await api.call("GET", "/api/auth/callback", {
+    query: { code: back.code, state: back.state },
+  });
+  const code = new URL(done.headers.location as string).searchParams.get("code") as string;
+  const answer = await api.call("POST", "/api/auth/console/token", {
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ code, code_verifier: verifier }),
+    jar: false,
+  });
+  return JSON.parse(answer.body) as { token: string; device_id: string; token_id: string };
+};

@@ -6,6 +6,12 @@ export { DeviceStore } from "./device-store.js";
 export { DependencyUnavailable } from "./errors.js";
 export type { ListedObject, ObjectStore, StoredObject } from "./object-store.js";
 export type { ParameterEntry, ParameterStore } from "./parameter-store.js";
-export { archiveKey, LEDGER_KEY, S3LedgerBlob } from "./s3-ledger.js";
+export {
+  type AppendOnlyLedger,
+  appendOnlyLedger,
+  archiveKey,
+  LEDGER_KEY,
+  S3LedgerBlob,
+} from "./s3-ledger.js";
 export { AccessSecrets, parameterNames, type SecretsOptions } from "./secrets.js";
 export { TokenRegistry } from "./token-registry.js";

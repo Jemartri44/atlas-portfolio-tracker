@@ -15,7 +15,10 @@ describe("routing and the shape of an error (R29)", () => {
       ["GET", "/api/session/"],
       ["POST", "/api/session"],
       ["DELETE", "/api/auth/logout"],
-      ["GET", "/api/ledger"],
+      // E3 serves /api/ledger; its neighbours stay unknown.
+      ["DELETE", "/api/ledger"],
+      ["GET", "/api/ledger/"],
+      ["GET", "/api/reference/ecb"],
     ]) {
       const result = await api.call(method as string, path as string);
       expect(result.statusCode).toBe(404);

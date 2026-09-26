@@ -9,7 +9,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { base64url, pkceChallenge, Signer } from "@atlas/adapters/access";
 import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { allowListOf, NAMES, SELF, setup } from "./harness.js";
+import { allowListOf, consoleLogin, NAMES, SELF, setup } from "./harness.js";
 
 const SUB = "SENTINELSUB7777777777";
 const EMAIL = "sentinel.email@example.test";
@@ -352,6 +352,117 @@ describe("the log of the API (R25)", () => {
       "remote_unavailable",
     ]) {
       expect(api.logs.some((line) => line.includes(code))).toBe(true);
+    }
+  });
+  it("carries none of them on the routes of the sync and of the reference data (E3)", async () => {
+    const api = setup();
+    api.ssm.set(NAMES.allowList, allowListOf({ sub: SUB, email: EMAIL }));
+    const account = { sub: SUB, email: EMAIL };
+    const console_ = await consoleLogin(api, account);
+    await api.signIn(account);
+    const LEDGER_LINE = JSON.stringify({
+      schema_version: 1,
+      id: "01ARYZ6S41TSV4RRFFQ69G5FA0",
+      recorded_at: "2026-09-01T18:22:05.000Z",
+      type: "account_created",
+      account_id: "SENTINEL-ACCOUNT",
+      name: "SENTINEL-NAME 987654.32",
+      platform: "test",
+      book: "core",
+      base_currency: "EUR",
+      country: "ES",
+      active: true,
+    });
+    const token = { "x-atlas-device-token": console_.token };
+    const json = { "content-type": "application/json" };
+    const cookie = { origin: SELF, ...json };
+    // Initialise with the sentinel line, read it back, append good and bad lines.
+    const empty = createHash("sha256").update("").digest("hex");
+    await api.call("PUT", "/api/ledger", {
+      headers: { ...token, ...json, "if-match": `"${empty}"` },
+      body: JSON.stringify({ content: `${LINE}\n`, confirm_duplicate_ids: [] }),
+      jar: false,
+    });
+    await api.call("PUT", "/api/ledger", {
+      headers: { ...token, ...json, "if-match": `"${empty}"` },
+      body: JSON.stringify({ content: `${LEDGER_LINE}\n`, confirm_duplicate_ids: [] }),
+      jar: false,
+    });
+    const read = await api.call("GET", "/api/ledger", { headers: token, jar: false });
+    await api.call("GET", "/api/ledger");
+    for (const body of [
+      JSON.stringify({ lines: [{ line: LINE }] }),
+      JSON.stringify({ lines: [{ line: LEDGER_LINE }] }),
+      `SENTINEL-ACCOUNT ${LINE}`,
+      JSON.stringify({ lines: [{ line: LINE }], device_id: "SENTINEL-DEVICE-IN-BODY" }),
+    ]) {
+      await api.call("POST", "/api/ledger/lines", {
+        headers: { ...cookie, "if-match": read.headers.etag as string },
+        body,
+      });
+      await api.call("POST", "/api/ledger/lines", {
+        headers: { ...token, ...json, "if-match": read.headers.etag as string },
+        body,
+        jar: false,
+      });
+    }
+    await api.call("PUT", "/api/sync/devices/self", {
+      headers: { ...token, ...json },
+      body: JSON.stringify({ pending: 1, held: 0, last_sync_at: "SENTINEL-ACCOUNT" }),
+      jar: false,
+    });
+    await api.call("PUT", "/api/sync/devices/self", {
+      headers: cookie,
+      body: JSON.stringify({ pending: 1, held: 0, last_sync_at: "2026-10-01T09:00:00Z" }),
+    });
+    await api.call("GET", "/api/sync/devices");
+    api.s3.seed("prices/SENTINEL.jsonl", `${LINE}\n`);
+    await api.call("GET", "/api/reference/index", { headers: token, jar: false });
+    await api.call("GET", "/api/reference/prices/SENTINEL.jsonl", { headers: token, jar: false });
+    await api.call("GET", "/api/reference/prices/..SENTINEL-ACCOUNT", {
+      headers: token,
+      jar: false,
+    });
+    api.s3.failNext();
+    await api.call("GET", "/api/ledger", { headers: token, jar: false });
+
+    const everything = [...api.logs, ...captured].join("\n");
+    for (const secret of [
+      "987654.32",
+      "SENTINEL-ACCOUNT",
+      "SENTINEL-NAME",
+      "SENTINEL-DEVICE-IN-BODY",
+      console_.token,
+      console_.token.split(".")[2] as string,
+      SUB,
+      EMAIL,
+    ]) {
+      expect(everything).not.toContain(secret);
+    }
+    for (const route of [
+      "/api/ledger",
+      "/api/ledger/lines",
+      "/api/sync/devices/self",
+      "/api/sync/devices",
+      "/api/reference/index",
+      "/api/reference/prices/{name}",
+    ]) {
+      expect(
+        api.logs.some((line) => line.includes(`"route":"${route}"`)),
+        route,
+      ).toBe(true);
+    }
+    for (const code of [
+      "initialised",
+      "init_rejected",
+      "line_rejected",
+      "body_not_json",
+      "remote_unavailable",
+    ]) {
+      expect(
+        api.logs.some((line) => line.includes(`"${code}"`)),
+        code,
+      ).toBe(true);
     }
   });
 });

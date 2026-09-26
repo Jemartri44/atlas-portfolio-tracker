@@ -17,7 +17,7 @@
 // written over.
 
 import { ConflictError, sha256Hex } from "@atlas/domain";
-import { BlobArchiveExists, type LedgerBlob } from "../ledger-store/blob.js";
+import { BlobArchiveExists, BlobLedgerStore, type LedgerBlob } from "../ledger-store/blob.js";
 import type { ObjectStore } from "./object-store.js";
 
 export const LEDGER_KEY = "ledger/ledger.jsonl";
@@ -61,3 +61,24 @@ export class S3LedgerBlob implements LedgerBlob {
     return next;
   }
 }
+
+/**
+ * **All the API may do with the remote ledger** (ADR-0026, Part A): read its
+ * bytes and append lines exactly as given. The initialisation of an empty
+ * remote is an append on the etag of zero bytes. Nothing here rewrites or
+ * deletes, and the handler holds nothing else (architecture test).
+ */
+export interface AppendOnlyLedger {
+  read(): Promise<Uint8Array>;
+  /** `BlobLedgerStore.appendLines`: a stale etag or a lost race is a ConflictError. */
+  appendLines(lines: readonly string[], etag: string): Promise<{ etag: string }>;
+}
+
+export const appendOnlyLedger = (objects: ObjectStore): AppendOnlyLedger => {
+  const blob = new S3LedgerBlob(objects);
+  const store = new BlobLedgerStore(blob);
+  return {
+    read: () => blob.read(),
+    appendLines: (lines, etag) => store.appendLines(lines, etag),
+  };
+};

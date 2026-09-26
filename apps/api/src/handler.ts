@@ -17,6 +17,7 @@ import {
 import {
   AccessSecrets,
   type AccessSecrets as AccessSecretsType,
+  appendOnlyLedger,
   DependencyUnavailable,
   DeviceStore,
   type ObjectStore,
@@ -78,6 +79,7 @@ import {
 } from "@atlas/domain/access";
 import { type FunctionUrlEvent, type FunctionUrlResult, normalise, type Request } from "./event.js";
 import { type LogEntry, logLine } from "./log.js";
+import { fail, type Outcome } from "./outcome.js";
 import {
   accessDeniedPage,
   CODE_PAGE_CSP,
@@ -94,9 +96,9 @@ import {
   noContent,
   page,
   redirect,
-  refused,
   sessionCookie,
 } from "./respond.js";
+import { type SyncCredential, syncRoutes } from "./sync.js";
 
 export interface HandlerDeps {
   readonly config: ApiConfig;
@@ -113,15 +115,6 @@ export interface HandlerDeps {
 export type Handler = (event: FunctionUrlEvent) => Promise<FunctionUrlResult>;
 
 /** What the handler answered, and the code and reason it logs (never anything else). */
-interface Outcome {
-  readonly result: FunctionUrlResult;
-  readonly code?: string;
-  readonly reason?: string;
-  readonly dependency?: string;
-  /** The public id of a token (ADR-0033, point 10): the most a log may say of one. */
-  readonly tokenId?: string;
-}
-
 const MAX_DEVICE_ATTEMPTS = 3;
 
 export const createHandler = (deps: HandlerDeps): Handler => {
@@ -135,6 +128,13 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     env: config.env,
   });
   const redirectUri = `${config.origin}/api/auth/callback`;
+  const sync = syncRoutes({
+    config,
+    ledger: appendOnlyLedger(deps.objects),
+    objects: deps.objects,
+    devices,
+    now: deps.now,
+  });
   let signer: { readonly key: string; readonly signer: Signer } | undefined;
 
   const nowSeconds = (): number => Math.floor(deps.now().getTime() / 1000);
@@ -147,12 +147,6 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     }
     return signer.signer;
   };
-
-  const fail = (value: ApiRefusal): Outcome => ({
-    result: refused(value),
-    code: value.code,
-    ...(typeof value.details.reason === "string" ? { reason: value.details.reason } : {}),
-  });
 
   /** Every page of the sign-in clears the attempt: it is single use, whatever the outcome. */
   const loginPage = (code: LoginPageError): Outcome => ({
@@ -356,6 +350,55 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     }
     const reason = deviceRefusal(await devices.read(checked.ok.device_id), "console");
     return reason === undefined ? checked.ok : refusal("device_forgotten", { reason });
+  };
+
+  /**
+   * The device a route of the sync speaks for (§2.3): the cookie's, checked
+   * as a session, or the token's, checked as in §2.2 — both with the object
+   * of their device. Never the body's.
+   */
+  const credentialOf = async (admission: Admission): Promise<SyncCredential | ApiRefusal> => {
+    if (admission.kind === "session") {
+      const session = await sessionOf(admission.value);
+      return "code" in session ? session : { deviceId: session.did, type: "web" };
+    }
+    if (admission.kind === "token") {
+      const record = await tokenOf(admission.value);
+      return "status" in record
+        ? record
+        : { deviceId: record.device_id, type: "console", tokenId: record.token_id };
+    }
+    // Admitted only with one of the two (routes.ts): anything else is a table
+    // that disagrees with this switch, never a credential.
+    throw new Error("route of the sync admitted without a credential");
+  };
+
+  /** A route of the sync, once its credential is checked. */
+  const syncRoute = async (
+    request: Request,
+    path: string,
+    params: Readonly<Record<string, string>>,
+    credential: SyncCredential,
+    body: unknown,
+  ): Promise<Outcome> => {
+    switch (path) {
+      case "/api/ledger":
+        return request.method === "GET"
+          ? sync.readLedger()
+          : sync.initialise(request.headers.get("if-match"), body);
+      case "/api/ledger/lines":
+        return sync.appendLines(request.headers.get("if-match"), body);
+      case "/api/sync/devices/self":
+        return sync.publish(credential, body);
+      case "/api/reference/index":
+        return sync.indexReference();
+      default:
+        return sync.readReference(
+          path === "/api/reference/ecb/{name}" ? "ecb" : "prices",
+          params.name as string,
+          request.headers.get("if-none-match"),
+        );
+    }
   };
 
   /** `GET /api/auth/console/start` (§4.1): every parameter checked, then the attempt and Google. */
@@ -756,6 +799,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         };
       }
       case "/api/session":
+      case "/api/sync/devices":
       case "/api/devices/tokens":
       case "/api/devices/tokens/{token_id}/revoke": {
         // Admitted only with the session (routes.ts): anything else is a
@@ -769,6 +813,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         }
         if (spec.path === "/api/devices/tokens") {
           return { outcome: await listTokens(), route: at };
+        }
+        if (spec.path === "/api/sync/devices") {
+          return { outcome: await sync.listDevices(), route: at };
         }
         if (spec.path === "/api/devices/tokens/{token_id}/revoke") {
           return {
@@ -784,6 +831,25 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         return { outcome: await exchange(admission, body), route: at };
       case "/api/auth/console/revoke":
         return { outcome: await revokeOwn(admission, body), route: at };
+      case "/api/ledger":
+      case "/api/ledger/lines":
+      case "/api/sync/devices/self":
+      case "/api/reference/index":
+      case "/api/reference/ecb/{name}":
+      case "/api/reference/prices/{name}": {
+        const credential = await credentialOf(admission);
+        if ("code" in credential) {
+          return { outcome: fail(credential), route: at };
+        }
+        const outcome = await syncRoute(request, spec.path, matched.params, credential, body);
+        return {
+          outcome:
+            credential.tokenId === undefined
+              ? outcome
+              : { ...outcome, tokenId: credential.tokenId },
+          route: at,
+        };
+      }
       default:
         // A route of the table with no branch here: not served (E2 and E3 add theirs).
         return { outcome: fail(refusal("not_found")), route: at };

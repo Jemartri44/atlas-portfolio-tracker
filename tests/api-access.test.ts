@@ -640,6 +640,41 @@ describe("architecture (015): the thin adapters of the SDK send only what they a
   });
 });
 
+describe("architecture (015): the API only appends, and the domain judges every line (E3)", () => {
+  const apiSources = () => listSources(join(apiRoot, "src"));
+
+  /**
+   * ADR-0026, Part A: the API never rewrites nor deletes a line. It holds the
+   * remote ledger only as `AppendOnlyLedger`, and no source of it names an
+   * operation that rewrites or deletes (mutant 31).
+   */
+  it("names no operation that rewrites or deletes the remote", () => {
+    const offenders = apiSources().filter((file) =>
+      /\breplaceLines\b|\.replace\(\s*\[|\bBlobLedgerStore\b|\bS3LedgerBlob\b|DeleteObject|deleteObject|deleteOutOfBand/.test(
+        parse(file).code,
+      ),
+    );
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+    const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
+    expect(sync).toContain("AppendOnlyLedger");
+  });
+
+  /**
+   * What a line is worth is `acceptAppend` and `acceptInit`, never a copy in
+   * the handler: no source of the API names a code of the table of §5.2
+   * (mutant 31, «reimplement a rule of acceptAppend»).
+   */
+  it("reimplements no rule of acceptAppend: the codes of a line live in the domain", () => {
+    const codes =
+      /["'`](line_unreadable|schema_version_unsupported|line_invalid|recorded_at_in_future|domain_rejected|duplicate_unconfirmed|pair_declaration_invalid|pair_incomplete|pair_not_contiguous|pair_rejected|seal_mismatch|waiver_not_appendable)["'`]/;
+    const offenders = apiSources().filter((file) => codes.test(parse(file).code));
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+    const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
+    expect(sync).toMatch(/acceptAppend\(/);
+    expect(sync).toMatch(/acceptInit\(/);
+  });
+});
+
 describe("architecture (015): the authoritative guard reads the graph of the bundle", () => {
   /**
    * The guards of this file read the sources; the one that decides reads the
