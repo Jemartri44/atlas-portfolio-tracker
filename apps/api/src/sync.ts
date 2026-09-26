@@ -6,7 +6,7 @@
 // `AppendOnlyLedger`: read and append, never rewrite, never delete.
 
 import type { AppendOnlyLedger, DeviceStore, ListedObject, ObjectStore } from "@atlas/adapters/aws";
-import { ConflictError, CURRENT_LEDGER_SCHEMA, sha256Hex } from "@atlas/domain";
+import { ConflictError, CURRENT_LEDGER_SCHEMA, sha256Hex, utf8Encode } from "@atlas/domain";
 import {
   type ApiConfig,
   type ApiRefusal,
@@ -33,6 +33,7 @@ import {
   parsePublishBody,
   RemoteError,
   type RemoteRules,
+  textOfLines,
 } from "@atlas/domain/sync";
 import { fail, type Outcome } from "./outcome.js";
 import { bytes, json, notModified } from "./respond.js";
@@ -53,6 +54,22 @@ export interface SyncContext {
 }
 
 const utf8 = new TextDecoder("utf-8", { fatal: true });
+
+/**
+ * The bytes the lines make, **only if they are UTF-8** (review of PR #96,
+ * security B1): the domain refuses a lone surrogate before judging a line,
+ * and this is the last check before S3, so that the remote can never be left
+ * in bytes no device can read.
+ */
+export const utf8Of = (lines: readonly string[]): Uint8Array | undefined => {
+  const bytes = utf8Encode(textOfLines(lines));
+  try {
+    utf8.decode(bytes);
+  } catch {
+    return undefined;
+  }
+  return bytes;
+};
 
 /** A rule of the domain that said no, with its own code; anything else goes on up. */
 const judged = <T>(run: () => T): T | ApiRefusal => {
@@ -111,6 +128,9 @@ export const syncRoutes = (context: SyncContext) => {
       return fail(refusal("precondition_failed"));
     }
     const judgement = acceptAppend(current.lines, entries, rules());
+    if (utf8Of(judgement.lines) === undefined) {
+      return fail(refusal("body_invalid", { reason: "not_utf8" }));
+    }
     let etag = current.etag;
     if (judgement.accepted > 0) {
       try {
@@ -151,6 +171,9 @@ export const syncRoutes = (context: SyncContext) => {
     const lines = judged(() => acceptInit(init.content, init.confirm_duplicate_ids, rules()));
     if (isRefusal(lines)) {
       return fail(lines);
+    }
+    if (utf8Of(lines) === undefined) {
+      return fail(refusal("init_rejected", { code: "not_utf8" }));
     }
     try {
       const written = await ledger.appendLines(lines, EMPTY_ETAG);

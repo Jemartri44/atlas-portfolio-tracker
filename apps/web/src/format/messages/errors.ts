@@ -468,6 +468,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   sync_marker_unreadable: () => "No se puede leer el estado de la sincronización.",
   sync_held_unreadable: () =>
     "No se pueden leer las operaciones retenidas o descartadas. No se tocan: hay que revisarlas antes de seguir.",
+  raw_lone_surrogate: () =>
+    "Una operación lleva un carácter que no es Unicode: no se ha guardado nada.",
   raw_line_break: (d) =>
     `La línea ${text(d.line)} de tus datos lleva dentro un salto de línea o un retorno de carro: el fichero tiene finales de línea de Windows, que solo deja una edición a mano, y así no se escribe tal cual. Conviértelo a finales LF en la consola, desde la carpeta del libro, con la orden que da «atlas» para este mismo error (copia antes el fichero en ledger.jsonl.crlf y cambia solo los finales de línea), y después vuelve a sincronizar. Aquí no se puede importar un fichero mientras la sincronización esté configurada.`,
   conflict: () =>

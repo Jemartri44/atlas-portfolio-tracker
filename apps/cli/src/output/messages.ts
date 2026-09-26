@@ -431,6 +431,8 @@ export const describeError = (error: DomainError): string => {
       return `El marcador de la sincronización (sync/state.json) no se puede leer (${text(d.reason)}).`;
     case "sync_held_unreadable":
       return `El fichero de ${d.file === "held" ? "lo retenido (sync/held.jsonl)" : "lo descartado (sync/discarded.jsonl)"} no se puede leer en la línea ${text(d.line)}. No se toca: revísalo antes de seguir.`;
+    case "raw_lone_surrogate":
+      return `La línea ${text(d.line)} lleva un carácter que no es Unicode (un suplente suelto): sus bytes no serían UTF-8 y el libro no se podría leer. No se ha escrito nada; esa línea no la escribe la aplicación.`;
     case "raw_line_break":
       return `La línea ${text(d.line)} lleva dentro un salto de línea o un retorno de carro (\\r): el libro tiene finales de línea de Windows, que solo deja una edición a mano. Así no se escribe tal cual, y atlas no lo arregla solo. Conviértelo a finales LF desde la carpeta del libro, con una copia previa en ledger.jsonl.crlf (se niega si ya existe): ${RAW_LINE_BREAK_FIX} — y después vuelve a sincronizar.`;
     case "archive_exists":

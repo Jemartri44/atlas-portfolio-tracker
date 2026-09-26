@@ -9,6 +9,7 @@ import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { EMPTY_ETAG } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
 import { account, deposit, lineOf } from "../../../packages/adapters/test/fixtures.js";
+import { utf8Of } from "../src/sync.js";
 import { consoleLogin, errorOf, SELF, setup } from "./harness.js";
 
 type Api = ReturnType<typeof setup>;
@@ -287,6 +288,92 @@ describe("POST /api/ledger/lines (§5.2)", () => {
       body: JSON.stringify({ lines: [{ line: lineOf(deposit) }] }),
     });
     expect(errorOf(answer).code).toBe("origin_rejected");
+  });
+});
+
+describe("text that is not Unicode, and keys twice (review of PR #96, security B1 and N3)", () => {
+  // As the attack arrives: `\ud800` once in the outer JSON, so the line
+  // itself holds the lone surrogate raw after the body is parsed.
+  const loneBody = (line: string, key: "lines" | "content") =>
+    key === "lines"
+      ? `{"lines":[{"line":${JSON.stringify(line).replace("NAME", "\\ud800")}}]}`
+      : `{"content":${JSON.stringify(`${line}\n`).replace("NAME", "\\ud800")},"confirm_duplicate_ids":[]}`;
+  const named = lineOf({ ...account, name: "NAME" });
+
+  it("refuses an append with a lone surrogate with 400, and the remote keeps its bytes", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    const text = textOf([lineOf(account)]);
+    api.s3.seed(LEDGER, text);
+    const answer = await api.call("POST", "/api/ledger/lines", {
+      headers: {
+        ...token.headers,
+        "content-type": "application/json",
+        "if-match": `"${sha(text)}"`,
+      },
+      body: loneBody(named, "lines"),
+      jar: false,
+    });
+    expect(answer.statusCode).toBe(400);
+    expect(errorOf(answer)).toEqual({
+      code: "body_invalid",
+      details: { reason: "lone_surrogate" },
+    });
+    expect(api.s3.text(LEDGER)).toBe(text);
+    // And the remote is still readable and writable by everyone.
+    const again = await write(
+      api,
+      token,
+      "POST",
+      "/api/ledger/lines",
+      { lines: [{ line: lineOf(deposit) }] },
+      { "if-match": `"${sha(text)}"` },
+    );
+    expect(again.statusCode).toBe(200);
+  });
+
+  it("refuses an initialisation with one with 422, and writes nothing", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    const answer = await api.call("PUT", "/api/ledger", {
+      headers: {
+        ...token.headers,
+        "content-type": "application/json",
+        "if-match": `"${EMPTY_ETAG}"`,
+      },
+      body: loneBody(named, "content"),
+      jar: false,
+    });
+    expect(answer.statusCode).toBe(422);
+    expect(errorOf(answer)).toEqual({
+      code: "init_rejected",
+      details: { code: "lone_surrogate", line: 1 },
+    });
+    expect(api.s3.text(LEDGER)).toBeUndefined();
+  });
+
+  it("refuses a key twice in a line with 400, and the remote keeps its bytes", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    const text = textOf([lineOf(account)]);
+    api.s3.seed(LEDGER, text);
+    const twice = lineOf(deposit).replace('"amount":', '"amount":"1000.00","amount":');
+    const answer = await write(
+      api,
+      token,
+      "POST",
+      "/api/ledger/lines",
+      { lines: [{ line: twice }] },
+      { "if-match": `"${sha(text)}"` },
+    );
+    expect(errorOf(answer)).toEqual({ code: "body_invalid", details: { reason: "duplicate_key" } });
+    expect(api.s3.text(LEDGER)).toBe(text);
+  });
+
+  it("never hands S3 bytes that are not UTF-8, whatever the lines", () => {
+    expect(utf8Of(["ok", "ñ😀"])).toEqual(new TextEncoder().encode("ok\nñ😀\n"));
+    expect(utf8Of(["a\ud800"])).toBeUndefined();
+    expect(utf8Of(["\udc00"])).toBeUndefined();
   });
 });
 
