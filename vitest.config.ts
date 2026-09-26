@@ -13,6 +13,7 @@ export default defineConfig({
       "@atlas/adapters/web-device": local(
         "./packages/adapters/src/ledger-store/browser/web-device.ts",
       ),
+      "@atlas/adapters/aws-sdk": local("./packages/adapters/src/aws/sdk.ts"),
       "@atlas/adapters/aws": local("./packages/adapters/src/aws/index.ts"),
       "@atlas/adapters/access": local("./packages/adapters/src/access/crypto.ts"),
       "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),

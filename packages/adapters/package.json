@@ -58,6 +58,10 @@
       "types": "./dist/aws/index.d.ts",
       "import": "./dist/aws/index.js"
     },
+    "./aws-sdk": {
+      "types": "./dist/aws/sdk.d.ts",
+      "import": "./dist/aws/sdk.js"
+    },
     "./access": {
       "types": "./dist/access/crypto.d.ts",
       "import": "./dist/access/crypto.js"

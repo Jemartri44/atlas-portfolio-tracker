@@ -596,6 +596,50 @@ describe("architecture (015): the records of the tokens are never deleted nor la
   });
 });
 
+describe("architecture (015): the thin adapters of the SDK send only what they are for (E3)", () => {
+  /**
+   * The API only appends to the bucket and never deletes (ADR-0026, Part A;
+   * ADR-0028, row 7), and the records of the tokens are never deleted nor
+   * labelled (T26). What the adapters take from the SDK is the closed list of
+   * commands they send; a delete, or anything else, is a violation.
+   */
+  it("takes from the SDK only the clients and the commands of the narrow interfaces", () => {
+    const allowed: Record<string, readonly string[]> = {
+      "@aws-sdk/client-s3": [
+        "S3Client",
+        "GetObjectCommand",
+        "PutObjectCommand",
+        "ListObjectsV2Command",
+        "ListObjectsV2CommandOutput",
+      ],
+      "@aws-sdk/client-ssm": [
+        "SSMClient",
+        "GetParameterCommand",
+        "GetParameterCommandOutput",
+        "PutParameterCommand",
+        "GetParametersByPathCommand",
+        "GetParametersByPathCommandOutput",
+      ],
+    };
+    const taken = productSources().flatMap((file) =>
+      parse(file)
+        .bindings.filter((binding) => binding.specifier.startsWith("@aws-sdk/"))
+        .map((binding) => `${binding.specifier} ${binding.name}`),
+    );
+    expect(taken.length).toBeGreaterThan(0);
+    expect(
+      taken.filter((entry) => {
+        const [specifier, name] = entry.split(" ") as [string, string];
+        return !(allowed[specifier] ?? []).includes(name);
+      }),
+    ).toEqual([]);
+    const deletes = productSources().filter((path) =>
+      /DeleteObjects?|deleteObject|DeleteBucket/.test(parse(path).code),
+    );
+    expect(deletes.map((path) => relative(repoRoot, path))).toEqual([]);
+  });
+});
+
 describe("architecture (015): the authoritative guard reads the graph of the bundle", () => {
   /**
    * The guards of this file read the sources; the one that decides reads the
