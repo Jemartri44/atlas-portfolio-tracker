@@ -12,11 +12,13 @@ import { readSession, type SessionState, signInHref, signOut } from "../../../sy
 
 const webDevice = () => import("@atlas/adapters/web-device");
 
+type Fetch = typeof fetch;
+
 /** The id kept in this browser, and the state of the session; the id the API says is adopted. */
-const load = async (): Promise<{ state: SessionState; kept: string | undefined }> => {
+const load = async (request: Fetch): Promise<{ state: SessionState; kept: string | undefined }> => {
   const { readWebDeviceId, saveWebDeviceId } = await webDevice();
   const [state, kept] = await Promise.all([
-    readSession(),
+    readSession(request),
     readWebDeviceId().catch(() => undefined),
   ]);
   if (state.kind === "signed_in" && state.deviceId !== kept) {
@@ -41,15 +43,22 @@ const UNAVAILABLE: Readonly<Record<string, string>> = {
     "La nube de Atlas no está disponible ahora mismo. Inténtalo de nuevo en unos minutos.",
 };
 
-export const SessionCard = (): JSX.Element => {
-  const [session, { refetch }] = createResource(load);
+/**
+ * The card receives the `fetch` it asks the API with (T1 of the review of PR
+ * #90, round 2): a test hands it its own, and never reaches the network. The
+ * application gives it none, and it takes the browser's at the moment of each
+ * call.
+ */
+export const SessionCard = (props: { readonly request?: Fetch }): JSX.Element => {
+  const request: Fetch = (input, init) => (props.request ?? fetch)(input, init);
+  const [session, { refetch }] = createResource(() => load(request));
   const [busy, setBusy] = createSignal(false);
   const [failure, setFailure] = createSignal<string>();
 
   const onSignOut = async (): Promise<void> => {
     setBusy(true);
     setFailure(undefined);
-    const outcome = await signOut();
+    const outcome = await signOut(request);
     setBusy(false);
     if (outcome !== "signed_out") {
       setFailure(outcome.code);
