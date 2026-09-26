@@ -476,6 +476,58 @@ describe("a request with the session (R18, R19, R23, R31)", () => {
     expect(start.statusCode).toBe(503);
     expect(start.body).toContain("<code>remote_unavailable</code>");
     expect(start.headers["content-security-policy"]).toContain("default-src 'none'");
+    // N2 of the review of PR #90: the page says when to try again, as the JSON does.
+    expect(start.headers["retry-after"]).toBe("5");
+  });
+
+  it("answers an unexpected failure of the return with the error page, and clears the attempt (N1, S1)", async () => {
+    for (const breakIt of ["s3_throws", "collision", "bad_session_key"] as const) {
+      const api = setup(
+        breakIt === "s3_throws"
+          ? {
+              objects: {
+                get: async () => undefined,
+                putIfNoneMatch: async () => {
+                  throw new Error("AccessDenied from an SDK that did not translate it");
+                },
+                putIfMatch: async () => "written",
+              },
+            }
+          : breakIt === "collision"
+            ? {
+                objects: {
+                  get: async () => undefined,
+                  putIfNoneMatch: async () => "exists",
+                  putIfMatch: async () => "written",
+                },
+              }
+            : {},
+      );
+      const start = await api.call("GET", "/api/auth/login");
+      const back = api.google.authorize(start.headers.location as string, ALLOWED);
+      if (breakIt === "bad_session_key") {
+        api.ssm.set(NAMES.sessionKey, "short");
+        api.advance(300_000);
+      }
+      const done = await api.call("GET", "/api/auth/callback", {
+        query: { code: back.code, state: back.state },
+      });
+      expect(done.statusCode).toBe(500);
+      expect(done.headers["content-type"]).toBe("text/html; charset=utf-8");
+      expect(done.body).toContain("<code>internal</code>");
+      expect(done.body).not.toContain("AccessDenied");
+      expect(setCookieOf(done.cookies, "__Host-atlas_login")).toContain("Max-Age=0");
+      expect(api.session()).toBeUndefined();
+    }
+  });
+
+  it("answers an unexpected failure of the start with the error page too", async () => {
+    const api = setup();
+    api.ssm.set(NAMES.sessionKey, "short");
+    const start = await api.call("GET", "/api/auth/login");
+    expect(start.statusCode).toBe(500);
+    expect(start.body).toContain("<code>internal</code>");
+    expect(start.headers.location).toBeUndefined();
   });
 });
 

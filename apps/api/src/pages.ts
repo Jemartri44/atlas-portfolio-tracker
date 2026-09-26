@@ -64,6 +64,8 @@ const SENTENCES: Record<LoginPageError, string> = {
   email_not_verified: "El correo de esta cuenta de Google no está verificado.",
   remote_unavailable:
     "Atlas no puede comprobar el acceso ahora mismo. Inténtalo de nuevo en unos minutos.",
+  internal:
+    "Atlas ha tenido un fallo inesperado y no ha iniciado la sesión. Vuelve a empezar desde Atlas.",
 };
 
 export const loginErrorPage = (code: LoginPageError): string =>

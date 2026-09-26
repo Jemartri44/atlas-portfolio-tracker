@@ -54,6 +54,8 @@ export const LOGIN_PAGE_ERRORS = {
   id_token_nonce: 400,
   email_not_verified: 403,
   remote_unavailable: 503,
+  /** Anything nobody expected, on the start or the return of a sign-in (N1 of the review of PR #90). */
+  internal: 500,
 } as const;
 
 export type LoginPageError = keyof typeof LOGIN_PAGE_ERRORS;

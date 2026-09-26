@@ -47,9 +47,11 @@ export const page = (
   html: string,
   cookies: string[],
   csp: string,
+  extra: Record<string, string> = {},
 ): FunctionUrlResult => ({
   statusCode: status,
   headers: {
+    ...extra,
     ...base,
     "content-type": "text/html; charset=utf-8",
     "referrer-policy": "no-referrer",

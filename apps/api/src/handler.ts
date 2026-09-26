@@ -110,8 +110,15 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     ...(typeof value.details.reason === "string" ? { reason: value.details.reason } : {}),
   });
 
+  /** Every page of the sign-in clears the attempt: it is single use, whatever the outcome. */
   const loginPage = (code: LoginPageError): Outcome => ({
-    result: page(LOGIN_PAGE_ERRORS[code], loginErrorPage(code), [clearLoginCookie()], PAGE_CSP),
+    result: page(
+      LOGIN_PAGE_ERRORS[code],
+      loginErrorPage(code),
+      [clearLoginCookie()],
+      PAGE_CSP,
+      code === "remote_unavailable" ? { "retry-after": "5" } : {},
+    ),
     code,
   });
 
@@ -346,22 +353,25 @@ export const createHandler = (deps: HandlerDeps): Handler => {
             : (findRoute(request.method, request.path)?.path ?? "unmatched"),
       };
       entry = base;
+      // The start and the return of a sign-in are navigations of the browser:
+      // whatever fails there is a page, and it clears the attempt (N1 and S1
+      // of the review of PR #90). Everywhere else, the JSON of §7.
+      const signIn = base.route === "/api/auth/callback" || base.route === "/api/auth/login";
+      const name =
+        error instanceof Error && /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : "unknown";
       if (error instanceof DependencyUnavailable) {
         const value = refusal("remote_unavailable", { dependency: error.dependency });
-        outcome =
-          base.route === "/api/auth/callback" || base.route === "/api/auth/login"
-            ? {
-                ...loginPage("remote_unavailable"),
-                reason: error.reason,
-                dependency: error.dependency,
-              }
-            : { ...fail(value), reason: error.reason, dependency: error.dependency };
+        outcome = signIn
+          ? {
+              ...loginPage("remote_unavailable"),
+              reason: error.reason,
+              dependency: error.dependency,
+            }
+          : { ...fail(value), reason: error.reason, dependency: error.dependency };
       } else {
-        outcome = {
-          ...fail(refusal("internal")),
-          reason:
-            error instanceof Error && /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : "unknown",
-        };
+        outcome = signIn
+          ? { ...loginPage("internal"), reason: name }
+          : { ...fail(refusal("internal")), reason: name };
       }
     }
     const status = outcome.result.statusCode;
