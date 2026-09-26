@@ -6,18 +6,15 @@
 // and to its header, towards the origin it was issued for.
 
 import { randomBytes } from "node:crypto";
-import { dirname } from "node:path";
 import { readLocalConfig } from "@atlas/adapters";
 import { pkceChallenge } from "@atlas/adapters/access";
 import {
   type CredentialEntry,
-  type CredentialsFile,
   entryForRemote,
   expiryWarning,
   isCredentialEntry,
   isDeviceName,
   isHttpsOrigin,
-  type RemoteJson,
   replacesAnotherOrigin,
   withEntry,
   withoutEntry,
