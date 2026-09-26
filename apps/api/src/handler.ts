@@ -327,14 +327,21 @@ export const createHandler = (deps: HandlerDeps): Handler => {
           route: at,
         };
       }
-      default: {
-        // `/api/session`: the only route of E1 that admits the session.
-        const session = await sessionOf((admission as { value: string }).value);
+      case "/api/session": {
+        // Admitted only with the session (routes.ts): anything else is a
+        // routing table that disagrees with this switch, never a session.
+        if (admission.kind !== "session") {
+          throw new Error("route admitted without a session");
+        }
+        const session = await sessionOf(admission.value);
         if ("code" in session) {
           return { outcome: fail(session), route: at };
         }
         return { outcome: { result: json(200, sessionView(session)) }, route: at };
       }
+      default:
+        // A route of the table with no branch here: not served (E2 and E3 add theirs).
+        return { outcome: fail(refusal("not_found")), route: at };
     }
   };
 
