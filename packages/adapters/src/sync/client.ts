@@ -68,7 +68,16 @@ export { MAX_ARCHIVE_NAMES, withArchiveNames };
 export interface SyncOptions {
   readonly schema: LedgerSchema;
   readonly now: () => Date;
+  /**
+   * The exact text of `sync/remote.json` that initialising or joining writes,
+   * first of its one write (the console, feature 015, §7 P16). Never a sync's.
+   */
+  readonly remoteJson?: string;
 }
+
+/** What initialising and joining add to their one write: the folder's remote, first. */
+const identityOf = (options: SyncOptions): { readonly remote?: string } =>
+  options.remoteJson === undefined ? {} : { remote: options.remoteJson };
 
 export type SyncOutcome =
   | {
@@ -294,6 +303,7 @@ export const initialiseRemote = async (
   }
   const now = options.now();
   await store.commit(state, {
+    ...identityOf(options),
     marker: markerFor(state.ledger.lines, state.ledger.lines.length, {
       remote_etag: initialised.etag,
       last_sync_at: now.toISOString(),
@@ -332,6 +342,7 @@ export const replaceFromRemote = async (
   await withArchiveNames(async (attempt) => {
     const state = await store.read();
     await store.commit(state, {
+      ...(how === "join" ? identityOf(options) : {}),
       held: replaceWithRemote(
         state.ledger,
         inspection.remoteEvents,
@@ -369,6 +380,7 @@ export const joinWithOwnLines = async (
     const state = await store.read();
     const mine = joinWithMine(state.ledger, linesOfText(read.snapshot.text));
     await store.commit(state, {
+      ...identityOf(options),
       ledger: ledgerChange(state.ledger, mine.lines, "join", now, attempt),
       marker: markerFor(mine.lines, mine.synced, { remote_etag: read.snapshot.etag }),
     });

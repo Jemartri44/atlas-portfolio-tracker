@@ -157,6 +157,11 @@ export class BrowserSyncStore implements SyncStateStore {
    * of it does.
    */
   async commit(expected: DeviceState, change: DeviceChange): Promise<void> {
+    // `sync/remote.json` is the console's folder's (feature 015, P16): the
+    // web knows its remote by its own origin, and never writes one.
+    if (change.remote !== undefined) {
+      throw new ValidationError("sync_remote_json_not_here", "the web keeps no sync/remote.json");
+    }
     // The lines are checked before the transaction opens: nothing but
     // IndexedDB may sit between its read and its write.
     // The archive name is checked as every store of the ledger checks it

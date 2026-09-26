@@ -18,6 +18,8 @@ export const SYNC_DIR = "sync";
 export const MARKER_FILE = join(SYNC_DIR, "state.json");
 export const HELD_FILE = join(SYNC_DIR, "held.jsonl");
 export const DISCARDED_FILE = join(SYNC_DIR, "discarded.jsonl");
+/** Which remote the folder syncs with (feature 015, §7 P7 and P16). */
+export const REMOTE_FILE = join(SYNC_DIR, "remote.json");
 
 const hasCode = (error: unknown, code: string): boolean =>
   typeof error === "object" && error !== null && (error as { code?: string }).code === code;
@@ -65,12 +67,14 @@ export class FolderSyncStore implements SyncStateStore {
   async read(): Promise<DeviceState> {
     const ledger: LoadedLedger = await this.ledger.load();
     const { presence, markerText } = await folderSyncPresence(this.folder, this.ops);
+    const remoteText = await readText(this.ops, join(this.folder, REMOTE_FILE));
     return {
       ledger,
       presence,
       markerText,
       heldText: (await readText(this.ops, join(this.folder, HELD_FILE))) ?? "",
       discardedText: (await readText(this.ops, join(this.folder, DISCARDED_FILE))) ?? "",
+      ...(remoteText === undefined ? {} : { remoteText }),
     };
   }
 
@@ -93,9 +97,15 @@ export class FolderSyncStore implements SyncStateStore {
         now.etag !== expected.ledger.etag ||
         ((await text(HELD_FILE)) ?? "") !== expected.heldText ||
         ((await text(DISCARDED_FILE)) ?? "") !== expected.discardedText ||
-        (await text(MARKER_FILE)) !== expected.markerText
+        (await text(MARKER_FILE)) !== expected.markerText ||
+        (await text(REMOTE_FILE)) !== expected.remoteText
       ) {
         throw new ConflictError();
+      }
+      // `sync/remote.json` first of all (§7 P16): the identity of the
+      // destination before anything of this write, the marker last.
+      if (change.remote !== undefined) {
+        await writer.writeFile(REMOTE_FILE, Buffer.from(change.remote));
       }
       // **The destination before the origin** (review of PR #83, B1): a line
       // that moves is written where it goes before the place it leaves forgets

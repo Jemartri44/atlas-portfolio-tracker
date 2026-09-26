@@ -220,7 +220,8 @@ export const sweepOrphanTemporaries = async (ledgerPath: string): Promise<string
   // sync too: `sync/state.json`, `held.jsonl` and `discarded.jsonl` are
   // written the same way, and a loose file in the folder that syncs ends up
   // confusing somebody.
-  const syncTemporary = /^(?:state\.json|held\.jsonl|discarded\.jsonl)\.tmp-\d+-\d+$/;
+  // Since feature 015 (§7 P16), `sync/remote.json` too.
+  const syncTemporary = /^(?:state\.json|held\.jsonl|discarded\.jsonl|remote\.json)\.tmp-\d+-\d+$/;
   const list = async (dir: string, keep: (name: string) => boolean): Promise<string[]> => {
     try {
       return (await fs.readdir(dir)).filter(keep);
