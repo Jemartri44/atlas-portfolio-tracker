@@ -576,6 +576,8 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
     expect(config).toContain('worker: { plugins: () => [moduleGraph("worker")] }');
     expect(config).toContain('fileName: ".vite/atlas-modules.json"');
     expect(config).toContain("realpathSync(path)");
+    // Round 4: a source of code is never inlined as a `data:` URL.
+    expect(config).toMatch(/assetsInlineLimit: \(filePath: string\)/);
     const script = readFileSync(
       join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
       "utf8",
@@ -594,6 +596,7 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
       "crea un worker cuyo grafo no se conoce",
       "el bundle lleva un fuente",
       "ningún grafo dice de dónde sale este fichero",
+      "lleva código incrustado como URL data:",
     ]) {
       expect(script).toContain(family);
     }
