@@ -38,7 +38,7 @@ Eres un revisor externo del proyecto **Atlas Portfolio Tracker** (`~/projects/at
 
 ## 4. Formato de salida
 
-Escribe el informe en `~/atlas-private/reviews/<fecha>-challenge.md` (fuera del repositorio) con esta estructura:
+Escribe el informe en `~/projects/atlas-private/reviews/<fecha>-challenge.md` (fuera del repositorio) con esta estructura:
 
 ```
 # Challenge de decisiones — <fecha>
