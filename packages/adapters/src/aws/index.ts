@@ -7,6 +7,12 @@ export { DependencyUnavailable } from "./errors.js";
 export type { ListedObject, ObjectStore, StoredObject } from "./object-store.js";
 export type { ParameterEntry, ParameterStore } from "./parameter-store.js";
 export {
+  REFERENCE_PREFIXES,
+  type ReferencePrefix,
+  type ReferenceReader,
+  referenceReader,
+} from "./reference-reader.js";
+export {
   type AppendOnlyLedger,
   appendOnlyLedger,
   archiveKey,

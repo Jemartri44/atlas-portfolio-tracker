@@ -22,6 +22,7 @@ import {
   DeviceStore,
   type ObjectStore,
   type ParameterStore,
+  referenceReader,
   TokenRegistry,
 } from "@atlas/adapters/aws";
 import { type IdentityProvider, IdentityUnavailable } from "@atlas/adapters/identity";
@@ -131,7 +132,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
   const sync = syncRoutes({
     config,
     ledger: appendOnlyLedger(deps.objects),
-    objects: deps.objects,
+    reference: referenceReader(deps.objects),
     devices,
     now: deps.now,
   });

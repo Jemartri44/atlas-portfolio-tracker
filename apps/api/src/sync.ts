@@ -5,7 +5,7 @@
 // `referenceKey`. The remote ledger is reached only through
 // `AppendOnlyLedger`: read and append, never rewrite, never delete.
 
-import type { AppendOnlyLedger, DeviceStore, ListedObject, ObjectStore } from "@atlas/adapters/aws";
+import type { AppendOnlyLedger, DeviceStore, ReferenceReader } from "@atlas/adapters/aws";
 import { ConflictError, CURRENT_LEDGER_SCHEMA, sha256Hex, utf8Encode } from "@atlas/domain";
 import {
   type ApiConfig,
@@ -48,7 +48,8 @@ export interface SyncCredential {
 export interface SyncContext {
   readonly config: ApiConfig;
   readonly ledger: AppendOnlyLedger;
-  readonly objects: ObjectStore;
+  /** The reference data, read only, its two prefixes and nothing else (review of PR #96, N1). */
+  readonly reference: ReferenceReader;
   readonly devices: DeviceStore;
   readonly now: () => Date;
 }
@@ -87,7 +88,7 @@ const isRefusal = (value: unknown): value is ApiRefusal =>
   typeof value === "object" && value !== null && "status" in value && "code" in value;
 
 export const syncRoutes = (context: SyncContext) => {
-  const { ledger, devices, objects, config } = context;
+  const { ledger, devices, reference, config } = context;
 
   const rules = (): RemoteRules => ({
     schema: CURRENT_LEDGER_SCHEMA,
@@ -253,11 +254,11 @@ export const syncRoutes = (context: SyncContext) => {
 
   /** `GET /api/reference/index` (§6): the first level of each prefix. */
   const indexReference = async (): Promise<Outcome> => {
-    const [ecb, prices]: (readonly ListedObject[])[] = await Promise.all([
-      objects.list("reference/ecb/"),
-      objects.list("prices/"),
+    const [ecb, prices] = await Promise.all([
+      reference.list("reference/ecb/"),
+      reference.list("prices/"),
     ]);
-    return { result: json(200, referenceIndex(ecb ?? [], prices ?? [])) };
+    return { result: json(200, referenceIndex(ecb, prices)) };
   };
 
   /** `GET /api/reference/<kind>/<name>` (§6): the name checked **before** S3 is touched. */
@@ -274,7 +275,7 @@ export const syncRoutes = (context: SyncContext) => {
     if (type === undefined) {
       return fail(refusal("not_found", { reason: "type" }));
     }
-    const stored = await objects.get(key.key);
+    const stored = await reference.get(key.key);
     if (stored === undefined) {
       return fail(refusal("not_found", { reason: "missing" }));
     }

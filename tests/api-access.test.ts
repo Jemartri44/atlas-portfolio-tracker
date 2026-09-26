@@ -650,13 +650,17 @@ describe("architecture (015): the API only appends, and the domain judges every 
    */
   it("names no operation that rewrites or deletes the remote", () => {
     const offenders = apiSources().filter((file) =>
-      /\breplaceLines\b|\.replace\(\s*\[|\bBlobLedgerStore\b|\bS3LedgerBlob\b|DeleteObject|deleteObject|deleteOutOfBand/.test(
+      /\breplaceLines\b|\.replace\(\s*\[|\bBlobLedgerStore\b|\bS3LedgerBlob\b|DeleteObject|deleteObject|deleteOutOfBand|\bputIfMatch\b|\bputIfNoneMatch\b|\bLEDGER_KEY\b|["'`]ledger\//.test(
         parse(file).code,
       ),
     );
     expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
     const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
     expect(sync).toContain("AppendOnlyLedger");
+    // The routes get no ObjectStore of their own (review of PR #96, security
+    // N1): the reference data through a read-only port of its two prefixes.
+    expect(parse(join(apiRoot, "src", "sync.ts")).code).not.toMatch(/\bObjectStore\b|\bobjects\b/);
+    expect(sync).toContain("ReferenceReader");
   });
 
   /**
