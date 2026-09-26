@@ -177,3 +177,23 @@ describe("no data route redirects (R24)", () => {
     }
   });
 });
+
+describe("the level of each log line (N4 of the review of PR #90)", () => {
+  it("is ERROR for a 5xx, WARN for a 4xx and INFO otherwise", async () => {
+    const levelOf = (line: string | undefined): string =>
+      (JSON.parse(line as string) as { level: string }).level;
+    const api = setup();
+    await api.call("GET", "/api/auth/login");
+    expect(levelOf(api.logs.at(-1))).toBe("INFO");
+    await api.call("GET", "/api/nothing");
+    expect(levelOf(api.logs.at(-1))).toBe("WARN");
+    await api.signIn();
+    expect(levelOf(api.logs.at(-1))).toBe("INFO");
+    api.ssm.throttleNext();
+    api.advance(3_600_000);
+    await api.call("GET", "/api/session");
+    expect(levelOf(api.logs.at(-1))).toBe("ERROR");
+    expect((await api.call("GET", "/api/session")).statusCode).toBe(200);
+    expect(levelOf(api.logs.at(-1))).toBe("INFO");
+  });
+});
