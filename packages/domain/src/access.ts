@@ -66,7 +66,13 @@ export {
   type RoutePolicy,
   type RouteSpec,
 } from "./access/routes.js";
-export { presentedDeviceId, type SessionView, sessionView } from "./access/session.js";
+export {
+  fromOwnSite,
+  presentedDeviceId,
+  type RequestSite,
+  type SessionView,
+  sessionView,
+} from "./access/session.js";
 export {
   isSubject,
   type LoginPayload,

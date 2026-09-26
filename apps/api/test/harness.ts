@@ -125,7 +125,9 @@ export const setup = (overrides: Partial<HandlerDeps> = {}) => {
     const start = await call(
       "GET",
       "/api/auth/login",
-      deviceId === undefined ? {} : { query: { device_id: deviceId } },
+      deviceId === undefined
+        ? {}
+        : { query: { device_id: deviceId }, headers: { "sec-fetch-site": "same-origin" } },
     );
     const back = google.authorize(start.headers.location as string, account);
     const done = await call("GET", "/api/auth/callback", {

@@ -350,6 +350,38 @@ describe("the device of the web (R20, R21)", () => {
     expect(api.s3.calls.some((call) => call.includes(".."))).toBe(false);
   });
 
+  it("ignores a presented id when the sign-in does not come from our own site (S2)", async () => {
+    const api = setup();
+    await api.signIn();
+    const mine = JSON.parse((await api.call("GET", "/api/session")).body).device_id as string;
+    for (const headers of [
+      { "sec-fetch-site": "cross-site" },
+      { "sec-fetch-site": "same-site" },
+      {},
+      { origin: "https://evil.example" },
+    ]) {
+      api.jar.clear();
+      const start = await api.call("GET", "/api/auth/login", {
+        query: { device_id: mine },
+        headers,
+      });
+      const back = api.google.authorize(start.headers.location as string, ALLOWED);
+      await api.call("GET", "/api/auth/callback", {
+        query: { code: back.code, state: back.state },
+      });
+      const assigned = JSON.parse((await api.call("GET", "/api/session")).body).device_id;
+      expect(assigned).not.toBe(mine);
+    }
+    api.jar.clear();
+    const start = await api.call("GET", "/api/auth/login", {
+      query: { device_id: mine },
+      headers: { origin: SELF },
+    });
+    const back = api.google.authorize(start.headers.location as string, ALLOWED);
+    await api.call("GET", "/api/auth/callback", { query: { code: back.code, state: back.state } });
+    expect(JSON.parse((await api.call("GET", "/api/session")).body).device_id).toBe(mine);
+  });
+
   it("never takes the device from the query, a header or the body of a request (R20)", async () => {
     const api = setup();
     await api.signIn();

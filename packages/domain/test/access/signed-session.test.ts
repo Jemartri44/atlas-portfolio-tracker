@@ -159,10 +159,30 @@ describe("the identifiers and the view of the session (R23)", () => {
     });
   });
 
-  it("keeps a presented device id only if well formed", () => {
-    expect(presentedDeviceId(ID22)).toBe(ID22);
-    expect(presentedDeviceId(`${ID22}x`)).toBeUndefined();
-    expect(presentedDeviceId("../../x")).toBeUndefined();
-    expect(presentedDeviceId(undefined)).toBeUndefined();
+  it("keeps a presented device id only if well formed and from our own site (S2)", () => {
+    const own = { secFetchSite: "same-origin", origin: undefined, self: "https://a.example" };
+    expect(presentedDeviceId(ID22, own)).toBe(ID22);
+    expect(presentedDeviceId(`${ID22}x`, own)).toBeUndefined();
+    expect(presentedDeviceId("../../x", own)).toBeUndefined();
+    expect(presentedDeviceId(undefined, own)).toBeUndefined();
+    expect(
+      presentedDeviceId(ID22, {
+        secFetchSite: undefined,
+        origin: "https://a.example",
+        self: "https://a.example",
+      }),
+    ).toBe(ID22);
+    for (const secFetchSite of ["cross-site", "same-site", "none", undefined]) {
+      expect(
+        presentedDeviceId(ID22, { secFetchSite, origin: undefined, self: "https://a.example" }),
+      ).toBeUndefined();
+      expect(
+        presentedDeviceId(ID22, {
+          secFetchSite,
+          origin: "https://evil.example",
+          self: "https://a.example",
+        }),
+      ).toBeUndefined();
+    }
   });
 });

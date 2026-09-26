@@ -162,7 +162,11 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       state,
       nonce,
       verifier,
-      did: presentedDeviceId(request.query.get("device_id") ?? undefined),
+      did: presentedDeviceId(request.query.get("device_id") ?? undefined, {
+        secFetchSite: request.headers.get("sec-fetch-site"),
+        origin: request.headers.get("origin"),
+        self: config.origin,
+      }),
       now: nowSeconds(),
       ttlSeconds: config.loginTtlSeconds,
     });
