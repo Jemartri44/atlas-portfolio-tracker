@@ -588,3 +588,99 @@ Ningún gemelo `.js` antes de cada lote ni antes de cada ejecución. `git diff e
 ### 15.7 Congelado
 
 **Commit congelado de la ronda 2: el que contiene esta sección** (su SHA, en el comentario de la PR y en el informe a la dirección). Desde aquí no se empuja nada a la rama mientras dura la revisión.
+
+## 16. Revisión de la PR #90, ronda 3: decisiones de la dirección y arreglos (2026-09-26)
+
+Revisión: `#issuecomment-5843549502`, sobre `85b5a87`. No convergió por **CI-1**: la CI `verify` de `85b5a87` salió en rojo por la cobertura de ramas del dominio en `packages/domain/src/ecb/propose.ts:95`. Además, (b) y (c) quedaron sin verificar. Decisiones de la dirección (2026-09-26), tal como llegaron:
+
+1. **CI-1**: un test determinista que cubra esa rama. Además, ejecutar la cobertura del dominio **sin** las suites de propiedades y cubrir con tests fijos lo que falte. El 100 % no puede depender de la semilla. En su propio commit.
+2. **Las cuatro vías de elusión** que apunta el revisor, cada una con su mutante, visto primero sobrevivir y después morir:
+   - `?worker&inline` y los *workers*;
+   - `?raw` y `?url`;
+   - `new URL("…", import.meta.url)`;
+   - alias o `node_modules/@atlas/…`.
+3. **Plazos**: bajarlos a 30 s en los tests de `0a47dd5` y `1987520`.
+
+### 16.1 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Cómo se vio en rojo |
+|---|---|---|
+| CI-1: las ramas que solo cubría una propiedad aleatoria | `99b0b9a` | El mutante C-residue sobrevive a los tests fijos de su fichero sin el test nuevo, y muere con él (§16.4) |
+| Vías de elusión: *workers*, consultas, ficheros emitidos y alias | `69ac13a`, y `f1d52f0` (el test que lo mantiene en su sitio) | V1, V2, V3 y V4 sobreviven al guardián de `85b5a87`. V1b y V1c solo los paraba «no describe este chunk», no una regla. Con el arreglo mueren todos por su regla (§16.4) |
+| Plazos a 30 s | `9d2f80b` | — |
+
+### 16.2 CI-1: lo medido
+
+- **Cómo se buscó.** Se ejecutó la suite entera con un sustituto inerte de `fast-check`: un alias de Vitest que convierte `fc.assert` en una operación vacía y cada arbitrario en un objeto que no hace nada. El sustituto y su configuración se quedan en el *scratchpad* (`noprops-015/`); no entran en el repositorio ni en ninguna dependencia. Cuatro tests fallan, como se esperaba, porque exigen que la propiedad haya recorrido libros, pero la cobertura se informa igual.
+  - **Solo el proyecto `domain`**: faltan líneas o ramas en `ecb/drafts.ts`, `ecb/rule-change.ts`, `filings/closed-years.ts`, `filings/proposal.ts`, `informative/m720.ts`, `projections/contribution.ts`, `projections/primitives.ts` y `usecases/preview-event.ts`.
+  - **La suite entera, como la mide `test:coverage`**: los tests fijos de la consola y de la web cubren todo eso salvo una cosa. **Solo queda `projections/contribution.ts`, líneas 113 (una rama) y 120-121**: el caso en que el redondeo deja un residuo positivo que va entero a la primera fila. Solo lo alcanzaba la propiedad aleatoria de la aportación.
+  - **Arreglo** (`99b0b9a`): un test fijo. Cuatro activos iguales en su objetivo y un céntimo que repartir: cada fila redondea a cero y el céntimo va a `ast_a`. Sin propiedades, `contribution.ts` queda al 100 %.
+- **`propose.ts:95` no es de las propiedades.** Con las propiedades inertes, `propose.ts` sigue al 100 %. Lo cubre `packages/domain/test/ecb/propose.test.ts` él solo (las dos ramas del `if`, 6 y 5 veces), y en la suite entera la web y la consola pasan por ella 239 y 72 veces. Ninguna suite de propiedades toca el BCE. Así que **la premisa de CI-1 («la cubre a veces una propiedad aleatoria») no se sostiene con lo medido**, y un test fijo más no la cambiaría: ya lo hay. No he añadido uno redundante.
+- **Qué la pudo dejar sin cubrir en la CI: no lo he averiguado.** La hipótesis, sin verificar, es que la fusión de la cobertura V8 de un mismo fichero cargado por varios proyectos y procesos pierda recuentos de bloque según el orden en que llegan. En la CI, con otros núcleos, el reparto cambia de una ejecución a otra. Sería de Vitest o de V8, no de la PR. Lo que hay:
+  - de las últimas 40 ejecuciones de `verify`, dos fallaron;
+  - esta falló en cobertura;
+  - en esta máquina, las cuatro ejecuciones completas en verde de la ronda 2 sacaron el dominio al 100 %, igual que las dos del revisor sobre `85b5a87`.
+  Si vuelve, lo propio es aislarla con `coverage-final.json` de la CI (subirlo como artefacto), no con más tests.
+
+### 16.3 Las vías de elusión, cerradas
+
+- **Los *workers*** (`69ac13a`). El *plugin* del grafo es ahora una fábrica, `moduleGraph("main" | "worker")`, y va también en `worker.plugins`. Cada *build* de un *worker* deja su grafo, con la entrada de cada trozo, y el principal lo escribe todo en `dist/.vite/atlas-modules.json` (`workers`). `check-bundle.mjs` pasa las reglas por todos los grafos. Además, **falla si el grafo principal importa un `?worker` o un `?sharedworker` sin un grafo de *worker* cuya entrada sea ese fichero**: con `inline` no queda un `.js` suelto que avise.
+- **`?raw` y `?url`.** El identificador llega **sin la consulta**, que va aparte y solo se usa para enseñarlo y para detectar *workers*. Las reglas comparan la ruta.
+- **Todos los ficheros emitidos.** `check-bundle.mjs` repasa ahora cada fichero de `dist/`, no solo los `.js`. Un fuente (`.ts`, `.tsx`, `.mts`, `.cts`, `.jsx`) nunca se sirve. Cada fichero tiene que estar descrito por alguno de estos:
+  - un trozo o un recurso de algún grafo; los recursos llevan sus ficheros de origen (`originalFileNames`), que pasan por las mismas reglas;
+  - un *source map* de uno de ellos;
+  - un fichero de `public/`;
+  - uno de los que se escriben después del grafo, nombrados uno a uno: la página, el manifiesto y el *service worker*.
+- **Alias y enlaces simbólicos.** El *plugin* aplica `realpath` a cada identificador y a cada origen, relativo a la raíz real del repositorio. Así ningún alias, ningún `preserveSymlinks` y ningún `node_modules/@atlas/…` disfrazan un fichero de un paquete. Las reglas ya no van ancladas al principio. Como defensa en profundidad, además:
+  - un identificador que después de `realpath` sigue en `node_modules/@atlas/` se niega («un paquete del repositorio por node_modules»);
+  - también uno de fuera del repositorio.
+
+### 16.4 Mutantes
+
+Con el guion de §15: un mutante solo cuenta como muerto si falla **con el mensaje de su regla**. Los mutantes de las vías suben los dos techos del paquete dentro del propio mutante. Así, «sobrevive» significa que el *build* sale con 0, y el techo no tapa nada.
+
+| Id | Mutante | Sobre `85b5a87` (el guardián de la ronda 2) | Con `69ac13a` |
+|---|---|---|---|
+| V1 | Un *worker* `?worker&inline` que importa `@atlas/adapters/sync-client` | **sobrevive** (sale con 0) | muerto: `worker 1: … el motor de la sincronización`, `… el cliente o la orquestación` |
+| V1b | Igual, con `?worker` | lo para solo «no describe este chunk» | muerto, ídem |
+| V1c | `new Worker(new URL("…/w.ts", import.meta.url))` | lo para solo «no describe este chunk» | muerto, ídem |
+| V2 | `import … from "…/domain/src/access.ts?raw"` | **sobrevive** | muerto: «las reglas del acceso» |
+| V2b | `import … from "…/adapters/src/sync/client.ts?url"` | muerto (el patrón no iba anclado al final) | muerto |
+| V3 | `new URL("…/adapters/src/sync/client.ts", import.meta.url)` | **sobrevive**: `assets/client-*.ts` servido | muerto: «el bundle lleva un fuente» y la regla del cliente sobre el origen del recurso |
+| V4 | Alias `@atlas/relay` → `node_modules/@atlas/adapters/src/aws/errors.ts` con `preserveSymlinks: true` | **sobrevive** | muerto: «un adaptador de Node de la API» |
+| V4b | El mismo alias, sin `preserveSymlinks` | muerto (Vite ya resolvía el enlace) | muerto |
+| G3-noworker | V1, con el *plugin* fuera de `worker.plugins` | — | muerto: «crea un worker cuyo grafo no se conoce» |
+| G3-noworker-b | V1b, ídem | — | muerto: «no describe este chunk» |
+| G3-norealpath | V4, con el `realpath` del *plugin* quitado | — | muerto: «un paquete del repositorio por node_modules» |
+| G3-stray | Un fichero escrito en `dist/` después del grafo | — | muerto: «ningún grafo dice de dónde sale» |
+| C-residue-before | `contribution.ts`: el residuo positivo se pierde, sin el test nuevo (solo los tests fijos de su fichero) | **sobrevive** | — |
+| C-residue | Ídem, con el test nuevo | — | muerto |
+
+- **Resultado**: V1-V4b, 8 de 8 muertos. De los que sobrevivían o solo paraba la cobertura, 6 de 6. G3, 4 de 4. C-residue, 1 de 1.
+- **Lotes anteriores**: el del grafo de la ronda 2, repetido sobre `69ac13a`, 18 de 18. Los estáticos (§15.3) no cambian: `tests/api-access.test.ts` solo añade comprobaciones de texto al test que mantiene el guardián.
+- El árbol, igual antes y después de cada mutante. Ningún gemelo `.js`.
+
+### 16.5 Plazos (`9d2f80b`)
+
+`proofs.test.ts` («deletes every price of the synthetic ledger…») y `grid-spans.test.tsx` bajan de 60 s a **30 s**. Son unas seis veces lo que miden, así que cubren la carga y siguen avisando si se vuelven mucho más lentos. El tercer *timeout* de la ronda 2, el guardián de `require`, no llevaba plazo: se arregló haciéndolo más rápido (`3549059`).
+
+### 16.6 Tubería y CI
+
+Sobre `f1d52f0`, el último commit de código. El congelado solo añade esta sección a `questions.md`, que ningún test lee.
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage` | 0 | 280 ficheros, 2.754 tests, 443 s; el dominio al 100 % (ramas 4.566/4.566, líneas 7.523/7.523); ningún `ECONNREFUSED` |
+| `npm run test:coverage`, repetida a continuación | 0 | 280 ficheros, 2.754 tests, 444 s; el dominio al 100 %; ningún `ECONNREFUSED` |
+| `npm run build` | 0 | Arranque 75.843 y total 282.280, sin cambio; ningún techo tocado |
+| La suite con las propiedades inertes (§16.2) | 1, por los cuatro tests que exigen que la propiedad recorra libros | **Ningún fichero del dominio con una línea, una rama o una función sin cubrir** |
+
+**CI `verify` en GitHub**: verde sobre `9d2f80b` (36221656013) y sobre `f1d52f0` (36222119247). La del congelado se comprueba después de empujarlo y va en el comentario de la PR.
+
+Ningún gemelo `.js`. `git diff ed1bb11 -- tests/fixtures` vacío.
+
+### 16.7 Congelado
+
+**Commit congelado de la ronda 3: el que contiene esta sección.** Su SHA va en el comentario de la PR y en el informe a la dirección. Desde aquí no se empuja nada a la rama mientras dura la revisión.
