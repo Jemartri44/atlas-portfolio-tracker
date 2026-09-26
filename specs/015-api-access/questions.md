@@ -325,3 +325,110 @@ find packages apps tests -name '*.js' -not -path '*/node_modules/*' -not -path '
 
 - **Q8 — El correo en el código de la consola.** La precisión de §8 («ninguna cookie lleva el correo») vale para las cookies. El código de un solo uso de §4.2 viaja en la URL de vuelta a `127.0.0.1` (queda en el historial del navegador) o se enseña en la página manual, firmado y **sin cifrar**, y ADR-0033 lo liga al par `{sub, email}`. Opciones, sin elegir: **(a)** el código lleva solo el `sub`, y al canjear la API toma el correo de la entrada de la lista permitida con ese `sub` (el par se vuelve a comprobar entero en ese momento; si el `sub` tiene dos entradas, se niega); **(b)** se cifra el código con AES-256-GCM y la subclave `console_code` (autenticado y opaco); **(c)** se acepta el correo legible en el código. Recomiendo **(a)**: no añade primitiva y el par se comprueba igual en el canje.
 - **Q9 — Un objeto de dispositivo ilegible.** Q3 fija tres valores de `details.reason` (`missing`, `wrong_type`, `forgotten`). Un `sync/devices/<id>.json` que existe pero no se lee de forma estricta (a mano, o de una versión más nueva) no es ninguno de los tres. E1 lo niega igual (`403 device_forgotten`, fallo seguro) con un **cuarto valor, `unreadable`**, en lugar de plegarlo en `missing`. ¿Se confirma, o se prefiere plegarlo?
+
+## 10. E1 — el esqueleto de la API, el acceso de la web y la sesión (2026-09-25)
+
+### 10.1 Qué hay en la rama
+
+| Bloque | Commits | Qué |
+|---|---|---|
+| Documentos del alto | `37ac7b7`, `edfc2cb`, `7374c53`, `08b8689` | Las decisiones de §8 en este fichero, en `data-model.md`, en `contracts/` y en `docs/api.md`; la nota de `mfa_required` en ADR-0033 y en `docs/runbooks/google-2-step-verification.md`; la errata de `docs/data-schema.md` §1 (cuenta compartida, sin bucket de CloudTrail) y la fila de `sync/devices/` con su tipo y su estado. Por encargo expreso de la dirección (§8) |
+| 1 — guardianes | `44e525a` | `tests/api-access.test.ts`: `@atlas/api` como *workspace* sin dependencias externas e inalcanzable; ningún doble ni carpeta de test alcanzable desde la API ni desde ningún `exports`; `Authorization` en ningún fuente del producto; el SDK de AWS solo en `adapters/src/aws/sdk-*`; las direcciones de Google solo en `adapters/src/identity/`; lo que alcanza la web, **derivado de sus importaciones y de `exports`**, sin SDK, Google, `node:` ni las reglas del acceso; la web sin nombres que configuren la sincronización ni claves `sync:*` (con el comentario de que se afloja solo en E4, tras P2 y P3); los módulos nuevos de la web en `LAZY_ONLY` |
+| 2 — reglas y esqueleto | `5a4a2f3`, `1d0abd5`, `e6267c7`, `51b6c8e` | `@atlas/domain/access` (puro, al 100 %): códigos, credenciales, rutas y su admisión, `Origin`, cuerpo, cargas firmadas, ID token, lista permitida, objeto del dispositivo, configuración. `@atlas/adapters/{access,identity,aws}` (solo Node): HKDF y HMAC con `timingSafeEqual`, PKCE, RS256; Google con sus direcciones fijadas y la caché de claves; las interfaces estrechas de S3 y SSM, el almacén de dispositivos y los secretos con su caché. `apps/api`: `createHandler(deps)` |
+| 3 — acceso de la web | `e6267c7`, `d82e45a`, `f20c5bf`, `211a099`, `30d48c6` | Inicio, vuelta, sesión, `GET /api/session`, cierre, páginas; `device_forgotten`, `remote_unavailable` y `body_too_large` en `REMOTE_FAILURE_CODES` y en las dos interfaces; la tarjeta «Sincronización» de Ajustes y el `device_id` guardado en IndexedDB |
+| Capturas | `d51c5fa`, `f96bf7c` | El servidor local con los dobles (`apps/api/test/support/local-server.ts`) |
+
+### 10.2 Cómo se vio cada test en rojo
+
+- **Guardianes**: con `apps/api` y `access.ts` sin crear, 5 de 11 en rojo (los de «tiene los ficheros», dependencias, puerta, SDK en los `package.json` y `LAZY_ONLY`); los otros seis **se vieron matar su mutante** (§10.3), porque sobre el árbol de hoy no había violación que ver.
+- **Dominio** (`packages/domain/test/access/`, 3 ficheros, 37 tests): con `src/access/` apartado, los tres ficheros fallan al cargar; con él, verdes y al 100 % de líneas y ramas.
+- **Adaptadores** (`test/access`, `test/identity`, `test/aws`, 21 tests): con `src/{aws,access,identity}` apartados, los tres en rojo.
+- **API** (`apps/api/test/`, 43 tests): con `createHandler` sustituido por uno que lanza, 43 de 43 en rojo.
+- **Mensajes**: al añadir los tres códigos a `REMOTE_FAILURE_CODES`, `tests/messages.test.ts` falló en «translates every one of them in both interfaces» antes de escribir las frases.
+- **El *service worker*** (`30d48c6`): el test del guardián se vio en rojo antes de añadir `navigateFallbackDenylist`.
+- *Honestidad sobre el orden*: en el dominio y los adaptadores escribí el código antes que el test y verifiqué el rojo apartando el código; la prueba de que cada test ata su regla son los mutantes de §10.3, cada uno visto morir.
+
+### 10.3 Mutación (guion `015-mut/mutate-015.mjs`: afirma cada sustitución, restaura y compara byte a byte, se niega con gemelos `.js`)
+
+**Lote de guardianes** (`e1-guards.json`, sobre el árbol final de E1): 14 de 14 muertos.
+
+| Id | Mutante | Resultado |
+|---|---|---|
+| M8a / M8b | leer `Authorization` en la API / escribirla en la web | muertos |
+| M12a–d | la web importa `BrowserSyncStore`, `initialiseRemote`, el cliente por importación dinámica, o nombra una clave `sync:*` | muertos |
+| G-api-reach | la consola importa `@atlas/api` | muerto |
+| G-double | la API importa un doble de test | muerto |
+| G-sdk | el SDK de AWS fuera de `src/aws/sdk-*` | muerto |
+| G-google | una dirección de Google en el dominio | muerto |
+| G-lazy | quitar la sección de Ajustes de `LAZY_ONLY` | muerto |
+| G-barrel | el barril reexporta el acceso | muerto |
+| G-dep | una dependencia externa en `@atlas/api` | muerto |
+| G-web-access | la web importa `@atlas/domain/access` | muerto |
+
+**Lote de E1** (`e1.json`): **51 de 51 muertos**, el árbol igual antes y después (`git status` comparado). Dos ajustes durante el lote, dichos: **M12bis-a sobrevivió** la primera vez —el test de «un id que la API no emitió» leía `device_id` del cuerpo de un `403` y comparaba `undefined`—; el test se reforzó (`89d0546`: exige `200` y el objeto del nuevo dispositivo) y el mutante murió. **M9a no se aplicó** la primera vez (Biome había partido la línea); se corrigió el ancla y murió.
+
+| Id | Mutante (§5 del encargo) | Resultado |
+|---|---|---|
+| M1a–d | la sesión abierta con la subclave del intento; una subclave para todos; sin mirar `typ`; la clave de sesión sin derivar | muertos |
+| M2 (×10) | saltarse `state`, PKCE, la firma, `aud`, `iss`, `exp`, `nonce`, `email_verified`; el `sub` sin el correo; el correo sin el `sub` | muertos |
+| M3-alg / M3-kid | otro algoritmo que RS256; una clave cualquiera para un `kid` desconocido | muertos |
+| M4a–c | no volver a consultar la lista; caché para siempre; caché del doble de lo configurado | muertos |
+| M5 | cookie y token: atender al token | muerto |
+| M6a / M6b | sin `Origin` aceptada (`if (origin && …)`); `Origin` ajeno aceptado | muertos |
+| M7 (×5) | sin `HttpOnly`; sin `Secure`; sin `__Host-`; sesión `Lax`; transitoria `Strict` | muertos |
+| M9a–c | registrar el mensaje de un error ajeno (con el filtro del registrador quitado); el mensaje de `JSON.parse` de un cuerpo que empieza por el centinela; el `sub` del acceso denegado | muertos |
+| M10 | el `sub` en una URL | muerto |
+| M11 | la web alcanza `@atlas/adapters/identity` por una subruta de `exports` | muerto |
+| M12bis-a–c, R2B2, M46sexies | aceptar un id presentado sin mirar su objeto; uno de consola u olvidado; no comprobar el dispositivo en cada petición; un objeto que falta cuenta como vivo; no mirar el tipo | muertos |
+| M12ter-a–d | página denegada sin `no-store`, sin `no-referrer`, con el correo; `GET /api/session` con la firma sin comprobar | muertos |
+| M12quater | `GET /api/session` con otro `device_id` | muerto |
+| M49a / M49b | plegar causas de `device_forgotten`; plegar `session_repeated` en `unauthenticated` | muertos |
+| SW, R01, R24, R05, R19, R31 | el SW vuelve a servir `/api/` con la SPA; `Authorization` como credencial; una ruta de datos que redirige; un cuerpo no JSON aceptado; la sesión no caduca; un parámetro de SSM que falta da una lista vacía | muertos |
+| M-login-clear | no borrar el intento en la vuelta | muerto |
+
+**No aplican a E1**: M12 (el guardián, ya en el lote de guardianes); de E2 en adelante, los de su entrega.
+
+### 10.4 El paquete web
+
+Medido con la regla de `check-bundle.mjs` (guion `015-bundle/measure-015.mjs`), contra una construcción de la base (`b3e2fcb`, en un worktree desacoplado):
+
+| Trozo | Base | E1 | Δ |
+|---|---|---|---|
+| `ajustes` (la tarjeta y el cliente de la sesión) | 4.637 | 6.240 | +1.603 |
+| `web-device` (nuevo) | 0 | 411 | +411 |
+| `errors` (tres frases) | 10.304 | 10.413 | +109 |
+| El resto (ruido de *hashes*) | | | +3 |
+| **Total** | 280.039 | **282.165** | **+2.126** |
+| **Arranque** | 75.843 | **75.834** | **−9** |
+
+El techo del total subió a **276 KB (282.624)** en su propio commit, antes del que lo necesita (`f20c5bf`), dentro de la autorización de Q1 (hasta 304.640). El techo del arranque no se tocó.
+
+### 10.5 Capturas (Chromium 151, desde el *scratchpad*; `~/atlas-private/capturas/2026-09-25-015-e1/`)
+
+A 400×890 con DPR 3, a 2045×1141, y a 360 de ancho midiendo `scrollWidth === clientWidth`: sin sesión con el libro vacío y privacidad puesta; sin sesión con datos (`synthetic-v1`) y privacidad quitada; con sesión; con sesión en oscuro (monitor); sesión caducada (el reloj del servidor avanza 8 h); dispositivo olvidado; acceso denegado; página de error (`email_not_verified`). **21 de 21 sin desplazamiento lateral** (`medidas.json`).
+
+**Lo que encontró mirar la pantalla** y ningún test había visto: **el *service worker* de la PWA respondía toda navegación con `index.html`**, así que con la PWA instalada `GET /api/auth/login` y la vuelta de Google **nunca llegaban a la Lambda** y la SPA pintaba «Aquí no hay nada». Arreglo en `30d48c6`: `navigateFallbackDenylist: [/^\/api\//]`, un test del guardián que lo exige en `vite.config.ts` y **una comprobación en `check-bundle.mjs` sobre el `sw.js` generado**, para que un cambio del *plugin* pare el *build*. Queda para E2: la página manual y la de reemisión también son navegaciones bajo `/api/`, ya cubiertas.
+
+### 10.6 Desviaciones del plan, dichas
+
+- **Los dobles** viven en `packages/adapters/test/{aws,identity}/test-only-*.ts` y el servidor local en `apps/api/test/support/`, no en `tests/support/api/`: los tests de los adaptadores y los de la API los comparten, y `apps/api/tsconfig.test.json` los incluye por ruta. El guardián de «ningún doble alcanzable» mira los dos sitios (patrón `test-only-` y carpetas `test/`).
+- **La comprobación de la lista en cada petición con cookie es por el `sub`** (`subjectAllowed`): la cookie no lleva el correo (precisión de la dirección), así que el par entero se comprueba al emitir la sesión y en cada petición se pregunta que el `sub` siga teniendo entrada. Quitar la entrada cierra la sesión en la petición siguiente tras la caché. **Pregunta Q10** (§11).
+- **`login_attempt_invalid`**, un código de página más (cookie del intento mal firmada, de otro `typ` o repetida), distinto de `login_attempt_missing` (ausente o caducada): no plegar dos casos. Escrito en `docs/api.md` §3.1 como «a confirmar».
+- **`body_too_large` entra también en `REMOTE_FAILURE_CODES`**: las rutas de §5 pueden responderlo.
+- **El `device_id` en IndexedDB** va bajo la clave `web:device_id` del almacén `ledger`, fuera de `sync:*`: iniciar sesión nunca configura la sincronización.
+- **La API no tiene composición de producción** (`lambda.ts`): sin el SDK no hay nada que componer (Q4, pendiente del usuario).
+
+### 10.7 Tubería y gemelos
+
+`npm run lint`, `typecheck`, `test:coverage` (el dominio al 100 %) y `build` en verde sobre el commit congelado (salidas en `015-final-*.log` del *scratchpad*). Búsqueda de gemelos `.js` antes de cada lote y antes de la PR: ninguno. `git diff b3e2fcb -- tests/fixtures`: vacío (E1 no toca el libro ni la salida fiscal; la predicción fiscal es de E3).
+
+## 11. Preguntas nuevas de E1
+
+- **Q10 — La lista permitida en cada petición, por el `sub`.** Como ninguna cookie lleva el correo, en cada petición con cookie se comprueba que el `sub` de la sesión siga teniendo una entrada en la lista (§10.6). El par `{sub, email}` entero se comprueba al iniciar sesión. El caso que esto deja pasar: cambiar en la lista el correo de una entrada **manteniendo su `sub`** no cierra las sesiones vivas hasta que caducan (8 h). ¿Se acepta, o se quiere que la cookie lleve un hash del correo (no el correo) para comparar el par entero en cada petición?
+
+## 12. Respuestas de la dirección (2026-09-26)
+
+- **Q8: opción (a).** El código de la consola lleva **solo el `sub`**; en el canje, la API toma el correo de la lista permitida y **vuelve a comprobar el par entero**, y **se niega si el `sub` tiene dos entradas**. Se aplica en E2 (`data-model.md` §1.4 se pone al día al empezar E2).
+- **Q9: se confirma el cuarto valor, `unreadable`**, de `details.reason` en `device_forgotten`.
+- **P3 / Q4: el usuario autoriza instalar `@aws-sdk/client-s3`, `@aws-sdk/client-ssm` y `esbuild`, con la versión fijada, en E3**, y construir aquí el paquete de la Lambda. **No se instalan en E1.**
+- **Q10**: pendiente.
