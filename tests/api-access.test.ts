@@ -546,6 +546,37 @@ describe("architecture (015): the web cannot configure the sync before P2 and P3
   });
 });
 
+describe("architecture (015): the authoritative guard reads the graph of the bundle", () => {
+  /**
+   * The guards of this file read the sources; the one that decides reads the
+   * modules Rolldown put in the bundle (round 2 of the review of PR #90). It
+   * runs inside `npm run build`, so this only holds that it is there: the
+   * plugin that writes the graph, and each family it refuses.
+   */
+  it("writes the graph in the build and refuses each family on it", () => {
+    const config = readFileSync(join(repoRoot, "apps", "web", "vite.config.ts"), "utf8");
+    expect(config).toContain('name: "atlas-module-graph"');
+    expect(config).toContain('fileName: ".vite/atlas-modules.json"');
+    const script = readFileSync(
+      join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
+      "utf8",
+    );
+    for (const family of [
+      "el cliente o la orquestación de la sincronización",
+      "el motor de la sincronización",
+      "las reglas del acceso",
+      "un adaptador de Node de la API",
+      "el SDK de AWS",
+      "la API o la consola",
+      "un módulo de Node",
+      "un doble o código de test",
+      "del almacén de la sincronización, que solo se puede leer",
+    ]) {
+      expect(script).toContain(family);
+    }
+  });
+});
+
 describe("architecture (015): nothing of the access on the boot path", () => {
   it("lists every web module of the feature in LAZY_ONLY from its first commit", () => {
     const script = readFileSync(
