@@ -623,8 +623,16 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20;
  * `device_forgotten`, `remote_unavailable` and `body_too_large` (`errors`
  * +109); the rest is hash noise. The boot did not move (75.834, −9). The
  * trend: 272,2 → 273,3 → 275,6.
+ *
+ * **Feature 015, E2 (2026-09-26): measured 276,48 (283.119 bytes, +839 over
+ * the 282.280 of E1 closed), ceiling 277,0.** Raised **before** the commit
+ * that needs it (the lesson of E1, `questions.md` §10.4), inside the
+ * authorisation of Q1 (up to 304.640). All of it lazy: the card «Dispositivos
+ * de la consola» of Ajustes with its client (`ajustes` +859); the rest is
+ * hash noise (`ecb` +29, `index` +9). The boot: 75.852 against 75.869, +9 of
+ * the table of preloads. The trend: 272,2 → 273,3 → 275,6 → 276,5.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 276 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 277 * 1024;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
