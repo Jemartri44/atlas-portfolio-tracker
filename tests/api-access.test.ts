@@ -562,6 +562,28 @@ describe("architecture (015): the web cannot configure the sync before P2 and P3
   });
 });
 
+describe("architecture (015): the records of the tokens are never deleted nor labelled (T26)", () => {
+  /**
+   * ADR-0033, point 9: a record is written to create it and to revoke it, and
+   * never deleted; a label or a delete is a way to bring a revoked token back
+   * (B1). The narrow interface of SSM offers exactly four operations, and no
+   * source of the product names the others of the service.
+   */
+  it("offers get, putNew, overwrite and listByPath, and nothing else", () => {
+    const file = join(adaptersRoot, "src", "aws", "parameter-store.ts");
+    const members = [...parse(file).code.matchAll(/^\s{2}([a-zA-Z]+)\(/gm)].map(
+      (match) => match[1],
+    );
+    expect(members).toEqual(["get", "putNew", "overwrite", "listByPath"]);
+    const offenders = productSources().filter((path) =>
+      /DeleteParameters?|LabelParameterVersion|UnlabelParameterVersion|deleteParameter|labelParameter/.test(
+        parse(path).code,
+      ),
+    );
+    expect(offenders.map((path) => relative(repoRoot, path))).toEqual([]);
+  });
+});
+
 describe("architecture (015): the authoritative guard reads the graph of the bundle", () => {
   /**
    * The guards of this file read the sources; the one that decides reads the
