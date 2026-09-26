@@ -1237,3 +1237,179 @@ Escrito antes del primer commit de código de E3. Consultado el 2026-09-26 (Euro
 - `git diff 2a23ec3 -- tests/fixtures` sale vacío.
 - **Motivo**: E3 no añade ningún tipo ni campo al libro ni toca la proyección. La API escribe las líneas tal cual (`appendLines`), así que el libro sincronizado es byte a byte el que el cliente serializó.
 - Si algo se mueve, se para.
+
+## 24. E3 — la sincronización sobre HTTP (2026-09-26)
+
+Sobre `2a23ec3` (E2 fusionada). El bloque 0 y la predicción fiscal están en §23, escritos antes del primer commit de código.
+
+### 24.1 Lo que dejó la ronda 2 de la PR #95
+
+| Punto | Commit | Test (visto en rojo) | Mutante |
+|---|---|---|---|
+| R2-1: la reemisión no revoca el registro de su propio `code.tid` | `b453195` | dos canjes simultáneos del mismo código: uno 200 y otro 409, y queda exactamente un token vivo (rojo: 0 vivos) | R21, muerto |
+| R2-2: si fallan todas las revocaciones, el log lleva el `token_id` que queda vivo | `b453195` | S3 cae y SSM falla tres veces: el `503` lleva `token_id` (rojo: sin él) | R22, muerto |
+| R2-3: el lado que rechaza de `SAFE` | `28ba7bb` | `apps/api/test/log.test.ts` | LOG2: **sobrevive** sin `log.test.ts` y muere con él |
+| Residuo de N5: una emisión nueva no sustituye la entrada de otro origen | `364d655` | la consola se niega con `credentials_other_origin` y no escribe nada (rojo: salía 0) | N5r y N5d, muertos |
+| `vitest.config` excluye `dist-test-browser` | `b764b16` | `tests/test-outputs.test.ts` deriva todo `outDir` de los tsconfig (rojo: faltaba) | VX, muerto |
+
+**Lotes: 7 de 7 muertos.**
+
+### 24.2 Instalación
+
+- `a230868`: `@aws-sdk/client-s3@3.1141.0` y `@aws-sdk/client-ssm@3.1141.0`, versión exacta, en `packages/adapters`, y `esbuild@0.28.2` como dependencia de desarrollo de `apps/api`.
+- `docs/dependencies.md` recoge las tres con su versión y su justificación. Anota que `esbuild` trae su binario por plataforma en `optionalDependencies`, el riesgo que motivó excluir Tailwind; se acepta porque está presupuestado y solo corre en el *build* de la Lambda.
+- Un test fija las versiones y que `apps/api` no tiene otra dependencia externa.
+- **La autorización**: el usuario la dio en el chat a la dirección («no tengo problema ninguno en instalar lo que haga falta»), confirmada por la dirección el 2026-09-26. No se instaló nada más.
+
+### 24.3 Mapa bloque → commit
+
+- **Bloque 1**:
+  - `65a1d1b`: `S3LedgerBlob` bajo `BlobLedgerStore`, con el contrato de los otros almacenes y el doble de S3 con las cuatro salidas de §23.1.
+  - `87922f4`: los adaptadores finos del SDK, detrás de la puerta `@atlas/adapters/aws-sdk`, probados con clientes simulados, más el guardián de la lista cerrada de órdenes y sin borrado.
+- **Bloque 2** y datos de referencia (**bloque 3**):
+  - `d9a03fd`: las reglas en el dominio (`sync-routes.ts`, la política `sync` y los códigos 412, 422, 428 y `reference_name_invalid`).
+  - `7cd9fed`: las rutas en la API, con `AppendOnlyLedger` y dos tests de estructura (nada reescribe ni borra; ningún código de §5.2 en `apps/api`).
+  - Composición y paquete, `2dfb520`: `compose.ts`, `lambda.ts`, `scripts/build-lambda.mjs` y `tests/lambda-package.test.ts`. Construye un ZIP determinista y comprueba que no lleva tests ni dobles, que es idéntico dos veces y que Node lo carga y se niega a arrancar sin configuración.
+- **Bloque 4**:
+  - `0573ea2`: la lectura estricta de las respuestas (§7) y `LINE_REJECTION_CODES`.
+  - `beeaa3e`: el cliente HTTP (`@atlas/adapters/sync-http`).
+  - `2c24493`: `sync/remote.json`, el primero de la escritura de inicializar y unirse, con el test del corte entre los dos.
+  - `b19d2f9`: los estados S0-S3 y la entrada de cada orden, en el dominio.
+  - `c820fb0` y `abc691c`: el reparto de `where` y del doble de la consola.
+  - `b852217`: `atlas sync`.
+- **Bloque 5**:
+  - Puntos 2 y 4, `09e4eb1`: `redo_waits_for_unit`, la traducción entre unidades y `recordRedo`, más el test de estructura de quién lo importa.
+  - Puntos 1 y 3, `d0c9fbf`: las frases.
+  - Punto 6, `6edad07`.
+  - Punto 5, en `09e4eb1` (`correctEvent` sobre un libro ya inválido).
+  - Punto 7, `4c33112`.
+- **La comparación fiscal a través de la API**: `25ec6c0` y `8ced900`.
+- **Los dos supervivientes del lote de E3**: `ccdbd40`.
+
+### 24.4 Cómo se vio cada test en rojo
+
+- Los de rutas, cliente, dominio y consola se escribieron antes que su código: módulo inexistente o aserción fallida en la primera ejecución.
+- Los de `redo-across-units` fallaron primero con `startRedo` resolviendo en lugar de esperar.
+- Los de `archive-names`, con `ArchiveExistsError`.
+- `tests/messages.test.ts` falló con los siete códigos nuevos sin traducir en las dos interfaces.
+- Los de §24.1 y §24.6, como dice su tabla.
+
+### 24.5 Lo que se volvió a mirar alrededor
+
+- **R2-1**: la renovación y la emisión nueva no revocan nada más que su registro.
+- **El cambio de `ObjectStore`**: se añade `list`. Los tres dobles en línea de los tests de la API ganan su `list`.
+- **Las órdenes que archivan**: todas pasan ahora por `withArchiveNames` (`syncDevice` ya lo hacía a su manera).
+- **`PUT /api/ledger`**: la lectura previa del remoto era redundante (el mutante M31e sobrevivía por eso, §24.6) y se quita. Un remoto no vacío lo rechaza la propia escritura, con `appendLines` sobre el etag de cero bytes.
+
+### 24.6 Mutación
+
+**El lote de E3** (`scratchpad/015-e3-part1..6.json`): **55 mutantes, no 60** como dije en el informe anterior.
+- Se corrieron de uno en uno, detrás de la puerta de memoria, con `--pool=forks --maxWorkers=1`.
+- El guion afirma cada sustitución, restaura, compara byte a byte y compara `git status`.
+- **52 muertos a la primera. Tres supervivientes**:
+  - **M31e** (inicializar un remoto que no está vacío): equivalente, por la lectura redundante. Se quitó la lectura (§24.5), y el mutante ya no tiene dónde aplicarse.
+  - **M29q2** (no comparar `sync/remote.json` al escribir): test nuevo, «otra consola escribió `remote.json` entre la lectura y la escritura» → `ConflictError`. **Muerto** al repetirlo.
+  - **M-log** (el `token_id` fuera del log de una ruta de la sincronización): test nuevo en `sync.test.ts`. **Muerto** al repetirlo.
+- **Resultado final: 54 de 54 aplicables muertos.**
+
+Los mutantes, por familia del encargo:
+- **30, el adaptador de S3**: reserializar; escribir sin comparar; sobrescribir un archivo; el `409` de `If-Match` y el de `If-None-Match`; el `404` de `If-Match`; no mandar `If-Match`; un `403` por «no existe»; un `500` no transitorio; crear el registro con `Overwrite`.
+- **31, la API**: `If-Match` viejo; sin `428`; escribir detrás de la primera rechazada; reimplementar `acceptAppend`; reescribir en lugar de añadir; el `412` de un olvido cruzado; publicar sin comprobar el instante; un `If-Match` débil; bytes no UTF-8 como texto; arrancar con cualquier clave; el paquete con tests.
+- **32, los clientes**: sin `x-amz-content-sha256`, o sobre otros bytes; un 5xx leído como respuesta; un código desconocido que retiene; seguir una redirección; no comprobar el ETag; mandar la cookie con el token.
+- **33, los datos de referencia**: `..`; el prefijo fuera; el `W/` no reconocido.
+- **33 bis, el rehacer**: otro id; otro tipo; negado por lo que ya era inválido; `recordEvent` relajado; `recordRedo` alcanzable desde `add`; una corrección sin sus ids sellados.
+- **34, lo heredado**: terminar por parecido; no esperar a otra unidad; no traducir entre unidades; no reintentar el nombre del archivo.
+- **29 quater, `remote.json` y los estados**: después del marcador; no comparado; no barrido; en la web; S1 tomado por sincronizado; `init` tras desactivar; S1 con otro origen; S3 por deducción; terminar la inicialización sobre otros bytes; `join` o `init` sin `remote.json`; la consola sin terminar S0.
+
+**Las extensiones de la propiedad** (punto 7). Cada mutante se corrió **antes** (la propiedad de la 014, copiada del commit anterior a `4c33112`) y **después**:
+
+| Extensión | Mutante | Antes | Después |
+|---|---|---|---|
+| Unirse otra vez, repetido tras un corte | P3: una orden que archiva nunca toma el nombre siguiente | sobrevive | **muerto** |
+| Cortar la web | W3: la web escribe el libro en una transacción aparte | sobrevive | **muerto** |
+| Terminar con algo retenido | E1: una retenida de antes se queda también en la cola | sobrevive | sobrevive: **equivalente** (una línea retenida ya salió del libro al retenerla; excluirla otra vez es defensa en profundidad) |
+| Terminar con algo retenido | E2: confirmar deja la línea retenida | sobrevive | sobrevive: **transitorio** (la sincronización siguiente la saca de la cola, y el estado no llega al final) |
+| Terminar con algo retenido | P1: una retenida nueva se queda en la cola | muerto | muerto (no distingue) |
+| El ejercicio cerrado | C1: confirmar sin las presentaciones que toca | sobrevive | sobrevive; no pierde ninguna línea. **Lo matan** los recorridos y los tests del cliente |
+| Cortar la web | W1: la web da por hecha una escritura abortada; W2: no aborta ante una negativa | sobreviven | sobreviven; **equivalentes para la propiedad** (un aborto de IndexedDB deshace todo y no se pierde ninguna línea, criterio aceptado por la dirección). **Los matan** los tests unitarios del almacén web |
+
+**Dicho con honestidad: la extensión «terminar con algo retenido» no tiene todavía un mutante que solo ella mate.**
+- Llega al estado 117 veces de 240 y añade dos comprobaciones: que la réplica empiece por el remoto, y que una línea retenida no esté en la cola.
+- Los tres candidatos que probé no sirven: uno es equivalente, otro transitorio y el tercero no distingue.
+- Queda para la dirección si lo quiere antes de fusionar, o para la 018.
+
+**Cuántas veces llega cada extensión** (4 semillas × 60 corridas = 240):
+- terminar con algo retenido: 117;
+- cortes de la web: 122;
+- volver a unirse: 274, 66 de ellas repetidas tras un corte;
+- reescrituras del remoto: 152;
+- volver a descargar: 136;
+- ejercicio cerrado retenido: 11.
+
+### 24.7 La salida fiscal
+
+**Predicción (§23.6): no se mueve nada. Resultado: no se mueve nada.**
+- `apps/cli/test/sync/fiscal.test.ts` gana el caso «a ledger reordered by a sync through the API». Dos consolas sobre el mismo manejador con el doble de S3 se sincronizan con `atlas sync init`, `atlas sync join --from-remote` y `atlas sync`. El libro reordenado es byte a byte el remoto.
+- `tax` (con `--lots`, `--boxes` y `--json`), `gains`, `income`, `m720`, `m721` y `filed` dan los mismos bytes con `sync/` y sin él.
+- `git diff 2a23ec3 -- tests/fixtures` sale vacío.
+
+### 24.8 El paquete
+
+- **Web**: E3 solo toca el catálogo perezoso de errores (`errors`). **Arranque 75.836** (−9, ruido de la tabla; techo 75.869) y **total 283.285** (+127; techo 283.648). No hace falta subir nada.
+- **Lambda**: `apps/api/dist-lambda/index.mjs`, de unos 1,44 MB con el SDK, a partir de 1.173 entradas, y `lambda.zip`, de unos 277 KB.
+
+### 24.9 Decisiones propias, dichas (a confirmar por la dirección)
+
+- `ObjectStore` gana `list(prefix)`, que es `ListObjectsV2` con `Delimiter`: el primer nivel, todas las páginas. Lo usan la lista de dispositivos y el índice de referencia.
+- En S3, archivar y escribir el libro son dos escrituras condicionales, no un solo paso. Si otro escritor gana entre las dos, queda un archivo que es copia exacta de lo que fue el libro, y nunca se sobrescribe. Está dicho en el comentario de `s3-ledger.ts` y lo prueba un test.
+- `GET /api/ledger` devuelve el cuerpo en base64 solo si los bytes no son UTF-8 válido.
+- `If-Match` solo se acepta como `"<sha256>"` fuerte: débil, sin comillas, una lista o `*` dan `412`.
+- `PUT /api/sync/devices/self` rechaza con `body_invalid` y `reason: last_sync_at` un `last_sync_at` que no sea un instante. Si lo aceptara, dejaría un objeto que ninguna petición volvería a leer.
+- Los códigos propios de la consola para elegir entrada: `sync_remote_unknown`, `sync_credential_missing`, `sync_already_configured`, `sync_remote_mismatch`, `sync_origin_missing`, `init_remote_not_empty` e `init_remote_not_this_ledger`. Solo los dice la consola; E4 los llevará a la web si hacen falta.
+- `atlas sync redo` enseña el plan (el borrador en JSON y los ids sellados) y pide confirmación. Sin terminal y sin `--yes` sale con 4, sin registrar nada.
+- El paquete de la Lambda toma las compilaciones ESM del SDK (`mainFields: module, main`), que bajan de 2,1 a 1,4 MB. Lleva además un `createRequire` en la cabecera para los módulos del SDK que todavía piden `require`.
+
+### 24.10 Documentos (para que los traslade la dirección)
+
+- **`docs/api.md`**:
+  - §5.5: quitar el SIN VERIFICAR (verificado en §23.1).
+  - §5.1: la respuesta en base64 si los bytes no son UTF-8.
+  - §5.2 y §5.5: el `If-Match` fuerte.
+  - §5.3: `reason: last_sync_at`.
+  - §6: el `W/` en `If-None-Match`.
+- **`docs/data-schema.md` §1**: `sync/remote.json` implementado, y su temporal en el barrido.
+- **La 017**:
+  - `s3:ListBucket` que cubra `ledger/` (§23.1);
+  - `s3:GetObject` en `archive/`: **no hace falta**, la API nunca archiva;
+  - el artefacto es `apps/api/dist-lambda/lambda.zip`, con el *handler* `index.handler`.
+- **La 018**:
+  - la prueba real de si un `s3:ListBucket` con la condición `s3:prefix` convierte el `403` en `404`;
+  - la carrera real de dos `PutObject` condicionales.
+
+### 24.11 La máquina y las paradas
+
+- Otros proyectos de la máquina (dos Gradle y el emulador de Android) dejaron la memoria disponible oscilando entre 500 y 3.500 MB.
+- El sistema paró cuatro ejecuciones en segundo plano. Ninguna perdió nada:
+  - el lanzador restaura con `git checkout` cualquier fuente que quede mutado, y lo dice;
+  - se reanuda solo lo que falta;
+  - cada veredicto se guarda en cuanto se conoce.
+- Desde la decisión de la dirección, todo corre con `--pool=forks --maxWorkers=1`, y la propiedad con `NODE_OPTIONS=--max-old-space-size=1536`, detrás de una puerta que espera a tener 1.500 MB disponibles.
+
+### 24.12 Tubería y congelado
+
+Sobre `ccdbd40`, el último commit de código. El congelado solo añade esta sección a `questions.md`, que ningún test lee. Todo con `--pool=forks --maxWorkers=1`.
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage -- --pool=forks --maxWorkers=1` | 0 | 301 ficheros y 2.975 tests en 796 s. El dominio al 100 %: sentencias 8.263/8.263, ramas 4.946/4.946, funciones 1.849/1.849. Ningún `ECONNREFUSED` |
+| la misma, repetida a continuación | 0 | 2.975 tests en 795 s. Ningún `ECONNREFUSED` |
+| `npm run build` | 0 | Arranque 75.836 y total 283.285. La Lambda, 1.442.157 bytes |
+
+- **Ningún test falló solo por el tiempo**, ni con la máquina cargada. No se subió ningún plazo.
+- Ningún gemelo `.js`.
+- `git diff 2a23ec3 -- tests/fixtures` está vacío.
+- El paso de la CI con `upload-artifact` sigue fuera de la rama, a la espera del permiso `workflow`.
+
+**Commit congelado de E3: el que contiene esta sección.** Su SHA va en la PR de E3. Desde aquí no se empuja nada mientras dura la revisión.
