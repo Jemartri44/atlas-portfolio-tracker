@@ -1048,3 +1048,94 @@ Tal como llegaron, con lo que se hizo con cada una.
 **Tubería**: `npm run lint` 0 y `npm run typecheck` 0 antes de cada empuje. La CI `verify` va en el comentario de la PR #95. Los cambios de esta sección son solo de documentos. El código es el de `38f8555`, con `test:coverage` dos veces en 0 y `build` en 0 (§20.11).
 
 **Commit congelado: el que contiene esta sección.** Su SHA va en la PR #95. Desde aquí no se empuja nada mientras dura la revisión.
+
+## 22. Decisiones de la dirección sobre las revisiones de la PR #95 (2026-09-26)
+
+Tal como llegaron, con lo que se hizo con cada una y el commit que lo lleva. Las dos revisiones se hicieron sobre el congelado `a6c5367`.
+
+### 22.1 Seguridad
+
+- **B1. `sentinels.test.ts` se extiende a las 5 rutas nuevas** (la reemisión, la renovación y la lista incluidas) y a sus caminos de fallo, con un registro de token cuyo `sub`, `email` y `secret_sha256` son centinelas. **Hecho en `c23c183`**:
+  - siembra un registro `SOWN` con `secret_sha256` centinela (`5e…`), el `sub` y el correo centinelas, y un objeto de dispositivo de consola;
+  - recorre el inicio, las vueltas (*loopback*, manual, reemisión, dispositivo inexistente), los canjes (emisión, repetición, renovación, token falsificado, cuerpo mal formado, SSM limitado, S3 caído), las revocaciones de la consola, la lista y la revocación de la web;
+  - comprueba que ningún centinela, ningún secreto y ningún *hash* aparece en los registros, y que las 5 rutas y los códigos de resultado sí aparecen.
+  - **Lo que encontró**: el registro tiraba la plantilla de ruta `/api/devices/tokens/{token_id}/revoke`, porque la expresión `SAFE` de `apps/api/src/log.ts` no admitía `{}`. **Corregido en `85d76ae`**. Por eso `c23c183` está en rojo por sí solo y pasa desde `85d76ae`; se deja anotado, sin reescribir la historia.
+- **N1. El canje lee `tokens.read(code.tid)` antes de revocar nada**; si el registro existe, responde `409 console_code_used` sin escribir. **Hecho en `8e5b86a`**, con tests de repetición para la emisión, la renovación y la reemisión: cada uno comprueba que el número de escrituras en SSM no cambia, y la reemisión, además, que el token recién entregado sigue sin `revoked_at`.
+- **N2. No se toca aquí.** **Hecho en `73cdb64`**: la entrada de la 017 en `docs/decision-roadmap.md` lleva una regla de límite de ritmo del WAF sobre `/api/*` y la concurrencia reservada, porque protegen la cuota de SSM compartida (ADR-0034).
+- **N3. Hecho en `73cdb64`**: la lista de la 018 lleva comprobar que el `GetParameter` justo después de revocar ya lee el valor nuevo.
+- **N4. La consola comprueba la carpeta `~/.config/atlas` como `packages/adapters/src/prices/secrets.ts`** (`mode & 0o077`, salvo en Windows) y avisa si no es `700`: «…ciérrala con chmod 700.». **Hecho en `8f7b0d4`**; `78155ef` añade los casos de solo el grupo (`750`) y solo los demás (`705`), y el de `700` sin aviso.
+- **N5. La respuesta del canje se valida con las reglas del dominio antes de guardarla** (`isCredentialEntry`, exportada ahora desde `@atlas/domain/access`), y en la renovación o la reemisión el `device_id` devuelto tiene que ser el pedido. Si no, no se escribe nada y sale `Error (console_response_invalid): …` con el código de salida de dominio. **Hecho en `8f7b0d4`** (y `c955f15` para la función del dominio).
+- **N7. Hecho**: la descripción de la PR #95 dice ahora, en su primer punto, que la PR lleva también los retoques de la ronda 5 de la PR #90 (`67007c1`), que no son de E2.
+
+### 22.2 Corrección
+
+- **B1. Hecho en `8e5b86a`**: el test de la reemisión siembra un token vivo de **otro** dispositivo (`OTHEROTHEROTHEROTHEROT`) y comprueba que su registro no cambia y que no se escribe nada sobre él. Mata `listed.read.device_id === code.rdid` → `true`.
+- **B2. Hecho en `8e5b86a`**: `other_subject`, `403 not_allowed` sin escribir nada (la lista con dos entradas, el token de una y el código de la otra). Mata `if (previous.sub !== code.sub)` → `if (false)`.
+- **N1. Aviso preciso. Hecho en `c955f15`** (dominio) **y `8f7b0d4`** (consola): `expiryWarning` devuelve `"expired"` solo cuando `expires_at <= ahora`, y `0` cuando queda menos de un día; la consola dice «Caduca en menos de un día» y «Ha caducado» solo si ha caducado. Tests con 23 h, 1 h, 25 h, un milisegundo antes y el instante exacto.
+- **N2. Hecho en `8f7b0d4`**: toda escritura de `credentials.json` pasa por `updateCredentials`, que relee el fichero justo antes de escribir y aplica solo el cambio de esta orden. El test escribe la entrada de otra terminal mientras la consola espera al navegador, y comprueba que las tres entradas quedan.
+- **N3. Hecho en `8e5b86a`**: si `devices.create` lanza, el token recién creado se revoca (hasta tres intentos, tragando sus errores) y se relanza el fallo original, que responde `503 remote_unavailable` con la dependencia `s3`. La colisión también revoca por ese camino. Tests del fallo y de la colisión en `8e5b86a`; `78155ef` añade el reintento (dos fallos de SSM y el tercer intento revoca; tres fallos y la respuesta sigue diciendo `s3`).
+- **N4. Hecho en `43b3085`**: `docs/api.md:135` dice lo de §21 (uso único aceptado por deducción, prueba real en la 018) y que la repetición se responde antes de revocar.
+- **N5. Hecho en `43b3085`**: `token_expiry_warning_days` (14) en `docs/data-schema.md:28`.
+- **N6. Hecho en `8e5b86a`** (`renewal_and_reissue` y `token_unreadable`) **y `8f7b0d4`** (borrar la entrada local tras `device_token_revoked`).
+- **N7. Hecho en `8e5b86a`**: en la reemisión, el registro guarda el nombre del objeto del dispositivo, el que el usuario confirmó, no `code.dn`. Test: el registro y la respuesta dicen «sobremesa».
+- **N8.** El *chunk* `ajustes` se queda como está.
+
+### 22.3 Cómo se vio cada test en rojo
+
+- Los mutantes de los revisores (S1-S7) se reprodujeron **sobre `a6c5367`, antes de tocar nada**: los 7 **sobrevivieron** (registros en el *scratchpad*, `r95b/`).
+- Los tests nuevos se corrieron contra el código viejo antes de cada corrección: en la API, 3 en rojo (repetición, fallo de S3, nombre de la reemisión); en la consola, 5 (N1, N2, N4, y los dos de N5); en el dominio, 3 (los casos de horas y `isCredentialEntry`).
+- Los dos tests de `78155ef` (reintento de la revocación y bits del grupo) se añadieron porque sus mutantes (N3b, N3c, N4b) no tenían quien los matara; se vieron sobrevivir con los tests de `73cdb64` y morir con los de `78155ef`.
+
+### 22.4 Mutación, después de las correcciones
+
+Sobre `78155ef`, con `mutate-015.mjs` (lote `r95-after-015.json` del *scratchpad*; la selección de tests del dominio, los adaptadores, la API, la consola y la web). **20 de 20 muertos.**
+
+| Id | Mutante | Antes | Después |
+|---|---|---|---|
+| S1 | el aviso cuenta el día con `Math.ceil` | sobrevive (`a6c5367`) | muerto |
+| S1b | «caducado» solo estrictamente después del instante (`<= 0` → `< 0`) | — (código nuevo) | muerto |
+| S1c | la consola dice «0 días» en vez de «menos de un día» | — (código nuevo) | muerto |
+| S2 | la reemisión revoca los tokens de cualquier dispositivo | sobrevive (`a6c5367`) | muerto |
+| S3 | la renovación no comprueba el `sub` | sobrevive (`a6c5367`) | muerto |
+| S4 | renovar y reemitir a la vez | sobrevive (`a6c5367`) | muerto |
+| S5 | se conserva la entrada revocada tras renovar | sobrevive (`a6c5367`) | muerto |
+| S6 | la colisión sin revocar el token nuevo | sobrevive (`a6c5367`) | muerto |
+| S7 | `token_unreadable` confundido con `token_missing` | sobrevive (`a6c5367`) | muerto |
+| N1s | sin la lectura previa: la repetición revoca antes de responder | tests en rojo sobre el código viejo | muerto |
+| N3a | el fallo de `devices.create` deja el token vivo | tests en rojo sobre el código viejo | muerto |
+| N3b | la revocación se intenta una sola vez | sobrevive (tests de `73cdb64`) | muerto |
+| N3c | un fallo al revocar tapa el fallo de S3 | sobrevive (tests de `73cdb64`) | muerto |
+| N7 | la reemisión guarda el nombre propuesto (`code.dn`) | tests en rojo sobre el código viejo | muerto |
+| N2 | se escribe sobre la instantánea leída antes del navegador | tests en rojo sobre el código viejo | muerto |
+| N4a | sin aviso por la carpeta abierta | tests en rojo sobre el código viejo | muerto |
+| N4b | solo se miran los bits de los demás (`0o007`) | sobrevive (tests de `73cdb64`) | muerto |
+| N5a | se guarda la respuesta sin las reglas del fichero | tests en rojo sobre el código viejo | muerto |
+| N5b | se guarda una renovación de otro dispositivo | tests en rojo sobre el código viejo | muerto |
+| LOG | la expresión `SAFE` sin `{}` tira la plantilla de ruta | el test de centinelas en rojo (`c23c183`) | muerto |
+
+Cada mutante se restaura y se compara byte a byte, con `git status` igual antes y después.
+
+### 22.5 Notas de honestidad
+
+- `c23c183` (los centinelas) está en rojo por sí solo: el test encontró el fallo del registro, que se corrige en el commit siguiente, `85d76ae`.
+- `8e5b86a` junta varias correcciones del canje (N1 de seguridad, B1, B2, N3, N6 y N7 de corrección), porque tocan la misma función y sus tests comparten el mismo bloque.
+- `43b3085` debía llevar también la hoja de ruta; solo lleva `docs/api.md` y `docs/data-schema.md`. La hoja de ruta va en `73cdb64`.
+- Todos los commits de esta ronda pasaron `lint` y `typecheck` en 0 antes de empujarlos.
+
+### 22.6 Tubería y congelado
+
+Sobre `78155ef`, el último commit de código. El congelado solo añade esta sección a `questions.md`, que ningún test lee.
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage` | 0 | 287 ficheros, 2.852 tests, 390 s; el dominio al 100 % (sentencias 8.125/8.125, ramas 4.808/4.808, funciones 1.812/1.812); ningún `ECONNREFUSED` |
+| `npm run test:coverage`, repetida a continuación | 0 | 2.852 tests, 443 s; ningún `ECONNREFUSED` |
+| `npm run build` | 0 | Arranque 75.845 y total 283.158 bytes gzip, los mismos que en `a6c5367`: esta ronda no toca la web |
+
+- `git diff 490f0e1 -- tests/fixtures` sigue vacío.
+- El paso de la CI con `upload-artifact` sigue fuera de la rama, a la espera del permiso `workflow`.
+- La CI `verify` va en el comentario de la PR #95.
+
+**Commit congelado: el que contiene esta sección.** Su SHA va en la PR #95. Desde aquí no se empuja nada mientras dura la revisión.
