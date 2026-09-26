@@ -5,6 +5,9 @@
   "description": "The Lambda behind CloudFront under /api/*: composes the domain and the adapters, decides nothing (ADR-0026, ADR-0027, ADR-0033).",
   "license": "MIT",
   "type": "module",
+  "scripts": {
+    "build": "node scripts/build-lambda.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
