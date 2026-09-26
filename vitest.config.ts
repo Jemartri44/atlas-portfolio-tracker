@@ -18,6 +18,7 @@ export default defineConfig({
       "@atlas/adapters/access": local("./packages/adapters/src/access/crypto.ts"),
       "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),
       "@atlas/adapters/sync-client": local("./packages/adapters/src/sync/client.ts"),
+      "@atlas/adapters/sync-http": local("./packages/adapters/src/sync/http-remote.ts"),
       "@atlas/adapters/sync": local("./packages/adapters/src/ledger-store/browser/sync-store.ts"),
       "@atlas/adapters/reference": local(
         "./packages/adapters/src/ledger-store/browser/reference.ts",

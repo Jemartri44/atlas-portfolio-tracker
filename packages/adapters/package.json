@@ -54,6 +54,10 @@
       "types": "./dist/sync/client.d.ts",
       "import": "./dist/sync/client.js"
     },
+    "./sync-http": {
+      "types": "./dist/sync/http-remote.d.ts",
+      "import": "./dist/sync/http-remote.js"
+    },
     "./aws": {
       "types": "./dist/aws/index.d.ts",
       "import": "./dist/aws/index.js"
