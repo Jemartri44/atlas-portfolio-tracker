@@ -35,9 +35,11 @@ const SCREENS: readonly [string, () => JSX.Element, string?][] = [
 /**
  * Eight whole screens rendered with the styles, twice: under coverage on a
  * loaded machine it went past the five seconds Vitest gives by default (review
- * of PR #90, round 2) with nothing wrong in it, so it gets a budget of its own.
+ * of PR #90, round 2) with nothing wrong in it, so it gets a budget of its own:
+ * six times what it measures, enough for the load and still a warning if it
+ * ever becomes much slower (round 3).
  */
-const RENDER_BUDGET_MS = 60_000;
+const RENDER_BUDGET_MS = 30_000;
 
 describe("the grid", () => {
   for (const width of [1024, 1280]) {
