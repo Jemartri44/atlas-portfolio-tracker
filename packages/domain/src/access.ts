@@ -22,6 +22,7 @@ export {
   refusal,
 } from "./access/codes.js";
 export {
+  API_CONFIG_CEILINGS,
   API_CONFIG_VARIABLES,
   type ApiConfig,
   parseApiConfig,

@@ -4,7 +4,11 @@
 
 import { describe, expect, it } from "vitest";
 import { isAllowed, parseAllowList, subjectAllowed } from "../../src/access/allow-list.js";
-import { parseApiConfig, TOKEN_CEILING_DAYS } from "../../src/access/config.js";
+import {
+  API_CONFIG_CEILINGS,
+  parseApiConfig,
+  TOKEN_CEILING_DAYS,
+} from "../../src/access/config.js";
 import {
   deviceKey,
   deviceRefusal,
@@ -304,6 +308,22 @@ describe("the configuration of the Lambda (R30; ADR-0033, point 7)", () => {
       "ATLAS_LOGIN_TTL_SECONDS",
       "not_a_positive_integer",
     );
+  });
+
+  it("never admits a duration or a cache above its ceiling fixed in the code (S4)", () => {
+    const ceilings: [string, number][] = [
+      ["ATLAS_SESSION_TTL_SECONDS", 86_400],
+      ["ATLAS_LOGIN_TTL_SECONDS", 1_800],
+      ["ATLAS_CONSOLE_CODE_TTL_SECONDS", 900],
+      ["ATLAS_ALLOW_LIST_CACHE_SECONDS", 3_600],
+      ["ATLAS_SECRETS_CACHE_SECONDS", 3_600],
+    ];
+    expect(API_CONFIG_CEILINGS).toEqual(Object.fromEntries(ceilings));
+    for (const [variable, ceiling] of ceilings) {
+      expect(() => parseApiConfig({ ...ENV, [variable]: String(ceiling) })).not.toThrow();
+      fails({ ...ENV, [variable]: String(ceiling + 1) }, variable, "above_ceiling");
+      fails({ ...ENV, [variable]: "999999999" }, variable, "above_ceiling");
+    }
   });
 
   it("never admits a token lifetime above the ceiling fixed in the code", () => {

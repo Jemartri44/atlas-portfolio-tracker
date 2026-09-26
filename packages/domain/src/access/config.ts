@@ -13,6 +13,24 @@ import { ValidationError } from "../errors.js";
  */
 export const TOKEN_CEILING_DAYS = 120;
 
+/**
+ * The ceilings of the other durations and caches, **fixed in the code** too
+ * (S4 of the review of PR #90): a typo of zeros in Terraform must stop the
+ * Lambda, not issue sessions of years or keep a withdrawn entry of the allow
+ * list alive for days in every warm instance. ADR-0027 asks for a short
+ * session and a cache of a few minutes; these are the outer limits, not the
+ * settings (`docs/api.md` §9).
+ */
+export const API_CONFIG_CEILINGS = {
+  ATLAS_SESSION_TTL_SECONDS: 24 * 3600,
+  ATLAS_LOGIN_TTL_SECONDS: 30 * 60,
+  ATLAS_CONSOLE_CODE_TTL_SECONDS: 15 * 60,
+  ATLAS_ALLOW_LIST_CACHE_SECONDS: 3600,
+  ATLAS_SECRETS_CACHE_SECONDS: 3600,
+} as const;
+
+const CEILING_OF: Readonly<Record<string, number>> = API_CONFIG_CEILINGS;
+
 export interface ApiConfig {
   readonly env: "dev" | "prod";
   /** `/atlas/<env>/`, where every parameter of this environment lives (ADR-0034, row 3). */
@@ -83,7 +101,12 @@ export const parseApiConfig = (env: Readonly<Record<string, string | undefined>>
     if (!/^[1-9]\d{0,8}$/.test(text)) {
       throw invalid(variable, "not_a_positive_integer");
     }
-    return Number(text);
+    const value = Number(text);
+    const ceiling = CEILING_OF[variable];
+    if (ceiling !== undefined && value > ceiling) {
+      throw invalid(variable, "above_ceiling");
+    }
+    return value;
   };
   const tokenLifetimeDays = number("ATLAS_TOKEN_LIFETIME_DAYS");
   if (tokenLifetimeDays > TOKEN_CEILING_DAYS) {
