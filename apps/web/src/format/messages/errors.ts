@@ -56,6 +56,10 @@ export const REMOTE_FAILURES: Readonly<Record<string, string>> = {
   init_rejected: "la nube no ha aceptado tus datos para empezar.",
   not_found: "esa ruta de la nube no existe; es un fallo de la aplicación.",
   internal: "la nube ha tenido un fallo interno y no ha escrito nada.",
+  device_forgotten:
+    "este navegador fue olvidado como dispositivo: vuelve a iniciar sesión y recibirá uno nuevo.",
+  remote_unavailable: "la nube no está disponible ahora mismo: inténtalo de nuevo en unos minutos.",
+  body_too_large: "la petición era demasiado grande para la nube; no se ha escrito nada.",
   transport_rejected: "la red ha rechazado la petición antes de llegar a la nube.",
   network_failed: "no hay conexión con la nube.",
 };

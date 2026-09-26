@@ -2,7 +2,7 @@
 
 Atlas no tendrá usuario ni contraseña propios: **se entrará solo con tu cuenta personal de Google** (ADR-0027). La web y la API aceptan a quien Google diga que eres, si figura en la lista permitida, y el token de la consola solo se emite al final de un inicio de sesión con Google (ADR-0033). **Esa cuenta es la llave de todo tu libro.**
 
-Y hoy Atlas **no puede comprobar** que esa cuenta tenga la verificación en dos pasos activada, ni impedir que Google recuerde un navegador (ADR-0027, «Lo que se pierde frente a Cognito»). La feature 015 comprobará si Google permite exigirla al emitir el token de la consola (ADR-0033, punto 2: `amr` con `mfa`, SIN VERIFICAR); esa comprobación, si llega, es solo para emitir ese token. Por eso tenerla activada es un **requisito tuyo**, previo al despliegue (`docs/decision-roadmap.md`, Ronda 8, «Plan por etapas», etapa 3). Esta guía te lleva por ella en unos 20 minutos.
+Y hoy Atlas **no puede comprobar** que esa cuenta tenga la verificación en dos pasos activada, ni impedir que Google recuerde un navegador (ADR-0027, «Lo que se pierde frente a Cognito»). La feature 015 comprobó (2026-09-25) si Google permite exigirla al emitir el token de la consola (ADR-0033, punto 2: `amr` con `mfa`): **no se puede exigir en la práctica**. Google solo entrega `amr` a una aplicación publicada y verificada por Google con una función en Beta activada, y aun así puede no venir; tampoco admite forzar que vuelvas a autenticarte. Atlas **no lo pide ni lo exige** (ADR-0033, nota del 2026-09-25 sobre `mfa`). Por eso tenerla activada es un **requisito tuyo**, previo al despliegue (`docs/decision-roadmap.md`, Ronda 8, «Plan por etapas», etapa 3). Esta guía te lleva por ella en unos 20 minutos.
 
 **Dos reglas:**
 

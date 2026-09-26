@@ -1,0 +1,21 @@
+{
+  "name": "@atlas/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Lambda behind CloudFront under /api/*: composes the domain and the adapters, decides nothing (ADR-0026, ADR-0027, ADR-0033).",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@atlas/adapters": "0.1.0",
+    "@atlas/domain": "0.1.0"
+  }
+}

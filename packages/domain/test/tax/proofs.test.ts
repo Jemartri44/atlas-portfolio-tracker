@@ -136,16 +136,29 @@ const synthetic = (): LedgerEvent[] =>
 
 const YEARS = [2026, 2027, 2028, 2029];
 
+/**
+ * Sixteen whole reports of the synthetic ledger: about five seconds under
+ * coverage on a loaded machine, the default budget of Vitest. It timed out
+ * once in the full suite (review of PR #90, round 2) with nothing wrong in it,
+ * so it gets a budget of its own: six times what it measures, enough for the
+ * load and still a warning if it ever becomes much slower (round 3).
+ */
+const SYNTHETIC_BUDGET_MS = 30_000;
+
 describe("proof 1: no figure of the return depends on a price", () => {
-  it("deletes every price of the synthetic ledger and every report is identical", () => {
-    const events = synthetic();
-    const stripped = withoutPrices(events);
-    expect(stripped.length).toBeLessThan(events.length);
-    for (const year of YEARS) {
-      expect(json(stripped, year)).toBe(json(events, year));
-      expect(boxesJson(stripped, year)).toBe(boxesJson(events, year));
-    }
-  });
+  it(
+    "deletes every price of the synthetic ledger and every report is identical",
+    () => {
+      const events = synthetic();
+      const stripped = withoutPrices(events);
+      expect(stripped.length).toBeLessThan(events.length);
+      for (const year of YEARS) {
+        expect(json(stripped, year)).toBe(json(events, year));
+        expect(boxesJson(stripped, year)).toBe(boxesJson(events, year));
+      }
+    },
+    SYNTHETIC_BUDGET_MS,
+  );
 
   it("deletes every price of the hand-computed exercise and every report is identical", () => {
     const { events } = exerciseLedger();

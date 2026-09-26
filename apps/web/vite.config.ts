@@ -10,12 +10,110 @@
 //    FileLedgerStore. Only the subpaths are aliased, and both the architecture
 //    test and scripts/check-bundle.mjs verify it on the real output.
 
+import { existsSync, realpathSync } from "node:fs";
+import { isAbsolute, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import solid from "vite-plugin-solid";
 
 const repo = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
+const repoRoot = realpathSync(repo("../../"));
+
+/**
+ * A module id as the guard compares it: without the `\0` of a virtual module
+ * and without its query (`?raw`, `?url`, `?worker&inline`, which travels
+ * apart), and **after `realpath`**, relative to the repository — so no alias,
+ * no `preserveSymlinks` and no `node_modules/@atlas/…` can make a file of a
+ * package look like another path (round 3 of the review of PR #90).
+ */
+const normalise = (raw: string): { id: string; query: string } => {
+  const bare = raw.replace(/^\0/, "");
+  const at = bare.indexOf("?");
+  const path = at === -1 ? bare : bare.slice(0, at);
+  const query = at === -1 ? "" : bare.slice(at + 1);
+  if (!isAbsolute(path)) {
+    return { id: path, query };
+  }
+  const real = existsSync(path) ? realpathSync(path) : path;
+  return { id: relative(repoRoot, real).replaceAll("\\", "/"), query };
+};
+
+interface Graph {
+  readonly chunks: readonly {
+    readonly file: string;
+    readonly entry: string | null;
+    readonly modules: readonly {
+      readonly id: string;
+      readonly query: string;
+      readonly bytes: number;
+      readonly exports: readonly string[];
+    }[];
+  }[];
+  readonly assets: readonly { readonly file: string; readonly sources: readonly string[] }[];
+}
+
+/** The graphs of the workers, filled while the main build transforms their imports. */
+const workerGraphs: Graph[] = [];
+
+/**
+ * **The real graph of the bundle**, for the authoritative guard (rounds 2 and
+ * 3 of the review of PR #90): every module Rolldown put in every chunk, with
+ * the bytes it renders and the names the bundle uses of it, and every asset
+ * with the files it comes from, written next to the output for
+ * `scripts/check-bundle.mjs` to read. **The workers are other builds**: the
+ * same plugin goes in `worker.plugins`, and their graphs travel inside the
+ * one of the main build, which runs after them. The static guards of
+ * `tests/api-access.test.ts` read the sources and are a quick warning; what
+ * the browser can download is decided here, and a module the web must not
+ * reach — however it got in: a relay, a relative path, `require`,
+ * `import.meta.glob`, a string, a worker, a query, an alias — is in this list
+ * or it is not in the bundle. Never precached nor served: `.json` is not among
+ * the patterns of the service worker, and the deploy (017) leaves `.vite/` out
+ * like Vite's own manifest.
+ */
+const moduleGraph = (build: "main" | "worker"): Plugin => ({
+  name: `atlas-module-graph-${build}`,
+  apply: "build",
+  buildStart() {
+    if (build === "main") {
+      workerGraphs.length = 0;
+    }
+  },
+  generateBundle(_options, bundle) {
+    const graph: Graph = {
+      chunks: Object.values(bundle)
+        .filter((output) => output.type === "chunk")
+        .map((chunk) => ({
+          file: chunk.fileName,
+          entry: chunk.facadeModuleId === null ? null : normalise(chunk.facadeModuleId).id,
+          modules: chunk.moduleIds.map((id) => ({
+            ...normalise(id),
+            bytes: chunk.modules[id]?.renderedLength ?? 0,
+            exports: chunk.modules[id]?.renderedExports ?? [],
+          })),
+        })),
+      assets: Object.values(bundle)
+        .filter((output) => output.type === "asset")
+        .map((asset) => ({
+          file: asset.fileName,
+          // Relative to the root of the web when they are not absolute.
+          sources: asset.originalFileNames.map(
+            (source) => normalise(isAbsolute(source) ? source : repo(`./${source}`)).id,
+          ),
+        })),
+    };
+    if (build === "worker") {
+      workerGraphs.push(graph);
+      return;
+    }
+    this.emitFile({
+      type: "asset",
+      fileName: ".vite/atlas-modules.json",
+      source: `${JSON.stringify({ ...graph, workers: workerGraphs }, null, 1)}\n`,
+    });
+  },
+});
 
 /**
  * Production CSP (constitution, security; ADR-0017). The dev server needs inline
@@ -58,6 +156,7 @@ export default defineConfig(({ command }) => ({
       transformIndexHtml: (html: string): string =>
         command === "serve" ? html.replace(PRODUCTION_CSP, DEVELOPMENT_CSP) : html,
     },
+    moduleGraph("main"),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png"],
@@ -90,6 +189,11 @@ export default defineConfig(({ command }) => ({
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
         // The ledger lives on the device: nothing to fetch, nothing to fall back to.
         navigateFallback: "index.html",
+        // Except under /api/: the sign-in (`/api/auth/login`) and the return
+        // from Google are navigations the Lambda must answer. Found on the
+        // screen in feature 015: with the service worker installed, the SPA
+        // painted «Aquí no hay nada» instead of going to Google.
+        navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
       },
       devOptions: { enabled: false },
@@ -105,6 +209,9 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
       "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),
+      "@atlas/adapters/web-device": repo(
+        "../../packages/adapters/src/ledger-store/browser/web-device.ts",
+      ),
       "@atlas/adapters/sync-client": repo("../../packages/adapters/src/sync/client.ts"),
       "@atlas/adapters/sync": repo(
         "../../packages/adapters/src/ledger-store/browser/sync-store.ts",
@@ -123,9 +230,21 @@ export default defineConfig(({ command }) => ({
       "@atlas/adapters/random": repo("../../packages/adapters/src/random/web-crypto.ts"),
     },
   },
+  // The workers are built apart; their graph goes to the guard like the rest.
+  worker: { plugins: () => [moduleGraph("worker")] },
   build: {
     target: "es2022",
     sourcemap: true,
+    /*
+     * **A source of code is never inlined** (round 4 of the review of PR #90,
+     * V3-inline). `new URL("…", import.meta.url)` makes the file an asset, and
+     * Vite inlines an asset under 4 KiB as a `data:` URL instead of emitting
+     * it: the text of a vetoed source then travelled inside a chunk, out of
+     * every graph. Emitted, it is a file `check-bundle.mjs` refuses. Anything
+     * else keeps the default of Vite (`undefined`).
+     */
+    assetsInlineLimit: (filePath: string): boolean | undefined =>
+      /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)(\?|$)/.test(filePath) ? false : undefined,
     // No `minify: "esbuild"` here on purpose (see the header).
     chunkSizeWarningLimit: 300,
     rollupOptions: {

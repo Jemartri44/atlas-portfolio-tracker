@@ -6,6 +6,8 @@ El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a tr
 
 **Puesto al día el 2026-09-25, al cerrar la feature 014** (PR #83). Sigue sin haber HTTP, pero la semántica de §5 ya está escrita y probada como código puro del dominio, el que llamará la Lambda de la 015: `parseAppendBody`, `acceptAppend`, `parsePublishBody`, `parseInitBody`, `acceptInit` e `initDuplicateIds` (`packages/domain/src/sync/remote.ts`), sobre el puerto `RemoteLedger` (`packages/domain/src/ports/remote-ledger.ts`). Los dos remotos simulados de los tests, en memoria y en un directorio, la cumplen. Lo que el código concretó respecto de la primera redacción está marcado «*(014)*» en §5 y §7, y la parte del cliente está en §5.7.
 
+**Puesto al día el 2026-09-25 con las decisiones del alto del plan de la feature 015** (`specs/015-api-access/questions.md` §8; propuestas en `specs/015-api-access/contracts/api-routes.md` y `data-model.md`): los valores que estaban [PENDIENTE] en §2, §3, §4 y §5, `GET /api/session`, la página de acceso denegado, el objeto del dispositivo con su tipo y su estado, la ligadura de la web (§5.4), la reemisión, las rutas de referencia (§6), los códigos nuevos (§7) y los parámetros de SSM (§9). Lo que queda [PENDIENTE] lo dice así.
+
 **Si este documento discrepa de una ADR, manda la ADR**, y la discrepancia se anota en el `questions.md` de la feature que la encuentre.
 
 ## 1. Reglas generales
@@ -30,7 +32,9 @@ Hay **dos**, y cada petición lleva **exactamente una**:
 - **Cookie y token a la vez: `400 credentials_ambiguous`**, sin mirar ninguna de las dos (ADR-0033, punto 4).
 - **Sin ninguna: `401 unauthenticated`**, salvo en las rutas de inicio de sesión.
 - **Con cookie, toda petición que escribe** comprueba además `Origin` contra el origen propio (`403 origin_rejected`). Con el token no hace falta: un navegador no añade una cabecera propia a otro sitio sin una comprobación CORS previa, y la API no responde a CORS.
-- **Cada petición vuelve a consultar la lista permitida** `{sub, email}` (ADR-0027, enmienda; ADR-0033, punto 5), con la caché de la lista de ADR-0027 (**[PENDIENTE]**, el valor lo fija la 015). El registro del token **no** se cachea (§2.2).
+- **Cada petición vuelve a consultar la lista permitida** (ADR-0027, enmienda; ADR-0033, punto 5), con la caché de la lista de ADR-0027: **120 s** (decidido el 2026-09-25). **Con el token**, se comprueba el par `{sub, email}` de su registro (§2.2). **Con la cookie**, que no lleva el correo, se comprueba que **el `sub` de la sesión siga teniendo una entrada** en la lista; el par entero se comprobó al iniciar la sesión (decisión Q10, 2026-09-26). **Retirar el acceso es quitar la entrada de ese `sub`**, no cambiarle el correo: con el mismo `sub` y otro correo, las sesiones vivas siguen valiendo hasta que caducan, y un inicio de sesión nuevo ya no pasa. El registro del token **no** se cachea (§2.2).
+- **Cada petición con credencial comprueba el objeto de su dispositivo** (`sync/devices/<device_id>.json`, §5.3): tiene que **existir**, ser **del tipo de la credencial** (cookie → `web`, token → `console`) y estar **activo**. Si no, `403 device_forgotten`, con `details.reason` = `missing` \| `wrong_type` \| `forgotten` o `unreadable` si el objeto no se lee (confirmado por la dirección el 2026-09-26, Q9). Un objeto que falta **nunca** cuenta como vivo (decisiones B1 y R2-B2 del prompt de la 015).
+- **Un fallo transitorio** de SSM (`ThrottlingException`) o de S3 al comprobar una credencial es **`503 remote_unavailable`**, que se puede reintentar, y **nunca** deja pasar la credencial ni la da por inválida para siempre (ADR-0034, fila 13).
 
 ### 2.1 Formato del token de dispositivo
 
@@ -53,6 +57,7 @@ En este orden, rechazando al primer fallo (ADR-0033, punto 5):
 4. No revocado → `device_token_revoked`.
 5. No caducado: antes de `expires_at` **y** antes de `issued_at` + 120 días (techo fijo en el código, ADR-0033 punto 7) → `device_token_expired`.
 6. Su par `{sub, email}` sigue en la lista permitida → `403 not_allowed`.
+7. El objeto de su dispositivo existe, es de tipo `console` y está activo → `403 device_forgotten` (§2).
 
 Solo pueden cachearse los negativos que no pueden volver a valer (revocado, caducado); un «no existe» no se cachea.
 
@@ -74,11 +79,21 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 
 | Método y ruta | Qué hace |
 |---|---|
-| `GET /api/auth/login` | Crea el intento (`state`, `nonce`, verificador PKCE) en la **cookie transitoria** `SameSite=Lax` de un solo uso, y redirige (`302`) a Google. |
-| `GET /api/auth/callback` | Vuelta de Google. Verifica en el orden de ADR-0027 (`state` contra la cookie transitoria, PKCE, firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`, par `{sub, email}` en la lista). Si el intento es de la **web**, emite la cookie de sesión y redirige a la SPA. Si es de la **consola**, sigue §4.2. |
-| `POST /api/auth/logout` | **[PENDIENTE]**: ADR-0027 no nombra una ruta para cerrar la sesión de la web. Propuesta: borra la cookie y responde `204`. La decide la 015. |
+| `GET /api/auth/login[?device_id=<22>]` | Crea el intento (`state`, `nonce`, verificador PKCE y, si la web lo presenta, su `device_id`) en la **cookie transitoria** `__Host-atlas_login` (`SameSite=Lax`, firmada, de un solo uso), y redirige (`302`) a Google con `scope=openid email`, PKCE S256, `state` y `nonce`. Una credencial presente se ignora. Un `device_id` con otro formato se descarta en silencio: no es credencial (§5.4). **El `device_id` solo se tiene en cuenta si el inicio viene del propio sitio** (`Sec-Fetch-Site: same-origin`, u `Origin` propio); desde otro sitio, o sin forma de saberlo, se ignora y el inicio sigue sin él (revisión de seguridad de la PR #90, S2). |
+| `GET /api/auth/callback` | Vuelta de Google. Verifica en el orden de ADR-0027 (`state` contra la cookie transitoria, PKCE, firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`, par `{sub, email}` en la lista). Si el intento es de la **web**, emite la cookie de sesión y redirige a la SPA (`/ajustes#sincronizacion`). Si es de la **consola**, sigue §4.2. La cookie transitoria **se borra en toda respuesta**. Un par que no está en la lista recibe la **página de acceso denegado**; cualquier otro fallo, la **página de error** (§3.1). |
+| `POST /api/auth/logout` | Cuerpo `{}` obligatorio (`415 body_not_json`). Borra la cookie de sesión (`Max-Age=0`) **sin validarla** —cerrar una sesión caducada o firmada con una clave rotada también la borra— y responde `204`. Con cookie, la comprobación de `Origin` de §2. Con el token, `403 forbidden_for_credential`. |
+| `GET /api/session` | Solo cookie. `200 { "signed_in": true, "expires_at": "<Z>", "device_id": "<22>" }`, con `Cache-Control: no-store`: así sabe la SPA si tiene sesión (la cookie es `HttpOnly`) y qué `device_id` le asignó la API. Si no, la misma respuesta que cualquier ruta con cookie (`401 unauthenticated`, `401 session_invalid`, `403 not_allowed`, `403 device_forgotten`, `503 remote_unavailable`). Con el token, `403 forbidden_for_credential`. |
 
-La duración de la sesión y de la cookie transitoria son **[PENDIENTE]**: ADR-0027 las deja a la feature (la 015).
+**Duraciones** (decididas el 2026-09-25): la sesión, **8 h absolutas**, sin renovación; la cookie transitoria, **10 min**. Las dos son configuración de la Lambda (§9).
+
+**La cookie de sesión** es `__Host-atlas_session`, con `Path=/`, `Secure`, `HttpOnly`, `SameSite=Strict` y sin `Domain`, firmada con HMAC-SHA256 y la subclave HKDF de `info` `atlas session v1`, con `typ: "atlas.session"`. Lleva **solo** `sub`, un identificador de sesión, el `device_id` de la web, la emisión y la caducidad: **ninguna cookie lleva el correo**. La transitoria, `__Host-atlas_login`, con su propia subclave (`atlas login v1`, `typ: "atlas.login"`). Formato exacto: `specs/015-api-access/data-model.md` §1.
+
+### 3.1 Las páginas propias de la Lambda
+
+Todas `text/html; charset=utf-8`, **sin *script* y sin nada externo**, con `Cache-Control: no-store`, `Referrer-Policy: no-referrer` y CSP `default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` (las de la consola, además, `sandbox`, §4.2).
+
+- **Acceso denegado** (`403`): la vuelta de Google fue válida pero el par no está en la lista. Enseña **solo el `sub` de la cuenta que acaba de autenticarse en esa misma petición**, escapado, y cómo darlo de alta. **Nunca el correo.** El `sub` no se registra ni va en ninguna URL.
+- **Error del inicio de sesión** (`400`, `403`, `500` o `503`): cualquier otro fallo del inicio o de la vuelta, con su código literal y una frase por código: `login_attempt_missing` (el intento no está o caducó), `login_attempt_invalid` (la cookie del intento no se lee o está repetida; añadido en E1 de la 015, a confirmar por la dirección), `login_state_mismatch`, `google_error`, `google_exchange_failed`, `id_token_invalid`, `id_token_audience`, `id_token_issuer`, `id_token_expired`, `id_token_nonce`, `email_not_verified`, `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `remote_unavailable` (con `Retry-After: 5`, como en JSON) e `internal` (`500`: cualquier fallo inesperado del inicio o de la vuelta, que también borra la cookie del intento; revisión de la PR #90, N1).
 
 ## 4. El token de dispositivo de la consola (ADR-0033)
 
@@ -92,18 +107,20 @@ La duración de la sesión y de la cookie transitoria son **[PENDIENTE]**: ADR-0
 | `state` | 43 caracteres de `[A-Za-z0-9_-]` generados por la consola. |
 | `code_challenge` | 43 caracteres de `[A-Za-z0-9_-]` (S256 del verificador, RFC 7636). |
 | `code_challenge_method` | Exactamente `S256`. |
-| `device_name` | El nombre que la consola propone para el dispositivo. **Límites [PENDIENTE]**, propuesta: de 1 a 40 caracteres, letras (con tildes y `ñ`), dígitos, espacio, `-`, `_` y `.`, sin espacios al principio ni al final. **Se escapa** allí donde se muestre (página manual, lista de la web, correo). |
+| `device_name` | El nombre que la consola propone para el dispositivo: **de 1 a 40 puntos de código en NFC**, solo `A-Z a-z 0-9`, `ÁÉÍÓÚÜÑáéíóúüñ`, el espacio, `.`, `_` y `-`, sin espacio al principio ni al final y sin dos seguidos (decidido el 2026-09-25). **Se escapa** allí donde se muestre (página manual, lista de la web, correo). |
+| `reissue_device_id` | Opcional: 22 caracteres de `[A-Za-z0-9_-]`. Solo en la **reemisión** para un dispositivo sin credencial (§4.3). Viaja en la cookie transitoria y después en el código. |
 | `mode` | `loopback` (por defecto) o `manual`. |
 
 Cualquier parámetro que no cumpla es `400 console_start_invalid`, con el nombre del parámetro en `details`, y no se abre ningún intento. Si cumplen, la Lambda guarda los parámetros **en la cookie transitoria** de ADR-0027, junto a los suyos, y sigue la vía c pidiendo a Google una **pantalla interactiva** (`prompt=select_account`).
 
 ### 4.2 La vuelta de Google, rama de la consola
 
-`GET /api/auth/callback` verifica **todo** lo de §3, lista permitida incluida. Si el intento es de la consola, **no emite cookie de sesión**: emite un **código de un solo uso**, firmado con la subclave `console_code` (HKDF) y con `typ` de código —el verificador de la cookie lo rechaza, y el del código rechaza una cookie—, que lleva el `token_id` que tendrá el token, el `code_challenge`, el par `{sub, email}`, el nombre del dispositivo y su caducidad (**[PENDIENTE]**, ADR-0033 dice «en minutos»; propuesta: 5 minutos).
+`GET /api/auth/callback` verifica **todo** lo de §3, lista permitida incluida. Si el intento es de la consola, **no emite cookie de sesión**: emite un **código de un solo uso**, firmado con la subclave `console_code` (HKDF) y con `typ` de código —el verificador de la cookie lo rechaza, y el del código rechaza una cookie—, que lleva el `token_id` que tendrá el token, el `code_challenge`, el par `{sub, email}` (si el correo sigue en el código está pendiente de la pregunta Q8 de la 015), el nombre del dispositivo y su caducidad: **5 minutos** (decidido el 2026-09-25).
 
-- **Si `amr` con `mfa` resulta verificable** (SIN VERIFICAR, la 015 lo comprueba antes de escribir código), una vuelta sin `mfa` es `403 mfa_required` y no hay código.
+- **`mfa_required` no se emite** (decidido el 2026-09-25, tras el bloque 0 de la 015): Google solo entrega `amr` a una aplicación publicada y verificada con una función en Beta activada, y aun así puede no venir; Google no admite forzar la reautenticación. La verificación en dos pasos sigue siendo un requisito operativo del usuario (ADR-0033, nota del 2026-09-25).
 - **`mode=loopback`:** `302` a `http://127.0.0.1:<port>/callback?code=<código>&state=<state>`. El destino es el **literal** `127.0.0.1`, fijado en el código, y el puerto, el número validado en §4.1: la ruta no puede redirigir a ningún otro sitio. La página que la consola sirve en ese puerto no carga nada externo y lleva `Referrer-Policy: no-referrer`; un `state` erróneo se ignora y el puerto sigue esperando.
-- **`mode=manual`:** una página propia de la Lambda **sin script**, con `Content-Security-Policy: sandbox`, `Cache-Control: no-store` y `Referrer-Policy: no-referrer`. Primero pide **confirmar expresamente el nombre del dispositivo**; después enseña el código, la hora del intento y el aviso de que el código solo se teclea en una consola que el usuario acaba de abrir él mismo. La consola lo lee sin mostrarlo.
+- **`mode=manual`:** una página propia de la Lambda **sin script**, con `Content-Security-Policy: sandbox`, `Cache-Control: no-store` y `Referrer-Policy: no-referrer`. Primero pide **confirmar expresamente el nombre del dispositivo**; después enseña el código, la hora del intento y el aviso de que el código solo se teclea en una consola que el usuario acaba de abrir él mismo. La confirmación, sin *script* y sin formulario (la `sandbox` los bloquea), es un `<details>` cuyo `<summary>` la dice: **el código solo aparece al desplegarlo**. La consola lo lee sin mostrarlo.
+- **Reemisión** (§4.3): tras verificar a Google, la Lambda lee `sync/devices/<reissue_device_id>.json`; si falta, está olvidado o es de tipo `web`, responde con la página de error (`reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`). Si es aceptable, sirve **una página de confirmación** con los datos **del servidor** —el nombre del dispositivo, su última publicación y sus pendientes, si se saben—: con `loopback`, un enlace «Sí, es este dispositivo: continuar» al literal `http://127.0.0.1:<port>/callback?code=…&state=…`; con `manual`, el mismo `<details>`. Sin esa confirmación no hay código.
 
 ### 4.3 Canje
 
@@ -116,7 +133,7 @@ Cualquier parámetro que no cumpla es `400 console_start_invalid`, con el nombre
 - **Renovación:** si la carpeta desde la que se inicia sesión tiene `sync/remote.json` y `credentials.json` tiene la entrada de **ese** `device_id`, la consola envía **ese** token en `x-atlas-device-token`, **y ningún otro**; sin `sync/remote.json`, no envía ninguno, aunque haya entradas del mismo origen, que son de otras carpetas (un token por dispositivo y por carpeta, ADR-0033, punto 6). *(Corregido el 2026-09-25, revisión de la PR #89, B2: decía «si la consola tiene un token anterior para ese origen».)* Para esta ruta, y solo para ella, un token **caducado pero no revocado** vale para identificar el dispositivo. La API **conserva su `device_id`** y **revoca el token anterior antes de crear el nuevo**. Un token revocado aquí es `401 device_token_revoked`, y la consola vuelve a iniciar sesión sin él.
 - Comprobaciones, en orden: firma y `typ` del código (`console_code_invalid`), caducidad (`console_code_expired`), verificador contra el `code_challenge` (`pkce_mismatch`), lista permitida otra vez (`not_allowed`).
 - **Uso único obligatorio:** el registro se crea **sin sobrescribir** (`PutParameter` sin `Overwrite`) con el `token_id` que trae el código; si ya existe, el código ya se usó: `409 console_code_used`. Que eso sea atómico ante dos canjes simultáneos está SIN VERIFICAR (la 015 lo verifica y, si no lo es, para).
-- **`device_id` lo asigna la API** en el primer canje: 22 caracteres de `[A-Za-z0-9_-]`, aleatorios. La consola nunca lo propone, **salvo en la reemisión** (ADR-0033, nota del 2026-09-25 sobre la reemisión): una carpeta cuyo `sync/remote.json` nombra un dispositivo sin credencial pide el token para **ese** `device_id`, y la API solo lo concede si el dispositivo existe, no está olvidado y es de tipo consola, tras un inicio de sesión con Google y PKCE completo, y revocando antes cualquier token anterior de ese dispositivo. Cómo viaja el `device_id` pedido lo fija la feature 015.
+- **`device_id` lo asigna la API** en el primer canje: 22 caracteres de `[A-Za-z0-9_-]`, aleatorios. La consola nunca lo propone, **salvo en la reemisión** (ADR-0033, nota del 2026-09-25 sobre la reemisión): una carpeta cuyo `sync/remote.json` nombra un dispositivo sin credencial pide el token para **ese** `device_id`, y la API solo lo concede si el dispositivo existe, no está olvidado y es de tipo consola, tras un inicio de sesión con Google y PKCE completo, y revocando antes cualquier token anterior de ese dispositivo. El `device_id` pedido viaja como `reissue_device_id` en §4.1, dentro de la cookie transitoria y después en el código. Al canjear, la API **vuelve a comprobar las tres condiciones** sobre el objeto (pudo cambiar entre la vuelta y el canje) —si no, `403 reissue_device_missing`, `reissue_device_forgotten` o `reissue_device_not_console`—, **revoca todos los tokens activos de ese dispositivo**, uno a uno, y solo después crea el nuevo sin sobrescribir.
 
 Respuesta `200`, **una sola vez**:
 
@@ -139,9 +156,9 @@ Respuesta `200`, **una sola vez**:
 
 ### 4.5 Lista y revocación desde la web (solo con sesión)
 
-- `GET /api/devices/tokens` → `200 { "tokens": [ … ] }`, uno por registro: `token_id`, `device_id`, `device_name`, `issued_at`, `expires_at`, `status` (`active` \| `expired` \| `revoked`), `revoked_at?`, `last_sync_at?` (leído de `sync/devices/<device_id>.json`, §5.3, nunca guardado en el registro) y `recent` (emitido en los últimos días; **[PENDIENTE]** cuántos, propuesta: 7). Sin correo ni `sub`.
+- `GET /api/devices/tokens` → `200 { "tokens": [ … ] }`, uno por registro: `token_id`, `device_id`, `device_name`, `issued_at`, `expires_at`, `status` (`active` \| `expired` \| `revoked`), `revoked_at?`, `last_sync_at?` (leído de `sync/devices/<device_id>.json`, §5.3, nunca guardado en el registro) y `recent` (emitido en los últimos **7 días**, decidido el 2026-09-25). Sin correo ni `sub`. Un registro ilegible sale como `{ "token_id": "<del nombre>", "status": "unreadable" }`, nunca se omite.
 - `POST /api/devices/tokens/<token_id>/revoke`, cuerpo `{}` → `200 { "token_id": "…", "revoked_at": "…" }`. `<token_id>` pasa la regla de §2.1 **antes** de construir el nombre del parámetro (`400 body_invalid` si no). Revocar uno ya revocado devuelve el mismo `revoked_at`, sin volver a escribir.
-- **Revocar todos sin Google** no es una ruta: es una operación de administración con credenciales de AWS (ADR-0028, fila 12), con procedimiento escrito en la 015 o la 018.
+- **Revocar todos sin Google** no es una ruta: es una operación de administración con credenciales de AWS (ADR-0028, fila 12), con procedimiento escrito en la 015 (`atlas admin revoke-all-tokens`).
 
 ## 5. Sincronización del libro (ADR-0026)
 
@@ -194,7 +211,7 @@ Cuerpo:
 | 2 | `schema_version` no es más nueva que la que conoce la Lambda | `schema_version_unsupported` |
 | 3 | **Las declaraciones de la entrada son admisibles para la línea**: `has_correction` solo en una anulación, `chain_continues` solo en una línea con `corrects_id`. Va antes que todo lo demás de la línea, y antes que `pair_incomplete`: si la declaración de la pareja está mal, no tiene sentido evaluar lo demás (decisión de la dirección, 2026-09-25) | `pair_declaration_invalid` |
 | 4 | La línea se decodifica y valida su forma con el dominio | `line_invalid`, con el código del dominio en `details.domain_code` |
-| 5 | `recorded_at` no es posterior a la hora de la Lambda más la tolerancia (ADR-0026, caso 8; tolerancia configurable, valor **[PENDIENTE]**, lo fija la 015) | `recorded_at_in_future` |
+| 5 | `recorded_at` no es posterior a la hora de la Lambda más la tolerancia (ADR-0026, caso 8; tolerancia configurable: **10 minutos**, decidido el 2026-09-25) | `recorded_at_in_future` |
 | 6 | El libro proyectado con la línea añadida sigue siendo válido. Un `id` repetido lo detecta la proyección (`duplicate_id`), así que es de esta fila, no de la 4 (decisión de la dirección, 2026-09-25). Una anulación con corrección no se proyecta sola: la unidad entera, abajo | `domain_rejected`, con `details.domain_code` |
 | 7 | Si la huella está repetida, la línea trae `confirm_duplicate` | `duplicate_unconfirmed`, con los `id` que la repiten |
 | 8 | Una `tax_return_filed` **sella el prefijo**: su `ledger_fingerprint` cuadra con el prefijo sobre el que cae, remoto más las líneas ya aceptadas de la petición (decisión de la dirección, 2026-09-25: «lo que sella el prefijo no se mueve de sitio», defendido también en el servidor; la proyección no lo comprueba al registrar, solo `check --deep` y `compact`) | `seal_mismatch` |
@@ -246,17 +263,24 @@ Respuesta `200` siempre que `If-Match` cuadró:
 { "pending": 2, "held": 1, "last_sync_at": "2026-10-01T10:00:00Z" }
 ```
 
-La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la credencial** (§2.3), esos tres campos y `published_at` (su hora). `pending` y `held` son enteros ≥ 0 (`400 body_invalid` si no). Respuesta `200 { "device_id": "…", "published_at": "…" }`. Es lo que miran `compact` y la restauración antes de actuar (ADR-0026, paso 7; ADR-0032): se niegan si algún dispositivo conocido tiene **`pending`** mayor que cero. **`held` no bloquea** (decisión de la dirección, 2026-09-25, como dicen ADR-0026, Parte A, y ADR-0032): lo retenido vive en el dispositivo y nunca se sube solo; se publica para que se vea.
+La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la credencial** (§2.3), esos tres campos y `published_at` (su hora). **El objeto del dispositivo** (decidido el 2026-09-25):
 
-`GET /api/sync/devices` (**solo sesión**) → `200 { "devices": [ { "device_id", "pending", "held", "last_sync_at", "published_at" } ] }`.
+```json
+{ "device_format": 1, "device_id": "<22>", "type": "web", "state": "active", "created_at": "…", "pending": 0, "held": 0, "last_sync_at": "…", "published_at": "…" }
+```
+
+`type` es `web` o `console`; `state`, `active` o `forgotten` (con `forgotten_at`); un objeto `console` lleva además `device_name`. Se lee de forma estricta. **Lo crea la API al asignar el identificador** —la web al iniciar sesión, la consola en el primer canje— con `If-None-Match: *`. **Este `PUT` nunca lo crea**: relee el objeto, se niega con `403 device_forgotten` si falta, es de otro tipo o está olvidado, y reescribe **con `If-Match` sobre lo leído**, conservando `type`, `state`, `created_at`, `device_name` y `forgotten_at`. Si ese `If-Match` falla, relee: olvidado entretanto → `device_forgotten`; si no, `412 precondition_failed`. **Olvidar** lo hace la administración, reescribiéndolo con `state: "forgotten"`, **nunca borrándolo**, después de revocar sus tokens. `pending` y `held` son enteros ≥ 0 (`400 body_invalid` si no). Respuesta `200 { "device_id": "…", "published_at": "…" }`. Es lo que miran `compact` y la restauración antes de actuar (ADR-0026, paso 7; ADR-0032): se niegan si algún dispositivo conocido tiene **`pending`** mayor que cero. **`held` no bloquea** (decisión de la dirección, 2026-09-25, como dicen ADR-0026, Parte A, y ADR-0032): lo retenido vive en el dispositivo y nunca se sube solo; se publica para que se vea.
+
+`GET /api/sync/devices` (**solo sesión**) → `200 { "devices": [ { "device_id", "type", "state", "pending", "held", "last_sync_at", "published_at" } ] }`. `compact` y la restauración solo cuentan los dispositivos **activos**.
 
 ### 5.4 Cómo se liga a su sesión el identificador de dispositivo de la web
 
-**[PENDIENTE] — la decide la 015** (nota del 2026-09-25 en ADR-0033). Lo que está fijado: la API toma el dispositivo de la credencial y **nunca del cuerpo** (ADR-0033, punto 6), para que quien robe una credencial no pueda publicar el estado de otro dispositivo, del que dependen `compact` y la restauración. Para la consola lo resuelve el token (el `device_id` que la API asignó al canjear). La web no tiene token: su credencial es una sesión corta que se renueva pasando por Google, y su identificador de dispositivo tiene que **sobrevivir** a las sesiones, porque su cola vive en su IndexedDB. Lo que el revisor de ADR-0033 dejó abierto es cómo se ata ese identificador a la sesión. Opciones, sin elegir:
+**Decidido: la opción (a)** (prompt de la 015, §7 P1, precisado en §7.1 bis, B1, B5 y N8). La API toma el dispositivo de la credencial y **nunca del cuerpo, de la URL ni de una cabecera** (ADR-0033, punto 6).
 
-- **(a) Asignado por la API al iniciar sesión y firmado dentro de la cookie.** La web guarda su `device_id` en IndexedDB y lo presenta **en el inicio de sesión** (`GET /api/auth/login?device_id=…`, no en cada petición); la API lo mete en la cookie transitoria y, tras verificar a Google, en la cookie de sesión. La primera vez, la API asigna uno. *Inconveniente:* la API no puede saber si ese identificador es de ese navegador; quien tenga la cuenta de Google podría iniciar sesión presentando el de otro dispositivo.
-- **(b) Un registro de dispositivos web en SSM**, como el de los tokens de la consola, con un secreto propio del navegador guardado en IndexedDB y presentado al iniciar sesión. *Inconveniente:* es una credencial de larga duración en la página, lo que ADR-0027 y ADR-0033 evitaron.
-- **(c) Sin identificador persistente en la web:** cada sesión es un dispositivo nuevo, y `compact` mira todos los que tengan algo pendiente. *Inconveniente:* se acumulan dispositivos muertos que hay que olvidar a mano.
+- La web presenta su `device_id` **solo al iniciar sesión** (`GET /api/auth/login?device_id=…`). La API lo lleva en la cookie transitoria y, tras verificar a Google, lo acepta **solo si ella misma lo emitió para un dispositivo web y no está olvidado**: su objeto `sync/devices/<id>.json` existe, es de tipo `web` y está activo. Si no —y la primera vez, siempre—, **asigna uno nuevo** (22 caracteres aleatorios) y crea su objeto con `If-None-Match: *`.
+- El `device_id` va **firmado dentro de la cookie de sesión**, y cada petición con cookie comprueba su objeto (§2).
+- La web lo lee de `GET /api/session` y lo guarda en IndexedDB, **donde no es credencial**.
+- **Riesgo aceptado** (decisión del 2026-09-25): copiar la IndexedDB a otro navegador crea dos escritores con el mismo `device_id`; no se detecta, se documenta. Hay un solo usuario y una sola cuenta de Google: presentar el id de otro dispositivo exige ser ya el usuario.
 
 ### 5.5 Inicializar un remoto vacío
 
@@ -319,7 +343,15 @@ Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene
 
 ## 6. Datos de referencia
 
-**[PENDIENTE] — feature 015.** El token y la sesión permiten leer los datos de referencia (ADR-0033, punto 6): el histórico del BCE (`reference/ecb/`) y los precios (`prices/`) que la tarea diaria escribe en la nube (ADR-0031, «Dónde se descarga»; ADR-0029). Las rutas, sus formatos y cómo sabe un dispositivo qué ha cambiado se fijan en el prompt de la 015. `documents/` e `imports/` se suben con la regla de añadir y nunca sobrescribir (ADR-0026, Consecuencias), con su detalle en la feature que los use.
+Decidido el 2026-09-25 (feature 015; **solo las rutas y sus clientes**: que la web del móvil descargue de aquí el histórico del BCE es de la 016). Leen con la sesión o el token (ADR-0033, punto 6), **no escriben nada** y no alcanzan nada fuera de `reference/ecb/` y `prices/`:
+
+| Ruta | Respuesta |
+|---|---|
+| `GET /api/reference/index` | `200 { "ecb": [ { "name", "version", "size" } ], "prices": [ … ] }`. `version` es una etiqueta opaca (el ETag del objeto en S3): sirve para saber qué ha cambiado sin descargarlo. Solo el primer nivel de cada prefijo (`previous/` y `rejected/` no se listan) |
+| `GET /api/reference/ecb/<name>` | Los bytes de `reference/ecb/<name>`, con `ETag: "<version>"`; con `If-None-Match` igual, `304` |
+| `GET /api/reference/prices/<name>` | Lo mismo sobre `prices/<name>` |
+
+`<name>` cumple `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` y no contiene `..`; si no, `400 reference_name_invalid` **antes de tocar S3**. Si no existe, `404 not_found`. `Content-Type` por la extensión: `.csv` → `text/csv; charset=utf-8`, `.jsonl` → `application/x-ndjson; charset=utf-8`, `.json` → `application/json`; cualquier otra, `404`. `documents/` e `imports/` se suben con la regla de añadir y nunca sobrescribir (ADR-0026, Consecuencias), con su detalle en la feature que los use (la subida no es de la 015).
 
 ## 7. Errores
 
@@ -337,7 +369,7 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `device_token_invalid` | 401 | Token con mal formato, sin registro, con otro `token_id` en el registro o con un secreto que no cuadra |
 | `device_token_revoked` | 401 | Token revocado |
 | `device_token_expired` | 401 | Token caducado (`expires_at` o el techo de 120 días) |
-| `not_allowed` | 403 | El par `{sub, email}` no está en la lista permitida |
+| `not_allowed` | 403 | Con el token, el par `{sub, email}` no está en la lista permitida; con la cookie, el `sub` de la sesión ya no tiene entrada (§2) |
 | `forbidden_for_credential` | 403 | Un token en una ruta solo de sesión (§2.3) |
 | `origin_rejected` | 403 | Escritura con cookie y `Origin` ajeno |
 | `mfa_required` | 403 | Emisión de un token sin `amr` con `mfa`, si se puede exigir (§4.2) |
@@ -353,8 +385,13 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `precondition_failed` | 412 | `If-Match` distinto del etag actual; nada escrito |
 | `not_found` | 404 | Ruta que no existe |
 | `internal` | 500 | Cualquier otro fallo; nada escrito |
+| `device_forgotten` | 403 | El objeto del dispositivo de la credencial falta, es de otro tipo o está olvidado (§2), con `details.reason` |
+| `remote_unavailable` | 503 | Fallo transitorio de SSM o de S3; se puede reintentar (`Retry-After: 5`, `details.dependency`: `ssm` \| `s3`). Nunca deja pasar una credencial |
+| `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console` | 403 | La reemisión de §4.3 pide un dispositivo que no existe, está olvidado o no es de consola |
+| `reference_name_invalid` | 400 | Un nombre de §6 que no cumple su regla |
+| `body_too_large` | 413 | Un cuerpo por encima del tope propio de la Lambda, antes de leerlo (la Function URL admite 6 MB) |
 
-*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed` (§5.7), nunca retiene por ellos, y cada interfaz tiene una frase para cada uno.
+*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más `device_forgotten` y `remote_unavailable` (feature 015), y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed` (§5.7), nunca retiene por ellos, y cada interfaz tiene una frase para cada uno.
 
 Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_declaration_invalid`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected`, `seal_mismatch` y `waiver_not_appendable`.
 
@@ -370,4 +407,18 @@ Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a un
 | Las órdenes de administración de la consola contra el almacén remoto: `compact` del remoto, restaurar y olvidar un dispositivo, **fuera de la API** (ADR-0026, Parte A) | **015** |
 | La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
 | El correo mensual con los inicios de sesión de la consola y los tokens vivos y emitidos | **016** |
-| El prefijo de SSM y sus permisos, la política de origen que reenvía `x-atlas-device-token`, la CSP que respeta la `sandbox` de §4.2 | **017** |
+| El prefijo de SSM y sus permisos, la política de origen que reenvía a `/api/*` `x-atlas-device-token`, **`Sec-Fetch-Site` y `Origin`** (sin las dos últimas, la Lambda nunca sabe que un inicio de sesión viene del propio sitio: ignora siempre el `device_id` de §3 y cada inicio de sesión de la web crea un dispositivo nuevo, sin avisar; y sin `Origin`, toda escritura con cookie se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2), la CSP que respeta la `sandbox` de §4.2 | **017** |
+
+## 9. Parámetros de SSM y configuración de la Lambda
+
+Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion de secretos**, con el rol de administración, nunca Terraform (ADR-0034, fila 21); aquí van sus nombres y formatos.
+
+| Parámetro | Tipo | Valor | Caché en cada instancia |
+|---|---|---|---|
+| `/atlas/<entorno>/auth/allow-list` | `SecureString` | `{"allow_list_format":1,"entries":[{"sub":"…","email":"…"}]}`; el correo se compara **exacto** y además se exige `email_verified` | 120 s |
+| `/atlas/<entorno>/auth/google-client-id` | `String` | el identificador del cliente OAuth del entorno | 300 s |
+| `/atlas/<entorno>/auth/google-client-secret` | `SecureString` | el secreto, tal cual | 300 s |
+| `/atlas/<entorno>/auth/session-key` | `SecureString` | 32 bytes aleatorios en base64url (43 caracteres); de ella salen las subclaves HKDF | 300 s: rotarla cierra todas las sesiones como mucho en 5 minutos |
+| `/atlas/<entorno>/device-tokens/<token_id>` | `SecureString` | el registro del token (formato en `specs/015-api-access/data-model.md` §2) | **ninguna** (§2.2) |
+
+**Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (28.800), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CONSOLE_CODE_TTL_SECONDS` (300), `ATLAS_TOKEN_LIFETIME_DAYS` (90; más de 120 impide arrancar), `ATLAS_RECENT_ISSUE_DAYS` (7), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120) y `ATLAS_SECRETS_CACHE_SECONDS` (300). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar. **Techos fijos en el código** (revisión de seguridad de la PR #90, S4): la sesión, como mucho 24 h (86.400); la cookie transitoria, 30 min (1.800); el código de la consola, 15 min (900); las dos cachés, 1 h (3.600); la tolerancia del reloj, 1 h (3.600); la ventana de las emisiones «recientes», 90 días; la caducidad del token, 120 días. Por encima, la configuración se rechaza y la Lambda no arranca.

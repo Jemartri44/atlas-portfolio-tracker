@@ -73,6 +73,12 @@ export const describeRemoteFailure = (code: unknown): string => {
       return "la ruta de la nube no existe; es un fallo de la aplicación.";
     case "internal":
       return "la nube ha tenido un fallo interno y no ha escrito nada.";
+    case "device_forgotten":
+      return "este dispositivo fue olvidado en la nube: vuelve a iniciar sesión con «atlas remote login».";
+    case "remote_unavailable":
+      return "la nube no está disponible ahora mismo (un fallo pasajero): inténtalo de nuevo en unos minutos.";
+    case "body_too_large":
+      return "la petición era demasiado grande para la nube; no se ha escrito nada.";
     case "transport_rejected":
       return "la petición la ha rechazado la red antes de llegar a la nube (CloudFront o el cortafuegos).";
     case "network_failed":

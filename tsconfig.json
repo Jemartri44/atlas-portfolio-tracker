@@ -29,6 +29,12 @@
       "path": "apps/cli/tsconfig.test.json"
     },
     {
+      "path": "apps/api"
+    },
+    {
+      "path": "apps/api/tsconfig.test.json"
+    },
+    {
       "path": "tests"
     },
     {

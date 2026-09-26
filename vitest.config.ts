@@ -10,6 +10,12 @@ export default defineConfig({
     // would otherwise swallow `@atlas/adapters/blob`.
     alias: {
       "@atlas/adapters/blob": local("./packages/adapters/src/ledger-store/blob.ts"),
+      "@atlas/adapters/web-device": local(
+        "./packages/adapters/src/ledger-store/browser/web-device.ts",
+      ),
+      "@atlas/adapters/aws": local("./packages/adapters/src/aws/index.ts"),
+      "@atlas/adapters/access": local("./packages/adapters/src/access/crypto.ts"),
+      "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),
       "@atlas/adapters/sync-client": local("./packages/adapters/src/sync/client.ts"),
       "@atlas/adapters/sync": local("./packages/adapters/src/ledger-store/browser/sync-store.ts"),
       "@atlas/adapters/reference": local(
@@ -27,7 +33,9 @@ export default defineConfig({
       "@atlas/domain/fiscal": local("./packages/domain/src/fiscal.ts"),
       "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": local("./packages/domain/src/sync.ts"),
+      "@atlas/domain/access": local("./packages/domain/src/access.ts"),
       "@atlas/domain": local("./packages/domain/src/index.ts"),
+      "@atlas/api": local("./apps/api/src/index.ts"),
     },
   },
   test: {
@@ -37,6 +45,7 @@ export default defineConfig({
       { extends: true, test: { name: "domain", root: "packages/domain" } },
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },
       { extends: true, test: { name: "cli", root: "apps/cli" } },
+      { extends: true, test: { name: "api", root: "apps/api" } },
       {
         extends: true,
         /*
@@ -85,6 +94,12 @@ export default defineConfig({
           name: "web",
           root: "apps/web",
           environment: "node",
+          /*
+           * **No test of the web goes out to the network** (T1 of the review
+           * of PR #90, round 2): `fetch` fails at once on any call a test did
+           * not simulate, in both environments.
+           */
+          setupFiles: ["./test/setup/no-network.ts"],
           server: { deps: { inline: [/@solidjs\/router/] } },
         },
       },
@@ -93,7 +108,9 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["packages/domain/src/**"],
-      reporter: ["text", "html"],
+      // `json` writes coverage/coverage-final.json, which the CI keeps when the
+      // coverage fails (review of PR #90, CI-1).
+      reporter: ["text", "html", "json"],
       thresholds: {
         lines: 100,
         branches: 100,

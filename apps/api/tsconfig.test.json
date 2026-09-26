@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "dist-test",
+    "tsBuildInfoFile": "dist-test/tsconfig.test.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": [
+    "test",
+    "../../packages/adapters/test/aws/test-only-fake-s3.ts",
+    "../../packages/adapters/test/aws/test-only-fake-ssm.ts",
+    "../../packages/adapters/test/identity/test-only-fake-google.ts"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.json"
+    },
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/adapters"
+    }
+  ]
+}

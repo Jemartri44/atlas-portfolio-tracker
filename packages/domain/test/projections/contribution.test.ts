@@ -191,6 +191,35 @@ describe("contributionPlan", () => {
     });
   });
 
+  it("gives a rounding residue left over to the first row in order, whole", () => {
+    // Four equal assets at target and one cent to split: every row rounds down
+    // to zero, so the cent is left over and goes whole to the first row by the
+    // order of the residue. Until the review of PR #90 (round 3) only the
+    // random property reached this path; the 100 % of the domain must not
+    // depend on its seed.
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const targets: Record<string, string> = {};
+    for (const suffix of ["a", "b", "c", "d"]) {
+      const assetId = `ast_${suffix}`;
+      b.asset(assetId, { asset_class: "equity" });
+      b.buy({ account_id: "acc_fund", asset_id: assetId, quantity: "1", unit_price: "100" });
+      b.valuation({ account_id: "acc_fund", asset_id: assetId, date: DATE, unit_value: "100" });
+      targets[assetId] = "25";
+    }
+    const result = contributionPlan(projectLedger(b.build()), {
+      amount: "0.01",
+      date: DATE,
+      settings: settings({ target_weights: targets }),
+    });
+    expect(allocations(result)).toEqual({
+      ast_a: "0.01",
+      ast_b: "0",
+      ast_c: "0",
+      ast_d: "0",
+    });
+  });
+
   it("refuses when the whole plan points outside the table", () => {
     // Every weight names an asset that is not in the core catalogue (a mistyped
     // `asset_id`): no row has a target, so there is no shortfall to cover and

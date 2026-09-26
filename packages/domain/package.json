@@ -25,6 +25,10 @@
     "./sync": {
       "types": "./dist/sync.d.ts",
       "import": "./dist/sync.js"
+    },
+    "./access": {
+      "types": "./dist/access.d.ts",
+      "import": "./dist/access.js"
     }
   },
   "files": [
