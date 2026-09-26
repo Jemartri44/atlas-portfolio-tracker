@@ -59,7 +59,11 @@ interface Parsed {
   readonly specifiers: readonly string[];
   /** The names each static import and re-export takes from each specifier. */
   readonly bindings: readonly Binding[];
-  readonly program: unknown;
+  /** How many `import(…)` and `import.meta` the parser found: a file with none has none to walk. */
+  readonly dynamicImports: number;
+  readonly importMetas: number;
+  /** The program, built only when asked: most guards never need it. */
+  readonly program: () => unknown;
 }
 
 interface Binding {
@@ -88,6 +92,7 @@ interface ModuleInfo {
   readonly dynamicImports: readonly {
     readonly moduleRequest: { readonly start: number; readonly end: number };
   }[];
+  readonly importMetas: readonly unknown[];
 }
 
 const parsedFiles = new Map<string, Parsed>();
@@ -152,7 +157,9 @@ const parse = (file: string): Parsed => {
     code,
     specifiers: [...new Set(bindings.map((binding) => binding.specifier))],
     bindings,
-    program: result.program,
+    dynamicImports: module.dynamicImports.length,
+    importMetas: module.importMetas.length,
+    program: () => result.program,
   };
   parsedFiles.set(file, parsed);
   return parsed;
@@ -346,8 +353,11 @@ describe("architecture (015): every import can be read", () => {
   it("allows a dynamic import only with a quoted string literal", () => {
     const offenders: string[] = [];
     for (const file of productSources()) {
-      const { program, source } = parse(file);
-      for (const node of nodesOf(program)) {
+      const { program, source, dynamicImports } = parse(file);
+      if (dynamicImports === 0) {
+        continue;
+      }
+      for (const node of nodesOf(program())) {
         const argument = node.source as { type?: string; value?: unknown } | undefined;
         if (
           node.type === "ImportExpression" &&
@@ -366,13 +376,19 @@ describe("architecture (015): every import can be read", () => {
    * web compiles with the types of Node, and the bundler follows it — and
    * `import.meta.glob(…)`, which Vite turns into imports at build time. The
    * product is ESM with literal imports only: neither is allowed anywhere,
-   * nor `createRequire`, nor `import.meta` read by a computed key.
+   * nor `createRequire`, nor `import.meta` read by a computed key. Only the
+   * sources that can hold one are walked: an identifier spells `require` as a
+   * word of the text or through a `\u` escape, and the parser lists every
+   * `import.meta`.
    */
   it("never uses require, createRequire or import.meta.glob", () => {
     const offenders: string[] = [];
     for (const file of productSources()) {
-      const { program, source } = parse(file);
-      for (const node of nodesOf(program)) {
+      const { program, source, importMetas } = parse(file);
+      if (importMetas === 0 && !/\brequire\b|createRequire|\\u/.test(source)) {
+        continue;
+      }
+      for (const node of nodesOf(program())) {
         const { start, end } = node as unknown as { start: number; end: number };
         const at = `${relative(repoRoot, file)}: ${source.slice(start, end).slice(0, 80)}`;
         if (
