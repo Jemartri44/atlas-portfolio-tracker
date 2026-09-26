@@ -107,8 +107,17 @@ const revealed = (confirmation: string, code: string): string =>
   `<details>
 <summary>${escapeHtml(confirmation)}</summary>
 <p>Pega este código en la consola; no se muestra al escribirlo:</p>
-<p><code>${escapeHtml(code)}</code></p>
+<p><code>${breakable(code)}</code></p>
 </details>`;
+
+/**
+ * A long code that a phone can wrap: a `<wbr>` every 32 characters. The page
+ * has no style — its CSP allows none — and `<wbr>` adds nothing to the text
+ * the user copies. Found on the screen (captures of E2): the unbroken code
+ * made the page five times as wide as a phone.
+ */
+const breakable = (code: string): string =>
+  (code.match(/.{1,32}/g) ?? []).map(escapeHtml).join("<wbr>");
 
 /** `mode=manual`, a new device or a renewal: confirm the name, then the code (§4.2). */
 export const manualCodePage = (fields: {

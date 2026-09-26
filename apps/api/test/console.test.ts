@@ -53,8 +53,9 @@ const consoleReturn = async (
 const codeOfLoopback = (location: string): string =>
   new URL(location).searchParams.get("code") as string;
 
+/** The code as the user copies it: `<wbr>` breaks the line on a phone and adds nothing to the text. */
 const codeOfPage = (html: string): string =>
-  /<\/summary>[\s\S]*<code>([^<]+)<\/code>/.exec(html)?.[1] as string;
+  String(/<\/summary>[\s\S]*<code>([\s\S]+?)<\/code>/.exec(html)?.[1]).replaceAll("<wbr>", "");
 
 const exchange = (api: Api, code: string, verifier: string, headers: Record<string, string> = {}) =>
   api.call("POST", "/api/auth/console/token", {
@@ -175,6 +176,10 @@ describe("the return of the console (§4.2; T16 to T18)", () => {
     const code = codeOfPage(done.body);
     expect(code.length).toBeGreaterThan(100);
     expect(before).not.toContain(code);
+    // Found on the screen (captures of E2): a code of ~400 characters with no
+    // place to break overflowed a phone five times its width. Nothing on the
+    // page may run longer than 64 characters without a break.
+    expect(/<code>[^<]{65,}/.test(done.body)).toBe(false);
     expect(done.body).toContain("«portátil de casa»");
     expect(setCookies(done).has("__Host-atlas_session")).toBe(false);
   });
@@ -482,6 +487,14 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
     const manual = await consoleReturn(api, { reissue_device_id: ID, mode: "manual" });
     const before = manual.done.body.split("<details>")[0] as string;
     expect(before).not.toContain(codeOfPage(manual.done.body));
+  });
+
+  it("escapes the name the server keeps, whatever it holds (mutant 29)", async () => {
+    const api = setup();
+    seedConsole(api, ID, { device_name: '<img src=x onerror="alert(1)">' });
+    const { done } = await consoleReturn(api, { reissue_device_id: ID, mode: "manual" });
+    expect(done.body).not.toContain("<img");
+    expect(done.body).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
   });
 
   it("refuses a device that is missing, forgotten, of the web or unreadable, each with its code", async () => {

@@ -107,9 +107,9 @@ const setupConsole = async (options: Parameters<typeof browser>[1] = {}) => {
       for (let i = 0; i < 50 && surf.pages.length === 0; i += 1) {
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
-      hidden = /<\/summary>[\s\S]*<code>([^<]+)<\/code>/.exec(
-        surf.pages[0] as string,
-      )?.[1] as string;
+      hidden = String(
+        /<\/summary>[\s\S]*<code>([\s\S]+?)<\/code>/.exec(surf.pages[0] as string)?.[1],
+      ).replaceAll("<wbr>", "");
       return hidden;
     },
     loopbackTimeoutMs: 5000,
