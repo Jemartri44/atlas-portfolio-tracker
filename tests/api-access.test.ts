@@ -675,6 +675,25 @@ describe("architecture (015): the API only appends, and the domain judges every 
   });
 });
 
+describe("architecture (015): the exception of the redo is bound to the sealed plan (E3, N1)", () => {
+  /**
+   * `recordRedo` records with the rule of `correctEvent` (§7 P6, option (a)).
+   * Only the orchestration of the redo may reach it — never the ordinary form
+   * of recording, where it would be a flag nobody could tell apart (N1;
+   * mutant 33 bis). The door of the sync re-exports it; nothing else names it.
+   */
+  it("is imported only by the orchestration of the redo", () => {
+    const users = productSources()
+      .filter((file) => parse(file).bindings.some((binding) => binding.name === "recordRedo"))
+      .map((file) => relative(repoRoot, file).replaceAll("\\", "/"))
+      .sort();
+    expect(users).toEqual([
+      "packages/adapters/src/sync/held-actions.ts",
+      "packages/domain/src/sync.ts",
+    ]);
+  });
+});
+
 describe("architecture (015): the authoritative guard reads the graph of the bundle", () => {
   /**
    * The guards of this file read the sources; the one that decides reads the

@@ -4,7 +4,7 @@
 // be valid** (decision D-Q1): the user can always get out of where the sync
 // left them. Which resolutions exist is the domain's (`resolutionsFor`).
 
-import { decodeLines } from "@atlas/domain";
+import { completeDraft, correctEvent, decodeLines, type UseCaseDeps } from "@atlas/domain";
 import type { DeviceState, SyncStateStore } from "@atlas/domain/sync";
 import {
   assertRedoRecorded,
@@ -20,9 +20,12 @@ import {
   type RedoPlan,
   type Refusal,
   type Resolution,
+  recordRedo,
+  redoContext,
   redoFinished,
   resolutionsFor,
   type SyncMarker,
+  sealedIds,
   startRedoPlan,
   syncArchiveName,
   unresolvedHeld,
@@ -144,6 +147,7 @@ export const startRedo = async (
 ): Promise<RedoPlan> => {
   const state = await store.read();
   const unit = unitOf(state, id);
+  const all = parseHeld(state.heldText);
   const { plan, records } = startRedoPlan(
     unit,
     decodeLines(unit.lines, options.schema),
@@ -151,11 +155,44 @@ export const startRedo = async (
     state.ledger.events,
     newId,
     options.now().toISOString(),
+    // What the other units say (point 2 of block 5): a target held in one of
+    // them waits for it, and one redone there is translated by the records.
+    redoContext(
+      all,
+      unresolvedHeld(all).map((held) => ({
+        unit: held,
+        events: decodeLines(held.lines, options.schema),
+      })),
+    ),
   );
   if (records.length > 0) {
     await store.commit(state, { held: records });
   }
   return plan;
+};
+
+/**
+ * **Redo**, the recording in between: **exactly the sealed plan** (§7 P6,
+ * option (a); N1). A line or a lone reversal goes by `recordRedo`, which
+ * refuses only for what it itself leaves invalid and only with the sealed id;
+ * a correction by `correctEvent`, which has that rule already, with its sealed
+ * ids and the reason of the held reversal. To record something else, discard
+ * and record it anew.
+ */
+export const recordRedoPlan = async (
+  deps: UseCaseDeps,
+  plan: RedoPlan,
+  options: { readonly confirmDuplicate?: boolean } = {},
+): Promise<void> => {
+  const confirmDuplicate = options.confirmDuplicate === true;
+  if (plan.kind === "correct") {
+    await correctEvent(deps, plan.target_id, plan.draft, plan.reason, {
+      ids: sealedIds(plan),
+      confirmDuplicate,
+    });
+    return;
+  }
+  await recordRedo(deps, plan, completeDraft(deps, plan.draft, plan.id), { confirmDuplicate });
 };
 
 /**

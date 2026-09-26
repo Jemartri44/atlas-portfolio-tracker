@@ -209,6 +209,8 @@ export type RedoPlan =
   | {
       readonly kind: "correct";
       readonly target_id: string;
+      /** The reason of the held reversal, which the redone correction keeps. */
+      readonly reason: string;
       readonly draft: Draft<SupportedEvent>;
       readonly reversal_id: string;
       readonly id: string;
@@ -275,18 +277,52 @@ const inForce = (targetId: string, ledger: readonly LedgerEvent[]): string => {
 };
 
 /**
- * What a pair of a chain reverses, **translated within the unit** (third
- * review of PR #83): a later pair that corrects the held correction of an
- * earlier one — which never reached the ledger — points at the id that
- * earlier pair was redone with. If that pair is still held, the later one
- * **waits** (`redo_waits_for_pair`, «primero la pareja N»): nothing that is
- * bound to fail is offered.
+ * What the rest of `held.jsonl` says to a redo (feature 015, E3, block 5,
+ * point 2): which events are held in **other** units still unresolved, and
+ * what every line redone anywhere was redone as. By ids only, never by
+ * resemblance.
+ */
+export interface RedoContext {
+  /** The id of each event held in a unit still unresolved → that unit. */
+  readonly heldIn: ReadonlyMap<string, string>;
+  /** The id of each held event that was redone, anywhere → the id it was redone with. */
+  readonly redoneAs: ReadonlyMap<string, string>;
+}
+
+/** The context of a redo, from the records of `held.jsonl` and the events of the units held. */
+export const redoContext = (
+  records: readonly HeldRecord[],
+  held: readonly { readonly unit: HeldUnit; readonly events: readonly LedgerEvent[] }[],
+): RedoContext => ({
+  heldIn: new Map(held.flatMap(({ unit, events }) => events.map((event) => [event.id, unit.unit]))),
+  redoneAs: new Map(
+    records.flatMap((record) =>
+      record.kind === "resolved" && record.replaces !== undefined && record.event_id !== undefined
+        ? [[record.replaces, record.event_id] as const]
+        : [],
+    ),
+  ),
+});
+
+const NO_CONTEXT: RedoContext = { heldIn: new Map(), redoneAs: new Map() };
+
+/**
+ * What a pair reverses, **translated by the ids of `held.jsonl`** (third
+ * review of PR #83; feature 015, point 2), in this order:
+ * 1. within its unit: a later pair of a chain that corrects the held
+ *    correction of an earlier one **waits** (`redo_waits_for_pair`);
+ * 2. held in **another** unit still unresolved: it waits for that unit
+ *    (`redo_waits_for_unit`, «primero la unidad X»);
+ * 3. redone, in this unit or in another: the id it was redone with — each
+ *    step by the ids the records say — and then the version in force.
+ * Nothing that is bound to fail is offered.
  */
 const targetOf = (
   unit: HeldUnit,
   parts: readonly { events: LedgerEvent[] }[],
   reversesId: string,
   ledger: readonly LedgerEvent[],
+  context: RedoContext,
 ): string => {
   const waiting = parts.findIndex((part) => part.events.some((event) => event.id === reversesId));
   if (waiting >= 0) {
@@ -294,7 +330,16 @@ const targetOf = (
       pair: waiting + 1,
     });
   }
-  return inForce(unit.redone?.[reversesId] ?? reversesId, ledger);
+  const elsewhere = context.heldIn.get(reversesId);
+  if (elsewhere !== undefined && elsewhere !== unit.unit) {
+    throw new ValidationError("redo_waits_for_unit", "the unit that holds its target comes first", {
+      unit: elsewhere,
+    });
+  }
+  // Redone as a new event of the ledger: from there on, the version in force
+  // is the ledger's own business (a later correction of it, say).
+  const redone = unit.redone?.[reversesId] ?? context.redoneAs.get(reversesId) ?? reversesId;
+  return inForce(redone, ledger);
 };
 
 const planOf = (
@@ -324,6 +369,7 @@ const planOf = (
     : {
         kind: "correct",
         target_id: targetId,
+        reason: reversal.reason,
         draft: withoutEnvelope(correction, false) as unknown as Draft<SupportedEvent>,
         reversal_id: ids[0] as string,
         id: ids[1] as string,
@@ -363,6 +409,7 @@ export const startRedoPlan = (
   ledger: readonly LedgerEvent[],
   newId: () => string,
   at: string,
+  context: RedoContext = NO_CONTEXT,
 ): { plan: RedoPlan; records: HeldRecord[] } => {
   const refusal = redoRefusal(unit, events, remoteIds);
   if (refusal !== undefined) {
@@ -373,7 +420,9 @@ export const startRedoPlan = (
     ...{ lines: string[]; events: LedgerEvent[] }[],
   ];
   const plan = (ids: readonly string[]) =>
-    planOf(part.events, ids, (reversesId) => targetOf(unit, [part, ...later], reversesId, ledger));
+    planOf(part.events, ids, (reversesId) =>
+      targetOf(unit, [part, ...later], reversesId, ledger, context),
+    );
   const sealed = sealedOf(unit, part.lines);
   // Planned before sealing: a pair that has to wait seals nothing.
   plan(part.lines.map(() => ""));

@@ -89,6 +89,7 @@ export {
   syncPermission,
 } from "./sync/permission.js";
 export { type ReapplyBase, type ReapplyOutcome, reapplyUnits } from "./sync/reapply.js";
+export { type RedoRecordOptions, recordRedo } from "./sync/redo-record.js";
 export {
   type AppendAcceptance,
   acceptAppend,
@@ -105,8 +106,10 @@ export {
   decisionOf,
   discardHeld,
   heldUnitById,
+  type RedoContext,
   type RedoPlan,
   type Resolution,
+  redoContext,
   redoFinished,
   redoneLines,
   resolutionsFor,
