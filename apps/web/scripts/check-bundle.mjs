@@ -670,8 +670,17 @@ const INLINE_STYLES = [
  * MPEG transport stream shares the extension), and every JavaScript,
  * ECMAScript, TypeScript or JSX type, with or without `x-`.
  */
-const CODE_DATA_URL =
-  /data:(?:video\/mp2t|(?:text|application)\/(?:x-)?(?:javascript|ecmascript|typescript|jsx|tsx|babel)|text\/jsx|application\/node)[;,]/gi;
+const CODE_MIME =
+  /^(?:video\/mp2t|(?:text|application)\/(?:x-)?(?:javascript|ecmascript|typescript|jsx|tsx|babel)|text\/jsx|application\/node)$/;
+
+/** Every `data:` URL with its MIME type; which of them is code is decided with the graph. */
+const DATA_URL = /data:([a-z]+\/[a-z0-9.+-]+)[;,]/gi;
+
+/** A source of code, by its extension, and a query that makes a module an asset (round 5). */
+const CODE_SOURCE = /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
+const AS_ASSET = /(^|&)(?:inline|url|raw)(&|=|$)/;
+
+const dataUrls = [];
 
 const files = (dir) =>
   readdirSync(dir).flatMap((entry) => {
@@ -717,8 +726,9 @@ for (const path of files(dist)) {
   // URL — a source under the inline limit, reached by `new URL(…)` — is text
   // of a module out of every graph. Whatever its MIME type says it is code,
   // it stops the build; `vite.config.ts` never inlines one to begin with.
-  for (const match of text.matchAll(CODE_DATA_URL)) {
-    problems.push(`${name}: lleva código incrustado como URL data: (${match[0]})`);
+  // Judged once the graph is read, to name the module that was inlined.
+  for (const match of text.matchAll(DATA_URL)) {
+    dataUrls.push({ name, url: match[0], mime: match[1].toLowerCase() });
   }
   if ([".js", ".html"].includes(extension)) {
     for (const { pattern, what } of INLINE_STYLES) {
@@ -957,6 +967,30 @@ for (const build of builds) {
 }
 
 /*
+ * **Code inlined as a `data:` URL** (rounds 4 and 5 of the review of PR #90).
+ * A source under the inline limit reached by `new URL(…)` — which
+ * `vite.config.ts` no longer inlines — or imported with `?inline` or
+ * `?url&inline`, which Vite inlines **before** asking `assetsInlineLimit`. Its
+ * MIME type is `video/mp2t` for `.ts` and `.mts`, a JavaScript type for `.js`,
+ * and `application/octet-stream` for the extensions Vite does not know
+ * (`.tsx`, `.cts`): that last one is refused **when the chunk holds a source
+ * of code imported as an asset**, and the module is named whenever the graph
+ * has it.
+ */
+const graphedChunks = new Map(
+  builds.flatMap((build) => (build.chunks ?? []).map((chunk) => [chunk.file, chunk])),
+);
+for (const { name, url, mime } of dataUrls) {
+  const inlined = (graphedChunks.get(name)?.modules ?? []).filter(
+    (module) => CODE_SOURCE.test(module.id) && AS_ASSET.test(module.query),
+  );
+  const which = inlined.length > 0 ? `: ${inlined.map((module) => shown(module)).join(", ")}` : "";
+  if (CODE_MIME.test(mime) || (mime === "application/octet-stream" && inlined.length > 0)) {
+    problems.push(`${name}: lleva código incrustado como URL data: (${url})${which}`);
+  }
+}
+
+/*
  * **A worker whose graph the guard does not know** stops the build: an import
  * `?worker` or `?sharedworker` in the graph of the main build with no worker
  * graph whose entry is that file. With `inline` there is no loose file for the
@@ -1030,7 +1064,10 @@ for (const path of files(dist).filter((path) => extname(path) === ".js")) {
   }
   const ids = new Set(chunk.modules.map((module) => module.id));
   for (const source of sources) {
-    const id = relative(repoRoot, resolve(dirname(path), source)).replaceAll("\\", "/");
+    const id = relative(repoRoot, resolve(dirname(path), source.replace(/\?.*$/, ""))).replaceAll(
+      "\\",
+      "/",
+    );
     if (!ids.has(id)) {
       problems.push(`${name}: su source map nombra ${id} y el grafo de módulos no`);
     }
