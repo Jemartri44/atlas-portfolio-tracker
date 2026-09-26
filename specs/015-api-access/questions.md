@@ -615,12 +615,12 @@ Revisión: `#issuecomment-5843549502`, sobre `85b5a87`. No convergió por **CI-1
   - **Solo el proyecto `domain`**: faltan líneas o ramas en `ecb/drafts.ts`, `ecb/rule-change.ts`, `filings/closed-years.ts`, `filings/proposal.ts`, `informative/m720.ts`, `projections/contribution.ts`, `projections/primitives.ts` y `usecases/preview-event.ts`.
   - **La suite entera, como la mide `test:coverage`**: los tests fijos de la consola y de la web cubren todo eso salvo una cosa. **Solo queda `projections/contribution.ts`, líneas 113 (una rama) y 120-121**: el caso en que el redondeo deja un residuo positivo que va entero a la primera fila. Solo lo alcanzaba la propiedad aleatoria de la aportación.
   - **Arreglo** (`99b0b9a`): un test fijo. Cuatro activos iguales en su objetivo y un céntimo que repartir: cada fila redondea a cero y el céntimo va a `ast_a`. Sin propiedades, `contribution.ts` queda al 100 %.
-- **`propose.ts:95` no es de las propiedades.** Con las propiedades inertes, `propose.ts` sigue al 100 %. Lo cubre `packages/domain/test/ecb/propose.test.ts` él solo (las dos ramas del `if`, 6 y 5 veces), y en la suite entera la web y la consola pasan por ella 239 y 72 veces. Ninguna suite de propiedades toca el BCE. Así que **la premisa de CI-1 («la cubre a veces una propiedad aleatoria») no se sostiene con lo medido**, y un test fijo más no la cambiaría: ya lo hay. No he añadido uno redundante.
-- **Qué la pudo dejar sin cubrir en la CI: no lo he averiguado.** La hipótesis, sin verificar, es que la fusión de la cobertura V8 de un mismo fichero cargado por varios proyectos y procesos pierda recuentos de bloque según el orden en que llegan. En la CI, con otros núcleos, el reparto cambia de una ejecución a otra. Sería de Vitest o de V8, no de la PR. Lo que hay:
+- **`propose.ts:95` no es de las propiedades.** Con las propiedades inertes, `propose.ts` sigue al 100 %. Lo cubren tests fijos: el proyecto `domain` con las propiedades inertes pasa por las dos ramas del `if` 6 y 5 veces, y `propose.test.ts` él solo, 5 y 2 (medido por la ronda 4). En la suite entera las dos ramas suman 239 y 72 pasadas. Ninguna suite de propiedades toca el BCE. Así que **la premisa de la decisión 1 de la dirección («la cubre a veces una propiedad aleatoria») no se sostiene con lo medido**, y un test fijo más no la cambiaría: ya lo hay. No he añadido uno redundante. *Corregido el 2026-09-26 (§17): aquí se atribuía esa premisa a la ronda 3, que no la afirmó («No he buscado la causa»); venía de la decisión de la dirección. Y las 239 y 72 pasadas se atribuían a la web y a la consola: son de la suite entera.*
+- **Qué la pudo dejar sin cubrir en la CI: no lo he averiguado.** La hipótesis, sin verificar, es que la fusión de la cobertura V8 de un mismo fichero cargado por varios proyectos y procesos pierda recuentos de bloque según el orden en que llegan. En la CI, con otros núcleos, el reparto cambia de una ejecución a otra. **No demostrado**: la PR añade el proyecto `api` y un `setupFiles` en `web`, que cambian qué procesos cargan el dominio, y ese es justo el mecanismo sospechoso (*corregido el 2026-09-26, §17: antes decía «sería de Vitest o de V8, no de la PR»*). Lo que hay:
   - de las últimas 40 ejecuciones de `verify`, dos fallaron;
   - esta falló en cobertura;
   - en esta máquina, las cuatro ejecuciones completas en verde de la ronda 2 sacaron el dominio al 100 %, igual que las dos del revisor sobre `85b5a87`.
-  Si vuelve, lo propio es aislarla con `coverage-final.json` de la CI (subirlo como artefacto), no con más tests.
+  Si vuelve, lo propio es aislarla con `coverage-final.json` de la CI, no con más tests. Desde la ronda 4, la CI lo sube como artefacto cuando falla (§17).
 
 ### 16.3 Las vías de elusión, cerradas
 
@@ -684,3 +684,78 @@ Ningún gemelo `.js`. `git diff ed1bb11 -- tests/fixtures` vacío.
 ### 16.7 Congelado
 
 **Commit congelado de la ronda 3: el que contiene esta sección.** Su SHA va en el comentario de la PR y en el informe a la dirección. Desde aquí no se empuja nada a la rama mientras dura la revisión.
+
+## 17. Revisión de la PR #90, ronda 4: decisiones de la dirección y arreglos (2026-09-26)
+
+Revisión: `#issuecomment-5843896025`, sobre `787441b`. Queda un solo bloqueante: **V3-inline**. Un fuente vetado de menos de 4 KiB, alcanzado con `new URL("…", import.meta.url)`, se incrusta en un trozo como `data:video/mp2t;base64,…` y no se emite como fichero. Así pasa por fuera de todos los grafos. Decisiones de la dirección (2026-09-26), tal como llegaron:
+
+1. **Cerrar V3-inline**:
+   - `build.assetsInlineLimit` pasa a ser una función que **nunca** incrusta un fuente de código y deja lo demás como lo hace Vite;
+   - `check-bundle.mjs` falla si un trozo lleva una URL `data:` con un tipo MIME de código;
+   - mutantes V3b (`aws/errors.ts`) y V3c (`access/id-token.ts`), vistos sobrevivir sobre `787441b` y después morir;
+   - el tamaño del *build* limpio, medido.
+2. **CI**: cuando `test:coverage` falle, subir `coverage/coverage-final.json` como artefacto (`actions/upload-artifact`, `if: failure()`).
+3. **§16**: corregir la atribución de la premisa de CI-1 y rebajar «no viene de la PR».
+
+### 17.1 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Cómo se vio en rojo |
+|---|---|---|
+| V3-inline: nunca incrustar código y negar las URL `data:` de código | `45b2bc4`, y `4b7be16` (el test que lo mantiene en su sitio) | V3b y V3c **sobreviven** sobre `787441b`: el *build* sale con 0 y `index-*.js` lleva `data:video/mp2t;base64`. Con el arreglo mueren (§17.3) |
+| CI: el informe de cobertura como artefacto | `06a7dbc` (el informe `json`); el paso de la CI, **sin empujar** (§17.2) | — |
+| §16.2 corregido | el commit congelado | — |
+
+### 17.2 Qué se hizo
+
+- **`assetsInlineLimit`** (`45b2bc4`) es una función que devuelve `false` para `.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs` y `.cjs`, también con consulta, y `undefined` para lo demás, que conserva el límite por defecto de Vite. Un fuente alcanzado con `new URL` sale entonces como fichero, y lo niegan las reglas de la ronda 3: «el bundle lleva un fuente» y la regla de su origen.
+- **`check-bundle.mjs`** busca en cada fichero de texto de `dist/` una URL `data:` con un tipo de código: `video/mp2t` (el que recibe `.ts`, porque la extensión es también la de MPEG-TS), `text/` o `application/` con `javascript`, `ecmascript`, `typescript`, `jsx`, `tsx` o `babel`, con o sin `x-`, `text/jsx` y `application/node`. Si la encuentra, para el *build*. Son dos capas, y cada una mata el mutante sola: G4-nolimit y G4-nodata.
+- **El *build* limpio no cambia de tamaño**: arranque 75.843 y total 282.280, byte a byte igual que en `787441b`. El paquete no llevaba nada incrustado de código ni de otro tipo. Las únicas coincidencias de `data:` eran `data:d` dentro del código de `@solidjs/router`, sin URL.
+- **La CI.** El paso está escrito:
+
+  ```yaml
+  - uses: actions/upload-artifact@v4
+    if: failure()
+    with:
+      name: coverage-final
+      path: coverage/coverage-final.json
+      if-no-files-found: ignore
+      retention-days: 14
+  ```
+
+  Va justo después de `npm run test:coverage`, y fija la versión mayor como las demás acciones del fichero (`@v4`). **No he podido empujarlo**: GitHub rechaza el empuje porque la credencial de esta máquina no tiene el permiso `workflow` («refusing to allow an OAuth App to create or update workflow `.github/workflows/ci.yml` without `workflow` scope»). Cambiar los permisos de la credencial no me corresponde. El cambio queda así:
+  - en el *scratchpad*, como parche (`ci-upload-artifact-015.patch`);
+  - en el *stash* del worktree (`ci-015-upload-artifact`).
+
+  Lo tiene que empujar alguien con ese permiso: el usuario, o `gh auth refresh -s workflow` y un empuje. **Lo que sí va en la rama** (`06a7dbc`): `vitest.config.ts` escribe también el informe `json`. Sin él no habría `coverage/coverage-final.json` que subir, porque los informes eran `text` y `html`. Comprobado: una ejecución que falla por los umbrales lo escribe igual.
+
+### 17.3 Mutantes
+
+Con el guion de §15. Cada mutante sube los techos del paquete dentro de sí mismo, y solo cuenta como muerto si falla con el mensaje de su regla.
+
+| Id | Mutante | Sobre `787441b` | Con `45b2bc4` |
+|---|---|---|---|
+| V3b | `new URL("../../../packages/adapters/src/aws/errors.ts", import.meta.url)` en `main.tsx` | **sobrevive**: `data:video/mp2t;base64` en `index-*.js` | muerto: «el bundle lleva un fuente» y «un adaptador de Node de la API» sobre `assets/errors-*.ts` |
+| V3c | Lo mismo con `packages/domain/src/access/id-token.ts` | **sobrevive** | muerto: «las reglas del acceso» y «el bundle lleva un fuente» |
+| G4-nolimit | V3b con `assetsInlineLimit` quitado | — | muerto: «lleva código incrustado como URL data: (data:video/mp2t;)» |
+| G4-nolimit-c | V3c, ídem | — | muerto, ídem |
+| G4-nodata | V3b con la regla de las URL `data:` desactivada | — | muerto: «el bundle lleva un fuente» |
+
+5 de 5 muertos, y las dos vías vistas sobrevivir antes. El árbol, igual antes y después de cada mutante.
+
+### 17.4 Tubería y CI
+
+Sobre `06a7dbc`, el último commit de código. El congelado solo cambia `questions.md`, que ningún test lee.
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage` | 0 | 280 ficheros, 2.754 tests, 361 s; el dominio al 100 % (ramas 4.566/4.566); ningún `ECONNREFUSED` |
+| `npm run test:coverage`, repetida a continuación | 0 | 2.754 tests, 488 s; el dominio al 100 %; ningún `ECONNREFUSED` |
+| `npm run build` | 0 | Arranque 75.843 y total 282.280: los mismos que en `787441b` |
+
+**CI `verify` en GitHub**: verde sobre `06a7dbc` (36224021137). La del commit congelado se comprueba después de empujarlo y va en el comentario de la PR. Ningún gemelo `.js`.
+
+### 17.5 Congelado
+
+**Commit congelado de la ronda 4: el que contiene esta sección.** Su SHA va en el comentario de la PR y en el informe a la dirección. Desde aquí no se empuja nada a la rama mientras dura la revisión.
