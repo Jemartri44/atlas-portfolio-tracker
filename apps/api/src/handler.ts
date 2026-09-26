@@ -128,6 +128,8 @@ export const createHandler = (deps: HandlerDeps): Handler => {
   const { config } = deps;
   const secrets: AccessSecretsType = new AccessSecrets(deps.parameters, deps.now, config);
   const devices = new DeviceStore(deps.objects);
+  /** The errors after which a new token stayed alive, with its public id (R2-2). */
+  const leftAlive = new WeakMap<object, string>();
   const tokens = new TokenRegistry(deps.parameters, config.ssmPrefix, {
     project: "atlas",
     env: config.env,
@@ -536,7 +538,15 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       // the console proposed (review of PR #95, N7).
       deviceName = device.device_name ?? code.dn;
       for (const listed of await tokens.list()) {
-        if (typeof listed.read === "object" && listed.read.device_id === code.rdid) {
+        // Never the record of this very code: an exchange of the same code
+        // running at once may have created it after this one read it, and
+        // revoking it would leave the device with no live token (review of
+        // PR #95, round 2, R2-1). The create below answers that one with 409.
+        if (
+          typeof listed.read === "object" &&
+          listed.read.device_id === code.rdid &&
+          listed.read.token_id !== code.tid
+        ) {
           await tokens.revoke(listed.read, nowMs);
         }
       }
@@ -575,14 +585,15 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         // S3 failed after the record was created (review of PR #95, N3): the
         // token is revoked — tried a few times, as much as can be — and
         // nothing is handed out; the failure answers as what it is (503).
-        await revokeAsMuchAsCan(record, nowMs);
+        await revokeOrMark(record, nowMs, error);
         throw error;
       }
       if (created === "exists") {
         // 128 random bits already taken: the new token must not name another
         // device's object. It is revoked, and nothing is handed out.
-        await revokeAsMuchAsCan(record, nowMs);
-        throw new Error("device id collision");
+        const collision = new Error("device id collision");
+        await revokeOrMark(record, nowMs, collision);
+        throw collision;
       }
     }
     return {
@@ -599,8 +610,16 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     };
   };
 
-  /** Revokes a record just created, retrying a transient failure; a record left alive is logged by the caller's 5xx. */
-  const revokeAsMuchAsCan = async (record: TokenRecord, nowMs: number): Promise<void> => {
+  /**
+   * Revokes a record just created, retrying a transient failure. If every try
+   * fails, the error the caller throws is marked with the record's id, and
+   * the log of its 5xx carries it.
+   */
+  const revokeOrMark = async (
+    record: TokenRecord,
+    nowMs: number,
+    error: unknown,
+  ): Promise<void> => {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await tokens.revoke(record, nowMs);
@@ -608,6 +627,12 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       } catch {
         // Tried again below; the answer is a 5xx either way.
       }
+    }
+    // Every try failed: the record stays alive, and the log of this 5xx names
+    // it — its public id, the most a log may say of a token (ADR-0033, point
+    // 10; review of PR #95, round 2, R2-2).
+    if (typeof error === "object" && error !== null) {
+      leftAlive.set(error, record.token_id);
     }
   };
 
@@ -793,6 +818,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         base.route === "/api/auth/console/start";
       const name =
         error instanceof Error && /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : "unknown";
+      const alive = typeof error === "object" && error !== null ? leftAlive.get(error) : undefined;
       if (error instanceof DependencyUnavailable) {
         const value = refusal("remote_unavailable", { dependency: error.dependency });
         outcome = signIn
@@ -806,6 +832,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         outcome = signIn
           ? { ...loginPage("internal"), reason: name }
           : { ...fail(refusal("internal")), reason: name };
+      }
+      if (alive !== undefined) {
+        outcome = { ...outcome, tokenId: alive };
       }
     }
     const status = outcome.result.statusCode;
