@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseSync } from "vite";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,14 +37,148 @@ const productSources = (): string[] => [
   ...listSources(webSrc),
 ];
 
-const importPattern =
-  /(?:^|\n)\s*(?:import|export)\b[^'"]*?\bfrom\s*['"]([^'"]+)['"]|(?:^|\n)\s*import\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+/**
+ * A source as the bundler reads it (round 2 of the review of PR #90, B2-bis
+ * and B3). The guards used to read imports with regular expressions and to
+ * strip comments with one more: a `//` inside a string swallowed the rest of
+ * the line, and a re-export, a `require` or an `import.meta.glob` walked past
+ * them. Now the source is **parsed** — with the parser Vite already ships
+ * (`parseSync`, Oxc), no new dependency — and its imports, re-exports and
+ * dynamic imports come from the parser, and its comments are blanked by the
+ * ranges the parser gives. A source it cannot parse fails the guard.
+ *
+ * These guards are the **quick warning**. The authoritative check is on the
+ * real graph of the bundle: `apps/web/scripts/check-bundle.mjs` reads the
+ * modules Rolldown put in it.
+ */
+interface Parsed {
+  readonly source: string;
+  /** The source with every comment blanked, strings and regular expressions untouched. */
+  readonly code: string;
+  /** Every `import … from`, `export … from`, side-effect import and literal `import("…")`. */
+  readonly specifiers: readonly string[];
+  /** The names each static import and re-export takes from each specifier. */
+  readonly bindings: readonly Binding[];
+  readonly program: unknown;
+}
+
+interface Binding {
+  readonly specifier: string;
+  readonly how: "import" | "export" | "dynamic";
+  /** The imported name; `*` for a namespace or `export *`, `default` for a default. */
+  readonly name: string;
+  readonly isType: boolean;
+}
+
+interface ModuleInfo {
+  readonly staticImports: readonly {
+    readonly moduleRequest: { readonly value: string };
+    readonly entries: readonly {
+      readonly importName: { readonly kind: string; readonly name: string | null };
+      readonly isType: boolean;
+    }[];
+  }[];
+  readonly staticExports: readonly {
+    readonly entries: readonly {
+      readonly moduleRequest: { readonly value: string } | null;
+      readonly importName: { readonly kind: string; readonly name: string | null };
+      readonly isType: boolean;
+    }[];
+  }[];
+  readonly dynamicImports: readonly {
+    readonly moduleRequest: { readonly start: number; readonly end: number };
+  }[];
+}
+
+const parsedFiles = new Map<string, Parsed>();
+
+const parse = (file: string): Parsed => {
+  const known = parsedFiles.get(file);
+  if (known !== undefined) {
+    return known;
+  }
+  const source = readFileSync(file, "utf8");
+  const result = parseSync(file, source);
+  if (result.errors.length > 0) {
+    throw new Error(`${relative(repoRoot, file)} cannot be parsed: ${result.errors[0]?.message}`);
+  }
+  let code = source;
+  for (const comment of result.comments) {
+    const blank = source.slice(comment.start, comment.end).replace(/[^\n]/g, " ");
+    code = code.slice(0, comment.start) + blank + code.slice(comment.end);
+  }
+  const module = result.module as unknown as ModuleInfo;
+  const bindings: Binding[] = [];
+  for (const statement of module.staticImports) {
+    const specifier = statement.moduleRequest.value;
+    if (statement.entries.length === 0) {
+      bindings.push({ specifier, how: "import", name: "*", isType: false });
+    }
+    for (const entry of statement.entries) {
+      bindings.push({
+        specifier,
+        how: "import",
+        name:
+          entry.importName.kind === "Name"
+            ? (entry.importName.name as string)
+            : entry.importName.kind === "Default"
+              ? "default"
+              : "*",
+        isType: entry.isType,
+      });
+    }
+  }
+  for (const statement of module.staticExports) {
+    for (const entry of statement.entries) {
+      if (entry.moduleRequest !== null) {
+        bindings.push({
+          specifier: entry.moduleRequest.value,
+          how: "export",
+          name: entry.importName.kind === "Name" ? (entry.importName.name as string) : "*",
+          isType: entry.isType,
+        });
+      }
+    }
+  }
+  for (const dynamic of module.dynamicImports) {
+    const argument = source.slice(dynamic.moduleRequest.start, dynamic.moduleRequest.end);
+    const literal = /^(["'])([^"'`\n$\\]*)\1$/.exec(argument.trim());
+    if (literal !== null) {
+      bindings.push({ specifier: literal[2] as string, how: "dynamic", name: "*", isType: false });
+    }
+  }
+  const parsed: Parsed = {
+    source,
+    code,
+    specifiers: [...new Set(bindings.map((binding) => binding.specifier))],
+    bindings,
+    program: result.program,
+  };
+  parsedFiles.set(file, parsed);
+  return parsed;
+};
 
 /** Static and dynamic specifiers alike: a dynamic import reaches as much as a static one. */
-const specifiersOf = (source: string): string[] =>
-  [...source.matchAll(importPattern)]
-    .map((match) => match[1] ?? match[2] ?? match[3])
-    .filter((specifier): specifier is string => specifier !== undefined);
+const specifiersOf = (file: string): readonly string[] => parse(file).specifiers;
+
+/** Every node of a parsed program, depth first. */
+const nodesOf = function* (node: unknown): Generator<Record<string, unknown>> {
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      yield* nodesOf(item);
+    }
+  } else if (typeof node === "object" && node !== null) {
+    const record = node as Record<string, unknown>;
+    if (typeof record.type === "string") {
+      yield record;
+    }
+    for (const [key, value] of Object.entries(record)) {
+      if (key !== "parent") {
+        yield* nodesOf(value);
+      }
+    }
+  }
+};
 
 /** A package subpath as its source file, **read off `exports`** (never a list written here). */
 const exportsOf = (root: string): Map<string, string> => {
@@ -98,7 +233,7 @@ const reach = (roots: readonly string[]): Map<string, string[]> => {
     if (file.startsWith("<")) {
       continue;
     }
-    for (const specifier of specifiersOf(readFileSync(file, "utf8"))) {
+    for (const specifier of specifiersOf(file)) {
       const next = resolveAcross(known, file, specifier);
       if (next !== undefined && !chains.has(next)) {
         chains.set(next, [...(chains.get(file) as string[]), next]);
@@ -150,7 +285,7 @@ describe("architecture (015): the API is a workspace of its own", () => {
       ...listSources(join(domainRoot, "src")),
       ...listSources(join(adaptersRoot, "src")),
     ].filter((file) =>
-      specifiersOf(readFileSync(file, "utf8")).some(
+      specifiersOf(file).some(
         (specifier) =>
           specifier === "@atlas/api" ||
           specifier.startsWith("@atlas/api/") ||
@@ -182,15 +317,13 @@ describe("architecture (015): the API is a workspace of its own", () => {
     expect(violations).toEqual([]);
     // And every product source names no test folder in any specifier.
     const named = productSources().filter((file) =>
-      specifiersOf(readFileSync(file, "utf8")).some((specifier) =>
-        /(^|\/)(test|tests)\/|test-only-/.test(specifier),
-      ),
+      specifiersOf(file).some((specifier) => /(^|\/)(test|tests)\/|test-only-/.test(specifier)),
     );
     expect(named.map((file) => relative(repoRoot, file))).toEqual([]);
   });
 
   it("keeps the rules of the access out of the barrel, behind a door of its own", () => {
-    const barrel = readFileSync(join(domainRoot, "src", "index.ts"), "utf8");
+    const barrel = join(domainRoot, "src", "index.ts");
     expect(specifiersOf(barrel).filter((specifier) => /\.\/access[/.]/.test(specifier))).toEqual(
       [],
     );
@@ -200,23 +333,63 @@ describe("architecture (015): the API is a workspace of its own", () => {
 
 describe("architecture (015): every import can be read", () => {
   /**
-   * The graph every guard above and below walks is read off the **text** of
-   * the imports, so an import it cannot read is an import it cannot see. A
+   * The graph every guard above and below walks is read off the imports of
+   * each source, so an import it cannot read is an import it cannot see. A
    * dynamic `import(…)` whose argument is not a plain string literal in
    * single or double quotes — a template literal, a variable, any expression —
    * is refused **everywhere in the product** (B2 of the review of PR #90: a
-   * template literal walked past the guard of P2 and P3 with every test green).
-   * Comments are prose, not imports, and are stripped first.
+   * template literal walked past the guard of P2 and P3 with every test
+   * green). Read off the parsed program, so a `//` inside a string before it
+   * hides nothing (B2-bis of round 2: the regular expression that stripped
+   * comments swallowed the rest of the line).
    */
   it("allows a dynamic import only with a quoted string literal", () => {
     const offenders: string[] = [];
     for (const file of productSources()) {
-      const code = readFileSync(file, "utf8")
-        .replace(/\/\*[\s\S]*?\*\//g, " ")
-        .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
-      for (const match of code.matchAll(/\bimport\s*\(([^)]*)\)?/g)) {
-        if (!/^\s*(["'])[^"'`\n$]*\1\s*$/.test(match[1] ?? "")) {
-          offenders.push(`${relative(repoRoot, file)}: import(${(match[1] ?? "").trim()})`);
+      const { program, source } = parse(file);
+      for (const node of nodesOf(program)) {
+        const argument = node.source as { type?: string; value?: unknown } | undefined;
+        if (
+          node.type === "ImportExpression" &&
+          !(argument?.type === "Literal" && typeof argument.value === "string")
+        ) {
+          const { start, end } = node as unknown as { start: number; end: number };
+          offenders.push(`${relative(repoRoot, file)}: ${source.slice(start, end)}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * Two more ways in that no guard read (B3 of round 2): `require(…)` — the
+   * web compiles with the types of Node, and the bundler follows it — and
+   * `import.meta.glob(…)`, which Vite turns into imports at build time. The
+   * product is ESM with literal imports only: neither is allowed anywhere,
+   * nor `createRequire`, nor `import.meta` read by a computed key.
+   */
+  it("never uses require, createRequire or import.meta.glob", () => {
+    const offenders: string[] = [];
+    for (const file of productSources()) {
+      const { program, source } = parse(file);
+      for (const node of nodesOf(program)) {
+        const { start, end } = node as unknown as { start: number; end: number };
+        const at = `${relative(repoRoot, file)}: ${source.slice(start, end).slice(0, 80)}`;
+        if (
+          node.type === "Identifier" &&
+          ["require", "createRequire"].includes(node.name as string)
+        ) {
+          offenders.push(at);
+        }
+        const object = node.object as { type?: string; meta?: { name?: string } } | undefined;
+        const property = node.property as { name?: string } | undefined;
+        if (
+          node.type === "MemberExpression" &&
+          object?.type === "MetaProperty" &&
+          object.meta?.name === "import" &&
+          (node.computed === true || /^glob/.test(property?.name ?? ""))
+        ) {
+          offenders.push(at);
         }
       }
     }
@@ -229,15 +402,13 @@ describe("architecture (015): credentials travel where ADR-0027 says", () => {
    * CloudFront overwrites `Authorization` with OAC (ADR-0027, fact 1): every
    * credential goes in the cookie or in `x-atlas-device-token`. Named as a
    * header in any form — a string or a property — in any source of the
-   * product, it is a violation; comments are stripped first, prose is not code.
+   * product, it is a violation; comments are blanked first (by the ranges the
+   * parser gives, so a `//` inside a string hides nothing), prose is not code.
    */
   it("never reads nor writes the Authorization header anywhere", () => {
-    const offenders = productSources().filter((file) => {
-      const code = readFileSync(file, "utf8")
-        .replace(/\/\*[\s\S]*?\*\//g, " ")
-        .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
-      return /["'`]authorization["'`]|\.authorization\b|\bauthorization\s*:/i.test(code);
-    });
+    const offenders = productSources().filter((file) =>
+      /["'`]authorization["'`]|\.authorization\b|\bauthorization\s*:/i.test(parse(file).code),
+    );
     expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
   });
 });
@@ -249,9 +420,8 @@ describe("architecture (015): AWS and Google only where they belong", () => {
   it("imports the AWS SDK nowhere but the thin adapters of src/aws/sdk-*", () => {
     const offenders = productSources().filter(
       (file) =>
-        specifiersOf(readFileSync(file, "utf8")).some((specifier) =>
-          specifier.startsWith("@aws-sdk/"),
-        ) && !/[/\\]adapters[/\\]src[/\\]aws[/\\]sdk-[^/\\]+\.ts$/.test(file),
+        specifiersOf(file).some((specifier) => specifier.startsWith("@aws-sdk/")) &&
+        !/[/\\]adapters[/\\]src[/\\]aws[/\\]sdk-[^/\\]+\.ts$/.test(file),
     );
     expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
     for (const root of [
@@ -288,7 +458,7 @@ describe("architecture (015): AWS and Google only where they belong", () => {
         const source = readFileSync(file, "utf8");
         return (
           googleHosts.test(source) ||
-          specifiersOf(source).some(
+          specifiersOf(file).some(
             (specifier) => specifier.startsWith("@aws-sdk/") || specifier.startsWith("node:"),
           ) ||
           /[/\\]adapters[/\\]src[/\\](aws|identity|access)[/\\]/.test(file) ||
@@ -318,42 +488,60 @@ describe("architecture (015): the web cannot configure the sync before P2 and P3
   const READ_ONLY = new Set(["browserSyncConfigured", "browserSyncPresence"]);
   const DOORS = /^@atlas\/(adapters\/sync(-client|-http)?|domain\/sync)$/;
 
+  /**
+   * The doors, as files: whatever the specifier that reaches them — the name
+   * of the package, a relative path into `packages/`, a relay of the web that
+   * re-exports them — a binding taken from one of these files is read by name
+   * (B3 of round 2: a relative path and a re-export walked past the names).
+   */
+  const doorFiles = (): Set<string> =>
+    new Set(
+      [...packages()].flatMap(([name, subpaths]) =>
+        [...subpaths]
+          .filter(([subpath]) => DOORS.test(`${name}${subpath.slice(1)}`))
+          .map(([, file]) => file),
+      ),
+    );
+
   it("imports from the doors of the sync only read-only names, and writes no sync:* key", () => {
+    const known = packages();
+    const doors = doorFiles();
+    expect(doors.size).toBeGreaterThanOrEqual(3);
     const violations: string[] = [];
     for (const file of listSources(webSrc)) {
-      const source = readFileSync(file, "utf8");
-      for (const match of source.matchAll(
-        /import\s+(type\s+)?([^'"]*?)\s*from\s*['"]([^'"]+)['"]/g,
-      )) {
-        const specifier = match[3] as string;
-        if (!DOORS.test(specifier) || match[1] !== undefined) {
+      const { source, bindings } = parse(file);
+      for (const binding of bindings) {
+        const target = resolveAcross(known, file, binding.specifier);
+        if (!DOORS.test(binding.specifier) && !(target !== undefined && doors.has(target))) {
           continue;
         }
-        const clause = (match[2] as string).trim();
-        const names = /^\{([\s\S]*)\}$/.exec(clause);
-        if (names === null) {
-          violations.push(`${relative(repoRoot, file)}: ${clause} from ${specifier}`);
-          continue;
-        }
-        for (const binding of (names[1] as string).split(",")) {
-          const name = binding
-            .trim()
-            .replace(/^type\s+/, "")
-            .split(/\s+as\s+/)[0] as string;
-          if (name !== "" && !binding.trim().startsWith("type ") && !READ_ONLY.has(name)) {
-            violations.push(`${relative(repoRoot, file)}: ${name} from ${specifier}`);
-          }
-        }
-      }
-      for (const match of source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) {
-        if (DOORS.test(match[1] as string)) {
-          violations.push(`${relative(repoRoot, file)}: dynamic import of ${match[1]}`);
+        const at = `${relative(repoRoot, file)}: ${binding.how} ${binding.name} from ${binding.specifier}`;
+        if (binding.how === "dynamic") {
+          violations.push(at);
+        } else if (!binding.isType && !READ_ONLY.has(binding.name)) {
+          violations.push(at);
         }
       }
       if (/["'`]sync:/.test(source)) {
         violations.push(`${relative(repoRoot, file)}: names a sync:* key`);
       }
     }
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * And by **reach**, for what the web must not touch at all before E4: the
+   * client of the sync and its orchestration (`packages/adapters/src/sync/`:
+   * `initialiseRemote`, `joinWithOwnLines`, `replaceFromRemote`, the held
+   * actions) and the HTTP client of E3. Walked across relative paths and
+   * re-exports, so a relay module of the web or a path into `packages/` is
+   * followed to the file (B3 of round 2, mutants R1 and R3). Loosened in E4
+   * with the guard above.
+   */
+  it("reaches neither the client of the sync nor its orchestration, by any path", () => {
+    const violations = [...webReach()]
+      .filter(([file]) => /[/\\]adapters[/\\]src[/\\]sync(-http)?[/\\]/.test(file))
+      .map(([, chain]) => chainText(chain));
     expect(violations).toEqual([]);
   });
 });
