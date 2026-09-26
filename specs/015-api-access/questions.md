@@ -401,7 +401,7 @@ Medido con la regla de `check-bundle.mjs` (guion `015-bundle/measure-015.mjs`), 
 | **Total** | 280.039 | **282.165** | **+2.126** |
 | **Arranque** | 75.843 | **75.834** | **−9** |
 
-**Medida sobre el commit congelado** (con la exclusión de `/api/` en el `sw.js`, +22): **arranque 75.834, total 282.187**. El techo del total subió a **276 KB (282.624)** en su propio commit, antes del que lo necesita (`f20c5bf`), dentro de la autorización de Q1 (hasta 304.640). El techo del arranque no se tocó.
+**Medida sobre el commit congelado** (con la exclusión de `/api/` en el `sw.js`, +22): **arranque 75.834, total 282.187**. El techo del total subió a **276 KB (282.624)** en su propio commit (`f20c5bf`), dentro de la autorización de Q1 (hasta 304.640). El techo del arranque no se tocó. **Corregido el 2026-09-26 (revisión de la PR #90, B1): la subida no fue antes del commit que la necesitaba.** `d82e45a` (las frases de los tres códigos nuevos, +109 en `errors`) ya deja el total en **280.105**, por encima del techo de entonces (280.064), así que **`d82e45a` no pasa el `build`**; `f20c5bf`, que sube el techo, va **después**. La historia no se reescribe (el empuje forzado está vetado). **Lección para E2-E5: el techo se mide y se sube antes del primer commit que añade bytes a la web, incluidos los mensajes, no solo antes de la pantalla.**
 
 ### 10.5 Capturas (Chromium 151, desde el *scratchpad*; `~/atlas-private/capturas/2026-09-25-015-e1/`)
 
@@ -438,3 +438,47 @@ A 400×890 con DPR 3, a 2045×1141, y a 360 de ancho midiendo `scrollWidth === c
 - **Commit congelado**: el que contiene esta sección (su SHA va en la PR de E1 y en el informe a la dirección). Desde aquí no se empuja nada a la rama mientras dura la revisión.
 - **Tubería sobre él**: `lint`, `typecheck`, `test:coverage` (277 ficheros, 2.739 tests; el dominio al 100 % de líneas, ramas, funciones y sentencias) y `build` en verde; ningún gemelo `.js`; `git diff b3e2fcb -- tests/fixtures` vacío.
 - **Paquete**: arranque 75.834 (techo 75.869), total 282.187 (techo 282.624).
+
+## 14. Revisión de la PR #90, ronda 1: decisiones de la dirección y arreglos (2026-09-26)
+
+Revisiones: corrección (`#issuecomment-5841582316`) y seguridad (`#issuecomment-5841596527`; «no encuentra ninguna forma de saltarse la autenticación»). Decisiones de la dirección del 2026-09-26, tal como llegaron, con el commit de cada arreglo, cómo se vio en rojo y qué se volvió a mirar.
+
+### 14.1 De la revisión de corrección
+
+- **B1 — el orden del techo.** No se reescribe la historia. §10.4 dice ahora la verdad: `d82e45a` no pasa el `build` y `f20c5bf` sube el techo después. **Lección para E2-E5: el techo se sube antes.**
+- **B2 — importaciones dinámicas no literales** (`73c18d6`). El guardián prohíbe en **todo el producto** cualquier `import(` cuyo argumento no sea una cadena literal entre comillas simples o dobles: las comillas invertidas y las expresiones quedan fuera. Así, todo lo que leen los guardianes (el de P2 y P3, el de alcance, el del SDK, el de «nada lo alcanza») y el cálculo de lo que alcanza la web ven todas las importaciones. *Rojo:* **S10 sobrevivió** con el guardián anterior (`git stash` del test, lote `r1-b2.json`) y muere con el nuevo, igual que S10b (una variable) y S10c (comillas invertidas en la API).
+- **N1 y S1 — un fallo inesperado del inicio de sesión** (`0f09f1c`). Cualquier error que nadie esperaba en `/api/auth/login` o en `/api/auth/callback` responde con **la página de error** (código de página nuevo, `internal`, `500`), que **borra la cookie del intento**. *Rojo:* tres tests en rojo antes del arreglo: un `putIfNoneMatch` que lanza un `Error` genérico, tres colisiones de identificador y una `session-key` mal formada, en la vuelta y en el inicio.
+- **N2 — `Retry-After` en la página** (`0f09f1c`). La página de `remote_unavailable` lleva `Retry-After: 5`, como el JSON. *Rojo:* el test de «SSM falla durante un inicio de sesión» pidió la cabecera antes del arreglo.
+- **N3 — para E3**: **la Lambda se niega a arrancar si la clave de sesión no mide 32 bytes.** Hoy no hay composición de producción. Se hará en la composición del SDK (E3): leer la clave al arrancar y construir el `Signer`, y si falla, no arrancar. Hasta entonces, una clave mal formada da la página `internal` o el `500`, nunca una firma débil.
+- **N4 — el nivel del registro** (`5023f0d`). Un test exige `ERROR` en un 5xx, `WARN` en un 4xx e `INFO` en el resto. *Rojo:* el test se escribió contra el código tal cual, que ya ponía el nivel bien; **mata S4** (el nivel fijo en `INFO`), que sobrevivía.
+- **N5 — `docs/api.md` al día** (`9518223`): `unreadable` confirmado (Q9), y «Quién implementa qué» va ahora antes de «Parámetros de SSM…», de modo que §8 precede a §9 (las referencias a §9 siguen valiendo). El comentario de `device.ts` y `data-model.md` §6 dicen «confirmado» (`b9e6750`).
+- **N6 — las dos preferencias**: `presentedDeviceId` usa `isId22` (`8912a09`), y `/api/session` se atiende por su nombre y exige una admisión de sesión, mientras que una ruta de la tabla sin rama en el `switch` responde `404` en vez de caer en la de la sesión (`979d017`).
+
+### 14.2 De la revisión de seguridad
+
+- **S2 — el `device_id` presentado, solo desde el propio sitio** (`8912a09`). El inicio de sesión tiene en cuenta el `device_id` **solo si la petición viene del propio sitio**: `Sec-Fetch-Site: same-origin` u `Origin` propio (`fromOwnSite`, en el dominio). Desde otro sitio, o sin forma de saberlo, se ignora y el inicio sigue sin él (se asigna uno nuevo). La tarjeta de la web navega desde el propio origen, así que la envía el navegador. *Rojo:* un test del dominio y otro de la API, con `cross-site`, `same-site`, sin cabeceras y con un `Origin` ajeno, en rojo antes del arreglo. Mutantes S2a (desde cualquier sitio) y S2b (aceptar sin `Sec-Fetch-Site`): muertos.
+- **S3 — la lista, por el `sub`, con cookie (Q10, aceptado)** (`9518223`). `docs/api.md` §2 y §7 lo dicen así: **con cookie, cada petición comprueba solo que el `sub` siga en la lista; retirar el acceso es quitar la entrada del `sub`, no cambiarle el correo**. El procedimiento de la cuenta robada ya dice «quitar el par de la lista», que es quitar la entrada: no hace falta tocarlo. El guion de secretos (017) lo tiene que decir igual (se añade a «Documentos»).
+- **S4 — techos en la configuración** (`f18fa57`), fijos en el código, como el del token: sesión ≤ 24 h, cookie transitoria ≤ 30 min, cachés ≤ 1 h, código de la consola ≤ 15 min. Por encima, la configuración se rechaza (`above_ceiling`). *Rojo:* el test del dominio con cada techo y cada techo más uno, en rojo antes del arreglo. Mutantes S4-techo y S4-sesion: muertos.
+- **S5 — los centinelas por los caminos de fallo** (`d39b8b1`): el proveedor caído, un token falsificado con los centinelas dentro (con un `kid` desconocido y con una firma que no es), un fallo de S3 en una petición y en una vuelta, y el `500` de un `Error` cuyo mensaje lleva los centinelas. El test comprueba además que cada camino se recorrió (`google_exchange_failed`, `id_token_invalid`, `dependency: s3`, `500`). Mutante S5 (registrar el mensaje saneado de un fallo del inicio de sesión): muerto.
+- **La cookie duplicada** entra en la lista del primer despliegue (018) de `docs/decision-roadmap.md` (`7851269`): comprobar cómo entrega la Function URL las cookies, y si una misma cookie llega por las dos fuentes, decidir antes de seguir. El código sigue fallando cerrado (`session_invalid`, `repeated`).
+
+### 14.3 Lo que se volvió a mirar alrededor
+
+- Las **cuatro rutas** tras N1: el `catch` es común y el `switch` ya no tiene rama por defecto que atienda una ruta nueva (N6); el guardián de alcance sigue viendo la web entera tras B2.
+- **Los lotes de mutación, enteros otra vez** sobre el árbol arreglado: **E1, 59 de 59 muertos** (los 51 de antes, con el ancla de M9a al día, más S4-nivel, N1, N2, S2a, S2b, S4-techo, S4-sesion y S5), y **guardianes, 18 de 18** (los 14 de antes, más S10, S10b, S10c y G-api-rel: el guardián de rutas relativas hacia `apps/api`, que la revisión señaló sin mutar). El árbol, igual antes y después de cada lote.
+
+### 14.4 Tubería sobre el commit congelado de la ronda 1
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage` | 0 | 277 ficheros, 2.745 tests; el dominio al 100 % de líneas, ramas, funciones y sentencias |
+| `npm run build` | 0 | arranque **75.834**, total **282.187**; sin cambio respecto del congelado anterior |
+
+Ningún gemelo `.js`; `git diff b3e2fcb -- tests/fixtures` vacío. **Commit congelado de la ronda 1: el que contiene esta sección** (su SHA, en el comentario de la PR y en el informe a la dirección).
+
+### 14.5 Documentos, añadidos
+
+- **Guion de secretos (017)** y su procedimiento: retirar el acceso es quitar la entrada del `sub` de la lista (S3).
+- **ADR-0027**: que la comprobación de cada petición con cookie es por el `sub` (Q10), y los techos de la configuración (S4).
