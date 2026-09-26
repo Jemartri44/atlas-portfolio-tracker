@@ -84,8 +84,15 @@ export const folderOpenToOthers = async (path: string): Promise<boolean> => {
  */
 export const updateCredentials = async (
   path: string,
-  change: (file: CredentialsFile) => CredentialsFile,
-): Promise<void> => writeCredentials(path, change(await readCredentials(path)));
+  change: (file: CredentialsFile) => CredentialsFile | undefined,
+): Promise<boolean> => {
+  const changed = change(await readCredentials(path));
+  if (changed === undefined) {
+    return false;
+  }
+  await writeCredentials(path, changed);
+  return true;
+};
 
 /** The credentials, or none when there is no file. A file open to others is not used. */
 export const readCredentials = async (path: string): Promise<CredentialsFile> => {

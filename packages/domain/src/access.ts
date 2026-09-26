@@ -63,6 +63,7 @@ export {
   parseCredentials,
   parseRemoteJson,
   type RemoteJson,
+  replacesAnotherOrigin,
   serializeCredentials,
   serializeRemoteJson,
   withEntry,

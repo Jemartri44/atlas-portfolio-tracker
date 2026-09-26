@@ -18,6 +18,7 @@ import {
   isDeviceName,
   isHttpsOrigin,
   type RemoteJson,
+  replacesAnotherOrigin,
   withEntry,
   withoutEntry,
 } from "@atlas/domain/access";
@@ -158,7 +159,17 @@ const login = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promis
       return EXIT.domain;
     }
     const kept: CredentialEntry = entry;
-    await updateCredentials(at.path, (file) => withEntry(file, kept));
+    // Read again just before writing: an entry of this device from another
+    // origin is never replaced (review of PR #95, round 2, the rest of N5).
+    const written = await updateCredentials(at.path, (file) =>
+      replacesAnotherOrigin(file, kept) ? undefined : withEntry(file, kept),
+    );
+    if (!written) {
+      ctx.io.err(
+        `Error (credentials_other_origin): el servidor ha respondido con el dispositivo ${kept.device_id}, que en credentials.json es de otro origen. No se ha guardado nada; revoca desde la web de ${origin} el token que se acaba de emitir.`,
+      );
+      return EXIT.domain;
+    }
     ctx.io.out(
       `Sesión iniciada: dispositivo «${entry.device_name}» (${entry.device_id}), token ${entry.token_id}, caduca el ${dateOf(entry.expires_at)}. No se ha tocado la carpeta del libro.`,
     );

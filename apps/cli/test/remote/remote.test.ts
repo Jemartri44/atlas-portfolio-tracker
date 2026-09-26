@@ -415,6 +415,25 @@ describe("what the review of PR #95 found in the console", () => {
     expect(await readFile(c.credentials, "utf8")).toBe(before);
   });
 
+  it("refuses a new token whose device already has an entry of another origin (round 2, N5)", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    const entry = await entryOf(c);
+    // The entry of that device now says another origin, as if it came from it.
+    const file = await c.readCredentialsFile();
+    file.entries[entry.device_id as string].origin = "https://other.example";
+    await writeFile(c.credentials, JSON.stringify(file), { mode: 0o600 });
+    const before = await readFile(c.credentials, "utf8");
+    // A server of SELF answering a new sign-in with that device id.
+    c.hooks.tamper = (path, body) =>
+      path === "/api/auth/console/token"
+        ? body.replace(/"device_id":"[^"]+"/, `"device_id":"${entry.device_id}"`)
+        : body;
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(1);
+    expect(c.err.join("\n")).toContain("credentials_other_origin");
+    expect(await readFile(c.credentials, "utf8")).toBe(before);
+  });
+
   it("drops the local entry when the token to renew is revoked, so the next sign-in reissues (§21)", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
