@@ -32,8 +32,8 @@ Hay **dos**, y cada petición lleva **exactamente una**:
 - **Cookie y token a la vez: `400 credentials_ambiguous`**, sin mirar ninguna de las dos (ADR-0033, punto 4).
 - **Sin ninguna: `401 unauthenticated`**, salvo en las rutas de inicio de sesión.
 - **Con cookie, toda petición que escribe** comprueba además `Origin` contra el origen propio (`403 origin_rejected`). Con el token no hace falta: un navegador no añade una cabecera propia a otro sitio sin una comprobación CORS previa, y la API no responde a CORS.
-- **Cada petición vuelve a consultar la lista permitida** `{sub, email}` (ADR-0027, enmienda; ADR-0033, punto 5), con la caché de la lista de ADR-0027: **120 s** (decidido el 2026-09-25). El registro del token **no** se cachea (§2.2).
-- **Cada petición con credencial comprueba el objeto de su dispositivo** (`sync/devices/<device_id>.json`, §5.3): tiene que **existir**, ser **del tipo de la credencial** (cookie → `web`, token → `console`) y estar **activo**. Si no, `403 device_forgotten`, con `details.reason` = `missing` \| `wrong_type` \| `forgotten` (y `unreadable` si el objeto no se lee, pendiente de confirmar). Un objeto que falta **nunca** cuenta como vivo (decisiones B1 y R2-B2 del prompt de la 015).
+- **Cada petición vuelve a consultar la lista permitida** (ADR-0027, enmienda; ADR-0033, punto 5), con la caché de la lista de ADR-0027: **120 s** (decidido el 2026-09-25). **Con el token**, se comprueba el par `{sub, email}` de su registro (§2.2). **Con la cookie**, que no lleva el correo, se comprueba que **el `sub` de la sesión siga teniendo una entrada** en la lista; el par entero se comprobó al iniciar la sesión (decisión Q10, 2026-09-26). **Retirar el acceso es quitar la entrada de ese `sub`**, no cambiarle el correo: con el mismo `sub` y otro correo, las sesiones vivas siguen valiendo hasta que caducan, y un inicio de sesión nuevo ya no pasa. El registro del token **no** se cachea (§2.2).
+- **Cada petición con credencial comprueba el objeto de su dispositivo** (`sync/devices/<device_id>.json`, §5.3): tiene que **existir**, ser **del tipo de la credencial** (cookie → `web`, token → `console`) y estar **activo**. Si no, `403 device_forgotten`, con `details.reason` = `missing` \| `wrong_type` \| `forgotten` o `unreadable` si el objeto no se lee (confirmado por la dirección el 2026-09-26, Q9). Un objeto que falta **nunca** cuenta como vivo (decisiones B1 y R2-B2 del prompt de la 015).
 - **Un fallo transitorio** de SSM (`ThrottlingException`) o de S3 al comprobar una credencial es **`503 remote_unavailable`**, que se puede reintentar, y **nunca** deja pasar la credencial ni la da por inválida para siempre (ADR-0034, fila 13).
 
 ### 2.1 Formato del token de dispositivo
@@ -79,7 +79,7 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 
 | Método y ruta | Qué hace |
 |---|---|
-| `GET /api/auth/login[?device_id=<22>]` | Crea el intento (`state`, `nonce`, verificador PKCE y, si la web lo presenta, su `device_id`) en la **cookie transitoria** `__Host-atlas_login` (`SameSite=Lax`, firmada, de un solo uso), y redirige (`302`) a Google con `scope=openid email`, PKCE S256, `state` y `nonce`. Una credencial presente se ignora. Un `device_id` con otro formato se descarta en silencio: no es credencial (§5.4). |
+| `GET /api/auth/login[?device_id=<22>]` | Crea el intento (`state`, `nonce`, verificador PKCE y, si la web lo presenta, su `device_id`) en la **cookie transitoria** `__Host-atlas_login` (`SameSite=Lax`, firmada, de un solo uso), y redirige (`302`) a Google con `scope=openid email`, PKCE S256, `state` y `nonce`. Una credencial presente se ignora. Un `device_id` con otro formato se descarta en silencio: no es credencial (§5.4). **El `device_id` solo se tiene en cuenta si el inicio viene del propio sitio** (`Sec-Fetch-Site: same-origin`, u `Origin` propio); desde otro sitio, o sin forma de saberlo, se ignora y el inicio sigue sin él (revisión de seguridad de la PR #90, S2). |
 | `GET /api/auth/callback` | Vuelta de Google. Verifica en el orden de ADR-0027 (`state` contra la cookie transitoria, PKCE, firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`, par `{sub, email}` en la lista). Si el intento es de la **web**, emite la cookie de sesión y redirige a la SPA (`/ajustes#sincronizacion`). Si es de la **consola**, sigue §4.2. La cookie transitoria **se borra en toda respuesta**. Un par que no está en la lista recibe la **página de acceso denegado**; cualquier otro fallo, la **página de error** (§3.1). |
 | `POST /api/auth/logout` | Cuerpo `{}` obligatorio (`415 body_not_json`). Borra la cookie de sesión (`Max-Age=0`) **sin validarla** —cerrar una sesión caducada o firmada con una clave rotada también la borra— y responde `204`. Con cookie, la comprobación de `Origin` de §2. Con el token, `403 forbidden_for_credential`. |
 | `GET /api/session` | Solo cookie. `200 { "signed_in": true, "expires_at": "<Z>", "device_id": "<22>" }`, con `Cache-Control: no-store`: así sabe la SPA si tiene sesión (la cookie es `HttpOnly`) y qué `device_id` le asignó la API. Si no, la misma respuesta que cualquier ruta con cookie (`401 unauthenticated`, `401 session_invalid`, `403 not_allowed`, `403 device_forgotten`, `503 remote_unavailable`). Con el token, `403 forbidden_for_credential`. |
@@ -93,7 +93,7 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 Todas `text/html; charset=utf-8`, **sin *script* y sin nada externo**, con `Cache-Control: no-store`, `Referrer-Policy: no-referrer` y CSP `default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` (las de la consola, además, `sandbox`, §4.2).
 
 - **Acceso denegado** (`403`): la vuelta de Google fue válida pero el par no está en la lista. Enseña **solo el `sub` de la cuenta que acaba de autenticarse en esa misma petición**, escapado, y cómo darlo de alta. **Nunca el correo.** El `sub` no se registra ni va en ninguna URL.
-- **Error del inicio de sesión** (`400`, `403` o `503`): cualquier otro fallo de la vuelta, con su código literal y una frase por código: `login_attempt_missing` (el intento no está o caducó), `login_attempt_invalid` (la cookie del intento no se lee o está repetida; añadido en E1 de la 015, a confirmar por la dirección), `login_state_mismatch`, `google_error`, `google_exchange_failed`, `id_token_invalid`, `id_token_audience`, `id_token_issuer`, `id_token_expired`, `id_token_nonce`, `email_not_verified`, `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console` y `remote_unavailable`.
+- **Error del inicio de sesión** (`400`, `403` o `503`): cualquier otro fallo de la vuelta, con su código literal y una frase por código: `login_attempt_missing` (el intento no está o caducó), `login_attempt_invalid` (la cookie del intento no se lee o está repetida; añadido en E1 de la 015, a confirmar por la dirección), `login_state_mismatch`, `google_error`, `google_exchange_failed`, `id_token_invalid`, `id_token_audience`, `id_token_issuer`, `id_token_expired`, `id_token_nonce`, `email_not_verified`, `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `remote_unavailable` (con `Retry-After: 5`, como en JSON) e `internal` (`500`: cualquier fallo inesperado del inicio o de la vuelta, que también borra la cookie del intento; revisión de la PR #90, N1).
 
 ## 4. El token de dispositivo de la consola (ADR-0033)
 
@@ -369,7 +369,7 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `device_token_invalid` | 401 | Token con mal formato, sin registro, con otro `token_id` en el registro o con un secreto que no cuadra |
 | `device_token_revoked` | 401 | Token revocado |
 | `device_token_expired` | 401 | Token caducado (`expires_at` o el techo de 120 días) |
-| `not_allowed` | 403 | El par `{sub, email}` no está en la lista permitida |
+| `not_allowed` | 403 | Con el token, el par `{sub, email}` no está en la lista permitida; con la cookie, el `sub` de la sesión ya no tiene entrada (§2) |
 | `forbidden_for_credential` | 403 | Un token en una ruta solo de sesión (§2.3) |
 | `origin_rejected` | 403 | Escritura con cookie y `Origin` ajeno |
 | `mfa_required` | 403 | Emisión de un token sin `amr` con `mfa`, si se puede exigir (§4.2) |
@@ -399,6 +399,16 @@ Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.cod
 
 Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a una respuesta sin este formato (el hash del cuerpo rechazado por AWS, el WAF, un error de CloudFront). Nunca se trata como un rechazo de líneas: la sincronización para y lo dice.
 
+## 8. Quién implementa qué
+
+| Pieza | Feature |
+|---|---|
+| El caso de uso puro que reaplica y acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto, el marcador, lo retenido y lo descartado, y un **remoto simulado** que cumple §5 sin HTTP | **014**, fusionada (PR #83, 2026-09-25) |
+| Las órdenes de administración de la consola contra el almacén remoto: `compact` del remoto, restaurar y olvidar un dispositivo, **fuera de la API** (ADR-0026, Parte A) | **015** |
+| La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
+| El correo mensual con los inicios de sesión de la consola y los tokens vivos y emitidos | **016** |
+| El prefijo de SSM y sus permisos, la política de origen que reenvía `x-atlas-device-token`, la CSP que respeta la `sandbox` de §4.2 | **017** |
+
 ## 9. Parámetros de SSM y configuración de la Lambda
 
 Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion de secretos**, con el rol de administración, nunca Terraform (ADR-0034, fila 21); aquí van sus nombres y formatos.
@@ -411,14 +421,4 @@ Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion
 | `/atlas/<entorno>/auth/session-key` | `SecureString` | 32 bytes aleatorios en base64url (43 caracteres); de ella salen las subclaves HKDF | 300 s: rotarla cierra todas las sesiones como mucho en 5 minutos |
 | `/atlas/<entorno>/device-tokens/<token_id>` | `SecureString` | el registro del token (formato en `specs/015-api-access/data-model.md` §2) | **ninguna** (§2.2) |
 
-**Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (28.800), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CONSOLE_CODE_TTL_SECONDS` (300), `ATLAS_TOKEN_LIFETIME_DAYS` (90; más de 120 impide arrancar), `ATLAS_RECENT_ISSUE_DAYS` (7), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120) y `ATLAS_SECRETS_CACHE_SECONDS` (300). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar.
-
-## 8. Quién implementa qué
-
-| Pieza | Feature |
-|---|---|
-| El caso de uso puro que reaplica y acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto, el marcador, lo retenido y lo descartado, y un **remoto simulado** que cumple §5 sin HTTP | **014**, fusionada (PR #83, 2026-09-25) |
-| Las órdenes de administración de la consola contra el almacén remoto: `compact` del remoto, restaurar y olvidar un dispositivo, **fuera de la API** (ADR-0026, Parte A) | **015** |
-| La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
-| El correo mensual con los inicios de sesión de la consola y los tokens vivos y emitidos | **016** |
-| El prefijo de SSM y sus permisos, la política de origen que reenvía `x-atlas-device-token`, la CSP que respeta la `sandbox` de §4.2 | **017** |
+**Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (28.800), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CONSOLE_CODE_TTL_SECONDS` (300), `ATLAS_TOKEN_LIFETIME_DAYS` (90; más de 120 impide arrancar), `ATLAS_RECENT_ISSUE_DAYS` (7), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120) y `ATLAS_SECRETS_CACHE_SECONDS` (300). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar. **Techos fijos en el código** (revisión de seguridad de la PR #90, S4): la sesión, como mucho 24 h (86.400); la cookie transitoria, 30 min (1.800); el código de la consola, 15 min (900); las dos cachés, 1 h (3.600); la caducidad del token, 120 días. Por encima, la configuración se rechaza y la Lambda no arranca.
