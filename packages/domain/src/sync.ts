@@ -8,6 +8,7 @@ export {
   type AppendEntry,
   type AppendResult,
   type DeviceQueueState,
+  LINE_REJECTION_CODES,
   type LineRejection,
   REMOTE_FAILURE_CODES,
   RemoteError,
@@ -15,6 +16,13 @@ export {
   type RemoteSnapshot,
 } from "./ports/remote-ledger.js";
 export type { DeviceChange, DeviceState, SyncStateStore } from "./ports/sync-state-store.js";
+export {
+  etagOfHeader,
+  parseAppendAnswer,
+  parseErrorAnswer,
+  parseInitAnswer,
+  parsePublishAnswer,
+} from "./sync/answers.js";
 export { syncArchiveName } from "./sync/archive.js";
 export {
   type HoldReason,

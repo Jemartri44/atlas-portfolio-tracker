@@ -84,6 +84,27 @@ export const REMOTE_FAILURE_CODES = [
 ] as const;
 
 /**
+ * The codes a line (or a unit) is rejected with inside a successful append
+ * (`docs/api.md` §5.2 and §7), **closed**: the only answers that hold a line
+ * back. An HTTP client takes any other `rejected.code` for an answer without
+ * the shape of the API (`transport_rejected`), never for a reason to hold.
+ */
+export const LINE_REJECTION_CODES = [
+  "line_unreadable",
+  "schema_version_unsupported",
+  "line_invalid",
+  "recorded_at_in_future",
+  "domain_rejected",
+  "duplicate_unconfirmed",
+  "pair_declaration_invalid",
+  "pair_incomplete",
+  "pair_not_contiguous",
+  "pair_rejected",
+  "seal_mismatch",
+  "waiver_not_appendable",
+] as const;
+
+/**
  * A request that did not get a line-by-line answer. `code` is one of the
  * codes of `docs/api.md` §7 — `precondition_failed` (412) sends the sync back
  * to step 1 — or, for what never reached the API, `transport_rejected` (an
