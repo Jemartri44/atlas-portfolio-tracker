@@ -40,7 +40,15 @@ export default defineConfig({
   },
   test: {
     passWithNoTests: true,
-    exclude: ["**/node_modules/**", "**/dist/**", "**/dist-test/**", "**/dist-test-sync/**"],
+    // Every outDir of a tsconfig (tests/test-outputs.test.ts): a compiled test
+    // must never run a second time after a build.
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/dist-test/**",
+      "**/dist-test-sync/**",
+      "**/dist-test-browser/**",
+    ],
     projects: [
       { extends: true, test: { name: "domain", root: "packages/domain" } },
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },
