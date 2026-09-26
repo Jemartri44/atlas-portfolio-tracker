@@ -198,6 +198,32 @@ describe("architecture (015): the API is a workspace of its own", () => {
   });
 });
 
+describe("architecture (015): every import can be read", () => {
+  /**
+   * The graph every guard above and below walks is read off the **text** of
+   * the imports, so an import it cannot read is an import it cannot see. A
+   * dynamic `import(…)` whose argument is not a plain string literal in
+   * single or double quotes — a template literal, a variable, any expression —
+   * is refused **everywhere in the product** (B2 of the review of PR #90: a
+   * template literal walked past the guard of P2 and P3 with every test green).
+   * Comments are prose, not imports, and are stripped first.
+   */
+  it("allows a dynamic import only with a quoted string literal", () => {
+    const offenders: string[] = [];
+    for (const file of productSources()) {
+      const code = readFileSync(file, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+      for (const match of code.matchAll(/\bimport\s*\(([^)]*)\)?/g)) {
+        if (!/^\s*(["'])[^"'`\n$]*\1\s*$/.test(match[1] ?? "")) {
+          offenders.push(`${relative(repoRoot, file)}: import(${(match[1] ?? "").trim()})`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe("architecture (015): credentials travel where ADR-0027 says", () => {
   /**
    * CloudFront overwrites `Authorization` with OAC (ADR-0027, fact 1): every
