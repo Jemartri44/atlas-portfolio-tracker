@@ -1024,3 +1024,27 @@ Sobre `38f8555`, el último commit de código. El congelado solo añade esta sec
 - La CI `verify` solo corre en la PR; su resultado va en la PR.
 
 **Commit congelado de E2: el que contiene esta sección.** Su SHA va en la PR de E2 y en el informe a la dirección. Desde aquí no se empuja nada a la rama mientras dura la revisión.
+
+## 21. Decisiones de la dirección sobre E2 (2026-09-26)
+
+Tal como llegaron, con lo que se hizo con cada una.
+
+- **Q11, aceptada la deducción.** La API documenta `ParameterAlreadyExists` para un `PutParameter` sin `Overwrite` sobre un nombre que ya existe, y las escrituras concurrentes sobre un mismo nombre se rechazan. **No se para.** A la lista de comprobaciones de la 018 se añade una prueba real contra SSM: dos canjes simultáneos del mismo código, de los que solo uno prospera. **Hecho**:
+  - ADR-0033 lleva una nota fechada con la deducción;
+  - la prueba entra en `docs/decision-roadmap.md`, 018, junto con la del *loopback* en el navegador real (P14).
+- **Las cuatro decisiones de §20.8, aceptadas tal cual.** **Hecho** en `docs/api.md` §3.1, §4.2, §4.3, §4.5 y §7:
+  - `reissue_device_unreadable`;
+  - `404 not_found` sin escribir nada, con `token_missing` y `token_unreadable`;
+  - los motivos `ambiguous_subject` y `other_subject`;
+  - borrar la entrada local para reemitir en el siguiente inicio de sesión.
+  - Además, `renewal_and_reissue`, dentro de `body_invalid`.
+- **Los dos tramos intermedios en rojo** (`f6cbbf7`, y de `23fa3dc` a `20127d3`) **quedan anotados como están**, sin reescribir la historia (§20.2). **La regla**: antes de cada empuje, al menos `typecheck`.
+- **Documentos: los traslado yo, en esta PR**, por orden expresa de la dirección. Es una excepción a §2 bis del encargo, limitada a esto. **Hecho en `dc6d6d2`**:
+  - `docs/api.md`: Q8 (el código lleva solo el `sub`), los códigos nuevos, el `404` y los motivos;
+  - ADR-0033: una nota fechada que cierra o actualiza los SIN VERIFICAR del bloque 0 (§18);
+  - ADR-0034: una nota fechada sobre la fila 9 (las etiquetas al crear, que exigen `ssm:AddTagsToResource`);
+  - `docs/decision-roadmap.md`: `ssm:AddTagsToResource` en la entrada de la 017, y las pruebas de Q11 y del *loopback* en la lista de la 018.
+
+**Tubería**: `npm run lint` 0 y `npm run typecheck` 0 antes de cada empuje. La CI `verify` va en el comentario de la PR #95. Los cambios de esta sección son solo de documentos. El código es el de `38f8555`, con `test:coverage` dos veces en 0 y `build` en 0 (§20.11).
+
+**Commit congelado: el que contiene esta sección.** Su SHA va en la PR #95. Desde aquí no se empuja nada mientras dura la revisión.
