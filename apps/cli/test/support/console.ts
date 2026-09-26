@@ -127,8 +127,10 @@ export interface ConsoleUnderTest {
 
 export const setupConsole = async (
   options: Parameters<typeof browser>[1] = {},
+  /** Another console's API: two consoles over one remote. */
+  shared?: Api,
 ): Promise<ConsoleUnderTest> => {
-  const api = setup();
+  const api = shared ?? setup();
   const root = await mkdtemp(join(tmpdir(), "atlas-remote-015-"));
   const ledger = join(root, "libro");
   const config = join(root, "config");
