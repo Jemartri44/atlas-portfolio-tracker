@@ -59,7 +59,7 @@ export {
   recordsText,
   unresolvedHeld,
 } from "./sync/held.js";
-export { initRefusal, joinWithMine, replaceWithRemote } from "./sync/join.js";
+export { initRefusal, initState, joinWithMine, replaceWithRemote } from "./sync/join.js";
 export {
   EMPTY_ETAG,
   lineSha256,

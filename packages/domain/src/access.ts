@@ -83,6 +83,13 @@ export {
   serializeDeviceObject,
 } from "./access/device.js";
 export {
+  type EntryChoice,
+  entryToStart,
+  entryToSync,
+  type FolderSyncState,
+  folderSyncState,
+} from "./access/folder-start.js";
+export {
   checkIdTokenClaims,
   checkIdTokenHeader,
   type IdTokenExpectation,
