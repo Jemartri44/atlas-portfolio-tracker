@@ -571,8 +571,11 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
    */
   it("writes the graph in the build and refuses each family on it", () => {
     const config = readFileSync(join(repoRoot, "apps", "web", "vite.config.ts"), "utf8");
-    expect(config).toContain('name: "atlas-module-graph"');
+    expect(config).toContain('moduleGraph("main"),');
+    // Round 3: the workers are other builds, with the same plugin.
+    expect(config).toContain('worker: { plugins: () => [moduleGraph("worker")] }');
     expect(config).toContain('fileName: ".vite/atlas-modules.json"');
+    expect(config).toContain("realpathSync(path)");
     const script = readFileSync(
       join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
       "utf8",
@@ -587,6 +590,10 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
       "un módulo de Node",
       "un doble o código de test",
       "del almacén de la sincronización, que solo se puede leer",
+      "un paquete del repositorio por node_modules",
+      "crea un worker cuyo grafo no se conoce",
+      "el bundle lleva un fuente",
+      "ningún grafo dice de dónde sale este fichero",
     ]) {
       expect(script).toContain(family);
     }
