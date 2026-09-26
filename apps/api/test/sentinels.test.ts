@@ -7,7 +7,9 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import { base64url, pkceChallenge, Signer } from "@atlas/adapters/access";
+import { SdkObjectStore } from "@atlas/adapters/aws-sdk";
 import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
+import { S3ServiceException } from "@aws-sdk/client-s3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { allowListOf, consoleLogin, NAMES, SELF, setup } from "./harness.js";
 
@@ -464,5 +466,40 @@ describe("the log of the API (R25)", () => {
         code,
       ).toBe(true);
     }
+  });
+  it("carries nothing of an error of the SDK that is not transient: not the bucket, not the key (review of PR #96, N4)", async () => {
+    const first = setup();
+    const console_ = await consoleLogin(first);
+    const BUCKET = "sentinel-bucket-7777";
+    const ARN = "arn:aws:sts::123456789012:assumed-role/atlas-dev-api/SENTINEL";
+    const client = {
+      send: async (command: { input: { Key?: string } }) => {
+        throw new S3ServiceException({
+          name: "AccessDenied",
+          $fault: "client",
+          $metadata: { httpStatusCode: 403 },
+          message: `User: ${ARN} is not authorized to perform s3:GetObject on ${BUCKET}/${String(command.input.Key)}`,
+        });
+      },
+    };
+    const api = setup({
+      objects: new SdkObjectStore(client as never, BUCKET),
+      parameters: first.ssm,
+    });
+    const answer = await api.call("GET", "/api/ledger", {
+      headers: { "x-atlas-device-token": console_.token },
+      jar: false,
+    });
+    expect(answer.statusCode).toBe(500);
+    expect(answer.body).not.toContain(BUCKET);
+    const everything = [...api.logs, ...captured].join("\n");
+    for (const secret of [BUCKET, ARN, "123456789012", "sync/devices", console_.token]) {
+      expect(everything).not.toContain(secret);
+    }
+    expect(JSON.parse(api.logs.at(-1) as string)).toMatchObject({
+      status: 500,
+      code: "internal",
+      reason: "AccessDenied",
+    });
   });
 });
