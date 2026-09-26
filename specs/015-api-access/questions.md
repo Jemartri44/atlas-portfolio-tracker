@@ -446,7 +446,7 @@ Revisiones: corrección (`#issuecomment-5841582316`) y seguridad (`#issuecomment
 ### 14.1 De la revisión de corrección
 
 - **B1 — el orden del techo.** No se reescribe la historia. §10.4 dice ahora la verdad: `d82e45a` no pasa el `build` y `f20c5bf` sube el techo después. **Lección para E2-E5: el techo se sube antes.**
-- **B2 — importaciones dinámicas no literales** (`73c18d6`). El guardián prohíbe en **todo el producto** cualquier `import(` cuyo argumento no sea una cadena literal entre comillas simples o dobles: las comillas invertidas y las expresiones quedan fuera. Así, todo lo que leen los guardianes (el de P2 y P3, el de alcance, el del SDK, el de «nada lo alcanza») y el cálculo de lo que alcanza la web ven todas las importaciones. *Rojo:* **S10 sobrevivió** con el guardián anterior (`git stash` del test, lote `r1-b2.json`) y muere con el nuevo, igual que S10b (una variable) y S10c (comillas invertidas en la API).
+- **B2 — importaciones dinámicas no literales** (`73c18d6`). El guardián prohíbe en **todo el producto** cualquier `import(` cuyo argumento no sea una cadena literal entre comillas simples o dobles: las comillas invertidas y las expresiones quedan fuera. Así, todo lo que leen los guardianes (el de P2 y P3, el de alcance, el del SDK, el de «nada lo alcanza») y el cálculo de lo que alcanza la web ven todas las importaciones. **Corregido el 2026-09-26 (ronda 2, B2-bis y B3): no era cierto.** El quitado de comentarios se rompía con un `//` dentro de una cadena (R7c), el guardián de P2 y P3 no leía `export … from` ni rutas relativas (R1, R3), y ningún guardián veía `require` (R4) ni `import.meta.glob` (R5): los cinco metían el cliente en el paquete con los guardianes en verde, y solo los paraba el techo. Lo que hay ahora, en §15. *Rojo:* **S10 sobrevivió** con el guardián anterior (`git stash` del test, lote `r1-b2.json`) y muere con el nuevo, igual que S10b (una variable) y S10c (comillas invertidas en la API).
 - **N1 y S1 — un fallo inesperado del inicio de sesión** (`0f09f1c`). Cualquier error que nadie esperaba en `/api/auth/login` o en `/api/auth/callback` responde con **la página de error** (código de página nuevo, `internal`, `500`), que **borra la cookie del intento**. *Rojo:* tres tests en rojo antes del arreglo: un `putIfNoneMatch` que lanza un `Error` genérico, tres colisiones de identificador y una `session-key` mal formada, en la vuelta y en el inicio.
 - **N2 — `Retry-After` en la página** (`0f09f1c`). La página de `remote_unavailable` lleva `Retry-After: 5`, como el JSON. *Rojo:* el test de «SSM falla durante un inicio de sesión» pidió la cabecera antes del arreglo.
 - **N3 — para E3**: **la Lambda se niega a arrancar si la clave de sesión no mide 32 bytes.** Hoy no hay composición de producción. Se hará en la composición del SDK (E3): leer la clave al arrancar y construir el `Signer`, y si falla, no arrancar. Hasta entonces, una clave mal formada da la página `internal` o el `500`, nunca una firma débil.
@@ -482,3 +482,109 @@ Ningún gemelo `.js`; `git diff b3e2fcb -- tests/fixtures` vacío. **Commit cong
 
 - **Guion de secretos (017)** y su procedimiento: retirar el acceso es quitar la entrada del `sub` de la lista (S3).
 - **ADR-0027**: que la comprobación de cada petición con cookie es por el `sub` (Q10), y los techos de la configuración (S4).
+
+## 15. Revisión de la PR #90, ronda 2: decisiones de la dirección y arreglos (2026-09-26)
+
+Revisión: `#issuecomment-5842695728`, sobre `ed1bb11`. Decisiones de la dirección: `#issuecomment-5842719680`. Hechas en la máquina nueva, en `.claude/worktrees/015-api-access`, a partir de `ed1bb11`. El guion de mutación de §10.3 se perdió con la mudanza; se reescribió igual (`mutate-015.mjs` del *scratchpad*: afirma que cada sustitución ocurre las veces dichas, restaura y compara byte a byte, borra lo creado, compara `git status` antes y después y se niega a correr con gemelos `.js`), y además **exige el motivo**: un mutante solo cuenta como muerto si la salida contiene el mensaje del guardián que debe matarlo.
+
+### 15.1 Mapa hallazgo → commit
+
+| Hallazgo | Decisión de la dirección | Commit | Cómo se vio en rojo |
+|---|---|---|---|
+| **B2-bis y B3** — la prueba autoritativa | Leer el grafo real del paquete después de `vite build` | `d599174` (y `7959ede`, el test que lo mantiene en su sitio) | Los siete mutantes del lote del grafo, contra el `check-bundle.mjs` de `ed1bb11`: **ninguno** falla por el grafo; seis solo por el techo del total y R4 también por el del arranque (tabla de §15.3). Con el grafo, mueren todos por su regla |
+| **B2-bis y B3** — los guardianes estáticos | Endurecerlos: sin `require(`, sin `import.meta.glob`, `export … from` leído, comentarios quitados sin romper con `//` en cadenas | `41c1c41` (y `3549059`, que solo recorre el árbol donde la construcción puede estar) | Los ocho mutantes del lote estático **sobreviven** los 60 tests de los dos guardianes sobre `ed1bb11`, y mueren con el nuevo |
+| **§14.1, la afirmación de B2** | Corregirla | este commit | — |
+| **T1** — ningún test sale a la red | `fetch` inyectado en `SessionCard`; un `fetch` global que falla en el entorno de la web | `3f26a6e`, `43fe27b`, `735422c` | `no-network*.test.ts`, en rojo sin el *setup* (Node: `Failed to parse URL`; happy-dom: `Failed to execute "fetch()"`); `session-card.test.tsx`, 2 de 3 en rojo sin la inyección |
+| **T1**, lo que salió al repetirla | — | `0a47dd5`, `3549059`, `1987520` | Tres *timeouts* de 5 s en cuatro ejecuciones de la suite completa, ninguno de red, con la máquina cargada por otros proyectos (§15.5): la prueba de los precios del libro sintético, el guardián nuevo de `require` (recorría el árbol de cada fuente del producto: 2,5 s solo) y el de las columnas de la rejilla a 1024 px |
+| **No bloqueante 1** — la política de origen | `Sec-Fetch-Site` y `Origin` a `/api/*` en `docs/api.md` §8 (fila de la 017) y en la lista de la 018 | `788389b` | — |
+| **No bloqueante 2** — `docs/api.md:96` | La página `internal` con `500` | `788389b` | — |
+| **No bloqueante 3** — los techos | `ATLAS_CLOCK_TOLERANCE_SECONDS` ≤ 3.600 y `ATLAS_RECENT_ISSUE_DAYS` ≤ 90, con tests | `54d79dd` | El test de los techos, con las dos filas nuevas, en rojo antes del arreglo (1 de 16) |
+
+### 15.2 Qué se hizo
+
+- **El grafo real del paquete** (`d599174`). Un *plugin* de `vite.config.ts` (`atlas-module-graph`, solo en `build`) escribe en `dist/.vite/atlas-modules.json` los módulos que Rolldown metió en cada trozo, con los bytes que cada uno aporta (`renderedLength`) y los nombres que el paquete usa de él (`renderedExports`). `check-bundle.mjs` lo lee y **para el *build*** con cualquiera de estas familias, se llegue por donde se llegue (un reenvío, una ruta relativa, `require`, `import.meta.glob`, una cadena):
+  - **cargado siquiera en el grafo**: el cliente y la orquestación de la sincronización (`packages/adapters/{src,dist}/sync/` y `sync-http/`, hasta E4), las reglas del acceso (`domain/{src,dist}/access`), los adaptadores de Node de la API (`aws/`, `access/`, `identity/`), el SDK de AWS (`@aws-sdk`, `@smithy`, `@aws-crypto`), `apps/api` y `apps/cli`, un módulo de Node (`node:` o `__vite-browser-external`) y los dobles (`test/`, `tests/`, `test-only-`);
+  - **con un byte en el paquete**: el motor del dominio de la sincronización. La puerta `@atlas/domain/sync` se carga para la pregunta de solo lectura del almacén de la sincronización, y con ella todo su motor, que Rolldown quita (0 bytes); solo `archive.ts`, `lines.ts` y `marker.ts` pueden aportar bytes, nombrados uno a uno;
+  - **por nombre**: del almacén de la sincronización (`sync-store.ts`) el paquete solo puede usar `browserSyncConfigured`, `browserSyncPresence` y los nombres de las tres claves. `BrowserSyncStore`, el que escribe, no.
+  - **Guardianes del guardián**: el grafo tiene que existir, tener la entrada y el dominio, describir **cada** trozo `.js` de la salida (salvo el *service worker*, que construye Workbox y que solo puede traer Workbox, y la línea de `registerSW.js`), y contener cada módulo que el *source map* de cada trozo nombra.
+  - **Por qué `moduleIds` y no los *source maps***: un módulo que el árbol quita del todo no sale en el *source map* y sí en el grafo. Leer el grafo es más estricto: el motor del dominio aparece entero en él, y por eso esa familia se lee por bytes.
+- **Los guardianes estáticos** (`41c1c41`) leen ahora cada fuente con **el analizador que ya trae Vite** (`parseSync`, de Oxc: ninguna dependencia nueva). Las importaciones, los reenvíos y las importaciones dinámicas salen del analizador, y los comentarios se quitan por los rangos que él da, así que un `//` dentro de una cadena no esconde nada. Tres reglas nuevas: **ni `require`, ni `createRequire`, ni `import.meta.glob`** (ni `import.meta` con clave calculada) en ningún fuente del producto; el guardián de P2 y P3 lee también los **`export … from`**, y trata como puerta **cualquier especificador que se resuelva a un fichero de las puertas**, no solo el nombre del paquete; y **la web no alcanza `packages/adapters/src/sync/` por ningún camino** (el alcance ya seguía rutas relativas y reenvíos). Una fuente que no se puede analizar hace fallar el guardián. Para no pagar el árbol de sintaxis de cada fuente (`3549059`), el de las importaciones dinámicas solo recorre las que el analizador dice que tienen alguna, y el de `require` solo las que tienen algún `import.meta` según el analizador o que escriben `require` como palabra, `createRequire` o un escape `\u` (un identificador puede escribirse con escapes: el mutante R4u lo prueba). Siguen siendo el aviso rápido: la prueba que decide es la del grafo.
+- **T1** (`3f26a6e`, `43fe27b`, `735422c`). El proyecto `web` de Vitest carga `test/setup/no-network.ts`, que cambia el `fetch` global por uno que **falla al instante** con `fetch sin simular en un test: <método> <url>`; en happy-dom, `window` es el propio objeto global, así que cubre también `window.fetch` (lo comprueba `no-network.dom.test.ts`). `SessionCard` recibe `request` y lo pasa a `readSession` y a `signOut`; la aplicación no le da ninguno y usa el del navegador en cada llamada. **Lo visto en esta máquina**: la suite completa sobre `54d79dd` (`ed1bb11` más los techos, sin tocar la web) salió con 0, pero su registro trae cinco `ECONNREFUSED 127.0.0.1:3000`: la tarjeta salía a la red en cada test que pintaba Ajustes. En la máquina del revisor algo escuchaba en el puerto 3000 y respondía `404` (lo dice su registro). Por qué eso hacía fallar allí el test de los precios no lo he reproducido; lo que está visto es que la petición salía, y que tras el arreglo ya no sale: ningún `ECONNREFUSED` en los registros.
+- **Documentos** (`788389b`): `docs/api.md` §3.1, la página de error del inicio de sesión con `400`, `403`, `500` o `503`, y «del inicio o de la vuelta»; `docs/api.md` §8, fila de la 017: la política de origen reenvía a `/api/*` `x-atlas-device-token`, `Sec-Fetch-Site` y `Origin`, y qué pasa sin ellas; `docs/decision-roadmap.md`, la 017 con las tres cabeceras y una comprobación más del primer despliegue de la 018 (dos inicios de sesión seguidos en `dev` conservan el `device_id`). Los techos nuevos, en `docs/api.md` §9 y `data-model.md` (`54d79dd`).
+
+### 15.3 Mutantes
+
+**Lote estático** (`guards-static-015.json`; orden: `vitest --project repo tests/api-access.test.ts tests/architecture.test.ts`): sobre los guardianes de `ed1bb11`, **0 de 8 muertos**; con `41c1c41`, **8 de 8**; y sobre el árbol final (`3549059`), con dos más, **10 de 10**.
+
+| Id | Mutante | Lo mata |
+|---|---|---|
+| R1 | `apps/web/src/sync/relay.ts` con `export { initialiseRemote } from "@atlas/adapters/sync-client"`, importado por ruta relativa desde `SessionCard`, con uso vivo | P2 y P3 (el reenvío, leído por nombre) y el alcance |
+| R1b | Igual con `export *` | P2 y P3 y el alcance |
+| R3 | `initialiseRemote` desde `../../../../../../packages/adapters/src/sync/client` | P2 y P3 (resuelto a la puerta) y el alcance |
+| R4 | `console.info(require("@atlas/adapters/sync-client"))` | «ni `require` ni `import.meta.glob`» |
+| R5 | `import.meta.glob("…/packages/adapters/src/sync/client.ts", { eager: true })` | «ni `require` ni `import.meta.glob`» |
+| R7c | ``["//", () => import(`@atlas/adapters/sync-client`)]`` | «solo con una cadena literal» |
+| R6 | `BrowserSyncStore` por ruta relativa a `sync-store` | P2 y P3 (resuelto a la puerta) |
+| R8 | `export { BrowserSyncStore } from "@atlas/adapters/sync"` en un reenvío | P2 y P3 (el reenvío, leído por nombre) |
+| R4u | `require` escrito con un escape, `\u0072equire(…)` | «ni `require` ni `import.meta.glob`» |
+| R5c | `import.meta["glob"](…)`, con clave calculada | «ni `require` ni `import.meta.glob`» |
+
+**Lote de guardianes de la ronda 1, repetido** sobre los guardianes nuevos (`guards-r1-015.json`), con `41c1c41` y otra vez con `3549059`: **19 de 19 muertos** las dos veces: M8a, M8b, M12a-d, S10, S10b, S10c, G-api-reach, G-api-rel, G-double, G-sdk, G-google, G-lazy, G-barrel, G-dep, G-web-access y M11.
+
+**Lote del grafo** (`guards-graph-015.json`; orden: `vite build && node scripts/check-bundle.mjs`, y el mutante solo cuenta como muerto si falla **con el mensaje de su regla**):
+
+| Id | Mutante | Sobre `ed1bb11` | Con `d599174` |
+|---|---|---|---|
+| B-R1 | R1 | solo el techo (276,5 KB) | muerto: «el cliente o la orquestación» (`client.ts`) |
+| B-R1b | R1b | — | muerto, ídem |
+| B-R3 | R3 | solo el techo (276,5 KB) | muerto, ídem |
+| B-R4 | R4 | solo los techos (arranque 76,8 KB; total 286,6 KB) | muerto, ídem |
+| B-R5 | R5 | solo el techo (282,9 KB) | muerto, ídem |
+| B-R7c | R7c | solo el techo (283,0 KB) | muerto, ídem |
+| B-R6 | R6 | solo el techo (276,8 KB) | muerto: «usa `BrowserSyncStore`» y el motor con bytes |
+| B-R8 | R8 | solo el techo (276,8 KB) | muerto, ídem |
+| B-engine | `joinWithMine` de `@atlas/domain/sync` en la web | — | muerto: «el motor de la sincronización» |
+| B-access | las reglas del acceso por ruta relativa | — | muerto: «las reglas del acceso» |
+| B-distaccess | la puerta compilada del acceso, desde `dist/` | — | muerto, ídem |
+| B-identity | el adaptador de Google | — | muerto: «un adaptador de Node de la API» |
+| B-aws | `aws/errors.ts` | — | muerto, ídem |
+| B-api | `apps/api/src/log.ts` | — | muerto: «la API o la consola» |
+| B-node | `node:fs` | — | muerto: «un módulo de Node» |
+| B-double | `packages/adapters/test/fake-idb.ts` | — | muerto: «un doble o código de test» |
+| B-nograph | el *plugin* escribe el grafo con otro nombre | — | muerto: «no se ha podido leer el grafo» |
+| B-nochunk | el grafo deja fuera el trozo de Ajustes | — | muerto: «no describe este chunk» |
+
+**18 de 18 muertos.** *Dicho*: `@atlas/domain/access` por su nombre no llega a empaquetarse en la web: el alias `@atlas/domain` de `vite.config.ts` casa por prefijo y lo convierte en `index.ts/access`, y el *build* falla antes del guardián. Por eso B-access y B-distaccess entran por ruta.
+
+**Lote de T1 y de los techos** (`r2-rest-015.json`): **10 de 11 muertos**. C-clock y C-recent (sin techo), C-clock+1 y C-recent+1 (el techo, uno más), S4-techo (sin comprobar techos) y S4-sesion (el de la sesión, doble) mueren con el test de los techos. T1-card (la tarjeta ignora su `fetch`), T1-signout (el cierre usa el global), T1-global (el *setup* no cambia el global) y T1-wiring (el proyecto `web` sin el *setup*) mueren con `no-network*` y `session-card`. **T1-window sobrevivió**: el *setup* cambiaba también `window.fetch`, y bajo happy-dom `window` **es** el objeto global (comprobado: `window === globalThis`). Era un mutante equivalente sobre una línea muerta; la línea se quitó (`735422c`) y el comentario lo dice.
+
+El árbol, igual antes y después de cada mutante (`git status` comparado). Ningún gemelo `.js` antes de cada lote.
+
+### 15.4 El paquete web
+
+Sin subida de techo. Medido con la regla de `check-bundle.mjs`: **arranque **75.843** (techo 75.869), total **282.280** (techo 282.624)**. Contra `ed1bb11` construido en esta máquina (75.834 y 282.187, lo mismo que en la anterior): el total sube **+93**, de ellos **+25** en `ajustes` (la inyección del `fetch`) y el resto ruido de *hashes*; el arranque sube **+9**, todo en la tabla de precargas de la entrada (`index`), sin código nuevo en él. El grafo va a `dist/.vite/atlas-modules.json`, que no cuenta: no es `.js` ni `.css`.
+
+### 15.5 Tubería
+
+Sobre `1987520`, el último commit de código (el congelado solo añade esta sección y la corrección de §14.1, que ningún test lee), en esta máquina, con 6 núcleos y otros proyectos compilando y probando a la vez (carga media entre 8 y 15):
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage` | 0 | 280 ficheros, 2.753 tests, 491 s; el dominio al 100 % de líneas, ramas, funciones y sentencias; ningún `ECONNREFUSED` en el registro |
+| `npm run test:coverage`, otra vez, seguida | 0 | 280 ficheros, 2.753 tests, 487 s; el dominio al 100 %; ningún `ECONNREFUSED` |
+| `npm run build` | 0 | arranque 75.843, total 282.280 |
+
+**Lo que costó llegar ahí, dicho.** La suite completa sobre `54d79dd` en esta máquina salió con 0 (5 min), con cinco `ECONNREFUSED 127.0.0.1:3000` en el registro: T1 existía, y aquí no se notaba porque nadie escuchaba en el puerto 3000. Con el arreglo, la suite se ejecutó seis veces más: sobre `735422c`, 1 y 0 (la prueba de los precios del libro sintético pasó de 5 s); sobre `0a47dd5`, 1 y 1 (el guardián nuevo de `require` y la rejilla a 1024 px pasaron de 5 s); sobre `1987520`, 0 y 0. Los tres fallos son *timeouts* del plazo por defecto de Vitest con la máquina cargada; ninguno es de red ni de lógica. Los tres tests reciben su plazo, como las suites de propiedades que ya lo tenían (`0a47dd5`, `1987520`), y el guardián de `require` deja de recorrer lo que no hace falta (`3549059`: de 2,5 s a 0,15 s). **Si la dirección prefiere otro remedio para los plazos** —un `testTimeout` global en `vitest.config.ts`, por ejemplo—, es una línea; no lo he tocado porque es configuración de la herramienta.
+
+Ningún gemelo `.js` antes de cada lote ni antes de cada ejecución. `git diff ed1bb11 -- tests/fixtures`: vacío.
+
+### 15.6 Documentos, añadidos
+
+- **017**: el despliegue deja fuera de lo que sirve CloudFront `dist/.vite/` (el grafo de módulos, como el manifiesto de Vite) y, si la dirección lo prefiere, los `*.map`. Hoy los *source maps* ya llevan las rutas de los fuentes, así que el grafo no enseña nada nuevo; pero no hace falta servirlo.
+- **Nada más**: las tres cabeceras y la comprobación de la 018 ya están escritas (`788389b`).
+
+### 15.7 Congelado
+
+**Commit congelado de la ronda 2: el que contiene esta sección** (su SHA, en el comentario de la PR y en el informe a la dirección). Desde aquí no se empuja nada a la rama mientras dura la revisión.
