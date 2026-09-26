@@ -1407,7 +1407,7 @@ Sobre `ccdbd40`, el último commit de código. El congelado solo añade esta sec
 | la misma, repetida a continuación | 0 | 2.975 tests en 795 s. Ningún `ECONNREFUSED` |
 | `npm run build` | 0 | Arranque 75.836 y total 283.285. La Lambda, 1.442.157 bytes |
 
-- **Ningún test falló solo por el tiempo**, ni con la máquina cargada. No se subió ningún plazo.
+- **Ningún test falló solo por el tiempo** en mis dos ejecuciones. No se subió ningún plazo. *(Corregido en §26.4: en la ejecución del revisor falló uno de la web por el tiempo, y ya no depende del reloj.)*
 - Ningún gemelo `.js`.
 - `git diff 2a23ec3 -- tests/fixtures` está vacío.
 - El paso de la CI con `upload-artifact` sigue fuera de la rama, a la espera del permiso `workflow`.
@@ -1429,5 +1429,105 @@ Tal como llegaron, con lo que se hizo con cada una.
   - `docs/decision-roadmap.md`: en la 017, `s3:ListBucket` que cubra `ledger/` (y que la API no necesita `s3:GetObject` en `archive/`) y el artefacto de la Lambda (`apps/api/dist-lambda/lambda.zip`, `index.handler`); en la 018, la prueba real de si `s3:ListBucket` con `s3:prefix` convierte el `403` en `404`, y la carrera real de dos `PutObject` condicionales.
 
 **Tubería**: `npm run lint` 0 y `npm run typecheck` 0 antes de cada empuje. Los cambios de esta sección son un test (`6b01733`) y documentos. El test pasa con `--maxWorkers=1`, y sus tres mutantes están arriba. El resto del código es el de `ccdbd40`, con `test:coverage` dos veces en 0 y `build` en 0 (§24.12). La CI `verify` va en el comentario de la PR #96.
+
+**Commit congelado: el que contiene esta sección.** Su SHA va en la PR #96. Desde aquí no se empuja nada mientras dura la revisión.
+
+## 26. Revisiones de la PR #96: decisiones de la dirección y correcciones (2026-09-26)
+
+Las dos revisiones se hicieron sobre el congelado `57ea212`. Aquí van las decisiones de la dirección, lo que se hizo con cada una y el commit que lo lleva.
+
+### 26.1 Seguridad
+
+- **B1 (bloqueante): una línea con un suplente suelto dejaba el remoto en bytes que no son UTF-8.** La API respondía `200` y escribía `ED A0 80`. Desde ahí, toda escritura por la API daba `500` y todo cliente paraba con `transport_rejected`. **Hecho**:
+  - `d8c7885`, el dominio: rechaza la línea antes de juzgarla (`/\p{Cs}/u`, `holdsLoneSurrogate`). En el append responde `body_invalid` con `reason: "lone_surrogate"`, y en el init, `init_rejected` con `code: "lone_surrogate"` y la línea. `rawLinesText` también la rechaza (`raw_lone_surrogate`), para que ningún almacén la escriba. Un par de suplentes bien formado sigue valiendo.
+  - `ea164f1`, la API: antes de escribir en S3 comprueba que los bytes son UTF-8 (`utf8Of`, con `TextDecoder` y `fatal: true`). Si no lo son, no escribe: `body_invalid`/`not_utf8` en el append e `init_rejected`/`not_utf8` en el init.
+  - **Tests**: la línea da `400` en el append (y el remoto se sigue pudiendo leer y escribir) y `422` en el init, y en los dos casos los bytes remotos no cambian.
+  - `raw_lone_surrogate` tiene su frase en las dos interfaces.
+- **N1: las rutas de referencia reciben un puerto de solo lectura limitado a sus dos prefijos** (`referenceReader`, `9ff94b1`).
+  - Rechaza cualquier otra clave o prefijo antes de preguntar a S3, y no tiene ninguna escritura.
+  - `sync.ts` ya no recibe ningún `ObjectStore`: el libro le llega por `AppendOnlyLedger`, los dispositivos por `DeviceStore` y la referencia por `ReferenceReader`.
+  - El test de estructura amplía su expresión a `putIfMatch`, `putIfNoneMatch`, `LEDGER_KEY` y `"ledger/`, y exige que `sync.ts` no nombre `ObjectStore` ni `objects`.
+- **N2: `lambda.ts` captura el fallo de arranque** (`composeOrFail`, `9ab0145`). Registra una línea con `code: "compose_failed"` y solo `error_name`, y relanza `new Error("compose_failed")`. El test usa un `AccessDeniedException` con el ARN en el mensaje: ni el registro ni el error relanzado lo llevan.
+- **N3: el dominio rechaza en el append y en el init una línea con una clave repetida**, a cualquier nivel (`d8c7885`): `body_invalid`/`duplicate_key` e `init_rejected`/`duplicate_key`.
+  - Lo decide `repeatsKey`, que recorre el texto exacto porque `JSON.parse` se queda con la última clave sin avisar.
+  - Compara las claves decodificadas: `"name"` y `"name"` son la misma.
+  - Una misma clave en dos objetos distintos, dentro de una cadena o repetida como cadena dentro de un array sigue valiendo (`2ecf09f` añade el caso del array).
+  - **Pendiente para la dirección**: si el cargador local (`decodeLine`) debe rechazarlas también. No se ha tocado.
+- **N4: los centinelas cubren un error del SDK no transitorio** (`57fcfa0`). Es un `AccessDenied` de `SdkObjectStore` con el bucket, la clave y el ARN en el mensaje. La respuesta es `500 internal`, el registro lleva `reason: "AccessDenied"`, y ni el registro, ni `stdout`, ni `stderr` llevan el bucket, la clave o la cuenta. Es un test de guarda, sin cambio de lógica: hoy no había fuga, porque el manejador ya registraba solo el nombre.
+
+### 26.2 Corrección
+
+- **N1: `atlas sync redo` es idempotente** (`8c81c8c`).
+  - Si el rehacer ya está en el libro con sus identificadores sellados (`redoRecorded`, por los ids sellados y con la misma regla que `finishRedo`), se salta el registro y solo termina. Lo dice: «ya estaba registrado… se termina, sin registrar nada otra vez».
+  - Test del corte: se registra el plan, se muere antes de terminar y se repite la orden. Sale con 0, no registra nada otra vez y deja `resolved`/`redone`, así que la traducción entre unidades se conserva.
+- **N2: la fila `unreadable`** de `GET /api/sync/devices` queda en `docs/api.md` §5.3 y tiene su test (`6f49ab3`): `{ device_id, state: "unreadable" }`, nunca omitida. **Anotado para E5**: `compact` y la restauración se niegan mientras haya un dispositivo ilegible.
+- **N3: las dos decisiones que faltaban de §24.9, aceptadas**: `redo` sale con 4 sin terminal, y `mainFields` y `createRequire` en el paquete de la Lambda.
+  - **`confirm` sin terminal**: la función compartida (`apps/cli/src/commands/shared.ts`) lanza `ConfirmationRequired`, que es la salida 4, y con un «no» devuelve `false`.
+  - Todas las órdenes que preguntan salen con 0 ante un «no», sin tocar nada: `compact`, `ca`, `edit`, `delete`, `draft discard`, `lock break`, `fx correct`, `add` y `sync redo`. `redo` es coherente con ellas.
+  - `atlas sync confirm <unidad>` no pregunta, y es a propósito. No registra ningún evento nuevo: devuelve a la cola una línea que ya estaba escrita. La orden misma es la decisión explícita.
+  - `draft confirm`, que sí registra un evento, enseña la vista previa y pregunta.
+- **N4: `apps/web/test/prices.test.tsx`** («offers to delete them in Ajustes…») espera una condición y no un tiempo fijo (`c3e9172`). Usa `until` en `apps/web/test/helpers/render.tsx`, que comprueba cada 10 ms y falla, diciendo qué esperaba, a los 10 s.
+  - **La frase de §24.12 no era cierta**: en la ejecución del revisor, ese test falló por el tiempo con la máquina cargada. Está corregida abajo.
+- **N5: el cuerpo de la PR** está al día: el congelado, la casilla **Docs** y esta ronda.
+- **Observación sobre E1: el revisor tenía razón, E1 no era equivalente, y el error fue mío.**
+  - En el hueco que deja a propósito el orden de `commit` (`held.jsonl` antes que el libro), una línea está en los dos sitios.
+  - La sincronización siguiente termina el movimiento solo porque `settle` excluye también lo retenido de antes (`heldLines`). E1, que excluye solo lo retenido nuevo, la dejaría en la cola además de retenida.
+  - **Además, E1 ya lo mataban dos tests de la 014** en `folder-store.test.ts` («loses no line with a cut between what is held back and the ledger» y el del corte dentro de la reescritura).
+  - En §24.6 solo lo corrí contra la propiedad, y de «la propiedad no lo mata» deduje «equivalente». Era una conclusión que los datos no sostenían.
+  - `961d555` añade el caso explícito: se corta en `open ledger.jsonl.tmp` y la sincronización siguiente deja la línea solo retenida.
+  - **Corrige §24.6**: E1 no es equivalente. La extensión «termina con líneas retenidas» sigue sin un mutante que solo ella mate, pero E1 no era la prueba de que no pudiera tenerlo.
+
+### 26.3 Mutantes: antes (los tests de `57ea212`) y después
+
+Con `mutate-015.mjs`, de uno en uno, detrás de la puerta de memoria y con `--pool=forks --maxWorkers=1`, en tres lotes de 8. «Antes» son los ficheros de test tal como estaban en `57ea212`, copiados junto a los de ahora.
+
+| Id | Mutante | Antes | Después |
+|---|---|---|---|
+| B1a | un append con un suplente suelto se juzga | sobrevive | **muerto** |
+| B1b | un init con un suplente suelto o una clave repetida se juzga | sobrevive | **muerto** |
+| B1c | `rawLinesText` escribe un suplente suelto | sobrevive | **muerto** |
+| B1d | `utf8Of` deja pasar bytes que no son UTF-8 | sobrevive | **muerto** |
+| N3a | una clave repetida no se rechaza | sobrevive | **muerto** |
+| N3b | las claves se comparan por su texto crudo (`"n\u0061me"` distinto de `"name"`) | sobrevive | **muerto** |
+| N3c | toda cadena tras una coma se toma por clave (también dentro de un array) | sobrevive | **muerto** |
+| SN1 | el puerto de referencia deja pasar cualquier clave | sobrevive | **muerto** |
+| SN2 | el fallo de arranque se relanza entero | sobrevive | **muerto** |
+| CN1 | un rehacer ya registrado se registra otra vez | sobrevive | **muerto** |
+| CN2 | la fila de un dispositivo ilegible se omite | sobrevive | **muerto** |
+| E1 | una retenida de antes se queda también en la cola | **muerto** (ya lo mataban dos tests de la 014) | muerto |
+
+**12 de 12 muertos después; 11 de 11 sobrevivían antes**, y E1 ya moría.
+
+- **El mutante de la llamada**, quitar la comprobación `utf8Of(...)` antes de `appendLines`, es **equivalente** mientras el dominio rechace el suplente suelto: por HTTP no se puede llegar a él. Es defensa en profundidad, por orden de la dirección, y lo que se prueba es la función (B1d).
+- Seguridad N4 y corrección N4 son tests, sin lógica, así que no llevan mutante.
+
+### 26.4 Corrección a §24.12
+
+En §24.12 dije «Ningún test falló solo por el tiempo». En mi ejecución fue así, pero en la del revisor falló uno de la web (`prices.test.tsx`, por un `settle(30)`), así que la frase no se sostiene. Ya no depende del reloj (§26.2, N4).
+
+### 26.5 Tubería y congelado
+
+Todo con `--pool=forks --maxWorkers=1`:
+- `lint`, `typecheck` y las dos `test:coverage`, sobre `2ecf09f`, el último commit de código;
+- `build`, sobre `9d45cdb`.
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage -- --pool=forks --maxWorkers=1` | 0 | 302 ficheros y 2.993 tests en 833 s. El dominio al 100 %: sentencias 8.310/8.310, ramas 4.974/4.974, funciones 1.852/1.852. Ningún `ECONNREFUSED` |
+| la misma, repetida a continuación | 0 | 2.993 tests en 963 s. Ningún `ECONNREFUSED` |
+| `npm run build`, sobre `2ecf09f` | **1** | El arranque medía 75.885 contra el techo de 75.869 |
+| `npm run build`, sobre `9d45cdb` | 0 | Arranque 75.885 contra el techo nuevo de 75.905; total 283.429 |
+
+- **El techo del arranque subió después del commit que lo necesitaba, al revés de la regla** («subido ANTES del commit que lo necesite»).
+  - La comprobación de `rawLinesText` (seguridad B1) cuesta **+37** en el arranque, porque el almacén del navegador está en el camino del arranque. Otros **+12** son ruido de la tabla de fragmentos perezosos.
+  - Por eso **el *build* estuvo en rojo desde `d8c7885` hasta `2ecf09f`**, y la CI `verify` de esos empujes también.
+  - La tubería lo encontró antes de congelar, y **`9d45cdb`** sube el techo a lo medido + 20 (75.905). Queda dentro de la autorización de §7 P13 (hasta 76.069), en su propio commit y con el desglose y la tendencia en el comentario de `check-bundle.mjs`.
+  - El tramo en rojo queda anotado, sin reescribir la historia, como en §21.
+- Probé a poner la comprobación en línea en lugar de compartida con la sincronización, y pesa lo mismo (75.885).
+- **Ningún test falló solo por el tiempo** en estas dos ejecuciones.
+- `git diff 2a23ec3 -- tests/fixtures` está vacío.
+- Ningún gemelo `.js`.
 
 **Commit congelado: el que contiene esta sección.** Su SHA va en la PR #96. Desde aquí no se empuja nada mientras dura la revisión.
