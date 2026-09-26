@@ -401,7 +401,7 @@ Medido con la regla de `check-bundle.mjs` (guion `015-bundle/measure-015.mjs`), 
 | **Total** | 280.039 | **282.165** | **+2.126** |
 | **Arranque** | 75.843 | **75.834** | **−9** |
 
-El techo del total subió a **276 KB (282.624)** en su propio commit, antes del que lo necesita (`f20c5bf`), dentro de la autorización de Q1 (hasta 304.640). El techo del arranque no se tocó.
+**Medida sobre el commit congelado** (con la exclusión de `/api/` en el `sw.js`, +22): **arranque 75.834, total 282.187**. El techo del total subió a **276 KB (282.624)** en su propio commit, antes del que lo necesita (`f20c5bf`), dentro de la autorización de Q1 (hasta 304.640). El techo del arranque no se tocó.
 
 ### 10.5 Capturas (Chromium 151, desde el *scratchpad*; `~/atlas-private/capturas/2026-09-25-015-e1/`)
 
@@ -432,3 +432,9 @@ A 400×890 con DPR 3, a 2045×1141, y a 360 de ancho midiendo `scrollWidth === c
 - **Q9: se confirma el cuarto valor, `unreadable`**, de `details.reason` en `device_forgotten`.
 - **P3 / Q4: el usuario autoriza instalar `@aws-sdk/client-s3`, `@aws-sdk/client-ssm` y `esbuild`, con la versión fijada, en E3**, y construir aquí el paquete de la Lambda. **No se instalan en E1.**
 - **Q10**: pendiente.
+
+## 13. E1 congelada (2026-09-26)
+
+- **Commit congelado**: el que contiene esta sección (su SHA va en la PR de E1 y en el informe a la dirección). Desde aquí no se empuja nada a la rama mientras dura la revisión.
+- **Tubería sobre él**: `lint`, `typecheck`, `test:coverage` (277 ficheros, 2.739 tests; el dominio al 100 % de líneas, ramas, funciones y sentencias) y `build` en verde; ningún gemelo `.js`; `git diff b3e2fcb -- tests/fixtures` vacío.
+- **Paquete**: arranque 75.834 (techo 75.869), total 282.187 (techo 282.624).
