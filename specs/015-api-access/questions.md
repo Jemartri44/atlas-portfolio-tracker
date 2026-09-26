@@ -1139,3 +1139,101 @@ Sobre `78155ef`, el último commit de código. El congelado solo añade esta sec
 - La CI `verify` va en el comentario de la PR #95.
 
 **Commit congelado: el que contiene esta sección.** Su SHA va en la PR #95. Desde aquí no se empuja nada mientras dura la revisión.
+
+## 23. E3 — bloque 0 y lo que se fija antes del código (2026-09-26)
+
+Escrito antes del primer commit de código de E3. Consultado el 2026-09-26 (Europe/Madrid). Delante van los cuatro puntos que dejó la ronda 2 de la PR #95 y la instalación, que no son código de E3 (§24 los reporta).
+
+### 23.1 Punto 1 — las escrituras condicionales de S3
+
+**Fuentes**:
+
+- `https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html`, apartado «Conditional write behavior»;
+- `https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html`, cabeceras `If-Match` e `If-None-Match`.
+
+**Lo que dicen, literal**:
+
+- `If-None-Match`: «If there's no existing object with the same key name in the bucket, the write operation succeeds, resulting in a `200 OK` response. If there's an existing object, the write operation fails, resulting in a `412 Precondition Failed` response.» Y la carrera: «If multiple conditional writes or copies occur for the same object name, the first write operation to finish succeeds. Amazon S3 then fails subsequent writes with a `412 Precondition Failed` response.» Con versionado, solo cuenta la versión actual.
+- `If-Match`: «If there's an existing object with the same key name and matching ETag, the write operation succeeds, resulting in a `200 OK` response. If the ETag doesn't match, the write operation fails with a `412 Precondition Failed` response. You can also receive a `409 Conflict` response in the case of concurrent requests.»
+- **Sin objeto**, `If-Match` no da `412`: «If there's no current object version with the same name, or if the current object version is a delete marker, the operation fails with a `404 Not Found` error.»
+- El `409`, en la referencia de `PutObject`: «If a conflicting operation occurs during the upload S3 returns a `409 ConditionalRequestConflict` response. On a 409 failure you should fetch the object's ETag and retry the upload.»
+- **Permisos**: `If-None-Match` exige `s3:PutObject`; `If-Match`, «the `s3:PutObject` and `s3:GetObject` permissions». Hay que firmar con SigV4, que el SDK hace siempre.
+
+**Conclusión: se sostiene.** Una escritura condicional no pisa otra: con `If-Match`, la segunda recibe `412` (ETag distinto) o `409` (concurrente); con `If-None-Match`, la primera en terminar gana y las demás reciben `412`. **No se para.**
+
+**Cómo lo aplica el código**:
+
+- El adaptador del SDK (`sdk-s3.ts`) traduce a `precondition_failed` (o a `exists` con `If-None-Match`) el `412`, el `409` y, con `If-Match`, el `404`. Nunca reintenta él: quien decide es el llamador (la API responde `412 precondition_failed` y el cliente vuelve al paso 1, `docs/api.md` §5.2).
+- `docs/api.md` §5.5, que lo dejaba SIN VERIFICAR, queda confirmado: con el objeto inexistente, `If-Match` daría `404`, y la API escribe con `If-None-Match: *`.
+- El doble de S3 imita las cuatro salidas (`412`, `409` en la carrera, `404` de `If-Match` sin objeto, `200`) y cita esta fuente.
+
+**Lo que encontré de más, para la 017** (no bloquea E3, que va con dobles):
+
+- `API_GetObject.html`: «If the object that you request doesn't exist, the error that Amazon S3 returns depends on whether you also have the `s3:ListBucket` permission.» Con él, `404`; **sin él, `403 Access Denied`**.
+- El libro remoto no existe hasta la primera inicialización, y un objeto de dispositivo puede faltar. Si la API recibe `403` por falta de `s3:ListBucket`, **el adaptador no lo toma por «no existe»**: lanza, y la API responde `500 internal`. Es fallo seguro, pero rompe la inicialización.
+- **La 017 tiene que dar a la Lambda `s3:ListBucket` que cubra `ledger/`**, además de `sync/devices/`, `reference/ecb/` y `prices/` (plan §10).
+- **SIN VERIFICAR**: si un `s3:ListBucket` con la condición `s3:prefix` cuenta para convertir el `403` en `404` en un `GetObject`. La condición no existe en el contexto de `GetObject`, así que puede no contar. Va a la lista de la 018 como prueba real. Si no cuenta, la salida es un `s3:ListBucket` sin condición sobre el bucket de datos, que solo deja listar nombres.
+
+### 23.2 Punto 2 — el ETag de S3 no es el SHA-256
+
+**Fuente**: `API_PutObject.html`, respuesta `ETag`: «for objects where the ETag is the MD5 digest of the object, you can calculate the MD5…». Y en un ejemplo con SSE-C: «The ETag that is returned is not the MD5 of the object». Es opaco: a veces MD5 y a veces no, y nunca SHA-256.
+
+**Cómo lo obtiene la Lambda**: de la cabecera `ETag` de su propio `GetObject`, en la misma lectura que le da los bytes. Con esos bytes calcula el SHA-256, que es el etag de la API, y escribe con `If-Match` sobre el ETag de S3 de esa lectura. Si otro escribió entre medias, S3 responde `412` o `409`, y la API, `412`. El cliente nunca ve el ETag de S3.
+
+### 23.3 Punto 3 — CloudFront y la compresión de `GET /api/ledger`
+
+**Fuente**: `https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/ServingCompressedFiles.html`.
+
+- «CloudFront only compresses objects that have one of the following values in the `Content-Type` response header». La lista no incluye `application/x-ndjson`. **`GET /api/ledger` no se comprime.**
+- Sí incluye `application/json` y `text/csv`, y por tanto **algunas rutas de referencia pueden comprimirse**. Solo si la política de la ruta lo pide («Compress objects automatically», con una *cache policy*), y solo entre 1.000 y 10.000.000 bytes.
+- Si comprime: «CloudFront also converts the strong `ETag` header value to a weak `ETag`… adds the characters `W/`». El cliente recibe `Content-Encoding`, y `fetch` descomprime por la norma Fetch, así que el cuerpo que ve son los bytes del fichero.
+
+**Cómo lo aplica el código**:
+
+- El cliente HTTP calcula el SHA-256 de los bytes que recibe, ya descomprimidos. Si la cabecera `ETag` viene, le quita `W/` y las comillas y **la compara**; si no cuadra, es `transport_rejected`.
+- `GET /api/reference/…` acepta en `If-None-Match` tanto `"<v>"` como `W/"<v>"`.
+- La tolerancia a la compresión no se aprovecha para nada más.
+- **Para la 017**: la política de `/api/*` no cachea (`CachingDisabled`), y la compresión es decisión suya.
+
+### 23.4 Lo que la Lambda devuelve, byte a byte
+
+- `GET /api/ledger` devuelve el cuerpo **como texto si sus bytes son UTF-8 válido**, porque así se reescriben idénticos, y **en base64 (`isBase64Encoded: true`) si no**. Exacto en los dos casos, y el caso normal no paga la inflación de base64 frente al tope de 6 MB (§1.4).
+- **Un libro que no quepa en 6 MB no se sirve**: la API responde `500` y lo registra. Hoy está lejos (ADR-0002: 1-2 MB en veinte años). El `ResponseStream` queda para cuando haga falta, dicho en la PR.
+
+### 23.5 Lo que E3 fija sobre el plan
+
+- **`ObjectStore` gana `list(prefix)`**: `ListObjectsV2` con `Delimiter: "/"`, solo el primer nivel, con nombre, ETag y tamaño, recorriendo todas las páginas. Lo usan `GET /api/sync/devices` y `GET /api/reference/index` (y E5, la administración). **Nunca hay borrado**.
+- **El libro remoto en S3**: `S3LedgerBlob` implementa `LedgerBlob` sobre `ObjectStore`, y `BlobLedgerStore` pone las seis operaciones, las mismas que la web.
+  - `update` lee, compara el SHA-256 y archiva con `If-None-Match: *` (`archive/<nombre>`, nunca sobrescrito).
+  - Después escribe con `If-Match` sobre el ETag leído, o con `If-None-Match: *` si no había objeto. Un `412` es `ConflictError`.
+  - **La diferencia con IndexedDB**: archivar y escribir no son un solo paso atómico. Si otro escritor gana entre los dos, queda un archivo y el libro no cambia. El archivo es una copia exacta de unos bytes que sí fueron el libro, nunca se sobrescribe, y el reintento lleva otro nombre (`syncArchiveName`). Se dice en el comentario del adaptador y lo prueba un test de corte.
+- **La API solo ve `read()` y `appendLines()`** del libro remoto (`AppendOnlyLedger`). La inicialización es un `appendLines` sobre el etag de cero bytes. Un test de estructura comprueba que ningún fichero de `apps/api/src` nombra `replace`, `replaceLines`, `DeleteObject` ni `deleteObject`, y que `sdk-s3.ts` y `sdk-ssm.ts` no usan ninguna orden de borrado.
+- **La composición de producción** (`apps/api/src/lambda.ts`):
+  - lee `ATLAS_*` con `parseApiConfig`;
+  - monta los clientes del SDK;
+  - **lee la clave de sesión y construye el `Signer` antes de exportar el manejador**, con un `await` de primer nivel.
+  
+  Si la configuración no se entiende o la clave no mide 32 bytes, **la Lambda no arranca**. Se prueba con clientes simulados, sin AWS.
+- **El paquete de la Lambda**: `apps/api/scripts/build-lambda.mjs` construye con `esbuild` un solo `index.mjs` ESM (Node 22, con el SDK dentro) y un `lambda.zip` determinista (fecha fija, orden fijo). Lo escribe un escritor de ZIP propio de pocas líneas con `node:zlib`, sin paquete nuevo. `npm run build` lo corre, y un test comprueba que el paquete no lleva ni dobles ni `tests/`.
+- **Las rutas nuevas**, en la tabla del dominio con una política nueva, **`sync`**: sesión o token. Con la sesión, las escrituras miran `Origin`. Con las dos, el objeto del dispositivo. `GET /api/sync/devices` sigue siendo solo de sesión.
+- **El cliente HTTP** (`packages/adapters/src/sync/http-remote.ts`, puerta `./sync-http`):
+  - uno solo, con la credencial inyectada;
+  - `redirect: "error"`;
+  - `x-amz-content-sha256` con Web Crypto;
+  - la regla de §7 para cada respuesta.
+  
+  La consola lo monta con el token y solo contra el origen HTTPS de su entrada. La web lo tendrá en E4: aquí existe, pero nada de la web lo alcanza (guardián de E1).
+- **Las órdenes**, las de `contracts/cli-commands.md`. La secuencia de `sync/remote.json` y sus estados S0-S3, las del plan §7. Lo heredado de la 014, el plan §8 con la opción (a) de §8 y el punto 4 en `sync/redo-record.ts` (Q5).
+- **El paquete web**: E3 no toca la web salvo las frases de los códigos nuevos (`errors`, perezoso). La función de N1 vive en `sync/redo-record.ts`, fuera del arranque (Q5). **Se mide antes y después**, y el arranque no sube.
+
+### 23.6 La predicción fiscal, antes de correr la suite de E3
+
+**No se mueve nada.**
+
+- `tax` (con `--lots`, `--boxes` y `--json`), `gains`, `income`, `m720`, `m721` y `filed` dan los mismos bytes:
+  - sobre `synthetic-v1` sin `sync/`;
+  - con una carpeta `sync/` (marcador, lo retenido y `remote.json`);
+  - y sobre un libro que ha pasado por una sincronización **a través del manejador de la API con el doble de S3**.
+- `git diff 2a23ec3 -- tests/fixtures` sale vacío.
+- **Motivo**: E3 no añade ningún tipo ni campo al libro ni toca la proyección. La API escribe las líneas tal cual (`appendLines`), así que el libro sincronizado es byte a byte el que el cliente serializó.
+- Si algo se mueve, se para.
