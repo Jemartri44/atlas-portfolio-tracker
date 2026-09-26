@@ -172,3 +172,5 @@ Dentro de una cuenta compartida, **Atlas queda protegido frente a los errores y 
 ## Nota del 2026-09-26 (mudanza a la máquina de desarrollo): dónde viven los ficheros locales de Terraform
 
 Decidida por la dirección, a partir de la decisión del usuario sobre la carpeta privada (PR #92). Con la mudanza a la máquina de desarrollo, la carpeta privada pasa a `~/projects/atlas-private/`, hermana del repositorio y nunca dentro de él. **El estado local del *bootstrap* de la fila 15 pasa a `~/projects/atlas-private/terraform/bootstrap/<account|dev|prod>/terraform.tfstate`**, un estado por parte, como hasta ahora. **El `terraform.tfvars` de cada entorno va en `~/projects/atlas-private/terraform/<env>/terraform.tfvars`**, fuera del repositorio. Nada más de la fila 15 ni de la fila 20 cambia.
+
+**Actualización del 2026-09-26:** la carpeta real es `~/personal/atlas/privado/terraform/…` (el estado del *bootstrap* en `~/personal/atlas/privado/terraform/bootstrap/<account|dev|prod>/terraform.tfstate` y el `terraform.tfvars` de cada entorno en `~/personal/atlas/privado/terraform/<env>/terraform.tfvars`); `~/projects/atlas-private/` es un enlace de compatibilidad hacia ella.
