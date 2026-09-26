@@ -25,12 +25,19 @@ export interface LocalConfig {
   readonly ecb_stale_currency_days: number;
   /** Minutes after which a held lock is described as probably abandoned. Informative only. */
   readonly lock_stale_minutes: number;
+  /**
+   * Days before its expiry from which the console warns that its token
+   * expires (feature 015, plan §6.2 (e); ADR-0033, point 7). Informative only:
+   * an expired token keeps the console working locally.
+   */
+  readonly token_expiry_warning_days: number;
 }
 
 /** The documented defaults. */
 export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   ecb_stale_currency_days: 30,
   lock_stale_minutes: 10,
+  token_expiry_warning_days: 14,
 };
 
 export const LOCAL_CONFIG_FILE = "atlas.config.json";
@@ -67,5 +74,7 @@ export const parseLocalConfig = (text: string): LocalConfig => {
     ecb_stale_currency_days:
       values.get("ecb_stale_currency_days") ?? DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days,
     lock_stale_minutes: values.get("lock_stale_minutes") ?? DEFAULT_LOCAL_CONFIG.lock_stale_minutes,
+    token_expiry_warning_days:
+      values.get("token_expiry_warning_days") ?? DEFAULT_LOCAL_CONFIG.token_expiry_warning_days,
   };
 };

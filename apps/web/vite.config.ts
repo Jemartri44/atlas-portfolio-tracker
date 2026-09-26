@@ -236,12 +236,16 @@ export default defineConfig(({ command }) => ({
     target: "es2022",
     sourcemap: true,
     /*
-     * **A source of code is never inlined** (round 4 of the review of PR #90,
-     * V3-inline). `new URL("…", import.meta.url)` makes the file an asset, and
-     * Vite inlines an asset under 4 KiB as a `data:` URL instead of emitting
-     * it: the text of a vetoed source then travelled inside a chunk, out of
-     * every graph. Emitted, it is a file `check-bundle.mjs` refuses. Anything
-     * else keeps the default of Vite (`undefined`).
+     * **An asset that is a source of code is not inlined by size** (round 4
+     * of the review of PR #90, V3-inline). `new URL("…", import.meta.url)`
+     * makes the file an asset, and Vite inlines an asset under 4 KiB as a
+     * `data:` URL instead of emitting it: the text of a vetoed source then
+     * travelled inside a chunk, out of every graph. Emitted, it is a file
+     * `check-bundle.mjs` refuses. Anything else keeps the default of Vite
+     * (`undefined`). **This does not cover `?inline`** (round 5): Vite reads
+     * that query before it asks this function, and inlines whatever the
+     * function says; what stops it is the rule of `data:` URLs of
+     * `check-bundle.mjs`, which reads the MIME type and the graph.
      */
     assetsInlineLimit: (filePath: string): boolean | undefined =>
       /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)(\?|$)/.test(filePath) ? false : undefined,

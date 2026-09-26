@@ -20,6 +20,17 @@ export const API_ERRORS = {
   not_found: 404,
   internal: 500,
   remote_unavailable: 503,
+  // E2, the token of the console (`docs/api.md` §4 and §7).
+  console_start_invalid: 400,
+  console_code_invalid: 400,
+  console_code_expired: 400,
+  console_code_used: 409,
+  pkce_mismatch: 400,
+  reissue_device_missing: 403,
+  reissue_device_forgotten: 403,
+  reissue_device_not_console: 403,
+  /** An object that exists but cannot be read strictly: never folded into `missing` (as Q9). */
+  reissue_device_unreadable: 403,
 } as const;
 
 export type ApiErrorCode = keyof typeof API_ERRORS;
@@ -56,6 +67,11 @@ export const LOGIN_PAGE_ERRORS = {
   remote_unavailable: 503,
   /** Anything nobody expected, on the start or the return of a sign-in (N1 of the review of PR #90). */
   internal: 500,
+  // E2: the return of a sign-in of the console that asks to reissue (§4.2).
+  reissue_device_missing: 403,
+  reissue_device_forgotten: 403,
+  reissue_device_not_console: 403,
+  reissue_device_unreadable: 403,
 } as const;
 
 export type LoginPageError = keyof typeof LOGIN_PAGE_ERRORS;

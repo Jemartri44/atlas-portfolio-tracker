@@ -3,6 +3,7 @@ import type { FxRateSource } from "@atlas/domain/ecb";
 import type { Flags } from "./args.js";
 import { describeWarning } from "./output/messages.js";
 import type { PriceEnvironment } from "./prices/load.js";
+import type { RemoteEnvironment } from "./remote/environment.js";
 
 export interface Io {
   out(text: string): void;
@@ -25,6 +26,8 @@ export interface Context {
   fxSource?: () => FxRateSource;
   /** The sources of prices and where the keys are; replaced in tests, which never touch the network. */
   prices?: PriceEnvironment;
+  /** The network, the credentials and the browser of `atlas remote`; the system's when absent. */
+  remote?: RemoteEnvironment;
 }
 
 export type Command = (ctx: Context, positionals: string[], flags: Flags) => Promise<number>;

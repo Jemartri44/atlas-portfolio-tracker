@@ -5,5 +5,6 @@
 export { DeviceStore } from "./device-store.js";
 export { DependencyUnavailable } from "./errors.js";
 export type { ObjectStore, StoredObject } from "./object-store.js";
-export type { ParameterStore } from "./parameter-store.js";
+export type { ParameterEntry, ParameterStore } from "./parameter-store.js";
 export { AccessSecrets, parameterNames, type SecretsOptions } from "./secrets.js";
+export { TokenRegistry } from "./token-registry.js";

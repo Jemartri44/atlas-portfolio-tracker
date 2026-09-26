@@ -158,6 +158,9 @@ const INVOCATIONS: {
   // The prices live in the folder, outside the ledger (feature 013); the ledger
   // is read only for the list of assets whose last close is shown.
   { command: "prices", argv: ["prices", "symbols"], readOnly: true, folderOnly: true },
+  // The sessions of the console live in credentials.json, outside the folder
+  // (feature 015, E2); the ledger is never read nor written by them.
+  { command: "remote", argv: ["remote", "status"], readOnly: true, folderOnly: true },
 ];
 
 const HEADER = "inválido";

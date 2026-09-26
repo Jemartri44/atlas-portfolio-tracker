@@ -759,3 +759,383 @@ Sobre `06a7dbc`, el último commit de código. El congelado solo cambia `questio
 ### 17.5 Congelado
 
 **Commit congelado de la ronda 4: el que contiene esta sección.** Su SHA va en el comentario de la PR y en el informe a la dirección. Desde aquí no se empuja nada a la rama mientras dura la revisión.
+
+## 18. E2 — bloque 0: las verificaciones, con su fuente (2026-09-26)
+
+E1 quedó fusionada en `develop` (PR #90, `490f0e1`); la rama sigue desde ahí. Las páginas se consultaron el 2026-09-26 (hora de Madrid) con `curl` o leídas como texto; las citas son literales. Antes del primer commit de código de E2.
+
+### 18.1 Punto 1 — `PutParameter` sin `Overwrite` ante dos peticiones simultáneas
+
+**Fuente**: la referencia de la API, `https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_PutParameter.html`.
+
+**Lo que dice**:
+
+- `Name`: «A parameter name must be unique within an AWS Region».
+- `Overwrite`: «Overwrite an existing parameter. The default value is `false`.»
+- Error `ParameterAlreadyExists`: «The parameter already exists. You can't create duplicate parameters.» (HTTP 400).
+- Error `TooManyUpdates`: «There are concurrent updates for a resource that supports one update at a time.» (HTTP 400).
+
+**Lo que no dice**: ninguna frase habla literalmente de dos `PutParameter` sin `Overwrite` **a la vez** sobre el mismo nombre. Lo que se sostiene es una deducción de tres afirmaciones documentadas: el nombre es único, sin `Overwrite` un parámetro existente no se sustituye nunca, y un parámetro «admite una actualización a la vez» y rechaza las concurrentes. De ahí, **como mucho una creación gana**; la otra recibe `ParameterAlreadyExists` (si llega después) o `TooManyUpdates` (si se cruzan). Buscado también en re:Post y en las incidencias del proveedor de Terraform: nada contradice esto ni lo afirma con más precisión.
+
+**Decisión de implementación, dentro de lo decidido**: el adaptador traduce `ParameterAlreadyExists` a «ya existe» (`409 console_code_used`) y `TooManyUpdates` a un fallo transitorio (`503 remote_unavailable`, se puede reintentar): si la otra creación ganó, el reintento da `console_code_used`; si ninguna ganó, el reintento crea. **Ninguno de los dos caminos deja dos tokens con el mismo `token_id`.** El doble de SSM imita las dos respuestas.
+
+**No paro E2**, porque la garantía que pide ADR-0033 (el uso único) se sigue de lo documentado. **Pero lo digo para la dirección**: si exige una cita literal sobre la concurrencia, no la hay, y la regla del encargo («si no lo es, para») se tendría que decidir con esta deducción delante. **Queda como pregunta Q11** (§19).
+
+### 18.2 Punto 2 — etiquetas al crear
+
+**Fuentes**:
+
+- la misma referencia, parámetro `Tags`: «Optional metadata that you assign to a resource. […] To add tags to an existing Systems Manager parameter, use the AddTagsToResource operation.»;
+- `https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-ssm-parameter.html`, nota: «To create an SSM parameter, you must have the AWS Identity and Access Management (IAM) permissions ssm:PutParameter and ssm:AddTagsToResource.»;
+- `https://docs.aws.amazon.com/cli/latest/reference/ssm/put-parameter.html`, `--tags`: el mismo texto.
+
+**Conclusión**: `PutParameter` **admite `Tags` al crear**; no hay restricción de nivel (un `SecureString` estándar vale). Etiquetar al crear **exige además `ssm:AddTagsToResource`** sobre el recurso (la nota de CloudFormation; la tabla de acciones de IAM se sirve con JavaScript y no se pudo leer como texto). Las etiquetas solo se ponen **al crear**: la revocación sobrescribe con `Overwrite` y sin `Tags`, y las conserva (las etiquetas son del recurso, no de la versión).
+
+**Hecho**: la API crea los registros con `project=atlas` y `env=<entorno>`. **Para la 017 y ADR-0034 (fila 9)**: el rol de la API necesita `ssm:AddTagsToResource` sobre `/atlas/<entorno>/device-tokens/*` (plan §10 ya lo preveía «solo si»; ahora es «sí»).
+
+### 18.3 Punto 3 — `GetParameter` con selector
+
+**Fuente**: `https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetParameter.html`.
+
+- `Name`: «To query by parameter label, use `"Name": "name:label"`. To query by parameter version, use `"Name": "name:version"`.»
+- Errores: `ParameterNotFound` («The parameter couldn't be found») y `ParameterVersionNotFound` («The specified parameter version wasn't found»).
+- La respuesta lleva `Selector` y `Version`.
+
+**El doble** (`test-only-fake-ssm.ts`) guarda **todas las versiones** de cada parámetro y resuelve `nombre:<n>` a la versión `n` y `nombre:<etiqueta>` a la versión etiquetada, como SSM. Así el mutante de B1 (construir el nombre sin validar el `token_id`, con `<id>:1` para leer la versión anterior a la revocación) muere contra el doble y no contra un supuesto.
+
+### 18.4 Punto 4 — la vuelta a `http://127.0.0.1` y *Local Network Access*
+
+**Fuentes**:
+
+- `https://developer.chrome.com/blog/local-network-access` (9 de junio de 2025; lanzamiento en Chrome 142): el permiso se pide para «requests initiated using the JavaScript `fetch()` API, subresource loading, and subframe navigation». **Las navegaciones de primer nivel no están en la lista.**
+- El *explainer* del WICG, `https://github.com/WICG/local-network-access/blob/main/explainer.md`, sección «Potential future changes» → «Top-level navigations to local network»: «Top-level navigations remain a risk after restrictions on subresource local network requests are in place». Es **trabajo futuro**, fuera del alcance actual.
+- Desde Chrome 146 el permiso se parte en «Local Network» y «Loopback Network» (resultados de búsqueda de fuentes secundarias; no cambia lo anterior).
+
+**Conclusión, con fuente**: el `302` de la vuelta de Google a `http://127.0.0.1:<puerto>/callback` es una **navegación de primer nivel** y **hoy no la restringe** *Local Network Access*. La página que sirve la consola no carga nada, así que no dispara ningún subrecurso local. **Riesgo escrito**: si Chromium extiende LNA a las navegaciones (el *explainer* lo contempla), la variante `--manual` sigue funcionando, porque no navega a `127.0.0.1`.
+
+**La prueba en el navegador real del usuario se aplaza a la 018** (§7 P14). El procedimiento, preparado:
+
+1. En WSL, en una carpeta cualquiera: `node -e 'require("http").createServer((q,s)=>{s.end("LOOPBACK-OK "+q.url)}).listen(49321,"127.0.0.1")'`.
+2. En Windows, abrir en el navegador de siempre (Chrome o Edge) cualquier página pública https que redirija; basta con escribir en la barra `https://httpbin.org/redirect-to?url=http%3A%2F%2F127.0.0.1%3A49321%2Fcallback%3Fcode%3Dx%26state%3Dy`.
+3. **Anotar**: si la pestaña enseña `LOOPBACK-OK /callback?code=x&state=y`; si el navegador pidió algún permiso («acceder a dispositivos de tu red local» o parecido); la versión del navegador (`chrome://version`) y el modo de red de WSL (`wsl --status` o `.wslconfig`).
+4. Parar el servidor con Ctrl+C.
+
+### 18.5 Punto 5 — `Content-Security-Policy: sandbox` y la página del código
+
+**Fuentes**:
+
+- HTML, `https://html.spec.whatwg.org/multipage/browsers.html#sandboxed-origin-browsing-context-flag`: «The sandboxed origin browsing context flag: This flag forces content into an opaque origin, thus preventing it from accessing other content from the same origin», y se pone «unless the tokens contains the `allow-same-origin` keyword».
+- CSP 3, `https://www.w3.org/TR/CSP3/`: `sandbox` no se admite en `<meta>` ni en modo de solo informe; va en la cabecera, como la envía la Lambda.
+
+**La prueba en Chromium de verdad** (Chrome for Testing 153.0.8010.12, `~/.cache/ms-playwright/chromium-1243`, conducido por el protocolo de DevTools con el `WebSocket` de Node 22, desde el *scratchpad*: `sandbox-probe-015.mjs`; sin instalar nada). Un servidor local sirve en el **mismo origen** una SPA con *script* y la página del código con dos variantes: solo `sandbox`, y la cabecera real (`default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; sandbox`, más `no-store` y `no-referrer`). Salida literal:
+
+```
+a contentDocument=null | threw:SecurityError | threw:SecurityError
+b contentDocument=null | threw:SecurityError | threw:SecurityError
+popup-null
+origin seen by the page: null
+details open before: false
+code visible before (innerText): false
+details open after a click: true
+code visible after (innerText): true
+```
+
+- La SPA **no puede leer** la página del código: ni su documento ni su `location` (`SecurityError`), tanto con solo `sandbox` como con la cabecera real; abrirla en una ventana sin gesto del usuario la bloquea el navegador.
+- La página tiene **origen opaco** (`null`).
+- El `<details>` **se despliega** dentro del *sandbox* con un clic real del ratón, sin *script*: antes el código no es texto visible; después, sí.
+
+**Nota de método**: en esta máquina Chromium solo arranca con `--no-sandbox` (el *sandbox* del proceso, que AppArmor no deja crear sin espacios de nombres de usuario); no tiene que ver con la `sandbox` de CSP, que es la que se prueba, y solo se cargaron páginas del servidor local de la prueba.
+
+**Conclusión**: la variante manual **sigue**.
+
+### 18.6 Punto 6 — WSL en modo NAT y abrir el navegador desde WSL
+
+**Fuente**: `https://learn.microsoft.com/en-us/windows/wsl/networking` (actualizada el 2026-06-02), «Default networking mode: NAT» → «Accessing Linux networking apps from Windows (localhost)»: «If you are building a networking app […] in your Linux distribution, you can access it from a Windows app (like your Edge or Chrome internet browser) using `localhost` (just like you normally would).» Y en modo *mirrored*: «the Windows host and WSL2 VM can connect to each other using `localhost` (127.0.0.1)».
+
+**Lo que no dice**: si en modo NAT el reenvío de `localhost` escucha también en el literal `127.0.0.1` de Windows (y no solo en `::1`), que es a donde redirige la Lambda. **Sin verificar**; entra en el procedimiento de §18.4 (paso 3, anotar el modo de red). Si falla, `--manual` lo cubre. **Abrir el navegador desde WSL no es un requisito**: la consola **imprime siempre la URL** e intenta abrirla sin depender de ello.
+
+### 18.7 Punto 7 — el valor de `amr`
+
+Sin objeto: Q2 decidió no emitir `mfa_required` (§8).
+
+### 18.8 Q8 aplicada
+
+El código de la consola lleva **solo el `sub`** (§12, Q8 (a)): `data-model.md` §1.4 está al día. En el canje, la API toma el correo de la lista permitida por ese `sub` y vuelve a comprobar el par entero; si el `sub` tiene dos entradas, se niega (`403 not_allowed`, `details.reason: "ambiguous_subject"`).
+
+## 19. Preguntas nuevas de E2
+
+- **Q11 — La atomicidad de `PutParameter` sin `Overwrite`** (§18.1): documentada por deducción, no con una frase literal. E2 sigue con ella. ¿Basta, o se quiere una segunda barrera que no dependa de SSM (por ejemplo, una escritura condicional de S3 por `token_id`, con su prefijo nuevo y su permiso en la 017)?
+
+## 20. E2 — el token de dispositivo de la consola (2026-09-26)
+
+E1 quedó fusionada en `develop` (PR #90, `490f0e1`). La ronda 5 convergió. E2 sigue el encargo §3 E2, §7.1 y §7.1 bis, y lo decidido en §8 a §17. El bloque 0 está en §18 y la pregunta nueva, en §19 (Q11).
+
+### 20.1 Los retoques de la ronda 5 (`67007c1`)
+
+- **La regla `data:` lee `application/octet-stream`.** Ese tipo es el de los fuentes cuya extensión Vite no conoce (`.tsx` y `.cts`). La regla lo niega **cuando el trozo tiene un fuente de código importado como recurso** (`?inline`, `?url` o `?raw`, según el grafo). Así no hay falsos positivos con un recurso binario legítimo.
+- **El mensaje nombra el módulo** cuando el grafo lo tiene: por ejemplo, `…: lleva código incrustado como URL data: (data:video/mp2t;): packages/domain/src/access/id-token.ts?url&inline`.
+- **El comentario de `vite.config.ts` dice la verdad.** `assetsInlineLimit` no cubre `?inline`, porque Vite lee esa consulta antes de preguntar a la función. Lo que lo para es la regla `data:`.
+- **Además**, el cruce con los *source maps* compara la ruta **sin la consulta**. Si no, un `?url` legítimo daría un falso «su source map nombra … y el grafo no».
+- **Dicho: `?inline` solo** no incrusta un `.tsx` ni un `.mts`. Vite los compila como módulo, y el *build* falla por `MISSING_EXPORT` antes del guardián. La vía que sí incrusta es `?url&inline`, y con ella se hicieron los mutantes.
+
+| Mutante | Sobre `490f0e1` | Con `67007c1` |
+|---|---|---|
+| V5-tsx: `SessionCard.tsx?url&inline` en `main.tsx` | **sobrevive** (`data:application/octet-stream`) | muerto, y el mensaje nombra el módulo |
+| V5-cts: un `probe.cts?url&inline` de la web | **sobrevive** | muerto, y nombra el módulo |
+| V5-ts: `id-token.ts?url&inline` | — | muerto: `(data:video/mp2t;): packages/domain/src/access/id-token.ts?url&inline` |
+| G5, control: V5-tsx con la lectura de `octet-stream` quitada | — | sobrevive, **como tiene que ser**: nada más lo para |
+| El lote V3 de la ronda 4 (V3b, V3c, G4-nolimit, G4-nodata), repetido | — | 4 de 4 muertos |
+
+### 20.2 Qué hay en la rama
+
+| Bloque | Commits | Qué |
+|---|---|---|
+| 0 | `6348306` | Las verificaciones con fuente (§18). `data-model.md` §1.4 queda al día con Q8 (a): el código lleva solo el `sub` |
+| 1, reglas | `0dc54d8`, `23fa3dc` | `access/token.ts`: el formato antes de construir el nombre (B1); el registro, leído solo como el token pedido; el orden de §2.2; la caducidad bajo el techo; y la fila de la lista. `access/console.ts`: el inicio parámetro a parámetro; el nombre del dispositivo; el literal `127.0.0.1`; el canje; la entrada de un `sub`; y la reemisión. `access/credentials.ts`: `credentials.json` como mapa por dispositivo; `sync/remote.json` estricto; qué entrada usa cada orden (B2); las carpetas que no se anidan; y el aviso de caducidad. `signed.ts` recibe el intento de la consola y su código. `routes.ts` recibe las rutas nuevas y sus políticas. `token_expiry_warning_days` (14) entra en `atlas.config.json` |
+| 1, adaptadores | `5dd5f77` | `ParameterStore` ofrece `putNew` (sin `Overwrite`, con etiquetas), `overwrite` (solo para revocar) y `listByPath`, **y nada más** (T26). `TokenRegistry` no cachea nada. `sha256Hex` y `sameSecret` comparan con `timingSafeEqual`. El doble de SSM guarda las versiones, resuelve `nombre:versión` y `nombre:etiqueta`, y responde `ParameterAlreadyExists` y `TooManyUpdates` |
+| 2, API | `f6cbbf7`, `b21b658`, `893fd05`, `407405d` | `console/start`; la rama de consola de la vuelta (*loopback*, manual y reemisión); `console/token` (emitir, renovar y reemitir); `console/revoke`; y `devices/tokens` con su revocación. Las páginas manual y de reemisión llevan `sandbox`. El registro de la Lambda lleva el `token_id` y nada más. El guardián de arquitectura impide borrar y etiquetar |
+| 3, consola | `42179a4` | `atlas remote login` (*loopback*, `--manual`, renovación y reemisión), `atlas remote logout` (`--local-only`) y `atlas remote status` |
+| 4, web | `84cdd35` (techo), `20127d3`, `38f8555` | La tarjeta «Dispositivos de la consola» en la sección de sincronización de Ajustes, en carga diferida |
+
+**Dicho**:
+- `f6cbbf7` no pasa `typecheck`. Un test de la API tenía un tipo sin ajustar, y el *hook* solo mira Biome. `b21b658` lo arregla dos minutos después. La historia no se reescribe.
+- La suite completa encontró dos fallos que la selección de E2 no veía, y los arregla `38f8555`:
+  - el test de `readLocalConfig` de los adaptadores esperaba la configuración sin la clave nueva;
+  - el guardián de «ninguna clase que la hoja no declare» rechazaba la clase `devices`; la tarjeta es ahora una `<section>` con su `aria-label`.
+
+  Desde `23fa3dc` y `20127d3` hasta `38f8555`, la suite completa no estaba en verde. La CI no los vio porque solo corre en la PR.
+
+### 20.3 La tabla de reglas (plan §4.2), con su test y su mutante
+
+| # | Test | Mutantes, todos muertos |
+|---|---|---|
+| T01-T02 | `token.test.ts` (formato, nombre, registro); `console.test.ts` de la API («checks the format before building any name», «a record whose own token id is another»); `token-registry.test.ts` (el doble con selectores) | M13a, M13b, M13c |
+| T03 | `token-registry.test.ts` (`sameSecret`); API («a wrong secret») | M-secret |
+| T04, T17 | `token.test.ts`; API (revocado; renovar con uno revocado) | M17a |
+| T05, T06 | `token.test.ts` (el techo); API («past the ceiling whatever its record says»); `config` (E1) | M16a, M16b, M17b |
+| T07 | `token.test.ts`; API (el par fuera de la lista) | M-list |
+| T08 | API (olvidado, borrado, de tipo `web`) | M46sexies, M-dev |
+| T09 | `token-registry.test.ts` («reads again on every call»); API (se revoca entre dos peticiones) | M14 |
+| T10 | API (SSM limitado: 503 y el reintento pasa) | M27 |
+| T11, T14 | `console.test.ts` del dominio (rutas); API (un token en `console/start` y en la lista) | M26a, M26b |
+| T12 | Dominio y API (un `device_id` en el cuerpo del canje) | — (lo cubren los tests de forma) |
+| T13 | Dominio (cada parámetro con su nombre); API | M29a |
+| T15 | API (`prompt=select_account`) | — |
+| T16, T20 | Dominio (el código con su `typ`); API (sin cookie de sesión; un código de otro propósito; caducado; PKCE; la lista otra vez; y el `sub` con dos entradas) | M15a, M15b, M-pkce, M-listagain, M-ambig |
+| T17 (*loopback*) | Dominio y API (el literal y el puerto) | M20a, M20b |
+| T18 | API (sin *script*, `sandbox`, `no-store`, `no-referrer`, el código solo dentro del `<details>` y partible en el teléfono) | M21a, M21b, M-wbr |
+| T21 | API (dos canjes del mismo código: `409`, un solo registro); `token-registry.test.ts` | M19 |
+| T22 | API (renovar conserva el dispositivo y revoca antes; el corte entre los dos pasos deja el anterior revocado y ningún nuevo) | M18a, M18b |
+| T23 | API (confirmación con los datos del servidor; los cuatro rechazos con su código; todos los tokens vivos revocados antes; el dispositivo, comprobado otra vez en el canje; el nombre del servidor, escapado); consola (reemite tras la confirmación) | M29sex-a a M29sex-e, M29b |
+| T24 | API (`console/revoke` revoca ese y solo ese) | M-revokeother |
+| T25 | API (lista solo con sesión; un registro ilegible sale; `<token_id>` validado antes del nombre; revocar dos veces escribe una) | M-webid, M-rewrite |
+| T26 | Arquitectura: `ParameterStore` ofrece exactamente cuatro operaciones y ningún fuente nombra ni borrar ni etiquetar | — (guardián estático) |
+| T27 | Consola: un `state` erróneo se ignora y el puerto sigue esperando; la página sin nada externo, con `no-referrer` | M22 |
+| T28, T29 | Consola: siempre imprime la URL; `redirect: "error"`; solo `https`; el token nunca en la salida, en un error ni en una URL | M23a, M23b, M23c |
+| T30 | Consola: `600` y atómico, `700` para la carpeta; no se usa con permisos abiertos; se niega dentro de la carpeta del libro | M24a, M24b, M24c |
+| T31, T34 | Dominio (mapa por dispositivo; qué entrada usa cada orden); consola (renueva solo con la entrada que nombra `sync/remote.json`, y las demás intactas) | M29bis, M29quinq |
+| T32 | Dominio (`sync/remote.json` estricto). La escritura bajo el cerrojo es de E3 | — |
+| T33 | Consola (el árbol de la carpeta del libro, igual antes y después de `login`) | — (cubierto por el mismo test) |
+| T35 | Consola (sin el `200` la entrada sigue; `--local-only` no llama al servidor y lo dice) | M25 |
+| T36 | Dominio (umbral −1, 0 y +1); consola (`status` avisa a 13 días) | T36 |
+| T37 | Web (el nombre como texto, nunca como marcado); API (escapado en la página) | M-card, M29b |
+| T38 | Dominio (el borde de 7 días) | T38 |
+
+### 20.4 Cómo se vio cada test en rojo
+
+- **Dominio**: sin `token.ts`, `console.ts` y `credentials.ts`, los tres ficheros de test fallan al cargar. Con ellos, el acceso está al 100 %. `local-config.test.ts` falla (1 de 2) antes de añadir `token_expiry_warning_days`.
+- **API**: con el manejador de E1 puesto otra vez (`git stash`), `console.test.ts` da 23 de 24 en rojo.
+- **Web**: `devices-card.test.tsx` falla al cargar sin el componente. `session-card.test.tsx` se puso al día, porque con sesión ahora pide también la lista.
+- **Consola**: los tests se escribieron después de la orden. El rojo se vio con los mutantes: cada uno de T27 a T36 muere con su test.
+- **Honestidad**: como en E1, en el dominio, los adaptadores y la API escribí el código antes que el test. Comprobé el rojo quitando el código, y la prueba de que cada test ata su regla son los mutantes.
+
+### 20.5 Mutación
+
+- **Lote de E2** (`e2-015.json` y `e2-wbr-015.json`): **52 de 52 muertos**. Cada uno se comprobó aplicado, se restauró y se comparó byte a byte, con el árbol igual y sin gemelos. La orden es la selección de tests de E2: dominio, adaptadores, API, consola, web y arquitectura. Revisé a mano qué test mata una muestra de diez (M18a, M29sex-d, M-rewrite, M24a, M23c, M14, M19, M16b, M26a y M-webid): cada uno muere por el test que lleva su regla.
+- **Guardianes, repetidos** sobre el árbol de E2: estático 10 de 10 y ronda 1 19 de 19.
+- **No aplican**: M28 (Q2, no se emite `mfa_required`). M29 bis de `sync/remote.json` escrito fuera del cerrojo y M29 quater son de E3, que es quien lo escribe.
+- **No repetido**: el lote de 59 mutantes de E1 sobre el manejador se perdió con la mudanza. Los caminos de E1 que tocó E2 (la vuelta de Google y el `catch` común) los cubren sus tests, que siguen en verde.
+
+### 20.6 El paquete web
+
+| | Medida | Techo |
+|---|---|---|
+| Arranque | **75.845** | 75.869; sin tocar |
+| Total | **283.158** | **277 KB (283.648)**, subido en su propio commit **antes** del que lo necesita (`84cdd35`), sobre la medida de 283.119, y dentro de la autorización de Q1 (hasta 304.640). La `<section>` de `38f8555` añade 39 bytes |
+
+- **Del total**, respecto de los 282.280 de E1: `ajustes` +859 (la tarjeta y su cliente), `ecb` +29 e `index` +9 de ruido de *hashes*. La tendencia: 272,2 → 273,3 → 275,6 → 276,5.
+- **El arranque sube +2** en la medida final (+9 en la intermedia), todo en la tabla de precargas de la entrada; no hay código nuevo en él.
+
+### 20.7 Capturas (Chrome for Testing 153, desde el *scratchpad*: `capture-e2-015.mjs`; en `~/personal/atlas/privado/capturas/2026-09-26-015-e2/`)
+
+- **Qué se captura**: la tarjeta de dispositivos, con una emisión reciente, un token antiguo y uno revocado, a 400×890 con DPR 3, a 2045×1141 (claro y oscuro) y a 360 de ancho. También la página manual (cerrada y abierta) y la de reemisión. **Sin desplazamiento lateral** en todas: `scrollWidth === clientWidth`, en `medidas.json`.
+- **Lo que encontró mirar la pantalla**: con la página manual abierta, **el código de unos 400 caracteres no se podía partir y hacía la página cinco veces más ancha que el teléfono** (`scrollWidth` 2.239 frente a 400). El arreglo (`893fd05`) mete un `<wbr>` cada 32 caracteres. Hace falta así: la CSP de la página no admite estilo, y `<wbr>` no añade nada al texto copiado. Tiene su test y su mutante (M-wbr).
+- **Comprobado en Chromium**: el enlace «Sí, es este dispositivo: continuar» de la página de reemisión, **servida con su CSP `sandbox`**, navega al clic hasta el `127.0.0.1` de la consola.
+- **Sin datos del libro**: la tarjeta no lee el libro ni enseña importes, así que el modo privacidad no tiene nada que tapar. Las capturas son con el libro vacío y la privacidad puesta (el valor por defecto). En las capturas de página entera, la barra fija de la aplicación queda dibujada a media página: es un efecto de la captura, no de la pantalla.
+
+### 20.8 Decisiones propias, dichas (a confirmar por la dirección)
+
+- **`reissue_device_unreadable`**, un cuarto código de la reemisión, como `unreadable` en Q9. Existe para no plegar un objeto ilegible en `missing`: página `403` en la vuelta y JSON `403` en el canje.
+- **Revocar desde la web un token que no existe o no se lee**: `404 not_found`, con `details.reason` `token_missing` o `token_unreadable`. No se escribe nada en ninguno de los dos casos.
+- **`not_allowed` con motivo**: `ambiguous_subject` si el `sub` del código tiene dos entradas (Q8 (a)), y `other_subject` si el token para renovar es de otro `sub`.
+- **Renovar y reemitir a la vez** (un token en la cabecera y `rdid` en el código): `400 body_invalid`, con `reason: renewal_and_reissue`. La consola nunca lo pide.
+- **Si al renovar el token anterior ya está revocado**, la consola borra esa entrada local y lo dice. Sin ella, el siguiente `atlas remote login` reemite para ese dispositivo («la consola vuelve a iniciar sesión sin él», §4.3).
+- **El primer canje crea el registro antes que el objeto del dispositivo.** El registro sin sobrescribir es la barrera del uso único. Si el objeto no se pudiera crear, el token nuevo se revoca y no se entrega nada.
+- **`atlas remote status`** enseña la entrada que nombra `sync/remote.json` y las de esta carpeta y su origen, y avisa con el umbral de `atlas.config.json`.
+- **La consola intenta abrir el navegador** con `xdg-open` (o `open` o `explorer.exe`) y no espera. La URL se imprime siempre.
+- **`apps/cli/tsconfig.test.json`** tiene ahora `rootDir: "../.."` e incluye el arnés de la API y sus dobles. Así los tests de la consola corren contra el manejador de verdad.
+
+### 20.9 Documentos (para que los traslade la dirección; §2 bis del encargo)
+
+- **`docs/api.md`**:
+  - §4.2: el correo ya no está pendiente de Q8, porque el código lleva solo el `sub`;
+  - §3.1 y §7: `reissue_device_unreadable`;
+  - §4.5: el `404 not_found` al revocar un token que no existe o no se lee;
+  - §7: los motivos de `not_allowed` (`ambiguous_subject` y `other_subject`) y de `body_invalid` (`renewal_and_reissue`).
+- **Plan §10 y la 017**: el rol de la API necesita **`ssm:AddTagsToResource`** sobre `/atlas/<entorno>/device-tokens/*` (§18.2).
+- **ADR-0034, fila 9**: `PutParameter` admite `Tags` al crear, con `ssm:AddTagsToResource` (§18.2).
+- **ADR-0033**:
+  - los SIN VERIFICAR de la 015, con su fuente (§18.1 a §18.6);
+  - la atomicidad de `PutParameter`, como deducción documentada y no como cita literal (Q11);
+  - la prueba en el navegador real, aplazada a la 018 con su procedimiento (§18.4).
+- **`contracts/cli-commands.md`**: `atlas remote status` y `token_expiry_warning_days`, tal como quedan.
+
+### 20.10 Lo que queda abierto
+
+- **Q11**: la atomicidad de `PutParameter` sin `Overwrite` está documentada por deducción (§18.1).
+- **P14**: la vuelta a `127.0.0.1` en el navegador real del usuario se aplaza a la 018. El procedimiento está en §18.4. Que el reenvío de `localhost` de WSL en modo NAT escuche en el literal `127.0.0.1` está SIN VERIFICAR.
+- **El paso de la CI** (`upload-artifact`) sigue esperando a que el usuario conceda el permiso `workflow`.
+- **El SDK de AWS** no está instalado (E3), así que no hay composición de producción.
+
+### 20.11 Tubería y congelado
+
+Sobre `38f8555`, el último commit de código. El congelado solo añade esta sección a `questions.md`, que ningún test lee.
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage` | 0 | 287 ficheros, 2.836 tests, 425 s; el dominio al 100 % (sentencias 8.120/8.120, ramas 4.803/4.803, funciones 1.811/1.811, líneas 7.721/7.721); ningún `ECONNREFUSED` |
+| `npm run test:coverage`, repetida a continuación | 0 | 2.836 tests, 406 s; el dominio al 100 %; ningún `ECONNREFUSED` |
+| `npm run build` | 0 | Arranque 75.845 y total 283.158 |
+
+- Ningún gemelo `.js`.
+- `git diff 490f0e1 -- tests/fixtures` está vacío: E2 no toca el libro ni la salida fiscal.
+- La CI `verify` solo corre en la PR; su resultado va en la PR.
+
+**Commit congelado de E2: el que contiene esta sección.** Su SHA va en la PR de E2 y en el informe a la dirección. Desde aquí no se empuja nada a la rama mientras dura la revisión.
+
+## 21. Decisiones de la dirección sobre E2 (2026-09-26)
+
+Tal como llegaron, con lo que se hizo con cada una.
+
+- **Q11, aceptada la deducción.** La API documenta `ParameterAlreadyExists` para un `PutParameter` sin `Overwrite` sobre un nombre que ya existe, y las escrituras concurrentes sobre un mismo nombre se rechazan. **No se para.** A la lista de comprobaciones de la 018 se añade una prueba real contra SSM: dos canjes simultáneos del mismo código, de los que solo uno prospera. **Hecho**:
+  - ADR-0033 lleva una nota fechada con la deducción;
+  - la prueba entra en `docs/decision-roadmap.md`, 018, junto con la del *loopback* en el navegador real (P14).
+- **Las cuatro decisiones de §20.8, aceptadas tal cual.** **Hecho** en `docs/api.md` §3.1, §4.2, §4.3, §4.5 y §7:
+  - `reissue_device_unreadable`;
+  - `404 not_found` sin escribir nada, con `token_missing` y `token_unreadable`;
+  - los motivos `ambiguous_subject` y `other_subject`;
+  - borrar la entrada local para reemitir en el siguiente inicio de sesión.
+  - Además, `renewal_and_reissue`, dentro de `body_invalid`.
+- **Los dos tramos intermedios en rojo** (`f6cbbf7`, y de `23fa3dc` a `20127d3`) **quedan anotados como están**, sin reescribir la historia (§20.2). **La regla**: antes de cada empuje, al menos `typecheck`.
+- **Documentos: los traslado yo, en esta PR**, por orden expresa de la dirección. Es una excepción a §2 bis del encargo, limitada a esto. **Hecho en `dc6d6d2`**:
+  - `docs/api.md`: Q8 (el código lleva solo el `sub`), los códigos nuevos, el `404` y los motivos;
+  - ADR-0033: una nota fechada que cierra o actualiza los SIN VERIFICAR del bloque 0 (§18);
+  - ADR-0034: una nota fechada sobre la fila 9 (las etiquetas al crear, que exigen `ssm:AddTagsToResource`);
+  - `docs/decision-roadmap.md`: `ssm:AddTagsToResource` en la entrada de la 017, y las pruebas de Q11 y del *loopback* en la lista de la 018.
+
+**Tubería**: `npm run lint` 0 y `npm run typecheck` 0 antes de cada empuje. La CI `verify` va en el comentario de la PR #95. Los cambios de esta sección son solo de documentos. El código es el de `38f8555`, con `test:coverage` dos veces en 0 y `build` en 0 (§20.11).
+
+**Commit congelado: el que contiene esta sección.** Su SHA va en la PR #95. Desde aquí no se empuja nada mientras dura la revisión.
+
+## 22. Decisiones de la dirección sobre las revisiones de la PR #95 (2026-09-26)
+
+Tal como llegaron, con lo que se hizo con cada una y el commit que lo lleva. Las dos revisiones se hicieron sobre el congelado `a6c5367`.
+
+### 22.1 Seguridad
+
+- **B1. `sentinels.test.ts` se extiende a las 5 rutas nuevas** (la reemisión, la renovación y la lista incluidas) y a sus caminos de fallo, con un registro de token cuyo `sub`, `email` y `secret_sha256` son centinelas. **Hecho en `c23c183`**:
+  - siembra un registro `SOWN` con `secret_sha256` centinela (`5e…`), el `sub` y el correo centinelas, y un objeto de dispositivo de consola;
+  - recorre el inicio, las vueltas (*loopback*, manual, reemisión, dispositivo inexistente), los canjes (emisión, repetición, renovación, token falsificado, cuerpo mal formado, SSM limitado, S3 caído), las revocaciones de la consola, la lista y la revocación de la web;
+  - comprueba que ningún centinela, ningún secreto y ningún *hash* aparece en los registros, y que las 5 rutas y los códigos de resultado sí aparecen.
+  - **Lo que encontró**: el registro tiraba la plantilla de ruta `/api/devices/tokens/{token_id}/revoke`, porque la expresión `SAFE` de `apps/api/src/log.ts` no admitía `{}`. **Corregido en `85d76ae`**. Por eso `c23c183` está en rojo por sí solo y pasa desde `85d76ae`; se deja anotado, sin reescribir la historia.
+- **N1. El canje lee `tokens.read(code.tid)` antes de revocar nada**; si el registro existe, responde `409 console_code_used` sin escribir. **Hecho en `8e5b86a`**, con tests de repetición para la emisión, la renovación y la reemisión: cada uno comprueba que el número de escrituras en SSM no cambia, y la reemisión, además, que el token recién entregado sigue sin `revoked_at`.
+- **N2. No se toca aquí.** **Hecho en `73cdb64`**: la entrada de la 017 en `docs/decision-roadmap.md` lleva una regla de límite de ritmo del WAF sobre `/api/*` y la concurrencia reservada, porque protegen la cuota de SSM compartida (ADR-0034).
+- **N3. Hecho en `73cdb64`**: la lista de la 018 lleva comprobar que el `GetParameter` justo después de revocar ya lee el valor nuevo.
+- **N4. La consola comprueba la carpeta `~/.config/atlas` como `packages/adapters/src/prices/secrets.ts`** (`mode & 0o077`, salvo en Windows) y avisa si no es `700`: «…ciérrala con chmod 700.». **Hecho en `8f7b0d4`**; `78155ef` añade los casos de solo el grupo (`750`) y solo los demás (`705`), y el de `700` sin aviso.
+- **N5. La respuesta del canje se valida con las reglas del dominio antes de guardarla** (`isCredentialEntry`, exportada ahora desde `@atlas/domain/access`), y en la renovación o la reemisión el `device_id` devuelto tiene que ser el pedido. Si no, no se escribe nada y sale `Error (console_response_invalid): …` con el código de salida de dominio. **Hecho en `8f7b0d4`** (y `c955f15` para la función del dominio).
+- **N7. Hecho**: la descripción de la PR #95 dice ahora, en su primer punto, que la PR lleva también los retoques de la ronda 5 de la PR #90 (`67007c1`), que no son de E2.
+
+### 22.2 Corrección
+
+- **B1. Hecho en `8e5b86a`**: el test de la reemisión siembra un token vivo de **otro** dispositivo (`OTHEROTHEROTHEROTHEROT`) y comprueba que su registro no cambia y que no se escribe nada sobre él. Mata `listed.read.device_id === code.rdid` → `true`.
+- **B2. Hecho en `8e5b86a`**: `other_subject`, `403 not_allowed` sin escribir nada (la lista con dos entradas, el token de una y el código de la otra). Mata `if (previous.sub !== code.sub)` → `if (false)`.
+- **N1. Aviso preciso. Hecho en `c955f15`** (dominio) **y `8f7b0d4`** (consola): `expiryWarning` devuelve `"expired"` solo cuando `expires_at <= ahora`, y `0` cuando queda menos de un día; la consola dice «Caduca en menos de un día» y «Ha caducado» solo si ha caducado. Tests con 23 h, 1 h, 25 h, un milisegundo antes y el instante exacto.
+- **N2. Hecho en `8f7b0d4`**: toda escritura de `credentials.json` pasa por `updateCredentials`, que relee el fichero justo antes de escribir y aplica solo el cambio de esta orden. El test escribe la entrada de otra terminal mientras la consola espera al navegador, y comprueba que las tres entradas quedan.
+- **N3. Hecho en `8e5b86a`**: si `devices.create` lanza, el token recién creado se revoca (hasta tres intentos, tragando sus errores) y se relanza el fallo original, que responde `503 remote_unavailable` con la dependencia `s3`. La colisión también revoca por ese camino. Tests del fallo y de la colisión en `8e5b86a`; `78155ef` añade el reintento (dos fallos de SSM y el tercer intento revoca; tres fallos y la respuesta sigue diciendo `s3`).
+- **N4. Hecho en `43b3085`**: `docs/api.md:135` dice lo de §21 (uso único aceptado por deducción, prueba real en la 018) y que la repetición se responde antes de revocar.
+- **N5. Hecho en `43b3085`**: `token_expiry_warning_days` (14) en `docs/data-schema.md:28`.
+- **N6. Hecho en `8e5b86a`** (`renewal_and_reissue` y `token_unreadable`) **y `8f7b0d4`** (borrar la entrada local tras `device_token_revoked`).
+- **N7. Hecho en `8e5b86a`**: en la reemisión, el registro guarda el nombre del objeto del dispositivo, el que el usuario confirmó, no `code.dn`. Test: el registro y la respuesta dicen «sobremesa».
+- **N8.** El *chunk* `ajustes` se queda como está.
+
+### 22.3 Cómo se vio cada test en rojo
+
+- Los mutantes de los revisores (S1-S7) se reprodujeron **sobre `a6c5367`, antes de tocar nada**: los 7 **sobrevivieron** (registros en el *scratchpad*, `r95b/`).
+- Los tests nuevos se corrieron contra el código viejo antes de cada corrección: en la API, 3 en rojo (repetición, fallo de S3, nombre de la reemisión); en la consola, 5 (N1, N2, N4, y los dos de N5); en el dominio, 3 (los casos de horas y `isCredentialEntry`).
+- Los dos tests de `78155ef` (reintento de la revocación y bits del grupo) se añadieron porque sus mutantes (N3b, N3c, N4b) no tenían quien los matara; se vieron sobrevivir con los tests de `73cdb64` y morir con los de `78155ef`.
+
+### 22.4 Mutación, después de las correcciones
+
+Sobre `78155ef`, con `mutate-015.mjs` (lote `r95-after-015.json` del *scratchpad*; la selección de tests del dominio, los adaptadores, la API, la consola y la web). **20 de 20 muertos.**
+
+| Id | Mutante | Antes | Después |
+|---|---|---|---|
+| S1 | el aviso cuenta el día con `Math.ceil` | sobrevive (`a6c5367`) | muerto |
+| S1b | «caducado» solo estrictamente después del instante (`<= 0` → `< 0`) | — (código nuevo) | muerto |
+| S1c | la consola dice «0 días» en vez de «menos de un día» | — (código nuevo) | muerto |
+| S2 | la reemisión revoca los tokens de cualquier dispositivo | sobrevive (`a6c5367`) | muerto |
+| S3 | la renovación no comprueba el `sub` | sobrevive (`a6c5367`) | muerto |
+| S4 | renovar y reemitir a la vez | sobrevive (`a6c5367`) | muerto |
+| S5 | se conserva la entrada revocada tras renovar | sobrevive (`a6c5367`) | muerto |
+| S6 | la colisión sin revocar el token nuevo | sobrevive (`a6c5367`) | muerto |
+| S7 | `token_unreadable` confundido con `token_missing` | sobrevive (`a6c5367`) | muerto |
+| N1s | sin la lectura previa: la repetición revoca antes de responder | tests en rojo sobre el código viejo | muerto |
+| N3a | el fallo de `devices.create` deja el token vivo | tests en rojo sobre el código viejo | muerto |
+| N3b | la revocación se intenta una sola vez | sobrevive (tests de `73cdb64`) | muerto |
+| N3c | un fallo al revocar tapa el fallo de S3 | sobrevive (tests de `73cdb64`) | muerto |
+| N7 | la reemisión guarda el nombre propuesto (`code.dn`) | tests en rojo sobre el código viejo | muerto |
+| N2 | se escribe sobre la instantánea leída antes del navegador | tests en rojo sobre el código viejo | muerto |
+| N4a | sin aviso por la carpeta abierta | tests en rojo sobre el código viejo | muerto |
+| N4b | solo se miran los bits de los demás (`0o007`) | sobrevive (tests de `73cdb64`) | muerto |
+| N5a | se guarda la respuesta sin las reglas del fichero | tests en rojo sobre el código viejo | muerto |
+| N5b | se guarda una renovación de otro dispositivo | tests en rojo sobre el código viejo | muerto |
+| LOG | la expresión `SAFE` sin `{}` tira la plantilla de ruta | el test de centinelas en rojo (`c23c183`) | muerto |
+
+Cada mutante se restaura y se compara byte a byte, con `git status` igual antes y después.
+
+### 22.5 Notas de honestidad
+
+- `c23c183` (los centinelas) está en rojo por sí solo: el test encontró el fallo del registro, que se corrige en el commit siguiente, `85d76ae`.
+- `8e5b86a` junta varias correcciones del canje (N1 de seguridad, B1, B2, N3, N6 y N7 de corrección), porque tocan la misma función y sus tests comparten el mismo bloque.
+- `43b3085` debía llevar también la hoja de ruta; solo lleva `docs/api.md` y `docs/data-schema.md`. La hoja de ruta va en `73cdb64`.
+- Todos los commits de esta ronda pasaron `lint` y `typecheck` en 0 antes de empujarlos.
+
+### 22.6 Tubería y congelado
+
+Sobre `78155ef`, el último commit de código. El congelado solo añade esta sección a `questions.md`, que ningún test lee.
+
+| Orden | Código de salida | Nota |
+|---|---|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage` | 0 | 287 ficheros, 2.852 tests, 390 s; el dominio al 100 % (sentencias 8.125/8.125, ramas 4.808/4.808, funciones 1.812/1.812); ningún `ECONNREFUSED` |
+| `npm run test:coverage`, repetida a continuación | 0 | 2.852 tests, 443 s; ningún `ECONNREFUSED` |
+| `npm run build` | 0 | Arranque 75.845 y total 283.158 bytes gzip, los mismos que en `a6c5367`: esta ronda no toca la web |
+
+- `git diff 490f0e1 -- tests/fixtures` sigue vacío.
+- El paso de la CI con `upload-artifact` sigue fuera de la rama, a la espera del permiso `workflow`.
+- La CI `verify` va en el comentario de la PR #95.
+
+**Commit congelado: el que contiene esta sección.** Su SHA va en la PR #95. Desde aquí no se empuja nada mientras dura la revisión.
