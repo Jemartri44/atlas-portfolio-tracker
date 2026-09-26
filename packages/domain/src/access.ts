@@ -125,6 +125,18 @@ export {
   splitSigned,
 } from "./access/signed.js";
 export {
+  ifNoneMatchHits,
+  publishedDevice,
+  type ReferenceEntry,
+  type ReferenceKind,
+  referenceContentType,
+  referenceIndex,
+  referenceKey,
+  refusalOfRemote,
+  requestedEtag,
+  versionOf,
+} from "./access/sync-routes.js";
+export {
   checkToken,
   DEVICE_TOKEN,
   type DeviceTokenParts,
