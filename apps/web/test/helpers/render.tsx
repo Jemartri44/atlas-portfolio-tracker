@@ -64,6 +64,26 @@ export const settle = async (ms = 0): Promise<void> => {
   await new Promise((resolve) => setTimeout(resolve, ms));
 };
 
+/**
+ * Waits for a **condition**, never for a fixed time (review of PR #96, N4): a
+ * test that asserts after `settle(30)` fails when the machine is loaded. It
+ * checks every few milliseconds and fails, saying what it waited for, only
+ * after a generous bound.
+ */
+export const until = async (
+  condition: () => boolean,
+  what: string,
+  boundMs = 10_000,
+): Promise<void> => {
+  const start = Date.now();
+  while (!condition()) {
+    if (Date.now() - start > boundMs) {
+      throw new Error(`waited ${boundMs} ms for: ${what}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+};
+
 /** Renders a component at a URL, behind the route pattern it has in the application. */
 export const show = async (
   url: string,

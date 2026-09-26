@@ -27,6 +27,14 @@ describe("rawLinesText", () => {
     expect(rawLinesText([], CURRENT_LEDGER_SCHEMA)).toBe("");
   });
 
+  it("refuses a line holding a lone surrogate: its bytes would not be UTF-8 (review of PR #96, B1)", () => {
+    const lone = buy.replace('"source":"manual"', '"source":"manual","note":"a\ud800"');
+    const error = failure([sell, lone]);
+    expect(error).toBeInstanceOf(ValidationError);
+    expect((error as ValidationError).code).toBe("raw_lone_surrogate");
+    expect((error as ValidationError).details).toEqual({ line: 2 });
+  });
+
   it("refuses a line holding a newline or a carriage return, with its position", () => {
     for (const broken of [`${buy}\n${sell}`, `${buy}\r`]) {
       const error = failure([sell, broken]) as ValidationError;

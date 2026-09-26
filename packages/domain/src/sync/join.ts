@@ -27,6 +27,23 @@ const invalidOf = (events: readonly LedgerEvent[]): { id: string; code: string }
 };
 
 /**
+ * What an initialisation finds in the remote (feature 015, E3; plan §7, S0
+ * and S1): nothing yet; **exactly the bytes of this ledger** — an
+ * initialisation cut after uploading, which only has to be finished —; or
+ * anything else, which is joined, never initialised over. By the bytes, never
+ * by resemblance.
+ */
+export const initState = (
+  localLines: readonly string[],
+  remoteText: string,
+): "empty" | "same" | "other" => {
+  if (remoteText === "") {
+    return "empty";
+  }
+  return remoteText === localLines.map((line) => `${line}\n`).join("") ? "same" : "other";
+};
+
+/**
  * The client refuses to initialise **before calling** when its ledger is not
  * valid (a `settings_changed` recorded with `acceptInvalid` before the sync
  * was configured, any invalid event): the remote never receives an invalid

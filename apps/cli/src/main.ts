@@ -50,6 +50,7 @@ import {
 } from "./commands/query.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
 import { remoteCommand } from "./commands/remote.js";
+import { syncCommand } from "./commands/sync.js";
 import { synthCommand } from "./commands/synth.js";
 import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
@@ -100,6 +101,7 @@ export const COMMANDS: Record<string, Command> = {
   draft: draftCommand,
   prices: pricesCommand,
   remote: remoteCommand,
+  sync: syncCommand,
 };
 
 /**
@@ -146,6 +148,17 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   prices: { update: 2, status: 2, symbols: 4, purge: 3 },
   draft: { list: 2, confirm: 3, discard: 3 },
   remote: { login: 2, logout: 2, status: 2 },
+  sync: {
+    status: 2,
+    held: 2,
+    confirm: 3,
+    discard: 3,
+    redo: 3,
+    init: 2,
+    join: 2,
+    redownload: 2,
+    deactivate: 2,
+  },
 };
 
 /** Refuses the first word a command does not read. */
@@ -190,7 +203,14 @@ comandos:
   draft list|confirm <id>|discard <id>   los borradores: no cuentan en ninguna cifra hasta registrarlos
   remote login [--origin <https://…>] [--name <nombre>] [--manual]   inicia sesión con Google y guarda el token de este dispositivo
   remote logout [--device <id>] [--local-only]   revoca el token en el servidor y lo borra de este equipo
-  remote status                  las sesiones guardadas de esta carpeta y cuándo caducan`;
+  remote status                  las sesiones guardadas de esta carpeta y cuándo caducan
+  sync                           sincroniza esta carpeta con su nube (la que dice sync/remote.json)
+  sync status|held               lo pendiente, lo retenido y la última sincronización; lo retenido con su motivo
+  sync confirm|redo|discard <unidad> [--reversal-only]   resuelve lo retenido
+  sync init [--origin <https://…>] [--device <id>]   sube el libro entero a una nube vacía
+  sync join --from-remote|--with-own-lines [--origin <https://…>] [--device <id>]   se une a una nube con libro
+  sync redownload                vuelve a descargar la nube tras una reescritura (solo si lo pides)
+  sync deactivate                desactiva la sincronización; lo retenido se queda`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),

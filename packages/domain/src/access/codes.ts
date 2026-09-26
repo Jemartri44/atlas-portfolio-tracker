@@ -31,6 +31,11 @@ export const API_ERRORS = {
   reissue_device_not_console: 403,
   /** An object that exists but cannot be read strictly: never folded into `missing` (as Q9). */
   reissue_device_unreadable: 403,
+  // E3, the sync and the reference data (`docs/api.md` §5, §6 and §7).
+  precondition_required: 428,
+  precondition_failed: 412,
+  init_rejected: 422,
+  reference_name_invalid: 400,
 } as const;
 
 export type ApiErrorCode = keyof typeof API_ERRORS;

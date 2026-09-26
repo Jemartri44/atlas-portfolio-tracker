@@ -14,6 +14,7 @@
 
 import { ValidationError } from "../errors.js";
 import type { LedgerEvent } from "./events.js";
+import { holdsLoneSurrogate } from "./json-keys.js";
 import { decodeLine } from "./line.js";
 import type { LedgerSchema } from "./migrations/index.js";
 
@@ -38,6 +39,13 @@ export const rawLinesText = (lines: readonly string[], schema: LedgerSchema): st
   lines.forEach((line, index) => {
     if (/[\n\r]/.test(line)) {
       throw new ValidationError("raw_line_break", `line ${index + 1} holds a line break`, {
+        line: index + 1,
+      });
+    }
+    // Its bytes would not be UTF-8, and the store would be unreadable (review
+    // of PR #96, B1): no store writes it, whoever asks.
+    if (holdsLoneSurrogate(line)) {
+      throw new ValidationError("raw_lone_surrogate", `line ${index + 1} is not Unicode`, {
         line: index + 1,
       });
     }

@@ -7,9 +7,11 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import { base64url, pkceChallenge, Signer } from "@atlas/adapters/access";
+import { SdkObjectStore } from "@atlas/adapters/aws-sdk";
 import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
+import { S3ServiceException } from "@aws-sdk/client-s3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { allowListOf, NAMES, SELF, setup } from "./harness.js";
+import { allowListOf, consoleLogin, NAMES, SELF, setup } from "./harness.js";
 
 const SUB = "SENTINELSUB7777777777";
 const EMAIL = "sentinel.email@example.test";
@@ -123,6 +125,7 @@ describe("the log of the API (R25)", () => {
           throw new Error(`boom ${SUB} ${EMAIL}`);
         },
         putIfMatch: async () => "written",
+        list: async () => [],
       },
     });
     failing.ssm.set(NAMES.allowList, allowListOf({ sub: SUB, email: EMAIL }));
@@ -352,5 +355,151 @@ describe("the log of the API (R25)", () => {
     ]) {
       expect(api.logs.some((line) => line.includes(code))).toBe(true);
     }
+  });
+  it("carries none of them on the routes of the sync and of the reference data (E3)", async () => {
+    const api = setup();
+    api.ssm.set(NAMES.allowList, allowListOf({ sub: SUB, email: EMAIL }));
+    const account = { sub: SUB, email: EMAIL };
+    const console_ = await consoleLogin(api, account);
+    await api.signIn(account);
+    const LEDGER_LINE = JSON.stringify({
+      schema_version: 1,
+      id: "01ARYZ6S41TSV4RRFFQ69G5FA0",
+      recorded_at: "2026-09-01T18:22:05.000Z",
+      type: "account_created",
+      account_id: "SENTINEL-ACCOUNT",
+      name: "SENTINEL-NAME 987654.32",
+      platform: "test",
+      book: "core",
+      base_currency: "EUR",
+      country: "ES",
+      active: true,
+    });
+    const token = { "x-atlas-device-token": console_.token };
+    const json = { "content-type": "application/json" };
+    const cookie = { origin: SELF, ...json };
+    // Initialise with the sentinel line, read it back, append good and bad lines.
+    const empty = createHash("sha256").update("").digest("hex");
+    await api.call("PUT", "/api/ledger", {
+      headers: { ...token, ...json, "if-match": `"${empty}"` },
+      body: JSON.stringify({ content: `${LINE}\n`, confirm_duplicate_ids: [] }),
+      jar: false,
+    });
+    await api.call("PUT", "/api/ledger", {
+      headers: { ...token, ...json, "if-match": `"${empty}"` },
+      body: JSON.stringify({ content: `${LEDGER_LINE}\n`, confirm_duplicate_ids: [] }),
+      jar: false,
+    });
+    const read = await api.call("GET", "/api/ledger", { headers: token, jar: false });
+    await api.call("GET", "/api/ledger");
+    for (const body of [
+      JSON.stringify({ lines: [{ line: LINE }] }),
+      JSON.stringify({ lines: [{ line: LEDGER_LINE }] }),
+      `SENTINEL-ACCOUNT ${LINE}`,
+      JSON.stringify({ lines: [{ line: LINE }], device_id: "SENTINEL-DEVICE-IN-BODY" }),
+    ]) {
+      await api.call("POST", "/api/ledger/lines", {
+        headers: { ...cookie, "if-match": read.headers.etag as string },
+        body,
+      });
+      await api.call("POST", "/api/ledger/lines", {
+        headers: { ...token, ...json, "if-match": read.headers.etag as string },
+        body,
+        jar: false,
+      });
+    }
+    await api.call("PUT", "/api/sync/devices/self", {
+      headers: { ...token, ...json },
+      body: JSON.stringify({ pending: 1, held: 0, last_sync_at: "SENTINEL-ACCOUNT" }),
+      jar: false,
+    });
+    await api.call("PUT", "/api/sync/devices/self", {
+      headers: cookie,
+      body: JSON.stringify({ pending: 1, held: 0, last_sync_at: "2026-10-01T09:00:00Z" }),
+    });
+    await api.call("GET", "/api/sync/devices");
+    api.s3.seed("prices/SENTINEL.jsonl", `${LINE}\n`);
+    await api.call("GET", "/api/reference/index", { headers: token, jar: false });
+    await api.call("GET", "/api/reference/prices/SENTINEL.jsonl", { headers: token, jar: false });
+    await api.call("GET", "/api/reference/prices/..SENTINEL-ACCOUNT", {
+      headers: token,
+      jar: false,
+    });
+    api.s3.failNext();
+    await api.call("GET", "/api/ledger", { headers: token, jar: false });
+
+    const everything = [...api.logs, ...captured].join("\n");
+    for (const secret of [
+      "987654.32",
+      "SENTINEL-ACCOUNT",
+      "SENTINEL-NAME",
+      "SENTINEL-DEVICE-IN-BODY",
+      console_.token,
+      console_.token.split(".")[2] as string,
+      SUB,
+      EMAIL,
+    ]) {
+      expect(everything).not.toContain(secret);
+    }
+    for (const route of [
+      "/api/ledger",
+      "/api/ledger/lines",
+      "/api/sync/devices/self",
+      "/api/sync/devices",
+      "/api/reference/index",
+      "/api/reference/prices/{name}",
+    ]) {
+      expect(
+        api.logs.some((line) => line.includes(`"route":"${route}"`)),
+        route,
+      ).toBe(true);
+    }
+    for (const code of [
+      "initialised",
+      "init_rejected",
+      "line_rejected",
+      "body_not_json",
+      "remote_unavailable",
+    ]) {
+      expect(
+        api.logs.some((line) => line.includes(`"${code}"`)),
+        code,
+      ).toBe(true);
+    }
+  });
+  it("carries nothing of an error of the SDK that is not transient: not the bucket, not the key (review of PR #96, N4)", async () => {
+    const first = setup();
+    const console_ = await consoleLogin(first);
+    const BUCKET = "sentinel-bucket-7777";
+    const ARN = "arn:aws:sts::123456789012:assumed-role/atlas-dev-api/SENTINEL";
+    const client = {
+      send: async (command: { input: { Key?: string } }) => {
+        throw new S3ServiceException({
+          name: "AccessDenied",
+          $fault: "client",
+          $metadata: { httpStatusCode: 403 },
+          message: `User: ${ARN} is not authorized to perform s3:GetObject on ${BUCKET}/${String(command.input.Key)}`,
+        });
+      },
+    };
+    const api = setup({
+      objects: new SdkObjectStore(client as never, BUCKET),
+      parameters: first.ssm,
+    });
+    const answer = await api.call("GET", "/api/ledger", {
+      headers: { "x-atlas-device-token": console_.token },
+      jar: false,
+    });
+    expect(answer.statusCode).toBe(500);
+    expect(answer.body).not.toContain(BUCKET);
+    const everything = [...api.logs, ...captured].join("\n");
+    for (const secret of [BUCKET, ARN, "123456789012", "sync/devices", console_.token]) {
+      expect(everything).not.toContain(secret);
+    }
+    expect(JSON.parse(api.logs.at(-1) as string)).toMatchObject({
+      status: 500,
+      code: "internal",
+      reason: "AccessDenied",
+    });
   });
 });

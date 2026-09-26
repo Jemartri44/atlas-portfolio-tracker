@@ -863,3 +863,125 @@ describe("the log of the console flow (mutant 9)", () => {
     expect(logs).toContain(`"token_id":"${body.token_id}"`);
   });
 });
+
+describe("what the round 2 of the review of PR #95 found", () => {
+  const ID = "RRRRRRRRRRRRRRRRRRRRRR";
+  const OLD = "AAAAAAAAAAAAAAAAAAAAAA";
+  const seedDevice = (api: Api) => {
+    api.s3.seed(
+      `sync/devices/${ID}.json`,
+      serializeDeviceObject(
+        newDevice({
+          deviceId: ID,
+          type: "console",
+          createdAt: "2026-09-01T10:00:00Z",
+          deviceName: "sobremesa",
+        }),
+      ),
+    );
+    api.ssm.set(
+      `${TOKENS}${OLD}`,
+      JSON.stringify({
+        token_record_format: 1,
+        token_id: OLD,
+        secret_sha256: "a".repeat(64),
+        sub: ALLOWED.sub,
+        email: ALLOWED.email,
+        device_id: ID,
+        device_name: "sobremesa",
+        issued_at: "2026-09-01T10:00:00Z",
+        expires_at: "2026-11-30T10:00:00Z",
+      }),
+    );
+  };
+  const live = (api: Api): string[] =>
+    [...new Set(api.ssm.writes.map((write) => write.split(" ")[1] as string))]
+      .filter((name) => name.startsWith(TOKENS))
+      .filter((name) => !("revoked_at" in JSON.parse(api.ssm.history(name).at(-1) as string)));
+
+  it("leaves exactly one live token when the same reissue code is exchanged twice at once (R2-1)", async () => {
+    const api = setup();
+    seedDevice(api);
+    const { done, secrets } = await consoleReturn(api, { reissue_device_id: ID });
+    const code = codeOfLoopback(
+      /<a href="([^"]+)"/.exec(done.body)?.[1]?.replaceAll("&amp;", "&") as string,
+    );
+    // Interleaved as the review did: both read the code's record before
+    // either creates it, and the second lists the tokens of the device after
+    // the first created its own.
+    const get = api.ssm.get.bind(api.ssm);
+    const putNew = api.ssm.putNew.bind(api.ssm);
+    const listByPath = api.ssm.listByPath.bind(api.ssm);
+    let tokenReads = 0;
+    let bothRead: () => void = () => undefined;
+    const readTwice = new Promise<void>((resolve) => {
+      bothRead = resolve;
+    });
+    let created: () => void = () => undefined;
+    const firstCreated = new Promise<void>((resolve) => {
+      created = resolve;
+    });
+    let lists = 0;
+    api.ssm.get = async (name: string) => {
+      if (name.startsWith(TOKENS)) {
+        tokenReads += 1;
+        if (tokenReads === 2) {
+          bothRead();
+        }
+      }
+      return get(name);
+    };
+    api.ssm.putNew = async (name, value, tags) => {
+      await readTwice;
+      const result = await putNew(name, value, tags);
+      created();
+      return result;
+    };
+    api.ssm.listByPath = async (path: string) => {
+      lists += 1;
+      if (lists === 2) {
+        await firstCreated;
+      }
+      return listByPath(path);
+    };
+    const [a, b] = await Promise.all([
+      exchange(api, code, secrets.verifier),
+      exchange(api, code, secrets.verifier),
+    ]);
+    expect([a.statusCode, b.statusCode].sort()).toEqual([200, 409]);
+    const token = JSON.parse((a.statusCode === 200 ? a : b).body);
+    expect(lists).toBe(2);
+    expect(live(api)).toEqual([`${TOKENS}${token.token_id}`]);
+  });
+
+  it("logs the id of the token left alive when every revocation failed (R2-2)", async () => {
+    const api = setup();
+    const { done, secrets } = await consoleReturn(api);
+    api.ssm.overwrite = async () => {
+      throw new Error("ssm down");
+    };
+    api.s3.failNext();
+    const answer = await exchange(
+      api,
+      codeOfLoopback(done.headers.location as string),
+      secrets.verifier,
+    );
+    expect(answer.statusCode).toBe(503);
+    const alive = api.ssm.writes
+      .filter((write) => write.startsWith("putNew "))
+      .map((write) => write.slice(`putNew ${TOKENS}`.length))
+      .at(-1) as string;
+    const line = JSON.parse(api.logs.at(-1) as string);
+    expect(line).toMatchObject({ status: 503, token_id: alive, code: "remote_unavailable" });
+  });
+
+  it("logs no id when the revocation of the new token went through", async () => {
+    const api = setup();
+    const { done, secrets } = await consoleReturn(api);
+    api.s3.failNext();
+    await exchange(api, codeOfLoopback(done.headers.location as string), secrets.verifier);
+    const line = JSON.parse(api.logs.at(-1) as string);
+    expect(line.status).toBe(503);
+    expect(line).not.toHaveProperty("token_id");
+  });
+});

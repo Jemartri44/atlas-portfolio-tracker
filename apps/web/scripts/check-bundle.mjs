@@ -260,8 +260,19 @@ const dist = join(webRoot, "dist");
  * chunk, 41.487): the code of 014 now adds **+140, the cap itself**. That is
  * why a lone reversal is redone through `recordEvent` with its id and
  * `reverseEvent` takes none: giving it one cost +25 more. Measured 75.837.
+ *
+ * **Review of PR #96 (feature 015, E3), 2026-09-26: measured 75.885, ceiling
+ * 75.905 — measured + 20 of noise margin**, within the authorisation of §7 P13
+ * of the prompt of 015 (up to 76.069). Breakdown, measured build by build:
+ * 75.836 at the frozen `57ea212`; **+37** for the check of a lone surrogate
+ * in `rawLinesText` (security B1: no store may write bytes that are not
+ * UTF-8, and the browser store is on the boot path); **+12** of the table of
+ * lazy chunks (new hashes of the lazy chunks of 015, no code of the boot).
+ * The check inline or shared with the sync weighs the same. Trend: the boot
+ * grows only when a rule of the ledger has to live where the ledger is
+ * written; everything else of 015 stays lazy.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.

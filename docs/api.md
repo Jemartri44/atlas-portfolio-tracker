@@ -8,6 +8,8 @@ El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a tr
 
 **Puesto al día el 2026-09-25 con las decisiones del alto del plan de la feature 015** (`specs/015-api-access/questions.md` §8; propuestas en `specs/015-api-access/contracts/api-routes.md` y `data-model.md`): los valores que estaban [PENDIENTE] en §2, §3, §4 y §5, `GET /api/session`, la página de acceso denegado, el objeto del dispositivo con su tipo y su estado, la ligadura de la web (§5.4), la reemisión, las rutas de referencia (§6), los códigos nuevos (§7) y los parámetros de SSM (§9). Lo que queda [PENDIENTE] lo dice así.
 
+**Puesto al día el 2026-09-26 con E3 de la feature 015** (`specs/015-api-access/questions.md` §23 y §24; decisiones de la dirección en §25): §5 está implementado sobre S3 con lo verificado en el bloque 0 (§5.5), y las precisiones de la implementación van marcadas «*(015)*» en §5.1, §5.2, §5.3, §5.5 y §6.
+
 **Si este documento discrepa de una ADR, manda la ADR**, y la discrepancia se anota en el `questions.md` de la feature que la encuentre.
 
 ## 1. Reglas generales
@@ -171,6 +173,7 @@ El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: 
 `GET /api/ledger`
 
 - `200`, cuerpo = **los bytes exactos** del libro, `Content-Type: application/x-ndjson; charset=utf-8`, cabecera `ETag: "<sha256>"`. Sin compresión que cambie los bytes que el cliente hashea (si CloudFront comprime, el cliente hashea lo descomprimido: lo que cuenta son los bytes del fichero).
+- *(015)* **Los bytes viajan como texto si son UTF-8 válido**, porque así se reescriben idénticos, y **en base64 (`isBase64Encoded`) si no lo son**. Exactos en los dos casos. El cliente comprueba que la cabecera `ETag`, fuerte o débil (`W/`, que pone CloudFront al comprimir), dice el SHA-256 de los bytes que recibió, ya descomprimidos. Si no lo dice, o si los bytes no son UTF-8, es `transport_rejected` (bloque 0 de E3, §23.3). **CloudFront no comprime `application/x-ndjson`**, que no está en su lista de tipos.
 - El cliente comprueba con este cuerpo el **hash del prefijo** que sincronizó (ADR-0026, Parte A): si los bytes de sus primeras `synced_lines` líneas no dan el hash de su marcador, el remoto se ha reescrito y no sube nada.
 - **La API no interpreta la versión de esquema al servir**: un cliente antiguo que no entiende el remoto lo rechaza al cargar (`docs/data-schema.md` §5), y sus pendientes esperan.
 - *(014)* **El puerto del cliente entrega texto, no bytes** (`RemoteSnapshot`: `text` y `etag`). El dominio no tiene decodificador UTF-8, así que el cliente HTTP decodifica los bytes del cuerpo y entrega el texto; el etag sigue siendo el SHA-256 de los bytes. Decodificar no pierde nada, porque toda línea del remoto se escribió desde una cadena, y el bloque 0 de la 014 lo comprobó byte a byte (`specs/014-ledger-sync-core/questions.md` §1.4).
@@ -202,6 +205,8 @@ Cuerpo:
 - Cualquier otro campo es `400 body_invalid`, y en particular un `device_id` (§2.3).
 
 **Si `If-Match` no es el etag actual: `412 precondition_failed`**, sin escribir nada. También si otro escritor gana la carrera entre la lectura de la Lambda y su `PutObject` condicional. El cliente vuelve al paso 1 de la sincronización.
+
+*(015)* **`If-Match` solo vale como `"<sha256>"` fuerte, en minúsculas.** Débil (`W/"…"`), sin comillas, una lista o `*` nunca son el etag del remoto, y dan `412` sin escribir nada. La carrera entre dos `PutObject` condicionales la verificó el bloque 0 de E3 (§23.1): S3 responde `412` o `409 ConditionalRequestConflict` a la que pierde, y la API traduce los dos a `412`.
 
 **Validación, línea a línea y en orden**, con el dominio (ADR-0026, Parte A), sobre el remoto con las líneas anteriores ya aceptadas:
 
@@ -269,9 +274,9 @@ La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la creden
 { "device_format": 1, "device_id": "<22>", "type": "web", "state": "active", "created_at": "…", "pending": 0, "held": 0, "last_sync_at": "…", "published_at": "…" }
 ```
 
-`type` es `web` o `console`; `state`, `active` o `forgotten` (con `forgotten_at`); un objeto `console` lleva además `device_name`. Se lee de forma estricta. **Lo crea la API al asignar el identificador** —la web al iniciar sesión, la consola en el primer canje— con `If-None-Match: *`. **Este `PUT` nunca lo crea**: relee el objeto, se niega con `403 device_forgotten` si falta, es de otro tipo o está olvidado, y reescribe **con `If-Match` sobre lo leído**, conservando `type`, `state`, `created_at`, `device_name` y `forgotten_at`. Si ese `If-Match` falla, relee: olvidado entretanto → `device_forgotten`; si no, `412 precondition_failed`. **Olvidar** lo hace la administración, reescribiéndolo con `state: "forgotten"`, **nunca borrándolo**, después de revocar sus tokens. `pending` y `held` son enteros ≥ 0 (`400 body_invalid` si no). Respuesta `200 { "device_id": "…", "published_at": "…" }`. Es lo que miran `compact` y la restauración antes de actuar (ADR-0026, paso 7; ADR-0032): se niegan si algún dispositivo conocido tiene **`pending`** mayor que cero. **`held` no bloquea** (decisión de la dirección, 2026-09-25, como dicen ADR-0026, Parte A, y ADR-0032): lo retenido vive en el dispositivo y nunca se sube solo; se publica para que se vea.
+`type` es `web` o `console`; `state`, `active` o `forgotten` (con `forgotten_at`); un objeto `console` lleva además `device_name`. Se lee de forma estricta. **Lo crea la API al asignar el identificador** —la web al iniciar sesión, la consola en el primer canje— con `If-None-Match: *`. **Este `PUT` nunca lo crea**: relee el objeto, se niega con `403 device_forgotten` si falta, es de otro tipo o está olvidado, y reescribe **con `If-Match` sobre lo leído**, conservando `type`, `state`, `created_at`, `device_name` y `forgotten_at`. Si ese `If-Match` falla, relee: olvidado entretanto → `device_forgotten`; si no, `412 precondition_failed`. **Olvidar** lo hace la administración, reescribiéndolo con `state: "forgotten"`, **nunca borrándolo**, después de revocar sus tokens. `pending` y `held` son enteros ≥ 0 (`400 body_invalid` si no). *(015)* `last_sync_at` tiene que ser un instante (`400 body_invalid`, `details.reason: "last_sync_at"`): con otra cosa, el objeto dejaría de poder leerse de forma estricta. Respuesta `200 { "device_id": "…", "published_at": "…" }`. Es lo que miran `compact` y la restauración antes de actuar (ADR-0026, paso 7; ADR-0032): se niegan si algún dispositivo conocido tiene **`pending`** mayor que cero. **`held` no bloquea** (decisión de la dirección, 2026-09-25, como dicen ADR-0026, Parte A, y ADR-0032): lo retenido vive en el dispositivo y nunca se sube solo; se publica para que se vea.
 
-`GET /api/sync/devices` (**solo sesión**) → `200 { "devices": [ { "device_id", "type", "state", "pending", "held", "last_sync_at", "published_at" } ] }`. `compact` y la restauración solo cuentan los dispositivos **activos**.
+`GET /api/sync/devices` (**solo sesión**) → `200 { "devices": [ { "device_id", "type", "state", "pending", "held", "last_sync_at", "published_at" } ] }`. `compact` y la restauración solo cuentan los dispositivos **activos**. *(015)* **Un objeto que no se puede leer** de forma estricta sale como `{ "device_id", "state": "unreadable" }`, sin los demás campos, y **nunca se omite**: sus pendientes no se conocen. Por eso `compact` y la restauración (E5) **se niegan** mientras haya uno, igual que con uno activo con pendientes (revisión de la PR #96, N2). Solo se listan los nombres que son un `device_id`.
 
 ### 5.4 Cómo se liga a su sesión el identificador de dispositivo de la web
 
@@ -284,7 +289,7 @@ La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la creden
 
 ### 5.5 Inicializar un remoto vacío
 
-`PUT /api/ledger`, solo con **`If-Match: "<sha256 de cero bytes>"`**, es decir, sobre un remoto **vacío o inexistente**: sin `If-Match`, `428 precondition_required`; con otro valor o con un remoto que no está vacío, `412 precondition_failed`. *(Para la 015, SIN VERIFICAR: con el objeto inexistente S3 no admite `If-Match`, y la Lambda traduce esta condición a `If-None-Match: *` en su `PutObject`.)* Cuerpo:
+`PUT /api/ledger`, solo con **`If-Match: "<sha256 de cero bytes>"`**, es decir, sobre un remoto **vacío o inexistente**: sin `If-Match`, `428 precondition_required`; con otro valor o con un remoto que no está vacío, `412 precondition_failed`. *(015, verificado en el bloque 0 de E3, §23.1: con el objeto inexistente, `If-Match` da `404` en S3, así que la Lambda escribe con `If-None-Match: *`. Si el objeto existe, S3 responde `412`, o `409` en una carrera, y la API responde `412 precondition_failed`.)* Cuerpo:
 
 ```json
 { "content": "<los bytes enteros del libro del primer dispositivo, como cadena, con sus saltos de línea>", "confirm_duplicate_ids": ["<id>", "…"] }
@@ -348,7 +353,7 @@ Decidido el 2026-09-25 (feature 015; **solo las rutas y sus clientes**: que la w
 | Ruta | Respuesta |
 |---|---|
 | `GET /api/reference/index` | `200 { "ecb": [ { "name", "version", "size" } ], "prices": [ … ] }`. `version` es una etiqueta opaca (el ETag del objeto en S3): sirve para saber qué ha cambiado sin descargarlo. Solo el primer nivel de cada prefijo (`previous/` y `rejected/` no se listan) |
-| `GET /api/reference/ecb/<name>` | Los bytes de `reference/ecb/<name>`, con `ETag: "<version>"`; con `If-None-Match` igual, `304` |
+| `GET /api/reference/ecb/<name>` | Los bytes de `reference/ecb/<name>`, con `ETag: "<version>"`; con `If-None-Match` igual, `304`. *(015)* Vale también en su forma débil, `W/"<version>"`, porque CloudFront debilita el ETag al comprimir (`text/csv` y `application/json` sí están en su lista), y `*` |
 | `GET /api/reference/prices/<name>` | Lo mismo sobre `prices/<name>` |
 
 `<name>` cumple `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` y no contiene `..`; si no, `400 reference_name_invalid` **antes de tocar S3**. Si no existe, `404 not_found`. `Content-Type` por la extensión: `.csv` → `text/csv; charset=utf-8`, `.jsonl` → `application/x-ndjson; charset=utf-8`, `.json` → `application/json`; cualquier otra, `404`. `documents/` e `imports/` se suben con la regla de añadir y nunca sobrescribir (ADR-0026, Consecuencias), con su detalle en la feature que los use (la subida no es de la 015).

@@ -3,7 +3,7 @@
 // ledger loses the line (V9), and every cut between two writes leaving every
 // line at least in one place.
 
-import { mkdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ConflictError } from "@atlas/domain";
 import {
@@ -103,6 +103,27 @@ describe("step 6 in the console", () => {
     );
     expect(writes.length).toBeGreaterThan(5);
     expect(writes.filter((entry) => !entry.endsWith(" locked"))).toEqual([]);
+  });
+
+  it("finishes the move of a line cut between held.jsonl and the ledger, on the next sync (review of PR #96, E1)", async () => {
+    const { bucket, options, device, rec, sale } = await heldScenario();
+    const saleLine = linesOf([sale])[0] as string;
+    rec.failAt(/^open ledger\.jsonl\.tmp/);
+    await syncDevice(device.sync, bucket.as("cli"), options).catch((error: unknown) => {
+      expect(String(error)).toContain("cut at");
+    });
+    // In the gap the order leaves on purpose: held and still in the queue.
+    const heldNow = () =>
+      readFile(join(device.dir, "sync", "held.jsonl"), "utf8").then((text) =>
+        unresolvedHeld(parseHeld(text)).flatMap((unit) => unit.lines),
+      );
+    expect(await heldNow()).toContain(saleLine);
+    expect(linesOfText(await device.text())).toContain(saleLine);
+    // The next sync finishes the move: held only, out of the queue.
+    await syncDevice(device.sync, bucket.as("cli"), options);
+    expect(await heldNow()).toContain(saleLine);
+    expect(linesOfText(await device.text())).not.toContain(saleLine);
+    expect(linesOfText(await bucket.text())).not.toContain(saleLine);
   });
 
   it("never calls the remote with the lock of the folder taken", async () => {

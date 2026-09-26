@@ -11,6 +11,7 @@ import type { AppendEntry, DeviceQueueState, LineRejection } from "../ports/remo
 import { RemoteError } from "../ports/remote-ledger.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerEvent, ReversalEvent, TaxReturnFiledEvent } from "../schema/events.js";
+import { holdsLoneSurrogate, repeatsKey } from "../schema/json-keys.js";
 import { decodeLine } from "../schema/line.js";
 import type { LedgerSchema } from "../schema/migrations/index.js";
 import { duplicatesOf } from "../usecases/record-event.js";
@@ -53,6 +54,10 @@ export const parseAppendBody = (body: unknown): AppendEntry[] => {
     if (typeof entry.line !== "string" || /[\n\r]/.test(entry.line)) {
       throw bodyInvalid("line");
     }
+    const refused = textRefusal(entry.line);
+    if (refused !== undefined) {
+      throw bodyInvalid(refused);
+    }
     for (const flag of ["confirm_duplicate", "has_correction", "chain_continues"]) {
       if (entry[flag] !== undefined && typeof entry[flag] !== "boolean") {
         throw bodyInvalid(flag);
@@ -65,6 +70,25 @@ export const parseAppendBody = (body: unknown): AppendEntry[] => {
       ...(entry.chain_continues === true ? { chain_continues: true as const } : {}),
     };
   });
+};
+
+/**
+ * What makes a line unacceptable **before it is judged** (review of PR #96,
+ * security B1 and N3): a lone surrogate, whose bytes would not be UTF-8 and
+ * would leave the remote unreadable for every device; or, in a line that is
+ * JSON, a key repeated inside one object, which two readers read two ways.
+ * A line that is not JSON is left to its judgement (`line_unreadable`).
+ */
+const textRefusal = (line: string): "lone_surrogate" | "duplicate_key" | undefined => {
+  if (holdsLoneSurrogate(line)) {
+    return "lone_surrogate";
+  }
+  try {
+    JSON.parse(line);
+  } catch {
+    return undefined;
+  }
+  return repeatsKey(line) ? "duplicate_key" : undefined;
 };
 
 /** The body of `PUT /api/sync/devices/self` (§5.3): two counts and a date; never a device. */
@@ -400,6 +424,10 @@ export const acceptInit = (
   for (const [index, line] of lines.entries()) {
     if (/\r/.test(line)) {
       throw initRejected("raw_line_break", { line: index + 1 });
+    }
+    const refused = textRefusal(line);
+    if (refused !== undefined) {
+      throw initRejected(refused, { line: index + 1 });
     }
     const read = readLine(line, rules);
     if ("code" in read) {

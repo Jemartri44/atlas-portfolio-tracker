@@ -447,6 +447,14 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.",
   redo_waits_for_pair: (d) =>
     `Todavía no: esta pareja corrige otra de la misma cadena que sigue retenida. Primero la pareja ${count(d.pair)}.`,
+  redo_waits_for_unit: () =>
+    "Todavía no: esto corrige una operación que sigue retenida en otro grupo. Resuelve antes ese; después, esto.",
+  redo_id_mismatch: () =>
+    "No se rehace: la operación no lleva el identificador que se reservó para rehacerla. Para registrar otra cosa, descarta lo retenido y regístrala de nuevo.",
+  redo_type_mismatch: () =>
+    "No se rehace: la operación no es del tipo que se retuvo. Para registrar otra cosa, descarta lo retenido y regístrala de nuevo.",
+  redo_plan_not_recordable: () =>
+    "Una corrección se rehace entera, con su anulación; es un fallo de la aplicación.",
   redo_partner_discarded: () =>
     "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.",
   join_required: (d) =>
@@ -455,11 +463,13 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `Tus datos se sincronizan, y este cambio dejaría ${count(d.affected)} operaciones inválidas: tus datos quedarían inválidos, no se podrían sincronizar y la sincronización se pararía. Repara antes esas operaciones (Ajustes → Verificación) o desactiva la sincronización de forma explícita.`,
   held_unit_unknown: () => "Ya no hay nada retenido ahí: puede que ya se haya resuelto.",
   redo_not_recorded: () =>
-    "Todavía no están registradas las operaciones que la rehacen, con los identificadores que se reservaron: regístralas primero; lo retenido sigue donde estaba.",
+    "Todavía no están registradas las operaciones que la rehacen, con los identificadores que se reservaron: regístralas primero; lo retenido sigue donde estaba. Si registraste a mano lo que había que rehacer, descarta lo retenido: lo que registraste se queda en tus datos.",
   resolution_not_offered: () => "Eso no se puede hacer con esta operación retenida.",
   sync_marker_unreadable: () => "No se puede leer el estado de la sincronización.",
   sync_held_unreadable: () =>
     "No se pueden leer las operaciones retenidas o descartadas. No se tocan: hay que revisarlas antes de seguir.",
+  raw_lone_surrogate: () =>
+    "Una operación lleva un carácter que no es Unicode: no se ha guardado nada.",
   raw_line_break: (d) =>
     `La línea ${text(d.line)} de tus datos lleva dentro un salto de línea o un retorno de carro: el fichero tiene finales de línea de Windows, que solo deja una edición a mano, y así no se escribe tal cual. Conviértelo a finales LF en la consola, desde la carpeta del libro, con la orden que da «atlas» para este mismo error (copia antes el fichero en ledger.jsonl.crlf y cambia solo los finales de línea), y después vuelve a sincronizar. Aquí no se puede importar un fichero mientras la sincronización esté configurada.`,
   conflict: () =>

@@ -6,68 +6,32 @@
 // and to its header, towards the origin it was issued for.
 
 import { randomBytes } from "node:crypto";
-import { dirname } from "node:path";
 import { readLocalConfig } from "@atlas/adapters";
 import { pkceChallenge } from "@atlas/adapters/access";
 import {
   type CredentialEntry,
-  type CredentialsFile,
   entryForRemote,
   expiryWarning,
   isCredentialEntry,
   isDeviceName,
   isHttpsOrigin,
-  type RemoteJson,
+  replacesAnotherOrigin,
   withEntry,
   withoutEntry,
 } from "@atlas/domain/access";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { describeConsoleFailure } from "../output/remote.js";
-import {
-  assertApart,
-  credentialsPath,
-  folderOpenToOthers,
-  readCredentials,
-  readRemoteJson,
-  realOf,
-  updateCredentials,
-} from "../remote/credentials-file.js";
+import { updateCredentials } from "../remote/credentials-file.js";
 import { type RemoteEnvironment, systemRemote } from "../remote/environment.js";
 import { postJson } from "../remote/http.js";
 import { openLoopback } from "../remote/loopback.js";
+import { expiryText, where } from "../remote/where.js";
 
 const id43 = (): string => randomBytes(32).toString("base64url");
 
 const USAGE_REMOTE =
   "uso: atlas remote login [--origin <https://…>] [--name <nombre>] [--manual] | atlas remote logout [--device <id>] [--local-only] | atlas remote status";
-
-interface Where {
-  readonly folder: string;
-  readonly realFolder: string;
-  readonly remote: RemoteJson | undefined;
-  readonly path: string;
-  readonly credentials: CredentialsFile;
-}
-
-/** The folder, its `sync/remote.json` and the credentials, once the two folders are known to be apart. */
-const where = async (ctx: Context, env: RemoteEnvironment): Promise<Where> => {
-  const folder = dirname(ctx.ledgerPath);
-  const path = credentialsPath(env.env, env.home);
-  await assertApart(path, folder);
-  if (await folderOpenToOthers(path)) {
-    ctx.io.err(
-      `Aviso: la carpeta de credentials.json (${dirname(path)}) está abierta a otros usuarios. El fichero sigue siendo solo tuyo, pero ciérrala con chmod 700.`,
-    );
-  }
-  return {
-    folder,
-    realFolder: await realOf(folder),
-    remote: await readRemoteJson(folder),
-    path,
-    credentials: await readCredentials(path),
-  };
-};
 
 const dateOf = (instant: string): string => instant.slice(0, 10);
 
@@ -158,7 +122,17 @@ const login = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promis
       return EXIT.domain;
     }
     const kept: CredentialEntry = entry;
-    await updateCredentials(at.path, (file) => withEntry(file, kept));
+    // Read again just before writing: an entry of this device from another
+    // origin is never replaced (review of PR #95, round 2, the rest of N5).
+    const written = await updateCredentials(at.path, (file) =>
+      replacesAnotherOrigin(file, kept) ? undefined : withEntry(file, kept),
+    );
+    if (!written) {
+      ctx.io.err(
+        `Error (credentials_other_origin): el servidor ha respondido con el dispositivo ${kept.device_id}, que en credentials.json es de otro origen. No se ha guardado nada; revoca desde la web de ${origin} el token que se acaba de emitir.`,
+      );
+      return EXIT.domain;
+    }
     ctx.io.out(
       `Sesión iniciada: dispositivo «${entry.device_name}» (${entry.device_id}), token ${entry.token_id}, caduca el ${dateOf(entry.expires_at)}. No se ha tocado la carpeta del libro.`,
     );
@@ -210,19 +184,6 @@ const logout = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promi
     `Sesión cerrada: token ${entry.token_id} revocado en el servidor y borrado de este equipo.`,
   );
   return 0;
-};
-
-/** The warning of the expiry, precise: less than a day is not expired (review of PR #95, N1). */
-const expiryText = (left: number | "expired" | undefined): string => {
-  if (left === undefined) {
-    return ".";
-  }
-  if (left === "expired") {
-    return ". Ha caducado: sincronizar pedirá volver a iniciar sesión.";
-  }
-  return left === 0
-    ? ". Caduca en menos de un día: renueva con «atlas remote login»."
-    : `. Caduca en ${left} días: renueva con «atlas remote login».`;
 };
 
 const status = async (ctx: Context, env: RemoteEnvironment): Promise<number> => {
