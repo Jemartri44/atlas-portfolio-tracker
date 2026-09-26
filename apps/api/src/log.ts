@@ -19,6 +19,8 @@ export interface LogEntry {
   readonly dependency?: string;
   /** The class of an unexpected error — its name, never its message. */
   readonly error_name?: string;
+  /** The public id of a console token (ADR-0033, point 10): never the token, never its hash. */
+  readonly token_id?: string;
 }
 
 const SAFE = /^[A-Za-z0-9_./-]{1,64}$/;
