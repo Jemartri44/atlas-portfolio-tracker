@@ -105,6 +105,7 @@ describe("a line with a key twice (review of PR #96, security N3)", () => {
   it("keeps a key repeated in two objects, or inside a string", () => {
     for (const text of [
       line.replace("}", ',"x":[{"k":1},{"k":2}]}'),
+      line.replace("}", ',"x":["k","k"],"y":{"z":["k","k"]}}'),
       line.replace('"name":"', '"name":"\\"name\\":'),
       line,
     ]) {
