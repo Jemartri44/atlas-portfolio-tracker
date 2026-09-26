@@ -94,6 +94,12 @@ export default defineConfig({
           name: "web",
           root: "apps/web",
           environment: "node",
+          /*
+           * **No test of the web goes out to the network** (T1 of the review
+           * of PR #90, round 2): `fetch` fails at once on any call a test did
+           * not simulate, in both environments.
+           */
+          setupFiles: ["./test/setup/no-network.ts"],
           server: { deps: { inline: [/@solidjs\/router/] } },
         },
       },
