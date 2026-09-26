@@ -23,6 +23,20 @@ export const fromBase64url = (text: string): Buffer | undefined => {
   return base64url(bytes) === text ? bytes : undefined;
 };
 
+/** The SHA-256 of a text in lower-case hex: what the record of a token keeps of its secret. */
+export const sha256Hex = (text: string): string =>
+  createHash("sha256").update(text, "utf8").digest("hex");
+
+/**
+ * Whether a secret is the one a record keeps the hash of, **in constant time**
+ * (`docs/api.md` §2.2, step 3; `timingSafeEqual`, T03).
+ */
+export const sameSecret = (secret: string, secretSha256: string): boolean => {
+  const given = Buffer.from(sha256Hex(secret), "ascii");
+  const kept = Buffer.from(secretSha256, "ascii");
+  return given.length === kept.length && timingSafeEqual(given, kept);
+};
+
 /** PKCE S256 (RFC 7636, §4.2): base64url of the SHA-256 of the ASCII verifier. */
 export const pkceChallenge = (verifier: string): string =>
   base64url(createHash("sha256").update(verifier, "ascii").digest());
