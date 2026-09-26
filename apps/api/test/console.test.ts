@@ -706,6 +706,36 @@ describe("the exchange sent again, and the rules no test tied (review of PR #95)
     );
   });
 
+  it("tries the revocation again when SSM fails, and still answers for S3 (N3, retry)", async () => {
+    for (const failures of [2, 3]) {
+      const api = setup();
+      const { done, secrets } = await consoleReturn(api);
+      const overwrite = api.ssm.overwrite.bind(api.ssm);
+      let left = failures;
+      api.ssm.overwrite = async (name: string, value: string) => {
+        if (left > 0) {
+          left -= 1;
+          throw new Error("ssm down");
+        }
+        return overwrite(name, value);
+      };
+      api.s3.failNext();
+      const answer = await exchange(
+        api,
+        codeOfLoopback(done.headers.location as string),
+        secrets.verifier,
+      );
+      expect(errorOf(answer)).toEqual({
+        code: "remote_unavailable",
+        details: { dependency: "s3" },
+      });
+      expect(answer.body).not.toContain("atlasdt1");
+      const last = JSON.parse(api.ssm.history(newRecordName(api)).at(-1) as string);
+      // Two failures and the third try revokes it; three and it stays as it was.
+      expect("revoked_at" in last).toBe(failures === 2);
+    }
+  });
+
   it("revokes the new token and hands nothing out when the new device id is taken (collision)", async () => {
     const api = setup({ random: (bytes) => new Uint8Array(bytes).fill(9) });
     const taken = Buffer.alloc(16, 9).toString("base64url");

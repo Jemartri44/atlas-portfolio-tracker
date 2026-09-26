@@ -378,9 +378,17 @@ describe("what the review of PR #95 found in the console", () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     expect(c.err.join("\n")).not.toContain("700");
-    await chmod(join(c.config, "atlas"), 0o755);
+    // Open to the group only, or to the others only: both warn.
+    for (const mode of [0o750, 0o705]) {
+      await chmod(join(c.config, "atlas"), mode);
+      c.err.length = 0;
+      expect(await c.exec(["remote", "status"])).toBe(0);
+      expect(c.err.join("\n")).toContain("chmod 700");
+    }
+    await chmod(join(c.config, "atlas"), 0o700);
+    c.err.length = 0;
     expect(await c.exec(["remote", "status"])).toBe(0);
-    expect(c.err.join("\n")).toContain("chmod 700");
+    expect(c.err.join("\n")).not.toContain("chmod 700");
   });
 
   it("stores nothing from an answer that is not a valid entry (N5)", async () => {
