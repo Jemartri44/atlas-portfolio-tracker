@@ -94,12 +94,23 @@ The user directs the project with a high-level assistant that writes decision ro
 7. **Fixtures** live in `tests/fixtures/<source>/` and are **synthetic**: real file format, fake values (invented ISINs, account ids like `U0000000`, round amounts). Real statements never enter the repo.
 8. **ADRs**: an implementer may propose one (status `Propuesta`, via `/adr`) but never accept it; the user decides.
 
+## Where things live
+
+| What | Where |
+|---|---|
+| Repository | `~/projects/atlas-portfolio-tracker`. The main folder always stays on `develop`; nobody runs `git switch` in it. |
+| Worktrees | `.claude/worktrees/<branch-or-task>`, inside the clone and git-ignored. None outside the clone: `../atlas-wt-*` and `../atlas-portfolio-tracker-NNN` are retired. |
+| Private inputs | `~/projects/atlas-private/` (`statements/`, `ui-refs/`, `capturas/`, `reviews/`). A sibling of the repository, never inside it, never committed. |
+| Secrets and credentials | `~/.config/atlas/` (or `$XDG_CONFIG_HOME/atlas/`), directory `700`; `secrets.json` and `credentials.json` `600` (ADR-0031, ADR-0033). |
+| Local Terraform files | `~/projects/atlas-private/terraform/<env>/terraform.tfvars` per environment; bootstrap state at `~/projects/atlas-private/terraform/bootstrap/<part>/terraform.tfstate`, one per part (`account`, `dev`, `prod`) (ADR-0034). |
+| Agent scratch files | The session scratchpad, with the branch or task name in the file name. |
+
 ## Private inputs (outside the repo)
 
-Real statements, screenshots and anything personal live in `~/atlas-private/` (never committed):
+Real statements, screenshots and anything personal live in `~/projects/atlas-private/` (never committed):
 
-- `~/atlas-private/statements/myinvestor/`, `~/atlas-private/statements/ibkr/` — raw exports, used only to learn the format when writing parsers and synthetic fixtures.
-- `~/atlas-private/ui-refs/` — screenshots the user likes, as layout references for Round 7.
+- `~/projects/atlas-private/statements/myinvestor/`, `~/projects/atlas-private/statements/ibkr/` — raw exports, used only to learn the format when writing parsers and synthetic fixtures.
+- `~/projects/atlas-private/ui-refs/` — screenshots the user likes, as layout references for Round 7.
 
 ## Domain traps
 

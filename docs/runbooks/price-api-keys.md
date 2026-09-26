@@ -54,9 +54,9 @@ Un objeto JSON con **solo estas dos entradas**, las dos con texto:
 
 Lo lee `packages/adapters/src/prices/secrets.ts` (`readSecrets`), y la consola lo busca con `secretsPath` en `~/.config/atlas/secrets.json`, o en `$XDG_CONFIG_HOME/atlas/secrets.json` si esa variable tiene una ruta absoluta.
 
-### Crearlo (Linux y WSL)
+### Crearlo (Linux)
 
-**Si usas WSL, hazlo en la terminal de WSL (Ubuntu), no en PowerShell ni en `cmd`.** El fichero va en el `HOME` de Linux, `/home/<tu usuario>/.config/atlas/secrets.json`, **no** en `C:\Users\…` ni en `/mnt/c/…`: en las unidades de Windows los permisos de Linux no funcionan como aquí, el fichero suele aparecer abierto a todos y la consola no usaría las claves.
+En la terminal de la máquina donde ejecutas la consola. El fichero va en tu `HOME`, `~/.config/atlas/secrets.json`, dentro de `~/.config/atlas/`, que queda con permisos `700`.
 
 Copia este bloque **entero, de la `{` a la `}`**, en la terminal. Las llaves hacen que la terminal lo lea completo antes de ejecutarlo, así que las preguntas no se comen las líneas siguientes del bloque. Te pide las dos claves **sin enseñarlas en pantalla**: pega cada una y pulsa Intro. Las claves no quedan en el historial de la terminal, y el fichero nace ya con permisos `600`.
 
@@ -64,6 +64,7 @@ Copia este bloque **entero, de la `{` a la `}`**, en la terminal. Las llaves hac
 {
 D="${XDG_CONFIG_HOME:-$HOME/.config}/atlas"
 mkdir -p "$D"
+chmod 700 "$D"
 read -rsp 'Clave de EODHD: ' KE; echo
 read -rsp 'Clave de Alpha Vantage: ' KA; echo
 ( umask 077; printf '{"eodhd":"%s","alpha_vantage":"%s"}\n' "$KE" "$KA" > "$D/secrets.json" )
@@ -77,15 +78,17 @@ ls -l "$D/secrets.json"
 
 - **Para cambiar una clave**, vuelve a ejecutar el bloque entero con las dos: sustituye el fichero.
 - **Si solo tienes una**, cambia la línea del `printf` por la de esa fuente, por ejemplo `printf '{"eodhd":"%s"}\n' "$KE"`, y no hace falta la otra línea `read`.
-- **No lo abras con el Bloc de notas de Windows** a través de `\\wsl.localhost`: puede cambiar los finales de línea o dejar una copia. Si alguna vez tienes que mirarlo, `nano "${XDG_CONFIG_HOME:-$HOME/.config}/atlas/secrets.json"` desde WSL.
+- Si alguna vez tienes que mirarlo, `nano "${XDG_CONFIG_HOME:-$HOME/.config}/atlas/secrets.json"` desde la terminal.
 
+> **Nota, solo si usas WSL:** hazlo en la terminal de WSL (Ubuntu), no en PowerShell ni en `cmd`. El fichero va en el `HOME` de Linux, `/home/<tu usuario>/.config/atlas/secrets.json`, **no** en `C:\Users\…` ni en `/mnt/c/…`: en las unidades de Windows los permisos de Linux no funcionan como aquí, el fichero suele aparecer abierto a todos y la consola no usaría las claves. **No lo abras con el Bloc de notas de Windows** a través de `\\wsl.localhost`: puede cambiar los finales de línea o dejar una copia.
+>
 > **El límite de WSL, dicho claro:** el `600` protege frente a otros usuarios de Linux, pero **no frente a un programa de Windows de tu mismo usuario**, que puede leer el fichero a través de `\\wsl$` o `\\wsl.localhost`. Es el mismo límite que ya tienen el libro y el token de la consola (ADR-0033). Lo que protege aquí es tu cuenta de Windows.
 
 > **`${XDG_CONFIG_HOME:-$HOME/.config}`** es `~/.config`, salvo que la variable `XDG_CONFIG_HOME` tenga algo: entonces la consola busca las claves en `$XDG_CONFIG_HOME/atlas/secrets.json`, y el bloque las escribe ahí mismo. Lo normal es que `echo $XDG_CONFIG_HOME` no escriba nada. Las órdenes de esta guía usan esa misma expresión para dar siempre con el fichero que lee la consola.
 
 ### Windows sin WSL
 
-El proyecto se usa desde WSL, y es lo recomendado. Si algún día ejecutas la consola directamente en Windows, el fichero va en `%USERPROFILE%\.config\atlas\secrets.json`, con el mismo contenido. **En Windows la consola no puede comprobar los permisos**, así que no hay `chmod` que valga: lo que protege el fichero es que esté dentro de tu carpeta de usuario y que nadie más use tu cuenta de Windows.
+El proyecto se usa desde Linux, y es lo recomendado. Si algún día ejecutas la consola directamente en Windows, el fichero va en `%USERPROFILE%\.config\atlas\secrets.json`, con el mismo contenido. **En Windows la consola no puede comprobar los permisos**, así que no hay `chmod` que valga: lo que protege el fichero es que esté dentro de tu carpeta de usuario y que nadie más use tu cuenta de Windows.
 
 ## 4. Comprobar que la consola las lee
 
