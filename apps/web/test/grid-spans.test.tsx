@@ -32,21 +32,32 @@ const SCREENS: readonly [string, () => JSX.Element, string?][] = [
   ["/ajustes/verificacion", Verificacion],
 ];
 
+/**
+ * Eight whole screens rendered with the styles, twice: under coverage on a
+ * loaded machine it went past the five seconds Vitest gives by default (review
+ * of PR #90, round 2) with nothing wrong in it, so it gets a budget of its own.
+ */
+const RENDER_BUDGET_MS = 60_000;
+
 describe("the grid", () => {
   for (const width of [1024, 1280]) {
-    it(`gives every child a span at ${width}px`, async () => {
-      withStyles(width, 800);
-      const unspanned: string[] = [];
-      for (const [path, screen, pattern] of SCREENS) {
-        const host = await show(path, screen, pattern);
-        for (const child of host.querySelectorAll(".grid > *")) {
-          const column = getComputedStyle(child).gridColumn;
-          if (column === "" || column === "auto" || column === "auto / auto") {
-            unspanned.push(`${path}: ${child.tagName.toLowerCase()}.${child.className}`);
+    it(
+      `gives every child a span at ${width}px`,
+      async () => {
+        withStyles(width, 800);
+        const unspanned: string[] = [];
+        for (const [path, screen, pattern] of SCREENS) {
+          const host = await show(path, screen, pattern);
+          for (const child of host.querySelectorAll(".grid > *")) {
+            const column = getComputedStyle(child).gridColumn;
+            if (column === "" || column === "auto" || column === "auto / auto") {
+              unspanned.push(`${path}: ${child.tagName.toLowerCase()}.${child.className}`);
+            }
           }
         }
-      }
-      expect(unspanned).toEqual([]);
-    });
+        expect(unspanned).toEqual([]);
+      },
+      RENDER_BUDGET_MS,
+    );
   }
 });
