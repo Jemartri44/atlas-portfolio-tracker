@@ -108,7 +108,9 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["packages/domain/src/**"],
-      reporter: ["text", "html"],
+      // `json` writes coverage/coverage-final.json, which the CI keeps when the
+      // coverage fails (review of PR #90, CI-1).
+      reporter: ["text", "html", "json"],
       thresholds: {
         lines: 100,
         branches: 100,
