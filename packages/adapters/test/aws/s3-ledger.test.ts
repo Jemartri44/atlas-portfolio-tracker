@@ -7,6 +7,7 @@ import { ArchiveExistsError, ConflictError, sha256Hex } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { DependencyUnavailable, LEDGER_KEY, S3LedgerBlob } from "../../src/aws/index.js";
 import { BlobLedgerStore } from "../../src/ledger-store/blob.js";
+import { withArchiveNames } from "../../src/sync/archive-names.js";
 import { account, deposit, lineOf } from "../fixtures.js";
 import { ledgerStoreContract } from "../ledger-store.contract.js";
 import { TestOnlyFakeS3 } from "./test-only-fake-s3.js";
@@ -123,6 +124,36 @@ describe("S3LedgerBlob", () => {
       store.replaceLines([lineOf(deposit)], again.etag, "lost.jsonl"),
     ).rejects.toBeInstanceOf(ArchiveExistsError);
     expect(s3.text("archive/lost.jsonl")).toBe(before);
+  });
+
+  it("leaves a safe state when cut between the archive and the ledger, and the retry takes the next name", async () => {
+    const s3 = new TestOnlyFakeS3();
+    const before = textOf([lineOf(account)]);
+    s3.seed(LEDGER_KEY, before);
+    const store = storeOver(s3);
+    // The process dies once the archive is written, before the ledger is.
+    s3.beforePut = (key) => {
+      if (key === LEDGER_KEY) {
+        s3.beforePut = undefined;
+        throw new Error("cut at the write of the ledger");
+      }
+    };
+    const replace = async (attempt: number) =>
+      store.replaceLines(
+        [lineOf(deposit)],
+        (await store.load()).etag,
+        attempt === 1 ? "pre-restore.jsonl" : `pre-restore-${attempt}.jsonl`,
+      );
+    await expect(replace(1)).rejects.toThrow(/cut at/);
+    // Safe: the archive is there, exactly the ledger, and the ledger did not change.
+    expect(s3.text("archive/pre-restore.jsonl")).toBe(before);
+    expect(s3.text(LEDGER_KEY)).toBe(before);
+    // The retry takes the next name: nothing overwritten, lost or written twice.
+    await withArchiveNames(replace);
+    expect(s3.text("archive/pre-restore.jsonl")).toBe(before);
+    expect(s3.text("archive/pre-restore-2.jsonl")).toBe(before);
+    expect(s3.text(LEDGER_KEY)).toBe(textOf([lineOf(deposit)]));
+    expect(s3.keys().filter((key) => key.startsWith("archive/"))).toHaveLength(2);
   });
 
   it("lets a failure of S3 through as what it is, never as a conflict", async () => {
