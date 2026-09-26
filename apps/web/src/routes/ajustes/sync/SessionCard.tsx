@@ -9,6 +9,7 @@ import { createResource, createSignal, type JSX, Match, Show, Switch } from "sol
 import { Notice, Section } from "../../../components/index.js";
 import { formatInstantDate } from "../../../format/date.js";
 import { readSession, type SessionState, signInHref, signOut } from "../../../sync/session.js";
+import { DevicesCard } from "./DevicesCard.jsx";
 
 const webDevice = () => import("@atlas/adapters/web-device");
 
@@ -111,6 +112,7 @@ export const SessionCard = (props: { readonly request?: Fetch }): JSX.Element =>
                       Cerrar sesión
                     </button>
                   </div>
+                  <DevicesCard request={request} />
                 </>
               )}
             </Match>

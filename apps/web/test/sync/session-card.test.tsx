@@ -38,6 +38,9 @@ const api = () => {
   const calls: string[] = [];
   const request = (async (url: string | URL, init?: RequestInit) => {
     calls.push(`${init?.method ?? "GET"} ${String(url)}`);
+    if (String(url) === "/api/devices/tokens") {
+      return new Response(JSON.stringify({ tokens: [] }), { status: 200 });
+    }
     return String(url) === "/api/session"
       ? new Response(
           JSON.stringify({ signed_in: true, expires_at: "2026-10-01T18:00:00Z", device_id: ID }),
@@ -57,7 +60,8 @@ describe("SessionCard", () => {
     await settle();
     expect(host.textContent).toContain("iniciada, hasta el");
     expect(host.textContent).toContain(ID);
-    expect(calls).toEqual(["GET /api/session"]);
+    // Signed in, the card of the devices asks for its list through the same API.
+    expect(calls).toEqual(["GET /api/session", "GET /api/devices/tokens"]);
     expect(await readWebDeviceId()).toBe(ID);
   });
 
@@ -72,7 +76,12 @@ describe("SessionCard", () => {
     );
     close?.click();
     await settle();
-    expect(calls).toEqual(["GET /api/session", "POST /api/auth/logout", "GET /api/session"]);
+    expect(calls).toEqual([
+      "GET /api/session",
+      "GET /api/devices/tokens",
+      "POST /api/auth/logout",
+      "GET /api/session",
+    ]);
     expect(host.textContent).not.toContain("No se ha podido cerrar la sesión");
   });
 
