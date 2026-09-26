@@ -11,6 +11,7 @@ import {
   entryForStart,
   expiryWarning,
   foldersNested,
+  isCredentialEntry,
   isHttpsOrigin,
   parseCredentials,
   parseRemoteJson,
@@ -74,6 +75,23 @@ describe("credentials.json (data-model §7)", () => {
     }
     expect(parseCredentials("{")).toBe("unreadable");
     expect(parseCredentials("null")).toBe("unreadable");
+  });
+});
+
+describe("an entry as the console receives it (review of PR #95, N5)", () => {
+  it("is valid only with the rules of the file", () => {
+    expect(isCredentialEntry(entry(A, "/a"))).toBe(true);
+    for (const bad of [
+      { ...entry(A, "/a"), token: "not-a-token" },
+      { ...entry(A, "/a"), token_id: B },
+      { ...entry(A, "/a"), origin: "http://x" },
+      { ...entry(A, "/a"), device_id: "x" },
+      { ...entry(A, "/a"), extra: 1 },
+      "x",
+      null,
+    ]) {
+      expect(isCredentialEntry(bad)).toBe(false);
+    }
   });
 });
 
@@ -165,6 +183,15 @@ describe("the warning of an expiry close by (ADR-0033, point 7; T36)", () => {
     expect(expiryWarning(e, at(15), 14)).toBeUndefined();
     expect(expiryWarning(e, at(14), 14)).toBe(14);
     expect(expiryWarning(e, at(13), 14)).toBe(13);
-    expect(expiryWarning(e, at(-3), 14)).toBe(0);
+    expect(expiryWarning(e, at(-3), 14)).toBe("expired");
+  });
+
+  it("counts whole days left, and says expired only once it is (review of PR #95, N1)", () => {
+    const hours = (count: number) => Date.parse(e.expires_at) - count * 3_600_000;
+    expect(expiryWarning(e, hours(23), 14)).toBe(0);
+    expect(expiryWarning(e, hours(1), 14)).toBe(0);
+    expect(expiryWarning(e, hours(25), 14)).toBe(1);
+    expect(expiryWarning(e, Date.parse(e.expires_at) - 1, 14)).toBe(0);
+    expect(expiryWarning(e, Date.parse(e.expires_at), 14)).toBe("expired");
   });
 });

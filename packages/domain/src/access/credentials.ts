@@ -59,6 +59,14 @@ const isEntry = (key: string, value: unknown): value is CredentialEntry =>
   typeof value.folder_hint === "string" &&
   value.folder_hint.startsWith("/");
 
+/**
+ * Whether a value is an entry as `credentials.json` keeps it: what the console
+ * checks on the answer of an exchange **before** writing anything (review of
+ * PR #95, N5), so a broken or hostile answer never makes the file unreadable.
+ */
+export const isCredentialEntry = (value: unknown): value is CredentialEntry =>
+  isRecord(value) && typeof value.device_id === "string" && isEntry(value.device_id, value);
+
 /** Strict: an unknown key, a type that is not its own or a format that is not 1 is unreadable. */
 export const parseCredentials = (text: string): CredentialsFile | "unreadable" => {
   let value: unknown;
@@ -186,12 +194,21 @@ export const foldersNested = (a: string, b: string): boolean => {
   );
 };
 
-/** Whole days left before the token expires, when they are `warnDays` or fewer; nothing otherwise. */
+/**
+ * The warning of an expiry close by: `expired` once `expires_at` has passed,
+ * and otherwise the **whole** days left when they are `warnDays` or fewer —
+ * `0` is «less than a day», never «expired» (review of PR #95, N1). Nothing
+ * when it is further away.
+ */
 export const expiryWarning = (
   entry: CredentialEntry,
   nowMs: number,
   warnDays: number,
-): number | undefined => {
-  const left = Math.floor((Date.parse(entry.expires_at) - nowMs) / 86_400_000);
-  return left <= warnDays ? Math.max(left, 0) : undefined;
+): number | "expired" | undefined => {
+  const leftMs = Date.parse(entry.expires_at) - nowMs;
+  if (leftMs <= 0) {
+    return "expired";
+  }
+  const days = Math.floor(leftMs / 86_400_000);
+  return days <= warnDays ? days : undefined;
 };

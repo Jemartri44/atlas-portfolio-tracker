@@ -58,6 +58,7 @@ export {
   entryForStart,
   expiryWarning,
   foldersNested,
+  isCredentialEntry,
   isHttpsOrigin,
   parseCredentials,
   parseRemoteJson,
