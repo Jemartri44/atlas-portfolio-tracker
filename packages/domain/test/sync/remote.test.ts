@@ -48,6 +48,85 @@ const bodyError = (run: () => unknown): string => {
 const plain = (events: readonly LedgerEvent[]): AppendEntry[] =>
   events.map((event) => ({ line: encodeLine(event) }));
 
+/** A line whose free text holds `raw` as it is: a lone surrogate or its pair. */
+const withText = (raw: string): string => {
+  const { events } = baseLedger();
+  return encodeLine(events[0] as LedgerEvent).replace(/"name":"[^"]*"/, `"name":"a${raw}b"`);
+};
+
+describe("a line whose text is not Unicode (review of PR #96, security B1)", () => {
+  const lone = ["\ud800", "\udfff", "x\ud800", "\udc00\ud800"];
+
+  it("refuses an append with a lone surrogate before judging it, and keeps a real pair", () => {
+    for (const raw of lone) {
+      expect(
+        bodyError(() => parseAppendBody({ lines: [{ line: withText(raw) }] })),
+        raw,
+      ).toBe("lone_surrogate");
+    }
+    expect(parseAppendBody({ lines: [{ line: withText("\ud83d\ude00") }] })).toHaveLength(1);
+  });
+
+  it("refuses an initialisation with one, with its line, and keeps a real pair", () => {
+    const { events } = baseLedger();
+    const good = linesOf(events);
+    for (const raw of lone) {
+      try {
+        acceptInit(`${good[0]}\n${withText(raw)}\n`, [], rules);
+        throw new Error("accepted");
+      } catch (error) {
+        expect(error).toBeInstanceOf(RemoteError);
+        expect((error as RemoteError).code).toBe("init_rejected");
+        expect((error as RemoteError).details).toEqual({ code: "lone_surrogate", line: 2 });
+      }
+    }
+  });
+});
+
+describe("a line with a key twice (review of PR #96, security N3)", () => {
+  const { events } = baseLedger();
+  const line = encodeLine(events[0] as LedgerEvent);
+  const twice = [
+    line.replace('"name":', '"name":"Visible","name":'),
+    line.replace('"name":', '"n\\u0061me":"Visible","name":'),
+    line.replace("}", ',"x":{"k":1,"k":2}}'),
+    line.replace("}", ',"x":[{"k":1},{"a":1,"a":2}]}'),
+  ];
+
+  it("refuses an append with a key repeated at any level, even written with escapes", () => {
+    for (const text of twice) {
+      expect(
+        bodyError(() => parseAppendBody({ lines: [{ line: text }] })),
+        text,
+      ).toBe("duplicate_key");
+    }
+  });
+
+  it("keeps a key repeated in two objects, or inside a string", () => {
+    for (const text of [
+      line.replace("}", ',"x":[{"k":1},{"k":2}]}'),
+      line.replace('"name":"', '"name":"\\"name\\":'),
+      line,
+    ]) {
+      expect(parseAppendBody({ lines: [{ line: text }] }), text).toHaveLength(1);
+    }
+  });
+
+  it("refuses an initialisation with one, with its line", () => {
+    try {
+      acceptInit(`${line}\n${twice[0]}\n`, [], rules);
+      throw new Error("accepted");
+    } catch (error) {
+      expect((error as RemoteError).code).toBe("init_rejected");
+      expect((error as RemoteError).details).toEqual({ code: "duplicate_key", line: 2 });
+    }
+  });
+
+  it("leaves to the judgement of a line what is not JSON", () => {
+    expect(parseAppendBody({ lines: [{ line: '{"a":' }] })).toHaveLength(1);
+  });
+});
+
 describe("the bodies of the routes, by their shape only", () => {
   it("reads an append, keeping only the declarations that are true", () => {
     expect(
