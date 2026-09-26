@@ -20,8 +20,8 @@ Lo que no cumple los tres criterios se decide sobre la marcha en el plan de cada
 | 4 | Semántica de operaciones y FIFO | Fase 1 | ADR-0009, ADR-0010, ADR-0011, `docs/data-schema.md` §6-8 | **Cerrada** 2026-08-30 |
 | 5 | Calidad, proceso y tooling del asistente | Fase 1 | Spec §11, `.githooks/`, `.claude/`, `.github/`, `LICENSE` | **Cerrada** 2026-08-30 |
 | — | *Challenge externo de las rondas 1-5* | Fase 1 | ADR-0012, ADR-0013, `docs/fiscal-questions.md` | **Hecho** 2026-08-30: 10 hallazgos aplicados; repetir antes de cada fase |
-| — | *Challenge 3 (documentos + código de las Fases 1 y 2)* | Fase 3 | ADR-0018, `data-schema.md` §3/§5/§6, bloque 0 del prompt 005, correcciones al prompt 005 | **Hecho** 2026-09-18: 7 hallazgos, todos aceptados; los 18 anteriores verificados como aplicados (informe en `~/atlas-private/reviews/`) |
-| — | *Challenge 2 (rondas + código de la Fase 1)* | Fase 2 | ADR-0014, ADR-0015, constitución 1.4.0, `data-schema.md` §4/§6/§8.4, `business-rules.md` §5, preguntas fiscales 14-16, bloque 0 del prompt 004 | **Hecho** 2026-08-31: 8 hallazgos, todos aceptados (informe en `~/atlas-private/reviews/`) |
+| — | *Challenge 3 (documentos + código de las Fases 1 y 2)* | Fase 3 | ADR-0018, `data-schema.md` §3/§5/§6, bloque 0 del prompt 005, correcciones al prompt 005 | **Hecho** 2026-09-18: 7 hallazgos, todos aceptados; los 18 anteriores verificados como aplicados (informe en `~/projects/atlas-private/reviews/`) |
+| — | *Challenge 2 (rondas + código de la Fase 1)* | Fase 2 | ADR-0014, ADR-0015, constitución 1.4.0, `data-schema.md` §4/§6/§8.4, `business-rules.md` §5, preguntas fiscales 14-16, bloque 0 del prompt 004 | **Hecho** 2026-08-31: 8 hallazgos, todos aceptados (informe en `~/projects/atlas-private/reviews/`) |
 | — | *Fase 0 (validación con la realidad, tareas del usuario)* | Rondas 6-7 | — | En curso: IBKR sin abrir; la primera suscripción a MyInvestor (y con ella la exportación de operaciones de fondos) se aplaza hasta que la app esté lista para registrarla; AWS y Yahoo diferidos a antes de la Fase 4 |
 | — | *Fase 1 (libro mayor): features 001-003* | Fases 2-5 | `specs/001-ledger-core/`, `specs/002-corporate-actions/`, `specs/003-synthetic-data/`, PRs #10, #12, #15, #18 | **Cerrada** 2026-08-30; *challenge* 2 ejecutado y triado el 2026-08-31. La Fase 2 es la feature `004-monthly-contribution`; los importadores de MyInvestor e IBKR tomarán los números siguientes cuando la Fase 0 los desbloquee. Candidatos de integridad anotados en `specs/003-synthetic-data/research.md` §1 (`inactive_reference`, `duplicate_valuation`, `valuation_quantity_mismatch`): decidir cuando se amplíe `integrity`. los importadores siguen dependiendo de la Fase 0 |
 | — | *Fase 2 (aportación mensual): feature `004-monthly-contribution`* | Fase 3 | `docs/prompts/004-monthly-contribution.md`, `specs/004-monthly-contribution/` | Implementada; PR #23 |
@@ -103,13 +103,13 @@ Decisiones:
 
 ## Fase 0 — Validación con la realidad (tareas del usuario, en paralelo)
 
-Ninguna bloquea la Fase 1: el dominio y la CLI no dependen de nada externo. Sus resultados alimentan las rondas 6 y 7 y los tests de contrato. Los ficheros privados (extractos reales, capturas) se dejan **fuera del repo**, en `~/atlas-private/` (ver `CLAUDE.md` → Private inputs).
+Ninguna bloquea la Fase 1: el dominio y la CLI no dependen de nada externo. Sus resultados alimentan las rondas 6 y 7 y los tests de contrato. Los ficheros privados (extractos reales, capturas) se dejan **fuera del repo**, en `~/projects/atlas-private/` (ver `CLAUDE.md` → Private inputs).
 
 **Cuanto antes**
 1. **Extracto de MyInvestor**: recibidos el 2026-08-30 el xlsx de movimientos de efectivo y el PDF de posición (formato documentado en `docs/statements/myinvestor.md`). Falta la exportación de **operaciones de fondos**, que solo existirá tras la primera suscripción; el usuario la hará cuando la app esté lista para registrarla (decidido el 2026-08-30), así que la feature 004 espera a la Fase 2.
 
 **Cuando la cuenta de IBKR esté abierta**
-2. **Flex Query**: Activity Flex Query en XML con *Trades*, *Cash Transactions*, *Corporate Actions*, *Transfers*, *Open Positions*; activar Flex Web Service y generar el token de solo lectura. Descargar una vez por API y dejar el XML en `~/atlas-private/statements/ibkr/`.
+2. **Flex Query**: Activity Flex Query en XML con *Trades*, *Cash Transactions*, *Corporate Actions*, *Transfers*, *Open Positions*; activar Flex Web Service y generar el token de solo lectura. Descargar una vez por API y dejar el XML en `~/projects/atlas-private/statements/ibkr/`.
 
 > **La web ya no depende de la Fase 4** (ADR-0019): funciona en el dispositivo, sin servidor y sin cuenta. Lo que la Fase 4 añade es la sincronización entre dispositivos, los precios automáticos y los avisos por correo.
 
