@@ -30,6 +30,7 @@ import {
   syncArchiveName,
   unresolvedHeld,
 } from "@atlas/domain/sync";
+import { withArchiveNames } from "./archive-names.js";
 import type { SyncOptions } from "./client.js";
 
 const markerOf = (state: DeviceState): SyncMarker | undefined =>
@@ -80,10 +81,17 @@ const unitOf = (state: DeviceState, id: string): HeldUnit =>
  * **Confirm**: the unit goes back to the queue in its local order and the
  * marker remembers the confirmation; the next sync uploads it declared.
  */
-export const confirmHeldUnit = async (
+export const confirmHeldUnit = (
   store: SyncStateStore,
   id: string,
   options: SyncOptions,
+): Promise<void> => withArchiveNames((attempt) => confirmOnce(store, id, options, attempt));
+
+const confirmOnce = async (
+  store: SyncStateStore,
+  id: string,
+  options: SyncOptions,
+  attempt: number,
 ): Promise<void> => {
   const state = await store.read();
   const unit = unitOf(state, id);
@@ -109,7 +117,7 @@ export const confirmHeldUnit = async (
       : pending
         ? {
             replace: done.lines,
-            archive: syncArchiveName("sync", options.now(), state.ledger.etag),
+            archive: syncArchiveName("sync", options.now(), state.ledger.etag, attempt),
           }
         : { append: done.lines.slice(state.ledger.lines.length) },
     marker: {

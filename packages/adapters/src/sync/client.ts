@@ -57,12 +57,13 @@ import {
   unitAtEntry,
   unresolvedHeld,
 } from "@atlas/domain/sync";
+import { MAX_ARCHIVE_NAMES, withArchiveNames } from "./archive-names.js";
 
 /** How many times a sync starts again after a `412` or a local change (decision D-Q9). */
 export const MAX_REMOTE_RACES = 3;
 export const MAX_LOCAL_CHANGES = 3;
-/** How many names an archive of the same second may take before giving up. */
-const MAX_ARCHIVE_NAMES = 9;
+
+export { MAX_ARCHIVE_NAMES, withArchiveNames };
 
 export interface SyncOptions {
   readonly schema: LedgerSchema;
@@ -314,7 +315,6 @@ export const replaceFromRemote = async (
   options: SyncOptions,
   how: "join" | "redownload",
 ): Promise<SyncOutcome> => {
-  const state = await store.read();
   const read = await readRemote(remote);
   if (read.stop !== undefined) {
     return { status: "stopped", stop: read.stop };
@@ -329,18 +329,21 @@ export const replaceFromRemote = async (
   }
   const now = options.now();
   const lines = inspection.remoteLines;
-  await store.commit(state, {
-    held: replaceWithRemote(
-      state.ledger,
-      inspection.remoteEvents,
-      how === "join" ? "join" : "rewrite",
-      now.toISOString(),
-    ),
-    ledger: ledgerChange(state.ledger, lines, how, now),
-    marker: markerFor(lines, lines.length, {
-      remote_etag: read.snapshot.etag,
-      last_sync_at: now.toISOString(),
-    }),
+  await withArchiveNames(async (attempt) => {
+    const state = await store.read();
+    await store.commit(state, {
+      held: replaceWithRemote(
+        state.ledger,
+        inspection.remoteEvents,
+        how === "join" ? "join" : "rewrite",
+        now.toISOString(),
+      ),
+      ledger: ledgerChange(state.ledger, lines, how, now, attempt),
+      marker: markerFor(lines, lines.length, {
+        remote_etag: read.snapshot.etag,
+        last_sync_at: now.toISOString(),
+      }),
+    });
   });
   return { status: "synced", uploaded: 0, pending: 0 };
 };
@@ -357,16 +360,19 @@ export const joinWithOwnLines = async (
   remote: RemoteLedger,
   options: SyncOptions,
 ): Promise<JoinOutcome> => {
-  const state = await store.read();
   const read = await readRemote(remote);
   if (read.stop !== undefined) {
     return { outcome: { status: "stopped", stop: read.stop }, invalid: [] };
   }
-  const joined = joinWithMine(state.ledger, linesOfText(read.snapshot.text));
   const now = options.now();
-  await store.commit(state, {
-    ledger: ledgerChange(state.ledger, joined.lines, "join", now),
-    marker: markerFor(joined.lines, joined.synced, { remote_etag: read.snapshot.etag }),
+  const joined = await withArchiveNames(async (attempt) => {
+    const state = await store.read();
+    const mine = joinWithMine(state.ledger, linesOfText(read.snapshot.text));
+    await store.commit(state, {
+      ledger: ledgerChange(state.ledger, mine.lines, "join", now, attempt),
+      marker: markerFor(mine.lines, mine.synced, { remote_etag: read.snapshot.etag }),
+    });
+    return mine;
   });
   return {
     outcome: { status: "synced", uploaded: 0, pending: joined.lines.length - joined.synced },
