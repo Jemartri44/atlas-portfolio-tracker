@@ -89,7 +89,51 @@ describe("the log of the API (R25)", () => {
 
     const session = Signer.fromSessionKey(sessionKey);
     expect(session).toBeDefined();
-    const everything = [...api.logs, ...captured].join("\n");
+    // The failures too (S5 of the review of PR #90): the provider down, a
+    // forged token that carries the sentinels, S3 failing, and an unexpected
+    // error whose message carries them.
+    await api.signIn(account);
+    api.google.down = true;
+    await api.signIn(account);
+    api.google.down = false;
+    const forged = api.google.token(
+      { alg: "RS256", kid: "unknown-kid" },
+      { sub: SUB, email: EMAIL },
+    );
+    const exchange = api.google.exchangeCode.bind(api.google);
+    api.google.exchangeCode = async () => forged;
+    await api.signIn(account);
+    api.google.exchangeCode = async () =>
+      `${forged.split(".")[0]}.${Buffer.from(EMAIL).toString("base64url")}.x`;
+    await api.signIn(account);
+    api.google.exchangeCode = exchange;
+    await api.signIn(account);
+    api.s3.failNext();
+    await api.call("GET", "/api/session");
+    api.s3.failNext();
+    await api.signIn(account);
+    const failing = setup({
+      objects: {
+        get: async () => {
+          throw new Error(`boom ${SUB} ${EMAIL} ${TOKEN} ${LINE}`);
+        },
+        putIfNoneMatch: async () => {
+          throw new Error(`boom ${SUB} ${EMAIL}`);
+        },
+        putIfMatch: async () => "written",
+      },
+    });
+    failing.ssm.set(NAMES.allowList, allowListOf({ sub: SUB, email: EMAIL }));
+    await failing.signIn(account);
+    await failing.call("GET", "/api/session", {
+      cookies: [`__Host-atlas_session=${api.session()}`],
+    });
+    expect(failing.logs.some((line) => line.includes('"status":500'))).toBe(true);
+    expect(api.logs.some((line) => line.includes("google_exchange_failed"))).toBe(true);
+    expect(api.logs.some((line) => line.includes("id_token_invalid"))).toBe(true);
+    expect(api.logs.some((line) => line.includes('"dependency":"s3"'))).toBe(true);
+
+    const everything = [...api.logs, ...failing.logs, ...captured].join("\n");
     expect(api.logs.length).toBeGreaterThan(15);
     const secrets = [
       SUB,
@@ -109,7 +153,7 @@ describe("the log of the API (R25)", () => {
     for (const secret of secrets) {
       expect(everything).not.toContain(secret);
     }
-    for (const line of api.logs) {
+    for (const line of [...api.logs, ...failing.logs]) {
       const entry = JSON.parse(line) as Record<string, unknown>;
       expect(
         Object.keys(entry).every((key) =>
