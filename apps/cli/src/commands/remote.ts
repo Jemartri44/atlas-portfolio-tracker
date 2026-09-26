@@ -14,6 +14,7 @@ import {
   type CredentialsFile,
   entryForRemote,
   expiryWarning,
+  isCredentialEntry,
   isDeviceName,
   isHttpsOrigin,
   type RemoteJson,
@@ -26,10 +27,11 @@ import { describeConsoleFailure } from "../output/remote.js";
 import {
   assertApart,
   credentialsPath,
+  folderOpenToOthers,
   readCredentials,
   readRemoteJson,
   realOf,
-  writeCredentials,
+  updateCredentials,
 } from "../remote/credentials-file.js";
 import { type RemoteEnvironment, systemRemote } from "../remote/environment.js";
 import { postJson } from "../remote/http.js";
@@ -53,6 +55,11 @@ const where = async (ctx: Context, env: RemoteEnvironment): Promise<Where> => {
   const folder = dirname(ctx.ledgerPath);
   const path = credentialsPath(env.env, env.home);
   await assertApart(path, folder);
+  if (await folderOpenToOthers(path)) {
+    ctx.io.err(
+      `Aviso: la carpeta de credentials.json (${dirname(path)}) está abierta a otros usuarios. El fichero sigue siendo solo tuyo, pero ciérrala con chmod 700.`,
+    );
+  }
   return {
     folder,
     realFolder: await realOf(folder),
@@ -124,23 +131,34 @@ const login = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promis
       if (answer.code === "device_token_revoked" && previous !== undefined) {
         // The previous token is dead on the server: keeping it would only send
         // it again. Without it, the next sign-in reissues for this device.
-        await writeCredentials(at.path, withoutEntry(at.credentials, previous.device_id));
+        await updateCredentials(at.path, (file) => withoutEntry(file, previous.device_id));
       }
       ctx.io.err(`Error (${answer.code}): ${describeConsoleFailure(answer.code)}`);
       return EXIT.domain;
     }
     const body = answer.body;
-    const entry: CredentialEntry = {
+    const entry = {
       origin,
-      device_id: String(body.device_id),
-      token: String(body.token),
-      token_id: String(body.token_id),
-      device_name: String(body.device_name),
-      issued_at: String(body.issued_at),
-      expires_at: String(body.expires_at),
+      device_id: body.device_id,
+      token: body.token,
+      token_id: body.token_id,
+      device_name: body.device_name,
+      issued_at: body.issued_at,
+      expires_at: body.expires_at,
       folder_hint: at.realFolder,
     };
-    await writeCredentials(at.path, withEntry(at.credentials, entry));
+    // The answer checked with the rules of the file before it is kept, and a
+    // renewal or a reissue has to answer for **its** device (review of PR
+    // #95, N5): nothing is written otherwise.
+    const expected = previous?.device_id ?? reissue;
+    if (!isCredentialEntry(entry) || (expected !== undefined && entry.device_id !== expected)) {
+      ctx.io.err(
+        "Error (console_response_invalid): la respuesta del servidor no es un token válido para este dispositivo. No se ha guardado nada; si el servidor llegó a emitir un token, revócalo desde la web.",
+      );
+      return EXIT.domain;
+    }
+    const kept: CredentialEntry = entry;
+    await updateCredentials(at.path, (file) => withEntry(file, kept));
     ctx.io.out(
       `Sesión iniciada: dispositivo «${entry.device_name}» (${entry.device_id}), token ${entry.token_id}, caduca el ${dateOf(entry.expires_at)}. No se ha tocado la carpeta del libro.`,
     );
@@ -167,7 +185,7 @@ const logout = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promi
     );
   }
   if (booleanFlag(flags, "local-only")) {
-    await writeCredentials(at.path, withoutEntry(at.credentials, entry.device_id));
+    await updateCredentials(at.path, (file) => withoutEntry(file, entry.device_id));
     ctx.io.out(
       `Borrada la sesión local del dispositivo «${entry.device_name}» (${entry.device_id}). El token ${entry.token_id} sigue vivo en el servidor hasta que caduque o lo revoques desde la web.`,
     );
@@ -187,11 +205,24 @@ const logout = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promi
     );
     return EXIT.domain;
   }
-  await writeCredentials(at.path, withoutEntry(at.credentials, entry.device_id));
+  await updateCredentials(at.path, (file) => withoutEntry(file, entry.device_id));
   ctx.io.out(
     `Sesión cerrada: token ${entry.token_id} revocado en el servidor y borrado de este equipo.`,
   );
   return 0;
+};
+
+/** The warning of the expiry, precise: less than a day is not expired (review of PR #95, N1). */
+const expiryText = (left: number | "expired" | undefined): string => {
+  if (left === undefined) {
+    return ".";
+  }
+  if (left === "expired") {
+    return ". Ha caducado: sincronizar pedirá volver a iniciar sesión.";
+  }
+  return left === 0
+    ? ". Caduca en menos de un día: renueva con «atlas remote login»."
+    : `. Caduca en ${left} días: renueva con «atlas remote login».`;
 };
 
 const status = async (ctx: Context, env: RemoteEnvironment): Promise<number> => {
@@ -221,7 +252,7 @@ const status = async (ctx: Context, env: RemoteEnvironment): Promise<number> => 
   for (const entry of here) {
     const left = expiryWarning(entry, now, warnDays);
     ctx.io.out(
-      `Dispositivo «${entry.device_name}» (${entry.device_id}) en ${entry.origin}: token ${entry.token_id}, caduca el ${dateOf(entry.expires_at)}${left === undefined ? "." : left === 0 ? ". Ha caducado: sincronizar pedirá volver a iniciar sesión." : `. Caduca en ${left} días: renueva con «atlas remote login».`}`,
+      `Dispositivo «${entry.device_name}» (${entry.device_id}) en ${entry.origin}: token ${entry.token_id}, caduca el ${dateOf(entry.expires_at)}${expiryText(left)}`,
     );
   }
   return 0;

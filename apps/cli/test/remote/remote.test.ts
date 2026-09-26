@@ -24,7 +24,13 @@ interface Seen {
 }
 
 /** The console's `fetch`, answered by the handler; a redirect with `redirect: "error"` throws, as fetch does. */
-const consoleFetch = (api: Api, seen: Seen[]): typeof fetch =>
+/** What a test changes in the answers of the API or around the browser. */
+interface Hooks {
+  tamper?: (path: string, body: string) => string;
+  onOpen?: (() => Promise<void>) | undefined;
+}
+
+const consoleFetch = (api: Api, seen: Seen[], hooks: Hooks = {}): typeof fetch =>
   (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
@@ -44,7 +50,8 @@ const consoleFetch = (api: Api, seen: Seen[]): typeof fetch =>
     if (result.statusCode === 302 && init?.redirect === "error") {
       throw new TypeError("redirect mode is set to error");
     }
-    return new Response(result.body, { status: result.statusCode, headers: result.headers });
+    const body = hooks.tamper === undefined ? result.body : hooks.tamper(url.pathname, result.body);
+    return new Response(body, { status: result.statusCode, headers: result.headers });
   }) as typeof fetch;
 
 /** The browser of the user: the start, Google, the return, and then wherever it says. */
@@ -95,13 +102,19 @@ const setupConsole = async (options: Parameters<typeof browser>[1] = {}) => {
   const out: string[] = [];
   const err: string[] = [];
   const surf = browser(api, options);
+  const hooks: Hooks = {};
   let hidden = "";
   const remote: RemoteEnvironment = {
-    fetch: consoleFetch(api, seen),
+    fetch: consoleFetch(api, seen, hooks),
     env: { XDG_CONFIG_HOME: config },
     home: root,
     hostname: "portatil",
-    openBrowser: surf.open,
+    openBrowser: (url) => {
+      void (async () => {
+        await hooks.onOpen?.();
+        surf.open(url);
+      })();
+    },
     readHidden: async () => {
       // The manual page is open: the user copies the code shown after confirming.
       for (let i = 0; i < 50 && surf.pages.length === 0; i += 1) {
@@ -136,6 +149,7 @@ const setupConsole = async (options: Parameters<typeof browser>[1] = {}) => {
   const credentials = join(config, "atlas", "credentials.json");
   const readCredentialsFile = async () => JSON.parse(await readFile(credentials, "utf8"));
   return {
+    hooks,
     api,
     root,
     ledger,
@@ -318,5 +332,96 @@ describe("atlas remote status (T36)", () => {
     expect(await c.exec(["remote", "status"])).toBe(0);
     expect(c.out.join("\n")).toContain("Caduca en 13 días");
     expect(c.out.join("\n")).not.toContain(entry?.token as string);
+  });
+});
+
+describe("what the review of PR #95 found in the console", () => {
+  const entryOf = async (c: Awaited<ReturnType<typeof setupConsole>>) =>
+    Object.values((await c.readCredentialsFile()).entries)[0] as Record<string, string>;
+
+  it("says «less than a day» with hours left, and «expired» only once expired (N1)", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    const entry = await entryOf(c);
+    await writeRemoteJson(c.ledger, entry.device_id as string);
+    const expires = Date.parse(entry.expires_at as string);
+    c.api.advance(expires - c.api.nowMs() - 23 * 3_600_000);
+    c.out.length = 0;
+    expect(await c.exec(["remote", "status"])).toBe(0);
+    expect(c.out.join("\n")).toContain("Caduca en menos de un día");
+    expect(c.out.join("\n")).not.toContain("Ha caducado");
+    c.api.advance(23 * 3_600_000);
+    c.out.length = 0;
+    expect(await c.exec(["remote", "status"])).toBe(0);
+    expect(c.out.join("\n")).toContain("Ha caducado");
+  });
+
+  it("keeps an entry another console wrote meanwhile: it reads the file again before writing (N2)", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    const first = await entryOf(c);
+    // While this sign-in waits for the browser, another terminal signs in.
+    c.hooks.onOpen = async () => {
+      const file = await c.readCredentialsFile();
+      const other = { ...first, device_id: "OTHERTERMINALOTHERTERM", folder_hint: "/otra" };
+      file.entries[other.device_id] = other;
+      await writeFile(c.credentials, JSON.stringify(file), { mode: 0o600 });
+      c.hooks.onOpen = undefined;
+    };
+    expect(await c.exec(["remote", "login", "--origin", SELF, "--name", "otra"])).toBe(0);
+    const entries = (await c.readCredentialsFile()).entries;
+    expect(Object.keys(entries)).toHaveLength(3);
+    expect(entries.OTHERTERMINALOTHERTERM).toBeDefined();
+  });
+
+  it("warns when the folder of the credentials is open to others (N4)", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    expect(c.err.join("\n")).not.toContain("700");
+    await chmod(join(c.config, "atlas"), 0o755);
+    expect(await c.exec(["remote", "status"])).toBe(0);
+    expect(c.err.join("\n")).toContain("chmod 700");
+  });
+
+  it("stores nothing from an answer that is not a valid entry (N5)", async () => {
+    const c = await setupConsole();
+    c.hooks.tamper = (path, body) =>
+      path === "/api/auth/console/token" ? body.replace(/atlasdt1\.[^"]+/, "not-a-token") : body;
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(1);
+    expect(c.err.join("\n")).toContain("console_response_invalid");
+    await expect(stat(c.credentials)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("stores nothing when a renewal answers for another device (N5)", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    const entry = await entryOf(c);
+    await writeRemoteJson(c.ledger, entry.device_id as string);
+    const before = await readFile(c.credentials, "utf8");
+    c.hooks.tamper = (path, body) =>
+      path === "/api/auth/console/token"
+        ? body.replace(entry.device_id as string, "ANOTHERDEVICEANOTHERDE")
+        : body;
+    expect(await c.exec(["remote", "login"])).toBe(1);
+    expect(c.err.join("\n")).toContain("console_response_invalid");
+    expect(await readFile(c.credentials, "utf8")).toBe(before);
+  });
+
+  it("drops the local entry when the token to renew is revoked, so the next sign-in reissues (§21)", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    const entry = await entryOf(c);
+    await writeRemoteJson(c.ledger, entry.device_id as string);
+    await c.api.call("POST", "/api/auth/console/revoke", {
+      headers: {
+        "x-atlas-device-token": entry.token as string,
+        "content-type": "application/json",
+      },
+      body: "{}",
+      jar: false,
+    });
+    expect(await c.exec(["remote", "login"])).toBe(1);
+    expect(c.err.join("\n")).toContain("device_token_revoked");
+    expect((await c.readCredentialsFile()).entries).toEqual({});
   });
 });

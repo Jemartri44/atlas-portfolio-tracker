@@ -62,6 +62,31 @@ export const assertApart = async (path: string, ledgerFolder: string): Promise<v
   }
 };
 
+/**
+ * Whether the folder of the credentials is open to others (CLAUDE.md: the
+ * folder is `700`; review of PR #95, N4). The file is `600` whatever the
+ * folder says, so this is a warning, not a refusal; on Windows there are no
+ * such bits, as for `secrets.json`.
+ */
+export const folderOpenToOthers = async (path: string): Promise<boolean> => {
+  try {
+    const stat = await fs.stat(dirname(path));
+    return process.platform !== "win32" && (stat.mode & 0o077) !== 0;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Changes the file **reading it again just before writing** (review of PR #95,
+ * N2): a sign-in waits minutes for the browser, and another console may have
+ * written its own entry meanwhile. Only the change of this order is applied.
+ */
+export const updateCredentials = async (
+  path: string,
+  change: (file: CredentialsFile) => CredentialsFile,
+): Promise<void> => writeCredentials(path, change(await readCredentials(path)));
+
 /** The credentials, or none when there is no file. A file open to others is not used. */
 export const readCredentials = async (path: string): Promise<CredentialsFile> => {
   let stat: Awaited<ReturnType<typeof fs.stat>>;
