@@ -361,7 +361,11 @@ describe("a token on every request (§2.2; T01 to T10)", () => {
           key,
           change === "web"
             ? serializeDeviceObject({
-                ...newDevice({ deviceId, type: "web", createdAt: device.created_at }),
+                ...newDevice({
+                  deviceId: deviceId as string,
+                  type: "web",
+                  createdAt: device.created_at,
+                }),
               })
             : serializeDeviceObject({
                 ...device,

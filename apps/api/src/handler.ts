@@ -26,7 +26,6 @@ import {
 import { type IdentityProvider, IdentityUnavailable } from "@atlas/adapters/identity";
 import {
   type Admission,
-  type AllowEntry,
   type ApiConfig,
   type ApiRefusal,
   admit,
