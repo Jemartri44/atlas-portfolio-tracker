@@ -26,7 +26,7 @@
 //    so vendoring uPlot, which is only ever loaded by two screens, would have
 //    failed the build without the boot path growing by a byte (Q6).
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -835,7 +835,7 @@ const FORBIDDEN_IN_WEB = [
   // of E3. **Loosened only in E4**, in the same commit as the guard of
   // `tests/api-access.test.ts`, and only after the commits of P2 and P3.
   {
-    anywhere: /^packages\/adapters\/(src|dist)\/sync(-http)?\//,
+    anywhere: /(^|\/)packages\/adapters\/(src|dist)\/sync(-http)?\//,
     what: "el cliente o la orquestación de la sincronización (D-Q17, hasta E4)",
   },
   // The engine of the domain, likewise until E4. The door `sync.ts` is
@@ -843,23 +843,36 @@ const FORBIDDEN_IN_WEB = [
   // modules are in the graph; only the three the export and that question
   // need may render a byte — named one by one, never by likeness.
   {
-    rendering: /^packages\/domain\/(src|dist)\/sync(\.[jt]s$|\/(?!(archive|lines|marker)\.[jt]s$))/,
+    rendering:
+      /(^|\/)packages\/domain\/(src|dist)\/sync(\.[jt]s$|\/(?!(archive|lines|marker)\.[jt]s$))/,
     what: "el motor de la sincronización (D-Q17, hasta E4)",
   },
   // The rules of the access are the API's, never the web's.
-  { anywhere: /^packages\/domain\/(src|dist)\/access(\.[jt]s$|\/)/, what: "las reglas del acceso" },
+  {
+    anywhere: /(^|\/)packages\/domain\/(src|dist)\/access(\.[jt]s$|\/)/,
+    what: "las reglas del acceso",
+  },
   // The Node adapters of the API, the SDK of AWS and the API itself.
   {
-    anywhere: /^packages\/adapters\/(src|dist)\/(aws|access|identity)\//,
+    anywhere: /(^|\/)packages\/adapters\/(src|dist)\/(aws|access|identity)\//,
     what: "un adaptador de Node de la API (AWS, acceso o Google)",
   },
   { anywhere: /(^|\/)node_modules\/@(aws-sdk|smithy|aws-crypto)\//, what: "el SDK de AWS" },
-  { anywhere: /^apps\/(api|cli)\//, what: "la API o la consola" },
+  { anywhere: /(^|\/)apps\/(api|cli)\//, what: "la API o la consola" },
   // A builtin of Node, however Vite names it once it stubs it for the browser.
   { anywhere: /(^|\0)node:|__vite-browser-external/, what: "un módulo de Node" },
   // The doubles of S3, SSM and Google, the local server of the captures, and
   // anything under a folder of tests.
   { anywhere: /(^|\/)(test|tests)\/|test-only-/, what: "un doble o código de test" },
+  // Round 3 of the review of PR #90: the ids arrive **after `realpath`**, so
+  // a package of the repository can never be named through `node_modules`
+  // — an alias or `preserveSymlinks` that did it is refused as such — nor
+  // can a module live outside the repository.
+  {
+    anywhere: /(^|\/)node_modules\/@atlas\//,
+    what: "un paquete del repositorio por node_modules (un alias o preserveSymlinks)",
+  },
+  { anywhere: /^\.\.\//, what: "un módulo de fuera del repositorio" },
 ];
 
 /**
@@ -869,7 +882,8 @@ const FORBIDDEN_IN_WEB = [
  * the question and the names of the keys, never `BrowserSyncStore`. Loosened
  * in E4 with the rest.
  */
-const SYNC_STORE = /^packages\/adapters\/(src|dist)\/ledger-store\/browser\/sync-store\.[jt]s$/;
+const SYNC_STORE =
+  /(^|\/)packages\/adapters\/(src|dist)\/ledger-store\/browser\/sync-store\.[jt]s$/;
 const SYNC_STORE_READ_ONLY = new Set([
   "browserSyncConfigured",
   "browserSyncPresence",
@@ -878,28 +892,72 @@ const SYNC_STORE_READ_ONLY = new Set([
   "SYNC_DISCARDED_KEY",
 ]);
 
-const repoRoot = resolve(webRoot, "..", "..");
+const repoRoot = realpathSync(resolve(webRoot, "..", ".."));
 const graphFile = join(dist, ".vite", "atlas-modules.json");
 const graph = statSync(graphFile, { throwIfNoEntry: false })
   ? JSON.parse(readFileSync(graphFile, "utf8"))
-  : { chunks: [] };
-for (const chunk of graph.chunks) {
-  for (const module of chunk.modules) {
-    for (const rule of FORBIDDEN_IN_WEB) {
-      const loaded = rule.anywhere?.test(module.id) === true;
-      const rendered = rule.rendering?.test(module.id) === true && module.bytes > 0;
-      if (loaded || rendered) {
-        problems.push(
-          `${chunk.file} trae ${rule.what}: ${module.id.replace("\0", "\\0")}${rendered ? ` (${module.bytes} bytes)` : ""}`,
-        );
+  : { chunks: [], assets: [], workers: [] };
+
+/**
+ * Every build of the output: the main one and **each worker**, which Vite
+ * builds apart (`worker.plugins` carries the same plugin; round 3 of the
+ * review of PR #90). The rules run over all of them.
+ */
+const builds = [
+  { label: "", ...graph },
+  ...(graph.workers ?? []).map((worker, index) => ({ label: `worker ${index + 1}: `, ...worker })),
+];
+const shown = (module) =>
+  `${module.id.replace("\0", "\\0")}${module.query ? `?${module.query}` : ""}`;
+const refuse = (where, id, bytes) => {
+  for (const rule of FORBIDDEN_IN_WEB) {
+    const loaded = rule.anywhere?.test(id) === true;
+    const rendered = rule.rendering?.test(id) === true && bytes > 0;
+    if (loaded || rendered) {
+      problems.push(`${where} trae ${rule.what}: ${id}${rendered ? ` (${bytes} bytes)` : ""}`);
+    }
+  }
+};
+for (const build of builds) {
+  for (const chunk of build.chunks ?? []) {
+    for (const module of chunk.modules) {
+      // Compared **without the query**: `?raw` and `?url` of a vetoed module
+      // are that module (round 3).
+      refuse(`${build.label}${chunk.file}`, module.id, module.bytes);
+      if (SYNC_STORE.test(module.id)) {
+        for (const name of module.exports.filter((name) => !SYNC_STORE_READ_ONLY.has(name))) {
+          problems.push(
+            `${build.label}${chunk.file} usa ${name} del almacén de la sincronización, que solo se puede leer (D-Q17, hasta E4)`,
+          );
+        }
       }
     }
-    if (SYNC_STORE.test(module.id)) {
-      for (const name of module.exports.filter((name) => !SYNC_STORE_READ_ONLY.has(name))) {
-        problems.push(
-          `${chunk.file} usa ${name} del almacén de la sincronización, que solo se puede leer (D-Q17, hasta E4)`,
-        );
-      }
+  }
+  // An asset is a file too: whatever it was emitted from falls under the rules.
+  for (const asset of build.assets ?? []) {
+    for (const source of asset.sources) {
+      refuse(`${build.label}${asset.file}`, source, 1);
+    }
+  }
+}
+
+/*
+ * **A worker whose graph the guard does not know** stops the build: an import
+ * `?worker` or `?sharedworker` in the graph of the main build with no worker
+ * graph whose entry is that file. With `inline` there is no loose file for the
+ * check below to notice, so this is what stands between it and the bundle.
+ */
+const workerEntries = new Set(
+  (graph.workers ?? []).flatMap((worker) =>
+    (worker.chunks ?? []).map((chunk) => chunk.entry).filter((entry) => entry !== null),
+  ),
+);
+for (const chunk of graph.chunks) {
+  for (const module of chunk.modules) {
+    if (/(^|&)(worker|sharedworker)(&|=|$)/.test(module.query) && !workerEntries.has(module.id)) {
+      problems.push(
+        `${chunk.file} crea un worker cuyo grafo no se conoce: ${shown(module)} (falta el plugin en worker.plugins)`,
+      );
     }
   }
 }
@@ -911,7 +969,9 @@ for (const chunk of graph.chunks) {
  * graph does not describe, stops the build instead of passing by looking at
  * nothing.
  */
-const graphed = new Map(graph.chunks.map((chunk) => [chunk.file, chunk]));
+const graphed = new Map(
+  builds.flatMap((build) => (build.chunks ?? []).map((chunk) => [chunk.file, chunk])),
+);
 const everyModule = graph.chunks.flatMap((chunk) => chunk.modules.map((module) => module.id));
 if (graph.chunks.length === 0) {
   problems.push(
@@ -959,6 +1019,48 @@ for (const path of files(dist).filter((path) => extname(path) === ".js")) {
     if (!ids.has(id)) {
       problems.push(`${name}: su source map nombra ${id} y el grafo de módulos no`);
     }
+  }
+}
+
+/*
+ * **Every emitted file**, not only the `.js` (round 3 of the review of PR #90:
+ * `new URL("…/client.ts", import.meta.url)` emits the source itself as an
+ * asset, out of the graph of modules). A source of TypeScript or JSX is never
+ * shipped; and every file has to be accounted for: a chunk or an asset of a
+ * graph (whose sources went through the rules above), a source map, a file of
+ * `public/`, or one of the few the build writes after the graph (the page,
+ * the manifest and the service worker, named one by one).
+ */
+const publicDir = join(webRoot, "public");
+const published = new Set(
+  statSync(publicDir, { throwIfNoEntry: false })
+    ? files(publicDir).map((path) => relative(publicDir, path).replaceAll("\\", "/"))
+    : [],
+);
+const emitted = new Set(
+  builds.flatMap((build) => [
+    ...(build.chunks ?? []).map((chunk) => chunk.file),
+    ...(build.assets ?? []).map((asset) => asset.file),
+  ]),
+);
+const WRITTEN_AFTER =
+  /^(index\.html|manifest\.webmanifest|registerSW\.js|sw\.js|workbox-[\w-]+\.js)(\.map)?$/;
+for (const path of files(dist)) {
+  const name = relative(dist, path).replaceAll("\\", "/");
+  if (name.startsWith(".vite/")) {
+    continue;
+  }
+  if (/\.(ts|tsx|mts|cts|jsx)$/.test(name)) {
+    problems.push(`${name}: el bundle lleva un fuente, que no se sirve nunca`);
+    continue;
+  }
+  const accounted =
+    emitted.has(name) ||
+    published.has(name) ||
+    WRITTEN_AFTER.test(name) ||
+    (name.endsWith(".map") && emitted.has(name.slice(0, -".map".length)));
+  if (!accounted) {
+    problems.push(`${name}: ningún grafo dice de dónde sale este fichero`);
   }
 }
 
