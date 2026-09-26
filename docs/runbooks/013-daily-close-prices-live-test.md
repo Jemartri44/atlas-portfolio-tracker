@@ -47,12 +47,12 @@ ls -l ~/.config/atlas/secrets.json
 
 ### 3. Pon al día el repositorio y compílalo
 
-La consola no está en el `PATH`: se ejecuta con Node desde tu clon del repositorio, después de compilarlo. Si tu clon no está en `~/projects/atlas-portfolio-tracker`, cambia la primera línea.
+La consola no está en el `PATH`: se ejecuta con Node desde tu clon del repositorio, después de compilarlo. Si tu clon no está en `~/personal/atlas/atlas-portfolio-tracker`, cambia la primera línea.
 
 **3a. Mira primero si el clon tiene cambios sin guardar:**
 
 ```bash
-REPO=~/projects/atlas-portfolio-tracker
+REPO=~/personal/atlas/atlas-portfolio-tracker
 cd "$REPO" && git status --short
 ```
 
@@ -129,7 +129,7 @@ Anota el código. `200` es que sí.
 Cada vez que abras una terminal nueva para esta parte, repite este bloque:
 
 ```bash
-REPO=~/projects/atlas-portfolio-tracker
+REPO=~/personal/atlas/atlas-portfolio-tracker
 T=~/atlas-prueba-013
 atlas() { node "$REPO/apps/cli/dist/main.js" --ledger "$T/ledger.jsonl" "$@"; }
 ```
@@ -257,7 +257,7 @@ atlas prices status
 
 1. En una terminal nueva (déjala abierta mientras miras la web); `REPO` es la misma carpeta de tu clon que en el paso 3:
    ```bash
-   REPO=~/projects/atlas-portfolio-tracker
+   REPO=~/personal/atlas/atlas-portfolio-tracker
    cd "$REPO" && npm run preview
    ```
 2. En Chrome o Edge, crea un perfil nuevo (menú del perfil, arriba a la derecha → «Añadir»), llámalo «Atlas prueba» y abre en él `http://localhost:4173`.

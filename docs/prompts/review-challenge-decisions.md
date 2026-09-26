@@ -4,7 +4,7 @@
 
 ---
 
-Eres un revisor externo del proyecto **Atlas Portfolio Tracker** (`~/projects/atlas-portfolio-tracker`), una aplicación personal de gestión de cartera de inversión a 20 años para un residente fiscal en España, de un solo usuario, que registra operaciones, calcula la aportación mensual, sigue un cubo especulativo y prepara la Renta. Las decisiones de arquitectura ya están tomadas. Tu trabajo **no es rediseñar ni opinar sobre gustos**: es encontrar las cosas importantes que **no se han planteado**.
+Eres un revisor externo del proyecto **Atlas Portfolio Tracker** (`~/personal/atlas/atlas-portfolio-tracker`), una aplicación personal de gestión de cartera de inversión a 20 años para un residente fiscal en España, de un solo usuario, que registra operaciones, calcula la aportación mensual, sigue un cubo especulativo y prepara la Renta. Las decisiones de arquitectura ya están tomadas. Tu trabajo **no es rediseñar ni opinar sobre gustos**: es encontrar las cosas importantes que **no se han planteado**.
 
 ## 1. Qué leer, en este orden
 
@@ -38,7 +38,7 @@ Eres un revisor externo del proyecto **Atlas Portfolio Tracker** (`~/projects/at
 
 ## 4. Formato de salida
 
-Escribe el informe en `~/projects/atlas-private/reviews/<fecha>-challenge.md` (fuera del repositorio) con esta estructura:
+Escribe el informe en `~/personal/atlas/privado/reviews/<fecha>-challenge.md` (fuera del repositorio) con esta estructura:
 
 ```
 # Challenge de decisiones — <fecha>

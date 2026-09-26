@@ -96,12 +96,12 @@ Se hace en una **carpeta de prueba** con un libro sintético, nunca en la de tu 
 
 ### Antes: pon al día tu clon y compílalo (obligatorio)
 
-**Hazlo siempre, aunque ya lo compilaras otro día.** Una compilación de antes de la feature 013 no conoce las órdenes de precios, y lo que sigue fallaría con «comando desconocido: prices». Si tu clon no está en `~/projects/atlas-portfolio-tracker`, cambia la primera línea.
+**Hazlo siempre, aunque ya lo compilaras otro día.** Una compilación de antes de la feature 013 no conoce las órdenes de precios, y lo que sigue fallaría con «comando desconocido: prices». Si tu clon no está en `~/personal/atlas/atlas-portfolio-tracker`, cambia la primera línea.
 
 Primero, mira si el clon tiene cambios sin guardar:
 
 ```bash
-REPO=~/projects/atlas-portfolio-tracker
+REPO=~/personal/atlas/atlas-portfolio-tracker
 cd "$REPO" && git status --short
 ```
 
@@ -120,7 +120,7 @@ echo "salida $?"
 En la misma terminal. La primera línea conserva la ruta de tu clon que pusiste en «Antes»; si abres otra terminal, vuelve a ejecutar antes la línea `REPO=…` de «Antes», con tu ruta:
 
 ```bash
-REPO="${REPO:-$HOME/projects/atlas-portfolio-tracker}"
+REPO="${REPO:-$HOME/personal/atlas/atlas-portfolio-tracker}"
 P=~/atlas-prueba-claves
 atlas() { node "$REPO/apps/cli/dist/main.js" --ledger "$P/ledger.jsonl" "$@"; }
 mkdir -p "$P"

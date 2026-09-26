@@ -98,19 +98,21 @@ The user directs the project with a high-level assistant that writes decision ro
 
 | What | Where |
 |---|---|
-| Repository | `~/projects/atlas-portfolio-tracker`. The main folder always stays on `develop`; nobody runs `git switch` in it. |
+| Repository | `~/personal/atlas/atlas-portfolio-tracker`. The main folder always stays on `develop`; nobody runs `git switch` in it. |
 | Worktrees | `.claude/worktrees/<branch-or-task>`, inside the clone and git-ignored. None outside the clone: `../atlas-wt-*` and `../atlas-portfolio-tracker-NNN` are retired. |
-| Private inputs | `~/projects/atlas-private/` (`statements/`, `ui-refs/`, `capturas/`, `reviews/`). A sibling of the repository, never inside it, never committed. |
+| Private inputs | `~/personal/atlas/privado/` (`statements/`, `ui-refs/`, `capturas/`, `reviews/`). A sibling of the repository, never inside it, never committed. |
 | Secrets and credentials | `~/.config/atlas/` (or `$XDG_CONFIG_HOME/atlas/`), directory `700`; `secrets.json` and `credentials.json` `600` (ADR-0031, ADR-0033). |
-| Local Terraform files | `~/projects/atlas-private/terraform/<env>/terraform.tfvars` per environment; bootstrap state at `~/projects/atlas-private/terraform/bootstrap/<part>/terraform.tfstate`, one per part (`account`, `dev`, `prod`) (ADR-0034). |
+| Local Terraform files | `~/personal/atlas/privado/terraform/<env>/terraform.tfvars` per environment; bootstrap state at `~/personal/atlas/privado/terraform/bootstrap/<part>/terraform.tfstate`, one per part (`account`, `dev`, `prod`) (ADR-0034). |
 | Agent scratch files | The session scratchpad, with the branch or task name in the file name. |
+
+`~/projects/atlas-portfolio-tracker` and `~/projects/atlas-private` are compatibility symlinks to the repository and the private folder; do not use them in new documents.
 
 ## Private inputs (outside the repo)
 
-Real statements, screenshots and anything personal live in `~/projects/atlas-private/` (never committed):
+Real statements, screenshots and anything personal live in `~/personal/atlas/privado/` (never committed):
 
-- `~/projects/atlas-private/statements/myinvestor/`, `~/projects/atlas-private/statements/ibkr/` — raw exports, used only to learn the format when writing parsers and synthetic fixtures.
-- `~/projects/atlas-private/ui-refs/` — screenshots the user likes, as layout references for Round 7.
+- `~/personal/atlas/privado/statements/myinvestor/`, `~/personal/atlas/privado/statements/ibkr/` — raw exports, used only to learn the format when writing parsers and synthetic fixtures.
+- `~/personal/atlas/privado/ui-refs/` — screenshots the user likes, as layout references for Round 7.
 
 ## Domain traps
 

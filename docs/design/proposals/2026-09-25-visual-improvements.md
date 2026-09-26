@@ -16,7 +16,7 @@
   - La fuente fue la de Linux (Ubuntu Sans), no Roboto ni Segoe.
   - Los campos de fecha salieron como `mm/dd/yyyy` porque el Chromium sin interfaz usa la configuración regional `en-US`. En el teléfono, con `es-ES`, no pasa.
   - En las capturas de página entera, la barra inferior fija sale a mitad de página: es un efecto de la captura.
-- **Referencias del usuario**: `~/projects/atlas-private/ui-refs/` solo tiene **una** imagen, la de Ghostfolio, y es el contraejemplo. Muestra una barra superior y otra lateral que repiten destinos, un título centrado que ocupa una franja entera, una tabla de una sola fila flotando en blanco y un porcentaje rojo con un icono de oso. **No hay ninguna referencia positiva**: todo lo que sigue se argumenta desde el encargo y desde las capturas.
+- **Referencias del usuario**: `~/personal/atlas/privado/ui-refs/` solo tiene **una** imagen, la de Ghostfolio, y es el contraejemplo. Muestra una barra superior y otra lateral que repiten destinos, un título centrado que ocupa una franja entera, una tabla de una sola fila flotando en blanco y un porcentaje rojo con un icono de oso. **No hay ninguna referencia positiva**: todo lo que sigue se argumenta desde el encargo y desde las capturas.
 
 ### Punto de partida
 
