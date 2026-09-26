@@ -49,6 +49,7 @@ import {
   valuationsCommand,
 } from "./commands/query.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
+import { remoteCommand } from "./commands/remote.js";
 import { synthCommand } from "./commands/synth.js";
 import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
@@ -57,7 +58,10 @@ import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from 
 import { describeLock, LOCK_LOST, remedyFor } from "./output/lock.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 import { describeSecretsError } from "./output/prices.js";
+import { describeCredentialsError } from "./output/remote.js";
 import type { PriceEnvironment } from "./prices/load.js";
+import { CredentialsError } from "./remote/credentials-file.js";
+import type { RemoteEnvironment } from "./remote/environment.js";
 
 export const COMMANDS: Record<string, Command> = {
   account: accountCommand,
@@ -95,6 +99,7 @@ export const COMMANDS: Record<string, Command> = {
   fx: fxCommand,
   draft: draftCommand,
   prices: pricesCommand,
+  remote: remoteCommand,
 };
 
 /**
@@ -140,6 +145,7 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   fx: { update: 2, status: 2, correct: 2 },
   prices: { update: 2, status: 2, symbols: 4, purge: 3 },
   draft: { list: 2, confirm: 3, discard: 3 },
+  remote: { login: 2, logout: 2, status: 2 },
 };
 
 /** Refuses the first word a command does not read. */
@@ -181,7 +187,10 @@ comandos:
   prices symbols [set|remove] <activo> [--eodhd S] [--alpha-vantage S] --currency C [--eodhd-currency C] [--alpha-vantage-currency C] [--accept-currency]
   fx correct [--reason …]        corrige los tipos que no son los de su fecha fiscal (tras cambiar fiscal_date_rule)
   add … --draft                  guarda como borrador una operación cuyo tipo del BCE aún no se ha publicado
-  draft list|confirm <id>|discard <id>   los borradores: no cuentan en ninguna cifra hasta registrarlos`;
+  draft list|confirm <id>|discard <id>   los borradores: no cuentan en ninguna cifra hasta registrarlos
+  remote login [--origin <https://…>] [--name <nombre>] [--manual]   inicia sesión con Google y guarda el token de este dispositivo
+  remote logout [--device <id>] [--local-only]   revoca el token en el servidor y lo borra de este equipo
+  remote status                  las sesiones guardadas de esta carpeta y cuándo caducan`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
@@ -215,9 +224,11 @@ export const run = async (
   fxSource?: () => FxRateSource,
   /** The sources of prices and the file of the keys; replaced in tests. */
   prices?: PriceEnvironment,
+  /** The network, the credentials and the browser of `atlas remote`; replaced in tests. */
+  remote?: RemoteEnvironment,
 ): Promise<number> => {
   let remind: string | undefined;
-  const code = await dispatch(argv, io, compose, fxSource, prices, (path) => {
+  const code = await dispatch(argv, io, compose, fxSource, prices, remote, (path) => {
     remind = path;
   });
   // Said after every command, whatever it did, failures included: a draft
@@ -237,6 +248,7 @@ const dispatch = async (
   compose: (ledgerPath: string) => UseCaseDeps,
   fxSource: (() => FxRateSource) | undefined,
   prices: PriceEnvironment | undefined,
+  remote: RemoteEnvironment | undefined,
   /** Where the reminder of pending drafts looks, once a command is going to run. */
   remindAt: (ledgerPath: string) => void,
 ): Promise<number> => {
@@ -264,6 +276,7 @@ const dispatch = async (
       json: booleanFlag(flags, "json"),
       ...(fxSource === undefined ? {} : { fxSource }),
       ...(prices === undefined ? {} : { prices }),
+      ...(remote === undefined ? {} : { remote }),
     };
     if (name !== "draft") {
       remindAt(ledgerPath);
@@ -360,6 +373,10 @@ const report = (io: Io, error: unknown): number => {
   }
   if (error instanceof DomainError) {
     io.err(`Error (${error.code}): ${describeError(error)}`);
+    return EXIT.domain;
+  }
+  if (error instanceof CredentialsError) {
+    io.err(`Error (${error.code}): ${describeCredentialsError(error.code)}`);
     return EXIT.domain;
   }
   if (error instanceof SecretsError) {
