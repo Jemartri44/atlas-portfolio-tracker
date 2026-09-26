@@ -102,7 +102,7 @@ The user directs the project with a high-level assistant that writes decision ro
 | Worktrees | `.claude/worktrees/<branch-or-task>`, inside the clone and git-ignored. None outside the clone: `../atlas-wt-*` and `../atlas-portfolio-tracker-NNN` are retired. |
 | Private inputs | `~/projects/atlas-private/` (`statements/`, `ui-refs/`, `capturas/`, `reviews/`). A sibling of the repository, never inside it, never committed. |
 | Secrets and credentials | `~/.config/atlas/` (or `$XDG_CONFIG_HOME/atlas/`), directory `700`; `secrets.json` and `credentials.json` `600` (ADR-0031, ADR-0033). |
-| Local Terraform files | `terraform.tfvars`: outside the repository, see ADR-0034. Bootstrap state: local, one per part (`account`, `dev`, `prod`), at `terraform/bootstrap/<part>/terraform.tfstate` inside the private folder (ADR-0034 row 15, written before the move as `~/atlas-private/…`). |
+| Local Terraform files | `~/projects/atlas-private/terraform/<env>/terraform.tfvars` per environment; bootstrap state at `~/projects/atlas-private/terraform/bootstrap/<part>/terraform.tfstate`, one per part (`account`, `dev`, `prod`) (ADR-0034). |
 | Agent scratch files | The session scratchpad, with the branch or task name in the file name. |
 
 ## Private inputs (outside the repo)
