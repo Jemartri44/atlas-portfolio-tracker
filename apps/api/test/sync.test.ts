@@ -537,6 +537,10 @@ describe("GET /api/sync/devices (§5.3, session only)", () => {
     const api = setup();
     const both = await credentials(api);
     api.s3.seed("sync/devices/unreadable-not-an-id.json", "{");
+    // A device whose object cannot be read is listed as such, never left out
+    // (review of PR #96, N2): compact and the restore must see it.
+    const broken = "BROKENBROKENBROKENBROK";
+    api.s3.seed(`sync/devices/${broken}.json`, "{");
     const answer = await read(api, both.session, "/api/sync/devices");
     expect(answer.statusCode).toBe(200);
     const rows = JSON.parse(answer.body).devices as Record<string, unknown>[];
@@ -544,8 +548,13 @@ describe("GET /api/sync/devices (§5.3, session only)", () => {
       [
         [both.token.deviceId, "console", "active"],
         [both.session.deviceId, "web", "active"],
+        [broken, undefined, "unreadable"],
       ].sort(),
     );
+    expect(rows.find((row) => row.device_id === broken)).toEqual({
+      device_id: broken,
+      state: "unreadable",
+    });
     expect(errorOf(await read(api, both.token, "/api/sync/devices")).code).toBe(
       "forbidden_for_credential",
     );
