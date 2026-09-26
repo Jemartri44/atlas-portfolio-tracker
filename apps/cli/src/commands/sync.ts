@@ -22,6 +22,7 @@ import {
   initialiseRemote,
   joinWithOwnLines,
   recordRedoPlan,
+  redoRecorded,
   replaceFromRemote,
   type SyncOptions,
   type SyncOutcome,
@@ -207,6 +208,15 @@ const redo = async (ctx: Context, unit: string): Promise<number> => {
   const options = optionsOf(ctx);
   const ids = createUlidGenerator(ctx.deps);
   const plan = await startRedo(store, unit, () => ids.next(), options);
+  if (await redoRecorded(store, unit, options)) {
+    // A redo cut between recording and finishing: it is in the ledger by its
+    // sealed ids, so it is finished and never recorded twice (review of PR #96, N1).
+    await finishRedo(store, unit, options);
+    ctx.io.out(
+      "El rehacer ya estaba registrado con sus identificadores sellados (se cortó antes de terminar): se termina, sin registrar nada otra vez.",
+    );
+    return EXIT.ok;
+  }
   ctx.io.out(
     plan.kind === "correct"
       ? `Se registrará la corrección de ${plan.target_id} (anulación ${plan.reversal_id} y operación ${plan.id}):`

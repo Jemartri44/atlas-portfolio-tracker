@@ -429,5 +429,6 @@ export {
   type HeldView,
   heldUnits,
   recordRedoPlan,
+  redoRecorded,
   startRedo,
 } from "./held-actions.js";

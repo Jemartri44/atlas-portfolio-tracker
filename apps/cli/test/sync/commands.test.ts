@@ -6,7 +6,14 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { encodeLine, type LedgerEvent } from "@atlas/domain";
+import { FileLedgerStore, FolderSyncStore } from "@atlas/adapters";
+import { recordRedoPlan, startRedo } from "@atlas/adapters/sync-client";
+import {
+  CURRENT_LEDGER_SCHEMA,
+  createUlidGenerator,
+  encodeLine,
+  type LedgerEvent,
+} from "@atlas/domain";
 import { markerFor, serializeMarker } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
 import { SELF } from "../../../api/test/harness.js";
@@ -218,6 +225,40 @@ describe("what is held, resolved from the console", () => {
     expect(recorded).toContain(sealed as string);
     expect(await c.exec(["sync", "held"])).toBe(0);
     expect(c.out.join("\n")).toContain("No hay nada retenido");
+  });
+
+  it("finishes a redo cut between recording and finishing, without recording twice (review of PR #96, N1)", async () => {
+    const c = await console_();
+    await c.exec(["sync", "init", "--origin", SELF]);
+    const remoteText = c.api.s3.text(LEDGER_KEY) as string;
+    c.api.s3.seed(LEDGER_KEY, remoteText + textOf([deposit(70, "5", "sha256:cut")]));
+    await append(c, [deposit(71, "5", "sha256:cut")]);
+    await c.exec(["sync"]);
+    await c.exec(["sync", "held"]);
+    const unit = /Unidad ([0-9a-f]{64})/.exec(c.out.join("\n"))?.[1] as string;
+    // The first `atlas sync redo` recorded the plan and died before finishing.
+    const ledger = new FileLedgerStore(ledgerFile(c));
+    const store = new FolderSyncStore(ledger);
+    const options = { schema: CURRENT_LEDGER_SCHEMA, now: () => new Date(c.api.nowMs()) };
+    const deps = {
+      store: ledger,
+      clock: { now: () => new Date(c.api.nowMs()) },
+      random: (t: Uint8Array) => t.fill(3),
+    };
+    const ids = createUlidGenerator(deps);
+    const plan = await startRedo(store, unit, () => ids.next(), options);
+    await recordRedoPlan(deps, plan, { confirmDuplicate: true });
+    const recorded = await readLedger(c);
+    // Repeated: it finishes by the sealed ids, and records nothing again.
+    c.out.length = 0;
+    c.err.length = 0;
+    expect(await c.exec(["--yes", "--confirm-duplicate", "sync", "redo", unit])).toBe(0);
+    expect(c.out.join("\n")).toContain("ya estaba registrado");
+    expect(await readLedger(c)).toBe(recorded);
+    await c.exec(["sync", "held"]);
+    expect(c.out.join("\n")).toContain("No hay nada retenido");
+    const discarded = (await readFile(join(c.ledger, "sync", "discarded.jsonl"), "utf8")).trim();
+    expect(JSON.parse(discarded).reason.code).toBe("redone");
   });
 
   it("discards it, and it stays in sync/discarded.jsonl", async () => {

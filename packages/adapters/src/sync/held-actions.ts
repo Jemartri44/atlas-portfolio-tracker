@@ -23,6 +23,7 @@ import {
   recordRedo,
   redoContext,
   redoFinished,
+  redoneLines,
   resolutionsFor,
   type SyncMarker,
   sealedIds,
@@ -201,6 +202,22 @@ export const recordRedoPlan = async (
     return;
   }
   await recordRedo(deps, plan, completeDraft(deps, plan.draft, plan.id), { confirmDuplicate });
+};
+
+/**
+ * Whether the redo of a unit is **already in the ledger**, by exactly the ids
+ * sealed for it (review of PR #96, N1): a redo cut between recording and
+ * finishing is finished, never recorded twice. By identity, never by
+ * resemblance: the same rule as `finishRedo`.
+ */
+export const redoRecorded = async (
+  store: SyncStateStore,
+  id: string,
+  options: SyncOptions,
+): Promise<boolean> => {
+  const state = await store.read();
+  const unit = unitOf(state, id);
+  return redoneLines(unit, decodeLines(unit.lines, options.schema), state.ledger.events).length > 0;
 };
 
 /**
