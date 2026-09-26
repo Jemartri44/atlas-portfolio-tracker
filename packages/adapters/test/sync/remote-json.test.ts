@@ -7,6 +7,7 @@
 
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { ConflictError } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { sweepOrphanTemporaries } from "../../src/ledger-store/folder-lock.js";
 import { initialiseRemote, joinWithOwnLines, replaceFromRemote } from "../../src/sync/client.js";
@@ -70,6 +71,17 @@ describe("sync/remote.json in the one write of initialising and joining (P16)", 
     ).rejects.toThrow(/cut at/);
     expect(await readFile(join(device.dir, REMOTE_FILE), "utf8")).toBe(REMOTE);
     expect(await readdir(join(device.dir, "sync"))).not.toContain("state.json");
+  });
+
+  it("writes nothing when remote.json changed since it was read (another console)", async () => {
+    const device = await consoleDevice(base());
+    const read = await device.sync.read();
+    await mkdir(join(device.dir, "sync"));
+    await writeFile(join(device.dir, REMOTE_FILE), REMOTE);
+    await expect(device.sync.commit(read, { remote: REMOTE })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    expect(await readdir(join(device.dir, "sync"))).toEqual(["remote.json"]);
   });
 
   it("writes nothing of it without being asked: a sync never does", async () => {

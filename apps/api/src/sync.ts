@@ -146,9 +146,8 @@ export const syncRoutes = (context: SyncContext) => {
     if (isRefusal(init)) {
       return fail(init);
     }
-    if ((await remote()).etag !== EMPTY_ETAG) {
-      return fail(refusal("precondition_failed"));
-    }
+    // A remote that is not empty is refused by the write itself: appending on
+    // the etag of zero bytes is a ConflictError (412) unless it is empty.
     const lines = judged(() => acceptInit(init.content, init.confirm_duplicate_ids, rules()));
     if (isRefusal(lines)) {
       return fail(lines);

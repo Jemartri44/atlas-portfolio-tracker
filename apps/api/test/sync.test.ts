@@ -91,6 +91,23 @@ describe("GET /api/ledger (§5.1)", () => {
     expect(answer.headers.etag).toBe(`"${sha(bytes)}"`);
   });
 
+  it("logs the public id of the token on a route of the sync, and nothing of the session", async () => {
+    const api = setup();
+    const both = await credentials(api);
+    const record = JSON.parse(
+      api.ssm.history(
+        (api.ssm.writes.find((write) => write.startsWith("putNew ")) as string).slice(7),
+      )[0] as string,
+    );
+    await read(api, both.token, "/api/ledger");
+    expect(JSON.parse(api.logs.at(-1) as string)).toMatchObject({
+      route: "/api/ledger",
+      token_id: record.token_id,
+    });
+    await read(api, both.session, "/api/ledger");
+    expect(JSON.parse(api.logs.at(-1) as string)).not.toHaveProperty("token_id");
+  });
+
   it("asks for a credential, and refuses a forgotten device", async () => {
     const api = setup();
     const { token } = await credentials(api);
