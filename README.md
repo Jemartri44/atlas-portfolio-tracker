@@ -242,7 +242,7 @@ Y un aviso que llega antes: `atlas settings set` compara la base del ahorro de l
 Mientras el libro real viva en un fichero local, haz una copia verificada tras cada sesión de registro y **siempre fuera del repositorio** (el repo es público):
 
 ```bash
-atlas backup --to ~/projects/atlas-private/backups
+atlas backup --to ~/personal/atlas/privado/backups
 ```
 
 `.gitignore` ignora `ledger*.jsonl`, `demo*.jsonl` y `backups/` en todo el árbol como red de seguridad, pero la regla es no escribir datos reales dentro del repositorio.

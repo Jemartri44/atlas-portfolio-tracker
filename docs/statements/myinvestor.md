@@ -1,6 +1,6 @@
 # Formato de los extractos de MyInvestor
 
-Descripción **estructural** de lo que exporta MyInvestor, para escribir el adaptador `StatementSource` y sus fixtures sintéticas. Sin datos reales: los ficheros originales viven en `~/projects/atlas-private/statements/myinvestor/`. Observado el 2026-08-30 sobre una cuenta recién abierta (sin fondos todavía), así que **la exportación de operaciones de fondos aún no se ha visto**; se completará con la primera suscripción.
+Descripción **estructural** de lo que exporta MyInvestor, para escribir el adaptador `StatementSource` y sus fixtures sintéticas. Sin datos reales: los ficheros originales viven en `~/personal/atlas/privado/statements/myinvestor/`. Observado el 2026-08-30 sobre una cuenta recién abierta (sin fondos todavía), así que **la exportación de operaciones de fondos aún no se ha visto**; se completará con la primera suscripción.
 
 ## 1. `Movimientos_<desde>_<hasta>.xlsx` — movimientos de la cuenta de efectivo
 

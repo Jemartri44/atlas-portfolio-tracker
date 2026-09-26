@@ -30,7 +30,7 @@ El 2026-09-18 el usuario corrigió a la dirección precisamente por esto: **dele
 - Le gusta el detalle y que se le diga lo que no está bien, **incluidos tus propios errores**. Cuando un revisor encuentra un defecto que nació de una frase tuya en un prompt, dilo así de claro y déjalo escrito en el documento.
 - Commits: **Conventional Commits en inglés, solo asunto (≤ 72), atómicos, sin rastro de IA**. Lo verifican `.githooks/commit-msg` y `.claude/hooks/check-git-commit.py`, que **bloquea el comando entero de Bash** si algún `git commit -m` no cumple: si te pasa, no se ejecutó nada, acorta y repite.
 - Git flow con git básico: ramas `feature/*` o `fix/*` desde `develop`, PR con la plantilla y checklist honesta, **nunca push directo** a `develop`/`main`. Las ramas no están protegidas en GitHub, así que la disciplina es tuya.
-- Todo lo técnico en inglés; `docs/`, specs y constitución en español con identificadores en inglés. Privacidad: el repo es público, nada personal ni importes reales; los ficheros reales viven en `~/projects/atlas-private/`.
+- Todo lo técnico en inglés; `docs/`, specs y constitución en español con identificadores en inglés. Privacidad: el repo es público, nada personal ni importes reales; los ficheros reales viven en `~/personal/atlas/privado/`.
 
 ## 3. El ciclo de una feature
 
@@ -53,7 +53,7 @@ Además del implementador y los revisores, hay **tres papeles delegados**:
 **El encargo del agente verificador**, siempre (ya no lo ejecutas tú):
 
 ```bash
-cd ~/projects/atlas-portfolio-tracker/.claude/worktrees/NNN-<name>
+cd ~/personal/atlas/atlas-portfolio-tracker/.claude/worktrees/NNN-<name>
 rm -rf packages/*/dist packages/*/dist-test packages/*/dist-test-browser packages/*/dist-test-sync packages/*/coverage apps/cli/dist apps/cli/dist-test tests/dist coverage
 find . -name '*.tsbuildinfo' -not -path '*/node_modules/*' -delete
 npm ci && npm run lint && npm run typecheck && npm run test:coverage && npm audit --audit-level=high && npm run build
@@ -127,8 +127,8 @@ Rama **`feature/015-api-access`**, **una sola rama y cinco entregas, E1 a E5, co
 ### 5.5 Entorno
 
 - **El proyecto pasa a una máquina virtual Ubuntu de desarrollo.** Las sesiones van en **tmux**, y cada una se abre con **`cc <nombre>`**.
-- **La estructura es la de `CLAUDE.md`, «Where things live»**: el repositorio en `~/projects/atlas-portfolio-tracker`, cuya carpeta principal se queda siempre en `develop`; los worktrees en `.claude/worktrees/<rama-o-tarea>`; los datos privados en `~/projects/atlas-private/`; los secretos en `~/.config/atlas/`; los ficheros locales de Terraform en `~/projects/atlas-private/terraform/`; los temporales de los agentes en el *scratchpad*, con la rama o la tarea en el nombre.
-- En la máquina anterior, la carpeta privada seguía en `~/atlas-private/` (el registro de E1 cita allí sus capturas, `capturas/2026-09-25-015-e1/`). Lo que haga falta de ella se lleva a mano a `~/projects/atlas-private/`, nunca por git.
+- **La estructura es la de `CLAUDE.md`, «Where things live»**: el repositorio en `~/personal/atlas/atlas-portfolio-tracker`, cuya carpeta principal se queda siempre en `develop`; los worktrees en `.claude/worktrees/<rama-o-tarea>`; los datos privados en `~/personal/atlas/privado/`; los secretos en `~/.config/atlas/`; los ficheros locales de Terraform en `~/personal/atlas/privado/terraform/`; los temporales de los agentes en el *scratchpad*, con la rama o la tarea en el nombre.
+- En la máquina anterior, la carpeta privada seguía en `~/atlas-private/` (el registro de E1 cita allí sus capturas, `capturas/2026-09-25-015-e1/`). Lo que haga falta de ella se lleva a mano a `~/personal/atlas/privado/`, nunca por git.
 - **Todavía no hay ningún libro real del usuario.** Por eso ADR-0018 sigue admitiendo endurecer validaciones dentro de la v1 (5.7).
 
 ### 5.6 Lecciones de método de estos días
@@ -239,7 +239,7 @@ La sincronización todavía **no se puede configurar**: no hay órdenes ni boton
 
 ## 9. Lo que sigue siendo del usuario
 
-- **Fase 4 (AWS)**: coste mínimo (≈ 0,01-0,05 $/mes, cubierto por créditos mientras duren) y alarma de presupuesto a 1 $; plan por etapas en `docs/decision-roadmap.md` («Ronda 8 — Plan por etapas» y «Etapas pendientes»). **No hay organización ni cuentas miembro** (decisión del usuario del 2026-09-25, que no se reabre): Atlas va a una cuenta que el usuario ya tiene en el Paid Plan y **compartirá con futuros proyectos suyos**, sin clave KMS propia mientras C2 no la exija (ADR-0034, aceptada). **Antes de la 018** hace las comprobaciones de solo lectura C1-C19 de ADR-0034 y contesta sus preguntas, **C3 incluida**, y **C2 se vuelve a comprobar**. Al repositorio vuelve solo sí, no o un número. El identificador de la cuenta y el dominio van a `~/projects/atlas-private/terraform/<env>/terraform.tfvars`. **Cada `apply` necesita su visto bueno.**
+- **Fase 4 (AWS)**: coste mínimo (≈ 0,01-0,05 $/mes, cubierto por créditos mientras duren) y alarma de presupuesto a 1 $; plan por etapas en `docs/decision-roadmap.md` («Ronda 8 — Plan por etapas» y «Etapas pendientes»). **No hay organización ni cuentas miembro** (decisión del usuario del 2026-09-25, que no se reabre): Atlas va a una cuenta que el usuario ya tiene en el Paid Plan y **compartirá con futuros proyectos suyos**, sin clave KMS propia mientras C2 no la exija (ADR-0034, aceptada). **Antes de la 018** hace las comprobaciones de solo lectura C1-C19 de ADR-0034 y contesta sus preguntas, **C3 incluida**, y **C2 se vuelve a comprobar**. Al repositorio vuelve solo sí, no o un número. El identificador de la cuenta y el dominio van a `~/personal/atlas/privado/terraform/<env>/terraform.tfvars`. **Cada `apply` necesita su visto bueno.**
 - **La verificación en dos pasos en Google** (la cuenta de la lista permitida) **y en GitHub, y el MFA del usuario raíz de AWS**: son requisitos operativos del usuario (ADR-0027: la aplicación no puede comprobarlos, y E1 decidió no emitir `mfa_required`, Q2). **Se comprueban antes de la 018.** Guía: `docs/runbooks/google-2-step-verification.md`.
 - **La prueba real de la 013**, **desde el paso 3** de `docs/runbooks/013-daily-close-prices-live-test.md`, porque las claves ya están en `~/.config/atlas/secrets.json`. Son dos partes en días distintos, por el cupo de EODHD. No tiene que pasar ninguna clave ni ningún ISIN a nadie, y devuelve una plantilla. Sin ella, la feature no está verificada. Lo que diga cierra el SIN VERIFICAR de ADR-0031 y puede pedir otra nota en la ADR.
 - **Importadores**: no existe el XML de IBKR ni la exportación de operaciones de fondos de MyInvestor. Sin ficheros reales no hay parser.
