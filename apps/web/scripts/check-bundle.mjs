@@ -12,7 +12,12 @@
 //    the wrong size — so it is checked here and not left to the eye. Solid
 //    compiles a static `style={{…}}` into the HTML of its templates, which live
 //    inside the `.js`, so the `.js` is scanned too.
-// 4. Size within budget, printed so plan.md can record the measured value.
+// 4. Nothing the web must not reach, read on the **real graph** of the bundle
+//    (round 2 of the review of PR #90): the modules Rolldown put in each
+//    chunk, which `vite.config.ts` writes to `dist/.vite/atlas-modules.json`.
+//    This is the authoritative guard; the static ones of
+//    `tests/api-access.test.ts` are the quick warning.
+// 5. Size within budget, printed so plan.md can record the measured value.
 //    **Two** budgets since feature 007, because the two answer different
 //    questions and only one of them is felt on a phone: what the browser has to
 //    download **to boot** (what index.html preloads), and the total of
@@ -22,7 +27,7 @@
 //    failed the build without the boot path growing by a byte (Q6).
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, extname, join, relative } from "node:path";
+import { dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
@@ -807,6 +812,157 @@ const modulesOf = (name) => {
 const kb = (value) => `${(value / 1024).toFixed(1)} KB`;
 
 /**
+ * **What the web must never bundle**, read on the real graph of the build
+ * (round 2 of the review of PR #90, B2-bis and B3). The static guards read
+ * the sources, and a `//` inside a string, a relay that re-exports, a
+ * relative path into `packages/`, `require` and `import.meta.glob` each
+ * walked past them with every test green; only the ceiling of the bundle
+ * noticed, and the ceiling is not a guard. Whatever the path, a module in
+ * this list is in the graph or it is not in the bundle.
+ *
+ * `anywhere`: the module may not even be **loaded** into the graph — rendered
+ * or shaken off, reaching it is already the defect. `rendering`: loaded
+ * through a door that also serves the web is tolerated, **rendering a byte**
+ * is not. Every path is relative to the repository, and `dist/` is named
+ * with `src/`: a subpath without an alias resolves through `exports` to the
+ * compiled package.
+ */
+const FORBIDDEN_IN_WEB = [
+  // The hard requirement of feature 014 (D-Q17): **until P2 and P3 are in
+  // (E4), the web reaches nothing that configures the sync**: the client and
+  // its orchestration (`initialiseRemote`, `joinWithOwnLines`,
+  // `replaceFromRemote`, `syncDevice`, the held actions) and the HTTP client
+  // of E3. **Loosened only in E4**, in the same commit as the guard of
+  // `tests/api-access.test.ts`, and only after the commits of P2 and P3.
+  {
+    anywhere: /^packages\/adapters\/(src|dist)\/sync(-http)?\//,
+    what: "el cliente o la orquestación de la sincronización (D-Q17, hasta E4)",
+  },
+  // The engine of the domain, likewise until E4. The door `sync.ts` is
+  // loaded for the read-only question of the store of the sync, so its
+  // modules are in the graph; only the three the export and that question
+  // need may render a byte — named one by one, never by likeness.
+  {
+    rendering: /^packages\/domain\/(src|dist)\/sync(\.[jt]s$|\/(?!(archive|lines|marker)\.[jt]s$))/,
+    what: "el motor de la sincronización (D-Q17, hasta E4)",
+  },
+  // The rules of the access are the API's, never the web's.
+  { anywhere: /^packages\/domain\/(src|dist)\/access(\.[jt]s$|\/)/, what: "las reglas del acceso" },
+  // The Node adapters of the API, the SDK of AWS and the API itself.
+  {
+    anywhere: /^packages\/adapters\/(src|dist)\/(aws|access|identity)\//,
+    what: "un adaptador de Node de la API (AWS, acceso o Google)",
+  },
+  { anywhere: /(^|\/)node_modules\/@(aws-sdk|smithy|aws-crypto)\//, what: "el SDK de AWS" },
+  { anywhere: /^apps\/(api|cli)\//, what: "la API o la consola" },
+  // A builtin of Node, however Vite names it once it stubs it for the browser.
+  { anywhere: /(^|\0)node:|__vite-browser-external/, what: "un módulo de Node" },
+  // The doubles of S3, SSM and Google, the local server of the captures, and
+  // anything under a folder of tests.
+  { anywhere: /(^|\/)(test|tests)\/|test-only-/, what: "un doble o código de test" },
+];
+
+/**
+ * The store of the sync is bundled for one read-only question (V7 of the
+ * 014), and that file also holds the writer of the `sync:*` keys. So its
+ * **rendered exports**, what the bundle actually uses of it, are read by name:
+ * the question and the names of the keys, never `BrowserSyncStore`. Loosened
+ * in E4 with the rest.
+ */
+const SYNC_STORE = /^packages\/adapters\/(src|dist)\/ledger-store\/browser\/sync-store\.[jt]s$/;
+const SYNC_STORE_READ_ONLY = new Set([
+  "browserSyncConfigured",
+  "browserSyncPresence",
+  "SYNC_STATE_KEY",
+  "SYNC_HELD_KEY",
+  "SYNC_DISCARDED_KEY",
+]);
+
+const repoRoot = resolve(webRoot, "..", "..");
+const graphFile = join(dist, ".vite", "atlas-modules.json");
+const graph = statSync(graphFile, { throwIfNoEntry: false })
+  ? JSON.parse(readFileSync(graphFile, "utf8"))
+  : { chunks: [] };
+for (const chunk of graph.chunks) {
+  for (const module of chunk.modules) {
+    for (const rule of FORBIDDEN_IN_WEB) {
+      const loaded = rule.anywhere?.test(module.id) === true;
+      const rendered = rule.rendering?.test(module.id) === true && module.bytes > 0;
+      if (loaded || rendered) {
+        problems.push(
+          `${chunk.file} trae ${rule.what}: ${module.id.replace("\0", "\\0")}${rendered ? ` (${module.bytes} bytes)` : ""}`,
+        );
+      }
+    }
+    if (SYNC_STORE.test(module.id)) {
+      for (const name of module.exports.filter((name) => !SYNC_STORE_READ_ONLY.has(name))) {
+        problems.push(
+          `${chunk.file} usa ${name} del almacén de la sincronización, que solo se puede leer (D-Q17, hasta E4)`,
+        );
+      }
+    }
+  }
+}
+
+/*
+ * Guards on the guard: the graph exists, covers **every** chunk of the output,
+ * holds the entry and the domain, and names every module the source maps say
+ * a chunk is made of — so a plugin that stopped seeing a chunk, or a chunk the
+ * graph does not describe, stops the build instead of passing by looking at
+ * nothing.
+ */
+const graphed = new Map(graph.chunks.map((chunk) => [chunk.file, chunk]));
+const everyModule = graph.chunks.flatMap((chunk) => chunk.modules.map((module) => module.id));
+if (graph.chunks.length === 0) {
+  problems.push(
+    `no se ha podido leer el grafo de módulos del bundle (${relative(repoRoot, graphFile)})`,
+  );
+}
+if (
+  !everyModule.includes("apps/web/src/main.tsx") ||
+  !everyModule.some((id) => id.startsWith("packages/domain/src/"))
+) {
+  problems.push(
+    "el grafo de módulos no tiene la entrada de la web o el dominio: no describe este bundle",
+  );
+}
+for (const path of files(dist).filter((path) => extname(path) === ".js")) {
+  const name = relative(dist, path).replaceAll("\\", "/");
+  const map = `${path}.map`;
+  const chunk = graphed.get(name);
+  if (!statSync(map, { throwIfNoEntry: false })) {
+    // Without a map, only a chunk of the graph (the runtime of Rolldown) or
+    // the one-line registration of the service worker the plugin writes.
+    if (chunk === undefined && name !== "registerSW.js") {
+      problems.push(`${name}: el grafo de módulos no describe este chunk`);
+    }
+    continue;
+  }
+  const sources = JSON.parse(readFileSync(map, "utf8")).sources;
+  if (chunk === undefined && /^(sw|workbox-[\w-]+)\.js$/.test(name)) {
+    // The service worker is built by Workbox, not by Rolldown, so it is not in
+    // the graph: it may hold Workbox and the file Workbox generates, nothing else.
+    for (const source of sources) {
+      if (!/(^|\/)node_modules\/workbox-[a-z-]+\/|\/sw\.js$/.test(source)) {
+        problems.push(`${name}: el service worker trae ${source}, que no es de Workbox`);
+      }
+    }
+    continue;
+  }
+  if (chunk === undefined) {
+    problems.push(`${name}: el grafo de módulos no describe este chunk`);
+    continue;
+  }
+  const ids = new Set(chunk.modules.map((module) => module.id));
+  for (const source of sources) {
+    const id = relative(repoRoot, resolve(dirname(path), source)).replaceAll("\\", "/");
+    if (!ids.has(id)) {
+      problems.push(`${name}: su source map nombra ${id} y el grafo de módulos no`);
+    }
+  }
+}
+
+/**
  * Feature 015: the service worker answers every navigation with the shell of
  * the SPA (`navigateFallback`) **except under `/api/`**, which is the API's:
  * the start of a sign-in and the return from Google. Checked on the output,
@@ -882,4 +1038,6 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log("Sin node: builtins, sin orígenes ajenos, dentro del presupuesto.");
+console.log(
+  "Sin node: builtins, sin módulos vetados para la web, sin orígenes ajenos, dentro del presupuesto.",
+);

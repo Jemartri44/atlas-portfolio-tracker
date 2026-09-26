@@ -10,12 +10,14 @@
 //    FileLedgerStore. Only the subpaths are aliased, and both the architecture
 //    test and scripts/check-bundle.mjs verify it on the real output.
 
+import { isAbsolute, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import solid from "vite-plugin-solid";
 
 const repo = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
+const repoRoot = repo("../../");
 
 /**
  * Production CSP (constitution, security; ADR-0017). The dev server needs inline
@@ -57,6 +59,40 @@ export default defineConfig(({ command }) => ({
       name: "atlas-csp",
       transformIndexHtml: (html: string): string =>
         command === "serve" ? html.replace(PRODUCTION_CSP, DEVELOPMENT_CSP) : html,
+    },
+    {
+      /*
+       * **The real graph of the bundle**, for the authoritative guard (round 2
+       * of the review of PR #90): every module Rolldown put in every chunk,
+       * written next to the output for `scripts/check-bundle.mjs` to read.
+       * The static guards of `tests/api-access.test.ts` read the sources and
+       * are a quick warning; what the browser can download is decided here,
+       * and a module the web must not reach — however it got in: a relay, a
+       * relative path, `require`, `import.meta.glob`, a string — is in this
+       * list or it is not in the bundle. Paths relative to the repository,
+       * `/`-separated. Never precached nor served: `.json` is not among the
+       * patterns of the service worker, and the deploy (017) leaves `.vite/`
+       * out like Vite's own manifest.
+       */
+      name: "atlas-module-graph",
+      apply: "build",
+      generateBundle(_options, bundle) {
+        const chunks = Object.values(bundle)
+          .filter((output) => output.type === "chunk")
+          .map((chunk) => ({
+            file: chunk.fileName,
+            modules: chunk.moduleIds.map((id) => ({
+              id: isAbsolute(id) ? relative(repoRoot, id).replaceAll("\\", "/") : id,
+              bytes: chunk.modules[id]?.renderedLength ?? 0,
+              exports: chunk.modules[id]?.renderedExports ?? [],
+            })),
+          }));
+        this.emitFile({
+          type: "asset",
+          fileName: ".vite/atlas-modules.json",
+          source: `${JSON.stringify({ chunks }, null, 1)}\n`,
+        });
+      },
     },
     VitePWA({
       registerType: "autoUpdate",
