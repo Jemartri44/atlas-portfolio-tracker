@@ -129,6 +129,11 @@ export class FakeTransaction {
     if (this.mode !== "readwrite") {
       throw new DOMException("read-only transaction", "ReadOnlyError");
     }
+    if (this.db.takeCut()) {
+      // The tab dies in the middle of a write (feature 015, E3, point 7): the
+      // request fails, the transaction aborts and rolls back everything.
+      throw new DOMException("cut at web write", "AbortError");
+    }
     this.db.store(this.storeName).set(key, value);
     this.written.add(key);
   }
@@ -238,6 +243,21 @@ export class FakeDatabase {
   readonly durability: IDBTransactionDurability[] = [];
   private readonly stores = new Map<string, Values>();
   private readonly pending: FakeTransaction[] = [];
+  private cuts = 0;
+
+  /** The next write of a read-write transaction fails as a cut: it aborts and rolls back. */
+  cutNextWrite(): void {
+    this.cuts = 1;
+  }
+
+  /** Whether a write has to fail as a cut now; consumes it. */
+  takeCut(): boolean {
+    if (this.cuts === 0) {
+      return false;
+    }
+    this.cuts -= 1;
+    return true;
+  }
   private running: FakeTransaction | undefined;
 
   constructor(storeNames: readonly string[]) {
