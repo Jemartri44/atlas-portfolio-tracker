@@ -82,3 +82,6 @@ ledger*.jsonl
 demo*.jsonl
 backups/
 *.tmp-*
+
+# Agent worktrees created inside the clone
+.claude/worktrees/
