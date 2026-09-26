@@ -8,7 +8,16 @@ import { randomBytes } from "node:crypto";
 import { base64url, pkceChallenge, Signer } from "@atlas/adapters/access";
 import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
-import { ALLOWED, allowListOf, errorOf, NAMES, SESSION_KEY, setCookies, setup } from "./harness.js";
+import {
+  ALLOWED,
+  allowListOf,
+  errorOf,
+  NAMES,
+  SESSION_KEY,
+  STRANGER,
+  setCookies,
+  setup,
+} from "./harness.js";
 
 const DAY = 86_400_000;
 const PORT = "49152";
@@ -38,12 +47,13 @@ const consoleReturn = async (
   api: Api,
   extra: Record<string, string> = {},
   secrets = consoleSecrets(),
+  account: typeof ALLOWED = ALLOWED,
 ) => {
   const start = await api.call("GET", "/api/auth/console/start", {
     query: startQuery(secrets, extra),
     jar: true,
   });
-  const back = api.google.authorize(start.headers.location as string, ALLOWED);
+  const back = api.google.authorize(start.headers.location as string, account);
   const done = await api.call("GET", "/api/auth/callback", {
     query: { code: back.code, state: back.state },
   });
@@ -554,6 +564,14 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
     for (const tokenId of ["AAAAAAAAAAAAAAAAAAAAAA", "BBBBBBBBBBBBBBBBBBBBBB"]) {
       api.ssm.set(`${TOKENS}${tokenId}`, record(tokenId));
     }
+    // A live token of **another** console: the reissue of ID never touches it
+    // (review of PR #95, B1: revoking every record survived).
+    const other = "OTHEROTHEROTHEROTHEROT";
+    const otherRecord = record(other).replace(
+      `"device_id":"${ID}"`,
+      '"device_id":"DDDDDDDDDDDDDDDDDDDDDD"',
+    );
+    api.ssm.set(`${TOKENS}${other}`, otherRecord);
     const { done, secrets } = await consoleReturn(api, { reissue_device_id: ID });
     const link = /<a href="([^"]+)"/.exec(done.body)?.[1]?.replaceAll("&amp;", "&") as string;
     const answer = await exchange(api, codeOfLoopback(link), secrets.verifier);
@@ -565,10 +583,18 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
         "revoked_at",
       );
     }
+    expect(api.ssm.history(`${TOKENS}${other}`)).toEqual([otherRecord]);
+    expect(api.ssm.writes.some((write) => write.endsWith(other))).toBe(false);
     const writes = api.ssm.writes.filter(
       (write) => !write.startsWith("putNew /atlas/dev/device-tokens/AAAA"),
     );
     expect(writes.at(-1)).toBe(`putNew ${TOKENS}${body.token_id}`);
+    // The record keeps the name of the device the user confirmed, the one of
+    // its object, not the one the console proposed (review of PR #95, N7).
+    expect(body.device_name).toBe("sobremesa");
+    expect(JSON.parse(api.ssm.history(`${TOKENS}${body.token_id}`)[0] as string).device_name).toBe(
+      "sobremesa",
+    );
     // Forgotten between the return and the exchange: refused at the exchange too.
     const later = await consoleReturn(api, { reissue_device_id: ID });
     const code = codeOfLoopback(
@@ -578,6 +604,142 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
     expect(errorOf(await exchange(api, code, later.secrets.verifier)).code).toBe(
       "reissue_device_forgotten",
     );
+  });
+});
+
+describe("the exchange sent again, and the rules no test tied (review of PR #95)", () => {
+  const reissueCode = async (api: Api, id: string) => {
+    const { done, secrets } = await consoleReturn(api, { reissue_device_id: id });
+    const link = /<a href="([^"]+)"/.exec(done.body)?.[1]?.replaceAll("&amp;", "&") as string;
+    return { code: codeOfLoopback(link), verifier: secrets.verifier };
+  };
+  const newRecordName = (api: Api): string =>
+    api.ssm.writes
+      .filter((write) => write.startsWith("putNew "))
+      .map((write) => write.slice("putNew ".length))
+      .at(-1) as string;
+
+  it("answers a code sent again with 409 and writes nothing: issue, renewal and reissue (N1)", async () => {
+    const api = setup();
+    // Issue.
+    const { done, secrets } = await consoleReturn(api);
+    const code = codeOfLoopback(done.headers.location as string);
+    const first = JSON.parse((await exchange(api, code, secrets.verifier)).body);
+    let writes = api.ssm.writes.length;
+    expect(errorOf(await exchange(api, code, secrets.verifier)).code).toBe("console_code_used");
+    expect(api.ssm.writes.length).toBe(writes);
+    // Renewal: the code sent again, with the token it just handed out.
+    const renewal = await consoleReturn(api);
+    const renewalCode = codeOfLoopback(renewal.done.headers.location as string);
+    const second = JSON.parse(
+      (
+        await exchange(api, renewalCode, renewal.secrets.verifier, {
+          "x-atlas-device-token": first.token,
+        })
+      ).body,
+    );
+    writes = api.ssm.writes.length;
+    const again = await exchange(api, renewalCode, renewal.secrets.verifier, {
+      "x-atlas-device-token": second.token,
+    });
+    expect(errorOf(again).code).toBe("console_code_used");
+    expect(api.ssm.writes.length).toBe(writes);
+    // Reissue: the code sent again does not revoke the token just handed out.
+    const reissue = await reissueCode(api, first.device_id as string);
+    const third = JSON.parse((await exchange(api, reissue.code, reissue.verifier)).body);
+    writes = api.ssm.writes.length;
+    expect(errorOf(await exchange(api, reissue.code, reissue.verifier)).code).toBe(
+      "console_code_used",
+    );
+    expect(api.ssm.writes.length).toBe(writes);
+    expect(
+      JSON.parse(api.ssm.history(`${TOKENS}${third.token_id}`).at(-1) as string),
+    ).not.toHaveProperty("revoked_at");
+  });
+
+  it("refuses to renew with the token of another sub, writing nothing (B2, other_subject)", async () => {
+    const api = setup();
+    api.ssm.set(NAMES.allowList, allowListOf(ALLOWED, STRANGER));
+    const mine = (await login(api)).body;
+    const theirs = await consoleReturn(api, {}, consoleSecrets(), STRANGER);
+    const writes = api.ssm.writes.length;
+    const answer = await exchange(
+      api,
+      codeOfLoopback(theirs.done.headers.location as string),
+      theirs.secrets.verifier,
+      { "x-atlas-device-token": mine.token as string },
+    );
+    expect(answer.statusCode).toBe(403);
+    expect(errorOf(answer)).toEqual({ code: "not_allowed", details: { reason: "other_subject" } });
+    expect(api.ssm.writes.length).toBe(writes);
+  });
+
+  it("refuses to renew and reissue at once, writing nothing (renewal_and_reissue)", async () => {
+    const api = setup();
+    const mine = (await login(api)).body;
+    const reissue = await reissueCode(api, mine.device_id as string);
+    const writes = api.ssm.writes.length;
+    const answer = await exchange(api, reissue.code, reissue.verifier, {
+      "x-atlas-device-token": mine.token as string,
+    });
+    expect(errorOf(answer)).toEqual({
+      code: "body_invalid",
+      details: { reason: "renewal_and_reissue" },
+    });
+    expect(api.ssm.writes.length).toBe(writes);
+  });
+
+  it("revokes the new token and answers 503 when the device cannot be created (N3)", async () => {
+    const api = setup();
+    const { done, secrets } = await consoleReturn(api);
+    api.s3.failNext();
+    const answer = await exchange(
+      api,
+      codeOfLoopback(done.headers.location as string),
+      secrets.verifier,
+    );
+    expect(answer.statusCode).toBe(503);
+    expect(errorOf(answer)).toEqual({ code: "remote_unavailable", details: { dependency: "s3" } });
+    expect(answer.body).not.toContain("atlasdt1");
+    expect(JSON.parse(api.ssm.history(newRecordName(api)).at(-1) as string)).toHaveProperty(
+      "revoked_at",
+    );
+  });
+
+  it("revokes the new token and hands nothing out when the new device id is taken (collision)", async () => {
+    const api = setup({ random: (bytes) => new Uint8Array(bytes).fill(9) });
+    const taken = Buffer.alloc(16, 9).toString("base64url");
+    api.s3.seed(
+      `sync/devices/${taken}.json`,
+      serializeDeviceObject(
+        newDevice({ deviceId: taken, type: "web", createdAt: "2026-09-01T10:00:00Z" }),
+      ),
+    );
+    const { done, secrets } = await consoleReturn(api);
+    const answer = await exchange(
+      api,
+      codeOfLoopback(done.headers.location as string),
+      secrets.verifier,
+    );
+    expect(answer.statusCode).toBe(500);
+    expect(answer.body).not.toContain("atlasdt1");
+    expect(JSON.parse(api.ssm.history(newRecordName(api)).at(-1) as string)).toHaveProperty(
+      "revoked_at",
+    );
+  });
+
+  it("says a record that cannot be read apart from one that does not exist (token_unreadable)", async () => {
+    const api = setup();
+    const id = "UUUUUUUUUUUUUUUUUUUUUU";
+    api.ssm.set(`${TOKENS}${id}`, "{");
+    await api.signIn();
+    const writes = api.ssm.writes.length;
+    const answer = await api.call("POST", `/api/devices/tokens/${id}/revoke`, {
+      headers: { "content-type": "application/json", origin: "https://atlas.example" },
+      body: "{}",
+    });
+    expect(errorOf(answer)).toEqual({ code: "not_found", details: { reason: "token_unreadable" } });
+    expect(api.ssm.writes.length).toBe(writes);
   });
 });
 

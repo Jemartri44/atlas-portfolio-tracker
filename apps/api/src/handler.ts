@@ -500,8 +500,15 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         refusal("not_allowed", entry === "ambiguous" ? { reason: "ambiguous_subject" } : {}),
       );
     }
+    // A code sent again is answered **before anything is revoked** (review of
+    // PR #95, N1): its record already exists, and a renewal or a reissue sent
+    // twice would otherwise revoke the token the first exchange handed out.
+    if ((await tokens.read(code.tid)) !== undefined) {
+      return { ...fail(refusal("console_code_used")), tokenId: code.tid };
+    }
     const nowMs = deps.now().getTime();
     let deviceId: string;
+    let deviceName = code.dn;
     let how: "token_issued" | "token_renewed" | "token_reissued";
     if (admission.kind === "token") {
       if (code.rdid !== undefined) {
@@ -520,10 +527,14 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       deviceId = previous.device_id;
       how = "token_renewed";
     } else if (code.rdid !== undefined) {
-      const refused = reissueRefusal(await devices.read(code.rdid));
-      if (refused !== undefined) {
-        return fail(refusal(refused));
+      const device = await devices.read(code.rdid);
+      const refused = reissueRefusal(device);
+      if (refused !== undefined || typeof device !== "object") {
+        return fail(refusal(refused ?? "reissue_device_missing"));
       }
+      // The name the user confirmed on the page is the device's, not the one
+      // the console proposed (review of PR #95, N7).
+      deviceName = device.device_name ?? code.dn;
       for (const listed of await tokens.list()) {
         if (typeof listed.read === "object" && listed.read.device_id === code.rdid) {
           await tokens.revoke(listed.read, nowMs);
@@ -542,28 +553,37 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       sub: entry.sub,
       email: entry.email,
       deviceId,
-      deviceName: code.dn,
+      deviceName,
       issuedAtMs: nowMs,
       lifetimeDays: config.tokenLifetimeDays,
     });
     if ((await tokens.create(record)) === "exists") {
       return { ...fail(refusal("console_code_used")), tokenId: code.tid };
     }
-    if (
-      how === "token_issued" &&
-      (await devices.create(
-        newDevice({
-          deviceId,
-          type: "console",
-          createdAt: deps.now().toISOString(),
-          deviceName: code.dn,
-        }),
-      )) === "exists"
-    ) {
-      // 128 random bits already taken: the new token must not name another
-      // device's object. It is revoked, and nothing is handed out.
-      await tokens.revoke(record, nowMs);
-      throw new Error("device id collision");
+    if (how === "token_issued") {
+      let created: "created" | "exists";
+      try {
+        created = await devices.create(
+          newDevice({
+            deviceId,
+            type: "console",
+            createdAt: deps.now().toISOString(),
+            deviceName,
+          }),
+        );
+      } catch (error) {
+        // S3 failed after the record was created (review of PR #95, N3): the
+        // token is revoked — tried a few times, as much as can be — and
+        // nothing is handed out; the failure answers as what it is (503).
+        await revokeAsMuchAsCan(record, nowMs);
+        throw error;
+      }
+      if (created === "exists") {
+        // 128 random bits already taken: the new token must not name another
+        // device's object. It is revoked, and nothing is handed out.
+        await revokeAsMuchAsCan(record, nowMs);
+        throw new Error("device id collision");
+      }
     }
     return {
       result: json(200, {
@@ -577,6 +597,18 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       code: how,
       tokenId: record.token_id,
     };
+  };
+
+  /** Revokes a record just created, retrying a transient failure; a record left alive is logged by the caller's 5xx. */
+  const revokeAsMuchAsCan = async (record: TokenRecord, nowMs: number): Promise<void> => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await tokens.revoke(record, nowMs);
+        return;
+      } catch {
+        // Tried again below; the answer is a 5xx either way.
+      }
+    }
   };
 
   /** `POST /api/auth/console/revoke` (§4.4): **this** token, and only this one. */
