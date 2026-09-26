@@ -27,6 +27,12 @@ export const API_CONFIG_CEILINGS = {
   ATLAS_CONSOLE_CODE_TTL_SECONDS: 15 * 60,
   ATLAS_ALLOW_LIST_CACHE_SECONDS: 3600,
   ATLAS_SECRETS_CACHE_SECONDS: 3600,
+  // Round 2 of the review of PR #90: the tolerance of the clock on the
+  // `recorded_at` of an appended line (`docs/api.md` §5.2) and the window of
+  // «recent» issues in the list of tokens (§4.5) had no ceiling. An hour and
+  // ninety days are outer limits; the settings are ten minutes and seven days.
+  ATLAS_CLOCK_TOLERANCE_SECONDS: 3600,
+  ATLAS_RECENT_ISSUE_DAYS: 90,
 } as const;
 
 const CEILING_OF: Readonly<Record<string, number>> = API_CONFIG_CEILINGS;

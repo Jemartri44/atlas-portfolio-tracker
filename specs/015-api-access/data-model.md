@@ -132,7 +132,7 @@ El guion de secretos de la 017 los crea **tal cual** (ADR-0034, fila 21). Esta f
 | `ATLAS_ALLOW_LIST_CACHE_SECONDS` | Caché de la lista permitida | **120** |
 | `ATLAS_SECRETS_CACHE_SECONDS` | Caché del secreto del cliente y de la clave de sesión | **300** |
 
-**Techos fijos en el código** (revisión de seguridad de la PR #90, S4, 2026-09-26): sesión ≤ 86.400 s (24 h), cookie transitoria ≤ 1.800 s (30 min), código de la consola ≤ 900 s (15 min), cada caché ≤ 3.600 s (1 h), token ≤ 120 días. Por encima, la configuración se rechaza (`above_ceiling`) y la Lambda no arranca.
+**Techos fijos en el código** (revisión de seguridad de la PR #90, S4, 2026-09-26): sesión ≤ 86.400 s (24 h), cookie transitoria ≤ 1.800 s (30 min), código de la consola ≤ 900 s (15 min), cada caché ≤ 3.600 s (1 h), token ≤ 120 días; y, desde la ronda 2 de la revisión (2026-09-26), la tolerancia del reloj ≤ 3.600 s (1 h) y las emisiones «recientes» ≤ 90 días. Por encima, la configuración se rechaza (`above_ceiling`) y la Lambda no arranca.
 
 ## 6. El objeto del dispositivo: `sync/devices/<device_id>.json` (forma decidida, §6.2 (d bis); `details.reason` de Q3)
 
