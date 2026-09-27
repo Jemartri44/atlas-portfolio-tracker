@@ -195,6 +195,62 @@ describe("atlas admin restore (ADR-0032, the six steps)", () => {
     expect(api.s3.text(LEDGER)).toBe(text(seeded));
   });
 
+  it("writes the candidate's bytes as they are, never serialised again (replaceLines)", async () => {
+    const api = setup();
+    api.s3.seed(LEDGER, text(seeded));
+    // The same events with their keys in another order: valid, and not what
+    // the encoder of today writes. A rewrite that serialises would change them.
+    const reordered = seeded
+      .slice(0, 2)
+      .map((line) =>
+        JSON.stringify(Object.fromEntries(Object.entries(JSON.parse(line)).reverse())),
+      );
+    expect(reordered[0]).not.toBe(seeded[0]);
+    api.s3.seed("backups/2026-07/ledger.jsonl", text(reordered));
+    const { c } = await adminConsole(api);
+    expect(await c.exec(["admin", "restore", "--env", "test", "--from", "backups/2026-07"])).toBe(
+      EXIT.ok,
+    );
+    expect(api.s3.text(LEDGER)).toBe(text(reordered));
+  });
+
+  it("writes nothing when the remote changed between the comparison and the write", async () => {
+    const api = setup();
+    api.s3.seed(LEDGER, text(seeded));
+    api.s3.seed("backups/2026-09/ledger.jsonl", text(seeded.slice(0, 2)));
+    const moved = text([
+      ...seeded,
+      encodeLine({ ...seed()[0], id: "01ARYZ6S41TSV4RRFFQ69G5ZZY" } as never),
+    ]);
+    // The second read of the ledger comes after the confirmation of step 4:
+    // another writer got there first.
+    let reads = 0;
+    const objects = new Proxy(api.s3, {
+      get: (target, name, receiver) =>
+        name === "get"
+          ? async (key: string) => {
+              if (key === LEDGER && ++reads === 2) {
+                target.seed(LEDGER, moved);
+              }
+              return target.get(key);
+            }
+          : Reflect.get(target, name, receiver),
+    });
+    const folder = await mkdtemp(join(tmpdir(), "atlas-admin-"));
+    const c = harness({
+      events: seed(),
+      admin: {
+        clientsFor: async () => ({ objects, parameters: api.ssm, ssmPrefix: CONFIG.ssmPrefix }),
+      },
+      ledgerPath: join(folder, "ledger.jsonl"),
+      confirm: true,
+    });
+    expect(await c.exec(["admin", "restore", "--env", "test", "--from", "backups/2026-09"])).toBe(
+      EXIT.conflict,
+    );
+    expect(api.s3.text(LEDGER)).toBe(moved);
+  });
+
   it("restores an older version of the object, compared event by event", async () => {
     const api = setup();
     api.s3.seed(LEDGER, text(seeded.slice(0, 1)));
