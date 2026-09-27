@@ -11,6 +11,7 @@ import {
 } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
 import { LEDGER_STORE } from "../../src/ledger-store/browser/idb.js";
+import { BrowserLedgerBlob } from "../../src/ledger-store/browser/indexeddb.js";
 import {
   SYNC_DEVICE_KEY,
   SYNC_HELD_KEY,
@@ -19,6 +20,7 @@ import {
 import {
   etagOfText,
   exportLedgerAndHeld,
+  heldDownloaded,
   replaceLedgerText,
 } from "../../src/ledger-store/browser/transfer.js";
 import { base, textOf } from "./builder.js";
@@ -106,5 +108,20 @@ describe("exporting a synced browser (P3)", () => {
     expect(web.db.store(LEDGER_STORE).get("current:meta")).toEqual({
       lastExportAt: when.toISOString(),
     });
+  });
+
+  // Round 2 of the review of PR #97, N2: the export owes what is held back
+  // until its file is downloaded; the date stays.
+  it("owes what is held back until it is downloaded apart, and keeps the date", async () => {
+    const web = webDevice(base());
+    const blob = new BrowserLedgerBlob(web.open);
+    const when = new Date("2027-01-01T00:00:00Z");
+    await exportLedgerAndHeld(when, web.open);
+    expect(await blob.exportState()).toEqual({ lastExportAt: when.toISOString() });
+    web.db.store(LEDGER_STORE).set(SYNC_HELD_KEY, held);
+    await exportLedgerAndHeld(when, web.open);
+    expect(await blob.exportState()).toEqual({ lastExportAt: when.toISOString(), heldOwed: 1 });
+    await heldDownloaded(web.open);
+    expect(await blob.exportState()).toEqual({ lastExportAt: when.toISOString() });
   });
 });

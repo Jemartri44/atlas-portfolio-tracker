@@ -6,7 +6,8 @@
 // the user to ignore the one that will matter.
 
 import { describe, expect, it } from "vitest";
-import { openLedger, showInShell, text, withGoldenLedger } from "./helpers/render.jsx";
+import { store } from "../src/ledger/state.js";
+import { openLedger, settle, showInShell, text, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -27,5 +28,34 @@ describe("the chip of the data", () => {
     expect(text(chip)).toContain("Navegador");
     expect(chip?.querySelector(".age")).toBeNull();
     expect(chip?.getAttribute("title")).toContain("Todavía no hay nada que exportar");
+  });
+
+  // Round 2 of the review of PR #97, N2: an export with something held back
+  // is not complete until what is held is downloaded too.
+  it("says what is held back is still to be downloaded, until it is", async () => {
+    const exported = (heldOwed?: number) => {
+      const current = store.load();
+      if (current.phase !== "ready") {
+        throw new Error("no ledger");
+      }
+      const { heldOwed: _gone, ...rest } = current.source;
+      store.setLoad({
+        ...current,
+        source: {
+          ...rest,
+          lastExportAt: "2029-07-01T09:00:00.000Z",
+          ...(heldOwed === undefined ? {} : { heldOwed }),
+        },
+      });
+    };
+    exported(2);
+    const host = await showInShell("/", screen);
+    const chip = () => host.querySelector(".source");
+    expect(text(chip())).toContain("falta descargar lo retenido");
+    expect(chip()?.querySelector(".age.is-overdue")).not.toBeNull();
+    exported();
+    await settle(10);
+    expect(text(chip())).toContain("exportado hoy");
+    expect(chip()?.querySelector(".age.is-overdue")).toBeNull();
   });
 });

@@ -7,7 +7,12 @@
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { BrowserLedgerBlob } from "@atlas/adapters/browser";
-import { etagOfText, exportLedgerAndHeld, replaceLedgerText } from "@atlas/adapters/transfer";
+import {
+  etagOfText,
+  exportLedgerAndHeld,
+  heldDownloaded,
+  replaceLedgerText,
+} from "@atlas/adapters/transfer";
 import { countOf } from "../format/number.js";
 import { loadInto } from "./actions.js";
 import { store } from "./state.js";
@@ -39,8 +44,32 @@ export interface ExportResult {
   readonly heldUnreadable?: true;
 }
 
-/** Downloads what is held back, from its own gesture (review of PR #97, security B2). */
-export const downloadHeld = (held: HeldExport): void => download(held.text, EXPORT_HELD_FILE_NAME);
+/** The export as the chip reads it: its date, and what it still owes. */
+const markSource = (lastExportAt: string, heldOwed: number | undefined): void => {
+  const current = store.load();
+  if (current.phase !== "ready") {
+    return;
+  }
+  const { heldOwed: _paid, ...rest } = current.source;
+  store.setLoad({
+    ...current,
+    source: { ...rest, lastExportAt, ...(heldOwed === undefined ? {} : { heldOwed }) },
+  });
+};
+
+/**
+ * Downloads what is held back, from its own gesture (review of PR #97,
+ * security B2), and marks it downloaded: until then the export is not
+ * complete, and the chip says so (round 2, N2).
+ */
+export const downloadHeld = async (held: HeldExport): Promise<void> => {
+  download(held.text, EXPORT_HELD_FILE_NAME);
+  await heldDownloaded();
+  const current = store.load();
+  if (current.phase === "ready" && current.source.lastExportAt !== undefined) {
+    markSource(current.source.lastExportAt, undefined);
+  }
+};
 
 /**
  * What the export says, in one sentence: the file of the ledger and, when
@@ -79,13 +108,7 @@ export const exportLedger = async (): Promise<ExportResult> => {
   const when = new Date();
   const exported = await exportLedgerAndHeld(when);
   download(exported.text, EXPORT_FILE_NAME);
-  const current = store.load();
-  if (current.phase === "ready") {
-    store.setLoad({
-      ...current,
-      source: { ...current.source, lastExportAt: when.toISOString() },
-    });
-  }
+  markSource(when.toISOString(), exported.heldOperations);
   if (exported.heldUnreadable === true) {
     return { heldUnreadable: true };
   }

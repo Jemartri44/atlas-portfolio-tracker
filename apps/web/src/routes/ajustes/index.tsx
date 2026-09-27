@@ -151,7 +151,7 @@ export default function AjustesRoute(): JSX.Element {
                         <button
                           type="button"
                           class="secondary"
-                          onClick={() => downloadHeld(pending())}
+                          onClick={() => void downloadHeld(pending())}
                         >
                           <Icon name="export" class="icon-sm" />
                           Descargar lo retenido

@@ -34,12 +34,7 @@ export const openBrowserStorage = async (): Promise<OpenedLedger> => {
   const blob = new BrowserLedgerBlob();
   const persisted = await requestPersistentStorage();
   rememberKind("browser");
-  const lastExportAt = await blob.lastExportAt();
-  const source: BrowserSource = {
-    kind: "browser",
-    persisted,
-    ...(lastExportAt === undefined ? {} : { lastExportAt }),
-  };
+  const source: BrowserSource = { kind: "browser", persisted, ...(await blob.exportState()) };
   return { deps: depsFor(new BlobLedgerStore(blob)), source, browser: blob };
 };
 

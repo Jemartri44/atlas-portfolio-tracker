@@ -144,7 +144,7 @@ describe("BrowserLedgerBlob", () => {
       // …and, at the moment it was, the ledger was exactly what was handed over.
       expect((commit.snapshot.get("current") as StoredLedger).text).toBe(exported);
       expect(commit.snapshot.get("current:meta")).toEqual({ lastExportAt: when.toISOString() });
-      expect(await blob.lastExportAt()).toBe(when.toISOString());
+      expect((await blob.exportState()).lastExportAt).toBe(when.toISOString());
     }
   });
 
@@ -152,27 +152,27 @@ describe("BrowserLedgerBlob", () => {
     const { blob, db, exportText } = browser();
     expect(await exportText(new Date())).toBe("");
     expect(db.commits).toEqual([]);
-    expect(await blob.lastExportAt()).toBeUndefined();
+    expect((await blob.exportState()).lastExportAt).toBeUndefined();
   });
 
   it("does not inherit the export date of the ledger an import replaces (D4)", async () => {
     const { blob, exportText, replaceText } = browser(`${lineOf(account)}\n`);
     await exportText(new Date("2026-09-20T10:00:00.000Z"));
-    expect(await blob.lastExportAt()).toBe("2026-09-20T10:00:00.000Z");
+    expect((await blob.exportState()).lastExportAt).toBe("2026-09-20T10:00:00.000Z");
     await replaceText(`${lineOf(deposit)}\n`);
     expect(await blob.text()).toBe(`${lineOf(deposit)}\n`);
-    expect(await blob.lastExportAt()).toBeUndefined();
+    expect((await blob.exportState()).lastExportAt).toBeUndefined();
   });
 
   it("still reads, and keeps, the export date a record carried before feature 012", async () => {
     const { blob, store, replaceText } = browser(`${lineOf(account)}\n`, {
       lastExportAt: "2026-09-01T09:00:00.000Z",
     });
-    expect(await blob.lastExportAt()).toBe("2026-09-01T09:00:00.000Z");
+    expect((await blob.exportState()).lastExportAt).toBe("2026-09-01T09:00:00.000Z");
     await store.append([deposit], (await store.load()).etag);
-    expect(await blob.lastExportAt()).toBe("2026-09-01T09:00:00.000Z");
+    expect((await blob.exportState()).lastExportAt).toBe("2026-09-01T09:00:00.000Z");
     await replaceText("");
-    expect(await blob.lastExportAt()).toBeUndefined();
+    expect((await blob.exportState()).lastExportAt).toBeUndefined();
   });
 
   it("refuses an import if the ledger changed between the question and the yes (review of PR #75)", async () => {

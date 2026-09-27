@@ -80,11 +80,35 @@ export const exportLedgerAndHeld = (
     const held = store.get(SYNC_HELD_KEY);
     held.onsuccess = () => {
       const stored = get.result as StoredLedger | undefined;
+      const apart = heldOf(held.result as string | undefined);
       if (stored !== undefined) {
-        const meta: StoredMeta = { lastExportAt: when.toISOString() };
+        // What is held back goes by its own button: until it is downloaded,
+        // the export owes it (round 2 of the review of PR #97, N2).
+        const meta: StoredMeta = {
+          lastExportAt: when.toISOString(),
+          ...(apart.heldOperations === undefined ? {} : { heldOwed: apart.heldOperations }),
+        };
         store.put(meta, META_KEY);
       }
-      settle.ok({ text: stored?.text ?? "", ...heldOf(held.result as string | undefined) });
+      settle.ok({ text: stored?.text ?? "", ...apart });
+    };
+  });
+
+/**
+ * What is held back was downloaded apart: the export no longer owes it. Only
+ * that is written; the date of the export stays (round 2 of the review of PR
+ * #97, N2).
+ */
+export const heldDownloaded = (open: Opener = openAtlasDb): Promise<void> =>
+  transact<void>(open, "readwrite", (store, _tx, settle) => {
+    const get = store.get(META_KEY);
+    get.onsuccess = () => {
+      const meta = get.result as StoredMeta | undefined;
+      if (meta?.heldOwed !== undefined) {
+        const paid: StoredMeta = { lastExportAt: meta.lastExportAt };
+        store.put(paid, META_KEY);
+      }
+      settle.ok(undefined);
     };
   });
 

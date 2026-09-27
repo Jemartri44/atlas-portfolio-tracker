@@ -40,6 +40,12 @@ export interface StoredLedger {
 
 export interface StoredMeta {
   lastExportAt: string;
+  /**
+   * Operations the sync held back at that export whose file was not
+   * downloaded yet (round 2 of the review of PR #97, N2): the export is not
+   * complete until it is.
+   */
+  heldOwed?: number;
 }
 
 const decoder = new TextDecoder();
@@ -150,15 +156,19 @@ export class BrowserLedgerBlob implements LedgerBlob {
     });
   }
 
-  lastExportAt(): Promise<string | undefined> {
-    return transact<string | undefined>(this.open, "readonly", (store, _tx, settle) => {
+  /**
+   * The last export and what it still owes of what the sync held back (round
+   * 2 of the review of PR #97, N2), in one read: the record of the export as
+   * stored, or the date a ledger of before feature 012 carried.
+   */
+  exportState(): Promise<Partial<StoredMeta>> {
+    return transact(this.open, "readonly", (store, _tx, settle) => {
       const meta = store.get(META_KEY);
       const current = store.get(CURRENT_KEY);
-      current.onsuccess = () =>
-        settle.ok(
-          (meta.result as StoredMeta | undefined)?.lastExportAt ??
-            (current.result as StoredLedger | undefined)?.lastExportAt,
-        );
+      current.onsuccess = () => {
+        const old = (current.result as StoredLedger | undefined)?.lastExportAt;
+        settle.ok((meta.result as StoredMeta | undefined) ?? (old ? { lastExportAt: old } : {}));
+      };
     });
   }
 
