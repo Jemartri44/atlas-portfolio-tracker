@@ -2431,3 +2431,39 @@ La tubería completa corrió sobre `5a179fc`, con un trabajador y detrás de la 
 | build | Arranque 74.114, total 301.364 |
 
 La CI, en la PR.
+
+## 36. La ronda 2 de revisiones de la PR #98: decisiones y entrega (2026-09-27)
+
+Revisión: ronda 2 (comentario 5857285760), sobre `943de12`.
+
+### 36.1 Las decisiones de la dirección
+
+- **R2-B1.** La lógica no cambia. Si la línea con la clave repetida es una **anulación**, el remedio es corregir el fichero a mano sin sincronización, o descartarla con sincronización.
+  - Se dice en data-schema §2 y en el mensaje `duplicate_key` de la consola y de la web.
+  - El mensaje distingue los dos casos: «anúlala» para una línea corriente y «corrígela a mano en el fichero» para una anulación.
+  - Un test del mensaje para cada caso.
+- **R2-N1.** En el 5.3 de la cuenta robada, las líneas que solo existen en la nube se anulan después del paso 6, una vez sincronizado. Las que ya están en tu carpeta, antes.
+- **Preferencia.** `strictText` usa `ignoreBOM: true`, así que un fichero con BOM se rechaza en vez de reescribirse con otros bytes. Con su test.
+
+### 36.2 Hecho
+
+- **R2-B1** (`04e84b0`):
+  - el error `duplicate_key` del dominio lleva ahora el tipo de la línea (`details.type`);
+  - la consola y la web eligen el remedio por él. Una anulación va al fichero, porque no se puede anular; cualquier otra línea, a su anulación. Con sincronización, las dos se descartan desde lo retenido;
+  - los tests: `apps/cli/test/messages.test.ts`, `apps/web/test/format.test.ts` y `repeated-key.test.ts` (el tipo en los detalles).
+  - **Mutantes**: la consola sin distinguir, la web sin distinguir y el dominio sin el tipo. Los tres mueren.
+- **Documentos** (`c9d7464`):
+  - data-schema §2: el remedio es anularla, **salvo que sea una anulación**, que no tiene remedio dentro del libro. Sin sincronización, se corrige a mano; con ella, se descarta;
+  - **R2-N1**: el 5.3 separa las líneas que ya están en tu réplica, que se anulan ahora y suben después del paso 6, de las que solo están en la nube, que se anulan después del paso 6, una vez sincronizado.
+- **Preferencia** (`65aa0ff`): `strictText` decodifica con `ignoreBOM: true`. El test escribe una copia buena precedida de `EF BB BF`, y `restore` se niega antes del paso 3 sin tocar la nube. **Sin `ignoreBOM`, el test falla**: lo comprobé.
+- **Bundle**: arranque 74.125 y total 301.439, dentro de sus techos (74.134 y 301.496), así que no hay que subirlos.
+
+### 36.3 Comprobaciones y congelado
+
+**El código queda congelado en `65aa0ff`.**
+
+- lint y typecheck, en 0;
+- build, en 0;
+- con `--maxWorkers=1`, los tests de los ficheros tocados y de sus guardianes: 20 ficheros y 297 tests, en verde. Son `packages/domain/test/schema`, los mensajes, la administración y el modo degradado de la consola, `format` y `no-jargon` de la web, y `messages` y `api-access` del repositorio.
+
+La tubería completa no se repite: la dirección pidió lint, typecheck y esos tests. La CI, en la PR.
