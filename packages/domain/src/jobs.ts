@@ -1,0 +1,67 @@
+// The rules of the scheduled jobs (feature 016), as a **separate entry point**
+// of the domain, like `access.ts`: which job is due, its period in
+// `Europe/Madrid`, its run record and what a retry does, the streaks of the
+// warnings, the event of EventBridge Scheduler, the configuration of each
+// function, the switch of the amounts and every mail, written here and only
+// here. Pure. The barrel never re-exports any of it, and neither the web nor
+// the API reach it (`tests/jobs-access.test.ts`; `check-bundle.mjs`).
+
+export { isMailAddress } from "./jobs/address.js";
+export { type AmountsSwitch, amountsSwitch } from "./jobs/amounts.js";
+export {
+  type Delivery,
+  frequencyOf,
+  isJobTask,
+  JOB_FAMILIES,
+  JOB_TASKS,
+  type JobFamily,
+  type JobTask,
+  PRODUCER_TASKS,
+} from "./jobs/catalog.js";
+export {
+  JOBS_CONFIG_VARIABLES,
+  type JobsConfig,
+  type MailConfig,
+  OAUTH_IDLE_WARNING_CEILING_DAYS,
+  parseJobsConfig,
+} from "./jobs/config.js";
+export { type JobEvent, type JobEventRefusal, parseJobEvent } from "./jobs/event.js";
+export { NOTICE_CODES, noticeMail } from "./jobs/mail/notice.js";
+export { reminderMail } from "./jobs/mail/reminder.js";
+export {
+  conditionsOf,
+  NOTICES_PREFIX,
+  type Notice,
+  type NoticeStep,
+  noticeIn,
+  noticeKey,
+  noticeStep,
+  parseNotice,
+  producerOf,
+  serializeNotice,
+} from "./jobs/notices.js";
+export { inWindow, periodOf, previousPeriod } from "./jobs/periods.js";
+export { type ReminderFacts, type ReminderInput, reminderFacts } from "./jobs/reminder.js";
+export {
+  claimRecord,
+  type Finding,
+  isClosed,
+  nextStep,
+  type Outcome,
+  parseRunRecord,
+  type RunRecord,
+  type RunState,
+  type RunStep,
+  recordIn,
+  runRecordKey,
+  serializeRunRecord,
+} from "./jobs/run-record.js";
+export type { MailMessage, Notifier, NotifierFailure, NotifierResult } from "./ports/notifier.js";
+export { NOTIFIER_FAILURES } from "./ports/notifier.js";
+export {
+  type IgnoredFrequency,
+  type JobFrequencies,
+  type JobFrequency,
+  type JobFrequencyKey,
+  readJobFrequencies,
+} from "./settings/job-frequencies.js";

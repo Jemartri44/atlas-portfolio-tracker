@@ -125,6 +125,29 @@ const NOT_SHOWN: Record<string, string> = {
 };
 
 /**
+ * Codes only the **scheduled jobs** raise (feature 016, E1): they end in the
+ * run record of a job, its log line or its mail, never in front of the
+ * console or the web. The mail says each warning with its own sentence
+ * (`jobs/mail/`); the rest are codes of a record. `job_frequency_*` and
+ * `job_not_available` will be said in Ajustes when E3 shows what a line of
+ * `job_frequencies` carries that the jobs ignore, and leave this list then.
+ */
+const JOBS_ONLY: Record<string, string> = {
+  job_already_done: "solo en el registro de una tarea",
+  job_event_invalid: "solo en el registro de la función: el evento de la programación",
+  job_frequencies_invalid: "solo en el registro de una tarea hasta E3",
+  job_frequency_invalid_value: "solo en el registro de una tarea hasta E3",
+  job_frequency_unknown_key: "solo en el registro de una tarea hasta E3",
+  job_not_available: "solo en el registro de una tarea hasta E3",
+  job_record_newer_format: "solo en el registro de una tarea",
+  job_record_unreadable: "solo en el registro de una tarea",
+  job_send_unknown: "solo en el registro de una tarea",
+  jobs_config_invalid: "solo en las tareas: la función no arranca",
+  notice_unreadable: "solo en el registro de la función de correo",
+  task_failed: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+};
+
+/**
  * Codes only the **administration** of the console raises (`atlas admin`,
  * feature 015, E5): the web never administers the remote, so only the CLI
  * translates them.
@@ -229,7 +252,7 @@ describe("Spanish messages: the two interfaces stay level", () => {
     const web = webCodes();
     const missing: string[] = [];
     for (const code of [...domainCodes()].sort()) {
-      if (NOT_SHOWN[code] !== undefined) {
+      if (NOT_SHOWN[code] !== undefined || Object.hasOwn(JOBS_ONLY, code)) {
         continue;
       }
       if (!cli.has(code)) {
@@ -240,6 +263,11 @@ describe("Spanish messages: the two interfaces stay level", () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+
+  it("keeps no code of the jobs that the jobs no longer raise", () => {
+    const domain = domainCodes();
+    expect(Object.keys(JOBS_ONLY).filter((code) => !domain.has(code))).toEqual([]);
   });
 
   it("has no dead entry in the web catalogue", () => {

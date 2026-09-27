@@ -164,3 +164,9 @@ export {
   tokenParameterPath,
   tokenStatus,
 } from "./access/token.js";
+export {
+  advancesWebSignIn,
+  parseWebSignIn,
+  serializeWebSignIn,
+  WEB_SIGN_IN_KEY,
+} from "./access/web-sign-in.js";
