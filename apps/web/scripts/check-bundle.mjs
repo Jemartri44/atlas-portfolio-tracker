@@ -959,6 +959,8 @@ const SYNC_STORE_READ_ONLY = new Set([
   "SYNC_STATE_KEY",
   "SYNC_HELD_KEY",
   "SYNC_DISCARDED_KEY",
+  // E4, block 2: the name of the key of the device the web joined with.
+  "SYNC_DEVICE_KEY",
 ]);
 
 const repoRoot = realpathSync(resolve(webRoot, "..", ".."));
