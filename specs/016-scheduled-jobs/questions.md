@@ -252,7 +252,7 @@ La dirección da el visto bueno a `spec.md` y `plan.md`. Decisiones:
 
 ### 10.4 Mutación (guion `016-mutate.mjs`, copia del de la 015: afirma cada sustitución, restaura, compara byte a byte, se niega con gemelos `.js`; lotes de ocho, uno a uno, tras la puerta de memoria)
 
-`016-e1-b1.json`, `-b2.json`, `-b3.json`, `-g.json` y `-b2x.json`; veredictos en sus `.out`. **Todos muertos**, con dos notas:
+`016-e1-b1.json`, `-b2.json`, `-b3.json`, `-g.json` y `-b2x.json`; veredictos en sus `.out`. **34 ejecuciones, 32 muertos**; `E1-5b` sobrevivió con su argumento escrito debajo y lo mata el test de su regla (`E1-5b2`); `G-sesraw` no se aplicó y se repitió como `G-sesraw2`, muerto:
 
 | Id | Mutante (§6 del encargo) | Test que lo mata | Veredicto |
 |---|---|---|---|
