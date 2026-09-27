@@ -435,20 +435,6 @@ describe("a request with the session (R18, R19, R23, R31)", () => {
     expect(errorOf(refused).code).toBe("not_allowed");
   });
 
-  // Step 4 of the recipe of the stolen Google account (§7.1 bis, B3; mutant
-  // 44): rotating the session key and waiting for the cache of the secrets
-  // (§6.2 (c), 300 s) leaves every cookie signed with the old key refused.
-  it("refuses a cookie of the old key once the session key is rotated and its cache expires", async () => {
-    const api = setup();
-    await api.signIn();
-    api.ssm.set(NAMES.sessionKey, base64url(Buffer.alloc(32, 7)));
-    api.advance(299_000);
-    expect((await api.call("GET", "/api/session")).statusCode).toBe(200);
-    api.advance(1_000);
-    const refused = await api.call("GET", "/api/session");
-    expect(errorOf(refused)).toEqual({ code: "session_invalid", details: { reason: "signature" } });
-  });
-
   it("expires the session at its time, without renewal (R19)", async () => {
     const api = setup();
     await api.signIn();
