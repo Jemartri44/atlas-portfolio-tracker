@@ -30,7 +30,7 @@ El modelo es `ARITY` (`apps/cli/src/main.ts`), con subórdenes como `lock`, `fx`
 |---|---|
 | `atlas admin compact --env <e> [--accept-unverified <filing_id>]…` | `compact` del remoto, con la negativa de `rewritePermission`, el archivo previo en `archive/` sin sobrescribir y la condición del remoto leído |
 | `atlas admin restore --env <e> --from <fichero \| s3-version:<id> \| backups/<AAAA-MM>>` | Los seis pasos de ADR-0032, cada uno con su salida. El paso 4 pide la confirmación con la lista delante |
-| `atlas admin forget-device --env <e> <device_id> [--force]` | Revoca sus tokens **y después** lo marca `forgotten`. Con pendientes o retenidas se niega, salvo con `--force`, que antes dice lo que se deja de ver |
+| `atlas admin forget-device --env <e> [--force] -- <device_id>` o `--device <device_id>` | Revoca sus tokens **y después** lo marca `forgotten`. Con pendientes o retenidas se niega, salvo con `--force`, que antes dice lo que se deja de ver. El identificador puede empezar por `-`: va detrás de `--`, que termina las opciones, o como valor de `--device`, que siempre toma la palabra siguiente (arreglo `fix/cli-dash-ids`) |
 | `atlas admin revoke-all-tokens --env <e>` | Revoca todos los registros vivos. Se puede repetir sin daño |
 | `atlas admin devices --env <e>` | Lista los objetos de `sync/devices/`, con su tipo y su estado (para elegir cuál olvidar) |
 
