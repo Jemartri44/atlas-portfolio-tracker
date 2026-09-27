@@ -451,3 +451,28 @@ Medido en Chromium tras el arreglo: al volver, **ningún `scrollIntoView` nuestr
 ### 10.7 Congelado
 
 **Código congelado: `c3c65e5`.** El commit que añade esta sección solo toca `specs/`. Desde aquí no empujo nada mientras dura la revisión.
+
+## 11. E2 — El primer pantallazo y la lista
+
+### 11.0 Lo que dejó la ronda 2 de la PR #105 (antes de E2)
+
+- **Estado**: E1 fusionada en `develop` (PR #105, `5e63bfb`), después de que la ronda 2 convergiera. `develop` se fusionó en la rama antes de empezar.
+- **Qué se hizo** en cada punto de la ronda 2, con su test visto en rojo o su mutante muerto:
+
+| Punto | Commit | Qué | Mutantes |
+|---|---|---|---|
+| **B2, hueco** | `2c69be0` | `tests/result-colour-identity.test.ts` analiza la web con el analizador de los guardianes estáticos (`support/source-graph.ts`, Oxc). Falla si se importa `signOf` con cualquier nombre fuera de `Figure.tsx`, `format/index.ts` y `format/number.ts`, y si aparece un literal o una plantilla con `positive` o `negative` fuera de `Amount.tsx` y `format/number.ts` | `import { signOf as toneOf }`, `const tone = "positive"` y `` `negative` ``: muertos |
+| **O3** | `6882da7` | El guardián de copias normaliza hex de 3, 4, 6 y 8 cifras y `rgb()`/`rgba()`, con comas o espacios, antes de comparar. Tiene un test propio de la normalización | `#0f6b5cff`, `rgb(15,107,92)` y `rgb(244 154 68 / 0.9)`: muertos |
+| **O1** | `1faea40` | La dirección que se compara, y la guardada en el `popstate`, incluyen la consulta. Test con los filtros de Movimientos: filtrar, volver atrás y navegar sin clic a `/ajustes#sincronizacion`; el marco llega y da el foco al título | `O1-query-left-out`: sobrevivió la primera vez, porque el enrutador también desplaza cuando el destino ya está pintado. Ahora el test distingue la llegada del marco por el foco, y muere |
+| **O2** | `1faea40` | `:where(h1, h2, h3)[tabindex="-1"]:focus { outline: none }`; el anillo de todo lo interactivo no se toca | Un `button` en la lista y la regla quitada: muertos. **Medido en Chromium**: el `h2` enfocado por el ancla tiene `outline: none` (aunque cumple `:focus-visible`); tras un Tab, el botón siguiente tiene `outline: solid 2px` |
+
+### 11.1 Predicción de la salida fiscal (antes de la suite de E2)
+
+E2 cambia el dominio en tres sitios:
+- `fiscalAttention.prominent`, que pasa a ser solo la campaña;
+- `inSeason`, que pasa a ser `inRentaSeason` en `settings/settings.ts`;
+- `hasForeignAccountsAt`, nuevo.
+
+**Ninguno lo lee ninguna orden de la consola**: `grep` de `fiscalAttention`, `prominent` e `inSeason` en `apps/cli/src`, `apps/api/src`, `apps/jobs/src` y `packages/adapters/src` no da nada.
+
+**Predicción**: `tax` (con `--lots`, `--boxes` y `--json`), `gains`, `income`, `m720`, `m721` y `filed` sobre `synthetic-v1` dan **los mismos bytes** que en `develop`, y `git diff origin/develop -- tests/fixtures` sale vacío.
