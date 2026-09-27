@@ -13,7 +13,7 @@
 
 ## Compleción de los requisitos
 
-- [x] No quedan marcas [NEEDS CLARIFICATION]: las preguntas abiertas están en `questions.md` (Q1-Q7), con su recomendación
+- [x] No quedan marcas [NEEDS CLARIFICATION]: las preguntas abiertas están en `questions.md` (Q1-Q6), con su recomendación
 - [x] Los requisitos se pueden probar y no son ambiguos
 - [x] Los criterios de éxito son medibles
 - [x] Los criterios de éxito no dependen de la tecnología
