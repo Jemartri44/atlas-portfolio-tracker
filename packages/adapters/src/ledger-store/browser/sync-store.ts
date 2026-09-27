@@ -37,6 +37,13 @@ import { CURRENT_KEY, type Opener, type StoredLedger } from "./indexeddb.js";
 export const SYNC_STATE_KEY = "sync:state";
 export const SYNC_HELD_KEY = "sync:held";
 export const SYNC_DISCARDED_KEY = "sync:discarded";
+/**
+ * The id of the device this browser joined with (feature 015, E4, block 2):
+ * the web's `sync/remote.json`, without the origin, which is the page's own.
+ * Written by initialising and joining, **first of the same transaction as
+ * the marker**; a session that brings another id does not sync.
+ */
+export const SYNC_DEVICE_KEY = "sync:device";
 const ARCHIVE_PREFIX = "archive/";
 
 const encoder = new TextEncoder();
@@ -47,10 +54,16 @@ interface Raw {
   marker: string | undefined;
   held: string | undefined;
   discarded: string | undefined;
+  device: string | undefined;
 }
 
 const presenceOf = (raw: Raw): SyncPresence => {
-  if (raw.marker === undefined && raw.held === undefined && raw.discarded === undefined) {
+  if (
+    raw.marker === undefined &&
+    raw.held === undefined &&
+    raw.discarded === undefined &&
+    raw.device === undefined
+  ) {
     return { present: false };
   }
   if (raw.marker === undefined) {
@@ -69,12 +82,14 @@ const readRaw = (store: IDBObjectStore, then: (raw: Raw) => void): void => {
   const marker = store.get(SYNC_STATE_KEY);
   const held = store.get(SYNC_HELD_KEY);
   const discarded = store.get(SYNC_DISCARDED_KEY);
-  discarded.onsuccess = () =>
+  const device = store.get(SYNC_DEVICE_KEY);
+  device.onsuccess = () =>
     then({
       ledger: ledger.result as StoredLedger | undefined,
       marker: marker.result as string | undefined,
       held: held.result as string | undefined,
       discarded: discarded.result as string | undefined,
+      device: device.result as string | undefined,
     });
 };
 
@@ -90,7 +105,10 @@ export const browserSyncConfigured = (open: Opener = openAtlasDb): Promise<boole
         let configured = false;
         readRaw(tx.objectStore(LEDGER_STORE), (raw) => {
           configured = syncConfiguredByText(
-            raw.marker !== undefined || raw.held !== undefined || raw.discarded !== undefined,
+            raw.marker !== undefined ||
+              raw.held !== undefined ||
+              raw.discarded !== undefined ||
+              raw.device !== undefined,
             raw.marker,
           );
         });
@@ -145,6 +163,7 @@ export class BrowserSyncStore implements SyncStateStore {
       markerText: raw.marker,
       heldText: raw.held ?? "",
       discardedText: raw.discarded ?? "",
+      ...(raw.device === undefined ? {} : { remoteText: raw.device }),
     };
   }
 
@@ -157,11 +176,6 @@ export class BrowserSyncStore implements SyncStateStore {
    * of it does.
    */
   async commit(expected: DeviceState, change: DeviceChange): Promise<void> {
-    // `sync/remote.json` is the console's folder's (feature 015, P16): the
-    // web knows its remote by its own origin, and never writes one.
-    if (change.remote !== undefined) {
-      throw new ValidationError("sync_remote_json_not_here", "the web keeps no sync/remote.json");
-    }
     // The lines are checked before the transaction opens: nothing but
     // IndexedDB may sit between its read and its write.
     // The archive name is checked as every store of the ledger checks it
@@ -199,10 +213,16 @@ export class BrowserSyncStore implements SyncStateStore {
           sha256Hex(encoder.encode(current)) !== expected.ledger.etag ||
           (raw.held ?? "") !== expected.heldText ||
           (raw.discarded ?? "") !== expected.discardedText ||
-          raw.marker !== expected.markerText
+          raw.marker !== expected.markerText ||
+          raw.device !== expected.remoteText
         ) {
           fail(new ConflictError());
           return;
+        }
+        // The device first (§7 P16, as the console's `remote.json`): all of
+        // it commits or none of it does, and it goes first all the same.
+        if (change.remote !== undefined) {
+          store.put(change.remote, SYNC_DEVICE_KEY);
         }
         if (change.held !== undefined && change.held.length > 0) {
           store.put(expected.heldText + recordsText(change.held), SYNC_HELD_KEY);

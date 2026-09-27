@@ -9,6 +9,8 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ConflictError } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
+import { LEDGER_STORE } from "../../src/ledger-store/browser/idb.js";
+import { SYNC_DEVICE_KEY, SYNC_STATE_KEY } from "../../src/ledger-store/browser/sync-store.js";
 import { sweepOrphanTemporaries } from "../../src/ledger-store/folder-lock.js";
 import { initialiseRemote, joinWithOwnLines, replaceFromRemote } from "../../src/sync/client.js";
 import { REMOTE_FILE } from "../../src/sync/folder-store.js";
@@ -91,12 +93,34 @@ describe("sync/remote.json in the one write of initialising and joining (P16)", 
     expect(await readdir(join(device.dir, "sync"))).not.toContain("remote.json");
   });
 
-  it("is refused by the store of the web: each client syncs its own store", async () => {
+  it("is kept by the web as the id of its device, in the same transaction as the marker (E4, block 2)", async () => {
     const bucket = SimulatedBucket.inMemory();
     const phone = webDevice(base());
+    const device = "DDDDDDDDDDDDDDDDDDDDDD";
+    const before = phone.db.commits.length;
+    await initialiseRemote(phone.sync, bucket.as("phone"), { ...clock(), remoteJson: device });
+    const values = phone.db.store(LEDGER_STORE);
+    expect(values.get(SYNC_DEVICE_KEY)).toBe(device);
+    const commits = phone.db.commits.slice(before);
+    expect(commits).toHaveLength(1);
+    expect(commits[0]?.written.sort()).toEqual([SYNC_DEVICE_KEY, SYNC_STATE_KEY].sort());
+    expect((await phone.sync.read()).remoteText).toBe(device);
+  });
+
+  it("is compared by the web at the write: changed in between, nothing is written", async () => {
+    const phone = webDevice(base());
+    const read = await phone.sync.read();
+    phone.db.store(LEDGER_STORE).set(SYNC_DEVICE_KEY, "OTHEROTHEROTHEROTHEROT");
     await expect(
-      initialiseRemote(phone.sync, bucket.as("phone"), { ...clock(), remoteJson: REMOTE }),
-    ).rejects.toMatchObject({ code: "sync_remote_json_not_here" });
+      phone.sync.commit(read, { remote: "DDDDDDDDDDDDDDDDDDDDDD" }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(phone.db.store(LEDGER_STORE).get(SYNC_DEVICE_KEY)).toBe("OTHEROTHEROTHEROTHEROT");
+  });
+
+  it("makes a browser with only the id of its device half started (S1), never unsynced", async () => {
+    const phone = webDevice(base());
+    phone.db.store(LEDGER_STORE).set(SYNC_DEVICE_KEY, "DDDDDDDDDDDDDDDDDDDDDD");
+    expect((await phone.sync.read()).presence).toEqual({ present: true, marker: "missing" });
   });
 
   it("is swept as a temporary when a write of it was cut (P16)", async () => {

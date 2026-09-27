@@ -435,6 +435,11 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "No se desactiva: falta el estado de la sincronización, así que no se sabe qué operaciones están pendientes. Sincroniza primero.",
   sync_not_configured: () =>
     "Tus datos no se sincronizan. Para empezar hay que elegirlo: subirlos enteros a una nube vacía, o unirte a una que ya tiene datos.",
+  sync_device_changed: () =>
+    "Este navegador se unió a la nube con otro dispositivo, que ya no es el de tu sesión (se olvidó, o no se aceptó). Lo pendiente sigue aquí. Para seguir, únete otra vez: «Unirme desde la nube» o «Unirme con mis operaciones».",
+  sync_device_unknown: () =>
+    "Este navegador se sincroniza pero no sabe con qué dispositivo se unió. Únete otra vez: «Unirme desde la nube» o «Unirme con mis operaciones». Lo pendiente sigue aquí.",
+  sync_already_configured: () => "Tus datos ya se sincronizan: no hace falta empezar otra vez.",
   sync_deactivated: () =>
     "La sincronización está desactivada. Para volver a sincronizar hay que unirse otra vez, de forma explícita.",
   remote_empty: () =>

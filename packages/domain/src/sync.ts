@@ -119,3 +119,4 @@ export {
 export { canonicalForRewrite, classifyAgainst, REWRITTEN_BY_COMPACT } from "./sync/rewrite.js";
 export { SEALS_PREFIX, sealHolds, sealsPrefix } from "./sync/seal.js";
 export { entriesOf, type QueueUnit, unitsOf } from "./sync/units.js";
+export { webJoinRefusal, webSyncRefusal } from "./sync/web-device.js";
