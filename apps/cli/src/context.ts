@@ -11,6 +11,12 @@ export interface Io {
   err(text: string): void;
   /** Resolves undefined when there is no interactive terminal to ask. */
   confirm(question: string): Promise<boolean | undefined>;
+  /**
+   * A line typed by the user, for the confirmations that ask for a word and
+   * not a yes (`atlas admin`: the name of the environment). Undefined, or
+   * absent, when there is no interactive terminal to ask.
+   */
+  ask?(question: string): Promise<string | undefined>;
 }
 
 export interface Context {

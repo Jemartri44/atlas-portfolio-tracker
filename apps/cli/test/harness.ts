@@ -31,6 +31,8 @@ export interface HarnessOptions {
   /** Answer given to confirmations; `undefined` simulates a non-interactive terminal. */
   confirm?: boolean;
   instant?: string;
+  /** What the user types when a confirmation asks for a word (`atlas admin`: the environment). */
+  typed?: string;
   /** The clients of the administration (`atlas admin`, `atlas backup --from-bucket`): doubles. */
   admin?: AdminAccess;
   /** Where the command believes its ledger is (`--ledger`), for the orders that look at its folder. */
@@ -58,6 +60,11 @@ export const harness = (options: HarnessOptions = {}): Harness => {
     out: (text) => out.push(text),
     err: (text) => err.push(text),
     confirm: async () => options.confirm,
+    // The question is on the screen, as a terminal shows it.
+    ask: async (question) => {
+      out.push(question);
+      return options.typed;
+    },
   };
   return {
     store,

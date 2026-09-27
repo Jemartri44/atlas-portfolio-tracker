@@ -239,6 +239,17 @@ export const terminalIo = (): Io => ({
       rl.close();
     }
   },
+  ask: async (question) => {
+    if (!process.stdin.isTTY) {
+      return undefined;
+    }
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      return (await rl.question(question)).trim();
+    } finally {
+      rl.close();
+    }
+  },
 });
 
 /** Runs one invocation and returns the exit code. `compose` is replaced in tests. */
