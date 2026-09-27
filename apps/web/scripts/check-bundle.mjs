@@ -1052,9 +1052,10 @@ for (const build of builds) {
  *   importer of a module of the section — the controller, a relay of it, a
  *   root-absolute path — is refused;
  * - the **reverse closure** of the engine — every module that reaches it, by
- *   any path — is the section, the engine, the page of Ajustes and the lazy
- *   load of that page (`App.tsx`, `main.tsx` and the `index.html` that loads
- *   it).
+ *   any path, walked whole — is the section, the engine, the page of Ajustes
+ *   and the lazy load of that page (`App.tsx`, `main.tsx` and the
+ *   `index.html` that loads it), and those three **only as ancestors through
+ *   the page** (round 3, O1).
  *
  * Any other importer could sync at boot, on a timer or when the connection
  * comes back. A graph that does not say who imports is refused as such.
@@ -1088,26 +1089,39 @@ for (const [id, importers] of importersOf) {
     }
   }
 }
-const closure = new Set();
-const pending = [...importersOf.keys()].filter((id) => WEB_ENGINE.test(id));
-while (pending.length > 0) {
-  const id = pending.shift();
-  if (closure.has(id)) {
-    continue;
+/** Every module that reaches the engine through its importers, the page not walked past when told. */
+const closureOfEngine = (barrier) => {
+  const reached = new Set();
+  const pending = [...importersOf.keys()].filter((id) => WEB_ENGINE.test(id));
+  while (pending.length > 0) {
+    const id = pending.shift();
+    if (reached.has(id)) {
+      continue;
+    }
+    reached.add(id);
+    if (!(barrier && AJUSTES_PAGE.test(id))) {
+      pending.push(...(importersOf.get(id) ?? []));
+    }
   }
-  closure.add(id);
-  // The loaders reach the engine only through the page of Ajustes: past
-  // them, nothing more to walk.
-  if (!AJUSTES_LOADERS.test(id)) {
-    pending.push(...(importersOf.get(id) ?? []));
-  }
-}
-for (const id of closure) {
+  return reached;
+};
+// The whole reverse closure, walked past the loaders too (review of PR #97,
+// round 3, O1): whatever imports a loader to reach the engine is in it.
+for (const id of closureOfEngine(false)) {
   const allowed =
     WEB_ENGINE.test(id) || SECTION.test(id) || AJUSTES_PAGE.test(id) || AJUSTES_LOADERS.test(id);
   if (!allowed) {
     problems.push(
       `${id} alcanza el motor de la sincronización de la web desde fuera de su sección`,
+    );
+  }
+}
+// And the loaders are admitted **only as ancestors through the page**: with
+// the page as a barrier, none of them reaches the engine.
+for (const id of closureOfEngine(true)) {
+  if (AJUSTES_LOADERS.test(id)) {
+    problems.push(
+      `${id} alcanza el motor de la sincronización de la web desde fuera de su sección, sin pasar por la página de Ajustes`,
     );
   }
 }
