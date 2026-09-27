@@ -152,6 +152,29 @@ a.row:hover {
   min-height: var(--tap);
 }
 
+/*
+ * A row whose link is its date (the movements, feature 020, M13): the date in
+ * ink and the whole row the target, instead of a column of underlined dates.
+ */
+.table tr:has(.row-link) {
+  position: relative;
+}
+
+.table .row-link {
+  color: var(--c-text);
+  text-decoration: none;
+}
+
+.table .row-link::after {
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.table tr:has(.row-link):hover td {
+  background-color: var(--c-fill-hover);
+}
+
 /* A long name is cut inside its cell, with the whole of it in the title. */
 .cell-trunc {
   display: block;

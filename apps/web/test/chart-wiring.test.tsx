@@ -60,7 +60,7 @@ describe("the axis of a chart is an amount", () => {
   });
 
   it("shows the figures when privacy is off", () => {
-    expect(yLabels(false)).toEqual(["1 k", "25 k"]);
+    expect(yLabels(false)).toEqual(["1 k€", "25 k€"]);
   });
 
   it("leaves a month and its year room enough not to run into the next", () => {

@@ -12,7 +12,7 @@
 // figure on it. If that leaves the chart lame in public, it stays lame: that is
 // exactly what the privacy mode promises.
 
-import { formatDecimalString } from "../../format/number.js";
+import { formatDecimalString, NBSP } from "../../format/number.js";
 
 /**
  * Thousands and millions, so an axis of a twenty-year ledger stays readable.
@@ -22,12 +22,14 @@ import { formatDecimalString } from "../../format/number.js";
 const compact = (value: number): string => {
   const abs = Math.abs(value);
   if (abs >= 1_000_000) {
-    return `${formatDecimalString((value / 1_000_000).toFixed(1), { decimals: 1 })} M`;
+    return `${formatDecimalString((value / 1_000_000).toFixed(1), { decimals: 1 })} M€`;
   }
   if (abs >= 1_000) {
-    return `${formatDecimalString((value / 1_000).toFixed(0), { decimals: 0 })} k`;
+    return `${formatDecimalString((value / 1_000).toFixed(0), { decimals: 0 })} k€`;
   }
-  return formatDecimalString(value.toFixed(0), { decimals: 0 });
+  // With its unit, as every amount: «400, 0, −200» alone did not say euros
+  // (feature 020, M13). The space before it does not break.
+  return `${formatDecimalString(value.toFixed(0), { decimals: 0 })}${NBSP}€`;
 };
 
 /**

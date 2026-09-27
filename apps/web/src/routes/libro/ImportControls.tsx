@@ -99,7 +99,7 @@ export const ImportControls = (props: {
             onClick={() => void onFolder()}
           >
             <Icon name="laptop" class="icon-sm" />
-            Importar desde la carpeta de la consola
+            Importar de la carpeta
           </button>
         </Show>
       </div>

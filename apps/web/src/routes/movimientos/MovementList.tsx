@@ -7,7 +7,7 @@ import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
 import { type DataColumn, DataTable } from "../../components/index.js";
 import { formatDate, formatLongDate } from "../../format/date.js";
-import type { MovementRow } from "../../view-models/index.js";
+import { hasState, type MovementRow, showsStateColumn } from "../../view-models/index.js";
 import { MovementFigure, MovementLine, MovementState } from "./MovementLine.jsx";
 
 const COLUMNS: readonly DataColumn<MovementRow>[] = [
@@ -16,7 +16,11 @@ const COLUMNS: readonly DataColumn<MovementRow>[] = [
     header: "Fecha",
     cell: (row) => (
       <>
-        <A href={`/movimientos/${row.id}`}>{formatDate(row.date)}</A>
+        {/* In ink, and the whole row its target (feature 020, M13): a column of
+            twenty underlined dates was the loudest thing on the screen. */}
+        <A href={`/movimientos/${row.id}`} class="row-link">
+          {formatDate(row.date)}
+        </A>
         <Show when={row.administrative}>
           <span class="meta" title="Fecha de registro: este tipo no tiene fecha de negocio">
             {" "}
@@ -37,7 +41,7 @@ const COLUMNS: readonly DataColumn<MovementRow>[] = [
     key: "status",
     header: "Estado",
     cell: (row) => (
-      <Show when={row.status !== "current" || row.invalidReason !== undefined}>
+      <Show when={hasState(row)}>
         <MovementState row={row} />
       </Show>
     ),
@@ -91,7 +95,9 @@ export const MovementList = (props: { rows: readonly MovementRow[] }): JSX.Eleme
     </div>
     <DataTable
       label="Movimientos"
-      columns={COLUMNS}
+      columns={
+        showsStateColumn(props.rows) ? COLUMNS : COLUMNS.filter((column) => column.key !== "status")
+      }
       rows={props.rows}
       tableOnly
       rowClass={(row) => (row.status === "reversed" ? "is-reversed" : undefined)}
