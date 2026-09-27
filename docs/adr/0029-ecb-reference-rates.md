@@ -94,3 +94,25 @@ Todos son **avisos**: un tipo distinto del oficial pudo confirmarse a sabiendas 
 **6. Confirmar un borrador** (punto 9). **El borrador guarda el identificador que tendrá su evento (`pending_event_id`) antes de escribir en el libro**, el evento se escribe con ese identificador, y después se quita el borrador. Al reintentar —un corte entre escribir y quitar—, **solo un evento con exactamente ese identificador** cuenta como «ya registrado», y entonces solo se quita el borrador; cualquier otro caso sigue el camino normal, con la pregunta de duplicado de ADR-0012. Guardar el identificador es una **operación condicional**: solo escribe si el borrador **sigue existiendo** y no tiene identificador o tiene **exactamente el que se leyó**, y se comprueba y se escribe **bajo el cerrojo** en la consola y **en una sola transacción** en IndexedDB; si no, `draft_changed`, y la confirmación para sin escribir nada. **Un borrador que ya no existe nunca se registra como nuevo.** El libro rechaza siempre un segundo evento con el mismo identificador (`duplicate_id`). El esquema del libro no cambia; el fichero del borrador (`draft_format: 1`) gana un campo opcional (`packages/domain/src/ecb/drafts.ts`, `recordPendingDraft` y `draftRecordedAs`).
 
 **La primera versión decidía por huella, y esa era una decisión de la dirección que borraba la única copia de una operación.** Daba el borrador por registrado si el libro tenía un evento en vigor con su misma huella, registrado después de guardarlo, y lo borraba sin registrarlo. La huella no distingue «este mismo borrador» de «otra operación idéntica»: un borrador y una compra idéntica registrada a mano dejaban una sola compra, no dos, y además contradecía ADR-0012 (una huella repetida es una pregunta, nunca un silencio). **La revisión lo cazó** (`questions.md` §11.1). Y la tercera pasada encontró que el primer arreglo, con el identificador guardado sin condición, dejaba que dos confirmaciones a la vez resucitaran el borrador, y que la web registrara como nuevo un borrador desaparecido (`questions.md` §12.1); de ahí la condición.
+
+## Nota del 2026-09-28: reconstruir en la nube un histórico dañado (feature 016, E2)
+
+Decisión de la dirección en las rondas 1 y 2 de la revisión de la PR #106 (`specs/016-scheduled-jobs/questions.md` §15 y §16). No cambia el punto 2: añade un caso que no tenía, el del bucket.
+
+**El caso.** En `reference/ecb/` del bucket no hay cerrojo ni `rename`. Una activación son tres escrituras condicionales: `previous/`, el fichero y el manifiesto. Hay dos casos que acaban con el fichero en vigor sin cuadrar con su manifiesto:
+
+- un corte que `previous/` no sabe deshacer;
+- dos ejecuciones a la vez que se entrelazan, cosa que la concurrencia 1 de la función impide.
+
+Ese histórico **no se usa**: `EcbHistoryDamaged`, como ya decía el punto 2. Pero la función del BCE tampoco puede quedarse parada para siempre.
+
+**La excepción.** Con el histórico dañado, la tarea del BCE lo **reconstruye desde el ZIP oficial del BCE**, nunca desde la API. El ZIP es la fuente de verdad y cualquiera puede volver a descargarlo y compararlo.
+
+- **La comparación del punto 2 se sigue aplicando**, contra la última generación que aún se lee: el fichero en vigor tal como está, aunque no cuadre con su manifiesto, y si no se lee, `previous/`.
+  - Si el ZIP cambia o quita un tipo de esa generación, **no se activa nada**. Queda el hallazgo `ecb_history_damaged` con el recuento de tipos, y el aviso pide intervenir.
+  - Si la comparación lo acepta, se escribe una generación nueva: el fichero y un manifiesto que lo nombra solo, sin `previous` y con los `rejected` que se podían leer, cada uno con escritura condicional. Queda el hallazgo `ecb_history_rebuilt`.
+- **La única excepción al punto 2**: si no queda **ninguna** generación que se lea, el ZIP se acepta **sin comparar**. Además de `ecb_history_rebuilt`, deja el hallazgo `ecb_rebuilt_unverified`, cuyo aviso pide comprobar los tipos del libro con `atlas check --deep`.
+- Si solo responde la API, no se reconstruye nada: la ejecución siguiente lo vuelve a intentar.
+- Lo que había sigue en las versiones anteriores del bucket.
+
+La consola no tiene este caso: su carpeta se escribe bajo cerrojo.
