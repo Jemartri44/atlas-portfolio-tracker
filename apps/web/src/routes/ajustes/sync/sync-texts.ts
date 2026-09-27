@@ -3,7 +3,7 @@
 // and the outcome of an order. No JSX: the card and the list of what is held
 // read it.
 
-import { Decimal, DomainError, Money } from "@atlas/domain";
+import { Decimal, DomainError, Money, Quantity } from "@atlas/domain";
 import type { Severity } from "../../../components/index.js";
 import { formatDate, formatInstantDate } from "../../../format/date.js";
 import { countOf } from "../../../format/number.js";
@@ -55,16 +55,44 @@ export const RESOLUTION: Readonly<Record<string, string>> = {
   discard: "Descartar",
 };
 
-/** The amount of an operation, when it has one: shown only through `Amount`, which the privacy mode masks. */
-export const amountOf = (event: Readonly<Record<string, unknown>>): Money | undefined => {
-  if (typeof event.amount !== "string" || typeof event.currency !== "string") {
+const moneyOf = (amount: unknown, currency: unknown): Money | undefined => {
+  if (typeof amount !== "string" || typeof currency !== "string") {
     return undefined;
   }
   try {
-    return Money.of(Decimal.parse(event.amount), event.currency as never);
+    return Money.of(Decimal.parse(amount), currency as never);
   } catch {
     return undefined;
   }
+};
+
+/**
+ * The figures of an operation, to tell two held ones apart (review of PR
+ * #97, correctness B2): its quantity, its amount (`amount` of the cash
+ * movements, `gross` of a dividend) and its price per unit (`unit_price` of
+ * a trade, `unit_value` of a valuation). **Shown only through `Amount`**,
+ * which the privacy mode masks.
+ */
+export const figuresOf = (
+  event: Readonly<Record<string, unknown>>,
+): {
+  readonly quantity?: Quantity;
+  readonly amount?: Money;
+  readonly unit?: Money;
+} => {
+  let quantity: Quantity | undefined;
+  try {
+    quantity = typeof event.quantity === "string" ? Quantity.parse(event.quantity) : undefined;
+  } catch {
+    quantity = undefined;
+  }
+  const amount = moneyOf(event.amount ?? event.gross, event.currency);
+  const unit = moneyOf(event.unit_price ?? event.unit_value, event.currency);
+  return {
+    ...(quantity === undefined ? {} : { quantity }),
+    ...(amount === undefined ? {} : { amount }),
+    ...(unit === undefined ? {} : { unit }),
+  };
 };
 
 export const dateOf = (event: Readonly<Record<string, unknown>>): string | undefined => {

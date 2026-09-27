@@ -6,30 +6,60 @@
 import { For, type JSX, Show } from "solid-js";
 import { Amount, Notice } from "../../../components/index.js";
 import { eventLabel } from "../../../format/labels.js";
+import { displayName, nameIndex } from "../../../format/names.js";
+import { store } from "../../../ledger/state.js";
 import type { HeldItem } from "../../../sync/engine-held.js";
 import type { PendingRedo } from "./sync-controller.js";
-import { amountOf, dateOf, RESOLUTION, said } from "./sync-texts.js";
+import { dateOf, figuresOf, RESOLUTION, said } from "./sync-texts.js";
 
 type Shown = Readonly<Record<string, unknown>>;
 
-/** One operation of what is held: its type, its date and its amount. */
+/**
+ * One operation of what is held: its type, its asset, its date and its
+ * figures — the quantity, the amount and the price per unit, each through
+ * `Amount`, which the privacy mode masks (review of PR #97, correctness B2).
+ * Never a raw line.
+ */
 const Operation = (props: { event: Shown | undefined }): JSX.Element => (
   <li>
     <Show when={props.event} fallback={<span>Una operación que no se puede leer</span>}>
-      {(event) => (
-        <>
-          <span>{eventLabel(String(event().type))}</span>
-          <Show when={dateOf(event())}>{(date) => <span class="meta"> · {date()}</span>}</Show>
-          <Show when={amountOf(event())}>
-            {(money) => (
-              <>
-                {" · "}
-                <Amount value={money()} />
-              </>
-            )}
-          </Show>
-        </>
-      )}
+      {(event) => {
+        const figures = () => figuresOf(event());
+        const names = () => nameIndex(store.snapshot()?.state);
+        return (
+          <>
+            <span>{eventLabel(String(event().type))}</span>
+            <Show when={event().asset_id}>
+              {(asset) => <span> · {displayName(names(), asset())}</span>}
+            </Show>
+            <Show when={dateOf(event())}>{(date) => <span class="meta"> · {date()}</span>}</Show>
+            <Show when={figures().quantity}>
+              {(quantity) => (
+                <>
+                  {" · "}
+                  <Amount quantity={quantity()} />
+                </>
+              )}
+            </Show>
+            <Show when={figures().unit}>
+              {(unit) => (
+                <>
+                  {" a "}
+                  <Amount value={unit()} unit />
+                </>
+              )}
+            </Show>
+            <Show when={figures().amount}>
+              {(money) => (
+                <>
+                  {" · "}
+                  <Amount value={money()} />
+                </>
+              )}
+            </Show>
+          </>
+        );
+      }}
     </Show>
   </li>
 );

@@ -164,6 +164,37 @@ describe("the card of the sync", () => {
     expect(host.textContent).toMatch(/250/);
   });
 
+  // Review of PR #97, correctness B2: two held purchases of the same day are
+  // told apart by their asset, quantity and price, and none of those figures
+  // shows under the privacy mode.
+  it("shows the asset, the quantity and the price of a held purchase, masked under privacy", async () => {
+    for (const privacy of [false, true]) {
+      const api = apiAt();
+      const first = await browserOf(base(), api);
+      await startSync(first.env, "init");
+      const own = new Builder(60);
+      own.trade("buy", "37", "2027-01-12");
+      const second = await browserOf([...base(), ...own.events], api);
+      await startSync(second.env, "join_from_remote");
+      store.setPrivacy(privacy);
+      const host = await show(second);
+      await until(() => (host.textContent ?? "").includes("ast_world"), "la compra retenida");
+      const shown = host.textContent ?? "";
+      expect(shown).toContain("Compra");
+      expect(shown).toMatch(/12\/01\/2027/);
+      if (privacy) {
+        expect(shown).not.toMatch(/37/);
+        expect(shown).not.toMatch(/100/);
+      } else {
+        expect(shown).toMatch(/37/);
+        expect(shown).toMatch(/100,00/);
+      }
+      dispose?.();
+      dispose = undefined;
+      document.body.innerHTML = "";
+    }
+  });
+
   it("redoes what is held only after showing the plan", async () => {
     const api = apiAt();
     const second = await joinedFromTheCloud(api);
