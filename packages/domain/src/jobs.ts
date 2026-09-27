@@ -31,6 +31,7 @@ export {
   parseJobsConfig,
 } from "./jobs/config.js";
 export { type ActiveHistory, activeHistoryOf } from "./jobs/ecb-manifest.js";
+export { type EcbRecovery, ecbRecovery } from "./jobs/ecb-recovery.js";
 export { type JobEvent, type JobEventRefusal, parseJobEvent } from "./jobs/event.js";
 export { ecbFindings, PRODUCER_FINDINGS, pricesFindings } from "./jobs/findings.js";
 export { NOTICE_CODES, type NoticeFacts, noticeMail } from "./jobs/mail/notice.js";
