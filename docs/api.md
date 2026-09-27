@@ -285,6 +285,15 @@ La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la creden
 - La web presenta su `device_id` **solo al iniciar sesión** (`GET /api/auth/login?device_id=…`). La API lo lleva en la cookie transitoria y, tras verificar a Google, lo acepta **solo si ella misma lo emitió para un dispositivo web y no está olvidado**: su objeto `sync/devices/<id>.json` existe, es de tipo `web` y está activo. Si no —y la primera vez, siempre—, **asigna uno nuevo** (22 caracteres aleatorios) y crea su objeto con `If-None-Match: *`.
 - El `device_id` va **firmado dentro de la cookie de sesión**, y cada petición con cookie comprueba su objeto (§2).
 - La web lo lee de `GET /api/session` y lo guarda en IndexedDB, **donde no es credencial**.
+- **Con qué dispositivo se unió la web** (implementado en E4 de la 015). Al inicializar o al unirse, la web guarda el `device_id` de su sesión en la clave `sync:device` de su almacén (`docs/data-schema.md` §1). Lo escribe **primero y en la misma transacción** que el marcador, y lo compara al escribir.
+  - Es el equivalente de `sync/remote.json` de la consola, pero **solo con el id**: el origen de la web es siempre el suyo.
+  - Antes de sincronizar o de volver a descargar, si el dispositivo de la sesión no es ese, la web **se niega** sin llamar a la API:
+    - `sync_device_changed` (`details.joined`, `details.session`) cuando es otro;
+    - `sync_device_unknown` cuando la web se sincroniza y no sabe con cuál se unió.
+  - Inicializar se niega con `sync_already_configured` sobre una sincronización en marcha. **Unirse** («Unirme desde la nube» o «Unirme con mis operaciones») es la salida, y reescribe `sync:device` con el dispositivo nuevo.
+  - Lo decide el dominio: `webSyncRefusal` y `webJoinRefusal`, en `packages/domain/src/sync/web-device.ts`.
+  - Lo pendiente nunca se pierde y unirse es siempre explícito.
+- **`device_forgotten`** en cualquier respuesta es un fallo remoto más (§5.7, `remote_failed`): la sincronización para sin retener nada. La web dice que hay que volver a iniciar sesión. Con el id nuevo, cae en `sync_device_changed`.
 - **Riesgo aceptado** (decisión del 2026-09-25): copiar la IndexedDB a otro navegador crea dos escritores con el mismo `device_id`; no se detecta, se documenta. Hay un solo usuario y una sola cuenta de Google: presentar el id de otro dispositivo exige ser ya el usuario.
 
 ### 5.5 Inicializar un remoto vacío
