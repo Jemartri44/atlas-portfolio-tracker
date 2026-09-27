@@ -337,9 +337,10 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       reports.push({ asset_id, group, outcome: "up_to_date", added: 0, failures });
       continue;
     }
-    // The last days stored are asked again when its type says so (crypto,
-    // live test of 2026-09-27: a provisional close equal to the day before):
-    // the same call starts earlier, and a different value is a correction.
+    // The N calendar days ending on the last close stored are asked again
+    // when its type says so (crypto, live test of 2026-09-27: a provisional
+    // close equal to the day before): the same call starts earlier, and a
+    // different value is a correction.
     const after =
       last === undefined
         ? addYears(today, -1)
