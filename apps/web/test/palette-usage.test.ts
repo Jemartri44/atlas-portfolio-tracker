@@ -66,4 +66,29 @@ describe("the colours of a gain and a loss", () => {
       .map((path) => relative(src, path));
     expect(named).toEqual([]);
   });
+
+  it("are not copied by value either: no sheet or code writes their hex, nor the danger's", () => {
+    // Round 1 of the review of PR #105, N4: `.meta { color: #0f6b5c }` was a
+    // gain on a non-result that no guardian saw. The values are read from
+    // `tokens.css`, all three blocks, so a change of palette moves this too.
+    const tokens = readFileSync(join(src, "styles/tokens.css"), "utf8");
+    const values = new Set<string>();
+    for (const rule of cssRules(tokens)) {
+      for (const [property, value] of rule.declarations) {
+        if (["--c-gain", "--c-loss", "--c-danger"].includes(property)) {
+          values.add(value.toLowerCase());
+        }
+      }
+    }
+    expect(values.size).toBe(6);
+    const copies = sources
+      .filter((path) => !path.endsWith("styles/tokens.css"))
+      .flatMap((path) => {
+        const text = readFileSync(path, "utf8").toLowerCase();
+        return [...values]
+          .filter((value) => new RegExp(`${value}(?![0-9a-f])`).test(text))
+          .map((value) => `${relative(src, path)}: ${value}`);
+      });
+    expect(copies).toEqual([]);
+  });
 });
