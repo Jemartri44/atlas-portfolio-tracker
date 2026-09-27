@@ -344,7 +344,15 @@ const dist = join(webRoot, "dist");
  * more under a query from 1800px, in the stylesheet of the boot. The trend:
  * 74.125 → 74.137 → 74.188.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_208;
+/*
+ * **Feature 020, E1, M4, the summary in 8+4 (2026-09-27): measured 74.275
+ * (+87 over 74.188), ceiling 74.295 — measured + 20**, raised before the
+ * commit that needs it, inside the authorisation (76.069). The placement of
+ * the five cards of the summary from 1800px (`summary.css`, in the stylesheet
+ * of the boot) and the order of the markup by width, which reads the query of
+ * the shell. The trend: 74.137 → 74.188 → 74.275.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_295;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
