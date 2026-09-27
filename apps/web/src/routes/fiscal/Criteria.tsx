@@ -77,7 +77,7 @@ const Stake = (props: { stake: StakeView }): JSX.Element => (
         fallback={<span class="stake-measure">{MEASURE_LABELS.not_quantifiable}</span>}
       >
         <span class="stake-measure">{MEASURE_LABELS[props.stake.measure]}</span>
-        <Amount value={props.stake.amount_eur} signed coloured />
+        <Amount value={props.stake.amount_eur} signed />
       </Show>
     </div>
     {/* Two entries of the same criterion differ in **why**, so the reason is

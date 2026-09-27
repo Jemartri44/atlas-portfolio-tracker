@@ -7,7 +7,14 @@ export {
   attentionItems,
 } from "./attention.js";
 export { type DetailField, type DetailView, detailView } from "./detail.js";
-export { type MovementRow, movementRow, movementRows, PAGE_SIZE } from "./movements.js";
+export {
+  hasState,
+  type MovementRow,
+  movementRow,
+  movementRows,
+  PAGE_SIZE,
+  showsStateColumn,
+} from "./movements.js";
 export {
   type BlockKey,
   type NetWorthBlock,

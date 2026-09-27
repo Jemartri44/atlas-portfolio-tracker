@@ -152,6 +152,35 @@ a.row:hover {
   min-height: var(--tap);
 }
 
+/*
+ * A row whose link is its date (feature 020, M13): the date in ink and the
+ * whole row the target. What the row says besides it stays above the link,
+ * so its title shows and its text selects (PR #105, round 1, N1).
+ */
+.table tr:has(.row-link) {
+  position: relative;
+}
+
+.table .row-link {
+  color: var(--c-text);
+  text-decoration: none;
+}
+
+.table .row-link::after {
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.table tr:has(.row-link):hover td {
+  background-color: var(--c-fill-hover);
+}
+
+.table tr:has(.row-link) :is(.cell-trunc, .meta, .tag) {
+  position: relative;
+  z-index: 1;
+}
+
 /* A long name is cut inside its cell, with the whole of it in the title. */
 .cell-trunc {
   display: block;

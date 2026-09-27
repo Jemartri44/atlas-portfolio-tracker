@@ -207,9 +207,26 @@
 
 /* A group of fields: one column, never wider than a line can be read. */
 .fieldset {
+  align-items: start;
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-4) var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   max-width: var(--reading-max);
+}
+
+/* Every field takes the row; two short ones of a pair share it (feature 020, M11). */
+.fieldset > * {
+  grid-column: 1 / -1;
+}
+
+/*
+ * Only from 384px: measured at 360, a date field needs 169px and half the row
+ * gives it 158, so at that width the pair stays a column (feature 020, M11).
+ */
+@media (min-width: 24rem) {
+  .fieldset > .pair {
+    grid-column: auto;
+  }
 }
 
 .field {

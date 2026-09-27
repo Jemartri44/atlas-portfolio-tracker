@@ -96,7 +96,7 @@ export const BudgetCard = (props: {
       }
     >
       <StatLine label="Pérdida acumulada sobre el aporte">
-        <Figure value={props.view.lossPct} unit="percent" coloured />
+        <Figure value={props.view.lossPct} unit="percent" />
       </StatLine>
     </Show>
 

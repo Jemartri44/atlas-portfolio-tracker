@@ -350,7 +350,90 @@ const dist = join(webRoot, "dist");
  * ledger's and keeps the newer (+21 in the chunk of the domain, +1 of the
  * table of chunks). The trend: 74.114 → 74.172 → 74.194; 1.875 left.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_214;
+/*
+ * **Feature 020, E1, M6 (2026-09-27): measured 74.137 (+12 over 74.125),
+ * ceiling 74.157 — measured + 20**, raised before the commit that needs it,
+ * inside the authorisation (76.069). Gain and loss leave the red of a problem
+ * under their own names, and the contributed spine of M3 gets its grey in
+ * the three blocks of the palette: three custom properties more in the one
+ * stylesheet of the boot. The trend: 74.114 → 74.125 → 74.137.
+ */
+/*
+ * **Feature 020, E1, M4, the step of the monitor (2026-09-27): measured
+ * 74.188 (+51 over 74.137), ceiling 74.208 — measured + 20**, raised before
+ * the commit that needs it, inside the authorisation (76.069). Eight tokens
+ * more under a query from 1800px, in the stylesheet of the boot. The trend:
+ * 74.125 → 74.137 → 74.188.
+ */
+/*
+ * **Feature 020, E1, M4, the summary in 8+4 (2026-09-27): measured 74.275
+ * (+87 over 74.188), ceiling 74.295 — measured + 20**, raised before the
+ * commit that needs it, inside the authorisation (76.069). The placement of
+ * the five cards of the summary from 1800px (`summary.css`, in the stylesheet
+ * of the boot) and the order of the markup by width, which reads the query of
+ * the shell. The trend: 74.137 → 74.188 → 74.275.
+ */
+/*
+ * **Feature 020, E1, M11, Registrar in one screenful (2026-09-27): measured
+ * 74.366 (+91 over 74.275), ceiling 74.386 — measured + 20**, raised before
+ * the commit that needs it, inside the authorisation (76.069). The tiles in
+ * three columns of 64px with the icon back from 640px, and the short fields
+ * in pairs from 384px: rules of `registrar.css` and `controls.css`, in the
+ * stylesheet of the boot. The trend: 74.188 → 74.275 → 74.366.
+ */
+/*
+ * **Feature 020, E1, M13, the polish (2026-09-27): measured 74.413 (+47 over
+ * 74.366), ceiling 74.433 — measured + 20**, raised before the commit that
+ * needs it, inside the authorisation (76.069). The date of a movement in ink
+ * with the whole row as its target, and the list of the tax card without its
+ * indent: rules of the stylesheet of the boot. The trend: 74.275 → 74.366 →
+ * 74.413.
+ */
+/*
+ * **Feature 020, E1, the anchor under the bar (2026-09-27): measured 74.596
+ * (+183 over 74.413), ceiling 74.616 — measured + 20**, raised before the
+ * commit that needs it, inside the authorisation (76.069). On the boot on
+ * purpose: the frame follows the fragment of every navigation once its target
+ * is painted (`shell/anchor.ts` and one effect of `AppShell`), and the
+ * document stops an anchor under the bar of each width (`--header-h`). The
+ * trend: 74.366 → 74.413 → 74.596.
+ */
+/*
+ * **Feature 020, E1, `develop` with PR #102 merged in (2026-09-27): measured
+ * 74.665 (+69 over 74.596), ceiling 74.685 — measured + 20**, set in the
+ * merge itself, where the two ceilings met: the prices of #102 and the E1 of
+ * 020, each measured on its own branch. The trend: 74.413 → 74.596 → 74.665.
+ */
+/*
+ * **Feature 020, E1, frozen (2026-09-27): measured 74.664 (−1), ceiling
+ * 74.684 — measured + 20**, lowered in a commit of its own: writing the new
+ * classes where the markup check reads them saved a byte. The trend: 74.596 →
+ * 74.665 → 74.664.
+ */
+/*
+ * **Round 1 of the review of PR #105, B1 and N2 (2026-09-27): measured
+ * 74.874 (+210 over 74.664), ceiling 74.894 — measured + 20**, raised before
+ * the commit that needs it, inside the authorisation (76.069). The fragment
+ * is read inside a `try`, the wait stops when the address changes, the back
+ * button wins and the focus goes to the title reached: all on the frame, on
+ * the boot on purpose. The trend: 74.596 → 74.664 → 74.874.
+ */
+/*
+ * **Round 1 of the review of PR #105, N1 (2026-09-27): measured 74.895 (+21
+ * over 74.874), ceiling 74.915 — measured + 20**, raised before the commit
+ * that needs it. What a row says besides its link stays above it: one rule of
+ * `lists.css`. The trend: 74.664 → 74.874 → 74.895.
+ */
+/*
+ * **Round 1 of the review of PR #105, N2 in Chromium (2026-09-27): measured
+ * 75.019 (+132 over the 74.887 of the axis), ceiling 75.039 — measured + 20**,
+ * raised before the commit that needs it, inside the authorisation (76.069).
+ * The back button, measured in the browser, still won the first version: the
+ * router hears `popstate` first, so the frame decides after the event, once
+ * per address, behind a gate that a click opens again. The trend: 74.874 →
+ * 74.895 → 74.887 → 75.019.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_039;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -801,7 +884,57 @@ const BOOT_BUDGET_GZIP_BYTES = 74_214;
  * origin (`warnings` +97), the ECB rates of the cash without closes
  * (`quotes` +105), and the hashes of the tables.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 294 * 1024 + 1045;
+/*
+ * **Feature 020, E1, the colour of a result only on results (2026-09-27):
+ * measured 301.545 (+106 over 301.439), ceiling 301.801 — measured + 256**,
+ * raised before the commit that needs it, inside the authorisation (310.500).
+ * Two `coloured` flags leave the fiscal criteria and the bucket card: the
+ * lazy chunks that name them change their hashes, and every chunk importing
+ * them compresses a few bytes worse. No code on the boot. The trend: 301.240
+ * → 301.370 → 301.439 → 301.545.
+ */
+/*
+ * **Feature 020, E1, up to M13 (2026-09-27): measured 301.980 (+435 over
+ * 301.545), ceiling 302.236 — measured + 256**, raised before the commit that
+ * needs it, inside the authorisation (310.500). The boot of M6, M4, M11 and
+ * M13 (+288, counted above) and, lazy, the summary in its order by width, the
+ * movements without the empty column and the axis with its unit. The trend:
+ * 301.545 → 301.518 → 301.692 → 301.768 → 301.980.
+ */
+/*
+ * **Feature 020, E1, `develop` with PR #102 merged in (2026-09-27): measured
+ * 302.418 (+352 over the 302.066 of the anchor), ceiling 302.674 — measured +
+ * 256**, set in the merge, inside the authorisation (310.500, raised by the
+ * direction precisely for #102). The trend: 301.980 → 302.066 → 302.418.
+ */
+/*
+ * **Feature 020, E1, frozen (2026-09-27): measured 302.379 (−39), ceiling
+ * 302.635 — measured + 256**, lowered in a commit of its own. The trend:
+ * 302.066 → 302.418 → 302.379.
+ */
+/*
+ * **Round 1 of the review of PR #105, N1 (2026-09-27): measured 302.638 (+125
+ * over the 302.513 of B1 and N2, +259 over 302.379), ceiling 302.894 —
+ * measured + 256**, raised before the commit that needs it, inside the
+ * authorisation (310.500). The trend: 302.379 → 302.513 → 302.638.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 302_894;
+
+/**
+ * What the direction authorised, which **no ceiling may pass** (feature 020,
+ * E1, block 1; prompt 020 §8.1, the accepted preference). The ceilings above
+ * follow what is measured, twenty bytes at a time; these two do not move with
+ * any improvement. Raising one is a decision of the direction, written in the
+ * prompt of the feature, never a commit of an improvement: a ceiling raised
+ * over its authorisation does not build green.
+ *
+ *   - Boot: 76.069, prompt 015 §7 P13, still standing (prompt 020 §5).
+ *   - Total: 310.500, raised by the direction on 2026-09-27 over the 309.500
+ *     of prompt 020 §8 P1, for the prices of PR #102
+ *     (`specs/020-visual-refresh/questions.md` §4.1).
+ */
+const BOOT_AUTHORISED_GZIP_BYTES = 76_069;
+const TOTAL_AUTHORISED_GZIP_BYTES = 310_500;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -868,6 +1001,17 @@ const files = (dir) =>
 const isText = (path) => [".js", ".css", ".html", ".webmanifest", ".json"].includes(extname(path));
 
 const problems = [];
+
+if (BOOT_BUDGET_GZIP_BYTES > BOOT_AUTHORISED_GZIP_BYTES) {
+  problems.push(
+    `el techo del arranque (${BOOT_BUDGET_GZIP_BYTES}) pasa de lo autorizado (${BOOT_AUTHORISED_GZIP_BYTES}): subir una autorización es cosa de la dirección`,
+  );
+}
+if (TOTAL_BUDGET_GZIP_BYTES > TOTAL_AUTHORISED_GZIP_BYTES) {
+  problems.push(
+    `el techo del total (${TOTAL_BUDGET_GZIP_BYTES}) pasa de lo autorizado (${TOTAL_AUTHORISED_GZIP_BYTES}): subir una autorización es cosa de la dirección`,
+  );
+}
 let gzipTotal = 0;
 const sizes = [];
 

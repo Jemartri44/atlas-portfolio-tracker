@@ -60,7 +60,18 @@ describe("the axis of a chart is an amount", () => {
   });
 
   it("shows the figures when privacy is off", () => {
-    expect(yLabels(false)).toEqual(["1 k", "25 k"]);
+    expect(yLabels(false)).toEqual(["1 k€", "25 k€"]);
+  });
+
+  it("leaves room between a figure of the axis and the first point", () => {
+    const axis = (privacy: boolean) =>
+      chartOptions({ x: X, series: SERIES, width: 320, height: 220 }, privacy).axes?.[1] as {
+        gap: number;
+        size: number;
+      };
+    expect(axis(false).gap).toBe(10);
+    expect(axis(false).size).toBe(60);
+    expect(axis(true).gap).toBe(0);
   });
 
   it("leaves a month and its year room enough not to run into the next", () => {

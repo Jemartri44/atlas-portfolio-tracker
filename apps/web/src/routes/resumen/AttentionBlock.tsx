@@ -24,7 +24,7 @@ export const noticeOf = (item: AttentionItem): NoticeItem => ({
 });
 
 export const AttentionBlock = (props: { items: readonly AttentionItem[] }): JSX.Element => (
-  <section class="card span-7" aria-label="Lo que reclama atención">
+  <section class="card span-7 summary-attention" aria-label="Lo que reclama atención">
     <div class="card-head">
       <h2>Atención</h2>
       <Show when={props.items.length > 0}>

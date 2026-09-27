@@ -125,7 +125,6 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
       ...(field.hint === undefined ? {} : { hint: field.hint }),
       ...(field.required === undefined ? {} : { required: field.required }),
       onInput: (next: string) => set(field.name, next),
-      ...(field.full === true ? { class: "full" } : {}),
       get error(): string | undefined {
         return props.errors?.[field.name];
       },
@@ -145,6 +144,7 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
       return (
         <SelectField
           {...common}
+          class={field.full === true ? "full" : field.pair === true ? "pair" : undefined}
           options={optionsOf(field, props.state, props.values, props.events)}
           {...(field.required === true ? {} : { placeholder: "Sin indicar" })}
         />
@@ -153,6 +153,7 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
     return (
       <Field
         {...common}
+        class={field.full === true ? "full" : field.pair === true ? "pair" : undefined}
         kind={field.kind}
         sensitive={isSensitive(field)}
         revealed={props.revealed?.(field.name) ?? true}
