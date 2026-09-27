@@ -17,7 +17,7 @@ Trece mejoras de la propuesta (M1-M13) y el ancla de `#sincronizacion`, en cuatr
 **Pruebas**: Vitest 4 con `happy-dom`, `fast-check` (ya es dependencia de desarrollo), `@vitest/coverage-v8`; siempre `--pool=forks --maxWorkers=1`, y las dos pasadas (`test:coverage:domain`, `test:others`) por separado con las opciones.
 **Plataforma**: el navegador del móvil (400×890, DPR 3) y del monitor (2045×1141); PWA estática con CSP `style-src 'self'`.
 **Tipo de proyecto**: monorepo; se tocan `apps/web` y `packages/domain`, y `tests/architecture.test.ts`.
-**Objetivos**: arranque ≤ 76.069 bytes gzip, total ≤ 309.500 (§6).
+**Objetivos**: arranque ≤ 76.069 bytes gzip, total ≤ 310.500 (§6; la dirección la subió de 309.500 el 2026-09-27, `questions.md` §4.1).
 **Restricciones**: sin dependencias, sin estilos en línea, ningún valor fuera de `tokens.css`, ningún porcentaje con `number`, ninguna regla de dominio en la web, memoria disponible ≥ 1.500 MB antes de cada paso pesado.
 **Escala**: 13 mejoras, 4 entregas, 5 cambios de dominio.
 
@@ -125,7 +125,7 @@ Tests en los bordes (primer y último día incluidos, el día antes y el de desp
 
 ### 4.2 `hasForeignAccountsAt` (E2)
 
-Diseño en [`data-model.md`](data-model.md) §1. **Compara con `tax_residence`**, nunca con `"ES"`; **sin `tax_residence`, `true`**. **No alineo `fiscalAttention` ni `informative/holdings.ts` con él**: con `tax_residence` ausente, el predicado dice `true` y ellos comparan con `ES`; cambiarlos haría que un libro sin `tax_residence` tratara como extranjeras las cuentas españolas y **movería avisos y cifras del 720/721**. Consecuencia conocida, en Q3: con una residencia distinta de `ES`, el predicado y el motor pueden discrepar (el motor sigue la ley española en cualquier caso).
+Diseño en [`data-model.md`](data-model.md) §1. **Compara con `tax_residence`**; **sin `tax_residence`, la regla actual del motor** (alguna cuenta con país distinto de `ES`), dentro de la función (Q3, respondida). **No alineo `fiscalAttention` ni `informative/holdings.ts` con él**: con `tax_residence` ausente, el predicado dice `true` y ellos comparan con `ES`; cambiarlos haría que un libro sin `tax_residence` tratara como extranjeras las cuentas españolas y **movería avisos y cifras del 720/721**. Consecuencia conocida, en Q3: con una residencia distinta de `ES`, el predicado y el motor pueden discrepar (el motor sigue la ley española en cualquier caso).
 
 ### 4.3 `NEAR_LIMIT_PCT` exportado (E3)
 
@@ -214,7 +214,7 @@ Las de la propuesta, corregidas donde veo más código: la propuesta no contaba 
 
 **Acumulado** (desde 74.125 / 301.439):
 
-| Tras | Arranque | Margen hasta 76.069 | Total | Margen hasta 309.500 |
+| Tras | Arranque | Margen hasta 76.069 | Total | Margen hasta 309.500 (310.500 desde el 2026-09-27) |
 |---|---:|---:|---:|---:|
 | E1 | 74.545 | 1.524 | 301.909 | 7.591 |
 | E2 | 74.935 | 1.134 | 303.239 | 6.261 |

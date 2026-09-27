@@ -83,6 +83,21 @@ Además, no alineo `fiscalAttention` ni `informative/holdings.ts` (que comparan 
 
 **Recomendación: (a)**. Un importe en juego en tinta con su signo se lee igual, y el color de pérdida en un criterio fiscal se confunde con «has perdido».
 
+## 4.1 Respuestas de la dirección (2026-09-27)
+
+Visto bueno a `spec.md` y `plan.md`. Decisiones, tal como llegaron:
+
+- **Q1**: buscar una pérdida oscura que cumpla todos los umbrales (pérdida/peligro ≥ 7, ganancia/pérdida ≥ 8 y contraste ≥ 4,5). Si no existe, se acepta un suelo por tema (7 en claro, 5 en oscuro), con los valores medidos anotados. El bloque 2 de E1 va con ese resultado. → §9.
+- **Q2**: sí, en la fila plegada y en estado neutro.
+- **Q3**: sí. Con `tax_residence`, el predicado usa ese valor; sin él, vuelve a la regla actual del motor («alguna cuenta con país distinto de ES»). Ese respaldo va **dentro de la función de dominio**, nunca en la web, con su test y su mutante. No se alinean `fiscalAttention` ni `holdings.ts`.
+- **Q4**: una fila por ejercicio verificado, con la cita del BOE.
+- **Q5**: sí, `inRentaSeason` en el barril y `fiscalAttention` usándola; se miden los bytes.
+- **Q6**: sí, sin color y con el signo.
+- **Propuestas (a) a (h)**: aceptadas tal cual. La definición de «lo aportado» va a `business-rules.md` en el commit de dominio de E4, y se enseñan la espina y la frase.
+- **Presupuesto total**: la PR #102 (precios) añadirá unos 406 bytes al total y 47 al arranque; **la autorización del total sube a 310.500 bytes**. El arranque sigue en 76.069. El orden de recorte (h) solo se aplica si ni con eso cabe. Cuando la #102 esté en `develop`, se fusiona en la rama y se vuelve a medir.
+- **Añadido para E3**: en *Atención*, el aviso de un tipo del BCE desactualizado enlaza hoy a «Registrar valoración»; tiene que llevar a actualizar el histórico del BCE (su sección de Ajustes), con su test.
+- **Errores del encargo (§6)**: corregidos en los artefactos (`spec.md`, `plan.md`, `data-model.md`): la lista cerrada de pares recoge `--c-raised`; el ancla lleva el efecto de ir al fragmento; `inRentaSeason` es la sexta pieza del barril; las autorizaciones son 76.069 y 310.500.
+
 ## 5. Propuestas del alto (§7.2 del encargo), con mi recomendación
 
 | | Qué | Propongo | Dónde |

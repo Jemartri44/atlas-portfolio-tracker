@@ -9,7 +9,7 @@
 - **Dónde**: `packages/domain/src/projections/foreign-accounts.ts`, fuera de `informative/` (que está en `LAZY_ONLY`); exportada por `index.ts`.
 - **Qué dice**: si alguna cuenta del catálogo, **tal como estaba en `date`**, tiene un país distinto de `settings.tax_residence`.
 - **«Tal como estaba»**: la misma regla que `accountsAt` (`informative/holdings.ts:69`): un `account_created` o `account_updated` cuenta desde el día en que **se registró** (`madridDateOf(recorded_at) <= date`), porque el catálogo no tiene fecha de negocio (ADR-0016, S6/Q6 de la 010). La última versión de cada cuenta hasta esa fecha manda. Activas y dadas de baja cuentan igual, como en `fiscalAttention`, para que el predicado sea **un superconjunto** de lo que puede producir un aviso del 720/721 con la residencia `ES`.
-- **Sin `tax_residence`**: devuelve `true` (no supone `ES`; reservar no esconde nada). **Q3**.
+- **Sin `tax_residence`**: vuelve a la regla que hoy aplica el motor, «alguna cuenta con país distinto de `ES`», **dentro de esta función**, nunca en la web (Q3, respondida el 2026-09-27). Con su test y su mutante (11 ter).
 - **Sin cuentas**: `false`.
 - **No lee `Date`**: la fecha entra como argumento.
 - **Coste**: se mide con un prototipo antes del commit (estimación: +60 a +90 bytes gzip en el arranque).

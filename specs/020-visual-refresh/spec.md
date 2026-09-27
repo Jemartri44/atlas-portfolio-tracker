@@ -39,7 +39,7 @@ Seis reglas atraviesan la feature (§0 del encargo):
 3. **Ninguna regla de dominio en la web.** Qué es lo aportado, cuándo es la campaña, cuándo termina una ventana, cuándo sube *Declaración*, qué activo está fuera de umbral: lo decide `packages/domain`. La web traduce, coloca y dibuja.
 4. **Ningún porcentaje que se lee se calcula con `number`**, y se redondea una sola vez, al mostrarlo.
 5. **Ni una dependencia nueva, ni un valor fuera de `tokens.css`, ni un estilo en línea**, con la CSP estricta sin tocar.
-6. **El paquete se mide mejora a mejora**; cada techo sube en su propio commit y antes del que lo necesita, y **si no cabe en la autorización (arranque 76.069, total 309.500), se para**.
+6. **El paquete se mide mejora a mejora**; cada techo sube en su propio commit y antes del que lo necesita, y **si no cabe en la autorización (arranque 76.069, total 310.500, subida por la dirección el 2026-09-27), se para**.
 
 ## Escenarios de usuario y pruebas
 
@@ -133,7 +133,7 @@ La evolución es una pila de paneles que comparten las fechas: arriba la cartera
 ### Casos límite
 
 - **El primer día y el último de la campaña**, con una campaña configurada distinta de la de por defecto; el día antes y el de después.
-- **Un 720 pendiente fuera de la campaña** con y sin cuentas en el extranjero; **`tax_residence` ausente** (el predicado no supone `ES`: responde que sí y se reserva la fila).
+- **Un 720 pendiente fuera de la campaña** con y sin cuentas en el extranjero; **`tax_residence` ausente** (el predicado vuelve a la regla del motor: alguna cuenta con país distinto de `ES`; Q3).
 - **Movimientos inválidos fuera de la campaña**: la tarjeta no sube, la fila no repite el aviso y el aviso llega a *Atención* dentro del grupo de inválidos que ya exista.
 - **«Pendiente» con un precio que falta** (una línea) y con dos (el bloque de hoy).
 - **Valoraciones del mismo día con una anulada**; valoraciones de dos días distintos; un grupo en *Últimos movimientos* cortado por la fecha consultada.
@@ -154,15 +154,15 @@ La evolución es una pila de paneles que comparten las fechas: arriba la cartera
 - **FR-002**: Ninguna cifra fiscal DEBE cambiar: la salida fiscal (`tax` con `--lots`, `--boxes` y `--json`, `gains`, `income`, `m720`, `m721` y `filed`) de `synthetic-v1` DEBE dar los mismos bytes, con la predicción escrita antes.
 - **FR-003**: Toda regla de negocio nueva (lo aportado, la campaña, el fin de una ventana, cuándo sube *Declaración*, qué activo está fuera de umbral, el plazo de un modelo) DEBE vivir en el dominio, en funciones puras con el 100 % de cobertura; la web solo presenta.
 - **FR-004**: Todo porcentaje que se lee DEBE calcularse en decimal (dominio o modelo de vista con el decimal del dominio) y redondearse una sola vez al mostrarse.
-- **FR-005**: Toda función nueva del dominio DEBE vivir detrás de una puerta perezosa con su guardián de arquitectura y su entrada en la lista de lo que no puede ir en el arranque, salvo `hasForeignAccountsAt` y `NEAR_LIMIT_PCT`, que van en el barril con su coste medido.
+- **FR-005**: Toda función nueva del dominio DEBE vivir detrás de una puerta perezosa con su guardián de arquitectura y su entrada en la lista de lo que no puede ir en el arranque, salvo `hasForeignAccountsAt`, `inRentaSeason` (Q5) y `NEAR_LIMIT_PCT`, que van en el barril con su coste medido.
 - **FR-006**: El color NUNCA DEBE ir solo: signo en cada resultado, forma distinta en cada marca, trazo distinto en cada serie, y renta variable y cripto nunca juntas sin etiqueta directa.
 - **FR-007**: Cada SVG nuevo DEBE ser una imagen con etiqueta accesible en porcentajes y fechas (nunca importes, con la privacidad puesta o quitada) o estar oculto con su equivalente en texto al lado; cada gráfica DEBE conservar su tabla equivalente plegada.
 - **FR-008**: Ningún objetivo táctil por debajo de 44 px, ningún texto que se lee por debajo de 13 px, ningún desplazamiento lateral de 360 a 2045 px, el orden de tabulación igual al visual y nada nuevo animado.
-- **FR-009**: El paquete DEBE medirse mejora a mejora; ningún techo DEBE superar su autorización (arranque 76.069 bytes gzip, total 309.500), y la comprobación del paquete DEBE fallar si un techo la supera.
+- **FR-009**: El paquete DEBE medirse mejora a mejora; ningún techo DEBE superar su autorización (arranque 76.069 bytes gzip, total 310.500), y la comprobación del paquete DEBE fallar si un techo la supera.
 
 **E1 — El marco y el color**
 
-- **FR-010**: Los colores de ganancia y de pérdida DEBEN sustituir a los de hoy en los tres bloques de variables, con los valores de la propuesta si pasan la prueba (ver `questions.md` Q1); el color de «paso completado» no cambia.
+- **FR-010**: Los colores de ganancia y de pérdida DEBEN sustituir a los de hoy en los tres bloques de variables, con la ganancia de la propuesta y una pérdida que pase todos los umbrales (Q1, respondida: `questions.md` §4.1); el color de «paso completado» no cambia.
 - **FR-011**: Una prueba del repositorio, sin dependencias, DEBE exigir cada variable en los tres bloques, la separación ganancia/pérdida (≥ 8 en el peor caso de las tres deficiencias, en los dos temas), la separación pérdida/peligro con visión normal, el contraste de texto (≥ 4,5:1) de ganancia y pérdida y el de la espina de lo aportado (≥ 3:1), y la propia simulación contra los valores publicados por su fuente.
 - **FR-012**: Los colores de ganancia y pérdida SOLO DEBEN usarse en resultados, sin alias fuera ni dentro del fichero de variables; dos variables de color no DEBEN compartir valor salvo una lista cerrada y justificada en la que no entra ningún color semántico.
 - **FR-013**: A partir de 1.800 px, el texto, la altura de la gráfica, el margen, la separación y el ancho máximo DEBEN subir un paso, y el Resumen DEBE ir en 8+4 con *Declaración* a la derecha, nunca sola en su fila.
@@ -175,7 +175,7 @@ La evolución es una pila de paneles que comparten las fechas: arriba la cartera
 - **FR-020**: *Declaración* SOLO DEBE subir arriba en la campaña de la Renta (ambos extremos incluidos, en la fecha consultada); lo pendiente del 720 y del 721 y los ejercicios sin declarar DEBEN seguir saliendo en el estado fiscal del dominio.
 - **FR-021**: El riesgo de perder datos DEBE ir primero y en una línea, siempre, y NO DEBE repetirse en *Atención*.
 - **FR-022**: Fuera de la campaña, *Declaración* DEBE ser una fila con su estado neutro, sin repetir ningún aviso; lo pendiente del 720 y del 721 DEBE ir a *Atención*, y el aviso de movimientos inválidos también, sumado al grupo de inválidos si existe.
-- **FR-023**: Fuera de la campaña y solo si el libro tiene alguna cuenta en el extranjero a la fecha (según la residencia fiscal de `Settings`, que sin valor no se supone), *Atención* DEBE reservar una fila de esqueleto al final de sus grupos visibles.
+- **FR-023**: Fuera de la campaña y solo si el libro tiene alguna cuenta en el extranjero a la fecha (según la residencia fiscal de `Settings`; sin ella, con la regla actual del motor, «alguna cuenta con país distinto de ES», dentro de la función de dominio: Q3), *Atención* DEBE reservar una fila de esqueleto al final de sus grupos visibles.
 - **FR-024**: «Pendiente» DEBE ir en una línea cuando falta un solo precio y en el bloque de hoy con dos o más.
 - **FR-025**: El orden del Resumen en el móvil DEBE ser: la línea de perder datos, *Declaración* (solo en campaña), el patrimonio, *Atención*, *Últimos movimientos*, la evolución y la fila de *Declaración* (fuera de campaña).
 - **FR-026**: En el móvil, Movimientos DEBE agruparse por mes (Europe/Madrid) con la fecha en la fila, y las valoraciones de un mismo día, no anuladas, DEBEN agruparse en una fila desplegable, también en *Últimos movimientos*, donde un grupo cuenta como una fila y respeta la fecha consultada.
@@ -211,14 +211,14 @@ La evolución es una pila de paneles que comparten las fechas: arriba la cartera
 
 - **SC-001**: Con la privacidad puesta, **cero** apariciones de un importe o una cantidad del libro sintético en el texto o los atributos de cada pantalla tocada.
 - **SC-002**: La salida fiscal de `synthetic-v1` da **los mismos bytes** antes y después de cada entrega; `git diff tests/fixtures` vacío.
-- **SC-003**: Ganancia frente a pérdida: distancia perceptiva **≥ 8** en el peor caso de protanopía, deuteranopía y tritanopía, en claro y en oscuro; pérdida frente a peligro con visión normal, **≥ 7** (ver Q1: en oscuro la propuesta mide 5,05).
+- **SC-003**: Ganancia frente a pérdida: distancia perceptiva **≥ 8** en el peor caso de protanopía, deuteranopía y tritanopía, en claro y en oscuro; pérdida frente a peligro con visión normal, **≥ 7** en los dos temas si existe una pérdida oscura que lo cumpla; si no, 7 en claro y 5 en oscuro (Q1, respondida).
 - **SC-004**: A 400×890, con la privacidad puesta el 20/01/2029, el primer pantallazo del Resumen contiene la línea de perder datos, el patrimonio con sus porcentajes y el primer grupo de *Atención*; **nada salta** en él al llegar lo perezoso (posiciones medidas antes y después).
 - **SC-005**: A 2045×1141, el borde superior de la gráfica de evolución queda **dentro de los 1.141 px** (hoy, en 1.187).
 - **SC-006**: 20 movimientos del libro sintético ocupan **menos de 2 pantallas** del móvil (hoy, 2,6).
 - **SC-007**: Registrar a 400×890: las siete baldosas y «Otros registros» **en el primer pantallazo**.
 - **SC-008**: Cada pantalla tocada tiene **al menos un porcentaje visible** junto a cada grupo de máscaras con la privacidad puesta; el Cubo pasa de 20 máscaras y 7 porcentajes a más porcentajes que máscaras.
 - **SC-009**: Sin desplazamiento lateral a 360, 400, 1.440 y 2045 px; **ningún** objetivo táctil nuevo por debajo de 44 px ni texto que se lee por debajo de 13 px.
-- **SC-010**: El arranque cabe en **76.069** bytes gzip y el total en **309.500**, con cada techo subido en su commit y antes del que lo necesita.
+- **SC-010**: El arranque cabe en **76.069** bytes gzip y el total en **310.500**, con cada techo subido en su commit y antes del que lo necesita.
 - **SC-011**: `packages/domain` al **100 %** de líneas, ramas, funciones y sentencias; cada regla de la tabla del plan con su test visto en rojo y su mutante muerto.
 
 ## Supuestos
