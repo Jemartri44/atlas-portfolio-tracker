@@ -404,7 +404,13 @@ const dist = join(webRoot, "dist");
  * merge itself, where the two ceilings met: the prices of #102 and the E1 of
  * 020, each measured on its own branch. The trend: 74.413 → 74.596 → 74.665.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_685;
+/*
+ * **Feature 020, E1, frozen (2026-09-27): measured 74.664 (−1), ceiling
+ * 74.684 — measured + 20**, lowered in a commit of its own: writing the new
+ * classes where the markup check reads them saved a byte. The trend: 74.596 →
+ * 74.665 → 74.664.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_684;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -878,7 +884,12 @@ const BOOT_BUDGET_GZIP_BYTES = 74_685;
  * 256**, set in the merge, inside the authorisation (310.500, raised by the
  * direction precisely for #102). The trend: 301.980 → 302.066 → 302.418.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 302_674;
+/*
+ * **Feature 020, E1, frozen (2026-09-27): measured 302.379 (−39), ceiling
+ * 302.635 — measured + 256**, lowered in a commit of its own. The trend:
+ * 302.066 → 302.418 → 302.379.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 302_635;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
