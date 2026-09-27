@@ -76,6 +76,7 @@ packages/adapters  port implementations: S3/file/memory LedgerStore, IBKR/MyInve
 apps/cli           Phase-1 interface over a local file or S3.
 apps/api           Lambda Function URL behind CloudFront (/api/*): verifies the Google token at sign-in, issues its own session, composes domain + adapters.
 apps/web           Vite SPA; uses domain to project/simulate offline.
+apps/jobs          Scheduled Lambdas run by EventBridge Scheduler (ECB, prices, email, backups, integrity); compose domain + adapters. Nothing imports apps/jobs.
 infra/             Terraform.
 ```
 
