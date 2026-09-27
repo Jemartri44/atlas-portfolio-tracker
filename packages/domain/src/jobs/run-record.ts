@@ -12,7 +12,8 @@
 //   sending       at most once: close as `send_unknown`, **never send again**;
 //                 otherwise do again
 //   send_failed   send again: the service said no
-//   failed        do again: nothing was sent
+//   failed        do again: the task failed before closing; a mail it may have
+//                 sent is guarded by its own streak (`notices.ts`), never here
 //   done          nothing
 //   send_unknown  nothing
 //
