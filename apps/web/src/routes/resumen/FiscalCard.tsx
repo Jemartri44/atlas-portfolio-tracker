@@ -30,7 +30,7 @@ export default function FiscalCard(props: {
     },
   );
   const klass = (): string =>
-    `span-4 ${status()?.prominent === true ? "is-first" : "is-last"}`.trimEnd();
+    `span-4 summary-fiscal ${status()?.prominent === true ? "is-first" : "is-last"}`.trimEnd();
 
   return (
     <Section

@@ -211,3 +211,35 @@
   margin: 0;
   padding-left: var(--space-5);
 }
+
+/* ---- The monitor: the summary in 8+4 (feature 020, M4) ------------------- */
+
+/*
+ * From the monitor's step the net worth takes 8 columns with the tax card at
+ * its right, never alone in its row, and the evolution takes 8 with attention
+ * and the recent movements stacked beside it, so the chart starts above the
+ * fold at 2045×1141. The markup comes in that order already
+ * (`view-models/summary-order.ts`), so nothing here reorders: the tax card
+ * gives up its `order` and keeps its own height instead of the band's.
+ */
+@media (min-width: 112.5rem) {
+  .grid > .summary-worth,
+  .grid > .summary-evolution {
+    grid-column: span 8;
+  }
+
+  .grid > .summary-fiscal,
+  .grid > .summary-attention,
+  .grid > .summary-moves {
+    grid-column: span 4;
+  }
+
+  .grid > .summary-fiscal {
+    align-self: start;
+    order: 0;
+  }
+
+  .grid > .summary-evolution {
+    grid-row: span 2;
+  }
+}

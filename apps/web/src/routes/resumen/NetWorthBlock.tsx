@@ -87,7 +87,7 @@ const Lines = (props: { block: Block }): JSX.Element => (
 );
 
 export const NetWorthBlock = (props: { view: NetWorthView }): JSX.Element => (
-  <section class="card hero span-12" aria-label="Patrimonio total">
+  <section class="card hero span-12 summary-worth" aria-label="Patrimonio total">
     <div class="hero-main">
       <div class="card-head">
         <h2>Patrimonio total</h2>
