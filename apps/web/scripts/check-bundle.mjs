@@ -441,7 +441,17 @@ const dist = join(webRoot, "dist");
  * tax engine for the settings, so the summary places its tax card on the
  * first paint (Q5). The trend: 75.019 → 75.034 → 75.059.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_079;
+/*
+ * **Feature 020, E2, M2, the first screenful by importance (2026-09-27):
+ * measured 75.339 (+280 over 75.059), ceiling 75.359 — measured + 20**,
+ * raised before the commit that needs it, inside the authorisation (76.069).
+ * The summary reads on its first paint whether it is the season and whether
+ * the ledger has an account abroad (`inRentaSeason`, `hasForeignAccountsAt`,
+ * from the barrel), and the stylesheet of the boot gains the line of the data,
+ * the row of the tax card, the row kept in *Atención* and the pending of one
+ * line. The trend: 75.034 → 75.059 → 75.339.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_359;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -926,7 +936,15 @@ const BOOT_BUDGET_GZIP_BYTES = 75_079;
  * measured + 256**, raised before the commit that needs it, inside the
  * authorisation (310.500). The trend: 302.379 → 302.513 → 302.638.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 302_894;
+/*
+ * **Feature 020, E2, M2 (2026-09-27): measured 303.708 (+935 over the
+ * 302.773 of round 2 of PR #105), ceiling 303.964 — measured + 256**, raised
+ * before the commit that needs it, inside the authorisation (310.500). The
+ * boot above (+305), and lazy: the summary in its order by the season, the
+ * tax card in its two shapes and the slot of the 720 in *Atención*. The
+ * trend: 302.785 → 302.773 → 303.708.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 303_964;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
