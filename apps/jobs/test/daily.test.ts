@@ -6,9 +6,11 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { encodeLine } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "../../../packages/adapters/test/aws/test-only-fake-ssm.js";
+import { catalogue, LedgerBuilder } from "../../../packages/domain/test/ledger-builder.js";
 import { MAIL_ENV, RECIPIENT, sentinelLedger, setupJobs } from "./harness.js";
 
 const fixtures = resolve(dirname(fileURLToPath(import.meta.url)), "../../../tests/fixtures/ecb");
@@ -170,6 +172,50 @@ describe("the daily task of the closes (ADR-0031; R21-R28, R33)", () => {
       { code: "currency_unchecked", subject: "eodhd", counts: { assets: 1 } },
     ]);
     expect(jobs.ses.attempts).toEqual([]);
+  });
+
+  it("warns of the theses of the bucket past their horizon, and of nothing else of a thesis (mutant 18 bis)", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.asset("ast_spec_two", {
+      asset_type: "stock",
+      book: "bucket",
+      currency: "USD",
+      transferable: false,
+    });
+    const usd = { currency: "USD", fx_rate: "1", trade_date: "2026-09-01" } as const;
+    b.thesisOpened({ thesis_id: "th_late", expected_horizon_days: 10 });
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: "1",
+      unit_price: "10",
+      thesis_id: "th_late",
+      ...usd,
+    });
+    b.thesisOpened({
+      thesis_id: "th_fresh",
+      asset_id: "ast_spec_two",
+      expected_horizon_days: 90,
+      invalidation: "a free text that never warns",
+    });
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec_two",
+      quantity: "1",
+      unit_price: "10",
+      thesis_id: "th_fresh",
+      ...usd,
+    });
+    const { s3, jobs } = pricesJobs();
+    s3.seed("ledger/ledger.jsonl", `${b.build().map(encodeLine).join("\n")}\n`);
+    await jobs.run(["prices_update"]);
+    const record = recordOf(s3, "jobs/prices/prices_update/2026-10-01.json");
+    expect(record.state).toBe("done");
+    expect(record.findings).toEqual([
+      { code: "thesis_horizon_exceeded", subject: "bucket", counts: { theses: 1 } },
+    ]);
+    expect(JSON.stringify(record)).not.toContain("th_late");
   });
 
   it("without keys calls nothing, counts no failure and leaves nothing for the mail (mutant 16)", async () => {
