@@ -1505,6 +1505,8 @@ Con `mutate-015.mjs`, de uno en uno, detrás de la puerta de memoria y con `--po
 
 En §24.12 dije «Ningún test falló solo por el tiempo». En mi ejecución fue así, pero en la del revisor falló uno de la web (`prices.test.tsx`, por un `settle(30)`), así que la frase no se sostiene. Ya no depende del reloj (§26.2, N4).
 
+*(Corregido el 2026-09-27, §27.1: `c3e9172` esperaba el botón y el primer aviso, pero la última aserción, «Sin precios automáticos…», seguía sin esperar. Con la máquina cargada podía fallar igual. Ahora espera también con `until`.)*
+
 ### 26.5 Tubería y congelado
 
 Todo con `--pool=forks --maxWorkers=1`:
@@ -1526,8 +1528,76 @@ Todo con `--pool=forks --maxWorkers=1`:
   - La tubería lo encontró antes de congelar, y **`9d45cdb`** sube el techo a lo medido + 20 (75.905). Queda dentro de la autorización de §7 P13 (hasta 76.069), en su propio commit y con el desglose y la tendencia en el comentario de `check-bundle.mjs`.
   - El tramo en rojo queda anotado, sin reescribir la historia, como en §21.
 - Probé a poner la comprobación en línea en lugar de compartida con la sincronización, y pesa lo mismo (75.885).
-- **Ningún test falló solo por el tiempo** en estas dos ejecuciones.
+- **Ningún test falló solo por el tiempo** en estas dos ejecuciones. *(Precisión del 2026-09-27, §27.1: no depender del tiempo no estaba asegurado. El test de la web aún tenía una aserción sin esperar a su condición.)*
 - `git diff 2a23ec3 -- tests/fixtures` está vacío.
 - Ningún gemelo `.js`.
 
 **Commit congelado: el que contiene esta sección.** Su SHA va en la PR #96. Desde aquí no se empuja nada mientras dura la revisión.
+
+## 27. E4 — el plan, antes del código (2026-09-27)
+
+Sobre `1e7c91c` (E3 fusionada: PR #96, ronda 2 convergida).
+
+### 27.1 Lo que dejó E3
+
+- **N4, que seguía abierto** (`7294514`): el test de Ajustes de `apps/web/test/prices.test.tsx` espera también con `until` al segundo aviso, «Sin precios automáticos…». Quedan corregidos §26.4 y §26.5, que lo daban por hecho.
+- **El techo del arranque de E3 subió después del commit que lo necesitaba.** Queda anotado en §26.5, sin reescribir la historia. **En E4, el techo se sube siempre antes**: se mide con un prototipo construido y deshecho, y la subida va en su propio commit, delante del que la necesita.
+
+### 27.2 Q12 — el cargador local ante una línea con claves repetidas (propuesta; no se implementa hasta que decida la dirección)
+
+- **Hoy** `decodeLine` usa `JSON.parse`, que se queda con la última de dos claves iguales sin avisar. Una línea editada a mano con `"amount":"1000.00", …, "amount":"1.00"` carga como 1.00.
+- **La API ya la rechaza** (E3, seguridad N3), con `body_invalid`/`duplicate_key`. Pero **`body_invalid` para la petición entera, no para esa línea**: un cliente que intentara subirla pararía la sincronización en cada intento, y no la retendría.
+- **Opciones**:
+  - **(a)** El cargador la rechaza, como una línea ilegible: el libro entero deja de cargar. Es fallo cerrado, pero deja sin sus datos a quien tiene un fichero de veinte años por una sola línea.
+  - **(b)** La proyección degradada (ADR-0015) la marca como **inválida**, con `duplicate_key` y su id. Se sigue leyendo, `atlas check` y la web la señalan, y **la sincronización la retiene en el paso 3** con `domain_rejected` antes de subirla, así que el `400` de la API nunca llega a darse.
+  - **(c)** No hacer nada: la línea la escribe solo una edición a mano, y `atlas check --deep` podría avisar.
+- **Recomiendo (b)**, que es la inclinación de la dirección. No bloquea nada entero, deja el problema a la vista con su id y hace que la sincronización retenga en vez de parar.
+  - **Coste**: una comprobación del texto exacto en `decodeLine` (`repeatsKey` ya existe en el dominio). Está en el camino del arranque, así que se mide antes.
+  - **Una consecuencia que decidir con ella**: si la API debe responder a esa línea con un **rechazo por línea** (`line_invalid`, `domain_code: duplicate_key`, dentro del `200`) en vez de `body_invalid`. Así, un cliente antiguo que no la haya marcado como inválida la retendría en vez de parar. Hoy recomiendo mantener `body_invalid`, porque ningún cliente de la aplicación la produce.
+
+### 27.3 El orden de E4 (encargo §3 E4; plan §14, punto 4)
+
+1. **Bloque 1, P2 y P3**:
+   - se mide el parche `specs/014-ledger-sync-core/deferred/p2-p3-web.patch` sobre este árbol con un prototipo, y se deshace;
+   - si hace falta, **la subida del techo del arranque en su propio commit, antes**;
+   - el test del parche (`transfer-sync.test.ts`), visto en rojo sin el código;
+   - el código de P2 y P3.
+2. **Solo después, en su propio commit, se afloja el guardián de E1** («the web cannot configure the sync before P2 and P3»), y en ese mismo commit la configuración se hace alcanzable. Lleva un mutante: el guardián aflojado no deja pasar lo que P2 y P3 protegen.
+3. **Bloque 2, la ligadura** (P1 (a), `device_forgotten`), en §27.4.
+4. **Bloque 3, las pantallas**, en §27.5.
+5. **Bloque 4, los dos fallos de la 014 (P11)**, cada uno con su test en rojo primero:
+   - presentar una declaración con una huella repetida pide confirmación en lugar de negarse (`confirmDuplicate`);
+   - el formulario de eventos corporativos avisa del ejercicio cerrado, como la consola.
+6. Las capturas, los mutantes, la tubería, la CI, el congelado y la PR.
+
+### 27.4 La ligadura del dispositivo de la web (bloque 2) — PROPUESTA
+
+- La web se sincroniza con **su propio origen**, con la cookie. Su `device_id` sale de `GET /api/session`, y la API lo toma de la cookie firmada, nunca del cuerpo.
+- **Qué pasa si la sesión trae un `device_id` distinto del que se unió.** El anterior fue olvidado, o la API no lo aceptó al iniciar sesión.
+  - **Propuesta**: la web guarda con qué dispositivo se unió, en una clave `sync:remote` de su almacén, **con el mismo formato que `sync/remote.json` de la consola** (`{ format: 1, origin, device_id }`). La escriben inicializar y unirse, en **la misma transacción** que el marcador.
+  - Así la web tiene los mismos estados que la consola (S0-S3, con las mismas funciones del dominio). **Esto deshace una decisión propia de E3** («la web no tiene `remote.json`»): lo digo aquí para que la dirección lo vea.
+  - Antes de sincronizar, si el `device_id` de la sesión no es el de `sync:remote`, la web **se niega** con `sync_device_changed`. La frase dice qué pasó y que la salida es **unirse otra vez**, desde la nube o con sus operaciones: lo pendiente nunca se pierde y unirse es explícito.
+  - Unirse de nuevo reescribe `sync:remote` con el dispositivo nuevo.
+- **`device_forgotten`** en cualquier respuesta: la web lo dice («este navegador fue olvidado en la nube: vuelve a iniciar sesión») y no retiene nada, como todo fallo remoto (V4). Al volver a iniciar sesión recibe un id nuevo y cae en el caso de arriba.
+- **La IndexedDB copiada**: no se detecta. Riesgo aceptado y documentado (Q6).
+
+### 27.5 Las pantallas (bloque 3)
+
+- En la sección perezosa de Ajustes (Q7), dentro de la tarjeta de Sincronización, **solo con sesión**:
+  - **Estado y botón**: pendientes, retenidas y cuánto hace de la última sincronización.
+  - **Empezar**: inicializar, unirse desde la nube o unirse con mis operaciones.
+  - **Lo retenido**: el motivo y las tres resoluciones. Rehacer enseña el plan y pide confirmación, como la consola.
+  - **Desactivar**, que se niega con pendientes.
+  - **Volver a descargar**, que solo se ofrece tras `remote_rewritten`.
+  - Y el aviso de que lo que se ve antes de sincronizar puede cambiar después.
+- **Nada sincroniza al arrancar**, con un temporizador ni al recuperar la conexión: los guardianes de la 014 siguen en verde.
+- **El modo privacidad**: lo retenido enseña el tipo, la fecha y el motivo, y cualquier importe va por `Amount`, que lo tapa. Un test **renderiza** con la privacidad puesta y busca que no aparezca ningún importe.
+- Los mensajes de la web de `sync_deactivated` y `join_required` nombran **los botones** de unirse (N11).
+
+### 27.6 El paquete
+
+- Partida sobre `1e7c91c`: **arranque 75.885 (techo 75.905) y total 283.429 (techo 283.648)**.
+- Autorización:
+  - **el arranque, hasta 76.069**;
+  - **el total, hasta 304.640** (280.064 + 24 KB).
+- Cada subida en su propio commit, **antes** del que la necesita, con la medida, el desglose y la tendencia.
