@@ -76,6 +76,7 @@ packages/adapters  port implementations: S3/file/memory LedgerStore, IBKR/MyInve
 apps/cli           Phase-1 interface over a local file or S3.
 apps/api           Lambda Function URL behind CloudFront (/api/*): verifies the Google token at sign-in, issues its own session, composes domain + adapters.
 apps/web           Vite SPA; uses domain to project/simulate offline.
+apps/jobs          Scheduled Lambdas run by EventBridge Scheduler (ECB, prices, email, backups, integrity); compose domain + adapters. Nothing imports apps/jobs.
 infra/             Terraform.
 ```
 
@@ -89,7 +90,7 @@ The user directs the project with a high-level assistant that writes decision ro
 2. **Decisions are already taken.** Do not re-open an accepted ADR, change the data schema, or pick a different library "because it is better". If the docs are ambiguous, contradictory, or block you: **stop, write the questions in `specs/NNN-<name>/questions.md`, and report** — do not guess on anything fiscal or structural.
 3. **Follow Spec Kit**: `/speckit-specify` → `/speckit-clarify` (if needed) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`, artefacts in `specs/NNN-<name>/` (Spanish prose, English identifiers). Show `spec.md` and `plan.md` to the user before writing code.
 4. **Branch** `feature/NNN-<name>` from `develop`; enable hooks with `git config core.hooksPath .githooks`; Conventional Commits in English, one subject line, atomic; open a PR to `develop` using the template; never push to `develop` or `main`.
-5. **Package names**: `@atlas/domain`, `@atlas/adapters`, `@atlas/cli`, `@atlas/api`, `@atlas/web`. Node 22+ (`.nvmrc`), ESM, strict `tsconfig` (ADR-0007). Dependencies only from `docs/dependencies.md`.
+5. **Package names**: `@atlas/domain`, `@atlas/adapters`, `@atlas/cli`, `@atlas/api`, `@atlas/web`, `@atlas/jobs`. Node 22+ (`.nvmrc`), ESM, strict `tsconfig` (ADR-0007). Dependencies only from `docs/dependencies.md`.
 6. **Definition of done**: tests green, `packages/domain` at 100% line and branch coverage, Biome clean, architecture test green (`domain` imports nothing), docs updated where behaviour changed, PR checklist honestly filled.
 7. **Fixtures** live in `tests/fixtures/<source>/` and are **synthetic**: real file format, fake values (invented ISINs, account ids like `U0000000`, round amounts). Real statements never enter the repo.
 8. **ADRs**: an implementer may propose one (status `Propuesta`, via `/adr`) but never accept it; the user decides.
