@@ -1601,3 +1601,130 @@ Sobre `1e7c91c` (E3 fusionada: PR #96, ronda 2 convergida).
   - **el arranque, hasta 76.069**;
   - **el total, hasta 304.640** (280.064 + 24 KB).
 - Cada subida en su propio commit, **antes** del que la necesita, con la medida, el desglose y la tendencia.
+
+## 28. E4 — la entrega (2026-09-27)
+
+La web sincronizada, en el orden del encargo (§3 E4) y de §27.3. **Código congelado en `62e7be9`**; este informe va en el commit siguiente, solo de documentos. Todo contra los dobles de S3, SSM y Google; ni AWS ni Google.
+
+### 28.1 Lo que hay, bloque a bloque
+
+- **Antes de nada** (lo pedido por la dirección al abrir E4):
+  - el test de precios espera también a «Sin precios automáticos…» (`7294514`); §26.4 y §26.5, corregidas;
+  - Q12 (claves repetidas en el cargador local) escrita como propuesta en §27.2, **sin implementar**: espera la decisión de la dirección;
+  - los techos se suben **siempre antes** del commit que los necesita, cada uno en su commit (`f8c9de0`, `6fd376a`, `4512665`, `68b7a8f`).
+- **Bloque 1, P2 y P3** (`4dc3c5f`, `7d051fb`): el parche diferido de la 014, aplicado a mano. `replaceLedgerText` lee el estado de la sincronización en su misma transacción y se niega con `import_refused_synced`; la exportación da el libro byte a byte y, aparte, lo retenido sin resolver (`ledger.held.jsonl`).
+- **La ligadura del dispositivo de la web** (opción (a) de P1; `b342ba7`, `ef1d593`, `344be41`):
+  - la web guarda con qué dispositivo se unió en la clave `sync:device` de su almacén, escrita **primero y en la misma transacción** que el marcador, y comparada al escribir;
+  - antes de sincronizar o volver a descargar, si el dispositivo de la sesión no es ese, se niega con `sync_device_changed` (o `sync_device_unknown` si no lo sabe); empezar y unirse los decide `webJoinRefusal` en el dominio;
+  - `device_forgotten` llega como cualquier fallo remoto (V4): la frase dice que se vuelva a iniciar sesión, y con el id nuevo la web cae en `sync_device_changed`, cuya salida es unirse otra vez;
+  - **encontrado de paso y arreglado** (`344be41`, test en rojo primero): la importación no contaba `sync:device` entre las claves de la sincronización, así que un navegador con solo esa clave se podía importar encima. Ahora la cuenta, y el guardián nuevo (abajo) exige que la importación lea **todas** las claves que escribe el almacén.
+- **El guardián de la D-Q17, reemplazado** (`969786e`), en el commit que hace alcanzable la configuración y después de P2 y P3:
+  - un único módulo de la web configura la sincronización, `apps/web/src/sync/engine.ts`, cargado solo desde la sección perezosa de Ajustes. Fuera de él, la web solo importa de las puertas de la sincronización los nombres de solo lectura, nunca de forma dinámica, y ningún fichero nombra una clave `sync:*`;
+  - el cliente y la orquestación solo se alcanzan a través del motor, por cualquier camino (reexportaciones y rutas relativas incluidas);
+  - P3: ningún módulo de la web importa la exportación sin lo retenido. P2: `replaceLedgerText` pregunta a `importPermission` y lee cada clave `SYNC_*_KEY` del almacén;
+  - `check-bundle.mjs` pierde las dos familias de la D-Q17 y la lista de nombres de solo lectura; `LAZY_ONLY` mantiene todo eso fuera del arranque. El guardián «sin temporizador» de la 014 cubre ahora también el motor y la sección de Ajustes;
+  - **mutantes G1–G8, 8 de 8 muertos** (§28.3).
+- **Bloque 3, las pantallas** (`3d9dbd8`, `3e2d3b1`), dentro de la tarjeta «Sincronización» y solo con sesión:
+  - estado (pendientes, retenidas, última sincronización) y «Sincronizar»;
+  - empezar: «Subir mis datos a la nube», «Unirme desde la nube» y «Unirme con mis operaciones», cada uno con su pregunta antes de escribir;
+  - lo retenido: el motivo (con las cifras tapadas por la privacidad, como toda la prosa de la web), el tipo, la fecha y el importe por `Amount`; las resoluciones que ofrece el dominio; rehacer enseña el plan y pide «Registrar» (y, si sale repetida, «Registrarla aunque parezca repetida»);
+  - «Desactivar», que se niega con pendientes; «Volver a descargar», solo tras `remote_rewritten` y con pregunta;
+  - el aviso de que lo que se ve antes de sincronizar puede cambiar después;
+  - N11: las frases de la web de `sync_deactivated` y `join_required` nombran los dos botones de unirse.
+- **Bloque 4, P11** (`66a71b0`, `c22bf0f`), cada uno con su test en rojo primero:
+  - «Registrar lo presentado» ya no se niega ante una huella repetida: pregunta con el diálogo de duplicados y registra con `confirmDuplicate` (ADR-0012);
+  - el formulario de eventos corporativos calcula los ejercicios cerrados al «Ver el efecto» y enseña `ClosedYearNotice` antes de «Registrar» (ADR-0020), como la consola.
+
+### 28.2 Desviaciones del plan de §27, dichas
+
+- **`sync:device` en lugar de `sync:remote`** (§27.4): la web guarda **solo el id del dispositivo**, no un `remote.json` completo. El origen de la web es siempre el suyo propio, y el analizador estricto de `remote.json` exige `https://`, que en las capturas locales (http) no se cumple. Los estados son los mismos (los decide el dominio con `webSyncRefusal` y `webJoinRefusal`).
+- **Una configuración de TypeScript nueva para tests**: `apps/web/tsconfig.test-api.json`, que el proyecto de la web excluye. Solo la usan los tres ficheros que tienen la API de los tests como red (`test/sync/api-support.ts`, `engine.test.ts`, `sync-card.test.tsx`), como ya hacen `apps/cli/tsconfig.test.json` y `packages/adapters/tsconfig.test-sync.json`. No hay dependencia nueva.
+- **Dos códigos propios de la web** (`init_remote_not_empty`, `init_remote_not_this_ledger`) se dicen en `routes/ajustes/sync/sync-texts.ts`, no en el catálogo de errores: no son códigos del dominio (la consola también los dice por su cuenta).
+
+### 28.3 Mutantes
+
+Por lotes, secuenciales, con el guardián de memoria; los ficheros de cada lote en el *scratchpad* (`015-e4-guards.json`, `015-e4-card.json`).
+
+- **Lote G, el guardián que sustituye a la D-Q17 (8 de 8 muertos)**:
+  - G1: otro módulo de la web importa por nombre algo que escribe;
+  - G2: un módulo de la web reexporta el cliente por una ruta relativa;
+  - G3: otro módulo de la web usa `BrowserSyncStore`;
+  - G4: el motor carga el cliente con un `import()` dinámico;
+  - G5: la exportación de la web deja fuera lo retenido (P3);
+  - G6: la importación olvida la clave del dispositivo (P2);
+  - G7: la importación reemplaza sin preguntar a `importPermission` (P2);
+  - G8: el motor sincroniza con un temporizador.
+- **Lote C, el motor, la tarjeta y P11 (9 de 10 muertos a la primera; 10 de 10 después)**:
+  - C1: la tarjeta sincroniza sea cual sea el dispositivo;
+  - C2: el motor sincroniza sin comprobar el dispositivo;
+  - C3: empezar no guarda el dispositivo de la sesión;
+  - C5: empezar escribe sin preguntar;
+  - C6: un importe retenido se enseña como cifra, sin `Amount`;
+  - C7: «Volver a descargar» aparece tras cualquier sincronización;
+  - C8: rehacer registra sin enseñar el plan;
+  - C9: «Registrar lo presentado» confirma sin `confirmDuplicate`;
+  - C10: el formulario corporativo no dice el ejercicio cerrado;
+  - **C4 sobrevivió** (el motor pasa «unirse» a `webJoinRefusal` también al inicializar). No era equivalente: el test solo probaba inicializar otra vez con el mismo dispositivo, donde las dos cosas se niegan igual. `4fb9835` añade el caso que las distingue (inicializar con la sesión de otro dispositivo se niega; unirse, no). Visto sobrevivir antes y morir después.
+- **La corrección de la importación** (`344be41`): su mutante es el código de antes (no contar `sync:device`), visto en rojo antes del arreglo; G6 lo repite contra el guardián.
+
+### 28.4 El paquete
+
+| Momento | Arranque | Techo | Total | Techo |
+|---|---:|---:|---:|---:|
+| Partida (`1e7c91c`) | 75.885 | 75.905 | 283.429 | 283.648 |
+| P2 y P3 | 75.900 | 75.920 | 284.240 | 284.496 |
+| La ligadura del dispositivo | 75.895 | 75.920 | 284.533 | 284.789 |
+| La tarjeta de la sincronización | 75.999 | 76.024 | 297.515 | 297.771 |
+| P11 y la tarjeta en tres ficheros | 76.026 | 76.051 | 298.392 | 298.648 |
+| **Congelado** | **76.030** | 76.051 | **298.381** | 298.648 |
+
+- **Dentro de la autorización**: el arranque, hasta 76.069 (quedan 39); el total, hasta 304.640 (quedan 6.259).
+- **En el arranque no hay código de la sincronización.** Lo que sube es:
+  - la tabla de exportaciones del trozo del dominio, que ahora sirve también al trozo perezoso de la sincronización (+60);
+  - `reloadLedger`, que antes se quitaba del arranque (+44);
+  - la tabla de trozos perezosos, con uno más, `DuplicateDialog` (+27).
+- **El total** es casi todo de `ajustes` (la tarjeta, el motor y el cliente) y de `sync` (el motor del dominio).
+- **Cada subida de techo va en su commit, antes del que la necesita**, con la medida, el desglose y la tendencia en el comentario de `check-bundle.mjs`.
+
+### 28.5 Commits en rojo por sí solos, dichos
+
+- **`4dc3c5f`** (el test de P2 y P3 solo) no compila ni pasa sin `7d051fb`. Desde entonces, test y código van en el mismo commit, con el rojo visto antes en local.
+- **`b342ba7`** se hizo con la construcción en rojo: `SYNC_DEVICE_KEY` se exportaba del almacén y no estaba en la lista de solo lectura del paquete. Arreglado en `ef1d593`. Desde entonces cada commit pasa antes por un guion que para si fallan el lint, los tipos o la construcción.
+
+### 28.6 Capturas
+
+En `~/personal/atlas/privado/capturas/2026-09-27-015-e4/`, con el libro sintético del repositorio (`tests/fixtures/ledger/synthetic-v1.jsonl`), el servidor local de la API y Chromium 153. Tres contextos de navegador, que son tres dispositivos. Cada escena, a 400×890 DPR 3 y a 2045×1141 en claro y en oscuro:
+
+- `vacio-*`: un libro vacío con sesión, con los tres «empezar»;
+- `subir-pregunta-*`: la pregunta antes de subir;
+- `sincronizado-*`: 199 operaciones subidas, pendientes 0 y la hora de la última sincronización;
+- `retenida-*`: otro navegador, con el libro entero, se une desde la nube. Su última línea (una valoración) queda retenida con su motivo, el tipo y la fecha, y la privacidad puesta.
+
+**Ningún desbordamiento horizontal** en ninguna (`medidas.json`). Tras la primera pasada separé los títulos «Sincronizar» y «Retenidas» con `block-title`, y la última sincronización dice también la hora (`62e7be9`).
+
+### 28.7 La tubería y la CI
+
+Sobre `62e7be9`, con `--pool=forks --maxWorkers=1`, cada paso tras el guardián de memoria:
+
+| Paso | Código de salida | Tiempo |
+|---|---:|---:|
+| lint | 0 | 2 s |
+| typecheck | 0 | 3 s |
+| cobertura, 1.ª | 0 | 848 s |
+| cobertura, 2.ª | 0 | 1.036 s |
+| build (incluido `check-bundle`) | 0 | 14 s |
+
+- **3.025 tests** en 307 ficheros. El dominio, al 100 % en líneas, ramas, funciones y sentencias.
+- **Dos incidencias antes de esta pasada limpia, dichas**:
+  - **La primera cobertura dio 99,97 % de ramas** (`packages/domain/src/ecb/propose.ts:95`, que E4 no toca), con los mismos 3.025 tests en verde. La rama sí se ejecuta: un test del dominio que ya existía («never overwrites what was typed…») mata el mutante que la quita. La repetición limpia, sobre el mismo commit, da 100 %. **Es intermitente, en la fusión de la cobertura entre proyectos.** No subí ningún umbral ni añadí un test que no aporta; lo dejo anotado por si vuelve.
+  - **La segunda cobertura de aquella pasada la estropeé yo**: mientras corría, lancé coberturas sueltas del dominio para investigar lo anterior, y borraron su directorio `coverage/.tmp`. Además probé un mutante en `propose.ts` en ese rato. Por eso repetí la tubería entera sin tocar nada. Error mío; la regla (nada en paralelo a la tubería) no admite excepción.
+- **La CI**: corre al abrir la PR (solo `pull_request`); su resultado está en la PR.
+
+### 28.8 Pendiente para la dirección
+
+- **Q12**: la propuesta de §27.2, sin implementar.
+- **Q6**: la IndexedDB copiada a otro navegador no se detecta. Riesgo aceptado; queda por escribir en la documentación.
+- **Documentos** que describen lo que cambia y que no toco (`docs/` es de la dirección):
+  - `docs/api.md` §5.4: la ligadura de la web con `sync:device`;
+  - `docs/data-schema.md`: la clave `sync:device` del almacén del navegador y `ledger.held.jsonl` junto a la exportación;
+  - `docs/specification.md`: la tarjeta de sincronización de la web.
