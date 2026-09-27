@@ -382,3 +382,72 @@ La revisión ([comentario](https://github.com/Jemartri44/atlas-portfolio-tracker
 - **N3**: se deja para E4 (M3). Anotado: a 2045 la tarjeta de evolución, con `grid-row: span 2`, se estira hasta la altura de *Atención* más *Últimos movimientos* y deja una banda vacía de más de 200 px bajo la leyenda. La gráfica más alta de M3 tiene que cerrarla, y E4 lo medirá.
 - **N4**: el guardián se amplía para que una copia literal del valor hex de la ganancia, la pérdida o el peligro fuera de `tokens.css` también falle. Con su mutante.
 - **Cosmético**: la etiqueta «0 €» del eje del Cubo a 400 px se separa del primer punto si cuesta poco; si no, se anota.
+
+### 10.1 Cómo quedó cada punto
+
+| Punto | Commits | Qué se hizo | Visto en rojo | Mutantes |
+|---|---|---|---|---|
+| **B1** | `f68fd71` (techo), `e1a9676` | `decodeFragment` decodifica dentro de un `try`; si falla, devuelve el fragmento tal cual, que no encuentra destino y no hace nada; un `#` solo no da nada. `FollowFragment` va dentro del `ErrorBoundary`. | `URIError: URI malformed` en los tests con `#50%` y `#%E0%A4%A` antes del arreglo (§10.3) | `B1-no-try` muere |
+| **B2** | `63fcec4` | `result-colour.test.ts` falla con `positive` o `negative` en un `class` o un `classList`, fuera de `Amount.tsx` y `Figure.tsx`, y con `signOf(` fuera de esos dos ficheros | por los tres mutantes (el guardián es nuevo sobre código sano) | `B2-positive-on-attention`, `B2-signOf-class`, `B2-classList-negative` mueren |
+| **N1** | `0979872` (techos), `3497495` | `position: relative; z-index: 1` para `.cell-trunc`, `.meta` y `.tag` dentro de `tr:has(.row-link)` | por sus mutantes | `N1-tag-under-link` y `N1-none-above` mueren |
+| **N2** | `e1a9676`, `4c25533` (techo), `7cc9e32` | El ancla actúa al entrar por URL o con un enlace de la aplicación, nunca al volver por el historial. El bucle se cancela al cambiar la dirección. Al llegar, el foco va al título de destino, con `tabindex="-1"` | los tests nuevos, en rojo contra el código de E1 (§10.3) | `N2-follows-back`, `N2-not-cancelled`, `N2-no-focus`, `N2-route-change-not-cancelling`, `N2-gate-spent-first-step` y `N2-click-does-not-open` mueren sobre el código final |
+| **N3** | — | Anotado arriba para E4 (M3) | — | — |
+| **N4** | `ebf3239` | `palette-usage.test.ts` lee de `tokens.css` los valores de `--c-gain`, `--c-loss` y `--c-danger` en los tres bloques (seis valores), y falla si alguno aparece en cualquier otra hoja o fichero de código, sin distinguir mayúsculas | por sus mutantes | `N4-gain-copied`, `N4-dark-loss-upper` (en mayúsculas) y `N4-danger-in-code` mueren |
+| **Cosmético** | `4305510`, `e9de3ad` | El eje Y deja 10 px entre la cifra y la gráfica (`gap`), con el ancho de 56 a 60 px; con la privacidad puesta, nada | en `chart-wiring.test.tsx` | — |
+
+### 10.2 Lo que encontró el navegador y no los tests
+
+**El botón atrás seguía perdiendo en Chromium con la primera versión de N2** (`e1a9676`). Los tests de `happy-dom` pasaban. La sonda en Chromium (entrar por `/ajustes#sincronizacion`, subir, ir a Movimientos y volver atrás) registraba un `scrollIntoView` nuestro nada más llegar el `popstate`. Tres cosas, que resolvió `7cc9e32`:
+- **El router oye `popstate` antes que el marco** y mueve la ubicación en el acto, así que el efecto decidía con la puerta aún abierta. Ahora decide tras el evento, en un `setTimeout(0)`.
+- **El router puede notificar la ruta y el fragmento por separado.** Una bandera que se gasta en el primer paso deja pasar el segundo. Ahora hay una puerta que guarda la dirección a la que se volvió (`historyGate`) y sigue cerrada hasta llegar a ella. Un clic la abre otra vez.
+- **Un solo recorrido por dirección** (`createMemo`), no uno por señal.
+
+Medido en Chromium tras el arreglo: al volver, **ningún `scrollIntoView` nuestro**. Aun así la página queda en el ancla: la restauración nativa de Chromium la lleva a la posición guardada de esa entrada del historial (un `scroll` sin llamada a JavaScript). Eso lo hace el navegador y no lo toco.
+
+- **Límite**: el «decide tras el evento» no tiene mutante que muera en `happy-dom`, donde el orden de los manejadores es otro. Su prueba es la sonda de Chromium (`020-probe-r1b.json` en el *scratchpad*).
+- **El foco**: medido en Chromium al entrar, el título «Sincronización» recibe `focusin` y queda como `document.activeElement`.
+
+**N1 en el navegador**: con el ratón sobre «Gamma Semiconductors · Cubo espe…», bajo el puntero está `span.cell-trunc` con `:hover` y su `title` completo, no el enlace de la fila (`elementFromPoint`). Chromium sin interfaz no dibuja el recuadro nativo del `title`, así que la captura con el ratón encima enseña la fila marcada y no el recuadro: está en `despues-r1/`, y la prueba es la de `elementFromPoint`.
+
+### 10.3 Cómo lo vi en rojo
+
+- **B1**: `anchor.test.tsx` contra el código de E1 dio `URIError: URI malformed` en los dos fragmentos rotos y `TypeError: decodeFragment is not a function` en el test de lectura.
+- **N2**: «does not win over the back button» contra el código de E1 dio «expected 4 to be 1». El de cancelar dio `find is not a function`, por el contrato nuevo de `scrollToFragment`.
+- **La cancelación al cambiar de dirección**: el primer test no mataba su mutante (**dos supervivientes**, `N2-route-change-not-cancelling` y `-2`). `happy-dom` ejecuta los fotogramas en el acto, y los 120 se gastaban antes del clic, así que el test no probaba nada. Lo arreglé dando a los fotogramas un ritmo de navegador (50 ms) en ese test, y **ahora muere** (`-3`, `-4` y `-final`).
+
+### 10.4 Commits en rojo por sí solos, dichos
+
+**`3497495` y `4305510`, empujados, fallan el test de arquitectura del límite de 250 líneas**: `lists.css` llegaba a 254 y `Chart.tsx` a 253. Lo encontró la tubería completa. `e9de3ad` los deja en 249, y lo hace recortando comentarios, no con una razón escrita. **Todos construyen en verde** (§10.5).
+
+### 10.5 Paquete, construcción commit a commit y tubería
+
+| Commit | `npm run build` | Arranque | Total |
+|---|---:|---:|---:|
+| `63fcec4` | 0 | 74.664 | 302.379 |
+| `ebf3239` | 0 | 74.664 | 302.379 |
+| `f68fd71` | 0 | 74.664 | 302.379 |
+| `e1a9676` | 0 | 74.874 | 302.513 |
+| `0979872` | 0 | 74.874 | 302.513 |
+| `3497495` | 0 | 74.895 | 302.638 |
+| `4305510` | 0 | 74.887 | 302.613 |
+| `4c25533` | 0 | 74.887 | 302.613 |
+| `7cc9e32` | 0 | 75.019 | 302.785 |
+| `e9de3ad` | 0 | 75.019 | 302.785 |
+| `c3c65e5` (fusión de `develop` con la 016) | 0 | 75.019 | 302.785 |
+
+- **Techos**: arranque 75.039 (autorizado 76.069, quedan 1.050) y total 302.894 (autorizado 310.500).
+- **El coste del arreglo del ancla** es +355 bytes en el arranque (74.664 → 75.019). Es el más caro de E1, y está en el arranque a propósito, porque es el marco.
+- **Proyección con la estimación de E2 a E4** (+775 en el arranque): unos 75.794, que quedan a 275 de la autorización. **El arranque se ha estrechado.** Si E2 o E3 se desvían, M14 es la primera propuesta de recorte (§3 del encargo).
+- **La fusión de `develop` con la 016** (`c3c65e5`) no toca nada de `apps/web/src` ni del barril, y el paquete no se mueve ni un byte. Cambió `package-lock.json`, y por eso pasé `npm ci`.
+- **Tubería completa sobre `c3c65e5`**: `lint` 0, `typecheck` 0, `test:coverage:domain` 0 (168 ficheros, 1.668 tests, 100 %), `test:others` 0 (183 ficheros, 1.736 tests) y `build` 0.
+- **Gemelos `.js`**: ninguno.
+- **Nombres de test**: frente a `d3463ff` no desaparece ninguno, salvo dos que cambian de título en `anchor.test.tsx` porque cambia su contrato: «waits for a target painted late, brings it to the top once **and gives it the focus**» y «is what the frame does on **entering by** /ajustes#sincronizacion». Frente a `develop`, los que faltaban antes de la fusión eran los de la 016, que ya están.
+- **Mutación de la ronda**: 29 ejecuciones, de las que 27 murieron. Los dos supervivientes son la primera versión del test de cancelación y están explicados en §10.3. Cada fichero se restauró byte a byte.
+
+### 10.6 Capturas
+
+`~/personal/atlas/privado/capturas/2026-09-27-020-E1/despues-r1/`: las escenas que cambian (Resumen, Cubo, Movimientos y Ajustes, en la matriz entera) y la del ratón sobre un nombre cortado. El índice está en `LEEME.md`. Medido: sin desplazamiento lateral, ningún texto por debajo de 13 px, el ancla bajo la barra (título en 81 px a 400) y la evolución en 540 px a 2045.
+
+### 10.7 Congelado
+
+**Código congelado: `c3c65e5`.** El commit que añade esta sección solo toca `specs/`. Desde aquí no empujo nada mientras dura la revisión.
