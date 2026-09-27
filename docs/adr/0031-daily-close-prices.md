@@ -184,3 +184,11 @@ Sufijos de bolsa documentados en Alpha Vantage: `.LON`, `.DEX` (Xetra), `.TRT`, 
 ## Nota del 2026-09-25 (ADR-0033 aceptada)
 
 **`~/.config/atlas/secrets.json` no cambia.** El token de dispositivo de la consola (ADR-0033) va en un fichero **hermano**, `~/.config/atlas/credentials.json` (o `$XDG_CONFIG_HOME/atlas/`), con **las mismas reglas**: permisos `600` o no se usa, fuera de la carpeta del libro (la consola se niega si una está dentro de la otra) y nunca lo leen la web, una copia, una exportación ni una sincronización. La diferencia es que **ese sí lo escribe la consola**, al iniciar y al cerrar sesión, de forma atómica. No va en `secrets.json` porque esta ADR fija que la aplicación nunca lo escribe, y porque su lector rechaza el fichero entero ante una clave desconocida: una consola de la 013 perdería sus claves de precios en cuanto apareciera el token.
+
+## Nota del 2026-09-27 (prueba real de precios)
+
+Decisiones de la dirección tras la prueba real del 2026-09-27 ([`docs/runbooks/013-daily-close-prices-live-test.md`](../runbooks/013-daily-close-prices-live-test.md), «Resultado de la prueba del 2026-09-27»):
+
+- **Lo verificado.** Londres: EODHD lista `TSCO.LSE` en **`GBX`** y da sus cierres en peniques, así que la divisa declarada `GBX` coincide con la de la fuente y no hay nada que confirmar. Cripto: el plan gratuito de EODHD sirve `BTC-EUR.CC`. **Siguen SIN VERIFICAR** los índices y `EUFUND`.
+- **El día de mercado depende del tipo de activo** (§6, «Un activo cuyo último cierre ya es el último día de lunes a viernes…»): lo dice `market_days` de `prices/config.json`, por tipo de activo, con `every_day` para `crypto` por defecto. La cripto cotiza los siete días y sus cierres del fin de semana se piden al día siguiente, no el lunes. **Nunca se guarda el día en curso**, igual que antes.
+- **Los cierres recientes se vuelven a pedir** donde el tipo de activo lo dice (`refetch_recent_days` de `prices/config.json`, `2` para `crypto` por defecto): EODHD dio el cierre de un sábado igual al del viernes, provisional. La misma llamada empieza antes, sin gastar cupo, y un valor distinto de la misma fuente se añade como corrección, con la regla de «un solo cierre en vigor por fecha». No toca `symbols.json`, cuyo `refetch_days` sigue siendo solo lo que pide una purga, una vez.
