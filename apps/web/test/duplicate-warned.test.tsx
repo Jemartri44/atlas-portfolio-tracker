@@ -9,6 +9,7 @@ import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { beforeEach, describe, expect, it } from "vitest";
 import { loadInto } from "../src/ledger/actions.js";
 import { store } from "../src/ledger/state.js";
+import CorporateForm from "../src/routes/registrar/corporate/form.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import { goldenText } from "./helpers/golden.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
@@ -75,6 +76,46 @@ describe("the duplicate question of the registration form", () => {
     expect(recorded()).toBe(once);
     // With the warning open, the notes change: not in the fingerprint.
     type(host, "f-notes", "cambiada con el aviso abierto");
+    await press(openDialog(host) as HTMLElement, "Registrar de todas formas");
+    await settle(60);
+    expect(recorded()).toBe(once);
+    await until(() => openDialog(host) !== undefined, "la pregunta otra vez", 3000);
+    await press(openDialog(host) as HTMLElement, "Registrar de todas formas");
+    await settle(60);
+    expect(recorded()).toBe(once + 1);
+  });
+
+  // Round 2 of the review of PR #97, N1: the corporate form follows the same
+  // rule, and a repeated corporate action transforms the lots twice.
+  it("confirms a repeated corporate action only as it was when the warning was shown", async () => {
+    const recorded = () => store.snapshot()?.events.length ?? 0;
+    const split = async (host: HTMLElement): Promise<void> => {
+      choose(host, "ca-asset_id", "ast_alpha");
+      type(host, "ca-effective_date", "2028-11-02");
+      type(host, "ca-source_document", "https://example.test/nota.pdf");
+      type(host, "ca-ratio", "2");
+      await settle(30);
+      await press(host, "Ver el efecto");
+      await settle(30);
+      (
+        [...host.querySelectorAll("section.effect button")].find(
+          (button) => button.textContent?.trim() === "Registrar",
+        ) as HTMLButtonElement
+      ).click();
+      await settle(60);
+    };
+    const path = "/registrar/evento-corporativo/split";
+    const route = "/registrar/evento-corporativo/:kind";
+    const start = recorded();
+    await split(await show(path, CorporateForm, route));
+    const once = recorded();
+    expect(once).toBe(start + 1);
+    const host = await show(path, CorporateForm, route);
+    await split(host);
+    await until(() => text(host).includes("Registrar de todas formas"), "la pregunta", 3000);
+    expect(recorded()).toBe(once);
+    // With the warning open, the notes change: not in the fingerprint.
+    type(host, "ca-notes", "cambiada con el aviso abierto");
     await press(openDialog(host) as HTMLElement, "Registrar de todas formas");
     await settle(60);
     expect(recorded()).toBe(once);
