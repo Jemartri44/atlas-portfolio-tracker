@@ -15,17 +15,19 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { A } from "@solidjs/router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Ajustes from "../src/routes/ajustes/index.jsx";
-import { scrollToFragment } from "../src/shell/anchor.js";
+import { decodeFragment, scrollToFragment } from "../src/shell/anchor.js";
 import { cssRules } from "./helpers/css-rules.js";
-import { showInShell, until, withGoldenLedger } from "./helpers/render.jsx";
+import { settle, showInShell, until, withGoldenLedger } from "./helpers/render.jsx";
 import { token, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 afterEach(() => {
   withoutStyles();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 const styles = join(dirname(fileURLToPath(import.meta.url)), "../src/styles");
@@ -49,43 +51,141 @@ describe("the margin of an anchor", () => {
   });
 });
 
+describe("reading the fragment", () => {
+  // Round 1 of the review of PR #105, B1: `#50%` threw `URIError` in the
+  // effect of the frame and left the screen blank.
+  it("decodes it, falls back to it as written, and reads nothing in a bare #", () => {
+    expect(decodeFragment("#sincronizaci%C3%B3n")).toBe("sincronización");
+    expect(decodeFragment("#50%")).toBe("50%");
+    expect(decodeFragment("#%E0%A4%A")).toBe("%E0%A4%A");
+    expect(decodeFragment("#")).toBeUndefined();
+    expect(decodeFragment("")).toBeUndefined();
+  });
+
+  it.each(["/ajustes#50%", "/ajustes#%E0%A4%A", "/ajustes#"])(
+    "opens %s with the frame and its screen, not a blank page",
+    async (url) => {
+      const host = await showInShell(url, { "/ajustes": Ajustes });
+      await until(() => host.querySelector("#sincronizacion") !== null, "la pantalla de Ajustes");
+      expect(host.querySelector("header.topbar")).not.toBeNull();
+    },
+  );
+});
+
 describe("going to the fragment", () => {
-  it("waits for a target painted late, and brings it to the top once", async () => {
-    const target = { scrollIntoView: vi.fn() } as unknown as Element;
+  it("waits for a target painted late, brings it to the top once and gives it the focus", async () => {
+    const target = document.createElement("div");
+    const title = document.createElement("h2");
+    target.append(title);
+    document.body.append(target);
+    const scroll = vi.spyOn(target, "scrollIntoView").mockImplementation(() => {});
     let frames = 0;
-    const found = await scrollToFragment(
-      "sincronizacion",
-      () => (frames >= 3 ? target : null),
-      async () => {
+    const found = await scrollToFragment("sincronizacion", {
+      find: () => (frames >= 3 ? target : null),
+      frame: async () => {
         frames += 1;
       },
-    );
+    });
     expect(found).toBe(true);
     expect(frames).toBe(3);
-    expect(target.scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: "auto", block: "start" });
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(scroll).toHaveBeenCalledWith({ behavior: "auto", block: "start" });
+    // The next Tab starts at the title that was reached, not at the top.
+    expect(title.getAttribute("tabindex")).toBe("-1");
+    expect(document.activeElement).toBe(title);
+    target.remove();
   });
 
   it("gives up after its bound on a fragment with no target", async () => {
     let frames = 0;
-    const found = await scrollToFragment(
-      "nada",
-      () => null,
-      async () => {
+    const found = await scrollToFragment("nada", {
+      find: () => null,
+      frame: async () => {
         frames += 1;
       },
-      5,
-    );
+      frames: 5,
+    });
     expect(found).toBe(false);
     expect(frames).toBe(6);
   });
 
-  it("is what the frame does on /ajustes#sincronizacion", async () => {
+  it("stops waiting as soon as it is cancelled, and moves nothing", async () => {
+    const control = new AbortController();
+    const target = { scrollIntoView: vi.fn() } as unknown as Element;
+    let frames = 0;
+    const found = await scrollToFragment("sincronizacion", {
+      find: () => (frames >= 3 ? target : null),
+      frame: async () => {
+        frames += 1;
+        if (frames === 2) {
+          control.abort();
+        }
+      },
+      signal: control.signal,
+    });
+    expect(found).toBe(false);
+    expect(frames).toBe(2);
+    expect(target.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  const toSync = (scroll: { mock: { contexts: unknown[] } }): number =>
+    scroll.mock.contexts.filter((element) => (element as Element).id === "sincronizacion").length;
+
+  it("is what the frame does on entering by /ajustes#sincronizacion", async () => {
     const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     await showInShell("/ajustes#sincronizacion", { "/ajustes": Ajustes });
+    await until(() => toSync(scroll) === 1, "que el marco lleve a #sincronizacion");
+  });
+
+  it("follows a link of the application to a fragment", async () => {
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    const Enlace = () => <A href="/ajustes#sincronizacion">Sincronización</A>;
+    const host = await showInShell("/enlace", { "/ajustes": Ajustes, "/enlace": Enlace });
+    (host.querySelector('a[href="/ajustes#sincronizacion"]') as HTMLElement).click();
+    // The router scrolls too when the target is already painted; the frame's
+    // own arrival is the one that also moves the focus.
+    await until(() => toSync(scroll) >= 1, "que el enlace lleve a #sincronizacion");
     await until(
-      () => scroll.mock.contexts.some((element) => (element as Element).id === "sincronizacion"),
-      "que el marco lleve a #sincronizacion",
+      () => document.activeElement === host.querySelector("#sincronizacion h2"),
+      "el foco en el título de destino",
     );
+  });
+
+  it("stops waiting when the address changes: a target painted on the next page is not chased", async () => {
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    // Frames at a browser's pace: happy-dom runs them at once, and 120 would be
+    // spent before the click, which would prove nothing.
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
+      setTimeout(() => callback(performance.now()), 50),
+    );
+    const Uno = () => <A href="/dos">Dos</A>;
+    const Dos = () => (
+      <div id="destino">
+        <h2>Destino</h2>
+      </div>
+    );
+    const host = await showInShell("/uno#destino", { "/uno": Uno, "/dos": Dos });
+    (host.querySelector('a[href="/dos"]') as HTMLElement).click();
+    await until(() => host.querySelector("#destino") !== null, "la segunda página");
+    await settle(300);
+    expect(scroll.mock.contexts.filter((element) => (element as Element).id === "destino")).toEqual(
+      [],
+    );
+  });
+
+  it("does not win over the back button: coming back from the history, it stays", async () => {
+    // Round 1 of the review of PR #105, N2.
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    const host = await showInShell("/ajustes#sincronizacion", { "/ajustes": Ajustes });
+    await until(() => toSync(scroll) === 1, "la primera llegada");
+    // Leave the fragment, then come back to it through the history.
+    window.history.pushState({}, "", "/ajustes");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await settle(20);
+    window.history.pushState({}, "", "/ajustes#sincronizacion");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await settle(50);
+    expect(host.querySelector("#sincronizacion")).not.toBeNull();
+    expect(toSync(scroll)).toBe(1);
   });
 });

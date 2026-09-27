@@ -8,7 +8,7 @@
 // because the first steps lead to Registrar and to Ajustes (D8).
 
 import { A, useLocation } from "@solidjs/router";
-import { createEffect, ErrorBoundary, type JSX, Show } from "solid-js";
+import { createEffect, ErrorBoundary, type JSX, onCleanup, Show } from "solid-js";
 import { Icon } from "../components/Icon.jsx";
 // Imported straight from their modules, not through the barrel: the shell is
 // on the boot path, and a barrel drags everything it re-exports with it — the
@@ -17,7 +17,7 @@ import { Icon } from "../components/Icon.jsx";
 import { Notice } from "../components/Notice.jsx";
 import { countOf } from "../format/number.js";
 import { store } from "../ledger/state.js";
-import { scrollToFragment } from "./anchor.js";
+import { decodeFragment, scrollToFragment } from "./anchor.js";
 import { LedgerChip } from "./LedgerChip.jsx";
 import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
@@ -115,25 +115,44 @@ const SettingsButton = (): JSX.Element => {
 };
 
 /**
- * After every navigation with a fragment, the target under the bar once it
- * exists (`shell/anchor.ts`). One of the few effects of the frame (ADR-0017).
+ * After entering by an address with a fragment, or following a link of the
+ * application to one, the target under the bar once it exists
+ * (`shell/anchor.ts`); never on the way back through the history, where the
+ * browser restores the place. One of the few effects of the frame (ADR-0017).
  */
 const FollowFragment = (): JSX.Element => {
   const location = useLocation();
+  // A `popstate` is the back or forward button. Heard in the capture phase, so
+  // it is known before the router moves the location and this effect runs.
+  let fromHistory = false;
+  const onHistory = (): void => {
+    fromHistory = true;
+  };
+  window.addEventListener("popstate", onHistory, { capture: true });
+  let waiting: AbortController | undefined;
+  onCleanup(() => {
+    window.removeEventListener("popstate", onHistory, { capture: true });
+    waiting?.abort();
+  });
   createEffect(() => {
-    const hash = location.hash;
-    // Read the path too: the same fragment on another page is another target.
+    const id = decodeFragment(location.hash);
+    // The path too: the same fragment on another page is another target.
     void location.pathname;
-    if (hash.length > 1) {
-      void scrollToFragment(decodeURIComponent(hash.slice(1)));
+    waiting?.abort();
+    waiting = undefined;
+    const back = fromHistory;
+    fromHistory = false;
+    if (back || id === undefined) {
+      return;
     }
+    waiting = new AbortController();
+    void scrollToFragment(id, { signal: waiting.signal });
   });
   return null;
 };
 
 export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
   <div class="app">
-    <FollowFragment />
     <a href="#contenido" class="skip-link">
       Ir al contenido
     </a>
@@ -163,6 +182,8 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
       <ErrorBoundary
         fallback={(failure, reset) => <ScreenFailed failure={failure} retry={reset} />}
       >
+        {/* Inside the boundary: a fragment it cannot follow never blanks the page. */}
+        <FollowFragment />
         {props.children}
       </ErrorBoundary>
     </main>
