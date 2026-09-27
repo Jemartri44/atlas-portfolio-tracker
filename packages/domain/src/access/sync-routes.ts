@@ -7,7 +7,7 @@
 
 import type { DeviceQueueState, RemoteError } from "../ports/remote-ledger.js";
 import { API_ERRORS, type ApiErrorCode, type ApiRefusal, refusal } from "./codes.js";
-import type { DeviceObject } from "./device.js";
+import type { DeviceObject, DeviceType } from "./device.js";
 import { isInstant } from "./ids.js";
 
 const STRONG_SHA = /^"([0-9a-f]{64})"$/;
@@ -141,4 +141,33 @@ export const refusalOfRemote = (error: RemoteError): ApiRefusal => {
     throw new Error(`the API has no answer for ${error.code}`);
   }
   return refusal(error.code as ApiErrorCode, error.details);
+};
+
+/**
+ * The routes of the sync that act **as a device** (`docs/api.md` §5.4): they
+ * read what it will append over, append, initialise and publish its queue.
+ * The reference data binds no device.
+ */
+export const DEVICE_BOUND_PATHS: ReadonlySet<string> = new Set([
+  "/api/ledger",
+  "/api/ledger/lines",
+  "/api/sync/devices/self",
+]);
+
+/**
+ * The device the client expects against the device of its credential (review
+ * of PR #97, security B1). The web names on every request the device it
+ * joined with: **without the header** a cookie is refused (`400`), since the
+ * session may have changed under an open page; **with another device** than
+ * the credential's, either credential is refused (`409`), and nothing is
+ * written. The console's token binds its device already, so it may omit it.
+ */
+export const expectedDeviceRefusal = (
+  credential: { readonly type: DeviceType; readonly deviceId: string },
+  header: string | undefined,
+): ApiRefusal | undefined => {
+  if (header === undefined) {
+    return credential.type === "web" ? refusal("expected_device_required") : undefined;
+  }
+  return header === credential.deviceId ? undefined : refusal("sync_device_changed");
 };

@@ -60,6 +60,10 @@ export const REMOTE_FAILURES: Readonly<Record<string, string>> = {
     "este navegador fue olvidado como dispositivo: vuelve a iniciar sesión y recibirá uno nuevo.",
   remote_unavailable: "la nube no está disponible ahora mismo: inténtalo de nuevo en unos minutos.",
   body_too_large: "la petición era demasiado grande para la nube; no se ha escrito nada.",
+  expected_device_required:
+    "la petición no decía con qué dispositivo se sincroniza; es un fallo de la aplicación. No se ha escrito nada.",
+  sync_device_changed:
+    "tu sesión es ahora de otro dispositivo que el que se unió en este navegador (quizá iniciaste sesión en otra pestaña). No se ha escrito nada: únete otra vez con «Unirme desde la nube» o «Unirme con mis operaciones».",
   transport_rejected: "la red ha rechazado la petición antes de llegar a la nube.",
   network_failed: "no hay conexión con la nube.",
 };

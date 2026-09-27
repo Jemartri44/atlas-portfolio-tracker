@@ -79,6 +79,10 @@ export const describeRemoteFailure = (code: unknown): string => {
       return "la nube no está disponible ahora mismo (un fallo pasajero): inténtalo de nuevo en unos minutos.";
     case "body_too_large":
       return "la petición era demasiado grande para la nube; no se ha escrito nada.";
+    case "expected_device_required":
+      return "la petición no decía con qué dispositivo se sincroniza; es un fallo de la aplicación. No se ha escrito nada.";
+    case "sync_device_changed":
+      return "la credencial es de otro dispositivo que el que esta carpeta tiene en sync/remote.json. No se ha escrito nada.";
     case "transport_rejected":
       return "la petición la ha rechazado la red antes de llegar a la nube (CloudFront o el cortafuegos).";
     case "network_failed":

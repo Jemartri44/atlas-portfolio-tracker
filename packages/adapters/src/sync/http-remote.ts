@@ -25,6 +25,7 @@ import {
   type AppendEntry,
   type AppendResult,
   type DeviceQueueState,
+  EXPECTED_DEVICE_HEADER,
   etagOfHeader,
   parseAppendAnswer,
   parseErrorAnswer,
@@ -41,6 +42,13 @@ export interface HttpRemoteOptions {
   readonly fetch: typeof fetch;
   /** The device token of the console; without it, the cookie of the web travels (same origin). */
   readonly token?: string;
+  /**
+   * The device this client syncs as, named on every request
+   * (`x-atlas-expected-device`; review of PR #97, security B1): the API
+   * writes nothing if the credential that travels is of another device.
+   * Required by the API with the cookie of the web.
+   */
+  readonly expectedDevice?: string;
 }
 
 const hex = async (bytes: Uint8Array): Promise<string> =>
@@ -63,6 +71,9 @@ export const httpRemote = (options: HttpRemoteOptions): RemoteLedger => {
     const sent: Record<string, string> = { ...headers };
     if (options.token !== undefined) {
       sent["x-atlas-device-token"] = options.token;
+    }
+    if (options.expectedDevice !== undefined) {
+      sent[EXPECTED_DEVICE_HEADER] = options.expectedDevice;
     }
     let payload: Uint8Array | undefined;
     if (body !== undefined) {

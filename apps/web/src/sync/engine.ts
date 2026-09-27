@@ -9,43 +9,28 @@
 
 import { BrowserSyncStore } from "@atlas/adapters/sync";
 import {
-  confirmHeldUnit,
   deactivateSync,
-  discardHeldUnit,
   finishInitialisation,
-  finishRedo,
-  type HeldView,
-  heldUnits,
   initialiseRemote,
   joinWithOwnLines,
-  recordRedoPlan,
-  redoRecorded,
   replaceFromRemote,
   type SyncOptions,
   type SyncOutcome,
-  startRedo,
   syncDevice,
 } from "@atlas/adapters/sync-client";
 import { httpRemote } from "@atlas/adapters/sync-http";
-import {
-  CURRENT_LEDGER_SCHEMA,
-  createUlidGenerator,
-  decodeLines,
-  type LedgerEvent,
-  type UseCaseDeps,
-} from "@atlas/domain";
+import { CURRENT_LEDGER_SCHEMA } from "@atlas/domain";
 import {
   initState,
   parseHeld,
-  type RedoPlan,
   type Refusal,
   RemoteError,
-  type Resolution,
   remoteFailed,
   unresolvedHeld,
   webJoinRefusal,
   webSyncRefusal,
 } from "@atlas/domain/sync";
+import { readSession } from "./session.js";
 
 export interface WebSyncEnv {
   /** The network: only the API of this origin, with the cookie. */
@@ -57,7 +42,12 @@ export interface WebSyncEnv {
 
 export type StartHow = "init" | "join_from_remote" | "join_with_mine";
 
-export type WebOutcome = SyncOutcome | { readonly status: "refused"; readonly refusal: Refusal };
+export type WebOutcome =
+  | (SyncOutcome & {
+      /** Operations held back by this order: joining from the cloud or downloading it again (review of PR #97, N3). */
+      readonly retained?: number;
+    })
+  | { readonly status: "refused"; readonly refusal: Refusal };
 
 /** What the card shows: whether it syncs, as which device, and its queue. */
 export interface WebSyncStatus {
@@ -72,12 +62,61 @@ export interface WebSyncStatus {
   readonly lastSyncAt: string | undefined;
 }
 
-const storeOf = (env: WebSyncEnv): BrowserSyncStore =>
+export const storeOf = (env: WebSyncEnv): BrowserSyncStore =>
   env.open === undefined ? new BrowserSyncStore() : new BrowserSyncStore(env.open);
 
-const remoteOf = (env: WebSyncEnv) => httpRemote({ origin: "", fetch: env.fetch });
+/** The remote as this device: every request names it, and the API refuses another (§5.4). */
+const remoteOf = (env: WebSyncEnv, device: string) =>
+  httpRemote({ origin: "", fetch: env.fetch, expectedDevice: device });
 
-const optionsOf = (env: WebSyncEnv, device?: string): SyncOptions => ({
+/** What a session that is not signed in is, as the failure of the remote it would be. */
+const SIGNED_OUT: Readonly<Record<string, string>> = {
+  signed_out: "unauthenticated",
+  expired: "session_invalid",
+  not_allowed: "not_allowed",
+  forgotten: "device_forgotten",
+};
+
+/**
+ * The device of the session **now**, read again before every order (review
+ * of PR #97, security B1): the page may have been painted under another
+ * session, signed in again in another tab. The API checks it as well.
+ */
+const sessionNow = async (env: WebSyncEnv): Promise<string | WebOutcome> => {
+  const session = await readSession(env.fetch);
+  if (session.kind === "signed_in") {
+    return session.deviceId;
+  }
+  const code =
+    session.kind === "unavailable" ? session.code : (SIGNED_OUT[session.kind] ?? "unauthenticated");
+  return {
+    status: "stopped",
+    stop: { code: "remote_failed", details: { remote_code: code } },
+  };
+};
+
+const unresolvedOf = (heldText: string): number => unresolvedHeld(parseHeld(heldText)).length;
+
+/** The operations held back and not resolved: the lines of every unit. */
+const heldLinesOf = (heldText: string): number =>
+  unresolvedHeld(parseHeld(heldText)).reduce((sum, unit) => sum + unit.lines.length, 0);
+
+/** Joins from the cloud or downloads it again, and says how many units it held back. */
+const replaceCounting = async (
+  store: BrowserSyncStore,
+  remote: ReturnType<typeof remoteOf>,
+  options: SyncOptions,
+  how: "join" | "redownload",
+): Promise<WebOutcome> => {
+  const before = heldLinesOf((await store.read()).heldText);
+  const outcome = await replaceFromRemote(store, remote, options, how);
+  if (outcome.status !== "synced") {
+    return outcome;
+  }
+  return { ...outcome, retained: heldLinesOf((await store.read()).heldText) - before };
+};
+
+export const optionsOf = (env: WebSyncEnv, device?: string): SyncOptions => ({
   schema: CURRENT_LEDGER_SCHEMA,
   now: env.now ?? (() => new Date()),
   ...(device === undefined ? {} : { remoteJson: device }),
@@ -95,33 +134,37 @@ export const webSyncStatus = async (env: WebSyncEnv): Promise<WebSyncStatus> => 
     half: state.presence.present && state.presence.marker === "missing",
     joined: state.remoteText,
     pending: marker === undefined ? undefined : state.ledger.lines.length - marker.synced_lines,
-    held: unresolvedHeld(parseHeld(state.heldText)).length,
+    held: unresolvedOf(state.heldText),
     lastSyncAt: marker?.last_sync_at,
   };
 };
 
-/** Sincronizar: only as the device this browser joined with. */
-export const syncNow = async (env: WebSyncEnv, session: string): Promise<WebOutcome> => {
+/** Sincronizar: only as the device this browser joined with, which the session must still be. */
+export const syncNow = async (env: WebSyncEnv): Promise<WebOutcome> => {
+  const session = await sessionNow(env);
+  if (typeof session !== "string") {
+    return session;
+  }
   const store = storeOf(env);
   const state = await store.read();
   const refusal = webSyncRefusal(state.presence, state.remoteText, session);
   if (refusal !== undefined) {
     return { status: "refused", refusal };
   }
-  return syncDevice(store, remoteOf(env), optionsOf(env));
+  return syncDevice(store, remoteOf(env, session), optionsOf(env));
 };
 
 /**
  * Empezar, always an explicit choice: upload the whole ledger to an empty
  * cloud, or join one that has a ledger — from the cloud, or with this
- * browser's operations as pending. The device of the session is recorded in
- * the same transaction as the marker.
+ * browser's operations as pending. The device of the session, read now, is
+ * recorded in the same transaction as the marker.
  */
-export const startSync = async (
-  env: WebSyncEnv,
-  session: string,
-  how: StartHow,
-): Promise<WebOutcome> => {
+export const startSync = async (env: WebSyncEnv, how: StartHow): Promise<WebOutcome> => {
+  const session = await sessionNow(env);
+  if (typeof session !== "string") {
+    return session;
+  }
   const store = storeOf(env);
   const state = await store.read();
   const refusal = webJoinRefusal(
@@ -133,10 +176,10 @@ export const startSync = async (
   if (refusal !== undefined) {
     return { status: "refused", refusal };
   }
-  const remote = remoteOf(env);
+  const remote = remoteOf(env, session);
   const options = optionsOf(env, session);
   if (how === "join_from_remote") {
-    return replaceFromRemote(store, remote, options, "join");
+    return replaceCounting(store, remote, options, "join");
   }
   if (how === "join_with_mine") {
     return (await joinWithOwnLines(store, remote, options)).outcome;
@@ -159,88 +202,21 @@ export const startSync = async (
     : initialiseRemote(store, remote, options);
 };
 
-/** Volver a descargar, only when the user asks, after the cloud was rewritten. */
-export const redownload = async (env: WebSyncEnv, session: string): Promise<WebOutcome> => {
+/** Volver a descargar, only when the user asks, after the cloud was rewritten; as the joined device. */
+export const redownload = async (env: WebSyncEnv): Promise<WebOutcome> => {
+  const session = await sessionNow(env);
+  if (typeof session !== "string") {
+    return session;
+  }
   const store = storeOf(env);
   const state = await store.read();
   const refusal = webSyncRefusal(state.presence, state.remoteText, session);
   if (refusal !== undefined) {
     return { status: "refused", refusal };
   }
-  return replaceFromRemote(store, remoteOf(env), optionsOf(env), "redownload");
+  return replaceCounting(store, remoteOf(env, session), optionsOf(env), "redownload");
 };
 
 /** Desactivar: refused with pending lines; what is held stays here. */
 export const deactivate = async (env: WebSyncEnv): Promise<Refusal | undefined> =>
   deactivateSync(storeOf(env), optionsOf(env));
-
-export const heldList = (env: WebSyncEnv): Promise<HeldView[]> =>
-  heldUnits(storeOf(env), optionsOf(env));
-
-/** A held unit as the card shows it: why, what can be done, and its operations. */
-export interface HeldItem {
-  readonly unit: string;
-  readonly reason: { readonly code: string; readonly details: Readonly<Record<string, unknown>> };
-  readonly resolutions: readonly Resolution[];
-  /** Each line read, or `undefined` when it cannot be read — held for exactly that. */
-  readonly events: readonly (LedgerEvent | undefined)[];
-}
-
-const readable = (line: string): LedgerEvent | undefined => {
-  try {
-    return decodeLines([line], CURRENT_LEDGER_SCHEMA)[0];
-  } catch {
-    return undefined;
-  }
-};
-
-export const heldItems = async (env: WebSyncEnv): Promise<HeldItem[]> =>
-  (await heldList(env)).map((view) => ({
-    unit: view.unit.unit,
-    reason: view.unit.reason,
-    resolutions: view.resolutions,
-    events: view.unit.lines.map(readable),
-  }));
-
-export const confirmHeld = (env: WebSyncEnv, unit: string): Promise<void> =>
-  confirmHeldUnit(storeOf(env), unit, optionsOf(env));
-
-export const discardHeld = (
-  env: WebSyncEnv,
-  unit: string,
-  only: "unit" | "reversal" = "unit",
-): Promise<void> => discardHeldUnit(storeOf(env), unit, optionsOf(env), only);
-
-/**
- * Rehacer, first half: the plan, with its ids sealed, for the user to see
- * before anything is recorded — or `recorded`, when a redo cut between
- * recording and finishing is already in the ledger by those ids, which only
- * finishes (review of PR #96, N1).
- */
-export const planRedo = async (
-  env: WebSyncEnv,
-  deps: UseCaseDeps,
-  unit: string,
-): Promise<{ readonly plan: RedoPlan } | { readonly recorded: true }> => {
-  const store = storeOf(env);
-  const options = optionsOf(env);
-  const ids = createUlidGenerator(deps);
-  const plan = await startRedo(store, unit, () => ids.next(), options);
-  if (await redoRecorded(store, unit, options)) {
-    await finishRedo(store, unit, options);
-    return { recorded: true };
-  }
-  return { plan };
-};
-
-/** Rehacer, second half, once the user confirmed the plan: exactly the sealed plan, then finished. */
-export const recordRedo = async (
-  env: WebSyncEnv,
-  deps: UseCaseDeps,
-  unit: string,
-  plan: RedoPlan,
-  confirmDuplicate: boolean,
-): Promise<void> => {
-  await recordRedoPlan(deps, plan, { confirmDuplicate });
-  await finishRedo(storeOf(env), unit, optionsOf(env));
-};

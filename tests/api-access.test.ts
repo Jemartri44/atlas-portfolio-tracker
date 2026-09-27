@@ -516,7 +516,11 @@ describe("architecture (015): the web configures the sync only through its engin
    * sync elsewhere for read-only questions, and that file also holds the
    * writer. Never a namespace, never dynamically, never a `sync:*` key named.
    */
-  const ENGINE = join(webSrc, "sync", "engine.ts");
+  /** The engine and what it holds back: the only modules of the web that configure the sync. */
+  const ENGINES = new Set([
+    join(webSrc, "sync", "engine.ts"),
+    join(webSrc, "sync", "engine-held.ts"),
+  ]);
   const READ_ONLY = new Set(["browserSyncConfigured", "browserSyncPresence"]);
   const DOORS = /^@atlas\/(adapters\/sync(-client|-http)?|domain\/sync)$/;
 
@@ -536,7 +540,9 @@ describe("architecture (015): the web configures the sync only through its engin
     );
 
   it("imports what writes the sync only in its engine, and names no sync:* key", () => {
-    expect(statSync(ENGINE, { throwIfNoEntry: false })?.isFile()).toBe(true);
+    for (const engine of ENGINES) {
+      expect(statSync(engine, { throwIfNoEntry: false })?.isFile(), engine).toBe(true);
+    }
     const known = packages();
     const doors = doorFiles();
     expect(doors.size).toBeGreaterThanOrEqual(3);
@@ -551,7 +557,7 @@ describe("architecture (015): the web configures the sync only through its engin
         const at = `${relative(repoRoot, file)}: ${binding.how} ${binding.name} from ${binding.specifier}`;
         if (binding.how === "dynamic") {
           violations.push(at);
-        } else if (file !== ENGINE && !binding.isType && !READ_ONLY.has(binding.name)) {
+        } else if (!ENGINES.has(file) && !binding.isType && !READ_ONLY.has(binding.name)) {
           violations.push(at);
         }
       }
@@ -572,8 +578,8 @@ describe("architecture (015): the web configures the sync only through its engin
   it("reaches the client of the sync only through the engine, by any path", () => {
     const violations = [
       ...reach(
-        listSources(webSrc).filter((file) => file !== ENGINE),
-        new Set([ENGINE]),
+        listSources(webSrc).filter((file) => !ENGINES.has(file)),
+        ENGINES,
       ),
     ]
       .filter(([file]) => /[/\\]adapters[/\\]src[/\\]sync(-http)?[/\\]/.test(file))

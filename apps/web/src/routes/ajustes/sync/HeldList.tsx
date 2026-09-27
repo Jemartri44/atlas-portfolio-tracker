@@ -6,7 +6,7 @@
 import { For, type JSX, Show } from "solid-js";
 import { Amount, Notice } from "../../../components/index.js";
 import { eventLabel } from "../../../format/labels.js";
-import type { HeldItem } from "../../../sync/engine.js";
+import type { HeldItem } from "../../../sync/engine-held.js";
 import type { PendingRedo } from "./sync-controller.js";
 import { amountOf, dateOf, RESOLUTION, said } from "./sync-texts.js";
 

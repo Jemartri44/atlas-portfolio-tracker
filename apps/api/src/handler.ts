@@ -39,10 +39,12 @@ import {
   consoleCodePayload,
   consoleLoginPayload,
   cookieValues,
+  DEVICE_BOUND_PATHS,
   DEVICE_TOKEN_HEADER,
   deviceRefusal,
   entryForSubject,
   expectEmptyObject,
+  expectedDeviceRefusal,
   findRoute,
   formatDeviceToken,
   instantOf,
@@ -78,6 +80,7 @@ import {
   tokenListItem,
   tokenStatus,
 } from "@atlas/domain/access";
+import { EXPECTED_DEVICE_HEADER } from "@atlas/domain/sync";
 import { type FunctionUrlEvent, type FunctionUrlResult, normalise, type Request } from "./event.js";
 import { type LogEntry, logLine } from "./log.js";
 import { fail, type Outcome } from "./outcome.js";
@@ -841,6 +844,20 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         const credential = await credentialOf(admission);
         if ("code" in credential) {
           return { outcome: fail(credential), route: at };
+        }
+        // The device the client expects, before anything is read or written
+        // (review of PR #97, security B1; docs/api.md §5.4).
+        const expected = DEVICE_BOUND_PATHS.has(spec.path)
+          ? expectedDeviceRefusal(credential, request.headers.get(EXPECTED_DEVICE_HEADER))
+          : undefined;
+        if (expected !== undefined) {
+          return {
+            outcome:
+              credential.tokenId === undefined
+                ? fail(expected)
+                : { ...fail(expected), tokenId: credential.tokenId },
+            route: at,
+          };
         }
         const outcome = await syncRoute(request, spec.path, matched.params, credential, body);
         return {

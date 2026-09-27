@@ -8,6 +8,7 @@ export {
   type AppendEntry,
   type AppendResult,
   type DeviceQueueState,
+  EXPECTED_DEVICE_HEADER,
   LINE_REJECTION_CODES,
   type LineRejection,
   REMOTE_FAILURE_CODES,

@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import { API_ERRORS, refusal } from "../../src/access/codes.js";
 import { newDevice } from "../../src/access/device.js";
 import {
+  DEVICE_BOUND_PATHS,
+  expectedDeviceRefusal,
   ifNoneMatchHits,
   publishedDevice,
   referenceContentType,
@@ -169,5 +171,32 @@ describe("refusalOfRemote: a rule of the sync said no (§5 and §7)", () => {
     for (const code of answerable) {
       expect(REMOTE_FAILURE_CODES as readonly string[], code).toContain(code);
     }
+  });
+});
+
+describe("expectedDeviceRefusal: the device the client expects (review of PR #97, security B1)", () => {
+  const web = { type: "web", deviceId: "D".repeat(22) } as const;
+  const console = { type: "console", deviceId: "C".repeat(22) } as const;
+
+  it("asks the cookie for the header, and lets the token go without it", () => {
+    expect(expectedDeviceRefusal(web, undefined)).toEqual(refusal("expected_device_required"));
+    expect(expectedDeviceRefusal(console, undefined)).toBeUndefined();
+  });
+
+  it("admits the credential's own device and refuses any other, whichever the credential", () => {
+    expect(expectedDeviceRefusal(web, web.deviceId)).toBeUndefined();
+    expect(expectedDeviceRefusal(console, console.deviceId)).toBeUndefined();
+    expect(expectedDeviceRefusal(web, console.deviceId)).toEqual(refusal("sync_device_changed"));
+    expect(expectedDeviceRefusal(console, "")).toEqual(refusal("sync_device_changed"));
+    expect(API_ERRORS.expected_device_required).toBe(400);
+    expect(API_ERRORS.sync_device_changed).toBe(409);
+  });
+
+  it("binds the routes that act as a device, and not the reference data", () => {
+    expect([...DEVICE_BOUND_PATHS].sort()).toEqual([
+      "/api/ledger",
+      "/api/ledger/lines",
+      "/api/sync/devices/self",
+    ]);
   });
 });

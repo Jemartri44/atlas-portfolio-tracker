@@ -92,13 +92,22 @@ export const outcomeTold = (outcome: WebOutcome, done: string): Told => {
       text: sayCode(outcome.stop.code, outcome.stop.details),
     };
   }
+  const retained = outcome.retained ?? 0;
   const parts = [
     `${countOf(outcome.uploaded, "operación subida", "operaciones subidas")}; ${countOf(outcome.pending, "queda pendiente", "quedan pendientes")}.`,
+    ...(retained === 0
+      ? []
+      : [
+          `${countOf(retained, "operación retenida", "operaciones retenidas")} de las que había aquí: revísalas en «Retenidas».`,
+        ]),
     ...(outcome.held === undefined ? [] : [said(outcome.held.code)]),
     ...(outcome.notice === undefined ? [] : [said(outcome.notice.code, outcome.notice.details)]),
   ];
   return {
-    severity: outcome.held === undefined && outcome.notice === undefined ? "info" : "caution",
+    severity:
+      outcome.held === undefined && outcome.notice === undefined && retained === 0
+        ? "info"
+        : "caution",
     title: done,
     text: parts.join(" "),
   };

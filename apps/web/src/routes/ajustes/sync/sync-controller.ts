@@ -9,13 +9,7 @@ import { reloadLedger } from "../../../ledger/actions.js";
 import { toAppError } from "../../../ledger/errors.js";
 import { store } from "../../../ledger/state.js";
 import {
-  confirmHeld,
   deactivate,
-  discardHeld,
-  type HeldItem,
-  heldItems,
-  planRedo,
-  recordRedo,
   redownload,
   type StartHow,
   startSync,
@@ -23,6 +17,14 @@ import {
   type WebSyncEnv,
   webSyncStatus,
 } from "../../../sync/engine.js";
+import {
+  confirmHeld,
+  discardHeld,
+  type HeldItem,
+  heldItems,
+  planRedo,
+  recordRedo,
+} from "../../../sync/engine-held.js";
 import { outcomeTold, said, type Told } from "./sync-texts.js";
 
 export interface SyncCardProps {
@@ -85,7 +87,7 @@ export const createSyncController = (props: SyncCardProps) => {
 
   const sync = (): Promise<void> =>
     run(async () => {
-      const outcome = await syncNow(env, props.device);
+      const outcome = await syncNow(env);
       setRewritten(outcome.status === "stopped" && outcome.stop.code === "remote_rewritten");
       return outcomeTold(outcome, "Sincronizado");
     });
@@ -99,9 +101,9 @@ export const createSyncController = (props: SyncCardProps) => {
         return undefined;
       }
       if (how !== "redownload") {
-        return outcomeTold(await startSync(env, props.device, how), "Sincronización iniciada");
+        return outcomeTold(await startSync(env, how), "Sincronización iniciada");
       }
-      const outcome = await redownload(env, props.device);
+      const outcome = await redownload(env);
       if (outcome.status === "synced") {
         setRewritten(false);
       }
