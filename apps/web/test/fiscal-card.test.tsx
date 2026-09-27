@@ -1,19 +1,18 @@
 // @vitest-environment happy-dom
 //
-// The card of the summary is the only way into the fiscal screen, and the only
-// card of the application that **moves**: in the income tax season, or when
-// there is something of the 720 to do, it goes to the top; the rest of the
-// year it sits at the end, quiet (P1 of the prompt).
-//
-// The four edges of the season are checked here as well as in the domain,
-// because what the domain decides and what the screen paints are two different
-// things, and it is the second one the user sees.
+// The card of the summary is the only way into the fiscal screen, and it has
+// two shapes (feature 020, E2, M2): in the income tax season, a card with
+// «Campaña de la Renta» and what is pending; out of it, a row folded at the
+// end that says only its neutral state and the years with no return recorded.
+// Whether it is the season is the domain's (`inRentaSeason`); where the card
+// goes is the order of the summary (`summary-first-screen.test.tsx`).
 
 import type { LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import FiscalCard from "../src/routes/resumen/FiscalCard.jsx";
+import { fiscalStatus } from "../src/routes/resumen/fiscal-status.js";
 import { goldenEvents } from "./helpers/golden.js";
-import { settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { show, text, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -82,61 +81,47 @@ const quiet = (): LedgerEvent[] => {
   ] as unknown as LedgerEvent[];
 };
 
-/**
- * Waits for the status to arrive, instead of guessing how long the dynamic
- * import takes: under coverage it took longer than the timeout that used to be
- * here, and the test failed one run in ten for a reason that had nothing to do
- * with what it checks.
- */
-const cardOn = async (date: string, ledger: LedgerEvent[] = events): Promise<HTMLElement> => {
-  const host = await show("/", () => <FiscalCard events={ledger} date={date} />);
-  for (let attempt = 0; attempt < 100 && host.querySelector(".skel") !== null; attempt += 1) {
-    await settle(10);
-  }
-  expect(host.querySelector(".skel")).toBeNull();
-  return host;
+const card = (season: boolean, date: string, ledger: LedgerEvent[] = events) => {
+  const status = fiscalStatus(ledger, date);
+  return show("/", () => (
+    <FiscalCard season={season} status={() => status} year={Number(date.slice(0, 4)) - 1} />
+  ));
 };
 
-const classOf = (host: HTMLElement): string => host.querySelector("section.card")?.className ?? "";
-
 describe("the fiscal card of the summary", () => {
-  it("is there from the first paint, before the tax engine arrives", async () => {
-    const host = await show("/", () => <FiscalCard events={events} date="2028-02-10" />);
-    // No `settle`: this is what the user sees while the chunk is downloading.
+  it("keeps its place with a skeleton until the engine answers, in the season", async () => {
+    const host = await show("/", () => (
+      <FiscalCard season={true} status={() => undefined} year={2028} />
+    ));
     expect(text(host)).toContain("Declaración");
     expect(host.querySelector(".skel")).not.toBeNull();
-    for (let attempt = 0; attempt < 100 && host.querySelector(".skel") !== null; attempt += 1) {
-      await settle(10);
-    }
     expect(text(host)).toContain("Ver la declaración");
   });
 
-  it("goes to the end outside the season, and to the top inside it", async () => {
-    const ledger = quiet();
-    expect(classOf(await cardOn("2028-03-31", ledger))).toContain("is-last");
-    expect(classOf(await cardOn("2028-04-01", ledger))).toContain("is-first");
-    expect(classOf(await cardOn("2028-06-30", ledger))).toContain("is-first");
-    expect(classOf(await cardOn("2028-07-01", ledger))).toContain("is-last");
-  });
-
-  it("says «Campaña de la Renta» only in season", async () => {
-    const ledger = quiet();
-    expect(text(await cardOn("2028-04-01", ledger))).toContain("Campaña de la Renta");
-    expect(text(await cardOn("2028-07-01", ledger))).not.toContain("Campaña de la Renta");
-  });
-
-  it("goes to the top out of season when a return is due, and says which", async () => {
-    // February 2028: the 720 of 2027 is due —the golden ledger holds securities
-    // abroad— and nothing of it is recorded.
-    const host = await cardOn("2028-02-10");
-    expect(classOf(host)).toContain("is-first");
-    const shown = text(host);
-    expect(shown).toMatch(/Modelo 72[01] de 2027/);
-    expect(shown).toContain("2027");
-  });
-
-  it("names the past years nobody has recorded a return for", async () => {
-    const host = await cardOn("2029-02-10");
+  it("says «Campaña de la Renta» in the season, and what is pending", async () => {
+    // May 2029: the 720 of 2028 has its securities abroad and no return recorded.
+    const host = await card(true, "2029-05-10");
+    expect(text(host)).toContain("Campaña de la Renta");
+    expect(host.querySelector(".fiscal-todo")).not.toBeNull();
     expect(text(host)).toMatch(/tiene cifras y no consta|tienen cifras y no constan/);
+  });
+
+  it("folds to a row out of the season that says only its neutral state", async () => {
+    const host = await card(false, "2029-01-20");
+    const row = host.querySelector(".summary-fiscal.is-row");
+    expect(row).not.toBeNull();
+    expect(text(row)).toContain("Declaración 2028 · fuera de campaña");
+    // Q2: the years with figures and no return, as a state, not a warning.
+    expect(text(row)).toMatch(/sin declarar: 2026, 2027 y 2028/);
+    // Never a notice: the 720 goes to *Atención*, the invalid events too.
+    expect(text(row)).not.toMatch(/Modelo 72[01]|inválidos|Campaña/);
+    expect(row?.querySelector('a[href="/fiscal"]')).not.toBeNull();
+  });
+
+  it("says nothing it does not know in the row of a quiet ledger", async () => {
+    const host = await card(false, "2028-09-01", quiet());
+    expect(text(host.querySelector(".summary-fiscal"))).toContain(
+      "Declaración 2027 · fuera de campaña",
+    );
   });
 });

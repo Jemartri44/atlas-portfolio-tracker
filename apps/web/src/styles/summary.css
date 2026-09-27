@@ -1,7 +1,13 @@
 /*
  * The summary (docs/design/system.md §5.2 and §7.2): the one hero figure with
- * its proportion bar and its three books, and the calm line of an empty
- * attention list. The first steps of an empty ledger are in `steps.css`.
+ * its proportion bar and its three books, the calm line of an empty attention
+ * list, the first screenful by importance and the 8+4 of the monitor. The
+ * first steps of an empty ledger are in `steps.css`.
+ *
+ * LINE BUDGET: the one screen whose shape changes with the season and with
+ * the width (feature 020, M2 and M4); its rules read together, and a sheet of
+ * its own for the placement would split the one card that moves from where
+ * it moves.
  */
 
 /* ---- Hero: the one big figure, always broken down ------------------------ */
@@ -190,20 +196,6 @@
 
 /* ---- The card of the summary -------------------------------------------- */
 
-/*
- * The one card of the application that moves: in the income tax season, or
- * when there is something of the 720 to do, it goes first; the rest of the
- * year, last. The order is decided by the domain and applied here, so the
- * markup keeps one place and the screen reader one reading order.
- */
-.card.is-first {
-  order: -1;
-}
-
-.card.is-last {
-  order: 1;
-}
-
 /* Flush with the title of the card: no indent (feature 020, M13). */
 .fiscal-todo {
   color: var(--c-text);
@@ -211,6 +203,45 @@
   gap: var(--space-2);
   margin: 0;
   padding-left: 0;
+}
+
+/* ---- First screenful by importance (feature 020, M2) ---------------------- */
+
+/* The risk of losing the data: one line across, before anything else. */
+.grid > .summary-loss {
+  grid-column: 1 / -1;
+}
+
+/* Out of the season, the tax card folded to one row that is its own link. */
+.summary-fiscal.is-row {
+  padding: 0;
+}
+
+.fiscal-row {
+  align-items: center;
+  color: var(--c-text-2);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-3);
+  min-height: var(--tap);
+  padding: var(--space-2) var(--space-4);
+  text-decoration: none;
+}
+
+.fiscal-row-text {
+  flex: 1;
+}
+
+.fiscal-row-text > strong {
+  color: var(--c-text);
+}
+
+.fiscal-row-action {
+  align-items: center;
+  color: var(--c-accent);
+  display: inline-flex;
+  font-weight: var(--fw-semibold);
+  gap: var(--space-1);
 }
 
 /* ---- The monitor: the summary in 8+4 (feature 020, M4) ------------------- */
@@ -237,7 +268,6 @@
 
   .grid > .summary-fiscal {
     align-self: start;
-    order: 0;
   }
 
   .grid > .summary-evolution {

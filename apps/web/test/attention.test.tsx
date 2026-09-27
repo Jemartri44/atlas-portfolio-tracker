@@ -33,7 +33,10 @@ const attention = (
   });
 
 describe("the list, as data", () => {
-  it("puts the risk of losing the data first, above a degraded ledger and a breached rule", () => {
+  it("puts a degraded ledger above a breached rule, and leaves the risk of losing the data to its own line", () => {
+    // Feature 020, E2, M2: the risk of losing the data is the first line of
+    // the summary (`dataLossItem`), and a notice said in its place is not
+    // repeated in the list.
     const items = attention(
       [
         warning("bucket_stop_loss_reached", {
@@ -43,13 +46,18 @@ describe("the list, as data", () => {
           limit_pct: "25",
         }),
       ],
-      { invalidCount: 3, exportOverdueDays: "never" },
+      { invalidCount: 3 },
     );
-    expect(items.map((item) => item.code)).toEqual([
-      "export_overdue",
-      "invalid_events",
-      "bucket_stop_loss_reached",
-    ]);
+    expect(items.map((item) => item.code)).toEqual(["invalid_events", "bucket_stop_loss_reached"]);
+  });
+
+  it("adds the tax sentence to the group of the invalid events out of season, never a group of its own", () => {
+    const blocked = attention([], { invalidCount: 2, fiscalBlocked: true });
+    expect(blocked.map((item) => item.code)).toEqual(["invalid_events"]);
+    expect(blocked[0]?.message).toContain("no se calcula nada fiscal");
+    expect(attention([], { invalidCount: 2 })[0]?.message).not.toContain("fiscal");
+    // Without invalid events there is nothing to add it to, and nothing to say.
+    expect(attention([], { invalidCount: 0, fiscalBlocked: true })).toEqual([]);
   });
 
   it("leaves out a repurchase window that had already closed on the date asked", () => {
@@ -220,10 +228,14 @@ describe("the rules whose repeats are one thing to do", () => {
 });
 
 describe("the list, on the summary", () => {
-  it("puts the export first and never an identifier or an ISO date", async () => {
+  it("says the export on its own line, before the list and not in it, and never an identifier or an ISO date", async () => {
+    // Feature 020, E2, M2: the risk of losing the data goes first, once.
     const host = await show("/", Resumen);
-    const items = [...host.querySelectorAll('[aria-label="Lo que reclama atención"] .notice')];
-    expect(text(items[0])).toContain("nunca se han exportado");
+    const grid = host.querySelector(".grid");
+    expect(grid?.firstElementChild?.classList.contains("summary-loss")).toBe(true);
+    expect(text(grid?.firstElementChild)).toContain("nunca los has exportado");
+    const list = text(host.querySelector('[aria-label="Lo que reclama atención"]'));
+    expect(list).not.toContain("exportado");
     const shown = text(host.querySelector('[aria-label="Lo que reclama atención"]'));
     expect(shown).not.toMatch(ULID);
     expect(shown).not.toMatch(/\d{4}-\d{2}-\d{2}|th_alpha/);

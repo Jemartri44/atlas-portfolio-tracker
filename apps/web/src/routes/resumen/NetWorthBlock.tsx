@@ -132,7 +132,12 @@ export const NetWorthBlock = (props: { view: NetWorthView }): JSX.Element => (
       </For>
     </ul>
 
-    <Show when={props.view.missing.length > 0}>
+    <Show when={props.view.missing.length === 1}>
+      <Pending line action={{ label: "Registrar valoración", to: "/registrar/valuation" }}>
+        Sin precio o sin tipo de cambio: {props.view.missing[0]}.
+      </Pending>
+    </Show>
+    <Show when={props.view.missing.length > 1}>
       <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
         Sin precio o sin tipo de cambio: {props.view.missing.join(", ")}. El total solo suma lo que
         sí lo tiene.

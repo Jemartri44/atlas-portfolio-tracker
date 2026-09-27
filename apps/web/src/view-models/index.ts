@@ -5,6 +5,9 @@ export {
   type AttentionSeverity,
   attentionDestination,
   attentionItems,
+  dataLossItem,
+  type FiscalAnswer,
+  fiscalSlot,
 } from "./attention.js";
 export { type DetailField, type DetailView, detailView } from "./detail.js";
 export {
