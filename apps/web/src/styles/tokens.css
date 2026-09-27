@@ -131,8 +131,12 @@
   --c-accent-soft-text: #1f4f7c;
   --c-on-accent: #ffffff;
 
-  --c-positive: #1b6a44; /* gains: always with a sign */
-  --c-negative: #a2392b; /* losses: always with a sign */
+  /* Results only (a gain or a loss, realised or latent), always with their
+     sign: never on a weight, a deviation, a price or a balance. Out of the red
+     of a problem and told apart under colour vision deficiency; the thresholds
+     live in test/palette.test.ts (feature 020, M6). */
+  --c-gain: #0f6b5c;
+  --c-loss: #b04a12;
 
   --c-caution: #80530a; /* needs a look */
   --c-caution-icon: #a8700f;
@@ -144,7 +148,9 @@
   --c-done: #1b6a44; /* a completed step */
 
   /* Data colours, validated as a set (lightness band, chroma, CVD ΔE ≥ 8,
-     normal-vision ΔE ≥ 15, ≥ 3:1 on the surface). Order is the domain order. */
+     normal-vision ΔE ≥ 15, ≥ 3:1 on the surface) when the palette was drawn;
+     the pairs that carry meaning are measured again by test/palette.test.ts.
+     Order is the domain order. */
   --c-class-equity: #4166b4;
   --c-class-fixed-income: #178a70;
   --c-class-gold: #b07f1f;
@@ -154,6 +160,9 @@
   --c-series-bucket: #b07f1f;
   --c-series-cash: #178a70;
   --c-series-index: #8a8880;
+  /* What was put into the core, a dashed step: the same neutral grey as the
+     index of the bucket, and they never share a chart (feature 020, M3). */
+  --c-series-contrib: #8a8880;
 
   --c-chart-grid: #ebe9e3;
   --c-chart-axis: #c9c6be;
@@ -210,8 +219,8 @@
     --c-accent-soft: #223246;
     --c-accent-soft-text: #a9c8ec;
     --c-on-accent: #0f1c2c;
-    --c-positive: #6fc79a;
-    --c-negative: #f0917e;
+    --c-gain: #5cc6b0;
+    --c-loss: #f49a44;
     --c-caution: #e8b659;
     --c-caution-icon: #d9a441;
     --c-caution-soft: #352a14;
@@ -228,6 +237,7 @@
     --c-series-bucket: #b98521;
     --c-series-cash: #2a9f80;
     --c-series-index: #8f8d86;
+    --c-series-contrib: #8f8d86;
     --c-chart-grid: #2a2a27;
     --c-chart-axis: #45443f;
     --c-chart-gap: #242422;
@@ -257,8 +267,8 @@
   --c-accent-soft: #223246;
   --c-accent-soft-text: #a9c8ec;
   --c-on-accent: #0f1c2c;
-  --c-positive: #6fc79a;
-  --c-negative: #f0917e;
+  --c-gain: #5cc6b0;
+  --c-loss: #f49a44;
   --c-caution: #e8b659;
   --c-caution-icon: #d9a441;
   --c-caution-soft: #352a14;
@@ -275,6 +285,7 @@
   --c-series-bucket: #b98521;
   --c-series-cash: #2a9f80;
   --c-series-index: #8f8d86;
+  --c-series-contrib: #8f8d86;
   --c-chart-grid: #2a2a27;
   --c-chart-axis: #45443f;
   --c-chart-gap: #242422;

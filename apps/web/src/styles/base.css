@@ -115,11 +115,11 @@
 
 /* Gains and losses: the sign is printed too, so colour is never alone. */
 .positive {
-  color: var(--c-positive);
+  color: var(--c-gain);
 }
 
 .negative {
-  color: var(--c-negative);
+  color: var(--c-loss);
 }
 
 /* A stale price in a table: the clock of the caution, its age on hover. */

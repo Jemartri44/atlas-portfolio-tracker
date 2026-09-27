@@ -19,11 +19,14 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   apply,
+  contrast,
   type Deficiency,
   deltaE,
   linear,
   MACHADO_2009,
   oklab,
+  simulate,
+  worstDeficiencyDeltaE,
 } from "./helpers/colour-vision.js";
 import { cssRules } from "./helpers/css-rules.js";
 
@@ -108,8 +111,8 @@ const SHARED: { names: string[]; why: string }[] = [
     why: "the bucket series borrows the gold colour; they never share a chart",
   },
   {
-    names: ["--c-positive", "--c-done"],
-    why: "until M6 of feature 020 a completed step wore the colour of a gain",
+    names: ["--c-series-contrib", "--c-series-index"],
+    why: "the contributed spine and the index are the same neutral grey; they never share a chart",
   },
 ];
 
@@ -214,10 +217,81 @@ describe("the simulation is the one its source publishes", () => {
     expect(oklab(linear("#000000"))).toEqual([0, 0, 0]);
   });
 
-  it("reproduces the ΔE the proposal measured on today's colours", () => {
+  it.each(["protan", "deutan", "tritan"] as Deficiency[])(
+    "%s: the simulation the tests use is that deficiency's matrix, clamped to the gamut",
+    (kind) => {
+      PRIMARIES.forEach((primary, column) => {
+        const out = simulate(primary, kind);
+        expect(out.map((value) => value.toFixed(6))).toEqual(
+          MACHADO_2009[kind].map((row) =>
+            Math.min(1, Math.max(0, row[column] as number)).toFixed(6),
+          ),
+        );
+      });
+    },
+  );
+
+  it("reproduces the ΔE the proposal measured, today's colours and its gain and loss", () => {
+    // docs/design/proposals/2026-09-25-visual-improvements.md §5.1: its gain and
+    // loss, worst case protanopia, 8,9 in light and 9,9 in dark.
+    expect(deltaE("#0f6b5c", "#b04a12", "protan")).toBeCloseTo(8.9, 1);
+    expect(deltaE("#5cc6b0", "#f2a066", "protan")).toBeCloseTo(9.9, 1);
     // docs/design/proposals/2026-09-25-visual-improvements.md §5.1, "Hoy".
     expect(deltaE("#1b6a44", "#a2392b", "deutan")).toBeCloseTo(6.3, 1);
     expect(deltaE("#6fc79a", "#f0917e", "deutan")).toBeCloseTo(4.2, 1);
     expect(deltaE("#a2392b", "#9e2f27")).toBeCloseTo(2.1, 1);
+  });
+});
+
+describe("gain, loss and a problem are told apart (M6)", () => {
+  const blocks = Object.keys(BLOCKS) as Block[];
+  const colour = (block: Block, name: string): string => {
+    const value = blockOf(tokensCss, block).get(name);
+    if (value === undefined) {
+      throw new Error(`${name} no está en ${block}`);
+    }
+    return value;
+  };
+
+  it.each(blocks)(
+    "%s: gain and loss stay ΔE ≥ 8 apart under protanopia, deuteranopia and tritanopia",
+    (block) => {
+      expect(
+        worstDeficiencyDeltaE(colour(block, "--c-gain"), colour(block, "--c-loss")),
+      ).toBeGreaterThanOrEqual(8);
+    },
+  );
+
+  it.each(blocks)("%s: a gain is the green one and a loss the warm one, never swapped", (block) => {
+    // OKLab a < 0 is the green side; a loss sits on the red-orange side, a > 0 and b > 0.
+    const [, gainA] = oklab(linear(colour(block, "--c-gain")));
+    const [, lossA, lossB] = oklab(linear(colour(block, "--c-loss")));
+    expect(gainA).toBeLessThan(0);
+    expect(lossA).toBeGreaterThan(0);
+    expect(lossB).toBeGreaterThan(0);
+  });
+
+  it.each(blocks)("%s: a loss is not the red of a problem, ΔE ≥ 7 with normal vision", (block) => {
+    // Q1, answered 2026-09-27: 7 in both themes, with a dark loss chosen to reach it.
+    expect(deltaE(colour(block, "--c-loss"), colour(block, "--c-danger"))).toBeGreaterThanOrEqual(
+      7,
+    );
+  });
+
+  it.each(blocks)("%s: gain and loss read as text (4,5:1) on a card and on the paper", (block) => {
+    for (const name of ["--c-gain", "--c-loss"]) {
+      for (const ground of ["--c-surface", "--c-canvas"]) {
+        expect(
+          contrast(colour(block, name), colour(block, ground)),
+          `${name} sobre ${ground}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it.each(blocks)("%s: the contributed spine reads as a graphic (3:1) on a card", (block) => {
+    expect(
+      contrast(colour(block, "--c-series-contrib"), colour(block, "--c-surface")),
+    ).toBeGreaterThanOrEqual(3);
   });
 });
