@@ -263,18 +263,17 @@ describe("two consoles downloading at once, on the disk", () => {
         settings: DEFAULT_SETTINGS,
         today: "2027-01-06",
         now: () => new Date("2027-01-06T08:00:00.000Z"),
-        // Asks for the lock again until it is free, never a fixed number of times.
-        store: new FilePriceStore(ledger, {
-          lockWaitMs: 2,
-          lockAttempts: Number.POSITIVE_INFINITY,
-        }),
+        // Asks for the lock again until it is free, with a budget far above
+        // the second the third writer holds it, and still finite (round 1 of
+        // PR #102): a lock never released must fail the test, not leave a
+        // console polling after the temporary folder is removed.
+        store: new FilePriceStore(ledger, { lockWaitMs: 2, lockAttempts: 2_000 }),
         sources: { eodhd: source },
       });
     // A third writer holds the lock while both start, longer than a bounded
     // retry would wait (the flake of the CI: a slow disk made one console
     // hold it past the other's attempts). Each console waits for the lock to
-    // be free — the condition — however long that takes; the test's own
-    // timeout is the only bound.
+    // be free — the condition — within a generous finite budget.
     const holder = await acquireFolderLock(ledger);
     const both = Promise.allSettled([run(), run()]);
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -287,5 +286,7 @@ describe("two consoles downloading at once, on the disk", () => {
     expect(calls).toBe(2);
     const status = parseStatus(await readFile(join(ledger, "prices", "_status.json"), "utf8"));
     expect(status.sources.eodhd?.calls_at).toHaveLength(2);
-  });
+    // Longer than the budget of the lock (2.000 × 2 ms, plus each attempt):
+    // with a lock never released, both consoles give up inside the test.
+  }, 30_000);
 });
