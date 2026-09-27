@@ -829,6 +829,69 @@ describe("architecture (015): the API only appends, and the domain judges every 
   });
 });
 
+describe("architecture (015): the administration is out of reach of the API (E5)", () => {
+  const cliSources = (): string[] => listSources(cliSrc);
+  const isAdministration = (file: string): boolean =>
+    /[/\\]adapters[/\\]src[/\\]aws[/\\]sdk-admin\.ts$/.test(file) ||
+    /[/\\]domain[/\\]src[/\\](admin\.ts|access[/\\]admin\.ts)$/.test(file) ||
+    /[/\\]apps[/\\]cli[/\\]/.test(file);
+
+  /**
+   * ADR-0026, Part A: `compact` and the restore are operations of
+   * administration, «fuera del camino que alcanza Internet». Nothing the
+   * handler reaches is an order, an adapter or a rule of the administration
+   * (mutant 45), and no source of the API names what only the administration
+   * has: an old version, a listing at depth, the mark of a forgotten device.
+   */
+  it("reaches no order, adapter or rule of the administration from apps/api", () => {
+    const roots = listSources(join(apiRoot, "src"));
+    const reached = reach(roots);
+    expect(reached.size).toBeGreaterThan(roots.length);
+    expect(
+      [...reached].filter(([file]) => isAdministration(file)).map(([, chain]) => chainText(chain)),
+    ).toEqual([]);
+    const offenders = roots.filter((file) =>
+      /\bgetVersion\b|\blistAll\b|\bAdminObjectStore\b|\bVersionId\b|\bforgottenDevice\b|\bremoteRewritePermission\b/.test(
+        parse(file).code,
+      ),
+    );
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+  });
+
+  /**
+   * The administration takes the role of administration from the standard
+   * chain of the SDK, **never the token of a device** (mutant 45; §7 P5, mutant
+   * 46 ter): nothing it imports is the credentials of the console, the header
+   * of the token or the client of the API.
+   */
+  it("uses no token of a device: it imports neither the credentials nor the client of the API", () => {
+    const roots = cliSources().filter((file) =>
+      /[/\\](admin[/\\][^/\\]+|commands[/\\](admin|backup|backup-copies))\.ts$/.test(file),
+    );
+    expect(roots.length).toBe(4);
+    // What they import, by name: never the credentials or the client of the
+    // console, and from the barrel of the adapters only the folder's own.
+    const imported = roots.flatMap((file) =>
+      parse(file).bindings.map((binding) => ({ file, ...binding })),
+    );
+    expect(imported.length).toBeGreaterThan(0);
+    const violations = imported
+      .filter(
+        ({ specifier, name }) =>
+          /(^|\/)remote\//.test(specifier) ||
+          /^@atlas\/adapters\/(sync-http|sync-client|sync|identity|access)$/.test(specifier) ||
+          (specifier === "@atlas/adapters" &&
+            !["FileLedgerStore", "HELD_FILE", "folderSyncPresence"].includes(name)),
+      )
+      .map(({ file, specifier, name }) => `${relative(repoRoot, file)}: ${name} from ${specifier}`);
+    expect(violations).toEqual([]);
+    const named = roots.filter((file) =>
+      /DEVICE_TOKEN_HEADER|x-atlas-device-token|credentials\.json/.test(parse(file).code),
+    );
+    expect(named.map((file) => relative(repoRoot, file))).toEqual([]);
+  });
+});
+
 describe("architecture (015): the exception of the redo is bound to the sealed plan (E3, N1)", () => {
   /**
    * `recordRedo` records with the rule of `correctEvent` (§7 P6, option (a)).
