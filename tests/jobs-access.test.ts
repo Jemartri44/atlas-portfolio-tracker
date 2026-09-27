@@ -6,7 +6,7 @@
 // names; the authoritative check of the web is still the graph of its bundle
 // (`apps/web/scripts/check-bundle.mjs`, `FORBIDDEN_IN_WEB`).
 
-import { statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -115,23 +115,13 @@ describe("architecture (016): the clock is injected", () => {
   /**
    * Nothing of this feature reads the real time outside the adapter of the
    * clock (§2 bis): a job that did would take its period from the machine,
-   * and a test that did would fail one day a year. The files of the feature
-   * are the folders it creates and the files it adds elsewhere, named here.
+   * and a test that did would fail one day a year. **Whole folders**, not a
+   * list of files (review of PR #104, idempotence N2): the application of the
+   * jobs, the rules of the jobs, every `jobs*` adapter of AWS, and every file
+   * the feature adds or touches elsewhere — the API included. And not only
+   * `new Date()` and `Date.now()`: `globalThis.Date`, `Reflect.construct(Date`
+   * and taking `Date` apart or aside reach the same clock.
    */
-  const ADDED_FILES = [
-    "packages/domain/src/jobs.ts",
-    "packages/domain/src/ports/notifier.ts",
-    "packages/domain/src/settings/job-frequencies.ts",
-    "packages/domain/src/access/web-sign-in.ts",
-    "packages/adapters/src/aws/mail.ts",
-    "packages/adapters/src/aws/sdk-ses.ts",
-    "packages/adapters/src/aws/jobs-store.ts",
-    "packages/adapters/src/aws/web-sign-in.ts",
-    "packages/adapters/test/aws/mail.test.ts",
-    "packages/adapters/test/aws/jobs-store.test.ts",
-    "packages/adapters/test/aws/test-only-fake-ses.ts",
-    "packages/adapters/test/jobs/test-only-file-notifier.ts",
-  ];
   const FOLDERS = [
     "apps/jobs/src",
     "apps/jobs/test",
@@ -140,16 +130,74 @@ describe("architecture (016): the clock is injected", () => {
     "packages/domain/test/jobs",
     "packages/adapters/test/jobs",
   ];
+  const ADDED_FILES = [
+    "scripts/lambda-package.mjs",
+    "packages/domain/src/jobs.ts",
+    "packages/domain/src/access.ts",
+    "packages/domain/src/ports/notifier.ts",
+    "packages/domain/src/settings/job-frequencies.ts",
+    "packages/domain/src/access/web-sign-in.ts",
+    "packages/adapters/src/aws/mail.ts",
+    "packages/adapters/src/aws/sdk-ses.ts",
+    "packages/adapters/src/aws/web-sign-in.ts",
+    "packages/adapters/test/aws/mail.test.ts",
+    "packages/adapters/test/aws/test-only-fake-ses.ts",
+    "apps/api/src/handler.ts",
+    "apps/api/test/sign-in.test.ts",
+  ];
+  /** Every source of a folder, the `.mjs` of the scripts too. */
+  const sourcesOf = (folder: string): string[] =>
+    statSync(folder, { throwIfNoEntry: false })?.isDirectory() === true
+      ? readdirSync(folder).flatMap((entry) => {
+          const path = join(folder, entry);
+          if (statSync(path).isDirectory()) {
+            return sourcesOf(path);
+          }
+          return /\.(ts|tsx|mjs)$/.test(path) && !path.endsWith(".d.ts") ? [path] : [];
+        })
+      : [];
+  const awsJobs = (): string[] =>
+    sourcesOf(join(adaptersRoot, "src", "aws")).filter((file) =>
+      /[/\\]jobs[^/\\]*\.ts$/.test(file),
+    );
+  const REAL_TIME =
+    /\bnew\s+(?:globalThis\s*\.\s*)?Date\s*\(\s*\)|\bDate\s*\.\s*now\b|\bglobalThis\s*\.\s*Date\b|\bReflect\s*\.\s*construct\s*\(\s*(?:globalThis\s*\.\s*)?Date\b|=\s*Date\s*[;,)]|\}\s*=\s*Date\b/;
 
   it("reads the real time only in the adapter of the clock", () => {
     const files = [
-      ...FOLDERS.flatMap((folder) => listSources(join(repoRoot, folder))),
+      ...FOLDERS.flatMap((folder) => sourcesOf(join(repoRoot, folder))),
+      ...awsJobs(),
       ...ADDED_FILES.map((file) => join(repoRoot, file)).filter(exists),
     ];
-    expect(files.length).toBeGreaterThan(10);
-    const offenders = files.filter((file) =>
-      /\bnew\s+Date\s*\(\s*\)|\bDate\s*\.\s*now\s*\(/.test(parse(file).code),
-    );
+    expect(files.length).toBeGreaterThan(40);
+    expect(
+      awsJobs()
+        .map((file) => relative(repoRoot, file))
+        .sort(),
+    ).toEqual(["packages/adapters/src/aws/jobs-store.ts", "packages/adapters/src/aws/jobs.ts"]);
+    const offenders = files.filter((file) => REAL_TIME.test(parse(file).code));
     expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+  });
+
+  it("catches every way of reaching the clock it names", () => {
+    for (const code of [
+      "const at = new Date();",
+      "const at = new globalThis.Date();",
+      "const ms = Date.now();",
+      "const D = globalThis.Date;",
+      "const at = Reflect.construct(Date, []);",
+      "const { now } = Date;",
+      "const Clock = Date;",
+    ]) {
+      expect(REAL_TIME.test(code), code).toBe(true);
+    }
+    for (const code of [
+      "new Date(now)",
+      "Date.parse(text)",
+      "Date.UTC(2026, 0, 1)",
+      "new Date(ms).toISOString()",
+    ]) {
+      expect(REAL_TIME.test(code), code).toBe(false);
+    }
   });
 });
