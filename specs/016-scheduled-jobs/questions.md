@@ -4,7 +4,11 @@ Fechas en `Europe/Madrid`. Todo lo ejecutado está en el *scratchpad* de la sesi
 
 ---
 
-## 0. Estado: alto del plan (2026-09-27)
+## 0. Estado: E1 terminada, a la espera de revisión (2026-09-27)
+
+E1 construida, tubería verde sobre `1d80be4`, congelada (§10.9). Lo que sigue es el estado del alto del plan, que se conserva.
+
+### 0.1 Estado del alto del plan (2026-09-27)
 
 `spec.md`, `plan.md` y los artefactos del plan (`research.md`, `data-model.md`, `contracts/` y `quickstart.md`) están escritos. **No hay ninguna línea de código de producción.** `/speckit-clarify` no se ha ejecutado: el encargo llega con sus diecinueve preguntas respondidas (§8.1) y la ronda 1 decidida (§8.2), y lo que queda abierto son decisiones de la dirección, que van aquí (§5), no preguntas al usuario.
 
@@ -177,6 +181,13 @@ Se completa en cada entrega. Hoy:
 - **`docs/data-schema.md` §1**: `jobs/` y el registro de ejecución, `access/last-web-sign-in.json` (Q3), al cerrar E1; quién escribe `prices/` y `reference/ecb/` en la nube, al cerrar E2; `positions.json` y el contenido de `backups/`, al cerrar E4.
 - **`docs/api.md`**: §6 (Q4), al cerrar E2; el objeto que escribe la API al iniciar sesión (Q3) y los parámetros de SSM y las variables de las tareas en §9 (plan §6 y `contracts/ssm-parameters.md`), al cerrar E1.
 - **`docs/decision-roadmap.md`**: la 017 con la lista de permisos de `contracts/iam-permissions.md`, en cada entrega.
+- **Del cierre de E1** (2026-09-27):
+  - `docs/api.md`: el objeto `access/last-web-sign-in.json` que escribe la API tras un inicio de sesión web, y los cuatro valores de la razón de esa línea de registro (`sign_in_date_written`, `_unchanged`, `_conflict`, `_unavailable`); §9, los parámetros `mail/recipient` y `mail/amounts` y las variables de las tareas (`contracts/ssm-and-config.md`).
+  - `docs/data-schema.md` §1: `jobs/<familia>/<tarea>/<periodo>.json`, `jobs/mail/notices/<código>--<asunto>.json` y `access/last-web-sign-in.json` (`data-model.md` §1-§3).
+  - `docs/specification.md` §9.5 y `docs/business-rules.md` §7 (`job_frequencies{}`): las claves y los valores de Q2, sin `off`, y `reconciliation` reservada.
+  - `docs/dependencies.md`: `@aws-sdk/client-sesv2@3.1141.0` ya instalado (E1, `17f3259`).
+  - `CLAUDE.md` («Code architecture»): la puerta `@atlas/domain/jobs` y las de los adaptadores `aws-jobs` y `aws-ses`, si la dirección quiere nombrarlas.
+  - Los códigos de las tareas en `tests/messages.test.ts` (`JOBS_ONLY`): la lista de lo que solo dicen el registro y el correo.
 
 ## 7. Gemelos `.js`
 
@@ -204,3 +215,131 @@ La dirección da el visto bueno a `spec.md` y `plan.md`. Decisiones:
 - `Thesis` está en `packages/domain/src/projections/state.ts:246`, no en `:252`.
 - `confirm` está en `apps/cli/src/commands/shared.ts:96`; la línea 97-99 es su cuerpo.
 - El techo total tras E5 de la 015 es `294 * 1024 + 440` = 301.496 bytes, que el encargo escribe «294 KB + 440»: coincide; no es un error, solo otra forma.
+
+## 10. E1: el esqueleto, el correo y el recordatorio mensual (2026-09-27)
+
+### 10.1 Qué hay en la rama
+
+| Commit | Qué |
+|---|---|
+| `17f3259` | `@aws-sdk/client-sesv2@3.1141.0` en `packages/adapters`, con el guardián de dependencias y el de las órdenes del SDK cambiados en el mismo commit (G4) |
+| `994b529` | Las reglas de las tareas en el dominio, detrás de la puerta `@atlas/domain/jobs`: catálogo, periodos de Madrid, evento, configuración, registro de ejecución, rachas, interruptor, dirección de correo, hechos y texto del recordatorio, aviso de tarea fallida; `settings/job-frequencies.ts` (fuera de `jobs/`, para que Ajustes lo lea en E3); `access/web-sign-in.ts`; el puerto `Notifier` |
+| `4ad8af2` | Los adaptadores: `aws/mail.ts` (`sesNotifier` sobre la interfaz estrecha `MailSender`), `aws/sdk-ses.ts` (el único con el SDK de SES), `aws/jobs-store.ts` (registros y rachas, escritura condicional solo bajo `jobs/<familia>/`), `aws/web-sign-in.ts`; puertas `@atlas/adapters/aws-jobs` y `@atlas/adapters/aws-ses`; el doble `test-only-fake-ses.ts` |
+| `5afe1a6` | La API escribe `access/last-web-sign-in.json` al terminar un inicio de sesión web; la razón de su línea de registro dice qué pasó (`sign_in_date_written`, `_unchanged`, `_conflict`, `_unavailable`), y el inicio de sesión nunca falla por ello |
+| `00f97dd` | P-H: `scripts/lambda-package.mjs`, el constructor común de los dos ZIP, con `absWorkingDir` en la raíz |
+| `febbca7` | `activeHistoryOf`: el fichero en vigor del manifiesto del BCE, leído estricto |
+| `3e0575f` | `apps/jobs` (`@atlas/jobs`): composición, manejador, motor de periodos, registro, `monthly_reminder` y `dispatch_findings`, `jobs.zip`; los guardianes G1, G2, G3, G5, G6, G7 y G8; `FORBIDDEN_IN_WEB` con `apps/jobs/` y las reglas de las tareas; el `Notifier` de fichero |
+| `1d80be4` | El periodo del recordatorio con la hora de Madrid, de principio a fin (mutante 6) |
+| `bd1a526` | Solo un comentario: qué protege un registro `failed` y qué no (§10.7, familia 4). No cambia código; la tubería corrió sobre `1d80be4` |
+
+### 10.2 Desviaciones del plan, dichas
+
+- **El manejador no puede ver una clave repetida ni un suplente suelto del evento**: el *runtime* de Lambda parsea la carga antes de entregarla. `parseJobEvent` recibe el objeto; los nombres de las tareas se comparan con el catálogo, que ninguno de los dos podría pasar. R12 queda con los demás motivos (`contracts/scheduler-event.md` lo dice).
+- **`JOBS_ONLY` en `tests/messages.test.ts`**: los códigos de las tareas no llegan ni a la consola ni a la web en E1; se declaran con su motivo, y un test impide que quede uno muerto. Los de `job_frequencies` saldrán de la lista en E3, cuando Ajustes los diga.
+- **Un código escrito con un ternario escapa al guardián de los mensajes** (`code: cond ? "a" : "b"`): el escáner no lo ve. Lo encontró el propio test «no dead entry» al añadir `JOBS_ONLY`; `readJobFrequencies` escribe ahora cada código entero. Lección para las entregas siguientes.
+- **El ZIP de la API dependía de la carpeta desde la que se construía**: esbuild escribe en el paquete rutas relativas a su carpeta de trabajo. Con el constructor común, `absWorkingDir` es la raíz, y el ZIP es el mismo desde cualquier carpeta (comprobado: `d844c900…` desde la raíz y desde `apps/api`). El tamaño del paquete de la API bajó de 1.447.023 a 1.440.348 bytes por eso, no por un cambio de código.
+- **`ecb_stale_currency_days` en la nube**: no hay `atlas.config.json`; la lectura de los precios del recordatorio usa `DEFAULT_LOCAL_CONFIG` (30 días). Si la dirección lo quiere configurable en la nube, es una variable más de la función de correo.
+- **El aviso del cliente OAuth**: la fecha límite es la del último inicio de sesión más seis meses (`addMonths`), y el aviso sale a partir de `ATLAS_OAUTH_IDLE_WARNING_DAYS` (150), con techo fijo de 179.
+- **Los registros que no se leen**: un registro de una tarea ilegible nunca cuenta como libre (`job_record_unreadable`, y no se hace nada).
+
+### 10.3 Cómo se vio cada test en rojo
+
+- **Los guardianes G1-G8**, contra los módulos vacíos (`export {};` en `apps/jobs/src/{lambda,compose,handler,tasks/mail}.ts`, `domain/src/jobs.ts`, `ports/notifier.ts`, `aws/{mail,sdk-ses}.ts`): `jobs-access` 3 de 6 en rojo (el correo que no alcanza nada, ningún lector del interruptor, menos de diez ficheros para el reloj) y `jobs-package` 3 de 3 (sin guion de construcción) — `016-red-guards.log`. Después, cada uno visto morir por su regla en la mutación (§10.4).
+- **El guardián de dependencias del SDK (G4)**: la versión anterior de `tests/api-access.test.ts` contra el manifiesto con `@aws-sdk/client-sesv2` falla («+ "@aws-sdk/client-sesv2": "3.1141.0"», `016-g4-red.log`); se cambió en el mismo commit que la instalación.
+- **La fecha del último inicio de sesión web (R16)**: los tres tests nuevos de `apps/api/test/sign-in.test.ts` contra el `handler.ts` anterior: 3 en rojo (`016-api-red.log`). Y dos tests existentes que fijaban las claves exactas del bucket tras iniciar sesión fallaron con el cambio y se pusieron al día a propósito (ahora llevan `access/last-web-sign-in.json`).
+- **El dominio**: la primera pasada falló en el texto exacto del recordatorio (el sangrado de los porcentajes, que el test fijaba mal) y la cobertura dejó cuatro ramas sin cubrir (`strict.ts:29`, el suplente suelto de verdad; `format.ts`, el signo y los cero decimales; `mail/reminder.ts:40`, el correo sin aproximación), que se cubrieron o se quitaron.
+- **Los tests de `apps/jobs`** pasaron a la primera: su rojo es la mutación (§10.4), donde cada regla de §4.2 que atan cayó con su mutante.
+
+### 10.4 Mutación (guion `016-mutate.mjs`, copia del de la 015: afirma cada sustitución, restaura, compara byte a byte, se niega con gemelos `.js`; lotes de ocho, uno a uno, tras la puerta de memoria)
+
+`016-e1-b1.json`, `-b2.json`, `-b3.json`, `-g.json` y `-b2x.json`; veredictos en sus `.out`. **Todos muertos**, con dos notas:
+
+| Id | Mutante (§6 del encargo) | Test que lo mata | Veredicto |
+|---|---|---|---|
+| E1-1a | los euros del reparto con el interruptor apagado [1] | `domain/test/jobs/reminder.test.ts`, `apps/jobs/test/reminder.test.ts` | KILLED |
+| E1-1b | una línea de clase dice euros en vez de porcentaje [1] | `reminder.test.ts` (dominio) | KILLED |
+| E1-2a | el interruptor encendido si está presente [2] | `event-config.test.ts`, `apps/jobs/test/reminder.test.ts` | KILLED |
+| E1-2b | el interruptor comparado tras `trim()` [2] | `event-config.test.ts` | KILLED |
+| E1-2c | un segundo lector del interruptor, en el adaptador de SES [2] | `tests/jobs-access.test.ts` (por su regla) | KILLED |
+| E1-3a | el `Notifier` envía al destinatario que trae el mensaje [3] | `adapters/test/aws/mail.test.ts` | KILLED |
+| E1-3b | un destinatario que no es una dirección envía [3] | `mail.test.ts` | KILLED |
+| E1-4a | el recordatorio mensual se puede apagar [4] | `frequencies.test.ts`, `apps/jobs/test/reminder.test.ts` | KILLED |
+| E1-4b | una clave desconocida invalida la lectura [4] | ídem | KILLED |
+| E1-4c | lo ignorado no se dice en el registro [4] | `apps/jobs/test/reminder.test.ts` | KILLED |
+| E1-4d | sin recordatorio con el libro que no carga [4] | ídem | KILLED |
+| E1-5a | un aviso cortado tras `sending` se retoma [5] | `run-record.test.ts` | KILLED |
+| E1-5b | un periodo reclamado se toma por libre [5] | `apps/jobs/test/reminder.test.ts` | **SURVIVED** (ver abajo) |
+| E1-5b2 | el mismo mutante, con el test de su regla | `run-record.test.ts` | KILLED |
+| E1-5d | el manejador reclama con `If-None-Match` un periodo abierto [5] | `apps/jobs/test/reminder.test.ts` | KILLED |
+| E1-5c | una racha se envía antes de marcarla `sending` [5] | `apps/jobs/test/dispatch.test.ts` | KILLED |
+| E1-6 | el día de las tareas en UTC [6] | `apps/jobs/test/reminder.test.ts` | KILLED |
+| E1-7a | un evento con un campo desconocido se ejecuta [7] | `event-config.test.ts`, `apps/jobs/test/reminder.test.ts` | KILLED |
+| E1-7b | una tarea de otra función se ejecuta [7] | `apps/jobs/test/reminder.test.ts` | KILLED |
+| E1-8a | los registros ilegibles de los tokens se omiten [8] | `reminder.test.ts` (dominio) | KILLED |
+| E1-8b | un token revocado cuenta como vivo [8] | ídem | KILLED |
+| E1-9a | el registro copia el mensaje de un error ajeno (las dos defensas a la vez) [9] | `apps/jobs/test/sentinels.test.ts` | KILLED |
+| E1-9b | el objeto del inicio de sesión web lleva algo más que la fecha [9] | `web-sign-in.test.ts`, `apps/api/test/sign-in.test.ts` | KILLED |
+| E1-9c | la fecha del inicio de sesión web retrocede [9] | ídem | KILLED |
+| E1-10 | el `Notifier` de fichero alcanzable desde el artefacto [10] | `tests/jobs-package.test.ts` («would carry tests or doubles») | KILLED |
+| E1-R20 | un asunto que no es ASCII (R20) | `reminder.test.ts` (dominio) | KILLED |
+| G-mailkeys | la tarea de correo alcanza una fuente de precios (B2) | `jobs-access.test.ts`, por su regla | KILLED |
+| G-apirel | la API alcanza las tareas por ruta relativa | `jobs-access.test.ts`, por su regla | KILLED |
+| G-webdoor | la web alcanza las reglas de las tareas por su puerta | `jobs-access.test.ts`, por su regla | KILLED |
+| G-relay | la consola reexporta las tareas por un relevo | `architecture.test.ts` («is imported by nothing») | KILLED |
+| G-clock | un módulo de las tareas lee la hora real | `jobs-access.test.ts`, por su regla | KILLED |
+| G-dynamic | las tareas importan con un `import()` no literal | `architecture.test.ts`, por su regla | KILLED |
+| G-sesraw | el adaptador de SES toma una segunda orden | — | NOT APPLIED (el `find` no casaba tras el formateo de Biome) |
+| G-sesraw2 | el mismo, con el `find` real | `api-access.test.ts` («takes from the SDK only») | KILLED |
+
+**E1-5b no es un mutante equivalente, y su supervivencia contra el test del manejador tiene un argumento escrito**: `runPeriod` hace lo mismo con `start` y con `resume` — reclama con `claimRecord(…, found)` y escribe sobre el ETag leído (`If-Match` si había registro, `If-None-Match: *` si no). La distinción vive solo en la regla del dominio, y su test la mata (E1-5b2). El mutante que sí rompería «al menos una vez» es reclamar con `If-None-Match` un periodo que tiene registro, y lo mata el test de corte (E1-5d).
+
+### 10.5 Capturas de los correos (texto, con el `Notifier` de SES sobre el doble y la composición entera; `~/personal/atlas/privado/capturas/2026-09-27-016-e1/`)
+
+Guion `016-capture-mails.mjs` sobre el arnés compilado: `01-recordatorio-sin-importes`, `02-recordatorio-con-importes`, `03-recordatorio-sin-libro-ni-tokens`, `04-recordatorio-aviso-cliente-oauth` y `05-aviso-tarea-fallida`. Mirados uno a uno: sin importes, ni activos, ni cuentas con el interruptor apagado; con él, solo los euros del reparto; el recordatorio degradado dice sus tres códigos; el aviso del cliente OAuth sale a los 162 días con la fecha límite. Una primera versión del escenario 3 limitaba SSM también para el destinatario, y **no salió ningún correo**, que es lo correcto (`mail_recipient_unavailable`, el periodo queda abierto); se cambió el escenario para que falle solo el registro de los tokens.
+
+### 10.6 El paquete web
+
+E1 no toca la web salvo `FORBIDDEN_IN_WEB` en `check-bundle.mjs`. Medido en la tubería (§10.8): el arranque y el total, iguales a la partida (74.125 y 301.439).
+
+### 10.7 Autocomprobación de §5, familia a familia
+
+| Familia | Qué miré | Con qué | Resultado |
+|---|---|---|---|
+| 1. Guardianes eludibles | Que las tareas, el `Notifier`, SES y las claves no se alcancen desde la API ni la web, y que la regla muera por sí misma | `tests/jobs-access.test.ts` y `architecture.test.ts` sobre el grafo parseado (reexportación, ruta relativa, puerta del paquete, relevo, `import()` no literal) y `FORBIDDEN_IN_WEB` en el grafo del paquete; mutantes G-* vistos morir **por su regla** (`expect` del guion) | Todo muerto. Cuenta de tests de guardianes: `architecture` 49 → 51, `api-access` 28 → 28, `jobs-access` 0 → 6, `jobs-package` 0 → 3, `messages` 10 → 11. Ninguno baja. Los comentarios que afirman un guardián (`aws/jobs.ts`, `compose.ts`, `test-only-file-notifier.ts`) tienen su test (G3, G8) |
+| 2. Reglas sin test o sin valor exacto | Cada cifra del correo con el interruptor encendido, cada recuento (tokens vivos, emitidos, ilegibles; días) y cada umbral (150/179 días) con su valor exacto | `reminder.test.ts` fija el cuerpo entero con el interruptor apagado y las líneas exactas que añade encendido; recuentos y bordes (149/150 días) | Cada regla de §4.2 con su mutante muerto (§10.4) |
+| 3. Reloj y red | Ningún `new Date()` ni `Date.now()` en lo nuevo; bordes de Madrid; ninguna red | G6 sobre las carpetas y ficheros de la feature; `periods.test.ts` (marzo, octubre, fin de mes, Nochevieja) y la prueba de extremo a extremo a las 23:30 UTC; todos los dobles en memoria, ningún `setTimeout` | Limpio; G-clock muerto |
+| 4. Documentos desalineados | Que cada afirmación de un comentario cite y cuadre con el código; lista de «Documentos» al día; la descripción de la PR contra el último commit | Relectura de las cabeceras de cada fichero nuevo contra su código; §6 ampliada; la descripción de la PR releída sobre el SHA congelado | Un comentario inexacto, corregido: la cabecera de `run-record.ts` decía que un `failed` no había enviado nada; en `dispatch_findings` un correo puede haber salido antes del fallo, y lo que impide el reenvío es la racha marcada `sending`, no el registro. Ahora lo dice así |
+| 5. Techo del paquete | Si E1 mueve el paquete web | La tubería (`build` con `check-bundle.mjs`) | No aplica: E1 no añade nada a la web; el techo no se toca |
+| 6. Registros con datos sensibles | Destinatario, remitente, asunto, cuerpo, importes, ids, clave, `sub`, mensaje de error ajeno, en los caminos de fallo | `apps/jobs/test/sentinels.test.ts`: `stdout` y `stderr` capturados; SSM limitado, SES que rechaza y que pierde, S3 que deniega con un mensaje lleno de centinelas, una tarea que lanza, un evento y una configuración con centinelas; `compose.test.ts` con un `AccessDenied` con ARN | Limpio; E1-9a muerto. La API: la razón de su línea es uno de cuatro literales |
+| 7. Entradas sin validar | Evento, parámetros de SSM, registros y rachas del bucket, claves construidas desde el exterior | `parseJobEvent` (objeto plano, `Object.hasOwn`, sin prototipo); destinatario con `isMailAddress`; registros y rachas con lectura estricta, UTF-8 `fatal`, claves repetidas y suplentes; `noticeKey` sin recorrido de rutas; `JobsStore` solo escribe bajo `jobs/<familia>/` | Limpio. Límite dicho: la clave repetida del evento no se puede ver (§10.2) |
+| 8. Dos pasos sin corte | Reclamar/hacer, hacer/cerrar, `sending`/enviar, enviar/apuntar | Tests de corte en `apps/jobs/test/reminder.test.ts` (entre enviar y cerrar: reenvío) y `dispatch.test.ts` (racha en `sending` tras un corte: `send_unknown` sin reenvío; y el estado en el momento del envío es `sending`) | E1-5c, E1-5d y E1-5a muertos |
+| 9. Procedimientos | — | — | No aplica en E1: ningún procedimiento nuevo (los de esta feature son de E4) |
+| 10. `--yes` | — | — | No aplica en E1: ninguna orden nueva de la consola (`atlas admin prices push` es de E2) |
+
+### 10.8 Tubería
+
+`016-pipeline.sh` (cada paso tras la puerta de memoria, nada en paralelo), sobre `1d80be4`:
+
+```
+lint 0 2s
+typecheck 0 1s
+cov1-domain 0 211s   (1.646 tests; dominio al 100 % de sentencias 8.750, ramas 5.368, funciones 1.964 y líneas 8.322)
+cov1-others 0 632s   (1.643 tests)
+cov2-domain 0 187s   (1.646 tests)
+cov2-others 0 662s   (1.643 tests)
+build 0 17s          (arranque 74.125 y total 301.439 bytes gzip, iguales a la partida; lambda.zip 1.442.269 bytes; jobs.zip 1.559.641 bytes, 1.376 entradas)
+```
+
+Además: `git diff origin/develop -- tests/fixtures` vacío; ningún gemelo `.js`; la cuenta de tests de los guardianes, en §10.7.
+
+**Predicción fiscal** (§8, escrita antes de correr nada): cumplida. E1 no toca ningún camino fiscal, `tests/fixtures` no cambia y la suite de la salida fiscal pasa entera en las dos pasadas.
+
+### 10.9 Congelado
+
+**Código congelado en `bd1a526`**; la entrega queda congelada en el commit que añade esta sección, cuyo SHA dice la descripción de la PR. Mientras dura la revisión no se empuja nada a la rama.
+
+## 11. Preguntas nuevas de E1
+
+- **Q11 — `ecb_stale_currency_days` en la nube.** La lectura de los precios del recordatorio usa el valor por defecto (30 días) de `DEFAULT_LOCAL_CONFIG`, porque en la nube no hay `atlas.config.json`. Recomendación: dejarlo así en E1 y, si hace falta, una variable de la función de correo en E2, cuando la nube tenga precios de verdad.
+- **Q12 — Los códigos de las tareas y el guardián de los mensajes.** En E1 se declaran en `JOBS_ONLY` (§10.2). Recomendación: aceptarlo, y que E3 saque de la lista los de `job_frequencies` cuando Ajustes los diga.
+
