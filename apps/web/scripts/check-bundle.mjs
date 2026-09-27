@@ -968,7 +968,13 @@ const BOOT_BUDGET_GZIP_BYTES = 75_412;
  * recent movements of the summary made a chunk at a time. The trend: 302.773
  * → 303.708 → 304.198.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 304_454;
+/*
+ * **Feature 020, E2 (2026-09-28): measured 303.708 (−537), ceiling lowered to
+ * 303.964 — measured + 256.** The tax card of the summary is no longer a chunk
+ * of its own: it went to the boot path, and its wrapper and its load went
+ * with it. The trend: 304.198 → 304.245 → 303.708.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 303_964;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
