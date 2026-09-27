@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { Decimal } from "../../src/money/decimal.js";
 import { netWorth } from "../../src/projections/networth.js";
+import type { ExternalPrices } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
@@ -200,5 +202,74 @@ describe("netWorth", () => {
     expect(before.cash.rows.find((row) => row.currency === "USD")?.fx_rate?.rate.toString()).toBe(
       "1.25",
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cash in a foreign currency, valued with the ECB history when there is one
+// (live test of 2026-09-27): the net worth used the ledger's rate of weeks ago
+// while the weights used the history already downloaded, and warned once per
+// account. Informative only: nothing fiscal reads it.
+// ---------------------------------------------------------------------------
+
+/** An external source with no quotes and an ECB history that knows the dollar from `date`. */
+const ecb = (rate: string, date: string): ExternalPrices => ({
+  at: () => undefined,
+  latestRate: (currency, asked) =>
+    currency === "USD" && date <= asked ? { rate: Decimal.parse(rate), date } : undefined,
+});
+
+/** The portfolio with dollars in a second account too. */
+const twoAccounts = (): LedgerBuilder => {
+  const b = portfolio();
+  b.deposit({ account_id: "acc_etf", amount: "50", currency: "USD", fx_rate: "1.25" });
+  return b;
+};
+
+describe("netWorth, foreign cash with the ECB history", () => {
+  it("uses the most recent rate of the history over the ledger's, and says where it came from", () => {
+    const view = netWorth(project(portfolio()), "2027-07-10", settings, ecb("2", "2027-07-09"));
+    const usd = view.cash.rows.find((row) => row.currency === "USD");
+    expect(usd?.fx_rate?.rate.toString()).toBe("2");
+    expect(usd?.fx_rate?.date).toBe("2027-07-09");
+    expect(usd?.fx_source).toBe("ecb");
+    expect(usd?.fx_rate_dated).toBe(true);
+    expect(usd?.fx_age_days).toBe(1);
+    // −100 dollars at 2 per euro.
+    expect(usd?.value_eur?.amount.toString()).toBe("-50");
+  });
+
+  it("falls back to the ledger's rate only when the history has none for the currency", () => {
+    const view = netWorth(project(portfolio()), "2027-06-30", settings, ecb("2", "2027-07-09"));
+    const usd = view.cash.rows.find((row) => row.currency === "USD");
+    expect(usd?.fx_rate?.rate.toString()).toBe("1.25");
+    expect(usd?.fx_source).toBe("ledger");
+    // Without an external source at all, the same.
+    const without = netWorth(project(portfolio()), "2027-06-30", settings);
+    expect(without.cash.rows.find((row) => row.currency === "USD")?.fx_source).toBe("ledger");
+  });
+
+  it("warns once per currency, with the date and the origin of the rate used", () => {
+    const stale = (external?: ExternalPrices) =>
+      netWorth(project(twoAccounts()), "2027-09-30", settings, external).warnings.filter(
+        (warning) => warning.code === "stale_fx_rate",
+      );
+    const fromHistory = stale(ecb("2", "2027-09-01"));
+    expect(fromHistory).toHaveLength(1);
+    expect(fromHistory[0]?.details).toMatchObject({
+      currency: "USD",
+      date: "2027-09-01",
+      age_days: 29,
+      source: "ecb",
+    });
+    // No event carries a rate of the history.
+    expect(fromHistory[0]?.event_id).toBe("");
+    const fromLedger = stale();
+    expect(fromLedger).toHaveLength(1);
+    expect(fromLedger[0]?.details).toMatchObject({
+      currency: "USD",
+      date: "2027-06-30",
+      source: "ledger",
+    });
   });
 });

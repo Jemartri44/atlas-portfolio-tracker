@@ -5,10 +5,13 @@
 // bounded exception. It never returns a single undecomposed number, and nothing
 // else in the application consumes its total except the warning of rule 18.
 //
-// Cash in a foreign currency is converted with the last rate the ledger knows
-// for that currency, and the row says **from when** that rate is: a rate two
-// years old is not today's data and must not be dressed up as one. A currency
-// the ledger never priced is shown unconverted and makes the total partial.
+// Cash in a foreign currency is converted with the most recent rate of the ECB
+// history when there is one, and only without it with the last rate the ledger
+// knows for that currency (live test of 2026-09-27: the weights already used
+// the history). The row says **from when** and **from where** that rate is: a
+// rate two years old is not today's data and must not be dressed up as one,
+// and it is said once per currency. A currency with no rate at all is shown
+// unconverted and makes the total partial. Informative: nothing fiscal reads it.
 
 import { type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
@@ -55,6 +58,8 @@ export interface CashLine {
   fx_stale?: boolean;
   /** The rate came with its own `fx_rate_date`; otherwise its date is the business date of its event. */
   fx_rate_dated?: boolean;
+  /** Where the rate came from: the ECB history, or the ledger when the history has none. */
+  fx_source?: "ecb" | "ledger";
   /** Absent = "not converted": never a zero. */
   value_eur?: Money;
 }
@@ -105,15 +110,38 @@ const bucketRowOf = (row: BucketPosition): NetWorthAssetRow => ({
   ...(row.value_eur === undefined ? {} : { value_eur: row.value_eur }),
 });
 
-/** Cash by account and currency, converted with the last rate the ledger knows. */
+/** The rate of the history, else the last the ledger knows on or before `date`. */
+const rateFor = (
+  state: LedgerState,
+  currency: Currency,
+  date: CivilDate,
+  external: ExternalPrices | undefined,
+):
+  | { rate: Decimal; date: CivilDate; dated: boolean; source: "ecb" | "ledger"; event_id: string }
+  | undefined => {
+  const published = external?.latestRate?.(currency, date);
+  if (published !== undefined) {
+    return { ...published, dated: true, source: "ecb", event_id: "" };
+  }
+  const known = state.fxRates.get(currency);
+  // Defence in depth, like `priceAt` with a valuation from the future: a view
+  // asked for a past date projects with `asOf` (ADR-0016), so a rate dated
+  // later cannot normally be here; if it is, the honest answer is that the
+  // ledger knew no rate **then**, not a conversion at tomorrow's rate.
+  return known === undefined || known.date > date ? undefined : { ...known, source: "ledger" };
+};
+
+/** Cash by account and currency, converted with the history's rate or the ledger's. */
 const cashBlockOf = (
   state: LedgerState,
   date: CivilDate,
   settings: Settings,
   warnings: Warning[],
+  external: ExternalPrices | undefined,
 ): CashBlock => {
   const rows: CashLine[] = [];
   const missing: Currency[] = [];
+  const warned = new Set<Currency>();
   let total = Money.zero(EUR);
   for (const [key, balance] of state.cash) {
     if (balance.isZero()) {
@@ -125,12 +153,8 @@ const cashBlockOf = (
       total = total.add(balance);
       continue;
     }
-    const known = state.fxRates.get(currency);
-    // Defence in depth, like `priceAt` with a valuation from the future: a view
-    // asked for a past date projects with `asOf` (ADR-0016), so a rate dated
-    // later cannot normally be here; if it is, the honest answer is that the
-    // ledger knew no rate **then**, not a conversion at tomorrow's rate.
-    if (known === undefined || known.date > date) {
+    const known = rateFor(state, currency, date, external);
+    if (known === undefined) {
       rows.push({ account_id, currency, balance });
       if (!missing.includes(currency)) {
         missing.push(currency);
@@ -141,12 +165,20 @@ const cashBlockOf = (
     const value = rate.toEur(balance);
     const ageDays = daysBetween(known.date, date);
     const stale = settings.stale_price_days !== undefined && ageDays > settings.stale_price_days;
-    if (stale) {
+    // Once per currency: every account holding it uses the same rate.
+    if (stale && !warned.has(currency)) {
+      warned.add(currency);
       warn(
         warnings,
         "stale_fx_rate",
-        `the rate used for ${currency} is ${ageDays} days old (${known.date}, limit ${settings.stale_price_days})`,
-        { currency, age_days: ageDays, date: known.date, limit_days: settings.stale_price_days },
+        `the rate used for ${currency} is ${ageDays} days old (${known.date}, ${known.source}, limit ${settings.stale_price_days})`,
+        {
+          currency,
+          age_days: ageDays,
+          date: known.date,
+          source: known.source,
+          limit_days: settings.stale_price_days,
+        },
         known.event_id,
       );
     }
@@ -158,6 +190,7 @@ const cashBlockOf = (
       fx_age_days: ageDays,
       fx_stale: stale,
       fx_rate_dated: known.dated,
+      fx_source: known.source,
       value_eur: value,
     });
     total = total.add(value);
@@ -180,7 +213,7 @@ export const netWorth = (
   const warnings: Warning[] = [];
   const core = coreWeights(state, date, settings, external);
   const bucket = bucketPositions(state, date, settings, external);
-  const cash = cashBlockOf(state, date, settings, warnings);
+  const cash = cashBlockOf(state, date, settings, warnings, external);
   const total = core.total_eur.add(bucket.total_value_eur).add(cash.total_eur);
   const partial = core.partial || bucket.partial || cash.partial;
   if (partial) {

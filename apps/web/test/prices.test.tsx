@@ -7,6 +7,7 @@
 // until the cloud exists.
 
 import { Decimal, Money } from "@atlas/domain";
+import { readEcbZipCsv } from "@atlas/domain/ecb";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
 import { Price, PriceDetail } from "../src/components/Price.jsx";
@@ -166,6 +167,26 @@ describe("reading prices from the folder the console writes", () => {
     ]);
     expect(quotes.closes.size).toBe(0);
     expect(externalOf(quotes, {} as never)).toBeUndefined();
+  });
+
+  it("without any close, still gives the ECB history's rates for the cash of the net worth", () => {
+    // Live test of 2026-09-27: the net worth valued the dollars with the
+    // ledger's rate of weeks before while the history had newer ones.
+    const history = readEcbZipCsv("Date,USD,\n2029-06-28,1.25,\n2029-06-27,1.2,\n");
+    const quotes = {
+      closes: new Map(),
+      unreadable: [],
+      mismatched: [],
+      history: { history, staleDays: 30 },
+    };
+    const external = externalOf(quotes, {} as never);
+    expect(external?.at("ast_world", "2029-06-29")).toBeUndefined();
+    expect(external?.latestRate?.("USD", "2029-06-29")).toEqual({
+      rate: Decimal.parse("1.25"),
+      date: "2029-06-28",
+    });
+    // Without a history, nothing, as before.
+    expect(externalOf({ ...quotes, history: { staleDays: 30 } }, {} as never)).toBeUndefined();
   });
 });
 

@@ -20,7 +20,7 @@
 // always marked; never anything fiscal.
 
 import type { CivilDate } from "../dates/civil-date.js";
-import type { EcbHistory } from "../ecb/history.js";
+import { type CurrencySeries, type EcbHistory, lastIndexOnOrBefore } from "../ecb/history.js";
 import { resolveRate } from "../ecb/resolve.js";
 import { Decimal } from "../money/decimal.js";
 import { manualPriceAt } from "../projections/manual-price.js";
@@ -205,6 +205,31 @@ const closeQuoteAt = (
 };
 
 /**
+ * The most recent rate of `currency` the history published on or before
+ * `date`, as published, whatever its age: the view says the age. For the
+ * informative value of foreign cash, never for a quote, which takes the rate
+ * of its own date.
+ */
+const latestOf =
+  (history: EcbHistory | undefined) =>
+  (currency: string, date: CivilDate): { rate: Decimal; date: CivilDate } | undefined => {
+    const series = history?.series.get(currency);
+    const index = series === undefined ? -1 : lastIndexOnOrBefore(series.dates, date);
+    return index < 0
+      ? undefined
+      : {
+          rate: Decimal.parse((series as CurrencySeries).rates[index] as string),
+          date: (series as CurrencySeries).dates[index] as CivilDate,
+        };
+  };
+
+/** The rates of a history without any close: the cash is still valued with them. */
+export const ecbRatesOnly = (history: EcbHistory): ExternalPrices => ({
+  at: () => undefined,
+  latestRate: latestOf(history),
+});
+
+/**
  * The quotes of the automatic closes for the gate: for each asset and date,
  * its own close in force on or before the date, or its approximation — never
  * both, never an average. An approximation, when there is one, is always the
@@ -225,6 +250,7 @@ export const externalPricesOf = (state: LedgerState, book: QuoteBook): ExternalP
     }
     return closeQuoteAt(book, book.closes.get(assetId) ?? [], date);
   },
+  latestRate: latestOf(book.history),
 });
 
 /** Every date with an automatic close, for the time series of the views (§6.4 (h)). */

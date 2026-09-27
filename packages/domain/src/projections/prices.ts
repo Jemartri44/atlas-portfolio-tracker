@@ -79,6 +79,13 @@ export interface ExternalQuote {
 /** The optional external source of the gate. Pure and synchronous, by the same rule. */
 export interface ExternalPrices {
   at(assetId: AssetId, date: CivilDate): ExternalQuote | undefined;
+  /**
+   * The most recent ECB rate of `currency` published on or before `date`, as
+   * published, when there is a history (live test of 2026-09-27). Only the
+   * informative value of the cash in a foreign currency reads it; nothing
+   * fiscal does, which takes the rate of its fiscal date from the ledger.
+   */
+  latestRate?(currency: Currency, date: CivilDate): { rate: Decimal; date: CivilDate } | undefined;
 }
 
 export interface PriceLookup {

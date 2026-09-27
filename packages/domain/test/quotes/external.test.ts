@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readEcbZipCsv } from "../../src/ecb/history.js";
+import { Decimal } from "../../src/money/decimal.js";
 import { priceAt } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import {
   approximationAt,
+  ecbRatesOnly,
   externalPricesOf,
   quoteDates,
   SUBUNITS,
@@ -270,5 +272,31 @@ describe("the approximation through the reference ETF (P3)", () => {
         "2027-01-05",
       ),
     ).toBe("etf_currency_changed");
+  });
+});
+
+describe("the most recent ECB rate of a currency, for the cash of the net worth", () => {
+  it("is the last one published on or before the date, as published", () => {
+    const external = externalPricesOf(state(), book({}));
+    expect(external.latestRate?.("USD", "2027-01-10")).toEqual({
+      rate: Decimal.parse("1.25"),
+      date: "2027-01-05",
+    });
+    expect(external.latestRate?.("USD", "2027-01-04")?.rate.toString()).toBe("1.2");
+    expect(external.latestRate?.("USD", "2026-12-30")).toBeUndefined();
+    // A currency the history does not publish, and no history at all: none.
+    expect(external.latestRate?.("CHF", "2027-01-10")).toBeUndefined();
+    expect(
+      externalPricesOf(state(), book({}, false)).latestRate?.("USD", "2027-01-10"),
+    ).toBeUndefined();
+  });
+
+  it("is there with no closes at all, when there is a history", () => {
+    const rates = ecbRatesOnly(history);
+    expect(rates.at("ast_world", "2027-01-10")).toBeUndefined();
+    expect(rates.latestRate?.("GBP", "2027-01-10")).toEqual({
+      rate: Decimal.parse("0.8"),
+      date: "2027-01-05",
+    });
   });
 });

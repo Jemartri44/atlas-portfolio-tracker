@@ -5,6 +5,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { FileEcbHistoryStore } from "@atlas/adapters";
 import { decodeLine, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { CLI_SETTINGS, Events } from "../events.js";
@@ -252,5 +253,121 @@ describe("the fiscal output with prices/ next to the ledger", () => {
     expect(Object.keys(files).length).toBeGreaterThan(2);
     await sameFiscalOutput(events, ["2026", "2027", "2028"], files, "2029-03-01T10:00:00.000Z");
     // Sixty commands over two folders: slow, and it has to be complete.
+  }, 120_000);
+});
+
+// ---------------------------------------------------------------------------
+// Cash in a foreign currency with the ECB history next to the ledger (live
+// test of 2026-09-27): valued with the most recent rate of the history, the
+// ledger's only without it, said once per currency — and nothing fiscal moves.
+// ---------------------------------------------------------------------------
+
+const ecbHistory = async (dir: string, rows: [string, string][]) => {
+  await new FileEcbHistoryStore(dir).activate({
+    source: "zip",
+    bytes: new TextEncoder().encode(
+      ["Date,USD,", ...rows.map(([date, rate]) => `${date},${rate},`)].join("\n"),
+    ),
+    url: "https://example.invalid/hist.zip",
+    fetched_at: "2027-06-09T06:00:00.000Z",
+  });
+};
+
+/** Dollars in two accounts, at the ledger's rate of May. */
+const dollars = () => {
+  const b = new Events();
+  b.settings({ ...CLI_SETTINGS, stale_price_days: 3 });
+  b.account("acc_ib", "IE");
+  b.account("acc_ib2", "IE");
+  for (const [account_id, amount] of [
+    ["acc_ib", "1000"],
+    ["acc_ib2", "500"],
+  ]) {
+    b.push("cash_deposit", {
+      account_id,
+      value_date: "2027-05-04",
+      amount,
+      currency: "USD",
+      fx_rate: "1.0582",
+      fx_rate_date: "2027-05-04",
+    });
+  }
+  return b.build();
+};
+
+const STALE_USD = /El tipo de cambio aplicado a USD/g;
+
+describe("the cash in a foreign currency in the net worth", () => {
+  it("is valued with the most recent rate of the ECB history, over the ledger's", async () => {
+    const f = await folder(dollars());
+    await ecbHistory(f.dir, [
+      ["2027-06-08", "1.25"],
+      ["2027-06-07", "1.2"],
+    ]);
+    const view = await f.atlas("networth", "--date", "2027-06-09");
+    expect(view.code).toBe(0);
+    expect(view.text).toMatch(/acc_ib\s+USD\s+1000\s+1\.25\s+2027-06-08\s+1\s+800\.00/);
+    expect(view.text).toMatch(/acc_ib2\s+USD\s+500\s+1\.25\s+2027-06-08\s+1\s+400\.00/);
+    expect(view.text.match(STALE_USD)).toBeNull();
+    const json = JSON.parse((await f.atlas("networth", "--date", "2027-06-09", "--json")).out);
+    expect(json.data.cash.rows[0]).toMatchObject({ fx_rate: "1.25", fx_rate_source: "ecb" });
+  });
+
+  it("says a stale rate once per currency, with the date of the rate used and its remedy", async () => {
+    const f = await folder(dollars());
+    await ecbHistory(f.dir, [["2027-06-01", "1.25"]]);
+    const fromHistory = (await f.atlas("networth", "--date", "2027-06-09")).text;
+    expect(fromHistory.match(STALE_USD)).toHaveLength(1);
+    expect(fromHistory).toContain(
+      "El tipo de cambio aplicado a USD es el del histórico del BCE del 2027-06-01, de hace 8 días; actualízalo con `atlas fx update`.",
+    );
+    // Without a history, the ledger's rate, said once as well.
+    const bare = await folder(dollars());
+    const fromLedger = await bare.atlas("networth", "--date", "2027-06-09");
+    expect(fromLedger.text).toMatch(/acc_ib\s+USD\s+1000\s+1\.0582\s+2027-05-04/);
+    expect(fromLedger.text.match(STALE_USD)).toHaveLength(1);
+    expect(fromLedger.text).toContain(
+      "El tipo de cambio aplicado a USD es de 36 días atrás (2027-05-04); registra una operación o una valoración más reciente en esa divisa.",
+    );
+    const json = JSON.parse((await bare.atlas("networth", "--date", "2027-06-09", "--json")).out);
+    expect(json.data.cash.rows[0]).toMatchObject({ fx_rate_source: "ledger" });
+  });
+});
+
+describe("the fiscal output with the ECB history next to the ledger", () => {
+  it("does not move a byte with a rate that moves the net worth", async () => {
+    // The prediction, written before running it: nothing fiscal moves. The
+    // fiscal commands read the history to contrast the rates of the ledger,
+    // so both folders have the same one, except the dollar of the last day,
+    // after every event: only the cash of the net worth can use it.
+    const events = await synthetic();
+    const low = await folder(events);
+    const high = await folder(events);
+    low.instant = "2029-03-01T10:00:00.000Z";
+    high.instant = low.instant;
+    await ecbHistory(low.dir, [
+      ["2029-02-28", "1.1"],
+      ["2026-01-02", "1.1"],
+    ]);
+    await ecbHistory(high.dir, [
+      ["2029-02-28", "2.5"],
+      ["2026-01-02", "1.1"],
+    ]);
+    for (const year of ["2027", "2028"]) {
+      for (const argv of FISCAL(year)) {
+        const a = await low.atlas(...argv);
+        const b = await high.atlas(...argv);
+        expect({ argv, code: b.code, text: b.text }).toEqual({ argv, code: a.code, text: a.text });
+      }
+    }
+    const cash = async (f: typeof low) =>
+      JSON.parse((await f.atlas("networth", "--date", "2029-02-28", "--json")).out)
+        .data.cash.rows.filter((row: { currency: string }) => row.currency === "USD")
+        .map((row: { fx_rate: string; fx_rate_source: string }) => [
+          row.fx_rate,
+          row.fx_rate_source,
+        ]);
+    expect(await cash(low)).toContainEqual(["1.1", "ecb"]);
+    expect(await cash(high)).toContainEqual(["2.5", "ecb"]);
   }, 120_000);
 });

@@ -132,6 +132,7 @@ const jsonNetWorth = (view: NetWorth) => ({
       fx_rate: row.fx_rate?.rate.toString(),
       fx_rate_date: row.fx_rate?.date,
       fx_rate_dated: row.fx_rate_dated,
+      fx_rate_source: row.fx_source,
       fx_age_days: row.fx_age_days,
       fx_stale: row.fx_stale,
       value_eur: row.value_eur?.amount.toString(),
