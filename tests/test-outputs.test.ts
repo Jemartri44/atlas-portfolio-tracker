@@ -38,3 +38,30 @@ describe("vitest leaves out every compiled folder", () => {
     }
   });
 });
+
+/**
+ * The domain's 100 % is measured **in a pass of its own** (feature 015, E5;
+ * `specs/015-api-access/questions.md` §33.5 and §34): merging the coverage of
+ * several projects once lost the hits of a whole test file of the domain, and
+ * made the 100 % depend on tests of other projects. `npm run test:coverage`,
+ * which the CI calls, runs both passes; the second one, with every other
+ * project, carries no threshold of the domain.
+ */
+describe("the coverage of the domain is measured on its own", () => {
+  const scripts = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"))
+    .scripts as Record<string, string>;
+
+  it("runs the domain with coverage alone, then every other project, in the script the CI calls", () => {
+    expect(scripts["test:coverage"]).toBe("npm run test:coverage:domain && npm run test:others");
+    expect(scripts["test:coverage:domain"]).toBe("vitest run --coverage --project domain");
+    expect(scripts["test:others"]).toBe("vitest run --project !domain");
+  });
+
+  it("keeps the threshold of 100 % and the coverage of the domain alone in the configuration", () => {
+    const config = readFileSync(join(repoRoot, "vitest.config.ts"), "utf8");
+    expect(config).toMatch(/include:\s*\["packages\/domain\/src\/\*\*"\]/);
+    expect(config).toMatch(
+      /thresholds:\s*\{\s*lines:\s*100,\s*branches:\s*100,\s*functions:\s*100,\s*statements:\s*100,?\s*\}/,
+    );
+  });
+});

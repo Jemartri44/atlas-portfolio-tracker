@@ -118,6 +118,9 @@ export default defineConfig({
       },
       { extends: true, test: { name: "repo", root: "tests" } },
     ],
+    // Measured in a pass of the domain alone (`npm run test:coverage:domain`;
+    // feature 015, E5, §34): the merge of several projects once lost the hits
+    // of a whole test file, and the 100 % depended on tests of other projects.
     coverage: {
       provider: "v8",
       include: ["packages/domain/src/**"],
