@@ -342,8 +342,15 @@ const dist = join(webRoot, "dist");
  * (+45 in the chunk of the domain, after moving the shape of that rate to the
  * lazy chunk of the quotes, where it was +68; +2 of the table of chunks). The
  * trend: 74.114 → 74.172; 1.897 left of the authorisation.
+ *
+ * **Round 1 of the review of PR #102, the more recent of the two ECB rates
+ * (2026-09-27): measured 74.194 (+22), ceiling 74.214 — measured + 20**,
+ * raised in this commit, before the commit that needs it, inside the
+ * authorisation. `netWorth` compares the date of the history's rate with the
+ * ledger's and keeps the newer (+21 in the chunk of the domain, +1 of the
+ * table of chunks). The trend: 74.114 → 74.172 → 74.194; 1.875 left.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_192;
+const BOOT_BUDGET_GZIP_BYTES = 74_214;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
