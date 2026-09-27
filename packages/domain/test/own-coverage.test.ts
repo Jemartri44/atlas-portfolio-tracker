@@ -6,10 +6,11 @@
 import { describe, expect, it } from "vitest";
 import { DraftChangedError } from "../src/ecb/drafts.js";
 import { readEcbZipCsv } from "../src/ecb/history.js";
-import { ruleChangeRates } from "../src/ecb/rule-change.js";
+import { rateCorrections, ruleChangeRates } from "../src/ecb/rule-change.js";
 import { closedYearImpact } from "../src/filings/closed-years.js";
 import { filingProposal } from "../src/filings/proposal.js";
 import { model720 } from "../src/informative/m720.js";
+import { projectLedger } from "../src/projections/project-ledger.js";
 import type { Draft, SellEvent } from "../src/schema/events.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../src/settings/settings.js";
 import { previewCorrection, previewReversal } from "../src/usecases/preview-event.js";
@@ -49,8 +50,17 @@ describe("ruleChangeRates (ecb/rule-change.ts)", () => {
     const next = mergeSettings(DEFAULT_SETTINGS, {
       fiscal_date_rule: { ...DEFAULT_SETTINGS.fiscal_date_rule, stock: "value_date" },
     } as Partial<Settings>);
-    const impact = ruleChangeRates(history, b.build(), DEFAULT_SETTINGS, next, 30);
+    const events = b.build();
+    const impact = ruleChangeRates(history, events, DEFAULT_SETTINGS, next, 30);
     expect(impact.lines.some((line) => line.event_id === dividend.id)).toBe(false);
+    // Where the branch matters (review of PR #98, N2; §35): the chain of
+    // `atlas fx correct` reads the same fiscal points, and a rate of business
+    // date is never one to correct — here its date, the 2nd, is not the one of
+    // the official rate of its value date, the 6th, and it is left alone.
+    const state = projectLedger(events, { collectErrors: true });
+    expect(rateCorrections(history, state, events, 30).map((line) => line.event_id)).not.toContain(
+      dividend.id,
+    );
   });
 });
 
@@ -142,7 +152,9 @@ describe("filingProposal of a renta (filings/proposal.ts)", () => {
     buy(b, "stock_s", "2028-01-15", "10", "60");
     const proposal = filingProposal(b.build(), "renta", 2027, { today: "2028-03-01" });
     const deferred = proposal.figures.find((figure) => figure.key === "deferred");
-    expect(deferred?.amount_eur.amount.toString()).not.toBe("0");
+    // The whole loss of the sale (10 × (60 − 100)), deferred by the repurchase
+    // of the 10, with its sign: a sum turned into a difference gives +400.
+    expect(deferred?.amount_eur.amount.toString()).toBe("-400");
   });
 });
 
@@ -190,7 +202,7 @@ describe("the previews of a reversal and of a correction (usecases/preview-event
   });
 
   it("previews a correction with only the warnings of the corrected event", async () => {
-    const { store, sale } = ledger();
+    const { store, sale, repurchase } = ledger();
     const {
       schema_version: _v,
       id: _id,
@@ -200,8 +212,16 @@ describe("the previews of a reversal and of a correction (usecases/preview-event
     } = sale as SellEvent & { fingerprint?: string };
     const draft = { ...rest, unit_price: "7" } as unknown as Draft<SellEvent>;
     const preview = await previewCorrection(testDeps(store), sale.id, draft, "precio mal");
-    expect(preview.warnings.every((warning) => warning.event_id === preview.candidate.id)).toBe(
-      true,
-    );
+    // Its own warning, and only it: the repurchase keeps its warning in the
+    // ledger, and that one is somebody else's.
+    expect(preview.warnings.map((warning) => [warning.code, warning.event_id])).toEqual([
+      ["wash_sale_window_prior_buy", preview.candidate.id],
+    ]);
+    expect(
+      preview.state.warnings.some(
+        (warning) =>
+          warning.code === "wash_sale_window_repurchase" && warning.event_id === repurchase.id,
+      ),
+    ).toBe(true);
   });
 });
