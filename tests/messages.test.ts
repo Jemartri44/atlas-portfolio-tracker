@@ -164,6 +164,10 @@ const CLI_ONLY: Record<string, string> = {
   forget_device_missing: "solo atlas admin forget-device",
   forget_device_unreadable: "solo atlas admin forget-device",
   forget_refused_queue: "solo atlas admin forget-device",
+  // Feature 016, E2, block 3.
+  symbols_push_missing: "solo atlas admin prices push",
+  symbols_push_misstored: "solo atlas admin prices push",
+  symbols_push_remote_newer: "solo atlas admin prices push",
 };
 
 /**
