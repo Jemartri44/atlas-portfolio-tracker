@@ -722,11 +722,20 @@ describe("the reference data (§6)", () => {
   it("answers 404 to a type it does not serve and to a file that is not there", async () => {
     const api = setup();
     const { token } = await credentials(api);
-    api.s3.seed("prices/notes.txt", "x");
-    expect(errorOf(await read(api, token, "/api/reference/prices/notes.txt"))).toEqual({
+    api.s3.seed("reference/ecb/notes.txt", "x");
+    expect(errorOf(await read(api, token, "/api/reference/ecb/notes.txt"))).toEqual({
       code: "not_found",
       details: { reason: "type" },
     });
+    // Feature 016, E2 (§8.2 M1): in prices/ only what priceFileName writes, and symbols.json.
+    api.s3.seed("prices/notes.txt", "x");
+    api.s3.seed("prices/_status.json", "{}");
+    for (const name of ["notes.txt", "_status.json", "config.json"]) {
+      expect(errorOf(await read(api, token, `/api/reference/prices/${name}`)), name).toEqual({
+        code: "reference_name_invalid",
+        details: {},
+      });
+    }
     expect(errorOf(await read(api, token, "/api/reference/prices/none.jsonl"))).toEqual({
       code: "not_found",
       details: { reason: "missing" },

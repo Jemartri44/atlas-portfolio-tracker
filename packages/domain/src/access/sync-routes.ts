@@ -6,6 +6,7 @@
 // of a conditional read. The handler decides nothing of it.
 
 import type { DeviceQueueState, RemoteError } from "../ports/remote-ledger.js";
+import { priceFileName } from "../quotes/line.js";
 import { API_ERRORS, type ApiErrorCode, type ApiRefusal, refusal } from "./codes.js";
 import type { DeviceObject, DeviceType } from "./device.js";
 import { isInstant } from "./ids.js";
@@ -59,16 +60,46 @@ const PREFIX: Readonly<Record<ReferenceKind, string>> = {
 
 const REFERENCE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
+/** The files of `prices/` served by their own name: never `_status.json` nor `config.json`. */
+const PRICE_FILES: readonly string[] = ["symbols.json"];
+
+/** The longest name of a price file: what a file system names (feature 016, §8.2 M1). */
+export const MAX_PRICE_NAME = 255;
+
 /**
- * The key of a reference file, **built only from a name of the closed
- * alphabet** and without `..`: nothing can leave `reference/ecb/` or
- * `prices/`, and it is decided before S3 is touched (§6; mutant 33).
+ * Whether `name` is **exactly what `priceFileName` writes** for some asset:
+ * decoding it and encoding it again gives the same name (feature 016, E2;
+ * §8.2 M1, amending P6 bis). The encoder never writes a `/`, so nothing can
+ * leave `prices/`; and a name it does not write is not a price file.
+ */
+const isPriceFileName = (name: string): boolean => {
+  if (name.length > MAX_PRICE_NAME || !name.endsWith(".jsonl")) {
+    return false;
+  }
+  try {
+    const assetId = decodeURIComponent(name.slice(0, -".jsonl".length));
+    return assetId !== "" && priceFileName(assetId) === name;
+  } catch {
+    return false;
+  }
+};
+
+/** Whether a name of `kind` may be served: the rule of each prefix, decided before S3 (§6). */
+export const isReferenceName = (kind: ReferenceKind, name: string): boolean =>
+  kind === "prices"
+    ? PRICE_FILES.includes(name) || isPriceFileName(name)
+    : REFERENCE_NAME.test(name) && !name.includes("..");
+
+/**
+ * The key of a reference file, **built only from a name its prefix serves**:
+ * nothing can leave `reference/ecb/` or `prices/`, and it is decided before S3
+ * is touched (§6; mutant 33).
  */
 export const referenceKey = (
   kind: ReferenceKind,
   name: string,
 ): { readonly key: string } | ApiRefusal =>
-  REFERENCE_NAME.test(name) && !name.includes("..")
+  isReferenceName(kind, name)
     ? { key: `${PREFIX[kind]}${name}` }
     : refusal("reference_name_invalid");
 
@@ -94,12 +125,16 @@ export const versionOf = (etag: string): string => etag.replace(/^W\//, "").repl
 
 const entriesOf = (
   listed: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
-  prefix: string,
+  kind: ReferenceKind,
 ): ReferenceEntry[] =>
   listed
-    .filter((object) => object.key.startsWith(prefix))
+    .filter(
+      (object) =>
+        object.key.startsWith(PREFIX[kind]) &&
+        isReferenceName(kind, object.key.slice(PREFIX[kind].length)),
+    )
     .map((object) => ({
-      name: object.key.slice(prefix.length),
+      name: object.key.slice(PREFIX[kind].length),
       version: versionOf(object.etag),
       size: object.size,
     }))
@@ -111,8 +146,8 @@ export const referenceIndex = (
   ecb: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
   prices: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
 ): { readonly ecb: ReferenceEntry[]; readonly prices: ReferenceEntry[] } => ({
-  ecb: entriesOf(ecb, PREFIX.ecb),
-  prices: entriesOf(prices, PREFIX.prices),
+  ecb: entriesOf(ecb, "ecb"),
+  prices: entriesOf(prices, "prices"),
 });
 
 /**
