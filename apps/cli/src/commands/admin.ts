@@ -380,7 +380,10 @@ const compactOrder = async (
  */
 const strictText = (bytes: Uint8Array): string => {
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    // `ignoreBOM`: a BOM is kept as a character, so the first line cannot be
+    // read and the copy is refused — never written back without it (round 2
+    // of the review of PR #98).
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch {
     throw new DomainError("restore_candidate_invalid", "the candidate is not UTF-8", {
       invalid: [],

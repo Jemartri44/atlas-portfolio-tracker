@@ -272,6 +272,21 @@ describe("atlas admin restore (ADR-0032, the six steps)", () => {
     expect(api.s3.text(LEDGER)).toBe(text(seeded));
   });
 
+  it("refuses a file that starts with a BOM instead of writing other bytes (round 2, PR #98)", async () => {
+    const api = setup();
+    api.s3.seed(LEDGER, text(seeded));
+    const { c, folder } = await adminConsole(api);
+    await writeFile(
+      join(folder, "copia.jsonl"),
+      Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(text(seeded.slice(0, 2)))]),
+    );
+    expect(
+      await c.exec(["admin", "restore", "--env", "test", "--from", join(folder, "copia.jsonl")]),
+    ).toBe(EXIT.domain);
+    expect(c.text()).not.toContain("3.");
+    expect(api.s3.text(LEDGER)).toBe(text(seeded));
+  });
+
   it("restores an older version of the object, compared event by event", async () => {
     const api = setup();
     api.s3.seed(LEDGER, text(seeded.slice(0, 1)));
