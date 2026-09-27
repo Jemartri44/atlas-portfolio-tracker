@@ -588,6 +588,25 @@ describe("architecture (015): the web configures the sync only through its engin
   });
 
   /**
+   * **Who may start an order of the sync** (review of PR #97, N1, blocking by
+   * decision of the direction): only the section of the sync in Ajustes,
+   * where every order is a button. No other module of the web imports the
+   * engine or reaches it through a relay, statically or with `import()`, so
+   * nothing can sync at boot, on a timer or when the connection comes back.
+   * The build holds the same on the real graph (`check-bundle.mjs`).
+   */
+  it("reaches the engine only from the section of the sync in Ajustes", () => {
+    const section = join(webSrc, "routes", "ajustes", "sync");
+    const inSection = (file: string): boolean => file.startsWith(`${section}/`);
+    expect(listSources(section).length).toBeGreaterThan(0);
+    const outside = listSources(webSrc).filter((file) => !inSection(file) && !ENGINES.has(file));
+    const violations = [...reach(outside, new Set(listSources(section)))]
+      .filter(([file]) => ENGINES.has(file))
+      .map(([, chain]) => chainText(chain));
+    expect(violations).toEqual([]);
+  });
+
+  /**
    * P3: the web exports the ledger **with what is held back** beside it,
    * never the ledger alone — the export without it is not imported anywhere
    * in the web.
@@ -646,6 +665,8 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
     // Round 3: the workers are other builds, with the same plugin.
     expect(config).toContain('worker: { plugins: () => [moduleGraph("worker")] }');
     expect(config).toContain('fileName: ".vite/atlas-modules.json"');
+    // Review of PR #97, N1: who imports each module, statically or not.
+    expect(config).toContain("info?.dynamicImporters");
     expect(config).toContain("realpathSync(path)");
     // Round 4: a source of code is never inlined as a `data:` URL.
     expect(config).toMatch(/assetsInlineLimit: \(filePath: string\)/);
@@ -665,6 +686,9 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
       "el bundle lleva un fuente",
       "ningún grafo dice de dónde sale este fichero",
       "lleva código incrustado como URL data:",
+      // Review of PR #97, N1.
+      "importa el motor de la sincronización de la web fuera de su sección de Ajustes",
+      "el grafo no dice quién importa",
     ]) {
       expect(script).toContain(family);
     }

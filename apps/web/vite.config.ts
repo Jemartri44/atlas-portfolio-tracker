@@ -48,6 +48,8 @@ interface Graph {
       readonly query: string;
       readonly bytes: number;
       readonly exports: readonly string[];
+      /** Who imports it, statically or with `import()` (review of PR #97, N1). */
+      readonly importers: readonly string[];
     }[];
   }[];
   readonly assets: readonly { readonly file: string; readonly sources: readonly string[] }[];
@@ -87,11 +89,17 @@ const moduleGraph = (build: "main" | "worker"): Plugin => ({
         .map((chunk) => ({
           file: chunk.fileName,
           entry: chunk.facadeModuleId === null ? null : normalise(chunk.facadeModuleId).id,
-          modules: chunk.moduleIds.map((id) => ({
-            ...normalise(id),
-            bytes: chunk.modules[id]?.renderedLength ?? 0,
-            exports: chunk.modules[id]?.renderedExports ?? [],
-          })),
+          modules: chunk.moduleIds.map((id) => {
+            const info = this.getModuleInfo(id);
+            return {
+              ...normalise(id),
+              bytes: chunk.modules[id]?.renderedLength ?? 0,
+              exports: chunk.modules[id]?.renderedExports ?? [],
+              importers: [...(info?.importers ?? []), ...(info?.dynamicImporters ?? [])].map(
+                (importer) => normalise(importer).id,
+              ),
+            };
+          }),
         })),
       assets: Object.values(bundle)
         .filter((output) => output.type === "asset")

@@ -1010,6 +1010,33 @@ for (const build of builds) {
 }
 
 /*
+ * **Who imports the engine of the sync of the web** (review of PR #97, N1,
+ * blocking by decision of the direction), read on the real graph: only the
+ * section of the sync in Ajustes — where every order is a button — and the
+ * engine itself, statically or with `import()`. Any other importer could sync
+ * at boot, on a timer or when the connection comes back. A graph that does
+ * not say who imports is refused as such.
+ */
+const WEB_ENGINE = /(^|\/)apps\/web\/src\/sync\/engine(-held)?\.[jt]s$/;
+const ENGINE_IMPORTERS =
+  /(^|\/)apps\/web\/src\/(routes\/ajustes\/sync\/[^/]+\.[jt]sx?|sync\/engine(-held)?\.[jt]s)$/;
+for (const build of builds) {
+  for (const chunk of build.chunks ?? []) {
+    for (const module of chunk.modules.filter((each) => WEB_ENGINE.test(each.id))) {
+      if (!Array.isArray(module.importers)) {
+        problems.push(`${build.label}${chunk.file}: el grafo no dice quién importa ${module.id}`);
+        continue;
+      }
+      for (const importer of module.importers.filter((each) => !ENGINE_IMPORTERS.test(each))) {
+        problems.push(
+          `${build.label}${chunk.file}: ${importer} importa el motor de la sincronización de la web fuera de su sección de Ajustes (${module.id})`,
+        );
+      }
+    }
+  }
+}
+
+/*
  * **Code inlined as a `data:` URL** (rounds 4 and 5 of the review of PR #90).
  * A source under the inline limit reached by `new URL(…)` — which
  * `vite.config.ts` no longer inlines — or imported with `?inline` or
