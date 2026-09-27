@@ -103,6 +103,9 @@
   --statusbar-h: 3.25rem; /* 52 */
   --tabbar-h: 4rem; /* 64 */
   --topbar-h: 4rem; /* 64 */
+  /* The fixed bar at the top at this width: the status bar on a phone and a
+     tablet, the top bar from 1200px. An anchor stops under it. */
+  --header-h: var(--statusbar-h);
   --tabbar-max: 40rem; /* the bottom bar stops growing on a tablet */
   --label-col: 4.5rem; /* the label column of the allocation bars */
   --dialog-max: 34rem;
@@ -206,6 +209,13 @@
     --gutter: var(--space-8); /* 40 */
     --grid-gap: var(--space-6); /* 24 */
     --content-max: 115rem; /* 1840 */
+  }
+}
+
+/* From 1200px the one bar at the top is the top bar (layout.css). */
+@media (min-width: 75rem) {
+  :root {
+    --header-h: var(--topbar-h);
   }
 }
 

@@ -8,7 +8,7 @@
 // because the first steps lead to Registrar and to Ajustes (D8).
 
 import { A, useLocation } from "@solidjs/router";
-import { ErrorBoundary, type JSX, Show } from "solid-js";
+import { createEffect, ErrorBoundary, type JSX, Show } from "solid-js";
 import { Icon } from "../components/Icon.jsx";
 // Imported straight from their modules, not through the barrel: the shell is
 // on the boot path, and a barrel drags everything it re-exports with it — the
@@ -17,6 +17,7 @@ import { Icon } from "../components/Icon.jsx";
 import { Notice } from "../components/Notice.jsx";
 import { countOf } from "../format/number.js";
 import { store } from "../ledger/state.js";
+import { scrollToFragment } from "./anchor.js";
 import { LedgerChip } from "./LedgerChip.jsx";
 import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
@@ -113,8 +114,26 @@ const SettingsButton = (): JSX.Element => {
   );
 };
 
+/**
+ * After every navigation with a fragment, the target under the bar once it
+ * exists (`shell/anchor.ts`). One of the few effects of the frame (ADR-0017).
+ */
+const FollowFragment = (): JSX.Element => {
+  const location = useLocation();
+  createEffect(() => {
+    const hash = location.hash;
+    // Read the path too: the same fragment on another page is another target.
+    void location.pathname;
+    if (hash.length > 1) {
+      void scrollToFragment(decodeURIComponent(hash.slice(1)));
+    }
+  });
+  return null;
+};
+
 export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
   <div class="app">
+    <FollowFragment />
     <a href="#contenido" class="skip-link">
       Ir al contenido
     </a>
