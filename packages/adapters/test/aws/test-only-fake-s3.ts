@@ -13,16 +13,20 @@
 //   fails with a 404 Not Found error» — all three are a failed condition for
 //   the narrow interface, as the adapter of the SDK translates them.
 // The ETag is opaque, never the SHA-256 of the bytes. There is no delete.
+// The bucket is versioned, as the data bucket is (ADR-0032): every write keeps
+// the one before as a version, which the administration reads (E5).
 
 import {
+  type AdminObjectStore,
   DependencyUnavailable,
   type ListedObject,
-  type ObjectStore,
   type StoredObject,
 } from "@atlas/adapters/aws";
 
-export class TestOnlyFakeS3 implements ObjectStore {
+export class TestOnlyFakeS3 implements AdminObjectStore {
   private readonly objects = new Map<string, StoredObject>();
+  /** Every version of every key, oldest first, with its id (a versioned bucket). */
+  private readonly history = new Map<string, { versionId: string; stored: StoredObject }[]>();
   private version = 0;
   private failures = 0;
   private conflicts = 0;
@@ -62,7 +66,12 @@ export class TestOnlyFakeS3 implements ObjectStore {
 
   private store(key: string, body: Uint8Array): void {
     this.version += 1;
-    this.objects.set(key, { body: Uint8Array.from(body), etag: `"fake-${this.version}"` });
+    const stored = { body: Uint8Array.from(body), etag: `"fake-${this.version}"` };
+    this.objects.set(key, stored);
+    this.history.set(key, [
+      ...(this.history.get(key) ?? []),
+      { versionId: `version-${this.version}`, stored },
+    ]);
   }
 
   async get(key: string): Promise<StoredObject | undefined> {
@@ -103,6 +112,19 @@ export class TestOnlyFakeS3 implements ObjectStore {
       .sort((a, b) => a.key.localeCompare(b.key));
   }
 
+  async getVersion(key: string, versionId: string): Promise<StoredObject | undefined> {
+    this.step(`getVersion ${key} ${versionId}`);
+    return this.history.get(key)?.find((entry) => entry.versionId === versionId)?.stored;
+  }
+
+  async listAll(prefix: string): Promise<readonly ListedObject[]> {
+    this.step(`listAll ${prefix}`);
+    return [...this.objects]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([key, stored]) => ({ key, etag: stored.etag, size: stored.body.length }))
+      .sort((a, b) => a.key.localeCompare(b.key));
+  }
+
   // --- What a test does from outside the API (the console of AWS, an admin) ---
 
   seed(key: string, text: string): void {
@@ -124,6 +146,11 @@ export class TestOnlyFakeS3 implements ObjectStore {
 
   deleteOutOfBand(key: string): void {
     this.objects.delete(key);
+  }
+
+  /** The version ids of a key, oldest first. */
+  versionsOf(key: string): string[] {
+    return (this.history.get(key) ?? []).map((entry) => entry.versionId);
   }
 
   keys(): string[] {
