@@ -140,6 +140,7 @@ describe("architecture (016): the clock is injected", () => {
     "packages/adapters/src/aws/mail.ts",
     "packages/adapters/src/aws/sdk-ses.ts",
     "packages/adapters/src/aws/web-sign-in.ts",
+    "packages/adapters/src/aws/index.ts",
     "packages/adapters/test/aws/mail.test.ts",
     "packages/adapters/test/aws/test-only-fake-ses.ts",
     "apps/api/src/handler.ts",
@@ -156,6 +157,11 @@ describe("architecture (016): the clock is injected", () => {
           return /\.(ts|tsx|mjs)$/.test(path) && !path.endsWith(".d.ts") ? [path] : [];
         })
       : [];
+  /** Every `jobs*` adapter of AWS, and its tests (round 2 of the review, R2-N1). */
+  const awsJobsTests = (): string[] =>
+    sourcesOf(join(adaptersRoot, "test", "aws")).filter((file) =>
+      /[/\\]jobs[^/\\]*\.ts$/.test(file),
+    );
   const awsJobs = (): string[] =>
     sourcesOf(join(adaptersRoot, "src", "aws")).filter((file) =>
       /[/\\]jobs[^/\\]*\.ts$/.test(file),
@@ -167,6 +173,7 @@ describe("architecture (016): the clock is injected", () => {
     const files = [
       ...FOLDERS.flatMap((folder) => sourcesOf(join(repoRoot, folder))),
       ...awsJobs(),
+      ...awsJobsTests(),
       ...ADDED_FILES.map((file) => join(repoRoot, file)).filter(exists),
     ];
     expect(files.length).toBeGreaterThan(40);
@@ -175,6 +182,9 @@ describe("architecture (016): the clock is injected", () => {
         .map((file) => relative(repoRoot, file))
         .sort(),
     ).toEqual(["packages/adapters/src/aws/jobs-store.ts", "packages/adapters/src/aws/jobs.ts"]);
+    expect(awsJobsTests().map((file) => relative(repoRoot, file))).toEqual([
+      "packages/adapters/test/aws/jobs-store.test.ts",
+    ]);
     const offenders = files.filter((file) => REAL_TIME.test(parse(file).code));
     expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
   });
