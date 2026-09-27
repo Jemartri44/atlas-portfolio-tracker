@@ -87,6 +87,7 @@ export {
   type SymbolsFile,
   serializeSymbols,
   unknownSymbolsKey,
+  unservableSymbols,
 } from "./quotes/symbols.js";
 export {
   type SymbolsPushChange,

@@ -18,6 +18,7 @@ import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
+import { repeatedKey, repeatedKeyError } from "../schema/json-keys.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
 /**
@@ -270,6 +271,25 @@ export const unknownSymbolsKey = (raw: unknown): string | undefined =>
         ?.slice(0, 64)
     : undefined;
 
+/**
+ * Why the text of a `prices/symbols.json` must never be served (review of PR
+ * #106, B1 and R2-B1): a key twice at any level, or a top-level key the file
+ * does not have. Only names are looked at, never a value; a text that is not
+ * JSON is not this function's to judge — every reader refuses it anyway.
+ */
+export const unservableSymbols = (text: string): "repeated_key" | "unknown_key" | undefined => {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  if (repeatedKey(text) !== undefined) {
+    return "repeated_key";
+  }
+  return unknownSymbolsKey(raw) === undefined ? undefined : "unknown_key";
+};
+
 /** Parses `prices/symbols.json`; `undefined` (no file) is an empty correspondence. */
 export const parseSymbols = (text: string | undefined): SymbolsFile => {
   if (text === undefined) {
@@ -280,6 +300,11 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
     raw = JSON.parse(text);
   } catch {
     throw wrong("json");
+  }
+  // A key twice says two things (review of PR #106, R2-B1): refused first.
+  const repeated = repeatedKey(text);
+  if (repeated !== undefined) {
+    throw repeatedKeyError("prices/symbols.json", repeated);
   }
   if (
     isObject(raw) &&

@@ -11,6 +11,7 @@ import { ValidationError } from "../errors.js";
 import type { SourceFailureKind } from "../ports/price-source.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
+import { repeatedKey, repeatedKeyError } from "../schema/json-keys.js";
 import type { MarketDays } from "./config.js";
 import { isQuoteSource } from "./sources.js";
 
@@ -72,6 +73,10 @@ export const parseStatus = (text: string | undefined): PriceStatus => {
     raw = JSON.parse(text);
   } catch {
     throw wrong("json");
+  }
+  const repeated = repeatedKey(text);
+  if (repeated !== undefined) {
+    throw repeatedKeyError("prices/_status.json", repeated);
   }
   if (!isObject(raw) || raw.status_format !== STATUS_FORMAT) {
     throw wrong("status_format");
