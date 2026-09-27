@@ -1,10 +1,12 @@
 // The clients of the administration (feature 015, E5; ADR-0026, Part A;
 // ADR-0034, rows 6 and 16), the door `@atlas/adapters/aws-admin`: the data
 // bucket and SSM **with the role of administration**, whose short-lived
-// credentials come from the **standard chain of the SDK** — a profile that
-// assumes `atlas-<env>-admin` with MFA (`role_arn`, `source_profile`,
-// `mfa_serial`), or the variables of a session already assumed. The console
-// never stores them (block 0 of E5, `questions.md` §33). Node only; never
+// credentials come from the **standard chain of the SDK**: a session already
+// opened — an IAM Identity Center profile after `aws sso login`, or the
+// variables `aws configure export-credentials` writes once the AWS CLI asked
+// for the MFA code. A profile with `mfa_serial` alone is refused by the chain,
+// which has no way to ask for the code (block 0 of E5, `questions.md` §33).
+// The console never stores them. Node only; never
 // reached by the API nor by the web (architecture tests).
 //
 // What the administration needs and the API must not have: an old version of

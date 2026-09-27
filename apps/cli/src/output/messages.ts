@@ -408,7 +408,7 @@ export const describeError = (error: DomainError): string => {
     case "admin_remote_unavailable":
       return "AWS no responde ahora (el bucket de datos o SSM): no se ha escrito nada que no se diga. Repite dentro de un rato.";
     case "admin_aws_refused":
-      return `AWS ha rechazado la orden (${text(d.name)}): revisa que el perfil asuma el rol de administración del entorno, con MFA.`;
+      return `AWS ha rechazado la orden (${text(d.name)}): la consola usa una sesión ya abierta del rol de administración del entorno, con MFA («aws sso login», o «aws configure export-credentials» tras el código), como dice el procedimiento «Revocar todos los tokens».`;
     case "restore_source_missing":
       return `No se encuentra la copia ${text(d.from)}.`;
     case "restore_candidate_invalid":
