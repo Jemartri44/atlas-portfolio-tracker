@@ -14,4 +14,16 @@ describe("the sentences of the sync", () => {
     expect(text).toContain("«Unirme desde la nube»");
     expect(text).toContain("«Unirme con mis operaciones»");
   });
+
+  // Review of PR #97, correctness N4: a reason names its way out with the
+  // word of the button that takes it.
+  it.each(["absent_at_join", "absent_after_rewrite", "differs_at_join", "differs_after_rewrite"])(
+    "says %s with the words of «Rehacer» and «Descartar»",
+    (code) => {
+      const text = describeError(new DomainError(code, code, {}), { privacy: false });
+      expect(text).toMatch(/[Rr]ehaz/);
+      expect(text).toMatch(/[Dd]esc[aá]rta/);
+      expect(text).not.toMatch(/[Rr]egístrala/);
+    },
+  );
 });

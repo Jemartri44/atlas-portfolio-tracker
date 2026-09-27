@@ -388,11 +388,11 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   partner_discarded: () =>
     "Retenida: descartaste la anulación de esta corrección, y una corrección sin su anulación no corrige nada: ni se sube ni se puede rehacer. Descártala también; si el cambio sigue siendo cierto, corrige de nuevo la operación en vigor.",
   absent_after_rewrite: () =>
-    "Retenida al volver a descargar: la nube se ha reescrito y ya no tiene esta operación. Nunca se sube sola: regístrala otra vez si sigue siendo cierta, o descártala.",
+    "Retenida al volver a descargar: la nube se ha reescrito y ya no tiene esta operación. Nunca se sube sola: rehazla si sigue siendo cierta, o descártala.",
   differs_after_rewrite: () =>
     "Retenida al volver a descargar: la nube tiene esta misma operación con otro contenido. Compara las dos y rehaz o descarta la tuya.",
   absent_at_join: () =>
-    "Retenida al empezar desde la nube: la nube no tiene esta operación de tus datos anteriores, que quedan archivados. Regístrala si sigue siendo cierta, o descártala.",
+    "Retenida al empezar desde la nube: la nube no tiene esta operación de tus datos anteriores, que quedan archivados. Rehazla si sigue siendo cierta, o descártala.",
   differs_at_join: () =>
     "Retenida al empezar desde la nube: la nube tiene esta operación con otro contenido. Compara y rehaz o descarta la tuya.",
   discarded_by_user: () => "Descartada por ti: queda aparte, fuera de tus datos.",
