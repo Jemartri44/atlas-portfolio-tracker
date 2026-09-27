@@ -724,6 +724,13 @@ Una tercera pasada de `test:others` sobre el mismo commit: 0, 1.722 tests (`016-
 
 - **Q17 — Un fallo intermitente de la 015 en `apps/cli/test/admin/admin.test.ts`** («asks for the name of the environment…», línea 333). `consoleLogin` crea el `device_id` con bytes aleatorios en base64url; si empieza por `--` (1 de cada 4.096), el analizador de argumentos lo toma por una opción y la orden sale con 64. Pasó en la primera pasada de esta tubería y no en las otras dos. No es de la 016 y no lo he tocado. Es también un defecto de uso: `atlas admin forget-device` con un id así necesita `--` antes del id. Recomendación: un `fix/` aparte que haga deterministas los ids del arnés de la API y documente `--` en el mensaje de uso, o que la orden acepte `--device <id>`.
 
-### 15.8 Congelado
+### 15.8 La CI y `develop`
 
-**Congelada la ronda 1 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `a3ddb26`. No se empuja nada más hasta la palabra de la dirección.
+La CI de `8dff5e8` salió en rojo en `build`: la CI construye la PR **fusionada con `develop`**, y `develop` ya traía la PR #105 (020), que dejó el techo del total en su medida + 256 (302.894). Con lo de E2 encima, el total medido es 302.935 (+297 sobre los 302.638 de la PR #105), 41 bytes por encima. Todo lo añadido es perezoso: el lector más estricto de `symbols.json` y la frase de `symbols_file_unknown_key`. El arranque no se mueve (75.011, por debajo de 75.039).
+
+- `aadb6b3` trae `develop` a la rama (sin conflictos) y `6fbc326` sube el techo del total a **303.191 = medida + 256**, en un commit propio y **dentro de la autorización** (310.500), como hace la 020. No se toca el techo del arranque ni ninguna autorización.
+- **Tubería completa sobre `6fbc326`**: lint 0, typecheck 0, cobertura del dominio 0 dos veces (100 %: sentencias 8.957, ramas 5.538, funciones 2.018, líneas 8.523; 1.709 tests), resto de proyectos 0 dos veces (1.798 tests, con los de la 020), build 0 (`lambda.zip` 1.443.799 bytes; `jobs.zip` 1.631.638 bytes). `tests/fixtures` sin cambios. Guardianes: `architecture` 51, `api-access` 28, `jobs-access` 14, `jobs-package` 3, `messages` 11.
+
+### 15.9 Congelado
+
+**Congelada la ronda 1 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `6fbc326`. No se empuja nada más hasta la palabra de la dirección.
