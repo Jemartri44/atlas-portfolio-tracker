@@ -761,4 +761,17 @@ describe("the reference data (§6)", () => {
     expect(JSON.stringify(refused)).not.toContain("sentinel-secret-of-the-api");
     expect(api.logs.join("\n")).not.toContain("sentinel-secret-of-the-api");
   });
+
+  it("never serves a symbols.json that repeats a key (review of PR #106, R2-B1)", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    api.s3.seed(
+      "prices/symbols.json",
+      '{"symbols_format":2,"assets":{"LEAK":{"note":"sentinel-secret-of-the-api"}},"assets":{}}',
+    );
+    const refused = await read(api, token, "/api/reference/prices/symbols.json");
+    expect(errorOf(refused)).toEqual({ code: "not_found", details: { reason: "repeated_key" } });
+    expect(JSON.stringify(refused)).not.toContain("sentinel-secret-of-the-api");
+    expect(api.logs.join("\n")).not.toContain("sentinel-secret-of-the-api");
+  });
 });
