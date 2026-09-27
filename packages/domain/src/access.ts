@@ -7,16 +7,6 @@
 // The barrel never re-exports any of it, and the web never reaches it.
 
 export {
-  type AdminDeviceRead,
-  type AdminEnvironment,
-  compareForRestore,
-  forgetRefusal,
-  forgottenDevice,
-  parseAdminConfig,
-  type RestoreComparison,
-  remoteRewritePermission,
-} from "./access/admin.js";
-export {
   type AllowEntry,
   isAllowed,
   parseAllowList,

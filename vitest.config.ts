@@ -38,6 +38,7 @@ export default defineConfig({
       "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": local("./packages/domain/src/sync.ts"),
       "@atlas/domain/access": local("./packages/domain/src/access.ts"),
+      "@atlas/domain/admin": local("./packages/domain/src/admin.ts"),
       "@atlas/domain": local("./packages/domain/src/index.ts"),
       "@atlas/api": local("./apps/api/src/index.ts"),
     },

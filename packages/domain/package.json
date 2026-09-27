@@ -33,6 +33,10 @@
     "./access": {
       "types": "./dist/access.d.ts",
       "import": "./dist/access.js"
+    },
+    "./admin": {
+      "types": "./dist/admin.d.ts",
+      "import": "./dist/admin.js"
     }
   },
   "files": [
