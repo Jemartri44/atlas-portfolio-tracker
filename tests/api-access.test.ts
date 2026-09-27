@@ -4,275 +4,28 @@
 // `architecture.test.ts`, which is already two thousand lines long; the graph
 // walk is the same idea: static imports, across packages through `exports`.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { parseSync } from "vite";
 import { describe, expect, it } from "vitest";
-
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const domainRoot = join(repoRoot, "packages", "domain");
-const adaptersRoot = join(repoRoot, "packages", "adapters");
-const apiRoot = join(repoRoot, "apps", "api");
-const webSrc = join(repoRoot, "apps", "web", "src");
-const cliSrc = join(repoRoot, "apps", "cli", "src");
-
-const listSources = (dir: string): string[] =>
-  statSync(dir, { throwIfNoEntry: false })?.isDirectory() === true
-    ? readdirSync(dir).flatMap((entry) => {
-        const path = join(dir, entry);
-        if (statSync(path).isDirectory()) {
-          return listSources(path);
-        }
-        return /\.(ts|tsx)$/.test(path) && !path.endsWith(".d.ts") ? [path] : [];
-      })
-    : [];
-
-/** Every source of the product: what ships, never a test. */
-const productSources = (): string[] => [
-  ...listSources(join(domainRoot, "src")),
-  ...listSources(join(adaptersRoot, "src")),
-  ...listSources(join(apiRoot, "src")),
-  ...listSources(cliSrc),
-  ...listSources(webSrc),
-];
-
-/**
- * A source as the bundler reads it (round 2 of the review of PR #90, B2-bis
- * and B3). The guards used to read imports with regular expressions and to
- * strip comments with one more: a `//` inside a string swallowed the rest of
- * the line, and a re-export, a `require` or an `import.meta.glob` walked past
- * them. Now the source is **parsed** — with the parser Vite already ships
- * (`parseSync`, Oxc), no new dependency — and its imports, re-exports and
- * dynamic imports come from the parser, and its comments are blanked by the
- * ranges the parser gives. A source it cannot parse fails the guard.
- *
- * These guards are the **quick warning**. The authoritative check is on the
- * real graph of the bundle: `apps/web/scripts/check-bundle.mjs` reads the
- * modules Rolldown put in it.
- */
-interface Parsed {
-  readonly source: string;
-  /** The source with every comment blanked, strings and regular expressions untouched. */
-  readonly code: string;
-  /** Every `import … from`, `export … from`, side-effect import and literal `import("…")`. */
-  readonly specifiers: readonly string[];
-  /** The names each static import and re-export takes from each specifier. */
-  readonly bindings: readonly Binding[];
-  /** How many `import(…)` and `import.meta` the parser found: a file with none has none to walk. */
-  readonly dynamicImports: number;
-  readonly importMetas: number;
-  /** The program, built only when asked: most guards never need it. */
-  readonly program: () => unknown;
-}
-
-interface Binding {
-  readonly specifier: string;
-  readonly how: "import" | "export" | "dynamic";
-  /** The imported name; `*` for a namespace or `export *`, `default` for a default. */
-  readonly name: string;
-  readonly isType: boolean;
-}
-
-interface ModuleInfo {
-  readonly staticImports: readonly {
-    readonly moduleRequest: { readonly value: string };
-    readonly entries: readonly {
-      readonly importName: { readonly kind: string; readonly name: string | null };
-      readonly isType: boolean;
-    }[];
-  }[];
-  readonly staticExports: readonly {
-    readonly entries: readonly {
-      readonly moduleRequest: { readonly value: string } | null;
-      readonly importName: { readonly kind: string; readonly name: string | null };
-      readonly isType: boolean;
-    }[];
-  }[];
-  readonly dynamicImports: readonly {
-    readonly moduleRequest: { readonly start: number; readonly end: number };
-  }[];
-  readonly importMetas: readonly unknown[];
-}
-
-const parsedFiles = new Map<string, Parsed>();
-
-const parse = (file: string): Parsed => {
-  const known = parsedFiles.get(file);
-  if (known !== undefined) {
-    return known;
-  }
-  const source = readFileSync(file, "utf8");
-  const result = parseSync(file, source);
-  if (result.errors.length > 0) {
-    throw new Error(`${relative(repoRoot, file)} cannot be parsed: ${result.errors[0]?.message}`);
-  }
-  let code = source;
-  for (const comment of result.comments) {
-    const blank = source.slice(comment.start, comment.end).replace(/[^\n]/g, " ");
-    code = code.slice(0, comment.start) + blank + code.slice(comment.end);
-  }
-  const module = result.module as unknown as ModuleInfo;
-  const bindings: Binding[] = [];
-  for (const statement of module.staticImports) {
-    const specifier = statement.moduleRequest.value;
-    if (statement.entries.length === 0) {
-      bindings.push({ specifier, how: "import", name: "*", isType: false });
-    }
-    for (const entry of statement.entries) {
-      bindings.push({
-        specifier,
-        how: "import",
-        name:
-          entry.importName.kind === "Name"
-            ? (entry.importName.name as string)
-            : entry.importName.kind === "Default"
-              ? "default"
-              : "*",
-        isType: entry.isType,
-      });
-    }
-  }
-  for (const statement of module.staticExports) {
-    for (const entry of statement.entries) {
-      if (entry.moduleRequest !== null) {
-        bindings.push({
-          specifier: entry.moduleRequest.value,
-          how: "export",
-          name: entry.importName.kind === "Name" ? (entry.importName.name as string) : "*",
-          isType: entry.isType,
-        });
-      }
-    }
-  }
-  for (const dynamic of module.dynamicImports) {
-    const argument = source.slice(dynamic.moduleRequest.start, dynamic.moduleRequest.end);
-    const literal = /^(["'])([^"'`\n$\\]*)\1$/.exec(argument.trim());
-    if (literal !== null) {
-      bindings.push({ specifier: literal[2] as string, how: "dynamic", name: "*", isType: false });
-    }
-  }
-  const parsed: Parsed = {
-    source,
-    code,
-    specifiers: [...new Set(bindings.map((binding) => binding.specifier))],
-    bindings,
-    dynamicImports: module.dynamicImports.length,
-    importMetas: module.importMetas.length,
-    program: () => result.program,
-  };
-  parsedFiles.set(file, parsed);
-  return parsed;
-};
-
-/** Static and dynamic specifiers alike: a dynamic import reaches as much as a static one. */
-const specifiersOf = (file: string): readonly string[] => parse(file).specifiers;
-
-/** Every node of a parsed program, depth first. */
-const nodesOf = function* (node: unknown): Generator<Record<string, unknown>> {
-  if (Array.isArray(node)) {
-    for (const item of node) {
-      yield* nodesOf(item);
-    }
-  } else if (typeof node === "object" && node !== null) {
-    const record = node as Record<string, unknown>;
-    if (typeof record.type === "string") {
-      yield record;
-    }
-    for (const [key, value] of Object.entries(record)) {
-      if (key !== "parent") {
-        yield* nodesOf(value);
-      }
-    }
-  }
-};
-
-/** A package subpath as its source file, **read off `exports`** (never a list written here). */
-const exportsOf = (root: string): Map<string, string> => {
-  const exported = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).exports as Record<
-    string,
-    { types: string }
-  >;
-  return new Map(
-    Object.entries(exported).map(([subpath, target]) => [
-      subpath,
-      join(root, "src", target.types.replace(/^\.\/dist\//, "").replace(/\.d\.ts$/, ".ts")),
-    ]),
-  );
-};
-
-const packages = (): Map<string, Map<string, string>> =>
-  new Map([
-    ["@atlas/domain", exportsOf(domainRoot)],
-    ["@atlas/adapters", exportsOf(adaptersRoot)],
-  ]);
-
-const resolveAcross = (
-  known: Map<string, Map<string, string>>,
-  from: string,
-  specifier: string,
-): string | undefined => {
-  const fileAt = (target: string): string | undefined => {
-    const bare = target.replace(/\.(js|jsx)$/, "");
-    return [target, `${bare}.ts`, `${bare}.tsx`, join(target, "index.ts")].find(
-      (path) =>
-        /\.tsx?$/.test(path) && statSync(path, { throwIfNoEntry: false })?.isFile() === true,
-    );
-  };
-  if (specifier.startsWith(".")) {
-    return fileAt(resolve(dirname(from), specifier));
-  }
-  // A root-absolute path, which Vite resolves from the root of the web (and an
-  // absolute path of the disk): never a way past a guard (round 2 of the
-  // review of PR #97, B1).
-  if (specifier.startsWith("/")) {
-    return (
-      fileAt(join(repoRoot, "apps", "web", specifier)) ??
-      fileAt(specifier) ??
-      `<unresolved ${specifier}>`
-    );
-  }
-  for (const [name, subpaths] of known) {
-    if (specifier === name || specifier.startsWith(`${name}/`)) {
-      const file = subpaths.get(`.${specifier.slice(name.length)}`);
-      // A subpath the package does not export cannot be imported at all; it
-      // is named so that a guard never passes by resolving it to nothing.
-      return file ?? `<unexported ${specifier}>`;
-    }
-  }
-  return undefined;
-};
-
-/** Everything a set of roots reaches, with the chain, across packages. */
-const reach = (
-  roots: readonly string[],
-  /** Files reached but not walked past: the one door a guard allows. */
-  stop: ReadonlySet<string> = new Set(),
-): Map<string, string[]> => {
-  const known = packages();
-  const chains = new Map<string, string[]>(roots.map((root) => [root, [root]]));
-  const pending = [...roots];
-  while (pending.length > 0) {
-    const file = pending.shift() as string;
-    if (file.startsWith("<") || stop.has(file)) {
-      continue;
-    }
-    for (const specifier of specifiersOf(file)) {
-      const next = resolveAcross(known, file, specifier);
-      if (next !== undefined && !chains.has(next)) {
-        chains.set(next, [...(chains.get(file) as string[]), next]);
-        pending.push(next);
-      }
-    }
-  }
-  return chains;
-};
-
-const chainText = (chain: readonly string[]): string =>
-  chain.map((file) => (file.startsWith("<") ? file : relative(repoRoot, file))).join(" -> ");
-
-/** What the web bundles: everything `apps/web/src` reaches, derived from its imports and `exports`. */
-const webReach = (): Map<string, string[]> => reach(listSources(webSrc));
+import {
+  adaptersRoot,
+  apiRoot,
+  chainText,
+  cliSrc,
+  domainRoot,
+  exportsOf,
+  listSources,
+  nodesOf,
+  packages,
+  parse,
+  productSources,
+  reach,
+  repoRoot,
+  resolveAcross,
+  specifiersOf,
+  webReach,
+  webSrc,
+} from "./support/source-graph.js";
 
 describe("architecture (015): the API is a workspace of its own", () => {
   it("has the files it guards, so no rule below passes by looking at nothing", () => {
@@ -302,7 +55,9 @@ describe("architecture (015): the API is a workspace of its own", () => {
     expect(manifest.devDependencies).toEqual({ esbuild: "0.28.2" });
   });
 
-  it("gives the adapters the two clients of the SDK the user authorised, pinned, and no other", () => {
+  // Feature 016, E1 (§8.1 P8): the client of SES v2 joins the two of the 015,
+  // authorised by the user and pinned at the same exact version.
+  it("gives the adapters the three clients of the SDK the user authorised, pinned, and no other", () => {
     const manifest = JSON.parse(
       readFileSync(join(repoRoot, "packages", "adapters", "package.json"), "utf8"),
     ) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
@@ -310,7 +65,11 @@ describe("architecture (015): the API is a workspace of its own", () => {
       Object.fromEntries(
         Object.entries(manifest.dependencies ?? {}).filter(([name]) => !name.startsWith("@atlas/")),
       ),
-    ).toEqual({ "@aws-sdk/client-s3": "3.1141.0", "@aws-sdk/client-ssm": "3.1141.0" });
+    ).toEqual({
+      "@aws-sdk/client-s3": "3.1141.0",
+      "@aws-sdk/client-sesv2": "3.1141.0",
+      "@aws-sdk/client-ssm": "3.1141.0",
+    });
     expect(manifest.devDependencies ?? {}).toEqual({});
   });
 
@@ -774,6 +533,8 @@ describe("architecture (015): the thin adapters of the SDK send only what they a
         "GetParametersByPathCommand",
         "GetParametersByPathCommandOutput",
       ],
+      // Feature 016 (§8.1 P8): one command, to send a mail, and its client.
+      "@aws-sdk/client-sesv2": ["SESv2Client", "SendEmailCommand"],
     };
     const taken = productSources().flatMap((file) =>
       parse(file)

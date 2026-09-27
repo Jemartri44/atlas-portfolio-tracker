@@ -15,6 +15,8 @@ export default defineConfig({
       ),
       "@atlas/adapters/aws-sdk": local("./packages/adapters/src/aws/sdk.ts"),
       "@atlas/adapters/aws-admin": local("./packages/adapters/src/aws/sdk-admin.ts"),
+      "@atlas/adapters/aws-jobs": local("./packages/adapters/src/aws/jobs.ts"),
+      "@atlas/adapters/aws-ses": local("./packages/adapters/src/aws/sdk-ses.ts"),
       "@atlas/adapters/aws": local("./packages/adapters/src/aws/index.ts"),
       "@atlas/adapters/access": local("./packages/adapters/src/access/crypto.ts"),
       "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),
@@ -39,6 +41,7 @@ export default defineConfig({
       "@atlas/domain/sync": local("./packages/domain/src/sync.ts"),
       "@atlas/domain/access": local("./packages/domain/src/access.ts"),
       "@atlas/domain/admin": local("./packages/domain/src/admin.ts"),
+      "@atlas/domain/jobs": local("./packages/domain/src/jobs.ts"),
       "@atlas/domain": local("./packages/domain/src/index.ts"),
       "@atlas/api": local("./apps/api/src/index.ts"),
     },
@@ -59,6 +62,7 @@ export default defineConfig({
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },
       { extends: true, test: { name: "cli", root: "apps/cli" } },
       { extends: true, test: { name: "api", root: "apps/api" } },
+      { extends: true, test: { name: "jobs", root: "apps/jobs" } },
       {
         extends: true,
         /*
