@@ -15,9 +15,10 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { A } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Ajustes from "../src/routes/ajustes/index.jsx";
+import Movimientos from "../src/routes/movimientos/index.jsx";
 import { decodeFragment, historyGate, scrollToFragment } from "../src/shell/anchor.js";
 import { cssRules } from "./helpers/css-rules.js";
 import { settle, showInShell, until, withGoldenLedger } from "./helpers/render.jsx";
@@ -90,6 +91,28 @@ describe("the way back through the history", () => {
     gate.popped("/a#x");
     gate.clicked();
     expect(gate.follows("/b#y")).toBe(true);
+  });
+});
+
+describe("the title reached by an anchor", () => {
+  it("takes the focus without the ring, and anything interactive keeps it", () => {
+    // Round 2 of the review of PR #105, O2: a focus from a script met
+    // `:focus-visible` in Chromium and painted the accent ring on the title.
+    const rule = cssRules(readFileSync(join(styles, "base.css"), "utf8")).find(
+      (candidate) => candidate.path.join(" ") === ':where(h1, h2, h3)[tabindex="-1"]:focus',
+    );
+    expect(rule?.declarations).toEqual([["outline", "none"]]);
+    // The ring of everything interactive is untouched.
+    const ring = cssRules(readFileSync(join(styles, "base.css"), "utf8")).find((candidate) =>
+      candidate.path.join(" ").endsWith(":focus-visible"),
+    );
+    expect(ring?.path.join(" ")).toBe(
+      ":where(a, button, input, select, textarea, summary, [tabindex]):focus-visible",
+    );
+    expect(ring?.declarations[0]).toEqual([
+      "outline",
+      "var(--border-strong) solid var(--c-accent)",
+    ]);
   });
 });
 
@@ -169,6 +192,35 @@ describe("going to the fragment", () => {
     await until(
       () => document.activeElement === host.querySelector("#sincronizacion h2"),
       "el foco en el título de destino",
+    );
+  });
+
+  it("opens the gate again after going back from a filter, which only changes the query", async () => {
+    // Round 2 of the review of PR #105, O1: the filters of the movements push
+    // their query; back from one, only the query changes, and a gate that
+    // compared the path and the fragment stayed shut for the next navigation.
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    let go: ((to: string) => void) | undefined;
+    const ConNavegacion = () => {
+      go = useNavigate();
+      return <Movimientos />;
+    };
+    await showInShell("/movimientos", { "/movimientos": ConNavegacion, "/ajustes": Ajustes });
+    go?.("/movimientos?tipo=buy");
+    await until(() => window.location.search === "?tipo=buy", "el filtro");
+    window.history.back();
+    await until(() => window.location.search === "", "la vuelta atrás del filtro");
+    await settle(50);
+    // A navigation of the application to a fragment, without a click.
+    // The router scrolls too when the target is already there; the frame is
+    // the one that also moves the focus, so the focus is what tells them apart.
+    go?.("/ajustes#sincronizacion");
+    await until(() => toSync(scroll) >= 1, "que se llegue al ancla");
+    await until(
+      () =>
+        document.activeElement?.closest("#sincronizacion") !== null &&
+        document.activeElement?.tagName === "H2",
+      "que el marco siga el ancla tras la vuelta atrás",
     );
   });
 

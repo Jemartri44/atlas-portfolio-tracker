@@ -106,6 +106,15 @@
   outline-offset: var(--space-0);
 }
 
+/*
+ * A title that receives the focus from a script (`tabindex="-1"`, the target
+ * of an anchor) is where the next Tab starts, not something to press: no ring
+ * (PR #105, round 2, O2). Only headings: anything interactive keeps it.
+ */
+:where(h1, h2, h3)[tabindex="-1"]:focus {
+  outline: none;
+}
+
 /* ---- Figures ------------------------------------------------------------ */
 
 /* Numbers in rows and columns align; a hero figure keeps proportional digits. */
