@@ -7,7 +7,6 @@
 // only a record that cannot even be written escapes as an error.
 
 import type { ObjectStore, ParameterStore } from "@atlas/adapters/aws";
-import type { PriceKeys } from "@atlas/adapters/aws-daily";
 import { JobsStore, JobsWriteConflict } from "@atlas/adapters/aws-jobs";
 import type { CivilDate } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
@@ -28,12 +27,16 @@ import type { PriceSource, QuoteSource } from "@atlas/domain/quotes";
 import type { JobLedger } from "./ledger.js";
 import { errorName, logLine } from "./log.js";
 
-/** The sources of the daily tasks, built by the composition (never reached by the mail task). */
+/**
+ * The sources of the daily tasks, built by the composition. The keys are a
+ * plain record here, not the type of the adapter that reads them: the mail
+ * task imports this module, and must not reach that adapter (B2).
+ */
 export interface JobSources {
   readonly ecb?: () => FxRateSource;
   readonly prices?: (
     chosen: NonNullable<JobsConfig["prices"]>["sources"],
-    keys: PriceKeys,
+    keys: Readonly<Partial<Record<QuoteSource, string>>>,
   ) => Partial<Record<QuoteSource, PriceSource>>;
 }
 
