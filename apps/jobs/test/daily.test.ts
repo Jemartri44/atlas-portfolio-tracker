@@ -51,6 +51,13 @@ const SYMBOLS = JSON.stringify({
       currencies: { eodhd: "EUR" },
       confirmed_at: "2026-09-01T00:00:00.000Z",
     },
+    // In the correspondence and not in the ledger: never downloaded (R33, mutant 21).
+    ast_stranger: {
+      eodhd: "STRANGER.XETRA",
+      currencies: { eodhd: "EUR" },
+      confirmed_at: "2026-09-01T00:00:00.000Z",
+      currency_check: { eodhd: { at: "2026-09-01T00:00:00.000Z" } },
+    },
   },
 });
 
@@ -150,6 +157,8 @@ describe("the daily task of the closes (ADR-0031; R21-R28, R33)", () => {
     expect(jobs.fetched.every((url) => url.includes("to=2026-09-30"))).toBe(true);
     expect(jobs.fetched.some((url) => url.includes("WORLD.XETRA"))).toBe(true);
     expect(jobs.fetched.some((url) => url.includes("BONDS.XETRA"))).toBe(false);
+    expect(jobs.fetched.some((url) => url.includes("STRANGER.XETRA"))).toBe(false);
+    expect(s3.keys()).not.toContain("prices/ast_stranger.jsonl");
     expect(s3.text("prices/ast_world.jsonl")).toContain('"close":"101.5"');
     expect(s3.text("prices/symbols.json")).toBe(SYMBOLS);
     const record = recordOf(s3, "jobs/prices/prices_update/2026-10-01.json");
