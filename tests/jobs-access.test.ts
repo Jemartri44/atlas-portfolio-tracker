@@ -40,6 +40,14 @@ const PRICE_KEYS = new RegExp(
   `${sep}adapters${sep}src${sep}aws${sep}price-keys\\.ts$|${sep}adapters${sep}src${sep}prices${sep}(eodhd|alpha-vantage|secrets)\\.ts$`,
 );
 
+/**
+ * What writes the history of the ECB and the closes in the bucket, and the
+ * simulated source of `dev` (E2): only the daily tasks of the jobs use them.
+ */
+const DAILY_WRITERS = new RegExp(
+  `${sep}adapters${sep}src${sep}aws${sep}(daily|s3-ecb-store|s3-price-store)\\.ts$|${sep}adapters${sep}src${sep}prices${sep}simulated\\.ts$`,
+);
+
 const exists = (file: string): boolean =>
   statSync(file, { throwIfNoEntry: false })?.isFile() === true;
 
@@ -86,6 +94,21 @@ describe("architecture (016): the jobs are reached by nothing that faces a user"
         !/[/\\]adapters[/\\]src[/\\]aws[/\\]sdk-ses\.ts$/.test(file),
     );
     expect(sesv2.map((file) => relative(repoRoot, file))).toEqual([]);
+  });
+
+  it("keeps the daily writers and the simulated source out of the API, the web and the console (E2)", () => {
+    const roots = [
+      join(apiRoot, "src", "lambda.ts"),
+      ...listSources(join(apiRoot, "src")),
+      ...listSources(cliSrc),
+    ];
+    expect(violationsOf(reach(roots), DAILY_WRITERS)).toEqual([]);
+    expect(violationsOf(webReach(), DAILY_WRITERS)).toEqual([]);
+  });
+
+  it("keeps the daily writers out of the mail task (E2)", () => {
+    const mail = reach([join(jobsSrc, "tasks", "mail.ts")]);
+    expect(violationsOf(mail, DAILY_WRITERS)).toEqual([]);
   });
 
   it("keeps the keys of the sources out of the mail task (B2)", () => {
@@ -145,6 +168,14 @@ describe("architecture (016): the clock is injected", () => {
     "packages/adapters/test/aws/test-only-fake-ses.ts",
     "apps/api/src/handler.ts",
     "apps/api/test/sign-in.test.ts",
+    "packages/domain/src/access/sync-routes.ts",
+    "packages/domain/src/quotes/cascade.ts",
+    "packages/adapters/src/aws/daily.ts",
+    "packages/adapters/src/aws/price-keys.ts",
+    "packages/adapters/src/aws/s3-ecb-store.ts",
+    "packages/adapters/src/aws/s3-price-store.ts",
+    "packages/adapters/src/prices/simulated.ts",
+    "packages/adapters/test/aws/s3-daily.test.ts",
   ];
   /** Every source of a folder, the `.mjs` of the scripts too. */
   const sourcesOf = (folder: string): string[] =>
