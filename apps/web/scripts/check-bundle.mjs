@@ -715,8 +715,19 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15 + 60 +
  * over 299.058), ceiling 299.587 — measured + 256**, raised before the
  * commit that needs it. Lazy: what is held shows its asset, quantity, price
  * and amount through `Amount` (`ajustes` +196); the rest is hash noise.
+ *
+ * **Review of PR #97, correctness B1 and security N4 and N5 (2026-09-27):
+ * measured 300.180 (+849 over 299.331), ceiling 300.436 — measured + 256**,
+ * raised before the commit that needs it. Lazy, all of it: the notice of an
+ * invalid ledger asks the store of the sync, only when it is painted, whether
+ * something is held back (`guard` +397, `sync-store` +167); discarding asks
+ * first (`ajustes` +191); a duplicate is confirmed only for the draft it was
+ * asked about (`warned` 783, a chunk of its own now with `DuplicateDialog`,
+ * −732). A lazy component instead of the inline read split `solid` out of
+ * the entry (+606 on the boot) and was dropped. The trend: 292,0 → 292,3 →
+ * 293,1.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 291 * 1024 + 1603;
+const TOTAL_BUDGET_GZIP_BYTES = 293 * 1024 + 404;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
