@@ -697,8 +697,15 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15 + 60 +
  * the closed-year notice of the corporate form (`form` +98), the card of the
  * sync in three files (`ajustes` +221) and the sentences of N11 (`errors`
  * +17). The trend: 277,6 → 290,5 → 291,6.
+ *
+ * **Review of PR #97, security B1 (2026-09-27): measured 298.730 (+338 over
+ * the 298.392 of P11), ceiling 298.986 — measured + 256**, raised before the
+ * commit that needs it, inside the authorisation (up to 304.640). All lazy:
+ * the engine reads the session before every order and names the device on
+ * every request (`ajustes` +325), and the sentences of `sync_device_changed`
+ * and `expected_device_required` as failures of the remote (`errors` +67).
  */
-const TOTAL_BUDGET_GZIP_BYTES = 291 * 1024 + 664;
+const TOTAL_BUDGET_GZIP_BYTES = 291 * 1024 + 1002;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
