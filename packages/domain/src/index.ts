@@ -63,6 +63,7 @@ export {
   type StandaloneFees,
 } from "./projections/costs.js";
 export type { FingerprintWaiver } from "./projections/filings.js";
+export { hasForeignAccountsAt } from "./projections/foreign-accounts.js";
 export { realizedGains } from "./projections/gains.js";
 export { investmentIncome } from "./projections/income.js";
 export { type IntegrityFinding, integrity } from "./projections/integrity.js";
