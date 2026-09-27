@@ -42,14 +42,21 @@ describe("the configuration of the prices function (M5, P14)", () => {
   });
 
   it("takes the simulated source in dev, and refuses it in prod (mutant 17)", () => {
-    expect(
-      parseJobsConfig({ ...PRICES_ENV, ATLAS_ENV: "dev", ATLAS_PRICE_SOURCES: "simulated" }).prices
-        ?.sources,
-    ).toBe("simulated");
+    const dev = { ...PRICES_ENV, ATLAS_ENV: "dev", ATLAS_DATA_BUCKET: "atlas-dev-data-x1" };
+    expect(parseJobsConfig({ ...dev, ATLAS_PRICE_SOURCES: "simulated" }).prices?.sources).toBe(
+      "simulated",
+    );
     expect(reasonOf({ ...PRICES_ENV, ATLAS_PRICE_SOURCES: "simulated" })).toEqual({
       variable: "ATLAS_PRICE_SOURCES",
       reason: "simulated_in_prod",
     });
+  });
+
+  it("never writes simulated closes into the bucket of prod by a wrong ATLAS_ENV (review of PR #106, N1)", () => {
+    // The function of prod with ATLAS_ENV=dev: its bucket is not of dev.
+    expect(reasonOf({ ...PRICES_ENV, ATLAS_ENV: "dev", ATLAS_PRICE_SOURCES: "simulated" })).toEqual(
+      { variable: "ATLAS_DATA_BUCKET", reason: "not_of_the_environment" },
+    );
   });
 
   it("refuses what it does not understand, and budgets above the plans", () => {

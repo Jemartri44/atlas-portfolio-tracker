@@ -322,7 +322,12 @@ describe("the daily task of the closes (ADR-0031; R21-R28, R33)", () => {
   it("uses the simulated source in dev, and calls nothing", async () => {
     const { s3, jobs } = pricesJobs({
       keys: false,
-      env: { ...PRICES_ENV, ATLAS_ENV: "dev", ATLAS_PRICE_SOURCES: "simulated" },
+      env: {
+        ...PRICES_ENV,
+        ATLAS_ENV: "dev",
+        ATLAS_DATA_BUCKET: "atlas-dev-data-test",
+        ATLAS_PRICE_SOURCES: "simulated",
+      },
     });
     await jobs.run(["prices_update"]);
     expect(jobs.fetched).toEqual([]);

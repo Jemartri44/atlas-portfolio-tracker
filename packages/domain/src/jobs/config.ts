@@ -219,6 +219,12 @@ export const parseJobsConfig = (env: Readonly<Record<string, string | undefined>
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(dataBucket)) {
     throw invalid("ATLAS_DATA_BUCKET", "not_a_bucket_name");
   }
+  // The bucket of the environment the function says (review of PR #106, N1):
+  // a function of prod with ATLAS_ENV=dev does not start, so the simulated
+  // source — which needs ATLAS_ENV=dev — only ever writes into a bucket of dev.
+  if (!dataBucket.startsWith(`atlas-${environment}-`)) {
+    throw invalid("ATLAS_DATA_BUCKET", "not_of_the_environment");
+  }
   const maxRun = required(env, "ATLAS_JOB_MAX_RUN_SECONDS");
   if (!/^[1-9]\d{0,8}$/.test(maxRun)) {
     throw invalid("ATLAS_JOB_MAX_RUN_SECONDS", "not_a_positive_integer");

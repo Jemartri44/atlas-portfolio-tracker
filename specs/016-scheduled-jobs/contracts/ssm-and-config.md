@@ -23,7 +23,7 @@ Con la forma de `docs/api.md` §9. `<entorno>` es `dev` o `prod`.
 | Variable | Funciones | Valor (Terraform) | Regla y techo fijo en el código |
 |---|---|---|---|
 | `ATLAS_ENV` | todas | `dev` / `prod` | uno de los dos |
-| `ATLAS_DATA_BUCKET` | todas | `atlas-<entorno>-data-<sufijo>` | la regla de la API |
+| `ATLAS_DATA_BUCKET` | todas | `atlas-<entorno>-data-<sufijo>` | la regla de la API, y **empieza por `atlas-<ATLAS_ENV>-`** (`not_of_the_environment`; revisión de la PR #106, N1): la fuente simulada, que exige `ATLAS_ENV=dev`, solo escribe en un bucket `atlas-dev-` |
 | `ATLAS_JOBS` | todas | la lista de su familia, separada por comas | tareas del catálogo, **de una sola familia** (`mixed_families`), sin repetidas |
 | `ATLAS_JOB_MAX_RUN_SECONDS` | todas | el tiempo máximo de la función (900) | entero de 1 a **900**: un registro reclamado hace menos no se retoma (revisión de la PR #104, N3); Terraform pone el mismo valor que el `timeout` de la Lambda |
 | `ATLAS_MAIL_FROM` | correo | el remitente verificado, de `terraform.tfvars` | la regla del destinatario |
