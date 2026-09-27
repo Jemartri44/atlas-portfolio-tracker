@@ -4,11 +4,8 @@
 // sign-in. The device is the session's: the browser records the one it
 // joined with, and another session's does not sync (§27.4).
 
-import type { LedgerEvent, UseCaseDeps } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { Builder, base, textOf } from "../../../../packages/adapters/test/sync/builder.js";
-import { webDevice } from "../../../../packages/adapters/test/sync/devices.js";
-import { ALLOWED, SELF, setup } from "../../../api/test/harness.js";
 import {
   confirmHeld,
   deactivate,
