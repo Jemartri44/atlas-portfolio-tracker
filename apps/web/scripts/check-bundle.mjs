@@ -352,7 +352,15 @@ const dist = join(webRoot, "dist");
  * of the boot) and the order of the markup by width, which reads the query of
  * the shell. The trend: 74.137 → 74.188 → 74.275.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_295;
+/*
+ * **Feature 020, E1, M11, Registrar in one screenful (2026-09-27): measured
+ * 74.366 (+91 over 74.275), ceiling 74.386 — measured + 20**, raised before
+ * the commit that needs it, inside the authorisation (76.069). The tiles in
+ * three columns of 64px with the icon back from 640px, and the short fields
+ * in pairs from 384px: rules of `registrar.css` and `controls.css`, in the
+ * stylesheet of the boot. The trend: 74.188 → 74.275 → 74.366.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_386;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
