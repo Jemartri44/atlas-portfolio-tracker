@@ -365,3 +365,66 @@ Revisiones sobre `89e983a`: privacidad (comentario 5858145560) e idempotencia (c
 - **N2.** El guardián del reloj cubre carpetas enteras (`apps/jobs/`, `packages/domain/src/jobs/`, `packages/adapters/src/aws/jobs*` y los ficheros de la API que toca la 016) y amplía el patrón a `globalThis.Date`, `Reflect.construct(Date` y la desestructuración de `Date`. Mata M3 y M4.
 - **N3.** Un registro `claimed` más reciente que el tiempo máximo de la Lambda (15 min, configurable) es `job_in_progress` y no se retoma. Test con los dos casos.
 - **N4.** Si el propio registro del recordatorio es ilegible, el recordatorio lo reclama con `If-Match` sobre su ETag, registra un `ERROR` y sigue: el mes no se pierde. El registro ilegible de otro productor se avisa como `record_unreadable`, con la tarea de la lista cerrada. Dos tests.
+
+### 12.2 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| Privacidad B1, N1, N2, N3; idempotencia N4 (la parte del correo) | `929c7ed` | `conditionsOf` descarta de los `findings` los códigos que fabrica el correo (`task_failed`, `record_unreadable`); `ownFindings` y `producerOf` solo aceptan de cada productor sus códigos con sus asuntos, de listas cerradas (`ProducerFindings`: código → asuntos); `noticeMail` exige `Object.hasOwn(TASKS, subject)`, y dice el periodo solo si tiene forma de periodo (`PERIOD_SHAPE`) y el código solo si es uno de los nuestros; `dispatch_findings` avisa un registro ilegible de un productor como `record_unreadable`; los centinelas cubren los avisos enviados, rechazados y perdidos |
+| Idempotencia B1, N1, N3, N4 (la parte del recordatorio) | `186bee4` | `run.ts` recuerda si marcó `sending` y, si el *runner* lanza después, cierra como `send_unknown`; `nextStep` recibe el instante y `ATLAS_JOB_MAX_RUN_SECONDS` (común a las cinco funciones, de 1 a 900, techo fijo) y da `job_in_progress` a un `claimed` o `sending` más reciente; el recordatorio reclama su propio registro ilegible con `If-Match` sobre su ETag (nunca uno de un formato más nuevo); `composeWith` y el arnés admiten *runners* de prueba; `cuts.test.ts` |
+| Idempotencia N2 | `994e4a4` | El guardián del reloj, por carpetas enteras (`apps/jobs/`, `packages/domain/{src,test}/jobs/`, `packages/adapters/test/jobs/`, todo `aws/jobs*`) y por los ficheros que la 016 añade o toca fuera (la API incluida, y `scripts/lambda-package.mjs`), sobre el código sin comentarios del analizador; el patrón cubre `globalThis.Date`, `Reflect.construct(Date`, la desestructuración y el alias de `Date`, con un test propio de lo que caza y lo que no |
+| Idempotencia B2 y la fila `failed` de B1 | `8bd1a2a` | `contracts/scheduler-event.md` pierde la viñeta de los bytes y los motivos `not_json` y `duplicate_key`, y dice el límite; `plan.md` §5.3 rehace la tabla (en curso, `failed`, ilegible); `data-model.md` §1; `contracts/mail.md` (`task_failed` y `record_unreadable`); `contracts/ssm-and-config.md` (`ATLAS_JOB_MAX_RUN_SECONDS`); §10.2 corregido |
+
+### 12.3 Cómo se vio cada test en rojo
+
+- **Dominio**: `notice-mail.test.ts` y `notices.test.ts` nuevos contra el código de `89e983a`: 7 en rojo (`016-r1-red1.log`); `run-record.test.ts` y `event-config.test.ts` contra el dominio con los arreglos de privacidad: 4 en rojo, el de «en curso» y los tres de la configuración (`016-r1-red2.log`).
+- **`apps/jobs`**: los tests nuevos y cambiados de `cuts`, `reminder` y `dispatch` contra `run.ts`, `tasks/mail.ts`, `jobs-store.ts` y las reglas del dominio de `89e983a` (con el arnés nuevo): 8 en rojo (`016-r1-jobs-red.log`) — el corte con reenvío, el propio registro ilegible, el periodo en curso, el texto del aviso, el aviso forjado, el registro ilegible de un productor, el corte tras `sending` y el `send_unknown` tras lanzar.
+- **El guardián del reloj**: M3 y M4 sobrevivían a `89e983a` (revisión de idempotencia, tabla de mutantes); ahora mueren por su regla.
+
+### 12.4 Mutación (lotes `016-r1-a.json` y `016-r1-b.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Antes | Después |
+|---|---|---|---|
+| R1-M1 | `markSending` no escribe (M1 del revisor) | sobrevivía (revisión) | KILLED por `cuts.test.ts` |
+| R1-M2 | un `sending` como mucho una vez se retoma (M2) | sobrevivía | KILLED por `cuts.test.ts` |
+| R1-M3 | `new globalThis.Date()` en `run.ts` (M3) | sobrevivía | KILLED por `jobs-access.test.ts`, por su regla |
+| R1-M4 | `Date.now()` en `aws/jobs.ts` (M4) | sobrevivía | KILLED por `jobs-access.test.ts`, por su regla |
+| R1-B1i | cerrar como `failed` tras `sending` (B1) | no existía la distinción | KILLED por `cuts.test.ts` |
+| R1-N3 | retomar una ejecución en curso | no existía la regla | KILLED por `run-record.test.ts` y `reminder.test.ts` |
+| R1-N4a | el recordatorio se salta su propio registro ilegible | era la conducta | KILLED por `reminder.test.ts` |
+| R1-N4b | el recordatorio reescribe un registro de un formato más nuevo | — | KILLED por `reminder.test.ts` |
+| R1-N4c | el correo se salta el registro ilegible de un productor | era la conducta | KILLED por `dispatch.test.ts` |
+| R1-P1 | un código fabricado se toma de los `findings` | era la conducta | KILLED por `notices.test.ts` y `dispatch.test.ts` |
+| R1-P2 | un aviso nombra un `subject` que no es un productor | era la conducta | KILLED por `notice-mail.test.ts` |
+| R1-P3 | los `findings` de un productor, sin filtrar | era la conducta | KILLED por `notices.test.ts` |
+| R1-P4 | el código del resultado, tal como vino | — | KILLED por `notice-mail.test.ts` |
+
+13 de 13 muertos.
+
+### 12.5 Lo que se volvió a mirar alrededor
+
+- **Defensa en profundidad del correo**: con B1 hay tres cerraduras independientes — `conditionsOf` (nunca un código fabricado de un registro), `ownFindings` (solo los códigos y asuntos del productor) y `noticeMail` (solo tareas de la lista y códigos conocidos). R1-P3 muere por su test propio porque `noticeMail` también lo pararía en `dispatch`: por eso cada cerradura tiene el suyo.
+- **El `subject` de las rachas**: `producerOf` usa las mismas listas, así que una racha de un código o un asunto que ya no se admite no se cierra ni se reabre: queda como está.
+- **E2 hereda el formato**: `PRODUCER_FINDINGS` (código → asuntos) es donde E2 y E4 declararán sus códigos (`source_failing` con `eodhd`/`alpha_vantage`, `ecb_update_rejected` con `ecb`, `thesis_horizon_exceeded`…), y la redacción de cada uno entra en `mail/notice.ts` con su test.
+- **Los tiempos de los tests de corte**: con `job_in_progress`, un reintento inmediato ya no reenvía; los tests de corte avanzan el reloj más allá de los 15 minutos y comprueban también el lado de dentro (06:14:59 en curso, 06:15:00 fuera).
+- **El test de los mensajes**: `job_in_progress` entra en `JOBS_ONLY`; `record_unreadable` lo dice el correo con su frase.
+
+### 12.6 Tubería
+
+`016-pipeline.sh` sobre `8bd1a2a` (cada paso tras la puerta de memoria, nada en paralelo):
+
+```
+lint 0 3s
+typecheck 0 1s
+cov1-domain 0 214s   (dominio al 100 %: sentencias 8.784, ramas 5.393, funciones 1.974, líneas 8.355)
+cov1-others 0 615s   (1.653 tests)
+cov2-domain 0 223s
+cov2-others 0 703s   (1.653 tests)
+build 0 14s          (arranque y total del paquete web sin cambios; jobs.zip 1.562.981 bytes)
+```
+
+`tests/fixtures` sin cambios; ningún gemelo `.js`. Tests de los guardianes: `architecture` 51, `api-access` 28, `jobs-access` 6 → 7 (el de las formas del reloj), `jobs-package` 3, `messages` 11. Ninguno baja.
+
+### 12.7 Congelado
+
+**Congelada la ronda 1 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `8bd1a2a`. No se empuja nada más hasta la palabra de la dirección.
