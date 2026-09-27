@@ -6,7 +6,7 @@
 // names; the authoritative check of the web is still the graph of its bundle
 // (`apps/web/scripts/check-bundle.mjs`, `FORBIDDEN_IN_WEB`).
 
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -17,10 +17,12 @@ import {
   domainRoot,
   jobsRoot,
   listSources,
+  packages,
   parse,
   productSources,
   reach,
   repoRoot,
+  resolveAcross,
   webReach,
 } from "./support/source-graph.js";
 
@@ -155,6 +157,36 @@ describe("architecture (016): one writer per object in prices/ (P18, M5)", () =>
         .map((line) => `${relative(repoRoot, file)}: ${line.trim()}`),
     );
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("architecture (016): no alias of `imports` escapes the graph (review of PR #106, N1)", () => {
+  /**
+   * A specifier that starts with `#` is an alias of the `imports` field of a
+   * `package.json`: the graph cannot follow it, and a guard that resolved it
+   * to nothing would pass looking at nothing. It fails closed, and the
+   * product has no such field at all.
+   */
+  it("takes a # alias for something it cannot see, never for nothing", () => {
+    expect(resolveAcross(packages(), join(apiRoot, "src", "handler.ts"), "#daily")).toBe(
+      "<unresolved #daily>",
+    );
+  });
+
+  it("finds no `imports` in any package.json of the product", () => {
+    const manifests = [
+      join(repoRoot, "package.json"),
+      ...["apps", "packages"].flatMap((folder) =>
+        readdirSync(join(repoRoot, folder)).map((name) =>
+          join(repoRoot, folder, name, "package.json"),
+        ),
+      ),
+    ].filter(exists);
+    expect(manifests.length).toBeGreaterThanOrEqual(7);
+    const withImports = manifests.filter((file) =>
+      Object.hasOwn(JSON.parse(readFileSync(file, "utf8")) as object, "imports"),
+    );
+    expect(withImports.map((file) => relative(repoRoot, file))).toEqual([]);
   });
 });
 

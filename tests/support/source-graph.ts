@@ -234,6 +234,11 @@ export const resolveAcross = (
       `<unresolved ${specifier}>`
     );
   }
+  // An alias of the `imports` field of a package.json: the graph cannot follow
+  // it, so it fails closed (review of PR #106, N1), and a test forbids the field.
+  if (specifier.startsWith("#")) {
+    return `<unresolved ${specifier}>`;
+  }
   for (const [name, subpaths] of known) {
     if (specifier === name || specifier.startsWith(`${name}/`)) {
       const file = subpaths.get(`.${specifier.slice(name.length)}`);
