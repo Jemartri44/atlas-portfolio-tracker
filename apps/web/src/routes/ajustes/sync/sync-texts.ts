@@ -5,7 +5,7 @@
 
 import { Decimal, DomainError, Money } from "@atlas/domain";
 import type { Severity } from "../../../components/index.js";
-import { formatDate } from "../../../format/date.js";
+import { formatDate, formatInstantDate } from "../../../format/date.js";
 import { countOf } from "../../../format/number.js";
 import { toAppError } from "../../../ledger/errors.js";
 import type { StartHow, WebOutcome } from "../../../sync/engine.js";
@@ -71,6 +71,10 @@ export const dateOf = (event: Readonly<Record<string, unknown>>): string | undef
   const date = event.trade_date ?? event.value_date ?? event.date;
   return typeof date === "string" ? formatDate(date as never) : undefined;
 };
+
+/** When it last synced: the day and the hour, so how long ago reads at a glance. */
+export const syncedAt = (instant: string): string =>
+  `${formatInstantDate(instant)}, ${new Date(instant).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`;
 
 /** What an order did, said; `done` titles a sync that went through. */
 export const outcomeTold = (outcome: WebOutcome, done: string): Told => {

@@ -40,11 +40,11 @@ export const HeldList = (props: {
   readonly onResolve: (item: HeldItem, resolution: string) => void;
 }): JSX.Element => (
   <Show when={props.items.length > 0}>
-    <h4>Retenidas</h4>
-    <ul class="rows">
+    <h4 class="block-title">Retenidas</h4>
+    <ul class="stack">
       <For each={props.items}>
         {(item) => (
-          <li>
+          <li class="stack">
             <p>{said(item.reason.code, item.reason.details)}</p>
             <ul>
               <For each={item.events}>

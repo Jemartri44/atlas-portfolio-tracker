@@ -11,11 +11,10 @@
 
 import { For, type JSX, Show } from "solid-js";
 import { Notice } from "../../../components/index.js";
-import { formatInstantDate } from "../../../format/date.js";
 import type { StartHow, WebSyncStatus } from "../../../sync/engine.js";
 import { HeldList, RedoConfirm } from "./HeldList.jsx";
 import { createSyncController, type SyncCardProps } from "./sync-controller.js";
-import { REDOWNLOAD_ASKS, START, said } from "./sync-texts.js";
+import { REDOWNLOAD_ASKS, START, said, syncedAt } from "./sync-texts.js";
 
 const ALL: readonly StartHow[] = ["init", "join_from_remote", "join_with_mine"];
 const JOIN: readonly StartHow[] = ["join_from_remote", "join_with_mine"];
@@ -67,7 +66,7 @@ export const SyncCard = (props: SyncCardProps): JSX.Element => {
         </div>
         <div class="fact">
           <dt>Última sincronización</dt>
-          <dd>{state.lastSyncAt === undefined ? "nunca" : formatInstantDate(state.lastSyncAt)}</dd>
+          <dd>{state.lastSyncAt === undefined ? "nunca" : syncedAt(state.lastSyncAt)}</dd>
         </div>
       </dl>
       <p class="card-note">
@@ -136,7 +135,7 @@ export const SyncCard = (props: SyncCardProps): JSX.Element => {
 
   return (
     <div>
-      <h3>Sincronizar</h3>
+      <h3 class="block-title">Sincronizar</h3>
       <Show when={card.status() === null}>
         <p class="meta">{said("sync_marker_unreadable")}</p>
       </Show>
