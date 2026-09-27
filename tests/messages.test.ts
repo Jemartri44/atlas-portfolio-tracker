@@ -125,6 +125,18 @@ const NOT_SHOWN: Record<string, string> = {
 };
 
 /**
+ * Codes only the **administration** of the console raises (`atlas admin`,
+ * feature 015, E5): the web never administers the remote, so only the CLI
+ * translates them.
+ */
+const CLI_ONLY: Record<string, string> = {
+  rewrite_refused_device_unreadable: "solo atlas admin compact y restore",
+  forget_device_missing: "solo atlas admin forget-device",
+  forget_device_unreadable: "solo atlas admin forget-device",
+  forget_refused_queue: "solo atlas admin forget-device",
+};
+
+/**
  * The codes of an integrity finding, which are not errors and not warnings: they
  * come out of `integrity()` and `deepCheck()` with their own vocabulary. Only
  * the web has a catalogue for them — the CLI prints the English message of the
@@ -223,7 +235,7 @@ describe("Spanish messages: the two interfaces stay level", () => {
       if (!cli.has(code)) {
         missing.push(`${code}: sin traducir en la CLI`);
       }
-      if (!web.has(code)) {
+      if (!web.has(code) && CLI_ONLY[code] === undefined) {
         missing.push(`${code}: sin traducir en la web`);
       }
     }

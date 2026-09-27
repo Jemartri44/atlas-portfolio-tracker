@@ -389,6 +389,32 @@ export const describeError = (error: DomainError): string => {
       return "No se reescribe la nube: el marcador de la sincronización no se puede leer. Sincroniza primero, que lo reconstruye.";
     case "rewrite_refused_marker_missing":
       return "No se reescribe la nube: existe sync/ pero falta su marcador. Sincroniza primero.";
+    case "rewrite_refused_device_unreadable":
+      return `No se reescribe la nube: el objeto de ${text(d.devices)} en sync/devices/ no se puede leer, y su cola no se puede conocer. Revísalo antes.`;
+    case "forget_device_missing":
+      return "Ese dispositivo no existe en sync/devices/: los enseña «atlas admin devices».";
+    case "forget_device_unreadable":
+      return "El objeto de ese dispositivo no se puede leer: no se ha tocado. Revísalo a mano en sync/devices/.";
+    case "forget_refused_queue":
+      return `Ese dispositivo tiene publicadas ${text(d.pending)} operaciones pendientes y ${text(d.held)} retenidas. Que sincronice antes; si está perdido, --force las deja fuera de la vista.`;
+    case "forget_contention":
+      return "El objeto del dispositivo ha cambiado tres veces mientras se olvidaba: repite la orden.";
+    case "admin_config_missing":
+      return `No existe ${text(d.path)}: escríbelo con la región, el bucket de datos y el prefijo de SSM de cada entorno (runbook «Revocar todos los tokens»).`;
+    case "admin_config_unreadable":
+      return `${text(d.path)} no se puede leer: tiene que llevar admin_format 1 y, por entorno, solo region, data_bucket y ssm_prefix.`;
+    case "admin_environment_unknown":
+      return `${text(d.path)} no tiene el entorno ${text(d.environment)}.`;
+    case "admin_remote_unavailable":
+      return "AWS no responde ahora (el bucket de datos o SSM): no se ha escrito nada que no se diga. Repite dentro de un rato.";
+    case "admin_aws_refused":
+      return `AWS ha rechazado la orden (${text(d.name)}): revisa que el perfil asuma el rol de administración del entorno, con MFA.`;
+    case "restore_source_missing":
+      return `No se encuentra la copia ${text(d.from)}.`;
+    case "restore_candidate_invalid":
+      return `La copia no pasa la comprobación (eventos inválidos: ${text(d.invalid)}; errores de la verificación a fondo: ${text(d.findings)}): no se ha tocado la nube.`;
+    case "bucket_key_unsafe":
+      return `La clave ${text(d.key)} del bucket no es una ruta sencilla: no se copia nada fuera del destino.`;
     case "import_refused_synced":
       return "No se importa: este libro se sincroniza, y sustituirlo borraría lo pendiente. Desactiva antes la sincronización.";
     case "deactivate_refused_pending":
