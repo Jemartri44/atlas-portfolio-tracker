@@ -25,6 +25,7 @@ export {
   OAUTH_IDLE_WARNING_CEILING_DAYS,
   parseJobsConfig,
 } from "./jobs/config.js";
+export { type ActiveHistory, activeHistoryOf } from "./jobs/ecb-manifest.js";
 export { type JobEvent, type JobEventRefusal, parseJobEvent } from "./jobs/event.js";
 export { NOTICE_CODES, noticeMail } from "./jobs/mail/notice.js";
 export { reminderMail } from "./jobs/mail/reminder.js";
