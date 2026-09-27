@@ -2299,3 +2299,120 @@ Cada `describe` del fichero, pasado solo con cobertura, cubre sus ramas por sí 
 | build | `c279bf3` | Arranque 74.073, total 301.370 |
 
 Un trabajador, detrás de la puerta de memoria, y todos los pasos con 0.
+
+## 35. La ronda 1 de revisiones de la PR #98: decisiones y entrega (2026-09-27)
+
+Revisiones: seguridad (comentario 5856369055) y corrección (comentario 5856517566), sobre `ef6115d`.
+
+### 35.1 Las decisiones de la dirección
+
+**Corrección**
+- **B1, Q12, opción 1.** Un evento marcado `duplicate_key` con una anulación viva cuenta como anulado y deja de ser inválido. Una anulación que repite clave no anula nada.
+  - Dos tests, uno por caso.
+  - El camino completo: `compact`, `atlas check`, la Renta y el 720.
+  - El remedio, en data-schema §2.
+  - Y qué hace la retención de la sincronización con una línea así ya anulada.
+- **B2.** El importe exacto, con su signo, en `own-coverage.test.ts`: tiene que matar `add` → `sub`.
+- **P1.** Rehacer la descripción de la PR a partir de §34 y §35.
+- **N1.** Al menos un aviso del evento corregido y ninguno ajeno: tiene que matar `filter(() => false)`.
+- **N2.** Si el mutante es equivalente, decirlo y argumentarlo; si no, el escenario donde importa.
+
+**Seguridad**
+- **B1.** El paso 5 de la cuenta robada, en este orden: olvidar, revisar con el rol de administración, y restaurar o dejar que las anulaciones suban después del paso 6. La línea 7 pasa a «antes de terminar el paso 5». Un ensayo del procedimiento completo con los dobles.
+- **N1.** `restore`, `compact` y `forget-device` rechazan `--yes`, y la confirmación exige escribir el nombre del entorno. Nota fechada en ADR-0032.
+- **N2.** `revoke-all-tokens` sale con un código distinto de 0 si queda algún registro ilegible, y el procedimiento lo dice.
+- **N3.** `printf '%s\n'` o un único programa de `jq`, con un test versionado del bucle ejecutado con `dash`, con un `device_name` que lleve `\` y `\n`.
+- **N4.** `file://` desde un fichero `600` en `~/.config/atlas`, borrado después.
+- **N5.** `--value="$(…)"`.
+- **N6.** `Object.hasOwn`, y `--env` validado con `^[a-z][a-z0-9-]*$`.
+- **N7.** Un guardián de arquitectura para que la web no alcance la administración, en las reglas estáticas y en las del grafo.
+- **N8.** Después de marcar el dispositivo, `forget-device` repasa y revoca los tokens emitidos entre medias.
+- **N9.** `restore --from` decodifica UTF-8 estricto y se niega si no lo es.
+- **Preferencias aceptadas**:
+  - la confirmación de olvidar muestra el tipo, el nombre y la última sincronización;
+  - `eval export-credentials` va en una subshell;
+  - en `backup --from-bucket`, una clave rara se salta con aviso, la copia sigue y la orden sale con un código distinto de 0.
+
+### 35.2 Corrección, hecho
+
+**B1, Q12.**
+- **El dominio** (`6b4d61a`): el paso 0 de `projectLedger` aplica primero las anulaciones y después juzga las líneas marcadas. Una marcada con anulación viva queda anulada y no inválida. Una **anulación** marcada se rechaza sin aplicarse, así que su objetivo sigue vivo. Hay dos tests en `repeated-key.test.ts`; el primero se vio en rojo.
+- **El camino completo mostró un defecto más, fuera de Q12.** `atlas delete` cargaba el libro de forma estricta para enseñar el evento, así que **en la consola no se podía anular ningún evento inválido** en un libro degradado, fuera `duplicate_key` o cualquier otro. El caso de uso (`reverseEvent`) sí lo permitía (ADR-0015, nota del 2026-09-25).
+  - **Corregido** (`b65042e`): `atlas delete` lee en modo degradado **solo si el objetivo es uno de los inválidos**, que es la reparación. Cualquier otra mutación sigue negándose en un libro degradado, como fija «still refuses every mutation».
+  - El test de la consola recorre la línea marcada: `tax 2027` se niega con `tax_ledger_invalid`; `delete` la anula; y después `check` da 0, `compact --yes` da 0, `tax 2027` da 0 y `m720 2027` da 0. Se vio en rojo.
+- **La sincronización** (`05b1a5b`, un test que lo fija; **no cambia código**).
+  - Una línea marcada **y ya anulada** antes de sincronizar **se retiene igual**, con `duplicate_key`. La sincronización juzga cada unidad por separado, y una anulación sin corrección es una unidad propia. Su anulación espera detrás: queda pendiente y no se retiene.
+  - Al descartar la línea, la anulación se queda sin objetivo y se retiene con `reversal_target_missing`. Al descartarla también, no queda nada, y **el remoto nunca recibe la línea**.
+  - Así que con la sincronización configurada el remedio es **descartar**, no anular. Queda dicho en data-schema §2.
+- **El remedio, en data-schema §2** (`916f665`).
+- **El arranque** sube 41 bytes: 74.114, con techo 74.134, subido antes en su propio *commit* (`5d73d34`). Quedan 1.955 bytes hasta la autorización.
+
+**B2, N1 y N2** (`5bfd0dd`):
+- **B2**: el diferido es exactamente `-400`, las diez acciones a (60 − 100), con su signo.
+- **N1**: los avisos de la vista previa son exactamente `[wash_sale_window_prior_buy, <el corregido>]`, y el aviso de la recompra, que sigue en el libro, no está entre ellos.
+- **N2: el mutante no es equivalente.**
+  - En `ruleChangeRates` sí lo es: un punto de fecha de negocio tiene la misma fecha de referencia con las dos reglas, así que nunca se nombra.
+  - Pero `fiscalPoints` también lo lee `rateCorrections`, la cadena de `atlas fx correct`. Con el mutante, un dividendo en dólares con el tipo del día 2 y fecha valor del 6 **se propondría para corregir** al tipo oficial del 6.
+  - El test nuevo lo fija: `rateCorrections` no lo nombra.
+- **Los tres mutantes (`add` → `sub`, `filter(() => false)` y `|| true`) sobreviven a `own-coverage.test.ts` de antes y mueren con el de ahora.** Lo ejecuté con el fichero de `5bfd0dd^`.
+
+### 35.3 Seguridad, hecho
+
+- **B1** (`e661d88`): el paso 5 de `docs/runbooks/stolen-google-account.md`, reescrito en tres partes.
+  - 5.1: olvidar primero.
+  - 5.2: revisar la nube con el rol de administración. Se puede descargar con `aws s3 cp` a `~/personal/atlas/privado/revision/`, o comparar con `atlas admin restore --from <réplica>` y contestar cualquier cosa que no sea el entorno.
+  - 5.3: restaurar ahí, o registrar anulaciones que suben después del paso 6.
+  - La línea 7 dice «antes de terminar el paso 5».
+  - **El ensayo** (`apps/cli/test/admin/stolen-account.test.ts`): la consola del usuario y la del intruso sobre una nube, con la misma cuenta de Google, recorren los seis pasos con la API y sus dobles.
+    - **Encontró un hueco en el procedimiento**: después del paso 3, la consola del usuario **necesita dos `atlas remote login`**. El primero choca con el token revocado y lo quita de `credentials.json`; el segundo vuelve a dar un token al mismo dispositivo, con confirmación en la página.
+    - Queda dicho en el paso 6 y en «Revocar todos los tokens».
+- **N1** (`2a8aa69`, `ac1f7a1`):
+  - `Io` gana `ask`, una línea escrita, opcional; sin terminal, `ConfirmationRequired`.
+  - `restore`, `compact` y `forget-device` se niegan con `--yes` (`EXIT.usage`) y confirman solo si se escribe el nombre del entorno. «s» no vale.
+  - La nota fechada está en ADR-0032 (`310cec6`), y `restore-the-ledger.md` lo dice.
+- **N2**: `revoke-all-tokens` sale con 1 si hay registros que no entiende, y dice que no se puede asegurar que estén revocados. El procedimiento exige «0 revocados, ningún sin entender y salida 0».
+- **N3** (`6f00ac8`): el apartado 2 de `revoke-all-tokens.md` es ahora `sh` POSIX con **un solo programa de `jq`**.
+  - Cada registro sale en dos líneas, el nombre y el valor con `tojson`, y se lee con `while read -r nombre && read -r nuevo`. Ningún valor pasa por `echo`.
+  - Un registro ilegible se salta, y el paso 3 lo cuenta.
+  - **El ensayo versionado**, `tests/runbook-revoke-all.test.ts`, extrae los dos bloques **tal como están en el procedimiento** (marcados con `<!-- ensayo: … -->`) y los ejecuta con `dash` contra una `aws` simulada:
+    - con un `device_name` con acentos, comillas, `\` y un salto de línea, escribe **los mismos bytes** que `serializeTokenRecord(revokedRecord(…))`;
+    - deja como están el ya revocado y el ilegible;
+    - la comprobación cuenta el ilegible.
+  - **El bucle anterior, con `echo`, falla con `dash`** (`jq: parse error: Invalid escape`), tal como decía la revisión. Lo ejecuté aparte.
+- **N4 y N5** (`e661d88`):
+  - la lista permitida se lee a `~/.config/atlas/allow-list.antes.json` con `umask 077`, se edita en `allow-list.json` y se escribe con `--value "file://…"`. El paso 6 repone la de antes y borra los dos;
+  - la clave de sesión se escribe con `--value="$(…)"`.
+  - *Sin probar*: contra AWS real.
+- **N6**: `--env` se valida con `^[a-z][a-z0-9-]*$` antes de pedir clientes. `environmentOf` busca con `Object.hasOwn`. Los tests usan `toString`, `__proto__`, `constructor` y `hasOwnProperty`.
+- **N7** (`9413de0`):
+  - **Reglas estáticas**: `lets neither the SDK, nor Google, …` veta además `packages/domain/src/admin.ts` y cualquier fichero de `apps/cli/`. El adaptador, en `adapters/src/aws/`, ya lo estaba.
+  - **Reglas del grafo**: una entrada nueva para `packages/domain/src/admin.ts`.
+  - **Una salvedad, comprobada.** Rolldown no deja en el grafo un módulo que solo reexporta, así que esa entrada no salta. Lo que llega al grafo son las reglas mismas, `domain/src/access/admin.ts`, y esas ya las veta «las reglas del acceso».
+    - Comprobado con un mutante que importa la puerta por ruta relativa: la guarda lo nombra así.
+    - Por el alias `@atlas/domain`, la web ni siquiera compila `@atlas/domain/admin`.
+- **N8**: después de la marca, `forget-device` vuelve a barrer los tokens del dispositivo. Si se repite sobre uno ya olvidado, barre también: así se termina un corte entre la marca y el barrido.
+- **N9**: `restore --from` lee los bytes y los decodifica con `fatal: true`, también los de S3. Si no son UTF-8, `restore_candidate_invalid` con `not_utf8`, antes del paso 3.
+- **Preferencias**:
+  - la pregunta de olvidar enseña «consola, «sobremesa», última sincronización …»;
+  - las credenciales exportadas van en una subshell;
+  - `backup --from-bucket` salta las claves raras, copia el resto y sale con 1 nombrándolas (`7dbbcdc`).
+
+### 35.4 Mutantes
+
+Las listas están en el *scratchpad*: `015-r35-b1.json`, `015-r35-sec.json` y `015-r35-doc.json`, con sus salidas. **Los 21, muertos.**
+
+| Mutante | Qué hace | Vivo antes |
+|---|---|---|
+| R35-B2, R35-N1, R35-N2 | Diferido restado, sin avisos, todo punto como fiscal | **Sí**, con el test de `5bfd0dd^` |
+| R35-B1-remedy (dominio y consola) | La marcada sigue inválida aunque esté anulada | Es el código de antes; el test nuevo se vio en rojo |
+| R35-B1-reversal | Una anulación marcada anula | — (el test se escribió con el código de antes, que ya lo hacía bien) |
+| R35-B1-cli-never, R35-B1-cli-always | `delete` nunca repara, o repara siempre | «never» es el código de antes: el test del remedio se vio en rojo |
+| S-N1-yes, S-N1-any, S-N2, S-N6-env, S-N6-own, S-N8-after, S-N8-again, S-N9, S-skip | La conducta de antes de cada corrección | Es el código de antes, con sus tests en verde: la CI de `ef6115d` |
+| S-N7-static | La web importa `@atlas/domain/admin` | El guardián de antes no vetaba `domain/src/admin.ts` |
+| S-N3-value, S-N3-check, S-N3-echo | El procedimiento con `--value` separado, sin contar el ilegible, o con `echo` | No había ensayo |
+
+### 35.5 *Commits* que no pasan solos, dichos
+
+Los *commits* `6f00ac8` a `310cec6` no pasan el typecheck por sí solos. `tests/runbook-revoke-all.test.ts` importaba el dominio por ruta relativa, fuera del `rootDir` de `tests/`. Lo corrige `b3dd724`, que lo importa por su puerta, `@atlas/domain/access`.
+
+Ese typecheck fallido dejó ficheros compilados junto a las fuentes del dominio: 40 ficheros de `access/`, `errors` y `guards`, ignorados por git. Los borré antes de seguir. El ejecutor de mutantes se negaba a correr con ellos.
