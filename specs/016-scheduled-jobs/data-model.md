@@ -22,7 +22,9 @@ Un objeto por tarea y periodo; lo escribe **solo** la función de su familia (`e
 | `findings?` | `{ code, subject, counts?, dates? }` (plan §5.4). **`subject` nunca es un `asset_id`, un símbolo, un ISIN, una cuenta ni un importe**: una fuente, un `thesis_id`, `ecb`, `backup`, `integrity` |
 | `objects?` | solo el volcado: `[{ key, sha256, kept_from_earlier_attempt? }]` |
 
-- Un registro ilegible **no** cuenta como libre: la tarea se niega (`job_record_unreadable`) y el correo lo avisa como `task_failed`.
+- Un registro ilegible **no** cuenta como libre: la tarea se niega (`job_record_unreadable`, con un `ERROR`). **Salvo el recordatorio mensual**, que lo reclama con `If-Match` sobre su ETag y envía, para no perder el mes; uno de un formato más nuevo no se toca nunca. El de un productor lo avisa el correo como `record_unreadable`, con la tarea como `subject` (revisión de la PR #104, N4).
+- Un registro `claimed` o `sending` reclamado hace menos que `ATLAS_JOB_MAX_RUN_SECONDS` es de una ejecución que puede seguir en marcha: nadie lo retoma (`job_in_progress`, N3).
+- **Los `findings` de un registro nunca traen `task_failed` ni `record_unreadable`**: los fabrica la función de correo, y de un productor solo se envían sus códigos con sus asuntos, de listas cerradas (revisión de la PR #104, privacidad B1).
 - Los registros **no se borran** (ningún rol tiene `DeleteObject`): unos cientos al año, bytes.
 
 ## 2. La racha de un aviso: `jobs/mail/notices/<code>--<subject>.json`

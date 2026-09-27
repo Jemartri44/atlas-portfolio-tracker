@@ -208,10 +208,13 @@ Formato en `data-model.md` §1. Clave `jobs/<familia>/<tarea>/<periodo>.json`; *
 | Estado leído | Recordatorio mensual (al menos una vez) | Avisos (como mucho una vez) | Tareas sin correo (BCE, precios, volcado, integridad) |
 |---|---|---|---|
 | ninguno | reclamar (`If-None-Match: *`) → hacer | ídem | ídem |
-| `claimed` | rehacer y enviar otra vez (el asunto lleva el periodo) | rehacer **sin enviar** si el registro dice `sending`; si no, enviar | rehacer: cada paso es idempotente (§7, §8) |
+| `claimed` o `sending`, reclamado hace **menos** que el tiempo máximo de la Lambda (`ATLAS_JOB_MAX_RUN_SECONDS`, 900 s) | nada: `job_in_progress`, otra ejecución puede seguir en marcha (revisión de la PR #104, N3) | ídem | ídem |
+| `claimed` | rehacer y enviar otra vez (el asunto lleva el periodo) | rehacer y enviar: no llegó a `sending` | rehacer: cada paso es idempotente (§7, §8) |
 | `sending` | — (no se usa) | cerrar como `send_unknown`, **sin enviar** | — |
 | `send_failed` | enviar otra vez | enviar otra vez: SES dijo que no | — |
-| `done` / `failed` | nada | nada | `done`: nada. `failed`: se reintenta en la ejecución del día siguiente dentro del periodo |
+| `failed` | **rehacer** (el correo mensual no se pierde) | rehacer: `failed` solo se escribe si el *runner* falló **antes** de marcar `sending`; si falla después, se cierra como `send_unknown` (revisión de la PR #104, B1) | se reintenta en la ejecución siguiente dentro del periodo |
+| `done` / `send_unknown` | nada | nada | nada |
+| ilegible | se reclama con `If-Match` sobre su ETag, con un `ERROR`, y se envía (revisión de la PR #104, N4); uno de un formato más nuevo no se toca | nada, con un `ERROR`; la función de correo lo avisa como `record_unreadable` si es de un productor | ídem |
 
 - Transiciones con `If-Match` sobre el ETag leído; un `precondition_failed` aborta la tarea sin reintentar (otra ejecución la tiene), con el código `job_record_conflict`.
 - **El manejador nunca lanza por un fallo previsto**: lo cierra como `failed` con su código y devuelve normalmente, para que Lambda no reintente (questions §1.4). Lanza solo si no puede ni escribir el registro.
