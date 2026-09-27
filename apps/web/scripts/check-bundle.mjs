@@ -658,8 +658,14 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15;
  * export gives what is held apart — the shared chunk of the domain of the
  * sync, reached now from two lazy chunks. The trend: 272,2 → 273,3 → 275,6 →
  * 276,5 → 277,6.
+ *
+ * **E4, the device of the web (2026-09-27): measured 284.533 (+293), ceiling
+ * 284.789 — measured + 256**, raised before the commit that needs it. Lazy:
+ * the sentences of `sync_device_changed`, `sync_device_unknown` and
+ * `sync_already_configured` (`errors`), and the key of the device in the
+ * store of the sync.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 277 * 1024 + 848;
+const TOTAL_BUDGET_GZIP_BYTES = 277 * 1024 + 1141;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
