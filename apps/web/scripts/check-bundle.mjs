@@ -451,7 +451,14 @@ const dist = join(webRoot, "dist");
  * the row of the tax card, the row kept in *Atención* and the pending of one
  * line. The trend: 75.034 → 75.059 → 75.339.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_359;
+/*
+ * **Feature 020, E2, measured in Chromium (2026-09-27): 75.361 (+27 over the
+ * 75.334 of M8), ceiling 75.381 — measured + 20**, raised before the commit
+ * that needs it, inside the authorisation (76.069). The row kept in
+ * *Atención* gets the height of the notice that fills it, so nothing in the
+ * first screenful jumps. The trend: 75.339 → 75.334 → 75.361.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_381;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
