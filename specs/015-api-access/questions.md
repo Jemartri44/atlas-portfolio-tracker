@@ -1943,3 +1943,60 @@ Con el guardián de memoria y secuenciales: `015-r97r2-b1.json`, `015-r97r2-n1.j
   - sigue pendiente del permiso `workflow` para que la CI guarde la cobertura cuando falle.
 - **El paquete**: arranque 76.055 (techo 76.069, que es la autorización) y total 300.299 (techo 300.436).
 - **La CI** corre en la PR y su resultado va en el mapa.
+
+## 32. E5, arranque: lo que dejó E4 y Q12 (2026-09-27) — PARADO en Q12
+
+E4 está fusionada en `develop` (PR #97, `640fa98`), y la ronda 3 converge (comentario 5854463150). E5 sigue en la misma rama y el mismo *worktree*.
+
+### 32.1 Lo que dejó E4
+
+- **O2** (`5c5c085`): `apps/web/test/export-held-chip.test.tsx` recorre la exportación y el aviso en una misma visita, con el doble de IndexedDB como el del navegador.
+  - Exportar con una retenida deja el aviso en «falta descargar lo retenido».
+  - «Descargar lo retenido» lo quita sin recargar.
+  - Mata M7 (`downloadHeld` sin `markSource`, `export.ts:66-71`) y M8 (`exportLedger` que anota `undefined`, `export.ts:111`). Los dos sobrevivían en la ronda 3.
+- **O1** (`1fa783f`): el cierre inverso del motor en `check-bundle.mjs` **recorre ya el grafo entero**, más allá de los cargadores.
+  - Admite `App.tsx`, `main.tsx` e `index.html` **solo como ancestros a través de la página**: con la página como barrera, ninguno de los tres puede alcanzar el motor.
+  - **Mutante**: un temporizador por `App.tsx` combinado con la vía 1. `SessionCard.tsx` y la página reexportan `createSyncController`, `App.tsx` entrega la página en diferido, y `no-existe.tsx` lo llama con `setInterval`.
+    - Contra el grafo de `2ff8111`: la construcción falla **solo por bytes**, sin mensaje de regla, así que sobrevive a la regla.
+    - Con `1fa783f`: **muere** («`no-existe.tsx` alcanza el motor de la sincronización de la web desde fuera de su sección»).
+    - Las reglas estáticas también lo matan.
+  - Ficheros: `015-e5-e4left.json` y sus registros en el *scratchpad*.
+
+### 32.2 Q12, opción (b): no cabe — **PARADO, a la espera de la dirección**
+
+**Medida del prototipo, sin *commit* y ya deshecho**:
+- `decodeLine` marca con un `WeakSet` el evento cuya línea repite una clave (`repeatsKey`, que ya existe en el dominio);
+- el paso 0 de `projectLedger` lo rechaza con `duplicate_key`, así que la proyección degradada lo deja inválido.
+
+| | Arranque (bytes gzip) |
+|---|---:|
+| E4 cerrada (`3e63843`) | 76.055 |
+| Con el prototipo de Q12 | **76.243** (+188) |
+| Tope autorizado (no se sube) | 76.069 |
+| **Falta** | **174** |
+
+El coste es `repeatsKey` (930 bytes sin comprimir en `json-keys.ts`, hoy fuera del arranque) más la marca y la comprobación. **Ni recortado cabe en 14 bytes.**
+
+**De dónde sacar los bytes. Propuestas, para que decida la dirección:**
+
+1. **Sacar del arranque código del dominio que solo usan pantallas perezosas.** Los metió el grupo `domain` de `advancedChunks` (feature 010) a través del barril `@atlas/domain`. Candidatos, en bytes sin comprimir en el arranque, y **solo los usan pantallas perezosas**:
+   - `projections/corporate-action-draft.ts`: 5.788 (lo usan el formulario corporativo y `view-models/forms/corporate`);
+   - `projections/deep-check.ts`: 3.572 (la verificación y `format/messages/findings`);
+   - `projections/simulate-transfer.ts`: 3.265 (`cartera/TransferSimulator` y `view-models/core/transfer`).
+   - **Probado**: quitarlos solo del grupo no mueve nada (76.243 igual), porque el barril los importa. Hay que darles **una puerta propia**, como `@atlas/domain/fiscal`, y que las pantallas perezosas los importen de ella.
+   - **Estimación sin medir**: entre 3 y 4 KB gzip menos en el arranque, muy por encima de los 174 que faltan. Hay que descontar la fontanería de un trozo más (la feature 010 midió 1,3 KB al partir el dominio en dos trozos de arranque; aquí el trozo nuevo sería perezoso, no de arranque).
+   - **Si la dirección lo aprueba, lo mido con un prototipo antes de construirlo.**
+2. **Q12 (b) fuera del arranque de la web** (coste en el arranque: 0 bytes).
+   - La marca solo la ponen la carga de la consola, `atlas check` y la verificación de la web, todas perezosas o fuera del paquete web.
+   - La sincronización la retiene en el paso 3 (`inspect`, en el trozo perezoso de la sincronización) con `domain_rejected` y `duplicate_key`, antes de subirla.
+   - **Lo que cambia respecto a (b)**: la pantalla de inicio de la web **no** contaría esa línea como inválida hasta abrir la verificación o sincronizar. El resto de (b) se cumple.
+3. **Subir la autorización del arranque** a 76.300, por ejemplo. La dirección ya dijo que no; lo dejo solo para que la tabla esté completa.
+
+**Recomiendo la 1**: libra el arranque de mucho más de lo que pide Q12, deja sitio a lo que venga y no rebaja (b). Si hay prisa, la 2 cumple lo esencial de (b) sin tocar el arranque.
+
+### 32.3 Lo que falta, sin empezar hasta que decidas Q12
+
+- **El punto 4, la cobertura intermitente**: la investigación en local (varias pasadas con los ajustes de la CI, guardando cada `coverage-final.json`) y la propuesta de configuración, sin aplicarla.
+- **E5 entero**, con los bloques 0 a 3 del encargo.
+
+Paré aquí, como pediste para el caso de que Q12 no cupiera. Si prefieres que siga con el punto 4 y con E5 mientras decides Q12, son independientes de ella.
