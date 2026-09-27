@@ -229,6 +229,30 @@ describe("the card of the sync", () => {
     await press(host, "Sí, seguir");
     await until(() => (host.textContent ?? "").includes("Descargado de nuevo"), "descargado");
     expect(await browser.web.text()).toBe(textOf(base()));
+    // Downloaded again, it is not offered any more (review of PR #97, correctness N1).
+    expect(button(host, "Volver a descargar")).toBeUndefined();
+    // And what it held back is said, with caution (N3): the line the cloud lost.
+    expect(host.textContent).toContain("1 operación retenida de las que había aquí");
+  });
+
+  // Review of PR #97, correctness N3.
+  it("says how many operations joining from the cloud held back, with caution", async () => {
+    const api = apiAt();
+    const first = await browserOf(base(), api);
+    await startSync(first.env, "init");
+    const own = new Builder(60);
+    own.deposit("250");
+    own.deposit("260", "2027-01-13");
+    const second = await browserOf([...base(), ...own.events], api);
+    const host = await show(second);
+    await press(host, "Unirme desde la nube");
+    await press(host, "Sí, seguir");
+    await until(() => (host.textContent ?? "").includes("Sincronización iniciada"), "unido");
+    expect(host.textContent).toContain("2 operaciones retenidas de las que había aquí");
+    const notice = [...host.querySelectorAll(".notice")].find((node) =>
+      (node.textContent ?? "").includes("Sincronización iniciada"),
+    );
+    expect(notice?.className).toContain("is-caution");
   });
 
   // Review of PR #97, security N4: discarding asks first; confirming does not.
