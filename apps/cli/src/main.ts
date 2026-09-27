@@ -24,8 +24,10 @@ import {
   type UseCaseDeps,
 } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
+import type { AdminAccess } from "./admin/environment.js";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
+import { adminCommand } from "./commands/admin.js";
 import { backupCommand } from "./commands/backup.js";
 import { bucketCommand, netWorthCommand } from "./commands/bucket.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
@@ -101,6 +103,7 @@ export const COMMANDS: Record<string, Command> = {
   draft: draftCommand,
   prices: pricesCommand,
   remote: remoteCommand,
+  admin: adminCommand,
   sync: syncCommand,
 };
 
@@ -148,6 +151,7 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   prices: { update: 2, status: 2, symbols: 4, purge: 3 },
   draft: { list: 2, confirm: 3, discard: 3 },
   remote: { login: 2, logout: 2, status: 2 },
+  admin: { devices: 2, "revoke-all-tokens": 2, "forget-device": 3, compact: 2, restore: 2 },
   sync: {
     status: 2,
     held: 2,
@@ -191,7 +195,7 @@ comandos:
   networth [--date]   bucket [--date]
   transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
   export --format jsonl|csv [--out <ruta>]
-  synth --out <ruta> [--seed <n>]   backup --to <directorio>
+  synth --out <ruta> [--seed <n>]   backup --to <directorio> [--from-bucket --env <entorno>]
   compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada
   lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición
   fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor
@@ -210,7 +214,9 @@ comandos:
   sync init [--origin <https://…>] [--device <id>]   sube el libro entero a una nube vacía
   sync join --from-remote|--with-own-lines [--origin <https://…>] [--device <id>]   se une a una nube con libro
   sync redownload                vuelve a descargar la nube tras una reescritura (solo si lo pides)
-  sync deactivate                desactiva la sincronización; lo retenido se queda`;
+  sync deactivate                desactiva la sincronización; lo retenido se queda
+  admin devices|revoke-all-tokens|forget-device <id> [--force]|compact|restore --from <copia> --env <entorno>
+                                 la administración de la nube, con el rol de administración y nunca por la API`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
@@ -246,9 +252,11 @@ export const run = async (
   prices?: PriceEnvironment,
   /** The network, the credentials and the browser of `atlas remote`; replaced in tests. */
   remote?: RemoteEnvironment,
+  /** The clients of the administration; replaced in tests, which never reach AWS. */
+  admin?: AdminAccess,
 ): Promise<number> => {
   let remind: string | undefined;
-  const code = await dispatch(argv, io, compose, fxSource, prices, remote, (path) => {
+  const code = await dispatch(argv, io, compose, fxSource, prices, remote, admin, (path) => {
     remind = path;
   });
   // Said after every command, whatever it did, failures included: a draft
@@ -269,6 +277,7 @@ const dispatch = async (
   fxSource: (() => FxRateSource) | undefined,
   prices: PriceEnvironment | undefined,
   remote: RemoteEnvironment | undefined,
+  admin: AdminAccess | undefined,
   /** Where the reminder of pending drafts looks, once a command is going to run. */
   remindAt: (ledgerPath: string) => void,
 ): Promise<number> => {
@@ -297,6 +306,7 @@ const dispatch = async (
       ...(fxSource === undefined ? {} : { fxSource }),
       ...(prices === undefined ? {} : { prices }),
       ...(remote === undefined ? {} : { remote }),
+      ...(admin === undefined ? {} : { admin }),
     };
     if (name !== "draft") {
       remindAt(ledgerPath);

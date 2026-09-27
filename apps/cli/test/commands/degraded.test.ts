@@ -164,6 +164,14 @@ const INVOCATIONS: {
   // The sync reads the folder's own state (sync/) and its remote; it never
   // shows the figures of the ledger (feature 015, E3).
   { command: "sync", argv: ["sync", "held"], readOnly: true, folderOnly: true },
+  // The administration works on the remote with the role of administration,
+  // never on the figures of the local ledger (feature 015, E5).
+  {
+    command: "admin",
+    argv: ["admin", "devices", "--env", "test"],
+    readOnly: true,
+    folderOnly: true,
+  },
 ];
 
 const HEADER = "inválido";

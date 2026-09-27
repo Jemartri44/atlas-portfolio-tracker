@@ -1,5 +1,6 @@
 import type { LedgerEvent, UseCaseDeps, Warning } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
+import type { AdminAccess } from "./admin/environment.js";
 import type { Flags } from "./args.js";
 import { describeWarning } from "./output/messages.js";
 import type { PriceEnvironment } from "./prices/load.js";
@@ -28,6 +29,13 @@ export interface Context {
   prices?: PriceEnvironment;
   /** The network, the credentials and the browser of `atlas remote`; the system's when absent. */
   remote?: RemoteEnvironment;
+  /**
+   * The clients of the administration (`atlas admin`, `atlas backup
+   * --from-bucket`), with the role of administration; the system's — the
+   * standard chain of the SDK — when absent. Replaced in tests, which never
+   * reach AWS.
+   */
+  admin?: AdminAccess;
 }
 
 export type Command = (ctx: Context, positionals: string[], flags: Flags) => Promise<number>;

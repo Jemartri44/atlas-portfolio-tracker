@@ -46,6 +46,9 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "from-remote",
   "with-own-lines",
   "reversal-only",
+  // Feature 015, E5: `atlas admin forget-device` and `atlas backup`.
+  "force",
+  "from-bucket",
   "lots",
   "manual",
   "neutrality-regime",

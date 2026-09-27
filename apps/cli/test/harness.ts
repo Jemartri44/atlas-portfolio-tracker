@@ -2,6 +2,7 @@
 
 import { MemoryLedgerStore } from "@atlas/adapters";
 import type { LedgerEvent, LedgerSchema, UseCaseDeps } from "@atlas/domain";
+import type { AdminAccess } from "../src/admin/environment.js";
 import type { Io } from "../src/context.js";
 import { run } from "../src/main.js";
 
@@ -30,6 +31,10 @@ export interface HarnessOptions {
   /** Answer given to confirmations; `undefined` simulates a non-interactive terminal. */
   confirm?: boolean;
   instant?: string;
+  /** The clients of the administration (`atlas admin`, `atlas backup --from-bucket`): doubles. */
+  admin?: AdminAccess;
+  /** Where the command believes its ledger is (`--ledger`), for the orders that look at its folder. */
+  ledgerPath?: string;
 }
 
 export const harness = (options: HarnessOptions = {}): Harness => {
@@ -58,7 +63,16 @@ export const harness = (options: HarnessOptions = {}): Harness => {
     store,
     out,
     err,
-    exec: (argv) => run(argv, io, () => deps),
+    exec: (argv) =>
+      run(
+        options.ledgerPath === undefined ? argv : [...argv, "--ledger", options.ledgerPath],
+        io,
+        () => deps,
+        undefined,
+        undefined,
+        undefined,
+        options.admin,
+      ),
     setInstant: (value) => {
       instant = value;
     },
