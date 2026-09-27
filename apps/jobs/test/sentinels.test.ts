@@ -28,6 +28,17 @@ beforeEach(() => {
     });
   }
 });
+// The console of Node too: vitest takes it before it reaches a stream, so a
+// `console.log` would never be seen above (mutant 15 of E2 survived that way).
+beforeEach(() => {
+  for (const method of ["log", "info", "warn", "error", "debug"] as const) {
+    vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+      written.push(
+        args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" "),
+      );
+    });
+  }
+});
 afterEach(() => {
   vi.restoreAllMocks();
 });
