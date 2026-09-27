@@ -2416,3 +2416,18 @@ Las listas están en el *scratchpad*: `015-r35-b1.json`, `015-r35-sec.json` y `0
 Los *commits* `6f00ac8` a `310cec6` no pasan el typecheck por sí solos. `tests/runbook-revoke-all.test.ts` importaba el dominio por ruta relativa, fuera del `rootDir` de `tests/`. Lo corrige `b3dd724`, que lo importa por su puerta, `@atlas/domain/access`.
 
 Ese typecheck fallido dejó ficheros compilados junto a las fuentes del dominio: 40 ficheros de `access/`, `errors` y `guards`, ignorados por git. Los borré antes de seguir. El ejecutor de mutantes se negaba a correr con ellos.
+
+### 35.6 La tubería, la CI y el congelado
+
+**El código queda congelado en `b3dd724`.** Lo posterior son documentos.
+
+La tubería completa corrió sobre `5a179fc`, con un trabajador y detrás de la puerta de memoria. Todos los pasos salieron con 0:
+
+| Paso | Resultado |
+|---|---|
+| lint, typecheck | 0 |
+| el dominio, dos veces | 1.589 tests; 100 % (5.058/5.058 ramas; 7.996/7.996 líneas); 170 s y 200 s |
+| el resto, dos veces | 1.580 tests; 693 s y 637 s |
+| build | Arranque 74.114, total 301.364 |
+
+La CI, en la PR.
