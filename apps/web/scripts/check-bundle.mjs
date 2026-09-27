@@ -737,7 +737,15 @@ const BOOT_BUDGET_GZIP_BYTES = 76_069;
  * the entry (+606 on the boot) and was dropped. The trend: 292,0 → 292,3 →
  * 293,1.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 293 * 1024 + 404;
+/*
+ * **Feature 015, E5, the door `@atlas/domain/tools` (2026-09-27): measured
+ * 301.240 (+941 over 300.299), ceiling 301.496 — measured + 256**, raised
+ * before the commit that needs it, inside the authorisation (up to 304.640).
+ * The draft of a corporate action, the deep check and the simulation of a
+ * transfer leave the boot (−2.166 on it) for a lazy chunk of their own
+ * (`tools`), and a chunk more costs its plumbing and its compression apart.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 294 * 1024 + 440;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
