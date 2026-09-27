@@ -325,4 +325,36 @@ describe("a line with a key twice", () => {
     expect(await h.exec(["positions"])).toBe(0);
     expect(h.text()).toContain(HEADER);
   });
+
+  // The remedy the message gives, walked whole (review of PR #98, B1; §35):
+  // annulled, the line stops being invalid, and every output that refused the
+  // ledger answers again.
+  it("is remedied by annulling it: check, compact, the renta and the 720 answer again", async () => {
+    const h = twice();
+    expect(await h.exec(["tax", "2027"])).not.toBe(0);
+    expect(h.text()).toContain("tax_ledger_invalid");
+    h.reset();
+    const code = await h.exec([
+      "delete",
+      "01ARYZ6S41TSV4RRFFQ69G5SET",
+      "--reason",
+      "clave repetida",
+      "--yes",
+    ]);
+    expect(code).toBe(0);
+    expect(h.text()).toContain("Registrado reversal");
+    h.reset();
+    expect(await h.exec(["check"])).toBe(0);
+    expect(h.text()).not.toContain("duplicate_key");
+    for (const argv of [
+      ["compact", "--yes"],
+      ["tax", "2027"],
+      ["m720", "2027"],
+    ]) {
+      h.reset();
+      expect({ argv, code: await h.exec(argv) }).toEqual({ argv, code: 0 });
+      expect(h.text()).not.toContain("tax_ledger_invalid");
+      expect(h.text()).not.toContain("invalid_events");
+    }
+  });
 });

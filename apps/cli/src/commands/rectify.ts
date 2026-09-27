@@ -170,7 +170,13 @@ export const deleteCommand = async (
 ): Promise<number> => {
   const id = requireId(positionals, 1, "uso: atlas delete <id> --reason …");
   const reason = requireFlag(flags, "reason");
-  const { events } = await loadAndProject(ctx.deps);
+  // A degraded ledger still refuses every other mutation, but annulling one of
+  // its invalid events is the repair the messages give (ADR-0015; review of
+  // PR #98, B1): that one is read in degraded mode, and `reverseEvent` refuses
+  // only what it would itself leave invalid.
+  const degraded = await loadAndProject(ctx.deps, { collectErrors: true });
+  const repairs = degraded.state.invalid.some((entry) => entry.event.id === id);
+  const { events } = repairs ? degraded : await loadAndProject(ctx.deps);
   const target = findEvent(events, id);
   preview(ctx, `Evento a anular ${summarize(target)}:`, draftOf(target));
   for (const line of await closedNotes(ctx, () => previewReversal(ctx.deps, id, reason))) {
