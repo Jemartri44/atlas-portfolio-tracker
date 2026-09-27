@@ -14,7 +14,9 @@ const RECORD = "jobs/mail/weekly_review/2026-W40.json";
 
 /** A warning sent at most once; `throwBefore`/`throwAfter` break it on either side of the send. */
 const warning =
-  (options: { throwBefore?: boolean; throwAfter?: boolean } = {}): TaskRunner =>
+  (
+    options: { throwBefore?: boolean; throwAfter?: boolean; failAfter?: boolean } = {},
+  ): TaskRunner =>
   async (context) => {
     if (options.throwBefore === true) {
       throw new Error("before");
@@ -26,6 +28,9 @@ const warning =
     });
     if (options.throwAfter === true) {
       throw new Error("after");
+    }
+    if (options.failAfter === true) {
+      return { state: "failed", outcome: { code: "compose_failed" } };
     }
     return sent.ok
       ? { state: "done", outcome: { code: "mail_sent" } }
@@ -78,6 +83,19 @@ describe("a delivery at most once, cut (R10)", () => {
     expect(JSON.parse(jobs.s3.text(RECORD) as string)).toMatchObject({
       state: "send_unknown",
       outcome: { code: "task_error" },
+    });
+    jobs.setNow("2026-10-02T06:00:00Z");
+    await jobs.run(["weekly_review"], "req-2");
+    expect(jobs.ses.attempts).toHaveLength(1);
+  });
+
+  it("closes as `send_unknown`, not `failed`, when the runner returns `failed` after `sending` (R2-B1)", async () => {
+    const jobs = setupJobs({ env: ENV, runners: { weekly_review: warning({ failAfter: true }) } });
+    await jobs.run(["weekly_review"]);
+    expect(jobs.ses.sent).toHaveLength(1);
+    expect(JSON.parse(jobs.s3.text(RECORD) as string)).toMatchObject({
+      state: "send_unknown",
+      outcome: { code: "compose_failed" },
     });
     jobs.setNow("2026-10-02T06:00:00Z");
     await jobs.run(["weekly_review"], "req-2");

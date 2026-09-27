@@ -151,8 +151,11 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
       result = { state: sending ? "send_unknown" : "failed", outcome: { code: "task_error" } };
       say({ level: "ERROR", code: "task_error", error_name: errorName(error) });
     }
+    // A run that marked `sending` and then says it failed may have sent: the
+    // same as a throw after it, `send_unknown` (round 2 of the review, R2-B1).
+    const state = sending && result.state === "failed" ? "send_unknown" : result.state;
     await store.writeRecord(
-      recordIn(record, result.state, at(), {
+      recordIn(record, state, at(), {
         outcome: result.outcome,
         ...(result.findings === undefined || result.findings.length === 0
           ? {}
@@ -162,7 +165,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
       etag,
     );
     say({
-      level: level(result.state),
+      level: level(state),
       code: result.outcome.code,
       ...(result.outcome.counts === undefined ? {} : { counts: result.outcome.counts }),
     });
