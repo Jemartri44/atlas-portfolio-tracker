@@ -894,28 +894,11 @@ const kb = (value) => `${(value / 1024).toFixed(1)} KB`;
  * compiled package.
  */
 const FORBIDDEN_IN_WEB = [
-  // The hard requirement of feature 014 (D-Q17): **until P2 and P3 are in
-  // (E4), the web reaches nothing that configures the sync**: the client and
-  // its orchestration (`initialiseRemote`, `joinWithOwnLines`,
-  // `replaceFromRemote`, `syncDevice`, the held actions) and the HTTP client
-  // of E3. **Loosened only in E4**, in the same commit as the guard of
-  // `tests/api-access.test.ts`, and only after the commits of P2 and P3.
-  {
-    anywhere: /(^|\/)packages\/adapters\/(src|dist)\/sync(-http)?\//,
-    what: "el cliente o la orquestación de la sincronización (D-Q17, hasta E4)",
-  },
-  // The engine of the domain, likewise until E4. The door `sync.ts` is
-  // loaded for the read-only question of the store of the sync, so its
-  // modules are in the graph; only those the export, the import and that
-  // question need may render a byte — named one by one, never by likeness.
-  // P2 and P3 (feature 015, E4, block 1) add two, both read-only: whether an
-  // import is admitted (`permission`) and what is held, for the export
-  // (`held`).
-  {
-    rendering:
-      /(^|\/)packages\/domain\/(src|dist)\/sync(\.[jt]s$|\/(?!(archive|lines|marker|permission|held)\.[jt]s$))/,
-    what: "el motor de la sincronización (D-Q17, hasta E4)",
-  },
+  // Feature 014 (D-Q17) kept the client of the sync, its orchestration, the
+  // engine of the domain and the writer of the store out of the web until
+  // P2 and P3 were in. They are (feature 015, E4), and the web configures the
+  // sync from one lazy module, `src/sync/engine.ts`: LAZY_ONLY keeps all of it
+  // off the boot, and `tests/api-access.test.ts` keeps it to that module.
   // The rules of the access are the API's, never the web's.
   {
     anywhere: /(^|\/)packages\/domain\/(src|dist)\/access(\.[jt]s$|\/)/,
@@ -943,25 +926,6 @@ const FORBIDDEN_IN_WEB = [
   },
   { anywhere: /^\.\.\//, what: "un módulo de fuera del repositorio" },
 ];
-
-/**
- * The store of the sync is bundled for one read-only question (V7 of the
- * 014), and that file also holds the writer of the `sync:*` keys. So its
- * **rendered exports**, what the bundle actually uses of it, are read by name:
- * the question and the names of the keys, never `BrowserSyncStore`. Loosened
- * in E4 with the rest.
- */
-const SYNC_STORE =
-  /(^|\/)packages\/adapters\/(src|dist)\/ledger-store\/browser\/sync-store\.[jt]s$/;
-const SYNC_STORE_READ_ONLY = new Set([
-  "browserSyncConfigured",
-  "browserSyncPresence",
-  "SYNC_STATE_KEY",
-  "SYNC_HELD_KEY",
-  "SYNC_DISCARDED_KEY",
-  // E4, block 2: the name of the key of the device the web joined with.
-  "SYNC_DEVICE_KEY",
-]);
 
 const repoRoot = realpathSync(resolve(webRoot, "..", ".."));
 const graphFile = join(dist, ".vite", "atlas-modules.json");
@@ -995,13 +959,6 @@ for (const build of builds) {
       // Compared **without the query**: `?raw` and `?url` of a vetoed module
       // are that module (round 3).
       refuse(`${build.label}${chunk.file}`, module.id, module.bytes);
-      if (SYNC_STORE.test(module.id)) {
-        for (const name of module.exports.filter((name) => !SYNC_STORE_READ_ONLY.has(name))) {
-          problems.push(
-            `${build.label}${chunk.file} usa ${name} del almacén de la sincronización, que solo se puede leer (D-Q17, hasta E4)`,
-          );
-        }
-      }
     }
   }
   // An asset is a file too: whatever it was emitted from falls under the rules.

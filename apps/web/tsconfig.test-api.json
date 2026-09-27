@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "noEmit": true,
+    "tsBuildInfoFile": "dist/tsconfig.test-api.tsbuildinfo",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["node"]
+  },
+  "include": [
+    "test/sync/engine.test.ts",
+    "src/sync/engine.ts",
+    "../api/test/harness.ts",
+    "../../packages/adapters/test/aws/test-only-fake-s3.ts",
+    "../../packages/adapters/test/aws/test-only-fake-ssm.ts",
+    "../../packages/adapters/test/identity/test-only-fake-google.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/adapters"
+    },
+    {
+      "path": "../../packages/adapters/tsconfig.test-sync.json"
+    },
+    {
+      "path": "../api"
+    }
+  ]
+}
