@@ -10,6 +10,7 @@ import {
   CURRENT_LEDGER_SCHEMA,
   DomainError,
   decodeLines,
+  type LedgerEvent,
   type LedgerState,
   projectLedger,
   type Settings,
@@ -18,7 +19,12 @@ import {
 import { linesOfText } from "@atlas/domain/sync";
 
 export type JobLedger =
-  | { readonly ok: true; readonly state: LedgerState; readonly settings: Settings }
+  | {
+      readonly ok: true;
+      readonly events: readonly LedgerEvent[];
+      readonly state: LedgerState;
+      readonly settings: Settings;
+    }
   | { readonly ok: false; readonly code: string };
 
 const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
@@ -38,11 +44,11 @@ export const loadLedger = async (objects: ObjectStore, today: CivilDate): Promis
   }
   try {
     const events = decodeLines(linesOfText(utf8.decode(bytes)), CURRENT_LEDGER_SCHEMA);
-    const state = projectLedger(events, { collectErrors: true });
+    const state = projectLedger(events, { collectErrors: true, asOf: today });
     if (state.invalid.length > 0) {
       return { ok: false, code: "ledger_invalid" };
     }
-    return { ok: true, state, settings: settingsAt(state, today).settings };
+    return { ok: true, events, state, settings: settingsAt(state, today).settings };
   } catch (error) {
     return {
       ok: false,

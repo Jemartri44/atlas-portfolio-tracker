@@ -6,13 +6,15 @@
 // has no runner yet, and says only the **name** of what failed: an error of
 // the SDK carries ARNs and account ids in its message (015, §26.1 N2).
 
+import { AlphaVantagePriceSource, EcbFxRateSource, EodhdPriceSource } from "@atlas/adapters";
 import type { ObjectStore, ParameterStore } from "@atlas/adapters/aws";
+import { SimulatedPriceSource } from "@atlas/adapters/aws-daily";
 import { type MailSender, sesNotifier } from "@atlas/adapters/aws-jobs";
 import { type Clock, ValidationError } from "@atlas/domain";
 import { type JobTask, parseJobsConfig } from "@atlas/domain/jobs";
 import { createJobsHandler, type JobsHandler } from "./handler.js";
 import { errorName, logLine } from "./log.js";
-import type { TaskRunner } from "./run.js";
+import type { JobSources, TaskRunner } from "./run.js";
 import { RUNNERS } from "./tasks/index.js";
 
 /** What production plugs in: the SDK stores, the sender of SES, the clock and the log. Simulated in the tests. */
@@ -21,9 +23,45 @@ export interface ProductionParts {
   readonly parameters: () => ParameterStore;
   /** Called only when the function is the mail's. */
   readonly mail: () => MailSender;
+  /** The `fetch` of the runtime, for the ECB and the price sources; a double in the tests. */
+  readonly fetch: (url: string, init?: { signal?: AbortSignal }) => Promise<Response>;
   readonly clock: Clock;
   readonly log: (line: string) => void;
 }
+
+/**
+ * The longest a call to a source may take (`questions.md` §14.1, point 3):
+ * the adapters of the 013 set none, and a source that hangs would take the
+ * whole Lambda. 41 calls at 15 s are 615 s, under its 900 s.
+ */
+export const SOURCE_TIMEOUT_MS = 15_000;
+
+const sourcesFor = (parts: ProductionParts): JobSources => {
+  const timed = (url: string) =>
+    parts.fetch(url, { signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS) });
+  return {
+    ecb: () => new EcbFxRateSource(timed, () => parts.clock.now()),
+    prices: (chosen, keys) =>
+      chosen === "simulated"
+        ? { eodhd: new SimulatedPriceSource() }
+        : Object.fromEntries(
+            chosen.flatMap((source) => {
+              const key = keys[source];
+              if (key === undefined) {
+                return [];
+              }
+              return [
+                [
+                  source,
+                  source === "eodhd"
+                    ? new EodhdPriceSource(key, timed)
+                    : new AlphaVantagePriceSource(key, timed),
+                ],
+              ];
+            }),
+          ),
+  };
+};
 
 /** The composition with the tasks built so far (`RUNNERS`). */
 export const compose = (
@@ -65,6 +103,9 @@ export const composeWith = (
               from: config.mail.from,
             }),
           }),
+      ...(config.family === "ecb" || config.family === "prices"
+        ? { sources: sourcesFor(parts) }
+        : {}),
       now: () => parts.clock.now(),
       log: parts.log,
     },
