@@ -4,10 +4,32 @@
 // a degraded ledger blocks **writing** only.
 
 import { A, Navigate } from "@solidjs/router";
-import { type JSX, Show } from "solid-js";
+import { createResource, type JSX, Show } from "solid-js";
 import { ErrorView, Notice, Skeleton } from "../components/index.js";
 import type { AppError, LedgerSnapshot } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
+
+/**
+ * Whether the sync is the cause of an invalid ledger (review of PR #97,
+ * correctness B1): D-Q1 lets a correction the sync holds back leave the
+ * ledger of this browser invalid, and that is resolved in the section of the
+ * sync in Ajustes, not in the verification. Read lazily, and only when the
+ * notice is painted; it only reads.
+ */
+const HeldCause = (): JSX.Element => {
+  const [pending] = createResource(() =>
+    import("../sync/held-pending.js").then((sync) => sync.browserHeldPending()).catch(() => 0),
+  );
+  return (
+    <Show when={(pending() ?? 0) > 0}>
+      <p>
+        <strong>La causa es lo que la sincronización retiene</strong>: mientras no se resuelva, tus
+        datos aquí pueden quedar incompletos. Se resuelve en{" "}
+        <A href="/ajustes#sincronizacion">Ajustes › Sincronización › Retenidas</A>.
+      </p>
+    </Show>
+  );
+};
 
 interface RequireLedgerProps {
   /** Painted with the loaded ledger. */
@@ -73,6 +95,7 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
                 >
                   Mientras haya eventos inválidos solo se puede registrar un cambio de
                   configuración. Rectifica lo que falla y vuelve.
+                  <HeldCause />
                 </Notice>
               }
             >

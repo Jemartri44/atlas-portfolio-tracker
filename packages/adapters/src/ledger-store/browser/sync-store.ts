@@ -24,11 +24,13 @@ import {
 import type { DeviceChange, DeviceState, SyncStateStore } from "@atlas/domain/sync";
 import {
   linesOfText,
+  parseHeld,
   parseMarker,
   recordsText,
   type SyncPresence,
   serializeMarker,
   syncConfiguredByText,
+  unresolvedHeld,
 } from "@atlas/domain/sync";
 
 import { LEDGER_STORE, openAtlasDb, StorageUnavailable } from "./idb.js";
@@ -116,6 +118,31 @@ export const browserSyncConfigured = (open: Opener = openAtlasDb): Promise<boole
         // The error as the browser gives it: this read sits on the path of a
         // write that already reports storage failures in its own words.
         tx.onabort = () => reject(tx.error);
+      }),
+  );
+
+/**
+ * How many units the sync holds back unresolved, for the notice of an invalid
+ * ledger (review of PR #97, correctness B1: D-Q1 lets a held correction leave
+ * the ledger invalid, and the notice has to say that is the cause). Read
+ * only; a held file that cannot be read counts as one: something is held, and
+ * it has to be looked at.
+ */
+export const browserHeldPending = (open: Opener = openAtlasDb): Promise<number> =>
+  open().then(
+    (db) =>
+      new Promise<number>((resolve, reject) => {
+        const tx = db.transaction(LEDGER_STORE, "readonly");
+        let pending = 0;
+        readRaw(tx.objectStore(LEDGER_STORE), (raw) => {
+          try {
+            pending = unresolvedHeld(parseHeld(raw.held ?? "")).length;
+          } catch {
+            pending = 1;
+          }
+        });
+        tx.oncomplete = () => resolve(pending);
+        tx.onabort = () => reject(new StorageUnavailable(tx.error));
       }),
   );
 

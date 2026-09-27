@@ -521,7 +521,13 @@ describe("architecture (015): the web configures the sync only through its engin
     join(webSrc, "sync", "engine.ts"),
     join(webSrc, "sync", "engine-held.ts"),
   ]);
-  const READ_ONLY = new Set(["browserSyncConfigured", "browserSyncPresence"]);
+  const READ_ONLY = new Set([
+    "browserSyncConfigured",
+    "browserSyncPresence",
+    // Review of PR #97, correctness B1: how many units are held back, for the
+    // notice of an invalid ledger.
+    "browserHeldPending",
+  ]);
   const DOORS = /^@atlas\/(adapters\/sync(-client|-http)?|domain\/sync)$/;
 
   /**
