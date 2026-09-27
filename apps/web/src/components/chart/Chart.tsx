@@ -129,11 +129,8 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         font: axisFont(),
         grid: { stroke: cssValue("--c-chart-grid"), width: 1 },
         ticks: { show: false },
-        // With the mask on the axis carries no figure at all: the grid stays,
-        // so the shape reads, and no line says how much (brief §7).
+        // No figure with the mask (brief §7); off, «0 €» clear of the plot (PR #105).
         size: privacy ? 8 : 60,
-        // Room between a figure and the plot: «0 €» touched the first point of
-        // the bucket at 400px (round 1 of the review of PR #105).
         gap: privacy ? 0 : 10,
         values: (_plot, splits) => splits.map((value) => axisAmount(value, privacy)),
       },

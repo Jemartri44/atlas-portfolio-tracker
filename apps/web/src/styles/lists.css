@@ -153,8 +153,9 @@ a.row:hover {
 }
 
 /*
- * A row whose link is its date (the movements, feature 020, M13): the date in
- * ink and the whole row the target, instead of a column of underlined dates.
+ * A row whose link is its date (feature 020, M13): the date in ink and the
+ * whole row the target. What the row says besides it stays above the link,
+ * so its title shows and its text selects (PR #105, round 1, N1).
  */
 .table tr:has(.row-link) {
   position: relative;
@@ -175,11 +176,6 @@ a.row:hover {
   background-color: var(--c-fill-hover);
 }
 
-/*
- * What the row says besides its link stays above it, so its title shows on
- * hover (the whole of a cut name, why a row is «(registro)» or invalid) and
- * its text can be selected (round 1 of the review of PR #105, N1).
- */
 .table tr:has(.row-link) :is(.cell-trunc, .meta, .tag) {
   position: relative;
   z-index: 1;
