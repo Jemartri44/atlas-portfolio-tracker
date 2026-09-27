@@ -113,15 +113,22 @@ describe("atlas backup --from-bucket (§7 P5)", () => {
     expect(api.s3.keys().map((key) => [key, api.s3.etagOf(key)])).toEqual(before);
   });
 
-  it("refuses a key that would leave the destination, and goes with --env only", async () => {
+  it("skips a key that would leave the destination, copies the rest, and fails at the end", async () => {
     const api = setup();
     api.s3.seed("documents/../../fuera.txt", "x");
+    api.s3.seed("imports/ibkr/2026-09.csv", "a,b");
     const f = await folder(api);
     const target = join(f.dir, "..", `copies-unsafe-${Date.now()}`);
     expect(await f.atlas("backup", "--to", target, "--from-bucket", "--env", "test")).toBe(
       EXIT.domain,
     );
     expect(f.text()).toContain("bucket_key_unsafe");
+    expect(f.text()).toContain("documents/../../fuera.txt");
+    // The rest is copied all the same, and nothing left the destination.
+    expect(await readFile(join(target, "bucket", "imports", "ibkr", "2026-09.csv"), "utf8")).toBe(
+      "a,b",
+    );
+    await expect(readFile(join(target, "..", "fuera.txt"), "utf8")).rejects.toThrow();
     expect(await f.atlas("backup", "--to", `${target}-2`, "--from-bucket")).toBe(EXIT.usage);
     expect(await f.atlas("backup", "--to", `${target}-3`, "--env", "test")).toBe(EXIT.usage);
   });

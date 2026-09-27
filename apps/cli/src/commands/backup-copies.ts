@@ -72,30 +72,49 @@ export const copyLocalDocuments = async (ledgerFolder: string, to: string): Prom
   return { written, unchanged };
 };
 
-/** A key of the bucket as a relative path of the disk: never out of the destination. */
-const safeKey = (key: string): string => {
+/** A key of the bucket as a relative path of the disk, or nothing: never out of the destination. */
+const safeKey = (key: string): string | undefined => {
   const parts = key.split("/");
   if (parts.some((part) => part === "" || part === "." || part === "..") || /[\\:\0]/.test(key)) {
-    throw new DomainError("bucket_key_unsafe", `the key ${key} is not a plain path`, { key });
+    return undefined;
   }
   return join(...parts);
 };
 
-/** `documents/` and `imports/` of the bucket, into `<to>/bucket/…`, only reading. */
-export const copyBucketFolders = async (clients: AdminClients, to: string): Promise<Copied> => {
+/** What the copy of the bucket did, and the keys it would not write to disk. */
+export interface CopiedFromBucket extends Copied {
+  readonly skipped: readonly string[];
+}
+
+/**
+ * `documents/` and `imports/` of the bucket, into `<to>/bucket/…`, only
+ * reading. A key that is not a plain path is **skipped**, said, and the copy
+ * goes on (review of PR #98, preference accepted by the direction): one odd
+ * key does not leave every other document without its copy.
+ */
+export const copyBucketFolders = async (
+  clients: AdminClients,
+  to: string,
+): Promise<CopiedFromBucket> => {
   let written = 0;
   let unchanged = 0;
+  const skipped: string[] = [];
   for (const prefix of ["documents/", "imports/"]) {
     for (const listed of await clients.objects.listAll(prefix)) {
       // The marker of a folder made in the console of S3: nothing to copy.
       if (listed.key.endsWith("/")) {
         continue;
       }
+      const path = safeKey(listed.key);
+      if (path === undefined) {
+        skipped.push(listed.key);
+        continue;
+      }
       const stored = await clients.objects.get(listed.key);
       if (stored === undefined) {
         continue;
       }
-      const outcome = await copyVerified(stored.body, join(to, "bucket", safeKey(listed.key)));
+      const outcome = await copyVerified(stored.body, join(to, "bucket", path));
       if (outcome === "written") {
         written += 1;
       } else {
@@ -103,5 +122,5 @@ export const copyBucketFolders = async (clients: AdminClients, to: string): Prom
       }
     }
   }
-  return { written, unchanged };
+  return { written, unchanged, skipped };
 };

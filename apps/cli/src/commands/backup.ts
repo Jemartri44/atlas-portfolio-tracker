@@ -11,9 +11,14 @@ import { FileLedgerStore, HELD_FILE } from "@atlas/adapters";
 import { DomainError, todayInMadrid } from "@atlas/domain";
 import { parseHeld, unresolvedHeld } from "@atlas/domain/sync";
 import { assertKnownFlags, booleanFlag, type Flags, requireFlag, UsageError } from "../args.js";
-import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { adminClientsOf, translateAwsFailure } from "./admin.js";
-import { type Copied, copyBucketFolders, copyLocalDocuments } from "./backup-copies.js";
+import {
+  type Copied,
+  type CopiedFromBucket,
+  copyBucketFolders,
+  copyLocalDocuments,
+} from "./backup-copies.js";
 import { confirmOutsideRepository, render } from "./shared.js";
 import { pathExists } from "./synth.js";
 
@@ -78,7 +83,7 @@ export const backupCommand = async (
   // The documentary sources the user leaves beside the ledger, verified and
   // never overwritten; then, when asked, the bucket's, only reading.
   const documents = await copyLocalDocuments(dirname(ctx.ledgerPath), directory);
-  let bucket: Copied | undefined;
+  let bucket: CopiedFromBucket | undefined;
   if (fromBucket) {
     try {
       bucket = await copyBucketFolders(await adminClientsOf(ctx, flags), directory);
@@ -109,5 +114,11 @@ export const backupCommand = async (
           ]),
     ].join("\n"),
   );
+  if (bucket !== undefined && bucket.skipped.length > 0) {
+    ctx.io.err(
+      `Error (bucket_key_unsafe): estas claves del bucket no son una ruta sencilla y no se han copiado; el resto, sí: ${bucket.skipped.join(", ")}.`,
+    );
+    return EXIT.domain;
+  }
   return 0;
 };
