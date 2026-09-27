@@ -8,6 +8,7 @@
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { BrowserLedgerBlob } from "@atlas/adapters/browser";
 import { etagOfText, exportLedgerAndHeld, replaceLedgerText } from "@atlas/adapters/transfer";
+import { countOf } from "../format/number.js";
 import { loadInto } from "./actions.js";
 import { store } from "./state.js";
 import { openBrowserStorage } from "./store.js";
@@ -26,20 +27,58 @@ const download = (text: string, name: string): void => {
   URL.revokeObjectURL(url);
 };
 
+/** What the sync holds back, found at the export and handed over with its own button. */
+export interface HeldExport {
+  readonly text: string;
+  readonly operations: number;
+}
+
+/** What an export did: the ledger always; what is held back apart, or that it could not be read. */
+export interface ExportResult {
+  readonly held?: HeldExport;
+  readonly heldUnreadable?: true;
+}
+
+/** Downloads what is held back, from its own gesture (review of PR #97, security B2). */
+export const downloadHeld = (held: HeldExport): void => download(held.text, EXPORT_HELD_FILE_NAME);
+
+/**
+ * What the export says, in one sentence: the file of the ledger and, when
+ * the sync holds something back, **how many operations and in which file**
+ * they go apart, with its own button — a second download from the same
+ * gesture is one the browser may block without a word (review of PR #97,
+ * security B2).
+ */
+export const exportSaid = (
+  result: ExportResult,
+): { readonly severity: "info" | "caution"; readonly text: string } => {
+  const ledger = `Tus datos van en ${EXPORT_FILE_NAME}. Guárdalo donde tengas la copia de seguridad.`;
+  if (result.heldUnreadable === true) {
+    return {
+      severity: "caution",
+      text: `${ledger} Lo retenido por la sincronización no se ha podido leer, así que no se ha exportado: revísalo en Ajustes › Sincronización antes de borrar nada de este navegador.`,
+    };
+  }
+  if (result.held === undefined) {
+    return { severity: "info", text: ledger };
+  }
+  return {
+    severity: "caution",
+    text: `${ledger} La sincronización retiene ${countOf(result.held.operations, "operación", "operaciones")} que no van en ese archivo: descárgalas aparte en ${EXPORT_HELD_FILE_NAME} con «Descargar lo retenido» y guárdalo junto a él.`,
+  };
+};
+
 /**
  * Triggers the download of the exact text and records the export date — the
  * text and the date in **one** transaction (feature 012, D4), so the date can
  * never claim an export that left out a line another tab recorded meanwhile.
+ * What the sync holds back is **not** downloaded from this gesture: it is
+ * returned, for its own button (§6.2 P3; review of PR #97, security B2).
  */
-export const exportLedger = async (): Promise<void> => {
+export const exportLedger = async (): Promise<ExportResult> => {
   const when = new Date();
-  const { text, held } = await exportLedgerAndHeld(when);
-  download(text, EXPORT_FILE_NAME);
-  // What the sync holds back, apart and named as such (§6.2 P3): operations
-  // of the user that are not in the ledger yet. Never mixed into it.
-  if (held !== undefined) {
-    download(held, EXPORT_HELD_FILE_NAME);
-  }
+  const exported = await exportLedgerAndHeld(when);
+  download(exported.text, EXPORT_FILE_NAME);
   const current = store.load();
   if (current.phase === "ready") {
     store.setLoad({
@@ -47,6 +86,12 @@ export const exportLedger = async (): Promise<void> => {
       source: { ...current.source, lastExportAt: when.toISOString() },
     });
   }
+  if (exported.heldUnreadable === true) {
+    return { heldUnreadable: true };
+  }
+  return exported.held === undefined
+    ? {}
+    : { held: { text: exported.held, operations: exported.heldOperations ?? 0 } };
 };
 
 /** What an import would do, said before doing it. */
