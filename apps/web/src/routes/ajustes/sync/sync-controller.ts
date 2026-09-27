@@ -125,15 +125,35 @@ export const createSyncController = (props: SyncCardProps) => {
           };
     });
 
-  const resolve = (item: HeldItem, resolution: string): Promise<void> =>
+  /** The unit the user asked to discard, until they say yes (review of PR #97, N4). */
+  const [discarding, setDiscarding] = createSignal<HeldItem>();
+
+  /** Discarding asks first; confirming does not (review of PR #97, N4). */
+  const resolve = (item: HeldItem, resolution: string): Promise<void> => {
+    if (resolution === "discard") {
+      setTold(undefined);
+      setDiscarding(item);
+      return Promise.resolve();
+    }
+    return resolveNow(item, resolution);
+  };
+
+  const discard = (): Promise<void> =>
+    run(async () => {
+      const item = discarding();
+      setDiscarding(undefined);
+      if (item === undefined) {
+        return undefined;
+      }
+      await discardHeld(env, item.unit);
+      return info("Descartada", said("discarded_by_user"));
+    });
+
+  const resolveNow = (item: HeldItem, resolution: string): Promise<void> =>
     run(async () => {
       if (resolution === "confirm") {
         await confirmHeld(env, item.unit);
         return info("Confirmada", "Sube en la próxima sincronización.");
-      }
-      if (resolution === "discard") {
-        await discardHeld(env, item.unit);
-        return info("Descartada", said("discarded_by_user"));
       }
       const planned = await planRedo(env, depsNow(), item.unit);
       if ("recorded" in planned) {
@@ -183,6 +203,9 @@ export const createSyncController = (props: SyncCardProps) => {
     proceed,
     stop,
     resolve,
+    discarding,
+    setDiscarding,
+    discard,
     recordPlanned,
   };
 };

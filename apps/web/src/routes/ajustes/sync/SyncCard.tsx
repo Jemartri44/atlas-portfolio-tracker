@@ -179,6 +179,30 @@ export const SyncCard = (props: SyncCardProps): JSX.Element => {
         busy={card.busy()}
         onResolve={(item, resolution) => void card.resolve(item, resolution)}
       />
+      <Show when={card.discarding()}>
+        <Notice
+          severity="caution"
+          title="¿Descartar lo retenido?"
+          action={
+            <div class="button-row">
+              <button type="button" disabled={card.busy()} onClick={() => void card.discard()}>
+                Sí, descartar
+              </button>
+              <button
+                type="button"
+                class="secondary"
+                disabled={card.busy()}
+                onClick={() => card.setDiscarding(undefined)}
+              >
+                Cancelar
+              </button>
+            </div>
+          }
+        >
+          Sale de tus datos y nunca se sube a la nube. Queda apartado entre lo descartado, por si
+          hiciera falta volver a registrarlo a mano.
+        </Notice>
+      </Show>
       <Show when={card.redo()}>
         {(redo) => (
           <RedoConfirm

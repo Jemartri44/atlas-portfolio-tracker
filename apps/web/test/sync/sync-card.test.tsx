@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { Builder, base, textOf } from "../../../../packages/adapters/test/sync/builder.js";
 import { store } from "../../src/ledger/state.js";
 import { SyncCard } from "../../src/routes/ajustes/sync/SyncCard.jsx";
-import { startSync } from "../../src/sync/engine.js";
+import { startSync, syncNow } from "../../src/sync/engine.js";
 import { type Api, apiAt, browserOf, cloudText, depsOf } from "./api-support.js";
 
 const settle = async (): Promise<void> => {
@@ -229,6 +229,42 @@ describe("the card of the sync", () => {
     await press(host, "Sí, seguir");
     await until(() => (host.textContent ?? "").includes("Descargado de nuevo"), "descargado");
     expect(await browser.web.text()).toBe(textOf(base()));
+  });
+
+  // Review of PR #97, security N4: discarding asks first; confirming does not.
+  it("asks before discarding what is held, and discards only on the yes", async () => {
+    const api = apiAt();
+    const second = await joinedFromTheCloud(api);
+    const host = await show(second);
+    await until(() => button(host, "Descartar") !== undefined, "lo retenido");
+    await press(host, "Descartar");
+    expect(host.textContent).toContain("¿Descartar lo retenido?");
+    expect(await second.web.discarded()).toBe("");
+    await press(host, "Cancelar");
+    expect(host.textContent).not.toContain("¿Descartar lo retenido?");
+    expect(await second.web.discarded()).toBe("");
+    await press(host, "Descartar");
+    await press(host, "Sí, descartar");
+    await until(() => (host.textContent ?? "").includes("Descartada"), "descartada");
+    expect(await second.web.discarded()).not.toBe("");
+    expect(button(host, "Descartar")).toBeUndefined();
+  });
+
+  it("confirms a repeated operation without a question", async () => {
+    const api = apiAt();
+    const first = await browserOf(base(), api);
+    await startSync(first.env, "init");
+    const second = await browserOf(base(), api);
+    await startSync(second.env, "join_from_remote");
+    await first.web.record([new Builder(100).deposit("50")]);
+    await syncNow(first.env);
+    await second.web.record([new Builder(900).deposit("50")]);
+    await syncNow(second.env);
+    const host = await show(second);
+    await until(() => button(host, "Confirmar") !== undefined, "la repetida");
+    await press(host, "Confirmar");
+    await until(() => (host.textContent ?? "").includes("Confirmada"), "confirmada");
+    expect(host.textContent).not.toContain("¿Confirmar");
   });
 
   it("refuses to deactivate with operations pending, and deactivates without them", async () => {
