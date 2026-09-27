@@ -5,10 +5,11 @@
 // bounded exception. It never returns a single undecomposed number, and nothing
 // else in the application consumes its total except the warning of rule 18.
 //
-// Cash in a foreign currency is converted with the most recent rate of the ECB
-// history when there is one, and only without it with the last rate the ledger
-// knows for that currency (live test of 2026-09-27: the weights already used
-// the history). The row says **from when** and **from where** that rate is: a
+// Cash in a foreign currency is converted with the more recent of two ECB
+// rates: the last one of the downloaded history and the last one the ledger
+// knows for that currency (live test of 2026-09-27 and round 1 of PR #102: the
+// weights already used the history, and an old history must not hide a newer
+// rate of the ledger). The row says **from when** and **from where** that rate is: a
 // rate two years old is not today's data and must not be dressed up as one,
 // and it is said once per currency. A currency with no rate at all is shown
 // unconverted and makes the total partial. Informative: nothing fiscal reads it.
@@ -131,9 +132,15 @@ const cashBlockOf = (
       total = total.add(balance);
       continue;
     }
-    // The history's rate first, the ledger's only without it. Small on
+    // The more recent of the two ECB rates at hand, the history's and the
+    // ledger's; on the same date the history's (round 1 of PR #102). Small on
     // purpose: this file is on the boot path of the web.
-    const known = external?.latestRate?.(currency, date) ?? state.fxRates.get(currency);
+    const ecb = external?.latestRate?.(currency, date);
+    const ledger = state.fxRates.get(currency);
+    const known =
+      ecb === undefined || (ledger !== undefined && ledger.date > ecb.date && ledger.date <= date)
+        ? ledger
+        : ecb;
     // Defence in depth, like `priceAt` with a valuation from the future: a view
     // asked for a past date projects with `asOf` (ADR-0016), so a rate dated
     // later cannot normally be here; if it is, the honest answer is that the

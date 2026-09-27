@@ -251,6 +251,34 @@ describe("netWorth, foreign cash with the ECB history", () => {
     expect(without.cash.rows.find((row) => row.currency === "USD")?.fx_source).toBeUndefined();
   });
 
+  it("uses the ledger's rate when it is more recent than the history's (round 1 of PR #102)", () => {
+    // The history not updated since 1 June; the ledger priced the dollar on 30 June.
+    const view = netWorth(project(portfolio()), "2027-07-10", settings, ecb("2", "2027-06-01"));
+    const usd = view.cash.rows.find((row) => row.currency === "USD");
+    expect(usd?.fx_rate?.rate.toString()).toBe("1.25");
+    expect(usd?.fx_rate?.date).toBe("2027-06-30");
+    expect(usd?.fx_source).toBeUndefined();
+    expect(usd?.fx_age_days).toBe(10);
+    // The warning says the date and the origin of the rate used: the ledger's.
+    const stale = netWorth(
+      project(portfolio()),
+      "2027-07-31",
+      settings,
+      ecb("2", "2027-06-01"),
+    ).warnings.filter((warning) => warning.code === "stale_fx_rate");
+    expect(stale).toHaveLength(1);
+    expect(stale[0]?.details).toMatchObject({ currency: "USD", date: "2027-06-30", age_days: 31 });
+    expect(stale[0]?.details.source).toBeUndefined();
+    // A ledger's rate from the future never beats the history's (ADR-0016).
+    const early = netWorth(project(portfolio()), "2027-01-12", settings, ecb("2", "2027-01-05"));
+    const past = early.cash.rows.find((row) => row.currency === "USD");
+    expect(past?.fx_rate?.date).toBe("2027-01-05");
+    expect(past?.fx_source).toBe("ecb");
+    // On the same date, the history's.
+    const same = netWorth(project(portfolio()), "2027-07-10", settings, ecb("2", "2027-06-30"));
+    expect(same.cash.rows.find((row) => row.currency === "USD")?.fx_source).toBe("ecb");
+  });
+
   it("warns once per currency, with the date and the origin of the rate used", () => {
     const stale = (external?: ExternalPrices) =>
       netWorth(project(twoAccounts()), "2027-09-30", settings, external).warnings.filter(

@@ -313,6 +313,15 @@ describe("the cash in a foreign currency in the net worth", () => {
     expect(json.data.cash.rows[0]).toMatchObject({ fx_rate: "1.25", fx_rate_source: "ecb" });
   });
 
+  it("uses the ledger's rate when the history is older than it (round 1 of PR #102)", async () => {
+    const f = await folder(dollars());
+    await ecbHistory(f.dir, [["2027-04-30", "1.25"]]);
+    const view = await f.atlas("networth", "--date", "2027-06-09");
+    expect(view.text).toMatch(/acc_ib\s+USD\s+1000\s+1\.0582\s+2027-05-04/);
+    const json = JSON.parse((await f.atlas("networth", "--date", "2027-06-09", "--json")).out);
+    expect(json.data.cash.rows[0]).toMatchObject({ fx_rate: "1.0582", fx_rate_source: "ledger" });
+  });
+
   it("says a stale rate once per currency, with the date of the rate used and its remedy", async () => {
     const f = await folder(dollars());
     await ecbHistory(f.dir, [["2027-06-01", "1.25"]]);
