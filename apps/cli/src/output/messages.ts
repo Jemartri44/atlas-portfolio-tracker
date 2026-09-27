@@ -79,6 +79,10 @@ export const describeRemoteFailure = (code: unknown): string => {
       return "la nube no está disponible ahora mismo (un fallo pasajero): inténtalo de nuevo en unos minutos.";
     case "body_too_large":
       return "la petición era demasiado grande para la nube; no se ha escrito nada.";
+    case "expected_device_required":
+      return "la petición no decía con qué dispositivo se sincroniza; es un fallo de la aplicación. No se ha escrito nada.";
+    case "sync_device_changed":
+      return "la credencial es de otro dispositivo que el que esta carpeta tiene en sync/remote.json. No se ha escrito nada.";
     case "transport_rejected":
       return "la petición la ha rechazado la red antes de llegar a la nube (CloudFront o el cortafuegos).";
     case "network_failed":
@@ -395,6 +399,12 @@ export const describeError = (error: DomainError): string => {
       return "Esta carpeta no está sincronizada. Para empezar hay que elegirlo: subir el libro entero a una nube vacía («atlas sync init --origin <https://…>»), o unirse a una que ya tiene libro, empezando desde ella («atlas sync join --from-remote --origin <https://…>») o subiendo tus líneas como pendientes («atlas sync join --with-own-lines --origin <https://…>»).";
     case "sync_deactivated":
       return "La sincronización de esta carpeta está desactivada. La única salida es unirse otra vez, de forma explícita: empezando desde la nube («atlas sync join --from-remote»: tu libro queda archivado y lo que la nube no tiene, retenido) o subiendo tus líneas como pendientes («atlas sync join --with-own-lines»).";
+    case "sync_device_changed":
+      return `Este navegador se unió a la nube como el dispositivo ${text(d.joined)}, y su sesión es ahora la del dispositivo ${text(d.session)} (el anterior fue olvidado, o no se aceptó). Lo pendiente sigue aquí. Para seguir hay que unirse otra vez, desde la nube o con las operaciones propias.`;
+    case "sync_device_unknown":
+      return "Este navegador se sincroniza pero no sabe con qué dispositivo se unió. Únete otra vez, desde la nube o con las operaciones propias; lo pendiente sigue aquí.";
+    case "sync_already_configured":
+      return "Ya se sincroniza: no se inicializa ni se une otra vez. Para volver tras desactivarla, únete.";
     case "remote_empty":
       return "La nube está vacía y este libro no ha sincronizado nada: no se sube línea a línea. Inicializa la nube con el libro entero, de forma explícita.";
     case "deactivate_refused_marker_unreadable":

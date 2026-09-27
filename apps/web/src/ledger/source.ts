@@ -23,6 +23,8 @@ export interface BrowserSource {
   kind: "browser";
   /** Absent when it has never been exported: the worst case of ADR-0019. */
   lastExportAt?: string;
+  /** Operations held back at the last export, not downloaded yet (review of PR #97, N2). */
+  heldOwed?: number;
   /** Whether the browser agreed not to evict the data. */
   persisted: boolean;
 }

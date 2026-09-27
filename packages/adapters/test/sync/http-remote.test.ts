@@ -63,6 +63,30 @@ describe("httpRemote: what it sends", () => {
     expect(headersOf(calls[0] as Sent)).not.toHaveProperty("x-atlas-device-token");
   });
 
+  it("names the device it expects on every request when given one, and never otherwise", async () => {
+    const device = "D".repeat(22);
+    const { fetch, calls } = scripted(({ url }) =>
+      url.endsWith("/api/ledger") && calls.length === 1
+        ? new Response("", { status: 200, headers: { etag: `"${sha("")}"` } })
+        : jsonAnswer(200, { etag: sha("x\n"), lines: 1 }),
+    );
+    const remote = httpRemote({ origin: "", fetch, expectedDevice: device });
+    await remote.read();
+    await remote.init("x\n", [], "0".repeat(64)).catch(() => undefined);
+    await remote
+      .publish({ pending: 0, held: 0, last_sync_at: "2027-01-01T00:00:00Z" })
+      .catch(() => undefined);
+    expect(calls.length).toBeGreaterThanOrEqual(3);
+    for (const sent of calls) {
+      expect(headersOf(sent)["x-atlas-expected-device"], sent.url).toBe(device);
+    }
+    const plain = scripted(
+      () => new Response("", { status: 200, headers: { etag: `"${sha("")}"` } }),
+    );
+    await httpRemote({ origin: "", fetch: plain.fetch }).read();
+    expect(headersOf(plain.calls[0] as Sent)).not.toHaveProperty("x-atlas-expected-device");
+  });
+
   it("hashes the exact bytes of every body it sends, and quotes the etag it writes on", async () => {
     const etag = "e".repeat(64);
     const { fetch, calls } = scripted((sent) =>

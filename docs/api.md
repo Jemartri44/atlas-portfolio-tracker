@@ -285,6 +285,24 @@ La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la creden
 - La web presenta su `device_id` **solo al iniciar sesión** (`GET /api/auth/login?device_id=…`). La API lo lleva en la cookie transitoria y, tras verificar a Google, lo acepta **solo si ella misma lo emitió para un dispositivo web y no está olvidado**: su objeto `sync/devices/<id>.json` existe, es de tipo `web` y está activo. Si no —y la primera vez, siempre—, **asigna uno nuevo** (22 caracteres aleatorios) y crea su objeto con `If-None-Match: *`.
 - El `device_id` va **firmado dentro de la cookie de sesión**, y cada petición con cookie comprueba su objeto (§2).
 - La web lo lee de `GET /api/session` y lo guarda en IndexedDB, **donde no es credencial**.
+- **Con qué dispositivo se unió la web** (implementado en E4 de la 015). Al inicializar o al unirse, la web guarda el `device_id` de su sesión en la clave `sync:device` de su almacén (`docs/data-schema.md` §1). Lo escribe **primero y en la misma transacción** que el marcador, y lo compara al escribir.
+  - Es el equivalente de `sync/remote.json` de la consola, pero **solo con el id**: el origen de la web es siempre el suyo.
+  - **Antes de cada orden** (sincronizar, volver a descargar, empezar), la web **relee `GET /api/session`**: la página pudo pintarse con otra sesión, iniciada de nuevo en otra pestaña (revisión de la PR #97, B1). Si el dispositivo de la sesión no es el de `sync:device`, **se niega** sin llamar a las rutas de §5:
+    - `sync_device_changed` (`details.joined`, `details.session`) cuando es otro;
+    - `sync_device_unknown` cuando la web se sincroniza y no sabe con cuál se unió.
+  - Inicializar se niega con `sync_already_configured` sobre una sincronización en marcha. **Unirse** («Unirme desde la nube» o «Unirme con mis operaciones») es la salida, y reescribe `sync:device` con el dispositivo nuevo.
+  - Lo decide el dominio: `webSyncRefusal` y `webJoinRefusal`, en `packages/domain/src/sync/web-device.ts`.
+  - **Y lo comprueba también el servidor** (decidido el 2026-09-27, revisión de la PR #97, B1). Cada petición de la web a una ruta de §5 que actúa como dispositivo —`GET` y `PUT /api/ledger`, `POST /api/ledger/lines` y `PUT /api/sync/devices/self`— lleva la cabecera **`x-atlas-expected-device`** con el dispositivo con el que se unió (al empezar, el de la sesión que va a quedar en `sync:device`).
+    - La API la compara con el dispositivo de la credencial **antes de leer ni escribir nada**.
+    - Si es otro, responde `409 sync_device_changed`, con cualquiera de las dos credenciales.
+    - Con la cookie es **obligatoria**: sin ella, `400 expected_device_required`.
+    - El token de la consola ya liga su dispositivo y puede omitirla.
+    - Las rutas de §6 no ligan ningún dispositivo y no la piden.
+    - Así, la sesión que cambia entre la relectura y la petición tampoco publica la cola de un dispositivo como si fuera la de otro.
+    - Lo decide `expectedDeviceRefusal` (`packages/domain/src/access/sync-routes.ts`).
+  - **CloudFront debe reenviar esta cabecera** a la Lambda, como `x-atlas-device-token` (para la 017).
+  - Lo pendiente nunca se pierde y unirse es siempre explícito.
+- **`device_forgotten`** en cualquier respuesta es un fallo remoto más (§5.7, `remote_failed`): la sincronización para sin retener nada. La web dice que hay que volver a iniciar sesión. Con el id nuevo, cae en `sync_device_changed`.
 - **Riesgo aceptado** (decisión del 2026-09-25): copiar la IndexedDB a otro navegador crea dos escritores con el mismo `device_id`; no se detecta, se documenta. Hay un solo usuario y una sola cuenta de Google: presentar el id de otro dispositivo exige ser ya el usuario.
 
 ### 5.5 Inicializar un remoto vacío
@@ -395,8 +413,10 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `reissue_device_unreadable` | 403 | La reemisión de §4.3 pide un dispositivo que no existe, está olvidado, no es de consola o cuyo objeto no se lee (el cuarto, decidido el 2026-09-26) |
 | `reference_name_invalid` | 400 | Un nombre de §6 que no cumple su regla |
 | `body_too_large` | 413 | Un cuerpo por encima del tope propio de la Lambda, antes de leerlo (la Function URL admite 6 MB) |
+| `expected_device_required` | 400 | Una ruta de §5 que actúa como dispositivo (`GET` y `PUT /api/ledger`, `POST /api/ledger/lines`, `PUT /api/sync/devices/self`) llamada con la cookie y **sin** la cabecera `x-atlas-expected-device` (§5.4). Nada leído ni escrito. Decidido el 2026-09-27 (revisión de la PR #97, B1) |
+| `sync_device_changed` | 409 | La cabecera `x-atlas-expected-device` nombra otro dispositivo que el de la credencial, con cualquiera de las dos (§5.4). Nada leído ni escrito |
 
-*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más `device_forgotten` y `remote_unavailable` (feature 015), y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed` (§5.7), nunca retiene por ellos, y cada interfaz tiene una frase para cada uno.
+*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más `device_forgotten`, `remote_unavailable`, `expected_device_required` y `sync_device_changed` (feature 015), y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed` (§5.7), nunca retiene por ellos, y cada interfaz tiene una frase para cada uno.
 
 Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_declaration_invalid`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected`, `seal_mismatch` y `waiver_not_appendable`.
 

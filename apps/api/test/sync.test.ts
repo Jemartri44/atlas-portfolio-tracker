@@ -33,7 +33,9 @@ const credentials = async (api: Api): Promise<{ token: Credential; session: Cred
     },
     session: {
       deviceId: session.device_id,
-      headers: { origin: SELF },
+      // The web names the device it joined with on every request of the sync
+      // (review of PR #97, security B1).
+      headers: { origin: SELF, "x-atlas-expected-device": session.device_id },
       jar: true,
     },
   };
@@ -374,6 +376,94 @@ describe("text that is not Unicode, and keys twice (review of PR #96, security B
     expect(utf8Of(["ok", "ñ😀"])).toEqual(new TextEncoder().encode("ok\nñ😀\n"));
     expect(utf8Of(["a\ud800"])).toBeUndefined();
     expect(utf8Of(["\udc00"])).toBeUndefined();
+  });
+});
+
+describe("the device the web expects (review of PR #97, security B1; §5.4)", () => {
+  const seeded = async () => {
+    const api = setup();
+    const both = await credentials(api);
+    api.s3.seed(LEDGER, textOf([lineOf(account)]));
+    return { api, ...both, etag: sha(textOf([lineOf(account)])) };
+  };
+  const without = (as: Credential, name: string): Credential => ({
+    ...as,
+    headers: Object.fromEntries(Object.entries(as.headers).filter(([key]) => key !== name)),
+  });
+  const naming = (as: Credential, device: string): Credential => ({
+    ...as,
+    headers: { ...as.headers, "x-atlas-expected-device": device },
+  });
+  const OTHER = "AAAAAAAAAAAAAAAAAAAAAA";
+
+  /** Every route that binds the device, and what it would write. */
+  const routes = (etag: string) =>
+    [
+      ["GET", "/api/ledger", undefined, {}],
+      [
+        "POST",
+        "/api/ledger/lines",
+        { lines: [{ line: lineOf(deposit) }] },
+        { "if-match": `"${etag}"` },
+      ],
+      [
+        "PUT",
+        "/api/ledger",
+        { content: `${lineOf(deposit)}\n`, confirm_duplicate_ids: [] },
+        { "if-match": `"${EMPTY_ETAG}"` },
+      ],
+      ["PUT", "/api/sync/devices/self", { pending: 1, held: 0 }, {}],
+    ] as const;
+
+  const call = (api: Api, as: Credential, route: ReturnType<typeof routes>[number]) => {
+    const [method, path, body, headers] = route;
+    return method === "GET"
+      ? read(api, as, path, headers)
+      : write(api, as, method, path, body, headers);
+  };
+
+  it("asks the cookie for the header (400) on every route of the sync, and writes nothing", async () => {
+    const { api, session, etag } = await seeded();
+    const ledger = api.s3.etagOf(LEDGER);
+    const device = api.s3.text(`sync/devices/${session.deviceId}.json`);
+    for (const route of routes(etag)) {
+      const answer = await call(api, without(session, "x-atlas-expected-device"), route);
+      expect(answer.statusCode, route[1]).toBe(400);
+      expect(errorOf(answer).code).toBe("expected_device_required");
+    }
+    expect(api.s3.etagOf(LEDGER)).toBe(ledger);
+    expect(api.s3.text(`sync/devices/${session.deviceId}.json`)).toBe(device);
+  });
+
+  it("refuses another device than the session's (409) on every route, and writes nothing", async () => {
+    const { api, session, etag } = await seeded();
+    const ledger = api.s3.etagOf(LEDGER);
+    const device = api.s3.text(`sync/devices/${session.deviceId}.json`);
+    for (const route of routes(etag)) {
+      const answer = await call(api, naming(session, OTHER), route);
+      expect(answer.statusCode, route[1]).toBe(409);
+      expect(errorOf(answer).code).toBe("sync_device_changed");
+    }
+    expect(api.s3.etagOf(LEDGER)).toBe(ledger);
+    expect(api.s3.text(`sync/devices/${session.deviceId}.json`)).toBe(device);
+  });
+
+  it("lets the token go without it, but never with another device named", async () => {
+    const { api, token } = await seeded();
+    expect((await read(api, token, "/api/ledger")).statusCode).toBe(200);
+    const answer = await read(api, naming(token, OTHER), "/api/ledger");
+    expect(answer.statusCode).toBe(409);
+    expect(errorOf(answer).code).toBe("sync_device_changed");
+  });
+
+  it("does not ask for it on the reference data, which binds no device", async () => {
+    const { api, session } = await seeded();
+    const answer = await read(
+      api,
+      without(session, "x-atlas-expected-device"),
+      "/api/reference/index",
+    );
+    expect(answer.statusCode).toBe(200);
   });
 });
 

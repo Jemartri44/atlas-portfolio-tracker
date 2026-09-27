@@ -1,0 +1,38 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "noEmit": true,
+    "tsBuildInfoFile": "dist/tsconfig.test-api.tsbuildinfo",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["node", "vite-plugin-pwa/client"],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js"
+  },
+  "include": [
+    "src",
+    "test/sync/api-support.ts",
+    "test/sync/engine.test.ts",
+    "test/sync/sync-card.test.tsx",
+    "../api/test/harness.ts",
+    "../../packages/adapters/test/aws/test-only-fake-s3.ts",
+    "../../packages/adapters/test/aws/test-only-fake-ssm.ts",
+    "../../packages/adapters/test/identity/test-only-fake-google.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/adapters"
+    },
+    {
+      "path": "../../packages/adapters/tsconfig.test-sync.json"
+    },
+    {
+      "path": "../api"
+    }
+  ]
+}

@@ -441,6 +441,24 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 - Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada en móvil.
 - **Modo privacidad**: un interruptor, **activado por defecto** (mientras el usuario no lo apague en ese dispositivo), que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. La máscara mide siempre lo mismo y conserva la unidad («•••• €», «•••• part.»), que dice qué se oculta sin decir cuánto. Lo que el usuario escribe no se oculta; lo que la aplicación precarga en un campo (corregir un movimiento, la configuración) sí, hasta que el campo recibe el foco. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
 - Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
+- **Sincronizar desde la web** (ADR-0026, Parte B; feature 015, E4). Se hace en la tarjeta «Sincronización» de Ajustes, en una sección que se carga en diferido y **solo con sesión**; nada de esto va en el arranque. **Nada sincroniza solo**: ni al arrancar, ni con un temporizador, ni al recuperar la conexión. Cada escritura es un botón.
+  - **Estado**: pendientes de subir, retenidas, y el día y la hora de la última sincronización, con el botón «Sincronizar».
+  - **Empezar**, siempre como elección explícita y con una pregunta antes de escribir:
+    - «Subir mis datos a la nube», solo sobre una nube vacía;
+    - «Unirme desde la nube»: los datos de este navegador se archivan, y lo que la nube no tiene queda retenido;
+    - «Unirme con mis operaciones»: las propias quedan pendientes de subir.
+  - **Lo retenido**: el motivo, dicho con la palabra de su botón, y de cada operación el tipo, el activo, la fecha, la cantidad, el precio por unidad y el importe. Las cifras van por el componente de importes, que el modo privacidad tapa; nunca la línea en bruto. Con las resoluciones que ofrece el dominio (confirmar, rehacer, descartar):
+    - rehacer enseña el plan antes de registrar;
+    - descartar pregunta antes;
+    - confirmar no pregunta.
+  - **Al unirse desde la nube o volver a descargar**, el resultado dice cuántas operaciones de las que había aquí han quedado retenidas.
+  - **Con algo retenido sin resolver**, el aviso de datos inválidos dice que la causa es lo retenido y enlaza con Ajustes › Sincronización › Retenidas (D-Q1).
+  - **«Desactivar»**, que se niega con operaciones pendientes y conserva lo retenido.
+  - **«Volver a descargar»**, que solo aparece tras una reescritura de la nube y pregunta antes.
+  - **El aviso** de que lo que se ve antes de sincronizar puede cambiar después.
+  - **Un navegador sincroniza como el dispositivo con el que se unió** (`docs/api.md` §5.4). La sesión se relee en cada orden y la API también lo comprueba. Con la sesión de otro, la tarjeta lo dice y ofrece unirse otra vez.
+  - **Mientras se sincroniza**, importar un fichero se niega. La exportación dice cuántas operaciones retenidas no van en el libro, y las entrega aparte, en `ledger.held.jsonl`, con su propio botón (`docs/data-schema.md` §1). Hasta que se descargan, el aviso de la barra dice «falta descargar lo retenido» en lugar de la fecha.
+  - **La sección de la sincronización de Ajustes tiene una sola puerta hacia fuera**: su tarjeta, que solo importa la página de Ajustes. Nadie más alcanza el motor, por ningún camino. Lo comprueban una regla sobre los fuentes y otra sobre el grafo real del paquete.
 - Funciona sin conexión para consulta (los datos cacheados siguen visibles con su antigüedad marcada).
 - **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. El sistema está en `docs/design/system.md` y la base de estilos es propia (ADR-0023).
 

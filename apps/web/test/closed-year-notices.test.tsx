@@ -13,6 +13,7 @@ import { MASK } from "../src/format/money.js";
 import { store } from "../src/ledger/state.js";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Detalle from "../src/routes/movimientos/detail.jsx";
+import CorporateForm from "../src/routes/registrar/corporate/form.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
 import {
@@ -79,6 +80,28 @@ describe("a write that reaches a filed return", () => {
     // And before the button, not after it.
     const shown = text(effect);
     expect(shown.indexOf("Afecta a la Renta")).toBeLessThan(shown.indexOf("Registrar"));
+  });
+
+  // Feature 015, E4 (P11; `specs/014-ledger-sync-core/questions.md` §9.2): a
+  // corporate action lands on a date of its own and rewrites lots, and the
+  // console already says it (`corporate-actions.ts`).
+  it("says so in the form of a corporate action, before the button that writes", async () => {
+    await withFiling();
+    const host = await show(
+      "/registrar/evento-corporativo/split",
+      CorporateForm,
+      "/registrar/evento-corporativo/:kind",
+    );
+    choose(host, "ca-asset_id", "ast_alpha");
+    type(host, "ca-effective_date", "2027-11-02");
+    type(host, "ca-source_document", "https://example.test/nota.pdf");
+    type(host, "ca-ratio", "2");
+    await press(host, "Ver el efecto");
+    await settle(30);
+    const effect = host.querySelector(".effect");
+    expect(text(effect)).toContain("Afecta a la Renta de 2027");
+    const shown = text(effect);
+    expect(shown.indexOf("Afecta a la Renta de 2027")).toBeLessThan(shown.indexOf("Registrar"));
   });
 
   it("says so in the dialog that annuls, with the figure it moves", async () => {

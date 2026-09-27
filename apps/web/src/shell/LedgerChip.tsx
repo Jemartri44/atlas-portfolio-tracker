@@ -20,6 +20,9 @@ const hasData = (): boolean => (store.snapshot()?.events.length ?? 0) > 0;
 
 /** The short second half of the chip: how old the copy is. */
 const ageOf = (source: LedgerSource): string => {
+  if (source.heldOwed) {
+    return "falta descargar lo retenido";
+  }
   const days = daysSinceExport(source, today());
   if (days === undefined) {
     return "sin exportar";
@@ -38,8 +41,9 @@ const detailOf = (source: LedgerSource): string => {
   return `Tus datos viven en este navegador. Última exportación: ${formatInstantDate(source.lastExportAt)}.`;
 };
 
+/** Overdue, or exported without what the sync holds back (review of PR #97, round 2, N2). */
 const needsAttention = (source: LedgerSource): boolean =>
-  hasData() && exportIsOverdue(source, today());
+  hasData() && (!!source.heldOwed || exportIsOverdue(source, today()));
 
 export const LedgerChip = (): JSX.Element => (
   <Show

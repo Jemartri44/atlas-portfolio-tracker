@@ -1923,7 +1923,14 @@ describe("architecture: the sync engine", () => {
     // Named at all, not only called one way: `addEventListener?.("online", …)`
     // walked past a pattern that expected `addEventListener(` right after.
     const triggers = /\bset(?:Interval|Timeout)\b|["'`]online["'`]|\bononline\b|visibilitychange/;
-    const violations = syncFiles()
+    // Feature 015, E4: the engine of the web and its section of Ajustes too.
+    const web = [join(webSrc, "sync"), join(webSrc, "routes", "ajustes", "sync")].flatMap((dir) =>
+      readdirSync(dir, { recursive: true, encoding: "utf8" })
+        .filter((entry) => /\.tsx?$/.test(entry))
+        .map((entry) => join(dir, entry)),
+    );
+    expect(web.some((file) => file.endsWith("engine.ts"))).toBe(true);
+    const violations = [...syncFiles(), ...web]
       .filter((file) => {
         const code = readFileSync(file, "utf8")
           .replace(/\/\*[\s\S]*?\*\//g, " ")

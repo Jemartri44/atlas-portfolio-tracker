@@ -212,11 +212,24 @@ const resolveAcross = (
   from: string,
   specifier: string,
 ): string | undefined => {
-  if (specifier.startsWith(".")) {
-    const target = resolve(dirname(from), specifier);
+  const fileAt = (target: string): string | undefined => {
     const bare = target.replace(/\.(js|jsx)$/, "");
-    return [`${bare}.ts`, `${bare}.tsx`, join(target, "index.ts")].find(
-      (path) => statSync(path, { throwIfNoEntry: false })?.isFile() === true,
+    return [target, `${bare}.ts`, `${bare}.tsx`, join(target, "index.ts")].find(
+      (path) =>
+        /\.tsx?$/.test(path) && statSync(path, { throwIfNoEntry: false })?.isFile() === true,
+    );
+  };
+  if (specifier.startsWith(".")) {
+    return fileAt(resolve(dirname(from), specifier));
+  }
+  // A root-absolute path, which Vite resolves from the root of the web (and an
+  // absolute path of the disk): never a way past a guard (round 2 of the
+  // review of PR #97, B1).
+  if (specifier.startsWith("/")) {
+    return (
+      fileAt(join(repoRoot, "apps", "web", specifier)) ??
+      fileAt(specifier) ??
+      `<unresolved ${specifier}>`
     );
   }
   for (const [name, subpaths] of known) {
@@ -231,13 +244,17 @@ const resolveAcross = (
 };
 
 /** Everything a set of roots reaches, with the chain, across packages. */
-const reach = (roots: readonly string[]): Map<string, string[]> => {
+const reach = (
+  roots: readonly string[],
+  /** Files reached but not walked past: the one door a guard allows. */
+  stop: ReadonlySet<string> = new Set(),
+): Map<string, string[]> => {
   const known = packages();
   const chains = new Map<string, string[]>(roots.map((root) => [root, [root]]));
   const pending = [...roots];
   while (pending.length > 0) {
     const file = pending.shift() as string;
-    if (file.startsWith("<")) {
+    if (file.startsWith("<") || stop.has(file)) {
       continue;
     }
     for (const specifier of specifiersOf(file)) {
@@ -498,29 +515,39 @@ describe("architecture (015): AWS and Google only where they belong", () => {
   });
 });
 
-describe("architecture (015): the web cannot configure the sync before P2 and P3", () => {
+describe("architecture (015): the web configures the sync only through its engine, with P2 and P3 in", () => {
   /**
-   * The hard requirement inherited from feature 014 (D-Q17): **no module of
-   * the web may reach what configures the sync** — initialise, join, redownload,
-   * the store that writes the `sync:*` keys, the HTTP client — until the
-   * refusal to import (P2) and what is held back in the export (P3) are in.
-   * **This guard is loosened only in E4, in the same commit that makes the
-   * configuration reachable, and only after the commits of P2 and P3**
-   * (`docs/prompts/015-api-access.md` §3, E4, block 1).
+   * The hard requirement inherited from feature 014 (D-Q17) kept the web away
+   * from everything that configures the sync until the refusal to import (P2)
+   * and what is held back in the export (P3) were in. They are (E4, block 1),
+   * and the guard that forbade it is replaced by this one, in the commit that
+   * makes the configuration reachable: **one module of the web configures the
+   * sync, `src/sync/engine.ts`**, loaded only by the lazy section of Ajustes,
+   * and P2 and P3 stay in.
    *
-   * Read by **name**, not by file: the web already imports the store of the
-   * sync for one read-only question (`browserSyncConfigured`, V7 of 014), and
-   * that file also holds the writer. So the web may import from the doors of
-   * the sync only the names on this list, never a namespace, never dynamically.
+   * Read by **name** outside the engine: the web imports the store of the
+   * sync elsewhere for read-only questions, and that file also holds the
+   * writer. Never a namespace, never dynamically, never a `sync:*` key named.
    */
-  const READ_ONLY = new Set(["browserSyncConfigured", "browserSyncPresence"]);
+  /** The engine and what it holds back: the only modules of the web that configure the sync. */
+  const ENGINES = new Set([
+    join(webSrc, "sync", "engine.ts"),
+    join(webSrc, "sync", "engine-held.ts"),
+  ]);
+  const READ_ONLY = new Set([
+    "browserSyncConfigured",
+    "browserSyncPresence",
+    // Review of PR #97, correctness B1: how many units are held back, for the
+    // notice of an invalid ledger.
+    "browserHeldPending",
+  ]);
   const DOORS = /^@atlas\/(adapters\/sync(-client|-http)?|domain\/sync)$/;
 
   /**
    * The doors, as files: whatever the specifier that reaches them — the name
    * of the package, a relative path into `packages/`, a relay of the web that
    * re-exports them — a binding taken from one of these files is read by name
-   * (B3 of round 2: a relative path and a re-export walked past the names).
+   * (B3 of round 2 of the review of PR #90).
    */
   const doorFiles = (): Set<string> =>
     new Set(
@@ -531,7 +558,10 @@ describe("architecture (015): the web cannot configure the sync before P2 and P3
       ),
     );
 
-  it("imports from the doors of the sync only read-only names, and writes no sync:* key", () => {
+  it("imports what writes the sync only in its engine, and names no sync:* key", () => {
+    for (const engine of ENGINES) {
+      expect(statSync(engine, { throwIfNoEntry: false })?.isFile(), engine).toBe(true);
+    }
     const known = packages();
     const doors = doorFiles();
     expect(doors.size).toBeGreaterThanOrEqual(3);
@@ -546,7 +576,7 @@ describe("architecture (015): the web cannot configure the sync before P2 and P3
         const at = `${relative(repoRoot, file)}: ${binding.how} ${binding.name} from ${binding.specifier}`;
         if (binding.how === "dynamic") {
           violations.push(at);
-        } else if (!binding.isType && !READ_ONLY.has(binding.name)) {
+        } else if (!ENGINES.has(file) && !binding.isType && !READ_ONLY.has(binding.name)) {
           violations.push(at);
         }
       }
@@ -558,143 +588,139 @@ describe("architecture (015): the web cannot configure the sync before P2 and P3
   });
 
   /**
-   * And by **reach**, for what the web must not touch at all before E4: the
-   * client of the sync and its orchestration (`packages/adapters/src/sync/`:
-   * `initialiseRemote`, `joinWithOwnLines`, `replaceFromRemote`, the held
-   * actions) and the HTTP client of E3. Walked across relative paths and
-   * re-exports, so a relay module of the web or a path into `packages/` is
-   * followed to the file (B3 of round 2, mutants R1 and R3). Loosened in E4
-   * with the guard above.
+   * And by **reach**: the client of the sync and its orchestration
+   * (`packages/adapters/src/sync/`) and the HTTP client of E3 are reached
+   * from the web only through the engine — walked across relative paths and
+   * re-exports, stopping at the engine, so a relay of the web or a path into
+   * `packages/` is followed to the file (mutants R1 and R3 of PR #90).
    */
-  it("reaches neither the client of the sync nor its orchestration, by any path", () => {
-    const violations = [...webReach()]
+  it("reaches the client of the sync only through the engine, by any path", () => {
+    const violations = [
+      ...reach(
+        listSources(webSrc).filter((file) => !ENGINES.has(file)),
+        ENGINES,
+      ),
+    ]
       .filter(([file]) => /[/\\]adapters[/\\]src[/\\]sync(-http)?[/\\]/.test(file))
       .map(([, chain]) => chainText(chain));
     expect(violations).toEqual([]);
   });
-});
-
-describe("architecture (015): the records of the tokens are never deleted nor labelled (T26)", () => {
-  /**
-   * ADR-0033, point 9: a record is written to create it and to revoke it, and
-   * never deleted; a label or a delete is a way to bring a revoked token back
-   * (B1). The narrow interface of SSM offers exactly four operations, and no
-   * source of the product names the others of the service.
-   */
-  it("offers get, putNew, overwrite and listByPath, and nothing else", () => {
-    const file = join(adaptersRoot, "src", "aws", "parameter-store.ts");
-    const members = [...parse(file).code.matchAll(/^\s{2}([a-zA-Z]+)\(/gm)].map(
-      (match) => match[1],
-    );
-    expect(members).toEqual(["get", "putNew", "overwrite", "listByPath"]);
-    const offenders = productSources().filter((path) =>
-      /DeleteParameters?|LabelParameterVersion|UnlabelParameterVersion|deleteParameter|labelParameter/.test(
-        parse(path).code,
-      ),
-    );
-    expect(offenders.map((path) => relative(repoRoot, path))).toEqual([]);
-  });
-});
-
-describe("architecture (015): the thin adapters of the SDK send only what they are for (E3)", () => {
-  /**
-   * The API only appends to the bucket and never deletes (ADR-0026, Part A;
-   * ADR-0028, row 7), and the records of the tokens are never deleted nor
-   * labelled (T26). What the adapters take from the SDK is the closed list of
-   * commands they send; a delete, or anything else, is a violation.
-   */
-  it("takes from the SDK only the clients and the commands of the narrow interfaces", () => {
-    const allowed: Record<string, readonly string[]> = {
-      "@aws-sdk/client-s3": [
-        "S3Client",
-        "GetObjectCommand",
-        "PutObjectCommand",
-        "ListObjectsV2Command",
-        "ListObjectsV2CommandOutput",
-      ],
-      "@aws-sdk/client-ssm": [
-        "SSMClient",
-        "GetParameterCommand",
-        "GetParameterCommandOutput",
-        "PutParameterCommand",
-        "GetParametersByPathCommand",
-        "GetParametersByPathCommandOutput",
-      ],
-    };
-    const taken = productSources().flatMap((file) =>
-      parse(file)
-        .bindings.filter((binding) => binding.specifier.startsWith("@aws-sdk/"))
-        .map((binding) => `${binding.specifier} ${binding.name}`),
-    );
-    expect(taken.length).toBeGreaterThan(0);
-    expect(
-      taken.filter((entry) => {
-        const [specifier, name] = entry.split(" ") as [string, string];
-        return !(allowed[specifier] ?? []).includes(name);
-      }),
-    ).toEqual([]);
-    const deletes = productSources().filter((path) =>
-      /DeleteObjects?|deleteObject|DeleteBucket/.test(parse(path).code),
-    );
-    expect(deletes.map((path) => relative(repoRoot, path))).toEqual([]);
-  });
-});
-
-describe("architecture (015): the API only appends, and the domain judges every line (E3)", () => {
-  const apiSources = () => listSources(join(apiRoot, "src"));
 
   /**
-   * ADR-0026, Part A: the API never rewrites nor deletes a line. It holds the
-   * remote ledger only as `AppendOnlyLedger`, and no source of it names an
-   * operation that rewrites or deletes (mutant 31).
+   * **Who may start an order of the sync** (review of PR #97, N1 of round 1
+   * and B1 of round 2, both blocking by decision of the direction): only the
+   * section of the sync in Ajustes, where every order is a button. The
+   * section has **one door**: its card, `SessionCard`, which only the page of
+   * Ajustes imports. No other module imports anything of the section — the
+   * controller, the engine, a relay of either — statically, with `import()` or
+   * through a root-absolute path; so nothing can sync at boot, on a timer or
+   * when the connection comes back. The build holds the same on the real
+   * graph (`check-bundle.mjs`).
    */
-  it("names no operation that rewrites or deletes the remote", () => {
-    const offenders = apiSources().filter((file) =>
-      /\breplaceLines\b|\.replace\(\s*\[|\bBlobLedgerStore\b|\bS3LedgerBlob\b|DeleteObject|deleteObject|deleteOutOfBand|\bputIfMatch\b|\bputIfNoneMatch\b|\bLEDGER_KEY\b|["'`]ledger\//.test(
-        parse(file).code,
-      ),
-    );
-    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
-    const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
-    expect(sync).toContain("AppendOnlyLedger");
-    // The routes get no ObjectStore of their own (review of PR #96, security
-    // N1): the reference data through a read-only port of its two prefixes.
-    expect(parse(join(apiRoot, "src", "sync.ts")).code).not.toMatch(/\bObjectStore\b|\bobjects\b/);
-    expect(sync).toContain("ReferenceReader");
+  const SECTION = join(webSrc, "routes", "ajustes", "sync");
+  const AJUSTES = join(webSrc, "routes", "ajustes", "index.tsx");
+  const DOOR = join(SECTION, "SessionCard.tsx");
+  const inSection = (file: string): boolean => file.startsWith(`${SECTION}/`);
+
+  it("keeps the section of the sync behind its one door", () => {
+    expect(statSync(DOOR, { throwIfNoEntry: false })?.isFile()).toBe(true);
+    const known = packages();
+    const violations: string[] = [];
+    for (const file of listSources(webSrc).filter((each) => !inSection(each))) {
+      for (const binding of parse(file).bindings) {
+        const target = resolveAcross(known, file, binding.specifier);
+        if (target === undefined || !(inSection(target) || ENGINES.has(target))) {
+          continue;
+        }
+        const door =
+          file === AJUSTES &&
+          target === DOOR &&
+          binding.how === "import" &&
+          binding.name === "SessionCard";
+        if (!door && !(ENGINES.has(file) && ENGINES.has(target))) {
+          violations.push(
+            `${relative(repoRoot, file)}: ${binding.how} ${binding.name} from ${binding.specifier}`,
+          );
+        }
+      }
+    }
+    expect(violations).toEqual([]);
   });
 
   /**
-   * What a line is worth is `acceptAppend` and `acceptInit`, never a copy in
-   * the handler: no source of the API names a code of the table of §5.2
-   * (mutant 31, «reimplement a rule of acceptAppend»).
+   * And by the **reverse closure** of the engine: whoever reaches it, by any
+   * path, is the section, the page of Ajustes, or the lazy load of that page
+   * (`App.tsx`, and `main.tsx` that mounts it) — and those two only through
+   * the page.
    */
-  it("reimplements no rule of acceptAppend: the codes of a line live in the domain", () => {
-    const codes =
-      /["'`](line_unreadable|schema_version_unsupported|line_invalid|recorded_at_in_future|domain_rejected|duplicate_unconfirmed|pair_declaration_invalid|pair_incomplete|pair_not_contiguous|pair_rejected|seal_mismatch|waiver_not_appendable)["'`]/;
-    const offenders = apiSources().filter((file) => codes.test(parse(file).code));
-    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
-    const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
-    expect(sync).toMatch(/acceptAppend\(/);
-    expect(sync).toMatch(/acceptInit\(/);
+  it("keeps whoever reaches the engine inside the section of the sync", () => {
+    const LOADERS = new Set([join(webSrc, "App.tsx"), join(webSrc, "main.tsx")]);
+    const reachesEngine = (file: string, stop: ReadonlySet<string> = new Set()) =>
+      [...reach([file], stop)].find(([reached]) => ENGINES.has(reached));
+    const violations: string[] = [];
+    for (const file of listSources(webSrc)) {
+      if (inSection(file) || ENGINES.has(file) || file === AJUSTES) {
+        continue;
+      }
+      const found = LOADERS.has(file)
+        ? reachesEngine(file, new Set([AJUSTES]))
+        : reachesEngine(file);
+      if (found !== undefined) {
+        violations.push(chainText(found[1]));
+      }
+    }
+    expect(violations).toEqual([]);
   });
-});
 
-describe("architecture (015): the exception of the redo is bound to the sealed plan (E3, N1)", () => {
   /**
-   * `recordRedo` records with the rule of `correctEvent` (§7 P6, option (a)).
-   * Only the orchestration of the redo may reach it — never the ordinary form
-   * of recording, where it would be a flag nobody could tell apart (N1;
-   * mutant 33 bis). The door of the sync re-exports it; nothing else names it.
+   * P3: the web exports the ledger **with what is held back** beside it,
+   * never the ledger alone — the adapter has no other export (the one
+   * without it was removed when it had no caller left, review of PR #97, N5).
    */
-  it("is imported only by the orchestration of the redo", () => {
-    const users = productSources()
-      .filter((file) => parse(file).bindings.some((binding) => binding.name === "recordRedo"))
-      .map((file) => relative(repoRoot, file).replaceAll("\\", "/"))
-      .sort();
-    expect(users).toEqual([
-      "packages/adapters/src/sync/held-actions.ts",
-      "packages/domain/src/sync.ts",
+  it("exports the ledger only together with what the sync holds back (P3)", () => {
+    const transfer = readFileSync(
+      join(adaptersRoot, "src", "ledger-store", "browser", "transfer.ts"),
+      "utf8",
+    );
+    expect([...transfer.matchAll(/export const (export\w*)/g)].map((match) => match[1])).toEqual([
+      "exportLedgerAndHeld",
     ]);
+    const names = listSources(webSrc).flatMap((file) =>
+      parse(file).bindings.map((binding) => ({ file, name: binding.name })),
+    );
+    expect(
+      names.some(
+        ({ file, name }) =>
+          file === join(webSrc, "ledger", "export.ts") && name === "exportLedgerAndHeld",
+      ),
+    ).toBe(true);
+  });
+
+  /**
+   * P2: the import is refused for a synced browser **in the transaction that
+   * would replace the ledger**, and it reads every key the store of the sync
+   * writes — the import keeps its own copy of their names so as not to share
+   * a chunk with the store, and a key the store adds must be added there too
+   * (E4: `sync:device` was not, and a browser with only it was imported over).
+   */
+  it("refuses an import over a synced browser, reading every key of the sync (P2)", () => {
+    const browser = join(adaptersRoot, "src", "ledger-store", "browser");
+    const store = readFileSync(join(browser, "sync-store.ts"), "utf8");
+    const transfer = readFileSync(join(browser, "transfer.ts"), "utf8");
+    const keys = [...store.matchAll(/export const SYNC_\w+_KEY = "(sync:[^"]+)"/g)].map(
+      (match) => match[1] as string,
+    );
+    expect(keys.length).toBeGreaterThanOrEqual(4);
+    for (const key of keys) {
+      expect(transfer, key).toContain(`"${key}"`);
+    }
+    const replace = transfer.slice(transfer.indexOf("export const replaceLedgerText"));
+    expect(replace).toContain("importPermission(");
+    expect(
+      listSources(webSrc).some((file) =>
+        parse(file).bindings.some((binding) => binding.name === "replaceLedgerText"),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -711,6 +737,8 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
     // Round 3: the workers are other builds, with the same plugin.
     expect(config).toContain('worker: { plugins: () => [moduleGraph("worker")] }');
     expect(config).toContain('fileName: ".vite/atlas-modules.json"');
+    // Review of PR #97, N1: who imports each module, statically or not.
+    expect(config).toContain("info?.dynamicImporters");
     expect(config).toContain("realpathSync(path)");
     // Round 4: a source of code is never inlined as a `data:` URL.
     expect(config).toMatch(/assetsInlineLimit: \(filePath: string\)/);
@@ -719,20 +747,21 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
       "utf8",
     );
     for (const family of [
-      "el cliente o la orquestación de la sincronización",
-      "el motor de la sincronización",
       "las reglas del acceso",
       "un adaptador de Node de la API",
       "el SDK de AWS",
       "la API o la consola",
       "un módulo de Node",
       "un doble o código de test",
-      "del almacén de la sincronización, que solo se puede leer",
       "un paquete del repositorio por node_modules",
       "crea un worker cuyo grafo no se conoce",
       "el bundle lleva un fuente",
       "ningún grafo dice de dónde sale este fichero",
       "lleva código incrustado como URL data:",
+      // Review of PR #97, N1 of round 1 and B1 of round 2.
+      "un módulo de la sección de la sincronización que no es su puerta",
+      "alcanza el motor de la sincronización de la web desde fuera de su sección",
+      "el grafo no dice quién importa",
     ]) {
       expect(script).toContain(family);
     }

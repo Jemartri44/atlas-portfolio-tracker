@@ -271,8 +271,40 @@ const dist = join(webRoot, "dist");
  * The check inline or shared with the sync weighs the same. Trend: the boot
  * grows only when a rule of the ledger has to live where the ledger is
  * written; everything else of 015 stays lazy.
+ *
+ * **Feature 015, E4, P2 and P3 (2026-09-27): measured 75.900 (+15), ceiling
+ * 75.920 — measured + 20**, raised **before** the commit that needs it (the
+ * lesson of E3, `questions.md` §26.5), inside the authorisation of §7 P13 (up
+ * to 76.069). The code of the boot does not grow: the +15 is the table of
+ * preloads of the entry, which now names the chunk of the domain of the sync
+ * shared by the import and the export (the 014 measured +18 for the same).
+ *
+ * **E4, the card of the sync (2026-09-27): measured 75.999 (+104), ceiling
+ * 76.024**, raised before the commit that needs it, inside the authorisation
+ * (up to 76.069). No code of the sync on the boot: **+60** is the table of
+ * exports of the chunk of the domain, which now also serves the lazy chunk of
+ * the sync (12 names more: the decoder of lines, the ids, money); **+44** is
+ * `reloadLedger`, which the boot shook off while nothing lazy called it. The
+ * trend: 75.836 → 75.885 → 75.900 → 75.999; what is left of the
+ * authorisation, 45, is for E4 alone.
+ *
+ * **E4, P11 (2026-09-27): measured 76.026 (+27), ceiling 76.051**, raised
+ * before the commits that need it. No code on the boot: the table of lazy
+ * chunks of the entry names one more, `DuplicateDialog`, which the filing
+ * screen now shares with the forms. The trend: 75.999 → 76.026; 18 left of
+ * the authorisation.
+ *
+ * **Round 2 of the review of PR #97, N2 (2026-09-27): measured 76.055 (+39
+ * over 76.016), ceiling 76.069 — the authorisation itself, not measured +
+ * 20**, raised before the commit that needs it. The chip of the header says
+ * «falta descargar lo retenido» until what the sync held back at an export is
+ * downloaded, and the boot reads it with the date of the export: +39, after
+ * trimming it from +133 (`exportState` replaces `lastExportAt` instead of
+ * sitting beside it, and the title of the chip keeps its sentence). **What is
+ * left of the authorisation is 14 bytes**, for Q12 in E5. The trend: 75.999 →
+ * 76.026 → 76.016 → 76.055.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36;
+const BOOT_BUDGET_GZIP_BYTES = 76_069;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -642,8 +674,70 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36;
  * de la consola» of Ajustes with its client (`ajustes` +859); the rest is
  * hash noise (`ecb` +29, `index` +9). The boot: 75.852 against 75.869, +9 of
  * the table of preloads. The trend: 272,2 → 273,3 → 275,6 → 276,5.
+ *
+ * **Feature 015, E4, P2 and P3 (2026-09-27): measured 284.240 (+811 over the
+ * 283.429 of E3 closed, with a prototype built and undone), ceiling 284.496
+ * — measured + 256.** Raised **before** the commit that needs it, inside the
+ * authorisation of Q1 (up to 304.640). All of it lazy: the refusal to import
+ * while synced reads the state of the sync in the same transaction, and the
+ * export gives what is held apart — the shared chunk of the domain of the
+ * sync, reached now from two lazy chunks. The trend: 272,2 → 273,3 → 275,6 →
+ * 276,5 → 277,6.
+ *
+ * **E4, the device of the web (2026-09-27): measured 284.533 (+293), ceiling
+ * 284.789 — measured + 256**, raised before the commit that needs it. Lazy:
+ * the sentences of `sync_device_changed`, `sync_device_unknown` and
+ * `sync_already_configured` (`errors`), and the key of the device in the
+ * store of the sync.
+ *
+ * **E4, the card of the sync (2026-09-27): measured 297.515 (+13.019 over
+ * 284.496), ceiling 297.771 — measured + 256**, raised before the commit that
+ * needs it, inside the authorisation of Q1 (up to 304.640). All of it lazy but
+ * 104 bytes: `ajustes` +6.783 (the card, the engine of the web and the client
+ * of the sync), `sync` +4.884 (the engine of the domain: join, held, resolve),
+ * `sync-store` +1.240 (a chunk of its own now, shared by the card and the
+ * writer: `write` −254), `ImportControls` +156, the boot +104; the rest is
+ * hash noise. The trend: 276,5 → 277,6 → 290,5.
+ *
+ * **E4, P11 and the card split in three files (2026-09-27): measured 298.392
+ * (+711 over 297.681), ceiling 298.648 — measured + 256**, raised before the
+ * commits that need it, inside the authorisation (up to 304.640). All lazy
+ * but 27: the duplicate question of the filing screen (`presentar` +126 and
+ * `DuplicateDialog` +734 as a chunk of its own, against `FormNotices` −448),
+ * the closed-year notice of the corporate form (`form` +98), the card of the
+ * sync in three files (`ajustes` +221) and the sentences of N11 (`errors`
+ * +17). The trend: 277,6 → 290,5 → 291,6.
+ *
+ * **Review of PR #97, security B1 (2026-09-27): measured 298.730 (+338 over
+ * the 298.392 of P11), ceiling 298.986 — measured + 256**, raised before the
+ * commit that needs it, inside the authorisation (up to 304.640). All lazy:
+ * the engine reads the session before every order and names the device on
+ * every request (`ajustes` +325), and the sentences of `sync_device_changed`
+ * and `expected_device_required` as failures of the remote (`errors` +67).
+ *
+ * **Review of PR #97, security B2 and N3 (2026-09-27): measured 299.058
+ * (+328), ceiling 299.314 — measured + 256**, raised before the commits that
+ * need it. Lazy: the export names what is held back and how many operations
+ * it carries, and downloads it from a button of its own (`ImportControls`
+ * +357, the chunk of the export). The trend: 291,6 → 291,7 → 292,0.
+ *
+ * **Review of PR #97, correctness B2 (2026-09-27): measured 299.331 (+273
+ * over 299.058), ceiling 299.587 — measured + 256**, raised before the
+ * commit that needs it. Lazy: what is held shows its asset, quantity, price
+ * and amount through `Amount` (`ajustes` +196); the rest is hash noise.
+ *
+ * **Review of PR #97, correctness B1 and security N4 and N5 (2026-09-27):
+ * measured 300.180 (+849 over 299.331), ceiling 300.436 — measured + 256**,
+ * raised before the commit that needs it. Lazy, all of it: the notice of an
+ * invalid ledger asks the store of the sync, only when it is painted, whether
+ * something is held back (`guard` +397, `sync-store` +167); discarding asks
+ * first (`ajustes` +191); a duplicate is confirmed only for the draft it was
+ * asked about (`warned` 783, a chunk of its own now with `DuplicateDialog`,
+ * −732). A lazy component instead of the inline read split `solid` out of
+ * the entry (+606 on the boot) and was dropped. The trend: 292,0 → 292,3 →
+ * 293,1.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 277 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 293 * 1024 + 404;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -872,25 +966,11 @@ const kb = (value) => `${(value / 1024).toFixed(1)} KB`;
  * compiled package.
  */
 const FORBIDDEN_IN_WEB = [
-  // The hard requirement of feature 014 (D-Q17): **until P2 and P3 are in
-  // (E4), the web reaches nothing that configures the sync**: the client and
-  // its orchestration (`initialiseRemote`, `joinWithOwnLines`,
-  // `replaceFromRemote`, `syncDevice`, the held actions) and the HTTP client
-  // of E3. **Loosened only in E4**, in the same commit as the guard of
-  // `tests/api-access.test.ts`, and only after the commits of P2 and P3.
-  {
-    anywhere: /(^|\/)packages\/adapters\/(src|dist)\/sync(-http)?\//,
-    what: "el cliente o la orquestación de la sincronización (D-Q17, hasta E4)",
-  },
-  // The engine of the domain, likewise until E4. The door `sync.ts` is
-  // loaded for the read-only question of the store of the sync, so its
-  // modules are in the graph; only the three the export and that question
-  // need may render a byte — named one by one, never by likeness.
-  {
-    rendering:
-      /(^|\/)packages\/domain\/(src|dist)\/sync(\.[jt]s$|\/(?!(archive|lines|marker)\.[jt]s$))/,
-    what: "el motor de la sincronización (D-Q17, hasta E4)",
-  },
+  // Feature 014 (D-Q17) kept the client of the sync, its orchestration, the
+  // engine of the domain and the writer of the store out of the web until
+  // P2 and P3 were in. They are (feature 015, E4), and the web configures the
+  // sync from one lazy module, `src/sync/engine.ts`: LAZY_ONLY keeps all of it
+  // off the boot, and `tests/api-access.test.ts` keeps it to that module.
   // The rules of the access are the API's, never the web's.
   {
     anywhere: /(^|\/)packages\/domain\/(src|dist)\/access(\.[jt]s$|\/)/,
@@ -918,23 +998,6 @@ const FORBIDDEN_IN_WEB = [
   },
   { anywhere: /^\.\.\//, what: "un módulo de fuera del repositorio" },
 ];
-
-/**
- * The store of the sync is bundled for one read-only question (V7 of the
- * 014), and that file also holds the writer of the `sync:*` keys. So its
- * **rendered exports**, what the bundle actually uses of it, are read by name:
- * the question and the names of the keys, never `BrowserSyncStore`. Loosened
- * in E4 with the rest.
- */
-const SYNC_STORE =
-  /(^|\/)packages\/adapters\/(src|dist)\/ledger-store\/browser\/sync-store\.[jt]s$/;
-const SYNC_STORE_READ_ONLY = new Set([
-  "browserSyncConfigured",
-  "browserSyncPresence",
-  "SYNC_STATE_KEY",
-  "SYNC_HELD_KEY",
-  "SYNC_DISCARDED_KEY",
-]);
 
 const repoRoot = realpathSync(resolve(webRoot, "..", ".."));
 const graphFile = join(dist, ".vite", "atlas-modules.json");
@@ -968,13 +1031,6 @@ for (const build of builds) {
       // Compared **without the query**: `?raw` and `?url` of a vetoed module
       // are that module (round 3).
       refuse(`${build.label}${chunk.file}`, module.id, module.bytes);
-      if (SYNC_STORE.test(module.id)) {
-        for (const name of module.exports.filter((name) => !SYNC_STORE_READ_ONLY.has(name))) {
-          problems.push(
-            `${build.label}${chunk.file} usa ${name} del almacén de la sincronización, que solo se puede leer (D-Q17, hasta E4)`,
-          );
-        }
-      }
     }
   }
   // An asset is a file too: whatever it was emitted from falls under the rules.
@@ -982,6 +1038,91 @@ for (const build of builds) {
     for (const source of asset.sources) {
       refuse(`${build.label}${asset.file}`, source, 1);
     }
+  }
+}
+
+/*
+ * **Who may start an order of the sync of the web** (review of PR #97, N1 of
+ * round 1 and B1 of round 2, blocking by decision of the direction), read on
+ * the real graph, with who imports each module, statically or with
+ * `import()`:
+ *
+ * - the section of the sync in Ajustes has **one door**, its card
+ *   `SessionCard`, and only the page of Ajustes goes through it: any other
+ *   importer of a module of the section — the controller, a relay of it, a
+ *   root-absolute path — is refused;
+ * - the **reverse closure** of the engine — every module that reaches it, by
+ *   any path — is the section, the engine, the page of Ajustes and the lazy
+ *   load of that page (`App.tsx`, `main.tsx` and the `index.html` that loads
+ *   it).
+ *
+ * Any other importer could sync at boot, on a timer or when the connection
+ * comes back. A graph that does not say who imports is refused as such.
+ */
+const WEB_ENGINE = /(^|\/)apps\/web\/src\/sync\/engine(-held)?\.[jt]s$/;
+const SECTION = /(^|\/)apps\/web\/src\/routes\/ajustes\/sync\/[^/]+\.[jt]sx?$/;
+const SECTION_DOOR = /(^|\/)apps\/web\/src\/routes\/ajustes\/sync\/SessionCard\.[jt]sx$/;
+const AJUSTES_PAGE = /(^|\/)apps\/web\/src\/routes\/ajustes\/index\.[jt]sx$/;
+const AJUSTES_LOADERS = /(^|\/)apps\/web\/(src\/(App|main)\.[jt]sx?|index\.html)$/;
+const importersOf = new Map();
+for (const build of builds) {
+  for (const chunk of build.chunks ?? []) {
+    for (const module of chunk.modules) {
+      if (!Array.isArray(module.importers)) {
+        problems.push(`${build.label}${chunk.file}: el grafo no dice quién importa ${module.id}`);
+        continue;
+      }
+      importersOf.set(module.id, [...(importersOf.get(module.id) ?? []), ...module.importers]);
+    }
+  }
+}
+for (const [id, importers] of importersOf) {
+  if (!SECTION.test(id)) {
+    continue;
+  }
+  for (const importer of importers.filter((each) => !SECTION.test(each))) {
+    if (!(SECTION_DOOR.test(id) && AJUSTES_PAGE.test(importer))) {
+      problems.push(
+        `${importer} importa ${id}, un módulo de la sección de la sincronización que no es su puerta`,
+      );
+    }
+  }
+}
+const closure = new Set();
+const pending = [...importersOf.keys()].filter((id) => WEB_ENGINE.test(id));
+while (pending.length > 0) {
+  const id = pending.shift();
+  if (closure.has(id)) {
+    continue;
+  }
+  closure.add(id);
+  // The loaders reach the engine only through the page of Ajustes: past
+  // them, nothing more to walk.
+  if (!AJUSTES_LOADERS.test(id)) {
+    pending.push(...(importersOf.get(id) ?? []));
+  }
+}
+for (const id of closure) {
+  const allowed =
+    WEB_ENGINE.test(id) || SECTION.test(id) || AJUSTES_PAGE.test(id) || AJUSTES_LOADERS.test(id);
+  if (!allowed) {
+    problems.push(
+      `${id} alcanza el motor de la sincronización de la web desde fuera de su sección`,
+    );
+  }
+}
+// And the engine itself is imported only by the section and by itself: a
+// loader that imported it straight would not be caught by the closure above.
+for (const [id, importers] of importersOf) {
+  if (!WEB_ENGINE.test(id)) {
+    continue;
+  }
+  for (const importer of importers.filter(
+    (each) => !SECTION.test(each) && !WEB_ENGINE.test(each),
+  )) {
+    problems.push(
+      `${importer} alcanza el motor de la sincronización de la web desde fuera de su sección (${id})`,
+    );
   }
 }
 

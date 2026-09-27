@@ -135,6 +135,12 @@ describe("the other files of prices/ and deleting what was imported", () => {
       "the notice that they were deleted",
     );
     expect(text(host)).toContain("Precios importados borrados de este navegador");
+    // The other half of the notice comes on its own render: waited for too
+    // (review of PR #96, round 2: N4 was left half done).
+    await until(
+      () => text(host).includes("Sin precios automáticos en este dispositivo"),
+      "the notice that there are no automatic prices",
+    );
     expect(text(host)).toContain("Sin precios automáticos en este dispositivo");
   });
 });

@@ -60,6 +60,10 @@ export const REMOTE_FAILURES: Readonly<Record<string, string>> = {
     "este navegador fue olvidado como dispositivo: vuelve a iniciar sesión y recibirá uno nuevo.",
   remote_unavailable: "la nube no está disponible ahora mismo: inténtalo de nuevo en unos minutos.",
   body_too_large: "la petición era demasiado grande para la nube; no se ha escrito nada.",
+  expected_device_required:
+    "la petición no decía con qué dispositivo se sincroniza; es un fallo de la aplicación. No se ha escrito nada.",
+  sync_device_changed:
+    "tu sesión es ahora de otro dispositivo que el que se unió en este navegador (quizá iniciaste sesión en otra pestaña). No se ha escrito nada: únete otra vez con «Unirme desde la nube» o «Unirme con mis operaciones».",
   transport_rejected: "la red ha rechazado la petición antes de llegar a la nube.",
   network_failed: "no hay conexión con la nube.",
 };
@@ -384,11 +388,11 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   partner_discarded: () =>
     "Retenida: descartaste la anulación de esta corrección, y una corrección sin su anulación no corrige nada: ni se sube ni se puede rehacer. Descártala también; si el cambio sigue siendo cierto, corrige de nuevo la operación en vigor.",
   absent_after_rewrite: () =>
-    "Retenida al volver a descargar: la nube se ha reescrito y ya no tiene esta operación. Nunca se sube sola: regístrala otra vez si sigue siendo cierta, o descártala.",
+    "Retenida al volver a descargar: la nube se ha reescrito y ya no tiene esta operación. Nunca se sube sola: rehazla si sigue siendo cierta, o descártala.",
   differs_after_rewrite: () =>
     "Retenida al volver a descargar: la nube tiene esta misma operación con otro contenido. Compara las dos y rehaz o descarta la tuya.",
   absent_at_join: () =>
-    "Retenida al empezar desde la nube: la nube no tiene esta operación de tus datos anteriores, que quedan archivados. Regístrala si sigue siendo cierta, o descártala.",
+    "Retenida al empezar desde la nube: la nube no tiene esta operación de tus datos anteriores, que quedan archivados. Rehazla si sigue siendo cierta, o descártala.",
   differs_at_join: () =>
     "Retenida al empezar desde la nube: la nube tiene esta operación con otro contenido. Compara y rehaz o descarta la tuya.",
   discarded_by_user: () => "Descartada por ti: queda aparte, fuera de tus datos.",
@@ -435,8 +439,13 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "No se desactiva: falta el estado de la sincronización, así que no se sabe qué operaciones están pendientes. Sincroniza primero.",
   sync_not_configured: () =>
     "Tus datos no se sincronizan. Para empezar hay que elegirlo: subirlos enteros a una nube vacía, o unirte a una que ya tiene datos.",
+  sync_device_changed: () =>
+    "Este navegador se unió a la nube con otro dispositivo, que ya no es el de tu sesión (se olvidó, o no se aceptó). Lo pendiente sigue aquí. Para seguir, únete otra vez: «Unirme desde la nube» o «Unirme con mis operaciones».",
+  sync_device_unknown: () =>
+    "Este navegador se sincroniza pero no sabe con qué dispositivo se unió. Únete otra vez: «Unirme desde la nube» o «Unirme con mis operaciones». Lo pendiente sigue aquí.",
+  sync_already_configured: () => "Tus datos ya se sincronizan: no hace falta empezar otra vez.",
   sync_deactivated: () =>
-    "La sincronización está desactivada. Para volver a sincronizar hay que unirse otra vez, de forma explícita.",
+    "La sincronización está desactivada. Para volver a sincronizar hay que unirse otra vez, de forma explícita: «Unirme desde la nube» o «Unirme con mis operaciones».",
   remote_empty: () =>
     "La nube está vacía y aquí no se ha sincronizado nada: no se sube operación a operación. Inicializa la nube con tus datos enteros, de forma explícita.",
   deactivate_refused_marker_unreadable: () =>
@@ -458,7 +467,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   redo_partner_discarded: () =>
     "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.",
   join_required: (d) =>
-    `La sincronización de este navegador perdió su estado, y aquí hay ${count(d.own_lines)} operaciones que la nube no tiene. No se mezclan solas: unirse a la nube es siempre una elección explícita. No se ha tocado nada.`,
+    `La sincronización de este navegador perdió su estado, y aquí hay ${count(d.own_lines)} operaciones que la nube no tiene. No se mezclan solas: unirse a la nube es siempre una elección explícita, con «Unirme desde la nube» o «Unirme con mis operaciones». No se ha tocado nada.`,
   accept_invalid_while_synced: (d) =>
     `Tus datos se sincronizan, y este cambio dejaría ${count(d.affected)} operaciones inválidas: tus datos quedarían inválidos, no se podrían sincronizar y la sincronización se pararía. Repara antes esas operaciones (Ajustes → Verificación) o desactiva la sincronización de forma explícita.`,
   held_unit_unknown: () => "Ya no hay nada retenido ahí: puede que ya se haya resuelto.",

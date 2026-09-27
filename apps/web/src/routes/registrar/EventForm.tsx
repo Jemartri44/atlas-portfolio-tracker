@@ -32,6 +32,7 @@ import { useFormProblems } from "./form-problems.js";
 import { previewStep } from "./preview-step.js";
 import { RateHint } from "./RateNotes.jsx";
 import { useFormRates } from "./rates.js";
+import { createWarned } from "./warned.js";
 import { draftStep, writeStep } from "./write-step.js";
 
 interface EventFormProps {
@@ -64,6 +65,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     useFormProblems(props.spec.fields);
   const [reason, setReason] = createSignal("");
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
+  const warned = createWarned();
   const [conflict, setConflict] = createSignal(false);
   const rates = useFormRates({
     spec: props.spec,
@@ -138,17 +140,16 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     if (!rates.cleared()) {
       return;
     }
-    const result = await writeStep(
-      toDraft(props.spec, values(), props.state),
-      props,
-      reason().trim(),
-      confirmDuplicate,
-    );
+    const draft = toDraft(props.spec, values(), props.state);
+    const asked = [draft, reason().trim()];
+    const yes = warned.confirms(asked, confirmDuplicate);
+    const result = await writeStep(draft, props, reason().trim(), yes);
     if (result.ok) {
       navigate(result.value);
       return;
     }
     if (result.failure.kind === "duplicate") {
+      warned.remember(asked);
       setDuplicate(result.failure.existing);
       return;
     }

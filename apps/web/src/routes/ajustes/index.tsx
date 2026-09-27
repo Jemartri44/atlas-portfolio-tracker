@@ -10,7 +10,7 @@ import { formatInstantDate } from "../../format/date.js";
 import { countOf } from "../../format/number.js";
 import { changeLedger } from "../../ledger/actions.js";
 import { toAppError } from "../../ledger/errors.js";
-import { exportLedger } from "../../ledger/export.js";
+import { downloadHeld, exportLedger, exportSaid, type HeldExport } from "../../ledger/export.js";
 import { type BrowserSource, daysSinceExport, sourceLabel } from "../../ledger/source.js";
 import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
@@ -56,7 +56,7 @@ const LinkRow = (props: {
 
 export default function AjustesRoute(): JSX.Element {
   const [busy, setBusy] = createSignal(false);
-  const [message, setMessage] = createSignal<string | undefined>(undefined);
+  const [message, setMessage] = createSignal<ReturnType<typeof exportSaid> | undefined>(undefined);
   const [error, setError] = createSignal<string | undefined>(undefined);
   const source = () => store.source();
 
@@ -66,12 +66,15 @@ export default function AjustesRoute(): JSX.Element {
     return current?.kind === "browser" ? current : undefined;
   };
 
+  const [held, setHeld] = createSignal<HeldExport | undefined>(undefined);
+
   const onExport = async (): Promise<void> => {
     setBusy(true);
     setError(undefined);
     try {
-      await exportLedger();
-      setMessage("Datos exportados. Guarda el archivo donde tengas la copia de seguridad.");
+      const result = await exportLedger();
+      setHeld(result.held);
+      setMessage(exportSaid(result));
     } catch (failure) {
       setError(toAppError(failure).message);
     } finally {
@@ -83,10 +86,12 @@ export default function AjustesRoute(): JSX.Element {
     <>
       <PageHeader title="Ajustes" />
 
-      <Show when={message() !== undefined}>
-        <Notice severity="info" title="Hecho">
-          {message()}
-        </Notice>
+      <Show when={message()}>
+        {(said) => (
+          <Notice severity={said().severity} title="Hecho">
+            {said().text}
+          </Notice>
+        )}
       </Show>
       <Show when={error() !== undefined}>
         <Notice severity="danger" title="No se ha podido">
@@ -141,15 +146,28 @@ export default function AjustesRoute(): JSX.Element {
                       <Icon name="export" class="icon-sm" />
                       Exportar tus datos
                     </button>
+                    <Show when={held()}>
+                      {(pending) => (
+                        <button
+                          type="button"
+                          class="secondary"
+                          onClick={() => void downloadHeld(pending())}
+                        >
+                          <Icon name="export" class="icon-sm" />
+                          Descargar lo retenido
+                        </button>
+                      )}
+                    </Show>
                   </div>
                   <ImportControls
                     busy={busy()}
                     setBusy={setBusy}
                     onError={setError}
                     onImported={(events) =>
-                      setMessage(
-                        `${countOf(events, "movimiento importado", "movimientos importados")}: los datos que había en este navegador se han sustituido.`,
-                      )
+                      setMessage({
+                        severity: "info",
+                        text: `${countOf(events, "movimiento importado", "movimientos importados")}: los datos que había en este navegador se han sustituido.`,
+                      })
                     }
                   />
                   <p class="card-note">

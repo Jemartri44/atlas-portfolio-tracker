@@ -2,14 +2,15 @@
 // signed in to the cloud of Atlas, until when, which device it is, and the
 // buttons to sign in and out. **The web works whole without it** (ADR-0019;
 // ADR-0027: the static web is not protected by a sign-in): signing in only
-// serves to sync, and syncing arrives in E4. A lazy section of Ajustes (Q7),
-// never on the boot path.
+// serves to sync, which the card of the sync does with the device of the
+// session (E4). A lazy section of Ajustes (Q7), never on the boot path.
 
 import { createResource, createSignal, type JSX, Match, Show, Switch } from "solid-js";
 import { Notice, Section } from "../../../components/index.js";
 import { formatInstantDate } from "../../../format/date.js";
 import { readSession, type SessionState, signInHref, signOut } from "../../../sync/session.js";
 import { DevicesCard } from "./DevicesCard.jsx";
+import { SyncCard } from "./SyncCard.jsx";
 
 const webDevice = () => import("@atlas/adapters/web-device");
 
@@ -50,7 +51,11 @@ const UNAVAILABLE: Readonly<Record<string, string>> = {
  * application gives it none, and it takes the browser's at the moment of each
  * call.
  */
-export const SessionCard = (props: { readonly request?: Fetch }): JSX.Element => {
+export const SessionCard = (props: {
+  readonly request?: Fetch;
+  /** IndexedDB for a test; the browser's own otherwise. */
+  readonly open?: () => Promise<IDBDatabase>;
+}): JSX.Element => {
   const request: Fetch = (input, init) => (props.request ?? fetch)(input, init);
   const [session, { refetch }] = createResource(() => load(request));
   const [busy, setBusy] = createSignal(false);
@@ -112,6 +117,11 @@ export const SessionCard = (props: { readonly request?: Fetch }): JSX.Element =>
                       Cerrar sesión
                     </button>
                   </div>
+                  <SyncCard
+                    device={(state() as { deviceId: string }).deviceId}
+                    request={request}
+                    {...(props.open === undefined ? {} : { open: props.open })}
+                  />
                   <DevicesCard request={request} />
                 </>
               )}

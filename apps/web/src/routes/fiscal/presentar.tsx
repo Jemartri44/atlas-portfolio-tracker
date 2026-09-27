@@ -27,7 +27,9 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import { filingFields, filingTitle } from "../../view-models/fiscal/index.js";
 import { asEventDraft } from "../../view-models/forms/values.js";
 import { RequireLedger } from "../guard.jsx";
+import { DuplicateDialog } from "../registrar/DuplicateDialog.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
+import { createWarned } from "../registrar/warned.js";
 
 const MODELS = new Set(["renta", "720", "721"]);
 
@@ -35,9 +37,7 @@ const MODELS = new Set(["renta", "720", "721"]);
 const failureText = (kind: string): string =>
   kind === "conflict"
     ? "Tus datos han cambiado mientras rellenabas esto. Se han vuelto a leer: comprueba las cifras y vuelve a registrarlo."
-    : kind === "duplicate"
-      ? "Ya hay una presentación idéntica registrada."
-      : "No se ha podido registrar.";
+    : "No se ha podido registrar.";
 
 export default function PresentarRoute(): JSX.Element {
   const params = useParams<{ modelo: string; ano: string }>();
@@ -53,6 +53,13 @@ export default function PresentarRoute(): JSX.Element {
   const [fieldProblem, setFieldProblem] = createSignal<Record<string, string>>({});
   const [failure, setFailure] = createSignal<AppError | undefined>();
   const [busy, setBusy] = createSignal(false);
+  /**
+   * A filing with the same fingerprint is already recorded: a warning with a
+   * confirmation, never a refusal (ADR-0012), as `--confirm-duplicate` in the
+   * console (feature 015, E4, P11).
+   */
+  const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>();
+  const warned = createWarned();
 
   return (
     <RequireLedger writes skeleton={5}>
@@ -76,7 +83,8 @@ export default function PresentarRoute(): JSX.Element {
         const shown = (key: string, proposed: string): string =>
           typed()[key] ?? decimalForInput(proposed);
 
-        const record = async (): Promise<void> => {
+        const record = async (confirmDuplicate = false): Promise<void> => {
+          setDuplicate(undefined);
           setProblem(undefined);
           setFailure(undefined);
           setFieldProblem({});
@@ -116,12 +124,18 @@ export default function PresentarRoute(): JSX.Element {
           });
           setBusy(true);
           try {
-            const result = await recordDraft(asEventDraft(draft));
+            const written = asEventDraft(draft);
+            const result = await recordDraft(written, {
+              confirmDuplicate: warned.confirms(written, confirmDuplicate),
+            });
             if (result.ok) {
               navigate(`/fiscal?ejercicio=${year}`, { replace: true });
               return;
             }
-            if (result.failure.kind === "error") {
+            if (result.failure.kind === "duplicate") {
+              warned.remember(written);
+              setDuplicate(result.failure.existing);
+            } else if (result.failure.kind === "error") {
               setFailure(result.failure.error);
             } else {
               setProblem(failureText(result.failure.kind));
@@ -202,6 +216,16 @@ export default function PresentarRoute(): JSX.Element {
                 </FormActions>
               </Section>
             </div>
+            <DuplicateDialog
+              duplicates={duplicate()}
+              onCancel={() => setDuplicate(undefined)}
+              onConfirm={() => void record(true)}
+            >
+              <p>
+                Ya consta una presentación con el mismo justificante. Si de verdad son dos
+                presentaciones distintas, confírmalo.
+              </p>
+            </DuplicateDialog>
           </>
         );
       }}
