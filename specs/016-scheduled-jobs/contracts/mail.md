@@ -35,11 +35,12 @@ Abre Atlas: <origen>
 
 | Tarea o hallazgo | Asunto | Cuerpo (sin importes) | (importes) |
 |---|---|---|---|
-| `source_failing` | `[Atlas] Aviso: fuente de precios EODHD` | «EODHD lleva 4 fallos seguidos (umbral 3), el último `rate_limited` el 2026-10-03. Los precios conservan su último valor con su antigüedad.» | — |
-| `currency_unchecked` (Q1) | `[Atlas] Aviso: correspondencias sin contrastar` | «2 correspondencias de EODHD no están contrastadas y no se descargan. Contrástalas en la consola y súbelas con `atlas admin prices push`.» | — |
-| `thesis_horizon_exceeded` | `[Atlas] Aviso: tesis del cubo` | «1 tesis del cubo ha superado su horizonte previsto. Revísala en la aplicación.» | — |
-| `ecb_update_rejected` | `[Atlas] Aviso: historico del BCE` | «La descarga del 2026-10-03 cambiaba 3 tipos ya publicados y no se ha activado. Sigue en vigor la anterior.» | — |
-| `ecb_calendar_mismatch` | ídem | «2 días no cuadran con el calendario TARGET.» | — |
+| `source_failing` (E2) | `[Atlas] Aviso: fuente de precios eodhd` (el nombre de la fuente, de la lista cerrada) | «EODHD lleva 3 fallos seguidos (umbral 3), desde el 2026-10-03. Los precios conservan su último valor con su antigüedad.» Solo `unavailable`, `rate_limited`, `blocked` e `invalid_response` cuentan; **una vez por racha** | — |
+| `currency_unchecked` (E2, Q1) | `[Atlas] Aviso: correspondencias sin contrastar en eodhd` | «2 correspondencias de EODHD no están contrastadas y la nube no las descarga, desde el 2026-10-01. Contrástalas en la consola y súbelas con «atlas admin prices push».» | — |
+| `thesis_horizon_exceeded` (E2) | `[Atlas] Aviso: tesis del cubo` | «1 tesis del cubo han superado su horizonte previsto, desde el 2026-10-01. Revísalas en la aplicación.» Nunca el id ni el nombre de la tesis | — |
+| `ecb_update_rejected` (E2) | `[Atlas] Aviso: historico del BCE` | «La descarga del histórico del BCE del periodo 2026-10-03 cambiaba 3 tipos ya publicados y no se ha activado, desde el 2026-10-03. Sigue en vigor el histórico anterior; la descarga queda aparte en reference/ecb/rejected/.» | — |
+| `ecb_calendar_mismatch` (E2) | `[Atlas] Aviso: calendario del BCE` | «2 días del histórico del BCE no cuadran con el calendario TARGET, desde el 2026-10-03.» Un aviso, no un bloqueo | — |
+| `ecb_history_damaged` (E2) | `[Atlas] Aviso: historico del BCE danado` | «El histórico del BCE en vigor no cuadra con su manifiesto y no se ha podido deshacer, desde el …: no se usa.» (el caso «dañado» de la recuperación, plan §7.1) | — |
 | `backup_failed`, `backup_object_differs`, `backup_ecb_inconsistent` | `[Atlas] Aviso: volcado 2026-10` | el código y qué hacer (procedimiento 1) | — |
 | `integrity_errors`, `restore_rehearsal_differs` | `[Atlas] Aviso: integridad 2026-Q4` | los códigos y sus recuentos | — |
 | `ledger_size_above_threshold` | ídem | «El libro ocupa 1.100.000 bytes (umbral 1.048.576): revisa el plazo de las versiones (ADR-0006).» | — |
@@ -49,4 +50,4 @@ Abre Atlas: <origen>
 | `tax_return_ready` (siempre en enero) | `[Atlas] Renta 2026 lista` | «Los datos de la Renta de 2026 están listos: 3 notas y 2 criterios en disputa.» | — (**nunca** la base ni ninguna cifra, **tampoco con el interruptor**: Q10, decidido el 2026-09-27; desviación del encargo, §3 E4, anotada en questions §9) |
 | `informative_thresholds` | `[Atlas] Modelos 720 y 721 de 2026` | **Neutro** (questions §13): «Revisa si te corresponde presentar el modelo 720 de 2026.» / «… el modelo 721 de 2026.» Sin la palabra «umbral», sin ninguna cifra y sin decir si se supera: el texto no deja deducir ninguna cota del patrimonio. La decisión de enviarlo sigue saliendo solo de las valoraciones manuales, con la función del modelo | — («sin cifras», decisión de la ronda 2; antes decía «el valor y el umbral de aviso») |
 
-Los textos definitivos se fijan con sus tests en cada entrega; esta tabla fija **qué información** lleva cada uno y cuál no. **Nada de lo que dice un registro llega a un correo sino por una lista cerrada** (revisión de la PR #104, privacidad B1): un código o un asunto que la redacción no conoce no se envía.
+Los textos definitivos se fijan con sus tests en cada entrega (los de E2, en `packages/domain/test/jobs/notice-mail.test.ts`); un recuento que no es un entero se dice «algunos», nunca como llegó; esta tabla fija **qué información** lleva cada uno y cuál no. **Nada de lo que dice un registro llega a un correo sino por una lista cerrada** (revisión de la PR #104, privacidad B1): un código o un asunto que la redacción no conoce no se envía.
