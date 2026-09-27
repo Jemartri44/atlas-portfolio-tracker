@@ -55,7 +55,9 @@ describe("architecture (015): the API is a workspace of its own", () => {
     expect(manifest.devDependencies).toEqual({ esbuild: "0.28.2" });
   });
 
-  it("gives the adapters the two clients of the SDK the user authorised, pinned, and no other", () => {
+  // Feature 016, E1 (§8.1 P8): the client of SES v2 joins the two of the 015,
+  // authorised by the user and pinned at the same exact version.
+  it("gives the adapters the three clients of the SDK the user authorised, pinned, and no other", () => {
     const manifest = JSON.parse(
       readFileSync(join(repoRoot, "packages", "adapters", "package.json"), "utf8"),
     ) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
@@ -63,7 +65,11 @@ describe("architecture (015): the API is a workspace of its own", () => {
       Object.fromEntries(
         Object.entries(manifest.dependencies ?? {}).filter(([name]) => !name.startsWith("@atlas/")),
       ),
-    ).toEqual({ "@aws-sdk/client-s3": "3.1141.0", "@aws-sdk/client-ssm": "3.1141.0" });
+    ).toEqual({
+      "@aws-sdk/client-s3": "3.1141.0",
+      "@aws-sdk/client-sesv2": "3.1141.0",
+      "@aws-sdk/client-ssm": "3.1141.0",
+    });
     expect(manifest.devDependencies ?? {}).toEqual({});
   });
 
@@ -527,6 +533,8 @@ describe("architecture (015): the thin adapters of the SDK send only what they a
         "GetParametersByPathCommand",
         "GetParametersByPathCommandOutput",
       ],
+      // Feature 016 (§8.1 P8): one command, to send a mail, and its client.
+      "@aws-sdk/client-sesv2": ["SESv2Client", "SendEmailCommand"],
     };
     const taken = productSources().flatMap((file) =>
       parse(file)
