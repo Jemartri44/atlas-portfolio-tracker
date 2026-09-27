@@ -49,7 +49,18 @@ Agrupadas por entrega (§2 del encargo). Cada tarea de código empieza por su te
 
 ## E2 — Los datos del día en la nube
 
-Bloque 0 (questions §2), almacenes de S3, tareas diarias, `atlas admin prices push`. Se detalla al empezar.
+- [x] T201 Traer `develop` tras la fusión de E1 (con la PR #102)
+- [x] T202 Q1: `updatePrices({ symbols: "read_only" })` y el resultado `currency_unchecked`
+- [x] T203 M1: `REFERENCE_NAME` de `prices/` por ida y vuelta con `priceFileName`; `_status.json` y `config.json` no se sirven
+- [x] T204 Bloque 0 en `questions.md` §14.1
+- [x] T205 El cupo de la nube en variables (18/23, umbral 3), `simulated` negada en `prod`, `cloudPriceConfigText`
+- [x] T206 Hallazgos del BCE y de los precios (`PRODUCER_FINDINGS`) y su redacción en el correo
+- [x] T207 `ecbRecovery` y los almacenes de S3 (`S3EcbHistoryStore`, `S3PriceStore`), las claves de SSM y la fuente simulada, detrás de `@atlas/adapters/aws-daily`
+- [x] T208 Las tareas `ecb_update` y `prices_update` en `apps/jobs`, con `fetch` limitado a 15 s
+- [x] T209 Guardianes: escritores diarios dentro de las tareas diarias; un solo escritor por objeto en `prices/`; centinelas de las tareas diarias (con la consola de Node)
+- [x] T210 `atlas admin prices push` (bloque 3): `symbolsPushPlan` y la orden
+- [x] T211 Contratos al día (`mail.md`, `iam-permissions.md` §8 y §9) y el plan
+- [x] T212 Autocomprobación de §5, mutación por lotes, tubería completa, congelar y PR
 
 ## E3 — Los dispositivos beben de la nube
 
