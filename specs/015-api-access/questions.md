@@ -1869,3 +1869,77 @@ En `~/personal/atlas/privado/capturas/2026-09-27-015-e4-r1/`, **por *viewport***
   - arranque 76.016, con techo en 76.051; la autorización llega a 76.069;
   - total 300.128, con techo en 300.436; la autorización llega a 304.640, así que quedan 4.512.
 - **La CI** corre en la PR (`pull_request`); su resultado se anota en el mapa de la PR #97.
+
+## 31. La ronda 2 de revisiones de la PR #97: decisiones y entrega (2026-09-27)
+
+La revisión es el comentario 5853955890, sobre `ddf6998`, y no converge.
+
+### 31.1 Las decisiones de la dirección
+
+- **B1 se cierra; no se acepta como riesgo.** La sección de la sincronización tiene **una sola puerta** hacia fuera, su tarjeta. Las dos reglas, la del grafo real y la estática, exigen:
+  - que el único módulo de fuera de `ajustes/sync/` que importe algo de la sección sea `ajustes/index.tsx`, y solo ese componente;
+  - que todo el cierre inverso de `engine.ts` quede dentro de la sección, más `ajustes/index.tsx` y la carga perezosa de la ruta de Ajustes.
+  - Mutantes: el salto por `sync-controller` desde `no-existe.tsx`, un reexporte de `sync-controller` y el alias de ruta absoluta. Los tres tienen que sobrevivir antes y morir después.
+- **N1**: un test que mate el mutante del formulario corporativo.
+- **N2**: con operaciones retenidas, el aviso «sin exportar» no desaparece del todo hasta que se descarga también lo retenido; mientras tanto dice «falta descargar lo retenido». Con test.
+
+### 31.2 Lo hecho
+
+- **B1** (`52b0c87`):
+  - La puerta es `SessionCard`, que es lo que importa la página de Ajustes; `SyncCard` y el controlador quedan dentro.
+  - **Regla estática**, «keeps the section of the sync behind its one door»: fuera de `routes/ajustes/sync/`, nadie importa nada de la sección ni del motor. La única excepción es `routes/ajustes/index.tsx` → `SessionCard`, por nombre y de forma estática. Los dos ficheros del motor se importan entre ellos.
+  - **Regla estática**, «keeps whoever reaches the engine inside the section of the sync»: el cierre inverso del motor, por cualquier camino y sin parar en la sección, solo puede ser la sección, el motor o la página de Ajustes. Además, `App.tsx` y `main.tsx`, que lo cargan de forma perezosa, solo pueden alcanzarlo a través de la página.
+  - **`resolveAcross` resuelve las rutas absolutas** (`/src/…`, desde la raíz de la web, y las del disco). Una que no se resuelve se nombra, nunca desaparece.
+  - **En el grafo real** (`check-bundle.mjs`), con los importadores estáticos y dinámicos de cada módulo:
+    - todo importador de un módulo de la sección que esté fuera de ella se rechaza, salvo la página de Ajustes para `SessionCard`;
+    - el cierre inverso del motor solo admite la sección, el motor, la página y la carga (`App.tsx`, `main.tsx` e `index.html`);
+    - el motor solo lo importan la sección y él mismo, para que un cargador no lo importe directamente.
+  - **El comentario de `tests/api-access.test.ts`** ya no promete nada que no se compruebe: nombra la puerta, el cierre y las rutas absolutas.
+- **N1** (`d9ea2c3`): test del formulario corporativo en `apps/web/test/duplicate-warned.test.tsx`. Registra un split; con el aviso abierto cambian las notas; el sí no lo registra y vuelve a avisar.
+- **N2** (`30502f0`, `8a4ea77`):
+  - El registro de la exportación (`current:meta`) guarda `heldOwed`, las operaciones retenidas que llevaba, en la misma transacción que la fecha.
+  - `heldDownloaded` lo quita al pulsar «Descargar lo retenido» y deja la fecha.
+  - El arranque lo lee con `exportState()`, que sustituye a `lastExportAt()`.
+  - El aviso de la barra dice «falta descargar lo retenido», en ámbar, mientras exista.
+  - Tests: el del adaptador en `transfer-sync.test.ts` y el del aviso en `ledger-chip.test.tsx`.
+- **Documentos** (`3e63843`): `docs/data-schema.md` (`heldOwed`, `heldDownloaded`) y `docs/specification.md` §9.6 (la puerta y el aviso).
+
+### 31.3 El paquete — atención para E5
+
+- **El arranque sube a 76.055** y su techo queda **en la autorización misma, 76.069** (`30502f0`, antes del commit que lo necesita).
+  - Es el aviso de N2, que tiene que estar en la barra desde el primer pintado y lee el registro de la exportación al arrancar.
+  - Lo recorté de +133 a +39: `exportState` sustituye a `lastExportAt` en lugar de sumarse, y el título del aviso se queda con su frase.
+- **Para Q12 en E5 quedan 14 bytes**, no los 18 de §29. **Si Q12 no cabe, la dirección tendrá que decidir de dónde sacarlos.**
+- El total es 300.299, con techo en 300.436.
+
+### 31.4 Mutantes
+
+Con el guardián de memoria y secuenciales: `015-r97r2-b1.json`, `015-r97r2-n1.json` y `015-r97r2-rest.json`.
+
+- **B1, antes**, contra las reglas de `ddf6998`: los tres (MB1, el salto por `sync-controller` desde `no-existe.tsx` con `setInterval`; MB2, un reexporte en `src/sync/controller-relay.ts`; MB3, `import("/src/routes/ajustes/sync/sync-controller.ts")`) **sobreviven** a la regla estática. En el grafo, la construcción falla solo por bytes, sin ningún mensaje de regla.
+- **B1, después**: **los seis mueren**, cada uno por su regla. El grafo dice, por ejemplo, «`apps/web/src/routes/no-existe.tsx` importa `…/sync-controller.ts`, un módulo de la sección de la sincronización que no es su puerta» y «… alcanza el motor de la sincronización de la web desde fuera de su sección».
+- **M1 y M1b de la ronda 1**, con los mensajes nuevos: los cuatro mueren.
+- **N1**: el mutante del revisor (`confirmDuplicate` sin `warned.confirms`) **muere**. Antes sobrevivía, como mostró la revisión.
+- **N2**: mueren los tres: el aviso que ignora la deuda, la exportación que no la anota y la descarga que no la quita. Los dos tests nuevos los vi en rojo contra el código anterior.
+
+### 31.5 La tubería y la CI
+
+**Código congelado en `3e63843`**; este informe va en el commit siguiente, solo de documentos. La tubería corrió sobre `3e63843`, con `--pool=forks --maxWorkers=1`, tras el guardián de memoria y sin nada en paralelo:
+
+| Paso | Código de salida | Tiempo |
+|---|---:|---:|
+| lint | 0 | 3 s |
+| typecheck | 0 | 2 s |
+| cobertura, 1.ª | 0 | 854 s |
+| cobertura, 2.ª | **1**, y 0 al repetirla | 950 s, y 880 s |
+| build (incluido `check-bundle`) | 0 | 11 s |
+
+- **3.058 tests** en 310 ficheros, todos en verde en las tres ejecuciones.
+- **La 2.ª cobertura salió con 1**:
+  - dio el 99,94 % de ramas en `packages/domain/src/ecb/resolve.ts:54-64`, que esta ronda no toca;
+  - la 1.ª, sobre el mismo commit, había dado el 100 %, y al repetir solo ese paso volvió al 100 %;
+  - es la misma intermitencia de §30, entonces en `ecb/propose.ts:95`, en la fusión de la cobertura entre proyectos;
+  - el registro del intento está en el *scratchpad* (`015-pipe-cov2-try1.log`);
+  - sigue pendiente del permiso `workflow` para que la CI guarde la cobertura cuando falle.
+- **El paquete**: arranque 76.055 (techo 76.069, que es la autorización) y total 300.299 (techo 300.436).
+- **La CI** corre en la PR y su resultado va en el mapa.
