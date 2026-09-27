@@ -50,3 +50,11 @@ export const repeatsKey = (text: string): boolean => {
 
 /** Whether a text holds a lone surrogate: its UTF-8 would not be UTF-8 (review of PR #96, B1). */
 export const holdsLoneSurrogate = (text: string): boolean => /\p{Cs}/u.test(text);
+
+/**
+ * The events read from a line with a key twice (Q12, option (b), §29 and
+ * §33): the line loads as `JSON.parse` reads it, and the degraded projection
+ * marks the event invalid with `duplicate_key`. Held by identity, never as a
+ * field: the event is what the line says, and nothing is added to it.
+ */
+export const REPEATED_KEY = new WeakSet<object>();

@@ -6,6 +6,7 @@
 import { ValidationError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
 import type { LedgerEvent } from "./events.js";
+import { REPEATED_KEY, repeatsKey } from "./json-keys.js";
 import { CURRENT_LEDGER_SCHEMA, type LedgerSchema, migrate } from "./migrations/index.js";
 import { validateShape } from "./validate.js";
 
@@ -38,7 +39,13 @@ export const parseLine = (text: string): UnknownRecord => {
 export const decodeLine = (
   text: string,
   schema: LedgerSchema = CURRENT_LEDGER_SCHEMA,
-): DecodedLine => ({ event: validateShape(migrate(parseLine(text), schema), schema), raw: text });
+): DecodedLine => {
+  const event = validateShape(migrate(parseLine(text), schema), schema);
+  if (repeatsKey(text)) {
+    REPEATED_KEY.add(event);
+  }
+  return { event, raw: text };
+};
 
 /** Canonical text of a record as written: envelope keys first, then the rest in their order, no spaces. */
 export const canonicalLine = (record: UnknownRecord): string => {

@@ -54,13 +54,6 @@ export {
   contributionPlan,
 } from "./projections/contribution.js";
 export {
-  type CashSettlement,
-  type CorporateActionDraft,
-  type CorporateActionParams,
-  corporateActionDraft,
-  type FractionRow,
-} from "./projections/corporate-action-draft.js";
-export {
   type BucketCostRow,
   type CoreCostRow,
   type CoreCostTotals,
@@ -69,7 +62,6 @@ export {
   type StandaloneFeeRow,
   type StandaloneFees,
 } from "./projections/costs.js";
-export { deepCheck } from "./projections/deep-check.js";
 export type { FingerprintWaiver } from "./projections/filings.js";
 export { realizedGains } from "./projections/gains.js";
 export { investmentIncome } from "./projections/income.js";
@@ -139,11 +131,6 @@ export {
   type SilencedWarnings,
   silencedWarnings,
 } from "./projections/settings-impact.js";
-export {
-  type SimulateTransferInput,
-  simulateTransfer,
-  type TransferSimulation,
-} from "./projections/simulate-transfer.js";
 export { type Snapshot, snapshotDiff, snapshotOf, sortKeysDeep } from "./projections/snapshot.js";
 export type * from "./projections/state.js";
 export { theses } from "./projections/theses.js";

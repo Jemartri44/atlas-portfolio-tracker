@@ -35,7 +35,8 @@ const THROTTLES = new Map([
   ["InternalError", "internal_error"],
 ]);
 
-const rethrow = (error: unknown): never => {
+/** A failure of S3 as the narrow interfaces say it: transient, or as it came. */
+export const rethrow = (error: unknown): never => {
   throw transient("s3", error, THROTTLES) ?? error;
 };
 

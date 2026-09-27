@@ -74,3 +74,14 @@ No habrá cuentas miembro dedicadas: Atlas se despliega en una cuenta de AWS que
 - **El ensayo de la etapa de despliegue** no puede perder una cuenta compartida para ensayar. Pasa a ser: **vaciar el bucket de `dev` con su rol de administración** (el de despliegue no puede, porque la política del bucket le niega los objetos), cancelar el plan Free de `dev` si lo tiene, **destruir `dev` y levantarlo restaurando el libro sintético desde la copia fuera de AWS**, y comprobar que vuelve entero. La regla de no ensayar nunca con datos reales en `dev` no cambia.
 - **Lo que ese ensayo no cubre**, y se acepta como pérdida de cobertura: lo que se perdería con la cuenta y el ensayo no toca —el *bootstrap*, los límites de permisos, el proveedor OIDC, el presupuesto, la activación de la etiqueta, la identidad de SES, los clientes OAuth y el guion de los secretos—. Si alguna vez hay que levantar Atlas en otra cuenta, esos pasos se ejecutan por primera vez de verdad.
 - **La capa 4 necesita un camino nuevo.** La política del bucket niega los objetos a todo lo que no sea un rol de Atlas del entorno (ADR-0034, fila 6), así que el principal del usuario ya no puede copiar `documents/` e `imports/` a su disco. **Lo elige la feature 015**: asumir el rol de administración con MFA en cada copia, o una ruta de la API.
+
+## Nota del 2026-09-27 (feature 015, E5): la confirmación del paso 4 se escribe
+
+Decidida por la dirección el 2026-09-27 tras la revisión de seguridad de la PR #98 (N1; `specs/015-api-access/questions.md` §35). El paso 4 pide una «confirmación explícita, con esa lista delante», y un `--yes` no la cumple: se escribe antes de ver la lista, y basta recuperar la orden del historial del shell para devolver la nube a una copia antigua sin ninguna pregunta. Por eso:
+
+- `atlas admin restore`, `atlas admin compact` y `atlas admin forget-device` **se niegan con `--yes`**;
+- se confirman **escribiendo el nombre del entorno** (`prod`), con lo que está en juego delante. Un «sí» no vale, y cualquier otra respuesta no toca nada;
+- sin una terminal a la que preguntar, se detienen sin escribir nada;
+- la confirmación de olvidar un dispositivo enseña además su tipo, su nombre y su última sincronización, para no olvidar el que no es.
+
+El paso 5 lee además la copia como UTF-8 estricto: un byte que no lo es se niega (`restore_candidate_invalid`, `not_utf8`), en vez de escribirse como otros bytes que los de la copia.

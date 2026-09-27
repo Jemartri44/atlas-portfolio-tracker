@@ -4,7 +4,12 @@
 
 export { DeviceStore } from "./device-store.js";
 export { DependencyUnavailable } from "./errors.js";
-export type { ListedObject, ObjectStore, StoredObject } from "./object-store.js";
+export type {
+  AdminObjectStore,
+  ListedObject,
+  ObjectStore,
+  StoredObject,
+} from "./object-store.js";
 export type { ParameterEntry, ParameterStore } from "./parameter-store.js";
 export {
   REFERENCE_PREFIXES,

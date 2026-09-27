@@ -507,7 +507,11 @@ describe("architecture (015): AWS and Google only where they belong", () => {
             (specifier) => specifier.startsWith("@aws-sdk/") || specifier.startsWith("node:"),
           ) ||
           /[/\\]adapters[/\\]src[/\\](aws|identity|access)[/\\]/.test(file) ||
-          /[/\\]domain[/\\]src[/\\]access(\.ts|[/\\])/.test(file)
+          /[/\\]domain[/\\]src[/\\]access(\.ts|[/\\])/.test(file) ||
+          // The administration (review of PR #98, N7): its rules, its adapter
+          // (under `aws/`, above) and its orders, which live in the console.
+          /[/\\]domain[/\\]src[/\\]admin\.ts$/.test(file) ||
+          /[/\\]apps[/\\]cli[/\\]/.test(file)
         );
       })
       .map(([, chain]) => chainText(chain));
@@ -721,6 +725,193 @@ describe("architecture (015): the web configures the sync only through its engin
         parse(file).bindings.some((binding) => binding.name === "replaceLedgerText"),
       ),
     ).toBe(true);
+  });
+});
+
+describe("architecture (015): the records of the tokens are never deleted nor labelled (T26)", () => {
+  /**
+   * ADR-0033, point 9: a record is written to create it and to revoke it, and
+   * never deleted; a label or a delete is a way to bring a revoked token back
+   * (B1). The narrow interface of SSM offers exactly four operations, and no
+   * source of the product names the others of the service.
+   */
+  it("offers get, putNew, overwrite and listByPath, and nothing else", () => {
+    const file = join(adaptersRoot, "src", "aws", "parameter-store.ts");
+    const members = [...parse(file).code.matchAll(/^\s{2}([a-zA-Z]+)\(/gm)].map(
+      (match) => match[1],
+    );
+    expect(members).toEqual(["get", "putNew", "overwrite", "listByPath"]);
+    const offenders = productSources().filter((path) =>
+      /DeleteParameters?|LabelParameterVersion|UnlabelParameterVersion|deleteParameter|labelParameter/.test(
+        parse(path).code,
+      ),
+    );
+    expect(offenders.map((path) => relative(repoRoot, path))).toEqual([]);
+  });
+});
+
+describe("architecture (015): the thin adapters of the SDK send only what they are for (E3)", () => {
+  /**
+   * The API only appends to the bucket and never deletes (ADR-0026, Part A;
+   * ADR-0028, row 7), and the records of the tokens are never deleted nor
+   * labelled (T26). What the adapters take from the SDK is the closed list of
+   * commands they send; a delete, or anything else, is a violation.
+   */
+  it("takes from the SDK only the clients and the commands of the narrow interfaces", () => {
+    const allowed: Record<string, readonly string[]> = {
+      "@aws-sdk/client-s3": [
+        "S3Client",
+        "GetObjectCommand",
+        "PutObjectCommand",
+        "ListObjectsV2Command",
+        "ListObjectsV2CommandOutput",
+      ],
+      "@aws-sdk/client-ssm": [
+        "SSMClient",
+        "GetParameterCommand",
+        "GetParameterCommandOutput",
+        "PutParameterCommand",
+        "GetParametersByPathCommand",
+        "GetParametersByPathCommandOutput",
+      ],
+    };
+    const taken = productSources().flatMap((file) =>
+      parse(file)
+        .bindings.filter((binding) => binding.specifier.startsWith("@aws-sdk/"))
+        .map((binding) => `${binding.specifier} ${binding.name}`),
+    );
+    expect(taken.length).toBeGreaterThan(0);
+    expect(
+      taken.filter((entry) => {
+        const [specifier, name] = entry.split(" ") as [string, string];
+        return !(allowed[specifier] ?? []).includes(name);
+      }),
+    ).toEqual([]);
+    const deletes = productSources().filter((path) =>
+      /DeleteObjects?|deleteObject|DeleteBucket/.test(parse(path).code),
+    );
+    expect(deletes.map((path) => relative(repoRoot, path))).toEqual([]);
+  });
+});
+
+describe("architecture (015): the API only appends, and the domain judges every line (E3)", () => {
+  const apiSources = () => listSources(join(apiRoot, "src"));
+
+  /**
+   * ADR-0026, Part A: the API never rewrites nor deletes a line. It holds the
+   * remote ledger only as `AppendOnlyLedger`, and no source of it names an
+   * operation that rewrites or deletes (mutant 31).
+   */
+  it("names no operation that rewrites or deletes the remote", () => {
+    const offenders = apiSources().filter((file) =>
+      /\breplaceLines\b|\.replace\(\s*\[|\bBlobLedgerStore\b|\bS3LedgerBlob\b|DeleteObject|deleteObject|deleteOutOfBand|\bputIfMatch\b|\bputIfNoneMatch\b|\bLEDGER_KEY\b|["'`]ledger\//.test(
+        parse(file).code,
+      ),
+    );
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+    const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
+    expect(sync).toContain("AppendOnlyLedger");
+    // The routes get no ObjectStore of their own (review of PR #96, security
+    // N1): the reference data through a read-only port of its two prefixes.
+    expect(parse(join(apiRoot, "src", "sync.ts")).code).not.toMatch(/\bObjectStore\b|\bobjects\b/);
+    expect(sync).toContain("ReferenceReader");
+  });
+
+  /**
+   * What a line is worth is `acceptAppend` and `acceptInit`, never a copy in
+   * the handler: no source of the API names a code of the table of §5.2
+   * (mutant 31, «reimplement a rule of acceptAppend»).
+   */
+  it("reimplements no rule of acceptAppend: the codes of a line live in the domain", () => {
+    const codes =
+      /["'`](line_unreadable|schema_version_unsupported|line_invalid|recorded_at_in_future|domain_rejected|duplicate_unconfirmed|pair_declaration_invalid|pair_incomplete|pair_not_contiguous|pair_rejected|seal_mismatch|waiver_not_appendable)["'`]/;
+    const offenders = apiSources().filter((file) => codes.test(parse(file).code));
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+    const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
+    expect(sync).toMatch(/acceptAppend\(/);
+    expect(sync).toMatch(/acceptInit\(/);
+  });
+});
+
+describe("architecture (015): the administration is out of reach of the API (E5)", () => {
+  const cliSources = (): string[] => listSources(cliSrc);
+  const isAdministration = (file: string): boolean =>
+    /[/\\]adapters[/\\]src[/\\]aws[/\\]sdk-admin\.ts$/.test(file) ||
+    /[/\\]domain[/\\]src[/\\](admin\.ts|access[/\\]admin\.ts)$/.test(file) ||
+    /[/\\]apps[/\\]cli[/\\]/.test(file);
+
+  /**
+   * ADR-0026, Part A: `compact` and the restore are operations of
+   * administration, «fuera del camino que alcanza Internet». Nothing the
+   * handler reaches is an order, an adapter or a rule of the administration
+   * (mutant 45), and no source of the API names what only the administration
+   * has: an old version, a listing at depth, the mark of a forgotten device.
+   */
+  it("reaches no order, adapter or rule of the administration from apps/api", () => {
+    const roots = listSources(join(apiRoot, "src"));
+    const reached = reach(roots);
+    expect(reached.size).toBeGreaterThan(roots.length);
+    expect(
+      [...reached].filter(([file]) => isAdministration(file)).map(([, chain]) => chainText(chain)),
+    ).toEqual([]);
+    const offenders = roots.filter((file) =>
+      /\bgetVersion\b|\blistAll\b|\bAdminObjectStore\b|\bVersionId\b|\bforgottenDevice\b|\bremoteRewritePermission\b/.test(
+        parse(file).code,
+      ),
+    );
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+  });
+
+  /**
+   * The administration takes the role of administration from the standard
+   * chain of the SDK, **never the token of a device** (mutant 45; §7 P5, mutant
+   * 46 ter): nothing it imports is the credentials of the console, the header
+   * of the token or the client of the API.
+   */
+  it("uses no token of a device: it imports neither the credentials nor the client of the API", () => {
+    const roots = cliSources().filter((file) =>
+      /[/\\](admin[/\\][^/\\]+|commands[/\\](admin|backup|backup-copies))\.ts$/.test(file),
+    );
+    expect(roots.length).toBe(4);
+    // What they import, by name: never the credentials or the client of the
+    // console, and from the barrel of the adapters only the folder's own.
+    const imported = roots.flatMap((file) =>
+      parse(file).bindings.map((binding) => ({ file, ...binding })),
+    );
+    expect(imported.length).toBeGreaterThan(0);
+    const violations = imported
+      .filter(
+        ({ specifier, name }) =>
+          /(^|\/)remote\//.test(specifier) ||
+          /^@atlas\/adapters\/(sync-http|sync-client|sync|identity|access)$/.test(specifier) ||
+          (specifier === "@atlas/adapters" &&
+            !["FileLedgerStore", "HELD_FILE", "folderSyncPresence"].includes(name)),
+      )
+      .map(({ file, specifier, name }) => `${relative(repoRoot, file)}: ${name} from ${specifier}`);
+    expect(violations).toEqual([]);
+    const named = roots.filter((file) =>
+      /DEVICE_TOKEN_HEADER|x-atlas-device-token|credentials\.json/.test(parse(file).code),
+    );
+    expect(named.map((file) => relative(repoRoot, file))).toEqual([]);
+  });
+});
+
+describe("architecture (015): the exception of the redo is bound to the sealed plan (E3, N1)", () => {
+  /**
+   * `recordRedo` records with the rule of `correctEvent` (§7 P6, option (a)).
+   * Only the orchestration of the redo may reach it — never the ordinary form
+   * of recording, where it would be a flag nobody could tell apart (N1;
+   * mutant 33 bis). The door of the sync re-exports it; nothing else names it.
+   */
+  it("is imported only by the orchestration of the redo", () => {
+    const users = productSources()
+      .filter((file) => parse(file).bindings.some((binding) => binding.name === "recordRedo"))
+      .map((file) => relative(repoRoot, file).replaceAll("\\", "/"))
+      .sort();
+    expect(users).toEqual([
+      "packages/adapters/src/sync/held-actions.ts",
+      "packages/domain/src/sync.ts",
+    ]);
   });
 });
 

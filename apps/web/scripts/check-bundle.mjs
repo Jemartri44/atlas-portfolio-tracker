@@ -304,7 +304,32 @@ const dist = join(webRoot, "dist");
  * left of the authorisation is 14 bytes**, for Q12 in E5. The trend: 75.999 →
  * 76.026 → 76.016 → 76.055.
  */
-const BOOT_BUDGET_GZIP_BYTES = 76_069;
+/*
+ * **Feature 015, E5, the door `@atlas/domain/tools` (decision of the
+ * direction on Q12, §33): measured 73.889 (−2.166), ceiling 73.909 — measured
+ * + 20**, lowered in a commit of its own. The draft of a corporate action,
+ * the deep check and the simulation of a transfer left the barrel of the
+ * domain, which the browser downloads at boot, for a door of their own. The
+ * authorisation stays at 76.069: what this frees is for Q12 (b) and for the
+ * visual work after the 015. The trend: 76.055 → 73.889.
+ */
+/*
+ * **Q12, option (b) (§29 and §33): measured 74.073 (+184), ceiling 74.093 —
+ * measured + 20**, raised before the commit that needs it, inside the
+ * authorisation (76.069). A line with a key twice is read and marked on the
+ * boot path, where the ledger of the browser is read (`repeatsKey`, 930 B of
+ * source until now only in the sync), and the degraded projection marks it
+ * invalid. The trend: 76.055 → 73.889 → 74.073; 1.976 left of the
+ * authorisation.
+ *
+ * **Q12, the remedy (review of PR #98, B1; §35): measured 74.114 (+41),
+ * ceiling 74.134 — measured + 20**, raised before the commit that needs it,
+ * inside the authorisation. A line with a key twice that a live reversal
+ * annuls counts as annulled: the projection waits for the reversals before
+ * judging it. The trend: 73.889 → 74.073 → 74.114; 1.955 left of the
+ * authorisation.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_134;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -737,7 +762,15 @@ const BOOT_BUDGET_GZIP_BYTES = 76_069;
  * the entry (+606 on the boot) and was dropped. The trend: 292,0 → 292,3 →
  * 293,1.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 293 * 1024 + 404;
+/*
+ * **Feature 015, E5, the door `@atlas/domain/tools` (2026-09-27): measured
+ * 301.240 (+941 over 300.299), ceiling 301.496 — measured + 256**, raised
+ * before the commit that needs it, inside the authorisation (up to 304.640).
+ * The draft of a corporate action, the deep check and the simulation of a
+ * transfer leave the boot (−2.166 on it) for a lazy chunk of their own
+ * (`tools`), and a chunk more costs its plumbing and its compression apart.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 294 * 1024 + 440;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -911,6 +944,17 @@ const LAZY_ONLY = [
   // commit: the domain of the sync and its door, the shared orchestration and
   // the web's own store of sync state. The sync is explicit and lazily loaded.
   { path: "/packages/domain/src/sync/", what: "la sincronización del libro" },
+  // Feature 015, E5 (Q12, §33): the tools of the screens opened on demand.
+  { path: "/packages/domain/src/tools.ts", what: "la puerta de las herramientas de las pantallas" },
+  {
+    path: "/packages/domain/src/projections/corporate-action-draft.ts",
+    what: "el borrador de un evento corporativo",
+  },
+  { path: "/packages/domain/src/projections/deep-check.ts", what: "la verificación a fondo" },
+  {
+    path: "/packages/domain/src/projections/simulate-transfer.ts",
+    what: "la simulación de un traspaso",
+  },
   // Feature 015: **nothing of the access on the boot path**, from its first
   // commit. The rules of the access are the API's and never the web's (the
   // architecture test keeps the web from reaching them at all); the session,
@@ -975,6 +1019,13 @@ const FORBIDDEN_IN_WEB = [
   {
     anywhere: /(^|\/)packages\/domain\/(src|dist)\/access(\.[jt]s$|\/)/,
     what: "las reglas del acceso",
+  },
+  // The administration of the remote (feature 015, E5; review of PR #98,
+  // N7): its rules behind their door; its adapter is under `aws/` and its
+  // orders in the console, both refused below.
+  {
+    anywhere: /(^|\/)packages\/domain\/(src|dist)\/admin\.[jt]s$/,
+    what: "las reglas de la administración",
   },
   // The Node adapters of the API, the SDK of AWS and the API itself.
   {
@@ -1052,9 +1103,10 @@ for (const build of builds) {
  *   importer of a module of the section — the controller, a relay of it, a
  *   root-absolute path — is refused;
  * - the **reverse closure** of the engine — every module that reaches it, by
- *   any path — is the section, the engine, the page of Ajustes and the lazy
- *   load of that page (`App.tsx`, `main.tsx` and the `index.html` that loads
- *   it).
+ *   any path, walked whole — is the section, the engine, the page of Ajustes
+ *   and the lazy load of that page (`App.tsx`, `main.tsx` and the
+ *   `index.html` that loads it), and those three **only as ancestors through
+ *   the page** (round 3, O1).
  *
  * Any other importer could sync at boot, on a timer or when the connection
  * comes back. A graph that does not say who imports is refused as such.
@@ -1088,26 +1140,39 @@ for (const [id, importers] of importersOf) {
     }
   }
 }
-const closure = new Set();
-const pending = [...importersOf.keys()].filter((id) => WEB_ENGINE.test(id));
-while (pending.length > 0) {
-  const id = pending.shift();
-  if (closure.has(id)) {
-    continue;
+/** Every module that reaches the engine through its importers, the page not walked past when told. */
+const closureOfEngine = (barrier) => {
+  const reached = new Set();
+  const pending = [...importersOf.keys()].filter((id) => WEB_ENGINE.test(id));
+  while (pending.length > 0) {
+    const id = pending.shift();
+    if (reached.has(id)) {
+      continue;
+    }
+    reached.add(id);
+    if (!(barrier && AJUSTES_PAGE.test(id))) {
+      pending.push(...(importersOf.get(id) ?? []));
+    }
   }
-  closure.add(id);
-  // The loaders reach the engine only through the page of Ajustes: past
-  // them, nothing more to walk.
-  if (!AJUSTES_LOADERS.test(id)) {
-    pending.push(...(importersOf.get(id) ?? []));
-  }
-}
-for (const id of closure) {
+  return reached;
+};
+// The whole reverse closure, walked past the loaders too (review of PR #97,
+// round 3, O1): whatever imports a loader to reach the engine is in it.
+for (const id of closureOfEngine(false)) {
   const allowed =
     WEB_ENGINE.test(id) || SECTION.test(id) || AJUSTES_PAGE.test(id) || AJUSTES_LOADERS.test(id);
   if (!allowed) {
     problems.push(
       `${id} alcanza el motor de la sincronización de la web desde fuera de su sección`,
+    );
+  }
+}
+// And the loaders are admitted **only as ancestors through the page**: with
+// the page as a barrier, none of them reaches the engine.
+for (const id of closureOfEngine(true)) {
+  if (AJUSTES_LOADERS.test(id)) {
+    problems.push(
+      `${id} alcanza el motor de la sincronización de la web desde fuera de su sección, sin pasar por la página de Ajustes`,
     );
   }
 }

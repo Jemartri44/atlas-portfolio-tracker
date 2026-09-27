@@ -9,7 +9,8 @@
 // the same rule about the same thing is one notice with its count and the
 // events it comes from.
 
-import { deepCheck, type IntegrityFinding, integrity } from "@atlas/domain";
+import { type IntegrityFinding, integrity } from "@atlas/domain";
+import { deepCheck } from "@atlas/domain/tools";
 import { A } from "@solidjs/router";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import {

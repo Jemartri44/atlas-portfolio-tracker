@@ -25,7 +25,7 @@ Siempre se redirige a un fichero y se lee `$?`: un resultado leído a través de
 | E2 | T01 a T38 (plan §4.2); el *loopback* y la variante manual de `atlas remote login` contra el servidor local, con el lanzador de navegador inyectado; la tarjeta de dispositivos con uno revocado y una emisión reciente | `apps/cli/test/remote/`; capturas |
 | E3 | `S3LedgerStore` con `ledger-store.contract.ts`; los recorridos de la 014 a través del manejador con el doble de S3; la propiedad ampliada y sus cifras; la salida fiscal byte a byte (predicción escrita antes) | `packages/adapters/test/`, `tests/` |
 | E4 | Los tests de P2 y P3, en rojo sin el código; el orden del historial (`git log --oneline`); las pantallas con pendientes, con algo retenido, tras una reescritura, al empezar, al desactivar y al importar o exportar sincronizado, con la privacidad puesta y quitada | capturas a 400×890 DPR 3, a 2045×1141 y a 360 de ancho (`scrollWidth === clientWidth`) |
-| E5 | Las órdenes de `atlas admin` y `atlas backup --from-bucket` contra los dobles, con un corte entre cada par de pasos ordenados; los tres procedimientos ejecutados en todo lo que no necesita AWS | `apps/cli/test/admin/`; `specs/015-api-access/runbooks/` |
+| E5 | Las órdenes de `atlas admin` y `atlas backup --from-bucket` contra los dobles, con un corte entre cada par de pasos ordenados; los tres procedimientos ejecutados en todo lo que no necesita AWS | `apps/cli/test/admin/`; `docs/runbooks/` (`restore-the-ledger.md`, `revoke-all-tokens.md`, `stolen-google-account.md`) |
 
 ## El servidor local de las capturas (plan §11)
 

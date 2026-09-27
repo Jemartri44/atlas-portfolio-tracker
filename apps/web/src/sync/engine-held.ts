@@ -83,7 +83,7 @@ export const planRedo = async (
 };
 
 /** Rehacer, second half, once the user confirmed the plan: exactly the sealed plan, then finished. */
-export const recordRedo = async (
+export const recordPlannedRedo = async (
   env: WebSyncEnv,
   deps: UseCaseDeps,
   unit: string,
