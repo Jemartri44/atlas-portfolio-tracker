@@ -14,7 +14,7 @@ import type {
   FxRateSource,
   StoredHistoryMeta,
 } from "../ports/fx-rate-source.js";
-import { asciiText, type EcbHistory, readEcbHistory } from "./history.js";
+import { asciiText, type EcbHistory, type EcbSource, readEcbHistory } from "./history.js";
 import { type CalendarDisagreement, calendarYears, crossCheckCalendar } from "./target.js";
 import { checkHistoryUpdate, type HistoryConflict } from "./update.js";
 
@@ -76,6 +76,12 @@ export const updateEcbHistory = async (
   };
 };
 
+/** A generation of the history left in the bucket, as its text and the source its name says. */
+export interface EcbGeneration {
+  readonly text: string;
+  readonly source: EcbSource;
+}
+
 /**
  * What rewrites a history in force that is **damaged** — its file does not
  * match its manifest and `previous/` cannot undo it (review of PR #106, B1):
@@ -83,6 +89,12 @@ export const updateEcbHistory = async (
  * with conditional writes. Only the store of the cloud has it.
  */
 export interface EcbHistoryRebuilder {
+  /**
+   * The generations left, newest first: the file in force as it is (its bytes
+   * do not match the manifest, but may still read as a history), then
+   * `previous/` (round 2 of the review of PR #106, R2-N1).
+   */
+  generations(): Promise<readonly EcbGeneration[]>;
   rebuild(next: DownloadedHistory): Promise<StoredHistoryMeta>;
 }
 
@@ -94,6 +106,17 @@ export type EcbRebuildResult =
       days: number;
       latest: CivilDate;
       calendar: CalendarDisagreement[];
+      /**
+       * Whether it was compared with a readable generation (ADR-0029, point 2).
+       * `false` only when nothing left could be read: accepted, and said.
+       */
+      verified: boolean;
+    }
+  | {
+      /** The ZIP contradicts the last readable generation: nothing is written. */
+      kind: "rejected";
+      conflicts: HistoryConflict[];
+      total: number;
     }
   | {
       /** The download came from the API: nothing is rebuilt from it. */
@@ -101,13 +124,27 @@ export type EcbRebuildResult =
       zip_failure?: string;
     };
 
+/** The first generation that still reads as a history, or nothing. */
+const lastReadable = (generations: readonly EcbGeneration[]): EcbHistory | undefined => {
+  for (const generation of generations) {
+    try {
+      return readEcbHistory(generation.text, generation.source);
+    } catch {
+      // Not a history (a `ValidationError`): the next generation is tried.
+    }
+  }
+  return undefined;
+};
+
 /**
  * Rebuilds a damaged history **from the official ZIP of the ECB only**, the
  * source of truth, which anyone can download again and compare: never from
- * the API, and never from what is left in the bucket, which is exactly what
- * cannot be trusted. Nothing is compared with the damaged history — there is
- * no history in force to compare with — and a ZIP that does not read as a
- * history writes nothing.
+ * the API. **The comparison of ADR-0029, point 2, still applies** (round 2 of
+ * the review of PR #106, R2-N1; note of ADR-0029 of 2026-09-28): against the
+ * last generation that still reads — the file in force as it is, else
+ * `previous/` — and a ZIP that changes or drops a rate of it is **not**
+ * activated. Only when nothing left reads is the ZIP accepted unverified,
+ * and that is said. A ZIP that does not read as a history writes nothing.
  */
 export const rebuildEcbHistory = async (
   deps: { source: FxRateSource; store: EcbHistoryRebuilder },
@@ -121,13 +158,18 @@ export const rebuildEcbHistory = async (
     };
   }
   const next = read(downloaded);
-  const check = checkHistoryUpdate(undefined, next) as { newDays: number; latest: CivilDate };
+  const previous = lastReadable(await deps.store.generations());
+  const check = checkHistoryUpdate(previous, next);
+  if (check.kind === "rejected") {
+    return { kind: "rejected", conflicts: check.conflicts, total: check.total };
+  }
   const stored = await deps.store.rebuild(downloaded);
   return {
     kind: "rebuilt",
     stored,
-    days: check.newDays,
+    days: next.publications.length,
     latest: check.latest,
     calendar: crossCheckCalendar(next, calendarYears(options.firstRateDate, options.today)),
+    verified: previous !== undefined,
   };
 };

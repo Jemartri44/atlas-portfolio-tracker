@@ -45,7 +45,14 @@ describe("the findings of the ECB", () => {
       { code: "ecb_history_damaged", subject: "ecb" },
     ]);
     expect(
-      ecbFindings({ kind: "rebuilt", stored, days: 7100, latest: "2026-10-02", calendar: [] }),
+      ecbFindings({
+        kind: "rebuilt",
+        stored,
+        days: 7100,
+        latest: "2026-10-02",
+        calendar: [],
+        verified: true,
+      }),
     ).toEqual([{ code: "ecb_history_rebuilt", subject: "ecb", counts: { days: 7100 } }]);
     expect(
       ecbFindings({
@@ -54,10 +61,16 @@ describe("the findings of the ECB", () => {
         days: 7100,
         latest: "2026-10-02",
         calendar: [{ date: "2026-10-01", kind: "working_day_without_publication" }],
+        verified: false,
       }),
     ).toEqual([
       { code: "ecb_history_rebuilt", subject: "ecb", counts: { days: 7100 } },
+      { code: "ecb_rebuilt_unverified", subject: "ecb" },
       { code: "ecb_calendar_mismatch", subject: "ecb", counts: { days: 1 } },
+    ]);
+    // A ZIP that contradicts the last readable generation asks for someone (R2-N1).
+    expect(ecbFindings({ kind: "rejected", conflicts: [], total: 3 })).toEqual([
+      { code: "ecb_history_damaged", subject: "ecb", counts: { conflicts: 3 } },
     ]);
   });
 });

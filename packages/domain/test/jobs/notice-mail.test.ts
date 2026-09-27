@@ -20,6 +20,7 @@ describe("the mail of a streak", () => {
       "ecb_calendar_mismatch",
       "ecb_history_damaged",
       "ecb_history_rebuilt",
+      "ecb_rebuilt_unverified",
     ]);
     expect(
       noticeMail({ code: "task_failed", subject: "monthly_backup" }, FACTS, "https://a.example"),
@@ -140,6 +141,14 @@ describe("the mail of a streak", () => {
       "2 días del histórico del BCE no cuadran con el calendario TARGET",
     );
     expect(mail("ecb_history_damaged", "ecb")?.body).toContain("no cuadra con su manifiesto");
+    expect(mail("ecb_history_damaged", "ecb")?.body).toContain("Se reconstruirá entero");
+    const refused = mail("ecb_history_damaged", "ecb", { conflicts: 3 })?.body;
+    expect(refused).toContain("el ZIP oficial del BCE contradice 3 tipos");
+    expect(refused).toContain("Hace falta intervenir");
+    expect(mail("ecb_rebuilt_unverified", "ecb")).toMatchObject({
+      subject: "[Atlas] Aviso: historico del BCE sin comparar",
+      body: expect.stringContaining("sin poder compararlo con ninguna versión anterior"),
+    });
     expect(mail("ecb_history_rebuilt", "ecb", { days: 7100 })).toMatchObject({
       subject: "[Atlas] Aviso: historico del BCE reconstruido",
       body: expect.stringContaining(
@@ -154,6 +163,7 @@ describe("the mail of a streak", () => {
       ["ecb_calendar_mismatch", "ecb"],
       ["ecb_history_damaged", "ecb"],
       ["ecb_history_rebuilt", "ecb"],
+      ["ecb_rebuilt_unverified", "ecb"],
     ] as const) {
       expect(/^[\x20-\x7e]+$/.test(mail(code, subject)?.subject as string), code).toBe(true);
     }

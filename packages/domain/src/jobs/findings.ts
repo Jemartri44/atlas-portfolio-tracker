@@ -28,6 +28,7 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
     ecb_calendar_mismatch: ["ecb"],
     ecb_history_damaged: ["ecb"],
     ecb_history_rebuilt: ["ecb"],
+    ecb_rebuilt_unverified: ["ecb"],
   },
   prices_update: {
     source_failing: ["eodhd", "alpha_vantage"],
@@ -43,7 +44,11 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
  */
 export const ecbFindings = (result: EcbUpdateResult | EcbRebuildResult): Finding[] => {
   if (result.kind === "rejected") {
-    return [{ code: "ecb_update_rejected", subject: "ecb", counts: { conflicts: result.total } }];
+    // An update kept apart (it has `kept`), or a rebuild whose ZIP contradicts
+    // the last readable generation (R2-N1), which asks for someone.
+    return "kept" in result
+      ? [{ code: "ecb_update_rejected", subject: "ecb", counts: { conflicts: result.total } }]
+      : [{ code: "ecb_history_damaged", subject: "ecb", counts: { conflicts: result.total } }];
   }
   if (result.kind === "zip_unavailable") {
     return [{ code: "ecb_history_damaged", subject: "ecb" }];
@@ -58,9 +63,14 @@ export const ecbFindings = (result: EcbUpdateResult | EcbRebuildResult): Finding
             counts: { days: result.calendar.length },
           },
         ];
-  return result.kind === "rebuilt"
-    ? [{ code: "ecb_history_rebuilt", subject: "ecb", counts: { days: result.days } }, ...calendar]
-    : calendar;
+  if (result.kind !== "rebuilt") {
+    return calendar;
+  }
+  return [
+    { code: "ecb_history_rebuilt", subject: "ecb", counts: { days: result.days } },
+    ...(result.verified ? [] : [{ code: "ecb_rebuilt_unverified", subject: "ecb" }]),
+    ...calendar,
+  ];
 };
 
 const SOURCES = ["eodhd", "alpha_vantage"] as const;

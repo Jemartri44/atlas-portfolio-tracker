@@ -71,6 +71,7 @@ export {
 } from "./ecb/target.js";
 export { checkHistoryUpdate, type HistoryConflict, type HistoryUpdate } from "./ecb/update.js";
 export {
+  type EcbGeneration,
   type EcbHistoryRebuilder,
   type EcbRebuildResult,
   type EcbUpdateResult,

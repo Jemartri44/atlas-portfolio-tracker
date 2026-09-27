@@ -155,10 +155,16 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
     subjects: ["ecb"],
     write: (_ecb, facts) => ({
       subject: "[Atlas] Aviso: historico del BCE danado",
-      lines: [
-        `El histórico del BCE en vigor no cuadra con su manifiesto y no se ha podido deshacer, desde el ${facts.since}: no se usa.`,
-        "Se reconstruirá entero desde el ZIP oficial del BCE en cuanto se pueda descargar; mientras tanto, hay que mirarlo en reference/ecb/.",
-      ],
+      lines:
+        facts.counts?.conflicts === undefined
+          ? [
+              `El histórico del BCE en vigor no cuadra con su manifiesto y no se ha podido deshacer, desde el ${facts.since}: no se usa.`,
+              "Se reconstruirá entero desde el ZIP oficial del BCE en cuanto se pueda descargar; mientras tanto, hay que mirarlo en reference/ecb/.",
+            ]
+          : [
+              `El histórico del BCE en vigor no cuadra con su manifiesto, y el ZIP oficial del BCE contradice ${countOf(facts, "conflicts")} tipos de la última versión que aún se lee, desde el ${facts.since}: no se ha activado nada y no se usa.`,
+              "Hace falta intervenir: mira reference/ecb/ y averigua cuál de los dos dice la verdad antes de que Atlas vuelva a usar el histórico.",
+            ],
     }),
   },
   ecb_history_rebuilt: {
@@ -168,6 +174,16 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       lines: [
         `El histórico del BCE en vigor no cuadraba con su manifiesto y se ha reconstruido entero desde el ZIP oficial del BCE (${countOf(facts, "days")} días), desde el ${facts.since}.`,
         "Lo que había sigue en las versiones anteriores del bucket, sin usarse.",
+      ],
+    }),
+  },
+  ecb_rebuilt_unverified: {
+    subjects: ["ecb"],
+    write: (_ecb, facts) => ({
+      subject: "[Atlas] Aviso: historico del BCE sin comparar",
+      lines: [
+        `El histórico del BCE se ha reconstruido desde el ZIP oficial sin poder compararlo con ninguna versión anterior, porque ninguna se podía leer, desde el ${facts.since}.`,
+        "Es la excepción de ADR-0029 (nota del 2026-09-28): comprueba los tipos de tus operaciones con «atlas check --deep».",
       ],
     }),
   },

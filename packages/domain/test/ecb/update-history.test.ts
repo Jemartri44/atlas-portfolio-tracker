@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { firstRateDateOf } from "../../src/ecb/ledger-rates.js";
+import type { EcbGeneration } from "../../src/ecb/update-history.js";
 import { rebuildEcbHistory, updateEcbHistory } from "../../src/ecb/update-history.js";
 import { ValidationError } from "../../src/errors.js";
 import type {
@@ -147,11 +148,12 @@ describe("updateEcbHistory", () => {
 
 describe("rebuildEcbHistory (review of PR #106, B1 (b))", () => {
   /** A store whose history in force is damaged: only `rebuild` writes. */
-  const damaged = () => {
+  const damaged = (generations: readonly EcbGeneration[] = []) => {
     const written: DownloadedHistory[] = [];
     return {
       written,
       store: {
+        generations: async () => generations,
         rebuild: async (next: DownloadedHistory): Promise<StoredHistoryMeta> => {
           written.push(next);
           return {
@@ -179,8 +181,42 @@ describe("rebuildEcbHistory (review of PR #106, B1 (b))", () => {
       days: 126,
       latest: "2026-03-31",
       calendar: [{ date: "2026-01-05", kind: "working_day_without_publication" }],
+      verified: false,
     });
     expect(written).toHaveLength(1);
+  });
+
+  it("compares with the file in force when it still reads, and activates a ZIP that keeps it (R2-N1)", async () => {
+    const older = text.replace(/^2026-03-31.*\n/m, "");
+    const { store, written } = damaged([
+      { text: older, source: "zip" },
+      { text: "<html>no</html>", source: "zip" },
+    ]);
+    const result = await rebuildEcbHistory(
+      { source: { download: async () => download(text) }, store },
+      options,
+    );
+    expect(result).toMatchObject({ kind: "rebuilt", verified: true, days: 127 });
+    expect(written).toHaveLength(1);
+  });
+
+  it("never activates a ZIP that changes or drops a rate of the last generation that reads (R2-N1)", async () => {
+    const changed = text.replace(",0.8595,", ",0.8596,");
+    const half = text.split("\n").slice(0, 60).join("\n");
+    for (const zip of [changed, half]) {
+      // The file in force does not read; previous/ does, and is compared.
+      const { store, written } = damaged([
+        { text: "", source: "zip" },
+        { text, source: "zip" },
+      ]);
+      const result = await rebuildEcbHistory(
+        { source: { download: async () => download(zip) }, store },
+        options,
+      );
+      expect(result).toMatchObject({ kind: "rejected" });
+      expect((result as { total: number }).total).toBeGreaterThan(0);
+      expect(written).toEqual([]);
+    }
   });
 
   it("never rebuilds from the API: the ZIP is the source of truth", async () => {
