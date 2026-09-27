@@ -94,6 +94,7 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 |---|---|---|
 | `s3:GetObject`, `s3:PutObject` | `B/prices/symbols.json` | `atlas admin prices push`: leer el remoto, enseñar la diferencia y escribir con `If-Match` sobre esa misma lectura (o `If-None-Match: *` si no había) |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `prices/` | `404` en vez de `403` cuando la nube aún no tiene correspondencia |
+| `s3:GetObjectVersion` | `B/prices/symbols.json` | recuperar la versión que sustituyó `push`, que la orden dice con su ETag y su `VersionId` (revisión de la PR #106, N5) |
 
 Con credenciales de corta duración y MFA, como las demás órdenes de `atlas admin` (ADR-0032, ADR-0034). Si el rol de administración de la 015 ya alcanza todo el bucket de datos, esta fila no añade nada; se escribe para que la 017 lo compruebe. La orden **nunca** escribe `B/prices/config.json`.
 

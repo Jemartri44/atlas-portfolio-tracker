@@ -98,6 +98,9 @@ describe("atlas admin prices push (016, E2, block 3)", () => {
     expect(c.text()).toContain("quitado ast_gone");
     expect(c.text()).toContain("cambiado ast_moved (eodhd)");
     expect(c.text()).toContain("añadido ast_new");
+    // What it replaces, to recover it from the versions of the bucket (review of PR #106, N5).
+    expect(c.text()).toContain(`ETag ${read}`);
+    expect(c.text()).toMatch(/versión version-\d+/);
     expect(api.s3.text(KEY)).toBe(local);
     expect(api.s3.conditions.filter((condition) => condition.key === KEY)).toEqual([
       { key: KEY, ifMatch: read },

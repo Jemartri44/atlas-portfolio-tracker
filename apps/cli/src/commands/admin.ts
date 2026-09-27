@@ -537,6 +537,16 @@ const pricesPushOrder = async (
     ctx.io.out(`La nube de ${environment} ya tiene este prices/symbols.json: no se sube nada.`);
     return EXIT.ok;
   }
+  // What it replaces, to recover it from the versions of the bucket (review
+  // of PR #106, N5): its ETag, and its version when the bucket says it.
+  const replaced =
+    remote === undefined
+      ? []
+      : [
+          `Sustituye el objeto con ETag ${remote.etag}${
+            remote.versionId === undefined ? "" : `, versión ${remote.versionId}`
+          }, que queda en el historial de versiones del bucket.`,
+        ];
   const said =
     plan.remote === "absent"
       ? "La nube no tiene ningún prices/symbols.json."
@@ -552,7 +562,7 @@ const pricesPushOrder = async (
               change.fields.length === 0 ? "" : ` (${change.fields.join(", ")})`
             }`,
         );
-  ctx.io.out([said, ...lines].join("\n"));
+  ctx.io.out([said, ...lines, ...replaced].join("\n"));
   if (
     !(await confirmEnvironment(
       ctx,
