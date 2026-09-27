@@ -7,11 +7,19 @@
 - Un registro ya revocado **se deja como está**, con su fecha, así que se puede repetir sin daño.
 - **Nunca borra** un registro: un registro borrado dejaría de poder negarse (ADR-0033, punto 9).
 
-**Lo que necesitas**: las credenciales de vida corta del rol `atlas-<entorno>-admin`, con MFA (ADR-0034, fila 16). Salen de la **cadena estándar del SDK de AWS**, y la consola no guarda nada:
-- un perfil de `~/.aws/config` con `role_arn`, `source_profile` y `mfa_serial`. El SDK de JavaScript v3 lo admite y te pide el código MFA; está en la tabla «Support by AWS SDKs and tools» de la *AWS SDKs and Tools Reference Guide*, *Assume role credential provider*;
-- o las variables de entorno de una sesión ya asumida, por ejemplo `AWS_PROFILE=atlas-prod-admin`.
+**Lo que necesitas**: las credenciales de vida corta del rol `atlas-<entorno>-admin`, con MFA (ADR-0034, fila 16). La consola las toma de la **cadena estándar del SDK de AWS** y no guarda nada. Tienen que venir **de una sesión ya abierta**, según quién asuma el rol (la comprobación **C5 de ADR-0034, SIN VERIFICAR, de la 018**):
 
-Quién asume el rol (IAM Identity Center o un usuario IAM con MFA) es la comprobación **C5 de ADR-0034, SIN VERIFICAR, de la 018**. Este procedimiento vale para las dos variantes.
+- **Con IAM Identity Center**: abre la sesión con `aws sso login --profile atlas-prod-admin`, que pide el MFA. Después usa `AWS_PROFILE=atlas-prod-admin` en cada orden.
+- **Con un usuario IAM con MFA**: el perfil de `~/.aws/config` lleva `role_arn`, `source_profile` y `mfa_serial`.
+  - La CLI de AWS pide el código MFA al usar ese perfil y guarda la sesión en `~/.aws/cli/cache` (*AWS CLI User Guide*, «Using an IAM role in the AWS CLI»).
+  - Exporta esa sesión a la terminal y ejecuta la orden:
+    ```sh
+    eval "$(aws configure export-credentials --profile atlas-prod-admin --format env)"
+    atlas admin revoke-all-tokens --env prod
+    ```
+  - **No basta con `AWS_PROFILE=atlas-prod-admin` para `atlas`**. El SDK de JavaScript no tiene cómo pedir el código: se niega con `admin_aws_refused (CredentialsProviderError)` antes de llamar a AWS (probado con el SDK, sin AWS: `apps/cli/test/admin/environment.test.ts`).
+
+En los ejemplos de abajo, `AWS_PROFILE=atlas-prod-admin` vale tal cual con IAM Identity Center. Con un usuario IAM, quítalo y exporta antes la sesión como arriba.
 
 Y `~/.config/atlas/admin.json`, que escribes tú y la aplicación nunca escribe (`data-model.md` §9):
 
