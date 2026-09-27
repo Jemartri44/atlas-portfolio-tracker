@@ -69,11 +69,13 @@ describe("the records of the jobs", () => {
     expect(await store.readRecord("monthly_reminder", "2026-10")).toEqual({
       kind: "unreadable",
       code: "job_record_unreadable",
+      etag: s3.etagOf("jobs/mail/monthly_reminder/2026-10.json"),
     });
     s3.seedBytes("jobs/mail/monthly_reminder/2026-11.json", new Uint8Array([0xff, 0xfe]));
     expect(await store.readRecord("monthly_reminder", "2026-11")).toEqual({
       kind: "unreadable",
       code: "not_utf8",
+      etag: s3.etagOf("jobs/mail/monthly_reminder/2026-11.json"),
     });
   });
 });
@@ -99,6 +101,7 @@ describe("the streaks of the warnings", () => {
     expect(await store.readNotice("task_failed", "prices_update")).toEqual({
       kind: "unreadable",
       code: "notice_unreadable",
+      etag: s3.etagOf("jobs/mail/notices/task_failed--prices_update.json"),
     });
     s3.seed("jobs/mail/notices/not a notice.json", "x");
     expect(await store.notices()).toEqual([
@@ -108,6 +111,7 @@ describe("the streaks of the warnings", () => {
     expect(await store.readNotice("task_failed", "../../ledger")).toEqual({
       kind: "unreadable",
       code: "notice_key_invalid",
+      etag: "",
     });
     await expect(
       store.writeNotice({ ...notice, subject: "../../ledger" }, undefined),

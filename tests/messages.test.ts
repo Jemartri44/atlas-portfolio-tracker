@@ -136,6 +136,7 @@ const JOBS_ONLY: Record<string, string> = {
   job_already_done: "solo en el registro de una tarea",
   job_event_invalid: "solo en el registro de la función: el evento de la programación",
   job_frequencies_invalid: "solo en el registro de una tarea hasta E3",
+  job_in_progress: "solo en el registro de una tarea: otra ejecución puede seguir en marcha",
   job_frequency_invalid_value: "solo en el registro de una tarea hasta E3",
   job_frequency_unknown_key: "solo en el registro de una tarea hasta E3",
   job_not_available: "solo en el registro de una tarea hasta E3",

@@ -126,7 +126,13 @@ describe("the monthly reminder, end to end", () => {
       code: "job_record_unavailable",
       error_name: "Error",
     });
+    // A run within the longest run of the Lambda may still be going on: left alone (N3).
+    jobs.setNow("2026-10-01T06:14:59Z");
     await jobs.run(["monthly_reminder"], "req-2");
+    expect(jobs.ses.sent).toHaveLength(1);
+    expect(lastLog(jobs.logs)).toMatchObject({ level: "INFO", code: "job_in_progress" });
+    jobs.setNow("2026-10-01T06:15:00Z");
+    await jobs.run(["monthly_reminder"], "req-3");
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
       "[Atlas] Recordatorio mensual 2026-10",
       "[Atlas] Recordatorio mensual 2026-10",
@@ -211,12 +217,56 @@ describe("the monthly reminder, end to end", () => {
     });
   });
 
-  it("says a record it cannot read, and never takes it for a free period", async () => {
+  it("claims back its own record when it cannot read it, says so, and sends: the month is not lost (N4)", async () => {
     const jobs = setupJobs();
     jobs.s3.seed("jobs/mail/monthly_reminder/2026-10.json", "{}\n");
     await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
+      "[Atlas] Recordatorio mensual 2026-10",
+    ]);
+    expect(jobs.logs.map((line) => JSON.parse(line))).toContainEqual(
+      expect.objectContaining({
+        level: "ERROR",
+        code: "job_record_unreadable",
+        reason: "job_record_unreadable",
+      }),
+    );
+    expect(
+      JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string),
+    ).toMatchObject({
+      state: "done",
+      attempts: 1,
+    });
+  });
+
+  it("never rewrites a record of a newer format, not even its own", async () => {
+    const jobs = setupJobs();
+    const newer = '{"run_format":2,"task":"monthly_reminder","period":"2026-10"}\n';
+    jobs.s3.seed("jobs/mail/monthly_reminder/2026-10.json", newer);
+    await jobs.run(["monthly_reminder"]);
     expect(jobs.ses.attempts).toEqual([]);
-    expect(lastLog(jobs.logs)).toMatchObject({ level: "ERROR", code: "job_record_unreadable" });
+    expect(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json")).toBe(newer);
+    expect(lastLog(jobs.logs)).toMatchObject({ level: "ERROR", reason: "job_record_newer_format" });
+  });
+
+  it("leaves alone a period claimed by a run still going on, and takes it up after (N3)", async () => {
+    const jobs = setupJobs();
+    jobs.s3.seed(
+      "jobs/mail/monthly_reminder/2026-10.json",
+      '{"run_format":1,"task":"monthly_reminder","period":"2026-10","state":"claimed","claimed_at":"2026-10-01T05:55:00Z","attempts":1}\n',
+    );
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.attempts).toEqual([]);
+    expect(lastLog(jobs.logs)).toMatchObject({ code: "job_in_progress" });
+    jobs.setNow("2026-10-01T06:10:00Z");
+    await jobs.run(["monthly_reminder"], "req-2");
+    expect(jobs.ses.sent).toHaveLength(1);
+    expect(
+      JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string),
+    ).toMatchObject({
+      state: "done",
+      attempts: 2,
+    });
   });
 
   it("stops when another run claimed the period first, writing nothing more", async () => {

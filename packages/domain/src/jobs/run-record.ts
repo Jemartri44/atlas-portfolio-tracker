@@ -8,12 +8,14 @@
 // state is decided here, by the delivery of the job (plan §5.3):
 //
 //   none          claim, do
-//   claimed       do again (nothing was sent, or it is the reminder)
+//   claimed       do again (nothing was sent, or it is the reminder) — unless
+//                 claimed less than the longest run ago: `job_in_progress`
 //   sending       at most once: close as `send_unknown`, **never send again**;
-//                 otherwise do again
+//                 otherwise do again — the same exception
 //   send_failed   send again: the service said no
-//   failed        do again: the task failed before closing; a mail it may have
-//                 sent is guarded by its own streak (`notices.ts`), never here
+//   failed        do again: the task failed **before** marking `sending` — a
+//                 run that throws after it closes as `send_unknown` instead
+//                 (review of PR #104, idempotence B1)
 //   done          nothing
 //   send_unknown  nothing
 //
@@ -154,12 +156,30 @@ export type RunStep =
   | { readonly kind: "start" }
   | { readonly kind: "resume" }
   | { readonly kind: "close_unknown" }
-  | { readonly kind: "skip"; readonly code: "job_already_done" | "job_send_unknown" };
+  | {
+      readonly kind: "skip";
+      readonly code: "job_already_done" | "job_send_unknown" | "job_in_progress";
+    };
 
-/** What a run does with the record it found for its period (plan §5.3). */
-export const nextStep = (record: RunRecord | undefined, delivery: Delivery): RunStep => {
+/**
+ * What a run does with the record it found for its period (plan §5.3). A
+ * record `claimed` or `sending` less than the longest run of the function ago
+ * may belong to a run still going on: it is left alone (`job_in_progress`),
+ * never taken up, or two runs would send the reminder twice (review of
+ * PR #104, idempotence N3).
+ */
+export const nextStep = (
+  record: RunRecord | undefined,
+  delivery: Delivery,
+  nowMs: number,
+  maxRunMs: number,
+): RunStep => {
   if (record === undefined) {
     return { kind: "start" };
+  }
+  const open = record.state === "claimed" || record.state === "sending";
+  if (open && nowMs - Date.parse(record.claimed_at) < maxRunMs) {
+    return { kind: "skip", code: "job_in_progress" };
   }
   switch (record.state) {
     case "done":

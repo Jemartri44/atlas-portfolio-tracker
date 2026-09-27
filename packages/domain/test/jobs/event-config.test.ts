@@ -53,6 +53,7 @@ const MAIL_ENV = {
   ATLAS_MAIL_FROM: "atlas@example.test",
   ATLAS_ORIGIN: "https://atlas.example.test",
   ATLAS_OAUTH_IDLE_WARNING_DAYS: "150",
+  ATLAS_JOB_MAX_RUN_SECONDS: "900",
 };
 
 const reasonOf = (env: Record<string, string | undefined>): unknown => {
@@ -75,6 +76,7 @@ describe("the configuration of a function (R17)", () => {
       dataBucket: "atlas-prod-data-x1",
       family: "mail",
       jobs: ["dispatch_findings", "monthly_reminder"],
+      maxRunMs: 900_000,
       mail: {
         from: "atlas@example.test",
         origin: "https://atlas.example.test",
@@ -89,6 +91,7 @@ describe("the configuration of a function (R17)", () => {
         ATLAS_ENV: "dev",
         ATLAS_DATA_BUCKET: "atlas-dev-data-x1",
         ATLAS_JOBS: "ecb_update",
+        ATLAS_JOB_MAX_RUN_SECONDS: "300",
       }),
     ).toEqual({
       env: "dev",
@@ -96,6 +99,7 @@ describe("the configuration of a function (R17)", () => {
       dataBucket: "atlas-dev-data-x1",
       family: "ecb",
       jobs: ["ecb_update"],
+      maxRunMs: 300_000,
     });
   });
 
@@ -167,6 +171,19 @@ describe("the configuration of a function (R17)", () => {
       expect(reasonOf(env)).toEqual(details);
     }
     expect(reasonOf({ ...MAIL_ENV, ATLAS_OAUTH_IDLE_WARNING_DAYS: "179" })).toBe("accepted");
+    // The longest a run lasts: the timeout of the Lambda, at most 900 s (N3).
+    expect(reasonOf({ ...MAIL_ENV, ATLAS_JOB_MAX_RUN_SECONDS: undefined })).toEqual({
+      variable: "ATLAS_JOB_MAX_RUN_SECONDS",
+      reason: "missing",
+    });
+    expect(reasonOf({ ...MAIL_ENV, ATLAS_JOB_MAX_RUN_SECONDS: "901" })).toEqual({
+      variable: "ATLAS_JOB_MAX_RUN_SECONDS",
+      reason: "above_ceiling",
+    });
+    expect(reasonOf({ ...MAIL_ENV, ATLAS_JOB_MAX_RUN_SECONDS: "0" })).toEqual({
+      variable: "ATLAS_JOB_MAX_RUN_SECONDS",
+      reason: "not_a_positive_integer",
+    });
   });
 });
 

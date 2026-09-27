@@ -17,7 +17,20 @@ import { isJobTask, JOB_TASKS, type JobFamily, type JobTask } from "./catalog.js
  */
 export const OAUTH_IDLE_WARNING_CEILING_DAYS = 179;
 
-const COMMON = ["ATLAS_ENV", "ATLAS_DATA_BUCKET", "ATLAS_JOBS"] as const;
+/**
+ * The ceiling of the longest run of a function, **fixed in the code**: the
+ * timeout of a Lambda can never be above 900 s (`questions.md` §1.7). A record
+ * claimed less than this ago may belong to a run still going on (review of
+ * PR #104, idempotence N3), so it is left alone.
+ */
+export const JOB_MAX_RUN_CEILING_SECONDS = 900;
+
+const COMMON = [
+  "ATLAS_ENV",
+  "ATLAS_DATA_BUCKET",
+  "ATLAS_JOBS",
+  "ATLAS_JOB_MAX_RUN_SECONDS",
+] as const;
 
 /** The variables of each family, besides the common ones. */
 export const JOBS_CONFIG_VARIABLES: Readonly<Record<JobFamily, readonly string[]>> = {
@@ -41,6 +54,8 @@ export interface JobsConfig {
   readonly dataBucket: string;
   readonly family: JobFamily;
   readonly jobs: readonly JobTask[];
+  /** The timeout of the Lambda, in milliseconds (`ATLAS_JOB_MAX_RUN_SECONDS`). */
+  readonly maxRunMs: number;
   readonly mail?: MailConfig;
 }
 
@@ -106,12 +121,20 @@ export const parseJobsConfig = (env: Readonly<Record<string, string | undefined>
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(dataBucket)) {
     throw invalid("ATLAS_DATA_BUCKET", "not_a_bucket_name");
   }
+  const maxRun = required(env, "ATLAS_JOB_MAX_RUN_SECONDS");
+  if (!/^[1-9]\d{0,8}$/.test(maxRun)) {
+    throw invalid("ATLAS_JOB_MAX_RUN_SECONDS", "not_a_positive_integer");
+  }
+  if (Number(maxRun) > JOB_MAX_RUN_CEILING_SECONDS) {
+    throw invalid("ATLAS_JOB_MAX_RUN_SECONDS", "above_ceiling");
+  }
   return {
     env: environment,
     ssmPrefix: `/atlas/${environment}/`,
     dataBucket,
     family,
     jobs,
+    maxRunMs: Number(maxRun) * 1000,
     ...(family === "mail" ? { mail: mailConfig(env) } : {}),
   };
 };

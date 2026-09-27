@@ -26,7 +26,12 @@ describe("the composition of the jobs (R17, R18)", () => {
       [{ ...MAIL_ENV, ATLAS_EODHD_KEY: "sentinel-key-123" }, "unknown"],
       [{ ...MAIL_ENV, ATLAS_JOBS: "monthly_reminder,prices_update" }, "mixed_families"],
       [
-        { ATLAS_ENV: "prod", ATLAS_DATA_BUCKET: "atlas-prod-data-test", ATLAS_JOBS: "ecb_update" },
+        {
+          ATLAS_ENV: "prod",
+          ATLAS_DATA_BUCKET: "atlas-prod-data-test",
+          ATLAS_JOBS: "ecb_update",
+          ATLAS_JOB_MAX_RUN_SECONDS: "900",
+        },
         "task_not_available",
       ],
       [{ ...MAIL_ENV, ATLAS_JOBS: "weekly_review" }, "task_not_available"],
@@ -77,7 +82,12 @@ describe("the composition of the jobs (R17, R18)", () => {
     const other = { n: 0 };
     expect(() =>
       composeOrFail(
-        { ATLAS_ENV: "prod", ATLAS_DATA_BUCKET: "atlas-prod-data-test", ATLAS_JOBS: "ecb_update" },
+        {
+          ATLAS_ENV: "prod",
+          ATLAS_DATA_BUCKET: "atlas-prod-data-test",
+          ATLAS_JOBS: "ecb_update",
+          ATLAS_JOB_MAX_RUN_SECONDS: "900",
+        },
         parts([], other),
       ),
     ).toThrow();

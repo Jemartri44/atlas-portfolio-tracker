@@ -17,6 +17,9 @@ const AT = "2026-10-01T06:00:00Z";
 const LATER = "2026-10-01T06:00:05.123Z";
 
 const claimed = claimRecord("monthly_reminder", "2026-10", AT);
+/** Fifteen minutes, the longest a Lambda runs (review of PR #104, idempotence N3). */
+const MAX_RUN = 900_000;
+const LONG_AFTER = Date.parse(AT) + MAX_RUN;
 
 describe("the run record", () => {
   it("lives under jobs/, by family, task and period", () => {
@@ -121,17 +124,17 @@ describe("what a retry does in each state (R10, plan §5.3)", () => {
   const inState = (state: RunRecord["state"]) => recordIn(claimed, state, LATER);
 
   it("starts a period nobody claimed", () => {
-    expect(nextStep(undefined, "at_least_once")).toEqual({ kind: "start" });
-    expect(nextStep(undefined, "at_most_once")).toEqual({ kind: "start" });
+    expect(nextStep(undefined, "at_least_once", LONG_AFTER, MAX_RUN)).toEqual({ kind: "start" });
+    expect(nextStep(undefined, "at_most_once", LONG_AFTER, MAX_RUN)).toEqual({ kind: "start" });
   });
 
   it("does nothing more with a period closed, whatever the delivery", () => {
     for (const delivery of ["at_least_once", "at_most_once", "repeatable"] as const) {
-      expect(nextStep(inState("done"), delivery)).toEqual({
+      expect(nextStep(inState("done"), delivery, LONG_AFTER, MAX_RUN)).toEqual({
         kind: "skip",
         code: "job_already_done",
       });
-      expect(nextStep(inState("send_unknown"), delivery)).toEqual({
+      expect(nextStep(inState("send_unknown"), delivery, LONG_AFTER, MAX_RUN)).toEqual({
         kind: "skip",
         code: "job_send_unknown",
       });
@@ -143,18 +146,53 @@ describe("what a retry does in each state (R10, plan §5.3)", () => {
   });
 
   it("never sends a warning twice: cut after `sending`, it is closed as unknown", () => {
-    expect(nextStep(inState("sending"), "at_most_once")).toEqual({ kind: "close_unknown" });
-    expect(nextStep(inState("sending"), "at_least_once")).toEqual({ kind: "resume" });
-    expect(nextStep(inState("sending"), "repeatable")).toEqual({ kind: "resume" });
+    expect(nextStep(inState("sending"), "at_most_once", LONG_AFTER, MAX_RUN)).toEqual({
+      kind: "close_unknown",
+    });
+    expect(nextStep(inState("sending"), "at_least_once", LONG_AFTER, MAX_RUN)).toEqual({
+      kind: "resume",
+    });
+    expect(nextStep(inState("sending"), "repeatable", LONG_AFTER, MAX_RUN)).toEqual({
+      kind: "resume",
+    });
   });
 
-  it("takes up again what was claimed, refused or failed: nothing of it was sent", () => {
+  it("takes up again what was claimed and abandoned, refused, or failed before sending", () => {
     for (const state of ["claimed", "send_failed", "failed"] as const) {
       for (const delivery of ["at_least_once", "at_most_once", "repeatable"] as const) {
-        expect(nextStep(inState(state), delivery), `${state} ${delivery}`).toEqual({
+        expect(
+          nextStep(inState(state), delivery, LONG_AFTER, MAX_RUN),
+          `${state} ${delivery}`,
+        ).toEqual({
           kind: "resume",
         });
       }
     }
+  });
+
+  it("leaves alone a run that may still be going on: claimed or sending less than its longest run ago (N3)", () => {
+    for (const state of ["claimed", "sending"] as const) {
+      for (const delivery of ["at_least_once", "at_most_once", "repeatable"] as const) {
+        expect(
+          nextStep(inState(state), delivery, LONG_AFTER - 1, MAX_RUN),
+          `${state} ${delivery}`,
+        ).toEqual({
+          kind: "skip",
+          code: "job_in_progress",
+        });
+      }
+    }
+    expect(nextStep(inState("claimed"), "at_least_once", LONG_AFTER, MAX_RUN)).toEqual({
+      kind: "resume",
+    });
+    expect(nextStep(inState("sending"), "at_most_once", LONG_AFTER, MAX_RUN)).toEqual({
+      kind: "close_unknown",
+    });
+    expect(nextStep(inState("send_failed"), "at_least_once", Date.parse(AT), MAX_RUN)).toEqual({
+      kind: "resume",
+    });
+    expect(nextStep(inState("failed"), "at_most_once", Date.parse(AT), MAX_RUN)).toEqual({
+      kind: "resume",
+    });
   });
 });

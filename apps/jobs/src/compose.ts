@@ -9,9 +9,10 @@
 import type { ObjectStore, ParameterStore } from "@atlas/adapters/aws";
 import { type MailSender, sesNotifier } from "@atlas/adapters/aws-jobs";
 import { type Clock, ValidationError } from "@atlas/domain";
-import { parseJobsConfig } from "@atlas/domain/jobs";
+import { type JobTask, parseJobsConfig } from "@atlas/domain/jobs";
 import { createJobsHandler, type JobsHandler } from "./handler.js";
 import { errorName, logLine } from "./log.js";
+import type { TaskRunner } from "./run.js";
 import { RUNNERS } from "./tasks/index.js";
 
 /** What production plugs in: the SDK stores, the sender of SES, the clock and the log. Simulated in the tests. */
@@ -24,12 +25,24 @@ export interface ProductionParts {
   readonly log: (line: string) => void;
 }
 
+/** The composition with the tasks built so far (`RUNNERS`). */
 export const compose = (
   env: Readonly<Record<string, string | undefined>>,
   parts: ProductionParts,
+): JobsHandler => composeWith(env, parts, RUNNERS);
+
+/**
+ * The composition with a given set of runners: production passes `RUNNERS`;
+ * a test passes a runner of its own, to cut a delivery where no task of E1
+ * can yet (review of PR #104, idempotence N1).
+ */
+export const composeWith = (
+  env: Readonly<Record<string, string | undefined>>,
+  parts: ProductionParts,
+  runners: Readonly<Partial<Record<JobTask, TaskRunner>>>,
 ): JobsHandler => {
   const config = parseJobsConfig(env);
-  const missing = config.jobs.find((task) => RUNNERS[task] === undefined);
+  const missing = config.jobs.find((task) => runners[task] === undefined);
   if (missing !== undefined) {
     throw new ValidationError("jobs_config_invalid", "ATLAS_JOBS: task_not_available", {
       variable: "ATLAS_JOBS",
@@ -55,7 +68,7 @@ export const compose = (
       now: () => parts.clock.now(),
       log: parts.log,
     },
-    RUNNERS,
+    runners,
   );
 };
 

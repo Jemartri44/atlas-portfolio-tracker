@@ -19,6 +19,7 @@ export {
   PRODUCER_TASKS,
 } from "./jobs/catalog.js";
 export {
+  JOB_MAX_RUN_CEILING_SECONDS,
   JOBS_CONFIG_VARIABLES,
   type JobsConfig,
   type MailConfig,

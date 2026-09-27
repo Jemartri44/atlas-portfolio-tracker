@@ -4,12 +4,14 @@
 // the switch off, or a log line on any path, must carry none of them.
 
 import { DEFAULT_SETTINGS, encodeLine, mergeSettings } from "@atlas/domain";
+import type { JobTask } from "@atlas/domain/jobs";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSes } from "../../../packages/adapters/test/aws/test-only-fake-ses.js";
 import { TestOnlyFakeSsm } from "../../../packages/adapters/test/aws/test-only-fake-ssm.js";
 import { catalogue, LedgerBuilder } from "../../../packages/domain/test/ledger-builder.js";
-import { compose } from "../src/compose.js";
+import { compose, composeWith } from "../src/compose.js";
 import type { JobsHandler } from "../src/handler.js";
+import type { TaskRunner } from "../src/run.js";
 
 export const ORIGIN = "https://atlas.example.test";
 export const SENDER = "atlas-sender@example.test";
@@ -22,6 +24,7 @@ export const MAIL_ENV: Readonly<Record<string, string>> = {
   ATLAS_MAIL_FROM: SENDER,
   ATLAS_ORIGIN: ORIGIN,
   ATLAS_OAUTH_IDLE_WARNING_DAYS: "150",
+  ATLAS_JOB_MAX_RUN_SECONDS: "900",
 };
 
 /** Figures and names that must never leave in a mail with the switch off, nor in a log. */
@@ -87,6 +90,8 @@ export const setupJobs = (
     env?: Readonly<Record<string, string | undefined>>;
     now?: string;
     ledger?: string;
+    /** Runners of a test, instead of the tasks built so far. */
+    runners?: Readonly<Partial<Record<JobTask, TaskRunner>>>;
   } = {},
 ): Jobs => {
   const s3 = new TestOnlyFakeS3();
@@ -96,13 +101,16 @@ export const setupJobs = (
   let now = Date.parse(options.now ?? "2026-10-01T06:00:00Z");
   ssm.set("/atlas/prod/mail/recipient", RECIPIENT);
   s3.seed("ledger/ledger.jsonl", options.ledger ?? sentinelLedger());
-  const handler = compose(options.env ?? MAIL_ENV, {
+  const parts = {
     objects: () => s3,
     parameters: () => ssm,
     mail: () => ses,
     clock: { now: () => new Date(now) },
-    log: (line) => logs.push(line),
-  });
+    log: (line: string) => logs.push(line),
+  };
+  const env = options.env ?? MAIL_ENV;
+  const handler =
+    options.runners === undefined ? compose(env, parts) : composeWith(env, parts, options.runners);
   return {
     s3,
     ssm,

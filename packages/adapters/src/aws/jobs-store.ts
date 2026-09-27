@@ -38,7 +38,7 @@ const textOf = (bytes: Uint8Array): string | undefined => {
 export type Read<T> =
   | { readonly kind: "absent" }
   | { readonly kind: "read"; readonly value: T; readonly etag: string }
-  | { readonly kind: "unreadable"; readonly code: string };
+  | { readonly kind: "unreadable"; readonly code: string; readonly etag: string };
 
 /** A write that did not happen because another run wrote first. */
 export class JobsWriteConflict extends Error {
@@ -72,7 +72,7 @@ export class JobsStore {
     const text = textOf(stored.body);
     const parsed = text === undefined ? undefined : parse(text);
     if (parsed === undefined || !parsed.ok) {
-      return { kind: "unreadable", code: parsed?.code ?? "not_utf8" };
+      return { kind: "unreadable", code: parsed?.code ?? "not_utf8", etag: stored.etag };
     }
     return { kind: "read", value: parsed.value, etag: stored.etag };
   }
@@ -106,7 +106,7 @@ export class JobsStore {
   readNotice(code: string, subject: string): Promise<Read<Notice>> {
     const key = noticeKey(code, subject);
     if (key === undefined) {
-      return Promise.resolve({ kind: "unreadable", code: "notice_key_invalid" });
+      return Promise.resolve({ kind: "unreadable", code: "notice_key_invalid", etag: "" });
     }
     return this.readParsed(key, (text) => {
       const read = parseNotice(text, code, subject);

@@ -85,15 +85,28 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
   const at = () => deps.now().toISOString();
 
   const read = await store.readRecord(task, period);
+  const delivery = JOB_TASKS[task].delivery;
+  // A record that does not read is never taken for a free period. Only the
+  // reminder, which must arrive, claims it back over its own ETag — never one
+  // of a newer format, which an old run must not rewrite — and says so
+  // (review of PR #104, idempotence N4): the month is not lost.
+  const reclaim =
+    read.kind === "unreadable" &&
+    delivery === "at_least_once" &&
+    read.code !== "job_record_newer_format";
   if (read.kind === "unreadable") {
     say({ level: "ERROR", code: "job_record_unreadable", reason: read.code });
-    return;
+    if (!reclaim) {
+      return;
+    }
   }
   if (read.kind === "absent" && input.onlyUnfinished === true) {
     return;
   }
   const found = read.kind === "read" ? read.value : undefined;
-  const step = nextStep(found, JOB_TASKS[task].delivery);
+  const step = reclaim
+    ? ({ kind: "resume" } as const)
+    : nextStep(found, delivery, deps.now().getTime(), deps.config.maxRunMs);
   if (step.kind === "skip") {
     if (input.onlyUnfinished !== true) {
       say({ level: "INFO", code: step.code });
@@ -101,7 +114,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
     return;
   }
   try {
-    let etag = read.kind === "read" ? read.etag : undefined;
+    let etag = read.kind === "absent" ? undefined : read.etag;
     if (step.kind === "close_unknown") {
       await store.writeRecord(recordIn(found as RunRecord, "send_unknown", at()), etag);
       say({ level: "WARN", code: "job_send_unknown" });
@@ -109,9 +122,14 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
     }
     let record = claimRecord(task, period, at(), found);
     etag = await store.writeRecord(record, etag);
+    // Whether the mail may have gone: once `sending` is written, a run that
+    // throws closes as `send_unknown`, never as `failed`, or the next run would
+    // send an at-most-once warning again (review of PR #104, idempotence B1).
+    let sending = false;
     const markSending = async () => {
       record = recordIn(record, "sending", at());
       etag = await store.writeRecord(record, etag);
+      sending = true;
     };
     const ignored = input.frequencies.ignored;
     let result: TaskResult;
@@ -130,7 +148,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
       if (error instanceof JobsWriteConflict) {
         throw error;
       }
-      result = { state: "failed", outcome: { code: "task_error" } };
+      result = { state: sending ? "send_unknown" : "failed", outcome: { code: "task_error" } };
       say({ level: "ERROR", code: "task_error", error_name: errorName(error) });
     }
     await store.writeRecord(
