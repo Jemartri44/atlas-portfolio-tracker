@@ -307,6 +307,18 @@ describe("the daily task of the closes (ADR-0031; R21-R28, R33)", () => {
     expect(JSON.stringify(record)).not.toContain("th_late");
   });
 
+  it("never writes symbols.json, whatever the run does (review of PR #106, N2)", async () => {
+    for (const status of [200, 401, 503]) {
+      const { s3, jobs } = pricesJobs({ status });
+      await jobs.run(["prices_update"]);
+      expect(s3.conditions.length, String(status)).toBeGreaterThan(0);
+      expect(s3.conditions.filter((condition) => condition.key === "prices/symbols.json")).toEqual(
+        [],
+      );
+      expect(s3.text("prices/symbols.json")).toBe(SYMBOLS);
+    }
+  });
+
   it("reads no correspondence with a top-level key it does not know (review of PR #106, B1)", async () => {
     const { s3, jobs } = pricesJobs();
     s3.seed(
