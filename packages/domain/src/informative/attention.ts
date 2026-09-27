@@ -22,12 +22,7 @@ import { unfiledPastYears } from "../filings/touched.js";
 import { closedYears } from "../projections/filings.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { FilingCategory, LedgerEvent } from "../schema/events.js";
-import {
-  INFORMATIVE_MODELS,
-  type InformativeModel,
-  rentaSeasonOf,
-  type Settings,
-} from "../settings/settings.js";
+import { INFORMATIVE_MODELS, type InformativeModel, inRentaSeason } from "../settings/settings.js";
 import { accountsAt } from "./holdings.js";
 import { informativeReturn } from "./m720.js";
 import type { InformativeCategory } from "./report.js";
@@ -62,12 +57,6 @@ export interface FiscalAttention {
   prominent: boolean;
 }
 
-const inSeason = (settings: Settings, today: CivilDate): boolean => {
-  const season = rentaSeasonOf(settings);
-  const day = today.slice(5);
-  return day >= season.start && day <= season.end;
-};
-
 const todoOf = (
   model: InformativeModel,
   year: number,
@@ -98,7 +87,7 @@ export const fiscalAttention = (
   today: CivilDate,
 ): FiscalAttention => {
   const state = projectLedger(events, { collectErrors: true });
-  const season = inSeason(state.fiscalSettings, today);
+  const season = inRentaSeason(state.fiscalSettings, today);
   const unfiled = unfiledPastYears(today, state);
   const foreign =
     state.invalid.length === 0 &&
