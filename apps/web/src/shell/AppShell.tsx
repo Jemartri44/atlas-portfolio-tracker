@@ -8,7 +8,7 @@
 // because the first steps lead to Registrar and to Ajustes (D8).
 
 import { A, useLocation } from "@solidjs/router";
-import { createEffect, ErrorBoundary, type JSX, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, ErrorBoundary, type JSX, onCleanup, Show } from "solid-js";
 import { Icon } from "../components/Icon.jsx";
 // Imported straight from their modules, not through the barrel: the shell is
 // on the boot path, and a barrel drags everything it re-exports with it — the
@@ -17,7 +17,7 @@ import { Icon } from "../components/Icon.jsx";
 import { Notice } from "../components/Notice.jsx";
 import { countOf } from "../format/number.js";
 import { store } from "../ledger/state.js";
-import { decodeFragment, scrollToFragment } from "./anchor.js";
+import { decodeFragment, historyGate, scrollToFragment } from "./anchor.js";
 import { LedgerChip } from "./LedgerChip.jsx";
 import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
@@ -122,31 +122,43 @@ const SettingsButton = (): JSX.Element => {
  */
 const FollowFragment = (): JSX.Element => {
   const location = useLocation();
-  // A `popstate` is the back or forward button. Heard in the capture phase, so
+  // `popstate` is the back or forward button; heard in the capture phase, so
   // it is known before the router moves the location and this effect runs.
-  let fromHistory = false;
-  const onHistory = (): void => {
-    fromHistory = true;
-  };
+  const gate = historyGate();
+  const onHistory = (): void => gate.popped(window.location.pathname + window.location.hash);
+  const onClick = (): void => gate.clicked();
   window.addEventListener("popstate", onHistory, { capture: true });
+  document.addEventListener("click", onClick, { capture: true });
   let waiting: AbortController | undefined;
   onCleanup(() => {
     window.removeEventListener("popstate", onHistory, { capture: true });
+    document.removeEventListener("click", onClick, { capture: true });
     waiting?.abort();
   });
+  // One run per address, not per signal: the router can notify the path and
+  // the fragment apart, and the same address seen twice would pass the gate
+  // on its second visit. The path too: the same fragment on another page is
+  // another target.
+  const address = createMemo(() => location.pathname + location.hash);
   createEffect(() => {
-    const id = decodeFragment(location.hash);
-    // The path too: the same fragment on another page is another target.
-    void location.pathname;
+    const here = address();
     waiting?.abort();
-    waiting = undefined;
-    const back = fromHistory;
-    fromHistory = false;
-    if (back || id === undefined) {
-      return;
-    }
-    waiting = new AbortController();
-    void scrollToFragment(id, { signal: waiting.signal });
+    const control = new AbortController();
+    waiting = control;
+    // Decided once the event that moved the address has been dispatched to
+    // everyone: in Chromium the router hears `popstate` before the frame does
+    // and moves the location at once, so deciding here, synchronously, met a
+    // gate nobody had shut yet (measured, round 1 of PR #105).
+    setTimeout(() => {
+      if (control.signal.aborted || !gate.follows(here)) {
+        return;
+      }
+      const hashAt = here.indexOf("#");
+      const id = hashAt < 0 ? undefined : decodeFragment(here.slice(hashAt));
+      if (id !== undefined) {
+        void scrollToFragment(id, { signal: control.signal });
+      }
+    }, 0);
   });
   return null;
 };

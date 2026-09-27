@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { A } from "@solidjs/router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Ajustes from "../src/routes/ajustes/index.jsx";
-import { decodeFragment, scrollToFragment } from "../src/shell/anchor.js";
+import { decodeFragment, historyGate, scrollToFragment } from "../src/shell/anchor.js";
 import { cssRules } from "./helpers/css-rules.js";
 import { settle, showInShell, until, withGoldenLedger } from "./helpers/render.jsx";
 import { token, withoutStyles, withStyles } from "./helpers/styles.js";
@@ -70,6 +70,27 @@ describe("reading the fragment", () => {
       expect(host.querySelector("header.topbar")).not.toBeNull();
     },
   );
+});
+
+describe("the way back through the history", () => {
+  it("keeps the gate shut until the address it popped to is reached, in as many steps as it takes", () => {
+    // Measured in Chromium: the router moved the path and then the fragment,
+    // and a flag spent on the first step let the second one follow.
+    const gate = historyGate();
+    expect(gate.follows("/ajustes#sincronizacion")).toBe(true);
+    gate.popped("/ajustes#sincronizacion");
+    expect(gate.follows("/ajustes")).toBe(false);
+    expect(gate.follows("/ajustes#sincronizacion")).toBe(false);
+    // Arrived: the next change is not from the history.
+    expect(gate.follows("/movimientos")).toBe(true);
+  });
+
+  it("opens again with a click, whatever the history left behind", () => {
+    const gate = historyGate();
+    gate.popped("/a#x");
+    gate.clicked();
+    expect(gate.follows("/b#y")).toBe(true);
+  });
 });
 
 describe("going to the fragment", () => {
@@ -171,6 +192,31 @@ describe("going to the fragment", () => {
     expect(scroll.mock.contexts.filter((element) => (element as Element).id === "destino")).toEqual(
       [],
     );
+  });
+
+  it("does not win over the back button after visiting another screen either", async () => {
+    // Measured in Chromium: the frame was mounted again with each screen, so
+    // coming back from another one met a fresh gate and followed the fragment.
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    const Otra = () => <p>Otra</p>;
+    const Salida = () => <A href="/otra">Otra</A>;
+    const Ajustes2 = () => (
+      <>
+        <Salida />
+        <Ajustes />
+      </>
+    );
+    const host = await showInShell("/ajustes#sincronizacion", {
+      "/ajustes": Ajustes2,
+      "/otra": Otra,
+    });
+    await until(() => toSync(scroll) === 1, "la primera llegada");
+    (host.querySelector('a[href="/otra"]') as HTMLElement).click();
+    await until(() => window.location.pathname === "/otra", "la otra pantalla");
+    window.history.back();
+    await until(() => host.querySelector("#sincronizacion") !== null, "la vuelta a Ajustes");
+    await settle(100);
+    expect(toSync(scroll)).toBe(1);
   });
 
   it("does not win over the back button: coming back from the history, it stays", async () => {

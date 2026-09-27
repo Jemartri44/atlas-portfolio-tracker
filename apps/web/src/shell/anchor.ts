@@ -37,6 +37,37 @@ export const decodeFragment = (hash: string): string | undefined => {
   }
 };
 
+/**
+ * Whether a change of address comes back through the history. The back or
+ * forward button fires `popstate` with the address already in place; the
+ * router may then move the path and the fragment in two steps, so the gate
+ * stays shut for every step until the address it popped to is reached, and
+ * a click (a link, a button that navigates) opens it again in any case.
+ * Measured in Chromium: a flag spent on the first step let the second one
+ * follow the fragment, and the back button lost (round 1 of PR #105, N2).
+ */
+export const historyGate = () => {
+  let poppedTo: string | undefined;
+  return {
+    popped(address: string): void {
+      poppedTo = address;
+    },
+    clicked(): void {
+      poppedTo = undefined;
+    },
+    /** Called once per change of address: whether this one may follow its fragment. */
+    follows(address: string): boolean {
+      if (poppedTo === undefined) {
+        return true;
+      }
+      if (address === poppedTo) {
+        poppedTo = undefined;
+      }
+      return false;
+    },
+  };
+};
+
 export interface FollowOptions {
   find?: (id: string) => Element | null;
   frame?: () => Promise<void>;
