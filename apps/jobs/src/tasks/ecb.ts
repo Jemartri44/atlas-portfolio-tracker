@@ -9,8 +9,11 @@
 //
 // **A damaged history does not stop the cloud** (review of PR #106, B1 (b)):
 // it is rebuilt whole from the official ZIP of the ECB, the source of truth,
-// which anyone can download again; with the API only, it stays damaged and
-// the next run tries again.
+// which anyone can download again — **compared first**, as ADR-0029, point 2,
+// asks, with the last generation that still reads (R2-N1): a ZIP that
+// contradicts it is not activated and asks for someone; with nothing left to
+// read it is accepted, unverified, and said. With the API only, it stays
+// damaged and the next run tries again.
 
 import { S3EcbHistoryStore } from "@atlas/adapters/aws-daily";
 import { firstRateDateOf, rebuildEcbHistory, updateEcbHistory } from "@atlas/domain/ecb";
@@ -38,9 +41,15 @@ export const ecbUpdate: TaskRunner = async (context): Promise<TaskResult> => {
         rebuilt.kind === "rebuilt"
           ? {
               code: "ecb_history_rebuilt",
-              counts: { days: rebuilt.days, calendar: rebuilt.calendar.length },
+              counts: {
+                days: rebuilt.days,
+                calendar: rebuilt.calendar.length,
+                verified: rebuilt.verified ? 1 : 0,
+              },
             }
-          : { code: "ecb_history_damaged" },
+          : rebuilt.kind === "rejected"
+            ? { code: "ecb_history_damaged", counts: { conflicts: rebuilt.total } }
+            : { code: "ecb_history_damaged" },
       findings: ecbFindings(rebuilt),
     };
   }

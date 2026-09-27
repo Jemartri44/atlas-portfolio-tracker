@@ -199,7 +199,8 @@ describe("a damaged history of the ECB (review of PR #106, B1 (b))", () => {
     const record = recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json");
     expect(record).toMatchObject({
       state: "done",
-      outcome: { code: "ecb_history_rebuilt", counts: { days: 127 } },
+      // Compared with the file in force, which still reads (R2-N1).
+      outcome: { code: "ecb_history_rebuilt", counts: { days: 127, verified: 1 } },
       findings: [{ code: "ecb_history_rebuilt", subject: "ecb", counts: { days: 127 } }],
     });
     expect(next.ses.attempts).toEqual([]);
@@ -219,6 +220,57 @@ describe("a damaged history of the ECB (review of PR #106, B1 (b))", () => {
       fetch: await zipNetwork(csv),
     }).run(["ecb_update"]);
     expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-03.json").outcome.code).toBe("ecb_updated");
+  });
+
+  it("never activates a ZIP that contradicts the last readable generation, and asks for someone (R2-N1)", async () => {
+    const csv = await readFile(join(fixtures, "eurofxref-hist.csv"), "utf8");
+    const { s3, ssm } = await damagedBucket(csv);
+    const before = s3.text("reference/ecb/eurofxref-hist.csv");
+    const changed = csv.replace(",0.8595,", ",0.8596,");
+    expect(changed).not.toBe(csv);
+    await setupJobs({
+      env: ECB_ENV,
+      s3,
+      ssm,
+      now: "2026-10-02T15:30:00Z",
+      fetch: await zipNetwork(changed),
+    }).run(["ecb_update"]);
+    expect(s3.text("reference/ecb/eurofxref-hist.csv")).toBe(before);
+    expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json")).toMatchObject({
+      outcome: { code: "ecb_history_damaged", counts: { conflicts: 1 } },
+      findings: [{ code: "ecb_history_damaged", subject: "ecb", counts: { conflicts: 1 } }],
+    });
+    const mail = setupJobs({ env: MAIL_ENV, s3, ssm, now: "2026-10-03T06:00:00Z" });
+    await mail.run(["dispatch_findings"]);
+    expect(mail.ses.sent[0]?.body).toContain("Hace falta intervenir");
+  });
+
+  it("accepts the ZIP unverified when nothing left reads, and says so (R2-N1)", async () => {
+    const csv = await readFile(join(fixtures, "eurofxref-hist.csv"), "utf8");
+    const { s3, ssm } = await damagedBucket(csv);
+    s3.seed("reference/ecb/eurofxref-hist.csv", "not a history");
+    s3.seed("reference/ecb/previous/eurofxref-hist.csv", "not a history either");
+    await setupJobs({
+      env: ECB_ENV,
+      s3,
+      ssm,
+      now: "2026-10-02T15:30:00Z",
+      fetch: await zipNetwork(csv),
+    }).run(["ecb_update"]);
+    expect(s3.text("reference/ecb/eurofxref-hist.csv")).toBe(csv);
+    expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json")).toMatchObject({
+      outcome: { code: "ecb_history_rebuilt", counts: { verified: 0 } },
+      findings: [
+        { code: "ecb_history_rebuilt", subject: "ecb" },
+        { code: "ecb_rebuilt_unverified", subject: "ecb" },
+      ],
+    });
+    const mail = setupJobs({ env: MAIL_ENV, s3, ssm, now: "2026-10-03T06:00:00Z" });
+    await mail.run(["dispatch_findings"]);
+    expect(mail.ses.sent.map((sent) => sent.subject).sort()).toEqual([
+      "[Atlas] Aviso: historico del BCE reconstruido",
+      "[Atlas] Aviso: historico del BCE sin comparar",
+    ]);
   });
 
   it("stays damaged, writing nothing, when only the API answers", async () => {
