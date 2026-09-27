@@ -2,8 +2,10 @@
 
 La feature 013 está construida y probada con dobles: ningún test ha hablado nunca con EODHD ni con Alpha Vantage. **Solo se da por verificada con tus claves**, y esta prueba la haces tú, en tu máquina. Tiene dos partes, en **dos días distintos**, porque las dos gastan el mismo cupo gratuito de EODHD (20 llamadas al día):
 
-- **Parte A** (unos 5 minutos, 7 llamadas de EODHD): cuatro preguntas directas a EODHD que nadie ha podido contestar sin tu clave.
-- **Parte B** (unos 30 minutos, unas 10 llamadas de EODHD y 3 de Alpha Vantage): la aplicación entera con las claves, en una carpeta de prueba.
+- **Parte A** (unos 5 minutos, 7 llamadas de EODHD; **solo el usuario**): cuatro preguntas directas a EODHD que nadie ha podido contestar sin tu clave.
+- **Parte B** (unos 30 minutos, unas 10 llamadas de EODHD y 3 de Alpha Vantage): la aplicación entera con las claves, en una carpeta de prueba. B8 es también **solo del usuario**.
+
+**«Solo el usuario»** marca los pasos que leen tu fichero de claves real (`~/.config/atlas/secrets.json`) con una orden escrita a mano: la parte A y B8. Esos los haces tú, nunca un asistente, que no debe leer ni imprimir ese fichero. El resto de la parte B usa las claves a través de la consola, que nunca las enseña.
 
 El día de EODHD empieza a medianoche GMT, que en Madrid es la **01:00 en invierno** y las **02:00 en verano**. Haz la parte B después de esa hora del día siguiente, o más tarde.
 
@@ -13,7 +15,24 @@ El día de EODHD empieza a medianoche GMT, que en Madrid es la **01:00 en invier
 2. **No copies tus ISIN** en lo que devuelvas: de los fondos, solo el recuento.
 3. **Todo en la carpeta de prueba**, `~/atlas-prueba-013`, nunca en la de tu libro. El libro de prueba es sintético, con activos inventados; aquí solo se les da un símbolo real para que haya algo que descargar.
 
-Lo que tienes que devolver está en la plantilla del final. Registro de la feature: [`specs/013-daily-close-prices/questions.md`](../../specs/013-daily-close-prices/questions.md) (§1.8 y §8); las decisiones, en ADR-0031, tercera enmienda.
+Lo que tienes que devolver está en la plantilla del final.
+
+## Resultado de la prueba del 2026-09-27
+
+La primera prueba real se hizo el 2026-09-27. Queda así:
+
+| Comprobación | Estado | Lo que se vio |
+|---|---|---|
+| A1, índices | **Pendiente** | Sin hacer: el índice del cubo sigue sin precio automático verificado |
+| A2, `EUFUND` | **Pendiente** | Sin hacer: los fondos siguen con extracto o entrada manual |
+| A3, Londres | **Verificado** | EODHD lista `TSCO.LSE` en **`GBX`**, no en `GBP`, y sus cierres llegan en peniques (cientos): la divisa declarada coincide con la de la fuente y la consola **no pregunta nada** |
+| A4, cripto | **Verificado** | El plan gratuito sirve `BTC-EUR.CC`: 365 cierres de un año |
+
+Y tres hallazgos, arreglados después en la rama `fix/prices-live-findings`:
+
+- **La cripto no pedía los cierres del fin de semana hasta el lunes**: el día de mercado era siempre de lunes a viernes. Ahora depende del tipo de activo (`market_days` de `prices/config.json`; la cripto, todos los días).
+- **El cierre de un sábado de `BTC-EUR.CC` era idéntico al del viernes**: un dato provisional. Ahora la cripto vuelve a pedir sus dos últimos días guardados en cada descarga (`refetch_recent_days`), en la misma llamada, y un valor distinto se guarda como corrección.
+- **`atlas networth` pasaba el efectivo en dólares con el tipo del libro** de semanas antes, con un aviso por cuenta, mientras los pesos ya usaban el histórico del BCE. Ahora usa el tipo más reciente del histórico, si existe, y avisa una sola vez por divisa con la fecha del tipo usado. Registro de la feature: [`specs/013-daily-close-prices/questions.md`](../../specs/013-daily-close-prices/questions.md) (§1.8 y §8); las decisiones, en ADR-0031, tercera enmienda.
 
 ---
 
@@ -70,7 +89,7 @@ echo "salida $?"
 
 ---
 
-## Parte A — Cuatro comprobaciones directas contra EODHD (día 1)
+## Parte A — Cuatro comprobaciones directas contra EODHD (día 1; solo el usuario)
 
 Siete llamadas. En la misma terminal:
 
@@ -102,16 +121,16 @@ Y si «tuyas» es 1 o más, si el plan gratuito sirve sus cierres (pon uno de lo
 curl -s -o /dev/null -w 'EUFUND eod %{http_code}\n' "https://eodhd.com/api/eod/ISIN1.EUFUND?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05"
 ```
 
-**A3. ¿En qué unidad llegan los cierres de Londres?** Con Tesco (`TSCO`), una acción de Londres que Alpha Vantage da en `GBX`, peniques (`questions.md` §1.4):
+**A3. ¿En qué unidad llegan los cierres de Londres?** Con Tesco (`TSCO`), una acción de Londres que Alpha Vantage da en `GBX`, peniques (`questions.md` §1.4). *Verificado el 2026-09-27: el listado dice `GBX` y el cierre va en peniques.*
 
 ```bash
 curl -s "https://eodhd.com/api/eod/TSCO.LSE?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05"; echo
 curl -s "https://eodhd.com/api/exchange-symbol-list/LSE?api_token=$K&fmt=json&symbols=TSCO"; echo
 ```
 
-Anota el `close` del primer día de la primera respuesta y el `Currency` de la segunda. Un cierre de **cientos** está en peniques; uno de **unidades**, en libras. Lo que se quiere saber es si el cierre va en peniques mientras el listado dice `GBP`.
+Anota el `close` del primer día de la primera respuesta y el `Currency` de la segunda. Un cierre de **cientos** está en peniques; uno de **unidades**, en libras. Lo que se quiere saber es si la unidad del cierre y la divisa del listado coinciden. En la prueba del 2026-09-27 coincidían: listado `GBX` y cierre en peniques. Se sospechaba que el listado diría `GBP` con los cierres en peniques; no fue así.
 
-**A4. ¿Entra la cripto en el plan gratuito?**
+**A4. ¿Entra la cripto en el plan gratuito?** *Verificado el 2026-09-27: sí.*
 
 ```bash
 curl -s -o /dev/null -w 'BTC-EUR.CC %{http_code}\n' "https://eodhd.com/api/eod/BTC-EUR.CC?api_token=$K&fmt=json&from=2026-09-01&to=2026-09-05"
@@ -156,19 +175,18 @@ atlas prices symbols set ast_world --currency EUR --eodhd IWDA.AS
 atlas prices symbols set ast_gold  --currency USD --alpha-vantage AAPL
 ```
 
-**Londres (`ast_alpha`)**, con las dos fuentes y una divisa cada una. La de Alpha Vantage es `GBX` (peniques: es lo que dice su búsqueda para `TSCO.LON`). La de EODHD depende de **A3**, el `close` de `TSCO.LSE`:
+**Londres (`ast_alpha`)**, con las dos fuentes y una divisa cada una. Las dos dan `GBX`, peniques: Alpha Vantage lo dice en su búsqueda para `TSCO.LON`, y EODHD en su listado de `TSCO.LSE`, con los cierres en peniques (A3, verificado el 2026-09-27). Declara `GBX` en las dos; **la consola no pregunta nada**:
 
-- si era de **cientos** (peniques), EODHD da los cierres en peniques aunque su listado diga `GBP`: declara `GBX`;
-  ```bash
-  atlas prices symbols set ast_alpha --eodhd TSCO.LSE --eodhd-currency GBX --alpha-vantage TSCO.LON --alpha-vantage-currency GBX
-  ```
-  La consola dirá que EODHD da `GBP` y te pedirá confirmar `GBX`: **confirma con `s`**, porque lo que manda es la unidad de los cierres, no la del listado.
-- si era de **unidades** (libras), declara `GBP`; no debería preguntar nada:
-  ```bash
-  atlas prices symbols set ast_alpha --eodhd TSCO.LSE --eodhd-currency GBP --alpha-vantage TSCO.LON --alpha-vantage-currency GBX
-  ```
+```bash
+atlas prices symbols set ast_alpha --eodhd TSCO.LSE --eodhd-currency GBX --alpha-vantage TSCO.LON --alpha-vantage-currency GBX
+```
 
-Las dos formas dan el mismo valor en euros: la aplicación convierte los peniques con el tipo de la libra por cien.
+Solo si tu A3 dio otra cosa:
+
+- si el listado de EODHD dijo `GBP` **y** el `close` era de **cientos** (peniques), declara igualmente `GBX`: la consola dirá que EODHD da `GBP` y te pedirá confirmar `GBX`; **confirma con `s`**, porque lo que manda es la unidad de los cierres, no la del listado;
+- si el `close` era de **unidades** (libras), declara `--eodhd-currency GBP`; con el listado en `GBP`, no pregunta nada.
+
+Las dos divisas dan el mismo valor en euros: la aplicación convierte los peniques con el tipo de la libra por cien.
 
 Y estas dos, **solo si la parte A dijo que sí**:
 
@@ -197,6 +215,7 @@ atlas prices status
 - las dos acaban en `salida 0`;
 - en la primera, cada activo con símbolo sale «actualizado» con su fuente (EODHD, o Alpha Vantage en `ast_gold`); los que no tienen símbolo (`ast_bonds`, y `ast_btc` o `ast_mm` si no se lo diste) salen «sin símbolo declarado», que es lo esperado;
 - en la segunda, **«ya al día (sin gastar cupo)»**. Un activo puede salir «sin cierres nuevos» si ayer fue festivo en su bolsa, **o si la fuente aún no ha publicado el cierre de ayer** (pasa si descargas temprano): eso sí gasta una llamada, y está bien;
+- la cripto (`ast_btc`) cotiza todos los días: un domingo o un lunes pide los cierres del fin de semana, y en cada descarga de un día nuevo vuelve a pedir sus dos últimos días guardados, en la misma llamada, por si la fuente los ha corregido. Si alguno cambió, la línea nueva es una corrección;
 - en `prices status`, «gastado hoy» cuadra con lo que has hecho, y ninguna fuente tiene fallos seguidos.
 
 Si un activo sale con fallos, anota la línea tal como sale (no lleva claves).
@@ -215,8 +234,8 @@ atlas prices update; atlas prices status
 
 **Antes de mirar, lo que va a parecer raro y no lo es.** El libro sintético es inventado: sus cantidades, sus divisas y sus valoraciones no tienen nada que ver con los valores reales que les has dado. Por eso:
 
-- **`ast_alpha` está en USD en el libro**, pero su cotización llega en peniques (`GBX`): comparada con lo que costó, la acción sale con una pérdida de alrededor del **−79 %**. No es un fallo: es un activo inventado al que se le ha puesto el precio de Tesco.
-- **Los pesos salen con «—»** y un aviso de total parcial: tres activos del núcleo no tienen precio (los que no llevan símbolo), y la aplicación **no calcula pesos sobre un total parcial**. Es lo que tiene que hacer.
+- **`ast_alpha` está en USD en el libro**, pero su cotización llega en peniques (`GBX`): comparada con lo que costó, la acción sale con una pérdida o una ganancia enorme. En la prueba del 2026-09-27, por ejemplo, fue de alrededor del −79 %; la cifra depende del mercado del día. No es un fallo: es un activo inventado al que se le ha puesto el precio de Tesco.
+- **Los pesos salen con «—»** y un aviso de total parcial: los activos del núcleo que no llevan símbolo no tienen precio, y la aplicación **no calcula pesos sobre un total parcial**. Es lo que tiene que hacer. Son **dos** (`ast_bonds` y `ast_mm`) si declaraste `ast_btc`, y **tres** si no.
 - **`ast_btc` sale con valores absurdos**, si le diste símbolo: la cantidad inventada del libro por el precio real del bitcóin.
 
 Nada de eso cuenta como fallo. Lo que se mira aquí es el **origen** y el **valor en euros** de cada precio.
@@ -229,22 +248,25 @@ atlas weights; atlas bucket; atlas networth
 
 ### B6. Forzar un fallo de EODHD sin tocar tu fichero de claves
 
-Se usa una **copia** de tus claves con una letra cambiada en la de EODHD, en otra carpeta, y se borra el fichero de precios de un activo del libro **de prueba** para obligar a la consola a llamar:
+Se usa un fichero de claves **inventadas**, en un `HOME` temporal, y se borra el fichero de precios de un activo del libro **de prueba** para obligar a la consola a llamar. **Nunca se copia ni se lee tu fichero real**: las claves de este paso no son las tuyas, y EODHD rechaza una clave que no existe.
 
 ```bash
-mkdir -p "$T-mala/atlas"
-node -e 'const fs=require("fs");const f=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));f.eodhd=(f.eodhd[0]==="X"?"Y":"X")+f.eodhd.slice(1);fs.writeFileSync(process.argv[2],JSON.stringify(f)+"\n",{mode:0o600})' ~/.config/atlas/secrets.json "$T-mala/atlas/secrets.json"
+FALSO=$(mktemp -d)
+mkdir -p "$FALSO/.config/atlas"
+( umask 077; printf '{"eodhd":"CLAVE-INVENTADA-EODHD","alpha_vantage":"CLAVE-INVENTADA-AV"}\n' > "$FALSO/.config/atlas/secrets.json" )
 echo '{"failure_threshold":1}' > "$T/prices/config.json"
 rm "$T/prices/ast_world.jsonl"
-XDG_CONFIG_HOME="$T-mala" atlas prices update > "$T/salida-3.txt" 2>&1; echo "salida $?"; cat "$T/salida-3.txt"
+HOME="$FALSO" XDG_CONFIG_HOME= atlas prices update > "$T/salida-3.txt" 2>&1; echo "salida $?"; cat "$T/salida-3.txt"
 ```
 
-**Cuenta como «sí»:** `salida 7`; en `ast_world`, «EODHD: ha rechazado la clave»; y el aviso «EODHD lleva demasiados fallos seguidos».
+`HOME="$FALSO"` hace que la consola busque las claves en `$FALSO/.config/atlas/secrets.json`, y `XDG_CONFIG_HOME=` vacío evita que las busque en otra carpeta si tu terminal la tiene definida.
+
+**Cuenta como «sí»:** `salida 7`; en `ast_world`, «EODHD: ha rechazado la clave»; y el aviso «EODHD lleva demasiados fallos seguidos». La línea de `ast_world` dice también «sin respuesta útil: conserva su último valor»: como su fichero de precios se ha borrado, **ese último valor es la valoración manual del libro** (la del 1 de septiembre), no un cierre descargado. Es lo esperado.
 
 Después, vuelve a dejarlo todo bien y comprueba que se recupera:
 
 ```bash
-rm -rf "$T-mala" "$T/prices/config.json"
+rm -rf "$FALSO" "$T/prices/config.json"
 atlas prices update > "$T/salida-4.txt" 2>&1; echo "salida $?"; cat "$T/salida-4.txt"
 atlas prices status
 ```
@@ -270,9 +292,9 @@ atlas prices status
 
 Al terminar, cierra el `npm run preview` con Ctrl+C. Puedes borrar el perfil «Atlas prueba» del navegador.
 
-### B8. Buscar las claves en lo escrito
+### B8. Buscar las claves en lo escrito (solo el usuario)
 
-Busca un trozo de cada clave (del segundo al noveno carácter, que también encuentra la copia con la letra cambiada de B6) en todo lo que ha escrito la prueba, incluidas las salidas guardadas:
+**Solo el usuario:** estas órdenes leen tu fichero de claves real. Busca un trozo de cada clave (del segundo al noveno carácter) en todo lo que ha escrito la prueba, incluidas las salidas guardadas:
 
 ```bash
 grep -rF "$(node -p "require('$HOME/.config/atlas/secrets.json').eodhd.slice(1,9)")" "$T" && echo FUGA || echo limpio
@@ -314,7 +336,7 @@ B8  EODHD: limpio / FUGA en …    Alpha Vantage: limpio / FUGA en …
 - **Ninguna salida ni ningún fichero contiene una clave** (B8).
 - **La web enseña lo que la consola descargó**, con su origen.
 
-**Un «sí» que no venga de las claves reales no vale.** Lo que salga de la parte A cierra lo que ADR-0031 aún da por SIN VERIFICAR (índices, `EUFUND`, Londres y cripto).
+**Un «sí» que no venga de las claves reales no vale.** Lo que salga de la parte A cierra lo que ADR-0031 aún da por SIN VERIFICAR: Londres y cripto quedaron verificados el 2026-09-27; faltan los índices (A1) y `EUFUND` (A2).
 
 ## Limpieza
 
