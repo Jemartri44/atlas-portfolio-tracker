@@ -45,6 +45,7 @@ coverage/
 dist-test/
 dist-test-browser/
 dist-test-sync/
+dist-lambda/
 *.tsbuildinfo
 
 # TypeScript output emitted **next to its source**, which happens whenever tsc

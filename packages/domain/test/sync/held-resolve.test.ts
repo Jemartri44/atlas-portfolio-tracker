@@ -19,6 +19,7 @@ import {
   decisionOf,
   discardHeld,
   type RedoPlan,
+  redoContext,
   redoFinished,
   redoneLines,
   resolutionsFor,
@@ -472,6 +473,78 @@ describe("a chain whose pairs correct each other (third review of PR #83)", () =
     };
     const again = holdRecords(linesOf(chain), "client", unit.reason, "t2");
     expect(unresolvedHeld([...records, ...discarded, stray, ...again])[0]?.redone).toBeUndefined();
+  });
+});
+
+describe("a pair that corrects a correction held in another unit (feature 015, point 2)", () => {
+  const b4 = device(6000);
+  const start = b4.deposit({ account_id: "acc_fund", amount: "12" });
+  const pairX = correction(b4, start, { amount: "22" });
+  const pairY = correction(b4, pairX[1], { amount: "32" });
+  const reason = { code: "absent_at_join", details: {} };
+  const records = [
+    ...holdRecords(linesOf(pairX), "join", reason, "t"),
+    ...holdRecords(linesOf(pairY), "join", reason, "t"),
+  ];
+  const units = unresolvedHeld(records);
+  const [unitX, unitY] = units as [Unit, Unit];
+  const context = (all: readonly HeldRecord[]) =>
+    redoContext(
+      all,
+      unresolvedHeld(all).map((unit) => ({
+        unit,
+        events: unit.unit === unitX.unit ? pairX : pairY,
+      })),
+    );
+
+  it("waits for the unit that holds its target, sealing nothing", () => {
+    expect(() =>
+      startRedoPlan(unitY, pairY, new Set(), [start], ids(), "t", context(records)),
+    ).toThrow(
+      expect.objectContaining({ code: "redo_waits_for_unit", details: { unit: unitX.unit } }),
+    );
+    // Without the context, as in feature 014: it did not wait.
+    expect(startRedoPlan(unitY, pairY, new Set(), [start], ids(), "t").plan.kind).toBe("correct");
+  });
+
+  it("corrects what that unit was redone with, once it is: by the ids of the records", () => {
+    const sealedX = unresolvedHeld([
+      ...records,
+      ...startRedoPlan(
+        unitX,
+        pairX,
+        new Set(),
+        [start],
+        ids("01AAAAAAAAAAAAAAAAAAAAAAXR", "01AAAAAAAAAAAAAAAAAAAAAAXC"),
+        "t",
+        context(records),
+      ).records,
+    ])[0] as Unit;
+    const done = [...records, ...redoFinished(sealedX, pairX, linesOf(pairX), "t").records];
+    const plan = startRedoPlan(
+      unresolvedHeld(done)[0] as Unit,
+      pairY,
+      new Set(),
+      [start],
+      ids(),
+      "t",
+      context(done),
+    ).plan;
+    expect(plan).toMatchObject({ kind: "correct", target_id: "01AAAAAAAAAAAAAAAAAAAAAAXC" });
+  });
+
+  it("keeps in the context only what the records say: resolved otherwise is not translated", () => {
+    const discarded: HeldRecord = {
+      held_format: 1,
+      kind: "resolved",
+      at: "t",
+      line_sha256: lineSha256(linesOf(pairX)[0] as string),
+      resolution: "discarded",
+    };
+    expect(context([...records, discarded]).redoneAs.size).toBe(0);
+    expect([...context(records).heldIn.values()].sort()).toEqual(
+      [unitX.unit, unitX.unit, unitY.unit, unitY.unit].sort(),
+    );
   });
 });
 

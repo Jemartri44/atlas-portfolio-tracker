@@ -15,6 +15,7 @@ import {
   isHttpsOrigin,
   parseCredentials,
   parseRemoteJson,
+  replacesAnotherOrigin,
   serializeCredentials,
   serializeRemoteJson,
   withEntry,
@@ -38,6 +39,15 @@ const entry = (deviceId: string, folder: string, origin = ORIGIN): CredentialEnt
 });
 
 describe("credentials.json (data-model §7)", () => {
+  it("says when a new entry would replace the entry of another origin (round 2, N5)", () => {
+    const file = withEntry(EMPTY_CREDENTIALS, entry(A, "/a"));
+    expect(replacesAnotherOrigin(file, entry(B, "/b"))).toBe(false);
+    expect(replacesAnotherOrigin(file, { ...entry(A, "/b"), device_name: "otra" })).toBe(false);
+    expect(
+      replacesAnotherOrigin(file, { ...entry(A, "/a"), origin: "https://other.example" }),
+    ).toBe(true);
+  });
+
   it("round-trips a map by device id, and each entry of its own (mutant 29 bis)", () => {
     const file = withEntry(withEntry(EMPTY_CREDENTIALS, entry(A, "/a")), entry(B, "/b"));
     expect(Object.keys(file.entries).sort()).toEqual([A, B]);

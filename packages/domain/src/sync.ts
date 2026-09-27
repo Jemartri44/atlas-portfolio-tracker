@@ -8,6 +8,7 @@ export {
   type AppendEntry,
   type AppendResult,
   type DeviceQueueState,
+  LINE_REJECTION_CODES,
   type LineRejection,
   REMOTE_FAILURE_CODES,
   RemoteError,
@@ -15,6 +16,13 @@ export {
   type RemoteSnapshot,
 } from "./ports/remote-ledger.js";
 export type { DeviceChange, DeviceState, SyncStateStore } from "./ports/sync-state-store.js";
+export {
+  etagOfHeader,
+  parseAppendAnswer,
+  parseErrorAnswer,
+  parseInitAnswer,
+  parsePublishAnswer,
+} from "./sync/answers.js";
 export { syncArchiveName } from "./sync/archive.js";
 export {
   type HoldReason,
@@ -51,7 +59,7 @@ export {
   recordsText,
   unresolvedHeld,
 } from "./sync/held.js";
-export { initRefusal, joinWithMine, replaceWithRemote } from "./sync/join.js";
+export { initRefusal, initState, joinWithMine, replaceWithRemote } from "./sync/join.js";
 export {
   EMPTY_ETAG,
   lineSha256,
@@ -81,6 +89,7 @@ export {
   syncPermission,
 } from "./sync/permission.js";
 export { type ReapplyBase, type ReapplyOutcome, reapplyUnits } from "./sync/reapply.js";
+export { type RedoRecordOptions, recordRedo } from "./sync/redo-record.js";
 export {
   type AppendAcceptance,
   acceptAppend,
@@ -97,8 +106,10 @@ export {
   decisionOf,
   discardHeld,
   heldUnitById,
+  type RedoContext,
   type RedoPlan,
   type Resolution,
+  redoContext,
   redoFinished,
   redoneLines,
   resolutionsFor,

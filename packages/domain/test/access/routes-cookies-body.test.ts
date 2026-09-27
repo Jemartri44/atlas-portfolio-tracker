@@ -92,14 +92,68 @@ describe("the routes and what each admits (api §2.3)", () => {
     expect(findRoute("GET", "/api/session/")).toBeUndefined();
     expect(findRoute("POST", "/api/session")).toBeUndefined();
     expect(findRoute("GET", "/API/session")).toBeUndefined();
-    // The writes of E1 and E2, each a POST with a JSON body.
-    expect(ROUTES.filter((spec) => spec.writes).map((spec) => spec.path)).toEqual([
-      "/api/auth/logout",
-      "/api/auth/console/token",
-      "/api/auth/console/revoke",
-      "/api/devices/tokens/{token_id}/revoke",
+    // The writes of E1, E2 and E3, each with a JSON body.
+    expect(
+      ROUTES.filter((spec) => spec.writes).map((spec) => `${spec.method} ${spec.path}`),
+    ).toEqual([
+      "POST /api/auth/logout",
+      "POST /api/auth/console/token",
+      "POST /api/auth/console/revoke",
+      "POST /api/devices/tokens/{token_id}/revoke",
+      "POST /api/ledger/lines",
+      "PUT /api/ledger",
+      "PUT /api/sync/devices/self",
     ]);
-    expect(ROUTES.filter((spec) => spec.writes).every((spec) => spec.method === "POST")).toBe(true);
+  });
+
+  it("gives the sync and the reference data to both credentials, and the devices to the session (E3)", () => {
+    const sync = [
+      ["GET", "/api/ledger"],
+      ["POST", "/api/ledger/lines"],
+      ["PUT", "/api/ledger"],
+      ["PUT", "/api/sync/devices/self"],
+      ["GET", "/api/reference/index"],
+      ["GET", "/api/reference/ecb/{name}"],
+      ["GET", "/api/reference/prices/{name}"],
+    ] as const;
+    for (const [method, path] of sync) {
+      expect(findRoute(method, path)?.policy, path).toBe("sync");
+    }
+    expect(findRoute("GET", "/api/sync/devices")?.policy).toBe("session");
+    expect(findRoute("GET", "/api/reference/ecb/a/b")).toBeUndefined();
+  });
+
+  it("admits a token or a session on a sync route; with the cookie, a write needs our Origin", () => {
+    const lines = route("/api/ledger/lines", "POST");
+    const read = route("/api/ledger");
+    expect(admit(lines, { kind: "token", value: "t" }, undefined, SELF)).toEqual({
+      kind: "token",
+      value: "t",
+    });
+    expect(admit(lines, { kind: "session", value: "v" }, SELF, SELF)).toEqual({
+      kind: "session",
+      value: "v",
+    });
+    expect(admit(lines, { kind: "session", value: "v" }, undefined, SELF)).toEqual({
+      kind: "refused",
+      refusal: refusal("origin_rejected"),
+    });
+    expect(admit(read, { kind: "session", value: "v" }, undefined, SELF)).toEqual({
+      kind: "session",
+      value: "v",
+    });
+    expect(admit(read, { kind: "none" }, undefined, SELF)).toEqual({
+      kind: "refused",
+      refusal: refusal("unauthenticated"),
+    });
+    expect(admit(read, { kind: "ambiguous" }, undefined, SELF)).toEqual({
+      kind: "refused",
+      refusal: refusal("credentials_ambiguous"),
+    });
+    expect(admit(route("/api/sync/devices"), { kind: "token", value: "t" }, SELF, SELF)).toEqual({
+      kind: "refused",
+      refusal: refusal("forbidden_for_credential"),
+    });
   });
 
   it("looks at no credential on the start and the return of a sign-in", () => {

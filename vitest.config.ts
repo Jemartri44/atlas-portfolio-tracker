@@ -13,10 +13,12 @@ export default defineConfig({
       "@atlas/adapters/web-device": local(
         "./packages/adapters/src/ledger-store/browser/web-device.ts",
       ),
+      "@atlas/adapters/aws-sdk": local("./packages/adapters/src/aws/sdk.ts"),
       "@atlas/adapters/aws": local("./packages/adapters/src/aws/index.ts"),
       "@atlas/adapters/access": local("./packages/adapters/src/access/crypto.ts"),
       "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),
       "@atlas/adapters/sync-client": local("./packages/adapters/src/sync/client.ts"),
+      "@atlas/adapters/sync-http": local("./packages/adapters/src/sync/http-remote.ts"),
       "@atlas/adapters/sync": local("./packages/adapters/src/ledger-store/browser/sync-store.ts"),
       "@atlas/adapters/reference": local(
         "./packages/adapters/src/ledger-store/browser/reference.ts",
@@ -40,7 +42,15 @@ export default defineConfig({
   },
   test: {
     passWithNoTests: true,
-    exclude: ["**/node_modules/**", "**/dist/**", "**/dist-test/**", "**/dist-test-sync/**"],
+    // Every outDir of a tsconfig (tests/test-outputs.test.ts): a compiled test
+    // must never run a second time after a build.
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/dist-test/**",
+      "**/dist-test-sync/**",
+      "**/dist-test-browser/**",
+    ],
     projects: [
       { extends: true, test: { name: "domain", root: "packages/domain" } },
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },

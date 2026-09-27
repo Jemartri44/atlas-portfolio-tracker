@@ -63,6 +63,7 @@ export {
   parseCredentials,
   parseRemoteJson,
   type RemoteJson,
+  replacesAnotherOrigin,
   serializeCredentials,
   serializeRemoteJson,
   withEntry,
@@ -81,6 +82,13 @@ export {
   parseDeviceObject,
   serializeDeviceObject,
 } from "./access/device.js";
+export {
+  type EntryChoice,
+  entryToStart,
+  entryToSync,
+  type FolderSyncState,
+  folderSyncState,
+} from "./access/folder-start.js";
 export {
   checkIdTokenClaims,
   checkIdTokenHeader,
@@ -123,6 +131,18 @@ export {
   sessionPayload,
   splitSigned,
 } from "./access/signed.js";
+export {
+  ifNoneMatchHits,
+  publishedDevice,
+  type ReferenceEntry,
+  type ReferenceKind,
+  referenceContentType,
+  referenceIndex,
+  referenceKey,
+  refusalOfRemote,
+  requestedEtag,
+  versionOf,
+} from "./access/sync-routes.js";
 export {
   checkToken,
   DEVICE_TOKEN,

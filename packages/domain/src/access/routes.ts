@@ -17,6 +17,8 @@ import type { Presented } from "./cookies.js";
  * - `exchange`: the exchange of §4.3, with no credential or with the previous
  *   token to renew; never with the cookie.
  * - `token`: the token of the console and nothing else.
+ * - `sync`: the sync and the reference data (§2.3): the cookie **or** the
+ *   token. With the cookie, a write checks `Origin`.
  */
 export type RoutePolicy =
   | "public"
@@ -25,7 +27,8 @@ export type RoutePolicy =
   | "session"
   | "logout"
   | "exchange"
-  | "token";
+  | "token"
+  | "sync";
 
 export interface RouteSpec {
   readonly method: "GET" | "POST" | "PUT";
@@ -51,6 +54,15 @@ export const ROUTES: readonly RouteSpec[] = [
     policy: "session",
     writes: true,
   },
+  // E3, the sync (`docs/api.md` §5) and the reference data (§6).
+  { method: "GET", path: "/api/ledger", policy: "sync", writes: false },
+  { method: "POST", path: "/api/ledger/lines", policy: "sync", writes: true },
+  { method: "PUT", path: "/api/ledger", policy: "sync", writes: true },
+  { method: "PUT", path: "/api/sync/devices/self", policy: "sync", writes: true },
+  { method: "GET", path: "/api/sync/devices", policy: "session", writes: false },
+  { method: "GET", path: "/api/reference/index", policy: "sync", writes: false },
+  { method: "GET", path: "/api/reference/ecb/{name}", policy: "sync", writes: false },
+  { method: "GET", path: "/api/reference/prices/{name}", policy: "sync", writes: false },
 ];
 
 /**
@@ -137,7 +149,9 @@ export const admit = (
     return refused(refusal("forbidden_for_credential"));
   }
   if (presented.kind === "token") {
-    return refused(refusal("forbidden_for_credential"));
+    return route.policy === "sync"
+      ? { kind: "token", value: presented.value }
+      : refused(refusal("forbidden_for_credential"));
   }
   if (presented.kind === "none") {
     return route.policy === "logout" ? { kind: "anonymous" } : refused(refusal("unauthenticated"));

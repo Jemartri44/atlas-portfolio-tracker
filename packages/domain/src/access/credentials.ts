@@ -98,6 +98,17 @@ export const withEntry = (file: CredentialsFile, entry: CredentialEntry): Creden
   entries: { ...file.entries, [entry.device_id]: entry },
 });
 
+/**
+ * A new entry that would take the place of the entry **of another origin**
+ * for the same device: never kept (review of PR #95, round 2, the rest of
+ * N5). A server answering a new sign-in with the id of a device of another
+ * origin must not steal that origin's token.
+ */
+export const replacesAnotherOrigin = (file: CredentialsFile, entry: CredentialEntry): boolean => {
+  const existing = file.entries[entry.device_id];
+  return existing !== undefined && existing.origin !== entry.origin;
+};
+
 export const withoutEntry = (file: CredentialsFile, deviceId: string): CredentialsFile => ({
   credentials_format: 1,
   entries: Object.fromEntries(Object.entries(file.entries).filter(([key]) => key !== deviceId)),

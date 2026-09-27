@@ -523,6 +523,7 @@ describe("a request with the session (R18, R19, R23, R31)", () => {
                   throw new Error("AccessDenied from an SDK that did not translate it");
                 },
                 putIfMatch: async () => "written",
+                list: async () => [],
               },
             }
           : breakIt === "collision"
@@ -531,6 +532,7 @@ describe("a request with the session (R18, R19, R23, R31)", () => {
                   get: async () => undefined,
                   putIfNoneMatch: async () => "exists",
                   putIfMatch: async () => "written",
+                  list: async () => [],
                 },
               }
             : {},

@@ -273,16 +273,28 @@ describe("architecture (015): the API is a workspace of its own", () => {
     ).toBe(true);
   });
 
-  it("depends only on workspaces of the repository (§2 bis, B4)", () => {
+  it("depends at runtime only on workspaces, and builds with esbuild pinned (§2 bis, B4; §7 P3)", () => {
     const manifest = JSON.parse(readFileSync(join(apiRoot, "package.json"), "utf8")) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
-    const names = [
-      ...Object.keys(manifest.dependencies ?? {}),
-      ...Object.keys(manifest.devDependencies ?? {}),
-    ];
-    expect(names.filter((name) => !name.startsWith("@atlas/"))).toEqual([]);
+    expect(
+      Object.keys(manifest.dependencies ?? {}).filter((name) => !name.startsWith("@atlas/")),
+    ).toEqual([]);
+    // The one tool the user authorised for the API (§12 of questions.md), at an exact version.
+    expect(manifest.devDependencies).toEqual({ esbuild: "0.28.2" });
+  });
+
+  it("gives the adapters the two clients of the SDK the user authorised, pinned, and no other", () => {
+    const manifest = JSON.parse(
+      readFileSync(join(repoRoot, "packages", "adapters", "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+    expect(
+      Object.fromEntries(
+        Object.entries(manifest.dependencies ?? {}).filter(([name]) => !name.startsWith("@atlas/")),
+      ),
+    ).toEqual({ "@aws-sdk/client-s3": "3.1141.0", "@aws-sdk/client-ssm": "3.1141.0" });
+    expect(manifest.devDependencies ?? {}).toEqual({});
   });
 
   it("is reached from nothing: not the web, not the console, not a package", () => {
@@ -581,6 +593,108 @@ describe("architecture (015): the records of the tokens are never deleted nor la
       ),
     );
     expect(offenders.map((path) => relative(repoRoot, path))).toEqual([]);
+  });
+});
+
+describe("architecture (015): the thin adapters of the SDK send only what they are for (E3)", () => {
+  /**
+   * The API only appends to the bucket and never deletes (ADR-0026, Part A;
+   * ADR-0028, row 7), and the records of the tokens are never deleted nor
+   * labelled (T26). What the adapters take from the SDK is the closed list of
+   * commands they send; a delete, or anything else, is a violation.
+   */
+  it("takes from the SDK only the clients and the commands of the narrow interfaces", () => {
+    const allowed: Record<string, readonly string[]> = {
+      "@aws-sdk/client-s3": [
+        "S3Client",
+        "GetObjectCommand",
+        "PutObjectCommand",
+        "ListObjectsV2Command",
+        "ListObjectsV2CommandOutput",
+      ],
+      "@aws-sdk/client-ssm": [
+        "SSMClient",
+        "GetParameterCommand",
+        "GetParameterCommandOutput",
+        "PutParameterCommand",
+        "GetParametersByPathCommand",
+        "GetParametersByPathCommandOutput",
+      ],
+    };
+    const taken = productSources().flatMap((file) =>
+      parse(file)
+        .bindings.filter((binding) => binding.specifier.startsWith("@aws-sdk/"))
+        .map((binding) => `${binding.specifier} ${binding.name}`),
+    );
+    expect(taken.length).toBeGreaterThan(0);
+    expect(
+      taken.filter((entry) => {
+        const [specifier, name] = entry.split(" ") as [string, string];
+        return !(allowed[specifier] ?? []).includes(name);
+      }),
+    ).toEqual([]);
+    const deletes = productSources().filter((path) =>
+      /DeleteObjects?|deleteObject|DeleteBucket/.test(parse(path).code),
+    );
+    expect(deletes.map((path) => relative(repoRoot, path))).toEqual([]);
+  });
+});
+
+describe("architecture (015): the API only appends, and the domain judges every line (E3)", () => {
+  const apiSources = () => listSources(join(apiRoot, "src"));
+
+  /**
+   * ADR-0026, Part A: the API never rewrites nor deletes a line. It holds the
+   * remote ledger only as `AppendOnlyLedger`, and no source of it names an
+   * operation that rewrites or deletes (mutant 31).
+   */
+  it("names no operation that rewrites or deletes the remote", () => {
+    const offenders = apiSources().filter((file) =>
+      /\breplaceLines\b|\.replace\(\s*\[|\bBlobLedgerStore\b|\bS3LedgerBlob\b|DeleteObject|deleteObject|deleteOutOfBand|\bputIfMatch\b|\bputIfNoneMatch\b|\bLEDGER_KEY\b|["'`]ledger\//.test(
+        parse(file).code,
+      ),
+    );
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+    const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
+    expect(sync).toContain("AppendOnlyLedger");
+    // The routes get no ObjectStore of their own (review of PR #96, security
+    // N1): the reference data through a read-only port of its two prefixes.
+    expect(parse(join(apiRoot, "src", "sync.ts")).code).not.toMatch(/\bObjectStore\b|\bobjects\b/);
+    expect(sync).toContain("ReferenceReader");
+  });
+
+  /**
+   * What a line is worth is `acceptAppend` and `acceptInit`, never a copy in
+   * the handler: no source of the API names a code of the table of §5.2
+   * (mutant 31, «reimplement a rule of acceptAppend»).
+   */
+  it("reimplements no rule of acceptAppend: the codes of a line live in the domain", () => {
+    const codes =
+      /["'`](line_unreadable|schema_version_unsupported|line_invalid|recorded_at_in_future|domain_rejected|duplicate_unconfirmed|pair_declaration_invalid|pair_incomplete|pair_not_contiguous|pair_rejected|seal_mismatch|waiver_not_appendable)["'`]/;
+    const offenders = apiSources().filter((file) => codes.test(parse(file).code));
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+    const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
+    expect(sync).toMatch(/acceptAppend\(/);
+    expect(sync).toMatch(/acceptInit\(/);
+  });
+});
+
+describe("architecture (015): the exception of the redo is bound to the sealed plan (E3, N1)", () => {
+  /**
+   * `recordRedo` records with the rule of `correctEvent` (§7 P6, option (a)).
+   * Only the orchestration of the redo may reach it — never the ordinary form
+   * of recording, where it would be a flag nobody could tell apart (N1;
+   * mutant 33 bis). The door of the sync re-exports it; nothing else names it.
+   */
+  it("is imported only by the orchestration of the redo", () => {
+    const users = productSources()
+      .filter((file) => parse(file).bindings.some((binding) => binding.name === "recordRedo"))
+      .map((file) => relative(repoRoot, file).replaceAll("\\", "/"))
+      .sort();
+    expect(users).toEqual([
+      "packages/adapters/src/sync/held-actions.ts",
+      "packages/domain/src/sync.ts",
+    ]);
   });
 });
 

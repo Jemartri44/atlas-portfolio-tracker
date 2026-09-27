@@ -27,7 +27,8 @@ export interface FunctionUrlResult {
   /** Each becomes a `Set-Cookie`: «don't manually add set-cookie headers» (AWS). */
   readonly cookies?: string[];
   readonly body: string;
-  readonly isBase64Encoded: false;
+  /** Only the exact bytes of a file that are not UTF-8 travel in base64 (§23.4). */
+  readonly isBase64Encoded: boolean;
 }
 
 export interface Request {

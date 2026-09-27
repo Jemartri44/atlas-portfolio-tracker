@@ -17,10 +17,12 @@ import {
 import {
   AccessSecrets,
   type AccessSecrets as AccessSecretsType,
+  appendOnlyLedger,
   DependencyUnavailable,
   DeviceStore,
   type ObjectStore,
   type ParameterStore,
+  referenceReader,
   TokenRegistry,
 } from "@atlas/adapters/aws";
 import { type IdentityProvider, IdentityUnavailable } from "@atlas/adapters/identity";
@@ -78,6 +80,7 @@ import {
 } from "@atlas/domain/access";
 import { type FunctionUrlEvent, type FunctionUrlResult, normalise, type Request } from "./event.js";
 import { type LogEntry, logLine } from "./log.js";
+import { fail, type Outcome } from "./outcome.js";
 import {
   accessDeniedPage,
   CODE_PAGE_CSP,
@@ -94,9 +97,9 @@ import {
   noContent,
   page,
   redirect,
-  refused,
   sessionCookie,
 } from "./respond.js";
+import { type SyncCredential, syncRoutes } from "./sync.js";
 
 export interface HandlerDeps {
   readonly config: ApiConfig;
@@ -113,26 +116,26 @@ export interface HandlerDeps {
 export type Handler = (event: FunctionUrlEvent) => Promise<FunctionUrlResult>;
 
 /** What the handler answered, and the code and reason it logs (never anything else). */
-interface Outcome {
-  readonly result: FunctionUrlResult;
-  readonly code?: string;
-  readonly reason?: string;
-  readonly dependency?: string;
-  /** The public id of a token (ADR-0033, point 10): the most a log may say of one. */
-  readonly tokenId?: string;
-}
-
 const MAX_DEVICE_ATTEMPTS = 3;
 
 export const createHandler = (deps: HandlerDeps): Handler => {
   const { config } = deps;
   const secrets: AccessSecretsType = new AccessSecrets(deps.parameters, deps.now, config);
   const devices = new DeviceStore(deps.objects);
+  /** The errors after which a new token stayed alive, with its public id (R2-2). */
+  const leftAlive = new WeakMap<object, string>();
   const tokens = new TokenRegistry(deps.parameters, config.ssmPrefix, {
     project: "atlas",
     env: config.env,
   });
   const redirectUri = `${config.origin}/api/auth/callback`;
+  const sync = syncRoutes({
+    config,
+    ledger: appendOnlyLedger(deps.objects),
+    reference: referenceReader(deps.objects),
+    devices,
+    now: deps.now,
+  });
   let signer: { readonly key: string; readonly signer: Signer } | undefined;
 
   const nowSeconds = (): number => Math.floor(deps.now().getTime() / 1000);
@@ -145,12 +148,6 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     }
     return signer.signer;
   };
-
-  const fail = (value: ApiRefusal): Outcome => ({
-    result: refused(value),
-    code: value.code,
-    ...(typeof value.details.reason === "string" ? { reason: value.details.reason } : {}),
-  });
 
   /** Every page of the sign-in clears the attempt: it is single use, whatever the outcome. */
   const loginPage = (code: LoginPageError): Outcome => ({
@@ -356,6 +353,55 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     return reason === undefined ? checked.ok : refusal("device_forgotten", { reason });
   };
 
+  /**
+   * The device a route of the sync speaks for (§2.3): the cookie's, checked
+   * as a session, or the token's, checked as in §2.2 — both with the object
+   * of their device. Never the body's.
+   */
+  const credentialOf = async (admission: Admission): Promise<SyncCredential | ApiRefusal> => {
+    if (admission.kind === "session") {
+      const session = await sessionOf(admission.value);
+      return "code" in session ? session : { deviceId: session.did, type: "web" };
+    }
+    if (admission.kind === "token") {
+      const record = await tokenOf(admission.value);
+      return "status" in record
+        ? record
+        : { deviceId: record.device_id, type: "console", tokenId: record.token_id };
+    }
+    // Admitted only with one of the two (routes.ts): anything else is a table
+    // that disagrees with this switch, never a credential.
+    throw new Error("route of the sync admitted without a credential");
+  };
+
+  /** A route of the sync, once its credential is checked. */
+  const syncRoute = async (
+    request: Request,
+    path: string,
+    params: Readonly<Record<string, string>>,
+    credential: SyncCredential,
+    body: unknown,
+  ): Promise<Outcome> => {
+    switch (path) {
+      case "/api/ledger":
+        return request.method === "GET"
+          ? sync.readLedger()
+          : sync.initialise(request.headers.get("if-match"), body);
+      case "/api/ledger/lines":
+        return sync.appendLines(request.headers.get("if-match"), body);
+      case "/api/sync/devices/self":
+        return sync.publish(credential, body);
+      case "/api/reference/index":
+        return sync.indexReference();
+      default:
+        return sync.readReference(
+          path === "/api/reference/ecb/{name}" ? "ecb" : "prices",
+          params.name as string,
+          request.headers.get("if-none-match"),
+        );
+    }
+  };
+
   /** `GET /api/auth/console/start` (§4.1): every parameter checked, then the attempt and Google. */
   const consoleStart = async (request: Request): Promise<Outcome> => {
     const asked = parseConsoleStart([...request.query]);
@@ -536,7 +582,15 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       // the console proposed (review of PR #95, N7).
       deviceName = device.device_name ?? code.dn;
       for (const listed of await tokens.list()) {
-        if (typeof listed.read === "object" && listed.read.device_id === code.rdid) {
+        // Never the record of this very code: an exchange of the same code
+        // running at once may have created it after this one read it, and
+        // revoking it would leave the device with no live token (review of
+        // PR #95, round 2, R2-1). The create below answers that one with 409.
+        if (
+          typeof listed.read === "object" &&
+          listed.read.device_id === code.rdid &&
+          listed.read.token_id !== code.tid
+        ) {
           await tokens.revoke(listed.read, nowMs);
         }
       }
@@ -575,14 +629,15 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         // S3 failed after the record was created (review of PR #95, N3): the
         // token is revoked — tried a few times, as much as can be — and
         // nothing is handed out; the failure answers as what it is (503).
-        await revokeAsMuchAsCan(record, nowMs);
+        await revokeOrMark(record, nowMs, error);
         throw error;
       }
       if (created === "exists") {
         // 128 random bits already taken: the new token must not name another
         // device's object. It is revoked, and nothing is handed out.
-        await revokeAsMuchAsCan(record, nowMs);
-        throw new Error("device id collision");
+        const collision = new Error("device id collision");
+        await revokeOrMark(record, nowMs, collision);
+        throw collision;
       }
     }
     return {
@@ -599,8 +654,16 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     };
   };
 
-  /** Revokes a record just created, retrying a transient failure; a record left alive is logged by the caller's 5xx. */
-  const revokeAsMuchAsCan = async (record: TokenRecord, nowMs: number): Promise<void> => {
+  /**
+   * Revokes a record just created, retrying a transient failure. If every try
+   * fails, the error the caller throws is marked with the record's id, and
+   * the log of its 5xx carries it.
+   */
+  const revokeOrMark = async (
+    record: TokenRecord,
+    nowMs: number,
+    error: unknown,
+  ): Promise<void> => {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await tokens.revoke(record, nowMs);
@@ -608,6 +671,12 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       } catch {
         // Tried again below; the answer is a 5xx either way.
       }
+    }
+    // Every try failed: the record stays alive, and the log of this 5xx names
+    // it — its public id, the most a log may say of a token (ADR-0033, point
+    // 10; review of PR #95, round 2, R2-2).
+    if (typeof error === "object" && error !== null) {
+      leftAlive.set(error, record.token_id);
     }
   };
 
@@ -731,6 +800,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         };
       }
       case "/api/session":
+      case "/api/sync/devices":
       case "/api/devices/tokens":
       case "/api/devices/tokens/{token_id}/revoke": {
         // Admitted only with the session (routes.ts): anything else is a
@@ -744,6 +814,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         }
         if (spec.path === "/api/devices/tokens") {
           return { outcome: await listTokens(), route: at };
+        }
+        if (spec.path === "/api/sync/devices") {
+          return { outcome: await sync.listDevices(), route: at };
         }
         if (spec.path === "/api/devices/tokens/{token_id}/revoke") {
           return {
@@ -759,6 +832,25 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         return { outcome: await exchange(admission, body), route: at };
       case "/api/auth/console/revoke":
         return { outcome: await revokeOwn(admission, body), route: at };
+      case "/api/ledger":
+      case "/api/ledger/lines":
+      case "/api/sync/devices/self":
+      case "/api/reference/index":
+      case "/api/reference/ecb/{name}":
+      case "/api/reference/prices/{name}": {
+        const credential = await credentialOf(admission);
+        if ("code" in credential) {
+          return { outcome: fail(credential), route: at };
+        }
+        const outcome = await syncRoute(request, spec.path, matched.params, credential, body);
+        return {
+          outcome:
+            credential.tokenId === undefined
+              ? outcome
+              : { ...outcome, tokenId: credential.tokenId },
+          route: at,
+        };
+      }
       default:
         // A route of the table with no branch here: not served (E2 and E3 add theirs).
         return { outcome: fail(refusal("not_found")), route: at };
@@ -793,6 +885,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         base.route === "/api/auth/console/start";
       const name =
         error instanceof Error && /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : "unknown";
+      const alive = typeof error === "object" && error !== null ? leftAlive.get(error) : undefined;
       if (error instanceof DependencyUnavailable) {
         const value = refusal("remote_unavailable", { dependency: error.dependency });
         outcome = signIn
@@ -806,6 +899,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         outcome = signIn
           ? { ...loginPage("internal"), reason: name }
           : { ...fail(refusal("internal")), reason: name };
+      }
+      if (alive !== undefined) {
+        outcome = { ...outcome, tokenId: alive };
       }
     }
     const status = outcome.result.statusCode;

@@ -392,35 +392,47 @@ export const describeError = (error: DomainError): string => {
     case "deactivate_refused_marker_missing":
       return "No se desactiva: existe sync/ pero falta su marcador, así que no se sabe qué líneas están pendientes. Sincroniza primero, que lo reconstruye.";
     case "sync_not_configured":
-      return "Esta carpeta no está sincronizada. Para empezar hay que elegirlo: subir el libro entero a una nube vacía, o unirse a una que ya tiene libro (empezando desde ella o subiendo tus líneas como pendientes).";
+      return "Esta carpeta no está sincronizada. Para empezar hay que elegirlo: subir el libro entero a una nube vacía («atlas sync init --origin <https://…>»), o unirse a una que ya tiene libro, empezando desde ella («atlas sync join --from-remote --origin <https://…>») o subiendo tus líneas como pendientes («atlas sync join --with-own-lines --origin <https://…>»).";
     case "sync_deactivated":
-      return "La sincronización de esta carpeta está desactivada. Para volver a sincronizar hay que unirse otra vez, de forma explícita.";
+      return "La sincronización de esta carpeta está desactivada. La única salida es unirse otra vez, de forma explícita: empezando desde la nube («atlas sync join --from-remote»: tu libro queda archivado y lo que la nube no tiene, retenido) o subiendo tus líneas como pendientes («atlas sync join --with-own-lines»).";
     case "remote_empty":
       return "La nube está vacía y este libro no ha sincronizado nada: no se sube línea a línea. Inicializa la nube con el libro entero, de forma explícita.";
     case "deactivate_refused_marker_unreadable":
       return "No se desactiva: el marcador de la sincronización no se puede leer. Sincroniza primero, que lo reconstruye.";
     case "init_refused_invalid_ledger":
       return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
+    case "init_remote_not_this_ledger":
+      return "La nube ya no tiene exactamente este libro: la inicialización no se termina sobre otra cosa. Únete a ella con «atlas sync join --from-remote» o «atlas sync join --with-own-lines».";
     case "redo_filing_in_remote":
       return "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.";
     case "redo_waits_for_pair":
       return `Todavía no: esta pareja corrige otra de la misma cadena que sigue retenida. Primero la pareja ${typeof d.pair === "number" ? d.pair : "anterior"}.`;
+    case "redo_waits_for_unit":
+      return `Todavía no: esto corrige una operación que sigue retenida en otra unidad. Primero la unidad ${text(d.unit)} («atlas sync held» la enseña); después, esta.`;
+    case "redo_id_mismatch":
+      return `No se rehace: la operación no lleva el identificador sellado para el rehacer (${text(d.expected)}). Para registrar otra cosa, descarta lo retenido y regístrala de nuevo.`;
+    case "redo_type_mismatch":
+      return `No se rehace: la operación no es del tipo que se retuvo (${text(d.expected)}). Para registrar otra cosa, descarta lo retenido y regístrala de nuevo.`;
+    case "redo_plan_not_recordable":
+      return "Una corrección se rehace con su anulación y su operación corregida juntas, con los identificadores sellados; es un fallo de la aplicación.";
     case "redo_partner_discarded":
       return "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.";
     case "join_required":
-      return `Esta carpeta tiene la sincronización sin su marcador, y el libro tiene ${typeof d.own_lines === "number" ? d.own_lines : 0} líneas que la nube no tiene. Reconstruir el marcador no basta para mezclarlas: unirse a la nube es siempre una elección explícita (desde la nube, o con tus líneas). No se ha tocado nada.`;
+      return `Esta carpeta tiene la sincronización sin su marcador, y el libro tiene ${typeof d.own_lines === "number" ? d.own_lines : 0} líneas que la nube no tiene. Reconstruir el marcador no basta para mezclarlas: la única salida es unirse, de forma explícita, empezando desde la nube («atlas sync join --from-remote») o subiendo tus líneas como pendientes («atlas sync join --with-own-lines»). No se ha tocado nada.`;
     case "accept_invalid_while_synced":
       return `Esta carpeta se sincroniza, y ese cambio de configuración dejaría inválidos ${Array.isArray(d.affected) ? d.affected.length : 0} eventos: el libro quedaría inválido, no se podría sincronizar y la sincronización se pararía. Repara antes esos eventos (atlas check te los enseña), o desactiva la sincronización de forma explícita; --accept-invalid no vale con la sincronización configurada.`;
     case "held_unit_unknown":
       return "No hay nada retenido con ese identificador: puede que ya se haya resuelto.";
     case "redo_not_recorded":
-      return `Todavía no están registradas, con los identificadores sellados (${Array.isArray(d.sealed) ? d.sealed.join(", ") : "ninguno"}), las operaciones que rehacen lo retenido: regístralas primero; lo retenido sigue donde estaba.`;
+      return `Todavía no están registradas, con los identificadores sellados (${Array.isArray(d.sealed) ? d.sealed.join(", ") : "ninguno"}), las operaciones que rehacen lo retenido: regístralas primero; lo retenido sigue donde estaba. Si registraste a mano lo que había que rehacer, descarta lo retenido («atlas sync discard <unidad>»): lo que registraste se queda en tu libro.`;
     case "resolution_not_offered":
       return `Esa resolución no se ofrece para lo retenido por «${text(d.reason)}».`;
     case "sync_marker_unreadable":
       return `El marcador de la sincronización (sync/state.json) no se puede leer (${text(d.reason)}).`;
     case "sync_held_unreadable":
       return `El fichero de ${d.file === "held" ? "lo retenido (sync/held.jsonl)" : "lo descartado (sync/discarded.jsonl)"} no se puede leer en la línea ${text(d.line)}. No se toca: revísalo antes de seguir.`;
+    case "raw_lone_surrogate":
+      return `La línea ${text(d.line)} lleva un carácter que no es Unicode (un suplente suelto): sus bytes no serían UTF-8 y el libro no se podría leer. No se ha escrito nada; esa línea no la escribe la aplicación.`;
     case "raw_line_break":
       return `La línea ${text(d.line)} lleva dentro un salto de línea o un retorno de carro (\\r): el libro tiene finales de línea de Windows, que solo deja una edición a mano. Así no se escribe tal cual, y atlas no lo arregla solo. Conviértelo a finales LF desde la carpeta del libro, con una copia previa en ledger.jsonl.crlf (se niega si ya existe): ${RAW_LINE_BREAK_FIX} — y después vuelve a sincronizar.`;
     case "archive_exists":

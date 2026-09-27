@@ -14,7 +14,7 @@ import { loadWebHistory, reloadWebHistory } from "../src/ecb/history.js";
 import { externalOf, forgetPrices, importPriceFiles, loadWebQuotes } from "../src/prices/quotes.js";
 import Ajustes from "../src/routes/ajustes/index.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";
-import { settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { settle, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -123,13 +123,17 @@ describe("the other files of prices/ and deleting what was imported", () => {
   it("offers to delete them in Ajustes only when there are imported prices", async () => {
     await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "999") }]);
     const host = await show("/ajustes", Ajustes);
-    await settle(30);
-    const button = [...host.querySelectorAll("button")].find((b) =>
-      b.textContent?.includes("Borrar los precios importados"),
+    const forget = () =>
+      [...host.querySelectorAll("button")].find((b) =>
+        b.textContent?.includes("Borrar los precios importados"),
+      );
+    // The condition, not a time (review of PR #96, N4): it failed under load.
+    await until(() => forget() !== undefined, "the button to delete the imported prices");
+    forget()?.click();
+    await until(
+      () => text(host).includes("Precios importados borrados de este navegador"),
+      "the notice that they were deleted",
     );
-    expect(button).toBeDefined();
-    button?.click();
-    await settle(30);
     expect(text(host)).toContain("Precios importados borrados de este navegador");
     expect(text(host)).toContain("Sin precios automáticos en este dispositivo");
   });

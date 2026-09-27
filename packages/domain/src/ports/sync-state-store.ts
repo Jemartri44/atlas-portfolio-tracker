@@ -16,6 +16,11 @@ export interface DeviceState {
   /** The exact text of what is held back and of what was discarded ("" when none). */
   readonly heldText: string;
   readonly discardedText: string;
+  /**
+   * The exact text of the console's `sync/remote.json`, when there is one
+   * (feature 015, P16): compared at the write like the rest. The web has none.
+   */
+  readonly remoteText?: string;
 }
 
 /**
@@ -35,6 +40,14 @@ export interface DeviceChange {
     | { readonly replace: readonly string[]; readonly archive: string }
     | undefined;
   readonly marker?: SyncMarker;
+  /**
+   * The exact text of `sync/remote.json`, the identity of the destination
+   * (feature 015, §7 P16): written by initialising and joining **before
+   * anything else of the same write** — the marker, the proof of arriving,
+   * goes last —, so a cut never leaves a marker that does not know its
+   * remote. Only the console's folder has it; the web's store refuses it.
+   */
+  readonly remote?: string;
 }
 
 /**
