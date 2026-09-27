@@ -202,6 +202,20 @@ describe("atlas admin prices push (016, E2, block 3)", () => {
     expect(api.s3.text(KEY)).toBe(remote);
   });
 
+  it("refuses a local file that repeats a key, never showing the value (review of PR #106, R2-B1)", async () => {
+    const api = setup();
+    const remote = symbols({ ast_a: entry("A.XETRA") });
+    api.s3.seed(KEY, remote);
+    const local = `{"symbols_format":2,"assets":{"LEAK":{"note":"sentinel-secret-of-the-push"}},"assets":${JSON.stringify(JSON.parse(remote).assets)}}`;
+    const c = consoleIn(api, await folderWith(local));
+    expect(await c.exec(push)).toBe(EXIT.domain);
+    expect(c.text()).toContain("json_key_repeated");
+    expect(c.text()).toContain("assets");
+    expect(c.text()).not.toContain("sentinel-secret-of-the-push");
+    expect(c.text()).not.toContain("Escribe");
+    expect(api.s3.text(KEY)).toBe(remote);
+  });
+
   it("refuses a local file that is not UTF-8", async () => {
     const api = setup();
     const folder = await folderWith(undefined);

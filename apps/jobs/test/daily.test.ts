@@ -319,12 +319,18 @@ describe("the daily task of the closes (ADR-0031; R21-R28, R33)", () => {
     }
   });
 
-  it("reads no correspondence with a top-level key it does not know (review of PR #106, B1)", async () => {
-    const { s3, jobs } = pricesJobs();
-    s3.seed(
-      "prices/symbols.json",
+  it.each([
+    [
+      "a top-level key it does not know (B1)",
       JSON.stringify({ ...JSON.parse(SYMBOLS), token: "sentinel-secret-of-the-cloud" }),
-    );
+    ],
+    [
+      "a key twice (R2-B1)",
+      `{"symbols_format":2,"assets":{"LEAK":{"note":"sentinel-secret-of-the-cloud"}},"assets":${JSON.stringify(JSON.parse(SYMBOLS).assets)}}`,
+    ],
+  ])("reads no correspondence with %s (review of PR #106)", async (_case, text) => {
+    const { s3, jobs } = pricesJobs();
+    s3.seed("prices/symbols.json", text);
     await jobs.run(["prices_update"]);
     expect(jobs.fetched).toEqual([]);
     const record = recordOf(s3, "jobs/prices/prices_update/2026-10-01.json");
