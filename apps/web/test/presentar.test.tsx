@@ -15,7 +15,7 @@ import { store } from "../src/ledger/state.js";
 import Presentar from "../src/routes/fiscal/presentar.jsx";
 import { goldenText } from "./helpers/golden.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
-import { press, settle, show, text, type, withGoldenLedger } from "./helpers/render.jsx";
+import { press, settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -124,5 +124,31 @@ describe("recording what was filed", () => {
     const again = await openForm(2020);
     expect(text(again)).toContain("Esto es una complementaria");
     expect(text(again)).toContain("la primera sigue constando");
+  });
+
+  // Feature 015, E4 (P11; `specs/014-ledger-sync-core/questions.md` §9.1): a
+  // repeated fingerprint is a warning with a confirmation, never a refusal
+  // (ADR-0012), as `atlas filed … --confirm-duplicate` in the console.
+  it("asks before recording a filing whose fingerprint repeats, and records it on a yes", async () => {
+    const filings = (): number =>
+      blob.text.split("\n").filter((line) => line.includes('"tax_return_filed"')).length;
+    const host = await openForm(2020);
+    type(host, "f-receipt", "100-2020-ABCDEFGHIJKL");
+    type(host, "f-filed-at", "2021-06-10");
+    await press(host, "Registrar lo presentado");
+    await settle(30);
+    const before = filings();
+    const again = await openForm(2020);
+    type(again, "f-receipt", "100-2020-ABCDEFGHIJKL");
+    type(again, "f-filed-at", "2021-06-10");
+    await press(again, "Registrar lo presentado");
+    await until(() => text(again).includes("Registrar de todas formas"), "la pregunta", 3000);
+    expect(filings()).toBe(before);
+    const dialog = [...again.querySelectorAll("dialog")].find((node) =>
+      node.hasAttribute("open"),
+    ) as HTMLElement;
+    await press(dialog, "Registrar de todas formas");
+    await settle(30);
+    expect(filings()).toBe(before + 1);
   });
 });
