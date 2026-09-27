@@ -2286,3 +2286,16 @@ Cada `describe` del fichero, pasado solo con cobertura, cubre sus ramas por sí 
 - **ADR-0033**: su punto 8 cita el MFA de la revocación sin Google, así que lleva la misma nota, corta.
 - **`data-model.md` §9, `spec.md` FR-014 y `quickstart.md`**: `admin.json` aceptado, y los procedimientos en su sitio nuevo (`cecfa9f`). **§33.8 y §33.10 siguen nombrando `specs/015-api-access/runbooks/`**: son el registro de entonces, y esta sección dice dónde están ahora.
 - `docs/prompts/015-api-access.md` §3 no se toca: dice dónde los escribía el implementador y que la dirección los traslada al cerrar, y eso es lo que ha pasado.
+
+### 34.4 La tubería, la CI y el congelado
+
+**El código queda congelado en `b04e828`.** Todo lo posterior son documentos.
+
+| Paso | Sobre | Resultado |
+|---|---|---|
+| lint, typecheck | `cecfa9f` | 0 |
+| cobertura del dominio, 1 y 2 | `cecfa9f`, `c279bf3` | 1.587 tests; dominio al 100 % (5.054/5.054 ramas, y líneas, funciones y sentencias); 158 s y 174 s |
+| el resto de proyectos, 1 y 2 | `c279bf3` | 1.563 tests; 502 s y 501 s |
+| build | `c279bf3` | Arranque 74.073, total 301.370 |
+
+Un trabajador, detrás de la puerta de memoria, y todos los pasos con 0.
