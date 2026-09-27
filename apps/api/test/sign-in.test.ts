@@ -289,7 +289,11 @@ describe("the device of the web (R20, R21)", () => {
     expect(Object.keys(body).sort()).toEqual(["device_id", "expires_at", "signed_in"]);
     expect(body.signed_in).toBe(true);
     expect(body.expires_at).toBe("2026-10-01T18:00:00Z");
-    expect(api.s3.keys()).toEqual([`sync/devices/${body.device_id}.json`]);
+    // Feature 016 (§8.1 P6): the date of the last web sign-in, and nothing else.
+    expect(api.s3.keys()).toEqual([
+      "access/last-web-sign-in.json",
+      `sync/devices/${body.device_id}.json`,
+    ]);
     expect(JSON.parse(api.s3.text(`sync/devices/${body.device_id}.json`) as string)).toMatchObject({
       type: "web",
       state: "active",
@@ -303,7 +307,7 @@ describe("the device of the web (R20, R21)", () => {
     api.jar.clear();
     await api.signIn(ALLOWED, first);
     expect(JSON.parse((await api.call("GET", "/api/session")).body).device_id).toBe(first);
-    expect(api.s3.keys()).toHaveLength(1);
+    expect(api.s3.keys()).toEqual(["access/last-web-sign-in.json", `sync/devices/${first}.json`]);
   });
 
   it("assigns a new one for an id it never issued, a forgotten one, a console's or a malformed one (R20)", async () => {
@@ -602,5 +606,64 @@ describe("POST /api/auth/logout", () => {
       body: '{"device_id":"x"}',
     });
     expect(errorOf(out)).toEqual({ code: "body_invalid", details: { reason: "not_empty_object" } });
+  });
+});
+
+/**
+ * Feature 016, E1 (R16, mutant 9; §8.1 P6): the API records the **date** of
+ * each web sign-in for the monthly mail, of Madrid, only moving forward, and
+ * with nothing else in it — no `sub`, no mail, no device. The sign-in never
+ * fails for it: what happened is the reason of its log line.
+ */
+describe("the date of the last web sign-in (016, R16)", () => {
+  it("writes only the date of Madrid, moves it forward, and never back", async () => {
+    const api = setup();
+    await api.signIn();
+    expect(api.s3.text("access/last-web-sign-in.json")).toBe(
+      '{"web_sign_in_format":1,"last_web_sign_in":"2026-10-01"}\n',
+    );
+    const text = api.s3.text("access/last-web-sign-in.json") as string;
+    for (const leak of [ALLOWED.sub, ALLOWED.email, "device"]) {
+      expect(text).not.toContain(leak);
+    }
+    expect(api.logs.at(-1)).toContain('"reason":"sign_in_date_written"');
+    api.jar.clear();
+    await api.signIn();
+    expect(api.logs.at(-1)).toContain('"reason":"sign_in_date_unchanged"');
+    api.s3.seed(
+      "access/last-web-sign-in.json",
+      '{"web_sign_in_format":1,"last_web_sign_in":"2026-12-31"}\n',
+    );
+    api.jar.clear();
+    await api.signIn();
+    expect(api.s3.text("access/last-web-sign-in.json")).toContain('"2026-12-31"');
+  });
+
+  it("signs in all the same when the bucket does not take the date", async () => {
+    const api = setup();
+    api.s3.beforePut = (key) => {
+      if (key === "access/last-web-sign-in.json") {
+        api.s3.seed(key, '{"web_sign_in_format":1,"last_web_sign_in":"2026-09-30"}\n');
+      }
+    };
+    const signedIn = await api.signIn();
+    expect(signedIn.done.statusCode).toBe(302);
+    expect(api.logs.at(-1)).toContain('"reason":"sign_in_date_conflict"');
+    expect(api.logs.at(-1)).toContain('"code":"signed_in_new_device"');
+  });
+
+  it("signs in all the same when the bucket does not answer for the date", async () => {
+    const api = setup();
+    const get = api.s3.get.bind(api.s3);
+    api.s3.get = async (key) => {
+      if (key === "access/last-web-sign-in.json") {
+        throw new Error("the bucket said something with user@example.test in it");
+      }
+      return get(key);
+    };
+    const signedIn = await api.signIn();
+    expect(signedIn.done.statusCode).toBe(302);
+    expect(api.logs.at(-1)).toContain('"reason":"sign_in_date_unavailable"');
+    expect(api.logs.join("\n")).not.toContain("user@example.test");
   });
 });

@@ -1065,6 +1065,14 @@ const FORBIDDEN_IN_WEB = [
   },
   { anywhere: /(^|\/)node_modules\/@(aws-sdk|smithy|aws-crypto)\//, what: "el SDK de AWS" },
   { anywhere: /(^|\/)apps\/(api|cli)\//, what: "la API o la consola" },
+  // Feature 016: the scheduled jobs, their rules in the domain and the port
+  // that sends mail. Nothing of the web may reach what holds the keys of the
+  // sources or the permission of SES (§8.2 B2).
+  { anywhere: /(^|\/)apps\/jobs\//, what: "las tareas programadas" },
+  {
+    anywhere: /(^|\/)packages\/domain\/(src|dist)\/(jobs(\.[jt]s$|\/)|ports\/notifier\.[jt]s$)/,
+    what: "las reglas de las tareas o el puerto del correo",
+  },
   // A builtin of Node, however Vite names it once it stubs it for the browser.
   { anywhere: /(^|\0)node:|__vite-browser-external/, what: "un módulo de Node" },
   // The doubles of S3, SSM and Google, the local server of the captures, and
