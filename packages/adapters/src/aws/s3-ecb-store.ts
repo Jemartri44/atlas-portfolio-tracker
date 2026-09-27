@@ -133,20 +133,35 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
   }
 
   async activate(next: DownloadedHistory): Promise<StoredHistoryMeta> {
+    // Every object this activation will write is read **first, together with
+    // the manifest**, and each write is conditioned on **that** read, never on
+    // a read made just before the write (review of PR #106, B1): another run
+    // that wrote any of them in between makes this one stop, whatever it wrote.
     const read = await this.manifest();
+    const file = fileOfSource(next.source);
+    let current: StoredObject | undefined;
+    let backup: { key: string; stored: StoredObject | undefined } | undefined;
     if (read !== undefined) {
-      // 1. The history in force becomes the backup before anything replaces it.
-      const current = await this.objects.get(`${DIR}${read.manifest.active.file}`);
+      current = await this.objects.get(`${DIR}${read.manifest.active.file}`);
       if (current === undefined || sha256(current.body) !== read.manifest.active.sha256) {
         throw new EcbHistoryDamaged(read.manifest.active.file);
       }
-      const backup = `${DIR}previous/${read.manifest.active.file}`;
-      await this.put(backup, current.body, await this.objects.get(backup));
+      const key = `${DIR}previous/${read.manifest.active.file}`;
+      backup = { key, stored: await this.objects.get(key) };
     }
-    // 2. The new file, over whatever is at its name.
-    const file = fileOfSource(next.source);
+    // The object of step 2: the file in force itself when the source is the
+    // same (verified above against the manifest), or the one of the other source.
+    const target =
+      read !== undefined && read.manifest.active.file === file
+        ? current
+        : await this.objects.get(`${DIR}${file}`);
+    // 1. The history in force becomes the backup before anything replaces it.
+    if (backup !== undefined) {
+      await this.put(backup.key, (current as StoredObject).body, backup.stored);
+    }
+    // 2. The new file, over what was read at its name.
     const meta = this.metaOf(next, file);
-    await this.put(`${DIR}${file}`, next.bytes, await this.objects.get(`${DIR}${file}`));
+    await this.put(`${DIR}${file}`, next.bytes, target);
     // 3. The manifest, last, over the one that was read.
     const updated: EcbManifest = {
       active: meta,

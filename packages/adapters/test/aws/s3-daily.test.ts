@@ -13,6 +13,7 @@ import { type DownloadedHistory, updateEcbHistory } from "@atlas/domain/ecb";
 import { cloudPriceConfigText } from "@atlas/domain/jobs";
 import { type PriceSource, parseStatus, updatePrices } from "@atlas/domain/quotes";
 import { describe, expect, it } from "vitest";
+import type { ObjectStore } from "../../src/aws/object-store.js";
 import { PriceKeyInvalid, priceKeyParameters, readPriceKeys } from "../../src/aws/price-keys.js";
 import { EcbStoreConflict, S3EcbHistoryStore } from "../../src/aws/s3-ecb-store.js";
 import {
@@ -40,9 +41,9 @@ const download = (
 });
 
 /** A history of the ZIP with one more day on top, the same rates below. */
-const withNewDay = (csv: string): Uint8Array => {
+const withNewDay = (csv: string, date = "2026-04-01"): Uint8Array => {
   const [header, first, ...rest] = csv.split("\n");
-  const day = (first as string).replace(/^\d{4}-\d{2}-\d{2}/, "2026-04-01");
+  const day = (first as string).replace(/^\d{4}-\d{2}-\d{2}/, date);
   return new TextEncoder().encode([header, day, first, ...rest].join("\n"));
 };
 
@@ -162,6 +163,93 @@ describe("reference/ecb/ in the bucket (R31)", () => {
     const puts = s3.calls.filter((call) => call.startsWith("put"));
     expect(puts.at(-1)).toBe("putIfNoneMatch reference/ecb/previous/eurofxref-hist.csv");
     expect(s3.keys()).not.toContain("reference/ecb/previous/eurofxref-hist.csv");
+  });
+
+  it("lets one of two runs that verified the same history win, and never mixes them (review of PR #106, B1)", async () => {
+    const s3 = new TestOnlyFakeS3();
+    const old = await load();
+    await new S3EcbHistoryStore(s3).activate(download(old));
+    const text = new TextDecoder().decode(old);
+    const nextA = withNewDay(text);
+    const nextB = withNewDay(text, "2026-04-02");
+    expect(sha(nextB)).not.toBe(sha(nextA));
+    const deferred = () => {
+      let open = () => {};
+      const opened = new Promise<void>((resolve) => {
+        open = resolve;
+      });
+      return { opened, open };
+    };
+    const aWroteFile = deferred();
+    const bWroteFile = deferred();
+    const aDone = deferred();
+    /** The same bucket, with the pauses a test asks for before a read or a write. */
+    const gated = (pause: {
+      get?: (nth: number) => Promise<void>;
+      put?: (key: string) => Promise<void>;
+    }): ObjectStore => {
+      let reads = 0;
+      return {
+        get: async (key) => {
+          await pause.get?.(reads++);
+          return s3.get(key);
+        },
+        list: (prefix) => s3.list(prefix),
+        putIfNoneMatch: async (key, body) => {
+          await pause.put?.(key);
+          return s3.putIfNoneMatch(key, body);
+        },
+        putIfMatch: async (key, body, etag) => {
+          await pause.put?.(key);
+          return s3.putIfMatch(key, body, etag);
+        },
+      };
+    };
+    // The reviewer's order: A and B read M0 and verify the file in force; A
+    // writes previous/ and its file; B reads again and writes its own; A
+    // writes the manifest; B writes its own.
+    const b = new S3EcbHistoryStore(
+      gated({
+        get: async (nth) => {
+          if (nth >= 2) {
+            await aWroteFile.opened;
+          }
+        },
+        put: async (key) => {
+          if (key === "reference/ecb/manifest.json") {
+            bWroteFile.open();
+            await aDone.opened;
+          }
+        },
+      }),
+    ).activate(download(nextB, "zip", "2026-10-02T15:31:00.000Z"));
+    const settledB = b.then(
+      () => "written",
+      (error: unknown) => error,
+    );
+    void settledB.then(() => bWroteFile.open());
+    const a = new S3EcbHistoryStore(
+      gated({
+        put: async (key) => {
+          if (key === "reference/ecb/manifest.json") {
+            aWroteFile.open();
+            await bWroteFile.opened;
+          }
+        },
+      }),
+    ).activate(download(nextA, "zip", "2026-10-02T15:30:00.000Z"));
+    const settledA = a.then(
+      () => "written",
+      (error: unknown) => error,
+    );
+    void settledA.then(() => aDone.open());
+    const [resultA, resultB] = await Promise.all([settledA, settledB]);
+    expect(resultA).toBe("written");
+    expect(resultB).toBeInstanceOf(EcbStoreConflict);
+    // What is in force is A's, whole: the file matches its manifest.
+    const store = new S3EcbHistoryStore(s3);
+    expect((await store.active())?.meta.sha256).toBe(sha(nextA));
+    expect(await store.recover()).toBe("none");
   });
 
   it("runs the update of the domain: accepts the same history, never overwrites a published rate", async () => {
