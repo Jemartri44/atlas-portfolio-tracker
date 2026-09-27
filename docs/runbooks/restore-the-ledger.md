@@ -35,12 +35,12 @@ AWS_PROFILE=atlas-prod-admin atlas admin restore --env prod --from <copia>
 La orden recorre los seis pasos de ADR-0032 **en orden y sin saltarse ninguno**, y escribe cada uno:
 
 1. **La copia candidata**, la que has nombrado.
-2. **La comprueba antes de tocar nada.** Tiene que cargar con el esquema actual, proyectarse sin eventos inválidos y pasar las comprobaciones de `check --deep` sin errores. Si no, se niega (`restore_candidate_invalid`) con la lista.
+2. **La comprueba antes de tocar nada.** Tiene que ser UTF-8 válido, byte a byte (si no, `restore_candidate_invalid` con `not_utf8`), cargar con el esquema actual, proyectarse sin eventos inválidos y pasar las comprobaciones de `check --deep` sin errores. Si no, se niega (`restore_candidate_invalid`) con la lista.
    - No contrasta los tipos del BCE, porque dependen del histórico de la carpeta. Si quieres ese contraste, pasa antes `atlas --ledger <copia> check --deep` en una carpeta con el histórico.
 3. **La compara con la nube por identificador**:
    - si la copia es un prefijo de la nube, dice «se pierde esta cola» y nombra cada evento;
    - si no, evento a evento, en los dos sentidos.
-4. **Te pide confirmación** con esa lista delante. Un «no» no toca nada.
+4. **Te pide confirmación** con esa lista delante: **escribe el nombre del entorno** (`prod`). Cualquier otra respuesta no toca nada. La orden **no admite `--yes`**, que se escribiría antes de ver la lista (ADR-0032, nota del 2026-09-27).
 5. **Archiva lo que había** en `archive/pre-restore-<fecha>T<hora>-<etag>.jsonl` y escribe la copia línea a línea, **con la condición de la nube que comparó en el paso 3**. Si alguien escribió entre medias, se niega sin escribir nada; vuelve a empezar.
 6. **Te dice lo que tiene que hacer cada dispositivo** (abajo).
 
