@@ -337,7 +337,14 @@ const dist = join(webRoot, "dist");
  * the three blocks of the palette: three custom properties more in the one
  * stylesheet of the boot. The trend: 74.114 → 74.125 → 74.137.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_157;
+/*
+ * **Feature 020, E1, M4, the step of the monitor (2026-09-27): measured
+ * 74.188 (+51 over 74.137), ceiling 74.208 — measured + 20**, raised before
+ * the commit that needs it, inside the authorisation (76.069). Eight tokens
+ * more under a query from 1800px, in the stylesheet of the boot. The trend:
+ * 74.125 → 74.137 → 74.188.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_208;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
