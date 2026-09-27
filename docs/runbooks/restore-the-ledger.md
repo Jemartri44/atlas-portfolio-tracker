@@ -6,7 +6,7 @@
 - **Restaurar nunca borra nada**: lo que hay se archiva antes en `archive/pre-restore-…`, que nunca se sobrescribe.
 - La copia se escribe **línea a línea, tal cual** (`replaceLines`): nunca se vuelve a serializar.
 
-**Lo que necesitas**: el rol y `admin.json`, como en «Revocar todos los tokens», apartado «Lo que necesitas».
+**Lo que necesitas**: el rol y `admin.json`, como en [Revocar todos los tokens](revoke-all-tokens.md), apartado «Lo que necesitas».
 
 **Se niega**, y hay que resolverlo antes:
 - si **algún dispositivo tiene operaciones pendientes** publicadas en `sync/devices/`, o las tiene la carpeta desde la que la ejecutas. Que sincronicen antes;

@@ -1,9 +1,9 @@
 # Revocar todos los tokens de consola sin Google
 
-**Cuándo**: sospechas que alguien tiene un token de consola tuyo y no puedes, o no quieres, entrar con Google para revocarlos uno a uno desde la web. Es el paso 3 de «Recuperar una cuenta de Google robada».
+**Cuándo**: sospechas que alguien tiene un token de consola tuyo y no puedes, o no quieres, entrar con Google para revocarlos uno a uno desde la web. Es el paso 3 de [Recuperar una cuenta de Google robada](stolen-google-account.md).
 
 **Qué hace**: revoca **todos** los registros vivos de `/atlas/<entorno>/device-tokens/` en SSM.
-- Usa el **mismo código** que la API al revocar (`revokedRecord`, ADR-0033, punto 8; §7 P4).
+- Usa el **mismo código** que la API al revocar (`revokedRecord`, ADR-0033, punto 8; `docs/prompts/015-api-access.md` §7 P4).
 - Un registro ya revocado **se deja como está**, con su fecha, así que se puede repetir sin daño.
 - **Nunca borra** un registro: un registro borrado dejaría de poder negarse (ADR-0033, punto 9).
 
@@ -21,7 +21,7 @@
 
 En los ejemplos de abajo, `AWS_PROFILE=atlas-prod-admin` vale tal cual con IAM Identity Center. Con un usuario IAM, quítalo y exporta antes la sesión como arriba.
 
-Y `~/.config/atlas/admin.json`, que escribes tú y la aplicación nunca escribe (`data-model.md` §9):
+Y `~/.config/atlas/admin.json`, que escribes tú y la aplicación nunca escribe (`specs/015-api-access/data-model.md` §9; `docs/data-schema.md` §1):
 
 ```json
 { "admin_format": 1, "environments": { "prod": { "region": "eu-west-1", "data_bucket": "atlas-prod-data-<sufijo>", "ssm_prefix": "/atlas/prod/" } } }
@@ -43,7 +43,7 @@ Compruébalo repitiendo la orden. Tiene que decir «Revocados 0 tokens».
 
 ## 2. Con la CLI de AWS (si la consola de Atlas no está disponible)
 
-Cada registro es **un** `SecureString` cuyo valor es un objeto JSON en una línea (`data-model.md` §2). Revocarlo es **añadirle `"revoked_at"`** al final, con el instante en UTC, **sin milisegundos**, y sin tocar nada más:
+Cada registro es **un** `SecureString` cuyo valor es un objeto JSON en una línea (`specs/015-api-access/data-model.md` §2). Revocarlo es **añadirle `"revoked_at"`** al final, con el instante en UTC, **sin milisegundos**, y sin tocar nada más:
 
 ```json
 {"token_record_format":1,"token_id":"…","secret_sha256":"…","sub":"…","email":"…","device_id":"…","device_name":"…","issued_at":"2026-10-01T10:00:00Z","expires_at":"2026-12-30T10:00:00Z","revoked_at":"2026-10-05T09:30:00Z"}
