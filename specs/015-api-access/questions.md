@@ -1747,3 +1747,125 @@ Sobre `62e7be9`, con `--pool=forks --maxWorkers=1`, cada paso tras el guardián 
   - `docs/data-schema.md` §1: la clave `sync:device`, `ledger.held.jsonl`, la importación negada mientras se sincroniza, y las cuatro claves `sync:*`;
   - `docs/data-schema.md` §2: la nota de Q12, opción (b);
   - `docs/specification.md` §9.6: la tarjeta de sincronización de la web.
+
+## 30. Las revisiones de la PR #97 (ronda 1): decisiones y entrega (2026-09-27)
+
+Revisiones: seguridad (comentario 5853136492) y corrección (comentario 5853214458), las dos sobre `35fbd0c`.
+
+### 30.1 Las decisiones de la dirección
+
+- **Seguridad**:
+  - **B1**, que coincide con N2 de corrección: la comprobación del dispositivo pasa al servidor.
+    - Cabecera `x-atlas-expected-device`, obligatoria con la cookie. Sin ella, `400`; con otro dispositivo, `409 sync_device_changed`, sin escribir nada.
+    - El motor relee la sesión antes de sincronizar y de volver a descargar.
+    - Documentado en `docs/api.md` §5.4 y §7, y con un test del cambio de sesión entre el pintado y el clic.
+  - **B2**: el mensaje de la exportación nombra `ledger.held.jsonl` y cuántas operaciones lleva; el fichero tiene su propio botón. Con test del mensaje.
+  - **N1**, que sube a bloqueante: `engine.ts` solo se importa desde la sección de la sincronización de Ajustes. Hay una regla sobre el grafo real y otra estática, que matan M1 y su variante con `setInterval`.
+  - **N2**: se acepta como riesgo residual y queda documentado (§30.3).
+  - **N3**: con un `sync:held` ilegible, se exporta el libro y se avisa.
+  - **N4**: «Descartar» pide confirmación; «Confirmar», no.
+  - **N5**: `record(true)` solo confirma el borrador idéntico al que avisó, y lo mismo en `EventForm.tsx`.
+- **Corrección**:
+  - **B1**: con algo retenido sin resolver, el aviso de libro inválido dice la causa y enlaza con Ajustes › Sincronización › Retenidas. Con test, y otro de «Rehacer» con el libro inválido.
+  - **B2**: lo retenido enseña el activo, la cantidad y el importe con `Amount`, bajo la privacidad. Con test con y sin privacidad.
+  - **N1**: tests que matan los tres mutantes.
+  - **N3**: «Unirme» dice cuántas operaciones retiene, con severidad `caution`.
+  - **N4**: el motivo usa la misma palabra que el botón.
+  - **N5**: se borra `exportLedgerText`, que estaba muerto.
+  - **N6**: capturas por *viewport*.
+  - `docs/data-schema.md` dice que `ledger.held.jsonl` no se reimporta y cómo se recupera.
+
+### 30.2 Lo hecho, commit a commit
+
+- **Techos del paquete**, cada uno **antes** de lo que lo necesita, en su propio commit y con la medida, el desglose y la tendencia: `1165ab8`, `ab60b14`, `c518095` y `778cd00`.
+  - El total pasa de 298.648 a 300.436 (medido 300.128).
+  - El arranque no se toca: 76.016 medido, con techo en 76.051.
+  - **Un intento que lo movía se descartó**: un componente perezoso para la causa del libro inválido separaba `solid` del arranque (+606).
+- **Seguridad B1** (`4488604`):
+  - la cabecera `x-atlas-expected-device` (`EXPECTED_DEVICE_HEADER` en el puerto remoto);
+  - los códigos `expected_device_required` (400) y `sync_device_changed` (409) en `API_ERRORS` y en `REMOTE_FAILURE_CODES`, con frase propia en las dos interfaces;
+  - la regla pura `expectedDeviceRefusal` y `DEVICE_BOUND_PATHS`, aplicada en el *handler* antes de leer ni escribir;
+  - `httpRemote({ expectedDevice })`;
+  - el motor lee `GET /api/session` en cada orden (`sessionNow`) y ya no recibe el dispositivo como parámetro;
+  - las acciones de lo retenido pasan a `apps/web/src/sync/engine-held.ts`;
+  - los tests de la web usan una cookie por navegador (`api-support.ts`, con `signInAgain` y `signOut`).
+  - Aquí va también la mitad del motor de corrección N3: la cuenta de lo retenido (`retained`); la frase y su test van en `1fbc461`.
+- **N1** (`b2a330f`):
+  - el grafo del paquete anota quién importa cada módulo, estática y dinámicamente;
+  - `check-bundle.mjs` rechaza cualquier importador del motor fuera de `routes/ajustes/sync/`, y un grafo que no lo diga;
+  - `tests/api-access.test.ts` lo exige por alcance sobre los fuentes.
+- **Seguridad B2 y N3; corrección N1 y N5**:
+  - `3026bb4` quita `exportLedgerText` (sin llamadas en la consola ni en la web; los tests de la 012 pasan a `exportLedgerAndHeld`, y así matan el mutante de `META_KEY`);
+  - `c5e24a0` hace que un `sync:held` ilegible no aborte la exportación, cuente las operaciones y no dé fichero cuando todo está resuelto;
+  - `b5271b4` pone el mensaje (`exportSaid`) y el botón «Descargar lo retenido».
+- **Corrección B2** (`f23b5bc`): el activo, la cantidad, el precio por unidad y el importe de lo retenido, siempre por `Amount`.
+- **Corrección N4** (`0f48226`): «Rehazla», como el botón.
+- **Seguridad N4** (`81e9b44`): «¿Descartar lo retenido?» antes de descartar.
+- **Corrección N1 y N3, tests** (`1fbc461`): «Volver a descargar» desaparece tras descargar, y unirse dice cuántas retiene, con `caution`.
+- **Seguridad N5** (`fda537a`): `warned.ts`, aplicado en «Registrar lo presentado», en `EventForm.tsx` y en el formulario corporativo, que tiene el mismo patrón.
+  - **Aviso**: el corporativo no tiene test propio; comparte el mismo ayudante, que sí lo tiene.
+- **Corrección B1** (`da802ae`, `2e3e582`):
+  - el aviso de libro inválido de `RequireLedger` pregunta, solo cuando se pinta, cuántas unidades retiene la sincronización. Usa la pregunta de solo lectura nueva `browserHeldPending` del almacén, cargada con `import()` a través de `apps/web/src/sync/held-pending.ts`, porque el guardián no deja un `import()` de una puerta de la sincronización;
+  - un test prueba que «Rehacer» funciona con el libro inválido (D-Q1).
+  - **No toqué** el aviso del resumen (`attention.ts`) ni el de `ClosedYearNotice`: la decisión nombra el aviso de libro inválido.
+- **Documentos** (`d30a242`):
+  - `docs/api.md` §5.4 y §7: la cabecera, los dos códigos y que CloudFront debe reenviarla (queda para la 017);
+  - `docs/data-schema.md`: `ledger.held.jsonl`, con su botón, que no se reimporta y cómo se recupera;
+  - `docs/specification.md` §9.6.
+
+### 30.3 N2, riesgo residual (seguridad)
+
+**El guardián de las claves `sync:*` es textual.** Busca el literal `sync:` en los fuentes de la web, así que una clave compuesta en tiempo de ejecución (`["sync","state"].join(":")`) escrita directamente en IndexedDB no la detecta.
+
+- **Se acepta** porque exige código nuevo de la aplicación que escriba en IndexedDB fuera de los adaptadores, que es exactamente lo que revisan las revisiones.
+- **Si llega a hacer falta**, la regla que lo cerraría es prohibir `indexedDB` y `objectStore(` en `apps/web/src`.
+
+### 30.4 Mutantes
+
+Por lotes, secuenciales, con el guardián de memoria: `015-r97-n1.json`, `015-r97-a.json` y `015-r97-b.json`.
+
+- **N1, antes y después**:
+  - Antes, contra los guardianes de `4488604`: M1 (`App.tsx` importa el motor al arrancar y en `online`) y M1b (`configuracion.tsx` con `setInterval`) **sobreviven** a la regla estática. La construcción falla solo por el presupuesto, sin la regla («FAILED WITHOUT THE EXPECTED REASON», lo mismo que vio la revisión).
+  - Después, **los cuatro mueren**, cada uno por la regla que le toca: estática y del grafo, para M1 y para M1b.
+- **Lote A, 8 de 8 muertos**:
+  - R1: el *handler* no comprueba la cabecera;
+  - R2: la cookie sin cabecera se admite;
+  - R3: el cliente no la manda;
+  - R4: el motor confía en el dispositivo unido en lugar de la sesión de ahora;
+  - R5: un `sync:held` ilegible aborta la exportación;
+  - R6: se exporta lo retenido ya resuelto;
+  - R7: la exportación no anota su fecha (`META_KEY`);
+  - R8: «Volver a descargar» sigue ofrecido tras descargar.
+- **Lote B, 6 de 6 muertos**:
+  - R9: la exportación no nombra el fichero;
+  - R10: el precio de lo retenido sin `Amount`;
+  - R11: descartar sin preguntar;
+  - R12: un sí que confirma cualquier borrador;
+  - R13: la causa dicha sin nada retenido;
+  - R14: unirse sin contar lo retenido.
+- **«Antes» de cada corrección**: cada test nuevo lo vi en rojo contra el código anterior, guardando solo el fuente corregido. Así, en N3 (el test de lo ilegible caduca), corrección B2, seguridad N4, corrección N4, seguridad N5 (los dos formularios) y corrección B1. Los de corrección N1 son los propios mutantes de la revisión (R6, R7 y R8).
+
+### 30.5 Capturas
+
+En `~/personal/atlas/privado/capturas/2026-09-27-015-e4-r1/`, **por *viewport***, con las barras fijas encima como las ve el usuario. Cada escena se capta desde el principio de la tarjeta y una pantalla más abajo cada vez, hasta su final. Ningún desbordamiento horizontal (`medidas.json`).
+
+- Se ven la unión con «1 operación retenida de las que había aquí», con aviso ámbar; y la valoración retenida con el activo, «•••• a ••••€» y la privacidad puesta.
+- **Encontrado, no corregido**: al entrar por `/ajustes#sincronizacion`, el título «Sincronización» queda debajo de la barra superior fija, porque falta un `scroll-margin-top`. Es un defecto de maquetación ajeno a estas decisiones; lo dejo para la dirección.
+
+### 30.6 La tubería y la CI
+
+**Código congelado en `d30a242`**; este informe va en el commit siguiente, solo de documentos. La tubería corrió sobre `d30a242`, con `--pool=forks --maxWorkers=1` y cada paso tras el guardián de memoria:
+
+| Paso | Código de salida | Tiempo |
+|---|---:|---:|
+| lint | 0 | 4 s |
+| typecheck | 0 | 4 s |
+| cobertura, 1.ª | 0 | 924 s |
+| cobertura, 2.ª | 0 | 851 s |
+| build (incluido `check-bundle`) | 0 | 10 s |
+
+- **3.054 tests** en 310 ficheros, sin nada paralelo durante la tubería. El dominio queda al 100 % en las dos coberturas.
+- **El paquete**:
+  - arranque 76.016, con techo en 76.051; la autorización llega a 76.069;
+  - total 300.128, con techo en 300.436; la autorización llega a 304.640, así que quedan 4.512.
+- **La CI** corre en la PR (`pull_request`); su resultado se anota en el mapa de la PR #97.
