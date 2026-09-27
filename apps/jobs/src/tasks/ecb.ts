@@ -6,9 +6,14 @@
 // composes and decides nothing, and **it sends nothing** (§8.2 B2): a rejected
 // update, a TARGET calendar in disagreement or a history damaged beyond
 // undoing are findings in its record, and the mail function sends them.
+//
+// **A damaged history does not stop the cloud** (review of PR #106, B1 (b)):
+// it is rebuilt whole from the official ZIP of the ECB, the source of truth,
+// which anyone can download again; with the API only, it stays damaged and
+// the next run tries again.
 
 import { S3EcbHistoryStore } from "@atlas/adapters/aws-daily";
-import { firstRateDateOf, updateEcbHistory } from "@atlas/domain/ecb";
+import { firstRateDateOf, rebuildEcbHistory, updateEcbHistory } from "@atlas/domain/ecb";
 import { ecbFindings } from "@atlas/domain/jobs";
 import type { TaskResult, TaskRunner } from "../run.js";
 
@@ -20,21 +25,26 @@ export const ecbUpdate: TaskRunner = async (context): Promise<TaskResult> => {
   }
   const store = new S3EcbHistoryStore(deps.objects);
   const recovered = await store.recover();
+  const ledger = await context.ledger();
+  const options = {
+    firstRateDate: ledger.ok ? firstRateDateOf(ledger.events) : undefined,
+    today: context.today,
+  };
   if (recovered === "damaged") {
+    const rebuilt = await rebuildEcbHistory({ source: source(), store }, options);
     return {
       state: "done",
-      outcome: { code: "ecb_history_damaged" },
-      findings: [{ code: "ecb_history_damaged", subject: "ecb" }],
+      outcome:
+        rebuilt.kind === "rebuilt"
+          ? {
+              code: "ecb_history_rebuilt",
+              counts: { days: rebuilt.days, calendar: rebuilt.calendar.length },
+            }
+          : { code: "ecb_history_damaged" },
+      findings: ecbFindings(rebuilt),
     };
   }
-  const ledger = await context.ledger();
-  const result = await updateEcbHistory(
-    { source: source(), store },
-    {
-      firstRateDate: ledger.ok ? firstRateDateOf(ledger.events) : undefined,
-      today: context.today,
-    },
-  );
+  const result = await updateEcbHistory({ source: source(), store }, options);
   return {
     state: "done",
     outcome: {

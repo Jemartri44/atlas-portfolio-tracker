@@ -5,7 +5,7 @@
 
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { encodeLine } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
@@ -149,6 +149,95 @@ describe("the daily task of the ECB (R31; ADR-0029)", () => {
     await next.run(["ecb_update"]);
     expect(s3.text("reference/ecb/api-exr.csv")).toBe(csv);
     expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json").outcome.counts.undone).toBe(1);
+  });
+});
+
+describe("a damaged history of the ECB (review of PR #106, B1 (b))", () => {
+  /** The ECB answering the ZIP, built as the ECB builds it. */
+  const zipNetwork = async (csv: string) => {
+    const script = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../../scripts/lambda-package.mjs",
+    );
+    const { zipOne } = (await import(pathToFileURL(script).href)) as {
+      zipOne(name: string, content: Uint8Array): Uint8Array;
+    };
+    const zip = zipOne("eurofxref-hist.csv", new TextEncoder().encode(csv));
+    return (url: string) =>
+      url.includes("eurofxref-hist.zip")
+        ? Promise.resolve(new Response(zip, { status: 200 }))
+        : text("not used", 500);
+  };
+
+  /** The reviewer's mixed state: the manifest records one file, the bucket holds another. */
+  const damagedBucket = async (csv: string) => {
+    const s3 = new TestOnlyFakeS3();
+    const ssm = new TestOnlyFakeSsm();
+    s3.seed("ledger/ledger.jsonl", sentinelLedger());
+    ssm.set("/atlas/prod/mail/recipient", RECIPIENT);
+    await setupJobs({ env: ECB_ENV, s3, ssm, fetch: await zipNetwork(csv) }).run(["ecb_update"]);
+    s3.seed("reference/ecb/eurofxref-hist.csv", csv.replace(/\n[^\n]+\n$/, "\n"));
+    s3.seed("reference/ecb/previous/eurofxref-hist.csv", "Date,USD,\n");
+    return { s3, ssm };
+  };
+
+  it("rebuilds it whole from the official ZIP, and the mail says so once", async () => {
+    const csv = await readFile(join(fixtures, "eurofxref-hist.csv"), "utf8");
+    const { s3, ssm } = await damagedBucket(csv);
+    const next = setupJobs({
+      env: ECB_ENV,
+      s3,
+      ssm,
+      now: "2026-10-02T15:30:00Z",
+      fetch: await zipNetwork(csv),
+    });
+    await next.run(["ecb_update"]);
+    expect(s3.text("reference/ecb/eurofxref-hist.csv")).toBe(csv);
+    const manifest = JSON.parse(s3.text("reference/ecb/manifest.json") as string);
+    expect(manifest.active).toMatchObject({ source: "zip", file: "eurofxref-hist.csv" });
+    expect(manifest.previous).toBeUndefined();
+    const record = recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json");
+    expect(record).toMatchObject({
+      state: "done",
+      outcome: { code: "ecb_history_rebuilt", counts: { days: 127 } },
+      findings: [{ code: "ecb_history_rebuilt", subject: "ecb", counts: { days: 127 } }],
+    });
+    expect(next.ses.attempts).toEqual([]);
+    for (const day of ["03", "04"]) {
+      const mail = setupJobs({ env: MAIL_ENV, s3, ssm, now: `2026-10-${day}T06:00:00Z` });
+      await mail.run(["dispatch_findings"]);
+      expect(mail.ses.sent.map((sent) => sent.subject)).toEqual(
+        day === "03" ? ["[Atlas] Aviso: historico del BCE reconstruido"] : [],
+      );
+    }
+    // The next day it is an ordinary update again.
+    await setupJobs({
+      env: ECB_ENV,
+      s3,
+      ssm,
+      now: "2026-10-03T15:30:00Z",
+      fetch: await zipNetwork(csv),
+    }).run(["ecb_update"]);
+    expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-03.json").outcome.code).toBe("ecb_updated");
+  });
+
+  it("stays damaged, writing nothing, when only the API answers", async () => {
+    const csv = await readFile(join(fixtures, "eurofxref-hist.csv"), "utf8");
+    const { s3, ssm } = await damagedBucket(csv);
+    const before = s3.text("reference/ecb/eurofxref-hist.csv");
+    const api = await readFile(join(fixtures, "api-exr.csv"), "utf8");
+    await setupJobs({
+      env: ECB_ENV,
+      s3,
+      ssm,
+      now: "2026-10-02T15:30:00Z",
+      fetch: ecbNetwork(api),
+    }).run(["ecb_update"]);
+    expect(s3.text("reference/ecb/eurofxref-hist.csv")).toBe(before);
+    expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json")).toMatchObject({
+      outcome: { code: "ecb_history_damaged" },
+      findings: [{ code: "ecb_history_damaged", subject: "ecb" }],
+    });
   });
 });
 

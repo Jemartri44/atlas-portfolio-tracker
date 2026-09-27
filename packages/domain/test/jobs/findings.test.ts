@@ -11,14 +11,15 @@ import { EMPTY_STATUS } from "../../src/quotes/status.js";
 const REPORT: UpdateReport = { no_sources: false, assets: [], remaining: {}, failing: [] };
 
 describe("the findings of the ECB", () => {
+  const stored = {
+    file: "eurofxref-hist.csv",
+    source: "zip" as const,
+    url: "u",
+    fetched_at: "t",
+    sha256: "s",
+  };
+
   it("says a rejected update with how many rates it would overwrite, and a calendar in disagreement", () => {
-    const stored = {
-      file: "eurofxref-hist.csv",
-      source: "zip" as const,
-      url: "u",
-      fetched_at: "t",
-      sha256: "s",
-    };
     expect(
       ecbFindings({ kind: "rejected", kept: stored, active: stored, conflicts: [], total: 3 }),
     ).toEqual([{ code: "ecb_update_rejected", subject: "ecb", counts: { conflicts: 3 } }]);
@@ -37,6 +38,27 @@ describe("the findings of the ECB", () => {
         ],
       }),
     ).toEqual([{ code: "ecb_calendar_mismatch", subject: "ecb", counts: { days: 2 } }]);
+  });
+
+  it("says a rebuild of a damaged history with its days, and the damage when there was no ZIP", () => {
+    expect(ecbFindings({ kind: "zip_unavailable" })).toEqual([
+      { code: "ecb_history_damaged", subject: "ecb" },
+    ]);
+    expect(
+      ecbFindings({ kind: "rebuilt", stored, days: 7100, latest: "2026-10-02", calendar: [] }),
+    ).toEqual([{ code: "ecb_history_rebuilt", subject: "ecb", counts: { days: 7100 } }]);
+    expect(
+      ecbFindings({
+        kind: "rebuilt",
+        stored,
+        days: 7100,
+        latest: "2026-10-02",
+        calendar: [{ date: "2026-10-01", kind: "working_day_without_publication" }],
+      }),
+    ).toEqual([
+      { code: "ecb_history_rebuilt", subject: "ecb", counts: { days: 7100 } },
+      { code: "ecb_calendar_mismatch", subject: "ecb", counts: { days: 1 } },
+    ]);
   });
 });
 

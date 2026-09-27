@@ -5,8 +5,9 @@
 //
 // - The ECB: an update that would overwrite a published rate (it is kept
 //   apart and the history in force stays: ADR-0029, point 2), a TARGET
-//   calendar in disagreement, and a history in force that does not match its
-//   manifest and could not be undone.
+//   calendar in disagreement, a history in force that does not match its
+//   manifest and could not be undone, and that history rebuilt from the
+//   official ZIP (review of PR #106, B1 (b)).
 // - The prices: a source at its threshold of consecutive failures (only
 //   `unavailable`, `rate_limited`, `blocked` and `invalid_response` count,
 //   ADR-0031, third amendment, §5), correspondences the cloud leaves out
@@ -14,7 +15,7 @@
 //   expected horizon — `horizon_exceeded`, the one rule that exists (§8.2 B1);
 //   the condition of invalidation is free text and never a warning.
 
-import type { EcbUpdateResult } from "../ecb/update-history.js";
+import type { EcbRebuildResult, EcbUpdateResult } from "../ecb/update-history.js";
 import type { UpdateReport } from "../quotes/cascade.js";
 import type { PriceStatus } from "../quotes/status.js";
 import type { ProducerFindings } from "./notices.js";
@@ -26,6 +27,7 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
     ecb_update_rejected: ["ecb"],
     ecb_calendar_mismatch: ["ecb"],
     ecb_history_damaged: ["ecb"],
+    ecb_history_rebuilt: ["ecb"],
   },
   prices_update: {
     source_failing: ["eodhd", "alpha_vantage"],
@@ -34,14 +36,31 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
   },
 };
 
-/** What an update of the ECB history leaves: a rejection, or a calendar that disagrees. */
-export const ecbFindings = (result: EcbUpdateResult): Finding[] => {
+/**
+ * What an update of the ECB history leaves: a rejection, or a calendar that
+ * disagrees; and what a rebuild of a damaged one leaves: the rebuild, or the
+ * damage still there when the ZIP could not be had.
+ */
+export const ecbFindings = (result: EcbUpdateResult | EcbRebuildResult): Finding[] => {
   if (result.kind === "rejected") {
     return [{ code: "ecb_update_rejected", subject: "ecb", counts: { conflicts: result.total } }];
   }
-  return result.calendar.length === 0
-    ? []
-    : [{ code: "ecb_calendar_mismatch", subject: "ecb", counts: { days: result.calendar.length } }];
+  if (result.kind === "zip_unavailable") {
+    return [{ code: "ecb_history_damaged", subject: "ecb" }];
+  }
+  const calendar: Finding[] =
+    result.calendar.length === 0
+      ? []
+      : [
+          {
+            code: "ecb_calendar_mismatch",
+            subject: "ecb",
+            counts: { days: result.calendar.length },
+          },
+        ];
+  return result.kind === "rebuilt"
+    ? [{ code: "ecb_history_rebuilt", subject: "ecb", counts: { days: result.days } }, ...calendar]
+    : calendar;
 };
 
 const SOURCES = ["eodhd", "alpha_vantage"] as const;

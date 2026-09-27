@@ -157,7 +157,17 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       subject: "[Atlas] Aviso: historico del BCE danado",
       lines: [
         `El histórico del BCE en vigor no cuadra con su manifiesto y no se ha podido deshacer, desde el ${facts.since}: no se usa.`,
-        "Hay que mirarlo en reference/ecb/.",
+        "Se reconstruirá entero desde el ZIP oficial del BCE en cuanto se pueda descargar; mientras tanto, hay que mirarlo en reference/ecb/.",
+      ],
+    }),
+  },
+  ecb_history_rebuilt: {
+    subjects: ["ecb"],
+    write: (_ecb, facts) => ({
+      subject: "[Atlas] Aviso: historico del BCE reconstruido",
+      lines: [
+        `El histórico del BCE en vigor no cuadraba con su manifiesto y se ha reconstruido entero desde el ZIP oficial del BCE (${countOf(facts, "days")} días), desde el ${facts.since}.`,
+        "Lo que había sigue en las versiones anteriores del bucket, sin usarse.",
       ],
     }),
   },
