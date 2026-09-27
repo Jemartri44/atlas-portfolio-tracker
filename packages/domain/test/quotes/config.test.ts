@@ -7,6 +7,26 @@ describe("prices/config.json", () => {
       source_order: ["eodhd", "alpha_vantage"],
       daily_calls: { eodhd: 20, alpha_vantage: 25 },
       failure_threshold: 3,
+      // Crypto trades every day and its last closes may be provisional (live
+      // test of 2026-09-27): configuration by asset type, never a constant.
+      market_days: {
+        fund: "mon_fri",
+        etf: "mon_fri",
+        etc: "mon_fri",
+        etp: "mon_fri",
+        stock: "mon_fri",
+        crypto: "every_day",
+        money_market: "mon_fri",
+      },
+      refetch_recent_days: {
+        fund: 0,
+        etf: 0,
+        etc: 0,
+        etp: 0,
+        stock: 0,
+        crypto: 2,
+        money_market: 0,
+      },
     });
     expect(parsePriceConfig("{}")).toEqual(DEFAULT_PRICE_CONFIG);
   });
@@ -17,9 +37,32 @@ describe("prices/config.json", () => {
         '{"source_order":["alpha_vantage","eodhd"],"daily_calls":{"eodhd":0},"failure_threshold":5}',
       ),
     ).toEqual({
+      ...DEFAULT_PRICE_CONFIG,
       source_order: ["alpha_vantage", "eodhd"],
       daily_calls: { eodhd: 0, alpha_vantage: 25 },
       failure_threshold: 5,
+    });
+  });
+
+  it("accepts up to 31 recent days asked again", () => {
+    expect(
+      parsePriceConfig('{"refetch_recent_days":{"crypto":31}}').refetch_recent_days.crypto,
+    ).toBe(31);
+  });
+
+  it("reads the market days and the recent days asked again by asset type, over the defaults", () => {
+    const config = parsePriceConfig(
+      '{"market_days":{"etf":"every_day","crypto":"mon_fri"},"refetch_recent_days":{"crypto":0,"stock":3}}',
+    );
+    expect(config.market_days).toEqual({
+      ...DEFAULT_PRICE_CONFIG.market_days,
+      etf: "every_day",
+      crypto: "mon_fri",
+    });
+    expect(config.refetch_recent_days).toEqual({
+      ...DEFAULT_PRICE_CONFIG.refetch_recent_days,
+      crypto: 0,
+      stock: 3,
     });
   });
 
@@ -38,6 +81,17 @@ describe("prices/config.json", () => {
       ['{"daily_calls":{"eodhd":-1}}', "daily_calls.eodhd"],
       ['{"daily_calls":{"eodhd":1.5}}', "daily_calls.eodhd"],
       ['{"failure_threshold":0}', "failure_threshold"],
+      ['{"market_days":[]}', "market_days"],
+      ['{"market_days":null}', "market_days"],
+      ['{"market_days":{"bond":"mon_fri"}}', "market_days.bond"],
+      ['{"market_days":{"crypto":"weekends"}}', "market_days.crypto"],
+      ['{"refetch_recent_days":"2"}', "refetch_recent_days"],
+      ['{"refetch_recent_days":{"coin":2}}', "refetch_recent_days.coin"],
+      ['{"refetch_recent_days":{"crypto":-1}}', "refetch_recent_days.crypto"],
+      ['{"refetch_recent_days":{"crypto":1.5}}', "refetch_recent_days.crypto"],
+      // At most a month (round 1 of PR #102): a huge value broke the dates mid-run.
+      ['{"refetch_recent_days":{"crypto":32}}', "refetch_recent_days.crypto"],
+      ['{"refetch_recent_days":{"crypto":1000000000}}', "refetch_recent_days.crypto"],
     ];
     for (const [text, field] of cases) {
       expect(() => parsePriceConfig(text), text).toThrow(
