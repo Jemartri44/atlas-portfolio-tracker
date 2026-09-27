@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { firstRateDateOf } from "../../src/ecb/ledger-rates.js";
-import { updateEcbHistory } from "../../src/ecb/update-history.js";
+import { rebuildEcbHistory, updateEcbHistory } from "../../src/ecb/update-history.js";
 import { ValidationError } from "../../src/errors.js";
 import type {
   DownloadedHistory,
@@ -142,6 +142,80 @@ describe("updateEcbHistory", () => {
       calendar: [{ date: "2026-01-05", kind: "working_day_without_publication" }],
     });
     expect(store.current?.text).toBe(missing);
+  });
+});
+
+describe("rebuildEcbHistory (review of PR #106, B1 (b))", () => {
+  /** A store whose history in force is damaged: only `rebuild` writes. */
+  const damaged = () => {
+    const written: DownloadedHistory[] = [];
+    return {
+      written,
+      store: {
+        rebuild: async (next: DownloadedHistory): Promise<StoredHistoryMeta> => {
+          written.push(next);
+          return {
+            file: "eurofxref-hist.csv",
+            source: next.source,
+            url: next.url,
+            fetched_at: next.fetched_at,
+            sha256: "y",
+          };
+        },
+      },
+    };
+  };
+
+  it("rebuilds the whole history from the official ZIP, and says every day of it", async () => {
+    const { store, written } = damaged();
+    const missing = text.replace(/^2026-01-05.*\n/m, "");
+    const result = await rebuildEcbHistory(
+      { source: { download: async () => download(missing) }, store },
+      { firstRateDate: "2026-01-02", today: "2026-03-31" },
+    );
+    expect(result).toMatchObject({
+      kind: "rebuilt",
+      stored: { sha256: "y", source: "zip" },
+      days: 126,
+      latest: "2026-03-31",
+      calendar: [{ date: "2026-01-05", kind: "working_day_without_publication" }],
+    });
+    expect(written).toHaveLength(1);
+  });
+
+  it("never rebuilds from the API: the ZIP is the source of truth", async () => {
+    const { store, written } = damaged();
+    const result = await rebuildEcbHistory(
+      {
+        source: {
+          download: async () =>
+            download(ecbFixture("api-exr.csv"), { source: "api", zip_failure: "HTTP 503" }),
+        },
+        store,
+      },
+      options,
+    );
+    expect(result).toEqual({ kind: "zip_unavailable", zip_failure: "HTTP 503" });
+    const bare = await rebuildEcbHistory(
+      {
+        source: { download: async () => download(ecbFixture("api-exr.csv"), { source: "api" }) },
+        store,
+      },
+      options,
+    );
+    expect(bare).toEqual({ kind: "zip_unavailable" });
+    expect(written).toEqual([]);
+  });
+
+  it("writes nothing when the ZIP does not read as a history", async () => {
+    const { store, written } = damaged();
+    await expect(
+      rebuildEcbHistory(
+        { source: { download: async () => download("<html>no</html>") }, store },
+        options,
+      ),
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(written).toEqual([]);
   });
 });
 
