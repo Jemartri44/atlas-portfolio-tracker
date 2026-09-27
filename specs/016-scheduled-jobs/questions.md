@@ -452,3 +452,45 @@ Revisión sobre `003ee81` (comentario 5858858950): un bloqueante pequeño, resid
 Comprobado sobre el último commit de código (`bc24072`): `lint` 0, `typecheck` 0, y los proyectos `jobs` y `repo` con `--pool=forks --maxWorkers=1`: 151 tests en verde. `jobs-access` sigue en 7 tests (el guardián crece por dentro). La dirección pidió para esta ronda lint, typecheck y los tests de `jobs`, no la tubería entera; la CI de la PR pasa la tubería completa.
 
 **Congelada la ronda 2 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR.
+
+## 14. E2: los datos del día en la nube (2026-09-27)
+
+E1 fusionada en `develop` (PR #104, `2f1afbf`); la rama la trae con `29af456`. Ese `develop` traía también la PR #102 (`fix/prices-live-findings`), que cambia la cascada: `prices/config.json` gana `market_days` y `refetch_recent_days` por tipo de activo, y la cascada vuelve a pedir los últimos días de la cripto. E2 lo tiene en cuenta (§14.2, Q13).
+
+### 14.1 Bloque 0 de E2
+
+Las verificaciones se hicieron antes de escribir el código de cada punto; este apartado se escribió tras los dos primeros commits de E2 (`b9e349f` y `d318153`), que aplican lo que aquí se verifica. Lo digo como desviación del orden del §6 del encargo.
+
+**Punto 1 — el cupo compartido** (documentación releída el 2026-09-27):
+
+- **EODHD**: `https://eodhd.com/financial-apis/api-limits`: «Free plan — 20 API calls per day»; «For subscription plans the daily limit resets at midnight GMT. The counter itself is reset lazily: it is zeroed by your first request after midnight»; «Failed lookups are charged. A request for a ticker that does not exist returns HTTP 404 and still costs its normal price»; agotado el día, «requests are refused with HTTP 402»; por minuto, 429 con `Retry-After`, a 1.000 por minuto.
+- **Alpha Vantage**: `https://www.alphavantage.co/support/`: «standard API usage limit (25 API requests per day)». La hora de reinicio, un límite por segundo o por minuto y la forma del error **siguen sin documentar**: el segundo de espera y el 200 con `Note`/`Information` salen de la observación en vivo de la 013.
+- **Usar la misma clave desde dos máquinas del mismo usuario**: EODHD prohíbe compartirla con **otras personas** (`…/terms-conditions`), no nombra dispositivos; Alpha Vantage concede el uso «on any computer or mobile device … that you own or control, for personal, non-commercial use» (`terms_of_service`, §2.a, PDF leído a mano). Que una función en la nube cuente como un dispositivo que el usuario controla es interpretación.
+- **Conclusión**: nada cambia desde el 2026-09-24. Los presupuestos de la nube quedan en **18 y 23** (§8.2 M5), que dejan 2 y 2 a la consola del mismo día GMT (EODHD) o de las mismas 24 horas (Alpha Vantage), con la regla de la 013: la reserva se escribe antes de llamar, en `_status.json` del almacén de cada uno. **Los dos almacenes no se ven**: la consola cuenta en su `prices/_status.json` y la nube en el del bucket, así que la suma la garantiza el reparto 18+2 y 23+2, no un contador común. Es lo que decidió M5; lo digo porque la consola, con la opción explícita de E3, puede gastar sus 2 y nada la para en 20.
+
+**Punto 2 — los nombres de `prices/` que se sirven** (código de `2f1afbf`, guion `016-names.mjs` sobre `priceFileName` compilado):
+
+| `asset_id` | nombre (`priceFileName`) | regla de la 015 | regla nueva (ida y vuelta, ≤ 255) |
+|---|---|---|---|
+| `ast_world`, `IE00B4L5Y983` | igual + `.jsonl` | sí | sí |
+| `ast%x` | `ast%25x.jsonl` | no | sí |
+| `ast(b)`, `ast!b`, `ast'b`, `ast*b`, `ast~b` | sin codificar | no | sí |
+| `_x`, `-x` | `_x.jsonl`, `-x.jsonl` | no | sí |
+| `.x` | `%2Ex.jsonl` | no | sí |
+| `..` | `%2E..jsonl` | no (`..`) | sí: sin `/`, es una clave plana |
+| `a b`, `a/b`, `ñandú` | `a%20b.jsonl`, `a%2Fb.jsonl`, `%C3%B1and%C3%BA.jsonl` | no | sí |
+| 123 y 124 caracteres | 129 y 130 caracteres | no (> 128) | sí |
+| 250 caracteres o más | 256 o más | no | **no** |
+| — | `symbols.json` | sí | sí, por su nombre |
+| — | `_status.json`, `config.json` | `_status` no; `config` sí | **no** (Q4) |
+
+- **Qué admite el cargador como `asset_id`**: cualquier cadena (`schema/validate.ts:73`, `asset_id: req("string")`); la regla nueva exige además que no sea vacía (`.jsonl` no se sirve).
+- **Lo único que sigue sin pasar** es un `asset_id` cuyo nombre de fichero pasa de 255 caracteres. **No es una restricción nueva**: la consola tampoco puede guardar ese fichero, porque el sistema de ficheros no admite nombres de más de 255 bytes, y el nombre codificado es ASCII. Ningún dispositivo necesita, por tanto, un nombre que la regla no sirva: **no para**.
+- **Sin verificar, para la 018**: que CloudFront y la Function URL entreguen `rawPath` sin decodificar las secuencias `%XX` (el manejador compara el segmento tal como llega). Si las decodificaran, `ast%25x.jsonl` llegaría como `ast%x.jsonl` y se negaría (400), nunca serviría otro fichero.
+
+**Punto 3 — tiempo y memoria de la Lambda** (límites en §1.7):
+
+- **BCE**: un ZIP de unos 600 KB y un CSV de unos 7.100 días por unas 40 divisas; leerlo y compararlo en el dominio tarda menos de un segundo en la máquina de desarrollo. Propuesta: 300 s y 256 MB.
+- **Precios**: como mucho 18 + 23 = 41 llamadas, con un segundo entre las de Alpha Vantage. **Los adaptadores de la 013 no ponen tiempo máximo a `fetch`**: en la nube, una fuente colgada consumiría la Lambda entera. La composición de la tarea les pasa un `fetch` con `AbortSignal.timeout(15 s)`: el peor caso son 41 × 15 s = 615 s, por debajo de 900 s. Propuesta: 900 s y 256 MB para la función de precios, y `ATLAS_JOB_MAX_RUN_SECONDS` igual a su `timeout` en cada función.
+
+**Punto 4 — `updatePrices` y `symbols.json`** (`cascade.ts` de `2f1afbf`): escribe `symbols.json` al contrastar una fuente sin `currency_check` (`contrast`) y al limpiar los días de una purga (`clearRefetched`). Con `symbols: "read_only"` (Q1, aceptada): una fuente sin contrastar se deja fuera como `currency_unchecked` (informe, nunca `_status.json`), y los días de una purga no se persiguen; así ninguno de los dos caminos escribe. El almacén de S3 se niega además a `writeSymbols` y a `rewriteCloses` (segunda cerradura). **Sale bien: E2 sigue.**
