@@ -16,6 +16,7 @@ const parts = (logs: string[], mailCalls: { n: number }) => ({
     mailCalls.n += 1;
     return new TestOnlyFakeSes();
   },
+  fetch: () => Promise.reject(new Error("no network in the tests")),
   clock: { now: () => new Date(Date.parse("2026-10-01T06:00:00Z")) },
   log: (line: string) => logs.push(line),
 });
@@ -29,7 +30,7 @@ describe("the composition of the jobs (R17, R18)", () => {
         {
           ATLAS_ENV: "prod",
           ATLAS_DATA_BUCKET: "atlas-prod-data-test",
-          ATLAS_JOBS: "ecb_update",
+          ATLAS_JOBS: "monthly_backup",
           ATLAS_JOB_MAX_RUN_SECONDS: "900",
         },
         "task_not_available",
@@ -80,17 +81,15 @@ describe("the composition of the jobs (R17, R18)", () => {
     composeOrFail(MAIL_ENV, parts([], mail));
     expect(mail.n).toBe(1);
     const other = { n: 0 };
-    expect(() =>
-      composeOrFail(
-        {
-          ATLAS_ENV: "prod",
-          ATLAS_DATA_BUCKET: "atlas-prod-data-test",
-          ATLAS_JOBS: "ecb_update",
-          ATLAS_JOB_MAX_RUN_SECONDS: "900",
-        },
-        parts([], other),
-      ),
-    ).toThrow();
+    composeOrFail(
+      {
+        ATLAS_ENV: "prod",
+        ATLAS_DATA_BUCKET: "atlas-prod-data-test",
+        ATLAS_JOBS: "ecb_update",
+        ATLAS_JOB_MAX_RUN_SECONDS: "300",
+      },
+      parts([], other),
+    );
     expect(other.n).toBe(0);
   });
 });

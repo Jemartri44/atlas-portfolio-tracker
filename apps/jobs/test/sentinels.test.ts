@@ -166,6 +166,7 @@ describe("the log of the jobs (G7, R15)", () => {
           objects: () => new TestOnlyFakeS3(),
           parameters: () => new TestOnlyFakeSsm(),
           mail: () => new TestOnlyFakeSes(),
+          fetch: () => Promise.reject(new Error("no network in the tests")),
           clock: { now: () => new Date(0) },
           log: (line) => logs.push(line),
         },

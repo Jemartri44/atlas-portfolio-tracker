@@ -48,8 +48,20 @@ export const sentinelLedger = (
       ...extra,
     }),
   );
-  b.buy({ account_id: "acc_fund", asset_id: "ast_world", quantity: "6", unit_price: "987.65" });
-  b.buy({ account_id: "acc_fund", asset_id: "ast_bonds", quantity: "3", unit_price: "4321.09" });
+  b.buy({
+    account_id: "acc_fund",
+    asset_id: "ast_world",
+    quantity: "6",
+    unit_price: "987.65",
+    trade_date: "2026-09-01",
+  });
+  b.buy({
+    account_id: "acc_fund",
+    asset_id: "ast_bonds",
+    quantity: "3",
+    unit_price: "4321.09",
+    trade_date: "2026-09-01",
+  });
   b.buy({
     account_id: "acc_etf",
     asset_id: "ast_gold",
@@ -57,6 +69,7 @@ export const sentinelLedger = (
     unit_price: "100",
     currency: "USD",
     fx_rate: "1",
+    trade_date: "2026-09-01",
   });
   for (const [account, asset, value, currency] of [
     ["acc_fund", "ast_world", "987.65", "EUR"],
@@ -80,6 +93,8 @@ export interface Jobs {
   readonly ssm: TestOnlyFakeSsm;
   readonly ses: TestOnlyFakeSes;
   readonly logs: string[];
+  /** Every address a source asked for. */
+  readonly fetched: string[];
   readonly handler: JobsHandler;
   run(tasks: readonly string[], requestId?: string): Promise<void>;
   setNow(iso: string): void;
@@ -92,19 +107,35 @@ export const setupJobs = (
     ledger?: string;
     /** Runners of a test, instead of the tasks built so far. */
     runners?: Readonly<Partial<Record<JobTask, TaskRunner>>>;
+    /** The network of the sources: a test says what each address answers; nothing else is reached. */
+    fetch?: (url: string) => Promise<Response>;
+    /** Shared doubles, to run two functions over the same bucket and parameters. */
+    s3?: TestOnlyFakeS3;
+    ssm?: TestOnlyFakeSsm;
   } = {},
 ): Jobs => {
-  const s3 = new TestOnlyFakeS3();
-  const ssm = new TestOnlyFakeSsm();
+  const s3 = options.s3 ?? new TestOnlyFakeS3();
+  const ssm = options.ssm ?? new TestOnlyFakeSsm();
+  const fetched: string[] = [];
   const ses = new TestOnlyFakeSes();
   const logs: string[] = [];
   let now = Date.parse(options.now ?? "2026-10-01T06:00:00Z");
-  ssm.set("/atlas/prod/mail/recipient", RECIPIENT);
-  s3.seed("ledger/ledger.jsonl", options.ledger ?? sentinelLedger());
+  if (options.ssm === undefined) {
+    ssm.set("/atlas/prod/mail/recipient", RECIPIENT);
+  }
+  if (options.s3 === undefined) {
+    s3.seed("ledger/ledger.jsonl", options.ledger ?? sentinelLedger());
+  }
   const parts = {
     objects: () => s3,
     parameters: () => ssm,
     mail: () => ses,
+    fetch: (url: string) => {
+      fetched.push(url);
+      return options.fetch === undefined
+        ? Promise.reject(new Error("no network in the tests"))
+        : options.fetch(url);
+    },
     clock: { now: () => new Date(now) },
     log: (line: string) => logs.push(line),
   };
@@ -116,6 +147,7 @@ export const setupJobs = (
     ssm,
     ses,
     logs,
+    fetched,
     handler,
     run: (tasks, requestId = "req-1") =>
       handler({ event_format: 1, tasks: [...tasks] }, { awsRequestId: requestId }),
