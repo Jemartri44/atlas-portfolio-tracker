@@ -7,6 +7,10 @@
 // (`parseJobsConfig`, `simulated_in_prod`). It answers as `eodhd`, the name
 // the store knows, a close of `100` for every weekday asked, in the currency
 // of the symbol's declaration, and never calls anything.
+//
+// It lives beside the door of the cloud (`aws-daily`), not in `prices/`: no
+// subpath the web could import may reach that folder, where the addresses of
+// the sources live (`tests/architecture.test.ts`).
 
 import type { CivilDate } from "@atlas/domain";
 import type { DailyClose, PriceSource, SourceResult } from "@atlas/domain/quotes";

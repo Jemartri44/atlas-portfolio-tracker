@@ -20,8 +20,8 @@ import {
   PriceStoreRefused,
   S3PriceStore,
 } from "../../src/aws/s3-price-store.js";
+import { SimulatedPriceSource } from "../../src/aws/simulated-prices.js";
 import { EcbHistoryDamaged } from "../../src/ecb/history-store.js";
-import { SimulatedPriceSource } from "../../src/prices/simulated.js";
 import { TestOnlyFakeS3 } from "./test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "./test-only-fake-ssm.js";
 

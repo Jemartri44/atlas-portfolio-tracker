@@ -5,7 +5,6 @@
 // `@atlas/adapters/aws-jobs`, so that neither the API nor the mail function
 // reaches the keys (`tests/jobs-access.test.ts`, §8.2 B2). Node only.
 
-export { SimulatedPriceSource } from "../prices/simulated.js";
 export {
   PriceKeyInvalid,
   type PriceKeys,
@@ -14,3 +13,4 @@ export {
 } from "./price-keys.js";
 export { type EcbRecovered, EcbStoreConflict, S3EcbHistoryStore } from "./s3-ecb-store.js";
 export { PriceStoreConflict, PriceStoreRefused, S3PriceStore } from "./s3-price-store.js";
+export { SimulatedPriceSource } from "./simulated-prices.js";

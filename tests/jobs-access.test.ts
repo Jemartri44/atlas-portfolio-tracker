@@ -45,7 +45,7 @@ const PRICE_KEYS = new RegExp(
  * simulated source of `dev` (E2): only the daily tasks of the jobs use them.
  */
 const DAILY_WRITERS = new RegExp(
-  `${sep}adapters${sep}src${sep}aws${sep}(daily|s3-ecb-store|s3-price-store)\\.ts$|${sep}adapters${sep}src${sep}prices${sep}simulated\\.ts$`,
+  `${sep}adapters${sep}src${sep}aws${sep}(daily|s3-ecb-store|s3-price-store|simulated-prices)\\.ts$`,
 );
 
 const exists = (file: string): boolean =>
@@ -174,7 +174,7 @@ describe("architecture (016): the clock is injected", () => {
     "packages/adapters/src/aws/price-keys.ts",
     "packages/adapters/src/aws/s3-ecb-store.ts",
     "packages/adapters/src/aws/s3-price-store.ts",
-    "packages/adapters/src/prices/simulated.ts",
+    "packages/adapters/src/aws/simulated-prices.ts",
     "packages/adapters/test/aws/s3-daily.test.ts",
   ];
   /** Every source of a folder, the `.mjs` of the scripts too. */
