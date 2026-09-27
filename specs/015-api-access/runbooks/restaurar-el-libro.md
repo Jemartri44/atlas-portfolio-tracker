@@ -35,7 +35,8 @@ AWS_PROFILE=atlas-prod-admin atlas admin restore --env prod --from <copia>
 La orden recorre los seis pasos de ADR-0032 **en orden y sin saltarse ninguno**, y escribe cada uno:
 
 1. **La copia candidata**, la que has nombrado.
-2. **La comprueba antes de tocar nada.** Tiene que cargar con el esquema actual, pasar `check --deep` sin errores y proyectarse sin eventos inválidos. Si no, se niega (`restore_candidate_invalid`) con la lista.
+2. **La comprueba antes de tocar nada.** Tiene que cargar con el esquema actual, proyectarse sin eventos inválidos y pasar las comprobaciones de `check --deep` sin errores. Si no, se niega (`restore_candidate_invalid`) con la lista.
+   - No contrasta los tipos del BCE, porque dependen del histórico de la carpeta. Si quieres ese contraste, pasa antes `atlas --ledger <copia> check --deep` en una carpeta con el histórico.
 3. **La compara con la nube por identificador**:
    - si la copia es un prefijo de la nube, dice «se pierde esta cola» y nombra cada evento;
    - si no, evento a evento, en los dos sentidos.
