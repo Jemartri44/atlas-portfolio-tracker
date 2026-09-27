@@ -433,7 +433,15 @@ const dist = join(webRoot, "dist");
  * per address, behind a gate that a click opens again. The trend: 74.874 →
  * 74.895 → 74.887 → 75.019.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_039;
+/*
+ * **Feature 020, E2, `inRentaSeason` in the barrel (2026-09-27): measured
+ * 75.059 (+25 over the 75.034 of round 2 of PR #105), ceiling 75.079 —
+ * measured + 20**, raised before the commit that needs it, inside the
+ * authorisation (76.069). The rule of the income tax season leaves the lazy
+ * tax engine for the settings, so the summary places its tax card on the
+ * first paint (Q5). The trend: 75.019 → 75.034 → 75.059.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_079;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
