@@ -11,6 +11,7 @@ import { ValidationError } from "../errors.js";
 import type { SourceFailureKind } from "../ports/price-source.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
+import type { MarketDays } from "./config.js";
 import { isQuoteSource } from "./sources.js";
 
 export const STATUS_FORMAT = 1;
@@ -219,13 +220,14 @@ export const failingSources = (status: PriceStatus, threshold: number): QuoteSou
   );
 
 /**
- * The last Monday-to-Friday day **before** `today`: a close up to it means
- * the asset is up to date and costs no call. Holidays are not known here, so
- * a holiday costs one call that returns nothing.
+ * The last day its market trades **before** `today` — Monday to Friday, or
+ * every day for crypto, as `prices/config.json` says for its asset type: a
+ * close up to it means the asset is up to date and costs no call. Holidays
+ * are not known here, so a holiday costs one call that returns nothing.
  */
-export const lastMarketDayBefore = (today: CivilDate): CivilDate => {
+export const lastMarketDayBefore = (today: CivilDate, days: MarketDays): CivilDate => {
   let day = addDays(today, -1);
-  while (isWeekend(day)) {
+  while (days === "mon_fri" && isWeekend(day)) {
     day = addDays(day, -1);
   }
   return day;

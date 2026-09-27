@@ -26,7 +26,7 @@ import type { DailyClose, PriceSource, SourceFailureKind } from "../ports/price-
 import type { PriceStore, PriceTransaction } from "../ports/price-store.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { LedgerState } from "../projections/state.js";
-import type { AssetId } from "../schema/events.js";
+import type { AssetId, AssetType } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { parsePriceConfig } from "./config.js";
 import { effectiveCloses, encodeCloseLine, linesToAppend, readCloseFile } from "./line.js";
@@ -327,11 +327,23 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
     const owed = Object.values(entry.refetch_days ?? {})
       .flat()
       .sort()[0];
-    if (owed === undefined && last !== undefined && last >= lastMarketDayBefore(today)) {
+    // Every planned asset is in the catalogue (`downloadPlan`), so it has a type.
+    const type = (input.state.assets.get(asset_id) as { asset_type: AssetType }).asset_type;
+    if (
+      owed === undefined &&
+      last !== undefined &&
+      last >= lastMarketDayBefore(today, config.market_days[type])
+    ) {
       reports.push({ asset_id, group, outcome: "up_to_date", added: 0, failures });
       continue;
     }
-    const after = last === undefined ? addYears(today, -1) : addDays(last, 1);
+    // The last days stored are asked again when its type says so (crypto,
+    // live test of 2026-09-27: a provisional close equal to the day before):
+    // the same call starts earlier, and a different value is a correction.
+    const after =
+      last === undefined
+        ? addYears(today, -1)
+        : addDays(last, 1 - config.refetch_recent_days[type]);
     const from = owed !== undefined && owed < after ? owed : after;
     // **Never the value of the day in course** (review of PR #78): asked in
     // the afternoon, a source gives a price of mid-session, and stored as the
