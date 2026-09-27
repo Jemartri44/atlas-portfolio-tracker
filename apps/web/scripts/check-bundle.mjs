@@ -458,7 +458,16 @@ const dist = join(webRoot, "dist");
  * *Atención* gets the height of the notice that fills it, so nothing in the
  * first screenful jumps. The trend: 75.339 → 75.334 → 75.361.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_381;
+/*
+ * **Feature 020, E2, measured in Chromium (2026-09-28): 75.392 (+14 over the
+ * 75.378 of the kept row at its exact height), ceiling 75.412 — measured +
+ * 20**, raised before the commit that needs it, inside the authorisation
+ * (76.069). The tax card only draws, so it moves to the boot path and is in
+ * its place on the first paint of the season: fetched after it, it pushed
+ * the summary of a phone down 213px when it came. The trend: 75.361 → 75.378
+ * → 75.392.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_412;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
