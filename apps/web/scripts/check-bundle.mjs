@@ -424,7 +424,16 @@ const dist = join(webRoot, "dist");
  * that needs it. What a row says besides its link stays above it: one rule of
  * `lists.css`. The trend: 74.664 → 74.874 → 74.895.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_915;
+/*
+ * **Round 1 of the review of PR #105, N2 in Chromium (2026-09-27): measured
+ * 75.019 (+132 over the 74.887 of the axis), ceiling 75.039 — measured + 20**,
+ * raised before the commit that needs it, inside the authorisation (76.069).
+ * The back button, measured in the browser, still won the first version: the
+ * router hears `popstate` first, so the frame decides after the event, once
+ * per address, behind a gate that a click opens again. The trend: 74.874 →
+ * 74.895 → 74.887 → 75.019.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_039;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
