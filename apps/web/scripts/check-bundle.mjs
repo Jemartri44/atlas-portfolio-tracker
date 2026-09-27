@@ -900,11 +900,14 @@ const FORBIDDEN_IN_WEB = [
   },
   // The engine of the domain, likewise until E4. The door `sync.ts` is
   // loaded for the read-only question of the store of the sync, so its
-  // modules are in the graph; only the three the export and that question
-  // need may render a byte — named one by one, never by likeness.
+  // modules are in the graph; only those the export, the import and that
+  // question need may render a byte — named one by one, never by likeness.
+  // P2 and P3 (feature 015, E4, block 1) add two, both read-only: whether an
+  // import is admitted (`permission`) and what is held, for the export
+  // (`held`).
   {
     rendering:
-      /(^|\/)packages\/domain\/(src|dist)\/sync(\.[jt]s$|\/(?!(archive|lines|marker)\.[jt]s$))/,
+      /(^|\/)packages\/domain\/(src|dist)\/sync(\.[jt]s$|\/(?!(archive|lines|marker|permission|held)\.[jt]s$))/,
     what: "el motor de la sincronización (D-Q17, hasta E4)",
   },
   // The rules of the access are the API's, never the web's.

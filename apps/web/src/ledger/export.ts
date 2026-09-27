@@ -7,12 +7,24 @@
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { BrowserLedgerBlob } from "@atlas/adapters/browser";
-import { etagOfText, exportLedgerText, replaceLedgerText } from "@atlas/adapters/transfer";
+import { etagOfText, exportLedgerAndHeld, replaceLedgerText } from "@atlas/adapters/transfer";
 import { loadInto } from "./actions.js";
 import { store } from "./state.js";
 import { openBrowserStorage } from "./store.js";
 
 export const EXPORT_FILE_NAME = "ledger.jsonl";
+/** The operations the sync holds back, exported beside the ledger when there are any. */
+export const EXPORT_HELD_FILE_NAME = "ledger.held.jsonl";
+
+const download = (text: string, name: string): void => {
+  const file = new Blob([text], { type: "application/x-ndjson" });
+  const url = URL.createObjectURL(file);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
 
 /**
  * Triggers the download of the exact text and records the export date — the
@@ -21,14 +33,13 @@ export const EXPORT_FILE_NAME = "ledger.jsonl";
  */
 export const exportLedger = async (): Promise<void> => {
   const when = new Date();
-  const text = await exportLedgerText(when);
-  const file = new Blob([text], { type: "application/x-ndjson" });
-  const url = URL.createObjectURL(file);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = EXPORT_FILE_NAME;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  const { text, held } = await exportLedgerAndHeld(when);
+  download(text, EXPORT_FILE_NAME);
+  // What the sync holds back, apart and named as such (§6.2 P3): operations
+  // of the user that are not in the ledger yet. Never mixed into it.
+  if (held !== undefined) {
+    download(held, EXPORT_HELD_FILE_NAME);
+  }
   const current = store.load();
   if (current.phase === "ready") {
     store.setLoad({

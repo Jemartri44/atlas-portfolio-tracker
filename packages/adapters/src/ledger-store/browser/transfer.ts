@@ -7,6 +7,13 @@
 // in (`indexeddb.ts`), for the reasons of feature 012, block 0.
 
 import { sha256Hex } from "@atlas/domain";
+import {
+  importPermission,
+  parseHeld,
+  RefusedError,
+  syncConfiguredByText,
+  unresolvedHeld,
+} from "@atlas/domain/sync";
 import { openAtlasDb } from "./idb.js";
 import {
   CURRENT_KEY,
@@ -16,6 +23,15 @@ import {
   type StoredMeta,
   transact,
 } from "./indexeddb.js";
+
+// The keys of the state of the sync (`sync-store.ts`), written again here so
+// that the import and the export do not share a chunk with the store of the
+// sync: a shared chunk is a name more in the table of the boot. The tests of
+// the import hold them equal, by setting the keys of the store and expecting
+// the refusal.
+const SYNC_STATE_KEY = "sync:state";
+const SYNC_HELD_KEY = "sync:held";
+const SYNC_DISCARDED_KEY = "sync:discarded";
 
 const encoder = new TextEncoder();
 
@@ -35,6 +51,37 @@ export const exportLedgerText = (when: Date, open: Opener = openAtlasDb): Promis
         store.put(meta, META_KEY);
       }
       settle.ok(stored?.text ?? "");
+    };
+  });
+
+/**
+ * The export **with what the sync holds back** (§6.2 P3): the text of the
+ * ledger and, apart, the text of the held records when any is unresolved —
+ * both read, and the date written, in one transaction. The ledger exported is
+ * the ledger, byte for byte; what is held back travels in a file of its own.
+ */
+export const exportLedgerAndHeld = (
+  when: Date,
+  open: Opener = openAtlasDb,
+): Promise<{ text: string; held?: string }> =>
+  transact<{ text: string; held?: string }>(open, "readwrite", (store, _tx, settle) => {
+    const get = store.get(CURRENT_KEY);
+    const held = store.get(SYNC_HELD_KEY);
+    held.onsuccess = () => {
+      const stored = get.result as StoredLedger | undefined;
+      if (stored !== undefined) {
+        const meta: StoredMeta = { lastExportAt: when.toISOString() };
+        store.put(meta, META_KEY);
+      }
+      const heldText = held.result as string | undefined;
+      const unresolved =
+        heldText !== undefined && unresolvedHeld(parseHeld(heldText)).length > 0
+          ? heldText
+          : undefined;
+      settle.ok({
+        text: stored?.text ?? "",
+        ...(unresolved === undefined ? {} : { held: unresolved }),
+      });
     };
   });
 
@@ -67,7 +114,24 @@ export const replaceLedgerText = (
 ): Promise<void> =>
   transact<void>(open, "readwrite", (store, _tx, settle) => {
     const get = store.get(CURRENT_KEY);
-    get.onsuccess = () => {
+    const marker = store.get(SYNC_STATE_KEY);
+    const held = store.get(SYNC_HELD_KEY);
+    const discarded = store.get(SYNC_DISCARDED_KEY);
+    discarded.onsuccess = () => {
+      // A synced ledger is not replaced by a file (§6.2 P2): checked in this
+      // same transaction, with the state of the sync next to the ledger.
+      const refusal = importPermission(
+        syncConfiguredByText(
+          marker.result !== undefined ||
+            held.result !== undefined ||
+            discarded.result !== undefined,
+          marker.result as string | undefined,
+        ),
+      );
+      if (refusal !== undefined) {
+        settle.fail(new RefusedError(refusal));
+        return;
+      }
       const current = (get.result as StoredLedger | undefined)?.text ?? "";
       if (etagOfText(current) !== expectedEtag) {
         settle.fail(
