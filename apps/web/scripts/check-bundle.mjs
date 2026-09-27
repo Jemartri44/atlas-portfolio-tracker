@@ -293,8 +293,18 @@ const dist = join(webRoot, "dist");
  * chunks of the entry names one more, `DuplicateDialog`, which the filing
  * screen now shares with the forms. The trend: 75.999 → 76.026; 18 left of
  * the authorisation.
+ *
+ * **Round 2 of the review of PR #97, N2 (2026-09-27): measured 76.055 (+39
+ * over 76.016), ceiling 76.069 — the authorisation itself, not measured +
+ * 20**, raised before the commit that needs it. The chip of the header says
+ * «falta descargar lo retenido» until what the sync held back at an export is
+ * downloaded, and the boot reads it with the date of the export: +39, after
+ * trimming it from +133 (`exportState` replaces `lastExportAt` instead of
+ * sitting beside it, and the title of the chip keeps its sentence). **What is
+ * left of the authorisation is 14 bytes**, for Q12 in E5. The trend: 75.999 →
+ * 76.026 → 76.016 → 76.055.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15 + 60 + 44 + 27;
+const BOOT_BUDGET_GZIP_BYTES = 76_069;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
