@@ -4,7 +4,6 @@
 // a forgotten device refused with `device_forgotten`, a revoked token refused.
 // Never AWS, never Google.
 
-import { createHash } from "node:crypto";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,31 +22,10 @@ import { setup as apiSetup, CONFIG, consoleLogin, errorOf } from "../../../api/t
 import type { AdminAccess } from "../../src/admin/environment.js";
 import { EXIT } from "../../src/context.js";
 import { harness, seed } from "../harness.js";
+import { dashRandom } from "../support/dash-ids.js";
 
-/**
- * The bytes the API draws, fixed: never chance. The harness drew them at
- * random, and one run in 4,096 gave a device id that began with `--`, which
- * the console read as an option. Every id of 16 bytes (device, token,
- * session) begins with `--` here, the case that broke; `DEVICE` gives the
- * ones of a single dash. The rest of each id comes from a fixed counter.
- */
-const fixedRandom = () => {
-  let drawn = 0;
-  return (bytes: number): Uint8Array => {
-    drawn += 1;
-    const out = Uint8Array.from(
-      createHash("sha256").update(`dashids-${drawn}`).digest().subarray(0, bytes),
-    );
-    if (bytes === 16) {
-      // `-` is 62 in base64url: 111110 111110 are the first twelve bits.
-      out[0] = 0xfb;
-      out[1] = 0xe0 | ((out[1] as number) & 0x0f);
-    }
-    return out;
-  };
-};
-
-const setup = () => apiSetup({ random: fixedRandom() });
+/** Every id the API draws begins with `--`; `DEVICE` gives the ones of a single dash. */
+const setup = () => apiSetup({ random: dashRandom() });
 
 type Api = ReturnType<typeof setup>;
 
