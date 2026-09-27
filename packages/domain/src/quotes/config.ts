@@ -28,9 +28,11 @@ export interface PriceConfig {
   /** The days the market of each asset type trades: a close up to the last of them is up to date. */
   readonly market_days: Readonly<Record<AssetType, MarketDays>>;
   /**
-   * How many of the last days stored are asked again at each download, by
-   * asset type: a source may give a provisional close and correct it later.
-   * It costs no call: the same call starts earlier.
+   * By asset type, the N calendar days ending on the last close stored that
+   * are asked again at each download (not the last N closes stored: a weekend
+   * or a gap counts as days): a source may give a provisional close and
+   * correct it later. It costs no call: the same call starts earlier. At most
+   * `MAX_REFETCH_RECENT_DAYS`.
    */
   readonly refetch_recent_days: Readonly<Record<AssetType, number>>;
 }
@@ -133,7 +135,11 @@ const byTypeOf = <T>(
 const isMarketDays = (value: unknown): value is MarketDays =>
   (MARKET_DAYS as readonly unknown[]).includes(value);
 
-const isDayCount = (value: unknown): value is number => wholeNumber(value, 0);
+/** At most a month (round 1 of PR #102): a huge count broke the dates in the middle of a run. */
+export const MAX_REFETCH_RECENT_DAYS = 31;
+
+const isDayCount = (value: unknown): value is number =>
+  wholeNumber(value, 0) && value <= MAX_REFETCH_RECENT_DAYS;
 
 /** Parses the text of `prices/config.json`; `undefined` (no file) is the defaults. */
 export const parsePriceConfig = (text: string | undefined): PriceConfig => {
@@ -168,7 +174,12 @@ export const parsePriceConfig = (text: string | undefined): PriceConfig => {
     } else if (key === "refetch_recent_days") {
       config = {
         ...config,
-        refetch_recent_days: byTypeOf(key, value, isDayCount, "a whole number"),
+        refetch_recent_days: byTypeOf(
+          key,
+          value,
+          isDayCount,
+          `a whole number from 0 to ${MAX_REFETCH_RECENT_DAYS}`,
+        ),
       };
     } else {
       throw wrong(key, `unknown key ${key}`);
