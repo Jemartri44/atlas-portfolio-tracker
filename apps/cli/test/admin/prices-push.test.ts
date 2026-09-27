@@ -217,6 +217,26 @@ describe("atlas admin prices push (016, E2, block 3)", () => {
     expect(api.s3.conditions.filter((condition) => condition.key === KEY)).toHaveLength(1);
   });
 
+  it("writes on the read that showed the difference, never on a later one (mutant 13 bis)", async () => {
+    const api = setup();
+    api.s3.seed(KEY, symbols({ ast_a: entry("A.XETRA") }));
+    const theirs = symbols({ ast_theirs: entry("T.XETRA") });
+    // Another writer right after the read, while the difference is on screen.
+    const get = api.s3.get.bind(api.s3);
+    let reads = 0;
+    api.s3.get = async (key) => {
+      const read = await get(key);
+      if (key === KEY && ++reads === 1) {
+        api.s3.seed(KEY, theirs);
+      }
+      return read;
+    };
+    const c = consoleIn(api, await folderWith(symbols({ ast_b: entry("B.XETRA") })));
+    expect(await c.exec(push)).toBe(EXIT.domain);
+    expect(c.text()).toContain("symbols_push_conflict");
+    expect(api.s3.text(KEY)).toBe(theirs);
+  });
+
   it("writes nothing when another writer creates the object first", async () => {
     const api = setup();
     const theirs = symbols({ ast_theirs: entry("T.XETRA") });
