@@ -87,7 +87,9 @@ AWS_PROFILE=atlas-prod-admin atlas admin forget-device --env prod <dispositivo>
 
 **5.3. Rectifica.** Una de dos:
 - **Restaura ahí mismo**, con la misma orden del 5.2, escribiendo `prod` en el paso 4 ([Restaurar el libro](restore-the-ledger.md), ADR-0032). Lo que había queda en `archive/pre-restore-…`.
-- O **registra las anulaciones en tu carpeta** (`atlas delete <id>`). Se quedan pendientes y **suben después del paso 6**, cuando tu consola vuelva a entrar.
+- O **anula** las líneas del intruso con `atlas delete <id>`, pero cada una **cuando esté en tu carpeta**:
+  - las que ya están en tu réplica, ahora mismo. Las anulaciones se quedan pendientes y **suben después del paso 6**, cuando tu consola vuelva a entrar;
+  - **las que solo están en la nube**, que son justo la cola que enseña el 5.2, **después del paso 6**, una vez sincronizado. Antes, tu carpeta no las tiene y `atlas delete` dice que el evento no existe.
 
 ## 6. Solo entonces, reponer tu cuenta en la lista
 

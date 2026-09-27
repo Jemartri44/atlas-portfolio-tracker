@@ -61,9 +61,9 @@ Reglas transversales:
   - `atlas check` y la web la señalan;
   - la sincronización la **retiene** con `domain_rejected` antes de subirla, así que el `400` de la API no llega a darse;
   - la API mantiene `body_invalid`.
-  - **El remedio es anularla** (decidido por la dirección el 2026-09-27, revisión de la PR #98, B1). El libro es de solo añadir, así que no hay otro sin editar el fichero a mano:
+  - **El remedio es anularla, salvo que la línea sea ella misma una anulación** (decidido por la dirección el 2026-09-27, revisiones de la PR #98, B1 y R2-B1). El libro es de solo añadir, así que no hay otro sin editar el fichero a mano:
     - una línea con una clave repetida que tiene una **anulación viva** cuenta como anulada y deja de ser inválida. Con eso, `atlas check` vuelve a pasar, `compact` compacta y la Renta y el 720 dejan de negarse con `tax_ledger_invalid`;
-    - una **anulación** que repite una clave no anula nada: es inválida y su objetivo sigue vivo;
+    - una **anulación** que repite una clave no anula nada: es inválida y su objetivo sigue vivo. **Y no tiene remedio dentro del libro**, porque una anulación no se puede anular (`reversal_of_reversal`). **Sin sincronización, el único remedio es corregirla a mano en el fichero**, quitando el campo repetido; con la sincronización configurada, se retiene y se **descarta**. El mensaje de `duplicate_key` lo dice en la consola y en la web según el tipo de la línea (`details.type`): «anúlala» para cualquier otra, «corrígela a mano» para una anulación;
     - `atlas delete <id>` anula un evento inválido aunque el libro esté degradado. Cualquier otra mutación sigue negándose mientras quede algún inválido (ADR-0015);
     - **con la sincronización configurada**, la línea queda retenida con `duplicate_key` aunque esté anulada, porque la sincronización juzga cada unidad por separado y una anulación es una unidad propia que espera detrás. El remedio allí es **descartarla**. Su anulación queda entonces sin objetivo y se retiene con `reversal_target_missing`; se descarta también, y ni el remoto ni la réplica guardan ninguna de las dos.
 - **Numéricos como cadenas decimales** (`"123.4567"`): punto decimal, sin exponente, sin separadores, signo opcional. Un `number` en un campo monetario o de cantidad es error de validación (ADR-0005).
