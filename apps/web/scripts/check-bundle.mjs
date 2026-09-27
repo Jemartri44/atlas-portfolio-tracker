@@ -704,8 +704,14 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15 + 60 +
  * the engine reads the session before every order and names the device on
  * every request (`ajustes` +325), and the sentences of `sync_device_changed`
  * and `expected_device_required` as failures of the remote (`errors` +67).
+ *
+ * **Review of PR #97, security B2 and N3 (2026-09-27): measured 299.058
+ * (+328), ceiling 299.314 — measured + 256**, raised before the commits that
+ * need it. Lazy: the export names what is held back and how many operations
+ * it carries, and downloads it from a button of its own (`ImportControls`
+ * +357, the chunk of the export). The trend: 291,6 → 291,7 → 292,0.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 291 * 1024 + 1002;
+const TOTAL_BUDGET_GZIP_BYTES = 291 * 1024 + 1330;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
