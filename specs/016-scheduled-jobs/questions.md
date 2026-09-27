@@ -698,7 +698,11 @@ Revisiones sobre `eab6ae9`: fuentes y S3 (comentario 5859690207) y `push` y guar
 
 ### 15.5 Lo que se volvió a mirar alrededor
 
-- **La otra carrera del BCE que las condiciones no descartan sin cerrojo**: dos ejecuciones de fuentes distintas (una del ZIP y otra de la API), cada una escribiendo el nombre del fichero de la otra a la vez. Leer el objeto del paso 2 al principio lo acota (una escritura posterior a esa lectura hace chocar), pero sin cerrojo no lo excluye: el fichero de otro nombre no se puede verificar contra el manifiesto. Si ocurre, acaba **dañado** y la ejecución siguiente lo reconstruye (B1 (b)). La cabecera y el plan lo dicen así, en vez de prometer más.
+- **Los dos entrelazados del BCE que las condiciones no descartan sin cerrojo** *(corregido en la ronda 2, R2-N2; antes hablaba de uno solo)*. S3 no permite condicionar una escritura al ETag de **otro** objeto, así que quedan dos casos:
+  - **(1)** Dos ejecuciones de fuentes distintas (una del ZIP y otra de la API) escriben a la vez cada una el nombre del fichero de la otra. Leer al principio el objeto del paso 2 lo acota, pero el fichero de otro nombre no se puede verificar contra el manifiesto.
+  - **(2)** Una activación está entre sus pasos 2 y 3 cuando otra ejecución hace `recover()`, ve el manifiesto viejo con el fichero nuevo y lo deshace. La primera escribe después su manifiesto sobre el manifiesto que el deshacer no tocó, y queda su manifiesto con el fichero anterior.
+
+  Los dos acaban **dañados** y nunca se leen como si cuadraran. Los resuelven dos cosas: la **reconstrucción de la ejecución siguiente** (comparada con la última generación legible, R2-N1) y, antes que nada, la **concurrencia 1 de la función** en la 017, que impide que dos ejecuciones coincidan. La cabecera del almacén y el plan §7.1 lo dicen así.
 - **Entre `active()` y `activate()`** (`updateEcbHistory` los llama por separado): otra ejecución que activara en medio cambia el manifiesto, y `activate` lo relee y escribe su manifiesto con `If-Match` sobre esa nueva lectura. La comparación con los tipos publicados se hizo contra el anterior. No lo he cambiado: las dos descargas son del BCE, la ventana es de milisegundos y la concurrencia 1 de la 017 la cierra. Lo dejo escrito por si la dirección prefiere que `activate` exija el mismo manifiesto que leyó `active()`, que es una comparación de ETag más.
 - **Un formato de `symbols.json` más nuevo con claves nuevas** se sigue diciendo como más nuevo, antes de mirar las claves: la comprobación de claves va después.
 - **La web** lee `prices/symbols.json` con el mismo `parseSymbols`, así que también rechaza una clave ajena, con su frase.
@@ -734,3 +738,55 @@ La CI de `8dff5e8` salió en rojo en `build`: la CI construye la PR **fusionada 
 ### 15.9 Congelado
 
 **Congelada la ronda 1 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `6fbc326`. No se empuja nada más hasta la palabra de la dirección.
+
+## 16. Revisión de la PR #106, ronda 2: decisiones de la dirección y arreglos (2026-09-28)
+
+Revisión sobre `fcff746` (comentario 5860915040). Decisiones de la dirección, del mismo día. Cada punto lleva su test, visto antes en rojo, y su mutante, que antes sobrevive (es el código anterior, o el revisor lo vio sobrevivir) y después muere.
+
+### 16.1 Decisiones
+
+- **R2-B1.** `parseSymbols` y el guardián de la API usan `repeatsKey` (de `schema/json-keys.ts`) y rechazan cualquier clave repetida, a cualquier nivel. Se hace lo mismo con `prices/config.json` y con cualquier otro fichero JSON que se lea de forma estricta en la nube o en `push`. El código de error nombra la clave y nunca el valor. Test con un centinela: `assets` repetido, `symbols_format` repetido, `"assets"` escapado y un campo repetido dentro de una entrada.
+- **R2-N1.** La reconstrucción aplica la comparación de ADR-0029, punto 2, contra la última generación legible que exista: el fichero activo si se puede leer y, si no, `previous`.
+  - Si la comparación la rechaza, no activa nada y deja `ecb_history_damaged` con un aviso que pide intervención.
+  - Si no queda nada legible, acepta y deja además `ecb_rebuilt_unverified`.
+  - La excepción se documenta en una nota fechada de ADR-0029 y en `data-schema`.
+- **R2-N2.** La cabecera del almacén y §15.5 describen los dos entrelazados y cómo se resuelven: la reconstrucción del día siguiente y la concurrencia 1 de la 017.
+- **R2-N3.** El grafo de los guardianes resuelve todas las condiciones de `exports` (`types`, `import`, `default`, `require`) y falla si apuntan a módulos distintos. Un test prohíbe exportaciones condicionales con destinos diferentes en los `package.json` del producto. Tiene que matar el mutante `./innocent`.
+
+### 16.2 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| R2-B1 | `cb6a324`, `8b5b329`, `419cf0c` | **Dominio:** `repeatedKey(text)` devuelve la primera clave repetida (decodificada, recortada a 64) y `repeatsKey` pasa a ser `repeatedKey(text) !== undefined`. `repeatedKeyError(file, key, line?)` da el código nuevo **`json_key_repeated`**, con `file`, `key` y, en un JSONL, `line`; nunca el valor. Lo usan los cuatro lectores de `prices/`: `symbols.json`, `config.json`, `_status.json` y cada línea de `<asset_id>.jsonl`. En `symbols.json` se comprueba antes que el formato más nuevo y que la clave desconocida. `unservableSymbols(text)` (`repeated_key` o `unknown_key`) es la regla que usa la API.<br>**API:** responde `404 not_found` con `reason: "repeated_key"`.<br>**Consola:** nombra el fichero y la clave.<br>**Web:** lo dice sin nombrarlos (test de jerga).<br>**Tests con centinela:** los cuatro casos del revisor en el lector, en `push` (local rechazado y remoto tratado como ilegible) y en la API; la tarea de la nube falla sin descargar; `push` se niega sin enseñar el valor |
+| R2-N1 | `fd7c00e`, `ae98823`, `b6aea74`, `4c72f02` | **`rebuildEcbHistory`:** pide `generations()` al almacén (el fichero en vigor tal como está y después `previous/`; sin manifiesto legible, los dos nombres de los dos) y compara con la primera que se lee (`checkHistoryUpdate`).<br>**Si la rechaza:** `rejected`, nada escrito, `ecb_history_damaged` con `counts.conflicts` y un correo que dice «Hace falta intervenir».<br>**Si no queda nada legible:** `rebuilt` con `verified: false` y el hallazgo `ecb_rebuilt_unverified`, con su correo.<br>**Documentos:** nota fechada en ADR-0029 («Nota del 2026-09-28»), la fila de `reference/ecb/` de `docs/data-schema.md` y el plan §7.1. Son los primeros cambios de esta feature en `docs/`, que por regla no toco: los pidió la dirección expresamente en esta ronda |
+| R2-N2 | `ae98823` (cabecera), este commit (§15.5) | La cabecera del almacén y el plan §7.1 describen **los dos entrelazados** que las condiciones no descartan sin cerrojo, porque S3 no condiciona una escritura al ETag de otro objeto: (1) dos fuentes que escriben a la vez el nombre de la otra; (2) un `recover()` entre los pasos 2 y 3 de otra activación. También dicen cómo se resuelven: acaban dañados y nunca se leen como si cuadraran; los arregla la reconstrucción de la ejecución siguiente y, antes, la concurrencia 1 de la 017 |
+| R2-N3 | `f7b53c7` | **`exportsOf` (`tests/support/source-graph.ts`):** resuelve todas las condiciones de cada exportación, a cualquier profundidad, y falla si nombran módulos distintos. El test de arquitectura usaba dos lectores propios que solo leían `types`; ahora usa el compartido.<br>**Tests nuevos en `jobs-access`:** ningún `package.json` del producto tiene una exportación con destinos distintos, y el lector se niega a leer uno así (con el `./innocent` del revisor) y lee uno coherente |
+
+Un detalle, dicho: `data-schema.md` dice además en la fila de `symbols.json` que una clave desconocida o repetida lo hace ilegible, y que la API no lo sirve. Es la consecuencia de la ronda 1 (B1) y de R2-B1, y la escribí en el mismo commit que la nota de ADR-0029.
+
+### 16.3 Cómo se vio cada test en rojo
+
+- **R2-B1**:
+  - **Dominio:** los 6 tests de `repeated-keys.test.ts` contra un `repeatedKey` que nunca encuentra nada (`016-e2r2-red-b1.log`).
+  - **Aplicaciones:** los de la API, `push` y la tarea, contra los lectores de `fcff746`, que dejaban pasar las cuatro sondas (`016-e2r2-red-b1-apps.log`): 3 en rojo.
+- **R2-N1**: los tests del dominio y de la tarea contra el `rebuildEcbHistory` de la ronda 1, que no comparaba (`016-e2r2-red-n1.log`): 5 en rojo. Entre ellos está «rebuilds…», que ahora espera `verified`.
+- **R2-N3**: «refuses to read a package whose conditions name different modules», contra el lector que solo leía `types` (`016-e2r2-red-n3.log`).
+
+### 16.4 Mutación (lotes `016-e2r2-a.json` y `016-e2r2-b.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Antes | Después |
+|---|---|---|---|
+| R2-B1a | `symbols.json` se lee con una clave repetida | era la conducta (sondas del revisor) | KILLED por los tests de `quotes`, de `push` y de la tarea |
+| R2-B1b | la API sirve un `symbols.json` con una clave repetida | era la conducta | KILLED por `apps/api/test/sync.test.ts` y `repeated-keys.test.ts` |
+| R2-B1c | `config.json` con una clave repetida | era la conducta | KILLED |
+| R2-B1d | `_status.json` con una clave repetida | era la conducta | KILLED |
+| R2-B1e | una línea de cierres con una clave repetida | era la conducta | KILLED |
+| R2-B1f | la negativa lleva el texto de alrededor (el valor), no la clave | — | KILLED por el centinela de `repeated-keys.test.ts` |
+| R2-N1a | la reconstrucción activa un ZIP que contradice la última generación legible | era la conducta (sonda del revisor) | KILLED por `update-history.test.ts` y `daily.test.ts` |
+| R2-N1b | la reconstrucción no compara con nada (la conducta de la ronda 1) | era la conducta | KILLED |
+| R2-N1c | una reconstrucción sin comparar se dice comparada | — | KILLED |
+| R2-N1d | solo se compara con el fichero en vigor, nunca con `previous/` | — | KILLED por `s3-daily.test.ts` |
+| R2-N3a | el `./innocent` del revisor: `types` e `import` con módulos distintos, importado por la API | sobrevivía (revisión) | KILLED por `jobs-access.test.ts` (el grafo falla cerrado y la regla de `exports`) |
+| R2-N3b | el grafo vuelve a leer solo `types` | era la conducta | KILLED |
+
+12 de 12 muertos.
