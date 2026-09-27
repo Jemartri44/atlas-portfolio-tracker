@@ -123,6 +123,8 @@ Siete llamadas, **1 del cupo cada una**, en su máquina, **sin pasar a nadie la 
 
 **El procedimiento se ha movido a un documento propio**, escrito para el usuario: [`docs/runbooks/013-daily-close-prices-live-test.md`](../../docs/runbooks/013-daily-close-prices-live-test.md), parte A. Al moverlo (2026-09-25) se corrigió: `jq` no está instalado en la máquina del usuario y se sustituyó por `node -e`; el ejemplo de Londres pasó de `CSPX.LSE` a `TSCO.LSE`, porque la divisa de CSPX en Londres no está verificada aquí y Tesco es el caso que §1.4 sí vio en `GBX`; y el recuento de `EUFUND` cuenta los ISIN del usuario también si `symbols=` no filtra.
 
+**Resultado de la prueba real del 2026-09-27** (detalle en el runbook, «Resultado de la prueba del 2026-09-27»): **Londres**, EODHD lista `TSCO.LSE` en **`GBX`**, no en `GBP`, con los cierres en peniques; la sospecha de Q2 y de §12 (un listado en `GBP` con cierres en peniques) no se dio, y la declaración `GBX` no pide confirmación. **Cripto**, el plan gratuito sirve `BTC-EUR.CC`. **Índices y `EUFUND` siguen pendientes.**
+
 ---
 
 ## 2. Propuestas del plan (las decide la dirección)

@@ -42,6 +42,7 @@ export {
   type Approximation,
   type ApproximationGap,
   approximationAt,
+  ecbRatesOnly,
   externalPricesOf,
   type QuoteBook,
   quoteDates,

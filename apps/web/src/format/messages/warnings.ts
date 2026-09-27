@@ -78,6 +78,17 @@ const gapText = (d: Details, n: Naming): string => {
 /** "de hace 17 días (01/09/2026)": the age of a price or a rate, and its date. */
 const age = (d: Details): string => `de hace ${days(d.age_days)} (${day(d.date)})`;
 
+/** The remedy of several stale rates: the ECB history's are updated, the ledger's recorded again. */
+const staleRatesRemedy = (fromHistory: readonly boolean[]): string => {
+  const ledger = "Registra una operación o una valoración más reciente en esas divisas";
+  if (fromHistory.every((ecb) => ecb)) {
+    return "Actualiza el histórico del BCE.";
+  }
+  return fromHistory.some((ecb) => ecb)
+    ? `${ledger}, o actualiza el histórico del BCE.`
+    : `${ledger}.`;
+};
+
 /** Why a box of the return is not the whole of what the form will hold. */
 const PARTIAL_BOX: Record<string, string> = {
   reductions_unknown:
@@ -104,7 +115,9 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   stale_price: (d, n) =>
     `${n.one(d.asset_id)}: el precio es ${age(d)}; registra una valoración más reciente.`,
   stale_fx_rate: (d) =>
-    `El tipo de cambio aplicado a ${text(d.currency)} es ${age(d)}; registra una operación o una valoración más reciente en esa divisa.`,
+    d.source === "ecb"
+      ? `El tipo de cambio aplicado a ${text(d.currency)} es el del histórico del BCE ${age(d)}; actualiza el histórico del BCE.`
+      : `El tipo de cambio aplicado a ${text(d.currency)} es ${age(d)}; registra una operación o una valoración más reciente en esa divisa.`,
   // --- Tracking ----------------------------------------------------------
   transfer_overdue: (d, n) =>
     `El traspaso de ${n.one(d.from_asset_id)} a ${n.one(d.to_asset_id)} lleva ${days(d.days_open)} abierto, más de los ${text(d.max_days)} configurados. Reclama a la gestora: mientras dure, el dinero no está invertido ni en el origen ni en el destino.`,
@@ -286,7 +299,7 @@ export const describeWarningGroup = (
     case "stale_fx_rate":
       return `${warnings.length} tipos de cambio de hace más de ${days(limitOf(warnings))} · ${joinAll(
         warnings.map((warning) => text(warning.details.currency)),
-      )}. Registra una operación o una valoración más reciente en esas divisas.`;
+      )}. ${staleRatesRemedy(warnings.map((warning) => warning.details.source === "ecb"))}`;
     case "deviation_above_threshold":
       return `${warnings.length} activos fuera del umbral de ±${pp(
         warnings[0]?.details.threshold_pp,

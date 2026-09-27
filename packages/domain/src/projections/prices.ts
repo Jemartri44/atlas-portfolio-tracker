@@ -24,6 +24,7 @@ import { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import type { AssetId, ValuationEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
+import type { KnownFxRate } from "./fx-rates.js";
 import { latestValuations, manualPriceOf } from "./manual-price.js";
 import type { LedgerState, Warning } from "./state.js";
 
@@ -79,6 +80,13 @@ export interface ExternalQuote {
 /** The optional external source of the gate. Pure and synchronous, by the same rule. */
 export interface ExternalPrices {
   at(assetId: AssetId, date: CivilDate): ExternalQuote | undefined;
+  /**
+   * The most recent ECB rate of `currency` published on or before `date`, as
+   * published, when there is a history (live test of 2026-09-27). Only the
+   * informative value of the cash in a foreign currency reads it; nothing
+   * fiscal does, which takes the rate of its fiscal date from the ledger.
+   */
+  latestRate?(currency: Currency, date: CivilDate): KnownFxRate | undefined;
 }
 
 export interface PriceLookup {
