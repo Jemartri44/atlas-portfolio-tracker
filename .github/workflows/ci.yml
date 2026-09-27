@@ -20,6 +20,19 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run test:coverage
+      # The domain's 100 % in a pass of its own, then every other project with
+      # no threshold of the domain (feature 015, E5, questions.md §34).
+      - run: npm run test:coverage:domain
+      # When the coverage of the domain fails, keep what it measured: a branch
+      # that goes uncovered only now and then (review of PR #90, CI-1) is
+      # isolated from this file, not by guessing.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: coverage-final
+          path: coverage/coverage-final.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - run: npm run test:others
       - run: npm audit --audit-level=high
       - run: npm run build
