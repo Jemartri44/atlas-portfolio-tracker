@@ -441,7 +441,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Este navegador se sincroniza pero no sabe con qué dispositivo se unió. Únete otra vez: «Unirme desde la nube» o «Unirme con mis operaciones». Lo pendiente sigue aquí.",
   sync_already_configured: () => "Tus datos ya se sincronizan: no hace falta empezar otra vez.",
   sync_deactivated: () =>
-    "La sincronización está desactivada. Para volver a sincronizar hay que unirse otra vez, de forma explícita.",
+    "La sincronización está desactivada. Para volver a sincronizar hay que unirse otra vez, de forma explícita: «Unirme desde la nube» o «Unirme con mis operaciones».",
   remote_empty: () =>
     "La nube está vacía y aquí no se ha sincronizado nada: no se sube operación a operación. Inicializa la nube con tus datos enteros, de forma explícita.",
   deactivate_refused_marker_unreadable: () =>
@@ -463,7 +463,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   redo_partner_discarded: () =>
     "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.",
   join_required: (d) =>
-    `La sincronización de este navegador perdió su estado, y aquí hay ${count(d.own_lines)} operaciones que la nube no tiene. No se mezclan solas: unirse a la nube es siempre una elección explícita. No se ha tocado nada.`,
+    `La sincronización de este navegador perdió su estado, y aquí hay ${count(d.own_lines)} operaciones que la nube no tiene. No se mezclan solas: unirse a la nube es siempre una elección explícita, con «Unirme desde la nube» o «Unirme con mis operaciones». No se ha tocado nada.`,
   accept_invalid_while_synced: (d) =>
     `Tus datos se sincronizan, y este cambio dejaría ${count(d.affected)} operaciones inválidas: tus datos quedarían inválidos, no se podrían sincronizar y la sincronización se pararía. Repara antes esas operaciones (Ajustes → Verificación) o desactiva la sincronización de forma explícita.`,
   held_unit_unknown: () => "Ya no hay nada retenido ahí: puede que ya se haya resuelto.",
