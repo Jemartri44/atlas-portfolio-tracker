@@ -3,15 +3,16 @@
 // included. Problems are said under their field or next to the buttons.
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
-import { accounts, corporateActionDraft, Quantity } from "@atlas/domain";
+import { accounts, corporateActionDraft } from "@atlas/domain";
+import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { useNavigate, useParams } from "@solidjs/router";
-import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Amount, Notice, Tag } from "../../../components/index.js";
-import { displayName, nameIndex } from "../../../format/names.js";
+import { createMemo, createSignal, type JSX, Show } from "solid-js";
+import { ClosedYearNotice, Notice, Tag } from "../../../components/index.js";
+import { nameIndex } from "../../../format/names.js";
 import { toAppError } from "../../../ledger/errors.js";
 import { attempt } from "../../../ledger/query.js";
 import { store, today } from "../../../ledger/state.js";
-import { previewDraft, recordDraft } from "../../../ledger/write.js";
+import { closedYearsOfDraft, previewDraft, recordDraft } from "../../../ledger/write.js";
 import { PageHeader } from "../../../shell/PageHeader.jsx";
 import { CORPORATE_COMMON, corporateForm } from "../../../view-models/forms/corporate.js";
 import type { FieldSpec, FormValues } from "../../../view-models/forms/index.js";
@@ -27,6 +28,7 @@ import { FormActions } from "../FormActions.jsx";
 import { FormFields } from "../FormFields.jsx";
 import { NoForm, Reloaded } from "../FormNotices.jsx";
 import { Preview } from "../Preview.jsx";
+import { Fractions } from "./Fractions.jsx";
 import { feeLinesError, toCorporateParams } from "./params.js";
 
 export default function CorporateFormRoute(): JSX.Element {
@@ -45,6 +47,8 @@ export default function CorporateFormRoute(): JSX.Element {
         const [problem, setProblem] = createSignal<string | undefined>(undefined);
         const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
         const [conflict, setConflict] = createSignal(false);
+        /** The filed returns it reaches, said before «Registrar» (ADR-0020; P11 of 015). */
+        const [closed, setClosed] = createSignal<readonly ClosedYearImpact[]>([]);
         const names = nameIndex(snapshot.state);
         const catalogue = accounts(snapshot.state);
 
@@ -96,7 +100,12 @@ export default function CorporateFormRoute(): JSX.Element {
             return;
           }
           try {
-            setPreview(await previewDraft(built.draft as never));
+            const [shown, reached] = await Promise.all([
+              previewDraft(built.draft as never),
+              closedYearsOfDraft(built.draft as never),
+            ]);
+            setClosed(reached);
+            setPreview(shown);
           } catch (failure) {
             setProblem(toAppError(failure).message);
           }
@@ -161,27 +170,11 @@ export default function CorporateFormRoute(): JSX.Element {
                       errors={errors()}
                     />
 
-                    <Show when={draft()?.no_fractions === true}>
-                      <Notice severity="info" title="Sin picos">
-                        Ninguna cuenta queda con fracciones, así que no se genera ninguna venta
-                        forzosa.
-                      </Notice>
-                    </Show>
-
-                    <Show when={(draft()?.fractional.length ?? 0) > 0}>
-                      <Notice severity="caution" title="Picos que se venden">
-                        <For each={draft()?.fractional ?? []}>
-                          {(row) => (
-                            <p class="meta">
-                              {displayName(names, row.account_id)}:{" "}
-                              <Amount quantity={Quantity.parse(row.quantity)} />
-                            </p>
-                          )}
-                        </For>
-                        Esa venta genera ganancia patrimonial. La aplicación la calcula al registrar
-                        el evento.
-                      </Notice>
-                    </Show>
+                    <Fractions
+                      none={draft()?.no_fractions === true}
+                      fractional={draft()?.fractional ?? []}
+                      names={names}
+                    />
 
                     <FormActions
                       problem={preview() === undefined ? problem() : undefined}
@@ -201,6 +194,7 @@ export default function CorporateFormRoute(): JSX.Element {
                     {(shown) => (
                       <section class="effect" aria-label="El efecto">
                         <Preview preview={shown()} names={names} />
+                        <ClosedYearNotice impacts={closed()} />
                         <Notice severity="info" title="Guarda el documento">
                           Copia la nota del emisor a tu carpeta de documentos: tus datos guardan la
                           referencia, no el archivo.
