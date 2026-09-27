@@ -175,6 +175,16 @@ a.row:hover {
   background-color: var(--c-fill-hover);
 }
 
+/*
+ * What the row says besides its link stays above it, so its title shows on
+ * hover (the whole of a cut name, why a row is «(registro)» or invalid) and
+ * its text can be selected (round 1 of the review of PR #105, N1).
+ */
+.table tr:has(.row-link) :is(.cell-trunc, .meta, .tag) {
+  position: relative;
+  z-index: 1;
+}
+
 /* A long name is cut inside its cell, with the whole of it in the title. */
 .cell-trunc {
   display: block;

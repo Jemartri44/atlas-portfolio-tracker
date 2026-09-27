@@ -51,6 +51,26 @@ describe("the table of the movements", () => {
   });
 });
 
+describe("what a row says besides its link", () => {
+  it("stays above the link that covers the row, so its title shows and its text selects", async () => {
+    withStyles(1440);
+    // Its one reversal annuls a dividend: a row with a state tag, and names cut to their cell.
+    const host = await show("/movimientos?tipo=dividend", Movimientos);
+    const inside = [
+      ...host.querySelectorAll(
+        "table tbody tr .cell-trunc, table tbody tr .meta, table tbody tr .tag",
+      ),
+    ];
+    expect(inside.length).toBeGreaterThan(0);
+    expect(inside.some((element) => element.classList.contains("cell-trunc"))).toBe(true);
+    expect(inside.some((element) => element.classList.contains("tag"))).toBe(true);
+    for (const element of inside) {
+      expect(applied(element, "position"), element.className).toBe("relative");
+      expect(applied(element, "z-index"), element.className).toBe("1");
+    }
+  });
+});
+
 describe("the list of the tax card", () => {
   it("sits flush with the title of its card, with no indent", async () => {
     withStyles(400);
