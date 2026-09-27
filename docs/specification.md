@@ -457,8 +457,8 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
   - **«Volver a descargar»**, que solo aparece tras una reescritura de la nube y pregunta antes.
   - **El aviso** de que lo que se ve antes de sincronizar puede cambiar después.
   - **Un navegador sincroniza como el dispositivo con el que se unió** (`docs/api.md` §5.4). La sesión se relee en cada orden y la API también lo comprueba. Con la sesión de otro, la tarjeta lo dice y ofrece unirse otra vez.
-  - **Mientras se sincroniza**, importar un fichero se niega. La exportación dice cuántas operaciones retenidas no van en el libro, y las entrega aparte, en `ledger.held.jsonl`, con su propio botón (`docs/data-schema.md` §1).
-  - **Solo la sección de la sincronización de Ajustes importa el motor**: lo comprueban una regla sobre los fuentes y otra sobre el grafo real del paquete.
+  - **Mientras se sincroniza**, importar un fichero se niega. La exportación dice cuántas operaciones retenidas no van en el libro, y las entrega aparte, en `ledger.held.jsonl`, con su propio botón (`docs/data-schema.md` §1). Hasta que se descargan, el aviso de la barra dice «falta descargar lo retenido» en lugar de la fecha.
+  - **La sección de la sincronización de Ajustes tiene una sola puerta hacia fuera**: su tarjeta, que solo importa la página de Ajustes. Nadie más alcanza el motor, por ningún camino. Lo comprueban una regla sobre los fuentes y otra sobre el grafo real del paquete.
 - Funciona sin conexión para consulta (los datos cacheados siguen visibles con su antigüedad marcada).
 - **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. El sistema está en `docs/design/system.md` y la base de estilos es propia (ADR-0023).
 
