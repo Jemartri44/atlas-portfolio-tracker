@@ -331,8 +331,12 @@ const dist = join(webRoot, "dist");
  *
  * **Findings of the live price test (2026-09-27, `fix/prices-live-findings`):
  * measured 74.172 (+47 over the 74.125 of develop), ceiling 74.192 —
- * measured + 20**, raised before the commit that needs it, inside the
- * authorisation (76.069); the direction confirms spending it here. `netWorth`
+ * measured + 20**, set in the merge commit 9e3dfd4 together with the code
+ * it measures, inside the authorisation (76.069). **Commits 0df06da to
+ * 7461ace exceed the boot ceiling of their base (76.069)**: their web build
+ * fails (76.092 at 7461ace, measured); 7a345b6 raised it after the code, to
+ * 76.112, and the merge replaced that value. Said here at the request of
+ * round 1 of the review of PR #102; the history is not rewritten. `netWorth`
  * is on the boot path: the cash in a foreign currency takes the ECB
  * history's rate when there is one and says a stale rate once per currency
  * (+45 in the chunk of the domain, after moving the shape of that rate to the
@@ -782,9 +786,11 @@ const BOOT_BUDGET_GZIP_BYTES = 74_192;
  *
  * **Findings of the live price test (2026-09-27, `fix/prices-live-findings`):
  * measured 301.845 (+406 over the 301.439 of develop, measured the same way),
- * ceiling 302.101 — measured + 256**, raised before the commit that needs it,
- * inside the authorisation (up to 304.640); the direction confirms spending
- * it here. Lazy but 47 (the boot, above): the remedy of a stale rate by its
+ * ceiling 302.101 — measured + 256**, set in the merge commit 9e3dfd4
+ * together with the code it measures, inside the authorisation (up to
+ * 304.640); commits 0df06da to 7461ace were built against the total ceiling
+ * of their base, and their boot ceiling is the one they exceed (note of the
+ * boot, above). Lazy but 47 (the boot, above): the remedy of a stale rate by its
  * origin (`warnings` +97), the ECB rates of the cash without closes
  * (`quotes` +105), and the hashes of the tables.
  */
