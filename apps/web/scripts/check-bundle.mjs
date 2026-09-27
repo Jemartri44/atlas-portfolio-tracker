@@ -410,7 +410,15 @@ const dist = join(webRoot, "dist");
  * classes where the markup check reads them saved a byte. The trend: 74.596 →
  * 74.665 → 74.664.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_684;
+/*
+ * **Round 1 of the review of PR #105, B1 and N2 (2026-09-27): measured
+ * 74.874 (+210 over 74.664), ceiling 74.894 — measured + 20**, raised before
+ * the commit that needs it, inside the authorisation (76.069). The fragment
+ * is read inside a `try`, the wait stops when the address changes, the back
+ * button wins and the focus goes to the title reached: all on the frame, on
+ * the boot on purpose. The trend: 74.596 → 74.664 → 74.874.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_894;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
