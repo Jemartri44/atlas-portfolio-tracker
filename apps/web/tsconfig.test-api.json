@@ -7,11 +7,15 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "preserve",
     "moduleResolution": "bundler",
-    "types": ["node"]
+    "types": ["node", "vite-plugin-pwa/client"],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js"
   },
   "include": [
+    "src",
+    "test/sync/api-support.ts",
     "test/sync/engine.test.ts",
-    "src/sync/engine.ts",
+    "test/sync/sync-card.test.tsx",
     "../api/test/harness.ts",
     "../../packages/adapters/test/aws/test-only-fake-s3.ts",
     "../../packages/adapters/test/aws/test-only-fake-ssm.ts",

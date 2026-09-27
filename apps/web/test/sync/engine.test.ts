@@ -19,79 +19,9 @@ import {
   redownload,
   startSync,
   syncNow,
-  type WebSyncEnv,
   webSyncStatus,
 } from "../../src/sync/engine.js";
-
-const DEVICE = "webdevice0000000000001";
-const OTHER = "webdevice0000000000002";
-
-type Api = ReturnType<typeof setup>;
-
-/** The API, its clock after the ledgers of the builder (recorded in August 2027). */
-const apiAt = (): Api => {
-  const api = setup();
-  api.advance(Date.parse("2027-09-01T10:00:00.000Z") - api.nowMs());
-  return api;
-};
-
-/** The browser's `fetch` at its own origin: the cookie of the jar, and `Origin` on a write. */
-const sameOrigin = (api: Api): typeof fetch =>
-  (async (input: string | URL | Request, init?: RequestInit) => {
-    const url = new URL(String(input), SELF);
-    const method = init?.method ?? "GET";
-    const headers = Object.fromEntries(new Headers(init?.headers));
-    const result = await api.call(method, url.pathname, {
-      headers: method === "GET" ? headers : { ...headers, origin: SELF },
-      ...(init?.body === undefined || init.body === null
-        ? {}
-        : {
-            body:
-              typeof init.body === "string"
-                ? init.body
-                : new TextDecoder().decode(init.body as Uint8Array),
-          }),
-    });
-    const body =
-      result.statusCode === 304 || result.statusCode === 204
-        ? null
-        : result.isBase64Encoded
-          ? Buffer.from(result.body, "base64")
-          : result.body;
-    return new Response(body, { status: result.statusCode, headers: result.headers });
-  }) as typeof fetch;
-
-const browserOf = async (events: readonly LedgerEvent[], api: Api, device = DEVICE) => {
-  await api.signIn(ALLOWED, device);
-  const web = webDevice(events);
-  let millis = Date.parse("2027-08-30T09:00:00.000Z");
-  const env: WebSyncEnv = {
-    fetch: sameOrigin(api),
-    open: web.open,
-    now: () => {
-      millis += 1000;
-      return new Date(millis);
-    },
-  };
-  return { web, env };
-};
-
-const cloudText = async (api: Api): Promise<string> => {
-  const read = await api.call("GET", "/api/ledger", { headers: { origin: SELF } });
-  return read.isBase64Encoded ? Buffer.from(read.body, "base64").toString("utf8") : read.body;
-};
-
-const depsOf = (web: ReturnType<typeof webDevice>, env: WebSyncEnv): UseCaseDeps => {
-  let counter = 0;
-  return {
-    store: web.store,
-    clock: { now: env.now as () => Date },
-    random: (target) => {
-      counter += 1;
-      target.fill((counter * 7) % 256);
-    },
-  };
-};
+import { apiAt, browserOf, cloudText, DEVICE, depsOf, OTHER } from "./api-support.js";
 
 describe("the sync of the web, against the API", () => {
   it("does nothing until asked: a browser that never started is not configured", async () => {

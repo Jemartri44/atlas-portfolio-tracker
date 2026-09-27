@@ -1,17 +1,11 @@
 // The sync of this browser with the API (feature 015, E4; ADR-0026, Part B):
-// the shared orchestration of the 014 (`@atlas/adapters/sync-client`) over
-// this browser's own store — IndexedDB, one transaction per write — and the
-// HTTP client of E3 with the cookie of the session, to the page's own origin.
-// **Every order is explicit**: nothing here runs at boot, on a timer or when
-// the connection comes back (the guards of the 014), and nothing configures
-// the sync as an effect of another order.
-//
-// The device is the session's (`GET /api/session`), never the body's. The
-// browser keeps the id it joined with, in the state of the sync, and a session that
-// brings another id does not sync: joining again is the way out (§27.4).
-//
-// Loaded lazily from the section of the sync in Ajustes (Q7); never on the
-// boot path.
+// the orchestration of the 014 (`@atlas/adapters/sync-client`) over this
+// browser's store — IndexedDB, one transaction per write — and the HTTP
+// client of E3 with the cookie, to the page's own origin. **Every order is
+// explicit**: nothing runs at boot, on a timer or when the connection comes
+// back. The device is the session's (`GET /api/session`); the browser keeps
+// the one it joined with, and a session with another does not sync: joining
+// again is the way out (§27.4). Loaded lazily from Ajustes (Q7).
 
 import { BrowserSyncStore } from "@atlas/adapters/sync";
 import {
@@ -33,13 +27,20 @@ import {
   syncDevice,
 } from "@atlas/adapters/sync-client";
 import { httpRemote } from "@atlas/adapters/sync-http";
-import { CURRENT_LEDGER_SCHEMA, createUlidGenerator, type UseCaseDeps } from "@atlas/domain";
+import {
+  CURRENT_LEDGER_SCHEMA,
+  createUlidGenerator,
+  decodeLines,
+  type LedgerEvent,
+  type UseCaseDeps,
+} from "@atlas/domain";
 import {
   initState,
   parseHeld,
   type RedoPlan,
   type Refusal,
   RemoteError,
+  type Resolution,
   remoteFailed,
   unresolvedHeld,
   webJoinRefusal,
@@ -175,6 +176,31 @@ export const deactivate = async (env: WebSyncEnv): Promise<Refusal | undefined> 
 
 export const heldList = (env: WebSyncEnv): Promise<HeldView[]> =>
   heldUnits(storeOf(env), optionsOf(env));
+
+/** A held unit as the card shows it: why, what can be done, and its operations. */
+export interface HeldItem {
+  readonly unit: string;
+  readonly reason: { readonly code: string; readonly details: Readonly<Record<string, unknown>> };
+  readonly resolutions: readonly Resolution[];
+  /** Each line read, or `undefined` when it cannot be read — held for exactly that. */
+  readonly events: readonly (LedgerEvent | undefined)[];
+}
+
+const readable = (line: string): LedgerEvent | undefined => {
+  try {
+    return decodeLines([line], CURRENT_LEDGER_SCHEMA)[0];
+  } catch {
+    return undefined;
+  }
+};
+
+export const heldItems = async (env: WebSyncEnv): Promise<HeldItem[]> =>
+  (await heldList(env)).map((view) => ({
+    unit: view.unit.unit,
+    reason: view.unit.reason,
+    resolutions: view.resolutions,
+    events: view.unit.lines.map(readable),
+  }));
 
 export const confirmHeld = (env: WebSyncEnv, unit: string): Promise<void> =>
   confirmHeldUnit(storeOf(env), unit, optionsOf(env));

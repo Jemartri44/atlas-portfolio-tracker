@@ -11,7 +11,11 @@
     "types": ["node", "vite-plugin-pwa/client"]
   },
   "include": ["src", "test", "../../packages/adapters/test/fake-idb.ts"],
-  "exclude": ["test/sync/engine.test.ts"],
+  "exclude": [
+    "test/sync/api-support.ts",
+    "test/sync/engine.test.ts",
+    "test/sync/sync-card.test.tsx"
+  ],
   "references": [
     {
       "path": "../../packages/domain"
