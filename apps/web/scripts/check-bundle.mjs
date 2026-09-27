@@ -368,7 +368,16 @@ const dist = join(webRoot, "dist");
  * indent: rules of the stylesheet of the boot. The trend: 74.275 → 74.366 →
  * 74.413.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_433;
+/*
+ * **Feature 020, E1, the anchor under the bar (2026-09-27): measured 74.596
+ * (+183 over 74.413), ceiling 74.616 — measured + 20**, raised before the
+ * commit that needs it, inside the authorisation (76.069). On the boot on
+ * purpose: the frame follows the fragment of every navigation once its target
+ * is painted (`shell/anchor.ts` and one effect of `AppShell`), and the
+ * document stops an anchor under the bar of each width (`--header-h`). The
+ * trend: 74.366 → 74.413 → 74.596.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_616;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
