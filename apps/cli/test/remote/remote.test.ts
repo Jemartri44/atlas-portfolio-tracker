@@ -131,7 +131,7 @@ describe("atlas remote logout (T35)", () => {
       string,
       string
     >[];
-    expect(entry?.device_id.startsWith("--")).toBe(true);
+    expect(entry?.device_id?.startsWith("--")).toBe(true);
     c.seen.length = 0;
     expect(
       await c.exec(["remote", "logout", "--device", entry?.device_id as string, "--local-only"]),
