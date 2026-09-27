@@ -23,6 +23,7 @@ import {
   requestedEtag,
   versionOf,
 } from "@atlas/domain/access";
+import { unknownSymbolsKey } from "@atlas/domain/quotes";
 import {
   acceptAppend,
   acceptInit,
@@ -62,6 +63,15 @@ const utf8 = new TextDecoder("utf-8", { fatal: true });
  * and this is the last check before S3, so that the remote can never be left
  * in bytes no device can read.
  */
+/** Whether the bytes of a `prices/symbols.json` read as JSON with a top-level key it does not have. */
+const hasUnknownKey = (body: Uint8Array): boolean => {
+  try {
+    return unknownSymbolsKey(JSON.parse(new TextDecoder().decode(body))) !== undefined;
+  } catch {
+    return false;
+  }
+};
+
 export const utf8Of = (lines: readonly string[]): Uint8Array | undefined => {
   const bytes = utf8Encode(textOfLines(lines));
   try {
@@ -278,6 +288,12 @@ export const syncRoutes = (context: SyncContext) => {
     const stored = await reference.get(key.key);
     if (stored === undefined) {
       return fail(refusal("not_found", { reason: "missing" }));
+    }
+    // A correspondence with a top-level key it does not have is never served
+    // (review of PR #106, B1): whatever it is, it did not go through the
+    // difference of `atlas admin prices push`. Only its name is looked at.
+    if (kind === "prices" && name === "symbols.json" && hasUnknownKey(stored.body)) {
+      return fail(refusal("not_found", { reason: "unknown_key" }));
     }
     const version = versionOf(stored.etag);
     const headers = { etag: `"${version}"` };

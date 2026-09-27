@@ -741,4 +741,24 @@ describe("the reference data (§6)", () => {
       details: { reason: "missing" },
     });
   });
+
+  it("never serves a symbols.json with a top-level key it does not know (review of PR #106, B1)", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    const good = JSON.stringify({ symbols_format: 2, assets: {} });
+    api.s3.seed("prices/symbols.json", good);
+    const served = await read(api, token, "/api/reference/prices/symbols.json");
+    expect(served.statusCode).toBe(200);
+    expect(Buffer.from(served.body, served.isBase64Encoded ? "base64" : "utf8").toString()).toBe(
+      good,
+    );
+    api.s3.seed(
+      "prices/symbols.json",
+      JSON.stringify({ symbols_format: 2, assets: {}, api_key: "sentinel-secret-of-the-api" }),
+    );
+    const refused = await read(api, token, "/api/reference/prices/symbols.json");
+    expect(errorOf(refused)).toEqual({ code: "not_found", details: { reason: "unknown_key" } });
+    expect(JSON.stringify(refused)).not.toContain("sentinel-secret-of-the-api");
+    expect(api.logs.join("\n")).not.toContain("sentinel-secret-of-the-api");
+  });
 });
