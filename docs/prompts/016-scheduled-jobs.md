@@ -75,7 +75,7 @@ Si algo es ambiguo, contradictorio o te bloquea, **no lo resuelvas**: escríbelo
    - **las verificaciones del bloque 0 de E1** (§3), cada una con su fuente, su fecha y lo que dice; y **la lista de las de E2 a E4**, con cuándo las harás;
    - **la tabla de reglas**, una fila por regla de este prompt y de las ADRs que cita (privacidad del correo, idempotencia, cupo, escritura única, registros), con **el test que la ata y el mutante que la rompe** (§6);
    - **los formatos, escritos como contrato**: el evento que cada tarea acepta de Scheduler; el registro de ejecución de cada tarea y dónde vive; los **nombres y formatos de los parámetros de SSM** que leen las tareas: **las claves de las fuentes**, `SecureString` que el guion de secretos de la 017 creará tal cual (ADR-0034, fila 21), y **el destinatario y el interruptor de importes**, dos `String` que **escribe Terraform desde `terraform.tfvars`** —el interruptor, por defecto «sin importes»— y que el guion de secretos **no crea** (ADR-0034, filas 12 y 21; [§8.2 M3](#r1-m3)); las variables `ATLAS_*` de cada Lambda; y la forma de `positions.json`;
-   - **la lista exacta de acciones de S3, SSM y SES de cada Lambda**, con su recurso. **Es lo que la 017 convertirá en política**, y escrita en el alto le permite empezar sin esperar al código. **El rol de precios no tiene ninguna acción `ses:*`, y el de correo no alcanza la clave de EODHD ni la de Alpha Vantage** ([§8.2 B2](#r1-b2));
+   - **la lista exacta de acciones de S3, SSM y SES de cada Lambda**, con su recurso. **Es lo que la 017 convertirá en política**, y escrita en el alto le permite empezar sin esperar al código. **Solo el rol de la función de correo tiene acciones `ses:*`**: los del BCE, los precios, el volcado y la integridad no tienen ninguna, y escriben sus hallazgos en `jobs/`, que la función de correo lee. **El rol de correo no alcanza la clave de EODHD ni la de Alpha Vantage** ([§8.2 B2](#r1-b2));
    - **lo que propones para cada punto de §7.2**, marcado como propuesta, y cómo aplicas cada respuesta de §8.1;
    - **la línea de partida del paquete web** medida sobre tu `develop`, y **tu estimación trozo a trozo** de lo que añade E3;
    - **la partición en entregas** tal como la vas a seguir (§3), o lo que cambiarías y por qué;
@@ -229,14 +229,14 @@ Con un libro inválido, o sin precios, **el correo llega igual** y dice qué no 
 
 #### Bloque 2 — Las tareas diarias
 
-- **El BCE**: `updateEcbHistory` sobre el almacén de S3, con la descarga de siempre (primero el ZIP, la API si falla). **Notifica solo si hay hallazgo** (§9.5): una actualización que pisaría un tipo ya publicado, o el calendario TARGET en desacuerdo.
+- **El BCE**: `updateEcbHistory` sobre el almacén de S3, con la descarga de siempre (primero el ZIP, la API si falla). **Avisa solo si hay hallazgo** (§9.5): una actualización que pisaría un tipo ya publicado, o el calendario TARGET en desacuerdo. **No envía nada**: deja el hallazgo en su registro de ejecución, bajo `jobs/`, y lo envía la función de correo ([§8.2 B2](#r1-b2)).
 - **Los precios**: `updatePrices` sobre el almacén de S3, **los activos y su prioridad sacados del libro remoto** (`ledger/ledger.jsonl`, leído con el almacén de S3 de la 015; ADR-0031, segunda enmienda, punto 5), `symbols.json` **del bucket** y la configuración de la Lambda (los presupuestos, el orden de las fuentes y el umbral de fallos seguidos, [§8.2 M5](#r1-m5)). **Nunca el día en curso.** Una correspondencia sin contrastar **no se descarga** (tercera enmienda, §4), y **la tarea no contrasta nunca** ([§8.1 P18](#p18-resp)): una fuente sin `currency_check` en el `symbols.json` subido se queda sin descargar, y la tarea lo deja como hallazgo en su registro.
 - **Las claves**, de SSM (`SecureString` bajo `/atlas/<entorno>/`, nombres en el plan), leídas en cada ejecución, **nunca en una variable de entorno ni en un registro**, y **censuradas en toda URL** que llegue a un error. **Sin claves** (el caso de `dev`, ADR-0034, fila 2), la tarea no descarga, **no cuenta fallos seguidos**, lo dice en el registro con un código y **no deja ningún hallazgo para el correo**.
 - **La fuente simulada de `dev`** ([§8.1 P14](#p14-resp), precisada en [§8.2 m3](#r1-m3m)): un adaptador de `PriceSource` con respuestas fijas. **Es la única excepción declarada al guardián de los dobles**, y el guardián la nombra de forma explícita: **viaja en `jobs.zip`**, porque se construye una vez y se promociona, pero **la composición se niega a usarla si el entorno es `prod`**, con su test y su mutante.
 - **Los hallazgos de E2**, cada uno solo cuando hay algo que hacer. **La tarea de precios nunca envía correo** ([§8.2 B2](#r1-b2)): deja cada hallazgo en su registro de ejecución, bajo `jobs/`, y la función de correo de E1 lo envía y apunta la racha:
   - **fallos seguidos** de una fuente al llegar al umbral (ADR-0031, tercera enmienda, §5: solo `unavailable`, `rate_limited`, `blocked` e `invalid_response`), **una vez por racha**, no uno al día;
   - **una tesis del cubo con el horizonte vencido** (`horizon_exceeded`, `packages/domain/src/projections/bucket.ts:156`), la única regla que existe ([§8.2 B1](#r1-b1)). **La condición de invalidación es texto libre y no genera aviso** (§4);
-  - **un hallazgo del BCE**, por el mismo camino (propuesta de quien redacta en [§8.2 B2](#r1-b2), a confirmar en el alto).
+  - **un hallazgo del BCE**, por el mismo camino ([§8.2 B2](#r1-b2)).
 
 #### Bloque 3 — `atlas admin prices push` ([§8.1 P18](#p18-resp), enmendada en [§8.2 M4](#r1-m4) y [M5](#r1-m5))
 
@@ -277,11 +277,11 @@ Con un libro inválido, o sin precios, **el correo llega igual** y dice qué no 
 
 - En `backups/<YYYY-MM>/` (el mes de `Europe/Madrid`): **el libro byte a byte**, el histórico del BCE en vigor **con su manifiesto**, `prices/` entero y **`positions.json`**, la proyección valorada, legible sin la aplicación (su forma, en el plan). **Cada objeto con `If-None-Match: *`: un volcado nunca se sobrescribe.** Si el objeto existe con los mismos bytes, se deja; si tiene otros, **se niega y avisa**, como `atlas backup` en E5 de la 015 (§33.7).
 - **El volcado de un mes a medias** (un corte entre dos objetos) lo termina el reintento sin pisar lo escrito, y el registro de ejecución lo sabe. Test de corte.
-- **Notifica solo si falla.**
+- **Avisa solo si falla**, dejando el hallazgo en su registro de ejecución, bajo `jobs/`; lo envía la función de correo ([§8.2 B2](#r1-b2)).
 
 #### Bloque 2 — La integridad y el ensayo de restauración, cada trimestre
 
-- **Recalcular todo desde cero y comparar**, y **el ensayo automático de restauración**: cargar el último volcado en un almacén en memoria, proyectarlo y compararlo con la proyección del libro vivo **cortado en los mismos eventos** (ADR-0032). La comparación es del dominio. **Cualquier diferencia manda un correo** que dice qué difiere, sin importes salvo el interruptor.
+- **Recalcular todo desde cero y comparar**, y **el ensayo automático de restauración**: cargar el último volcado en un almacén en memoria, proyectarlo y compararlo con la proyección del libro vivo **cortado en los mismos eventos** (ADR-0032). La comparación es del dominio. **Cualquier diferencia es un hallazgo** que la tarea deja en su registro, bajo `jobs/`, y que la función de correo envía diciendo qué difiere, sin importes salvo el interruptor ([§8.2 B2](#r1-b2)). **Lo mismo el aviso de tamaño** de abajo.
 - **Nunca en `dev` con datos reales** (ADR-0032): en `dev` solo hay datos sintéticos, y la tarea no hace nada distinto por entorno.
 - **El tamaño del libro** (ADR-0028): la tarea lo informa y **avisa al pasar del umbral** (1 MB, configuración de la Lambda con ese valor por defecto) para que se revise el plazo de expiración de las versiones no vigentes de ADR-0006. El aviso dice el tamaño y el umbral, que no son importes.
 
@@ -417,7 +417,7 @@ Valen **para cada entrega**, sobre lo que esa entrega construye, y para la featu
     16. **sin claves, contar un fallo seguido** o mandar un correo;
     17. **la fuente simulada** usada por la composición con `ATLAS_ENV=prod`, o **una segunda excepción** al guardián de los dobles que no se nombra ([§8.2 m3](#r1-m3m));
     18. **el aviso de fallos seguidos** que se repite cada día de la misma racha, o que cuenta `not_found` o `budget_exhausted`;
-    18 bis. **la tarea de precios enviando un correo** o con cualquier permiso `ses:*` en la lista del alto, o **la función de correo alcanzando una clave de fuente** ([§8.2 B2](#r1-b2)); y **un aviso de tesis por algo que no es `horizon_exceeded`** ([§8.2 B1](#r1-b1));
+    18 bis. **cualquier tarea que no sea la función de correo enviando un correo** (el BCE, los precios, el volcado o la integridad) o con cualquier permiso `ses:*` en la lista del alto, o **la función de correo alcanzando una clave de fuente** ([§8.2 B2](#r1-b2)); y **un aviso de tesis por algo que no es `horizon_exceeded`** ([§8.2 B1](#r1-b1));
     19. **el BCE activado a medias**: un lector que ve el fichero nuevo con el manifiesto viejo como si cuadrara, o una actualización que pisa un tipo ya publicado;
     20. **un conflicto de S3 que se reintenta** dentro de la misma ejecución;
     21. **los activos sacados de otra parte** que el libro remoto;
@@ -518,7 +518,7 @@ La revisión (comentario 5856795660 de la PR #99) encontró dos bloqueantes, sie
 
 - <a id="r1-b1"></a>**B1 — El aviso de tesis se limita a `horizon_exceeded`**, la regla que ya existe (`packages/domain/src/projections/bucket.ts:156`). **La condición de invalidación sigue siendo texto libre** (`Thesis.invalidation`, `projections/state.ts:252`) **y no genera aviso automático**; queda fuera de alcance (§4). *Motivo (la revisión):* el prompt pedía avisar «con la regla que ya tiene el dominio», y esa regla no existe; el implementador habría tenido que inventar un umbral o interpretar texto libre, que son decisiones de producto, y darle forma a la condición tocaría el esquema. Aplicada en E2, bloque 2, en §4 y en el mutante 18 bis.
 - <a id="r1-b2"></a>**B2 — La tarea de precios nunca envía correo.** Deja cada hallazgo (fallos seguidos, tesis con el horizonte vencido) **en su registro de ejecución, bajo `jobs/` en S3**. **La función de correo los lee, los envía y apunta la racha**, para avisar una vez por racha. **El rol de precios no tiene `ses:*`, y el de correo no alcanza la clave de EODHD** (ni la de Alpha Vantage). Se recoge en la lista de permisos del alto (§2) y tiene su mutante (§6, 18 bis). Precisa §8.1 P4. *Motivo (la revisión):* P4 separa los roles para que la clave de EODHD nunca esté al alcance del rol que envía correo, pero el texto ponía el aviso en la tarea de precios, y la 017 habría dado a un mismo rol `ses:SendEmail`, el destinatario y la clave. Aplicada en §2, en E1, bloque 2, en E2, bloque 2, y en el mutante 18 bis.
-  - **Propuesta de quien redacta, a confirmar en el alto:** el mismo camino para el BCE, el volcado y la integridad, de modo que **solo la función de correo tenga `ses:*`**. La dirección decidió B2 para los precios; extenderlo a las demás es coherente con P4, pero no está decidido.
+  - **Extendido a todas las tareas, decidido por la dirección el 2026-09-27:** el BCE, los precios, el volcado y la integridad dejan sus hallazgos en `jobs/`, y **solo la función de correo tiene `ses:*`**. Aplicado en la lista de permisos del alto (§2), en E2, bloque 2, en E4, bloques 1 y 2, y en el mutante 18 bis.
 
 **Medios**
 
