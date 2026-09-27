@@ -339,9 +339,11 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
 export const dataLossItem = (days: number | "never"): AttentionItem =>
   itemOf(
     "export_overdue",
+    // The sentence of the mockup, short enough for one line on the monitor:
+    // what follows from it is said in Ajustes, where the export is.
     days === "never"
-      ? "Tus datos viven en el navegador y nunca los has exportado: si borras los datos del sitio, se pierden."
-      : `Tus datos viven en el navegador y hace ${countOf(days, "día", "días")} que no los exportas: si borras los datos del sitio, se pierde lo registrado desde entonces.`,
+      ? "Tus datos viven en el navegador y nunca los has exportado."
+      : `Tus datos viven en el navegador y hace ${countOf(days, "día", "días")} que no los exportas.`,
   );
 
 /** What the lazy tax engine answered, as much as *Atención* needs of it. */

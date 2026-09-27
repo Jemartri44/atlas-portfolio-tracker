@@ -29,10 +29,18 @@ a.notice:hover {
 
 /* A row kept for a notice that arrives after the first paint (feature 020, M2). */
 .notice-reserved {
+  align-content: start;
   border-top: var(--border) solid var(--c-border);
   display: grid;
   gap: var(--space-2);
+  min-height: var(--notice-reserved-h);
   padding-block: var(--space-3);
+}
+
+@media (min-width: 64rem) {
+  .notice-reserved {
+    min-height: var(--notice-reserved-h-wide);
+  }
 }
 
 .notice-icon {

@@ -17,12 +17,14 @@
 // never exported from this browser.
 
 import { describe, expect, it } from "vitest";
+import { NoticeList } from "../src/components/Notice.jsx";
 import { Pending } from "../src/components/States.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { NetWorthBlock } from "../src/routes/resumen/NetWorthBlock.jsx";
 import { fiscalSlot } from "../src/view-models/index.js";
 import { goldenText } from "./helpers/golden.js";
 import { openLedger, show, text, today, until, withGoldenLedger } from "./helpers/render.jsx";
+import { applied, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -127,6 +129,26 @@ describe("the place of the 720 and the 721 in Atención", () => {
       action: { label: "Ver la declaración", to: "/fiscal" },
     });
     expect(fiscalSlot({ season: false, abroad: true, answer: { lines: [] } })).toBeUndefined();
+  });
+});
+
+describe("the row kept in Atención", () => {
+  it("has the height of the notice that fills it, on the phone and on the monitor", async () => {
+    // Measured in Chromium with the golden ledger on 20/01/2029: 118px at
+    // 400 and 70px at 2045, so nothing in the first screenful jumps when the
+    // notice arrives (`medidas.json`, «jumps»).
+    for (const [width, height] of [
+      [400, "118px"],
+      [2045, "70px"],
+    ] as const) {
+      withStyles(width);
+      const host = await show("/", () => <NoticeList items={[]} label="Avisos" reserve />);
+      expect(applied(host.querySelector(".notice-reserved"), "min-height")).toBe(height);
+      withoutStyles();
+    }
+    // Back to the viewport of the other tests: the order of the summary reads it.
+    withStyles(1024);
+    withoutStyles();
   });
 });
 
