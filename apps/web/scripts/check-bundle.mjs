@@ -770,7 +770,16 @@ const BOOT_BUDGET_GZIP_BYTES = 74_134;
  * transfer leave the boot (−2.166 on it) for a lazy chunk of their own
  * (`tools`), and a chunk more costs its plumbing and its compression apart.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 294 * 1024 + 440;
+/*
+ * **Feature 020, E1, the colour of a result only on results (2026-09-27):
+ * measured 301.545 (+106 over 301.439), ceiling 301.801 — measured + 256**,
+ * raised before the commit that needs it, inside the authorisation (310.500).
+ * Two `coloured` flags leave the fiscal criteria and the bucket card: the
+ * lazy chunks that name them change their hashes, and every chunk importing
+ * them compresses a few bytes worse. No code on the boot. The trend: 301.240
+ * → 301.370 → 301.439 → 301.545.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 301_801;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
