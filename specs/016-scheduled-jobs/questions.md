@@ -439,3 +439,16 @@ Revisión sobre `003ee81` (comentario 5858858950): un bloqueante pequeño, resid
 - **Textos de E4 en `contracts/mail.md` §2** (se construyen en E4; el contrato se corrige ya):
   - `weekly_review`: los porcentajes y los puntos de desviación se quedan (P9 permite porcentajes);
   - `informative_thresholds`: texto neutro, por ejemplo «Revisa si te corresponde presentar el modelo 720/721 de <año>», sin la palabra «umbral», sin cifras y sin decir si se supera: el correo no deja deducir ninguna cota del patrimonio.
+
+### 13.1 Mapa y evidencia
+
+| Hallazgo | Commit | Qué | Rojo y mutante |
+|---|---|---|---|
+| R2-B1 | `553332f` | `run.ts`: con `sending` marcado, un `failed` **devuelto** por el *runner* se escribe `send_unknown`, igual que uno lanzado | `cuts.test.ts`, «returns `failed` after `sending`»: en rojo contra `8bd1a2a` (quedaba `failed` y el segundo día reenviaba). Mutante R2-B1 (`const state = result.state`): KILLED |
+| R2-N1 | `bc24072` | El guardián del reloj añade `packages/adapters/src/aws/index.ts` y los tests `packages/adapters/test/aws/jobs*` (por patrón, con la lista que encuentra fijada) | M5 del revisor (`Date.now()` en `aws/index.ts`, R2-N1a) y `new Date()` en `jobs-store.test.ts` (R2-N1b): KILLED, por su regla |
+| R2-N2 | — | Se deja como está, por decisión | — |
+| Textos de E4 | `07c2f4a` | `contracts/mail.md` §2: `weekly_review` conserva porcentajes y puntos; `informative_thresholds` pasa a un texto neutro («Revisa si te corresponde presentar el modelo 720 de 2026.»), sin «umbral», sin cifras, sin decir si se supera, y sin cifras tampoco con el interruptor | — (se construye en E4) |
+
+Comprobado sobre el último commit de código (`bc24072`): `lint` 0, `typecheck` 0, y los proyectos `jobs` y `repo` con `--pool=forks --maxWorkers=1`: 151 tests en verde. `jobs-access` sigue en 7 tests (el guardián crece por dentro). La dirección pidió para esta ronda lint, typecheck y los tests de `jobs`, no la tubería entera; la CI de la PR pasa la tubería completa.
+
+**Congelada la ronda 2 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR.
