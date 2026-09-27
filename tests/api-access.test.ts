@@ -608,14 +608,20 @@ describe("architecture (015): the web configures the sync only through its engin
 
   /**
    * P3: the web exports the ledger **with what is held back** beside it,
-   * never the ledger alone — the export without it is not imported anywhere
-   * in the web.
+   * never the ledger alone — the adapter has no other export (the one
+   * without it was removed when it had no caller left, review of PR #97, N5).
    */
   it("exports the ledger only together with what the sync holds back (P3)", () => {
+    const transfer = readFileSync(
+      join(adaptersRoot, "src", "ledger-store", "browser", "transfer.ts"),
+      "utf8",
+    );
+    expect([...transfer.matchAll(/export const (export\w*)/g)].map((match) => match[1])).toEqual([
+      "exportLedgerAndHeld",
+    ]);
     const names = listSources(webSrc).flatMap((file) =>
       parse(file).bindings.map((binding) => ({ file, name: binding.name })),
     );
-    expect(names.filter(({ name }) => name === "exportLedgerText")).toEqual([]);
     expect(
       names.some(
         ({ file, name }) =>

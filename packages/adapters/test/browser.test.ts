@@ -13,7 +13,7 @@ import { DRAFT_STORE, LEDGER_STORE } from "../src/ledger-store/browser/idb.js";
 import { BrowserLedgerBlob, type StoredLedger } from "../src/ledger-store/browser/indexeddb.js";
 import {
   etagOfText,
-  exportLedgerText,
+  exportLedgerAndHeld,
   LedgerChangedSinceAsked,
   replaceLedgerText,
 } from "../src/ledger-store/browser/transfer.js";
@@ -38,7 +38,9 @@ const browser = (text?: string, extra: Partial<StoredLedger> = {}) => {
     db,
     blob,
     store: new BlobLedgerStore(blob),
-    exportText: (when: Date) => exportLedgerText(when, open),
+    // The export of the web is always the one with what is held (P3); the
+    // text of the ledger is what these tests of feature 012 read.
+    exportText: async (when: Date) => (await exportLedgerAndHeld(when, open)).text,
     /** An import confirmed on the ledger as it is now. */
     replaceText: async (next: string) =>
       replaceLedgerText(next, etagOfText(await blob.text()), open),

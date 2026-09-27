@@ -37,29 +37,13 @@ const SYNC_DEVICE_KEY = "sync:device";
 const encoder = new TextEncoder();
 
 /**
- * The text to export, and the date of this export recorded **in the same
- * transaction**: the date can never claim an export that did not include the
- * last line recorded (feature 012, D4). Only the date is written; the text of
- * the ledger is not touched. No date when there is no ledger.
- */
-export const exportLedgerText = (when: Date, open: Opener = openAtlasDb): Promise<string> =>
-  transact<string>(open, "readwrite", (store, _tx, settle) => {
-    const get = store.get(CURRENT_KEY);
-    get.onsuccess = () => {
-      const stored = get.result as StoredLedger | undefined;
-      if (stored !== undefined) {
-        const meta: StoredMeta = { lastExportAt: when.toISOString() };
-        store.put(meta, META_KEY);
-      }
-      settle.ok(stored?.text ?? "");
-    };
-  });
-
-/**
  * The export **with what the sync holds back** (§6.2 P3): the text of the
  * ledger and, apart, the text of the held records when any is unresolved —
- * both read, and the date written, in one transaction. The ledger exported is
- * the ledger, byte for byte; what is held back travels in a file of its own.
+ * both read, and the date written, in one transaction (feature 012, D4: the
+ * date can never claim an export that did not include the last line
+ * recorded; only the date is written, and no date when there is no ledger).
+ * The ledger exported is the ledger, byte for byte; what is held back
+ * travels in a file of its own. The only export of the web.
  */
 export const exportLedgerAndHeld = (
   when: Date,
