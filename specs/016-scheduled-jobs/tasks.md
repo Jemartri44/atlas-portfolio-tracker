@@ -66,6 +66,10 @@ Agrupadas por entrega (§2 del encargo). Cada tarea de código empieza por su te
 
 Consola, web, `notification_email`. Se detalla al empezar.
 
+- **Anotado de la revisión de la PR #106 (N2 de fuentes y S3; decisión de la dirección, 2026-09-27)**: cuando la consola esté configurada para bajar los precios de la nube, su presupuesto por defecto pasa a ser **el sobrante del plan** (2 llamadas de EODHD y 2 de Alpha Vantage), salvo que su `prices/config.json` diga otra cosa. Hoy, sin ese fichero, la consola usa 20 y 25 y, con la nube gastando 18 y 23, puede pasarse del cupo del plan gratuito. **La revisión de E3 lo comprueba.**
+
 ## E4 — Copias, integridad y avisos periódicos
 
 Volcado, integridad, avisos, procedimientos. Se detalla al empezar.
+
+- **Anotado de la revisión de la PR #106 (N3 de fuentes y S3)**: quien use `manifest.previous` de `reference/ecb/` (un procedimiento de restauración, el volcado) **verifica su SHA-256** antes de usarlo: un corte entre los pasos 1 y 2 de una activación deja `previous/` con otro contenido que el que dice el manifiesto.

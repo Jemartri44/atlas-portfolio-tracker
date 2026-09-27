@@ -196,6 +196,7 @@ Se completa en cada entrega. Hoy:
   - `docs/specification.md` §9.5: los hallazgos de E2 y su texto (`contracts/mail.md` §2).
   - `CLAUDE.md` («Code architecture»): la puerta `@atlas/adapters/aws-daily`, si la dirección quiere nombrarla.
   - La orden nueva de la consola, `atlas admin prices push --env <entorno>`, donde se listen las órdenes de `atlas admin` (el procedimiento 3 de E4 la explica).
+  - **De la ronda 1 de la revisión de la PR #106**: `docs/api.md` §6, `GET /api/reference/prices/symbols.json` responde `404 not_found` con `reason: "unknown_key"` si el objeto tiene una clave de primer nivel que no es `symbols_format` ni `assets`; ADR-0029 (o `docs/data-schema.md`), la reconstrucción de un histórico dañado desde el ZIP oficial (`ecb_history_rebuilt`, sin `previous`); `docs/data-schema.md`, `prices/symbols.json` sin claves de primer nivel ajenas (`symbols_file_unknown_key`); la variable `ATLAS_DATA_BUCKET` debe empezar por `atlas-<ATLAS_ENV>-`.
 
 ## 7. Gemelos `.js`
 
@@ -626,5 +627,78 @@ build 0 13s          (lambda.zip 1.442.976 bytes; jobs.zip 1.627.481 bytes, 1.40
 
 - **Q13 — `market_days` y `refetch_recent_days` en la nube.** La PR #102 los añadió a `prices/config.json` con valores por tipo de activo. `cloudPriceConfigText` escribe solo `source_order`, `daily_calls` y el umbral, así que la nube usa **los valores por defecto** de `parsePriceConfig` (los mismos que la consola sin `config.json`). Recomendación: dejarlo así; si la dirección los quiere configurables en la nube, son variables más de la función de precios, con su techo.
 - **Q14 — `atlas admin prices push` y un remoto ilegible** (§14.3). La orden lo sustituye, diciéndolo en la diferencia y con la misma confirmación; uno de formato más nuevo se niega. Recomendación: así.
-- **Q15 — La consola de Node en los centinelas** (§14.5). El hueco venía de E1, y **los centinelas de la API tienen el mismo**: `apps/api/test/sentinels.test.ts:31-32` espía solo `process.stdout.write` y `process.stderr.write`. No lo he cambiado: es de la 015 y está fuera de E2. Recomendación: una línea en un `fix/` aparte o en la 017, con su mutante (`console.log` de un token en el manejador).
+- **Q15 — ~~La consola de Node en los centinelas de la API~~. Retirada** (revisión de la PR #106, N3 de `push`): era falsa. `apps/api/test/sentinels.test.ts:33-38` ya espía `console.log`, `info`, `warn`, `error` y `debug` desde `57fcfa0`, anterior a esta PR; yo leí solo las líneas 31-32. El hueco de §14.5 era solo de los centinelas de las tareas, y está cerrado.
 - **Q16 — El tiempo máximo de cada llamada (15 s)** es una constante de la composición (`SOURCE_TIMEOUT_MS`), no una variable: con 41 llamadas cabe en 900 s. Recomendación: constante; si la dirección lo quiere configurable, es una variable más con techo.
+
+## 15. Revisión de la PR #106, ronda 1: decisiones de la dirección y arreglos (2026-09-27)
+
+Revisiones sobre `eab6ae9`: fuentes y S3 (comentario 5859690207) y `push` y guardianes (comentario 5859773419). Decisiones de la dirección, del mismo día. Cada arreglo de lógica lleva su test visto en rojo y su mutante, que sobrevive antes (es el código anterior, o el revisor lo vio sobrevivir) y muere después.
+
+### 15.1 Decisiones
+
+**Fuentes y S3**
+
+- **B1 (a).** El paso 2 de la activación del BCE se condiciona al ETag del fichero leído junto al manifiesto, no a un `get` nuevo. Test con el entrelazado del revisor (A y B verifican, A escribe, B escribe…): B falla sin mezclar nada. Además se corrigen la cabecera y el plan.
+- **B1 (b).** Autorreparación: si `recover()` da `damaged`, la tarea del BCE no se queda parada. Reconstruye el histórico entero desde el ZIP oficial del BCE, que es la fuente de verdad y es reproducible, con una generación nueva escrita con escrituras condicionales, y deja el hallazgo `ecb_history_rebuilt`. Test con el estado mezclado del revisor. También se corrigen la cabecera y el plan.
+- **N1.** `parseJobsConfig` exige que `ATLAS_DATA_BUCKET` empiece por `atlas-<ATLAS_ENV>-`, y la fuente simulada exige `ATLAS_ENV=dev` y un bucket `atlas-dev-`. Con su test.
+- **N2.** Se resuelve en E3: cuando la consola baje los precios de la nube, su presupuesto por defecto pasa a ser el sobrante del plan (2 y 2), salvo que `config.json` diga otra cosa. Anotado en E3 y para su revisión.
+- **N3.** Para E4: quien use `manifest.previous` verifica el SHA.
+
+**`push` y guardianes**
+
+- **B1.** `symbolsPushPlan` rechaza cualquier clave de nivel superior que no sea `symbols_format` ni `assets`, con un código nuevo que nombra la clave y nunca su valor. El mismo rechazo se aplica en `parseSymbols`, al leer el fichero en la nube y en la API. Test con un centinela.
+- **N1.** Un especificador que empieza por `#` falla cerrado en `resolveAcross` (`<unresolved #…>`), y un test prohíbe `imports` en los `package.json` del producto. Tiene que matar M5.
+- **N2.** Un test de conducta en `daily.test.ts` comprueba que, con un `symbols.json` legible en el S3 falso, ninguna escritura nombra `prices/symbols.json`. Tiene que matar M7.
+- **N3.** Q15 era falsa: se corrige §14.9.
+- **N4.** `Object.create(null)` y `Object.hasOwn` en `parseSymbols` y en la diferencia. Mutantes con `constructor` y `__proto__`.
+- **N5.** `push` imprime el ETag y la versión que sustituye, y el contrato de IAM añade `s3:GetObjectVersion` al rol de administración.
+
+### 15.2 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| S3 B1 (a) | `6f3f7fd` | `activate` lee **antes de escribir nada**, junto al manifiesto, el fichero en vigor (verificado contra el manifiesto), `previous/` y el objeto del paso 2 (el mismo fichero en vigor si la fuente no cambia), y condiciona cada escritura a **esa** lectura. Test del entrelazado del revisor con dos almacenes sobre el mismo bucket y pausas en las lecturas y las escrituras |
+| S3 B1 (b) | `460fc2e`, `0b0bb03`, `287b8e8` | `rebuildEcbHistory` en el dominio: solo desde el ZIP (desde la API, `zip_unavailable` y nada escrito), un ZIP que no se lee no escribe nada. `S3EcbHistoryStore.rebuild()`: se niega si el histórico no está dañado; escribe el fichero y después un manifiesto nuevo sin `previous` y con los `rejected` que se leían, cada uno condicionado a lo leído. La tarea del BCE reconstruye cuando `recover()` da `damaged`, con el resultado `ecb_history_rebuilt` y su hallazgo, y el correo con su frase. Cabecera del almacén y plan §7.1 corregidos |
+| S3 N1 | `647e3ab` | `not_of_the_environment`: el bucket empieza por `atlas-<ATLAS_ENV>-` en todas las familias. La simulada ya exigía `ATLAS_ENV=dev`, y con esta regla solo escribe en un bucket `atlas-dev-` (no hace falta una segunda comprobación, que no se podría alcanzar). `contracts/ssm-and-config.md` al día |
+| S3 N2, N3 | este commit | `tasks.md`: N2 en E3 y en su revisión; N3 en E4 |
+| `push` B1 y N4 | `b780823`, `8f2c7bf`, `06c6785` | `parseSymbols` rechaza una clave de primer nivel desconocida con `symbols_file_unknown_key` (`details.key`, el nombre recortado a 64 caracteres; nunca el valor), después de decir un formato más nuevo; `assets` sin prototipo, y la diferencia con `Object.hasOwn`. La API no sirve un `symbols.json` con una clave desconocida (`404 not_found`, `reason: "unknown_key"`). La tarea de precios falla sin descargar nada, y `push` se niega; los dos, con un centinela que no aparece en ninguna salida, registro ni log. La consola y la web traducen el código nuevo |
+| `push` N1 | `2c9d5e3` | `resolveAcross` da `<unresolved #…>` a un alias de `imports`; un test comprueba que ningún `package.json` del producto (raíz, `apps/*`, `packages/*`) tiene `imports` |
+| `push` N2 | `67a842c` | En `daily.test.ts`, con respuestas 200, 401 y 503, ninguna escritura condicional nombra `prices/symbols.json`, y el objeto sigue igual |
+| `push` N3 | este commit | §14.9, Q15, corregida |
+| `push` N5 | `af66e81`, `bf7b946` | `StoredObject.versionId` (lo da `GetObject` en un bucket versionado); `push` dice «Sustituye el objeto con ETag … , versión …, que queda en el historial de versiones del bucket»; `contracts/iam-permissions.md` §8 añade `s3:GetObjectVersion` |
+
+### 15.3 Cómo se vio cada test en rojo
+
+- **S3 B1 (a)**: el test del entrelazado contra el `activate` de `9e28eea`: `EcbHistoryDamaged`, el estado mezclado del revisor (`016-e2r-red-b1a.log`). Para verlo en rojo, la pausa de B tuvo que ir **en las lecturas**: en la primera versión del test, la pausa estaba antes de las escrituras, B leía `previous/` antes de que A escribiera y fallaba en el paso 1, así que el test pasaba también con el código viejo.
+- **S3 B1 (b)**: los tests de `apps/jobs` contra la tarea anterior: el de la reconstrucción en rojo; el de «solo la API» pasa con los dos códigos, porque el viejo tampoco escribía (`016-e2r-red-b1b.log`). Los tests del dominio y del almacén se escribieron con el código nuevo; su rojo es la mutación.
+- **S3 N1**: los casos nuevos de `prices-config.test.ts` y `event-config.test.ts`: 2 tests en rojo (`016-e2r-red-n1.log`).
+- **`push` B1 y N4**: 5 tests del dominio en rojo contra `9e28eea` (`016-e2r-red-pb1.log`), y el de la API (`016-e2r-red-api.log`).
+- **`push` N1**: el test del alias `#`, en rojo contra el grafo anterior (`016-e2r-red-gn1.log`).
+- **`push` N5**: el test de `push` que espera el ETag y la versión, en rojo antes de cambiar la orden.
+
+### 15.4 Mutación (lotes `016-e2r-a.json` y `016-e2r-b.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Antes | Después |
+|---|---|---|---|
+| R-B1a | el paso 2 condicionado a una lectura hecha justo antes de escribir (la conducta de `9e28eea`) | era el código; el revisor lo vio pasar el test del mutante 20 | KILLED por `s3-daily.test.ts` (el entrelazado) |
+| R-B1b1 | la tarea del BCE no reconstruye un histórico dañado | era la conducta | KILLED por `daily.test.ts` |
+| R-B1b2 | se reconstruye desde la API | — | KILLED por `update-history.test.ts` y `daily.test.ts` |
+| R-B1b3 | el almacén reconstruye un histórico que no está dañado | — | KILLED por `s3-daily.test.ts` |
+| R-N1 | un bucket de otro entorno aceptado | era la conducta | KILLED por `prices-config.test.ts` y `event-config.test.ts` |
+| R-PB1a | una clave de primer nivel desconocida aceptada en todas partes | era la conducta (sonda del revisor) | KILLED por los tests del dominio y de `push` |
+| R-PB1b | la API sirve un `symbols.json` con una clave desconocida | era la conducta | KILLED por `apps/api/test/sync.test.ts` |
+| R-N4a | `assets` sobre un objeto con prototipo | era la conducta (sondas `constructor` y `__proto__` del revisor) | KILLED por `symbols.test.ts` |
+| R-N4b | la diferencia lee propiedades heredadas como activos | era la conducta | KILLED por `symbols-push.test.ts` |
+| R-GN1a | M5 del revisor: un alias `#daily` en `apps/api/package.json` que alcanza los escritores diarios | sobrevivía (revisión) | KILLED por `jobs-access.test.ts` (tres reglas del grafo, que ahora ven `<unresolved #daily>`, y la de `imports`) |
+| R-GN1b | el grafo resuelve un alias `#` a nada | era la conducta | KILLED por `jobs-access.test.ts` |
+| R-GN2 | M7 del revisor: la tarea escribe `symbols.json` con la clave en otra línea | sobrevivía (revisión) | KILLED por `daily.test.ts` («never writes symbols.json, whatever the run does») |
+| R-N5 | `push` no dice la versión que sustituye | era la conducta | KILLED por `prices-push.test.ts` |
+
+13 de 13 muertos.
+
+### 15.5 Lo que se volvió a mirar alrededor
+
+- **La otra carrera del BCE que las condiciones no descartan sin cerrojo**: dos ejecuciones de fuentes distintas (una del ZIP y otra de la API), cada una escribiendo el nombre del fichero de la otra a la vez. Leer el objeto del paso 2 al principio lo acota (una escritura posterior a esa lectura hace chocar), pero sin cerrojo no lo excluye: el fichero de otro nombre no se puede verificar contra el manifiesto. Si ocurre, acaba **dañado** y la ejecución siguiente lo reconstruye (B1 (b)). La cabecera y el plan lo dicen así, en vez de prometer más.
+- **Entre `active()` y `activate()`** (`updateEcbHistory` los llama por separado): otra ejecución que activara en medio cambia el manifiesto, y `activate` lo relee y escribe su manifiesto con `If-Match` sobre esa nueva lectura. La comparación con los tipos publicados se hizo contra el anterior. No lo he cambiado: las dos descargas son del BCE, la ventana es de milisegundos y la concurrencia 1 de la 017 la cierra. Lo dejo escrito por si la dirección prefiere que `activate` exija el mismo manifiesto que leyó `active()`, que es una comparación de ETag más.
+- **Un formato de `symbols.json` más nuevo con claves nuevas** se sigue diciendo como más nuevo, antes de mirar las claves: la comprobación de claves va después.
+- **La web** lee `prices/symbols.json` con el mismo `parseSymbols`, así que también rechaza una clave ajena, con su frase.
