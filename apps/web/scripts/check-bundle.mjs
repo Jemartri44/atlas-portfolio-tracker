@@ -329,7 +329,15 @@ const dist = join(webRoot, "dist");
  * judging it. The trend: 73.889 → 74.073 → 74.114; 1.955 left of the
  * authorisation.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_134;
+/*
+ * **Feature 020, E1, M6 (2026-09-27): measured 74.137 (+12 over 74.125),
+ * ceiling 74.157 — measured + 20**, raised before the commit that needs it,
+ * inside the authorisation (76.069). Gain and loss leave the red of a problem
+ * under their own names, and the contributed spine of M3 gets its grey in
+ * the three blocks of the palette: three custom properties more in the one
+ * stylesheet of the boot. The trend: 74.114 → 74.125 → 74.137.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_157;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
