@@ -281,6 +281,9 @@ describe("the most recent ECB rate of a currency, for the cash of the net worth"
     expect(external.latestRate?.("USD", "2027-01-10")).toEqual({
       rate: Decimal.parse("1.25"),
       date: "2027-01-05",
+      dated: true,
+      event_id: "",
+      source: "ecb",
     });
     expect(external.latestRate?.("USD", "2027-01-04")?.rate.toString()).toBe("1.2");
     expect(external.latestRate?.("USD", "2026-12-30")).toBeUndefined();
@@ -294,9 +297,10 @@ describe("the most recent ECB rate of a currency, for the cash of the net worth"
   it("is there with no closes at all, when there is a history", () => {
     const rates = ecbRatesOnly(history);
     expect(rates.at("ast_world", "2027-01-10")).toBeUndefined();
-    expect(rates.latestRate?.("GBP", "2027-01-10")).toEqual({
+    expect(rates.latestRate?.("GBP", "2027-01-10")).toMatchObject({
       rate: Decimal.parse("0.8"),
       date: "2027-01-05",
+      source: "ecb",
     });
   });
 });

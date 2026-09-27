@@ -216,7 +216,9 @@ describe("netWorth", () => {
 const ecb = (rate: string, date: string): ExternalPrices => ({
   at: () => undefined,
   latestRate: (currency, asked) =>
-    currency === "USD" && date <= asked ? { rate: Decimal.parse(rate), date } : undefined,
+    currency === "USD" && date <= asked
+      ? { rate: Decimal.parse(rate), date, dated: true, event_id: "", source: "ecb" }
+      : undefined,
 });
 
 /** The portfolio with dollars in a second account too. */
@@ -243,10 +245,10 @@ describe("netWorth, foreign cash with the ECB history", () => {
     const view = netWorth(project(portfolio()), "2027-06-30", settings, ecb("2", "2027-07-09"));
     const usd = view.cash.rows.find((row) => row.currency === "USD");
     expect(usd?.fx_rate?.rate.toString()).toBe("1.25");
-    expect(usd?.fx_source).toBe("ledger");
+    expect(usd?.fx_source).toBeUndefined();
     // Without an external source at all, the same.
     const without = netWorth(project(portfolio()), "2027-06-30", settings);
-    expect(without.cash.rows.find((row) => row.currency === "USD")?.fx_source).toBe("ledger");
+    expect(without.cash.rows.find((row) => row.currency === "USD")?.fx_source).toBeUndefined();
   });
 
   it("warns once per currency, with the date and the origin of the rate used", () => {
@@ -266,10 +268,7 @@ describe("netWorth, foreign cash with the ECB history", () => {
     expect(fromHistory[0]?.event_id).toBe("");
     const fromLedger = stale();
     expect(fromLedger).toHaveLength(1);
-    expect(fromLedger[0]?.details).toMatchObject({
-      currency: "USD",
-      date: "2027-06-30",
-      source: "ledger",
-    });
+    expect(fromLedger[0]?.details).toMatchObject({ currency: "USD", date: "2027-06-30" });
+    expect(fromLedger[0]?.details.source).toBeUndefined();
   });
 });

@@ -23,6 +23,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { type CurrencySeries, type EcbHistory, lastIndexOnOrBefore } from "../ecb/history.js";
 import { resolveRate } from "../ecb/resolve.js";
 import { Decimal } from "../money/decimal.js";
+import type { KnownFxRate } from "../projections/fx-rates.js";
 import { manualPriceAt } from "../projections/manual-price.js";
 import type { ExternalPrices, ExternalQuote, QuoteSource } from "../projections/prices.js";
 import type { LedgerState } from "../projections/state.js";
@@ -212,7 +213,7 @@ const closeQuoteAt = (
  */
 const latestOf =
   (history: EcbHistory | undefined) =>
-  (currency: string, date: CivilDate): { rate: Decimal; date: CivilDate } | undefined => {
+  (currency: string, date: CivilDate): KnownFxRate | undefined => {
     const series = history?.series.get(currency);
     const index = series === undefined ? -1 : lastIndexOnOrBefore(series.dates, date);
     return index < 0
@@ -220,6 +221,10 @@ const latestOf =
       : {
           rate: Decimal.parse((series as CurrencySeries).rates[index] as string),
           date: (series as CurrencySeries).dates[index] as CivilDate,
+          // Published on its date, and read from no event of the ledger.
+          dated: true,
+          event_id: "",
+          source: "ecb",
         };
   };
 

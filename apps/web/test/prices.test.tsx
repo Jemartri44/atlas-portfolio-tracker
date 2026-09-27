@@ -181,7 +181,7 @@ describe("reading prices from the folder the console writes", () => {
     };
     const external = externalOf(quotes, {} as never);
     expect(external?.at("ast_world", "2029-06-29")).toBeUndefined();
-    expect(external?.latestRate?.("USD", "2029-06-29")).toEqual({
+    expect(external?.latestRate?.("USD", "2029-06-29")).toMatchObject({
       rate: Decimal.parse("1.25"),
       date: "2029-06-28",
     });

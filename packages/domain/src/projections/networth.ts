@@ -58,8 +58,8 @@ export interface CashLine {
   fx_stale?: boolean;
   /** The rate came with its own `fx_rate_date`; otherwise its date is the business date of its event. */
   fx_rate_dated?: boolean;
-  /** Where the rate came from: the ECB history, or the ledger when the history has none. */
-  fx_source?: "ecb" | "ledger";
+  /** `ecb` when the rate is the ECB history's; absent when it is the ledger's. */
+  fx_source?: "ecb" | undefined;
   /** Absent = "not converted": never a zero. */
   value_eur?: Money;
 }
@@ -110,27 +110,6 @@ const bucketRowOf = (row: BucketPosition): NetWorthAssetRow => ({
   ...(row.value_eur === undefined ? {} : { value_eur: row.value_eur }),
 });
 
-/** The rate of the history, else the last the ledger knows on or before `date`. */
-const rateFor = (
-  state: LedgerState,
-  currency: Currency,
-  date: CivilDate,
-  external: ExternalPrices | undefined,
-):
-  | { rate: Decimal; date: CivilDate; dated: boolean; source: "ecb" | "ledger"; event_id: string }
-  | undefined => {
-  const published = external?.latestRate?.(currency, date);
-  if (published !== undefined) {
-    return { ...published, dated: true, source: "ecb", event_id: "" };
-  }
-  const known = state.fxRates.get(currency);
-  // Defence in depth, like `priceAt` with a valuation from the future: a view
-  // asked for a past date projects with `asOf` (ADR-0016), so a rate dated
-  // later cannot normally be here; if it is, the honest answer is that the
-  // ledger knew no rate **then**, not a conversion at tomorrow's rate.
-  return known === undefined || known.date > date ? undefined : { ...known, source: "ledger" };
-};
-
 /** Cash by account and currency, converted with the history's rate or the ledger's. */
 const cashBlockOf = (
   state: LedgerState,
@@ -141,7 +120,6 @@ const cashBlockOf = (
 ): CashBlock => {
   const rows: CashLine[] = [];
   const missing: Currency[] = [];
-  const warned = new Set<Currency>();
   let total = Money.zero(EUR);
   for (const [key, balance] of state.cash) {
     if (balance.isZero()) {
@@ -153,8 +131,14 @@ const cashBlockOf = (
       total = total.add(balance);
       continue;
     }
-    const known = rateFor(state, currency, date, external);
-    if (known === undefined) {
+    // The history's rate first, the ledger's only without it. Small on
+    // purpose: this file is on the boot path of the web.
+    const known = external?.latestRate?.(currency, date) ?? state.fxRates.get(currency);
+    // Defence in depth, like `priceAt` with a valuation from the future: a view
+    // asked for a past date projects with `asOf` (ADR-0016), so a rate dated
+    // later cannot normally be here; if it is, the honest answer is that the
+    // ledger knew no rate **then**, not a conversion at tomorrow's rate.
+    if (known === undefined || known.date > date) {
       rows.push({ account_id, currency, balance });
       if (!missing.includes(currency)) {
         missing.push(currency);
@@ -165,13 +149,13 @@ const cashBlockOf = (
     const value = rate.toEur(balance);
     const ageDays = daysBetween(known.date, date);
     const stale = settings.stale_price_days !== undefined && ageDays > settings.stale_price_days;
-    // Once per currency: every account holding it uses the same rate.
-    if (stale && !warned.has(currency)) {
-      warned.add(currency);
+    // Once per currency: every account holding it uses the same rate, and the
+    // cash is the only one that warns into this list.
+    if (stale && !warnings.some((said) => said.details.currency === currency)) {
       warn(
         warnings,
         "stale_fx_rate",
-        `the rate used for ${currency} is ${ageDays} days old (${known.date}, ${known.source}, limit ${settings.stale_price_days})`,
+        `the rate used for ${currency} is ${ageDays} days old (${known.date}, limit ${settings.stale_price_days})`,
         {
           currency,
           age_days: ageDays,

@@ -24,6 +24,7 @@ import { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import type { AssetId, ValuationEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
+import type { KnownFxRate } from "./fx-rates.js";
 import { latestValuations, manualPriceOf } from "./manual-price.js";
 import type { LedgerState, Warning } from "./state.js";
 
@@ -85,7 +86,7 @@ export interface ExternalPrices {
    * informative value of the cash in a foreign currency reads it; nothing
    * fiscal does, which takes the rate of its fiscal date from the ledger.
    */
-  latestRate?(currency: Currency, date: CivilDate): { rate: Decimal; date: CivilDate } | undefined;
+  latestRate?(currency: Currency, date: CivilDate): KnownFxRate | undefined;
 }
 
 export interface PriceLookup {

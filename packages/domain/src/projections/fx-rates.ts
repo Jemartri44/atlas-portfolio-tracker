@@ -22,10 +22,15 @@ import type { LedgerState } from "./state.js";
 export interface KnownFxRate {
   rate: Decimal;
   date: CivilDate;
-  /** The event the rate was read from. */
+  /** The event the rate was read from; empty for a rate of the ECB history. */
   event_id: Ulid;
   /** The rate carried its own `fx_rate_date`; otherwise `date` is the business date. */
   dated: boolean;
+  /**
+   * `ecb` for a rate of the downloaded ECB history, which only the cash of the
+   * net worth reads (live test of 2026-09-27); absent for a rate of the ledger.
+   */
+  source?: "ecb";
 }
 
 interface RawPair {
