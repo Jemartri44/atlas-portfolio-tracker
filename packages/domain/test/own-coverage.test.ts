@@ -1,7 +1,7 @@
-// The ten branches of the domain that only tests of **other** projects used to
-// cover (feature 015, E5; `questions.md` §33.5 and §34): the domain's 100 %
-// is now measured in a pass of its own, so each one is covered here, by the
-// domain's own tests.
+// What only tests of **other** projects used to cover in the domain (feature
+// 015, E5; `questions.md` §33.5 and §34) — ten branches, two functions and
+// the lines in them —: the domain's 100 % is now measured in a pass of its
+// own, so each one is covered here, by the domain's own tests.
 
 import { describe, expect, it } from "vitest";
 import { DraftChangedError } from "../src/ecb/drafts.js";
@@ -10,10 +10,14 @@ import { ruleChangeRates } from "../src/ecb/rule-change.js";
 import { closedYearImpact } from "../src/filings/closed-years.js";
 import { filingProposal } from "../src/filings/proposal.js";
 import { model720 } from "../src/informative/m720.js";
+import type { Draft, SellEvent } from "../src/schema/events.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../src/settings/settings.js";
+import { previewCorrection, previewReversal } from "../src/usecases/preview-event.js";
 import { ecbFixture } from "./fixtures-path.js";
 import { catalogue, LedgerBuilder } from "./ledger-builder.js";
+import { TestStore } from "./memory-store.js";
 import { buy, HAND_SETTINGS, sell, taxBuilder } from "./tax/helpers.js";
+import { testDeps } from "./usecases/helpers.js";
 
 describe("DraftChangedError (ecb/drafts.ts)", () => {
   it("says a draft that is gone apart from one stamped elsewhere", () => {
@@ -126,6 +130,78 @@ describe("model720 (informative/m720.ts)", () => {
           invalid: [expect.objectContaining({ id: orphan.id })],
         }),
       }),
+    );
+  });
+});
+
+describe("filingProposal of a renta (filings/proposal.ts)", () => {
+  it("proposes as deferred the loss a repurchase inside the window defers", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    sell(b, "stock_s", "2027-12-20", "10", "60");
+    buy(b, "stock_s", "2028-01-15", "10", "60");
+    const proposal = filingProposal(b.build(), "renta", 2027, { today: "2028-03-01" });
+    const deferred = proposal.figures.find((figure) => figure.key === "deferred");
+    expect(deferred?.amount_eur.amount.toString()).not.toBe("0");
+  });
+});
+
+describe("the previews of a reversal and of a correction (usecases/preview-event.ts)", () => {
+  const ledger = () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "10",
+      unit_price: "10",
+      trade_date: "2027-01-08",
+      value_date: "2027-01-12",
+    });
+    const sale = b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "5",
+      unit_price: "6",
+      trade_date: "2027-03-08",
+      value_date: "2027-03-10",
+    });
+    const repurchase = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "1",
+      unit_price: "6",
+      trade_date: "2027-04-08",
+      value_date: "2027-04-10",
+    });
+    return { store: new TestStore(b.build()), sale, repurchase };
+  };
+
+  it("previews a reversal as the write would append it, and writes nothing", async () => {
+    const { store, repurchase } = ledger();
+    const preview = await previewReversal(testDeps(store), repurchase.id, "no era mía");
+    expect(preview.candidate.type).toBe("reversal");
+    expect((preview.candidate as unknown as { reverses_id: string }).reverses_id).toBe(
+      repurchase.id,
+    );
+    expect(preview.before.positions.map((row) => row.quantity.toString())).toEqual(["6"]);
+    expect(preview.after.positions.map((row) => row.quantity.toString())).toEqual(["5"]);
+    expect((await store.load()).etag).toBe("0");
+  });
+
+  it("previews a correction with only the warnings of the corrected event", async () => {
+    const { store, sale } = ledger();
+    const {
+      schema_version: _v,
+      id: _id,
+      recorded_at: _at,
+      fingerprint: _fp,
+      ...rest
+    } = sale as SellEvent & { fingerprint?: string };
+    const draft = { ...rest, unit_price: "7" } as unknown as Draft<SellEvent>;
+    const preview = await previewCorrection(testDeps(store), sale.id, draft, "precio mal");
+    expect(preview.warnings.every((warning) => warning.event_id === preview.candidate.id)).toBe(
+      true,
     );
   });
 });
