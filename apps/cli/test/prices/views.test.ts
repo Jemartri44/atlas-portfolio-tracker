@@ -347,21 +347,31 @@ describe("the fiscal output with the ECB history next to the ledger", () => {
   it("does not move a byte with a rate that moves the net worth", async () => {
     // The prediction, written before running it: nothing fiscal moves. The
     // fiscal commands read the history to contrast the rates of the ledger,
-    // so both folders have the same one, except the dollar of the last day,
-    // after every event: only the cash of the net worth can use it.
+    // so both folders publish on the same days and differ only in the dollar
+    // of days that no event of the fixture uses: one after every event, and
+    // one inside each year, before its 31 December (round 1 of PR #102). A
+    // fiscal output that valued the cash with the history's rate "as of"
+    // the year-end — the m720 with `latestRate` — would move with them. The
+    // 31 December itself cannot be the day: the fixture has valuations with
+    // rates of 2027-12-31 and 2028-12-29, which the history contrasts.
     const events = await synthetic();
+    const inYear = ["2027-12-28", "2028-12-27"];
+    const used = JSON.stringify(events);
+    for (const day of inYear) {
+      expect(used).not.toContain(`"${day}"`);
+    }
     const low = await folder(events);
     const high = await folder(events);
     low.instant = "2029-03-01T10:00:00.000Z";
     high.instant = low.instant;
-    await ecbHistory(low.dir, [
-      ["2029-02-28", "1.1"],
+    const history = (dollar: string): [string, string][] => [
+      ["2029-02-28", dollar],
+      ["2028-12-27", dollar],
+      ["2027-12-28", dollar],
       ["2026-01-02", "1.1"],
-    ]);
-    await ecbHistory(high.dir, [
-      ["2029-02-28", "2.5"],
-      ["2026-01-02", "1.1"],
-    ]);
+    ];
+    await ecbHistory(low.dir, history("1.1"));
+    await ecbHistory(high.dir, history("2.5"));
     for (const year of ["2027", "2028"]) {
       for (const argv of FISCAL(year)) {
         const a = await low.atlas(...argv);
