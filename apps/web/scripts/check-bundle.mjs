@@ -1032,29 +1032,87 @@ for (const build of builds) {
 }
 
 /*
- * **Who imports the engine of the sync of the web** (review of PR #97, N1,
- * blocking by decision of the direction), read on the real graph: only the
- * section of the sync in Ajustes — where every order is a button — and the
- * engine itself, statically or with `import()`. Any other importer could sync
- * at boot, on a timer or when the connection comes back. A graph that does
- * not say who imports is refused as such.
+ * **Who may start an order of the sync of the web** (review of PR #97, N1 of
+ * round 1 and B1 of round 2, blocking by decision of the direction), read on
+ * the real graph, with who imports each module, statically or with
+ * `import()`:
+ *
+ * - the section of the sync in Ajustes has **one door**, its card
+ *   `SessionCard`, and only the page of Ajustes goes through it: any other
+ *   importer of a module of the section — the controller, a relay of it, a
+ *   root-absolute path — is refused;
+ * - the **reverse closure** of the engine — every module that reaches it, by
+ *   any path — is the section, the engine, the page of Ajustes and the lazy
+ *   load of that page (`App.tsx`, `main.tsx` and the `index.html` that loads
+ *   it).
+ *
+ * Any other importer could sync at boot, on a timer or when the connection
+ * comes back. A graph that does not say who imports is refused as such.
  */
 const WEB_ENGINE = /(^|\/)apps\/web\/src\/sync\/engine(-held)?\.[jt]s$/;
-const ENGINE_IMPORTERS =
-  /(^|\/)apps\/web\/src\/(routes\/ajustes\/sync\/[^/]+\.[jt]sx?|sync\/engine(-held)?\.[jt]s)$/;
+const SECTION = /(^|\/)apps\/web\/src\/routes\/ajustes\/sync\/[^/]+\.[jt]sx?$/;
+const SECTION_DOOR = /(^|\/)apps\/web\/src\/routes\/ajustes\/sync\/SessionCard\.[jt]sx$/;
+const AJUSTES_PAGE = /(^|\/)apps\/web\/src\/routes\/ajustes\/index\.[jt]sx$/;
+const AJUSTES_LOADERS = /(^|\/)apps\/web\/(src\/(App|main)\.[jt]sx?|index\.html)$/;
+const importersOf = new Map();
 for (const build of builds) {
   for (const chunk of build.chunks ?? []) {
-    for (const module of chunk.modules.filter((each) => WEB_ENGINE.test(each.id))) {
+    for (const module of chunk.modules) {
       if (!Array.isArray(module.importers)) {
         problems.push(`${build.label}${chunk.file}: el grafo no dice quién importa ${module.id}`);
         continue;
       }
-      for (const importer of module.importers.filter((each) => !ENGINE_IMPORTERS.test(each))) {
-        problems.push(
-          `${build.label}${chunk.file}: ${importer} importa el motor de la sincronización de la web fuera de su sección de Ajustes (${module.id})`,
-        );
-      }
+      importersOf.set(module.id, [...(importersOf.get(module.id) ?? []), ...module.importers]);
     }
+  }
+}
+for (const [id, importers] of importersOf) {
+  if (!SECTION.test(id)) {
+    continue;
+  }
+  for (const importer of importers.filter((each) => !SECTION.test(each))) {
+    if (!(SECTION_DOOR.test(id) && AJUSTES_PAGE.test(importer))) {
+      problems.push(
+        `${importer} importa ${id}, un módulo de la sección de la sincronización que no es su puerta`,
+      );
+    }
+  }
+}
+const closure = new Set();
+const pending = [...importersOf.keys()].filter((id) => WEB_ENGINE.test(id));
+while (pending.length > 0) {
+  const id = pending.shift();
+  if (closure.has(id)) {
+    continue;
+  }
+  closure.add(id);
+  // The loaders reach the engine only through the page of Ajustes: past
+  // them, nothing more to walk.
+  if (!AJUSTES_LOADERS.test(id)) {
+    pending.push(...(importersOf.get(id) ?? []));
+  }
+}
+for (const id of closure) {
+  const allowed =
+    WEB_ENGINE.test(id) || SECTION.test(id) || AJUSTES_PAGE.test(id) || AJUSTES_LOADERS.test(id);
+  if (!allowed) {
+    problems.push(
+      `${id} alcanza el motor de la sincronización de la web desde fuera de su sección`,
+    );
+  }
+}
+// And the engine itself is imported only by the section and by itself: a
+// loader that imported it straight would not be caught by the closure above.
+for (const [id, importers] of importersOf) {
+  if (!WEB_ENGINE.test(id)) {
+    continue;
+  }
+  for (const importer of importers.filter(
+    (each) => !SECTION.test(each) && !WEB_ENGINE.test(each),
+  )) {
+    problems.push(
+      `${importer} alcanza el motor de la sincronización de la web desde fuera de su sección (${id})`,
+    );
   }
 }
 

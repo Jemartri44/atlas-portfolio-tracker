@@ -212,11 +212,24 @@ const resolveAcross = (
   from: string,
   specifier: string,
 ): string | undefined => {
-  if (specifier.startsWith(".")) {
-    const target = resolve(dirname(from), specifier);
+  const fileAt = (target: string): string | undefined => {
     const bare = target.replace(/\.(js|jsx)$/, "");
-    return [`${bare}.ts`, `${bare}.tsx`, join(target, "index.ts")].find(
-      (path) => statSync(path, { throwIfNoEntry: false })?.isFile() === true,
+    return [target, `${bare}.ts`, `${bare}.tsx`, join(target, "index.ts")].find(
+      (path) =>
+        /\.tsx?$/.test(path) && statSync(path, { throwIfNoEntry: false })?.isFile() === true,
+    );
+  };
+  if (specifier.startsWith(".")) {
+    return fileAt(resolve(dirname(from), specifier));
+  }
+  // A root-absolute path, which Vite resolves from the root of the web (and an
+  // absolute path of the disk): never a way past a guard (round 2 of the
+  // review of PR #97, B1).
+  if (specifier.startsWith("/")) {
+    return (
+      fileAt(join(repoRoot, "apps", "web", specifier)) ??
+      fileAt(specifier) ??
+      `<unresolved ${specifier}>`
     );
   }
   for (const [name, subpaths] of known) {
@@ -594,21 +607,68 @@ describe("architecture (015): the web configures the sync only through its engin
   });
 
   /**
-   * **Who may start an order of the sync** (review of PR #97, N1, blocking by
-   * decision of the direction): only the section of the sync in Ajustes,
-   * where every order is a button. No other module of the web imports the
-   * engine or reaches it through a relay, statically or with `import()`, so
-   * nothing can sync at boot, on a timer or when the connection comes back.
-   * The build holds the same on the real graph (`check-bundle.mjs`).
+   * **Who may start an order of the sync** (review of PR #97, N1 of round 1
+   * and B1 of round 2, both blocking by decision of the direction): only the
+   * section of the sync in Ajustes, where every order is a button. The
+   * section has **one door**: its card, `SessionCard`, which only the page of
+   * Ajustes imports. No other module imports anything of the section — the
+   * controller, the engine, a relay of either — statically, with `import()` or
+   * through a root-absolute path; so nothing can sync at boot, on a timer or
+   * when the connection comes back. The build holds the same on the real
+   * graph (`check-bundle.mjs`).
    */
-  it("reaches the engine only from the section of the sync in Ajustes", () => {
-    const section = join(webSrc, "routes", "ajustes", "sync");
-    const inSection = (file: string): boolean => file.startsWith(`${section}/`);
-    expect(listSources(section).length).toBeGreaterThan(0);
-    const outside = listSources(webSrc).filter((file) => !inSection(file) && !ENGINES.has(file));
-    const violations = [...reach(outside, new Set(listSources(section)))]
-      .filter(([file]) => ENGINES.has(file))
-      .map(([, chain]) => chainText(chain));
+  const SECTION = join(webSrc, "routes", "ajustes", "sync");
+  const AJUSTES = join(webSrc, "routes", "ajustes", "index.tsx");
+  const DOOR = join(SECTION, "SessionCard.tsx");
+  const inSection = (file: string): boolean => file.startsWith(`${SECTION}/`);
+
+  it("keeps the section of the sync behind its one door", () => {
+    expect(statSync(DOOR, { throwIfNoEntry: false })?.isFile()).toBe(true);
+    const known = packages();
+    const violations: string[] = [];
+    for (const file of listSources(webSrc).filter((each) => !inSection(each))) {
+      for (const binding of parse(file).bindings) {
+        const target = resolveAcross(known, file, binding.specifier);
+        if (target === undefined || !(inSection(target) || ENGINES.has(target))) {
+          continue;
+        }
+        const door =
+          file === AJUSTES &&
+          target === DOOR &&
+          binding.how === "import" &&
+          binding.name === "SessionCard";
+        if (!door && !(ENGINES.has(file) && ENGINES.has(target))) {
+          violations.push(
+            `${relative(repoRoot, file)}: ${binding.how} ${binding.name} from ${binding.specifier}`,
+          );
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * And by the **reverse closure** of the engine: whoever reaches it, by any
+   * path, is the section, the page of Ajustes, or the lazy load of that page
+   * (`App.tsx`, and `main.tsx` that mounts it) — and those two only through
+   * the page.
+   */
+  it("keeps whoever reaches the engine inside the section of the sync", () => {
+    const LOADERS = new Set([join(webSrc, "App.tsx"), join(webSrc, "main.tsx")]);
+    const reachesEngine = (file: string, stop: ReadonlySet<string> = new Set()) =>
+      [...reach([file], stop)].find(([reached]) => ENGINES.has(reached));
+    const violations: string[] = [];
+    for (const file of listSources(webSrc)) {
+      if (inSection(file) || ENGINES.has(file) || file === AJUSTES) {
+        continue;
+      }
+      const found = LOADERS.has(file)
+        ? reachesEngine(file, new Set([AJUSTES]))
+        : reachesEngine(file);
+      if (found !== undefined) {
+        violations.push(chainText(found[1]));
+      }
+    }
     expect(violations).toEqual([]);
   });
 
@@ -698,8 +758,9 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
       "el bundle lleva un fuente",
       "ningún grafo dice de dónde sale este fichero",
       "lleva código incrustado como URL data:",
-      // Review of PR #97, N1.
-      "importa el motor de la sincronización de la web fuera de su sección de Ajustes",
+      // Review of PR #97, N1 of round 1 and B1 of round 2.
+      "un módulo de la sección de la sincronización que no es su puerta",
+      "alcanza el motor de la sincronización de la web desde fuera de su sección",
       "el grafo no dice quién importa",
     ]) {
       expect(script).toContain(family);
