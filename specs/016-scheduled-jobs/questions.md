@@ -428,3 +428,14 @@ build 0 14s          (arranque y total del paquete web sin cambios; jobs.zip 1.5
 ### 12.7 Congelado
 
 **Congelada la ronda 1 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `8bd1a2a`. No se empuja nada más hasta la palabra de la dirección.
+
+## 13. Revisión de la PR #104, ronda 2: decisiones de la dirección y arreglos (2026-09-27)
+
+Revisión sobre `003ee81` (comentario 5858858950): un bloqueante pequeño, residuo de la B1 de idempotencia. Decisiones de la dirección, del mismo día:
+
+- **R2-B1.** En `run.ts`, si se llegó a marcar `sending` y el *runner* **devuelve** `failed`, se escribe `send_unknown`, igual que si hubiera lanzado. Test en `cuts.test.ts` (`weekly_review` con un *runner* de prueba: `ses.attempts` se queda en 1) y su mutante.
+- **R2-N1.** El guardián del reloj cubre también `packages/adapters/src/aws/index.ts` y los tests de `packages/adapters/test/aws/jobs*`. Mata el mutante con `Date.now()` en `aws/index.ts`.
+- **R2-N2.** Se deja como está.
+- **Textos de E4 en `contracts/mail.md` §2** (se construyen en E4; el contrato se corrige ya):
+  - `weekly_review`: los porcentajes y los puntos de desviación se quedan (P9 permite porcentajes);
+  - `informative_thresholds`: texto neutro, por ejemplo «Revisa si te corresponde presentar el modelo 720/721 de <año>», sin la palabra «umbral», sin cifras y sin decir si se supera: el correo no deja deducir ninguna cota del patrimonio.
