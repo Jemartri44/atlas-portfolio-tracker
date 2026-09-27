@@ -66,6 +66,10 @@
       "types": "./dist/aws/sdk.d.ts",
       "import": "./dist/aws/sdk.js"
     },
+    "./aws-admin": {
+      "types": "./dist/aws/sdk-admin.d.ts",
+      "import": "./dist/aws/sdk-admin.js"
+    },
     "./access": {
       "types": "./dist/access/crypto.d.ts",
       "import": "./dist/access/crypto.js"

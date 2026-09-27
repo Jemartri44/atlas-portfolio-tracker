@@ -2,7 +2,6 @@
 
 import {
   cashBalances,
-  deepCheck,
   type FingerprintWaiver,
   fiscalLots,
   type IntegrityFinding,
@@ -18,6 +17,7 @@ import {
   type Warning,
 } from "@atlas/domain";
 import { foreignRatesOf, type RateCheck } from "@atlas/domain/ecb";
+import { deepCheck } from "@atlas/domain/tools";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { day, describeEcbFinding } from "../output/ecb.js";

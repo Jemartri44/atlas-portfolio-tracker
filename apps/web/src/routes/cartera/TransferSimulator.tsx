@@ -8,7 +8,7 @@
 // `CLAUDE.md`, `docs/business-rules.md` §5.2).
 
 import type { LedgerState, Settings } from "@atlas/domain";
-import { simulateTransfer } from "@atlas/domain";
+import { simulateTransfer } from "@atlas/domain/tools";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import {
   Amount,

@@ -23,13 +23,14 @@ const stamp = (now: Date): string => {
 };
 
 /**
- * `pre-sync-2026-09-25T061200-0123456789ab.jsonl` and its two siblings. An
+ * `pre-sync-2026-09-25T061200-0123456789ab.jsonl` and its siblings — `pre-restore-…`
+ * is the remote's, before `atlas admin restore` (ADR-0032, step 5). An
  * archive is never overwritten: when the name is taken — a write cut after
  * archiving and retried within the same second —, `-2`, `-3`… as `compact`
  * does.
  */
 export const syncArchiveName = (
-  kind: "sync" | "join" | "redownload",
+  kind: "sync" | "join" | "redownload" | "restore",
   now: Date,
   etag: string,
   attempt = 1,

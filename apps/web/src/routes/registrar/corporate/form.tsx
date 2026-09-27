@@ -3,8 +3,9 @@
 // included. Problems are said under their field or next to the buttons.
 
 import type { EventPreview, LedgerState } from "@atlas/domain";
-import { accounts, corporateActionDraft } from "@atlas/domain";
+import { accounts } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
+import { corporateActionDraft } from "@atlas/domain/tools";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
 import { ClosedYearNotice, Notice, Tag } from "../../../components/index.js";

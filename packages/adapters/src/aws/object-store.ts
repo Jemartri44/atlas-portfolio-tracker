@@ -37,3 +37,16 @@ export interface ObjectStore {
    */
   list(prefix: string): Promise<readonly ListedObject[]>;
 }
+
+/**
+ * What the **administration** adds (feature 015, E5; ADR-0032), never given to
+ * the API: an older version of an object, to restore from it, and every object
+ * under a prefix at any depth, to copy `documents/` and `imports/` to disk.
+ * Still no delete.
+ */
+export interface AdminObjectStore extends ObjectStore {
+  /** `GetObject` with `VersionId`: nothing when the key or the version does not exist. */
+  getVersion(key: string, versionId: string): Promise<StoredObject | undefined>;
+  /** `ListObjectsV2` with no delimiter: every object under `prefix`, every page, by key. */
+  listAll(prefix: string): Promise<readonly ListedObject[]>;
+}

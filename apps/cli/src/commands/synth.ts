@@ -5,7 +5,6 @@ import { access } from "node:fs/promises";
 import { FileLedgerStore } from "@atlas/adapters";
 import {
   DomainError,
-  deepCheck,
   encodeLine,
   generateLedger,
   integrity,
@@ -13,6 +12,7 @@ import {
   projectLedger,
   summarizeLedger,
 } from "@atlas/domain";
+import { deepCheck } from "@atlas/domain/tools";
 import { assertKnownFlags, type Flags, requireFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";

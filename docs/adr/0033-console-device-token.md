@@ -292,3 +292,7 @@ Decidida por la dirección el 2026-09-26 sobre `specs/015-api-access/questions.m
 - **`amr` con `mfa`**: sin objeto desde la nota del 2026-09-25 (`mfa_required` no se emite).
 
 Siguen siendo de la 017 los permisos de KMS para `aws/ssm` y que la función de la CSP de CloudFront respete la `sandbox` de la página.
+
+## Nota del 2026-09-27 (feature 015, E5): el MFA de la revocación sin Google
+
+Decidida por la dirección el 2026-09-27 (`specs/015-api-access/questions.md` §34). El punto 8, en la nota del 2026-09-25 sobre ADR-0034, dice que revocar todos los tokens sin Google lo hace el rol de administración «asumido con MFA independiente de Google». **Ese MFA lo pide la CLI de AWS, no la consola de Atlas.** La cadena estándar del SDK que usa `atlas admin revoke-all-tokens` no pide el código de un perfil con `mfa_serial`, así que la orden se ejecuta sobre una sesión ya abierta: `aws sso login`, o `aws configure export-credentials` después de que la CLI de AWS pida el código. El procedimiento es `docs/runbooks/revoke-all-tokens.md`, y la nota del mismo día en ADR-0034 da las fuentes.

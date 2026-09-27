@@ -56,7 +56,10 @@ export const compactPermission = (presence: SyncPresence): Refusal | undefined =
 export const rewritePermission = (
   presence: SyncPresence,
   pendingHere: number,
-  devices: readonly (DeviceQueueState & { readonly device_id: string })[],
+  devices: readonly (Pick<DeviceQueueState, "pending" | "held"> & {
+    readonly device_id: string;
+    readonly last_sync_at?: string;
+  })[],
 ): Refusal | undefined => {
   const marker = markerState(presence);
   if (marker === "unreadable") {

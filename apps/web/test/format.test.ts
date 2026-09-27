@@ -397,6 +397,24 @@ describe("the catalogue of names", () => {
     expect(text).not.toContain("acc_ibkr");
     expect(describeError(error, { privacy: false })).toContain("acc_ibkr");
   });
+
+  // Round 2 of the review of PR #98, R2-B1: an annulment with a key twice
+  // cannot be annulled, so its remedy is the file; any other line, annulling.
+  it("gives the remedy of a key twice by the kind of line", () => {
+    const of = (type: string) =>
+      describeError(
+        {
+          code: "duplicate_key",
+          message: "english",
+          details: { id: "01ARYZ6S41TSV4RRFFQ69G5FAV", type },
+        } as unknown as ProjectionError,
+        { privacy: false },
+      );
+    expect(of("cash_deposit")).toContain("Anúlala");
+    expect(of("cash_deposit")).not.toContain("corrígela a mano");
+    expect(of("reversal")).toContain("corrígela a mano en el archivo");
+    expect(of("reversal")).not.toContain("Anúlala");
+  });
 });
 
 /**

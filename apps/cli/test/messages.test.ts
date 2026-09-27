@@ -63,3 +63,25 @@ describe("describeError: the per-asset-type settings name the type and the value
     expect(rule).toContain("value_date");
   });
 });
+
+// Round 2 of the review of PR #98, R2-B1: an annulment with a key twice cannot
+// be annulled, so its remedy is the file; any other line, annulling.
+describe("describeError: the remedy of a key twice, by the kind of line", () => {
+  const of = (type: string) =>
+    describeError(
+      new ValidationError("duplicate_key", "a key appears twice", {
+        id: "01ARYZ6S41TSV4RRFFQ69G5FAV",
+        type,
+      }),
+    );
+
+  it("sends an ordinary line to its annulment", () => {
+    expect(of("cash_deposit")).toContain("Anúlala (atlas delete)");
+    expect(of("cash_deposit")).not.toContain("corrígela a mano");
+  });
+
+  it("sends an annulment to the file, since it cannot be annulled", () => {
+    expect(of("reversal")).toContain("corrígela a mano en el fichero");
+    expect(of("reversal")).not.toContain("atlas delete");
+  });
+});

@@ -6,7 +6,8 @@
 // is repeated on the screen every single time, because it is the mistake this
 // project exists to avoid (trap 1 of `CLAUDE.md`).
 
-import type { Money, Quantity, TransferSimulation, Warning } from "@atlas/domain";
+import type { Money, Quantity, Warning } from "@atlas/domain";
+import type { TransferSimulation } from "@atlas/domain/tools";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 
 export interface TransferRowView {

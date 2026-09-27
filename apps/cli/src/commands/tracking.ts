@@ -1,13 +1,7 @@
 // atlas order place|cancel|note|list · atlas transfer request|update|pending|simulate
 
-import {
-  daysBetween,
-  pendingOrders,
-  settingsAt,
-  simulateTransfer,
-  transferWatch,
-  type Warning,
-} from "@atlas/domain";
+import { daysBetween, pendingOrders, settingsAt, transferWatch, type Warning } from "@atlas/domain";
+import { simulateTransfer } from "@atlas/domain/tools";
 import {
   assertKnownFlags,
   booleanFlag,

@@ -5,7 +5,7 @@
 import { access, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEFAULT_SETTINGS } from "@atlas/domain";
+import { DEFAULT_SETTINGS, encodeLine, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { COMMANDS } from "../../src/main.js";
@@ -164,6 +164,14 @@ const INVOCATIONS: {
   // The sync reads the folder's own state (sync/) and its remote; it never
   // shows the figures of the ledger (feature 015, E3).
   { command: "sync", argv: ["sync", "held"], readOnly: true, folderOnly: true },
+  // The administration works on the remote with the role of administration,
+  // never on the figures of the local ledger (feature 015, E5).
+  {
+    command: "admin",
+    argv: ["admin", "devices", "--env", "test"],
+    readOnly: true,
+    folderOnly: true,
+  },
 ];
 
 const HEADER = "inválido";
@@ -287,5 +295,66 @@ describe("writing inside a git working tree", () => {
     expect(await h.exec(["export", "--format", "csv", "--out", target])).toBe(0);
     expect(h.text()).not.toContain("dentro del repositorio");
     await rm(target, { force: true });
+  });
+});
+
+// Q12, option (b) (§29 and §33): a line with a key twice — a hand edit — is
+// read with its last value and reported by `atlas check` as invalid, with its
+// id; the other commands answer on the degraded ledger.
+describe("a line with a key twice", () => {
+  const twice = () => {
+    const lines = configured().map((event) => encodeLine(event as unknown as LedgerEvent));
+    const last = lines.at(-1) as string;
+    lines[lines.length - 1] = last.replace(
+      '"bucket_pct_of_contribution":"10"',
+      '"bucket_pct_of_contribution":"99","bucket_pct_of_contribution":"10"',
+    );
+    expect(lines.at(-1)).not.toBe(last);
+    return harness({ lines, confirm: true });
+  };
+
+  it("is reported by check as invalid, with its id and the reason", async () => {
+    const h = twice();
+    expect(await h.exec(["check"])).not.toBe(0);
+    expect(h.text()).toContain("01ARYZ6S41TSV4RRFFQ69G5SET");
+    expect(h.text()).toContain("duplicate_key");
+  });
+
+  it("leaves the read-only commands answering on the degraded ledger", async () => {
+    const h = twice();
+    expect(await h.exec(["positions"])).toBe(0);
+    expect(h.text()).toContain(HEADER);
+  });
+
+  // The remedy the message gives, walked whole (review of PR #98, B1; §35):
+  // annulled, the line stops being invalid, and every output that refused the
+  // ledger answers again.
+  it("is remedied by annulling it: check, compact, the renta and the 720 answer again", async () => {
+    const h = twice();
+    expect(await h.exec(["tax", "2027"])).not.toBe(0);
+    expect(h.text()).toContain("tax_ledger_invalid");
+    h.reset();
+    const code = await h.exec([
+      "delete",
+      "01ARYZ6S41TSV4RRFFQ69G5SET",
+      "--reason",
+      "clave repetida",
+      "--yes",
+    ]);
+    expect(code).toBe(0);
+    expect(h.text()).toContain("Registrado reversal");
+    h.reset();
+    expect(await h.exec(["check"])).toBe(0);
+    expect(h.text()).not.toContain("duplicate_key");
+    for (const argv of [
+      ["compact", "--yes"],
+      ["tax", "2027"],
+      ["m720", "2027"],
+    ]) {
+      h.reset();
+      expect({ argv, code: await h.exec(argv) }).toEqual({ argv, code: 0 });
+      expect(h.text()).not.toContain("tax_ledger_invalid");
+      expect(h.text()).not.toContain("invalid_events");
+    }
   });
 });

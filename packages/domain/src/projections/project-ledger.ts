@@ -9,7 +9,7 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
-import { DomainError, ProjectionError, UnsupportedEventError } from "../errors.js";
+import { DomainError, ProjectionError, UnsupportedEventError, ValidationError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { isReservedEventType } from "../schema/envelope.js";
 import type {
@@ -26,6 +26,7 @@ import type {
   ThesisClosedEvent,
   ThesisOpenedEvent,
 } from "../schema/events.js";
+import { REPEATED_KEY } from "../schema/json-keys.js";
 import { fiscalDateOf } from "../settings/fiscal-date.js";
 import { DEFAULT_SETTINGS, type Settings } from "../settings/settings.js";
 import {
@@ -321,6 +322,14 @@ const applyCatalogue = (state: LedgerState, event: CatalogueEvent): void => {
   }
 };
 
+/**
+ * With its type (round 2 of the review of PR #98, R2-B1): the remedy of an
+ * annulment with a key twice is not another annulment — it cannot be
+ * reversed — and the interfaces say which one it is.
+ */
+const duplicateKey = (event: LedgerEvent): ValidationError =>
+  new ValidationError("duplicate_key", "a key appears twice", { id: event.id, type: event.type });
+
 export const projectLedger = (
   events: readonly LedgerEvent[],
   options: ProjectOptions = {},
@@ -353,7 +362,18 @@ export const projectLedger = (
     }
     state.positionOf.set(event.id, position);
   });
+  const repeated: LedgerEvent[] = [];
   for (const event of events) {
+    if (REPEATED_KEY.has(event)) {
+      // Q12 (b): a line with a key twice is read, never trusted. A reversal
+      // with one annuls nothing; any other waits for the reversals below.
+      if (event.type === "reversal") {
+        reject(event, duplicateKey(event));
+      } else {
+        repeated.push(event);
+      }
+      continue;
+    }
     if (isReservedEventType(event.type)) {
       reject(event, new UnsupportedEventError(event.type, event.id));
       continue;
@@ -361,6 +381,14 @@ export const projectLedger = (
     if (event.type === "reversal") {
       skipped.add(event.id);
       guarded(event, () => applyReversal(state, events, event));
+    }
+  }
+  // The remedy of the messages (review of PR #98, B1; §35): annulled by a live
+  // reversal, the line counts as annulled and is not invalid any more; the
+  // ledger is append-only, and otherwise only another hand edit would do.
+  for (const event of repeated) {
+    if (!state.reversed.has(event.id)) {
+      reject(event, duplicateKey(event));
     }
   }
   // Corrections. A correction needs its original reversed (anywhere in the

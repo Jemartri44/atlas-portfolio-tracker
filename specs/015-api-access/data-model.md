@@ -1,6 +1,6 @@
 # Modelo de datos y formatos, escritos como contrato: `015-api-access`
 
-Todos los formatos de esta feature viven **fuera del libro**: ninguno añade un tipo de evento ni un campo, ni sube `schema_version` (§2 bis del encargo). Los lectores son **estrictos**: una clave desconocida, un tipo que no es el suyo o un formato que no es `1` hacen el objeto **ilegible**, con su código, y nunca se leen como «vacío» ni como «válido por defecto». **Aprobado por la dirección el 2026-09-25** (`questions.md` §8), con una precisión: **ninguna cookie lleva el correo**. Queda abierto `admin.json` (§9, E5); el correo del código de la consola se decidió en Q8 (a) (§1.4).
+Todos los formatos de esta feature viven **fuera del libro**: ninguno añade un tipo de evento ni un campo, ni sube `schema_version` (§2 bis del encargo). Los lectores son **estrictos**: una clave desconocida, un tipo que no es el suyo o un formato que no es `1` hacen el objeto **ilegible**, con su código, y nunca se leen como «vacío» ni como «válido por defecto». **Aprobado por la dirección el 2026-09-25** (`questions.md` §8), con una precisión: **ninguna cookie lleva el correo**. `admin.json` (§9, E5) lo aceptó la dirección el 2026-09-27; el correo del código de la consola se decidió en Q8 (a) (§1.4).
 
 Convenciones: los instantes son ISO 8601 en UTC con `Z`, salvo `iat` y `exp` de las cargas firmadas, que son segundos Unix enteros. Los identificadores aleatorios usan base64url sin relleno.
 
@@ -185,7 +185,7 @@ Una línea, terminada en `\n`, **exactamente** con esas tres claves:
 
 **Lo escriben solo inicializar y unirse**, bajo el cerrojo y de forma atómica. El temporal es `sync/remote.json.tmp-<pid>-<hora>`, y el barrido de la 015 lo incluye. `atlas remote login` **no escribe nada** en la carpeta del libro. Los estados intermedios, en plan §7.
 
-## 9. La configuración local de la administración (PROPUESTA, E5)
+## 9. La configuración local de la administración (E5; aceptada por la dirección el 2026-09-27, `questions.md` §34)
 
 `~/.config/atlas/admin.json`. Lo escribe el usuario y **la aplicación nunca lo escribe**. No es secreto, pero tampoco va al repositorio:
 

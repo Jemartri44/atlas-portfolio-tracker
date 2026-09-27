@@ -13,8 +13,8 @@ import {
   netWorthSeries,
   projectLedger,
   settingsAt,
-  simulateTransfer,
 } from "@atlas/domain";
+import { simulateTransfer } from "@atlas/domain/tools";
 import { describe, expect, it } from "vitest";
 import { nameIndex } from "../src/format/names.js";
 import { feeLinesError, toCorporateParams } from "../src/routes/registrar/corporate/params.js";
