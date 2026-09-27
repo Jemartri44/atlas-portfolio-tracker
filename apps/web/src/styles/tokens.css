@@ -95,8 +95,8 @@
   /* The row kept in *Atención* for the 720 (feature 020, M2): the height the
      notice has when it arrives, measured on the user's phone and monitor, so
      nothing jumps when it fills. */
-  --notice-reserved-h: 7.375rem; /* 118 at 400px */
-  --notice-reserved-h-wide: 4.375rem; /* 70 at 2045px */
+  --notice-reserved-h: 7.4727rem; /* 119.56 at 400px */
+  --notice-reserved-h-wide: 4.461rem; /* 71.38 at 2045px */
 
   /* ---- Layout ----------------------------------------------------------- */
 

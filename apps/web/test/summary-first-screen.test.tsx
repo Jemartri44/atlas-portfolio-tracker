@@ -134,12 +134,12 @@ describe("the place of the 720 and the 721 in Atención", () => {
 
 describe("the row kept in Atención", () => {
   it("has the height of the notice that fills it, on the phone and on the monitor", async () => {
-    // Measured in Chromium with the golden ledger on 20/01/2029: 118px at
-    // 400 and 70px at 2045, so nothing in the first screenful jumps when the
-    // notice arrives (`medidas.json`, «jumps»).
+    // Measured in Chromium with the golden ledger on 20/01/2029: 119.56px at
+    // 400 and 71.38px at 2045, so nothing in the first screenful jumps when
+    // the notice arrives (`medidas.json`, «jumps»).
     for (const [width, height] of [
-      [400, "118px"],
-      [2045, "70px"],
+      [400, "119.5632px"],
+      [2045, "71.376px"],
     ] as const) {
       withStyles(width);
       const host = await show("/", () => <NoticeList items={[]} label="Avisos" reserve />);
