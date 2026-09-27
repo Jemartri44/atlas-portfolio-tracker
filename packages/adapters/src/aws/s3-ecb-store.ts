@@ -15,23 +15,31 @@
 //
 // Every object the three steps write is read **at the start, together with
 // the manifest**, and each write is conditioned on **that** read (review of
-// PR #106, B1): a run that wrote any of them after this one verified the
-// history makes this one stop, so two runs that verified the same history
-// never leave one's file under the other's manifest. A write whose condition
-// fails — another run, or the administration — is `EcbStoreConflict`, and the
-// run stops without retrying (§8.1 P11).
+// PR #106, B1): two activations that verified the same history never leave
+// one's file under the other's manifest. A write whose condition fails —
+// another run, or the administration — is `EcbStoreConflict`, and the run
+// stops without retrying (§8.1 P11).
 //
 // `recover()`, called before each update, undoes a cut between 2 and 3 when
 // `previous/` holds exactly what the manifest records (`ecbRecovery`). What it
-// cannot undo is **damaged**, and the ECB job then rebuilds the history whole
-// from the official ZIP with `rebuild()` (a new generation, conditional too),
-// so the cloud never stays stopped on a damaged history. The one mix the
-// conditions cannot rule out without a lock — two runs of different sources
-// writing each other's file name at once — ends damaged, and is rebuilt.
+// cannot undo is **damaged**, and the ECB job rebuilds the history from the
+// official ZIP with `rebuild()` — compared first with the last generation
+// that still reads (`generations()`, ADR-0029, note of 2026-09-28).
+//
+// **Two interleavings the conditions cannot rule out without a lock**, because
+// S3 cannot condition a write on the ETag of **another** object (round 2 of
+// the review of PR #106, R2-N2): (1) two activations of different sources
+// writing each other's file name at once; (2) an activation between its steps
+// 2 and 3 while another run's `recover()` undoes its file — the first then
+// writes its manifest over the one the undo did not touch. Both end
+// **damaged**, never read as if they matched; the next run's rebuild resolves
+// them, and the reserved concurrency 1 of the function (feature 017) keeps two
+// runs from ever meeting.
 
 import { createHash } from "node:crypto";
 import type {
   DownloadedHistory,
+  EcbGeneration,
   EcbHistoryStore,
   StoredHistory,
   StoredHistoryMeta,
@@ -42,6 +50,8 @@ import type { ObjectStore, StoredObject } from "./object-store.js";
 
 const DIR = "reference/ecb/";
 const MANIFEST = `${DIR}manifest.json`;
+/** The two names a file in force can have, one per source (ADR-0029, third amendment). */
+const FILES = [fileOfSource("zip"), fileOfSource("api")];
 
 const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
@@ -145,6 +155,31 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
     }
     await this.put(`${DIR}${decision.file}`, (previous as StoredObject).body, current);
     return "undone";
+  }
+
+  /**
+   * The generations left for the rebuild to compare with (round 2 of the
+   * review of PR #106, R2-N1), newest first: the file the manifest names and
+   * its `previous/`; with no manifest that reads, both names of both.
+   */
+  async generations(): Promise<readonly EcbGeneration[]> {
+    const manifest = await this.objects.get(MANIFEST);
+    const active = manifest === undefined ? undefined : activeHistoryOf(textOf(manifest.body));
+    const names =
+      active === undefined
+        ? [...FILES, ...FILES.map((file) => `previous/${file}`)]
+        : [active.file, `previous/${active.file}`];
+    const found: EcbGeneration[] = [];
+    for (const name of names) {
+      const stored = await this.objects.get(`${DIR}${name}`);
+      if (stored !== undefined) {
+        found.push({
+          text: textOf(stored.body),
+          source: name.endsWith(fileOfSource("api")) ? "api" : "zip",
+        });
+      }
+    }
+    return found;
   }
 
   /**

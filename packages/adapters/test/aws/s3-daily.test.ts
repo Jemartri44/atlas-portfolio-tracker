@@ -283,6 +283,30 @@ describe("reference/ecb/ in the bucket (R31)", () => {
     expect(manifest.rejected).toHaveLength(1);
   });
 
+  it("gives the generations left to compare with, newest first (review of PR #106, R2-N1)", async () => {
+    const s3 = new TestOnlyFakeS3();
+    const store = new S3EcbHistoryStore(s3);
+    expect(await store.generations()).toEqual([]);
+    const old = await load();
+    await store.activate(download(old));
+    await store.activate(
+      download(withNewDay(new TextDecoder().decode(old)), "zip", "2026-10-02T15:30:00.000Z"),
+    );
+    s3.seed("reference/ecb/eurofxref-hist.csv", "damaged");
+    expect(await store.generations()).toEqual([
+      { text: "damaged", source: "zip" },
+      { text: new TextDecoder().decode(old), source: "zip" },
+    ]);
+    // With no manifest that reads: both names of both, the API's as such.
+    s3.seed("reference/ecb/manifest.json", "not a manifest");
+    s3.seed("reference/ecb/api-exr.csv", "api");
+    expect((await store.generations()).map((generation) => generation.source)).toEqual([
+      "zip",
+      "api",
+      "zip",
+    ]);
+  });
+
   it("rebuilds over a manifest that does not read, and stops at another writer", async () => {
     const s3 = new TestOnlyFakeS3();
     const store = new S3EcbHistoryStore(s3);
