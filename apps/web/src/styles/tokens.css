@@ -191,6 +191,22 @@
   }
 }
 
+/* The monitor (≥ 1800; the user's is 2045): one more step of type, a taller
+   chart, more air and a wider reading container (feature 020, M4). Placed
+   after the desktop step so it wins from 1800 on. */
+@media (min-width: 112.5rem) {
+  :root {
+    --text-md: 1rem; /* 16 */
+    --text-lg: 1.1875rem; /* 19 */
+    --text-xl: 1.75rem; /* 28 */
+    --text-display: 3rem; /* 48 */
+    --chart-h: clamp(15rem, 28vh, 22rem);
+    --gutter: var(--space-8); /* 40 */
+    --grid-gap: var(--space-6); /* 24 */
+    --content-max: 115rem; /* 1840 */
+  }
+}
+
 @media (min-width: 40rem) and (max-width: 63.99rem) {
   :root {
     --gutter: var(--space-6);
