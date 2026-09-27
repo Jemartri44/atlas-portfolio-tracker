@@ -6,6 +6,7 @@
 // that denies, a function without configuration, an event with a sentinel in
 // it. `stdout` and `stderr` are captured too, not only the logger.
 
+import { claimRecord, recordIn, serializeRunRecord } from "@atlas/domain/jobs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSes } from "../../../packages/adapters/test/aws/test-only-fake-ses.js";
@@ -53,7 +54,48 @@ const check = (logs: readonly string[], subjects: readonly string[] = []) => {
   }
 };
 
+/** A failed backup, and a record that tries to put an id and an ISIN in a warning. */
+const seedProducers = (jobs: ReturnType<typeof setupJobs>) => {
+  jobs.s3.seed(
+    "jobs/backup/monthly_backup/2026-10.json",
+    serializeRunRecord(
+      recordIn(
+        claimRecord("monthly_backup", "2026-10", "2026-10-01T01:15:00Z"),
+        "failed",
+        "2026-10-01T01:16:00Z",
+        {
+          outcome: { code: "task_error" },
+          findings: [
+            { code: "task_failed", subject: "ast_world" },
+            { code: "source_failing", subject: "IE00B4L5Y983" },
+          ],
+        },
+      ),
+    ),
+  );
+  jobs.s3.seed("jobs/integrity/quarterly_integrity/2026-Q4.json", "{}\n");
+};
+
 describe("the log of the jobs (G7, R15)", () => {
+  it("carries none of them when the mail function sends warnings, is refused or loses them (privacy N3)", async () => {
+    for (const trouble of ["none", "refuse", "lose"] as const) {
+      const jobs = setupJobs();
+      seedProducers(jobs);
+      if (trouble === "refuse") {
+        jobs.ses.refuseNext(2);
+      }
+      if (trouble === "lose") {
+        jobs.ses.loseAfterSendingNext();
+      }
+      await jobs.run(["dispatch_findings", "monthly_reminder"]);
+      expect(jobs.ses.attempts.length, trouble).toBeGreaterThan(1);
+      const subjects = jobs.ses.attempts.map((mail) => mail.subject);
+      check(jobs.logs, [...subjects, "IE00B4L5Y983", "Ha fallado", "no se puede leer"]);
+      expect(jobs.ses.attempts.map((mail) => mail.body).join("\n")).not.toContain("IE00B4L5Y983");
+      expect(jobs.ses.attempts.map((mail) => mail.body).join("\n")).not.toContain("ast_world");
+    }
+  });
+
   it("carries none of them when the reminder goes, amounts on", async () => {
     const jobs = setupJobs();
     jobs.ssm.set("/atlas/prod/mail/amounts", "on");

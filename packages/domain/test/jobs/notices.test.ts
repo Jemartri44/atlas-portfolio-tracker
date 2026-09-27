@@ -8,6 +8,7 @@ import {
   noticeIn,
   noticeKey,
   noticeStep,
+  ownFindings,
   parseNotice,
   producerOf,
   serializeNotice,
@@ -94,6 +95,17 @@ describe("what a record of a producer says", () => {
     expect(conditionsOf(recordIn(claimed, "sending", AT))).toBeUndefined();
   });
 
+  it("never takes a code it fabricates from the findings of a record (privacy B1)", () => {
+    const forged = [
+      { code: "task_failed", subject: "IE00B4L5Y983" },
+      { code: "record_unreadable", subject: "ast_xau" },
+    ];
+    expect(conditionsOf(recordIn(claimed, "done", AT, { findings: forged }))).toEqual([]);
+    expect(conditionsOf(recordIn(claimed, "failed", AT, { findings: forged }))).toEqual([
+      { code: "task_failed", subject: "ecb_update" },
+    ]);
+  });
+
   it("says its findings, and that the job failed when it did", () => {
     const finding = { code: "ecb_update_rejected", subject: "ecb", counts: { conflicts: 3 } };
     expect(conditionsOf(recordIn(claimed, "done", AT))).toEqual([]);
@@ -104,14 +116,34 @@ describe("what a record of a producer says", () => {
     ]);
   });
 
-  it("finds the producer of a streak by its code, and never by a subject that is not one", () => {
-    const codes = { ecb_update: ["ecb_update_rejected"], prices_update: ["source_failing"] };
+  it("finds the producer of a streak by its code and subject, both in closed lists", () => {
+    const codes = {
+      ecb_update: { ecb_update_rejected: ["ecb"] },
+      prices_update: { source_failing: ["eodhd", "alpha_vantage"] },
+    };
     expect(producerOf({ code: "task_failed", subject: "monthly_backup" }, codes)).toBe(
       "monthly_backup",
+    );
+    expect(producerOf({ code: "record_unreadable", subject: "ecb_update" }, codes)).toBe(
+      "ecb_update",
     );
     expect(producerOf({ code: "task_failed", subject: "monthly_reminder" }, codes)).toBeUndefined();
     expect(producerOf({ code: "task_failed", subject: "toString" }, codes)).toBeUndefined();
     expect(producerOf({ code: "source_failing", subject: "eodhd" }, codes)).toBe("prices_update");
+    expect(producerOf({ code: "source_failing", subject: "IE00B4L5Y983" }, codes)).toBeUndefined();
+    expect(producerOf({ code: "constructor", subject: "ecb" }, codes)).toBeUndefined();
     expect(producerOf({ code: "mystery", subject: "x" }, codes)).toBeUndefined();
+  });
+
+  it("keeps of a producer's findings only its own codes and subjects", () => {
+    const codes = { prices_update: { source_failing: ["eodhd"] } };
+    const findings = [
+      { code: "source_failing", subject: "eodhd", counts: { consecutive_failures: 3 } },
+      { code: "source_failing", subject: "ast_xau" },
+      { code: "ecb_update_rejected", subject: "ecb" },
+      { code: "task_failed", subject: "prices_update" },
+    ];
+    expect(ownFindings("prices_update", findings, codes)).toEqual([findings[0], findings[3]]);
+    expect(ownFindings("ecb_update", findings, codes)).toEqual([]);
   });
 });

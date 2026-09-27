@@ -74,3 +74,7 @@ export const previousPeriod = (frequency: JobFrequency, date: CivilDate): string
 /** Whether a job of this frequency may run on `date`: a yearly job only in January. */
 export const inWindow = (frequency: JobFrequency, date: CivilDate): boolean =>
   frequency !== "yearly" || date.slice(5, 7) === "01";
+
+/** The shape of every period this module writes, to say one back only when it is one. */
+export const PERIOD_SHAPE =
+  /^\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?|-W(0[1-9]|[1-4]\d|5[0-3])|-Q[1-4])?$/;

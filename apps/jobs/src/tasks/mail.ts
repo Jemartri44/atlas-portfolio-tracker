@@ -23,15 +23,15 @@ import {
   type Finding,
   frequencyOf,
   type JobTask,
-  NOTICE_CODES,
   noticeIn,
   noticeMail,
   noticeStep,
+  ownFindings,
   PRODUCER_TASKS,
+  type ProducerFindings,
   periodOf,
   previousPeriod,
   producerOf,
-  type RunRecord,
   reminderFacts,
   reminderMail,
 } from "@atlas/domain/jobs";
@@ -125,43 +125,67 @@ export const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> 
     : { state: "send_failed", outcome: { code: sent.code, counts: summary } };
 };
 
-/** The last record of a producer that says something: of this period, or else the one before. */
+/** What the last record of a producer says, with where it comes from. */
+interface Said {
+  readonly findings: readonly Finding[];
+  readonly period: string;
+  readonly outcome?: string;
+}
+
+/**
+ * What the last record of a producer says: of this period, or else the one
+ * before. A record that does not read is said too, as `record_unreadable` with
+ * the task as subject (review of PR #104, idempotence N4) — never skipped.
+ * Of a readable one, only what that producer may say (privacy B1).
+ */
 const latestOf = async (
   store: JobsStore,
   task: JobTask,
   context: TaskContext,
-): Promise<RunRecord | undefined> => {
+): Promise<Said | undefined> => {
   const frequency = frequencyOf(task, context.frequencies.frequencies);
   for (const period of [
     periodOf(frequency, context.today),
     previousPeriod(frequency, context.today),
   ]) {
     const read = await store.readRecord(task, period);
-    if (read.kind === "read" && conditionsOf(read.value) !== undefined) {
-      return read.value;
+    if (read.kind === "unreadable") {
+      return {
+        findings: [{ code: "record_unreadable", subject: task }],
+        period,
+        outcome: read.code,
+      };
+    }
+    const said = read.kind === "read" ? conditionsOf(read.value) : undefined;
+    if (read.kind === "read" && said !== undefined) {
+      return {
+        findings: ownFindings(task, said, PRODUCER_FINDINGS),
+        period,
+        ...(read.value.outcome === undefined ? {} : { outcome: read.value.outcome.code }),
+      };
     }
   }
   return undefined;
 };
 
-/** The codes each producer may leave; E2 and E4 add theirs. */
-const PRODUCER_CODES: Readonly<Partial<Record<JobTask, readonly string[]>>> = {};
+/** The codes each producer may leave, each with its closed list of subjects; E2 and E4 add theirs. */
+const PRODUCER_FINDINGS: ProducerFindings = {};
 
 export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult> => {
   const { deps, store } = context;
   const at = () => deps.now().toISOString();
   const counts = { sent: 0, closed: 0, refused: 0, unknown: 0, ignored: 0 };
-  const conditions = new Map<JobTask, readonly Finding[]>();
+  const conditions = new Map<JobTask, Said>();
   for (const task of PRODUCER_TASKS) {
-    const said = conditionsOf(await latestOf(store, task, context));
+    const said = await latestOf(store, task, context);
     if (said !== undefined) {
       conditions.set(task, said);
     }
   }
   const present = (code: string, subject: string): boolean | undefined => {
-    const producer = producerOf({ code, subject }, PRODUCER_CODES);
+    const producer = producerOf({ code, subject }, PRODUCER_FINDINGS);
     const said = producer === undefined ? undefined : conditions.get(producer);
-    return said?.some((finding) => finding.code === code && finding.subject === subject);
+    return said?.findings.some((finding) => finding.code === code && finding.subject === subject);
   };
 
   // Streaks whose condition is gone are closed.
@@ -176,10 +200,15 @@ export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult>
     }
   }
 
-  // Conditions present are sent once per streak.
-  for (const findings of conditions.values()) {
-    for (const finding of findings) {
-      if (!NOTICE_CODES.includes(finding.code)) {
+  // Conditions present are sent once per streak, and only when the mail can say them.
+  for (const said of conditions.values()) {
+    for (const finding of said.findings) {
+      const facts = (since: CivilDate) => ({
+        since,
+        period: said.period,
+        ...(said.outcome === undefined ? {} : { outcome: said.outcome }),
+      });
+      if (noticeMail(finding, facts(context.today), origin(context)) === undefined) {
         counts.ignored += 1;
         continue;
       }
@@ -210,7 +239,7 @@ export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult>
       const since =
         step.kind === "send" && notice !== undefined ? notice.streak_since : context.today;
       const sending = await store.writeNotice(noticeIn(finding, "sending", at(), since), etag);
-      const mail = noticeMail(finding, since, origin(context));
+      const mail = noticeMail(finding, facts(since), origin(context));
       const sent = await notifierOf(context).send(mail as NonNullable<typeof mail>);
       const state = sent.ok
         ? "sent"

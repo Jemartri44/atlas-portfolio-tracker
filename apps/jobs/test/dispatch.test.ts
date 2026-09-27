@@ -45,7 +45,7 @@ describe("the warnings of the other jobs (R19)", () => {
       "[Atlas] Aviso: tarea monthly_backup",
     ]);
     expect(jobs.ses.sent[0]?.body).toContain(
-      "Ha fallado el volcado mensual (desde el 2026-10-01).",
+      "Ha fallado el volcado mensual en el periodo 2026-10 (código task_error), desde el 2026-10-01.",
     );
     expect(JSON.parse(jobs.s3.text(NOTICE) as string)).toMatchObject({
       state: "sent",
@@ -162,5 +162,50 @@ describe("the warnings of the other jobs (R19)", () => {
     });
     const writes = jobs.s3.conditions.map((condition) => condition.key);
     expect(writes.filter((key) => !key.startsWith("jobs/mail/"))).toEqual([]);
+  });
+
+  it("sends nothing a record says with a code it may not say, whatever the subject (privacy B1)", async () => {
+    for (const subject of ["IE00B4L5Y983", "ast_xau", "constructor", "monthly_backup"]) {
+      const jobs = setupJobs();
+      jobs.s3.seed(
+        "jobs/backup/monthly_backup/2026-10.json",
+        serializeRunRecord(
+          recordIn(
+            claimRecord("monthly_backup", "2026-10", "2026-10-01T01:15:00Z"),
+            "done",
+            "2026-10-01T01:16:00Z",
+            {
+              outcome: { code: "backup_written" },
+              findings: [
+                { code: "task_failed", subject },
+                { code: "record_unreadable", subject },
+                { code: "source_failing", subject },
+              ],
+            },
+          ),
+        ),
+      );
+      await jobs.run(["dispatch_findings"]);
+      expect(jobs.ses.sent, subject).toEqual([]);
+      expect(
+        jobs.s3.keys().filter((key) => key.startsWith("jobs/mail/notices/")),
+        subject,
+      ).toEqual([]);
+    }
+  });
+
+  it("says a record of a producer that cannot be read, once, with the task and its period (N4)", async () => {
+    const jobs = setupJobs();
+    jobs.s3.seed("jobs/backup/monthly_backup/2026-10.json", "{}\n");
+    await jobs.run(["dispatch_findings"]);
+    expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
+      "[Atlas] Aviso: registro de monthly_backup",
+    ]);
+    expect(jobs.ses.sent[0]?.body).toContain(
+      "El registro de monthly_backup (el volcado mensual) del periodo 2026-10 no se puede leer (código job_record_unreadable), desde el 2026-10-01.",
+    );
+    jobs.setNow("2026-10-02T06:00:00Z");
+    await jobs.run(["dispatch_findings"], "req-2");
+    expect(jobs.ses.sent).toHaveLength(1);
   });
 });

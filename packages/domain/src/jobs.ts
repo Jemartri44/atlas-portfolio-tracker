@@ -27,16 +27,19 @@ export {
 } from "./jobs/config.js";
 export { type ActiveHistory, activeHistoryOf } from "./jobs/ecb-manifest.js";
 export { type JobEvent, type JobEventRefusal, parseJobEvent } from "./jobs/event.js";
-export { NOTICE_CODES, noticeMail } from "./jobs/mail/notice.js";
+export { NOTICE_CODES, type NoticeFacts, noticeMail } from "./jobs/mail/notice.js";
 export { reminderMail } from "./jobs/mail/reminder.js";
 export {
   conditionsOf,
+  FABRICATED_CODES,
   NOTICES_PREFIX,
   type Notice,
   type NoticeStep,
   noticeIn,
   noticeKey,
   noticeStep,
+  ownFindings,
+  type ProducerFindings,
   parseNotice,
   producerOf,
   serializeNotice,

@@ -119,9 +119,23 @@ export const noticeIn = (
 });
 
 /**
- * The conditions a closed record of a producer says: its findings, and
- * `task_failed` with the task as subject when the job itself failed.
- * `undefined` when the record does not say anything yet (none, or still open).
+ * The codes the mail function fabricates itself from a record — that a job
+ * failed, that its record cannot be read — with the task as subject. **A
+ * record can never bring them in its findings** (review of PR #104, privacy
+ * B1): a finding `task_failed` with an ISIN as subject would put it in a mail.
+ */
+export const FABRICATED_CODES: readonly string[] = ["task_failed", "record_unreadable"];
+
+/** What each producer may leave: its codes, each with the closed list of its subjects. */
+export type ProducerFindings = Readonly<
+  Partial<Record<JobTask, Readonly<Record<string, readonly string[]>>>>
+>;
+
+/**
+ * The conditions a closed record of a producer says: its findings, never one
+ * of the fabricated codes, and `task_failed` with the task as subject when the
+ * job itself failed. `undefined` when the record does not say anything yet
+ * (none, or still open).
  */
 export const conditionsOf = (record: RunRecord | undefined): readonly Finding[] | undefined => {
   if (record === undefined || record.state === "claimed" || record.state === "sending") {
@@ -129,18 +143,47 @@ export const conditionsOf = (record: RunRecord | undefined): readonly Finding[] 
   }
   const failed: Finding[] =
     record.state === "failed" ? [{ code: "task_failed", subject: record.task }] : [];
-  return [...failed, ...(record.findings ?? [])];
+  const found = (record.findings ?? []).filter(
+    (finding) => !FABRICATED_CODES.includes(finding.code),
+  );
+  return [...failed, ...found];
 };
 
-/** The producer a notice belongs to: `task_failed` names it; any other code, by the producers' codes. */
+/** Whether `subject` is one of the producing tasks: the only subject a fabricated code has. */
+const isProducer = (subject: string): subject is JobTask =>
+  (PRODUCER_TASKS as readonly string[]).includes(subject);
+
+/** Whether `task` may say `code` about `subject`: both in its closed lists. */
+const mayFind = (
+  task: JobTask,
+  finding: Pick<Finding, "code" | "subject">,
+  producers: ProducerFindings,
+): boolean => {
+  if (FABRICATED_CODES.includes(finding.code)) {
+    return finding.subject === task;
+  }
+  const codes = producers[task];
+  return (
+    codes !== undefined &&
+    Object.hasOwn(codes, finding.code) &&
+    (codes[finding.code] as readonly string[]).includes(finding.subject)
+  );
+};
+
+/** Of what a producer said, only what it may say (privacy B1): everything else is dropped. */
+export const ownFindings = (
+  task: JobTask,
+  findings: readonly Finding[],
+  producers: ProducerFindings,
+): Finding[] => findings.filter((finding) => mayFind(task, finding, producers));
+
+/** The producer a streak belongs to, by its code and subject, both in closed lists; or none. */
 export const producerOf = (
   notice: Pick<Notice, "code" | "subject">,
-  codesOf: Readonly<Partial<Record<JobTask, readonly string[]>>>,
+  producers: ProducerFindings,
 ): JobTask | undefined => {
-  if (notice.code === "task_failed") {
-    return (PRODUCER_TASKS as readonly string[]).includes(notice.subject)
-      ? (notice.subject as JobTask)
-      : undefined;
+  if (FABRICATED_CODES.includes(notice.code)) {
+    return isProducer(notice.subject) ? notice.subject : undefined;
   }
-  return PRODUCER_TASKS.find((task) => codesOf[task]?.includes(notice.code) === true);
+  return PRODUCER_TASKS.find((task) => mayFind(task, notice, producers));
 };
