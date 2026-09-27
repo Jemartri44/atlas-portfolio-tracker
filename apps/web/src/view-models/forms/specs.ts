@@ -61,6 +61,12 @@ export interface FieldSpec {
   /** Occupies the full width of the grid. */
   full?: boolean;
   /**
+   * Sits beside the field next to it on a phone, as one of a pair of short
+   * fields (the two dates, quantity and price; feature 020, M11). Both of a
+   * pair carry it, and they are declared one after the other.
+   */
+  pair?: boolean;
+  /**
    * For a list of assets: the field (an account or an asset) whose **book** the
    * list is narrowed to. A core account never buys a bucket share.
    */
@@ -203,6 +209,7 @@ const tradeFields = (): FieldSpec[] => [
     kind: "date",
     required: true,
     hint: "Cuando se dio la orden.",
+    pair: true,
   },
   {
     name: "value_date",
@@ -210,13 +217,15 @@ const tradeFields = (): FieldSpec[] => [
     kind: "date",
     required: true,
     hint: "Cuando liquidó. En fondos es la que manda para la fiscalidad.",
+    pair: true,
   },
-  { name: "quantity", label: "Cantidad", kind: "decimal", required: true },
+  { name: "quantity", label: "Cantidad", kind: "decimal", required: true, pair: true },
   {
     name: "unit_price",
     label: "Precio unitario",
     kind: "decimal",
     hint: "Obligatorio si no indicas el importe liquidado.",
+    pair: true,
   },
   {
     name: "amount",

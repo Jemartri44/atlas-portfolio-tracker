@@ -125,7 +125,7 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
       ...(field.hint === undefined ? {} : { hint: field.hint }),
       ...(field.required === undefined ? {} : { required: field.required }),
       onInput: (next: string) => set(field.name, next),
-      ...(field.full === true ? { class: "full" } : {}),
+      ...(field.full === true ? { class: "full" } : field.pair === true ? { class: "pair" } : {}),
       get error(): string | undefined {
         return props.errors?.[field.name];
       },
