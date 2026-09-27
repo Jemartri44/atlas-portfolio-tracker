@@ -106,7 +106,24 @@ Además, no alineo `fiscalAttention` ni `informative/holdings.ts` (que comparan 
 
 ## 7. Capturas «antes» de E1
 
-*(Se completa al terminar la pasada.)*
+- **Dónde**: `~/personal/atlas/privado/capturas/2026-09-27-020-E1/antes/` (292 capturas, 128 escenas), con `LEEME.md`, `medidas.json` e `indice.json`; las dos maquetas de la propuesta a 400 y 2045, en claro y en oscuro, en `…/maquetas/` (22).
+- **Compilación**: la de producción de `ae66814`, con `vite preview` y su CSP. **Chromium**: `chromium-1243` (`Chrome/153.0.8010.12`), el único que hay, tomado como el más alto.
+- **Matriz**: 400×890 DPR 3 y 2045×1141; claro y oscuro; privacidad puesta y quitada; sintético el 20/01/2029 en las ocho pantallas que la feature toca (Resumen, Movimientos, Registrar, compra, Cartera, Cubo, Ajustes, Declaración) y el 15/05/2029 en el Resumen y Declaración; libro vacío (Resumen, Registrar, Cartera, Cubo, Ajustes) y primer arranque. Por *viewport*.
+- **Medidas de partida** (`medidas.json`):
+
+| Medida | Hoy | Objetivo |
+|---|---|---|
+| Desplazamiento lateral a 360, 400, 1.440 y 2045 (privacidad quitada) | **ninguno** | ninguno |
+| Texto que se lee por debajo de 13 px | **ninguno** | ninguno |
+| Objetivos por debajo de 44 px | 88 apariciones, todas `input` de casillas (24 px) e interruptores (1 px) con la etiqueta como objetivo | clasificar en E1 |
+| Cuerpo a 1.799 / 1.800 px | 15 px / 15 px | cambia en 1.800 (16 px) |
+| Borde superior de la gráfica de evolución a 2045×1141 | **1.187 px** (tarjeta en 1.110) | ≤ 1.141 |
+| Ancla `#sincronizacion` a 400, al cargar | la página no baja (`scrollY` 0) | baja al destino |
+| Ancla a 400, llevada al fragmento | título en 17 px, **bajo la barra** (53 px) | ≥ borde de la barra |
+| Ancla a 2045 | título en 197 px, barra en 65 | igual |
+| Pantallas del móvil, sintético y privacidad puesta | Resumen 2,83 · Movimientos 2,58 · Registrar 1,15 · Cubo 3,49 | Movimientos < 2; Registrar ≤ 1 |
+
+- **Límite de esta pasada**: los campos de fecha salen `mm/dd/yyyy` porque el selector sigue el idioma de la interfaz de Chromium; el guion ya arranca con `--lang=es-ES`. El «antes» definitivo de E1 se toma al empezar la entrega, sobre el `develop` de ese día (puede haber entrado la 016).
 
 ## 8. Documentos que la dirección tendrá que actualizar
 
