@@ -25,6 +25,7 @@ import {
 import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
 import {
   type EffectiveClose,
+  ecbRatesOnly,
   externalPricesOf,
   type MismatchedCloses,
   parseSymbols,
@@ -161,18 +162,21 @@ export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQu
   }
 };
 
-/** The quotes of the ledger `state` at any date, for the gate; nothing without closes. */
+/** The quotes of `state` for the gate; without closes, the ECB rates of the cash (2026-09-27). */
 export const externalOf = (
   quotes: WebQuotes | undefined,
   state: LedgerState,
-): ExternalPrices | undefined =>
-  quotes === undefined || quotes.closes.size === 0
-    ? undefined
-    : externalPricesOf(state, {
-        closes: quotes.closes,
-        ...(quotes.history.history === undefined ? {} : { history: quotes.history.history }),
-        staleDays: quotes.history.staleDays,
-      });
+): ExternalPrices | undefined => {
+  const history = quotes?.history.history;
+  if (quotes === undefined || quotes.closes.size === 0) {
+    return history === undefined ? undefined : ecbRatesOnly(history);
+  }
+  return externalPricesOf(state, {
+    closes: quotes.closes,
+    ...(history === undefined ? {} : { history }),
+    staleDays: quotes.history.staleDays,
+  });
+};
 
 /**
  * The files of `prices/` that the console writes, that are not prices and that

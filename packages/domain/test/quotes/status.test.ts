@@ -103,9 +103,15 @@ describe("the failures of a source", () => {
 });
 
 describe("the last market day before today", () => {
-  it("skips the weekend", () => {
-    expect(lastMarketDayBefore("2027-01-06")).toBe("2027-01-05"); // Wednesday → Tuesday
-    expect(lastMarketDayBefore("2027-01-04")).toBe("2027-01-01"); // Monday → Friday
-    expect(lastMarketDayBefore("2027-01-03")).toBe("2027-01-01"); // Sunday → Friday
+  it("skips the weekend for a market open Monday to Friday", () => {
+    expect(lastMarketDayBefore("2027-01-06", "mon_fri")).toBe("2027-01-05"); // Wednesday → Tuesday
+    expect(lastMarketDayBefore("2027-01-04", "mon_fri")).toBe("2027-01-01"); // Monday → Friday
+    expect(lastMarketDayBefore("2027-01-03", "mon_fri")).toBe("2027-01-01"); // Sunday → Friday
+  });
+
+  it("is yesterday, weekend or not, for a market open every day (crypto)", () => {
+    expect(lastMarketDayBefore("2027-01-06", "every_day")).toBe("2027-01-05");
+    expect(lastMarketDayBefore("2027-01-04", "every_day")).toBe("2027-01-03"); // Monday → Sunday
+    expect(lastMarketDayBefore("2027-01-03", "every_day")).toBe("2027-01-02"); // Sunday → Saturday
   });
 });

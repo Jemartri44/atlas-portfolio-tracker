@@ -328,8 +328,29 @@ const dist = join(webRoot, "dist");
  * annuls counts as annulled: the projection waits for the reversals before
  * judging it. The trend: 73.889 → 74.073 → 74.114; 1.955 left of the
  * authorisation.
+ *
+ * **Findings of the live price test (2026-09-27, `fix/prices-live-findings`):
+ * measured 74.172 (+47 over the 74.125 of develop), ceiling 74.192 —
+ * measured + 20**, set in the merge commit 9e3dfd4 together with the code
+ * it measures, inside the authorisation (76.069). **Commits 0df06da to
+ * 7461ace exceed the boot ceiling of their base (76.069)**: their web build
+ * fails (76.092 at 7461ace, measured); 7a345b6 raised it after the code, to
+ * 76.112, and the merge replaced that value. Said here at the request of
+ * round 1 of the review of PR #102; the history is not rewritten. `netWorth`
+ * is on the boot path: the cash in a foreign currency takes the ECB
+ * history's rate when there is one and says a stale rate once per currency
+ * (+45 in the chunk of the domain, after moving the shape of that rate to the
+ * lazy chunk of the quotes, where it was +68; +2 of the table of chunks). The
+ * trend: 74.114 → 74.172; 1.897 left of the authorisation.
+ *
+ * **Round 1 of the review of PR #102, the more recent of the two ECB rates
+ * (2026-09-27): measured 74.194 (+22), ceiling 74.214 — measured + 20**,
+ * raised in this commit, before the commit that needs it, inside the
+ * authorisation. `netWorth` compares the date of the history's rate with the
+ * ledger's and keeps the newer (+21 in the chunk of the domain, +1 of the
+ * table of chunks). The trend: 74.114 → 74.172 → 74.194; 1.875 left.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_134;
+const BOOT_BUDGET_GZIP_BYTES = 74_214;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -769,8 +790,18 @@ const BOOT_BUDGET_GZIP_BYTES = 74_134;
  * The draft of a corporate action, the deep check and the simulation of a
  * transfer leave the boot (−2.166 on it) for a lazy chunk of their own
  * (`tools`), and a chunk more costs its plumbing and its compression apart.
+ *
+ * **Findings of the live price test (2026-09-27, `fix/prices-live-findings`):
+ * measured 301.845 (+406 over the 301.439 of develop, measured the same way),
+ * ceiling 302.101 — measured + 256**, set in the merge commit 9e3dfd4
+ * together with the code it measures, inside the authorisation (up to
+ * 304.640); commits 0df06da to 7461ace were built against the total ceiling
+ * of their base, and their boot ceiling is the one they exceed (note of the
+ * boot, above). Lazy but 47 (the boot, above): the remedy of a stale rate by its
+ * origin (`warnings` +97), the ECB rates of the cash without closes
+ * (`quotes` +105), and the hashes of the tables.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 294 * 1024 + 440;
+const TOTAL_BUDGET_GZIP_BYTES = 294 * 1024 + 1045;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

@@ -168,6 +168,34 @@ describe("the rules whose repeats are one thing to do", () => {
       {},
     );
     expect(old[0]?.message).toMatch(/de hace más de 10 días/);
+    expect(old[0]?.message).toMatch(
+      /Registra una operación o una valoración más reciente en esas divisas\.$/,
+    );
+  });
+
+  it("say the remedy of a stale rate by its origin: the ECB history is updated", () => {
+    // Live test of 2026-09-27: the cash is valued with the ECB history when there is one.
+    const stale = (sources: string[]) =>
+      attention(
+        sources.map((source, index) =>
+          warning(
+            "stale_fx_rate",
+            { currency: `C${index}`, age_days: 10, date: "2028-12-31", source },
+            `01ARYZ6S41TSV4RRFFQ690004${index}`,
+          ),
+        ),
+        {},
+      )[0]?.message ?? "";
+    expect(stale(["ecb", "ecb"])).toMatch(/Actualiza el histórico del BCE\.$/);
+    expect(stale(["ecb", "ledger"])).toMatch(
+      /más reciente en esas divisas, o actualiza el histórico del BCE\.$/,
+    );
+    expect(stale(["ecb"])).toMatch(
+      /es el del histórico del BCE de hace 10 días .*; actualiza el histórico del BCE\.$/,
+    );
+    expect(stale(["ledger"])).toMatch(
+      /registra una operación o una valoración más reciente en esa divisa\.$/,
+    );
   });
 
   it("say the deviations together, each with its points", () => {

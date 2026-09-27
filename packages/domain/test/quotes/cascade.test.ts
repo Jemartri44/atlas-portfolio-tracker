@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { addDays } from "../../src/dates/civil-date.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { type UpdatePricesInput, updatePrices } from "../../src/quotes/cascade.js";
 import { encodeCloseLine, readCloseFile } from "../../src/quotes/line.js";
@@ -592,5 +593,131 @@ describe("updatePrices", () => {
     store.files.set("config.json", '{"failure_threshold":2}');
     const report = await updatePrices(input);
     expect(report.failing).toEqual(["eodhd", "alpha_vantage"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The market days and the recent days asked again, by asset type (live test
+// of 2026-09-27): crypto trades seven days a week, and EODHD gave the close of
+// Saturday equal to Friday's, provisional. Both come from `prices/config.json`
+// by asset type, never from a constant.
+// ---------------------------------------------------------------------------
+
+const SUNDAY = "2027-01-03";
+
+/** A crypto and an ETF of the core, both held, with a close stored on `last`. */
+const byType = (today: string, last: string, config?: string) => {
+  const b = new LedgerBuilder();
+  catalogue(b);
+  b.asset("ast_btc", { asset_type: "crypto", asset_class: "crypto" });
+  b.asset("ast_etf", { asset_type: "etf" });
+  b.buy({ account_id: "acc_fund", asset_id: "ast_btc", trade_date: "2026-12-01" });
+  b.buy({ account_id: "acc_fund", asset_id: "ast_etf", trade_date: "2026-12-01" });
+  const store = new MemoryPriceStore();
+  store.files.set(
+    "symbols.json",
+    symbolsFile({
+      ast_btc: { currency: "EUR", eodhd: "BTC-EUR.CC" },
+      ast_etf: { currency: "EUR", eodhd: "ETF.AS" },
+    }),
+  );
+  if (config !== undefined) {
+    store.files.set("config.json", config);
+  }
+  for (const assetId of ["ast_btc", "ast_etf"]) {
+    store.files.set(
+      `${assetId}.jsonl`,
+      `${encodeCloseLine({ schema_version: 1, date: last, close: "100", currency: "EUR", source: "eodhd", fetched_at: `${last}T20:00:00.000Z` })}\n`,
+    );
+  }
+  const eodhd = new FakeSource("eodhd", (_symbol, from, to) => {
+    const days: [string, string][] = [];
+    for (let day = from; day <= to; day = addDays(day, 1)) {
+      // The source now has the final close of every day: 101 where 100 was provisional.
+      days.push([day, day === last ? "101" : "100"]);
+    }
+    return closes(...days);
+  });
+  let tick = Date.parse(`${today}T08:00:00.000Z`);
+  const input: UpdatePricesInput = {
+    state: projectLedger(b.build(), { asOf: today }),
+    settings: DEFAULT_SETTINGS,
+    today,
+    now: () => {
+      tick += 1000;
+      return new Date(tick);
+    },
+    store,
+    sources: { eodhd },
+  };
+  return { store, eodhd, input };
+};
+
+describe("the market days by asset type", () => {
+  it("asks for the weekend closes of a crypto on Sunday, and not for those of an ETF", async () => {
+    const { eodhd, input } = byType(SUNDAY, "2027-01-01");
+    const report = await updatePrices(input);
+    // Friday's close is the last market day of the ETF: up to date, no call.
+    expect(eodhd.calls.map((c) => c.symbol)).toEqual(["BTC-EUR.CC"]);
+    // Never the day in course: up to Saturday.
+    expect(eodhd.calls[0]).toMatchObject({ to: "2027-01-02" });
+    expect(report.assets.map((a) => [a.asset_id, a.outcome])).toEqual([
+      ["ast_btc", "updated"],
+      ["ast_etf", "up_to_date"],
+    ]);
+  });
+
+  it("spends nothing on a crypto whose close of yesterday is stored", async () => {
+    const { eodhd, input } = byType(SUNDAY, "2027-01-02");
+    const report = await updatePrices(input);
+    expect(eodhd.calls).toEqual([]);
+    expect(report.assets.every((a) => a.outcome === "up_to_date")).toBe(true);
+  });
+
+  it("follows prices/config.json, not the asset type alone", async () => {
+    const { eodhd, input } = byType(
+      SUNDAY,
+      "2027-01-01",
+      '{"market_days":{"crypto":"mon_fri","etf":"every_day"}}',
+    );
+    await updatePrices(input);
+    expect(eodhd.calls.map((c) => c.symbol)).toEqual(["ETF.AS"]);
+  });
+});
+
+describe("the recent days asked again by asset type", () => {
+  it("asks a crypto again for its last two days stored, and stores the correction", async () => {
+    const { store, eodhd, input } = byType("2027-01-06", "2027-01-04");
+    const report = await updatePrices(input);
+    // The crypto from the day before its last close; the ETF from the day after.
+    expect(eodhd.calls.map((c) => [c.symbol, c.from, c.to])).toEqual([
+      ["BTC-EUR.CC", "2027-01-03", "2027-01-05"],
+      ["ETF.AS", "2027-01-05", "2027-01-05"],
+    ]);
+    // The provisional 100 of the 4th is corrected to 101, the 5th is new, and
+    // the 3rd, not stored before, is added: three lines, each in force.
+    const btc = readCloseFile("ast_btc", store.files.get("ast_btc.jsonl") ?? "");
+    expect(btc.map((line) => [line.date, line.close])).toEqual([
+      ["2027-01-04", "100"],
+      ["2027-01-03", "100"],
+      ["2027-01-04", "101"],
+      ["2027-01-05", "100"],
+    ]);
+    expect(report.assets[0]).toMatchObject({ asset_id: "ast_btc", outcome: "updated", added: 3 });
+  });
+
+  it("asks the recent days of the configuration, and none with zero", async () => {
+    const three = byType("2027-01-06", "2027-01-04", '{"refetch_recent_days":{"crypto":3}}');
+    await updatePrices(three.input);
+    expect(three.eodhd.calls[0]).toMatchObject({ symbol: "BTC-EUR.CC", from: "2027-01-02" });
+    const none = byType("2027-01-06", "2027-01-04", '{"refetch_recent_days":{"crypto":0}}');
+    await updatePrices(none.input);
+    expect(none.eodhd.calls[0]).toMatchObject({ symbol: "BTC-EUR.CC", from: "2027-01-05" });
+  });
+
+  it("does not ask the recent days again once the asset is up to date: no call spent twice a day", async () => {
+    const { eodhd, input } = byType("2027-01-06", "2027-01-05");
+    await updatePrices(input);
+    expect(eodhd.calls).toEqual([]);
   });
 });

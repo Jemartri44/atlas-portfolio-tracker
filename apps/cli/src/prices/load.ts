@@ -25,6 +25,7 @@ import {
 import { type AssetId, DomainError, type ExternalPrices, type LedgerState } from "@atlas/domain";
 import { type EcbHistory, readEcbHistory } from "@atlas/domain/ecb";
 import {
+  ecbRatesOnly,
   externalPricesOf,
   type PriceSource,
   parseSymbols,
@@ -113,7 +114,11 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
     }
   }
   if (files.size === 0) {
-    return { notes: [] };
+    // No closes, but the ECB history still values the cash in a foreign
+    // currency (live test of 2026-09-27); a history that does not read is
+    // said by the views that convert quotes, not here.
+    const { history } = await historyOf(folder);
+    return history === undefined ? { notes: [] } : { external: ecbRatesOnly(history), notes: [] };
   }
   let config: Awaited<ReturnType<typeof readLocalConfig>>;
   try {
