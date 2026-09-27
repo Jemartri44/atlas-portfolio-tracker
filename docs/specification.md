@@ -63,7 +63,7 @@ El cubo nunca entra en el cálculo de los pesos objetivo del núcleo. Es un pres
 
 **Vista consolidada:** patrimonio total = núcleo (desglosado por clase de activo) + cubo + efectivo de las cuentas de inversión, con desglose siempre visible. Nunca un único número sin descomponer. El colchón bancario queda **fuera del alcance** de la aplicación (ADR-0004).
 
-El **efectivo en divisa** se valora con el tipo más reciente del histórico del BCE descargado, si existe, y solo sin él con el último tipo que conoce el libro; cada fila dice la fecha y el origen del tipo, y un tipo caducado se avisa **una vez por divisa**, con la fecha del tipo usado (prueba real del 2026-09-27). Es una valoración informativa: ningún cálculo fiscal la lee, y la fiscalidad sigue usando solo el tipo del BCE de su fecha fiscal, guardado en el libro.
+El **efectivo en divisa** se valora con **el más reciente de dos tipos del BCE**: el último del histórico descargado hasta esa fecha y el último que conoce el libro (con la misma fecha, el del histórico). Así un histórico sin actualizar no tapa un tipo más nuevo del libro. Cada fila dice la fecha y el origen del tipo, y un tipo caducado se avisa **una vez por divisa**, con la fecha del tipo usado (prueba real del 2026-09-27). Es una valoración informativa: ningún cálculo fiscal la lee, y la fiscalidad sigue usando solo el tipo del BCE de su fecha fiscal, guardado en el libro.
 
 ---
 

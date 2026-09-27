@@ -15,7 +15,7 @@ El día de EODHD empieza a medianoche GMT, que en Madrid es la **01:00 en invier
 2. **No copies tus ISIN** en lo que devuelvas: de los fondos, solo el recuento.
 3. **Todo en la carpeta de prueba**, `~/atlas-prueba-013`, nunca en la de tu libro. El libro de prueba es sintético, con activos inventados; aquí solo se les da un símbolo real para que haya algo que descargar.
 
-Lo que tienes que devolver está en la plantilla del final.
+Lo que tienes que devolver está en la plantilla del final. Registro de la feature: [`specs/013-daily-close-prices/questions.md`](../../specs/013-daily-close-prices/questions.md) (§1.8 y §8); las decisiones, en ADR-0031, tercera enmienda.
 
 ## Resultado de la prueba del 2026-09-27
 
@@ -31,8 +31,8 @@ La primera prueba real se hizo el 2026-09-27. Queda así:
 Y tres hallazgos, arreglados después en la rama `fix/prices-live-findings`:
 
 - **La cripto no pedía los cierres del fin de semana hasta el lunes**: el día de mercado era siempre de lunes a viernes. Ahora depende del tipo de activo (`market_days` de `prices/config.json`; la cripto, todos los días).
-- **El cierre de un sábado de `BTC-EUR.CC` era idéntico al del viernes**: un dato provisional. Ahora la cripto vuelve a pedir sus dos últimos días guardados en cada descarga (`refetch_recent_days`), en la misma llamada, y un valor distinto se guarda como corrección.
-- **`atlas networth` pasaba el efectivo en dólares con el tipo del libro** de semanas antes, con un aviso por cuenta, mientras los pesos ya usaban el histórico del BCE. Ahora usa el tipo más reciente del histórico, si existe, y avisa una sola vez por divisa con la fecha del tipo usado. Registro de la feature: [`specs/013-daily-close-prices/questions.md`](../../specs/013-daily-close-prices/questions.md) (§1.8 y §8); las decisiones, en ADR-0031, tercera enmienda.
+- **El cierre de un sábado de `BTC-EUR.CC` era idéntico al del viernes**: un dato provisional. Ahora la cripto vuelve a pedir en cada descarga los dos días naturales que acaban en su último cierre guardado (`refetch_recent_days`), en la misma llamada, y un valor distinto se guarda como corrección.
+- **`atlas networth` pasaba el efectivo en dólares con el tipo del libro** de semanas antes, con un aviso por cuenta, mientras los pesos ya usaban el histórico del BCE. Ahora usa el más reciente de los dos tipos del BCE, el del histórico y el del libro, y avisa una sola vez por divisa con la fecha y el origen del tipo usado.
 
 ---
 
@@ -215,7 +215,7 @@ atlas prices status
 - las dos acaban en `salida 0`;
 - en la primera, cada activo con símbolo sale «actualizado» con su fuente (EODHD, o Alpha Vantage en `ast_gold`); los que no tienen símbolo (`ast_bonds`, y `ast_btc` o `ast_mm` si no se lo diste) salen «sin símbolo declarado», que es lo esperado;
 - en la segunda, **«ya al día (sin gastar cupo)»**. Un activo puede salir «sin cierres nuevos» si ayer fue festivo en su bolsa, **o si la fuente aún no ha publicado el cierre de ayer** (pasa si descargas temprano): eso sí gasta una llamada, y está bien;
-- la cripto (`ast_btc`) cotiza todos los días: un domingo o un lunes pide los cierres del fin de semana, y en cada descarga de un día nuevo vuelve a pedir sus dos últimos días guardados, en la misma llamada, por si la fuente los ha corregido. Si alguno cambió, la línea nueva es una corrección;
+- la cripto (`ast_btc`) cotiza todos los días: un domingo o un lunes pide los cierres del fin de semana, y en cada descarga de un día nuevo vuelve a pedir los dos días naturales que acaban en su último cierre guardado, en la misma llamada, por si la fuente los ha corregido. Si alguno cambió, la línea nueva es una corrección;
 - en `prices status`, «gastado hoy» cuadra con lo que has hecho, y ninguna fuente tiene fallos seguidos.
 
 Si un activo sale con fallos, anota la línea tal como sale (no lleva claves).
