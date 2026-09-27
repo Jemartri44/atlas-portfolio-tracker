@@ -162,26 +162,21 @@ export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQu
   }
 };
 
-/**
- * The quotes of the ledger `state` at any date, for the gate. Without closes,
- * only the rates of the ECB history, for the cash in a foreign currency of the
- * net worth (live test of 2026-09-27); without either, nothing.
- */
+/** The quotes of `state` for the gate; without closes, the ECB rates of the cash (2026-09-27). */
 export const externalOf = (
   quotes: WebQuotes | undefined,
   state: LedgerState,
-): ExternalPrices | undefined =>
-  quotes === undefined
-    ? undefined
-    : quotes.closes.size === 0
-      ? quotes.history.history === undefined
-        ? undefined
-        : ecbRatesOnly(quotes.history.history)
-      : externalPricesOf(state, {
-          closes: quotes.closes,
-          ...(quotes.history.history === undefined ? {} : { history: quotes.history.history }),
-          staleDays: quotes.history.staleDays,
-        });
+): ExternalPrices | undefined => {
+  const history = quotes?.history.history;
+  if (quotes === undefined || quotes.closes.size === 0) {
+    return history === undefined ? undefined : ecbRatesOnly(history);
+  }
+  return externalPricesOf(state, {
+    closes: quotes.closes,
+    ...(history === undefined ? {} : { history }),
+    staleDays: quotes.history.staleDays,
+  });
+};
 
 /**
  * The files of `prices/` that the console writes, that are not prices and that
