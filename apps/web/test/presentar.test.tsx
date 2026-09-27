@@ -151,4 +151,36 @@ describe("recording what was filed", () => {
     await settle(30);
     expect(filings()).toBe(before + 1);
   });
+
+  // Review of PR #97, security N5: the dialog does not freeze the form. A
+  // field changed with the warning open is another filing, and the yes that
+  // was given to the first does not confirm it: it warns again.
+  it("confirms a repeated filing only as it was when the warning was shown", async () => {
+    const filings = (): number =>
+      blob.text.split("\n").filter((line) => line.includes('"tax_return_filed"')).length;
+    const host = await openForm(2020);
+    type(host, "f-receipt", "100-2020-ABCDEFGHIJKL");
+    type(host, "f-filed-at", "2021-06-10");
+    await press(host, "Registrar lo presentado");
+    await settle(30);
+    const before = filings();
+    const again = await openForm(2020);
+    type(again, "f-receipt", "100-2020-ABCDEFGHIJKL");
+    type(again, "f-filed-at", "2021-06-10");
+    await press(again, "Registrar lo presentado");
+    await until(() => text(again).includes("Registrar de todas formas"), "la pregunta", 3000);
+    // With the warning open, a field changes: notes are not in the fingerprint.
+    type(again, "f-notes", "cambiada con el aviso abierto");
+    const open = () =>
+      [...again.querySelectorAll("dialog")].find((node) =>
+        node.hasAttribute("open"),
+      ) as HTMLElement;
+    await press(open(), "Registrar de todas formas");
+    await settle(30);
+    expect(filings()).toBe(before);
+    await until(() => open() !== undefined, "la pregunta otra vez", 3000);
+    await press(open(), "Registrar de todas formas");
+    await settle(30);
+    expect(filings()).toBe(before + 1);
+  });
 });

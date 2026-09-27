@@ -29,6 +29,7 @@ import { asEventDraft } from "../../view-models/forms/values.js";
 import { RequireLedger } from "../guard.jsx";
 import { DuplicateDialog } from "../registrar/DuplicateDialog.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
+import { createWarned } from "../registrar/warned.js";
 
 const MODELS = new Set(["renta", "720", "721"]);
 
@@ -58,6 +59,7 @@ export default function PresentarRoute(): JSX.Element {
    * console (feature 015, E4, P11).
    */
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>();
+  const warned = createWarned();
 
   return (
     <RequireLedger writes skeleton={5}>
@@ -122,12 +124,16 @@ export default function PresentarRoute(): JSX.Element {
           });
           setBusy(true);
           try {
-            const result = await recordDraft(asEventDraft(draft), { confirmDuplicate });
+            const written = asEventDraft(draft);
+            const result = await recordDraft(written, {
+              confirmDuplicate: warned.confirms(written, confirmDuplicate),
+            });
             if (result.ok) {
               navigate(`/fiscal?ejercicio=${year}`, { replace: true });
               return;
             }
             if (result.failure.kind === "duplicate") {
+              warned.remember(written);
               setDuplicate(result.failure.existing);
             } else if (result.failure.kind === "error") {
               setFailure(result.failure.error);

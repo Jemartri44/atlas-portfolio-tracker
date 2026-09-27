@@ -28,6 +28,7 @@ import { FormActions } from "../FormActions.jsx";
 import { FormFields } from "../FormFields.jsx";
 import { NoForm, Reloaded } from "../FormNotices.jsx";
 import { Preview } from "../Preview.jsx";
+import { createWarned } from "../warned.js";
 import { Fractions } from "./Fractions.jsx";
 import { feeLinesError, toCorporateParams } from "./params.js";
 
@@ -46,6 +47,7 @@ export default function CorporateFormRoute(): JSX.Element {
         const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
         const [problem, setProblem] = createSignal<string | undefined>(undefined);
         const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
+        const warned = createWarned();
         const [conflict, setConflict] = createSignal(false);
         /** The filed returns it reaches, said before «Registrar» (ADR-0020; P11 of 015). */
         const [closed, setClosed] = createSignal<readonly ClosedYearImpact[]>([]);
@@ -118,12 +120,15 @@ export default function CorporateFormRoute(): JSX.Element {
           }
           setProblem(undefined);
           setDuplicate(undefined);
-          const result = await recordDraft(built.draft as never, { confirmDuplicate });
+          const result = await recordDraft(built.draft as never, {
+            confirmDuplicate: warned.confirms(built.draft, confirmDuplicate),
+          });
           if (result.ok) {
             navigate(`/movimientos/${result.value.event.id}`);
             return;
           }
           if (result.failure.kind === "duplicate") {
+            warned.remember(built.draft);
             setDuplicate(result.failure.existing);
             return;
           }
