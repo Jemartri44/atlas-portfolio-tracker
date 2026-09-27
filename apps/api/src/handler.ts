@@ -22,10 +22,12 @@ import {
   DeviceStore,
   type ObjectStore,
   type ParameterStore,
+  recordWebSignIn,
   referenceReader,
   TokenRegistry,
 } from "@atlas/adapters/aws";
 import { type IdentityProvider, IdentityUnavailable } from "@atlas/adapters/identity";
+import { madridDateOf } from "@atlas/domain";
 import {
   type Admission,
   type ApiConfig,
@@ -226,6 +228,20 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     };
   };
 
+  /**
+   * The date of this web sign-in, for the monthly mail (feature 016, §8.1 P6;
+   * `access/last-web-sign-in.json`): only the date of Madrid, moved forward,
+   * never back. **The sign-in never fails for it**: what happened is only the
+   * reason of the log line.
+   */
+  const signInDate = async (): Promise<string> => {
+    try {
+      return `sign_in_date_${await recordWebSignIn(deps.objects, madridDateOf(deps.now()))}`;
+    } catch {
+      return "sign_in_date_unavailable";
+    }
+  };
+
   const callback = async (request: Request): Promise<Outcome> => {
     const attempts = cookieValues(request.cookies, LOGIN_COOKIE);
     if (attempts.length === 0) {
@@ -318,12 +334,14 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       now: nowSeconds(),
       ttlSeconds: config.sessionTtlSeconds,
     });
+    const cookie = sessionCookie(
+      (await signerNow()).sign("session", session),
+      config.sessionTtlSeconds,
+    );
     return {
-      result: redirect(`${config.origin}/ajustes#sincronizacion`, [
-        clearLoginCookie(),
-        sessionCookie((await signerNow()).sign("session", session), config.sessionTtlSeconds),
-      ]),
+      result: redirect(`${config.origin}/ajustes#sincronizacion`, [clearLoginCookie(), cookie]),
       code: presented === deviceId ? "signed_in" : "signed_in_new_device",
+      reason: await signInDate(),
     };
   };
 
