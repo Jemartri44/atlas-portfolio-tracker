@@ -146,6 +146,12 @@ const JOBS_ONLY: Record<string, string> = {
   jobs_config_invalid: "solo en las tareas: la función no arranca",
   notice_unreadable: "solo en el registro de la función de correo",
   task_failed: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  // E2: the findings of the ECB and the prices, said by the mail only.
+  currency_unchecked: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  ecb_calendar_mismatch: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  ecb_update_rejected: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  source_failing: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  thesis_horizon_exceeded: "el correo lo dice con su frase (jobs/mail/notice.ts)",
 };
 
 /**

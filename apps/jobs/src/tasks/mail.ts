@@ -27,8 +27,8 @@ import {
   noticeMail,
   noticeStep,
   ownFindings,
+  PRODUCER_FINDINGS,
   PRODUCER_TASKS,
-  type ProducerFindings,
   periodOf,
   previousPeriod,
   producerOf,
@@ -168,9 +168,6 @@ const latestOf = async (
   return undefined;
 };
 
-/** The codes each producer may leave, each with its closed list of subjects; E2 and E4 add theirs. */
-const PRODUCER_FINDINGS: ProducerFindings = {};
-
 export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult> => {
   const { deps, store } = context;
   const at = () => deps.now().toISOString();
@@ -207,6 +204,7 @@ export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult>
         since,
         period: said.period,
         ...(said.outcome === undefined ? {} : { outcome: said.outcome }),
+        ...(finding.counts === undefined ? {} : { counts: finding.counts }),
       });
       if (noticeMail(finding, facts(context.today), origin(context)) === undefined) {
         counts.ignored += 1;
