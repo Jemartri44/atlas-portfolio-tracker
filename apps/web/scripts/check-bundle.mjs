@@ -287,8 +287,14 @@ const dist = join(webRoot, "dist");
  * `reloadLedger`, which the boot shook off while nothing lazy called it. The
  * trend: 75.836 → 75.885 → 75.900 → 75.999; what is left of the
  * authorisation, 45, is for E4 alone.
+ *
+ * **E4, P11 (2026-09-27): measured 76.026 (+27), ceiling 76.051**, raised
+ * before the commits that need it. No code on the boot: the table of lazy
+ * chunks of the entry names one more, `DuplicateDialog`, which the filing
+ * screen now shares with the forms. The trend: 75.999 → 76.026; 18 left of
+ * the authorisation.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15 + 60 + 44;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15 + 60 + 44 + 27;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -682,8 +688,17 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15 + 60 +
  * `sync-store` +1.240 (a chunk of its own now, shared by the card and the
  * writer: `write` −254), `ImportControls` +156, the boot +104; the rest is
  * hash noise. The trend: 276,5 → 277,6 → 290,5.
+ *
+ * **E4, P11 and the card split in three files (2026-09-27): measured 298.392
+ * (+711 over 297.681), ceiling 298.648 — measured + 256**, raised before the
+ * commits that need it, inside the authorisation (up to 304.640). All lazy
+ * but 27: the duplicate question of the filing screen (`presentar` +126 and
+ * `DuplicateDialog` +734 as a chunk of its own, against `FormNotices` −448),
+ * the closed-year notice of the corporate form (`form` +98), the card of the
+ * sync in three files (`ajustes` +221) and the sentences of N11 (`errors`
+ * +17). The trend: 277,6 → 290,5 → 291,6.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 290 * 1024 + 811;
+const TOTAL_BUDGET_GZIP_BYTES = 291 * 1024 + 664;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
