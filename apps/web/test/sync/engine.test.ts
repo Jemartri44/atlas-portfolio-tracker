@@ -190,6 +190,32 @@ describe("the sync of the web, against the API", () => {
     expect(await syncNow(second.env)).toMatchObject({ status: "synced", uploaded: 1 });
   });
 
+  // Review of PR #97, correctness B1 (D-Q1): resolving what is held never
+  // waits for the rest of the ledger to be valid.
+  it("redoes what is held back on a ledger that is invalid", async () => {
+    const api = apiAt();
+    const first = await browserOf(base(), api);
+    await startSync(first.env, "init");
+    const own = new Builder(80);
+    own.deposit("300");
+    const second = await browserOf([...base(), ...own.events], api);
+    await startSync(second.env, "join_from_remote");
+    // A sale of more than is held: the local ledger is invalid now.
+    await second.web.record([new Builder(200).trade("sell", "1000", "2027-02-01")]);
+    const deps = depsOf(second.web, second.env);
+    const { projectLedger } = await import("@atlas/domain");
+    const loaded = await deps.store.load();
+    expect(projectLedger(loaded.events, { collectErrors: true }).invalid.length).toBeGreaterThan(0);
+    const [unit] = await heldList(second.env);
+    const redo = await planRedo(second.env, deps, unit?.unit.unit as string);
+    expect("plan" in redo).toBe(true);
+    if ("plan" in redo) {
+      await recordRedo(second.env, deps, unit?.unit.unit as string, redo.plan, false);
+    }
+    expect(await webSyncStatus(second.env)).toMatchObject({ held: 0 });
+    expect(await second.web.text()).toContain('"amount":"300"');
+  });
+
   it("joins with its own operations as pending", async () => {
     const api = apiAt();
     const first = await browserOf(base(), api);
