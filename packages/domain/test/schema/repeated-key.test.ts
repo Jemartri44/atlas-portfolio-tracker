@@ -53,4 +53,38 @@ describe("a line with a key twice (Q12, (b))", () => {
     expect(state.invalid).toEqual([]);
     expect(state.accounts.size).toBe(1);
   });
+
+  // The remedy the messages give (review of PR #98, B1; §35): a live reversal
+  // of the line annuls it, and it stops being invalid — the ledger is
+  // append-only, and otherwise only another hand edit would get it out.
+  it("stops being invalid once a live reversal annuls it", () => {
+    const reversal = { ...SAMPLES.reversal, reverses_id: SAMPLES.account_created.id };
+    const state = projectLedger([decodeLine(twice).event, decodeLine(encodeLine(reversal)).event], {
+      collectErrors: true,
+    });
+    expect(state.invalid).toEqual([]);
+    expect(state.reversed.get(SAMPLES.account_created.id)).toBe(reversal.id);
+    expect(state.accounts.size).toBe(0);
+    // Strict too: nothing is left to stop it.
+    expect(() =>
+      projectLedger([decodeLine(twice).event, decodeLine(encodeLine(reversal)).event]),
+    ).not.toThrow();
+  });
+
+  it("annuls nothing when the reversal itself has a key twice: both stay as they were", () => {
+    const reversal = { ...SAMPLES.reversal, reverses_id: SAMPLES.account_created.id };
+    const bad = encodeLine(reversal).replace(
+      '"reason":"precio mal tecleado"',
+      '"reason":"x","reason":"precio mal tecleado"',
+    );
+    expect(bad).not.toBe(encodeLine(reversal));
+    const state = projectLedger([decodeLine(account).event, decodeLine(bad).event], {
+      collectErrors: true,
+    });
+    expect(state.invalid.map((entry) => [entry.event.id, entry.error.code])).toEqual([
+      [reversal.id, "duplicate_key"],
+    ]);
+    expect(state.reversed.has(SAMPLES.account_created.id)).toBe(false);
+    expect(state.accounts.size).toBe(1);
+  });
 });

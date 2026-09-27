@@ -322,6 +322,9 @@ const applyCatalogue = (state: LedgerState, event: CatalogueEvent): void => {
   }
 };
 
+const duplicateKey = (event: LedgerEvent): ValidationError =>
+  new ValidationError("duplicate_key", "a key appears twice", { id: event.id });
+
 export const projectLedger = (
   events: readonly LedgerEvent[],
   options: ProjectOptions = {},
@@ -354,10 +357,16 @@ export const projectLedger = (
     }
     state.positionOf.set(event.id, position);
   });
+  const repeated: LedgerEvent[] = [];
   for (const event of events) {
     if (REPEATED_KEY.has(event)) {
-      // Q12 (b): a line with a key twice is read, never trusted.
-      reject(event, new ValidationError("duplicate_key", "a key appears twice", { id: event.id }));
+      // Q12 (b): a line with a key twice is read, never trusted. A reversal
+      // with one annuls nothing; any other waits for the reversals below.
+      if (event.type === "reversal") {
+        reject(event, duplicateKey(event));
+      } else {
+        repeated.push(event);
+      }
       continue;
     }
     if (isReservedEventType(event.type)) {
@@ -367,6 +376,14 @@ export const projectLedger = (
     if (event.type === "reversal") {
       skipped.add(event.id);
       guarded(event, () => applyReversal(state, events, event));
+    }
+  }
+  // The remedy of the messages (review of PR #98, B1; §35): annulled by a live
+  // reversal, the line counts as annulled and is not invalid any more; the
+  // ledger is append-only, and otherwise only another hand edit would do.
+  for (const event of repeated) {
+    if (!state.reversed.has(event.id)) {
+      reject(event, duplicateKey(event));
     }
   }
   // Corrections. A correction needs its original reversed (anywhere in the
