@@ -549,7 +549,11 @@ export const describeError = (error: DomainError): string => {
     case "invalid_json":
       return `La línea ${text(d.line ?? "")} no es JSON válido: el fichero no es un libro de Atlas.`;
     case "duplicate_key":
-      return "Una línea del libro repite un campo (lo deja así una edición a mano): se lee con el último valor, pero el evento cuenta como inválido y no se sincroniza. Rectifícalo con una anulación y el evento correcto.";
+      // An annulment cannot be annulled (round 2 of the review of PR #98,
+      // R2-B1): its only remedy, without sync, is the file itself.
+      return d.type === "reversal"
+        ? "Una anulación del libro repite un campo (lo deja así una edición a mano): cuenta como inválida, no anula nada y no se sincroniza. Una anulación no se puede anular: corrígela a mano en el fichero, quitando el campo repetido. Con la sincronización configurada, descártala desde lo retenido."
+        : "Una línea del libro repite un campo (lo deja así una edición a mano): se lee con el último valor, pero el evento cuenta como inválido y no se sincroniza. Anúlala (atlas delete) y registra el evento correcto; con la sincronización configurada, descártala desde lo retenido.";
     case "invalid_envelope":
       return `El sobre de la línea no es válido: falta o sobra ${text(d.field)}.`;
     case "invalid_currency":

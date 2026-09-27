@@ -493,8 +493,11 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   // What the reader needs: the file is not what was expected, and where.
   invalid_line: (d) => `${notTheFormat(d)} no es un evento.`,
   invalid_json: (d) => `${notTheFormat(d)} no se puede leer como datos de Atlas.`,
-  duplicate_key: () =>
-    "Esta operación repite un campo en su línea (lo deja así una edición a mano del archivo): se lee con el último valor, pero cuenta como inválida y no se sincroniza. Rectifícala: anúlala y regístrala bien.",
+  // An annulment cannot be annulled (round 2 of the review of PR #98, R2-B1).
+  duplicate_key: (d) =>
+    d.type === "reversal"
+      ? "Esta anulación repite un campo en su línea (lo deja así una edición a mano del archivo): cuenta como inválida, no anula nada y no se sincroniza. Una anulación no se puede anular: corrígela a mano en el archivo, quitando el campo repetido. Con la sincronización activada, descártala desde lo retenido."
+      : "Esta operación repite un campo en su línea (lo deja así una edición a mano del archivo): se lee con el último valor, pero cuenta como inválida y no se sincroniza. Anúlala y regístrala bien; con la sincronización activada, descártala desde lo retenido.",
   invalid_envelope: (d) => `La cabecera de la línea no es válida (${field(d.field)}).`,
   missing_field: (d) => `Falta ${field(d.field)} en ${kind(d.type)}.`,
   invalid_field: (d) =>

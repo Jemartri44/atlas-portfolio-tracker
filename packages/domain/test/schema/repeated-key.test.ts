@@ -84,6 +84,8 @@ describe("a line with a key twice (Q12, (b))", () => {
     expect(state.invalid.map((entry) => [entry.event.id, entry.error.code])).toEqual([
       [reversal.id, "duplicate_key"],
     ]);
+    // With its type: the interfaces send an annulment to the file (R2-B1).
+    expect(state.invalid[0]?.error.details).toMatchObject({ id: reversal.id, type: "reversal" });
     expect(state.reversed.has(SAMPLES.account_created.id)).toBe(false);
     expect(state.accounts.size).toBe(1);
   });

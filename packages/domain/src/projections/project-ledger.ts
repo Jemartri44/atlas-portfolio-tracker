@@ -322,8 +322,13 @@ const applyCatalogue = (state: LedgerState, event: CatalogueEvent): void => {
   }
 };
 
+/**
+ * With its type (round 2 of the review of PR #98, R2-B1): the remedy of an
+ * annulment with a key twice is not another annulment — it cannot be
+ * reversed — and the interfaces say which one it is.
+ */
 const duplicateKey = (event: LedgerEvent): ValidationError =>
-  new ValidationError("duplicate_key", "a key appears twice", { id: event.id });
+  new ValidationError("duplicate_key", "a key appears twice", { id: event.id, type: event.type });
 
 export const projectLedger = (
   events: readonly LedgerEvent[],
