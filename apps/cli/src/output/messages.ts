@@ -501,6 +501,8 @@ export const describeError = (error: DomainError): string => {
       return `La correspondencia de símbolos prices/symbols.json no se entiende (${text(d.field)}): corrígela, o vuelve a declarar los símbolos con «atlas prices symbols set».`;
     case "symbols_file_newer_version":
       return `La correspondencia de símbolos prices/symbols.json es de una versión más nueva de la aplicación (formato ${text(d.format)}): esta consola no la lee ni la escribe. Actualiza la aplicación.`;
+    case "symbols_file_unknown_key":
+      return `La correspondencia de símbolos prices/symbols.json tiene una clave de primer nivel que no es suya (${text(d.key)}): quítala del fichero. Solo lleva symbols_format y assets; nunca se sube ni se lee con otra cosa.`;
     case "symbols_misstored_pending":
       return `${text(d.asset_id)} tiene cierres de ${text(d.source)} guardados en una divisa equivocada, pendientes de purgar: mientras tanto no se puede quitar esa fuente ni el activo, porque volverían a contar en euros sin aviso. Púrgalos con «atlas prices purge ${text(d.asset_id)} --source ${text(d.source)}».`;
     case "symbols_not_declared":

@@ -154,6 +154,53 @@ describe("symbolsPushPlan (016, E2, block 3)", () => {
     }
   });
 
+  it("refuses a top-level key it does not know, naming the key and never its value (review of PR #106, B1)", () => {
+    const remote = file({ ast_a: entry("A.XETRA") });
+    const local = JSON.stringify({
+      symbols_format: 2,
+      assets: JSON.parse(remote).assets,
+      eodhd_api_key: "sentinel-secret-of-the-push",
+    });
+    const refused = refusal(() => symbolsPushPlan(local, remote));
+    expect(refused).toEqual({
+      code: "symbols_file_unknown_key",
+      details: { key: "eodhd_api_key" },
+    });
+    expect(JSON.stringify(refused)).not.toContain("sentinel-secret-of-the-push");
+  });
+
+  it("replaces a remote with a top-level key it does not know, as one it cannot read", () => {
+    const local = file({ ast_a: entry("A.XETRA") });
+    const remote = JSON.stringify({ ...JSON.parse(local), extra: 1 });
+    expect(symbolsPushPlan(local, remote)).toMatchObject({ kind: "push", remote: "unreadable" });
+  });
+
+  it("is not fooled by assets named like the properties of every object (review of PR #106, N4)", () => {
+    const local = JSON.stringify({
+      symbols_format: 2,
+      assets: { constructor: entry("C.XETRA"), toString: entry("T.XETRA") },
+    });
+    expect(symbolsPushPlan(local, undefined)).toEqual({
+      kind: "push",
+      remote: "absent",
+      changes: [
+        { asset_id: "constructor", change: "added", fields: [] },
+        { asset_id: "toString", change: "added", fields: [] },
+      ],
+    });
+    const proto = JSON.stringify({
+      symbols_format: 2,
+      assets: JSON.parse(
+        `{"__proto__": ${JSON.stringify(entry("P.LSE", { misstored: { eodhd: "GBP" } }))}}`,
+      ),
+    });
+    expect(proto).toContain('"__proto__"');
+    expect(refusal(() => symbolsPushPlan(proto, undefined))).toEqual({
+      code: "symbols_push_misstored",
+      details: { assets: ["__proto__"] },
+    });
+  });
+
   it("does not take a readable remote with the same content but other bytes as the same", () => {
     const local = file({ ast_a: entry("A.XETRA") });
     expect(symbolsPushPlan(local, `${local}\n`)).toEqual({

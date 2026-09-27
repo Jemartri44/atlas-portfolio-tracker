@@ -256,6 +256,20 @@ const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry 
   return legacy ? withoutLegacyConfirmations(entry) : entry;
 };
 
+const TOP_LEVEL_KEYS: readonly string[] = ["symbols_format", "assets"];
+
+/**
+ * The first top-level key of a parsed `prices/symbols.json` that the file
+ * does not have, cut to 64 characters; nothing when every key is known or it
+ * is not an object. Only the name: the value is never read.
+ */
+export const unknownSymbolsKey = (raw: unknown): string | undefined =>
+  isObject(raw)
+    ? Object.keys(raw)
+        .find((key) => !TOP_LEVEL_KEYS.includes(key))
+        ?.slice(0, 64)
+    : undefined;
+
 /** Parses `prices/symbols.json`; `undefined` (no file) is an empty correspondence. */
 export const parseSymbols = (text: string | undefined): SymbolsFile => {
   if (text === undefined) {
@@ -279,6 +293,18 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
       { format: raw.symbols_format },
     );
   }
+  // A key the file does not have is refused, by its name and never its value
+  // (review of PR #106, B1): `atlas admin prices push` uploads the bytes as
+  // they are, and the API serves them to every device, so a secret pasted at
+  // the top level would travel without the difference ever showing it.
+  const unknown = unknownSymbolsKey(raw);
+  if (unknown !== undefined) {
+    throw new ValidationError(
+      "symbols_file_unknown_key",
+      "prices/symbols.json has a top-level key it does not know",
+      { key: unknown },
+    );
+  }
   if (
     !isObject(raw) ||
     (raw.symbols_format !== SYMBOLS_FORMAT && raw.symbols_format !== LEGACY_FORMAT) ||
@@ -287,7 +313,9 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
     throw wrong("symbols_format");
   }
   const legacy = raw.symbols_format === LEGACY_FORMAT;
-  const assets: Record<AssetId, SymbolEntry> = {};
+  // Without a prototype (review of PR #106, N4): an asset called `__proto__`
+  // or `constructor` is an asset like any other, never a property of objects.
+  const assets: Record<AssetId, SymbolEntry> = Object.create(null);
   for (const [assetId, value] of Object.entries(raw.assets)) {
     assets[assetId] = entryOf(assetId, value, legacy);
   }

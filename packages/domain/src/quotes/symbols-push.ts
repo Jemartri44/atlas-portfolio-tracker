@@ -7,7 +7,8 @@
 // ETag of that same read.
 //
 // Refused, with nothing written: no local file; a local file that cannot be
-// read or is of a newer format (`parseSymbols` says which); one that still
+// read, is of a newer format or has a top-level key the file does not have
+// (`parseSymbols` says which, the key by its name only); one that still
 // has closes stored in a wrong currency (`misstored`: purge them locally
 // first, or the cloud would keep them out of every figure forever); and a
 // remote file of a newer format, which an older console must never rewrite.
@@ -103,13 +104,15 @@ export const symbolsPushPlan = (
   if (theirs.kind === "readable" && remote === local) {
     return { kind: "same" };
   }
-  const before = theirs.kind === "readable" ? theirs.file.assets : {};
+  const before: SymbolsFile["assets"] =
+    theirs.kind === "readable" ? theirs.file.assets : Object.create(null);
   const changes: SymbolsPushChange[] = [];
   for (const assetId of [
     ...new Set([...Object.keys(before), ...Object.keys(mine.assets)]),
   ].sort()) {
-    const was = before[assetId];
-    const is = mine.assets[assetId];
+    // Own keys only (review of PR #106, N4): `constructor` is an asset here.
+    const was = Object.hasOwn(before, assetId) ? before[assetId] : undefined;
+    const is = Object.hasOwn(mine.assets, assetId) ? mine.assets[assetId] : undefined;
     if (was === undefined) {
       changes.push({ asset_id: assetId, change: "added", fields: [] });
     } else if (is === undefined) {
