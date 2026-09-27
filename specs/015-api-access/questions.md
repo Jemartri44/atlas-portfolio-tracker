@@ -2209,3 +2209,80 @@ Batches en el *scratchpad*: `015-e5-b1.json` y `015-e5-b2.json`, con sus salidas
 - **El punto 4**: decidir la propuesta (a) o (b) de §33.5. No he tocado la configuración.
 - **`admin.json`**: aceptar o cambiar la propuesta de `data-model.md` §9.
 - **Trasladar los documentos** de §33.10.
+
+## 34. Las decisiones de la dirección sobre E5, y su entrega (2026-09-27)
+
+### 34.1 Las decisiones
+
+- **Punto 4: opción (a).**
+  - Primero, tests del dominio para lo que hoy solo cubren otros proyectos, cada uno visto en rojo al excluir los demás proyectos.
+  - Después, la cobertura del dominio se mide en su propia pasada, con el umbral del 100 % solo ahí, y la pasada general va sin umbral para el dominio.
+  - La CI llama a las dos. Como `ci.yml` no se puede empujar sin el permiso `workflow`, su cambio va en un parche del *scratchpad*, y `npm run test:coverage` ejecuta las dos pasadas, para que la CI de hoy ya las use.
+  - Medir el tiempo añadido.
+- **`admin.json`: aceptado** tal como está en `data-model.md` §9. Nunca lo escribe la aplicación, y se lee de forma estricta.
+- **Documentos, en esta misma PR**, por orden expresa de la dirección:
+  - `docs/data-schema.md`: el nombre de `pre-restore`, Q12 como implementada y `admin.json`;
+  - los tres procedimientos, a `docs/runbooks/`, enlazados desde un índice;
+  - la línea 86 de `google-2-step-verification.md`;
+  - una nota fechada en ADR-0034, fila 16;
+  - la nota del MFA en ADR-0033, si la cita.
+
+### 34.2 El punto 4, hecho
+
+**Lo que solo cubrían otros proyectos.** Medí la pasada del dominio solo con el umbral puesto, y **eran más de las diez ramas de §33.5**:
+- las diez ramas;
+- **dos funciones y sus líneas**: `previewReversal` (`usecases/preview-event.ts:186-198`), la función que filtra los avisos de `previewCorrection` (`:241`) y la que suma lo diferido en la propuesta de la Renta (`filings/proposal.ts:109`).
+
+§33.5 solo miró las ramas, y por eso no las vio. **Queda corregido aquí.**
+
+**Los tests**, en `packages/domain/test/own-coverage.test.ts` (`f0009e1`, `6a9b583`):
+- `DraftChangedError`, con sus dos mensajes;
+- `ruleChangeRates`, con un dividendo en dólares, cuyo tipo es de fecha de negocio;
+- `closedYearImpact`, en un libro sin ningún `settings_changed`;
+- `filingProposal` de un 720 con un valor extranjero valorado;
+- `filingProposal` de una Renta con una pérdida diferida;
+- `model720` sobre un libro con un evento inválido;
+- `previewReversal`;
+- `previewCorrection`, con un aviso de otro evento.
+
+**Vistos en rojo al excluir los demás proyectos:**
+- sin el fichero nuevo, la pasada del dominio solo daba 5.044/5.054 ramas, con las diez de §33.5 al aire;
+- con las ocho primeras pruebas, las ramas llegaban al 100 %, pero las líneas, las funciones y las sentencias no, por las tres funciones de arriba (99,86 %, 99,83 % y 99,86 %), y el umbral la hacía fallar;
+- con las ocho pruebas, todo al 100 %.
+
+Cada `describe` del fichero, pasado solo con cobertura, cubre sus ramas por sí mismo. Lo comprobé uno a uno.
+
+**La configuración** (`b04e828`):
+- `test:coverage:domain` es `vitest run --coverage --project domain`, con el umbral del 100 % de `vitest.config.ts`;
+- `test:others` es `vitest run --project !domain`, sin cobertura, así que no tiene umbral del dominio;
+- `test:coverage` los encadena. Es lo que llama la CI de hoy.
+- Un guardián en `tests/test-outputs.test.ts` fija los tres guiones y el umbral.
+
+**El parche de `ci.yml`** es `ci-015-two-passes.patch` en el *scratchpad*:
+- dos pasos, `test:coverage:domain` y `test:others`;
+- entre los dos, **la subida de `coverage-final.json` si falla la cobertura del dominio**, que es el cambio del *stash* `ci-015-upload-artifact`. Así los dos cambios de `ci.yml` están en un solo parche. El `json` del informe ya está en `vitest.config.ts` desde E3;
+- se aplica limpio sobre `develop` (`git apply --check`).
+- **Lo tiene que empujar alguien con el permiso `workflow`.** Mientras tanto, la CI ya corre las dos pasadas a través de `npm run test:coverage`.
+
+**El tiempo:**
+
+| Dónde | Antes, una pasada con cobertura de todo | Ahora, las dos pasadas | Diferencia |
+|---|---:|---:|---:|
+| CI (paso `npm run test:coverage`) | 189 s (`ea55e1e`) | 174 s (`cecfa9f`) | **−15 s** |
+| Local, un trabajador | 869 a 978 s | 159 s (dominio) + 480 s (resto) = 639 s | **unos −4 a −5 min** |
+
+**No añade tiempo: lo quita.** El resto de proyectos ya no se instrumenta.
+
+### 34.3 Los documentos, hechos
+
+- `docs/data-schema.md` §1 y §2 (`188f15b`):
+  - el nombre `pre-restore-<YYYY-MM-DD>T<HHMMSS>-<etag>.jsonl`, y que restaurar falla con `archive_exists` como confirmar, unirse y volver a descargar;
+  - Q12, implementada;
+  - una fila para `~/.config/atlas/admin.json`.
+- **Los procedimientos, en `docs/runbooks/`** (`3598718`), con nombres en inglés como los demás ficheros: `restore-the-ledger.md`, `revoke-all-tokens.md` y `stolen-google-account.md`. Se enlazan entre sí.
+- **El índice de `docs/runbooks/`** es `README.md` nuevo, con los seis procedimientos, y `docs/prompts/README.md` apunta a él (`318f536`).
+- **`google-2-step-verification.md`, línea 86**: enlaza `stolen-google-account.md` (`55cde77`).
+- **ADR-0034**: una nota del 2026-09-27 (`26d1fc9`). La fila 16 queda **verificada** con fuente: el *root* no puede hacer `AssumeRole`. Para C5, el MFA lo pide la CLI de AWS, no el SDK.
+- **ADR-0033**: su punto 8 cita el MFA de la revocación sin Google, así que lleva la misma nota, corta.
+- **`data-model.md` §9, `spec.md` FR-014 y `quickstart.md`**: `admin.json` aceptado, y los procedimientos en su sitio nuevo (`cecfa9f`). **§33.8 y §33.10 siguen nombrando `specs/015-api-access/runbooks/`**: son el registro de entonces, y esta sección dice dónde están ahora.
+- `docs/prompts/015-api-access.md` §3 no se toca: dice dónde los escribía el implementador y que la dirección los traslada al cerrar, y eso es lo que ha pasado.
