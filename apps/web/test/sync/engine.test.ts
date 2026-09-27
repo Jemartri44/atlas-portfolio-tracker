@@ -19,7 +19,7 @@ import {
   discardHeld,
   heldList,
   planRedo,
-  recordRedo,
+  recordPlannedRedo,
 } from "../../src/sync/engine-held.js";
 import { apiAt, browserOf, cloudText, depsOf } from "./api-support.js";
 
@@ -184,7 +184,7 @@ describe("the sync of the web, against the API", () => {
     const redo = await planRedo(second.env, deps, units[1]?.unit.unit as string);
     expect("plan" in redo).toBe(true);
     if ("plan" in redo) {
-      await recordRedo(second.env, deps, units[1]?.unit.unit as string, redo.plan, false);
+      await recordPlannedRedo(second.env, deps, units[1]?.unit.unit as string, redo.plan, false);
     }
     expect(await webSyncStatus(second.env)).toMatchObject({ held: 0, pending: 1 });
     expect(await syncNow(second.env)).toMatchObject({ status: "synced", uploaded: 1 });
@@ -210,7 +210,7 @@ describe("the sync of the web, against the API", () => {
     const redo = await planRedo(second.env, deps, unit?.unit.unit as string);
     expect("plan" in redo).toBe(true);
     if ("plan" in redo) {
-      await recordRedo(second.env, deps, unit?.unit.unit as string, redo.plan, false);
+      await recordPlannedRedo(second.env, deps, unit?.unit.unit as string, redo.plan, false);
     }
     expect(await webSyncStatus(second.env)).toMatchObject({ held: 0 });
     expect(await second.web.text()).toContain('"amount":"300"');

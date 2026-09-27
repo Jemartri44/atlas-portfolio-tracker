@@ -23,7 +23,7 @@ import {
   type HeldItem,
   heldItems,
   planRedo,
-  recordRedo,
+  recordPlannedRedo,
 } from "../../../sync/engine-held.js";
 import { outcomeTold, said, type Told } from "./sync-texts.js";
 
@@ -173,7 +173,7 @@ export const createSyncController = (props: SyncCardProps) => {
         return undefined;
       }
       try {
-        await recordRedo(env, depsNow(), current.unit, current.plan, current.duplicate);
+        await recordPlannedRedo(env, depsNow(), current.unit, current.plan, current.duplicate);
       } catch (error) {
         if (error instanceof DomainError && error.code === "duplicate_fingerprint") {
           setRedo({ ...current, duplicate: true });
