@@ -9,7 +9,7 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
-import { DomainError, ProjectionError, UnsupportedEventError } from "../errors.js";
+import { DomainError, ProjectionError, UnsupportedEventError, ValidationError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { isReservedEventType } from "../schema/envelope.js";
 import type {
@@ -26,6 +26,7 @@ import type {
   ThesisClosedEvent,
   ThesisOpenedEvent,
 } from "../schema/events.js";
+import { REPEATED_KEY } from "../schema/json-keys.js";
 import { fiscalDateOf } from "../settings/fiscal-date.js";
 import { DEFAULT_SETTINGS, type Settings } from "../settings/settings.js";
 import {
@@ -354,6 +355,11 @@ export const projectLedger = (
     state.positionOf.set(event.id, position);
   });
   for (const event of events) {
+    if (REPEATED_KEY.has(event)) {
+      // Q12 (b): a line with a key twice is read, never trusted.
+      reject(event, new ValidationError("duplicate_key", "a key appears twice", { id: event.id }));
+      continue;
+    }
     if (isReservedEventType(event.type)) {
       reject(event, new UnsupportedEventError(event.type, event.id));
       continue;

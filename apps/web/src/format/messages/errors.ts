@@ -493,6 +493,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   // What the reader needs: the file is not what was expected, and where.
   invalid_line: (d) => `${notTheFormat(d)} no es un evento.`,
   invalid_json: (d) => `${notTheFormat(d)} no se puede leer como datos de Atlas.`,
+  duplicate_key: () =>
+    "Esta operación repite un campo en su línea (lo deja así una edición a mano del archivo): se lee con el último valor, pero cuenta como inválida y no se sincroniza. Rectifícala: anúlala y regístrala bien.",
   invalid_envelope: (d) => `La cabecera de la línea no es válida (${field(d.field)}).`,
   missing_field: (d) => `Falta ${field(d.field)} en ${kind(d.type)}.`,
   invalid_field: (d) =>

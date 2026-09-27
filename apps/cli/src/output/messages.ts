@@ -522,6 +522,8 @@ export const describeError = (error: DomainError): string => {
       return `Línea no válida${d.line === undefined ? "" : ` (${text(d.line)})`}: ${text(d.value ?? "no es un objeto JSON")}.`;
     case "invalid_json":
       return `La línea ${text(d.line ?? "")} no es JSON válido: el fichero no es un libro de Atlas.`;
+    case "duplicate_key":
+      return "Una línea del libro repite un campo (lo deja así una edición a mano): se lee con el último valor, pero el evento cuenta como inválido y no se sincroniza. Rectifícalo con una anulación y el evento correcto.";
     case "invalid_envelope":
       return `El sobre de la línea no es válido: falta o sobra ${text(d.field)}.`;
     case "invalid_currency":
