@@ -278,8 +278,17 @@ const dist = join(webRoot, "dist");
  * to 76.069). The code of the boot does not grow: the +15 is the table of
  * preloads of the entry, which now names the chunk of the domain of the sync
  * shared by the import and the export (the 014 measured +18 for the same).
+ *
+ * **E4, the card of the sync (2026-09-27): measured 75.999 (+104), ceiling
+ * 76.024**, raised before the commit that needs it, inside the authorisation
+ * (up to 76.069). No code of the sync on the boot: **+60** is the table of
+ * exports of the chunk of the domain, which now also serves the lazy chunk of
+ * the sync (12 names more: the decoder of lines, the ids, money); **+44** is
+ * `reloadLedger`, which the boot shook off while nothing lazy called it. The
+ * trend: 75.836 → 75.885 → 75.900 → 75.999; what is left of the
+ * authorisation, 45, is for E4 alone.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15 + 60 + 44;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -664,8 +673,17 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15;
  * the sentences of `sync_device_changed`, `sync_device_unknown` and
  * `sync_already_configured` (`errors`), and the key of the device in the
  * store of the sync.
+ *
+ * **E4, the card of the sync (2026-09-27): measured 297.515 (+13.019 over
+ * 284.496), ceiling 297.771 — measured + 256**, raised before the commit that
+ * needs it, inside the authorisation of Q1 (up to 304.640). All of it lazy but
+ * 104 bytes: `ajustes` +6.783 (the card, the engine of the web and the client
+ * of the sync), `sync` +4.884 (the engine of the domain: join, held, resolve),
+ * `sync-store` +1.240 (a chunk of its own now, shared by the card and the
+ * writer: `write` −254), `ImportControls` +156, the boot +104; the rest is
+ * hash noise. The trend: 276,5 → 277,6 → 290,5.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 277 * 1024 + 1141;
+const TOTAL_BUDGET_GZIP_BYTES = 290 * 1024 + 811;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
