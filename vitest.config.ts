@@ -62,6 +62,7 @@ export default defineConfig({
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },
       { extends: true, test: { name: "cli", root: "apps/cli" } },
       { extends: true, test: { name: "api", root: "apps/api" } },
+      { extends: true, test: { name: "jobs", root: "apps/jobs" } },
       {
         extends: true,
         /*
