@@ -138,6 +138,7 @@ describe("architecture (016): the clock is injected", () => {
     "apps/jobs/scripts",
     "packages/domain/src/jobs",
     "packages/domain/test/jobs",
+    "packages/adapters/test/jobs",
   ];
 
   it("reads the real time only in the adapter of the clock", () => {

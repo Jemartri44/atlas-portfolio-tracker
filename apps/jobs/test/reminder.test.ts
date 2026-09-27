@@ -176,6 +176,21 @@ describe("the monthly reminder, end to end", () => {
     ]);
   });
 
+  it("takes its period from the day of Madrid, not of UTC (R11, mutant 6)", async () => {
+    // 23:30 UTC of the 31st of October is 00:30 of the 1st of November in Madrid.
+    const november = setupJobs({ now: "2026-10-31T23:30:00Z" });
+    await november.run(["monthly_reminder"]);
+    expect(november.ses.sent.map((mail) => mail.subject)).toEqual([
+      "[Atlas] Recordatorio mensual 2026-11",
+    ]);
+    // 22:30 UTC of the 31st of December is still the old year in Madrid.
+    const december = setupJobs({ now: "2026-12-31T22:30:00Z" });
+    await december.run(["monthly_reminder"]);
+    expect(december.ses.sent.map((mail) => mail.subject)).toEqual([
+      "[Atlas] Recordatorio mensual 2026-12",
+    ]);
+  });
+
   it("never starts the reminder of a month nobody claimed: only today's", async () => {
     const jobs = setupJobs({ now: "2026-11-01T07:00:00Z" });
     await jobs.run(["monthly_reminder"]);
