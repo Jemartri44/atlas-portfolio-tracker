@@ -252,6 +252,51 @@ describe("reference/ecb/ in the bucket (R31)", () => {
     expect(await store.recover()).toBe("none");
   });
 
+  it("rebuilds a damaged history from a new download, and only a damaged one (review of PR #106, B1 (b))", async () => {
+    const s3 = new TestOnlyFakeS3();
+    const store = new S3EcbHistoryStore(s3);
+    const old = await load();
+    const text = new TextDecoder().decode(old);
+    await store.activate(download(old));
+    await store.keepRejected(download(new TextEncoder().encode("bad"), "api"));
+    // Not damaged: a rebuild is refused and writes nothing.
+    const writes = s3.conditions.length;
+    await expect(store.rebuild(download(old))).rejects.toBeInstanceOf(EcbStoreConflict);
+    expect(s3.conditions.length).toBe(writes);
+    // The reviewer's mixed state: the manifest records A, the file holds B,
+    // previous/ holds the history before both.
+    await store.activate(download(withNewDay(text), "zip", "2026-10-02T15:30:00.000Z"));
+    s3.seed(
+      "reference/ecb/eurofxref-hist.csv",
+      new TextDecoder().decode(withNewDay(text, "2026-04-02")),
+    );
+    expect(await store.recover()).toBe("damaged");
+    const zip = withNewDay(text, "2026-04-03");
+    const meta = await store.rebuild(download(zip, "zip", "2026-10-03T07:00:00.000Z"));
+    expect(meta).toMatchObject({ file: "eurofxref-hist.csv", source: "zip", sha256: sha(zip) });
+    expect((await store.active())?.meta.sha256).toBe(sha(zip));
+    expect(await store.recover()).toBe("none");
+    const manifest = JSON.parse(s3.text("reference/ecb/manifest.json") as string);
+    // A new generation: nothing of the damaged one is named as previous, and
+    // the rejected downloads are still said.
+    expect(manifest.previous).toBeUndefined();
+    expect(manifest.rejected).toHaveLength(1);
+  });
+
+  it("rebuilds over a manifest that does not read, and stops at another writer", async () => {
+    const s3 = new TestOnlyFakeS3();
+    const store = new S3EcbHistoryStore(s3);
+    const old = await load();
+    await store.activate(download(old));
+    s3.seed("reference/ecb/manifest.json", "not a manifest");
+    s3.conflictNext();
+    await expect(store.rebuild(download(old))).rejects.toBeInstanceOf(EcbStoreConflict);
+    expect(await store.recover()).toBe("damaged");
+    await store.rebuild(download(old));
+    expect((await store.active())?.meta.sha256).toBe(sha(old));
+    expect(JSON.parse(s3.text("reference/ecb/manifest.json") as string).rejected).toEqual([]);
+  });
+
   it("runs the update of the domain: accepts the same history, never overwrites a published rate", async () => {
     const s3 = new TestOnlyFakeS3();
     const store = new S3EcbHistoryStore(s3);

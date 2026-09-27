@@ -13,10 +13,21 @@
 //                                                             name: an orphan nobody reads
 //   3. `manifest.json` ← the new manifest                     the new history
 //
+// Every object the three steps write is read **at the start, together with
+// the manifest**, and each write is conditioned on **that** read (review of
+// PR #106, B1): a run that wrote any of them after this one verified the
+// history makes this one stop, so two runs that verified the same history
+// never leave one's file under the other's manifest. A write whose condition
+// fails — another run, or the administration — is `EcbStoreConflict`, and the
+// run stops without retrying (§8.1 P11).
+//
 // `recover()`, called before each update, undoes a cut between 2 and 3 when
-// `previous/` holds exactly what the manifest records (`ecbRecovery`). A write
-// whose condition fails — another run, or the administration — is
-// `EcbStoreConflict`, and the run stops without retrying (§8.1 P11).
+// `previous/` holds exactly what the manifest records (`ecbRecovery`). What it
+// cannot undo is **damaged**, and the ECB job then rebuilds the history whole
+// from the official ZIP with `rebuild()` (a new generation, conditional too),
+// so the cloud never stays stopped on a damaged history. The one mix the
+// conditions cannot rule out without a lock — two runs of different sources
+// writing each other's file name at once — ends damaged, and is rebuilt.
 
 import { createHash } from "node:crypto";
 import type {
@@ -25,7 +36,7 @@ import type {
   StoredHistory,
   StoredHistoryMeta,
 } from "@atlas/domain/ecb";
-import { activeHistoryOf, ecbRecovery } from "@atlas/domain/jobs";
+import { activeHistoryOf, type EcbRecovery, ecbRecovery } from "@atlas/domain/jobs";
 import { EcbHistoryDamaged, type EcbManifest, fileOfSource } from "../ecb/history-store.js";
 import type { ObjectStore, StoredObject } from "./object-store.js";
 
@@ -97,29 +108,73 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
     return { meta: read.manifest.active, text: textOf(file.body) };
   }
 
-  /** Undoes an activation cut before its manifest, or says the history damaged (plan §7.1). */
-  async recover(): Promise<EcbRecovered> {
+  /** What `recover()` sees: the manifest, the file it names, `previous/`, and what to do. */
+  private async diagnose(): Promise<{
+    decision: EcbRecovery;
+    manifest: StoredObject | undefined;
+    current?: StoredObject;
+    previous?: StoredObject;
+  }> {
     const manifest = await this.objects.get(MANIFEST);
     const active = manifest === undefined ? undefined : activeHistoryOf(textOf(manifest.body));
     if (manifest !== undefined && active === undefined) {
-      return "damaged";
+      return { decision: { kind: "damaged" }, manifest };
     }
-    const file = active === undefined ? undefined : await this.objects.get(`${DIR}${active.file}`);
+    const current =
+      active === undefined ? undefined : await this.objects.get(`${DIR}${active.file}`);
     const previous =
       active === undefined ? undefined : await this.objects.get(`${DIR}previous/${active.file}`);
     const decision = ecbRecovery({
       active,
-      fileSha256: file === undefined ? undefined : sha256(file.body),
+      fileSha256: current === undefined ? undefined : sha256(current.body),
       previousSha256: previous === undefined ? undefined : sha256(previous.body),
     });
-    if (decision.kind === "none") {
-      return "none";
+    return {
+      decision,
+      manifest,
+      ...(current === undefined ? {} : { current }),
+      ...(previous === undefined ? {} : { previous }),
+    };
+  }
+
+  /** Undoes an activation cut before its manifest, or says the history damaged (plan §7.1). */
+  async recover(): Promise<EcbRecovered> {
+    const { decision, current, previous } = await this.diagnose();
+    if (decision.kind !== "undo") {
+      return decision.kind;
     }
-    if (decision.kind === "damaged") {
-      return "damaged";
-    }
-    await this.put(`${DIR}${decision.file}`, (previous as StoredObject).body, file);
+    await this.put(`${DIR}${decision.file}`, (previous as StoredObject).body, current);
     return "undone";
+  }
+
+  /**
+   * Rewrites a **damaged** history in force from a new download (review of
+   * PR #106, B1 (b)): a new generation — the file, then a manifest that names
+   * it alone, with no `previous` from the damaged one and the rejected
+   * downloads it still names — each written on the object read here. Refused
+   * when the history is not damaged (another run repaired it first), and a
+   * write in between is `EcbStoreConflict`. What was there stays in the older
+   * versions of the bucket.
+   */
+  async rebuild(next: DownloadedHistory): Promise<StoredHistoryMeta> {
+    const state = await this.diagnose();
+    if (state.decision.kind !== "damaged") {
+      throw new EcbStoreConflict();
+    }
+    const file = fileOfSource(next.source);
+    const target = await this.objects.get(`${DIR}${file}`);
+    const text = state.manifest === undefined ? "" : textOf(state.manifest.body);
+    const rejected =
+      activeHistoryOf(text) === undefined ? [] : (JSON.parse(text) as EcbManifest).rejected;
+    const meta = this.metaOf(next, file);
+    await this.put(`${DIR}${file}`, next.bytes, target);
+    const rebuilt: EcbManifest = { active: meta, rejected };
+    await this.put(
+      MANIFEST,
+      new TextEncoder().encode(`${JSON.stringify(rebuilt, null, 2)}\n`),
+      state.manifest,
+    );
+    return meta;
   }
 
   private metaOf(next: DownloadedHistory, file: string): StoredHistoryMeta {
