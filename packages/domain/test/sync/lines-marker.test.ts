@@ -119,6 +119,10 @@ describe("the archives of the sync", () => {
     expect(syncArchiveName("redownload", new Date("2026-01-01T00:00:00Z"), etag)).toBe(
       "pre-redownload-2026-01-01T010000-0123456789ab.jsonl",
     );
+    // The restore of the remote by the administration (ADR-0032, step 5; E5).
+    expect(syncArchiveName("restore", new Date("2026-10-03T08:00:00Z"), etag)).toBe(
+      "pre-restore-2026-10-03T100000-0123456789ab.jsonl",
+    );
     expect(syncArchiveName("sync", new Date("2026-01-01T00:00:00Z"), etag, 3)).toBe(
       "pre-sync-2026-01-01T010000-0123456789ab-3.jsonl",
     );
