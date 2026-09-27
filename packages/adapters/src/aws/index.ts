@@ -26,3 +26,4 @@ export {
 } from "./s3-ledger.js";
 export { AccessSecrets, parameterNames, type SecretsOptions } from "./secrets.js";
 export { TokenRegistry } from "./token-registry.js";
+export { readWebSignIn, recordWebSignIn, type WebSignInWrite } from "./web-sign-in.js";

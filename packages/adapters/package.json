@@ -70,6 +70,14 @@
       "types": "./dist/aws/sdk-admin.d.ts",
       "import": "./dist/aws/sdk-admin.js"
     },
+    "./aws-jobs": {
+      "types": "./dist/aws/jobs.d.ts",
+      "import": "./dist/aws/jobs.js"
+    },
+    "./aws-ses": {
+      "types": "./dist/aws/sdk-ses.d.ts",
+      "import": "./dist/aws/sdk-ses.js"
+    },
     "./access": {
       "types": "./dist/access/crypto.d.ts",
       "import": "./dist/access/crypto.js"
