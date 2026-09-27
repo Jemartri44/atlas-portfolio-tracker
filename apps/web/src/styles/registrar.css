@@ -7,14 +7,20 @@
 
 /* ---- Tiles: one tap for what happens every month ------------------------ */
 
+/*
+ * On a phone the seven tiles are three columns of 64px (feature 020, M11): the
+ * word alone, centred, so the seven fit in three rows and «Otros registros»
+ * stays on the first screenful. The round icon comes back from 640px, where
+ * there is room for it.
+ */
 .tiles {
   display: grid;
-  gap: var(--space-3);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .tile {
-  align-content: start;
+  align-content: center;
   background-color: var(--c-surface);
   border: var(--border) solid var(--c-border);
   border-radius: var(--radius-lg);
@@ -23,8 +29,8 @@
   display: grid;
   gap: var(--space-2);
   height: 100%;
-  min-height: 6.5rem;
-  padding: var(--space-4);
+  min-height: var(--tile-h);
+  padding: var(--space-2) var(--space-3);
   text-decoration: none;
 }
 
@@ -38,7 +44,7 @@
   background-color: var(--c-accent-soft);
   border-radius: var(--radius-pill);
   color: var(--c-accent-soft-text);
-  display: flex;
+  display: none;
   height: var(--lead-size);
   justify-content: center;
   width: var(--lead-size);
@@ -156,8 +162,21 @@
   color: var(--c-text-3);
 }
 
+@media (min-width: 40rem) {
+  .tile {
+    align-content: start;
+    min-height: var(--tile-h-wide);
+    padding: var(--space-4);
+  }
+
+  .tile > .lead {
+    display: flex;
+  }
+}
+
 @media (min-width: 64rem) {
   .tiles {
+    gap: var(--space-3);
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 

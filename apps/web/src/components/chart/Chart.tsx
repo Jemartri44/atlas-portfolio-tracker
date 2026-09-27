@@ -129,9 +129,9 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         font: axisFont(),
         grid: { stroke: cssValue("--c-chart-grid"), width: 1 },
         ticks: { show: false },
-        // With the mask on the axis carries no figure at all: the grid stays,
-        // so the shape reads, and no line says how much (brief §7).
-        size: privacy ? 8 : 56,
+        // No figure with the mask (brief §7); off, «0 €» clear of the plot (PR #105).
+        size: privacy ? 8 : 60,
+        gap: privacy ? 0 : 10,
         values: (_plot, splits) => splits.map((value) => axisAmount(value, privacy)),
       },
     ],

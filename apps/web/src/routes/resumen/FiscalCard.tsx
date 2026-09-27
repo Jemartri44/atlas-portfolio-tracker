@@ -29,13 +29,11 @@ export default function FiscalCard(props: {
       return module.fiscalStatus(input.events, input.date);
     },
   );
-  const klass = (): string =>
-    `span-4 ${status()?.prominent === true ? "is-first" : "is-last"}`.trimEnd();
 
   return (
     <Section
       title="Declaración"
-      class={klass()}
+      class={`span-4 summary-fiscal ${status()?.prominent === true ? "is-first" : "is-last"}`}
       aside={
         <Show when={status()?.season === true}>
           <span class="scope">Campaña de la Renta</span>

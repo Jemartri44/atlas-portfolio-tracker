@@ -209,5 +209,15 @@ export const movementRows = (
   events?: EventReferences,
 ): MovementRow[] => entries.map((entry) => movementRow(entry, names, events));
 
+/** Whether a row has something to say under «Estado»: a state other than the normal one, or invalid. */
+export const hasState = (row: MovementRow): boolean =>
+  row.status !== "current" || row.invalidReason !== undefined;
+
+/**
+ * The column «Estado» only when some row of the page uses it (feature 020,
+ * M13): on a ledger with nothing reversed it was twenty empty cells in a row.
+ */
+export const showsStateColumn = (rows: readonly MovementRow[]): boolean => rows.some(hasState);
+
 /** Page size of the progressive load: twenty years of ledger never paint at once. */
 export const PAGE_SIZE = 20;

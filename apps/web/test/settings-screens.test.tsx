@@ -128,7 +128,9 @@ describe("the first run", () => {
       expect(buttons.filter((button) => !button.classList.contains("secondary")).map(text)).toEqual(
         ["Seguir con los datos de este navegador"],
       );
-      const folder = buttons.find((button) => text(button).includes("carpeta de la consola"));
+      // «Importar de la carpeta» (feature 020, M13): the long label broke into
+      // two lines inside its 44px at 400px; the card says whose folder it is.
+      const folder = buttons.find((button) => text(button).trim() === "Importar de la carpeta");
       expect(folder?.classList.contains("secondary")).toBe(true);
       // The consequence of the decision of feature 012, written and not hidden.
       expect(text(host)).toContain("no comparten un libro vivo");

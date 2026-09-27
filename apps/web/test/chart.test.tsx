@@ -41,12 +41,19 @@ const DIGITS = /\d/;
 
 describe("the axis of a chart is an amount", () => {
   it("shows no figure at all when privacy is on", () => {
-    expect(axisAmount(12_345, false)).toBe("12 k");
+    expect(axisAmount(12_345, false)).toBe("12 k€");
     expect(axisAmount(12_345, true)).toBe("");
-    expect(axisAmount(2_500_000, false)).toBe("2,5 M");
+    expect(axisAmount(2_500_000, false)).toBe("2,5 M€");
     expect(axisAmount(2_500_000, true)).toBe("");
-    expect(axisAmount(750, false)).toBe("750");
+    expect(axisAmount(750, false)).toBe("750\u00a0€");
     expect(axisAmount(750, true)).toBe("");
+  });
+
+  it("says its unit with every figure: «400, 0, −200» alone was not an amount (M13)", () => {
+    expect(axisAmount(400, false)).toBe("400\u00a0€");
+    expect(axisAmount(0, false)).toBe("0\u00a0€");
+    expect(axisAmount(-200, false)).toBe("\u2212200\u00a0€");
+    expect(axisAmount(-12_345, false)).toBe("\u221212 k€");
   });
 
   it("gives nothing for a value that is not a number", () => {

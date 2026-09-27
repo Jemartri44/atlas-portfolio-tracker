@@ -90,6 +90,8 @@
   --lead-size: 2.25rem; /* the round icon that opens a row */
   --glyph-size: 2.75rem; /* the round glyph of an empty state */
   --mark-size: 1.75rem; /* the number of a first step */
+  --tile-h: 4rem; /* 64 · a tile of the day to day on a phone (feature 020, M11) */
+  --tile-h-wide: 6.5rem; /* 104 · the tile with its icon and its sentence, from 640px */
 
   /* ---- Layout ----------------------------------------------------------- */
 
@@ -101,6 +103,9 @@
   --statusbar-h: 3.25rem; /* 52 */
   --tabbar-h: 4rem; /* 64 */
   --topbar-h: 4rem; /* 64 */
+  /* The fixed bar at the top at this width: the status bar on a phone and a
+     tablet, the top bar from 1200px. An anchor stops under it. */
+  --header-h: var(--statusbar-h);
   --tabbar-max: 40rem; /* the bottom bar stops growing on a tablet */
   --label-col: 4.5rem; /* the label column of the allocation bars */
   --dialog-max: 34rem;
@@ -131,8 +136,12 @@
   --c-accent-soft-text: #1f4f7c;
   --c-on-accent: #ffffff;
 
-  --c-positive: #1b6a44; /* gains: always with a sign */
-  --c-negative: #a2392b; /* losses: always with a sign */
+  /* Results only (a gain or a loss, realised or latent), always with their
+     sign: never on a weight, a deviation, a price or a balance. Out of the red
+     of a problem and told apart under colour vision deficiency; the thresholds
+     live in test/palette.test.ts (feature 020, M6). */
+  --c-gain: #0f6b5c;
+  --c-loss: #b04a12;
 
   --c-caution: #80530a; /* needs a look */
   --c-caution-icon: #a8700f;
@@ -144,7 +153,9 @@
   --c-done: #1b6a44; /* a completed step */
 
   /* Data colours, validated as a set (lightness band, chroma, CVD ΔE ≥ 8,
-     normal-vision ΔE ≥ 15, ≥ 3:1 on the surface). Order is the domain order. */
+     normal-vision ΔE ≥ 15, ≥ 3:1 on the surface) when the palette was drawn;
+     the pairs that carry meaning are measured again by test/palette.test.ts.
+     Order is the domain order. */
   --c-class-equity: #4166b4;
   --c-class-fixed-income: #178a70;
   --c-class-gold: #b07f1f;
@@ -154,6 +165,9 @@
   --c-series-bucket: #b07f1f;
   --c-series-cash: #178a70;
   --c-series-index: #8a8880;
+  /* What was put into the core, a dashed step: the same neutral grey as the
+     index of the bucket, and they never share a chart (feature 020, M3). */
+  --c-series-contrib: #8a8880;
 
   --c-chart-grid: #ebe9e3;
   --c-chart-axis: #c9c6be;
@@ -179,6 +193,29 @@
     --gutter: var(--space-7);
     --grid-gap: var(--space-5);
     --chart-h: var(--chart-h-wide);
+  }
+}
+
+/* The monitor (≥ 1800; the user's is 2045): one more step of type, a taller
+   chart, more air and a wider reading container (feature 020, M4). Placed
+   after the desktop step so it wins from 1800 on. */
+@media (min-width: 112.5rem) {
+  :root {
+    --text-md: 1rem; /* 16 */
+    --text-lg: 1.1875rem; /* 19 */
+    --text-xl: 1.75rem; /* 28 */
+    --text-display: 3rem; /* 48 */
+    --chart-h: clamp(15rem, 28vh, 22rem);
+    --gutter: var(--space-8); /* 40 */
+    --grid-gap: var(--space-6); /* 24 */
+    --content-max: 115rem; /* 1840 */
+  }
+}
+
+/* From 1200px the one bar at the top is the top bar (layout.css). */
+@media (min-width: 75rem) {
+  :root {
+    --header-h: var(--topbar-h);
   }
 }
 
@@ -210,8 +247,8 @@
     --c-accent-soft: #223246;
     --c-accent-soft-text: #a9c8ec;
     --c-on-accent: #0f1c2c;
-    --c-positive: #6fc79a;
-    --c-negative: #f0917e;
+    --c-gain: #5cc6b0;
+    --c-loss: #f49a44;
     --c-caution: #e8b659;
     --c-caution-icon: #d9a441;
     --c-caution-soft: #352a14;
@@ -228,6 +265,7 @@
     --c-series-bucket: #b98521;
     --c-series-cash: #2a9f80;
     --c-series-index: #8f8d86;
+    --c-series-contrib: #8f8d86;
     --c-chart-grid: #2a2a27;
     --c-chart-axis: #45443f;
     --c-chart-gap: #242422;
@@ -257,8 +295,8 @@
   --c-accent-soft: #223246;
   --c-accent-soft-text: #a9c8ec;
   --c-on-accent: #0f1c2c;
-  --c-positive: #6fc79a;
-  --c-negative: #f0917e;
+  --c-gain: #5cc6b0;
+  --c-loss: #f49a44;
   --c-caution: #e8b659;
   --c-caution-icon: #d9a441;
   --c-caution-soft: #352a14;
@@ -275,6 +313,7 @@
   --c-series-bucket: #b98521;
   --c-series-cash: #2a9f80;
   --c-series-index: #8f8d86;
+  --c-series-contrib: #8f8d86;
   --c-chart-grid: #2a2a27;
   --c-chart-axis: #45443f;
   --c-chart-gap: #242422;
