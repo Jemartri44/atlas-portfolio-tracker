@@ -14,15 +14,17 @@ export {
   byMonth,
   firstEntries,
   groupValuations,
-  hasState,
   type ListEntry,
   type MonthOfEntries,
+  type ValuationGroup,
+} from "./movement-entries.js";
+export {
+  hasState,
   type MovementRow,
   movementRow,
   movementRows,
   PAGE_SIZE,
   showsStateColumn,
-  type ValuationGroup,
 } from "./movements.js";
 export {
   type BlockKey,

@@ -143,6 +143,6 @@ describe("the list of a phone", () => {
     );
     expect(new Set(headings).size).toBe(headings.length);
     // The day of 31/12/2028, gathered: one row that unfolds with its 44px summary.
-    expect(host.querySelector(".days .valuation-group > summary")).not.toBeNull();
+    expect(host.querySelector(".days .rows details.disclosure > summary")).not.toBeNull();
   });
 });

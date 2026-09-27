@@ -68,10 +68,7 @@ const COLUMNS: readonly DataColumn<MovementRow>[] = [
  * M8), with the same disclosure as everywhere: its summary is a 44px row.
  */
 export const ValuationGroupLine = (props: { group: ValuationGroup }): JSX.Element => (
-  <Disclosure
-    class="valuation-group"
-    label={`${props.group.rows.length} valoraciones · ${formatDate(props.group.date)}`}
-  >
+  <Disclosure label={`${props.group.rows.length} valoraciones · ${formatDate(props.group.date)}`}>
     <ul class="rows">
       <For each={props.group.rows}>
         {(row) => (
