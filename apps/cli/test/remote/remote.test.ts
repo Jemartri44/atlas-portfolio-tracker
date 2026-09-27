@@ -7,8 +7,9 @@
 import { chmod, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { SELF } from "../../../api/test/harness.js";
+import { SELF, setup } from "../../../api/test/harness.js";
 import { folderTree, setupConsole, writeRemoteJson } from "../support/console.js";
+import { dashRandom } from "../support/dash-ids.js";
 
 describe("atlas remote login (T27 to T29, T33)", () => {
   it("signs in by loopback, keeps the token in a 600 file, and writes nothing in the folder of the ledger", async () => {
@@ -123,12 +124,14 @@ describe("atlas remote logout (T35)", () => {
   });
 
   it("forgets only locally when asked, and says the token is still alive", async () => {
-    const c = await setupConsole();
+    // Its device id begins with `--`, never by chance: --device takes it all the same.
+    const c = await setupConsole({}, setup({ random: dashRandom() }));
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const [entry] = Object.values((await c.readCredentialsFile()).entries) as Record<
       string,
       string
     >[];
+    expect(entry?.device_id?.startsWith("--")).toBe(true);
     c.seen.length = 0;
     expect(
       await c.exec(["remote", "logout", "--device", entry?.device_id as string, "--local-only"]),
