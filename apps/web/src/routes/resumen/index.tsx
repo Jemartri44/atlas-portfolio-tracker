@@ -27,7 +27,7 @@ import {
   transferWatch,
 } from "@atlas/domain";
 import { A } from "@solidjs/router";
-import { createMemo, createResource, For, type JSX, lazy, Show } from "solid-js";
+import { createMemo, createResource, For, type JSX, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
 import { Icon, Notice, type NoticeItem, NoticeLink, Section } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
@@ -53,14 +53,11 @@ import { RequireLedger } from "../guard.jsx";
 import { EntryLine } from "../movimientos/MovementList.jsx";
 import { AttentionBlock, noticeOf } from "./AttentionBlock.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
+// The card that leads to the fiscal screen only draws, so it is on the boot
+// path and in its place on the first paint (feature 020, E2): what asks the
+// tax engine is `fiscal-status.ts`, loaded after it.
+import FiscalCard from "./FiscalCard.jsx";
 import { NetWorthBlock } from "./NetWorthBlock.jsx";
-
-/**
- * The card that leads to the fiscal screen, loaded **after** the summary: it
- * is the only card that asks the tax engine anything, and the engine is not on
- * the boot path.
- */
-const FiscalCard = lazy(() => import("./FiscalCard.jsx"));
 
 /** How many recent movements the summary shows (prompt §3.6). */
 const RECENT = 5;
