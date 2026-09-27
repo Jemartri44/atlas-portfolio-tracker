@@ -773,6 +773,22 @@ const BOOT_BUDGET_GZIP_BYTES = 74_134;
 const TOTAL_BUDGET_GZIP_BYTES = 294 * 1024 + 440;
 
 /**
+ * What the direction authorised, which **no ceiling may pass** (feature 020,
+ * E1, block 1; prompt 020 §8.1, the accepted preference). The ceilings above
+ * follow what is measured, twenty bytes at a time; these two do not move with
+ * any improvement. Raising one is a decision of the direction, written in the
+ * prompt of the feature, never a commit of an improvement: a ceiling raised
+ * over its authorisation does not build green.
+ *
+ *   - Boot: 76.069, prompt 015 §7 P13, still standing (prompt 020 §5).
+ *   - Total: 310.500, raised by the direction on 2026-09-27 over the 309.500
+ *     of prompt 020 §8 P1, for the prices of PR #102
+ *     (`specs/020-visual-refresh/questions.md` §4.1).
+ */
+const BOOT_AUTHORISED_GZIP_BYTES = 76_069;
+const TOTAL_AUTHORISED_GZIP_BYTES = 310_500;
+
+/**
  * Absolute URLs allowed in the output, one by one and with their reason. None
  * of them is ever requested: they are identifiers or text inside a message.
  * Anything else fails the build, which is the point — a new foreign URL has to
@@ -837,6 +853,17 @@ const files = (dir) =>
 const isText = (path) => [".js", ".css", ".html", ".webmanifest", ".json"].includes(extname(path));
 
 const problems = [];
+
+if (BOOT_BUDGET_GZIP_BYTES > BOOT_AUTHORISED_GZIP_BYTES) {
+  problems.push(
+    `el techo del arranque (${BOOT_BUDGET_GZIP_BYTES}) pasa de lo autorizado (${BOOT_AUTHORISED_GZIP_BYTES}): subir una autorización es cosa de la dirección`,
+  );
+}
+if (TOTAL_BUDGET_GZIP_BYTES > TOTAL_AUTHORISED_GZIP_BYTES) {
+  problems.push(
+    `el techo del total (${TOTAL_BUDGET_GZIP_BYTES}) pasa de lo autorizado (${TOTAL_AUTHORISED_GZIP_BYTES}): subir una autorización es cosa de la dirección`,
+  );
+}
 let gzipTotal = 0;
 const sizes = [];
 
