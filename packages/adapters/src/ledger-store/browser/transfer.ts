@@ -36,20 +36,46 @@ const SYNC_DEVICE_KEY = "sync:device";
 
 const encoder = new TextEncoder();
 
+/** What an export hands over (§6.2 P3; review of PR #97, security B2 and N3). */
+export interface LedgerExport {
+  /** The ledger, byte for byte. */
+  readonly text: string;
+  /** The text of what the sync holds back, when anything of it is unresolved. */
+  readonly held?: string;
+  /** How many operations are held back and unresolved: the lines of every unit. */
+  readonly heldOperations?: number;
+  /** What is held back cannot be read: the ledger goes anyway, and this says so. */
+  readonly heldUnreadable?: true;
+}
+
+/** What is held back, read without throwing: a throw would abort the export of the ledger (N3). */
+const heldOf = (heldText: string | undefined): Omit<LedgerExport, "text"> => {
+  if (heldText === undefined) {
+    return {};
+  }
+  try {
+    const units = unresolvedHeld(parseHeld(heldText));
+    const operations = units.reduce((sum, unit) => sum + unit.lines.length, 0);
+    return operations === 0 ? {} : { held: heldText, heldOperations: operations };
+  } catch {
+    return { heldUnreadable: true };
+  }
+};
+
 /**
  * The export **with what the sync holds back** (§6.2 P3): the text of the
  * ledger and, apart, the text of the held records when any is unresolved —
- * both read, and the date written, in one transaction (feature 012, D4: the
- * date can never claim an export that did not include the last line
- * recorded; only the date is written, and no date when there is no ledger).
- * The ledger exported is the ledger, byte for byte; what is held back
- * travels in a file of its own. The only export of the web.
+ * both read, and the date of this export written, in **one** transaction
+ * (feature 012, D4): the date can never claim an export that did not include
+ * the last line recorded. Only the date is written; no date when there is no
+ * ledger. A `sync:held` that cannot be read never stops the ledger from going
+ * (review of PR #97, N3): the export says it instead.
  */
 export const exportLedgerAndHeld = (
   when: Date,
   open: Opener = openAtlasDb,
-): Promise<{ text: string; held?: string }> =>
-  transact<{ text: string; held?: string }>(open, "readwrite", (store, _tx, settle) => {
+): Promise<LedgerExport> =>
+  transact<LedgerExport>(open, "readwrite", (store, _tx, settle) => {
     const get = store.get(CURRENT_KEY);
     const held = store.get(SYNC_HELD_KEY);
     held.onsuccess = () => {
@@ -58,15 +84,7 @@ export const exportLedgerAndHeld = (
         const meta: StoredMeta = { lastExportAt: when.toISOString() };
         store.put(meta, META_KEY);
       }
-      const heldText = held.result as string | undefined;
-      const unresolved =
-        heldText !== undefined && unresolvedHeld(parseHeld(heldText)).length > 0
-          ? heldText
-          : undefined;
-      settle.ok({
-        text: stored?.text ?? "",
-        ...(unresolved === undefined ? {} : { held: unresolved }),
-      });
+      settle.ok({ text: stored?.text ?? "", ...heldOf(held.result as string | undefined) });
     };
   });
 
