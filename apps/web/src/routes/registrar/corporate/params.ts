@@ -9,7 +9,7 @@
 // Numbers are read like every other number of the application
 // (`format/input.ts`): `1.200,50` is twelve hundred, `1.5` is refused.
 
-import type { CorporateActionParams } from "@atlas/domain";
+import type { CorporateActionParams } from "@atlas/domain/tools";
 import { parseDecimalInput } from "../../../format/input.js";
 import type { CorporateForm } from "../../../view-models/forms/corporate.js";
 import type { FormValues } from "../../../view-models/forms/index.js";

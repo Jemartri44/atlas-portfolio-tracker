@@ -14,6 +14,10 @@
       "types": "./dist/fiscal.d.ts",
       "import": "./dist/fiscal.js"
     },
+    "./tools": {
+      "types": "./dist/tools.d.ts",
+      "import": "./dist/tools.js"
+    },
     "./ecb": {
       "types": "./dist/ecb.d.ts",
       "import": "./dist/ecb.js"

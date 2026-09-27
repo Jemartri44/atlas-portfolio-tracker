@@ -919,6 +919,17 @@ const LAZY_ONLY = [
   // commit: the domain of the sync and its door, the shared orchestration and
   // the web's own store of sync state. The sync is explicit and lazily loaded.
   { path: "/packages/domain/src/sync/", what: "la sincronización del libro" },
+  // Feature 015, E5 (Q12, §33): the tools of the screens opened on demand.
+  { path: "/packages/domain/src/tools.ts", what: "la puerta de las herramientas de las pantallas" },
+  {
+    path: "/packages/domain/src/projections/corporate-action-draft.ts",
+    what: "el borrador de un evento corporativo",
+  },
+  { path: "/packages/domain/src/projections/deep-check.ts", what: "la verificación a fondo" },
+  {
+    path: "/packages/domain/src/projections/simulate-transfer.ts",
+    what: "la simulación de un traspaso",
+  },
   // Feature 015: **nothing of the access on the boot path**, from its first
   // commit. The rules of the access are the API's and never the web's (the
   // architecture test keeps the web from reaching them at all); the session,

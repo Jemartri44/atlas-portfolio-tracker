@@ -213,6 +213,7 @@ export default defineConfig(({ command }) => ({
       // otherwise swallow `@atlas/domain/fiscal`.
       "@atlas/domain/ecb": repo("../../packages/domain/src/ecb.ts"),
       "@atlas/domain/fiscal": repo("../../packages/domain/src/fiscal.ts"),
+      "@atlas/domain/tools": repo("../../packages/domain/src/tools.ts"),
       "@atlas/domain/quotes": repo("../../packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
@@ -297,7 +298,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|sync[\\/]|sync\.ts|ports[\\/](?:remote-ledger|sync-state-store)\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|sync[\\/]|sync\.ts|tools\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer)\.ts|ports[\\/](?:remote-ledger|sync-state-store)\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
             },
           ],
         },

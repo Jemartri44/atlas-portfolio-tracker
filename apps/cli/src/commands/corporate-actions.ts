@@ -8,12 +8,8 @@
 
 import { readFile } from "node:fs/promises";
 import {
-  type CashSettlement,
   CORPORATE_ACTION_KINDS,
-  type CorporateActionDraft,
   type CorporateActionKind,
-  type CorporateActionParams,
-  corporateActionDraft,
   DomainError,
   type Draft,
   type Effect,
@@ -24,6 +20,12 @@ import {
   previewEvent,
   recordEvent,
 } from "@atlas/domain";
+import {
+  type CashSettlement,
+  type CorporateActionDraft,
+  type CorporateActionParams,
+  corporateActionDraft,
+} from "@atlas/domain/tools";
 import {
   assertKnownFlags,
   booleanFlag,

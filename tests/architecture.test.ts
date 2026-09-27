@@ -1342,6 +1342,43 @@ describe("architecture: the ECB is not in the barrel", () => {
   });
 });
 
+describe("architecture: the tools of the screens on demand are not in the barrel", () => {
+  /**
+   * Feature 015, E5 (decision of the direction on Q12, §33): the draft of a
+   * corporate action, the deep check and the simulation of a transfer live
+   * behind `@atlas/domain/tools`. They rode in the barrel onto the boot path of
+   * the web for screens opened now and then (2.166 B gzip of boot); the barrel
+   * never exports them again, and no other module of the domain imports them.
+   */
+  const TOOLS =
+    /\.\/(projections\/)?(corporate-action-draft|deep-check|simulate-transfer)\.js$|\.\/tools\.js$/;
+
+  it("keeps them out of index.ts, and behind their door", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    expect(specifiersOf(barrel).filter((specifier) => TOOLS.test(specifier))).toEqual([]);
+    const door = specifiersOf(readFileSync(join(domainSrc, "tools.ts"), "utf8"));
+    expect(door.filter((specifier) => TOOLS.test(specifier))).toHaveLength(3);
+  });
+
+  it("is imported by no other module of the domain", () => {
+    const own = new Set(
+      [
+        "tools.ts",
+        "projections/corporate-action-draft.ts",
+        "projections/deep-check.ts",
+        "projections/simulate-transfer.ts",
+      ].map((file) => join(domainSrc, file)),
+    );
+    const offenders = listTsFiles(domainSrc)
+      .filter((file) => !own.has(file))
+      .filter((file) =>
+        specifiersOf(readFileSync(file, "utf8")).some((specifier) => TOOLS.test(specifier)),
+      )
+      .map((file) => relative(repoRoot, file));
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe("architecture: the automatic prices are not in the barrel", () => {
   /**
    * Feature 013: nothing of the automatic prices on the boot path of the web.
