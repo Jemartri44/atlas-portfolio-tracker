@@ -418,7 +418,13 @@ const dist = join(webRoot, "dist");
  * button wins and the focus goes to the title reached: all on the frame, on
  * the boot on purpose. The trend: 74.596 → 74.664 → 74.874.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_894;
+/*
+ * **Round 1 of the review of PR #105, N1 (2026-09-27): measured 74.895 (+21
+ * over 74.874), ceiling 74.915 — measured + 20**, raised before the commit
+ * that needs it. What a row says besides its link stays above it: one rule of
+ * `lists.css`. The trend: 74.664 → 74.874 → 74.895.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_915;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -897,7 +903,13 @@ const BOOT_BUDGET_GZIP_BYTES = 74_894;
  * 302.635 — measured + 256**, lowered in a commit of its own. The trend:
  * 302.066 → 302.418 → 302.379.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 302_635;
+/*
+ * **Round 1 of the review of PR #105, N1 (2026-09-27): measured 302.638 (+125
+ * over the 302.513 of B1 and N2, +259 over 302.379), ceiling 302.894 —
+ * measured + 256**, raised before the commit that needs it, inside the
+ * authorisation (310.500). The trend: 302.379 → 302.513 → 302.638.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 302_894;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
