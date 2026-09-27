@@ -16,11 +16,44 @@ import { describe, expect, it } from "vitest";
 
 const src = join(dirname(fileURLToPath(import.meta.url)), "../src");
 
-const files = (dir: string): string[] =>
+const files = (dir: string, pattern = /\.tsx$/): string[] =>
   readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
-    return statSync(path).isDirectory() ? files(path) : path.endsWith(".tsx") ? [path] : [];
+    return statSync(path).isDirectory() ? files(path, pattern) : pattern.test(path) ? [path] : [];
   });
+
+/** The two components that paint a figure by its sign; nobody else may. */
+const PAINTERS = new Set(["components/Amount.tsx", "components/Figure.tsx"]);
+
+/**
+ * Every `class` and `classList` attribute of a piece of markup, with its value
+ * whole: a quoted string, or an expression in braces, nested braces included.
+ */
+const classAttributes = (source: string): string[] => {
+  const found: string[] = [];
+  for (const match of source.matchAll(/\bclass(?:List)?=/g)) {
+    let at = (match.index ?? 0) + match[0].length;
+    const open = source.charAt(at);
+    if (open === '"' || open === "'") {
+      found.push(source.slice(at + 1, source.indexOf(open, at + 1)));
+      continue;
+    }
+    if (open !== "{") {
+      continue;
+    }
+    let depth = 0;
+    const start = at;
+    for (; at < source.length; at += 1) {
+      const character = source.charAt(at);
+      depth += character === "{" ? 1 : character === "}" ? -1 : 0;
+      if (depth === 0) {
+        break;
+      }
+    }
+    found.push(source.slice(start, at + 1));
+  }
+  return found;
+};
 
 /** Where the colour is asked for, and what each place colours. */
 const RESULTS: Record<string, { count: number; what: string }> = {
@@ -76,5 +109,28 @@ describe("the colour of a result goes only on results", () => {
     expect(found).toEqual(
       Object.fromEntries(Object.entries(RESULTS).map(([name, entry]) => [name, entry.count])),
     );
+  });
+
+  it("is never written as a sign class by hand, outside the two components that paint by sign", () => {
+    // Round 1 of the review of PR #105, B2: a `class="positive"` on attention
+    // went through every guardian, because they only looked at `coloured`.
+    const written = files(src)
+      .map((path) => [relative(src, path), readFileSync(path, "utf8")] as const)
+      .filter(([name]) => !PAINTERS.has(name))
+      .flatMap(([name, source]) =>
+        classAttributes(source)
+          .filter((value) => /\b(positive|negative)\b/.test(value))
+          .map((value) => `${name}: ${value}`),
+      );
+    expect(written).toEqual([]);
+  });
+
+  it("is not asked of the sign of a value outside the two components that paint by sign", () => {
+    const asking = files(src, /\.(ts|tsx)$/)
+      .map((path) => [relative(src, path), readFileSync(path, "utf8")] as const)
+      .filter(([name]) => !PAINTERS.has(name))
+      .filter(([, source]) => /\bsignOf\s*\(/.test(source))
+      .map(([name]) => name);
+    expect(asking).toEqual([]);
   });
 });

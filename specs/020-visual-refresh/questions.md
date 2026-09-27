@@ -370,3 +370,15 @@ Además de §8:
 
 - **Código congelado: `ded43d6`**. El commit que añade esta sección solo toca `specs/`; su SHA va en la PR. Desde aquí no empujo nada mientras dura la revisión.
 - **Para los revisores**: `git worktree add --detach .claude/worktrees/020-rev-E1-<revisor> <sha>`.
+
+## 10. Ronda 1 de la revisión de la PR #105 (2026-09-27)
+
+La revisión ([comentario](https://github.com/Jemartri44/atlas-portfolio-tracker/pull/105#issuecomment-5858891406)) no convergió: hay dos hallazgos que bloquean y cuatro que no. Estas son las decisiones de la dirección, tal como llegaron. Cada corrección lleva su test, visto antes en rojo, y su mutante.
+
+- **B1**: la decodificación del fragmento va dentro de un `try`. Si falla, se usa el valor sin decodificar; si tampoco encaja, no se hace nada. `FollowFragment` pasa a estar dentro del `ErrorBoundary`. Tests con `#50%`, `#%E0%A4%A` y `#`.
+- **B2**: `result-colour.test.ts` falla si aparece `positive` o `negative` en un `class` fuera de `Amount.tsx` y `Figure.tsx`, y si aparece `signOf(` fuera de esos dos ficheros. Mutantes: `AttentionBlock` con `positive`, y un `class={signOf(x)}` en otro sitio.
+- **N1**: `position: relative; z-index: 1` para `.cell-trunc`, `.meta` y `.tag` dentro de las filas enlace. Se comprueba con una captura, con el ratón encima, que el `title` se ve.
+- **N2**: el ancla solo actúa al entrar por URL o al navegar dentro de la aplicación hacia un fragmento, nunca al volver atrás (`popstate`). El bucle se cancela si cambia la ruta. Al llegar, el foco pasa al título de destino, con `tabindex="-1"`.
+- **N3**: se deja para E4 (M3). Anotado: a 2045 la tarjeta de evolución, con `grid-row: span 2`, se estira hasta la altura de *Atención* más *Últimos movimientos* y deja una banda vacía de más de 200 px bajo la leyenda. La gráfica más alta de M3 tiene que cerrarla, y E4 lo medirá.
+- **N4**: el guardián se amplía para que una copia literal del valor hex de la ganancia, la pérdida o el peligro fuera de `tokens.css` también falle. Con su mutante.
+- **Cosmético**: la etiqueta «0 €» del eje del Cubo a 400 px se separa del primer punto si cuesta poco; si no, se anota.
