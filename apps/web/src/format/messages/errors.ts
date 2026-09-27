@@ -268,8 +268,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "La correspondencia de símbolos de la carpeta no se entiende. Se arregla desde la consola, declarando otra vez los símbolos.",
   symbols_file_newer_version: () =>
     "La correspondencia de símbolos de la carpeta es de una versión más nueva de la aplicación. Recarga la aplicación para actualizarla.",
-  symbols_file_unknown_key: (d) =>
-    `La correspondencia de símbolos de la carpeta tiene una clave que no es suya (${text(d.key)}): se arregla desde la consola, quitándola del fichero.`,
+  symbols_file_unknown_key: () =>
+    "La correspondencia de símbolos de la carpeta tiene un dato que no es suyo. Se arregla desde la consola.",
   symbols_misstored_pending: (d, n) =>
     `${n.one(d.asset_id)} tiene cierres guardados en una divisa equivocada, pendientes de purgar desde la consola: mientras tanto no se puede quitar esa fuente ni el activo.`,
   symbols_not_declared: (d, n) =>
