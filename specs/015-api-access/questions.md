@@ -1728,3 +1728,22 @@ Sobre `62e7be9`, con `--pool=forks --maxWorkers=1`, cada paso tras el guardián 
   - `docs/api.md` §5.4: la ligadura de la web con `sync:device`;
   - `docs/data-schema.md`: la clave `sync:device` del almacén del navegador y `ledger.held.jsonl` junto a la exportación;
   - `docs/specification.md`: la tarjeta de sincronización de la web.
+
+## 29. Las decisiones de la dirección sobre E4 (2026-09-27)
+
+- **Q12, opción (b).**
+  - La proyección degradada marca la línea con una clave repetida como inválida, con `duplicate_key` y su id. `atlas check` y la web la señalan, y la sincronización la retiene con `domain_rejected` antes de subirla.
+  - La API mantiene `body_invalid`.
+  - **Se implementa al empezar E5, no en la PR #97.**
+  - **Se mide antes**: al arranque le quedan 18 bytes hasta el tope de 76.069 (hoy 76.030 medido, techo 76.051). Si no cabe, se para y se propone de dónde sacar los bytes. **El tope no se sube.**
+  - Anotada en `docs/data-schema.md` §2.
+- **Desviaciones de §28.2, aceptadas**:
+  - `sync:device` en lugar de `sync:remote`;
+  - `apps/web/tsconfig.test-api.json`.
+- **La cobertura intermitente de `ecb/propose.ts:95`**: anotada. Sigue pendiente de que el usuario dé el permiso `workflow` para el cambio de la CI que guarda la cobertura (el stash `ci-015-upload-artifact`).
+- **Los dos commits que no pasan solos** (`4dc3c5f`, `b342ba7`): anotados, sin reescribir la historia.
+- **Documentos, por orden expresa de la dirección, en la PR #97**:
+  - `docs/api.md` §5.4: con qué dispositivo se une la web, las negativas, y `device_forgotten`;
+  - `docs/data-schema.md` §1: la clave `sync:device`, `ledger.held.jsonl`, la importación negada mientras se sincroniza, y las cuatro claves `sync:*`;
+  - `docs/data-schema.md` §2: la nota de Q12, opción (b);
+  - `docs/specification.md` §9.6: la tarjeta de sincronización de la web.
