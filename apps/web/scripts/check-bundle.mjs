@@ -321,8 +321,15 @@ const dist = join(webRoot, "dist");
  * source until now only in the sync), and the degraded projection marks it
  * invalid. The trend: 76.055 → 73.889 → 74.073; 1.976 left of the
  * authorisation.
+ *
+ * **Q12, the remedy (review of PR #98, B1; §35): measured 74.114 (+41),
+ * ceiling 74.134 — measured + 20**, raised before the commit that needs it,
+ * inside the authorisation. A line with a key twice that a live reversal
+ * annuls counts as annulled: the projection waits for the reversals before
+ * judging it. The trend: 73.889 → 74.073 → 74.114; 1.955 left of the
+ * authorisation.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_093;
+const BOOT_BUDGET_GZIP_BYTES = 74_134;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
