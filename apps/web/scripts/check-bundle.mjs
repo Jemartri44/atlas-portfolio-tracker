@@ -1020,6 +1020,13 @@ const FORBIDDEN_IN_WEB = [
     anywhere: /(^|\/)packages\/domain\/(src|dist)\/access(\.[jt]s$|\/)/,
     what: "las reglas del acceso",
   },
+  // The administration of the remote (feature 015, E5; review of PR #98,
+  // N7): its rules behind their door; its adapter is under `aws/` and its
+  // orders in the console, both refused below.
+  {
+    anywhere: /(^|\/)packages\/domain\/(src|dist)\/admin\.[jt]s$/,
+    what: "las reglas de la administración",
+  },
   // The Node adapters of the API, the SDK of AWS and the API itself.
   {
     anywhere: /(^|\/)packages\/adapters\/(src|dist)\/(aws|access|identity)\//,

@@ -507,7 +507,11 @@ describe("architecture (015): AWS and Google only where they belong", () => {
             (specifier) => specifier.startsWith("@aws-sdk/") || specifier.startsWith("node:"),
           ) ||
           /[/\\]adapters[/\\]src[/\\](aws|identity|access)[/\\]/.test(file) ||
-          /[/\\]domain[/\\]src[/\\]access(\.ts|[/\\])/.test(file)
+          /[/\\]domain[/\\]src[/\\]access(\.ts|[/\\])/.test(file) ||
+          // The administration (review of PR #98, N7): its rules, its adapter
+          // (under `aws/`, above) and its orders, which live in the console.
+          /[/\\]domain[/\\]src[/\\]admin\.ts$/.test(file) ||
+          /[/\\]apps[/\\]cli[/\\]/.test(file)
         );
       })
       .map(([, chain]) => chainText(chain));
