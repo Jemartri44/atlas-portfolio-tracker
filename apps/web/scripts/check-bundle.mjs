@@ -918,7 +918,16 @@ const BOOT_BUDGET_GZIP_BYTES = 75_039;
  * measured + 256**, raised before the commit that needs it, inside the
  * authorisation (310.500). The trend: 302.379 → 302.513 → 302.638.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 302_894;
+/*
+ * **Feature 016, E2, round 1 of the review of PR #106, with `develop` (PR
+ * #105) merged in (2026-09-28): measured 302.935 (+297 over the 302.638 of
+ * PR #105), ceiling 303.191 — measured + 256**, raised in the commit after the
+ * merge, inside the authorisation (310.500). All of it lazy: the stricter
+ * reader of `prices/symbols.json` (no key of its own, no prototype) and the
+ * sentence of `symbols_file_unknown_key`. The boot does not move (75.011,
+ * under 75.039). The trend: 302.379 → 302.638 → 302.935.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 303_191;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
