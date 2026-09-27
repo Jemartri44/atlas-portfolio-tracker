@@ -2193,7 +2193,16 @@ Batches en el *scratchpad*: `015-e5-b1.json` y `015-e5-b2.json`, con sus salidas
 
 ### 33.11 La tubería y la CI
 
-Se rellena al cerrar.
+**La tubería completa**, con un trabajador y detrás de la puerta de memoria. Todos los pasos salieron con 0:
+
+| Paso | Sobre | Resultado |
+|---|---|---|
+| lint, typecheck | `a0a06ea` | 0 |
+| cobertura 1 | `7f4217f` (solo documentos sobre `a0a06ea`) | 3.140 tests; dominio al 100 % (5.054/5.054 ramas); 978 s |
+| cobertura 2 | `7f4217f` | Lo mismo; 869 s |
+| build | `7f4217f` | Arranque 74.073, total 301.370 |
+
+**El código queda congelado en `a0a06ea`.** Lo posterior son solo documentos. La CI, en la PR de E5.
 
 ### 33.12 Pendiente para la dirección
 
