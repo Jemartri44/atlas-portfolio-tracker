@@ -17,13 +17,13 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
 import {
   newTokenRecord,
   revokedRecord,
   serializeTokenRecord,
   type TokenRecord,
-} from "../packages/domain/src/access/token.js";
+} from "@atlas/domain/access";
+import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const runbook = readFileSync(join(repoRoot, "docs", "runbooks", "revoke-all-tokens.md"), "utf8");

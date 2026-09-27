@@ -76,7 +76,7 @@ describe("the stolen Google account, rehearsed step by step with the doubles", (
     expect(await intruder.exec(["sync", "join", "--from-remote", "--origin", SELF])).toBe(0);
     await writeFile(
       ledgerFile(intruder),
-      (await readFile(ledgerFile(intruder), "utf8")) + `${intruderDeposit}\n`,
+      `${await readFile(ledgerFile(intruder), "utf8")}${intruderDeposit}\n`,
     );
     expect(await intruder.exec(["sync"])).toBe(0);
     expect(api.s3.text(LEDGER_KEY)).toContain(INTRUDER_LINE);
