@@ -45,15 +45,27 @@ import {
   requireFlag,
   UsageError,
 } from "../args.js";
-import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { ConfirmationRequired, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
-import { confirm, render } from "./shared.js";
+import { render } from "./shared.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
 
+/** The name of an environment, as `admin.json` names it (review of PR #98, N6). */
+const ENVIRONMENT = /^[a-z][a-z0-9-]*$/;
+
+/** `--env`, required and with the shape of a name: never `toString` nor `__proto__`. */
+export const environmentFlag = (flags: Flags): string => {
+  const environment = requireFlag(flags, "env");
+  if (!ENVIRONMENT.test(environment)) {
+    throw new UsageError(`--env no es el nombre de un entorno: «${environment}»`);
+  }
+  return environment;
+};
+
 /** The clients of the environment `--env` names, with the role of administration. */
 export const adminClientsOf = async (ctx: Context, flags: Flags): Promise<AdminClients> => {
-  const environment = requireFlag(flags, "env");
+  const environment = environmentFlag(flags);
   if (ctx.admin !== undefined) {
     return ctx.admin.clientsFor(environment);
   }
@@ -78,6 +90,26 @@ export const translateAwsFailure = (error: unknown): unknown => {
     return new DomainError("admin_aws_refused", "aws refused the order", { name: error.name });
   }
   return error;
+};
+
+/**
+ * The confirmation of an order that rewrites the remote or forgets a device
+ * (review of PR #98, N1; ADR-0032, note of 2026-09-27): never `--yes`, which
+ * is written before the list is on screen, and never a plain yes — the user
+ * types the name of the environment, with what is at stake in front.
+ */
+const confirmEnvironment = async (
+  ctx: Context,
+  environment: string,
+  question: string,
+): Promise<boolean> => {
+  const typed = await ctx.io.ask?.(`${question} Escribe «${environment}» para seguir: `);
+  if (typed === undefined) {
+    throw new ConfirmationRequired(
+      "hace falta confirmar escribiendo el nombre del entorno, y no hay terminal interactiva",
+    );
+  }
+  return typed === environment;
 };
 
 /** Every object under `sync/devices/`, read strictly: an unreadable one is kept as such. */
@@ -169,11 +201,13 @@ const revokeAllOrder = async (ctx: Context, clients: AdminClients): Promise<numb
       ...(done.unreadable.length === 0
         ? []
         : [
-            `Registros ilegibles, sin tocar (la API los rechaza igualmente): ${done.unreadable.join(", ")}.`,
+            `Registros que esta consola no entiende, sin tocar: ${done.unreadable.join(", ")}. No se puede asegurar que estén revocados: revísalos con la CLI de AWS (procedimiento «Revocar todos los tokens», apartado 2).`,
           ]),
     ].join("\n"),
   );
-  return EXIT.ok;
+  // Revoking **all** is not done while a record could not be read (review of
+  // PR #98, N2): a console older than the API may not understand a live one.
+  return done.unreadable.length === 0 ? EXIT.ok : EXIT.domain;
 };
 
 /**
@@ -186,14 +220,23 @@ const revokeAllOrder = async (ctx: Context, clients: AdminClients): Promise<numb
 const forgetOrder = async (
   ctx: Context,
   clients: AdminClients,
+  environment: string,
   id: string,
   force: boolean,
 ): Promise<number> => {
   const devices = new DeviceStore(clients.objects);
   const first = await devices.readForUpdate(id);
   const refusal = forgetRefusal(first?.device, force);
+  const sweep = () =>
+    revokeTokens(clients, ctx.deps.clock.now().getTime(), (record) => record.device_id === id);
   if (refusal === "already_forgotten") {
-    ctx.io.out(`El dispositivo ${id} ya estaba olvidado: no se ha tocado nada.`);
+    // A cut after the mark and before the sweep below is finished here.
+    const late = await sweep();
+    ctx.io.out(
+      late.revoked.length === 0
+        ? `El dispositivo ${id} ya estaba olvidado: no se ha tocado nada.`
+        : `El dispositivo ${id} ya estaba olvidado; revocados ${late.revoked.length} tokens suyos que seguían vivos.`,
+    );
     return EXIT.ok;
   }
   if (refusal !== undefined) {
@@ -205,7 +248,18 @@ const forgetOrder = async (
       `Con --force: ${device.pending} operaciones pendientes y ${device.held} retenidas de ese dispositivo dejarán de verse desde aquí. Siguen en él, pero nunca llegarán a la nube.`,
     );
   }
-  if (!(await confirm(ctx, `¿Olvidar el dispositivo ${id} y revocar sus tokens? [s/N] `))) {
+  const described = [
+    device.type === "web" ? "web" : "consola",
+    ...(device.device_name === undefined ? [] : [`«${device.device_name}»`]),
+    `última sincronización ${device.last_sync_at ?? "ninguna"}`,
+  ].join(", ");
+  if (
+    !(await confirmEnvironment(
+      ctx,
+      environment,
+      `¿Olvidar en ${environment} el dispositivo ${id} (${described}) y revocar sus tokens?`,
+    ))
+  ) {
     ctx.io.out("Cancelado: no se ha tocado nada.");
     return EXIT.ok;
   }
@@ -241,11 +295,15 @@ const forgetOrder = async (
     }
     current = await devices.readForUpdate(id);
   }
+  // And again once it is forgotten (review of PR #98, N8): a sign-in that
+  // ended between the revocation and the mark left a token nobody revoked.
+  const late = await sweep();
+  const revoked = [...tokens.revoked, ...late.revoked];
   render(
     ctx,
-    { device_id: id, revoked: tokens.revoked, already: tokens.already },
+    { device_id: id, revoked, already: tokens.already },
     [
-      `Olvidado ${id}: revocados ${tokens.revoked.length} tokens (${tokens.already} ya lo estaban).`,
+      `Olvidado ${id}: revocados ${revoked.length} tokens (${tokens.already} ya lo estaban).`,
       "La API rechazará toda credencial de ese dispositivo con device_forgotten. Si era una web, recibirá otro dispositivo al volver a iniciar sesión.",
     ].join("\n"),
   );
@@ -276,7 +334,12 @@ const remoteStore = (ctx: Context, clients: AdminClients): LedgerStore =>
  * condition of the remote that was read. Every device then sees the rewrite by
  * the hash of its prefix and downloads again when its user asks.
  */
-const compactOrder = async (ctx: Context, clients: AdminClients, flags: Flags): Promise<number> => {
+const compactOrder = async (
+  ctx: Context,
+  clients: AdminClients,
+  environment: string,
+  flags: Flags,
+): Promise<number> => {
   const refusal = await rewriteRefusal(ctx, clients);
   if (refusal !== undefined) {
     throw new RefusedError(refusal);
@@ -292,7 +355,7 @@ const compactOrder = async (ctx: Context, clients: AdminClients, flags: Flags): 
   ctx.io.out(
     `La nube tiene ${plan.lines} líneas, ${plan.outdated} en versiones anteriores a ${plan.targetVersion}. El original se archivará como archive/${plan.archiveName}, que nunca se sobrescribe.`,
   );
-  if (!(await confirm(ctx, "¿Compactar la nube? [s/N] "))) {
+  if (!(await confirmEnvironment(ctx, environment, `¿Compactar la nube de ${environment}?`))) {
     ctx.io.out("Cancelado: no se ha tocado nada.");
     return EXIT.ok;
   }
@@ -309,29 +372,45 @@ const compactOrder = async (ctx: Context, clients: AdminClients, flags: Flags): 
   return EXIT.ok;
 };
 
+/**
+ * The bytes of the candidate as text, **strictly** (review of PR #98, N9): a
+ * byte that is not UTF-8 would become U+FFFD, pass the check and be written
+ * as other bytes than the copy's. Refused instead, as a candidate that does
+ * not pass.
+ */
+const strictText = (bytes: Uint8Array): string => {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new DomainError("restore_candidate_invalid", "the candidate is not UTF-8", {
+      invalid: [],
+      findings: ["not_utf8"],
+    });
+  }
+};
+
 /** Step 1 of ADR-0032: the candidate, from a version of S3, a monthly dump or a file. */
 const candidateText = async (clients: AdminClients, from: string): Promise<string> => {
-  const decoder = new TextDecoder("utf-8", { fatal: true });
   if (from.startsWith("s3-version:")) {
     const stored = await clients.objects.getVersion(LEDGER_KEY, from.slice("s3-version:".length));
     if (stored === undefined) {
       throw new DomainError("restore_source_missing", `no version ${from}`, { from });
     }
-    return decoder.decode(stored.body);
+    return strictText(stored.body);
   }
   if (/^backups\/\d{4}-\d{2}$/.test(from)) {
     const stored = await clients.objects.get(`${from}/ledger.jsonl`);
     if (stored === undefined) {
       throw new DomainError("restore_source_missing", `no dump ${from}`, { from });
     }
-    return decoder.decode(stored.body);
+    return strictText(stored.body);
   }
   const { readFile } = await import("node:fs/promises");
-  const text = await readFile(from, "utf8").catch(() => undefined);
-  if (text === undefined) {
+  const bytes = await readFile(from).catch(() => undefined);
+  if (bytes === undefined) {
     throw new DomainError("restore_source_missing", `no file ${from}`, { from });
   }
-  return text;
+  return strictText(bytes);
 };
 
 /** Step 2: it loads with the current schema, projects with nothing invalid, and verifies. */
@@ -357,7 +436,12 @@ const checkCandidate = (ctx: Context, lines: string[]): LedgerEvent[] => {
  * candidate is written **line by line as it is** (`replaceLines`, never
  * `replace`, which reserialises), on the condition of the remote compared.
  */
-const restoreOrder = async (ctx: Context, clients: AdminClients, flags: Flags): Promise<number> => {
+const restoreOrder = async (
+  ctx: Context,
+  clients: AdminClients,
+  environment: string,
+  flags: Flags,
+): Promise<number> => {
   const refusal = await rewriteRefusal(ctx, clients);
   if (refusal !== undefined) {
     throw new RefusedError(refusal);
@@ -383,7 +467,13 @@ const restoreOrder = async (ctx: Context, clients: AdminClients, flags: Flags): 
         : `difiere de la nube. Solo en la copia: ${comparison.onlyCandidate.join(", ") || "nada"}. Solo en la nube, que se pierde: ${comparison.onlyRemote.join(", ") || "nada"}.`;
   ctx.io.out(`3. La copia ${said}`);
   // 4. The explicit yes, with that list on screen.
-  if (!(await confirm(ctx, "4. ¿Sustituir la nube por esta copia? [s/N] "))) {
+  if (
+    !(await confirmEnvironment(
+      ctx,
+      environment,
+      `4. ¿Sustituir la nube de ${environment} por esta copia?`,
+    ))
+  ) {
     ctx.io.out("Cancelado: no se ha tocado nada.");
     return EXIT.ok;
   }
@@ -418,6 +508,13 @@ export const adminCommand = async (
   if (order === "forget-device" && id === undefined) {
     throw new UsageError("falta el dispositivo: los enseña «atlas admin devices»");
   }
+  // Review of PR #98, N1: a `--yes` is written before the list is on screen.
+  if (ctx.yes && ["forget-device", "compact", "restore"].includes(order)) {
+    throw new UsageError(
+      `--yes no vale en «atlas admin ${order}»: se confirma escribiendo el nombre del entorno, con lo que se pierde delante (ADR-0032)`,
+    );
+  }
+  const environment = environmentFlag(flags);
   try {
     const clients = await adminClientsOf(ctx, flags);
     switch (order) {
@@ -426,11 +523,17 @@ export const adminCommand = async (
       case "revoke-all-tokens":
         return await revokeAllOrder(ctx, clients);
       case "forget-device":
-        return await forgetOrder(ctx, clients, id as string, booleanFlag(flags, "force"));
+        return await forgetOrder(
+          ctx,
+          clients,
+          environment,
+          id as string,
+          booleanFlag(flags, "force"),
+        );
       case "compact":
-        return await compactOrder(ctx, clients, flags);
+        return await compactOrder(ctx, clients, environment, flags);
       default:
-        return await restoreOrder(ctx, clients, flags);
+        return await restoreOrder(ctx, clients, environment, flags);
     }
   } catch (error) {
     throw translateAwsFailure(error);

@@ -50,6 +50,7 @@ const adminConsole = async (
       admin: adminOf(api),
       ledgerPath: join(folder, "ledger.jsonl"),
       confirm: options.confirm ?? true,
+      typed: options.confirm === false ? "no" : "test",
       ...(options.schema === undefined ? {} : { schema: options.schema }),
     }),
   };
@@ -244,11 +245,31 @@ describe("atlas admin restore (ADR-0032, the six steps)", () => {
       },
       ledgerPath: join(folder, "ledger.jsonl"),
       confirm: true,
+      typed: "test",
     });
     expect(await c.exec(["admin", "restore", "--env", "test", "--from", "backups/2026-09"])).toBe(
       EXIT.conflict,
     );
     expect(api.s3.text(LEDGER)).toBe(moved);
+  });
+
+  it("refuses a file that is not UTF-8, before comparing (review of PR #98, N9)", async () => {
+    const api = setup();
+    api.s3.seed(LEDGER, text(seeded));
+    const { c, folder } = await adminConsole(api);
+    // A byte 0xFF inside a string of a good copy: not UTF-8 at all.
+    const broken = Buffer.from(text(seeded.slice(0, 2)));
+    const at = broken.indexOf("Fondos");
+    expect(at).toBeGreaterThan(0);
+    broken[at + 3] = 0xff;
+    await writeFile(join(folder, "copia.jsonl"), broken);
+    expect(
+      await c.exec(["admin", "restore", "--env", "test", "--from", join(folder, "copia.jsonl")]),
+    ).toBe(EXIT.domain);
+    expect(c.text()).toContain("restore_candidate_invalid");
+    expect(c.text()).toContain("not_utf8");
+    expect(c.text()).not.toContain("3.");
+    expect(api.s3.text(LEDGER)).toBe(text(seeded));
   });
 
   it("restores an older version of the object, compared event by event", async () => {

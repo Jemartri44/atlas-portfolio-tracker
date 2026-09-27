@@ -41,7 +41,11 @@ export const environmentOf = async (path: string, name: string): Promise<AdminEn
   if (config === "unreadable") {
     throw new DomainError("admin_config_unreadable", `${path} cannot be read`, { path });
   }
-  const environment = config.environments[name];
+  // Its own key only: never `toString`, `constructor` or `__proto__` of the
+  // prototype (review of PR #98, N6).
+  const environment = Object.hasOwn(config.environments, name)
+    ? config.environments[name]
+    : undefined;
   if (environment === undefined) {
     throw new DomainError("admin_environment_unknown", `no environment ${name} in ${path}`, {
       environment: name,

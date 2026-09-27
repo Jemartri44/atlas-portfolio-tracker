@@ -54,6 +54,12 @@ describe("environmentOf", () => {
       code: "admin_environment_unknown",
       details: { environment: "dev" },
     });
+    // Only its own keys (review of PR #98, N6): never the prototype's.
+    for (const name of ["toString", "constructor", "__proto__", "hasOwnProperty"]) {
+      await expect(environmentOf(join(good, "atlas", "admin.json"), name)).rejects.toMatchObject({
+        code: "admin_environment_unknown",
+      });
+    }
   });
 });
 

@@ -11,8 +11,10 @@ import { DependencyUnavailable } from "@atlas/adapters/aws";
 import { DomainError } from "@atlas/domain";
 import {
   newDevice,
+  newTokenRecord,
   parseTokenRecord,
   serializeDeviceObject,
+  serializeTokenRecord,
   tokenParameterPath,
 } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
@@ -61,6 +63,7 @@ const adminConsole = async (api: Api, options: { confirm?: boolean } = {}) => {
     admin: adminOf(api),
     ledgerPath: join(folder, "ledger.jsonl"),
     confirm: options.confirm ?? true,
+    typed: options.confirm === false ? "no" : "test",
   });
 };
 
@@ -127,8 +130,11 @@ describe("atlas admin revoke-all-tokens (§7 P4)", () => {
     const name = `${tokenParameterPath(CONFIG.ssmPrefix)}${"U".repeat(22)}`;
     api.ssm.set(name, "{");
     const c = await adminConsole(api);
-    expect(await c.exec(["admin", "revoke-all-tokens", "--env", "test"])).toBe(EXIT.ok);
+    // Revoking all is not done while a record could not be read (review of
+    // PR #98, N2): the order fails, naming it, and leaves it as it is.
+    expect(await c.exec(["admin", "revoke-all-tokens", "--env", "test"])).toBe(EXIT.domain);
     expect(c.text()).toContain("U".repeat(22));
+    expect(c.text()).toContain("No se puede asegurar que estén revocados");
     expect(await api.ssm.get(name)).toBe("{");
   });
 });
@@ -248,6 +254,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
       },
       ledgerPath: join(await mkdtemp(join(tmpdir(), "atlas-admin-")), "ledger.jsonl"),
       confirm: true,
+      typed: "test",
     });
     expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).not.toBe(
       EXIT.ok,
@@ -295,5 +302,131 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(6)])).not.toBe(EXIT.ok);
     expect(c.text()).toContain("forget_device_unreadable");
     expect(api.s3.text(`sync/devices/${DEVICE(6)}.json`)).toBe("{");
+  });
+});
+
+describe("the confirmations of the administration (review of PR #98, N1)", () => {
+  it.each([
+    ["forget-device", ["admin", "forget-device", "--env", "test", DEVICE(8)]],
+    ["compact", ["admin", "compact", "--env", "test"]],
+    ["restore", ["admin", "restore", "--env", "test", "--from", "backups/2026-09"]],
+  ])("refuses --yes in %s, and writes nothing", async (_order, argv) => {
+    const api = setup();
+    seedDevice(api, DEVICE(8));
+    const before = api.s3.keys().map((key) => [key, api.s3.etagOf(key)]);
+    const c = await adminConsole(api);
+    expect(await c.exec([...argv, "--yes"])).toBe(EXIT.usage);
+    expect(c.text()).toContain("--yes no vale");
+    expect(api.s3.keys().map((key) => [key, api.s3.etagOf(key)])).toEqual(before);
+  });
+
+  it("asks for the name of the environment, with the device described, and a yes is not it", async () => {
+    const api = setup();
+    const mine = await consoleLogin(api);
+    const c = harness({
+      events: seed(),
+      admin: adminOf(api),
+      ledgerPath: join(await mkdtemp(join(tmpdir(), "atlas-admin-")), "ledger.jsonl"),
+      confirm: true,
+      typed: "s",
+    });
+    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).toBe(EXIT.ok);
+    expect(c.text()).toContain("Cancelado");
+    expect(c.text()).toContain("consola, «sobremesa», última sincronización ninguna");
+    expect(c.text()).toContain("Escribe «test» para seguir");
+    expect(JSON.parse(api.s3.text(`sync/devices/${mine.device_id}.json`) as string).state).toBe(
+      "active",
+    );
+  });
+
+  it("stops without a terminal to ask", async () => {
+    const api = setup();
+    seedDevice(api, DEVICE(9));
+    const c = harness({
+      events: seed(),
+      admin: adminOf(api),
+      ledgerPath: join(await mkdtemp(join(tmpdir(), "atlas-admin-")), "ledger.jsonl"),
+    });
+    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(9)])).toBe(EXIT.noTty);
+    expect(JSON.parse(api.s3.text(`sync/devices/${DEVICE(9)}.json`) as string).state).toBe(
+      "active",
+    );
+  });
+});
+
+describe("the name of the environment (review of PR #98, N6)", () => {
+  it.each(["toString", "__proto__", "Prod", "-x"])(
+    "refuses --env %s before any client",
+    async (name) => {
+      let asked = false;
+      const c = harness({
+        events: seed(),
+        admin: {
+          clientsFor: async () => {
+            asked = true;
+            throw new Error("never");
+          },
+        },
+      });
+      expect(await c.exec(["admin", "devices", "--env", name])).toBe(EXIT.usage);
+      expect(asked).toBe(false);
+    },
+  );
+});
+
+describe("forget-device sweeps the tokens issued meanwhile (review of PR #98, N8)", () => {
+  const recordFor = (deviceId: string, tokenId: string) =>
+    serializeTokenRecord(
+      newTokenRecord({
+        tokenId,
+        secretSha256: "0".repeat(64),
+        sub: "108234567890123456789",
+        email: "user@example.test",
+        deviceId,
+        deviceName: "sobremesa",
+        issuedAtMs: Date.UTC(2026, 9, 1, 10, 0, 0),
+        lifetimeDays: 90,
+      }),
+    );
+
+  it("revokes a token issued between the revocation and the mark", async () => {
+    const api = setup();
+    const mine = await consoleLogin(api);
+    const late = "L".repeat(22);
+    let crossed = false;
+    api.s3.beforePut = (key) => {
+      if (!crossed && key === `sync/devices/${mine.device_id}.json`) {
+        crossed = true;
+        api.ssm.set(
+          `${tokenParameterPath(CONFIG.ssmPrefix)}${late}`,
+          recordFor(mine.device_id, late),
+        );
+      }
+    };
+    const c = await adminConsole(api);
+    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).toBe(EXIT.ok);
+    const record = parseTokenRecord(
+      (await api.ssm.get(`${tokenParameterPath(CONFIG.ssmPrefix)}${late}`)) as string,
+      late,
+    );
+    expect((record as { revoked_at?: string }).revoked_at).toBeDefined();
+    expect(c.text()).toContain("revocados 2 tokens");
+  });
+
+  it("finishes the sweep when repeated over a device already forgotten", async () => {
+    const api = setup();
+    seedDevice(api, DEVICE(10));
+    const c = await adminConsole(api);
+    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(10)])).toBe(EXIT.ok);
+    const late = "M".repeat(22);
+    api.ssm.set(`${tokenParameterPath(CONFIG.ssmPrefix)}${late}`, recordFor(DEVICE(10), late));
+    c.reset();
+    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(10)])).toBe(EXIT.ok);
+    expect(c.text()).toContain("revocados 1 tokens suyos que seguían vivos");
+    const record = parseTokenRecord(
+      (await api.ssm.get(`${tokenParameterPath(CONFIG.ssmPrefix)}${late}`)) as string,
+      late,
+    );
+    expect((record as { revoked_at?: string }).revoked_at).toBeDefined();
   });
 });
