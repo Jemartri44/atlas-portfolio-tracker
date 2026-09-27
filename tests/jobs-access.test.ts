@@ -118,6 +118,46 @@ describe("architecture (016): the jobs are reached by nothing that faces a user"
   });
 });
 
+describe("architecture (016): one writer per object in prices/ (P18, M5)", () => {
+  /**
+   * The code of the cloud — the application of the jobs and the adapters of
+   * AWS it reaches — never writes `prices/symbols.json`, whose one writer is
+   * `atlas admin prices push`, and never names `prices/config.json`, which
+   * does not exist in the cloud: the budgets, the order of the sources and the
+   * threshold are configuration of the function. The domain is shared with
+   * the console and is not looked at here.
+   */
+  const cloudCode = (): string[] =>
+    [...reach([join(jobsSrc, "lambda.ts")]).keys()].filter((file) =>
+      new RegExp(`${sep}apps${sep}jobs${sep}src${sep}|${sep}adapters${sep}src${sep}aws${sep}`).test(
+        file,
+      ),
+    );
+
+  it("finds the code it looks at, the store of the prices included", () => {
+    const files = cloudCode().map((file) => relative(repoRoot, file));
+    expect(files).toContain("apps/jobs/src/tasks/prices.ts");
+    expect(files).toContain("packages/adapters/src/aws/s3-price-store.ts");
+  });
+
+  it("never names the file of the budget of the console", () => {
+    const offenders = cloudCode().filter((file) =>
+      /config\.json|PRICE_CONFIG_FILE/.test(parse(file).code),
+    );
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+  });
+
+  it("only reads the correspondence of symbols, never writes it", () => {
+    const offenders = cloudCode().flatMap((file) =>
+      parse(file)
+        .code.split("\n")
+        .filter((line) => /symbols\.json|\bSYMBOLS\b/.test(line) && /put|write/i.test(line))
+        .map((line) => `${relative(repoRoot, file)}: ${line.trim()}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe("architecture (016): one reader of the switch of amounts (M2)", () => {
   /**
    * The switch lives in SSM (`/atlas/<env>/mail/amounts`, ADR-0028, row 18).
