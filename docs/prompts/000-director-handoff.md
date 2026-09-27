@@ -1,5 +1,7 @@
 # Prompt 000 — Relevo de la dirección
 
+> **Puesta al día el 2026-09-27 con la sección «Estado al 2026-09-27»**, delante de §5: la 015 fusionada entera, lo que está en marcha y lo que falta del usuario. Lo que sigue en esta nota es de la versión anterior.
+>
 > Quinta versión, 2026-09-18; **estado (§5, §6, §8 y §9) puesto al día el 2026-09-26, antes de mudar la sesión de dirección a otra máquina**: sustituye al del 2026-09-25 (cierre de la 014) y recoge lo fusionado del 24 al 26 de septiembre, la feature 015 en curso, las decisiones del usuario, el entorno nuevo y las lecciones de método de estos días (§5). El modelo de trabajo, el método de revisión (§3, §4) y las lecciones (§7) no han cambiado. Léela entera antes de hablar con el usuario. Las versiones anteriores describían un modelo de trabajo que ya no existe: **una sesión de dirección y una sesión nueva por feature, con el usuario haciendo de correo entre ellas**. Desde el 2026-09-18 hay **una sola sesión permanente** que dirige y orquesta. Esta versión recoge la corrección que el usuario hizo el mismo día: **la dirección orquesta, no ejecuta** (§1, §3, §4).
 
 ---
@@ -75,6 +77,46 @@ Las tres han escondido defectos (§7). El verificador te entrega las capturas, n
 - Uno de **calidad, tests y *golden***: que la cobertura del 100 % no mienta (**pídele que pruebe por mutación**: ha cazado tres tests falsos que la cobertura ocultaba), que no haya reglas de negocio en la CLI, y que **verifique el diff del *golden* id por id y clave por clave**.
 
 Esos dos revisores han encontrado, entre las features 004 y 005, once defectos reales que iban camino de `develop`, incluido uno bloqueante.
+
+## Estado al 2026-09-27
+
+Escrita el 2026-09-27, al fusionarse entera la 015. Va delante de §5 y la pone al día: §5 a §9 siguen valiendo salvo en lo que esta sección cambia, y §8 («Lo inmediato») queda sustituido por el último apartado de esta. Las horas van en hora de Madrid (§7).
+
+### Fusionado de la #90 a la #100
+
+| PR | Qué |
+|---|---|
+| #90 | **E1 de la 015**: el esqueleto de `apps/api`, el acceso de la web con Google por código de autorización y PKCE, la sesión propia y la lista permitida. Fusionada el 2026-09-26 a las 08:57, tras cuatro rondas de revisión (`specs/015-api-access/questions.md` §14 a §17) |
+| #91 | Ignorar `.claude/worktrees/` en git |
+| #92 | La sección «Where things live» de `CLAUDE.md` y la nota del 2026-09-26 en ADR-0034 |
+| #93 | Este documento, puesto al día el 2026-09-26 |
+| #94 | Las rutas de la carpeta personal (`~/personal/atlas/…`) en los documentos |
+| #95 | **E2**: el token de dispositivo de la consola, `atlas remote login` y `logout`, el registro en SSM y la pantalla de dispositivos. El 2026-09-26 a las 12:06 |
+| #96 | **E3**: el `LedgerStore` de S3 con escrituras condicionales, la sincronización sobre HTTP, los datos de referencia, el cliente HTTP, `atlas sync` y el paquete de la Lambda, con el SDK de AWS y `esbuild` instalados con la versión fijada. El 2026-09-27 a las 05:15 |
+| #97 | **E4**: la web sincronizada, con P2 y P3 primero, la ligadura del dispositivo, la comprobación en el servidor con `x-atlas-expected-device` y los dos fallos de la web que encontró la 014 (P11). A las 11:03 |
+| #98 | **E5**: la puerta `@atlas/domain/tools` (−2.166 bytes en el arranque), la clave repetida de Q12 (b), la cobertura del dominio medida en su propia pasada, `atlas admin`, `atlas backup --from-bucket` y los procedimientos de restaurar el libro, revocar todos los tokens y la cuenta de Google robada, en [`docs/runbooks/`](../runbooks/README.md). A las 17:46 |
+| #99 | El prompt de la **016** (tareas programadas y correo), con sus diecinueve preguntas contestadas y la ronda 1 de su revisión aplicada. A las 16:55 |
+| #100 | El prompt de la **020** (mejoras visuales, M1-M13), con sus nueve preguntas contestadas y la revisión 1 decidida. A las 16:45 |
+
+Con eso, **la 015 está fusionada entera** y de la etapa 2 de la Ronda 8 solo quedan la 016 y la 017. Siguen siendo **34 ADRs, todas aceptadas**, con notas nuevas de la 015 en ADR-0032, ADR-0033 y ADR-0034. El paquete web, al cerrar la 015: arranque **74.125** (techo 74.134, autorización 76.069) y total **301.439** (techo 301.496). El registro entero está en `specs/015-api-access/questions.md`, y lo que la 015 deja a la 016, la 017 y la 018, en «Etapas pendientes» de `docs/decision-roadmap.md`.
+
+### En marcha
+
+- **La 016 (tareas programadas y correo)**, en implementación en `feature/016-scheduled-jobs` (worktree `.claude/worktrees/016-scheduled-jobs`), con el prompt de la PR #99: cuatro entregas con una PR cada una.
+- **La 020 (mejoras visuales)**, en implementación en `feature/020-visual-refresh` (worktree `.claude/worktrees/020-visual-refresh`), con el prompt de la PR #100. Comparte con la 016 el margen del arranque del paquete web.
+- **La PR de los arreglos de precios**, en curso, en `fix/prices-live-findings` (worktree `.claude/worktrees/fix-prices-live`): lo que encontró la prueba real de la 013 del 2026-09-27 (los días de mercado y la vuelta a pedir lo reciente según el tipo de activo, el efectivo en divisa valorado con el último tipo del BCE, y el procedimiento alineado con esa prueba).
+- **El cierre de la 015**: la PR #101 (`chore/ci-coverage-passes`), que parte en la CI la cobertura del dominio y el resto en dos pasos y guarda `coverage-final.json` como artefacto si falla la primera, ahora que `gh` tiene el permiso `workflow`; y la PR de documentos de este cierre (`docs/015-close`).
+
+### Pendiente del usuario
+
+- **Solo aportar los ficheros reales de los brókeres cuando opere**: el XML de la consulta Flex de IBKR y la exportación de operaciones de fondos de MyInvestor. Sin ellos no hay *parser* ni importación automática (hoja de ruta: Ronda 6 y la etapa futura «Importación automática»). La prueba real de precios de la 013 ya la hizo el 2026-09-27; lo que §9 pide antes de la 018 se retoma al prepararla.
+
+### Lo siguiente
+
+1. Llevar la 016 y la 020 por el ciclo de §3, con dos revisores por PR y, en la 016, la autocomprobación de las diez familias de defectos de su prompt (§5).
+2. Integrar la PR #101 y la de los arreglos de precios cuando su CI salga en verde.
+3. Antes del prompt de la 017, el *challenge* de decisiones con ADR-0034 dentro (§6). El prompt parte de «Lo que la 015 le deja a la 017» en la hoja de ruta.
+4. La importación automática (IBKR por el Flex Web Service, como borradores pendientes de confirmar; MyInvestor por subida del export) es una etapa futura sin empezar: cuando llegue, primero su ADR.
 
 ## 5. Estado al 2026-09-26
 
