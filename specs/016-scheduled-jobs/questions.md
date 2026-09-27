@@ -660,11 +660,11 @@ Revisiones sobre `eab6ae9`: fuentes y S3 (comentario 5859690207) y `push` y guar
 | S3 B1 (a) | `6f3f7fd` | `activate` lee **antes de escribir nada**, junto al manifiesto, el fichero en vigor (verificado contra el manifiesto), `previous/` y el objeto del paso 2 (el mismo fichero en vigor si la fuente no cambia), y condiciona cada escritura a **esa** lectura. Test del entrelazado del revisor con dos almacenes sobre el mismo bucket y pausas en las lecturas y las escrituras |
 | S3 B1 (b) | `460fc2e`, `0b0bb03`, `287b8e8` | `rebuildEcbHistory` en el dominio: solo desde el ZIP (desde la API, `zip_unavailable` y nada escrito), un ZIP que no se lee no escribe nada. `S3EcbHistoryStore.rebuild()`: se niega si el histórico no está dañado; escribe el fichero y después un manifiesto nuevo sin `previous` y con los `rejected` que se leían, cada uno condicionado a lo leído. La tarea del BCE reconstruye cuando `recover()` da `damaged`, con el resultado `ecb_history_rebuilt` y su hallazgo, y el correo con su frase. Cabecera del almacén y plan §7.1 corregidos |
 | S3 N1 | `647e3ab` | `not_of_the_environment`: el bucket empieza por `atlas-<ATLAS_ENV>-` en todas las familias. La simulada ya exigía `ATLAS_ENV=dev`, y con esta regla solo escribe en un bucket `atlas-dev-` (no hace falta una segunda comprobación, que no se podría alcanzar). `contracts/ssm-and-config.md` al día |
-| S3 N2, N3 | este commit | `tasks.md`: N2 en E3 y en su revisión; N3 en E4 |
+| S3 N2, N3 | `a09e3e2` | `tasks.md`: N2 en E3 y en su revisión; N3 en E4 |
 | `push` B1 y N4 | `b780823`, `8f2c7bf`, `06c6785` | `parseSymbols` rechaza una clave de primer nivel desconocida con `symbols_file_unknown_key` (`details.key`, el nombre recortado a 64 caracteres; nunca el valor), después de decir un formato más nuevo; `assets` sin prototipo, y la diferencia con `Object.hasOwn`. La API no sirve un `symbols.json` con una clave desconocida (`404 not_found`, `reason: "unknown_key"`). La tarea de precios falla sin descargar nada, y `push` se niega; los dos, con un centinela que no aparece en ninguna salida, registro ni log. La consola y la web traducen el código nuevo |
 | `push` N1 | `2c9d5e3` | `resolveAcross` da `<unresolved #…>` a un alias de `imports`; un test comprueba que ningún `package.json` del producto (raíz, `apps/*`, `packages/*`) tiene `imports` |
 | `push` N2 | `67a842c` | En `daily.test.ts`, con respuestas 200, 401 y 503, ninguna escritura condicional nombra `prices/symbols.json`, y el objeto sigue igual |
-| `push` N3 | este commit | §14.9, Q15, corregida |
+| `push` N3 | `a09e3e2` | §14.9, Q15, corregida |
 | `push` N5 | `af66e81`, `bf7b946` | `StoredObject.versionId` (lo da `GetObject` en un bucket versionado); `push` dice «Sustituye el objeto con ETag … , versión …, que queda en el historial de versiones del bucket»; `contracts/iam-permissions.md` §8 añade `s3:GetObjectVersion` |
 
 ### 15.3 Cómo se vio cada test en rojo
@@ -702,3 +702,28 @@ Revisiones sobre `eab6ae9`: fuentes y S3 (comentario 5859690207) y `push` y guar
 - **Entre `active()` y `activate()`** (`updateEcbHistory` los llama por separado): otra ejecución que activara en medio cambia el manifiesto, y `activate` lo relee y escribe su manifiesto con `If-Match` sobre esa nueva lectura. La comparación con los tipos publicados se hizo contra el anterior. No lo he cambiado: las dos descargas son del BCE, la ventana es de milisegundos y la concurrencia 1 de la 017 la cierra. Lo dejo escrito por si la dirección prefiere que `activate` exija el mismo manifiesto que leyó `active()`, que es una comparación de ETag más.
 - **Un formato de `symbols.json` más nuevo con claves nuevas** se sigue diciendo como más nuevo, antes de mirar las claves: la comprobación de claves va después.
 - **La web** lee `prices/symbols.json` con el mismo `parseSymbols`, así que también rechaza una clave ajena, con su frase.
+- **Arreglo que salió de la tubería** (`a3ddb26`): el texto web de `symbols_file_unknown_key` decía la clave, y el test de jerga de la web (`no-jargon.test.tsx`), que prueba cada plantilla con identificadores de muestra, lo cazó. La web dice ahora «un dato que no es suyo» sin nombrarlo; la consola sí nombra la clave, como pidió la dirección.
+
+### 15.6 Tubería
+
+`016-pipeline.sh` sobre `a3ddb26` (cada paso tras la puerta de memoria, nada en paralelo):
+
+```
+lint 0 5s
+typecheck 0 1s
+cov1-domain 0 271s   (1.709 tests; dominio al 100 %: sentencias 8.957, ramas 5.538, funciones 2.018, líneas 8.523)
+cov1-others 1 786s   (1.721 de 1.722: el fallo intermitente de Q17, fuera de la 016)
+cov2-domain 0 269s
+cov2-others 0 520s   (1.722 tests)
+build 0 11s          (lambda.zip 1.443.799 bytes; jobs.zip 1.631.638 bytes, 1.408 entradas)
+```
+
+Una tercera pasada de `test:others` sobre el mismo commit: 0, 1.722 tests (`016-pipe-cov3-others.log`). El paquete web, medido en bytes: arranque 74.177 (antes 74.194) y total 301.906 (antes 301.825; +81 por el mensaje nuevo y la comprobación de claves, que viajan en trozos perezosos), por debajo de sus techos (74.214 y 302.101). `tests/fixtures` sin cambios; ningún gemelo `.js`. Tests de los guardianes: `architecture` 51, `api-access` 28, `jobs-access` 12 → 14 (el alias `#` y los `imports`), `jobs-package` 3, `messages` 11. Ninguno baja.
+
+### 15.7 Pregunta nueva
+
+- **Q17 — Un fallo intermitente de la 015 en `apps/cli/test/admin/admin.test.ts`** («asks for the name of the environment…», línea 333). `consoleLogin` crea el `device_id` con bytes aleatorios en base64url; si empieza por `--` (1 de cada 4.096), el analizador de argumentos lo toma por una opción y la orden sale con 64. Pasó en la primera pasada de esta tubería y no en las otras dos. No es de la 016 y no lo he tocado. Es también un defecto de uso: `atlas admin forget-device` con un id así necesita `--` antes del id. Recomendación: un `fix/` aparte que haga deterministas los ids del arnés de la API y documente `--` en el mensaje de uso, o que la orden acepte `--device <id>`.
+
+### 15.8 Congelado
+
+**Congelada la ronda 1 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `a3ddb26`. No se empuja nada más hasta la palabra de la dirección.
