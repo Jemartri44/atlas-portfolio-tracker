@@ -360,7 +360,15 @@ const dist = join(webRoot, "dist");
  * in pairs from 384px: rules of `registrar.css` and `controls.css`, in the
  * stylesheet of the boot. The trend: 74.188 → 74.275 → 74.366.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_386;
+/*
+ * **Feature 020, E1, M13, the polish (2026-09-27): measured 74.413 (+47 over
+ * 74.366), ceiling 74.433 — measured + 20**, raised before the commit that
+ * needs it, inside the authorisation (76.069). The date of a movement in ink
+ * with the whole row as its target, and the list of the tax card without its
+ * indent: rules of the stylesheet of the boot. The trend: 74.275 → 74.366 →
+ * 74.413.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_433;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -810,7 +818,15 @@ const BOOT_BUDGET_GZIP_BYTES = 74_386;
  * them compresses a few bytes worse. No code on the boot. The trend: 301.240
  * → 301.370 → 301.439 → 301.545.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 301_801;
+/*
+ * **Feature 020, E1, up to M13 (2026-09-27): measured 301.980 (+435 over
+ * 301.545), ceiling 302.236 — measured + 256**, raised before the commit that
+ * needs it, inside the authorisation (310.500). The boot of M6, M4, M11 and
+ * M13 (+288, counted above) and, lazy, the summary in its order by width, the
+ * movements without the empty column and the axis with its unit. The trend:
+ * 301.545 → 301.518 → 301.692 → 301.768 → 301.980.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 302_236;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
