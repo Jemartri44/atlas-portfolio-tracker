@@ -313,7 +313,16 @@ const dist = join(webRoot, "dist");
  * authorisation stays at 76.069: what this frees is for Q12 (b) and for the
  * visual work after the 015. The trend: 76.055 → 73.889.
  */
-const BOOT_BUDGET_GZIP_BYTES = 73_909;
+/*
+ * **Q12, option (b) (§29 and §33): measured 74.073 (+184), ceiling 74.093 —
+ * measured + 20**, raised before the commit that needs it, inside the
+ * authorisation (76.069). A line with a key twice is read and marked on the
+ * boot path, where the ledger of the browser is read (`repeatsKey`, 930 B of
+ * source until now only in the sync), and the degraded projection marks it
+ * invalid. The trend: 76.055 → 73.889 → 74.073; 1.976 left of the
+ * authorisation.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 74_093;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
