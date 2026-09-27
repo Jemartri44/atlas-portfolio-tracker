@@ -215,8 +215,9 @@ comandos:
   sync join --from-remote|--with-own-lines [--origin <https://…>] [--device <id>]   se une a una nube con libro
   sync redownload                vuelve a descargar la nube tras una reescritura (solo si lo pides)
   sync deactivate                desactiva la sincronización; lo retenido se queda
-  admin devices|revoke-all-tokens|forget-device <id> [--force]|compact|restore --from <copia> --env <entorno>
-                                 la administración de la nube, con el rol de administración y nunca por la API`;
+  admin devices|revoke-all-tokens|forget-device [--] <id>|--device <id> [--force]|compact|restore --from <copia> --env <entorno>
+                                 la administración de la nube, con el rol de administración y nunca por la API
+  --                             termina las opciones: lo que va detrás es posicional (un id que empiece por guion)`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
