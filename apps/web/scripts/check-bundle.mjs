@@ -304,7 +304,16 @@ const dist = join(webRoot, "dist");
  * left of the authorisation is 14 bytes**, for Q12 in E5. The trend: 75.999 →
  * 76.026 → 76.016 → 76.055.
  */
-const BOOT_BUDGET_GZIP_BYTES = 76_069;
+/*
+ * **Feature 015, E5, the door `@atlas/domain/tools` (decision of the
+ * direction on Q12, §33): measured 73.889 (−2.166), ceiling 73.909 — measured
+ * + 20**, lowered in a commit of its own. The draft of a corporate action,
+ * the deep check and the simulation of a transfer left the barrel of the
+ * domain, which the browser downloads at boot, for a door of their own. The
+ * authorisation stays at 76.069: what this frees is for Q12 (b) and for the
+ * visual work after the 015. The trend: 76.055 → 73.889.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 73_909;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
