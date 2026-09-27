@@ -944,7 +944,15 @@ const BOOT_BUDGET_GZIP_BYTES = 75_359;
  * tax card in its two shapes and the slot of the 720 in *Atención*. The
  * trend: 302.785 → 302.773 → 303.708.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 303_964;
+/*
+ * **Feature 020, E2, M8 (2026-09-27): measured 304.198 (+490 over 303.708),
+ * ceiling 304.454 — measured + 256**, raised before the commit that needs it,
+ * inside the authorisation (310.500). Lazy, all of it: the list of a phone by
+ * month, the valuations of a day gathered into one row that unfolds, and the
+ * recent movements of the summary made a chunk at a time. The trend: 302.773
+ * → 303.708 → 304.198.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 304_454;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
