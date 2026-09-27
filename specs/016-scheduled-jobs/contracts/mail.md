@@ -1,4 +1,4 @@
-# Contrato: el texto de cada correo (**PROPUESTA**, §7.2 (e))
+# Contrato: el texto de cada correo (§7.2 (e), **aceptado** el 2026-09-27)
 
 Texto plano, español, sin HTML, sin nada remoto ni enlaces de seguimiento; como mucho `ATLAS_ORIGIN` en la última línea («Abre Atlas: <origen>»). **Asunto en ASCII** (Q5) con el identificador del periodo. Cada línea sale de un **código** del dominio, nunca del `message` de un aviso (regla R3).
 
@@ -45,7 +45,7 @@ Abre Atlas: <origen>
 | `ledger_size_above_threshold` | ídem | «El libro ocupa 1.100.000 bytes (umbral 1.048.576): revisa el plazo de las versiones (ADR-0006).» | — |
 | `task_failed` | `[Atlas] Aviso: tarea <tarea>` | la tarea, el periodo y el código | — |
 | `weekly_review` | `[Atlas] Revision semanal 2026-W41` | «Renta fija se desvía 6,2 puntos de su objetivo (umbral 5).» «El cubo pesa el 12,3 % del patrimonio (máximo 10 %).» Regla 17 por código | los euros de la regla 17 (aportación bruta y tope) |
-| `tax_return_ready` (siempre en enero) | `[Atlas] Renta 2026 lista` | «Los datos de la Renta de 2026 están listos: 3 notas y 2 criterios en disputa.» | — (**nunca** la base ni ninguna cifra fiscal: §3 E4 del encargo, «sin la base ni ninguna cifra salvo el interruptor»; propongo **ni con el interruptor**) |
+| `tax_return_ready` (siempre en enero) | `[Atlas] Renta 2026 lista` | «Los datos de la Renta de 2026 están listos: 3 notas y 2 criterios en disputa.» | — (**nunca** la base ni ninguna cifra, **tampoco con el interruptor**: Q10, decidido el 2026-09-27; desviación del encargo, §3 E4, anotada en questions §9) |
 | `informative_thresholds` | `[Atlas] Modelos 720 y 721` | «Valores en el extranjero (720): por encima del umbral de aviso.» Solo con valoraciones manuales | el valor y el umbral de aviso |
 
 Los textos definitivos se fijan con sus tests en cada entrega; esta tabla fija **qué información** lleva cada uno y cuál no.

@@ -4,7 +4,7 @@
 
 **Entrada**: `docs/prompts/016-scheduled-jobs.md` (§8.1 y §8.2 aplicadas), la spec, y lo comprobado en `questions.md` §1 y §3.
 
-**Estado**: **propuesta para el alto**. Todo lo marcado **PROPUESTA** lo decide la dirección (§7.2 del encargo). Lo demás aplica decisiones ya tomadas, citadas.
+**Estado**: **aceptado por la dirección el 2026-09-27** (questions §9), con Q1-Q10 como se recomendaban. Lo marcado «PROPUESTA» quedó aceptado.
 
 ## Resumen
 
@@ -44,7 +44,6 @@ packages/domain/src/
     event.ts                        el evento de Scheduler, leído estricto
     config.ts                       las variables ATLAS_* de las tareas (regla de parseApiConfig)
     catalog.ts                      las tareas, sus familias y sus frecuencias admitidas
-    frequencies.ts                  job_frequencies: lectura tolerante, escritura estricta
     periods.ts                      periodo de cada frecuencia en Europe/Madrid
     due.ts                          qué toca hoy
     run-record.ts                   formato del registro y sus transiciones
@@ -56,6 +55,8 @@ packages/domain/src/
     (E2) prices-findings.ts, ecb-findings.ts, ecb-recovery.ts, symbols-push.ts
     (E4) positions.ts, rehearsal.ts, size.ts, review.ts, informative-alerts.ts
   quotes/cascade.ts                 (E2, si se acepta Q1) opción symbols: "read_only"
+  settings/job-frequencies.ts       el catálogo de job_frequencies: lectura tolerante, escritura estricta
+                                    (fuera de jobs/: Ajustes lo leerá en E3 sin alcanzar las tareas)
   settings/settings.ts              (E3) mergeSettings deja fuera notification_email
   access/sync-routes.ts             (E2) REFERENCE_NAME por ida y vuelta (Q4)
 

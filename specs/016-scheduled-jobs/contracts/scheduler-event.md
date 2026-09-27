@@ -1,4 +1,4 @@
-# Contrato: el evento de EventBridge Scheduler (**PROPUESTA**)
+# Contrato: el evento de EventBridge Scheduler (**aceptado** el 2026-09-27)
 
 Lo que cada programación pone en `Target.Input` y la función recibe como evento, invocada de forma asíncrona (`questions.md` §1.4).
 

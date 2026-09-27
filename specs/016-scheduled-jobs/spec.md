@@ -4,7 +4,7 @@
 
 **Creada**: 2026-09-27 (Europe/Madrid)
 
-**Estado**: **borrador para el alto del plan**. Espera el visto bueno de la dirección junto con [`plan.md`](plan.md) y [`questions.md`](questions.md). No hay ni una línea de código de producción.
+**Estado**: **aceptada por la dirección el 2026-09-27** (`questions.md` §9). E1 en construcción.
 
 **Entrada**: `docs/prompts/016-scheduled-jobs.md` entero, con las respuestas de §8.1 (P1-P18, P6 bis y la regla de `--yes`) y las decisiones de §8.2 (B1, B2, M1-M7, m1-m3). Además: ADR-0028 con sus notas, ADR-0034 entera, ADR-0029, ADR-0031 y ADR-0032 con sus enmiendas y notas, ADR-0033 («Consecuencias»), ADR-0027 («Riesgo»), ADR-0026, ADR-0018 y ADR-0022; `docs/specification.md` §5, §7, §9.2-§9.6, §11.7 y §11.8; `docs/business-rules.md` §7; `docs/data-schema.md` §1; `docs/api.md` §1, §2, §6, §7 y §9; `docs/decision-roadmap.md` (Ronda 8, la entrada de la 016 y «Etapas pendientes»); `docs/prompts/015-api-access.md` §2-§2 ter y §5, y `specs/015-api-access/questions.md` de §20 en adelante. Constitución 1.6.2. **Si el encargo y la hoja de ruta o una ADR discrepan, mandan la hoja de ruta y la ADR**, y la discrepancia va a `questions.md`.
 

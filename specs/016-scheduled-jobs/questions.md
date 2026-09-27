@@ -74,7 +74,7 @@ Consultadas el 2026-09-27. Las páginas se descargaron con `curl` y se leyeron c
 
 ### 1.8 Lo que la dirección tiene que escribir en cada ADR, del bloque 0 de E1
 
-- **ADR-0034, fila 12**: la condición **verificada** para `SendEmail` de la v2 (acción `ses:SendEmail`, claves de condición, `Null`, `ses:ApiVersion`), con las fuentes de §1.1; lo sin verificar del ARN de identidad con un dominio verificado; y el riesgo del punto 2: la política de identidad no aísla a Atlas de otro proyecto con `ses:SendEmail` sobre `*`.
+- **ADR-0034, fila 12** (con nota fechada del riesgo residual, decidido el 2026-09-27, §9): la condición **verificada** para `SendEmail` de la v2 (acción `ses:SendEmail`, claves de condición, `Null`, `ses:ApiVersion`), con las fuentes de §1.1; lo sin verificar del ARN de identidad con un dominio verificado; y el riesgo del punto 2: la política de identidad no aísla a Atlas de otro proyecto con `ses:SendEmail` sobre `*`.
 - **ADR-0034, fila 9**: Scheduler **solo se etiqueta por grupo** (verificado); si su uso y el de SES se atribuyen por etiqueta, **sin verificar**.
 - **ADR-0031** (el cupo compartido): los presupuestos de la nube como variables de la función de precios (§8.2 M5) y, si se acepta Q1, la opción de `updatePrices` que no contrasta ni escribe `symbols.json`.
 - **ADR-0032** (el volcado): el contenido de `backups/<YYYY-MM>/`, `positions.json` y la conducta del reintento (plan §8), al cerrar E4.
@@ -185,3 +185,22 @@ Antes de escribir nada, sobre `ae66814` (todo `.js` fuera de `dist`, `vendor`, `
 ## 8. Predicción fiscal (antes de correr ninguna suite)
 
 **No se mueve nada.** `atlas tax` (con `--lots`, `--boxes` y `--json`), `gains`, `income`, `m720`, `m721` y `filed` darán los mismos bytes con y sin `prices/` de la nube en cada entrega, y `git diff origin/develop -- tests/fixtures` saldrá vacío. Motivo: ninguna tarea escribe en el libro; la puerta del 720 sigue cerrada por estructura (ADR-0031, segunda enmienda); el aviso del 720 y el 721 usa la misma función del modelo, que no alcanza la puerta de precios; y retirar `notification_email` de la web y de las fotos nuevas no toca el generador ni el *golden*, porque `mergeSettings` no está en el camino del generador (plan §10.3).
+
+## 9. Respuestas de la dirección al alto del plan (2026-09-27)
+
+La dirección da el visto bueno a `spec.md` y `plan.md`. Decisiones:
+
+- **Propuestas del alto (a)-(i), P-H y la tabla de permisos: aceptadas tal cual.** Además, aceptadas y llevadas a `contracts/iam-permissions.md`:
+  - la política del bucket que exige `s3:if-none-match` en `backups/*` (§4, ya no «propuesta»);
+  - los dos ARN de identidad de SES en el recurso de `ses:SendEmail` (el del remitente y el de su dominio);
+  - los reintentos: Scheduler con 2 reintentos y 3.600 s; Lambda asíncrona con 0 reintentos y 3.600 s; concurrencia reservada 1.
+- **Riesgo del punto 2 del bloque 0** (otro proyecto con `ses:SendEmail` sobre `*` puede enviar como Atlas): **aceptado como riesgo residual**; la dirección lo anota en ADR-0034 con una nota fechada. `kms:Decrypt` con `aws/ssm` y la atribución del coste de SES por etiqueta pasan a la lista de comprobaciones de la **018**; las etiquetas de Scheduler (solo por grupo), a la **017**.
+- **Q1 a Q9: como se recomendaban.** En Q1, `symbols: "read_only"` en `updatePrices`, con `currency_unchecked` convertido en hallazgo, y el almacén de S3 que se niega a `writeSymbols` y `rewriteCloses` como segunda cerradura.
+- **Q10: aceptada la versión más estricta que el encargo.** El correo de la Renta **nunca** lleva cifras, esté como esté el interruptor. **Desviación anotada** respecto de `docs/prompts/016-scheduled-jobs.md` §3, E4, bloque 3 («sin la base ni ninguna cifra salvo el interruptor»): la regla aplicada es «sin la base ni ninguna cifra, nunca». `contracts/mail.md` §2 lo dice así.
+- **Discrepancias de §3**: se corrigen donde toca (los números de línea del encargo son del encargo, en `docs/`, que no toco; quedan anotadas en §3 y en «Documentos») y se sigue.
+
+### 9.1 Errores del encargo, para su §8.3
+
+- `Thesis` está en `packages/domain/src/projections/state.ts:246`, no en `:252`.
+- `confirm` está en `apps/cli/src/commands/shared.ts:96`; la línea 97-99 es su cuerpo.
+- El techo total tras E5 de la 015 es `294 * 1024 + 440` = 301.496 bytes, que el encargo escribe «294 KB + 440»: coincide; no es un error, solo otra forma.

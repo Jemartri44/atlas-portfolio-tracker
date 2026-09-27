@@ -1,4 +1,4 @@
-# Contrato: parámetros de SSM y configuración de cada función (**PROPUESTA**, §7.2 (a) y (b))
+# Contrato: parámetros de SSM y configuración de cada función (**aceptado** el 2026-09-27, §7.2 (a) y (b))
 
 Con la forma de `docs/api.md` §9. `<entorno>` es `dev` o `prod`.
 

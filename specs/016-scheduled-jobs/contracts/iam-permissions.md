@@ -1,5 +1,7 @@
 # Contrato: las acciones de AWS de cada Lambda (para la política de la 017)
 
+**Aceptado por la dirección el 2026-09-27** (questions §9).
+
 **Es lo que la 017 convertirá en política** (§2 del encargo). Se pone al día al cerrar cada entrega. Notación: `B` = `arn:aws:s3:::atlas-<entorno>-data-<sufijo>`; `P` = `arn:aws:ssm:eu-west-1:<cuenta>:parameter/atlas/<entorno>`; `I` = `arn:aws:ses:eu-west-1:<cuenta>:identity`. Todas con el límite de permisos de su entorno (ADR-0034, fila 5) y **sin `s3:DeleteObject`, `ssm:DeleteParameter`, `ssm:PutParameter` ni `ssm:LabelParameterVersion`**.
 
 **Reglas de §8.2 B2**: **solo el rol de correo tiene acciones `ses:*`**; los del BCE, los precios, el volcado y la integridad no tienen ninguna; **el rol de correo no alcanza `P/prices/*`**.
@@ -27,7 +29,7 @@ Por qué `s3:GetObject` sobre lo que se escribe: `If-Match` exige `s3:PutObject`
 | `s3:PutObject` | `B/prices/*` **con denegación explícita** de `B/prices/symbols.json` y `B/prices/config.json` | cierres y `_status.json`; **un solo escritor por objeto** (§8.1 P18, §8.2 M5): IAM impide lo que el código ya no hace |
 | `s3:GetObject`, `s3:PutObject` | `B/jobs/prices/*` | su registro |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `prices/`, `jobs/prices/`, `ledger/` | ídem |
-| `ssm:GetParameter` | `P/prices/eodhd-key`, `P/prices/alpha-vantage-key` | las claves (`SecureString`, `aws/ssm`); `kms:Decrypt` **sin verificar** (questions §1.7, la 017) |
+| `ssm:GetParameter` | `P/prices/eodhd-key`, `P/prices/alpha-vantage-key` | las claves (`SecureString`, `aws/ssm`); `kms:Decrypt` **sin verificar**: comprobación de la 018 (questions §9) |
 | — | red de salida | `eodhd.com`, `www.alphavantage.co` |
 
 ## 3. `atlas-<entorno>-job-mail`
@@ -39,8 +41,8 @@ Por qué `s3:GetObject` sobre lo que se escribe: `If-Match` exige `s3:PutObject`
 | `s3:PutObject` | `B/jobs/mail/*` | sus registros y sus rachas; **ningún otro prefijo** |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `jobs/`, `prices/`, `reference/ecb/`, `access/`, `ledger/` | ídem |
 | `ssm:GetParameter` | `P/mail/recipient`, `P/mail/amounts` | `String`, sin KMS |
-| `ssm:GetParametersByPath` | `P/device-tokens` (con `ssm:Recursive = false`) | contar tokens vivos y emitidos; `SecureString`, `kms:Decrypt` **sin verificar** |
-| `ses:SendEmail` | `I/<remitente>` **y** `I/<dominio del remitente>` (questions §1.1: qué ARN evalúa SES con un dominio verificado, sin verificar), y la del destinatario si la cuenta sigue en el *sandbox* | el envío |
+| `ssm:GetParametersByPath` | `P/device-tokens` (con `ssm:Recursive = false`) | contar tokens vivos y emitidos; `SecureString`, `kms:Decrypt` **sin verificar**: comprobación de la 018 |
+| `ses:SendEmail` | `I/<remitente>` **y** `I/<dominio del remitente>`, los dos (aceptado, questions §9; qué ARN evalúa SES con un dominio verificado sigue sin verificar, §1.1), y la del destinatario si la cuenta sigue en el *sandbox* | el envío |
 
 Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 
@@ -63,7 +65,7 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 | `s3:GetObject`, `s3:PutObject` | `B/jobs/backup/*` | su registro |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `prices/`, `reference/ecb/`, `backups/`, `jobs/backup/`, `ledger/` | listar `prices/` (primer nivel) y `404` |
 
-**Propuesta para la política del bucket** (questions §1.7): denegar `s3:PutObject` en `B/backups/*` a cualquier principal cuando falte `s3:if-none-match` (`conditional-writes-enforce.html`): así, ni un error del código puede sobrescribir un volcado. Se verifica en el bloque 0 de E4.
+**Política del bucket, aceptada por la dirección** (questions §1.7 y §9): denegar `s3:PutObject` en `B/backups/*` a cualquier principal cuando falte `s3:if-none-match` (`conditional-writes-enforce.html`): así, ni un error del código puede sobrescribir un volcado. Su forma exacta se verifica en el bloque 0 de E4.
 
 ## 5. `atlas-<entorno>-job-integrity`
 
@@ -82,6 +84,6 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 ## 7. Comunes a las cinco funciones de tareas
 
 - `logs:CreateLogStream` y `logs:PutLogEvents` sobre su propio grupo `/aws/lambda/atlas-<entorno>-job-<familia>` (lo crea Terraform, ADR-0034, fila 3).
-- Concurrencia reservada **1** (§8.1 P11); `PutFunctionEventInvokeConfig` con `MaximumRetryAttempts = 0` y `MaximumEventAgeInSeconds = 3600` (questions §1.4).
+- Concurrencia reservada **1** (§8.1 P11); `PutFunctionEventInvokeConfig` con `MaximumRetryAttempts = 0` y `MaximumEventAgeInSeconds = 3600`; cada programación con `RetryPolicy` `MaximumRetryAttempts = 2` y `MaximumEventAgeInSeconds = 3600` (questions §1.4; **aceptado**, §9).
 - El rol de Scheduler que invoca: `lambda:InvokeFunction` sobre las cinco funciones, nada más.
 - El grupo de programaciones `atlas-<entorno>-jobs`, etiquetado (solo se etiquetan grupos, questions §1.6); en `dev`, las programaciones **desactivadas** (ADR-0034, fila 2).
