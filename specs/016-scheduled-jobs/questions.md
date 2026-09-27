@@ -343,3 +343,25 @@ Además: `git diff origin/develop -- tests/fixtures` vacío; ningún gemelo `.js
 - **Q11 — `ecb_stale_currency_days` en la nube.** La lectura de los precios del recordatorio usa el valor por defecto (30 días) de `DEFAULT_LOCAL_CONFIG`, porque en la nube no hay `atlas.config.json`. Recomendación: dejarlo así en E1 y, si hace falta, una variable de la función de correo en E2, cuando la nube tenga precios de verdad.
 - **Q12 — Los códigos de las tareas y el guardián de los mensajes.** En E1 se declaran en `JOBS_ONLY` (§10.2). Recomendación: aceptarlo, y que E3 saque de la lista los de `job_frequencies` cuando Ajustes los diga.
 
+
+## 12. Revisión de la PR #104, ronda 1: decisiones de la dirección y arreglos (2026-09-27)
+
+Revisiones sobre `89e983a`: privacidad (comentario 5858145560) e idempotencia (comentario 5858284784). Decisiones de la dirección, del mismo día. Cada arreglo de lógica lleva su test visto en rojo y su mutante, que sobrevive antes y muere después.
+
+### 12.1 Decisiones
+
+**Privacidad**
+
+- **B1.** `task_failed` solo admite como `subject` una tarea de `PRODUCER_TASKS` (con `Object.hasOwn`); con cualquier otro, ningún aviso. Un `task_failed` dentro de `findings` se rechaza. La función de correo solo envía los códigos de `PRODUCER_CODES[productor]`. Cambia `notice-mail.test.ts:27-30`, y un test de `dispatch` comprueba que `ses.sent` queda vacío ante un `subject` desconocido (un ISIN, `ast_xau`, `constructor`).
+- **N1.** Resuelto con B1.
+- **N2.** El correo de `task_failed` lleva la tarea, el periodo y el código, como dice el contrato, todo de listas cerradas.
+- **N3.** Los centinelas cubren `dispatch_findings` enviando, con SES que rechaza y con el envío perdido.
+
+**Idempotencia**
+
+- **B1.** `run.ts` recuerda si llegó a marcar `sending`; si el *runner* lanza después, cierra como `send_unknown`, no como `failed`. Se corrige la fila `failed` de plan §5.3 (el recordatorio se rehace; un aviso, solo si no llegó a `sending`), se renombra el test y se añade el caso `sending → throw → send_unknown`.
+- **B2.** Solo documento: el contrato del evento pierde la viñeta de UTF-8 y claves repetidas y los dos motivos, y describe la limitación; se corrige §10.2.
+- **N1.** `markSending` se queda. El arnés permite inyectar *runners*, y `cuts.test.ts` prueba un *runner* de prueba que se entrega como mucho una vez: corte tras `sending` y reintento. Mata M1 y M2.
+- **N2.** El guardián del reloj cubre carpetas enteras (`apps/jobs/`, `packages/domain/src/jobs/`, `packages/adapters/src/aws/jobs*` y los ficheros de la API que toca la 016) y amplía el patrón a `globalThis.Date`, `Reflect.construct(Date` y la desestructuración de `Date`. Mata M3 y M4.
+- **N3.** Un registro `claimed` más reciente que el tiempo máximo de la Lambda (15 min, configurable) es `job_in_progress` y no se retoma. Test con los dos casos.
+- **N4.** Si el propio registro del recordatorio es ilegible, el recordatorio lo reclama con `If-Match` sobre su ETag, registra un `ERROR` y sigue: el mes no se pierde. El registro ilegible de otro productor se avisa como `record_unreadable`, con la tarea de la lista cerrada. Dos tests.
