@@ -50,6 +50,21 @@ describe("the sync of the web, against the API", () => {
     });
   });
 
+  // Mutant C4 of E4 survived without this: with another device in the
+  // session, uploading everything again is refused; only joining is allowed.
+  it("never initialises again over a sync of another device: it joins", async () => {
+    const api = apiAt();
+    const { env } = await browserOf(base(), api);
+    await startSync(env, DEVICE, "init");
+    expect(await startSync(env, OTHER, "init")).toMatchObject({
+      status: "refused",
+      refusal: { code: "sync_already_configured" },
+    });
+    expect(await webSyncStatus(env)).toMatchObject({ joined: DEVICE });
+    expect(await startSync(env, OTHER, "join_from_remote")).toMatchObject({ status: "synced" });
+    expect(await webSyncStatus(env)).toMatchObject({ joined: OTHER });
+  });
+
   it("syncs only as the device it joined with", async () => {
     const api = apiAt();
     const { web, env } = await browserOf(base(), api);
