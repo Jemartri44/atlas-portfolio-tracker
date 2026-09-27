@@ -307,6 +307,26 @@ describe("the daily task of the closes (ADR-0031; R21-R28, R33)", () => {
     expect(JSON.stringify(record)).not.toContain("th_late");
   });
 
+  it("reads no correspondence with a top-level key it does not know (review of PR #106, B1)", async () => {
+    const { s3, jobs } = pricesJobs();
+    s3.seed(
+      "prices/symbols.json",
+      JSON.stringify({ ...JSON.parse(SYMBOLS), token: "sentinel-secret-of-the-cloud" }),
+    );
+    await jobs.run(["prices_update"]);
+    expect(jobs.fetched).toEqual([]);
+    const record = recordOf(s3, "jobs/prices/prices_update/2026-10-01.json");
+    expect(record.state).toBe("failed");
+    const everything = [
+      ...jobs.logs,
+      ...s3
+        .keys()
+        .filter((k) => k.startsWith("jobs/"))
+        .map((k) => s3.text(k) ?? ""),
+    ].join("\n");
+    expect(everything).not.toContain("sentinel-secret-of-the-cloud");
+  });
+
   it("without keys calls nothing, counts no failure and leaves nothing for the mail (mutant 16)", async () => {
     const { s3, jobs } = pricesJobs({ keys: false });
     await jobs.run(["prices_update"]);

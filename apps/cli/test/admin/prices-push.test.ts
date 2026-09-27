@@ -182,6 +182,23 @@ describe("atlas admin prices push (016, E2, block 3)", () => {
     expect(api.s3.keys()).not.toContain(KEY);
   });
 
+  it("refuses a top-level key the file does not have, never showing its value (review of PR #106, B1)", async () => {
+    const api = setup();
+    const remote = symbols({ ast_a: entry("A.XETRA") });
+    api.s3.seed(KEY, remote);
+    const local = JSON.stringify({
+      ...JSON.parse(remote),
+      eodhd_api_key: "sentinel-secret-of-the-push",
+    });
+    const c = consoleIn(api, await folderWith(local));
+    expect(await c.exec(push)).toBe(EXIT.domain);
+    expect(c.text()).toContain("symbols_file_unknown_key");
+    expect(c.text()).toContain("eodhd_api_key");
+    expect(c.text()).not.toContain("sentinel-secret-of-the-push");
+    expect(c.text()).not.toContain("Escribe");
+    expect(api.s3.text(KEY)).toBe(remote);
+  });
+
   it("refuses a local file that is not UTF-8", async () => {
     const api = setup();
     const folder = await folderWith(undefined);
