@@ -72,7 +72,9 @@ export const harness = (options: HarnessOptions = {}): Harness => {
     err,
     exec: (argv) =>
       run(
-        options.ledgerPath === undefined ? argv : [...argv, "--ledger", options.ledgerPath],
+        // In front, as the usage line puts the global flags: behind, a `--` of
+        // the test would make it a positional.
+        options.ledgerPath === undefined ? argv : ["--ledger", options.ledgerPath, ...argv],
         io,
         () => deps,
         undefined,
