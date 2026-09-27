@@ -271,8 +271,15 @@ const dist = join(webRoot, "dist");
  * The check inline or shared with the sync weighs the same. Trend: the boot
  * grows only when a rule of the ledger has to live where the ledger is
  * written; everything else of 015 stays lazy.
+ *
+ * **Feature 015, E4, P2 and P3 (2026-09-27): measured 75.900 (+15), ceiling
+ * 75.920 — measured + 20**, raised **before** the commit that needs it (the
+ * lesson of E3, `questions.md` §26.5), inside the authorisation of §7 P13 (up
+ * to 76.069). The code of the boot does not grow: the +15 is the table of
+ * preloads of the entry, which now names the chunk of the domain of the sync
+ * shared by the import and the export (the 014 measured +18 for the same).
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36;
+const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36 + 15;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -642,8 +649,17 @@ const BOOT_BUDGET_GZIP_BYTES = 75_418 + 307 + 108 + 5 + 11 + 20 + 36;
  * de la consola» of Ajustes with its client (`ajustes` +859); the rest is
  * hash noise (`ecb` +29, `index` +9). The boot: 75.852 against 75.869, +9 of
  * the table of preloads. The trend: 272,2 → 273,3 → 275,6 → 276,5.
+ *
+ * **Feature 015, E4, P2 and P3 (2026-09-27): measured 284.240 (+811 over the
+ * 283.429 of E3 closed, with a prototype built and undone), ceiling 284.496
+ * — measured + 256.** Raised **before** the commit that needs it, inside the
+ * authorisation of Q1 (up to 304.640). All of it lazy: the refusal to import
+ * while synced reads the state of the sync in the same transaction, and the
+ * export gives what is held apart — the shared chunk of the domain of the
+ * sync, reached now from two lazy chunks. The trend: 272,2 → 273,3 → 275,6 →
+ * 276,5 → 277,6.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 277 * 1024;
+const TOTAL_BUDGET_GZIP_BYTES = 277 * 1024 + 848;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
