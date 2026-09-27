@@ -2000,3 +2000,203 @@ El coste es `repeatsKey` (930 bytes sin comprimir en `json-keys.ts`, hoy fuera d
 - **E5 entero**, con los bloques 0 a 3 del encargo.
 
 Paré aquí, como pediste para el caso de que Q12 no cupiera. Si prefieres que siga con el punto 4 y con E5 mientras decides Q12, son independientes de ella.
+
+## 33. E5: la puerta de las herramientas, Q12, la cobertura intermitente y la administración (2026-09-27)
+
+### 33.1 La decisión de la dirección sobre Q12
+
+«**Opción 1**. Esos bytes nos vienen bien también para las mejoras visuales que llegan después de la 015.» Por este orden y sin esperar entre pasos:
+1. prototipo y medida de la puerta propia;
+2. la implementación en *commits* propios, con una regla que impida que el barril vuelva a exportarlos;
+3. Q12 (b) encima;
+4. el punto 4, como propuesta;
+5. E5 entero.
+
+El tope de arranque autorizado se queda en 76.069. Si la medida baja, va un techo nuevo más bajo en su propio *commit*, con 20 bytes de margen.
+
+### 33.2 La puerta `@atlas/domain/tools` (pasos 1 y 2)
+
+- **La puerta**: `packages/domain/src/tools.ts`, con el mismo patrón que `@atlas/domain/fiscal`. Exporta `corporateActionDraft`, `deepCheck` y `simulateTransfer`, con sus tipos, y el barril `@atlas/domain` ya no los exporta (`083b6fb`).
+- **Quién la importa**:
+  - las pantallas perezosas: el formulario corporativo, la verificación, el simulador de traspasos y su modelo de vista;
+  - las órdenes de la consola que los usan: `corporate-actions`, `query`, `synth` y `tracking`.
+- **La regla** (`tests/architecture.test.ts`): el barril no los exporta, `tools.ts` sí, y ningún otro módulo del dominio importa la puerta. Mutantes `TOOLS-barrel` y `TOOLS-inner`: **muertos**.
+
+| | Arranque (bytes gzip) | Total (bytes gzip) |
+|---|---:|---:|
+| E4 cerrada (`3e63843`) | 76.055 | — |
+| Con la puerta | **73.889** (−2.166) | 301.240 |
+| Techo nuevo del arranque (`505587f`) | 73.909 (lo medido + 20) | |
+| Con Q12 (b) | **74.073** (+184) | 301.370 |
+| Techo del arranque con Q12 (`f190840`) | 74.093 (lo medido + 20), **por debajo de la autorización de 76.069** | |
+
+- **El trozo nuevo cuesta en el total**: sube el techo total a 301.496 (`64e0ca4`), dentro de la autorización de 304.640.
+- **El techo, antes de cada *commit* que lo necesita**, con su medida, su desglose y su tendencia en el comentario de `check-bundle.mjs`.
+- **Hoy quedan 1.996 bytes** entre lo medido en el arranque y la autorización, para lo que llegue después de la 015.
+
+### 33.3 Q12 (b) (`15cebe7`)
+
+- `decodeLine` marca con un `WeakSet` (`REPEATED_KEY`) el evento cuya línea repite una clave.
+- El paso 0 de `projectLedger` lo rechaza con `ValidationError("duplicate_key", …, { id })`, así que la proyección degradada lo deja **inválido**, con su id.
+- La sincronización lo retiene con `domain_rejected` y no lo sube.
+- Mensajes en la consola y en la web.
+- Tests:
+  - el dominio (5);
+  - la sincronización: se retiene, no se sube, y lo retenido dice `duplicate_key`;
+  - la consola: `check` lo nombra y `positions` responde con la cabecera de degradado.
+- Mutantes `Q12-mark`, `Q12-project` y `Q12-nested`: **muertos**.
+
+### 33.4 Una regresión mía de E4: cuatro guardianes borrados
+
+**El *commit* `969786e` de E4 borró por error cuatro bloques de `tests/api-access.test.ts`**, que nadie echó de menos porque un test que no existe no falla:
+- los registros de los tokens nunca se borran ni se etiquetan (T26);
+- los adaptadores del SDK solo toman del SDK lo que necesitan (E3);
+- la API solo añade, y el dominio juzga cada línea (E3);
+- el rehacer está atado al plan sellado (E3, N1).
+
+**Repuestos tal cual en `30e5644`.**
+- El último habría fallado: la web llamaba `recordRedo` a su envoltorio del rehacer.
+- Se renombró antes, en su propio *commit*, a `recordPlannedRedo` (`b65016c`). No cambia el comportamiento ni los bytes del arranque.
+- Visto en rojo con el nombre antiguo, y en verde con el nuevo.
+
+### 33.5 El punto 4: la cobertura intermitente (**PROPUESTA, sin aplicar**)
+
+**Lo medido en local, con los ajustes de la CI** (`--pool=forks --maxWorkers=1`, cada `coverage-final.json` guardado en el *scratchpad*):
+
+| Pasada | Veces | Ramas del dominio |
+|---|---:|---|
+| Todo el repositorio | 2 | 5006/5006, idénticas |
+| Solo el proyecto `domain` | 3 | 4996/5006, idénticas |
+| Solo `domain`, con los ficheros en orden aleatorio (semillas 11 a 66) | 6 | 4996/5006, idénticas |
+| Solo `adapters`, `api`, `cli`, `web` o `repo` (y `repo` con `adapters` o con `api`) | 7 | **0 ficheros del dominio** |
+| `domain` y `adapters` juntos | 1 | 4998/5006 |
+
+**Lo que dicen los datos:**
+1. **Los mapas de ramas son idénticos** en todas las pasadas y en todos los proyectos. Lo comparé fichero a fichero con la cobertura de `cli`, `web` y `adapters` con `allowExternal`. Ninguna transformación distinta cambia el mapa.
+2. **Los contadores bailan en unas 580 ramas entre dos pasadas cualesquiera**, también con solo el dominio. Son las pruebas de propiedades (`fast-check`, 19 ficheros). **Ninguna rama pasa nunca de cubierta a no cubierta**: cero en las 11 comparaciones.
+3. **El 100 % del dominio en la CI depende de otros proyectos.** Diez ramas solo las cubren tests de fuera del dominio:
+   - `ecb/drafts.ts:69` (dos brazos);
+   - `ecb/rule-change.ts:96`;
+   - `filings/closed-years.ts:178` y `:179`;
+   - `filings/proposal.ts:144`, `:145`, `:225` y `:227`;
+   - `informative/m720.ts:305`.
+   
+   Vitest 4.1.11 solo cuenta lo que otro proyecto ejecuta del dominio **si el proyecto `domain` corre en la misma invocación**: sin él, el fichero queda fuera de la raíz de ese proyecto (`allowExternal` falso) y no aparece.
+4. **Los dos fallos que guardé** (2 de 29 pasadas en local):
+   - uno en `ecb/propose.ts:95`, con 4995/4996;
+   - otro en `ecb/resolve.ts:54-64`, con 4999/5002.
+   
+   Los dos ficheros tenían entonces el mismo número de ramas que hoy (29 y 16). Así que **no se deformó el mapa: se perdieron los contadores**. En `resolve.ts`, los brazos perdidos de las líneas 58 y 64 solo los cubren los tests del dominio (9 y 6 visitas, las mismas en la pasada completa). **Se perdió la aportación entera de un fichero de test del dominio**, no la de otro proyecto.
+
+**La causa, hasta donde llega lo comprobado.** En `@vitest/coverage-v8` 4.1.11, por cada proyecto y entorno:
+- se funden en bruto los resultados de V8 de cada fichero de test (`mergeProcessCovs`);
+- después se convierten con las transformaciones de ese proyecto;
+- y al final se funden los proyectos en istanbul, por posición.
+
+Hay dos sitios donde la aportación de un fichero puede perderse sin error:
+- el desplazamiento del envoltorio del módulo cae a `0` cuando el trabajador no tiene su `moduleExecutionInfo` (`startOffset: … || 0`, en `@vitest/coverage-v8/dist/index.js`). Con dos desplazamientos distintos para la misma URL, la fusión en bruto coloca mal los rangos de uno de ellos;
+- `getSources` se traga el error de una transformación (`.catch(() => null)`).
+
+El segundo cambiaría el mapa, y el mapa no cambió: queda descartado. **El primero es compatible con todo lo visto, pero no lo he reproducido**: 11 pasadas seguidas sin un fallo. **No afirmo que sea la causa.** Lo que sí está comprobado es que **en una sola pasada del dominio no hay fusión entre proyectos**, y que ahí nada baila.
+
+**Propuesta, para que decida la dirección. No la he aplicado:**
+- **(a) Recomendada: medir el 100 % del dominio en su propia pasada.**
+  - `test:coverage` pasaría a ser `vitest run --coverage --project domain`, con el umbral del 100 %, seguido de `vitest run --project adapters --project api --project cli --project web --project repo` sin cobertura. `ci.yml` no cambia, porque llama a `npm run test:coverage`.
+  - **Antes**, en su propio *commit*: tests del dominio para las diez ramas del punto 3. Los escribo en cuanto lo apruebes. Sin ellos, el umbral fallaría.
+  - **Ganancias**:
+    - quita la fusión entre proyectos, que es donde está el fallo;
+    - la medida es la de los tests del propio dominio, que es lo que dice la definición de hecho;
+    - solo se instrumenta el dominio: la pasada con cobertura del dominio tarda unos 3 minutos, y el resto corre sin el coste de la cobertura.
+- **(b) No la recomiendo: repetir la cobertura una vez en la CI si falla.** Esconde el síntoma y deja el 100 % dependiendo de otros proyectos.
+
+### 33.6 E5, bloque 0: lo verificado, con fuentes (consultado el 2026-09-27)
+
+1. **Las credenciales de la consola.** Salen de la cadena estándar del SDK, y la consola nunca las guarda.
+   - *AWS SDK for JavaScript v3 Developer Guide*, «Set credentials in Node.js» (`docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-credentials-node.html`): el orden de la cadena.
+   - *AWS SDKs and Tools Reference Guide*, «Assume role credential provider» (`docs.aws.amazon.com/sdkref/latest/guide/feature-assume-role-credentials.html`): `mfa_serial` es «Required when assuming a role where the trust policy for that role includes a condition that requires MFA authentication», y la tabla dice «SDK for JavaScript 3.x: Yes».
+   - **Pero la cadena de un cliente no pide el código.** `@aws-sdk/credential-provider-ini` lanza «Profile … requires multi-factor authentication, but no MFA code callback was provided» si nadie le pasa `mfaCodeProvider`, y corta la cadena (`tryNextLink: false`). Está en `node_modules/@aws-sdk/credential-provider-ini/dist-cjs/index.js:96-97`.
+     - **Probado con el SDK real y sin AWS**: un perfil con `mfa_serial` da `admin_aws_refused (CredentialsProviderError)` antes de llamar a STS (`apps/cli/test/admin/environment.test.ts`).
+     - **Corregido** en el código, en el mensaje y en el procedimiento (`710f7af`, `a0a06ea`). Mi borrador decía que el SDK pedía el código, y no es así.
+   - **Cómo se abre entonces la sesión**, en las dos variantes de C5:
+     - **IAM Identity Center**: `aws sso login`, y el SDK lee la sesión guardada;
+     - **usuario IAM con MFA**: la CLI de AWS «prompts the user to enter the one-time password (OTP) that the MFA device provides» y guarda la sesión en `~/.aws/cli/cache` (*AWS CLI User Guide*, «Using an IAM role in the AWS CLI»). `aws configure export-credentials --format env` la exporta como variables («Display credentials as exported shell variables», referencia de la CLI de AWS v2).
+     - **Qué principal asume el rol sigue SIN VERIFICAR** (C5, de la 018).
+2. **El *root* no puede asumir el rol.** *IAM User Guide*, «Compare AWS STS credentials» (`docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_sts-comparison.html`): «Who can call» de `AssumeRole` es «IAM user or IAM role with existing temporary security credentials». El de `GetSessionToken` es «IAM user or AWS account root user». **Queda verificado el SIN VERIFICAR de ADR-0034, fila 16.** El procedimiento dice que el *root* solo sirve para desbloquear.
+
+### 33.7 E5, bloques 1 y 2: lo construido
+
+- **Las reglas, en el dominio**, detrás de **una puerta propia, `@atlas/domain/admin`** (`9e53313`, `3b8f160`): `remoteRewritePermission`, `forgetRefusal`, `forgottenDevice`, `compareForRestore` y `parseAdminConfig`.
+  - Van aparte de `@atlas/domain/access` porque la API alcanza esa puerta, y nada de la administración debe ser alcanzable desde ella.
+  - `rewritePermission` recibe ahora solo lo que usa del objeto del dispositivo, sin la fecha de la última sincronización.
+- **Los adaptadores** (`67a141d`, `f09b3fb`):
+  - `AdminObjectStore` añade dos operaciones: una versión anterior de un objeto (`GetObject` con `VersionId`) y el listado de todo lo que cuelga de un prefijo, a cualquier profundidad (`ListObjectsV2` sin delimitador). **Sigue sin borrar.**
+  - La puerta nueva es `@atlas/adapters/aws-admin`.
+  - El doble de S3 guarda versiones y lista a cualquier profundidad.
+- **`atlas admin`** (`3a07249`): `devices`, `revoke-all-tokens`, `forget-device <id> [--force]`, `compact` y `restore --from <fichero|s3-version:<id>|backups/AAAA-MM>`, siempre con `--env`.
+  - **Lo que niega la reescritura**: lo pendiente de esta carpeta si está sincronizada, lo publicado por cualquier dispositivo vivo y un objeto ilegible. Lo retenido no bloquea, y un dispositivo olvidado no cuenta.
+  - **Restaurar**: los seis pasos, cada uno con su salida.
+    - El candidato se comprueba con la integridad, `deepCheck` y la proyección. **No se contrastan los tipos del BCE**, que dependen del histórico de la carpeta; el procedimiento lo dice.
+    - Se escribe con `replaceLines` sobre el etag del paso 3.
+    - Lo anterior se archiva en `archive/pre-restore-<fecha>T<hora>-<etag>.jsonl`, con `syncArchiveName("restore")` (`ca336cf`).
+  - **Olvidar**: revoca primero, marca después, sobre el ETag leído, con tres intentos y `forget_contention`. Los dos cortes tienen su test: revocado y vivo es un estado seguro, y repetir la orden lo termina.
+  - **Los fallos de AWS se dicen sin el mensaje del SDK**: `admin_remote_unavailable` y `admin_aws_refused`.
+- **`atlas backup`** (`ab2774a`):
+  - copia siempre la carpeta local `documents/`;
+  - con `--from-bucket --env`, también `documents/` e `imports/` del bucket, en `<destino>/bucket/`, **solo leyendo**;
+  - cada fichero se verifica por SHA-256, y nada se sobrescribe. Si ya está con los mismos bytes, se deja; si tiene otros, se niega con `path_exists`;
+  - una clave que saldría del destino se niega con `bucket_key_unsafe`. Los marcadores de carpeta de la consola de S3 se saltan.
+- **Los guardianes** (`873c564`):
+  - `apps/api` no alcanza ni una orden, ni un adaptador, ni una regla de la administración;
+  - ninguna fuente de la API nombra `getVersion`, `listAll`, `VersionId` ni el olvido;
+  - la administración no importa ni las credenciales de la consola, ni el cliente de la API, ni la cabecera del token.
+- **El paso 4 de la cuenta robada** (rotar la clave y esperar la caché) ya tenía su test en E2. Escribí uno repetido y lo quité (`3e13512`, `c0f51a8`).
+- **Mensajes en español en la consola** (`1128d70`). Los cuatro códigos de la administración que salen del dominio los traduce **solo la consola**: la web nunca administra. `tests/messages.test.ts` los declara en `CLI_ONLY`.
+
+### 33.8 E5, bloque 3: los procedimientos
+
+En `specs/015-api-access/runbooks/`, en español, con las órdenes exactas y con lo probado y lo no probado dicho en cada uno:
+- `revocar-todos-los-tokens.md`:
+  - con la consola;
+  - con la CLI de AWS: el paso de `jq` **da los mismos bytes que `revokedRecord`**, probado sin AWS con un `device_name` con acentos y comillas;
+  - el *root*, solo para desbloquear.
+- `restaurar-el-libro.md`: los seis pasos, cómo elegir la copia, qué hace después cada dispositivo, la prueba anual y la pérdida de la cuenta.
+- `cuenta-de-google-robada.md`: los seis pasos de B3, en su orden, y el caso distinto de **perder** la cuenta.
+
+### 33.9 Mutantes
+
+Batches en el *scratchpad*: `015-e5-b1.json` y `015-e5-b2.json`, con sus salidas. **Los 18, muertos.**
+
+| Mutante | Qué hace | Lo mata |
+|---|---|---|
+| E5-42a, 42c | La reescritura no mira las colas publicadas, o no se niega con un dispositivo ilegible | `rewrite.test.ts`; los tests del dominio |
+| E5-42b | Lo retenido bloquea la reescritura (V5) | Los tests del dominio |
+| E5-43a | Restaurar con `replace`, que vuelve a serializar | El test de los bytes tal cual (`79db531`) |
+| E5-43b, 43c, 43d | Otro nombre de archivo, restaurar sin decir la comparación, o sin pedir confirmación | `rewrite.test.ts` |
+| E5-43e | Escribe con una condición leída otra vez, no la que se comparó | El test del cambio entre los pasos 3 y 5 (`79db531`) |
+| E5-44a | Olvida primero y revoca después | Los cortes de `admin.test.ts` |
+| E5-44b | La clave de sesión queda en caché para siempre | El test de E2 |
+| E5-45a, 45b | La API alcanza la administración, o la administración toma las credenciales de la consola | Los guardianes de `873c564` |
+| E5-46a, 46b | Revocar todos deja alguno vivo, o cuenta como nuevo uno ya revocado | `admin.test.ts` |
+| E5-46 bis a, b, c | Olvidar con cola sin `--force`, `--force` sin avisar, o la marca que deja el dispositivo activo | `admin.test.ts` |
+| E5-46 ter | La copia escribe en el bucket | `backup.test.ts` |
+
+**Vistos vivos antes de su test y muertos después**: E5-43a y E5-43e, contra el `rewrite.test.ts` anterior a `79db531`; y E5-45a, contra el `api-access.test.ts` anterior a `873c564`.
+
+### 33.10 Documentos (para que los traslade la dirección)
+
+- **`docs/data-schema.md` §1, fila de `archive/`**: el nombre real es `pre-restore-<YYYY-MM-DD>T<HHMMSS>-<etag>.jsonl` (`syncArchiveName("restore")`), no `pre-restore-<fecha>.jsonl`. Como confirmar, unirse y volver a descargar, **no prueba `-2`**: si el nombre existe, falla con `archive_exists` y se repite.
+- **`docs/data-schema.md` §2, la clave repetida (Q12)**: «se implementa en E5 de la 015» pasa a «**implementado** en E5 (`15cebe7`)».
+- **`docs/data-schema.md` §1**: `~/.config/atlas/admin.json` **se usa tal como propone `data-model.md` §9**. §9 sigue diciendo PROPUESTA: falta que la dirección la acepte.
+- **`docs/runbooks/`**: los tres procedimientos de `specs/015-api-access/runbooks/`. En `google-2-step-verification.md`, línea 86, cambiar «El procedimiento paso a paso llegará con el despliegue» por un enlace a `cuenta-de-google-robada.md` («Recuperar una cuenta de Google robada»), que sigue el mismo orden de B3.
+- **ADR-0034, fila 16**: el *root* y `AssumeRole` quedan **verificados**, con la fuente de §33.6. Y una nota para C5: con un usuario IAM, la consola necesita la sesión ya abierta por la CLI de AWS, porque el SDK no pide el código.
+- **`docs/api.md`**: nada. La administración no pasa por la API.
+
+### 33.11 La tubería y la CI
+
+Se rellena al cerrar.
+
+### 33.12 Pendiente para la dirección
+
+- **El punto 4**: decidir la propuesta (a) o (b) de §33.5. No he tocado la configuración.
+- **`admin.json`**: aceptar o cambiar la propuesta de `data-model.md` §9.
+- **Trasladar los documentos** de §33.10.
