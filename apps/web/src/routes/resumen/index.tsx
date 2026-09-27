@@ -41,6 +41,7 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   attentionItems,
   dataLossItem,
+  firstEntries,
   fiscalSlot,
   movementRows,
   netWorthView,
@@ -49,7 +50,7 @@ import {
 import { netWorthPlot } from "../../view-models/series.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
-import { MovementLine } from "../movimientos/MovementLine.jsx";
+import { EntryLine } from "../movimientos/MovementList.jsx";
 import { AttentionBlock, noticeOf } from "./AttentionBlock.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
 import { NetWorthBlock } from "./NetWorthBlock.jsx";
@@ -149,10 +150,13 @@ export default function ResumenRoute(): JSX.Element {
         });
         // Cut at the date read: what is dated later has not happened yet.
         const entries = ledgerEntries(snapshot.state, snapshot.events, { to: date });
-        const recent = movementRows(
-          entries.filter(isMovement).slice(0, RECENT),
-          names,
-          eventReferences(snapshot.events, names),
+        // Five entries, the valuations of a day gathered into one (M8).
+        const movements = entries.filter(isMovement);
+        const references = eventReferences(snapshot.events, names);
+        const recent = firstEntries(
+          movements.length,
+          (from, to) => movementRows(movements.slice(from, to), names, references),
+          RECENT,
         );
         const onboarding = onboardingOf(dated, entries, settings);
         const moved = entries.some(isMovement);
@@ -179,9 +183,9 @@ export default function ResumenRoute(): JSX.Element {
             >
               <ul class="rows">
                 <For each={recent}>
-                  {(row) => (
+                  {(entry) => (
                     <li>
-                      <MovementLine row={row} />
+                      <EntryLine entry={entry} />
                     </li>
                   )}
                 </For>

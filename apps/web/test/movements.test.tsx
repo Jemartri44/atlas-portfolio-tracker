@@ -13,8 +13,7 @@ import { store } from "../src/ledger/state.js";
 import Detail from "../src/routes/movimientos/detail.jsx";
 import Movimientos from "../src/routes/movimientos/index.jsx";
 import { movementGlyph } from "../src/routes/movimientos/MovementLine.jsx";
-import { byDay } from "../src/routes/movimientos/MovementList.jsx";
-import { movementRows } from "../src/view-models/index.js";
+import { byMonth, type MovementRow, movementRows } from "../src/view-models/index.js";
 import { draftSentence, movementSentence } from "../src/view-models/sentence.js";
 import { goldenEvents } from "./helpers/golden.js";
 import { show, text, withGoldenLedger } from "./helpers/render.jsx";
@@ -52,11 +51,20 @@ const said = (type: string): string => plain(movementSentence(current(type), nam
 const drafted = (type: string): string => plain(draftSentence(current(type).event, names));
 
 describe("the list of movements", () => {
-  it("groups consecutive rows of the same day, in the order given", () => {
+  it("puts the rows under one heading per month, in the order given (feature 020, M8)", () => {
+    // It replaces the grouping by day of feature 007: a heading per day cost
+    // one more row per movement on a phone.
     const rows = movementRows(entries.slice(0, 30), names);
-    const days = byDay(rows);
-    expect(days.flatMap((day) => day.rows)).toEqual(rows);
-    expect(new Set(days.map((day) => day.date)).size).toBe(days.length);
+    const months = byMonth(rows.map((row) => ({ kind: "row" as const, row })));
+    expect(
+      months.flatMap((month) => month.entries.map((entry) => (entry as { row: MovementRow }).row)),
+    ).toEqual(rows);
+    expect(new Set(months.map((month) => month.month)).size).toBe(months.length);
+    for (const month of months) {
+      for (const entry of month.entries) {
+        expect((entry as { row: MovementRow }).row.date.slice(0, 7)).toBe(month.month);
+      }
+    }
   });
 
   it("folds the filters on a phone, with the search always in sight", async () => {

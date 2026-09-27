@@ -11,12 +11,18 @@ export {
 } from "./attention.js";
 export { type DetailField, type DetailView, detailView } from "./detail.js";
 export {
+  byMonth,
+  firstEntries,
+  groupValuations,
   hasState,
+  type ListEntry,
+  type MonthOfEntries,
   type MovementRow,
   movementRow,
   movementRows,
   PAGE_SIZE,
   showsStateColumn,
+  type ValuationGroup,
 } from "./movements.js";
 export {
   type BlockKey,

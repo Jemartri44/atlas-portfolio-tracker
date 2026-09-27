@@ -1,13 +1,22 @@
-// The rows of the ledger (docs/design/system.md §7.3): on a phone, grouped by
-// day, each movement a row in two lines with the glyph of its type; from
+// The rows of the ledger (docs/design/system.md §7.3): on a phone, under one
+// heading per month with the date in each row, and the valuations of a day
+// gathered into one row that unfolds (feature 020, M8); from
 // 1024px, the dense table. What is genuinely about a movement — which figure
 // matters, what a reversed row looks like — lives in `MovementLine`.
 
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
-import { type DataColumn, DataTable } from "../../components/index.js";
-import { formatDate, formatLongDate } from "../../format/date.js";
-import { hasState, type MovementRow, showsStateColumn } from "../../view-models/index.js";
+import { type DataColumn, DataTable, Disclosure } from "../../components/index.js";
+import { formatDate, formatMonth } from "../../format/date.js";
+import {
+  byMonth,
+  groupValuations,
+  hasState,
+  type ListEntry,
+  type MovementRow,
+  showsStateColumn,
+  type ValuationGroup,
+} from "../../view-models/index.js";
 import { MovementFigure, MovementLine, MovementState } from "./MovementLine.jsx";
 
 const COLUMNS: readonly DataColumn<MovementRow>[] = [
@@ -54,37 +63,53 @@ const COLUMNS: readonly DataColumn<MovementRow>[] = [
   },
 ];
 
-interface Day {
-  date: string;
-  rows: MovementRow[];
-}
+/**
+ * The valuations of one day, folded into one row that unfolds (feature 020,
+ * M8), with the same disclosure as everywhere: its summary is a 44px row.
+ */
+export const ValuationGroupLine = (props: { group: ValuationGroup }): JSX.Element => (
+  <Disclosure
+    class="valuation-group"
+    label={`${props.group.rows.length} valoraciones · ${formatDate(props.group.date)}`}
+  >
+    <ul class="rows">
+      <For each={props.group.rows}>
+        {(row) => (
+          <li>
+            <MovementLine row={row} />
+          </li>
+        )}
+      </For>
+    </ul>
+  </Disclosure>
+);
 
-/** Consecutive rows of the same date, in the order the domain gave them. */
-export const byDay = (rows: readonly MovementRow[]): Day[] => {
-  const days: Day[] = [];
-  for (const row of rows) {
-    const last = days[days.length - 1];
-    if (last?.date === row.date) {
-      last.rows.push(row);
-    } else {
-      days.push({ date: row.date, rows: [row] });
-    }
-  }
-  return days;
-};
+/** One entry of a list: a movement, or the valuations of a day gathered. */
+export const EntryLine = (props: { entry: ListEntry }): JSX.Element => (
+  <Show
+    when={props.entry.kind === "valuations" ? (props.entry as ValuationGroup) : undefined}
+    fallback={<MovementLine row={(props.entry as { row: MovementRow }).row} />}
+  >
+    {(group) => <ValuationGroupLine group={group()} />}
+  </Show>
+);
+
+/** `2028-12` → `diciembre de 2028`. */
+const monthHeading = (month: string): string =>
+  `${formatMonth(`${month}-01`)} de ${month.slice(0, 4)}`;
 
 export const MovementList = (props: { rows: readonly MovementRow[] }): JSX.Element => (
   <>
     <div class="days only-narrow">
-      <For each={byDay(props.rows)}>
-        {(day) => (
-          <section class="day" aria-label={formatLongDate(day.date)}>
-            <h2 class="day-title">{formatLongDate(day.date)}</h2>
+      <For each={byMonth(groupValuations(props.rows))}>
+        {(month) => (
+          <section class="day" aria-label={monthHeading(month.month)}>
+            <h2 class="day-title">{monthHeading(month.month)}</h2>
             <ul class="rows">
-              <For each={day.rows}>
-                {(row) => (
+              <For each={month.entries}>
+                {(entry) => (
                   <li>
-                    <MovementLine row={row} dated={false} />
+                    <EntryLine entry={entry} />
                   </li>
                 )}
               </For>
