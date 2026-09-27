@@ -178,3 +178,18 @@ Decidida por la dirección, a partir de la decisión del usuario sobre la carpet
 ## Nota del 2026-09-26 (bloque 0 de E2 de la feature 015): los parámetros de los tokens se crean etiquetados
 
 Decidida por la dirección el 2026-09-26 sobre `specs/015-api-access/questions.md` §18.2 y §21. La fila 9 decía que la 015 crea los parámetros de los tokens de la consola **con etiqueta si `PutParameter` lo admite al crear, SIN VERIFICAR**. **Verificado**: la referencia de `PutParameter` admite `Tags` al crear, y la de `AWS::SSM::Parameter` dice que crear un parámetro etiquetado exige `ssm:PutParameter` **y `ssm:AddTagsToResource`**. La API crea cada `/atlas/<entorno>/device-tokens/<token_id>` con `project=atlas` y `env=<entorno>` (fila 3), y la revocación, que sobrescribe sin `Tags`, las conserva. Así esos parámetros entran en el filtro del presupuesto de la fila 9. **Consecuencia para la 017**: el rol de la API necesita `ssm:AddTagsToResource` sobre `/atlas/<entorno>/device-tokens/*` (`docs/decision-roadmap.md`, 017).
+
+## Nota del 2026-09-27 (bloque 0 de E5 de la feature 015): el *root* y el MFA del rol de administración
+
+Decidida por la dirección el 2026-09-27 sobre `specs/015-api-access/questions.md` §33.6 y §34.
+
+- **Fila 16, el *root*: verificado.** La fila decía «STS no admite `AssumeRole` con sus credenciales (**SIN VERIFICAR** con fuente en esta ronda)». La *IAM User Guide*, «Compare AWS STS credentials» (`docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_sts-comparison.html`, consultada el 2026-09-27), dice en «Who can call»:
+  - de `AssumeRole`: «IAM user or IAM role with existing temporary security credentials»;
+  - de `GetSessionToken`: «IAM user or AWS account root user».
+
+  **El *root* no puede asumir `atlas-<entorno>-admin`**, y sigue sirviendo solo para desbloquear, como dice la fila. El procedimiento es `docs/runbooks/revoke-all-tokens.md`, apartado 3.
+- **Para C5, el MFA lo pide la CLI de AWS, no el SDK.** La cadena estándar del SDK de JavaScript v3, que es la que usa la consola de Atlas, **no pide el código MFA** de un perfil con `mfa_serial`. Sin una función que se lo dé (`mfaCodeProvider`), se niega antes de llamar a STS. Está probado con el SDK real y sin AWS en `apps/cli/test/admin/environment.test.ts`. Así que `atlas admin` y `atlas backup --from-bucket` usan **una sesión ya abierta**, en cualquiera de las dos variantes de C5:
+  - con **IAM Identity Center**: `aws sso login`;
+  - con un **usuario IAM con MFA**: la CLI de AWS pide el código al usar el perfil (*AWS CLI User Guide*, «Using an IAM role in the AWS CLI») y `aws configure export-credentials --format env` pasa la sesión a la terminal.
+
+  Qué principal asume el rol y con qué condición de MFA sigue **SIN VERIFICAR** y es de la 018. Esto no cambia la decisión de la fila 16: la sesión sigue siendo de vida corta y con MFA independiente de Google. Solo dice quién pide el código.
