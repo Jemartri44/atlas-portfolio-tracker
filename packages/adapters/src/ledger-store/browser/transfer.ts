@@ -32,6 +32,7 @@ import {
 const SYNC_STATE_KEY = "sync:state";
 const SYNC_HELD_KEY = "sync:held";
 const SYNC_DISCARDED_KEY = "sync:discarded";
+const SYNC_DEVICE_KEY = "sync:device";
 
 const encoder = new TextEncoder();
 
@@ -117,14 +118,16 @@ export const replaceLedgerText = (
     const marker = store.get(SYNC_STATE_KEY);
     const held = store.get(SYNC_HELD_KEY);
     const discarded = store.get(SYNC_DISCARDED_KEY);
-    discarded.onsuccess = () => {
+    const device = store.get(SYNC_DEVICE_KEY);
+    device.onsuccess = () => {
       // A synced ledger is not replaced by a file (§6.2 P2): checked in this
       // same transaction, with the state of the sync next to the ledger.
       const refusal = importPermission(
         syncConfiguredByText(
           marker.result !== undefined ||
             held.result !== undefined ||
-            discarded.result !== undefined,
+            discarded.result !== undefined ||
+            device.result !== undefined,
           marker.result as string | undefined,
         ),
       );
