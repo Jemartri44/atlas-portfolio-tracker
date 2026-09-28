@@ -64,6 +64,18 @@ export const restoreRehearsal = (input: {
   readonly live: readonly LedgerEvent[];
   readonly today: CivilDate;
 }): Rehearsal => {
+  // An id twice stops a projection even when it collects errors (`duplicate_id`):
+  // the dump that repeats one is invalid, and a live ledger that does is not
+  // projected, and said — never a failure of the whole integrity (review of
+  // PR #109, copias B1). Its errors are said by the check anyway.
+  const repeated = (events: readonly LedgerEvent[]): number =>
+    events.length - new Set(events.map((event) => event.id)).size;
+  if (repeated(input.dump) > 0) {
+    return { ok: false, differs: { dump_invalid: repeated(input.dump) } };
+  }
+  if (repeated(input.live) > 0) {
+    return { ok: false, differs: { rehearsal_skipped_invalid: 1 } };
+  }
   const differs: Record<string, number> = {};
   const count = (code: string) => {
     differs[code] = (differs[code] ?? 0) + 1;

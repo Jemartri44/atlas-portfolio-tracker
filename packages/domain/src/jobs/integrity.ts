@@ -42,6 +42,8 @@ export const REHEARSAL_CODES = [
   "dump_missing",
   /** The ledger of the dump is not the one its record says, or does not load. */
   "dump_unreadable",
+  /** The live ledger repeats an id: its cut is not projected (review of PR #109, copias B1). */
+  "rehearsal_skipped_invalid",
 ] as const;
 
 const known = (codes: readonly string[], code: string): boolean => codes.includes(code);

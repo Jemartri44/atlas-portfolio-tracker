@@ -159,17 +159,24 @@ describe("the quarterly integrity (E4, plan §9)", () => {
     }
   });
 
-  it("counts the errors of the check, and the mail says them once", async () => {
+  it("counts the errors of the check with a dump of that ledger, and the mail says them once (copias B1)", async () => {
     const lines = sentinelLedger().trimEnd().split("\n");
-    // A line repeated: the same id twice, which `atlas check --deep` refuses.
+    // A line repeated: the same id twice, which `atlas check --deep` refuses —
+    // dumped as it is, as it happens in production from the first month.
     const ledger = `${[...lines, lines.at(-1)].join("\n")}\n`;
     const s3 = withDump(ledger);
-    await check(s3);
-    expect(recordOf(s3).findings).toContainEqual({
-      code: "integrity_errors",
-      subject: "integrity",
-      counts: { errors: 1, duplicate_id: 1 },
-    });
+    await dump(s3);
+    await check(s3, { ...INTEGRITY_ENV, ATLAS_LEDGER_SIZE_WARNING_BYTES: "1024" });
+    expect(recordOf(s3)).toMatchObject({ state: "done", outcome: { code: "integrity_checked" } });
+    expect(recordOf(s3).findings).toEqual([
+      { code: "integrity_errors", subject: "integrity", counts: { errors: 1, duplicate_id: 1 } },
+      { code: "restore_rehearsal_differs", subject: "integrity", counts: { dump_invalid: 1 } },
+      {
+        code: "ledger_size_above_threshold",
+        subject: "integrity",
+        counts: { bytes: ledger.length, threshold: 1024 },
+      },
+    ]);
     const ssm = new TestOnlyFakeSsm();
     ssm.set("/atlas/prod/mail/recipient", RECIPIENT);
     const mail = setupJobs({ env: MAIL_ENV, now: "2026-10-01T06:00:00Z", s3, ssm });
@@ -178,10 +185,33 @@ describe("the quarterly integrity (E4, plan §9)", () => {
     const subjects = mail.ses.sent.map((sent) => sent.subject);
     expect(
       subjects.filter((subject) => subject === "[Atlas] Aviso: integridad 2026-Q4"),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(mail.ses.sent.map((sent) => sent.body).join("\n")).toContain(
       "encontró 1 errores (duplicate_id: 1)",
     );
+  });
+
+  it("skips the rehearsal of a live ledger that repeats an id of the dump, and says so (copias B1)", async () => {
+    const s3 = withDump();
+    await dump(s3);
+    const live = s3.text("ledger/ledger.jsonl") as string;
+    const lines = live.trimEnd().split("\n");
+    s3.seed("ledger/ledger.jsonl", `${live}${lines[3]}\n`);
+    await check(s3, { ...INTEGRITY_ENV, ATLAS_LEDGER_SIZE_WARNING_BYTES: "1024" });
+    expect(recordOf(s3)).toMatchObject({ state: "done", outcome: { code: "integrity_checked" } });
+    expect(recordOf(s3).findings).toEqual([
+      { code: "integrity_errors", subject: "integrity", counts: { errors: 1, duplicate_id: 1 } },
+      {
+        code: "restore_rehearsal_differs",
+        subject: "integrity",
+        counts: { rehearsal_skipped_invalid: 1 },
+      },
+      {
+        code: "ledger_size_above_threshold",
+        subject: "integrity",
+        counts: { bytes: live.length + (lines[3] as string).length + 1, threshold: 1024 },
+      },
+    ]);
   });
 
   it("fails with its code without a ledger, and writes nothing but its record", async () => {

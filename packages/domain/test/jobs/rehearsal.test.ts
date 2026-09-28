@@ -112,6 +112,26 @@ describe("the rehearsal of a restore (mutant 29)", () => {
   });
 });
 
+describe("a ledger with an id twice (review of PR #109, copias B1)", () => {
+  it("never projects a dump with an id twice: dump_invalid, by how many", () => {
+    const events = live();
+    const twice = [...events, events.at(-1) as LedgerEvent];
+    expect(restoreRehearsal({ dump: twice, live: events, today: TODAY })).toEqual({
+      ok: false,
+      differs: { dump_invalid: 1 },
+    });
+  });
+
+  it("never projects a live ledger that repeats an id of the dump: the rehearsal is skipped", () => {
+    const events = live();
+    const twice = [...events, events[5] as LedgerEvent];
+    expect(restoreRehearsal({ dump: events, live: twice, today: TODAY })).toEqual({
+      ok: false,
+      differs: { rehearsal_skipped_invalid: 1 },
+    });
+  });
+});
+
 describe("the last dump to rehearse with", () => {
   const SHA = "d".repeat(64);
   const done = (period: string, objects = true): RunRecord =>
