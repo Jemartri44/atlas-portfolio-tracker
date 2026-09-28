@@ -38,6 +38,10 @@ describe("the manifest of the ECB history", () => {
       manifest({ file: "eurofxref-hist.csv", source: "ftp", sha256: SHA }),
       manifest({ file: "eurofxref-hist.csv", source: "zip", sha256: "A".repeat(64) }),
       manifest({ file: "eurofxref-hist.csv", source: "zip", sha256: 7 }),
+      // Read strictly, as the web reads it too (feature 016, E3).
+      "[]",
+      `{"active":${JSON.stringify({ file: "eurofxref-hist.csv", source: "zip", sha256: SHA })},"active":{}}`,
+      `{"active":{"file":"eurofxref-hist.csv","source":"zip","sha256":"${SHA}"},"x":"\ud800"}`,
     ]) {
       expect(activeHistoryOf(text), text).toBeUndefined();
     }

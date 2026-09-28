@@ -4,9 +4,15 @@
 // may have; JSON text with a repeated key or a lone surrogate is refused, as
 // `JSON.parse` would keep the last of two equal keys without a word.
 
-import { isPlainObject, type Plain, strictJsonObject } from "../schema/strict-json.js";
+import { holdsLoneSurrogate, repeatsKey } from "../schema/json-keys.js";
 
-export { isPlainObject, type Plain, strictJsonObject };
+export type Plain = Record<string, unknown>;
+
+export const isPlainObject = (value: unknown): value is Plain =>
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value) &&
+  [Object.prototype, null].includes(Object.getPrototypeOf(value));
 
 /** Whether `value` has every key of `required`, and no key outside `required` and `optional`. */
 export const hasKeys = (
@@ -16,6 +22,20 @@ export const hasKeys = (
 ): boolean =>
   required.every((key) => Object.hasOwn(value, key)) &&
   Object.keys(value).every((key) => required.includes(key) || optional.includes(key));
+
+/** A JSON object from its text, or nothing: not JSON, a repeated key, a lone surrogate, not an object. */
+export const strictJsonObject = (text: string): Plain | undefined => {
+  if (holdsLoneSurrogate(text)) {
+    return undefined;
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  return isPlainObject(value) && !repeatsKey(text) ? value : undefined;
+};
 
 /** An instant as the jobs write it: ISO 8601 UTC, with or without milliseconds. */
 export const isInstantText = (value: unknown): value is string =>
