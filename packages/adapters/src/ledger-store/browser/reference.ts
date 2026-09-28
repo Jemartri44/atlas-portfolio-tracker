@@ -8,7 +8,7 @@
 // database, under a key of its own. Losing it loses nothing of the ledger: it
 // is imported again.
 
-import { idbGet, idbPut, LEDGER_STORE } from "./idb.js";
+import { idbDelete, idbGet, idbPut, LEDGER_STORE } from "./idb.js";
 
 /** The key of the ECB history imported by hand, in the `ledger` store (exported for the test of keys of feature 014). */
 export const IMPORTED_HISTORY_KEY = "reference:ecb";
@@ -38,3 +38,11 @@ export const saveImportedHistory = (history: ImportedHistory): Promise<void> =>
 
 export const importedHistory = (): Promise<ImportedHistory | undefined> =>
   idbGet<ImportedHistory>(LEDGER_STORE, KEY);
+
+/**
+ * Erases the copy kept in this browser (review of PR #108, N4): after the
+ * administration restores a generation of the cloud that an older one
+ * contradicts, the next download is a first one again. The ledger is not
+ * touched.
+ */
+export const forgetImportedHistory = (): Promise<void> => idbDelete(LEDGER_STORE, KEY);

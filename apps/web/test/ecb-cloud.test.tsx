@@ -16,7 +16,7 @@ import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
 import { downloadCloudHistory } from "../src/ecb/cloud.js";
 import { loadWebHistory, reloadWebHistory } from "../src/ecb/history.js";
 import Ajustes from "../src/routes/ajustes/index.jsx";
-import { settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { press, settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -183,6 +183,44 @@ describe("the ECB history of the cloud in the web (016, E3, block 2)", () => {
     } finally {
       globalThis.fetch = real;
     }
+  });
+});
+
+describe("erasing the copy of this browser (review of PR #108, N4)", () => {
+  it("asks first, erases only when confirmed, and lets the restored one come down again", async () => {
+    const { importedHistory } = await import("@atlas/adapters/reference");
+    await downloadCloudHistory(api({ manifest: manifestOf(csv), file: csv }).request, NOW);
+    await reloadWebHistory();
+    const offline = api({ manifest: manifestOf(csv), file: csv, session: false });
+    const real = globalThis.fetch;
+    globalThis.fetch = offline.request;
+    try {
+      const host = await show("/ajustes", Ajustes);
+      await settle(100);
+      await press(host, "Borrar la copia del BCE de este navegador");
+      expect(text(host.querySelector("dialog"))).toContain("se puede volver a bajar");
+      // Cancelled: nothing is erased.
+      await press(host, "Cancelar");
+      expect(await importedHistory()).toBeDefined();
+      await press(host, "Borrar la copia del BCE de este navegador");
+      const confirm = [...(host.querySelector("dialog")?.querySelectorAll("button") ?? [])].find(
+        (button) => button.textContent?.trim() === "Borrar la copia",
+      );
+      confirm?.click();
+      await settle(100);
+      expect(await importedHistory()).toBeUndefined();
+      expect(text(host)).toContain("Copia borrada");
+    } finally {
+      globalThis.fetch = real;
+    }
+    // The next download is a first one: a restored generation comes down whole.
+    const changed = csv.replace(",0.8595,", ",0.8596,");
+    expect(
+      await downloadCloudHistory(
+        api({ manifest: manifestOf(changed), file: changed }).request,
+        NOW,
+      ),
+    ).toMatchObject({ kind: "saved" });
   });
 });
 

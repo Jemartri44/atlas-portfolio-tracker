@@ -9,7 +9,7 @@
 // lazily.
 
 import { createResource, createSignal, type JSX, Show } from "solid-js";
-import { Icon, Notice, Section } from "../../components/index.js";
+import { ConfirmDialog, Icon, Notice, Section } from "../../components/index.js";
 import { downloadCloudHistory } from "../../ecb/cloud.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { toAppError } from "../../ledger/errors.js";
@@ -41,6 +41,7 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
   const [web, { refetch }] = createResource(async () => (await ecb()).loadWebHistory());
   const [busy, setBusy] = createSignal(false);
   const [signedIn, setSignedIn] = createSignal(false);
+  const [forgetting, setForgetting] = createSignal(false);
   const [said, setSaid] = createSignal<{ tone: "info" | "danger" | "caution"; text: string }>();
 
   const guarded = async (action: () => Promise<string | undefined>): Promise<void> => {
@@ -103,6 +104,15 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
     }
     return state.kind;
   });
+
+  /** Erases the copy of this browser, after asking (review of PR #108, N4). */
+  const onForget = (): Promise<void> => {
+    setForgetting(false);
+    return guarded(async () => {
+      await (await ecb()).forgetWebCopy();
+      return "Copia borrada: este navegador ya no tiene histórico del BCE. La próxima descarga de la nube lo baja entero.";
+    });
+  };
 
   const onLink = (): Promise<void> =>
     guarded(async () => {
@@ -196,6 +206,16 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
             Bajar de la nube
           </button>
         </Show>
+        <Show when={web()?.origin === "imported" || web()?.origin === "cloud"}>
+          <button
+            type="button"
+            class="secondary danger"
+            disabled={busy()}
+            onClick={() => setForgetting(true)}
+          >
+            Borrar la copia del BCE de este navegador
+          </button>
+        </Show>
         <Show when={canLinkFolder()}>
           <button type="button" class="secondary" disabled={busy()} onClick={() => void onLink()}>
             <Icon name="laptop" class="icon-sm" />
@@ -219,6 +239,18 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
         <code>atlas fx update</code>; en el móvil, con la sesión iniciada, se baja de tu nube al
         abrir esta tarjeta, o importa el <code>eurofxref-hist.zip</code> de la web del BCE.
       </p>
+      <ConfirmDialog
+        open={forgetting()}
+        title="¿Borrar la copia del BCE de este navegador?"
+        confirm="Borrar la copia"
+        destructive
+        onClose={() => setForgetting(false)}
+        onConfirm={() => void onForget()}
+      >
+        Solo se borra el histórico que guarda este navegador; el libro no se toca. Con la sesión
+        iniciada, se puede volver a bajar de la nube entero, por ejemplo después de que se haya
+        restaurado allí una versión buena.
+      </ConfirmDialog>
     </Section>
   );
 };

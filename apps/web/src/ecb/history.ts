@@ -11,7 +11,11 @@
 // (decision (r)), and the build fails if it ever is.
 
 import { queryFolderPermission, readFolderText, rememberedFolder } from "@atlas/adapters/folder";
-import { importedHistory, saveImportedHistory } from "@atlas/adapters/reference";
+import {
+  forgetImportedHistory,
+  importedHistory,
+  saveImportedHistory,
+} from "@atlas/adapters/reference";
 import { sha256Hex, utf8Encode } from "@atlas/domain";
 import {
   asciiText,
@@ -187,4 +191,10 @@ export const importHistoryFile = async (
   });
   await reloadWebHistory();
   return { kind: "imported", latest: check.latest, source };
+};
+
+/** Erases the copy of this browser (imported or from the cloud) and reads again (review of PR #108, N4). */
+export const forgetWebCopy = async (): Promise<void> => {
+  await forgetImportedHistory();
+  await reloadWebHistory();
 };
