@@ -55,6 +55,8 @@ Llega siempre, una vez al mes. Si llega dos veces con el mismo mes en el asunto,
 
 `ecb_update_rejected`, `ecb_calendar_mismatch`, `ecb_history_damaged`, `ecb_history_rebuilt` y `ecb_rebuilt_unverified`: sigue `ecb-history-in-the-cloud.md`, que dice qué hacer con cada uno. Un calendario que no cuadra es un aviso, no un bloqueo.
 
+`ecb_update_undone`: una actualización se cortó entre el fichero y su manifiesto, y la ejecución siguiente la ha deshecho y ha vuelto a descargar. No hay nada que hacer salvo que se repita. Si se repite, mira `reference/ecb/` con el mismo procedimiento.
+
 ## Una tarea falla o su registro no se lee
 
 - **`task_failed`**: la tarea se cerró como fallida en el periodo que dice el correo, con su código (por ejemplo `ledger_absent`, que significa que no hay libro en el bucket). Se vuelve a intentar sola en su próxima ejecución. Si el aviso vuelve tras cerrarse la racha, lee su registro (`jobs/<familia>/<tarea>/<periodo>.json`).
@@ -113,12 +115,12 @@ La tarea recalcula el libro desde cero con las comprobaciones de `atlas check --
 
 Llega solo si se pasa algún umbral de `Ajustes`: la desviación de un activo del núcleo sobre `deviation_threshold_pp`, o las reglas 17 y 18 del cubo. Dice la clase del activo y los puntos, nunca el activo. Ábrelo en la aplicación (Resumen o Cubo) y corrígelo con la aportación del mes o como diga el plan. Lo que dice «Sin medir» es una regla que no se pudo medir, por ejemplo por falta de precios: no es un aviso por sí solo.
 
-Si el libro no se ha podido leer, la revisión **no se envía ese día** y se vuelve a intentar al siguiente. Si llega el domingo sin haberlo podido leer, llega un correo que lo dice, con el código (`ledger_unavailable`, por ejemplo). **Una semana que ya pasó no se envía nunca**: si su correo no salió, queda cerrada como `expired` en su registro.
+Si el libro, los cierres o el histórico del BCE no se han podido leer, la revisión **no se envía ese día** y se vuelve a intentar al siguiente. Si llega el domingo sin haberlos podido leer, llega un correo que lo dice, con el código: `ledger_unavailable` o `reference_unavailable`. **Una semana que ya pasó no se envía nunca**: si su correo no salió, queda cerrada como `expired` en su registro.
 
 ## La Renta de enero
 
 Llega en enero, como mucho una vez: los datos de la Renta del ejercicio anterior están listos, con cuántas notas y cuántos criterios en disputa lleva. Las notas incluyen las del contraste de los tipos del BCE, como `atlas tax`, con la antigüedad por defecto (Q11). **Nunca lleva la base ni ninguna cifra.** Ábrelos en la aplicación (Fiscal) o con `atlas tax AAAA`, y revisa las notas y los criterios antes de presentar.
-- Si el libro o el histórico del BCE no se han podido leer, no se envía ese día y se vuelve a intentar al siguiente.
+- Si el libro o el histórico del BCE no se han podido leer, o el histórico está dañado (una actualización cortada que todavía no se ha deshecho), no se envía ese día y se vuelve a intentar al siguiente. Solo cuando no hay ningún histórico se cuentan las notas sin el contraste del BCE.
 - Si el 31 de enero sigue sin poderse, llega «No se han podido preparar…» con el código. Lo mismo, desde el primer día, si el libro no se puede preparar por su contenido.
 - **Un enero que ya pasó no se envía nunca**: su registro queda como `expired`.
 
