@@ -64,8 +64,9 @@ Es el procedimiento [Revocar todos los tokens](revoke-all-tokens.md), que tiene 
 **5.1. Olvida primero los dispositivos que no reconozcas.**
 ```sh
 AWS_PROFILE=atlas-prod-admin atlas admin devices --env prod
-AWS_PROFILE=atlas-prod-admin atlas admin forget-device --env prod <dispositivo>
+AWS_PROFILE=atlas-prod-admin atlas admin forget-device --env prod -- <dispositivo>
 ```
+- El identificador va **detrás de `--`**, que termina las opciones: son 22 caracteres base64url y pueden empezar por `-` o por `--`, y sin él la consola lo leería como una opción y saldría con 64. Vale también `--device <dispositivo>`; si llevas `--force`, ponlo antes del `--`.
 - La confirmación enseña su tipo, su nombre y su última sincronización, y pide que escribas `prod`.
 - Revoca sus tokens, **después** lo marca olvidado y vuelve a barrer los tokens que se hubieran emitido entre medias. Nunca se borra.
 - Si publicó operaciones pendientes o retenidas, se niega. Con `--force`, dice antes lo que dejarás de ver.

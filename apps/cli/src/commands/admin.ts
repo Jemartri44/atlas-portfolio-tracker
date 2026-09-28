@@ -44,6 +44,7 @@ import {
   type Flags,
   listFlag,
   requireFlag,
+  stringFlag,
   UsageError,
 } from "../args.js";
 import { ConfirmationRequired, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
@@ -213,7 +214,7 @@ const revokeAllOrder = async (ctx: Context, clients: AdminClients): Promise<numb
 };
 
 /**
- * `atlas admin forget-device <id> [--force]` (§7 P9, amended in §7.1 bis, B1):
+ * `atlas admin forget-device <id>|--device <id> [--force]` (§7 P9, amended in §7.1 bis, B1):
  * **first** its tokens are revoked, **then** its object is rewritten on the
  * ETag it was read at, with `state: "forgotten"`. Never deleted. A cut between
  * the two leaves it revoked and not forgotten — safe, and repeating finishes
@@ -594,14 +595,14 @@ const pricesPushOrder = async (
 };
 
 const USAGE =
-  "uso: atlas admin devices | revoke-all-tokens | forget-device <dispositivo> [--force] | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push, siempre con --env <entorno>";
+  "uso: atlas admin devices | revoke-all-tokens | forget-device [--] <dispositivo> | forget-device --device <dispositivo> [--force] | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push, siempre con --env <entorno>";
 
 export const adminCommand = async (
   ctx: Context,
   positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  assertKnownFlags(flags, ["env", "force", "from", "accept-unverified", ...GLOBAL_FLAGS]);
+  assertKnownFlags(flags, ["env", "force", "from", "accept-unverified", "device", ...GLOBAL_FLAGS]);
   const order = positionals[1];
   if (
     order === undefined ||
@@ -612,9 +613,20 @@ export const adminCommand = async (
   ) {
     throw new UsageError(USAGE);
   }
-  const id = positionals[2];
+  // A device id may begin with a dash: after `--`, or as `--device <id>`.
+  const flagged = stringFlag(flags, "device");
+  if (flagged !== undefined && (order !== "forget-device" || positionals[2] !== undefined)) {
+    throw new UsageError(
+      order === "forget-device"
+        ? "el dispositivo se da una sola vez: «forget-device -- <id>» o «forget-device --device <id>»"
+        : `--device no vale en «atlas admin ${order}»`,
+    );
+  }
+  const id = flagged ?? positionals[2];
   if (order === "forget-device" && id === undefined) {
-    throw new UsageError("falta el dispositivo: los enseña «atlas admin devices»");
+    throw new UsageError(
+      "falta el dispositivo: los enseña «atlas admin devices»; si empieza por guion, escríbelo detrás de «--» o con --device <id>",
+    );
   }
   // Review of PR #98, N1: a `--yes` is written before the list is on screen.
   if (ctx.yes && ["forget-device", "compact", "restore", "prices"].includes(order)) {
