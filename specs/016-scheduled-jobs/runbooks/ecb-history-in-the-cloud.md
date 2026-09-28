@@ -30,6 +30,7 @@ Así ninguna ejecución escribe mientras trabajas:
 
 `update-schedule` **sustituye la programación entera**: un campo opcional que no se le pase vuelve a su valor por defecto (por ejemplo, `ScheduleExpressionTimezone` pasaría a UTC). Por eso la orden se construye con la salida de `get-schedule`, quitando solo los tres campos que devuelve y que no se pueden escribir (`Arn`, `CreationDate` y `LastModificationDate`), y cambiando solo `State`:
 
+<!-- ensayo: parar -->
 ```sh
 AWS_PROFILE=atlas-prod-admin aws scheduler get-schedule --group-name atlas-prod-jobs --name atlas-prod-job-ecb > ecb-schedule.json
 jq 'del(.Arn, .CreationDate, .LastModificationDate) | .State = "DISABLED"' ecb-schedule.json > ecb-schedule-disabled.json
@@ -40,6 +41,7 @@ Si la CLI rechaza algún otro campo de la salida por no ser de entrada, quita **
 
 Comprueba que solo ha cambiado el estado. La diferencia tiene que salir vacía:
 
+<!-- ensayo: comprobar-parada -->
 ```sh
 AWS_PROFILE=atlas-prod-admin aws scheduler get-schedule --group-name atlas-prod-jobs --name atlas-prod-job-ecb \
   | jq -S 'del(.LastModificationDate, .State)' > ecb-schedule-now.json
@@ -65,6 +67,8 @@ FILE=$(jq -r .active.file manifest-<id>.json)
 AWS_PROFILE=atlas-prod-admin aws s3api get-object --bucket <bucket-de-datos> --key "reference/ecb/$FILE" --version-id <id-del-fichero> hist-<id>.csv
 sha256sum hist-<id>.csv
 ```
+
+**`previous/` solo vale si cuadra con su manifiesto** (N3 de la revisión de la PR #106): un corte entre los dos primeros pasos de una activación deja allí otros bytes que los que el manifiesto dice. Antes de usar `previous/<fichero>`, compara su `sha256sum` con `previous.sha256` del manifiesto que lo nombra (`jq -r .previous.sha256 manifest-<id>.json`); si no cuadra, no lo uses.
 
 **Una generación buena cumple dos cosas:**
 
@@ -116,6 +120,7 @@ Después mira su registro en `jobs/ecb/ecb_update/<día>.json`. Tiene que decir 
 
 **SIN VERIFICAR contra AWS**, como el paso 1. La misma orden, con lo que guardaste en el paso 1 **tal cual, estado incluido**: la programación vuelve a estar como estaba (en `prod`, `ENABLED`; en `dev`, que se queda en reposo, como estuviera):
 
+<!-- ensayo: reactivar -->
 ```sh
 jq 'del(.Arn, .CreationDate, .LastModificationDate)' ecb-schedule.json > ecb-schedule-restored.json
 AWS_PROFILE=atlas-prod-admin aws scheduler update-schedule --cli-input-json file://ecb-schedule-restored.json
@@ -123,6 +128,7 @@ AWS_PROFILE=atlas-prod-admin aws scheduler update-schedule --cli-input-json file
 
 Comprueba que la programación vuelve a ser la de antes, incluido su estado. La diferencia tiene que salir vacía:
 
+<!-- ensayo: comprobar-reactivada -->
 ```sh
 AWS_PROFILE=atlas-prod-admin aws scheduler get-schedule --group-name atlas-prod-jobs --name atlas-prod-job-ecb \
   | jq -S 'del(.LastModificationDate)' > ecb-schedule-now.json
