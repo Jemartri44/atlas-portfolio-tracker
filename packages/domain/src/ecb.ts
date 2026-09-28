@@ -41,6 +41,7 @@ export {
   sameRate,
 } from "./ecb/history.js";
 export { firstRateDateOf, type RatePoint, ratePointsOf } from "./ecb/ledger-rates.js";
+export { type ActiveHistory, activeHistoryOf } from "./ecb/manifest.js";
 export {
   type OfficialRate,
   officialRatesOf,
