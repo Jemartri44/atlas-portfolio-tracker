@@ -790,3 +790,30 @@ Un detalle, dicho: `data-schema.md` dice además en la fila de `symbols.json` qu
 | R2-N3b | el grafo vuelve a leer solo `types` | era la conducta | KILLED |
 
 12 de 12 muertos.
+
+### 16.5 Tubería, `develop` y el paquete web
+
+- **La primera tubería de la ronda, sobre `249e146`, falló en `build`.**
+  - El arranque subía 77 bytes, hasta 75.088, por encima de su techo de 75.039. El error nuevo vivía en `schema/json-keys.ts`, que viaja en el arranque de la web con el lector del libro.
+  - `d6c6850` lo lleva a `quotes/repeated-key.ts`, que es perezoso. El arranque vuelve a 75.012, 1 byte sobre los 75.011 de la ronda 1, y el techo del arranque **no se toca**.
+- **`79e7575` trae `develop` a la rama**, con la PR #107 (`fix/cli-dash-ids`, que resuelve Q17).
+  - Hubo conflictos en el texto de uso de `atlas admin`, en `apps/cli/src/main.ts` y `commands/admin.ts`.
+  - Se resolvieron con las dos cosas: `forget-device [--] <id> | --device <id>` y `prices push`.
+- **`728d3f6` sube el techo del total** a **303.451 = medida (303.195) + 256**, en un commit propio y dentro de la autorización (310.500). Todo el aumento es perezoso: el rechazo de las claves repetidas y su frase.
+- **Tubería completa sobre `728d3f6`: todo en 0.**
+
+  ```
+  lint 0, typecheck 0
+  cov1-domain 0   (1.718 tests; dominio al 100 %: sentencias 8.991, ramas 5.560, funciones 2.023, líneas 8.556)
+  cov1-others 0   (1.812 tests)
+  cov2-domain 0
+  cov2-others 0   (1.812 tests)
+  build 0         (lambda.zip 1.444.049 bytes; jobs.zip 1.635.222 bytes, 1.409 entradas)
+  ```
+
+  `tests/fixtures` sin cambios. Tests de los guardianes: `architecture` 51, `api-access` 28, `jobs-access` 14 → 16 (las exportaciones condicionales), `jobs-package` 3, `messages` 11. Ninguno baja.
+- **Q17 queda resuelta en `develop`** con la PR #107.
+
+### 16.6 Congelado
+
+**Congelada la ronda 2 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `728d3f6`. No se empuja nada más hasta la palabra de la dirección.
