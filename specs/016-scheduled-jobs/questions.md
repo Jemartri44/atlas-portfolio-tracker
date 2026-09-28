@@ -1013,6 +1013,8 @@ build 0         (lambda.zip 1.444.049 bytes; jobs.zip 1.637.421 bytes, 1.411 ent
 | N3 | `9d66bf2`, `3ea6e33` | Puerta neutra `@atlas/domain/remote-answers`: `RemoteError`, `parseErrorAnswer` y `parseReferenceIndex`, estos dos en `domain/src/remote/answers.ts`.<br>La puerta de la sincronización sigue exportando `parseErrorAnswer`, que usa.<br>El cliente de referencia y la consola importan de la puerta neutra. La web la carga en diferido (el grupo `domain` de `vite.config.ts` la deja fuera, y `LAZY_ONLY` lo vigila).<br>El guardián de la sincronización no cambia ni gana excepciones. Uno nuevo en `api-access.test.ts` comprueba que el cliente de referencia y la descarga del BCE de la web no alcanzan nada de la sincronización, por ningún camino |
 | N4 (web) | `9108c04` | «Borrar la copia del BCE de este navegador» en la tarjeta del BCE, cuando hay una copia importada o de la nube, con confirmación (`ConfirmDialog`, destructiva). Borra solo la copia del navegador, y la siguiente descarga es una primera: una generación restaurada baja entera |
 | N4 (procedimiento e IAM) | `6d5c222` | El procedimiento:<br>- trabaja fuera del repositorio;<br>- avisa de la deriva respecto de Terraform y de no desplegar hasta reactivar;<br>- saca el nombre del fichero del manifiesto;<br>- en el paso 4 borra antes el registro de hoy, que está versionado;<br>- manda borrar la copia de cada navegador tras restaurar.<br>`contracts/iam-permissions.md` §8: `scheduler:GetSchedule`/`UpdateSchedule` (y `iam:PassRole`, que exige `UpdateSchedule`), `s3:ListBucketVersions`, `s3:GetObjectVersion` y `s3:PutObject` sobre `reference/ecb/*`, `s3:DeleteObject` sobre el manifiesto y sobre `jobs/ecb/ecb_update/*`, y `lambda:InvokeFunction` |
+| Tarjeta del BCE | `8882da5` | Los textos de lo que dice la descarga de la nube pasan a `routes/ajustes/ecb-cloud-said.ts` (`cloudSaid`): con «Borrar la copia», `EcbCard.tsx` pasaba de las 250 líneas que permite el test de arquitectura. El test de estructura de `ecb-cloud.test.tsx` cuenta ahora solo quien toma un valor de `ecb/cloud.js` (o lo importa en diferido): un `import type` no ejecuta nada |
+| Esta sección | este commit | §18.7 |
 
 **Añadido por mi cuenta, dicho:** `iam:PassRole` sobre el rol de Scheduler. `UpdateSchedule` lo exige al reescribir una programación con su destino. Es una deducción de la documentación de EventBridge Scheduler, **sin verificar** contra AWS.
 
@@ -1055,3 +1057,12 @@ build 0         (lambda.zip 1.444.049 bytes; jobs.zip 1.637.421 bytes, 1.411 ent
 | R1-N6b | lo que llega no se cuenta contra el tope | ídem | KILLED |
 
 9 de 9 muertos.
+
+### 18.7 Tubería y congelación
+
+- **Tubería completa** sobre `8882da5`, un solo trabajador y tras la puerta de memoria (`016-pipeline.out`): lint, typecheck, las dos pasadas de cobertura y el build, todo en verde.
+  - Dominio: 1.732 tests, **100 %** de sentencias (9.079), ramas (5.642) y líneas (8.640).
+  - El resto: 1.846 tests.
+- **La primera pasada, sobre `6a4f04e`, falló** (`016-pipeline-r1-e3a.out`): `EcbCard.tsx` tenía 256 líneas y el test de arquitectura permite 250. Se arregló con `8882da5` (§18.3), sin tocar ninguna regla.
+- **El paquete web tras `8882da5`**: arranque 75.053 y total 305.392 bytes, dentro de los techos de `a6e2eab` (75.077 y 305.650). No hizo falta subir ningún techo más. Los comentarios de `check-bundle.mjs` dicen 75.057 y 305.394, lo medido antes de separar los textos de la tarjeta.
+- **Congelación:** la rama queda congelada en el commit que añade esta sección. No se empuja nada más mientras dure la revisión.
