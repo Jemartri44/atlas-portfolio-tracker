@@ -24,11 +24,14 @@ const line = (
 ): CloseLine => ({ schema_version: 1, date, close, currency: "EUR", source, fetched_at });
 
 const ORDER = ["eodhd", "alpha_vantage"] as const;
+const TODAY = "2026-10-01";
 
 describe("the closes the console takes from the cloud (016, E3, block 1)", () => {
   it("adds a date it does not have, keeping the source and the time of the cloud", () => {
     expect(
-      cloudLinesToAppend([line("2026-09-29", "10")], [line("2026-09-30", "11")], ORDER),
+      cloudLinesToAppend([line("2026-09-29", "10")], [line("2026-09-30", "11")], ORDER, {
+        today: TODAY,
+      }).added,
     ).toEqual([line("2026-09-30", "11")]);
   });
 
@@ -44,7 +47,7 @@ describe("the closes the console takes from the cloud (016, E3, block 1)", () =>
       line("2026-09-30", "13", "alpha_vantage"), // a source after: never
       line("2026-09-30", "14", "eodhd"), // a correction of the same source: added
     ];
-    expect(cloudLinesToAppend(local, cloud, ORDER)).toEqual([
+    expect(cloudLinesToAppend(local, cloud, ORDER, { today: TODAY }).added).toEqual([
       line("2026-09-29", "12", "eodhd"),
       line("2026-09-30", "14", "eodhd"),
     ]);
@@ -56,8 +59,33 @@ describe("the closes the console takes from the cloud (016, E3, block 1)", () =>
         [],
         [line("2026-09-30", "10", "alpha_vantage"), line("2026-09-30", "10", "alpha_vantage")],
         ORDER,
-      ),
+        { today: TODAY },
+      ).added,
     ).toEqual([line("2026-09-30", "10", "alpha_vantage")]);
+  });
+});
+
+describe("what the console never takes from the cloud (review of PR #108, B1 and N5)", () => {
+  it("never a close of today or of a day to come, and says how many it left (B1)", () => {
+    expect(
+      cloudLinesToAppend(
+        [],
+        [line("2026-09-30", "10"), line("2026-10-01", "11"), line("2099-01-01", "12")],
+        ORDER,
+        { today: TODAY },
+      ),
+    ).toEqual({ added: [line("2026-09-30", "10")], future: 2, mismatched: 0 });
+  });
+
+  it("never a close in another currency than the one the folder declares for its source (N5)", () => {
+    const gbp = { ...line("2026-09-29", "900"), currency: "GBP" };
+    const alpha = { ...line("2026-09-28", "9", "alpha_vantage"), currency: "GBP" };
+    expect(
+      cloudLinesToAppend([], [gbp, line("2026-09-30", "10"), alpha], ORDER, {
+        today: TODAY,
+        declared: { eodhd: "EUR" },
+      }),
+    ).toEqual({ added: [line("2026-09-30", "10"), alpha], future: 0, mismatched: 1 });
   });
 });
 
@@ -103,6 +131,8 @@ describe("which files of the cloud the console asks for", () => {
     };
     expect(CLOUD_PULL_FILE).toBe("_cloud.json");
     expect(parseCloudPull(serializeCloudPull(pull))).toEqual(pull);
+    const said = { ...pull, discarded: { future: 2, currency_mismatch: 1 } };
+    expect(parseCloudPull(serializeCloudPull(said))).toEqual(said);
     expect(parseCloudPull(undefined)).toBeUndefined();
     for (const text of [
       "{",
@@ -113,6 +143,10 @@ describe("which files of the cloud the console asks for", () => {
       JSON.stringify({ ...pull, pulled_at: 1 }),
       JSON.stringify({ ...pull, versions: [] }),
       JSON.stringify({ ...pull, versions: { a: 1 } }),
+      JSON.stringify({ ...pull, discarded: [] }),
+      JSON.stringify({ ...pull, discarded: { future: -1, currency_mismatch: 0 } }),
+      JSON.stringify({ ...pull, discarded: { future: 1 } }),
+      JSON.stringify({ ...pull, discarded: { future: 1, currency_mismatch: 0, x: 0 } }),
       '{"cloud_format":1,"cloud_format":1,"origin":"o","pulled_at":"t","versions":{}}',
     ]) {
       expect(() => parseCloudPull(text), text).toThrow(

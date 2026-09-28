@@ -94,6 +94,17 @@ const pulledText = (outcome: Extract<PullOutcome, { kind: "pulled" }>, origin: s
   return [
     `Precios de la nube (${origin}), bajados el ${outcome.pulled_at}: ${outcome.files.length} ficheros con cambios, ${added} líneas añadidas. No se ha llamado a ninguna fuente.`,
     ...(outcome.files.length === 0 ? ["La carpeta ya estaba al día con la nube."] : []),
+    // Review of PR #108, B1 and N5: what the cloud had and the folder never takes.
+    ...(outcome.discarded.future === 0
+      ? []
+      : [
+          `Aviso (cloud_lines_future): ${outcome.discarded.future} cierres de la nube con fecha de hoy o de un día futuro no se han añadido; nunca se guarda el día en curso.`,
+        ]),
+    ...(outcome.discarded.currency_mismatch === 0
+      ? []
+      : [
+          `Aviso (cloud_currency_mismatch): ${outcome.discarded.currency_mismatch} cierres de la nube en otra divisa que la que declara esta carpeta para su fuente no se han añadido. Si cambiaste la divisa aquí, súbela con «atlas admin prices push».`,
+        ]),
     ...problems.map((file) =>
       file.problem === "local_unreadable"
         ? `Aviso: el fichero de precios de ${file.asset_id} de esta carpeta no se lee: no se ha tocado. Míralo con «atlas prices status».`
@@ -190,6 +201,16 @@ const status = async (ctx: Context): Promise<number> => {
     .sort()
     .at(-1);
   const text = [
+    ...(pull?.discarded === undefined || pull.discarded.future === 0
+      ? []
+      : [
+          `cloud_lines_future: ${pull.discarded.future} cierres de la nube con fecha de hoy o futura se dejaron fuera en la última descarga.`,
+        ]),
+    ...(pull?.discarded === undefined || pull.discarded.currency_mismatch === 0
+      ? []
+      : [
+          `cloud_currency_mismatch: ${pull.discarded.currency_mismatch} cierres de la nube en otra divisa que la declarada se dejaron fuera en la última descarga.`,
+        ]),
     // Where the prices of the folder came from, and when (feature 016, E3).
     `Procedencia: ${
       [

@@ -8,7 +8,7 @@
 
 import { FilePriceStore, folderSyncPresence } from "@atlas/adapters";
 import { httpReference } from "@atlas/adapters/reference-http";
-import type { AssetId } from "@atlas/domain";
+import { type AssetId, todayInMadrid } from "@atlas/domain";
 import { entryToSync, folderSyncState } from "@atlas/domain/access";
 import {
   assetOfPriceFile,
@@ -17,6 +17,7 @@ import {
   encodeCloseLine,
   parseCloudPull,
   parsePriceConfig,
+  parseSymbols,
   readCloseFile,
   serializeCloudPull,
 } from "@atlas/domain/quotes";
@@ -65,7 +66,13 @@ export interface PulledFile {
 
 export type PullOutcome =
   | { readonly kind: "no_prices" }
-  | { readonly kind: "pulled"; readonly pulled_at: string; readonly files: readonly PulledFile[] };
+  | {
+      readonly kind: "pulled";
+      readonly pulled_at: string;
+      readonly files: readonly PulledFile[];
+      /** Lines left out, by why (review of PR #108, B1 and N5). */
+      readonly discarded: { readonly future: number; readonly currency_mismatch: number };
+    };
 
 const utf8 = new TextDecoder("utf-8", { fatal: true });
 
@@ -85,7 +92,13 @@ export const pullFromCloud = async (
     return { kind: "no_prices" };
   }
   const held = pull?.origin === cloud.origin ? pull.versions : {};
-  const fetched: { name: string; asset_id: AssetId; text?: string; version: string }[] = [];
+  const fetched: {
+    name: string;
+    asset_id: AssetId;
+    /** Absent: not modified. `null`: bytes that are not UTF-8 (N2). */
+    text?: string | null;
+    version: string;
+  }[] = [];
   for (const entry of changedPriceFiles(closesInCloud, pull, cloud.origin)) {
     const read = await reference.get(
       "prices",
@@ -100,27 +113,38 @@ export const pullFromCloud = async (
       fetched.push({ name: entry.name, asset_id, version: entry.version });
       continue;
     }
-    let text: string | undefined;
+    let text: string | null;
     try {
       text = utf8.decode(read.bytes);
     } catch {
-      text = "";
+      // Bytes that are not UTF-8 are a file that does not read, never an
+      // empty one taken as held (review of PR #108, N2).
+      text = null;
     }
     fetched.push({ name: entry.name, asset_id, text, version: read.version });
   }
   const pulled_at = ctx.deps.clock.now().toISOString();
+  // Never the day in course, as the 013 never asks a source for it (B1).
+  const today = todayInMadrid(ctx.deps.clock);
   // 2. Compare and write, under the lock.
   const files = await store.transact(async (tx) => {
     const config = parsePriceConfig(await tx.config(), { sharedWithCloud: true });
+    // The currency the folder declares for each source is the only one taken (N5).
+    const symbols = parseSymbols(await tx.symbols());
     const versions: Record<string, string> = { ...held };
     const done: PulledFile[] = [];
+    const discarded = { future: 0, currency_mismatch: 0 };
     for (const file of fetched) {
       if (file.text === undefined) {
+        // Not modified: what the folder holds is that version.
         versions[file.name] = file.version;
         continue;
       }
       let cloudLines: ReturnType<typeof readCloseFile>;
       try {
+        if (file.text === null) {
+          throw new RangeError("not UTF-8");
+        }
         cloudLines = readCloseFile(file.asset_id, file.text);
       } catch {
         // Not recorded as held: asked again next time.
@@ -136,17 +160,31 @@ export const pullFromCloud = async (
         done.push({ asset_id: file.asset_id, added: 0, problem: "local_unreadable" });
         continue;
       }
-      const added = cloudLinesToAppend(localLines, cloudLines, config.source_order);
-      if (added.length > 0) {
-        await tx.appendCloses(file.asset_id, added.map(encodeCloseLine));
+      const entry = Object.hasOwn(symbols.assets, file.asset_id)
+        ? symbols.assets[file.asset_id]
+        : undefined;
+      const merge = cloudLinesToAppend(localLines, cloudLines, config.source_order, {
+        today,
+        ...(entry === undefined ? {} : { declared: entry.currencies }),
+      });
+      if (merge.added.length > 0) {
+        await tx.appendCloses(file.asset_id, merge.added.map(encodeCloseLine));
       }
+      discarded.future += merge.future;
+      discarded.currency_mismatch += merge.mismatched;
       versions[file.name] = file.version;
-      done.push({ asset_id: file.asset_id, added: added.length });
+      done.push({ asset_id: file.asset_id, added: merge.added.length });
     }
     await tx.writeCloudPull(
-      serializeCloudPull({ cloud_format: 1, origin: cloud.origin, pulled_at, versions }),
+      serializeCloudPull({
+        cloud_format: 1,
+        origin: cloud.origin,
+        pulled_at,
+        versions,
+        discarded,
+      }),
     );
-    return done;
+    return { done, discarded };
   });
-  return { kind: "pulled", pulled_at, files };
+  return { kind: "pulled", pulled_at, files: files.done, discarded: files.discarded };
 };

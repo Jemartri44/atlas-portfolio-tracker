@@ -196,6 +196,45 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     expect(existsSync(join(c.ledger, "prices", "ast_a.jsonl"))).toBe(false);
   });
 
+  it("never takes a close of today or of a day to come, and says it (review of PR #108, B1)", async () => {
+    const { c } = await synced();
+    // The clock of the tests is 2026-10-01 in Madrid.
+    c.api.s3.seed(
+      "prices/ast_a.jsonl",
+      text([close("2026-09-30", "10"), close("2026-10-01", "11"), close("2099-01-01", "12")]),
+    );
+    expect(await c.exec(["prices", "update"])).toBe(0);
+    expect(await local(c.ledger, "ast_a.jsonl")).toBe(text([close("2026-09-30", "10")]));
+    expect(c.out.join("\n")).toContain("cloud_lines_future");
+    c.out.length = 0;
+    expect(await c.exec(["prices", "status"])).toBe(0);
+    expect(c.out.join("\n")).toContain("cloud_lines_future: 2");
+  });
+
+  it("never takes a close in another currency than the folder declares for its source (N5)", async () => {
+    const { c } = await synced();
+    c.api.s3.seed(
+      "prices/ast_a.jsonl",
+      text([
+        JSON.stringify({ ...JSON.parse(close("2026-09-29", "900")), currency: "GBP" }),
+        close("2026-09-30", "10"),
+      ]),
+    );
+    expect(await c.exec(["prices", "update"])).toBe(0);
+    expect(await local(c.ledger, "ast_a.jsonl")).toBe(text([close("2026-09-30", "10")]));
+    expect(c.out.join("\n")).toContain("cloud_currency_mismatch");
+  });
+
+  it("takes a file of the cloud that is not UTF-8 as unreadable, and asks for it again (N2)", async () => {
+    const { c } = await synced();
+    c.api.s3.seedBytes("prices/ast_a.jsonl", Uint8Array.from([0xff, 0xfe, 0x0a]));
+    expect(await c.exec(["prices", "update"])).toBe(0);
+    expect(c.out.join("\n")).toContain("de la nube no se lee");
+    const pull = JSON.parse(await local(c.ledger, "_cloud.json"));
+    expect(pull.versions).toEqual({});
+    expect(existsSync(join(c.ledger, "prices", "ast_a.jsonl"))).toBe(false);
+  });
+
   it("says where the prices of the folder came from, and when", async () => {
     const { c } = await synced();
     c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-29", "10")]));

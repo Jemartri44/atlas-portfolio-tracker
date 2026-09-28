@@ -11,6 +11,7 @@
 // file, the origin it came from and when. Written by the console only, under
 // the lock; never served and never uploaded.
 
+import type { CivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
@@ -30,6 +31,8 @@ export interface CloudPull {
   readonly pulled_at: string;
   /** The version of each file of `prices/` as the index said it, by name. */
   readonly versions: Readonly<Record<string, string>>;
+  /** What the last pull left out, by why (review of PR #108, B1 and N5); `status` says it. */
+  readonly discarded?: { readonly future: number; readonly currency_mismatch: number };
 }
 
 const wrongPull = (field: string): ValidationError =>
@@ -59,7 +62,7 @@ export const parseCloudPull = (text: string | undefined): CloudPull | undefined 
     throw wrongPull("cloud_format");
   }
   for (const key of Object.keys(raw)) {
-    if (!["cloud_format", "origin", "pulled_at", "versions"].includes(key)) {
+    if (!["cloud_format", "origin", "pulled_at", "versions", "discarded"].includes(key)) {
       throw wrongPull(key);
     }
   }
@@ -71,6 +74,19 @@ export const parseCloudPull = (text: string | undefined): CloudPull | undefined 
   }
   if (!isObject(raw.versions) || !Object.values(raw.versions).every((v) => typeof v === "string")) {
     throw wrongPull("versions");
+  }
+  if (raw.discarded !== undefined) {
+    const discarded = raw.discarded;
+    const count = (value: unknown) =>
+      typeof value === "number" && Number.isInteger(value) && value >= 0;
+    if (
+      !isObject(discarded) ||
+      Object.keys(discarded).length !== 2 ||
+      !count(discarded.future) ||
+      !count(discarded.currency_mismatch)
+    ) {
+      throw wrongPull("discarded");
+    }
   }
   return raw as unknown as CloudPull;
 };
@@ -104,24 +120,58 @@ export const changedPriceFiles = <T extends { readonly name: string; readonly ve
   );
 };
 
+/** What a merge of the lines of the cloud added, and what it left out. */
+export interface CloudMerge {
+  readonly added: CloseLine[];
+  /** Closes of today or of a day to come: never taken (review of PR #108, B1). */
+  readonly future: number;
+  /**
+   * Closes in another currency than the one the folder declares for their
+   * source in its `symbols.json`: never taken (review of PR #108, N5).
+   */
+  readonly mismatched: number;
+}
+
 /**
  * The lines of the cloud to append to the local file (mutant 23): each line
  * of the cloud, in its order, is decided with the rules of the 013 against
  * the local file **and what was added before it**, keeping the source and the
  * time the cloud gave it. What is local is never rewritten.
+ *
+ * **Never the day in course** (review of PR #108, B1): the 013 keeps that
+ * rule in the range it asks the sources for, and what comes down from the
+ * cloud does not pass through it — a close of today, or of a day to come,
+ * would stay for ever in a file that only grows. And **the currency the
+ * folder declares** for the source of a line (its `symbols.json`), when it
+ * declares one, is the only one taken (N5).
  */
 export const cloudLinesToAppend = (
   existing: readonly CloseLine[],
   cloud: readonly CloseLine[],
   order: readonly QuoteSource[],
-): CloseLine[] => {
+  options: {
+    readonly today: CivilDate;
+    readonly declared?: Partial<Record<QuoteSource, string>>;
+  },
+): CloudMerge => {
   const held = [...existing];
   const added: CloseLine[] = [];
+  let future = 0;
+  let mismatched = 0;
   for (const line of cloud) {
+    if (line.date >= options.today) {
+      future += 1;
+      continue;
+    }
+    const declared = options.declared?.[line.source];
+    if (declared !== undefined && declared !== line.currency) {
+      mismatched += 1;
+      continue;
+    }
     for (const next of linesToAppend(held, [line], line.source, order, line.fetched_at)) {
       held.push(next);
       added.push(next);
     }
   }
-  return added;
+  return { added, future, mismatched };
 };
