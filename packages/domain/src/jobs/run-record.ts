@@ -58,6 +58,19 @@ export interface Finding {
   readonly dates?: readonly CivilDate[];
 }
 
+/**
+ * An object a monthly dump wrote, or found already there (E4, plan §8): its
+ * key, **always under the dump of its own period**, and the SHA-256 of its
+ * bytes. `kept_from_earlier_attempt` says that an attempt before this one
+ * of the same period left other bytes there, which stay: a dump is never
+ * overwritten.
+ */
+export interface DumpObject {
+  readonly key: string;
+  readonly sha256: string;
+  readonly kept_from_earlier_attempt?: true;
+}
+
 export interface Outcome {
   readonly code: string;
   readonly counts?: Counts;
@@ -74,6 +87,8 @@ export interface RunRecord {
   readonly outcome?: Outcome;
   readonly frequencies?: { readonly ignored: readonly IgnoredFrequency[] };
   readonly findings?: readonly Finding[];
+  /** Only the monthly dump. */
+  readonly objects?: readonly DumpObject[];
 }
 
 /** Where the record of `task` and `period` lives. */
@@ -101,6 +116,23 @@ export const isFinding = (value: unknown): value is Finding =>
   (value.counts === undefined || isCounts(value.counts)) &&
   (value.dates === undefined || (Array.isArray(value.dates) && value.dates.every(isCivilDate)));
 
+/** A key of a dump of `period`: one or more plain segments below it, never a way out. */
+const isDumpKey = (key: unknown, period: string): boolean =>
+  typeof key === "string" &&
+  key.startsWith(`backups/${period}/`) &&
+  key
+    .slice(`backups/${period}/`.length)
+    .split("/")
+    .every((segment) => /^[A-Za-z0-9._%-]{1,255}$/.test(segment) && !/^\.\.?$/.test(segment));
+
+const isDumpObject = (value: unknown, period: string): value is DumpObject =>
+  isPlainObject(value) &&
+  hasKeys(value, ["key", "sha256"], ["kept_from_earlier_attempt"]) &&
+  isDumpKey(value.key, period) &&
+  typeof value.sha256 === "string" &&
+  /^[0-9a-f]{64}$/.test(value.sha256) &&
+  (value.kept_from_earlier_attempt === undefined || value.kept_from_earlier_attempt === true);
+
 const isIgnored = (value: unknown): value is IgnoredFrequency =>
   isPlainObject(value) &&
   hasKeys(value, ["code"], ["key"]) &&
@@ -127,7 +159,7 @@ export const parseRunRecord = (text: string, task: JobTask, period: string): Rea
     hasKeys(
       value,
       ["run_format", "task", "period", "state", "claimed_at", "attempts"],
-      ["closed_at", "outcome", "frequencies", "findings"],
+      ["closed_at", "outcome", "frequencies", "findings", "objects"],
     ) &&
     value.run_format === RUN_FORMAT &&
     value.task === task &&
@@ -144,7 +176,11 @@ export const parseRunRecord = (text: string, task: JobTask, period: string): Rea
         Array.isArray(value.frequencies.ignored) &&
         value.frequencies.ignored.every(isIgnored))) &&
     (value.findings === undefined ||
-      (Array.isArray(value.findings) && value.findings.every(isFinding)));
+      (Array.isArray(value.findings) && value.findings.every(isFinding))) &&
+    (value.objects === undefined ||
+      (task === "monthly_backup" &&
+        Array.isArray(value.objects) &&
+        value.objects.every((object) => isDumpObject(object, period))));
   return readable
     ? { ok: true, record: value as unknown as RunRecord }
     : { ok: false, code: "job_record_unreadable" };
@@ -221,6 +257,7 @@ export const recordIn = (
     readonly outcome?: Outcome;
     readonly findings?: readonly Finding[];
     readonly frequencies?: { readonly ignored: readonly IgnoredFrequency[] };
+    readonly objects?: readonly DumpObject[];
   } = {},
 ): RunRecord => {
   const { closed_at: _closed, ...rest } = record;

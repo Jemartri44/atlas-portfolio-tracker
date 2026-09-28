@@ -120,6 +120,48 @@ describe("the run record", () => {
   });
 });
 
+describe("the objects of a monthly dump in its record (E4, plan §8)", () => {
+  const SHA = "a".repeat(64);
+  const dump = recordIn(claimRecord("monthly_backup", "2026-10", AT), "done", LATER, {
+    outcome: { code: "backup_done", counts: { objects: 2 } },
+    objects: [
+      { key: "backups/2026-10/ledger.jsonl", sha256: SHA },
+      { key: "backups/2026-10/prices/ast_a.jsonl", sha256: SHA, kept_from_earlier_attempt: true },
+    ],
+  });
+
+  it("keeps each object with its SHA-256, and whether an earlier attempt left it", () => {
+    expect(parseRunRecord(serializeRunRecord(dump), "monthly_backup", "2026-10")).toEqual({
+      ok: true,
+      record: dump,
+    });
+  });
+
+  it("reads nothing else: another period, a way out of it, a hash that is not one, another task", () => {
+    const text = serializeRunRecord(dump);
+    for (const bad of [
+      text.replace("backups/2026-10/ledger.jsonl", "backups/2026-09/ledger.jsonl"),
+      text.replace("backups/2026-10/ledger.jsonl", "backups/2026-10/../ledger.jsonl"),
+      text.replace("backups/2026-10/ledger.jsonl", "backups/2026-10/"),
+      text.replace("backups/2026-10/ledger.jsonl", "backups/2026-10//ledger.jsonl"),
+      text.replace("backups/2026-10/ledger.jsonl", "ledger/ledger.jsonl"),
+      text.replace(`"sha256":"${SHA}"`, `"sha256":"${"A".repeat(64)}"`),
+      text.replace(`"sha256":"${SHA}"`, `"sha256":"${SHA}0"`),
+      text.replace('"kept_from_earlier_attempt":true', '"kept_from_earlier_attempt":false'),
+      text.replace('"kept_from_earlier_attempt":true', '"kept_from_earlier_attempt":true,"x":1'),
+      text.replace('"objects":[', '"objects":[[],'),
+    ]) {
+      expect(parseRunRecord(bad, "monthly_backup", "2026-10"), bad).toEqual({
+        ok: false,
+        code: "job_record_unreadable",
+      });
+    }
+    // Only the dump has objects.
+    const other = serializeRunRecord({ ...dump, task: "quarterly_integrity", period: "2026-Q4" });
+    expect(parseRunRecord(other, "quarterly_integrity", "2026-Q4").ok).toBe(false);
+  });
+});
+
 describe("what a retry does in each state (R10, plan §5.3)", () => {
   const inState = (state: RunRecord["state"]) => recordIn(claimed, state, LATER);
 
