@@ -1,0 +1,58 @@
+flowchart LR
+    U(["👤 Usuario<br/>red corporativa"])
+
+    subgraph CLOUD["☁️ Azure"]
+        subgraph DBX["Azure Databricks · workspace staging"]
+            AUTH("🔐 Login Entra<br/>+ permisos App")
+            FE("Frontend React<br/>Databricks App")
+            SS("Secret scope")
+        end
+
+        subgraph APIMG["API Management · staging Ayvens"]
+            APIM("🛡️ APIM<br/>subscription key · CORS")
+        end
+
+        subgraph AZ["🔒 Suscripción PoC · red privada"]
+            WEB("Backend FastAPI<br/>Web App")
+            KV("Key Vault")
+            subgraph DATA["Datos"]
+                PG[("PostgreSQL")]
+                RD[("Redis")]
+                BLOB[("Blob Storage")]
+            end
+            subgraph IAG["IA"]
+                SRCH("AI Search")
+                AOAI("Azure OpenAI")
+                DI("Doc Intelligence")
+            end
+        end
+    end
+
+    U -->|"① login"| AUTH --> FE
+    SS -.-> FE
+    FE -->|"② HTTPS + key"| APIM
+    APIM -->|"③ solo desde APIM"| WEB
+    WEB --> DATA
+    WEB --> IAG
+    WEB -.-> KV
+
+    classDef user fill:#343a40,stroke:#343a40,color:#fff
+    classDef dbx fill:#ff6b35,stroke:#ff6b35,color:#fff
+    classDef dbxl fill:#ffe3d6,stroke:#ff6b35,color:#b3400f
+    classDef apim fill:#7c3aed,stroke:#7c3aed,color:#fff
+    classDef azure fill:#0b5cad,stroke:#0b5cad,color:#fff
+    classDef store fill:#e7f1ff,stroke:#0b5cad,color:#0b5cad
+
+    class U user
+    class AUTH,FE dbx
+    class SS dbxl
+    class APIM apim
+    class WEB,KV azure
+    class PG,RD,BLOB,SRCH,AOAI,DI store
+
+    style CLOUD fill:#fafcff,stroke:#9fb8d6,stroke-width:1px,color:#5b7ea8
+    style DBX fill:#fff4ee,stroke:#ff6b35,stroke-width:2px,color:#ff6b35
+    style APIMG fill:#f5efff,stroke:#7c3aed,stroke-width:2px,color:#7c3aed
+    style AZ fill:#f2f7ff,stroke:#0b5cad,stroke-width:2px,stroke-dasharray:6 4,color:#0b5cad
+    style DATA fill:#ffffff,stroke:#b6cdea,color:#0b5cad
+    style IAG fill:#ffffff,stroke:#b6cdea,color:#0b5cad
