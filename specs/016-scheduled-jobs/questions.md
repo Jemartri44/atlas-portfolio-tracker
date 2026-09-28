@@ -4,9 +4,9 @@ Fechas en `Europe/Madrid`. Todo lo ejecutado está en el *scratchpad* de la sesi
 
 ---
 
-## 0. Estado: E1 terminada, a la espera de revisión (2026-09-27)
+## 0. Estado: E4 terminada, a la espera de revisión (2026-09-28); E1 a E3 fusionadas
 
-E1 construida, tubería verde sobre `1d80be4`, congelada (§10.9). Lo que sigue es el estado del alto del plan, que se conserva.
+E1 (PR #104), E2 (PR #106) y E3 (PR #108) están fusionadas. E4 está construida, con la tubería en verde sobre `01e313a`, y congelada (§20). Lo que sigue es el estado del alto del plan, que se conserva.
 
 ### 0.1 Estado del alto del plan (2026-09-27)
 
@@ -1198,3 +1198,269 @@ Las páginas son las que se descargaron el 2026-09-27 para el bloque 0 de E1 (`a
 - `API_HeadObject.html`: «To use HEAD, you must have the s3:GetObject permission», y la respuesta trae `Content-Length`, «Size of the body in bytes».
 - `API_ListObjectsV2.html`: cada `Contents` trae `Size`, y la operación pide `s3:ListBucket`. El `ObjectStore` de la 015 ya lo da: `list(prefix)` devuelve `size`.
 - **Lo que se hace:** la tarea de integridad **descarga el libro de todas formas**, para recalcular y ensayar, así que el tamaño es el de los bytes leídos (plan §9). No hace falta ningún permiso nuevo.
+
+### 20.2 Qué hay en la rama, y las decisiones mías, dichas
+
+**El volcado mensual** (`apps/jobs/src/tasks/backup.ts`; dominio en `jobs/backup.ts` y `jobs/positions.ts`; plan §8).
+- **Qué vuelca y en qué orden**, en `backups/<YYYY-MM>/` del mes de Madrid:
+  1. el libro byte a byte;
+  2. `positions.json`, del libro **del volcado**;
+  3. el fichero del BCE en vigor, y después su manifiesto;
+  4. cada objeto del primer nivel de `prices/` con un nombre llano.
+- **Cómo escribe**: cada objeto con `If-None-Match: *`. Un objeto que ya está, con otros bytes:
+  - en un reintento del mismo mes, **se deja** (`kept_from_earlier_attempt`);
+  - sin intento anterior, se niega, y se dice (`backup_object_differs`), sin escribir nada más.
+- **El registro** guarda la lista de objetos con su SHA-256 (`objects`, `data-model.md` §1).
+- **`previous/` no se vuelca.**
+- **Decisión mía: un volcado que falla es el `task_failed` de `monthly_backup`**, que ya fabrica la función de correo, con su código (`ledger_absent`, por ejemplo). **No hay un `backup_failed` aparte**, que el plan §5.4 nombraba. Los hallazgos propios del volcado son tres:
+  - `backup_object_differs`;
+  - `backup_ecb_inconsistent`: el fichero que el volcado ya tiene, de un intento anterior, es de otra generación que el manifiesto en vigor, así que el manifiesto no se escribe;
+  - `backup_positions_missing`, **nuevo**: el libro del volcado no se proyecta sin errores, así que no hay `positions.json`. El libro, los precios y el BCE sí se vuelcan.
+- **Decisión mía: sin histórico del BCE, o con uno que no cuadra con su manifiesto, el volcado va sin BCE.** Lo dice el recuento `ecb: 0`, sin hallazgo: el histórico dañado ya lo avisa la tarea del BCE.
+
+**`positions.json`** (`data-model.md` §4, al día). Tiene tres cambios respecto de la propuesta de E1:
+- **cada total lleva `partial`**: un total parcial que parece completo es lo que prohíbe la constitución (V);
+- **`price.source`** es `manual` o la fuente del cierre (`eodhd`, `alpha_vantage`), y no `close`;
+- **el efectivo lleva su `value_eur`.**
+
+Además:
+- los importes van redondeados a céntimos, como en una pantalla, y la cantidad va exacta;
+- una posición sin lotes abiertos detrás lleva `cost_eur: null`.
+
+**La integridad trimestral** (`apps/jobs/src/tasks/integrity.ts`; `jobs/rehearsal.ts`, `jobs/integrity.ts`; plan §9).
+- **Qué comprueba**: `integrity` y `deepCheck` del libro vivo, como `atlas check --deep`. **Decisión mía: sin el contraste de los tipos del BCE**, que solo da avisos (`severity: "warning"`): la integridad avisa de **errores** (Q7). Por eso la función **ya no lee `reference/ecb/*`** (contrato de IAM §5).
+- **Los códigos** de los errores salen de una lista cerrada, `INTEGRITY_ERROR_CODES`. Un test la vuelve a leer de los fuentes de `integrity.ts` y `deep-check.ts`, y los códigos de un evento no válido cuentan como `other`.
+- **El ensayo** usa el último volcado cerrado con su libro. Lo busca en los registros de `monthly_backup`, lo contrasta con el SHA-256 que guardó su registro, lo proyecta en memoria y lo compara con el libro vivo **cortado en los mismos eventos**. La comparación es por identificador, contenido y orden, y después por posiciones, efectivo, lotes, ganancias y rendimientos.
+- **El tamaño** son los bytes que la función lee del libro, contra `ATLAS_LEDGER_SIZE_WARNING_BYTES` (nueva, de 1.024 a 104.857.600). Avisa **por encima** del umbral, nunca en él.
+
+**La revisión semanal** (`weekly_review` en `tasks/mail.ts`; `jobs/review.ts`).
+- **Qué lee**: las desviaciones (`deviation_above_threshold`) y las reglas 17 y 18 (`bucketStats(…).controls.warnings`), por su código y sus `details`, nunca por su `message` (R3). Valora con los cierres de la nube, como la web: es informativa.
+- **Decisiones mías:**
+  - **una desviación se dice por la clase del activo** («Renta fija: un activo está 6,2 puntos por encima de su objetivo»), porque los avisos del dominio son por activo y el correo no nombra activos (§8.1 P9);
+  - **lo que no se pudo medir** (un núcleo parcial, o una regla del cubo sin precios) va en «Sin medir» en un correo que sale de todas formas, pero **nunca lo envía por sí solo**; si no, el aviso llegaría cada semana a quien valora a mano;
+  - con un libro que no carga, **no hay correo**: lo dicen el recordatorio mensual y la integridad.
+
+**La Renta de enero** (`tax_return_ready` en `tasks/fiscal.ts`; `jobs/tax-return.ts`).
+- **Qué cuenta**: las notas son las del informe del año anterior (`report.notes`), con los hallazgos del BCE del bucket **como los pasa `atlas tax`**, y los criterios en disputa son los de lectura abierta (`report.doubtful`).
+- **Decisión mía: sale en enero aunque no se pueda preparar**, con el código. Como mucho una vez.
+- **No lee el interruptor**: no lo recibe (Q10).
+
+**Los modelos 720 y 721** (`informative_thresholds` en `tasks/fiscal.ts`; `jobs/informative.ts`).
+- **Decisión mía: «algo que hacer» es lo que ya levanta la tarjeta fiscal de la web** (`fiscalAttention`) para el año que acaba: un modelo que obliga y no está presentado, uno que no se puede decidir todavía o uno cerca del umbral de aviso. La función toma el libro y el día, y nada más.
+- **Sin libro, no hay correo.** Con eventos no válidos, sí: no se pudo comprobar.
+- **El asunto es el mismo** tenga algo uno o los dos modelos.
+
+**El envío de los avisos periódicos** (`tasks/send.ts`), **como mucho una vez**:
+- marca `sending` antes de enviar;
+- una negativa de SES, o un destinatario que falta, se cierra `send_failed`, y la ejecución siguiente del periodo lo vuelve a intentar;
+- una suerte desconocida se cierra `send_unknown`.
+
+**N3 de §15** (`c5ee7b6`).
+- **La reconstrucción** del histórico dañado compara con `previous/` **solo si sus bytes tienen el SHA-256 que el manifiesto dice de él** (`previousHistoryOf`). Además toma el nombre de `manifest.previous`, que cambia si cambió la fuente; antes leía `previous/<fichero en vigor>`.
+- **Sin manifiesto legible** no hay con qué comprobarlo, y se sigue comparando con los dos nombres. Eso solo puede hacer que la reconstrucción rechace un ZIP, nunca que lo acepte.
+- **El volcado no copia `previous/`**, y el procedimiento del BCE manda comprobarlo antes de usarlo.
+
+**Contratos** (`ce7a7db`):
+- `iam-permissions.md`:
+  - §4, la política de `backups/*` con su forma;
+  - §5, la integridad sin el BCE;
+  - §8, `s3:GetObject` sobre `jobs/ecb/*`, pedido por la dirección, y lo que usa el procedimiento de los avisos;
+  - §9, propuesta de tiempo y memoria de las tres funciones que faltaban.
+- `mail.md`: los textos de E4.
+- `data-model.md`: §1 y §4.
+- `plan.md` y `tasks.md`.
+
+### 20.3 Mapa de commits
+
+| Commit | Qué |
+|---|---|
+| `e9a35c7` | Bloque 0 (§20.1) |
+| `0f7b40b` | `ATLAS_LEDGER_SIZE_WARNING_BYTES` |
+| `9101924` | `objects` en el registro del volcado |
+| `c5ee7b6` | N3: `previous/` solo si cuadra con su manifiesto |
+| `0e91442`, `5a38081`, `8a81882` | `positions.json`, las decisiones del volcado, el ensayo |
+| `ebbcc49`, `7f46c1b`, `87c97c8` | Los hallazgos del volcado y de la integridad y sus correos |
+| `69751f3` | La revisión semanal, la Renta y los modelos 720 y 721, en el dominio |
+| `6a5f60d`, `3a35312` | El lector del BCE y del libro por separado; el intento y los objetos en `run.ts` |
+| `efc63db`, `b329af0`, `88d4753` | Las tareas del volcado, de la integridad y de los avisos periódicos |
+| `88dc35a` | Guardianes: los avisos de enero no alcanzan un precio; centinelas de E4; códigos solo del correo |
+| `9e899c6`, `0ca302b` | Los procedimientos y su ensayo versionado |
+| `ce7a7db` | Contratos al día |
+| `01e313a` | Dos tests más: un aviso cortado tras salir, y un volcado con otro SHA-256 |
+
+**Cada commit pasa `typecheck` y `lint`**, comprobado commit a commit con `016-e4-per-commit.txt`. **Pero no cada commit pasa sus tests**: `tests/messages.test.ts` estuvo en rojo desde `5a38081`, que trajo los primeros códigos de E4, hasta `88dc35a`, que los declara solo del correo. Esos commits ya estaban empujados y no he reescrito la historia. Queda dicho: tendría que haber declarado cada código en el mismo commit que lo trajo.
+
+### 20.4 Cómo se vio cada test en rojo
+
+- **Dominio**:
+  - **módulos nuevos** (`positions`, `backup`, `rehearsal`, `integrity`, `review`, `tax-return`, `informative`, `mail/periodic`): cada test, en rojo sin su módulo (`016-e4-red-*.log`);
+  - **módulos que ya existían**: con su cambio pendiente. La configuración (`016-e4-red-config.log`), los objetos del registro (`-objects`), los productores (`-producers`), los correos nuevos (`-notice`) y `backup_positions_missing` (`-posmissing`).
+- **N3**: los dos tests (dominio y almacén de S3), en rojo contra `9101924` (`016-e4-red-n3.log`).
+- **Tareas**: los tests de `backup`, `integrity` y `periodic`, en rojo con su tarea sin registrar en `RUNNERS` (`016-e4-red-backup-task.log`, `-integrity-task`, `-periodic-task`).
+- **Guardianes y procedimientos**: su rojo son sus mutantes (§20.5). El ensayo de los procedimientos encontró un fallo de verdad en su primera ejecución: `BUCKET=<bucket-de-datos>` sin comillas es un error de sintaxis en `sh` (`016-e4-runbook.log`). Ahora va entre comillas.
+
+### 20.5 Mutación (lotes `016-e4-a.json` a `-d.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Lo mata | Veredicto |
+|---|---|---|---|
+| E4-28a | un objeto que escribió otro se deja en silencio | `backup.test.ts` (dominio y tarea) | KILLED |
+| E4-28b | el reintento no sabe que hubo un intento anterior: un mes a medias | `backup.test.ts` (tarea, el corte) | KILLED |
+| E4-28c | un objeto que se deja se apunta con los bytes de hoy | ídem (las posiciones del libro del volcado) | KILLED |
+| E4-28d | el manifiesto del BCE sobre un fichero de otra generación | ídem | KILLED |
+| E4-28e | un nombre de `prices/` con salida de la carpeta | `backup.test.ts` (dominio) | KILLED |
+| E4-28f | el volcado escribe sin `If-None-Match` | `backup.test.ts` (tarea) | KILLED |
+| E4-N3 | `previous/` comparado con lo que tenga | `s3-daily.test.ts` | KILLED |
+| E4-pos | una posición sin precio valorada a cero | `positions.test.ts` | KILLED |
+| E4-29a | el ensayo compara con el libro vivo sin cortar | `rehearsal.test.ts`, `integrity.test.ts` | KILLED |
+| E4-29b | una diferencia del ensayo que no avisa | `integrity.test.ts` (dominio y tarea) | KILLED |
+| E4-29c | un volcado con otro SHA-256 que su registro, ensayado | `integrity.test.ts` (tarea) | KILLED |
+| E4-29d | el ensayo con el volcado más viejo | `rehearsal.test.ts` | KILLED |
+| E4-30a | el umbral del tamaño escrito en el código | `integrity.test.ts` (tarea) | KILLED |
+| E4-30b | el aviso de tamaño en el umbral y no por encima | `integrity.test.ts` (dominio y tarea) | KILLED |
+| E4-int | un código que las listas no conocen, escrito tal cual | `integrity.test.ts` (dominio) | KILLED |
+| E4-32a | la revisión semanal sin nada que hacer, enviada | `review.test.ts`, `periodic.test.ts` | KILLED |
+| E4-32b | el correo del 720 sin nada que hacer, enviado | `periodic-mail.test.ts`, `periodic.test.ts` | KILLED |
+| E4-31a | la tarea de enero lee los cierres de la nube | `jobs-access.test.ts` («composes them in a module that reads no close») | KILLED |
+| E4-31b | el 720 de las tareas alcanza la puerta de los precios | `jobs-access.test.ts` («decides … with nothing price-aware») | KILLED |
+| E4-31c | el correo del 720 dice si se supera el umbral | `periodic-mail.test.ts` | KILLED |
+| E4-rev | los euros de la regla 17 con el interruptor apagado | `periodic-mail.test.ts` | KILLED |
+| E4-once | un aviso periódico enviado sin marcar `sending` antes | `periodic.test.ts` (el corte tras enviar) | KILLED |
+| E4-33a | el paso 5 restaura desde la programación parada | `runbook-016.test.ts` | KILLED |
+| E4-33b | el paso 1 pasa los campos que `update-schedule` no admite | ídem | KILLED |
+| E4-33c | la comprobación de un volcado dice `bien` de lo que difiere | ídem | KILLED |
+| E4-33d | el paso 5 fuerza `ENABLED`: despierta una programación de `dev` | ídem | KILLED |
+
+26 de 26 muertos. Los de los guardianes (E4-31a y E4-31b), **cada uno por su regla**: el test que falla es el suyo, no otro.
+
+**Sin mutante, con su argumento**:
+- **Q10, la Renta sin cifras con el interruptor.** `taxReturnMail` no recibe el interruptor, así que ningún mutante de una línea le da un camino para poner una cifra. El test lo comprueba con el interruptor encendido y los centinelas del libro (`periodic.test.ts`).
+- **La clase en lugar del activo en la revisión semanal.** `ReviewFacts` no lleva el activo: no hay nada que un mutante pueda poner en el correo.
+
+### 20.6 Autocomprobación de §5, familia a familia
+
+| Familia | Qué miré | Con qué | Lo que salió |
+|---|---|---|---|
+| 1. Guardianes eludibles | Los avisos de enero no alcanzan un precio | Grafo real (`reach`) desde `jobs/informative.ts` y `jobs/tax-return.ts`; la lista **exacta** de ficheros de `apps/jobs/src` que alcanza `tasks/fiscal.ts`, así que un reexportador nuevo en medio aparece en ella; y los especificadores y nombres prohibidos en `fiscal.ts`. No es vacío: `jobs/review.ts` sí alcanza los precios | E4-31a y E4-31b mueren por su regla. Cuenta de guardianes contra `develop`: `architecture` 51 = 51, `api-access` 30 = 30, `jobs-access` 16 → 18, `jobs-package` 3 = 3, `messages` 11 = 11, más `runbook-016` 3 nuevos |
+| 2. Reglas sin valor exacto | Recuentos, umbrales, textos y objetos | Cada recuento con su valor: los contadores del volcado, `bytes` y `threshold`, `notes: 2` y `disputed: 1`, las líneas del correo semanal y la lista de `objects` con su SHA-256 | 26 mutantes muertos (§20.5) |
+| 3. Reloj y red | Los ficheros nuevos | El guardián del reloj cubre `apps/jobs` y `domain/src/jobs` enteros, y `ecb/manifest.ts` se añadió a su lista. Los tests usan el reloj del arnés; los procedimientos se ensayan con un `aws` simulado, sin red | Limpio |
+| 4. Documentos desalineados | Cabeceras de los ficheros nuevos, contratos, procedimientos | Relectura contra el código. Cada afirmación de un procedimiento cita el test que la prueba | `data-model.md` §4 y `iam-permissions.md` §5 no decían lo construido; están corregidos (§20.2). La lista de documentos, en §20.8 |
+| 5. Techo del paquete | E4 no toca la web | `npm run build` en la tubería (§20.7) | Ningún techo cambia |
+| 6. Registros sensibles | Las tres tareas nuevas y los avisos periódicos, por el camino feliz y por el de fallo | `sentinels.test.ts` ampliado: volcado, integridad y revisión con importes, y S3 que deniega con un mensaje lleno de centinelas | Limpio. El registro lleva códigos y recuentos, y el tamaño en bytes, que no es un importe |
+| 7. Entradas sin validar | Nombres del listado de `prices/`, claves de `objects`, registros del volcado, el libro del volcado, `manifest.previous` | `dumpablePriceName`; `isDumpObject` (una clave bajo su periodo, sin `..`); UTF-8 estricto y SHA-256 contra el registro; `previousHistoryOf` estricto | Limpio |
+| 8. Escrituras en dos pasos | Los objetos del volcado, el par del BCE, enviar y cerrar un aviso periódico | Un corte entre cada par de objetos (7), el manifiesto tras otra generación y un corte tras enviar | Cada uno con su mutante muerto (28b, 28c, 28d y once) |
+| 9. Procedimientos | Los cuatro de la 016 | `tests/runbook-016.test.ts`: los pasos 1 y 5 del BCE y la comprobación de un volcado, **tal cual**, con `dash`, uno detrás de otro sobre el estado que deja el anterior. Nada personal en una línea de orden: el destinatario va con el editor, nunca en `-var` ni en `echo` | El ensayo encontró el `BUCKET=<…>` sin comillas. Terraform y AWS real quedan dichos como no probados (018) |
+| 10. `--yes` | E4 no trae ninguna orden nueva de la consola | — | No aplica: ninguna orden nueva |
+
+### 20.7 Tubería y paquete
+
+- **Tubería completa** sobre `01e313a`, un solo trabajador y tras la puerta de memoria (`016-pipeline.out`): lint, typecheck, las dos pasadas de cobertura y el build, todo en verde a la primera.
+  - Dominio: 1.781 tests, **100 %** de sentencias (9.310), ramas (5.812), funciones (2.121) y líneas (8.856).
+  - El resto: 1.882 tests.
+  - `jobs.zip`: 1.827.639 bytes, de 1.443 entradas. `lambda.zip`: 1.444.049 bytes.
+- **El paquete web**, en bytes: arranque **75.061** y total **305.573**, los mismos que tras la ronda 2 de E3, dentro de los techos (75.077 y 305.650). E4 no toca la web, y `previousHistoryOf`, que vive junto al lector del manifiesto que usa la web, queda fuera del paquete.
+- **Salida fiscal: no se mueve nada**, como decía la predicción de §8. `git diff c492209 -- tests/fixtures` sale vacío, y ninguna tarea escribe en el libro.
+- **Gemelos `.js`**: ninguno, comprobado por el guion de mutación antes de cada mutante.
+
+### 20.8 Documentos de `docs/` que hay que actualizar por la 016 entera
+
+Todo lo que la 016 cambió y `docs/` todavía no dice, por documento. Consolida §6 (E1 a E3), §18, §19 y E4. La fuente de cada cosa es el contrato o la sección que se cita.
+
+**`CLAUDE.md`** («Code architecture»):
+- Las puertas nuevas, si la dirección quiere nombrarlas:
+  - del dominio: `@atlas/domain/jobs` y `@atlas/domain/remote-answers`;
+  - de los adaptadores: `@atlas/adapters/aws-jobs`, `aws-ses`, `aws-daily` y `reference-http`.
+- `apps/jobs` y `@atlas/jobs` ya están.
+
+**`docs/specification.md`**:
+- **§5, `alert_channels`**: la redacción de §6 (E3), que dice que no existe y que, si algún día existe, vive fuera del libro.
+- **§5 y la lista permitida de `Settings`**: `notification_email` sale de Ajustes y de toda foto nueva de `settings_changed`. El cargador lo sigue aceptando (§8.1 P12).
+- **§9.2, el diagrama**: cinco funciones de un solo artefacto (`jobs.zip`), una por familia de permisos, y **solo la de correo envía**. Las demás dejan sus hallazgos en `jobs/`.
+- **§9.5, la tabla**:
+  - las claves y los valores de `job_frequencies` (Q2, sin `off`, con `reconciliation` reservada) y la hora de cada programación (plan §6);
+  - qué avisa cada tarea, tal como está construido. **Precios**: una fuente que falla, correspondencias sin contrastar, tesis con el horizonte vencido (no la condición de invalidación, §8.2 B1) y ficheros ilegibles. **BCE**: sus cinco hallazgos. **Volcado**: solo si falla (`backup_object_differs`, `backup_ecb_inconsistent`, `backup_positions_missing` y `task_failed`). **Integridad**: errores, ensayo y tamaño por encima de `ATLAS_LEDGER_SIZE_WARNING_BYTES`. **Semanal**: solo si se pasa un umbral. **Renta**: nunca con cifras (Q10). **720 y 721**: texto neutro, con valoraciones manuales y los umbrales de aviso de `Settings`, en lugar de «si se acerca a 50.000 €».
+
+**`docs/business-rules.md` §7**:
+- `job_frequencies{}`: las claves y los valores de Q2.
+- `notification_email`: la nota de P12.
+
+**`docs/data-schema.md` §1**:
+- **Objetos nuevos**:
+  - `jobs/<familia>/<tarea>/<periodo>.json`, con `objects` del volcado (`data-model.md` §1);
+  - `jobs/mail/notices/<código>--<asunto>.json` (§2);
+  - `access/last-web-sign-in.json` (§3);
+  - `prices/_cloud.json` (E3, local y nunca subido).
+- **Quién escribe en la nube** (`data-model.md` §5):
+  - `reference/ecb/` y `prices/`, solo las tareas diarias;
+  - `prices/symbols.json`, solo `atlas admin prices push`;
+  - `prices/config.json` no existe en la nube.
+- **La fila de `backups/`**: su contenido exacto y el formato de `positions.json` (§4).
+  - El contenido: `ledger.jsonl`, `positions.json`, `reference/ecb/<fichero en vigor>` con `manifest.json`, y `prices/` de primer nivel con `symbols.json` y `_status.json`.
+  - `previous/` no se vuelca.
+  - La fila dice hoy solo `eurofxref-hist.csv`, y puede ser `api-exr.csv`.
+- **La fila de `reference/ecb/`**: la web lo baja de la nube con sesión (E3), y quien use `previous/` comprueba su SHA-256 contra `manifest.previous` (N3).
+
+**`docs/api.md`**:
+- **§6**:
+  - `REFERENCE_NAME` de `prices/` por ida y vuelta con `priceFileName`, con 255 como máximo; `_status.json` y `config.json` no se sirven (Q4, M1);
+  - `symbols.json` con una clave ajena o repetida da `404 not_found` con `reason: "unknown_key"`;
+  - los clientes `@atlas/adapters/reference-http`, con `If-None-Match`.
+- **El inicio de sesión web**: el objeto `access/last-web-sign-in.json` que escribe la API, y los cuatro valores de la razón de su línea de registro.
+- **§9**:
+  - los parámetros de SSM de las tareas: `mail/recipient`, `mail/amounts`, `prices/eodhd-key` y `prices/alpha-vantage-key`;
+  - las variables `ATLAS_*` de cada función (`contracts/ssm-and-config.md`), `ATLAS_LEDGER_SIZE_WARNING_BYTES` incluida.
+
+**ADRs**:
+- **ADR-0034**:
+  - fila 12, verificada contra la API v2, con el riesgo residual (§1.1, §1.2, §9);
+  - fila 9: Scheduler solo se etiqueta por grupo, y la atribución de SES y Scheduler por etiqueta está sin verificar;
+  - la política de `backups/*` (§20.1), con `s3:ObjectCreationOperation` sin verificar (018).
+- **ADR-0031**:
+  - los presupuestos de la nube como variables de la función (M5);
+  - `symbols: "read_only"` y `currency_unchecked`: la nube nunca contrasta (Q1);
+  - la consola en una carpeta sincronizada baja de la API, con `--from-sources` y 2 y 2 por defecto (E3);
+  - la asimetría de N5 (§19.2).
+- **ADR-0032**:
+  - el contenido del volcado y su reintento: `kept_from_earlier_attempt`, nunca se sobrescribe (plan §8);
+  - `positions.json`;
+  - el ensayo trimestral, cortado en los mismos eventos, con sus códigos;
+  - la integridad son los errores de `atlas check --deep` sin el contraste del BCE.
+- **ADR-0028**:
+  - la nota de ADR-0033: `kms:Decrypt` con `aws/ssm`, sin verificar (§1.7);
+  - el aviso de tamaño, construido en la integridad con `ATLAS_LEDGER_SIZE_WARNING_BYTES`.
+- **ADR-0029**:
+  - N3: `previous/` solo si cuadra con su manifiesto;
+  - el punto 3, «en el móvil»: construido en E3 (tercera procedencia de la web).
+
+**`docs/dependencies.md`**: `@aws-sdk/client-sesv2@3.1141.0`, instalado en E1 (`17f3259`).
+
+**`docs/runbooks/`**:
+- **Los cuatro procedimientos de `specs/016-scheduled-jobs/runbooks/`**, con su entrada en `README.md`:
+  - `ecb-history-in-the-cloud.md`;
+  - `scheduled-warnings.md`;
+  - `mail-recipient-and-amounts.md`;
+  - `cloud-symbols-and-budgets.md`.
+- `tests/runbook-016.test.ts` los busca primero en `docs/runbooks/`, así que el traslado no toca el test.
+
+**`docs/decision-roadmap.md`**:
+- **Cerrar la 016.**
+- **Para la 017**, la lista de permisos de `contracts/iam-permissions.md`, con:
+  - la política de `backups/*`;
+  - `s3:GetObject` sobre `jobs/ecb/*` y `iam:PassRole` para la administración (sin verificar);
+  - el tiempo y la memoria de §9.
+- **Para la 018**, lo que queda sin verificar:
+  - `kms:Decrypt` con `aws/ssm`;
+  - la atribución de SES y Scheduler por etiqueta;
+  - `s3:ObjectCreationOperation`;
+  - las órdenes de `update-schedule` de los procedimientos;
+  - la memoria de las funciones;
+  - los procedimientos de Terraform: el destinatario, el interruptor y los presupuestos.
+
+**`docs/prompts/README.md`**: la 016 fusionada. **`docs/prompts/016-scheduled-jobs.md` §8.3**: los errores de §9.1.
+
+**Donde se listen las órdenes de la consola**:
+- `atlas prices update --from-sources` (E3);
+- `atlas admin prices push --env <entorno>` (E2).
+
+### 20.9 Congelado
+
+La entrega queda **congelada en el commit que añade esta sección**, y la PR de E4 dice su SHA. No se empuja nada más mientras dure la revisión.
