@@ -22,8 +22,23 @@ export interface HttpReferenceOptions {
 
 export type ReferenceKind = "ecb" | "prices";
 
-/** The most a file of reference data may weigh: 20 MB (review of PR #108, N6). */
+/**
+ * The most an answer of the reference data may weigh: 20 MB (review of PR
+ * #108, N6) — the index, the manifest of the ECB, a file of prices.
+ */
 export const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
+
+/**
+ * The most **a history of the ECB** may weigh: 64 MB (round 2 of the review
+ * of PR #108). `api-exr.csv` is some 12 MB today and grows every day; the
+ * ZIP's CSV is smaller. Only these two names under `ecb`.
+ */
+export const MAX_ECB_HISTORY_BYTES = 64 * 1024 * 1024;
+
+const ECB_HISTORIES: ReadonlySet<string> = new Set(["api-exr.csv", "eurofxref-hist.csv"]);
+
+const limitOf = (kind: ReferenceKind, name: string): number =>
+  kind === "ecb" && ECB_HISTORIES.has(name) ? MAX_ECB_HISTORY_BYTES : MAX_REFERENCE_BYTES;
 
 export type ReferenceRead =
   /** The version asked for is the one there: nothing travelled. */
@@ -58,14 +73,17 @@ export const httpReference = (options: HttpReferenceOptions) => {
     new RemoteError("transport_rejected", status, { reason: "too_large" });
 
   /**
-   * The body, **never more than `MAX_REFERENCE_BYTES`** (review of PR #108,
-   * N6): the SHA-256 of the manifest says nothing of the size, and a huge
+   * The body, **never more than `limit`** (review of PR #108, N6 and round
+   * 2): the SHA-256 of the manifest says nothing of the size, and a huge
    * object would be loaded whole into a phone before anything checked it.
    * Refused by the length it says, or counted as it arrives.
    */
-  const bytesOf = async (response: Response): Promise<Uint8Array> => {
+  const bytesOf = async (
+    response: Response,
+    limit: number = MAX_REFERENCE_BYTES,
+  ): Promise<Uint8Array> => {
     const said = Number(response.headers.get("content-length"));
-    if (Number.isFinite(said) && said > MAX_REFERENCE_BYTES) {
+    if (Number.isFinite(said) && said > limit) {
       throw tooLarge(response.status);
     }
     const reader = response.body?.getReader();
@@ -81,7 +99,7 @@ export const httpReference = (options: HttpReferenceOptions) => {
           break;
         }
         total += value.length;
-        if (total > MAX_REFERENCE_BYTES) {
+        if (total > limit) {
           await reader.cancel().catch(() => undefined);
           throw tooLarge(response.status);
         }
@@ -155,7 +173,7 @@ export const httpReference = (options: HttpReferenceOptions) => {
       if (read === undefined) {
         throw new RemoteError("transport_rejected", 200, { reason: "etag" });
       }
-      return { kind: "file", bytes: await bytesOf(response), version: read };
+      return { kind: "file", bytes: await bytesOf(response, limitOf(kind, name)), version: read };
     },
   };
 };

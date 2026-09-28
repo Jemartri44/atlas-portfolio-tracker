@@ -107,7 +107,7 @@ describe("the client of the reference data (016, E3)", () => {
 describe("the size of what comes down (review of PR #108, N6)", () => {
   const MB = 1024 * 1024;
 
-  it("refuses more than 20 MB, said by its length or counted as it arrives", async () => {
+  it("refuses more than 20 MB, said by its length or counted as it arrives (N6)", async () => {
     const said = client(() =>
       answer(200, "x", { etag: '"v"', "content-length": String(20 * MB + 1) }),
     );
@@ -140,6 +140,57 @@ describe("the size of what comes down (review of PR #108, N6)", () => {
     await expect(index.reference.index()).rejects.toMatchObject({
       details: { reason: "too_large" },
     });
+  });
+
+  /** `total` bytes, streamed in chunks of 8 MB, with no length said. */
+  const streaming = (total: number) =>
+    client(() => {
+      const chunk = new Uint8Array(8 * MB);
+      let left = total;
+      return Promise.resolve(
+        new Response(
+          new ReadableStream({
+            pull(controller) {
+              if (left === 0) {
+                controller.close();
+                return;
+              }
+              const size = Math.min(left, chunk.length);
+              controller.enqueue(chunk.subarray(0, size));
+              left -= size;
+            },
+          }),
+          { status: 200, headers: { etag: '"v"' } },
+        ),
+      );
+    });
+
+  it("takes up to 64 MB of each history of the ECB, never more (review of PR #108, round 2)", async () => {
+    for (const name of ["api-exr.csv", "eurofxref-hist.csv"]) {
+      const read = await streaming(64 * MB).reference.get("ecb", name);
+      expect((read as { bytes: Uint8Array }).bytes.length).toBe(64 * MB);
+      await expect(streaming(64 * MB + 1).reference.get("ecb", name)).rejects.toMatchObject({
+        details: { reason: "too_large" },
+      });
+      const said = client(() =>
+        answer(200, "x", { etag: '"v"', "content-length": String(64 * MB + 1) }),
+      );
+      await expect(said.reference.get("ecb", name)).rejects.toMatchObject({
+        details: { reason: "too_large" },
+      });
+    }
+  });
+
+  it("keeps 20 MB for the manifest of the ECB and for a file of prices", async () => {
+    for (const [kind, name] of [
+      ["ecb", "manifest.json"],
+      ["prices", "api-exr.csv"],
+      ["prices", "a.jsonl"],
+    ] as const) {
+      await expect(streaming(20 * MB + 1).reference.get(kind, name)).rejects.toMatchObject({
+        details: { reason: "too_large" },
+      });
+    }
   });
 
   it("takes exactly 20 MB", async () => {
