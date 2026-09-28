@@ -1496,7 +1496,7 @@ Hay dos revisiones sobre `64baa60`: copias (comentario 5864639173) y avisos y ru
 | Hallazgo | Commit | Qué |
 |---|---|---|
 | Copias B1 | `33dcfe4` | `restoreRehearsal` cuenta los `id` repetidos antes de proyectar nada: en el volcado da `dump_invalid` (cuántos) y en el vivo da `rehearsal_skipped_invalid`. `REHEARSAL_CODES` lo lista. `integrity.test.ts` pasa las dos variantes **con el volcado hecho antes**: un libro con una línea repetida que se vuelca, y un vivo que repite un `id` del volcado. El resultado es `done`, con `integrity_errors {duplicate_id}`, la diferencia del ensayo y el aviso de tamaño |
-| Copias N1 y N3 | `04f79b3` | **N1.** Sin un BCE en vigor que cuadre con su manifiesto, el volcado da `backup_ecb_missing` (hallazgo, correo y lista cerrada). **N3.** `dumpStep({ existing, next, earlier })`: guarda como suyo solo lo que tiene exactamente los bytes que un intento anterior dice que escribió. Además: `TaskInterrupted` lleva a un intento cortado los objetos que escribió, junto con los de intentos anteriores; `claimRecord` hereda `objects` en la reclamación siguiente, así que el registro los conserva aunque la ejecución muera sin cerrarlo; y `TaskContext.earlier` los da al reintento. `job_expired` y `backup_ecb_missing` se declaran solo del registro y del correo en `messages.test.ts` |
+| Copias N1 y N3 | `04f79b3` | **N1.** Sin un BCE en vigor que cuadre con su manifiesto, el volcado da `backup_ecb_missing` (hallazgo, correo y lista cerrada). **N3.** `dumpStep({ existing, next, earlier })`: guarda como suyo solo lo que tiene exactamente los bytes que un intento anterior dice que escribió. Además: `TaskInterrupted` lleva a un intento cortado los objetos que escribió, junto con los de intentos anteriores; `claimRecord` hereda `objects` en la reclamación siguiente~~, así que el registro los conserva aunque la ejecución muera sin cerrarlo~~ (**falso, corregido en §22, R2-B1**: solo conservaba lo que había anotado un intento que cerró); y `TaskContext.earlier` los da al reintento. `job_expired` y `backup_ecb_missing` se declaran solo del registro y del correo en `messages.test.ts` |
 | Avisos B1, B2, N1, N2, N3 y N4 | `38b256b` | **B1 y N4.** Estado nuevo `expired`. El manejador cierra el periodo anterior de todo aviso `at_most_once` sin enviar. `taxReturnFacts` e `informativeFacts` reciben `year`, que la tarea saca de `context.period`. **B2 y N1.** `ledgerFailureKind` distingue `transient`, `invalid`, `content` y `absent`; `lastDayOfWindow` da el último día del periodo. Un fallo pasajero se cierra `failed` sin enviar, y el último día sale el texto neutro con el código: `weeklyReviewUnavailableMail` para la revisión, `informativeMail` con `unavailable` para los modelos y el texto de siempre para la Renta. **N2.** `CLOUD_ECB_STALE_DAYS`, un solo valor para el recordatorio y la Renta. `readCloudEcbHistory` lanza si no puede leer, y la Renta lo toma por fallo pasajero (`ecb_unavailable`). **N3.** `scopedObjects` (`apps/jobs/src/scoped-objects.ts`) y `inScope` en `fiscal.ts`. El guardián de `jobs-access` pasa a una **lista nombre a nombre** de lo que el grafo de `fiscal.ts` toma de los paquetes, más los dos usos de `deps.objects`, los dos dentro del alcance |
 | Copias N2 | `9ca34ca` | El bloque arreglado. `runbook-016.test.ts` ejecuta el bloque sin `-e`, como un *shell* interactivo, con un objeto que falta y los mismos bytes que el anterior. El `aws` simulado falla como la CLI ante una clave que no existe. El procedimiento dice además `backup_ecb_missing`, `rehearsal_skipped_invalid`, los reintentos y el último día |
 | Copias N4 y contratos | `1a346e2` | **IAM**: §4 lee solo `manifest.json` y los dos ficheros del BCE; §5 lee `backups/*/ledger.jsonl`. **`mail.md`**: `backup_ecb_missing` y las reglas de la ronda. **`data-model.md`**: `expired` y `objects` en un intento fallido y en su reclamación |
@@ -1560,4 +1560,77 @@ Además, en R1-N3a y R1-N3b el lote «antes» completo falla por otra causa: el 
 - **Cada commit de la ronda** pasa `typecheck` y `lint` por separado (`016-r1-per-commit.txt`).
 - **La web no cambia**, `tests/fixtures` no cambia y la salida fiscal no se mueve.
 - **Guardianes**: `jobs-access` tiene 18 tests (uno cambia de regla, ninguno se pierde) y `runbook-016` pasa de 3 a 4.
+- **Congelación:** la ronda queda congelada en el commit que añade esta sección, y el mapa de la PR dice su SHA.
+
+## 22. Revisión de la PR #109, ronda 2: decisiones de la dirección y arreglos (2026-09-28)
+
+La revisión sobre `1c47153` (comentario 5865690184) deja un bloqueante y un no bloqueante. Las decisiones de la dirección son del mismo día. Cada una lleva su test, visto en rojo antes, y su mutante: sobrevive a los tests de `1c47153` y muere con los nuevos.
+
+### 22.1 Decisiones
+
+- **R2-B1. Se mantiene N3, sin volver atrás.** Antes de cada `putIfNoneMatch`, el volcado anota en el registro reclamado la intención del objeto (clave y SHA-256), con `If-Match` sobre el registro. Un reintento considera suyo un objeto que ya existe si su SHA-256 coincide con una intención anotada; si no coincide, es `backup_object_differs`. Así, un corte duro después de escribir no da una falsa alarma. Se corrigen la cabecera de `tasks/backup.ts` y §21.
+- **R2-N1.**
+  - La tarea del BCE deja el hallazgo `ecb_update_undone`, con su correo, cuando `recover()` deshace una actualización cortada.
+  - Para la Renta, un histórico dañado o recién deshecho es `ecb_unavailable`: un fallo pasajero que se reintenta al día siguiente. Solo la ausencia real de histórico cuenta como «sin histórico».
+  - Se corrige `questions.md:1547`.
+- **Lo apuntado sin verificar.** La revisión semanal aplica también el fallo pasajero: un error de `readReference` no se traga, sino que se trata como pasajero, igual que en la Renta.
+
+### 22.2 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| R2-B1 | `9c98e75` | `TaskContext.note(objects)` añade los objetos a `record.objects` y reescribe el registro con `If-Match` (su ETag). El caso `write` de `put` anota `{ key, sha256 }` **antes** de `putIfNoneMatch`. `dumpStep({ existing, next, earlier })` recibe ahora **todas** las intenciones de la clave (`earlier: string[]`): un objeto es del mes si coincide con cualquiera. `TaskInterrupted` junta lo anotado con lo que lleva el corte, sin repetir clave y SHA. **Test de corte duro**: el intento se cuelga en el `putIfNoneMatch` del fichero del BCE, después de escribir `positions.json`, con el registro `claimed`. El reintento de las 01:35 termina `done` en el intento 2, sin hallazgos y con los siete objetos. Guarda `positions.json` con `kept_from_earlier_attempt` y cuenta el BCE (1), los precios (3) y `differs: 0`. Hay un test de dominio con varias intenciones para una clave |
+| R2-N1 y la revisión semanal | `c5522a2` | **`ecb_update_undone`**: `ecbFindings(result, { undone })`, con el hallazgo antes de lo que encuentre la descarga del día. Tiene su redacción en `notice.ts` («[Atlas] Aviso: historico del BCE deshecho»), está en `NOTICE_CODES` y en `PRODUCER_FINDINGS.ecb_update`, y `messages.test.ts` lo declara solo de las tareas. **`readCloudEcbHistory`** devuelve `absent`, `damaged` o `history`, y lanza si no puede leer. Es `damaged` cuando el manifiesto no se entiende, el fichero falta, su SHA-256 no cuadra, no es UTF-8 o no se lee como histórico. **La Renta**: con `damaged` o con un error de lectura, reintenta con `ecb_unavailable` y lo dice el 31 de enero. **La referencia** (`reference.ts`) ya no se traga un error de lectura de `prices/` ni del BCE. **La revisión semanal** trata un error de `readReference` como pasajero (`reference_unavailable`): `failed` sin enviar, y el domingo el texto neutro con el código. El texto neutro dice ahora «no se ha podido leer lo que necesita», no «el libro» |
+| Contratos | `41d9e74` | `mail.md`: la fila de `ecb_update_undone`, el texto semanal y el BCE dañado en la Renta. `data-model.md`: `objects` se anota antes de cada escritura. `scheduled-warnings.md`: `ecb_update_undone`, `reference_unavailable` en la revisión semanal y el BCE dañado en la Renta. `questions.md`: §21.5 (líneas 1547 y 1551) tachadas y corregidas |
+| Esta sección | este commit | §22 y la corrección de §21.2 (la fila de copias N1 y N3 decía que el registro conservaba lo escrito aunque la ejecución muriera sin cerrarlo) |
+
+### 22.3 Cómo se vio cada test en rojo
+
+Los tests nuevos y los cambiados, sobre el código (`src`) de `1c47153`, puesto en su sitio y restaurado después: 11 en rojo (`016-r2-red.log`).
+- **Dominio**: la intención múltiple de `backup`, `ecb_update_undone` en `findings` y en `notice-mail` (y el orden de `NOTICE_CODES`), y el texto semanal de `periodic-mail`.
+- **Tareas**:
+  - el corte duro (R2-B1), que en `1c47153` termina con `backup_object_differs`;
+  - el test de N3 con la intención anotada;
+  - el deshacer del BCE, que en `1c47153` no dice nada;
+  - la Renta con el BCE dañado, que en `1c47153` cuenta las notas como sin histórico;
+  - la revisión semanal sin poder leer los cierres o el libro.
+
+### 22.4 Mutación: antes y después
+
+Cada mutante devuelve el defecto al código nuevo. «Después» es con los tests de ahora y «antes», con los de `1c47153` (`016-r2m-0.json` a `-2.json`, uno a uno tras la puerta de memoria).
+
+| Id | Mutante | Antes | Después |
+|---|---|---|---|
+| R3-B1a | el volcado escribe sin anotar antes la intención | SURVIVED | KILLED |
+| R3-B1b | la intención se anota en memoria y nunca en el registro | SURVIVED* | KILLED |
+| R3-N1a | la tarea del BCE no dice que ha deshecho una actualización | SURVIVED | KILLED |
+| R3-N1b | la Renta cuenta las notas contra un histórico dañado | SURVIVED* | KILLED |
+| R3-N1c | un fichero que no cuadra con su manifiesto se toma por «sin histórico» | SURVIVED* | KILLED |
+| R3-Wa | la revisión semanal valora con menos cuando no puede leer los cierres | SURVIVED* | KILLED |
+| R3-Wb | un cierre que no se pudo leer se toma por ninguno | SURVIVED* | KILLED |
+
+\* **«Antes» con los tests antiguos que el código nuevo pasa.** Con el lote antiguo completo, esos cinco mueren, pero no por el mutante: tres tests de `1c47153` fallan contra el código nuevo sin ningún mutante, porque la ronda cambia justo lo que afirmaban.
+- «keeps as its own only what the record of an earlier attempt says it wrote (copias N3)»: ahora el registro lleva también la intención anotada.
+- «never spends the income tax on a ledger or a history it could not read today»: un manifiesto `"{}"` ya no es «sin histórico», sino dañado.
+- «never spends the week's review on a ledger it could not read, and says it on Sunday»: el texto neutro cambia.
+
+Por eso su «antes» se ejecutó con `-t`, sin esos tres (`016-r2m-2.out`), como en §21.4. Hay un control sin mutante con el mismo filtro, que pasa. R3-B1a y R3-N1a sobreviven al lote antiguo completo.
+
+### 22.5 Decisiones mías
+
+- **Una intención por escritura, no una por volcado.** Anotar las siete de golpe al principio obligaría a calcular antes `positions.json` y los precios, y un reintento con otro libro vivo vería intenciones que nunca se escribieron. Una por objeto cuesta una escritura condicional más del registro por objeto, unas diez al mes.
+- **Un fallo al anotar** (`JobsWriteConflict`, o un error de S3) detiene el intento antes de escribir el objeto. No queda nada escrito sin anotar.
+- **La revisión semanal con un libro no válido, que no se decodifica o que no existe** sigue sin enviar nada (§21.5). Solo lo pasajero (el libro o la referencia sin poderse leer) se reintenta y se dice el domingo.
+- **Un `symbols.json` que no se entiende** sigue dando una referencia sin precios automáticos, como en la consola (feature 013), y no es un fallo. Un error al **leerlo** sí es pasajero.
+- **En la revisión semanal, un histórico del BCE dañado** no corta la revisión: valora sin él, con las notas de siempre. La decisión pide tratar como pasajero el error de `readReference`, y un histórico dañado no lanza error; ya lo avisa la tarea del BCE (`ecb_update_undone`, o su reconstrucción).
+
+### 22.6 Tubería y congelación
+
+- **Tubería completa** sobre `41d9e74`, con un solo trabajador y tras la puerta de memoria (`016-pipeline.out`): lint, typecheck, las dos pasadas de cobertura y el build, todo en verde a la primera.
+  - Dominio: 1.793 tests, **100 %** de sentencias (9.336), ramas (5.837), funciones (2.131) y líneas (8.880).
+  - El resto: 1.898 tests.
+  - `jobs.zip`: 1.835.811 bytes.
+- **Cada commit de la ronda** pasa `typecheck` y `lint` por separado (`016-r2-per-commit.txt`).
+- **La web no cambia**, `tests/fixtures` no cambia y la salida fiscal no se mueve.
+- **Guardianes**: `jobs-access` cambia una línea fijada (la lectura del BCE de la Renta) y `messages` declara `ecb_update_undone` solo de las tareas.
 - **Congelación:** la ronda queda congelada en el commit que añade esta sección, y el mapa de la PR dice su SHA.
