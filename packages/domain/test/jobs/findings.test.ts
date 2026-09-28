@@ -148,6 +148,28 @@ describe("the findings of the prices", () => {
     ).toEqual([]);
   });
 
+  it("says files of closes that do not read, by how many and never by asset (round 3 of the review of PR #106)", () => {
+    const unreadable = (id: string) => ({
+      asset_id: id,
+      group: "core" as const,
+      outcome: "unreadable" as const,
+      added: 0,
+      failures: [],
+    });
+    const findings = pricesFindings({
+      report: { ...REPORT, assets: [unreadable("IE00B4L5Y983"), unreadable("ast_world")] },
+      status: EMPTY_STATUS,
+      threshold: 3,
+      theses: 0,
+    });
+    expect(findings).toEqual([
+      { code: "prices_file_unreadable", subject: "prices", counts: { files: 2 } },
+    ]);
+    expect(JSON.stringify(findings)).not.toContain("IE00B4L5Y983");
+    expect(JSON.stringify(findings)).not.toContain("ast_world");
+    expect(ownFindings("prices_update", findings, PRODUCER_FINDINGS)).toEqual(findings);
+  });
+
   it("leaves only findings its producer may say, whose subjects are closed lists", () => {
     const findings = pricesFindings({
       report: { ...REPORT, failing: ["eodhd"] },
@@ -161,7 +183,7 @@ describe("the findings of the prices", () => {
       Object.values(codes ?? {}),
     )) {
       for (const subject of subjects) {
-        expect(["ecb", "eodhd", "alpha_vantage", "bucket"]).toContain(subject);
+        expect(["ecb", "eodhd", "alpha_vantage", "bucket", "prices"]).toContain(subject);
       }
     }
   });
