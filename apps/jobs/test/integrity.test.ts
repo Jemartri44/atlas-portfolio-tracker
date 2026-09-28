@@ -119,6 +119,16 @@ describe("the quarterly integrity (E4, plan §9)", () => {
     expect(recordOf(s3).findings).toEqual([
       { code: "restore_rehearsal_differs", subject: "integrity", counts: { dump_unreadable: 1 } },
     ]);
+    // Bytes that read, and still not the ones the record kept: never rehearsed with.
+    const other = withDump();
+    await dump(other);
+    const kept = JSON.parse(other.text("jobs/backup/monthly_backup/2026-10.json") as string);
+    kept.objects[0].sha256 = "0".repeat(64);
+    other.seed("jobs/backup/monthly_backup/2026-10.json", `${JSON.stringify(kept)}\n`);
+    await check(other);
+    expect(recordOf(other).findings).toEqual([
+      { code: "restore_rehearsal_differs", subject: "integrity", counts: { dump_unreadable: 1 } },
+    ]);
     const none = withDump();
     await check(none);
     expect(recordOf(none).findings).toEqual([

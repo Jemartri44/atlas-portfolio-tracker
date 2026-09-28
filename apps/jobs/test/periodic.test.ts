@@ -92,6 +92,31 @@ describe("the weekly review (E4)", () => {
   });
 });
 
+describe("a periodic warning cut after it went (at most once)", () => {
+  it("is never sent again when the run dies between sending and closing its record", async () => {
+    const run = jobs({
+      jobs: "weekly_review",
+      now: MONDAY,
+      ledger: sentinelLedger({ deviation_threshold_pp: "5" }),
+    });
+    const key = "jobs/mail/weekly_review/2026-W41.json";
+    run.s3.beforePut = (put) => {
+      if (put === key && run.ses.sent.length === 1) {
+        run.s3.beforePut = undefined;
+        throw new Error("cut");
+      }
+    };
+    await run.run(["weekly_review"]);
+    expect(run.ses.sent).toHaveLength(1);
+    expect(record(run.s3, "weekly_review", "2026-W41").state).toBe("sending");
+    // The next day, long after the run could still be going on.
+    run.setNow("2026-10-06T06:00:00Z");
+    await run.run(["weekly_review"]);
+    expect(run.ses.attempts).toHaveLength(1);
+    expect(record(run.s3, "weekly_review", "2026-W41").state).toBe("send_unknown");
+  });
+});
+
 describe("the income tax of January (Q10)", () => {
   it("says the year before is ready, with no figure even with the switch on", async () => {
     const run = jobs({ jobs: "tax_return_ready", now: JANUARY, amounts: "on" });
