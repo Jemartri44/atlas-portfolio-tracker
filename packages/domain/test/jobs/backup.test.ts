@@ -39,15 +39,17 @@ describe("where a dump lives (E4)", () => {
 
 describe("what the dump does with each object (mutant 28)", () => {
   it("writes what is not there, and leaves what is there with the same bytes", () => {
-    expect(dumpStep({ existing: undefined, next: A, retrying: false })).toBe("write");
-    expect(dumpStep({ existing: undefined, next: A, retrying: true })).toBe("write");
-    expect(dumpStep({ existing: A, next: A, retrying: false })).toBe("same");
-    expect(dumpStep({ existing: A, next: A, retrying: true })).toBe("same");
+    expect(dumpStep({ existing: undefined, next: A, earlier: undefined })).toBe("write");
+    expect(dumpStep({ existing: undefined, next: A, earlier: B })).toBe("write");
+    expect(dumpStep({ existing: A, next: A, earlier: undefined })).toBe("same");
+    expect(dumpStep({ existing: A, next: A, earlier: B })).toBe("same");
   });
 
-  it("keeps other bytes an earlier attempt of the month left, and refuses them with none", () => {
-    expect(dumpStep({ existing: B, next: A, retrying: true })).toBe("kept");
-    expect(dumpStep({ existing: B, next: A, retrying: false })).toBe("differs");
+  it("keeps only what an earlier attempt says it wrote, and refuses any other bytes (copias N3)", () => {
+    expect(dumpStep({ existing: B, next: A, earlier: B })).toBe("kept");
+    // A retry, with other bytes that no attempt wrote: somebody else did.
+    expect(dumpStep({ existing: B, next: A, earlier: undefined })).toBe("differs");
+    expect(dumpStep({ existing: B, next: A, earlier: "c".repeat(64) })).toBe("differs");
   });
 
   it("writes the manifest of the ECB only over the very file it names", () => {
@@ -59,23 +61,59 @@ describe("what the dump does with each object (mutant 28)", () => {
 
 describe("what a dump leaves for the mail (only when it fails, §8.2 B2)", () => {
   it("says the objects it refused and the pair of the ECB it could not write, and nothing else", () => {
-    expect(backupFindings({ differs: 0, ecbInconsistent: false, positionsMissing: false })).toEqual(
-      [],
-    );
-    expect(backupFindings({ differs: 2, ecbInconsistent: false, positionsMissing: false })).toEqual(
-      [{ code: "backup_object_differs", subject: "backup", counts: { objects: 2 } }],
-    );
-    expect(backupFindings({ differs: 0, ecbInconsistent: true, positionsMissing: false })).toEqual([
-      { code: "backup_ecb_inconsistent", subject: "backup" },
-    ]);
-    expect(backupFindings({ differs: 1, ecbInconsistent: true, positionsMissing: true })).toEqual([
+    expect(
+      backupFindings({
+        differs: 0,
+        ecbInconsistent: false,
+        positionsMissing: false,
+        ecbMissing: false,
+      }),
+    ).toEqual([]);
+    expect(
+      backupFindings({
+        differs: 2,
+        ecbInconsistent: false,
+        positionsMissing: false,
+        ecbMissing: false,
+      }),
+    ).toEqual([{ code: "backup_object_differs", subject: "backup", counts: { objects: 2 } }]);
+    expect(
+      backupFindings({
+        differs: 0,
+        ecbInconsistent: true,
+        positionsMissing: false,
+        ecbMissing: false,
+      }),
+    ).toEqual([{ code: "backup_ecb_inconsistent", subject: "backup" }]);
+    expect(
+      backupFindings({
+        differs: 1,
+        ecbInconsistent: true,
+        positionsMissing: true,
+        ecbMissing: false,
+      }),
+    ).toEqual([
       { code: "backup_object_differs", subject: "backup", counts: { objects: 1 } },
       { code: "backup_ecb_inconsistent", subject: "backup" },
       { code: "backup_positions_missing", subject: "backup" },
     ]);
+    // A dump without the history of the ECB says so (copias N1).
+    expect(
+      backupFindings({
+        differs: 0,
+        ecbInconsistent: false,
+        positionsMissing: false,
+        ecbMissing: true,
+      }),
+    ).toEqual([{ code: "backup_ecb_missing", subject: "backup" }]);
     // A ledger that does not project leaves the dump without its positions, and says so.
-    expect(backupFindings({ differs: 0, ecbInconsistent: false, positionsMissing: true })).toEqual([
-      { code: "backup_positions_missing", subject: "backup" },
-    ]);
+    expect(
+      backupFindings({
+        differs: 0,
+        ecbInconsistent: false,
+        positionsMissing: true,
+        ecbMissing: false,
+      }),
+    ).toEqual([{ code: "backup_positions_missing", subject: "backup" }]);
   });
 });

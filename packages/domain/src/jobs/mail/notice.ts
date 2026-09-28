@@ -253,6 +253,16 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       ],
     }),
   },
+  backup_ecb_missing: {
+    subjects: ["backup"],
+    write: (_backup, facts) => ({
+      subject: `[Atlas] Aviso: volcado ${periodInSubject(facts)}`,
+      lines: [
+        `El volcado mensual ${ofPeriod(facts)} no lleva el histórico del BCE, desde el ${facts.since}: no había ninguno en vigor que cuadrara con su manifiesto.`,
+        "El resto del volcado está completo. Mira reference/ecb/ con el procedimiento del histórico del BCE.",
+      ],
+    }),
+  },
   integrity_errors: {
     subjects: ["integrity"],
     write: (_integrity, facts) => ({

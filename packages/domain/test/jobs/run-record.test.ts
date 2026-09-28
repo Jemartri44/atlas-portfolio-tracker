@@ -238,3 +238,44 @@ describe("what a retry does in each state (R10, plan §5.3)", () => {
     });
   });
 });
+
+describe("round 1 of the review of PR #109", () => {
+  it("closes a past period of a warning as expired, which nothing takes up again (avisos B1)", () => {
+    const expired = recordIn(claimRecord("tax_return_ready", "2026", AT), "expired", LATER, {
+      outcome: { code: "job_expired" },
+    });
+    expect(parseRunRecord(serializeRunRecord(expired), "tax_return_ready", "2026")).toEqual({
+      ok: true,
+      record: expired,
+    });
+    expect(expired.closed_at).toBe(LATER);
+    expect(isClosed(expired)).toBe(true);
+    for (const delivery of ["at_most_once", "at_least_once", "repeatable"] as const) {
+      expect(nextStep(expired, delivery, LONG_AFTER, MAX_RUN)).toEqual({
+        kind: "skip",
+        code: "job_expired",
+      });
+    }
+  });
+
+  it("carries the objects an earlier attempt wrote into the claim of the next (copias N3)", () => {
+    const SHA = "e".repeat(64);
+    const failed = recordIn(claimRecord("monthly_backup", "2026-10", AT), "failed", LATER, {
+      outcome: { code: "task_error" },
+      objects: [{ key: "backups/2026-10/ledger.jsonl", sha256: SHA }],
+    });
+    const again = claimRecord("monthly_backup", "2026-10", LATER, failed);
+    expect(again).toEqual({
+      run_format: 1,
+      task: "monthly_backup",
+      period: "2026-10",
+      state: "claimed",
+      claimed_at: LATER,
+      attempts: 2,
+      objects: [{ key: "backups/2026-10/ledger.jsonl", sha256: SHA }],
+    });
+    expect(parseRunRecord(serializeRunRecord(again), "monthly_backup", "2026-10").ok).toBe(true);
+    // Nothing to carry: nothing carried.
+    expect(claimRecord("monthly_backup", "2026-10", LATER, claimed).objects).toBeUndefined();
+  });
+});

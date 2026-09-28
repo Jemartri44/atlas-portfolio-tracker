@@ -25,6 +25,7 @@ describe("the mail of a streak", () => {
       "backup_object_differs",
       "backup_ecb_inconsistent",
       "backup_positions_missing",
+      "backup_ecb_missing",
       "integrity_errors",
       "restore_rehearsal_differs",
       "ledger_size_above_threshold",
@@ -261,6 +262,22 @@ describe("the warnings of the dump and of the integrity (016, E4)", () => {
       body: body([
         "El volcado mensual del periodo 2026-10 no lleva positions.json, desde el 2026-10-01: el libro no se proyecta sin errores.",
         "El libro, los precios y el histórico del BCE sí están. Mira el libro con «atlas check --deep».",
+      ]),
+    });
+  });
+
+  it("says a dump without the history of the ECB (copias N1)", () => {
+    expect(
+      noticeMail(
+        { code: "backup_ecb_missing", subject: "backup" },
+        { since: "2026-10-01", period: "2026-10" },
+        ORIGIN,
+      ),
+    ).toEqual({
+      subject: "[Atlas] Aviso: volcado 2026-10",
+      body: body([
+        "El volcado mensual del periodo 2026-10 no lleva el histórico del BCE, desde el 2026-10-01: no había ninguno en vigor que cuadrara con su manifiesto.",
+        "El resto del volcado está completo. Mira reference/ecb/ con el procedimiento del histórico del BCE.",
       ]),
     });
   });

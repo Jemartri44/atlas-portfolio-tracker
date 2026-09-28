@@ -43,6 +43,8 @@ export const RUN_STATES = [
   "done",
   "failed",
   "send_unknown",
+  // A past period of a warning nobody sent: closed without sending (review of PR #109, avisos B1).
+  "expired",
 ] as const;
 export type RunState = (typeof RUN_STATES)[number];
 
@@ -194,7 +196,7 @@ export type RunStep =
   | { readonly kind: "close_unknown" }
   | {
       readonly kind: "skip";
-      readonly code: "job_already_done" | "job_send_unknown" | "job_in_progress";
+      readonly code: "job_already_done" | "job_send_unknown" | "job_in_progress" | "job_expired";
     };
 
 /**
@@ -222,6 +224,8 @@ export const nextStep = (
       return { kind: "skip", code: "job_already_done" };
     case "send_unknown":
       return { kind: "skip", code: "job_send_unknown" };
+    case "expired":
+      return { kind: "skip", code: "job_expired" };
     case "sending":
       return delivery === "at_most_once" ? { kind: "close_unknown" } : { kind: "resume" };
     default:
@@ -231,7 +235,7 @@ export const nextStep = (
 
 /** Whether a record is closed: nothing more happens to its period. */
 export const isClosed = (record: RunRecord): boolean =>
-  record.state === "done" || record.state === "send_unknown";
+  record.state === "done" || record.state === "send_unknown" || record.state === "expired";
 
 /** The record a run writes when it claims its period, or takes it up again. */
 export const claimRecord = (
@@ -246,6 +250,9 @@ export const claimRecord = (
   state: "claimed",
   claimed_at: at,
   attempts: previous === undefined ? 1 : previous.attempts + 1,
+  // What earlier attempts of a dump wrote is carried, so a retry tells its own
+  // objects from anybody else's even after a run that died (review of PR #109, copias N3).
+  ...(previous?.objects === undefined ? {} : { objects: previous.objects }),
 });
 
 /** The same record in another state; closing states carry the instant. */

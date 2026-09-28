@@ -8,7 +8,8 @@
 // other bytes than the ones it was going to write is either **what an earlier
 // attempt of the same month left** — the ledger grew between two attempts,
 // say — and stays (`kept`), or something nobody should have written, which is
-// refused and said (`backup_object_differs`) with nothing more written.
+// refused and said (`backup_object_differs`) with nothing more written. What
+// an earlier attempt left is what its record says it wrote, byte for byte.
 
 import type { Finding } from "./run-record.js";
 
@@ -39,13 +40,15 @@ export type DumpStep = "write" | "same" | "kept" | "differs";
 
 /**
  * What to do with one object of the dump, from the SHA-256 of what is there
- * (if anything) and of what was going to be written. `retrying`: an earlier
- * attempt of the same month exists.
+ * (if anything), of what was going to be written, and of what **an earlier
+ * attempt of the same month says it wrote** at that key (its record keeps the
+ * list, review of PR #109, copias N3). Other bytes are kept only when they are
+ * exactly those: anything else, somebody else wrote.
  */
 export const dumpStep = (input: {
   readonly existing: string | undefined;
   readonly next: string;
-  readonly retrying: boolean;
+  readonly earlier: string | undefined;
 }): DumpStep => {
   if (input.existing === undefined) {
     return "write";
@@ -53,7 +56,7 @@ export const dumpStep = (input: {
   if (input.existing === input.next) {
     return "same";
   }
-  return input.retrying ? "kept" : "differs";
+  return input.existing === input.earlier ? "kept" : "differs";
 };
 
 /**
@@ -73,6 +76,8 @@ export const backupFindings = (input: {
   readonly ecbInconsistent: boolean;
   /** The ledger of the dump does not project cleanly: no `positions.json` was written. */
   readonly positionsMissing: boolean;
+  /** No history of the ECB in force that matched its manifest: none was dumped (copias N1). */
+  readonly ecbMissing: boolean;
 }): Finding[] => [
   ...(input.differs === 0
     ? []
@@ -85,4 +90,5 @@ export const backupFindings = (input: {
       ]),
   ...(input.ecbInconsistent ? [{ code: "backup_ecb_inconsistent", subject: "backup" }] : []),
   ...(input.positionsMissing ? [{ code: "backup_positions_missing", subject: "backup" }] : []),
+  ...(input.ecbMissing ? [{ code: "backup_ecb_missing", subject: "backup" }] : []),
 ];

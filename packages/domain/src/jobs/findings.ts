@@ -42,6 +42,7 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
     backup_object_differs: ["backup"],
     backup_ecb_inconsistent: ["backup"],
     backup_positions_missing: ["backup"],
+    backup_ecb_missing: ["backup"],
   },
   quarterly_integrity: {
     integrity_errors: ["integrity"],

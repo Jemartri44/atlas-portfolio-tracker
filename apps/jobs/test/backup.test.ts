@@ -197,13 +197,53 @@ describe("the monthly dump (E4, plan §8)", () => {
     });
   });
 
-  it("dumps without the ECB when there is none, or none that matches its manifest", async () => {
+  it("dumps without the ECB when there is none that matches its manifest, and says so (copias N1)", async () => {
+    for (const change of [
+      (s3: TestOnlyFakeS3) => s3.seed("reference/ecb/eurofxref-hist.csv", "damaged"),
+      (s3: TestOnlyFakeS3) => s3.deleteOutOfBand("reference/ecb/manifest.json"),
+    ]) {
+      const s3 = seeded();
+      change(s3);
+      await backup(s3).run(["monthly_backup"]);
+      expect(s3.keys().filter((key) => key.startsWith(`${DUMP}reference/`))).toEqual([]);
+      expect(recordOf(s3)).toMatchObject({
+        state: "done",
+        outcome: { counts: { ecb: 0 } },
+        findings: [{ code: "backup_ecb_missing", subject: "backup" }],
+      });
+    }
+  });
+
+  it("keeps as its own only what the record of an earlier attempt says it wrote (copias N3)", async () => {
     const s3 = seeded();
-    s3.seed("reference/ecb/eurofxref-hist.csv", "damaged");
+    s3.beforePut = (key) => {
+      if (key === `${DUMP}positions.json`) {
+        s3.beforePut = undefined;
+        throw new Error("cut");
+      }
+    };
     await backup(s3).run(["monthly_backup"]);
-    expect(s3.keys().filter((key) => key.startsWith(`${DUMP}reference/`))).toEqual([]);
-    expect(recordOf(s3)).toMatchObject({ state: "done", outcome: { counts: { ecb: 0 } } });
-    expect(recordOf(s3).findings).toBeUndefined();
+    // The failed attempt says what it wrote before the cut.
+    expect(recordOf(s3)).toMatchObject({
+      state: "failed",
+      objects: [
+        { key: `${DUMP}ledger.jsonl`, sha256: sha(s3.text("ledger/ledger.jsonl") as string) },
+      ],
+    });
+    // Before the retry, somebody else writes an object of the dump.
+    s3.seed(`${DUMP}prices/ast_world.jsonl`, "not a close\n");
+    await backup(s3, "2026-10-01T02:00:00Z").run(["monthly_backup"]);
+    const record = recordOf(s3);
+    expect(record).toMatchObject({
+      state: "done",
+      findings: [{ code: "backup_object_differs", subject: "backup", counts: { objects: 1 } }],
+    });
+    expect(
+      record.objects.filter(
+        (object: { kept_from_earlier_attempt?: true }) => object.kept_from_earlier_attempt,
+      ),
+    ).toEqual([]);
+    expect(s3.text(`${DUMP}prices/ast_world.jsonl`)).toBe("not a close\n");
   });
 
   it("leaves out of prices/ a name that is not plain, and says a ledger it cannot value", async () => {
