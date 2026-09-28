@@ -39,6 +39,14 @@ export const loadLedger = async (objects: ObjectStore, today: CivilDate): Promis
       code: error instanceof DependencyUnavailable ? "ledger_unavailable" : "ledger_unreadable",
     };
   }
+  return ledgerOfBytes(bytes, today);
+};
+
+/**
+ * A ledger from its bytes: the remote one, or the one of a monthly dump (E4).
+ * Empty is absent; what does not decode or project cleanly is a code.
+ */
+export const ledgerOfBytes = (bytes: Uint8Array, today: CivilDate): JobLedger => {
   if (bytes.length === 0) {
     return { ok: false, code: "ledger_absent" };
   }

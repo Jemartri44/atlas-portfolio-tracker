@@ -7,8 +7,10 @@
 // mail is sent at all. No amounts, ever.
 
 import type { MailMessage } from "../../ports/notifier.js";
+import { INTEGRITY_ERROR_CODES, REHEARSAL_CODES } from "../integrity.js";
 import { PERIOD_SHAPE } from "../periods.js";
 import type { Finding } from "../run-record.js";
+import { count } from "./format.js";
 
 /** The producing tasks, as the mail says them: the closed list of subjects. */
 const TASKS: Readonly<Record<string, string>> = {
@@ -24,6 +26,10 @@ const CODES: readonly string[] = [
   "job_record_unreadable",
   "job_record_newer_format",
   "not_utf8",
+  // Why the dump or the integrity could not read the ledger (E4).
+  "ledger_absent",
+  "ledger_unavailable",
+  "ledger_unreadable",
 ];
 
 /** What the dispatch knows of the streak besides its code and subject. */
@@ -75,6 +81,26 @@ const countOf = (facts: NoticeFacts, name: string): string => {
       ? facts.counts[name]
       : undefined;
   return value !== undefined && Number.isInteger(value) && value >= 0 ? String(value) : "algunos";
+};
+
+/**
+ * The codes a finding counts by, from `list`, each with its count; `other`
+ * said as «otros». A key the list does not know is never written.
+ */
+const codesOf = (facts: NoticeFacts, list: readonly string[]): string =>
+  [...list, "other"]
+    .filter((name) => facts.counts !== undefined && Object.hasOwn(facts.counts, name))
+    .map((name) => `${name === "other" ? "otros" : name}: ${countOf(facts, name)}`)
+    .join(", ");
+
+/** The period of a warning of the dump or of the integrity, in its subject. */
+const periodInSubject = (facts: NoticeFacts): string =>
+  validPeriod(facts) ?? "(periodo desconocido)";
+
+/** A count as the mail says a size: with its thousands point. */
+const bytesOf = (facts: NoticeFacts, name: string): string => {
+  const value = countOf(facts, name);
+  return value === "algunos" ? value : count(Number(value));
 };
 
 const TASK_SUBJECTS = Object.keys(TASKS);
@@ -151,6 +177,16 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       ],
     }),
   },
+  ecb_update_undone: {
+    subjects: ["ecb"],
+    write: (_ecb, facts) => ({
+      subject: "[Atlas] Aviso: historico del BCE deshecho",
+      lines: [
+        `Una actualización del histórico del BCE se cortó a medias y se ha deshecho, desde el ${facts.since}: el fichero en vigor no cuadraba con su manifiesto y vuelve a ser el anterior.`,
+        "La descarga del día se ha vuelto a hacer después. Si se repite, mira reference/ecb/ con el procedimiento del histórico del BCE.",
+      ],
+    }),
+  },
   ecb_calendar_mismatch: {
     subjects: ["ecb"],
     write: (_ecb, facts) => ({
@@ -194,6 +230,76 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       lines: [
         `El histórico del BCE se ha reconstruido desde el ZIP oficial sin poder compararlo con ninguna versión anterior, porque ninguna se podía leer, desde el ${facts.since}.`,
         "Es la excepción de ADR-0029 (nota del 2026-09-28): comprueba los tipos de tus operaciones con «atlas check --deep».",
+      ],
+    }),
+  },
+  backup_object_differs: {
+    subjects: ["backup"],
+    write: (_backup, facts) => ({
+      subject: `[Atlas] Aviso: volcado ${periodInSubject(facts)}`,
+      lines: [
+        `El volcado mensual ${ofPeriod(facts)} encontró ${countOf(facts, "objects")} objetos ya escritos con otros bytes y no ha escrito nada más, desde el ${facts.since}.`,
+        `Un volcado no se sobrescribe nunca: mira backups/${validPeriod(facts) ?? "<periodo>"}/ antes de nada, con el procedimiento de los avisos.`,
+      ],
+    }),
+  },
+  backup_ecb_inconsistent: {
+    subjects: ["backup"],
+    write: (_backup, facts) => ({
+      subject: `[Atlas] Aviso: volcado ${periodInSubject(facts)}`,
+      lines: [
+        `El volcado mensual ${ofPeriod(facts)} no ha guardado el manifiesto del histórico del BCE, desde el ${facts.since}: el fichero del volcado no es el que nombra el manifiesto en vigor.`,
+        "El resto del volcado está completo. El histórico del BCE se puede volver a bajar del BCE cuando haga falta.",
+      ],
+    }),
+  },
+  backup_positions_missing: {
+    subjects: ["backup"],
+    write: (_backup, facts) => ({
+      subject: `[Atlas] Aviso: volcado ${periodInSubject(facts)}`,
+      lines: [
+        `El volcado mensual ${ofPeriod(facts)} no lleva positions.json, desde el ${facts.since}: el libro no se proyecta sin errores.`,
+        "El libro, los precios y el histórico del BCE sí están. Mira el libro con «atlas check --deep».",
+      ],
+    }),
+  },
+  backup_ecb_missing: {
+    subjects: ["backup"],
+    write: (_backup, facts) => ({
+      subject: `[Atlas] Aviso: volcado ${periodInSubject(facts)}`,
+      lines: [
+        `El volcado mensual ${ofPeriod(facts)} no lleva el histórico del BCE, desde el ${facts.since}: no había ninguno en vigor que cuadrara con su manifiesto.`,
+        "El resto del volcado está completo. Mira reference/ecb/ con el procedimiento del histórico del BCE.",
+      ],
+    }),
+  },
+  integrity_errors: {
+    subjects: ["integrity"],
+    write: (_integrity, facts) => ({
+      subject: `[Atlas] Aviso: integridad ${periodInSubject(facts)}`,
+      lines: [
+        `La comprobación de integridad ${ofPeriod(facts)} encontró ${countOf(facts, "errors")} errores (${codesOf(facts, INTEGRITY_ERROR_CODES)}), desde el ${facts.since}.`,
+        "Míralos en la consola con «atlas check --deep»; se rectifican con el libro, nunca restaurando.",
+      ],
+    }),
+  },
+  restore_rehearsal_differs: {
+    subjects: ["integrity"],
+    write: (_integrity, facts) => ({
+      subject: `[Atlas] Aviso: integridad ${periodInSubject(facts)}`,
+      lines: [
+        `El ensayo de restauración ${ofPeriod(facts)} no reproduce el libro con el último volcado (${codesOf(facts, REHEARSAL_CODES)}), desde el ${facts.since}.`,
+        "No restaures desde ese volcado sin mirarlo antes: sigue el procedimiento de los avisos.",
+      ],
+    }),
+  },
+  ledger_size_above_threshold: {
+    subjects: ["integrity"],
+    write: (_integrity, facts) => ({
+      subject: `[Atlas] Aviso: integridad ${periodInSubject(facts)}`,
+      lines: [
+        `El libro ocupa ${bytesOf(facts, "bytes")} bytes (umbral ${bytesOf(facts, "threshold")}), desde el ${facts.since}.`,
+        "Revisa el plazo de expiración de las versiones no vigentes del bucket (ADR-0006).",
       ],
     }),
   },

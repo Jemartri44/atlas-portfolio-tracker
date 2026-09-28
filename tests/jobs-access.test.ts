@@ -122,6 +122,105 @@ describe("architecture (016): the jobs are reached by nothing that faces a user"
   });
 });
 
+describe("architecture (016): the warnings of January reach no price (E4, mutant 31)", () => {
+  /**
+   * No price reaches the fiscal path, not even a warning (§0 of the prompt;
+   * ADR-0031, second amendment). The income tax and the thresholds of the 720
+   * and 721 are decided in the domain by functions that take the ledger and
+   * the day, and reach nothing price-aware — the same rule that closes the
+   * 720 (`tests/architecture.test.ts`). The task composes them in a module of
+   * its own that reads no close: not `reference.ts`, not the door of the
+   * quotes, not a projection that takes the external prices.
+   */
+  const PRICE_AWARE = new RegExp(
+    `${sep}domain${sep}src${sep}(projections${sep}prices\\.ts$|quotes(\\.ts$|${sep}))`,
+  );
+  const fiscal = join(jobsSrc, "tasks", "fiscal.ts");
+
+  it("decides the income tax and the 720 in the domain with nothing price-aware", () => {
+    for (const file of ["informative.ts", "tax-return.ts"]) {
+      const reached = reach([join(domainRoot, "src", "jobs", file)]);
+      expect(reached.size, file).toBeGreaterThan(5);
+      expect(violationsOf(reached, PRICE_AWARE), file).toEqual([]);
+    }
+    // Not vacuous: the weekly review, which values with the closes, does reach them.
+    expect(
+      violationsOf(reach([join(domainRoot, "src", "jobs", "review.ts")]), PRICE_AWARE).length,
+    ).toBeGreaterThan(0);
+  });
+
+  /**
+   * **The graph of the fiscal task, name by name** (review of PR #109, avisos
+   * N3): a list of forbidden names is dodged by one more name of a barrel that
+   * values with the closes (`reviewFacts`, `positionsDocument`…). So every
+   * module of the application the task reaches is listed, and every **value**
+   * each of them takes from a package is listed too: a new one fails here
+   * until somebody looks at it. Types run nothing and are left alone. And the
+   * store of the bucket reaches the task only through its scope (`ledger/`
+   * and `reference/ecb/`), which the behaviour test holds.
+   */
+  it("composes them in a module whose graph takes from the packages only what it lists", () => {
+    expect(exists(fiscal)).toBe(true);
+    const reached = [...reach([fiscal]).keys()].filter((file) => file.startsWith(jobsSrc));
+    expect(reached.map((file) => relative(repoRoot, file)).sort()).toEqual([
+      "apps/jobs/src/ecb-history.ts",
+      "apps/jobs/src/ledger.ts",
+      "apps/jobs/src/log.ts",
+      "apps/jobs/src/run.ts",
+      "apps/jobs/src/scoped-objects.ts",
+      "apps/jobs/src/tasks/fiscal.ts",
+      "apps/jobs/src/tasks/send.ts",
+    ]);
+    const values = reached
+      .flatMap((file) =>
+        parse(file)
+          .bindings.filter((binding) => binding.specifier.startsWith("@atlas/") && !binding.isType)
+          .map((binding) => `${relative(repoRoot, file)} ${binding.specifier} ${binding.name}`),
+      )
+      .sort();
+    expect(values).toEqual(
+      [
+        "apps/jobs/src/ecb-history.ts @atlas/adapters/aws referenceReader",
+        "apps/jobs/src/ecb-history.ts @atlas/domain/ecb DEFAULT_LOCAL_CONFIG",
+        "apps/jobs/src/ecb-history.ts @atlas/domain/ecb readEcbHistory",
+        "apps/jobs/src/ecb-history.ts @atlas/domain/jobs activeHistoryOf",
+        "apps/jobs/src/ledger.ts @atlas/adapters/aws DependencyUnavailable",
+        "apps/jobs/src/ledger.ts @atlas/adapters/aws appendOnlyLedger",
+        "apps/jobs/src/ledger.ts @atlas/domain CURRENT_LEDGER_SCHEMA",
+        "apps/jobs/src/ledger.ts @atlas/domain DomainError",
+        "apps/jobs/src/ledger.ts @atlas/domain decodeLines",
+        "apps/jobs/src/ledger.ts @atlas/domain projectLedger",
+        "apps/jobs/src/ledger.ts @atlas/domain settingsAt",
+        "apps/jobs/src/ledger.ts @atlas/domain/sync linesOfText",
+        "apps/jobs/src/run.ts @atlas/adapters/aws-jobs JobsStore",
+        "apps/jobs/src/run.ts @atlas/adapters/aws-jobs JobsWriteConflict",
+        "apps/jobs/src/run.ts @atlas/domain/jobs JOB_TASKS",
+        "apps/jobs/src/run.ts @atlas/domain/jobs claimRecord",
+        "apps/jobs/src/run.ts @atlas/domain/jobs nextStep",
+        "apps/jobs/src/run.ts @atlas/domain/jobs recordIn",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/ecb checkLedgerRates",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs frequencyOf",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs informativeFacts",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs informativeMail",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs lastDayOfWindow",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs ledgerFailureKind",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs taxReturnFacts",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs taxReturnMail",
+      ].sort(),
+    );
+    // The store of the bucket: scoped, and then read only inside the scope.
+    expect(
+      parse(fiscal)
+        .code.split("\n")
+        .filter((line) => /\bdeps\.objects\b/.test(line))
+        .map((line) => line.trim()),
+    ).toEqual([
+      "deps: { ...context.deps, objects: scopedObjects(context.deps.objects, FISCAL_SCOPE) },",
+      "read = await readCloudEcbHistory(context.deps.objects);",
+    ]);
+  });
+});
+
 describe("architecture (016): one writer per object in prices/ (P18, M5)", () => {
   /**
    * The code of the cloud — the application of the jobs and the adapters of
@@ -316,6 +415,7 @@ describe("architecture (016): the clock is injected", () => {
     "packages/adapters/src/aws/s3-price-store.ts",
     "packages/adapters/src/aws/simulated-prices.ts",
     "packages/adapters/test/aws/s3-daily.test.ts",
+    "packages/domain/src/ecb/manifest.ts",
   ];
   /** Every source of a folder, the `.mjs` of the scripts too. */
   const sourcesOf = (folder: string): string[] =>

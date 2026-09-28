@@ -120,6 +120,48 @@ describe("the run record", () => {
   });
 });
 
+describe("the objects of a monthly dump in its record (E4, plan §8)", () => {
+  const SHA = "a".repeat(64);
+  const dump = recordIn(claimRecord("monthly_backup", "2026-10", AT), "done", LATER, {
+    outcome: { code: "backup_done", counts: { objects: 2 } },
+    objects: [
+      { key: "backups/2026-10/ledger.jsonl", sha256: SHA },
+      { key: "backups/2026-10/prices/ast_a.jsonl", sha256: SHA, kept_from_earlier_attempt: true },
+    ],
+  });
+
+  it("keeps each object with its SHA-256, and whether an earlier attempt left it", () => {
+    expect(parseRunRecord(serializeRunRecord(dump), "monthly_backup", "2026-10")).toEqual({
+      ok: true,
+      record: dump,
+    });
+  });
+
+  it("reads nothing else: another period, a way out of it, a hash that is not one, another task", () => {
+    const text = serializeRunRecord(dump);
+    for (const bad of [
+      text.replace("backups/2026-10/ledger.jsonl", "backups/2026-09/ledger.jsonl"),
+      text.replace("backups/2026-10/ledger.jsonl", "backups/2026-10/../ledger.jsonl"),
+      text.replace("backups/2026-10/ledger.jsonl", "backups/2026-10/"),
+      text.replace("backups/2026-10/ledger.jsonl", "backups/2026-10//ledger.jsonl"),
+      text.replace("backups/2026-10/ledger.jsonl", "ledger/ledger.jsonl"),
+      text.replace(`"sha256":"${SHA}"`, `"sha256":"${"A".repeat(64)}"`),
+      text.replace(`"sha256":"${SHA}"`, `"sha256":"${SHA}0"`),
+      text.replace('"kept_from_earlier_attempt":true', '"kept_from_earlier_attempt":false'),
+      text.replace('"kept_from_earlier_attempt":true', '"kept_from_earlier_attempt":true,"x":1'),
+      text.replace('"objects":[', '"objects":[[],'),
+    ]) {
+      expect(parseRunRecord(bad, "monthly_backup", "2026-10"), bad).toEqual({
+        ok: false,
+        code: "job_record_unreadable",
+      });
+    }
+    // Only the dump has objects.
+    const other = serializeRunRecord({ ...dump, task: "quarterly_integrity", period: "2026-Q4" });
+    expect(parseRunRecord(other, "quarterly_integrity", "2026-Q4").ok).toBe(false);
+  });
+});
+
 describe("what a retry does in each state (R10, plan §5.3)", () => {
   const inState = (state: RunRecord["state"]) => recordIn(claimed, state, LATER);
 
@@ -194,5 +236,46 @@ describe("what a retry does in each state (R10, plan §5.3)", () => {
     expect(nextStep(inState("failed"), "at_most_once", Date.parse(AT), MAX_RUN)).toEqual({
       kind: "resume",
     });
+  });
+});
+
+describe("round 1 of the review of PR #109", () => {
+  it("closes a past period of a warning as expired, which nothing takes up again (avisos B1)", () => {
+    const expired = recordIn(claimRecord("tax_return_ready", "2026", AT), "expired", LATER, {
+      outcome: { code: "job_expired" },
+    });
+    expect(parseRunRecord(serializeRunRecord(expired), "tax_return_ready", "2026")).toEqual({
+      ok: true,
+      record: expired,
+    });
+    expect(expired.closed_at).toBe(LATER);
+    expect(isClosed(expired)).toBe(true);
+    for (const delivery of ["at_most_once", "at_least_once", "repeatable"] as const) {
+      expect(nextStep(expired, delivery, LONG_AFTER, MAX_RUN)).toEqual({
+        kind: "skip",
+        code: "job_expired",
+      });
+    }
+  });
+
+  it("carries the objects an earlier attempt wrote into the claim of the next (copias N3)", () => {
+    const SHA = "e".repeat(64);
+    const failed = recordIn(claimRecord("monthly_backup", "2026-10", AT), "failed", LATER, {
+      outcome: { code: "task_error" },
+      objects: [{ key: "backups/2026-10/ledger.jsonl", sha256: SHA }],
+    });
+    const again = claimRecord("monthly_backup", "2026-10", LATER, failed);
+    expect(again).toEqual({
+      run_format: 1,
+      task: "monthly_backup",
+      period: "2026-10",
+      state: "claimed",
+      claimed_at: LATER,
+      attempts: 2,
+      objects: [{ key: "backups/2026-10/ledger.jsonl", sha256: SHA }],
+    });
+    expect(parseRunRecord(serializeRunRecord(again), "monthly_backup", "2026-10").ok).toBe(true);
+    // Nothing to carry: nothing carried.
+    expect(claimRecord("monthly_backup", "2026-10", LATER, claimed).objects).toBeUndefined();
   });
 });

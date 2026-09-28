@@ -103,6 +103,54 @@ describe("the configuration of a function (R17)", () => {
     });
   });
 
+  it("reads the backup and the integrity functions, the threshold of the size with its range (E4)", () => {
+    const base = {
+      ATLAS_ENV: "prod",
+      ATLAS_DATA_BUCKET: "atlas-prod-data-x1",
+      ATLAS_JOB_MAX_RUN_SECONDS: "900",
+    };
+    expect(parseJobsConfig({ ...base, ATLAS_JOBS: "monthly_backup" })).toEqual({
+      env: "prod",
+      ssmPrefix: "/atlas/prod/",
+      dataBucket: "atlas-prod-data-x1",
+      family: "backup",
+      jobs: ["monthly_backup"],
+      maxRunMs: 900_000,
+    });
+    const integrity = { ...base, ATLAS_JOBS: "quarterly_integrity" };
+    expect(parseJobsConfig({ ...integrity, ATLAS_LEDGER_SIZE_WARNING_BYTES: "1048576" })).toEqual({
+      env: "prod",
+      ssmPrefix: "/atlas/prod/",
+      dataBucket: "atlas-prod-data-x1",
+      family: "integrity",
+      jobs: ["quarterly_integrity"],
+      maxRunMs: 900_000,
+      integrity: { ledgerSizeWarningBytes: 1_048_576 },
+    });
+    expect(
+      parseJobsConfig({ ...integrity, ATLAS_LEDGER_SIZE_WARNING_BYTES: "1024" }).integrity,
+    ).toEqual({ ledgerSizeWarningBytes: 1024 });
+    expect(
+      parseJobsConfig({ ...integrity, ATLAS_LEDGER_SIZE_WARNING_BYTES: "104857600" }).integrity,
+    ).toEqual({ ledgerSizeWarningBytes: 104_857_600 });
+    for (const [value, reason] of [
+      [undefined, "missing"],
+      ["1023", "not_a_whole_number"],
+      ["104857601", "above_ceiling"],
+      ["1MB", "not_a_whole_number"],
+      ["01048576", "not_a_whole_number"],
+    ] as const) {
+      expect(reasonOf({ ...integrity, ATLAS_LEDGER_SIZE_WARNING_BYTES: value })).toEqual({
+        variable: "ATLAS_LEDGER_SIZE_WARNING_BYTES",
+        reason,
+      });
+    }
+    // Only the integrity reads it: the backup does not start with it.
+    expect(
+      reasonOf({ ...base, ATLAS_JOBS: "monthly_backup", ATLAS_LEDGER_SIZE_WARNING_BYTES: "1024" }),
+    ).toEqual({ variable: "ATLAS_LEDGER_SIZE_WARNING_BYTES", reason: "other_family" });
+  });
+
   it("refuses to start with anything it does not understand, saying which and why", () => {
     const cases: [Record<string, string | undefined>, unknown][] = [
       [

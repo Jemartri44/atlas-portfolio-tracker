@@ -60,3 +60,35 @@ export const activeHistoryOf = (manifestText: string): ActiveHistory | undefined
     ? { file: FILE_OF[source], source, sha256 }
     : undefined;
 };
+
+export interface PreviousHistory {
+  readonly file: "previous/eurofxref-hist.csv" | "previous/api-exr.csv";
+  readonly source: EcbSource;
+  readonly sha256: string;
+}
+
+/**
+ * The history a manifest names as **the one it replaced** (`previous`), with
+ * the SHA-256 its bytes must have — or nothing, when the manifest does not
+ * read or names none. **Whoever uses `previous/` checks its bytes against
+ * this first** (N3 of the review of PR #106): a cut between the first two
+ * steps of an activation leaves in `previous/` other bytes than the ones the
+ * manifest records, and those were never verified as a generation.
+ */
+export const previousHistoryOf = (manifestText: string): PreviousHistory | undefined => {
+  const manifest = manifestObject(manifestText);
+  if (manifest === undefined || activeHistoryOf(manifestText) === undefined) {
+    return undefined;
+  }
+  const previous = manifest.previous;
+  if (!isPlainObject(previous)) {
+    return undefined;
+  }
+  const { file, source, sha256 } = previous;
+  return (source === "zip" || source === "api") &&
+    file === `previous/${FILE_OF[source]}` &&
+    typeof sha256 === "string" &&
+    /^[0-9a-f]{64}$/.test(sha256)
+    ? { file: `previous/${FILE_OF[source]}`, source, sha256 }
+    : undefined;
+};

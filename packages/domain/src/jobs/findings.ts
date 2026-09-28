@@ -25,6 +25,7 @@ import type { Finding } from "./run-record.js";
 /** Every code each producer may leave, with the closed list of its subjects. */
 export const PRODUCER_FINDINGS: ProducerFindings = {
   ecb_update: {
+    ecb_update_undone: ["ecb"],
     ecb_update_rejected: ["ecb"],
     ecb_calendar_mismatch: ["ecb"],
     ecb_history_damaged: ["ecb"],
@@ -37,6 +38,18 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
     thesis_horizon_exceeded: ["bucket"],
     prices_file_unreadable: ["prices"],
   },
+  // E4: only when something failed or differs.
+  monthly_backup: {
+    backup_object_differs: ["backup"],
+    backup_ecb_inconsistent: ["backup"],
+    backup_positions_missing: ["backup"],
+    backup_ecb_missing: ["backup"],
+  },
+  quarterly_integrity: {
+    integrity_errors: ["integrity"],
+    restore_rehearsal_differs: ["integrity"],
+    ledger_size_above_threshold: ["integrity"],
+  },
 };
 
 /**
@@ -44,7 +57,17 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
  * disagrees; and what a rebuild of a damaged one leaves: the rebuild, or the
  * damage still there when the ZIP could not be had.
  */
-export const ecbFindings = (result: EcbUpdateResult | EcbRebuildResult): Finding[] => {
+export const ecbFindings = (
+  result: EcbUpdateResult | EcbRebuildResult,
+  recovered: { readonly undone?: boolean } = {},
+): Finding[] => [
+  // An update of an earlier run cut halfway, undone before this one: never in
+  // silence (review of PR #109, round 2, R2-N1).
+  ...(recovered.undone === true ? [{ code: "ecb_update_undone", subject: "ecb" }] : []),
+  ...resultFindings(result),
+];
+
+const resultFindings = (result: EcbUpdateResult | EcbRebuildResult): Finding[] => {
   if (result.kind === "rejected") {
     // An update kept apart (it has `kept`), or a rebuild whose ZIP contradicts
     // the last readable generation (R2-N1), which asks for someone.

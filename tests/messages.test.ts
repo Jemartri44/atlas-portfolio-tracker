@@ -143,6 +143,7 @@ const JOBS_ONLY: Record<string, string> = {
   job_record_newer_format: "solo en el registro de una tarea",
   job_record_unreadable: "solo en el registro de una tarea",
   job_send_unknown: "solo en el registro de una tarea",
+  job_expired: "solo en el registro de una tarea: un aviso de un periodo pasado, nunca enviado",
   jobs_config_invalid: "solo en las tareas: la función no arranca",
   notice_unreadable: "solo en el registro de la función de correo",
   task_failed: "el correo lo dice con su frase (jobs/mail/notice.ts)",
@@ -153,9 +154,20 @@ const JOBS_ONLY: Record<string, string> = {
   ecb_history_rebuilt: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   ecb_rebuilt_unverified: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   ecb_update_rejected: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  ecb_update_undone: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   source_failing: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   thesis_horizon_exceeded: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   prices_file_unreadable: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  // E4: the findings of the dump and the integrity, said by the mail only.
+  backup_object_differs: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  backup_ecb_inconsistent: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  backup_positions_missing: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  backup_ecb_missing: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  integrity_errors: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  restore_rehearsal_differs: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  ledger_size_above_threshold: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  core_weights_partial:
+    "el correo de la revisión semanal lo dice con su frase (jobs/mail/periodic.ts)",
 };
 
 /**

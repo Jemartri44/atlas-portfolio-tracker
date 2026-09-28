@@ -3,7 +3,9 @@
 // counts only.
 
 import { describe, expect, it } from "vitest";
+import { backupFindings } from "../../src/jobs/backup.js";
 import { ecbFindings, PRODUCER_FINDINGS, pricesFindings } from "../../src/jobs/findings.js";
+import { integrityFindings } from "../../src/jobs/integrity.js";
 import { ownFindings } from "../../src/jobs/notices.js";
 import type { UpdateReport } from "../../src/quotes/cascade.js";
 import { EMPTY_STATUS } from "../../src/quotes/status.js";
@@ -18,6 +20,28 @@ describe("the findings of the ECB", () => {
     fetched_at: "t",
     sha256: "s",
   };
+
+  it("says an update cut halfway and undone, before what the update of the day found (R2-N1)", () => {
+    const stored = { source: "zip", sha256: "a".repeat(64) } as never;
+    expect(
+      ecbFindings(
+        { kind: "accepted", stored, newDays: 1, latest: "2026-10-02", calendar: [] },
+        { undone: true },
+      ),
+    ).toEqual([{ code: "ecb_update_undone", subject: "ecb" }]);
+    expect(
+      ecbFindings(
+        { kind: "rejected", kept: stored, active: stored, conflicts: [], total: 3 },
+        { undone: true },
+      ),
+    ).toEqual([
+      { code: "ecb_update_undone", subject: "ecb" },
+      { code: "ecb_update_rejected", subject: "ecb", counts: { conflicts: 3 } },
+    ]);
+    expect(
+      ownFindings("ecb_update", [{ code: "ecb_update_undone", subject: "ecb" }], PRODUCER_FINDINGS),
+    ).toEqual([{ code: "ecb_update_undone", subject: "ecb" }]);
+  });
 
   it("says a rejected update with how many rates it would overwrite, and a calendar in disagreement", () => {
     expect(
@@ -183,8 +207,37 @@ describe("the findings of the prices", () => {
       Object.values(codes ?? {}),
     )) {
       for (const subject of subjects) {
-        expect(["ecb", "eodhd", "alpha_vantage", "bucket", "prices"]).toContain(subject);
+        expect([
+          "ecb",
+          "eodhd",
+          "alpha_vantage",
+          "bucket",
+          "prices",
+          "backup",
+          "integrity",
+        ]).toContain(subject);
       }
     }
+  });
+});
+
+describe("what the dump and the integrity may say (016, E4)", () => {
+  it("keeps each producer to its own codes and subjects, and nobody else to them", () => {
+    const backup = backupFindings({
+      differs: 1,
+      ecbInconsistent: true,
+      positionsMissing: true,
+      ecbMissing: true,
+    });
+    const integrity = integrityFindings({
+      errors: [{ code: "lots_mismatch" }],
+      rehearsal: { ok: false, differs: { cash_differ: 1 } },
+      size: { bytes: 2048, threshold: 1024 },
+    });
+    expect(ownFindings("monthly_backup", backup, PRODUCER_FINDINGS)).toEqual(backup);
+    expect(ownFindings("quarterly_integrity", integrity, PRODUCER_FINDINGS)).toEqual(integrity);
+    expect(ownFindings("monthly_backup", integrity, PRODUCER_FINDINGS)).toEqual([]);
+    expect(ownFindings("quarterly_integrity", backup, PRODUCER_FINDINGS)).toEqual([]);
+    expect(ownFindings("prices_update", [...backup, ...integrity], PRODUCER_FINDINGS)).toEqual([]);
   });
 });

@@ -15,7 +15,13 @@
 
 import { readWebSignIn, TokenRegistry } from "@atlas/adapters/aws";
 import type { JobsStore } from "@atlas/adapters/aws-jobs";
-import { type CivilDate, contributionPlan, DomainError } from "@atlas/domain";
+import {
+  bucketStats,
+  type CivilDate,
+  contributionPlan,
+  coreWeights,
+  DomainError,
+} from "@atlas/domain";
 import {
   type AmountsSwitch,
   amountsSwitch,
@@ -23,6 +29,8 @@ import {
   type Finding,
   frequencyOf,
   type JobTask,
+  lastDayOfWindow,
+  ledgerFailureKind,
   noticeIn,
   noticeMail,
   noticeStep,
@@ -34,9 +42,14 @@ import {
   producerOf,
   reminderFacts,
   reminderMail,
+  reviewDue,
+  reviewFacts,
+  weeklyReviewMail,
+  weeklyReviewUnavailableMail,
 } from "@atlas/domain/jobs";
 import { readReference } from "../reference.js";
 import type { TaskContext, TaskResult, TaskRunner } from "../run.js";
+import { notifierOf, originOf, sendOnce } from "./send.js";
 
 /** Reads the switch of the amounts: the only place. A failure of SSM leaves it off. */
 const amountsOf = async (context: TaskContext): Promise<AmountsSwitch> => {
@@ -49,15 +62,7 @@ const amountsOf = async (context: TaskContext): Promise<AmountsSwitch> => {
   }
 };
 
-const notifierOf = (context: TaskContext) => {
-  const notifier = context.deps.notifier;
-  if (notifier === undefined) {
-    throw new RangeError("a mail task without a notifier");
-  }
-  return notifier;
-};
-
-const origin = (context: TaskContext): string => context.deps.config.mail?.origin ?? "";
+const origin = originOf;
 
 /** The contribution of the month, or the code of why it could not be computed. */
 const planOf = async (context: TaskContext) => {
@@ -251,8 +256,77 @@ export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult>
   return { state: "done", outcome: { code: "findings_dispatched", counts } };
 };
 
-/** The tasks of the mail function built so far (E1); E4 adds the periodic warnings. */
+/**
+ * The weekly review (E4; `docs/specification.md` §9.5): the deviations of the
+ * core above `deviation_threshold_pp` and rules 17 and 18 of the bucket,
+ * valued with the closes of the cloud as the web values them (informative:
+ * nothing fiscal). **Only when a threshold is passed** (mutant 32); at most
+ * once, and never for a week gone (the handler closes it `expired`; review of
+ * PR #109, avisos N4). A ledger that could not be read now closes the run
+ * `failed` and the next day tries again; on the last day of the period it is
+ * said, with its code (avisos B2). A ledger that is wrong sends nothing here:
+ * the monthly reminder and the integrity say it.
+ */
+export const weeklyReview: TaskRunner = async (context): Promise<TaskResult> => {
+  const last = lastDayOfWindow(
+    frequencyOf(context.task, context.frequencies.frequencies),
+    context.today,
+  );
+  /** A passing failure: tried again tomorrow, said on the last day of the period. */
+  const passing = (code: string): Promise<TaskResult> | TaskResult =>
+    last
+      ? sendOnce(context, weeklyReviewUnavailableMail(context.period, code, origin(context)))
+      : { state: "failed", outcome: { code } };
+  const ledger = await context.ledger();
+  if (!ledger.ok) {
+    return ledgerFailureKind(ledger.code) === "transient"
+      ? passing(ledger.code)
+      : { state: "done", outcome: { code: ledger.code } };
+  }
+  let reference: Awaited<ReturnType<typeof readReference>>;
+  try {
+    reference = await readReference(context.deps.objects, ledger.state);
+  } catch {
+    // The closes or the history of the ECB could not be read now: like the
+    // ledger, a passing failure, never a review valued with less (round 2).
+    return passing("reference_unavailable");
+  }
+  const external = "external" in reference ? reference.external : undefined;
+  const weights = coreWeights(ledger.state, context.today, ledger.settings, external);
+  const bucket = bucketStats(
+    ledger.state,
+    ledger.events,
+    context.today,
+    ledger.settings,
+    undefined,
+    external,
+  );
+  const facts = reviewFacts({
+    state: ledger.state,
+    weights,
+    bucket: bucket.controls.warnings,
+    ...(ledger.settings.deviation_threshold_pp === undefined
+      ? {}
+      : { deviationThreshold: ledger.settings.deviation_threshold_pp }),
+  });
+  const counts = {
+    deviations: facts.deviations.length,
+    rules: facts.rules.length,
+    unmeasured: facts.unmeasured.length,
+  };
+  if (!reviewDue(facts)) {
+    return { state: "done", outcome: { code: "review_nothing_to_do", counts } };
+  }
+  const amounts = await amountsOf(context);
+  return sendOnce(context, weeklyReviewMail(facts, amounts, context.period, origin(context)), {
+    ...counts,
+    amounts: amounts === "on" ? 1 : 0,
+  });
+};
+
+/** The tasks of the mail function that read the switch or the prices; the fiscal ones apart (`fiscal.ts`). */
 export const MAIL_RUNNERS: Readonly<Partial<Record<JobTask, TaskRunner>>> = {
   dispatch_findings: dispatchFindings,
   monthly_reminder: monthlyReminder,
+  weekly_review: weeklyReview,
 };

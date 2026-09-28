@@ -79,6 +79,19 @@ Agrupadas por entrega (§2 del encargo). Cada tarea de código empieza por su te
 
 ## E4 — Copias, integridad y avisos periódicos
 
-Volcado, integridad, avisos, procedimientos. Se detalla al empezar.
+- [x] T401 Traer `develop` tras la fusión de E3 (PR #108)
+- [x] T402 Bloque 0 en `questions.md` §20.1
+- [x] T403 `ATLAS_LEDGER_SIZE_WARNING_BYTES` de la función de integridad (1.024 a 104.857.600)
+- [x] T404 Los objetos del volcado en su registro (`objects`, solo `monthly_backup`)
+- [x] T405 N3 de §15: `previous/` solo con el SHA-256 que el manifiesto dice de él (`previousHistoryOf`, `generations()`)
+- [x] T406 [R40] `positions.json` (`positionsDocument`) y las decisiones del volcado (`dumpStep`, `dumpManifestStep`, `backupFindings`)
+- [x] T407 [R41] El ensayo de restauración (`restoreRehearsal`, `latestDump`)
+- [x] T408 [R42] Los hallazgos de la integridad (`integrityFindings`, listas cerradas de códigos) y sus correos
+- [x] T409 [R43, R44] La revisión semanal, la Renta y los modelos 720 y 721 (`reviewFacts`, `taxReturnFacts`, `informativeFacts`) y sus correos
+- [x] T410 Las tareas `monthly_backup`, `quarterly_integrity`, `weekly_review`, `tax_return_ready` e `informative_thresholds` en `apps/jobs`; todo el catálogo tiene su *runner*
+- [x] T411 Guardianes: los avisos de enero no alcanzan ningún precio; centinelas de las tareas de E4; códigos solo del correo en `tests/messages.test.ts`
+- [x] T412 [R45] Los procedimientos (`runbooks/`) y su ensayo versionado (`tests/runbook-016.test.ts`)
+- [x] T413 Contratos al día (`iam-permissions.md` §4, §5, §8 y §9, `mail.md`, `data-model.md` §1 y §4) y la lista de documentos de la 016 entera (questions §20.8)
+- [x] T414 Autocomprobación de §5, mutación, tubería completa, congelar y PR
 
-- **Anotado de la revisión de la PR #106 (N3 de fuentes y S3)**: quien use `manifest.previous` de `reference/ecb/` (un procedimiento de restauración, el volcado) **verifica su SHA-256** antes de usarlo: un corte entre los pasos 1 y 2 de una activación deja `previous/` con otro contenido que el que dice el manifiesto.
+- **Anotado de la revisión de la PR #106 (N3 de fuentes y S3)**: quien use `manifest.previous` de `reference/ecb/` (un procedimiento de restauración, el volcado) **verifica su SHA-256** antes de usarlo: un corte entre los pasos 1 y 2 de una activación deja `previous/` con otro contenido que el que dice el manifiesto. **Hecho en E4 (T405)**: la reconstrucción solo compara con `previous/` si cuadra; el volcado no copia `previous/`; el procedimiento del BCE lo manda comprobar.

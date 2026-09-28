@@ -229,7 +229,7 @@ Formato en `data-model.md` §1. Clave `jobs/<familia>/<tarea>/<periodo>.json`; *
 
 - Cada tarea no-correo deja en su registro, al cerrar, `findings`: `{ code, subject, counts?, dates? }`. `subject` es **opaco y sin datos personales**: `eodhd`, `alpha_vantage`, el `thesis_id`, `ecb`, `backup`, `integrity`. Nunca un `asset_id`, un símbolo, un ISIN ni un importe.
 - `dispatch_findings` (diaria, la primera del correo) lee el **último registro cerrado** de cada tarea productora y mantiene una racha por `(code, subject)` en `jobs/mail/notices/<code>--<subject>.json` (**un escritor**: el correo). Racha abierta y no avisada → reclamar el aviso (`sending`, `If-Match`), enviar, `sent`. Condición desaparecida en el último registro → la racha se cierra; si vuelve, es otra racha. Así se avisa **una vez por racha**, no una al día.
-- Hallazgos: `source_failing` (fallos seguidos en el umbral), `currency_unchecked` (Q1), `thesis_horizon_exceeded`, `ecb_update_rejected`, `ecb_calendar_mismatch`, `backup_failed`, `backup_object_differs`, `integrity_errors`, `restore_rehearsal_differs`, `ledger_size_above_threshold`, y `task_failed` para cualquier tarea cerrada como `failed`.
+- Hallazgos: `source_failing` (fallos seguidos en el umbral), `currency_unchecked` (Q1), `thesis_horizon_exceeded`, `ecb_update_rejected`, `ecb_calendar_mismatch`, `backup_object_differs`, `backup_ecb_inconsistent`, `backup_positions_missing`, `integrity_errors`, `restore_rehearsal_differs`, `ledger_size_above_threshold`, y `task_failed` para cualquier tarea cerrada como `failed` (un volcado que falla es el `task_failed` de `monthly_backup`: no hay un `backup_failed` aparte, questions §20.2).
 
 ### 5.5 El correo (E1, bloque 3)
 
@@ -304,7 +304,7 @@ El nombre del fichero en vigor es fijo por fuente (`eurofxref-hist.csv` o `api-e
 
 ## 9. E4: integridad, ensayo y tamaño
 
-1. `deepCheck` del libro vivo (`@atlas/domain/tools`): sus errores son `integrity_errors` con el recuento por código (Q7).
+1. `integrity` y `deepCheck` del libro vivo (`@atlas/domain/tools`), lo que hace `atlas check --deep` salvo el contraste de los tipos del BCE, que solo da avisos: sus **errores** son `integrity_errors` con el recuento por código, de la lista cerrada de `INTEGRITY_ERROR_CODES` (Q7).
 2. **Ensayo** (`rehearsal.ts`): el último volcado cerrado (del registro de `monthly_backup`) se carga en un almacén en memoria y se proyecta; el libro vivo se **restringe a los identificadores del volcado**, en el orden del vivo, y se proyecta; se comparan lotes, efectivo y proyección fiscal por identificador. Un evento del volcado que falta en el vivo, o con otros bytes, o cualquier diferencia de proyección: `restore_rehearsal_differs`, con los códigos de lo que difiere y sin importes.
 3. **Tamaño**: los bytes del libro leídos; por encima de `ATLAS_LEDGER_SIZE_WARNING_BYTES` (1.048.576 por defecto), `ledger_size_above_threshold` con el tamaño y el umbral (no son importes).
 

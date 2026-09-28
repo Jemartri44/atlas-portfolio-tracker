@@ -331,6 +331,28 @@ describe("reference/ecb/ in the bucket (R31)", () => {
     ]);
   });
 
+  it("compares with previous/ only when its bytes are what the manifest records for it (N3 of §15)", async () => {
+    const s3 = new TestOnlyFakeS3();
+    const store = new S3EcbHistoryStore(s3);
+    const old = await load();
+    const oldText = new TextDecoder().decode(old);
+    await store.activate(download(old));
+    // The source changes: the previous one is the ZIP's file, not the API's.
+    await store.activate(download(withNewDay(oldText), "api", "2026-10-02T15:30:00.000Z"));
+    s3.seed("reference/ecb/api-exr.csv", "damaged");
+    expect(await store.generations()).toEqual([
+      { text: "damaged", source: "api" },
+      { text: oldText, source: "zip" },
+    ]);
+    // A cut between steps 1 and 2 of a later activation leaves other bytes in
+    // previous/ than the ones the manifest records: never compared with.
+    s3.seed(
+      "reference/ecb/previous/eurofxref-hist.csv",
+      new TextDecoder().decode(withNewDay(oldText, "2026-05-01")),
+    );
+    expect(await store.generations()).toEqual([{ text: "damaged", source: "api" }]);
+  });
+
   it("rebuilds over a manifest that does not read, and stops at another writer", async () => {
     const s3 = new TestOnlyFakeS3();
     const store = new S3EcbHistoryStore(s3);

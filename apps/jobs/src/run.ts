@@ -12,6 +12,7 @@ import type { CivilDate } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
 import {
   claimRecord,
+  type DumpObject,
   type Finding,
   JOB_TASKS,
   type JobFrequencies,
@@ -62,15 +63,44 @@ export interface TaskContext {
   readonly frequencies: JobFrequencies;
   /** Marks the record `sending` right before a warning goes out: the step that makes it at most once. */
   readonly markSending: () => Promise<void>;
+  /** Which attempt of the period this is: above 1, an earlier one claimed it. */
+  readonly attempt: number;
+  /** What earlier attempts of the period noted they were going to write (only the dump). */
+  readonly earlier: readonly DumpObject[];
+  /**
+   * Notes in the record of this attempt, **before** writing them, the objects
+   * it is going to write (only the dump; review of PR #109, R2-B1): a run that
+   * dies right after a write, never closing its record, still leaves it said,
+   * and the retry keeps that object as its own. A conditional write on the
+   * record: another run in between stops this one.
+   */
+  readonly note: (objects: readonly DumpObject[]) => Promise<void>;
 }
 
 export interface TaskResult {
   readonly state: "done" | "failed" | "send_failed" | "send_unknown";
   readonly outcome: Outcome;
   readonly findings?: readonly Finding[];
+  /** Only the monthly dump: what it wrote, or found written (plan §8). */
+  readonly objects?: readonly DumpObject[];
 }
 
 export type TaskRunner = (context: TaskContext) => Promise<TaskResult>;
+
+/**
+ * A run that could not finish and says what it wrote before (review of PR
+ * #109, copias N3): its record keeps those objects, so the retry keeps them as
+ * its own and nothing else. Only the name of the cause is said.
+ */
+export class TaskInterrupted extends Error {
+  override readonly name = "TaskInterrupted";
+  constructor(
+    readonly objects: readonly DumpObject[],
+    readonly causeName: string,
+  ) {
+    super("the task was interrupted");
+  }
+}
 
 const level = (state: TaskResult["state"]): "INFO" | "WARN" | "ERROR" =>
   state === "done" ? "INFO" : state === "send_unknown" ? "WARN" : "ERROR";
@@ -86,6 +116,11 @@ export interface RunInput {
   readonly runner: TaskRunner;
   /** A period before today's: only taken up if it was left open, never started. */
   readonly onlyUnfinished?: boolean;
+  /**
+   * A period before today's of a warning (at most once): never sent any more,
+   * closed `expired` if it was left open (review of PR #109, avisos B1 and N4).
+   */
+  readonly expire?: boolean;
 }
 
 /** Runs `task` for `period`, once, whatever came before. */
@@ -137,6 +172,15 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
       say({ level: "WARN", code: "job_send_unknown" });
       return;
     }
+    if (input.expire === true) {
+      // A past week, or a January gone: a warning is never sent late, never twice.
+      await store.writeRecord(
+        recordIn(found as RunRecord, "expired", at(), { outcome: { code: "job_expired" } }),
+        etag,
+      );
+      say({ level: "WARN", code: "job_expired" });
+      return;
+    }
     let record = claimRecord(task, period, at(), found);
     etag = await store.writeRecord(record, etag);
     // Whether the mail may have gone: once `sending` is written, a run that
@@ -147,6 +191,10 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
       record = recordIn(record, "sending", at());
       etag = await store.writeRecord(record, etag);
       sending = true;
+    };
+    const note = async (objects: readonly DumpObject[]) => {
+      record = { ...record, objects: [...(record.objects ?? []), ...objects] };
+      etag = await store.writeRecord(record, etag);
     };
     const ignored = input.frequencies.ignored;
     let result: TaskResult;
@@ -160,13 +208,38 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
         ledger: input.ledger,
         frequencies: input.frequencies,
         markSending,
+        attempt: record.attempts,
+        earlier: found?.objects ?? [],
+        note,
       });
     } catch (error) {
       if (error instanceof JobsWriteConflict) {
         throw error;
       }
-      result = { state: sending ? "send_unknown" : "failed", outcome: { code: "task_error" } };
-      say({ level: "ERROR", code: "task_error", error_name: errorName(error) });
+      const interrupted = error instanceof TaskInterrupted ? error : undefined;
+      result = {
+        state: sending ? "send_unknown" : "failed",
+        outcome: { code: "task_error" },
+        // What this attempt noted, and what it says it wrote besides.
+        ...(interrupted === undefined
+          ? {}
+          : {
+              objects: [
+                ...(record.objects ?? []),
+                ...interrupted.objects.filter(
+                  (object) =>
+                    !(record.objects ?? []).some(
+                      (noted) => noted.key === object.key && noted.sha256 === object.sha256,
+                    ),
+                ),
+              ],
+            }),
+      };
+      say({
+        level: "ERROR",
+        code: "task_error",
+        error_name: interrupted === undefined ? errorName(error) : interrupted.causeName,
+      });
     }
     // A run that marked `sending` and then says it failed may have sent: the
     // same as a throw after it, `send_unknown` (round 2 of the review, R2-B1).
@@ -178,6 +251,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
           ? {}
           : { findings: result.findings }),
         ...(ignored.length === 0 ? {} : { frequencies: { ignored } }),
+        ...(result.objects === undefined ? {} : { objects: result.objects }),
       }),
       etag,
     );
