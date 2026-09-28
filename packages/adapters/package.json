@@ -58,6 +58,10 @@
       "types": "./dist/sync/http-remote.d.ts",
       "import": "./dist/sync/http-remote.js"
     },
+    "./reference-http": {
+      "types": "./dist/sync/http-reference.d.ts",
+      "import": "./dist/sync/http-reference.js"
+    },
     "./aws": {
       "types": "./dist/aws/index.d.ts",
       "import": "./dist/aws/index.js"
