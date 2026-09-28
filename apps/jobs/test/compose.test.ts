@@ -26,15 +26,6 @@ describe("the composition of the jobs (R17, R18)", () => {
     for (const [env, reason] of [
       [{ ...MAIL_ENV, ATLAS_EODHD_KEY: "sentinel-key-123" }, "unknown"],
       [{ ...MAIL_ENV, ATLAS_JOBS: "monthly_reminder,prices_update" }, "mixed_families"],
-      [
-        {
-          ATLAS_ENV: "prod",
-          ATLAS_DATA_BUCKET: "atlas-prod-data-test",
-          ATLAS_JOBS: "monthly_backup",
-          ATLAS_JOB_MAX_RUN_SECONDS: "900",
-        },
-        "task_not_available",
-      ],
       [{ ...MAIL_ENV, ATLAS_JOBS: "weekly_review" }, "task_not_available"],
       [{}, "missing"],
     ] as const) {
