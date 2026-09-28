@@ -12,7 +12,7 @@ import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fa
 import { TestOnlyFakeSes } from "../../../packages/adapters/test/aws/test-only-fake-ses.js";
 import { TestOnlyFakeSsm } from "../../../packages/adapters/test/aws/test-only-fake-ssm.js";
 import { composeOrFail } from "../src/compose.js";
-import { MAIL_ENV, RECIPIENT, SENDER, SENTINELS, setupJobs } from "./harness.js";
+import { MAIL_ENV, RECIPIENT, SENDER, SENTINELS, sentinelLedger, setupJobs } from "./harness.js";
 
 const KEY = "sentinel-key-of-the-source";
 const SUB = "108234567890123456789";
@@ -217,6 +217,68 @@ describe("the log of the jobs (G7, R15)", () => {
           expect(records.join("\n"), sentinel).not.toContain(sentinel);
         }
       }
+    }
+  });
+
+  it("carries none of them when the dump, the integrity and the periodic warnings run, or S3 denies them (E4)", async () => {
+    const backupEnv = {
+      ATLAS_ENV: "prod",
+      ATLAS_DATA_BUCKET: "atlas-prod-data-test",
+      ATLAS_JOBS: "monthly_backup",
+      ATLAS_JOB_MAX_RUN_SECONDS: "900",
+    };
+    const integrityEnv = {
+      ...backupEnv,
+      ATLAS_JOBS: "quarterly_integrity",
+      ATLAS_LEDGER_SIZE_WARNING_BYTES: "1024",
+    };
+    // The happy path: a dump, its rehearsal, the size above its threshold.
+    const s3 = new TestOnlyFakeS3();
+    s3.seed("ledger/ledger.jsonl", sentinelLedger({ deviation_threshold_pp: "5" }));
+    const dump = setupJobs({
+      env: backupEnv,
+      now: "2026-10-01T01:15:00Z",
+      s3,
+      ssm: new TestOnlyFakeSsm(),
+    });
+    await dump.run(["monthly_backup"]);
+    check(dump.logs);
+    const integrity = setupJobs({
+      env: integrityEnv,
+      now: "2026-10-01T02:15:00Z",
+      s3,
+      ssm: new TestOnlyFakeSsm(),
+    });
+    await integrity.run(["quarterly_integrity"]);
+    check(integrity.logs);
+    // The warnings of the mail function, amounts on.
+    const ssm = new TestOnlyFakeSsm();
+    ssm.set("/atlas/prod/mail/recipient", RECIPIENT);
+    ssm.set("/atlas/prod/mail/amounts", "on");
+    const periodic = setupJobs({
+      env: { ...MAIL_ENV, ATLAS_JOBS: "dispatch_findings,weekly_review" },
+      now: "2026-10-05T06:00:00Z",
+      s3,
+      ssm,
+    });
+    await periodic.run(["dispatch_findings", "weekly_review"]);
+    expect(periodic.ses.sent.length).toBeGreaterThan(1);
+    check(periodic.logs, [...periodic.ses.sent.map((mail) => mail.subject), "Renta", "puntos"]);
+    // The failures: S3 that denies, with a message full of them.
+    for (const [env, task] of [
+      [backupEnv, "monthly_backup"],
+      [integrityEnv, "quarterly_integrity"],
+    ] as const) {
+      const denied = setupJobs({ env, now: "2026-10-01T03:00:00Z", ssm: new TestOnlyFakeSsm() });
+      denied.s3.get = async () => {
+        throw Object.assign(new Error(FOREIGN), { name: "AccessDenied" });
+      };
+      await denied.run([task]);
+      check(denied.logs);
+      expect(
+        denied.logs.map((line) => JSON.parse(line).error_name),
+        task,
+      ).toContain("AccessDenied");
     }
   });
 

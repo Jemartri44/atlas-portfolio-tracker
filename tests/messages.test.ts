@@ -156,6 +156,15 @@ const JOBS_ONLY: Record<string, string> = {
   source_failing: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   thesis_horizon_exceeded: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   prices_file_unreadable: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  // E4: the findings of the dump and the integrity, said by the mail only.
+  backup_object_differs: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  backup_ecb_inconsistent: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  backup_positions_missing: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  integrity_errors: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  restore_rehearsal_differs: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  ledger_size_above_threshold: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  core_weights_partial:
+    "el correo de la revisión semanal lo dice con su frase (jobs/mail/periodic.ts)",
 };
 
 /**

@@ -122,6 +122,61 @@ describe("architecture (016): the jobs are reached by nothing that faces a user"
   });
 });
 
+describe("architecture (016): the warnings of January reach no price (E4, mutant 31)", () => {
+  /**
+   * No price reaches the fiscal path, not even a warning (§0 of the prompt;
+   * ADR-0031, second amendment). The income tax and the thresholds of the 720
+   * and 721 are decided in the domain by functions that take the ledger and
+   * the day, and reach nothing price-aware — the same rule that closes the
+   * 720 (`tests/architecture.test.ts`). The task composes them in a module of
+   * its own that reads no close: not `reference.ts`, not the door of the
+   * quotes, not a projection that takes the external prices.
+   */
+  const PRICE_AWARE = new RegExp(
+    `${sep}domain${sep}src${sep}(projections${sep}prices\\.ts$|quotes(\\.ts$|${sep}))`,
+  );
+  const fiscal = join(jobsSrc, "tasks", "fiscal.ts");
+
+  it("decides the income tax and the 720 in the domain with nothing price-aware", () => {
+    for (const file of ["informative.ts", "tax-return.ts"]) {
+      const reached = reach([join(domainRoot, "src", "jobs", file)]);
+      expect(reached.size, file).toBeGreaterThan(5);
+      expect(violationsOf(reached, PRICE_AWARE), file).toEqual([]);
+    }
+    // Not vacuous: the weekly review, which values with the closes, does reach them.
+    expect(
+      violationsOf(reach([join(domainRoot, "src", "jobs", "review.ts")]), PRICE_AWARE).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("composes them in a module that reads no close", () => {
+    expect(exists(fiscal)).toBe(true);
+    const local = [...reach([fiscal]).keys()]
+      .filter((file) => file.startsWith(jobsSrc))
+      .map((file) => relative(repoRoot, file))
+      .sort();
+    expect(local).toEqual([
+      "apps/jobs/src/ecb-history.ts",
+      "apps/jobs/src/ledger.ts",
+      "apps/jobs/src/log.ts",
+      "apps/jobs/src/run.ts",
+      "apps/jobs/src/tasks/fiscal.ts",
+      "apps/jobs/src/tasks/send.ts",
+    ]);
+    const { specifiers, code } = parse(fiscal);
+    expect(
+      specifiers.filter((specifier) =>
+        /^@atlas\/(domain\/quotes|adapters\/aws-daily|adapters\/aws-admin)$/.test(specifier),
+      ),
+    ).toEqual([]);
+    expect(
+      code.match(
+        /\b(readReference|referenceReader|ExternalPrices|externalPricesOf|coreWeights|bucketStats|bucketPositions|netWorth|valuations|contributionPlan)\b/g,
+      ),
+    ).toBeNull();
+  });
+});
+
 describe("architecture (016): one writer per object in prices/ (P18, M5)", () => {
   /**
    * The code of the cloud — the application of the jobs and the adapters of
@@ -316,6 +371,7 @@ describe("architecture (016): the clock is injected", () => {
     "packages/adapters/src/aws/s3-price-store.ts",
     "packages/adapters/src/aws/simulated-prices.ts",
     "packages/adapters/test/aws/s3-daily.test.ts",
+    "packages/domain/src/ecb/manifest.ts",
   ];
   /** Every source of a folder, the `.mjs` of the scripts too. */
   const sourcesOf = (folder: string): string[] =>
