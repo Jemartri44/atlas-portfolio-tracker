@@ -205,6 +205,19 @@ describe("atlas settings set: notification_email (feature 016, E3; §8.2 M7)", (
   });
 });
 
+describe("atlas settings set --notification-email (review of PR #108, N1)", () => {
+  it("is refused, saying where the recipient lives, and writes nothing", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    const before = (await h.store.load()).lines.length;
+    expect(await h.exec(["settings", "set", "--notification-email", "yo@example.invalid"])).toBe(
+      EXIT.usage,
+    );
+    expect(h.text()).toContain("terraform.tfvars");
+    expect(h.text()).toContain("nunca en el libro");
+    expect((await h.store.load()).lines).toHaveLength(before);
+  });
+});
+
 describe("atlas settings set: a change that moves a past tax year", () => {
   /** A sale agreed on 30/12/2027 and settled on 02/01/2028. */
   const straddling = async (confirm = true) => {
