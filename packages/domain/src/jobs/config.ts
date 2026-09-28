@@ -43,7 +43,7 @@ export const JOBS_CONFIG_VARIABLES: Readonly<Record<JobFamily, readonly string[]
   ],
   mail: ["ATLAS_MAIL_FROM", "ATLAS_ORIGIN", "ATLAS_OAUTH_IDLE_WARNING_DAYS"],
   backup: [],
-  integrity: [],
+  integrity: ["ATLAS_LEDGER_SIZE_WARNING_BYTES"],
 };
 
 export interface MailConfig {
@@ -71,6 +71,19 @@ export const PRICE_BUDGET_CEILINGS = { eodhd: 20, alpha_vantage: 25 } as const;
 /** The ceiling of the threshold of consecutive failures. */
 export const FAILURE_THRESHOLD_CEILING = 30;
 
+/**
+ * The integrity (E4; ADR-0028, «Revisión del plazo de las versiones»): the
+ * size of the ledger above which the lifetime of the non-current versions of
+ * ADR-0006 has to be looked at again. 1 MB by default in Terraform; **never
+ * in the code**, with its floor and ceiling fixed here.
+ */
+export interface IntegrityConfig {
+  readonly ledgerSizeWarningBytes: number;
+}
+
+/** The floor and the ceiling of `ATLAS_LEDGER_SIZE_WARNING_BYTES`: 1 KiB and 100 MiB. */
+export const LEDGER_SIZE_WARNING_RANGE = { floor: 1024, ceiling: 104_857_600 } as const;
+
 export interface JobsConfig {
   readonly env: "dev" | "prod";
   /** `/atlas/<env>/` (ADR-0034, row 3). */
@@ -82,6 +95,7 @@ export interface JobsConfig {
   readonly maxRunMs: number;
   readonly mail?: MailConfig;
   readonly prices?: PricesConfig;
+  readonly integrity?: IntegrityConfig;
 }
 
 const invalid = (variable: string, reason: string): ValidationError =>
@@ -241,5 +255,17 @@ export const parseJobsConfig = (env: Readonly<Record<string, string | undefined>
     maxRunMs: Number(maxRun) * 1000,
     ...(family === "mail" ? { mail: mailConfig(env) } : {}),
     ...(family === "prices" ? { prices: pricesConfig(env, environment) } : {}),
+    ...(family === "integrity"
+      ? {
+          integrity: {
+            ledgerSizeWarningBytes: wholeNumber(
+              env,
+              "ATLAS_LEDGER_SIZE_WARNING_BYTES",
+              LEDGER_SIZE_WARNING_RANGE.floor,
+              LEDGER_SIZE_WARNING_RANGE.ceiling,
+            ),
+          },
+        }
+      : {}),
   };
 };
