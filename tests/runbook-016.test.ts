@@ -79,6 +79,8 @@ case "$1 $2" in
       esac
       shift
     done
+    # NoSuchKey or AccessDenied: the CLI fails and writes nothing.
+    [ -f "$FAKE/s3/$key" ] || { printf 'An error occurred (NoSuchKey)\\n' >&2; exit 254; }
     cp "$FAKE/s3/$key" "$out"
     printf '{}\\n'
     ;;
@@ -93,13 +95,20 @@ const world = () => {
   mkdirSync(work);
   writeFileSync(join(dir, "bin", "aws"), FAKE_AWS);
   chmodSync(join(dir, "bin", "aws"), 0o755);
-  const run = (script: string): string =>
-    execFileSync("dash", ["-e", "-c", script], {
-      cwd: work,
-      env: { ...process.env, PATH: `${join(dir, "bin")}:${process.env.PATH}`, FAKE: dir },
-      encoding: "utf8",
-    });
-  return { dir, work, run };
+  const shell =
+    (flags: readonly string[]) =>
+    (script: string): string =>
+      execFileSync("dash", [...flags, "-c", script], {
+        cwd: work,
+        env: { ...process.env, PATH: `${join(dir, "bin")}:${process.env.PATH}`, FAKE: dir },
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+  /**
+   * `-e`, so a step that fails stops the rehearsal; and `interactive`, as it
+   * runs when pasted into a shell, which never stops (review of PR #109, copias N2).
+   */
+  return { dir, work, run: shell(["-e"]), interactive: shell([]) };
 };
 
 /** The schedule of the ECB as `get-schedule` gives it, every optional field set. */
@@ -193,5 +202,36 @@ describe("a monthly dump checked against its record (scheduled-warnings.md)", ()
     // It leaves nothing behind in the folder where it ran.
     expect(existsSync(join(w.work, "objeto.tmp"))).toBe(false);
     expect(existsSync(join(w.work, "registro.json"))).toBe(false);
+  });
+
+  it("says `MAL` of an object it cannot read, pasted into a shell without -e (copias N2)", () => {
+    const w = world();
+    const same = '{"line":1}\n';
+    // Two objects with the same bytes: the second one cannot be read. A stale
+    // `objeto.tmp` of the first would pass it off as `bien`.
+    const record = {
+      objects: [
+        { key: "backups/2026-10/ledger.jsonl", sha256: sha(same) },
+        { key: "backups/2026-10/prices/a.jsonl", sha256: sha(same) },
+        { key: "backups/2026-10/prices/b.jsonl", sha256: sha("") },
+      ],
+    };
+    mkdirSync(join(w.dir, "s3", "backups", "2026-10", "prices"), { recursive: true });
+    writeFileSync(join(w.dir, "s3", "backups", "2026-10", "ledger.jsonl"), same);
+    writeFileSync(join(w.dir, "s3", "backups", "2026-10", "prices", "b.jsonl"), "");
+    mkdirSync(join(w.dir, "s3", "jobs", "backup", "monthly_backup"), { recursive: true });
+    writeFileSync(
+      join(w.dir, "s3", "jobs", "backup", "monthly_backup", "2026-10.json"),
+      `${JSON.stringify(record)}\n`,
+    );
+    expect(w.interactive(block(text, "comprobar-volcado"))).toBe(
+      [
+        "bien backups/2026-10/ledger.jsonl",
+        "MAL backups/2026-10/prices/a.jsonl (no se lee)",
+        "bien backups/2026-10/prices/b.jsonl",
+        "",
+      ].join("\n"),
+    );
+    expect(existsSync(join(w.work, "objeto.tmp"))).toBe(false);
   });
 });
