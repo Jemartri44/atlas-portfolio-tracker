@@ -28,6 +28,17 @@ beforeEach(() => {
     });
   }
 });
+// The console of Node too: vitest takes it before it reaches a stream, so a
+// `console.log` would never be seen above (mutant 15 of E2 survived that way).
+beforeEach(() => {
+  for (const method of ["log", "info", "warn", "error", "debug"] as const) {
+    vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+      written.push(
+        args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" "),
+      );
+    });
+  }
+});
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -153,6 +164,62 @@ describe("the log of the jobs (G7, R15)", () => {
     check(jobs.logs);
   });
 
+  it("carries none of them when a source of prices or the ECB fails with a message full of them (E2)", async () => {
+    const symbols = JSON.stringify({
+      symbols_format: 2,
+      assets: {
+        ast_world: {
+          eodhd: "WORLD.XETRA",
+          currencies: { eodhd: "EUR" },
+          confirmed_at: "2026-09-01T00:00:00.000Z",
+          currency_check: { eodhd: { at: "2026-09-01T00:00:00.000Z" } },
+        },
+      },
+    });
+    const failures = [
+      () => Promise.reject(new Error(`${FOREIGN} WORLD.XETRA ast_world`)),
+      () => Promise.resolve(new Response(`${FOREIGN} WORLD.XETRA ast_world`, { status: 500 })),
+      () => Promise.resolve(new Response(`[{"date":"${FOREIGN}","close":"x"}]`)),
+    ];
+    const families = [
+      { ATLAS_JOBS: "ecb_update" },
+      {
+        ATLAS_JOBS: "prices_update",
+        ATLAS_PRICE_SOURCES: "eodhd",
+        ATLAS_PRICES_EODHD_DAILY_CALLS: "18",
+        ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS: "0",
+        ATLAS_PRICES_FAILURE_THRESHOLD: "3",
+      },
+    ];
+    for (const fail of failures) {
+      for (const family of families) {
+        const jobs = setupJobs({
+          env: {
+            ATLAS_ENV: "prod",
+            ATLAS_DATA_BUCKET: "atlas-prod-data-test",
+            ATLAS_JOB_MAX_RUN_SECONDS: "900",
+            ...family,
+          },
+          fetch: fail,
+        });
+        jobs.s3.seed("prices/symbols.json", symbols);
+        jobs.ssm.set("/atlas/prod/prices/eodhd-key", KEY);
+        await jobs.run([family.ATLAS_JOBS]);
+        // The source was reached, and failed: the path under test is the one of failure.
+        expect(jobs.fetched.length, family.ATLAS_JOBS).toBeGreaterThan(0);
+        check(jobs.logs, ["WORLD.XETRA"]);
+        const records = jobs.s3
+          .keys()
+          .filter((key) => key.startsWith("jobs/"))
+          .map((key) => jobs.s3.text(key) ?? "");
+        expect(records.length, family.ATLAS_JOBS).toBeGreaterThan(0);
+        for (const sentinel of [KEY, RECIPIENT, "WORLD.XETRA", "arn:aws"]) {
+          expect(records.join("\n"), sentinel).not.toContain(sentinel);
+        }
+      }
+    }
+  });
+
   it("carries none of them when the event or the configuration is wrong", async () => {
     const jobs = setupJobs();
     await jobs.handler({ event_format: 1, tasks: [KEY, RECIPIENT] }, { awsRequestId: RECIPIENT });
@@ -166,6 +233,7 @@ describe("the log of the jobs (G7, R15)", () => {
           objects: () => new TestOnlyFakeS3(),
           parameters: () => new TestOnlyFakeSsm(),
           mail: () => new TestOnlyFakeSes(),
+          fetch: () => Promise.reject(new Error("no network in the tests")),
           clock: { now: () => new Date(0) },
           log: (line) => logs.push(line),
         },

@@ -66,12 +66,10 @@ export class TestOnlyFakeS3 implements AdminObjectStore {
 
   private store(key: string, body: Uint8Array): void {
     this.version += 1;
-    const stored = { body: Uint8Array.from(body), etag: `"fake-${this.version}"` };
+    const versionId = `version-${this.version}`;
+    const stored = { body: Uint8Array.from(body), etag: `"fake-${this.version}"`, versionId };
     this.objects.set(key, stored);
-    this.history.set(key, [
-      ...(this.history.get(key) ?? []),
-      { versionId: `version-${this.version}`, stored },
-    ]);
+    this.history.set(key, [...(this.history.get(key) ?? []), { versionId, stored }]);
   }
 
   async get(key: string): Promise<StoredObject | undefined> {

@@ -9,6 +9,7 @@
 import type { ObjectStore, ParameterStore } from "@atlas/adapters/aws";
 import { JobsStore, JobsWriteConflict } from "@atlas/adapters/aws-jobs";
 import type { CivilDate } from "@atlas/domain";
+import type { FxRateSource } from "@atlas/domain/ecb";
 import {
   claimRecord,
   type Finding,
@@ -22,8 +23,22 @@ import {
   type RunRecord,
   recordIn,
 } from "@atlas/domain/jobs";
+import type { PriceSource, QuoteSource } from "@atlas/domain/quotes";
 import type { JobLedger } from "./ledger.js";
 import { errorName, logLine } from "./log.js";
+
+/**
+ * The sources of the daily tasks, built by the composition. The keys are a
+ * plain record here, not the type of the adapter that reads them: the mail
+ * task imports this module, and must not reach that adapter (B2).
+ */
+export interface JobSources {
+  readonly ecb?: () => FxRateSource;
+  readonly prices?: (
+    chosen: NonNullable<JobsConfig["prices"]>["sources"],
+    keys: Readonly<Partial<Record<QuoteSource, string>>>,
+  ) => Partial<Record<QuoteSource, PriceSource>>;
+}
 
 export interface JobsDeps {
   readonly config: JobsConfig;
@@ -31,6 +46,8 @@ export interface JobsDeps {
   readonly parameters: ParameterStore;
   /** Only the mail family has one (§8.2 B2). */
   readonly notifier?: Notifier;
+  /** Only the ECB and the prices functions have them. */
+  readonly sources?: JobSources;
   readonly now: () => Date;
   readonly log: (line: string) => void;
 }

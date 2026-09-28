@@ -70,7 +70,14 @@ export {
   targetHolidays,
 } from "./ecb/target.js";
 export { checkHistoryUpdate, type HistoryConflict, type HistoryUpdate } from "./ecb/update.js";
-export { type EcbUpdateResult, updateEcbHistory } from "./ecb/update-history.js";
+export {
+  type EcbGeneration,
+  type EcbHistoryRebuilder,
+  type EcbRebuildResult,
+  type EcbUpdateResult,
+  rebuildEcbHistory,
+  updateEcbHistory,
+} from "./ecb/update-history.js";
 export type { PendingDraftStore } from "./ports/draft-store.js";
 export type {
   DownloadedHistory,

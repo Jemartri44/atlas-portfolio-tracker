@@ -23,6 +23,7 @@ import {
   requestedEtag,
   versionOf,
 } from "@atlas/domain/access";
+import { unservableSymbols } from "@atlas/domain/quotes";
 import {
   acceptAppend,
   acceptInit,
@@ -278,6 +279,15 @@ export const syncRoutes = (context: SyncContext) => {
     const stored = await reference.get(key.key);
     if (stored === undefined) {
       return fail(refusal("not_found", { reason: "missing" }));
+    }
+    // Never served (review of PR #106, B1 and R2-B1): a key twice, or one it
+    // does not have. It did not go through the difference of `push`.
+    const unservable =
+      kind === "prices" && name === "symbols.json"
+        ? unservableSymbols(new TextDecoder().decode(stored.body))
+        : undefined;
+    if (unservable !== undefined) {
+      return fail(refusal("not_found", { reason: unservable }));
     }
     const version = versionOf(stored.etag);
     const headers = { etag: `"${version}"` };

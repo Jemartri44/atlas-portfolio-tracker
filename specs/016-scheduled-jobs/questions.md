@@ -188,6 +188,15 @@ Se completa en cada entrega. Hoy:
   - `docs/dependencies.md`: `@aws-sdk/client-sesv2@3.1141.0` ya instalado (E1, `17f3259`).
   - `CLAUDE.md` («Code architecture»): la puerta `@atlas/domain/jobs` y las de los adaptadores `aws-jobs` y `aws-ses`, si la dirección quiere nombrarlas.
   - Los códigos de las tareas en `tests/messages.test.ts` (`JOBS_ONLY`): la lista de lo que solo dicen el registro y el correo.
+- **Del cierre de E2** (2026-09-27):
+  - `docs/api.md` §6: `REFERENCE_NAME` de `prices/` por ida y vuelta con `priceFileName` (≤ 255, id no vacío), `symbols.json` por su nombre, `_status.json` y `config.json` no se sirven (400 `reference_name_invalid`); el índice solo lista lo que se serviría (Q4, M1).
+  - `docs/api.md` §9 o `docs/data-schema.md`: las variables de la función de precios (`contracts/ssm-and-config.md`) y los parámetros `/atlas/<entorno>/prices/eodhd-key` y `…/alpha-vantage-key`.
+  - `docs/data-schema.md` §1: en la nube, `reference/ecb/` (con `manifest.json`, `previous/`, `rejected/`) y `prices/` (cierres y `_status.json`) los escriben solo las tareas diarias; `prices/symbols.json`, solo `atlas admin prices push`; en la nube no hay `prices/config.json` (`data-model.md` §5).
+  - ADR-0031 (segunda o tercera enmienda): `symbols: "read_only"` y el resultado `currency_unchecked` (Q1); la nube nunca contrasta.
+  - `docs/specification.md` §9.5: los hallazgos de E2 y su texto (`contracts/mail.md` §2).
+  - `CLAUDE.md` («Code architecture»): la puerta `@atlas/adapters/aws-daily`, si la dirección quiere nombrarla.
+  - La orden nueva de la consola, `atlas admin prices push --env <entorno>`, donde se listen las órdenes de `atlas admin` (el procedimiento 3 de E4 la explica).
+  - **De la ronda 1 de la revisión de la PR #106**: `docs/api.md` §6, `GET /api/reference/prices/symbols.json` responde `404 not_found` con `reason: "unknown_key"` si el objeto tiene una clave de primer nivel que no es `symbols_format` ni `assets`; ADR-0029 (o `docs/data-schema.md`), la reconstrucción de un histórico dañado desde el ZIP oficial (`ecb_history_rebuilt`, sin `previous`); `docs/data-schema.md`, `prices/symbols.json` sin claves de primer nivel ajenas (`symbols_file_unknown_key`); la variable `ATLAS_DATA_BUCKET` debe empezar por `atlas-<ATLAS_ENV>-`.
 
 ## 7. Gemelos `.js`
 
@@ -452,3 +461,359 @@ Revisión sobre `003ee81` (comentario 5858858950): un bloqueante pequeño, resid
 Comprobado sobre el último commit de código (`bc24072`): `lint` 0, `typecheck` 0, y los proyectos `jobs` y `repo` con `--pool=forks --maxWorkers=1`: 151 tests en verde. `jobs-access` sigue en 7 tests (el guardián crece por dentro). La dirección pidió para esta ronda lint, typecheck y los tests de `jobs`, no la tubería entera; la CI de la PR pasa la tubería completa.
 
 **Congelada la ronda 2 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR.
+
+## 14. E2: los datos del día en la nube (2026-09-27)
+
+E1 fusionada en `develop` (PR #104, `2f1afbf`); la rama la trae con `29af456`. Ese `develop` traía también la PR #102 (`fix/prices-live-findings`), que cambia la cascada: `prices/config.json` gana `market_days` y `refetch_recent_days` por tipo de activo, y la cascada vuelve a pedir los últimos días de la cripto. E2 lo tiene en cuenta (§14.2, Q13).
+
+### 14.1 Bloque 0 de E2
+
+Las verificaciones se hicieron antes de escribir el código de cada punto; este apartado se escribió tras los dos primeros commits de E2 (`b9e349f` y `d318153`), que aplican lo que aquí se verifica. Lo digo como desviación del orden del §6 del encargo.
+
+**Punto 1 — el cupo compartido** (documentación releída el 2026-09-27):
+
+- **EODHD**: `https://eodhd.com/financial-apis/api-limits`: «Free plan — 20 API calls per day»; «For subscription plans the daily limit resets at midnight GMT. The counter itself is reset lazily: it is zeroed by your first request after midnight»; «Failed lookups are charged. A request for a ticker that does not exist returns HTTP 404 and still costs its normal price»; agotado el día, «requests are refused with HTTP 402»; por minuto, 429 con `Retry-After`, a 1.000 por minuto.
+- **Alpha Vantage**: `https://www.alphavantage.co/support/`: «standard API usage limit (25 API requests per day)». La hora de reinicio, un límite por segundo o por minuto y la forma del error **siguen sin documentar**: el segundo de espera y el 200 con `Note`/`Information` salen de la observación en vivo de la 013.
+- **Usar la misma clave desde dos máquinas del mismo usuario**: EODHD prohíbe compartirla con **otras personas** (`…/terms-conditions`), no nombra dispositivos; Alpha Vantage concede el uso «on any computer or mobile device … that you own or control, for personal, non-commercial use» (`terms_of_service`, §2.a, PDF leído a mano). Que una función en la nube cuente como un dispositivo que el usuario controla es interpretación.
+- **Conclusión**: nada cambia desde el 2026-09-24. Los presupuestos de la nube quedan en **18 y 23** (§8.2 M5), que dejan 2 y 2 a la consola del mismo día GMT (EODHD) o de las mismas 24 horas (Alpha Vantage), con la regla de la 013: la reserva se escribe antes de llamar, en `_status.json` del almacén de cada uno. **Los dos almacenes no se ven**: la consola cuenta en su `prices/_status.json` y la nube en el del bucket, así que la suma la garantiza el reparto 18+2 y 23+2, no un contador común. Es lo que decidió M5; lo digo porque la consola, con la opción explícita de E3, puede gastar sus 2 y nada la para en 20.
+
+**Punto 2 — los nombres de `prices/` que se sirven** (código de `2f1afbf`, guion `016-names.mjs` sobre `priceFileName` compilado):
+
+| `asset_id` | nombre (`priceFileName`) | regla de la 015 | regla nueva (ida y vuelta, ≤ 255) |
+|---|---|---|---|
+| `ast_world`, `IE00B4L5Y983` | igual + `.jsonl` | sí | sí |
+| `ast%x` | `ast%25x.jsonl` | no | sí |
+| `ast(b)`, `ast!b`, `ast'b`, `ast*b`, `ast~b` | sin codificar | no | sí |
+| `_x`, `-x` | `_x.jsonl`, `-x.jsonl` | no | sí |
+| `.x` | `%2Ex.jsonl` | no | sí |
+| `..` | `%2E..jsonl` | no (`..`) | sí: sin `/`, es una clave plana |
+| `a b`, `a/b`, `ñandú` | `a%20b.jsonl`, `a%2Fb.jsonl`, `%C3%B1and%C3%BA.jsonl` | no | sí |
+| 123 y 124 caracteres | 129 y 130 caracteres | no (> 128) | sí |
+| 250 caracteres o más | 256 o más | no | **no** |
+| — | `symbols.json` | sí | sí, por su nombre |
+| — | `_status.json`, `config.json` | `_status` no; `config` sí | **no** (Q4) |
+
+- **Qué admite el cargador como `asset_id`**: cualquier cadena (`schema/validate.ts:73`, `asset_id: req("string")`); la regla nueva exige además que no sea vacía (`.jsonl` no se sirve).
+- **Lo único que sigue sin pasar** es un `asset_id` cuyo nombre de fichero pasa de 255 caracteres. **No es una restricción nueva**: la consola tampoco puede guardar ese fichero, porque el sistema de ficheros no admite nombres de más de 255 bytes, y el nombre codificado es ASCII. Ningún dispositivo necesita, por tanto, un nombre que la regla no sirva: **no para**.
+- **Sin verificar, para la 018**: que CloudFront y la Function URL entreguen `rawPath` sin decodificar las secuencias `%XX` (el manejador compara el segmento tal como llega). Si las decodificaran, `ast%25x.jsonl` llegaría como `ast%x.jsonl` y se negaría (400), nunca serviría otro fichero.
+
+**Punto 3 — tiempo y memoria de la Lambda** (límites en §1.7):
+
+- **BCE**: un ZIP de unos 600 KB y un CSV de unos 7.100 días por unas 40 divisas; leerlo y compararlo en el dominio tarda menos de un segundo en la máquina de desarrollo. Propuesta: 300 s y 256 MB.
+- **Precios**: como mucho 18 + 23 = 41 llamadas, con un segundo entre las de Alpha Vantage. **Los adaptadores de la 013 no ponen tiempo máximo a `fetch`**: en la nube, una fuente colgada consumiría la Lambda entera. La composición de la tarea les pasa un `fetch` con `AbortSignal.timeout(15 s)`: el peor caso son 41 × 15 s = 615 s, por debajo de 900 s. Propuesta: 900 s y 256 MB para la función de precios, y `ATLAS_JOB_MAX_RUN_SECONDS` igual a su `timeout` en cada función.
+
+**Punto 4 — `updatePrices` y `symbols.json`** (`cascade.ts` de `2f1afbf`): escribe `symbols.json` al contrastar una fuente sin `currency_check` (`contrast`) y al limpiar los días de una purga (`clearRefetched`). Con `symbols: "read_only"` (Q1, aceptada): una fuente sin contrastar se deja fuera como `currency_unchecked` (informe, nunca `_status.json`), y los días de una purga no se persiguen; así ninguno de los dos caminos escribe. El almacén de S3 se niega además a `writeSymbols` y a `rewriteCloses` (segunda cerradura). **Sale bien: E2 sigue.**
+
+### 14.2 Qué hay en la rama
+
+| Commit | Qué |
+|---|---|
+| `29af456` | `develop` traído a la rama tras la fusión de E1 (con la PR #102) |
+| `b9e349f` | Q1: `updatePrices({ symbols: "read_only" })`: una fuente sin `currency_check` queda fuera como `currency_unchecked` (con `unchecked` en el informe), no se contrasta y no se persiguen los días de una purga; la consola dice el nuevo resultado |
+| `d318153` | M1: `REFERENCE_NAME` de `prices/` por ida y vuelta con `priceFileName` (≤ 255, id no vacío); `symbols.json` se sirve por su nombre, `_status.json` y `config.json` no; el índice filtra lo que no se serviría |
+| `af26191` | §14.1, el bloque 0 |
+| `5fa7429` | El cupo de la nube en variables (`ATLAS_PRICE_SOURCES`, `ATLAS_PRICES_EODHD_DAILY_CALLS` 0-20, `ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS` 0-25, `ATLAS_PRICES_FAILURE_THRESHOLD` 1-30), `simulated` negada en `prod`, y `cloudPriceConfigText`, que las convierte en el texto de un `prices/config.json` para la cascada |
+| `484a6ae` | Los hallazgos de E2 en el dominio (`PRODUCER_FINDINGS` de `ecb_update` y `prices_update`, `ecbFindings`, `pricesFindings`) y su redacción en `mail/notice.ts`, con los recuentos de una lista cerrada («algunos» si no es un entero) |
+| `17d8333` | `ecbRecovery`: nada, deshacer desde `previous/` o dañado |
+| `1cdaa2c` | Los adaptadores: `S3EcbHistoryStore` (activar, conservar un rechazo, recuperar), `S3PriceStore` (cada escritura con `If-Match` sobre lo que leyó la misma transacción; se niega a `writeSymbols` y a `rewriteCloses`), las claves de SSM (`/atlas/<entorno>/prices/eodhd-key` y `…/alpha-vantage-key`) y la fuente simulada; puerta `@atlas/adapters/aws-daily` |
+| `d0effc2`, `ec868ed` | `apps/jobs`: la composición construye las fuentes (con `fetch` limitado a 15 s) y las tareas `ecb_update` y `prices_update`, que no envían nada y dejan sus hallazgos en su registro |
+| `34f25ee` | La tarea de correo alcanzaba el adaptador de las claves por un `import type` de `run.ts`: lo vio el guardián B2 al ampliarlo; ahora el tipo de las claves es un registro simple |
+| `7632013` | Guardián: los escritores diarios y la fuente simulada, fuera de la API, la web, la consola y la tarea de correo; y los ficheros de E2 bajo el guardián del reloj |
+| `271a267` | La fuente simulada pasa de `adapters/src/prices/simulated.ts` a `adapters/src/aws/simulated-prices.ts` (§14.3) |
+| `74cbb9e`, `d5963aa` | `atlas admin prices push` (bloque 3): `symbolsPushPlan` en el dominio y la orden en la consola |
+| `f29d171` | Guardián: un solo escritor por objeto en `prices/` (la nube nunca escribe `symbols.json` ni nombra `config.json`) |
+| `b159121`, `2639a4b`, `2de2671` | Tests: centinelas en los caminos de fallo de las dos tareas diarias; los activos, solo del libro; el aviso de tesis, solo por el horizonte |
+| `48a8355` | El plan y `contracts/mail.md` al día con lo construido |
+| `5506399`, `187954c` | Los dos huecos que abrió la mutación (§14.5): los centinelas capturan también la consola de Node; `push` con otro escritor justo después de su lectura |
+| `9e28eea` | `contracts/iam-permissions.md` §8 (el rol de administración para `push`) y §9 (tiempo y memoria de las dos funciones); `tasks.md` de E2 |
+
+### 14.3 Desviaciones del plan, dichas
+
+- **`symbolsPushPlan` vive en `domain/src/quotes/symbols-push.ts`**, no en `domain/src/jobs/` como decía el plan: la consola no puede alcanzar el código de las tareas (guardián de 016), y la regla es de la correspondencia de símbolos, no de una tarea.
+- **Los hallazgos van en un fichero, `domain/src/jobs/findings.ts`**, y no en `prices-findings.ts` y `ecb-findings.ts`: las dos funciones son cortas y comparten la lista cerrada `PRODUCER_FINDINGS`.
+- **La fuente simulada vive en `adapters/src/aws/simulated-prices.ts`**, no en `adapters/src/prices/`: un test de arquitectura de la 013 exige que ningún *subpath* del paquete que la web podría importar alcance `prices/`, donde viven las direcciones de las fuentes, y la puerta `aws-daily` es uno. El guardián de los dobles la nombra con su nueva ruta; sigue siendo **la única excepción declarada**.
+- **`atlas admin prices push` y un remoto que no se lee**: el encargo dice qué hacer con un fichero local ilegible (negarse), no con un remoto ilegible. La orden **lo sustituye, diciéndolo** en la diferencia («no se puede leer: se sustituye entero»), con la misma confirmación tecleando el entorno: es la única forma de arreglarlo sin la CLI de AWS. Un remoto **de un formato más nuevo** se niega (`symbols_push_remote_newer`): una consola vieja nunca reescribe un fichero más nuevo. Q14.
+- **`atlas admin prices push` sube los bytes locales tal cual**, sin volver a escribirlos: un fichero de formato 1 se sube como está (la nube lee el formato 1); uno de formato 1 cuya confirmación deja cierres mal guardados se niega como `misstored`, porque el lector lo convierte así.
+- **Un conflicto de `push`** (otro escritor entre la lectura y la escritura) sale con el código 1 (`symbols_push_conflict`), como `forget_contention`, y nunca reintenta: la diferencia nueva hay que verla.
+- **El registro de la tarea de precios** lleva recuentos por resultado (`updated`, `up_to_date`, `failed`, `out_of_budget`, `unchecked`, `no_symbol`) y ningún id; el del BCE, `undone`, `new_days`, `calendar` o `conflicts`.
+- **Un historial del BCE dañado** (el manifiesto no cuadra y `previous/` no deja deshacer) es un hallazgo más, `ecb_history_damaged`, con su frase en el correo; el plan lo nombraba en §7.1 y no en la tabla del contrato del correo, que ya lo tiene.
+
+### 14.4 Cómo se vio cada test en rojo
+
+- **La cascada con `read_only`** (Q1): los tres tests nuevos de `cascade.test.ts` contra la cascada de `2f1afbf`: 3 en rojo (`016-e2-red1.log`).
+- **Los nombres de `prices/`** (M1): los casos nuevos de `sync-routes.test.ts` contra la regla de la 015; y dos tests de la API que fijaban la respuesta anterior (`prices/notes.txt` daba 404 `type`; ahora da 400 `reference_name_invalid`) fallaron con el cambio y se pusieron al día a propósito (el caso del 404 `type` pasa a `reference/ecb/`).
+- **El guardián de los mensajes** se puso en rojo con los cinco códigos nuevos de los hallazgos y se declararon en `JOBS_ONLY`; con los tres de `push`, en `CLI_ONLY`.
+- **Los guardianes, en rojo de verdad**: el B2 ampliado encontró que la tarea de correo alcanzaba `aws/price-keys.ts` por un `import type` (`34f25ee`); el test de arquitectura de la 013 encontró la fuente simulada bajo `prices/` alcanzable por un *subpath* (`271a267`). Los nuevos se vieron morir con una importación de `aws-daily` en la API y con una escritura de `symbols.json` y un `config.json` en el código de la nube.
+- **Las tareas y los almacenes**: sus tests pasaron tras ajustar el arnés (las compras del libro de prueba estaban fechadas después del día de la tarea, y el cargador ahora proyecta al día); su rojo es la mutación (§14.5), donde cada regla de §4.2 que atan cayó con su mutante.
+
+### 14.5 Mutación (lotes `016-e2-a.json` a `016-e2-e.json`, uno a uno tras la puerta de memoria)
+
+**30 ejecuciones: de los 28 mutantes, 26 muertos a la primera; los dos que sobrevivieron descubrieron dos huecos de los tests, que se cerraron, y murieron al repetirlos** (`15-2`, `13bis-b-2`; lote `016-e2-e.json`):
+
+| Id | Mutante (§6 del encargo) | Test que lo mata | Veredicto |
+|---|---|---|---|
+| 11 | pedir el día en curso (`to = today`) [11] | `apps/jobs/test/daily.test.ts` | KILLED |
+| 12 | llamar a una fuente sin reservar antes la llamada [12] | `daily.test.ts` (conflicto: la reserva se queda) | KILLED |
+| 13a | el almacén de la nube escribe `symbols.json` [13] | `adapters/test/aws/s3-daily.test.ts`, `tests/jobs-access.test.ts` | KILLED |
+| 13b | el almacén lee un `prices/config.json` del bucket [13] | ídem | KILLED |
+| 14a | descargar una correspondencia sin contrastar (la cascada) [14] | `daily.test.ts` | KILLED |
+| 14b | la tarea corre la cascada en lectura y escritura (contrasta en la nube) [14] | `daily.test.ts` | KILLED |
+| 15 | las claves impresas con `console.log` [15] | `apps/jobs/test/sentinels.test.ts` | **SURVIVED** (ver abajo) |
+| 15-2 | el mismo, con los centinelas que capturan la consola de Node | `sentinels.test.ts` | KILLED |
+| 16 | sin claves, la ejecución falla (y el correo lo diría) [16] | `daily.test.ts` | KILLED |
+| 17a | la fuente simulada aceptada en `prod` [17] | `daily.test.ts`, `domain/test/jobs/prices-config.test.ts` | KILLED |
+| 17b | un segundo doble, sin nombrar, en el artefacto [17] | `tests/jobs-package.test.ts` | KILLED |
+| 18a | `not_found` cuenta como fallo de la fuente [18] | `domain/test/quotes` | KILLED |
+| 18b | una fuente avisada por debajo de su umbral [18] | `daily.test.ts`, `findings.test.ts` | KILLED |
+| 18bis | un aviso de tesis por algo que no es el horizonte [18 bis] | `daily.test.ts` | KILLED |
+| 18bis-b | la tarea de correo alcanza el adaptador de las claves [18 bis] | `jobs-access.test.ts`, por su regla | KILLED |
+| 19a | el BCE activado sin copia en `previous/` [19] | `s3-daily.test.ts` | KILLED |
+| 19b | un lector que da por bueno el fichero en vigor sin su hash [19] | `s3-daily.test.ts` | KILLED |
+| 19c | el manifiesto escrito antes que el fichero [19] | `s3-daily.test.ts` | KILLED |
+| 20a | un conflicto de `prices/` reintentado sobre una lectura nueva [20] | `s3-daily.test.ts`, `daily.test.ts` | KILLED |
+| 20b | un conflicto de `reference/ecb/` reintentado [20] | `s3-daily.test.ts` | KILLED |
+| 21 | los activos sacados también de `symbols.json` [21] | `daily.test.ts` (`ast_stranger`) | KILLED |
+| 13bis-a | `push` sube un `symbols.json` con `misstored` [13 bis] | `apps/cli/test/admin/prices-push.test.ts` | KILLED |
+| 13bis-b | `push` escribe sobre una lectura posterior, no sobre la que enseñó la diferencia [13 bis] | `prices-push.test.ts` | **SURVIVED** (ver abajo) |
+| 13bis-b-2 | el mismo, con el test de otro escritor tras la lectura | `prices-push.test.ts` | KILLED |
+| 13bis-c | `push` acepta `--yes` [13 bis] | `prices-push.test.ts` | KILLED |
+| 13bis-d | `push` confirma sin teclear el entorno [13 bis] | `prices-push.test.ts` | KILLED |
+| 13bis-e | `push` sube también `config.json` [13 bis] | `prices-push.test.ts` | KILLED |
+| 13bis-f | `push` deja un fichero de estado en la carpeta [13 bis] | `prices-push.test.ts` | KILLED |
+| 13bis-g | `push` reescribe un remoto de un formato más nuevo | `prices-push.test.ts` | KILLED |
+| M1 | se sirve un nombre de `prices/` que no hace la ida y vuelta | `domain/test/access/sync-routes.test.ts`, `apps/api/test/sync.test.ts` | KILLED |
+
+- **15 sobrevivió por un hueco de E1**: los centinelas espiaban `process.stdout.write` y `process.stderr.write`, pero vitest se queda con `console.*` antes de que llegue a un flujo, así que un `console.log` nunca se veía. §10.7 (familia 6) decía «`stdout` y `stderr` capturados»: era cierto de los flujos y no de la consola. Ahora se espían también `console.log`, `info`, `warn`, `error` y `debug` (`5506399`); `15-2` muere.
+- **13bis-b sobrevivió porque el test del conflicto metía al otro escritor dentro de la escritura**: la lectura nueva del mutante también veía el ETag viejo y la escritura fallaba igual. El test nuevo mete al otro escritor justo después de la lectura que enseña la diferencia (mientras se pide confirmación); con el mutante, la segunda lectura ve su ETag y lo pisa. `13bis-b-2` muere (`187954c`).
+
+### 14.6 Autocomprobación de §5, familia a familia
+
+| Familia | Qué miré | Con qué | Resultado |
+|---|---|---|---|
+| 1. Guardianes eludibles | Que las claves, los almacenes diarios y la fuente simulada no se alcancen desde la API, la web, la consola ni la tarea de correo; que la nube no escriba `symbols.json` ni nombre `config.json`; que el guardián del reloj cubra lo nuevo | `jobs-access.test.ts` sobre el grafo parseado (también los `import type`), el test de arquitectura de la 013 sobre los *subpaths*, `jobs-package.test.ts` sobre las entradas del paquete; cada regla nueva vista morir por sí misma | **Dos hallazgos reales** (§14.4): la tarea de correo alcanzaba `price-keys.ts` por un `import type`, y la fuente simulada quedaba bajo `prices/`, alcanzable por un *subpath*. Cuenta de tests: `architecture` 51 → 51, `api-access` 28 → 28, `jobs-access` 7 → 12, `jobs-package` 3 → 3, `messages` 11 → 11. Ninguno baja |
+| 2. Reglas sin test o sin valor exacto | Cada techo (20, 25, 30), cada valor por defecto (18, 23, 3), cada recuento del registro y de los hallazgos, el día de la descarga, el umbral de fallos seguidos, el texto de cada aviso | `prices-config.test.ts` (bordes 0, techo y techo + 1), `findings.test.ts`, `notice-mail.test.ts` (asunto y cuerpo exactos), `daily.test.ts` (`to=2026-09-30`, recuentos exactos, el aviso el día 03 y ninguno más del 04 al 06) | Cada regla con su mutante muerto (§14.5) |
+| 3. Reloj y red | Ningún `new Date()` ni `Date.now()` en lo nuevo; ninguna red en los tests; un tiempo máximo en cada llamada real | El guardián del reloj con los ficheros de E2; `fetch` inyectado en la composición (el de los tests rechaza lo que no espera); `AbortSignal.timeout(15 s)` en `compose.ts` | Limpio. La fuente simulada usa `new Date(fecha)` y `Date.parse`, nunca la hora real |
+| 4. Documentos desalineados | Las cabeceras de cada fichero nuevo contra su código; el plan y los contratos contra lo construido | Relectura; el plan tenía nombres de ficheros que no existen (`prices-findings.ts`, `ecb-findings.ts`, `jobs/symbols-push.ts`, `prices/simulated.ts`) y los tests de R22-R33 con nombres viejos | Corregidos en `48a8355`; §10.7, familia 6, decía «`stdout` y `stderr` capturados» sin la consola de Node: lo corrige §14.5 |
+| 5. Techo del paquete | Si E2 mueve el paquete web | La tubería (`build` con `check-bundle.mjs`) | La web no importa nada nuevo; arranque y total en §14.7 |
+| 6. Registros con datos sensibles | La clave (también en la URL), los símbolos, los `asset_id`, el mensaje de un error ajeno, en los caminos de fallo de las dos tareas | `sentinels.test.ts` (red que rechaza con un mensaje lleno de centinelas, un 500 con ellos en el cuerpo, una respuesta ilegible; BCE y precios; registros de `jobs/` incluidos) y `daily.test.ts` (401: la clave en la URL pedida y en ningún registro ni log) | Limpio tras cerrar el hueco de la consola (15-2) |
+| 7. Entradas sin validar | Las variables de la función, las claves de SSM, los nombres de `prices/`, el `symbols.json` del bucket y el local | `parseJobsConfig` (enteros, techos, fuentes conocidas y sin repetir); `readPriceKeys` (imprimibles, 1-256, nunca el valor en el error); `isPriceFileName` (ida y vuelta, `decodeURIComponent` en un `try`); `parseSymbols` estricto; `push` con UTF-8 `fatal` a los dos lados | Limpio |
+| 8. Dos pasos sin corte | Reservar y llamar; escribir cierres y estado; activar el BCE (tres escrituras); leer y escribir en `push` | `s3-daily.test.ts` (un corte en cada hueco de la activación, un conflicto a mitad de transacción), `daily.test.ts` (conflicto: la reserva se queda), `prices-push.test.ts` (otro escritor entre la lectura y la escritura) | 12, 19a-c, 20a-b y 13bis-b-2 muertos |
+| 9. Procedimientos | — | — | No aplica en E2: los procedimientos son de E4 (el de `push` es el 3) |
+| 10. `--yes` | `atlas admin prices push` | `prices-push.test.ts`: `--yes` rechazado antes de leer nada; sin terminal, salida 4; lo tecleado que no es el entorno, cancelado; la diferencia en pantalla antes de preguntar | 13bis-c y 13bis-d muertos |
+
+### 14.7 Tubería
+
+`016-pipeline.sh` sobre `9e28eea` (cada paso tras la puerta de memoria, nada en paralelo):
+
+```
+lint 0 5s
+typecheck 0 4s
+cov1-domain 0 217s   (1.699 tests; dominio al 100 %: sentencias 8.936, ramas 5.520, funciones 2.014, líneas 8.502)
+cov1-others 0 678s   (1.710 tests)
+cov2-domain 0 171s   (1.699 tests)
+cov2-others 0 729s   (1.710 tests)
+build 0 13s          (lambda.zip 1.442.976 bytes; jobs.zip 1.627.481 bytes, 1.408 entradas)
+```
+
+- **El paquete web, igual a `develop`**: arranque 74.194 y total 301.825 bytes gzip, medidos con una copia de `check-bundle.mjs` que imprime los bytes, sobre este `build` y sobre un `vite build` de `2f1afbf` en la carpeta principal (que ya lleva la PR #102). E2 no añade nada a la web: la regla de nombres está en el servidor y en un módulo que la web no arranca, y `symbolsPushPlan` no lo importa la web.
+- `git diff origin/develop -- tests/fixtures` vacío; ningún gemelo `.js`; la cuenta de tests de los guardianes, en §14.6.
+- **Predicción fiscal** (escrita antes de correr nada): E2 no toca ningún camino fiscal; la cascada solo gana una rama que la consola no usa. Cumplida: `tests/fixtures` no cambia y la suite de la salida fiscal pasa entera en las dos pasadas.
+
+### 14.8 Congelado
+
+**Código congelado en `9e28eea`**; la entrega queda congelada en el commit que añade esta sección, cuyo SHA dice la descripción de la PR. Mientras dura la revisión no se empuja nada a la rama.
+
+### 14.9 Preguntas nuevas de E2
+
+- **Q13 — `market_days` y `refetch_recent_days` en la nube.** La PR #102 los añadió a `prices/config.json` con valores por tipo de activo. `cloudPriceConfigText` escribe solo `source_order`, `daily_calls` y el umbral, así que la nube usa **los valores por defecto** de `parsePriceConfig` (los mismos que la consola sin `config.json`). Recomendación: dejarlo así; si la dirección los quiere configurables en la nube, son variables más de la función de precios, con su techo.
+- **Q14 — `atlas admin prices push` y un remoto ilegible** (§14.3). La orden lo sustituye, diciéndolo en la diferencia y con la misma confirmación; uno de formato más nuevo se niega. Recomendación: así.
+- **Q15 — ~~La consola de Node en los centinelas de la API~~. Retirada** (revisión de la PR #106, N3 de `push`): era falsa. `apps/api/test/sentinels.test.ts:33-38` ya espía `console.log`, `info`, `warn`, `error` y `debug` desde `57fcfa0`, anterior a esta PR; yo leí solo las líneas 31-32. El hueco de §14.5 era solo de los centinelas de las tareas, y está cerrado.
+- **Q16 — El tiempo máximo de cada llamada (15 s)** es una constante de la composición (`SOURCE_TIMEOUT_MS`), no una variable: con 41 llamadas cabe en 900 s. Recomendación: constante; si la dirección lo quiere configurable, es una variable más con techo.
+
+## 15. Revisión de la PR #106, ronda 1: decisiones de la dirección y arreglos (2026-09-27)
+
+Revisiones sobre `eab6ae9`: fuentes y S3 (comentario 5859690207) y `push` y guardianes (comentario 5859773419). Decisiones de la dirección, del mismo día. Cada arreglo de lógica lleva su test visto en rojo y su mutante, que sobrevive antes (es el código anterior, o el revisor lo vio sobrevivir) y muere después.
+
+### 15.1 Decisiones
+
+**Fuentes y S3**
+
+- **B1 (a).** El paso 2 de la activación del BCE se condiciona al ETag del fichero leído junto al manifiesto, no a un `get` nuevo. Test con el entrelazado del revisor (A y B verifican, A escribe, B escribe…): B falla sin mezclar nada. Además se corrigen la cabecera y el plan.
+- **B1 (b).** Autorreparación: si `recover()` da `damaged`, la tarea del BCE no se queda parada. Reconstruye el histórico entero desde el ZIP oficial del BCE, que es la fuente de verdad y es reproducible, con una generación nueva escrita con escrituras condicionales, y deja el hallazgo `ecb_history_rebuilt`. Test con el estado mezclado del revisor. También se corrigen la cabecera y el plan.
+- **N1.** `parseJobsConfig` exige que `ATLAS_DATA_BUCKET` empiece por `atlas-<ATLAS_ENV>-`, y la fuente simulada exige `ATLAS_ENV=dev` y un bucket `atlas-dev-`. Con su test.
+- **N2.** Se resuelve en E3: cuando la consola baje los precios de la nube, su presupuesto por defecto pasa a ser el sobrante del plan (2 y 2), salvo que `config.json` diga otra cosa. Anotado en E3 y para su revisión.
+- **N3.** Para E4: quien use `manifest.previous` verifica el SHA.
+
+**`push` y guardianes**
+
+- **B1.** `symbolsPushPlan` rechaza cualquier clave de nivel superior que no sea `symbols_format` ni `assets`, con un código nuevo que nombra la clave y nunca su valor. El mismo rechazo se aplica en `parseSymbols`, al leer el fichero en la nube y en la API. Test con un centinela.
+- **N1.** Un especificador que empieza por `#` falla cerrado en `resolveAcross` (`<unresolved #…>`), y un test prohíbe `imports` en los `package.json` del producto. Tiene que matar M5.
+- **N2.** Un test de conducta en `daily.test.ts` comprueba que, con un `symbols.json` legible en el S3 falso, ninguna escritura nombra `prices/symbols.json`. Tiene que matar M7.
+- **N3.** Q15 era falsa: se corrige §14.9.
+- **N4.** `Object.create(null)` y `Object.hasOwn` en `parseSymbols` y en la diferencia. Mutantes con `constructor` y `__proto__`.
+- **N5.** `push` imprime el ETag y la versión que sustituye, y el contrato de IAM añade `s3:GetObjectVersion` al rol de administración.
+
+### 15.2 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| S3 B1 (a) | `6f3f7fd` | `activate` lee **antes de escribir nada**, junto al manifiesto, el fichero en vigor (verificado contra el manifiesto), `previous/` y el objeto del paso 2 (el mismo fichero en vigor si la fuente no cambia), y condiciona cada escritura a **esa** lectura. Test del entrelazado del revisor con dos almacenes sobre el mismo bucket y pausas en las lecturas y las escrituras |
+| S3 B1 (b) | `460fc2e`, `0b0bb03`, `287b8e8` | `rebuildEcbHistory` en el dominio: solo desde el ZIP (desde la API, `zip_unavailable` y nada escrito), un ZIP que no se lee no escribe nada. `S3EcbHistoryStore.rebuild()`: se niega si el histórico no está dañado; escribe el fichero y después un manifiesto nuevo sin `previous` y con los `rejected` que se leían, cada uno condicionado a lo leído. La tarea del BCE reconstruye cuando `recover()` da `damaged`, con el resultado `ecb_history_rebuilt` y su hallazgo, y el correo con su frase. Cabecera del almacén y plan §7.1 corregidos |
+| S3 N1 | `647e3ab` | `not_of_the_environment`: el bucket empieza por `atlas-<ATLAS_ENV>-` en todas las familias. La simulada ya exigía `ATLAS_ENV=dev`, y con esta regla solo escribe en un bucket `atlas-dev-` (no hace falta una segunda comprobación, que no se podría alcanzar). `contracts/ssm-and-config.md` al día |
+| S3 N2, N3 | `a09e3e2` | `tasks.md`: N2 en E3 y en su revisión; N3 en E4 |
+| `push` B1 y N4 | `b780823`, `8f2c7bf`, `06c6785` | `parseSymbols` rechaza una clave de primer nivel desconocida con `symbols_file_unknown_key` (`details.key`, el nombre recortado a 64 caracteres; nunca el valor), después de decir un formato más nuevo; `assets` sin prototipo, y la diferencia con `Object.hasOwn`. La API no sirve un `symbols.json` con una clave desconocida (`404 not_found`, `reason: "unknown_key"`). La tarea de precios falla sin descargar nada, y `push` se niega; los dos, con un centinela que no aparece en ninguna salida, registro ni log. La consola y la web traducen el código nuevo |
+| `push` N1 | `2c9d5e3` | `resolveAcross` da `<unresolved #…>` a un alias de `imports`; un test comprueba que ningún `package.json` del producto (raíz, `apps/*`, `packages/*`) tiene `imports` |
+| `push` N2 | `67a842c` | En `daily.test.ts`, con respuestas 200, 401 y 503, ninguna escritura condicional nombra `prices/symbols.json`, y el objeto sigue igual |
+| `push` N3 | `a09e3e2` | §14.9, Q15, corregida |
+| `push` N5 | `af66e81`, `bf7b946` | `StoredObject.versionId` (lo da `GetObject` en un bucket versionado); `push` dice «Sustituye el objeto con ETag … , versión …, que queda en el historial de versiones del bucket»; `contracts/iam-permissions.md` §8 añade `s3:GetObjectVersion` |
+
+### 15.3 Cómo se vio cada test en rojo
+
+- **S3 B1 (a)**: el test del entrelazado contra el `activate` de `9e28eea`: `EcbHistoryDamaged`, el estado mezclado del revisor (`016-e2r-red-b1a.log`). Para verlo en rojo, la pausa de B tuvo que ir **en las lecturas**: en la primera versión del test, la pausa estaba antes de las escrituras, B leía `previous/` antes de que A escribiera y fallaba en el paso 1, así que el test pasaba también con el código viejo.
+- **S3 B1 (b)**: los tests de `apps/jobs` contra la tarea anterior: el de la reconstrucción en rojo; el de «solo la API» pasa con los dos códigos, porque el viejo tampoco escribía (`016-e2r-red-b1b.log`). Los tests del dominio y del almacén se escribieron con el código nuevo; su rojo es la mutación.
+- **S3 N1**: los casos nuevos de `prices-config.test.ts` y `event-config.test.ts`: 2 tests en rojo (`016-e2r-red-n1.log`).
+- **`push` B1 y N4**: 5 tests del dominio en rojo contra `9e28eea` (`016-e2r-red-pb1.log`), y el de la API (`016-e2r-red-api.log`).
+- **`push` N1**: el test del alias `#`, en rojo contra el grafo anterior (`016-e2r-red-gn1.log`).
+- **`push` N5**: el test de `push` que espera el ETag y la versión, en rojo antes de cambiar la orden.
+
+### 15.4 Mutación (lotes `016-e2r-a.json` y `016-e2r-b.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Antes | Después |
+|---|---|---|---|
+| R-B1a | el paso 2 condicionado a una lectura hecha justo antes de escribir (la conducta de `9e28eea`) | era el código; el revisor lo vio pasar el test del mutante 20 | KILLED por `s3-daily.test.ts` (el entrelazado) |
+| R-B1b1 | la tarea del BCE no reconstruye un histórico dañado | era la conducta | KILLED por `daily.test.ts` |
+| R-B1b2 | se reconstruye desde la API | — | KILLED por `update-history.test.ts` y `daily.test.ts` |
+| R-B1b3 | el almacén reconstruye un histórico que no está dañado | — | KILLED por `s3-daily.test.ts` |
+| R-N1 | un bucket de otro entorno aceptado | era la conducta | KILLED por `prices-config.test.ts` y `event-config.test.ts` |
+| R-PB1a | una clave de primer nivel desconocida aceptada en todas partes | era la conducta (sonda del revisor) | KILLED por los tests del dominio y de `push` |
+| R-PB1b | la API sirve un `symbols.json` con una clave desconocida | era la conducta | KILLED por `apps/api/test/sync.test.ts` |
+| R-N4a | `assets` sobre un objeto con prototipo | era la conducta (sondas `constructor` y `__proto__` del revisor) | KILLED por `symbols.test.ts` |
+| R-N4b | la diferencia lee propiedades heredadas como activos | era la conducta | KILLED por `symbols-push.test.ts` |
+| R-GN1a | M5 del revisor: un alias `#daily` en `apps/api/package.json` que alcanza los escritores diarios | sobrevivía (revisión) | KILLED por `jobs-access.test.ts` (tres reglas del grafo, que ahora ven `<unresolved #daily>`, y la de `imports`) |
+| R-GN1b | el grafo resuelve un alias `#` a nada | era la conducta | KILLED por `jobs-access.test.ts` |
+| R-GN2 | M7 del revisor: la tarea escribe `symbols.json` con la clave en otra línea | sobrevivía (revisión) | KILLED por `daily.test.ts` («never writes symbols.json, whatever the run does») |
+| R-N5 | `push` no dice la versión que sustituye | era la conducta | KILLED por `prices-push.test.ts` |
+
+13 de 13 muertos.
+
+### 15.5 Lo que se volvió a mirar alrededor
+
+- **Los dos entrelazados del BCE que las condiciones no descartan sin cerrojo** *(corregido en la ronda 2, R2-N2; antes hablaba de uno solo)*. S3 no permite condicionar una escritura al ETag de **otro** objeto, así que quedan dos casos:
+  - **(1)** Dos ejecuciones de fuentes distintas (una del ZIP y otra de la API) escriben a la vez cada una el nombre del fichero de la otra. Leer al principio el objeto del paso 2 lo acota, pero el fichero de otro nombre no se puede verificar contra el manifiesto.
+  - **(2)** Una activación está entre sus pasos 2 y 3 cuando otra ejecución hace `recover()`, ve el manifiesto viejo con el fichero nuevo y lo deshace. La primera escribe después su manifiesto sobre el manifiesto que el deshacer no tocó, y queda su manifiesto con el fichero anterior.
+
+  Los dos acaban **dañados** y nunca se leen como si cuadraran. Los resuelven dos cosas: la **reconstrucción de la ejecución siguiente** (comparada con la última generación legible, R2-N1) y, antes que nada, la **concurrencia 1 de la función** en la 017, que impide que dos ejecuciones coincidan. La cabecera del almacén y el plan §7.1 lo dicen así.
+- **Entre `active()` y `activate()`** (`updateEcbHistory` los llama por separado): otra ejecución que activara en medio cambia el manifiesto, y `activate` lo relee y escribe su manifiesto con `If-Match` sobre esa nueva lectura. La comparación con los tipos publicados se hizo contra el anterior. No lo he cambiado: las dos descargas son del BCE, la ventana es de milisegundos y la concurrencia 1 de la 017 la cierra. Lo dejo escrito por si la dirección prefiere que `activate` exija el mismo manifiesto que leyó `active()`, que es una comparación de ETag más.
+- **Un formato de `symbols.json` más nuevo con claves nuevas** se sigue diciendo como más nuevo, antes de mirar las claves: la comprobación de claves va después.
+- **La web** lee `prices/symbols.json` con el mismo `parseSymbols`, así que también rechaza una clave ajena, con su frase.
+- **Arreglo que salió de la tubería** (`a3ddb26`): el texto web de `symbols_file_unknown_key` decía la clave, y el test de jerga de la web (`no-jargon.test.tsx`), que prueba cada plantilla con identificadores de muestra, lo cazó. La web dice ahora «un dato que no es suyo» sin nombrarlo; la consola sí nombra la clave, como pidió la dirección.
+
+### 15.6 Tubería
+
+`016-pipeline.sh` sobre `a3ddb26` (cada paso tras la puerta de memoria, nada en paralelo):
+
+```
+lint 0 5s
+typecheck 0 1s
+cov1-domain 0 271s   (1.709 tests; dominio al 100 %: sentencias 8.957, ramas 5.538, funciones 2.018, líneas 8.523)
+cov1-others 1 786s   (1.721 de 1.722: el fallo intermitente de Q17, fuera de la 016)
+cov2-domain 0 269s
+cov2-others 0 520s   (1.722 tests)
+build 0 11s          (lambda.zip 1.443.799 bytes; jobs.zip 1.631.638 bytes, 1.408 entradas)
+```
+
+Una tercera pasada de `test:others` sobre el mismo commit: 0, 1.722 tests (`016-pipe-cov3-others.log`). El paquete web, medido en bytes: arranque 74.177 (antes 74.194) y total 301.906 (antes 301.825; +81 por el mensaje nuevo y la comprobación de claves, que viajan en trozos perezosos), por debajo de sus techos (74.214 y 302.101). `tests/fixtures` sin cambios; ningún gemelo `.js`. Tests de los guardianes: `architecture` 51, `api-access` 28, `jobs-access` 12 → 14 (el alias `#` y los `imports`), `jobs-package` 3, `messages` 11. Ninguno baja.
+
+### 15.7 Pregunta nueva
+
+- **Q17 — Un fallo intermitente de la 015 en `apps/cli/test/admin/admin.test.ts`** («asks for the name of the environment…», línea 333). `consoleLogin` crea el `device_id` con bytes aleatorios en base64url; si empieza por `--` (1 de cada 4.096), el analizador de argumentos lo toma por una opción y la orden sale con 64. Pasó en la primera pasada de esta tubería y no en las otras dos. No es de la 016 y no lo he tocado. Es también un defecto de uso: `atlas admin forget-device` con un id así necesita `--` antes del id. Recomendación: un `fix/` aparte que haga deterministas los ids del arnés de la API y documente `--` en el mensaje de uso, o que la orden acepte `--device <id>`.
+
+### 15.8 La CI y `develop`
+
+La CI de `8dff5e8` salió en rojo en `build`: la CI construye la PR **fusionada con `develop`**, y `develop` ya traía la PR #105 (020), que dejó el techo del total en su medida + 256 (302.894). Con lo de E2 encima, el total medido es 302.935 (+297 sobre los 302.638 de la PR #105), 41 bytes por encima. Todo lo añadido es perezoso: el lector más estricto de `symbols.json` y la frase de `symbols_file_unknown_key`. El arranque no se mueve (75.011, por debajo de 75.039).
+
+- `aadb6b3` trae `develop` a la rama (sin conflictos) y `6fbc326` sube el techo del total a **303.191 = medida + 256**, en un commit propio y **dentro de la autorización** (310.500), como hace la 020. No se toca el techo del arranque ni ninguna autorización.
+- **Tubería completa sobre `6fbc326`**: lint 0, typecheck 0, cobertura del dominio 0 dos veces (100 %: sentencias 8.957, ramas 5.538, funciones 2.018, líneas 8.523; 1.709 tests), resto de proyectos 0 dos veces (1.798 tests, con los de la 020), build 0 (`lambda.zip` 1.443.799 bytes; `jobs.zip` 1.631.638 bytes). `tests/fixtures` sin cambios. Guardianes: `architecture` 51, `api-access` 28, `jobs-access` 14, `jobs-package` 3, `messages` 11.
+
+### 15.9 Congelado
+
+**Congelada la ronda 1 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `6fbc326`. No se empuja nada más hasta la palabra de la dirección.
+
+## 16. Revisión de la PR #106, ronda 2: decisiones de la dirección y arreglos (2026-09-28)
+
+Revisión sobre `fcff746` (comentario 5860915040). Decisiones de la dirección, del mismo día. Cada punto lleva su test, visto antes en rojo, y su mutante, que antes sobrevive (es el código anterior, o el revisor lo vio sobrevivir) y después muere.
+
+### 16.1 Decisiones
+
+- **R2-B1.** `parseSymbols` y el guardián de la API usan `repeatsKey` (de `schema/json-keys.ts`) y rechazan cualquier clave repetida, a cualquier nivel. Se hace lo mismo con `prices/config.json` y con cualquier otro fichero JSON que se lea de forma estricta en la nube o en `push`. El código de error nombra la clave y nunca el valor. Test con un centinela: `assets` repetido, `symbols_format` repetido, `"assets"` escapado y un campo repetido dentro de una entrada.
+- **R2-N1.** La reconstrucción aplica la comparación de ADR-0029, punto 2, contra la última generación legible que exista: el fichero activo si se puede leer y, si no, `previous`.
+  - Si la comparación la rechaza, no activa nada y deja `ecb_history_damaged` con un aviso que pide intervención.
+  - Si no queda nada legible, acepta y deja además `ecb_rebuilt_unverified`.
+  - La excepción se documenta en una nota fechada de ADR-0029 y en `data-schema`.
+- **R2-N2.** La cabecera del almacén y §15.5 describen los dos entrelazados y cómo se resuelven: la reconstrucción del día siguiente y la concurrencia 1 de la 017.
+- **R2-N3.** El grafo de los guardianes resuelve todas las condiciones de `exports` (`types`, `import`, `default`, `require`) y falla si apuntan a módulos distintos. Un test prohíbe exportaciones condicionales con destinos diferentes en los `package.json` del producto. Tiene que matar el mutante `./innocent`.
+
+### 16.2 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| R2-B1 | `cb6a324`, `8b5b329`, `419cf0c` | **Dominio:** `repeatedKey(text)` devuelve la primera clave repetida (decodificada, recortada a 64) y `repeatsKey` pasa a ser `repeatedKey(text) !== undefined`. `repeatedKeyError(file, key, line?)` da el código nuevo **`json_key_repeated`**, con `file`, `key` y, en un JSONL, `line`; nunca el valor. Lo usan los cuatro lectores de `prices/`: `symbols.json`, `config.json`, `_status.json` y cada línea de `<asset_id>.jsonl`. En `symbols.json` se comprueba antes que el formato más nuevo y que la clave desconocida. `unservableSymbols(text)` (`repeated_key` o `unknown_key`) es la regla que usa la API.<br>**API:** responde `404 not_found` con `reason: "repeated_key"`.<br>**Consola:** nombra el fichero y la clave.<br>**Web:** lo dice sin nombrarlos (test de jerga).<br>**Tests con centinela:** los cuatro casos del revisor en el lector, en `push` (local rechazado y remoto tratado como ilegible) y en la API; la tarea de la nube falla sin descargar; `push` se niega sin enseñar el valor |
+| R2-N1 | `fd7c00e`, `ae98823`, `b6aea74`, `4c72f02` | **`rebuildEcbHistory`:** pide `generations()` al almacén (el fichero en vigor tal como está y después `previous/`; sin manifiesto legible, los dos nombres de los dos) y compara con la primera que se lee (`checkHistoryUpdate`).<br>**Si la rechaza:** `rejected`, nada escrito, `ecb_history_damaged` con `counts.conflicts` y un correo que dice «Hace falta intervenir».<br>**Si no queda nada legible:** `rebuilt` con `verified: false` y el hallazgo `ecb_rebuilt_unverified`, con su correo.<br>**Documentos:** nota fechada en ADR-0029 («Nota del 2026-09-28»), la fila de `reference/ecb/` de `docs/data-schema.md` y el plan §7.1. Son los primeros cambios de esta feature en `docs/`, que por regla no toco: los pidió la dirección expresamente en esta ronda |
+| R2-N2 | `ae98823` (cabecera), este commit (§15.5) | La cabecera del almacén y el plan §7.1 describen **los dos entrelazados** que las condiciones no descartan sin cerrojo, porque S3 no condiciona una escritura al ETag de otro objeto: (1) dos fuentes que escriben a la vez el nombre de la otra; (2) un `recover()` entre los pasos 2 y 3 de otra activación. También dicen cómo se resuelven: acaban dañados y nunca se leen como si cuadraran; los arregla la reconstrucción de la ejecución siguiente y, antes, la concurrencia 1 de la 017 |
+| R2-N3 | `f7b53c7` | **`exportsOf` (`tests/support/source-graph.ts`):** resuelve todas las condiciones de cada exportación, a cualquier profundidad, y falla si nombran módulos distintos. El test de arquitectura usaba dos lectores propios que solo leían `types`; ahora usa el compartido.<br>**Tests nuevos en `jobs-access`:** ningún `package.json` del producto tiene una exportación con destinos distintos, y el lector se niega a leer uno así (con el `./innocent` del revisor) y lee uno coherente |
+
+Un detalle, dicho: `data-schema.md` dice además en la fila de `symbols.json` que una clave desconocida o repetida lo hace ilegible, y que la API no lo sirve. Es la consecuencia de la ronda 1 (B1) y de R2-B1, y la escribí en el mismo commit que la nota de ADR-0029.
+
+### 16.3 Cómo se vio cada test en rojo
+
+- **R2-B1**:
+  - **Dominio:** los 6 tests de `repeated-keys.test.ts` contra un `repeatedKey` que nunca encuentra nada (`016-e2r2-red-b1.log`).
+  - **Aplicaciones:** los de la API, `push` y la tarea, contra los lectores de `fcff746`, que dejaban pasar las cuatro sondas (`016-e2r2-red-b1-apps.log`): 3 en rojo.
+- **R2-N1**: los tests del dominio y de la tarea contra el `rebuildEcbHistory` de la ronda 1, que no comparaba (`016-e2r2-red-n1.log`): 5 en rojo. Entre ellos está «rebuilds…», que ahora espera `verified`.
+- **R2-N3**: «refuses to read a package whose conditions name different modules», contra el lector que solo leía `types` (`016-e2r2-red-n3.log`).
+
+### 16.4 Mutación (lotes `016-e2r2-a.json` y `016-e2r2-b.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Antes | Después |
+|---|---|---|---|
+| R2-B1a | `symbols.json` se lee con una clave repetida | era la conducta (sondas del revisor) | KILLED por los tests de `quotes`, de `push` y de la tarea |
+| R2-B1b | la API sirve un `symbols.json` con una clave repetida | era la conducta | KILLED por `apps/api/test/sync.test.ts` y `repeated-keys.test.ts` |
+| R2-B1c | `config.json` con una clave repetida | era la conducta | KILLED |
+| R2-B1d | `_status.json` con una clave repetida | era la conducta | KILLED |
+| R2-B1e | una línea de cierres con una clave repetida | era la conducta | KILLED |
+| R2-B1f | la negativa lleva el texto de alrededor (el valor), no la clave | — | KILLED por el centinela de `repeated-keys.test.ts` |
+| R2-N1a | la reconstrucción activa un ZIP que contradice la última generación legible | era la conducta (sonda del revisor) | KILLED por `update-history.test.ts` y `daily.test.ts` |
+| R2-N1b | la reconstrucción no compara con nada (la conducta de la ronda 1) | era la conducta | KILLED |
+| R2-N1c | una reconstrucción sin comparar se dice comparada | — | KILLED |
+| R2-N1d | solo se compara con el fichero en vigor, nunca con `previous/` | — | KILLED por `s3-daily.test.ts` |
+| R2-N3a | el `./innocent` del revisor: `types` e `import` con módulos distintos, importado por la API | sobrevivía (revisión) | KILLED por `jobs-access.test.ts` (el grafo falla cerrado y la regla de `exports`) |
+| R2-N3b | el grafo vuelve a leer solo `types` | era la conducta | KILLED |
+
+12 de 12 muertos.
+
+### 16.5 Tubería, `develop` y el paquete web
+
+- **La primera tubería de la ronda, sobre `249e146`, falló en `build`.**
+  - El arranque subía 77 bytes, hasta 75.088, por encima de su techo de 75.039. El error nuevo vivía en `schema/json-keys.ts`, que viaja en el arranque de la web con el lector del libro.
+  - `d6c6850` lo lleva a `quotes/repeated-key.ts`, que es perezoso. El arranque vuelve a 75.012, 1 byte sobre los 75.011 de la ronda 1, y el techo del arranque **no se toca**.
+- **`79e7575` trae `develop` a la rama**, con la PR #107 (`fix/cli-dash-ids`, que resuelve Q17).
+  - Hubo conflictos en el texto de uso de `atlas admin`, en `apps/cli/src/main.ts` y `commands/admin.ts`.
+  - Se resolvieron con las dos cosas: `forget-device [--] <id> | --device <id>` y `prices push`.
+- **`728d3f6` sube el techo del total** a **303.451 = medida (303.195) + 256**, en un commit propio y dentro de la autorización (310.500). Todo el aumento es perezoso: el rechazo de las claves repetidas y su frase.
+- **Tubería completa sobre `728d3f6`: todo en 0.**
+
+  ```
+  lint 0, typecheck 0
+  cov1-domain 0   (1.718 tests; dominio al 100 %: sentencias 8.991, ramas 5.560, funciones 2.023, líneas 8.556)
+  cov1-others 0   (1.812 tests)
+  cov2-domain 0
+  cov2-others 0   (1.812 tests)
+  build 0         (lambda.zip 1.444.049 bytes; jobs.zip 1.635.222 bytes, 1.409 entradas)
+  ```
+
+  `tests/fixtures` sin cambios. Tests de los guardianes: `architecture` 51, `api-access` 28, `jobs-access` 14 → 16 (las exportaciones condicionales), `jobs-package` 3, `messages` 11. Ninguno baja.
+- **Q17 queda resuelta en `develop`** con la PR #107.
+
+### 16.6 Congelado
+
+**Congelada la ronda 2 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `728d3f6`. No se empuja nada más hasta la palabra de la dirección.

@@ -5,6 +5,7 @@ import {
   EMPTY_SYMBOLS,
   parseSymbols,
   serializeSymbols,
+  unknownSymbolsKey,
 } from "../../src/quotes/symbols.js";
 
 import { declared } from "./fakes.js";
@@ -28,6 +29,45 @@ describe("prices/symbols.json", () => {
       },
     };
     expect(parseSymbols(serializeSymbols(file))).toEqual(file);
+  });
+
+  it("refuses a top-level key it does not know, by its name only (review of PR #106, B1)", () => {
+    for (const format of [1, 2]) {
+      try {
+        parseSymbols(
+          JSON.stringify({ symbols_format: format, assets: {}, token: "sentinel-value" }),
+        );
+        expect.unreachable();
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "symbols_file_unknown_key",
+          details: { key: "token" },
+        });
+        expect(JSON.stringify(error)).not.toContain("sentinel-value");
+        expect((error as Error).message).not.toContain("sentinel-value");
+      }
+    }
+    expect(unknownSymbolsKey([])).toBeUndefined();
+    expect(unknownSymbolsKey("assets")).toBeUndefined();
+    expect(unknownSymbolsKey({ symbols_format: 2, assets: {} })).toBeUndefined();
+    expect(unknownSymbolsKey({ ["k".repeat(100)]: 1 })).toBe("k".repeat(64));
+    expect(() => parseSymbols("[]")).toThrow(/symbols_format/);
+    // A newer format is said as such first: it may well have keys of its own.
+    expect(() => parseSymbols(JSON.stringify({ symbols_format: 3, assets: {}, more: 1 }))).toThrow(
+      /newer/,
+    );
+  });
+
+  it("keeps an asset named like a property of every object as its own (review of PR #106, N4)", () => {
+    const entry = { eodhd: "P.XETRA", currencies: { eodhd: "EUR" }, confirmed_at: AT };
+    const parsed = parseSymbols(
+      `{"symbols_format":2,"assets":{"__proto__":${JSON.stringify(entry)},"constructor":${JSON.stringify(entry)}}}`,
+    );
+    expect(Object.keys(parsed.assets).sort()).toEqual(["__proto__", "constructor"]);
+    expect(Object.hasOwn(parsed.assets, "__proto__")).toBe(true);
+    expect(
+      parseSymbols(JSON.stringify({ symbols_format: 2, assets: {} })).assets.toString,
+    ).toBeUndefined();
   });
 
   it("refuses what it does not understand, naming it", () => {

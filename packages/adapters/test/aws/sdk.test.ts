@@ -67,9 +67,16 @@ describe("SdkObjectStore", () => {
     const got = await store.get("there");
     expect(new TextDecoder().decode(got?.body)).toBe("hola");
     expect(got?.etag).toBe('"e1"');
+    expect(got?.versionId).toBeUndefined();
     expect(await store.get("missing")).toBeUndefined();
     expect(sent.every((command) => command instanceof GetObjectCommand)).toBe(true);
     expect((sent[0] as GetObjectCommand).input).toEqual({ Bucket: "atlas-dev-data", Key: "there" });
+  });
+
+  it("says the version of what it got when the bucket is versioned (review of PR #106, N5)", async () => {
+    const { client } = s3Client(() => ({ Body: body("hola"), ETag: '"e1"', VersionId: "v-1" }));
+    const got = await new SdkObjectStore(client, "atlas-dev-data").get("there");
+    expect(got?.versionId).toBe("v-1");
   });
 
   it("never takes a 403 (no s3:ListBucket) for a missing key (§23.1)", async () => {

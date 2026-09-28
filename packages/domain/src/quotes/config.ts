@@ -14,6 +14,8 @@
 import { ValidationError } from "../errors.js";
 import type { QuoteSource } from "../projections/prices.js";
 import { ASSET_TYPES, type AssetType } from "../schema/events.js";
+import { repeatedKey } from "../schema/json-keys.js";
+import { repeatedKeyError } from "./repeated-key.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
 export const PRICE_CONFIG_FILE = "config.json";
@@ -151,6 +153,10 @@ export const parsePriceConfig = (text: string | undefined): PriceConfig => {
     raw = JSON.parse(text);
   } catch {
     throw wrong("json", "not valid JSON");
+  }
+  const repeated = repeatedKey(text);
+  if (repeated !== undefined) {
+    throw repeatedKeyError("prices/config.json", repeated);
   }
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     throw wrong("json", "must be an object");

@@ -52,9 +52,11 @@ packages/domain/src/
     reminder.ts                     los datos del recordatorio (días, tokens, reparto por clase)
     sign-in.ts                      el objeto del último inicio de sesión web y su regla de avance
     mail/                           una función pura por correo: asunto y cuerpo
-    (E2) prices-findings.ts, ecb-findings.ts, ecb-recovery.ts, symbols-push.ts
+    (E2) config.ts (el cupo de la nube), findings.ts (los hallazgos del BCE y de los precios), ecb-recovery.ts
     (E4) positions.ts, rehearsal.ts, size.ts, review.ts, informative-alerts.ts
-  quotes/cascade.ts                 (E2, si se acepta Q1) opción symbols: "read_only"
+  quotes/cascade.ts                 (E2, Q1) opción symbols: "read_only"
+  quotes/symbols-push.ts            (E2) symbolsPushPlan: la diferencia y las negativas de atlas admin prices push
+                                    (en quotes/, no en jobs/: la consola no alcanza el código de las tareas)
   settings/job-frequencies.ts       el catálogo de job_frequencies: lectura tolerante, escritura estricta
                                     (fuera de jobs/: Ajustes lo leerá en E3 sin alcanzar las tareas)
   settings/settings.ts              (E3) mergeSettings deja fuera notification_email
@@ -68,7 +70,10 @@ packages/adapters/src/
   aws/s3-ecb-store.ts               (E2) EcbHistoryStore sobre S3
   aws/s3-price-store.ts             (E2) PriceStore sobre S3
   aws/price-keys.ts                 (E2) las claves de las fuentes desde SSM
-  prices/simulated.ts               (E2) la fuente simulada de dev: la única excepción declarada al guardián de los dobles
+  aws/daily.ts                      (E2) la puerta @atlas/adapters/aws-daily: almacenes, claves y fuente simulada
+  aws/simulated-prices.ts           (E2) la fuente simulada de dev: la única excepción declarada al guardián de los dobles
+                                    (junto a la puerta de la nube y no en prices/: ningún subpath que la web pueda
+                                    importar alcanza prices/, donde viven las direcciones de las fuentes)
 
 packages/adapters/test/jobs/
   test-only-file-notifier.ts        el Notifier de fichero (pruebas y capturas)
@@ -100,8 +105,8 @@ La del encargo (§3, §8.1 P2), sin cambios: **E1** esqueleto, correo y recordat
 |---|---|---|---|
 | E1 | **Z1** privacidad del correo y registros | `domain/src/jobs/{mail/,amounts,reminder,sign-in}.ts`, `ports/notifier.ts`, `adapters/src/aws/{mail,sdk-ses,sign-in-object}.ts`, `apps/jobs/src/{log,tasks/mail}.ts`, `apps/api/src/handler.ts` (el cambio del inicio de sesión) y los tests de centinelas y de renderizado | Alta: lo que sale del perímetro |
 | E1 | **Z2** idempotencia, periodos y reloj | `domain/src/jobs/{event,config,catalog,frequencies,periods,due,run-record,notices}.ts`, `adapters/src/aws/jobs-store.ts`, `apps/jobs/src/{compose,handler,lambda}.ts`, `apps/jobs/scripts/`, los guardianes nuevos | Alta: se multiplica por cada tarea |
-| E2 | **Z3** fuentes, claves, cupo y `atlas admin prices push` | `quotes/cascade.ts` (Q1), `adapters/src/aws/price-keys.ts`, `prices/simulated.ts`, `apps/jobs/src/tasks/prices.ts`, `apps/cli/src/commands/admin.ts` (push), `domain/src/jobs/{prices-findings,symbols-push}.ts` | Alta |
-| E2 | **Z4** escrituras en S3 y sus cortes | `adapters/src/aws/{s3-ecb-store,s3-price-store}.ts`, `domain/src/jobs/{ecb-recovery,ecb-findings}.ts`, `access/sync-routes.ts` (Q4), `apps/jobs/src/tasks/ecb.ts` | Alta |
+| E2 | **Z3** fuentes, claves, cupo y `atlas admin prices push` | `quotes/cascade.ts` (Q1), `adapters/src/aws/{price-keys,simulated-prices}.ts`, `apps/jobs/src/tasks/prices.ts`, `apps/cli/src/commands/admin.ts` (push), `domain/src/jobs/{config,findings}.ts`, `domain/src/quotes/symbols-push.ts` | Alta |
+| E2 | **Z4** escrituras en S3 y sus cortes | `adapters/src/aws/{s3-ecb-store,s3-price-store}.ts`, `domain/src/jobs/{ecb-recovery,findings}.ts`, `access/sync-routes.ts` (Q4), `apps/jobs/src/tasks/ecb.ts` | Alta |
 | E3 | **Z5** la consola y su carpeta | `apps/cli/src/commands/prices.ts`, lo que añade a la carpeta, `settings/settings.ts` (`mergeSettings`) | Media |
 | E3 | **Z6** la web y su paquete | `apps/web/src/{ecb,prices,view-models/settings}.ts…`, `check-bundle.mjs` | Media |
 | E4 | **Z7** copias y restauración | `domain/src/jobs/{positions,rehearsal,size}.ts`, `apps/jobs/src/tasks/{backup,integrity}.ts` | Alta: lo que es para siempre |
@@ -126,7 +131,7 @@ Cada fila se ve en rojo antes que el código, y su mutante se ve morir **por su 
 | G5 | Nada nuevo de la web en el arranque, y ningún módulo de la web alcanza `domain/src/jobs/` salvo lo que E3 declare en `LAZY_ONLY` | `check-bundle.mjs` (`LAZY_ONLY`) y `architecture.test.ts` | quitar `domain/src/jobs/` de `LAZY_ONLY` [27] |
 | G6 | **El reloj**: ningún fichero nuevo o tocado por la 016 fuera de `adapters/src/clock/system.ts` nombra `new Date(` sin argumento ni `Date.now(` | `tests/jobs-access.test.ts`, sobre la lista de ficheros de la feature (los de `apps/jobs`, `domain/src/jobs`, `adapters/src/aws/{mail,jobs-store,…}` y sus tests) | un `Date.now()` en `due.ts`; un `new Date()` en un test de `apps/jobs` |
 | G7 | El test de centinelas de los registros corre sobre el manejador de las tareas, captura `stdout` y `stderr` y cubre los caminos de fallo | `apps/jobs/test/sentinels.test.ts`, vacío al principio y creciendo con cada tarea | registrar el `message` de un error del SDK; registrar el destinatario [9] |
-| G8 | **Los dobles**: nada de `test-only-*` ni de `adapters/test/` es alcanzable desde `jobs.zip`; **la única excepción declarada** es `adapters/src/prices/simulated.ts`, nombrada en el guardián | `tests/jobs-package.test.ts` (entradas del *metafile*, como `lambda-package.test.ts`) | el `Notifier` de fichero alcanzable desde `compose.ts` [10]; una segunda excepción sin nombrar [17] |
+| G8 | **Los dobles**: nada de `test-only-*` ni de `adapters/test/` es alcanzable desde `jobs.zip`; **la única excepción declarada** es `adapters/src/aws/simulated-prices.ts`, nombrada en el guardián | `tests/jobs-package.test.ts` (entradas del *metafile*, como `lambda-package.test.ts`) | el `Notifier` de fichero alcanzable desde `compose.ts` [10]; una segunda excepción sin nombrar [17] |
 
 Antes de cada PR se cuentan los tests de `architecture`, `api-access`, `jobs-access` y `jobs-package` contra la línea de `questions.md` §3 (49, 28, 0, 0).
 
@@ -160,18 +165,18 @@ Antes de cada PR se cuentan los tests de `architecture`, `api-access`, `jobs-acc
 | # | Regla | Test | Mutante |
 |---|---|---|---|
 | R21 | Nunca el día en curso | el contrato del almacén de S3 con la cascada, `today` en Madrid a las 07:00 | `to = today` [11] |
-| R22 | Una llamada se reserva **antes** de llamar y una reserva **nunca se devuelve** tras un corte o un conflicto | `adapters/test/aws/s3-price-store.test.ts`, cortes y `409` | reservar después; restar al abortar [12] |
+| R22 | Una llamada se reserva **antes** de llamar y una reserva **nunca se devuelve** tras un corte o un conflicto | `adapters/test/aws/s3-daily.test.ts` y `apps/jobs/test/daily.test.ts`, cortes y `409` | reservar después; restar al abortar [12] |
 | R23 | La tarea nunca escribe `symbols.json` ni lee un `prices/config.json` del bucket: la configuración sale de la función (§8.2 M5) | el almacén de S3 se niega a `writeSymbols` y `rewriteCloses`; su `config()` no toca S3 (el doble lo registra) | leer `prices/config.json`; permitir `writeSymbols` [13] |
-| R24 | `atlas admin prices push`: solo `symbols.json`, sin estado local, diferencia a la vista, entorno tecleado, sin `--yes`, salida 4 sin terminal, `If-Match` sobre **esa** lectura, negativa con `misstored`, ilegible o formato más nuevo | `apps/cli/test/admin-prices-push.test.ts` | los cinco de [13 bis] |
-| R25 | Una correspondencia sin contrastar no se descarga (Q1) | la cascada con `symbols: "read_only"` | contrastar en la nube [14] |
-| R26 | La clave nunca en un registro, un error ni una URL guardada | centinela de clave en los caminos de fallo (401, red caída) | quitar la censura [15] |
-| R27 | Sin claves: ni descarga, ni fallos seguidos, ni hallazgos | `apps/jobs/test/prices.test.ts` | contar el fallo [16] |
-| R28 | La fuente simulada, negada con `ATLAS_ENV=prod` | `apps/jobs/test/compose.test.ts` | quitar la comprobación [17] |
-| R29 | Fallos seguidos: solo `unavailable`, `rate_limited`, `blocked`, `invalid_response`; un aviso por racha | `notices.test.ts`, `dispatch.test.ts` | contar `not_found` [18] |
-| R30 | Aviso de tesis solo por `horizon_exceeded` (§8.2 B1) | `prices-findings.test.ts` | avisar por `invalidation` [18 bis] |
-| R31 | BCE: ningún lector ve el fichero nuevo con el manifiesto viejo como si cuadrara; nunca se pisa un tipo publicado; la siguiente ejecución termina o deshace | `s3-ecb-store.test.ts`, un corte en cada hueco de §7.1 | invertir fichero y manifiesto [19] |
+| R24 | `atlas admin prices push`: solo `symbols.json`, sin estado local, diferencia a la vista, entorno tecleado, sin `--yes`, salida 4 sin terminal, `If-Match` sobre **esa** lectura, negativa con `misstored`, ilegible o formato más nuevo | `apps/cli/test/admin/prices-push.test.ts` y `domain/test/quotes/symbols-push.test.ts` | los cinco de [13 bis] |
+| R25 | Una correspondencia sin contrastar no se descarga (Q1) | la cascada con `symbols: "read_only"` (`domain/test/quotes/cascade.test.ts`) | contrastar en la nube [14] |
+| R26 | La clave nunca en un registro, un error ni una URL guardada | centinela de clave en los caminos de fallo (401, red caída): `apps/jobs/test/daily.test.ts`, `sentinels.test.ts`, `adapters/test/aws/s3-daily.test.ts` | quitar la censura [15] |
+| R27 | Sin claves: ni descarga, ni fallos seguidos, ni hallazgos | `apps/jobs/test/daily.test.ts` | contar el fallo [16] |
+| R28 | La fuente simulada, negada con `ATLAS_ENV=prod` | `domain/test/jobs/prices-config.test.ts` y `apps/jobs/test/daily.test.ts` | quitar la comprobación [17] |
+| R29 | Fallos seguidos: solo `unavailable`, `rate_limited`, `blocked`, `invalid_response`; un aviso por racha | `domain/test/jobs/findings.test.ts`, `apps/jobs/test/daily.test.ts` | contar `not_found` [18] |
+| R30 | Aviso de tesis solo por `horizon_exceeded` (§8.2 B1) | `domain/test/jobs/findings.test.ts` | avisar por `invalidation` [18 bis] |
+| R31 | BCE: ningún lector ve el fichero nuevo con el manifiesto viejo como si cuadrara; nunca se pisa un tipo publicado; la siguiente ejecución termina o deshace | `adapters/test/aws/s3-daily.test.ts` y `domain/test/jobs/ecb-recovery.test.ts`, un corte en cada hueco de §7.1 | invertir fichero y manifiesto [19] |
 | R32 | Un conflicto de S3 aborta sin reintentar dentro de la ejecución | los dos almacenes | un bucle de reintento [20] |
-| R33 | Los activos, del libro remoto | `prices.test.ts` | leerlos de `symbols.json` [21] |
+| R33 | Los activos, del libro remoto | `apps/jobs/test/daily.test.ts` | leerlos de `symbols.json` [21] |
 | R34-R39 | E3: consola sin fuentes [22], reglas de la 013 al añadir [23], red fuera del cerrojo [24], SHA-256 y sin descarga al arrancar [25], `notification_email` [26], arranque [27] | los de §11 | los de §6 |
 | R40-R45 | E4: `backups/` nunca sobrescrito y mes a medias terminado [28], ensayo cortado en los mismos eventos [29], umbral de tamaño configurable y justo por encima [30], 720 sin cierres [31], nada sin algo que hacer [32], procedimientos [33] | los de §8 y §9 | los de §6 |
 | R46-R48 | Siempre: la cifra fiscal no cambia [34], dos códigos nunca se pliegan [35], ninguna orden destructiva acepta `--yes` [36] | `tests/fixtures` + la salida fiscal; `messages.test.ts`; `admin` | los de §6 |
@@ -261,12 +266,12 @@ El nombre del fichero en vigor es fijo por fuente (`eurofxref-hist.csv` o `api-e
 
 | Paso | Escritura | Qué ve un lector (API, web, `active()`) si se corta **después** de este paso |
 |---|---|---|
-| 1 | leer `manifest.json` (ETag M) y el fichero en vigor (ETag F) | lo de antes |
+| 1 | leer **a la vez, antes de escribir nada**, `manifest.json` (ETag M), el fichero en vigor (ETag F, verificado contra el manifiesto), `previous/<fichero en vigor>` y el objeto del paso 3 (F si es el mismo nombre); cada escritura se condiciona a **esta** lectura, nunca a una lectura hecha justo antes de escribir (revisión de la PR #106, B1) | lo de antes |
 | 2 | `previous/<fichero en vigor>` ← bytes en vigor (`If-Match` sobre el suyo, o `If-None-Match: *`) | lo de antes: manifiesto y fichero cuadran |
 | 3 | `<fichero nuevo>` ← descarga (`If-Match` F si es el mismo nombre; `If-Match`/`If-None-Match` sobre el suyo si cambia la fuente) | **mismo nombre**: el manifiesto viejo con el fichero nuevo, **que no cuadra con su SHA-256**: `EcbHistoryDamaged`, nunca «como si cuadrara». **Otro nombre**: lo de antes, más un fichero huérfano |
 | 4 | `manifest.json` ← nuevo, `previous` apuntando a `previous/<fichero>` (`If-Match` M) | lo nuevo |
 
-**Recuperación** (función pura `ecbRecovery`, `jobs/ecb-recovery.ts`): al empezar, si el manifiesto no cuadra con su fichero en vigor **y** `previous/<fichero>` tiene el SHA-256 del manifiesto → **deshacer**: el fichero en vigor ← `previous/` (`If-Match`), y la actualización del día sigue después. Cualquier otro desacuerdo → hallazgo `ecb_history_damaged` y no se escribe nada. `keepRejected`: `rejected/<instante>-<fichero>` (`If-None-Match: *`) y después el manifiesto (`If-Match`); un corte entre los dos deja un huérfano inocuo. **Primera activación**: fichero y manifiesto con `If-None-Match: *`.
+**Recuperación** (función pura `ecbRecovery`, `jobs/ecb-recovery.ts`): al empezar, si el manifiesto no cuadra con su fichero en vigor **y** `previous/<fichero>` tiene el SHA-256 del manifiesto → **deshacer**: el fichero en vigor ← `previous/` (`If-Match`), y la actualización del día sigue después. Cualquier otro desacuerdo es **dañado**, y la tarea **no se queda parada** (revisión de la PR #106, B1 (b)): reconstruye el histórico entero **desde el ZIP oficial del BCE** (`rebuildEcbHistory`, `rebuild()`), **comparado antes, como pide ADR-0029 punto 2, con la última generación que aún se lee** (el fichero en vigor tal como está y, si no, `previous/`; `generations()`; ronda 2, R2-N1): si el ZIP la contradice no se activa nada y queda `ecb_history_damaged` con el recuento, que pide intervenir; si no queda nada legible se acepta sin comparar, con `ecb_rebuilt_unverified` (ADR-0029, nota del 2026-09-28). Si la comparación lo acepta: el fichero y un manifiesto nuevo que lo nombra solo (sin `previous` del dañado, conservando `rejected`), cada uno con `If-Match` o `If-None-Match` sobre lo leído, y deja el hallazgo `ecb_history_rebuilt`. `rebuild()` se niega si el histórico ya no está dañado (otra ejecución lo arregló). Si solo responde la API, no se reconstruye nada: hallazgo `ecb_history_damaged`, y la ejecución siguiente lo vuelve a intentar. Lo que había queda en las versiones anteriores del bucket. **Con las lecturas del paso 1, dos activaciones que verificaron el mismo histórico nunca dejan el fichero de una bajo el manifiesto de la otra.** Hay **dos entrelazados** que las condiciones no descartan sin cerrojo, porque S3 no deja condicionar una escritura al ETag de **otro** objeto: (1) dos activaciones de fuentes distintas escribiendo a la vez el nombre de la otra; (2) una activación entre su paso 2 y su paso 3 mientras otra ejecución hace `recover()` y deshace su fichero (el manifiesto de la primera se escribe después sobre el manifiesto que el deshacer no tocó). Los dos acaban **dañados**, nunca leídos como si cuadraran, y los resuelven la **reconstrucción de la ejecución siguiente** y, antes que nada, la **concurrencia 1 de la función** (017), que impide dos ejecuciones a la vez. `keepRejected`: `rejected/<instante>-<fichero>` (`If-None-Match: *`) y después el manifiesto (`If-Match`); un corte entre los dos deja un huérfano inocuo. **Primera activación**: fichero y manifiesto con `If-None-Match: *`.
 
 ### 7.2 `PriceStore` sobre S3 (`s3-price-store.ts`)
 

@@ -74,6 +74,10 @@
       "types": "./dist/aws/jobs.d.ts",
       "import": "./dist/aws/jobs.js"
     },
+    "./aws-daily": {
+      "types": "./dist/aws/daily.d.ts",
+      "import": "./dist/aws/daily.js"
+    },
     "./aws-ses": {
       "types": "./dist/aws/sdk-ses.d.ts",
       "import": "./dist/aws/sdk-ses.js"

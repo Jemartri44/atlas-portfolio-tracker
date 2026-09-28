@@ -51,6 +51,8 @@ const OUTCOME_TEXT: Record<AssetOutcome, string> = {
   out_of_budget: "fuera del cupo de hoy: conserva su último valor",
   failed: "sin respuesta útil: conserva su último valor",
   currency_mismatch: "divisa en desacuerdo: no se guarda",
+  // Only the cloud leaves a source out this way (feature 016, Q1): the console contrasts.
+  currency_unchecked: "divisa sin contrastar: no se descarga",
   unreadable: "su fichero de precios no se lee: no se toca",
 };
 

@@ -150,6 +150,19 @@ describe("the configuration of a function (R17)", () => {
         { ...MAIL_ENV, ATLAS_DATA_BUCKET: "Bucket" },
         { variable: "ATLAS_DATA_BUCKET", reason: "not_a_bucket_name" },
       ],
+      // Review of PR #106, N1: the bucket of the environment the function says.
+      [
+        { ...MAIL_ENV, ATLAS_DATA_BUCKET: "atlas-dev-data-x1" },
+        { variable: "ATLAS_DATA_BUCKET", reason: "not_of_the_environment" },
+      ],
+      [
+        { ...MAIL_ENV, ATLAS_DATA_BUCKET: "atlas-production-data-x1" },
+        { variable: "ATLAS_DATA_BUCKET", reason: "not_of_the_environment" },
+      ],
+      [
+        { ...MAIL_ENV, ATLAS_ENV: "dev" },
+        { variable: "ATLAS_DATA_BUCKET", reason: "not_of_the_environment" },
+      ],
       [
         { ...MAIL_ENV, ATLAS_MAIL_FROM: "Atlas <atlas@example.test>" },
         { variable: "ATLAS_MAIL_FROM", reason: "not_a_mail_address" },

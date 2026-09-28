@@ -8,6 +8,8 @@ export interface StoredObject {
   readonly body: Uint8Array;
   /** The opaque ETag of S3: never the SHA-256 of the bytes. */
   readonly etag: string;
+  /** The version of the object, when the bucket is versioned (`atlas admin prices push` says it). */
+  readonly versionId?: string;
 }
 
 /** One object of a listing: the first level under a prefix. */

@@ -87,3 +87,22 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 - Concurrencia reservada **1** (§8.1 P11); `PutFunctionEventInvokeConfig` con `MaximumRetryAttempts = 0` y `MaximumEventAgeInSeconds = 3600`; cada programación con `RetryPolicy` `MaximumRetryAttempts = 2` y `MaximumEventAgeInSeconds = 3600` (questions §1.4; **aceptado**, §9).
 - El rol de Scheduler que invoca: `lambda:InvokeFunction` sobre las cinco funciones, nada más.
 - El grupo de programaciones `atlas-<entorno>-jobs`, etiquetado (solo se etiquetan grupos, questions §1.6); en `dev`, las programaciones **desactivadas** (ADR-0034, fila 2).
+
+## 8. `atlas-<entorno>-admin` (lo que añade la 016, E2)
+
+| Acción | Recurso | Para qué |
+|---|---|---|
+| `s3:GetObject`, `s3:PutObject` | `B/prices/symbols.json` | `atlas admin prices push`: leer el remoto, enseñar la diferencia y escribir con `If-Match` sobre esa misma lectura (o `If-None-Match: *` si no había) |
+| `s3:ListBucket` | `B`, con `s3:prefix` en `prices/` | `404` en vez de `403` cuando la nube aún no tiene correspondencia |
+| `s3:GetObjectVersion` | `B/prices/symbols.json` | recuperar la versión que sustituyó `push`, que la orden dice con su ETag y su `VersionId` (revisión de la PR #106, N5) |
+
+Con credenciales de corta duración y MFA, como las demás órdenes de `atlas admin` (ADR-0032, ADR-0034). Si el rol de administración de la 015 ya alcanza todo el bucket de datos, esta fila no añade nada; se escribe para que la 017 lo compruebe. La orden **nunca** escribe `B/prices/config.json`.
+
+## 9. Tiempo y memoria (propuesta del bloque 0 de E2, questions §14.1, punto 3)
+
+| Función | `timeout` | Memoria | `ATLAS_JOB_MAX_RUN_SECONDS` |
+|---|---|---|---|
+| `atlas-<entorno>-job-ecb` | 300 s | 256 MB | 300 |
+| `atlas-<entorno>-job-prices` | 900 s | 256 MB | 900 |
+
+Cada llamada a una fuente lleva un tiempo máximo de 15 s (`AbortSignal.timeout`, en la composición): el peor caso de la de precios son 41 × 15 s = 615 s.
