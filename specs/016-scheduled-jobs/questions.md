@@ -972,3 +972,86 @@ build 0         (lambda.zip 1.444.049 bytes; jobs.zip 1.637.421 bytes, 1.411 ent
 ### 17.10 Congelado
 
 **E3 queda congelada en el commit que añade esta sección**; su SHA lo dice la descripción de la PR. El código está en `d4cda05`. Mientras dura la revisión no se empuja nada.
+
+## 18. Decisiones de la dirección sobre E3 y revisión de la PR #108, ronda 1 (2026-09-28)
+
+### 18.1 Decisiones sobre las preguntas de E3
+
+- **Q18.** Se acepta el asunto agregado `prices`, con recuentos y sin racha por activo.
+- **Q19.** Se aceptan los +13 del arranque, dentro de la autorización de 76.069.
+  - **La autorización del total sube a 312.000 bytes** para toda la web, porque la 016 y la 020 crecen a la vez.
+  - El techo del total se mide como siempre: medida + 256, en su propio commit y antes del commit que lo necesita.
+  - `TOTAL_AUTHORISED_GZIP_BYTES` sube a 312.000 en `check-bundle.mjs`, en un commit propio y con su test (la mutación 7 bis). La 020 lo trae al fusionar `develop`.
+- **Los precios en el móvil no se construyen**, como dicen P7 y Q8.
+- **`s3:DeleteObject` sobre el manifiesto del BCE** para el rol de administración queda aceptado para el contrato de IAM de la 017.
+
+### 18.2 Decisiones sobre la ronda 1 (comentario 5862320849)
+
+- **B1.** `cloudLinesToAppend` recibe `today` (Madrid) y descarta toda línea con `date >= today`. Dice cuántas, con `cloud_lines_future`, en la salida y en `status`. Tests con una línea de hoy y otra de 2099.
+- **N1.** `atlas settings set --notification-email` desaparece. Si se usa, `UsageError` con un mensaje que dice que el destinatario vive en la configuración de la nube (tfvars), nunca en el libro. Con su test.
+- **N2.** Un fichero de la nube que no es UTF-8 es `cloud_unreadable` y su versión no se guarda. Test con bytes `0xFF`.
+- **N3.** `RemoteError`, `parseErrorAnswer` y `parseReferenceIndex` pasan a una puerta neutra, que no es la de la sincronización. El guardián de la sincronización queda estricto, sin excepciones. Mutante: un módulo fuera de `adapters/src/sync/` que importa la puerta de la sincronización.
+- **N4.** Se corrige el procedimiento:
+  - paso 4: borrar antes el registro de hoy;
+  - permisos en §8 del contrato de IAM;
+  - paso 3a: el nombre del fichero sale del manifiesto;
+  - la tarjeta del BCE ofrece «Borrar la copia del BCE de este navegador», con confirmación;
+  - aviso de deriva en Terraform.
+- **N5.** Si el `symbols.json` local declara una divisa para la fuente y la nube sirve otra, esas líneas no se añaden, y se dice `cloud_currency_mismatch`. Con su test.
+- **N6.** Tope de 20 MB en la descarga de la web y en la de la consola. Con su test.
+- El techo del arranque se sube si hace falta, en su propio commit.
+
+### 18.3 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| Q19 (312.000) | `4829d9c` | `TOTAL_AUTHORISED_GZIP_BYTES` a 312.000, con su comentario, y el test `bundle-authorisation.test.ts` al día |
+| N1 | `ada76e9` | `--notification-email` sale de las opciones de `atlas settings set`. Usarla da `UsageError`: «el destinatario de los correos vive en la configuración de la nube (terraform.tfvars, de donde pasa a SSM), nunca en el libro», y no se escribe nada |
+| B1, N5, N2 | `570b6fc` | `cloudLinesToAppend(…, { today, declared })` devuelve `{ added, future, mismatched }`: nunca una línea de hoy o futura, ni una en otra divisa que la que la carpeta declara para su fuente.<br>La consola pasa `today` de Madrid y las divisas de su `symbols.json`, dice `cloud_lines_future` y `cloud_currency_mismatch` al bajar y los guarda en `_cloud.json` (`discarded`) para que `status` los diga.<br>Unos bytes que no son UTF-8 son `cloud_unreadable` y su versión no se guarda |
+| N6 | `2eda1ad` | El cliente de los datos de referencia (la consola y la web) no pasa de 20 MB (`MAX_REFERENCE_BYTES`): lo niega por la longitud que dice la respuesta, o contando lo que llega, y corta la lectura |
+| Techos | `a6e2eab` | Los dos techos, **antes** de los commits que los necesitan (§18.5) |
+| N3 | `9d66bf2`, `3ea6e33` | Puerta neutra `@atlas/domain/remote-answers`: `RemoteError`, `parseErrorAnswer` y `parseReferenceIndex`, estos dos en `domain/src/remote/answers.ts`.<br>La puerta de la sincronización sigue exportando `parseErrorAnswer`, que usa.<br>El cliente de referencia y la consola importan de la puerta neutra. La web la carga en diferido (el grupo `domain` de `vite.config.ts` la deja fuera, y `LAZY_ONLY` lo vigila).<br>El guardián de la sincronización no cambia ni gana excepciones. Uno nuevo en `api-access.test.ts` comprueba que el cliente de referencia y la descarga del BCE de la web no alcanzan nada de la sincronización, por ningún camino |
+| N4 (web) | `9108c04` | «Borrar la copia del BCE de este navegador» en la tarjeta del BCE, cuando hay una copia importada o de la nube, con confirmación (`ConfirmDialog`, destructiva). Borra solo la copia del navegador, y la siguiente descarga es una primera: una generación restaurada baja entera |
+| N4 (procedimiento e IAM) | `6d5c222` | El procedimiento:<br>- trabaja fuera del repositorio;<br>- avisa de la deriva respecto de Terraform y de no desplegar hasta reactivar;<br>- saca el nombre del fichero del manifiesto;<br>- en el paso 4 borra antes el registro de hoy, que está versionado;<br>- manda borrar la copia de cada navegador tras restaurar.<br>`contracts/iam-permissions.md` §8: `scheduler:GetSchedule`/`UpdateSchedule` (y `iam:PassRole`, que exige `UpdateSchedule`), `s3:ListBucketVersions`, `s3:GetObjectVersion` y `s3:PutObject` sobre `reference/ecb/*`, `s3:DeleteObject` sobre el manifiesto y sobre `jobs/ecb/ecb_update/*`, y `lambda:InvokeFunction` |
+
+**Añadido por mi cuenta, dicho:** `iam:PassRole` sobre el rol de Scheduler. `UpdateSchedule` lo exige al reescribir una programación con su destino. Es una deducción de la documentación de EventBridge Scheduler, **sin verificar** contra AWS.
+
+### 18.4 Cómo se vio cada test en rojo
+
+- **N1**: el test de `settings.test.ts` (consola), en rojo contra `catalogue.ts` de `0a86822`, que aceptaba la opción y salía con 0 (`016-e3r1-red-n1.log`).
+- **B1, N5, N2**: los tres tests nuevos de la consola, en rojo contra el dominio de `0a86822` (`016-e3r1-red-cli.log`). Los del dominio fallan por la firma nueva, y su rojo de conducta es la mutación.
+- **N6**: el test del tope, en rojo contra el cliente sin tope (`016-e3r1-red-n6.log`).
+- **N3**: el guardián nuevo, en rojo con el cliente importando la puerta de la sincronización (`016-e3r1-red-n3.log`), que es también el mutante R1-N3.
+- **N4 (web)**: el test de «Borrar la copia», en rojo antes de que existiera el botón (`016-e3r1-red-n4.log`).
+
+### 18.5 El paquete web
+
+**Medido en bytes:**
+- **Arranque: 75.057**, +32 sobre los 75.025 de E3 y +45 sobre `develop`.
+  - Unos +16 son dos exportaciones más del trozo `domain`, que los trozos diferidos de la puerta neutra toman de él (`isRecord` y compañía).
+  - El resto es de los nombres de los trozos.
+  - **Techo 75.077 = medida + 20**, dentro de la autorización de 76.069, como permitió la dirección.
+- **Total: 305.394**, +558 sobre E3.
+  - La sección de Ajustes pone +463, con «Borrar la copia», su confirmación y el tope de 20 MB del cliente.
+  - El resto es de la puerta neutra y del almacén del navegador.
+  - **Techo 305.650 = medida + 256**, dentro de 312.000.
+
+**Un tropiezo, dicho:** con la puerta neutra, Rolldown metió `remote/answers.ts` y `ports/remote-ledger.ts` en el trozo `domain`, que es de arranque. `check-bundle.mjs` lo paró: el arranque subía a 75.672.
+- La expresión del grupo `domain` de `vite.config.ts` deja ahora fuera `remote/` y `remote-answers.ts`, como ya dejaba fuera `sync/`.
+- Van en el commit de la puerta, `9d66bf2`. Los commits de esta ronda se reordenaron en local antes de empujar, para que ninguno construya en rojo.
+
+### 18.6 Mutación (lotes `016-e3r1-a.json` y `-b.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Test que lo mata | Veredicto |
+|---|---|---|---|
+| R1-B1 | una línea de hoy o futura se toma de la nube | `domain/test/quotes/cloud.test.ts`, `apps/cli/test/prices/cloud.test.ts` | KILLED |
+| R1-N5a | una línea en otra divisa que la declarada se toma | ídem | KILLED |
+| R1-N5b | la consola no le dice al dominio qué declara la carpeta | `cloud.test.ts` (consola) | KILLED |
+| R1-N2 | unos bytes que no son UTF-8 se toman por un fichero vacío | `cloud.test.ts` (consola) | KILLED |
+| R1-N1 | `--notification-email` se niega sin decir dónde vive el destinatario | `settings.test.ts` (consola) | KILLED |
+| R1-N3 | el cliente de referencia importa la puerta de la sincronización | `tests/api-access.test.ts` (el guardián nuevo) | KILLED |
+| R1-N4 | la copia del navegador se borra sin preguntar | `apps/web/test/ecb-cloud.test.tsx` | KILLED |
+| R1-N6a | no se mira la longitud que dice la respuesta | `packages/adapters/test/reference/http.test.ts` | KILLED |
+| R1-N6b | lo que llega no se cuenta contra el tope | ídem | KILLED |
+
+9 de 9 muertos.
