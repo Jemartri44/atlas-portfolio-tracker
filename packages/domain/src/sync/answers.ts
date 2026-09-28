@@ -105,3 +105,35 @@ export const etagOfHeader = (header: string | null): string | undefined => {
   const quoted = /^(?:W\/)?"([0-9a-f]{64})"$/.exec(header ?? "");
   return quoted?.[1];
 };
+
+/** One entry of the index of the reference data (`docs/api.md` §6). */
+export interface ReferenceIndexEntry {
+  readonly name: string;
+  readonly version: string;
+  readonly size: number;
+}
+
+const isEntry = (value: unknown): value is ReferenceIndexEntry =>
+  isRecord(value) &&
+  onlyKeys(value, ["name", "version", "size"]) &&
+  typeof value.name === "string" &&
+  value.name !== "" &&
+  typeof value.version === "string" &&
+  value.version !== "" &&
+  isCount(value.size);
+
+/**
+ * The `200` of `GET /api/reference/index` (feature 016, E3): the first level
+ * of `reference/ecb/` and of `prices/`, each entry with its opaque version.
+ */
+export const parseReferenceIndex = (
+  value: unknown,
+): { ecb: ReferenceIndexEntry[]; prices: ReferenceIndexEntry[] } | undefined =>
+  isRecord(value) &&
+  onlyKeys(value, ["ecb", "prices"]) &&
+  Array.isArray(value.ecb) &&
+  Array.isArray(value.prices) &&
+  value.ecb.every(isEntry) &&
+  value.prices.every(isEntry)
+    ? { ecb: value.ecb, prices: value.prices }
+    : undefined;

@@ -11,6 +11,7 @@ import {
   parseErrorAnswer,
   parseInitAnswer,
   parsePublishAnswer,
+  parseReferenceIndex,
 } from "../../src/sync/answers.js";
 
 const SHA = "c".repeat(64);
@@ -157,6 +158,34 @@ describe("etagOfHeader (§5.1; block 0 of E3, §23.3)", () => {
     expect(etagOfHeader(`W/"${SHA}"`)).toBe(SHA);
     for (const value of [null, SHA, `"${SHA.toUpperCase()}"`, '"abc"', `"${SHA}", "${SHA}"`]) {
       expect(etagOfHeader(value), String(value)).toBeUndefined();
+    }
+  });
+});
+
+describe("the index of the reference data (feature 016, E3)", () => {
+  const entry = { name: "ast_a.jsonl", version: "v1", size: 10 };
+
+  it("reads the two lists, each entry with its name, version and size", () => {
+    expect(parseReferenceIndex({ ecb: [], prices: [entry] })).toEqual({ ecb: [], prices: [entry] });
+  });
+
+  it("refuses anything else", () => {
+    for (const value of [
+      null,
+      [],
+      { ecb: [] },
+      { ecb: [], prices: [], more: [] },
+      { ecb: {}, prices: [] },
+      { ecb: [], prices: {} },
+      { ecb: [], prices: [{ ...entry, name: "" }] },
+      { ecb: [], prices: [{ ...entry, version: "" }] },
+      { ecb: [], prices: [{ ...entry, version: 1 }] },
+      { ecb: [], prices: [{ ...entry, size: -1 }] },
+      { ecb: [], prices: [{ ...entry, extra: 1 }] },
+      { ecb: [{ name: 1, version: "v", size: 0 }], prices: [] },
+      { ecb: ["x"], prices: [] },
+    ]) {
+      expect(parseReferenceIndex(value), JSON.stringify(value)).toBeUndefined();
     }
   });
 });

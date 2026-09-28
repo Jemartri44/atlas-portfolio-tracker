@@ -23,6 +23,8 @@ export {
   parseErrorAnswer,
   parseInitAnswer,
   parsePublishAnswer,
+  parseReferenceIndex,
+  type ReferenceIndexEntry,
 } from "./sync/answers.js";
 export { syncArchiveName } from "./sync/archive.js";
 export {
