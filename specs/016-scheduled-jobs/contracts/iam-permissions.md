@@ -60,20 +60,31 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 
 | Acción | Recurso | Para qué |
 |---|---|---|
-| `s3:GetObject` | `B/ledger/ledger.jsonl`, `B/reference/ecb/*`, `B/prices/*` | lo que se vuelca |
-| `s3:GetObject`, `s3:PutObject` | `B/backups/*` | escribir con `If-None-Match: *` y comparar lo que ya existe |
+| `s3:GetObject` | `B/ledger/ledger.jsonl`, `B/reference/ecb/*`, `B/prices/*` | lo que se vuelca; `prices/` y el histórico también valoran `positions.json` |
+| `s3:GetObject`, `s3:PutObject` | `B/backups/*` | escribir con `If-None-Match: *` (basta `s3:PutObject`, questions §20.1) y comparar lo que ya existe (`s3:GetObject`) |
 | `s3:GetObject`, `s3:PutObject` | `B/jobs/backup/*` | su registro |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `prices/`, `reference/ecb/`, `backups/`, `jobs/backup/`, `ledger/` | listar `prices/` (primer nivel) y `404` |
 
-**Política del bucket, aceptada por la dirección** (questions §1.7 y §9): denegar `s3:PutObject` en `B/backups/*` a cualquier principal cuando falte `s3:if-none-match` (`conditional-writes-enforce.html`): así, ni un error del código puede sobrescribir un volcado. Su forma exacta se verifica en el bloque 0 de E4.
+**Política del bucket, aceptada por la dirección** (questions §1.7 y §9), con la forma que verificó el bloque 0 de E4 (questions §20.1, `conditional-writes-enforce.html`): así, ni un error del código puede sobrescribir un volcado.
+
+```json
+{ "Sid": "BackupsOnlyIfAbsent", "Effect": "Deny", "Principal": "*", "Action": "s3:PutObject",
+  "Resource": "B/backups/*",
+  "Condition": { "Null": { "s3:if-none-match": "true" }, "Bool": { "s3:ObjectCreationOperation": "true" } } }
+```
+
+**Sin verificar, para la 018**: que `s3:ObjectCreationOperation` valga `true` en un `PutObject` simple; si no, basta la condición `Null` sola. `If-None-Match` solo mira la versión vigente: ningún rol de Atlas tiene `s3:DeleteObject` sobre `B/backups/*`, así que nadie puede dejar una marca de borrado encima de un volcado.
 
 ## 5. `atlas-<entorno>-job-integrity`
 
 | Acción | Recurso | Para qué |
 |---|---|---|
-| `s3:GetObject` | `B/ledger/ledger.jsonl`, `B/backups/*`, `B/reference/ecb/*`, `B/jobs/backup/*` | recalcular, el último volcado y el histórico para `deepCheck` |
+| `s3:GetObject` | `B/ledger/ledger.jsonl` | recalcular desde cero (`integrity`, `deepCheck`) y medir su tamaño (questions §20.1, punto 2) |
+| `s3:GetObject` | `B/jobs/backup/*`, `B/backups/*` | el último volcado cerrado (su registro y su `ledger.jsonl`) para el ensayo de restauración |
 | `s3:GetObject`, `s3:PutObject` | `B/jobs/integrity/*` | su registro |
-| `s3:ListBucket` | `B`, con `s3:prefix` en `jobs/backup/`, `jobs/integrity/`, `backups/`, `reference/ecb/`, `ledger/` | encontrar el último volcado cerrado y `404` |
+| `s3:ListBucket` | `B`, con `s3:prefix` en `jobs/backup/monthly_backup/`, `jobs/integrity/`, `backups/`, `ledger/` | encontrar los volcados y `404` |
+
+**Cambio en E4**: ya no lee `B/reference/ecb/*`. Los errores de la integridad son los de `atlas check --deep` sin el contraste de los tipos del BCE, que solo da avisos (Q7; questions §20.2).
 
 ## 6. `atlas-<entorno>-api` (lo que añade la 016)
 
@@ -108,6 +119,15 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 | `s3:DeleteObject` | `B/reference/ecb/manifest.json` | retirar una generación que miente con una marca de borrado (paso 3b). **Aceptado por la dirección para la 017** (§18) |
 | `s3:DeleteObject` | `B/jobs/ecb/ecb_update/*` | borrar el registro de ejecución de hoy, versionado, para que la invocación a mano no acabe en `job_already_done` (paso 4) |
 | `lambda:InvokeFunction` | `L` | ejecutar la tarea una vez a mano (paso 4) |
+| `s3:GetObject` | `B/jobs/ecb/*` | leer el registro de la ejecución a mano, que tiene que decir `ecb_updated` (paso 4; pedido por la dirección para E4) |
+
+**El procedimiento de los avisos** (`specs/016-scheduled-jobs/runbooks/scheduled-warnings.md`; E4):
+
+| Acción | Recurso | Para qué |
+|---|---|---|
+| `s3:GetObject` | `B/jobs/*` | leer el registro de una tarea que falla o no se lee, y el de un volcado |
+| `s3:GetObject` | `B/backups/*` | comprobar un volcado contra su registro (el bloque ensayado) |
+| `s3:ListBucketVersions` | `B`, con `s3:prefix` en `backups/` | ver quién escribió un objeto que no dejó el volcado (`backup_object_differs`) |
 
 Con credenciales de corta duración y MFA, como las demás órdenes de `atlas admin` (ADR-0032, ADR-0034). Si el rol de administración de la 015 ya alcanza todo el bucket de datos, estas filas no añaden nada **del bucket**; se escriben para que la 017 lo compruebe, y las de Scheduler y Lambda sí son nuevas. La orden `push` **nunca** escribe `B/prices/config.json`.
 
@@ -117,5 +137,14 @@ Con credenciales de corta duración y MFA, como las demás órdenes de `atlas ad
 |---|---|---|---|
 | `atlas-<entorno>-job-ecb` | 300 s | 256 MB | 300 |
 | `atlas-<entorno>-job-prices` | 900 s | 256 MB | 900 |
+| `atlas-<entorno>-job-mail` | 300 s | 256 MB | 300 |
+| `atlas-<entorno>-job-backup` | 300 s | 512 MB | 300 |
+| `atlas-<entorno>-job-integrity` | 300 s | 512 MB | 300 |
+
+**E4, propuesta**:
+- **El volcado** tiene en memoria a la vez el libro, `prices/` y el histórico del BCE, unos 600 KB en ZIP y unos 12 MB en el CSV de la API (§19.1).
+- **La integridad** tiene en memoria dos libros, el vivo y el del volcado, con sus dos proyecciones.
+
+Con un libro de 1-2 MB (ADR-0002), 512 MB dejan margen. **Sin medir** contra una Lambda real: es de la 018.
 
 Cada llamada a una fuente lleva un tiempo máximo de 15 s (`AbortSignal.timeout`, en la composición): el peor caso de la de precios son 41 × 15 s = 615 s.

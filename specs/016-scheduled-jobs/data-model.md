@@ -20,7 +20,7 @@ Un objeto por tarea y periodo; lo escribe **solo** la función de su familia (`e
 | `outcome?` | `{ code, counts? }`; `counts`, enteros con nombres del catálogo de códigos |
 | `frequencies?` | lo que la lectura tolerante ignoró, por código (R9) |
 | `findings?` | `{ code, subject, counts?, dates? }` (plan §5.4). **`subject` nunca es un `asset_id`, un símbolo, un ISIN, una cuenta ni un importe**: una fuente, un `thesis_id`, `ecb`, `backup`, `integrity` |
-| `objects?` | solo el volcado: `[{ key, sha256, kept_from_earlier_attempt? }]` |
+| `objects?` | solo el volcado (`monthly_backup`): `[{ key, sha256, kept_from_earlier_attempt? }]`, con cada `key` bajo `backups/<su periodo>/` y sin `..`, el SHA-256 en hexadecimal y `kept_from_earlier_attempt` solo como `true`. Otra tarea con `objects`, ilegible |
 
 - Un registro ilegible **no** cuenta como libre: la tarea se niega (`job_record_unreadable`, con un `ERROR`). **Salvo el recordatorio mensual**, que lo reclama con `If-Match` sobre su ETag y envía, para no perder el mes; uno de un formato más nuevo no se toca nunca. El de un productor lo avisa el correo como `record_unreadable`, con la tarea como `subject` (revisión de la PR #104, N4).
 - Un registro `claimed` o `sending` reclamado hace menos que `ATLAS_JOB_MAX_RUN_SECONDS` es de una ejecución que puede seguir en marcha: nadie lo retoma (`job_in_progress`, N3).
@@ -45,20 +45,48 @@ Un objeto por tarea y periodo; lo escribe **solo** la función de su familia (`e
 
 ## 4. `positions.json` del volcado (E4; legible sin la aplicación)
 
+Construido por `positionsDocument` (`packages/domain/src/jobs/positions.ts`) a partir del `ledger.jsonl` **del mismo volcado**:
+
 ```json
-{"positions_format":1,"as_of":"2026-10-01","generated_at":"2026-10-01T01:15:04Z","ledger":{"sha256":"…","lines":812},
- "note":"Informativo. Valores con el último precio conocido; nunca una cifra fiscal.",
- "core":[{"account_id":"…","asset_id":"…","isin":"…","name":"…","asset_class":"equity","quantity":"12.5","cost_eur":"1500.00","value_eur":"1650.40","price":{"date":"2026-09-30","source":"close","approximation":false}}],
- "bucket":[{"account_id":"…","asset_id":"…","name":"…","quantity":"3","cost_eur":"300.00","value_eur":null,"price":{"source":"none"}}],
- "cash":[{"account_id":"…","book":"core","currency":"EUR","amount":"120.00"}],
- "totals":{"core_eur":"…","bucket_eur":"…","cash_eur":"…"},
- "warnings":["missing_manual_prices"]}
+{
+  "positions_format": 1,
+  "as_of": "2026-10-01",
+  "generated_at": "2026-10-01T01:15:04.000Z",
+  "ledger": { "sha256": "…", "lines": 812 },
+  "note": "Informativo. Valores con el último precio conocido; nunca una cifra fiscal.",
+  "core": [
+    { "account_id": "…", "asset_id": "…", "isin": "…", "name": "…", "asset_class": "equity",
+      "quantity": "12.5", "cost_eur": "1500.00", "value_eur": "1650.40",
+      "price": { "date": "2026-09-30", "source": "eodhd", "approximation": false } }
+  ],
+  "bucket": [
+    { "account_id": "…", "asset_id": "…", "name": "…", "quantity": "3", "cost_eur": "300.00",
+      "value_eur": null, "price": { "source": "none" } }
+  ],
+  "cash": [ { "account_id": "…", "book": "core", "currency": "EUR", "amount": "120.00", "value_eur": "120.00" } ],
+  "totals": {
+    "core": { "eur": "…", "partial": false },
+    "bucket": { "eur": "…", "partial": true },
+    "cash": { "eur": "…", "partial": false }
+  },
+  "warnings": ["partial_net_worth"]
+}
 ```
 
-- Importes como **cadenas** decimales (ADR-0005); `value_eur: null` cuando no hay precio con valor en euros, nunca un cero.
-- Núcleo y cubo **separados**, y los totales **desglosados**, nunca sumados (constitución III).
-- Una línea por línea de JSON con sangría de dos espacios: el volcado es para leerlo a mano (el `\n` final se mantiene).
+- **Importes como cadenas decimales redondeadas a céntimos**, como las enseña una pantalla (ADR-0005). **La cantidad va exacta**, como la tiene el libro.
+- **Sin precio**, la posición lleva `value_eur: null` y `price: {"source": "none"}`, nunca un cero.
+  - Un bloque con alguna posición sin valor en euros lleva `partial: true`.
+  - Una posición sin lotes abiertos detrás (la forma de `lots_mismatch`) lleva `cost_eur: null`.
+- **El precio dice de dónde sale**: `manual`, o la fuente del cierre de la nube (`eodhd`, `alpha_vantage`). Una aproximación por el ETF de referencia lleva `approximation: true`.
+- `isin` solo aparece si el activo lo tiene.
+- **Núcleo y cubo van separados**, y los totales desglosados, cada uno con su `partial`: **no hay total de los dos** (constitución III).
+- `warnings` lleva **los códigos** de los avisos de la proyección, una vez cada uno y ordenados. Nunca su texto, que lleva importes e identificadores.
 - `ledger.sha256` y `ledger.lines` son los del `ledger.jsonl` del mismo volcado: dicen de qué libro sale.
+- Sangría de dos espacios y un salto de línea final: el volcado se lee a mano.
+- **Cambios respecto de la propuesta de E1**, dichos en questions §20.2:
+  - los totales llevan `partial`;
+  - `price.source` es `manual` o la fuente (antes decía `close`);
+  - el efectivo lleva `value_eur`.
 
 ## 5. Lo que ya existe y cambia de dueño en la nube
 
