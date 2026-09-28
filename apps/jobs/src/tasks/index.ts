@@ -7,6 +7,7 @@ import type { JobTask } from "@atlas/domain/jobs";
 import type { TaskRunner } from "../run.js";
 import { monthlyBackup } from "./backup.js";
 import { ecbUpdate } from "./ecb.js";
+import { quarterlyIntegrity } from "./integrity.js";
 import { MAIL_RUNNERS } from "./mail.js";
 import { pricesUpdate } from "./prices.js";
 
@@ -15,4 +16,5 @@ export const RUNNERS: Readonly<Partial<Record<JobTask, TaskRunner>>> = {
   ecb_update: ecbUpdate,
   prices_update: pricesUpdate,
   monthly_backup: monthlyBackup,
+  quarterly_integrity: quarterlyIntegrity,
 };
