@@ -9,7 +9,8 @@
 // attempt of the same month left** — the ledger grew between two attempts,
 // say — and stays (`kept`), or something nobody should have written, which is
 // refused and said (`backup_object_differs`) with nothing more written. What
-// an earlier attempt left is what its record says it wrote, byte for byte.
+// an earlier attempt left is what its record says it was going to write, byte
+// for byte: the dump notes each object in its record **before** writing it.
 
 import type { Finding } from "./run-record.js";
 
@@ -40,15 +41,16 @@ export type DumpStep = "write" | "same" | "kept" | "differs";
 
 /**
  * What to do with one object of the dump, from the SHA-256 of what is there
- * (if anything), of what was going to be written, and of what **an earlier
- * attempt of the same month says it wrote** at that key (its record keeps the
- * list, review of PR #109, copias N3). Other bytes are kept only when they are
- * exactly those: anything else, somebody else wrote.
+ * (if anything), of what was going to be written, and of **every intent an
+ * earlier attempt of the same month noted in its record before writing** at
+ * that key (review of PR #109: N3 of round 1, and R2-B1, a run that dies
+ * after writing still left its intent). Other bytes are kept only when they
+ * are one of those: anything else, somebody else wrote.
  */
 export const dumpStep = (input: {
   readonly existing: string | undefined;
   readonly next: string;
-  readonly earlier: string | undefined;
+  readonly earlier: readonly string[];
 }): DumpStep => {
   if (input.existing === undefined) {
     return "write";
@@ -56,7 +58,7 @@ export const dumpStep = (input: {
   if (input.existing === input.next) {
     return "same";
   }
-  return input.existing === input.earlier ? "kept" : "differs";
+  return input.earlier.includes(input.existing) ? "kept" : "differs";
 };
 
 /**

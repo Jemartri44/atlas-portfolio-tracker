@@ -39,17 +39,19 @@ describe("where a dump lives (E4)", () => {
 
 describe("what the dump does with each object (mutant 28)", () => {
   it("writes what is not there, and leaves what is there with the same bytes", () => {
-    expect(dumpStep({ existing: undefined, next: A, earlier: undefined })).toBe("write");
-    expect(dumpStep({ existing: undefined, next: A, earlier: B })).toBe("write");
-    expect(dumpStep({ existing: A, next: A, earlier: undefined })).toBe("same");
-    expect(dumpStep({ existing: A, next: A, earlier: B })).toBe("same");
+    expect(dumpStep({ existing: undefined, next: A, earlier: [] })).toBe("write");
+    expect(dumpStep({ existing: undefined, next: A, earlier: [B] })).toBe("write");
+    expect(dumpStep({ existing: A, next: A, earlier: [] })).toBe("same");
+    expect(dumpStep({ existing: A, next: A, earlier: [B] })).toBe("same");
   });
 
   it("keeps only what an earlier attempt says it wrote, and refuses any other bytes (copias N3)", () => {
-    expect(dumpStep({ existing: B, next: A, earlier: B })).toBe("kept");
+    expect(dumpStep({ existing: B, next: A, earlier: [B] })).toBe("kept");
     // A retry, with other bytes that no attempt wrote: somebody else did.
-    expect(dumpStep({ existing: B, next: A, earlier: undefined })).toBe("differs");
-    expect(dumpStep({ existing: B, next: A, earlier: "c".repeat(64) })).toBe("differs");
+    expect(dumpStep({ existing: B, next: A, earlier: [] })).toBe("differs");
+    expect(dumpStep({ existing: B, next: A, earlier: ["c".repeat(64)] })).toBe("differs");
+    // Several intents of earlier attempts at one key: any of them is its own (R2-B1).
+    expect(dumpStep({ existing: B, next: A, earlier: ["c".repeat(64), B] })).toBe("kept");
   });
 
   it("writes the manifest of the ECB only over the very file it names", () => {

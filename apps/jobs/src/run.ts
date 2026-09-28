@@ -65,8 +65,16 @@ export interface TaskContext {
   readonly markSending: () => Promise<void>;
   /** Which attempt of the period this is: above 1, an earlier one claimed it. */
   readonly attempt: number;
-  /** What earlier attempts of the period say they wrote (only the dump): its record keeps it. */
+  /** What earlier attempts of the period noted they were going to write (only the dump). */
   readonly earlier: readonly DumpObject[];
+  /**
+   * Notes in the record of this attempt, **before** writing them, the objects
+   * it is going to write (only the dump; review of PR #109, R2-B1): a run that
+   * dies right after a write, never closing its record, still leaves it said,
+   * and the retry keeps that object as its own. A conditional write on the
+   * record: another run in between stops this one.
+   */
+  readonly note: (objects: readonly DumpObject[]) => Promise<void>;
 }
 
 export interface TaskResult {
@@ -184,6 +192,10 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
       etag = await store.writeRecord(record, etag);
       sending = true;
     };
+    const note = async (objects: readonly DumpObject[]) => {
+      record = { ...record, objects: [...(record.objects ?? []), ...objects] };
+      etag = await store.writeRecord(record, etag);
+    };
     const ignored = input.frequencies.ignored;
     let result: TaskResult;
     try {
@@ -198,6 +210,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
         markSending,
         attempt: record.attempts,
         earlier: found?.objects ?? [],
+        note,
       });
     } catch (error) {
       if (error instanceof JobsWriteConflict) {
@@ -207,7 +220,20 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
       result = {
         state: sending ? "send_unknown" : "failed",
         outcome: { code: "task_error" },
-        ...(interrupted === undefined ? {} : { objects: interrupted.objects }),
+        // What this attempt noted, and what it says it wrote besides.
+        ...(interrupted === undefined
+          ? {}
+          : {
+              objects: [
+                ...(record.objects ?? []),
+                ...interrupted.objects.filter(
+                  (object) =>
+                    !(record.objects ?? []).some(
+                      (noted) => noted.key === object.key && noted.sha256 === object.sha256,
+                    ),
+                ),
+              ],
+            }),
       };
       say({
         level: "ERROR",

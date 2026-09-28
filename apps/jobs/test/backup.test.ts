@@ -214,6 +214,45 @@ describe("the monthly dump (E4, plan §8)", () => {
     }
   });
 
+  it("finishes a month whose run died after writing, its record never closed (R2-B1)", async () => {
+    const s3 = seeded();
+    // The first attempt hangs on the history of the ECB, right after writing
+    // positions.json: a timeout, never a thrown error. Its record stays claimed.
+    const put = s3.putIfNoneMatch.bind(s3);
+    let hang = true;
+    let hung = false;
+    s3.putIfNoneMatch = (key, body) => {
+      if (hang && key === `${DUMP}reference/ecb/eurofxref-hist.csv`) {
+        hung = true;
+        return new Promise(() => undefined);
+      }
+      return put(key, body);
+    };
+    void backup(s3).run(["monthly_backup"]);
+    while (!hung) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    hang = false;
+    expect(recordOf(s3).state).toBe("claimed");
+    const positions = s3.text(`${DUMP}positions.json`);
+    // The retry, twenty minutes later: past the longest the run could last.
+    await backup(s3, "2026-10-01T01:35:00Z").run(["monthly_backup"]);
+    const record = recordOf(s3);
+    expect(record).toMatchObject({ state: "done", attempts: 2 });
+    expect(record.findings).toBeUndefined();
+    expect(s3.keys().filter((key) => key.startsWith(DUMP))).toEqual(
+      DUMPED.map((name) => `${DUMP}${name}`),
+    );
+    // Its own positions, left and said as such; the ECB and the prices, written.
+    expect(s3.text(`${DUMP}positions.json`)).toBe(positions);
+    expect(record.objects).toContainEqual({
+      key: `${DUMP}positions.json`,
+      sha256: sha(positions as string),
+      kept_from_earlier_attempt: true,
+    });
+    expect(record.outcome.counts).toMatchObject({ ecb: 1, prices: 3, differs: 0 });
+  });
+
   it("keeps as its own only what the record of an earlier attempt says it wrote (copias N3)", async () => {
     const s3 = seeded();
     s3.beforePut = (key) => {
@@ -223,13 +262,16 @@ describe("the monthly dump (E4, plan §8)", () => {
       }
     };
     await backup(s3).run(["monthly_backup"]);
-    // The failed attempt says what it wrote before the cut.
-    expect(recordOf(s3)).toMatchObject({
-      state: "failed",
-      objects: [
-        { key: `${DUMP}ledger.jsonl`, sha256: sha(s3.text("ledger/ledger.jsonl") as string) },
-      ],
+    // The failed attempt says what it wrote before the cut, and what it was writing.
+    expect(recordOf(s3)).toMatchObject({ state: "failed" });
+    expect(recordOf(s3).objects[0]).toEqual({
+      key: `${DUMP}ledger.jsonl`,
+      sha256: sha(s3.text("ledger/ledger.jsonl") as string),
     });
+    expect(recordOf(s3).objects.map((object: { key: string }) => object.key)).toEqual([
+      `${DUMP}ledger.jsonl`,
+      `${DUMP}positions.json`,
+    ]);
     // Before the retry, somebody else writes an object of the dump.
     s3.seed(`${DUMP}prices/ast_world.jsonl`, "not a close\n");
     await backup(s3, "2026-10-01T02:00:00Z").run(["monthly_backup"]);

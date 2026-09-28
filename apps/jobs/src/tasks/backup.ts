@@ -6,13 +6,17 @@
 // (§8.2 B2): what fails is a finding in its record, for the mail function.
 //
 // **A dump is for ever.** Every object is written with `If-None-Match: *`,
-// never over another. A month left half done by a cut is finished by the
-// retry, which leaves what the earlier attempt wrote and says so
-// (`kept_from_earlier_attempt`): the positions are always those of the ledger
-// **of the dump**, not of the live one. An object there with other bytes and
-// no earlier attempt is refused (`backup_object_differs`) and nothing more is
-// written. A conditional write that meets another writer stops the run: only
-// this function writes `backups/`, so it can only be another run of it.
+// never over another. **Before each write, the object is noted in the record
+// of the attempt** (its key and SHA-256, a conditional write on the record;
+// review of PR #109, R2-B1). A month left half done by a cut — a thrown error,
+// or a run that dies with its record still claimed (a timeout) — is finished
+// by the retry, which leaves what an earlier attempt noted and wrote, and says
+// so (`kept_from_earlier_attempt`): the positions are always those of the
+// ledger **of the dump**, not of the live one. An object there with bytes no
+// attempt noted is refused (`backup_object_differs`, N3 of round 1) and
+// nothing more is written. A conditional write that meets another writer
+// stops the run: only this function writes `backups/`, so it can only be
+// another run of it.
 
 import { createHash } from "node:crypto";
 import { LEDGER_KEY } from "@atlas/adapters/aws";
@@ -48,7 +52,10 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
   const { deps } = context;
   const prefix = dumpPrefix(context.period);
   // What earlier attempts of the month say they wrote, byte for byte (copias N3).
-  const earlier = new Map(context.earlier.map((object) => [object.key, object.sha256]));
+  const earlier = new Map<string, string[]>();
+  for (const object of context.earlier) {
+    earlier.set(object.key, [...(earlier.get(object.key) ?? []), object.sha256]);
+  }
   const objects: DumpObject[] = [];
   /** The objects of this attempt, and those of earlier ones it did not reach again. */
   const withEarlier = (): DumpObject[] => [
@@ -73,10 +80,12 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
     const step = dumpStep({
       existing: existing === undefined ? undefined : sha256(existing.body),
       next,
-      earlier: earlier.get(key),
+      earlier: earlier.get(key) ?? [],
     });
     switch (step) {
       case "write":
+        // Said before it is written: a run that dies after this write still left it said (R2-B1).
+        await context.note([{ key, sha256: next }]);
         if ((await deps.objects.putIfNoneMatch(key, bytes)) === "exists") {
           throw new JobsWriteConflict();
         }
