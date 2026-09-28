@@ -49,28 +49,28 @@ export const parseCloudPull = (text: string | undefined): CloudPull | undefined 
   try {
     raw = JSON.parse(text);
   } catch {
-    throw invalid("json");
+    throw wrongPull("json");
   }
   const repeated = repeatedKey(text);
   if (repeated !== undefined) {
     throw repeatedKeyError(`prices/${CLOUD_PULL_FILE}`, repeated);
   }
   if (!isObject(raw) || raw.cloud_format !== CLOUD_PULL_FORMAT) {
-    throw invalid("cloud_format");
+    throw wrongPull("cloud_format");
   }
   for (const key of Object.keys(raw)) {
     if (!["cloud_format", "origin", "pulled_at", "versions"].includes(key)) {
-      throw invalid(key);
+      throw wrongPull(key);
     }
   }
   if (typeof raw.origin !== "string") {
-    throw invalid("origin");
+    throw wrongPull("origin");
   }
   if (typeof raw.pulled_at !== "string") {
-    throw invalid("pulled_at");
+    throw wrongPull("pulled_at");
   }
   if (!isObject(raw.versions) || !Object.values(raw.versions).every((v) => typeof v === "string")) {
-    throw invalid("versions");
+    throw wrongPull("versions");
   }
   return raw as unknown as CloudPull;
 };
