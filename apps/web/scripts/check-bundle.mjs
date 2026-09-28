@@ -1123,6 +1123,7 @@ const LAZY_ONLY = [
   // Feature 016, E3, block 2: the download of the ECB history from the cloud
   // is never the boot's (its reading of the manifest is in `ecb/`, above).
   { path: "/src/ecb/", what: "el histórico del BCE de la web" },
+  { path: "/packages/adapters/src/reference/", what: "el cliente de los datos de referencia" },
   {
     path: "/packages/domain/src/schema/strict-json.ts",
     what: "la lectura estricta del manifiesto",

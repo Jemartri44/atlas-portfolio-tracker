@@ -3,7 +3,7 @@
 
 import { RemoteError } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
-import { httpReference } from "../../src/sync/http-reference.js";
+import { httpReference } from "../../src/reference/http.js";
 
 interface Seen {
   url: string;

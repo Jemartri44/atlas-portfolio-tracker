@@ -7,7 +7,9 @@
 // here: what an index may be is the domain's (`parseReferenceIndex`).
 //
 // A subpath of its own (`@atlas/adapters/reference-http`), so that the web
-// loads it lazily, never on its boot path.
+// loads it lazily, never on its boot path; and a folder of its own, outside
+// `sync/`: it only reads, and the web reaches what configures the sync only
+// through its engine (feature 015's guardians).
 
 import { parseErrorAnswer, parseReferenceIndex, RemoteError } from "@atlas/domain/sync";
 

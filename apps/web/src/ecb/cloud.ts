@@ -15,9 +15,8 @@
 // The CSP does not change: it is our own origin.
 
 import { httpReference } from "@atlas/adapters/reference-http";
-import { sha256Hex } from "@atlas/domain";
+import { DomainError, sha256Hex } from "@atlas/domain";
 import type { EcbSource } from "@atlas/domain/ecb";
-import { RemoteError } from "@atlas/domain/sync";
 
 export type CloudOutcome =
   | { readonly kind: "saved"; readonly latest: string; readonly source: EcbSource }
@@ -90,7 +89,9 @@ export const downloadCloudHistory = async (
     await reloadWebHistory();
     return { kind: "saved", latest: check.latest, source: active.source };
   } catch (error) {
-    if (error instanceof RemoteError) {
+    // A `RemoteError` of the client, by its base class: the web imports the
+    // door of the sync only in its engine (feature 015's guardians).
+    if (error instanceof DomainError) {
       return { kind: "failed", code: error.code };
     }
     throw error;
