@@ -7,44 +7,16 @@
 // history whose bytes do not match its manifest is **not used**, and every
 // quote not in euros stays without a value in euros. Never an invented rate.
 
-import { createHash } from "node:crypto";
 import { type ObjectStore, referenceReader } from "@atlas/adapters/aws";
 import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
-import { DEFAULT_LOCAL_CONFIG, readEcbHistory } from "@atlas/domain/ecb";
-import { activeHistoryOf } from "@atlas/domain/jobs";
+import { DEFAULT_LOCAL_CONFIG } from "@atlas/domain/ecb";
 import { externalPricesOf, parseSymbols, priceFileName, readCloses } from "@atlas/domain/quotes";
-
-const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-
-const textOf = (bytes: Uint8Array): string | undefined => {
-  try {
-    return utf8.decode(bytes);
-  } catch {
-    return undefined;
-  }
-};
+import { readCloudEcbHistory, textOf } from "./ecb-history.js";
 
 export interface ReferenceRead {
   readonly external?: ExternalPrices;
   readonly counts: { readonly price_files: number; readonly ecb_history: number };
 }
-
-const historyOf = async (reader: ReturnType<typeof referenceReader>) => {
-  const manifest = await reader.get("reference/ecb/manifest.json");
-  const active = manifest === undefined ? undefined : activeHistoryOf(textOf(manifest.body) ?? "");
-  if (active === undefined) {
-    return undefined;
-  }
-  const file = await reader.get(`reference/ecb/${active.file}`);
-  if (
-    file === undefined ||
-    createHash("sha256").update(file.body).digest("hex") !== active.sha256
-  ) {
-    return undefined;
-  }
-  const text = textOf(file.body);
-  return text === undefined ? undefined : readEcbHistory(text, active.source);
-};
 
 export const readReference = async (
   objects: ObjectStore,
@@ -59,7 +31,7 @@ export const readReference = async (
       files.set(assetId, text);
     }
   }
-  const history = await historyOf(reader).catch(() => undefined);
+  const history = await readCloudEcbHistory(objects).catch(() => undefined);
   const counts = { price_files: files.size, ecb_history: history === undefined ? 0 : 1 };
   if (files.size === 0) {
     return { counts };
