@@ -6,7 +6,7 @@
 // 2026-09-27): a base or a quota in a mailbox is the most sensitive thing
 // Atlas computes, and the mail only has to say the data is ready.
 
-import { type CivilDate, yearOf } from "../dates/civil-date.js";
+import type { CivilDate } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
 import type { LedgerEvent } from "../schema/events.js";
 import { taxYear } from "../tax/year.js";
@@ -25,11 +25,13 @@ export type TaxReturnFacts =
 
 export const taxReturnFacts = (input: {
   readonly events: readonly LedgerEvent[];
+  /** The fiscal year: the one before the year of the period, never of the day (review of PR #109, avisos B1). */
+  readonly year: number;
   readonly today: CivilDate;
   /** The findings of the ECB check, as `atlas tax` passes them: they only note lines. */
   readonly rateFindings?: readonly { readonly event_id: string; readonly code: string }[];
 }): TaxReturnFacts => {
-  const year = yearOf(input.today) - 1;
+  const year = input.year;
   try {
     const report = taxYear(input.events, year, {
       today: input.today,

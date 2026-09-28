@@ -7,8 +7,16 @@
 
 import { createHash } from "node:crypto";
 import { type ObjectStore, referenceReader } from "@atlas/adapters/aws";
-import { type EcbHistory, readEcbHistory } from "@atlas/domain/ecb";
+import { DEFAULT_LOCAL_CONFIG, type EcbHistory, readEcbHistory } from "@atlas/domain/ecb";
 import { activeHistoryOf } from "@atlas/domain/jobs";
+
+/**
+ * How old a rate of the ECB may be before a currency counts as stale, in the
+ * cloud: there is no `atlas.config.json`, so the default of the console (Q11).
+ * **One value for every task**: the reminder values the cash with it, and the
+ * income tax of January notes the rates with it (review of PR #109, avisos N2).
+ */
+export const CLOUD_ECB_STALE_DAYS = DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days;
 
 const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
@@ -20,7 +28,11 @@ export const textOf = (bytes: Uint8Array): string | undefined => {
   }
 };
 
-/** The history in force, or nothing: no manifest, a file that does not match it, or not a history. */
+/**
+ * The history in force, or nothing: no manifest, a file that does not match
+ * it, or not a history. **A read that fails throws**: it is not «no history»,
+ * and a caller that said so would say less than it knows (avisos N2).
+ */
 export const readCloudEcbHistory = async (
   objects: ObjectStore,
 ): Promise<EcbHistory | undefined> => {

@@ -149,31 +149,75 @@ describe("architecture (016): the warnings of January reach no price (E4, mutant
     ).toBeGreaterThan(0);
   });
 
-  it("composes them in a module that reads no close", () => {
+  /**
+   * **The graph of the fiscal task, name by name** (review of PR #109, avisos
+   * N3): a list of forbidden names is dodged by one more name of a barrel that
+   * values with the closes (`reviewFacts`, `positionsDocument`…). So every
+   * module of the application the task reaches is listed, and every **value**
+   * each of them takes from a package is listed too: a new one fails here
+   * until somebody looks at it. Types run nothing and are left alone. And the
+   * store of the bucket reaches the task only through its scope (`ledger/`
+   * and `reference/ecb/`), which the behaviour test holds.
+   */
+  it("composes them in a module whose graph takes from the packages only what it lists", () => {
     expect(exists(fiscal)).toBe(true);
-    const local = [...reach([fiscal]).keys()]
-      .filter((file) => file.startsWith(jobsSrc))
-      .map((file) => relative(repoRoot, file))
-      .sort();
-    expect(local).toEqual([
+    const reached = [...reach([fiscal]).keys()].filter((file) => file.startsWith(jobsSrc));
+    expect(reached.map((file) => relative(repoRoot, file)).sort()).toEqual([
       "apps/jobs/src/ecb-history.ts",
       "apps/jobs/src/ledger.ts",
       "apps/jobs/src/log.ts",
       "apps/jobs/src/run.ts",
+      "apps/jobs/src/scoped-objects.ts",
       "apps/jobs/src/tasks/fiscal.ts",
       "apps/jobs/src/tasks/send.ts",
     ]);
-    const { specifiers, code } = parse(fiscal);
+    const values = reached
+      .flatMap((file) =>
+        parse(file)
+          .bindings.filter((binding) => binding.specifier.startsWith("@atlas/") && !binding.isType)
+          .map((binding) => `${relative(repoRoot, file)} ${binding.specifier} ${binding.name}`),
+      )
+      .sort();
+    expect(values).toEqual(
+      [
+        "apps/jobs/src/ecb-history.ts @atlas/adapters/aws referenceReader",
+        "apps/jobs/src/ecb-history.ts @atlas/domain/ecb DEFAULT_LOCAL_CONFIG",
+        "apps/jobs/src/ecb-history.ts @atlas/domain/ecb readEcbHistory",
+        "apps/jobs/src/ecb-history.ts @atlas/domain/jobs activeHistoryOf",
+        "apps/jobs/src/ledger.ts @atlas/adapters/aws DependencyUnavailable",
+        "apps/jobs/src/ledger.ts @atlas/adapters/aws appendOnlyLedger",
+        "apps/jobs/src/ledger.ts @atlas/domain CURRENT_LEDGER_SCHEMA",
+        "apps/jobs/src/ledger.ts @atlas/domain DomainError",
+        "apps/jobs/src/ledger.ts @atlas/domain decodeLines",
+        "apps/jobs/src/ledger.ts @atlas/domain projectLedger",
+        "apps/jobs/src/ledger.ts @atlas/domain settingsAt",
+        "apps/jobs/src/ledger.ts @atlas/domain/sync linesOfText",
+        "apps/jobs/src/run.ts @atlas/adapters/aws-jobs JobsStore",
+        "apps/jobs/src/run.ts @atlas/adapters/aws-jobs JobsWriteConflict",
+        "apps/jobs/src/run.ts @atlas/domain/jobs JOB_TASKS",
+        "apps/jobs/src/run.ts @atlas/domain/jobs claimRecord",
+        "apps/jobs/src/run.ts @atlas/domain/jobs nextStep",
+        "apps/jobs/src/run.ts @atlas/domain/jobs recordIn",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/ecb checkLedgerRates",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs frequencyOf",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs informativeFacts",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs informativeMail",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs lastDayOfWindow",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs ledgerFailureKind",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs taxReturnFacts",
+        "apps/jobs/src/tasks/fiscal.ts @atlas/domain/jobs taxReturnMail",
+      ].sort(),
+    );
+    // The store of the bucket: scoped, and then read only inside the scope.
     expect(
-      specifiers.filter((specifier) =>
-        /^@atlas\/(domain\/quotes|adapters\/aws-daily|adapters\/aws-admin)$/.test(specifier),
-      ),
-    ).toEqual([]);
-    expect(
-      code.match(
-        /\b(readReference|referenceReader|ExternalPrices|externalPricesOf|coreWeights|bucketStats|bucketPositions|netWorth|valuations|contributionPlan)\b/g,
-      ),
-    ).toBeNull();
+      parse(fiscal)
+        .code.split("\n")
+        .filter((line) => /\bdeps\.objects\b/.test(line))
+        .map((line) => line.trim()),
+    ).toEqual([
+      "deps: { ...context.deps, objects: scopedObjects(context.deps.objects, FISCAL_SCOPE) },",
+      "history = await readCloudEcbHistory(context.deps.objects);",
+    ]);
   });
 });
 

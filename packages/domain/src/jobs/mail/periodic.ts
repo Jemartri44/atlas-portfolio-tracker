@@ -96,12 +96,33 @@ export const weeklyReviewMail = (
     ),
     ...section("Sin medir", facts.unmeasured.map(unmeasuredLine)),
   ];
-  return withOrigin(
-    `[Atlas] Revision ${period.includes("-W") ? "semanal" : "mensual"} ${period}`,
-    lines.slice(0, -1),
+  return withOrigin(reviewSubject(period), lines.slice(0, -1), origin);
+};
+
+/** A code of ours, or «desconocido»: nothing else reaches a mail. */
+const codeText = (code: string): string => (CODE_SHAPE.test(code) ? code : "desconocido");
+
+const reviewSubject = (period: string): string =>
+  `[Atlas] Revision ${period.includes("-W") ? "semanal" : "mensual"} ${period}`;
+
+/**
+ * The review of a period whose ledger could not be read on any day of it,
+ * said on its last day (review of PR #109, avisos B2): with its code, and no
+ * figure.
+ */
+export const weeklyReviewUnavailableMail = (
+  period: string,
+  code: string,
+  origin: string,
+): MailMessage =>
+  withOrigin(
+    reviewSubject(period),
+    [
+      `No se ha podido hacer la revisión de ${period} (código ${codeText(code)}): el libro no se ha podido leer ${period.includes("-W") ? "en toda la semana" : "en todo el mes"}.`,
+      "Abre la aplicación para ver los pesos y las reglas del cubo.",
+    ],
     origin,
   );
-};
 
 /** The income tax of January: ready, and how many notes and criteria in dispute. No figure, ever. */
 export const taxReturnMail = (facts: TaxReturnFacts, origin: string): MailMessage =>
@@ -117,7 +138,7 @@ export const taxReturnMail = (facts: TaxReturnFacts, origin: string): MailMessag
     : withOrigin(
         `[Atlas] Renta ${facts.year}`,
         [
-          `No se han podido preparar los datos de la Renta de ${facts.year} (código ${CODE_SHAPE.test(facts.code) ? facts.code : "desconocido"}).`,
+          `No se han podido preparar los datos de la Renta de ${facts.year} (código ${codeText(facts.code)}).`,
           "Abre la aplicación para ver qué falta.",
         ],
         origin,
@@ -128,18 +149,22 @@ export const informativeMail = (
   facts: InformativeFacts,
   origin: string,
 ): MailMessage | undefined => {
-  if (!facts.invalid && facts.models.length === 0) {
+  if (!facts.invalid && facts.models.length === 0 && facts.unavailable === undefined) {
     return undefined;
   }
   return withOrigin(
     `[Atlas] Modelos 720 y 721 de ${facts.year}`,
-    facts.invalid
+    facts.unavailable !== undefined
       ? [
-          `No se han podido comprobar los modelos 720 y 721 de ${facts.year}: el libro tiene eventos no válidos. Abre la aplicación.`,
+          `No se han podido comprobar los modelos 720 y 721 de ${facts.year} (código ${codeText(facts.unavailable)}). Abre la aplicación.`,
         ]
-      : facts.models.map(
-          (model) => `Revisa si te corresponde presentar el modelo ${model} de ${facts.year}.`,
-        ),
+      : facts.invalid
+        ? [
+            `No se han podido comprobar los modelos 720 y 721 de ${facts.year}: el libro tiene eventos no válidos. Abre la aplicación.`,
+          ]
+        : facts.models.map(
+            (model) => `Revisa si te corresponde presentar el modelo ${model} de ${facts.year}.`,
+          ),
     origin,
   );
 };

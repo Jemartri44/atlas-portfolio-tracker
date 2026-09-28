@@ -13,7 +13,7 @@
 // The mail says it **neutrally** (questions §13): which model to look at,
 // never a figure nor whether a threshold is passed.
 
-import { type CivilDate, yearOf } from "../dates/civil-date.js";
+import type { CivilDate } from "../dates/civil-date.js";
 import { fiscalAttention } from "../informative/attention.js";
 import type { LedgerEvent } from "../schema/events.js";
 import type { InformativeModel } from "../settings/settings.js";
@@ -24,13 +24,20 @@ export interface InformativeFacts {
   readonly invalid: boolean;
   /** The models with something to do for `year`, each once, in order. */
   readonly models: readonly InformativeModel[];
+  /**
+   * The ledger could not be read by the last day of January: said neutrally,
+   * with its code (review of PR #109, avisos B2). Never the text of invalid events.
+   */
+  readonly unavailable?: string;
 }
 
 export const informativeFacts = (input: {
   readonly events: readonly LedgerEvent[];
+  /** The year of the models: the one before the period's, never the day's (avisos B1). */
+  readonly year: number;
   readonly today: CivilDate;
 }): InformativeFacts => {
-  const year = yearOf(input.today) - 1;
+  const year = input.year;
   const attention = fiscalAttention(input.events, input.today);
   const models = new Set(
     attention.todo.filter((todo) => todo.year === year).map((todo) => todo.model),

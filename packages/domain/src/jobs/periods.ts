@@ -75,6 +75,18 @@ export const previousPeriod = (frequency: JobFrequency, date: CivilDate): string
 export const inWindow = (frequency: JobFrequency, date: CivilDate): boolean =>
   frequency !== "yearly" || date.slice(5, 7) === "01";
 
+/**
+ * Whether `date` is the last day a job of this frequency may run in its
+ * period: Sunday of the ISO week, the last day of the month or the quarter,
+ * and the 31st of January for a yearly one (its window). A warning that could
+ * not be checked until then says so on that day, and never later (review of
+ * PR #109, avisos B2).
+ */
+export const lastDayOfWindow = (frequency: JobFrequency, date: CivilDate): boolean =>
+  frequency === "yearly"
+    ? date.slice(5) === "01-31"
+    : periodOf(frequency, addDays(date, 1)) !== periodOf(frequency, date);
+
 /** The shape of every period this module writes, to say one back only when it is one. */
 export const PERIOD_SHAPE =
   /^\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?|-W(0[1-9]|[1-4]\d|5[0-3])|-Q[1-4])?$/;

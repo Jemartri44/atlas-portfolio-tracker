@@ -5,7 +5,12 @@
 
 import { describe, expect, it } from "vitest";
 import type { InformativeFacts } from "../../src/jobs/informative.js";
-import { informativeMail, taxReturnMail, weeklyReviewMail } from "../../src/jobs/mail/periodic.js";
+import {
+  informativeMail,
+  taxReturnMail,
+  weeklyReviewMail,
+  weeklyReviewUnavailableMail,
+} from "../../src/jobs/mail/periodic.js";
 import type { ReviewFacts } from "../../src/jobs/review.js";
 import { Decimal } from "../../src/money/decimal.js";
 import { Money } from "../../src/money/money.js";
@@ -108,6 +113,27 @@ describe("the weekly review by mail (E4)", () => {
   });
 });
 
+describe("a week it could not review by its Sunday (avisos B2)", () => {
+  it("says so, with its code and no figure", () => {
+    expect(weeklyReviewUnavailableMail("2026-W41", "ledger_unavailable", ORIGIN)).toEqual({
+      subject: "[Atlas] Revision semanal 2026-W41",
+      body: [
+        "No se ha podido hacer la revisión de 2026-W41 (código ledger_unavailable): el libro no se ha podido leer en toda la semana.",
+        "Abre la aplicación para ver los pesos y las reglas del cubo.",
+        "",
+        `Abre Atlas: ${ORIGIN}`,
+        "",
+      ].join("\n"),
+    });
+    expect(weeklyReviewUnavailableMail("2026-10", "x y", ORIGIN).subject).toBe(
+      "[Atlas] Revision mensual 2026-10",
+    );
+    expect(weeklyReviewUnavailableMail("2026-10", "x y", ORIGIN).body).toContain(
+      "(código desconocido)",
+    );
+  });
+});
+
 describe("the income tax of January by mail (Q10: never a figure)", () => {
   it("says it is ready with its counts, and why when it could not be prepared", () => {
     expect(taxReturnMail({ ok: true, year: 2026, notes: 3, disputed: 2 }, ORIGIN)).toEqual({
@@ -142,6 +168,27 @@ describe("the 720 and the 721 by mail (questions §13: neutral)", () => {
     year: 2026,
     invalid,
     models,
+  });
+
+  it("says, neutrally and with its code, a ledger it could not check by the end of January (avisos B2)", () => {
+    expect(
+      informativeMail(
+        { year: 2026, invalid: false, models: [], unavailable: "ledger_unavailable" },
+        ORIGIN,
+      ),
+    ).toEqual({
+      subject: "[Atlas] Modelos 720 y 721 de 2026",
+      body: [
+        "No se han podido comprobar los modelos 720 y 721 de 2026 (código ledger_unavailable). Abre la aplicación.",
+        "",
+        `Abre Atlas: ${ORIGIN}`,
+        "",
+      ].join("\n"),
+    });
+    expect(
+      informativeMail({ year: 2026, invalid: false, models: [], unavailable: "ES00 x" }, ORIGIN)
+        ?.body,
+    ).toContain("(código desconocido)");
   });
 
   it("names the model to look at and nothing else: no threshold, no figure, no verdict", () => {

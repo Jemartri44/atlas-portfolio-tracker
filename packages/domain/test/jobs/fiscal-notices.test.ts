@@ -37,7 +37,7 @@ describe("the income tax of January (Q10)", () => {
   it("says the year before is ready with its counts of notes and criteria in dispute", () => {
     const events = year2026();
     const report = taxYear(events, 2026, { today: "2027-01-01" });
-    expect(taxReturnFacts({ events, today: "2027-01-01" })).toEqual({
+    expect(taxReturnFacts({ events, year: 2026, today: "2027-01-01" })).toEqual({
       ok: true,
       year: 2026,
       notes: report.notes.length,
@@ -52,22 +52,24 @@ describe("the income tax of January (Q10)", () => {
     const broken = events.map((event) =>
       event.type === "sell" ? ({ ...event, quantity: "60" } as LedgerEvent) : event,
     );
-    expect(taxReturnFacts({ events: broken, today: "2027-01-01" })).toEqual({
+    expect(taxReturnFacts({ events: broken, year: 2026, today: "2027-01-01" })).toEqual({
       ok: false,
       year: 2026,
       code: "tax_ledger_invalid",
     });
     // The findings of the ECB check only note lines, as `atlas tax` passes them.
-    expect(taxReturnFacts({ events, today: "2027-01-01", rateFindings: [] })).toMatchObject({
+    expect(
+      taxReturnFacts({ events, year: 2026, today: "2027-01-01", rateFindings: [] }),
+    ).toMatchObject({
       ok: true,
       notes: 2,
     });
     // A failure that is not one of the domain says no message either.
     expect(
-      taxReturnFacts({ events: [null as unknown as LedgerEvent], today: "2027-01-01" }),
+      taxReturnFacts({ events: [null as unknown as LedgerEvent], year: 2026, today: "2027-01-01" }),
     ).toEqual({ ok: false, year: 2026, code: "tax_failed" });
     // The engine applies the regime in force since 2018: January of 2018 asks for 2017.
-    expect(taxReturnFacts({ events, today: "2018-01-01" })).toEqual({
+    expect(taxReturnFacts({ events, year: 2017, today: "2018-01-01" })).toEqual({
       ok: false,
       year: 2017,
       code: "tax_year_unsupported",
@@ -77,7 +79,7 @@ describe("the income tax of January (Q10)", () => {
 
 describe("the thresholds of the 720 and the 721 (mutant 31)", () => {
   it("says nothing for a ledger with nothing abroad", () => {
-    expect(informativeFacts({ events: year2026(), today: "2027-01-01" })).toEqual({
+    expect(informativeFacts({ events: year2026(), year: 2026, today: "2027-01-01" })).toEqual({
       year: 2026,
       invalid: false,
       models: [],
@@ -102,7 +104,7 @@ describe("the thresholds of the 720 and the 721 (mutant 31)", () => {
       quantity: "600",
       unit_value: "100",
     });
-    const facts = informativeFacts({ events: b.build(), today: "2027-01-01" });
+    const facts = informativeFacts({ events: b.build(), year: 2026, today: "2027-01-01" });
     expect(facts.year).toBe(2026);
     expect(facts.invalid).toBe(false);
     expect(facts.models).toEqual(["720"]);
@@ -112,10 +114,24 @@ describe("the thresholds of the 720 and the 721 (mutant 31)", () => {
     const events = year2026().map((event) =>
       event.type === "sell" ? ({ ...event, quantity: "60" } as LedgerEvent) : event,
     );
-    expect(informativeFacts({ events, today: "2027-01-01" })).toEqual({
+    expect(informativeFacts({ events, year: 2026, today: "2027-01-01" })).toEqual({
       year: 2026,
       invalid: true,
       models: [],
     });
+  });
+});
+
+describe("the year of the warnings of January comes from their period (review of PR #109, avisos B1)", () => {
+  it("computes the year it is given, never the one of the day", () => {
+    const events = year2026();
+    const report = taxYear(events, 2025, { today: "2027-01-01" });
+    expect(taxReturnFacts({ events, year: 2025, today: "2027-01-01" })).toEqual({
+      ok: true,
+      year: 2025,
+      notes: report.notes.length,
+      disputed: report.doubtful.length,
+    });
+    expect(informativeFacts({ events, year: 2025, today: "2027-01-01" }).year).toBe(2025);
   });
 });

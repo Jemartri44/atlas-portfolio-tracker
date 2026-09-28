@@ -29,6 +29,8 @@ import {
   type Finding,
   frequencyOf,
   type JobTask,
+  lastDayOfWindow,
+  ledgerFailureKind,
   noticeIn,
   noticeMail,
   noticeStep,
@@ -43,6 +45,7 @@ import {
   reviewDue,
   reviewFacts,
   weeklyReviewMail,
+  weeklyReviewUnavailableMail,
 } from "@atlas/domain/jobs";
 import { readReference } from "../reference.js";
 import type { TaskContext, TaskResult, TaskRunner } from "../run.js";
@@ -258,13 +261,25 @@ export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult>
  * core above `deviation_threshold_pp` and rules 17 and 18 of the bucket,
  * valued with the closes of the cloud as the web values them (informative:
  * nothing fiscal). **Only when a threshold is passed** (mutant 32); at most
- * once. A ledger that does not load sends nothing here: the monthly reminder
- * and the integrity say it.
+ * once, and never for a week gone (the handler closes it `expired`; review of
+ * PR #109, avisos N4). A ledger that could not be read now closes the run
+ * `failed` and the next day tries again; on the last day of the period it is
+ * said, with its code (avisos B2). A ledger that is wrong sends nothing here:
+ * the monthly reminder and the integrity say it.
  */
 export const weeklyReview: TaskRunner = async (context): Promise<TaskResult> => {
   const ledger = await context.ledger();
   if (!ledger.ok) {
-    return { state: "done", outcome: { code: ledger.code } };
+    if (ledgerFailureKind(ledger.code) !== "transient") {
+      return { state: "done", outcome: { code: ledger.code } };
+    }
+    const last = lastDayOfWindow(
+      frequencyOf(context.task, context.frequencies.frequencies),
+      context.today,
+    );
+    return last
+      ? sendOnce(context, weeklyReviewUnavailableMail(context.period, ledger.code, origin(context)))
+      : { state: "failed", outcome: { code: ledger.code } };
   }
   const reference = await readReference(context.deps.objects, ledger.state).catch(() => ({
     counts: { price_files: 0, ecb_history: 0 },

@@ -3,7 +3,14 @@
 
 import { describe, expect, it } from "vitest";
 import { madridDateOf } from "../../src/dates/madrid.js";
-import { inWindow, isoWeekday, periodOf, previousPeriod } from "../../src/jobs/periods.js";
+import {
+  inWindow,
+  isoWeekday,
+  lastDayOfWindow,
+  periodOf,
+  previousPeriod,
+} from "../../src/jobs/periods.js";
+import type { JobFrequency } from "../../src/settings/job-frequencies.js";
 
 const at = (iso: string) => madridDateOf(new Date(iso));
 
@@ -64,5 +71,29 @@ describe("the period of a job, of Europe/Madrid (R11)", () => {
     expect(inWindow("yearly", "2027-02-01")).toBe(false);
     expect(inWindow("yearly", "2026-12-31")).toBe(false);
     expect(inWindow("monthly", "2026-12-31")).toBe(true);
+  });
+});
+
+describe("the last day a job of each frequency may run in its period (review of PR #109, avisos B2)", () => {
+  it("is Sunday of the week, the last of the month or the quarter, and 31 January of the year", () => {
+    const cases: [JobFrequency, string, boolean][] = [
+      ["daily", "2026-10-05", true],
+      ["weekly", "2026-10-11", true],
+      ["weekly", "2026-10-10", false],
+      ["weekly", "2026-10-05", false],
+      ["monthly", "2026-10-31", true],
+      ["monthly", "2026-10-30", false],
+      ["monthly", "2027-02-28", true],
+      ["monthly", "2028-02-28", false],
+      ["monthly", "2028-02-29", true],
+      ["quarterly", "2026-12-31", true],
+      ["quarterly", "2026-11-30", false],
+      ["yearly", "2027-01-31", true],
+      ["yearly", "2027-01-30", false],
+      ["yearly", "2027-12-31", false],
+    ];
+    for (const [frequency, date, last] of cases) {
+      expect(lastDayOfWindow(frequency, date), `${frequency} ${date}`).toBe(last);
+    }
   });
 });

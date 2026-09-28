@@ -9,9 +9,8 @@
 
 import { type ObjectStore, referenceReader } from "@atlas/adapters/aws";
 import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
-import { DEFAULT_LOCAL_CONFIG } from "@atlas/domain/ecb";
 import { externalPricesOf, parseSymbols, priceFileName, readCloses } from "@atlas/domain/quotes";
-import { readCloudEcbHistory, textOf } from "./ecb-history.js";
+import { CLOUD_ECB_STALE_DAYS, readCloudEcbHistory, textOf } from "./ecb-history.js";
 
 export interface ReferenceRead {
   readonly external?: ExternalPrices;
@@ -48,7 +47,7 @@ export const readReference = async (
       external: externalPricesOf(state, {
         closes: read.closes,
         ...(history === undefined ? {} : { history }),
-        staleDays: DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days,
+        staleDays: CLOUD_ECB_STALE_DAYS,
       }),
       counts,
     };

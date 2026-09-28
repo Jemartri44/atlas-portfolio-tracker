@@ -87,6 +87,8 @@ export const createJobsHandler = (
             frequencies,
             runner,
             ...(finishing ? { onlyUnfinished: true } : {}),
+            // A warning of a period gone is closed, never sent (review of PR #109, avisos B1).
+            ...(finishing && JOB_TASKS[task].delivery === "at_most_once" ? { expire: true } : {}),
           });
         } catch (error) {
           deps.log(
