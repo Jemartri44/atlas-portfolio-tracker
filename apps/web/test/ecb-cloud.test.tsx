@@ -237,7 +237,10 @@ describe("nothing downloads the history of the cloud at start or on a timer (mut
 
   it("is reached only from the card of the ECB, which keeps no timer", () => {
     const importers = files(src).filter((file) =>
-      /ecb\/cloud\.js/.test(readFileSync(file, "utf8")),
+      // A value taken from it, or a dynamic import: a type alone runs nothing.
+      /import\s*\{[^}]*\}\s*from\s*"[^"]*ecb\/cloud\.js"|import\(\s*"[^"]*ecb\/cloud\.js"/.test(
+        readFileSync(file, "utf8"),
+      ),
     );
     expect(importers.map((file) => file.slice(src.length + 1))).toEqual([
       "routes/ajustes/EcbCard.tsx",

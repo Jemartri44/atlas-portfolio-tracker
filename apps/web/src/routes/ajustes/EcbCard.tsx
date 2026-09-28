@@ -18,6 +18,7 @@ import { canLinkFolder } from "../../ledger/source.js";
 // Statically, as the card of the session does: the section of Ajustes is
 // lazy already, and a dynamic import would split it for nothing.
 import { readSession } from "../../sync/session.js";
+import { cloudSaid } from "./ecb-cloud-said.js";
 
 const ecb = () => import("../../ecb/history.js");
 
@@ -63,33 +64,12 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
   /** Downloads the history of the cloud; `asked`: the user pressed the button. */
   const onCloud = (asked: boolean): Promise<void> =>
     guarded(async () => {
-      const outcome = await downloadCloudHistory(request);
-      switch (outcome.kind) {
-        case "saved":
-          return `Histórico bajado de la nube: publica hasta el ${formatDate(outcome.latest)}.`;
-        case "up_to_date":
-          return asked ? "El histórico de la nube es el mismo que ya tienes." : undefined;
-        case "none":
-          return asked ? "La nube todavía no tiene histórico del BCE." : undefined;
-        case "damaged":
-          setSaid({
-            tone: "danger",
-            text: "El histórico de la nube no es el archivo que registra su manifiesto: no se usa, y sigue el que tenías.",
-          });
-          return undefined;
-        case "rejected":
-          setSaid({
-            tone: "caution",
-            text: `El histórico de la nube cambia ${outcome.total} ${outcome.total === 1 ? "tipo ya publicado" : "tipos ya publicados"} del que tienes: no se ha usado, y sigue el anterior. O el BCE ha corregido un tipo o algo está mal.`,
-          });
-          return undefined;
-        default:
-          setSaid({
-            tone: "caution",
-            text: `No se ha podido bajar el histórico de la nube (${outcome.code}): sigue el que tenías.`,
-          });
-          return undefined;
+      const shown = cloudSaid(await downloadCloudHistory(request), asked);
+      if (shown !== undefined && shown.tone !== "info") {
+        setSaid(shown);
+        return undefined;
       }
+      return shown?.text;
     });
 
   // Opening the card is asking (015, §7 P12): with a session, the history of
