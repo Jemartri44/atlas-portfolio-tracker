@@ -540,7 +540,12 @@ La revisión (comentario 5856795660 de la PR #99) encontró dos bloqueantes, sie
 
 ### 8.3 Respuestas a las preguntas del implementador, y errores de este prompt
 
-*(Vacío.)*
+Escrita al cerrar la feature (2026-09-28). Las preguntas y sus respuestas, con su motivo, están en `specs/016-scheduled-jobs/questions.md`; aquí solo el índice, para no repetirlas.
+
+- **Q1 a Q9**, del alto del plan: contestadas el 2026-09-27 **como se recomendaban** (`questions.md` §5 y §9). Q1: `symbols: "read_only"` en `updatePrices`, con `currency_unchecked` como hallazgo y el almacén de S3 que se niega a escribir `symbols.json` como segunda cerradura.
+- **Q10, desviación de este prompt, anotada**: §3, E4, bloque 3 decía que el correo de la Renta va «sin la base ni ninguna cifra salvo el interruptor». La dirección aceptó la versión más estricta: **sin la base ni ninguna cifra, nunca**, esté como esté el interruptor (`questions.md` §9; `contracts/mail.md` §2).
+- **Q11, la antigüedad del contraste de los tipos en la Renta**: la nube usa el valor por defecto, el mismo que el recordatorio; queda anotada en «Sin etapa asignada» de `docs/decision-roadmap.md` (`questions.md` §21.5).
+- **Errores de este prompt** (`questions.md` §3 y §9.1): `Thesis` está en `packages/domain/src/projections/state.ts:246`, no en `:252`; `confirm` está en `apps/cli/src/commands/shared.ts:96` (las líneas 97-99 son su cuerpo), y la confirmación que exige teclear el entorno es `confirmEnvironment`; `manifest()` no está en el puerto `EcbHistoryStore`, solo en el adaptador de carpeta; y `updatePrices` escribe `symbols.json` en dos sitios, el contraste y `clearRefetched`, que es lo que dio lugar a Q1. El techo total «294 KB + 440» es `294 × 1024 + 440` = 301.496 bytes: coincide, no es un error.
 
 ## 9. Preguntas abiertas para la dirección
 
