@@ -1,7 +1,7 @@
 // Feature 016, E1: the file in force of the ECB history, from its manifest.
 
 import { describe, expect, it } from "vitest";
-import { activeHistoryOf } from "../../src/jobs/ecb-manifest.js";
+import { activeHistoryOf, previousHistoryOf } from "../../src/jobs/ecb-manifest.js";
 
 const SHA = "a".repeat(64);
 const manifest = (active: unknown) => JSON.stringify({ active, rejected: [] });
@@ -44,6 +44,43 @@ describe("the manifest of the ECB history", () => {
       `{"active":{"file":"eurofxref-hist.csv","source":"zip","sha256":"${SHA}"},"x":"\ud800"}`,
     ]) {
       expect(activeHistoryOf(text), text).toBeUndefined();
+    }
+  });
+});
+
+describe("the history the manifest names as the previous one (N3 of §15)", () => {
+  const withPrevious = (previous: unknown) =>
+    JSON.stringify({
+      active: { file: "api-exr.csv", source: "api", sha256: SHA },
+      previous,
+      rejected: [],
+    });
+
+  it("says its file under previous/, its source and the SHA-256 its bytes must have", () => {
+    expect(
+      previousHistoryOf(
+        withPrevious({ file: "previous/eurofxref-hist.csv", source: "zip", sha256: SHA, url: "u" }),
+      ),
+    ).toEqual({ file: "previous/eurofxref-hist.csv", source: "zip", sha256: SHA });
+    expect(
+      previousHistoryOf(withPrevious({ file: "previous/api-exr.csv", source: "api", sha256: SHA }))
+        ?.file,
+    ).toBe("previous/api-exr.csv");
+  });
+
+  it("gives nothing without one, or with one that names anything else", () => {
+    for (const text of [
+      JSON.stringify({ active: { file: "api-exr.csv", source: "api", sha256: SHA }, rejected: [] }),
+      withPrevious({ file: "eurofxref-hist.csv", source: "zip", sha256: SHA }),
+      withPrevious({ file: "previous/api-exr.csv", source: "zip", sha256: SHA }),
+      withPrevious({ file: "previous/../ledger.jsonl", source: "zip", sha256: SHA }),
+      withPrevious({ file: "previous/eurofxref-hist.csv", source: "zip", sha256: "b" }),
+      withPrevious("previous/eurofxref-hist.csv"),
+      // The manifest itself must read: no active history, no previous one.
+      JSON.stringify({ previous: { file: "previous/api-exr.csv", source: "api", sha256: SHA } }),
+      "not json",
+    ]) {
+      expect(previousHistoryOf(text), text).toBeUndefined();
     }
   });
 });

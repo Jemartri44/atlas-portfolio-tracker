@@ -2,4 +2,9 @@
 // since the web reads it too (feature 016, E3): the web never reaches the code
 // of the jobs. Kept here for the jobs' own door.
 
-export { type ActiveHistory, activeHistoryOf } from "../ecb/manifest.js";
+export {
+  type ActiveHistory,
+  activeHistoryOf,
+  type PreviousHistory,
+  previousHistoryOf,
+} from "../ecb/manifest.js";

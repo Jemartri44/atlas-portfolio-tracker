@@ -44,7 +44,12 @@ import type {
   StoredHistory,
   StoredHistoryMeta,
 } from "@atlas/domain/ecb";
-import { activeHistoryOf, type EcbRecovery, ecbRecovery } from "@atlas/domain/jobs";
+import {
+  activeHistoryOf,
+  type EcbRecovery,
+  ecbRecovery,
+  previousHistoryOf,
+} from "@atlas/domain/jobs";
 import { EcbHistoryDamaged, type EcbManifest, fileOfSource } from "../ecb/history-store.js";
 import type { ObjectStore, StoredObject } from "./object-store.js";
 
@@ -175,20 +180,30 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
 
   /**
    * The generations left for the rebuild to compare with (round 2 of the
-   * review of PR #106, R2-N1), newest first: the file the manifest names and
-   * its `previous/`; with no manifest that reads, both names of both.
+   * review of PR #106, R2-N1), newest first: the file the manifest names, as
+   * it is, and the one the manifest names as `previous` — **only if its bytes
+   * have the SHA-256 the manifest records for it** (N3 of the review of PR
+   * #106): a cut between the first two steps of an activation leaves other
+   * bytes there. With no manifest that reads there is nothing to check them
+   * against: both names of both, as they are, which can only make the rebuild
+   * refuse a ZIP that contradicts them — never accept one.
    */
   async generations(): Promise<readonly EcbGeneration[]> {
     const manifest = await this.objects.get(MANIFEST);
-    const active = manifest === undefined ? undefined : activeHistoryOf(textOf(manifest.body));
-    const names =
+    const text = manifest === undefined ? undefined : textOf(manifest.body);
+    const active = text === undefined ? undefined : activeHistoryOf(text);
+    const previous = text === undefined ? undefined : previousHistoryOf(text);
+    const names: { name: string; sha256?: string }[] =
       active === undefined
-        ? [...FILES, ...FILES.map((file) => `previous/${file}`)]
-        : [active.file, `previous/${active.file}`];
+        ? [...FILES, ...FILES.map((file) => `previous/${file}`)].map((name) => ({ name }))
+        : [
+            { name: active.file },
+            ...(previous === undefined ? [] : [{ name: previous.file, sha256: previous.sha256 }]),
+          ];
     const found: EcbGeneration[] = [];
-    for (const name of names) {
+    for (const { name, sha256: expected } of names) {
       const stored = await this.objects.get(`${DIR}${name}`);
-      if (stored !== undefined) {
+      if (stored !== undefined && (expected === undefined || sha256(stored.body) === expected)) {
         found.push({
           text: textOf(stored.body),
           source: name.endsWith(fileOfSource("api")) ? "api" : "zip",
