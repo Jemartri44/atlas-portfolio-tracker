@@ -103,3 +103,52 @@ describe("the client of the reference data (016, E3)", () => {
     expect((await failing(broken, "get")).code).toBe("network_failed");
   });
 });
+
+describe("the size of what comes down (review of PR #108, N6)", () => {
+  const MB = 1024 * 1024;
+
+  it("refuses more than 20 MB, said by its length or counted as it arrives", async () => {
+    const said = client(() =>
+      answer(200, "x", { etag: '"v"', "content-length": String(20 * MB + 1) }),
+    );
+    await expect(said.reference.get("ecb", "manifest.json")).rejects.toMatchObject({
+      code: "transport_rejected",
+      details: { reason: "too_large" },
+    });
+    const big = new Uint8Array(20 * MB + 1);
+    const streamed = client(() =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(big.subarray(0, 10 * MB));
+              controller.enqueue(big.subarray(10 * MB));
+              controller.close();
+            },
+          }),
+          { status: 200, headers: { etag: '"v"' } },
+        ),
+      ),
+    );
+    await expect(streamed.reference.get("prices", "a.jsonl")).rejects.toMatchObject({
+      code: "transport_rejected",
+      details: { reason: "too_large" },
+    });
+    const index = client(() =>
+      answer(200, JSON.stringify(INDEX), { "content-length": String(20 * MB + 1) }),
+    );
+    await expect(index.reference.index()).rejects.toMatchObject({
+      details: { reason: "too_large" },
+    });
+  });
+
+  it("takes exactly 20 MB", async () => {
+    const { reference } = client(() =>
+      Promise.resolve(
+        new Response(new Uint8Array(20 * MB), { status: 200, headers: { etag: '"v"' } }),
+      ),
+    );
+    const read = await reference.get("prices", "a.jsonl");
+    expect((read as { bytes: Uint8Array }).bytes.length).toBe(20 * MB);
+  });
+});

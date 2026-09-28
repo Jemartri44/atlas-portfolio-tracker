@@ -22,6 +22,9 @@ export interface HttpReferenceOptions {
 
 export type ReferenceKind = "ecb" | "prices";
 
+/** The most a file of reference data may weigh: 20 MB (review of PR #108, N6). */
+export const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
+
 export type ReferenceRead =
   /** The version asked for is the one there: nothing travelled. */
   | { readonly kind: "not_modified" }
@@ -51,12 +54,52 @@ export const httpReference = (options: HttpReferenceOptions) => {
     }
   };
 
+  const tooLarge = (status: number): RemoteError =>
+    new RemoteError("transport_rejected", status, { reason: "too_large" });
+
+  /**
+   * The body, **never more than `MAX_REFERENCE_BYTES`** (review of PR #108,
+   * N6): the SHA-256 of the manifest says nothing of the size, and a huge
+   * object would be loaded whole into a phone before anything checked it.
+   * Refused by the length it says, or counted as it arrives.
+   */
   const bytesOf = async (response: Response): Promise<Uint8Array> => {
+    const said = Number(response.headers.get("content-length"));
+    if (Number.isFinite(said) && said > MAX_REFERENCE_BYTES) {
+      throw tooLarge(response.status);
+    }
+    const reader = response.body?.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
     try {
-      return new Uint8Array(await response.arrayBuffer());
-    } catch {
+      if (reader === undefined) {
+        return new Uint8Array(await response.arrayBuffer());
+      }
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        total += value.length;
+        if (total > MAX_REFERENCE_BYTES) {
+          await reader.cancel().catch(() => undefined);
+          throw tooLarge(response.status);
+        }
+        chunks.push(value);
+      }
+    } catch (error) {
+      if (error instanceof RemoteError) {
+        throw error;
+      }
       throw new RemoteError("network_failed", response.status);
     }
+    const bytes = new Uint8Array(total);
+    let at = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, at);
+      at += chunk.length;
+    }
+    return bytes;
   };
 
   const failure = async (response: Response): Promise<RemoteError> => {
@@ -79,9 +122,10 @@ export const httpReference = (options: HttpReferenceOptions) => {
       if (response.status !== 200) {
         throw await failure(response);
       }
+      const body = await bytesOf(response);
       let parsed: unknown;
       try {
-        parsed = JSON.parse(new TextDecoder().decode(await bytesOf(response)));
+        parsed = JSON.parse(new TextDecoder().decode(body));
       } catch {
         parsed = undefined;
       }
