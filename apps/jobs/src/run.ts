@@ -12,6 +12,7 @@ import type { CivilDate } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
 import {
   claimRecord,
+  type DumpObject,
   type Finding,
   JOB_TASKS,
   type JobFrequencies,
@@ -62,12 +63,16 @@ export interface TaskContext {
   readonly frequencies: JobFrequencies;
   /** Marks the record `sending` right before a warning goes out: the step that makes it at most once. */
   readonly markSending: () => Promise<void>;
+  /** Which attempt of the period this is: above 1, an earlier one claimed it (the dump keeps what it left). */
+  readonly attempt: number;
 }
 
 export interface TaskResult {
   readonly state: "done" | "failed" | "send_failed" | "send_unknown";
   readonly outcome: Outcome;
   readonly findings?: readonly Finding[];
+  /** Only the monthly dump: what it wrote, or found written (plan §8). */
+  readonly objects?: readonly DumpObject[];
 }
 
 export type TaskRunner = (context: TaskContext) => Promise<TaskResult>;
@@ -160,6 +165,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
         ledger: input.ledger,
         frequencies: input.frequencies,
         markSending,
+        attempt: record.attempts,
       });
     } catch (error) {
       if (error instanceof JobsWriteConflict) {
@@ -178,6 +184,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
           ? {}
           : { findings: result.findings }),
         ...(ignored.length === 0 ? {} : { frequencies: { ignored } }),
+        ...(result.objects === undefined ? {} : { objects: result.objects }),
       }),
       etag,
     );
