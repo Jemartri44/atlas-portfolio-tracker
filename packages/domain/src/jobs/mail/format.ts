@@ -39,6 +39,9 @@ const spanish = (value: Decimal, decimals: number): string => {
 /** `62.5` → `62,5 %`. */
 export const percent = (value: Decimal): string => `${spanish(value, 1)} %`;
 
+/** `6.25` → `6,3`: points of a deviation, one decimal, with its sign. */
+export const points = (value: Decimal): string => spanish(value, 1);
+
 /** `1000` → `1.000,00 €`. Only with the switch on. */
 export const euros = (value: Money): string => `${spanish(value.amount, 2)} €`;
 
