@@ -66,6 +66,11 @@ export interface UpdatePricesInput {
    * push`, is never written.
    */
   readonly symbols?: "read_write" | "read_only";
+  /**
+   * A console whose folder is synced with a cloud that downloads too (N2 of
+   * §15 of feature 016): its default budget is the leftover of the free plans.
+   */
+  readonly sharedWithCloud?: boolean;
 }
 
 export type AssetOutcome =
@@ -198,7 +203,9 @@ const clearRefetched = async (
 export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateReport> => {
   const { store, today } = input;
   const readOnly = input.symbols === "read_only";
-  const config = parsePriceConfig(await store.config());
+  const config = parsePriceConfig(await store.config(), {
+    sharedWithCloud: input.sharedWithCloud === true,
+  });
   const symbols = parseSymbols(await store.symbols());
   const available = config.source_order.filter(
     (source) => input.sources[source] !== undefined && config.daily_calls[source] > 0,
