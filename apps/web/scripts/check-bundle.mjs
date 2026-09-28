@@ -433,7 +433,15 @@ const dist = join(webRoot, "dist");
  * per address, behind a gate that a click opens again. The trend: 74.874 →
  * 74.895 → 74.887 → 75.019.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_039;
+/*
+ * **Feature 016, E3, round 1 of the review of PR #108 (2026-09-28): measured
+ * 75.057 (+32 over the 75.025 of E3), ceiling 75.077 — measured + 20**,
+ * raised in a commit of its own before the one that needs it, inside the
+ * authorisation (76.069), as the direction allowed (§18). The neutral door of
+ * the answers of the API leaves the domain chunk two exports more (+16), and
+ * the names of the chunks move the rest. The trend: 75.012 → 75.025 → 75.057.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_077;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -949,7 +957,16 @@ const BOOT_BUDGET_GZIP_BYTES = 75_039;
  * fit what is left of §8.1 P13 for the feature, and are not built (Q8). The
  * trend: 302.935 → 303.195 → 304.746.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 305_002;
+/*
+ * **Feature 016, E3, round 1 of the review of PR #108 (2026-09-28): measured
+ * 305.394 (+558 over the 304.836 of E3), ceiling 305.650 — measured + 256**,
+ * raised in a commit of its own before the one that needs it, inside the
+ * authorisation (312.000). All of it lazy: erasing the copy of the ECB of this
+ * browser with its confirmation (+463 in the section of Ajustes, with the cap
+ * of 20 MB of the client), and the neutral door of the answers of the API.
+ * The trend: 303.195 → 304.836 → 305.394.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 305_650;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
