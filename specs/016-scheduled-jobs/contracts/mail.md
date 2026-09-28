@@ -31,6 +31,8 @@ Copia fuera de AWS
 Abre Atlas: <origen>
 ```
 
+Si los cierres o el histórico del BCE no se pueden leer (un error de lectura, no su ausencia), el recordatorio **no se envía**: el registro se cierra `failed` con `reference_unavailable` y la ejecución siguiente lo vuelve a intentar, como la revisión semanal. Al ser «al menos una vez», sale en cuanto se puedan leer (cierre de la 016).
+
 ## 2. Avisos (como mucho una vez; una vez por racha)
 
 | Tarea o hallazgo | Asunto | Cuerpo (sin importes) | (importes) |
