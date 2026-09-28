@@ -22,6 +22,11 @@ describe("the mail of a streak", () => {
       "ecb_history_damaged",
       "ecb_history_rebuilt",
       "ecb_rebuilt_unverified",
+      "backup_object_differs",
+      "backup_ecb_inconsistent",
+      "integrity_errors",
+      "restore_rehearsal_differs",
+      "ledger_size_above_threshold",
     ]);
     expect(
       noticeMail({ code: "task_failed", subject: "monthly_backup" }, FACTS, "https://a.example"),
@@ -207,5 +212,138 @@ describe("the mail of a streak", () => {
         `${code} ${subject}`,
       ).toBeUndefined();
     }
+  });
+});
+
+describe("the warnings of the dump and of the integrity (016, E4)", () => {
+  const ORIGIN = "https://a.example";
+  const body = (lines: string[]) => [...lines, "", `Abre Atlas: ${ORIGIN}`, ""].join("\n");
+
+  it("says a dump that found other bytes, and one that could not keep the ECB with its manifest", () => {
+    expect(
+      noticeMail(
+        { code: "backup_object_differs", subject: "backup" },
+        { since: "2026-10-01", period: "2026-10", counts: { objects: 2 } },
+        ORIGIN,
+      ),
+    ).toEqual({
+      subject: "[Atlas] Aviso: volcado 2026-10",
+      body: body([
+        "El volcado mensual del periodo 2026-10 encontró 2 objetos ya escritos con otros bytes y no ha escrito nada más, desde el 2026-10-01.",
+        "Un volcado no se sobrescribe nunca: mira backups/2026-10/ antes de nada, con el procedimiento de los avisos.",
+      ]),
+    });
+    expect(
+      noticeMail(
+        { code: "backup_ecb_inconsistent", subject: "backup" },
+        { since: "2026-10-01", period: "2026-10" },
+        ORIGIN,
+      ),
+    ).toEqual({
+      subject: "[Atlas] Aviso: volcado 2026-10",
+      body: body([
+        "El volcado mensual del periodo 2026-10 no ha guardado el manifiesto del histórico del BCE, desde el 2026-10-01: el fichero del volcado no es el que nombra el manifiesto en vigor.",
+        "El resto del volcado está completo. El histórico del BCE se puede volver a bajar del BCE cuando haga falta.",
+      ]),
+    });
+  });
+
+  it("says the errors of the check and the differences of the rehearsal by code, from their lists", () => {
+    expect(
+      noticeMail(
+        { code: "integrity_errors", subject: "integrity" },
+        {
+          since: "2026-10-01",
+          period: "2026-Q4",
+          counts: { errors: 4, lots_mismatch: 2, negative_position: 1, other: 1, ES00: 9 },
+        },
+        ORIGIN,
+      ),
+    ).toEqual({
+      subject: "[Atlas] Aviso: integridad 2026-Q4",
+      body: body([
+        "La comprobación de integridad del periodo 2026-Q4 encontró 4 errores (lots_mismatch: 2, negative_position: 1, otros: 1), desde el 2026-10-01.",
+        "Míralos en la consola con «atlas check --deep»; se rectifican con el libro, nunca restaurando.",
+      ]),
+    });
+    expect(
+      noticeMail(
+        { code: "restore_rehearsal_differs", subject: "integrity" },
+        {
+          since: "2026-10-01",
+          period: "2026-Q4",
+          counts: { event_differs: 1, cash_differ: 1, x: 3 },
+        },
+        ORIGIN,
+      ),
+    ).toEqual({
+      subject: "[Atlas] Aviso: integridad 2026-Q4",
+      body: body([
+        "El ensayo de restauración del periodo 2026-Q4 no reproduce el libro con el último volcado (event_differs: 1, cash_differ: 1), desde el 2026-10-01.",
+        "No restaures desde ese volcado sin mirarlo antes: sigue el procedimiento de los avisos.",
+      ]),
+    });
+  });
+
+  it("says the size of the ledger and its threshold, in bytes", () => {
+    expect(
+      noticeMail(
+        { code: "ledger_size_above_threshold", subject: "integrity" },
+        {
+          since: "2026-10-01",
+          period: "2026-Q4",
+          counts: { bytes: 1_100_000, threshold: 1_048_576 },
+        },
+        ORIGIN,
+      ),
+    ).toEqual({
+      subject: "[Atlas] Aviso: integridad 2026-Q4",
+      body: body([
+        "El libro ocupa 1.100.000 bytes (umbral 1.048.576), desde el 2026-10-01.",
+        "Revisa el plazo de expiración de las versiones no vigentes del bucket (ADR-0006).",
+      ]),
+    });
+  });
+
+  it("never says a period it cannot vouch for, and never a subject outside its list", () => {
+    const mail = noticeMail(
+      { code: "integrity_errors", subject: "integrity" },
+      { since: "2026-10-01", period: "IE00B4L5Y983", counts: { errors: 1, other: 1 } },
+      ORIGIN,
+    );
+    expect(mail?.subject).toBe("[Atlas] Aviso: integridad (periodo desconocido)");
+    const dump = noticeMail(
+      { code: "backup_object_differs", subject: "backup" },
+      { since: "2026-10-01", period: "../x", counts: { objects: 1 } },
+      ORIGIN,
+    );
+    expect(dump?.subject).toBe("[Atlas] Aviso: volcado (periodo desconocido)");
+    expect(dump?.body).toContain("mira backups/<periodo>/ antes de nada");
+    expect(dump?.body).not.toContain("../x");
+    expect(
+      noticeMail(
+        { code: "ledger_size_above_threshold", subject: "integrity" },
+        { since: "2026-10-01", period: "2026-Q4", counts: { bytes: 1.5, threshold: 1024 } },
+        ORIGIN,
+      )?.body,
+    ).toContain("El libro ocupa algunos bytes (umbral 1.024)");
+    expect(mail?.body).not.toContain("IE00B4L5Y983");
+    for (const [code, subject] of [
+      ["backup_object_differs", "integrity"],
+      ["integrity_errors", "backup"],
+      ["ledger_size_above_threshold", "ast_world"],
+    ] as const) {
+      expect(noticeMail({ code, subject }, { since: "2026-10-01" }, ORIGIN), code).toBeUndefined();
+    }
+  });
+
+  it("says a failed dump with the code of why, when it is one of ours", () => {
+    expect(
+      noticeMail(
+        { code: "task_failed", subject: "monthly_backup" },
+        { since: "2026-10-01", period: "2026-10", outcome: "ledger_absent" },
+        ORIGIN,
+      )?.body,
+    ).toContain("Ha fallado el volcado mensual en el periodo 2026-10 (código ledger_absent)");
   });
 });
