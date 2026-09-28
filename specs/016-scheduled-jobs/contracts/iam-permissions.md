@@ -60,7 +60,7 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 
 | Acción | Recurso | Para qué |
 |---|---|---|
-| `s3:GetObject` | `B/ledger/ledger.jsonl`, `B/reference/ecb/*`, `B/prices/*` | lo que se vuelca; `prices/` y el histórico también valoran `positions.json` |
+| `s3:GetObject` | `B/ledger/ledger.jsonl`, `B/reference/ecb/manifest.json`, `B/reference/ecb/eurofxref-hist.csv`, `B/reference/ecb/api-exr.csv`, `B/prices/*` | lo que se vuelca; `prices/` y el histórico también valoran `positions.json`. **Estrechado en la ronda 1 de la PR #109 (N4)**: ni `previous/` ni `rejected/`, que el volcado no lee |
 | `s3:GetObject`, `s3:PutObject` | `B/backups/*` | escribir con `If-None-Match: *` (basta `s3:PutObject`, questions §20.1) y comparar lo que ya existe (`s3:GetObject`) |
 | `s3:GetObject`, `s3:PutObject` | `B/jobs/backup/*` | su registro |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `prices/`, `reference/ecb/`, `backups/`, `jobs/backup/`, `ledger/` | listar `prices/` (primer nivel) y `404` |
@@ -80,7 +80,7 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 | Acción | Recurso | Para qué |
 |---|---|---|
 | `s3:GetObject` | `B/ledger/ledger.jsonl` | recalcular desde cero (`integrity`, `deepCheck`) y medir su tamaño (questions §20.1, punto 2) |
-| `s3:GetObject` | `B/jobs/backup/*`, `B/backups/*` | el último volcado cerrado (su registro y su `ledger.jsonl`) para el ensayo de restauración |
+| `s3:GetObject` | `B/jobs/backup/*`, `B/backups/*/ledger.jsonl` | el último volcado cerrado (su registro y su `ledger.jsonl`) para el ensayo de restauración. **Estrechado en la ronda 1 de la PR #109 (N4)**: ni `positions.json` ni `prices/` del volcado |
 | `s3:GetObject`, `s3:PutObject` | `B/jobs/integrity/*` | su registro |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `jobs/backup/monthly_backup/`, `jobs/integrity/`, `backups/`, `ledger/` | encontrar los volcados y `404` |
 

@@ -14,13 +14,13 @@ Un objeto por tarea y periodo; lo escribe **solo** la función de su familia (`e
 |---|---|
 | `run_format` | `1` |
 | `task`, `period` | los de la clave; si no cuadran, ilegible (`job_record_unreadable`) |
-| `state` | `claimed` → (`sending` → `send_failed` \| cerrado) → `done` \| `failed` \| `send_unknown` (plan §5.3) |
+| `state` | `claimed` → (`sending` → `send_failed` \| cerrado) → `done` \| `failed` \| `send_unknown` (plan §5.3); y `expired`: el periodo pasado de un aviso que quedó abierto se cierra así, **sin enviar** (ronda 1 de la PR #109, avisos B1 y N4) |
 | `claimed_at`, `closed_at?` | instantes |
 | `attempts` | entero ≥ 1; cada reclamación de un registro no cerrado lo sube |
 | `outcome?` | `{ code, counts? }`; `counts`, enteros con nombres del catálogo de códigos |
 | `frequencies?` | lo que la lectura tolerante ignoró, por código (R9) |
 | `findings?` | `{ code, subject, counts?, dates? }` (plan §5.4). **`subject` nunca es un `asset_id`, un símbolo, un ISIN, una cuenta ni un importe**: una fuente, un `thesis_id`, `ecb`, `backup`, `integrity` |
-| `objects?` | solo el volcado (`monthly_backup`): `[{ key, sha256, kept_from_earlier_attempt? }]`, con cada `key` bajo `backups/<su periodo>/` y sin `..`, el SHA-256 en hexadecimal y `kept_from_earlier_attempt` solo como `true`. Otra tarea con `objects`, ilegible |
+| `objects?` | solo el volcado (`monthly_backup`), **también en un intento que falla y en la reclamación del siguiente**, que lo hereda (ronda 1 de la PR #109, copias N3): un reintento solo guarda como suyo (`kept_from_earlier_attempt`) un objeto con los bytes que esta lista dice; cualquier otro es `backup_object_differs`. Formato: `[{ key, sha256, kept_from_earlier_attempt? }]`, con cada `key` bajo `backups/<su periodo>/` y sin `..`, el SHA-256 en hexadecimal y `kept_from_earlier_attempt` solo como `true`. Otra tarea con `objects`, ilegible |
 
 - Un registro ilegible **no** cuenta como libre: la tarea se niega (`job_record_unreadable`, con un `ERROR`). **Salvo el recordatorio mensual**, que lo reclama con `If-Match` sobre su ETag y envía, para no perder el mes; uno de un formato más nuevo no se toca nunca. El de un productor lo avisa el correo como `record_unreadable`, con la tarea como `subject` (revisión de la PR #104, N4).
 - Un registro `claimed` o `sending` reclamado hace menos que `ATLAS_JOB_MAX_RUN_SECONDS` es de una ejecución que puede seguir en marcha: nadie lo retoma (`job_in_progress`, N3).
