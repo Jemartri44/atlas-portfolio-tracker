@@ -8,7 +8,7 @@
 - **El correo `[Atlas] Aviso: historico del BCE sin comparar`.** Se reconstruyó sin nada con qué compararlo y quieres comprobar esa versión.
 - **Sabes que una generación en vigor está mal**, por ejemplo porque `atlas check --deep` da `fx_rate_mismatch` en operaciones que cuadraban antes.
 
-**Qué es.** Una operación de **administración**, con las credenciales de vida corta y MFA del rol `atlas-<entorno>-admin` (ADR-0034, fila 16). **Nunca pasa por la API**, que solo lee `reference/ecb/`. **Nada se borra para siempre**: el bucket está versionado, y cada paso de abajo crea una versión nueva o una marca de borrado, nunca destruye una anterior.
+**Qué es.** Una operación de **administración**, con las credenciales de vida corta y MFA del rol `atlas-<entorno>-admin` (ADR-0034, fila 16). Los permisos que usa, uno por paso, están en `specs/016-scheduled-jobs/contracts/iam-permissions.md` §8. **Nunca pasa por la API**, que solo lee `reference/ecb/`. **Nada se borra para siempre**: el bucket está versionado, y cada paso de abajo crea una versión nueva o una marca de borrado, nunca destruye una anterior.
 
 **Una generación** son tres objetos que van juntos:
 
@@ -20,6 +20,8 @@ Un fichero que no cuadra con el SHA-256 de su manifiesto **no lo usa nadie**: ni
 
 ---
 
+**Trabaja en una carpeta fuera del repositorio** (por ejemplo `~/personal/atlas/privado/`), nunca en la del libro ni en el repositorio: los ficheros que bajes son datos de tu nube.
+
 ## 1. Parar la tarea del BCE
 
 Así ninguna ejecución escribe mientras trabajas:
@@ -30,6 +32,8 @@ AWS_PROFILE=atlas-prod-admin aws scheduler get-schedule --group-name atlas-prod-
 
 Desactiva la programación con `aws scheduler update-schedule`, usando los mismos campos de `ecb-schedule.json` y `--state DISABLED`. Guarda `ecb-schedule.json` para el paso 5.
 
+**Aviso: deriva respecto de Terraform.** Mientras la programación esté desactivada a mano, no es lo que dice Terraform. Un `terraform apply` en medio la volvería a activar; un `terraform plan` la enseña como cambio. **No despliegues nada hasta el paso 5**, y después comprueba que `terraform plan` ya no enseña ninguna diferencia en ella.
+
 ## 2. Ver las generaciones que hay
 
 ```sh
@@ -37,11 +41,12 @@ AWS_PROFILE=atlas-prod-admin aws s3api list-object-versions --bucket <bucket-de-
   --query 'Versions[].[Key,VersionId,LastModified,ETag]' --output table
 ```
 
-Baja la versión que quieras mirar a una carpeta de trabajo, **nunca la de tu libro**:
+Baja la versión que quieras mirar a tu carpeta de trabajo, **nunca la de tu libro ni el repositorio**. El nombre del fichero en vigor lo dice su manifiesto (`active.file`): `eurofxref-hist.csv` si vino del ZIP, `api-exr.csv` si vino de la API.
 
 ```sh
 AWS_PROFILE=atlas-prod-admin aws s3api get-object --bucket <bucket-de-datos> --key reference/ecb/manifest.json --version-id <id> manifest-<id>.json
-AWS_PROFILE=atlas-prod-admin aws s3api get-object --bucket <bucket-de-datos> --key reference/ecb/eurofxref-hist.csv --version-id <id> hist-<id>.csv
+FILE=$(jq -r .active.file manifest-<id>.json)
+AWS_PROFILE=atlas-prod-admin aws s3api get-object --bucket <bucket-de-datos> --key "reference/ecb/$FILE" --version-id <id-del-fichero> hist-<id>.csv
 sha256sum hist-<id>.csv
 ```
 
@@ -55,8 +60,9 @@ sha256sum hist-<id>.csv
 Copia sobre el objeto actual la versión buena, **primero el fichero y después su manifiesto**. Es el mismo orden en que escribe la tarea: un corte entre los dos deja un fichero que no cuadra con el manifiesto, que nadie usa.
 
 ```sh
-AWS_PROFILE=atlas-prod-admin aws s3api copy-object --bucket <bucket-de-datos> --key reference/ecb/eurofxref-hist.csv \
-  --copy-source "<bucket-de-datos>/reference/ecb/eurofxref-hist.csv?versionId=<id-del-fichero>"
+FILE=$(jq -r .active.file manifest-<id-del-manifiesto>.json)
+AWS_PROFILE=atlas-prod-admin aws s3api copy-object --bucket <bucket-de-datos> --key "reference/ecb/$FILE" \
+  --copy-source "<bucket-de-datos>/reference/ecb/$FILE?versionId=<id-del-fichero>"
 AWS_PROFILE=atlas-prod-admin aws s3api copy-object --bucket <bucket-de-datos> --key reference/ecb/manifest.json \
   --copy-source "<bucket-de-datos>/reference/ecb/manifest.json?versionId=<id-del-manifiesto>"
 ```
@@ -75,7 +81,13 @@ Sin manifiesto no hay histórico en vigor. La siguiente ejecución lo descarga d
 
 ## 4. Comprobar
 
-Ejecuta la tarea una vez a mano:
+Si la tarea del BCE ya corrió hoy, una invocación a mano no hace nada: su registro de hoy dice que ya terminó (`job_already_done`). **Primero borra ese registro**. Está versionado, así que la versión anterior sigue en el historial. `<periodo>` es el día de hoy en Madrid, `AAAA-MM-DD`:
+
+```sh
+AWS_PROFILE=atlas-prod-admin aws s3api delete-object --bucket <bucket-de-datos> --key jobs/ecb/ecb_update/<periodo>.json
+```
+
+Después ejecuta la tarea una vez a mano:
 
 ```sh
 AWS_PROFILE=atlas-prod-admin aws lambda invoke --function-name atlas-prod-job-ecb \
@@ -91,5 +103,5 @@ Vuelve a activar la programación con los campos que guardaste en `ecb-schedule.
 ## Después, en cada dispositivo
 
 - **La consola no cambia**: sigue bajando el BCE del propio BCE (feature 016, §8.1 P16).
-- **La web** vuelve a leer el histórico de la nube la próxima vez que abras la tarjeta del BCE o lo pidas. Uno que no cuadra con su manifiesto no se usa y se dice.
+- **La web guarda su propia copia**, y una web que ya guardó la generación que mentía **rechaza la restaurada**, porque le faltan tipos o los cambia (ADR-0029, punto 2): se queda con la mala y lo dice. **En cada navegador**: Ajustes → Tipos del BCE → «Borrar la copia del BCE de este navegador». Confirma, y la tarjeta la vuelve a bajar entera de la nube la próxima vez que la abras con la sesión iniciada (o con «Bajar de la nube»).
 - Si algún tipo del libro se contrastó contra la generación que mentía, `atlas check --deep` lo vuelve a contrastar con la buena.
