@@ -77,7 +77,22 @@ export class EcbStoreConflict extends Error {
 export type EcbRecovered = "none" | "undone" | "damaged";
 
 export class S3EcbHistoryStore implements EcbHistoryStore {
+  /**
+   * The ETag of the manifest `active()` read (`null`: there was none), so
+   * that the write that follows — `activate` or `keepRejected`, which the
+   * update decided comparing with **that** history — happens only over it
+   * (§15.5): another run that activated in between makes this one stop.
+   */
+  private seen: { readonly etag: string | null } | undefined;
+
   constructor(private readonly objects: ObjectStore) {}
+
+  /** Stops when the manifest is not the one `active()` read. */
+  private assertSeen(stored: StoredObject | undefined): void {
+    if (this.seen !== undefined && this.seen.etag !== (stored?.etag ?? null)) {
+      throw new EcbStoreConflict();
+    }
+  }
 
   /** Writes `body` at `key` over what was read there (`stored`), or creates it. */
   private async put(
@@ -108,6 +123,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
 
   async active(): Promise<StoredHistory | undefined> {
     const read = await this.manifest();
+    this.seen = { etag: read?.stored.etag ?? null };
     if (read === undefined) {
       return undefined;
     }
@@ -228,6 +244,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
     // a read made just before the write (review of PR #106, B1): another run
     // that wrote any of them in between makes this one stop, whatever it wrote.
     const read = await this.manifest();
+    this.assertSeen(read?.stored);
     const file = fileOfSource(next.source);
     let current: StoredObject | undefined;
     let backup: { key: string; stored: StoredObject | undefined } | undefined;
@@ -273,6 +290,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
     if (read === undefined) {
       throw new EcbHistoryDamaged("manifest.json");
     }
+    this.assertSeen(read.stored);
     const stamp = next.fetched_at.replace(/[:.]/g, "-");
     const file = `rejected/${stamp}-${fileOfSource(next.source)}`;
     const meta = this.metaOf(next, file);
