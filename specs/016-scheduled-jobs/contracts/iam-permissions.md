@@ -107,7 +107,7 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 | `s3:ListBucket` | `B`, con `s3:prefix` en `prices/` | `404` en vez de `403` cuando la nube aún no tiene correspondencia |
 | `s3:GetObjectVersion` | `B/prices/symbols.json` | recuperar la versión que sustituyó `push`, que la orden dice con su ETag y su `VersionId` (revisión de la PR #106, N5) |
 
-**El procedimiento del histórico del BCE en la nube** (`specs/016-scheduled-jobs/runbooks/ecb-history-in-the-cloud.md`; E3, revisión de la PR #108, N4, y §18). `S` = `arn:aws:scheduler:eu-west-1:<cuenta>:schedule/atlas-<entorno>-jobs/atlas-<entorno>-job-ecb`; `L` = `arn:aws:lambda:eu-west-1:<cuenta>:function:atlas-<entorno>-job-ecb`.
+**El procedimiento del histórico del BCE en la nube** (`docs/runbooks/ecb-history-in-the-cloud.md`; E3, revisión de la PR #108, N4, y §18). `S` = `arn:aws:scheduler:eu-west-1:<cuenta>:schedule/atlas-<entorno>-jobs/atlas-<entorno>-job-ecb`; `L` = `arn:aws:lambda:eu-west-1:<cuenta>:function:atlas-<entorno>-job-ecb`.
 
 | Acción | Recurso | Para qué |
 |---|---|---|
@@ -121,7 +121,7 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 | `lambda:InvokeFunction` | `L` | ejecutar la tarea una vez a mano (paso 4) |
 | `s3:GetObject` | `B/jobs/ecb/*` | leer el registro de la ejecución a mano, que tiene que decir `ecb_updated` (paso 4; pedido por la dirección para E4) |
 
-**El procedimiento de los avisos** (`specs/016-scheduled-jobs/runbooks/scheduled-warnings.md`; E4):
+**El procedimiento de los avisos** (`docs/runbooks/scheduled-warnings.md`; E4):
 
 | Acción | Recurso | Para qué |
 |---|---|---|

@@ -1,6 +1,6 @@
 # El destinatario de los correos y los importes
 
-> Borrador de la feature 016 (E4). La dirección lo pasará a `docs/runbooks/` al cerrar la feature.
+> Feature 016. Lo que necesita AWS real está sin probar hasta la feature 018: lo dice el final de este procedimiento.
 
 **Cuándo usarlo.** Cuando quieres que los correos lleven los euros (o dejen de llevarlos), o que lleguen a otra dirección.
 
