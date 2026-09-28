@@ -8,7 +8,7 @@
 // asks, never at start nor on a timer. Everything of the ECB is loaded here,
 // lazily.
 
-import { createResource, createSignal, type JSX, onMount, Show } from "solid-js";
+import { createResource, createSignal, type JSX, Show } from "solid-js";
 import { Icon, Notice, Section } from "../../components/index.js";
 import { downloadCloudHistory } from "../../ecb/cloud.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
@@ -92,15 +92,16 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
     });
 
   // Opening the card is asking (015, §7 P12): with a session, the history of
-  // the cloud comes down. Never at start and never on a timer (mutant 25).
-  onMount(() => {
-    void (async () => {
-      const state = await readSession(request);
-      if (state.kind === "signed_in") {
-        setSignedIn(true);
-        await onCloud(false);
-      }
-    })();
+  // the cloud comes down. Never at start and never on a timer (mutant 25). A
+  // resource, as the card of the session reads its state: no start-up hook
+  // outside the few files ADR-0017 allows.
+  createResource(async () => {
+    const state = await readSession(request);
+    if (state.kind === "signed_in") {
+      setSignedIn(true);
+      await onCloud(false);
+    }
+    return state.kind;
   });
 
   const onLink = (): Promise<void> =>

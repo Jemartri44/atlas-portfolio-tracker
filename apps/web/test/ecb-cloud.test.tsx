@@ -205,8 +205,8 @@ describe("nothing downloads the history of the cloud at start or on a timer (mut
       "routes/ajustes/EcbCard.tsx",
     ]);
     const card = readFileSync(join(src, "routes/ajustes/EcbCard.tsx"), "utf8");
-    expect(card).not.toMatch(/setTimeout|setInterval|requestIdleCallback/);
-    // It downloads from `onMount` and from its button, and from nothing else.
+    expect(card).not.toMatch(/setTimeout|setInterval|requestIdleCallback|onMount/);
+    // It downloads when it opens and from its button, and from nothing else.
     expect(card.match(/downloadCloudHistory\(/g)).toHaveLength(1);
   });
 });
