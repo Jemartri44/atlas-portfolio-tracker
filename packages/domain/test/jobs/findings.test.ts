@@ -201,7 +201,7 @@ describe("the findings of the prices", () => {
 
 describe("what the dump and the integrity may say (016, E4)", () => {
   it("keeps each producer to its own codes and subjects, and nobody else to them", () => {
-    const backup = backupFindings({ differs: 1, ecbInconsistent: true });
+    const backup = backupFindings({ differs: 1, ecbInconsistent: true, positionsMissing: true });
     const integrity = integrityFindings({
       errors: [{ code: "lots_mismatch" }],
       rehearsal: { ok: false, differs: { cash_differ: 1 } },

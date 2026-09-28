@@ -243,6 +243,16 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       ],
     }),
   },
+  backup_positions_missing: {
+    subjects: ["backup"],
+    write: (_backup, facts) => ({
+      subject: `[Atlas] Aviso: volcado ${periodInSubject(facts)}`,
+      lines: [
+        `El volcado mensual ${ofPeriod(facts)} no lleva positions.json, desde el ${facts.since}: el libro no se proyecta sin errores.`,
+        "El libro, los precios y el histórico del BCE sí están. Mira el libro con «atlas check --deep».",
+      ],
+    }),
+  },
   integrity_errors: {
     subjects: ["integrity"],
     write: (_integrity, facts) => ({

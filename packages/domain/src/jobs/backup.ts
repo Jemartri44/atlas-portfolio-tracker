@@ -71,6 +71,8 @@ export const dumpManifestStep = (input: {
 export const backupFindings = (input: {
   readonly differs: number;
   readonly ecbInconsistent: boolean;
+  /** The ledger of the dump does not project cleanly: no `positions.json` was written. */
+  readonly positionsMissing: boolean;
 }): Finding[] => [
   ...(input.differs === 0
     ? []
@@ -82,4 +84,5 @@ export const backupFindings = (input: {
         },
       ]),
   ...(input.ecbInconsistent ? [{ code: "backup_ecb_inconsistent", subject: "backup" }] : []),
+  ...(input.positionsMissing ? [{ code: "backup_positions_missing", subject: "backup" }] : []),
 ];

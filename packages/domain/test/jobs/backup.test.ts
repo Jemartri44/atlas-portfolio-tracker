@@ -59,16 +59,23 @@ describe("what the dump does with each object (mutant 28)", () => {
 
 describe("what a dump leaves for the mail (only when it fails, §8.2 B2)", () => {
   it("says the objects it refused and the pair of the ECB it could not write, and nothing else", () => {
-    expect(backupFindings({ differs: 0, ecbInconsistent: false })).toEqual([]);
-    expect(backupFindings({ differs: 2, ecbInconsistent: false })).toEqual([
-      { code: "backup_object_differs", subject: "backup", counts: { objects: 2 } },
-    ]);
-    expect(backupFindings({ differs: 0, ecbInconsistent: true })).toEqual([
+    expect(backupFindings({ differs: 0, ecbInconsistent: false, positionsMissing: false })).toEqual(
+      [],
+    );
+    expect(backupFindings({ differs: 2, ecbInconsistent: false, positionsMissing: false })).toEqual(
+      [{ code: "backup_object_differs", subject: "backup", counts: { objects: 2 } }],
+    );
+    expect(backupFindings({ differs: 0, ecbInconsistent: true, positionsMissing: false })).toEqual([
       { code: "backup_ecb_inconsistent", subject: "backup" },
     ]);
-    expect(backupFindings({ differs: 1, ecbInconsistent: true })).toEqual([
+    expect(backupFindings({ differs: 1, ecbInconsistent: true, positionsMissing: true })).toEqual([
       { code: "backup_object_differs", subject: "backup", counts: { objects: 1 } },
       { code: "backup_ecb_inconsistent", subject: "backup" },
+      { code: "backup_positions_missing", subject: "backup" },
+    ]);
+    // A ledger that does not project leaves the dump without its positions, and says so.
+    expect(backupFindings({ differs: 0, ecbInconsistent: false, positionsMissing: true })).toEqual([
+      { code: "backup_positions_missing", subject: "backup" },
     ]);
   });
 });
