@@ -951,3 +951,24 @@ De 16 mutantes, 15 muertos a la primera. El superviviente destapó un caso sin t
   - **El total**, según la lectura de P13, está dentro (2.198 de 3.072 contando lo que añadió la 016) o fuera (268 por encima del absoluto 304.568, porque la 020 añadió unos 1.100 en medio).
 
   Recomendación: que la dirección fije la lectura del total y autorice el arranque de E3, que hoy pasa sin tocar ningún techo pero sin margen. Los precios del móvil quedan fuera con cualquier lectura.
+
+### 17.9 Tubería
+
+`016-pipeline.sh` sobre `d4cda05`: todo en 0 (cada paso tras la puerta de memoria, nada en paralelo).
+
+```
+lint 0, typecheck 0
+cov1-domain 0   (1.730 tests; dominio al 100 %: sentencias 9.059, ramas 5.622, funciones 2.038, líneas 8.621)
+cov1-others 0   (1.838 tests)
+cov2-domain 0
+cov2-others 0   (1.838 tests)
+build 0         (lambda.zip 1.444.049 bytes; jobs.zip 1.637.421 bytes, 1.411 entradas; web: arranque 75.025, total 304.836)
+```
+
+- **La primera tubería, sobre `92200b0`, salió en 1 en los dos pasos de `test:others`.** Fueron dos guardianes de la 015 (`api-access.test.ts`): la web importaba `RemoteError` de la puerta de la sincronización y alcanzaba `adapters/src/sync/` fuera de su motor. Lo arregló `7fafbb5` (§17.3), sin tocar el guardián.
+- `tests/fixtures` sin cambios; ningún gemelo `.js`.
+- Tests de los guardianes: `architecture` 51, `api-access` 28, `jobs-access` 16, `jobs-package` 3, `messages` 11. Ninguno baja.
+
+### 17.10 Congelado
+
+**E3 queda congelada en el commit que añade esta sección**; su SHA lo dice la descripción de la PR. El código está en `d4cda05`. Mientras dura la revisión no se empuja nada.
