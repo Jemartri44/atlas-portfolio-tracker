@@ -113,8 +113,12 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
 
   it("adds with the rules of the 013, never rewriting a local byte (mutant 23)", async () => {
     const { c } = await synced();
+    // A local line as a hand or an older version wrote it: a rewrite would show.
     const before = text([
-      close("2026-09-28", "9", "alpha_vantage", "2026-09-29T06:00:00.000Z"),
+      close("2026-09-28", "9", "alpha_vantage", "2026-09-29T06:00:00.000Z").replace(
+        '"close":"9"',
+        '"close": "9"',
+      ),
       close("2026-09-29", "10", "eodhd", "2026-09-30T06:00:00.000Z"),
     ]);
     await writeFile(join(c.ledger, "prices", "ast_a.jsonl"), before);
