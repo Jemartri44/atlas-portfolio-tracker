@@ -32,7 +32,7 @@ export interface CloudPull {
   readonly versions: Readonly<Record<string, string>>;
 }
 
-const invalid = (field: string): ValidationError =>
+const wrongPull = (field: string): ValidationError =>
   new ValidationError("invalid_cloud_pull", `prices/${CLOUD_PULL_FILE}: ${field} is not valid`, {
     field,
   });
