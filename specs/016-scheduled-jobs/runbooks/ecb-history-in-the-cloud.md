@@ -26,11 +26,27 @@ Un fichero que no cuadra con el SHA-256 de su manifiesto **no lo usa nadie**: ni
 
 Así ninguna ejecución escribe mientras trabajas:
 
+> **SIN VERIFICAR contra AWS**: las órdenes de este paso y del paso 5 salen de la documentación de EventBridge Scheduler y de la CLI. Se comprueban en la 018, en `dev`, antes de pasar el procedimiento a `docs/runbooks/`.
+
+`update-schedule` **sustituye la programación entera**: un campo opcional que no se le pase vuelve a su valor por defecto (por ejemplo, `ScheduleExpressionTimezone` pasaría a UTC). Por eso la orden se construye con la salida de `get-schedule`, quitando solo los tres campos que devuelve y que no se pueden escribir (`Arn`, `CreationDate` y `LastModificationDate`), y cambiando solo `State`:
+
 ```sh
 AWS_PROFILE=atlas-prod-admin aws scheduler get-schedule --group-name atlas-prod-jobs --name atlas-prod-job-ecb > ecb-schedule.json
+jq 'del(.Arn, .CreationDate, .LastModificationDate) | .State = "DISABLED"' ecb-schedule.json > ecb-schedule-disabled.json
+AWS_PROFILE=atlas-prod-admin aws scheduler update-schedule --cli-input-json file://ecb-schedule-disabled.json
 ```
 
-Desactiva la programación con `aws scheduler update-schedule`, usando los mismos campos de `ecb-schedule.json` y `--state DISABLED`. Guarda `ecb-schedule.json` para el paso 5.
+Si la CLI rechaza algún otro campo de la salida por no ser de entrada, quita **solo ese** del `del(...)`. Nunca quites ni cambies otro campo.
+
+Comprueba que solo ha cambiado el estado. La diferencia tiene que salir vacía:
+
+```sh
+AWS_PROFILE=atlas-prod-admin aws scheduler get-schedule --group-name atlas-prod-jobs --name atlas-prod-job-ecb \
+  | jq -S 'del(.LastModificationDate, .State)' > ecb-schedule-now.json
+jq -S 'del(.LastModificationDate, .State)' ecb-schedule.json | diff - ecb-schedule-now.json
+```
+
+Guarda `ecb-schedule.json` para el paso 5.
 
 **Aviso: deriva respecto de Terraform.** Mientras la programación esté desactivada a mano, no es lo que dice Terraform. Un `terraform apply` en medio la volvería a activar; un `terraform plan` la enseña como cambio. **No despliegues nada hasta el paso 5**, y después comprueba que `terraform plan` ya no enseña ninguna diferencia en ella.
 
@@ -77,7 +93,7 @@ AWS_PROFILE=atlas-prod-admin aws s3api delete-object --bucket <bucket-de-datos> 
 
 Sin manifiesto no hay histórico en vigor. La siguiente ejecución lo descarga del BCE como la primera vez: con el ZIP, o con la API si el ZIP falla, siempre dicho. **Úsalo solo si has comprobado la descarga del paso 2 contra el ZIP**, porque esa primera activación no compara con nada.
 
-- Necesita `s3:DeleteObject` sobre `reference/ecb/manifest.json` en el rol de administración. **Es una propuesta para la 017**: el contrato de IAM de la 016 no lo da todavía.
+- Necesita `s3:DeleteObject` sobre `reference/ecb/manifest.json` en el rol de administración. Está en el contrato de IAM de la 016 (§8), **aceptado por la dirección para la 017**, que es quien lo construye (§18).
 
 ## 4. Comprobar
 
@@ -96,9 +112,24 @@ AWS_PROFILE=atlas-prod-admin aws lambda invoke --function-name atlas-prod-job-ec
 
 Después mira su registro en `jobs/ecb/ecb_update/<día>.json`. Tiene que decir `ecb_updated` y no `ecb_history_damaged`.
 
-## 5. Volver a activar la tarea
+## 5. Volver a dejar la tarea como estaba
 
-Vuelve a activar la programación con los campos que guardaste en `ecb-schedule.json` y `--state ENABLED`.
+**SIN VERIFICAR contra AWS**, como el paso 1. La misma orden, con lo que guardaste en el paso 1 **tal cual, estado incluido**: la programación vuelve a estar como estaba (en `prod`, `ENABLED`; en `dev`, que se queda en reposo, como estuviera):
+
+```sh
+jq 'del(.Arn, .CreationDate, .LastModificationDate)' ecb-schedule.json > ecb-schedule-restored.json
+AWS_PROFILE=atlas-prod-admin aws scheduler update-schedule --cli-input-json file://ecb-schedule-restored.json
+```
+
+Comprueba que la programación vuelve a ser la de antes, incluido su estado. La diferencia tiene que salir vacía:
+
+```sh
+AWS_PROFILE=atlas-prod-admin aws scheduler get-schedule --group-name atlas-prod-jobs --name atlas-prod-job-ecb \
+  | jq -S 'del(.LastModificationDate)' > ecb-schedule-now.json
+jq -S 'del(.LastModificationDate)' ecb-schedule.json | diff - ecb-schedule-now.json
+```
+
+Después, `terraform plan` ya no enseña ninguna diferencia en la programación (paso 1).
 
 ## Después, en cada dispositivo
 

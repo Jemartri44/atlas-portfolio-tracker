@@ -100,7 +100,7 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 
 | Acción | Recurso | Para qué |
 |---|---|---|
-| `scheduler:GetSchedule`, `scheduler:UpdateSchedule` | `S` | parar la tarea del BCE mientras se trabaja y volver a activarla (pasos 1 y 5). **Crea deriva respecto de Terraform** mientras dura; el procedimiento lo dice |
+| `scheduler:GetSchedule`, `scheduler:UpdateSchedule` | `S` | parar la tarea del BCE mientras se trabaja, comprobar que solo cambió el estado y volver a dejarla como estaba (pasos 1 y 5; órdenes **sin verificar** contra AWS, para la 018). **Crea deriva respecto de Terraform** mientras dura; el procedimiento lo dice |
 | `iam:PassRole` | el rol de Scheduler que invoca (`contracts/iam-permissions.md` §7) | lo exige `UpdateSchedule` al reescribir la programación con su destino |
 | `s3:ListBucketVersions` | `B`, con `s3:prefix` en `reference/ecb/` y `jobs/ecb/` | ver las generaciones y sus versiones (paso 2) |
 | `s3:GetObjectVersion` | `B/reference/ecb/*`, `B/jobs/ecb/*` | bajar una versión anterior para mirarla (paso 2) y copiarla (paso 3a) |
