@@ -11,7 +11,7 @@
 // `sync/`: it only reads, and the web reaches what configures the sync only
 // through its engine (feature 015's guardians).
 
-import { parseErrorAnswer, parseReferenceIndex, RemoteError } from "@atlas/domain/sync";
+import { parseErrorAnswer, parseReferenceIndex, RemoteError } from "@atlas/domain/remote-answers";
 
 export interface HttpReferenceOptions {
   readonly origin: string;

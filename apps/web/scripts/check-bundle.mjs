@@ -1144,6 +1144,11 @@ const LAZY_ONLY = [
   { path: "/src/ecb/", what: "el histórico del BCE de la web" },
   { path: "/packages/adapters/src/reference/", what: "el cliente de los datos de referencia" },
   {
+    path: "/packages/domain/src/remote/",
+    what: "las respuestas del API que no son de la sincronización",
+  },
+  { path: "/packages/domain/src/remote-answers.ts", what: "la puerta de las respuestas del API" },
+  {
     path: "/packages/domain/src/schema/strict-json.ts",
     what: "la lectura estricta del manifiesto",
   },

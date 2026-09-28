@@ -1,7 +1,7 @@
 // Feature 016, E3: the client of the reference data, over a `fetch` that
 // answers as the API does (`docs/api.md` §6). Never the network.
 
-import { RemoteError } from "@atlas/domain/sync";
+import { RemoteError } from "@atlas/domain/remote-answers";
 import { describe, expect, it } from "vitest";
 import { httpReference } from "../../src/reference/http.js";
 

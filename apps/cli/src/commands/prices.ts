@@ -30,7 +30,7 @@ import {
   type UpdateReport,
   updatePrices,
 } from "@atlas/domain/quotes";
-import { RemoteError } from "@atlas/domain/sync";
+import { RemoteError } from "@atlas/domain/remote-answers";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { FAILURE_TEXT, mismatchedNotes, SOURCE_NAMES, unservedNotes } from "../output/prices.js";

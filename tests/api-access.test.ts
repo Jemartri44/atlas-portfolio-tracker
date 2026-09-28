@@ -370,6 +370,32 @@ describe("architecture (015): the web configures the sync only through its engin
   });
 
   /**
+   * **The reference data is not the sync** (feature 016, E3; review of PR
+   * #108, N3). The web reaches the client of the reference data from the card
+   * of the ECB, outside the engine; so that client — and the web's download of
+   * the ECB — reach nothing of the sync: not its door, not its orchestration.
+   * What they share with the sync lives at a neutral door,
+   * `@atlas/domain/remote-answers`. No exception in the rules above.
+   */
+  it("keeps the reference data away from the sync, by any path", () => {
+    const roots = [
+      join(adaptersRoot, "src", "reference", "http.ts"),
+      ...listSources(join(webSrc, "ecb")),
+    ];
+    for (const root of roots) {
+      expect(statSync(root, { throwIfNoEntry: false })?.isFile(), root).toBe(true);
+    }
+    const violations = [...reach(roots)]
+      .filter(
+        ([file]) =>
+          /[/\\]adapters[/\\]src[/\\]sync(-http)?[/\\]/.test(file) ||
+          /[/\\]domain[/\\]src[/\\]sync(\.ts$|[/\\])/.test(file),
+      )
+      .map(([, chain]) => chainText(chain));
+    expect(violations).toEqual([]);
+  });
+
+  /**
    * **Who may start an order of the sync** (review of PR #97, N1 of round 1
    * and B1 of round 2, both blocking by decision of the direction): only the
    * section of the sync in Ajustes, where every order is a button. The
