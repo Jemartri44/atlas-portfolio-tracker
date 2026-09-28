@@ -936,7 +936,20 @@ const BOOT_BUDGET_GZIP_BYTES = 75_039;
  * sentence. The boot moves by 1 byte (75.012, under 75.039). The trend:
  * 302.638 → 302.935 → 303.195.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 303_451;
+/*
+ * **Feature 016, E3, block 2 (2026-09-28): measured 304.746 (+1.551 over the
+ * 303.195 of E2), ceiling 305.002 — measured + 256**, raised in a commit of
+ * its own before the one that needs it, inside the authorisation (310.500).
+ * All of it lazy: the download of the ECB history from the cloud in the
+ * section of Ajustes (+1.090, with the client of the reference data), the
+ * store of the imported copy in a chunk of its own (+251) and the strict
+ * reading of the manifest in the chunk of the ECB (+208). The boot moves +21
+ * (75.033, under 75.039): `mergeSettings` leaving `notification_email` out
+ * (+14, P12) and the hashes of the chunk names (+7). The mobile prices do not
+ * fit what is left of §8.1 P13 for the feature, and are not built (Q8). The
+ * trend: 302.935 → 303.195 → 304.746.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 305_002;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
@@ -1107,6 +1120,13 @@ const LAZY_ONLY = [
   // the local configuration. If any of it shows up here, the build stops.
   { path: "/packages/domain/src/ecb/", what: "los tipos del BCE" },
   { path: "/packages/domain/src/ecb.ts", what: "la puerta del BCE" },
+  // Feature 016, E3, block 2: the download of the ECB history from the cloud
+  // is never the boot's (its reading of the manifest is in `ecb/`, above).
+  { path: "/src/ecb/", what: "el histórico del BCE de la web" },
+  {
+    path: "/packages/domain/src/schema/strict-json.ts",
+    what: "la lectura estricta del manifiesto",
+  },
   { path: "/packages/domain/src/config/", what: "la configuración local" },
   // Block 5: the drafts, their store and their counter. The frame keeps only
   // the place of the counter; reading and painting it arrive later.
