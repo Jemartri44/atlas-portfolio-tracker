@@ -216,6 +216,7 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/tools": repo("../../packages/domain/src/tools.ts"),
       "@atlas/domain/quotes": repo("../../packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
+      "@atlas/domain/remote-answers": repo("../../packages/domain/src/remote-answers.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
       "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),
       "@atlas/adapters/web-device": repo(
@@ -298,7 +299,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|sync[\\/]|sync\.ts|tools\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer)\.ts|ports[\\/](?:remote-ledger|sync-state-store)\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer)\.ts|ports[\\/](?:remote-ledger|sync-state-store)\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
             },
           ],
         },

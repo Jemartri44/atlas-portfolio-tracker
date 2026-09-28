@@ -5,13 +5,13 @@
 
 import { describe, expect, it } from "vitest";
 import { LINE_REJECTION_CODES, REMOTE_FAILURE_CODES } from "../../src/ports/remote-ledger.js";
+import { parseReferenceIndex } from "../../src/remote/answers.js";
 import {
   etagOfHeader,
   parseAppendAnswer,
   parseErrorAnswer,
   parseInitAnswer,
   parsePublishAnswer,
-  parseReferenceIndex,
 } from "../../src/sync/answers.js";
 
 const SHA = "c".repeat(64);
