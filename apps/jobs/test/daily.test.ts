@@ -359,6 +359,33 @@ describe("the daily task of the closes (ADR-0031; R21-R28, R33)", () => {
     expect(JSON.stringify(record)).not.toContain("th_late");
   });
 
+  it("says a file of closes that does not read, by how many and never by asset (round 3 of the review of PR #106)", async () => {
+    const { s3, ssm, jobs } = pricesJobs();
+    s3.seed(
+      "prices/ast_world.jsonl",
+      '{"schema_version":1,"date":"2026-09-01","close":"1","close":"2"}\n',
+    );
+    await jobs.run(["prices_update"]);
+    const record = recordOf(s3, "jobs/prices/prices_update/2026-10-01.json");
+    expect(record).toMatchObject({
+      state: "done",
+      outcome: { code: "prices_updated", counts: { unreadable: 1 } },
+    });
+    expect(record.findings).toContainEqual({
+      code: "prices_file_unreadable",
+      subject: "prices",
+      counts: { files: 1 },
+    });
+    expect(s3.text("prices/ast_world.jsonl")).toContain('"close":"2"');
+    const mail = setupJobs({ env: MAIL_ENV, s3, ssm, now: "2026-10-02T06:00:00Z" });
+    await mail.run(["dispatch_findings"]);
+    const sent = mail.ses.sent.find(
+      (m) => m.subject === "[Atlas] Aviso: ficheros de precios ilegibles",
+    );
+    expect(sent?.body).toContain("1 ficheros de cierres de la nube no se leen");
+    expect(JSON.stringify(mail.ses.sent)).not.toContain("ast_world");
+  });
+
   it("never writes symbols.json, whatever the run does (review of PR #106, N2)", async () => {
     for (const status of [200, 401, 503]) {
       const { s3, jobs } = pricesJobs({ status });

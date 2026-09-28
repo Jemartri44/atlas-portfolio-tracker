@@ -6,7 +6,7 @@
 // It never writes in the ledger. Without keys it calls nobody and says so:
 // that is not an error, and everything else works the same.
 
-import { FilePriceStore } from "@atlas/adapters";
+import { FilePriceStore, folderSyncPresence } from "@atlas/adapters";
 import { type AssetId, settingsAt, todayInMadrid } from "@atlas/domain";
 import {
   type AssetOutcome,
@@ -15,6 +15,7 @@ import {
   isQuoteSource,
   type PriceStatus,
   type PriceStore,
+  parseCloudPull,
   parsePriceConfig,
   parseStatus,
   parseSymbols,
@@ -29,15 +30,17 @@ import {
   type UpdateReport,
   updatePrices,
 } from "@atlas/domain/quotes";
+import { RemoteError } from "@atlas/domain/remote-answers";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { FAILURE_TEXT, mismatchedNotes, SOURCE_NAMES, unservedNotes } from "../output/prices.js";
 import { table } from "../output/table.js";
+import { type PullOutcome, priceOriginOf, pullFromCloud } from "../prices/cloud.js";
 import { folderOf, keysFor, sourcesFor } from "../prices/load.js";
 import { confirm, loadForQuery, render } from "./shared.js";
 
 const USAGE_PRICES =
-  "uso: atlas prices update | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> [--eodhd <símbolo>] [--alpha-vantage <símbolo>] --currency <divisa> [--eodhd-currency <divisa>] [--alpha-vantage-currency <divisa>] [--accept-currency] | atlas prices symbols remove <activo> | atlas prices purge <activo> --source eodhd|alpha_vantage [--yes]";
+  "uso: atlas prices update [--from-sources] | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> [--eodhd <símbolo>] [--alpha-vantage <símbolo>] --currency <divisa> [--eodhd-currency <divisa>] [--alpha-vantage-currency <divisa>] [--accept-currency] | atlas prices symbols remove <activo> | atlas prices purge <activo> --source eodhd|alpha_vantage [--yes]";
 
 const NO_KEYS =
   "No hay claves de fuentes de precios configuradas: sin precios automáticos. La entrada manual (`atlas add valuation`) sigue funcionando igual.";
@@ -81,7 +84,65 @@ const updateText = (report: UpdateReport, failing: readonly QuoteSource[]): stri
   ].join("\n");
 };
 
-const update = async (ctx: Context): Promise<number> => {
+/** Said when a synced folder calls the sources: they spend the plans it shares with the cloud. */
+const SHARED_QUOTA =
+  "la consola llama a las fuentes y gasta el cupo que comparte con la nube: por defecto, 2 llamadas de EODHD y 2 de Alpha Vantage al día, salvo que prices/config.json diga otra cosa.";
+
+const pulledText = (outcome: Extract<PullOutcome, { kind: "pulled" }>, origin: string): string => {
+  const added = outcome.files.reduce((sum, file) => sum + file.added, 0);
+  const problems = outcome.files.filter((file) => file.problem !== undefined);
+  return [
+    `Precios de la nube (${origin}), bajados el ${outcome.pulled_at}: ${outcome.files.length} ficheros con cambios, ${added} líneas añadidas. No se ha llamado a ninguna fuente.`,
+    ...(outcome.files.length === 0 ? ["La carpeta ya estaba al día con la nube."] : []),
+    // Review of PR #108, B1 and N5: what the cloud had and the folder never takes.
+    ...(outcome.discarded.future === 0
+      ? []
+      : [
+          `Aviso (cloud_lines_future): ${outcome.discarded.future} cierres de la nube con fecha de hoy o futura, o tomados el mismo día de su sesión, no se han añadido; nunca se guarda un cierre del día en curso.`,
+        ]),
+    ...(outcome.discarded.currency_mismatch === 0
+      ? []
+      : [
+          `Aviso (cloud_currency_mismatch): ${outcome.discarded.currency_mismatch} cierres de la nube en otra divisa que la que declara esta carpeta para su fuente no se han añadido. Si cambiaste la divisa aquí, súbela con «atlas admin prices push».`,
+        ]),
+    ...problems.map((file) =>
+      file.problem === "local_unreadable"
+        ? `Aviso: el fichero de precios de ${file.asset_id} de esta carpeta no se lee: no se ha tocado. Míralo con «atlas prices status».`
+        : `Aviso: el fichero de precios de ${file.asset_id} de la nube no se lee: no se ha añadido nada de él.`,
+    ),
+  ].join("\n");
+};
+
+const update = async (ctx: Context, flags: Flags): Promise<number> => {
+  // Feature 016, E3, block 1: a synced folder takes its prices from the cloud,
+  // and calls the sources only when asked (mutant 22), sharing the plans (N2).
+  const fromSources = booleanFlag(flags, "from-sources");
+  const origin = await priceOriginOf(ctx);
+  if (origin.kind === "refused" && !fromSources) {
+    ctx.io.err(`Error: no se pueden bajar los precios de la nube: ${origin.message}`);
+    return EXIT.domain;
+  }
+  if (origin.kind === "cloud" && !fromSources) {
+    let outcome: PullOutcome;
+    try {
+      outcome = await pullFromCloud(ctx, origin);
+    } catch (error) {
+      if (error instanceof RemoteError) {
+        ctx.io.err(
+          `Error (${error.code}): no se han podido bajar los precios de la nube. No se ha llamado a ninguna fuente ni se ha tocado nada; vuelve a intentarlo más tarde.`,
+        );
+        return EXIT.domain;
+      }
+      throw error;
+    }
+    if (outcome.kind === "pulled") {
+      render(ctx, outcome, pulledText(outcome, origin.origin));
+      return EXIT.ok;
+    }
+    ctx.io.err(`La nube todavía no tiene precios: esta vez ${SHARED_QUOTA}`);
+  } else if (origin.kind !== "unsynced") {
+    ctx.io.err(`Con --from-sources en una carpeta sincronizada, ${SHARED_QUOTA}`);
+  }
   const { keys, note } = await keysFor(ctx);
   if (note !== undefined) {
     ctx.io.err(note);
@@ -95,6 +156,7 @@ const update = async (ctx: Context): Promise<number> => {
     now: () => ctx.deps.clock.now(),
     store: new FilePriceStore(folderOf(ctx)),
     sources: sourcesFor(ctx, keys),
+    sharedWithCloud: origin.kind !== "unsynced",
   });
   if (report.no_sources) {
     render(ctx, report, NO_KEYS);
@@ -111,7 +173,10 @@ const status = async (ctx: Context): Promise<number> => {
   const store = new FilePriceStore(folderOf(ctx));
   const today = todayInMadrid(ctx.deps.clock);
   const { state } = await loadForQuery(ctx, today);
-  const config = parsePriceConfig(await store.config());
+  // A folder that was ever synced shares the plans with the cloud (N2 of §15).
+  const { presence } = await folderSyncPresence(folderOf(ctx));
+  const config = parsePriceConfig(await store.config(), { sharedWithCloud: presence.present });
+  const pull = parseCloudPull(await store.cloudPull());
   const symbols = parseSymbols(await store.symbols());
   const ids = [...new Set([...state.assets.keys(), ...Object.keys(symbols.assets)])].sort();
   const files = new Map<AssetId, string>();
@@ -130,7 +195,32 @@ const status = async (ctx: Context): Promise<number> => {
     today,
     ctx.deps.clock.now(),
   );
+  const lastCall = view.sources
+    .map((s) => s.last_success)
+    .filter((at): at is string => at !== undefined)
+    .sort()
+    .at(-1);
   const text = [
+    ...(pull?.discarded === undefined || pull.discarded.future === 0
+      ? []
+      : [
+          `cloud_lines_future: ${pull.discarded.future} cierres de la nube con fecha de hoy o futura, o tomados el mismo día de su sesión, se dejaron fuera en la última descarga.`,
+        ]),
+    ...(pull?.discarded === undefined || pull.discarded.currency_mismatch === 0
+      ? []
+      : [
+          `cloud_currency_mismatch: ${pull.discarded.currency_mismatch} cierres de la nube en otra divisa que la declarada se dejaron fuera en la última descarga.`,
+        ]),
+    // Where the prices of the folder came from, and when (feature 016, E3).
+    `Procedencia: ${
+      [
+        ...(pull === undefined
+          ? []
+          : [`de la nube (${pull.origin}), última descarga ${pull.pulled_at}`]),
+        ...(lastCall === undefined ? [] : [`de las fuentes, última llamada con éxito ${lastCall}`]),
+      ].join("; ") || "todavía ninguna"
+    }.`,
+    "",
     "Fuentes de precios (el cupo de EODHD se cuenta por día GMT; el de Alpha Vantage, en las últimas 24 horas):",
     table(
       [
@@ -382,9 +472,13 @@ export const pricesCommand = async (
   flags: Flags,
 ): Promise<number> => {
   const sub = positionals[1];
-  if (sub === "update" || sub === "status") {
+  if (sub === "update") {
+    assertKnownFlags(flags, ["from-sources", ...GLOBAL_FLAGS]);
+    return update(ctx, flags);
+  }
+  if (sub === "status") {
     assertKnownFlags(flags, [...GLOBAL_FLAGS]);
-    return sub === "update" ? update(ctx) : status(ctx);
+    return status(ctx);
   }
   if (sub === "purge") {
     assertKnownFlags(flags, ["source", ...GLOBAL_FLAGS]);

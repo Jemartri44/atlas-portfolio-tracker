@@ -64,7 +64,16 @@ Agrupadas por entrega (§2 del encargo). Cada tarea de código empieza por su te
 
 ## E3 — Los dispositivos beben de la nube
 
-Consola, web, `notification_email`. Se detalla al empezar.
+- [x] T301 Traer `develop` tras la fusión de E2
+- [x] T302 N2 de §15: 2 y 2 por defecto en una carpeta que comparte los planes con la nube (`parsePriceConfig`, `updatePrices`)
+- [x] T303 Observación de la ronda 3: `prices_file_unreadable` y el recuento en el registro
+- [x] T304 §15.5: el almacén del BCE escribe solo sobre el manifiesto que leyó `active()`
+- [x] T305 El procedimiento del histórico del BCE en la nube (`runbooks/`)
+- [x] T306 Bloque 3: `notification_email` fuera de las fotos nuevas y de Ajustes; la redacción de `alert_channels` en §6
+- [x] T307 Bloque 1: `quotes/cloud.ts`, el cliente de los datos de referencia, `_cloud.json`, `atlas prices update` desde la nube, `--from-sources`, la procedencia en `status`
+- [x] T308 Bloque 2: la web baja el BCE de la nube (el SHA-256, la regla del punto 2, solo al abrir la tarjeta o a petición)
+- [ ] T309 Bloque 2: los precios del móvil — **no caben en P13** (§17.4, Q8): no se construyen
+- [x] T310 Autocomprobación de §5, mutación, tubería completa, congelar y PR
 
 - **Anotado de la revisión de la PR #106 (N2 de fuentes y S3; decisión de la dirección, 2026-09-27)**: cuando la consola esté configurada para bajar los precios de la nube, su presupuesto por defecto pasa a ser **el sobrante del plan** (2 llamadas de EODHD y 2 de Alpha Vantage), salvo que su `prices/config.json` diga otra cosa. Hoy, sin ese fichero, la consola usa 20 y 25 y, con la nube gastando 18 y 23, puede pasarse del cupo del plan gratuito. **La revisión de E3 lo comprueba.**
 

@@ -84,6 +84,8 @@ export const pricesUpdate: TaskRunner = async (context): Promise<TaskResult> => 
         out_of_budget: count("out_of_budget"),
         unchecked: count("currency_unchecked"),
         no_symbol: count("no_symbol"),
+        // Never silent (round 3 of the review of PR #106): a file that does not read.
+        unreadable: count("unreadable"),
       },
     },
     findings: pricesFindings({

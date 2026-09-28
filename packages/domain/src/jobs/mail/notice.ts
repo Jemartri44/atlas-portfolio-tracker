@@ -131,6 +131,16 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       ],
     }),
   },
+  prices_file_unreadable: {
+    subjects: ["prices"],
+    write: (_prices, facts) => ({
+      subject: "[Atlas] Aviso: ficheros de precios ilegibles",
+      lines: [
+        `${countOf(facts, "files")} ficheros de cierres de la nube no se leen y la nube no los toca, desde el ${facts.since}: esos activos se quedan sin precio automático.`,
+        "Mira cuáles con «atlas prices status» en la consola.",
+      ],
+    }),
+  },
   ecb_update_rejected: {
     subjects: ["ecb"],
     write: (_ecb, facts) => ({

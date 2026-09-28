@@ -23,6 +23,7 @@ export default defineConfig({
       "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),
       "@atlas/adapters/sync-client": local("./packages/adapters/src/sync/client.ts"),
       "@atlas/adapters/sync-http": local("./packages/adapters/src/sync/http-remote.ts"),
+      "@atlas/adapters/reference-http": local("./packages/adapters/src/reference/http.ts"),
       "@atlas/adapters/sync": local("./packages/adapters/src/ledger-store/browser/sync-store.ts"),
       "@atlas/adapters/reference": local(
         "./packages/adapters/src/ledger-store/browser/reference.ts",
@@ -40,6 +41,7 @@ export default defineConfig({
       "@atlas/domain/tools": local("./packages/domain/src/tools.ts"),
       "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": local("./packages/domain/src/sync.ts"),
+      "@atlas/domain/remote-answers": local("./packages/domain/src/remote-answers.ts"),
       "@atlas/domain/access": local("./packages/domain/src/access.ts"),
       "@atlas/domain/admin": local("./packages/domain/src/admin.ts"),
       "@atlas/domain/jobs": local("./packages/domain/src/jobs.ts"),

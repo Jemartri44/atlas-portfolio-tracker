@@ -46,6 +46,8 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "from-remote",
   "with-own-lines",
   "reversal-only",
+  // Feature 016, E3: `atlas prices update --from-sources`.
+  "from-sources",
   // Feature 015, E5: `atlas admin forget-device` and `atlas backup`.
   "force",
   "from-bucket",

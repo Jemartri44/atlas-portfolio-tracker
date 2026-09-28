@@ -197,6 +197,15 @@ Se completa en cada entrega. Hoy:
   - `CLAUDE.md` («Code architecture»): la puerta `@atlas/adapters/aws-daily`, si la dirección quiere nombrarla.
   - La orden nueva de la consola, `atlas admin prices push --env <entorno>`, donde se listen las órdenes de `atlas admin` (el procedimiento 3 de E4 la explica).
   - **De la ronda 1 de la revisión de la PR #106**: `docs/api.md` §6, `GET /api/reference/prices/symbols.json` responde `404 not_found` con `reason: "unknown_key"` si el objeto tiene una clave de primer nivel que no es `symbols_format` ni `assets`; ADR-0029 (o `docs/data-schema.md`), la reconstrucción de un histórico dañado desde el ZIP oficial (`ecb_history_rebuilt`, sin `previous`); `docs/data-schema.md`, `prices/symbols.json` sin claves de primer nivel ajenas (`symbols_file_unknown_key`); la variable `ATLAS_DATA_BUCKET` debe empezar por `atlas-<ATLAS_ENV>-`.
+- **Del cierre de E3** (2026-09-28):
+  - **`docs/specification.md` §5, `alert_channels`** (§8.1 P17). La redacción que propongo sustituye el párrafo «Previsión, todavía fuera de la lista normativa»:
+    > **`alert_channels{}` no existe y no entra en §7.** Qué avisa por correo y qué se queda solo en la interfaz lo decide hoy el código de las tareas (feature 016): cada aviso tiene su canal fijo. Si algún día se configura, **vive fuera del libro, junto al destinatario del correo**, en SSM (ADR-0028, ADR-0034): es configuración operativa que ninguna cifra del libro lee (constitución, principio IV, enmienda 1.6.0), y en `Settings`, que es una foto completa, un cliente antiguo la borraría al escribir la foto siguiente. **Nunca en `docs/business-rules.md` §7.**
+  - `docs/business-rules.md` §7 (fila de `notification_email`) y `docs/specification.md` (el párrafo de la lista permitida y el destinatario) dicen «La web todavía lo ofrece en Ajustes; se retira con la feature 016». Pasa a: **retirado de Ajustes y de toda foto nueva de `settings_changed`**, escrita desde la web o desde la consola (`mergeSettings`), y el cargador lo sigue aceptando en las líneas antiguas (§8.1 P12). La nota de P12 que escribe la dirección.
+  - `docs/data-schema.md` §1: el fichero nuevo `prices/_cloud.json` (`{ cloud_format: 1, origin, pulled_at, versions }`), que escribe solo la consola bajo el cerrojo y nunca se sirve ni se sube; las líneas que baja de la nube conservan `source` y `fetched_at`. En la fila de `reference/ecb/`, la web lo baja de la nube con sesión (tercera procedencia, `origin: "cloud"` en la copia del navegador).
+  - ADR-0031 (enmienda): en una carpeta sincronizada, `atlas prices update` baja de la API y no llama a ninguna fuente; `--from-sources` las llama y gasta el cupo compartido, con 2 y 2 por defecto (`SHARED_WITH_CLOUD_DAILY_CALLS`) salvo lo que diga `config.json`.
+  - `docs/api.md` §6: los clientes de la consola y de la web (`@atlas/adapters/reference-http`), con `If-None-Match` sobre la versión que tienen.
+  - `docs/runbooks/`: el procedimiento `specs/016-scheduled-jobs/runbooks/ecb-history-in-the-cloud.md`; y, para la 017, `s3:DeleteObject` sobre `reference/ecb/manifest.json` en el rol de administración, que ese procedimiento pide.
+  - El mensaje de uso de `atlas` y el apartado de la consola que liste `atlas prices update`: la opción `--from-sources`.
 
 ## 7. Gemelos `.js`
 
@@ -703,7 +712,7 @@ Revisiones sobre `eab6ae9`: fuentes y S3 (comentario 5859690207) y `push` y guar
   - **(2)** Una activación está entre sus pasos 2 y 3 cuando otra ejecución hace `recover()`, ve el manifiesto viejo con el fichero nuevo y lo deshace. La primera escribe después su manifiesto sobre el manifiesto que el deshacer no tocó, y queda su manifiesto con el fichero anterior.
 
   Los dos acaban **dañados** y nunca se leen como si cuadraran. Los resuelven dos cosas: la **reconstrucción de la ejecución siguiente** (comparada con la última generación legible, R2-N1) y, antes que nada, la **concurrencia 1 de la función** en la 017, que impide que dos ejecuciones coincidan. La cabecera del almacén y el plan §7.1 lo dicen así.
-- **Entre `active()` y `activate()`** (`updateEcbHistory` los llama por separado): otra ejecución que activara en medio cambia el manifiesto, y `activate` lo relee y escribe su manifiesto con `If-Match` sobre esa nueva lectura. La comparación con los tipos publicados se hizo contra el anterior. No lo he cambiado: las dos descargas son del BCE, la ventana es de milisegundos y la concurrencia 1 de la 017 la cierra. Lo dejo escrito por si la dirección prefiere que `activate` exija el mismo manifiesto que leyó `active()`, que es una comparación de ETag más.
+- **Entre `active()` y `activate()`** *(cerrado en E3, `f1bf870`)*: `activate` y `keepRejected` escriben solo sobre el manifiesto que leyó `active()`; si otra ejecución activó en medio, `EcbStoreConflict`.
 - **Un formato de `symbols.json` más nuevo con claves nuevas** se sigue diciendo como más nuevo, antes de mirar las claves: la comprobación de claves va después.
 - **La web** lee `prices/symbols.json` con el mismo `parseSymbols`, así que también rechaza una clave ajena, con su frase.
 - **Arreglo que salió de la tubería** (`a3ddb26`): el texto web de `symbols_file_unknown_key` decía la clave, y el test de jerga de la web (`no-jargon.test.tsx`), que prueba cada plantilla con identificadores de muestra, lo cazó. La web dice ahora «un dato que no es suyo» sin nombrarlo; la consola sí nombra la clave, como pidió la dirección.
@@ -817,3 +826,337 @@ Un detalle, dicho: `data-schema.md` dice además en la fila de `symbols.json` qu
 ### 16.6 Congelado
 
 **Congelada la ronda 2 en el commit que añade esta sección**, cuyo SHA dice el mapa de la PR. Código en `728d3f6`. No se empuja nada más hasta la palabra de la dirección.
+
+## 17. E3: los dispositivos beben de la nube (2026-09-28)
+
+E2 fusionada en `develop` (PR #106, `e498a07`; la ronda 3 converge, comentario 5861463035). La rama la trae con `2d186a7`.
+
+### 17.1 Lo pendiente de E2
+
+- **N2 de §15, el presupuesto de la consola que comparte los planes con la nube.** `parsePriceConfig(text, { sharedWithCloud })`: con la opción, el presupuesto por defecto es `SHARED_WITH_CLOUD_DAILY_CALLS` (2 de EODHD y 2 de Alpha Vantage), y lo que diga `daily_calls` en `config.json` manda sobre él, fuente a fuente. La consola lo aplica en toda carpeta **que se sincronizó alguna vez** (existe `sync/`): con `--from-sources`, cuando la nube aún no tiene precios, y en `atlas prices status`. `updatePrices({ sharedWithCloud })` lo pasa a la cascada.
+- **La observación de la ronda 3 (ficheros de cierres ilegibles).** El registro de `prices_update` cuenta `unreadable`, y `pricesFindings` deja `prices_file_unreadable` con el recuento de ficheros, con su correo («N ficheros de cierres de la nube no se leen…»).
+  - **Cómo lo he interpretado:** el asunto es **`prices`**, un asunto opaco de la lista cerrada (`PRODUCER_FINDINGS`), y el correo dice solo cuántos. El `asset_id` no está en ninguna lista cerrada, así que nunca va ni en el asunto ni en el correo. Quién es cada uno lo dice `atlas prices status`.
+  - Si la dirección quería un asunto por activo con un identificador opaco (un *hash*, por ejemplo), es Q18.
+- **§15.5, la ventana entre `active()` y `activate()`.** `S3EcbHistoryStore` recuerda el ETag del manifiesto que leyó `active()` (o que no había ninguno), y `activate` y `keepRejected` se niegan (`EcbStoreConflict`) si el manifiesto que leen es otro.
+- **El procedimiento**, en `specs/016-scheduled-jobs/runbooks/ecb-history-in-the-cloud.md`: restaurar una generación buena desde las versiones del bucket (primero el fichero y después su manifiesto) o retirar una que miente (marca de borrado sobre el manifiesto, para que la ejecución siguiente descargue como la primera vez), con el rol de administración.
+  - Retirar necesita `s3:DeleteObject` sobre `reference/ecb/manifest.json` en ese rol, **que el contrato de IAM no da todavía**. Es una propuesta para la 017, y el procedimiento lo dice.
+
+### 17.2 Qué hay en la rama
+
+| Commit | Qué |
+|---|---|
+| `3ae71f3`, `87698ef` | `prices_file_unreadable`: el hallazgo con su asunto opaco y su correo, y el recuento en el registro de `prices_update` |
+| `f1bf870` | El almacén del BCE escribe solo sobre el manifiesto que leyó `active()` (§15.5) |
+| `c44d2bc` | El procedimiento de restaurar o retirar una generación del histórico del BCE de la nube |
+| `287130b`, `63b3f8c` | Bloque 3: `mergeSettings` deja fuera `notification_email` en toda foto nueva, venga de lo que hay en vigor o del cambio, en la web y en la consola; el cargador lo sigue leyendo; Ajustes deja de ofrecerlo. El *golden* y el generador sintético no cambian |
+| `afb6ee2`, `7f569da`, `8bac850` | Bloque 1, dominio: `quotes/cloud.ts` (`cloudLinesToAppend` con las reglas de la 013, `changedPriceFiles`, `assetOfPriceFile` por ida y vuelta, `prices/_cloud.json` estricto) y el presupuesto compartido (N2). **`7f569da` no compila por sí solo**: un renombrado a medias del ayudante que el guardián de mensajes confundía con un código, arreglado en el siguiente, `8bac850`, y empujado antes de verlo. Lo digo como fallo de proceso: el empuje se hizo sin pasar `typecheck` |
+| `c8b9a5c`, `2465a32` | `parseReferenceIndex` en el dominio y el cliente de los datos de referencia (`@atlas/adapters/reference-http`): el índice y un fichero, con `If-None-Match` sobre la versión que se tiene; la credencial inyectada, como el remoto |
+| `5d6bfdb`, `6948956` | Bloque 1, consola: `FilePriceStore` guarda `prices/_cloud.json` bajo el mismo cerrojo. `atlas prices update` en una carpeta sincronizada baja de la API (la red antes del cerrojo; comparar y escribir dentro) y no llama a ninguna fuente; `--from-sources` las llama, diciendo que gasta el cupo compartido; `atlas prices status` dice la procedencia y cuándo |
+| `45173e3`, `2a2ca46` | La lectura estricta del manifiesto del BCE pasa a `ecb/manifest.ts`, con su propia lectura estricta, porque la web la usa y nunca alcanza el código de las tareas. La puerta de las tareas la sigue exportando |
+| `7ce3179` | El techo del total, medido + 256, **antes** del commit que lo necesita (§17.4) |
+| `d92fbcf`, `b3cb563` | Bloque 2, web: `apps/web/src/ecb/cloud.ts` y la tarjeta del BCE (§17.3) |
+| `bbfb5ea` | Test: una línea local escrita a mano deja ver cualquier reescritura (el mutante 23b) |
+| `7fafbb5` | El cliente de los datos de referencia sale de `adapters/src/sync/` y la web deja de importar la puerta de la sincronización (lo paró la primera tubería, §17.3) |
+| `45806e7` | Test: una carpeta cuya sesión no sirve nunca cae en las fuentes (el superviviente de §17.6) |
+
+### 17.3 Desviaciones y decisiones mías, dichas
+
+- **El móvil no baja los precios** (§8.1 P7 y P13, Q8). Lo que queda de la autorización del total para la feature no llega para ellos (§17.4), y solo el BCE es obligatorio. **Paro en eso, como mandan P7 y Q8**, y lo digo.
+- **La tarjeta del BCE baja de la nube al abrirse, con sesión**, y con el botón «Bajar de la nube». Nada al arrancar ni con temporizador.
+  - La descarga viaja en la sección de Ajustes, que ya es perezosa. Lo pesado (el BCE, el almacén del navegador, el histórico de la web) se carga solo cuando corre, para no tocar el arranque ni partir la sección en dos (§17.4).
+  - La tarjeta no usa `onMount` (ADR-0017): lo abre un recurso, como la tarjeta de la sesión.
+- **Lo que baja de la nube se guarda como la copia importada**, en la misma clave, marcado `origin: "cloud"` y con la versión del manifiesto. Por eso sustituye a una copia importada a mano. La regla de ADR-0029, punto 2, se aplica igual: una que cambia un tipo ya publicado no se guarda, y se dice.
+- **Una carpeta sincronizada cuya nube aún no tiene precios** llama a las fuentes, diciéndolo, con el presupuesto compartido. **Una carpeta sincronizada cuya sesión no sirve** (`sync_credential_missing` y demás) **no cae en las fuentes**: dice por qué y sale con 1, salvo con `--from-sources`.
+- **Lo que la consola guarda de la nube**, `prices/_cloud.json`, es un fichero nuevo del almacén local. Nunca se sirve (la regla de nombres de la API lo niega) ni se sube. Tiene su código de error (`invalid_cloud_pull`), que solo dice la consola.
+- **El cliente de los datos de referencia vive en `packages/adapters/src/reference/`**, con su propio *subpath* y sin condiciones de `exports` distintas (R2-N3).
+  - Lo escribí primero en `sync/`, junto al del remoto. La primera tubería lo paró: los guardianes de la 015 solo dejan a la web alcanzar `adapters/src/sync/` y la puerta de la sincronización por su motor.
+  - `7fafbb5` lo saca de `sync/`: solo lee, y no configura nada. Además, la web reconoce el fallo por la clase base, `DomainError`, sin importar la puerta de la sincronización.
+- **`alert_channels` no se implementa** (§8.1 P17). La redacción que propongo está en §6.
+
+### 17.4 El paquete web
+
+Medido en bytes con la copia de `check-bundle.mjs` que imprime los totales, sobre `develop` (`e498a07`: arranque 75.012, total 303.195) y sobre la rama.
+
+| Medida | `develop` | E3 | Diferencia |
+|---|---|---|---|
+| Arranque | 75.012 | 75.025 | **+13** (techo 75.039, no se toca) |
+| Total | 303.195 | 304.836 | +1.641 (techo subido a 305.002 en `7ce3179`, dentro de la autorización de 310.500) |
+
+- **El arranque no es +0**, como pide §8.1 P13: son +13 bytes.
+  - **+14 son de la regla de P12 en el dominio**: `mergeSettings` deja fuera `notification_email`, y ese módulo está en el arranque.
+  - **El resto es ruido de los nombres de los trozos** (sus *hashes*): entre construcciones de la rama osciló entre +13 y +27 sin cambiar código del arranque.
+  - Lo intenté reducir. Con eso, **no se sube el techo del arranque**, que queda con 14 bytes de margen. El próximo cambio de nombres de trozos puede comérselo. Es Q19.
+- **El total, por trozos** (gzip):
+  - la sección de Ajustes, +1.090: la descarga, el cliente y la tarjeta;
+  - el almacén de la copia, que pasa a un trozo propio, +251;
+  - la lectura estricta del manifiesto en el trozo del BCE, +208;
+  - ruido de los nombres en otros trozos.
+- **Cuánto queda de P13.** La autorización de la feature son 3.072 bytes sobre el techo de partida. Hay dos lecturas:
+  - **Contando lo que añadió la 016**: E2 +557 (302.638 → 303.195) y E3 +1.641, en total **2.198 de 3.072**; quedan 874.
+  - **Contando el absoluto de §4** (304.568): el total ya lo pasa por 268. La razón es que la 020 subió el total unos 1.100 bytes en medio, con su propia autorización.
+  - Con cualquiera de las dos, **los precios del móvil (1,2-1,8 KB, plan §12) no caben**. Lo que quede para las mejoras visuales lo decide la dirección con la lectura que elija (Q19).
+
+### 17.5 Cómo se vio cada test en rojo
+
+- **Ficheros ilegibles**: los de `findings.test.ts` y `notice-mail.test.ts` contra el dominio de `2d186a7` (3 en rojo, `016-e3-red-unreadable.log`), y el de `daily.test.ts` contra la tarea anterior (el registro sin `unreadable`).
+- **§15.5**: el test de «solo sobre el manifiesto que leyó `active()`», en rojo contra el almacén de `2d186a7` (`016-e3-red-etag.log`).
+- **`notification_email`**: 4 en rojo, en el dominio, la consola y la web (`016-e3-red-email.log`).
+- **La consola y la nube**: los 9 tests de `apps/cli/test/prices/cloud.test.ts`, en rojo contra la consola anterior, que llamaba a las fuentes (`016-e3-red-cloud.log`). El de la sesión que no sirve se escribió después, porque su mutante sobrevivió (§17.6).
+- **La web y la nube**: los tests de `ecb-cloud.test.tsx` se escribieron con el módulo. Su rojo es la mutación (25a, 25b, 27).
+
+### 17.6 Mutación (lotes `016-e3-a.json`, `-b.json` y `-c.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante (§6 del encargo) | Test que lo mata | Veredicto |
+|---|---|---|---|
+| E3-22 | una carpeta sincronizada llama a las fuentes sin `--from-sources` [22] | `apps/cli/test/prices/cloud.test.ts` | KILLED |
+| E3-23a | cada línea de la nube se añade, sin las reglas de la 013 [23] | `domain/test/quotes/cloud.test.ts`, `cloud.test.ts` (consola) | KILLED |
+| E3-23b | el fichero local se reescribe en vez de añadirle [23] | `cloud.test.ts` (consola), con una línea escrita a mano | KILLED |
+| E3-24 | el índice se baja con el cerrojo tomado [24] | `cloud.test.ts` (consola) | KILLED |
+| E3-25a | la web usa un fichero que no cuadra con su manifiesto [25] | `apps/web/test/ecb-cloud.test.tsx` | KILLED |
+| E3-25b | la web baja el histórico al arrancar [25] | `ecb-cloud.test.tsx` (quién lo importa) | KILLED |
+| E3-26a | Ajustes vuelve a ofrecer `notification_email` [26] | `settings-text.test.tsx` | KILLED |
+| E3-26b | una foto nueva sigue llevando `notification_email`, desde la web y desde la consola [26] | `settings.test.ts` (dominio y consola), `settings-text.test.tsx` | KILLED |
+| E3-26c | el cargador rechaza una línea antigua que lo lleva [26] | `settings.test.ts` (dominio) | KILLED |
+| E3-27 | un módulo nuevo de la web en el arranque [27] | `check-bundle.mjs` («El bundle no cumple…») | KILLED |
+| E3-N2 | una carpeta sincronizada gasta los planes enteros | `cloud.test.ts` (consola) | KILLED |
+| E3-R3a | los ficheros ilegibles fuera del registro | `apps/jobs/test/daily.test.ts` | KILLED |
+| E3-R3b | los ficheros ilegibles nunca llegan al correo | `domain/test/jobs/findings.test.ts` | KILLED |
+| E3-1555 | `activate` sobre un manifiesto distinto del que leyó `active()` | `adapters/test/aws/s3-daily.test.ts` | KILLED |
+| E3-ver | se vuelve a pedir cada fichero de la nube, sea cual sea su versión | `domain/test/quotes/cloud.test.ts`, `cloud.test.ts` (consola) | KILLED |
+| E3-refused | una carpeta cuya sesión no sirve cae en las fuentes | — | **SURVIVED**: no había test. Añadido en `45806e7` |
+| E3-refused-2 | el mismo, con el test nuevo | `cloud.test.ts` (consola) | KILLED |
+
+De 16 mutantes, 15 muertos a la primera. El superviviente destapó un caso sin test, que ya lo tiene y ahora lo mata.
+
+### 17.7 Autocomprobación de §5, familia a familia
+
+| Familia | Qué miré | Con qué | Resultado |
+|---|---|---|---|
+| 1. Guardianes eludibles | Que los guardianes de la 015 sigan en pie (la primera tubería los vio caer y se arregló el código, no el guardián: §17.3); que la descarga de la web no se alcance desde el arranque; que la web no alcance el código de las tareas al leer el manifiesto; que ninguna exportación nueva tenga condiciones distintas | `LAZY_ONLY` con `/src/ecb/` (mata E3-27), `jobs-access` (el manifiesto pasa a `ecb/` porque la web no puede alcanzar `domain/src/jobs/`), el test de exportaciones de R2-N3 sobre `./reference-http` | Cuenta de tests: `architecture` 51, `api-access` 28, `jobs-access` 16, `jobs-package` 3, `messages` 11. Ninguno baja |
+| 2. Reglas sin test o sin valor exacto | 2 y 2 por defecto, lo que manda `config.json`, cada regla de la 013 al añadir, qué ficheros se vuelven a pedir | `cloud.test.ts` del dominio y de la consola, con valores exactos (2 llamadas, 3 con `daily_calls` a 5, las líneas añadidas byte a byte) | Cada regla con su mutante muerto (§17.6) |
+| 3. Reloj y red | La consola usa el reloj inyectado (`pulled_at`); la web, `now` inyectable; ningún test sale a la red | `setup/no-network.ts` en la web; la consola sobre el API con sus dobles | Limpio. La web usa `new Date()` como su importación a mano (fuera del guardián del reloj, que es de las tareas) |
+| 4. Documentos desalineados | Las cabeceras de `cloud.ts` (dominio, consola y web), de `http-reference.ts`, de la tarjeta y de `file-store.ts` | Relectura. Hay cambios que la dirección tiene que llevar a `docs/`: §6 | La cabecera de la tarjeta decía «la web nunca lo descarga»; corregida |
+| 5. Techo del paquete | Arranque +0 y total dentro de P13 | Medido en bytes (§17.4) | **El arranque no es +0 (+13) y el total depende de la lectura de P13**: Q19. El techo del total se subió antes del commit que lo necesita; el del arranque no se toca |
+| 6. Registros con datos sensibles | El token de la carpeta en la URL o en un error; el `asset_id` en el correo | El token solo viaja en su cabecera (`http-reference.test.ts`); los errores se dicen por código; el correo de los ilegibles, solo con recuentos | Limpio |
+| 7. Entradas sin validar | El índice de la API, los nombres de fichero, `_cloud.json`, el manifiesto en la web, los bytes del fichero | `parseReferenceIndex` estricto; `assetOfPriceFile` por ida y vuelta; `parseCloudPull` estricto con `repeatedKey`; `activeHistoryOf` estricto; SHA-256 antes de leer; UTF-8 `fatal` | Limpio |
+| 8. Dos pasos sin corte | Bajar y escribir; los cierres y `_cloud.json` | La red antes del cerrojo (mata E3-24); las líneas y `_cloud.json` en la misma transacción. Un fichero de la nube que no se lee no queda como tenido y se vuelve a pedir | Un corte a mitad deja las líneas ya añadidas y un `_cloud.json` viejo: la siguiente vez vuelve a pedir esos ficheros y las reglas de la 013 no añaden nada dos veces |
+| 9. Procedimientos | El del histórico del BCE en la nube | `specs/016-scheduled-jobs/runbooks/ecb-history-in-the-cloud.md`, releído orden a orden | Sin ejecutar contra AWS (no hay despliegue). Pide un permiso que el contrato aún no da (§17.1) |
+| 10. `--yes` | — | — | Ninguna orden nueva destruye nada: `--from-sources` solo elige de dónde bajar |
+
+### 17.8 Preguntas nuevas de E3
+
+- **Q18. El asunto de `prices_file_unreadable`.** Lo he hecho con el asunto opaco `prices` y el recuento de ficheros, sin nombrar nunca un activo (§17.1). Si la dirección quería una racha por activo, con un identificador opaco (un *hash* del `asset_id`, por ejemplo), es un cambio pequeño en `pricesFindings` y en la lista cerrada. Recomendación: dejarlo así. Un aviso por fichero haría una racha por activo en el buzón, y la consola ya dice cuál es.
+- **Q19. El paquete web frente a §8.1 P13** (§17.4):
+  - **El arranque es +13 y no +0.** +14 son de la regla de P12, que está en el dominio de arranque, y el resto es ruido de los nombres de los trozos. Queda con 14 bytes de margen bajo el techo (75.039), que no he subido.
+  - **El total**, según la lectura de P13, está dentro (2.198 de 3.072 contando lo que añadió la 016) o fuera (268 por encima del absoluto 304.568, porque la 020 añadió unos 1.100 en medio).
+
+  Recomendación: que la dirección fije la lectura del total y autorice el arranque de E3, que hoy pasa sin tocar ningún techo pero sin margen. Los precios del móvil quedan fuera con cualquier lectura.
+
+### 17.9 Tubería
+
+`016-pipeline.sh` sobre `d4cda05`: todo en 0 (cada paso tras la puerta de memoria, nada en paralelo).
+
+```
+lint 0, typecheck 0
+cov1-domain 0   (1.730 tests; dominio al 100 %: sentencias 9.059, ramas 5.622, funciones 2.038, líneas 8.621)
+cov1-others 0   (1.838 tests)
+cov2-domain 0
+cov2-others 0   (1.838 tests)
+build 0         (lambda.zip 1.444.049 bytes; jobs.zip 1.637.421 bytes, 1.411 entradas; web: arranque 75.025, total 304.836)
+```
+
+- **La primera tubería, sobre `92200b0`, salió en 1 en los dos pasos de `test:others`.** Fueron dos guardianes de la 015 (`api-access.test.ts`): la web importaba `RemoteError` de la puerta de la sincronización y alcanzaba `adapters/src/sync/` fuera de su motor. Lo arregló `7fafbb5` (§17.3), sin tocar el guardián.
+- `tests/fixtures` sin cambios; ningún gemelo `.js`.
+- Tests de los guardianes: `architecture` 51, `api-access` 28, `jobs-access` 16, `jobs-package` 3, `messages` 11. Ninguno baja.
+
+### 17.10 Congelado
+
+**E3 queda congelada en el commit que añade esta sección**; su SHA lo dice la descripción de la PR. El código está en `d4cda05`. Mientras dura la revisión no se empuja nada.
+
+## 18. Decisiones de la dirección sobre E3 y revisión de la PR #108, ronda 1 (2026-09-28)
+
+### 18.1 Decisiones sobre las preguntas de E3
+
+- **Q18.** Se acepta el asunto agregado `prices`, con recuentos y sin racha por activo.
+- **Q19.** Se aceptan los +13 del arranque, dentro de la autorización de 76.069.
+  - **La autorización del total sube a 312.000 bytes** para toda la web, porque la 016 y la 020 crecen a la vez.
+  - El techo del total se mide como siempre: medida + 256, en su propio commit y antes del commit que lo necesita.
+  - `TOTAL_AUTHORISED_GZIP_BYTES` sube a 312.000 en `check-bundle.mjs`, en un commit propio y con su test (la mutación 7 bis). La 020 lo trae al fusionar `develop`.
+- **Los precios en el móvil no se construyen**, como dicen P7 y Q8.
+- **`s3:DeleteObject` sobre el manifiesto del BCE** para el rol de administración queda aceptado para el contrato de IAM de la 017.
+
+### 18.2 Decisiones sobre la ronda 1 (comentario 5862320849)
+
+- **B1.** `cloudLinesToAppend` recibe `today` (Madrid) y descarta toda línea con `date >= today`. Dice cuántas, con `cloud_lines_future`, en la salida y en `status`. Tests con una línea de hoy y otra de 2099.
+- **N1.** `atlas settings set --notification-email` desaparece. Si se usa, `UsageError` con un mensaje que dice que el destinatario vive en la configuración de la nube (tfvars), nunca en el libro. Con su test.
+- **N2.** Un fichero de la nube que no es UTF-8 es `cloud_unreadable` y su versión no se guarda. Test con bytes `0xFF`.
+- **N3.** `RemoteError`, `parseErrorAnswer` y `parseReferenceIndex` pasan a una puerta neutra, que no es la de la sincronización. El guardián de la sincronización queda estricto, sin excepciones. Mutante: un módulo fuera de `adapters/src/sync/` que importa la puerta de la sincronización.
+- **N4.** Se corrige el procedimiento:
+  - paso 4: borrar antes el registro de hoy;
+  - permisos en §8 del contrato de IAM;
+  - paso 3a: el nombre del fichero sale del manifiesto;
+  - la tarjeta del BCE ofrece «Borrar la copia del BCE de este navegador», con confirmación;
+  - aviso de deriva en Terraform.
+- **N5.** Si el `symbols.json` local declara una divisa para la fuente y la nube sirve otra, esas líneas no se añaden, y se dice `cloud_currency_mismatch`. Con su test.
+- **N6.** Tope de 20 MB en la descarga de la web y en la de la consola. Con su test.
+- El techo del arranque se sube si hace falta, en su propio commit.
+
+### 18.3 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| Q19 (312.000) | `4829d9c` | `TOTAL_AUTHORISED_GZIP_BYTES` a 312.000, con su comentario, y el test `bundle-authorisation.test.ts` al día |
+| N1 | `ada76e9` | `--notification-email` sale de las opciones de `atlas settings set`. Usarla da `UsageError`: «el destinatario de los correos vive en la configuración de la nube (terraform.tfvars, de donde pasa a SSM), nunca en el libro», y no se escribe nada |
+| B1, N5, N2 | `570b6fc` | `cloudLinesToAppend(…, { today, declared })` devuelve `{ added, future, mismatched }`: nunca una línea de hoy o futura, ni una en otra divisa que la que la carpeta declara para su fuente.<br>La consola pasa `today` de Madrid y las divisas de su `symbols.json`, dice `cloud_lines_future` y `cloud_currency_mismatch` al bajar y los guarda en `_cloud.json` (`discarded`) para que `status` los diga.<br>Unos bytes que no son UTF-8 son `cloud_unreadable` y su versión no se guarda |
+| N6 | `2eda1ad` | El cliente de los datos de referencia (la consola y la web) no pasa de 20 MB (`MAX_REFERENCE_BYTES`): lo niega por la longitud que dice la respuesta, o contando lo que llega, y corta la lectura |
+| Techos | `a6e2eab` | Los dos techos, **antes** de los commits que los necesitan (§18.5) |
+| N3 | `9d66bf2`, `3ea6e33` | Puerta neutra `@atlas/domain/remote-answers`: `RemoteError`, `parseErrorAnswer` y `parseReferenceIndex`, estos dos en `domain/src/remote/answers.ts`.<br>La puerta de la sincronización sigue exportando `parseErrorAnswer`, que usa.<br>El cliente de referencia y la consola importan de la puerta neutra. La web la carga en diferido (el grupo `domain` de `vite.config.ts` la deja fuera, y `LAZY_ONLY` lo vigila).<br>El guardián de la sincronización no cambia ni gana excepciones. Uno nuevo en `api-access.test.ts` comprueba que el cliente de referencia y la descarga del BCE de la web no alcanzan nada de la sincronización, por ningún camino |
+| N4 (web) | `9108c04` | «Borrar la copia del BCE de este navegador» en la tarjeta del BCE, cuando hay una copia importada o de la nube, con confirmación (`ConfirmDialog`, destructiva). Borra solo la copia del navegador, y la siguiente descarga es una primera: una generación restaurada baja entera |
+| N4 (procedimiento e IAM) | `6d5c222` | El procedimiento:<br>- trabaja fuera del repositorio;<br>- avisa de la deriva respecto de Terraform y de no desplegar hasta reactivar;<br>- saca el nombre del fichero del manifiesto;<br>- en el paso 4 borra antes el registro de hoy, que está versionado;<br>- manda borrar la copia de cada navegador tras restaurar.<br>`contracts/iam-permissions.md` §8: `scheduler:GetSchedule`/`UpdateSchedule` (y `iam:PassRole`, que exige `UpdateSchedule`), `s3:ListBucketVersions`, `s3:GetObjectVersion` y `s3:PutObject` sobre `reference/ecb/*`, `s3:DeleteObject` sobre el manifiesto y sobre `jobs/ecb/ecb_update/*`, y `lambda:InvokeFunction` |
+| Tarjeta del BCE | `8882da5` | Los textos de lo que dice la descarga de la nube pasan a `routes/ajustes/ecb-cloud-said.ts` (`cloudSaid`): con «Borrar la copia», `EcbCard.tsx` pasaba de las 250 líneas que permite el test de arquitectura. El test de estructura de `ecb-cloud.test.tsx` cuenta ahora solo quien toma un valor de `ecb/cloud.js` (o lo importa en diferido): un `import type` no ejecuta nada |
+| Esta sección | este commit | §18.7 |
+
+**Añadido por mi cuenta, dicho:** `iam:PassRole` sobre el rol de Scheduler. `UpdateSchedule` lo exige al reescribir una programación con su destino. Es una deducción de la documentación de EventBridge Scheduler, **sin verificar** contra AWS.
+
+### 18.4 Cómo se vio cada test en rojo
+
+- **N1**: el test de `settings.test.ts` (consola), en rojo contra `catalogue.ts` de `0a86822`, que aceptaba la opción y salía con 0 (`016-e3r1-red-n1.log`).
+- **B1, N5, N2**: los tres tests nuevos de la consola, en rojo contra el dominio de `0a86822` (`016-e3r1-red-cli.log`). Los del dominio fallan por la firma nueva, y su rojo de conducta es la mutación.
+- **N6**: el test del tope, en rojo contra el cliente sin tope (`016-e3r1-red-n6.log`).
+- **N3**: el guardián nuevo, en rojo con el cliente importando la puerta de la sincronización (`016-e3r1-red-n3.log`), que es también el mutante R1-N3.
+- **N4 (web)**: el test de «Borrar la copia», en rojo antes de que existiera el botón (`016-e3r1-red-n4.log`).
+
+### 18.5 El paquete web
+
+**Medido en bytes:**
+- **Arranque: 75.057**, +32 sobre los 75.025 de E3 y +45 sobre `develop`.
+  - Unos +16 son dos exportaciones más del trozo `domain`, que los trozos diferidos de la puerta neutra toman de él (`isRecord` y compañía).
+  - El resto es de los nombres de los trozos.
+  - **Techo 75.077 = medida + 20**, dentro de la autorización de 76.069, como permitió la dirección.
+- **Total: 305.394**, +558 sobre E3.
+  - La sección de Ajustes pone +463, con «Borrar la copia», su confirmación y el tope de 20 MB del cliente.
+  - El resto es de la puerta neutra y del almacén del navegador.
+  - **Techo 305.650 = medida + 256**, dentro de 312.000.
+
+**Un tropiezo, dicho:** con la puerta neutra, Rolldown metió `remote/answers.ts` y `ports/remote-ledger.ts` en el trozo `domain`, que es de arranque. `check-bundle.mjs` lo paró: el arranque subía a 75.672.
+- La expresión del grupo `domain` de `vite.config.ts` deja ahora fuera `remote/` y `remote-answers.ts`, como ya dejaba fuera `sync/`.
+- Van en el commit de la puerta, `9d66bf2`. Los commits de esta ronda se reordenaron en local antes de empujar, para que ninguno construya en rojo.
+
+### 18.6 Mutación (lotes `016-e3r1-a.json` y `-b.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Test que lo mata | Veredicto |
+|---|---|---|---|
+| R1-B1 | una línea de hoy o futura se toma de la nube | `domain/test/quotes/cloud.test.ts`, `apps/cli/test/prices/cloud.test.ts` | KILLED |
+| R1-N5a | una línea en otra divisa que la declarada se toma | ídem | KILLED |
+| R1-N5b | la consola no le dice al dominio qué declara la carpeta | `cloud.test.ts` (consola) | KILLED |
+| R1-N2 | unos bytes que no son UTF-8 se toman por un fichero vacío | `cloud.test.ts` (consola) | KILLED |
+| R1-N1 | `--notification-email` se niega sin decir dónde vive el destinatario | `settings.test.ts` (consola) | KILLED |
+| R1-N3 | el cliente de referencia importa la puerta de la sincronización | `tests/api-access.test.ts` (el guardián nuevo) | KILLED |
+| R1-N4 | la copia del navegador se borra sin preguntar | `apps/web/test/ecb-cloud.test.tsx` | KILLED |
+| R1-N6a | no se mira la longitud que dice la respuesta | `packages/adapters/test/reference/http.test.ts` | KILLED |
+| R1-N6b | lo que llega no se cuenta contra el tope | ídem | KILLED |
+
+9 de 9 muertos.
+
+### 18.7 Tubería y congelación
+
+- **Tubería completa** sobre `8882da5`, un solo trabajador y tras la puerta de memoria (`016-pipeline.out`): lint, typecheck, las dos pasadas de cobertura y el build, todo en verde.
+  - Dominio: 1.732 tests, **100 %** de sentencias (9.079), ramas (5.642) y líneas (8.640).
+  - El resto: 1.846 tests.
+- **La primera pasada, sobre `6a4f04e`, falló** (`016-pipeline-r1-e3a.out`): `EcbCard.tsx` tenía 256 líneas y el test de arquitectura permite 250. Se arregló con `8882da5` (§18.3), sin tocar ninguna regla.
+- **El paquete web tras `8882da5`**: arranque 75.053 y total 305.392 bytes, dentro de los techos de `a6e2eab` (75.077 y 305.650). No hizo falta subir ningún techo más. Los comentarios de `check-bundle.mjs` dicen 75.057 y 305.394, lo medido antes de separar los textos de la tarjeta.
+- **Congelación:** la rama queda congelada en el commit que añade esta sección. No se empuja nada más mientras dure la revisión.
+
+## 19. Revisión de la PR #108, ronda 2: decisiones de la dirección y arreglos (2026-09-28)
+
+La ronda 2 (comentario 5863160435) deja un bloqueante, R2-B1. Las decisiones de la dirección están abajo. Cada corrección de lógica tiene su test, visto en rojo, y su mutante.
+
+### 19.1 Decisiones
+
+- **R2-B1.** Se descarta también toda línea cuya fecha sea igual o posterior al día en Madrid de su `fetched_at`, es decir, un cierre tomado el mismo día de su sesión. Cuenta en `cloud_lines_future`. Test: el caso que reprodujo el revisor, descartado el primer día y otra vez al día siguiente, con otra versión del fichero.
+- **El tope de descarga, por recurso.** Cada histórico del BCE (`api-exr.csv` y el CSV del ZIP) sube a **64 MB**, porque hoy ronda 12 MB y crece. Todo lo demás sigue en 20 MB. Un test por tope.
+- **El procedimiento.**
+  - Los pasos 1 y 5 llevan la orden completa de `update-schedule`, construida con la salida de `get-schedule`, para que no se pierda ningún campo (tampoco la zona horaria).
+  - Va marcado **SIN VERIFICAR contra AWS**, para comprobarlo en la 018.
+  - La línea 80 se corrige para que cuadre con el §8 del contrato de IAM.
+- **El reexportador de `relay/`**, un hueco que viene de la 015, se cierra en esta PR:
+  - la puerta de la sincronización (`@atlas/domain/sync`) solo puede importarse desde `packages/adapters/src/sync*/` y desde el motor de la web;
+  - un reexporte desde cualquier otro módulo de los adaptadores falla el guardián;
+  - se añade el mutante del revisor.
+- **N5 sin declaración local**: se queda como está (§18.2).
+
+### 19.2 La asimetría de N5 con la 013 (anotada por decisión de la dirección)
+
+- **En local**, la 013 nunca baja un precio en una divisa que no haya contrastado (`cascade.ts`, el contraste de `currency_check`).
+- **Lo que baja de la nube** solo se contrasta con el `symbols.json` local **si ese fichero declara la divisa** de la fuente de la línea. Si no la declara, la línea entra sin contrastar. Pasa en tres casos: la fuente no tiene divisa declarada, el activo no está en `symbols.json` o no hay `symbols.json`.
+- En esos casos, **la consola se fía del contraste que hizo la tarea de la nube** con el `symbols.json` del bucket, que es el que sube `atlas admin prices push`.
+- Queda así por decisión de la dirección (§18.2, N5; ronda 2).
+
+### 19.3 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| R2-B1 | `706731d` | `cloudLinesToAppend` descarta también la línea con `date >= madridDateOf(fetched_at)` y la cuenta en `future`. Los textos de `cloud_lines_future` (al bajar y en `status`) lo dicen: «o tomados el mismo día de su sesión».<br>Test del dominio con las dos fronteras de Madrid en horario de verano: 21:59:59Z del mismo día se descarta; 22:00:00Z, que en Madrid ya es el día siguiente aunque en UTC no, se toma.<br>Test de la consola con el caso del revisor: el día 1, a las 12:00 en Madrid, la nube sirve un cierre tomado a las 11:00 y se descarta. El día 2, con otra versión que trae además el cierre de la sesión, se vuelve a descartar el de media sesión, se toma el bueno y `status` dice `cloud_lines_future: 1` |
+| El tope, por recurso | `c8e4f6f` | `MAX_ECB_HISTORY_BYTES` = 64 MB solo para `get("ecb", "api-exr.csv" \| "eurofxref-hist.csv")`. `MAX_REFERENCE_BYTES` = 20 MB para el índice, el manifiesto, los ficheros de precios y el cuerpo de un error, por la longitud que dice la respuesta y contando lo que llega |
+| Guardián de la puerta de la sincronización | `c67e2b7` | Test nuevo en `tests/api-access.test.ts`: en `packages/adapters/src`, fuera de `src/sync*/`, ningún módulo toma nada de `@atlas/domain/sync`, ni por su nombre ni por una ruta relativa a `packages/domain`: ni `import`, ni `export … from`, ni `import()`. En la web, la regla de la 015 ya lo deja en el motor (§19.5) |
+| El procedimiento | `06d9fe9` | Pasos 1 y 5: `get-schedule` → `jq 'del(.Arn, .CreationDate, .LastModificationDate)'` → `update-schedule --cli-input-json`. En el paso 1 solo cambia `State` a `DISABLED`; en el paso 5 se escribe lo guardado **tal cual, estado incluido**. Tras cada escritura, un `diff` que tiene que salir vacío. Marcado **SIN VERIFICAR contra AWS**, para la 018. La línea 80 cita ahora el §8 («aceptado por la dirección para la 017»), y la fila de Scheduler del §8 dice los pasos igual |
+| Esta sección | este commit | §19 |
+
+### 19.4 Cómo se vio cada test en rojo
+
+- **R2-B1**: los dos tests nuevos, contra el dominio de `09446c0` (`016-e3r2-red-b1.log`). El de la consola falla justo en el paso del día 2: añade el cierre de media sesión.
+- **El tope de 64 MB**: el test de los históricos, contra el cliente de `09446c0`, donde todo tenía el mismo tope de 20 MB (`016-e3r2-red-cap.log`). El de «20 MB para lo demás» ya pasaba entonces: su rojo es el de los mutantes R2-CAPb y R2-CAPc.
+- **El guardián**: es una regla nueva y el código ya la cumple, así que su rojo son los mutantes R2-SYNC, empezando por el del revisor.
+
+### 19.5 Dos puntos para la dirección
+
+**1. Dos módulos de la 015 toman la puerta fuera de `src/sync*/`, y el guardián los nombra en una lista cerrada.** Cumplir la regla al pie de la letra obligaba a mover código de la 015 en la última ronda, así que no lo he hecho. Son estos dos:
+- `ledger-store/browser/sync-store.ts`, que **es** la puerta `@atlas/adapters/sync`;
+- `ledger-store/browser/transfer.ts`, que exporta lo que la sincronización retiene (P3).
+
+El guardián les deja **usar** la puerta, pero no **reexportarla**: ni `export … from`, ni exportar otra vez un nombre tomado de ella (mutantes R2-SYNCc y R2-SYNCd). Un nombre de la lista que deja de tomar la puerta falla hasta que se quita de la lista, así que la lista solo puede encoger.
+
+Si la dirección los quiere dentro de `src/sync*/`, moverlos es mecánico y toca estos sitios:
+- `package.json` de los adaptadores;
+- `vitest.config.ts`;
+- `vite.config.ts`;
+- `check-bundle.mjs`;
+- `tests/architecture.test.ts`;
+- cinco tests de los adaptadores.
+
+**2. La web, al pie de la letra.** Fuera del motor, la web ya no puede tomar ningún **valor** de la puerta (la regla de la 015). Sí puede tomar:
+- tipos, que no ejecutan nada (`sync-controller.ts` toma `RedoPlan`);
+- las tres preguntas de solo lectura de `@atlas/adapters/sync`.
+
+No lo he cambiado.
+
+**Observación sin cambio, para la 017:** el paso 4 del procedimiento manda leer el registro de ejecución de hoy, lo que necesita `s3:GetObject` sobre `jobs/ecb/*`. El §8 solo lista `s3:GetObjectVersion`. Si el rol de administración de la 015 ya alcanza todo el bucket, no falta nada.
+
+### 19.6 Mutación (lotes `016-e3r2-a.json` y `-b.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Test que lo mata | Veredicto |
+|---|---|---|---|
+| R2-B1a | un cierre tomado el día de su sesión se toma de la nube | `domain/test/quotes/cloud.test.ts`, `apps/cli/test/prices/cloud.test.ts` | KILLED |
+| R2-B1b | el día de `fetched_at` se lee en UTC, no en Madrid | `domain/test/quotes/cloud.test.ts` | KILLED |
+| R2-B1c | `>` en vez de `>=`: se toma el del mismo día | ídem | KILLED |
+| R2-CAPa | un histórico del BCE, a 20 MB | `packages/adapters/test/reference/http.test.ts` | KILLED |
+| R2-CAPb | todo `ecb`, el manifiesto incluido, a 64 MB | ídem | KILLED |
+| R2-CAPc | un fichero de precios con nombre de histórico, a 64 MB | ídem | KILLED |
+| R2-CAPd | lo que llega se cuenta siempre contra 64 MB | ídem | KILLED |
+| R2-SYNCa | **el del revisor**: `adapters/src/relay/relay.ts` reexporta `replaceWithRemote` de `@atlas/domain/sync`, y `ecb-cloud-said.ts` lo importa por una ruta relativa | `tests/api-access.test.ts` (el guardián nuevo) | KILLED |
+| R2-SYNCb | el mismo reexportador, por una ruta relativa a `packages/domain/src/sync.ts` | ídem | KILLED |
+| R2-SYNCc | `transfer.ts` reexporta de la puerta | ídem | KILLED |
+| R2-SYNCd | `transfer.ts` exporta otra vez un nombre que tomó de la puerta | ídem | KILLED |
+
+11 de 11 muertos.
+
+### 19.7 Paquete, tubería y congelación
+
+- **El paquete web tras `06d9fe9`**, en bytes: arranque **75.061** y total **305.573**, dentro de los techos de `a6e2eab` (75.077 y 305.650).
+  - El total sube +181 sobre `8882da5`: es el tope por recurso del cliente de referencia, y todo es diferido.
+  - El arranque sube +8, de los nombres de los trozos.
+  - No hizo falta subir ningún techo.
+- **Tubería completa** sobre `06d9fe9`, un solo trabajador y tras la puerta de memoria (`016-pipeline.out`): lint, typecheck, las dos pasadas de cobertura y el build, todo en verde a la primera.
+  - Dominio: 1.733 tests, **100 %** de sentencias (9.079), ramas (5.644), funciones (2.042) y líneas.
+  - El resto: 1.850 tests.
+- **Congelación:** la rama queda congelada en el commit que añade esta sección. No se empuja nada más.

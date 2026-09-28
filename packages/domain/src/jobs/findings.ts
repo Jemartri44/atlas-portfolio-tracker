@@ -13,7 +13,8 @@
 //   ADR-0031, third amendment, §5), correspondences the cloud leaves out
 //   because nobody contrasted them (Q1), and theses of the bucket past their
 //   expected horizon — `horizon_exceeded`, the one rule that exists (§8.2 B1);
-//   the condition of invalidation is free text and never a warning.
+//   the condition of invalidation is free text and never a warning; and files
+//   of closes that do not read, by how many (round 3 of the review of PR #106).
 
 import type { EcbRebuildResult, EcbUpdateResult } from "../ecb/update-history.js";
 import type { UpdateReport } from "../quotes/cascade.js";
@@ -34,6 +35,7 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
     source_failing: ["eodhd", "alpha_vantage"],
     currency_unchecked: ["eodhd", "alpha_vantage"],
     thesis_horizon_exceeded: ["bucket"],
+    prices_file_unreadable: ["prices"],
   },
 };
 
@@ -104,5 +106,13 @@ export const pricesFindings = (input: {
     input.theses === 0
       ? []
       : [{ code: "thesis_horizon_exceeded", subject: "bucket", counts: { theses: input.theses } }];
-  return [...failing, ...unchecked, ...theses];
+  // A file of closes that does not read is never silent (round 3 of the
+  // review of PR #106): said by how many, under an opaque subject of the
+  // closed list — never the asset, which is not a closed list.
+  const unreadable = input.report.assets.filter((asset) => asset.outcome === "unreadable").length;
+  const files: Finding[] =
+    unreadable === 0
+      ? []
+      : [{ code: "prices_file_unreadable", subject: "prices", counts: { files: unreadable } }];
+  return [...failing, ...unchecked, ...theses, ...files];
 };

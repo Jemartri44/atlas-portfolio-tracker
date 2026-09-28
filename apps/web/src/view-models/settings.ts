@@ -173,11 +173,9 @@ export const SETTINGS_TEXTS: readonly TextSetting[] = [
     label: "Fin de la temporada de Renta",
     hint: "Mes y día, como 06-30.",
   },
-  {
-    key: "notification_email",
-    label: "Correo de avisos",
-    hint: "Todavía no se envía ningún correo: queda guardado para cuando lleguen los avisos por correo.",
-  },
+  // `notification_email` is no longer offered (feature 016, E3; §8.1 P12): the
+  // recipient of the mail lives outside the ledger, and a new snapshot never
+  // carries it (`mergeSettings`).
 ];
 
 /** The two settings that hold one value **per asset type** (ADR-0013, ADR-0018). */

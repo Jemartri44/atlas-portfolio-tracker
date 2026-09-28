@@ -252,6 +252,30 @@ describe("reference/ecb/ in the bucket (R31)", () => {
     expect(await store.recover()).toBe("none");
   });
 
+  it("activates or keeps apart only over the manifest active() read (§15.5)", async () => {
+    const s3 = new TestOnlyFakeS3();
+    const old = await load();
+    await new S3EcbHistoryStore(s3).activate(download(old));
+    const text = new TextDecoder().decode(old);
+    for (const write of ["activate", "keepRejected"] as const) {
+      const late = new S3EcbHistoryStore(s3);
+      await late.active();
+      // Another run activates between this one's read and its write.
+      await new S3EcbHistoryStore(s3).activate(
+        download(withNewDay(text, write === "activate" ? "2026-04-05" : "2026-04-06")),
+      );
+      const before = s3.text("reference/ecb/manifest.json");
+      await expect(late[write](download(withNewDay(text, "2026-04-07")))).rejects.toBeInstanceOf(
+        EcbStoreConflict,
+      );
+      expect(s3.text("reference/ecb/manifest.json")).toBe(before);
+    }
+    // Without a read by active(), as before: over what it reads itself.
+    await expect(
+      new S3EcbHistoryStore(s3).activate(download(withNewDay(text, "2026-04-08"))),
+    ).resolves.toMatchObject({ file: "eurofxref-hist.csv" });
+  });
+
   it("rebuilds a damaged history from a new download, and only a damaged one (review of PR #106, B1 (b))", async () => {
     const s3 = new TestOnlyFakeS3();
     const store = new S3EcbHistoryStore(s3);

@@ -16,6 +16,7 @@ describe("the mail of a streak", () => {
       "source_failing",
       "currency_unchecked",
       "thesis_horizon_exceeded",
+      "prices_file_unreadable",
       "ecb_update_rejected",
       "ecb_calendar_mismatch",
       "ecb_history_damaged",
@@ -145,6 +146,10 @@ describe("the mail of a streak", () => {
     const refused = mail("ecb_history_damaged", "ecb", { conflicts: 3 })?.body;
     expect(refused).toContain("el ZIP oficial del BCE contradice 3 tipos");
     expect(refused).toContain("Hace falta intervenir");
+    expect(mail("prices_file_unreadable", "prices", { files: 2 })).toMatchObject({
+      subject: "[Atlas] Aviso: ficheros de precios ilegibles",
+      body: expect.stringContaining("2 ficheros de cierres de la nube no se leen"),
+    });
     expect(mail("ecb_rebuilt_unverified", "ecb")).toMatchObject({
       subject: "[Atlas] Aviso: historico del BCE sin comparar",
       body: expect.stringContaining("sin poder compararlo con ninguna versión anterior"),
@@ -164,6 +169,7 @@ describe("the mail of a streak", () => {
       ["ecb_history_damaged", "ecb"],
       ["ecb_history_rebuilt", "ecb"],
       ["ecb_rebuilt_unverified", "ecb"],
+      ["prices_file_unreadable", "prices"],
     ] as const) {
       expect(/^[\x20-\x7e]+$/.test(mail(code, subject)?.subject as string), code).toBe(true);
     }

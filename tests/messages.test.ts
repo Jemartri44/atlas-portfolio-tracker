@@ -155,6 +155,7 @@ const JOBS_ONLY: Record<string, string> = {
   ecb_update_rejected: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   source_failing: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   thesis_horizon_exceeded: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  prices_file_unreadable: "el correo lo dice con su frase (jobs/mail/notice.ts)",
 };
 
 /**
@@ -167,6 +168,8 @@ const CLI_ONLY: Record<string, string> = {
   forget_device_missing: "solo atlas admin forget-device",
   forget_device_unreadable: "solo atlas admin forget-device",
   forget_refused_queue: "solo atlas admin forget-device",
+  // Feature 016, E3: only the console pulls from the cloud and keeps its state.
+  invalid_cloud_pull: "solo atlas prices update, en una carpeta sincronizada",
   // Feature 016, E2, block 3.
   symbols_push_missing: "solo atlas admin prices push",
   symbols_push_misstored: "solo atlas admin prices push",

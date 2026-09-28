@@ -91,11 +91,14 @@ const orderOf = (value: unknown): QuoteSource[] => {
   return value;
 };
 
-const callsOf = (value: unknown): Record<QuoteSource, number> => {
+const callsOf = (
+  value: unknown,
+  base: Readonly<Record<QuoteSource, number>>,
+): Record<QuoteSource, number> => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw wrong("daily_calls", "daily_calls must be an object");
   }
-  const calls = { ...DEFAULT_PRICE_CONFIG.daily_calls };
+  const calls = { ...base };
   for (const [source, count] of Object.entries(value)) {
     if (!isQuoteSource(source)) {
       throw wrong(`daily_calls.${source}`, `unknown source ${source}`);
@@ -143,10 +146,29 @@ export const MAX_REFETCH_RECENT_DAYS = 31;
 const isDayCount = (value: unknown): value is number =>
   wholeNumber(value, 0) && value <= MAX_REFETCH_RECENT_DAYS;
 
+/**
+ * The calls a day a console **shares with the cloud** by default (N2 of §15 of
+ * feature 016): the leftover of the free plans (20 and 25) after the 18 and
+ * 23 of the cloud. A console of a synced folder spends these unless its
+ * `config.json` says otherwise; two stores that never see each other can
+ * only keep inside the plan by splitting it.
+ */
+export const SHARED_WITH_CLOUD_DAILY_CALLS: Readonly<Record<QuoteSource, number>> = {
+  eodhd: 2,
+  alpha_vantage: 2,
+};
+
 /** Parses the text of `prices/config.json`; `undefined` (no file) is the defaults. */
-export const parsePriceConfig = (text: string | undefined): PriceConfig => {
+export const parsePriceConfig = (
+  text: string | undefined,
+  options: { readonly sharedWithCloud?: boolean } = {},
+): PriceConfig => {
+  const base =
+    options.sharedWithCloud === true
+      ? { ...DEFAULT_PRICE_CONFIG, daily_calls: SHARED_WITH_CLOUD_DAILY_CALLS }
+      : DEFAULT_PRICE_CONFIG;
   if (text === undefined) {
-    return DEFAULT_PRICE_CONFIG;
+    return base;
   }
   let raw: unknown;
   try {
@@ -161,12 +183,12 @@ export const parsePriceConfig = (text: string | undefined): PriceConfig => {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     throw wrong("json", "must be an object");
   }
-  let config: PriceConfig = DEFAULT_PRICE_CONFIG;
+  let config: PriceConfig = base;
   for (const [key, value] of Object.entries(raw)) {
     if (key === "source_order") {
       config = { ...config, source_order: orderOf(value) };
     } else if (key === "daily_calls") {
-      config = { ...config, daily_calls: callsOf(value) };
+      config = { ...config, daily_calls: callsOf(value, base.daily_calls) };
     } else if (key === "failure_threshold") {
       if (!wholeNumber(value, 1)) {
         throw wrong(key, "failure_threshold must be a positive whole number");

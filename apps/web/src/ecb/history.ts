@@ -11,7 +11,11 @@
 // (decision (r)), and the build fails if it ever is.
 
 import { queryFolderPermission, readFolderText, rememberedFolder } from "@atlas/adapters/folder";
-import { importedHistory, saveImportedHistory } from "@atlas/adapters/reference";
+import {
+  forgetImportedHistory,
+  importedHistory,
+  saveImportedHistory,
+} from "@atlas/adapters/reference";
 import { sha256Hex, utf8Encode } from "@atlas/domain";
 import {
   asciiText,
@@ -28,8 +32,8 @@ import { entryOfZip, isZip } from "./zip.js";
 
 export interface WebHistory {
   history?: EcbHistory;
-  /** Where it came from. */
-  origin?: "folder" | "imported";
+  /** Where it came from: the linked folder, a copy imported by hand, or the cloud (feature 016, E3). */
+  origin?: "folder" | "imported" | "cloud";
   source?: EcbSource;
   /** The last day it publishes. */
   latest?: string;
@@ -112,7 +116,7 @@ const fromImport = async (staleDays: number): Promise<WebHistory | undefined> =>
   const history = readEcbHistory(stored.text, stored.source);
   return {
     history,
-    origin: "imported",
+    origin: stored.origin === "cloud" ? "cloud" : "imported",
     source: stored.source,
     latest: latestPublication(history),
     when: stored.imported_at,
@@ -187,4 +191,10 @@ export const importHistoryFile = async (
   });
   await reloadWebHistory();
   return { kind: "imported", latest: check.latest, source };
+};
+
+/** Erases the copy of this browser (imported or from the cloud) and reads again (review of PR #108, N4). */
+export const forgetWebCopy = async (): Promise<void> => {
+  await forgetImportedHistory();
+  await reloadWebHistory();
 };

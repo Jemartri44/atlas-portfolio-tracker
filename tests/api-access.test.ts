@@ -370,6 +370,103 @@ describe("architecture (015): the web configures the sync only through its engin
   });
 
   /**
+   * **The reference data is not the sync** (feature 016, E3; review of PR
+   * #108, N3). The web reaches the client of the reference data from the card
+   * of the ECB, outside the engine; so that client — and the web's download of
+   * the ECB — reach nothing of the sync: not its door, not its orchestration.
+   * What they share with the sync lives at a neutral door,
+   * `@atlas/domain/remote-answers`. No exception in the rules above.
+   */
+  it("keeps the reference data away from the sync, by any path", () => {
+    const roots = [
+      join(adaptersRoot, "src", "reference", "http.ts"),
+      ...listSources(join(webSrc, "ecb")),
+    ];
+    for (const root of roots) {
+      expect(statSync(root, { throwIfNoEntry: false })?.isFile(), root).toBe(true);
+    }
+    const violations = [...reach(roots)]
+      .filter(
+        ([file]) =>
+          /[/\\]adapters[/\\]src[/\\]sync(-http)?[/\\]/.test(file) ||
+          /[/\\]domain[/\\]src[/\\]sync(\.ts$|[/\\])/.test(file),
+      )
+      .map(([, chain]) => chainText(chain));
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * **The door of the sync is imported only by the sync** (review of PR
+   * #108, round 2; a gap that comes from the 015): in `packages/adapters`,
+   * only the modules under `src/sync*\/` take anything from
+   * `@atlas/domain/sync` — by its name, by a relative path into
+   * `packages/domain`, statically, re-exported or with `import()`. On the
+   * web side, the rule above keeps it in the engine.
+   *
+   * Two modules of the 015 took it before this rule and are **named here,
+   * closed**: the browser store of the sync, which is the door
+   * `@atlas/adapters/sync` itself, and the transfer of the ledger, which
+   * exports what the sync holds back (P3). They may use it, never relay it:
+   * no `export … from` the door, and no name taken from it exported again.
+   * A new module of the adapters that takes the door — a relay under
+   * `src/relay/` that the web imports by a relative path, the mutant of the
+   * reviewer — fails here.
+   */
+  it("lets only the sync take its door in the adapters, and relay it from nowhere", () => {
+    const known = packages();
+    const domainSync = known.get("@atlas/domain")?.get("./sync");
+    expect(domainSync, "the door @atlas/domain/sync").toBeDefined();
+    const domainSyncDir = join(domainRoot, "src", "sync");
+    const isDoor = (target: string | undefined): boolean =>
+      target !== undefined && (target === domainSync || target.startsWith(`${domainSyncDir}/`));
+    const browser = join(adaptersRoot, "src", "ledger-store", "browser");
+    const NAMED = new Set([join(browser, "sync-store.ts"), join(browser, "transfer.ts")]);
+    for (const file of NAMED) {
+      expect(statSync(file, { throwIfNoEntry: false })?.isFile(), file).toBe(true);
+    }
+    const ofTheSync = (file: string): boolean =>
+      /[/\\]adapters[/\\]src[/\\]sync[^/\\]*[/\\]/.test(file);
+    const violations: string[] = [];
+    for (const file of listSources(join(adaptersRoot, "src"))) {
+      if (ofTheSync(file)) {
+        continue;
+      }
+      const { code, bindings } = parse(file);
+      const taken = bindings.filter(
+        (binding) =>
+          binding.specifier === "@atlas/domain/sync" ||
+          isDoor(resolveAcross(known, file, binding.specifier)),
+      );
+      const at = (what: string) => `${relative(repoRoot, file)}: ${what}`;
+      if (!NAMED.has(file)) {
+        violations.push(...taken.map((binding) => at(`${binding.how} ${binding.name}`)));
+        continue;
+      }
+      if (taken.length === 0) {
+        violations.push(at("named, but takes nothing of the door: take it out of the list"));
+      }
+      violations.push(
+        ...taken
+          .filter((binding) => binding.how !== "import")
+          .map((binding) => at(`${binding.how} ${binding.name}`)),
+      );
+      const names = new Set(taken.map((binding) => binding.name));
+      for (const list of code.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}(?!\s*from)/g)) {
+        for (const entry of (list[1] as string).split(",")) {
+          const name = entry
+            .trim()
+            .replace(/^type\s+/, "")
+            .split(/\s+as\s+/)[0] as string;
+          if (names.has(name)) {
+            violations.push(at(`exports again ${name}`));
+          }
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  /**
    * **Who may start an order of the sync** (review of PR #97, N1 of round 1
    * and B1 of round 2, both blocking by decision of the direction): only the
    * section of the sync in Ajustes, where every order is a button. The

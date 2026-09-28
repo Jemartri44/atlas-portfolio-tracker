@@ -11,6 +11,7 @@ import type { UseCaseDeps } from "@atlas/domain";
 import { ALLOWED, SELF, setup } from "../../../api/test/harness.js";
 import type { Io } from "../../src/context.js";
 import { run } from "../../src/main.js";
+import type { PriceEnvironment } from "../../src/prices/load.js";
 import type { RemoteEnvironment } from "../../src/remote/environment.js";
 
 export type Api = ReturnType<typeof setup>;
@@ -129,6 +130,8 @@ export const setupConsole = async (
   options: Parameters<typeof browser>[1] = {},
   /** Another console's API: two consoles over one remote. */
   shared?: Api,
+  /** The sources of prices and the file of the keys (feature 016, E3); never the network. */
+  prices?: PriceEnvironment,
 ): Promise<ConsoleUnderTest> => {
   const api = shared ?? setup();
   const root = await mkdtemp(join(tmpdir(), "atlas-remote-015-"));
@@ -175,14 +178,7 @@ export const setupConsole = async (
     random: (target) => target.fill(7),
   });
   const exec = (argv: string[]) =>
-    run(
-      ["--ledger", join(ledger, "ledger.jsonl"), ...argv],
-      io,
-      deps,
-      undefined,
-      undefined,
-      remote,
-    );
+    run(["--ledger", join(ledger, "ledger.jsonl"), ...argv], io, deps, undefined, prices, remote);
   const credentials = join(config, "atlas", "credentials.json");
   const readCredentialsFile = async () => JSON.parse(await readFile(credentials, "utf8"));
   return {

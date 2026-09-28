@@ -433,7 +433,15 @@ const dist = join(webRoot, "dist");
  * per address, behind a gate that a click opens again. The trend: 74.874 →
  * 74.895 → 74.887 → 75.019.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_039;
+/*
+ * **Feature 016, E3, round 1 of the review of PR #108 (2026-09-28): measured
+ * 75.057 (+32 over the 75.025 of E3), ceiling 75.077 — measured + 20**,
+ * raised in a commit of its own before the one that needs it, inside the
+ * authorisation (76.069), as the direction allowed (§18). The neutral door of
+ * the answers of the API leaves the domain chunk two exports more (+16), and
+ * the names of the chunks move the rest. The trend: 75.012 → 75.025 → 75.057.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_077;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -936,7 +944,29 @@ const BOOT_BUDGET_GZIP_BYTES = 75_039;
  * sentence. The boot moves by 1 byte (75.012, under 75.039). The trend:
  * 302.638 → 302.935 → 303.195.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 303_451;
+/*
+ * **Feature 016, E3, block 2 (2026-09-28): measured 304.746 (+1.551 over the
+ * 303.195 of E2), ceiling 305.002 — measured + 256**, raised in a commit of
+ * its own before the one that needs it, inside the authorisation (310.500).
+ * All of it lazy: the download of the ECB history from the cloud in the
+ * section of Ajustes (+1.090, with the client of the reference data), the
+ * store of the imported copy in a chunk of its own (+251) and the strict
+ * reading of the manifest in the chunk of the ECB (+208). The boot moves +21
+ * (75.033, under 75.039): `mergeSettings` leaving `notification_email` out
+ * (+14, P12) and the hashes of the chunk names (+7). The mobile prices do not
+ * fit what is left of §8.1 P13 for the feature, and are not built (Q8). The
+ * trend: 302.935 → 303.195 → 304.746.
+ */
+/*
+ * **Feature 016, E3, round 1 of the review of PR #108 (2026-09-28): measured
+ * 305.394 (+558 over the 304.836 of E3), ceiling 305.650 — measured + 256**,
+ * raised in a commit of its own before the one that needs it, inside the
+ * authorisation (312.000). All of it lazy: erasing the copy of the ECB of this
+ * browser with its confirmation (+463 in the section of Ajustes, with the cap
+ * of 20 MB of the client), and the neutral door of the answers of the API.
+ * The trend: 303.195 → 304.836 → 305.394.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 305_650;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
@@ -947,12 +977,14 @@ const TOTAL_BUDGET_GZIP_BYTES = 303_451;
  * over its authorisation does not build green.
  *
  *   - Boot: 76.069, prompt 015 §7 P13, still standing (prompt 020 §5).
- *   - Total: 310.500, raised by the direction on 2026-09-27 over the 309.500
- *     of prompt 020 §8 P1, for the prices of PR #102
- *     (`specs/020-visual-refresh/questions.md` §4.1).
+ *   - Total: 312.000, raised by the direction on 2026-09-28 for the whole web,
+ *     because features 016 and 020 grow at the same time
+ *     (`specs/016-scheduled-jobs/questions.md` §18, Q19); before, 310.500,
+ *     raised on 2026-09-27 over the 309.500 of prompt 020 §8 P1, for the
+ *     prices of PR #102 (`specs/020-visual-refresh/questions.md` §4.1).
  */
 const BOOT_AUTHORISED_GZIP_BYTES = 76_069;
-const TOTAL_AUTHORISED_GZIP_BYTES = 310_500;
+const TOTAL_AUTHORISED_GZIP_BYTES = 312_000;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -1107,6 +1139,19 @@ const LAZY_ONLY = [
   // the local configuration. If any of it shows up here, the build stops.
   { path: "/packages/domain/src/ecb/", what: "los tipos del BCE" },
   { path: "/packages/domain/src/ecb.ts", what: "la puerta del BCE" },
+  // Feature 016, E3, block 2: the download of the ECB history from the cloud
+  // is never the boot's (its reading of the manifest is in `ecb/`, above).
+  { path: "/src/ecb/", what: "el histórico del BCE de la web" },
+  { path: "/packages/adapters/src/reference/", what: "el cliente de los datos de referencia" },
+  {
+    path: "/packages/domain/src/remote/",
+    what: "las respuestas del API que no son de la sincronización",
+  },
+  { path: "/packages/domain/src/remote-answers.ts", what: "la puerta de las respuestas del API" },
+  {
+    path: "/packages/domain/src/schema/strict-json.ts",
+    what: "la lectura estricta del manifiesto",
+  },
   { path: "/packages/domain/src/config/", what: "la configuración local" },
   // Block 5: the drafts, their store and their counter. The frame keeps only
   // the place of the counter; reading and painting it arrive later.

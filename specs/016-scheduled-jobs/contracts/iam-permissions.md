@@ -96,7 +96,20 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 | `s3:ListBucket` | `B`, con `s3:prefix` en `prices/` | `404` en vez de `403` cuando la nube aún no tiene correspondencia |
 | `s3:GetObjectVersion` | `B/prices/symbols.json` | recuperar la versión que sustituyó `push`, que la orden dice con su ETag y su `VersionId` (revisión de la PR #106, N5) |
 
-Con credenciales de corta duración y MFA, como las demás órdenes de `atlas admin` (ADR-0032, ADR-0034). Si el rol de administración de la 015 ya alcanza todo el bucket de datos, esta fila no añade nada; se escribe para que la 017 lo compruebe. La orden **nunca** escribe `B/prices/config.json`.
+**El procedimiento del histórico del BCE en la nube** (`specs/016-scheduled-jobs/runbooks/ecb-history-in-the-cloud.md`; E3, revisión de la PR #108, N4, y §18). `S` = `arn:aws:scheduler:eu-west-1:<cuenta>:schedule/atlas-<entorno>-jobs/atlas-<entorno>-job-ecb`; `L` = `arn:aws:lambda:eu-west-1:<cuenta>:function:atlas-<entorno>-job-ecb`.
+
+| Acción | Recurso | Para qué |
+|---|---|---|
+| `scheduler:GetSchedule`, `scheduler:UpdateSchedule` | `S` | parar la tarea del BCE mientras se trabaja, comprobar que solo cambió el estado y volver a dejarla como estaba (pasos 1 y 5; órdenes **sin verificar** contra AWS, para la 018). **Crea deriva respecto de Terraform** mientras dura; el procedimiento lo dice |
+| `iam:PassRole` | el rol de Scheduler que invoca (`contracts/iam-permissions.md` §7) | lo exige `UpdateSchedule` al reescribir la programación con su destino |
+| `s3:ListBucketVersions` | `B`, con `s3:prefix` en `reference/ecb/` y `jobs/ecb/` | ver las generaciones y sus versiones (paso 2) |
+| `s3:GetObjectVersion` | `B/reference/ecb/*`, `B/jobs/ecb/*` | bajar una versión anterior para mirarla (paso 2) y copiarla (paso 3a) |
+| `s3:PutObject` | `B/reference/ecb/*` | restaurar una generación buena copiando sus versiones (paso 3a) |
+| `s3:DeleteObject` | `B/reference/ecb/manifest.json` | retirar una generación que miente con una marca de borrado (paso 3b). **Aceptado por la dirección para la 017** (§18) |
+| `s3:DeleteObject` | `B/jobs/ecb/ecb_update/*` | borrar el registro de ejecución de hoy, versionado, para que la invocación a mano no acabe en `job_already_done` (paso 4) |
+| `lambda:InvokeFunction` | `L` | ejecutar la tarea una vez a mano (paso 4) |
+
+Con credenciales de corta duración y MFA, como las demás órdenes de `atlas admin` (ADR-0032, ADR-0034). Si el rol de administración de la 015 ya alcanza todo el bucket de datos, estas filas no añaden nada **del bucket**; se escriben para que la 017 lo compruebe, y las de Scheduler y Lambda sí son nuevas. La orden `push` **nunca** escribe `B/prices/config.json`.
 
 ## 9. Tiempo y memoria (propuesta del bloque 0 de E2, questions §14.1, punto 3)
 

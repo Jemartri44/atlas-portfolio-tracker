@@ -501,6 +501,8 @@ export const describeError = (error: DomainError): string => {
       return `La correspondencia de símbolos prices/symbols.json no se entiende (${text(d.field)}): corrígela, o vuelve a declarar los símbolos con «atlas prices symbols set».`;
     case "symbols_file_newer_version":
       return `La correspondencia de símbolos prices/symbols.json es de una versión más nueva de la aplicación (formato ${text(d.format)}): esta consola no la lee ni la escribe. Actualiza la aplicación.`;
+    case "invalid_cloud_pull":
+      return `prices/_cloud.json, lo que la carpeta guarda de su última descarga de la nube, no se entiende (${text(d.field)}): bórralo y vuelve a ejecutar «atlas prices update», que lo rehace sin tocar ningún cierre.`;
     case "json_key_repeated":
       return `${text(d.file)}${d.line === undefined ? "" : `, línea ${text(d.line)},`} repite la clave ${text(d.key)}: dice dos cosas a la vez y no se lee. Quita una de las dos; la aplicación nunca escribe una clave dos veces.`;
     case "symbols_file_unknown_key":
