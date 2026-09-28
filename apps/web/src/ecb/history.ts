@@ -28,8 +28,8 @@ import { entryOfZip, isZip } from "./zip.js";
 
 export interface WebHistory {
   history?: EcbHistory;
-  /** Where it came from. */
-  origin?: "folder" | "imported";
+  /** Where it came from: the linked folder, a copy imported by hand, or the cloud (feature 016, E3). */
+  origin?: "folder" | "imported" | "cloud";
   source?: EcbSource;
   /** The last day it publishes. */
   latest?: string;
@@ -112,7 +112,7 @@ const fromImport = async (staleDays: number): Promise<WebHistory | undefined> =>
   const history = readEcbHistory(stored.text, stored.source);
   return {
     history,
-    origin: "imported",
+    origin: stored.origin === "cloud" ? "cloud" : "imported",
     source: stored.source,
     latest: latestPublication(history),
     when: stored.imported_at,

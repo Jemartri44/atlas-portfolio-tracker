@@ -3,9 +3,8 @@
 // of the ECB may be (decision (r) of prompt 012).
 //
 // The ECB history **imported by hand** into this browser (feature 012, block
-// 3): on a phone, until the cloud exists, it is the only way the history gets
-// here — the web downloads nothing from a third party (ADR-0028, ADR-0029,
-// point 3). Kept as text, exactly as imported, next to the ledger in the same
+// 3), or **downloaded from the cloud** with the session of this browser
+// (feature 016, E3) — never from a third party (ADR-0028, ADR-0029, point 3). Kept as text, exactly as imported, next to the ledger in the same
 // database, under a key of its own. Losing it loses nothing of the ledger: it
 // is imported again.
 
@@ -24,6 +23,14 @@ export interface ImportedHistory {
   file_name: string;
   /** ISO 8601 UTC. */
   imported_at: string;
+  /**
+   * Where it came from when it is not a file chosen by hand (feature 016, E3):
+   * `cloud`, downloaded from the API with the session of this browser. Absent
+   * for a copy imported by hand, as every copy stored before.
+   */
+  origin?: "cloud";
+  /** The version of `manifest.json` it was downloaded with, to ask again on it. */
+  manifest_version?: string;
 }
 
 export const saveImportedHistory = (history: ImportedHistory): Promise<void> =>

@@ -1,18 +1,27 @@
 // «Tipos del BCE» in Ajustes (feature 012, block 3): which history the web is
-// using — the one the console downloaded into the linked folder, or one
-// imported by hand —, until when it publishes, and the two ways to get one.
-// The web never downloads it: on the desktop the console does
-// (`atlas fx update`), on the phone it is imported, until the cloud exists
-// (ADR-0029, point 3). Everything of the ECB is loaded here, lazily.
+// using — the one the console downloaded into the linked folder, one
+// imported by hand, or one downloaded from the cloud —, until when it
+// publishes, and the ways to get one. The web never downloads from a third
+// party: on the desktop the console does (`atlas fx update`); on the phone it
+// is imported, or **downloaded from our own cloud** with the session of this
+// browser (feature 016, E3, block 2) — only when the card opens or the user
+// asks, never at start nor on a timer. Everything of the ECB is loaded here,
+// lazily.
 
-import { createResource, createSignal, type JSX, Show } from "solid-js";
+import { createResource, createSignal, type JSX, onMount, Show } from "solid-js";
 import { Icon, Notice, Section } from "../../components/index.js";
+import { downloadCloudHistory } from "../../ecb/cloud.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { toAppError } from "../../ledger/errors.js";
 import { linkFolder } from "../../ledger/folder.js";
 import { canLinkFolder } from "../../ledger/source.js";
+// Statically, as the card of the session does: the section of Ajustes is
+// lazy already, and a dynamic import would split it for nothing.
+import { readSession } from "../../sync/session.js";
 
 const ecb = () => import("../../ecb/history.js");
+
+type Fetch = typeof fetch;
 
 const PROBLEMS = {
   permission:
@@ -27,9 +36,11 @@ const PROBLEMS = {
     "La configuración local de la carpeta no se entiende: corrígela en la carpeta o bórrala para volver a los valores por defecto.",
 } as const;
 
-export const EcbCard = (): JSX.Element => {
+export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element => {
+  const request: Fetch = (input, init) => (props.request ?? fetch)(input, init);
   const [web, { refetch }] = createResource(async () => (await ecb()).loadWebHistory());
   const [busy, setBusy] = createSignal(false);
+  const [signedIn, setSignedIn] = createSignal(false);
   const [said, setSaid] = createSignal<{ tone: "info" | "danger" | "caution"; text: string }>();
 
   const guarded = async (action: () => Promise<string | undefined>): Promise<void> => {
@@ -47,6 +58,50 @@ export const EcbCard = (): JSX.Element => {
       refetch();
     }
   };
+
+  /** Downloads the history of the cloud; `asked`: the user pressed the button. */
+  const onCloud = (asked: boolean): Promise<void> =>
+    guarded(async () => {
+      const outcome = await downloadCloudHistory(request);
+      switch (outcome.kind) {
+        case "saved":
+          return `Histórico bajado de la nube: publica hasta el ${formatDate(outcome.latest)}.`;
+        case "up_to_date":
+          return asked ? "El histórico de la nube es el mismo que ya tienes." : undefined;
+        case "none":
+          return asked ? "La nube todavía no tiene histórico del BCE." : undefined;
+        case "damaged":
+          setSaid({
+            tone: "danger",
+            text: "El histórico de la nube no es el archivo que registra su manifiesto: no se usa, y sigue el que tenías.",
+          });
+          return undefined;
+        case "rejected":
+          setSaid({
+            tone: "caution",
+            text: `El histórico de la nube cambia ${outcome.total} ${outcome.total === 1 ? "tipo ya publicado" : "tipos ya publicados"} del que tienes: no se ha usado, y sigue el anterior. O el BCE ha corregido un tipo o algo está mal.`,
+          });
+          return undefined;
+        default:
+          setSaid({
+            tone: "caution",
+            text: `No se ha podido bajar el histórico de la nube (${outcome.code}): sigue el que tenías.`,
+          });
+          return undefined;
+      }
+    });
+
+  // Opening the card is asking (015, §7 P12): with a session, the history of
+  // the cloud comes down. Never at start and never on a timer (mutant 25).
+  onMount(() => {
+    void (async () => {
+      const state = await readSession(request);
+      if (state.kind === "signed_in") {
+        setSignedIn(true);
+        await onCloud(false);
+      }
+    })();
+  });
 
   const onLink = (): Promise<void> =>
     guarded(async () => {
@@ -99,7 +154,9 @@ export const EcbCard = (): JSX.Element => {
               <p>
                 {loaded().origin === "folder"
                   ? "El que descargó la consola en la carpeta enlazada"
-                  : "Importado a mano en este navegador"}
+                  : loaded().origin === "cloud"
+                    ? "Bajado de tu nube"
+                    : "Importado a mano en este navegador"}
                 ,{" "}
                 {loaded().source === "zip"
                   ? "del ZIP oficial del BCE"
@@ -107,7 +164,7 @@ export const EcbCard = (): JSX.Element => {
                 ; publica hasta el {formatDate(loaded().latest as string)}
                 {loaded().when === undefined
                   ? "."
-                  : `, ${loaded().origin === "folder" ? "descargado" : "importado"} el ${formatInstantDate(loaded().when as string)}.`}
+                  : `, ${loaded().origin === "imported" ? "importado" : "descargado"} el ${formatInstantDate(loaded().when as string)}.`}
               </p>
             </Show>
             <Show when={loaded().problem}>
@@ -127,6 +184,17 @@ export const EcbCard = (): JSX.Element => {
         {(message) => <Notice severity={message().tone}>{message().text}</Notice>}
       </Show>
       <div class="button-row">
+        <Show when={signedIn()}>
+          <button
+            type="button"
+            class="secondary"
+            disabled={busy()}
+            onClick={() => void onCloud(true)}
+          >
+            <Icon name="import" class="icon-sm" />
+            Bajar de la nube
+          </button>
+        </Show>
         <Show when={canLinkFolder()}>
           <button type="button" class="secondary" disabled={busy()} onClick={() => void onLink()}>
             <Icon name="laptop" class="icon-sm" />
@@ -147,8 +215,8 @@ export const EcbCard = (): JSX.Element => {
       </div>
       <p class="card-note">
         La web no descarga nada de fuera. En el ordenador lo descarga la consola con{" "}
-        <code>atlas fx update</code>; en el móvil, importa el <code>eurofxref-hist.zip</code> de la
-        web del BCE.
+        <code>atlas fx update</code>; en el móvil, con la sesión iniciada, se baja de tu nube al
+        abrir esta tarjeta, o importa el <code>eurofxref-hist.zip</code> de la web del BCE.
       </p>
     </Section>
   );
