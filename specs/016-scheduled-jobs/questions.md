@@ -1160,3 +1160,41 @@ No lo he cambiado.
   - Dominio: 1.733 tests, **100 %** de sentencias (9.079), ramas (5.644), funciones (2.042) y líneas.
   - El resto: 1.850 tests.
 - **Congelación:** la rama queda congelada en el commit que añade esta sección. No se empuja nada más.
+
+## 20. E4: copias, integridad y avisos periódicos (2026-09-28)
+
+E3 está fusionada en `develop` (PR #108, `c492209`). La rama la trae por avance rápido: `git log HEAD..origin/develop` queda vacío. La dirección aceptó el 2026-09-28 las dos decisiones de §19.5, la lista cerrada que solo puede encoger y la regla de la web sin tocar, y también el paso 5 del procedimiento con el estado guardado.
+
+Encargo de E4:
+- el volcado mensual con `positions.json`;
+- la integridad y el ensayo de restauración trimestrales, con el aviso de tamaño por encima de 1 MB;
+- la revisión semanal;
+- la Renta en enero, sin cifras nunca (Q10);
+- los umbrales del 720 y el 721, con el texto neutro de §13;
+- N3 de §15: quien use `manifest.previous` verifica el SHA-256;
+- los procedimientos;
+- `s3:GetObject` sobre `jobs/ecb/*` en el §8 de IAM;
+- al cerrar, la lista completa de documentos de `docs/` que hay que actualizar por la 016 entera.
+
+Zonas de revisión: Z7, copias y restauración; Z8, avisos y la ruta fiscal.
+
+### 20.1 Bloque 0 de E4
+
+Las páginas son las que se descargaron el 2026-09-27 para el bloque 0 de E1 (`aws-research-016/`, en el *scratchpad*). Se han vuelto a leer como texto el 2026-09-28. No se ha pedido nada a AWS.
+
+**Punto 1. Escribir `backups/<YYYY-MM>/` solo con `If-None-Match: *`.**
+- **Permiso.** `AmazonS3/latest/userguide/conditional-writes.html` dice: «To perform conditional writes with the HTTP If-None-Match header you must have the s3:PutObject permission. This enables the caller to check for the presence of objects in the bucket». Para `If-Match` dice «you must have the s3:PutObject and s3:GetObject permissions». **El volcado solo necesita `s3:PutObject` para escribir.** Además lee `s3:GetObject` en `backups/*` para comparar un objeto que ya existe con el que iba a escribir (plan §8). Las dos acciones ya estaban en `contracts/iam-permissions.md` §4.
+- **Versiones.** La misma página: «The HTTP If-None-Match header only applies to the current version of an object in a version bucket». En el bucket versionado, un volcado que alguien haya borrado (una marca de borrado como versión vigente) se podría volver a escribir. Ningún rol de Atlas tiene `s3:DeleteObject` sobre `backups/*`, y la tarea no borra nada. **No para**: se anota para la 017.
+- **La política de bucket que lo impone.** `AmazonS3/latest/userguide/conditional-writes-enforce.html`, ejemplo 2: una denegación con `"Null": { "s3:if-match": "true" }` y `"Bool": { "s3:ObjectCreationOperation": "true" }`. El ejemplo 1 hace lo mismo con `s3:if-none-match`. Para `backups/*` queda así, y va al contrato de IAM §4 como forma exacta para la 017:
+  ```json
+  { "Sid": "BackupsOnlyIfAbsent", "Effect": "Deny", "Principal": "*", "Action": "s3:PutObject",
+    "Resource": "B/backups/*",
+    "Condition": { "Null": { "s3:if-none-match": "true" }, "Bool": { "s3:ObjectCreationOperation": "true" } } }
+  ```
+  Con `Principal: "*"` también se niega a la administración. Ninguna orden de `atlas admin` escribe en `backups/`, así que no se pierde nada.
+- **Sin verificar, para la 018**: que `s3:ObjectCreationOperation` valga `true` para un `PutObject` simple. La página solo lo explica con las subidas multiparte. Si no fuera así, bastaría con la condición `Null` sola. La forma con las dos condiciones es la de la documentación, y la 018 la prueba contra AWS real en `dev`.
+
+**Punto 2. El tamaño del libro sin descargarlo.**
+- `API_HeadObject.html`: «To use HEAD, you must have the s3:GetObject permission», y la respuesta trae `Content-Length`, «Size of the body in bytes».
+- `API_ListObjectsV2.html`: cada `Contents` trae `Size`, y la operación pide `s3:ListBucket`. El `ObjectStore` de la 015 ya lo da: `list(prefix)` devuelve `size`.
+- **Lo que se hace:** la tarea de integridad **descarga el libro de todas formas**, para recalcular y ensayar, así que el tamaño es el de los bytes leídos (plan §9). No hace falta ningún permiso nuevo.
