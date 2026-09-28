@@ -856,6 +856,7 @@ E2 fusionada en `develop` (PR #106, `e498a07`; la ronda 3 converge, comentario 5
 | `7ce3179` | El techo del total, medido + 256, **antes** del commit que lo necesita (§17.4) |
 | `d92fbcf`, `b3cb563` | Bloque 2, web: `apps/web/src/ecb/cloud.ts` y la tarjeta del BCE (§17.3) |
 | `bbfb5ea` | Test: una línea local escrita a mano deja ver cualquier reescritura (el mutante 23b) |
+| `7fafbb5` | El cliente de los datos de referencia sale de `adapters/src/sync/` y la web deja de importar la puerta de la sincronización (lo paró la primera tubería, §17.3) |
 | `45806e7` | Test: una carpeta cuya sesión no sirve nunca cae en las fuentes (el superviviente de §17.6) |
 
 ### 17.3 Desviaciones y decisiones mías, dichas
@@ -867,7 +868,9 @@ E2 fusionada en `develop` (PR #106, `e498a07`; la ronda 3 converge, comentario 5
 - **Lo que baja de la nube se guarda como la copia importada**, en la misma clave, marcado `origin: "cloud"` y con la versión del manifiesto. Por eso sustituye a una copia importada a mano. La regla de ADR-0029, punto 2, se aplica igual: una que cambia un tipo ya publicado no se guarda, y se dice.
 - **Una carpeta sincronizada cuya nube aún no tiene precios** llama a las fuentes, diciéndolo, con el presupuesto compartido. **Una carpeta sincronizada cuya sesión no sirve** (`sync_credential_missing` y demás) **no cae en las fuentes**: dice por qué y sale con 1, salvo con `--from-sources`.
 - **Lo que la consola guarda de la nube**, `prices/_cloud.json`, es un fichero nuevo del almacén local. Nunca se sirve (la regla de nombres de la API lo niega) ni se sube. Tiene su código de error (`invalid_cloud_pull`), que solo dice la consola.
-- **El cliente de los datos de referencia vive en `packages/adapters/src/sync/`**, junto al del remoto, con su propio *subpath* y sin condiciones de `exports` distintas (R2-N3).
+- **El cliente de los datos de referencia vive en `packages/adapters/src/reference/`**, con su propio *subpath* y sin condiciones de `exports` distintas (R2-N3).
+  - Lo escribí primero en `sync/`, junto al del remoto. La primera tubería lo paró: los guardianes de la 015 solo dejan a la web alcanzar `adapters/src/sync/` y la puerta de la sincronización por su motor.
+  - `7fafbb5` lo saca de `sync/`: solo lee, y no configura nada. Además, la web reconoce el fallo por la clase base, `DomainError`, sin importar la puerta de la sincronización.
 - **`alert_channels` no se implementa** (§8.1 P17). La redacción que propongo está en §6.
 
 ### 17.4 El paquete web
@@ -876,22 +879,21 @@ Medido en bytes con la copia de `check-bundle.mjs` que imprime los totales, sobr
 
 | Medida | `develop` | E3 | Diferencia |
 |---|---|---|---|
-| Arranque | 75.012 | 75.039 | **+27** (techo 75.039, no se toca) |
-| Total | 303.195 | 304.791 | +1.596 (techo subido a 305.002 en `7ce3179`, dentro de la autorización de 310.500) |
+| Arranque | 75.012 | 75.025 | **+13** (techo 75.039, no se toca) |
+| Total | 303.195 | 304.836 | +1.641 (techo subido a 305.002 en `7ce3179`, dentro de la autorización de 310.500) |
 
-- **El arranque no es +0**, como pide §8.1 P13: son +27 bytes.
+- **El arranque no es +0**, como pide §8.1 P13: son +13 bytes.
   - **+14 son de la regla de P12 en el dominio**: `mergeSettings` deja fuera `notification_email`, y ese módulo está en el arranque.
-  - **El resto, unos +13, cambia con los nombres de los trozos** (sus *hashes*): entre construcciones de la rama osciló entre +21 y +27 sin cambiar código del arranque.
-  - Lo intenté reducir. Con eso, **no se sube el techo del arranque**.
-  - **Queda a 0 bytes del techo**: el próximo cambio de nombres de trozos puede pasarlo. Es Q19.
+  - **El resto es ruido de los nombres de los trozos** (sus *hashes*): entre construcciones de la rama osciló entre +13 y +27 sin cambiar código del arranque.
+  - Lo intenté reducir. Con eso, **no se sube el techo del arranque**, que queda con 14 bytes de margen. El próximo cambio de nombres de trozos puede comérselo. Es Q19.
 - **El total, por trozos** (gzip):
   - la sección de Ajustes, +1.090: la descarga, el cliente y la tarjeta;
   - el almacén de la copia, que pasa a un trozo propio, +251;
   - la lectura estricta del manifiesto en el trozo del BCE, +208;
   - ruido de los nombres en otros trozos.
 - **Cuánto queda de P13.** La autorización de la feature son 3.072 bytes sobre el techo de partida. Hay dos lecturas:
-  - **Contando lo que añadió la 016**: E2 +557 (302.638 → 303.195) y E3 +1.596, en total **2.153 de 3.072**; quedan 919.
-  - **Contando el absoluto de §4** (304.568): el total ya lo pasa por 223. La razón es que la 020 subió el total unos 1.100 bytes en medio, con su propia autorización.
+  - **Contando lo que añadió la 016**: E2 +557 (302.638 → 303.195) y E3 +1.641, en total **2.198 de 3.072**; quedan 874.
+  - **Contando el absoluto de §4** (304.568): el total ya lo pasa por 268. La razón es que la 020 subió el total unos 1.100 bytes en medio, con su propia autorización.
   - Con cualquiera de las dos, **los precios del móvil (1,2-1,8 KB, plan §12) no caben**. Lo que quede para las mejoras visuales lo decide la dirección con la lectura que elija (Q19).
 
 ### 17.5 Cómo se vio cada test en rojo
@@ -930,11 +932,11 @@ De 16 mutantes, 15 muertos a la primera. El superviviente destapó un caso sin t
 
 | Familia | Qué miré | Con qué | Resultado |
 |---|---|---|---|
-| 1. Guardianes eludibles | Que la descarga de la web no se alcance desde el arranque; que la web no alcance el código de las tareas al leer el manifiesto; que ninguna exportación nueva tenga condiciones distintas | `LAZY_ONLY` con `/src/ecb/` (mata E3-27), `jobs-access` (el manifiesto pasa a `ecb/` porque la web no puede alcanzar `domain/src/jobs/`), el test de exportaciones de R2-N3 sobre `./reference-http` | Cuenta de tests: `architecture` 51, `api-access` 28, `jobs-access` 16, `jobs-package` 3, `messages` 11. Ninguno baja |
+| 1. Guardianes eludibles | Que los guardianes de la 015 sigan en pie (la primera tubería los vio caer y se arregló el código, no el guardián: §17.3); que la descarga de la web no se alcance desde el arranque; que la web no alcance el código de las tareas al leer el manifiesto; que ninguna exportación nueva tenga condiciones distintas | `LAZY_ONLY` con `/src/ecb/` (mata E3-27), `jobs-access` (el manifiesto pasa a `ecb/` porque la web no puede alcanzar `domain/src/jobs/`), el test de exportaciones de R2-N3 sobre `./reference-http` | Cuenta de tests: `architecture` 51, `api-access` 28, `jobs-access` 16, `jobs-package` 3, `messages` 11. Ninguno baja |
 | 2. Reglas sin test o sin valor exacto | 2 y 2 por defecto, lo que manda `config.json`, cada regla de la 013 al añadir, qué ficheros se vuelven a pedir | `cloud.test.ts` del dominio y de la consola, con valores exactos (2 llamadas, 3 con `daily_calls` a 5, las líneas añadidas byte a byte) | Cada regla con su mutante muerto (§17.6) |
 | 3. Reloj y red | La consola usa el reloj inyectado (`pulled_at`); la web, `now` inyectable; ningún test sale a la red | `setup/no-network.ts` en la web; la consola sobre el API con sus dobles | Limpio. La web usa `new Date()` como su importación a mano (fuera del guardián del reloj, que es de las tareas) |
 | 4. Documentos desalineados | Las cabeceras de `cloud.ts` (dominio, consola y web), de `http-reference.ts`, de la tarjeta y de `file-store.ts` | Relectura. Hay cambios que la dirección tiene que llevar a `docs/`: §6 | La cabecera de la tarjeta decía «la web nunca lo descarga»; corregida |
-| 5. Techo del paquete | Arranque +0 y total dentro de P13 | Medido en bytes (§17.4) | **El arranque no es +0 (+27) y el total depende de la lectura de P13**: Q19. El techo del total se subió antes del commit que lo necesita; el del arranque no se toca |
+| 5. Techo del paquete | Arranque +0 y total dentro de P13 | Medido en bytes (§17.4) | **El arranque no es +0 (+13) y el total depende de la lectura de P13**: Q19. El techo del total se subió antes del commit que lo necesita; el del arranque no se toca |
 | 6. Registros con datos sensibles | El token de la carpeta en la URL o en un error; el `asset_id` en el correo | El token solo viaja en su cabecera (`http-reference.test.ts`); los errores se dicen por código; el correo de los ilegibles, solo con recuentos | Limpio |
 | 7. Entradas sin validar | El índice de la API, los nombres de fichero, `_cloud.json`, el manifiesto en la web, los bytes del fichero | `parseReferenceIndex` estricto; `assetOfPriceFile` por ida y vuelta; `parseCloudPull` estricto con `repeatedKey`; `activeHistoryOf` estricto; SHA-256 antes de leer; UTF-8 `fatal` | Limpio |
 | 8. Dos pasos sin corte | Bajar y escribir; los cierres y `_cloud.json` | La red antes del cerrojo (mata E3-24); las líneas y `_cloud.json` en la misma transacción. Un fichero de la nube que no se lee no queda como tenido y se vuelve a pedir | Un corte a mitad deja las líneas ya añadidas y un `_cloud.json` viejo: la siguiente vez vuelve a pedir esos ficheros y las reglas de la 013 no añaden nada dos veces |
@@ -945,7 +947,7 @@ De 16 mutantes, 15 muertos a la primera. El superviviente destapó un caso sin t
 
 - **Q18. El asunto de `prices_file_unreadable`.** Lo he hecho con el asunto opaco `prices` y el recuento de ficheros, sin nombrar nunca un activo (§17.1). Si la dirección quería una racha por activo, con un identificador opaco (un *hash* del `asset_id`, por ejemplo), es un cambio pequeño en `pricesFindings` y en la lista cerrada. Recomendación: dejarlo así. Un aviso por fichero haría una racha por activo en el buzón, y la consola ya dice cuál es.
 - **Q19. El paquete web frente a §8.1 P13** (§17.4):
-  - **El arranque es +27 y no +0.** +14 son de la regla de P12, que está en el dominio de arranque, y el resto es ruido de los nombres de los trozos. Queda justo en el techo (75.039), que no he subido.
-  - **El total**, según la lectura de P13, está dentro (2.153 de 3.072 contando lo que añadió la 016) o fuera (223 por encima del absoluto 304.568, porque la 020 añadió unos 1.100 en medio).
+  - **El arranque es +13 y no +0.** +14 son de la regla de P12, que está en el dominio de arranque, y el resto es ruido de los nombres de los trozos. Queda con 14 bytes de margen bajo el techo (75.039), que no he subido.
+  - **El total**, según la lectura de P13, está dentro (2.198 de 3.072 contando lo que añadió la 016) o fuera (268 por encima del absoluto 304.568, porque la 020 añadió unos 1.100 en medio).
 
   Recomendación: que la dirección fije la lectura del total y autorice el arranque de E3, que hoy pasa sin tocar ningún techo pero sin margen. Los precios del móvil quedan fuera con cualquier lectura.
