@@ -185,6 +185,17 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     expect(existsSync(join(c.ledger, "prices", "_cloud.json"))).toBe(false);
   });
 
+  it("never falls to the sources when the session of the folder cannot be used", async () => {
+    const { c, eodhd } = await synced();
+    c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-29", "10")]));
+    await writeFile(c.credentials, '{"credentials_format":1,"entries":{}}\n');
+    await chmod(c.credentials, 0o600);
+    expect(await c.exec(["prices", "update"])).toBe(1);
+    expect(c.err.join("\n")).toContain("sync_credential_missing");
+    expect(eodhd.calls).toEqual([]);
+    expect(existsSync(join(c.ledger, "prices", "ast_a.jsonl"))).toBe(false);
+  });
+
   it("says where the prices of the folder came from, and when", async () => {
     const { c } = await synced();
     c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-29", "10")]));
