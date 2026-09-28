@@ -177,6 +177,16 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       ],
     }),
   },
+  ecb_update_undone: {
+    subjects: ["ecb"],
+    write: (_ecb, facts) => ({
+      subject: "[Atlas] Aviso: historico del BCE deshecho",
+      lines: [
+        `Una actualización del histórico del BCE se cortó a medias y se ha deshecho, desde el ${facts.since}: el fichero en vigor no cuadraba con su manifiesto y vuelve a ser el anterior.`,
+        "La descarga del día se ha vuelto a hacer después. Si se repite, mira reference/ecb/ con el procedimiento del histórico del BCE.",
+      ],
+    }),
+  },
   ecb_calendar_mismatch: {
     subjects: ["ecb"],
     write: (_ecb, facts) => ({

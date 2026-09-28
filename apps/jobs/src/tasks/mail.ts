@@ -268,22 +268,29 @@ export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult>
  * the monthly reminder and the integrity say it.
  */
 export const weeklyReview: TaskRunner = async (context): Promise<TaskResult> => {
+  const last = lastDayOfWindow(
+    frequencyOf(context.task, context.frequencies.frequencies),
+    context.today,
+  );
+  /** A passing failure: tried again tomorrow, said on the last day of the period. */
+  const passing = (code: string): Promise<TaskResult> | TaskResult =>
+    last
+      ? sendOnce(context, weeklyReviewUnavailableMail(context.period, code, origin(context)))
+      : { state: "failed", outcome: { code } };
   const ledger = await context.ledger();
   if (!ledger.ok) {
-    if (ledgerFailureKind(ledger.code) !== "transient") {
-      return { state: "done", outcome: { code: ledger.code } };
-    }
-    const last = lastDayOfWindow(
-      frequencyOf(context.task, context.frequencies.frequencies),
-      context.today,
-    );
-    return last
-      ? sendOnce(context, weeklyReviewUnavailableMail(context.period, ledger.code, origin(context)))
-      : { state: "failed", outcome: { code: ledger.code } };
+    return ledgerFailureKind(ledger.code) === "transient"
+      ? passing(ledger.code)
+      : { state: "done", outcome: { code: ledger.code } };
   }
-  const reference = await readReference(context.deps.objects, ledger.state).catch(() => ({
-    counts: { price_files: 0, ecb_history: 0 },
-  }));
+  let reference: Awaited<ReturnType<typeof readReference>>;
+  try {
+    reference = await readReference(context.deps.objects, ledger.state);
+  } catch {
+    // The closes or the history of the ECB could not be read now: like the
+    // ledger, a passing failure, never a review valued with less (round 2).
+    return passing("reference_unavailable");
+  }
   const external = "external" in reference ? reference.external : undefined;
   const weights = coreWeights(ledger.state, context.today, ledger.settings, external);
   const bucket = bucketStats(

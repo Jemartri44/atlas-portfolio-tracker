@@ -29,26 +29,46 @@ export const textOf = (bytes: Uint8Array): string | undefined => {
 };
 
 /**
- * The history in force, or nothing: no manifest, a file that does not match
- * it, or not a history. **A read that fails throws**: it is not «no history»,
- * and a caller that said so would say less than it knows (avisos N2).
+ * What the bucket holds of the history of the ECB (review of PR #109, round
+ * 2, R2-N1): **none at all** (no manifest), a history in force whose bytes are
+ * the ones its manifest records, or one that is **damaged** — a manifest that
+ * does not read, a file that is missing, does not match it or is not a
+ * history, as an update cut halfway leaves it until the next run undoes it.
+ * Damaged is never «none». **A read that fails throws**: it is neither.
  */
-export const readCloudEcbHistory = async (
-  objects: ObjectStore,
-): Promise<EcbHistory | undefined> => {
+export type CloudEcbRead =
+  | { readonly kind: "absent" }
+  | { readonly kind: "damaged" }
+  | { readonly kind: "history"; readonly history: EcbHistory };
+
+export const readCloudEcbHistory = async (objects: ObjectStore): Promise<CloudEcbRead> => {
   const reader = referenceReader(objects);
   const manifest = await reader.get("reference/ecb/manifest.json");
-  const active = manifest === undefined ? undefined : activeHistoryOf(textOf(manifest.body) ?? "");
+  if (manifest === undefined) {
+    return { kind: "absent" };
+  }
+  const active = activeHistoryOf(textOf(manifest.body) ?? "");
   if (active === undefined) {
-    return undefined;
+    return { kind: "damaged" };
   }
   const file = await reader.get(`reference/ecb/${active.file}`);
   if (
     file === undefined ||
     createHash("sha256").update(file.body).digest("hex") !== active.sha256
   ) {
-    return undefined;
+    return { kind: "damaged" };
   }
   const text = textOf(file.body);
-  return text === undefined ? undefined : readEcbHistory(text, active.source);
+  if (text === undefined) {
+    return { kind: "damaged" };
+  }
+  try {
+    return { kind: "history", history: readEcbHistory(text, active.source) };
+  } catch {
+    return { kind: "damaged" };
+  }
 };
+
+/** The history in force when it is one; a damaged one or none are both nothing to value with. */
+export const historyOf = (read: CloudEcbRead): EcbHistory | undefined =>
+  read.kind === "history" ? read.history : undefined;

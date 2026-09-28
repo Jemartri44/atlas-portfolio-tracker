@@ -10,7 +10,7 @@
 import { type ObjectStore, referenceReader } from "@atlas/adapters/aws";
 import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
 import { externalPricesOf, parseSymbols, priceFileName, readCloses } from "@atlas/domain/quotes";
-import { CLOUD_ECB_STALE_DAYS, readCloudEcbHistory, textOf } from "./ecb-history.js";
+import { CLOUD_ECB_STALE_DAYS, historyOf, readCloudEcbHistory, textOf } from "./ecb-history.js";
 
 export interface ReferenceRead {
   readonly external?: ExternalPrices;
@@ -24,19 +24,20 @@ export const readReference = async (
   const reader = referenceReader(objects);
   const files = new Map<AssetId, string>();
   for (const assetId of state.assets.keys()) {
-    const stored = await reader.get(`prices/${priceFileName(assetId)}`).catch(() => undefined);
+    // A read that fails throws: a passing failure, never «no price» (R2, weekly review).
+    const stored = await reader.get(`prices/${priceFileName(assetId)}`);
     const text = stored === undefined ? undefined : textOf(stored.body);
     if (text !== undefined) {
       files.set(assetId, text);
     }
   }
-  const history = await readCloudEcbHistory(objects).catch(() => undefined);
+  const history = historyOf(await readCloudEcbHistory(objects));
   const counts = { price_files: files.size, ecb_history: history === undefined ? 0 : 1 };
   if (files.size === 0) {
     return { counts };
   }
+  const stored = await reader.get("prices/symbols.json");
   try {
-    const stored = await reader.get("prices/symbols.json");
     const text = stored === undefined ? undefined : textOf(stored.body);
     if (stored !== undefined && text === undefined) {
       throw new RangeError("prices/symbols.json is not UTF-8");

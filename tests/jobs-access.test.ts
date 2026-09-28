@@ -216,7 +216,7 @@ describe("architecture (016): the warnings of January reach no price (E4, mutant
         .map((line) => line.trim()),
     ).toEqual([
       "deps: { ...context.deps, objects: scopedObjects(context.deps.objects, FISCAL_SCOPE) },",
-      "history = await readCloudEcbHistory(context.deps.objects);",
+      "read = await readCloudEcbHistory(context.deps.objects);",
     ]);
   });
 });

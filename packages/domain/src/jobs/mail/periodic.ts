@@ -118,7 +118,7 @@ export const weeklyReviewUnavailableMail = (
   withOrigin(
     reviewSubject(period),
     [
-      `No se ha podido hacer la revisión de ${period} (código ${codeText(code)}): el libro no se ha podido leer ${period.includes("-W") ? "en toda la semana" : "en todo el mes"}.`,
+      `No se ha podido hacer la revisión de ${period} (código ${codeText(code)}): no se ha podido leer lo que necesita ${period.includes("-W") ? "en toda la semana" : "en todo el mes"}.`,
       "Abre la aplicación para ver los pesos y las reglas del cubo.",
     ],
     origin,

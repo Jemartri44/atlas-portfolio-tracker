@@ -65,6 +65,6 @@ export const ecbUpdate: TaskRunner = async (context): Promise<TaskResult> => {
           : { conflicts: result.total }),
       },
     },
-    findings: ecbFindings(result),
+    findings: ecbFindings(result, { undone: recovered === "undone" }),
   };
 };

@@ -18,6 +18,7 @@ describe("the mail of a streak", () => {
       "thesis_horizon_exceeded",
       "prices_file_unreadable",
       "ecb_update_rejected",
+      "ecb_update_undone",
       "ecb_calendar_mismatch",
       "ecb_history_damaged",
       "ecb_history_rebuilt",
@@ -214,6 +215,27 @@ describe("the mail of a streak", () => {
         `${code} ${subject}`,
       ).toBeUndefined();
     }
+  });
+});
+
+describe("an update of the ECB cut and undone (review of PR #109, round 2, R2-N1)", () => {
+  it("says it, and that the history in force is the one before", () => {
+    expect(
+      noticeMail(
+        { code: "ecb_update_undone", subject: "ecb" },
+        { since: "2026-10-02", period: "2026-10-02" },
+        "https://a.example",
+      ),
+    ).toEqual({
+      subject: "[Atlas] Aviso: historico del BCE deshecho",
+      body: [
+        "Una actualización del histórico del BCE se cortó a medias y se ha deshecho, desde el 2026-10-02: el fichero en vigor no cuadraba con su manifiesto y vuelve a ser el anterior.",
+        "La descarga del día se ha vuelto a hacer después. Si se repite, mira reference/ecb/ con el procedimiento del histórico del BCE.",
+        "",
+        "Abre Atlas: https://a.example",
+        "",
+      ].join("\n"),
+    });
   });
 });
 

@@ -21,6 +21,28 @@ describe("the findings of the ECB", () => {
     sha256: "s",
   };
 
+  it("says an update cut halfway and undone, before what the update of the day found (R2-N1)", () => {
+    const stored = { source: "zip", sha256: "a".repeat(64) } as never;
+    expect(
+      ecbFindings(
+        { kind: "accepted", stored, newDays: 1, latest: "2026-10-02", calendar: [] },
+        { undone: true },
+      ),
+    ).toEqual([{ code: "ecb_update_undone", subject: "ecb" }]);
+    expect(
+      ecbFindings(
+        { kind: "rejected", kept: stored, active: stored, conflicts: [], total: 3 },
+        { undone: true },
+      ),
+    ).toEqual([
+      { code: "ecb_update_undone", subject: "ecb" },
+      { code: "ecb_update_rejected", subject: "ecb", counts: { conflicts: 3 } },
+    ]);
+    expect(
+      ownFindings("ecb_update", [{ code: "ecb_update_undone", subject: "ecb" }], PRODUCER_FINDINGS),
+    ).toEqual([{ code: "ecb_update_undone", subject: "ecb" }]);
+  });
+
   it("says a rejected update with how many rates it would overwrite, and a calendar in disagreement", () => {
     expect(
       ecbFindings({ kind: "rejected", kept: stored, active: stored, conflicts: [], total: 3 }),

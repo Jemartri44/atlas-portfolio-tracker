@@ -188,9 +188,67 @@ describe("a passing failure is retried, and said on the last day (avisos B2 and 
     expect(jobs.ses.attempts).toEqual([]);
     expect(record(s3, "tax_return_ready", "2027").outcome.code).toBe("ecb_unavailable");
     s3.get = get;
+    // No history at all is none, and then the tax goes without its notes.
+    s3.deleteOutOfBand("reference/ecb/manifest.json");
     jobs.setNow("2027-01-03T07:00:00Z");
     await jobs.run(["tax_return_ready"]);
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual(["[Atlas] Renta 2026 lista"]);
+  });
+
+  it("never counts the notes against a damaged history of the ECB: tried again, said on 31 January (R2-N1)", async () => {
+    const s3 = bucket(sentinelLedger());
+    const csv = readFileSync(join(fixtures, "eurofxref-hist.csv"), "utf8");
+    // An update cut halfway: the file in force is not the one its manifest records.
+    s3.seed("reference/ecb/eurofxref-hist.csv", `${csv}half written`);
+    s3.seed(
+      "reference/ecb/manifest.json",
+      `${JSON.stringify({
+        active: {
+          file: "eurofxref-hist.csv",
+          source: "zip",
+          sha256: createHash("sha256").update(csv).digest("hex"),
+          url: "https://ecb.example/zip",
+          fetched_at: "2026-12-31T15:30:00.000Z",
+        },
+        rejected: [],
+      })}\n`,
+    );
+    const jobs = run({ jobs: "tax_return_ready", now: "2027-01-02T07:00:00Z", s3 });
+    await jobs.run(["tax_return_ready"]);
+    expect(jobs.ses.attempts).toEqual([]);
+    expect(record(s3, "tax_return_ready", "2027")).toMatchObject({
+      state: "failed",
+      outcome: { code: "ecb_unavailable" },
+    });
+    jobs.setNow("2027-01-31T07:00:00Z");
+    await jobs.run(["tax_return_ready"]);
+    expect(firstLines(jobs.ses.sent)).toEqual([
+      "No se han podido preparar los datos de la Renta de 2026 (código ecb_unavailable).",
+    ]);
+  });
+
+  it("never spends the week's review on closes it could not read, and says it on Sunday (round 2)", async () => {
+    const s3 = bucket(sentinelLedger({ deviation_threshold_pp: "5" }));
+    s3.seed("prices/ast_world.jsonl", "");
+    const get = s3.get.bind(s3);
+    s3.get = async (key) => {
+      if (key.startsWith("prices/")) {
+        throw Object.assign(new Error("down"), { name: "ServiceUnavailable" });
+      }
+      return get(key);
+    };
+    const jobs = run({ jobs: "weekly_review", now: "2026-10-05T06:00:00Z", s3 });
+    await jobs.run(["weekly_review"]);
+    expect(jobs.ses.attempts).toEqual([]);
+    expect(record(s3, "weekly_review", "2026-W41")).toMatchObject({
+      state: "failed",
+      outcome: { code: "reference_unavailable" },
+    });
+    jobs.setNow("2026-10-11T06:00:00Z");
+    await jobs.run(["weekly_review"]);
+    expect(firstLines(jobs.ses.sent)).toEqual([
+      "No se ha podido hacer la revisión de 2026-W41 (código reference_unavailable): no se ha podido leer lo que necesita en toda la semana.",
+    ]);
   });
 
   it("says, on 31 January, the income tax it could not prepare, with its code", async () => {
@@ -219,7 +277,7 @@ describe("a passing failure is retried, and said on the last day (avisos B2 and 
     expect(jobs.ses.sent.map((mail) => [mail.subject, mail.body.split("\n")[0]])).toEqual([
       [
         "[Atlas] Revision semanal 2026-W41",
-        "No se ha podido hacer la revisión de 2026-W41 (código ledger_unavailable): el libro no se ha podido leer en toda la semana.",
+        "No se ha podido hacer la revisión de 2026-W41 (código ledger_unavailable): no se ha podido leer lo que necesita en toda la semana.",
       ],
     ]);
   });

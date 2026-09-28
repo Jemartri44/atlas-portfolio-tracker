@@ -149,6 +149,18 @@ describe("the daily task of the ECB (R31; ADR-0029)", () => {
     await next.run(["ecb_update"]);
     expect(s3.text("reference/ecb/api-exr.csv")).toBe(csv);
     expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json").outcome.counts.undone).toBe(1);
+    // Never in silence (review of PR #109, round 2, R2-N1): a finding, and one mail.
+    expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json").findings).toEqual([
+      { code: "ecb_update_undone", subject: "ecb" },
+    ]);
+    const ssm = new TestOnlyFakeSsm();
+    ssm.set("/atlas/prod/mail/recipient", RECIPIENT);
+    const mail = setupJobs({ env: MAIL_ENV, s3, ssm, now: "2026-10-03T06:00:00Z" });
+    await mail.run(["dispatch_findings"]);
+    await mail.run(["dispatch_findings"]);
+    expect(mail.ses.sent.map((sent) => sent.subject)).toEqual([
+      "[Atlas] Aviso: historico del BCE deshecho",
+    ]);
   });
 });
 

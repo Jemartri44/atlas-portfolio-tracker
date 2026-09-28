@@ -118,7 +118,7 @@ describe("a week it could not review by its Sunday (avisos B2)", () => {
     expect(weeklyReviewUnavailableMail("2026-W41", "ledger_unavailable", ORIGIN)).toEqual({
       subject: "[Atlas] Revision semanal 2026-W41",
       body: [
-        "No se ha podido hacer la revisión de 2026-W41 (código ledger_unavailable): el libro no se ha podido leer en toda la semana.",
+        "No se ha podido hacer la revisión de 2026-W41 (código ledger_unavailable): no se ha podido leer lo que necesita en toda la semana.",
         "Abre la aplicación para ver los pesos y las reglas del cubo.",
         "",
         `Abre Atlas: ${ORIGIN}`,

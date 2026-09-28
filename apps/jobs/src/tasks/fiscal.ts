@@ -70,13 +70,19 @@ export const taxReturnReady: TaskRunner = inScope(async (context): Promise<TaskR
       ? retry(ledger.code)
       : cannot(ledger.code);
   }
-  let history: Awaited<ReturnType<typeof readCloudEcbHistory>>;
+  let read: Awaited<ReturnType<typeof readCloudEcbHistory>>;
   try {
-    history = await readCloudEcbHistory(context.deps.objects);
+    read = await readCloudEcbHistory(context.deps.objects);
   } catch {
-    // «No history» is not «could not read it»: the notes would be fewer, unsaid.
+    read = { kind: "damaged" };
+  }
+  // «No history» is only the absence of one. One that could not be read, or
+  // is damaged — an update cut halfway, until the next run undoes it — would
+  // count fewer notes without saying so: tried again tomorrow (R2-N1).
+  if (read.kind === "damaged") {
     return lastDay(context) ? cannot("ecb_unavailable") : retry("ecb_unavailable");
   }
+  const history = read.kind === "history" ? read.history : undefined;
   const check = checkLedgerRates(
     history,
     ledger.state,
