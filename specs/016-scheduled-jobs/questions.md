@@ -1066,3 +1066,97 @@ build 0         (lambda.zip 1.444.049 bytes; jobs.zip 1.637.421 bytes, 1.411 ent
 - **La primera pasada, sobre `6a4f04e`, falló** (`016-pipeline-r1-e3a.out`): `EcbCard.tsx` tenía 256 líneas y el test de arquitectura permite 250. Se arregló con `8882da5` (§18.3), sin tocar ninguna regla.
 - **El paquete web tras `8882da5`**: arranque 75.053 y total 305.392 bytes, dentro de los techos de `a6e2eab` (75.077 y 305.650). No hizo falta subir ningún techo más. Los comentarios de `check-bundle.mjs` dicen 75.057 y 305.394, lo medido antes de separar los textos de la tarjeta.
 - **Congelación:** la rama queda congelada en el commit que añade esta sección. No se empuja nada más mientras dure la revisión.
+
+## 19. Revisión de la PR #108, ronda 2: decisiones de la dirección y arreglos (2026-09-28)
+
+La ronda 2 (comentario 5863160435) deja un bloqueante, R2-B1. Las decisiones de la dirección están abajo. Cada corrección de lógica tiene su test, visto en rojo, y su mutante.
+
+### 19.1 Decisiones
+
+- **R2-B1.** Se descarta también toda línea cuya fecha sea igual o posterior al día en Madrid de su `fetched_at`, es decir, un cierre tomado el mismo día de su sesión. Cuenta en `cloud_lines_future`. Test: el caso que reprodujo el revisor, descartado el primer día y otra vez al día siguiente, con otra versión del fichero.
+- **El tope de descarga, por recurso.** Cada histórico del BCE (`api-exr.csv` y el CSV del ZIP) sube a **64 MB**, porque hoy ronda 12 MB y crece. Todo lo demás sigue en 20 MB. Un test por tope.
+- **El procedimiento.**
+  - Los pasos 1 y 5 llevan la orden completa de `update-schedule`, construida con la salida de `get-schedule`, para que no se pierda ningún campo (tampoco la zona horaria).
+  - Va marcado **SIN VERIFICAR contra AWS**, para comprobarlo en la 018.
+  - La línea 80 se corrige para que cuadre con el §8 del contrato de IAM.
+- **El reexportador de `relay/`**, un hueco que viene de la 015, se cierra en esta PR:
+  - la puerta de la sincronización (`@atlas/domain/sync`) solo puede importarse desde `packages/adapters/src/sync*/` y desde el motor de la web;
+  - un reexporte desde cualquier otro módulo de los adaptadores falla el guardián;
+  - se añade el mutante del revisor.
+- **N5 sin declaración local**: se queda como está (§18.2).
+
+### 19.2 La asimetría de N5 con la 013 (anotada por decisión de la dirección)
+
+- **En local**, la 013 nunca baja un precio en una divisa que no haya contrastado (`cascade.ts`, el contraste de `currency_check`).
+- **Lo que baja de la nube** solo se contrasta con el `symbols.json` local **si ese fichero declara la divisa** de la fuente de la línea. Si no la declara, la línea entra sin contrastar. Pasa en tres casos: la fuente no tiene divisa declarada, el activo no está en `symbols.json` o no hay `symbols.json`.
+- En esos casos, **la consola se fía del contraste que hizo la tarea de la nube** con el `symbols.json` del bucket, que es el que sube `atlas admin prices push`.
+- Queda así por decisión de la dirección (§18.2, N5; ronda 2).
+
+### 19.3 Mapa hallazgo → commit
+
+| Hallazgo | Commit | Qué |
+|---|---|---|
+| R2-B1 | `706731d` | `cloudLinesToAppend` descarta también la línea con `date >= madridDateOf(fetched_at)` y la cuenta en `future`. Los textos de `cloud_lines_future` (al bajar y en `status`) lo dicen: «o tomados el mismo día de su sesión».<br>Test del dominio con las dos fronteras de Madrid en horario de verano: 21:59:59Z del mismo día se descarta; 22:00:00Z, que en Madrid ya es el día siguiente aunque en UTC no, se toma.<br>Test de la consola con el caso del revisor: el día 1, a las 12:00 en Madrid, la nube sirve un cierre tomado a las 11:00 y se descarta. El día 2, con otra versión que trae además el cierre de la sesión, se vuelve a descartar el de media sesión, se toma el bueno y `status` dice `cloud_lines_future: 1` |
+| El tope, por recurso | `c8e4f6f` | `MAX_ECB_HISTORY_BYTES` = 64 MB solo para `get("ecb", "api-exr.csv" \| "eurofxref-hist.csv")`. `MAX_REFERENCE_BYTES` = 20 MB para el índice, el manifiesto, los ficheros de precios y el cuerpo de un error, por la longitud que dice la respuesta y contando lo que llega |
+| Guardián de la puerta de la sincronización | `c67e2b7` | Test nuevo en `tests/api-access.test.ts`: en `packages/adapters/src`, fuera de `src/sync*/`, ningún módulo toma nada de `@atlas/domain/sync`, ni por su nombre ni por una ruta relativa a `packages/domain`: ni `import`, ni `export … from`, ni `import()`. En la web, la regla de la 015 ya lo deja en el motor (§19.5) |
+| El procedimiento | `06d9fe9` | Pasos 1 y 5: `get-schedule` → `jq 'del(.Arn, .CreationDate, .LastModificationDate)'` → `update-schedule --cli-input-json`. En el paso 1 solo cambia `State` a `DISABLED`; en el paso 5 se escribe lo guardado **tal cual, estado incluido**. Tras cada escritura, un `diff` que tiene que salir vacío. Marcado **SIN VERIFICAR contra AWS**, para la 018. La línea 80 cita ahora el §8 («aceptado por la dirección para la 017»), y la fila de Scheduler del §8 dice los pasos igual |
+| Esta sección | este commit | §19 |
+
+### 19.4 Cómo se vio cada test en rojo
+
+- **R2-B1**: los dos tests nuevos, contra el dominio de `09446c0` (`016-e3r2-red-b1.log`). El de la consola falla justo en el paso del día 2: añade el cierre de media sesión.
+- **El tope de 64 MB**: el test de los históricos, contra el cliente de `09446c0`, donde todo tenía el mismo tope de 20 MB (`016-e3r2-red-cap.log`). El de «20 MB para lo demás» ya pasaba entonces: su rojo es el de los mutantes R2-CAPb y R2-CAPc.
+- **El guardián**: es una regla nueva y el código ya la cumple, así que su rojo son los mutantes R2-SYNC, empezando por el del revisor.
+
+### 19.5 Dos puntos para la dirección
+
+**1. Dos módulos de la 015 toman la puerta fuera de `src/sync*/`, y el guardián los nombra en una lista cerrada.** Cumplir la regla al pie de la letra obligaba a mover código de la 015 en la última ronda, así que no lo he hecho. Son estos dos:
+- `ledger-store/browser/sync-store.ts`, que **es** la puerta `@atlas/adapters/sync`;
+- `ledger-store/browser/transfer.ts`, que exporta lo que la sincronización retiene (P3).
+
+El guardián les deja **usar** la puerta, pero no **reexportarla**: ni `export … from`, ni exportar otra vez un nombre tomado de ella (mutantes R2-SYNCc y R2-SYNCd). Un nombre de la lista que deja de tomar la puerta falla hasta que se quita de la lista, así que la lista solo puede encoger.
+
+Si la dirección los quiere dentro de `src/sync*/`, moverlos es mecánico y toca estos sitios:
+- `package.json` de los adaptadores;
+- `vitest.config.ts`;
+- `vite.config.ts`;
+- `check-bundle.mjs`;
+- `tests/architecture.test.ts`;
+- cinco tests de los adaptadores.
+
+**2. La web, al pie de la letra.** Fuera del motor, la web ya no puede tomar ningún **valor** de la puerta (la regla de la 015). Sí puede tomar:
+- tipos, que no ejecutan nada (`sync-controller.ts` toma `RedoPlan`);
+- las tres preguntas de solo lectura de `@atlas/adapters/sync`.
+
+No lo he cambiado.
+
+**Observación sin cambio, para la 017:** el paso 4 del procedimiento manda leer el registro de ejecución de hoy, lo que necesita `s3:GetObject` sobre `jobs/ecb/*`. El §8 solo lista `s3:GetObjectVersion`. Si el rol de administración de la 015 ya alcanza todo el bucket, no falta nada.
+
+### 19.6 Mutación (lotes `016-e3r2-a.json` y `-b.json`, uno a uno tras la puerta de memoria)
+
+| Id | Mutante | Test que lo mata | Veredicto |
+|---|---|---|---|
+| R2-B1a | un cierre tomado el día de su sesión se toma de la nube | `domain/test/quotes/cloud.test.ts`, `apps/cli/test/prices/cloud.test.ts` | KILLED |
+| R2-B1b | el día de `fetched_at` se lee en UTC, no en Madrid | `domain/test/quotes/cloud.test.ts` | KILLED |
+| R2-B1c | `>` en vez de `>=`: se toma el del mismo día | ídem | KILLED |
+| R2-CAPa | un histórico del BCE, a 20 MB | `packages/adapters/test/reference/http.test.ts` | KILLED |
+| R2-CAPb | todo `ecb`, el manifiesto incluido, a 64 MB | ídem | KILLED |
+| R2-CAPc | un fichero de precios con nombre de histórico, a 64 MB | ídem | KILLED |
+| R2-CAPd | lo que llega se cuenta siempre contra 64 MB | ídem | KILLED |
+| R2-SYNCa | **el del revisor**: `adapters/src/relay/relay.ts` reexporta `replaceWithRemote` de `@atlas/domain/sync`, y `ecb-cloud-said.ts` lo importa por una ruta relativa | `tests/api-access.test.ts` (el guardián nuevo) | KILLED |
+| R2-SYNCb | el mismo reexportador, por una ruta relativa a `packages/domain/src/sync.ts` | ídem | KILLED |
+| R2-SYNCc | `transfer.ts` reexporta de la puerta | ídem | KILLED |
+| R2-SYNCd | `transfer.ts` exporta otra vez un nombre que tomó de la puerta | ídem | KILLED |
+
+11 de 11 muertos.
+
+### 19.7 Paquete, tubería y congelación
+
+- **El paquete web tras `06d9fe9`**, en bytes: arranque **75.061** y total **305.573**, dentro de los techos de `a6e2eab` (75.077 y 305.650).
+  - El total sube +181 sobre `8882da5`: es el tope por recurso del cliente de referencia, y todo es diferido.
+  - El arranque sube +8, de los nombres de los trozos.
+  - No hizo falta subir ningún techo.
+- **Tubería completa** sobre `06d9fe9`, un solo trabajador y tras la puerta de memoria (`016-pipeline.out`): lint, typecheck, las dos pasadas de cobertura y el build, todo en verde a la primera.
+  - Dominio: 1.733 tests, **100 %** de sentencias (9.079), ramas (5.644), funciones (2.042) y líneas.
+  - El resto: 1.850 tests.
+- **Congelación:** la rama queda congelada en el commit que añade esta sección. No se empuja nada más.
