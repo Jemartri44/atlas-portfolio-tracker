@@ -211,6 +211,27 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     expect(c.out.join("\n")).toContain("cloud_lines_future: 2");
   });
 
+  it("never takes a close taken on the day of its session, not even the day after (R2-B1)", async () => {
+    const { c } = await synced();
+    // 2026-10-01, 12:00 in Madrid: the cloud serves a close taken at 11:00.
+    const midSession = close("2026-10-01", "11", "eodhd", "2026-10-01T09:00:00.000Z");
+    c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-30", "10"), midSession]));
+    expect(await c.exec(["prices", "update"])).toBe(0);
+    expect(await local(c.ledger, "ast_a.jsonl")).toBe(text([close("2026-09-30", "10")]));
+    expect(c.out.join("\n")).toContain("cloud_lines_future");
+    // The day after, the task adds the close of the session: another version.
+    c.api.advance(86_400_000);
+    const final = close("2026-10-01", "12", "eodhd", "2026-10-02T05:00:00.000Z");
+    c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-30", "10"), midSession, final]));
+    c.out.length = 0;
+    expect(await c.exec(["prices", "update"])).toBe(0);
+    expect(await local(c.ledger, "ast_a.jsonl")).toBe(text([close("2026-09-30", "10"), final]));
+    expect(c.out.join("\n")).toContain("cloud_lines_future");
+    c.out.length = 0;
+    expect(await c.exec(["prices", "status"])).toBe(0);
+    expect(c.out.join("\n")).toContain("cloud_lines_future: 1");
+  });
+
   it("never takes a close in another currency than the folder declares for its source (N5)", async () => {
     const { c } = await synced();
     c.api.s3.seed(

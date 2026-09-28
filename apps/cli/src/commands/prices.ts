@@ -98,7 +98,7 @@ const pulledText = (outcome: Extract<PullOutcome, { kind: "pulled" }>, origin: s
     ...(outcome.discarded.future === 0
       ? []
       : [
-          `Aviso (cloud_lines_future): ${outcome.discarded.future} cierres de la nube con fecha de hoy o de un día futuro no se han añadido; nunca se guarda el día en curso.`,
+          `Aviso (cloud_lines_future): ${outcome.discarded.future} cierres de la nube con fecha de hoy o futura, o tomados el mismo día de su sesión, no se han añadido; nunca se guarda un cierre del día en curso.`,
         ]),
     ...(outcome.discarded.currency_mismatch === 0
       ? []
@@ -204,7 +204,7 @@ const status = async (ctx: Context): Promise<number> => {
     ...(pull?.discarded === undefined || pull.discarded.future === 0
       ? []
       : [
-          `cloud_lines_future: ${pull.discarded.future} cierres de la nube con fecha de hoy o futura se dejaron fuera en la última descarga.`,
+          `cloud_lines_future: ${pull.discarded.future} cierres de la nube con fecha de hoy o futura, o tomados el mismo día de su sesión, se dejaron fuera en la última descarga.`,
         ]),
     ...(pull?.discarded === undefined || pull.discarded.currency_mismatch === 0
       ? []

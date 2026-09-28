@@ -77,6 +77,35 @@ describe("what the console never takes from the cloud (review of PR #108, B1 and
     ).toEqual({ added: [line("2026-09-30", "10")], future: 2, mismatched: 0 });
   });
 
+  it("never a close taken on the day of its own session, not even the day after (R2-B1)", () => {
+    const at = (date: string, close: string, fetched: string) =>
+      line(date, close, "eodhd", fetched);
+    expect(
+      cloudLinesToAppend(
+        [],
+        [
+          // Taken at mid-session, 11:00 in Madrid of the same day: never.
+          at("2026-10-01", "11", "2026-10-01T09:00:00.000Z"),
+          // Its close, taken the day after: taken.
+          at("2026-10-01", "12", "2026-10-02T05:00:00.000Z"),
+          // 23:59:59 in Madrid of its own day (summer time): never.
+          at("2026-09-28", "9", "2026-09-28T21:59:59.000Z"),
+          // 00:00 in Madrid of the day after, still its day in UTC: taken.
+          at("2026-09-29", "10", "2026-09-29T22:00:00.000Z"),
+        ],
+        ORDER,
+        { today: "2026-10-02" },
+      ),
+    ).toEqual({
+      added: [
+        at("2026-10-01", "12", "2026-10-02T05:00:00.000Z"),
+        at("2026-09-29", "10", "2026-09-29T22:00:00.000Z"),
+      ],
+      future: 2,
+      mismatched: 0,
+    });
+  });
+
   it("never a close in another currency than the one the folder declares for its source (N5)", () => {
     const gbp = { ...line("2026-09-29", "900"), currency: "GBP" };
     const alpha = { ...line("2026-09-28", "9", "alpha_vantage"), currency: "GBP" };

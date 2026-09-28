@@ -12,6 +12,7 @@
 // the lock; never served and never uploaded.
 
 import type { CivilDate } from "../dates/civil-date.js";
+import { madridDateOf } from "../dates/madrid.js";
 import { ValidationError } from "../errors.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
@@ -123,7 +124,10 @@ export const changedPriceFiles = <T extends { readonly name: string; readonly ve
 /** What a merge of the lines of the cloud added, and what it left out. */
 export interface CloudMerge {
   readonly added: CloseLine[];
-  /** Closes of today or of a day to come: never taken (review of PR #108, B1). */
+  /**
+   * Closes of today or of a day to come (review of PR #108, B1), or taken on
+   * the day of their own session (R2-B1): never taken.
+   */
   readonly future: number;
   /**
    * Closes in another currency than the one the folder declares for their
@@ -141,7 +145,9 @@ export interface CloudMerge {
  * **Never the day in course** (review of PR #108, B1): the 013 keeps that
  * rule in the range it asks the sources for, and what comes down from the
  * cloud does not pass through it — a close of today, or of a day to come,
- * would stay for ever in a file that only grows. And **the currency the
+ * would stay for ever in a file that only grows. **Nor a close taken on the
+ * day of its session** (R2-B1): a date not before the day in Madrid of its
+ * `fetched_at` is a value of mid-session, the day after as much as today. And **the currency the
  * folder declares** for the source of a line (its `symbols.json`), when it
  * declares one, is the only one taken (N5).
  */
@@ -159,7 +165,10 @@ export const cloudLinesToAppend = (
   let future = 0;
   let mismatched = 0;
   for (const line of cloud) {
-    if (line.date >= options.today) {
+    // Nor a close taken on the day of its own session, or before it (R2-B1):
+    // the 013 never asks for the day in course, so no line of its own is
+    // like that, and the day of whoever downloads would only delay it a day.
+    if (line.date >= options.today || line.date >= madridDateOf(line.fetched_at)) {
       future += 1;
       continue;
     }
