@@ -3,7 +3,9 @@
 // counts only.
 
 import { describe, expect, it } from "vitest";
+import { backupFindings } from "../../src/jobs/backup.js";
 import { ecbFindings, PRODUCER_FINDINGS, pricesFindings } from "../../src/jobs/findings.js";
+import { integrityFindings } from "../../src/jobs/integrity.js";
 import { ownFindings } from "../../src/jobs/notices.js";
 import type { UpdateReport } from "../../src/quotes/cascade.js";
 import { EMPTY_STATUS } from "../../src/quotes/status.js";
@@ -183,8 +185,32 @@ describe("the findings of the prices", () => {
       Object.values(codes ?? {}),
     )) {
       for (const subject of subjects) {
-        expect(["ecb", "eodhd", "alpha_vantage", "bucket", "prices"]).toContain(subject);
+        expect([
+          "ecb",
+          "eodhd",
+          "alpha_vantage",
+          "bucket",
+          "prices",
+          "backup",
+          "integrity",
+        ]).toContain(subject);
       }
     }
+  });
+});
+
+describe("what the dump and the integrity may say (016, E4)", () => {
+  it("keeps each producer to its own codes and subjects, and nobody else to them", () => {
+    const backup = backupFindings({ differs: 1, ecbInconsistent: true });
+    const integrity = integrityFindings({
+      errors: [{ code: "lots_mismatch" }],
+      rehearsal: { ok: false, differs: { cash_differ: 1 } },
+      size: { bytes: 2048, threshold: 1024 },
+    });
+    expect(ownFindings("monthly_backup", backup, PRODUCER_FINDINGS)).toEqual(backup);
+    expect(ownFindings("quarterly_integrity", integrity, PRODUCER_FINDINGS)).toEqual(integrity);
+    expect(ownFindings("monthly_backup", integrity, PRODUCER_FINDINGS)).toEqual([]);
+    expect(ownFindings("quarterly_integrity", backup, PRODUCER_FINDINGS)).toEqual([]);
+    expect(ownFindings("prices_update", [...backup, ...integrity], PRODUCER_FINDINGS)).toEqual([]);
   });
 });

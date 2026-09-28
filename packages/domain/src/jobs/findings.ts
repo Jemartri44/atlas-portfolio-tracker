@@ -37,6 +37,16 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
     thesis_horizon_exceeded: ["bucket"],
     prices_file_unreadable: ["prices"],
   },
+  // E4: only when something failed or differs.
+  monthly_backup: {
+    backup_object_differs: ["backup"],
+    backup_ecb_inconsistent: ["backup"],
+  },
+  quarterly_integrity: {
+    integrity_errors: ["integrity"],
+    restore_rehearsal_differs: ["integrity"],
+    ledger_size_above_threshold: ["integrity"],
+  },
 };
 
 /**
