@@ -18,7 +18,8 @@ import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
-import { repeatedKey, repeatedKeyError } from "../schema/json-keys.js";
+import { repeatedKey } from "../schema/json-keys.js";
+import { repeatedKeyError } from "./repeated-key.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
 /**

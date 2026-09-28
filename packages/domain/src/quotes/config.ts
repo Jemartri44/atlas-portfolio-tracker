@@ -14,7 +14,8 @@
 import { ValidationError } from "../errors.js";
 import type { QuoteSource } from "../projections/prices.js";
 import { ASSET_TYPES, type AssetType } from "../schema/events.js";
-import { repeatedKey, repeatedKeyError } from "../schema/json-keys.js";
+import { repeatedKey } from "../schema/json-keys.js";
+import { repeatedKeyError } from "./repeated-key.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
 export const PRICE_CONFIG_FILE = "config.json";

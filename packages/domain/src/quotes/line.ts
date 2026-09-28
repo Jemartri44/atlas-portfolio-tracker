@@ -21,7 +21,8 @@ import { ValidationError } from "../errors.js";
 import { Decimal, type DecimalString, isDecimalString } from "../money/decimal.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
-import { repeatedKey, repeatedKeyError } from "../schema/json-keys.js";
+import { repeatedKey } from "../schema/json-keys.js";
+import { repeatedKeyError } from "./repeated-key.js";
 import { isQuoteSource } from "./sources.js";
 import type { SymbolEntry, SymbolsFile } from "./symbols.js";
 

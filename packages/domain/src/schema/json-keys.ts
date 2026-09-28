@@ -8,8 +8,6 @@
 // Called only on a text `JSON.parse` already accepted: every string is closed
 // and every bracket matched, which is what lets this walk stay this small.
 
-import { ValidationError } from "../errors.js";
-
 /**
  * The first key a JSON text repeats inside one object, at any level, cut to
  * 64 characters; nothing when it repeats none (review of PR #106, R2-B1: a
@@ -56,17 +54,6 @@ export const repeatedKey = (text: string): string | undefined => {
 };
 
 export const repeatsKey = (text: string): boolean => repeatedKey(text) !== undefined;
-
-/**
- * The refusal of a JSON of `prices/` that repeats a key (review of PR #106,
- * R2-B1): the file and the key, never the value; the line, for a JSONL.
- */
-export const repeatedKeyError = (file: string, key: string, line?: number): ValidationError =>
-  new ValidationError("json_key_repeated", `${file} repeats a key`, {
-    file,
-    ...(line === undefined ? {} : { line }),
-    key,
-  });
 
 /** Whether a text holds a lone surrogate: its UTF-8 would not be UTF-8 (review of PR #96, B1). */
 export const holdsLoneSurrogate = (text: string): boolean => /\p{Cs}/u.test(text);
