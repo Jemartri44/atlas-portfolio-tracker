@@ -95,46 +95,117 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
     expect(sse).not.toContain("kms");
   });
 
-  it("denies objects and listings to every principal that is not a role of this environment (resource lock)", () => {
-    const statements = policyOf(stack(env));
-    const objects = statements.find((s) => s.Sid === "DenyObjectActionsOutsideTheEnvironment");
-    const roles = (objects?.Condition?.ArnNotLike?.["aws:PrincipalArn"] ?? []) as string[];
-    expect([...roles].sort()).toEqual(
-      ["api", "admin", "job-ecb", "job-prices", "job-mail", "job-backup", "job-integrity"]
-        .map((name) => `arn:aws:iam::${ACCOUNT}:role/atlas-${env}-${name}`)
-        .sort(),
+  const principals = (statement: Statement | undefined): string[] =>
+    ((statement?.Condition?.ArnNotLike as Record<string, string[]> | undefined)?.[
+      "aws:PrincipalArn"
+    ] ?? []) as string[];
+  const role = (name: string): string => `arn:aws:iam::${ACCOUNT}:role/atlas-${env}-${name}`;
+  const ENV_ROLES = [
+    "api",
+    "admin",
+    "job-ecb",
+    "job-prices",
+    "job-mail",
+    "job-backup",
+    "job-integrity",
+  ].map(role);
+
+  it("denies every action on objects to whoever is not a role of this environment (resource lock)", () => {
+    const statement = policyOf(stack(env)).find(
+      (s) => s.Sid === "DenyObjectActionsOutsideTheEnvironment",
     );
+    expect(statement).toMatchObject({
+      Effect: "Deny",
+      Principal: "*",
+      Action: ["s3:*"],
+      Resource: `arn:aws:s3:::${bucket}/*`,
+    });
+    expect([...principals(statement)].sort()).toEqual([...ENV_ROLES].sort());
+  });
+
+  it("denies the listings: ListBucket except to deploy and plan, versions and uploads to the roles only", () => {
+    const statements = policyOf(stack(env));
     const listing = statements.find((s) => s.Sid === "DenyListOutsideTheEnvironment");
-    const listers = (listing?.Condition?.ArnNotLike?.["aws:PrincipalArn"] ?? []) as string[];
-    // Deploy and plan escape only the denial of `s3:ListBucket`, nothing else (B1).
-    expect(listers.filter((arn) => !roles.includes(arn)).sort()).toEqual([
-      `arn:aws:iam::${ACCOUNT}:role/atlas-${env}-deploy`,
-      `arn:aws:iam::${ACCOUNT}:role/atlas-${env}-plan`,
-    ]);
-    expect([listing?.Action].flat()).toEqual(["s3:ListBucket"]);
+    expect(listing).toMatchObject({
+      Effect: "Deny",
+      Principal: "*",
+      Action: ["s3:ListBucket"],
+      Resource: `arn:aws:s3:::${bucket}`,
+    });
+    expect([...principals(listing)].sort()).toEqual(
+      [...ENV_ROLES, role("deploy"), role("plan")].sort(),
+    );
     const versions = statements.find((s) => s.Sid === "DenyVersionAndUploadListsOutsideTheRoles");
+    expect(versions).toMatchObject({
+      Effect: "Deny",
+      Principal: "*",
+      Resource: `arn:aws:s3:::${bucket}`,
+    });
     expect([versions?.Action].flat().sort()).toEqual([
       "s3:ListBucketMultipartUploads",
       "s3:ListBucketVersions",
     ]);
-    expect(versions?.Condition?.ArnNotLike?.["aws:PrincipalArn"]).toEqual(roles);
+    expect([...principals(versions)].sort()).toEqual([...ENV_ROLES].sort());
   });
 
-  it("denies configuration changes to everyone but deploy and admin, and backups/ without If-None-Match", () => {
-    const statements = policyOf(stack(env));
-    const config = statements.find((s) => s.Sid === "DenyConfigurationChangesExceptDeployAndAdmin");
-    expect(config?.Condition?.ArnNotLike?.["aws:PrincipalArn"]).toEqual([
-      `arn:aws:iam::${ACCOUNT}:role/atlas-${env}-deploy`,
-      `arn:aws:iam::${ACCOUNT}:role/atlas-${env}-admin`,
-    ]);
-    const backups = statements.find((s) => s.Sid === "BackupsOnlyIfAbsent");
-    expect(backups).toMatchObject({
+  it("denies every write of the configuration to everyone but deploy and admin, inventory, logging, notification and replication included", () => {
+    const statement = policyOf(stack(env)).find(
+      (s) => s.Sid === "DenyConfigurationChangesExceptDeployAndAdmin",
+    );
+    expect(statement).toMatchObject({
       Effect: "Deny",
+      Principal: "*",
+      Resource: `arn:aws:s3:::${bucket}`,
+    });
+    expect([statement?.Action].flat().sort()).toEqual([
+      "s3:DeleteBucket*",
+      "s3:Put*Configuration",
+      "s3:PutBucket*",
+    ]);
+    expect(principals(statement)).toEqual([role("deploy"), role("admin")]);
+    // The three patterns cover what a stranger could use to take names or contents out.
+    const covers = (action: string): boolean =>
+      [statement?.Action]
+        .flat()
+        .some((pattern) => new RegExp(`^${String(pattern).replaceAll("*", ".*")}$`).test(action));
+    for (const action of [
+      "s3:PutInventoryConfiguration",
+      "s3:PutBucketLogging",
+      "s3:PutBucketNotification",
+      "s3:PutReplicationConfiguration",
+      "s3:PutBucketPolicy",
+      "s3:DeleteBucketPolicy",
+      "s3:PutAccelerateConfiguration",
+      "s3:PutMetricsConfiguration",
+      "s3:PutAnalyticsConfiguration",
+      "s3:PutEncryptionConfiguration",
+      "s3:PutLifecycleConfiguration",
+      "s3:PutBucketVersioning",
+    ]) {
+      expect(covers(action), action).toBe(true);
+    }
+  });
+
+  it("denies backups/ without If-None-Match, and every request without TLS", () => {
+    const statements = policyOf(stack(env));
+    expect(statements.find((s) => s.Sid === "BackupsOnlyIfAbsent")).toMatchObject({
+      Effect: "Deny",
+      Principal: "*",
       Action: "s3:PutObject",
       Resource: `arn:aws:s3:::${bucket}/backups/*`,
       Condition: { Null: { "s3:if-none-match": "true" } },
     });
-    expect(statements.find((s) => s.Sid === "DenyInsecureTransport")).toBeDefined();
+    expect(statements.find((s) => s.Sid === "DenyInsecureTransport")).toMatchObject({
+      Effect: "Deny",
+      Principal: "*",
+      Action: "s3:*",
+      Resource: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
+      Condition: { Bool: { "aws:SecureTransport": "false" } },
+    });
+  });
+
+  it("has no Allow at all: the identity policies grant, the bucket policy only denies", () => {
+    expect(policyOf(stack(env)).filter((s) => s.Effect !== "Deny")).toEqual([]);
   });
 
   it("is the origin of no distribution, and the SPA bucket is the only S3 origin", () => {
@@ -211,12 +282,14 @@ describe.each(ENVS)("the parameters, logs and function of %s", (env) => {
     ).toBeUndefined();
   });
 
-  it("reserves concurrency only when asked (C12)", () => {
-    expect(attrs(stack(env), "aws_lambda_function").reserved_concurrent_executions).toBe(-1);
-    const reserved = renderStack(env, { api_reserved_concurrency: env === "dev" ? 1 : 5 });
-    expect(attrs(reserved, "aws_lambda_function").reserved_concurrent_executions).toBe(
+  it("reserves concurrency by default, 1 in dev and 5 in prod, and leaves it open only when asked (C12)", () => {
+    expect(attrs(stack(env), "aws_lambda_function").reserved_concurrent_executions).toBe(
       env === "dev" ? 1 : 5,
     );
+    const open = renderStack(env, { reserve_api_concurrency: false });
+    expect(attrs(open, "aws_lambda_function").reserved_concurrent_executions).toBe(-1);
+    const more = renderStack(env, { api_reserved_concurrency: 7 });
+    expect(attrs(more, "aws_lambda_function").reserved_concurrent_executions).toBe(7);
   });
 
   it("passes the guardians: tags, closed wildcards, regions, cost.md", () => {
