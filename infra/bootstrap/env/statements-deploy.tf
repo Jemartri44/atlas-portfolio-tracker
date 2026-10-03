@@ -142,9 +142,20 @@ locals {
 
   deploy_edge_statements = [
     {
+      # SAR: CreateDistribution and CreateFunction take no resource type, only the
+      # action-level keys `aws:RequestTag` and `aws:TagKeys`: an ARN here would never
+      # match. `Resource: "*"` with the request tag is the closed-list exception.
       sid       = "CloudFrontCreate"
       effect    = "Allow"
-      actions   = ["cloudfront:CreateDistribution", "cloudfront:CreateFunction", "cloudfront:TagResource"]
+      actions   = ["cloudfront:CreateDistribution", "cloudfront:CreateFunction"]
+      resources = ["*"]
+      condition = local.request_tag_env
+    },
+    {
+      # CreateDistributionWithTags also needs TagResource, which does take a resource.
+      sid       = "CloudFrontTagOnCreate"
+      effect    = "Allow"
+      actions   = ["cloudfront:TagResource"]
       resources = [local.cf_distribution, local.cf_function]
       condition = local.request_tag_env
     },
@@ -165,9 +176,17 @@ locals {
       condition = local.tag_env_equals
     },
     {
+      # SAR: RequestCertificate takes no resource type (same reasoning as CloudFront).
       sid       = "AcmCreate"
       effect    = "Allow"
-      actions   = ["acm:AddTagsToCertificate", "acm:RequestCertificate"]
+      actions   = ["acm:RequestCertificate"]
+      resources = ["*"]
+      condition = local.request_tag_env
+    },
+    {
+      sid       = "AcmTagOnCreate"
+      effect    = "Allow"
+      actions   = ["acm:AddTagsToCertificate"]
       resources = [local.acm_certificate]
       condition = local.request_tag_env
     },

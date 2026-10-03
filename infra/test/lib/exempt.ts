@@ -15,5 +15,8 @@ export const UNTAGGABLE: Record<string, string> = {
   aws_iam_role_policy_attachment: "link between a role and a policy: no tags exist",
   aws_ce_cost_allocation_tag: "the activation of a tag key: not a taggable resource",
   aws_cloudfront_origin_access_control: "the OAC admits no tag (research b0.3)",
+  aws_lambda_function_url: "a Function URL is not taggable",
+  aws_lambda_permission: "a resource policy statement is not taggable",
+  aws_acm_certificate_validation: "waits for DNS: not a taggable resource",
   aws_kms_alias: "an alias is not taggable",
 };

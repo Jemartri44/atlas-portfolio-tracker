@@ -4,9 +4,17 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { costTypes } from "./lib/cost.js";
 import { UNTAGGABLE } from "./lib/exempt.js";
 import { costTypes as costTypesGuardian, tags, wildcards } from "./lib/guardians.js";
-import { decide, type Statement } from "./lib/iam.js";
+import { decide, flatten, type Statement } from "./lib/iam.js";
 import { changes, only, type Plan } from "./lib/plan.js";
-import { ACCOUNT, ADMIN, REPOSITORY, renderEnv, SENDER } from "./lib/renders.js";
+import {
+  ACCOUNT,
+  ADMIN,
+  REPOSITORY,
+  renderEnv,
+  renderStack,
+  SENDER,
+  SUFFIX,
+} from "./lib/renders.js";
 import {
   boundaryOf,
   type Contract,
@@ -27,6 +35,23 @@ const contract = JSON.parse(
 ) as Contract;
 
 const ENVS = ["dev", "prod"] as const;
+const stack = (env: "dev" | "prod"): Plan => renderStack(env);
+
+// Family 11, the closed list of `Resource: "*"`, each with its source: the Service
+// Authorization Reference (SAR) lists no resource type for these actions. The three
+// creations are scoped by the action-level key `aws:RequestTag/env` instead (E2
+// block 0: an ARN in those statements is never evaluated, so the first `apply` would
+// have been denied).
+const CLOSED_STAR_LIST = [
+  { action: "logs:DescribeLogGroups", source: "Service Authorization Reference" },
+  { action: "cloudfront:CreateDistribution", source: "Service Authorization Reference" },
+  { action: "cloudfront:CreateFunction", source: "Service Authorization Reference" },
+  { action: "acm:RequestCertificate", source: "Service Authorization Reference" },
+  {
+    action: "ssm:DescribeParameters",
+    source: "Service Authorization Reference; provider v6.67.0 parameter.go L317",
+  },
+];
 const plans: Record<string, Plan> = {
   get dev() {
     return renderEnv("dev");
@@ -80,11 +105,7 @@ describe.each(ENVS)("the roles of the bootstrap of %s", (env) => {
   it("have no tag missing, no policy attached from elsewhere and no wildcard but the closed list", () => {
     const plan = plans[env] as Plan;
     expect(tags(plan, { project: "atlas", env, managed_by: "terraform" }, UNTAGGABLE)).toEqual([]);
-    expect(
-      wildcards(plan, [
-        { action: "logs:DescribeLogGroups", source: "Service Authorization Reference" },
-      ]),
-    ).toEqual([]);
+    expect(wildcards(plan, CLOSED_STAR_LIST)).toEqual([]);
   });
 });
 
@@ -185,7 +206,7 @@ describe("the trust of the administration role (C5)", () => {
 describe.each(ENVS)(
   "the permissions of the deploy and plan roles of %s against their contract",
   (env) => {
-    it.each(["deploy", "plan"])(
+    it.each(["deploy", "plan", "admin"])(
       "%s: exactly the lines of the contract, no more and no fewer",
       (role) => {
         const rendered = lineSet(roleStatements(plans[env] as Plan, `atlas-${env}-${role}`));
@@ -195,6 +216,27 @@ describe.each(ENVS)(
         expect(rendered).toHaveLength(wanted.length);
       },
     );
+
+    it("the administration role: no delete but the two of the ECB procedure, no secret read with decryption, no kms and no IAM but the pass to Scheduler", () => {
+      const lines = flatten(roleStatements(plans[env] as Plan, `atlas-${env}-admin`));
+      const actions = lines.map((line) => line.action);
+      expect([...new Set(actions.filter((action) => /Delete/.test(action)))]).toEqual([
+        "s3:DeleteObject",
+      ]);
+      const deletes = lines.filter((line) => line.action === "s3:DeleteObject");
+      expect(deletes.map((line) => line.resource).sort()).toEqual(
+        [
+          `arn:aws:s3:::atlas-${env}-data-${SUFFIX}/jobs/ecb/ecb_update/*`,
+          `arn:aws:s3:::atlas-${env}-data-${SUFFIX}/reference/ecb/manifest.json`,
+        ].sort(),
+      );
+      expect(actions.filter((action) => action.startsWith("kms:"))).toEqual([]);
+      expect(actions.filter((action) => action.startsWith("iam:"))).toEqual(["iam:PassRole"]);
+      expect(actions).not.toContain("ssm:LabelParameterVersion");
+      for (const line of lines.filter((entry) => entry.action === "ssm:GetParameter")) {
+        expect(line.resource).toMatch(/parameter\/atlas\/(dev|prod)\/(auth|prices)\/\*$/);
+      }
+    });
 
     it("the plan role has no policy attached: ReadOnlyAccess, or any other, cannot slip in", () => {
       const plan = plans[env] as Plan;
@@ -228,6 +270,79 @@ describe.each(ENVS)(
     });
   },
 );
+
+describe.each(ENVS)("the creations that take no resource type, in %s", (env) => {
+  const NO_RESOURCE = [
+    "cloudfront:CreateDistribution",
+    "cloudfront:CreateFunction",
+    "acm:RequestCertificate",
+  ];
+  const statementsWith = (statements: Statement[], action: string): Statement[] =>
+    statements.filter(
+      (entry) => entry.Effect === "Allow" && [entry.Action].flat().includes(action),
+    );
+
+  it("the deploy role allows them only on `*` and only with the request tag of its environment", () => {
+    const plan = plans[env] as Plan;
+    const own = roleStatements(plan, `atlas-${env}-deploy`);
+    for (const action of NO_RESOURCE) {
+      const found = statementsWith(own, action);
+      expect(found, action).toHaveLength(1);
+      expect([found[0]?.Resource].flat(), action).toEqual(["*"]);
+      expect(found[0]?.Condition, action).toEqual({
+        StringEquals: { "aws:RequestTag/env": env },
+      });
+    }
+  });
+
+  it("the boundary lets them through on `*` with the request tag, and not without it, with another environment's, or in the home region", () => {
+    const boundary = boundaryOf(plans[env] as Plan);
+    const other = env === "dev" ? "prod" : "dev";
+    const context = { "aws:RequestedRegion": "us-east-1" };
+    for (const action of NO_RESOURCE) {
+      expect(
+        decide(boundary, { action, context: { ...context, "aws:RequestTag/env": env } }),
+        action,
+      ).toBe("allow");
+      expect(decide(boundary, { action, context }), action).not.toBe("allow");
+      expect(
+        decide(boundary, { action, context: { ...context, "aws:RequestTag/env": other } }),
+        action,
+      ).not.toBe("allow");
+      expect(
+        decide(boundary, {
+          action,
+          context: { "aws:RequestedRegion": "eu-west-1", "aws:RequestTag/env": env },
+        }),
+        action,
+      ).not.toBe("allow");
+    }
+  });
+});
+
+describe.each(ENVS)("ssm:DescribeParameters in %s (Q-E2-1)", (env) => {
+  it("is held only by deploy and plan, on `*`, and by no other role of the contract", () => {
+    const plan = plans[env] as Plan;
+    for (const role of ["deploy", "plan"]) {
+      const lines = flatten(roleStatements(plan, `atlas-${env}-${role}`)).filter(
+        (line) => line.action === "ssm:DescribeParameters",
+      );
+      expect(
+        lines.map((line) => [line.effect, line.resource]),
+        role,
+      ).toEqual([["Allow", "*"]]);
+    }
+    for (const role of ["admin"]) {
+      expect(
+        flatten(roleStatements(plan, `atlas-${env}-${role}`)).map((line) => line.action),
+        role,
+      ).not.toContain("ssm:DescribeParameters");
+    }
+    expect(JSON.stringify(roleStatements(stack(env), `atlas-${env}-api`))).not.toContain(
+      "DescribeParameters",
+    );
+  });
+});
 
 describe.each(ENVS)("the permissions boundary of %s", (env) => {
   let boundary: Statement[];

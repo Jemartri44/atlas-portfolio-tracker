@@ -73,9 +73,9 @@ locals {
       condition = local.boundary_home
     },
     {
-      sid       = "LogsDescribe"
+      sid       = "NoResourceReads"
       effect    = "Allow"
-      actions   = ["logs:DescribeLogGroups"]
+      actions   = ["logs:DescribeLogGroups", "ssm:DescribeParameters"]
       resources = ["*"]
       condition = local.boundary_home
     },
@@ -130,6 +130,14 @@ locals {
       ]
       resources = [local.cf_distribution, local.cf_function, local.acm_certificate, local.waf_web_acl]
       condition = merge(local.boundary_edge, { StringEqualsIfExists = { "aws:ResourceTag/env" = var.env } })
+    },
+    {
+      # Actions that take no resource type (SAR): only the request tag can scope them.
+      sid       = "EdgeCreate"
+      effect    = "Allow"
+      actions   = ["acm:RequestCertificate", "cloudfront:CreateDistribution", "cloudfront:CreateFunction"]
+      resources = ["*"]
+      condition = { StringEquals = { "aws:RequestedRegion" = [local.edge], "aws:RequestTag/env" = var.env } }
     },
     {
       sid       = "EdgeReads"

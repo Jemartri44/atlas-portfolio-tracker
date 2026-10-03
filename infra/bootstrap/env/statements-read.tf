@@ -38,6 +38,15 @@ locals {
       resources = ["*"]
     },
     {
+      # `aws_ssm_parameter` refreshes with DescribeParameters (provider v6.67.0,
+      # parameter.go L317) and SAR lists no resource type for it: the closed-list
+      # `Resource: "*"`. It returns metadata only, never a value (answer of 2026-10-03).
+      sid       = "SsmDescribe"
+      effect    = "Allow"
+      actions   = ["ssm:DescribeParameters"]
+      resources = ["*"]
+    },
+    {
       sid       = "SsmStringsRead"
       effect    = "Allow"
       actions   = ["ssm:GetParameter", "ssm:ListTagsForResource"]

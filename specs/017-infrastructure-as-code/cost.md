@@ -33,6 +33,7 @@ Estado: **E1** (cuenta y aislamiento) escrita; las filas de E2 a E4 son las prev
 | `aws_cloudfront_function` | `dev`, `prod` | E2 | 0 en el plan Free (SIN VERIFICAR, E2 b0.2) | — |
 | `aws_wafv2_web_acl` | `dev`, `prod` | E2 | 0 con el plan Free | fuera del plan: 7-8 $/mes (estimación del plan, SIN VERIFICAR, E2 b0.2) |
 | `aws_acm_certificate` | `dev`, `prod` | E2 | 0 | — |
+| `aws_acm_certificate_validation` | `dev`, `prod` | E2 | 0 (espera el registro DNS que crea el usuario) | — |
 | `aws_scheduler_schedule_group` | `dev`, `prod` | E3 | por verificar (nivel gratuito, E3 b0) | — |
 | `aws_scheduler_schedule` | `dev`, `prod`: 5 por entorno | E3 | por verificar (nivel gratuito, E3 b0) | — |
 | `aws_ssm_parameter` | `dev`, `prod`: solo `String` | E3 | 0 (estándar) | parámetros avanzados; rendimiento alto |

@@ -105,7 +105,7 @@ resource "aws_iam_role_policy" "plan" {
   policy = local.policy_documents.plan
 }
 
-# Its permissions arrive in E2, when the resources it names exist.
+# Its permissions are in statements-admin.tf (E2).
 resource "aws_iam_role" "admin" {
   name                 = local.role_names.admin
   description          = "Administration of ${var.env}, assumed by the user's principal."

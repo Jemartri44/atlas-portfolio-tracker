@@ -22,6 +22,13 @@ export const lockFile = join(infraRoot, "test", "fixtures", ".terraform.lock.hcl
 
 /** The provider is configured so that nothing can reach AWS (specs/017, research b0.1). */
 export const OFFLINE_OVERRIDE = `# Written by the harness into a scratch copy, never into a real root.
+# The remote backend of a stack root becomes a local one: nothing reaches S3.
+terraform {
+  backend "local" {
+    path = "render.tfstate"
+  }
+}
+
 provider "aws" {
   access_key                  = "AKIAFAKEFAKEFAKEFAKE"
   secret_key                  = "fake-fake-fake-fake-fake-fake-fake-fake"
@@ -187,7 +194,7 @@ export const renderPlan = (request: PlanRequest): Plan => {
     refresh(absolute, entry.rootDir, fixture, scratch);
     const init = terraform(
       entry.rootDir,
-      ["init", "-backend=false", "-input=false", "-no-color", "-lockfile=readonly"],
+      ["init", "-input=false", "-no-color", "-lockfile=readonly"],
       { network: true },
     );
     if (init.status !== 0) {
