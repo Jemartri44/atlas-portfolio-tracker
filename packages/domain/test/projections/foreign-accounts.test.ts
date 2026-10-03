@@ -64,6 +64,22 @@ describe("an account abroad on a date", () => {
     );
   });
 
+  it("lets the last line win: an account brought back home is no longer abroad", () => {
+    const b = new LedgerBuilder();
+    b.account("acc_ib", { country: "IE" });
+    const [created] = b.build() as (LedgerEvent & { recorded_at: string })[];
+    const back = {
+      ...created,
+      id: `${created?.id}x`,
+      type: "account_updated",
+      country: "ES",
+      recorded_at: "2029-03-01T10:00:00Z",
+    } as unknown as LedgerEvent;
+    const events = [created as LedgerEvent, back];
+    expect(hasForeignAccountsAt(events, "2029-02-28", { tax_residence: "ES" })).toBe(true);
+    expect(hasForeignAccountsAt(events, "2029-03-01", { tax_residence: "ES" })).toBe(false);
+  });
+
   it("counts an account from the Madrid day it was recorded, not the UTC one", () => {
     const b = new LedgerBuilder();
     b.account("acc_ib", { country: "IE" });
