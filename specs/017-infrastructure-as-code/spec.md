@@ -4,7 +4,7 @@
 
 **Creada**: 2026-10-03 (Europe/Madrid)
 
-**Estado**: borrador, pendiente del visto bueno de la dirección (junto con `plan.md` y `questions.md`) antes de escribir código.
+**Estado**: fusionada entera en cuatro entregas (PR #114, #115, #116 y #117), escrita y verificada sin AWS; nada desplegado. Lo que queda abierto, en `questions.md` y en «Etapas pendientes» de `docs/decision-roadmap.md`. El texto de abajo es el de la propuesta original.
 
 **Entrada**: `docs/prompts/017-infrastructure-as-code.md` entero, con sus respuestas de §12.1 (P1-P12) y las decisiones del usuario de §12.2 (B1-B7, N1-N6); ADR-0026 a ADR-0034 con sus notas (en especial la nota de ADR-0034 del 2026-10-03); `specs/015-api-access/plan.md` §10; `specs/016-scheduled-jobs/contracts/` (`iam-permissions.md`, `ssm-and-config.md`, `scheduler-event.md`) y `specs/016-scheduled-jobs/plan.md` §6; `docs/api.md` §8 y §9; `docs/data-schema.md` §1.
 

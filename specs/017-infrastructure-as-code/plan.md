@@ -4,7 +4,7 @@
 
 **Entrada**: `docs/prompts/017-infrastructure-as-code.md` (manda lo decidido en su §12), ADR-0028, 0033, 0034 y las notas citadas, `specs/015-api-access/plan.md` §10 y `specs/016-scheduled-jobs/contracts/`.
 
-**Estado**: propuesta, pendiente del visto bueno de la dirección. **No hay código ni `.tf` todavía.** Todo lo marcado **propuesta** lo confirma la dirección (prompt §11.2); lo marcado **SIN VERIFICAR** lo cierra el bloque 0 de su entrega o la 018.
+**Estado**: ejecutado y fusionado en cuatro entregas (PR #114 a #117); sin AWS, nada desplegado. Lo que el código decidió por su cuenta, en `questions.md`. El texto de abajo es el de la propuesta original, y lo que dice de «no hay código ni `.tf` todavía» ya no es cierto. Todo lo marcado **propuesta** lo confirma la dirección (prompt §11.2); lo marcado **SIN VERIFICAR** lo cierra el bloque 0 de su entrega o la 018.
 
 ## Resumen
 
