@@ -745,3 +745,15 @@ Techos: arranque **75.855**, total **310.066**. Margen hasta la autorización: *
 - Capturas (scratchpad de la sesión, `020-e3-shots/antes` y `despues`, 56 cada una): Cartera y Cubo, 400x890 x3 y 2045x1141, claro y oscuro, importes ocultos y visibles, libro sintético, reloj 20/01/2029 10:00 Europe/Madrid, `Chrome/153.0.8010.12`. «Antes» es `9f6956d1`. Medidas (`medidas.json`): sin desplazamiento lateral a 360, 400, 1.440 y 2045; ningún texto por debajo de 13 px fuera de la máscara; un objetivo táctil por debajo de 44 px, igual antes y después (previo).
 - No comprobé commit a commit que cada uno construye: se sabe que `33e2665a` y `f2d1210f` no (§12.3).
 - Los relojes extremos (`TZ=Pacific/Kiritimati`, `Pacific/Pago_Pago`, 31/12 y 01/01) no se corrieron en E3.
+
+## 13. E4 — Las gráficas y el tiempo
+
+Rama `feature/020-visual-refresh`, ya con `develop` (E1-E3 fusionadas en la PR #119). Partida medida: arranque **75.830**, total **309.831** (techos 75.855 y 310.066; autorización 76.069 y 312.000, que **no se sube**).
+
+### 13.1 Predicción de la salida fiscal (antes del código de E4)
+
+E4 añade en el dominio, **solo funciones nuevas y detrás de puertas perezosas**: `contributedSeries` y `bucketIndexPctSeries` en `@atlas/domain/charts`; `fiscalCalendar` y la tabla `FILING_DEADLINES` en `@atlas/domain/fiscal`. Dos cambios en código existente, sin cambio de comportamiento: `rangeOf` de `projections/series.ts` pasa a exportarse, y `cashFlowsOf` y `bucketAccountIds` de `bucket-stats.ts` pasan a exportarse **del módulo, no del barril**.
+
+Ninguna orden de la consola llama a nada de esto (`grep` en `apps/cli/src`, `apps/api/src`, `apps/jobs/src` y `packages/adapters/src`).
+
+**Predicción**: `tax <año>` (con `--lots`, con `--boxes` y con `--json`), `gains`, `income`, `m720`, `m721` y `filed` (renta, 720 y 721), sobre `synthetic-v1`, para los años 2024 a 2029, dan **los mismos bytes** que en `develop`; `git diff origin/develop -- tests/fixtures` sale vacío. Salida de `develop` guardada antes de tocar nada (66 ficheros, script `020-e4-fiscal.sh` del *scratchpad*).
