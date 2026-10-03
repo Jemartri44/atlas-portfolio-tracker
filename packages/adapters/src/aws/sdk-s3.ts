@@ -47,7 +47,11 @@ export class SdkObjectStore implements ObjectStore {
   ) {}
 
   async get(key: string): Promise<StoredObject | undefined> {
-    let output: { Body?: { transformToByteArray(): Promise<Uint8Array> }; ETag?: string };
+    let output: {
+      Body?: { transformToByteArray(): Promise<Uint8Array> };
+      ETag?: string;
+      VersionId?: string;
+    };
     try {
       output = (await this.client.send(
         new GetObjectCommand({ Bucket: this.bucket, Key: key }),
@@ -62,7 +66,11 @@ export class SdkObjectStore implements ObjectStore {
     if (output.Body === undefined || output.ETag === undefined) {
       throw new Error("s3 answered an object without a body or an etag");
     }
-    return { body: await output.Body.transformToByteArray(), etag: output.ETag };
+    return {
+      body: await output.Body.transformToByteArray(),
+      etag: output.ETag,
+      ...(output.VersionId === undefined ? {} : { versionId: output.VersionId }),
+    };
   }
 
   async putIfNoneMatch(key: string, body: Uint8Array): Promise<"created" | "exists"> {

@@ -1,6 +1,6 @@
 # Prompt 000 — Relevo de la dirección
 
-> **Puesta al día el 2026-09-27 con la sección «Estado al 2026-09-27»**, delante de §5: la 015 fusionada entera, lo que está en marcha y lo que falta del usuario. Lo que sigue en esta nota es de la versión anterior.
+> **Puesta al día el 2026-09-28 con la sección «Estado al 2026-09-28»**, delante de todo el estado: la 016 fusionada entera, el prompt de la 017 abierto y lo que falta del usuario. La del 2026-09-27 (la 015 fusionada entera) va justo después y sigue valiendo salvo en lo que la nueva cambia. Lo que sigue en esta nota es de la versión anterior.
 >
 > Quinta versión, 2026-09-18; **estado (§5, §6, §8 y §9) puesto al día el 2026-09-26, antes de mudar la sesión de dirección a otra máquina**: sustituye al del 2026-09-25 (cierre de la 014) y recoge lo fusionado del 24 al 26 de septiembre, la feature 015 en curso, las decisiones del usuario, el entorno nuevo y las lecciones de método de estos días (§5). El modelo de trabajo, el método de revisión (§3, §4) y las lecciones (§7) no han cambiado. Léela entera antes de hablar con el usuario. Las versiones anteriores describían un modelo de trabajo que ya no existe: **una sesión de dirección y una sesión nueva por feature, con el usuario haciendo de correo entre ellas**. Desde el 2026-09-18 hay **una sola sesión permanente** que dirige y orquesta. Esta versión recoge la corrección que el usuario hizo el mismo día: **la dirección orquesta, no ejecuta** (§1, §3, §4).
 
@@ -77,6 +77,45 @@ Las tres han escondido defectos (§7). El verificador te entrega las capturas, n
 - Uno de **calidad, tests y *golden***: que la cobertura del 100 % no mienta (**pídele que pruebe por mutación**: ha cazado tres tests falsos que la cobertura ocultaba), que no haya reglas de negocio en la CLI, y que **verifique el diff del *golden* id por id y clave por clave**.
 
 Esos dos revisores han encontrado, entre las features 004 y 005, once defectos reales que iban camino de `develop`, incluido uno bloqueante.
+
+## Estado al 2026-09-28
+
+Escrita el 2026-09-28, al fusionarse entera la 016. Va delante de «Estado al 2026-09-27» y la pone al día: esa sección y §5 a §9 siguen valiendo salvo en lo que esta cambia, y su «Lo siguiente» queda sustituido por el de esta. Las horas van en hora de Madrid (§7).
+
+### Fusionado de la #101 a la #109
+
+| PR | Qué |
+|---|---|
+| #101 | La CI parte en dos pasadas la cobertura del dominio y el resto de los tests. El 2026-09-27 a las 17:56 |
+| #102 | Los arreglos de la prueba real de precios de la 013: los días de mercado y la vuelta a pedir lo reciente por tipo de activo (ADR-0031, nota del 2026-09-27). A las 18:39 |
+| #103 | El cierre documental de la 015. A las 18:01 |
+| #104 | **E1 de la 016**: el esqueleto de `apps/jobs`, el puerto `Notifier` con su adaptador de SES (`@aws-sdk/client-sesv2`, versión fijada) y el recordatorio mensual. A las 21:16 |
+| #105 | **E1 de la 020**: el marco y el color. A las 22:43 |
+| #106 | **E2 de la 016**: el BCE y los precios diarios en la nube y `atlas admin prices push`. El 2026-09-28 a las 02:56 |
+| #107 | La consola acepta identificadores que empiezan por un guion. A las 01:52 |
+| #108 | **E3 de la 016**: la consola y la web bajan de la nube los precios y el histórico del BCE, y `notification_email` sale de Ajustes. A las 06:48 |
+| #109 | **E4 de la 016**: el volcado mensual con `positions.json`, la integridad y el ensayo de restauración trimestrales, la revisión semanal, la Renta de enero y los modelos 720 y 721, y los procedimientos. A las 10:43, tras dos rondas de revisión |
+
+Con eso, **la 016 está fusionada entera** y de la etapa 2 de la Ronda 8 solo queda la 017. Siguen siendo **34 ADRs, todas aceptadas**, con notas del cierre de la 016 en ADR-0028, ADR-0029, ADR-0031, ADR-0032 y ADR-0034. **Nada está desplegado**: todo está probado con dobles de S3, SSM, SES y las fuentes. El paquete web, al cerrar la 016: arranque **75.061** (techo 75.077) y total **305.573** (techo 305.650). El registro entero está en `specs/016-scheduled-jobs/questions.md`; qué deja la 016 a la 017 (los contratos de IAM, las programaciones, el tiempo y la memoria) y qué deja **SIN VERIFICAR** para la 018, en «Etapas pendientes» de `docs/decision-roadmap.md`. Los cuatro procedimientos nuevos están en [`docs/runbooks/`](../runbooks/README.md).
+
+**El cierre de la 016** (PR de `docs/016-close`) trae los documentos de `docs/` al día con la feature entera, mueve los procedimientos a `docs/runbooks/` y arregla un defecto pequeño que quedó tras la ronda 2: el recordatorio mensual se tragaba un error al leer los cierres o el BCE y salía valorado con menos; ahora no sale y se reintenta, como la revisión semanal.
+
+### En marcha
+
+- **La 017 (infraestructura como código)**: su prompt, en la PR #110 (`docs/017-prompt`), abierta. Doce preguntas para la dirección en su §13; **la P1, instalar Terraform, es decisión del usuario y para el primer commit de código**.
+- **La 020 (mejoras visuales)**: E1 fusionada (PR #105); las entregas siguientes, en `feature/020-visual-refresh` (worktree `.claude/worktrees/020-visual-refresh`).
+
+### Pendiente del usuario
+
+- Lo mismo que el 2026-09-27: **los ficheros reales de los brókeres** cuando opere. Y ahora también **la decisión de instalar Terraform** (P1 del prompt de la 017).
+- Antes de la 018, las comprobaciones C1-C19 de ADR-0034 y lo que §9 pide, más el remitente, el destinatario y el interruptor de importes en `terraform.tfvars` ([`docs/runbooks/mail-recipient-and-amounts.md`](../runbooks/mail-recipient-and-amounts.md)).
+
+### Lo siguiente
+
+1. Revisar y cerrar el prompt de la 017 (PR #110), contestar sus preguntas y lanzarla. El prompt tiene que recoger «Lo que la 016 le deja a la 017» de la hoja de ruta, además de lo de la 015.
+2. Llevar la 020 por el ciclo de §3.
+3. El *challenge* de decisiones con ADR-0034 dentro (§6), si no se hace antes de lanzar la 017.
+4. Sin etapa: Q11 de la 016 (la antigüedad del contraste de los tipos en la Renta de enero) y la subida de `documents/` e `imports/` al bucket, en «Sin etapa asignada» de la hoja de ruta.
 
 ## Estado al 2026-09-27
 

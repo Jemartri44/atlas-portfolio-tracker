@@ -18,10 +18,14 @@ import {
   tokenParameterPath,
 } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
-import { CONFIG, consoleLogin, errorOf, setup } from "../../../api/test/harness.js";
+import { setup as apiSetup, CONFIG, consoleLogin, errorOf } from "../../../api/test/harness.js";
 import type { AdminAccess } from "../../src/admin/environment.js";
 import { EXIT } from "../../src/context.js";
 import { harness, seed } from "../harness.js";
+import { dashRandom } from "../support/dash-ids.js";
+
+/** Every id the API draws begins with `--`; `DEVICE` gives the ones of a single dash. */
+const setup = () => apiSetup({ random: dashRandom() });
 
 type Api = ReturnType<typeof setup>;
 
@@ -38,7 +42,20 @@ const adminOf = (api: Api): AdminAccess => ({
   },
 });
 
-const DEVICE = (n: number) => `D${String(n).padStart(21, "0")}`;
+/** A device id of 22 characters that begins with `--` (odd) or with `-` (even). */
+const DEVICE = (n: number) =>
+  n % 2 === 1 ? `--D${String(n).padStart(19, "0")}` : `-D${String(n).padStart(20, "0")}`;
+
+/** `atlas admin forget-device` with the id after `--`, the end of the options. */
+const forget = (id: string, ...flags: string[]) => [
+  "admin",
+  "forget-device",
+  "--env",
+  "test",
+  ...flags,
+  "--",
+  id,
+];
 
 const seedDevice = (api: Api, id: string, queue: { pending?: number; held?: number } = {}) =>
   api.s3.seed(
@@ -145,7 +162,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     const mine = await consoleLogin(api);
     const other = await consoleLogin(api);
     const c = await adminConsole(api);
-    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).toBe(EXIT.ok);
+    expect(await c.exec(forget(mine.device_id))).toBe(EXIT.ok);
     const object = JSON.parse(api.s3.text(`sync/devices/${mine.device_id}.json`) as string);
     expect(object).toMatchObject({ state: "forgotten" });
     expect(object.forgotten_at).toBeDefined();
@@ -171,9 +188,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
       device_id: string;
     };
     const c = await adminConsole(api);
-    expect(await c.exec(["admin", "forget-device", "--env", "test", session.device_id])).toBe(
-      EXIT.ok,
-    );
+    expect(await c.exec(forget(session.device_id))).toBe(EXIT.ok);
     const answer = await api.call("GET", "/api/session");
     expect(errorOf(answer).code).toBe("device_forgotten");
   });
@@ -182,15 +197,13 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     const api = setup();
     seedDevice(api, DEVICE(3), { pending: 2, held: 1 });
     const c = await adminConsole(api);
-    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(3)])).not.toBe(EXIT.ok);
+    expect(await c.exec(forget(DEVICE(3)))).not.toBe(EXIT.ok);
     expect(c.text()).toContain("forget_refused_queue");
     expect(JSON.parse(api.s3.text(`sync/devices/${DEVICE(3)}.json`) as string).state).toBe(
       "active",
     );
     c.reset();
-    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(3), "--force"])).toBe(
-      EXIT.ok,
-    );
+    expect(await c.exec(forget(DEVICE(3), "--force"))).toBe(EXIT.ok);
     expect(c.text()).toContain("2 operaciones pendientes y 1 retenidas");
     expect(JSON.parse(api.s3.text(`sync/devices/${DEVICE(3)}.json`) as string).state).toBe(
       "forgotten",
@@ -201,10 +214,10 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     const api = setup();
     seedDevice(api, DEVICE(4));
     const c = await adminConsole(api);
-    await c.exec(["admin", "forget-device", "--env", "test", DEVICE(4)]);
+    await c.exec(forget(DEVICE(4)));
     const etag = api.s3.etagOf(`sync/devices/${DEVICE(4)}.json`);
     c.reset();
-    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(4)])).toBe(EXIT.ok);
+    expect(await c.exec(forget(DEVICE(4)))).toBe(EXIT.ok);
     expect(c.text()).toContain("ya estaba olvidado");
     expect(api.s3.etagOf(`sync/devices/${DEVICE(4)}.json`)).toBe(etag);
   });
@@ -216,9 +229,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     const mine = await consoleLogin(api);
     const c = await adminConsole(api);
     api.ssm.throttleNext(1);
-    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).not.toBe(
-      EXIT.ok,
-    );
+    expect(await c.exec(forget(mine.device_id))).not.toBe(EXIT.ok);
     expect(JSON.parse(api.s3.text(`sync/devices/${mine.device_id}.json`) as string).state).toBe(
       "active",
     );
@@ -228,7 +239,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     );
     expect((record as { revoked_at?: string }).revoked_at).toBeUndefined();
     c.reset();
-    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).toBe(EXIT.ok);
+    expect(await c.exec(forget(mine.device_id))).toBe(EXIT.ok);
     expect(JSON.parse(api.s3.text(`sync/devices/${mine.device_id}.json`) as string).state).toBe(
       "forgotten",
     );
@@ -256,9 +267,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
       confirm: true,
       typed: "test",
     });
-    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).not.toBe(
-      EXIT.ok,
-    );
+    expect(await c.exec(forget(mine.device_id))).not.toBe(EXIT.ok);
     expect(JSON.parse(api.s3.text(`sync/devices/${mine.device_id}.json`) as string).state).toBe(
       "active",
     );
@@ -268,7 +277,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     );
     expect((record as { revoked_at?: string }).revoked_at).toBeDefined();
     c.reset();
-    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).toBe(EXIT.ok);
+    expect(await c.exec(forget(mine.device_id))).toBe(EXIT.ok);
     expect(JSON.parse(api.s3.text(`sync/devices/${mine.device_id}.json`) as string).state).toBe(
       "forgotten",
     );
@@ -286,9 +295,71 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
       }
     };
     const c = await adminConsole(api);
-    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(5)])).toBe(EXIT.ok);
+    expect(await c.exec(forget(DEVICE(5)))).toBe(EXIT.ok);
     expect(JSON.parse(api.s3.text(`sync/devices/${DEVICE(5)}.json`) as string).state).toBe(
       "forgotten",
+    );
+  });
+
+  it("takes an id that begins with a dash after --, or as --device, and says so when it is not", async () => {
+    const api = setup();
+    const mine = await consoleLogin(api);
+    const other = await consoleLogin(api);
+    // The harness draws them so: the case that was left to chance.
+    expect(mine.device_id.startsWith("--")).toBe(true);
+    expect(DEVICE(2).startsWith("-") && !DEVICE(2).startsWith("--")).toBe(true);
+    seedDevice(api, DEVICE(2), { pending: 1 });
+    const c = await adminConsole(api);
+    const before = api.s3.keys().map((key) => [key, api.s3.etagOf(key)]);
+    // Written bare, it reads as an option: refused, naming the way out.
+    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).toBe(
+      EXIT.usage,
+    );
+    expect(c.text()).toContain(`opción desconocida: ${mine.device_id}`);
+    expect(c.text()).toContain("escríbelo detrás de «--»");
+    expect(api.s3.keys().map((key) => [key, api.s3.etagOf(key)])).toEqual(before);
+    // As --device, whatever it begins with.
+    c.reset();
+    expect(
+      await c.exec(["admin", "forget-device", "--env", "test", "--device", mine.device_id]),
+    ).toBe(EXIT.ok);
+    expect(JSON.parse(api.s3.text(`sync/devices/${mine.device_id}.json`) as string).state).toBe(
+      "forgotten",
+    );
+    // A single dash is a positional even without --, and --force goes with it.
+    c.reset();
+    expect(await c.exec(["admin", "forget-device", DEVICE(2), "--force", "--env", "test"])).toBe(
+      EXIT.ok,
+    );
+    expect(JSON.parse(api.s3.text(`sync/devices/${DEVICE(2)}.json`) as string).state).toBe(
+      "forgotten",
+    );
+    // Only one of the two ways at a time.
+    c.reset();
+    expect(
+      await c.exec([
+        "admin",
+        "forget-device",
+        "--env",
+        "test",
+        "--device",
+        other.device_id,
+        "--",
+        other.device_id,
+      ]),
+    ).toBe(EXIT.usage);
+    expect(c.text()).toContain("el dispositivo se da una sola vez");
+    // --device belongs to forget-device only, and a missing one names both ways.
+    c.reset();
+    expect(await c.exec(["admin", "devices", "--env", "test", "--device", other.device_id])).toBe(
+      EXIT.usage,
+    );
+    expect(c.text()).toContain("--device no vale en «atlas admin devices»");
+    c.reset();
+    expect(await c.exec(["admin", "forget-device", "--env", "test"])).toBe(EXIT.usage);
+    expect(c.text()).toContain("escríbelo detrás de «--» o con --device <id>");
+    expect(JSON.parse(api.s3.text(`sync/devices/${other.device_id}.json`) as string).state).toBe(
+      "active",
     );
   });
 
@@ -296,10 +367,10 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     const api = setup();
     api.s3.seed(`sync/devices/${DEVICE(6)}.json`, "{");
     const c = await adminConsole(api);
-    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(7)])).not.toBe(EXIT.ok);
+    expect(await c.exec(forget(DEVICE(7)))).not.toBe(EXIT.ok);
     expect(c.text()).toContain("forget_device_missing");
     c.reset();
-    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(6)])).not.toBe(EXIT.ok);
+    expect(await c.exec(forget(DEVICE(6)))).not.toBe(EXIT.ok);
     expect(c.text()).toContain("forget_device_unreadable");
     expect(api.s3.text(`sync/devices/${DEVICE(6)}.json`)).toBe("{");
   });
@@ -307,7 +378,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
 
 describe("the confirmations of the administration (review of PR #98, N1)", () => {
   it.each([
-    ["forget-device", ["admin", "forget-device", "--env", "test", DEVICE(8)]],
+    ["forget-device", ["admin", "forget-device", "--env", "test", "--device", DEVICE(8)]],
     ["compact", ["admin", "compact", "--env", "test"]],
     ["restore", ["admin", "restore", "--env", "test", "--from", "backups/2026-09"]],
   ])("refuses --yes in %s, and writes nothing", async (_order, argv) => {
@@ -330,7 +401,7 @@ describe("the confirmations of the administration (review of PR #98, N1)", () =>
       confirm: true,
       typed: "s",
     });
-    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).toBe(EXIT.ok);
+    expect(await c.exec(forget(mine.device_id))).toBe(EXIT.ok);
     expect(c.text()).toContain("Cancelado");
     expect(c.text()).toContain("consola, «sobremesa», última sincronización ninguna");
     expect(c.text()).toContain("Escribe «test» para seguir");
@@ -347,7 +418,7 @@ describe("the confirmations of the administration (review of PR #98, N1)", () =>
       admin: adminOf(api),
       ledgerPath: join(await mkdtemp(join(tmpdir(), "atlas-admin-")), "ledger.jsonl"),
     });
-    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(9)])).toBe(EXIT.noTty);
+    expect(await c.exec(forget(DEVICE(9)))).toBe(EXIT.noTty);
     expect(JSON.parse(api.s3.text(`sync/devices/${DEVICE(9)}.json`) as string).state).toBe(
       "active",
     );
@@ -404,7 +475,7 @@ describe("forget-device sweeps the tokens issued meanwhile (review of PR #98, N8
       }
     };
     const c = await adminConsole(api);
-    expect(await c.exec(["admin", "forget-device", "--env", "test", mine.device_id])).toBe(EXIT.ok);
+    expect(await c.exec(forget(mine.device_id))).toBe(EXIT.ok);
     const record = parseTokenRecord(
       (await api.ssm.get(`${tokenParameterPath(CONFIG.ssmPrefix)}${late}`)) as string,
       late,
@@ -417,11 +488,11 @@ describe("forget-device sweeps the tokens issued meanwhile (review of PR #98, N8
     const api = setup();
     seedDevice(api, DEVICE(10));
     const c = await adminConsole(api);
-    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(10)])).toBe(EXIT.ok);
+    expect(await c.exec(forget(DEVICE(10)))).toBe(EXIT.ok);
     const late = "M".repeat(22);
     api.ssm.set(`${tokenParameterPath(CONFIG.ssmPrefix)}${late}`, recordFor(DEVICE(10), late));
     c.reset();
-    expect(await c.exec(["admin", "forget-device", "--env", "test", DEVICE(10)])).toBe(EXIT.ok);
+    expect(await c.exec(forget(DEVICE(10)))).toBe(EXIT.ok);
     expect(c.text()).toContain("revocados 1 tokens suyos que seguían vivos");
     const record = parseTokenRecord(
       (await api.ssm.get(`${tokenParameterPath(CONFIG.ssmPrefix)}${late}`)) as string,

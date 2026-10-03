@@ -11,12 +11,21 @@ import { join } from "node:path";
 import { base64url } from "@atlas/adapters/access";
 import { encodeLine, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
-import { ALLOWED, allowListOf, CONFIG, errorOf, NAMES, SELF } from "../../../api/test/harness.js";
+import {
+  ALLOWED,
+  allowListOf,
+  CONFIG,
+  errorOf,
+  NAMES,
+  SELF,
+  setup,
+} from "../../../api/test/harness.js";
 import type { AdminAccess } from "../../src/admin/environment.js";
 import { EXIT } from "../../src/context.js";
 import { CLI_SETTINGS, Events } from "../events.js";
 import { harness, seed } from "../harness.js";
 import { type Api, type ConsoleUnderTest, setupConsole } from "../support/console.js";
+import { dashRandom } from "../support/dash-ids.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
 
@@ -62,8 +71,8 @@ const adminConsole = async (api: Api, typed: string) => {
 
 describe("the stolen Google account, rehearsed step by step with the doubles", () => {
   it("walks the six steps in their order, and leaves the intruder out and the user in", async () => {
-    // The user's console, synced.
-    const user = await setupConsole({ confirmReissue: true });
+    // The user's console, synced. Every device id begins with `--`, never by chance.
+    const user = await setupConsole({ confirmReissue: true }, setup({ random: dashRandom() }));
     await writeFile(ledgerFile(user), textOf(base()));
     expect(await user.exec(["remote", "login", "--origin", SELF])).toBe(0);
     expect(await user.exec(["sync", "init", "--origin", SELF])).toBe(0);
@@ -110,9 +119,11 @@ describe("the stolen Google account, rehearsed step by step with the doubles", (
     expect(await admin.exec(["admin", "devices", "--env", "test"])).toBe(EXIT.ok);
     expect(admin.text()).toContain(intruderDevice);
     admin.reset();
-    expect(await admin.exec(["admin", "forget-device", "--env", "test", intruderDevice])).toBe(
-      EXIT.ok,
-    );
+    // After `--`, as the runbook writes it: a device id may begin with a dash.
+    expect(intruderDevice.startsWith("--")).toBe(true);
+    expect(
+      await admin.exec(["admin", "forget-device", "--env", "test", "--", intruderDevice]),
+    ).toBe(EXIT.ok);
     expect(JSON.parse(api.s3.text(`sync/devices/${intruderDevice}.json`) as string).state).toBe(
       "forgotten",
     );

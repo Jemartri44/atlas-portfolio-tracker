@@ -18,6 +18,8 @@ import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
+import { repeatedKey } from "../schema/json-keys.js";
+import { repeatedKeyError } from "./repeated-key.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
 /**
@@ -256,6 +258,39 @@ const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry 
   return legacy ? withoutLegacyConfirmations(entry) : entry;
 };
 
+const TOP_LEVEL_KEYS: readonly string[] = ["symbols_format", "assets"];
+
+/**
+ * The first top-level key of a parsed `prices/symbols.json` that the file
+ * does not have, cut to 64 characters; nothing when every key is known or it
+ * is not an object. Only the name: the value is never read.
+ */
+export const unknownSymbolsKey = (raw: unknown): string | undefined =>
+  isObject(raw)
+    ? Object.keys(raw)
+        .find((key) => !TOP_LEVEL_KEYS.includes(key))
+        ?.slice(0, 64)
+    : undefined;
+
+/**
+ * Why the text of a `prices/symbols.json` must never be served (review of PR
+ * #106, B1 and R2-B1): a key twice at any level, or a top-level key the file
+ * does not have. Only names are looked at, never a value; a text that is not
+ * JSON is not this function's to judge — every reader refuses it anyway.
+ */
+export const unservableSymbols = (text: string): "repeated_key" | "unknown_key" | undefined => {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  if (repeatedKey(text) !== undefined) {
+    return "repeated_key";
+  }
+  return unknownSymbolsKey(raw) === undefined ? undefined : "unknown_key";
+};
+
 /** Parses `prices/symbols.json`; `undefined` (no file) is an empty correspondence. */
 export const parseSymbols = (text: string | undefined): SymbolsFile => {
   if (text === undefined) {
@@ -266,6 +301,11 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
     raw = JSON.parse(text);
   } catch {
     throw wrong("json");
+  }
+  // A key twice says two things (review of PR #106, R2-B1): refused first.
+  const repeated = repeatedKey(text);
+  if (repeated !== undefined) {
+    throw repeatedKeyError("prices/symbols.json", repeated);
   }
   if (
     isObject(raw) &&
@@ -279,6 +319,18 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
       { format: raw.symbols_format },
     );
   }
+  // A key the file does not have is refused, by its name and never its value
+  // (review of PR #106, B1): `atlas admin prices push` uploads the bytes as
+  // they are, and the API serves them to every device, so a secret pasted at
+  // the top level would travel without the difference ever showing it.
+  const unknown = unknownSymbolsKey(raw);
+  if (unknown !== undefined) {
+    throw new ValidationError(
+      "symbols_file_unknown_key",
+      "prices/symbols.json has a top-level key it does not know",
+      { key: unknown },
+    );
+  }
   if (
     !isObject(raw) ||
     (raw.symbols_format !== SYMBOLS_FORMAT && raw.symbols_format !== LEGACY_FORMAT) ||
@@ -287,7 +339,9 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
     throw wrong("symbols_format");
   }
   const legacy = raw.symbols_format === LEGACY_FORMAT;
-  const assets: Record<AssetId, SymbolEntry> = {};
+  // Without a prototype (review of PR #106, N4): an asset called `__proto__`
+  // or `constructor` is an asset like any other, never a property of objects.
+  const assets: Record<AssetId, SymbolEntry> = Object.create(null);
   for (const [assetId, value] of Object.entries(raw.assets)) {
     assets[assetId] = entryOf(assetId, value, legacy);
   }

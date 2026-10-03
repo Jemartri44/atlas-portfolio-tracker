@@ -41,6 +41,7 @@ export {
   sameRate,
 } from "./ecb/history.js";
 export { firstRateDateOf, type RatePoint, ratePointsOf } from "./ecb/ledger-rates.js";
+export { type ActiveHistory, activeHistoryOf } from "./ecb/manifest.js";
 export {
   type OfficialRate,
   officialRatesOf,
@@ -70,7 +71,14 @@ export {
   targetHolidays,
 } from "./ecb/target.js";
 export { checkHistoryUpdate, type HistoryConflict, type HistoryUpdate } from "./ecb/update.js";
-export { type EcbUpdateResult, updateEcbHistory } from "./ecb/update-history.js";
+export {
+  type EcbGeneration,
+  type EcbHistoryRebuilder,
+  type EcbRebuildResult,
+  type EcbUpdateResult,
+  rebuildEcbHistory,
+  updateEcbHistory,
+} from "./ecb/update-history.js";
 export type { PendingDraftStore } from "./ports/draft-store.js";
 export type {
   DownloadedHistory,

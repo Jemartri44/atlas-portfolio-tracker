@@ -241,7 +241,6 @@ const SETTINGS_DECIMALS = [
   "renta-season-start",
   "renta-season-end",
   "tax-residence",
-  "notification-email",
 ];
 const SETTINGS_INTEGERS = ["stale-price-days", "transfer-max-days", "loss-carryforward-years"];
 /** Free-text settings: the benchmark is an `asset_id`, checked against the catalogue when queried. */
@@ -417,6 +416,13 @@ export const settingsCommand = async (
     return 0;
   }
   if (action === "set") {
+    // Feature 016, E3 (review of PR #108, N1): never accepted to be dropped in
+    // silence — a new snapshot leaves it out (`mergeSettings`, §8.1 P12).
+    if (flags.has("notification-email")) {
+      throw new UsageError(
+        "--notification-email ya no existe: el destinatario de los correos vive en la configuración de la nube (terraform.tfvars, de donde pasa a SSM), nunca en el libro (ADR-0028, ADR-0034)",
+      );
+    }
     if (flags.has("wash-sale-window-days")) {
       throw new UsageError(
         "la ventana de recompra se cuenta de fecha a fecha: usa --wash-sale-window fund=1y,stock=2m (ADR-0014)",

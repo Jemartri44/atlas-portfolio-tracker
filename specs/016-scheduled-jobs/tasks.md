@@ -49,12 +49,49 @@ Agrupadas por entrega (§2 del encargo). Cada tarea de código empieza por su te
 
 ## E2 — Los datos del día en la nube
 
-Bloque 0 (questions §2), almacenes de S3, tareas diarias, `atlas admin prices push`. Se detalla al empezar.
+- [x] T201 Traer `develop` tras la fusión de E1 (con la PR #102)
+- [x] T202 Q1: `updatePrices({ symbols: "read_only" })` y el resultado `currency_unchecked`
+- [x] T203 M1: `REFERENCE_NAME` de `prices/` por ida y vuelta con `priceFileName`; `_status.json` y `config.json` no se sirven
+- [x] T204 Bloque 0 en `questions.md` §14.1
+- [x] T205 El cupo de la nube en variables (18/23, umbral 3), `simulated` negada en `prod`, `cloudPriceConfigText`
+- [x] T206 Hallazgos del BCE y de los precios (`PRODUCER_FINDINGS`) y su redacción en el correo
+- [x] T207 `ecbRecovery` y los almacenes de S3 (`S3EcbHistoryStore`, `S3PriceStore`), las claves de SSM y la fuente simulada, detrás de `@atlas/adapters/aws-daily`
+- [x] T208 Las tareas `ecb_update` y `prices_update` en `apps/jobs`, con `fetch` limitado a 15 s
+- [x] T209 Guardianes: escritores diarios dentro de las tareas diarias; un solo escritor por objeto en `prices/`; centinelas de las tareas diarias (con la consola de Node)
+- [x] T210 `atlas admin prices push` (bloque 3): `symbolsPushPlan` y la orden
+- [x] T211 Contratos al día (`mail.md`, `iam-permissions.md` §8 y §9) y el plan
+- [x] T212 Autocomprobación de §5, mutación por lotes, tubería completa, congelar y PR
 
 ## E3 — Los dispositivos beben de la nube
 
-Consola, web, `notification_email`. Se detalla al empezar.
+- [x] T301 Traer `develop` tras la fusión de E2
+- [x] T302 N2 de §15: 2 y 2 por defecto en una carpeta que comparte los planes con la nube (`parsePriceConfig`, `updatePrices`)
+- [x] T303 Observación de la ronda 3: `prices_file_unreadable` y el recuento en el registro
+- [x] T304 §15.5: el almacén del BCE escribe solo sobre el manifiesto que leyó `active()`
+- [x] T305 El procedimiento del histórico del BCE en la nube (`runbooks/`)
+- [x] T306 Bloque 3: `notification_email` fuera de las fotos nuevas y de Ajustes; la redacción de `alert_channels` en §6
+- [x] T307 Bloque 1: `quotes/cloud.ts`, el cliente de los datos de referencia, `_cloud.json`, `atlas prices update` desde la nube, `--from-sources`, la procedencia en `status`
+- [x] T308 Bloque 2: la web baja el BCE de la nube (el SHA-256, la regla del punto 2, solo al abrir la tarjeta o a petición)
+- [ ] T309 Bloque 2: los precios del móvil — **no caben en P13** (§17.4, Q8): no se construyen
+- [x] T310 Autocomprobación de §5, mutación, tubería completa, congelar y PR
+
+- **Anotado de la revisión de la PR #106 (N2 de fuentes y S3; decisión de la dirección, 2026-09-27)**: cuando la consola esté configurada para bajar los precios de la nube, su presupuesto por defecto pasa a ser **el sobrante del plan** (2 llamadas de EODHD y 2 de Alpha Vantage), salvo que su `prices/config.json` diga otra cosa. Hoy, sin ese fichero, la consola usa 20 y 25 y, con la nube gastando 18 y 23, puede pasarse del cupo del plan gratuito. **La revisión de E3 lo comprueba.**
 
 ## E4 — Copias, integridad y avisos periódicos
 
-Volcado, integridad, avisos, procedimientos. Se detalla al empezar.
+- [x] T401 Traer `develop` tras la fusión de E3 (PR #108)
+- [x] T402 Bloque 0 en `questions.md` §20.1
+- [x] T403 `ATLAS_LEDGER_SIZE_WARNING_BYTES` de la función de integridad (1.024 a 104.857.600)
+- [x] T404 Los objetos del volcado en su registro (`objects`, solo `monthly_backup`)
+- [x] T405 N3 de §15: `previous/` solo con el SHA-256 que el manifiesto dice de él (`previousHistoryOf`, `generations()`)
+- [x] T406 [R40] `positions.json` (`positionsDocument`) y las decisiones del volcado (`dumpStep`, `dumpManifestStep`, `backupFindings`)
+- [x] T407 [R41] El ensayo de restauración (`restoreRehearsal`, `latestDump`)
+- [x] T408 [R42] Los hallazgos de la integridad (`integrityFindings`, listas cerradas de códigos) y sus correos
+- [x] T409 [R43, R44] La revisión semanal, la Renta y los modelos 720 y 721 (`reviewFacts`, `taxReturnFacts`, `informativeFacts`) y sus correos
+- [x] T410 Las tareas `monthly_backup`, `quarterly_integrity`, `weekly_review`, `tax_return_ready` e `informative_thresholds` en `apps/jobs`; todo el catálogo tiene su *runner*
+- [x] T411 Guardianes: los avisos de enero no alcanzan ningún precio; centinelas de las tareas de E4; códigos solo del correo en `tests/messages.test.ts`
+- [x] T412 [R45] Los procedimientos (`runbooks/`) y su ensayo versionado (`tests/runbook-016.test.ts`)
+- [x] T413 Contratos al día (`iam-permissions.md` §4, §5, §8 y §9, `mail.md`, `data-model.md` §1 y §4) y la lista de documentos de la 016 entera (questions §20.8)
+- [x] T414 Autocomprobación de §5, mutación, tubería completa, congelar y PR
+
+- **Anotado de la revisión de la PR #106 (N3 de fuentes y S3)**: quien use `manifest.previous` de `reference/ecb/` (un procedimiento de restauración, el volcado) **verifica su SHA-256** antes de usarlo: un corte entre los pasos 1 y 2 de una activación deja `previous/` con otro contenido que el que dice el manifiesto. **Hecho en E4 (T405)**: la reconstrucción solo compara con `previous/` si cuadra; el volcado no copia `previous/`; el procedimiento del BCE lo manda comprobar.

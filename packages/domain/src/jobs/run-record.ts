@@ -43,6 +43,8 @@ export const RUN_STATES = [
   "done",
   "failed",
   "send_unknown",
+  // A past period of a warning nobody sent: closed without sending (review of PR #109, avisos B1).
+  "expired",
 ] as const;
 export type RunState = (typeof RUN_STATES)[number];
 
@@ -56,6 +58,19 @@ export interface Finding {
   readonly subject: string;
   readonly counts?: Counts;
   readonly dates?: readonly CivilDate[];
+}
+
+/**
+ * An object a monthly dump wrote, or found already there (E4, plan §8): its
+ * key, **always under the dump of its own period**, and the SHA-256 of its
+ * bytes. `kept_from_earlier_attempt` says that an attempt before this one
+ * of the same period left other bytes there, which stay: a dump is never
+ * overwritten.
+ */
+export interface DumpObject {
+  readonly key: string;
+  readonly sha256: string;
+  readonly kept_from_earlier_attempt?: true;
 }
 
 export interface Outcome {
@@ -74,6 +89,8 @@ export interface RunRecord {
   readonly outcome?: Outcome;
   readonly frequencies?: { readonly ignored: readonly IgnoredFrequency[] };
   readonly findings?: readonly Finding[];
+  /** Only the monthly dump. */
+  readonly objects?: readonly DumpObject[];
 }
 
 /** Where the record of `task` and `period` lives. */
@@ -101,6 +118,23 @@ export const isFinding = (value: unknown): value is Finding =>
   (value.counts === undefined || isCounts(value.counts)) &&
   (value.dates === undefined || (Array.isArray(value.dates) && value.dates.every(isCivilDate)));
 
+/** A key of a dump of `period`: one or more plain segments below it, never a way out. */
+const isDumpKey = (key: unknown, period: string): boolean =>
+  typeof key === "string" &&
+  key.startsWith(`backups/${period}/`) &&
+  key
+    .slice(`backups/${period}/`.length)
+    .split("/")
+    .every((segment) => /^[A-Za-z0-9._%-]{1,255}$/.test(segment) && !/^\.\.?$/.test(segment));
+
+const isDumpObject = (value: unknown, period: string): value is DumpObject =>
+  isPlainObject(value) &&
+  hasKeys(value, ["key", "sha256"], ["kept_from_earlier_attempt"]) &&
+  isDumpKey(value.key, period) &&
+  typeof value.sha256 === "string" &&
+  /^[0-9a-f]{64}$/.test(value.sha256) &&
+  (value.kept_from_earlier_attempt === undefined || value.kept_from_earlier_attempt === true);
+
 const isIgnored = (value: unknown): value is IgnoredFrequency =>
   isPlainObject(value) &&
   hasKeys(value, ["code"], ["key"]) &&
@@ -127,7 +161,7 @@ export const parseRunRecord = (text: string, task: JobTask, period: string): Rea
     hasKeys(
       value,
       ["run_format", "task", "period", "state", "claimed_at", "attempts"],
-      ["closed_at", "outcome", "frequencies", "findings"],
+      ["closed_at", "outcome", "frequencies", "findings", "objects"],
     ) &&
     value.run_format === RUN_FORMAT &&
     value.task === task &&
@@ -144,7 +178,11 @@ export const parseRunRecord = (text: string, task: JobTask, period: string): Rea
         Array.isArray(value.frequencies.ignored) &&
         value.frequencies.ignored.every(isIgnored))) &&
     (value.findings === undefined ||
-      (Array.isArray(value.findings) && value.findings.every(isFinding)));
+      (Array.isArray(value.findings) && value.findings.every(isFinding))) &&
+    (value.objects === undefined ||
+      (task === "monthly_backup" &&
+        Array.isArray(value.objects) &&
+        value.objects.every((object) => isDumpObject(object, period))));
   return readable
     ? { ok: true, record: value as unknown as RunRecord }
     : { ok: false, code: "job_record_unreadable" };
@@ -158,7 +196,7 @@ export type RunStep =
   | { readonly kind: "close_unknown" }
   | {
       readonly kind: "skip";
-      readonly code: "job_already_done" | "job_send_unknown" | "job_in_progress";
+      readonly code: "job_already_done" | "job_send_unknown" | "job_in_progress" | "job_expired";
     };
 
 /**
@@ -186,6 +224,8 @@ export const nextStep = (
       return { kind: "skip", code: "job_already_done" };
     case "send_unknown":
       return { kind: "skip", code: "job_send_unknown" };
+    case "expired":
+      return { kind: "skip", code: "job_expired" };
     case "sending":
       return delivery === "at_most_once" ? { kind: "close_unknown" } : { kind: "resume" };
     default:
@@ -195,7 +235,7 @@ export const nextStep = (
 
 /** Whether a record is closed: nothing more happens to its period. */
 export const isClosed = (record: RunRecord): boolean =>
-  record.state === "done" || record.state === "send_unknown";
+  record.state === "done" || record.state === "send_unknown" || record.state === "expired";
 
 /** The record a run writes when it claims its period, or takes it up again. */
 export const claimRecord = (
@@ -210,6 +250,9 @@ export const claimRecord = (
   state: "claimed",
   claimed_at: at,
   attempts: previous === undefined ? 1 : previous.attempts + 1,
+  // What earlier attempts of a dump wrote is carried, so a retry tells its own
+  // objects from anybody else's even after a run that died (review of PR #109, copias N3).
+  ...(previous?.objects === undefined ? {} : { objects: previous.objects }),
 });
 
 /** The same record in another state; closing states carry the instant. */
@@ -221,6 +264,7 @@ export const recordIn = (
     readonly outcome?: Outcome;
     readonly findings?: readonly Finding[];
     readonly frequencies?: { readonly ignored: readonly IgnoredFrequency[] };
+    readonly objects?: readonly DumpObject[];
   } = {},
 ): RunRecord => {
   const { closed_at: _closed, ...rest } = record;

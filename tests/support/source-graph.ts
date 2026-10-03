@@ -189,17 +189,44 @@ export const nodesOf = function* (node: unknown): Generator<Record<string, unkno
   }
 };
 
-/** A package subpath as its source file, **read off `exports`** (never a list written here). */
+/** Every target the conditions of an export name, at any depth (`types`, `import`, `default`, `require`…). */
+const targetsOf = (value: unknown): string[] =>
+  typeof value === "string"
+    ? [value]
+    : typeof value === "object" && value !== null
+      ? Object.values(value).flatMap(targetsOf)
+      : [];
+
+/**
+ * A package subpath as its source file, **read off `exports`** (never a list
+ * written here). **Every condition** is resolved, and they must all name the
+ * same module (round 2 of the review of PR #106, R2-N3): the graph once read
+ * `types` while the bundler took `import`, and a subpath could point the two
+ * at different files. Different modules fail, so no guard passes on one.
+ */
 export const exportsOf = (root: string): Map<string, string> => {
   const exported = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).exports as Record<
     string,
-    { types: string }
+    unknown
   >;
   return new Map(
-    Object.entries(exported).map(([subpath, target]) => [
-      subpath,
-      join(root, "src", target.types.replace(/^\.\/dist\//, "").replace(/\.d\.ts$/, ".ts")),
-    ]),
+    Object.entries(exported).map(([subpath, target]) => {
+      const sources = new Set(
+        targetsOf(target).map((named) =>
+          join(
+            root,
+            "src",
+            `${named.replace(/^\.\/dist\//, "").replace(/\.d\.ts$|\.js$|\.ts$/, "")}.ts`,
+          ),
+        ),
+      );
+      if (sources.size !== 1) {
+        throw new Error(
+          `${subpath} of ${relative(repoRoot, join(root, "package.json"))}: its conditions name ${sources.size} modules, not one`,
+        );
+      }
+      return [subpath, [...sources][0] as string];
+    }),
   );
 };
 
@@ -233,6 +260,11 @@ export const resolveAcross = (
       fileAt(specifier) ??
       `<unresolved ${specifier}>`
     );
+  }
+  // An alias of the `imports` field of a package.json: the graph cannot follow
+  // it, so it fails closed (review of PR #106, N1), and a test forbids the field.
+  if (specifier.startsWith("#")) {
+    return `<unresolved ${specifier}>`;
   }
   for (const [name, subpaths] of known) {
     if (specifier === name || specifier.startsWith(`${name}/`)) {

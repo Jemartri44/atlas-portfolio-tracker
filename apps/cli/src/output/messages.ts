@@ -409,6 +409,14 @@ export const describeError = (error: DomainError): string => {
       return "AWS no responde ahora (el bucket de datos o SSM): no se ha escrito nada que no se diga. Repite dentro de un rato.";
     case "admin_aws_refused":
       return `AWS ha rechazado la orden (${text(d.name)}): la consola usa una sesión ya abierta del rol de administración del entorno, con MFA («aws sso login», o «aws configure export-credentials» tras el código), como dice el procedimiento «Revocar todos los tokens».`;
+    case "symbols_push_missing":
+      return "No hay prices/symbols.json en la carpeta: declara antes los símbolos con «atlas prices symbols set».";
+    case "symbols_push_misstored":
+      return `No se sube: prices/symbols.json aún tiene cierres guardados en otra divisa (${text(d.assets)}). Púrgalos antes en local con «atlas prices purge».`;
+    case "symbols_push_remote_newer":
+      return `No se sube: el prices/symbols.json de la nube es de una versión más nueva de la aplicación (formato ${text(d.format)}), y esta consola no lo sobrescribe. Actualiza la aplicación.`;
+    case "symbols_push_conflict":
+      return "El prices/symbols.json de la nube ha cambiado mientras se comparaba: no se ha escrito nada. Repite la orden para ver la diferencia nueva.";
     case "restore_source_missing":
       return `No se encuentra la copia ${text(d.from)}.`;
     case "restore_candidate_invalid":
@@ -493,6 +501,12 @@ export const describeError = (error: DomainError): string => {
       return `La correspondencia de símbolos prices/symbols.json no se entiende (${text(d.field)}): corrígela, o vuelve a declarar los símbolos con «atlas prices symbols set».`;
     case "symbols_file_newer_version":
       return `La correspondencia de símbolos prices/symbols.json es de una versión más nueva de la aplicación (formato ${text(d.format)}): esta consola no la lee ni la escribe. Actualiza la aplicación.`;
+    case "invalid_cloud_pull":
+      return `prices/_cloud.json, lo que la carpeta guarda de su última descarga de la nube, no se entiende (${text(d.field)}): bórralo y vuelve a ejecutar «atlas prices update», que lo rehace sin tocar ningún cierre.`;
+    case "json_key_repeated":
+      return `${text(d.file)}${d.line === undefined ? "" : `, línea ${text(d.line)},`} repite la clave ${text(d.key)}: dice dos cosas a la vez y no se lee. Quita una de las dos; la aplicación nunca escribe una clave dos veces.`;
+    case "symbols_file_unknown_key":
+      return `La correspondencia de símbolos prices/symbols.json tiene una clave de primer nivel que no es suya (${text(d.key)}): quítala del fichero. Solo lleva symbols_format y assets; nunca se sube ni se lee con otra cosa.`;
     case "symbols_misstored_pending":
       return `${text(d.asset_id)} tiene cierres de ${text(d.source)} guardados en una divisa equivocada, pendientes de purgar: mientras tanto no se puede quitar esa fuente ni el activo, porque volverían a contar en euros sin aviso. Púrgalos con «atlas prices purge ${text(d.asset_id)} --source ${text(d.source)}».`;
     case "symbols_not_declared":

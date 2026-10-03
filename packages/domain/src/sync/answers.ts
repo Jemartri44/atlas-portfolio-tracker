@@ -10,8 +10,8 @@ import {
   type AppendResult,
   LINE_REJECTION_CODES,
   type LineRejection,
-  REMOTE_FAILURE_CODES,
 } from "../ports/remote-ledger.js";
+import { parseErrorAnswer } from "../remote/answers.js";
 
 const SHA = /^[0-9a-f]{64}$/;
 
@@ -77,31 +77,12 @@ export const parsePublishAnswer = (
     ? { device_id: value.device_id, published_at: value.published_at }
     : undefined;
 
-/** The codes only the client names, for what never reached the API: never read from an answer. */
-const CLIENT_ONLY = new Set(["transport_rejected", "network_failed"]);
-
-/** An error of §7 of the closed list, or nothing (then the answer is `transport_rejected`). */
-export const parseErrorAnswer = (
-  value: unknown,
-): { code: string; details: Record<string, unknown> } | undefined => {
-  if (!isRecord(value) || !onlyKeys(value, ["error"]) || !isRecord(value.error)) {
-    return undefined;
-  }
-  const { error } = value;
-  if (
-    !onlyKeys(error, ["code", "details"]) ||
-    typeof error.code !== "string" ||
-    CLIENT_ONLY.has(error.code) ||
-    !(REMOTE_FAILURE_CODES as readonly string[]).includes(error.code) ||
-    !isRecord(error.details)
-  ) {
-    return undefined;
-  }
-  return { code: error.code, details: error.details };
-};
-
 /** The SHA-256 an `ETag` quotes, strong or weak (CloudFront weakens it when it compresses). */
 export const etagOfHeader = (header: string | null): string | undefined => {
   const quoted = /^(?:W\/)?"([0-9a-f]{64})"$/.exec(header ?? "");
   return quoted?.[1];
 };
+
+// What the reference data and the sync share (`remote/answers.ts`): kept at
+// this door for the sync, which always read them here.
+export { parseErrorAnswer };

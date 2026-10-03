@@ -100,9 +100,61 @@ describe("the reference data (§6)", () => {
     ]) {
       expect(referenceKey("ecb", name), name).toEqual(refusal("reference_name_invalid"));
     }
-    expect(referenceKey("prices", `a${"x".repeat(127)}`)).toEqual({
-      key: `prices/a${"x".repeat(127)}`,
+    expect(referenceKey("ecb", `a${"x".repeat(127)}`)).toEqual({
+      key: `reference/ecb/a${"x".repeat(127)}`,
     });
+  });
+
+  /**
+   * Feature 016, E2 (§8.2 M1, amending P6 bis; Q4): a name of `prices/` is
+   * served when it is **exactly what `priceFileName` writes** for some asset
+   * — decoding and encoding it again gives the same name — at most 255
+   * characters, and `symbols.json`; never `_status.json` nor `config.json`.
+   * The whole list of the reviewer of PR #99, with what each gives.
+   */
+  it("serves the price files by the round trip with priceFileName, at most 255 characters", () => {
+    for (const name of [
+      "IE00B4L5Y983.jsonl",
+      "ast%25x.jsonl",
+      "ast(b).jsonl",
+      "ast!b.jsonl",
+      "ast'b.jsonl",
+      "ast*b.jsonl",
+      "ast~b.jsonl",
+      "_x.jsonl",
+      "-x.jsonl",
+      "%2Ex.jsonl",
+      "%2E..jsonl",
+      "a%20b.jsonl",
+      "a%2Fb.jsonl",
+      "%C3%B1and%C3%BA.jsonl",
+      `${"a".repeat(249)}.jsonl`,
+      "symbols.json",
+    ]) {
+      expect(referenceKey("prices", name), name).toEqual({ key: `prices/${name}` });
+    }
+    for (const name of [
+      "_status.json",
+      "config.json",
+      `${"a".repeat(250)}.jsonl`,
+      ".x.jsonl",
+      "a b.jsonl",
+      "a/b.jsonl",
+      "a%2fb.jsonl",
+      "%41.jsonl",
+      "a%.jsonl",
+      "a%E0%A4%A.jsonl",
+      "ñ.jsonl",
+      "x.csv",
+      "x",
+      ".jsonl",
+      "",
+      "..",
+      "../ledger/ledger.jsonl",
+      "..%2Fledger%2Fledger.jsonl",
+    ]) {
+      expect(referenceKey("prices", name), name).toEqual(refusal("reference_name_invalid"));
+    }
   });
 
   it("serves only .csv, .jsonl and .json, each with its type", () => {
@@ -122,7 +174,12 @@ describe("the reference data (§6)", () => {
           { key: "reference/ecb/eurofxref-hist.csv", etag: '"e1"', size: 900 },
           { key: "reference/ecb/api-exr.csv", etag: '"a1"', size: 800 },
         ],
-        [{ key: "prices/X.jsonl", etag: 'W/"p1"', size: 30 }],
+        [
+          { key: "prices/X.jsonl", etag: 'W/"p1"', size: 30 },
+          { key: "prices/_status.json", etag: '"s1"', size: 40 },
+          { key: "prices/config.json", etag: '"c1"', size: 10 },
+          { key: "prices/ .jsonl", etag: '"b1"', size: 10 },
+        ],
       ),
     ).toEqual({
       ecb: [

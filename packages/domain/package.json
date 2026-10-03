@@ -30,6 +30,10 @@
       "types": "./dist/sync.d.ts",
       "import": "./dist/sync.js"
     },
+    "./remote-answers": {
+      "types": "./dist/remote-answers.d.ts",
+      "import": "./dist/remote-answers.js"
+    },
     "./access": {
       "types": "./dist/access.d.ts",
       "import": "./dist/access.js"

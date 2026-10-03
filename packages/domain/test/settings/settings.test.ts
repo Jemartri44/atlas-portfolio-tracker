@@ -379,6 +379,25 @@ describe("mergeSettings", () => {
   });
 });
 
+describe("notification_email (feature 016, E3; §8.1 P12, §8.2 M7)", () => {
+  it("never carries it into a new snapshot, from what is in force or from the patch", () => {
+    const current = mergeSettings(DEFAULT_SETTINGS, {});
+    const withEmail = { ...current, notification_email: "atlas@example.invalid" };
+    expect("notification_email" in mergeSettings(withEmail, { stale_price_days: 7 })).toBe(false);
+    expect(
+      "notification_email" in
+        mergeSettings(DEFAULT_SETTINGS, { notification_email: "yo@example.invalid" }),
+    ).toBe(false);
+  });
+
+  it("still reads it in a line already written: the loader never hardens", () => {
+    expect(
+      validateSettings({ ...DEFAULT_SETTINGS, notification_email: "atlas@example.invalid" })
+        .notification_email,
+    ).toBe("atlas@example.invalid");
+  });
+});
+
 describe("bucket_benchmark_asset_id (business rule 16)", () => {
   it("accepts an asset_id and rejects an empty or non-string one", () => {
     expect(

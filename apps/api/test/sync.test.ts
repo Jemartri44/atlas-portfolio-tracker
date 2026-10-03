@@ -722,14 +722,56 @@ describe("the reference data (§6)", () => {
   it("answers 404 to a type it does not serve and to a file that is not there", async () => {
     const api = setup();
     const { token } = await credentials(api);
-    api.s3.seed("prices/notes.txt", "x");
-    expect(errorOf(await read(api, token, "/api/reference/prices/notes.txt"))).toEqual({
+    api.s3.seed("reference/ecb/notes.txt", "x");
+    expect(errorOf(await read(api, token, "/api/reference/ecb/notes.txt"))).toEqual({
       code: "not_found",
       details: { reason: "type" },
     });
+    // Feature 016, E2 (§8.2 M1): in prices/ only what priceFileName writes, and symbols.json.
+    api.s3.seed("prices/notes.txt", "x");
+    api.s3.seed("prices/_status.json", "{}");
+    for (const name of ["notes.txt", "_status.json", "config.json"]) {
+      expect(errorOf(await read(api, token, `/api/reference/prices/${name}`)), name).toEqual({
+        code: "reference_name_invalid",
+        details: {},
+      });
+    }
     expect(errorOf(await read(api, token, "/api/reference/prices/none.jsonl"))).toEqual({
       code: "not_found",
       details: { reason: "missing" },
     });
+  });
+
+  it("never serves a symbols.json with a top-level key it does not know (review of PR #106, B1)", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    const good = JSON.stringify({ symbols_format: 2, assets: {} });
+    api.s3.seed("prices/symbols.json", good);
+    const served = await read(api, token, "/api/reference/prices/symbols.json");
+    expect(served.statusCode).toBe(200);
+    expect(Buffer.from(served.body, served.isBase64Encoded ? "base64" : "utf8").toString()).toBe(
+      good,
+    );
+    api.s3.seed(
+      "prices/symbols.json",
+      JSON.stringify({ symbols_format: 2, assets: {}, api_key: "sentinel-secret-of-the-api" }),
+    );
+    const refused = await read(api, token, "/api/reference/prices/symbols.json");
+    expect(errorOf(refused)).toEqual({ code: "not_found", details: { reason: "unknown_key" } });
+    expect(JSON.stringify(refused)).not.toContain("sentinel-secret-of-the-api");
+    expect(api.logs.join("\n")).not.toContain("sentinel-secret-of-the-api");
+  });
+
+  it("never serves a symbols.json that repeats a key (review of PR #106, R2-B1)", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    api.s3.seed(
+      "prices/symbols.json",
+      '{"symbols_format":2,"assets":{"LEAK":{"note":"sentinel-secret-of-the-api"}},"assets":{}}',
+    );
+    const refused = await read(api, token, "/api/reference/prices/symbols.json");
+    expect(errorOf(refused)).toEqual({ code: "not_found", details: { reason: "repeated_key" } });
+    expect(JSON.stringify(refused)).not.toContain("sentinel-secret-of-the-api");
+    expect(api.logs.join("\n")).not.toContain("sentinel-secret-of-the-api");
   });
 });

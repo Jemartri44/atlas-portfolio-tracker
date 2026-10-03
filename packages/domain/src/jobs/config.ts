@@ -35,10 +35,15 @@ const COMMON = [
 /** The variables of each family, besides the common ones. */
 export const JOBS_CONFIG_VARIABLES: Readonly<Record<JobFamily, readonly string[]>> = {
   ecb: [],
-  prices: [],
+  prices: [
+    "ATLAS_PRICE_SOURCES",
+    "ATLAS_PRICES_EODHD_DAILY_CALLS",
+    "ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS",
+    "ATLAS_PRICES_FAILURE_THRESHOLD",
+  ],
   mail: ["ATLAS_MAIL_FROM", "ATLAS_ORIGIN", "ATLAS_OAUTH_IDLE_WARNING_DAYS"],
   backup: [],
-  integrity: [],
+  integrity: ["ATLAS_LEDGER_SIZE_WARNING_BYTES"],
 };
 
 export interface MailConfig {
@@ -46,6 +51,38 @@ export interface MailConfig {
   readonly origin: string;
   readonly idleWarningDays: number;
 }
+
+/**
+ * The download of the cloud (§8.2 M5): **not** a `prices/config.json` of the
+ * bucket, which does not exist, but variables of the function that Terraform
+ * writes. `simulated` is the fixed source of `dev` (§8.1 P14, §8.2 m3): it
+ * replaces the real ones, never mixes with them, and **stops the function in
+ * `prod`**.
+ */
+export interface PricesConfig {
+  readonly sources: readonly ("eodhd" | "alpha_vantage")[] | "simulated";
+  readonly dailyCalls: { readonly eodhd: number; readonly alpha_vantage: number };
+  readonly failureThreshold: number;
+}
+
+/** The ceilings of the budgets, **fixed in the code**: the quotas of the free plans (ADR-0031). */
+export const PRICE_BUDGET_CEILINGS = { eodhd: 20, alpha_vantage: 25 } as const;
+
+/** The ceiling of the threshold of consecutive failures. */
+export const FAILURE_THRESHOLD_CEILING = 30;
+
+/**
+ * The integrity (E4; ADR-0028, «Revisión del plazo de las versiones»): the
+ * size of the ledger above which the lifetime of the non-current versions of
+ * ADR-0006 has to be looked at again. 1 MB by default in Terraform; **never
+ * in the code**, with its floor and ceiling fixed here.
+ */
+export interface IntegrityConfig {
+  readonly ledgerSizeWarningBytes: number;
+}
+
+/** The floor and the ceiling of `ATLAS_LEDGER_SIZE_WARNING_BYTES`: 1 KiB and 100 MiB. */
+export const LEDGER_SIZE_WARNING_RANGE = { floor: 1024, ceiling: 104_857_600 } as const;
 
 export interface JobsConfig {
   readonly env: "dev" | "prod";
@@ -57,6 +94,8 @@ export interface JobsConfig {
   /** The timeout of the Lambda, in milliseconds (`ATLAS_JOB_MAX_RUN_SECONDS`). */
   readonly maxRunMs: number;
   readonly mail?: MailConfig;
+  readonly prices?: PricesConfig;
+  readonly integrity?: IntegrityConfig;
 }
 
 const invalid = (variable: string, reason: string): ValidationError =>
@@ -104,6 +143,79 @@ const mailConfig = (env: Readonly<Record<string, string | undefined>>): MailConf
   return { from, origin, idleWarningDays: Number(days) };
 };
 
+const wholeNumber = (
+  env: Readonly<Record<string, string | undefined>>,
+  variable: string,
+  minimum: number,
+  ceiling: number,
+): number => {
+  const text = required(env, variable);
+  if (!/^(0|[1-9]\d{0,8})$/.test(text) || Number(text) < minimum) {
+    throw invalid(variable, "not_a_whole_number");
+  }
+  if (Number(text) > ceiling) {
+    throw invalid(variable, "above_ceiling");
+  }
+  return Number(text);
+};
+
+const pricesConfig = (
+  env: Readonly<Record<string, string | undefined>>,
+  environment: "dev" | "prod",
+): PricesConfig => {
+  const names = required(env, "ATLAS_PRICE_SOURCES").split(",");
+  let sources: PricesConfig["sources"];
+  if (names.length === 1 && names[0] === "simulated") {
+    if (environment === "prod") {
+      throw invalid("ATLAS_PRICE_SOURCES", "simulated_in_prod");
+    }
+    sources = "simulated";
+  } else {
+    if (!names.every((name) => name === "eodhd" || name === "alpha_vantage")) {
+      throw invalid("ATLAS_PRICE_SOURCES", "unknown_source");
+    }
+    if (new Set(names).size !== names.length) {
+      throw invalid("ATLAS_PRICE_SOURCES", "repeated_source");
+    }
+    sources = names as ("eodhd" | "alpha_vantage")[];
+  }
+  return {
+    sources,
+    dailyCalls: {
+      eodhd: wholeNumber(env, "ATLAS_PRICES_EODHD_DAILY_CALLS", 0, PRICE_BUDGET_CEILINGS.eodhd),
+      alpha_vantage: wholeNumber(
+        env,
+        "ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS",
+        0,
+        PRICE_BUDGET_CEILINGS.alpha_vantage,
+      ),
+    },
+    failureThreshold: wholeNumber(
+      env,
+      "ATLAS_PRICES_FAILURE_THRESHOLD",
+      1,
+      FAILURE_THRESHOLD_CEILING,
+    ),
+  };
+};
+
+/**
+ * The text of a `prices/config.json` made of the configuration of the
+ * function, for `parsePriceConfig` to read as always: the order of the
+ * sources, their budgets and the threshold. The market days and the recent
+ * days asked again by asset type keep their defaults (Q13). The simulated
+ * source answers as `eodhd`, the only name the store knows.
+ */
+export const cloudPriceConfigText = (prices: PricesConfig): string =>
+  JSON.stringify({
+    source_order: prices.sources === "simulated" ? ["eodhd"] : prices.sources,
+    daily_calls:
+      prices.sources === "simulated"
+        ? { eodhd: prices.dailyCalls.eodhd, alpha_vantage: 0 }
+        : prices.dailyCalls,
+    failure_threshold: prices.failureThreshold,
+  });
+
 export const parseJobsConfig = (env: Readonly<Record<string, string | undefined>>): JobsConfig => {
   const { family, jobs } = jobsOf(required(env, "ATLAS_JOBS"));
   const mine: readonly string[] = [...COMMON, ...JOBS_CONFIG_VARIABLES[family]];
@@ -121,6 +233,12 @@ export const parseJobsConfig = (env: Readonly<Record<string, string | undefined>
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(dataBucket)) {
     throw invalid("ATLAS_DATA_BUCKET", "not_a_bucket_name");
   }
+  // The bucket of the environment the function says (review of PR #106, N1):
+  // a function of prod with ATLAS_ENV=dev does not start, so the simulated
+  // source — which needs ATLAS_ENV=dev — only ever writes into a bucket of dev.
+  if (!dataBucket.startsWith(`atlas-${environment}-`)) {
+    throw invalid("ATLAS_DATA_BUCKET", "not_of_the_environment");
+  }
   const maxRun = required(env, "ATLAS_JOB_MAX_RUN_SECONDS");
   if (!/^[1-9]\d{0,8}$/.test(maxRun)) {
     throw invalid("ATLAS_JOB_MAX_RUN_SECONDS", "not_a_positive_integer");
@@ -136,5 +254,18 @@ export const parseJobsConfig = (env: Readonly<Record<string, string | undefined>
     jobs,
     maxRunMs: Number(maxRun) * 1000,
     ...(family === "mail" ? { mail: mailConfig(env) } : {}),
+    ...(family === "prices" ? { prices: pricesConfig(env, environment) } : {}),
+    ...(family === "integrity"
+      ? {
+          integrity: {
+            ledgerSizeWarningBytes: wholeNumber(
+              env,
+              "ATLAS_LEDGER_SIZE_WARNING_BYTES",
+              LEDGER_SIZE_WARNING_RANGE.floor,
+              LEDGER_SIZE_WARNING_RANGE.ceiling,
+            ),
+          },
+        }
+      : {}),
   };
 };

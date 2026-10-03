@@ -151,7 +151,14 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   prices: { update: 2, status: 2, symbols: 4, purge: 3 },
   draft: { list: 2, confirm: 3, discard: 3 },
   remote: { login: 2, logout: 2, status: 2 },
-  admin: { devices: 2, "revoke-all-tokens": 2, "forget-device": 3, compact: 2, restore: 2 },
+  admin: {
+    devices: 2,
+    "revoke-all-tokens": 2,
+    "forget-device": 3,
+    compact: 2,
+    restore: 2,
+    prices: 3,
+  },
   sync: {
     status: 2,
     held: 2,
@@ -200,6 +207,7 @@ comandos:
   lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición
   fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor
   prices update|status           los cierres diarios junto al libro (prices/): descargarlos y ver cada fuente y su cupo
+  prices update --from-sources   en una carpeta sincronizada, llamar a las fuentes en vez de bajar de la nube (gasta el cupo compartido)
   prices purge <activo> --source S  quita los cierres guardados en una divisa que su fuente no declara; sus días se vuelven a pedir una vez
   prices symbols [set|remove] <activo> [--eodhd S] [--alpha-vantage S] --currency C [--eodhd-currency C] [--alpha-vantage-currency C] [--accept-currency]
   fx correct [--reason …]        corrige los tipos que no son los de su fecha fiscal (tras cambiar fiscal_date_rule)
@@ -215,8 +223,9 @@ comandos:
   sync join --from-remote|--with-own-lines [--origin <https://…>] [--device <id>]   se une a una nube con libro
   sync redownload                vuelve a descargar la nube tras una reescritura (solo si lo pides)
   sync deactivate                desactiva la sincronización; lo retenido se queda
-  admin devices|revoke-all-tokens|forget-device <id> [--force]|compact|restore --from <copia> --env <entorno>
-                                 la administración de la nube, con el rol de administración y nunca por la API`;
+  admin devices|revoke-all-tokens|forget-device [--] <id>|--device <id> [--force]|compact|restore --from <copia>|prices push --env <entorno>
+                                 la administración de la nube, con el rol de administración y nunca por la API
+  --                             termina las opciones: lo que va detrás es posicional (un id que empiece por guion)`;
 
 export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),

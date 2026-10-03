@@ -22,7 +22,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const script = join(repoRoot, "apps", "jobs", "scripts", "build-lambda.mjs");
 
 /** The doubles that may travel in the artefact: only the simulated source of `dev` (m3). */
-const DECLARED_DOUBLES = ["packages/adapters/src/prices/simulated.ts"] as const;
+const DECLARED_DOUBLES = ["packages/adapters/src/aws/simulated-prices.ts"] as const;
 
 interface Script {
   buildJobs(outDir: string): Promise<{ inputs: string[]; bundle: Uint8Array }>;

@@ -58,6 +58,10 @@
       "types": "./dist/sync/http-remote.d.ts",
       "import": "./dist/sync/http-remote.js"
     },
+    "./reference-http": {
+      "types": "./dist/reference/http.d.ts",
+      "import": "./dist/reference/http.js"
+    },
     "./aws": {
       "types": "./dist/aws/index.d.ts",
       "import": "./dist/aws/index.js"
@@ -73,6 +77,10 @@
     "./aws-jobs": {
       "types": "./dist/aws/jobs.d.ts",
       "import": "./dist/aws/jobs.js"
+    },
+    "./aws-daily": {
+      "types": "./dist/aws/daily.d.ts",
+      "import": "./dist/aws/daily.js"
     },
     "./aws-ses": {
       "types": "./dist/aws/sdk-ses.d.ts",

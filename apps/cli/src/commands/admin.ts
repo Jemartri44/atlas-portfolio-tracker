@@ -1,5 +1,5 @@
 // atlas admin devices | revoke-all-tokens | forget-device | compact | restore
-// --env <e> (feature 015, E5; ADR-0026, Part A; ADR-0032; ADR-0033, point 8;
+// | prices push --env <e> (feature 015, E5; feature 016, E2, block 3; ADR-0026, Part A; ADR-0032; ADR-0033, point 8;
 // `contracts/cli-commands.md`): operations of administration **over the copy
 // of reference**, with the short-lived credentials of the role
 // `atlas-<env>-admin` (the standard chain of the SDK) — **never with the
@@ -34,6 +34,7 @@ import {
   forgottenDevice,
   remoteRewritePermission,
 } from "@atlas/domain/admin";
+import { symbolsPushPlan } from "@atlas/domain/quotes";
 import { linesOfText, RefusedError, syncArchiveName } from "@atlas/domain/sync";
 import { deepCheck } from "@atlas/domain/tools";
 import type { AdminClients } from "../admin/environment.js";
@@ -43,6 +44,7 @@ import {
   type Flags,
   listFlag,
   requireFlag,
+  stringFlag,
   UsageError,
 } from "../args.js";
 import { ConfirmationRequired, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
@@ -50,6 +52,7 @@ import { table } from "../output/table.js";
 import { render } from "./shared.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
+const SYMBOLS_KEY = "prices/symbols.json";
 
 /** The name of an environment, as `admin.json` names it (review of PR #98, N6). */
 const ENVIRONMENT = /^[a-z][a-z0-9-]*$/;
@@ -211,7 +214,7 @@ const revokeAllOrder = async (ctx: Context, clients: AdminClients): Promise<numb
 };
 
 /**
- * `atlas admin forget-device <id> [--force]` (§7 P9, amended in §7.1 bis, B1):
+ * `atlas admin forget-device <id>|--device <id> [--force]` (§7 P9, amended in §7.1 bis, B1):
  * **first** its tokens are revoked, **then** its object is rewritten on the
  * ETag it was read at, with `state: "forgotten"`. Never deleted. A cut between
  * the two leaves it revoked and not forgotten — safe, and repeating finishes
@@ -491,30 +494,144 @@ const restoreOrder = async (
   return EXIT.ok;
 };
 
+/** Text, strictly UTF-8; `undefined` when the bytes are not. */
+const utf8 = (bytes: Uint8Array): string | undefined => {
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    return undefined;
+  }
+};
+
+const CHANGE_TEXT = { added: "añadido", removed: "quitado", changed: "cambiado" } as const;
+
+/**
+ * `atlas admin prices push` (feature 016, E2, block 3; §8.1 P18, amended in
+ * §8.2 M4 and M5): uploads **only** the local `prices/symbols.json` — never
+ * `config.json`, which stays the budget of the console — and keeps **no
+ * local state**: it reads the remote object, shows the difference, asks for
+ * the name of the environment and writes on the ETag of **that same read**
+ * (`If-None-Match: *` when there was none). A write in between is a conflict
+ * that writes nothing; it is never retried on a newer read nobody saw.
+ */
+const pricesPushOrder = async (
+  ctx: Context,
+  clients: AdminClients,
+  environment: string,
+): Promise<number> => {
+  const { readFile } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const bytes = await readFile(join(dirname(ctx.ledgerPath), "prices", "symbols.json")).catch(
+    (error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") {
+        return undefined;
+      }
+      throw error;
+    },
+  );
+  // A local file that is not UTF-8 is unreadable: "" is refused by the reader.
+  const local = bytes === undefined ? undefined : (utf8(bytes) ?? "");
+  const remote = await clients.objects.get(SYMBOLS_KEY);
+  // A remote that is not UTF-8 is unreadable too, and replaced as such.
+  const plan = symbolsPushPlan(local, remote === undefined ? undefined : (utf8(remote.body) ?? ""));
+  if (plan.kind === "same") {
+    ctx.io.out(`La nube de ${environment} ya tiene este prices/symbols.json: no se sube nada.`);
+    return EXIT.ok;
+  }
+  // What it replaces, to recover it from the versions of the bucket (review
+  // of PR #106, N5): its ETag, and its version when the bucket says it.
+  const replaced =
+    remote === undefined
+      ? []
+      : [
+          `Sustituye el objeto con ETag ${remote.etag}${
+            remote.versionId === undefined ? "" : `, versión ${remote.versionId}`
+          }, que queda en el historial de versiones del bucket.`,
+        ];
+  const said =
+    plan.remote === "absent"
+      ? "La nube no tiene ningún prices/symbols.json."
+      : plan.remote === "unreadable"
+        ? "El prices/symbols.json de la nube no se puede leer: se sustituye entero."
+        : "Diferencia con el prices/symbols.json de la nube:";
+  const lines =
+    plan.changes.length === 0
+      ? ["  ningún activo cambia: solo la forma del fichero"]
+      : plan.changes.map(
+          (change) =>
+            `  ${CHANGE_TEXT[change.change]} ${change.asset_id}${
+              change.fields.length === 0 ? "" : ` (${change.fields.join(", ")})`
+            }`,
+        );
+  ctx.io.out([said, ...lines, ...replaced].join("\n"));
+  if (
+    !(await confirmEnvironment(
+      ctx,
+      environment,
+      `¿Subir prices/symbols.json a ${environment}? La tarea de precios lo usará tal cual y nunca contrasta: una fuente sin contrastar no se descarga.`,
+    ))
+  ) {
+    ctx.io.out("Cancelado: no se ha tocado nada.");
+    return EXIT.ok;
+  }
+  const written =
+    remote === undefined
+      ? (await clients.objects.putIfNoneMatch(SYMBOLS_KEY, bytes as Uint8Array)) === "created"
+      : (await clients.objects.putIfMatch(SYMBOLS_KEY, bytes as Uint8Array, remote.etag)) ===
+        "written";
+  if (!written) {
+    throw new DomainError(
+      "symbols_push_conflict",
+      "prices/symbols.json changed in the cloud while it was compared",
+      {},
+    );
+  }
+  render(
+    ctx,
+    { environment, changes: plan.changes },
+    `Subido prices/symbols.json a ${environment}: ${plan.changes.length} activos cambian.`,
+  );
+  return EXIT.ok;
+};
+
 const USAGE =
-  "uso: atlas admin devices | revoke-all-tokens | forget-device <dispositivo> [--force] | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM>, siempre con --env <entorno>";
+  "uso: atlas admin devices | revoke-all-tokens | forget-device [--] <dispositivo> | forget-device --device <dispositivo> [--force] | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push, siempre con --env <entorno>";
 
 export const adminCommand = async (
   ctx: Context,
   positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  assertKnownFlags(flags, ["env", "force", "from", "accept-unverified", ...GLOBAL_FLAGS]);
+  assertKnownFlags(flags, ["env", "force", "from", "accept-unverified", "device", ...GLOBAL_FLAGS]);
   const order = positionals[1];
   if (
     order === undefined ||
-    !["devices", "revoke-all-tokens", "forget-device", "compact", "restore"].includes(order)
+    !["devices", "revoke-all-tokens", "forget-device", "compact", "restore", "prices"].includes(
+      order,
+    ) ||
+    (order === "prices" && positionals[2] !== "push")
   ) {
     throw new UsageError(USAGE);
   }
-  const id = positionals[2];
+  // A device id may begin with a dash: after `--`, or as `--device <id>`.
+  const flagged = stringFlag(flags, "device");
+  if (flagged !== undefined && (order !== "forget-device" || positionals[2] !== undefined)) {
+    throw new UsageError(
+      order === "forget-device"
+        ? "el dispositivo se da una sola vez: «forget-device -- <id>» o «forget-device --device <id>»"
+        : `--device no vale en «atlas admin ${order}»`,
+    );
+  }
+  const id = flagged ?? positionals[2];
   if (order === "forget-device" && id === undefined) {
-    throw new UsageError("falta el dispositivo: los enseña «atlas admin devices»");
+    throw new UsageError(
+      "falta el dispositivo: los enseña «atlas admin devices»; si empieza por guion, escríbelo detrás de «--» o con --device <id>",
+    );
   }
   // Review of PR #98, N1: a `--yes` is written before the list is on screen.
-  if (ctx.yes && ["forget-device", "compact", "restore"].includes(order)) {
+  if (ctx.yes && ["forget-device", "compact", "restore", "prices"].includes(order)) {
     throw new UsageError(
-      `--yes no vale en «atlas admin ${order}»: se confirma escribiendo el nombre del entorno, con lo que se pierde delante (ADR-0032)`,
+      `--yes no vale en «atlas admin ${order === "prices" ? "prices push" : order}»: se confirma escribiendo el nombre del entorno, con lo que se pierde delante (ADR-0032)`,
     );
   }
   const environment = environmentFlag(flags);
@@ -535,6 +652,8 @@ export const adminCommand = async (
         );
       case "compact":
         return await compactOrder(ctx, clients, environment, flags);
+      case "prices":
+        return await pricesPushOrder(ctx, clients, environment);
       default:
         return await restoreOrder(ctx, clients, environment, flags);
     }

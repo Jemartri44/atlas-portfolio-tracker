@@ -187,6 +187,37 @@ describe("atlas settings set: the legacy wash-sale window", () => {
   });
 });
 
+describe("atlas settings set: notification_email (feature 016, E3; §8.2 M7)", () => {
+  it("writes a new snapshot without it, and leaves the old line as it is", async () => {
+    const old = settingsEvent("01ARYZ6S41TSV4RRFFQ69G5SET", {
+      notification_email: "atlas@example.invalid",
+    });
+    const h = harness({ events: [...seed(), old], confirm: true });
+    expect(await h.exec(["settings", "set", "--stale-price-days", "9"])).toBe(0);
+    const { events } = await h.store.load();
+    const written = events[events.length - 1] as unknown as { settings: Record<string, unknown> };
+    expect("notification_email" in written.settings).toBe(false);
+    expect(written.settings.stale_price_days).toBe(9);
+    expect(
+      (events[events.length - 2] as unknown as { settings: Record<string, unknown> }).settings
+        .notification_email,
+    ).toBe("atlas@example.invalid");
+  });
+});
+
+describe("atlas settings set --notification-email (review of PR #108, N1)", () => {
+  it("is refused, saying where the recipient lives, and writes nothing", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    const before = (await h.store.load()).lines.length;
+    expect(await h.exec(["settings", "set", "--notification-email", "yo@example.invalid"])).toBe(
+      EXIT.usage,
+    );
+    expect(h.text()).toContain("terraform.tfvars");
+    expect(h.text()).toContain("nunca en el libro");
+    expect((await h.store.load()).lines).toHaveLength(before);
+  });
+});
+
 describe("atlas settings set: a change that moves a past tax year", () => {
   /** A sale agreed on 30/12/2027 and settled on 02/01/2028. */
   const straddling = async (confirm = true) => {

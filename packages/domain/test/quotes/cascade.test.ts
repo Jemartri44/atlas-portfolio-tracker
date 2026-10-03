@@ -721,3 +721,99 @@ describe("the recent days asked again by asset type", () => {
     expect(eodhd.calls).toEqual([]);
   });
 });
+
+/**
+ * Feature 016, E2 (Q1, accepted on 2026-09-27): the cloud reads `symbols.json`
+ * and **never writes it** — one writer per object, `atlas admin prices push`
+ * (§8.1 P18) — and **never contrasts** a currency: a source without
+ * `currency_check` is not downloaded, and says so (`currency_unchecked`), and
+ * the days a local purge asked for again are the console's to chase.
+ */
+describe("updatePrices with the correspondence read only (016, Q1)", () => {
+  it("never contrasts a source nobody contrasted, and says it unchecked", async () => {
+    const { store, input } = setup();
+    const unchecked = { currency: "USD", eodhd: "SPEC.US", currency_check: {} };
+    store.files.set("symbols.json", symbolsFile({ ast_spec: unchecked }));
+    const before = store.files.get("symbols.json");
+    const eodhd = new FakeSource(
+      "eodhd",
+      () => closes(["2027-01-05", "10"]),
+      store,
+      () => ({ ok: true, value: "USD" }),
+    );
+    const report = await updatePrices({ ...input, sources: { eodhd }, symbols: "read_only" });
+    expect(eodhd.currencyCalls).toEqual([]);
+    expect(eodhd.calls).toEqual([]);
+    expect(report.assets.find((asset) => asset.asset_id === "ast_spec")).toMatchObject({
+      outcome: "currency_unchecked",
+      unchecked: ["eodhd"],
+      added: 0,
+    });
+    expect(store.files.get("symbols.json")).toBe(before);
+    expect(parseStatus(store.files.get("_status.json")).assets.ast_spec).toBeUndefined();
+  });
+
+  it("downloads from a contrasted source and leaves an unchecked one out", async () => {
+    const { store, eodhd, alpha, input } = setup(
+      () => ({ ok: false, kind: "unavailable" }),
+      () => closes(["2027-01-05", "10"]),
+    );
+    store.files.set(
+      "symbols.json",
+      symbolsFile({
+        ast_spec: {
+          currency: "USD",
+          eodhd: "SPEC.US",
+          alpha_vantage: "SPEC",
+          currency_check: { alpha_vantage: { at: "2027-01-01T00:00:00.000Z" } },
+        },
+      }),
+    );
+    const report = await updatePrices({ ...input, symbols: "read_only" });
+    expect(eodhd.calls).toEqual([]);
+    expect(alpha.calls.length).toBe(1);
+    expect(report.assets.find((asset) => asset.asset_id === "ast_spec")).toMatchObject({
+      outcome: "updated",
+      source: "alpha_vantage",
+      unchecked: ["eodhd"],
+    });
+  });
+
+  it("never chases the days a local purge asked for again, and never rewrites symbols.json", async () => {
+    const { store, eodhd, input } = setup();
+    const text = JSON.stringify({
+      symbols_format: 2,
+      assets: {
+        ast_spec: {
+          eodhd: "SPEC.US",
+          currencies: { eodhd: "USD" },
+          confirmed_at: "2027-01-01T00:00:00.000Z",
+          currency_check: { eodhd: { at: "2027-01-01T00:00:00.000Z" } },
+          refetch_days: { eodhd: ["2026-12-01"] },
+        },
+      },
+    });
+    store.files.set("symbols.json", text);
+    store.files.set(
+      "ast_spec.jsonl",
+      `${encodeCloseLine({ schema_version: 1, date: "2027-01-04", close: "9", currency: "USD", source: "eodhd", fetched_at: "2027-01-05T08:00:00.000Z" })}\n`,
+    );
+    await updatePrices({ ...input, sources: { eodhd }, symbols: "read_only" });
+    expect(eodhd.calls.map((call) => call.from)).toEqual(["2027-01-05"]);
+    expect(store.files.get("symbols.json")).toBe(text);
+  });
+
+  it("keeps contrasting and chasing in the console, which writes symbols.json", async () => {
+    const { store, input } = setup();
+    const unchecked = { currency: "USD", eodhd: "SPEC.US", currency_check: {} };
+    store.files.set("symbols.json", symbolsFile({ ast_spec: unchecked }));
+    const eodhd = new FakeSource(
+      "eodhd",
+      () => closes(["2027-01-05", "10"]),
+      store,
+      () => ({ ok: true, value: "USD" }),
+    );
+    await updatePrices({ ...input, sources: { eodhd }, symbols: "read_write" });
+    expect(eodhd.currencyCalls).toEqual(["SPEC.US"]);
+  });
+});

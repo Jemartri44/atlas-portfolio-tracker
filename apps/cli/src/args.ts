@@ -46,6 +46,8 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "from-remote",
   "with-own-lines",
   "reversal-only",
+  // Feature 016, E3: `atlas prices update --from-sources`.
+  "from-sources",
   // Feature 015, E5: `atlas admin forget-device` and `atlas backup`.
   "force",
   "from-bucket",
@@ -85,6 +87,21 @@ export const REPEATABLE_FLAGS: ReadonlySet<string> = new Set([
   "accept-unverified",
 ]);
 
+/**
+ * The flags of an identifier that may begin with a dash (a device id is 22
+ * characters of base64url): they always take the next word as their value,
+ * as an option with a required argument does in POSIX `getopt`. Without this,
+ * `--device --Kq3…` left `--device` with no value and read the id as a flag.
+ */
+export const ID_FLAGS: ReadonlySet<string> = new Set(["device"]);
+
+/**
+ * What a word that looked like an option and was not one may have been: a
+ * value that begins with a dash. `--` ends the options, POSIX style.
+ */
+const DASH_HINT =
+  "Si es un valor que empieza por guion, como un identificador, escríbelo detrás de «--», que termina las opciones: atlas … -- <valor>";
+
 /** Words that read as a yes or a no after a flag that takes none. */
 const YES_OR_NO = new Set(["true", "false", "sí", "si", "no", "0", "1"]);
 
@@ -123,7 +140,7 @@ export const parseArgs = (
     }
     const body = token.slice(2);
     if (body.length === 0 || body.startsWith("-")) {
-      throw new UsageError(`opción no válida: ${token}`);
+      throw new UsageError(`opción no válida: ${token}. ${DASH_HINT}`);
     }
     const add = (name: string, value: string): void => {
       if (!REPEATABLE_FLAGS.has(name)) {
@@ -139,6 +156,11 @@ export const parseArgs = (
       continue;
     }
     const next = argv[i + 1];
+    if (ID_FLAGS.has(body) && next !== undefined) {
+      add(body, next);
+      i += 1;
+      continue;
+    }
     if (booleans.has(body) && next !== undefined && YES_OR_NO.has(next.toLowerCase())) {
       throw booleanWithValue(body, next);
     }
@@ -201,7 +223,7 @@ export const booleanFlag = (flags: Flags, name: string): boolean => {
 export const assertKnownFlags = (flags: Flags, allowed: readonly string[]): void => {
   for (const name of flags.keys()) {
     if (!allowed.includes(name)) {
-      throw new UsageError(`opción desconocida: --${name}`);
+      throw new UsageError(`opción desconocida: --${name}. ${DASH_HINT}`);
     }
   }
 };

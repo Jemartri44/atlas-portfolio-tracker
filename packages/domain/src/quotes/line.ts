@@ -21,6 +21,8 @@ import { ValidationError } from "../errors.js";
 import { Decimal, type DecimalString, isDecimalString } from "../money/decimal.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
+import { repeatedKey } from "../schema/json-keys.js";
+import { repeatedKeyError } from "./repeated-key.js";
 import { isQuoteSource } from "./sources.js";
 import type { SymbolEntry, SymbolsFile } from "./symbols.js";
 
@@ -81,6 +83,10 @@ const lineOf = (assetId: AssetId, text: string, number: number): CloseLine => {
     raw = JSON.parse(text);
   } catch {
     throw invalid(assetId, number, "json");
+  }
+  const repeated = repeatedKey(text);
+  if (repeated !== undefined) {
+    throw repeatedKeyError(`prices/${priceFileName(assetId)}`, repeated, number);
   }
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     throw invalid(assetId, number, "json");

@@ -57,6 +57,20 @@ export interface UpdatePricesInput {
   readonly store: PriceStore;
   /** Only the sources that have a key: without one, a source is never called. */
   readonly sources: Partial<Record<QuoteSource, PriceSource>>;
+  /**
+   * Whether this run may write `symbols.json` (the console, by default) or
+   * only read it (the cloud, feature 016, Q1): read only, a source never
+   * contrasted is left out as `currency_unchecked` — the cloud **never
+   * contrasts** (§8.1 P18) — and the days a local purge asked for again are
+   * not chased, so `symbols.json`, whose one writer is `atlas admin prices
+   * push`, is never written.
+   */
+  readonly symbols?: "read_write" | "read_only";
+  /**
+   * A console whose folder is synced with a cloud that downloads too (N2 of
+   * §15 of feature 016): its default budget is the leftover of the free plans.
+   */
+  readonly sharedWithCloud?: boolean;
 }
 
 export type AssetOutcome =
@@ -67,6 +81,7 @@ export type AssetOutcome =
   | "out_of_budget"
   | "failed"
   | "currency_mismatch"
+  | "currency_unchecked"
   | "unreadable";
 
 export interface AssetReport {
@@ -81,6 +96,8 @@ export interface AssetReport {
   readonly failures: readonly { readonly source: QuoteSource; readonly kind: QuoteFailureKind }[];
   /** The code of the error that kept its file from being read (`unreadable`). */
   readonly error?: string;
+  /** Read only: the sources left out because nobody contrasted their currency. */
+  readonly unchecked?: readonly QuoteSource[];
 }
 
 export interface UpdateReport {
@@ -185,7 +202,10 @@ const clearRefetched = async (
 /** Downloads the closes of the day; see the header for the rules. */
 export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateReport> => {
   const { store, today } = input;
-  const config = parsePriceConfig(await store.config());
+  const readOnly = input.symbols === "read_only";
+  const config = parsePriceConfig(await store.config(), {
+    sharedWithCloud: input.sharedWithCloud === true,
+  });
   const symbols = parseSymbols(await store.symbols());
   const available = config.source_order.filter(
     (source) => input.sources[source] !== undefined && config.daily_calls[source] > 0,
@@ -317,14 +337,28 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       });
       continue;
     }
-    if (usable.length === 0) {
-      reports.push({ asset_id, group, outcome: "currency_mismatch", added: 0, failures });
+    const unchecked = readOnly
+      ? usable.filter((source) => entry.currency_check?.[source] === undefined)
+      : [];
+    const downloadable = usable.filter((source) => !unchecked.includes(source));
+    const uncheckedPart = unchecked.length === 0 ? {} : { unchecked };
+    if (downloadable.length === 0) {
+      reports.push({
+        asset_id,
+        group,
+        outcome: unchecked.length === 0 ? "currency_mismatch" : "currency_unchecked",
+        added: 0,
+        failures,
+        ...uncheckedPart,
+      });
       continue;
     }
     // The days a purge promised to ask for again (second pass of the review
     // of PR #80): the download starts at the first of them, whichever source
     // answers, and not after the last close, which may be of another source.
-    const owed = Object.values(entry.refetch_days ?? {})
+    // Read only, they are the console's to chase (Q1).
+    const refetch = readOnly ? undefined : entry.refetch_days;
+    const owed = Object.values(refetch ?? {})
       .flat()
       .sort()[0];
     // Every planned asset is in the catalogue (`downloadPlan`), so it has a type.
@@ -334,7 +368,14 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       last !== undefined &&
       last >= lastMarketDayBefore(today, config.market_days[type])
     ) {
-      reports.push({ asset_id, group, outcome: "up_to_date", added: 0, failures });
+      reports.push({
+        asset_id,
+        group,
+        outcome: "up_to_date",
+        added: 0,
+        failures,
+        ...uncheckedPart,
+      });
       continue;
     }
     // The N calendar days ending on the last close stored are asked again
@@ -351,7 +392,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
     // close of today it would stay one for good. Only days before today.
     const to = addDays(today, -1);
     let answered: QuoteSource | undefined;
-    for (const source of usable) {
+    for (const source of downloadable) {
       const retiredBy = retired.get(source);
       if (retiredBy !== undefined) {
         failures.push({ source, kind: retiredBy });
@@ -406,7 +447,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       }
       downloads.push({
         asset_id,
-        ...(entry.refetch_days === undefined ? {} : { refetched: entry.refetch_days }),
+        ...(refetch === undefined ? {} : { refetched: refetch }),
         source,
         // The currency **of the source that brought it**, never of another.
         currency: entry.currencies[source] as string,
@@ -417,9 +458,24 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       break;
     }
     if (answered === undefined) {
-      reports.push({ asset_id, group, outcome: outcomeOf(failures), added: 0, failures });
+      reports.push({
+        asset_id,
+        group,
+        outcome: outcomeOf(failures),
+        added: 0,
+        failures,
+        ...uncheckedPart,
+      });
     } else {
-      reports.push({ asset_id, group, outcome: "updated", source: answered, added: 0, failures });
+      reports.push({
+        asset_id,
+        group,
+        outcome: "updated",
+        source: answered,
+        added: 0,
+        failures,
+        ...uncheckedPart,
+      });
     }
   }
 

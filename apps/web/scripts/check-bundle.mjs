@@ -434,6 +434,14 @@ const dist = join(webRoot, "dist");
  * 74.895 → 74.887 → 75.019.
  */
 /*
+ * **Feature 016, E3, round 1 of the review of PR #108 (2026-09-28): measured
+ * 75.057 (+32 over the 75.025 of E3), ceiling 75.077 — measured + 20**,
+ * raised in a commit of its own before the one that needs it, inside the
+ * authorisation (76.069), as the direction allowed (§18). The neutral door of
+ * the answers of the API leaves the domain chunk two exports more (+16), and
+ * the names of the chunks move the rest. The trend: 75.012 → 75.025 → 75.057.
+ */
+/*
  * **Feature 020, E2, `inRentaSeason` in the barrel (2026-09-27): measured
  * 75.059 (+25 over the 75.034 of round 2 of PR #105), ceiling 75.079 —
  * measured + 20**, raised before the commit that needs it, inside the
@@ -467,7 +475,12 @@ const dist = join(webRoot, "dist");
  * the summary of a phone down 213px when it came. The trend: 75.361 → 75.378
  * → 75.392.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_412;
+/*
+ * **Feature 020, E2, `develop` (016 E2-E4) merged in (2026-10-03): measured
+ * 75.482, ceiling 75.502 — measured + 20**, inside the authorisation (76.069).
+ * The two lines of work raised the boot in parallel; this is their sum.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_502;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -953,6 +966,46 @@ const BOOT_BUDGET_GZIP_BYTES = 75_412;
  * authorisation (310.500). The trend: 302.379 → 302.513 → 302.638.
  */
 /*
+ * **Feature 016, E2, round 1 of the review of PR #106, with `develop` (PR
+ * #105) merged in (2026-09-28): measured 302.935 (+297 over the 302.638 of
+ * PR #105), ceiling 303.191 — measured + 256**, raised in the commit after the
+ * merge, inside the authorisation (310.500). All of it lazy: the stricter
+ * reader of `prices/symbols.json` (no key of its own, no prototype) and the
+ * sentence of `symbols_file_unknown_key`. The boot does not move (75.011,
+ * under 75.039). The trend: 302.379 → 302.638 → 302.935.
+ */
+/*
+ * **Feature 016, E2, round 2 of the review of PR #106 (2026-09-28): measured
+ * 303.195 (+260 over the 302.935 of round 1), ceiling 303.451 — measured +
+ * 256**, raised in a commit of its own, inside the authorisation (310.500).
+ * All of it lazy: the refusal of a key twice in every JSON of `prices/`
+ * (`json_key_repeated`, kept off the boot in `quotes/repeated-key.ts`) and its
+ * sentence. The boot moves by 1 byte (75.012, under 75.039). The trend:
+ * 302.638 → 302.935 → 303.195.
+ */
+/*
+ * **Feature 016, E3, block 2 (2026-09-28): measured 304.746 (+1.551 over the
+ * 303.195 of E2), ceiling 305.002 — measured + 256**, raised in a commit of
+ * its own before the one that needs it, inside the authorisation (310.500).
+ * All of it lazy: the download of the ECB history from the cloud in the
+ * section of Ajustes (+1.090, with the client of the reference data), the
+ * store of the imported copy in a chunk of its own (+251) and the strict
+ * reading of the manifest in the chunk of the ECB (+208). The boot moves +21
+ * (75.033, under 75.039): `mergeSettings` leaving `notification_email` out
+ * (+14, P12) and the hashes of the chunk names (+7). The mobile prices do not
+ * fit what is left of §8.1 P13 for the feature, and are not built (Q8). The
+ * trend: 302.935 → 303.195 → 304.746.
+ */
+/*
+ * **Feature 016, E3, round 1 of the review of PR #108 (2026-09-28): measured
+ * 305.394 (+558 over the 304.836 of E3), ceiling 305.650 — measured + 256**,
+ * raised in a commit of its own before the one that needs it, inside the
+ * authorisation (312.000). All of it lazy: erasing the copy of the ECB of this
+ * browser with its confirmation (+463 in the section of Ajustes, with the cap
+ * of 20 MB of the client), and the neutral door of the answers of the API.
+ * The trend: 303.195 → 304.836 → 305.394.
+ */
+/*
  * **Feature 020, E2, M2 (2026-09-27): measured 303.708 (+935 over the
  * 302.773 of round 2 of PR #105), ceiling 303.964 — measured + 256**, raised
  * before the commit that needs it, inside the authorisation (310.500). The
@@ -974,7 +1027,13 @@ const BOOT_BUDGET_GZIP_BYTES = 75_412;
  * of its own: it went to the boot path, and its wrapper and its load went
  * with it. The trend: 304.198 → 304.245 → 303.708.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 303_964;
+/*
+ * **Feature 020, E2, `develop` (016 E2-E4) merged in (2026-10-03): measured
+ * 306.434, ceiling 306.690 — measured + 256**, inside the authorisation
+ * (312.000). The two lines of work raised the total in parallel; this is
+ * their sum.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 306_690;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
@@ -985,12 +1044,14 @@ const TOTAL_BUDGET_GZIP_BYTES = 303_964;
  * over its authorisation does not build green.
  *
  *   - Boot: 76.069, prompt 015 §7 P13, still standing (prompt 020 §5).
- *   - Total: 310.500, raised by the direction on 2026-09-27 over the 309.500
- *     of prompt 020 §8 P1, for the prices of PR #102
- *     (`specs/020-visual-refresh/questions.md` §4.1).
+ *   - Total: 312.000, raised by the direction on 2026-09-28 for the whole web,
+ *     because features 016 and 020 grow at the same time
+ *     (`specs/016-scheduled-jobs/questions.md` §18, Q19); before, 310.500,
+ *     raised on 2026-09-27 over the 309.500 of prompt 020 §8 P1, for the
+ *     prices of PR #102 (`specs/020-visual-refresh/questions.md` §4.1).
  */
 const BOOT_AUTHORISED_GZIP_BYTES = 76_069;
-const TOTAL_AUTHORISED_GZIP_BYTES = 310_500;
+const TOTAL_AUTHORISED_GZIP_BYTES = 312_000;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -1145,6 +1206,19 @@ const LAZY_ONLY = [
   // the local configuration. If any of it shows up here, the build stops.
   { path: "/packages/domain/src/ecb/", what: "los tipos del BCE" },
   { path: "/packages/domain/src/ecb.ts", what: "la puerta del BCE" },
+  // Feature 016, E3, block 2: the download of the ECB history from the cloud
+  // is never the boot's (its reading of the manifest is in `ecb/`, above).
+  { path: "/src/ecb/", what: "el histórico del BCE de la web" },
+  { path: "/packages/adapters/src/reference/", what: "el cliente de los datos de referencia" },
+  {
+    path: "/packages/domain/src/remote/",
+    what: "las respuestas del API que no son de la sincronización",
+  },
+  { path: "/packages/domain/src/remote-answers.ts", what: "la puerta de las respuestas del API" },
+  {
+    path: "/packages/domain/src/schema/strict-json.ts",
+    what: "la lectura estricta del manifiesto",
+  },
   { path: "/packages/domain/src/config/", what: "la configuración local" },
   // Block 5: the drafts, their store and their counter. The frame keeps only
   // the place of the counter; reading and painting it arrive later.

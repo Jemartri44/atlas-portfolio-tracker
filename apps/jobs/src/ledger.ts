@@ -10,6 +10,7 @@ import {
   CURRENT_LEDGER_SCHEMA,
   DomainError,
   decodeLines,
+  type LedgerEvent,
   type LedgerState,
   projectLedger,
   type Settings,
@@ -18,7 +19,12 @@ import {
 import { linesOfText } from "@atlas/domain/sync";
 
 export type JobLedger =
-  | { readonly ok: true; readonly state: LedgerState; readonly settings: Settings }
+  | {
+      readonly ok: true;
+      readonly events: readonly LedgerEvent[];
+      readonly state: LedgerState;
+      readonly settings: Settings;
+    }
   | { readonly ok: false; readonly code: string };
 
 const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
@@ -33,16 +39,24 @@ export const loadLedger = async (objects: ObjectStore, today: CivilDate): Promis
       code: error instanceof DependencyUnavailable ? "ledger_unavailable" : "ledger_unreadable",
     };
   }
+  return ledgerOfBytes(bytes, today);
+};
+
+/**
+ * A ledger from its bytes: the remote one, or the one of a monthly dump (E4).
+ * Empty is absent; what does not decode or project cleanly is a code.
+ */
+export const ledgerOfBytes = (bytes: Uint8Array, today: CivilDate): JobLedger => {
   if (bytes.length === 0) {
     return { ok: false, code: "ledger_absent" };
   }
   try {
     const events = decodeLines(linesOfText(utf8.decode(bytes)), CURRENT_LEDGER_SCHEMA);
-    const state = projectLedger(events, { collectErrors: true });
+    const state = projectLedger(events, { collectErrors: true, asOf: today });
     if (state.invalid.length > 0) {
       return { ok: false, code: "ledger_invalid" };
     }
-    return { ok: true, state, settings: settingsAt(state, today).settings };
+    return { ok: true, events, state, settings: settingsAt(state, today).settings };
   } catch (error) {
     return {
       ok: false,

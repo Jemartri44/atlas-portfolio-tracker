@@ -13,6 +13,7 @@ export const handler = composeOrFail(process.env, {
   objects: productionObjectStore,
   parameters: productionParameterStore,
   mail: productionMailSender,
+  fetch: (url, init) => globalThis.fetch(url, init),
   clock: systemClock,
   log: (line) => console.log(line),
 });

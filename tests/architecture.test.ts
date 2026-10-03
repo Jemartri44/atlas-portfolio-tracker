@@ -7,6 +7,7 @@ import {
   listSources,
   parse as parsedSource,
   specifiersOf as parsedSpecifiersOf,
+  exportsOf as sharedExportsOf,
 } from "./support/source-graph.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -1413,13 +1414,10 @@ describe("architecture: the ECB and the prices are downloaded by the console onl
    * (feature 013, §6.4 (c)).
    */
   const webReachableAdapters = (): string[] => {
-    const exported = JSON.parse(readFileSync(join(adapters, "package.json"), "utf8"))
-      .exports as Record<string, { types: string }>;
-    const pending = Object.entries(exported)
+    // Every condition of each export, one module or a failure (review of PR #106, R2-N3).
+    const pending = [...sharedExportsOf(adapters)]
       .filter(([subpath]) => subpath !== ".")
-      .map(([, target]) =>
-        join(adaptersSrc, target.types.replace(/^\.\/dist\//, "").replace(/\.d\.ts$/, ".ts")),
-      );
+      .map(([, source]) => source);
     const seen = new Set<string>();
     while (pending.length > 0) {
       const file = pending.pop() as string;
@@ -1835,19 +1833,8 @@ describe("architecture: the sync engine", () => {
   ];
   const isSync = (file: string): boolean => syncFiles().includes(file);
 
-  /** A package subpath as its source file, read off `exports`. */
-  const exportsOf = (root: string): Map<string, string> => {
-    const exported = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).exports as Record<
-      string,
-      { types: string }
-    >;
-    return new Map(
-      Object.entries(exported).map(([subpath, target]) => [
-        subpath,
-        join(root, "src", target.types.replace(/^\.\/dist\//, "").replace(/\.d\.ts$/, ".ts")),
-      ]),
-    );
-  };
+  /** A package subpath as its source file: every condition, one module (review of PR #106, R2-N3). */
+  const exportsOf = sharedExportsOf;
   const packages = new Map<string, Map<string, string>>([
     ["@atlas/domain", exportsOf(domainRoot)],
     ["@atlas/adapters", exportsOf(adaptersRoot)],

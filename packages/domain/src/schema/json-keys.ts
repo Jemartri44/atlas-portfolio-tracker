@@ -8,7 +8,12 @@
 // Called only on a text `JSON.parse` already accepted: every string is closed
 // and every bracket matched, which is what lets this walk stay this small.
 
-export const repeatsKey = (text: string): boolean => {
+/**
+ * The first key a JSON text repeats inside one object, at any level, cut to
+ * 64 characters; nothing when it repeats none (review of PR #106, R2-B1: a
+ * refusal names the key, never its value).
+ */
+export const repeatedKey = (text: string): string | undefined => {
   /** One entry per open bracket: the keys of an object seen so far, or null for an array. */
   const open: (Set<string> | null)[] = [];
   let expectKey = false;
@@ -25,7 +30,7 @@ export const repeatsKey = (text: string): boolean => {
         const keys = open[open.length - 1] as Set<string>;
         const key = JSON.parse(text.slice(at, end + 1)) as string;
         if (keys.has(key)) {
-          return true;
+          return key.slice(0, 64);
         }
         keys.add(key);
         expectKey = false;
@@ -45,8 +50,10 @@ export const repeatsKey = (text: string): boolean => {
     }
     at += 1;
   }
-  return false;
+  return undefined;
 };
+
+export const repeatsKey = (text: string): boolean => repeatedKey(text) !== undefined;
 
 /** Whether a text holds a lone surrogate: its UTF-8 would not be UTF-8 (review of PR #96, B1). */
 export const holdsLoneSurrogate = (text: string): boolean => /\p{Cs}/u.test(text);
