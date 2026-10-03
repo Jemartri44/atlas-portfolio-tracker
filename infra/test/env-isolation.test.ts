@@ -645,7 +645,11 @@ describe.each(ENVS)(
       for (const action of writes) {
         for (const name of ["admin", "deploy", "plan"]) {
           expect(
-            decide(boundary, { action, resource: a.role(name), context: withBoundary }),
+            decide(boundary, {
+              action,
+              resource: a.role(name),
+              context: { ...withBoundary, "aws:RequestedRegion": "us-east-1" },
+            }),
             `${action} ${name}`,
           ).toBe("deny");
         }
@@ -657,7 +661,10 @@ describe.each(ENVS)(
       ]) {
         for (const policy of ["boundary", "deploy-iam"]) {
           const resource = `arn:aws:iam::${ACCOUNT}:policy/atlas-${env}-${policy}`;
-          expect(decide(boundary, { action, resource }), `${action} ${policy}`).toBe("deny");
+          expect(
+            decide(boundary, { action, resource, context: { "aws:RequestedRegion": "us-east-1" } }),
+            `${action} ${policy}`,
+          ).toBe("deny");
         }
       }
     });
