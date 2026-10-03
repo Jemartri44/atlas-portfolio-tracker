@@ -172,7 +172,7 @@ Una distribución por entorno, con certificado, WAF y función de CSP propios; `
 - **SC-004**: Cada uno de los 55 mutantes del prompt (§10) muere por un test visto morir.
 - **SC-005**: La suma de `cost.md` queda entre 0,01 y 0,05 $ al mes; cero tipos de recurso fuera de la lista.
 - **SC-006**: Cero ficheros versionados con datos personales; `gitleaks` limpio; cero secretos en el `plan` y en el estado simulado.
-- **SC-007**: La autocomprobación de las veinte familias de §9 del prompt está pasada y escrita en `questions.md` en cada entrega.
+- **SC-007**: La autocomprobación de las diecisiete familias de §9 del prompt (siete heredadas de la 016 y diez nuevas, numeradas 11 a 20) está pasada y escrita en `questions.md` en cada entrega.
 - **SC-008**: Cero `apply`, cero llamadas a AWS y cero credenciales en todo el historial de la rama.
 
 ## Supuestos
