@@ -500,7 +500,16 @@ const dist = join(webRoot, "dist");
  * door `@atlas/domain/charts`, which `check-bundle.mjs` had found in the boot
  * chunk (−208 net). The trend: 75.620 → 75.701 → 75.593.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_640;
+/*
+ * **Feature 020, E3, M10 (2026-10-03): measured 75.835 (+242 over the 75.593
+ * of the strips), ceiling 75.855 — measured + 20**, inside the authorisation
+ * (76.069), which leaves 234 bytes for E4 (estimated at +60). All of it is the
+ * stylesheet: the three gauges of the bucket and the dumbbells of its theses
+ * (`bucket.css`) are on the boot path with the rest of the styles, and the
+ * shared rules of strips, gauges and dumbbells are written once. M14 (styles
+ * per screen) is the lever if E4 needs more. The trend: 75.593 → 75.835.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_855;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -1072,7 +1081,16 @@ const BOOT_BUDGET_GZIP_BYTES = 75_640;
  * 307.720 (+449 over the 307.271 of the shares), ceiling 307.976 — measured +
  * 256**, inside the authorisation (312.000). The trend: 307.271 → 307.720.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 307_976;
+/*
+ * **Feature 020, E3, M10 (2026-10-03): measured 309.810 (+2.090 over the
+ * 307.720 of the strips), ceiling 310.066 — measured + 256**, inside the
+ * authorisation (312.000), which leaves 2.190 bytes for E4 (estimated at
+ * +3.150: **it does not fit as estimated**, plan §6.3 has the order of cuts).
+ * Of those, +242 are the boot (above); the lazy chunk of the Cubo carries the
+ * gauges, the dumbbells and their view-model (+1,8 KB gzip). The trend:
+ * 307.720 → 309.810.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 310_066;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
