@@ -9,9 +9,10 @@
 //
 // Abroad is a country other than `tax_residence` of the settings. Without it,
 // the rule the engine of the informative returns applies today —a country
-// other than ES (`informative/holdings.ts`)— so the row is reserved exactly
-// when that engine could produce something. That fallback lives here, never in
-// the web.
+// other than ES (`informative/holdings.ts`). With a residence other than ES
+// the two readings differ (the engine still compares with ES, Q3 of the
+// feature), so the row may be reserved late there. That fallback lives here,
+// never in the web.
 //
 // The catalogue as it stood on the date: an `account_created` or an
 // `account_updated` counts from the day, in Madrid, it was **recorded**, as

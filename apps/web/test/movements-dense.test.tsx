@@ -79,8 +79,8 @@ describe("the first entries of a list", () => {
       row("g", "2028-12-27", "buy"),
       row("h", "2028-12-26", "buy"),
     ];
-    // Chunks of one row at a time: the three valuations of the 31st arrive
-    // over three chunks and still come out as one entry.
+    // Asking for two entries: the three valuations of the 31st are one entry,
+    // and the day is complete even though the first chunk may end inside it.
     const first = firstEntries(rows.length, (from, to) => rows.slice(from, to), 2);
     expect(first).toHaveLength(2);
     expect(first[0]?.kind === "valuations" ? first[0].rows : []).toHaveLength(3);
