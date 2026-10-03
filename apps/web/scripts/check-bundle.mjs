@@ -1090,7 +1090,15 @@ const BOOT_BUDGET_GZIP_BYTES = 75_855;
  * gauges, the dumbbells and their view-model (+1,8 KB gzip). The trend:
  * 307.720 → 309.810.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 310_066;
+/*
+ * **Feature 020, E4, «Este año» (2026-10-03): measured 310.152 (+321 over the
+ * 309.831 of the start of E4), ceiling 310.408 — measured + 256**, inside the
+ * authorisation (312.000), which is **not** raised. Of those, about +200 are
+ * the filing deadlines and the calendar of the domain (commit before), which
+ * the chunk of the fiscal screen already carries; the boot is −4. The trend:
+ * 309.831 → 310.152.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 310_408;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
