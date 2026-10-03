@@ -160,6 +160,18 @@
   font-weight: var(--fw-medium);
 }
 
+/* The share of a part, in front of the amount that may be hidden (feature 020, M1). */
+.kpi dd .share {
+  display: block;
+}
+
+.kpi dd .kpi-amount {
+  color: var(--c-text-2);
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-regular);
+}
+
 /* The note that closes a card: an icon, one sentence, pushed to the bottom. */
 .note-line {
   align-items: start;
