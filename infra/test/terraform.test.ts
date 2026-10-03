@@ -4,7 +4,7 @@ import { assertEnoughMemory, infraRoot, terraform } from "./lib/terraform.js";
 // Layers A and B of prompt 017 §4: syntax, schema, and a plan with a simulated provider.
 // The only network is the HashiCorp registry, in `init` (the provider is not AWS).
 
-const ROOTS = ["bootstrap/account", "bootstrap/env"];
+const ROOTS = ["bootstrap/account", "bootstrap/env", "envs/dev", "envs/prod"];
 
 describe("terraform fmt", () => {
   it("leaves nothing to format in infra/", () => {

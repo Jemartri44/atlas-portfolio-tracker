@@ -220,8 +220,11 @@ export const secrets = (plan: Plan): Violation[] => {
         change.change.after?.environment as { variables?: Record<string, string> }[],
       );
       for (const block of environment) {
-        for (const name of Object.keys(block.variables ?? {})) {
-          if (SECRET_NAME.test(name)) {
+        for (const [name, value] of Object.entries(block.variables ?? {})) {
+          // A whole number of seconds or days is a setting (ATLAS_SECRETS_CACHE_SECONDS
+          // is the cache time of the secrets, not a secret), whatever its name says.
+          const duration = /_(SECONDS|DAYS)$/.test(name) && /^[0-9]{1,9}$/.test(String(value));
+          if (SECRET_NAME.test(name) && !duration) {
             violations.push({
               rule: "secret",
               address: change.address,

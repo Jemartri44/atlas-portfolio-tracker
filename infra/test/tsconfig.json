@@ -7,5 +7,10 @@
     "types": ["node"]
   },
   "include": ["**/*.ts"],
-  "exclude": ["dist", "fixtures"]
+  "exclude": ["dist", "fixtures"],
+  "references": [
+    {
+      "path": "../../packages/domain"
+    }
+  ]
 }

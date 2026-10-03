@@ -54,3 +54,19 @@ export const renderAccount = (over: Record<string, Value> = {}): Plan =>
 /** The plan of `bootstrap/env` for one environment. */
 export const renderEnv = (env: "dev" | "prod", over: Record<string, Value> = {}): Plan =>
   render("bootstrap/env", { ...envBase, env, ...over });
+
+const stackBase: Record<string, Value> = {
+  account_id: ACCOUNT,
+  bucket_suffix: SUFFIX,
+  domain: "atlas.example.invalid",
+  mail_recipient: RECIPIENT,
+  edge_mode: "free_plan",
+  oac_spa_id: "E2EXAMPLESPA000",
+  oac_api_id: "E2EXAMPLEAPI000",
+  artifact_key: "builds/0000000000000000000000000000000000000000/lambda.zip",
+  artifact_sha256_base64: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+};
+
+/** The plan of the stack of one environment (`envs/<env>`). */
+export const renderStack = (env: "dev" | "prod", over: Record<string, Value> = {}): Plan =>
+  render(`envs/${env}`, { ...stackBase, ...over });
