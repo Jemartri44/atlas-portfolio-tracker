@@ -15,6 +15,7 @@ locals {
         "lambda:GetFunctionCodeSigningConfig",
         "lambda:GetFunctionConcurrency",
         "lambda:GetFunctionConfiguration",
+        "lambda:GetFunctionEventInvokeConfig",
         "lambda:GetFunctionUrlConfig",
         "lambda:GetPolicy",
         "lambda:GetRuntimeManagementConfig",

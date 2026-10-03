@@ -183,10 +183,15 @@ export const principalStars = (plan: Plan): Violation[] =>
       })),
   );
 
-/** Family 11, second half: nothing sensitive may enter a policy (it would hide in the plan). */
-export const sensitiveInPolicies = (plan: Plan): Violation[] =>
+/**
+ * Family 11, second half: nothing sensitive may enter a policy (it would hide in the plan).
+ * `allowed` is a closed list of resource addresses, each one a decision written down: the
+ * mail role carries the recipient in its `ses:Recipients` condition (ADR-0034, rows 1 and 12).
+ */
+export const sensitiveInPolicies = (plan: Plan, allowed: readonly string[] = []): Violation[] =>
   changes(plan).flatMap((change) =>
     (POLICY_ATTRIBUTES[change.type] ?? [])
+      .filter(() => !allowed.includes(change.address))
       .filter(({ attribute }) => deepTrue(change.change.after_sensitive?.[attribute]))
       .map(({ attribute }) => ({
         rule: "sensitive-in-policy",

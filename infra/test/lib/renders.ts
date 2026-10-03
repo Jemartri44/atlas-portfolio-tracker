@@ -10,7 +10,7 @@ export const RECIPIENT = "user@example.invalid";
 export const BUDGET_EMAIL = "alerts@example.invalid";
 export const REPOSITORY = "Jemartri44/atlas-portfolio-tracker";
 
-export type Value = string | boolean | number;
+export type Value = string | boolean | number | string[];
 
 /** The text of a `.tfvars` file. */
 export const tfvars = (values: Record<string, Value>): string =>
@@ -65,6 +65,9 @@ const stackBase: Record<string, Value> = {
   oac_api_id: "E2EXAMPLEAPI000",
   artifact_key: "builds/0000000000000000000000000000000000000000/lambda.zip",
   artifact_sha256_base64: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  mail_sender: SENDER,
+  jobs_artifact_key: "builds/0000000000000000000000000000000000000000/jobs.zip",
+  jobs_artifact_sha256_base64: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 };
 
 /** The plan of the stack of one environment (`envs/<env>`). */

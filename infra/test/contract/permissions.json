@@ -353,6 +353,7 @@
             "lambda:GetFunctionCodeSigningConfig",
             "lambda:GetFunctionConcurrency",
             "lambda:GetFunctionConfiguration",
+            "lambda:GetFunctionEventInvokeConfig",
             "lambda:GetFunctionUrlConfig",
             "lambda:GetPolicy",
             "lambda:GetRuntimeManagementConfig",
@@ -559,8 +560,10 @@
             "lambda:CreateFunctionUrlConfig",
             "lambda:DeleteFunction",
             "lambda:DeleteFunctionConcurrency",
+            "lambda:DeleteFunctionEventInvokeConfig",
             "lambda:DeleteFunctionUrlConfig",
             "lambda:PutFunctionConcurrency",
+            "lambda:PutFunctionEventInvokeConfig",
             "lambda:RemovePermission",
             "lambda:TagResource",
             "lambda:UntagResource",
@@ -709,6 +712,7 @@
             "lambda:GetFunctionCodeSigningConfig",
             "lambda:GetFunctionConcurrency",
             "lambda:GetFunctionConfiguration",
+            "lambda:GetFunctionEventInvokeConfig",
             "lambda:GetFunctionUrlConfig",
             "lambda:GetPolicy",
             "lambda:GetRuntimeManagementConfig",
@@ -1021,7 +1025,7 @@
       ]
     },
     "job-ecb": {
-      "rendered": false,
+      "rendered": true,
       "statements": [
         {
           "sid": "Read",
@@ -1065,7 +1069,7 @@
       ]
     },
     "job-prices": {
-      "rendered": false,
+      "rendered": true,
       "statements": [
         {
           "sid": "Read",
@@ -1081,10 +1085,14 @@
           "sid": "Write",
           "effect": "Allow",
           "actions": ["s3:PutObject"],
-          "resources": [
-            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*",
-            "arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/prices/*"
-          ],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*"],
+          "contract": "C16-n2"
+        },
+        {
+          "sid": "JobRecord",
+          "effect": "Allow",
+          "actions": ["s3:GetObject", "s3:PutObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/prices/*"],
           "contract": "C16-n2"
         },
         {
@@ -1098,6 +1106,18 @@
           "contract": "C16-n2 (M2)"
         },
         {
+          "sid": "List",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "condition": {
+            "StringLike": {
+              "s3:prefix": ["prices/*", "jobs/prices/*", "ledger/*"]
+            }
+          },
+          "contract": "C16-n2"
+        },
+        {
           "sid": "Keys",
           "effect": "Allow",
           "actions": ["ssm:GetParameter"],
@@ -1106,6 +1126,19 @@
             "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/alpha-vantage-key"
           ],
           "contract": "C16-n2; A34-21"
+        },
+        {
+          "sid": "KmsSsm",
+          "effect": "Allow",
+          "actions": ["kms:Decrypt"],
+          "resources": ["arn:aws:kms:eu-west-1:{account}:key/*"],
+          "condition": {
+            "StringEquals": {
+              "kms:ViaService": "ssm.eu-west-1.amazonaws.com"
+            }
+          },
+          "contract": "C15; A33",
+          "pending": "E2 b0.4: kms on aws/ssm is neither in the boundary nor in any policy yet; E3 keeps it so (no source for an identity policy on aws/ssm)"
         },
         {
           "sid": "Logs",
@@ -1120,7 +1153,7 @@
       ]
     },
     "job-mail": {
-      "rendered": false,
+      "rendered": true,
       "statements": [
         {
           "sid": "Read",
@@ -1140,6 +1173,18 @@
           "effect": "Allow",
           "actions": ["s3:PutObject"],
           "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/mail/*"],
+          "contract": "C16-n3"
+        },
+        {
+          "sid": "List",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "condition": {
+            "StringLike": {
+              "s3:prefix": ["jobs/*", "prices/*", "reference/ecb/*", "access/*", "ledger/*"]
+            }
+          },
           "contract": "C16-n3"
         },
         {
@@ -1187,6 +1232,39 @@
           "contract": "C16-n3; A34-12"
         },
         {
+          "sid": "KmsSsm",
+          "effect": "Allow",
+          "actions": ["kms:Decrypt"],
+          "resources": ["arn:aws:kms:eu-west-1:{account}:key/*"],
+          "condition": {
+            "StringEquals": {
+              "kms:ViaService": "ssm.eu-west-1.amazonaws.com"
+            }
+          },
+          "contract": "C15; A33",
+          "pending": "E2 b0.4: kms on aws/ssm is neither in the boundary nor in any policy yet; E3 keeps it so (no source for an identity policy on aws/ssm)"
+        },
+        {
+          "sid": "SendRecipientIdentity",
+          "effect": "Allow",
+          "actions": ["ses:SendEmail"],
+          "resources": ["arn:aws:ses:eu-west-1:{account}:identity/{recipient}"],
+          "condition": {
+            "StringEquals": {
+              "ses:FromAddress": "{sender}",
+              "ses:ApiVersion": "2"
+            },
+            "ForAllValues:StringEquals": {
+              "ses:Recipients": ["{recipient}"]
+            },
+            "Null": {
+              "ses:Recipients": "false"
+            }
+          },
+          "contract": "C16-n3; A34-12",
+          "pending": "E3 b0.1: needed only while the account is in the SES sandbox; no source says so for an identity policy, so it is neither in the boundary nor in the role"
+        },
+        {
           "sid": "Logs",
           "effect": "Allow",
           "actions": ["logs:CreateLogStream", "logs:PutLogEvents"],
@@ -1199,7 +1277,7 @@
       ]
     },
     "job-backup": {
-      "rendered": false,
+      "rendered": true,
       "statements": [
         {
           "sid": "Read",
@@ -1225,6 +1303,18 @@
           "contract": "C16-n4"
         },
         {
+          "sid": "List",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "condition": {
+            "StringLike": {
+              "s3:prefix": ["prices/*", "reference/ecb/*", "backups/*", "jobs/backup/*", "ledger/*"]
+            }
+          },
+          "contract": "C16-n4"
+        },
+        {
           "sid": "Logs",
           "effect": "Allow",
           "actions": ["logs:CreateLogStream", "logs:PutLogEvents"],
@@ -1237,7 +1327,7 @@
       ]
     },
     "job-integrity": {
-      "rendered": false,
+      "rendered": true,
       "statements": [
         {
           "sid": "Read",
@@ -1258,6 +1348,23 @@
           "contract": "C16-n5"
         },
         {
+          "sid": "List",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "condition": {
+            "StringLike": {
+              "s3:prefix": [
+                "jobs/backup/monthly_backup/*",
+                "jobs/integrity/*",
+                "backups/*",
+                "ledger/*"
+              ]
+            }
+          },
+          "contract": "C16-n5"
+        },
+        {
           "sid": "Logs",
           "effect": "Allow",
           "actions": ["logs:CreateLogStream", "logs:PutLogEvents"],
@@ -1270,7 +1377,7 @@
       ]
     },
     "scheduler": {
-      "rendered": false,
+      "rendered": true,
       "statements": [
         {
           "sid": "Invoke",

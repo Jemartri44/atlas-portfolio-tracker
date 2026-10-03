@@ -7,14 +7,17 @@ mock_provider "aws" {
 }
 
 variables {
-  account_id             = "111122223333"
-  bucket_suffix          = "abc123def456"
-  domain                 = "atlas.example.invalid"
-  mail_recipient         = "user@example.invalid"
-  oac_spa_id             = "E2EXAMPLESPA000"
-  oac_api_id             = "E2EXAMPLEAPI000"
-  artifact_key           = "builds/0000/lambda.zip"
-  artifact_sha256_base64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  account_id                  = "111122223333"
+  bucket_suffix               = "abc123def456"
+  domain                      = "atlas.example.invalid"
+  mail_recipient              = "user@example.invalid"
+  oac_spa_id                  = "E2EXAMPLESPA000"
+  oac_api_id                  = "E2EXAMPLEAPI000"
+  artifact_key                = "builds/0000/lambda.zip"
+  artifact_sha256_base64      = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  mail_sender                 = "atlas@example.invalid"
+  jobs_artifact_key           = "builds/0000/jobs.zip"
+  jobs_artifact_sha256_base64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 }
 
 run "prod_has_the_web_acl_and_is_enabled" {
@@ -66,4 +69,35 @@ run "c12_zero_is_refused" {
     api_reserved_concurrency = 0
   }
   expect_failures = [var.api_reserved_concurrency]
+}
+
+run "jobs_schedules_enabled" {
+  command = plan
+  variables {
+    edge_mode = "free_plan"
+  }
+  assert {
+    condition     = alltrue([for state in values(module.atlas.schedule_states) : state == "ENABLED"])
+    error_message = "every schedule of prod is ENABLED"
+  }
+}
+
+run "prices_never_simulated_in_prod" {
+  command = plan
+  variables {
+    edge_mode      = "free_plan"
+    prices_sources = ["simulated"]
+  }
+  expect_failures = [var.prices_sources]
+}
+
+run "c12_jobs_reserved_by_default" {
+  command = plan
+  variables {
+    edge_mode = "free_plan"
+  }
+  assert {
+    condition     = alltrue([for value in values(module.atlas.jobs_reserved_concurrency) : value == 1])
+    error_message = "each task reserves 1 execution"
+  }
 }

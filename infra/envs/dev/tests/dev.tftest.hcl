@@ -7,14 +7,17 @@ mock_provider "aws" {
 }
 
 variables {
-  account_id             = "111122223333"
-  bucket_suffix          = "abc123def456"
-  domain                 = "atlas.example.invalid"
-  mail_recipient         = "user@example.invalid"
-  oac_spa_id             = "E2EXAMPLESPA000"
-  oac_api_id             = "E2EXAMPLEAPI000"
-  artifact_key           = "builds/0000/lambda.zip"
-  artifact_sha256_base64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  account_id                  = "111122223333"
+  bucket_suffix               = "abc123def456"
+  domain                      = "atlas.example.invalid"
+  mail_recipient              = "user@example.invalid"
+  oac_spa_id                  = "E2EXAMPLESPA000"
+  oac_api_id                  = "E2EXAMPLEAPI000"
+  artifact_key                = "builds/0000/lambda.zip"
+  artifact_sha256_base64      = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  mail_sender                 = "atlas@example.invalid"
+  jobs_artifact_key           = "builds/0000/jobs.zip"
+  jobs_artifact_sha256_base64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 }
 
 run "c11_free_plan_dev" {
@@ -100,4 +103,59 @@ run "c12_zero_is_refused" {
     api_reserved_concurrency = 0
   }
   expect_failures = [var.api_reserved_concurrency]
+}
+
+run "jobs_schedules_disabled_by_default" {
+  command = plan
+  variables {
+    edge_mode = "free_plan"
+  }
+  assert {
+    condition     = alltrue([for state in values(module.atlas.schedule_states) : state == "DISABLED"])
+    error_message = "every schedule of dev is DISABLED unless the lever names it"
+  }
+}
+
+run "jobs_schedule_lever_enables_only_the_named_one" {
+  command = plan
+  variables {
+    edge_mode       = "free_plan"
+    dev_active_jobs = ["ecb"]
+  }
+  assert {
+    condition     = module.atlas.schedule_states["ecb"] == "ENABLED" && module.atlas.schedule_states["mail"] == "DISABLED"
+    error_message = "only the family named in dev_active_jobs is ENABLED"
+  }
+}
+
+run "jobs_lever_rejects_an_unknown_family" {
+  command = plan
+  variables {
+    edge_mode       = "free_plan"
+    dev_active_jobs = ["everything"]
+  }
+  expect_failures = [var.dev_active_jobs]
+}
+
+run "c12_jobs_reserved_by_default" {
+  command = plan
+  variables {
+    edge_mode = "free_plan"
+  }
+  assert {
+    condition     = alltrue([for value in values(module.atlas.jobs_reserved_concurrency) : value == 1])
+    error_message = "each task reserves 1 execution"
+  }
+}
+
+run "c12_jobs_unreserved" {
+  command = plan
+  variables {
+    edge_mode                = "free_plan"
+    reserve_jobs_concurrency = false
+  }
+  assert {
+    condition     = alltrue([for value in values(module.atlas.jobs_reserved_concurrency) : value == -1])
+    error_message = "unreserved when the account has no margin"
+  }
 }

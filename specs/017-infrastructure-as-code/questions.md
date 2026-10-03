@@ -272,3 +272,68 @@ Mutantes de la ronda 1, vistos morir (restaurados y comparados byte a byte): den
 ## E2 — Ronda 2 de la PR #115
 
 **B1 (S3 Metadata)**: la denegación de configuración del bucket de datos gana `s3:CreateBucketMetadata*` y `s3:UpdateBucketMetadata*` (cubren las dos versiones de la operación), y el test de cobertura lleva casos de cada una. **SIN VERIFICAR (018)**: el nombre IAM exacto de la v2 y su disponibilidad en `eu-west-1`; los patrones cubren las variantes `…Configuration`, `…TableConfiguration`, `…InventoryTableConfiguration` y `…JournalTableConfiguration` que se conocen. Mutante: quitar el patrón nuevo hace fallar el test.
+
+## E3 — Bloque 0: verificaciones hechas el 2026-10-03 (antes del primer `.tf` de E3)
+
+Fuentes: documentación pública de AWS (`docs.aws.amazon.com`, `aws.amazon.com/eventbridge/pricing`), AWS Service Reference (SAR, JSON de `servicereference.us-east-1.amazonaws.com`), código del proveedor `hashicorp/aws` **v6.67.0** (GitHub). Ninguna llamada a una cuenta.
+
+| Punto | Qué dice, con su fuente | Consecuencia |
+|---|---|---|
+| **b0.1** ARN de identidad de SES | SAR: `ses:SendEmail` admite los recursos `identity`, `configuration-set` y `template`, y las claves `ses:ApiVersion`, `ses:FromAddress`, `ses:Recipients` (entre otras). *Sending authorization policy examples* (`docs/ses/latest/dg/sending-authorization-policy-examples.html`): la política sobre **`identity/<dominio>`** (el dominio) autoriza enviar desde `<dirección>@<dominio>` con `ses:FromAddress`. *Request production access*: fuera del *sandbox* se puede escribir a cualquier destinatario, y solo hay que verificar las identidades de origen. **Ninguna página dice qué ARN evalúa IAM** cuando existen a la vez la identidad del dominio y la de la dirección, ni que el *sandbox* exija permiso sobre la identidad del **destinatario** | El recurso nombra las dos identidades del remitente (aceptado por la dirección, 016 §9). **La identidad del destinatario no entra**: sin fuente no se ensancha, y fuera del *sandbox* no hace falta. Queda `pending` en `permissions.json` (`job-mail/SendRecipientIdentity`) y **SIN VERIFICAR para la 018** (primer envío real; si SES responde `AccessDenied` por el destinatario, es una pregunta, no un ensanche) |
+| **b0.2** Reintentos, ventana, zona, estado | Proveedor v6.67.0, `internal/service/scheduler/schedule.go`: `schedule_expression_timezone`, `flexible_time_window { mode }`, `state` (`ENABLED`/`DISABLED`), `target { arn, role_arn, input, retry_policy { maximum_retry_attempts, maximum_event_age_in_seconds } }`. `function_event_invoke_config.go`: `maximum_retry_attempts` y `maximum_event_age_in_seconds`, con `PutFunctionEventInvokeConfig` también al actualizar | Se escribe tal cual: `Europe/Madrid`, `OFF`, `2` y `3600` en la programación, `0` y `3600` en la función. **El proveedor no etiqueta las programaciones** (`aws_scheduler_schedule` no tiene `tags`): `UNTAGGABLE` lleva el tipo con su motivo, y solo el grupo se etiqueta (016 §1.6) |
+| **b0.3** ARN de `aws:SourceArn` en la confianza de Scheduler (**cierra la fila 29**) | *EventBridge Scheduler User Guide, «Confused deputy prevention»*: «The value of `aws:SourceArn` must be your EventBridge Scheduler **schedule group ARN**»; «**Do not scope the `aws:SourceArn` statement to a specific schedule or a schedule name prefix.** The ARN you specify must be a schedule group»; el ejemplo usa `StringEquals` con `aws:SourceAccount` y `aws:SourceArn` = `arn:aws:scheduler:<región>:<cuenta>:schedule-group/<grupo>`, y `ArnLike` solo con comodines | **Hay fuente, y sustituye a la salida «por el lado seguro» del prompt** (las dos formas con `ArnLike`): la confianza es `StringEquals` con `aws:SourceArn` = el ARN **exacto del grupo** `atlas-<entorno>-jobs` (sin comodín) y `aws:SourceAccount`. La forma de programación que el prompt admitía **está desaconsejada por la fuente**. Sigue **SIN VERIFICAR para la 018** que AWS lo cumpla al activar la primera programación de `dev` (lo que cubre la fuente es la documentación, no el comportamiento) |
+| **b0.4** Acciones de IAM de lo nuevo | SAR: `lambda:{Put,Get,Delete}FunctionEventInvokeConfig` admiten el recurso `function`; `scheduler:{CreateSchedule,GetSchedule,UpdateSchedule,DeleteSchedule}` el recurso `schedule` y `{CreateScheduleGroup,GetScheduleGroup,DeleteScheduleGroup,TagResource,ListTagsForResource}` el `schedule-group`. Código del proveedor: `aws_lambda_function_event_invoke_config` llama a `PutFunctionEventInvokeConfig`, `GetFunctionEventInvokeConfig` y `DeleteFunctionEventInvokeConfig`; `aws_scheduler_schedule` y el grupo, a `Create/Get/Update/Delete` y a `TagResource`/`ListTagsForResource` (el grupo) | **HALLAZGO 4 (E1 incompleta, con fuente)**: el despliegue no tenía `lambda:PutFunctionEventInvokeConfig` ni `lambda:DeleteFunctionEventInvokeConfig`, ni el `plan` ni el despliegue `lambda:GetFunctionEventInvokeConfig`: el primer `apply` habría recibido `AccessDenied` en las cinco funciones. **Arreglado en E3** (`statements-deploy.tf`, `statements-read.tf`, `permissions.json`); el límite ya las cubre con `lambda:Put*`, `Get*` y `Delete*`. Las de Scheduler ya estaban. **Requiere reaplicar el *bootstrap* de cada entorno, `dev` primero** |
+| **b0.5** Coste | `aws.amazon.com/eventbridge/pricing`: «You can make 14,000,000 invocations per month for free» (Scheduler); solo se facturan invocaciones | Unas 300 invocaciones al mes entre los dos entornos: 0. `cost.md` actualizada con los tipos nuevos (`aws_lambda_function_event_invoke_config`) |
+| **(d)** arquitectura | `node apps/jobs/scripts/build-lambda.mjs` (esbuild): `jobs.zip` = **un solo `index.mjs`** (1,8 MB), sin ningún `.node` | **`arm64`** (P-7) |
+| **kms** sobre `aws/ssm` | Sin cambio respecto de E2 b0.4: la misma página dice que hace falta `kms:Decrypt` y que no se pueden establecer políticas de acceso sobre `aws/ssm`. **Sin fuente que desempate** | No se concede `kms` por identidad a la función de precios (claves) ni a la de correo (`device-tokens`): quedan `pending` en `permissions.json` (`job-prices/KmsSsm`, `job-mail/KmsSsm`), con la misma salida que E2 (una declaración con `kms:ViaService`) si la 018 ve `AccessDenied` |
+
+## E3 — Estado y cierre (2026-10-03)
+
+**Hecho**: `infra/modules/atlas/jobs.tf` (cinco funciones `arm64`, un solo `jobs.zip`, cada una con su rol, su política exacta del contrato 016 §1 a §5, su grupo de registros con 30 o 7 días, concurrencia reservada 1 y la invocación asíncrona con 0 reintentos y 3.600 s) y `scheduler.tf` (grupo `atlas-<entorno>-jobs` etiquetado, rol de Scheduler con `lambda:InvokeFunction` sobre las cinco y su confianza, cinco programaciones diarias en `Europe/Madrid` con `FlexibleTimeWindow = OFF`, reintentos 2 y 3.600 s y el `Input` del contrato). Raíces `envs/{dev,prod}` con las variables nuevas (`mail_sender`, `jobs_artifact_*`, `reserve_jobs_concurrency`, los presupuestos de precios, `oauth_idle_warning_days`, `ledger_size_warning_bytes`, `dev_active_jobs` en `dev`, `prices_sources` en `prod`). `permissions.json` pone al día los roles de las tareas con las tablas del contrato 016 (**faltaban** los `s3:ListBucket` de precios, correo, volcado e integridad y `GetObject` sobre `jobs/prices/*`: E1 las había dejado sin escribir). `terraform test`: `dev` 13 `run`, `prod` 8, en verde. `infra/test/jobs.test.ts` (Z5 y Z6).
+
+### Decisiones mías fuera del encargo (a confirmar)
+
+1. **HALLAZGO 4** (b0.4): acciones `lambda:*FunctionEventInvokeConfig` que E1 no concedía; arreglado en `statements-deploy.tf`, `statements-read.tf` y el contrato. **Reaplicar el *bootstrap* (`dev` primero)**: la casilla sigue pendiente de la persona, para la 018.
+2. **La confianza de Scheduler es el ARN exacto del grupo con `StringEquals` y `aws:SourceAccount`** (b0.3, con fuente): sustituye a la salida «las dos formas con `ArnLike`» del prompt, que la fuente desaconseja.
+3. **La política del rol de correo sale `sensitive` en el `plan`** (lleva el destinatario en `ses:Recipients`, ADR-0034, filas 1 y 12): `sensitiveInPolicies` gana una lista de excepciones **cerrada** (`allowed`) y el test fija que es la única. Consecuencia aceptada por la fila 1: un cambio de esa política no se ve en el `plan` revisado. El contenido sí está en el JSON del `plan` local (`after`), por lo que la suite lo compara línea a línea con el contrato.
+4. **Concurrencia de las tareas**: la variable `jobs_reserved_concurrency` de `contracts/variables.md` (entero ≥ 1 o `null`) queda como **`reserve_jobs_concurrency`** (booleano, por defecto `true`; el valor es siempre 1, como pide el contrato 016 y el mutante 27). Igual que C12 para la API.
+5. **`prices_sources`**: `dev` lo lleva fijo (`["simulated"]`, sin variable) y `prod` como variable que **rechaza** `simulated`; el módulo lo rechaza también fuera de `dev` con la validación `d[e]v` (el módulo no nombra entornos).
+6. **Palanca de las programaciones de `dev`**: `dev_active_jobs` (conjunto de familias, por defecto vacío) en lugar de un booleano: la 018 activa **una**, una vez, desde la tubería. `prod` activa las cinco, fijas.
+7. **`aws_scheduler_schedule` y `aws_lambda_function_event_invoke_config` en `UNTAGGABLE`**, con motivo, y en `cost.md`.
+8. **`ATLAS_ORIGIN` de la función de correo** lleva el dominio (sensible): mismo riesgo aceptado que el de la API (P-4).
+
+### SIN VERIFICAR (018)
+
+Qué ARN evalúa SES con dominio y dirección verificados a la vez y si el *sandbox* pide la identidad del destinatario (b0.1); que Scheduler asuma el rol con la condición del grupo (b0.3); `kms:Decrypt` sobre `aws/ssm` para las claves de precios y los tokens (b0.4 de E2); que la cuenta tenga margen para reservar 1 + 1 + 5 + 10 ejecuciones (cuota reducida en cuentas nuevas, C12); el `timeout` y la memoria (§9 del contrato: «sin medir»); que `s3:ListBucket` por prefijo dé 404 y no 403 a las tareas.
+
+### Autocomprobación de las 17 familias (E3)
+
+| Familia | Qué miré, con qué | Salió |
+|---|---|---|
+| 1 Guardianes eludibles | `wildcards`, `secrets`, `tags`, `costTypes` y `sensitiveInPolicies` sobre el `plan` de `envs/dev` y `envs/prod` | sin violaciones; una excepción nueva y cerrada (decisión 3) |
+| 2 Valor exacto | los cinco roles y el de Scheduler contra `permissions.json` línea a línea; horas, `timeout` y memoria **leídos de los documentos** (`specification.md` §9.5, `iam-permissions.md` §9, `scheduler-event.md`) | igual |
+| 4 Documentos alineados | variables `ATLAS_*` contra `parseJobsConfig` y `JOBS_CONFIG_VARIABLES` importados; `Input` contra `parseJobEvent` | alineados |
+| 6 Registros | ningún guion en E3 | n/a |
+| 7 Entradas | `validation` en cada variable nueva; `terraform test` rechaza una familia desconocida y `simulated` en `prod` | hecho |
+| 9, 10 Procedimientos, `--yes` | ninguno en E3 | n/a |
+| 11 Comodines | ninguno nuevo | limpio |
+| 12 Etiquetas | solo el grupo; `UNTAGGABLE` con motivo | completas |
+| 13 Secretos | ninguna clave de precios ni `SecureString` en Terraform | limpio |
+| 14 `prevent_destroy` | sin cambios | n/a |
+| 15 Deriva | `enabled_jobs` es la única palanca del estado | hecho |
+| 16 Cruce | `crossEnvironment` sobre las seis políticas nuevas; sin literal de entorno en `jobs.tf` ni `scheduler.tf` | limpio |
+| 17 Datos personales | `static.test.ts` (placeholders `example.invalid`) | limpio |
+| 18, 19, 20 | sin cambios | n/a |
+
+### Mutantes de E3, ejecutados sobre los `.tf` (cada uno restaurado después; árbol limpio)
+
+Vistos morir por `jobs.test.ts`: **23** (`ses:SendEmail` en el rol del BCE: 7 fallos), **24** (sin `Null`: 4), **25** (`DenyConfig` pasada a `Allow`: 4), **26** (`state` literal `ENABLED`: 2), **27** (concurrencia 2: 2), **28** (`timeout` 301 contra el contrato: 2), **50** (confianza de Scheduler sin `aws:SourceArn`: 2), **55** (rol sin `logs:PutLogEvents`: 10). **29** (`prod` con `simulated`): el proceso dio «no tests», es decir, la suite ni arrancó (el plan de `prod` no validaba); **no cuenta como visto morir por un test con nombre**, solo como rechazo de la validación; el `run` `prices_never_simulated_in_prod` de `terraform test` lo cubre y **no se mutó**. Sin mutar: 24 (otro destinatario), 26 (otro `Input` u otra zona), 27 (reintentos distintos).
+
+### Documentos que tendrá que actualizar la dirección (E3)
+
+ADR-0034 (fila 29: cerrada con fuente, el grupo; la política del rol de correo `sensitive`; las acciones de `EventInvokeConfig`), `specs/016-scheduled-jobs/questions.md` §1.1 (identidades de SES, sin fuente nueva) y `contracts/iam-permissions.md` (el ARN de `aws:SourceArn` de Scheduler), `docs/decision-roadmap.md` (la 018 recibe lo SIN VERIFICAR de arriba), `contracts/variables.md` (nombres nuevos: `reserve_jobs_concurrency`, `dev_active_jobs`, `prices_sources`).
+
+### Notas para la dirección, sin decidir (revisión de la PR #116, ronda 1)
+
+- **N2 — identidad SES del destinatario.** Si la cuenta sigue en el *sandbox*, SES puede exigir permiso también sobre la identidad del destinatario; ninguna fuente consultada lo dice, así que no entra en el rol ni en el límite y queda `pending` (`job-mail/SendRecipientIdentity`). Decide la dirección si se concede cuando C9 diga que la cuenta está en el *sandbox*, o si lo resuelve la 018 con el primer envío.
+- **N3 — política del rol de correo oculta en el plan.** Lleva el destinatario (sensible, ADR-0034, filas 1 y 12), así que el `plan` de la CI la muestra como `(sensitive value)`: un cambio de esa política no se ve al revisar. Nota pendiente de ADR-0034: aceptar la consecuencia o separar la sentencia de envío en una política propia para que el resto del rol siga visible.

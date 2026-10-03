@@ -438,7 +438,12 @@ describe.each(ENVS)("the permissions boundary of %s", (env) => {
         .filter((statement) => statement.pending !== undefined)
         .map((s) => `${role}/${s.sid}`),
     );
-    expect(pending).toEqual(["api/KmsSsm"]);
+    expect(pending.sort()).toEqual([
+      "api/KmsSsm",
+      "job-mail/KmsSsm",
+      "job-mail/SendRecipientIdentity",
+      "job-prices/KmsSsm",
+    ]);
     for (const action of ["kms:Decrypt", "kms:Encrypt"]) {
       expect(
         decide(boundary, {
