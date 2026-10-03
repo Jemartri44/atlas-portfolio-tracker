@@ -4,7 +4,7 @@
 // interface than a gesture anyway.
 //
 // A range with no point in it is **disabled and says why**, instead of leaving a
-// blank chart. With manual prices recorded once or twice a year, "1 mes" is
+// blank chart. With manual prices recorded once or twice a year, "Este año" is
 // empty most of the time, and an empty chart reads as a broken chart.
 
 import { For, type JSX } from "solid-js";

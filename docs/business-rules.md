@@ -33,6 +33,19 @@ Oro y cripto son **satélites**: posiciones pequeñas que deben comportarse dist
 
 El cubo sí aparece en la vista de patrimonio total, con etiqueta propia. El patrimonio nunca se muestra como un único número sin descomponer.
 
+### Lo aportado a la cartera principal
+
+Es la línea con la que se lee la evolución del núcleo: cuánto dinero ha puesto el usuario, frente a lo que vale lo que tiene. Es una **derivación del libro** (`contributedSeries`), nunca un dato guardado.
+
+1. **Qué cuenta.** Los `cash_deposit` (suman) y los `cash_withdrawal` (restan) en cuentas cuyo libro es `core`. Ingresos de 1.000 € el 01/02 y el 01/03 y una retirada de 300 € el 15/03: lo aportado a 31/03 es 1.700 €.
+2. **Su valor en euros** es `amount / fx_rate` del propio evento, con la precisión de ADR-0005 (la misma expresión que usa el cubo), nunca el tipo del día de la gráfica. 1.100 USD con `fx_rate` 1,1000 son 1.000 € en cualquier fecha posterior.
+3. **Qué no cuenta:** dividendos, intereses, comisiones sueltas, compras, ventas, cambios de divisa, eventos corporativos y traspasos (también el de custodia, ADR-0012): no son dinero que el usuario pone o saca.
+4. **El cubo nunca entra** (constitución III). El dinero que pasa del núcleo al cubo se registra como retirada en uno e ingreso en el otro, y resta de lo aportado al núcleo, que es lo que pasó.
+5. **Anulados y corregidos:** manda la proyección. Un evento anulado no cuenta y su corrección sí.
+6. **Compras sin ingreso previo.** Si el núcleo tiene una compra anterior a su primer ingreso (o ninguno), lo aportado **no se inventa a partir de las compras**: la serie lleva `uncovered_buys` y la pantalla lo dice en una frase.
+7. **Una fecha de consulta** (ADR-0016): el punto de la fecha `d` cuenta los eventos de fecha de negocio `<= d`, en las mismas fechas que la serie del patrimonio. No depende de ningún precio: no tiene huecos.
+8. **El libro de la cuenta** es el actual, como en las aportaciones del cubo.
+
 ---
 
 ## 2. Reglas de cartera

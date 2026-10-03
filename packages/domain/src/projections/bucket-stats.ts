@@ -13,7 +13,13 @@ import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
 import { Money } from "../money/money.js";
-import type { AccountId, AssetId, LedgerEvent } from "../schema/events.js";
+import type {
+  AccountId,
+  AssetId,
+  CashDepositEvent,
+  CashWithdrawalEvent,
+  LedgerEvent,
+} from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import {
   type BucketThesisView,
@@ -191,6 +197,18 @@ const drawdownOf = (
   };
 };
 
+/**
+ * What a deposit or a withdrawal is worth in euros: `amount / fx_rate` of the
+ * event itself. The rate carries its own date since ADR-0021: a cash movement
+ * without it does not reach a projection, because the loader rejects it.
+ * Exported from the module, never from the barrel, for `contributedSeries`
+ * (feature 020, E4), which must value cash exactly as the bucket does.
+ */
+export const cashEurOf = (event: CashDepositEvent | CashWithdrawalEvent): Money =>
+  FxRate.of(Decimal.parse(event.fx_rate), event.currency, event.fx_rate_date).toEur(
+    Money.parse(event.amount, event.currency),
+  );
+
 interface CashFlows {
   deposits: Money;
   withdrawals: Money;
@@ -203,7 +221,7 @@ interface CashFlows {
  * `costSummary`: accumulating this in the projection would change `snapshotOf`
  * and the golden file for no reason.
  */
-const cashFlowsOf = (
+export const cashFlowsOf = (
   state: LedgerState,
   events: readonly LedgerEvent[],
   accounts: ReadonlySet<string>,
@@ -227,13 +245,7 @@ const cashFlowsOf = (
       flows.firstDate = date;
     }
     if (event.type === "cash_deposit" || event.type === "cash_withdrawal") {
-      // The rate carries its own date since ADR-0021: a cash movement without
-      // it does not reach a projection, because the loader rejects it.
-      const amount = FxRate.of(
-        Decimal.parse(event.fx_rate),
-        event.currency,
-        event.fx_rate_date,
-      ).toEur(Money.parse(event.amount, event.currency));
+      const amount = cashEurOf(event);
       if (event.type === "cash_deposit") {
         flows.deposits = flows.deposits.add(amount);
       } else {

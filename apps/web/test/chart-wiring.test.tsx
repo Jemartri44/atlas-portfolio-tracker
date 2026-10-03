@@ -227,17 +227,19 @@ describe("the life cycle of the chart", () => {
 describe("the range buttons", () => {
   const x = [0, 300 * DAY, 1000 * DAY, 2000 * DAY];
   const values = [[1, 2, 3, 4]];
+  // Day 2000 of the epoch is 23/06/1975: the date asked about.
+  const asOf = "1975-06-23";
 
   it("counts the points inside each window", () => {
-    const counts = rangeCounts(x, values);
+    const counts = rangeCounts(x, values, asOf);
     const of = (key: string): number => counts.find((c) => c.key === key)?.points ?? -1;
 
     // The last point is day 2000, so the windows reach back to days 173
-    // (5 años), 1.634 (1 año) and 1.969 (1 mes).
+    // (5 años) and 1.634 (1 año); «Este año» is 1975 and holds only that one.
     expect(of("TODO")).toBe(4);
     expect(of("5A")).toBe(3);
     expect(of("1A")).toBe(1);
-    expect(of("1M")).toBe(1);
+    expect(of("ESTE_ANO")).toBe(1);
   });
 
   /**
@@ -246,7 +248,7 @@ describe("the range buttons", () => {
    */
   it("does not count a date where every series is a hole", () => {
     const holes = [[1, null, null, null]];
-    const counts = rangeCounts(x, holes);
+    const counts = rangeCounts(x, holes, asOf);
 
     expect(counts.find((c) => c.key === "TODO")?.points).toBe(1);
     // Day 0 is outside the five-year window, and the three dates inside it are
@@ -255,14 +257,32 @@ describe("the range buttons", () => {
   });
 
   it("selects the same indices the counting promised", () => {
-    expect(rangeIndices(x, "TODO")).toEqual([0, 1, 2, 3]);
-    expect(rangeIndices(x, "5A")).toEqual([1, 2, 3]);
-    expect(rangeIndices(x, "1A")).toEqual([3]);
+    expect(rangeIndices(x, "TODO", asOf)).toEqual([0, 1, 2, 3]);
+    expect(rangeIndices(x, "5A", asOf)).toEqual([1, 2, 3]);
+    expect(rangeIndices(x, "1A", asOf)).toEqual([3]);
   });
 
   it("says nothing about an empty series instead of failing", () => {
-    expect(rangeCounts([], []).every((c) => c.points === 0)).toBe(true);
-    expect(rangeIndices([], "1A")).toEqual([]);
+    expect(rangeCounts([], [], asOf).every((c) => c.points === 0)).toBe(true);
+    expect(rangeIndices([], "1A", asOf)).toEqual([]);
+  });
+
+  /**
+   * «Este año» is the calendar year of the date asked about, both ends in:
+   * the first of January is in, the thirty-first of December before it is out,
+   * whatever the zone of the machine (the points are dates at UTC midnight).
+   */
+  it("runs from 1 January of the year of the date asked about", () => {
+    const at = (date: string): number => Date.parse(`${date}T00:00:00Z`) / 1000;
+    const dates = [at("2028-12-31"), at("2029-01-01"), at("2029-03-15"), at("2029-05-15")];
+    expect(rangeIndices(dates, "ESTE_ANO", "2029-05-15")).toEqual([1, 2, 3]);
+    expect(rangeIndices(dates, "ESTE_ANO", "2028-12-31")).toEqual([0]);
+    const none = rangeCounts(dates, [[null, null, null, 1]], "2029-05-15");
+    expect(none.find((c) => c.key === "ESTE_ANO")?.points).toBe(1);
+    expect(
+      rangeCounts(dates, [[1, null, null, null]], "2029-05-15").find((c) => c.key === "ESTE_ANO")
+        ?.points,
+    ).toBe(0);
   });
 });
 

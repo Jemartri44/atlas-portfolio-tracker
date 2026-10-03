@@ -14,6 +14,7 @@ import type { MissingNote } from "../../view-models/series.js";
 import { Amount } from "../Amount.jsx";
 import { type DataColumn, DataTable } from "../DataTable.jsx";
 import { Disclosure } from "../Disclosure.jsx";
+import { Figure } from "../Figure.jsx";
 
 export interface ChartTableRow {
   date: string;
@@ -30,17 +31,24 @@ interface ChartTableProps {
   /** The chart shades a band: the swatch beside the line says what it is. */
   banded?: boolean | undefined;
   caption: string;
+  /** What the values are: euros (masked with the privacy) or a percentage (never). */
+  unit?: "eur" | "pct" | undefined;
 }
 
 /** The figure of one series on a row, or the hole where it is not known. */
-const amountOf = (row: ChartTableRow, index: number): JSX.Element => (
-  <Amount
-    value={
-      row.values[index] === undefined ? undefined : Money.parse(row.values[index] as string, "EUR")
-    }
-    missingReason="falta algún precio a esa fecha"
-  />
-);
+const amountOf = (row: ChartTableRow, index: number, unit?: "eur" | "pct"): JSX.Element =>
+  unit === "pct" ? (
+    <Figure value={row.values[index]} unit="percent" decimals={1} signed />
+  ) : (
+    <Amount
+      value={
+        row.values[index] === undefined
+          ? undefined
+          : Money.parse(row.values[index] as string, "EUR")
+      }
+      missingReason="falta algún precio a esa fecha"
+    />
+  );
 
 /**
  * A column per series, plus the date. The figures go through `Amount`.
@@ -51,7 +59,10 @@ const amountOf = (row: ChartTableRow, index: number): JSX.Element => (
  * table's, with nothing saying which was the core and which the cash. On a
  * table the header says it; on a card there is no header, so the card has to.
  */
-const columnsOf = (headers: readonly string[]): DataColumn<ChartTableRow>[] => [
+const columnsOf = (
+  headers: readonly string[],
+  unit?: "eur" | "pct",
+): DataColumn<ChartTableRow>[] => [
   {
     key: "date",
     header: "Fecha",
@@ -63,10 +74,10 @@ const columnsOf = (headers: readonly string[]): DataColumn<ChartTableRow>[] => [
     header,
     numeric: true,
     card: "sub" as const,
-    cell: (row: ChartTableRow) => amountOf(row, index),
+    cell: (row: ChartTableRow) => amountOf(row, index, unit),
     cardCell: (row: ChartTableRow) => (
       <>
-        {header} {amountOf(row, index)}
+        {header} {amountOf(row, index, unit)}
       </>
     ),
   })),
@@ -94,7 +105,7 @@ export const ChartTable = (props: ChartTableProps): JSX.Element => (
     <Disclosure label="Ver los datos de la gráfica">
       <DataTable
         label={props.caption}
-        columns={columnsOf(props.headers)}
+        columns={columnsOf(props.headers, props.unit)}
         rows={props.rows}
         size="sm"
       />

@@ -27,10 +27,10 @@ import {
   settingsAt,
   transferWatch,
 } from "@atlas/domain";
+import { contributedSeries } from "@atlas/domain/charts";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { SeriesCard } from "../../components/chart/index.js";
-import { Icon, Notice, type NoticeItem, NoticeLink, Section } from "../../components/index.js";
+import { Icon, type NoticeItem, NoticeLink, Section } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -48,11 +48,12 @@ import {
   netWorthView,
   onboardingOf,
 } from "../../view-models/index.js";
-import { netWorthPlot } from "../../view-models/series.js";
+import { netWorthPlot, withContributed } from "../../view-models/series.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
 import { EntryLine } from "../movimientos/MovementList.jsx";
 import { AttentionBlock, noticeOf } from "./AttentionBlock.jsx";
+import { EvolutionCard } from "./EvolutionCard.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
 // The card that leads to the fiscal screen only draws, so it is on the boot
 // path and in its place on the first paint (feature 020, E2): what asks the
@@ -159,9 +160,11 @@ export default function ResumenRoute(): JSX.Element {
         const onboarding = onboardingOf(dated, entries, settings);
         const moved = entries.some(isMovement);
         const monitor = mediaQuery(MONITOR);
-        const series = netWorthPlot(
-          netWorthSeries(snapshot.events, { to: date, max_points: MAX_POINTS }),
-          names,
+        const range = { to: date, max_points: MAX_POINTS };
+        const contributed = contributedSeries(snapshot.events, range);
+        const series = withContributed(
+          netWorthPlot(netWorthSeries(snapshot.events, range), names),
+          contributed,
         );
 
         // The cards, each once; `summaryOrder` says in which order they go.
@@ -198,23 +201,7 @@ export default function ResumenRoute(): JSX.Element {
             <FiscalCard season={season} status={fiscal} year={nextReturnYear(settings, date)} />
           ),
           evolution: () => (
-            <SeriesCard
-              title="Evolución del patrimonio"
-              class="span-12 summary-evolution"
-              labels={["Cartera principal", "Cubo", "Efectivo"]}
-              colours={["--c-series-core", "--c-series-bucket", "--c-series-cash"]}
-              dashes={[undefined, [6, 4], [1, 5]]}
-              x={series.x}
-              values={series.values}
-              rows={series.rows}
-              missing={series.missing}
-              empty={
-                <Notice severity="info" title="Todavía no hay nada que dibujar">
-                  La evolución se dibuja sobre las fechas que tienen precio. Registra una valoración
-                  y aparecerá el primer punto.
-                </Notice>
-              }
-            />
+            <EvolutionCard asOf={date} series={series} uncoveredBuys={contributed.uncovered_buys} />
           ),
         };
 

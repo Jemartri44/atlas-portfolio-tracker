@@ -5,8 +5,9 @@
 // It is one component and not three copies because both charts of feature 007
 // need exactly this, and the next one will too.
 
-import { createMemo, createSignal, type JSX, Show } from "solid-js";
-import type { MissingNote } from "../../view-models/series.js";
+import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
+import { formatDate } from "../../format/date.js";
+import { gapRule, type MissingNote } from "../../view-models/series.js";
 import { Section } from "../Section.jsx";
 import { Chart, type ChartSeries } from "./Chart.jsx";
 import { ChartLegend } from "./ChartLegend.jsx";
@@ -17,6 +18,8 @@ import { type RangeKey, rangeCounts, rangeIndices } from "./ranges.js";
 
 export interface SeriesCardProps {
   title: string;
+  /** The date asked about: «Este año» runs from 1 January of its year to it. */
+  asOf: string;
   /** Its place in the grid of the screen. */
   class?: string | undefined;
   /** Names of the series, in the order of `values`. */
@@ -35,13 +38,41 @@ export interface SeriesCardProps {
   foot?: JSX.Element | undefined;
   /** The last rows of the card, drawn or not: a disclosure with the detail. */
   tail?: JSX.Element | undefined;
+  /**
+   * The series that are drawn as steps, by index (what was contributed), and
+   * the panels of a stack: each with the series it draws and, for a strip, its
+   * name. Each panel has its own scale and they share the dates and the cursor
+   * (feature 020, E4, M3). Without panels, one chart with everything.
+   */
+  stepped?: readonly number[] | undefined;
+  panels?: readonly { series: readonly number[]; name?: string }[] | undefined;
+  /** What the values are: euros, or a percentage (axis and table without a mask). */
+  unit?: "eur" | "pct" | undefined;
+  /** Past half a range of holes, jump to the last stretch with data and say so (M7). */
+  jump?: boolean | undefined;
 }
 
 export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
   const [range, setRange] = createSignal<RangeKey>("TODO");
 
-  const indices = createMemo<number[]>(() => rangeIndices(props.x, range()));
-  const options = createMemo<RangeOption[]>(() => rangeCounts(props.x, props.values));
+  const ranged = createMemo<number[]>(() => rangeIndices(props.x, range(), props.asOf));
+  const hole = createMemo(() =>
+    props.jump === true
+      ? gapRule(
+          ranged().map((at) => props.x[at] as number),
+          props.values.map((one) => ranged().map((at) => one[at] ?? null)),
+        )
+      : undefined,
+  );
+  const indices = (): number[] => {
+    const rule = hole();
+    return rule === undefined
+      ? ranged()
+      : rule === "pending"
+        ? []
+        : ranged().slice(rule.from, rule.to + 1);
+  };
+  const options = createMemo<RangeOption[]>(() => rangeCounts(props.x, props.values, props.asOf));
 
   const series = (): ChartSeries[] =>
     props.labels.map((label, index) => ({
@@ -49,6 +80,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
       values: indices().map((at) => props.values[index]?.[at] ?? null),
       colour: props.colours[index] ?? "--c-series-index",
       ...(props.dashes[index] === undefined ? {} : { dash: props.dashes[index] as number[] }),
+      ...(props.stepped?.includes(index) === true ? { step: true } : {}),
     }));
 
   const shown = (): number[] => indices().map((at) => props.x[at] as number);
@@ -65,16 +97,49 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
       aside={props.lead === undefined ? buttons() : undefined}
     >
       {props.lead}
-      <Show when={props.x.length > 0} fallback={props.empty}>
+      <Show when={props.x.length > 0 && hole() !== "pending"} fallback={props.empty}>
         <Show when={props.lead !== undefined}>
           <div class="chart-range">{buttons()}</div>
         </Show>
         <figure class="chart">
-          <Chart x={shown()} series={series()} label={props.title} />
+          <Show
+            when={props.panels}
+            fallback={<Chart x={shown()} series={series()} label={props.title} unit={props.unit} />}
+          >
+            {(panels) => (
+              <For each={panels()}>
+                {(panel, at) => (
+                  <>
+                    <Show when={panel.name}>
+                      <p class="panel-name">
+                        {panel.name} <span>escala propia</span>
+                      </p>
+                    </Show>
+                    <Chart
+                      x={shown()}
+                      series={panel.series.map((index) => series()[index] as ChartSeries)}
+                      bands={series()}
+                      label={`${props.title}: ${panel.name ?? "cartera principal y lo aportado"}`}
+                      panel={at() === 0 ? "main" : at() === panels().length - 1 ? "end" : "strip"}
+                      sync="evolution"
+                      dates={at() === panels().length - 1}
+                    />
+                  </>
+                )}
+              </For>
+            )}
+          </Show>
           <figcaption>
             <ChartLegend series={series()} />
           </figcaption>
         </figure>
+        <Show when={typeof hole() === "object"}>
+          <p class="gap-note">
+            Los huecos ocupan más de la mitad de este rango: se enseña el último tramo con datos,
+            del {formatDate(props.rows[indices()[0] as number]?.date ?? "")} al{" "}
+            {formatDate(props.rows[indices().at(-1) as number]?.date ?? "")}.
+          </p>
+        </Show>
         {props.foot}
         <ChartTable
           headers={props.labels}
@@ -83,6 +148,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
             values: props.rows[at]?.values ?? [],
           }))}
           caption={props.title}
+          unit={props.unit}
           missing={props.missing}
           banded={gapsOf(shown(), series()).length > 0}
         />

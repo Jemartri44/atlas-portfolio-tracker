@@ -509,7 +509,13 @@ const dist = join(webRoot, "dist");
  * shared rules of strips, gauges and dumbbells are written once. M14 (styles
  * per screen) is the lever if E4 needs more. The trend: 75.593 → 75.835.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_855;
+/*
+ * **Feature 020, E4, M3 (2026-10-03): measured 75.919 (+97 over the 75.822 of
+ * the bucket in percent), ceiling 75.939 — measured + 20**, inside the
+ * authorisation (76.069). The stylesheet only: the tokens of the heights of
+ * the panels and the rules of the stack. The trend: 75.822 → 75.919.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_939;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -1090,7 +1096,31 @@ const BOOT_BUDGET_GZIP_BYTES = 75_855;
  * gauges, the dumbbells and their view-model (+1,8 KB gzip). The trend:
  * 307.720 → 309.810.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 310_066;
+/*
+ * **Feature 020, E4, «Este año» (2026-10-03): measured 310.152 (+321 over the
+ * 309.831 of the start of E4), ceiling 310.408 — measured + 256**, inside the
+ * authorisation (312.000), which is **not** raised. Of those, about +200 are
+ * the filing deadlines and the calendar of the domain (commit before), which
+ * the chunk of the fiscal screen already carries; the boot is −4. The trend:
+ * 309.831 → 310.152.
+ */
+/*
+ * **Feature 020, E4, M7 (2026-10-03): measured 310.725 (+573 over the 310.152
+ * of «Este año»), ceiling 310.981 — measured + 256**, inside the authorisation
+ * (312.000), which leaves 1.275 bytes for M3 and M12 (estimated at +2.500: the
+ * cuts of plan §6.3 come first). The boot is −4 (above). The trend: 310.152 →
+ * 310.725.
+ */
+/*
+ * **Feature 020, E4, M3 (2026-10-03): measured 311.983 (+1.258 over the
+ * 310.725 of the bucket in percent), ceiling 312.000 — the authorisation, not
+ * measured + 256**: there are 17 bytes left, and M12 does not fit in them
+ * (the cuts of plan §6.3 come before it). Of those, the stack of three charts
+ * and its step (`Chart`, `SeriesCard`), the contributions of the domain in a
+ * chunk of the charts that the summary and the bucket share, and the column of
+ * the table. The trend: 310.725 → 311.983.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 312_000;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,

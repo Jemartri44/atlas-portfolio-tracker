@@ -41,6 +41,13 @@ export {
   fiscalAttention,
   type InformativeTodo,
 } from "./informative/attention.js";
+export {
+  type CalendarDate,
+  type CalendarKind,
+  type FiscalCalendar,
+  fiscalCalendar,
+} from "./informative/calendar.js";
+export { FILING_DEADLINES, type FilingDeadline } from "./informative/deadlines.js";
 export { informativeReturn, model720, model721 } from "./informative/m720.js";
 export type * from "./informative/report.js";
 export { taxBoxes } from "./tax/boxes/boxes.js";

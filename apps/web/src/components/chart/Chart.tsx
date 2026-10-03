@@ -23,41 +23,8 @@
 import { createEffect, type JSX, onCleanup, onMount } from "solid-js";
 import uPlot from "../../../vendor/uplot/uPlot.js";
 import { store, usePrivacy } from "../../ledger/state.js";
-import { axisAmount, axisDates, spanOf } from "./axis.js";
-import { drawGaps, gapsOf } from "./gaps.js";
-
-export interface ChartSeries {
-  label: string;
-  /** One value per x, `null` where the ledger has no answer. Never a zero. */
-  values: readonly (number | null)[];
-  /** Token name, resolved against the stylesheet: no colour is written here. */
-  colour: string;
-  /** Dash pattern, so the series is told apart without colour. */
-  dash?: readonly number[];
-}
-
-const DEFAULT_HEIGHT = 184;
-
-/** Above this many points the dots crowd the line and are hidden. */
-const DOTS_UP_TO = 40;
-
-/**
- * Whether a series holds a value with a hole on **both** sides (or with no
- * neighbour at all).
- *
- * A line is drawn between two consecutive values; a value alone between two
- * holes has nothing to join, so with the dots hidden it is not drawn at all —
- * a date the ledger *does* know about, missing from the chart. Exactly the
- * situation this feature's ledger is in most of the time: prices recorded once
- * or twice a year, and one lonely valuation in between.
- */
-export const hasIsolatedPoint = (values: readonly (number | null)[]): boolean =>
-  values.some(
-    (value, index) =>
-      value !== null &&
-      (values[index - 1] ?? null) === null &&
-      (values[index + 1] ?? null) === null,
-  );
+import { gapsOf } from "./gaps.js";
+import { type ChartSeries, type ChartSpec, chartOptions, hasIsolatedPoint } from "./options.js";
 
 interface ChartProps {
   /** Seconds since the epoch, ascending. */
@@ -66,101 +33,18 @@ interface ChartProps {
   /** Accessible name; the equivalent table carries the numbers themselves. */
   label: string;
   height?: number;
+  unit?: "eur" | "pct" | undefined;
+  /** The class of the frame: a panel and a strip of a stack have their own height. */
+  panel?: "main" | "strip" | "end" | undefined;
+  sync?: string | undefined;
+  dates?: boolean | undefined;
+  /** The series whose holes are shaded, when they are not the ones drawn. */
+  bands?: readonly ChartSeries[] | undefined;
 }
 
-const cssValue = (name: string): string =>
-  getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888";
+const DEFAULT_HEIGHT = 184;
 
-/** The type of the axes: the family of the page, at the smallest step it reads. */
-const axisFont = (): string => `13px ${cssValue("--font-sans")}`;
-
-export interface ChartSpec {
-  x: readonly number[];
-  series: readonly ChartSeries[];
-  width: number;
-  height: number;
-}
-
-/**
- * The options uPlot is built with, as a **pure function of the data and the
- * privacy flag**, so the two rules that live in here can be asserted without a
- * canvas:
- *
- *   1. the Y axis asks `axisAmount` for its labels **with the privacy flag** —
- *      the axis of a chart is an amount for every purpose, and with the mask on
- *      there can be no absolute figure on it;
- *   2. every series carries `spanGaps: false` — a `null` is a hole, and without
- *      this uPlot joins its two ends with a straight line, which is exactly the
- *      interpolation this feature exists to refuse.
- *
- * Both used to be unreachable from a test: they were expressions inside the
- * component, and a mutation of either left the whole suite green.
- */
-/** The least room, in CSS pixels, between two labels of the date axis. */
-const SPACE = { days: 56, months: 88, years: 56 } as const;
-
-export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options => {
-  const from = spec.x[0] ?? 0;
-  const to = spec.x[spec.x.length - 1] ?? from;
-  const span = spanOf(from, to);
-  return {
-    width: spec.width,
-    height: spec.height,
-    // Room on the right for half of the last date, which uPlot centres on its
-    // tick: at the edge of a phone «dic 2028» was cut to «dic 20».
-    padding: [8, SPACE[span] / 2 - 16, 0, 0],
-    legend: { show: false },
-    cursor: { drag: { x: false, y: false } },
-    scales: { x: { time: true } },
-    hooks: { drawClear: [drawGaps(gapsOf(spec.x, spec.series))] },
-    axes: [
-      {
-        stroke: cssValue("--c-text-3"),
-        font: axisFont(),
-        grid: { show: false },
-        ticks: { show: false },
-        // The least room between two dates: «sept 2026» is wider than «2026»,
-        // and at uPlot's default of 50 px the months ran into each other.
-        space: SPACE[span],
-        values: (_plot, splits) => axisDates(splits, span),
-      },
-      {
-        stroke: cssValue("--c-text-3"),
-        font: axisFont(),
-        grid: { stroke: cssValue("--c-chart-grid"), width: 1 },
-        ticks: { show: false },
-        // No figure with the mask (brief §7); off, «0 €» clear of the plot (PR #105).
-        size: privacy ? 8 : 60,
-        gap: privacy ? 0 : 10,
-        values: (_plot, splits) => splits.map((value) => axisAmount(value, privacy)),
-      },
-    ],
-    series: [
-      {},
-      ...spec.series.map((series) => ({
-        label: series.label,
-        stroke: cssValue(series.colour),
-        width: 2,
-        cap: "round" as CanvasLineCap,
-        spanGaps: false,
-        // uPlot draws on a canvas of device pixels and does not scale a dash:
-        // at 3x a dotted line came out solid on the phone.
-        ...(series.dash === undefined
-          ? {}
-          : { dash: series.dash.map((step) => step * (window.devicePixelRatio || 1)) }),
-        // Crowded charts hide their dots, **except** where a dot is the only
-        // way a value gets drawn at all.
-        points: {
-          show: spec.x.length < DOTS_UP_TO || hasIsolatedPoint(series.values),
-          size: 8,
-          fill: cssValue("--c-surface"),
-        },
-      })),
-    ],
-  };
-};
-
-export { gapsOf };
+export { type ChartSeries, type ChartSpec, chartOptions, gapsOf, hasIsolatedPoint };
 
 export const Chart = (props: ChartProps): JSX.Element => {
   const privacy = usePrivacy();
@@ -204,6 +88,10 @@ export const Chart = (props: ChartProps): JSX.Element => {
           series: props.series,
           width: host.clientWidth || 320,
           height: props.height ?? (host.clientHeight || DEFAULT_HEIGHT),
+          ...(props.unit === undefined ? {} : { unit: props.unit }),
+          ...(props.sync === undefined ? {} : { sync: props.sync }),
+          ...(props.dates === undefined ? {} : { dates: props.dates }),
+          ...(props.bands === undefined ? {} : { bands: props.bands }),
         },
         privacy(),
       ),
@@ -245,5 +133,12 @@ export const Chart = (props: ChartProps): JSX.Element => {
     plot = undefined;
   });
 
-  return <div class="chart-plot" ref={host} role="img" aria-label={props.label} />;
+  return (
+    <div
+      class={props.panel === undefined ? "chart-plot" : `chart-plot is-${props.panel}`}
+      ref={host}
+      role="img"
+      aria-label={props.label}
+    />
+  );
 };

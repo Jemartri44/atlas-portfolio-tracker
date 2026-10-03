@@ -5,7 +5,7 @@
 // function of the data, so it can be asserted without a canvas.
 
 import type uPlot from "../../../vendor/uplot/uPlot.js";
-import type { ChartSeries } from "./Chart.jsx";
+import type { ChartSeries } from "./options.js";
 
 /** Room on each side of the label, so the dashed edges never touch it. */
 const LABEL_MARGIN = 6;
@@ -18,14 +18,17 @@ const cssValue = (name: string): string =>
  * known point before the hole to the first known one after it (or the edge of
  * the chart). Where only one series lacks its datum, the hole is that line
  * stopping, and a band across the whole chart would say the others lack it too
- * (review of 2026-09-19). A series with no value at all is absent, not a hole.
+ * (review of 2026-09-19). A series with no value at all is absent, not a hole, and
+ * a step series (what was contributed) has no holes and says nothing about them.
  * Pure, so what is shaded can be asserted without a canvas.
  */
 export const gapsOf = (
   x: readonly number[],
-  series: readonly ChartSeries[],
+  series: readonly Pick<ChartSeries, "values" | "step">[],
 ): { from: number; to: number }[] => {
-  const drawn = series.filter((one) => one.values.some((value) => value !== null));
+  const drawn = series.filter(
+    (one) => one.step !== true && one.values.some((value) => value !== null),
+  );
   const holes = x.map(
     (_, index) => drawn.length > 0 && drawn.every((one) => (one.values[index] ?? null) === null),
   );

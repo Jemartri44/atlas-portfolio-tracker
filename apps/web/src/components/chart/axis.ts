@@ -47,6 +47,23 @@ export const axisAmount = (value: number | null | undefined, privacy: boolean): 
 };
 
 /**
+ * The labels of a percentage axis, with as many decimals as its steps need
+ * («2,5 %» and not «3 %»). A share does not give the size of the money away,
+ * so, unlike the amounts, it is never withheld with the privacy on (feature
+ * 020, E4, M7).
+ */
+export const axisPercents = (splits: readonly number[]): string[] => {
+  const decimals = splits.every((value) => Number.isInteger(value))
+    ? 0
+    : splits.every((value) => Number.isInteger(value * 10))
+      ? 1
+      : 2;
+  return splits.map(
+    (value) => `${formatDecimalString(value.toFixed(decimals), { decimals })}${NBSP}%`,
+  );
+};
+
+/**
  * A date of the X axis: the day is noise on a five-year range, and vital on a
  * month. The year in full: «feb 27» reads as the 27th of February.
  */
