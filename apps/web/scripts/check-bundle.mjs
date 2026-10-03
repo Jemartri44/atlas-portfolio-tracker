@@ -1098,7 +1098,14 @@ const BOOT_BUDGET_GZIP_BYTES = 75_855;
  * the chunk of the fiscal screen already carries; the boot is −4. The trend:
  * 309.831 → 310.152.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 310_408;
+/*
+ * **Feature 020, E4, M7 (2026-10-03): measured 310.725 (+573 over the 310.152
+ * of «Este año»), ceiling 310.981 — measured + 256**, inside the authorisation
+ * (312.000), which leaves 1.275 bytes for M3 and M12 (estimated at +2.500: the
+ * cuts of plan §6.3 come first). The boot is −4 (above). The trend: 310.152 →
+ * 310.725.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 310_981;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
