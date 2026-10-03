@@ -736,3 +736,12 @@ Techos: arranque **75.855**, total **310.066**. Margen hasta la autorización: *
 - `system.md` §5.2: con la privacidad puesta, un porcentaje junto a cada importe oculto; las tablas funden sus columnas de importes en «Importes ocultos» (*Costes*, *Posiciones abiertas*, *Tesis*).
 - `data-model.md` §3 y `contracts/domain-doors.md`: `bucketGauges` y `thesisVsIndexPct` tal como se implementaron (`thesis_pct`, `index_pct`, `vs_index_pp` ausentes si falta la comparación; `result_pct` con signo).
 - `business-rules.md`: nada cambia; `NEAR_LIMIT_PCT` sigue sin ser configurable.
+
+### 12.6 Tubería y capturas
+
+- `test:coverage:domain`: **186 ficheros, 1.825 tests, 100 %** de sentencias (9.369), ramas (5.862), funciones (2.136) y líneas (8.913).
+- `test:others`: 204 ficheros; en la primera pasada fallaron 2 tests (`architecture` por una hoja de más de 250 líneas sin razón, y `result-colour` por los % nuevos de resultados); arreglados en `07becaee` (hoja `indicators.css`; la diferencia en pp queda en tinta, sin `coloured`). Después: `architecture`, `result-colour`, `palette-usage` y `bucket-gauges` en verde; `tsc -b` y `npm run build` (con `check-bundle.mjs`) en verde. Lint: solo el aviso previo de `infra/`.
+- Paquete final medido: arranque **75.837**, total **309.895** (techos 75.855 y 310.066; autorización 76.069 y 312.000).
+- Capturas (scratchpad de la sesión, `020-e3-shots/antes` y `despues`, 56 cada una): Cartera y Cubo, 400x890 x3 y 2045x1141, claro y oscuro, importes ocultos y visibles, libro sintético, reloj 20/01/2029 10:00 Europe/Madrid, `Chrome/153.0.8010.12`. «Antes» es `9f6956d1`. Medidas (`medidas.json`): sin desplazamiento lateral a 360, 400, 1.440 y 2045; ningún texto por debajo de 13 px fuera de la máscara; un objetivo táctil por debajo de 44 px, igual antes y después (previo).
+- No comprobé commit a commit que cada uno construye: se sabe que `33e2665a` y `f2d1210f` no (§12.3).
+- Los relojes extremos (`TZ=Pacific/Kiritimati`, `Pacific/Pago_Pago`, 31/12 y 01/01) no se corrieron en E3.
