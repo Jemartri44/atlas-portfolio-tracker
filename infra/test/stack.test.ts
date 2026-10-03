@@ -240,13 +240,13 @@ describe.each(ENVS)("the parameters, logs and function of %s", (env) => {
   });
 
   it("creates its log group, with 30 days in prod and 7 in dev", () => {
-    const group = attrs(stack(env), "aws_cloudwatch_log_group");
+    const group = attrs(stack(env), "aws_cloudwatch_log_group", "api");
     expect(group.name).toBe(`/aws/lambda/atlas-${env}-api`);
     expect(group.retention_in_days).toBe(env === "prod" ? 30 : 7);
   });
 
   it("is arm64, 256 MB, 30 s, Node 22, with exactly the variables parseApiConfig accepts", () => {
-    const fn = attrs(stack(env), "aws_lambda_function");
+    const fn = attrs(stack(env), "aws_lambda_function", "api");
     expect(fn).toMatchObject({
       function_name: `atlas-${env}-api`,
       runtime: "nodejs22.x",
@@ -289,13 +289,13 @@ describe.each(ENVS)("the parameters, logs and function of %s", (env) => {
   });
 
   it("reserves concurrency by default, 1 in dev and 5 in prod, and leaves it open only when asked (C12)", () => {
-    expect(attrs(stack(env), "aws_lambda_function").reserved_concurrent_executions).toBe(
+    expect(attrs(stack(env), "aws_lambda_function", "api").reserved_concurrent_executions).toBe(
       env === "dev" ? 1 : 5,
     );
     const open = renderStack(env, { reserve_api_concurrency: false });
-    expect(attrs(open, "aws_lambda_function").reserved_concurrent_executions).toBe(-1);
+    expect(attrs(open, "aws_lambda_function", "api").reserved_concurrent_executions).toBe(-1);
     const more = renderStack(env, { api_reserved_concurrency: 7 });
-    expect(attrs(more, "aws_lambda_function").reserved_concurrent_executions).toBe(7);
+    expect(attrs(more, "aws_lambda_function", "api").reserved_concurrent_executions).toBe(7);
   });
 
   it("passes the guardians: tags, closed wildcards, regions, cost.md", () => {
