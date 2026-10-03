@@ -19,4 +19,7 @@ export const UNTAGGABLE: Record<string, string> = {
   aws_lambda_permission: "a resource policy statement is not taggable",
   aws_acm_certificate_validation: "waits for DNS: not a taggable resource",
   aws_kms_alias: "an alias is not taggable",
+  aws_scheduler_schedule:
+    "a schedule is not taggable: only the schedule group is (API_TagResource; 016 questions 1.6)",
+  aws_lambda_function_event_invoke_config: "the invoke configuration of a function is not taggable",
 };

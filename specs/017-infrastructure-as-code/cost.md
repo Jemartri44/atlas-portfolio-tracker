@@ -2,7 +2,7 @@
 
 > **Cualquier `apply` necesita el visto bueno del usuario con esta estimación delante.** Esta tabla es una **lista cerrada**: un tipo de recurso que no figura aquí hace fallar el test de `infra/test/` (prompt 017, §12.2 N1). Añadir un tipo es una decisión de coste: se escribe aquí, con su motivo, en el mismo commit que el recurso.
 
-Estado: **E1** (cuenta y aislamiento) escrita; las filas de E2 a E4 son las previstas en `plan.md` y se confirman con la fuente de cada servicio en el bloque 0 de su entrega. La suma esperada cae en 0,01-0,05 $/mes (ADR-0028, ADR-0034, fila 9); **si al verificar las fuentes no sale, se para**. Lo que mide el consumo real es la 018 (Cost Explorer), no esta tabla.
+Estado: **E1** (cuenta y aislamiento), **E2** (datos y borde) y **E3** (tareas y correo) escritas; las filas de E2 a E4 son las previstas en `plan.md` y se confirman con la fuente de cada servicio en el bloque 0 de su entrega. La suma esperada cae en 0,01-0,05 $/mes (ADR-0028, ADR-0034, fila 9); **si al verificar las fuentes no sale, se para**. Lo que mide el consumo real es la 018 (Cost Explorer), no esta tabla.
 
 | Tipo de recurso | Parte | Entrega | Coste esperado | Qué lo haría crecer |
 |---|---|---|---|---|
@@ -25,7 +25,7 @@ Estado: **E1** (cuenta y aislamiento) escrita; las filas de E2 a E4 son las prev
 | `aws_cloudfront_origin_access_control` | `dev`, `prod` | E1 | 0 | — |
 | `aws_kms_key` | `prod`, solo con C2 | E1 | **1 $/mes** (ADR-0034, fila 8; las 20.000 peticiones gratuitas al mes son de la cuenta, fila 13) | la alarma pasa de 1 a 2 $ con esta clave |
 | `aws_kms_alias` | `prod`, solo con C2 | E1 | 0 | — |
-| `aws_lambda_function` | `dev`, `prod`: 6 por entorno | E2, E3 | nivel gratuito compartido de la cuenta | concurrencia provisionada y VPC (no entran) |
+| `aws_lambda_function` | `dev`, `prod`: 6 por entorno (la API y las cinco tareas) | E2, E3 | nivel gratuito compartido de la cuenta | concurrencia provisionada y VPC (no entran) |
 | `aws_lambda_function_url` | `dev`, `prod` | E2 | 0 | — |
 | `aws_lambda_permission` | `dev`, `prod` | E2, E3 | 0 | — |
 | `aws_cloudwatch_log_group` | `dev`, `prod` | E2, E3 | céntimos; retención 30 y 7 días | retención sin límite |
@@ -34,8 +34,9 @@ Estado: **E1** (cuenta y aislamiento) escrita; las filas de E2 a E4 son las prev
 | `aws_wafv2_web_acl` | `dev`, `prod` | E2 | 0 con el plan Free | fuera del plan: 7-8 $/mes (estimación del plan, SIN VERIFICAR, E2 b0.2) |
 | `aws_acm_certificate` | `dev`, `prod` | E2 | 0 | — |
 | `aws_acm_certificate_validation` | `dev`, `prod` | E2 | 0 (espera el registro DNS que crea el usuario) | — |
-| `aws_scheduler_schedule_group` | `dev`, `prod` | E3 | por verificar (nivel gratuito, E3 b0) | — |
-| `aws_scheduler_schedule` | `dev`, `prod`: 5 por entorno | E3 | por verificar (nivel gratuito, E3 b0) | — |
+| `aws_scheduler_schedule_group` | `dev`, `prod` | E3 | 0 (solo se facturan invocaciones, con 14 millones gratis al mes, `aws.amazon.com/eventbridge/pricing`, E3 b0) | — |
+| `aws_scheduler_schedule` | `dev`, `prod`: 5 por entorno | E3 | 0: unas 300 invocaciones al mes entre los dos entornos, frente a 14 millones gratis (E3 b0) | programaciones de más o una frecuencia mayor que la diaria |
+| `aws_lambda_function_event_invoke_config` | `dev`, `prod`: 5 por entorno | E3 | 0 (configuración de la función) | — |
 | `aws_ssm_parameter` | `dev`, `prod`: solo `String` | E3 | 0 (estándar) | parámetros avanzados; rendimiento alto |
 
 ## Cómo se comprueba
