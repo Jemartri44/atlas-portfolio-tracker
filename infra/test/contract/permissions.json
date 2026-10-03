@@ -1,0 +1,1344 @@
+{
+  "_comment": "Permissions contract of every role of Atlas in one environment (prompt 017, section 4: rows of the permissions table, action by action and resource by resource). Placeholders: {env}, {account}, {suffix}, {sender}, {sender_host}, {recipient}. `rendered: true` roles are compared line by line with the plan of bootstrap/env; the others are written by E2 and E3 and today only feed the boundary cross test. `pending` lines are known gaps, listed so that they cannot be forgotten.",
+  "roles": {
+    "deploy": {
+      "rendered": true,
+      "statements": [
+        {
+          "sid": "CloudFrontCreate",
+          "effect": "Allow",
+          "actions": [
+            "cloudfront:CreateDistribution",
+            "cloudfront:CreateFunction",
+            "cloudfront:TagResource"
+          ],
+          "resources": [
+            "arn:aws:cloudfront::{account}:distribution/*",
+            "arn:aws:cloudfront::{account}:function/atlas-{env}-*"
+          ],
+          "condition": {
+            "StringEquals": {
+              "aws:RequestTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5; NB4"
+        },
+        {
+          "sid": "CloudFrontChange",
+          "effect": "Allow",
+          "actions": [
+            "cloudfront:CreateInvalidation",
+            "cloudfront:DeleteDistribution",
+            "cloudfront:DeleteFunction",
+            "cloudfront:PublishFunction",
+            "cloudfront:TagResource",
+            "cloudfront:UntagResource",
+            "cloudfront:UpdateDistribution",
+            "cloudfront:UpdateFunction"
+          ],
+          "resources": [
+            "arn:aws:cloudfront::{account}:distribution/*",
+            "arn:aws:cloudfront::{account}:function/atlas-{env}-*"
+          ],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5; NB4"
+        },
+        {
+          "sid": "AcmCreate",
+          "effect": "Allow",
+          "actions": ["acm:AddTagsToCertificate", "acm:RequestCertificate"],
+          "resources": ["arn:aws:acm:us-east-1:{account}:certificate/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:RequestTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "AcmChange",
+          "effect": "Allow",
+          "actions": [
+            "acm:AddTagsToCertificate",
+            "acm:DeleteCertificate",
+            "acm:RemoveTagsFromCertificate"
+          ],
+          "resources": ["arn:aws:acm:us-east-1:{account}:certificate/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "WafCreate",
+          "effect": "Allow",
+          "actions": ["wafv2:CreateWebACL", "wafv2:TagResource"],
+          "resources": ["arn:aws:wafv2:us-east-1:{account}:global/webacl/atlas-{env}-*/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:RequestTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "WafChange",
+          "effect": "Allow",
+          "actions": [
+            "wafv2:DeleteWebACL",
+            "wafv2:TagResource",
+            "wafv2:UntagResource",
+            "wafv2:UpdateWebACL"
+          ],
+          "resources": ["arn:aws:wafv2:us-east-1:{account}:global/webacl/atlas-{env}-*/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "IamRoleWriteWithBoundary",
+          "effect": "Allow",
+          "actions": [
+            "iam:CreateRole",
+            "iam:DeleteRolePolicy",
+            "iam:PutRolePolicy",
+            "iam:UpdateAssumeRolePolicy"
+          ],
+          "resources": ["arn:aws:iam::{account}:role/atlas-{env}-*"],
+          "condition": {
+            "StringEquals": {
+              "iam:PermissionsBoundary": "arn:aws:iam::{account}:policy/atlas-{env}-boundary"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "IamRoleOther",
+          "effect": "Allow",
+          "actions": [
+            "iam:DeleteRole",
+            "iam:TagRole",
+            "iam:UntagRole",
+            "iam:UpdateRoleDescription"
+          ],
+          "resources": ["arn:aws:iam::{account}:role/atlas-{env}-*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "IamPassRoleToLambda",
+          "effect": "Allow",
+          "actions": ["iam:PassRole"],
+          "resources": [
+            "arn:aws:iam::{account}:role/atlas-{env}-api",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-ecb",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-prices",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-mail",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-backup",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-integrity"
+          ],
+          "condition": {
+            "StringEquals": {
+              "iam:PassedToService": "lambda.amazonaws.com"
+            }
+          },
+          "contract": "P12-B4"
+        },
+        {
+          "sid": "IamPassRoleToScheduler",
+          "effect": "Allow",
+          "actions": ["iam:PassRole"],
+          "resources": ["arn:aws:iam::{account}:role/atlas-{env}-scheduler"],
+          "condition": {
+            "StringEquals": {
+              "iam:PassedToService": "scheduler.amazonaws.com"
+            }
+          },
+          "contract": "P12-B4"
+        },
+        {
+          "sid": "DenyBootstrapRoles",
+          "effect": "Deny",
+          "actions": [
+            "iam:AttachRolePolicy",
+            "iam:CreateRole",
+            "iam:DeleteRole",
+            "iam:DeleteRolePermissionsBoundary",
+            "iam:DeleteRolePolicy",
+            "iam:DetachRolePolicy",
+            "iam:PutRolePermissionsBoundary",
+            "iam:PutRolePolicy",
+            "iam:TagRole",
+            "iam:UntagRole",
+            "iam:UpdateAssumeRolePolicy",
+            "iam:UpdateRole",
+            "iam:UpdateRoleDescription"
+          ],
+          "resources": [
+            "arn:aws:iam::{account}:role/atlas-{env}-admin",
+            "arn:aws:iam::{account}:role/atlas-{env}-deploy",
+            "arn:aws:iam::{account}:role/atlas-{env}-plan"
+          ],
+          "contract": "A34-5; B4(d)"
+        },
+        {
+          "sid": "DenyBoundaryRemoval",
+          "effect": "Deny",
+          "actions": ["iam:DeleteRolePermissionsBoundary", "iam:PutRolePermissionsBoundary"],
+          "resources": ["arn:aws:iam::{account}:role/atlas-{env}-*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "DenyOwnPolicyChange",
+          "effect": "Deny",
+          "actions": [
+            "iam:CreatePolicy",
+            "iam:CreatePolicyVersion",
+            "iam:DeletePolicy",
+            "iam:DeletePolicyVersion",
+            "iam:SetDefaultPolicyVersion"
+          ],
+          "resources": ["arn:aws:iam::{account}:policy/atlas-{env}-*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "DenyRoleWithoutBoundary",
+          "effect": "Deny",
+          "actions": [
+            "iam:CreateRole",
+            "iam:DeleteRolePolicy",
+            "iam:PutRolePolicy",
+            "iam:UpdateAssumeRolePolicy"
+          ],
+          "resources": ["arn:aws:iam::{account}:role/atlas-{env}-*"],
+          "condition": {
+            "StringNotEquals": {
+              "iam:PermissionsBoundary": "arn:aws:iam::{account}:policy/atlas-{env}-boundary"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "DenyTaggingOtherEnvironments",
+          "effect": "Deny",
+          "actions": [
+            "acm:AddTagsToCertificate",
+            "acm:RemoveTagsFromCertificate",
+            "cloudfront:TagResource",
+            "cloudfront:UntagResource",
+            "iam:TagRole",
+            "iam:UntagRole",
+            "lambda:TagResource",
+            "lambda:UntagResource",
+            "logs:TagResource",
+            "logs:UntagResource",
+            "s3:PutBucketTagging",
+            "scheduler:TagResource",
+            "scheduler:UntagResource",
+            "ssm:AddTagsToResource",
+            "ssm:RemoveTagsFromResource",
+            "wafv2:TagResource",
+            "wafv2:UntagResource"
+          ],
+          "resources": ["*"],
+          "condition": {
+            "Null": {
+              "aws:ResourceTag/env": "false"
+            },
+            "StringNotEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5; B4(a)"
+        },
+        {
+          "sid": "DenyChangingTheEnvTag",
+          "effect": "Deny",
+          "actions": [
+            "acm:AddTagsToCertificate",
+            "acm:RemoveTagsFromCertificate",
+            "cloudfront:TagResource",
+            "cloudfront:UntagResource",
+            "iam:TagRole",
+            "iam:UntagRole",
+            "lambda:TagResource",
+            "lambda:UntagResource",
+            "logs:TagResource",
+            "logs:UntagResource",
+            "s3:PutBucketTagging",
+            "scheduler:TagResource",
+            "scheduler:UntagResource",
+            "ssm:AddTagsToResource",
+            "ssm:RemoveTagsFromResource",
+            "wafv2:TagResource",
+            "wafv2:UntagResource"
+          ],
+          "resources": ["*"],
+          "condition": {
+            "ForAnyValue:StringEquals": {
+              "aws:TagKeys": ["env"]
+            },
+            "Null": {
+              "aws:ResourceTag/env": "false"
+            }
+          },
+          "contract": "A34-5; B4(a)"
+        },
+        {
+          "sid": "DenyChangingTheProjectTag",
+          "effect": "Deny",
+          "actions": [
+            "acm:AddTagsToCertificate",
+            "acm:RemoveTagsFromCertificate",
+            "cloudfront:TagResource",
+            "cloudfront:UntagResource",
+            "iam:TagRole",
+            "iam:UntagRole",
+            "lambda:TagResource",
+            "lambda:UntagResource",
+            "logs:TagResource",
+            "logs:UntagResource",
+            "s3:PutBucketTagging",
+            "scheduler:TagResource",
+            "scheduler:UntagResource",
+            "ssm:AddTagsToResource",
+            "ssm:RemoveTagsFromResource",
+            "wafv2:TagResource",
+            "wafv2:UntagResource"
+          ],
+          "resources": ["*"],
+          "condition": {
+            "ForAnyValue:StringEquals": {
+              "aws:TagKeys": ["project"]
+            },
+            "Null": {
+              "aws:ResourceTag/project": "false"
+            }
+          },
+          "contract": "A34-5; B4(a)"
+        },
+        {
+          "sid": "LambdaRead",
+          "effect": "Allow",
+          "actions": [
+            "lambda:GetFunction",
+            "lambda:GetFunctionCodeSigningConfig",
+            "lambda:GetFunctionConcurrency",
+            "lambda:GetFunctionConfiguration",
+            "lambda:GetFunctionUrlConfig",
+            "lambda:GetPolicy",
+            "lambda:GetRuntimeManagementConfig",
+            "lambda:ListTags",
+            "lambda:ListVersionsByFunction"
+          ],
+          "resources": ["arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "LogsRead",
+          "effect": "Allow",
+          "actions": ["logs:ListTagsForResource"],
+          "resources": ["arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-*"],
+          "contract": "A34-3"
+        },
+        {
+          "sid": "LogsDescribe",
+          "effect": "Allow",
+          "actions": ["logs:DescribeLogGroups"],
+          "resources": ["*"],
+          "contract": "P-5 (closed list; SAR: no resource type)"
+        },
+        {
+          "sid": "SsmStringsRead",
+          "effect": "Allow",
+          "actions": ["ssm:GetParameter", "ssm:ListTagsForResource"],
+          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/mail/*"],
+          "contract": "A34-12, A34-21"
+        },
+        {
+          "sid": "SchedulerRead",
+          "effect": "Allow",
+          "actions": ["scheduler:GetScheduleGroup", "scheduler:ListTagsForResource"],
+          "resources": ["arn:aws:scheduler:eu-west-1:{account}:schedule-group/atlas-{env}-*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "SchedulerScheduleRead",
+          "effect": "Allow",
+          "actions": ["scheduler:GetSchedule"],
+          "resources": ["arn:aws:scheduler:eu-west-1:{account}:schedule/atlas-{env}-jobs/*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "DataBucketConfigurationRead",
+          "effect": "Allow",
+          "actions": [
+            "s3:GetAccelerateConfiguration",
+            "s3:GetBucketAcl",
+            "s3:GetBucketCORS",
+            "s3:GetBucketLogging",
+            "s3:GetBucketObjectLockConfiguration",
+            "s3:GetBucketOwnershipControls",
+            "s3:GetBucketPolicy",
+            "s3:GetBucketPublicAccessBlock",
+            "s3:GetBucketRequestPayment",
+            "s3:GetBucketTagging",
+            "s3:GetBucketVersioning",
+            "s3:GetBucketWebsite",
+            "s3:GetEncryptionConfiguration",
+            "s3:GetLifecycleConfiguration",
+            "s3:GetReplicationConfiguration",
+            "s3:ListBucket"
+          ],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "contract": "P12-B1; research b0.9"
+        },
+        {
+          "sid": "SpaBucketConfigurationRead",
+          "effect": "Allow",
+          "actions": [
+            "s3:GetAccelerateConfiguration",
+            "s3:GetBucketAcl",
+            "s3:GetBucketCORS",
+            "s3:GetBucketLogging",
+            "s3:GetBucketObjectLockConfiguration",
+            "s3:GetBucketOwnershipControls",
+            "s3:GetBucketPolicy",
+            "s3:GetBucketPublicAccessBlock",
+            "s3:GetBucketRequestPayment",
+            "s3:GetBucketTagging",
+            "s3:GetBucketVersioning",
+            "s3:GetBucketWebsite",
+            "s3:GetEncryptionConfiguration",
+            "s3:GetLifecycleConfiguration",
+            "s3:GetReplicationConfiguration",
+            "s3:ListBucket"
+          ],
+          "resources": ["arn:aws:s3:::atlas-{env}-spa-{suffix}"],
+          "contract": "P12-B1; research b0.9"
+        },
+        {
+          "sid": "CloudFrontDistributionRead",
+          "effect": "Allow",
+          "actions": [
+            "cloudfront:GetDistribution",
+            "cloudfront:GetDistributionConfig",
+            "cloudfront:ListTagsForResource"
+          ],
+          "resources": ["arn:aws:cloudfront::{account}:distribution/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "CloudFrontFunctionRead",
+          "effect": "Allow",
+          "actions": [
+            "cloudfront:DescribeFunction",
+            "cloudfront:GetFunction",
+            "cloudfront:ListTagsForResource"
+          ],
+          "resources": ["arn:aws:cloudfront::{account}:function/atlas-{env}-*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "CloudFrontBootstrapRead",
+          "effect": "Allow",
+          "actions": [
+            "cloudfront:GetCachePolicy",
+            "cloudfront:GetOriginAccessControl",
+            "cloudfront:GetOriginRequestPolicy",
+            "cloudfront:GetResponseHeadersPolicy"
+          ],
+          "resources": [
+            "arn:aws:cloudfront::{account}:origin-access-control/*",
+            "arn:aws:cloudfront::{account}:cache-policy/*",
+            "arn:aws:cloudfront::{account}:origin-request-policy/*",
+            "arn:aws:cloudfront::{account}:response-headers-policy/*"
+          ],
+          "contract": "A34-5; research b0.3"
+        },
+        {
+          "sid": "AcmRead",
+          "effect": "Allow",
+          "actions": [
+            "acm:DescribeCertificate",
+            "acm:GetCertificate",
+            "acm:ListTagsForCertificate"
+          ],
+          "resources": ["arn:aws:acm:us-east-1:{account}:certificate/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "WafRead",
+          "effect": "Allow",
+          "actions": ["wafv2:GetWebACL", "wafv2:ListTagsForResource"],
+          "resources": ["arn:aws:wafv2:us-east-1:{account}:global/webacl/atlas-{env}-*/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "IamRead",
+          "effect": "Allow",
+          "actions": [
+            "iam:GetRole",
+            "iam:GetRolePolicy",
+            "iam:ListAttachedRolePolicies",
+            "iam:ListInstanceProfilesForRole",
+            "iam:ListRolePolicies",
+            "iam:ListRoleTags"
+          ],
+          "resources": ["arn:aws:iam::{account}:role/atlas-{env}-*"],
+          "contract": "P12-B4"
+        },
+        {
+          "sid": "IamPolicyRead",
+          "effect": "Allow",
+          "actions": ["iam:GetPolicy", "iam:GetPolicyVersion", "iam:ListPolicyVersions"],
+          "resources": ["arn:aws:iam::{account}:policy/atlas-{env}-*"],
+          "contract": "P12-B4"
+        },
+        {
+          "sid": "LambdaWrite",
+          "effect": "Allow",
+          "actions": [
+            "lambda:AddPermission",
+            "lambda:CreateFunction",
+            "lambda:CreateFunctionUrlConfig",
+            "lambda:DeleteFunction",
+            "lambda:DeleteFunctionConcurrency",
+            "lambda:DeleteFunctionUrlConfig",
+            "lambda:PutFunctionConcurrency",
+            "lambda:RemovePermission",
+            "lambda:TagResource",
+            "lambda:UntagResource",
+            "lambda:UpdateFunctionCode",
+            "lambda:UpdateFunctionConfiguration",
+            "lambda:UpdateFunctionUrlConfig"
+          ],
+          "resources": ["arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "LogsWrite",
+          "effect": "Allow",
+          "actions": [
+            "logs:CreateLogGroup",
+            "logs:DeleteLogGroup",
+            "logs:DeleteRetentionPolicy",
+            "logs:PutRetentionPolicy",
+            "logs:TagResource",
+            "logs:UntagResource"
+          ],
+          "resources": ["arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-*"],
+          "contract": "A34-3, A34-5"
+        },
+        {
+          "sid": "SsmStringsWrite",
+          "effect": "Allow",
+          "actions": [
+            "ssm:AddTagsToResource",
+            "ssm:DeleteParameter",
+            "ssm:PutParameter",
+            "ssm:RemoveTagsFromResource"
+          ],
+          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/mail/*"],
+          "contract": "A34-5, A34-12, A34-21"
+        },
+        {
+          "sid": "SchedulerGroupWrite",
+          "effect": "Allow",
+          "actions": [
+            "scheduler:CreateScheduleGroup",
+            "scheduler:DeleteScheduleGroup",
+            "scheduler:TagResource",
+            "scheduler:UntagResource"
+          ],
+          "resources": ["arn:aws:scheduler:eu-west-1:{account}:schedule-group/atlas-{env}-*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "SchedulerScheduleWrite",
+          "effect": "Allow",
+          "actions": [
+            "scheduler:CreateSchedule",
+            "scheduler:DeleteSchedule",
+            "scheduler:UpdateSchedule"
+          ],
+          "resources": ["arn:aws:scheduler:eu-west-1:{account}:schedule/atlas-{env}-jobs/*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "SpaBucketConfigurationWrite",
+          "effect": "Allow",
+          "actions": [
+            "s3:CreateBucket",
+            "s3:PutBucketOwnershipControls",
+            "s3:PutBucketPolicy",
+            "s3:PutBucketPublicAccessBlock",
+            "s3:PutBucketTagging",
+            "s3:PutBucketVersioning",
+            "s3:PutEncryptionConfiguration",
+            "s3:PutLifecycleConfiguration",
+            "s3:DeleteBucket"
+          ],
+          "resources": ["arn:aws:s3:::atlas-{env}-spa-{suffix}"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "SpaBucketObjects",
+          "effect": "Allow",
+          "actions": ["s3:DeleteObject", "s3:PutObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-spa-{suffix}/*"],
+          "contract": "E4 (P11)"
+        },
+        {
+          "sid": "DataBucketConfigurationWrite",
+          "effect": "Allow",
+          "actions": [
+            "s3:CreateBucket",
+            "s3:PutBucketOwnershipControls",
+            "s3:PutBucketPolicy",
+            "s3:PutBucketPublicAccessBlock",
+            "s3:PutBucketTagging",
+            "s3:PutBucketVersioning",
+            "s3:PutEncryptionConfiguration",
+            "s3:PutLifecycleConfiguration"
+          ],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "contract": "P12-B1; A34-6"
+        },
+        {
+          "sid": "StateReadWrite",
+          "effect": "Allow",
+          "actions": ["s3:DeleteObject", "s3:GetObject", "s3:PutObject"],
+          "resources": ["arn:aws:s3:::atlas-account-tfstate-{suffix}/envs/{env}/*"],
+          "contract": "A34-15"
+        },
+        {
+          "sid": "StateList",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket"],
+          "resources": ["arn:aws:s3:::atlas-account-tfstate-{suffix}"],
+          "condition": {
+            "StringLike": {
+              "s3:prefix": "envs/{env}/*"
+            }
+          },
+          "contract": "P12-B2; A34-15"
+        },
+        {
+          "sid": "ArtifactObjects",
+          "effect": "Allow",
+          "resources": ["arn:aws:s3:::atlas-account-artifacts-{suffix}/*"],
+          "contract": "P12-B6",
+          "actionsByEnv": {
+            "dev": ["s3:GetObject", "s3:PutObject"],
+            "prod": ["s3:GetObject"]
+          }
+        },
+        {
+          "sid": "ArtifactList",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket"],
+          "resources": ["arn:aws:s3:::atlas-account-artifacts-{suffix}"],
+          "contract": "P12-B6"
+        }
+      ]
+    },
+    "plan": {
+      "rendered": true,
+      "statements": [
+        {
+          "sid": "LambdaRead",
+          "effect": "Allow",
+          "actions": [
+            "lambda:GetFunction",
+            "lambda:GetFunctionCodeSigningConfig",
+            "lambda:GetFunctionConcurrency",
+            "lambda:GetFunctionConfiguration",
+            "lambda:GetFunctionUrlConfig",
+            "lambda:GetPolicy",
+            "lambda:GetRuntimeManagementConfig",
+            "lambda:ListTags",
+            "lambda:ListVersionsByFunction"
+          ],
+          "resources": ["arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "LogsRead",
+          "effect": "Allow",
+          "actions": ["logs:ListTagsForResource"],
+          "resources": ["arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-*"],
+          "contract": "A34-3"
+        },
+        {
+          "sid": "LogsDescribe",
+          "effect": "Allow",
+          "actions": ["logs:DescribeLogGroups"],
+          "resources": ["*"],
+          "contract": "P-5 (closed list; SAR: no resource type)"
+        },
+        {
+          "sid": "SsmStringsRead",
+          "effect": "Allow",
+          "actions": ["ssm:GetParameter", "ssm:ListTagsForResource"],
+          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/mail/*"],
+          "contract": "A34-12, A34-21"
+        },
+        {
+          "sid": "SchedulerRead",
+          "effect": "Allow",
+          "actions": ["scheduler:GetScheduleGroup", "scheduler:ListTagsForResource"],
+          "resources": ["arn:aws:scheduler:eu-west-1:{account}:schedule-group/atlas-{env}-*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "SchedulerScheduleRead",
+          "effect": "Allow",
+          "actions": ["scheduler:GetSchedule"],
+          "resources": ["arn:aws:scheduler:eu-west-1:{account}:schedule/atlas-{env}-jobs/*"],
+          "contract": "A34-5"
+        },
+        {
+          "sid": "DataBucketConfigurationRead",
+          "effect": "Allow",
+          "actions": [
+            "s3:GetAccelerateConfiguration",
+            "s3:GetBucketAcl",
+            "s3:GetBucketCORS",
+            "s3:GetBucketLogging",
+            "s3:GetBucketObjectLockConfiguration",
+            "s3:GetBucketOwnershipControls",
+            "s3:GetBucketPolicy",
+            "s3:GetBucketPublicAccessBlock",
+            "s3:GetBucketRequestPayment",
+            "s3:GetBucketTagging",
+            "s3:GetBucketVersioning",
+            "s3:GetBucketWebsite",
+            "s3:GetEncryptionConfiguration",
+            "s3:GetLifecycleConfiguration",
+            "s3:GetReplicationConfiguration",
+            "s3:ListBucket"
+          ],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "contract": "P12-B1; research b0.9"
+        },
+        {
+          "sid": "SpaBucketConfigurationRead",
+          "effect": "Allow",
+          "actions": [
+            "s3:GetAccelerateConfiguration",
+            "s3:GetBucketAcl",
+            "s3:GetBucketCORS",
+            "s3:GetBucketLogging",
+            "s3:GetBucketObjectLockConfiguration",
+            "s3:GetBucketOwnershipControls",
+            "s3:GetBucketPolicy",
+            "s3:GetBucketPublicAccessBlock",
+            "s3:GetBucketRequestPayment",
+            "s3:GetBucketTagging",
+            "s3:GetBucketVersioning",
+            "s3:GetBucketWebsite",
+            "s3:GetEncryptionConfiguration",
+            "s3:GetLifecycleConfiguration",
+            "s3:GetReplicationConfiguration",
+            "s3:ListBucket"
+          ],
+          "resources": ["arn:aws:s3:::atlas-{env}-spa-{suffix}"],
+          "contract": "P12-B1; research b0.9"
+        },
+        {
+          "sid": "CloudFrontDistributionRead",
+          "effect": "Allow",
+          "actions": [
+            "cloudfront:GetDistribution",
+            "cloudfront:GetDistributionConfig",
+            "cloudfront:ListTagsForResource"
+          ],
+          "resources": ["arn:aws:cloudfront::{account}:distribution/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "CloudFrontFunctionRead",
+          "effect": "Allow",
+          "actions": [
+            "cloudfront:DescribeFunction",
+            "cloudfront:GetFunction",
+            "cloudfront:ListTagsForResource"
+          ],
+          "resources": ["arn:aws:cloudfront::{account}:function/atlas-{env}-*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "CloudFrontBootstrapRead",
+          "effect": "Allow",
+          "actions": [
+            "cloudfront:GetCachePolicy",
+            "cloudfront:GetOriginAccessControl",
+            "cloudfront:GetOriginRequestPolicy",
+            "cloudfront:GetResponseHeadersPolicy"
+          ],
+          "resources": [
+            "arn:aws:cloudfront::{account}:origin-access-control/*",
+            "arn:aws:cloudfront::{account}:cache-policy/*",
+            "arn:aws:cloudfront::{account}:origin-request-policy/*",
+            "arn:aws:cloudfront::{account}:response-headers-policy/*"
+          ],
+          "contract": "A34-5; research b0.3"
+        },
+        {
+          "sid": "AcmRead",
+          "effect": "Allow",
+          "actions": [
+            "acm:DescribeCertificate",
+            "acm:GetCertificate",
+            "acm:ListTagsForCertificate"
+          ],
+          "resources": ["arn:aws:acm:us-east-1:{account}:certificate/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "WafRead",
+          "effect": "Allow",
+          "actions": ["wafv2:GetWebACL", "wafv2:ListTagsForResource"],
+          "resources": ["arn:aws:wafv2:us-east-1:{account}:global/webacl/atlas-{env}-*/*"],
+          "condition": {
+            "StringEquals": {
+              "aws:ResourceTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5"
+        },
+        {
+          "sid": "IamRead",
+          "effect": "Allow",
+          "actions": [
+            "iam:GetRole",
+            "iam:GetRolePolicy",
+            "iam:ListAttachedRolePolicies",
+            "iam:ListInstanceProfilesForRole",
+            "iam:ListRolePolicies",
+            "iam:ListRoleTags"
+          ],
+          "resources": ["arn:aws:iam::{account}:role/atlas-{env}-*"],
+          "contract": "P12-B4"
+        },
+        {
+          "sid": "IamPolicyRead",
+          "effect": "Allow",
+          "actions": ["iam:GetPolicy", "iam:GetPolicyVersion", "iam:ListPolicyVersions"],
+          "resources": ["arn:aws:iam::{account}:policy/atlas-{env}-*"],
+          "contract": "P12-B4"
+        },
+        {
+          "sid": "StateRead",
+          "effect": "Allow",
+          "actions": ["s3:GetObject"],
+          "resources": ["arn:aws:s3:::atlas-account-tfstate-{suffix}/envs/{env}/terraform.tfstate"],
+          "contract": "P12-B2"
+        },
+        {
+          "sid": "StateList",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket"],
+          "resources": ["arn:aws:s3:::atlas-account-tfstate-{suffix}"],
+          "condition": {
+            "StringLike": {
+              "s3:prefix": "envs/{env}/*"
+            }
+          },
+          "contract": "P12-B2; A34-15"
+        }
+      ]
+    },
+    "api": {
+      "rendered": false,
+      "statements": [
+        {
+          "sid": "LedgerRead",
+          "effect": "Allow",
+          "actions": ["s3:GetObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/sync/devices/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*"
+          ],
+          "contract": "C15"
+        },
+        {
+          "sid": "LedgerWrite",
+          "effect": "Allow",
+          "actions": ["s3:PutObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/sync/devices/*"
+          ],
+          "contract": "C15"
+        },
+        {
+          "sid": "AccessMarker",
+          "effect": "Allow",
+          "actions": ["s3:GetObject", "s3:PutObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/access/last-web-sign-in.json"],
+          "contract": "C16-6"
+        },
+        {
+          "sid": "List",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "condition": {
+            "StringLike": {
+              "s3:prefix": ["ledger/*", "sync/devices/*", "reference/ecb/*", "prices/*", "access/*"]
+            }
+          },
+          "contract": "C15; P12-B5"
+        },
+        {
+          "sid": "SsmRead",
+          "effect": "Allow",
+          "actions": ["ssm:GetParameter"],
+          "resources": [
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/auth/*",
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens/*"
+          ],
+          "contract": "C15"
+        },
+        {
+          "sid": "SsmByPath",
+          "effect": "Allow",
+          "actions": ["ssm:GetParametersByPath"],
+          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens"],
+          "contract": "C15"
+        },
+        {
+          "sid": "SsmTokens",
+          "effect": "Allow",
+          "actions": ["ssm:AddTagsToResource", "ssm:PutParameter"],
+          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens/*"],
+          "contract": "C15; A34-9"
+        },
+        {
+          "sid": "KmsSsm",
+          "effect": "Allow",
+          "actions": ["kms:Decrypt", "kms:Encrypt"],
+          "resources": ["arn:aws:kms:eu-west-1:{account}:key/*"],
+          "condition": {
+            "StringEquals": {
+              "kms:ViaService": "ssm.eu-west-1.amazonaws.com"
+            }
+          },
+          "contract": "C15; A33",
+          "pending": "E2 b0.4: kms on aws/ssm is neither in the boundary nor in any policy yet"
+        },
+        {
+          "sid": "Logs",
+          "effect": "Allow",
+          "actions": ["logs:CreateLogStream", "logs:PutLogEvents"],
+          "resources": [
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-api",
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-api:*"
+          ],
+          "contract": "C16-n7; P12-N6"
+        }
+      ]
+    },
+    "job-ecb": {
+      "rendered": false,
+      "statements": [
+        {
+          "sid": "Read",
+          "effect": "Allow",
+          "actions": ["s3:GetObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl"],
+          "contract": "C16-n1"
+        },
+        {
+          "sid": "ReadWrite",
+          "effect": "Allow",
+          "actions": ["s3:GetObject", "s3:PutObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/ecb/*"
+          ],
+          "contract": "C16-n1"
+        },
+        {
+          "sid": "List",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "condition": {
+            "StringLike": {
+              "s3:prefix": ["reference/ecb/*", "jobs/ecb/*", "ledger/*"]
+            }
+          },
+          "contract": "C16-n1"
+        },
+        {
+          "sid": "Logs",
+          "effect": "Allow",
+          "actions": ["logs:CreateLogStream", "logs:PutLogEvents"],
+          "resources": [
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-ecb",
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-ecb:*"
+          ],
+          "contract": "C16-n7; P12-N6"
+        }
+      ]
+    },
+    "job-prices": {
+      "rendered": false,
+      "statements": [
+        {
+          "sid": "Read",
+          "effect": "Allow",
+          "actions": ["s3:GetObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*"
+          ],
+          "contract": "C16-n2"
+        },
+        {
+          "sid": "Write",
+          "effect": "Allow",
+          "actions": ["s3:PutObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/prices/*"
+          ],
+          "contract": "C16-n2"
+        },
+        {
+          "sid": "DenyConfig",
+          "effect": "Deny",
+          "actions": ["s3:PutObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/symbols.json",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/config.json"
+          ],
+          "contract": "C16-n2 (M2)"
+        },
+        {
+          "sid": "Keys",
+          "effect": "Allow",
+          "actions": ["ssm:GetParameter"],
+          "resources": [
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/eodhd-key",
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/alpha-vantage-key"
+          ],
+          "contract": "C16-n2; A34-21"
+        },
+        {
+          "sid": "Logs",
+          "effect": "Allow",
+          "actions": ["logs:CreateLogStream", "logs:PutLogEvents"],
+          "resources": [
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-prices",
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-prices:*"
+          ],
+          "contract": "C16-n7; P12-N6"
+        }
+      ]
+    },
+    "job-mail": {
+      "rendered": false,
+      "statements": [
+        {
+          "sid": "Read",
+          "effect": "Allow",
+          "actions": ["s3:GetObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/access/last-web-sign-in.json",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/*"
+          ],
+          "contract": "C16-n3"
+        },
+        {
+          "sid": "Write",
+          "effect": "Allow",
+          "actions": ["s3:PutObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/mail/*"],
+          "contract": "C16-n3"
+        },
+        {
+          "sid": "Config",
+          "effect": "Allow",
+          "actions": ["ssm:GetParameter"],
+          "resources": [
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/mail/recipient",
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/mail/amounts"
+          ],
+          "contract": "C16-n3"
+        },
+        {
+          "sid": "Tokens",
+          "effect": "Allow",
+          "actions": ["ssm:GetParametersByPath"],
+          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens"],
+          "condition": {
+            "StringEquals": {
+              "ssm:Recursive": "false"
+            }
+          },
+          "contract": "C16-n3"
+        },
+        {
+          "sid": "Send",
+          "effect": "Allow",
+          "actions": ["ses:SendEmail"],
+          "resources": [
+            "arn:aws:ses:eu-west-1:{account}:identity/{sender}",
+            "arn:aws:ses:eu-west-1:{account}:identity/{sender_host}"
+          ],
+          "condition": {
+            "StringEquals": {
+              "ses:FromAddress": "{sender}",
+              "ses:ApiVersion": "2"
+            },
+            "ForAllValues:StringEquals": {
+              "ses:Recipients": ["{recipient}"]
+            },
+            "Null": {
+              "ses:Recipients": "false"
+            }
+          },
+          "contract": "C16-n3; A34-12"
+        },
+        {
+          "sid": "Logs",
+          "effect": "Allow",
+          "actions": ["logs:CreateLogStream", "logs:PutLogEvents"],
+          "resources": [
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-mail",
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-mail:*"
+          ],
+          "contract": "C16-n7; P12-N6"
+        }
+      ]
+    },
+    "job-backup": {
+      "rendered": false,
+      "statements": [
+        {
+          "sid": "Read",
+          "effect": "Allow",
+          "actions": ["s3:GetObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/manifest.json",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/eurofxref-hist.csv",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/api-exr.csv",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*"
+          ],
+          "contract": "C16-n4"
+        },
+        {
+          "sid": "ReadWrite",
+          "effect": "Allow",
+          "actions": ["s3:GetObject", "s3:PutObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/backups/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/backup/*"
+          ],
+          "contract": "C16-n4"
+        },
+        {
+          "sid": "Logs",
+          "effect": "Allow",
+          "actions": ["logs:CreateLogStream", "logs:PutLogEvents"],
+          "resources": [
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-backup",
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-backup:*"
+          ],
+          "contract": "C16-n7; P12-N6"
+        }
+      ]
+    },
+    "job-integrity": {
+      "rendered": false,
+      "statements": [
+        {
+          "sid": "Read",
+          "effect": "Allow",
+          "actions": ["s3:GetObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/backup/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/backups/*/ledger.jsonl"
+          ],
+          "contract": "C16-n5"
+        },
+        {
+          "sid": "ReadWrite",
+          "effect": "Allow",
+          "actions": ["s3:GetObject", "s3:PutObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/integrity/*"],
+          "contract": "C16-n5"
+        },
+        {
+          "sid": "Logs",
+          "effect": "Allow",
+          "actions": ["logs:CreateLogStream", "logs:PutLogEvents"],
+          "resources": [
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-integrity",
+            "arn:aws:logs:eu-west-1:{account}:log-group:/aws/lambda/atlas-{env}-job-integrity:*"
+          ],
+          "contract": "C16-n7; P12-N6"
+        }
+      ]
+    },
+    "scheduler": {
+      "rendered": false,
+      "statements": [
+        {
+          "sid": "Invoke",
+          "effect": "Allow",
+          "actions": ["lambda:InvokeFunction"],
+          "resources": [
+            "arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-job-ecb",
+            "arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-job-prices",
+            "arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-job-mail",
+            "arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-job-backup",
+            "arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-job-integrity"
+          ],
+          "contract": "C16-n7"
+        }
+      ]
+    },
+    "admin": {
+      "rendered": false,
+      "statements": [
+        {
+          "sid": "Objects",
+          "effect": "Allow",
+          "actions": ["s3:GetObject", "s3:GetObjectVersion", "s3:PutObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/*"],
+          "contract": "C15; R"
+        },
+        {
+          "sid": "List",
+          "effect": "Allow",
+          "actions": ["s3:ListBucket", "s3:ListBucketVersions"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
+          "contract": "C15; C16-n8"
+        },
+        {
+          "sid": "Tokens",
+          "effect": "Allow",
+          "actions": ["ssm:GetParametersByPath", "ssm:PutParameter"],
+          "resources": [
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens",
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens/*"
+          ],
+          "contract": "C15"
+        },
+        {
+          "sid": "EcbDelete",
+          "effect": "Allow",
+          "actions": ["s3:DeleteObject"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/manifest.json",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/ecb/ecb_update/*"
+          ],
+          "contract": "C16-n8 (accepted by the direction)"
+        },
+        {
+          "sid": "Schedule",
+          "effect": "Allow",
+          "actions": ["scheduler:GetSchedule", "scheduler:UpdateSchedule"],
+          "resources": [
+            "arn:aws:scheduler:eu-west-1:{account}:schedule/atlas-{env}-jobs/atlas-{env}-job-ecb"
+          ],
+          "contract": "C16-n8"
+        },
+        {
+          "sid": "PassScheduler",
+          "effect": "Allow",
+          "actions": ["iam:PassRole"],
+          "resources": ["arn:aws:iam::{account}:role/atlas-{env}-scheduler"],
+          "condition": {
+            "StringEquals": {
+              "iam:PassedToService": "scheduler.amazonaws.com"
+            }
+          },
+          "contract": "C16-n8; P12-B4"
+        },
+        {
+          "sid": "Invoke",
+          "effect": "Allow",
+          "actions": ["lambda:InvokeFunction"],
+          "resources": ["arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-job-ecb"],
+          "contract": "C16-n8"
+        },
+        {
+          "sid": "Secrets",
+          "effect": "Allow",
+          "actions": ["ssm:AddTagsToResource", "ssm:PutParameter"],
+          "resources": [
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/auth/*",
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/*"
+          ],
+          "contract": "A34-21; P-3 (answered yes)"
+        },
+        {
+          "sid": "SecretsExistence",
+          "effect": "Allow",
+          "actions": ["ssm:GetParameter"],
+          "resources": [
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/auth/*",
+            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/*"
+          ],
+          "contract": "P-3 (answered yes: WithDecryption=false, administrator only)"
+        }
+      ]
+    }
+  }
+}
