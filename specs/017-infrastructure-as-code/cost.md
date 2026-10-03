@@ -2,7 +2,7 @@
 
 > **Cualquier `apply` necesita el visto bueno del usuario con esta estimación delante.** Esta tabla es una **lista cerrada**: un tipo de recurso que no figura aquí hace fallar el test de `infra/test/` (prompt 017, §12.2 N1). Añadir un tipo es una decisión de coste: se escribe aquí, con su motivo, en el mismo commit que el recurso.
 
-Estado: **E1** (cuenta y aislamiento), **E2** (datos y borde) y **E3** (tareas y correo) escritas; las filas de E2 a E4 son las previstas en `plan.md` y se confirman con la fuente de cada servicio en el bloque 0 de su entrega. La suma esperada cae en 0,01-0,05 $/mes (ADR-0028, ADR-0034, fila 9); **si al verificar las fuentes no sale, se para**. Lo que mide el consumo real es la 018 (Cost Explorer), no esta tabla.
+Estado: **cerrada en E4** (cuenta, datos y borde, tareas y correo, más lo que corre fuera de Terraform); las filas de E2 a E4 son las previstas en `plan.md` y se confirman con la fuente de cada servicio en el bloque 0 de su entrega. La suma esperada cae en 0,01-0,05 $/mes (ADR-0028, ADR-0034, fila 9); **si al verificar las fuentes no sale, se para**. Lo que mide el consumo real es la 018 (Cost Explorer), no esta tabla.
 
 | Tipo de recurso | Parte | Entrega | Coste esperado | Qué lo haría crecer |
 |---|---|---|---|---|
@@ -38,6 +38,10 @@ Estado: **E1** (cuenta y aislamiento), **E2** (datos y borde) y **E3** (tareas y
 | `aws_scheduler_schedule` | `dev`, `prod`: 5 por entorno | E3 | 0: unas 300 invocaciones al mes entre los dos entornos, frente a 14 millones gratis (E3 b0) | programaciones de más o una frecuencia mayor que la diaria |
 | `aws_lambda_function_event_invoke_config` | `dev`, `prod`: 5 por entorno | E3 | 0 (configuración de la función) | — |
 | `aws_ssm_parameter` | `dev`, `prod`: solo `String` | E3 | 0 (estándar) | parámetros avanzados; rendimiento alto |
+
+## Cierre (E4)
+
+E4 no añade ningún tipo de recurso de Terraform: la orden `atlas admin secrets` escribe parámetros `SecureString` estándar (sin cargo, ADR-0033 F1; las 20.000 peticiones gratuitas de KMS son de la cuenta), el guion del plan de tarifa plana suscribe un plan Free (0 $; cancelarlo devuelve la distribución al pago por uso) y los flujos de Actions no cuestan en un repositorio público. El bucket de artefactos y su caducidad (90 días) ya están en `aws_s3_bucket*` de E1. **Suma esperada: del orden de 0,01-0,05 $ al mes** (S3 y Lambda a céntimos, SES unos 10 correos al mes, todo lo demás a 0), **más 1 $ al mes solo si C2 adopta la clave KMS del cliente**. Fuente de cada fila: la columna «Coste esperado», con las páginas de precios consultadas en E2 y E3. El consumo real lo mide la 018 con Cost Explorer.
 
 ## Cómo se comprueba
 

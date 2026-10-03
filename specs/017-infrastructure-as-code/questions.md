@@ -337,3 +337,61 @@ ADR-0034 (fila 29: cerrada con fuente, el grupo; la política del rol de correo 
 
 - **N2 — identidad SES del destinatario.** Si la cuenta sigue en el *sandbox*, SES puede exigir permiso también sobre la identidad del destinatario; ninguna fuente consultada lo dice, así que no entra en el rol ni en el límite y queda `pending` (`job-mail/SendRecipientIdentity`). Decide la dirección si se concede cuando C9 diga que la cuenta está en el *sandbox*, o si lo resuelve la 018 con el primer envío.
 - **N3 — política del rol de correo oculta en el plan.** Lleva el destinatario (sensible, ADR-0034, filas 1 y 12), así que el `plan` de la CI la muestra como `(sensitive value)`: un cambio de esa política no se ve al revisar. Nota pendiente de ADR-0034: aceptar la consecuencia o separar la sentencia de envío en una política propia para que el resto del rol siga visible.
+
+## E4 — Bloque 0: verificaciones hechas el 2026-10-03 (antes del primer commit de E4)
+
+Fuentes: API de GitHub (estado de PR e incidencias), modelo de servicio `pricing-plan-manager` de botocore (`botocore/data/pricing-plan-manager/2025-08-05/service-2.json`), documentación de GitHub Actions (`github/docs`). Ninguna llamada a una cuenta de AWS.
+
+| Punto | Qué dice, con su fuente | Consecuencia |
+|---|---|---|
+| **b0.1** PR del proveedor | `hashicorp/terraform-provider-aws#49235` «New Resource: `aws_pricingplanmanager_subscription`»: **abierta**, sin fusionar, última actividad 2026-09-17. Incidencias **#45450** (abierta, 2026-09-04) y **#49232** (abierta, 2026-08-12). Última versión publicada: **v6.67.0** (2026-09-30), **sin** `internal/service/pricingplanmanager` (404 en esa etiqueta) | El guion sigue haciendo falta; su cabecera lleva la condición de retirada (versión publicada con el recurso) y el enlace |
+| **b0.2** Órdenes de la CLI | botocore: servicio `pricing-plan-manager`; `CreateSubscription` (`planFamily` `CloudFront`, `planTier` `FREE`, `usageLevel` `DEFAULT`, `resourceArns` con **exactamente una distribución y una *web ACL***, `approvalMode` `IMMEDIATE`, **`clientToken`** de idempotencia), `ListSubscriptions` (con `resourceArns`, `planTier`, `status`, `eTag`, `scheduledChange`), `GetSubscription`, `CancelSubscription` (**`ifMatch` obligatorio**; en una suscripción activa la cancelación **se programa al final del periodo**), `AssociateResourcesToSubscription`. Los de Free se activan siempre al instante | Idempotencia por dos vías: se lista primero y, si ya cubre la distribución, no se crea; y el `clientToken` es fijo por entorno. Cancelar usa el `eTag` leído. **La región `us-east-1` viene del prompt, no del modelo** (SIN VERIFICAR, 018). Los nombres exactos de las opciones de la CLI son la forma habitual de la v2 (`--plan-family`…), **SIN VERIFICAR** hasta tener la CLI |
+| **b0.3** GitHub Actions | `github/docs`: «con la excepción de `GITHUB_TOKEN`, los secretos **no se pasan al ejecutor** cuando el flujo lo dispara un repositorio *fork*»; el `GITHUB_TOKEN` de una PR de *fork* pasa a **solo lectura** (los permisos de escritura, `id-token: write` incluido, se rebajan; `permissions` no los concede). *OIDC reference*: el `sub` lleva `pull_request` **solo si el trabajo no declara *environment***. Enmascarado: los secretos se ocultan por valor exacto, **«no está garantizado» si el valor se transforma**, y solo se ocultan dentro del trabajo; los secretos de varias líneas o estructurados se ocultan mal (recomienda no usarlos); `::add-mask::VALOR` oculta lo que no es un secreto. Los secretos del repositorio y de la organización se leen al encolar; **los del *environment*, al empezar el trabajo que lo referencia** | Que un *fork* no recibe OIDC es una **inferencia** de «escritura rebajada a lectura» (no hay frase literal sobre `id-token`); el trabajo de `plan` lo refuerza con la condición de que la rama sea de este repositorio. Los `tfvars` y el *backend* viajan en un secreto de **una línea en base64**; **lo decodificado no está enmascarado**, por eso nada de ello se imprime: la salida de `terraform` va a un fichero y el registro lleva solo direcciones y acciones. Todo valor derivado que se use (credenciales de la sesión, el token OIDC) se enmascara con `::add-mask::` antes de usarse |
+
+## E4 — Estado y cierre (2026-10-03, cuarto implementador)
+
+**Hecho y verde** (rama `feature/017-e4-scripts-ci-runbooks`): `atlas admin secrets` (`apps/cli/src/commands/admin-secrets.ts`, `admin/secrets.ts`, `output/secret-prompt.ts`, puerta `SecretStore` y `SdkSecretStore` en `packages/adapters`, doble `test-only-fake-secrets.ts`); `infra/scripts/flat-rate-plan.sh` con su ensayo; los tres flujos (`infra-plan.yml`, `deploy-dev.yml`, `deploy-prod.yml`) y `infra/scripts/ci/*.sh`; `aws` simulado `infra/test/fakes/aws`; tests `infra/test/scripts/*.test.ts` y `apps/cli/test/admin/secrets.test.ts`; runbooks `docs/runbooks/{atlas-admin-secrets,flat-rate-plan,bootstrap-and-ci}.md`; `cost.md` cerrado.
+
+### Decisiones mías fuera del encargo (a confirmar)
+
+1. **`managed_by=atlas-admin-secrets`** en los parámetros que crea la orden (ADR-0034, fila 3 dice `terraform` para lo de Terraform; para lo creado por el guion no hay valor escrito).
+2. **El flujo sin `aws-actions/configure-aws-credentials`** (acción nueva no autorizada): `infra/scripts/ci/assume-role.sh` pide el token OIDC con `curl` y llama a `aws sts assume-role-with-web-identity` (CLI del ejecutor), enmascarando cada valor. **Pregunta Q-E4-1**: ¿se prefiere la acción oficial fijada por SHA?
+3. **El artefacto se identifica por el *tree* de git** (`builds/<tree>/`), no por el SHA del commit: `main` recibe una fusión (*merge commit*) con otro SHA que el de `develop`, pero el mismo contenido tiene el mismo *tree*; `prod` toma lo que `dev` escribió para ese *tree* y comprueba su SHA-256. Si no existe, falla («despliega dev primero»).
+4. **Secretos de la CI**: el `plan` de los dos entornos usa secretos **del repositorio** (`ATLAS_PLAN_<ENV>_*`, un trabajo sin *environment* no ve los del *environment*); el despliegue de `dev` usa los del repositorio y el de `prod`, los del *environment* `prod`. `tfvars` y `backend` van en base64 de una línea (§12 P6; matiz de b0.3).
+5. **`atlas admin secrets`**: la lista permitida se escribe entera (lo anterior no se puede leer con `WithDecryption=false`); la clave de sesión se genera con `RandomSource` y pide teclear el entorno para crearla o rotarla; los valores inválidos y los fallos de AWS dicen el parámetro y nunca el valor ni el mensaje. El token Flex de IBKR no está: ningún contrato le da nombre. Con C2 (clave KMS del cliente) la orden **no pasa `KeyId`**: SIN VERIFICAR / pregunta Q-E4-2 si C2 se adopta.
+6. **El *flujo de dev* no invalida CloudFront**: `envs/*` no tiene `outputs.tf` con el identificador de la distribución, y añadirlo es infraestructura de E2. Sin invalidación, `index.html` puede servirse hasta el TTL de la caché. **Pregunta Q-E4-3.**
+7. Las cuatro cosas siguientes quedan **sin hacer** (ver «No hecho»).
+
+### Autocomprobación de las 17 familias (E4)
+
+| Familia | Qué miré, con qué | Salió |
+|---|---|---|
+| 1 Guardianes eludibles | los tests de flujos leen el texto de los YAML y de los `.sh` (no hay `plan` de Terraform aquí); `terraform show` solo se acepta si la línea pasa por `summarize-plan.sh` | hecho para E4; los de políticas, de E1-E3, sin cambios |
+| 2 Valor exacto | las órdenes del `aws` simulado se afirman **enteras**, una a una (flat-rate); `-lock=false`, `branches: [main]`, exclusiones de `.vite` y `*.map` con su literal | hecho |
+| 4 Documentos alineados | `PRICE_KEY_PATTERN` leído del código de `price-keys.ts`; nombres de parámetro de `docs/api.md` §9; permisos de la orden contra el contrato `admin` (`Secrets`, `SecretsExistence`) | alineados |
+| 6 Registros | la orden con un `Error` que lleva el valor (no sale), un valor inválido (no sale), un `aws` simulado que falla con `SECRET-IN-MESSAGE` (no sale) | hecho |
+| 7 Entradas | `--env __proto__` y entorno no `dev`/`prod` en el guion (64); ARN con regex estricta; la orden rechaza cualquier posicional y banderas ajenas | hecho |
+| 9 Procedimientos | el del plan de tarifa plana se recorre contra el `aws` simulado en orden (`runbooks.test.ts`); los de `bootstrap-and-ci` y de la orden de secretos **no se pueden recorrer** (Terraform real o SSM real): solo se comprueban por lectura | parcial, dicho |
+| 10 `--yes` | la orden y el guion lo rechazan; ningún runbook lo usa | hecho |
+| 11, 12, 13, 14, 15, 16, 19, 20 | sin recursos nuevos de Terraform en E4 | n/a, con motivo |
+| 17 Datos personales | los ARN de los ensayos usan `000000000000`; ningún dominio, cuenta o sufijo en los flujos (todo en secretos) | limpio |
+| 18 Registros de la CI | `ci.test.ts` y `scripts/ci.test.ts`: `permissions` explícitos, SHA, sin `environment:` en `plan` ni en `dev`, `prod` solo de `main`, la salida de `terraform` y de `aws s3` a ficheros no subidos, ningún `upload-artifact` nuevo | hecho |
+
+### Mutantes de E4, vistos morir (cada uno restaurado; árbol limpio)
+
+**32** (`environment:` en el plan; sin `-lock=false`), **33** (acción por etiqueta), **34** (`npm run build` en `prod`; sin excluir `.vite`), **41** (`init` sin redirigir al fichero), **54** (`prod` también desde `develop`), **31** (guion sin la negativa de tres planes; cancelar sin el entorno tecleado), **30** (`--yes` aceptado, sobrescribir sin confirmar, valor en la línea de órdenes aceptado, `WithDecryption=true`, prompt que repite lo tecleado). **No ejecutados**: 30 con «el valor impreso en un camino de fallo» (lo guarda un test, no se mutó), 35 (los runbooks de Terraform no se recorren), 32 «`npm ci` en plan» y «`upload-artifact` del plan» (guardados por el test, no mutados), 40 en su parte de flujo ya cubierta (32b), 53 y 55 no son de E4.
+
+### No hecho en E4 (para quien continúe)
+
+- **Revisión por zonas (Z7, Z8) y SHA congelado**: no hecha.
+- **Terraform real (`fmt`, `validate`, `terraform test`) no se reejecutó en E4** salvo lo que corre `npm run test:infra`; ver el resultado en la PR.
+- El runbook de la orden de secretos y el de CI no se recorren con dobles (no hay doble de Terraform); `docs/runbooks/stolen-google-account.md` y `revoke-all-tokens.md` **no se tocaron** (siguen con su alternativa de CLI de AWS; la redacción final es de la dirección).
+- Sin cobertura 100 % afirmada de `packages/domain`: **no se tocó el dominio**.
+
+### SIN VERIFICAR (018)
+
+Región y nombres exactos de opciones de `aws pricing-plan-manager`; que una PR de *fork* no reciba OIDC (inferencia); que `GetParameter` sin descifrar baste para la existencia con KMS `aws/ssm` (N3 de E2 sigue: IAM no impone «sin descifrar»); que `PutParameter` con `Overwrite` y `Type` iguales no cambie el tipo; el enmascarado de un `tfvars` en base64 decodificado; que el rol de despliegue acepte `aws s3 sync --delete` sobre el bucket de la SPA con sus acciones de objeto.
+
+### Documentos que tendrá que actualizar la dirección (E4)
+
+ADR-0034 (notas de E1-E4: fila 15 con el estado solo para `deploy`/`plan`/admin, fila 21 cerrada con la orden, `managed_by` de lo creado por el guion), **`docs/prompts/README.md`** y **`CLAUDE.md`** (no se editaron), `docs/dependencies.md` (sin cambios nuevos: `setup-terraform` ya está), ADR-0027 (guion de secretos hecho), `docs/decision-roadmap.md` (la 018 recibe lo SIN VERIFICAR), `docs/specification.md` §11.6, la redacción de `stolen-google-account.md` y `revoke-all-tokens.md`.
