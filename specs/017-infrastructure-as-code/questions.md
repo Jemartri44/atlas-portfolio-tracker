@@ -208,3 +208,46 @@ Código de v6.67.0 (`internal/service/{lambda,logs,cloudfront,wafv2,acm,ssm}`), 
 **Preguntas abiertas para la coordinadora**: Q-E2-1 (`ssm:DescribeParameters`, arriba; sin ella el `plan` de los dos `String` falla); dónde viven el rol de la API y su política (propuesto: `modules/atlas`, creados por el despliegue con el límite puesto); y que el arreglo del HALLAZGO 1 toca el límite y el despliegue de E1 (revisión de la zona Z1 al fusionar).
 
 Mutantes de esta parte, vistos morir (restaurados y comparados byte a byte): creaciones de CloudFront por ARN en lugar de `*`; `EdgeCreate` del límite con otra etiqueta; `s3:DeleteObject` general en el rol de administración. Suite `infra` completa: 10 ficheros, 192 tests en verde.
+
+## E2 — Cierre (continuación, 2026-10-03)
+
+**Hecho** (sustituye a la lista «Falta» de arriba, salvo lo que se nombra al final):
+
+- `infra/modules/data-bucket` y `data-bucket-protected` (mismo contrato; solo el segundo con `prevent_destroy`), elegidos en la raíz de cada entorno (`infra/envs/{dev,prod}`, backend `s3` parcial con `use_lockfile`, dos proveedores, `.terraform.lock.hcl` igual al de E1).
+- `infra/modules/atlas`: configuración del bucket de datos (versionado `Enabled`, SSE-S3, bloqueo público, propiedad, ciclo de vida de 365 días y multiparte a 7) y su política (las dos cerraduras del recurso: objetos y listados fuera de los roles del entorno, `deploy` y `plan` solo fuera de la denegación de `s3:ListBucket`, configuración solo `deploy` y `admin`, `backups/*` sin `If-None-Match`, solo TLS); bucket de la SPA con política `AWS:SourceArn`; rol de la API (contrato `api`, `rendered: true`, sin `kms:`); grupo de registros (30 o 7 días por variable validada); Lambda `arm64`, 256 MB, 30 s, variables `ATLAS_*` aceptadas por `parseApiConfig` (importado del dominio, no copiado); Function URL `AWS_IAM` con `InvokeFunctionUrl` e `InvokeFunction` por `source_arn`; certificado ACM con validación; *web ACL* con una regla de ritmo en `/api/*` (`edge_mode`); función de la CSP solo en el comportamiento por defecto (la `<meta>` más `frame-ancestors 'none'`, comparada directiva a directiva); distribución con `enabled = var.enabled` (`dev_active` en `dev`); dos `String` del correo.
+- `terraform test` (`envs/dev`: 7 `run`; `envs/prod`: 4): C11 (`free_plan` y `pay_per_use` en `dev`; `pay_per_use` rechazado en `prod`), C12 (reservada y sin reservar), `dev_active`, validación de `edge_mode`.
+- `infra/test/stack.test.ts` (36 tests sobre el `plan` renderizado de `envs/<env>` y lecturas estáticas del HCL) y el arnés: `OFFLINE_OVERRIDE` sustituye el *backend* remoto por uno local en la copia temporal, y `init` ya no lleva `-backend=false` en `renderPlan` (en la copia no hay *backend* remoto).
+- `cost.md`: `aws_acm_certificate_validation`. `exempt.ts`: `aws_lambda_function_url`, `aws_lambda_permission`, `aws_acm_certificate_validation` (no etiquetables).
+
+**Decisiones mías fuera del encargo**: (1) el guardián de secretos admite un nombre de variable de entorno de Lambda que termine en `_SECONDS` o `_DAYS` con valor entero (`ATLAS_SECRETS_CACHE_SECONDS` es el tiempo de caché de los secretos, no un secreto); (2) los identificadores de las políticas gestionadas de CloudFront van como constantes con su fuente (sin `data`); (3) la OAC llega al módulo como variable (`oac_spa_id`, `oac_api_id`, salidas del *bootstrap*); (4) `edge_mode = pay_per_use` queda rechazado en la raíz de `prod` (C11 solo habla de `dev`); (5) límite de ritmo por defecto 300 peticiones por IP y 5 minutos, sin fuente de la cifra (la 018 la ajusta); (6) la política del bucket de la SPA se escribe con `aws_cloudfront_distribution.this.arn`, desconocido en el `plan`: se comprueba con `terraform test` y con una lectura estática (no con el JSON); (7) `domain` y `mail_recipient` sensibles, como ADR-0034 fila 1.
+
+**SIN VERIFICAR (018)**: el valor de `s3:ObjectCreationOperation`; que `DescribeParameters` sea necesario (Q-E2-1, sigue abierta: sin ella el `plan` de los dos `String` falla); `wafv2:AssociateWebACL` y lecturas de políticas gestionadas de CloudFront en el `apply` (HALLAZGO 3); que una cuenta que usa Free Tier no pueda suscribirse al plan Free; el nivel gratuito del pago por uso de `dev`; que `s3:ListBucket` por prefijo dé 404 y no 403; que la distribución con `CachingDisabled` entregue las *cookies* y las cuatro cabeceras.
+
+**No hecho**: mutantes 41 (de E4) y los de la lista de abajo que no figuren como muertos; la autocomprobación de las diecisiete familias de E2 escrita familia a familia (las que ejercen los tests de esta entrega: 1, 2, 11, 12, 13, 14, 16, 17, 19 por `regions` solo en E1; **no se ha pasado `regions()` sobre el `plan` de `envs/*`**); SHA congelado y revisión por zonas. `docs/` sin tocar.
+
+### Autocomprobación de las 17 familias (E2)
+
+| Familia | Qué miré, con qué | Salió |
+|---|---|---|
+| 1 Guardianes eludibles | `guardians.test.ts` (batería de E1, sin cambios) y `wildcards`/`secrets`/`tags`/`costTypes` sobre el `plan` renderizado de `envs/dev` y `envs/prod` | sin violaciones; el guardián de secretos gana una excepción acotada (decisión 1) |
+| 2 Valor exacto | roles `api`, `admin`, `deploy`, `plan` contra `permissions.json` línea a línea; retención 7/30, 365 días, `arm64`/256/30 con valores | igual, ni una línea de más ni de menos |
+| 4 Documentos alineados | CSP de la función contra la `<meta>` de `apps/web/index.html` directiva a directiva; `ATLAS_*` contra `parseApiConfig` importado; `mail_*` con los nombres de la 016 | alineados |
+| 6 Registros | ningún guion en E2; los `output` del módulo no llevan dominio ni sufijo (`spa_bucket_name` sensible) | n/a, con motivo |
+| 7 Entradas | `validation` en cada variable del módulo y de las raíces; `terraform test` rechaza `edge_mode = none` y `pay_per_use` en `prod` | hecho |
+| 9, 10 Procedimientos, `--yes` | ninguno en E2 (E4) | n/a, con motivo |
+| 11 Comodines | lista cerrada ampliada con `cloudfront:CreateDistribution`, `cloudfront:CreateFunction`, `acm:RequestCertificate` (fuente SAR, con `aws:RequestTag/env`) | sin comodín fuera de la lista |
+| 12 Etiquetas | `tags()` sobre el `plan` de las raíces con tres tipos nuevos no etiquetables y su motivo | completas |
+| 13 Secretos | dos `String`, ningún `SecureString`, ninguna variable de entorno secreta, ninguna fuente de datos de SSM | limpio |
+| 14 `prevent_destroy` | lectura estática: solo el módulo protegido, solo la raíz de `prod`; versionado `Enabled` sobre el `plan`; `force_destroy = false` | hecho |
+| 15 Deriva | `dev_active` única palanca de `enabled`; ningún `ignore_changes` | hecho |
+| 16 Cruce | `static.test.ts` (sin literal de entorno en `infra/modules/`: ejecutado tras limpiar los módulos); cada ARN con `local.prefix`; las dos cerraduras del bucket de datos, por separado (política de identidad de la API contra el contrato; política del recurso en `stack.test.ts`) | limpio |
+| 17 Datos personales | `static.test.ts`; los `tfvars` de las pruebas usan `example.invalid` y `111122223333` | limpio |
+| 18 Registros de la CI | sin cambios en E2 | n/a |
+| 19 Región | `regions.test.ts`: solo certificado, validación, *web ACL*, función de la CSP y distribución en `us-east-1`; las raíces cablean los dos proveedores | hecho (el `regions()` de E1 no lee recursos de módulos: por eso la lectura del HCL) |
+| 20 Autobloqueo | `deploy` y `admin` quedan fuera de la denegación de configuración del bucket de datos (test) | hecho |
+
+### Mutantes de E2, vistos morir (restaurados y comparados byte a byte)
+
+**11** (`s3:DeleteObject` en la API), **43** (sin `access/` en el listado), **12** (sin la denegación del listado), **13** (`backups/*` sin la condición `Null`), **14** (`source_account` en lugar de `source_arn`), **45** (Function URL `NONE`), **15** (`/api/*` con política que cachea), **16** (CSP sin `frame-ancestors`), **17** (`enabled = true` sin `dev_active`), **21** (retención de 14 días), **22** (variable `ATLAS_*` de más), **46** (el bucket de datos como origen). De ronda E1 sobre esta parte: creaciones de CloudFront por ARN, `EdgeCreate` con otra etiqueta y `s3:DeleteObject` general del administrador.
+
+**No ejecutados (sin test o sin mutante propio)**: 18 (la regla de ritmo la fija un test, no se mutó), 19 (sensibilidad de `domain`/`mail_recipient`: el atributo `sensitive` no se mutó), 20 (el test de `SecureString` está en `guardians.test.ts`, no se mutó sobre un `.tf` de E2), 41 y 54 (E4/E3).

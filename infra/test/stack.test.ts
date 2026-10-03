@@ -4,13 +4,7 @@ import { parseApiConfig } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
 import { costTypes } from "./lib/cost.js";
 import { UNTAGGABLE } from "./lib/exempt.js";
-import {
-  costTypes as costTypesGuardian,
-  regions,
-  secrets,
-  tags,
-  wildcards,
-} from "./lib/guardians.js";
+import { costTypes as costTypesGuardian, secrets, tags, wildcards } from "./lib/guardians.js";
 import { parsePolicy, type Statement } from "./lib/iam.js";
 import { changes, ofType, only, type Plan } from "./lib/plan.js";
 import { ACCOUNT, renderStack, SUFFIX } from "./lib/renders.js";
