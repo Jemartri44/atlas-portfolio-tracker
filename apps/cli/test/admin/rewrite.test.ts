@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { encodeLine, type LedgerSchema, type Migration } from "@atlas/domain";
 import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
+import { TestOnlyFakeSecrets } from "../../../../packages/adapters/test/aws/test-only-fake-secrets.js";
 import { CONFIG, setup } from "../../../api/test/harness.js";
 import type { AdminAccess } from "../../src/admin/environment.js";
 import { EXIT } from "../../src/context.js";
@@ -20,7 +21,12 @@ type Api = ReturnType<typeof setup>;
 const LEDGER = "ledger/ledger.jsonl";
 
 const adminOf = (api: Api): AdminAccess => ({
-  clientsFor: async () => ({ objects: api.s3, parameters: api.ssm, ssmPrefix: CONFIG.ssmPrefix }),
+  clientsFor: async () => ({
+    objects: api.s3,
+    parameters: api.ssm,
+    secrets: new TestOnlyFakeSecrets(),
+    ssmPrefix: CONFIG.ssmPrefix,
+  }),
 });
 
 const text = (lines: readonly string[]): string => lines.map((line) => `${line}\n`).join("");
@@ -241,7 +247,12 @@ describe("atlas admin restore (ADR-0032, the six steps)", () => {
     const c = harness({
       events: seed(),
       admin: {
-        clientsFor: async () => ({ objects, parameters: api.ssm, ssmPrefix: CONFIG.ssmPrefix }),
+        clientsFor: async () => ({
+          objects,
+          parameters: api.ssm,
+          secrets: new TestOnlyFakeSecrets(),
+          ssmPrefix: CONFIG.ssmPrefix,
+        }),
       },
       ledgerPath: join(folder, "ledger.jsonl"),
       confirm: true,

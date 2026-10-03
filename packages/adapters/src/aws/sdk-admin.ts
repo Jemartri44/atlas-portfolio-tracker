@@ -20,11 +20,17 @@ import {
   type ListObjectsV2CommandOutput,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { SSMClient } from "@aws-sdk/client-ssm";
+import {
+  AddTagsToResourceCommand,
+  GetParameterCommand,
+  PutParameterCommand,
+  SSMClient,
+} from "@aws-sdk/client-ssm";
 import type { AdminObjectStore, ListedObject, StoredObject } from "./object-store.js";
-import { factsOf } from "./sdk-errors.js";
+import { factsOf, transient } from "./sdk-errors.js";
 import { rethrow, type S3Sender, SdkObjectStore } from "./sdk-s3.js";
 import { SdkParameterStore } from "./sdk-ssm.js";
+import { type SecretKind, type SecretStore, SecretTagsFailed } from "./secret-store.js";
 
 export class SdkAdminObjectStore extends SdkObjectStore implements AdminObjectStore {
   constructor(
@@ -80,6 +86,92 @@ export class SdkAdminObjectStore extends SdkObjectStore implements AdminObjectSt
   }
 }
 
+/** What `SdkSecretStore` sends: the client of the SDK, or a simulated one with the same calls. */
+export interface SecretSender {
+  send(
+    command: GetParameterCommand | PutParameterCommand | AddTagsToResourceCommand,
+  ): Promise<unknown>;
+}
+
+const SECRET_THROTTLES = new Map([
+  ["ThrottlingException", "throttling"],
+  ["TooManyUpdates", "too_many_updates"],
+]);
+
+const rethrowSecret = (error: unknown): never => {
+  throw transient("ssm", error, SECRET_THROTTLES) ?? error;
+};
+
+const tagList = (tags: Readonly<Record<string, string>>) =>
+  Object.entries(tags).map(([Key, Value]) => ({ Key, Value }));
+
+/**
+ * The parameters the secrets order writes (feature 017, E4). Three commands and
+ * no more: `GetParameter` **never decrypting**, `PutParameter` and
+ * `AddTagsToResource`. No delete and no label, never.
+ */
+export class SdkSecretStore implements SecretStore {
+  constructor(private readonly client: SecretSender) {}
+
+  async exists(name: string): Promise<boolean> {
+    try {
+      await this.client.send(new GetParameterCommand({ Name: name, WithDecryption: false }));
+      return true;
+    } catch (error) {
+      if (factsOf(error).name === "ParameterNotFound") {
+        return false;
+      }
+      return rethrowSecret(error);
+    }
+  }
+
+  async create(
+    name: string,
+    value: string,
+    kind: SecretKind,
+    tags: Readonly<Record<string, string>>,
+  ): Promise<"created" | "exists"> {
+    try {
+      await this.client.send(
+        new PutParameterCommand({ Name: name, Value: value, Type: kind, Tags: tagList(tags) }),
+      );
+      return "created";
+    } catch (error) {
+      if (factsOf(error).name === "ParameterAlreadyExists") {
+        return "exists";
+      }
+      return rethrowSecret(error);
+    }
+  }
+
+  async rotate(
+    name: string,
+    value: string,
+    kind: SecretKind,
+    tags: Readonly<Record<string, string>>,
+  ): Promise<void> {
+    try {
+      await this.client.send(
+        new PutParameterCommand({ Name: name, Value: value, Type: kind, Overwrite: true }),
+      );
+    } catch (error) {
+      return rethrowSecret(error);
+    }
+    // The value is already in: a failure from here on is "rotated, not tagged", never "not rotated".
+    try {
+      await this.client.send(
+        new AddTagsToResourceCommand({
+          ResourceType: "Parameter",
+          ResourceId: name,
+          Tags: tagList(tags),
+        }),
+      );
+    } catch {
+      throw new SecretTagsFailed(name);
+    }
+  }
+}
+
 /**
  * The clients of one environment, with the standard chain of credentials: no
  * credential is passed here, and none is read or written by the console.
@@ -93,4 +185,5 @@ export const adminClients = (environment: {
     environment.data_bucket,
   ),
   parameters: new SdkParameterStore(new SSMClient({ region: environment.region })),
+  secrets: new SdkSecretStore(new SSMClient({ region: environment.region })),
 });

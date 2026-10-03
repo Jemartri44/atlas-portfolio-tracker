@@ -33,6 +33,8 @@ export interface HarnessOptions {
   instant?: string;
   /** What the user types when a confirmation asks for a word (`atlas admin`: the environment). */
   typed?: string;
+  /** What the user types, with no echo, one line per prompt (`atlas admin secrets`); none = no terminal. */
+  secretLines?: string[] | undefined;
   /** The clients of the administration (`atlas admin`, `atlas backup --from-bucket`): doubles. */
   admin?: AdminAccess;
   /** Where the command believes its ledger is (`--ledger`), for the orders that look at its folder. */
@@ -65,6 +67,15 @@ export const harness = (options: HarnessOptions = {}): Harness => {
       out.push(question);
       return options.typed;
     },
+    // The question is on the screen; what is typed is not (no echo).
+    ...(options.secretLines === undefined
+      ? {}
+      : {
+          askSecret: async (question: string) => {
+            out.push(question);
+            return options.secretLines?.shift();
+          },
+        }),
   };
   return {
     store,

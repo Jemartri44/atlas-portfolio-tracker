@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { base64url } from "@atlas/adapters/access";
 import { encodeLine, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
+import { TestOnlyFakeSecrets } from "../../../../packages/adapters/test/aws/test-only-fake-secrets.js";
 import {
   ALLOWED,
   allowListOf,
@@ -63,7 +64,12 @@ const said = (c: ConsoleUnderTest) => [...c.out, ...c.err].join("\n");
 /** The console of the administrator, from an empty folder, answering `typed`. */
 const adminConsole = async (api: Api, typed: string) => {
   const admin: AdminAccess = {
-    clientsFor: async () => ({ objects: api.s3, parameters: api.ssm, ssmPrefix: CONFIG.ssmPrefix }),
+    clientsFor: async () => ({
+      objects: api.s3,
+      parameters: api.ssm,
+      secrets: new TestOnlyFakeSecrets(),
+      ssmPrefix: CONFIG.ssmPrefix,
+    }),
   };
   const folder = await mkdtemp(join(tmpdir(), "atlas-admin-"));
   return harness({ events: seed(), admin, ledgerPath: join(folder, "ledger.jsonl"), typed });

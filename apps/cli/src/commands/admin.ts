@@ -49,6 +49,7 @@ import {
 } from "../args.js";
 import { ConfirmationRequired, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
+import { secretsOrder } from "./admin-secrets.js";
 import { render } from "./shared.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
@@ -595,7 +596,7 @@ const pricesPushOrder = async (
 };
 
 const USAGE =
-  "uso: atlas admin devices | revoke-all-tokens | forget-device [--] <dispositivo> | forget-device --device <dispositivo> [--force] | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push, siempre con --env <entorno>";
+  "uso: atlas admin devices | revoke-all-tokens | forget-device [--] <dispositivo> | forget-device --device <dispositivo> [--force] | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push | secrets, siempre con --env <entorno>";
 
 export const adminCommand = async (
   ctx: Context,
@@ -606,9 +607,15 @@ export const adminCommand = async (
   const order = positionals[1];
   if (
     order === undefined ||
-    !["devices", "revoke-all-tokens", "forget-device", "compact", "restore", "prices"].includes(
-      order,
-    ) ||
+    ![
+      "devices",
+      "revoke-all-tokens",
+      "forget-device",
+      "compact",
+      "restore",
+      "prices",
+      "secrets",
+    ].includes(order) ||
     (order === "prices" && positionals[2] !== "push")
   ) {
     throw new UsageError(USAGE);
@@ -629,7 +636,7 @@ export const adminCommand = async (
     );
   }
   // Review of PR #98, N1: a `--yes` is written before the list is on screen.
-  if (ctx.yes && ["forget-device", "compact", "restore", "prices"].includes(order)) {
+  if (ctx.yes && ["forget-device", "compact", "restore", "prices", "secrets"].includes(order)) {
     throw new UsageError(
       `--yes no vale en «atlas admin ${order === "prices" ? "prices push" : order}»: se confirma escribiendo el nombre del entorno, con lo que se pierde delante (ADR-0032)`,
     );
@@ -654,6 +661,11 @@ export const adminCommand = async (
         return await compactOrder(ctx, clients, environment, flags);
       case "prices":
         return await pricesPushOrder(ctx, clients, environment);
+      case "secrets":
+        return await secretsOrder(ctx, clients, environment, positionals, flags, {
+          confirm: confirmEnvironment,
+          translate: translateAwsFailure,
+        });
       default:
         return await restoreOrder(ctx, clients, environment, flags);
     }

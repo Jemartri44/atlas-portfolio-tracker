@@ -11,13 +11,15 @@
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { AdminObjectStore, ParameterStore } from "@atlas/adapters/aws";
+import type { AdminObjectStore, ParameterStore, SecretStore } from "@atlas/adapters/aws";
 import { DomainError } from "@atlas/domain";
 import { type AdminEnvironment, parseAdminConfig } from "@atlas/domain/admin";
 
 export interface AdminClients {
   readonly objects: AdminObjectStore;
   readonly parameters: ParameterStore;
+  /** The parameters `atlas admin secrets` writes (feature 017, E4): exists, create, rotate. */
+  readonly secrets: SecretStore;
   /** `/atlas/<env>/`, where the records of the tokens live. */
   readonly ssmPrefix: string;
 }

@@ -1,0 +1,57 @@
+name: Deploy prod
+
+# Feature 017, E4 (prompt 017, section 5, flow 3). PREPARED AND INERT until the 018: needs the
+# repository variable ATLAS_DEPLOY_ENABLED = true. Only from `main`, only through the
+# environment `prod` (required approval; its branch rule, main only, is configured in GitHub
+# by the procedure of the 018). It does NOT build: it takes the set dev wrote for the same
+# source tree and checks its SHA-256 before it applies anything.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.ATLAS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+      - name: Assume the deploy role of prod
+        run: |
+          infra/scripts/ci/assume-role.sh "$ROLE_ARN"
+          echo "TREE=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_ENV"
+        env:
+          ROLE_ARN: ${{ secrets.ATLAS_PROD_DEPLOY_ROLE_ARN }}
+      - name: Promote the artifact of dev
+        run: infra/scripts/ci/promote.sh "$RUNNER_TEMP/artifact" "$TREE"
+        env:
+          ARTIFACT_BUCKET: ${{ secrets.ATLAS_ARTIFACT_BUCKET }}
+      - name: Apply prod
+        run: |
+          set -a; . <(infra/scripts/ci/artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE"); set +a
+          infra/scripts/ci/terraform-run.sh prod apply
+        env:
+          ATLAS_TFVARS_B64: ${{ secrets.ATLAS_PROD_TFVARS_B64 }}
+          ATLAS_BACKEND_B64: ${{ secrets.ATLAS_PROD_BACKEND_B64 }}
+      - name: Upload the SPA
+        run: |
+          mkdir "$RUNNER_TEMP/spa" && tar -xzf "$RUNNER_TEMP/artifact/spa.tgz" -C "$RUNNER_TEMP/spa"
+          aws s3 sync "$RUNNER_TEMP/spa/" "s3://$SPA_BUCKET/" --delete --exclude '.vite/*' --exclude '*.map' --only-show-errors > "$RUNNER_TEMP/aws-spa.log" 2>&1
+        env:
+          SPA_BUCKET: ${{ secrets.ATLAS_PROD_SPA_BUCKET }}

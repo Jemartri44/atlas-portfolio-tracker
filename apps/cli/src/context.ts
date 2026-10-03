@@ -17,6 +17,11 @@ export interface Io {
    * absent, when there is no interactive terminal to ask.
    */
   ask?(question: string): Promise<string | undefined>;
+  /**
+   * A line typed **with no echo** (`atlas admin secrets`): never shown, never
+   * kept. Undefined, or absent, when there is no interactive terminal.
+   */
+  askSecret?(question: string): Promise<string | undefined>;
 }
 
 export interface Context {

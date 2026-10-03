@@ -18,6 +18,7 @@ import {
   tokenParameterPath,
 } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
+import { TestOnlyFakeSecrets } from "../../../../packages/adapters/test/aws/test-only-fake-secrets.js";
 import { setup as apiSetup, CONFIG, consoleLogin, errorOf } from "../../../api/test/harness.js";
 import type { AdminAccess } from "../../src/admin/environment.js";
 import { EXIT } from "../../src/context.js";
@@ -38,7 +39,12 @@ const adminOf = (api: Api): AdminAccess => ({
         path: "admin.json",
       });
     }
-    return { objects: api.s3, parameters: api.ssm, ssmPrefix: CONFIG.ssmPrefix };
+    return {
+      objects: api.s3,
+      parameters: api.ssm,
+      secrets: new TestOnlyFakeSecrets(),
+      ssmPrefix: CONFIG.ssmPrefix,
+    };
   },
 });
 
@@ -261,7 +267,12 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     const c = harness({
       events: seed(),
       admin: {
-        clientsFor: async () => ({ objects, parameters: api.ssm, ssmPrefix: CONFIG.ssmPrefix }),
+        clientsFor: async () => ({
+          objects,
+          parameters: api.ssm,
+          secrets: new TestOnlyFakeSecrets(),
+          ssmPrefix: CONFIG.ssmPrefix,
+        }),
       },
       ledgerPath: join(await mkdtemp(join(tmpdir(), "atlas-admin-")), "ledger.jsonl"),
       confirm: true,

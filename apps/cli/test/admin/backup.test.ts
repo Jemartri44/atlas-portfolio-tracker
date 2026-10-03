@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { encodeLine } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
+import { TestOnlyFakeSecrets } from "../../../../packages/adapters/test/aws/test-only-fake-secrets.js";
 import { CONFIG, setup } from "../../../api/test/harness.js";
 import type { AdminAccess } from "../../src/admin/environment.js";
 import { EXIT, type Io } from "../../src/context.js";
@@ -18,7 +19,12 @@ import { seed } from "../harness.js";
 type Api = ReturnType<typeof setup>;
 
 const adminOf = (api: Api): AdminAccess => ({
-  clientsFor: async () => ({ objects: api.s3, parameters: api.ssm, ssmPrefix: CONFIG.ssmPrefix }),
+  clientsFor: async () => ({
+    objects: api.s3,
+    parameters: api.ssm,
+    secrets: new TestOnlyFakeSecrets(),
+    ssmPrefix: CONFIG.ssmPrefix,
+  }),
 });
 
 /** A folder with a ledger and its `documents/`, and the console over it. */
