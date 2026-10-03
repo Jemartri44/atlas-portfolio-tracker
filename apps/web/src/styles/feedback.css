@@ -2,6 +2,10 @@
  * What the application says about itself (docs/design/system.md §5.6–5.8,
  * §5.16): the one notice, what cannot be computed yet, what is empty and what
  * is loading. None of them is a blank page; only a real problem is red.
+ *
+ * LINE BUDGET: four states that share their well, their spacing and their
+ * icon column, and since feature 020 a row kept for a late notice and a
+ * pending of one line; split, each half would repeat the other's measures.
  */
 
 /* ---- Notice: the one warning component ---------------------------------- */
@@ -21,6 +25,22 @@ a.notice:hover {
 
 .notices > li + li > .notice {
   border-top: var(--border) solid var(--c-border);
+}
+
+/* A row kept for a notice that arrives after the first paint (feature 020, M2). */
+.notice-reserved {
+  align-content: start;
+  border-top: var(--border) solid var(--c-border);
+  display: grid;
+  gap: var(--space-2);
+  min-height: var(--notice-reserved-h);
+  padding-block: var(--space-3);
+}
+
+@media (min-width: 64rem) {
+  .notice-reserved {
+    min-height: var(--notice-reserved-h-wide);
+  }
 }
 
 .notice-icon {
@@ -145,9 +165,29 @@ a.notice:hover .notice-action {
   margin: 0;
 }
 
+/* One datum missing: one line, no well (feature 020, M2). */
+.pending.is-line {
+  align-items: center;
+  background-color: transparent;
+  padding: var(--space-2) 0;
+}
+
+.pending.is-line .pending-body {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+}
+
 /* A quiet action lines up with the sentence above it. */
 .pending-body > a {
   margin-left: calc(-1 * var(--space-2));
+}
+
+.pending.is-line .pending-body > a {
+  margin-left: 0;
+  min-height: var(--tap);
+  padding-inline: var(--space-1);
 }
 
 @media (min-width: 64rem) {

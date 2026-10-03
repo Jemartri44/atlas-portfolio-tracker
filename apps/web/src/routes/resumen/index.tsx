@@ -15,19 +15,22 @@
 
 import {
   coreWeights,
+  hasForeignAccountsAt,
+  inRentaSeason,
   integrity,
   type LedgerEntry,
   ledgerEntries,
   netWorth,
   netWorthSeries,
+  nextReturnYear,
   pendingOrders,
   settingsAt,
   transferWatch,
 } from "@atlas/domain";
 import { A } from "@solidjs/router";
-import { createMemo, For, type JSX, lazy, Show } from "solid-js";
+import { createMemo, createResource, For, type JSX, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
-import { Icon, Notice, Section } from "../../components/index.js";
+import { Icon, Notice, type NoticeItem, NoticeLink, Section } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -38,6 +41,9 @@ import { MONITOR, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   attentionItems,
+  dataLossItem,
+  firstEntries,
+  fiscalSlot,
   movementRows,
   netWorthView,
   onboardingOf,
@@ -45,17 +51,14 @@ import {
 import { netWorthPlot } from "../../view-models/series.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
-import { MovementLine } from "../movimientos/MovementLine.jsx";
-import { AttentionBlock } from "./AttentionBlock.jsx";
+import { EntryLine } from "../movimientos/MovementList.jsx";
+import { AttentionBlock, noticeOf } from "./AttentionBlock.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
+// The card that leads to the fiscal screen only draws, so it is on the boot
+// path and in its place on the first paint (feature 020, E2): what asks the
+// tax engine is `fiscal-status.ts`, loaded after it.
+import FiscalCard from "./FiscalCard.jsx";
 import { NetWorthBlock } from "./NetWorthBlock.jsx";
-
-/**
- * The card that leads to the fiscal screen, loaded **after** the summary: it
- * is the only card that asks the tax engine anything, and the engine is not on
- * the boot path.
- */
-const FiscalCard = lazy(() => import("./FiscalCard.jsx"));
 
 /** How many recent movements the summary shows (prompt §3.6). */
 const RECENT = 5;
@@ -100,8 +103,35 @@ export default function ResumenRoute(): JSX.Element {
           source?.kind === "browser"
             ? (daysSinceExport(source, date) ?? ("never" as const))
             : undefined;
+        // The risk of losing the data: its own first line, never in the list.
+        const loss =
+          overdueDays === undefined || (overdueDays !== "never" && overdueDays <= 7)
+            ? undefined
+            : dataLossItem(overdueDays);
+        // Known on the first paint, so nothing jumps when the engine answers:
+        // whether it is the season (the card goes first) and whether the 720
+        // or the 721 could have something to say (a row of *Atención* is kept).
+        const season = inRentaSeason(settings, date);
+        const abroad = hasForeignAccountsAt(snapshot.events, date, settings);
+        const invalid = snapshot.state.invalid.length;
+        // The tax engine, after the first paint (it is not on the boot path).
+        const [fiscal] = createResource(
+          () => ({ events: snapshot.events, date }),
+          async (input) =>
+            (await import("./fiscal-status.js")).fiscalStatus(input.events, input.date),
+        );
+        // Out of the season, what is pending of the 720 and the 721 goes to
+        // *Atención*: a row kept for it with an account abroad, filled or
+        // dropped when the engine answers. In the season the card says it.
+        const fiscalNotice = (): "reserved" | NoticeItem | undefined => {
+          const slot = fiscalSlot({ season, abroad, answer: fiscal() });
+          return slot === undefined || slot === "reserved"
+            ? slot
+            : { severity: "caution", message: slot.message, action: slot.action };
+        };
         const items = attentionItems({
-          invalidCount: snapshot.state.invalid.length,
+          invalidCount: invalid,
+          fiscalBlocked: !season && invalid > 0,
           warnings: [
             ...dated.warnings,
             ...weights.warnings,
@@ -111,9 +141,6 @@ export default function ResumenRoute(): JSX.Element {
           findings: integrity(snapshot.state).filter((finding) => finding.severity === "error"),
           openOrders: pendingOrders(dated, date),
           openTransfers: transfers.rows,
-          ...(overdueDays === undefined || (overdueDays !== "never" && overdueDays <= 7)
-            ? {}
-            : { exportOverdueDays: overdueDays }),
           names,
           privacy: store.privacy(),
           date,
@@ -121,10 +148,13 @@ export default function ResumenRoute(): JSX.Element {
         });
         // Cut at the date read: what is dated later has not happened yet.
         const entries = ledgerEntries(snapshot.state, snapshot.events, { to: date });
-        const recent = movementRows(
-          entries.filter(isMovement).slice(0, RECENT),
-          names,
-          eventReferences(snapshot.events, names),
+        // Five entries, the valuations of a day gathered into one (M8).
+        const movements = entries.filter(isMovement);
+        const references = eventReferences(snapshot.events, names);
+        const recent = firstEntries(
+          movements.length,
+          (from, to) => movementRows(movements.slice(from, to), names, references),
+          RECENT,
         );
         const onboarding = onboardingOf(dated, entries, settings);
         const moved = entries.some(isMovement);
@@ -137,7 +167,12 @@ export default function ResumenRoute(): JSX.Element {
         // The cards, each once; `summaryOrder` says in which order they go.
         const cards: Record<SummaryCard, () => JSX.Element> = {
           worth: () => <NetWorthBlock view={liveWorth()} />,
-          attention: () => <AttentionBlock items={items} />,
+          loss: () => (
+            <Show when={loss}>
+              {(item) => <NoticeLink item={noticeOf(item())} class="summary-loss" />}
+            </Show>
+          ),
+          attention: () => <AttentionBlock items={items} fiscal={fiscalNotice} />,
           moves: () => (
             <Section
               title="Últimos movimientos"
@@ -146,9 +181,9 @@ export default function ResumenRoute(): JSX.Element {
             >
               <ul class="rows">
                 <For each={recent}>
-                  {(row) => (
+                  {(entry) => (
                     <li>
-                      <MovementLine row={row} />
+                      <EntryLine entry={entry} />
                     </li>
                   )}
                 </For>
@@ -159,7 +194,9 @@ export default function ResumenRoute(): JSX.Element {
               </A>
             </Section>
           ),
-          fiscal: () => <FiscalCard events={snapshot.events} date={date} />,
+          fiscal: () => (
+            <FiscalCard season={season} status={fiscal} year={nextReturnYear(settings, date)} />
+          ),
           evolution: () => (
             <SeriesCard
               title="Evolución del patrimonio"
@@ -190,7 +227,11 @@ export default function ResumenRoute(): JSX.Element {
               <Show when={onboarding}>{(steps) => <FirstSteps onboarding={steps()} />}</Show>
 
               <Show when={moved}>
-                <For each={summaryOrder(monitor())}>{(card) => cards[card]()}</For>
+                <For
+                  each={summaryOrder({ monitor: monitor(), season, dataLoss: loss !== undefined })}
+                >
+                  {(card) => cards[card]()}
+                </For>
               </Show>
             </div>
           </>

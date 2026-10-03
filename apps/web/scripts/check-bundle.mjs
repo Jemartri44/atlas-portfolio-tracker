@@ -441,7 +441,46 @@ const dist = join(webRoot, "dist");
  * the answers of the API leaves the domain chunk two exports more (+16), and
  * the names of the chunks move the rest. The trend: 75.012 → 75.025 → 75.057.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_077;
+/*
+ * **Feature 020, E2, `inRentaSeason` in the barrel (2026-09-27): measured
+ * 75.059 (+25 over the 75.034 of round 2 of PR #105), ceiling 75.079 —
+ * measured + 20**, raised before the commit that needs it, inside the
+ * authorisation (76.069). The rule of the income tax season leaves the lazy
+ * tax engine for the settings, so the summary places its tax card on the
+ * first paint (Q5). The trend: 75.019 → 75.034 → 75.059.
+ */
+/*
+ * **Feature 020, E2, M2, the first screenful by importance (2026-09-27):
+ * measured 75.339 (+280 over 75.059), ceiling 75.359 — measured + 20**,
+ * raised before the commit that needs it, inside the authorisation (76.069).
+ * The summary reads on its first paint whether it is the season and whether
+ * the ledger has an account abroad (`inRentaSeason`, `hasForeignAccountsAt`,
+ * from the barrel), and the stylesheet of the boot gains the line of the data,
+ * the row of the tax card, the row kept in *Atención* and the pending of one
+ * line. The trend: 75.034 → 75.059 → 75.339.
+ */
+/*
+ * **Feature 020, E2, measured in Chromium (2026-09-27): 75.361 (+27 over the
+ * 75.334 of M8), ceiling 75.381 — measured + 20**, raised before the commit
+ * that needs it, inside the authorisation (76.069). The row kept in
+ * *Atención* gets the height of the notice that fills it, so nothing in the
+ * first screenful jumps. The trend: 75.339 → 75.334 → 75.361.
+ */
+/*
+ * **Feature 020, E2, measured in Chromium (2026-09-28): 75.392 (+14 over the
+ * 75.378 of the kept row at its exact height), ceiling 75.412 — measured +
+ * 20**, raised before the commit that needs it, inside the authorisation
+ * (76.069). The tax card only draws, so it moves to the boot path and is in
+ * its place on the first paint of the season: fetched after it, it pushed
+ * the summary of a phone down 213px when it came. The trend: 75.361 → 75.378
+ * → 75.392.
+ */
+/*
+ * **Feature 020, E2, `develop` (016 E2-E4) merged in (2026-10-03): measured
+ * 75.482, ceiling 75.502 — measured + 20**, inside the authorisation (76.069).
+ * The two lines of work raised the boot in parallel; this is their sum.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_502;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -966,7 +1005,35 @@ const BOOT_BUDGET_GZIP_BYTES = 75_077;
  * of 20 MB of the client), and the neutral door of the answers of the API.
  * The trend: 303.195 → 304.836 → 305.394.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 305_650;
+/*
+ * **Feature 020, E2, M2 (2026-09-27): measured 303.708 (+935 over the
+ * 302.773 of round 2 of PR #105), ceiling 303.964 — measured + 256**, raised
+ * before the commit that needs it, inside the authorisation (310.500). The
+ * boot above (+305), and lazy: the summary in its order by the season, the
+ * tax card in its two shapes and the slot of the 720 in *Atención*. The
+ * trend: 302.785 → 302.773 → 303.708.
+ */
+/*
+ * **Feature 020, E2, M8 (2026-09-27): measured 304.198 (+490 over 303.708),
+ * ceiling 304.454 — measured + 256**, raised before the commit that needs it,
+ * inside the authorisation (310.500). Lazy, all of it: the list of a phone by
+ * month, the valuations of a day gathered into one row that unfolds, and the
+ * recent movements of the summary made a chunk at a time. The trend: 302.773
+ * → 303.708 → 304.198.
+ */
+/*
+ * **Feature 020, E2 (2026-09-28): measured 303.708 (−537), ceiling lowered to
+ * 303.964 — measured + 256.** The tax card of the summary is no longer a chunk
+ * of its own: it went to the boot path, and its wrapper and its load went
+ * with it. The trend: 304.198 → 304.245 → 303.708.
+ */
+/*
+ * **Feature 020, E2, `develop` (016 E2-E4) merged in (2026-10-03): measured
+ * 306.434, ceiling 306.690 — measured + 256**, inside the authorisation
+ * (312.000). The two lines of work raised the total in parallel; this is
+ * their sum.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 306_690;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,

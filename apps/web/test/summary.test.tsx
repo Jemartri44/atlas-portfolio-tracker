@@ -59,10 +59,12 @@ describe("the recent movements of the summary", () => {
     today("2027-01-10");
     const host = await show("/", Resumen);
     const card = host.querySelector('[aria-label="Últimos movimientos"]');
-    const dates = [...(card?.querySelectorAll(".row .fig-sub") ?? [])].map((node) =>
-      iso(text(node).trim()),
+    // Five entries, a gathered day of valuations counting as one (feature 020, M8).
+    expect(card?.querySelector(".rows")?.children).toHaveLength(5);
+    const dates = [...text(card).matchAll(/(\d{2}\/\d{2}\/\d{4})/g)].map((match) =>
+      iso(match[1] as string),
     );
-    expect(dates).toHaveLength(5);
+    expect(dates.length).toBeGreaterThanOrEqual(5);
     expect(dates.filter((date) => date > "2027-01-10")).toEqual([]);
     // And the golden ledger does have movements after that date.
     expect(goldenLines().some((line) => /"(trade|value)_date":"2027-0[2-9]/.test(line))).toBe(true);

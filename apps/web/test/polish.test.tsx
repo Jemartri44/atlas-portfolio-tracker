@@ -9,6 +9,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import Movimientos from "../src/routes/movimientos/index.jsx";
 import FiscalCard from "../src/routes/resumen/FiscalCard.jsx";
+import { fiscalStatus } from "../src/routes/resumen/fiscal-status.js";
 import { hasState, type MovementRow, showsStateColumn } from "../src/view-models/index.js";
 import { goldenEvents } from "./helpers/golden.js";
 import { settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
@@ -75,14 +76,12 @@ describe("the list of the tax card", () => {
   it("sits flush with the title of its card, with no indent", async () => {
     withStyles(400);
     const events = goldenEvents();
-    const host = await show("/", () => <FiscalCard events={events} date="2028-02-10" />);
-    for (
-      let attempt = 0;
-      attempt < 200 && host.querySelector(".fiscal-todo") === null;
-      attempt += 1
-    ) {
-      await settle(10);
-    }
+    // In the season, where the card has its list (feature 020, E2).
+    const status = fiscalStatus(events, "2029-05-10");
+    const host = await show("/", () => (
+      <FiscalCard season={true} status={() => status} year={2028} />
+    ));
+    await settle(10);
     expect(applied(host.querySelector(".fiscal-todo"), "padding-left")).toMatch(/^0(px)?$/);
   });
 });

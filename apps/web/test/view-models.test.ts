@@ -31,6 +31,7 @@ import {
   attentionDestination,
   attentionItems,
   candidateSettings,
+  dataLossItem,
   detailView,
   movementRow,
   movementRows,
@@ -143,28 +144,15 @@ describe("attentionItems", () => {
     expect(items[1]?.message).toContain("12 días");
   });
 
-  it("nags about the export only when it is due, and says when it never happened", () => {
-    const never = attentionItems({
-      invalidCount: 0,
-      privacy: false,
-      warnings: [],
-      findings: [],
-      openOrders: [],
-      openTransfers: [],
-      exportOverdueDays: "never",
-    });
-    expect(never[0]?.code).toBe("export_overdue");
-    expect(never[0]?.message).toContain("nunca");
-    const late = attentionItems({
-      invalidCount: 0,
-      privacy: false,
-      warnings: [],
-      findings: [],
-      openOrders: [],
-      openTransfers: [],
-      exportOverdueDays: 20,
-    });
-    expect(late[0]?.message).toContain("20 días");
+  it("says the risk of losing the data, and when the export never happened", () => {
+    // Its own line of the summary since feature 020 (E2, M2), not an item of the list.
+    const never = dataLossItem("never");
+    expect(never.code).toBe("export_overdue");
+    expect(never.severity).toBe("error");
+    expect(never.message).toContain("nunca");
+    expect(never.action.to).toBe("/ajustes");
+    expect(dataLossItem(20).message).toContain("20 días");
+    expect(dataLossItem(1).message).toContain("1 día ");
   });
 
   it("carries the integrity findings with their events", () => {

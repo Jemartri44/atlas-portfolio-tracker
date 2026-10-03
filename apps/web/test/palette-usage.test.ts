@@ -31,6 +31,26 @@ const RESULT_RULES = [
   { sheet: "styles/base.css", selector: ".negative" },
 ];
 
+/** Every colour written in a text, in hex of 3, 4, 6 or 8 digits or `rgb()`/`rgba()`, as #rrggbb. */
+const coloursIn = (text: string): { written: string; rgb: string }[] => {
+  const hex = (value: number): string => value.toString(16).padStart(2, "0");
+  const found: { written: string; rgb: string }[] = [];
+  for (const match of text.matchAll(/#([0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})(?![0-9a-z])/gi)) {
+    const digits = (match[1] as string).toLowerCase();
+    const long = digits.length <= 4 ? [...digits].map((digit) => digit + digit).join("") : digits;
+    found.push({ written: match[0], rgb: `#${long.slice(0, 6)}` });
+  }
+  for (const match of text.matchAll(/rgba?\(\s*(\d{1,3})[\s,]+(\d{1,3})[\s,]+(\d{1,3})[^)]*\)/gi)) {
+    const [red, green, blue] = [match[1], match[2], match[3]].map(Number) as [
+      number,
+      number,
+      number,
+    ];
+    found.push({ written: match[0], rgb: `#${hex(red)}${hex(green)}${hex(blue)}` });
+  }
+  return found;
+};
+
 describe("the colours of a gain and a loss", () => {
   it("left no trace of the colours they replaced", () => {
     const left = sources
@@ -67,10 +87,12 @@ describe("the colours of a gain and a loss", () => {
     expect(named).toEqual([]);
   });
 
-  it("are not copied by value either: no sheet or code writes their hex, nor the danger's", () => {
+  it("are not copied by value either: no sheet or code writes their colour, nor the danger's", () => {
     // Round 1 of the review of PR #105, N4: `.meta { color: #0f6b5c }` was a
-    // gain on a non-result that no guardian saw. The values are read from
-    // `tokens.css`, all three blocks, so a change of palette moves this too.
+    // gain on a non-result that no guardian saw. Round 2, O3: nor in another
+    // notation — `#0f6b5cff`, `#0f6b5c` shortened, `rgb(15, 107, 92)` — so
+    // every colour written in the sources is normalised before comparing. The
+    // values are read from `tokens.css`, all three blocks.
     const tokens = readFileSync(join(src, "styles/tokens.css"), "utf8");
     const values = new Set<string>();
     for (const rule of cssRules(tokens)) {
@@ -83,12 +105,26 @@ describe("the colours of a gain and a loss", () => {
     expect(values.size).toBe(6);
     const copies = sources
       .filter((path) => !path.endsWith("styles/tokens.css"))
-      .flatMap((path) => {
-        const text = readFileSync(path, "utf8").toLowerCase();
-        return [...values]
-          .filter((value) => new RegExp(`${value}(?![0-9a-f])`).test(text))
-          .map((value) => `${relative(src, path)}: ${value}`);
-      });
+      .flatMap((path) =>
+        coloursIn(readFileSync(path, "utf8"))
+          .filter((colour) => values.has(colour.rgb))
+          .map((colour) => `${relative(src, path)}: ${colour.written}`),
+      );
     expect(copies).toEqual([]);
+  });
+
+  it("normalises every notation of a colour to #rrggbb", () => {
+    expect(coloursIn("#0f6b5c #0F6B5C #0f6b5cff #abc #abcd").map((colour) => colour.rgb)).toEqual([
+      "#0f6b5c",
+      "#0f6b5c",
+      "#0f6b5c",
+      "#aabbcc",
+      "#aabbcc",
+    ]);
+    expect(
+      coloursIn("rgb(15,107,92) rgb(15 107 92) rgba(15, 107, 92, 0.5) rgb(15 107 92 / 50%)").map(
+        (colour) => colour.rgb,
+      ),
+    ).toEqual(["#0f6b5c", "#0f6b5c", "#0f6b5c", "#0f6b5c"]);
   });
 });

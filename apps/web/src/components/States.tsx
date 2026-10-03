@@ -13,11 +13,16 @@ interface PendingProps {
   children: JSX.Element;
   /** The one action that fixes it. */
   action?: { label: string; to: string } | undefined;
+  /**
+   * One line and no well, when one datum is missing (feature 020, M2): a
+   * block of 160px for a single price pushed the summary down.
+   */
+  line?: boolean | undefined;
 }
 
 /** "No se puede calcular todavía": a well, a clock, a sentence and one action. */
 export const Pending = (props: PendingProps): JSX.Element => (
-  <div class="pending" role="status">
+  <div class={props.line === true ? "pending is-line" : "pending"} role="status">
     <Icon name="clock" />
     <div class="pending-body">
       <p class="pending-text">{props.children}</p>

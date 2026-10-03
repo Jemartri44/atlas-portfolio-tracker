@@ -23,27 +23,56 @@ export const noticeOf = (item: AttentionItem): NoticeItem => ({
   count: item.count,
 });
 
-export const AttentionBlock = (props: { items: readonly AttentionItem[] }): JSX.Element => (
-  <section class="card span-7 summary-attention" aria-label="Lo que reclama atención">
-    <div class="card-head">
-      <h2>Atención</h2>
-      <Show when={props.items.length > 0}>
-        <span class="aside">
-          {props.items.length} {props.items.length === 1 ? "aviso" : "avisos"}
-        </span>
-      </Show>
-    </div>
+/** Where the notice of the tax side goes among the visible ones: at the end of them. */
+const VISIBLE = 4;
 
-    <Show
-      when={props.items.length > 0}
-      fallback={
-        <p class="calm">
-          <Icon name="check" class="icon-sm" />
-          Nada que hacer.
-        </p>
-      }
-    >
-      <NoticeList items={props.items.map(noticeOf)} label="Avisos" />
-    </Show>
-  </section>
-);
+export const AttentionBlock = (props: {
+  items: readonly AttentionItem[];
+  /**
+   * The notice of the 720 and the 721 out of the season (feature 020, M2):
+   * a row kept for it while the tax engine answers, then the notice or
+   * nothing. It counts among the four in sight.
+   */
+  fiscal?: (() => "reserved" | NoticeItem | undefined) | undefined;
+}): JSX.Element => {
+  const fiscal = (): "reserved" | NoticeItem | undefined => props.fiscal?.();
+  const notices = (): NoticeItem[] => {
+    const all = props.items.map(noticeOf);
+    const item = fiscal();
+    if (item === undefined || item === "reserved") {
+      return all;
+    }
+    const at = Math.min(VISIBLE - 1, all.length);
+    return [...all.slice(0, at), item, ...all.slice(at)];
+  };
+  const count = (): number => notices().length;
+  return (
+    <section class="card span-7 summary-attention" aria-label="Lo que reclama atención">
+      <div class="card-head">
+        <h2>Atención</h2>
+        <Show when={count() > 0}>
+          <span class="aside">
+            {count()} {count() === 1 ? "aviso" : "avisos"}
+          </span>
+        </Show>
+      </div>
+
+      <Show
+        when={count() > 0 || fiscal() === "reserved"}
+        fallback={
+          <p class="calm">
+            <Icon name="check" class="icon-sm" />
+            Nada que hacer.
+          </p>
+        }
+      >
+        <NoticeList
+          items={notices()}
+          label="Avisos"
+          limit={VISIBLE}
+          reserve={fiscal() === "reserved"}
+        />
+      </Show>
+    </section>
+  );
+};

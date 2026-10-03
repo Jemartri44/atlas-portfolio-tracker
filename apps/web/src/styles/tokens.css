@@ -92,6 +92,11 @@
   --mark-size: 1.75rem; /* the number of a first step */
   --tile-h: 4rem; /* 64 · a tile of the day to day on a phone (feature 020, M11) */
   --tile-h-wide: 6.5rem; /* 104 · the tile with its icon and its sentence, from 640px */
+  /* The row kept in *Atención* for the 720 (feature 020, M2): the height the
+     notice has when it arrives, measured on the user's phone and monitor, so
+     nothing jumps when it fills. */
+  --notice-reserved-h: 7.4727rem; /* 119.56 at 400px */
+  --notice-reserved-h-wide: 4.461rem; /* 71.38 at 2045px */
 
   /* ---- Layout ----------------------------------------------------------- */
 

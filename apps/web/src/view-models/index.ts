@@ -5,8 +5,19 @@ export {
   type AttentionSeverity,
   attentionDestination,
   attentionItems,
+  dataLossItem,
+  type FiscalAnswer,
+  fiscalSlot,
 } from "./attention.js";
 export { type DetailField, type DetailView, detailView } from "./detail.js";
+export {
+  byMonth,
+  firstEntries,
+  groupValuations,
+  type ListEntry,
+  type MonthOfEntries,
+  type ValuationGroup,
+} from "./movement-entries.js";
 export {
   hasState,
   type MovementRow,

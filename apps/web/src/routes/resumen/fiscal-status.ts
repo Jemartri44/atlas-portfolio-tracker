@@ -15,8 +15,6 @@ import type { LedgerEvent } from "@atlas/domain";
 import { fiscalAttention, type InformativeTodo } from "@atlas/domain/fiscal";
 
 export interface FiscalStatus {
-  /** The card goes to the top of the summary: season, or something to do. */
-  prominent: boolean;
   season: boolean;
   /** One line per thing to do, already in Spanish. */
   lines: string[];
@@ -48,7 +46,6 @@ const todoText = (todo: InformativeTodo): string => {
 export const fiscalStatus = (events: readonly LedgerEvent[], today: string): FiscalStatus => {
   const attention = fiscalAttention(events, today);
   return {
-    prominent: attention.prominent,
     season: attention.season,
     lines: attention.todo.map(todoText),
     unfiled: attention.unfiled_years,

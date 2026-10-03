@@ -4,6 +4,7 @@ Fechas en Europe/Madrid. Aquí van las preguntas a la dirección, lo que se resp
 
 ## 1. Estado
 
+- **2026-09-28**: **E2 terminada y congelada** (§11). El código congelado es `9f2ddcc`.
 - **2026-09-27, tarde**: **E1 terminada y congelada** (§9). El código congelado es `ded43d6`.
 - **2026-09-27**: alto del plan. Rama `feature/020-visual-refresh` desde `origin/develop` (`ae66814`), worktree `.claude/worktrees/020-visual-refresh`, `core.hooksPath` a `.githooks`, `npm ci`. `git log origin/develop..origin/feature/015-api-access` sale vacío (la 015 entera está en `develop`).
 - **Sin código de producción.** Hay `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md` y esta lista.
@@ -451,3 +452,237 @@ Medido en Chromium tras el arreglo: al volver, **ningún `scrollIntoView` nuestr
 ### 10.7 Congelado
 
 **Código congelado: `c3c65e5`.** El commit que añade esta sección solo toca `specs/`. Desde aquí no empujo nada mientras dura la revisión.
+
+## 11. E2 — El primer pantallazo y la lista
+
+### 11.0 Lo que dejó la ronda 2 de la PR #105 (antes de E2)
+
+- **Estado**: E1 fusionada en `develop` (PR #105, `5e63bfb`), después de que la ronda 2 convergiera. `develop` se fusionó en la rama antes de empezar.
+- **Qué se hizo** en cada punto de la ronda 2, con su test visto en rojo o su mutante muerto:
+
+| Punto | Commit | Qué | Mutantes |
+|---|---|---|---|
+| **B2, hueco** | `2c69be0` | `tests/result-colour-identity.test.ts` analiza la web con el analizador de los guardianes estáticos (`support/source-graph.ts`, Oxc). Falla si se importa `signOf` con cualquier nombre fuera de `Figure.tsx`, `format/index.ts` y `format/number.ts`, y si aparece un literal o una plantilla con `positive` o `negative` fuera de `Amount.tsx` y `format/number.ts` | `import { signOf as toneOf }`, `const tone = "positive"` y `` `negative` ``: muertos |
+| **O3** | `6882da7` | El guardián de copias normaliza hex de 3, 4, 6 y 8 cifras y `rgb()`/`rgba()`, con comas o espacios, antes de comparar. Tiene un test propio de la normalización | `#0f6b5cff`, `rgb(15,107,92)` y `rgb(244 154 68 / 0.9)`: muertos |
+| **O1** | `1faea40` | La dirección que se compara, y la guardada en el `popstate`, incluyen la consulta. Test con los filtros de Movimientos: filtrar, volver atrás y navegar sin clic a `/ajustes#sincronizacion`; el marco llega y da el foco al título | `O1-query-left-out`: sobrevivió la primera vez, porque el enrutador también desplaza cuando el destino ya está pintado. Ahora el test distingue la llegada del marco por el foco, y muere |
+| **O2** | `1faea40` | `:where(h1, h2, h3)[tabindex="-1"]:focus { outline: none }`; el anillo de todo lo interactivo no se toca | Un `button` en la lista y la regla quitada: muertos. **Medido en Chromium**: el `h2` enfocado por el ancla tiene `outline: none` (aunque cumple `:focus-visible`); tras un Tab, el botón siguiente tiene `outline: solid 2px` |
+
+### 11.1 Predicción de la salida fiscal (antes de la suite de E2)
+
+E2 cambia el dominio en tres sitios:
+- `fiscalAttention.prominent`, que pasa a ser solo la campaña;
+- `inSeason`, que pasa a ser `inRentaSeason` en `settings/settings.ts`;
+- `hasForeignAccountsAt`, nuevo.
+
+**Ninguno lo lee ninguna orden de la consola**: `grep` de `fiscalAttention`, `prominent` e `inSeason` en `apps/cli/src`, `apps/api/src`, `apps/jobs/src` y `packages/adapters/src` no da nada.
+
+**Predicción**: `tax` (con `--lots`, `--boxes` y `--json`), `gains`, `income`, `m720`, `m721` y `filed` sobre `synthetic-v1` dan **los mismos bytes** que en `develop`, y `git diff origin/develop -- tests/fixtures` sale vacío.
+
+### 11.2 Los commits de E2
+
+Los del dominio van **señalados** (⚑): cada uno en su propio commit, con sus tests, y ninguno lo lee la consola (§11.1).
+
+| Commit | Qué |
+|---|---|
+| `534befb` | `develop` (la E1 fusionada, `5e63bfb`) en la rama |
+| `2c69be0`, `6882da7`, `1faea40` | Lo que dejó la ronda 2 (§11.0) |
+| `1e87404` | La predicción de la salida fiscal, antes de la suite (§11.1) |
+| `5b5ab01` | Techo del arranque, delante de `a2a791d` |
+| ⚑ `a2a791d` | `inRentaSeason(settings, date)` en `settings/settings.ts`, exportada por el barril (Q5): el día `MM-DD` de la fecha civil entre `renta_season_start` y `renta_season_end`, bordes incluidos |
+| ⚑ `86b09b3` | `fiscalAttention.prominent` pasa a ser **solo la campaña** (usa `inRentaSeason`). Lo pendiente del 720 y del 721, los ejercicios sin declarar y los inválidos se siguen diciendo, pero ya no suben la tarjeta |
+| ⚑ `fa97135` | `hasForeignAccountsAt(events, date, settings)`, nueva en `projections/foreign-accounts.ts` y en el barril (Q3): el último país de cada cuenta registrada hasta el día civil de Madrid, frente a `tax_residence`; sin valor, la regla del motor, «país ≠ ES», dentro de la función. `fiscalAttention` y `holdings.ts` no se alinean con ella (Q3) |
+| `457a8cf` | Techos del arranque y del total, delante de `e77fa21` |
+| `e77fa21` | M2: el orden del primer pantallazo por importancia (`summary-order.ts`), la línea del riesgo de perder los datos (`dataLossItem`, `NoticeLink`), la fila guardada en *Atención* para el 720 (`fiscalSlot`, `NoticeList reserve`, P5), la fila plegada de *Declaración* fuera de campaña (Q2), la frase fiscal unida al grupo de los inválidos, y «pendiente» en una línea con un solo precio |
+| `78b76d8` | Techo del total, delante de `805bfc7` |
+| `805bfc7` | M8: la lista del teléfono por meses, con la fecha en cada fila, y las valoraciones vigentes de un día en una fila que se despliega; los últimos movimientos del Resumen, por entradas |
+| `8594594`, `c0a93ad` | Techo del arranque; la fila guardada con la altura del aviso que la llena |
+| `9cebed4` | El agrupado de movimientos en su propio fichero (`view-models/movement-entries.ts`) y sin una clase que ninguna hoja declara (§11.5) |
+| `86d1ae9` | «Sin precio: Alpha Spin-off. Registrar →» cabe en una línea a 400 px |
+| `28b8427` | La fila guardada, a la altura exacta medida (119,56 px a 400 y 71,38 a 2045): con 118 y 70, *Últimos movimientos* bajaba 2 px a 2045 |
+| `6ac2719`, `5ab750f` | Techo del arranque; **la tarjeta fiscal, en su sitio en la primera pintada** (§11.3) |
+| `9f2ddcc` | El techo del total baja a lo medido + 256 |
+
+### 11.3 Lo que encontraron las capturas y no los tests
+
+- **La tarjeta fiscal llegaba tarde.** `FiscalCard` era un trozo perezoso desde la 010, cuando preguntaba al motor fiscal. En E2 ya solo dibuja (lo del motor está en `fiscal-status.ts`, que se sigue cargando después), pero seguía perezosa: en la primera pintada no estaba, y al llegar empujaba el Resumen del teléfono **213 px** hacia abajo. En campaña, con la tarjeta la segunda, ese salto caía en el primer pantallazo. `develop` hacía lo mismo, y peor: fuera de campaña, con un 720 pendiente, la tarjeta subía arriba al llegar. Lo vi en la segunda pasada de capturas; en la primera el trozo ya estaba en la caché y llegaba antes de los 250 ms. Ahora `FiscalCard` va en el arranque (+14 bytes; el total baja 537, porque desaparecen el envoltorio y la carga del trozo) y su esqueleto ocupa el sitio desde la primera pintada, como ya decía `system.md` §7.2. El test (`summary-fiscal-first-paint.test.tsx`) retrasa dos segundos el módulo de la tarjeta, como una red lenta; lo vi en rojo contra el código perezoso.
+- **La fila guardada medía 1,4-1,6 px menos que el aviso.** A 2045, *Últimos movimientos* (en 1.071 px, dentro del pliegue de 1.141) bajaba 2 px. Ahora los dos tokens tienen la altura medida en Chromium, y el test la fija.
+- **«Pendiente» en una línea** ocupaba dos a 400 px (el enlace con su relleno no cabía): relleno de 4 px y el enlace a 44 px de alto.
+
+### 11.4 El paquete, mejora a mejora
+
+Medido con `check-bundle.mjs` en la construcción de cada commit (§11.6):
+
+| Mejora | Arranque | Δ | Total | Δ | Estimado (arranque / total) |
+|---|---:|---:|---:|---:|---|
+| Partida (`534befb`, `develop`) | 75.019 | | 302.785 | | |
+| Lo de la ronda 2 (`1faea40`) | 75.034 | +15 | 302.773 | −12 | — |
+| `inRentaSeason` (`a2a791d`) | 75.059 | +25 | 302.816 | +43 | +130 / +130, con la siguiente |
+| `prominent` solo en campaña (`86b09b3`) | 75.057 | −2 | 302.806 | −10 | |
+| `hasForeignAccountsAt` (`fa97135`) | 75.057 | 0 | 302.806 | 0 | (nadie la importa aún: la cuenta M2) |
+| M2 (`e77fa21`) | 75.339 | +282 | 303.708 | +902 | +200 / +700 |
+| M8 (`805bfc7`) | 75.334 | −5 | 304.198 | +490 | +60 / +500 |
+| La fila a la altura del aviso (`c0a93ad`) | 75.361 | +27 | 304.199 | +1 | |
+| El agrupado en su fichero (`9cebed4`) | 75.374 | +13 | 304.243 | +44 | |
+| «Pendiente» en una línea (`86d1ae9`) | 75.378 | +4 | 304.275 | +32 | |
+| La altura exacta (`28b8427`) | 75.378 | 0 | 304.245 | −30 | |
+| La tarjeta en la primera pintada (`5ab750f`) | 75.392 | +14 | 303.708 | −537 | |
+| **E2, congelada** | **75.392** | **+373** | **303.708** | **+923** | **+390 / +1.330** |
+
+- **Techos**: arranque **75.412** (medido + 20), total **303.964** (medido + 256, bajado en su propio commit). Cada subida va delante del commit que la necesita (§11.6).
+- **Margen**: el arranque queda a **677** bytes de 76.069; el total, a **6.792** de 310.500. Con lo estimado para E3 y E4 (+385 y +6.015), E4 acabaría hacia 75.777 y 309.723: **cabe, con unos 290 y 780 bytes**.
+
+### 11.5 Commits que no pasaban por sí solos, dichos
+
+- **Construcción**: los 21, en verde (§11.6).
+- **Tests**: `805bfc7`, `8594594` y `c0a93ad` **fallan en dos tests de arquitectura**: `view-models/movements.ts` pasaba de 250 líneas sin razón escrita, y `valuation-group` era una clase que ninguna hoja declara. Lo encontré al pasar los tests de arquitectura antes de la tubería; lo arregla `9cebed4` (el agrupado a `movement-entries.ts`, y la clase fuera: el test mira el `details.disclosure` de la lista). Los tres están empujados; no reescribo la historia. Comprobado commit a commit en el worktree de pruebas: `78b76d8` 51/51, los tres 49/51, `9cebed4` 51/51.
+
+### 11.6 Cada commit construye por sí solo (familia 5)
+
+`020-percommit.sh` en el worktree desacoplado `020-probe`, en secuencia, `npm run build` (con `check-bundle.mjs`) de cada commit de E2. `package-lock.json` no cambia en el tramo.
+
+| Commit | `npm run build` | Arranque | Total |
+|---|---:|---:|---:|
+| `534befb` | 0 | 75019 | 302785 |
+| `2c69be0` | 0 | 75019 | 302785 |
+| `6882da7` | 0 | 75019 | 302785 |
+| `1faea40` | 0 | 75034 | 302773 |
+| `1e87404` | 0 | 75034 | 302773 |
+| `5b5ab01` | 0 | 75034 | 302773 |
+| `a2a791d` | 0 | 75059 | 302816 |
+| `86b09b3` | 0 | 75057 | 302806 |
+| `fa97135` | 0 | 75057 | 302806 |
+| `457a8cf` | 0 | 75057 | 302806 |
+| `e77fa21` | 0 | 75339 | 303708 |
+| `78b76d8` | 0 | 75339 | 303708 |
+| `805bfc7` | 0 | 75334 | 304198 |
+| `8594594` | 0 | 75334 | 304198 |
+| `c0a93ad` | 0 | 75361 | 304199 |
+| `9cebed4` | 0 | 75374 | 304243 |
+| `86d1ae9` | 0 | 75378 | 304275 |
+| `28b8427` | 0 | 75378 | 304245 |
+| `6ac2719` | 0 | 75378 | 304245 |
+| `5ab750f` | 0 | 75392 | 303708 |
+| `9f2ddcc` | 0 | 75392 | 303708 |
+
+**Los veintiuno, en verde.** Que `e77fa21` y `5ab750f` den el mismo total, 303.708, es casualidad: M8 sumó 490 perezosos y la tarjeta en el arranque quitó 537 (y los arreglos de en medio, +47).
+
+### 11.7 Mutación
+
+Con `020-mut/mutate.py`, como en E1. En E2, **37 mutantes distintos, todos muertos al final, y los ficheros restaurados idénticos** en las 47 pasadas. Cinco sobrevivieron la primera vez, y en cada uno reforcé el test, no el mutante:
+
+| Mutante | Qué rompe | Primera vez | Tras reforzar el test |
+|---|---|---|---|
+| `O1-query-left-out` | La consulta, fuera de la dirección del ancla | vive (el enrutador desplaza solo) | muere: el test distingue la llegada del marco por el foco |
+| `10-loss-in-list` | El riesgo de los datos, también dentro de *Atención* | vive | muere |
+| `11ter-reserved-always` | La fila guardada, sin cuenta en el extranjero | vive | muere: `fiscalSlot` se prueba sola, sin la pintada |
+| `12-line-with-two` | Dos precios que faltan, en una línea | vive | muere: el test pone dos precios |
+| `13-edge-day-cut` | Los últimos movimientos, con el día del borde cortado | vive | muere: el test pone el día en el borde de un trozo |
+
+Los demás, muertos a la primera:
+
+- **Dominio**: `8-prominent-old` y `8-prominent-todo` (la tarjeta sube con el 720 o con lo pendiente), `9-first-day-out`, `9-last-day-out` y `9-default-ignored` (los bordes de la campaña y su configuración), `11ter-literal-ES`, `11ter-absent-means-yes`, `11ter-utc-day` y `11ter-no-date` (la residencia, el valor ausente, el día en UTC en lugar del de Madrid, y la fecha ignorada).
+- **M2**: `10-loss-not-first`, `11-720-lost`, `11-720-twice`, `11bis-card-rises`, `11bis-not-in-attention`, `11bis-row-repeats`, `12-block-with-one`, `M2-reserved-no-height`, `E2-reserved-old-height` (la fila con 70 px en lugar de 71,38) y `E2-card-lazy-again` (la tarjeta, perezosa otra vez).
+- **M8**: `13-across-days`, `13-other-types`, `13-with-annulled`, `13-group-as-rows` y `13-ignores-date`. Al mover el agrupado a `movement-entries.ts` volví a pasar los cinco de ese fichero allí (`E2-moved-*`): muertos.
+- **Ronda 2**: los nueve de §11.0.
+
+### 11.8 Cómo vi fallar cada test antes que el código
+
+- **Dominio**: `renta-season.test.ts` y `foreign-accounts.test.ts` se escribieron antes que la función, y fallaban porque no existía. En `attention.test.ts` cambié primero las expectativas: la tarjeta ya no sube fuera de la campaña. Esas fallaron contra `prominent` tal como estaba.
+- **Web**: `summary-first-screen.test.tsx` y `movements-dense.test.tsx` se escribieron contra el orden y la lista de `develop`, y fallaron por la mejora que les tocaba. `fiscal-card.test.tsx` se reescribió para las dos formas de la tarjeta.
+- **`summary-fiscal-first-paint.test.tsx`**: en rojo contra la tarjeta perezosa. Esperaba `summary-fiscal` y encontró `summary-attention`.
+- **Todos**, además, vistos morir por sus mutantes (§11.7).
+
+### 11.9 Tubería completa, sobre `9f2ddcc`
+
+| Orden | Salida | Nota |
+|---|---:|---|
+| `npm run lint` | 0 | |
+| `npm run typecheck` | 0 | |
+| `npm run test:coverage:domain -- --pool=forks --maxWorkers=1` | 0 | 170 ficheros, 1.680 tests; el dominio al **100 %** en sentencias, ramas, funciones y líneas |
+| `npm run test:others -- --pool=forks --maxWorkers=1` | 0 | 187 ficheros, 1.761 tests |
+| `npm run build` | 0 | arranque 75.392, total 303.708 |
+| Toda la suite con `TZ=Pacific/Kiritimati` y el reloj en el **15/05/2029 23:30** de Madrid (ya el 16 allí) | 0 | 357 ficheros, 3.441 tests |
+| Toda la suite con `TZ=Pacific/Pago_Pago` y el reloj en el **01/01/2029 00:30** de Madrid (aún el 31/12 allí) | 0 | 357 ficheros, 3.441 tests |
+
+- **Gemelos `.js`**: ninguno.
+- **Nombres de test** (`020-testnames.sh`, `5e63bfb` frente a la rama): 4.076 → 4.128. Desaparecen once títulos, todos **reescritos** porque la regla cambió, no borrados:
+  - `attention.test.tsx`: «puts the export first…» pasa a «says the export on its own line, before the list and not in it…»; y «puts the risk of losing the data first, above a degraded ledger…» pasa a «puts a degraded ledger above a breached rule, and leaves the risk of losing the data to its own line».
+  - `fiscal-card.test.tsx`: cuatro títulos («goes to the end outside the season…», «goes to the top out of season when a return is due…», «is there from the first paint…» y «names the past years…») pasan a «folds to a row out of the season that says only its neutral state», «keeps its place with a skeleton until the engine answers, in the season», «says nothing it does not know in the row of a quiet ledger» y «says «Campaña de la Renta» in the season, and what is pending». Uno más, «says «Campaña de la Renta» only in season», queda dentro de esos.
+  - `movements.test.tsx`: «groups consecutive rows of the same day…» pasa a «puts the rows under one heading per month…».
+  - `palette-usage.test.ts`: «…writes their hex…» pasa a «…writes their colour…» (O3).
+  - `view-models.test.ts`: «nags about the export only when it is due…» pasa a «says the risk of losing the data, and when the export never happened».
+  - `packages/domain/test/informative/attention.test.ts`: «raises the card in January when there is nothing to value it with» pasa a «says in January that there is nothing to value it with, and no longer raises the card».
+- **Salida fiscal**, comparada con la compilación de `develop` (`5e63bfb`) sobre `synthetic-v1`, con el reloj en el 20/01/2029 (`020-fiscal.sh`):
+  - `tax` (a secas, `--lots`, `--boxes` y `--json`), `gains`, `income`, `m720` y `m721` de 2026, 2027 y 2028: **24 salidas, iguales byte a byte**.
+  - `filed renta 2027` sobre una copia: la misma salida y la misma línea añadida, huellas incluidas, **salvo el ULID del evento nuevo**, que es aleatorio.
+  - `git diff origin/develop -- tests/fixtures`: vacío.
+
+  **La predicción de §11.1 se cumple.**
+
+### 11.10 Autocomprobación de §6, familia a familia
+
+1. **Guardianes que se pueden eludir.**
+   - *El signo por identidad* (hueco de B2): `import { signOf as toneOf }`, una constante `"positive"` y una plantilla `` `negative` ``. Muertos (§11.0).
+   - *Las copias de un color*: hex de 8 cifras y `rgb()` con comas o con espacios. Muertos (§11.0).
+   - *La puerta del barril*: las dos piezas nuevas (`inRentaSeason` y `hasForeignAccountsAt`) son las que autorizan Q5 y el encargo. Nada más entra en el barril, y el test de arquitectura sigue en verde.
+   - *La privacidad por atributos*: ningún importe nuevo en un atributo. Los `aria-label` nuevos dicen «diciembre de 2028» y «Declaración», y la etiqueta de la fila agrupada dice «9 valoraciones · 31/12/2028»: una cuenta y una fecha, nunca una cifra.
+2. **Reglas sin test.**
+   - «Arriba y en una línea, siempre, también en campaña»: `summary-first-screen.test.tsx`, en las dos fechas.
+   - «No se repite en *Atención*»: `10-loss-in-list`.
+   - «La tarjeta sube solo en campaña», con sus bordes: dominio, `9-*` y `8-*`.
+   - «La fila se guarda solo con cuenta en el extranjero»: `11ter-*`.
+   - «Un aviso no se dice dos veces» (el 720 fuera de campaña, solo en *Atención*): `11-720-twice` y `11bis-row-repeats`.
+   - «Una línea con un precio, el bloque con dos o más»: `12-*`.
+   - «Solo valoraciones vigentes, solo del mismo día»: `13-*`.
+   - «Nada salta en el primer pantallazo»: la altura exacta de la fila, fijada por el test, y la tarjeta en la primera pintada (§11.3). La prueba de fondo es la medida de Chromium (§11.11).
+3. **Tests que dependen del reloj.**
+   - La campaña se lee de la fecha civil de Madrid que ya usa el Resumen. `hasForeignAccountsAt` compara `madridDateOf(recorded_at)`, y `11ter-utc-day` muere.
+   - Nada nuevo lee `Date.now()` ni `new Date()` sin argumento.
+   - Las dos pasadas con husos extremos y el reloj falso, en verde (§11.9).
+4. **Documentos y descripción de la PR.** La PR, este fichero y la rama dicen lo mismo:
+   - los commits de §11.2 están todos;
+   - las cifras son las de `9f2ddcc`;
+   - los tres commits del dominio van señalados;
+   - lo no hecho se dice: E3 y E4, y `NEAR_LIMIT_PCT`, que es de E3 y no se ha tocado.
+5. **Techo subido tarde.** Ninguno: §11.6.
+6. **Accesibilidad.**
+   - La línea del riesgo es un enlace entero con su texto. La fila guardada es `aria-hidden`.
+   - La fila agrupada es un `details` con su `summary` de 44 px.
+   - Los títulos de mes son `h2` dentro de una `section` con su `aria-label`.
+   - Con la tarjeta en el arranque, el orden del marcado sigue siendo el de la pantalla (`readingOrder`).
+   - Sin objetivos nuevos por debajo de 44 px, sin texto por debajo de 13 px y sin desplazamiento lateral a 360, 400, 1.440 y 2045 (§11.11).
+
+### 11.11 Capturas y medidas
+
+- **Dónde**: `~/personal/atlas/privado/capturas/2026-09-27-020-E2/`, con `antes/` (80 capturas, `develop` en `5e63bfb`), `despues/` (72, `9f2ddcc`) y `LEEME.md`. Son las escenas de *Resumen* y *Movimientos* en la matriz entera (32 por pasada), con el mismo guion y el mismo Chromium (`Chrome/153.0.8010.12`) que en E1.
+- **Medidas** (`medidas.json`, antes → después):
+
+| Medida | Antes | Después | Regla |
+|---|---|---|---|
+| Saltos en el primer pantallazo (400 y 2045, enero y mayo) | a 400, patrimonio y *Atención* bajan **213 px** en las dos fechas | **ninguno**, y las mismas tarjetas a los 250 ms que a los 4 s | nada salta |
+| Primer pantallazo a 400, enero | patrimonio, *Atención* y *Declaración* (llegada tarde, arriba) | riesgo de los datos, patrimonio, *Atención* | por importancia |
+| Primer pantallazo a 400, mayo | patrimonio, *Atención* y *Declaración* (llegada tarde) | riesgo de los datos, *Declaración*, patrimonio, *Atención* | la tarjeta, la segunda en campaña |
+| Borde superior de la gráfica de evolución a 2045×1141 | 540 px | **605 px** (la línea del riesgo va encima) | ≤ 1.141: sigue arriba |
+| Movimientos a 400, alto de la página | 2.295 px, **2,58 pantallas** | 1.451 px, **1,63 pantallas** | más densa |
+| Resumen a 400, enero | 2.493 px | 2.356 px | |
+| Desplazamiento lateral a 360, 400, 1.440 y 2045 | ninguno | **ninguno** | |
+| Texto por debajo de 13 px y objetivos por debajo de 44 px, en estas escenas | ninguno | **ninguno** | |
+
+### 11.12 Documentos que la dirección tendrá que actualizar por E2
+
+- `system.md` §7.2, **Móvil**. Primero la línea del riesgo de perder los datos, arriba y en una línea, siempre. Fuera de campaña siguen patrimonio, *Atención*, *Últimos movimientos*, *Evolución* y la fila de *Declaración*. En campaña: *Declaración*, patrimonio, *Atención*, movimientos y evolución.
+- `system.md` §7.2, ***Declaración***. Ya no «va la primera cuando haya algo del 720 o del 721 que hacer». Va la primera solo en campaña. Fuera de ella es una fila plegada con su estado neutro y los ejercicios sin declarar (Q2). Lo del 720 y el 721 va a *Atención*, en una fila que se guarda en la primera pintada si el libro tiene una cuenta en el extranjero. La frase fiscal se une al grupo de los inválidos. El esqueleto ocupa su sitio desde la primera pintada, porque la tarjeta va en el arranque; lo que pregunta al motor sigue después.
+- `system.md` §7.2, **Escritorio**. La línea del riesgo va a lo ancho, encima del 8+4.
+- `system.md` §7.2, **Parcial**. Con un solo precio que falta, una línea: «Sin precio: X. Registrar →». Con dos o más, el bloque *pendiente*.
+- `system.md` §7.3, **Lista, móvil**. Agrupada **por mes**, con la fecha en cada fila, y las valoraciones vigentes de un día en una fila que se despliega: «N valoraciones · dd/mm/aaaa».
+- `system.md` §5.6. El aviso que es un enlace entero (`NoticeLink`), y la fila guardada en una lista de avisos (`reserve`, `.notice-reserved`).
+- `system.md` §3.6. `--notice-reserved-h` (119,56 px a 400) y `--notice-reserved-h-wide` (71,38 px desde 1.024), medidos.
+- `system.md` §9. `view-models/movement-entries.ts`, y `fiscalSlot` y `dataLossItem` en `view-models/attention.ts`.
+- `business-rules.md` línea 324. «Semanas en que la tarjeta fiscal del Resumen sube arriba del todo» sigue siendo cierto, y ahora es lo **único** que la sube. Conviene decirlo, y la regla del 720 fuera de campaña.
+- `business-rules.md`, `tax_residence`. `hasForeignAccountsAt` usa la residencia configurada y, sin ella, «país ≠ ES» (Q3).
+- `brief.md` §8 (línea 200) y la maqueta `prototype/resumen*.html`. El texto del riesgo es ahora «Tus datos viven en el navegador y hace N días que no los exportas» (o «…y nunca los has exportado»), sin la consecuencia, como pide el encargo, con «Exportar tus datos →».
+
+### 11.13 Congelado
+
+- **Código congelado: `9f2ddcc`**. El commit que añade esta sección solo toca `specs/`; su SHA va en la PR. Desde aquí no empujo nada mientras dura la revisión.
+- **Para los revisores**: `git worktree add --detach .claude/worktrees/020-rev-E2-<revisor> <sha>`.

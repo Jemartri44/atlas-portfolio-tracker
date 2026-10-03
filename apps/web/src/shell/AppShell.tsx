@@ -125,7 +125,8 @@ const FollowFragment = (): JSX.Element => {
   // `popstate` is the back or forward button; heard in the capture phase, so
   // it is known before the router moves the location and this effect runs.
   const gate = historyGate();
-  const onHistory = (): void => gate.popped(window.location.pathname + window.location.hash);
+  const onHistory = (): void =>
+    gate.popped(window.location.pathname + window.location.search + window.location.hash);
   const onClick = (): void => gate.clicked();
   window.addEventListener("popstate", onHistory, { capture: true });
   document.addEventListener("click", onClick, { capture: true });
@@ -139,7 +140,9 @@ const FollowFragment = (): JSX.Element => {
   // the fragment apart, and the same address seen twice would pass the gate
   // on its second visit. The path too: the same fragment on another page is
   // another target.
-  const address = createMemo(() => location.pathname + location.hash);
+  // The query too: the back button after a filter only changes it, and a
+  // gate shut by it has to see that address to open again (PR #105, round 2).
+  const address = createMemo(() => location.pathname + location.search + location.hash);
   createEffect(() => {
     const here = address();
     waiting?.abort();

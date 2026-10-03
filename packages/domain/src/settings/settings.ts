@@ -3,7 +3,7 @@
 // to be verified with the tax advisor); every other parameter is optional until
 // the user sets it.
 
-import { isCivilDate } from "../dates/civil-date.js";
+import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
 import { Decimal, type DecimalString, isDecimalString } from "../money/decimal.js";
@@ -292,10 +292,41 @@ export const modelAlertThresholdOf = (settings: Settings, model: InformativeMode
 export const DEFAULT_RENTA_SEASON = { start: "04-01", end: "06-30" } as const;
 
 /** The season in force, as two `MM-DD`: what the settings say, or its documented default. */
-export const rentaSeasonOf = (settings: Settings): { start: string; end: string } => ({
+export const rentaSeasonOf = (
+  settings: Pick<Settings, "renta_season_start" | "renta_season_end">,
+): { start: string; end: string } => ({
   start: settings.renta_season_start ?? DEFAULT_RENTA_SEASON.start,
   end: settings.renta_season_end ?? DEFAULT_RENTA_SEASON.end,
 });
+
+/**
+ * Whether a date falls in the income tax season, both ends included. A rule
+ * about when a return is due is a fiscal rule (prompt 010, Q11), and it lives
+ * here, with the season, so the summary can place its tax card on the first
+ * paint (feature 020, E2; Q5, answered 2026-09-27). The date is an argument.
+ */
+export const inRentaSeason = (
+  settings: Pick<Settings, "renta_season_start" | "renta_season_end">,
+  date: CivilDate,
+): boolean => {
+  const season = rentaSeasonOf(settings);
+  const day = date.slice(5);
+  return day >= season.start && day <= season.end;
+};
+
+/**
+ * The fiscal year whose return comes next at a date: the previous year until
+ * the season ends, and the current one once it has (the return of the year
+ * just closed is the next one due, not the one already filed). The end of the
+ * season comes from the settings, never from a constant.
+ */
+export const nextReturnYear = (
+  settings: Pick<Settings, "renta_season_start" | "renta_season_end">,
+  date: CivilDate,
+): number => {
+  const year = Number(date.slice(0, 4));
+  return date.slice(5) > rentaSeasonOf(settings).end ? year : year - 1;
+};
 
 /** The treaty rate for a country, or nothing when the settings do not know it (#16). */
 export const treatyWithholdingPctOf = (

@@ -101,15 +101,17 @@ describe("the income tax season", () => {
 });
 
 describe("something of the informative returns to do", () => {
-  it("raises the card in January when there is nothing to value it with", () => {
+  it("says in January that there is nothing to value it with, and no longer raises the card", () => {
     // Out of season, and with securities abroad that cannot be valued: the
-    // verdict is "cannot be determined" and that **is** something to do.
+    // verdict is "cannot be determined" and that **is** something to do. Since
+    // feature 020 (E2, M2) it is said in *Atención*, not by raising the card:
+    // what is pending still comes out, only the place changes.
     const attention = fiscalAttention(abroad(false).build(), "2028-01-20");
     expect(attention.season).toBe(false);
     expect(attention.todo).toEqual([
       { model: "720", year: 2027, category: "securities", reason: "undetermined" },
     ]);
-    expect(attention.prominent).toBe(true);
+    expect(attention.prominent).toBe(false);
   });
 
   it("stays quiet when everything abroad is valued and below the threshold", () => {
@@ -139,7 +141,8 @@ describe("something of the informative returns to do", () => {
     expect(attention.todo).toEqual([
       { model: "720", year: 2027, category: "securities", reason: "file" },
     ]);
-    expect(attention.prominent).toBe(true);
+    // Said, and out of season said in *Atención*: the card stays in its place.
+    expect(attention.prominent).toBe(false);
   });
 
   it("stops asking once the return of that year is recorded", () => {
@@ -182,5 +185,41 @@ describe("something of the informative returns to do", () => {
     expect(fiscalAttention(b.build(), "2028-01-20").todo).toEqual([
       { model: "720", year: 2027, category: "securities", reason: "alert" },
     ]);
+  });
+});
+
+describe("when the card goes to the top (feature 020, E2, M2)", () => {
+  // Only the income tax season raises it. A 720 pending out of season or an
+  // invalid event is still said —in `todo` and in `invalid_events`— but in
+  // *Atención*, and the card keeps its folded row at the end.
+  it("rises on the first and the last day of a configured season, not the day before or after", () => {
+    const b = abroad(false);
+    b.settings({ ...SETTINGS, renta_season_start: "03-15", renta_season_end: "05-20" });
+    const events = b.build();
+    expect(fiscalAttention(events, "2028-03-14").prominent).toBe(false);
+    expect(fiscalAttention(events, "2028-03-15").prominent).toBe(true);
+    expect(fiscalAttention(events, "2028-05-20").prominent).toBe(true);
+    expect(fiscalAttention(events, "2028-05-21").prominent).toBe(false);
+  });
+
+  it("stays in its place with a 720 pending out of season, which is still said", () => {
+    const attention = fiscalAttention(abroad(false).build(), "2028-02-10");
+    expect(attention.todo.length).toBeGreaterThan(0);
+    expect(attention.prominent).toBe(false);
+  });
+
+  it("stays in its place with an invalid event out of season, which is still counted", () => {
+    const b = domestic();
+    // Selling what was never held: an invalid event of the degraded projection.
+    b.sell({
+      account_id: "acc_es",
+      asset_id: "fund_f",
+      value_date: "2027-06-01",
+      quantity: "500",
+      unit_price: "120",
+    });
+    const attention = fiscalAttention(b.build(), "2028-09-01");
+    expect(attention.invalid_events).toBe(1);
+    expect(attention.prominent).toBe(false);
   });
 });

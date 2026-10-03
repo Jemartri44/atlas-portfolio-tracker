@@ -166,8 +166,12 @@ export interface AttentionInput {
   findings: readonly IntegrityFinding[];
   openOrders: readonly OpenOrder[];
   openTransfers: readonly OpenTransfer[];
-  /** Days without exporting, when the ledger lives in the browser (ADR-0019). */
-  exportOverdueDays?: number | "never";
+  /**
+   * Out of the income tax season, with invalid events: the tax side is not
+   * computed at all, and *Atención* says so inside the group of the invalid
+   * events, not as a group of its own (feature 020, E2, N4 of §8.1).
+   */
+  fiscalBlocked?: boolean;
   /** The catalogue, so a warning names the asset instead of its identifier. */
   names?: NameIndex;
   /** Privacy mode: the figures of a warning travel **inside** its sentence. */
@@ -246,7 +250,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "invalid_events",
-        `${countOf(input.invalidCount, "movimiento inválido", "movimientos inválidos")} en tus datos: se puede consultar, pero no registrar hasta rectificarlos.`,
+        `${countOf(input.invalidCount, "movimiento inválido", "movimientos inválidos")} en tus datos: se puede consultar, pero no registrar hasta rectificarlos.${input.fiscalBlocked === true ? " Con movimientos inválidos no se calcula nada fiscal: repáralos primero." : ""}`,
       ),
     );
   }
@@ -316,17 +320,6 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     );
   }
 
-  if (input.exportOverdueDays !== undefined) {
-    items.push(
-      itemOf(
-        "export_overdue",
-        input.exportOverdueDays === "never"
-          ? "Tus datos viven en el navegador y nunca se han exportado: si borras los datos del sitio, se pierden."
-          : `Tus datos viven en el navegador y la última exportación es de hace ${countOf(input.exportOverdueDays, "día", "días")}: si borras los datos del sitio, se pierde lo registrado desde entonces.`,
-      ),
-    );
-  }
-
   const order: Record<AttentionSeverity, number> = { error: 0, warning: 1, info: 2 };
   return items.sort(
     (a, b) =>
@@ -334,6 +327,56 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
       a.rank - b.rank ||
       a.message.localeCompare(b.message),
   );
+};
+
+/**
+ * The risk of losing the data (feature 020, E2, M2): the first line of the
+ * summary, always, and never again inside *Atención* — a notice said in its
+ * place is not repeated in a list (docs/design/system.md §5.6). The ledger
+ * lives only in the browser and has not been exported for more than a week,
+ * or ever: one «clear site data» away from being gone.
+ */
+export const dataLossItem = (days: number | "never"): AttentionItem =>
+  itemOf(
+    "export_overdue",
+    // The sentence of the mockup, short enough for one line on the monitor:
+    // what follows from it is said in Ajustes, where the export is.
+    days === "never"
+      ? "Tus datos viven en el navegador y nunca los has exportado."
+      : `Tus datos viven en el navegador y hace ${countOf(days, "día", "días")} que no los exportas.`,
+  );
+
+/** What the lazy tax engine answered, as much as *Atención* needs of it. */
+export interface FiscalAnswer {
+  /** What is pending of the 720 and the 721, one sentence each, in Spanish. */
+  lines: readonly string[];
+}
+
+/**
+ * The place of the 720 and the 721 in *Atención* (feature 020, E2, M2; §8 P5
+ * of prompt 020). In the season the tax card says it, so nothing here. Out of
+ * it, before the engine answers, a row **kept** when the ledger has an account
+ * abroad (the domain's `hasForeignAccountsAt`, known on the first paint), so
+ * the list does not jump; once it answers, one notice with its way to the
+ * fiscal screen, or nothing.
+ */
+export const fiscalSlot = (input: {
+  season: boolean;
+  abroad: boolean;
+  answer: FiscalAnswer | undefined;
+}): "reserved" | { message: string; action: { label: string; to: string } } | undefined => {
+  if (input.season) {
+    return undefined;
+  }
+  if (input.answer === undefined) {
+    return input.abroad ? "reserved" : undefined;
+  }
+  return input.answer.lines.length === 0
+    ? undefined
+    : {
+        message: input.answer.lines.join(" "),
+        action: { label: "Ver la declaración", to: "/fiscal" },
+      };
 };
 
 /** Every code this module can show, for the test that checks they all have a destination. */

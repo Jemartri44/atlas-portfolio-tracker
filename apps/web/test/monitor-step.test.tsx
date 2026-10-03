@@ -65,8 +65,22 @@ describe("the step of the monitor", () => {
 
 describe("the summary in 8+4", () => {
   it("walks the cards in the order of reading of each width", () => {
-    expect(summaryOrder(false)).toEqual(["worth", "attention", "moves", "fiscal", "evolution"]);
-    expect(summaryOrder(true)).toEqual(["worth", "fiscal", "evolution", "attention", "moves"]);
+    // Out of the season and with nothing to lose (the order of E1, where the
+    // tax card was still decided later): feature 020, E2 moved it to the end.
+    expect(summaryOrder({ monitor: false, season: false, dataLoss: false })).toEqual([
+      "worth",
+      "attention",
+      "moves",
+      "evolution",
+      "fiscal",
+    ]);
+    expect(summaryOrder({ monitor: true, season: false, dataLoss: false })).toEqual([
+      "worth",
+      "fiscal",
+      "evolution",
+      "attention",
+      "moves",
+    ]);
   });
 
   it("puts the tax card beside the net worth and the evolution beside attention, from 1800px", async () => {
@@ -91,8 +105,9 @@ describe("the summary in 8+4", () => {
     expect(span("summary-attention")).toBe("span 4");
     expect(span("summary-moves")).toBe("span 4");
     expect(applied(host.querySelector(".summary-evolution"), "grid-row")).toBe("span 2");
-    // The tax card does not jump to the start with the order of the phone.
-    expect(applied(host.querySelector(".summary-fiscal"), "order")).toBe("0");
+    // Nothing reorders by CSS: the markup is already in the order read
+    // (feature 020, E2 took the `order` of the tax card away altogether).
+    expect(applied(host.querySelector(".summary-fiscal"), "order")).toMatch(/^(0)?$/);
   });
 
   it("keeps the order of the phone below 1800px", async () => {
@@ -102,12 +117,13 @@ describe("the summary in 8+4", () => {
     const order = [...host.querySelectorAll(".grid > .card")].map((card) =>
       [...card.classList].find((name) => name.startsWith("summary-")),
     );
+    // Out of the season, the tax card is a row at the end (feature 020, E2).
     expect(order).toEqual([
       "summary-worth",
       "summary-attention",
       "summary-moves",
-      "summary-fiscal",
       "summary-evolution",
+      "summary-fiscal",
     ]);
     expect(applied(host.querySelector(".summary-worth"), "grid-column")).toBe("1 / -1");
   });
