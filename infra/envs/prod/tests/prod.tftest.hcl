@@ -36,11 +36,10 @@ run "c11_pay_per_use_is_refused_in_prod" {
   expect_failures = [var.edge_mode]
 }
 
-run "c12_reserved" {
+run "c12_reserved_by_default" {
   command = plan
   variables {
-    edge_mode                = "free_plan"
-    api_reserved_concurrency = 5
+    edge_mode = "free_plan"
   }
   assert {
     condition     = module.atlas.api_reserved_concurrency == 5
@@ -51,10 +50,20 @@ run "c12_reserved" {
 run "c12_unreserved" {
   command = plan
   variables {
-    edge_mode = "free_plan"
+    edge_mode               = "free_plan"
+    reserve_api_concurrency = false
   }
   assert {
     condition     = module.atlas.api_reserved_concurrency == -1
     error_message = "unreserved"
   }
+}
+
+run "c12_zero_is_refused" {
+  command = plan
+  variables {
+    edge_mode                = "free_plan"
+    api_reserved_concurrency = 0
+  }
+  expect_failures = [var.api_reserved_concurrency]
 }

@@ -29,7 +29,7 @@ module "atlas" {
   enabled                  = var.dev_active
   edge_mode                = var.edge_mode
   log_retention_days       = 7
-  api_reserved_concurrency = var.api_reserved_concurrency
+  api_reserved_concurrency = var.reserve_api_concurrency ? var.api_reserved_concurrency : null
   oac_spa_id               = var.oac_spa_id
   oac_api_id               = var.oac_api_id
   artifact_key             = var.artifact_key
