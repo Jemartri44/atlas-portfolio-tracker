@@ -325,9 +325,9 @@ Qué ARN evalúa SES con dominio y dirección verificados a la vez y si el *sand
 | 17 Datos personales | `static.test.ts` (placeholders `example.invalid`) | limpio |
 | 18, 19, 20 | sin cambios | n/a |
 
-### Mutantes de E3: **no ejecutados**
+### Mutantes de E3, ejecutados sobre los `.tf` (cada uno restaurado después; árbol limpio)
 
-Me quedé sin turnos antes de ejecutarlos. Los tests existen para cada uno y son los que deben verlos morir: 23 (`ses:` en otro rol; correo sobre `prices/`), 24 (condición sin `Null`, otro destinatario), 25 (sin la denegación de `symbols.json`/`config.json`), 26 (`ENABLED` en `dev`, otro `Input`, otra zona), 27 (concurrencia distinta de 1, reintentos distintos), 28 (`ATLAS_JOB_MAX_RUN_SECONDS` distinto del `timeout`, variable de más), 29 (`simulated` o claves en `prod`), 50 (confianza de Scheduler sin `aws:SourceArn` o con otra) y 55 (sin `logs:` sobre su grupo). **Ninguno se ha visto morir.**
+Vistos morir por `jobs.test.ts`: **23** (`ses:SendEmail` en el rol del BCE: 7 fallos), **24** (sin `Null`: 4), **25** (`DenyConfig` pasada a `Allow`: 4), **26** (`state` literal `ENABLED`: 2), **27** (concurrencia 2: 2), **28** (`timeout` 301 contra el contrato: 2), **50** (confianza de Scheduler sin `aws:SourceArn`: 2), **55** (rol sin `logs:PutLogEvents`: 10). **29** (`prod` con `simulated`): el proceso dio «no tests», es decir, la suite ni arrancó (el plan de `prod` no validaba); **no cuenta como visto morir por un test con nombre**, solo como rechazo de la validación; el `run` `prices_never_simulated_in_prod` de `terraform test` lo cubre y **no se mutó**. Sin mutar: 24 (otro destinatario), 26 (otro `Input` u otra zona), 27 (reintentos distintos).
 
 ### Documentos que tendrá que actualizar la dirección (E3)
 
