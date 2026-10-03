@@ -23,7 +23,7 @@ const cssValue = (name: string): string =>
  */
 export const gapsOf = (
   x: readonly number[],
-  series: readonly ChartSeries[],
+  series: readonly Pick<ChartSeries, "values">[],
 ): { from: number; to: number }[] => {
   const drawn = series.filter((one) => one.values.some((value) => value !== null));
   const holes = x.map(

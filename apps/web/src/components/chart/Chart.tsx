@@ -23,7 +23,7 @@
 import { createEffect, type JSX, onCleanup, onMount } from "solid-js";
 import uPlot from "../../../vendor/uplot/uPlot.js";
 import { store, usePrivacy } from "../../ledger/state.js";
-import { axisAmount, axisDates, spanOf } from "./axis.js";
+import { axisAmount, axisDates, axisPercents, spanOf } from "./axis.js";
 import { drawGaps, gapsOf } from "./gaps.js";
 
 export interface ChartSeries {
@@ -66,6 +66,7 @@ interface ChartProps {
   /** Accessible name; the equivalent table carries the numbers themselves. */
   label: string;
   height?: number;
+  unit?: "eur" | "pct" | undefined;
 }
 
 const cssValue = (name: string): string =>
@@ -79,6 +80,8 @@ export interface ChartSpec {
   series: readonly ChartSeries[];
   width: number;
   height: number;
+  /** What the Y axis measures; euros by default. A share is not withheld with the privacy on. */
+  unit?: "eur" | "pct";
 }
 
 /**
@@ -103,6 +106,8 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
   const from = spec.x[0] ?? 0;
   const to = spec.x[spec.x.length - 1] ?? from;
   const span = spanOf(from, to);
+  // Only an amount is withheld: a share of what was contributed gives nothing away.
+  const masked = privacy && spec.unit !== "pct";
   return {
     width: spec.width,
     height: spec.height,
@@ -130,9 +135,12 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         grid: { stroke: cssValue("--c-chart-grid"), width: 1 },
         ticks: { show: false },
         // No figure with the mask (brief §7); off, «0 €» clear of the plot (PR #105).
-        size: privacy ? 8 : 60,
-        gap: privacy ? 0 : 10,
-        values: (_plot, splits) => splits.map((value) => axisAmount(value, privacy)),
+        size: masked ? 8 : 60,
+        gap: masked ? 0 : 10,
+        values: (_plot, splits) =>
+          spec.unit === "pct"
+            ? axisPercents(splits)
+            : splits.map((value) => axisAmount(value, masked)),
       },
     ],
     series: [
@@ -204,6 +212,7 @@ export const Chart = (props: ChartProps): JSX.Element => {
           series: props.series,
           width: host.clientWidth || 320,
           height: props.height ?? (host.clientHeight || DEFAULT_HEIGHT),
+          ...(props.unit === undefined ? {} : { unit: props.unit }),
         },
         privacy(),
       ),

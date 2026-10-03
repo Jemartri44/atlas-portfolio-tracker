@@ -14,7 +14,6 @@
 // A bucket with nothing in it is one empty state, not six empty cards.
 
 import {
-  bucketIndexSeries,
   bucketPositions,
   bucketStats,
   bucketTheses,
@@ -23,7 +22,7 @@ import {
   settingsAt,
   type Warning,
 } from "@atlas/domain";
-import { bucketGauges } from "@atlas/domain/charts";
+import { bucketGauges, bucketIndexPctSeries } from "@atlas/domain/charts";
 import { A } from "@solidjs/router";
 import { createMemo, For, type JSX, Show } from "solid-js";
 import {
@@ -116,7 +115,7 @@ export default function CuboRoute(): JSX.Element {
         );
         const series = createMemo(() =>
           bucketIndexPlot(
-            bucketIndexSeries(snapshot.events, { to: date(), max_points: MAX_POINTS }),
+            bucketIndexPctSeries(snapshot.events, { to: date(), max_points: MAX_POINTS }),
           ),
         );
 

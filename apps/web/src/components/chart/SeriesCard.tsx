@@ -6,7 +6,8 @@
 // need exactly this, and the next one will too.
 
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
-import type { MissingNote } from "../../view-models/series.js";
+import { formatDate } from "../../format/date.js";
+import { gapRule, type MissingNote } from "../../view-models/series.js";
 import { Section } from "../Section.jsx";
 import { Chart, type ChartSeries } from "./Chart.jsx";
 import { ChartLegend } from "./ChartLegend.jsx";
@@ -37,12 +38,32 @@ export interface SeriesCardProps {
   foot?: JSX.Element | undefined;
   /** The last rows of the card, drawn or not: a disclosure with the detail. */
   tail?: JSX.Element | undefined;
+  /** What the values are: euros, or a percentage (axis and table without a mask). */
+  unit?: "eur" | "pct" | undefined;
+  /** Past half a range of holes, jump to the last stretch with data and say so (M7). */
+  jump?: boolean | undefined;
 }
 
 export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
   const [range, setRange] = createSignal<RangeKey>("TODO");
 
-  const indices = createMemo<number[]>(() => rangeIndices(props.x, range(), props.asOf));
+  const ranged = createMemo<number[]>(() => rangeIndices(props.x, range(), props.asOf));
+  const hole = createMemo(() =>
+    props.jump === true
+      ? gapRule(
+          ranged().map((at) => props.x[at] as number),
+          props.values.map((one) => ranged().map((at) => one[at] ?? null)),
+        )
+      : undefined,
+  );
+  const indices = (): number[] => {
+    const rule = hole();
+    return rule === undefined
+      ? ranged()
+      : rule === "pending"
+        ? []
+        : ranged().slice(rule.from, rule.to + 1);
+  };
   const options = createMemo<RangeOption[]>(() => rangeCounts(props.x, props.values, props.asOf));
 
   const series = (): ChartSeries[] =>
@@ -67,16 +88,23 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
       aside={props.lead === undefined ? buttons() : undefined}
     >
       {props.lead}
-      <Show when={props.x.length > 0} fallback={props.empty}>
+      <Show when={props.x.length > 0 && hole() !== "pending"} fallback={props.empty}>
         <Show when={props.lead !== undefined}>
           <div class="chart-range">{buttons()}</div>
         </Show>
         <figure class="chart">
-          <Chart x={shown()} series={series()} label={props.title} />
+          <Chart x={shown()} series={series()} label={props.title} unit={props.unit} />
           <figcaption>
             <ChartLegend series={series()} />
           </figcaption>
         </figure>
+        <Show when={typeof hole() === "object"}>
+          <p class="gap-note">
+            Los huecos ocupan más de la mitad de este rango: se enseña el último tramo con datos,
+            del {formatDate(props.rows[indices()[0] as number]?.date ?? "")} al{" "}
+            {formatDate(props.rows[indices().at(-1) as number]?.date ?? "")}.
+          </p>
+        </Show>
         {props.foot}
         <ChartTable
           headers={props.labels}
@@ -85,6 +113,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
             values: props.rows[at]?.values ?? [],
           }))}
           caption={props.title}
+          unit={props.unit}
           missing={props.missing}
           banded={gapsOf(shown(), series()).length > 0}
         />

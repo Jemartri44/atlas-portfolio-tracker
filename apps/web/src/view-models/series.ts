@@ -7,7 +7,9 @@
 // only turns "absent" into `null`, which is what uPlot draws as a gap with
 // `spanGaps` off.
 
-import type { BucketIndexSeries, NetWorthSeries } from "@atlas/domain";
+import type { NetWorthSeries } from "@atlas/domain";
+import type { BucketIndexPctSeries } from "@atlas/domain/charts";
+import { gapsOf } from "../components/chart/gaps.js";
 import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
 
 /** Seconds since the epoch, which is what uPlot's time scale wants. */
@@ -109,17 +111,26 @@ export const netWorthPlot = (
   };
 };
 
-export const bucketIndexPlot = (series: BucketIndexSeries): PlottedSeries => {
-  const drawn = series.points.filter((point) => point.vs_index_eur !== undefined).length;
+/**
+ * The bucket against the index **in percent** of what was contributed (feature
+ * 020, E4, M7). The values are numbers only to place the line: what is shown
+ * is the decimal string of the domain, formatted once.
+ */
+export const bucketIndexPlot = (series: BucketIndexPctSeries): PlottedSeries => {
+  const drawn = series.points.filter((point) => point.vs_index_pct !== undefined).length;
+  const share = (value: { toString: () => string } | undefined): number | null =>
+    value === undefined ? null : Number.parseFloat(value.toString());
+  const text = (value: { toString: () => string } | undefined): string | undefined =>
+    value?.toString();
   return {
     x: series.points.map((point) => secondsOf(point.date)),
     values: [
-      series.points.map((point) => numberOrNull(point.result_eur)),
-      series.points.map((point) => numberOrNull(point.benchmark_eur)),
+      series.points.map((point) => share(point.result_pct)),
+      series.points.map((point) => share(point.benchmark_pct)),
     ],
     rows: series.points.map((point) => ({
       date: point.date,
-      values: [stringOrUndefined(point.result_eur), stringOrUndefined(point.benchmark_eur)],
+      values: [text(point.result_pct), text(point.benchmark_pct)],
     })),
     drawn,
     total: series.points.length,
@@ -127,9 +138,42 @@ export const bucketIndexPlot = (series: BucketIndexSeries): PlottedSeries => {
       ? {}
       : {
           missing: {
-            line: `En ${series.points.length - drawn} de ${series.points.length} fechas falta el precio del índice o de algún activo del cubo: la comparación se corta ahí.`,
+            line: `En ${series.points.length - drawn} de ${series.points.length} fechas falta el precio del índice o de algún activo del cubo, o aún no había aportado nada: la comparación se corta ahí.`,
             from: [],
           },
         }),
   };
+};
+
+/**
+ * What to do when the holes take up **more than half** of the width of the
+ * range chosen (feature 020, E4, M7): nothing, jump to the last stretch with
+ * data (the indices of its first and last point), or, with no data at all,
+ * `"pending"`, and no chart. A hole is where no series has a value, measured
+ * as the band the chart draws over it. Presentation, not a rule of the
+ * domain: nothing is estimated, the stretch is simply the last one known.
+ */
+export type HoleRule = undefined | "pending" | { from: number; to: number };
+
+export const gapRule = (
+  x: readonly number[],
+  values: readonly (readonly (number | null)[])[],
+): HoleRule => {
+  const known = x.map((_, index) => values.some((series) => (series[index] ?? null) !== null));
+  const last = known.lastIndexOf(true);
+  if (last === -1) {
+    return "pending";
+  }
+  const width = gapsOf(
+    x,
+    values.map((series) => ({ values: series })),
+  ).reduce((sum, gap) => sum + (gap.to - gap.from), 0);
+  if (2 * width <= (x[x.length - 1] as number) - (x[0] as number)) {
+    return undefined;
+  }
+  let first = last;
+  while (first > 0 && known[first - 1] === true) {
+    first -= 1;
+  }
+  return { from: first, to: last };
 };
