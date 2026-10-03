@@ -44,13 +44,46 @@ describe("every new workflow", () => {
   });
 });
 
+describe("checkouts and concurrency", () => {
+  it("never persist the token in the checkout, and a deployment of an environment never overlaps itself", () => {
+    for (const name of WORKFLOWS) {
+      const text = flow(name);
+      const checkouts =
+        text.match(
+          /actions\/checkout@[0-9a-f]{40} # v4\n\s+with:\n\s+persist-credentials: false/g,
+        ) ?? [];
+      expect(checkouts.length, name).toBe((text.match(/actions\/checkout@/g) ?? []).length);
+    }
+    for (const env of ["dev", "prod"]) {
+      expect(flow(`deploy-${env}.yml`)).toMatch(
+        new RegExp(`concurrency:\\n {2}group: atlas-deploy-${env}\\n {2}cancel-in-progress: false`),
+      );
+    }
+  });
+});
+
 describe("the plan workflow (mutant 32)", () => {
   const text = flow("infra-plan.yml");
   it("declares no environment, runs no npm, and only for a branch of this repository", () => {
     expect(text).not.toContain("environment:");
     expect(text).not.toMatch(/npm |setup-node/);
     expect(text).toContain("github.event.pull_request.head.repo.full_name == github.repository");
-    expect(text).toContain('terraform-run.sh "${{ matrix.env }}" plan');
+    expect(text).toContain("terraform-run.sh dev plan");
+    expect(text).toContain("terraform-run.sh prod plan");
+    // The plan of one environment never falls back on the secrets of the other.
+    for (const [env, other] of [
+      ["DEV", "PROD"],
+      ["PROD", "DEV"],
+    ] as const) {
+      const steps = text
+        .split("      - name:")
+        .filter((step) => step.includes(`ATLAS_PLAN_${env}_`));
+      expect(steps.length).toBeGreaterThan(0);
+      for (const step of steps) {
+        expect(step).not.toContain(`ATLAS_PLAN_${other}_`);
+      }
+    }
+    expect(code("infra/scripts/ci/terraform-run.sh")).toContain("faltan los secretos");
   });
   it("runs with -lock=false and never shows a plan unfiltered", () => {
     const run = code("infra/scripts/ci/terraform-run.sh");

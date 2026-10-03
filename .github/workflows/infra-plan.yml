@@ -26,16 +26,31 @@ jobs:
         env: [dev, prod]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.16.5
           terraform_wrapper: false
-      - name: Assume the role of plan
+      - name: Assume the role of plan (dev)
+        if: ${{ matrix.env == 'dev' }}
         run: infra/scripts/ci/assume-role.sh "$ROLE_ARN"
         env:
-          ROLE_ARN: ${{ matrix.env == 'dev' && secrets.ATLAS_PLAN_DEV_ROLE_ARN || secrets.ATLAS_PLAN_PROD_ROLE_ARN }}
-      - name: Plan (addresses and actions only)
-        run: infra/scripts/ci/terraform-run.sh "${{ matrix.env }}" plan
+          ROLE_ARN: ${{ secrets.ATLAS_PLAN_DEV_ROLE_ARN }}
+      - name: Plan dev (addresses and actions only)
+        if: ${{ matrix.env == 'dev' }}
+        run: infra/scripts/ci/terraform-run.sh dev plan
         env:
-          ATLAS_TFVARS_B64: ${{ matrix.env == 'dev' && secrets.ATLAS_PLAN_DEV_TFVARS_B64 || secrets.ATLAS_PLAN_PROD_TFVARS_B64 }}
-          ATLAS_BACKEND_B64: ${{ matrix.env == 'dev' && secrets.ATLAS_PLAN_DEV_BACKEND_B64 || secrets.ATLAS_PLAN_PROD_BACKEND_B64 }}
+          ATLAS_TFVARS_B64: ${{ secrets.ATLAS_PLAN_DEV_TFVARS_B64 }}
+          ATLAS_BACKEND_B64: ${{ secrets.ATLAS_PLAN_DEV_BACKEND_B64 }}
+      - name: Assume the role of plan (prod)
+        if: ${{ matrix.env == 'prod' }}
+        run: infra/scripts/ci/assume-role.sh "$ROLE_ARN"
+        env:
+          ROLE_ARN: ${{ secrets.ATLAS_PLAN_PROD_ROLE_ARN }}
+      - name: Plan prod (addresses and actions only)
+        if: ${{ matrix.env == 'prod' }}
+        run: infra/scripts/ci/terraform-run.sh prod plan
+        env:
+          ATLAS_TFVARS_B64: ${{ secrets.ATLAS_PLAN_PROD_TFVARS_B64 }}
+          ATLAS_BACKEND_B64: ${{ secrets.ATLAS_PLAN_PROD_BACKEND_B64 }}

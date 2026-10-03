@@ -7,6 +7,7 @@
 set -euo pipefail
 env_name="${1:?env}"; mode="${2:?mode}"
 case "$env_name" in dev | prod) ;; *) exit 64 ;; esac
+[ -n "${ATLAS_TFVARS_B64:-}" ] && [ -n "${ATLAS_BACKEND_B64:-}" ] || { echo "faltan los secretos de $env_name: no se hace nada"; exit 1; }
 tmp="${RUNNER_TEMP:?}"; log="$tmp/terraform.log"; : >"$log"
 (umask 077; printf '%s' "$ATLAS_TFVARS_B64" | base64 -d >"$tmp/terraform.tfvars"; printf '%s' "$ATLAS_BACKEND_B64" | base64 -d >"$tmp/backend.hcl")
 tf() { terraform -chdir="infra/envs/$env_name" "$@"; }
