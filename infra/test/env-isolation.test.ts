@@ -668,7 +668,7 @@ describe.each(ENVS)(
         decide(boundary, {
           action: "iam:PutRolePolicy",
           resource: a.role("api"),
-          context: withBoundary,
+          context: { ...withBoundary, "aws:RequestedRegion": "us-east-1" },
         }),
       ).toBe("allow");
       expect(
