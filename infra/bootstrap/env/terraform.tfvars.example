@@ -1,0 +1,9 @@
+# Placeholders only. The real files live outside the repository, one per environment:
+# ~/personal/atlas/privado/terraform/bootstrap/<dev|prod>/terraform.tfvars
+env                      = "dev"
+account_id               = "000000000000"
+bucket_suffix            = "example000"
+admin_principal_arn      = "arn:aws:iam::000000000000:user/example-admin"
+admin_trust_mode         = "iam_user_mfa"
+use_customer_managed_key = false
+mail_sender              = "atlas@example.invalid"
