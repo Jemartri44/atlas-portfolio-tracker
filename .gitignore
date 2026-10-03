@@ -86,3 +86,14 @@ backups/
 
 # Agent worktrees created inside the clone
 .claude/worktrees/
+
+# Terraform (feature 017): state, saved plans, variable files with the personal
+# values (account, domain, addresses, bucket suffix) and the provider cache never
+# enter the repository. `.terraform.lock.hcl` IS versioned (exact provider, hashes);
+# `*.tfvars.example` keeps only evident placeholders.
+*.tfvars
+!*.tfvars.example
+*.tfstate*
+*.tfplan
+.terraform/
+crash.log

@@ -124,6 +124,19 @@ export default defineConfig({
         },
       },
       { extends: true, test: { name: "repo", root: "tests" } },
+      {
+        extends: true,
+        // Feature 017: the infrastructure suite. It never reaches AWS: the guard
+        // below refuses to start when the process has any credential.
+        test: {
+          name: "infra",
+          root: "infra/test",
+          setupFiles: ["./setup/no-credentials.ts"],
+          // Rendering a plan loads the whole AWS provider: tens of seconds each.
+          testTimeout: 600_000,
+          hookTimeout: 600_000,
+        },
+      },
     ],
     // Measured in a pass of the domain alone (`npm run test:coverage:domain`;
     // feature 015, E5, §34): the merge of several projects once lost the hits
