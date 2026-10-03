@@ -140,3 +140,12 @@ Muertos, vistos fallar por su test: **1** (`sub` con comodín; `sub` de `plan` c
 Lo que enseñó la ejecución (cada uno visto sobrevivir, arreglado y visto morir): el 4 sobrevivía porque la denegación de la clave `env` lo tapaba (el test añade ahora el caso `TagKeys = managed_by`); el 5 porque la denegación de otras regiones tapaba la de `organizations` (el test pide ahora la región); el 52 porque la expresión regular excluía el guion de `atlas-prod-x`.
 
 **No ejecutados** (no son de E1): 41, 43, 45, 46, 50, 54, 55 y la parte `-lock=false` del 40. Sin mutante propio: el 38 (lo guarda `static.test.ts`, pero no se ha mutado un fichero con un dato personal).
+
+## Ronda 1 de la PR #114 (arreglos)
+
+- **B1** `test:others` pasa a listar los proyectos (`adapters`, `cli`, `api`, `jobs`, `web`, `repo`): los filtros `!x` de Vitest se unen y volvían a incluir `domain` e `infra`. `tests/test-outputs.test.ts` y `ci.test.ts` lo fijan.
+- **B2** KMS (C2): `Decrypt` de la API ya no se limita por `PARAMETER_ARN`; solo `Encrypt` (ADR-0034, fila 8, opción 2). El test fija las dos cosas (la API descifra `auth/*` y no cifra fuera de `device-tokens/*`).
+- **B3** El límite lleva `DenyBootstrapIam`: ninguna escritura de IAM sobre `admin`, `deploy`, `plan` ni sobre las políticas `atlas-<env>-*`, para cualquier rol del entorno. Test sobre el límite (vale para el rol de la API) y mutante.
+- **B4** La política del bucket de artefactos gana `DenyAnyOtherPrincipal` (`s3:*`) como el estado; test y mutante.
+- `admin_principal_arn` se valida sin comodines (`*`, `?`) y con la cuenta igual a `account_id`, en las dos partes, con `run` de `terraform test` que lo rechaza.
+- **A confirmar por la dirección**: (a) `decide` (`infra/test/lib/iam.ts`) es un evaluador propio mínimo, **decisión mía** que contradice «sin evaluador propio» del prompt §4 y de `plan.md`; se limita a una lista cerrada de operadores y falla si ve otro. Su comportamiento con `ForAnyValue:` y operador negado con clave ausente difiere de IAM; ninguna política lo usa hoy. (b) **Nota pendiente de ADR-0034**: el bucket del estado admite solo `atlas-<env>-deploy`, `-plan` y el administrador (más estricto que «`atlas-prod-*`»); la caducidad de 90 días de los artefactos es sin fuente y un artefacto de más de 90 días ya no se puede promocionar. (c) **SIN VERIFICAR para la 018**: con `s3:ListBucket` solo por prefijo, un `GetObject` de una clave inexistente puede dar 403 y no 404 en el primer `init`; (d) con `mail_sender` en el dominio del usuario, ese dominio sale en claro en el `plan` a través del límite.

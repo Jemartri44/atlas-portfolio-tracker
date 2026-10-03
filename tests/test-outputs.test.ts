@@ -54,7 +54,9 @@ describe("the coverage of the domain is measured on its own", () => {
   it("runs the domain with coverage alone, then every other project, in the script the CI calls", () => {
     expect(scripts["test:coverage"]).toBe("npm run test:coverage:domain && npm run test:others");
     expect(scripts["test:coverage:domain"]).toBe("vitest run --coverage --project domain");
-    expect(scripts["test:others"]).toBe("vitest run --project !domain --project !infra");
+    expect(scripts["test:others"]).toBe(
+      "vitest run --project adapters --project cli --project api --project jobs --project web --project repo",
+    );
     // The infrastructure suite has a job of its own in the CI, which installs Terraform.
     expect(scripts["test:infra"]).toBe("vitest run --project infra --pool=forks --maxWorkers=1");
   });

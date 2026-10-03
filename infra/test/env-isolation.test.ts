@@ -579,7 +579,8 @@ describe("the customer managed key of prod (C2), only when asked for", () => {
     const others = statements().filter((entry) => entry.Sid !== "AdministrationPrincipal");
     expect(others.map((entry) => entry.Sid).sort()).toEqual([
       "AdminRoleEncryptDecrypt",
-      "ApiTokensEncryptDecrypt",
+      "ApiDecrypt",
+      "ApiTokensEncrypt",
       "JobsDecrypt",
     ]);
     for (const entry of others) {
@@ -599,11 +600,12 @@ describe("the customer managed key of prod (C2), only when asked for", () => {
     };
     expect(byPrincipal(role("api"), "kms:Decrypt", tokens)).toBe("allow");
     expect(byPrincipal(role("api"), "kms:Encrypt", tokens)).toBe("allow");
-    expect(
-      byPrincipal(role("api"), "kms:Decrypt", {
-        "kms:EncryptionContext:PARAMETER_ARN": `arn:aws:ssm:eu-west-1:${ACCOUNT}:parameter/atlas/prod/auth/x`,
-      }),
-    ).toBe("implicit-deny");
+    const auth = {
+      "kms:EncryptionContext:PARAMETER_ARN": `arn:aws:ssm:eu-west-1:${ACCOUNT}:parameter/atlas/prod/auth/x`,
+    };
+    // The API reads /auth/* with this key: Decrypt is not limited by path, only Encrypt is.
+    expect(byPrincipal(role("api"), "kms:Decrypt", auth)).toBe("allow");
+    expect(byPrincipal(role("api"), "kms:Encrypt", auth)).toBe("implicit-deny");
     for (const job of ["job-ecb", "job-prices", "job-mail", "job-backup", "job-integrity"]) {
       expect(byPrincipal(role(job), "kms:Decrypt"), job).toBe("allow");
       expect(byPrincipal(role(job), "kms:Encrypt"), `${job} encrypt`).toBe("implicit-deny");
@@ -617,3 +619,65 @@ describe("the customer managed key of prod (C2), only when asked for", () => {
     );
   });
 });
+
+describe.each(ENVS)(
+  "the boundary of %s: nobody writes IAM on the bootstrap (rows 4 and 5)",
+  (env) => {
+    const a = arns(env);
+    const withBoundary = {
+      "iam:PermissionsBoundary": `arn:aws:iam::${ACCOUNT}:policy/atlas-${env}-boundary`,
+    };
+    const writes = [
+      "iam:UpdateAssumeRolePolicy",
+      "iam:PutRolePolicy",
+      "iam:DeleteRolePolicy",
+      "iam:AttachRolePolicy",
+      "iam:DetachRolePolicy",
+      "iam:DeleteRole",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "iam:UpdateRole",
+      "iam:PutRolePermissionsBoundary",
+    ];
+
+    it("denies every IAM write on admin, deploy and plan, for any role that carries it, the API's included", () => {
+      const boundary = boundaryOf(plans[env] as Plan);
+      for (const action of writes) {
+        for (const name of ["admin", "deploy", "plan"]) {
+          expect(
+            decide(boundary, { action, resource: a.role(name), context: withBoundary }),
+            `${action} ${name}`,
+          ).toBe("deny");
+        }
+      }
+      for (const action of [
+        "iam:CreatePolicyVersion",
+        "iam:SetDefaultPolicyVersion",
+        "iam:DeletePolicy",
+      ]) {
+        for (const policy of ["boundary", "deploy-iam"]) {
+          const resource = `arn:aws:iam::${ACCOUNT}:policy/atlas-${env}-${policy}`;
+          expect(decide(boundary, { action, resource }), `${action} ${policy}`).toBe("deny");
+        }
+      }
+    });
+
+    it("still lets the deploy role write the roles it creates, and reads stay open", () => {
+      const boundary = boundaryOf(plans[env] as Plan);
+      expect(
+        decide(boundary, {
+          action: "iam:PutRolePolicy",
+          resource: a.role("api"),
+          context: withBoundary,
+        }),
+      ).toBe("allow");
+      expect(
+        decide(boundary, {
+          action: "iam:GetRole",
+          resource: a.role("admin"),
+          context: { "aws:RequestedRegion": "us-east-1" },
+        }),
+      ).toBe("allow");
+    });
+  },
+);

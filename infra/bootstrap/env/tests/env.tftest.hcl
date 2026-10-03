@@ -110,3 +110,25 @@ run "rejects_an_environment_that_is_not_dev_or_prod" {
 
   expect_failures = [var.env]
 }
+
+run "rejects_an_admin_principal_with_a_wildcard" {
+  command = plan
+
+  variables {
+    env                 = "dev"
+    admin_principal_arn = "arn:aws:iam::111122223333:role/*"
+  }
+
+  expect_failures = [var.admin_principal_arn]
+}
+
+run "rejects_an_admin_principal_with_a_another_account" {
+  command = plan
+
+  variables {
+    env                 = "dev"
+    admin_principal_arn = "arn:aws:iam::999988887777:role/someone"
+  }
+
+  expect_failures = [var.admin_principal_arn]
+}

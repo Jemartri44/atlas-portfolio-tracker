@@ -177,6 +177,15 @@ locals {
       resources = ["*"]
     },
     {
+      # No role of the environment, whatever its policy says, writes IAM on the
+      # roles of the bootstrap or on the policies of the environment (row 4: no IAM
+      # but the deploy role's, and row 5: nobody touches the bootstrap).
+      sid       = "DenyBootstrapIam"
+      effect    = "Deny"
+      actions   = ["iam:Attach*", "iam:Create*", "iam:Delete*", "iam:Detach*", "iam:Put*", "iam:Set*", "iam:Tag*", "iam:Untag*", "iam:Update*"]
+      resources = concat(local.bootstrap_role_arns, [local.iam_policies])
+    },
+    {
       sid       = "DenyOtherRegions"
       effect    = "Deny"
       actions   = ["*"]

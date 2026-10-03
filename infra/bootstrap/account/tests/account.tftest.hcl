@@ -147,3 +147,23 @@ run "rejects_an_account_that_is_not_twelve_digits" {
 
   expect_failures = [var.account_id]
 }
+
+run "rejects_an_admin_principal_with_a_wildcard" {
+  command = plan
+
+  variables {
+    admin_principal_arn = "arn:aws:iam::111122223333:role/*"
+  }
+
+  expect_failures = [var.admin_principal_arn]
+}
+
+run "rejects_an_admin_principal_with_a_another_account" {
+  command = plan
+
+  variables {
+    admin_principal_arn = "arn:aws:iam::999988887777:role/someone"
+  }
+
+  expect_failures = [var.admin_principal_arn]
+}

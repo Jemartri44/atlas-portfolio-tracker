@@ -41,7 +41,8 @@ describe("the infra job of the CI", () => {
     expect(text).toContain("npm run test:infra");
     const scripts = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"))
       .scripts as Record<string, string>;
-    expect(scripts["test:others"]).toContain("--project !infra");
+    expect(scripts["test:others"]).not.toContain("infra");
+    expect(scripts["test:others"]).not.toContain("domain");
     expect(job("verify")).not.toContain("terraform");
   });
 

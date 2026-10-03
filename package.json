@@ -21,7 +21,7 @@
     "test": "vitest run",
     "test:coverage": "npm run test:coverage:domain && npm run test:others",
     "test:coverage:domain": "vitest run --coverage --project domain",
-    "test:others": "vitest run --project !domain --project !infra",
+    "test:others": "vitest run --project adapters --project cli --project api --project jobs --project web --project repo",
     "test:infra": "vitest run --project infra --pool=forks --maxWorkers=1",
     "atlas": "node apps/cli/dist/main.js",
     "dev": "npm run dev -w @atlas/web",

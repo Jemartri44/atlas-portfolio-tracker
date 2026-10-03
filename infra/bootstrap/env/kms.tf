@@ -41,10 +41,22 @@ locals {
       }
     },
     {
-      Sid       = "ApiTokensEncryptDecrypt"
+      # The API reads /auth/* and the device tokens with this key: Decrypt is not
+      # limited by path (ADR-0034, row 8, option 2: only Encrypt is).
+      Sid       = "ApiDecrypt"
       Effect    = "Allow"
       Principal = "*"
-      Action    = ["kms:Decrypt", "kms:Encrypt"]
+      Action    = ["kms:Decrypt"]
+      Resource  = "*"
+      Condition = {
+        ArnLike = { "aws:PrincipalArn" = local.role_arn.api }
+      }
+    },
+    {
+      Sid       = "ApiTokensEncrypt"
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = ["kms:Encrypt"]
       Resource  = "*"
       Condition = {
         ArnLike = {

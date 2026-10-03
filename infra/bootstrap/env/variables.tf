@@ -55,8 +55,8 @@ variable "admin_principal_arn" {
   type        = string
 
   validation {
-    condition     = can(regex("^arn:aws:iam::[0-9]{12}:(user|role)/.+$", var.admin_principal_arn))
-    error_message = "admin_principal_arn must be the ARN of an IAM user or role."
+    condition     = can(regex("^arn:aws:iam::[0-9]{12}:(user|role)/[A-Za-z0-9+=,.@_/-]+$", var.admin_principal_arn)) && try(split(":", var.admin_principal_arn)[4], "") == var.account_id
+    error_message = "admin_principal_arn must be the ARN of one IAM user or role of this account, with no wildcard."
   }
 }
 

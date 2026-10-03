@@ -187,6 +187,22 @@ describe("the artifacts bucket (B6): the lock of promoting what dev built", () =
     expect(ask(role("atlas-dev-plan"), "s3:ListBucket", artifacts)).toBe("deny");
   });
 
+  it("denies everything else to any principal that is not a deploy role or the administrator", () => {
+    for (const action of [
+      "s3:ReplicateObject",
+      "s3:ReplicateDelete",
+      "s3:PutBucketTagging",
+      "s3:PutReplicationConfiguration",
+      "s3:PutBucketObjectLockConfiguration",
+      "s3:GetObject",
+      "s3:ListBucket",
+    ]) {
+      expect(ask(role("another-project"), action, object), action).toBe("deny");
+      expect(ask(role("atlas-dev-plan"), action, object), `plan ${action}`).toBe("deny");
+    }
+    expect(ask(role("atlas-prod-deploy"), "s3:GetObject", object)).not.toBe("deny");
+  });
+
   it("expires what is old (90 days, 30 noncurrent, 7 for multipart) and is versioned, not force-destroyed", () => {
     const plan = renderAccount();
     const rule = JSON.stringify(

@@ -108,6 +108,14 @@ locals {
         Condition = { Bool = { "aws:SecureTransport" = "false" } }
       },
       {
+        Sid       = "DenyAnyOtherPrincipal"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource  = [local.artifacts_arn, "${local.artifacts_arn}/*"]
+        Condition = { ArnNotLike = { "aws:PrincipalArn" = [local.role_arn["dev-deploy"], local.role_arn["prod-deploy"], var.admin_principal_arn] } }
+      },
+      {
         Sid       = "DenyWritesExceptDevDeploy"
         Effect    = "Deny"
         Principal = "*"
