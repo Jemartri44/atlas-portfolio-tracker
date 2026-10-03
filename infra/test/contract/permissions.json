@@ -7,11 +7,19 @@
         {
           "sid": "CloudFrontCreate",
           "effect": "Allow",
-          "actions": [
-            "cloudfront:CreateDistribution",
-            "cloudfront:CreateFunction",
-            "cloudfront:TagResource"
-          ],
+          "actions": ["cloudfront:CreateDistribution", "cloudfront:CreateFunction"],
+          "resources": ["*"],
+          "condition": {
+            "StringEquals": {
+              "aws:RequestTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5; NB4; SAR (no resource type)"
+        },
+        {
+          "sid": "CloudFrontTagOnCreate",
+          "effect": "Allow",
+          "actions": ["cloudfront:TagResource"],
           "resources": [
             "arn:aws:cloudfront::{account}:distribution/*",
             "arn:aws:cloudfront::{account}:function/atlas-{env}-*"
@@ -50,7 +58,19 @@
         {
           "sid": "AcmCreate",
           "effect": "Allow",
-          "actions": ["acm:AddTagsToCertificate", "acm:RequestCertificate"],
+          "actions": ["acm:RequestCertificate"],
+          "resources": ["*"],
+          "condition": {
+            "StringEquals": {
+              "aws:RequestTag/env": "{env}"
+            }
+          },
+          "contract": "A34-5; SAR (no resource type)"
+        },
+        {
+          "sid": "AcmTagOnCreate",
+          "effect": "Allow",
+          "actions": ["acm:AddTagsToCertificate"],
           "resources": ["arn:aws:acm:us-east-1:{account}:certificate/*"],
           "condition": {
             "StringEquals": {
@@ -1254,7 +1274,7 @@
       ]
     },
     "admin": {
-      "rendered": false,
+      "rendered": true,
       "statements": [
         {
           "sid": "Objects",
